@@ -27,3 +27,4 @@ RGB_MATRIX_DRIVER = WS2812
 DEFAULT_FOLDER = handwired/polyatom/stm32f407
 
 QUANTUM_LIB_SRC += spi_master.c
+SRC += kdisp.c

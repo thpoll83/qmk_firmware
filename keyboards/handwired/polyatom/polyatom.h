@@ -24,3 +24,13 @@
     { k00, k01 }, \
     { k02, k03 } \
 }
+
+//shift register for display selection
+void sr_init(void);
+void sr_shift_out(uint8_t val);
+void sr_shift_out_latch(uint8_t val);
+
+//spi utility functions
+void spi_prepare_commands(void);
+void spi_prepare_data(void);
+void spi_reset(void);

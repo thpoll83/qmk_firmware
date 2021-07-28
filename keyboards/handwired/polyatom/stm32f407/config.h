@@ -18,8 +18,10 @@
 
 #include "config_common.h"
 
-#define MATRIX_COL_PINS { A2, A3 }
-#define MATRIX_ROW_PINS { A4, A5 }
+#define MATRIX_COL_PINS \
+    { A2, A3 }
+#define MATRIX_ROW_PINS \
+    { A4, A5 }
 
 #define I2C_DRIVER I2CD1
 #define I2C1_SCL_BANK GPIOB
@@ -35,26 +37,32 @@
 #define RGB_DI_PIN C6
 #define DRIVER_LED_TOTAL 10
 
-#   define RGB_MATRIX_KEYPRESSES
+#define RGB_MATRIX_KEYPRESSES
 // #   define RGB_MATRIX_FRAMEBUFFER_EFFECTS
-#   define RGB_MATRIX_LED_PROCESS_LIMIT (DRIVER_LED_TOTAL + 4) / 5 // limits the number of LEDs to process in an animation per task run (increases keyboard responsiveness)
-#   define RGB_MATRIX_LED_FLUSH_LIMIT 16 // limits in milliseconds how frequently an animation will update the LEDs. 16 (16ms) is equivalent to limiting to 60fps (increases keyboard responsiveness)
-#    define RGB_MATRIX_MAXIMUM_BRIGHTNESS 25
+#define RGB_MATRIX_LED_PROCESS_LIMIT (DRIVER_LED_TOTAL + 4) / 5  // limits the number of LEDs to process in an animation per task run (increases keyboard responsiveness)
+#define RGB_MATRIX_LED_FLUSH_LIMIT 16                            // limits in milliseconds how frequently an animation will update the LEDs. 16 (16ms) is equivalent to limiting to 60fps (increases keyboard responsiveness)
+#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 25
+#define RGB_DISABLE_AFTER_TIMEOUT 10000
 
-//SPI interface to write to the selected display
+// SPI interface to write to the selected display
+
 #define SPI_DRIVER SPID2
-#define  SPI_CS_PIN C7
-#define  SPI_CD_PIN C5
-#define  SPI_RST_PIN B12
-#define  SPI_SCK_PIN B13
-#define  SPI_SCK_PAL_MODE 5
+#define SPI_SS_PIN B12
+#define SPI_DC_PIN C5
+#define SPI_RST_PIN B1
+#define SPI_SCK_PIN B13
+#define SPI_SCK_PAL_MODE 5
 #define SPI_MOSI_PIN B15
 #define SPI_MOSI_PAL_MODE 5
 #define SPI_MISO_PIN B14
 #define SPI_MISO_PAL_MODE 5
 
-//Shift register to select the display
+// Shift register to select the display
 #define SR_NMR_PIN D4
 #define SR_CLK_PIN D5
 #define SR_DATA_PIN D6
 #define SR_LATCH_PIN D7
+
+// KEY_DISPLAYS_VBAT_PIN
+#define KEY_DISPLAYS_VBAT_PIN D1
+#define KEY_DISPLAYS_VDD_PIN D3

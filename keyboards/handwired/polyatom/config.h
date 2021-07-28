@@ -42,6 +42,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define OLED_DISPLAY_128X64
 #define OLED_FONT_END 255
 #define OLED_FONT_H "gfxfont.c"
+#define OLED_TIMEOUT 60000
+#define OLED_FADE_OUT
+#define OLED_FADE_OUT_INTERVAL 2
+
 
 //#define TAPPING_TERM 500
 

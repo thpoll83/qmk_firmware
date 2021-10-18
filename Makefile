@@ -387,6 +387,10 @@ if [ $$error_occurred -gt 0 ]; then $(HANDLE_ERROR); fi;
 
 endef
 
+# pico-sdk ships with tinyusb, which has a lot of dependencies we don't want.
+# Therefore we ignore it.
+GIT_IGNORE_TINYUSB = -c submodule."tinyusb".update=none
+
 # Catch everything and parse the command line ourselves.
 .PHONY: %
 %:
@@ -401,6 +405,7 @@ ifndef SKIP_GIT
 	if [ ! -e lib/lufa ]; then git submodule sync lib/lufa && git submodule update --depth 50 --init lib/lufa; fi
 	if [ ! -e lib/vusb ]; then git submodule sync lib/vusb && git submodule update --depth 50 --init lib/vusb; fi
 	if [ ! -e lib/printf ]; then git submodule sync lib/printf && git submodule update --depth 50 --init lib/printf; fi
+	if [ ! -e lib/pico-sdk ]; then git $(GIT_IGNORE_TINYUSB) submodule sync lib/pico-sdk && git $(GIT_IGNORE_TINYUSB) submodule update --depth 50 --init lib/pico-sdk; fi
 	git submodule status --recursive 2>/dev/null | \
 	while IFS= read -r x; do \
 		case "$$x" in \
@@ -423,13 +428,13 @@ endif
 	if [ -f $(ERROR_FILE) ]; then printf "$(MSG_ERRORS)" & exit 1; fi;
 
 lib/%:
-	git submodule sync $?
-	git submodule update --init $?
+	git $(GIT_IGNORE_TINYUSB) submodule sync $?
+	git $(GIT_IGNORE_TINYUSB) submodule update --init $?
 
 .PHONY: git-submodule
 git-submodule:
-	git submodule sync --recursive
-	git submodule update --init --recursive --progress
+	git $(GIT_IGNORE_TINYUSB) submodule sync --recursive
+	git $(GIT_IGNORE_TINYUSB) submodule update --init --recursive --progress
 
 .PHONY: list-keyboards
 list-keyboards:

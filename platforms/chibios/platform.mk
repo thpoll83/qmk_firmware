@@ -87,9 +87,9 @@ ifeq ("$(MCU_PORT_NAME)","")
 endif
 
 ifeq ("$(wildcard $(PLATFORM_MK))","")
-    PLATFORM_MK = $(CHIBIOS)/os/hal/ports/$(MCU_PORT_NAME)/$(MCU_SERIES)/$(PLATFORM_NAME).mk
+    PLATFORM_MK = $(CHIBIOS_CONTRIB)/os/hal/ports/$(MCU_PORT_NAME)/$(MCU_SERIES)/$(PLATFORM_NAME).mk
     ifeq ("$(wildcard $(PLATFORM_MK))","")
-        PLATFORM_MK = $(CHIBIOS_CONTRIB)/os/hal/ports/$(MCU_PORT_NAME)/$(MCU_SERIES)/$(PLATFORM_NAME).mk
+        PLATFORM_MK = $(CHIBIOS)/os/hal/ports/$(MCU_PORT_NAME)/$(MCU_SERIES)/$(PLATFORM_NAME).mk
     endif
 endif
 
@@ -304,6 +304,35 @@ ifeq ($(strip $(USE_CHIBIOS_CONTRIB)),yes)
     include $(CHIBIOS_CONTRIB)/os/hal/hal.mk
     PLATFORM_SRC += $(PLATFORMSRC_CONTRIB) $(HALSRC_CONTRIB)
     EXTRAINCDIRS += $(PLATFORMINC_CONTRIB) $(HALINC_CONTRIB) $(CHIBIOS_CONTRIB)/os/various
+endif
+
+#
+# Raspberry Pi Pico SDK Support
+##############################################################################
+ifeq ($(strip $(MCU_FAMILY)), RP)
+    PLATFORM_RP2040_PATH = $(PLATFORM_PATH)/$(PLATFORM_KEY)/rp2040
+    include $(PLATFORM_RP2040_PATH)/pico-sdk.mk
+
+    PLATFORM_SRC += $(PICOSDKSRC) \
+                    $(PLATFORM_RP2040_PATH)/stage2_bootloaders.c \
+                    $(PLATFORM_RP2040_PATH)/pico_sdk_shims.c
+
+    EXTRAINCDIRS += $(PICOSDKINC)
+
+    # Enables optimized Compiler intrinsics which are located in the RP2040
+    # bootrom. This needs startup code and linker script support from ChibiOS,
+    # therefore disabled by default.
+    ifeq ($(strip $(PICO_INTRINSICS_ENABLED)), yes)
+        include $(PLATFORM_RP2040_PATH)/pico-intrinsics.mk
+        PLATFORM_SRC += $(PICOSDKINTRINSICSSRC)
+        EXTRAINCDIRS += $(PICOSDKINTRINSICSINC)
+    endif
+
+    ADEFS += -DCRT0_VTOR_INIT=1 \
+             -DCRT0_EXTRA_CORES_NUMBER=0
+
+    CFLAGS += -DPICO_NO_FPGA_CHECK \
+              -DNDEBUG
 endif
 
 #

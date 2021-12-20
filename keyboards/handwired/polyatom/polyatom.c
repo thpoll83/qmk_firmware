@@ -35,17 +35,18 @@ void sr_shift_out_latch(uint8_t val) {
 }
 
 void spi_prepare_commands(void) {
+    setPinOutput(SPI_DC_PIN);
     writePinLow(SPI_DC_PIN);
     wait_us(50); //?
 }
 
 void spi_prepare_data(void) {
+    setPinOutput(SPI_DC_PIN);
     writePinHigh(SPI_DC_PIN);
     wait_us(50); //?
 }
 
 void spi_reset(void) {
-    setPinOutput(SPI_DC_PIN);
     setPinOutput(SPI_RST_PIN);
 
     writePinHigh(SPI_RST_PIN);

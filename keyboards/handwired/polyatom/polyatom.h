@@ -21,16 +21,35 @@
 #define LAYOUT( \
     k00, k01, k02, k03 \
 ) { \
-    { k00, k01 }, \
-    { k02, k03 } \
+    { k00, k02 }, \
+    { k01, k03 } \
 }
 
-//shift register for display selection
+#define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_ROWS+(col))
+
+
+
+// Shift register helper functions
+
+// Initialize the shift register by pulling SR_NMR_PIN to low for 10 usec
 void sr_init(void);
+
+// Send a single byte to the shift register using SR_CLK_PIN and SR_DATA_PIN
 void sr_shift_out(uint8_t val);
+
+// Send a single byte and pull SR_LATCH_PIN to high for 10 usec to apply the byte to the outputs
 void sr_shift_out_latch(uint8_t val);
 
-//spi utility functions
+
+
+
+// SPI helper functions
+
+// Prepare SPI device for command transfer; SPI_DC_PIN will be set to low
 void spi_prepare_commands(void);
+
+// Prepare SPI device for data transfer; SPI_DC_PIN will be set to high
 void spi_prepare_data(void);
+
+// Reset all connected SPI devices by pulling SPI_RST_PIN to low for 1 msec
 void spi_reset(void);

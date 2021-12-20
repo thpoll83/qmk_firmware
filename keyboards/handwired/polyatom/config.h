@@ -41,11 +41,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* Oled Size */
 #define OLED_DISPLAY_128X64
 #define OLED_FONT_END 255
-#define OLED_FONT_H "gfxfont.c"
+#define OLED_FONT_H "fonts/base_font.h"
 #define OLED_TIMEOUT 60000
 #define OLED_FADE_OUT
 #define OLED_FADE_OUT_INTERVAL 2
 
+#define ENCODERS_PAD_A { E13 }
+#define ENCODERS_PAD_B { E15 }
+#define ENCODER_RESOLUTION 4
 
 //#define TAPPING_TERM 500
 

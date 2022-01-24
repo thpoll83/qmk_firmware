@@ -1,18 +1,27 @@
 #include "polyatom.h"
 #include QMK_KEYBOARD_H
 
-void sr_init() {
+
+void sr_hw_setup(void) {
     setPinOutput(SR_NMR_PIN);
     setPinOutput(SR_CLK_PIN);
     setPinOutput(SR_DATA_PIN);
     setPinOutput(SR_LATCH_PIN);
 
-    // shift register setup
     writePinHigh(SR_NMR_PIN);
-    wait_us(10); //1?
+    writePinHigh(SR_CLK_PIN);
+    writePinHigh(SR_DATA_PIN);
+    writePinLow(SR_LATCH_PIN);
+ }
+
+void sr_init(void) {
+    // shift register setup
+    //writePinHigh(SR_NMR_PIN);
+    //wait_us(10); //1?
     writePinLow(SR_NMR_PIN);
     wait_us(10);
     writePinHigh(SR_NMR_PIN);
+    wait_us(10);
 }
 
 void sr_shift_out(uint8_t val) {
@@ -26,12 +35,34 @@ void sr_shift_out(uint8_t val) {
 }
 
 void sr_shift_out_latch(uint8_t val) {
+    //wait_us(10);
     writePinLow(SR_LATCH_PIN);
     sr_shift_out(val);
-    wait_us(10); //1?
+    wait_us(10);
     writePinHigh(SR_LATCH_PIN);
-    wait_us(10); //1?
+    wait_us(10);
     writePinLow(SR_LATCH_PIN);
+    wait_us(10);
+}
+
+void spi_hw_setup(void) {
+    setPinOutput(SPI_SS_PIN);
+    writePinLow(SPI_SS_PIN);
+
+    setPinOutput(SPI_DC_PIN);
+    writePinLow(SPI_DC_PIN);
+
+    setPinOutput(SPI_RST_PIN);
+    writePinLow(SPI_RST_PIN);
+
+    setPinOutput(SPI_SCK_PIN);
+    writePinLow(SPI_SCK_PIN);
+
+    setPinOutput(SPI_MOSI_PIN);
+    writePinLow(SPI_MOSI_PIN);
+
+    setPinOutput(SPI_MISO_PIN);
+    writePinLow(SPI_MISO_PIN);
 }
 
 void spi_prepare_commands(void) {

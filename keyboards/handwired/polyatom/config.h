@@ -24,13 +24,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define PRODUCT_ID      0x2007
 #define DEVICE_VER      0x0205
 #define MANUFACTURER    [thpoll]
-#define PRODUCT         PolyKeyboard-Atom v0.2.5
+#define PRODUCT         PolyKeyboard-Atom v0.2.6
 
 /* key matrix size */
-#define MATRIX_ROWS 2
-#define MATRIX_COLS 2
+#define MATRIX_ROWS 1
+#define MATRIX_COLS 4
 
 #define DIODE_DIRECTION ROW2COL
+
+#define LAYOUT( \
+    k00, k01, k02, k03 \
+) { \
+    { k00, k01 , k02, k03 } \
+}
+
+#define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_ROWS+(col))
 
 /* define if matrix has ghost */
 //#define MATRIX_HAS_GHOST

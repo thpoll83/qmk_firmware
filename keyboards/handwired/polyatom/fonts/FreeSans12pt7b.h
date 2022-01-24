@@ -1,4 +1,4 @@
-const uint8_t FreeSans12pt7bBitmaps[] PROGMEM = {
+static const uint8_t FreeSans12pt7bBitmaps[] PROGMEM = {
     0xFF, 0xFF, 0xFF, 0xF0, 0xF0, 0xCF, 0x3C, 0xF3, 0x8A, 0x20, 0x06, 0x30,
     0x31, 0x03, 0x18, 0x18, 0xC7, 0xFF, 0xBF, 0xFC, 0x31, 0x03, 0x18, 0x18,
     0xC7, 0xFF, 0xBF, 0xFC, 0x31, 0x01, 0x18, 0x18, 0xC0, 0xC6, 0x06, 0x30,
@@ -165,7 +165,7 @@ const uint8_t FreeSans12pt7bBitmaps[] PROGMEM = {
     0x8C, 0x63, 0x18, 0xC6, 0x73, 0x00, 0x70, 0x3E, 0x09, 0xE4, 0x1F, 0x03,
     0x80};
 
-const GFXglyph FreeSans12pt7bGlyphs[] PROGMEM = {
+static const GFXglyph FreeSans12pt7bGlyphs[] PROGMEM = {
     {0, 0, 0, 6, 0, 1},         // 0x20 ' '
     {0, 2, 18, 8, 3, -17},      // 0x21 '!'
     {5, 6, 6, 8, 1, -16},       // 0x22 '"'
@@ -262,7 +262,7 @@ const GFXglyph FreeSans12pt7bGlyphs[] PROGMEM = {
     {1947, 5, 23, 8, 2, -17},   // 0x7D '}'
     {1962, 10, 5, 12, 1, -10}}; // 0x7E '~'
 
-const GFXfont FreeSans12pt7b PROGMEM = {(uint8_t *)FreeSans12pt7bBitmaps,
+static const GFXfont FreeSans12pt7b PROGMEM = {(uint8_t *)FreeSans12pt7bBitmaps,
                                         (GFXglyph *)FreeSans12pt7bGlyphs, 0x20,
                                         0x7E, 20/*29*/};
 

@@ -18,18 +18,9 @@
 
 #include "quantum.h"
 
-#define LAYOUT( \
-    k00, k01, k02, k03 \
-) { \
-    { k00, k02 }, \
-    { k01, k03 } \
-}
-
-#define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_ROWS+(col))
-
-
 
 // Shift register helper functions
+void sr_hw_setup(void);
 
 // Initialize the shift register by pulling SR_NMR_PIN to low for 10 usec
 void sr_init(void);
@@ -44,6 +35,7 @@ void sr_shift_out_latch(uint8_t val);
 
 
 // SPI helper functions
+void spi_hw_setup(void);
 
 // Prepare SPI device for command transfer; SPI_DC_PIN will be set to low
 void spi_prepare_commands(void);

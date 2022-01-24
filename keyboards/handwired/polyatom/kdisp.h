@@ -16,4 +16,6 @@ void kdisp_send_buffer(void);
 
 void kdisp_invert(bool invert);
 
+void kdisp_hw_setup(void);
+
 void kdisp_init(void);

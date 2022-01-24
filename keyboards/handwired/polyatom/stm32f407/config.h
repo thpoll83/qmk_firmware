@@ -19,9 +19,9 @@
 #include "config_common.h"
 
 #define MATRIX_COL_PINS \
-    { A2, A3 }
+    { A3, A2, A5, A4 }
 #define MATRIX_ROW_PINS \
-    { A4, A5 }
+    { E8 }
 
 #define I2C_DRIVER I2CD1
 #define I2C1_SCL_BANK GPIOB
@@ -35,7 +35,7 @@
 #define I2C1_DUTY_CYCLE STD_DUTY_CYCLE
 
 #define RGB_DI_PIN C6
-#define DRIVER_LED_TOTAL 10
+#define DRIVER_LED_TOTAL 4
 
 #define RGB_MATRIX_KEYPRESSES
 // #   define RGB_MATRIX_FRAMEBUFFER_EFFECTS

@@ -251,8 +251,8 @@ void kdisp_init(void) {
     spi_transmit(chargePump, sizeof(chargePump));
     static const uint8_t PROGMEM memMode[] = {SSD1306_MEMORYMODE, 0x00};
     spi_transmit(memMode, sizeof(memMode));
-    spi_write(SSD1306_SEGREMAP);    // | 0x1 ?
-    spi_write(SSD1306_COMSCANINC);  // SSD1306_COMSCANDEC ?
+    spi_write(SSD1306_SEGREMAP | 0x1); //rotate by 180: remove 0x01
+    spi_write(SSD1306_COMSCANDEC); //rotate by 180: SSD1306_COMSCANINC
     static const uint8_t PROGMEM contrast[] = {SSD1306_SETCONTRAST, 0xff};
     spi_transmit(contrast, sizeof(contrast));
     spi_write(SSD1306_SETPRECHARGE);

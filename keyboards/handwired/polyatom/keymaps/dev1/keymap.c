@@ -393,12 +393,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     if (record->event.pressed) {
         last_key = keycode;
         if (disp_idx != 255) {
-            wait_ms(1);
+            //wait_ms(1);
             kdisp_invert(true);
         }
     } else {
         if (disp_idx != 255) {
-            wait_ms(1);
+            //wait_ms(1);
             kdisp_invert(false);
         }
     }

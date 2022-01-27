@@ -61,7 +61,7 @@ static bool     finished_timer = false;
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
     timer = startup_timer = timer_read32();
     last_update = 0;
-    print("OLED initialized.");
+    //uprint("OLED initialized.");
     return OLED_ROTATION_180;
 }
 
@@ -162,23 +162,26 @@ static void fade_display(void) {
     }
 }
 
-void oled_task_user(void) {
+bool oled_task_user(void) {
     if (!finished_timer && (timer_elapsed32(startup_timer) < 2000)) {
         oled_set_cursor(0, 4);
         render_logo();
+        //uprint("OLED: Render Logo");
     } else if (timer_elapsed32(timer)-last_update > 60000) {
         fade_display();
     } else {
         if (!finished_timer) {
             oled_clear();
             finished_timer = true;
-            print("Ready.");
+            //uprint("OLED: Ready.");
         }
         oled_set_cursor(0, 4);
         render_logo();
         oled_set_cursor(0, 0);
         render_info();
     }
+
+    return true;
 }
 
 // rotary encoder
@@ -247,7 +250,7 @@ struct disp_status {
     uint8_t bitmask;
 };
 
-struct disp_status key_display[] = {{.bitmask = ~0x02}, {.bitmask = ~0x04}, {.bitmask = ~0x08}, {.bitmask = ~0x10}};
+struct disp_status key_display[] = {{.bitmask = ~0x01}, {.bitmask = ~0x02}, {.bitmask = ~0x04}, {.bitmask = ~0x08}};
 
 const char* keycode_to_disp_text(uint16_t keycode) {
     bool shift = holdShift;
@@ -343,10 +346,7 @@ const char* keycode_to_disp_text(uint16_t keycode) {
 }
 
 uint8_t matrix_disp_index(uint8_t row, uint8_t col) {
-    uint8_t disp_idx = LAYOUT_TO_INDEX(row, col);
-    if(disp_idx==2) return 1;
-    else if(disp_idx==1) return 2;
-    return disp_idx;
+    return LAYOUT_TO_INDEX(row, col);
 }
 
 uint8_t keycode_to_disp_index(uint16_t keycode) {
@@ -387,24 +387,25 @@ void process_layer_switch_user(uint16_t new_layer) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+    uint8_t disp_idx = matrix_disp_index(record->event.key.row, record->event.key.col);
+    uint8_t bitmask = key_display[disp_idx].bitmask;
+    sr_shift_out_latch(bitmask);
     if (record->event.pressed) {
-        last_key         = keycode;
-        uint8_t disp_idx = matrix_disp_index(record->event.key.row, record->event.key.col);
+        last_key = keycode;
         if (disp_idx != 255) {
-            sr_shift_out_latch(key_display[disp_idx].bitmask);
+            wait_ms(1);
             kdisp_invert(true);
         }
     } else {
-        uint8_t disp_idx = keycode_to_disp_index(keycode);
         if (disp_idx != 255) {
-            sr_shift_out_latch(key_display[disp_idx].bitmask);
+            wait_ms(1);
             kdisp_invert(false);
         }
     }
 
-    uprintf("KL: kc: 0x%04X, col: %u, row: %u, pressed: %b, time: %u, interrupt: %b, count: %u\n",
+    uprintf("KL: kc: 0x%04X, col: %u, row: %u, pressed: %b, time: %u, interrupt: %b, count: %u SR bitmask: 0x%04X (%u)\n",
         keycode, record->event.key.col, record->event.key.row, record->event.pressed,
-        record->event.time, record->tap.interrupted, record->tap.count);
+        record->event.time, record->tap.interrupted, record->tap.count, bitmask, ~bitmask);
 
     /*switch (keycode) {
         case KC_LAYER_1:

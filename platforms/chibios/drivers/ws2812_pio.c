@@ -69,6 +69,7 @@ bool ws2812_init(void) {
     uint pio_idx = pio_get_index(pio);
     /* Get PIOx peripheral out of reset state. */
     hal_lld_peripheral_unreset(pio_idx == 0 ? RESETS_ALLREG_PIO0 : RESETS_ALLREG_PIO1);
+<<<<<<< HEAD
 
     // clang-format off
     iomode_t rgb_pin_mode = PAL_RP_PAD_SLEWFAST |
@@ -77,6 +78,9 @@ bool ws2812_init(void) {
     // clang-format on
 
     palSetLineMode(RGB_DI_PIN, rgb_pin_mode);
+=======
+    palSetLineMode(RGB_DI_PIN, pio_idx == 0 ? PAL_MODE_ALTERNATE_PIO0 : PAL_MODE_ALTERNATE_PIO1);
+>>>>>>> 529c067027 (Add WS2812 PIO DMA enabled driver and documentation)
 
     state_machine = pio_claim_unused_sm(pio, true);
     if (state_machine < 0) {

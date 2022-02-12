@@ -38,6 +38,10 @@ typedef SIOConfig QMKSerialConfig;
 #    endif
 #endif
 
+#if defined(SOFT_SERIAL_PIN)
+#    define SERIAL_USART_TX_PIN SOFT_SERIAL_PIN
+#endif
+
 #if !defined(USART_CR1_M0)
 #    define USART_CR1_M0 USART_CR1_M // some platforms (f1xx) dont have this so
 #endif

@@ -19,11 +19,19 @@ bool __attribute__((nonnull)) send(const uint8_t* source, const size_t size);
 #endif
 
 #if !defined(SERIAL_USART_TX_PIN)
-#    define SERIAL_USART_TX_PIN A9
+#    if defined(MCU_RP)
+#        define SERIAL_USART_TX_PIN GP0
+#    else
+#        define SERIAL_USART_TX_PIN A9
+#    endif
 #endif
 
 #if !defined(SERIAL_USART_RX_PIN)
-#    define SERIAL_USART_RX_PIN A10
+#    if defined(MCU_RP)
+#        define SERIAL_USART_RX_PIN GP1
+#    else
+#        define SERIAL_USART_RX_PIN A10
+#    endif
 #endif
 
 #if !defined(SELECT_SOFT_SERIAL_SPEED)

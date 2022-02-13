@@ -31,6 +31,8 @@ void sr_shift_out(uint8_t val);
 // Send a single byte and pull SR_LATCH_PIN to high for 10 usec to apply the byte to the outputs
 void sr_shift_out_latch(uint8_t val);
 
+void sr_shift_out_buffer_latch(const uint8_t* val, uint8_t len);
+
 
 
 

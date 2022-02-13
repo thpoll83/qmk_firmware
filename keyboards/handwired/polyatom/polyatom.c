@@ -47,6 +47,19 @@ void sr_shift_out_latch(uint8_t val) {
     wait_us(2);
 }
 
+void sr_shift_out_buffer_latch(const uint8_t* val, uint8_t len) {
+    //wait_us(10);
+    writePinLow(SR_LATCH_PIN);
+    for(uint8_t i=0;i<len;++i) {
+        sr_shift_out(val[i]);
+    }
+    wait_us(2);
+    writePinHigh(SR_LATCH_PIN);
+    wait_us(2);
+    writePinLow(SR_LATCH_PIN);
+    wait_us(2);
+}
+
 void spi_hw_setup(void) {
     setPinOutput(SPI_SS_PIN);
     writePinLow(SPI_SS_PIN);

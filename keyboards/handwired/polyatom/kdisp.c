@@ -219,7 +219,7 @@ void kdisp_hw_setup(void) {
     sr_hw_setup();
 }
 
-void kdisp_init(void) {
+void kdisp_init(const int8_t num_shift_regs) {
 
     // first turn on logic power supply
     writePinHigh(KEY_DISPLAYS_VDD_PIN);
@@ -228,10 +228,15 @@ void kdisp_init(void) {
     writePinHigh(KEY_DISPLAYS_VBAT_PIN);
 
     spi_init();
-    //wait_ms(20);
 
     sr_init();
-    sr_shift_out_latch(0x00);
+
+    //make sure we are talking to all shift registers
+    uint8_t all[num_shift_regs];
+    for(int8_t i=0;i<num_shift_regs;++i) {
+        all[i] = 0;
+    }
+    sr_shift_out_buffer_latch(all, num_shift_regs);
 
     spi_reset();
 

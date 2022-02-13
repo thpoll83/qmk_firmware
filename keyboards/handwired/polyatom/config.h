@@ -27,16 +27,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define PRODUCT         PolyKeyboard-Atom v0.2.6
 
 /* key matrix size */
-#define MATRIX_ROWS 1
+#define MATRIX_ROWS 2
 #define MATRIX_COLS 4
 
 #define DIODE_DIRECTION ROW2COL
 
-#define LAYOUT( \
-    k00, k01, k02, k03 \
-) { \
-    { k00, k01 , k02, k03 } \
-}
 
 #define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_COLS+(col))
 
@@ -57,9 +52,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define ENCODERS_PAD_A { E13 }
 #define ENCODERS_PAD_B { E15 }
-#define ENCODER_RESOLUTION 4
+#define ENCODER_RESOLUTION 8
 
-#define DRIVER_LED_TOTAL 4
+#define DRIVER_LED_TOTAL 8
+
+#define NUM_SHIFT_REGISTERS 2
 
 #define RGB_MATRIX_KEYPRESSES
 
@@ -104,6 +101,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DISABLE_RGB_MATRIX_SOLID_SPLASH
 #define DISABLE_RGB_MATRIX_SOLID_MULTISPLASH
 
-
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE_NEXUS
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_CROSS
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_WIDE
 

@@ -3,7 +3,7 @@
 #include "kdisp.h"
 #include "fonts/FreeSans12pt7b.h"
 
-enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, _LAYER3 = 3, _LAYER4 = 4, _LAYER5 = 5, _LAYER6 = 6, _LAYER7 = 7, _LAYER8 = 8, _LAYER9 = 9, NUM_LAYERS = 10 };
+enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, _LAYER3 = 3, _LAYER4 = 4, _LAYER5 = 5, NUM_LAYERS = 6 };
 uint16_t currentLayer = 0;
 
 // enum custom_keycodes { KC_LAYER_1 = SAFE_RANGE, KC_LAYER_2, KC_LAYER_3 };
@@ -11,27 +11,26 @@ uint16_t currentLayer = 0;
 uint8_t g_rgb_matrix_mode = RGB_MATRIX_SOLID_REACTIVE_NEXUS;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    [_LAYER0] = LAYOUT(KC_1,    KC_2,   KC_3,      KC_4),
-    [_LAYER1] = LAYOUT(KC_5,    KC_6,   KC_7,      KC_8),
-    [_LAYER2] = LAYOUT(KC_9,    KC_0,   KC_EQUAL,  KC_MINUS),
-    [_LAYER3] = LAYOUT(KC_A,    KC_B,   KC_C,      KC_D),
-    [_LAYER4] = LAYOUT(KC_E,    KC_F,   KC_G,      KC_H),
-    [_LAYER5] = LAYOUT(KC_I,    KC_J,   KC_K,      KC_L),
-    [_LAYER6] = LAYOUT(KC_M,    KC_N,   KC_O,      KC_P),
-    [_LAYER7] = LAYOUT(KC_Q,    KC_R,   KC_S,      KC_T),
-    [_LAYER8] = LAYOUT(KC_U,    KC_V,   KC_W,      KC_X),
-    [_LAYER9] = LAYOUT(KC_Y,    KC_Z,   KC_SLASH,  KC_DOT),
-
+    [_LAYER0] = {{KC_1,    KC_2,   KC_3,      KC_4}, {KC_5,    KC_6,   KC_7,      KC_8}},
+    [_LAYER1] = {{KC_5,    KC_6,   KC_7,      KC_8}, {KC_9,    KC_0,   KC_EQUAL,  KC_MINUS}},
+    [_LAYER2] = {{KC_A,    KC_B,   KC_C,      KC_D}, {KC_E,    KC_F,   KC_G,      KC_H}},
+    [_LAYER3] = {{KC_I,    KC_J,   KC_K,      KC_L}, {KC_M,    KC_N,   KC_O,      KC_P}},
+    [_LAYER4] = {{KC_Q,    KC_R,   KC_S,      KC_T}, {KC_U,    KC_V,   KC_W,      KC_X}},
+    [_LAYER5] = {{KC_Y,    KC_Z,   KC_SLASH,  KC_TILDE}, {KC_COMMA,    KC_DOT,   KC_LBRACKET,  KC_RBRACKET}}
 };
 
 led_config_t g_led_config = {{// Key Matrix to LED Index
-                              {0, 1,  2, 3}},
+                              {0, 1, 2, 3}, {4, 5, 6, 7}},
                              {
                                  // LED Index to Physical Position
                                  {100, 32},
                                  {120, 32},
                                  {140, 32},
-                                 {160, 32}
+                                 {160, 32},
+                                 {100, 52},
+                                 {120, 52},
+                                 {140, 52},
+                                 {160, 52}
                                  //{190, 32},
                                  //{180, 32},
                                  //{170, 32},
@@ -41,7 +40,7 @@ led_config_t g_led_config = {{// Key Matrix to LED Index
                              },
                              {
                                  // LED Index to Flag
-                                 4, 4, 4, 4
+                                 4, 4, 4, 4, 4, 4, 4, 4
                                  //0, 0, 2, 4, 4, 4, 4, 2, 0, 0
                                  //, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                              }};
@@ -61,7 +60,6 @@ static bool     finished_timer = false;
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
     timer = startup_timer = timer_read32();
     last_update = 0;
-    //uprint("OLED initialized.");
     return OLED_ROTATION_180;
 }
 
@@ -95,18 +93,18 @@ void render_info(void) {
         case _LAYER5:
             oled_write_ln_P(PSTR("5 "), false);
             break;
-        case _LAYER6:
-            oled_write_ln_P(PSTR("6 "), false);
-            break;
-        case _LAYER7:
-            oled_write_ln_P(PSTR("7 "), false);
-            break;
-        case _LAYER8:
-            oled_write_ln_P(PSTR("8 "), false);
-            break;
-        case _LAYER9:
-            oled_write_ln_P(PSTR("9 "), false);
-            break;
+        // case _LAYER6:
+        //     oled_write_ln_P(PSTR("6 "), false);
+        //     break;
+        // case _LAYER7:
+        //     oled_write_ln_P(PSTR("7 "), false);
+        //     break;
+        // case _LAYER8:
+        //     oled_write_ln_P(PSTR("8 "), false);
+        //     break;
+        // case _LAYER9:
+        //     oled_write_ln_P(PSTR("9 "), false);
+        //     break;
         default:
             // Or use the write_ln shortcut over adding '\n' to the end of your string
             oled_write_ln_P(PSTR("? "), false);
@@ -166,14 +164,12 @@ bool oled_task_user(void) {
     if (!finished_timer && (timer_elapsed32(startup_timer) < 2000)) {
         oled_set_cursor(0, 4);
         render_logo();
-        //uprint("OLED: Render Logo");
     } else if (timer_elapsed32(timer)-last_update > 60000) {
         fade_display();
     } else {
         if (!finished_timer) {
             oled_clear();
             finished_timer = true;
-            //uprint("OLED: Ready.");
         }
         oled_set_cursor(0, 4);
         render_logo();
@@ -201,7 +197,6 @@ void matrix_scan_user(void) {
         rotarySwitchPressed = false;
     } else if(!rotarySwitchPressed) {
         rotarySwitchPressed = true;
-        //tap_code(KC_shift);
         holdShift = !holdShift;
         process_layer_switch_user(currentLayer);
         last_update = timer_elapsed32(timer);
@@ -220,7 +215,6 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
     }
     currentLayer = currentLayer % NUM_LAYERS;
 
-    //uprint("Activated Layer %d", currentLayer);
     process_layer_switch_user(currentLayer);
     last_update = timer_elapsed32(timer);
     return true;
@@ -242,15 +236,16 @@ void keyboard_post_init_user(void) {
     debug_keyboard = false;
     debug_mouse    = false;
 
-    kdisp_init();
+    kdisp_init(NUM_SHIFT_REGISTERS);
     process_layer_switch_user(currentLayer);
 }
 
 struct disp_status {
-    uint8_t bitmask;
+    uint8_t bitmask[NUM_SHIFT_REGISTERS];
 };
 
-struct disp_status key_display[] = {{.bitmask = ~0x01}, {.bitmask = ~0x02}, {.bitmask = ~0x04}, {.bitmask = ~0x08}};
+struct disp_status key_display[] = {{.bitmask = {~0x00, ~0x01}}, {.bitmask = {~0x00, ~0x02}}, {.bitmask = {~0x00, ~0x04}}, {.bitmask = {~0x00, ~0x08}},
+                                    {.bitmask = {~0x01, ~0x00}}, {.bitmask = {~0x02, ~0x00}}, {.bitmask = {~0x04, ~0x00}}, {.bitmask = {~0x08, ~0x00}}};
 
 const char* keycode_to_disp_text(uint16_t keycode) {
     bool shift = holdShift;
@@ -281,8 +276,16 @@ const char* keycode_to_disp_text(uint16_t keycode) {
             return shift ? "-" : "_";
         case KC_SLASH:
             return shift ? "/" : "?";
+        case KC_TILDE:
+            return shift ? "`" : "~";
+        case KC_COMMA:
+            return shift ? "<" : ",";
         case KC_DOT:
-            return shift ? "." : ">";
+            return shift ? ">" : ",";
+        case KC_LBRACKET:
+            return shift ? "{" : "[";
+        case KC_RBRACKET:
+            return shift ? "}" : "]";
         default: break;
     }
     shift |= host_keyboard_led_state().caps_lock;
@@ -342,7 +345,7 @@ const char* keycode_to_disp_text(uint16_t keycode) {
         default:
             break;
     }
-    return 0;
+    return "?";
 }
 
 uint8_t matrix_disp_index(uint8_t row, uint8_t col) {
@@ -372,12 +375,12 @@ void process_layer_switch_user(uint16_t new_layer) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             //key.col           = c;
             //key.row           = r;
-            uint16_t keycode  = keymaps[new_layer][r][c];//keymap_key_to_keycode(new_layer, key);
+            uint16_t keycode  = keymaps[new_layer][r][c];
             uint8_t  disp_idx = matrix_disp_index(r, c);
 
             if (disp_idx != 255) {
                 const char* text = keycode_to_disp_text(keycode);
-                sr_shift_out_latch(key_display[disp_idx].bitmask);
+                sr_shift_out_buffer_latch(key_display[disp_idx].bitmask, sizeof(key_display->bitmask));
                 kdisp_set_buffer(0x00);
                 kdisp_write_gfx_text(&FreeSans12pt7b, 28, 18, text);
                 kdisp_send_buffer();
@@ -388,24 +391,22 @@ void process_layer_switch_user(uint16_t new_layer) {
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     uint8_t disp_idx = matrix_disp_index(record->event.key.row, record->event.key.col);
-    uint8_t bitmask = key_display[disp_idx].bitmask;
-    sr_shift_out_latch(bitmask);
+    const uint8_t* bitmask = key_display[disp_idx].bitmask;
+    sr_shift_out_buffer_latch(bitmask, sizeof(key_display->bitmask));
     if (record->event.pressed) {
         last_key = keycode;
         if (disp_idx != 255) {
-            //wait_ms(1);
             kdisp_invert(true);
         }
     } else {
         if (disp_idx != 255) {
-            //wait_ms(1);
             kdisp_invert(false);
         }
     }
 
-    uprintf("KL: kc: 0x%04X, col: %u, row: %u, pressed: %b, time: %u, interrupt: %b, count: %u SR bitmask: 0x%04X (%u)\n",
+    uprintf("KL: kc: 0x%04X, col: %u, row: %u, pressed: %b, time: %u, interrupt: %b, count: %u SR bitmask: 0x%02X%02X (%u, %u)\n",
         keycode, record->event.key.col, record->event.key.row, record->event.pressed,
-        record->event.time, record->tap.interrupted, record->tap.count, bitmask, ~bitmask);
+        record->event.time, record->tap.interrupted, record->tap.count, bitmask[1], bitmask[0], ~bitmask[1], ~bitmask[0]);
 
     /*switch (keycode) {
         case KC_LAYER_1:

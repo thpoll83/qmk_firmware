@@ -21,7 +21,7 @@
 #define MATRIX_COL_PINS \
     { A3, A2, A5, A4 }
 #define MATRIX_ROW_PINS \
-    { E8 }
+    { E8, E7 }
 
 #define I2C_DRIVER I2CD1
 #define I2C1_SCL_PIN B8

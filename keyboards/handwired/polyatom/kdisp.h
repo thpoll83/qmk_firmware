@@ -18,4 +18,4 @@ void kdisp_invert(bool invert);
 
 void kdisp_hw_setup(void);
 
-void kdisp_init(void);
+void kdisp_init(const int8_t num_shift_regs);

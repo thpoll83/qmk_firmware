@@ -30,11 +30,19 @@
 #include <ch.h>
 #include <hal.h>
 
-#ifndef I2C1_SCL_PIN
-#    define I2C1_SCL_PIN B6
+#if !defined(I2C1_SCL_PIN)
+#    if defined(MCU_RP)
+#        define I2C1_SCL_PIN GP2
+#    else
+#        define I2C1_SCL_PIN B6
+#    endif
 #endif
-#ifndef I2C1_SDA_PIN
-#    define I2C1_SDA_PIN B7
+#if !defined(I2C1_SDA_PIN)
+#    if defined(MCU_RP)
+#        define I2C1_SDA_PIN GP3
+#    else
+#        define I2C1_SDA_PIN B7
+#    endif
 #endif
 
 #ifdef USE_I2CV1
@@ -68,7 +76,11 @@
 #endif
 
 #ifndef I2C_DRIVER
-#    define I2C_DRIVER I2CD1
+#    if defined(MCU_RP)
+#        define I2C_DRIVER I2CD2
+#    else
+#        define I2C_DRIVER I2CD1
+#    endif
 #endif
 
 #ifdef USE_GPIOV1
@@ -90,22 +102,30 @@
 
 static uint8_t i2c_address;
 
+#if defined(MCU_RP)
+#    if !defined(I2C1_CLOCK_SPEED)
+#        define I2C1_CLOCK_SPEED 400000
+#    endif
+
+static const I2CConfig i2cconfig = {.baudrate = I2C1_CLOCK_SPEED};
+#else
 static const I2CConfig i2cconfig = {
-#if defined(USE_I2CV1_CONTRIB)
+#    if defined(USE_I2CV1_CONTRIB)
     I2C1_CLOCK_SPEED,
-#elif defined(USE_I2CV1)
+#    elif defined(USE_I2CV1)
     I2C1_OPMODE,
     I2C1_CLOCK_SPEED,
     I2C1_DUTY_CYCLE,
-#elif defined(WB32F3G71xx)
+#    elif defined(WB32F3G71xx)
     I2C1_OPMODE,
     I2C1_CLOCK_SPEED,
-#else
+#    else
     // This configures the I2C clock to 400khz assuming a 72Mhz clock
     // For more info : https://www.st.com/en/embedded-software/stsw-stm32126.html
     STM32_TIMINGR_PRESC(I2C1_TIMINGR_PRESC) | STM32_TIMINGR_SCLDEL(I2C1_TIMINGR_SCLDEL) | STM32_TIMINGR_SDADEL(I2C1_TIMINGR_SDADEL) | STM32_TIMINGR_SCLH(I2C1_TIMINGR_SCLH) | STM32_TIMINGR_SCLL(I2C1_TIMINGR_SCLL), 0, 0
-#endif
+#    endif
 };
+#endif
 
 static i2c_status_t chibios_to_qmk(const msg_t* status) {
     switch (*status) {
@@ -129,7 +149,11 @@ __attribute__((weak)) void i2c_init(void) {
         palSetLineMode(I2C1_SDA_PIN, PAL_MODE_INPUT);
 
         chThdSleepMilliseconds(10);
-#if defined(USE_GPIOV1)
+
+#if defined(MCU_RP)
+        palSetLineMode(I2C1_SCL_PIN, PAL_MODE_ALTERNATE_I2C | PAL_RP_PAD_PUE | PAL_RP_PAD_DRIVE4);
+        palSetLineMode(I2C1_SDA_PIN, PAL_MODE_ALTERNATE_I2C | PAL_RP_PAD_PUE | PAL_RP_PAD_DRIVE4);
+#elif defined(USE_GPIOV1)
         palSetLineMode(I2C1_SCL_PIN, I2C1_SCL_PAL_MODE);
         palSetLineMode(I2C1_SDA_PIN, I2C1_SDA_PAL_MODE);
 #else

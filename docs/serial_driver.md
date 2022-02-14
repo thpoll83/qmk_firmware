@@ -222,10 +222,14 @@ Where 'n' matches the peripheral number of your selected USART on the MCU.
 ### The `PIO` driver
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 The `PIO` subsystem is a Raspberry Pi RP2040 specific implementation, using the integrated PIO peripheral and is therefore only available on this MCU. Because of the flexible nature of the PIO peripherals, **any** GPIO pin can be used as a `TX` or `RX` pin. Half-duplex and Full-duplex operation is fully supported. The Half-duplex operation mode uses the built-in pull-ups and GPIO manipulation on the RP2040 to drive the line high by default. An external pull-up is therefore not necessary.
 =======
 The `PIO` subsystem is a Raspberry Pi RP2040 specific implementation, using the integrated PIO peripheral and is therefore only available on this MCU. Because of the flexible nature of the PIO peripherals, **any** GPIO pin can be used as a `TX` or `RX` pin. Half-duplex and Full-duplex operation is fully supported. The Half-duplex operation mode uses the built-in pull-ups of the RP2040 by default to drive the line high, therefore external pull-ups are not strictly necessary. But as these pull-ups are rather weak (~50kΩ) it is adviced to use external pull-ups on new designs.
 >>>>>>> 951395777a (Add PIO serial driver and documentation)
+=======
+The `PIO` subsystem is a Raspberry Pi RP2040 specific implementation, using the integrated PIO peripheral and is therefore only available on this MCU. Because of the flexible nature of the PIO peripherals, **any** GPIO pin can be used as a `TX` or `RX` pin. Half-duplex and Full-duplex operation is fully supported. The Half-duplex operation mode uses the built-in pull-ups of the RP2040 by default to drive the line high as these pull-ups are rather weak (~50kΩ) it is adviced to use external pull-ups on new designs or if you have connection problems on legacy AVR Pro Micro designs as well.
+>>>>>>> 19a00f5770 (Add PIO serial driver and documentation)
 
 Configure the hardware via your config.h:
 ```c

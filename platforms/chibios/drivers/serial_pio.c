@@ -129,6 +129,7 @@ void pio_serve_interrupt(void) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 #if !defined(SERIAL_USART_FULL_DUPLEX)
 // The internal pull-ups of the RP2040 are rather weakish with a range of 50k to
 // 80k, which in turn do not provide enough current to guarantee fast signal rise
@@ -182,6 +183,8 @@ static inline void leave_rx_state(void) {}
 
 =======
 >>>>>>> 951395777a (Add PIO serial driver and documentation)
+=======
+>>>>>>> 19a00f5770 (Add PIO serial driver and documentation)
 /**
  * @brief Clear the RX and TX hardware FIFOs of the state machines.
  */
@@ -241,11 +244,14 @@ static inline bool send_impl(const uint8_t* source, const size_t size) {
  */
 inline bool send(const uint8_t* source, const size_t size) {
 <<<<<<< HEAD
+<<<<<<< HEAD
     leave_rx_state();
     bool result = send_impl(source, size);
     enter_rx_state();
 
 =======
+=======
+>>>>>>> 19a00f5770 (Add PIO serial driver and documentation)
 #if !defined(SERIAL_USART_FULL_DUPLEX)
     // In Half-duplex operation the tx pin dual-functions as sender and
     // receiver. To not receive the data we will send, we disable the receiving
@@ -270,7 +276,10 @@ inline bool send(const uint8_t* source, const size_t size) {
     pio_sm_set_enabled(pio, rx_state_machine, true);
     osalSysUnlock();
 #endif
+<<<<<<< HEAD
 >>>>>>> 951395777a (Add PIO serial driver and documentation)
+=======
+>>>>>>> 19a00f5770 (Add PIO serial driver and documentation)
     return result;
 }
 
@@ -346,10 +355,14 @@ static inline void pio_tx_init(pin_t tx_pin) {
     // clang-format on
     pio_sm_set_pins_with_mask(pio, tx_state_machine, 1U << tx_pin, 1U << tx_pin);
 <<<<<<< HEAD
+<<<<<<< HEAD
     pio_sm_set_consecutive_pindirs(pio, tx_state_machine, tx_pin, 1U, true);
 =======
     pio_sm_set_consecutive_pindirs(pio, tx_state_machine, tx_pin, 1, true);
 >>>>>>> 951395777a (Add PIO serial driver and documentation)
+=======
+    pio_sm_set_consecutive_pindirs(pio, tx_state_machine, tx_pin, 1, true);
+>>>>>>> 19a00f5770 (Add PIO serial driver and documentation)
 #else
     // clang-format off
     iomode_t tx_pin_mode = PAL_RP_PAD_IE |
@@ -358,6 +371,7 @@ static inline void pio_tx_init(pin_t tx_pin) {
                            PAL_RP_PAD_PUE |
                            PAL_RP_PAD_SLEWFAST |
 <<<<<<< HEAD
+<<<<<<< HEAD
                            PAL_RP_PAD_DRIVE12 |
                            PAL_RP_IOCTRL_OEOVER_DRVINVPERI |
                            (pio_idx == 0 ? PAL_MODE_ALTERNATE_PIO0 : PAL_MODE_ALTERNATE_PIO1);
@@ -365,13 +379,18 @@ static inline void pio_tx_init(pin_t tx_pin) {
     pio_sm_set_pins_with_mask(pio, tx_state_machine, 0U << tx_pin, 1U << tx_pin);
     pio_sm_set_consecutive_pindirs(pio, tx_state_machine, tx_pin, 1U, true);
 =======
+=======
+>>>>>>> 19a00f5770 (Add PIO serial driver and documentation)
                            PAL_RP_PAD_DRIVE4 |
                            PAL_RP_IOCTRL_OEOVER_DRVINVPERI |
                            (pio_idx == 0 ? PAL_MODE_ALTERNATE_PIO0 : PAL_MODE_ALTERNATE_PIO1);
     // clang-format on
     pio_sm_set_pins_with_mask(pio, tx_state_machine, 0U, 1U << tx_pin);
     pio_sm_set_consecutive_pindirs(pio, tx_state_machine, tx_pin, 1, true);
+<<<<<<< HEAD
 >>>>>>> 951395777a (Add PIO serial driver and documentation)
+=======
+>>>>>>> 19a00f5770 (Add PIO serial driver and documentation)
 #endif
 
     palSetLineMode(tx_pin, tx_pin_mode);
@@ -461,10 +480,13 @@ static inline void pio_init(pin_t tx_pin, pin_t rx_pin) {
     nvicEnableVector(RP_PIO0_IRQ_0_NUMBER, RP_IRQ_UART0_PRIORITY);
 #endif
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     enter_rx_state();
 =======
 >>>>>>> 951395777a (Add PIO serial driver and documentation)
+=======
+>>>>>>> 19a00f5770 (Add PIO serial driver and documentation)
 }
 
 /**

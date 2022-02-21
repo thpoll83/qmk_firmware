@@ -1,7 +1,7 @@
 #include QMK_KEYBOARD_H
 #include "print.h"
-#include "disp_array.h"
-#include "shift_reg.h"
+#include "base/disp_array.h"
+#include "base/shift_reg.h"
 #include "fonts/FreeSans12pt7b.h"
 
 enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, _LAYER3 = 3, _LAYER4 = 4, _LAYER5 = 5, NUM_LAYERS = 6 };

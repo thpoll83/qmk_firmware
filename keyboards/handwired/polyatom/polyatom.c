@@ -1,9 +1,9 @@
 #include QMK_KEYBOARD_H
 
 #include "polyatom.h"
-#include "disp_array.h"
-#include "shift_reg.h"
-#include "spi_helper.h"
+#include "base/disp_array.h"
+#include "base/shift_reg.h"
+#include "base/spi_helper.h"
 
 static uint32_t startup_timer;
 static uint32_t timer;

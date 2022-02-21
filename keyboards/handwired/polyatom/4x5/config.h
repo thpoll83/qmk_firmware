@@ -24,7 +24,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define PRODUCT_ID      0x2007
 #define DEVICE_VER      0x0205
 #define MANUFACTURER    [thpoll]
-#define PRODUCT         PolyKeyboard-Atom v0.2.7
+#define PRODUCT         PolyKeyboard-Atom v0.2.6
+
+/* key matrix size */
+#define MATRIX_ROWS 2
+#define MATRIX_COLS 4
+
+#define DIODE_DIRECTION ROW2COL
+
+
+#define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_COLS+(col))
 
 /* define if matrix has ghost */
 //#define MATRIX_HAS_GHOST
@@ -37,7 +46,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define OLED_FONT_END 255
 #define OLED_FONT_H "fonts/base_font.h"
 #define OLED_BRIGHTNESS 128
+//#define OLED_TIMEOUT 60000
+//#define OLED_FADE_OUT
+//#define OLED_FADE_OUT_INTERVAL 2
 
+#define ENCODERS_PAD_A { E13 }
+#define ENCODERS_PAD_B { E15 }
+#define ENCODER_RESOLUTION 8
+
+#define DRIVER_LED_TOTAL 8
+
+#define NUM_SHIFT_REGISTERS 2
 
 #define RGB_MATRIX_KEYPRESSES
 

@@ -18,20 +18,16 @@
 
 #include "quantum.h"
 
-void next_rgb_matrix_effect(void);
+// Shift register helper functions
+void sr_hw_setup(void);
 
-uint8_t keycode_to_disp_index(uint16_t keycode);
+// Initialize the shift register by pulling SR_NMR_PIN to low for 10 usec
+void sr_init(void);
 
-// key updates
+// Send a single byte to the shift register using SR_CLK_PIN and SR_DATA_PIN
+void sr_shift_out(uint8_t val);
 
-void update_performed(void);
+// Send a single byte and pull SR_LATCH_PIN to high for 10 usec to apply the byte to the outputs
+void sr_shift_out_latch(uint8_t val);
 
-void set_last_key(uint16_t keycode);
-
-//layer helpers
-
-void force_layer_switch(void);
-
-void next_layer(int8_t num_layers);
-
-void prev_layer(int8_t num_layers);
+void sr_shift_out_buffer_latch(const uint8_t* val, uint8_t len);

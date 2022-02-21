@@ -23,6 +23,10 @@
 #define MATRIX_ROW_PINS \
     { E8, E7 }
 
+#define ENCODERS_SWITCH B11
+#define ENCODERS_PAD_A { E13 }
+#define ENCODERS_PAD_B { E15 }
+
 #define I2C_DRIVER I2CD1
 #define I2C1_SCL_PIN B8
 #define I2C1_SDA_PIN B9
@@ -33,6 +37,8 @@
 #define I2C1_DUTY_CYCLE STD_DUTY_CYCLE
 
 #define RGB_DI_PIN C6
+
+#define OLED_INIT setPinInputHigh(B11);
 
 
 // SPI interface to write to the selected display

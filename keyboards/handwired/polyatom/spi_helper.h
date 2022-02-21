@@ -18,20 +18,14 @@
 
 #include "quantum.h"
 
-void next_rgb_matrix_effect(void);
+// SPI helper functions
+void spi_hw_setup(void);
 
-uint8_t keycode_to_disp_index(uint16_t keycode);
+// Prepare SPI device for command transfer; SPI_DC_PIN will be set to low
+void spi_prepare_commands(void);
 
-// key updates
+// Prepare SPI device for data transfer; SPI_DC_PIN will be set to high
+void spi_prepare_data(void);
 
-void update_performed(void);
-
-void set_last_key(uint16_t keycode);
-
-//layer helpers
-
-void force_layer_switch(void);
-
-void next_layer(int8_t num_layers);
-
-void prev_layer(int8_t num_layers);
+// Reset all connected SPI devices by pulling SPI_RST_PIN to low for 1 msec
+void spi_reset(void);

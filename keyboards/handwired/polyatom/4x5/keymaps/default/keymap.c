@@ -20,29 +20,42 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 led_config_t g_led_config = {{// Key Matrix to LED Index
-                              {0, 1, 2, 3}, {4, 5, 6, 7}},
+                              {0, 1, 2, 3},
+                              {4, 5, 6, 7},
+                              {8, 9, 10, 11},
+                              {12, 13, 14, 15},
+                              {16, 17, 18, 19}
+                             },
                              {
                                  // LED Index to Physical Position
-                                 {100, 32},
-                                 {120, 32},
-                                 {140, 32},
-                                 {160, 32},
-                                 {100, 52},
-                                 {120, 52},
-                                 {140, 52},
-                                 {160, 52}
-                                 //{190, 32},
-                                 //{180, 32},
-                                 //{170, 32},
-                                 //{160, 32},
-                                 //{150, 32},
-                                 //{140, 32}  //, {139, 32}, {138, 32}, {137, 32}, {136, 32}, {135, 32}, {134, 32}, {133, 32}, {132, 32}, {131, 32}, {130, 32}, {129, 32}, {128, 32}, {127, 32}, {126, 32}, {125, 32}, {124, 32}, {123, 32}, {122, 32}, {121, 32}, {120, 32}, {119, 32}, {118, 32}, {117, 32}, {116, 32}, {115, 32}, {114, 32}, {113, 32}, {112, 32}, {111, 32}, {110, 32}, {109, 32}, {108, 32}, {107, 32}, {106, 32}, {105, 32}, {104, 32}, {103, 32}, {102, 32}, {101, 32}, {100, 32}, {99, 32}, {98, 32}, {97, 32}, {96, 32}, {95, 32}, {94, 32}, {93, 32}, {92, 32}, {91, 32}, {90, 32}
+                                 {100, 40},
+                                 {120, 40},
+                                 {140, 40},
+                                 {160, 40},
+                                 {100, 60},
+                                 {120, 60},
+                                 {140, 60},
+                                 {160, 60},
+                                 {100, 80},
+                                 {120, 80},
+                                 {140, 80},
+                                 {160, 80},
+                                 {100, 100},
+                                 {120, 100},
+                                 {140, 100},
+                                 {160, 100},
+                                 {100, 120},
+                                 {120, 120},
+                                 {140, 120},
+                                 {160, 120}
                              },
                              {
                                  // LED Index to Flag
-                                 4, 4, 4, 4, 4, 4, 4, 4
-                                 //0, 0, 2, 4, 4, 4, 4, 2, 0, 0
-                                 //, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                                 4, 4, 4, 4,
+                                 4, 4, 4, 4,
+                                 4, 4, 4, 4,
+                                 4, 4, 4, 4,
+                                 4, 4, 4, 4
                              }};
 
 void process_layer_switch_user(uint16_t new_layer);
@@ -370,11 +383,8 @@ void process_layer_switch_user(uint16_t new_layer) {
     rgb_matrix_step_noeeprom();
     g_rgb_matrix_mode = (g_rgb_matrix_mode + 1) % RGB_MATRIX_EFFECT_MAX;
 
-    // keypos_t key;
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
-            //key.col           = c;
-            //key.row           = r;
             uint16_t keycode  = keymaps[new_layer][r][c];
             uint8_t  disp_idx = matrix_disp_index(r, c);
 
@@ -407,36 +417,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     uprintf("KL: kc: 0x%04X, col: %u, row: %u, pressed: %b, time: %u, interrupt: %b, count: %u SR bitmask: 0x%02X%02X (%u, %u)\n",
         keycode, record->event.key.col, record->event.key.row, record->event.pressed,
         record->event.time, record->tap.interrupted, record->tap.count, bitmask[1], bitmask[0], ~bitmask[1], ~bitmask[0]);
-
-    /*switch (keycode) {
-        case KC_LAYER_1:
-            if (record->event.pressed) {
-                layer_move(_LAYER1);
-                print("Activated Layer 1");
-                process_layer_switch_user(_LAYER1);
-            }
-            return false;
-
-        case KC_LAYER_2:
-            if (record->event.pressed) {
-                layer_move(_LAYER2);
-                print("Activated Layer 2");
-                process_layer_switch_user(_LAYER2);
-            }
-            return false;
-
-        case KC_LAYER_3:
-            if (record->event.pressed) {
-                layer_move(_LAYER3);
-                print("Activated Layer 3");
-                process_layer_switch_user(_LAYER3);
-            }
-            return false;
-
-        default:
-            return true;
-    }
-    */
 
    last_update = timer_elapsed32(timer);
 

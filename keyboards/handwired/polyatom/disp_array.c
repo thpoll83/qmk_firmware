@@ -3,8 +3,10 @@
 #include <stdbool.h>
 
 #include "polyatom.h"
+#include "spi_helper.h"
+#include "shift_reg.h"
 #include "spi_master.h"
-#include "kdisp.h"
+#include "disp_array.h"
 #include OLED_FONT_H
 
 #define SSD1306_MEMORYMODE 0x20           ///< See datasheet

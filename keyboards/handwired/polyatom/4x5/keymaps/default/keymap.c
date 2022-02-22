@@ -4,18 +4,30 @@
 #include "base/shift_reg.h"
 #include "fonts/FreeSans12pt7b.h"
 
-enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, _LAYER3 = 3, _LAYER4 = 4, _LAYER5 = 5, NUM_LAYERS = 6 };
+enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, NUM_LAYERS = 3 };
 
 static bool rotarySwitchPressed = false;
 static bool holdShift = false;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    [_LAYER0] = LAYOUT(KC_1,    KC_2,   KC_3,      KC_4,        KC_5,       KC_6,     KC_7,         KC_8),
-    [_LAYER1] = LAYOUT(KC_5,    KC_6,   KC_7,      KC_8,        KC_9,       KC_0,     KC_EQUAL,     KC_MINUS),
-    [_LAYER2] = LAYOUT(KC_A,    KC_B,   KC_C,      KC_D,        KC_E,       KC_F,     KC_G,         KC_H),
-    [_LAYER3] = LAYOUT(KC_I,    KC_J,   KC_K,      KC_L,        KC_M,       KC_N,     KC_O,         KC_P),
-    [_LAYER4] = LAYOUT(KC_Q,    KC_R,   KC_S,      KC_T,        KC_U,       KC_V,     KC_W,         KC_X),
-    [_LAYER5] = LAYOUT(KC_Y,    KC_Z,   KC_SLASH,  KC_TILDE,    KC_COMMA,   KC_DOT,   KC_LBRACKET,  KC_RBRACKET)
+    [_LAYER0] = LAYOUT( KC_NUM_LOCK, KC_KP_SLASH, KC_KP_ASTERISK,   KC_KP_MINUS,
+                        KC_KP_7,     KC_KP_8,     KC_KP_9,          KC_KP_PLUS,
+                        KC_KP_4,     KC_KP_5,     KC_KP_6,          KC_KP_EQUAL,
+                        KC_KP_1,     KC_KP_2,     KC_KP_3,          KC_CALCULATOR,
+                        KC_KP_0,     KC_KP_COMMA, KC_KP_DOT,        KC_KP_ENTER
+                        ),
+    [_LAYER1] = LAYOUT( KC_A,        KC_B,        KC_C,             KC_D,
+                        KC_E,        KC_F,        KC_G,             KC_H,
+                        KC_I,        KC_J,        KC_K,             KC_L,
+                        KC_M,        KC_N,        KC_O,             KC_P,
+                        KC_Q,        KC_R,        KC_S,             KC_T
+                        ),
+    [_LAYER2] = LAYOUT( KC_U,        KC_V,        KC_W,             KC_X,
+                        KC_Y,        KC_Z,        KC_1,             KC_2,
+                        KC_3,        KC_4,        KC_5,             KC_6,
+                        KC_7,        KC_8,        KC_9,             KC_0,
+                        KC_TILDE,    KC_SPACE,    KC_DELETE,        KC_BACKSPACE
+                        )
 };
 
 led_config_t g_led_config = {{// Key Matrix to LED Index
@@ -123,6 +135,12 @@ const char* keycode_to_disp_text(uint16_t keycode) {
             return shift ? "{" : "[";
         case KC_RBRACKET:
             return shift ? "}" : "]";
+        case KC_SPACE:
+            return "";
+        case KC_DELETE:
+            return "Del";
+        case KC_BACKSPACE:
+            return "<--";
         default: break;
     }
     shift |= host_keyboard_led_state().caps_lock;
@@ -179,6 +197,47 @@ const char* keycode_to_disp_text(uint16_t keycode) {
             return shift ? "Y" : "y";
         case KC_Z:
             return shift ? "Z" : "z";
+        case KC_NUM_LOCK:
+            return shift ? "[Num]" : " Num ";
+        case KC_KP_SLASH:
+            return "/";
+        case KC_KP_ASTERISK:
+            return "*";
+        case KC_KP_MINUS:
+            return "-";
+        case KC_KP_7:
+            return shift ? "Home" : "7";
+        case KC_KP_8:
+         return shift ? "^" : "8";
+        case KC_KP_9:
+         return shift ? "PgUp" : "9";
+        case KC_KP_PLUS:
+            return "+";
+        case KC_KP_4:
+            return shift ? "<" : "4";
+        case KC_KP_5:
+            return shift ? " " : "5";
+        case KC_KP_6:
+            return shift ? ">" : "6";
+        case KC_KP_EQUAL:
+            return "=";
+        case KC_KP_1:
+            return shift ? "End" : "1";
+        case KC_KP_2:
+            return shift ? "v" : "2";
+        case KC_KP_3:
+            return shift ? "PgDn" : "3";
+        case KC_CALCULATOR:
+            return "Calc";
+        case KC_KP_0:
+            return shift ? "Ins" : "0";
+        case KC_KP_COMMA:
+            return shift ? "Del" : ",";
+        case KC_KP_DOT:
+            return shift ? "Del" : ".";
+        case KC_KP_ENTER:
+            return "Enter";
+
         default:
             break;
     }

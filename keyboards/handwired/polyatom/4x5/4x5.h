@@ -16,19 +16,3 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #pragma once
-
-/* key matrix size */
-#define MATRIX_ROWS 2
-#define MATRIX_COLS 4
-
-#define DIODE_DIRECTION ROW2COL
-
-#define LAYOUT(k00, k01, k02, k03, k04, k05, k06, k07) { { k00, k01 , k02, k03 }, { k04, k05 , k06, k07 } }
-
-#define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_COLS+(col))
-
-#define ENCODER_RESOLUTION 2
-
-#define DRIVER_LED_TOTAL 20
-
-#define NUM_SHIFT_REGISTERS 2

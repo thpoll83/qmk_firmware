@@ -25,7 +25,7 @@ OLED_DRIVER = SSD1306
 RGB_MATRIX_ENABLE = yes
 RGB_MATRIX_DRIVER = WS2812
 
-DEFAULT_FOLDER = handwired/polyatom/stm32f407
-
 QUANTUM_LIB_SRC += spi_master.c
 SRC += base/disp_array.c base/shift_reg.c base/spi_helper.c
+
+DEFAULT_FOLDER = handwired/polyatom/4x2/stm32f407

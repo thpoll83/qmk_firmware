@@ -24,22 +24,22 @@ void spi_hw_setup(void) {
 void spi_prepare_commands(void) {
     setPinOutput(SPI_DC_PIN);
     writePinLow(SPI_DC_PIN);
-    wait_us(50); // make it shorter ?
+    //wait_us(1);
 }
 
 void spi_prepare_data(void) {
     setPinOutput(SPI_DC_PIN);
     writePinHigh(SPI_DC_PIN);
-    wait_us(5); // shorter ?
+    //wait_us(1);
 }
 
 void spi_reset(void) {
     setPinOutput(SPI_RST_PIN);
 
     writePinHigh(SPI_RST_PIN);
-    wait_ms(1);
+    wait_us(2);
     writePinLow(SPI_RST_PIN);
-    wait_ms(1);
+    wait_us(2);
     writePinHigh(SPI_RST_PIN);
-    wait_ms(1);
+    wait_us(2);
 }

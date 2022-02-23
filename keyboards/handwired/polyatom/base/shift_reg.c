@@ -15,30 +15,30 @@ void sr_hw_setup(void) {
 
 void sr_init(void) {
     writePinLow(SR_NMR_PIN);
-    wait_us(5);
+    wait_us(2);
     writePinHigh(SR_NMR_PIN);
-    wait_us(5);
+    wait_us(2);
 }
 
 void sr_shift_out(uint8_t val) {
     for (uint8_t i = 0; i < 8; i++) {
         writePin(SR_DATA_PIN, !!(val & (1 << (7 - i))));
-        wait_us(1);
+        WAIT_NS(20);
         writePinLow(SR_CLK_PIN);
-        wait_us(2);
+        WAIT_NS(20);
         writePinHigh(SR_CLK_PIN);
-        wait_us(2);
+        //wait_us(1);
     }
 }
 
 void sr_shift_out_latch(uint8_t val) {
     writePinLow(SR_LATCH_PIN);
     sr_shift_out(val);
-    wait_us(2);
+    WAIT_NS(20);
     writePinHigh(SR_LATCH_PIN);
-    wait_us(2);
+    WAIT_NS(20);
     writePinLow(SR_LATCH_PIN);
-    wait_us(2);
+    //wait_us(1);
 }
 
 void sr_shift_out_buffer_latch(const uint8_t* val, uint8_t len) {
@@ -46,9 +46,9 @@ void sr_shift_out_buffer_latch(const uint8_t* val, uint8_t len) {
     for(uint8_t i=0;i<len;++i) {
         sr_shift_out(val[i]);
     }
-    wait_us(2);
+    WAIT_NS(20);
     writePinHigh(SR_LATCH_PIN);
-    wait_us(2);
+    WAIT_NS(20);
     writePinLow(SR_LATCH_PIN);
-    wait_us(2);
+    //wait_us(1);
 }

@@ -7,7 +7,6 @@
 enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, NUM_LAYERS = 3 };
 
 static bool rotarySwitchPressed = false;
-static bool holdShift = false;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_LAYER0] = LAYOUT( KC_NUM_LOCK, KC_KP_SLASH, KC_KP_ASTERISK,   KC_KP_MINUS,
@@ -32,10 +31,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 led_config_t g_led_config = {{// Key Matrix to LED Index
                               {0, 1, 2, 3},
-                              {4, 5, 6, 7}/*,
+                              {4, 5, 6, 7},
                               {8, 9, 10, 11},
                               {12, 13, 14, 15},
-                              {16, 17, 18, 19}*/
+                              {16, 17, 18, 19}
                              },
                              {
                                  // LED Index to Physical Position
@@ -63,16 +62,12 @@ void matrix_init_user(void) {
 void matrix_scan_user(void) {
     if (readPin(ENCODERS_SWITCH)) {
         if(rotarySwitchPressed) {
-            if(holdShift) {
-                register_code(KC_LSHIFT);
-            } else {
-                unregister_code(KC_LSHIFT);
-            }
+            register_code(KC_CAPS_LOCK);
+            unregister_code(KC_CAPS_LOCK);
         }
         rotarySwitchPressed = false;
     } else if(!rotarySwitchPressed) {
         rotarySwitchPressed = true;
-        holdShift = !holdShift;
         force_layer_switch();
         update_performed();
     }
@@ -101,8 +96,8 @@ struct disp_status key_display[] = {
         {.bitmask = {~0x01, ~0x00, ~0x00, ~0x00, ~0x00}}, {.bitmask = {~0x02, ~0x00, ~0x00, ~0x00, ~0x00}}, {.bitmask = {~0x04, ~0x00, ~0x00, ~0x00, ~0x00}}, {.bitmask = {~0x08, ~0x00, ~0x00, ~0x00, ~0x00}}
     };
 
-const char* keycode_to_disp_text(uint16_t keycode) {
-    bool shift = holdShift;
+const char* keycode_to_disp_text(uint16_t keycode, led_t state) {
+    bool shift = ((get_mods() & MOD_MASK_SHIFT) == MOD_MASK_SHIFT) || state.caps_lock;
     switch (keycode) {
         case KC_0:
             return shift ? ")" : "0";
@@ -141,15 +136,11 @@ const char* keycode_to_disp_text(uint16_t keycode) {
         case KC_RBRACKET:
             return shift ? "}" : "]";
         case KC_SPACE:
-            return "";
+            return "[    ]";
         case KC_DELETE:
             return "Del";
         case KC_BACKSPACE:
             return "<--";
-        default: break;
-    }
-    shift |= host_keyboard_led_state().caps_lock;
-    switch (keycode) {
         case KC_A:
             return shift ? "A" : "a";
         case KC_B:
@@ -203,7 +194,7 @@ const char* keycode_to_disp_text(uint16_t keycode) {
         case KC_Z:
             return shift ? "Z" : "z";
         case KC_NUM_LOCK:
-            return shift ? "[Num]" : " Num ";
+            return !state.num_lock ? " Num " : "[Num]";
         case KC_KP_SLASH:
             return "/";
         case KC_KP_ASTERISK:
@@ -211,35 +202,35 @@ const char* keycode_to_disp_text(uint16_t keycode) {
         case KC_KP_MINUS:
             return "-";
         case KC_KP_7:
-            return shift ? "Home" : "7";
+            return !state.num_lock ? "Home" : "7";
         case KC_KP_8:
-         return shift ? "^" : "8";
+         return !state.num_lock ? "^" : "8";
         case KC_KP_9:
-         return shift ? "PgUp" : "9";
+         return !state.num_lock ? "PgUp" : "9";
         case KC_KP_PLUS:
             return "+";
         case KC_KP_4:
-            return shift ? "<" : "4";
+            return !state.num_lock ? "<" : "4";
         case KC_KP_5:
-            return shift ? " " : "5";
+            return !state.num_lock ? "" : "5";
         case KC_KP_6:
-            return shift ? ">" : "6";
+            return !state.num_lock ? ">" : "6";
         case KC_KP_EQUAL:
             return "=";
         case KC_KP_1:
-            return shift ? "End" : "1";
+            return !state.num_lock ? "End" : "1";
         case KC_KP_2:
-            return shift ? "v" : "2";
+            return !state.num_lock ? "v" : "2";
         case KC_KP_3:
-            return shift ? "PgDn" : "3";
+            return !state.num_lock ? "PgDn" : "3";
         case KC_CALCULATOR:
             return "Calc";
         case KC_KP_0:
-            return shift ? "Ins" : "0";
+            return !state.num_lock ? "Ins" : "0";
         case KC_KP_COMMA:
-            return shift ? "Del" : ",";
+            return !state.num_lock ? "Del" : ",";
         case KC_KP_DOT:
-            return shift ? "Del" : ".";
+            return !state.num_lock ? "Del" : ".";
         case KC_KP_ENTER:
             return "Enter";
 
@@ -253,6 +244,8 @@ void process_layer_switch_user(uint16_t new_layer) {
     layer_move(new_layer);
     next_rgb_matrix_effect();
 
+    led_t state = host_keyboard_led_state();
+
     // keypos_t key;
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
@@ -262,7 +255,7 @@ void process_layer_switch_user(uint16_t new_layer) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
 
             if (disp_idx != 255) {
-                const char* text = keycode_to_disp_text(keycode);
+                const char* text = keycode_to_disp_text(keycode, state);
                 sr_shift_out_buffer_latch(key_display[disp_idx].bitmask, sizeof(key_display->bitmask));
                 kdisp_set_buffer(0x00);
                 kdisp_write_gfx_text(&FreeSans12pt7b, 28, 18, text);
@@ -285,6 +278,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         if (disp_idx != 255) {
             kdisp_invert(false);
         }
+    }
+    if(keycode==KC_NUM_LOCK && !record->event.pressed) {
+        force_layer_switch();
     }
 
     uprintf("KL: kc: 0x%04X, col: %u, row: %u, pressed: %b, time: %u, interrupt: %b, count: %u display: %d SR bitmask: 0x%02X%02X%02X%02X%02X\n",

@@ -4,28 +4,45 @@
 #include "base/shift_reg.h"
 #include "fonts/FreeSans12pt7b.h"
 
-enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, NUM_LAYERS = 3 };
+#include "quantum/quantum_keycodes.h"
+
+enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, _LAYER3 = 3, NUM_LAYERS = 4 };
+
+enum my_keycodes {
+  KC_NEXT_LAYER = SAFE_RANGE,
+  RGB_NEXT,
+  RGB_PREV,
+  QK_BOOTLOADER,
+  QK_DEBUG_TOGGLE,
+  QK_CLEAR_EEPROM
+};
 
 static bool rotarySwitchPressed = false;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    [_LAYER0] = LAYOUT( KC_NUM_LOCK, KC_KP_SLASH, KC_KP_ASTERISK,   KC_KP_MINUS,
-                        KC_KP_7,     KC_KP_8,     KC_KP_9,          KC_KP_PLUS,
-                        KC_KP_4,     KC_KP_5,     KC_KP_6,          KC_KP_EQUAL,
-                        KC_KP_1,     KC_KP_2,     KC_KP_3,          KC_CALCULATOR,
-                        KC_KP_0,     KC_KP_COMMA, KC_KP_DOT,        KC_KP_ENTER
+    [_LAYER0] = LAYOUT( KC_NUM_LOCK,        KC_KP_SLASH,        KC_KP_ASTERISK,     KC_KP_MINUS,
+                        KC_KP_7,            KC_KP_8,            KC_KP_9,            KC_KP_PLUS,
+                        KC_KP_4,            KC_KP_5,            KC_KP_6,            KC_KP_EQUAL,
+                        KC_KP_1,            KC_KP_2,            KC_KP_3,            KC_KP_ENTER,
+                        KC_KP_0,            KC_KP_COMMA,        KC_KP_DOT,          KC_NEXT_LAYER
                         ),
-    [_LAYER1] = LAYOUT( KC_A,        KC_B,        KC_C,             KC_D,
-                        KC_E,        KC_F,        KC_G,             KC_H,
-                        KC_I,        KC_J,        KC_K,             KC_L,
-                        KC_M,        KC_N,        KC_O,             KC_P,
-                        KC_Q,        KC_R,        KC_S,             KC_T
+    [_LAYER1] = LAYOUT( KC_A,               KC_B,               KC_C,               KC_D,
+                        KC_E,               KC_F,               KC_G,               KC_H,
+                        KC_I,               KC_J,               KC_K,               KC_L,
+                        KC_M,               KC_N,               KC_O,               KC_P,
+                        KC_Q,               KC_R,               KC_S,               KC_NEXT_LAYER
                         ),
-    [_LAYER2] = LAYOUT( KC_U,        KC_V,        KC_W,             KC_X,
-                        KC_Y,        KC_Z,        KC_1,             KC_2,
-                        KC_3,        KC_4,        KC_5,             KC_6,
-                        KC_7,        KC_8,        KC_9,             KC_0,
-                        KC_TILDE,    KC_SPACE,    KC_DELETE,        KC_BACKSPACE
+    [_LAYER2] = LAYOUT( KC_T,               KC_U,               KC_V,               KC_W,
+                        KC_X,               KC_Y,               KC_Z,               KC_0,
+                        KC_1,               KC_2,               KC_3,               KC_SPACE,
+                        KC_4,               KC_5,               KC_6,               KC_BACKSPACE,
+                        KC_7,               KC_8,               KC_9,               KC_NEXT_LAYER
+                        ),
+    [_LAYER3] = LAYOUT( QK_BOOTLOADER,      QK_DEBUG_TOGGLE,    QK_CLEAR_EEPROM,    RGB_PREV,
+                        KC_MS_ACCEL0,       KC_MS_ACCEL1,       KC_MS_ACCEL2,       RGB_TOG,
+                        KC_MS_BTN1,         KC_MS_UP,           KC_MS_BTN2,         RGB_NEXT,
+                        KC_MS_LEFT,         KC_MS_BTN3,         KC_MS_RIGHT,        KC_AUDIO_MUTE,
+                        KC_AUDIO_VOL_DOWN,  KC_MS_DOWN,         KC_AUDIO_VOL_UP,    KC_NEXT_LAYER
                         )
 };
 
@@ -68,8 +85,8 @@ void matrix_scan_user(void) {
         rotarySwitchPressed = false;
     } else if(!rotarySwitchPressed) {
         rotarySwitchPressed = true;
-        force_layer_switch();
-        update_performed();
+        //force_layer_switch();
+        //update_performed();
     }
 }
 
@@ -233,7 +250,50 @@ const char* keycode_to_disp_text(uint16_t keycode, led_t state) {
             return !state.num_lock ? "Del" : ".";
         case KC_KP_ENTER:
             return "Enter";
-
+        case QK_BOOTLOADER:
+            return "BootL";
+        case QK_DEBUG_TOGGLE:
+            return "Debug";
+        case QK_CLEAR_EEPROM:
+            return "Clr EE";
+        case RGB_PREV:
+            return "Prev <";
+        case RGB_TOG:
+            return rgb_matrix_is_enabled() ? "[RGB]" : " RGB ";
+        case RGB_NEXT:
+            return "Next >";
+        case KC_MEDIA_NEXT_TRACK:
+            return ">>";
+        case KC_MEDIA_PLAY_PAUSE:
+            return "|| |>";
+        case KC_MEDIA_PREV_TRACK:
+            return "<<";
+        case KC_MS_ACCEL0:
+            return ">>";
+        case KC_MS_ACCEL1:
+            return ">>>";
+        case KC_MS_ACCEL2:
+            return ">>>>";
+        case KC_MS_BTN1:
+            return "LClick";
+        case KC_MS_BTN2:
+            return "RClick";
+        case KC_MS_BTN3:
+            return "MClick";
+        case KC_MS_UP:
+            return "^";
+        case KC_MS_LEFT:
+            return "<";
+        case KC_MS_RIGHT:
+            return ">";
+        case KC_AUDIO_MUTE:
+            return "Mute";
+        case KC_AUDIO_VOL_DOWN:
+            return "Vol )>.";
+        case KC_AUDIO_VOL_UP:
+            return "Vol .>)";
+        case KC_NEXT_LAYER:
+            return "Next L";
         default:
             break;
     }
@@ -242,7 +302,6 @@ const char* keycode_to_disp_text(uint16_t keycode, led_t state) {
 
 void process_layer_switch_user(uint16_t new_layer) {
     layer_move(new_layer);
-    next_rgb_matrix_effect();
 
     led_t state = host_keyboard_led_state();
 
@@ -279,8 +338,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             kdisp_invert(false);
         }
     }
-    if(keycode==KC_NUM_LOCK && !record->event.pressed) {
-        force_layer_switch();
+    if(!record->event.pressed) {
+        switch(keycode) {
+            case KC_NUM_LOCK:
+                force_layer_switch();
+                break;
+            case KC_NEXT_LAYER:
+                next_layer(NUM_LAYERS);
+                update_performed();
+                break;
+            case RGB_NEXT:
+                rgb_matrix_step_noeeprom();
+                break;
+            case RGB_PREV:
+                rgb_matrix_step_reverse_noeeprom();
+                break;
+        }
     }
 
     uprintf("KL: kc: 0x%04X, col: %u, row: %u, pressed: %b, time: %u, interrupt: %b, count: %u display: %d SR bitmask: 0x%02X%02X%02X%02X%02X\n",
@@ -291,3 +364,4 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
    return true;
 };
+

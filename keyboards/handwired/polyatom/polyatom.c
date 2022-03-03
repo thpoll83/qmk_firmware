@@ -14,13 +14,6 @@ uint16_t currentLayer = 0;
 static uint16_t last_key       = 0;
 static bool     finished_timer = false;
 
-uint8_t g_rgb_matrix_mode = RGB_MATRIX_SOLID_REACTIVE_NEXUS;
-
-void next_rgb_matrix_effect(void) {
-    rgb_matrix_step_noeeprom();
-    g_rgb_matrix_mode = (g_rgb_matrix_mode + 1) % RGB_MATRIX_EFFECT_MAX;
-}
-
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
     timer = startup_timer = timer_read32();
     last_update = 0;
@@ -48,7 +41,12 @@ void render_info(void) {
     oled_write_P(led_state.scroll_lock ? PSTR("SCR  ") : PSTR("[ ]  "), false);
 
     uint32_t uptime = timer_elapsed32(startup_timer);
-    snprintf(buffer, sizeof(buffer), "\nMode:%2d %d:%02d v%d.%d\n", g_rgb_matrix_mode, uptime / 60000, (uptime / 1000) % 60, (char)(DEVICE_VER >> 8), (char)DEVICE_VER);
+    snprintf(buffer, sizeof(buffer), "\nMode:%2d %d:%02d v%d.%d\n",
+        rgb_matrix_get_mode(),
+        uptime / 60000,
+        (uptime / 1000) % 60,
+        (char)(DEVICE_VER >> 8),
+        (char)DEVICE_VER);
     oled_write(buffer, false);
 
     snprintf(buffer, sizeof(buffer), "Key: 0x%04x %s", last_key, finished_timer ? "r" : "x");
@@ -113,6 +111,11 @@ void force_layer_switch(void) {
     process_layer_switch_user(currentLayer);
 }
 
+void set_layer(uint16_t new_layer) {
+    currentLayer = currentLayer;
+    process_layer_switch_user(currentLayer);
+}
+
 void next_layer(int8_t num_layers) {
     currentLayer = (currentLayer+1) % num_layers;
     force_layer_switch();
@@ -130,8 +133,8 @@ void prev_layer(int8_t num_layers) {
 }
 
 void keyboard_post_init_user(void) {
-    rgb_matrix_set_color_all(0, 4, 4);
-    rgb_matrix_mode_noeeprom(g_rgb_matrix_mode);
+    //rgb_matrix_set_color_all(0, 4, 4);
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_REACTIVE_NEXUS);
 
     // Customise these values to desired behaviour
     debug_enable   = true;

@@ -24,8 +24,6 @@
 #    include "4x5.h"
 #endif
 
-void next_rgb_matrix_effect(void);
-
 uint8_t keycode_to_disp_index(uint16_t keycode);
 
 // key updates
@@ -37,6 +35,8 @@ void set_last_key(uint16_t keycode);
 //layer helpers
 
 void force_layer_switch(void);
+
+void set_layer(uint16_t new_layer);
 
 void next_layer(int8_t num_layers);
 

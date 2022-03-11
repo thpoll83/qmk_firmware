@@ -16,6 +16,10 @@ void kdisp_send_buffer(void);
 
 void kdisp_invert(bool invert);
 
+void kdisp_set_contrast(uint8_t contrast);
+
+void kdisp_enable(bool enable);
+
 void kdisp_hw_setup(void);
 
-void kdisp_init(const int8_t num_shift_regs);
+void kdisp_init(const int8_t num_shift_regs, bool turn_on);

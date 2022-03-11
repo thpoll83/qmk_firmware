@@ -36,9 +36,35 @@
 #define I2C1_CLOCK_SPEED 100000
 #define I2C1_DUTY_CYCLE STD_DUTY_CYCLE
 
+#define OLED_INIT setPinInputHigh(B11);
+
 #define RGB_DI_PIN C6
 
-#define OLED_INIT setPinInputHigh(B11);
+#define WS2812_TRST_US 300
+
+/* From the WS2812B-Mini V3 Docs
+T0H 0 220ns~380ns
+T1H 1 580ns~1µs
+T0L 0 580ns~1µs
+T1L 1 580ns~1µs
+TRES  > 280µs
+*/
+
+//#define WS2812_TIMING	1250
+#define WS2812_T0H	380
+#define WS2812_T0L	1000
+#define WS2812_T1H	1000
+#define WS2812_T1L	580
+
+/*
+#define WS2812_PWM_DRIVER PWMD3  // default: PWMD2
+#define WS2812_PWM_CHANNEL 2  // default: 2
+#define WS2812_PWM_PAL_MODE 2  // Pin "alternate function", see the respective datasheet for the appropriate values for your MCU. default: 2
+//#define WS2812_PWM_COMPLEMENTARY_OUTPUT // Define for a complementary timer output (TIMx_CHyN); omit for a normal timer output (TIMx_CHy).
+#define WS2812_DMA_STREAM STM32_DMA1_STREAM2  // DMA Stream for TIMx_UP, see the respective reference manual for the appropriate values for your MCU.
+#define WS2812_DMA_CHANNEL 2  // DMA Channel for TIMx_UP, see the respective reference manual for the appropriate values for your MCU.
+//#define WS2812_DMAMUX_ID STM32_DMAMUX1_TIM3_UP // DMAMUX configuration for TIMx_UP -- only required if your MCU has a DMAMUX peripheral, see the respective reference manual for the appropriate values for your MCU.
+*/
 
 
 // SPI interface to write to the selected display

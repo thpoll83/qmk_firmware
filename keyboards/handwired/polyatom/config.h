@@ -22,22 +22,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* USB Device descriptor parameter */
 #define VENDOR_ID       0x2021
 #define PRODUCT_ID      0x2007
-#define DEVICE_VER      0x0205
+#define DEVICE_VER      0x0208
 #define MANUFACTURER    [thpoll]
-#define PRODUCT         PolyKeyboard-Atom v0.2.7
+#define PRODUCT         PolyKeyboard-Atom v0.2.8
 
 /* define if matrix has ghost */
 //#define MATRIX_HAS_GHOST
 
 /* Set 0 if debouncing isn't needed */
-#define DEBOUNCE    5
+#define DEBOUNCE    2
 
 /* Oled Size */
-#define OLED_DISPLAY_128X64
-#define OLED_FONT_END 255
-#define OLED_FONT_H "fonts/base_font.h"
-#define OLED_BRIGHTNESS 128
 
+#define OLED_DISPLAY_128X64
+#define OLED_FONT_START	32
+#define OLED_FONT_END	126
+#define OLED_FONT_H "fonts/base_font.h"
+#define OLED_BRIGHTNESS 60
+#define OLED_FADE_OUT
+#define OLED_FADE_OUT_INTERVAL 1
+
+
+#define MOUSEKEY_MOVE_DELTA	2
+
+//#define WS2812_TRST_US 80
 
 #define RGB_MATRIX_KEYPRESSES
 

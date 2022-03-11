@@ -42,13 +42,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ENCODER_RESOLUTION 2
 
 #define DRIVER_LED_TOTAL 20
+#define RGBLED_NUM 20
 
-// #define WS2812_PWM_DRIVER PWMD8  // default: PWMD2
-// #define WS2812_PWM_CHANNEL 1  // default: 2
-// #define WS2812_PWM_PAL_MODE 2  // Pin "alternate function", see the respective datasheet for the appropriate values for your MCU. default: 2
-// //#define WS2812_PWM_COMPLEMENTARY_OUTPUT // Define for a complementary timer output (TIMx_CHyN); omit for a normal timer output (TIMx_CHy).
-// #define WS2812_DMA_STREAM STM32_DMA1_STREAM2  // DMA Stream for TIMx_UP, see the respective reference manual for the appropriate values for your MCU.
-// #define WS2812_DMA_CHANNEL 2  // DMA Channel for TIMx_UP, see the respective reference manual for the appropriate values for your MCU.
-// #define WS2812_DMAMUX_ID STM32_DMAMUX1_TIM8_UP // DMAMUX configuration for TIMx_UP -- only required if your MCU has a DMAMUX peripheral, see the respectiv
+#define RGB_DISABLE_WHEN_USB_SUSPENDED
+#define RGB_DISABLE_TIMEOUT 62000
 
 #define NUM_SHIFT_REGISTERS 5

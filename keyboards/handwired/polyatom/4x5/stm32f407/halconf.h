@@ -31,3 +31,6 @@
 #define SPI_USE_WAIT TRUE
 #define SPI_SELECT_MODE SPI_SELECT_MODE_PAD
 
+//#undef HAL_USE_PWM
+//#define HAL_USE_PWM TRUE
+

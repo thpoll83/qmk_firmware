@@ -18,6 +18,7 @@ UNICODE_ENABLE = no         # Unicode
 BLUETOOTH_ENABLE = no       # Enable Bluetooth with the Adafruit EZ-Key HID
 AUDIO_ENABLE = no           # Audio output on port C6
 ENCODER_ENABLE = yes
+DEFERRED_EXEC_ENABLE = yes
 
 OLED_ENABLE = yes
 OLED_DRIVER = SSD1306
@@ -28,4 +29,4 @@ RGB_MATRIX_DRIVER = WS2812
 QUANTUM_LIB_SRC += spi_master.c
 SRC += base/disp_array.c base/shift_reg.c base/spi_helper.c
 
-DEFAULT_FOLDER = handwired/polyatom/4x2/stm32f407
+DEFAULT_FOLDER = handwired/polyatom/4x5/stm32f407

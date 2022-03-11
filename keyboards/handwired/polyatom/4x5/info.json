@@ -1,7 +1,6 @@
 {
     "keyboard_name": "PolyKeyboard-Atom (20 Keys)",
     "url": "",
-    "maintainer": "thpoll83",
     "layouts": {
         "LAYOUT_polyatom_4x5": {
             "layout": [

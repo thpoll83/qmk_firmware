@@ -5,102 +5,120 @@
 #include "base/shift_reg.h"
 #include "base/spi_helper.h"
 
-static uint32_t startup_timer;
 static uint32_t timer;
 static int32_t last_update;
 
 uint16_t currentLayer = 0;
 
-static uint16_t last_key       = 0;
-static bool     finished_timer = false;
+static uint16_t last_key = 0;
+static bool     diplays_on = false;
+static deferred_token displays_task_user_token;
+
+#ifdef OLED_ENABLE
 
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
-    timer = startup_timer = timer_read32();
-    last_update = 0;
+    //timer = timer_read32();
     return OLED_ROTATION_180;
 }
 
-static void render_logo(void) {
+bool oled_task_user(void) {
+    char buffer[32];
+
+    led_t led_state = host_keyboard_led_state();
+    snprintf(buffer, sizeof(buffer), "Layer: %d %s %s %s",
+            get_highest_layer(layer_state),
+            led_state.num_lock ? "NUM" : "[ ]",
+            led_state.caps_lock ? "CAP" : "[ ]",
+            led_state.scroll_lock ? "SCR" : "[ ]"
+        );
+    oled_write(buffer, false);
+
+    snprintf(buffer, sizeof(buffer), "\nLast Key: 0x%04x", last_key);
+    oled_write(buffer, false);
+
+    snprintf(buffer, sizeof(buffer), "\nMode:%2d ver. %d.%d\n",
+        rgb_matrix_get_mode(), (char)(DEVICE_VER >> 8), (char)DEVICE_VER);
+    oled_write(buffer, false);
+
+    oled_set_cursor(0, 4);
     static const char PROGMEM raw_logo[] = {0x80, 0xc0, 0xc0, 0x40, 0x40, 0x40, 0xc0, 0xc0, 0xc0, 0x80, 0x00, 0x80, 0xc0, 0xc0, 0x40, 0x40, 0x40, 0x40, 0xc0, 0xc0, 0x80, 0x00, 0x80, 0xc0, 0x40, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0x80, 0x00, 0x80, 0xc0, 0x40, 0xc0, 0xc0, 0xc0, 0xc0, 0x40, 0xc0, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                             0xff, 0xff, 0x00, 0xef, 0xef, 0xef, 0xf0, 0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0x00, 0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0xf8, 0xf7, 0xf7, 0x07, 0xf7, 0xf8, 0xff, 0xff, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00,
                                             0x01, 0x03, 0x02, 0x03, 0x73, 0x73, 0x63, 0x03, 0x73, 0x61, 0x30, 0x01, 0x03, 0x03, 0x02, 0x02, 0x02, 0x02, 0x03, 0x03, 0x01, 0x00, 0x01, 0x03, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x01, 0x00, 0x01, 0x03, 0x03, 0x03, 0x03, 0x02, 0x03, 0x03, 0xff, 0xff, 0x00, 0xcf, 0xdf, 0x2f, 0xf0, 0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0x01, 0xee, 0xee, 0xfe, 0xfe, 0xfe, 0xff, 0xff, 0x00, 0xff, 0xff, 0xf0, 0xef, 0xef, 0x0f, 0xef, 0xf0, 0xff, 0xff, 0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xee, 0xce, 0x31, 0xff, 0xff, 0x00, 0xff, 0xff, 0x01, 0xfe, 0xfe, 0xfe, 0xfe, 0x01, 0xff, 0xff, 0x00, 0xff, 0xff, 0x07, 0xb9, 0xbe, 0xbe, 0xb9, 0x07, 0xff, 0xff, 0x00, 0xff, 0xff, 0x01, 0xde, 0xde, 0x9e, 0x61, 0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfd, 0x03, 0xff, 0xff,
                                             0x00, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x21, 0x27, 0x21, 0x20, 0x27, 0x22, 0x27, 0x20, 0x27, 0x23, 0x23, 0x20, 0x27, 0x25, 0x27, 0x20, 0x27, 0x27, 0x24, 0x20, 0x27, 0x27, 0x24, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x23, 0x27, 0x24, 0x27, 0x27, 0x27, 0x24, 0x27, 0x27, 0x23, 0x20, 0x23, 0x27, 0x26, 0x25, 0x25, 0x25, 0x25, 0x25, 0x27, 0x23, 0x20, 0x23, 0x27, 0x27, 0x27, 0x27, 0x24, 0x27, 0x27, 0x27, 0x23, 0x20, 0x23, 0x27, 0x24, 0x25, 0x25, 0x25, 0x25, 0x26, 0x27, 0x23, 0x20, 0x23, 0x27, 0x26, 0x25, 0x25, 0x25, 0x25, 0x26, 0x27, 0x23, 0x20, 0x23, 0x27, 0x24, 0x27, 0x27, 0x27, 0x27, 0x24, 0x27, 0x03, 0x20, 0x03, 0x27, 0x04, 0x27, 0x07, 0x67, 0x34, 0x77, 0x07, 0x13, 0x70, 0x13, 0x07, 0x74, 0x55, 0x75, 0x05, 0x76, 0x37, 0x77, 0x03};
     oled_write_raw_P(raw_logo, sizeof(raw_logo));
+
+    return false;
 }
 
-void render_info(void) {
-    char     buffer[32];
+#endif
 
-    snprintf(buffer, sizeof(buffer), "Layer: %d ", get_highest_layer(layer_state));
-    oled_write(buffer, false);
+enum diplay_state {
+    DISPLAYS_ON,
+    DISPLAYS_ON_SET_CONTRAST,
+    DISPLAYS_SET_CONTRAST,
+    DISPLAYS_OFF
+};
 
-    led_t led_state = host_keyboard_led_state();
-
-    oled_write_P(led_state.num_lock ? PSTR("NUM ") : PSTR("[ ] "), false);
-    oled_write_P(led_state.caps_lock ? PSTR("CAP ") : PSTR("[ ] "), false);
-    oled_write_P(led_state.scroll_lock ? PSTR("SCR  ") : PSTR("[ ]  "), false);
-
-    uint32_t uptime = timer_elapsed32(startup_timer);
-    snprintf(buffer, sizeof(buffer), "\nMode:%2d %d:%02d v%d.%d\n",
-        rgb_matrix_get_mode(),
-        uptime / 60000,
-        (uptime / 1000) % 60,
-        (char)(DEVICE_VER >> 8),
-        (char)DEVICE_VER);
-    oled_write(buffer, false);
-
-    snprintf(buffer, sizeof(buffer), "Key: 0x%04x %s", last_key, finished_timer ? "r" : "x");
-    oled_write(buffer, false);
+void select_all_displays(void) {
+    // make sure we are talking to all shift registers
+    uint8_t all[NUM_SHIFT_REGISTERS] = {0,0,0,0,0};
+    sr_shift_out_buffer_latch(all, NUM_SHIFT_REGISTERS);
 }
 
-// Setup some mask which can be or'd with bytes to turn off pixels
-const uint8_t single_bit_masks[8] = {127, 191, 223, 239, 247, 251, 253, 254};
-
-static void fade_display(void) {
-    // Define the reader structure
-    oled_buffer_reader_t reader;
-    uint8_t              buff_char;
-    if (random() % 30 == 0) {
-        srand(timer_read());
-        // Fetch a pointer for the buffer byte at index 0. The return structure
-        // will have the pointer and the number of bytes remaining from this
-        // index position if we want to perform a sequential read by
-        // incrementing the buffer pointer
-        reader = oled_read_raw(0);
-        // Loop over the remaining buffer and erase pixels as we go
-        for (uint16_t i = 0; i < reader.remaining_element_count; i++) {
-            // Get the actual byte in the buffer by dereferencing the pointer
-            buff_char = *reader.current_element;
-            if (buff_char != 0) {
-                oled_write_raw_byte(buff_char & single_bit_masks[rand() % 8], i);
-            }
-            // increment the pointer to fetch a new byte during the next loop
-            reader.current_element++;
-        }
+void set_displays(enum diplay_state state, uint8_t contrast) {
+    select_all_displays();
+    if (state != DISPLAYS_SET_CONTRAST) {
+        bool enable = state != DISPLAYS_OFF;
+        kdisp_enable(enable);
+        diplays_on = enable;
+        #ifdef OLED_ENABLE
+        if(enable) oled_on(); else  oled_off();
+        #endif
+        uprintf("All displays %s\n", enable ? "on" : "off");
+    }
+    if (state == DISPLAYS_ON_SET_CONTRAST || state == DISPLAYS_SET_CONTRAST) {
+        kdisp_set_contrast(contrast);
+        #ifdef OLED_ENABLE
+        oled_set_brightness(contrast);
+        #endif
     }
 }
 
-bool oled_task_user(void) {
-    if (!finished_timer && (timer_elapsed32(startup_timer) < 2000)) {
-        oled_set_cursor(0, 4);
-        render_logo();
-    } else if (timer_elapsed32(timer)-last_update > 60000) {
-        fade_display();
-    } else {
-        if (!finished_timer) {
-            oled_clear();
-            finished_timer = true;
-        }
-        oled_set_cursor(0, 4);
-        render_logo();
-        oled_set_cursor(0, 0);
-        render_info();
+#define FADE_TRANSITION_TIME 5000
+#define FADE_OUT_TIME 60000
+#define FULL_BRIGHT 50
+
+uint32_t displays_task_user(uint32_t trigger_time, void* cb_arg) {
+    uint32_t elapsed_time_since_update = timer_elapsed32(timer) - last_update;
+
+    if (elapsed_time_since_update > FADE_OUT_TIME && diplays_on) {
+        int32_t contrast = ((FADE_TRANSITION_TIME - (elapsed_time_since_update - FADE_OUT_TIME)) * FULL_BRIGHT) / FADE_TRANSITION_TIME;
+
+        set_displays(contrast < 1 ? DISPLAYS_OFF : DISPLAYS_SET_CONTRAST, (uint8_t)contrast);
     }
 
+    return 100;
+}
+
+
+
+//disable first keypress if the displays are turned off
+bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+    if (!diplays_on) {
+        select_all_displays();
+        if (!record->event.pressed) {
+            set_displays(DISPLAYS_ON, 0);
+        } else {
+            set_displays(DISPLAYS_SET_CONTRAST, FULL_BRIGHT);
+        }
+        update_performed();
+        return false;
+    }
     return true;
 }
 
 void early_hardware_init_post(void) {
+    last_update = 0;
     kdisp_hw_setup();
     spi_hw_setup();
 }
@@ -112,7 +130,7 @@ void force_layer_switch(void) {
 }
 
 void set_layer(uint16_t new_layer) {
-    currentLayer = currentLayer;
+    currentLayer = new_layer;
     process_layer_switch_user(currentLayer);
 }
 
@@ -134,7 +152,7 @@ void prev_layer(int8_t num_layers) {
 
 void keyboard_post_init_user(void) {
     //rgb_matrix_set_color_all(0, 4, 4);
-    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_REACTIVE_NEXUS);
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_RAINBOW_MOVING_CHEVRON);
 
     // Customise these values to desired behaviour
     debug_enable   = true;
@@ -142,8 +160,12 @@ void keyboard_post_init_user(void) {
     debug_keyboard = false;
     debug_mouse    = false;
 
-    kdisp_init(NUM_SHIFT_REGISTERS);
+    kdisp_init(NUM_SHIFT_REGISTERS, false);
+
+    displays_task_user_token = defer_exec(100, displays_task_user, NULL);
+
     force_layer_switch();
+    set_displays(DISPLAYS_ON_SET_CONTRAST, FULL_BRIGHT);
 }
 
 
@@ -160,7 +182,7 @@ uint8_t keycode_to_disp_index(uint16_t keycode) {
 }
 
 void update_performed(void) {
-       last_update = timer_elapsed32(timer);
+    last_update = timer_elapsed32(timer);
 }
 
 void set_last_key(uint16_t keycode) {

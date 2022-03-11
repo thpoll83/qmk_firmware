@@ -17,15 +17,21 @@
 
 #include_next "mcuconf.h"
 
+/* USB */
 #undef STM32_USB_USE_OTG1
-#define STM32_USB_USE_OTG1                  TRUE
+#define STM32_USB_USE_OTG1 TRUE
 
 #undef STM32_USB_USE_OTG2
-#define STM32_USB_USE_OTG2                  FALSE
+#define STM32_USB_USE_OTG2 FALSE
 
+/* Use I2C1 for OLED display */
 #undef STM32_I2C_USE_I2C1
 #define STM32_I2C_USE_I2C1 TRUE
 
+/* Use SPI1 for keycap displays and flash */
 #undef STM32_SPI_USE_SPI1
 #define STM32_SPI_USE_SPI1 TRUE
 
+/* TIM3 used for WS2812 driver (RGB Matrix) */
+//#undef STM32_PWM_USE_TIM3
+//#define STM32_PWM_USE_TIM3 TRUE

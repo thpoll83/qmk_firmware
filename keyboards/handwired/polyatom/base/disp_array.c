@@ -7,7 +7,7 @@
 #include "shift_reg.h"
 #include "spi_master.h"
 #include "disp_array.h"
-#include OLED_FONT_H
+#include "../fonts/base_font.h"
 
 #define SSD1306_MEMORYMODE 0x20           ///< See datasheet
 #define SSD1306_COLUMNADDR 0x21           ///< See datasheet
@@ -156,12 +156,12 @@ void kdisp_write_gfx_text(const GFXfont *gfxFont, int16_t x, int16_t y, const ch
 }
 
 void kdisp_write_char(uint16_t x, uint16_t y, const char ch) {
-    uint8_t cast_data = (uint8_t)ch;  // font based on unsigned type for index
-    if (cast_data < OLED_FONT_START || cast_data > OLED_FONT_END) {
-        memset(&scratch_buffer[GET_BUFFER_OFFSET(x, y)], 0x00, OLED_FONT_WIDTH);
+    uint8_t font_index = (uint8_t)ch;  // font based on unsigned type for index
+    if (font_index < BASIC_FONT_START || font_index > BASIC_FONT_END) {
+        memset(&scratch_buffer[GET_BUFFER_OFFSET(x, y)], 0x00, BASIC_FONT_WIDTH);
     } else {
-        const uint8_t *glyph = &font[(cast_data - OLED_FONT_START) * OLED_FONT_WIDTH];
-        COPY_TO_BUFFER_XY(x, y, glyph, OLED_FONT_WIDTH);
+        const uint8_t *glyph = &font[(font_index - BASIC_FONT_START) * BASIC_FONT_WIDTH];
+        COPY_TO_BUFFER_XY(x, y, glyph, BASIC_FONT_WIDTH);
     }
 }
 
@@ -211,6 +211,21 @@ void kdisp_invert(bool invert) {
     spi_stop();
 }
 
+void kdisp_set_contrast(uint8_t contrast) {
+    spi_start(SPI_SS_PIN, false, SPI_MODE, STM32_SYSCLK / 1000000);
+    spi_prepare_commands();
+    spi_write(SSD1306_SETCONTRAST);
+    spi_write(contrast);
+    spi_stop();
+}
+
+void kdisp_enable(bool enable) {
+    spi_start(SPI_SS_PIN, false, SPI_MODE, STM32_SYSCLK / 1000000);
+    spi_prepare_commands();
+    spi_write(enable ? SSD1306_DISPLAYON : SSD1306_DISPLAYOFF);
+    spi_stop();
+}
+
 void kdisp_hw_setup(void) {
     //make sure the pins are output pins and low
     setPinOutput(KEY_DISPLAYS_VDD_PIN);
@@ -221,11 +236,11 @@ void kdisp_hw_setup(void) {
     sr_hw_setup();
 }
 
-void kdisp_init(const int8_t num_shift_regs) {
+void kdisp_init(const int8_t num_shift_regs, bool turn_on) {
 
     // first turn on logic power supply
     writePinHigh(KEY_DISPLAYS_VDD_PIN);
-    wait_ms(3);
+    wait_ms(1);
     // and then the power supply for the displays
     writePinHigh(KEY_DISPLAYS_VBAT_PIN);
 
@@ -260,7 +275,7 @@ void kdisp_init(const int8_t num_shift_regs) {
     spi_transmit(memMode, sizeof(memMode));
     spi_write(SSD1306_SEGREMAP | 0x1); //rotate by 180: remove 0x01
     spi_write(SSD1306_COMSCANDEC); //rotate by 180: SSD1306_COMSCANINC
-    static const uint8_t PROGMEM contrast[] = {SSD1306_SETCONTRAST, 0xff};
+    static const uint8_t PROGMEM contrast[] = {SSD1306_SETCONTRAST, 0x00};
     spi_transmit(contrast, sizeof(contrast));
     spi_write(SSD1306_SETPRECHARGE);
     spi_write(0x22);  // ext vcc
@@ -274,33 +289,9 @@ void kdisp_init(const int8_t num_shift_regs) {
     static const uint8_t PROGMEM fin[] = {0xad, 0x30};
     spi_transmit(fin, sizeof(fin));
 
-    spi_write(SSD1306_DISPLAYON);
+    if(turn_on) {
+        spi_write(SSD1306_DISPLAYON);
+    }
 
     spi_stop();
-
-    wait_ms(10);
-/*
-    sr_shift_out_latch(~0x02);
-    kdisp_set_buffer(0x00);
-
-    kdisp_draw_bitmap(0, 0, test_bmp_data, test_bmp_width, 40);
-    kdisp_send_buffer();
-
-    sr_shift_out_latch(~0x04);
-    kdisp_set_buffer(0x00);
-    kdisp_write_gfx_char(&FreeSans12pt7b, 28, 18, '1');
-
-    kdisp_send_buffer();
-
-    sr_shift_out_latch(~0x08);
-    kdisp_set_buffer(0x00);
-    kdisp_write_gfx_text(&FreeSans12pt7b, 28, 18, "ABCD");
-    kdisp_send_buffer();
-
-    sr_shift_out_latch(~0x10);
-    kdisp_set_buffer(0x00);
-    kdisp_write_gfx_text(&FreeSans12pt7b, 28, 18, "abcd");
-    // kdisp_write_char(50, 10, '3');
-    kdisp_send_buffer();
-    */
 }

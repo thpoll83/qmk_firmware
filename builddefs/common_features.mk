@@ -624,6 +624,7 @@ ifeq ($(strip $(SPLIT_KEYBOARD)), yes)
         ifeq ($(strip $(SERIAL_DRIVER)), bitbang)
             QUANTUM_LIB_SRC += serial.c
         else
+            QUANTUM_LIB_SRC += serial_protocol.c
             QUANTUM_LIB_SRC += serial_$(strip $(SERIAL_DRIVER)).c
         endif
     endif

@@ -18,7 +18,8 @@
         "type_traits": "c",
         "utility": "c",
         "ranges": "c",
-        "xlocale": "c"
+        "xlocale": "c",
+        "stack": "c"
     },
     "[markdown]": {
         "editor.trimAutoWhitespace": false,

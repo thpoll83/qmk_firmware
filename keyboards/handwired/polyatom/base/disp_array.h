@@ -2,11 +2,11 @@
 
 #include "fonts/gfxfont.h"
 
-uint8_t kdisp_write_gfx_char(const GFXfont *gfxFont, int16_t x, int16_t y, unsigned char c);
+uint8_t kdisp_write_gfx_char(const GFXfont **fonts, uint8_t num_fonts, int16_t x, int16_t y, uint16_t c);
 
-void kdisp_write_gfx_text(const GFXfont *gfxFont, int16_t x, int16_t y, const char *text);
+void kdisp_write_gfx_text(const GFXfont **fonts, uint8_t num_fonts, int16_t x, int16_t y, const uint16_t *text);
 
-void kdisp_write_char(uint16_t x, uint16_t y, const char ch);
+void kdisp_write_base_char(uint16_t x, uint16_t y, char c);
 
 void kdisp_draw_bitmap(uint16_t x, uint16_t y, const uint8_t pgm_bmp[], uint8_t bmp_width, uint8_t bmp_height);
 

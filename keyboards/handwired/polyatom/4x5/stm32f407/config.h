@@ -21,7 +21,7 @@
 #define MATRIX_COL_PINS \
     { A3, A2, A5, A4 }
 #define MATRIX_ROW_PINS \
-    { E8, E7, E10, E9, E11 }
+    { E8, E7, E10, E9, E12 }
 
 #define ENCODERS_SWITCH B11
 #define ENCODERS_PAD_A { E13 }

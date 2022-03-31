@@ -1,3 +1,5 @@
+//Created with help from https://tchapi.github.io/Adafruit-GFX-Font-Customiser/
+
 const uint8_t FreeSans12pt7bBitmaps[] PROGMEM = {
   0x00, 0xFF, 0xFF, 0xFF, 0x83, 0xC0, 0xCF, 0x3C, 0xF3, 0x4D, 0x30, 0x06,
   0x60, 0x23, 0x03, 0x18, 0x18, 0xC7, 0xFF, 0xBF, 0xFC, 0x23, 0x03, 0x18,
@@ -339,22 +341,22 @@ const GFXfont FreeSans12pt7b PROGMEM = {
 
 // Approx. 2586 bytes
 
-#define ICON_LAYER        "\x80"
-#define ICON_UP           "\x81"
-#define ICON_DOWN         "\x82"
-#define ICON_LEFT         "\x83"
-#define ICON_RIGHT        "\x84"
-#define ICON_SPACE        "\x85"
-#define ICON_LMB          "\x86"
-#define ICON_MMB          "\x87"
-#define ICON_RMB          "\x88"
-#define ICON_VOL_UP       "\x89"
-#define ICON_VOL_DOWN     "\x8A"
-#define ICON_BACKSPACE    "\x8B"
-#define ICON_NUMLOCK_OFF  "\x8C"
-#define ICON_NUMLOCK_ON   "\x8D"
-#define ICON_CAPSLOCK_OFF "\x8E"
-#define ICON_CAPSLOCK_ON  "\x8F"
-#define ICON_SHIFT        "\x90"
-#define ICON_SWITCH_ON    "\x91"
-#define ICON_SWITCH_OFF   "\x92"
+#define ICON_LAYER        u"\x0080"
+#define ICON_UP           u"\x0081"
+#define ICON_DOWN         u"\x0082"
+#define ICON_LEFT         u"\x0083"
+#define ICON_RIGHT        u"\x0084"
+#define ICON_SPACE        u"\x0085"
+#define ICON_LMB          u"\x0086"
+#define ICON_MMB          u"\x0087"
+#define ICON_RMB          u"\x0088"
+#define ICON_VOL_UP       u"\x0089"
+#define ICON_VOL_DOWN     u"\x008A"
+#define ICON_BACKSPACE    u"\x008B"
+#define ICON_NUMLOCK_OFF  u"\x008C"
+#define ICON_NUMLOCK_ON   u"\x008D"
+#define ICON_CAPSLOCK_OFF u"\x008E"
+#define ICON_CAPSLOCK_ON  u"\x008F"
+#define ICON_SHIFT        u"\x0090"
+#define ICON_SWITCH_ON    u"\x0091"
+#define ICON_SWITCH_OFF   u"\x0092"

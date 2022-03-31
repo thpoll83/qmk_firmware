@@ -1,8 +1,10 @@
 #include QMK_KEYBOARD_H
+
 #include "print.h"
 #include "base/disp_array.h"
 #include "base/shift_reg.h"
-#include "fonts/FreeSans12pt7b.h"
+#include "fonts/gfx_used_fonts.h"
+//#include "fonts/FreeSans12pt7b.h"
 
 #include "quantum/quantum_keycodes.h"
 
@@ -86,7 +88,6 @@ void matrix_init_user(void) {
     #ifdef OLED_ENABLE
     OLED_INIT;
     #endif
-    /*RGB_HW_INIT;*/
 }
 
 void matrix_scan_user(void) {
@@ -137,248 +138,251 @@ struct diplay_info key_display[] = {
     };
 
 
-const char* keycode_to_disp_text(uint16_t keycode, led_t state) {
+const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
     bool shift = ((get_mods() & MOD_MASK_SHIFT)!=0) || state.caps_lock;
     switch (keycode) {
         case KC_0:
-            return shift ? ")" : "0";
+            return shift ? u")" : u"0";
         case KC_1:
-            return shift ? "!" : "1";
+            return shift ? u"!" : u"1";
         case KC_2:
-            return shift ? "@" : "2";
+            return shift ? u"@" : u"2";
         case KC_3:
-            return shift ? "#" : "3";
+            return shift ? u"#" : u"3";
         case KC_4:
-            return shift ? "$" : "4";
+            return shift ? u"$" : u"4";
         case KC_5:
-            return shift ? "%" : "5";
+            return shift ? u"%" : u"5";
         case KC_6:
-            return shift ? "^" : "6";
+            return shift ? u"^" : u"6";
         case KC_7:
-            return shift ? "&" : "7";
+            return shift ? u"&" : u"7";
         case KC_8:
-            return shift ? "*" : "8";
+            return shift ? u"*" : u"8";
         case KC_9:
-            return shift ? "(" : "9";
+            return shift ? u"(" : u"9";
         case KC_EQUAL:
-            return shift ? "+" : "=";
+            return shift ? u"+" : u"=";
         case KC_MINUS:
-            return shift ? "_" : "-";
+            return shift ? u"_" : u"-";
         case KC_GRAVE:
-            return shift ? "~" : "`";
+            return shift ? u"~" : u"`";
         case KC_COMMA:
-            return shift ? "<" : ",";
+            return shift ? u"<" : u",";
         case KC_DOT:
-            return shift ? ">" : ",";
+            return shift ? u">" : u",";
         case KC_LBRACKET:
-            return shift ? "{" : "[";
+            return shift ? u"{" : u"[";
         case KC_RBRACKET:
-            return shift ? "}" : "]";
+            return shift ? u"}" : u"]";
         case KC_SPACE:
-            return "  " ICON_SPACE;
+            return u"  " ICON_SPACE;
         case KC_BACKSPACE:
-            return " " ICON_BACKSPACE;
+            return u" " ICON_BACKSPACE;
         case KC_A:
-            return shift ? "A" : "a";
+            return shift ? u"A" : u"a";
         case KC_B:
-            return shift ? "B" : "b";
+            return shift ? u"B" : u"b";
         case KC_C:
-            return shift ? "C" : "c";
+            return shift ? u"C" : u"c";
         case KC_D:
-            return shift ? "D" : "d";
+            return shift ? u"D" : u"d";
         case KC_E:
-            return shift ? "E" : "e";
+            return shift ? u"E" : u"e";
         case KC_F:
-            return shift ? "F" : "f";
+            return shift ? u"F" : u"f";
         case KC_G:
-            return shift ? "G" : "g";
+            return shift ? u"G" : u"g";
         case KC_H:
-            return shift ? "H" : "h";
+            return shift ? u"H" : u"h";
         case KC_I:
-            return shift ? "I" : "i";
+            return shift ? u"I" : u"i";
         case KC_J:
-            return shift ? "J" : "j";
+            return shift ? u"J" : u"j";
         case KC_K:
-            return shift ? "K" : "k";
+            return shift ? u"K" : u"k";
         case KC_L:
-            return shift ? "L" : "l";
+            return shift ? u"L" : u"l";
         case KC_M:
-            return shift ? "M" : "m";
+            return shift ? u"M" : u"m";
         case KC_N:
-            return shift ? "N" : "n";
+            return shift ? u"N" : u"n";
         case KC_O:
-            return shift ? "O" : "o";
+            return shift ? u"O" : u"o";
         case KC_P:
-            return shift ? "P" : "p";
+            return shift ? u"P" : u"p";
         case KC_Q:
-            return shift ? "Q" : "q";
+            return shift ? u"Q" : u"q";
         case KC_R:
-            return shift ? "R" : "r";
+            return shift ? u"R" : u"r";
         case KC_S:
-            return shift ? "S" : "s";
+            return shift ? u"S" : u"s";
         case KC_T:
-            return shift ? "T" : "t";
+            return shift ? u"T" : u"t";
         case KC_U:
-            return shift ? "U" : "u";
+            return shift ? u"U" : u"u";
         case KC_V:
-            return shift ? "V" : "v";
+            return shift ? u"V" : u"v";
         case KC_W:
-            return shift ? "W" : "w";
+            return shift ? u"W" : u"w";
         case KC_X:
-            return shift ? "X" : "x";
+            return shift ? u"X" : u"x";
         case KC_Y:
-            return shift ? "Y" : "y";
+            return shift ? u"Y" : u"y";
         case KC_Z:
-            return shift ? "Z" : "z";
+            return shift ? u"Z" : u"z";
         case KC_NUM_LOCK:
-            return !state.num_lock ? "Num" ICON_NUMLOCK_OFF : "Num" ICON_NUMLOCK_ON;
+            return !state.num_lock ? u"Num" ICON_NUMLOCK_OFF : u"Num" ICON_NUMLOCK_ON;
         case KC_KP_SLASH:
-            return "/";
+            return u"/";
         case KC_KP_ASTERISK:
-            return "*";
+            return u"*";
         case KC_KP_MINUS:
-            return "-";
+            return u"-";
         case KC_KP_7:
-            return !state.num_lock ? "Home" : "7";
+            return !state.num_lock ? u"Home" : u"7";
         case KC_KP_8:
-            return !state.num_lock ? "  " ICON_UP : "8";
+            return !state.num_lock ? u"  " ICON_UP : u"8";
         case KC_KP_9:
-            return !state.num_lock ? "PgUp" : "9";
+            return !state.num_lock ? u"PgUp" : u"9";
         case KC_KP_PLUS:
-            return "+";
+            return u"+";
         case KC_KP_4:
-            return !state.num_lock ? "  " ICON_LEFT : "4";
+            return !state.num_lock ? u"  " ICON_LEFT : u"4";
         case KC_KP_5:
-            return !state.num_lock ? "" : "5";
+            return !state.num_lock ? u"" : u"5";
         case KC_KP_6:
-            return !state.num_lock ? "  " ICON_RIGHT : "6";
+            return !state.num_lock ? u"  " ICON_RIGHT : u"6";
         case KC_KP_EQUAL:
-            return "=";
+            return u"=";
         case KC_KP_1:
-            return !state.num_lock ? "End" : "1";
+            return !state.num_lock ? u"End" : u"1";
         case KC_KP_2:
-            return !state.num_lock ? "  " ICON_DOWN : "2";
+            return !state.num_lock ? u"  u" ICON_DOWN : u"2";
         case KC_KP_3:
-            return !state.num_lock ? "PgDn" : "3";
+            return !state.num_lock ? u"PgDn" : u"3";
         case KC_CALCULATOR:
-            return "Calc";
+            return u"Calc";
         case KC_KP_0:
-            return !state.num_lock ? "Ins" : "0";
+            return !state.num_lock ? u"Ins" : u"0";
         case KC_KP_DOT:
-            return !state.num_lock ? "Del" : ".";
+            return !state.num_lock ? u"Del" : u".";
         case KC_KP_ENTER:
-            return "Enter";
+            return u"Enter";
         case QK_BOOTLOADER:
-            return "BootL";
+            return u"BootL";
         case QK_DEBUG_TOGGLE:
-            return "Debug";
+            return u"Debug";
         case QK_CLEAR_EEPROM:
-            return "Clr EE";
+            return u"Clr EE";
         case RGB_PREV:
-            return "R  " ICON_LEFT;
+            return u"R  " ICON_LEFT;
         case RGB_TOGGLE:
-            return rgb_matrix_is_enabled() ? "G " ICON_SWITCH_ON : "G " ICON_SWITCH_OFF;
+            return rgb_matrix_is_enabled() ? u"G " ICON_SWITCH_ON : u"G " ICON_SWITCH_OFF;
         case RGB_NEXT:
-            return "B  " ICON_RIGHT;
+            return u"B  " ICON_RIGHT;
         case KC_MEDIA_NEXT_TRACK:
             return ICON_RIGHT ICON_RIGHT;
         case KC_MEDIA_PLAY_PAUSE:
-            return "  " ICON_RIGHT;
+            return u"  " ICON_RIGHT;
         case KC_MEDIA_STOP:
-            return "Stop";
+            return u"Stop";
         case KC_MEDIA_PREV_TRACK:
             return ICON_LEFT ICON_LEFT;
         case KC_MS_ACCEL0:
-            return ">>";
+            return u">>";
         case KC_MS_ACCEL1:
-            return ">>>";
+            return u">>>";
         case KC_MS_ACCEL2:
-            return ">>>>";
+            return u">>>>";
         case KC_MS_BTN1:
-            return "  " ICON_LMB;
+            return u"  " ICON_LMB;
         case KC_MS_BTN2:
-            return "  " ICON_RMB;
+            return u"  " ICON_RMB;
         case KC_MS_BTN3:
-            return "  " ICON_MMB;
+            return u"  " ICON_MMB;
         case KC_MS_UP:
-            return "  " ICON_UP;
+            return u"  " ICON_UP;
         case KC_MS_DOWN:
-            return "  " ICON_DOWN;
+            return u"  " ICON_DOWN;
         case KC_MS_LEFT:
-            return "  " ICON_LEFT;
+            return u"  " ICON_LEFT;
         case KC_MS_RIGHT:
-            return "  " ICON_RIGHT;
+            return u"  " ICON_RIGHT;
         case KC_AUDIO_MUTE:
-            return "Mute";
+            return u"Mute";
         case KC_AUDIO_VOL_DOWN:
-            return "  " ICON_VOL_DOWN;
+            return u"  " ICON_VOL_DOWN;
         case KC_AUDIO_VOL_UP:
-            return "  " ICON_VOL_UP;
+            return u"  " ICON_VOL_UP;
         case KC_NEXT_LAYER:
-            return "Next " ICON_LAYER;
+            return u"Next " ICON_LAYER;
         case KC_PRINT_SCREEN:
-            return "PrtScn";
+            return u"PrtScn";
         case KC_SCROLL_LOCK:
-            return "SclLck";
+            return u"SclLck";
         case KC_PAUSE:
-            return "Pause";
+            return u"Pause";
         case KC_INSERT:
-            return "Insert";
+            return u"Insert";
         case KC_HOME:
-            return "Home";
+            return u"Home";
         case KC_PAGE_UP:
-            return "PgUp";
+            return u"PgUp";
         case KC_PAGE_DOWN:
-            return "PgDn";
+            return u"PgDn";
         case KC_BACKSLASH:
-            return shift ? "|" : "\\";
+            return shift ? u"|" : u"\\";
         case KC_DELETE:
-            return "Delete";
+            return u"Delete";
         case KC_END:
-            return "End";
+            return u"End";
         case KC_SLASH:
-            return shift ? "?" : "/";
+            return shift ? u"?" : u"/";
         case KC_ESC:
-            return "ESC";
+            return u"ESC";
         case KC_RIGHT_SHIFT:
-            return state.caps_lock ? " " ICON_SHIFT "  " ICON_CAPSLOCK_ON : " " ICON_SHIFT "  " ICON_CAPSLOCK_OFF;
+            return state.caps_lock ? u" " ICON_SHIFT u"  " ICON_CAPSLOCK_ON : u" " ICON_SHIFT u"  " ICON_CAPSLOCK_OFF;
         case KC_F1:
-            return "F1";
+            return u"F1";
         case KC_F2:
-            return "F2";
+            return u"F2";
         case KC_F3:
-            return "F3";
+            return u"F3";
         case KC_F4:
-            return "F4";
+            return u"F4";
         case KC_F5:
-            return "F5";
+            return u"F5";
         case KC_F6:
-            return "F6";
+            return u"F6";
         case KC_F7:
-            return "F7";
+            return u"F7";
         case KC_F8:
-            return "F8";
+            return u"F8";
         case KC_F9:
-            return "F9";
+            return u"F9";
         case KC_F10:
-            return "F10";
+            return u"F10";
         case KC_F11:
-            return "F11";
+            return u"F11";
         case KC_F12:
-            return "F12";
+            return u"F12";
         case KC_LEFT_CTRL:
-            return "L Ctrl";
+            return u"L Ctrl";
         case KC_LEFT_ALT:
-            return "L Alt";
+            return u"L Alt";
         default:
             break;
     }
-    return "?";
+    return u"?";
 }
+
+const GFXfont* ALL_FONTS [] = {&AsciiFont, &IconsFont, &HangulJamoFont};
+const uint8_t NUM_FONTS = sizeof(ALL_FONTS) / sizeof(GFXfont*);
+
 
 void process_layer_switch_user(uint16_t new_layer) {
     layer_move(new_layer);
-
     led_t state = host_keyboard_led_state();
 
     // keypos_t key;
@@ -390,10 +394,10 @@ void process_layer_switch_user(uint16_t new_layer) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
 
             if (disp_idx != 255) {
-                const char* text = keycode_to_disp_text(keycode, state);
+                const uint16_t* text = keycode_to_disp_text(keycode, state);
                 sr_shift_out_buffer_latch(key_display[disp_idx].bitmask, sizeof(key_display->bitmask));
                 kdisp_set_buffer(0x00);
-                kdisp_write_gfx_text(&FreeSans12pt7b, 28, 18, text);
+                kdisp_write_gfx_text(ALL_FONTS, NUM_FONTS, 28, 18, text);
                 kdisp_send_buffer();
             }
         }

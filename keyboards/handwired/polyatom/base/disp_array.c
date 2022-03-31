@@ -69,27 +69,27 @@ const uint8_t PROGMEM test_bmp_data[] = {
 #define SET_PIXEL(x, y) scratch_buffer[GET_BUFFER_OFFSET((x), (y))] |= (1 << ((y)&0x7))
 #define COPY_TO_BUFFER_XY(unint16X, uint16Y, srcBuffer, numBytes) memcpy_P(&scratch_buffer[GET_BUFFER_OFFSET((unint16X), (uint16Y))], (srcBuffer), (numBytes))
 
-inline GFXglyph *pgm_read_glyph_ptr(const GFXfont *gfxFont, uint8_t c) {
+inline GFXglyph *pgm_read_glyph_ptr(const GFXfont *font, uint16_t c) {
 #ifdef __AVR__
-    return &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))[c]);
+    return &(((GFXglyph *)pgm_read_pointer(&font->glyph))[c]);
 #else
     // expression in __AVR__ section may generate "dereferencing type-punned
     // pointer will break strict-aliasing rules" warning In fact, on other
     // platforms (such as STM32) there is no need to do this pointer magic as
     // program memory may be read in a usual way So expression may be simplified
-    return gfxFont->glyph + c;
+    return font->glyph + c;
 #endif  //__AVR__
 }
 
-inline uint8_t *pgm_read_bitmap_ptr(const GFXfont *gfxFont) {
+inline uint8_t *pgm_read_bitmap_ptr(const GFXfont *font) {
 #ifdef __AVR__
-    return (uint8_t *)pgm_read_pointer(&gfxFont->bitmap);
+    return (uint8_t *)pgm_read_pointer(&font->bitmap);
 #else
     // expression in __AVR__ section generates "dereferencing type-punned pointer
     // will break strict-aliasing rules" warning In fact, on other platforms (such
     // as STM32) there is no need to do this pointer magic as program memory may
     // be read in a usual way So expression may be simplified
-    return gfxFont->bitmap;
+    return font->bitmap;
 #endif  //__AVR__
 }
 
@@ -107,18 +107,28 @@ void kdisp_fill_rect(uint16_t x_start, uint16_t y_start, uint8_t width, uint8_t 
    @brief   Draw a single character
     @param    x   Bottom left corner x coordinate
     @param    y   Bottom left corner y coordinate
-    @param    c   The 8-bit font-indexed character (likely ascii, only defined ones according to the font!)
+    @param    ch  The 16-bit font-indexed character
 */
 /**************************************************************************/
-uint8_t kdisp_write_gfx_char(const GFXfont *gfxFont, int16_t x, int16_t y, unsigned char c) {
-    uint16_t first = pgm_read_byte(&gfxFont->first);
-    uint16_t last  = pgm_read_byte(&gfxFont->last);
-    if (c < first || c > last) {
-        return 0;
+uint8_t kdisp_write_gfx_char(const GFXfont **fonts, uint8_t num_fonts, int16_t x, int16_t y, uint16_t ch) {
+    const GFXfont * currentFont = 0;
+    uint16_t first = 0;
+    uint16_t last = 0;
+    for (uint8_t idx = 0; idx < num_fonts; ++idx) {
+        currentFont = fonts[idx];
+        first = pgm_read_byte(&currentFont->first);
+        last  = pgm_read_byte(&currentFont->last);
+        if (ch < first || ch > last) {
+            if (idx == num_fonts - 1) {
+                return 0; //no match at all
+            }
+        } else {
+            break;
+        }
     }
-    c -= (uint8_t)first;
-    GFXglyph *glyph  = pgm_read_glyph_ptr(gfxFont, c);
-    uint8_t * bitmap = pgm_read_bitmap_ptr(gfxFont);
+    ch -= first;
+    const GFXglyph *glyph  = pgm_read_glyph_ptr(currentFont, ch);
+    const uint8_t  *bitmap = pgm_read_bitmap_ptr(currentFont);
 
     uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
     uint8_t  w = pgm_read_byte(&glyph->width), h = pgm_read_byte(&glyph->height);
@@ -126,7 +136,6 @@ uint8_t kdisp_write_gfx_char(const GFXfont *gfxFont, int16_t x, int16_t y, unsig
     uint8_t  xx, yy, bits = 0, bit = 0;
 
     // Todo: Add character clipping here
-
     for (yy = 0; yy < h; yy++) {
         for (xx = 0; xx < w; xx++) {
             if (!(bit++ & 7)) {
@@ -142,20 +151,20 @@ uint8_t kdisp_write_gfx_char(const GFXfont *gfxFont, int16_t x, int16_t y, unsig
     return pgm_read_byte(&glyph->xAdvance);
 }
 
-void kdisp_write_gfx_text(const GFXfont *gfxFont, int16_t x, int16_t y, const char *text) {
+void kdisp_write_gfx_text(const GFXfont **fonts, uint8_t num_fonts, int16_t x, int16_t y, const uint16_t *text) {
     uint16_t x_cursor = x;
     while (*text != 0) {
-        if(*text=='\n') {
-            y += pgm_read_byte(&gfxFont->yAdvance);
+        if(*text==u'\n') {
+            y += pgm_read_byte(&fonts[0]->yAdvance);
             x_cursor = x;
         } else {
-            x_cursor +=kdisp_write_gfx_char(gfxFont, x_cursor, y, *text);
+            x_cursor += kdisp_write_gfx_char(fonts, num_fonts, x_cursor, y, *text);
         }
         text++;
     }
 }
 
-void kdisp_write_char(uint16_t x, uint16_t y, const char ch) {
+void kdisp_write_base_char(uint16_t x, uint16_t y, const char ch) {
     uint8_t font_index = (uint8_t)ch;  // font based on unsigned type for index
     if (font_index < BASIC_FONT_START || font_index > BASIC_FONT_END) {
         memset(&scratch_buffer[GET_BUFFER_OFFSET(x, y)], 0x00, BASIC_FONT_WIDTH);

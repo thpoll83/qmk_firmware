@@ -65,25 +65,25 @@ const uint8_t HangulBitmaps[] PROGMEM = {
 };
 
 const GFXglyph HangulGlyphs[] PROGMEM = {
-  {     0,  15,  15,  17,    1,  -15 },   // 0x1100 'Kiyeok'
-  {    29,  18,  15,  20,    1,  -15 },   // 0x1101 'Ssangkiyeok'
-  {    64,  15,  15,  17,    1,  -15 },   // 0x1102 'Nieun'
-  {    93,  15,  15,  17,    1,  -15 },   // 0x1103 'Tikeut'
-  {   122,  18,  15,  20,    1,  -15 },   // 0x1104 'Ssangtikeut'
-  {   157,  15,  15,  17,    1,  -15 },   // 0x1105 'Rieul'
-  {   186,  15,  15,  17,    1,  -15 },   // 0x1106 'Mieum'
-  {   215,  15,  15,  17,    1,  -15 },   // 0x1107 'Pieup'
-  {   244,  18,  15,  20,    1,  -15 },   // 0x1108 'Ssangpieup'
-  {   279,  15,  15,  17,    1,  -15 },   // 0x1109 'Sios'
-  {   308,  18,  15,  20,    1,  -15 },   // 0x110A 'Ssangsios'
-  {   343,  15,  15,  17,    1,  -15 },   // 0x110B 'Ieung'
-  {   372,  15,  15,  17,    1,  -15 },   // 0x110C 'Cieuc'
-  {   401,  18,  15,  20,    1,  -15 },   // 0x110D 'Ssangcieuc'
-  {   436,  15,  15,  17,    1,  -15 },   // 0x110E 'Chieuch'
-  {   465,  15,  15,  17,    1,  -15 },   // 0x110F 'Khieukh'
-  {   494,  15,  15,  17,    1,  -15 },   // 0x1110 'Thieuth'
-  {   523,  15,  15,  17,    1,  -15 },   // 0x1111 'Phieuph'
-  {   552,  14,  15,  16,    1,  -15 },   // 0x1112 'Hieuh'
+  {     0,  15,  15,  17,    1,  -15 },   // 0x1100 Kiyeok
+  {    29,  18,  15,  20,    1,  -15 },   // 0x1101 Ssangkiyeok
+  {    64,  15,  15,  17,    1,  -15 },   // 0x1102 Nieun
+  {    93,  15,  15,  17,    1,  -15 },   // 0x1103 Tikeut
+  {   122,  18,  15,  20,    1,  -15 },   // 0x1104 Ssangtikeut
+  {   157,  15,  15,  17,    1,  -15 },   // 0x1105 Rieul
+  {   186,  15,  15,  17,    1,  -15 },   // 0x1106 Mieum
+  {   215,  15,  15,  17,    1,  -15 },   // 0x1107 Pieup
+  {   244,  18,  15,  20,    1,  -15 },   // 0x1108 Ssangpieup
+  {   279,  15,  15,  17,    1,  -15 },   // 0x1109 Sios
+  {   308,  18,  15,  20,    1,  -15 },   // 0x110A Ssangsios
+  {   343,  15,  15,  17,    1,  -15 },   // 0x110B Ieung
+  {   372,  15,  15,  17,    1,  -15 },   // 0x110C Cieuc
+  {   401,  18,  15,  20,    1,  -15 },   // 0x110D Ssangcieuc
+  {   436,  15,  15,  17,    1,  -15 },   // 0x110E Chieuch
+  {   465,  15,  15,  17,    1,  -15 },   // 0x110F Khieukh
+  {   494,  15,  15,  17,    1,  -15 },   // 0x1110 Thieuth
+  {   523,  15,  15,  17,    1,  -15 },   // 0x1111 Phieuph
+  {   552,  14,  15,  16,    1,  -15 },   // 0x1112 Hieuh
   {     0,   0,   0,   0,    0,    0 },   // 0x1113  [[ No need for any composed forms ...
   {     0,   0,   0,   0,    0,    0 },   // 0x1114
   {     0,   0,   0,   0,    0,    0 },   // 0x1115
@@ -162,27 +162,27 @@ const GFXglyph HangulGlyphs[] PROGMEM = {
   {     0,   0,   0,   0,    0,    0 },   // 0x115E
   {     0,   0,   0,   0,    0,    0 },   // 0x115F
   {     0,   0,   0,   0,    0,    0 },   // 0x1160 ... ]
-  {   579,   5,  15,  14,    8,  -15 },   // 0x1161 'A'
-  {   589,   6,  15,  15,    8,  -15 },   // 0x1162 'Ae'
-  {   601,   5,  15,  14,    8,  -15 },   // 0x1163 'Ya'
-  {   611,   6,  15,  15,    8,  -15 },   // 0x1164 'Yae'
-  {   623,   5,  15,  14,    8,  -15 },   // 0x1165 'Eo'
-  {   633,   9,  15,  18,    8,  -15 },   // 0x1166 'E'
-  {   651,   5,  15,  14,    8,  -15 },   // 0x1167 'Yeo'
-  {   661,   9,  15,  18,    8,  -15 },   // 0x1168 'Ye'
-  {   679,  16,   5,  18,    1,   -5 },   // 0x1169 'O'
+  {   579,   5,  15,  14,    8,  -15 },   // 0x1161 A
+  {   589,   6,  15,  15,    8,  -15 },   // 0x1162 Ae
+  {   601,   5,  15,  14,    8,  -15 },   // 0x1163 Ya
+  {   611,   6,  15,  15,    8,  -15 },   // 0x1164 Yae
+  {   623,   5,  15,  14,    8,  -15 },   // 0x1165 Eo
+  {   633,   9,  15,  18,    8,  -15 },   // 0x1166 E
+  {   651,   5,  15,  14,    8,  -15 },   // 0x1167 Yeo
+  {   661,   9,  15,  18,    8,  -15 },   // 0x1168 Ye
+  {   679,  16,   5,  18,    1,   -5 },   // 0x1169 O
   {     0,   0,   0,   0,    0,    0 },   // 0x116A (composed)
   {     0,   0,   0,   0,    0,    0 },   // 0x116B (composed)
   {     0,   0,   0,   0,    0,    0 },   // 0x116C (composed)
-  {   689,  16,   5,  18,    1,   -5 },   // 0x116D 'Yo'
-  {   699,  16,   5,  18,    1,   -5 },   // 0x116E 'U'
+  {   689,  16,   5,  18,    1,   -5 },   // 0x116D Yo
+  {   699,  16,   5,  18,    1,   -5 },   // 0x116E U
   {     0,   0,   0,   0,    0,    0 },   // 0x116F (composed)
   {     0,   0,   0,   0,    0,    0 },   // 0x1170 (composed)
   {     0,   0,   0,   0,    0,    0 },   // 0x1171 (composed)
-  {   709,  16,   5,  18,    1,   -5 },   // 0x1172 'Yu'
-  {   719,  16,   2,  18,    1,   -2 },   // 0x1173 'Eu'
+  {   709,  16,   5,  18,    1,   -5 },   // 0x1172 Yu
+  {   719,  16,   2,  18,    1,   -2 },   // 0x1173 Eu
   {     0,   0,   0,   0,    0,    0 },   // 0x1174 (composed)
-  {   723,   2,  15,  13,   10,  -15 }    // 0x1175 'I'
+  {   723,   2,  15,  13,   10,  -15 }    // 0x1175 I
 };
 
 const GFXfont HangulJamoFont PROGMEM = {
@@ -191,3 +191,37 @@ const GFXfont HangulJamoFont PROGMEM = {
   0x1100, 0x1175,
   1
 };
+
+#define HANGEUL_KIYEOK          u"\x1100"
+#define HANGEUL_SSANGKIYEOK     u"\x1101"
+#define HANGEUL_NIEUN           u"\x1102"
+#define HANGEUL_TIKEUT          u"\x1103"
+#define HANGEUL_SSANGTIKEUT     u"\x1104"
+#define HANGEUL_RIEUL           u"\x1105"
+#define HANGEUL_MIEUM           u"\x1106"
+#define HANGEUL_PIEUP           u"\x1107"
+#define HANGEUL_SSANGPIEUP      u"\x1108"
+#define HANGEUL_SIOS            u"\x1109"
+#define HANGEUL_SSANGSIOS       u"\x110A"
+#define HANGEUL_IEUNG           u"\x110B"
+#define HANGEUL_CIEUC           u"\x110C"
+#define HANGEUL_SSANGCIEUC      u"\x110D"
+#define HANGEUL_CHIEUCH         u"\x110E"
+#define HANGEUL_KHIEUKH         u"\x110F"
+#define HANGEUL_THIEUTH         u"\x1110"
+#define HANGEUL_PHIEUPH         u"\x1111"
+#define HANGEUL_HIEUH           u"\x1112"
+#define HANGEUL_A               u"\x1161"
+#define HANGEUL_AE              u"\x1162"
+#define HANGEUL_YA              u"\x1163"
+#define HANGEUL_YAE             u"\x1164"
+#define HANGEUL_EO              u"\x1165"
+#define HANGEUL_E               u"\x1166"
+#define HANGEUL_YEO             u"\x1167"
+#define HANGEUL_YE              u"\x1168"
+#define HANGEUL_O               u"\x1169"
+#define HANGEUL_YO              u"\x116D"
+#define HANGEUL_U               u"\x116E"
+#define HANGEUL_YU              u"\x1172"
+#define HANGEUL_EU              u"\x1173"
+#define HANGEUL_I               u"\x1175"

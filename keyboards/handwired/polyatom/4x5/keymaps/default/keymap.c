@@ -4,17 +4,49 @@
 #include "base/disp_array.h"
 #include "base/shift_reg.h"
 #include "fonts/gfx_used_fonts.h"
-//#include "fonts/FreeSans12pt7b.h"
 
 #include "quantum/quantum_keycodes.h"
 
-enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, _LAYER3 = 3, _LAYER4 = 4, _LAYER5 = 5, NUM_LAYERS = 6 };
+enum kb_layers { _LAYER0 = 0, _LAYER1 = 1, _LAYER2 = 2, _LAYER3 = 3, _LAYER4 = 4, _LAYER5 = 5, _LAYER6 = 6, _LAYER7 = 7, NUM_LAYERS = 8 };
 
 enum my_keycodes {
   KC_NEXT_LAYER = SAFE_RANGE,
   RGB_TOGGLE,
   RGB_NEXT,
-  RGB_PREV
+  RGB_PREV,
+  KC_HANGEUL_KIYEOK          =0x1100,
+  KC_HANGEUL_SSANGKIYEOK     =0x1101,
+  KC_HANGEUL_NIEUN           =0x1102,
+  KC_HANGEUL_TIKEUT          =0x1103,
+  KC_HANGEUL_SSANGTIKEUT     =0x1104,
+  KC_HANGEUL_RIEUL           =0x1105,
+  KC_HANGEUL_MIEUM           =0x1106,
+  KC_HANGEUL_PIEUP           =0x1107,
+  KC_HANGEUL_SSANGPIEUP      =0x1108,
+  KC_HANGEUL_SIOS            =0x1109,
+  KC_HANGEUL_SSANGSIOS       =0x110A,
+  KC_HANGEUL_IEUNG           =0x110B,
+  KC_HANGEUL_CIEUC           =0x110C,
+  KC_HANGEUL_SSANGCIEUC      =0x110D,
+  KC_HANGEUL_CHIEUCH         =0x110E,
+  KC_HANGEUL_KHIEUKH         =0x110F,
+  KC_HANGEUL_THIEUTH         =0x1110,
+  KC_HANGEUL_PHIEUPH         =0x1111,
+  KC_HANGEUL_HIEUH           =0x1112,
+  KC_HANGEUL_A               =0x1161,
+  KC_HANGEUL_AE              =0x1162,
+  KC_HANGEUL_YA              =0x1163,
+  KC_HANGEUL_YAE             =0x1164,
+  KC_HANGEUL_EO              =0x1165,
+  KC_HANGEUL_E               =0x1166,
+  KC_HANGEUL_YEO             =0x1167,
+  KC_HANGEUL_YE              =0x1168,
+  KC_HANGEUL_O               =0x1169,
+  KC_HANGEUL_YO              =0x116D,
+  KC_HANGEUL_U               =0x116E,
+  KC_HANGEUL_YU              =0x1172,
+  KC_HANGEUL_EU              =0x1173,
+  KC_HANGEUL_I               =0x1175
 };
 
 static bool rotarySwitchPressed = false;
@@ -38,19 +70,31 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                         KC_4,               KC_5,               KC_6,               KC_7,
                         KC_8,               KC_9,               KC_RIGHT_SHIFT,     KC_NEXT_LAYER
                         ),
-    [_LAYER3] = LAYOUT( KC_PRINT_SCREEN,    KC_SCROLL_LOCK,     KC_PAUSE,           KC_BACKSPACE,
+    [_LAYER3] = LAYOUT( KC_HANGEUL_KIYEOK,  KC_HANGEUL_NIEUN,   KC_HANGEUL_TIKEUT,  KC_HANGEUL_RIEUL,
+                        KC_HANGEUL_MIEUM,   KC_HANGEUL_PIEUP,   KC_HANGEUL_SIOS,    KC_HANGEUL_IEUNG,
+                        KC_HANGEUL_CIEUC,   KC_HANGEUL_CHIEUCH, KC_HANGEUL_KHIEUKH, KC_HANGEUL_THIEUTH,
+                        KC_HANGEUL_PHIEUPH, KC_HANGEUL_HIEUH,   KC_SPACE,           KC_BACKSPACE,
+                        KC_SLASH,           KC_KP_DOT,          KC_RIGHT_SHIFT,     KC_NEXT_LAYER
+                        ),
+    [_LAYER4] = LAYOUT( KC_HANGEUL_A,       KC_HANGEUL_AE,      KC_HANGEUL_YAE,     KC_HANGEUL_YA,
+                        KC_HANGEUL_EO,      KC_HANGEUL_E,       KC_HANGEUL_YE,      KC_HANGEUL_YEO,
+                        KC_HANGEUL_O,       KC_HANGEUL_YO,      KC_HANGEUL_U,       KC_HANGEUL_YU,
+                        KC_HANGEUL_EU,      KC_HANGEUL_I,       KC_SPACE,           KC_BACKSPACE,
+                        KC_SLASH,           KC_KP_DOT,          KC_RIGHT_SHIFT,     KC_NEXT_LAYER
+                        ),
+    [_LAYER5] = LAYOUT( KC_PRINT_SCREEN,    KC_SCROLL_LOCK,     KC_PAUSE,           KC_BACKSPACE,
                         KC_INSERT,          KC_HOME,            KC_PAGE_UP,         KC_BACKSLASH,
                         KC_DELETE,          KC_END,             KC_PAGE_DOWN,       KC_SLASH,
                         KC_LEFT_BRACKET,    KC_RIGHT_BRACKET,   KC_GRAVE,           KC_MINUS,
                         KC_COMMA,           KC_DOT,             KC_RIGHT_SHIFT,     KC_NEXT_LAYER
                         ),
-    [_LAYER4] = LAYOUT( KC_F1,              KC_F2,              KC_F3,              KC_F4,
+    [_LAYER6] = LAYOUT( KC_F1,              KC_F2,              KC_F3,              KC_F4,
                         KC_F5,              KC_F6,              KC_F7,              KC_F8,
                         KC_F9,              KC_F10,             KC_F11,             KC_F12,
                         KC_MEDIA_PREV_TRACK,KC_MEDIA_PLAY_PAUSE,KC_MEDIA_STOP,      KC_MEDIA_NEXT_TRACK,
                         KC_LEFT_CTRL,       KC_LEFT_ALT,        KC_RIGHT_SHIFT,     KC_NEXT_LAYER
                         ),
-    [_LAYER5] = LAYOUT( QK_BOOTLOADER,      QK_DEBUG_TOGGLE,    QK_CLEAR_EEPROM,    RGB_PREV,
+    [_LAYER7] = LAYOUT( QK_BOOTLOADER,      QK_DEBUG_TOGGLE,    QK_CLEAR_EEPROM,    RGB_PREV,
                         KC_MS_BTN1,         KC_MS_UP,           KC_MS_BTN2,         RGB_TOGGLE,
                         KC_MS_LEFT,         KC_MS_BTN3,         KC_MS_RIGHT,        RGB_NEXT,
                         KC_AUDIO_VOL_DOWN,  KC_MS_DOWN,         KC_AUDIO_VOL_UP,    KC_AUDIO_MUTE,
@@ -141,6 +185,62 @@ struct diplay_info key_display[] = {
 const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
     bool shift = ((get_mods() & MOD_MASK_SHIFT)!=0) || state.caps_lock;
     switch (keycode) {
+        case KC_HANGEUL_NIEUN:
+            return HANGEUL_NIEUN;
+        case KC_HANGEUL_RIEUL:
+            return HANGEUL_RIEUL;
+        case KC_HANGEUL_MIEUM:
+            return HANGEUL_MIEUM;
+        case KC_HANGEUL_IEUNG:
+            return HANGEUL_IEUNG;
+        case KC_HANGEUL_CHIEUCH:
+            return HANGEUL_CHIEUCH;
+        case KC_HANGEUL_KHIEUKH:
+            return HANGEUL_KHIEUKH;
+        case KC_HANGEUL_THIEUTH:
+            return HANGEUL_THIEUTH;
+        case KC_HANGEUL_PHIEUPH:
+            return HANGEUL_PHIEUPH;
+        case KC_HANGEUL_HIEUH:
+            return HANGEUL_HIEUH;
+        case KC_HANGEUL_A:
+            return HANGEUL_A;
+        case KC_HANGEUL_AE:
+            return HANGEUL_AE;
+        case KC_HANGEUL_YA:
+            return HANGEUL_YA;
+        case KC_HANGEUL_YAE:
+            return HANGEUL_YAE;
+        case KC_HANGEUL_EO:
+            return HANGEUL_EO;
+        case KC_HANGEUL_E:
+            return HANGEUL_E;
+        case KC_HANGEUL_YEO:
+            return HANGEUL_YEO;
+        case KC_HANGEUL_YE:
+            return HANGEUL_YE;
+        case KC_HANGEUL_O:
+            return HANGEUL_O;
+        case KC_HANGEUL_YO:
+            return HANGEUL_YO;
+        case KC_HANGEUL_U:
+            return HANGEUL_U;
+        case KC_HANGEUL_YU:
+            return HANGEUL_YU;
+        case KC_HANGEUL_EU:
+            return HANGEUL_EU;
+        case KC_HANGEUL_I:
+            return HANGEUL_I;
+        case KC_HANGEUL_KIYEOK:
+            return shift ? HANGEUL_SSANGKIYEOK : HANGEUL_KIYEOK;
+        case KC_HANGEUL_TIKEUT:
+            return shift ? HANGEUL_SSANGTIKEUT : HANGEUL_TIKEUT;
+        case KC_HANGEUL_PIEUP:
+            return shift ? HANGEUL_SSANGPIEUP : HANGEUL_PIEUP;
+        case KC_HANGEUL_SIOS:
+            return shift ? HANGEUL_SSANGSIOS : HANGEUL_SIOS;
+        case KC_HANGEUL_CIEUC:
+            return shift ? HANGEUL_SSANGCIEUC : HANGEUL_CIEUC;
         case KC_0:
             return shift ? u")" : u"0";
         case KC_1:
@@ -374,7 +474,7 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         default:
             break;
     }
-    return u"?";
+    return u"[?]";
 }
 
 const GFXfont* ALL_FONTS [] = {&AsciiFont, &IconsFont, &HangulJamoFont};

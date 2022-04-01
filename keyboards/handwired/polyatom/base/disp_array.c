@@ -116,14 +116,19 @@ uint8_t kdisp_write_gfx_char(const GFXfont **fonts, uint8_t num_fonts, int16_t x
     uint16_t last = 0;
     for (uint8_t idx = 0; idx < num_fonts; ++idx) {
         currentFont = fonts[idx];
-        first = pgm_read_byte(&currentFont->first);
-        last  = pgm_read_byte(&currentFont->last);
+        first = pgm_read_word(&currentFont->first);
+        last  = pgm_read_word(&currentFont->last);
         if (ch < first || ch > last) {
             if (idx == num_fonts - 1) {
-                return 0; //no match at all
+                currentFont = fonts[0];
+                first = pgm_read_word(&currentFont->first);
+                last  = pgm_read_word(&currentFont->last);
+                ch = u'!';
+                break;
+                //return 0; //no match at all
             }
         } else {
-            break;
+            break; // found character in range of the current font
         }
     }
     ch -= first;

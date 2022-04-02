@@ -8,6 +8,7 @@ jobs:
   automatic_approve:
     runs-on: ubuntu-latest
 
+<<<<<<< HEAD
     if: github.repository == 'qmk/qmk_firmware'
 
     steps:
@@ -16,3 +17,11 @@ jobs:
         token: ${{ secrets.QMK_BOT_TOKEN }}
         workflows: "format.yml,lint.yml,unit_test.yml"
         dangerous_files: "lib/python/,Makefile,paths.mk,builddefs/"
+=======
+    steps:
+        uses: mheap/automatic-approve-action@v1
+        with:
+          token: ${{ secrets.QMK_BOT_TOKEN }}
+          workflows: "format.yml,lint.yml,unit_test.yml"
+          dangerous_files: "lib/python/,Makefile,paths.mk,builddefs/"
+>>>>>>> bebccd1fd0 (Automatically approve workflow runs from first time contributors (#16774))

@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 77e8fd27c1 (Run auto approve only on qmk/qmk_firmware (#16786))
     if: github.repository == 'qmk/qmk_firmware'
 
     steps:

@@ -28,7 +28,11 @@
 #endif
 
 #ifndef SPI_SCK_PIN
-#    define SPI_SCK_PIN B13
+#    ifdef MCU_RP
+#        define SPI_SCK_PIN GP10
+#    else
+#        define SPI_SCK_PIN B13
+#    endif
 #endif
 
 #ifndef SPI_SCK_PAL_MODE
@@ -40,7 +44,11 @@
 #endif
 
 #ifndef SPI_MOSI_PIN
-#    define SPI_MOSI_PIN B15
+#    ifdef MCU_RP
+#        define SPI_MOSI_PIN GP11
+#    else
+#        define SPI_MOSI_PIN B15
+#    endif
 #endif
 
 #ifndef SPI_MOSI_PAL_MODE
@@ -52,7 +60,11 @@
 #endif
 
 #ifndef SPI_MISO_PIN
-#    define SPI_MISO_PIN B14
+#    ifdef MCU_RP
+#        define SPI_MISO_PIN GP12
+#    else
+#        define SPI_MISO_PIN B14
+#    endif
 #endif
 
 #ifndef SPI_MISO_PAL_MODE

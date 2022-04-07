@@ -1,0 +1,5 @@
+# MCU name
+MCU = RP2040
+
+ALLOW_WARNINGS = yes
+PICO_INTRINSICS_ENABLED = no # ATM Unsupported by ChibiOS!

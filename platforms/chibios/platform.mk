@@ -39,7 +39,6 @@ ifeq ($(strip $(MCU)), risc-v)
     STARTUP_MK = $(CHIBIOS_CONTRIB)/os/common/startup/RISCV-ECLIC/compilers/GCC/mk/startup_$(MCU_STARTUP).mk
     PORT_V = $(CHIBIOS_CONTRIB)/os/common/ports/RISCV-ECLIC/compilers/GCC/mk/port.mk
     RULESPATH = $(CHIBIOS_CONTRIB)/os/common/startup/RISCV-ECLIC/compilers/GCC
-    PLATFORM_MK = $(CHIBIOS_CONTRIB)/os/hal/ports/GD/GD32VF103/platform.mk
 else
     # ARM Support
     CHIBIOS_PORT ?=
@@ -82,10 +81,15 @@ ifeq ("$(PLATFORM_NAME)","")
     PLATFORM_NAME = platform
 endif
 
+# If no MCU port name was specified, use the family instead
+ifeq ("$(MCU_PORT_NAME)","")
+    MCU_PORT_NAME = $(MCU_FAMILY)
+endif
+
 ifeq ("$(wildcard $(PLATFORM_MK))","")
-    PLATFORM_MK = $(CHIBIOS)/os/hal/ports/$(MCU_FAMILY)/$(MCU_SERIES)/$(PLATFORM_NAME).mk
+    PLATFORM_MK = $(CHIBIOS_CONTRIB)/os/hal/ports/$(MCU_PORT_NAME)/$(MCU_SERIES)/$(PLATFORM_NAME).mk
     ifeq ("$(wildcard $(PLATFORM_MK))","")
-        PLATFORM_MK = $(CHIBIOS_CONTRIB)/os/hal/ports/$(MCU_FAMILY)/$(MCU_SERIES)/$(PLATFORM_NAME).mk
+        PLATFORM_MK = $(CHIBIOS)/os/hal/ports/$(MCU_PORT_NAME)/$(MCU_SERIES)/$(PLATFORM_NAME).mk
     endif
 endif
 
@@ -261,7 +265,8 @@ PLATFORM_SRC = \
         $(STREAMSSRC) \
         $(CHIBIOS)/os/various/syscalls.c \
         $(PLATFORM_COMMON_DIR)/syscall-fallbacks.c \
-        $(PLATFORM_COMMON_DIR)/wait.c
+        $(PLATFORM_COMMON_DIR)/wait.c \
+        $(PLATFORM_COMMON_DIR)/synchronization_util.c
 
 # Ensure the ASM files are not subjected to LTO -- it'll strip out interrupt handlers otherwise.
 QUANTUM_LIB_SRC += $(STARTUPASM) $(PORTASM) $(OSALASM) $(PLATFORMASM)
@@ -299,6 +304,35 @@ ifeq ($(strip $(USE_CHIBIOS_CONTRIB)),yes)
     include $(CHIBIOS_CONTRIB)/os/hal/hal.mk
     PLATFORM_SRC += $(PLATFORMSRC_CONTRIB) $(HALSRC_CONTRIB)
     EXTRAINCDIRS += $(PLATFORMINC_CONTRIB) $(HALINC_CONTRIB) $(CHIBIOS_CONTRIB)/os/various
+endif
+
+#
+# Raspberry Pi Pico SDK Support
+##############################################################################
+ifeq ($(strip $(MCU_FAMILY)), RP)
+    PLATFORM_RP2040_PATH = $(PLATFORM_PATH)/$(PLATFORM_KEY)/rp2040
+    include $(PLATFORM_RP2040_PATH)/pico-sdk.mk
+
+    PLATFORM_SRC += $(PICOSDKSRC) \
+                    $(PLATFORM_RP2040_PATH)/stage2_bootloaders.c \
+                    $(PLATFORM_RP2040_PATH)/pico_sdk_shims.c
+
+    EXTRAINCDIRS += $(PICOSDKINC)
+
+    # Enables optimized Compiler intrinsics which are located in the RP2040
+    # bootrom. This needs startup code and linker script support from ChibiOS,
+    # therefore disabled by default.
+    ifeq ($(strip $(PICO_INTRINSICS_ENABLED)), yes)
+        include $(PLATFORM_RP2040_PATH)/pico-intrinsics.mk
+        PLATFORM_SRC += $(PICOSDKINTRINSICSSRC)
+        EXTRAINCDIRS += $(PICOSDKINTRINSICSINC)
+    endif
+
+    ADEFS += -DCRT0_VTOR_INIT=1 \
+             -DCRT0_EXTRA_CORES_NUMBER=0
+
+    CFLAGS += -DPICO_NO_FPGA_CHECK \
+              -DNDEBUG
 endif
 
 #
@@ -415,6 +449,9 @@ LDFLAGS  += $(SHARED_LDFLAGS) $(SHARED_LDSYMBOLS) $(TOOLCHAIN_LDFLAGS) $(TOOLCHA
 
 # Tell QMK that we are hosting it on ChibiOS.
 OPT_DEFS += -DPROTOCOL_CHIBIOS
+
+# ChibiOS supports synchronization primitives like a Mutex
+OPT_DEFS += -DPLATFORM_SUPPORTS_SYNCHRONIZATION
 
 # Workaround to stop ChibiOS from complaining about new GCC -- it's been fixed for 7/8/9 already
 OPT_DEFS += -DPORT_IGNORE_GCC_VERSION_CHECK=1

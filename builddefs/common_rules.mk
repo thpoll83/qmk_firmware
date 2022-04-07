@@ -49,11 +49,7 @@ FORMAT = ihex
 OPT ?= s
 
 # Compiler flag to set the C Standard level.
-#     c89   = "ANSI" C
-#     gnu89 = c89 plus GCC extensions
-#     c99   = ISO C99 standard (not yet fully implemented)
-#     gnu99 = c99 plus GCC extensions
-CSTANDARD = -std=gnu99
+CSTANDARD = -std=gnu11
 
 
 # Place -D or -U options here for C sources
@@ -316,7 +312,7 @@ gccversion :
 	@$(BUILD_CMD)
 
 %.uf2: %.hex
-	$(eval CMD=$(UF2CONV) $(BUILD_DIR)/$(TARGET).hex -o $(BUILD_DIR)/$(TARGET).uf2 -c -f $(UF2_FAMILY) >/dev/null 2>&1)
+	$(eval CMD=$(UF2CONV) $(BUILD_DIR)/$(TARGET).hex --output $(BUILD_DIR)/$(TARGET).uf2 --convert --family $(UF2_FAMILY) >/dev/null 2>&1)
 	#@$(SILENT) || printf "$(MSG_EXECUTING) '$(CMD)':\n"
 	@$(SILENT) || printf "$(MSG_UF2) $@" | $(AWK_CMD)
 	@$(BUILD_CMD)

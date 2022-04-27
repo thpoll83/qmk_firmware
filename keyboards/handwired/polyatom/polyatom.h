@@ -43,7 +43,7 @@ void next_layer(int8_t num_layers);
 void prev_layer(int8_t num_layers);
 
 #ifndef NOP_FUDGE
-#    if defined(STM32F0XX) || defined(STM32F1XX) || defined(GD32VF103) || defined(STM32F3XX) || defined(STM32F4XX) || defined(STM32L0XX)
+#    if defined(STM32F0XX) || defined(STM32F1XX) || defined(GD32VF103) || defined(STM32F3XX) || defined(STM32F4XX) || defined(STM32L0XX) || defined(RP2040)
 #        define NOP_FUDGE 0.4
 #    else
 #        error("NOP_FUDGE configuration required")

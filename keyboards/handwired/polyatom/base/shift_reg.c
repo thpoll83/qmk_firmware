@@ -2,22 +2,28 @@
 #include QMK_KEYBOARD_H
 
 void sr_hw_setup(void) {
-    setPinOutput(SR_NMR_PIN);
+    if( SR_NMR_PIN != NO_PIN ) {
+        setPinOutput(SR_NMR_PIN);
+    }
     setPinOutput(SR_CLK_PIN);
     setPinOutput(SR_DATA_PIN);
     setPinOutput(SR_LATCH_PIN);
 
-    writePinHigh(SR_NMR_PIN);
+    if( SR_NMR_PIN != NO_PIN ) {
+        writePinHigh(SR_NMR_PIN);
+    }
     writePinHigh(SR_CLK_PIN);
     writePinHigh(SR_DATA_PIN);
     writePinLow(SR_LATCH_PIN);
  }
 
 void sr_init(void) {
-    writePinLow(SR_NMR_PIN);
-    wait_us(2);
-    writePinHigh(SR_NMR_PIN);
-    wait_us(2);
+    if( SR_NMR_PIN != NO_PIN ) {
+        writePinLow(SR_NMR_PIN);
+        wait_us(2);
+        writePinHigh(SR_NMR_PIN);
+        wait_us(2);
+    }
 }
 
 void sr_shift_out(uint8_t val) {

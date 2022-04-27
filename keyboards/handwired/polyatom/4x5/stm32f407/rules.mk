@@ -5,6 +5,4 @@ MCU = STM32F407
 BOOTLOADER = stm32-dfu
 
 # Build Options
-#   change yes to no to disable
-#
-#KEYBOARD_SHARED_EP       = yes
+WS2812_DRIVER = bitbang

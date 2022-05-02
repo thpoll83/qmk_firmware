@@ -81,14 +81,14 @@ TRES  > 280µs
 //#define SPI_MISO_PAL_MODE 5
 
 // Shift register to select the display
-#define SR_NMR_PIN NO_PIN
+#define SR_NMR_PIN GP17 //NO_PIN if possible
 #define SR_CLK_PIN GP27
 #define SR_DATA_PIN GP26
 #define SR_LATCH_PIN GP28
 
 // KEY_DISPLAYS_VBAT_PIN
 #define KEY_DISPLAYS_VBAT_PIN GP3
-#define KEY_DISPLAYS_VDD_PIN GP3
+#define KEY_DISPLAYS_VDD_PIN GP4
 
 /* Reset. */
 #define RP2040_BOOTLOADER_DOUBLE_TAP_RESET

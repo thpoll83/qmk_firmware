@@ -2,7 +2,7 @@
 #include QMK_KEYBOARD_H
 
 void sr_hw_setup(void) {
-    if( SR_NMR_PIN != NO_PIN ) {
+    /*if( SR_NMR_PIN != NO_PIN ) {
         setPinOutput(SR_NMR_PIN);
     }
     setPinOutput(SR_CLK_PIN);
@@ -15,14 +15,16 @@ void sr_hw_setup(void) {
     writePinHigh(SR_CLK_PIN);
     writePinHigh(SR_DATA_PIN);
     writePinLow(SR_LATCH_PIN);
+    */
  }
 
 void sr_init(void) {
     if( SR_NMR_PIN != NO_PIN ) {
+        setPinOutput(SR_NMR_PIN);
         writePinLow(SR_NMR_PIN);
-        wait_us(2);
+        WAIT_NS(200);//wait_us(10);
         writePinHigh(SR_NMR_PIN);
-        wait_us(2);
+        WAIT_NS(20);//wait_us(2);
     }
 }
 
@@ -38,6 +40,9 @@ void sr_shift_out(uint8_t val) {
 }
 
 void sr_shift_out_latch(uint8_t val) {
+    setPinOutput(SR_DATA_PIN);
+    setPinOutput(SR_CLK_PIN);
+    setPinOutput(SR_LATCH_PIN);
     writePinLow(SR_LATCH_PIN);
     sr_shift_out(val);
     WAIT_NS(20);
@@ -48,6 +53,9 @@ void sr_shift_out_latch(uint8_t val) {
 }
 
 void sr_shift_out_buffer_latch(const uint8_t* val, uint8_t len) {
+    setPinOutput(SR_DATA_PIN);
+    setPinOutput(SR_CLK_PIN);
+    setPinOutput(SR_LATCH_PIN);
     writePinLow(SR_LATCH_PIN);
     for(uint8_t i=0;i<len;++i) {
         sr_shift_out(val[i]);

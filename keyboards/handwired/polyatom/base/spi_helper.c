@@ -2,7 +2,7 @@
 #include QMK_KEYBOARD_H
 
 void spi_hw_setup(void) {
-    setPinOutput(SPI_SS_PIN);
+    /*setPinOutput(SPI_SS_PIN);
     writePinLow(SPI_SS_PIN);
 
     setPinOutput(SPI_DC_PIN);
@@ -19,6 +19,7 @@ void spi_hw_setup(void) {
 
     setPinOutput(SPI_MISO_PIN);
     writePinLow(SPI_MISO_PIN);
+    */
 }
 
 void spi_prepare_commands(void) {

@@ -160,7 +160,7 @@ void keyboard_post_init_user(void) {
     debug_keyboard = false;
     debug_mouse    = false;
 
-    kdisp_init(NUM_SHIFT_REGISTERS, false);
+    kdisp_init(NUM_SHIFT_REGISTERS, true);
 
     displays_task_user_token = defer_exec(100, displays_task_user, NULL);
 

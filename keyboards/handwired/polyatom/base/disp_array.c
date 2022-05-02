@@ -200,7 +200,7 @@ void kdisp_draw_bitmap(uint16_t x, uint16_t y, const uint8_t pgm_bmp[], uint8_t 
 void kdisp_set_buffer(uint8_t vertical_pixel_row_of_8_pixels) { memset(scratch_buffer, vertical_pixel_row_of_8_pixels, BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT); }
 
 void kdisp_send_buffer(void) {
-    spi_start(SPI_SS_PIN, false, SPI_MODE, SYSTEM_CLOCK / 1000000);
+    spi_start(SPI_SS_PIN, false, SPI_MODE, CPU_CLOCK / 1000000);
 
     spi_prepare_commands();
 
@@ -219,14 +219,14 @@ void kdisp_send_buffer(void) {
 }
 
 void kdisp_invert(bool invert) {
-    spi_start(SPI_SS_PIN, false, SPI_MODE, SYSTEM_CLOCK / 1000000);
+    spi_start(SPI_SS_PIN, false, SPI_MODE, CPU_CLOCK / 1000000);
     spi_prepare_commands();
     spi_write(invert ? SSD1306_INVERTDISPLAY : SSD1306_NORMALDISPLAY);
     spi_stop();
 }
 
 void kdisp_set_contrast(uint8_t contrast) {
-    spi_start(SPI_SS_PIN, false, SPI_MODE, SYSTEM_CLOCK / 1000000);
+    spi_start(SPI_SS_PIN, false, SPI_MODE, CPU_CLOCK / 1000000);
     spi_prepare_commands();
     spi_write(SSD1306_SETCONTRAST);
     spi_write(contrast);
@@ -234,7 +234,7 @@ void kdisp_set_contrast(uint8_t contrast) {
 }
 
 void kdisp_enable(bool enable) {
-    spi_start(SPI_SS_PIN, false, SPI_MODE, SYSTEM_CLOCK / 1000000);
+    spi_start(SPI_SS_PIN, false, SPI_MODE, CPU_CLOCK / 1000000);
     spi_prepare_commands();
     spi_write(enable ? SSD1306_DISPLAYON : SSD1306_DISPLAYOFF);
     spi_stop();
@@ -252,12 +252,15 @@ void kdisp_hw_setup(void) {
 
 void kdisp_init(const int8_t num_shift_regs, bool turn_on) {
 
+    //make sure the pins are output pins and low
+    setPinOutput(KEY_DISPLAYS_VDD_PIN);
+    setPinOutput(KEY_DISPLAYS_VBAT_PIN);
+
     // first turn on logic power supply
     writePinHigh(KEY_DISPLAYS_VDD_PIN);
-    wait_ms(1);
+    wait_ms(5);
     // and then the power supply for the displays
     writePinHigh(KEY_DISPLAYS_VBAT_PIN);
-
     spi_init();
 
     sr_init();
@@ -271,7 +274,7 @@ void kdisp_init(const int8_t num_shift_regs, bool turn_on) {
 
     spi_reset();
 
-    spi_start(SPI_SS_PIN, false, SPI_MODE, SYSTEM_CLOCK / 1000000);
+    spi_start(SPI_SS_PIN, false, SPI_MODE, CPU_CLOCK / 1000000);
 
     spi_prepare_commands();
 

@@ -129,6 +129,10 @@ led_config_t g_led_config = {{// Key Matrix to LED Index
 void process_layer_switch_user(uint16_t new_layer);
 
 void matrix_init_user(void) {
+    setPinOutput(KEY_DISPLAYS_VDD_PIN);
+    setPinOutput(KEY_DISPLAYS_VBAT_PIN);
+    writePinLow(KEY_DISPLAYS_VDD_PIN);
+    writePinLow(KEY_DISPLAYS_VBAT_PIN);
     #ifdef OLED_ENABLE
     OLED_INIT;
     #endif

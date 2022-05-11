@@ -39,7 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_COLS+(col))
 
-#define ENCODER_RESOLUTION 2
+#define ENCODER_RESOLUTION 4
 
 #define DRIVER_LED_TOTAL 20
 #define RGBLED_NUM 20

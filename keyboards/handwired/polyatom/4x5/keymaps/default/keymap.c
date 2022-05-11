@@ -129,13 +129,14 @@ led_config_t g_led_config = {{// Key Matrix to LED Index
 void process_layer_switch_user(uint16_t new_layer);
 
 void matrix_init_user(void) {
+    setPinInputHigh(ENCODERS_SWITCH);
 #ifdef OLED_ENABLE
     OLED_INIT;
     #endif
 }
 
 void matrix_scan_user(void) {
-    if (readPin(ENCODERS_SWITCH)) {
+    if (readPin(ENCODERS_SWITCH)==0) {
         if(rotarySwitchPressed) {
             register_code(KC_CAPS_LOCK);
             unregister_code(KC_CAPS_LOCK);

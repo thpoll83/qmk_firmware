@@ -74,7 +74,7 @@ TRES  > 280µs
 #define SPI_DC_PIN C5
 #define SPI_RST_PIN B1
 #define SPI_SCK_PIN B3 //B13
-#define SPI_SCK_PAL_MODE 5
+#define SPI_SCK_PAL_MODE 3
 #define SPI_MOSI_PIN B5 //B15
 #define SPI_MOSI_PAL_MODE 5
 #define SPI_MISO_PIN B4 //B14

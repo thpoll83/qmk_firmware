@@ -129,11 +129,7 @@ led_config_t g_led_config = {{// Key Matrix to LED Index
 void process_layer_switch_user(uint16_t new_layer);
 
 void matrix_init_user(void) {
-    setPinOutput(KEY_DISPLAYS_VDD_PIN);
-    setPinOutput(KEY_DISPLAYS_VBAT_PIN);
-    writePinLow(KEY_DISPLAYS_VDD_PIN);
-    writePinLow(KEY_DISPLAYS_VBAT_PIN);
-    #ifdef OLED_ENABLE
+#ifdef OLED_ENABLE
     OLED_INIT;
     #endif
 }
@@ -346,7 +342,7 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         case KC_KP_7:
             return !state.num_lock ? u"Home" : u"7";
         case KC_KP_8:
-            return !state.num_lock ? u"  " ICON_UP : u"8";
+            return !state.num_lock ? u"   " ICON_UP : u"8";
         case KC_KP_9:
             return !state.num_lock ? u"PgUp" : u"9";
         case KC_KP_PLUS:
@@ -362,7 +358,7 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         case KC_KP_1:
             return !state.num_lock ? u"End" : u"1";
         case KC_KP_2:
-            return !state.num_lock ? u"  u" ICON_DOWN : u"2";
+            return !state.num_lock ? u"   " ICON_DOWN : u"2";
         case KC_KP_3:
             return !state.num_lock ? u"PgDn" : u"3";
         case KC_CALCULATOR:

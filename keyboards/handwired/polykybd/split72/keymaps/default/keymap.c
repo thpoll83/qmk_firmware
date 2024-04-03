@@ -106,13 +106,13 @@ enum my_keycodes {
       for lang in languages:
           cog.out(f"KC_{lang}, ")
     ]]]*/
-    KC_LANG_EN, KC_LANG_DE, KC_LANG_FR, KC_LANG_ES, KC_LANG_PT, KC_LANG_IT, KC_LANG_TR, KC_LANG_KO, KC_LANG_JA, KC_LANG_AR, KC_LANG_GR, 
+    KC_LANG_EN, KC_LANG_DE, KC_LANG_FR, KC_LANG_ES, KC_LANG_PT, KC_LANG_IT, KC_LANG_TR, KC_LANG_KO, KC_LANG_JA, KC_LANG_AR, KC_LANG_GR,
     //[[[end]]]
     /*[[[cog
       for idx in range(10):
           cog.out(f"KC_LAT{idx}, ")
     ]]]*/
-    KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9, 
+    KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
     //[[[end]]]
     //Lables, no functionality:
     LBL_TEXT
@@ -1896,12 +1896,19 @@ bool oled_task_user(void) {
 }
 
 bool encoder_update_user(uint8_t index, bool clockwise) {
-    if (clockwise) {
-      tap_code(KC_WH_U);
-    } else {
-      tap_code(KC_WH_D);
+    if (index == 0) {
+        if (clockwise) {
+            tap_code(KC_WH_U);
+        } else {
+            tap_code(KC_WH_D);
+        }
+    } else if (index == 1) {
+        if (clockwise) {
+            tap_code(KC_VOLU);
+        } else {
+            tap_code(KC_VOLD);
+        }
     }
-
     return false;
 }
 

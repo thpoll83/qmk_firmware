@@ -46,13 +46,12 @@ static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
 #define EMJ(x) UM(PRIVATE_EMOJI_##x)
 
-//6 sec
-#define FADE_TRANSITION_TIME 6000
-//1 min
-#define FADE_OUT_TIME 60000
-//20 min
-//#define TURN_OFF_TIME 1200000
-#define TURN_OFF_TIME 240000
+//10 sec
+#define FADE_TRANSITION_TIME 10000
+//2 min
+#define FADE_OUT_TIME 120000
+//10 min
+#define TURN_OFF_TIME 1200000
 
 /*[[[cog
 import cog
@@ -619,6 +618,7 @@ void housekeeping_task_user(void) {
             } else if(elapsed_time_since_update > TURN_OFF_TIME) {
                 uprint("Turning off\n");
                 poly_suspend();
+                last_update=-1;
             } else if((l_state.flags & DISP_IDLE)!=0) {
                 int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
                 l_state.contrast = time_after%50;
@@ -627,6 +627,32 @@ void housekeeping_task_user(void) {
             }
         }
     }
+}
+
+#define LAYOUT_left_right_stacked(\
+    lc0r0, lc1r0 ,lc2r0, lc3r0, lc4r0, lc5r0 ,lc6r0, \
+    lc0r1, lc1r1 ,lc2r1, lc3r1, lc4r1, lc5r1 ,lc6r1, \
+    lc0r2, lc1r2 ,lc2r2, lc3r2, lc4r2, lc5r2 ,lc6r2, lc7r3, \
+    lc0r3, lc1r3 ,lc2r3, lc3r3, lc4r3, lc5r3 ,lc6r3, lc7r4, \
+    lc0r4, lc1r4 ,lc2r4, lc3r4,        lc4r4 ,lc5r4, lc6r4, \
+    \
+           rc1r0 ,rc2r0, rc3r0, rc4r0, rc5r0 ,rc6r0, rc7r0, \
+           rc1r1 ,rc2r1, rc3r1, rc4r1, rc5r1 ,rc6r1, rc7r1, \
+    rc0r3, rc1r2 ,rc2r2, rc3r2, rc4r2, rc5r2 ,rc6r2, rc7r2, \
+    rc0r4, rc1r3 ,rc2r3, rc3r3, rc4r3, rc5r3 ,rc6r3, rc7r3, \
+    rc1r4, rc2r4 ,rc3r4,        rc4r4, rc5r4 ,rc6r4, rc7r4 \
+  ) { \
+    { lc0r0, lc1r0 ,lc2r0, lc3r0, lc4r0, lc5r0 ,lc6r0, KC_NO }, \
+    { lc0r1, lc1r1 ,lc2r1, lc3r1, lc4r1, lc5r1 ,lc6r1, KC_NO }, \
+    { lc0r2, lc1r2 ,lc2r2, lc3r2, lc4r2, lc5r2 ,lc6r2, KC_NO }, \
+    { lc0r3, lc1r3 ,lc2r3, lc3r3, lc4r3, lc5r3 ,lc6r3, lc7r3 }, \
+    { lc0r4, lc1r4 ,lc2r4, lc3r4, lc4r4, lc5r4 ,lc6r4, lc7r4 }, \
+    \
+    { KC_NO, rc1r0 ,rc2r0, rc3r0, rc4r0, rc5r0 ,rc6r0, rc7r0 }, \
+    { KC_NO, rc1r1 ,rc2r1, rc3r1, rc4r1, rc5r1 ,rc6r1, rc7r1 }, \
+    { KC_NO, rc1r2 ,rc2r2, rc3r2, rc4r2, rc5r2 ,rc6r2, rc7r2 }, \
+    { rc0r3, rc1r3 ,rc2r3, rc3r3, rc4r3, rc5r3 ,rc6r3, rc7r3 }, \
+    { rc0r4, rc1r4 ,rc2r4, rc3r4, rc4r4, rc5r4 ,rc6r4, rc7r4 } \
 }
 
 const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -1472,7 +1498,7 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
 }
 
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
-    if(keycode>KC_RGUI) {
+    if(keycode>KC_RGUI || (keycode>KC_NUM_LOCK && keycode<KC_NUBS) || (keycode>KC_APP && keycode<KC_LEFT_CTRL)) {
         return false;
     }
     uint16_t idx = (keycode>KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode>KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
@@ -2201,9 +2227,9 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
 }
 
 void poly_suspend(void) {
+    l_state.overlay_flags = flag_off(l_state.overlay_flags, DISPLAY_OVERLAYS);
     l_state.flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)RGB_ON);
     l_state.contrast = DISP_OFF;
-    last_update = -1;
 }
 
 void suspend_power_down_kb(void) {
@@ -2211,6 +2237,7 @@ void suspend_power_down_kb(void) {
     rgb_matrix_disable_noeeprom();
     housekeeping_task_user();
     suspend_power_down_user();
+    last_update = -1;
 }
 
 

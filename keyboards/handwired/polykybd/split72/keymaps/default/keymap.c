@@ -128,6 +128,8 @@ enum my_keycodes {
     //Lables, no functionality:
     LBL_TEXT
 };
+static_assert((int)KC_RGB_TOG<=(int)QK_KB_31, "Too many custom QK key codes");
+static_assert((int)LBL_TEXT<=(int)QK_USER_31, "Too many user custom key codes");
 
 struct display_info {
     uint8_t bitmask[NUM_SHIFT_REGISTERS];
@@ -524,29 +526,29 @@ void sync_and_refresh_displays(void) {
             }
         }
 
-        bool restored = false;
+        //bool restored = false;
         if(status_disp_changed && status_disp_on) {
-            rgb_matrix_reload_from_eeprom();
-            if(rgb_matrix_is_enabled()) {
-                l_state.flags = flag_on(l_state.flags, RGB_ON);
-                restored = true;
-            }
+            // rgb_matrix_reload_from_eeprom();
+            // if(rgb_matrix_is_enabled()) {
+            //     l_state.flags = flag_on(l_state.flags, RGB_ON);
+            //     restored = true;
+            // }
             oled_set_brightness(OLED_BRIGHTNESS);
         }
 
         if(has_flag_changed(l_state.flags, g_state.flags, RGB_ON)) {
             if (test_flag(l_state.flags, RGB_ON)) {
-                if(restored) {
-                    rgb_matrix_enable_noeeprom();
-                } else {
+                // if(restored) {
+                //     rgb_matrix_enable_noeeprom();
+                // } else {
                     rgb_matrix_enable();
-                }
+                //}
             } else {
-                 if(!status_disp_on) {
-                    rgb_matrix_disable_noeeprom();
-                } else {
+                //  if(!status_disp_on) {
+                //     rgb_matrix_disable_noeeprom();
+                // } else {
                     rgb_matrix_disable();
-                }
+                //}
             }
         }
 
@@ -809,25 +811,25 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,     TO(_UL),
         _______,    _______,    _______,    _______,    _______,    _______,    _______,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        KC_CAPS,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
+        KC_CAPS,    _______,    KC_UNDO,    KC_CUT,     KC_COPY,    KC_PASTE,   _______,    _______,
         _______,    _______,    _______,    KC_BTN2,                _______,    _______,    _______,
 
                     KC_F6,      KC_F7,      KC_F8,      KC_F9,      KC_F10,      KC_F11,    KC_F12,
-                    KC_BTN3,    KC_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
+                    KC_AGAIN,   KC_BTN2,    _______,    KC_SELECT,  _______,    _______,    TO(_SL),
+        _______,    KC_BTN3,    KC_OPER,    KC_CRSEL,   KC_EXSEL,   _______,    _______,    _______,
         TO(_NL),    KC_RALT,    _______,    _______,    _______,    _______,    _______,    KC_INS,
         KC_BTN1,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
         ),
     [_FL1] = LAYOUT_left_right_stacked(
         OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,      KC_F6,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
+        _______,    _______,    _______,    _______,    KC_FIND,    _______,    _______,    _______,
+        _______,    _______,    KC_UNDO,    KC_CUT,     KC_COPY,    KC_PASTE,   _______,    _______,
         _______,    _______,    _______,    _______,                _______,    _______,    KC_INS,
 
-                    KC_F7,      KC_F8,      KC_F9,      KC_F10,      KC_F11,     KC_F12,    TO(_UL),
-                    KC_BTN3,    KC_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    KC_CAPS,
+                    KC_F7,      KC_F8,      KC_F9,      KC_F10,     KC_F11,     KC_F12,     TO(_UL),
+                    KC_AGAIN,   KC_BTN2,    _______,    KC_SELECT,  _______,    _______,    TO(_SL),
+        _______,    KC_BTN3,    KC_OPER,    KC_CRSEL,   KC_EXSEL,   _______,    _______,    KC_CAPS,
         TO(_NL),    KC_RALT,    _______,    _______,    _______,    _______,    _______,    _______,
         KC_BTN1,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
         ),
@@ -1390,6 +1392,26 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         return u" Ctx";
     case DE_GRV: //for Neo Layout
         return u"`";
+    case KC_CUT:
+        return u"Cut";
+    case KC_COPY:
+        return u"Copy";
+    case KC_PASTE:
+        return u"Paste";
+    case KC_UNDO:
+        return u"Undo";
+    case KC_AGAIN:
+        return u"Redo";
+    case KC_FIND:
+        return u"Find";
+    case KC_SELECT:
+        return u"Word\r\v   sel";
+    case KC_EXSEL:
+        return u"Line\r\v    sel";
+    case KC_OPER:
+        return u"Line\r\v    join";
+    case KC_CRSEL:
+        return u"Line\r\v    del";
     /*[[[cog
         for lang in languages:
             short = lang.split("_")[1]
@@ -1678,6 +1700,40 @@ void display_message(uint8_t row, uint8_t col, const uint16_t* message, const GF
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+    switch (keycode) {
+        case KC_CRSEL:
+            if (record->event.pressed) { SEND_STRING(SS_TAP(X_HOME) SS_TAP(X_HOME) SS_LSFT(SS_TAP(X_END)) SS_TAP(X_BACKSPACE) SS_TAP(X_BACKSPACE) SS_TAP(X_DOWN)); }
+            uprint("Delete Line.\n");
+            return false;
+        case KC_SELECT:
+            if (record->event.pressed) { SEND_STRING(SS_LCTL(SS_TAP(X_LEFT) SS_LSFT(SS_TAP(X_RGHT)))); }
+            uprint("Select Word.\n");
+            return false;
+        case KC_EXSEL:
+            if (record->event.pressed) { SEND_STRING(SS_TAP(X_HOME) SS_LSFT(SS_TAP(X_END))); }
+            uprint("Select Line.\n");
+            return false;
+        case KC_OPER:
+            if (record->event.pressed) {
+                SEND_STRING( // Go to the end of the line and tap delete.
+                    SS_TAP(X_END) SS_TAP(X_DEL)
+                    SS_TAP(X_SPC) // In case this has joined two wormatrix toaend_string splhhhhds together, insert one space.
+                    SS_LCTL(
+                        // Go to the beginning of the next word.
+                        SS_TAP(X_RGHT) SS_TAP(X_LEFT)
+                        // Select back to the end of the previous word. This should select
+                        // all spaces and tabs between the joined lines from indentation
+                        // or trailing whitespace, including the space inserted earlier.
+                        SS_LSFT(SS_TAP(X_LEFT) SS_TAP(X_RGHT))
+                    )
+                    SS_TAP(X_SPC) // Replace the selection with a single space.
+                );
+                uprint("Join Line.\n");
+            }
+            return false;
+        default:
+            break;
+    }
     const bool addlang = get_highest_layer(l_layer.layer)==_ADDLANG1;
     if (record->event.pressed) {
         switch (keycode) {
@@ -1751,11 +1807,6 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         switch (keycode) {
         case KC_RGB_TOG:
             l_state.flags = toggle_flag(l_state.flags, RGB_ON);
-            // if(test_flag(l_state.flags, RGB_ON)) {
-            //     rgb_matrix_enable();
-            // } else {
-            //     rgb_matrix_disable();
-            // }
             break;
         case KC_DEADKEY:
             l_state.flags = toggle_flag(l_state.flags, DEAD_KEY_ON_WAKEUP);
@@ -1878,9 +1929,9 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         }
     }
 
-    //uprintf("Key 0x%04X, col/row: %u/%u, %s, time: %u, int: %d, cnt: %u disp#: %d 0x%02X%02X%02X%02X%02X\n",
-     //   keycode, record->event.key.col, record->event.key.row, record->event.pressed ? "DN" : "UP",
-     //   record->event.time, record->tap.interrupted ? 1 : 0, record->tap.count, disp_idx, bitmask[4], bitmask[3], bitmask[2], bitmask[1], bitmask[0]);
+    uprintf("Key 0x%04X, col/row: %u/%u, %s, time: %u, int: %d, cnt: %u\n",
+        keycode, record->event.key.col, record->event.key.row, record->event.pressed ? "DN" : "UP",
+        record->event.time, record->tap.interrupted ? 1 : 0, record->tap.count);
 
     update_performed();
 };
@@ -1890,15 +1941,6 @@ void show_splash_screen(void) {
     display_message(1, 1, u"POLY", &FreeSansBold24pt7b);
     display_message(2, 1, u"KYBD", &FreeSansBold24pt7b);
 }
-
-// void oled_on_off(bool on) {
-//     if (!on) {
-//         oled_off();
-//     } else {
-//         oled_on();
-//         uprintf("oled_on %s\n", is_usb_host_side() ? "Host" : "Bridge");
-//     }
-// }
 
 void set_displays(uint8_t contrast, bool idle) {
     if(idle) {
@@ -2228,7 +2270,7 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
 
 void poly_suspend(void) {
     l_state.overlay_flags = flag_off(l_state.overlay_flags, DISPLAY_OVERLAYS);
-    l_state.flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)RGB_ON);
+    l_state.flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE);// & ~((uint8_t)RGB_ON);
     l_state.contrast = DISP_OFF;
 }
 
@@ -2248,7 +2290,10 @@ void suspend_wakeup_init_kb(void) {
     l_state.contrast = ee.brightness;
     last_update = 0;
 
-    rgb_matrix_reload_from_eeprom();
+    //rgb_matrix_reload_from_eeprom();
+    if(test_flag(l_state.flags, RGB_ON)) {
+        rgb_matrix_enable_noeeprom();
+    }
 
     update_performed();
     housekeeping_task_user();
@@ -2424,7 +2469,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 15: //start/stop idle
                 if(data[3]==0) {
-                    if((l_state.flags & (STATUS_DISP_ON|DISP_IDLE|RGB_ON))==0) {
+                    if((l_state.flags & (STATUS_DISP_ON|DISP_IDLE))==0) {
                         suspend_wakeup_init_kb();
                     } else {
                         l_state.flags &= ~((uint8_t)DISP_IDLE);

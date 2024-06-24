@@ -37,8 +37,18 @@ or
 
 ### Flash split setup via EE Hands
 
+(eg. when you flash for the first time)
+
 `make handwired/polykybd/split72:default:uf2-split-right`
 `make handwired/polykybd/split72:default:uf2-split-left`
+
+### Keymaps
+
+There is a `default` and `via` keymap, also for the slightly older revision 2: `revision2` and `revision2_via`. Example for a via keymap on revision 2:
+
+`make handwired/polykybd/split72:revision2_via:uf2-split-right`
+`make handwired/polykybd/split72:revision2_via:uf2-split-left`
+
 
 ## After merging master into branch update dependencies with
 

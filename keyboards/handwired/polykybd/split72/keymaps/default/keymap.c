@@ -18,6 +18,7 @@
 
 #include "quantum/quantum_keycodes.h"
 #include "quantum/keymap_extras/keymap_german.h"
+#include "quantum/keymap_introspection.h"
 #include "quantum/via.h"
 
 #include "raw_hid.h"
@@ -217,13 +218,22 @@ typedef struct _latin_sync_t {
 
 static latin_sync_t g_latin;
 
-#define SYNC_ACK 0b11001010
+#define SYNC_ACK        0b11001010
+#define SYNC_CRC32_ERR  0b00110101
+
 typedef struct _poly_sync_reply_t {
     uint8_t ack;
 } poly_sync_reply_t;
 
 
 static int32_t last_update = 0;
+
+#ifdef VIA_ENABLE
+typedef struct _via_sync_t {
+    uint32_t crc32;
+    uint8_t via_commands[32];
+} via_sync_t;
+ #endif
 
 #define NUM_SEGMENTS_PER_OVERLAY 15
 #define BYTES_PER_SEGMENT 24
@@ -346,6 +356,8 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
             memcpy(&l_state, in_data, sizeof(poly_sync_t));
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
             //request_disp_refresh();
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }
     }
 }
@@ -358,9 +370,62 @@ void user_sync_latin_ex_data_handler(uint8_t in_len, const void* in_data, uint8_
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
             save_user_eeconf();
             request_disp_refresh();
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }
     }
 }
+
+#ifdef VIA_ENABLE
+
+#ifndef DYNAMIC_KEYMAP_EEPROM_ADDR
+#    define DYNAMIC_KEYMAP_EEPROM_ADDR VIA_EEPROM_CONFIG_END
+#endif
+#define DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT 9
+_Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COUNT, "Maximum cannot exceed DYNAMIC_KEYMAP_LAYER_COUNT");
+
+void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data) {
+    uint16_t dynamic_keymap_eeprom_size = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
+    void *   target                     = (void *)(DYNAMIC_KEYMAP_EEPROM_ADDR + offset);
+    const uint8_t *source                     = data;
+    for (uint16_t i = 0; i < size; i++) {
+        if (offset + i < dynamic_keymap_eeprom_size) {
+            eeprom_update_byte(target, *source);
+        }
+        source++;
+        target++;
+    }
+}
+
+void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len >= (sizeof(uint32_t)+1) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
+        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
+        const via_sync_t* via_data = (const via_sync_t *)in_data;
+        if(crc32 == via_data->crc32) {
+            const uint8_t* command_data = &via_data->via_commands[1];
+            switch(via_data->via_commands[0]) {
+                case id_dynamic_keymap_reset:
+                    dynamic_keymap_reset();
+                    break;
+                case id_dynamic_keymap_set_keycode:
+                    dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+                    break;
+                case id_dynamic_keymap_set_buffer: {
+                    uint16_t offset = (command_data[0] << 8) | command_data[1];
+                    uint16_t size   = command_data[2]; // size <= 28
+                    dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
+                    break;
+                }
+                default: break;
+            }
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+            request_disp_refresh();
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
+        }
+    }
+}
+#endif
 
 void user_sync_lastkey_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(poly_last_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
@@ -370,6 +435,8 @@ void user_sync_lastkey_data_handler(uint8_t in_len, const void* in_data, uint8_t
             memcpy(&g_last, in_data, sizeof(poly_last_t));
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
             request_disp_refresh();
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }
     }
 }
@@ -381,6 +448,8 @@ void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t o
             memcpy(&l_layer, in_data, sizeof(poly_layer_t));
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
             //request_disp_refresh();
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }
     }
 }
@@ -396,6 +465,8 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
                 request_disp_refresh();
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }
     }
 }
@@ -409,8 +480,10 @@ const char* tid_to_str(int8_t tid) {
     case USER_SYNC_POLY_DATA:  return "UserPoly";
     case USER_SYNC_LASTKEY_DATA: return "UserLastKey";
     case USER_SYNC_LATIN_EX_DATA: return "UserLatinEx";
-
-    default: return "";
+    #ifdef VIA_ENABLE
+    case USER_SYNC_VIA_DATA: return "UserVia";
+    #endif
+    default: return "Not registered";
     }
 }
 
@@ -424,10 +497,10 @@ bool send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t num_b
         if(sync_success && reply.ack == SYNC_ACK) {
             break;
         }
-        sync_success = false;
         if(debug_enable) {
             uprintf("Bridge sync retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack == SYNC_ACK, num_bytes);
         }
+        sync_success = false;
     }
     if(debug_enable && retry>0) {
         if(sync_success)
@@ -870,12 +943,16 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_BASE,    LBL_TEXT,   KC_TOGMODS, KC_TOGTEXT,             KC_NO,      QK_MAKE,    QK_BOOT,
 
 
+        //             RM_PREV,    RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RM_NEXT,
+        //             KC_NO,      RM_SPDD,    RM_SPDU,    KC_NO,      RM_HUED,    RM_HUEU,    KC_NO,
+        // _______,    KC_NO,      RM_VALD,    RM_VALU,    KC_NO,      RM_SATD,    RM_SATU,    KC_NO,
                     RGB_RMOD,   RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RGB_MOD,
                     KC_NO,      RGB_SPD,    RGB_SPI,    KC_NO,      RGB_HUD,    RGB_HUI,    KC_NO,
         _______,    KC_NO,      RGB_VAD,    RGB_VAI,    KC_NO,      RGB_SAD,    RGB_SAI,    KC_NO,
         EE_CLR,     KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
         DB_TOGG,    KC_DEADKEY, KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
+
     //Language Selection Layer
     [_LL] = LAYOUT_left_right_stacked(
                         KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
@@ -976,6 +1053,11 @@ led_config_t g_led_config = { {// Key Matrix to LED Index
                              } };
 
 const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
+
+    if(IS_QK_MOD_TAP(keycode)) {
+        keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
+    }
+
     switch (keycode) {
     /*[[[cog
     wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "lang/lang_lut.xlsx"), data_only=True)
@@ -1135,6 +1217,15 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
     case UM(138): return u" " PRIVATE_EMOJI_1F918;
     case UM(139): return u" " PRIVATE_EMOJI_1F919;
     //[[[end]]]
+
+    case SC_LCPO: return u"(   " CURRENCY_SIGN;
+    case SC_RCPC: return u")   " CURRENCY_SIGN;
+    case SC_LSPO: return u"(   " ICON_SHIFT;
+    case SC_RSPC: return u")   " ICON_SHIFT;
+    case SC_LAPO: return u"(    <\r     ~";
+    case SC_RAPC: return u")    <\r     ~";
+    case SC_SENT: return ARROWS_RETURN u"  " ICON_SHIFT;
+
     case TO(_EMJ0): return u" " PRIVATE_EMOJI_1F600 u"\v" ICON_LAYER;
     case TO(_EMJ1): return u" " PRIVATE_EMOJI_1F440 u"\v" ICON_LAYER;
     case KC_DEADKEY: return (l_state.flags&DEAD_KEY_ON_WAKEUP)==0 ? u"WakeX\r\v" ICON_SWITCH_OFF : u"WakeX\r\v" ICON_SWITCH_ON;
@@ -1202,27 +1293,27 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         return u"Boot";
     case QK_DEBUG_TOGGLE:
         return ((l_state.flags & DBG_ON) == 0) ? u"Dbg\r\v" ICON_SWITCH_OFF : u"Dbg\r\v" ICON_SWITCH_ON;
-    case RGB_RMOD:
+    case RGB_RMOD: case RM_PREV:
         return u" " ICON_LEFT PRIVATE_LIGHT;
     case KC_RGB_TOG:
         return u"  I/O";
-    case RGB_MOD:
+    case RGB_MOD: case RM_NEXT:
         return PRIVATE_LIGHT ICON_RIGHT;
-    case RGB_HUI:
+    case RGB_HUI: case RM_HUEU:
         return u"Hue+";
-    case RGB_HUD:
+    case RGB_HUD: case RM_HUED:
         return u"Hue-";
-    case RGB_SAI:
+    case RGB_SAI: case RM_SATU:
         return u"Sat+";
-    case RGB_SAD:
+    case RGB_SAD: case RM_SATD:
         return u"Sat-";
-    case RGB_VAI:
+    case RGB_VAI: case RM_VALU:
         return u"Bri+";
-    case RGB_VAD:
+    case RGB_VAD: case RM_VALD:
         return u"Bri-";
-    case RGB_SPI:
+    case RGB_SPI: case RM_SPDU:
         return u"Spd+";
-    case RGB_SPD:
+    case RGB_SPD: case RM_SPDD:
         return u"Spd-";
     case RGB_MODE_PLAIN:
         return u"Plan";
@@ -1503,6 +1594,42 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             default: break;
         }
     }
+
+    if(IS_QK_MOD_TAP(keycode)) {
+        uint8_t mods = QK_MOD_TAP_GET_MODS(keycode);
+        if((mods & MOD_MASK_CSAG) == MOD_MASK_CSAG) {
+            return u"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
+        } else if((mods & MOD_MASK_SAG) == MOD_MASK_SAG) {
+            return u"    " ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
+        } else if((mods & MOD_MASK_CAG) == MOD_MASK_CAG) {
+            return u"    " CURRENCY_SIGN NOT_SIGN KATAKANA_MIDDLE_DOT;
+        } else if((mods & MOD_MASK_CSG) == MOD_MASK_CSG) {
+            return u"    " CURRENCY_SIGN ICON_SHIFT KATAKANA_MIDDLE_DOT;
+        } else if((mods & MOD_MASK_CSA) == MOD_MASK_CSA) {
+            return u"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN;
+        } else if((mods & MOD_MASK_AG) == MOD_MASK_AG) {
+            return u"    " NOT_SIGN KATAKANA_MIDDLE_DOT;
+        } else if((mods & MOD_MASK_SG) == MOD_MASK_SG) {
+            return u"    " ICON_SHIFT KATAKANA_MIDDLE_DOT;
+        } else if((mods & MOD_MASK_SA) == MOD_MASK_SA) {
+            return u"    " CURRENCY_SIGN NOT_SIGN;
+        } else if((mods & MOD_MASK_CG) == MOD_MASK_CG) {
+            return u"    " CURRENCY_SIGN KATAKANA_MIDDLE_DOT;
+        } else if((mods & MOD_MASK_CA) == MOD_MASK_CA) {
+            return u"    " CURRENCY_SIGN NOT_SIGN;
+        } else if((mods & MOD_MASK_CS) == MOD_MASK_CS) {
+            return u"    " CURRENCY_SIGN ICON_SHIFT;
+        } else if(mods & MOD_MASK_CTRL) {
+            return u"    " CURRENCY_SIGN;
+        } else if(mods & MOD_MASK_ALT) {
+            return u"    " NOT_SIGN;
+        } else if (mods & MOD_MASK_SHIFT) {
+            return u"    " ICON_SHIFT;
+        } else {
+            return u"   " KATAKANA_MIDDLE_DOT;
+        }
+    }
+
     return NULL;
 }
 
@@ -1584,9 +1711,10 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     uint8_t layer = get_highest_layer(l_layer.layer);
-                    uint16_t highest_kc = keymaps[layer][r + offset][c];
+                    uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c);//keymaps[layer][r + offset][c];
                     //if we encounter a transparent key go down one layer (but only one!)
-                    keycode = (highest_kc == KC_TRNS) ? keymaps[get_highest_layer(l_layer.layer&~(1<<layer))][r + offset][c] : highest_kc;
+                    //keycode = (highest_kc == KC_TRNS) ? keymaps[get_highest_layer(l_layer.layer&~(1<<layer))][r + offset][c] : highest_kc;
+                    keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(l_layer.layer&~(1<<layer)),r + offset,c) : highest_kc;
                     kdisp_enable(true);//(l_state.flags&STATUS_DISP_ON) != 0);
                     kdisp_set_contrast(l_state.contrast-1);
                     if(keycode!=KC_TRNS) {
@@ -1598,7 +1726,7 @@ void update_displays(enum refresh_mode mode) {
                                     uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
                                     kdisp_write_gfx_char(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, unicode_map[chr]);
                                 }
-                            } else.. {
+                            } else {
                                 kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, text);
                             }
                         }
@@ -2015,6 +2143,10 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_LATIN_EX_DATA,   user_sync_latin_ex_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_DATA,    user_sync_overlay_data_handler);
 
+    #ifdef VIA_ENABLE
+        transaction_register_rpc(USER_SYNC_VIA_DATA,    user_sync_via_data_handler);
+    #endif
+
 }
 
 void keyboard_pre_init_user(void) {
@@ -2203,15 +2335,22 @@ bool oled_task_user(void) {
     return false;
 }
 
-bool encoder_update_user(uint8_t index, bool clockwise) {
-    if (clockwise) {
-      tap_code(KC_WH_U);
-    } else {
-      tap_code(KC_WH_D);
-    }
-
-    return false;
-}
+const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
+    [0] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [1] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [2] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [3] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [4] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [5] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [6] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [7] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [8] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [9] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [10] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [11] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [12] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [13] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+};
 
 void invert_display(uint8_t r, uint8_t c, bool state) {
     uint16_t keycode = keymaps[_BL][r][0];
@@ -2497,8 +2636,45 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
         #endif
     }
 }
+
 #ifndef VIA_ENABLE
+
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     via_custom_value_command_kb(data, length);
 }
+
+#else
+
+bool via_command_kb(uint8_t *data, uint8_t length) {
+    uint8_t *command_id   = &(data[0]);
+    uint8_t *command_data = &(data[1]);
+    uint8_t data_len = 0;
+
+    switch(*command_id) {
+        case id_dynamic_keymap_reset:
+            dynamic_keymap_reset();
+            data_len = 1;
+            break;
+        case id_dynamic_keymap_set_keycode:
+            dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+            data_len = 6;
+            break;
+        case id_dynamic_keymap_set_buffer: {
+            uint16_t offset = (command_data[0] << 8) | command_data[1];
+            uint16_t size   = command_data[2]; // size <= 28
+            dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
+            data_len = 32;
+            break;
+        }
+        default:
+            return false;
+    }
+    via_sync_t sync_data;
+    memcpy(&sync_data.via_commands, data, data_len);
+    send_to_bridge(USER_SYNC_VIA_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 10);
+    request_disp_refresh();
+    raw_hid_send(data, length);
+    return true;
+}
+
 #endif

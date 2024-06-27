@@ -53,7 +53,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // #define SPLIT_LED_STATE_ENABLE
 // #define SPLIT_MODS_ENABLE
 #define SPLIT_WPM_ENABLE
-#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA
+#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_VIA_DATA
 
 #define EE_HANDS
 
@@ -140,6 +140,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //#define POINTING_DEVICE_DEBUG
 //#define PIMORONI_TRACKBALL_SCALE 5
 //#define TRACKBALL_LED_TIMEOUT 5000
+
+
+// Master to slave:
+#define RPC_M2S_BUFFER_SIZE 48
+// Slave to master:
+#define RPC_S2M_BUFFER_SIZE 48
 
 
 

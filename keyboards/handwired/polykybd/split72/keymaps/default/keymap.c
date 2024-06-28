@@ -33,6 +33,7 @@
 
 #include "lang/lang_lut.h"
 
+#include "layers.h"
 #include "keycodes.h"
 #include "uni.h"
 
@@ -42,23 +43,6 @@ const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGE
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
 static enum lang_layer g_lang_init = INIT_LANG;
-
-enum kb_layers {
-    _BL = 0x00,
-    _L0 = _BL,
-    _L1,
-    _L2,
-    _L3,
-    _L4,
-    _FL0,
-    _FL1,
-    _NL,
-    _UL,
-    _SL,
-    _LL,
-    _ADDLANG1,
-    _EMJ0,
-    _EMJ1 };
 
 struct display_info {
     uint8_t bitmask[NUM_SHIFT_REGISTERS];
@@ -96,6 +80,7 @@ static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/Pix
 
 void reset_overlay_buffers(void) {
     memset(&use_overlay, 0, sizeof(use_overlay));
+    memset(&overlays, 0, sizeof(overlays));
 }
 
 typedef struct _overlay_sync_t {
@@ -439,7 +424,7 @@ void sync_and_refresh_displays(void) {
             l_state.overlay_flags = flag_off(l_state.overlay_flags, RESET_BUFFERS);
         }
 
-        if( debug_changed || overlays_changed || reset_overlays) {
+        if( debug_changed || overlays_changed || reset_overlays || l_state.unicode_mode!=g_state.unicode_mode) {
             request_disp_refresh();
             update_performed();
         }
@@ -872,293 +857,27 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
     }
 
-    switch (keycode) {
-    case SC_LCPO: return u"(   " CURRENCY_SIGN;
-    case SC_RCPC: return u")   " CURRENCY_SIGN;
-    case SC_LSPO: return u"(   " ICON_SHIFT;
-    case SC_RSPC: return u")   " ICON_SHIFT;
-    case SC_LAPO: return u"(    <\r     ~";
-    case SC_RAPC: return u")    <\r     ~";
-    case SC_SENT: return ARROWS_RETURN u"  " ICON_SHIFT;
+    const uint16_t* text = keycode_to_static_text(keycode, state, l_state.flags);
+    if(text!=NULL) {
+        return text;
+    }
 
-    case TO(_EMJ0): return u" " PRIVATE_EMOJI_1F600 u"\v" ICON_LAYER;
-    case TO(_EMJ1): return u" " PRIVATE_EMOJI_1F440 u"\v" ICON_LAYER;
-    case KC_DEADKEY: return (l_state.flags&DEAD_KEY_ON_WAKEUP)==0 ? u"WakeX\r\v" ICON_SWITCH_OFF : u"WakeX\r\v" ICON_SWITCH_ON;
-    case LBL_TEXT: return u"Text:";
-    case KC_TOGMODS: return (l_state.flags&MODS_AS_TEXT)==0 ? u"Mods\r\v" ICON_SWITCH_OFF : u"Mods\r\v" ICON_SWITCH_ON;
-    case KC_TOGTEXT: return (l_state.flags&MORE_TEXT)==0 ? u"Cmds\r\v" ICON_SWITCH_OFF : u"Cmds\r\v" ICON_SWITCH_ON;
-    case QK_UNICODE_MODE_MACOS:
-        return l_state.unicode_mode==UNICODE_MODE_MACOS ? u"Mac\r\v" ICON_SWITCH_ON : u"Mac\r\v" ICON_SWITCH_OFF;
-    case QK_UNICODE_MODE_LINUX:
-        return l_state.unicode_mode==UNICODE_MODE_LINUX ? u"Lnx\r\v" ICON_SWITCH_ON : u"Lnx\r\v" ICON_SWITCH_OFF;
-    case QK_UNICODE_MODE_WINDOWS:
-        return l_state.unicode_mode==UNICODE_MODE_WINDOWS ? u"Win\r\v" ICON_SWITCH_ON : u"Win\r\v" ICON_SWITCH_OFF;
-    case QK_UNICODE_MODE_BSD:
-        return l_state.unicode_mode==UNICODE_MODE_BSD ? u"BSD\r\v" ICON_SWITCH_ON : u"BSD\r\v" ICON_SWITCH_OFF;
-    case QK_UNICODE_MODE_WINCOMPOSE:
-        return l_state.unicode_mode==UNICODE_MODE_WINCOMPOSE ? u"WinC\r\v" ICON_SWITCH_ON : u"WinC\r\v" ICON_SWITCH_OFF;
-    case QK_UNICODE_MODE_EMACS:
-        return l_state.unicode_mode==UNICODE_MODE_EMACS ? u"Emcs\r\v" ICON_SWITCH_ON : u"Emcs\r\v" ICON_SWITCH_OFF;
-    case QK_LEAD:
-        return u"Lead";
-    case KC_HYPR:
-        return (l_state.flags&MORE_TEXT)!=0 ? u"Hypr" : u" " PRIVATE_HYPER;
-    case KC_MEH:
-        return (l_state.flags&MORE_TEXT)!=0 ? u"Meh" : u" " PRIVATE_MEH;
-    case KC_EXEC:
-        return u"Exec";
-    case KC_NUM_LOCK:
-        return !state.num_lock ? u"Nm" ICON_NUMLOCK_OFF : u"Nm" ICON_NUMLOCK_ON;
-    case KC_KP_SLASH:
-        return u"/";
-    case KC_KP_ASTERISK:
-    case KC_KP_MINUS:
-        return u"-";
-    case KC_KP_7:
-        return !state.num_lock ? ARROWS_LEFTSTOP : u"7";
-    case KC_KP_8:
-        return !state.num_lock ? u"   " ICON_UP : u"8";
-    case KC_KP_9:
-        return !state.num_lock ? ARROWS_UPSTOP : u"9";
-    case KC_KP_PLUS:
-        return u"+";
-    case KC_KP_4:
-        return !state.num_lock ? u"  " ICON_LEFT : u"4";
-    case KC_KP_5:
-        return !state.num_lock ? u"" : u"5";
-    case KC_KP_6:
-        return !state.num_lock ? u"  " ICON_RIGHT : u"6";
-    case KC_KP_EQUAL:
-        return u"=";
-    case KC_KP_1:
-        return !state.num_lock ? ARROWS_RIGHTSTOP : u"1";
-    case KC_KP_2:
-        return !state.num_lock ? u"   " ICON_DOWN : u"2";
-    case KC_KP_3:
-        return !state.num_lock ? ARROWS_DOWNSTOP : u"3";
-    case KC_CALCULATOR:
-        return u"   " PRIVATE_CALC;
-    case KC_KP_0:
-        return !state.num_lock ? u"Ins" : u"0";
-    case KC_KP_DOT:
-        return !state.num_lock ? u"Del" : u".";
-    case KC_KP_ENTER:
-        return u"Enter";
-    case QK_BOOTLOADER:
-        return u"Boot";
-    case QK_DEBUG_TOGGLE:
-        return ((l_state.flags & DBG_ON) == 0) ? u"Dbg\r\v" ICON_SWITCH_OFF : u"Dbg\r\v" ICON_SWITCH_ON;
-    case RGB_RMOD: case RM_PREV:
-        return u" " ICON_LEFT PRIVATE_LIGHT;
-    case KC_RGB_TOG:
-        return u"  I/O";
-    case RGB_MOD: case RM_NEXT:
-        return PRIVATE_LIGHT ICON_RIGHT;
-    case RGB_HUI: case RM_HUEU:
-        return u"Hue+";
-    case RGB_HUD: case RM_HUED:
-        return u"Hue-";
-    case RGB_SAI: case RM_SATU:
-        return u"Sat+";
-    case RGB_SAD: case RM_SATD:
-        return u"Sat-";
-    case RGB_VAI: case RM_VALU:
-        return u"Bri+";
-    case RGB_VAD: case RM_VALD:
-        return u"Bri-";
-    case RGB_SPI: case RM_SPDU:
-        return u"Spd+";
-    case RGB_SPD: case RM_SPDD:
-        return u"Spd-";
-    case RGB_MODE_PLAIN:
-        return u"Plan";
-    case RGB_MODE_BREATHE:
-        return u"Brth";
-    case RGB_MODE_SWIRL:
-        return u"Swrl";
-    case RGB_MODE_RAINBOW:
-        return u"Rnbw";
-    case KC_MEDIA_NEXT_TRACK:
-        return ICON_RIGHT ICON_RIGHT;
-    case KC_MEDIA_PLAY_PAUSE:
-        return u"  " ICON_RIGHT;
-    case KC_MEDIA_STOP:
-        return u"Stop";
-    case KC_MEDIA_PREV_TRACK:
-        return ICON_LEFT ICON_LEFT;
-    case KC_MS_ACCEL0:
-        return u">>";
-    case KC_MS_ACCEL1:
-        return u">>>";
-    case KC_MS_ACCEL2:
-        return u">>>>";
-    case KC_BTN1:
-        return u"  " ICON_LMB;
-    case KC_BTN2:
-        return u"  " ICON_RMB;
-    case KC_BTN3:
-        return u"  " ICON_MMB;
-    case KC_MS_UP:
-        return u"  " ICON_UP;
-    case KC_MS_DOWN:
-        return u"  " ICON_DOWN;
-    case KC_MS_LEFT:
-        return u"  " ICON_LEFT;
-    case KC_MS_RIGHT:
-        return u"  " ICON_RIGHT;
-    case KC_AUDIO_MUTE:
-        return u"  " PRIVATE_MUTE;
-    case KC_AUDIO_VOL_DOWN:
-        return u"  " PRIVATE_VOL_DOWN;
-    case KC_AUDIO_VOL_UP:
-        return u"  " PRIVATE_VOL_UP;
-    case KC_PRINT_SCREEN:
-        return u"  " PRIVATE_IMAGE;
-    case KC_SCROLL_LOCK:
-        return u"ScLk";
-    case KC_PAUSE:
-        return u"Paus";
-    case KC_INSERT:
-        return u"Ins";
-    case KC_HOME:
-        return ARROWS_LEFTSTOP;
-    case KC_END:
-        return u"   " ARROWS_RIGHTSTOP;
-    case KC_PAGE_UP:
-        return u"  " ARROWS_UPSTOP;
-    case KC_PAGE_DOWN:
-        return u"  " ARROWS_DOWNSTOP;
-    case KC_DELETE:
-        return (l_state.flags&MORE_TEXT)!=0 ? u"Del" : TECHNICAL_ERASERIGHT;
-    case KC_MYCM:
-        return u"  " PRIVATE_PC;
-    case TO(_SL):
-        return PRIVATE_SETTINGS u"\v" ICON_LAYER;
-    case MO(_FL0):
-    case MO(_FL1):
-        return u"Fn\r\v\t" ICON_LAYER;
-    case TO(_NL):
-        return u"Nm\r\v\t" ICON_LAYER;
-    case MO(_NL):
-        return u"Nm!\r\v\t" ICON_LAYER;
-    case KC_BASE:
-        return u"Base\r\v\t" ICON_LAYER;
-    case KC_L0:
-        return l_layer.def_layer==_L0 ? u"Qwty\r\v" ICON_SWITCH_ON : u"Qwty\r\v" ICON_SWITCH_OFF;
-    case KC_L1:
-        return l_layer.def_layer==_L1 ? u"Qwty!\r\v" ICON_SWITCH_ON : u"Qwty!\r\v" ICON_SWITCH_OFF;
-    case KC_L2:
-        return l_layer.def_layer==_L2 ? u"Clmk\r\v" ICON_SWITCH_ON : u"Clmk\r\v" ICON_SWITCH_OFF;
-    case KC_L3:
-        return l_layer.def_layer==_L3 ? u"Neo\r\v" ICON_SWITCH_ON : u"Neo\r\v" ICON_SWITCH_OFF;
-    case KC_L4:
-        return l_layer.def_layer==_L4 ? u"Wkm\r\v" ICON_SWITCH_ON : u"Wkm\r\v" ICON_SWITCH_OFF;
-    case OSL(_UL):
-        return u"Util*\r\v\t" ICON_LAYER;
-    case TO(_UL):
-        return u"Util\r\v\t" ICON_LAYER;
-    case MO(_ADDLANG1):
-        return u"Intl";
-    case KC_F1: return u" F1";
-    case KC_F2: return u" F2";
-    case KC_F3: return u" F3";
-    case KC_F4: return u" F4";
-    case KC_F5: return u" F5";
-    case KC_F6: return u" F6";
-    case KC_F7: return u" F7";
-    case KC_F8: return u" F8";
-    case KC_F9: return u" F9";
-    case KC_F10:return u" F10";
-    case KC_F11:return u" F11";
-    case KC_F12:return u" F12";
-    case KC_F13:return u" F13";
-    case KC_F14:return u" F14";
-    case KC_F15:return u" F15";
-    case KC_F16:return u" F16";
-    case KC_F17:return u" F17";
-    case KC_F18:return u" F18";
-    case KC_F19:return u" F19";
-    case KC_F20:return u" F20";
-    case KC_F21:return u" F21";
-    case KC_F22:return u" F22";
-    case KC_F23:return u" F23";
-    case KC_F24:return u" F24";
-    case KC_LEFT_CTRL:
-    case KC_RIGHT_CTRL:
-        return (l_state.flags&MODS_AS_TEXT)!=0 ? u"Ctrl" : TECHNICAL_CONTROL;
-    case KC_LEFT_ALT:
-        return (l_state.flags&MODS_AS_TEXT)!=0 ? u"Alt" : TECHNICAL_OPTION;
-    case KC_RIGHT_ALT:
-        return (l_state.flags&MODS_AS_TEXT)!=0 ? ( l_state.lang == KC_LANG_EN ? u"Alt" : u"Alt\nGr") : TECHNICAL_OPTION;
-    case KC_LGUI:
-    case KC_RGUI:
-        return (l_state.flags&MODS_AS_TEXT)!=0 ? u"GUI" : DINGBAT_BLACK_DIA_X;
-    case KC_LEFT:
-        return u"  " ICON_LEFT;
-    case KC_RIGHT:
-        return u"  " ICON_RIGHT;
-    case KC_UP:
-        return u"  " ICON_UP;
-    case KC_DOWN:
-        return u"  " ICON_DOWN;
-    case KC_CAPS_LOCK:
-        return state.caps_lock ? u"Cap" ICON_CAPSLOCK_ON : u"Cap" ICON_CAPSLOCK_OFF;
-    case KC_LSFT:
-    case KC_RSFT:
-        return (l_state.flags&MODS_AS_TEXT)!=0 ? u"Shft" : u" " ICON_SHIFT;
-    case KC_NO:
-        return u"";
-    case KC_DDIM:
-        return u"  " ICON_LEFT;
-    case KC_DBRI:
-        return u"  " ICON_RIGHT;
-    case KC_D1Q:
-        return u"  " PRIVATE_DISP_DARKER;
-    case KC_D3Q:
-        return u"  " PRIVATE_DISP_BRIGHTER;
-    case KC_DHLF:
-        return u"  " PRIVATE_DISP_HALF;
-    case KC_DMIN:
-        return u"  " PRIVATE_DISP_DARK;
-    case KC_DMAX:
-        return u"  " PRIVATE_DISP_BRIGHT;
-    case KC_LANG:
-        return (l_state.flags&MORE_TEXT)!=0 ? u"Lang" : PRIVATE_WORLD;
-    case SH_TOGG:
-        return u"SwpH";
-    case QK_MAKE:
-        return u"Make";
-    case EE_CLR:
-        return u"ClrEE";
-    case QK_REBOOT:
-        return u" " ARROWS_CIRCLE;
-    case KC_LNG1:
-        return u"Han/Y";
-    case KC_APP:
-        return u" Ctx";
-    case DE_GRV: //for Neo Layout
-        return u"`";
-    case KC_CUT:
-        return u"Cut";
-    case KC_COPY:
-        return u"Copy";
-    case KC_PASTE:
-        return u"Paste";
-    case KC_UNDO:
-        return u"Undo";
-    case KC_AGAIN:
-        return u"Redo";
-    case KC_FIND:
-        return u"Find";
-    case KC_SELECT:
-        return u"Word\r\v   sel";
-    case KC_EXSEL:
-        return u"Line\r\v    sel";
-    case KC_OPER:
-        return u"Line\r\v    join";
-    case KC_CRSEL:
-        return u"Line\r\v    del";
-    /*[[[cog
+    switch (keycode) {
+        case QK_UNICODE_MODE_MACOS:         return l_state.unicode_mode == UNICODE_MODE_MACOS ? u"Mac\r\v" ICON_SWITCH_ON : u"Mac\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_LINUX:         return l_state.unicode_mode == UNICODE_MODE_LINUX ? u"Lnx\r\v" ICON_SWITCH_ON : u"Lnx\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_WINDOWS:       return l_state.unicode_mode == UNICODE_MODE_WINDOWS ? u"Win\r\v" ICON_SWITCH_ON : u"Win\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_BSD:           return l_state.unicode_mode == UNICODE_MODE_BSD ? u"BSD\r\v" ICON_SWITCH_ON : u"BSD\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_WINCOMPOSE:    return l_state.unicode_mode == UNICODE_MODE_WINCOMPOSE ? u"WinC\r\v" ICON_SWITCH_ON : u"WinC\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_EMACS:         return l_state.unicode_mode == UNICODE_MODE_EMACS ? u"Emcs\r\v" ICON_SWITCH_ON : u"Emcs\r\v" ICON_SWITCH_OFF;
+
+        case KC_L0:                         return l_layer.def_layer == _L0 ? u"Qwty\r\v" ICON_SWITCH_ON : u"Qwty\r\v" ICON_SWITCH_OFF;
+        case KC_L1:                         return l_layer.def_layer == _L1 ? u"Qwty!\r\v" ICON_SWITCH_ON : u"Qwty!\r\v" ICON_SWITCH_OFF;
+        case KC_L2:                         return l_layer.def_layer == _L2 ? u"Clmk\r\v" ICON_SWITCH_ON : u"Clmk\r\v" ICON_SWITCH_OFF;
+        case KC_L3:                         return l_layer.def_layer == _L3 ? u"Neo\r\v" ICON_SWITCH_ON : u"Neo\r\v" ICON_SWITCH_OFF;
+        case KC_L4:                         return l_layer.def_layer == _L4 ? u"Wkm\r\v" ICON_SWITCH_ON : u"Wkm\r\v" ICON_SWITCH_OFF;
+
+        //Language selection keycodes
+        /*[[[cog
         import cog
         import os
         from textwrap import wrap
@@ -1177,56 +896,49 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         for lang in languages:
             short = lang.split("_")[1]
             cog.outl(f'case KC_{lang}: return l_state.lang == {lang} ? u"[{short}]" : u" {short}";')
-    ]]]*/
-    case KC_LANG_EN: return l_state.lang == LANG_EN ? u"[EN]" : u" EN";
-    case KC_LANG_DE: return l_state.lang == LANG_DE ? u"[DE]" : u" DE";
-    case KC_LANG_FR: return l_state.lang == LANG_FR ? u"[FR]" : u" FR";
-    case KC_LANG_ES: return l_state.lang == LANG_ES ? u"[ES]" : u" ES";
-    case KC_LANG_PT: return l_state.lang == LANG_PT ? u"[PT]" : u" PT";
-    case KC_LANG_IT: return l_state.lang == LANG_IT ? u"[IT]" : u" IT";
-    case KC_LANG_TR: return l_state.lang == LANG_TR ? u"[TR]" : u" TR";
-    case KC_LANG_KO: return l_state.lang == LANG_KO ? u"[KO]" : u" KO";
-    case KC_LANG_JA: return l_state.lang == LANG_JA ? u"[JA]" : u" JA";
-    case KC_LANG_AR: return l_state.lang == LANG_AR ? u"[AR]" : u" AR";
-    case KC_LANG_GR: return l_state.lang == LANG_GR ? u"[GR]" : u" GR";
-    //[[[end]]]
-    //The following entries will over-rule language specific enties in the follow langauge lookup table,
-    //however with this we can control them by flags and so far those wehere not lanuage specific anyway.
-    case KC_ENTER:      return (l_state.flags&MORE_TEXT)!=0 ? u"Enter"    : ARROWS_RETURN;
-    case KC_ESCAPE:	    return (l_state.flags&MORE_TEXT)!=0 ? u"Esc"      : TECHNICAL_ESCAPE;
-    case KC_BACKSPACE:  return (l_state.flags&MORE_TEXT)!=0 ? u"Bksp"     : TECHNICAL_ERASELEFT;
-    case KC_TAB:        return (l_state.flags&MORE_TEXT)!=0 ? u"Tab"      : ARROWS_TAB;
-    case KC_SPACE:      return (l_state.flags&MORE_TEXT)!=0 ? u"Space"    : ICON_SPACE;
-    default:
-    {
-        bool shift = ((l_layer.mods & MOD_MASK_SHIFT) != 0);
-        bool add_lang = get_highest_layer(l_layer.layer)==_ADDLANG1;
-        bool alt = ((l_layer.mods & MOD_MASK_ALT) != 0);
-        if(keycode>=KC_A && keycode<=KC_Z && add_lang) {
-            //display the previously selected latin variation of the letter
-            const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-            uint8_t variation = (shift || state.caps_lock) ? g_latin.ex[keycode-KC_A]>>4 : g_latin.ex[keycode-KC_A]&0xf;
-
-            const uint16_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
-            return (def_variation!=NULL) ? latin_ex_map[offset+keycode-KC_A][variation] : NULL;
-        }
-
-        if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
-            if(add_lang && alt && l_last.latin_kc!=0) {
-                //show all available alternatives for selected latin letter
+        ]]]*/
+        case KC_LANG_EN: return l_state.lang == LANG_EN ? u"[EN]" : u" EN";
+        case KC_LANG_DE: return l_state.lang == LANG_DE ? u"[DE]" : u" DE";
+        case KC_LANG_FR: return l_state.lang == LANG_FR ? u"[FR]" : u" FR";
+        case KC_LANG_ES: return l_state.lang == LANG_ES ? u"[ES]" : u" ES";
+        case KC_LANG_PT: return l_state.lang == LANG_PT ? u"[PT]" : u" PT";
+        case KC_LANG_IT: return l_state.lang == LANG_IT ? u"[IT]" : u" IT";
+        case KC_LANG_TR: return l_state.lang == LANG_TR ? u"[TR]" : u" TR";
+        case KC_LANG_KO: return l_state.lang == LANG_KO ? u"[KO]" : u" KO";
+        case KC_LANG_JA: return l_state.lang == LANG_JA ? u"[JA]" : u" JA";
+        case KC_LANG_AR: return l_state.lang == LANG_AR ? u"[AR]" : u" AR";
+        case KC_LANG_GR: return l_state.lang == LANG_GR ? u"[GR]" : u" GR";
+        //[[[end]]]
+        default:
+        {
+            bool shift = ((l_layer.mods & MOD_MASK_SHIFT) != 0);
+            bool add_lang = get_highest_layer(l_layer.layer)==_ADDLANG1;
+            bool alt = ((l_layer.mods & MOD_MASK_ALT) != 0);
+            if(keycode>=KC_A && keycode<=KC_Z && add_lang) {
+                //display the previously selected latin variation of the letter
                 const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-                return latin_ex_map[offset+l_last.latin_kc-KC_A][keycode-KC_LAT0];
-            } else {
-                return NULL; //show nothing
+                uint8_t variation = (shift || state.caps_lock) ? g_latin.ex[keycode-KC_A]>>4 : g_latin.ex[keycode-KC_A]&0xf;
+
+                const uint16_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
+                return (def_variation!=NULL) ? latin_ex_map[offset+keycode-KC_A][variation] : NULL;
+            }
+
+            if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
+                if(add_lang && alt && l_last.latin_kc!=0) {
+                    //show all available alternatives for selected latin letter
+                    const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
+                    return latin_ex_map[offset+l_last.latin_kc-KC_A][keycode-KC_LAT0];
+                } else {
+                    return NULL; //show nothing
+                }
+            }
+
+            const uint16_t* text = translate_keycode(l_state.lang, keycode, shift, state.caps_lock);
+            if (text != NULL) {
+                return text;
             }
         }
-
-        const uint16_t* text = translate_keycode(l_state.lang, keycode, shift, state.caps_lock);
-        if (text != NULL) {
-            return text;
-        }
-    }
-    break;
+        break;
     }
     return NULL;
 }

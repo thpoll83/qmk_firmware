@@ -15,6 +15,55 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#define BITMASK1(x) .bitmask = {~0, ~0, ~0, ~0, (uint8_t)(~(1<<x))}
+#define BITMASK2(x) .bitmask = {~0, ~0, ~0, (uint8_t)(~(1<<x)), ~0}
+#define BITMASK3(x) .bitmask = {~0, ~0, (uint8_t)(~(1<<x)), ~0, ~0}
+#define BITMASK4(x) .bitmask = {~0, (uint8_t)(~(1<<x)), ~0, ~0, ~0}
+#define BITMASK5(x) .bitmask = {(uint8_t)(~(1<<x)), ~0, ~0, ~0, ~0}
+
+typedef struct _poly_eeconf_t {
+    uint8_t lang;
+    uint8_t brightness;
+    uint16_t unused;
+    uint8_t latin_ex[26];
+} poly_eeconf_t;
+
+
+static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");
+
+typedef struct _poly_layer_t {
+    uint32_t      crc32;
+    layer_state_t layer;
+    layer_state_t def_layer;
+    led_t         led_state;
+    uint8_t       mods;
+} poly_layer_t;
+
+typedef struct _poly_sync_t {
+    uint32_t crc32;
+    uint8_t  lang;
+    uint8_t  contrast;
+    uint8_t  flags;
+    uint8_t  overlay_flags;
+    uint8_t  unicode_mode;
+} poly_sync_t;
+
+typedef struct _poly_last_t {
+    uint32_t crc32;
+    uint16_t latin_kc;
+} poly_last_t;
+
+typedef struct _latin_sync_t {
+    uint32_t crc32;
+    uint8_t  ex[26];
+} latin_sync_t;
+
+#ifdef VIA_ENABLE
+typedef struct _via_sync_t {
+    uint32_t crc32;
+    uint8_t  via_commands[32];
+} via_sync_t;
+#endif
 
 void oled_draw_kybd(void) {
     static const char kybd_bitmap [] PROGMEM =

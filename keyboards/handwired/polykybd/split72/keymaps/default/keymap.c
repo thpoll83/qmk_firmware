@@ -1,7 +1,22 @@
 #include QMK_KEYBOARD_H
 
+#include "quantum/quantum_keycodes.h"
+#include "quantum/keymap_extras/keymap_german.h"
+#include "quantum/keymap_introspection.h"
+#include "quantum/via.h"
+
+#include "raw_hid.h"
+#include "oled_driver.h"
+#include "version.h"
+#include "print.h"
+#include "debug.h"
+
+#include <transactions.h>
+#include <hardware/flash.h>
+
 #include "polykybd.h"
 #include "split72/split72.h"
+#include "split72/sync_helper.h"
 #include "split72/keymaps/default/uni.h"
 
 #include "base/com.h"
@@ -16,64 +31,17 @@
 
 #include "base/crc32.h"
 
-#include "quantum/quantum_keycodes.h"
-#include "quantum/keymap_extras/keymap_german.h"
-#include "quantum/keymap_introspection.h"
-#include "quantum/via.h"
-
-#include "raw_hid.h"
-#include "oled_driver.h"
-#include "version.h"
-#include "print.h"
-#include "debug.h"
-
-
-
-#include <transactions.h>
-#include <hardware/flash.h>
-
 #include "lang/lang_lut.h"
 
-#define FW_VERSION "0.5.2"
+#include "keycodes.h"
+#include "uni.h"
 
+//not used at the moment
 #define FLASH_TARGET_OFFSET (4 * 1024 * 1024) //we start at 4MB and use the remaining 4MB for resource data
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
-#define FULL_BRIGHT 50
-#define MIN_BRIGHT 1
-#define DISP_OFF 0
-#define BRIGHT_STEP 1
-
-#define EMJ(x) UM(PRIVATE_EMOJI_##x)
-
-//10 sec
-#define FADE_TRANSITION_TIME 10000
-//2 min
-#define FADE_OUT_TIME 120000
-//10 min
-#define TURN_OFF_TIME 1200000
-
-/*[[[cog
-import cog
-import os
-from textwrap import wrap
-from openpyxl import load_workbook
-wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "lang", "lang_lut.xlsx"))
-sheet = wb['key_lut']
-
-languages = []
-lang_index = 0
-lang_key = sheet["B1"].value
-while lang_key:
-    languages.append(lang_key)
-    if lang_index==0:
-        cog.outl(f"static enum lang_layer g_lang_init = {lang_key};")
-    lang_index = lang_index + 1
-    lang_key = sheet.cell(row = 1, column = 2 + lang_index*3).value
-]]]*/
-static enum lang_layer g_lang_init = LANG_EN;
-//[[[end]]]
+static enum lang_layer g_lang_init = INIT_LANG;
 
 enum kb_layers {
     _BL = 0x00,
@@ -92,55 +60,9 @@ enum kb_layers {
     _EMJ0,
     _EMJ1 };
 
-enum my_keycodes {
-    KC_LANG = QK_KB_0,
-    KC_DMIN,
-    KC_DMAX,
-    KC_DDIM,
-    KC_DBRI,
-    KC_DHLF,
-    KC_D1Q,
-    KC_D3Q,
-    KC_BASE,
-    KC_L0,
-    KC_L1,
-    KC_L2,
-    KC_L3,
-    KC_L4,
-    KC_DEADKEY,
-    KC_TOGMODS,
-    KC_TOGTEXT,
-    KC_RGB_TOG,
-    /*[[[cog
-        for lang in languages:
-            if lang == "LANG_EN":
-                cog.out(f"KC_LANG_EN = SAFE_RANGE, ")
-            else:
-                cog.out(f"KC_{lang}, ")
-    ]]]*/
-    KC_LANG_EN = SAFE_RANGE, KC_LANG_DE, KC_LANG_FR, KC_LANG_ES, KC_LANG_PT, KC_LANG_IT, KC_LANG_TR, KC_LANG_KO, KC_LANG_JA, KC_LANG_AR, KC_LANG_GR,
-    //[[[end]]]
-    /*[[[cog
-      for idx in range(10):
-          cog.out(f"KC_LAT{idx}, ")
-    ]]]*/
-    KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
-    //[[[end]]]
-    //Lables, no functionality:
-    LBL_TEXT
-};
-static_assert((int)KC_RGB_TOG<=(int)QK_KB_31, "Too many custom QK key codes");
-static_assert((int)LBL_TEXT<=(int)QK_USER_31, "Too many user custom key codes");
-
 struct display_info {
     uint8_t bitmask[NUM_SHIFT_REGISTERS];
 };
-
-#define BITMASK1(x) .bitmask = {~0, ~0, ~0, ~0, (uint8_t)(~(1<<x))}
-#define BITMASK2(x) .bitmask = {~0, ~0, ~0, (uint8_t)(~(1<<x)), ~0}
-#define BITMASK3(x) .bitmask = {~0, ~0, (uint8_t)(~(1<<x)), ~0, ~0}
-#define BITMASK4(x) .bitmask = {~0, (uint8_t)(~(1<<x)), ~0, ~0, ~0}
-#define BITMASK5(x) .bitmask = {(uint8_t)(~(1<<x)), ~0, ~0, ~0, ~0}
 
 const struct display_info key_display[] = {
         {BITMASK1(0)}, {BITMASK1(1)}, {BITMASK1(2)}, {BITMASK1(3)}, {BITMASK1(4)}, {BITMASK1(5)}, {BITMASK1(6)}, {BITMASK1(7)},
@@ -156,89 +78,19 @@ const struct display_info disp_row_3 = { BITMASK4(0) };
 enum refresh_mode { START_FIRST_HALF, START_SECOND_HALF, DONE_ALL, ALL_AT_ONCE };
 static enum refresh_mode g_refresh = DONE_ALL;
 
-enum com_state { NOT_INITIALIZED, USB_HOST, BRIDGE };
-static enum com_state com = NOT_INITIALIZED;
-
-bool is_usb_host_side(void) {
-    return com == USB_HOST;
-}
-
-enum side_state { UNDECIDED, LEFT_SIDE, RIGHT_SIDE };
-static enum side_state side = UNDECIDED;
-
-bool is_left_side(void) {
-    return side == LEFT_SIDE;
-}
-
-bool is_right_side(void) {
-    return side == RIGHT_SIDE;
-}
-typedef struct _poly_eeconf_t {
-    uint8_t lang;
-    uint8_t brightness;
-    uint16_t unused;
-    uint8_t latin_ex[26];
-} poly_eeconf_t;
-
-
-static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");
-
-typedef struct _poly_layer_t {
-    uint32_t crc32;
-    layer_state_t layer;
-    layer_state_t def_layer;
-    led_t led_state;
-    uint8_t mods;
-} poly_layer_t;
 static poly_layer_t l_layer;
 static poly_layer_t g_layer;
 
-typedef struct _poly_sync_t {
-    uint32_t crc32;
-    uint8_t lang;
-    uint8_t contrast;
-    uint8_t flags;
-    uint8_t overlay_flags;
-    uint8_t unicode_mode;
-} poly_sync_t;
 static poly_sync_t l_state;
 static poly_sync_t g_state;
 
-typedef struct _poly_last_t {
-    uint32_t crc32;
-    uint16_t latin_kc;
-} poly_last_t;
 static poly_last_t l_last;
 static poly_last_t g_last;
 
-typedef struct _latin_sync_t {
-    uint32_t crc32;
-    uint8_t ex[26];
-} latin_sync_t;
-
 static latin_sync_t g_latin;
-
-#define SYNC_ACK        0b11001010
-#define SYNC_CRC32_ERR  0b00110101
-
-typedef struct _poly_sync_reply_t {
-    uint8_t ack;
-} poly_sync_reply_t;
-
 
 static int32_t last_update = 0;
 
-#ifdef VIA_ENABLE
-typedef struct _via_sync_t {
-    uint32_t crc32;
-    uint8_t via_commands[32];
-} via_sync_t;
- #endif
-
-#define NUM_SEGMENTS_PER_OVERLAY 15
-#define BYTES_PER_SEGMENT 24
-#define NUM_OVERLAYS 90
-#define NUM_VARIATIONS 7 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5), ALT_SHIFT(6), Not supported: CTRL_ALT_SHIFT(7) GUI_KEY(8)
 static uint8_t use_overlay[NUM_OVERLAYS*NUM_VARIATIONS];
 static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
 
@@ -472,49 +324,6 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
 }
 
 //void oled_on_off(bool on);
-
-const char* tid_to_str(int8_t tid) {
-    switch (tid)
-    {
-    case USER_SYNC_LAYER_DATA: return "UserLayer";
-    case USER_SYNC_POLY_DATA:  return "UserPoly";
-    case USER_SYNC_LASTKEY_DATA: return "UserLastKey";
-    case USER_SYNC_LATIN_EX_DATA: return "UserLatinEx";
-    #ifdef VIA_ENABLE
-    case USER_SYNC_VIA_DATA: return "UserVia";
-    #endif
-    default: return "Not registered";
-    }
-}
-
-bool send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t num_bytes, const uint8_t retries) {
-    poly_sync_reply_t reply;
-    bool sync_success = false;
-    uint8_t retry = 0;
-    *((uint32_t *)buffer_with4crc_bytes) = crc32_1byte(&((uint8_t *)buffer_with4crc_bytes)[4], num_bytes-4, 0);
-    for(; retry<retries; ++retry) {
-        sync_success = transaction_rpc_exec(tid, num_bytes, buffer_with4crc_bytes, sizeof(poly_sync_reply_t), &reply);
-        if(sync_success && reply.ack == SYNC_ACK) {
-            break;
-        }
-        if(debug_enable) {
-            uprintf("Bridge sync retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack == SYNC_ACK, num_bytes);
-        }
-        sync_success = false;
-    }
-    if(debug_enable && retry>0) {
-        if(sync_success)
-            uprintf("Success on retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack == SYNC_ACK, num_bytes);
-        else
-            uprintf("Failed to sync %d bytes for transaction %s!\n", num_bytes, tid_to_str(tid));
-    }
-
-    return sync_success;
-}
-
-bool differ(const void* b1, const void* b2, uint8_t byte_count) {
-    return memcmp(&((const uint8_t *)b1)[4], &((const uint8_t *)b2)[4], byte_count - 4) != 0; // start after crc32
-}
 
 #define BYTE_TO_BINARY_PATTERN "|%s%s%s%s%s%s%s%s"
 #define BYTE_TO_FLAGS(byte)  \
@@ -1054,170 +863,16 @@ led_config_t g_led_config = { {// Key Matrix to LED Index
 
 const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
 
+    const uint16_t* emoji = keycode_to_emoji(keycode);
+    if(emoji!=NULL) {
+        return emoji;
+    }
+
     if(IS_QK_MOD_TAP(keycode)) {
         keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
     }
 
     switch (keycode) {
-    /*[[[cog
-    wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "lang/lang_lut.xlsx"), data_only=True)
-    sheet = wb['named_glyphs']
-
-    idx = 0
-    glyph_index = 1
-    glyph_key = sheet[f"A{glyph_index}"].value
-    while glyph_key and not glyph_key.startswith("PRIVATE_EMOJI"):
-        glyph_key = sheet[f"A{glyph_index}"].value
-        glyph_index = glyph_index + 1
-    while glyph_key and glyph_key.startswith("PRIVATE_EMOJI"):
-        cog.outl(f'case UM({idx}): return u" " {glyph_key};')
-        glyph_key = sheet[f"A{glyph_index}"].value
-        idx = idx + 1
-        glyph_index = glyph_index + 1
-
-    ]]]*/
-    case UM(0): return u" " PRIVATE_EMOJI_1F600;
-    case UM(1): return u" " PRIVATE_EMOJI_1F601;
-    case UM(2): return u" " PRIVATE_EMOJI_1F602;
-    case UM(3): return u" " PRIVATE_EMOJI_1F603;
-    case UM(4): return u" " PRIVATE_EMOJI_1F604;
-    case UM(5): return u" " PRIVATE_EMOJI_1F605;
-    case UM(6): return u" " PRIVATE_EMOJI_1F606;
-    case UM(7): return u" " PRIVATE_EMOJI_1F607;
-    case UM(8): return u" " PRIVATE_EMOJI_1F608;
-    case UM(9): return u" " PRIVATE_EMOJI_1F609;
-    case UM(10): return u" " PRIVATE_EMOJI_1F60A;
-    case UM(11): return u" " PRIVATE_EMOJI_1F60B;
-    case UM(12): return u" " PRIVATE_EMOJI_1F60C;
-    case UM(13): return u" " PRIVATE_EMOJI_1F60D;
-    case UM(14): return u" " PRIVATE_EMOJI_1F60E;
-    case UM(15): return u" " PRIVATE_EMOJI_1F60F;
-    case UM(16): return u" " PRIVATE_EMOJI_1F610;
-    case UM(17): return u" " PRIVATE_EMOJI_1F611;
-    case UM(18): return u" " PRIVATE_EMOJI_1F612;
-    case UM(19): return u" " PRIVATE_EMOJI_1F613;
-    case UM(20): return u" " PRIVATE_EMOJI_1F614;
-    case UM(21): return u" " PRIVATE_EMOJI_1F615;
-    case UM(22): return u" " PRIVATE_EMOJI_1F616;
-    case UM(23): return u" " PRIVATE_EMOJI_1F617;
-    case UM(24): return u" " PRIVATE_EMOJI_1F618;
-    case UM(25): return u" " PRIVATE_EMOJI_1F619;
-    case UM(26): return u" " PRIVATE_EMOJI_1F61A;
-    case UM(27): return u" " PRIVATE_EMOJI_1F61B;
-    case UM(28): return u" " PRIVATE_EMOJI_1F61C;
-    case UM(29): return u" " PRIVATE_EMOJI_1F61D;
-    case UM(30): return u" " PRIVATE_EMOJI_1F61E;
-    case UM(31): return u" " PRIVATE_EMOJI_1F61F;
-    case UM(32): return u" " PRIVATE_EMOJI_1F620;
-    case UM(33): return u" " PRIVATE_EMOJI_1F621;
-    case UM(34): return u" " PRIVATE_EMOJI_1F622;
-    case UM(35): return u" " PRIVATE_EMOJI_1F623;
-    case UM(36): return u" " PRIVATE_EMOJI_1F624;
-    case UM(37): return u" " PRIVATE_EMOJI_1F625;
-    case UM(38): return u" " PRIVATE_EMOJI_1F626;
-    case UM(39): return u" " PRIVATE_EMOJI_1F627;
-    case UM(40): return u" " PRIVATE_EMOJI_1F628;
-    case UM(41): return u" " PRIVATE_EMOJI_1F629;
-    case UM(42): return u" " PRIVATE_EMOJI_1F62A;
-    case UM(43): return u" " PRIVATE_EMOJI_1F62B;
-    case UM(44): return u" " PRIVATE_EMOJI_1F62C;
-    case UM(45): return u" " PRIVATE_EMOJI_1F62D;
-    case UM(46): return u" " PRIVATE_EMOJI_1F62E;
-    case UM(47): return u" " PRIVATE_EMOJI_1F62F;
-    case UM(48): return u" " PRIVATE_EMOJI_1F630;
-    case UM(49): return u" " PRIVATE_EMOJI_1F631;
-    case UM(50): return u" " PRIVATE_EMOJI_1F632;
-    case UM(51): return u" " PRIVATE_EMOJI_1F633;
-    case UM(52): return u" " PRIVATE_EMOJI_1F634;
-    case UM(53): return u" " PRIVATE_EMOJI_1F635;
-    case UM(54): return u" " PRIVATE_EMOJI_1F636;
-    case UM(55): return u" " PRIVATE_EMOJI_1F637;
-    case UM(56): return u" " PRIVATE_EMOJI_1F638;
-    case UM(57): return u" " PRIVATE_EMOJI_1F639;
-    case UM(58): return u" " PRIVATE_EMOJI_1F644;
-    case UM(59): return u" " PRIVATE_EMOJI_1F645;
-    case UM(60): return u" " PRIVATE_EMOJI_1F646;
-    case UM(61): return u" " PRIVATE_EMOJI_1F647;
-    case UM(62): return u" " PRIVATE_EMOJI_1F648;
-    case UM(63): return u" " PRIVATE_EMOJI_1F649;
-    case UM(64): return u" " PRIVATE_EMOJI_1F64A;
-    case UM(65): return u" " PRIVATE_EMOJI_1F64B;
-    case UM(66): return u" " PRIVATE_EMOJI_1F64C;
-    case UM(67): return u" " PRIVATE_EMOJI_1F64D;
-    case UM(68): return u" " PRIVATE_EMOJI_1F64E;
-    case UM(69): return u" " PRIVATE_EMOJI_1F64F;
-    case UM(70): return u" " PRIVATE_EMOJI_1F440;
-    case UM(71): return u" " PRIVATE_EMOJI_1F441;
-    case UM(72): return u" " PRIVATE_EMOJI_1F442;
-    case UM(73): return u" " PRIVATE_EMOJI_1F443;
-    case UM(74): return u" " PRIVATE_EMOJI_1F444;
-    case UM(75): return u" " PRIVATE_EMOJI_1F445;
-    case UM(76): return u" " PRIVATE_EMOJI_1F446;
-    case UM(77): return u" " PRIVATE_EMOJI_1F447;
-    case UM(78): return u" " PRIVATE_EMOJI_1F448;
-    case UM(79): return u" " PRIVATE_EMOJI_1F449;
-    case UM(80): return u" " PRIVATE_EMOJI_1F44A;
-    case UM(81): return u" " PRIVATE_EMOJI_1F44B;
-    case UM(82): return u" " PRIVATE_EMOJI_1F44C;
-    case UM(83): return u" " PRIVATE_EMOJI_1F44D;
-    case UM(84): return u" " PRIVATE_EMOJI_1F44E;
-    case UM(85): return u" " PRIVATE_EMOJI_1F44F;
-    case UM(86): return u" " PRIVATE_EMOJI_1F450;
-    case UM(87): return u" " PRIVATE_EMOJI_1F451;
-    case UM(88): return u" " PRIVATE_EMOJI_1F452;
-    case UM(89): return u" " PRIVATE_EMOJI_1F453;
-    case UM(90): return u" " PRIVATE_EMOJI_1F47B;
-    case UM(91): return u" " PRIVATE_EMOJI_1F47C;
-    case UM(92): return u" " PRIVATE_EMOJI_1F47D;
-    case UM(93): return u" " PRIVATE_EMOJI_1F47E;
-    case UM(94): return u" " PRIVATE_EMOJI_1F47F;
-    case UM(95): return u" " PRIVATE_EMOJI_1F480;
-    case UM(96): return u" " PRIVATE_EMOJI_1F481;
-    case UM(97): return u" " PRIVATE_EMOJI_1F482;
-    case UM(98): return u" " PRIVATE_EMOJI_1F483;
-    case UM(99): return u" " PRIVATE_EMOJI_1F484;
-    case UM(100): return u" " PRIVATE_EMOJI_1F485;
-    case UM(101): return u" " PRIVATE_EMOJI_1F489;
-    case UM(102): return u" " PRIVATE_EMOJI_1F48A;
-    case UM(103): return u" " PRIVATE_EMOJI_1F48B;
-    case UM(104): return u" " PRIVATE_EMOJI_1F48C;
-    case UM(105): return u" " PRIVATE_EMOJI_1F48D;
-    case UM(106): return u" " PRIVATE_EMOJI_1F48E;
-    case UM(107): return u" " PRIVATE_EMOJI_1F48F;
-    case UM(108): return u" " PRIVATE_EMOJI_1F490;
-    case UM(109): return u" " PRIVATE_EMOJI_1F491;
-    case UM(110): return u" " PRIVATE_EMOJI_1F492;
-    case UM(111): return u" " PRIVATE_EMOJI_1F493;
-    case UM(112): return u" " PRIVATE_EMOJI_1F494;
-    case UM(113): return u" " PRIVATE_EMOJI_1F495;
-    case UM(114): return u" " PRIVATE_EMOJI_1F496;
-    case UM(115): return u" " PRIVATE_EMOJI_1F4A1;
-    case UM(116): return u" " PRIVATE_EMOJI_1F4A2;
-    case UM(117): return u" " PRIVATE_EMOJI_1F4A3;
-    case UM(118): return u" " PRIVATE_EMOJI_1F4A4;
-    case UM(119): return u" " PRIVATE_EMOJI_1F4A5;
-    case UM(120): return u" " PRIVATE_EMOJI_1F4A6;
-    case UM(121): return u" " PRIVATE_EMOJI_1F4A7;
-    case UM(122): return u" " PRIVATE_EMOJI_1F4A8;
-    case UM(123): return u" " PRIVATE_EMOJI_1F4A9;
-    case UM(124): return u" " PRIVATE_EMOJI_1F4AA;
-    case UM(125): return u" " PRIVATE_EMOJI_1F4AB;
-    case UM(126): return u" " PRIVATE_EMOJI_1F4AC;
-    case UM(127): return u" " PRIVATE_EMOJI_1F4AD;
-    case UM(128): return u" " PRIVATE_EMOJI_1F4AE;
-    case UM(129): return u" " PRIVATE_EMOJI_1F4AF;
-    case UM(130): return u" " PRIVATE_EMOJI_1F4B0;
-    case UM(131): return u" " PRIVATE_EMOJI_1F4B1;
-    case UM(132): return u" " PRIVATE_EMOJI_1F912;
-    case UM(133): return u" " PRIVATE_EMOJI_1F913;
-    case UM(134): return u" " PRIVATE_EMOJI_1F914;
-    case UM(135): return u" " PRIVATE_EMOJI_1F915;
-    case UM(136): return u" " PRIVATE_EMOJI_1F916;
-    case UM(137): return u" " PRIVATE_EMOJI_1F917;
-    case UM(138): return u" " PRIVATE_EMOJI_1F918;
-    case UM(139): return u" " PRIVATE_EMOJI_1F919;
-    //[[[end]]]
-
     case SC_LCPO: return u"(   " CURRENCY_SIGN;
     case SC_RCPC: return u")   " CURRENCY_SIGN;
     case SC_LSPO: return u"(   " ICON_SHIFT;
@@ -1504,6 +1159,21 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
     case KC_CRSEL:
         return u"Line\r\v    del";
     /*[[[cog
+        import cog
+        import os
+        from textwrap import wrap
+        from openpyxl import load_workbook
+        wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "lang", "lang_lut.xlsx"))
+        sheet = wb['key_lut']
+
+        languages = []
+        lang_index = 0
+        lang_key = sheet["B1"].value
+        while lang_key:
+            languages.append(lang_key)
+            lang_index = lang_index + 1
+            lang_key = sheet.cell(row = 1, column = 2 + lang_index*3).value
+
         for lang in languages:
             short = lang.split("_")[1]
             cog.outl(f'case KC_{lang}: return l_state.lang == {lang} ? u"[{short}]" : u" {short}";')
@@ -2488,17 +2158,17 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     for lang in languages:
                         cog.outl(f'case {lang}: memcpy(data, "P\\x07.{lang[5:]}", 5); break;')
                     ]]]*/
-                    case LANG_EN: memcpy(data, "P1.EN", 5); break;
-                    case LANG_DE: memcpy(data, "P1.DE", 5); break;
-                    case LANG_FR: memcpy(data, "P1.FR", 5); break;
-                    case LANG_ES: memcpy(data, "P1.ES", 5); break;
-                    case LANG_PT: memcpy(data, "P1.PT", 5); break;
-                    case LANG_IT: memcpy(data, "P1.IT", 5); break;
-                    case LANG_TR: memcpy(data, "P1.TR", 5); break;
-                    case LANG_KO: memcpy(data, "P1.KO", 5); break;
-                    case LANG_JA: memcpy(data, "P1.JA", 5); break;
-                    case LANG_AR: memcpy(data, "P1.AR", 5); break;
-                    case LANG_GR: memcpy(data, "P1.GR", 5); break;
+                    case LANG_EN: memcpy(data, "P\x07.EN", 5); break;
+                    case LANG_DE: memcpy(data, "P\x07.DE", 5); break;
+                    case LANG_FR: memcpy(data, "P\x07.FR", 5); break;
+                    case LANG_ES: memcpy(data, "P\x07.ES", 5); break;
+                    case LANG_PT: memcpy(data, "P\x07.PT", 5); break;
+                    case LANG_IT: memcpy(data, "P\x07.IT", 5); break;
+                    case LANG_TR: memcpy(data, "P\x07.TR", 5); break;
+                    case LANG_KO: memcpy(data, "P\x07.KO", 5); break;
+                    case LANG_JA: memcpy(data, "P\x07.JA", 5); break;
+                    case LANG_AR: memcpy(data, "P\x07.AR", 5); break;
+                    case LANG_GR: memcpy(data, "P\x07.GR", 5); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -2511,14 +2181,14 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 lang_list = "P\\x08."
                 for lang in languages:
                     lang_list += lang[5:]
-                    if len(lang_list)>=(32-3-1):
-                        cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)});')
+                    if len(lang_list)>=(32-1):
+                        cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)-3});')
                         cog.outl(f'raw_hid_send(data, length);')
                         cog.outl(f'memset(data, 0, length);')
-                        lang_list = "P8."
+                        lang_list = "P\\x08."
                     elif lang != languages[-1]:
                         lang_list += ","
-                cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)});')
+                cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)-3});')
                 ]]]*/
                 memcpy(data, "P\x08.EN,DE,FR,ES,PT,IT,TR,KO,JA", 29);
                 raw_hid_send(data, length);

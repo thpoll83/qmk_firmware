@@ -567,3 +567,167 @@ static const uint16_t latin_rev_ex_map[26*2][10] PROGMEM = {
   /* [51] 122/z */ { 326, 328, 330, 0, 0, 0, 0, 0, 0, 0 }
 //[[[end]]]
 };
+
+const uint16_t* keycode_to_emoji(uint16_t keycode) {
+    switch (keycode) {
+    /*[[[cog
+    wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "lang/lang_lut.xlsx"), data_only=True)
+    sheet = wb['named_glyphs']
+
+    idx = 0
+    glyph_index = 1
+    glyph_key = sheet[f"A{glyph_index}"].value
+    while glyph_key and not glyph_key.startswith("PRIVATE_EMOJI"):
+        glyph_key = sheet[f"A{glyph_index}"].value
+        glyph_index = glyph_index + 1
+    while glyph_key and glyph_key.startswith("PRIVATE_EMOJI"):
+        cog.outl(f'case UM({idx}): return u" " {glyph_key};')
+        glyph_key = sheet[f"A{glyph_index}"].value
+        idx = idx + 1
+        glyph_index = glyph_index + 1
+
+    ]]]*/
+    case UM(0): return u" " PRIVATE_EMOJI_1F600;
+    case UM(1): return u" " PRIVATE_EMOJI_1F601;
+    case UM(2): return u" " PRIVATE_EMOJI_1F602;
+    case UM(3): return u" " PRIVATE_EMOJI_1F603;
+    case UM(4): return u" " PRIVATE_EMOJI_1F604;
+    case UM(5): return u" " PRIVATE_EMOJI_1F605;
+    case UM(6): return u" " PRIVATE_EMOJI_1F606;
+    case UM(7): return u" " PRIVATE_EMOJI_1F607;
+    case UM(8): return u" " PRIVATE_EMOJI_1F608;
+    case UM(9): return u" " PRIVATE_EMOJI_1F609;
+    case UM(10): return u" " PRIVATE_EMOJI_1F60A;
+    case UM(11): return u" " PRIVATE_EMOJI_1F60B;
+    case UM(12): return u" " PRIVATE_EMOJI_1F60C;
+    case UM(13): return u" " PRIVATE_EMOJI_1F60D;
+    case UM(14): return u" " PRIVATE_EMOJI_1F60E;
+    case UM(15): return u" " PRIVATE_EMOJI_1F60F;
+    case UM(16): return u" " PRIVATE_EMOJI_1F610;
+    case UM(17): return u" " PRIVATE_EMOJI_1F611;
+    case UM(18): return u" " PRIVATE_EMOJI_1F612;
+    case UM(19): return u" " PRIVATE_EMOJI_1F613;
+    case UM(20): return u" " PRIVATE_EMOJI_1F614;
+    case UM(21): return u" " PRIVATE_EMOJI_1F615;
+    case UM(22): return u" " PRIVATE_EMOJI_1F616;
+    case UM(23): return u" " PRIVATE_EMOJI_1F617;
+    case UM(24): return u" " PRIVATE_EMOJI_1F618;
+    case UM(25): return u" " PRIVATE_EMOJI_1F619;
+    case UM(26): return u" " PRIVATE_EMOJI_1F61A;
+    case UM(27): return u" " PRIVATE_EMOJI_1F61B;
+    case UM(28): return u" " PRIVATE_EMOJI_1F61C;
+    case UM(29): return u" " PRIVATE_EMOJI_1F61D;
+    case UM(30): return u" " PRIVATE_EMOJI_1F61E;
+    case UM(31): return u" " PRIVATE_EMOJI_1F61F;
+    case UM(32): return u" " PRIVATE_EMOJI_1F620;
+    case UM(33): return u" " PRIVATE_EMOJI_1F621;
+    case UM(34): return u" " PRIVATE_EMOJI_1F622;
+    case UM(35): return u" " PRIVATE_EMOJI_1F623;
+    case UM(36): return u" " PRIVATE_EMOJI_1F624;
+    case UM(37): return u" " PRIVATE_EMOJI_1F625;
+    case UM(38): return u" " PRIVATE_EMOJI_1F626;
+    case UM(39): return u" " PRIVATE_EMOJI_1F627;
+    case UM(40): return u" " PRIVATE_EMOJI_1F628;
+    case UM(41): return u" " PRIVATE_EMOJI_1F629;
+    case UM(42): return u" " PRIVATE_EMOJI_1F62A;
+    case UM(43): return u" " PRIVATE_EMOJI_1F62B;
+    case UM(44): return u" " PRIVATE_EMOJI_1F62C;
+    case UM(45): return u" " PRIVATE_EMOJI_1F62D;
+    case UM(46): return u" " PRIVATE_EMOJI_1F62E;
+    case UM(47): return u" " PRIVATE_EMOJI_1F62F;
+    case UM(48): return u" " PRIVATE_EMOJI_1F630;
+    case UM(49): return u" " PRIVATE_EMOJI_1F631;
+    case UM(50): return u" " PRIVATE_EMOJI_1F632;
+    case UM(51): return u" " PRIVATE_EMOJI_1F633;
+    case UM(52): return u" " PRIVATE_EMOJI_1F634;
+    case UM(53): return u" " PRIVATE_EMOJI_1F635;
+    case UM(54): return u" " PRIVATE_EMOJI_1F636;
+    case UM(55): return u" " PRIVATE_EMOJI_1F637;
+    case UM(56): return u" " PRIVATE_EMOJI_1F638;
+    case UM(57): return u" " PRIVATE_EMOJI_1F639;
+    case UM(58): return u" " PRIVATE_EMOJI_1F644;
+    case UM(59): return u" " PRIVATE_EMOJI_1F645;
+    case UM(60): return u" " PRIVATE_EMOJI_1F646;
+    case UM(61): return u" " PRIVATE_EMOJI_1F647;
+    case UM(62): return u" " PRIVATE_EMOJI_1F648;
+    case UM(63): return u" " PRIVATE_EMOJI_1F649;
+    case UM(64): return u" " PRIVATE_EMOJI_1F64A;
+    case UM(65): return u" " PRIVATE_EMOJI_1F64B;
+    case UM(66): return u" " PRIVATE_EMOJI_1F64C;
+    case UM(67): return u" " PRIVATE_EMOJI_1F64D;
+    case UM(68): return u" " PRIVATE_EMOJI_1F64E;
+    case UM(69): return u" " PRIVATE_EMOJI_1F64F;
+    case UM(70): return u" " PRIVATE_EMOJI_1F440;
+    case UM(71): return u" " PRIVATE_EMOJI_1F441;
+    case UM(72): return u" " PRIVATE_EMOJI_1F442;
+    case UM(73): return u" " PRIVATE_EMOJI_1F443;
+    case UM(74): return u" " PRIVATE_EMOJI_1F444;
+    case UM(75): return u" " PRIVATE_EMOJI_1F445;
+    case UM(76): return u" " PRIVATE_EMOJI_1F446;
+    case UM(77): return u" " PRIVATE_EMOJI_1F447;
+    case UM(78): return u" " PRIVATE_EMOJI_1F448;
+    case UM(79): return u" " PRIVATE_EMOJI_1F449;
+    case UM(80): return u" " PRIVATE_EMOJI_1F44A;
+    case UM(81): return u" " PRIVATE_EMOJI_1F44B;
+    case UM(82): return u" " PRIVATE_EMOJI_1F44C;
+    case UM(83): return u" " PRIVATE_EMOJI_1F44D;
+    case UM(84): return u" " PRIVATE_EMOJI_1F44E;
+    case UM(85): return u" " PRIVATE_EMOJI_1F44F;
+    case UM(86): return u" " PRIVATE_EMOJI_1F450;
+    case UM(87): return u" " PRIVATE_EMOJI_1F451;
+    case UM(88): return u" " PRIVATE_EMOJI_1F452;
+    case UM(89): return u" " PRIVATE_EMOJI_1F453;
+    case UM(90): return u" " PRIVATE_EMOJI_1F47B;
+    case UM(91): return u" " PRIVATE_EMOJI_1F47C;
+    case UM(92): return u" " PRIVATE_EMOJI_1F47D;
+    case UM(93): return u" " PRIVATE_EMOJI_1F47E;
+    case UM(94): return u" " PRIVATE_EMOJI_1F47F;
+    case UM(95): return u" " PRIVATE_EMOJI_1F480;
+    case UM(96): return u" " PRIVATE_EMOJI_1F481;
+    case UM(97): return u" " PRIVATE_EMOJI_1F482;
+    case UM(98): return u" " PRIVATE_EMOJI_1F483;
+    case UM(99): return u" " PRIVATE_EMOJI_1F484;
+    case UM(100): return u" " PRIVATE_EMOJI_1F485;
+    case UM(101): return u" " PRIVATE_EMOJI_1F489;
+    case UM(102): return u" " PRIVATE_EMOJI_1F48A;
+    case UM(103): return u" " PRIVATE_EMOJI_1F48B;
+    case UM(104): return u" " PRIVATE_EMOJI_1F48C;
+    case UM(105): return u" " PRIVATE_EMOJI_1F48D;
+    case UM(106): return u" " PRIVATE_EMOJI_1F48E;
+    case UM(107): return u" " PRIVATE_EMOJI_1F48F;
+    case UM(108): return u" " PRIVATE_EMOJI_1F490;
+    case UM(109): return u" " PRIVATE_EMOJI_1F491;
+    case UM(110): return u" " PRIVATE_EMOJI_1F492;
+    case UM(111): return u" " PRIVATE_EMOJI_1F493;
+    case UM(112): return u" " PRIVATE_EMOJI_1F494;
+    case UM(113): return u" " PRIVATE_EMOJI_1F495;
+    case UM(114): return u" " PRIVATE_EMOJI_1F496;
+    case UM(115): return u" " PRIVATE_EMOJI_1F4A1;
+    case UM(116): return u" " PRIVATE_EMOJI_1F4A2;
+    case UM(117): return u" " PRIVATE_EMOJI_1F4A3;
+    case UM(118): return u" " PRIVATE_EMOJI_1F4A4;
+    case UM(119): return u" " PRIVATE_EMOJI_1F4A5;
+    case UM(120): return u" " PRIVATE_EMOJI_1F4A6;
+    case UM(121): return u" " PRIVATE_EMOJI_1F4A7;
+    case UM(122): return u" " PRIVATE_EMOJI_1F4A8;
+    case UM(123): return u" " PRIVATE_EMOJI_1F4A9;
+    case UM(124): return u" " PRIVATE_EMOJI_1F4AA;
+    case UM(125): return u" " PRIVATE_EMOJI_1F4AB;
+    case UM(126): return u" " PRIVATE_EMOJI_1F4AC;
+    case UM(127): return u" " PRIVATE_EMOJI_1F4AD;
+    case UM(128): return u" " PRIVATE_EMOJI_1F4AE;
+    case UM(129): return u" " PRIVATE_EMOJI_1F4AF;
+    case UM(130): return u" " PRIVATE_EMOJI_1F4B0;
+    case UM(131): return u" " PRIVATE_EMOJI_1F4B1;
+    case UM(132): return u" " PRIVATE_EMOJI_1F912;
+    case UM(133): return u" " PRIVATE_EMOJI_1F913;
+    case UM(134): return u" " PRIVATE_EMOJI_1F914;
+    case UM(135): return u" " PRIVATE_EMOJI_1F915;
+    case UM(136): return u" " PRIVATE_EMOJI_1F916;
+    case UM(137): return u" " PRIVATE_EMOJI_1F917;
+    case UM(138): return u" " PRIVATE_EMOJI_1F918;
+    case UM(139): return u" " PRIVATE_EMOJI_1F919;
+    //[[[end]]]
+    default: return NULL;
+    }
+}

@@ -147,5 +147,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Slave to master:
 #define RPC_S2M_BUFFER_SIZE 48
 
+//######################################
+//#          PolyKybd specific         #
+//######################################
+#define FW_VERSION "0.5.2"
+
+#define FULL_BRIGHT 50
+#define MIN_BRIGHT 1
+#define DISP_OFF 0
+#define BRIGHT_STEP 1
+
+//10 sec
+#define FADE_TRANSITION_TIME 10000
+//2 min
+#define FADE_OUT_TIME 120000
+//10 min
+#define TURN_OFF_TIME 1200000
+
+//######################################
+//#          Overlays specific         #
+//######################################
+#define NUM_SEGMENTS_PER_OVERLAY 15
+#define BYTES_PER_SEGMENT 24
+#define NUM_OVERLAYS 90
+#define NUM_VARIATIONS 7 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5), ALT_SHIFT(6), Not supported: CTRL_ALT_SHIFT(7) GUI_KEY(8)
 
 

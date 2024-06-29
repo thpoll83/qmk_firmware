@@ -13,17 +13,6 @@ bool is_usb_host_side(void) {
     return com == USB_HOST;
 }
 
-enum side_state { UNDECIDED, LEFT_SIDE, RIGHT_SIDE };
-static enum side_state side = UNDECIDED;
-
-bool is_left_side(void) {
-    return side == LEFT_SIDE;
-}
-
-bool is_right_side(void) {
-    return side == RIGHT_SIDE;
-}
-
 #define SYNC_ACK        0b11001010
 #define SYNC_CRC32_ERR  0b00110101
 

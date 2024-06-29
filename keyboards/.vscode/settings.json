@@ -11,6 +11,8 @@
         "typeinfo": "c",
         "initializer_list": "c",
         "utility": "c",
-        "system_error": "c"
+        "system_error": "c",
+        "type_traits": "c",
+        "random": "c"
     }
 }

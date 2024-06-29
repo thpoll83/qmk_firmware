@@ -15,6 +15,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+enum side_state { UNDECIDED, LEFT_SIDE, RIGHT_SIDE };
+static enum side_state side = UNDECIDED;
+
+bool is_left_side(void) {
+    return side == LEFT_SIDE;
+}
+
+bool is_right_side(void) {
+    return side == RIGHT_SIDE;
+}
+
 #define BITMASK1(x) .bitmask = {~0, ~0, ~0, ~0, (uint8_t)(~(1<<x))}
 #define BITMASK2(x) .bitmask = {~0, ~0, ~0, (uint8_t)(~(1<<x)), ~0}
 #define BITMASK3(x) .bitmask = {~0, ~0, (uint8_t)(~(1<<x)), ~0, ~0}
@@ -64,6 +75,33 @@ typedef struct _via_sync_t {
     uint8_t  via_commands[32];
 } via_sync_t;
 #endif
+
+bool get_split_matrix_pos(uint16_t keycode, uint8_t layer, uint8_t* row, uint8_t* col) {
+    const uint8_t first = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
+    for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+            if (keycode_at_keymap_location(layer, r, c) == keycode) {
+                *row = r;
+                *col = c;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool get_split_matrix_side(uint16_t keycode, uint8_t layer) {
+    const uint8_t first = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
+    for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+            if (keycode_at_keymap_location(layer, r, c) == keycode) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 
 void oled_draw_kybd(void) {
     static const char kybd_bitmap [] PROGMEM =

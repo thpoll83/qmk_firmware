@@ -98,6 +98,7 @@ void set_selected_displays(int8_t old_value, int8_t new_value);
 void toggle_stagger(bool new_state);
 void oled_update_buffer(void);
 void poly_suspend(void);
+void invert_display(uint8_t r, uint8_t c, bool state);
 
 void save_user_eeconf(void) {
     poly_eeconf_t ee;
@@ -243,20 +244,31 @@ void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out
             switch(via_data->via_commands[0]) {
                 case id_dynamic_keymap_reset:
                     dynamic_keymap_reset();
+                    request_disp_refresh();
                     break;
                 case id_dynamic_keymap_set_keycode:
                     dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+                    request_disp_refresh();
                     break;
                 case id_dynamic_keymap_set_buffer: {
                     uint16_t offset = (command_data[0] << 8) | command_data[1];
                     uint16_t size   = command_data[2]; // size <= 28
                     dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
+                    request_disp_refresh();
                     break;
                 }
+                case id_custom_save:
+                case 'P':
+                    if(command_data[0]==14) {
+                        uint16_t keycode = ((uint16_t)command_data[2])<<8 | command_data[3];
+                        uint8_t r, c;
+                        if (get_split_matrix_pos(keycode, get_highest_layer(l_layer.layer), &r, &c)) {
+                            invert_display(r, c, command_data[4] == 0);
+                        }
+                    }
                 default: break;
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            request_disp_refresh();
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }
@@ -1754,7 +1766,7 @@ void invert_display(uint8_t r, uint8_t c, bool state) {
 extern matrix_row_t matrix[MATRIX_ROWS];
 static matrix_row_t last_matrix[MATRIX_ROWS_PER_SIDE];
 void matrix_scan_user(void) {
-    uint8_t first   = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
+    const uint8_t first   = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     bool    changed = false;
     for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
         if (last_matrix[r - first] != matrix[r]) {
@@ -1821,6 +1833,8 @@ void suspend_wakeup_init_kb(void) {
     suspend_wakeup_init_user();
 }
 
+
+
 static uint16_t byte_counter = 0;
 void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
     if(keycode>KC_RGUI) {
@@ -1833,10 +1847,10 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
         return;
     }
     idx = adjust_overlay_idx_to_mod(idx, mods);
-    memcpy(overlays[idx] + segment_0_to_14*BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
-
-    //send buffer to bridge
-    {
+    //only send to bridge when needed
+    if(get_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer))) {
+        memcpy(overlays[idx] + segment_0_to_14*BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
+    } else { //send buffer to bridge
         overlay_sync_t transfer;
         transfer.segment = segment_0_to_14;
         transfer.adj_idx = idx;
@@ -1921,7 +1935,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     memcpy(data, "P\x09!", 3);
                 }
                 break;
-            case 10: //receive overlay e.g. P4:\4\4
+            case 10: //receive overlay
                 {
                     uint8_t keycode = data[3];
                     uint8_t segment = data[5];
@@ -1985,6 +1999,17 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                         unregister_code(keycode);
                         printf("Unregistered keycode: %u.\n", keycode);
                     }
+                    uint8_t r, c;
+                    if (get_split_matrix_pos(keycode, get_highest_layer(l_layer.layer), &r, &c)) {
+                        invert_display(r, c, data[5] == 0);
+                    } else {
+                        // send to bridge
+                        const uint8_t data_len = 6;
+                        via_sync_t sync_data;
+                        memcpy(&sync_data.via_commands, data, data_len);
+                        send_to_bridge(USER_SYNC_VIA_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 3);
+                    }
+
                     memcpy(data, "P\x0e.", 3);
                 }
                 break;

@@ -76,21 +76,87 @@ typedef struct _via_sync_t {
 } via_sync_t;
 #endif
 
-bool get_split_matrix_pos(uint16_t keycode, uint8_t layer, uint8_t* row, uint8_t* col) {
-    const uint8_t first = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
-    for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
+enum key_split_pos { POS_NOT_FOUND, POS_LEFT, POS_RIGHT, POS_ON_BOTH };
+
+const char* pos_to_str(enum key_split_pos pos) {
+    switch (pos)
+    {
+    case POS_LEFT: return "L";
+    case POS_RIGHT: return "R";
+    case POS_ON_BOTH: return "B";
+    default: return "?";
+    }
+}
+
+bool is_on_current_side(enum key_split_pos pos) {
+    return pos==POS_ON_BOTH || (is_left_side() && pos==POS_LEFT) || (is_right_side() && pos ==POS_RIGHT);
+}
+
+bool is_on_other_side(enum key_split_pos pos) {
+    return pos==POS_ON_BOTH || (is_left_side() && pos==POS_RIGHT) || (is_right_side() && pos ==POS_LEFT);
+}
+
+enum key_split_pos get_split_matrix_pos(uint16_t keycode, uint8_t layer, uint8_t* row, uint8_t* col, bool prefer_rc_left) {
+    enum key_split_pos pos = POS_NOT_FOUND;
+
+    for (uint8_t r = 0; r < MATRIX_ROWS_PER_SIDE; r++) {
         for (uint8_t c = 0; c < MATRIX_COLS; c++) {
             if (keycode_at_keymap_location(layer, r, c) == keycode) {
                 *row = r;
                 *col = c;
-                return true;
+                pos = POS_LEFT;
+                break;
+            }
+        }
+        if(pos!=POS_NOT_FOUND) {
+            break;
+        }
+    }
+
+    for (uint8_t r = MATRIX_ROWS_PER_SIDE; r < MATRIX_ROWS_PER_SIDE*2; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+            if (keycode_at_keymap_location(layer, r, c) == keycode) {
+                if(!prefer_rc_left || pos==POS_NOT_FOUND) {
+                    *row = r;
+                    *col = c;
+                }
+                return pos == POS_LEFT ? POS_ON_BOTH : POS_RIGHT;
             }
         }
     }
-    return false;
+
+    return pos;
 }
 
-bool get_split_matrix_side(uint16_t keycode, uint8_t layer) {
+enum key_split_pos get_split_matrix_side(uint16_t keycode, uint8_t layer) {
+    enum key_split_pos pos = POS_NOT_FOUND;
+
+    for (uint8_t r = 0; r < MATRIX_ROWS_PER_SIDE; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+            if (keycode_at_keymap_location(layer, r, c) == keycode) {
+                pos = POS_LEFT;
+                break;
+            }
+        }
+        if(pos!=POS_NOT_FOUND) {
+            break;
+        }
+    }
+
+    for (uint8_t r = MATRIX_ROWS_PER_SIDE; r < MATRIX_ROWS_PER_SIDE*2; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+            if (keycode_at_keymap_location(layer, r, c) == keycode) {
+                return pos == POS_LEFT ? POS_ON_BOTH : POS_RIGHT;
+                break;
+            }
+        }
+    }
+
+    return pos;
+}
+
+//tells if the given keycode is on the current side (still there could be the same key on the other side)
+bool is_on_current_split_matrix_side(uint16_t keycode, uint8_t layer) {
     const uint8_t first = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
         for (uint8_t c = 0; c < MATRIX_COLS; c++) {

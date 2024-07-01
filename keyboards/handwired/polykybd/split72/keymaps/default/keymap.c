@@ -262,7 +262,12 @@ void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out
                     if(command_data[0]==14) {
                         uint16_t keycode = ((uint16_t)command_data[2])<<8 | command_data[3];
                         uint8_t r, c;
-                        if (get_split_matrix_pos(keycode, get_highest_layer(l_layer.layer), &r, &c)) {
+                        enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(l_layer.layer), &r, &c, is_left_side());
+                        if(pos==POS_NOT_FOUND) {
+                            //actually it should be the previous layer instead of default, but it worked so far
+                            pos = get_split_matrix_pos(keycode, l_layer.def_layer, &r, &c, is_left_side());
+                        }
+                        if (is_on_current_side(pos)) {
                             invert_display(r, c, command_data[4] == 0);
                         }
                     }
@@ -1451,9 +1456,17 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         }
     }
 
-    uprintf("Key 0x%04X, col/row: %u/%u, %s, time: %u, int: %d, cnt: %u\n",
-        keycode, record->event.key.col, record->event.key.row, record->event.pressed ? "DN" : "UP",
-        record->event.time, record->tap.interrupted ? 1 : 0, record->tap.count);
+    // uprintf("Key 0x%04X, col/row: %u/%u, %s, time: %u, int: %d, cnt: %u\n",
+    //     keycode, record->event.key.col, record->event.key.row, record->event.pressed ? "DN" : "UP",
+    //     record->event.time, record->tap.interrupted ? 1 : 0, record->tap.count);
+    uint32_t t = timer_elapsed32(last_update);
+    if(record->event.pressed) {
+        uprintf("wait %ld.%03ld\n", t/1000, t%1000);
+        uprintf("press 0x%04x\n", keycode);
+    } else {
+        uprintf("wait %ld.%03ld\n", t/1000, t%1000);
+        uprintf("release 0x%04x\n", keycode);
+    }
 
     update_performed();
 };
@@ -1837,20 +1850,24 @@ void suspend_wakeup_init_kb(void) {
 
 static uint16_t byte_counter = 0;
 void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
-    if(keycode>KC_RGUI) {
+    if (keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
         return;
     }
-    uint16_t idx = (keycode>KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode>KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
-    if(idx>=90) {
+    uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
+    if (idx >= 90) {
         uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
         return;
     }
     idx = adjust_overlay_idx_to_mod(idx, mods);
+
+    enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
+    //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
+    if (is_on_current_side(pos)) {
+        memcpy(overlays[idx] + segment_0_to_14 * BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
+    }
     //only send to bridge when needed
-    if(get_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer))) {
-        memcpy(overlays[idx] + segment_0_to_14*BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
-    } else { //send buffer to bridge
+    if (is_on_other_side(pos)) {
         overlay_sync_t transfer;
         transfer.segment = segment_0_to_14;
         transfer.adj_idx = idx;
@@ -1859,11 +1876,20 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
     }
 
     byte_counter += BYTES_PER_SEGMENT;
-    if(segment_0_to_14==NUM_SEGMENTS_PER_OVERLAY-1) {
+    if (segment_0_to_14 == NUM_SEGMENTS_PER_OVERLAY - 1) {
         use_overlay[idx] = true;
-        uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d.\n", keycode, mods, byte_counter, idx);
+        uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n", keycode, mods, byte_counter, idx, pos_to_str(pos));
         byte_counter = 0;
     }
+}
+
+void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
+#if defined(LED_MATRIX_ENABLE)
+    led_matrix_handle_key_event(row, col, pressed);
+#endif
+#if defined(RGB_MATRIX_ENABLE)
+    rgb_matrix_handle_key_event(row, col, pressed);
+#endif
 }
 
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
@@ -1992,23 +2018,26 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
             case 14: //key press
                 {
                     uint16_t keycode = ((uint16_t)data[3])<<8 | data[4];
-                    if(data[5]==0) {
-                        register_code(keycode);
-                        printf("Registered keycode: %u.\n", keycode);
-                    } else {
-                        unregister_code(keycode);
-                        printf("Unregistered keycode: %u.\n", keycode);
-                    }
                     uint8_t r, c;
-                    if (get_split_matrix_pos(keycode, get_highest_layer(l_layer.layer), &r, &c)) {
-                        invert_display(r, c, data[5] == 0);
-                    } else {
+                    enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(l_layer.layer), &r, &c, is_left_side());
+                    const bool pressed = data[5] == 0;
+                    if(pos==POS_NOT_FOUND) {
+                        //actually it should be the previous layer instead of default, but it worked so far
+                        pos = get_split_matrix_pos(keycode, l_layer.def_layer, &r, &c, is_left_side());
+                    }
+                    if (is_on_current_side(pos)) {
+                        invert_display(r, c, pressed);
+                    }
+                    //a key can be on both sides, so no else here
+                    if (is_on_other_side(pos)) {
                         // send to bridge
                         const uint8_t data_len = 6;
                         via_sync_t sync_data;
                         memcpy(&sync_data.via_commands, data, data_len);
                         send_to_bridge(USER_SYNC_VIA_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 3);
                     }
+                    action_exec(MAKE_KEYEVENT(r, c, pressed));
+                    switch_events_poly(r,c, pressed);
 
                     memcpy(data, "P\x0e.", 3);
                 }

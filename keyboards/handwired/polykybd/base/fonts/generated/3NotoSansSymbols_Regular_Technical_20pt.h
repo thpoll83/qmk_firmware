@@ -1,4 +1,4 @@
-// /Users/chad/.local/bin/fontconvert -f~/repos/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf -s20 -r50 -v _Technical_ 0x2387 0x2388 0x238b 0x238b 0x2399 0x2399 
+// fontconvert -f~/repos/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf -s20 -r50 -v _Technical_ 0x2387 0x2388 0x238b 0x238b 0x2399 0x2399 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
 const uint8_t NotoSansSymbols_Regular_Technical_20pt16bBitmaps[] PROGMEM = {

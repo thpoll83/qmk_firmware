@@ -2,7 +2,8 @@
 
 #include "generated/0NotoSans_Regular_Base_14pt.h"
 #include "generated/1NotoSans_Regular_SupAndExtA_14pt.h"
-#include "generated/2NotoSans_Regular_EuroSign_14pt.h"
+#include "generated/2NotoSans_Regular_CurrencySigns_14pt.h"
+#include "generated/2NotoSans_Regular_NumeroSign_14pt.h"
 #include "generated/3NotoEmoji_Medium_Hyper_18pt.h"
 #include "generated/3NotoEmoji_Medium_Meh_20pt.h"
 #include "generated/3NotoEmoji_Medium_Settings_20pt.h"
@@ -36,6 +37,7 @@
 #include "generated/NotoSansJP_Regular_Hiragana_15pt.h"
 #include "generated/NotoSansJP_Regular_Punct_15pt.h"
 #include "generated/NotoSansJP_Regular_PunctSupl_15pt.h"
+#include "generated/NotoSans_Regular_Cyrillic_14pt.h"
 #include "generated/NotoSans_Regular_GreekBase_14pt.h"
 #include "generated/NotoSans_Regular_GreekChi_14pt.h"
 #include "generated/NotoSans_Regular_GreekTonos_14pt.h"
@@ -50,7 +52,8 @@ const GFXfont* ALL_FONTS [] = {
   &IconsFont,
   &NotoSans_Regular_Base_14pt7b,
   &NotoSans_Regular_SupAndExtA_14pt16b,
-  &NotoSans_Regular_EuroSign_14pt16b,
+  &NotoSans_Regular_CurrencySigns_14pt16b,
+  &NotoSans_Regular_NumeroSign_14pt16b,
   &NotoEmoji_Medium_Hyper_18pt16b,
   &NotoEmoji_Medium_Meh_20pt16b,
   &NotoEmoji_Medium_Settings_20pt16b,
@@ -84,6 +87,7 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct_15pt16b,
   &NotoSansJP_Regular_PunctSupl_15pt16b,
+  &NotoSans_Regular_Cyrillic_14pt16b,
   &NotoSans_Regular_GreekBase_14pt16b,
   &NotoSans_Regular_GreekChi_14pt16b,
   &NotoSans_Regular_GreekTonos_14pt16b,

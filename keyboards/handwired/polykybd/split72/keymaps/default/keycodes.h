@@ -50,26 +50,26 @@ enum my_keycodes {
     KC_TOGTEXT,
     KC_RGB_TOG,
     /*[[[cog
-        for lang in languages:
-            if lang == "LANG_EN":
-                cog.out(f"KC_LANG_EN = SAFE_RANGE, ")
-            else:
-                cog.out(f"KC_{lang}, ")
-    ]]]*/
-    KC_LANG_EN = SAFE_RANGE, KC_LANG_DE, KC_LANG_FR, KC_LANG_ES, KC_LANG_PT, KC_LANG_IT, KC_LANG_TR, KC_LANG_KO, KC_LANG_JA, KC_LANG_AR, KC_LANG_GR,
-    //[[[end]]]
-    /*[[[cog
       for idx in range(10):
           cog.out(f"KC_LAT{idx}, ")
     ]]]*/
     KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
     //[[[end]]]
-    //Lables, no functionality:
+    /*[[[cog
+        for lang in languages:
+            if lang == "LANG_EN":
+                cog.out(f"KC_LANG_EN = QK_USER_0, ")
+            else:
+                cog.out(f"KC_{lang}, ")
+    ]]]*/
+    KC_LANG_EN = QK_USER_0, KC_LANG_DE, KC_LANG_FR, KC_LANG_ES, KC_LANG_PT, KC_LANG_IT, KC_LANG_TR, KC_LANG_KO, KC_LANG_JA, KC_LANG_AR, KC_LANG_GR, KC_LANG_UA, KC_LANG_RU, KC_LANG_BY, KC_LANG_KZ, KC_LANG_BG,
+    //[[[end]]]
+        //Lables, no functionality:
     LBL_TEXT
 };
-static_assert((int)KC_RGB_TOG <= (int)QK_KB_31, "Too many custom QK key codes");
+static_assert((int)KC_LAT9 <= (int)QK_KB_31, "Too many custom QK key codes");
+static_assert((int)KC_LAT9 < (int)KC_LANG_EN, "Overlap detected");
 static_assert((int)LBL_TEXT <= (int)QK_USER_31, "Too many user custom key codes");
-
 
 const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {
     switch (keycode) {

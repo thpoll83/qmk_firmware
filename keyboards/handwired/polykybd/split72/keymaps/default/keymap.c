@@ -760,9 +760,9 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_BASE,                    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
                     KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_MACOS,
-                    KC_NO,      KC_LANG_GR, KC_LANG_AR, KC_LANG_ES, KC_LANG_PT, KC_NO,      QK_UNICODE_MODE_LINUX,
-        _______,    KC_NO,      KC_LANG_TR, KC_LANG_JA, KC_LANG_DE, KC_LANG_FR, KC_NO,      QK_UNICODE_MODE_WINDOWS,
-        KC_NO,      KC_NO,      KC_NO,      KC_LANG_KO, KC_LANG_EN, KC_LANG_IT, KC_NO,      QK_UNICODE_MODE_BSD,
+                    KC_NO,      KC_LANG_UA, KC_LANG_BG, KC_LANG_BY, KC_LANG_RU, KC_NO,      QK_UNICODE_MODE_LINUX,
+        _______,    KC_NO,      KC_LANG_KZ, KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_WINDOWS,
+        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_BSD,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(
@@ -852,11 +852,6 @@ led_config_t g_led_config = { {// Key Matrix to LED Index
 
 const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
 
-    const uint16_t* emoji = keycode_to_emoji(keycode);
-    if(emoji!=NULL) {
-        return emoji;
-    }
-
     if(IS_QK_MOD_TAP(keycode)) {
         keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
     }
@@ -912,6 +907,11 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         case KC_LANG_JA: return l_state.lang == LANG_JA ? u"[JA]" : u" JA";
         case KC_LANG_AR: return l_state.lang == LANG_AR ? u"[AR]" : u" AR";
         case KC_LANG_GR: return l_state.lang == LANG_GR ? u"[GR]" : u" GR";
+        case KC_LANG_UA: return l_state.lang == LANG_UA ? u"[UA]" : u" UA";
+        case KC_LANG_RU: return l_state.lang == LANG_RU ? u"[RU]" : u" RU";
+        case KC_LANG_BY: return l_state.lang == LANG_BY ? u"[BY]" : u" BY";
+        case KC_LANG_KZ: return l_state.lang == LANG_KZ ? u"[KZ]" : u" KZ";
+        case KC_LANG_BG: return l_state.lang == LANG_BG ? u"[BG]" : u" BG";
         //[[[end]]]
         default:
         {
@@ -944,6 +944,12 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         }
         break;
     }
+
+    const uint16_t* emoji = keycode_to_emoji(keycode);
+    if(emoji!=NULL) {
+        return emoji;
+    }
+
     return NULL;
 }
 
@@ -1108,7 +1114,7 @@ void update_displays(enum refresh_mode mode) {
                         kdisp_set_buffer(0x00);
                         if(!overlay_only) {
                             if(text==NULL){
-                                if((keycode&QK_UNICODEMAP_PAIR)!=0){
+                                if((keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
                                     uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
                                     kdisp_write_gfx_char(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, unicode_map[chr]);
                                 }
@@ -1385,6 +1391,11 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_LANG_JA: l_state.lang = LANG_JA; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_AR: l_state.lang = LANG_AR; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_GR: l_state.lang = LANG_GR; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_UA: l_state.lang = LANG_UA; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_RU: l_state.lang = LANG_RU; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_BY: l_state.lang = LANG_BY; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_KZ: l_state.lang = LANG_KZ; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_BG: l_state.lang = LANG_BG; save_user_eeconf(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
@@ -1843,6 +1854,11 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     case LANG_JA: memcpy(data, "P\x07.JA", 5); break;
                     case LANG_AR: memcpy(data, "P\x07.AR", 5); break;
                     case LANG_GR: memcpy(data, "P\x07.GR", 5); break;
+                    case LANG_UA: memcpy(data, "P\x07.UA", 5); break;
+                    case LANG_RU: memcpy(data, "P\x07.RU", 5); break;
+                    case LANG_BY: memcpy(data, "P\x07.BY", 5); break;
+                    case LANG_KZ: memcpy(data, "P\x07.KZ", 5); break;
+                    case LANG_BG: memcpy(data, "P\x07.BG", 5); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -1867,7 +1883,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.EN,DE,FR,ES,PT,IT,TR,KO,JA", 29);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.AR,GR", 8);
+                memcpy(data, "P\x08.AR,GR,UA,RU,BY,KZ,BG", 23);
                 //[[[end]]]
                 break;
             case 9: //change language

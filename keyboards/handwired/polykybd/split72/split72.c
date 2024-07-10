@@ -18,6 +18,10 @@ const struct display_info key_display[] = {
 };
 
 void invert_display(uint8_t r, uint8_t c, bool state) {
+    if (r>=5 && r<=8) {
+        c--; //on the right side of the slit layout the first 4 rows have no key
+    }
+
     r = r % MATRIX_ROWS_PER_SIDE;
     const uint8_t disp_idx = LAYOUT_TO_INDEX(r, c);
     const uint8_t* bitmask = key_display[disp_idx].bitmask;

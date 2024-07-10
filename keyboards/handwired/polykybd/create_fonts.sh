@@ -18,7 +18,7 @@ size_ar=16
 
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _Base_ 0x20 0x7e > "base/fonts/generated/0NotoSans_Regular_Base_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -r44 -v _SupAndExtA_  0xa1 0x17e > "base/fonts/generated/1NotoSans_Regular_SupAndExtA_${size_lat}pt.h"
-fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _GreekChi_ 0x2c7 0x2c7 > "base/fonts/generated/NotoSans_Regular_GreekChi_${size_lat}pt.h"
+fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _LetterMod_ 0x2c6 0x2dd > "base/fonts/generated/NotoSans_Regular_LetterMod_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _GreekTonos_  0x384 0x385 > "base/fonts/generated/NotoSans_Regular_GreekTonos_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _GreekBase_  0x391 0x3c9 > "base/fonts/generated/NotoSans_Regular_GreekBase_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _Cyrillic_  0x401 0x46b 0x490 0x4bb 0x4d8 0x4e9 > "base/fonts/generated/NotoSans_Regular_Cyrillic_${size_lat}pt.h"

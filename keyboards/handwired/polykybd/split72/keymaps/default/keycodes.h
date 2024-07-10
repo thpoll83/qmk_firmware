@@ -53,7 +53,7 @@ enum my_keycodes {
       for idx in range(10):
           cog.out(f"KC_LAT{idx}, ")
     ]]]*/
-    KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
+    KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9, 
     //[[[end]]]
     /*[[[cog
         for lang in languages:
@@ -62,7 +62,7 @@ enum my_keycodes {
             else:
                 cog.out(f"KC_{lang}, ")
     ]]]*/
-    KC_LANG_EN = QK_USER_0, KC_LANG_DE, KC_LANG_FR, KC_LANG_ES, KC_LANG_PT, KC_LANG_IT, KC_LANG_TR, KC_LANG_KO, KC_LANG_JA, KC_LANG_AR, KC_LANG_GR, KC_LANG_UA, KC_LANG_RU, KC_LANG_BY, KC_LANG_KZ, KC_LANG_BG,
+    KC_LANG_EN = QK_USER_0, KC_LANG_DE, KC_LANG_FR, KC_LANG_ES, KC_LANG_PT, KC_LANG_IT, KC_LANG_TR, KC_LANG_KO, KC_LANG_JA, KC_LANG_AR, KC_LANG_GR, KC_LANG_UA, KC_LANG_RU, KC_LANG_BY, KC_LANG_KZ, KC_LANG_BG, KC_LANG_PL, 
     //[[[end]]]
         //Lables, no functionality:
     LBL_TEXT

@@ -39,8 +39,8 @@
 #include "generated/NotoSansJP_Regular_PunctSupl_15pt.h"
 #include "generated/NotoSans_Regular_Cyrillic_14pt.h"
 #include "generated/NotoSans_Regular_GreekBase_14pt.h"
-#include "generated/NotoSans_Regular_GreekChi_14pt.h"
 #include "generated/NotoSans_Regular_GreekTonos_14pt.h"
+#include "generated/NotoSans_Regular_LetterMod_14pt.h"
 #include "generated/NotoSans_Regular_SZ_14pt.h"
 #include "generated/NotoSerifKR_Regular_Consonants_21pt.h"
 #include "generated/NotoSerifKR_Regular_Vowels_21pt.h"
@@ -89,8 +89,8 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSansJP_Regular_PunctSupl_15pt16b,
   &NotoSans_Regular_Cyrillic_14pt16b,
   &NotoSans_Regular_GreekBase_14pt16b,
-  &NotoSans_Regular_GreekChi_14pt16b,
   &NotoSans_Regular_GreekTonos_14pt16b,
+  &NotoSans_Regular_LetterMod_14pt16b,
   &NotoSans_Regular_SZ_14pt16b,
   &NotoSerifKR_Regular_Consonants_21pt16b,
   &NotoSerifKR_Regular_Vowels_21pt16b,

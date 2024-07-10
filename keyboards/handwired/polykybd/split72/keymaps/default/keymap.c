@@ -761,7 +761,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
                     KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_MACOS,
                     KC_NO,      KC_LANG_UA, KC_LANG_BG, KC_LANG_BY, KC_LANG_RU, KC_NO,      QK_UNICODE_MODE_LINUX,
-        _______,    KC_NO,      KC_LANG_KZ, KC_LANG_PL, KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_WINDOWS,
+        _______,    KC_NO,      KC_LANG_KZ, KC_LANG_PL, KC_LANG_RO, KC_NO,      KC_NO,      QK_UNICODE_MODE_WINDOWS,
         KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_BSD,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
@@ -913,6 +913,7 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         case KC_LANG_KZ: return l_state.lang == LANG_KZ ? u"[KZ]" : u" KZ";
         case KC_LANG_BG: return l_state.lang == LANG_BG ? u"[BG]" : u" BG";
         case KC_LANG_PL: return l_state.lang == LANG_PL ? u"[PL]" : u" PL";
+        case KC_LANG_RO: return l_state.lang == LANG_RO ? u"[RO]" : u" RO";
         //[[[end]]]
         default:
         {
@@ -1398,6 +1399,7 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_LANG_KZ: l_state.lang = LANG_KZ; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_BG: l_state.lang = LANG_BG; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_PL: l_state.lang = LANG_PL; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_RO: l_state.lang = LANG_RO; save_user_eeconf(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
@@ -1862,6 +1864,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     case LANG_KZ: memcpy(data, "P\x07.KZ", 5); break;
                     case LANG_BG: memcpy(data, "P\x07.BG", 5); break;
                     case LANG_PL: memcpy(data, "P\x07.PL", 5); break;
+                    case LANG_RO: memcpy(data, "P\x07.RO", 5); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -1886,7 +1889,10 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.EN,DE,FR,ES,PT,IT,TR,KO,JA", 29);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.AR,GR,UA,RU,BY,KZ,BG,PL", 26);
+                memcpy(data, "P\x08.AR,GR,UA,RU,BY,KZ,BG,PL,RO", 29);
+                raw_hid_send(data, length);
+                memset(data, 0, length);
+                memcpy(data, "P\x08.", 3);
                 //[[[end]]]
                 break;
             case 9: //change language

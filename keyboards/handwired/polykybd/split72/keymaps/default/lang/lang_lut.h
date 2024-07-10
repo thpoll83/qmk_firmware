@@ -40,6 +40,7 @@ enum lang_layer {
     LANG_KZ,
     LANG_BG,
     LANG_PL,
+    LANG_RO,
     //[[[end]]]
     NUM_LANG };
 

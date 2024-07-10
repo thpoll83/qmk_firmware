@@ -44,18 +44,6 @@ static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
 static enum lang_layer g_lang_init = INIT_LANG;
 
-struct display_info {
-    uint8_t bitmask[NUM_SHIFT_REGISTERS];
-};
-
-const struct display_info key_display[] = {
-        {BITMASK1(0)}, {BITMASK1(1)}, {BITMASK1(2)}, {BITMASK1(3)}, {BITMASK1(4)}, {BITMASK1(5)}, {BITMASK1(6)}, {BITMASK1(7)},
-        {BITMASK2(0)}, {BITMASK2(1)}, {BITMASK2(2)}, {BITMASK2(3)}, {BITMASK2(4)}, {BITMASK2(5)}, {BITMASK2(6)}, {BITMASK2(7)},
-        {BITMASK3(0)}, {BITMASK3(1)}, {BITMASK3(2)}, {BITMASK3(3)}, {BITMASK3(4)}, {BITMASK3(5)}, {BITMASK3(6)}, {BITMASK3(7)},
-        {BITMASK4(0)}, {BITMASK4(1)}, {BITMASK4(2)}, {BITMASK4(3)}, {BITMASK4(4)}, {BITMASK4(5)}, {BITMASK4(6)}, {BITMASK4(7)},
-        {BITMASK5(0)}, {BITMASK5(1)}, {BITMASK5(2)}, {BITMASK5(3)}, {BITMASK5(4)}, {BITMASK5(5)}, {BITMASK5(6)}, {BITMASK5(7)}
-};
-
 const struct display_info disp_row_0 = { BITMASK1(0) };
 const struct display_info disp_row_3 = { BITMASK4(0) };
 
@@ -98,7 +86,6 @@ void set_selected_displays(int8_t old_value, int8_t new_value);
 void toggle_stagger(bool new_state);
 void oled_update_buffer(void);
 void poly_suspend(void);
-void invert_display(uint8_t r, uint8_t c, bool state);
 
 void save_user_eeconf(void) {
     poly_eeconf_t ee;
@@ -1203,29 +1190,6 @@ void kdisp_idle(uint8_t contrast) {
     }
 }
 
-void display_message(uint8_t row, uint8_t col, const uint16_t* message, const GFXfont* font) {
-
-    const GFXfont* displayFont[] = { font };
-    uint8_t index = 0;
-    for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
-
-        uint8_t disp_idx = LAYOUT_TO_INDEX(row, c);
-
-        if (disp_idx != 255) {
-
-            sr_shift_out_buffer_latch(key_display[disp_idx].bitmask, sizeof(key_display->bitmask));
-            kdisp_set_buffer(0x00);
-
-            if (c >= col && message[index] != 0) {
-                const uint16_t text[2] = { message[index], 0 };
-                kdisp_write_gfx_text(displayFont, 1, 49, 38, text);
-                index++;
-            }
-            kdisp_send_buffer();
-        }
-    }
-}
-
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     switch (keycode) {
         case KC_CRSEL:
@@ -1533,7 +1497,8 @@ void keyboard_post_init_user(void) {
 
     //set these values, they will never change
     com = is_keyboard_master() ? USB_HOST : BRIDGE;
-    side = is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE;
+    set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
+
 
     //encoder pins
     setPinInputHigh(GP25);
@@ -1645,7 +1610,7 @@ void oled_update_buffer(void) {
     kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 0, 14, ICON_LAYER);
     hex_to_u16_string((char*) buffer, sizeof(buffer), get_highest_layer(g_layer.layer));
     kdisp_write_gfx_text(displayFont, 1, 20, 14, buffer);
-    if(side==UNDECIDED) {
+    if(side_is_undecided()) {
         kdisp_write_gfx_text(displayFont, 1, 50, 14, u"Uknw");
     } else {
         kdisp_write_gfx_text(displayFont, 1, 38, 14, is_left_side() ? u"LEFT" : u"RIGHT");
@@ -1759,50 +1724,7 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [13] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
 };
 
-void invert_display(uint8_t r, uint8_t c, bool state) {
-    uint16_t keycode = keymaps[_BL][r][0];
-    if (keycode == KC_NO) {
-        c--;
-    }
 
-    r = r % MATRIX_ROWS_PER_SIDE;
-    uint8_t disp_idx = LAYOUT_TO_INDEX(r, c);
-    const uint8_t* bitmask = key_display[disp_idx].bitmask;
-    sr_shift_out_buffer_latch(bitmask, sizeof(key_display->bitmask));
-
-    if (disp_idx != 255) {
-        kdisp_invert(state);
-    }
-}
-
-// invert displays directly when pressed (no need to do split sync)
-extern matrix_row_t matrix[MATRIX_ROWS];
-static matrix_row_t last_matrix[MATRIX_ROWS_PER_SIDE];
-void matrix_scan_user(void) {
-    const uint8_t first   = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
-    bool    changed = false;
-    for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
-        if (last_matrix[r - first] != matrix[r]) {
-            changed = true;
-            for (uint8_t c = 0; c < MATRIX_COLS; c++) {
-                bool old     = ((last_matrix[r - first] >> c) & 1) == 1;
-                bool current = ((matrix[r] >> c) & 1) == 1;
-                if (!old && current) {
-                    invert_display(r,c,true);
-                } else if (old && !current) {
-                    invert_display(r,c,false);
-                }
-            }
-        }
-    }
-    if (changed) {
-        memcpy(last_matrix, &matrix[first], sizeof(last_matrix));
-    }
-}
-
-void matrix_slave_scan_user(void) {
-    matrix_scan_user();
-}
 
 oled_rotation_t oled_init_user(oled_rotation_t rotation){
     oled_off();

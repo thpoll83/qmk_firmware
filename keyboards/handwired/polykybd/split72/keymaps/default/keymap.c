@@ -779,30 +779,30 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,    _______,    _______,                _______,    _______,    _______,    _______
         ),
     [_EMJ0] = LAYOUT_left_right_stacked(
-        UM(0),    UM(1),    UM(2),    UM(3),    UM(4),    UM(5),    UM(6),
-        UM(14),   UM(15),   UM(16),   UM(17),   UM(18),   UM(19),   UM(20),
-        UM(28),   UM(29),   UM(30),   UM(31),   UM(32),   UM(33),   UM(34),   _______,
-        UM(42),   UM(43),   UM(44),   UM(45),   UM(46),   UM(47),   UM(48),   UM(49),
-        KC_BASE,  UM(58),   UM(59),   UM(60),             UM(61),   UM(62),   UM(63),
+        EMJ(0),    EMJ(1),    EMJ(2),    EMJ(3),    EMJ(4),    EMJ(5),    EMJ(6),
+        EMJ(14),   EMJ(15),   EMJ(16),   EMJ(17),   EMJ(18),   EMJ(19),   EMJ(20),
+        EMJ(28),   EMJ(29),   EMJ(30),   EMJ(31),   EMJ(32),   EMJ(33),   EMJ(34),   _______,
+        EMJ(42),   EMJ(43),   EMJ(44),   EMJ(45),   EMJ(46),   EMJ(47),   EMJ(48),   EMJ(49),
+        KC_BASE,   EMJ(58),   EMJ(59),   EMJ(60),              EMJ(61),   EMJ(62),   EMJ(63),
 
-                  UM(7),    UM(8),    UM(9),    UM(10),   UM(11),   UM(12),   UM(13),
-                  UM(21),   UM(22),   UM(23),   UM(24),   UM(25),   UM(26),   UM(27),
-        _______,  UM(35),   UM(36),   UM(37),   UM(38),   UM(39),   UM(40),   UM(41),
-        UM(50),   UM(51),   UM(52),   UM(53),   UM(54),   UM(55),   UM(56),   UM(57),
-        UM(64),   UM(65),   UM(66),             UM(67),   UM(68),   UM(69),   TO(_EMJ1)
+                  EMJ(7),    EMJ(8),    EMJ(9),    EMJ(10),   EMJ(11),   EMJ(12),   EMJ(13),
+                  EMJ(21),   EMJ(22),   EMJ(23),   EMJ(24),   EMJ(25),   EMJ(26),   EMJ(27),
+        _______,  EMJ(35),   EMJ(36),   EMJ(37),   EMJ(38),   EMJ(39),   EMJ(40),   EMJ(41),
+        EMJ(50),  EMJ(51),   EMJ(52),   EMJ(53),   EMJ(54),   EMJ(55),   EMJ(56),   EMJ(57),
+        EMJ(64),  EMJ(65),   EMJ(66),              EMJ(67),   EMJ(68),   EMJ(69),   TO(_EMJ1)
         ),
     [_EMJ1] = LAYOUT_left_right_stacked(
-        UM(70+0),    UM(70+1),    UM(70+2),    UM(70+3),    UM(70+4),    UM(70+5),    UM(70+6),
-        UM(70+14),   UM(70+15),   UM(70+16),   UM(70+17),   UM(70+18),   UM(70+19),   UM(70+20),
-        UM(70+28),   UM(70+29),   UM(70+30),   UM(70+31),   UM(70+32),   UM(70+33),   UM(70+34),   _______,
-        UM(70+42),   UM(70+43),   UM(70+44),   UM(70+45),   UM(70+46),   UM(70+47),   UM(70+48),   UM(70+49),
-        KC_BASE,     UM(70+58),   UM(70+59),   UM(70+60),                UM(70+61),   UM(70+62),   UM(70+63),
+        EMJ(70+0),    EMJ(70+1),    EMJ(70+2),    EMJ(70+3),    EMJ(70+4),    EMJ(70+5),    EMJ(70+6),
+        EMJ(70+14),   EMJ(70+15),   EMJ(70+16),   EMJ(70+17),   EMJ(70+18),   EMJ(70+19),   EMJ(70+20),
+        EMJ(70+28),   EMJ(70+29),   EMJ(70+30),   EMJ(70+31),   EMJ(70+32),   EMJ(70+33),   EMJ(70+34),   _______,
+        EMJ(70+42),   EMJ(70+43),   EMJ(70+44),   EMJ(70+45),   EMJ(70+46),   EMJ(70+47),   EMJ(70+48),   EMJ(70+49),
+        KC_BASE,      EMJ(70+58),   EMJ(70+59),   EMJ(70+60),                 EMJ(70+61),   EMJ(70+62),   EMJ(70+63),
 
-                     UM(70+7),    UM(70+8),    UM(70+9),    UM(70+10),   UM(70+11),   UM(70+12),   UM(70+13),
-                     UM(70+21),   UM(70+22),   UM(70+23),   UM(70+24),   UM(70+25),   UM(70+26),   UM(70+27),
-        _______,     UM(70+35),   UM(70+36),   UM(70+37),   UM(70+38),   UM(70+39),   UM(70+40),   UM(70+41),
-        UM(70+50),   UM(70+51),   UM(70+52),   UM(70+53),   UM(70+54),   UM(70+55),   UM(70+56),   UM(70+57),
-        UM(70+64),   UM(70+65),   UM(70+66),                UM(70+67),   UM(70+68),   UM(70+69),   TO(_EMJ0)
+                     EMJ(70+7),    EMJ(70+8),    EMJ(70+9),    EMJ(70+10),   EMJ(70+11),   EMJ(70+12),   EMJ(70+13),
+                     EMJ(70+21),   EMJ(70+22),   EMJ(70+23),   EMJ(70+24),   EMJ(70+25),   EMJ(70+26),   EMJ(70+27),
+        _______,     EMJ(70+35),   EMJ(70+36),   EMJ(70+37),   EMJ(70+38),   EMJ(70+39),   EMJ(70+40),   EMJ(70+41),
+        EMJ(70+50),  EMJ(70+51),   EMJ(70+52),   EMJ(70+53),   EMJ(70+54),   EMJ(70+55),   EMJ(70+56),   EMJ(70+57),
+        EMJ(70+64),  EMJ(70+65),   EMJ(70+66),                 EMJ(70+67),   EMJ(70+68),   EMJ(70+69),   TO(_EMJ0)
         )
 };
 
@@ -851,6 +851,11 @@ led_config_t g_led_config = { {// Key Matrix to LED Index
                              } };
 
 const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
+
+    const uint16_t* emoji = keycode_to_emoji(keycode);
+    if(emoji!=NULL) {
+        return emoji;
+    }
 
     if(IS_QK_MOD_TAP(keycode)) {
         keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
@@ -914,6 +919,7 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         case KC_LANG_BG: return l_state.lang == LANG_BG ? u"[BG]" : u" BG";
         case KC_LANG_PL: return l_state.lang == LANG_PL ? u"[PL]" : u" PL";
         case KC_LANG_RO: return l_state.lang == LANG_RO ? u"[RO]" : u" RO";
+        case KC_LANG_CN: return l_state.lang == LANG_CN ? u"[CN]" : u" CN";
         //[[[end]]]
         default:
         {
@@ -945,11 +951,6 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
             }
         }
         break;
-    }
-
-    const uint16_t* emoji = keycode_to_emoji(keycode);
-    if(emoji!=NULL) {
-        return emoji;
     }
 
     return NULL;
@@ -1105,10 +1106,13 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     uint8_t layer = get_highest_layer(l_layer.layer);
-                    uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c);//keymaps[layer][r + offset][c];
-                    //if we encounter a transparent key go down one layer (but only one!)
-                    //keycode = (highest_kc == KC_TRNS) ? keymaps[get_highest_layer(l_layer.layer&~(1<<layer))][r + offset][c] : highest_kc;
-                    keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(l_layer.layer&~(1<<layer)),r + offset,c) : highest_kc;
+                    if(layer < DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) {
+                        uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
+                        keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(l_layer.layer&~(1<<layer)),r + offset,c) : highest_kc;
+                    } else {
+                        uint16_t highest_kc = keymaps[layer][r + offset][c]; //if we encounter a transparent key go down one layer (but only one!)
+                        keycode = (highest_kc == KC_TRNS) ? keymaps[get_highest_layer(l_layer.layer&~(1<<layer))][r + offset][c] : highest_kc;
+                    }
                     kdisp_enable(true);//(l_state.flags&STATUS_DISP_ON) != 0);
                     kdisp_set_contrast(l_state.contrast-1);
                     if(keycode!=KC_TRNS) {
@@ -1199,6 +1203,11 @@ void kdisp_idle(uint8_t contrast) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+
+     if(process_unicodemap_poly(keycode, record)) {
+        return  false;
+    }
+
     switch (keycode) {
         case KC_CRSEL:
             if (record->event.pressed) { SEND_STRING(SS_TAP(X_HOME) SS_TAP(X_HOME) SS_LSFT(SS_TAP(X_END)) SS_TAP(X_BACKSPACE) SS_TAP(X_BACKSPACE) SS_TAP(X_DOWN)); }
@@ -1294,6 +1303,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             l_last.latin_kc = 0;
         }
     }
+
     return display_wakeup(record);
 }
 
@@ -1400,6 +1410,7 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_LANG_BG: l_state.lang = LANG_BG; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_PL: l_state.lang = LANG_PL; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_RO: l_state.lang = LANG_RO; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_CN: l_state.lang = LANG_CN; save_user_eeconf(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
@@ -1865,6 +1876,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     case LANG_BG: memcpy(data, "P\x07.BG", 5); break;
                     case LANG_PL: memcpy(data, "P\x07.PL", 5); break;
                     case LANG_RO: memcpy(data, "P\x07.RO", 5); break;
+                    case LANG_CN: memcpy(data, "P\x07.CN", 5); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -1892,7 +1904,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.AR,GR,UA,RU,BY,KZ,BG,PL,RO", 29);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.", 3);
+                memcpy(data, "P\x08.CN", 5);
                 //[[[end]]]
                 break;
             case 9: //change language

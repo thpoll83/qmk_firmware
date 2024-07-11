@@ -4,6 +4,10 @@
 #read size_lat
 size_lat=14
 
+#echo "Enter Cyrillic font size (eg. 14):"
+#read size_lat
+size_cyr=16
+
 #echo "Enter Korean font size (eg. 19):"
 #read size_kr
 size_kr=21
@@ -19,13 +23,11 @@ size_ar=16
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _Base_ 0x20 0x7e > "base/fonts/generated/0NotoSans_Regular_Base_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -r44 -v _SupAndExtA_  0xa1 0x17e > "base/fonts/generated/1NotoSans_Regular_SupAndExtA_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _LetterMod_ 0x2c6 0x2dd > "base/fonts/generated/NotoSans_Regular_LetterMod_${size_lat}pt.h"
-fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _GreekTonos_  0x384 0x385 > "base/fonts/generated/NotoSans_Regular_GreekTonos_${size_lat}pt.h"
-fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _GreekBase_  0x391 0x3c9 > "base/fonts/generated/NotoSans_Regular_GreekBase_${size_lat}pt.h"
-fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _Cyrillic_  0x401 0x46b 0x490 0x4bb 0x4d8 0x4e9 > "base/fonts/generated/NotoSans_Regular_Cyrillic_${size_lat}pt.h"
+fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _Greek_  0x384 0x385 0x391 0x3c9 > "base/fonts/generated/NotoSans_Regular_Greek_${size_lat}pt.h"
+fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_cyr}" -v _Cyrillic_  0x401 0x46b 0x490 0x4bb 0x4d8 0x4e9 > "base/fonts/generated/NotoSans_Regular_Cyrillic_${size_cyr}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -r44 -v _SZ_  0x1E9E 0x1E9E > "base/fonts/generated/NotoSans_Regular_SZ_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.otf "-s${size_jp}" -v _Hiragana_ 0x3041 0x309f > "base/fonts/generated/NotoSansJP_Regular_Hiragana_${size_jp}pt.h"
-fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.otf "-s${size_jp}" -v _Punct_ 0x3001 0x3002 0x300c 0x300d > "base/fonts/generated/NotoSansJP_Regular_Punct_${size_jp}pt.h"
-fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.otf "-s${size_jp}" -v _PunctSupl_ 0x30fb 0x30fc > "base/fonts/generated/NotoSansJP_Regular_PunctSupl_${size_jp}pt.h"
+fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.otf "-s${size_jp}" -v _Punct_ 0x3001 0x3002 0x300c 0x300d 0x30fb 0x30fc > "base/fonts/generated/NotoSansJP_Regular_Punct_${size_jp}pt.h"
 fontconvert -f~/repos/noto-serif-kr/NotoSerifKR-Regular.otf "-s${size_kr}" -r51 -v _Vowels_ 0x1161 0x1169 0x116d 0x116e 0x1172 0x1175 > "base/fonts/generated/NotoSerifKR_Regular_Vowels_${size_kr}pt.h"
 fontconvert -f~/repos/noto-serif-kr/NotoSerifKR-Regular.otf "-s${size_kr}" -v _Consonants_ 0x1100 0x1112 > "base/fonts/generated/NotoSerifKR_Regular_Consonants_${size_kr}pt.h"
 fontconvert -f~/repos/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf "-s${size_ar}" -r40 -v _Isolated_ 0x60c 0x669 > "base/fonts/generated/NotoSansAR_Regular_Isolated_${size_ar}pt.h"
@@ -40,9 +42,8 @@ fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s20" -r50 -v _Lig
 fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s16" -r45 -v _Brightness_ -n0x11000 0x1F311 0x1F318 > "base/fonts/generated/5NotoEmoji_Medium_Brightness_16pt.h"
 fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s20" -r50 -v _AI_ -n0x11000 0x1F300 0x1F300 > "base/fonts/generated/6NotoEmoji_Medium_AI_20pt.h"
 fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s14" -r50 -v _FileOpen_ -n0x11000 0x1F4C2 0x1F4C2 > "base/fonts/generated/4NotoEmoji_Medium_FileOpen_14pt.h"
-fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s18" -r50 -v _Lock_ -n0x11000 0x1F512 0x1F512 > "base/fonts/generated/5NotoEmoji_Medium_Lock_20pt.h"
+fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s18" -r50 -v _LockFind_ -n0x11000 0x1F50E 0x1F50E 0x1F512 0x1F512 > "base/fonts/generated/5NotoEmoji_Medium_LockFind_18pt.h"
 fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s18" -r50 -v _ClipCpy_ -n0x11000 0x1F4CB 0x1F4CB > "base/fonts/generated/4NotoEmoji_Medium_Copy_18pt.h"
-fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s18" -r50 -v _Find_ -n0x11000 0x1F50E 0x1F50E > "base/fonts/generated/4NotoEmoji_Medium_Find_18pt.h"
 fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s12" -r50 -v _Note_ -n0x11000 0x1f4dd 0x1f4dd > "base/fonts/generated/5NotoEmoji_Medium_Note_12pt.h"
 fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s20" -r50 -v _Emojis0_ -n0x10000 0x1f600 0x1f64f > "base/fonts/generated/6NotoEmoji_Medium_Emoji0_20pt.h"
 fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s20" -r50 -v _Emojis1_ -n0xfd00 0x1f440 0x1f453 0x1f47b 0x1f496 0x1f4a1 0x1f4b1 > "base/fonts/generated/7NotoEmoji_Medium_Emoji1 _20pt.h"
@@ -50,14 +51,9 @@ fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s20" -r50 -v _Emo
 fontconvert -f~/repos/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf "-s20" -r50 -v _Technical_ 0x2387 0x2388 0x238b 0x238b 0x2399 0x2399 > "base/fonts/generated/3NotoSansSymbols_Regular_Technical_20pt.h"
 fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _Technical2_ 0x2318 0x2318 0x2325 0x2326 0x232B 0x232B > "base/fonts/generated/3NotoSansSymbols2_Regular_Technical_20pt.h"
 fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _Checkmark_ 0x2611 0x2611 > "base/fonts/generated/3NotoSansSymbols2_Regular_Checkmark_20pt.h"
-fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _Box_ 0x2611 0x2611 > "base/fonts/generated/4NotoSansSymbols2_Regular_Box_20pt.h"
 fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _Arrows_ 	0x2B6F 0x2B73 0x2B7E 0x2B7E 0x2B8C 0x2B8C 0x2B8E 0x2B8E 0x2BA0 0x2BA0 > "base/fonts/generated/3NotoSansSymbols2_Regular_Arrows_20pt.h"
-fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _Diamond_ 0x2756 0x2756 > "base/fonts/generated/3NotoSansSymbols2_Regular_Diamond_20pt.h"
-fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _ClipCut_ 0x2702 0x2702 > "base/fonts/generated/4NotoSansSymbols2_Regular_Cut_20pt.h"
-fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _ClipPaste_ -n0x11000 0x1F5CA 0x1F5CA > "base/fonts/generated/4NotoSansSymbols2_Regular_Paste_20pt.h"
-fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _Volume_ -n0x11000 0x1F568 0x1F56A > "base/fonts/generated/5NotoSansSymbols2_Regular_Volume_20pt.h"
-fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _Calc_ -n0x11000 0x1F5A9 0x1F5AB > "base/fonts/generated/5NotoSansSymbols2_Regular_Calc_20pt.h"
-fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _HW_ -n0x11000 0x1F5B3 0x1F5BC > "base/fonts/generated/5NotoSansSymbols2_Regular_Hardware_20pt.h"
+fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _DiamondCut_ 0x2702 0x2702 0x2756 0x2756 > "base/fonts/generated/3NotoSansSymbols2_Regular_DiamondCut_20pt.h"
+fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s20" -r50 -v _Util_ -n0x11000 0x1F568 0x1F56A 0x1F5A9 0x1F5AB 0x1F5B3 0x1F5BC 0x1F5CA 0x1F5CA > "base/fonts/generated/4NotoSansSymbols2_Regular_Util_20pt.h"
 fontconvert -f~/repos/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf "-s18" -r50 -v _Window_ -n0x11000 0x1F5D5 0x1F5DB > "base/fonts/generated/5NotoSansSymbols2_Regular_Window_18pt.h"
 
 

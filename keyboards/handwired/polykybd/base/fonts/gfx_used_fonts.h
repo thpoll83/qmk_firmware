@@ -10,22 +10,15 @@
 #include "generated/3NotoEmoji_Medium_World_20pt.h"
 #include "generated/3NotoSansSymbols2_Regular_Arrows_20pt.h"
 #include "generated/3NotoSansSymbols2_Regular_Checkmark_20pt.h"
-#include "generated/3NotoSansSymbols2_Regular_Diamond_20pt.h"
+#include "generated/3NotoSansSymbols2_Regular_DiamondCut_20pt.h"
 #include "generated/3NotoSansSymbols2_Regular_Technical_20pt.h"
 #include "generated/3NotoSansSymbols_Regular_Technical_20pt.h"
 #include "generated/4NotoEmoji_Medium_Copy_18pt.h"
 #include "generated/4NotoEmoji_Medium_FileOpen_14pt.h"
-#include "generated/4NotoEmoji_Medium_Find_18pt.h"
-#include "generated/4NotoSansSymbols2_Regular_Box_20pt.h"
-#include "generated/4NotoSansSymbols2_Regular_Cut_20pt.h"
-#include "generated/4NotoSansSymbols2_Regular_Paste_20pt.h"
+#include "generated/4NotoSansSymbols2_Regular_Util_20pt.h"
 #include "generated/5NotoEmoji_Medium_Brightness_16pt.h"
-#include "generated/5NotoEmoji_Medium_Lock_20pt.h"
+#include "generated/5NotoEmoji_Medium_LockFind_18pt.h"
 #include "generated/5NotoEmoji_Medium_Note_12pt.h"
-#include "generated/5NotoEmoji_Medium_Note_16pt.h"
-#include "generated/5NotoSansSymbols2_Regular_Calc_20pt.h"
-#include "generated/5NotoSansSymbols2_Regular_Hardware_20pt.h"
-#include "generated/5NotoSansSymbols2_Regular_Volume_20pt.h"
 #include "generated/5NotoSansSymbols2_Regular_Window_18pt.h"
 #include "generated/6NotoEmoji_Medium_AI_20pt.h"
 #include "generated/6NotoEmoji_Medium_Emoji0_20pt.h"
@@ -36,10 +29,8 @@
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
 #include "generated/NotoSansJP_Regular_Hiragana_15pt.h"
 #include "generated/NotoSansJP_Regular_Punct_15pt.h"
-#include "generated/NotoSansJP_Regular_PunctSupl_15pt.h"
-#include "generated/NotoSans_Regular_Cyrillic_14pt.h"
-#include "generated/NotoSans_Regular_GreekBase_14pt.h"
-#include "generated/NotoSans_Regular_GreekTonos_14pt.h"
+#include "generated/NotoSans_Regular_Cyrillic_16pt.h"
+#include "generated/NotoSans_Regular_Greek_14pt.h"
 #include "generated/NotoSans_Regular_LetterMod_14pt.h"
 #include "generated/NotoSans_Regular_SZ_14pt.h"
 #include "generated/NotoSerifKR_Regular_Consonants_21pt.h"
@@ -60,22 +51,15 @@ const GFXfont* ALL_FONTS [] = {
   &NotoEmoji_Medium_World_20pt16b,
   &NotoSansSymbols2_Regular_Arrows_20pt16b,
   &NotoSansSymbols2_Regular_Checkmark_20pt16b,
-  &NotoSansSymbols2_Regular_Diamond_20pt16b,
+  &NotoSansSymbols2_Regular_DiamondCut_20pt16b,
   &NotoSansSymbols2_Regular_Technical2_20pt16b,
   &NotoSansSymbols_Regular_Technical_20pt16b,
   &NotoEmoji_Medium_ClipCpy_18pt16b,
   &NotoEmoji_Medium_FileOpen_14pt16b,
-  &NotoEmoji_Medium_Find_18pt16b,
-  &NotoSansSymbols2_Regular_Box_20pt16b,
-  &NotoSansSymbols2_Regular_ClipCut_20pt16b,
-  &NotoSansSymbols2_Regular_ClipPaste_20pt16b,
+  &NotoSansSymbols2_Regular_Util_20pt16b,
   &NotoEmoji_Medium_Brightness_16pt16b,
-  &NotoEmoji_Medium_Lock_18pt16b,
+  &NotoEmoji_Medium_LockFind_18pt16b,
   &NotoEmoji_Medium_Note_12pt16b,
-  &NotoEmoji_Medium_Note_16pt16b,
-  &NotoSansSymbols2_Regular_Calc_20pt16b,
-  &NotoSansSymbols2_Regular_HW_20pt16b,
-  &NotoSansSymbols2_Regular_Volume_20pt16b,
   &NotoSansSymbols2_Regular_Window_18pt16b,
   &NotoEmoji_Medium_AI_20pt16b,
   &NotoEmoji_Medium_Emojis0_20pt16b,
@@ -86,10 +70,8 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSansArabic_Regular_Isolated_16pt16b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct_15pt16b,
-  &NotoSansJP_Regular_PunctSupl_15pt16b,
-  &NotoSans_Regular_Cyrillic_14pt16b,
-  &NotoSans_Regular_GreekBase_14pt16b,
-  &NotoSans_Regular_GreekTonos_14pt16b,
+  &NotoSans_Regular_Cyrillic_16pt16b,
+  &NotoSans_Regular_Greek_14pt16b,
   &NotoSans_Regular_LetterMod_14pt16b,
   &NotoSans_Regular_SZ_14pt16b,
   &NotoSerifKR_Regular_Consonants_21pt16b,

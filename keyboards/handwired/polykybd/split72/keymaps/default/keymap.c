@@ -761,8 +761,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
                     KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_MACOS,
                     KC_NO,      KC_LANG_UA, KC_LANG_BG, KC_LANG_BY, KC_LANG_RU, KC_NO,      QK_UNICODE_MODE_LINUX,
-        _______,    KC_NO,      KC_LANG_KZ, KC_LANG_PL, KC_LANG_RO, KC_NO,      KC_NO,      QK_UNICODE_MODE_WINDOWS,
-        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_BSD,
+        _______,    KC_NO,      KC_LANG_KZ, KC_LANG_PL, KC_LANG_RO, KC_LANG_CN, KC_NO,      QK_UNICODE_MODE_WINDOWS,
+        KC_NO,      KC_NO,      KC_LANG_NL, KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_BSD,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(
@@ -920,6 +920,7 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         case KC_LANG_PL: return l_state.lang == LANG_PL ? u"[PL]" : u" PL";
         case KC_LANG_RO: return l_state.lang == LANG_RO ? u"[RO]" : u" RO";
         case KC_LANG_CN: return l_state.lang == LANG_CN ? u"[CN]" : u" CN";
+        case KC_LANG_NL: return l_state.lang == LANG_NL ? u"[NL]" : u" NL";
         //[[[end]]]
         default:
         {
@@ -1106,14 +1107,9 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     uint8_t layer = get_highest_layer(l_layer.layer);
-                    if(layer < DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) {
-                        uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
-                        keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(l_layer.layer&~(1<<layer)),r + offset,c) : highest_kc;
-                    } else {
-                        uint16_t highest_kc = keymaps[layer][r + offset][c]; //if we encounter a transparent key go down one layer (but only one!)
-                        keycode = (highest_kc == KC_TRNS) ? keymaps[get_highest_layer(l_layer.layer&~(1<<layer))][r + offset][c] : highest_kc;
-                    }
-                    kdisp_enable(true);//(l_state.flags&STATUS_DISP_ON) != 0);
+                    uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
+                    keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(l_layer.layer&~(1<<layer)),r + offset,c) : highest_kc;
+                    kdisp_enable(true);
                     kdisp_set_contrast(l_state.contrast-1);
                     if(keycode!=KC_TRNS) {
                         const uint16_t* text = keycode_to_disp_text(keycode, state);
@@ -1203,6 +1199,15 @@ void kdisp_idle(uint8_t contrast) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+
+    uint32_t t = timer_elapsed32(last_update);
+    if(record->event.pressed) {
+        uprintf("wait %ld.%03ld\n", t/1000, t%1000);
+        uprintf("press 0x%04x\n", keycode);
+    } else {
+        uprintf("wait %ld.%03ld\n", t/1000, t%1000);
+        uprintf("release 0x%04x\n", keycode);
+    }
 
      if(process_unicodemap_poly(keycode, record)) {
         return  false;
@@ -1411,6 +1416,7 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_LANG_PL: l_state.lang = LANG_PL; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_RO: l_state.lang = LANG_RO; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_CN: l_state.lang = LANG_CN; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_NL: l_state.lang = LANG_NL; save_user_eeconf(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
@@ -1449,14 +1455,6 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     // uprintf("Key 0x%04X, col/row: %u/%u, %s, time: %u, int: %d, cnt: %u\n",
     //     keycode, record->event.key.col, record->event.key.row, record->event.pressed ? "DN" : "UP",
     //     record->event.time, record->tap.interrupted ? 1 : 0, record->tap.count);
-    uint32_t t = timer_elapsed32(last_update);
-    if(record->event.pressed) {
-        uprintf("wait %ld.%03ld\n", t/1000, t%1000);
-        uprintf("press 0x%04x\n", keycode);
-    } else {
-        uprintf("wait %ld.%03ld\n", t/1000, t%1000);
-        uprintf("release 0x%04x\n", keycode);
-    }
 
     update_performed();
 };
@@ -1465,6 +1463,11 @@ void show_splash_screen(void) {
     clear_all_displays();
     display_message(1, 1, u"POLY", &FreeSansBold24pt7b);
     display_message(2, 1, u"KYBD", &FreeSansBold24pt7b);
+    wait_ms(2000);
+    clear_all_displays();
+    display_message(1, 1, u"SPLIT", &FreeSansBold24pt7b);
+    display_message(3, 1, u" 7 2", &FreeSansBold24pt7b);
+    wait_ms(2000);
 }
 
 void set_displays(uint8_t contrast, bool idle) {
@@ -1877,6 +1880,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     case LANG_PL: memcpy(data, "P\x07.PL", 5); break;
                     case LANG_RO: memcpy(data, "P\x07.RO", 5); break;
                     case LANG_CN: memcpy(data, "P\x07.CN", 5); break;
+                    case LANG_NL: memcpy(data, "P\x07.NL", 5); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -1904,7 +1908,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.AR,GR,UA,RU,BY,KZ,BG,PL,RO", 29);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.CN", 5);
+                memcpy(data, "P\x08.CN,NL", 8);
                 //[[[end]]]
                 break;
             case 9: //change language

@@ -32,6 +32,7 @@
 #include "base/crc32.h"
 
 #include "lang/lang_lut.h"
+#include "lang/lang_lut_ext.h"
 
 #include "layers.h"
 #include "keycodes.h"
@@ -850,7 +851,7 @@ led_config_t g_led_config = { {// Key Matrix to LED Index
                                  4, 4, 4, 4, 4, 4, 4, 4
                              } };
 
-const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
+const uint16_t* to_static_text(uint16_t keycode, led_t state) {
 
     const uint16_t* emoji = keycode_to_emoji(keycode);
     if(emoji!=NULL) {
@@ -895,7 +896,7 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         while lang_key:
             languages.append(lang_key)
             lang_index = lang_index + 1
-            lang_key = sheet.cell(row = 1, column = 2 + lang_index*3).value
+            lang_key = sheet.cell(row = 1, column = 2 + lang_index*4).value
 
         for lang in languages:
             short = lang.split("_")[1]
@@ -923,38 +924,56 @@ const uint16_t* keycode_to_disp_text(uint16_t keycode, led_t state) {
         case KC_LANG_NL: return l_state.lang == LANG_NL ? u"[NL]" : u" NL";
         //[[[end]]]
         default:
-        {
-            bool shift = ((l_layer.mods & MOD_MASK_SHIFT) != 0);
-            bool add_lang = get_highest_layer(l_layer.layer)==_ADDLANG1;
-            bool alt = ((l_layer.mods & MOD_MASK_ALT) != 0);
-            if(keycode>=KC_A && keycode<=KC_Z && add_lang) {
-                //display the previously selected latin variation of the letter
-                const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-                uint8_t variation = (shift || state.caps_lock) ? g_latin.ex[keycode-KC_A]>>4 : g_latin.ex[keycode-KC_A]&0xf;
+            return NULL;
+    }
+}
 
-                const uint16_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
-                return (def_variation!=NULL) ? latin_ex_map[offset+keycode-KC_A][variation] : NULL;
-            }
+bool render_key(uint16_t keycode, led_t state) {
+    bool shift = ((l_layer.mods & MOD_MASK_SHIFT) != 0);
+    bool add_lang = get_highest_layer(l_layer.layer)==_ADDLANG1;
+    bool alt = ((l_layer.mods & MOD_MASK_ALT) != 0);
+    if(keycode>=KC_A && keycode<=KC_Z && add_lang) {
+        //display the previously selected latin variation of the letter
+        const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
+        uint8_t variation = (shift || state.caps_lock) ? g_latin.ex[keycode-KC_A]>>4 : g_latin.ex[keycode-KC_A]&0xf;
 
-            if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
-                if(add_lang && alt && l_last.latin_kc!=0) {
-                    //show all available alternatives for selected latin letter
-                    const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-                    return latin_ex_map[offset+l_last.latin_kc-KC_A][keycode-KC_LAT0];
-                } else {
-                    return NULL; //show nothing
-                }
-            }
-
-            const uint16_t* text = translate_keycode(l_state.lang, keycode, shift, state.caps_lock);
-            if (text != NULL) {
-                return text;
-            }
+        const uint16_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
+        if(def_variation!=NULL) {
+            kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, latin_ex_map[offset+keycode-KC_A][variation]);
+            return true;
         }
-        break;
+        return false;
+    }
+    //cariation selection on 0~9
+    if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
+        if(add_lang && alt && l_last.latin_kc!=0) {
+            //show all available alternatives for selected latin letter
+            const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
+            kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, latin_ex_map[offset+l_last.latin_kc-KC_A][keycode-KC_LAT0]);
+            return true;
+        }
+        return false;
     }
 
-    return NULL;
+    //translate to current language
+    const uint16_t* letter = translate_keycode(l_state.lang, keycode, shift, state.caps_lock, false);
+    if (letter != NULL) {
+        kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, letter);
+        if(!shift && !state.caps_lock && !(keycode>=KC_A && keycode<=KC_Z)) {
+            //preview upper case representation
+            letter = translate_keycode(l_state.lang, keycode, true, false, false);
+            if (letter != NULL) {
+                kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 60, 23, letter);
+            }
+        }
+        //preview alt representation
+        letter = translate_keycode(l_state.lang, keycode, false, false, true);
+        if (letter != NULL) {
+            kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 80, 40, letter);
+        }
+        return true;
+    }
+    return false;
 }
 
 const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
@@ -1057,6 +1076,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
     if(combine) {
         combine_with_mask();
     }
+    kdisp_clear_bitmap_courtyard(28, 0, overlays[idx], 72, 40);
     kdisp_draw_bitmap(28, 0, overlays[idx], 72, 40); //don't understnad why we start at offset 28... need to think about it
     return true;
 }
@@ -1112,11 +1132,11 @@ void update_displays(enum refresh_mode mode) {
                     kdisp_enable(true);
                     kdisp_set_contrast(l_state.contrast-1);
                     if(keycode!=KC_TRNS) {
-                        const uint16_t* text = keycode_to_disp_text(keycode, state);
+                        const uint16_t* text = to_static_text(keycode, state);
                         kdisp_set_buffer(0x00);
                         if(!overlay_only) {
-                            if(text==NULL){
-                                if((keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
+                            if(text==NULL) {
+                                if(!render_key(keycode, state) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
                                     uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
                                     kdisp_write_gfx_char(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, unicode_map[chr]);
                                 }
@@ -1463,11 +1483,11 @@ void show_splash_screen(void) {
     clear_all_displays();
     display_message(1, 1, u"POLY", &FreeSansBold24pt7b);
     display_message(2, 1, u"KYBD", &FreeSansBold24pt7b);
-    wait_ms(2000);
+    wait_ms(400);
     clear_all_displays();
     display_message(1, 1, u"SPLIT", &FreeSansBold24pt7b);
     display_message(3, 1, u" 7 2", &FreeSansBold24pt7b);
-    wait_ms(2000);
+    //wait_ms(100);
 }
 
 void set_displays(uint8_t contrast, bool idle) {

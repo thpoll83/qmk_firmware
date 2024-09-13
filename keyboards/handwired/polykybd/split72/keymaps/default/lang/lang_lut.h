@@ -21,7 +21,7 @@ enum lang_layer {
         else:
             cog.outl(f"\t{lang_key},")
         lang_index = lang_index + 1
-        lang_key = sheet.cell(row = 1, column = 2 + lang_index*3).value
+        lang_key = sheet.cell(row = 1, column = 2 + lang_index*4).value
     ]]]*/
     LANG_EN = 0,
     LANG_DE,
@@ -46,4 +46,7 @@ enum lang_layer {
     //[[[end]]]
     NUM_LANG };
 
-const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shift, bool caps_lock);
+const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shift, bool caps_lock, bool alt_gr);
+
+extern const uint16_t* latin_ex_map[26*2][10];
+

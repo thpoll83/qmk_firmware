@@ -25,7 +25,7 @@ while lang_key:
     if lang_index==0:
         cog.outl(f"#define INIT_LANG {lang_key}")
     lang_index = lang_index + 1
-    lang_key = sheet.cell(row = 1, column = 2 + lang_index*3).value
+    lang_key = sheet.cell(row = 1, column = 2 + lang_index*4).value
 ]]]*/
 #define INIT_LANG LANG_EN
 //[[[end]]]

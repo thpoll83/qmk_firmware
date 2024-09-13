@@ -187,6 +187,14 @@ void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height
     }
 }
 
+void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
+    for (int x = x_start; x < (x_start + width); ++x) {
+        for (int y = y_start; y < (y_start + height); ++y) {
+            CLEAR_PIXEL_CLIPPED(x, y);
+        }
+    }
+}
+
 // Draw a character
 /**************************************************************************/
 /*!
@@ -304,6 +312,27 @@ void kdisp_draw_bitmap(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_w
             }
             if (vertical_pixel_row_8 & 0x80) {
                 SET_PIXEL_CLIPPED(x + bmp_x, y);
+            }
+        }
+    }
+}
+
+void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height) {
+    int8_t byte_width           = (bmp_width + 7) / 8;
+    uint8_t vertical_pixel_row_8 = 0;
+
+    for (int8_t bmp_y = 0; bmp_y < bmp_height; bmp_y++, y++) {
+        for (int8_t bmp_x = 0; bmp_x < bmp_width; bmp_x++) {
+            if (bmp_x & 0x07) {
+                vertical_pixel_row_8 <<= 1;
+            } else {
+                vertical_pixel_row_8 = pgm_read_byte(&pgm_bmp[bmp_y * byte_width + (bmp_x >> 3)]);
+            }
+            if (vertical_pixel_row_8 & 0x80) {
+                bmp_x = PK_MIN(bmp_x, bmp_x-2);
+                y = PK_MIN(y, y-2);
+                kdisp_clear_rect(bmp_x, y, bmp_width-bmp_x, bmp_height- y);
+                return;
             }
         }
     }

@@ -5,6 +5,7 @@
 #include "named_glyphs.h"
 
 enum {ALPHA = 26, NUM = 10, ADDITIONAL = 18};
+enum variation_index{VAR_SMALL = 0, VAR_SHIFT, VAR_CAPS, VAR_ALTGR};
 enum lang_layer {
     /*[[[cog
     import cog
@@ -48,5 +49,36 @@ enum lang_layer {
 
 const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shift, bool caps_lock, bool alt_gr);
 
-extern const uint16_t* latin_ex_map[26*2][10];
+enum settings_keys {
+    /*[[[cog
+    #skip all letters
+    key_index = 2
+    key_name = sheet["A2"].value
+    glyph_code = sheet["D2"].value
+    while not key_name.startswith("{"):
+        key_index = key_index + 1
+        key_name = sheet.cell(row = key_index, column = 1).value
+
+    #collect all settings keys
+    all_keys = []
+    last_key = key_name
+    while key_name:
+        all_keys.append("SETTING_" + key_name.strip('{}').replace('.','_').upper())
+        key_index = key_index + 1
+        last_key = key_name
+        key_name = sheet.cell(row = key_index, column = 1).value
+    cog.outl(',\n'.join(str_key + ( " = 0" if str_key==all_keys[0] else "") for str_key in all_keys) + ',')
+    cog.outl("SETTINGS_NUM")
+    ]]]*/
+    SETTING_LETTER_HOFFSET = 0,
+    SETTING_LETTER_VOFFSET,
+    SETTING_NUM_HOFFSET,
+    SETTING_NUM_VOFFSET,
+    SETTING_SYM_HOFFSET,
+    SETTING_SYM_VOFFSET,
+    SETTINGS_NUM
+    //[[[end]]]
+};
+
+int8_t get_setting(uint8_t setting, uint8_t lang, uint8_t variation);
 

@@ -77,4 +77,4 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSerifKR_Regular_Consonants_21pt16b,
   &NotoSerifKR_Regular_Vowels_21pt16b,
 };
-
+#define ALL_FONT_SIZE (sizeof(ALL_FONTS) / sizeof(GFXfont*))

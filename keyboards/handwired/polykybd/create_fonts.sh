@@ -66,3 +66,4 @@ echo -e 'const GFXfont* ALL_FONTS [] = {' >> gfx_used_fonts.h
 echo -e '  &IconsFont,' >> gfx_used_fonts.h
 cat  generated/*pt.h | grep -oP 'const GFXfont \K\w+' | while read line; do echo "  &"${line}","; done >> gfx_used_fonts.h
 echo -e '};\n' >> gfx_used_fonts.h
+echo -e '#define ALL_FONT_SIZE (sizeof(ALL_FONTS) / sizeof(GFXfont*))' >> gfx_used_fonts.h

@@ -929,17 +929,18 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
 }
 
 bool render_key(uint16_t keycode, led_t state) {
-    bool shift = ((l_layer.mods & MOD_MASK_SHIFT) != 0);
-    bool add_lang = get_highest_layer(l_layer.layer)==_ADDLANG1;
-    bool alt = ((l_layer.mods & MOD_MASK_ALT) != 0);
-    if(keycode>=KC_A && keycode<=KC_Z && add_lang) {
+    const bool shift = ((l_layer.mods & MOD_MASK_SHIFT) != 0);
+    const bool add_lang = get_highest_layer(l_layer.layer)==_ADDLANG1;
+    const bool alt = ((l_layer.mods & MOD_MASK_ALT) != 0);
+    const bool is_letter = keycode>=KC_A && keycode<=KC_Z;
+    if(is_letter && add_lang) {
         //display the previously selected latin variation of the letter
         const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
         uint8_t variation = (shift || state.caps_lock) ? g_latin.ex[keycode-KC_A]>>4 : g_latin.ex[keycode-KC_A]&0xf;
 
         const uint16_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
         if(def_variation!=NULL) {
-            kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, latin_ex_map[offset+keycode-KC_A][variation]);
+            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, latin_ex_map[offset+keycode-KC_A][variation]);
             return true;
         }
         return false;
@@ -949,7 +950,7 @@ bool render_key(uint16_t keycode, led_t state) {
         if(add_lang && alt && l_last.latin_kc!=0) {
             //show all available alternatives for selected latin letter
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-            kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, latin_ex_map[offset+l_last.latin_kc-KC_A][keycode-KC_LAT0]);
+            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, latin_ex_map[offset+l_last.latin_kc-KC_A][keycode-KC_LAT0]);
             return true;
         }
         return false;
@@ -958,18 +959,45 @@ bool render_key(uint16_t keycode, led_t state) {
     //translate to current language
     const uint16_t* letter = translate_keycode(l_state.lang, keycode, shift, state.caps_lock, false);
     if (letter != NULL) {
-        kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, letter);
-        if(!shift && !state.caps_lock && !(keycode>=KC_A && keycode<=KC_Z)) {
-            //preview upper case representation
-            letter = translate_keycode(l_state.lang, keycode, true, false, false);
-            if (letter != NULL) {
-                kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 60, 23, letter);
+        int8_t v_set;
+        int8_t h_set;
+        if(is_letter) {
+            v_set = SETTING_LETTER_VOFFSET;
+            h_set = SETTING_LETTER_HOFFSET;
+        } else {
+            const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
+            if(is_num){
+                v_set = SETTING_NUM_VOFFSET;
+                h_set = SETTING_NUM_HOFFSET;
+            } else {
+                v_set = SETTING_SYM_VOFFSET;
+                h_set = SETTING_SYM_HOFFSET;
+            }
+        }
+        int8_t v_off = get_setting(v_set, l_state.lang, VAR_SMALL);
+        int8_t h_off = get_setting(h_set, l_state.lang, VAR_SMALL);
+
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
+
+        //preview capital letter?
+        if(!shift && !state.caps_lock) {
+            v_off = get_setting(v_set, l_state.lang, VAR_SHIFT);
+            h_off = get_setting(h_set, l_state.lang, VAR_SHIFT);
+            if(v_off>=0 && h_off>=0) {
+                letter = translate_keycode(l_state.lang, keycode, true, false, false);
+                if (letter != NULL) {
+                    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
+                }
             }
         }
         //preview alt representation
         letter = translate_keycode(l_state.lang, keycode, false, false, true);
         if (letter != NULL) {
-            kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 80, 40, letter);
+            v_off = get_setting(v_set, l_state.lang, VAR_ALTGR);
+            h_off = get_setting(h_set, l_state.lang, VAR_ALTGR);
+            if(v_off>=0 && h_off>=0) {
+                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
+            }
         }
         return true;
     }
@@ -1138,10 +1166,10 @@ void update_displays(enum refresh_mode mode) {
                             if(text==NULL) {
                                 if(!render_key(keycode, state) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
                                     uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
-                                    kdisp_write_gfx_char(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, unicode_map[chr]);
+                                    kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, 28, 23, unicode_map[chr]);
                                 }
                             } else {
-                                kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, text);
+                                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text);
                             }
                         }
                         text = NULL;
@@ -1153,7 +1181,7 @@ void update_displays(enum refresh_mode mode) {
                             text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
-                            kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 28, 23, text);
+                            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text);
                         }
                         kdisp_send_buffer();
                     }
@@ -1656,7 +1684,7 @@ void oled_update_buffer(void) {
 
     const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 0, 14, ICON_LAYER);
+    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 0, 14, ICON_LAYER);
     hex_to_u16_string((char*) buffer, sizeof(buffer), get_highest_layer(g_layer.layer));
     kdisp_write_gfx_text(displayFont, 1, 20, 14, buffer);
     if(side_is_undecided()) {
@@ -1665,10 +1693,10 @@ void oled_update_buffer(void) {
         kdisp_write_gfx_text(displayFont, 1, 38, 14, is_left_side() ? u"LEFT" : u"RIGHT");
     }
 
-    kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 108, 16, g_layer.led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
-    kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 108, 38, g_layer.led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
+    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 108, 16, g_layer.led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
+    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 108, 38, g_layer.led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
     if(g_layer.led_state.scroll_lock) {
-        kdisp_write_gfx_text(ALL_FONTS, sizeof(ALL_FONTS) / sizeof(GFXfont*), 112, 54, ARROWS_DOWNSTOP);
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 112, 54, ARROWS_DOWNSTOP);
     } else {
         kdisp_write_gfx_text(smallFont, 1, 112, 56, is_usb_host_side() ? u"H" : u"B");
     }

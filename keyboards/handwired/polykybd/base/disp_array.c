@@ -317,24 +317,51 @@ void kdisp_draw_bitmap(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_w
     }
 }
 
+void clear_line(int8_t from_x, int8_t to_x, int8_t y) {
+    for (int8_t x = from_x; x < to_x; ++x) {
+        CLEAR_PIXEL_CLIPPED(x, y);
+    }
+}
+
 void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height) {
     int8_t byte_width           = (bmp_width + 7) / 8;
     uint8_t vertical_pixel_row_8 = 0;
-
-    for (int8_t bmp_y = 0; bmp_y < bmp_height; bmp_y++, y++) {
-        for (int8_t bmp_x = 0; bmp_x < bmp_width; bmp_x++) {
+    int8_t first = 127;
+    int8_t last=0;
+    int8_t num_empty = 0;
+    for (int8_t bmp_y = 0; bmp_y < bmp_height; ++bmp_y, ++y) {
+        //first = 127;
+        //last = 0;
+        num_empty++;
+        for (int8_t bmp_x = 0; bmp_x < bmp_width; ++bmp_x) {
             if (bmp_x & 0x07) {
                 vertical_pixel_row_8 <<= 1;
             } else {
                 vertical_pixel_row_8 = pgm_read_byte(&pgm_bmp[bmp_y * byte_width + (bmp_x >> 3)]);
             }
             if (vertical_pixel_row_8 & 0x80) {
-                bmp_x = PK_MIN(bmp_x, bmp_x-2);
-                y = PK_MIN(y, y-2);
-                kdisp_clear_rect(bmp_x, y, bmp_width-bmp_x, bmp_height- y);
-                return;
+                first = PK_MIN(bmp_x-3, first);
+                last = PK_MAX(bmp_x+3, last);
+                num_empty = 0;
             }
         }
+        if(first!=127) {
+            if(num_empty==0) {
+                clear_line(x+first+4, x+last-4, y-2);
+                clear_line(x+first+2, x+last-2, y-1);
+
+            }
+            clear_line(x+first, x+last, y);
+            uint8_t dist;
+            PK_POW(dist, 2, (num_empty+1));
+            first+=dist;
+            last -=dist;
+            if(first>=last) {
+                first = 127;
+                num_empty = 0;
+            }
+        }
+        vertical_pixel_row_8 = 0;
     }
 }
 

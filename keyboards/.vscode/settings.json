@@ -13,6 +13,10 @@
         "utility": "c",
         "system_error": "c",
         "type_traits": "c",
-        "random": "c"
+        "random": "c",
+        "optional": "c",
+        "functional": "c",
+        "tuple": "c",
+        "ostream": "c"
     }
 }

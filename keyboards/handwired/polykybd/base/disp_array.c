@@ -204,7 +204,7 @@ void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t heigh
     @param    ch  The 16-bit font-indexed character
 */
 /**************************************************************************/
-int8_t kdisp_write_gfx_char(const GFXfont **fonts, uint8_t num_fonts, int8_t x, int8_t y, uint16_t ch) {
+int8_t kdisp_write_gfx_char(const GFXfont **fonts, uint8_t num_fonts, int8_t x, int8_t y, uint16_t ch, bool clear_cy) {
     const GFXfont * currentFont = 0;
     uint16_t first = 0;
     uint16_t last = 0;
@@ -237,7 +237,10 @@ int8_t kdisp_write_gfx_char(const GFXfont **fonts, uint8_t num_fonts, int8_t x, 
     int8_t   xo = pgm_read_byte(&glyph->xOffset), yo = pgm_read_byte(&glyph->yOffset);
     int8_t  xx, yy, bits = 0, bit = 0;
 
-    // Todo: Add character clipping here
+    if(clear_cy) {
+        kdisp_clear_bitmap_courtyard(x+xo, y+yo, &bitmap[bo], w, h);
+    }
+
     for (yy = 0; yy < h; yy++) {
         for (xx = 0; xx < w; xx++) {
             if (!(bit++ & 7)) {
@@ -254,6 +257,10 @@ int8_t kdisp_write_gfx_char(const GFXfont **fonts, uint8_t num_fonts, int8_t x, 
 }
 
 void kdisp_write_gfx_text(const GFXfont **fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text) {
+    kdisp_write_gfx_text_cy(fonts, num_fonts, x, y, text, false);
+}
+
+void kdisp_write_gfx_text_cy(const GFXfont **fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text, bool clear_cy) {
     int8_t x_cursor = x;
     int8_t y_cursor = y;
     while (*text != 0) {
@@ -282,7 +289,7 @@ void kdisp_write_gfx_text(const GFXfont **fonts, uint8_t num_fonts, int8_t x, in
                 x_cursor = x;
                 break;
             default:
-                x_cursor += kdisp_write_gfx_char(fonts, num_fonts, x_cursor, y_cursor, *text);
+                x_cursor += kdisp_write_gfx_char(fonts, num_fonts, x_cursor, y_cursor, *text, clear_cy);
                 break;
         }
         text++;
@@ -324,44 +331,43 @@ void clear_line(int8_t from_x, int8_t to_x, int8_t y) {
 }
 
 void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height) {
-    int8_t byte_width           = (bmp_width + 7) / 8;
-    uint8_t vertical_pixel_row_8 = 0;
+    uint16_t offset = 0;
     int8_t first = 127;
     int8_t last=0;
     int8_t num_empty = 0;
-    for (int8_t bmp_y = 0; bmp_y < bmp_height; ++bmp_y, ++y) {
-        //first = 127;
-        //last = 0;
+    int8_t bits = 0, bit = 0;
+    for (int8_t bmp_y = 0; bmp_y < bmp_height; ++bmp_y) {
         num_empty++;
         for (int8_t bmp_x = 0; bmp_x < bmp_width; ++bmp_x) {
-            if (bmp_x & 0x07) {
-                vertical_pixel_row_8 <<= 1;
-            } else {
-                vertical_pixel_row_8 = pgm_read_byte(&pgm_bmp[bmp_y * byte_width + (bmp_x >> 3)]);
+            if (!(bit++ & 7)) {
+                bits = pgm_read_byte(&pgm_bmp[offset++]);
             }
-            if (vertical_pixel_row_8 & 0x80) {
+            if (bits & 0x80) {
                 first = PK_MIN(bmp_x-3, first);
                 last = PK_MAX(bmp_x+3, last);
                 num_empty = 0;
             }
+            bits <<= 1;
+
         }
         if(first!=127) {
             if(num_empty==0) {
-                clear_line(x+first+4, x+last-4, y-2);
-                clear_line(x+first+2, x+last-2, y-1);
-
+                clear_line(x+first+4, x+last-4, bmp_y + y-2);
+                clear_line(x+first+2, x+last-2, bmp_y + y-1);
+            } else {
+                num_empty = PK_MIN(num_empty, 6);
             }
-            clear_line(x+first, x+last, y);
+            clear_line(x+first, x+last, bmp_y + y);
             uint8_t dist;
             PK_POW(dist, 2, (num_empty+1));
             first+=dist;
             last -=dist;
             if(first>=last) {
                 first = 127;
+                last=0;
                 num_empty = 0;
             }
         }
-        vertical_pixel_row_8 = 0;
     }
 }
 

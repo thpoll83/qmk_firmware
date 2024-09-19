@@ -1262,7 +1262,7 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  LANG_IT*/  0,-1,0,50,
 		/*  LANG_TR*/  0,-1,0,50,
 		/*  LANG_KO*/  0,35,0,0,
-		/*  LANG_JA*/  0,35,0,0,
+		/*  LANG_JA*/  0,-1,0,0,
 		/*  LANG_AR*/  0,38,0,52,
 		/*  LANG_GR*/  0,-1,0,50,
 		/*  LANG_UA*/  0,-1,0,50,
@@ -1285,7 +1285,7 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  LANG_IT*/  0,-1,0,15,
 		/*  LANG_TR*/  0,-1,0,15,
 		/*  LANG_KO*/  0,15,0,0,
-		/*  LANG_JA*/  0,15,0,0,
+		/*  LANG_JA*/  0,-1,0,0,
 		/*  LANG_AR*/  0,13,0,13,
 		/*  LANG_GR*/  0,-1,0,15,
 		/*  LANG_UA*/  0,-1,0,15,
@@ -1331,7 +1331,7 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  LANG_IT*/  0,15,0,15,
 		/*  LANG_TR*/  0,15,0,15,
 		/*  LANG_KO*/  0,15,0,0,
-		/*  LANG_JA*/  0,15,0,0,
+		/*  LANG_JA*/  0,12,0,0,
 		/*  LANG_AR*/  0,13,0,13,
 		/*  LANG_GR*/  0,15,0,15,
 		/*  LANG_UA*/  0,15,0,15,
@@ -1377,7 +1377,7 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  LANG_IT*/  0,15,0,15,
 		/*  LANG_TR*/  0,15,0,15,
 		/*  LANG_KO*/  0,15,0,0,
-		/*  LANG_JA*/  0,15,0,0,
+		/*  LANG_JA*/  0,12,0,0,
 		/*  LANG_AR*/  0,13,0,13,
 		/*  LANG_GR*/  0,15,0,15,
 		/*  LANG_UA*/  0,15,0,15,
@@ -1397,7 +1397,29 @@ int8_t get_setting(uint8_t setting, uint8_t lang, uint8_t variation) {
     return poly_settings[setting][lang*4+variation];
 }
 
-const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shift, bool caps_lock, bool alt_gr) {
+const uint16_t* translate_keycode_only_shift(uint8_t used_lang, uint16_t keycode) {
+    uint16_t index = keycode - KC_A;
+
+    if(keycode==KC_NONUS_BACKSLASH) {
+        index = ALPHA + NUM + ADDITIONAL - 1;
+    } else if((keycode < KC_A || keycode > KC_SLASH)) {
+        return NULL;
+    }
+    return  lang_plane[index][used_lang*4 + VAR_SHIFT];
+}
+
+const uint16_t* translate_keycode_only_altgr(uint8_t used_lang, uint16_t keycode) {
+    uint16_t index = keycode - KC_A;
+
+    if(keycode==KC_NONUS_BACKSLASH) {
+        index = ALPHA + NUM + ADDITIONAL - 1;
+    } else if((keycode < KC_A || keycode > KC_SLASH)) {
+        return NULL;
+    }
+    return  lang_plane[index][used_lang*4 + VAR_ALTGR];
+}
+
+const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shift, bool caps_lock) {
     uint16_t index = keycode - KC_A;
 
     if(keycode==KC_NONUS_BACKSLASH) {
@@ -1406,18 +1428,14 @@ const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
         return NULL;
     }
 
-    if(alt_gr) {
-        return lang_plane[index][used_lang*4 + 3];
-    }
-
-    const uint16_t* lower_case = lang_plane[index][used_lang*4];
+    const uint16_t* lower_case = lang_plane[index][used_lang*4 + VAR_SMALL];
     if(lower_case==NULL) {
         lower_case = lang_plane[index][0]; //english as backup
         used_lang = 0;
     }
 
     if(caps_lock) {
-        const uint16_t* caps_case = lang_plane[index][used_lang*4 + 2];
+        const uint16_t* caps_case = lang_plane[index][used_lang*4 + VAR_CAPS];
         if(caps_case!=NULL) {
             if(!shift) {
                 return caps_case;
@@ -1428,7 +1446,7 @@ const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
     }
 
     if(shift) {
-        const uint16_t* upper_case = lang_plane[index][used_lang*4 + 1];
+        const uint16_t* upper_case = lang_plane[index][used_lang*4 + VAR_SHIFT];
         if(upper_case!=NULL) {
             return upper_case;
         }

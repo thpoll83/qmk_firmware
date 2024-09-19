@@ -47,7 +47,11 @@ enum lang_layer {
     //[[[end]]]
     NUM_LANG };
 
-const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shift, bool caps_lock, bool alt_gr);
+const uint16_t* translate_keycode_only_shift(uint8_t used_lang, uint16_t keycode);
+
+const uint16_t* translate_keycode_only_altgr(uint8_t used_lang, uint16_t keycode);
+
+const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shift, bool caps_lock);
 
 enum settings_keys {
     /*[[[cog

@@ -957,7 +957,7 @@ bool render_key(uint16_t keycode, led_t state) {
     }
 
     //translate to current language
-    const uint16_t* letter = translate_keycode(l_state.lang, keycode, shift, state.caps_lock, false);
+    const uint16_t* letter = translate_keycode(l_state.lang, keycode, shift, state.caps_lock);
     if (letter != NULL) {
         int8_t v_set;
         int8_t h_set;
@@ -984,14 +984,14 @@ bool render_key(uint16_t keycode, led_t state) {
             v_off = get_setting(v_set, l_state.lang, VAR_SHIFT);
             h_off = get_setting(h_set, l_state.lang, VAR_SHIFT);
             if(v_off>=0 && h_off>=0) {
-                letter = translate_keycode(l_state.lang, keycode, true, false, false);
+                letter = translate_keycode_only_shift(l_state.lang, keycode);
                 if (letter != NULL) {
                     kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
                 }
             }
         }
         //preview alt representation
-        letter = translate_keycode(l_state.lang, keycode, false, false, true);
+        letter = translate_keycode_only_altgr(l_state.lang, keycode);
         if (letter != NULL) {
             v_off = get_setting(v_set, l_state.lang, VAR_ALTGR);
             h_off = get_setting(h_set, l_state.lang, VAR_ALTGR);
@@ -1166,7 +1166,7 @@ void update_displays(enum refresh_mode mode) {
                             if(text==NULL) {
                                 if(!render_key(keycode, state) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
                                     uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
-                                    kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, 28, 23, unicode_map[chr]);
+                                    kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, 28, 23, unicode_map[chr], false);
                                 }
                             } else {
                                 kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text);
@@ -1181,7 +1181,7 @@ void update_displays(enum refresh_mode mode) {
                             text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
-                            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text);
+                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text, true);
                         }
                         kdisp_send_buffer();
                     }

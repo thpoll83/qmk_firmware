@@ -757,13 +757,13 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                         KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
                         KC_NO,      KC_LANG_PT, KC_LANG_ES, KC_LANG_AR, KC_LANG_GR, KC_NO,      KC_NO,
         QK_UNICODE_MODE_WINCOMPOSE, KC_LANG_FR, KC_LANG_DE, KC_LANG_JA, KC_LANG_TR, KC_NO,      KC_NO,      KC_MS_BTN1,
-        QK_UNICODE_MODE_EMACS,      KC_LANG_IT, KC_LANG_EN, KC_LANG_KO, KC_NO,      KC_NO,      KC_NO,      KC_NO,
+        QK_UNICODE_MODE_EMACS,      KC_LANG_IT, KC_LANG_EN, KC_LANG_KO, KC_LANG_SV, KC_NO,      KC_NO,      KC_NO,
         KC_BASE,                    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
                     KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_MACOS,
                     KC_NO,      KC_LANG_UA, KC_LANG_BG, KC_LANG_BE, KC_LANG_RU, KC_NO,      QK_UNICODE_MODE_LINUX,
         _______,    KC_NO,      KC_LANG_KZ, KC_LANG_PL, KC_LANG_RO, KC_LANG_ZH, KC_NO,      QK_UNICODE_MODE_WINDOWS,
-        KC_NO,      KC_NO,      KC_LANG_NL, KC_LANG_HE, KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_BSD,
+        KC_NO,      KC_NO,      KC_LANG_NL, KC_LANG_HE, KC_LANG_NO, KC_LANG_FI, KC_NO,      QK_UNICODE_MODE_BSD,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(
@@ -923,6 +923,9 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
         case KC_LANG_ZH: return l_state.lang == LANG_ZH ? u"[ZH]" : u" ZH";
         case KC_LANG_NL: return l_state.lang == LANG_NL ? u"[NL]" : u" NL";
         case KC_LANG_HE: return l_state.lang == LANG_HE ? u"[HE]" : u" HE";
+        case KC_LANG_SV: return l_state.lang == LANG_SV ? u"[SV]" : u" SV";
+        case KC_LANG_FI: return l_state.lang == LANG_FI ? u"[FI]" : u" FI";
+        case KC_LANG_NO: return l_state.lang == LANG_NO ? u"[NO]" : u" NO";
         //[[[end]]]
         default:
             return NULL;
@@ -1491,6 +1494,9 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_LANG_ZH: l_state.lang = LANG_ZH; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_NL: l_state.lang = LANG_NL; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_HE: l_state.lang = LANG_HE; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_SV: l_state.lang = LANG_SV; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_FI: l_state.lang = LANG_FI; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_NO: l_state.lang = LANG_NO; save_user_eeconf(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
@@ -1956,6 +1962,9 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     case LANG_ZH: memcpy(data, "P\x07.ZH", 5); break;
                     case LANG_NL: memcpy(data, "P\x07.NL", 5); break;
                     case LANG_HE: memcpy(data, "P\x07.HE", 5); break;
+                    case LANG_SV: memcpy(data, "P\x07.SV", 5); break;
+                    case LANG_FI: memcpy(data, "P\x07.FI", 5); break;
+                    case LANG_NO: memcpy(data, "P\x07.NO", 5); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -1983,7 +1992,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.AR,GR,UA,RU,BE,KZ,BG,PL,RO", 29);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.ZH,NL,HE", 11);
+                memcpy(data, "P\x08.ZH,NL,HE,SV,FI,NO", 20);
                 //[[[end]]]
                 break;
             case 9: //change language

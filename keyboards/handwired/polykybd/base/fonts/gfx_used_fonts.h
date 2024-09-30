@@ -25,10 +25,17 @@
 #include "generated/6NotoEmoji_Medium_Light_20pt.h"
 #include "generated/7NotoEmoji_Medium_Emoji1 _20pt.h"
 #include "generated/7NotoEmoji_Medium_Emoji2_20pt.h"
+#include "generated/7NotoSansJP_Regular_Cjk4e2d_15pt.h"
+#include "generated/7NotoSansJP_Regular_Cjk5eff_15pt.h"
+#include "generated/7NotoSansJP_Regular_Cjk96e3_15pt.h"
+#include "generated/7NotoSansJP_Regular_KangXi_15pt.h"
 #include "generated/NotoSansAR_Regular_FormsB_16pt.h"
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
 #include "generated/NotoSansJP_Regular_Hiragana_15pt.h"
 #include "generated/NotoSansJP_Regular_Punct_15pt.h"
+#include "generated/NotoSansJP_Regular_Punct2_15pt.h"
+#include "generated/NotoSans_Medium_Hebrew_16pt.h"
+#include "generated/NotoSans_Medium_HebrewDots_22pt.h"
 #include "generated/NotoSans_Regular_Cyrillic_16pt.h"
 #include "generated/NotoSans_Regular_Greek_14pt.h"
 #include "generated/NotoSans_Regular_LetterMod_14pt.h"
@@ -66,10 +73,17 @@ const GFXfont* ALL_FONTS [] = {
   &NotoEmoji_Medium_Light_20pt16b,
   &NotoEmoji_Medium_Emojis1_20pt16b,
   &NotoEmoji_Medium_Emojis2_20pt16b,
+  &NotoSansJP_Regular_Cjk4e2d_15pt16b,
+  &NotoSansJP_Regular_Cjk5eff_15pt16b,
+  &NotoSansJP_Regular_Cjk96e3_15pt16b,
+  &NotoSansJP_Regular_KangXi_15pt16b,
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct_15pt16b,
+  &NotoSansJP_Regular_Punct2_15pt16b,
+  &NotoSansHebrew_Medium_Hebrew_16pt16b,
+  &NotoSansHebrew_Medium_HebrewDots_22pt16b,
   &NotoSans_Regular_Cyrillic_16pt16b,
   &NotoSans_Regular_Greek_14pt16b,
   &NotoSans_Regular_LetterMod_14pt16b,
@@ -77,4 +91,5 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSerifKR_Regular_Consonants_21pt16b,
   &NotoSerifKR_Regular_Vowels_21pt16b,
 };
+
 #define ALL_FONT_SIZE (sizeof(ALL_FONTS) / sizeof(GFXfont*))

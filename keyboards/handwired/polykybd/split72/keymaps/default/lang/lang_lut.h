@@ -37,13 +37,14 @@ enum lang_layer {
     LANG_GR,
     LANG_UA,
     LANG_RU,
-    LANG_BY,
+    LANG_BE,
     LANG_KZ,
     LANG_BG,
     LANG_PL,
     LANG_RO,
-    LANG_CN,
+    LANG_ZH,
     LANG_NL,
+    LANG_HE,
     //[[[end]]]
     NUM_LANG };
 
@@ -82,6 +83,10 @@ enum settings_keys {
     SETTING_SYM_VOFFSET,
     SETTINGS_NUM
     //[[[end]]]
+};
+
+enum settings_constants {
+    HIDE_KEY = -128
 };
 
 int8_t get_setting(uint8_t setting, uint8_t lang, uint8_t variation);

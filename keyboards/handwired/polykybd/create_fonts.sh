@@ -4,11 +4,19 @@
 #read size_lat
 size_lat=14
 
-#echo "Enter Cyrillic font size (eg. 14):"
-#read size_lat
+#echo "Enter Cyrillic font size (eg. 16):"
+#read size_cyr
 size_cyr=16
 
-#echo "Enter Korean font size (eg. 19):"
+#echo "Enter Hebrew font size (eg. 16):"
+#read size_hbr
+size_hbr=16
+
+#echo "Enter Hebrew Punctuation font size (eg. 22):"
+#read size_hbr_dts
+size_hbr_dts=22
+
+#echo "Enter Korean font size (eg. 21):"
 #read size_kr
 size_kr=21
 
@@ -25,14 +33,21 @@ fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -r44 -v _Su
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _LetterMod_ 0x2c6 0x2dd > "base/fonts/generated/NotoSans_Regular_LetterMod_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _Greek_  0x384 0x385 0x391 0x3c9 > "base/fonts/generated/NotoSans_Regular_Greek_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_cyr}" -v _Cyrillic_  0x401 0x46b 0x490 0x4bb 0x4d8 0x4e9 > "base/fonts/generated/NotoSans_Regular_Cyrillic_${size_cyr}pt.h"
+fontconvert -f~/repos/Noto_Sans_Hebrew/static/NotoSansHebrew-Medium.ttf "-s${size_hbr_dts}" -v _HebrewDots_  0x5b0 0x5c7 > "base/fonts/generated/NotoSans_Medium_HebrewDots_${size_hbr_dts}pt.h"
+fontconvert -f~/repos/Noto_Sans_Hebrew/static/NotoSansHebrew-Medium.ttf "-s${size_hbr}" -v _Hebrew_  0x5d0 0x5ea 0x5f0 0x5f4 > "base/fonts/generated/NotoSans_Medium_Hebrew_${size_hbr}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -r44 -v _SZ_  0x1E9E 0x1E9E > "base/fonts/generated/NotoSans_Regular_SZ_${size_lat}pt.h"
-fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.otf "-s${size_jp}" -v _Hiragana_ 0x3041 0x309f > "base/fonts/generated/NotoSansJP_Regular_Hiragana_${size_jp}pt.h"
-fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.otf "-s${size_jp}" -v _Punct_ 0x3001 0x3002 0x300c 0x300d 0x30fb 0x30fc > "base/fonts/generated/NotoSansJP_Regular_Punct_${size_jp}pt.h"
+fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.ttf "-s${size_jp}" -v _KangXi_ 0x2f00 0x2f00 0x2f08 0x2f08 0x2f17 0x2f18 0x2f1d 0x2f25 0x2f2b 0x2f2d 0x2f38 0x2f3f 0x2f47 0x2f4a 0x2f54 0x2f55 0x2f65 0x2f65 0x2f75 0x2f75 0x2fa6 0x2fa6 > "base/fonts/generated/7NotoSansJP_Regular_KangXi_${size_jp}pt.h"
+fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.ttf "-s${size_jp}" -v _Cjk4e2d_ 0x4e2d 0x4e2d > "base/fonts/generated/7NotoSansJP_Regular_Cjk4e2d_${size_jp}pt.h"
+fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.ttf "-s${size_jp}" -v _Cjk5eff_ 0x5eff 0x5eff > "base/fonts/generated/7NotoSansJP_Regular_Cjk5eff_${size_jp}pt.h"
+fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.ttf "-s${size_jp}" -v _Cjk96e3_ 0x96e3 0x96e3 > "base/fonts/generated/7NotoSansJP_Regular_Cjk96e3_${size_jp}pt.h"
+fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.ttf "-s${size_jp}" -v _Hiragana_ 0x3041 0x309f > "base/fonts/generated/NotoSansJP_Regular_Hiragana_${size_jp}pt.h"
+fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.ttf "-s${size_jp}" -v _Punct_ 0x3001 0x3002 0x3008 0x3011 > "base/fonts/generated/NotoSansJP_Regular_Punct_${size_jp}pt.h"
+fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.ttf "-s${size_jp}" -v _Punct2_ 0x30fb 0x30fc > "base/fonts/generated/NotoSansJP_Regular_Punct2_${size_jp}pt.h"
 fontconvert -f~/repos/noto-serif-kr/NotoSerifKR-Regular.otf "-s${size_kr}" -r51 -v _Vowels_ 0x1161 0x1169 0x116d 0x116e 0x1172 0x1175 > "base/fonts/generated/NotoSerifKR_Regular_Vowels_${size_kr}pt.h"
 fontconvert -f~/repos/noto-serif-kr/NotoSerifKR-Regular.otf "-s${size_kr}" -v _Consonants_ 0x1100 0x1112 > "base/fonts/generated/NotoSerifKR_Regular_Consonants_${size_kr}pt.h"
 fontconvert -f~/repos/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf "-s${size_ar}" -r40 -v _Isolated_ 0x60c 0x669 > "base/fonts/generated/NotoSansAR_Regular_Isolated_${size_ar}pt.h"
 fontconvert -f~/repos/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf "-s${size_ar}" -r40 -v _FormsB_ 0xfef5 0xfef5 0xfefb 0xfefb > "base/fonts/generated/NotoSansAR_Regular_FormsB_${size_ar}pt.h"
-fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _CurrencySigns_  0x20ac 0x20ac 0x20b4 0x20b4 > "base/fonts/generated/2NotoSans_Regular_CurrencySigns_${size_lat}pt.h"
+fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _CurrencySigns_  0x20aa 0x20ac 0x20b4 0x20b4 > "base/fonts/generated/2NotoSans_Regular_CurrencySigns_${size_lat}pt.h"
 fontconvert -f~/repos/noto-sans/NotoSans-Regular.ttf "-s${size_lat}" -v _NumeroSign_  0x2116 0x2116 > "base/fonts/generated/2NotoSans_Regular_NumeroSign_${size_lat}pt.h"
 fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s20" -r50 -v _World_ -n0x11000 0x1F310 0x1F310 > "base/fonts/generated/3NotoEmoji_Medium_World_20pt.h"
 fontconvert -f~/repos/Noto_Emoji/static/NotoEmoji-Medium.ttf "-s20" -r50 -v _Meh_ -n0x11000 0x1F410 0x1F410 > "base/fonts/generated/3NotoEmoji_Medium_Meh_20pt.h"

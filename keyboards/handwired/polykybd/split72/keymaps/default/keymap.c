@@ -755,9 +755,9 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     //Language Selection Layer
     [_LL] = LAYOUT_left_right_stacked(
                         KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
-                        KC_NO,      KC_LANG_PT, KC_LANG_ES, KC_LANG_AR, KC_LANG_GR, KC_NO,      KC_NO,
-        QK_UNICODE_MODE_WINCOMPOSE, KC_LANG_FR, KC_LANG_DE, KC_LANG_JA, KC_LANG_TR, KC_NO,      KC_NO,      KC_MS_BTN1,
-        QK_UNICODE_MODE_EMACS,      KC_LANG_IT, KC_LANG_EN, KC_LANG_KO, KC_LANG_SV, KC_NO,      KC_NO,      KC_NO,
+                        KC_NO,      KC_LANG_PT, KC_LANG_ES, KC_LANG_AR, KC_LANG_GR, KC_LANG_DK, KC_NO,
+        QK_UNICODE_MODE_WINCOMPOSE, KC_LANG_FR, KC_LANG_DE, KC_LANG_JA, KC_LANG_TR, KC_LANG_HU, KC_NO,      KC_MS_BTN1,
+        QK_UNICODE_MODE_EMACS,      KC_LANG_IT, KC_LANG_EN, KC_LANG_KO, KC_LANG_SV, KC_LANG_CZ, KC_NO,      KC_NO,
         KC_BASE,                    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
                     KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_UNICODE_MODE_MACOS,
@@ -926,6 +926,9 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
         case KC_LANG_SV: return l_state.lang == LANG_SV ? u"[SV]" : u" SV";
         case KC_LANG_FI: return l_state.lang == LANG_FI ? u"[FI]" : u" FI";
         case KC_LANG_NO: return l_state.lang == LANG_NO ? u"[NO]" : u" NO";
+        case KC_LANG_DK: return l_state.lang == LANG_DK ? u"[DK]" : u" DK";
+        case KC_LANG_HU: return l_state.lang == LANG_HU ? u"[HU]" : u" HU";
+        case KC_LANG_CZ: return l_state.lang == LANG_CZ ? u"[CZ]" : u" CZ";
         //[[[end]]]
         default:
             return NULL;
@@ -1497,6 +1500,9 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_LANG_SV: l_state.lang = LANG_SV; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_FI: l_state.lang = LANG_FI; save_user_eeconf(); layer_off(_LL); break;
         case KC_LANG_NO: l_state.lang = LANG_NO; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_DK: l_state.lang = LANG_DK; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_HU: l_state.lang = LANG_HU; save_user_eeconf(); layer_off(_LL); break;
+        case KC_LANG_CZ: l_state.lang = LANG_CZ; save_user_eeconf(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
@@ -1965,6 +1971,9 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     case LANG_SV: memcpy(data, "P\x07.SV", 5); break;
                     case LANG_FI: memcpy(data, "P\x07.FI", 5); break;
                     case LANG_NO: memcpy(data, "P\x07.NO", 5); break;
+                    case LANG_DK: memcpy(data, "P\x07.DK", 5); break;
+                    case LANG_HU: memcpy(data, "P\x07.HU", 5); break;
+                    case LANG_CZ: memcpy(data, "P\x07.CZ", 5); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -1992,7 +2001,10 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.AR,GR,UA,RU,BE,KZ,BG,PL,RO", 29);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.ZH,NL,HE,SV,FI,NO", 20);
+                memcpy(data, "P\x08.ZH,NL,HE,SV,FI,NO,DK,HU,CZ", 29);
+                raw_hid_send(data, length);
+                memset(data, 0, length);
+                memcpy(data, "P\x08.", 3);
                 //[[[end]]]
                 break;
             case 9: //change language

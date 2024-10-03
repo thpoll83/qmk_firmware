@@ -3,14 +3,13 @@
 #include "generated/0NotoSans_Regular_Base_14pt.h"
 #include "generated/1NotoSans_Regular_SupAndExtA_14pt.h"
 #include "generated/2NotoSans_Regular_CurrencySigns_14pt.h"
-#include "generated/2NotoSans_Regular_NumeroSign_14pt.h"
 #include "generated/3NotoEmoji_Medium_Hyper_18pt.h"
 #include "generated/3NotoEmoji_Medium_Meh_20pt.h"
 #include "generated/3NotoEmoji_Medium_Settings_20pt.h"
 #include "generated/3NotoEmoji_Medium_World_20pt.h"
 #include "generated/3NotoSansSymbols2_Regular_Arrows_20pt.h"
-#include "generated/3NotoSansSymbols2_Regular_Checkmark_20pt.h"
 #include "generated/3NotoSansSymbols2_Regular_DiamondCut_20pt.h"
+#include "generated/3NotoSansSymbols2_Regular_SymbolsAndShapes_20pt.h"
 #include "generated/3NotoSansSymbols2_Regular_Technical_20pt.h"
 #include "generated/3NotoSansSymbols_Regular_Technical_20pt.h"
 #include "generated/4NotoEmoji_Medium_Copy_18pt.h"
@@ -29,6 +28,7 @@
 #include "generated/7NotoSansJP_Regular_Cjk5eff_15pt.h"
 #include "generated/7NotoSansJP_Regular_Cjk96e3_15pt.h"
 #include "generated/7NotoSansJP_Regular_KangXi_15pt.h"
+#include "generated/7NotoSansSymbols2_Regular_Chess_20pt.h"
 #include "generated/NotoSansAR_Regular_FormsB_16pt.h"
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
 #include "generated/NotoSansJP_Regular_Hiragana_15pt.h"
@@ -51,14 +51,13 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSans_Regular_Base_14pt7b,
   &NotoSans_Regular_SupAndExtA_14pt16b,
   &NotoSans_Regular_CurrencySigns_14pt16b,
-  &NotoSans_Regular_NumeroSign_14pt16b,
   &NotoEmoji_Medium_Hyper_18pt16b,
   &NotoEmoji_Medium_Meh_20pt16b,
   &NotoEmoji_Medium_Settings_20pt16b,
   &NotoEmoji_Medium_World_20pt16b,
   &NotoSansSymbols2_Regular_Arrows_20pt16b,
-  &NotoSansSymbols2_Regular_Checkmark_20pt16b,
   &NotoSansSymbols2_Regular_DiamondCut_20pt16b,
+  &NotoSansSymbols2_Regular_SymbolsAndShapes_20pt16b,
   &NotoSansSymbols2_Regular_Technical2_20pt16b,
   &NotoSansSymbols_Regular_Technical_20pt16b,
   &NotoEmoji_Medium_ClipCpy_18pt16b,
@@ -77,6 +76,7 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSansJP_Regular_Cjk5eff_15pt16b,
   &NotoSansJP_Regular_Cjk96e3_15pt16b,
   &NotoSansJP_Regular_KangXi_15pt16b,
+  &NotoSansSymbols2_Regular_Chess_20pt16b,
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,
   &NotoSansJP_Regular_Hiragana_15pt16b,

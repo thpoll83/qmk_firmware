@@ -21,13 +21,14 @@ languages = []
 lang_index = 0
 lang_key = sheet["B1"].value
 while lang_key:
+    lang_key = lang_key.replace("-", "").upper()
     languages.append(lang_key)
     if lang_index==0:
-        cog.outl(f"#define INIT_LANG {lang_key}")
+        cog.outl(f"#define INIT_LANG LANG_{lang_key}")
     lang_index = lang_index + 1
     lang_key = sheet.cell(row = 1, column = 2 + lang_index*4).value
 ]]]*/
-#define INIT_LANG LANG_EN
+#define INIT_LANG LANG_ENUS
 //[[[end]]]
 
 enum my_keycodes {
@@ -57,18 +58,18 @@ enum my_keycodes {
     //[[[end]]]
     /*[[[cog
         for lang in languages:
-            if lang == "LANG_EN":
-                cog.out(f"KC_LANG_EN = QK_USER_0, ")
+            if lang == "ENUS":
+                cog.out(f"KCL_ENUS = QK_USER_0, ")
             else:
-                cog.out(f"KC_{lang}, ")
+                cog.out(f"KCL_{lang}, ")
     ]]]*/
-    KC_LANG_EN = QK_USER_0, KC_LANG_DE, KC_LANG_FR, KC_LANG_ES, KC_LANG_PT, KC_LANG_IT, KC_LANG_TR, KC_LANG_KO, KC_LANG_JA, KC_LANG_AR, KC_LANG_GR, KC_LANG_UA, KC_LANG_RU, KC_LANG_BE, KC_LANG_KZ, KC_LANG_BG, KC_LANG_PL, KC_LANG_RO, KC_LANG_ZH, KC_LANG_NL, KC_LANG_HE, KC_LANG_SV, KC_LANG_FI, KC_LANG_NO, KC_LANG_DK, KC_LANG_HU, KC_LANG_CZ, 
+    KCL_ENUS = QK_USER_0, KCL_DEDE, KCL_FRFR, KCL_ESES, KCL_PTPT, KCL_ITIT, KCL_TRTR, KCL_KOKR, KCL_JAJP, KCL_ARSA, KCL_ELGR, KCL_UKUA, KCL_RURU, KCL_BEBY, KCL_KKKZ, KCL_BGBG, KCL_PLPL, KCL_RORO, KCL_ZHCN, KCL_NLNL, KCL_HEIL, KCL_SVSE, KCL_FIFI, KCL_NNNO, KCL_DADK, KCL_HUHU, KCL_CSCZ, 
     //[[[end]]]
         //Lables, no functionality:
     LBL_TEXT
 };
 static_assert((int)KC_LAT9 <= (int)QK_KB_31, "Too many custom QK key codes");
-static_assert((int)KC_LAT9 < (int)KC_LANG_EN, "Overlap detected");
+static_assert((int)KC_LAT9 < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)LBL_TEXT <= (int)QK_USER_31, "Too many user custom key codes");
 
 const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {

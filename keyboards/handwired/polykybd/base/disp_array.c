@@ -279,7 +279,7 @@ void kdisp_write_gfx_text_cy(const GFXfont **fonts, uint8_t num_fonts, int8_t x,
                 y_cursor = y_cursor>1 ? y_cursor - 2 : 0;
                 break;
             case u'\t':
-                x_cursor += ((x_cursor-x)/40+1)*40;
+                x_cursor += ((x_cursor-x)/36+1)*36;
                 break;
             case u'\n':
                 y_cursor += pgm_read_byte(&fonts[0]->yAdvance);

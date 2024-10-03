@@ -17,40 +17,41 @@ enum lang_layer {
     lang_index = 0
     lang_key = sheet["B1"].value
     while lang_key:
+        lang_key = lang_key.replace("-", "").upper()
         if lang_index==0:
-            cog.outl(f"\t{lang_key} = 0,")
+            cog.outl(f"\tLANG_{lang_key} = 0,")
         else:
-            cog.outl(f"\t{lang_key},")
+            cog.outl(f"\tLANG_{lang_key},")
         lang_index = lang_index + 1
         lang_key = sheet.cell(row = 1, column = 2 + lang_index*4).value
     ]]]*/
-    LANG_EN = 0,
-    LANG_DE,
-    LANG_FR,
-    LANG_ES,
-    LANG_PT,
-    LANG_IT,
-    LANG_TR,
-    LANG_KO,
-    LANG_JA,
-    LANG_AR,
-    LANG_GR,
-    LANG_UA,
-    LANG_RU,
-    LANG_BE,
-    LANG_KZ,
-    LANG_BG,
-    LANG_PL,
-    LANG_RO,
-    LANG_ZH,
-    LANG_NL,
-    LANG_HE,
-    LANG_SV,
-    LANG_FI,
-    LANG_NO,
-    LANG_DK,
-    LANG_HU,
-    LANG_CZ,
+    LANG_ENUS = 0,
+    LANG_DEDE,
+    LANG_FRFR,
+    LANG_ESES,
+    LANG_PTPT,
+    LANG_ITIT,
+    LANG_TRTR,
+    LANG_KOKR,
+    LANG_JAJP,
+    LANG_ARSA,
+    LANG_ELGR,
+    LANG_UKUA,
+    LANG_RURU,
+    LANG_BEBY,
+    LANG_KKKZ,
+    LANG_BGBG,
+    LANG_PLPL,
+    LANG_RORO,
+    LANG_ZHCN,
+    LANG_NLNL,
+    LANG_HEIL,
+    LANG_SVSE,
+    LANG_FIFI,
+    LANG_NNNO,
+    LANG_DADK,
+    LANG_HUHU,
+    LANG_CSCZ,
     //[[[end]]]
     NUM_LANG };
 

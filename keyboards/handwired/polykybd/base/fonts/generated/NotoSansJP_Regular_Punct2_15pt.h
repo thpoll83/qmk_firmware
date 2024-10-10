@@ -1,9 +1,11 @@
-// fontconvert -f~/repos/noto-sans-jp/NotoSansJP-Regular.ttf -s15 -v _Punct2_ 0x30fb 0x30fc 
+// fontconvert -ffonts/noto-sans-jp/NotoSansJP-Regular.ttf -s15 -v _Punct2_ 0x30fb 0x30fc 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
+/* num ranges: 1 */
 const uint8_t NotoSansJP_Regular_Punct2_15pt16bBitmaps[] PROGMEM = {
-  0x7B, 0xFF, 0xFF, 0xF9, 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-  0xFF, 0xF8 };
+  /* range 0 (0x30fb - 0x30fc): */  0x7B, 0xFF, 0xFF, 0xF9, 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+  0xFF, 0xF8
+ };
 
 const GFXglyph NotoSansJP_Regular_Punct2_15pt16bGlyphs[] PROGMEM = {
 // bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0x30fb - 0x30fc)

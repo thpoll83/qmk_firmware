@@ -777,32 +777,32 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         lines = []
         for lidx in range(0, 8):
             line = ""
-            for idx in range(0, 6):
-                if (lidx*6+idx)>=len(languages):
+            for idx in range(0, 5):
+                if (lidx*5+idx)>=len(languages):
                     line = f"{line}KC_NO,\t\t"
                 else:
-                    line = f'{line}KCL_{languages[(lidx*6+idx)].upper()},\t'
+                    line = f'{line}KCL_{languages[(lidx*5+idx)].upper()},\t'
             lines.append(line)
-        cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[0]}");
-        cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[1]}");
-        cog.outl(f"QK_UNICODE_MODE_WINCOMPOSE,\t\t{lines[2]}\tKC_MS_BTN1,");
-        cog.outl(f"QK_UNICODE_MODE_EMACS,\t\t\t{lines[3]}\tKC_NO,");
+        cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[0]}");
+        cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[1]}");
+        cog.outl(f"QK_UNICODE_MODE_WINCOMPOSE,\t\tKC_NO,\t\t{lines[2]}\tKC_MS_BTN1,");
+        cog.outl(f"QK_UNICODE_MODE_EMACS,\t\t\tKC_NO,\t\t{lines[3]}\tKC_NO,");
         cog.outl("KC_BASE,\t\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\t\tKC_NO,");
         cog.outl("")
-        cog.outl(f"\t\t\t\t\t{lines[4]}QK_UNICODE_MODE_MACOS,");
-        cog.outl(f"\t\t\t\t\t{lines[5]}QK_UNICODE_MODE_LINUX,");
-        cog.outl(f"_______,\t\t\t{lines[6]}QK_UNICODE_MODE_WINDOWS,");
-        cog.outl(f"KC_NO,\t\t\t\t{lines[7]}QK_UNICODE_MODE_BSD,");
+        cog.outl(f"\t\t\t\t\t{lines[4]}KC_NO,\t\tQK_UNICODE_MODE_MACOS,");
+        cog.outl(f"\t\t\t\t\t{lines[5]}KC_NO,\t\tQK_UNICODE_MODE_LINUX,");
+        cog.outl(f"_______,\t\t\t{lines[6]}KC_NO,\t\tQK_UNICODE_MODE_WINDOWS,");
+        cog.outl(f"KC_NO,\t\t\t\t{lines[7]}KC_NO,\t\tQK_UNICODE_MODE_BSD,");
         cog.outl("KC_NO,\t\t\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\tKC_BASE");
         ]]]*/
-        KC_NO,							KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,	KCL_DEDE,
-        KC_NO,							KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_FIFI,	KCL_FRFR,	KCL_HEIL,
-        QK_UNICODE_MODE_WINCOMPOSE,		KCL_HUHU,	KCL_ITIT,	KCL_JAJP,	KCL_KKKZ,	KCL_KOKR,	KCL_NLNL,		KC_MS_BTN1,
-        QK_UNICODE_MODE_EMACS,			KCL_NNNO,	KCL_PLPL,	KCL_PTPT,	KCL_RORO,	KCL_RURU,	KCL_SVSE,		KC_NO,
+        KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,	
+        KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_FIFI,	
+        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FRFR,	KCL_HEIL,	KCL_HUHU,	KCL_ITIT,	KCL_JAJP,		KC_MS_BTN1,
+        QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_KKKZ,	KCL_KOKR,	KCL_NLNL,	KCL_NNNO,	KCL_PLPL,		KC_NO,
         KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
 
-        					KCL_TRTR,	KCL_UKUA,	KCL_ZHCN,	KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_MACOS,
-        					KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_LINUX,
+        					KCL_PTPT,	KCL_RORO,	KCL_RURU,	KCL_SVSE,	KCL_TRTR,	KC_NO,		QK_UNICODE_MODE_MACOS,
+        					KCL_UKUA,	KCL_ZHCN,	KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_LINUX,
         _______,			KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_WINDOWS,
         KC_NO,				KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
         KC_NO,				KC_NO,		KC_NO,					KC_NO,		KC_NO,		KC_NO,		KC_BASE
@@ -903,6 +903,26 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
     if(IS_QK_MOD_TAP(keycode)) {
         keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
     }
+
+#ifndef ENABLE_NUMLOCK_FOR_OSX
+    if(l_state.unicode_mode == UNICODE_MODE_MACOS && keycode >= KC_NUM_LOCK && keycode <=KC_KP_DOT) {
+        switch(keycode) {
+            case KC_NUM_LOCK: return u"";
+            case KC_KP_7:     return u"7";
+            case KC_KP_8:     return u"8";
+            case KC_KP_9:     return u"9";
+            case KC_KP_4:     return u"4";
+            case KC_KP_5:     return u"5";
+            case KC_KP_6:     return u"6";
+            case KC_KP_1:     return u"1";
+            case KC_KP_2:     return u"2";
+            case KC_KP_3:     return u"3";
+            case KC_KP_0:     return u"0";
+            case KC_KP_DOT:   return u".";
+            default: break;
+        }
+    }
+#endif
 
     const uint16_t* text = keycode_to_static_text(keycode, state, l_state.flags);
     if(text!=NULL) {

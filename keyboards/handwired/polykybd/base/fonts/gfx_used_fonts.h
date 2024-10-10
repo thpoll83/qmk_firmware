@@ -88,8 +88,8 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSans_Regular_Greek_14pt16b,
   &NotoSans_Regular_LetterMod_14pt16b,
   &NotoSans_Regular_SZ_14pt16b,
-  &NotoSerifKR_Regular_Consonants_21pt16b,
-  &NotoSerifKR_Regular_Vowels_21pt16b,
+  &NotoSerifKR_Medium_Consonants_21pt16b,
+  &NotoSerifKR_Medium_Vowels_21pt16b,
 };
 
 #define ALL_FONT_SIZE (sizeof(ALL_FONTS) / sizeof(GFXfont*))

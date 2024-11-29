@@ -1,1 +1,1 @@
-SRC += lang/lang_lut.c
+SRC += keycode_helper.c lang/lang_lut.c

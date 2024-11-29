@@ -35,7 +35,7 @@
 #include "lang/lang_lut_ext.h"
 
 #include "layers.h"
-#include "keycodes.h"
+#include "keycode_helper.h"
 #include "uni.h"
 
 /*[[[cog
@@ -1946,6 +1946,9 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
     idx = adjust_overlay_idx_to_mod(idx, mods);
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
+    if(pos==POS_NOT_FOUND) {
+        pos = get_split_matrix_side(keycode, _FL0); //actually we shoyuld check _FL1 depednig on the base layer, but for now it si good enough
+    }
     //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
     if (is_on_current_side(pos)) {
         memcpy(overlays[idx] + segment_0_to_14 * BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
@@ -2074,7 +2077,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     if(keycode>=KC_A && keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
                         uint8_t mods = data[4];
                         if((mods & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            fill_overlay_buffer(keycode, mods,segment, &data[6]);
+                            fill_overlay_buffer(keycode, mods, segment, &data[6]);
                             if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                                 update_performed();
                                 request_disp_refresh();
@@ -2134,6 +2137,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     if (is_on_current_side(pos)) {
                         invert_display(r, c, pressed);
                     }
+                    #ifdef VIA_ENABLE
                     //a key can be on both sides, so no else here
                     if (is_on_other_side(pos)) {
                         // send to bridge
@@ -2142,6 +2146,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                         memcpy(&sync_data.via_commands, data, data_len);
                         send_to_bridge(USER_SYNC_VIA_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 3);
                     }
+                    #endif
                     action_exec(MAKE_KEYEVENT(r, c, pressed));
                     switch_events_poly(r,c, pressed);
 

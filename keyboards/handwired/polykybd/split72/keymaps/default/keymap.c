@@ -408,17 +408,20 @@ void sync_and_refresh_displays(void) {
         }
 
         if(flags!=l_state.flags) {
-            uprintf("Poly State Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", l_state.flags, BYTE_TO_FLAGS(l_state.flags));
+            //uprintf("Poly State Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", l_state.flags, BYTE_TO_FLAGS(l_state.flags));
             flags=l_state.flags;
         }
         if(overlay_flags!=l_state.overlay_flags) {
-            uprintf("Poly Ovrly Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", l_state.overlay_flags, BYTE_TO_OVERLAY_FLAGS(l_state.overlay_flags));
+            //uprintf("Poly Ovrly Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", l_state.overlay_flags, BYTE_TO_OVERLAY_FLAGS(l_state.overlay_flags));
             overlay_flags=l_state.overlay_flags;
         }
 
         l_state.flags = set_flag(l_state.flags, DBG_ON, debug_enable);
         state_diff = differ(&l_state, &g_state, sizeof(poly_sync_t));
         if ( state_diff ) {
+            // if(l_state.lang!=g_state.lang) {
+            //     uprintf("Sending lang change from %d to %d to bridge.\n", l_state.lang, g_state.lang);
+            // }
             send_to_bridge(USER_SYNC_POLY_DATA, (void *)&l_state, sizeof(l_state), 10);
         }
 
@@ -442,6 +445,7 @@ void sync_and_refresh_displays(void) {
     if(state_diff) {
         const bool idle_changed         = has_flag_changed(l_state.flags, g_state.flags, DISP_IDLE);
         const bool contrast_changed     = g_state.contrast != l_state.contrast;
+        const bool lang_changed         = g_state.lang != l_state.lang;
         const bool status_disp_changed  = has_flag_changed(l_state.flags, g_state.flags, STATUS_DISP_ON);
         const bool status_disp_on       = test_flag(l_state.flags, STATUS_DISP_ON);
         const bool overlays_changed     = has_flag_changed(l_state.overlay_flags, g_state.overlay_flags, DISPLAY_OVERLAYS);
@@ -485,7 +489,7 @@ void sync_and_refresh_displays(void) {
             l_state.overlay_flags = flag_off(l_state.overlay_flags, RESET_BUFFERS);
         }
 
-        if( debug_changed || overlays_changed || reset_overlays || l_state.unicode_mode!=g_state.unicode_mode) {
+        if( debug_changed || overlays_changed || reset_overlays || lang_changed || l_state.unicode_mode!=g_state.unicode_mode) {
             request_disp_refresh();
             update_performed();
         }

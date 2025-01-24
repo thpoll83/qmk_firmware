@@ -40,6 +40,9 @@ struct display_info {
 #define BITMASK4(x) .bitmask = {~0, (uint8_t)(~(1<<x)), ~0, ~0, ~0}
 #define BITMASK5(x) .bitmask = {(uint8_t)(~(1<<x)), ~0, ~0, ~0, ~0}
 
+#define LANG_TO_UI32(a,b,c,d) (((uint32_t)(a))<<24 | ((uint32_t)(b))<<16 | ((uint32_t)(c))<<8 | (d))
+#define LANGSTR_TO_UI32(str) LANG_TO_UI32(str[0],str[1],str[2],str[3])
+
 typedef struct _poly_eeconf_t {
     uint8_t lang;
     uint8_t brightness;

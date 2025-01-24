@@ -54,9 +54,45 @@ while lang_key:
     languages.append(lang_key)
     lang_index = lang_index + 1
     lang_key = sheet.cell(row = 1, column = 2 + lang_index*4).value
-languages.sort()
 ]]]*/
 //[[[end]]]
+
+
+uint32_t lang_uint32 [] = {
+    /*[[[cog
+    for lang_key in languages:
+        cog.outl(f'\tLANGSTR_TO_UI32("{lang_key}"),')
+    ]]]*/
+    LANGSTR_TO_UI32("enUS"),
+    LANGSTR_TO_UI32("deDE"),
+    LANGSTR_TO_UI32("frFR"),
+    LANGSTR_TO_UI32("esES"),
+    LANGSTR_TO_UI32("ptPT"),
+    LANGSTR_TO_UI32("itIT"),
+    LANGSTR_TO_UI32("trTR"),
+    LANGSTR_TO_UI32("koKR"),
+    LANGSTR_TO_UI32("jaJP"),
+    LANGSTR_TO_UI32("arSA"),
+    LANGSTR_TO_UI32("elGR"),
+    LANGSTR_TO_UI32("ukUA"),
+    LANGSTR_TO_UI32("ruRU"),
+    LANGSTR_TO_UI32("beBY"),
+    LANGSTR_TO_UI32("kkKZ"),
+    LANGSTR_TO_UI32("bgBG"),
+    LANGSTR_TO_UI32("plPL"),
+    LANGSTR_TO_UI32("roRO"),
+    LANGSTR_TO_UI32("zhCN"),
+    LANGSTR_TO_UI32("nlNL"),
+    LANGSTR_TO_UI32("heIL"),
+    LANGSTR_TO_UI32("svSE"),
+    LANGSTR_TO_UI32("fiFI"),
+    LANGSTR_TO_UI32("nnNO"),
+    LANGSTR_TO_UI32("daDK"),
+    LANGSTR_TO_UI32("huHU"),
+    LANGSTR_TO_UI32("csCZ"),
+    //[[[end]]]
+    };
+
 
 //not used at the moment
 #define FLASH_TARGET_OFFSET (4 * 1024 * 1024) //we start at 4MB and use the remaining 4MB for resource data
@@ -774,14 +810,15 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     //Language Selection Layer
     [_LL] = LAYOUT_left_right_stacked(
         /*[[[cog
+        slang = sorted(languages)
         lines = []
         for lidx in range(0, 8):
             line = ""
             for idx in range(0, 5):
-                if (lidx*5+idx)>=len(languages):
+                if (lidx*5+idx)>=len(slang):
                     line = f"{line}KC_NO,\t\t"
                 else:
-                    line = f'{line}KCL_{languages[(lidx*5+idx)].upper()},\t'
+                    line = f'{line}KCL_{slang[(lidx*5+idx)].upper()},\t'
             lines.append(line)
         cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[0]}");
         cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[1]}");
@@ -795,8 +832,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         cog.outl(f"KC_NO,\t\t\t\t{lines[7]}KC_NO,\t\tQK_UNICODE_MODE_BSD,");
         cog.outl("KC_NO,\t\t\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\tKC_BASE");
         ]]]*/
-        KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,	
-        KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_FIFI,	
+        KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,
+        KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_FIFI,
         QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FRFR,	KCL_HEIL,	KCL_HUHU,	KCL_ITIT,	KCL_JAJP,		KC_MS_BTN1,
         QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_KKKZ,	KCL_KOKR,	KCL_NLNL,	KCL_NNNO,	KCL_PLPL,		KC_NO,
         KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
@@ -949,33 +986,33 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
             pretty = f"{lang[0:2]}\\r\\t{lang[2:]}"
             cog.outl(f'case KCL_{lang.upper()}: return l_state.lang == LANG_{lang.upper()} ? u"{pretty}\\r\\x05\\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"{pretty}";')
         ]]]*/
-        case KCL_ARSA: return l_state.lang == LANG_ARSA ? u"ar\r\tSA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ar\r\tSA";
-        case KCL_BEBY: return l_state.lang == LANG_BEBY ? u"be\r\tBY\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"be\r\tBY";
-        case KCL_BGBG: return l_state.lang == LANG_BGBG ? u"bg\r\tBG\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"bg\r\tBG";
-        case KCL_CSCZ: return l_state.lang == LANG_CSCZ ? u"cs\r\tCZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"cs\r\tCZ";
-        case KCL_DADK: return l_state.lang == LANG_DADK ? u"da\r\tDK\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"da\r\tDK";
-        case KCL_DEDE: return l_state.lang == LANG_DEDE ? u"de\r\tDE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"de\r\tDE";
-        case KCL_ELGR: return l_state.lang == LANG_ELGR ? u"el\r\tGR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"el\r\tGR";
         case KCL_ENUS: return l_state.lang == LANG_ENUS ? u"en\r\tUS\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"en\r\tUS";
-        case KCL_ESES: return l_state.lang == LANG_ESES ? u"es\r\tES\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"es\r\tES";
-        case KCL_FIFI: return l_state.lang == LANG_FIFI ? u"fi\r\tFI\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fi\r\tFI";
+        case KCL_DEDE: return l_state.lang == LANG_DEDE ? u"de\r\tDE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"de\r\tDE";
         case KCL_FRFR: return l_state.lang == LANG_FRFR ? u"fr\r\tFR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fr\r\tFR";
-        case KCL_HEIL: return l_state.lang == LANG_HEIL ? u"he\r\tIL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"he\r\tIL";
-        case KCL_HUHU: return l_state.lang == LANG_HUHU ? u"hu\r\tHU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"hu\r\tHU";
-        case KCL_ITIT: return l_state.lang == LANG_ITIT ? u"it\r\tIT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"it\r\tIT";
-        case KCL_JAJP: return l_state.lang == LANG_JAJP ? u"ja\r\tJP\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ja\r\tJP";
-        case KCL_KKKZ: return l_state.lang == LANG_KKKZ ? u"kk\r\tKZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"kk\r\tKZ";
-        case KCL_KOKR: return l_state.lang == LANG_KOKR ? u"ko\r\tKR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ko\r\tKR";
-        case KCL_NLNL: return l_state.lang == LANG_NLNL ? u"nl\r\tNL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nl\r\tNL";
-        case KCL_NNNO: return l_state.lang == LANG_NNNO ? u"nn\r\tNO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nn\r\tNO";
-        case KCL_PLPL: return l_state.lang == LANG_PLPL ? u"pl\r\tPL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"pl\r\tPL";
+        case KCL_ESES: return l_state.lang == LANG_ESES ? u"es\r\tES\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"es\r\tES";
         case KCL_PTPT: return l_state.lang == LANG_PTPT ? u"pt\r\tPT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"pt\r\tPT";
-        case KCL_RORO: return l_state.lang == LANG_RORO ? u"ro\r\tRO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ro\r\tRO";
-        case KCL_RURU: return l_state.lang == LANG_RURU ? u"ru\r\tRU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ru\r\tRU";
-        case KCL_SVSE: return l_state.lang == LANG_SVSE ? u"sv\r\tSE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"sv\r\tSE";
+        case KCL_ITIT: return l_state.lang == LANG_ITIT ? u"it\r\tIT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"it\r\tIT";
         case KCL_TRTR: return l_state.lang == LANG_TRTR ? u"tr\r\tTR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"tr\r\tTR";
+        case KCL_KOKR: return l_state.lang == LANG_KOKR ? u"ko\r\tKR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ko\r\tKR";
+        case KCL_JAJP: return l_state.lang == LANG_JAJP ? u"ja\r\tJP\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ja\r\tJP";
+        case KCL_ARSA: return l_state.lang == LANG_ARSA ? u"ar\r\tSA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ar\r\tSA";
+        case KCL_ELGR: return l_state.lang == LANG_ELGR ? u"el\r\tGR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"el\r\tGR";
         case KCL_UKUA: return l_state.lang == LANG_UKUA ? u"uk\r\tUA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"uk\r\tUA";
+        case KCL_RURU: return l_state.lang == LANG_RURU ? u"ru\r\tRU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ru\r\tRU";
+        case KCL_BEBY: return l_state.lang == LANG_BEBY ? u"be\r\tBY\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"be\r\tBY";
+        case KCL_KKKZ: return l_state.lang == LANG_KKKZ ? u"kk\r\tKZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"kk\r\tKZ";
+        case KCL_BGBG: return l_state.lang == LANG_BGBG ? u"bg\r\tBG\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"bg\r\tBG";
+        case KCL_PLPL: return l_state.lang == LANG_PLPL ? u"pl\r\tPL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"pl\r\tPL";
+        case KCL_RORO: return l_state.lang == LANG_RORO ? u"ro\r\tRO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ro\r\tRO";
         case KCL_ZHCN: return l_state.lang == LANG_ZHCN ? u"zh\r\tCN\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"zh\r\tCN";
+        case KCL_NLNL: return l_state.lang == LANG_NLNL ? u"nl\r\tNL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nl\r\tNL";
+        case KCL_HEIL: return l_state.lang == LANG_HEIL ? u"he\r\tIL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"he\r\tIL";
+        case KCL_SVSE: return l_state.lang == LANG_SVSE ? u"sv\r\tSE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"sv\r\tSE";
+        case KCL_FIFI: return l_state.lang == LANG_FIFI ? u"fi\r\tFI\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fi\r\tFI";
+        case KCL_NNNO: return l_state.lang == LANG_NNNO ? u"nn\r\tNO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nn\r\tNO";
+        case KCL_DADK: return l_state.lang == LANG_DADK ? u"da\r\tDK\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"da\r\tDK";
+        case KCL_HUHU: return l_state.lang == LANG_HUHU ? u"hu\r\tHU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"hu\r\tHU";
+        case KCL_CSCZ: return l_state.lang == LANG_CSCZ ? u"cs\r\tCZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"cs\r\tCZ";
         //[[[end]]]
         default:
             return NULL;
@@ -1523,33 +1560,33 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             for lang in languages:
                 cog.outl(f'case KCL_{lang.upper()}: l_state.lang = LANG_{lang.upper()}; save_user_eeconf(); layer_off(_LL); break;')
             ]]]*/
-        case KCL_ARSA: l_state.lang = LANG_ARSA; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_BEBY: l_state.lang = LANG_BEBY; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_BGBG: l_state.lang = LANG_BGBG; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_CSCZ: l_state.lang = LANG_CSCZ; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_DADK: l_state.lang = LANG_DADK; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_DEDE: l_state.lang = LANG_DEDE; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_ELGR: l_state.lang = LANG_ELGR; save_user_eeconf(); layer_off(_LL); break;
         case KCL_ENUS: l_state.lang = LANG_ENUS; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_ESES: l_state.lang = LANG_ESES; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_FIFI: l_state.lang = LANG_FIFI; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_DEDE: l_state.lang = LANG_DEDE; save_user_eeconf(); layer_off(_LL); break;
         case KCL_FRFR: l_state.lang = LANG_FRFR; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_HEIL: l_state.lang = LANG_HEIL; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_HUHU: l_state.lang = LANG_HUHU; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_ITIT: l_state.lang = LANG_ITIT; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_JAJP: l_state.lang = LANG_JAJP; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_KKKZ: l_state.lang = LANG_KKKZ; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_KOKR: l_state.lang = LANG_KOKR; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_NLNL: l_state.lang = LANG_NLNL; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_NNNO: l_state.lang = LANG_NNNO; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_PLPL: l_state.lang = LANG_PLPL; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ESES: l_state.lang = LANG_ESES; save_user_eeconf(); layer_off(_LL); break;
         case KCL_PTPT: l_state.lang = LANG_PTPT; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_RORO: l_state.lang = LANG_RORO; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_RURU: l_state.lang = LANG_RURU; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_SVSE: l_state.lang = LANG_SVSE; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ITIT: l_state.lang = LANG_ITIT; save_user_eeconf(); layer_off(_LL); break;
         case KCL_TRTR: l_state.lang = LANG_TRTR; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_KOKR: l_state.lang = LANG_KOKR; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_JAJP: l_state.lang = LANG_JAJP; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ARSA: l_state.lang = LANG_ARSA; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ELGR: l_state.lang = LANG_ELGR; save_user_eeconf(); layer_off(_LL); break;
         case KCL_UKUA: l_state.lang = LANG_UKUA; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_RURU: l_state.lang = LANG_RURU; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_BEBY: l_state.lang = LANG_BEBY; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_KKKZ: l_state.lang = LANG_KKKZ; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_BGBG: l_state.lang = LANG_BGBG; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_PLPL: l_state.lang = LANG_PLPL; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_RORO: l_state.lang = LANG_RORO; save_user_eeconf(); layer_off(_LL); break;
         case KCL_ZHCN: l_state.lang = LANG_ZHCN; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_NLNL: l_state.lang = LANG_NLNL; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_HEIL: l_state.lang = LANG_HEIL; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_SVSE: l_state.lang = LANG_SVSE; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_FIFI: l_state.lang = LANG_FIFI; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_NNNO: l_state.lang = LANG_NNNO; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_DADK: l_state.lang = LANG_DADK; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_HUHU: l_state.lang = LANG_HUHU; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_CSCZ: l_state.lang = LANG_CSCZ; save_user_eeconf(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
@@ -1995,35 +2032,35 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 switch(l_state.lang) {
                     /*[[[cog
                     for lang in languages:
-                        cog.outl(f'case LANG_{lang.upper()}: memcpy(data, "P\\x07.{lang[2:]}", 5); break;')
+                        cog.outl(f'case LANG_{lang.upper()}: memcpy(data, "P\\x07.{lang}", 7); break;')
                     ]]]*/
-                    case LANG_ARSA: memcpy(data, "P\x07.SA", 5); break;
-                    case LANG_BEBY: memcpy(data, "P\x07.BY", 5); break;
-                    case LANG_BGBG: memcpy(data, "P\x07.BG", 5); break;
-                    case LANG_CSCZ: memcpy(data, "P\x07.CZ", 5); break;
-                    case LANG_DADK: memcpy(data, "P\x07.DK", 5); break;
-                    case LANG_DEDE: memcpy(data, "P\x07.DE", 5); break;
-                    case LANG_ELGR: memcpy(data, "P\x07.GR", 5); break;
-                    case LANG_ENUS: memcpy(data, "P\x07.US", 5); break;
-                    case LANG_ESES: memcpy(data, "P\x07.ES", 5); break;
-                    case LANG_FIFI: memcpy(data, "P\x07.FI", 5); break;
-                    case LANG_FRFR: memcpy(data, "P\x07.FR", 5); break;
-                    case LANG_HEIL: memcpy(data, "P\x07.IL", 5); break;
-                    case LANG_HUHU: memcpy(data, "P\x07.HU", 5); break;
-                    case LANG_ITIT: memcpy(data, "P\x07.IT", 5); break;
-                    case LANG_JAJP: memcpy(data, "P\x07.JP", 5); break;
-                    case LANG_KKKZ: memcpy(data, "P\x07.KZ", 5); break;
-                    case LANG_KOKR: memcpy(data, "P\x07.KR", 5); break;
-                    case LANG_NLNL: memcpy(data, "P\x07.NL", 5); break;
-                    case LANG_NNNO: memcpy(data, "P\x07.NO", 5); break;
-                    case LANG_PLPL: memcpy(data, "P\x07.PL", 5); break;
-                    case LANG_PTPT: memcpy(data, "P\x07.PT", 5); break;
-                    case LANG_RORO: memcpy(data, "P\x07.RO", 5); break;
-                    case LANG_RURU: memcpy(data, "P\x07.RU", 5); break;
-                    case LANG_SVSE: memcpy(data, "P\x07.SE", 5); break;
-                    case LANG_TRTR: memcpy(data, "P\x07.TR", 5); break;
-                    case LANG_UKUA: memcpy(data, "P\x07.UA", 5); break;
-                    case LANG_ZHCN: memcpy(data, "P\x07.CN", 5); break;
+                    case LANG_ENUS: memcpy(data, "P\x07.enUS", 7); break;
+                    case LANG_DEDE: memcpy(data, "P\x07.deDE", 7); break;
+                    case LANG_FRFR: memcpy(data, "P\x07.frFR", 7); break;
+                    case LANG_ESES: memcpy(data, "P\x07.esES", 7); break;
+                    case LANG_PTPT: memcpy(data, "P\x07.ptPT", 7); break;
+                    case LANG_ITIT: memcpy(data, "P\x07.itIT", 7); break;
+                    case LANG_TRTR: memcpy(data, "P\x07.trTR", 7); break;
+                    case LANG_KOKR: memcpy(data, "P\x07.koKR", 7); break;
+                    case LANG_JAJP: memcpy(data, "P\x07.jaJP", 7); break;
+                    case LANG_ARSA: memcpy(data, "P\x07.arSA", 7); break;
+                    case LANG_ELGR: memcpy(data, "P\x07.elGR", 7); break;
+                    case LANG_UKUA: memcpy(data, "P\x07.ukUA", 7); break;
+                    case LANG_RURU: memcpy(data, "P\x07.ruRU", 7); break;
+                    case LANG_BEBY: memcpy(data, "P\x07.beBY", 7); break;
+                    case LANG_KKKZ: memcpy(data, "P\x07.kkKZ", 7); break;
+                    case LANG_BGBG: memcpy(data, "P\x07.bgBG", 7); break;
+                    case LANG_PLPL: memcpy(data, "P\x07.plPL", 7); break;
+                    case LANG_RORO: memcpy(data, "P\x07.roRO", 7); break;
+                    case LANG_ZHCN: memcpy(data, "P\x07.zhCN", 7); break;
+                    case LANG_NLNL: memcpy(data, "P\x07.nlNL", 7); break;
+                    case LANG_HEIL: memcpy(data, "P\x07.heIL", 7); break;
+                    case LANG_SVSE: memcpy(data, "P\x07.svSE", 7); break;
+                    case LANG_FIFI: memcpy(data, "P\x07.fiFI", 7); break;
+                    case LANG_NNNO: memcpy(data, "P\x07.nnNO", 7); break;
+                    case LANG_DADK: memcpy(data, "P\x07.daDK", 7); break;
+                    case LANG_HUHU: memcpy(data, "P\x07.huHU", 7); break;
+                    case LANG_CSCZ: memcpy(data, "P\x07.csCZ", 7); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -2035,39 +2072,49 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 /*[[[cog
                 lang_list = "P\\x08."
                 for lang in languages:
-                    lang_list += lang[2:]
-                    if len(lang_list)>=(32-1):
+                    lang_list += lang
+                    if len(lang_list)>=(32+3-3):
                         cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)-3});')
                         cog.outl(f'raw_hid_send(data, length);')
                         cog.outl(f'memset(data, 0, length);')
                         lang_list = "P\\x08."
-                    elif lang != languages[-1]:
-                        lang_list += ","
                 cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)-3});')
                 ]]]*/
-                memcpy(data, "P\x08.SA,BY,BG,CZ,DK,DE,GR,US,ES", 29);
+                memcpy(data, "P\x08.enUSdeDEfrFResESptPTitITtrTR", 31);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.FI,FR,IL,HU,IT,JP,KZ,KR,NL", 29);
+                memcpy(data, "P\x08.koKRjaJParSAelGRukUAruRUbeBY", 31);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.NO,PL,PT,RO,RU,SE,TR,UA,CN", 29);
+                memcpy(data, "P\x08.kkKZbgBGplPLroROzhCNnlNLheIL", 31);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.", 3);
+                memcpy(data, "P\x08.svSEfiFInnNOdaDKhuHUcsCZ", 27);
                 //[[[end]]]
                 break;
             case 9: //change language
-                if(data[3]< NUM_LANG) {
-                    l_state.lang = data[3];
-                    uprintf("Setting lang to %u.\n", data[3]);
-                    request_disp_refresh();
-                    update_performed();
-                    memcpy(data, "P\x09.", 3);
-                } else {
-                    uprintf("Invalid language index %u.\n", data[3]);
-                    memset(data, 0, length);
-                    memcpy(data, "P\x09!", 3);
+                {
+                    uint32_t decoded = LANG_TO_UI32(data[3], data[4], data[5], data[6]);
+                    uint8_t new_lang = l_state.lang;
+
+                    for(uint8_t idx=0;idx<NUM_LANG;++idx) {
+                        if(lang_uint32[idx]==decoded) {
+                            new_lang = idx;
+                            break;
+                        }
+                    }
+
+                    if(new_lang<NUM_LANG) {
+                        l_state.lang = new_lang;
+                        uprintf("Setting lang to %u (%c%c%c%c).\n", new_lang, data[3], data[4], data[5], data[6]);
+                        request_disp_refresh();
+                        update_performed();
+                        memcpy(data, "P\x09.", 3);
+                    } else {
+                        uprintf("Invalid language index %u (%c%c%c%c).\n", new_lang, data[3], data[4], data[5], data[6]);
+                        memset(data, 0, length);
+                        memcpy(data, "P\x09!", 3);
+                    }
                 }
                 break;
             case 10: //receive overlay

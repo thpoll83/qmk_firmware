@@ -1979,6 +1979,16 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
         uprint("Warning: Supplied overlay keycode not supported.\n");
         return;
     }
+
+    if(keycode>=KC_A && keycode<=KC_Z) {
+        const uint16_t* translated = translate_keycode(l_state.lang, keycode, false, false);
+        if(translated!=NULL) {
+            uint16_t new_keycode = translated[0] - 'a' + KC_A;
+            if(if(new_keycode>=KC_A && new_keycode<=KC_Z)) {
+                keycode = (uint8_t) new_keycode;
+            }
+        }
+    }
     uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
     if (idx >= 90) {
         uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");

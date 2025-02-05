@@ -1984,7 +1984,7 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
         const uint16_t* translated = translate_keycode(l_state.lang, keycode, false, false);
         if(translated!=NULL) {
             uint16_t new_keycode = translated[0] - 'a' + KC_A;
-            if(if(new_keycode>=KC_A && new_keycode<=KC_Z)) {
+            if(new_keycode>=KC_A && new_keycode<=KC_Z) {
                 keycode = (uint8_t) new_keycode;
             }
         }

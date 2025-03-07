@@ -1971,15 +1971,7 @@ void suspend_wakeup_init_kb(void) {
     suspend_wakeup_init_user();
 }
 
-
-
-static uint16_t byte_counter = 0;
-void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
-    if (keycode > KC_RGUI) {
-        uprint("Warning: Supplied overlay keycode not supported.\n");
-        return;
-    }
-
+uint8_t translate_a_to_z(uint8_t keycode) {
     if(keycode>=KC_A && keycode<=KC_Z) {
         const uint16_t* translated = translate_keycode(l_state.lang, keycode, false, false);
         if(translated!=NULL) {
@@ -1989,6 +1981,19 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
             }
         }
     }
+    return keycode;
+}
+
+
+static uint16_t byte_counter = 0;
+void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
+    if (keycode > KC_RGUI) {
+        uprint("Warning: Supplied overlay keycode not supported.\n");
+        return;
+    }
+
+    keycode = translate_a_to_z(keycode);
+
     uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
     if (idx >= 90) {
         uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
@@ -2019,6 +2024,55 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
         uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n", keycode, mods, byte_counter, idx, pos_to_str(pos));
         byte_counter = 0;
     }
+}
+
+static uint16_t rle_index = 0;
+static uint8_t rle_keycode = 0;
+static uint8_t rle_mods = 0;
+bool decompress_overlay_buffer(uint8_t* compressed) {
+    if (rle_keycode > KC_RGUI) {
+        uprint("Warning: Supplied overlay keycode not supported.\n");
+        return false;
+    }
+
+    uint8_t keycode = translate_a_to_z(rle_keycode);
+
+    uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
+    if (idx >= 90) {
+        uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
+        return false;
+    }
+    idx = adjust_overlay_idx_to_mod(idx, rle_mods);
+
+    enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
+    if(pos==POS_NOT_FOUND) {
+        pos = get_split_matrix_side(keycode, _FL0); //actually we shoyuld check _FL1 depednig on the base layer, but for now it si good enough
+    }
+    //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
+    if (is_on_current_side(pos)) {
+        rle_index += rle_decompress(overlays[idx], 360, compressed, rle_index==0?27:29, rle_index);
+    }
+    //only send to bridge when needed
+    if (is_on_other_side(pos)) {
+        rle_index += rle_count(360, compressed, rle_index==0?27:29, rle_index);
+        // compressed_overlay_sync_t transfer;
+        // transfer.start = rle_index==0;
+        // transfer.adj_idx = idx;
+        // memcpy(&transfer.overlay, compressed, 27);
+        // send_to_bridge(USER_SYNC_COMPRESSED_OVERLAY_DATA, (void*)&transfer, sizeof(transfer), 10);
+    }
+
+    byte_counter += rle_index==0?27:29;
+    if (rle_index >= 360*8-1) {
+        use_overlay[idx] = true;
+        uprintf("--> Finished keycode 0x%x (mod 0x%x, idx %d): compressed bytes %d, side %s, total bits %d bytes %d.\n", keycode, rle_mods, idx, byte_counter, pos_to_str(pos), rle_index, rle_index/8);
+        rle_index = 0;
+        byte_counter = 0;
+        return true;
+    }
+    uprintf("Received compressed overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s, RLE idx %d.\n", keycode, rle_mods, byte_counter, idx, pos_to_str(pos), rle_index);
+
+    return false;
 }
 
 void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
@@ -2234,6 +2288,30 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     }
                 }
                 memcpy(data, "P\x0f.", 3);
+                break;
+            case 16: //receive RLE compressed overlay
+                rle_index = 0;
+                rle_keycode = data[3];
+                rle_mods = data[4];
+
+                uprintf("Start with compressed data for keycode 0x%x (modifiers: 0x%x).\n", rle_keycode, rle_mods);
+
+                //fall through
+            case 17: //receive RLE compressed overlay
+                {
+                    if(rle_keycode>=KC_A && rle_keycode<=KC_RIGHT_GUI) {
+                        if((rle_mods & MOD_MASK_GUI)==0) { //for now we filter out the gui key
+                            if(!decompress_overlay_buffer(rle_index==0?&data[5]:&data[3])) {
+                                update_performed();
+                                request_disp_refresh();
+                            }
+                        }
+                        memcpy(data, rle_index==0 ? "P\x10!" : "P\x11!", 3);
+                    } else {
+                        memset(data, 0, length);
+                        memcpy(data, rle_index==0 ? "P\x10!" : "P\x11!", 3);
+                    }
+                }
                 break;
             default:
                 printf("Unknown command: %u.\n", data[1]);

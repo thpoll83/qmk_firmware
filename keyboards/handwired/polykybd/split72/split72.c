@@ -18,27 +18,26 @@ const struct display_info key_display[] = {
 };
 
 uint16_t rle_decompress(uint8_t* dest, uint16_t max, uint8_t* compressed, uint8_t len, uint16_t bit_index) {
-    uint16_t count = 0;
-    uint8_t bit_offset = bit_index % 8;
-    for(uint8_t d=0; d<len; d++) {
-
-        uint8_t bits = compressed[d];
-        bool zeros = bits<128;
-        if(!zeros) {
+    uint16_t count      = 0;
+    uint8_t  bit_offset = bit_index % 8;
+    for (uint8_t d = 0; d < len; d++) {
+        uint8_t bits  = compressed[d];
+        bool    zeros = bits < 128;
+        if (!zeros) {
             bits -= 128;
         }
-        for(uint8_t b=0; b<=bits; b++) {
-            if(count/8>=max) {
+        for (uint8_t b = 0; b < bits; b++) {
+            if (count / 8 >= max) {
                 return count;
             }
-            if(zeros) {
-                *dest &= ~(1<<bit_offset);
+            if (zeros) {
+                *dest &= ~(1 << (7 - bit_offset));
             } else {
-                *dest |= (1 << bit_offset);
+                *dest |= (1 << (7 - bit_offset));
             }
             count++;
             bit_offset++;
-            if(bit_offset==8) {
+            if (bit_offset == 8) {
                 dest++;
                 bit_offset = 0;
             }
@@ -47,14 +46,13 @@ uint16_t rle_decompress(uint8_t* dest, uint16_t max, uint8_t* compressed, uint8_
     return count;
 }
 
-
 uint16_t rle_count(uint16_t max, uint8_t* compressed, uint8_t len, uint16_t bit_index) {
     uint16_t count = 0;
     uint8_t bit_offset = bit_index % 8;
 
     for(uint8_t d=0; d<len; d++) {
         uint8_t bits = compressed[d];
-        for(uint8_t b=0; b<=bits; b++) {
+        for(uint8_t b=0; b<bits; b++) {
             if(count/8>=max) {
                 return count;
             }

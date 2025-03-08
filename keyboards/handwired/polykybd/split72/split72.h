@@ -87,8 +87,8 @@ typedef struct _via_sync_t {
 } via_sync_t;
 #endif
 
-uint16_t rle_count(uint16_t max, uint8_t* compressed, uint8_t len, uint16_t bit_index);
-uint16_t rle_decompress(uint8_t* dest, uint16_t max, uint8_t* compressed, uint8_t len, uint16_t bit_index);
+uint16_t rle_count(uint16_t max, const uint8_t* compressed, uint8_t len, uint16_t bit_index);
+uint16_t rle_decompress(uint8_t* dest, uint16_t max, const uint8_t* compressed, uint8_t len, uint16_t bit_index);
 
 enum key_split_pos { POS_NOT_FOUND, POS_LEFT, POS_RIGHT, POS_ON_BOTH };
 

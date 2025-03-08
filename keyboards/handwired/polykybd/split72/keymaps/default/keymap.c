@@ -123,6 +123,12 @@ static int32_t last_update = 0;
 static uint8_t use_overlay[NUM_OVERLAYS*NUM_VARIATIONS];
 static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
 
+
+static uint16_t rle_index = 0;
+static uint16_t rle_index_bridge = 0;
+static uint8_t rle_keycode = 0;
+static uint8_t rle_mods = 0;
+
 void reset_overlay_buffers(void) {
     memset(&use_overlay, 0, sizeof(use_overlay));
     memset(&overlays, 0, sizeof(overlays));
@@ -135,6 +141,12 @@ typedef struct _overlay_sync_t {
     uint8_t overlay[BYTES_PER_SEGMENT];
 } overlay_sync_t;
 
+typedef struct _compressed_overlay_sync_t {
+    uint32_t crc32;
+    uint16_t adj_idx;
+    uint8_t len;
+    uint8_t compressed[COMPRESSED_MAX];
+} compressed_overlay_sync_t;
 
 bool display_wakeup(keyrecord_t* record);
 void update_displays(enum refresh_mode mode);
@@ -209,8 +221,8 @@ layer_state_t persistent_default_layer_get(void) {
 }
 
 void persistent_default_layer_set(uint16_t default_layer) {
-  eeconfig_update_default_layer(default_layer);
-  default_layer_set(default_layer);
+    eeconfig_update_default_layer(default_layer);
+    default_layer_set(default_layer);
 }
 
 void request_disp_refresh(void) {
@@ -361,6 +373,28 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
             if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                 use_overlay[ov->adj_idx] = true;
                 request_disp_refresh();
+            }
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
+        }
+    }
+}
+
+void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len == sizeof(compressed_overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
+        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
+        const compressed_overlay_sync_t* ov = ((const compressed_overlay_sync_t *)in_data);
+        if(crc32 == ov->crc32) {
+            if(ov->len == COMPRESSED_START) {
+                rle_index = 0;
+            }
+            int16_t maxlen = 360 - rle_index/8;
+            rle_index += rle_decompress(overlays[ov->adj_idx], PK_MAX(0,maxlen), ov->compressed, ov->len, rle_index);
+            if (rle_index >= 360*8) {
+                use_overlay[ov->adj_idx] = true;
+                request_disp_refresh();
+                rle_index = 0; //maybe no needed, just to be sure
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
@@ -1717,6 +1751,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_LASTKEY_DATA,    user_sync_lastkey_data_handler);
     transaction_register_rpc(USER_SYNC_LATIN_EX_DATA,   user_sync_latin_ex_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_DATA,    user_sync_overlay_data_handler);
+    transaction_register_rpc(USER_SYNC_COMPRESSED_DATA, user_sync_overlay_data_handler);
 
     #ifdef VIA_ENABLE
         transaction_register_rpc(USER_SYNC_VIA_DATA,    user_sync_via_data_handler);
@@ -2026,9 +2061,6 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
     }
 }
 
-static uint16_t rle_index = 0;
-static uint8_t rle_keycode = 0;
-static uint8_t rle_mods = 0;
 bool decompress_overlay_buffer(uint8_t* compressed) {
     if (rle_keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
@@ -2036,6 +2068,7 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
     }
 
     uint8_t keycode = translate_a_to_z(rle_keycode);
+    uint8_t compressed_len = rle_index==0?COMPRESSED_START:COMPRESSED_MAX;
 
     uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
     if (idx >= 90) {
@@ -2050,20 +2083,27 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
     }
     //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
     if (is_on_current_side(pos)) {
-        rle_index += rle_decompress(overlays[idx], 360, compressed, rle_index==0?27:29, rle_index);
+        int16_t maxlen = 360 - rle_index/8;
+        rle_index += rle_decompress(overlays[idx]+rle_index/8, PK_MAX(0,maxlen), compressed, compressed_len, rle_index);
     }
+    byte_counter += compressed_len;
     //only send to bridge when needed
     if (is_on_other_side(pos)) {
-        rle_index += rle_count(360, compressed, rle_index==0?27:29, rle_index);
-        // compressed_overlay_sync_t transfer;
-        // transfer.start = rle_index==0;
-        // transfer.adj_idx = idx;
-        // memcpy(&transfer.overlay, compressed, 27);
-        // send_to_bridge(USER_SYNC_COMPRESSED_OVERLAY_DATA, (void*)&transfer, sizeof(transfer), 10);
+        int16_t maxlen = 360 - rle_index_bridge/8;
+        rle_index_bridge += rle_count(PK_MAX(0,maxlen), compressed, compressed_len, rle_index_bridge);
+        compressed_overlay_sync_t transfer;
+        transfer.len = compressed_len;
+        transfer.adj_idx = idx;
+        memcpy(&transfer.compressed, compressed, compressed_len);
+        send_to_bridge(USER_SYNC_COMPRESSED_DATA, (void*)&transfer, sizeof(transfer), 10);
+
+        if (rle_index_bridge >= 360*8) {
+            use_overlay[idx] = true;
+            uprintf("--> Finished sending keycode 0x%x (mod 0x%x, idx %d), compressed bytes %d to bridge, total bits %d bytes %d.\n", keycode, rle_mods, idx, byte_counter, rle_index_bridge, rle_index_bridge/8);
+        }
     }
 
-    byte_counter += rle_index==0?27:29;
-    if (rle_index >= 360*8-1) {
+    if (rle_index >= 360*8) {
         use_overlay[idx] = true;
         uprintf("--> Finished keycode 0x%x (mod 0x%x, idx %d): compressed bytes %d, side %s, total bits %d bytes %d.\n", keycode, rle_mods, idx, byte_counter, pos_to_str(pos), rle_index, rle_index/8);
         rle_index = 0;
@@ -2291,6 +2331,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 16: //receive RLE compressed overlay
                 rle_index = 0;
+                rle_index_bridge = 0;
                 rle_keycode = data[3];
                 rle_mods = data[4];
 

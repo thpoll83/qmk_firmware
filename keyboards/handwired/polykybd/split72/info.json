@@ -6,9 +6,9 @@
     "bootloader": "rp2040",
     "processor": "RP2040",
     "usb": {
-      "vid": "0x2021",
-      "pid": "0x2007",
-      "device_version": "3.2.0"
+        "vid": "0x2021",
+        "pid": "0x2007",
+        "device_version": "3.2.0"
     },
     "features": {
         "bootmagic": false,

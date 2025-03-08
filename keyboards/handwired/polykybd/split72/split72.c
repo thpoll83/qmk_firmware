@@ -17,7 +17,7 @@ const struct display_info key_display[] = {
         {BITMASK5(0)}, {BITMASK5(1)}, {BITMASK5(2)}, {BITMASK5(3)}, {BITMASK5(4)}, {BITMASK5(5)}, {BITMASK5(6)}, {BITMASK5(7)}
 };
 
-uint16_t rle_decompress(uint8_t* dest, uint16_t max, uint8_t* compressed, uint8_t len, uint16_t bit_index) {
+uint16_t rle_decompress(uint8_t* dest, uint16_t max, const uint8_t* compressed, uint8_t len, uint16_t bit_index) {
     uint16_t count      = 0;
     uint8_t  bit_offset = bit_index % 8;
     for (uint8_t d = 0; d < len; d++) {
@@ -46,7 +46,7 @@ uint16_t rle_decompress(uint8_t* dest, uint16_t max, uint8_t* compressed, uint8_
     return count;
 }
 
-uint16_t rle_count(uint16_t max, uint8_t* compressed, uint8_t len, uint16_t bit_index) {
+uint16_t rle_count(uint16_t max, const uint8_t* compressed, uint8_t len, uint16_t bit_index) {
     uint16_t count = 0;
     uint8_t bit_offset = bit_index % 8;
 

@@ -2068,8 +2068,6 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
     }
 
     uint8_t keycode = translate_a_to_z(rle_keycode);
-    uint8_t compressed_len = rle_index==0?COMPRESSED_START:COMPRESSED_MAX;
-
     uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
     if (idx >= 90) {
         uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
@@ -2083,34 +2081,39 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
     }
     //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
     if (is_on_current_side(pos)) {
+        uint8_t compressed_len = rle_index==0?COMPRESSED_START:COMPRESSED_MAX;
         int16_t maxlen = 360 - rle_index/8;
         rle_index += rle_decompress(overlays[idx]+rle_index/8, PK_MAX(0,maxlen), compressed, compressed_len, rle_index);
+        //rle_index += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
+        uprintf("keycode 0x%x bits %d, bytes %d.\n",
+            keycode, rle_index, rle_index/8);
     }
-    byte_counter += compressed_len;
+
     //only send to bridge when needed
     if (is_on_other_side(pos)) {
+        uint8_t compressed_len = rle_index_bridge==0?COMPRESSED_START:COMPRESSED_MAX;
         int16_t maxlen = 360 - rle_index_bridge/8;
-        rle_index_bridge += rle_count(PK_MAX(0,maxlen), compressed, compressed_len, rle_index_bridge);
+        rle_index_bridge += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
         compressed_overlay_sync_t transfer;
         transfer.len = compressed_len;
         transfer.adj_idx = idx;
         memcpy(&transfer.compressed, compressed, compressed_len);
         send_to_bridge(USER_SYNC_COMPRESSED_DATA, (void*)&transfer, sizeof(transfer), 10);
 
-        if (rle_index_bridge >= 360*8) {
+        if (rle_index_bridge >= 360*8 -1) {
             use_overlay[idx] = true;
-            uprintf("--> Finished sending keycode 0x%x (mod 0x%x, idx %d), compressed bytes %d to bridge, total bits %d bytes %d.\n", keycode, rle_mods, idx, byte_counter, rle_index_bridge, rle_index_bridge/8);
+            uprintf("--> Sent keycode 0x%x (mod 0x%x) to bridge, total bytes %d.\n",
+                keycode, rle_mods, rle_index_bridge/8);
         }
     }
 
-    if (rle_index >= 360*8) {
+    if (rle_index >= 360*8 -1) {
         use_overlay[idx] = true;
-        uprintf("--> Finished keycode 0x%x (mod 0x%x, idx %d): compressed bytes %d, side %s, total bits %d bytes %d.\n", keycode, rle_mods, idx, byte_counter, pos_to_str(pos), rle_index, rle_index/8);
-        rle_index = 0;
-        byte_counter = 0;
+        uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
+            keycode, rle_mods, pos_to_str(pos), rle_index/8);
         return true;
     }
-    uprintf("Received compressed overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s, RLE idx %d.\n", keycode, rle_mods, byte_counter, idx, pos_to_str(pos), rle_index);
+    //uprintf("Received compressed overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s, RLE idx %d.\n", keycode, rle_mods, byte_counter, idx, pos_to_str(pos), rle_index);
 
     return false;
 }
@@ -2340,17 +2343,18 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 //fall through
             case 17: //receive RLE compressed overlay
                 {
+                    bool first = data[1]==16;
                     if(rle_keycode>=KC_A && rle_keycode<=KC_RIGHT_GUI) {
                         if((rle_mods & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            if(!decompress_overlay_buffer(rle_index==0?&data[5]:&data[3])) {
+                            if(!decompress_overlay_buffer(first?&data[5]:&data[3])) {
                                 update_performed();
                                 request_disp_refresh();
                             }
                         }
-                        memcpy(data, rle_index==0 ? "P\x10!" : "P\x11!", 3);
+                        memcpy(data, first ? "P\x10!" : "P\x11!", 3);
                     } else {
                         memset(data, 0, length);
-                        memcpy(data, rle_index==0 ? "P\x10!" : "P\x11!", 3);
+                        memcpy(data, first ? "P\x10!" : "P\x11!", 3);
                     }
                 }
                 break;

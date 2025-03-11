@@ -123,11 +123,18 @@ static int32_t last_update = 0;
 static uint8_t use_overlay[NUM_OVERLAYS*NUM_VARIATIONS];
 static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
 
-
+//helpers for compressed overlay data
 static uint16_t rle_index = 0;
 static uint16_t rle_index_bridge = 0;
 static uint8_t rle_keycode = 0;
 static uint8_t rle_mods = 0;
+
+//helpers for overlay data where only a region of interset is sent (instead of the full overlay)
+static uint8_t roi_x = 0;
+static uint8_t roy_y = 0;
+static uint8_t roi_xx = 0;
+static uint8_t roi_yy = 0;
+static bool roi_compressed = false;
 
 void reset_overlay_buffers(void) {
     memset(&use_overlay, 0, sizeof(use_overlay));
@@ -2118,6 +2125,63 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
     return false;
 }
 
+bool fill_roi_overlay_buffer(uint8_t* data) {
+    if (rle_keycode > KC_RGUI) {
+        uprint("Warning: Supplied overlay keycode not supported.\n");
+        return false;
+    }
+
+    uint8_t keycode = translate_a_to_z(rle_keycode);
+    uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
+    if (idx >= 90) {
+        uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
+        return false;
+    }
+    idx = adjust_overlay_idx_to_mod(idx, rle_mods);
+
+    enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
+    if(pos==POS_NOT_FOUND) {
+        pos = get_split_matrix_side(keycode, _FL0); //actually we shoyuld check _FL1 depednig on the base layer, but for now it si good enough
+    }
+    //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
+    if (is_on_current_side(pos)) {
+        // uint8_t compressed_len = rle_index==0?COMPRESSED_START:COMPRESSED_MAX;
+        // int16_t maxlen = 360 - rle_index/8;
+        // rle_index += rle_decompress(overlays[idx]+rle_index/8, PK_MAX(0,maxlen), compressed, compressed_len, rle_index);
+        // //rle_index += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
+        // uprintf("keycode 0x%x bits %d, bytes %d.\n",
+        //     keycode, rle_index, rle_index/8);
+    }
+
+    //only send to bridge when needed
+    if (is_on_other_side(pos)) {
+        // uint8_t compressed_len = rle_index_bridge==0?COMPRESSED_START:COMPRESSED_MAX;
+        // int16_t maxlen = 360 - rle_index_bridge/8;
+        // rle_index_bridge += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
+        // compressed_overlay_sync_t transfer;
+        // transfer.len = compressed_len;
+        // transfer.adj_idx = idx;
+        // memcpy(&transfer.compressed, compressed, compressed_len);
+        // send_to_bridge(USER_SYNC_COMPRESSED_DATA, (void*)&transfer, sizeof(transfer), 10);
+
+        // if (rle_index_bridge >= 360*8 -1) {
+        //     use_overlay[idx] = true;
+        //     uprintf("--> Sent keycode 0x%x (mod 0x%x) to bridge, total bytes %d.\n",
+        //         keycode, rle_mods, rle_index_bridge/8);
+        // }
+    }
+
+    // if (rle_index >= 360*8 -1) {
+    //     use_overlay[idx] = true;
+    //     uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
+    //         keycode, rle_mods, pos_to_str(pos), rle_index/8);
+    //     return true;
+    // }
+    //uprintf("Received compressed overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s, RLE idx %d.\n", keycode, rle_mods, byte_counter, idx, pos_to_str(pos), rle_index);
+
+    return false;
+}
+
 void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 #if defined(LED_MATRIX_ENABLE)
     led_matrix_handle_key_event(row, col, pressed);
@@ -2355,6 +2419,34 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     } else {
                         memset(data, 0, length);
                         memcpy(data, first ? "P\x10!" : "P\x11!", 3);
+                    }
+                }
+                break;
+            case 18: //start roi overlay
+                rle_index = 0;
+                rle_index_bridge = 0;
+                rle_keycode = data[3];
+                rle_mods = data[4];
+                roi_x = data[5];
+                roy_y = data[6];
+                roi_xx = data[7];
+                roi_yy = data[8];
+                roi_compressed = (data[9]==1);
+                //fall through
+            case 19: //receive roi overlay
+                {
+                    bool first = data[1]==18;
+                    if(rle_keycode>=KC_A && rle_keycode<=KC_RIGHT_GUI) {
+                        if((rle_mods & MOD_MASK_GUI)==0) { //for now we filter out the gui key
+                            if(!fill_roi_overlay_buffer(first?&data[10]:&data[3])) {
+                                update_performed();
+                                request_disp_refresh();
+                            }
+                        }
+                        memcpy(data, first ? "P\x12!" : "P\x13!", 3);
+                    } else {
+                        memset(data, 0, length);
+                        memcpy(data, first ? "P\x12!" : "P\x13!", 3);
                     }
                 }
                 break;

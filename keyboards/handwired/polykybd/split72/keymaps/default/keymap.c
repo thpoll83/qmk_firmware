@@ -399,11 +399,11 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
                 hid_bit_index = 0;
             }
             int16_t maxlen = 360 - hid_bit_index/8;
-            hid_bit_index += rle_decompress(overlays[ov->adj_idx], PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
+            hid_bit_index += rle_decompress(overlays[ov->adj_idx]+hid_bit_index/8, PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
             if (hid_bit_index >= 360*8) {
                 use_overlay[ov->adj_idx] = true;
                 request_disp_refresh();
-                hid_bit_index = 0; //maybe no needed, just to be sure
+                hid_bit_index = 0;
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
@@ -1760,7 +1760,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_LASTKEY_DATA,    user_sync_lastkey_data_handler);
     transaction_register_rpc(USER_SYNC_LATIN_EX_DATA,   user_sync_latin_ex_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_DATA,    user_sync_overlay_data_handler);
-    transaction_register_rpc(USER_SYNC_COMPRESSED_DATA, user_sync_overlay_data_handler);
+    transaction_register_rpc(USER_SYNC_COMPRESSED_DATA, user_sync_compressed_overlay_data_handler);
 
     #ifdef VIA_ENABLE
         transaction_register_rpc(USER_SYNC_VIA_DATA,    user_sync_via_data_handler);

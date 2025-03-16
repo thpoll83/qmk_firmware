@@ -45,8 +45,6 @@
 #define SSD1306_SET_VERTICAL_SCROLL_AREA 0xA3             ///< Set scroll range
 
 // display specific constants
-#define SCREEN_WIDTH 72
-#define SCREEN_HEIGHT 40
 #define BUFFER_BYTE_VIS_HEIGHT 5
 #define BUFFER_BYTE_HEIGHT 8
 #define BUFFER_BYTE_VIS_WIDTH 72

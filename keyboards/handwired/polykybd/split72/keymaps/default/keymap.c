@@ -2147,12 +2147,39 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
     }
     //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
     if (is_on_current_side(pos)) {
-        // uint8_t compressed_len = hid_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
-        // int16_t maxlen = 360 - hid_bit_index/8;
-        // hid_bit_index += rle_decompress(overlays[idx]+hid_bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, hid_bit_index);
-        // //hid_bit_index += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
-        // uprintf("keycode 0x%x bits %d, bytes %d.\n",
-        //     keycode, hid_bit_index, hid_bit_index/8);
+        //only for rois having a multiple of 8 dimension
+        uint8_t data_len = hid_bit_index==0?ROI_START:ROI_MAX;
+
+        uint8_t x,y;
+        if(hid_bit_index==0) {
+            y = hid_roi_y;
+            x = hid_roi_x;
+            hid_bit_index = hid_roi_y * SCREEN_WIDTH + hid_roi_x;
+        } else {
+            y = hid_bit_index / SCREEN_WIDTH;
+            x = hid_bit_index % SCREEN_WIDTH;
+        }
+
+        uint8_t copied_bits = 0;
+        do {
+            uint8_t max_x_avail = x+data_len*8-copied_bits;
+            uint8_t xx = PK_MIN(hid_roi_xx, max_x_avail);
+            uint8_t slice_len = xx-x;
+            memcpy(overlays[idx] + hid_bit_index/8, &data[copied_bits/8], slice_len/8);
+            hid_bit_index += slice_len;
+            if(xx==hid_roi_xx) {
+                if(y==hid_roi_yy) {
+                    return true; //at the end of the roi
+                }
+                hid_bit_index += SCREEN_WIDTH - (hid_roi_xx-hid_roi_x);
+                y++;
+                x = hid_roi_x;
+            } else {
+                x += slice_len;
+                hid_bit_index += slice_len;
+            }
+            copied_bits += slice_len;
+        } while((copied_bits/8)<data_len);
     }
 
     //only send to bridge when needed

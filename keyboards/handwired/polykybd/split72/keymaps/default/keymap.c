@@ -2127,6 +2127,35 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
     return false;
 }
 
+// bool copy_rectangle_to_overlay(uint8_t* data, uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t bit_idx, uint8_t len) {
+
+//     uint8_t col = bit_idx % h;
+//     for (uint8_t row = bit_idx/h; row < h; row++) {
+//         uint8_t* dest_row = overlays[idx] + ((y + row) * SCREEN_WIDTH + x) / 8;
+//         uint8_t* src_row = data + (row * ((w + 7) / 8));
+
+//         for (; col < w; col++) {
+//             uint8_t src_bit = (src_row[col / 8] >> (7 - (col % 8))) & 1;
+//             uint8_t dest_bit_pos = (x + col) % 8;
+
+//             if (src_bit) {
+//                 *dest_row |= (1 << (7 - dest_bit_pos));
+//             } else {
+//                 *dest_row &= ~(1 << (7 - dest_bit_pos));
+//             }
+
+//             if(dest_row*8+dest_bit_pos>=bit_idx+len*8) {
+//                 return true;
+//             }
+//             if (dest_bit_pos == 7) {
+//                 dest_row++;
+//             }
+//             col = 0;
+//         }
+//     }
+//     return true;
+// }
+
 bool fill_roi_overlay_buffer(uint8_t* data) {
     if (hid_keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
@@ -2298,7 +2327,8 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 9: //change language
                 {
-                    uint32_t decoded = LANG_TO_UI32(data[3], data[4], data[5], data[6]);
+                    uint8_t* start = &data[HID_DATA_IDX];
+                    uint32_t decoded = LANG_TO_UI32_ARR(start);
                     uint8_t new_lang = l_state.lang;
 
                     for(uint8_t idx=0;idx<NUM_LANG;++idx) {
@@ -2310,12 +2340,12 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
 
                     if(new_lang<NUM_LANG) {
                         l_state.lang = new_lang;
-                        uprintf("Setting lang to %u (%c%c%c%c).\n", new_lang, data[3], data[4], data[5], data[6]);
+                        uprintf("Setting lang to %u.\n", new_lang);
                         request_disp_refresh();
                         update_performed();
                         memcpy(data, "P\x09.", 3);
                     } else {
-                        uprintf("Invalid language index %u (%c%c%c%c).\n", new_lang, data[3], data[4], data[5], data[6]);
+                        uprintf("Invalid language index %u.\n", new_lang);
                         memset(data, 0, length);
                         memcpy(data, "P\x09!", 3);
                     }
@@ -2323,12 +2353,12 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 10: //receive overlay
                 {
-                    uint8_t keycode = data[3];
-                    uint8_t segment = data[5];
+                    uint8_t keycode = data[HID_DATA_IDX];
+                    uint8_t segment = data[HID_DATA_IDX+2];
                     if(keycode>=KC_A && keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
-                        uint8_t mods = data[4];
+                        uint8_t mods = data[HID_DATA_IDX+1];
                         if((mods & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            fill_overlay_buffer(keycode, mods, segment, &data[6]);
+                            fill_overlay_buffer(keycode, mods, segment, &data[HID_DATA_IDX+3]);
                             if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                                 update_performed();
                                 request_disp_refresh();
@@ -2343,44 +2373,44 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 11: //overlays flags on
                 {
-                    const bool vis_changed = test_flag(data[3]^l_state.overlay_flags, DISPLAY_OVERLAYS);
-                    l_state.overlay_flags = flag_on(l_state.overlay_flags, data[3]);
+                    const bool vis_changed = test_flag(data[HID_DATA_IDX]^l_state.overlay_flags, DISPLAY_OVERLAYS);
+                    l_state.overlay_flags = flag_on(l_state.overlay_flags, data[HID_DATA_IDX]);
                     if(vis_changed) {
                         housekeeping_task_user();
                     }
                     memcpy(data, "P\x0b.", 3);
-                    uprintf("Overlay flags 0x%x set.\n", data[3]);
+                    uprintf("Overlay flags 0x%x set.\n", data[HID_DATA_IDX]);
                 }
                 break;
 
             case 12: //overlays flags off
                 {
-                    const bool vis_changed = test_flag(data[3]^l_state.overlay_flags, DISPLAY_OVERLAYS);
-                    l_state.overlay_flags = flag_off(l_state.overlay_flags, data[3]);
+                    const bool vis_changed = test_flag(data[HID_DATA_IDX]^l_state.overlay_flags, DISPLAY_OVERLAYS);
+                    l_state.overlay_flags = flag_off(l_state.overlay_flags, data[HID_DATA_IDX]);
                     if(vis_changed) {
                         housekeeping_task_user();
                     }
                     memcpy(data, "P\x0c.", 3);
-                    uprintf("Overlay flags 0x%x cleared.\n", data[3]);
+                    uprintf("Overlay flags 0x%x cleared.\n", data[HID_DATA_IDX]);
                 }
                 break;
             case 13: //set brightness
-                if ( data[3] <= FULL_BRIGHT) {
-                    l_state.contrast = data[3];
+                if ( data[HID_DATA_IDX] <= FULL_BRIGHT) {
+                    l_state.contrast = data[HID_DATA_IDX];
                     save_user_eeconf();
                     memcpy(data, "P\x0d.", 3);
-                    uprintf("Set brightness to: %u.\n", data[3]);
+                    uprintf("Set brightness to: %u.\n", data[HID_DATA_IDX]);
                 } else {
                     memcpy(data, "P\x0d!", 3);
-                    uprintf("Refused to set brightness to: %u.\n", data[3]);
+                    uprintf("Refused to set brightness to: %u.\n", data[HID_DATA_IDX]);
                 }
                 break;
             case 14: //key press
                 {
-                    uint16_t keycode = ((uint16_t)data[3])<<8 | data[4];
+                    uint16_t keycode = ((uint16_t)data[HID_DATA_IDX])<<8 | data[HID_DATA_IDX+1];
                     uint8_t r, c;
                     enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(l_layer.layer), &r, &c, is_left_side());
-                    const bool pressed = data[5] == 0;
+                    const bool pressed = data[HID_DATA_IDX+2] == 0;
                     if(pos==POS_NOT_FOUND) {
                         //actually it should be the previous layer instead of default, but it worked so far
                         pos = get_split_matrix_pos(keycode, l_layer.def_layer, &r, &c, is_left_side());
@@ -2405,7 +2435,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 }
                 break;
             case 15: //start/stop idle
-                if(data[3]==0) {
+                if(data[HID_DATA_IDX]==0) {
                     if((l_state.flags & (STATUS_DISP_ON|DISP_IDLE))==0) {
                         suspend_wakeup_init_kb();
                     } else {
@@ -2428,18 +2458,17 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
             case 16: //receive RLE compressed overlay
                 hid_bit_index = 0;
                 hid_bit_index_bridge = 0;
-                hid_keycode = data[3];
-                hid_modifier = data[4];
-
+                hid_keycode = data[HID_DATA_IDX];
+                hid_modifier = data[HID_DATA_IDX+1];
                 uprintf("Start with compressed data for keycode 0x%x (modifiers: 0x%x).\n", hid_keycode, hid_modifier);
 
                 //fall through
             case 17: //receive RLE compressed overlay
                 {
-                    bool first = data[1]==16;
+                    bool first = data[HID_CMD_IDX]==16;
                     if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
                         if((hid_modifier & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            if(!decompress_overlay_buffer(first?&data[5]:&data[3])) {
+                            if(!decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX])) {
                                 update_performed();
                                 request_disp_refresh();
                             }
@@ -2454,20 +2483,20 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
             case 18: //start roi overlay
                 hid_bit_index = 0;
                 hid_bit_index_bridge = 0;
-                hid_keycode = data[3];
-                hid_modifier = data[4];
-                hid_roi_x = data[5];
-                hid_roi_y = data[6];
-                hid_roi_xx = data[7];
-                hid_roi_yy = data[8];
-                hid_roi_rle = (data[9]==1);
+                hid_keycode = data[HID_DATA_IDX+2];
+                hid_modifier = data[HID_DATA_IDX+3];
+                hid_roi_x = data[HID_DATA_IDX+4];
+                hid_roi_y = data[HID_DATA_IDX+5];
+                hid_roi_xx = data[HID_DATA_IDX+6];
+                hid_roi_yy = data[HID_DATA_IDX+7];
+                hid_roi_rle = (data[HID_DATA_IDX+8]==1);
                 //fall through
             case 19: //receive roi overlay
                 {
-                    bool first = data[1]==18;
+                    bool first = data[HID_CMD_IDX]==18;
                     if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
                         if((hid_modifier & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            if(!fill_roi_overlay_buffer(first?&data[10]:&data[3])) {
+                            if(!fill_roi_overlay_buffer(first?&data[HID_DATA_IDX+7]:&data[HID_DATA_IDX])) {
                                 update_performed();
                                 request_disp_refresh();
                             }
@@ -2480,7 +2509,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 }
                 break;
             default:
-                printf("Unknown command: %u.\n", data[1]);
+                printf("Unknown command: %u.\n", data[HID_CMD_IDX]);
                 break;
         }
         #ifndef VIA_ENABLE

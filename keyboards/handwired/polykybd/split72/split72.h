@@ -40,7 +40,10 @@ struct display_info {
 #define BITMASK4(x) .bitmask = {~0, (uint8_t)(~(1<<x)), ~0, ~0, ~0}
 #define BITMASK5(x) .bitmask = {(uint8_t)(~(1<<x)), ~0, ~0, ~0, ~0}
 
+#define HID_CMD_IDX 1
+#define HID_DATA_IDX 2
 #define LANG_TO_UI32(a,b,c,d) (((uint32_t)(a))<<24 | ((uint32_t)(b))<<16 | ((uint32_t)(c))<<8 | (d))
+#define LANG_TO_UI32_ARR(arr) (((uint32_t)(arr[0]))<<24 | ((uint32_t)(arr[1]))<<16 | ((uint32_t)(arr[2]))<<8 | (arr[3]))
 #define LANGSTR_TO_UI32(str) LANG_TO_UI32(str[0],str[1],str[2],str[3])
 
 typedef struct _poly_eeconf_t {

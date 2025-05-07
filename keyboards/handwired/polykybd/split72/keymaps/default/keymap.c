@@ -2127,34 +2127,33 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
     return false;
 }
 
-// bool copy_rectangle_to_overlay(uint8_t* data, uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t bit_idx, uint8_t len) {
+bool copy_rectangle_to_overlay(uint8_t* dest, uint8_t* data, uint8_t x, uint8_t y, uint8_t xx, uint8_t yy, uint16_t bitlen) {
+    uint16_t bit_cnt = 0;
+    uint8_t  start_y = hid_bit_index / SCREEN_WIDTH;
+    for (uint8_t dest_y = start_y; dest_y < yy; dest_y++) {
+        uint8_t start_x = bit_cnt == 0 ? hid_bit_index % SCREEN_WIDTH : x;
+        for (uint8_t dest_x = start_x; dest_x < xx; dest_x++) {
+            hid_bit_index       = dest_y * SCREEN_WIDTH + dest_x;
+            uint8_t data_byte   = data[bit_cnt / 8];
+            uint8_t bit_in_byte = bit_cnt % 8;
+            bool    bit_is_set  = ((0x80 >> bit_in_byte) & data_byte) != 0;
 
-//     uint8_t col = bit_idx % h;
-//     for (uint8_t row = bit_idx/h; row < h; row++) {
-//         uint8_t* dest_row = overlays[idx] + ((y + row) * SCREEN_WIDTH + x) / 8;
-//         uint8_t* src_row = data + (row * ((w + 7) / 8));
+            if (bit_is_set) {
+                dest[hid_bit_index / 8] |= 0x80 >> (hid_bit_index % 8);
+            } else {
+                dest[hid_bit_index / 8] &= ~(0x80 >> (hid_bit_index % 8));
+            }
 
-//         for (; col < w; col++) {
-//             uint8_t src_bit = (src_row[col / 8] >> (7 - (col % 8))) & 1;
-//             uint8_t dest_bit_pos = (x + col) % 8;
-
-//             if (src_bit) {
-//                 *dest_row |= (1 << (7 - dest_bit_pos));
-//             } else {
-//                 *dest_row &= ~(1 << (7 - dest_bit_pos));
-//             }
-
-//             if(dest_row*8+dest_bit_pos>=bit_idx+len*8) {
-//                 return true;
-//             }
-//             if (dest_bit_pos == 7) {
-//                 dest_row++;
-//             }
-//             col = 0;
-//         }
-//     }
-//     return true;
-// }
+            bit_cnt++;
+            if (bit_cnt >= bitlen) {
+                hid_bit_index++;
+                return false;
+            }
+        }
+    }
+    hid_bit_index++;
+    return true;
+}
 
 bool fill_roi_overlay_buffer(uint8_t* data) {
     if (hid_keycode > KC_RGUI) {
@@ -2174,41 +2173,16 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
     if(pos==POS_NOT_FOUND) {
         pos = get_split_matrix_side(keycode, _FL0); //actually we shoyuld check _FL1 depednig on the base layer, but for now it si good enough
     }
-    //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
+
+    bool finished = false;
     if (is_on_current_side(pos)) {
-        //only for rois having a multiple of 8 dimension
-        uint8_t data_len = hid_bit_index==0?ROI_START:ROI_MAX;
+        uint16_t data_len = hid_bit_index==0?ROI_START:ROI_MAX;
 
-        uint8_t x,y;
+        //uint8_t x,y;
         if(hid_bit_index==0) {
-            y = hid_roi_y;
-            x = hid_roi_x;
             hid_bit_index = hid_roi_y * SCREEN_WIDTH + hid_roi_x;
-        } else {
-            y = hid_bit_index / SCREEN_WIDTH;
-            x = hid_bit_index % SCREEN_WIDTH;
         }
-
-        uint8_t copied_bits = 0;
-        do {
-            uint8_t max_x_avail = x+data_len*8-copied_bits;
-            uint8_t xx = PK_MIN(hid_roi_xx, max_x_avail);
-            uint8_t slice_len = xx-x;
-            memcpy(overlays[idx] + hid_bit_index/8, &data[copied_bits/8], slice_len/8);
-            hid_bit_index += slice_len;
-            if(xx==hid_roi_xx) {
-                if(y==hid_roi_yy) {
-                    return true; //at the end of the roi
-                }
-                hid_bit_index += SCREEN_WIDTH - (hid_roi_xx-hid_roi_x);
-                y++;
-                x = hid_roi_x;
-            } else {
-                x += slice_len;
-                hid_bit_index += slice_len;
-            }
-            copied_bits += slice_len;
-        } while((copied_bits/8)<data_len);
+        finished = copy_rectangle_to_overlay(overlays[idx], data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8);
     }
 
     //only send to bridge when needed
@@ -2229,12 +2203,12 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
         // }
     }
 
-    // if (hid_bit_index >= 360*8 -1) {
-    //     use_overlay[idx] = true;
-    //     uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
-    //         keycode, hid_modifier, pos_to_str(pos), hid_bit_index/8);
-    //     return true;
-    // }
+    if (finished) {
+        use_overlay[idx] = true;
+        uprintf("--> Finished ROI update for keycode 0x%x (mod 0x%x): side %s.\n",
+            keycode, hid_modifier, pos_to_str(pos));
+        return true;
+    }
     //uprintf("Received compressed overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s, RLE idx %d.\n", keycode, hid_modifier, hid_byte_count, idx, pos_to_str(pos), hid_bit_index);
 
     return false;
@@ -2483,20 +2457,20 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
             case 18: //start roi overlay
                 hid_bit_index = 0;
                 hid_bit_index_bridge = 0;
-                hid_keycode = data[HID_DATA_IDX+2];
-                hid_modifier = data[HID_DATA_IDX+3];
-                hid_roi_x = data[HID_DATA_IDX+4];
-                hid_roi_y = data[HID_DATA_IDX+5];
-                hid_roi_xx = data[HID_DATA_IDX+6];
-                hid_roi_yy = data[HID_DATA_IDX+7];
-                hid_roi_rle = (data[HID_DATA_IDX+8]==1);
+                hid_keycode = data[HID_DATA_IDX];
+                hid_modifier = data[HID_DATA_IDX+1]&0x0f;
+                hid_roi_y = (data[HID_DATA_IDX+2]&0x03) | ((data[HID_DATA_IDX+1]>>2)&0x3c);
+                hid_roi_yy = data[HID_DATA_IDX+2] >> 2;
+                hid_roi_x = data[HID_DATA_IDX+3];
+                hid_roi_xx = data[HID_DATA_IDX+4]&0x7f;
+                hid_roi_rle = ((data[HID_DATA_IDX+4]&0x80)!=0);
                 //fall through
             case 19: //receive roi overlay
                 {
                     bool first = data[HID_CMD_IDX]==18;
                     if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
                         if((hid_modifier & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            if(!fill_roi_overlay_buffer(first?&data[HID_DATA_IDX+7]:&data[HID_DATA_IDX])) {
+                            if(!fill_roi_overlay_buffer(first?&data[HID_DATA_IDX+5]:&data[HID_DATA_IDX])) {
                                 update_performed();
                                 request_disp_refresh();
                             }

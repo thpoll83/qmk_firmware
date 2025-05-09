@@ -157,6 +157,12 @@ typedef struct _compressed_overlay_sync_t {
     uint8_t compressed[COMPRESSED_MAX];
 } compressed_overlay_sync_t;
 
+typedef struct _roi_overlay_sync_t {
+    uint32_t crc32;
+    uint16_t adj_idx;
+    uint8_t data[ROI_MAX];
+} roi_overlay_sync_t;
+
 bool display_wakeup(keyrecord_t* record);
 void update_displays(enum refresh_mode mode);
 void set_displays(uint8_t contrast, bool idle);
@@ -406,6 +412,44 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
                 hid_bit_index = 0;
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
+        }
+    }
+}
+
+bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint8_t x, const uint8_t y, const uint8_t xx, const uint8_t yy, const uint16_t bitlen);
+void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len == sizeof(roi_overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
+        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
+        const roi_overlay_sync_t* roi_ov = ((const roi_overlay_sync_t *)in_data);
+        if(crc32 == roi_ov->crc32) {
+            bool first = hid_bit_index==0;
+            uint16_t data_len;
+            if(first) {
+                hid_bit_index = 0;
+                hid_bit_index_bridge = 0;
+                hid_keycode = roi_ov->data[0];
+                hid_modifier = roi_ov->data[1]&0x0f;
+                hid_roi_y = (roi_ov->data[2]&0x03) | ((roi_ov->data[1]>>2)&0x3c);
+                hid_roi_yy = roi_ov->data[2] >> 2;
+                hid_roi_x = roi_ov->data[3];
+                hid_roi_xx = roi_ov->data[4]&0x7f;
+                hid_roi_rle = ((roi_ov->data[4]&0x80)!=0);
+                hid_bit_index = hid_roi_y * SCREEN_WIDTH + hid_roi_x;
+                data_len = ROI_START;
+            } else {
+                data_len = ROI_MAX;
+            }
+            if(copy_rectangle_to_overlay(overlays[roi_ov->adj_idx], first?(roi_ov->data+5):roi_ov->data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8)) {
+                //finished roi update
+                hid_bit_index = 0;
+                hid_bit_index_bridge = 0;
+                ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
+                request_disp_refresh();
+            } else {
+                ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+            }
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }
@@ -1761,6 +1805,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_LATIN_EX_DATA,   user_sync_latin_ex_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_DATA,    user_sync_overlay_data_handler);
     transaction_register_rpc(USER_SYNC_COMPRESSED_DATA, user_sync_compressed_overlay_data_handler);
+    transaction_register_rpc(USER_SYNC_ROI_DATA,        user_sync_roi_data_handler);
 
     #ifdef VIA_ENABLE
         transaction_register_rpc(USER_SYNC_VIA_DATA,    user_sync_via_data_handler);
@@ -2127,7 +2172,7 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
     return false;
 }
 
-bool copy_rectangle_to_overlay(uint8_t* dest, uint8_t* data, uint8_t x, uint8_t y, uint8_t xx, uint8_t yy, uint16_t bitlen) {
+bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint8_t x, const uint8_t y, const uint8_t xx, const uint8_t yy, const uint16_t bitlen) {
     uint16_t bit_cnt = 0;
     uint8_t  start_y = hid_bit_index / SCREEN_WIDTH;
     for (uint8_t dest_y = start_y; dest_y < yy; dest_y++) {
@@ -2175,32 +2220,29 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
     }
 
     bool finished = false;
+    bool first = hid_bit_index==0;
     if (is_on_current_side(pos)) {
-        uint16_t data_len = hid_bit_index==0?ROI_START:ROI_MAX;
+        uint16_t data_len = first?ROI_START:ROI_MAX;
 
         //uint8_t x,y;
         if(hid_bit_index==0) {
             hid_bit_index = hid_roi_y * SCREEN_WIDTH + hid_roi_x;
         }
-        finished = copy_rectangle_to_overlay(overlays[idx], data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8);
+        finished = copy_rectangle_to_overlay(overlays[idx], first?(data+5):data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8);
     }
 
     //only send to bridge when needed
     if (is_on_other_side(pos)) {
-        // uint8_t compressed_len = hid_bit_index_bridge==0?COMPRESSED_START:COMPRESSED_MAX;
-        // int16_t maxlen = 360 - hid_bit_index_bridge/8;
-        // hid_bit_index_bridge += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
-        // compressed_overlay_sync_t transfer;
-        // transfer.len = compressed_len;
-        // transfer.adj_idx = idx;
-        // memcpy(&transfer.compressed, compressed, compressed_len);
-        // send_to_bridge(USER_SYNC_COMPRESSED_DATA, (void*)&transfer, sizeof(transfer), 10);
+        hid_bit_index_bridge++;
+        roi_overlay_sync_t transfer;
+        transfer.adj_idx = idx;
+        memcpy(&transfer.data, data, ROI_MAX);
 
-        // if (hid_bit_index_bridge >= 360*8 -1) {
-        //     use_overlay[idx] = true;
-        //     uprintf("--> Sent keycode 0x%x (mod 0x%x) to bridge, total bytes %d.\n",
-        //         keycode, hid_modifier, hid_bit_index_bridge/8);
-        // }
+        if (send_to_bridge(USER_SYNC_ROI_DATA, (void*)&transfer, sizeof(transfer), 10)==SYNC_ACK_SIG) {
+            use_overlay[idx] = true;
+            uprintf("--> Sent ROI for keycode 0x%x (mod 0x%x) to bridge in %d messages.\n",
+                keycode, hid_modifier, hid_bit_index_bridge);
+        }
     }
 
     if (finished) {
@@ -2470,7 +2512,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     bool first = data[HID_CMD_IDX]==18;
                     if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
                         if((hid_modifier & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            if(!fill_roi_overlay_buffer(first?&data[HID_DATA_IDX+5]:&data[HID_DATA_IDX])) {
+                            if(!fill_roi_overlay_buffer(&data[HID_DATA_IDX])) {
                                 update_performed();
                                 request_disp_refresh();
                             }

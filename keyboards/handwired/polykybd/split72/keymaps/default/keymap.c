@@ -1463,7 +1463,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         uprintf("release 0x%04x\n", keycode);
     }
 
-     if(process_unicodemap_poly(keycode, record)) {
+    if(process_unicodemap_poly(keycode, record)) {
         return  false;
     }
 
@@ -1722,13 +1722,15 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
 
 void show_splash_screen(void) {
     clear_all_displays();
-    display_message(1, 1, u"POLY", &FreeSansBold24pt7b);
-    display_message(2, 1, u"KYBD", &FreeSansBold24pt7b);
+    if(is_left_side()) {
+        display_message(1, 1, u"POLY", &FreeSansBold24pt7b);
+        display_message(2, 1, u"KYBD", &FreeSansBold24pt7b);
+    } else {
+        display_message(1, 1, u"SPLIT", &FreeSansBold24pt7b);
+        display_message(3, 1, u" 7 2", &FreeSansBold24pt7b);
+    }
     wait_ms(400);
-    clear_all_displays();
-    display_message(1, 1, u"SPLIT", &FreeSansBold24pt7b);
-    display_message(3, 1, u" 7 2", &FreeSansBold24pt7b);
-    //wait_ms(100);
+    request_disp_refresh();
 }
 
 void set_displays(uint8_t contrast, bool idle) {
@@ -2522,6 +2524,32 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                         memset(data, 0, length);
                         memcpy(data, first ? "P\x12!" : "P\x13!", 3);
                     }
+                }
+                break;
+            case 20: //set unicode input mode
+                switch(data[HID_DATA_IDX]) {
+                    case 0: //Linux = 0
+                        unicode_input_mode_set_user(UNICODE_MODE_LINUX);
+                        memcpy(data, "P\x13.", 3);
+                        break;
+                    case 1: //Mac = 1
+                        unicode_input_mode_set_user(UNICODE_MODE_MACOS);
+                        memcpy(data, "P\x13.", 3);
+                        break;
+                    case 2: //Windows = 2
+                        unicode_input_mode_set_user(UNICODE_MODE_WINDOWS);
+                        memcpy(data, "P\x13.", 3);
+                        break;
+                    case 3: //WinCompose = 3
+                        unicode_input_mode_set_user(UNICODE_MODE_WINCOMPOSE);
+                        memcpy(data, "P\x13.", 3);
+                        break;
+                    case 4: //BSD = 4
+                        unicode_input_mode_set_user(UNICODE_MODE_BSD);
+                        memcpy(data, "P\x13.", 3);
+                        break;
+                    default:
+                        memcpy(data, "P\x13!", 3);
                 }
                 break;
             default:

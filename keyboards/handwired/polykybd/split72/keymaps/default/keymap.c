@@ -161,6 +161,7 @@ typedef struct _roi_overlay_sync_t {
     uint32_t crc32;
     uint16_t adj_idx;
     uint8_t data[ROI_MAX];
+    uint8_t msg_idx;
 } roi_overlay_sync_t;
 
 bool display_wakeup(keyrecord_t* record);
@@ -424,10 +425,10 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         const roi_overlay_sync_t* roi_ov = ((const roi_overlay_sync_t *)in_data);
         if(crc32 == roi_ov->crc32) {
-            bool first = hid_bit_index==0;
+            bool first = roi_ov->msg_idx==0;
             uint16_t data_len;
             if(first) {
-                hid_bit_index = 0;
+                //hid_bit_index = 0;
                 hid_bit_index_bridge = 0;
                 hid_keycode = roi_ov->data[0];
                 hid_modifier = roi_ov->data[1]&0x0f;
@@ -441,10 +442,8 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
             } else {
                 data_len = ROI_MAX;
             }
-            if(copy_rectangle_to_overlay(overlays[roi_ov->adj_idx], first?(roi_ov->data+5):roi_ov->data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8)) {
+            if(copy_rectangle_to_overlay(overlays[roi_ov->adj_idx], first?(&((roi_ov->data)[5])):roi_ov->data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8)) {
                 //finished roi update
-                hid_bit_index = 0;
-                hid_bit_index_bridge = 0;
                 ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
                 request_disp_refresh();
             } else {
@@ -1730,7 +1729,7 @@ void show_splash_screen(void) {
         display_message(3, 1, u" 7 2", &FreeSansBold24pt7b);
     }
     wait_ms(400);
-    request_disp_refresh();
+    update_displays(ALL_AT_ONCE);
 }
 
 void set_displays(uint8_t contrast, bool idle) {
@@ -2179,6 +2178,13 @@ bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint8_t
     uint8_t  start_y = hid_bit_index / SCREEN_WIDTH;
     for (uint8_t dest_y = start_y; dest_y < yy; dest_y++) {
         uint8_t start_x = bit_cnt == 0 ? hid_bit_index % SCREEN_WIDTH : x;
+        if (start_x == xx) {
+            start_x = x;
+            dest_y++;
+            if (dest_y >= yy) {
+                return false;
+            }
+        }
         for (uint8_t dest_x = start_x; dest_x < xx; dest_x++) {
             hid_bit_index       = dest_y * SCREEN_WIDTH + dest_x;
             uint8_t data_byte   = data[bit_cnt / 8];
@@ -2193,12 +2199,12 @@ bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint8_t
 
             bit_cnt++;
             if (bit_cnt >= bitlen) {
-                hid_bit_index++;
+                hid_bit_index++; //for the next call
                 return false;
             }
         }
     }
-    hid_bit_index++;
+    hid_bit_index++; //should match the max
     return true;
 }
 
@@ -2227,23 +2233,28 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
         uint16_t data_len = first?ROI_START:ROI_MAX;
 
         //uint8_t x,y;
-        if(hid_bit_index==0) {
+        if(first) {
             hid_bit_index = hid_roi_y * SCREEN_WIDTH + hid_roi_x;
         }
-        finished = copy_rectangle_to_overlay(overlays[idx], first?(data+5):data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8);
+        finished = copy_rectangle_to_overlay(overlays[idx], first?(&(data[5])):data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8);
     }
+
+    uprintf("Processing keycode 0x%x bits %d, bytes %d.\n",
+        keycode, hid_bit_index, hid_bit_index/8);
 
     //only send to bridge when needed
     if (is_on_other_side(pos)) {
-        hid_bit_index_bridge++;
+
         roi_overlay_sync_t transfer;
         transfer.adj_idx = idx;
+        transfer.msg_idx = hid_bit_index_bridge;
+        hid_bit_index_bridge++; //abusing the bridge index as counter
         memcpy(&transfer.data, data, ROI_MAX);
 
         if (send_to_bridge(USER_SYNC_ROI_DATA, (void*)&transfer, sizeof(transfer), 10)==SYNC_ACK_SIG) {
             use_overlay[idx] = true;
-            uprintf("--> Sent ROI for keycode 0x%x (mod 0x%x) to bridge in %d messages.\n",
-                keycode, hid_modifier, hid_bit_index_bridge);
+            uprintf("--> Finished ROI update for keycode 0x%x (mod 0x%x), sent to bridge: side %s in %d messages.\n",
+                keycode, hid_modifier, pos_to_str(pos), hid_bit_index_bridge);
         }
     }
 

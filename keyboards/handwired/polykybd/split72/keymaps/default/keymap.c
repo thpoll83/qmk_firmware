@@ -2183,7 +2183,7 @@ bool copy_rectangle_to_overlay_xy(uint8_t* dest, const uint8_t* data, const uint
             start_x = x;
             dest_y++;
             if (dest_y >= yy) {
-                return false;
+                return hid_bit_index >= 2880;
             }
         } else if(start_x < x) {
             start_x = x;
@@ -2203,7 +2203,7 @@ bool copy_rectangle_to_overlay_xy(uint8_t* dest, const uint8_t* data, const uint
             bit_cnt++;
             if (bit_cnt >= bitlen) {
                 hid_bit_index++; //for the next call
-                return false;
+                return hid_bit_index >= 2880;
             }
         }
     }
@@ -2220,7 +2220,7 @@ bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint16_
                 return true;
             }
         }
-        return false;
+        return hid_bit_index >= 2880;
     } else {
         return copy_rectangle_to_overlay_xy(dest, data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, bitlen);
     }

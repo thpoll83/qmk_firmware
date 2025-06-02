@@ -150,7 +150,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.5.6"
+#define FW_VERSION "0.5.7"
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

@@ -419,7 +419,7 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
     }
 }
 
-bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint8_t x, const uint8_t y, const uint8_t xx, const uint8_t yy, const uint16_t bitlen);
+bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint16_t bitlen);
 void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(roi_overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -442,9 +442,10 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
             } else {
                 data_len = ROI_MAX;
             }
-            if(copy_rectangle_to_overlay(overlays[roi_ov->adj_idx], first?(&((roi_ov->data)[5])):roi_ov->data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8)) {
+            if(copy_rectangle_to_overlay(overlays[roi_ov->adj_idx], first?(&((roi_ov->data)[5])):roi_ov->data, data_len*8)) {
                 //finished roi update
                 ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
+                use_overlay[roi_ov->adj_idx] = true;
                 request_disp_refresh();
             } else {
                 ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
@@ -2173,7 +2174,7 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
     return false;
 }
 
-bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint8_t x, const uint8_t y, const uint8_t xx, const uint8_t yy, const uint16_t bitlen) {
+bool copy_rectangle_to_overlay_xy(uint8_t* dest, const uint8_t* data, const uint8_t x, const uint8_t y, const uint8_t xx, const uint8_t yy, const uint16_t bitlen) {
     uint16_t bit_cnt = 0;
     uint8_t  start_y = hid_bit_index / SCREEN_WIDTH;
     for (uint8_t dest_y = start_y; dest_y < yy; dest_y++) {
@@ -2184,6 +2185,8 @@ bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint8_t
             if (dest_y >= yy) {
                 return false;
             }
+        } else if(start_x < x) {
+            start_x = x;
         }
         for (uint8_t dest_x = start_x; dest_x < xx; dest_x++) {
             hid_bit_index       = dest_y * SCREEN_WIDTH + dest_x;
@@ -2206,6 +2209,21 @@ bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint8_t
     }
     hid_bit_index++; //should match the max
     return true;
+}
+
+bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint16_t bitlen) {
+    if(hid_roi_rle) {
+        for (uint8_t i = 0; i < bitlen / 8; i++) {
+            uint8_t buffer[16];
+            uint16_t num_bits = rle_decompress(buffer, 16, &data[i], 1, 0);
+            if (copy_rectangle_to_overlay_xy(dest, buffer, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, num_bits)) {
+                return true;
+            }
+        }
+        return false;
+    } else {
+        return copy_rectangle_to_overlay_xy(dest, data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, bitlen);
+    }
 }
 
 bool fill_roi_overlay_buffer(uint8_t* data) {
@@ -2236,7 +2254,7 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
         if(first) {
             hid_bit_index = hid_roi_y * SCREEN_WIDTH + hid_roi_x;
         }
-        finished = copy_rectangle_to_overlay(overlays[idx], first?(&(data[5])):data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, data_len*8);
+        finished = copy_rectangle_to_overlay(overlays[idx], first?(&(data[5])):data, data_len*8);
     }
 
     uprintf("Processing keycode 0x%x bits %d, bytes %d.\n",

@@ -120,8 +120,9 @@ static latin_sync_t g_latin;
 
 static int32_t last_update = 0;
 
-static uint8_t use_overlay[NUM_OVERLAYS*NUM_VARIATIONS];
+static uint8_t use_overlay[NUM_OVERLAYS*NUM_VARIATIONS]; //use as bitset to save 551 byte of ram
 static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
+static int16_t overlaymap [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 
 static uint16_t hid_byte_count = 0;
 
@@ -1800,6 +1801,16 @@ void keyboard_post_init_user(void) {
 
     memset(&g_state, 0, sizeof(g_state));
     memset(&use_overlay, 0, sizeof(use_overlay));
+
+    //standard mapping is 1:1
+    for(int16_t i = 0; i < NUM_OVERLAYS*NUM_VARIATIONS; ++i) {
+        overlaymap[i] = i;
+    }
+    //the additional map entries for the gui key are set as unused
+    for(int16_t i = NUM_OVERLAYS*NUM_VARIATIONS; i < NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP; ++i) {
+        overlaymap[i] = -1;
+    }
+
 
     transaction_register_rpc(USER_SYNC_POLY_DATA,       user_sync_poly_data_handler);
     transaction_register_rpc(USER_SYNC_LAYER_DATA,      user_sync_layer_data_handler);

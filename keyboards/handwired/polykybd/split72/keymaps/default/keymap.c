@@ -120,7 +120,7 @@ static latin_sync_t g_latin;
 
 static int32_t last_update = 0;
 
-static uint8_t use_overlay[NUM_OVERLAYS*NUM_VARIATIONS]; //use as bitset to save 551 byte of ram
+static uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS/8)+1];
 static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
 static int16_t overlaymap [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 
@@ -138,6 +138,18 @@ static uint8_t hid_roi_y = 0;
 static uint8_t hid_roi_xx = 0;
 static uint8_t hid_roi_yy = 0;
 static bool hid_roi_rle = false;
+
+void set_overlay_usage(uint16_t overlay_idx) {
+    use_overlay[overlay_idx/8] |= (1<<(overlay_idx%8));
+}
+
+// void clear_overlay_usage(uint16_t overlay_idx) {
+//     use_overlay[overlay_idx/8] &= ~(1<<(overlay_idx%8));
+// }
+
+bool is_overlay_used(uint16_t overlay_idx) {
+    return (use_overlay[overlay_idx/8] & (1<<(overlay_idx%8))) != 0;
+}
 
 void reset_overlay_buffers(void) {
     memset(&use_overlay, 0, sizeof(use_overlay));
@@ -388,7 +400,7 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
         if(crc32 == ov->crc32) {
             memcpy(overlays[ov->adj_idx] + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
             if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
-                use_overlay[ov->adj_idx] = true;
+                set_overlay_usage(ov->adj_idx);
                 request_disp_refresh();
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
@@ -409,7 +421,7 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
             int16_t maxlen = 360 - hid_bit_index/8;
             hid_bit_index += rle_decompress(overlays[ov->adj_idx]+hid_bit_index/8, PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
             if (hid_bit_index >= 360*8) {
-                use_overlay[ov->adj_idx] = true;
+                set_overlay_usage(ov->adj_idx);
                 request_disp_refresh();
                 hid_bit_index = 0;
             }
@@ -446,7 +458,7 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
             if(copy_rectangle_to_overlay(overlays[roi_ov->adj_idx], first?(&((roi_ov->data)[5])):roi_ov->data, data_len*8)) {
                 //finished roi update
                 ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
-                use_overlay[roi_ov->adj_idx] = true;
+                set_overlay_usage(roi_ov->adj_idx);
                 request_disp_refresh();
             } else {
                 ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
@@ -1305,7 +1317,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
         return false;
     }
     idx = adjust_overlay_idx_to_mod(idx, mods);
-    if(!use_overlay[idx]) {
+    if(!is_overlay_used(idx)) {
         return false;
     }
     if(combine) {
@@ -2122,7 +2134,7 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
 
     hid_byte_count += BYTES_PER_SEGMENT;
     if (segment_0_to_14 == NUM_SEGMENTS_PER_OVERLAY - 1) {
-        use_overlay[idx] = true;
+        set_overlay_usage(idx);
         uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n", keycode, mods, hid_byte_count, idx, pos_to_str(pos));
         hid_byte_count = 0;
     }
@@ -2168,14 +2180,14 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
         send_to_bridge(USER_SYNC_COMPRESSED_DATA, (void*)&transfer, sizeof(transfer), 10);
 
         if (hid_bit_index_bridge >= 360*8 -1) {
-            use_overlay[idx] = true;
+            set_overlay_usage(idx);
             uprintf("--> Sent keycode 0x%x (mod 0x%x) to bridge, total bytes %d.\n",
                 keycode, hid_modifier, hid_bit_index_bridge/8);
         }
     }
 
     if (hid_bit_index >= 360*8 -1) {
-        use_overlay[idx] = true;
+        set_overlay_usage(idx);
         uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
             keycode, hid_modifier, pos_to_str(pos), hid_bit_index/8);
         return true;
@@ -2281,14 +2293,14 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
         memcpy(&transfer.data, data, ROI_MAX);
 
         if (send_to_bridge(USER_SYNC_ROI_DATA, (void*)&transfer, sizeof(transfer), 10)==SYNC_ACK_SIG) {
-            use_overlay[idx] = true;
+            set_overlay_usage(idx);
             uprintf("--> Finished ROI update for keycode 0x%x (mod 0x%x), sent to bridge: side %s in %d messages.\n",
                 keycode, hid_modifier, pos_to_str(pos), hid_bit_index_bridge);
         }
     }
 
     if (finished) {
-        use_overlay[idx] = true;
+        set_overlay_usage(idx);
         uprintf("--> Finished ROI update for keycode 0x%x (mod 0x%x): side %s.\n",
             keycode, hid_modifier, pos_to_str(pos));
         return true;

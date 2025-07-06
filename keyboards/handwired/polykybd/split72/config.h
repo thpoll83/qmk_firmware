@@ -172,7 +172,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NUM_SEGMENTS_PER_OVERLAY 15
 #define BYTES_PER_SEGMENT 24
 
-#define COMPRESSED_MAX (HID_REPORT_SIZE-2) // minus via cmd byte and minus polybybd cmd byte -> -2
+#define HID_DATA_MAX (HID_REPORT_SIZE-2) // minus via cmd byte and minus polybybd cmd byte -> -2
+#define COMPRESSED_MAX HID_DATA_MAX
 #define COMPRESSED_START (HID_REPORT_SIZE-4) // additional minus keycode and minus modifier -> -4
 
 #define ROI_MAX (HID_REPORT_SIZE-2) // minus via cmd byte and minus polybybd cmd byte -> -2
@@ -180,6 +181,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define NUM_OVERLAYS 90
 #define NUM_VARIATIONS 7 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5), ALT_SHIFT(6), Not supported: CTRL_ALT_SHIFT(7) GUI_KEY(8)
-#define NUM_VARIATIONS_WITH_MAP 8
+#define NUM_VARIATIONS_WITH_MAP 9
 
 

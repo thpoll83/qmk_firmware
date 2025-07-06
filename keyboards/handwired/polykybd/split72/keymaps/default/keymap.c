@@ -120,9 +120,10 @@ static latin_sync_t g_latin;
 
 static int32_t last_update = 0;
 
-static uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS/8)+1];
+#define UNSET_OVERLAY_MAPPING 0xffff
+static uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
-static int16_t overlaymap [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
+static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 
 static uint16_t hid_byte_count = 0;
 
@@ -142,10 +143,6 @@ static bool hid_roi_rle = false;
 void set_overlay_usage(uint16_t overlay_idx) {
     use_overlay[overlay_idx/8] |= (1<<(overlay_idx%8));
 }
-
-// void clear_overlay_usage(uint16_t overlay_idx) {
-//     use_overlay[overlay_idx/8] &= ~(1<<(overlay_idx%8));
-// }
 
 bool is_overlay_used(uint16_t overlay_idx) {
     return (use_overlay[overlay_idx/8] & (1<<(overlay_idx%8))) != 0;
@@ -1296,16 +1293,11 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
 }
 
 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5),
-// ALT_SHIFT(6), {Not supported: CTRL_ALT_SHIFT(7) and GUI_KEY(8)}
+// ALT_SHIFT(6), CTRL_ALT_SHIFT(7) and GUI_KEY(8)
 uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
     //no differencce between r&l mods:
     mods |= mods>>4;
-    mods &= 0x7;
-    // if(mods>7) {  //no CTRL_ALT_SHIFT and no combo with GUI, so 7 == GUI
-    //     return idx + NUM_OVERLAYS*7;
-    // }
-
-    return mods == 7 ? idx : idx + NUM_OVERLAYS * mods;
+    return idx + NUM_OVERLAYS * mods;
 }
 
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
@@ -1317,12 +1309,15 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
         return false;
     }
     idx = adjust_overlay_idx_to_mod(idx, mods);
+    idx = overlay_map[idx];
+
     if(!is_overlay_used(idx)) {
         return false;
     }
     if(combine) {
         combine_with_mask();
     }
+
     kdisp_clear_bitmap_courtyard(28, 0, overlays[idx], 72, 40);
     kdisp_draw_bitmap(28, 0, overlays[idx], 72, 40); //don't understnad why we start at offset 28... need to think about it
     return true;
@@ -1812,15 +1807,16 @@ void keyboard_post_init_user(void) {
     //srand(halGetCounterValue());
 
     memset(&g_state, 0, sizeof(g_state));
-    memset(&use_overlay, 0, sizeof(use_overlay));
+    reset_overlay_buffers();
 
+    //maybe overlay_map needsa reset method as well?
     //standard mapping is 1:1
     for(int16_t i = 0; i < NUM_OVERLAYS*NUM_VARIATIONS; ++i) {
-        overlaymap[i] = i;
+        overlay_map[i] = i;
     }
-    //the additional map entries for the gui key are set as unused
+    //the additional map entries for Ctrl+Alt+Shift and GUI Modifiers will point to the no_modifier version (0-NUM_OVERLAYS)
     for(int16_t i = NUM_OVERLAYS*NUM_VARIATIONS; i < NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP; ++i) {
-        overlaymap[i] = -1;
+        overlay_map[i] = i%NUM_OVERLAYS;
     }
 
 
@@ -2114,6 +2110,7 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
         return;
     }
     idx = adjust_overlay_idx_to_mod(idx, mods);
+    idx = overlay_map[idx];
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
     if(pos==POS_NOT_FOUND) {
@@ -2153,6 +2150,7 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
         return false;
     }
     idx = adjust_overlay_idx_to_mod(idx, hid_modifier);
+    idx = overlay_map[idx];
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
     if(pos==POS_NOT_FOUND) {
@@ -2262,6 +2260,7 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
         return false;
     }
     idx = adjust_overlay_idx_to_mod(idx, hid_modifier);
+    idx = overlay_map[idx];
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
     if(pos==POS_NOT_FOUND) {
@@ -2309,6 +2308,29 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
 
     return false;
 }
+
+void set_10bit_overlay_mapping(uint8_t* mapping) {
+    const uint8_t max = 30*8/10;
+    const uint16_t UNSET_OVERLAY_MAPPING = 0xffff;
+    uint16_t from = UNSET_OVERLAY_MAPPING;
+    for(uint8_t idx=0;idx<max;++idx) {
+        uint8_t start_bit = idx*10;
+        uint8_t start_byte = start_bit/8;
+        uint8_t start_bit_in_byte = start_bit%8;
+        uint8_t num_bits_in_byte2 = 10-(8-start_bit_in_byte);
+        uint16_t to =   ((uint16_t)(mapping[start_byte]>>start_bit_in_byte)) |
+                        ((uint16_t)(0xff>>(8-num_bits_in_byte2))&mapping[start_byte+1])<<(8-start_bit_in_byte);
+        if(from==UNSET_OVERLAY_MAPPING) {
+            from = to;
+        } else {
+            if(from<NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP && to<NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP) {
+                overlay_map[from] = to;
+            }
+            from = UNSET_OVERLAY_MAPPING;
+        }
+    }
+}
+
 
 void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 #if defined(LED_MATRIX_ENABLE)
@@ -2427,12 +2449,10 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     uint8_t segment = data[HID_DATA_IDX+2];
                     if(keycode>=KC_A && keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
                         uint8_t mods = data[HID_DATA_IDX+1];
-                        if((mods & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            fill_overlay_buffer(keycode, mods, segment, &data[HID_DATA_IDX+3]);
-                            if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
-                                update_performed();
-                                request_disp_refresh();
-                            }
+                        fill_overlay_buffer(keycode, mods, segment, &data[HID_DATA_IDX+3]);
+                        if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
+                            update_performed();
+                            request_disp_refresh();
                         }
                         memcpy(data, "P\x0a.", 3);
                     } else {
@@ -2537,11 +2557,9 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 {
                     bool first = data[HID_CMD_IDX]==16;
                     if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
-                        if((hid_modifier & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            if(!decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX])) {
-                                update_performed();
-                                request_disp_refresh();
-                            }
+                        if(!decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX])) {
+                            update_performed();
+                            request_disp_refresh();
                         }
                         memcpy(data, first ? "P\x10!" : "P\x11!", 3);
                     } else {
@@ -2565,11 +2583,9 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 {
                     bool first = data[HID_CMD_IDX]==18;
                     if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
-                        if((hid_modifier & MOD_MASK_GUI)==0) { //for now we filter out the gui key
-                            if(!fill_roi_overlay_buffer(&data[HID_DATA_IDX])) {
-                                update_performed();
-                                request_disp_refresh();
-                            }
+                        if(!fill_roi_overlay_buffer(&data[HID_DATA_IDX])) {
+                            update_performed();
+                            request_disp_refresh();
                         }
                         memcpy(data, first ? "P\x12!" : "P\x13!", 3);
                     } else {
@@ -2604,9 +2620,17 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                         memcpy(data, "P\x13!", 3);
                 }
                 break;
+            case 21:
+                {
+                    set_10bit_overlay_mapping(&data[HID_DATA_IDX+1]);
+                    memcpy(data, "P\x14.", 3);
+                    uprintf("Overlay mapping data received.\n");
+                }
+                break;
             default:
                 printf("Unknown command: %u.\n", data[HID_CMD_IDX]);
                 break;
+
         }
         #ifndef VIA_ENABLE
             raw_hid_send(data, length);

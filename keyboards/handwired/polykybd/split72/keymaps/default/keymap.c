@@ -120,7 +120,6 @@ static latin_sync_t g_latin;
 
 static int32_t last_update = 0;
 
-#define UNSET_OVERLAY_MAPPING 0xffff
 static uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
 static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
@@ -2310,20 +2309,18 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
 }
 
 void set_10bit_overlay_mapping(uint8_t* mapping) {
-    const uint8_t max = 30*8/10;
-    const uint16_t UNSET_OVERLAY_MAPPING = 0xffff;
     uint16_t from = UNSET_OVERLAY_MAPPING;
-    for(uint8_t idx=0;idx<max;++idx) {
-        uint8_t start_bit = idx*10;
+    for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
+        uint8_t start_bit = idx*OVERLAY_MAP_IDX_BITS;
         uint8_t start_byte = start_bit/8;
         uint8_t start_bit_in_byte = start_bit%8;
-        uint8_t num_bits_in_byte2 = 10-(8-start_bit_in_byte);
+        uint8_t num_bits_in_byte2 = OVERLAY_MAP_IDX_BITS-(8-start_bit_in_byte);
         uint16_t to =   ((uint16_t)(mapping[start_byte]>>start_bit_in_byte)) |
                         ((uint16_t)(0xff>>(8-num_bits_in_byte2))&mapping[start_byte+1])<<(8-start_bit_in_byte);
         if(from==UNSET_OVERLAY_MAPPING) {
             from = to;
         } else {
-            if(from<NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP && to<NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP) {
+            if(from<OVERLAY_MAP_IDX_CNT && to<OVERLAY_MAP_IDX_CNT) {
                 overlay_map[from] = to;
             }
             from = UNSET_OVERLAY_MAPPING;
@@ -2622,7 +2619,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 21:
                 {
-                    set_10bit_overlay_mapping(&data[HID_DATA_IDX+1]);
+                    set_10bit_overlay_mapping(&data[HID_DATA_IDX]);
                     memcpy(data, "P\x14.", 3);
                     uprintf("Overlay mapping data received.\n");
                 }

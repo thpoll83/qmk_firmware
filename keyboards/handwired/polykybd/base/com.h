@@ -19,6 +19,8 @@ enum overlay_flag {
     CLEAR_RIGHT_TOP     = 1 << 3,
     CLEAR_RIGHT_BOTTOM  = 1 << 4,
     RESET_BUFFERS       = 1 << 5,
+    USAGE_RESET         = 1 << 6,
+    MAPPING_RESET       = 1 << 7
 };
 
 bool test_flag(uint8_t flags, uint8_t f) ;

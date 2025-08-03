@@ -148,8 +148,22 @@ bool is_overlay_used(uint16_t overlay_idx) {
 }
 
 void reset_overlay_buffers(void) {
-    memset(&use_overlay, 0, sizeof(use_overlay));
     memset(&overlays, 0, sizeof(overlays));
+}
+
+void reset_overlay_usage(void) {
+    memset(&use_overlay, 0, sizeof(use_overlay));
+}
+
+void reset_overlay_mapping(void) {
+    for(int16_t i = 0; i < NUM_OVERLAYS*NUM_VARIATIONS; ++i) {
+        overlay_map[i] = i;
+    }
+    //the additional map entries for Ctrl+Alt+Shift and GUI Modifiers will point to the no_modifier version (0-NUM_OVERLAYS)
+    for(int16_t i = NUM_OVERLAYS*NUM_VARIATIONS; i < NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP; ++i) {
+        overlay_map[i] = i%NUM_OVERLAYS;
+    }
+
 }
 
 typedef struct _overlay_sync_t {
@@ -479,8 +493,8 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
   ((byte) & 0x01 ? "StatD|" : " --- |")
 
   #define BYTE_TO_OVERLAY_FLAGS(byte)  \
-  ((byte) & 0x80 ? "  1  |" : " --- |"), \
-  ((byte) & 0x40 ? "  1  |" : " --- |"), \
+  ((byte) & 0x80 ? "MpRst|" : " --- |"), \
+  ((byte) & 0x40 ? "UsRst|" : " --- |"), \
   ((byte) & 0x20 ? "Reset|" : " --- |"), \
   ((byte) & 0x10 ? "ClrRB|" : " --- |"), \
   ((byte) & 0x08 ? "ClrRT|" : " --- |"), \
@@ -546,6 +560,8 @@ void sync_and_refresh_displays(void) {
         const bool status_disp_on       = test_flag(l_state.flags, STATUS_DISP_ON);
         const bool overlays_changed     = has_flag_changed(l_state.overlay_flags, g_state.overlay_flags, DISPLAY_OVERLAYS);
         const bool reset_overlays       = test_flag(l_state.overlay_flags, RESET_BUFFERS);
+        const bool usage_reset          = test_flag(l_state.overlay_flags, USAGE_RESET);
+        const bool mapping_reset        = test_flag(l_state.overlay_flags, MAPPING_RESET);
         const bool debug_changed        = has_flag_changed(l_state.flags, g_state.flags, DBG_ON);
 
         if(idle_changed) {
@@ -584,8 +600,16 @@ void sync_and_refresh_displays(void) {
             reset_overlay_buffers();
             l_state.overlay_flags = flag_off(l_state.overlay_flags, RESET_BUFFERS);
         }
+        if(usage_reset) {
+            reset_overlay_usage();
+            l_state.overlay_flags = flag_off(l_state.overlay_flags, USAGE_RESET);
+        }
+        if(mapping_reset) {
+            reset_overlay_mapping();
+            l_state.overlay_flags = flag_off(l_state.overlay_flags, MAPPING_RESET);
+        }
 
-        if( debug_changed || overlays_changed || reset_overlays || lang_changed || l_state.unicode_mode!=g_state.unicode_mode) {
+        if( debug_changed || overlays_changed || reset_overlays || usage_reset || mapping_reset || lang_changed || l_state.unicode_mode!=g_state.unicode_mode) {
             request_disp_refresh();
             update_performed();
         }
@@ -1807,17 +1831,9 @@ void keyboard_post_init_user(void) {
 
     memset(&g_state, 0, sizeof(g_state));
     reset_overlay_buffers();
-
-    //maybe overlay_map needsa reset method as well?
+    reset_overlay_usage();
     //standard mapping is 1:1
-    for(int16_t i = 0; i < NUM_OVERLAYS*NUM_VARIATIONS; ++i) {
-        overlay_map[i] = i;
-    }
-    //the additional map entries for Ctrl+Alt+Shift and GUI Modifiers will point to the no_modifier version (0-NUM_OVERLAYS)
-    for(int16_t i = NUM_OVERLAYS*NUM_VARIATIONS; i < NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP; ++i) {
-        overlay_map[i] = i%NUM_OVERLAYS;
-    }
-
+    reset_overlay_mapping();
 
     transaction_register_rpc(USER_SYNC_POLY_DATA,       user_sync_poly_data_handler);
     transaction_register_rpc(USER_SYNC_LAYER_DATA,      user_sync_layer_data_handler);
@@ -2322,6 +2338,7 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
         } else {
             if(from<OVERLAY_MAP_IDX_CNT && to<OVERLAY_MAP_IDX_CNT) {
                 overlay_map[from] = to;
+                uprintf("Setting overlay mapping from %u to %u\n", from, to);
             }
             from = UNSET_OVERLAY_MAPPING;
         }

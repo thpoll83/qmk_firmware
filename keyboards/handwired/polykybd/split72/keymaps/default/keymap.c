@@ -1320,6 +1320,7 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
 uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
     //no differencce between r&l mods:
     mods |= mods>>4;
+    mods &= 0x0f;
     return idx + NUM_OVERLAYS * mods;
 }
 
@@ -2444,6 +2445,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                         }
                     }
 
+                    memset(data, 0, length);
                     if(new_lang<NUM_LANG) {
                         l_state.lang = new_lang;
                         uprintf("Setting lang to %u.\n", new_lang);
@@ -2452,7 +2454,6 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                         memcpy(data, "P\x09.", 3);
                     } else {
                         uprintf("Invalid language index %u.\n", new_lang);
-                        memset(data, 0, length);
                         memcpy(data, "P\x09!", 3);
                     }
                 }
@@ -2468,6 +2469,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                             update_performed();
                             request_disp_refresh();
                         }
+                        memset(data, 0, length);
                         memcpy(data, "P\x0a.", 3);
                     } else {
                         memset(data, 0, length);
@@ -2482,6 +2484,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     if(vis_changed) {
                         housekeeping_task_user();
                     }
+                    memset(data, 0, length);
                     memcpy(data, "P\x0b.", 3);
                     uprintf("Overlay flags 0x%x set.\n", data[HID_DATA_IDX]);
                 }
@@ -2494,6 +2497,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     if(vis_changed) {
                         housekeeping_task_user();
                     }
+                    memset(data, 0, length);
                     memcpy(data, "P\x0c.", 3);
                     uprintf("Overlay flags 0x%x cleared.\n", data[HID_DATA_IDX]);
                 }
@@ -2502,11 +2506,13 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 if ( data[HID_DATA_IDX] <= FULL_BRIGHT) {
                     l_state.contrast = data[HID_DATA_IDX];
                     save_user_eeconf();
+                    memset(data, 0, length);
                     memcpy(data, "P\x0d.", 3);
-                    uprintf("Set brightness to: %u.\n", data[HID_DATA_IDX]);
+                    uprintf("Set brightness to: %u.\n", l_state.contrast);
                 } else {
-                    memcpy(data, "P\x0d!", 3);
                     uprintf("Refused to set brightness to: %u.\n", data[HID_DATA_IDX]);
+                    memset(data, 0, length);
+                    memcpy(data, "P\x0d!", 3);
                 }
                 break;
             case 14: //key press
@@ -2534,7 +2540,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     #endif
                     action_exec(MAKE_KEYEVENT(r, c, pressed));
                     switch_events_poly(r,c, pressed);
-
+                    memset(data, 0, length);
                     memcpy(data, "P\x0e.", 3);
                 }
                 break;
@@ -2557,6 +2563,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                         uprint("Start idle.\n");
                     }
                 }
+                memset(data, 0, length);
                 memcpy(data, "P\x0f.", 3);
                 break;
             case 16: //receive RLE compressed overlay
@@ -2575,6 +2582,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                             update_performed();
                             request_disp_refresh();
                         }
+                        memset(data, 0, length);
                         memcpy(data, first ? "P\x10!" : "P\x11!", 3);
                     } else {
                         memset(data, 0, length);
@@ -2601,6 +2609,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                             update_performed();
                             request_disp_refresh();
                         }
+                        memset(data, 0, length);
                         memcpy(data, first ? "P\x12!" : "P\x13!", 3);
                     } else {
                         memset(data, 0, length);
@@ -2612,31 +2621,39 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 switch(data[HID_DATA_IDX]) {
                     case 0: //Linux = 0
                         unicode_input_mode_set_user(UNICODE_MODE_LINUX);
+                        memset(data, 0, length);
                         memcpy(data, "P\x13.", 3);
                         break;
                     case 1: //Mac = 1
                         unicode_input_mode_set_user(UNICODE_MODE_MACOS);
+                        memset(data, 0, length);
                         memcpy(data, "P\x13.", 3);
                         break;
                     case 2: //Windows = 2
                         unicode_input_mode_set_user(UNICODE_MODE_WINDOWS);
+                        memset(data, 0, length);
                         memcpy(data, "P\x13.", 3);
                         break;
                     case 3: //WinCompose = 3
                         unicode_input_mode_set_user(UNICODE_MODE_WINCOMPOSE);
+                        memset(data, 0, length);
                         memcpy(data, "P\x13.", 3);
                         break;
                     case 4: //BSD = 4
                         unicode_input_mode_set_user(UNICODE_MODE_BSD);
+                        memset(data, 0, length);
                         memcpy(data, "P\x13.", 3);
                         break;
                     default:
+                        memset(data, 0, length);
                         memcpy(data, "P\x13!", 3);
+                        break;
                 }
                 break;
             case 21:
                 {
                     set_10bit_overlay_mapping(&data[HID_DATA_IDX]);
+                    memset(data, 0, length);
                     memcpy(data, "P\x14.", 3);
                     uprintf("Overlay mapping data received.\n");
                 }

@@ -1318,7 +1318,12 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5),
 // ALT_SHIFT(6), CTRL_ALT_SHIFT(7) and GUI_KEY(8)
 uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
-    //no differencce between r&l mods:
+    // GUI_KEY key cannot be combined with other modifiers in case of overlays
+    // for the moment, so GUI_KEY takes priority over all modifiers
+    if((mods&0x88) != 0) {
+        return idx + NUM_OVERLAYS * 8;
+    }
+    //no difference between r&l mods:
     mods |= mods>>4;
     mods &= 0x0f;
     return idx + NUM_OVERLAYS * mods;
@@ -2257,7 +2262,8 @@ bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint16_
                 return true;
             }
         }
-        return hid_bit_index >= 2880;
+
+        return hid_bit_index >= ((hid_roi_yy-1) * SCREEN_WIDTH + hid_roi_xx);
     } else {
         return copy_rectangle_to_overlay_xy(dest, data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, bitlen);
     }

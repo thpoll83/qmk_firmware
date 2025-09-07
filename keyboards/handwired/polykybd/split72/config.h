@@ -180,8 +180,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ROI_START (HID_REPORT_SIZE-7) // additional minus keycode and 4 bytes compressed roi header -> -7
 
 #define NUM_OVERLAYS 90
-#define NUM_VARIATIONS 7 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5), ALT_SHIFT(6), Not supported: CTRL_ALT_SHIFT(7) GUI_KEY(8)
-#define NUM_VARIATIONS_WITH_MAP 9 //all modifiers supported
+#define NUM_VARIATIONS 7 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5), ALT_SHIFT(6), Not supported without overlay mapping CTRL_ALT_SHIFT(7) GUI_KEY(8)
+#define NUM_VARIATIONS_WITH_MAP 9 //all modifiers supported (current maximum would be 14, maybe later support GUI+CTL/ALT/SHIFT -> 12)
 #define OVERLAY_MAP_IDX_CNT (NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP)
 #define OVERLAY_MAP_IDX_BITS 10
 #define OVERLAY_MAP_IDX_CNT_PER_REPORT (HID_DATA_MAX*8/OVERLAY_MAP_IDX_BITS)

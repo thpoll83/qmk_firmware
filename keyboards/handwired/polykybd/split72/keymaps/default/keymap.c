@@ -1010,6 +1010,20 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         )
 };
 
+layer_state_t get_function_layer(layer_state_t def_layer) {
+    switch (def_layer) {
+        case _L0:
+        case _L3:
+            return _FL0;
+        case _L1:
+        case _L2:
+        case _L4:
+            return _FL1;
+        default:
+            return 0;
+
+    }
+}
 
 #define LX(x,y) ((x)/2),y
 led_config_t g_led_config = { {// Key Matrix to LED Index
@@ -2135,7 +2149,13 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
     if(pos==POS_NOT_FOUND) {
-        pos = get_split_matrix_side(keycode, _FL0); //actually we shoyuld check _FL1 depednig on the base layer, but for now it si good enough
+        layer_state_t layer = get_function_layer(l_layer.def_layer);
+        if(layer!=0) {
+            pos = get_split_matrix_side(keycode, layer);
+        } else {
+            pos = POS_ON_BOTH;
+            uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
+        }
     }
     //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
     if (is_on_current_side(pos)) {
@@ -2175,7 +2195,13 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
     if(pos==POS_NOT_FOUND) {
-        pos = get_split_matrix_side(keycode, _FL0); //actually we shoyuld check _FL1 depednig on the base layer, but for now it si good enough
+        layer_state_t layer = get_function_layer(l_layer.def_layer);
+        if(layer!=0) {
+            pos = get_split_matrix_side(keycode, layer);
+        } else {
+            pos = POS_ON_BOTH;
+            uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
+        }
     }
     //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
     if (is_on_current_side(pos)) {
@@ -2286,7 +2312,13 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
     if(pos==POS_NOT_FOUND) {
-        pos = get_split_matrix_side(keycode, _FL0); //actually we shoyuld check _FL1 depednig on the base layer, but for now it si good enough
+        layer_state_t layer = get_function_layer(l_layer.def_layer);
+        if(layer!=0) {
+            pos = get_split_matrix_side(keycode, layer);
+        } else {
+            pos = POS_ON_BOTH;
+            uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
+        }
     }
 
     bool finished = false;

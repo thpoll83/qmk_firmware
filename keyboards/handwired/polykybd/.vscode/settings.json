@@ -3,4 +3,8 @@
         "gfx_used_fonts.h": "c",
         "shift_reg.h": "c"
     }
+    "workbench.colorCustomizations": {
+        "editorGhostText.foreground": "#a5a5a5c3",
+        "editorGhostText.background": "#e1cc4986"
+    }
 }

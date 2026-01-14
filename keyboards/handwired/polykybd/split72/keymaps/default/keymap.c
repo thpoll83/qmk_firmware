@@ -122,6 +122,14 @@ static latin_sync_t g_latin;
 
 static volatile int32_t last_update = 0;
 
+typedef struct roi_update_data_t{
+    uint8_t x;
+    uint8_t y;
+    uint8_t xx;
+    uint8_t yy;
+    bool compressed;
+} roi_update_data_t;
+
 #define USE_CORE1_FOR_DECOMPRESSION
 
 #ifdef USE_CORE1_FOR_DECOMPRESSION
@@ -130,8 +138,9 @@ static volatile uint32_t core1_decomp_count = 0;
 static uint32_t core0_decomp_count = 0;
 
 static volatile uint8_t core1_buffer[HID_DATA_MAX];
-static volatile int16_t core1_maxlen;
+static volatile int16_t core1_max_bitlen;
 static volatile uint16_t core1_idx;
+static volatile roi_update_data_t core1_roi;
 #endif
 
 static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
@@ -147,11 +156,7 @@ static uint8_t hid_keycode = 0;
 static uint8_t hid_modifier = 0;
 
 //helpers for overlay data where only a region of interset is sent (instead of the full overlay)
-static uint8_t hid_roi_x = 0;
-static uint8_t hid_roi_y = 0;
-static uint8_t hid_roi_xx = 0;
-static uint8_t hid_roi_yy = 0;
-static bool hid_roi_rle = false;
+static roi_update_data_t hid_roi;
 
 void set_overlay_usage(uint16_t overlay_idx) {
     use_overlay[overlay_idx/8] |= (1<<(overlay_idx%8));
@@ -393,9 +398,13 @@ void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 }
 #endif
 
+uint16_t copy_rectangle_to_overlay(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint8_t data_len);
+
 #ifdef USE_CORE1_FOR_DECOMPRESSION
 typedef enum {
-    CORE_CMD_START      = 0xcafe0001
+    CORE1_CMD_DECOMPRESS     = 0xcafe0001,
+    CORE1_CMD_ROI_UPDATE     = 0xcafe0002,
+    CORE1_CMD_RESET_BIT_IDX  = 0xcafe0003,
 } fifo_command_t;
 
 //main function for core1, do not use any prtintf or similar, stack is limited
@@ -403,22 +412,47 @@ void core1_entry(void) {
     multicore_fifo_drain();
     while (true) {
         uint32_t cmd = multicore_fifo_pop_blocking();  // blocks if empty
-        if (cmd == CORE_CMD_START) {
-            uint16_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
-            core1_bit_index += rle_decompress(overlays[core1_idx]+core1_bit_index/8, PK_MAX(0,core1_maxlen), core1_buffer, data_len, core1_bit_index);
+        switch (cmd) {
+            case CORE1_CMD_DECOMPRESS:{
+                    uint16_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
+                    core1_bit_index += rle_decompress(overlays[core1_idx]+core1_bit_index/8, PK_MAX(0,core1_max_bitlen), core1_buffer, data_len, core1_bit_index);
 
-            if (core1_bit_index >= 360*8 -1) {
-                set_overlay_usage(core1_idx);
-                update_performed();
-                request_disp_refresh();
+                    if (core1_bit_index >= 360*8 -1) {
+                        set_overlay_usage(core1_idx);
+                        update_performed();
+                        request_disp_refresh();
+                        core1_bit_index = 0;
+                    }
+                    core1_decomp_count++;
+                    if(core1_decomp_count==0) { //handle overflow
+                        core1_decomp_count=1;
+                    }
+                    dmb();
+                } break;
+            case CORE1_CMD_ROI_UPDATE:{
+                    uint8_t data_len = ROI_MAX;
+                    if(core1_bit_index==0) {
+                        core1_bit_index = core1_roi.y * SCREEN_WIDTH + core1_roi.x;
+                        data_len = ROI_START;
+                    }
+                    core1_bit_index = copy_rectangle_to_overlay(core1_bit_index, overlays[core1_idx], core1_buffer, &core1_roi, data_len);
+                    if(core1_bit_index >= 2880) {
+                        set_overlay_usage(core1_idx);
+                        update_performed();
+                        request_disp_refresh();
+                        core1_bit_index = 0;
+                    }
+                    core1_decomp_count++;
+                    if(core1_decomp_count==0) { //handle overflow
+                        core1_decomp_count=1;
+                    }
+                    dmb();
+                } break;
+            case CORE1_CMD_RESET_BIT_IDX:
                 core1_bit_index = 0;
-            }
-            //multicore_fifo_push_blocking(CORE_CMD_FINISHED);
-            core1_decomp_count++;
-            if(core1_decomp_count==0) { //handle overflow
-                core1_decomp_count=1;
-            }
-            dmb();
+                dmb();
+                break;
+            default: break;
         }
     }
 }
@@ -427,28 +461,59 @@ void core1_entry(void) {
 // All fragments have to be processed in order and until the end, no parallel processing possible
 void core1_decompress_fragment(uint8_t keycode, uint16_t overlay_idx, const uint8_t* compressed) {
     //wait in case decompression is still ongoing
+    dmb();
+    while(core0_decomp_count!=core1_decomp_count) {
+        //no wait function needed as the uprintf inside the loop will already take some time
+        uprintf("CORE1: Waiting for decompression...\n");
         dmb();
-        while(core0_decomp_count!=core1_decomp_count) {
-            //no wait function needed as the uprintf inside the loop will already take some time
-            uprintf("CORE1: Waiting...\n");
-            dmb();
-        }
-        //copy data to dedicated buffers
-        uint16_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
-        core1_maxlen = 360 - core1_bit_index/8;
-        core1_idx = overlay_idx;
-        for(uint8_t i=0;i<data_len;++i) {
-            core1_buffer[i] = compressed[i]; //memcopy not avialable for volatile memory
-        }
+    }
+    //copy data to dedicated buffers
+    uint8_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
+    core1_max_bitlen = 360 - core1_bit_index/8;
+    core1_idx = overlay_idx;
+    for(uint8_t i=0;i<data_len;++i) {
+        core1_buffer[i] = compressed[i]; //memcopy not avialable for volatile memory
+    }
 
-        uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d).\n", keycode, hid_modifier, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index);
-        core0_decomp_count++;
-        if(core0_decomp_count==0) { //handle overflow
-            core0_decomp_count=1;
-        }
+    uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d).\n", keycode, hid_modifier, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index);
+    core0_decomp_count++;
+    if(core0_decomp_count==0) { //handle overflow
+        core0_decomp_count=1;
+    }
+    dmb();
+    //allow core1 to start decompressing
+    multicore_fifo_push_blocking(CORE1_CMD_DECOMPRESS);
+}
+
+void core1_roi_start(void) {
+    multicore_fifo_push_blocking(CORE1_CMD_RESET_BIT_IDX);
+}
+
+void core1_update_roi(uint8_t keycode, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi) {
+    //wait in case decompression is still ongoing
+    dmb();
+    while(core0_decomp_count!=core1_decomp_count) {
+        //no wait function needed as the uprintf inside the loop will already take some time
+        uprintf("CORE1: Waiting for roi update...\n");
         dmb();
-        //allow core1 to start decompressing
-        multicore_fifo_push_blocking(CORE_CMD_START);
+    }
+    //copy data to dedicated buffers
+    //core1_max_bitlen = 360 - core1_bit_index/8;
+    core1_roi = *roi;
+    core1_idx = overlay_idx;
+    const uint8_t data_len = core1_bit_index==0?ROI_START:ROI_MAX;
+    for(uint8_t i=0;i<data_len;++i) {
+        core1_buffer[i] =  data[i]; //memcopy not available for volatile memory
+    }
+
+    uprintf("CORE1: Key 0x%x (mod 0x%x) roi update: (added %d bytes, bit index: %d).\n", keycode, hid_modifier, data_len, core1_bit_index);
+    core0_decomp_count++;
+    if(core0_decomp_count==0) { //handle overflow
+        core0_decomp_count=1;
+    }
+    dmb();
+    //allow core1 to start decompressing
+    multicore_fifo_push_blocking(CORE1_CMD_ROI_UPDATE);
 }
 #endif
 
@@ -524,7 +589,6 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
     }
 }
 
-bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint16_t bitlen);
 void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(roi_overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -537,17 +601,18 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
                 hid_bit_index_bridge = 0;
                 hid_keycode = roi_ov->data[0];
                 hid_modifier = roi_ov->data[1]&0x0f;
-                hid_roi_y = (roi_ov->data[2]&0x03) | ((roi_ov->data[1]>>2)&0x3c);
-                hid_roi_yy = roi_ov->data[2] >> 2;
-                hid_roi_x = roi_ov->data[3];
-                hid_roi_xx = roi_ov->data[4]&0x7f;
-                hid_roi_rle = ((roi_ov->data[4]&0x80)!=0);
-                hid_bit_index = hid_roi_y * SCREEN_WIDTH + hid_roi_x;
+                hid_roi.y = (roi_ov->data[2]&0x03) | ((roi_ov->data[1]>>2)&0x3c);
+                hid_roi.yy = roi_ov->data[2] >> 2;
+                hid_roi.x = roi_ov->data[3];
+                hid_roi.xx = roi_ov->data[4]&0x7f;
+                hid_roi.compressed = ((roi_ov->data[4]&0x80)!=0);
+                hid_bit_index = hid_roi.y * SCREEN_WIDTH + hid_roi.x;
                 data_len = ROI_START;
             } else {
                 data_len = ROI_MAX;
             }
-            if(copy_rectangle_to_overlay(overlays[roi_ov->adj_idx], first?(&((roi_ov->data)[5])):roi_ov->data, data_len*8)) {
+            hid_bit_index = copy_rectangle_to_overlay(hid_bit_index, overlays[roi_ov->adj_idx], first?(&((roi_ov->data)[5])):roi_ov->data, &hid_roi, data_len);
+            if( hid_bit_index >= 2880) {
                 //finished roi update
                 ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
                 set_overlay_usage(roi_ov->adj_idx);
@@ -2333,70 +2398,69 @@ void decompress_overlay_buffer(uint8_t* compressed) {
     }
 }
 
-bool copy_rectangle_to_overlay_xy(uint8_t* dest, const uint8_t* data, const uint8_t x, const uint8_t y, const uint8_t xx, const uint8_t yy, const uint16_t bitlen) {
+uint16_t copy_rectangle_to_overlay_xy(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint16_t bitlen) {
     uint16_t bit_cnt = 0;
-    uint8_t  start_y = hid_bit_index / SCREEN_WIDTH;
-    for (uint8_t dest_y = start_y; dest_y < yy; dest_y++) {
-        uint8_t start_x = bit_cnt == 0 ? hid_bit_index % SCREEN_WIDTH : x;
-        if (start_x == xx) {
-            start_x = x;
+    uint8_t  start_y = bit_index / SCREEN_WIDTH;
+    for (uint8_t dest_y = start_y; dest_y < roi->yy; dest_y++) {
+        uint8_t start_x = bit_cnt == 0 ? bit_index % SCREEN_WIDTH : roi->x;
+        if (start_x == roi->xx) {
+            start_x = roi->x;
             dest_y++;
-            if (dest_y >= yy) {
-                return hid_bit_index >= 2880;
+            if (dest_y >= roi->yy) {
+                return bit_index;
             }
-        } else if(start_x < x) {
-            start_x = x;
+        } else if(start_x < roi->x) {
+            start_x = roi->x;
         }
-        for (uint8_t dest_x = start_x; dest_x < xx; dest_x++) {
-            hid_bit_index       = dest_y * SCREEN_WIDTH + dest_x;
+        for (uint8_t dest_x = start_x; dest_x < roi->xx; dest_x++) {
+            bit_index = dest_y * SCREEN_WIDTH + dest_x;
             uint8_t data_byte   = data[bit_cnt / 8];
             uint8_t bit_in_byte = bit_cnt % 8;
             bool    bit_is_set  = ((0x80 >> bit_in_byte) & data_byte) != 0;
 
             if (bit_is_set) {
-                dest[hid_bit_index / 8] |= 0x80 >> (hid_bit_index % 8);
+                dest[bit_index / 8] |= 0x80 >> (bit_index % 8);
             } else {
-                dest[hid_bit_index / 8] &= ~(0x80 >> (hid_bit_index % 8));
+                dest[bit_index / 8] &= ~(0x80 >> (bit_index % 8));
             }
 
             bit_cnt++;
             if (bit_cnt >= bitlen) {
-                hid_bit_index++; //for the next call
-                return hid_bit_index >= 2880;
+                bit_index++; //for the next call
+                return bit_index;
             }
         }
     }
-    hid_bit_index++; //should match the max
-    return true;
+    return 2880;
 }
 
-bool copy_rectangle_to_overlay(uint8_t* dest, const uint8_t* data, const uint16_t bitlen) {
-    if(hid_roi_rle) {
-        for (uint8_t i = 0; i < bitlen / 8; i++) {
+uint16_t copy_rectangle_to_overlay(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint8_t data_len) {
+    if(roi->compressed) {
+        for (uint8_t i = 0; i < data_len; i++) {
             uint8_t buffer[16];
             uint16_t num_bits = rle_decompress(buffer, 16, &data[i], 1, 0);
-            if (copy_rectangle_to_overlay_xy(dest, buffer, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, num_bits)) {
-                return true;
+            bit_index = copy_rectangle_to_overlay_xy(bit_index, dest, buffer, roi, num_bits);
+            if( bit_index >= 2880) {
+                return bit_index;
             }
         }
-
-        return hid_bit_index >= ((hid_roi_yy-1) * SCREEN_WIDTH + hid_roi_xx);
     } else {
-        return copy_rectangle_to_overlay_xy(dest, data, hid_roi_x, hid_roi_y, hid_roi_xx, hid_roi_yy, bitlen);
+        bit_index = copy_rectangle_to_overlay_xy(bit_index, dest, data, roi, data_len*8);
     }
+    return bit_index >= ((roi->yy-1) * SCREEN_WIDTH + roi->xx) ? 2880 : bit_index;
 }
 
-bool fill_roi_overlay_buffer(uint8_t* data) {
+void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     if (hid_keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
-        return false;
+        return;
     }
 
     uint8_t keycode = translate_a_to_z(hid_keycode);
     uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
     if (idx >= 90) {
         uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
-        return false;
+        return;
     }
     idx = adjust_overlay_idx_to_mod(idx, hid_modifier);
     idx = overlay_map[idx];
@@ -2412,20 +2476,27 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
         }
     }
 
-    bool finished = false;
-    bool first = hid_bit_index==0;
     if (is_on_current_side(pos)) {
-        uint16_t data_len = first?ROI_START:ROI_MAX;
+        #ifdef USE_CORE1_FOR_DECOMPRESSION
+            if(first) {
+                core1_roi_start();
+            }
+            core1_update_roi(keycode, idx, first?(&(data[5])):data, &hid_roi);
+        #else
+            uint16_t data_len = first?ROI_START:ROI_MAX;
 
-        //uint8_t x,y;
-        if(first) {
-            hid_bit_index = hid_roi_y * SCREEN_WIDTH + hid_roi_x;
-        }
-        finished = copy_rectangle_to_overlay(overlays[idx], first?(&(data[5])):data, data_len*8);
+            //uint8_t x,y;
+            if(first) {
+                hid_bit_index = hid_roi.y * SCREEN_WIDTH + hid_roi.x;
+            }
+            hid_bit_index = copy_rectangle_to_overlay(hid_bit_index, overlays[idx], first?(&(data[5])):data, &hid_roi, data_len)
+            if(hid_bit_index >= 2880) {
+                set_overlay_usage(idx);
+                update_performed();
+                request_disp_refresh();
+            }
+        #endif
     }
-
-    uprintf("Processing keycode 0x%x bits %d, bytes %d.\n",
-        keycode, hid_bit_index, hid_bit_index/8);
 
     //only send to bridge when needed
     if (is_on_other_side(pos)) {
@@ -2442,16 +2513,6 @@ bool fill_roi_overlay_buffer(uint8_t* data) {
                 keycode, hid_modifier, pos_to_str(pos), hid_bit_index_bridge);
         }
     }
-
-    if (finished) {
-        set_overlay_usage(idx);
-        uprintf("--> Finished ROI update for keycode 0x%x (mod 0x%x): side %s.\n",
-            keycode, hid_modifier, pos_to_str(pos));
-        return true;
-    }
-    //uprintf("Received compressed overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s, RLE idx %d.\n", keycode, hid_modifier, hid_byte_count, idx, pos_to_str(pos), hid_bit_index);
-
-    return false;
 }
 
 void set_10bit_overlay_mapping(uint8_t* mapping) {
@@ -2683,7 +2744,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                         update_performed();
                     }
                     uprint("Stop idle.\n");
-                } else {
+} else {
                     last_update = timer_read32() - FADE_OUT_TIME;
                     if(last_update<0) {
                         uprintf("Starting idle in %ld msec .\n", -last_update);
@@ -2721,20 +2782,21 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 hid_bit_index_bridge = 0;
                 hid_keycode = data[HID_DATA_IDX];
                 hid_modifier = data[HID_DATA_IDX+1]&0x0f;
-                hid_roi_y = (data[HID_DATA_IDX+2]&0x03) | ((data[HID_DATA_IDX+1]>>2)&0x3c);
-                hid_roi_yy = data[HID_DATA_IDX+2] >> 2;
-                hid_roi_x = data[HID_DATA_IDX+3];
-                hid_roi_xx = data[HID_DATA_IDX+4]&0x7f;
-                hid_roi_rle = ((data[HID_DATA_IDX+4]&0x80)!=0);
+                hid_roi.y = (data[HID_DATA_IDX+2]&0x03) | ((data[HID_DATA_IDX+1]>>2)&0x3c);
+                hid_roi.yy = data[HID_DATA_IDX+2] >> 2;
+                hid_roi.x = data[HID_DATA_IDX+3];
+                hid_roi.xx = data[HID_DATA_IDX+4]&0x7f;
+                hid_roi.compressed = ((data[HID_DATA_IDX+4]&0x80)!=0);
                 //fall through
             case 19: //receive roi overlay
                 {
                     bool first = data[HID_CMD_IDX]==18;
                     if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
-                        if(!fill_roi_overlay_buffer(&data[HID_DATA_IDX])) {
-                            update_performed();
-                            request_disp_refresh();
-                        }
+                        fill_roi_overlay_buffer(&data[HID_DATA_IDX], data[1]==18);
+                        // if(!fill_roi_overlay_buffer(&data[HID_DATA_IDX], hid_roi_rle)) {
+                        //     update_performed();
+                        //     request_disp_refresh();
+                        // }
                         memset(data, 0, length);
                         memcpy(data, first ? "P\x12!" : "P\x13!", 3);
                     } else {

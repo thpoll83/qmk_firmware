@@ -31,6 +31,8 @@
 
 #include "base/crc32.h"
 
+#include "base/multicore/core1.h"
+
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
 
@@ -105,7 +107,7 @@ const struct display_info disp_row_0 = { BITMASK1(0) };
 const struct display_info disp_row_3 = { BITMASK4(0) };
 
 enum refresh_mode { START_FIRST_HALF, START_SECOND_HALF, DONE_ALL, ALL_AT_ONCE };
-static enum refresh_mode g_refresh = DONE_ALL;
+static volatile enum refresh_mode g_refresh = DONE_ALL;
 
 static poly_layer_t l_layer;
 static poly_layer_t g_layer;
@@ -118,10 +120,22 @@ static poly_last_t g_last;
 
 static latin_sync_t g_latin;
 
-static int32_t last_update = 0;
+static volatile int32_t last_update = 0;
 
-static uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
-static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
+#define USE_CORE1_FOR_DECOMPRESSION
+
+#ifdef USE_CORE1_FOR_DECOMPRESSION
+static volatile uint16_t core1_bit_index = 0;
+static volatile uint32_t core1_decomp_count = 0;
+static uint32_t core0_decomp_count = 0;
+
+static volatile uint8_t core1_buffer[HID_DATA_MAX];
+static volatile int16_t core1_maxlen;
+static volatile uint16_t core1_idx;
+#endif
+
+static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
+static /*volatile*/ uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
 static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 
 static uint16_t hid_byte_count = 0;
@@ -152,7 +166,10 @@ void reset_overlay_buffers(void) {
 }
 
 void reset_overlay_usage(void) {
-    memset(&use_overlay, 0, sizeof(use_overlay));
+    for(int16_t i = 0; i < sizeof(use_overlay); ++i) {
+        use_overlay[i] = 0;
+    }
+    //memset(&use_overlay, 0, sizeof(use_overlay));
 }
 
 void reset_overlay_mapping(void) {
@@ -376,6 +393,67 @@ void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 }
 #endif
 
+#ifdef USE_CORE1_FOR_DECOMPRESSION
+typedef enum {
+    CORE_CMD_START      = 0xcafe0001
+} fifo_command_t;
+
+//main function for core1, do not use any prtintf or similar, stack is limited
+void core1_entry(void) {
+    multicore_fifo_drain();
+    while (true) {
+        uint32_t cmd = multicore_fifo_pop_blocking();  // blocks if empty
+        if (cmd == CORE_CMD_START) {
+            uint16_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
+            core1_bit_index += rle_decompress(overlays[core1_idx]+core1_bit_index/8, PK_MAX(0,core1_maxlen), core1_buffer, data_len, core1_bit_index);
+
+            if (core1_bit_index >= 360*8 -1) {
+                set_overlay_usage(core1_idx);
+                update_performed();
+                request_disp_refresh();
+                core1_bit_index = 0;
+            }
+            //multicore_fifo_push_blocking(CORE_CMD_FINISHED);
+            core1_decomp_count++;
+            if(core1_decomp_count==0) { //handle overflow
+                core1_decomp_count=1;
+            }
+            dmb();
+        }
+    }
+}
+
+// Decompress the supplied buffer on core1, will block if previous decompression is still ongoing
+// All fragments have to be processed in order and until the end, no parallel processing possible
+void core1_decompress_fragment(uint8_t keycode, uint16_t overlay_idx, const uint8_t* compressed) {
+    //wait in case decompression is still ongoing
+        dmb();
+        while(core0_decomp_count!=core1_decomp_count) {
+            //no wait function needed as the uprintf inside the loop will already take some time
+            uprintf("CORE1: Waiting...\n");
+            dmb();
+        }
+        //copy data to dedicated buffers
+        uint16_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
+        core1_maxlen = 360 - core1_bit_index/8;
+        core1_idx = overlay_idx;
+        for(uint8_t i=0;i<data_len;++i) {
+            core1_buffer[i] = compressed[i]; //memcopy not avialable for volatile memory
+        }
+
+        uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d).\n", keycode, hid_modifier, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index);
+        core0_decomp_count++;
+        if(core0_decomp_count==0) { //handle overflow
+            core0_decomp_count=1;
+        }
+        dmb();
+        //allow core1 to start decompressing
+        multicore_fifo_push_blocking(CORE_CMD_START);
+}
+#endif
+
+
+
 void user_sync_lastkey_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(poly_last_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -425,6 +503,9 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         const compressed_overlay_sync_t* ov = ((const compressed_overlay_sync_t *)in_data);
         if(crc32 == ov->crc32) {
+#ifdef USE_CORE1_FOR_DECOMPRESSION
+            core1_decompress_fragment(KC_NO, ov->adj_idx, ov->compressed);
+#else
             if(ov->len == COMPRESSED_START) {
                 hid_bit_index = 0;
             }
@@ -435,6 +516,7 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
                 request_disp_refresh();
                 hid_bit_index = 0;
             }
+#endif
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
@@ -517,6 +599,10 @@ void sync_and_refresh_displays(void) {
             l_state.contrast = ee.brightness;
         }
 
+// #ifdef USE_CORE1_FOR_DECOMPRESSION
+//         uprintf("Status: %lu/%lu\n", core1_decomp_count, core0_decomp_count);
+// #endif
+
         if(flags!=l_state.flags) {
             //uprintf("Poly State Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", l_state.flags, BYTE_TO_FLAGS(l_state.flags));
             flags=l_state.flags;
@@ -542,8 +628,8 @@ void sync_and_refresh_displays(void) {
             send_to_bridge(USER_SYNC_LAYER_DATA, (void *)&l_layer, sizeof(l_layer), 10);
         }
         if ( differ(&l_last, &g_last, sizeof(poly_last_t)) ) {
-             send_to_bridge(USER_SYNC_LASTKEY_DATA, (void *)&l_last, sizeof(l_last), 5);
-             memcpy(&g_last, &l_last, sizeof(l_last));
+            send_to_bridge(USER_SYNC_LASTKEY_DATA, (void *)&l_last, sizeof(l_last), 5);
+            memcpy(&g_last, &l_last, sizeof(l_last));
         }
     } else {
         layer_diff = differ(&l_layer, &g_layer, sizeof(poly_layer_t));
@@ -1855,6 +1941,10 @@ void keyboard_post_init_user(void) {
     //standard mapping is 1:1
     reset_overlay_mapping();
 
+#ifdef USE_CORE1_FOR_DECOMPRESSION
+    multicore_launch_core1();//start_core1();
+#endif
+
     transaction_register_rpc(USER_SYNC_POLY_DATA,       user_sync_poly_data_handler);
     transaction_register_rpc(USER_SYNC_LAYER_DATA,      user_sync_layer_data_handler);
     transaction_register_rpc(USER_SYNC_LASTKEY_DATA,    user_sync_lastkey_data_handler);
@@ -2178,17 +2268,17 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
     }
 }
 
-bool decompress_overlay_buffer(uint8_t* compressed) {
+void decompress_overlay_buffer(uint8_t* compressed) {
     if (hid_keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
-        return false;
+        return;
     }
 
     uint8_t keycode = translate_a_to_z(hid_keycode);
     uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
     if (idx >= 90) {
         uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
-        return false;
+        return;
     }
     idx = adjust_overlay_idx_to_mod(idx, hid_modifier);
     idx = overlay_map[idx];
@@ -2203,14 +2293,25 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
             uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
         }
     }
-    //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
+
     if (is_on_current_side(pos)) {
+#ifdef USE_CORE1_FOR_DECOMPRESSION
+        core1_decompress_fragment(keycode, idx, compressed);
+#else
         uint8_t compressed_len = hid_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
         int16_t maxlen = 360 - hid_bit_index/8;
         hid_bit_index += rle_decompress(overlays[idx]+hid_bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, hid_bit_index);
-        //hid_bit_index += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
-        uprintf("keycode 0x%x bits %d, bytes %d.\n",
-            keycode, hid_bit_index, hid_bit_index/8);
+        //uprintf("keycode 0x%x bits %d, bytes %d.\n",
+        //   keycode, hid_bit_index, hid_bit_index/8);
+
+        if (hid_bit_index >= 360*8 -1) {
+            set_overlay_usage(idx);
+            uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
+                keycode, hid_modifier, pos_to_str(pos), hid_bit_index/8);
+            update_performed();
+            request_disp_refresh();
+        }
+#endif
     }
 
     //only send to bridge when needed
@@ -2230,16 +2331,6 @@ bool decompress_overlay_buffer(uint8_t* compressed) {
                 keycode, hid_modifier, hid_bit_index_bridge/8);
         }
     }
-
-    if (hid_bit_index >= 360*8 -1) {
-        set_overlay_usage(idx);
-        uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
-            keycode, hid_modifier, pos_to_str(pos), hid_bit_index/8);
-        return true;
-    }
-    //uprintf("Received compressed overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s, RLE idx %d.\n", keycode, hid_modifier, hid_byte_count, idx, pos_to_str(pos), hid_bit_index);
-
-    return false;
 }
 
 bool copy_rectangle_to_overlay_xy(uint8_t* dest, const uint8_t* data, const uint8_t x, const uint8_t y, const uint8_t xx, const uint8_t yy, const uint16_t bitlen) {
@@ -2616,10 +2707,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 {
                     bool first = data[HID_CMD_IDX]==16;
                     if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
-                        if(!decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX])) {
-                            update_performed();
-                            request_disp_refresh();
-                        }
+                        decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX]);
                         memset(data, 0, length);
                         memcpy(data, first ? "P\x10!" : "P\x11!", 3);
                     } else {

@@ -158,18 +158,26 @@ static uint8_t hid_modifier = 0;
 //helpers for overlay data where only a region of interset is sent (instead of the full overlay)
 static roi_update_data_t hid_roi;
 
+// Marks specified overlay as being used by setting its bit in the usage array.
+// Global variables: use_overlay
 void set_overlay_usage(uint16_t overlay_idx) {
     use_overlay[overlay_idx/8] |= (1<<(overlay_idx%8));
 }
 
+// Checks if the specified overlay is marked as being used.
+// Global variables: use_overlay
 bool is_overlay_used(uint16_t overlay_idx) {
     return (use_overlay[overlay_idx/8] & (1<<(overlay_idx%8))) != 0;
 }
 
+// Clears all overlay buffer data by setting it to zero.
+// Global variables: overlays
 void reset_overlay_buffers(void) {
     memset(&overlays, 0, sizeof(overlays));
 }
 
+// Resets all overlay usage flags by clearing the entire usage array.
+// Global variables: use_overlay
 void reset_overlay_usage(void) {
     for(int16_t i = 0; i < sizeof(use_overlay); ++i) {
         use_overlay[i] = 0;
@@ -177,6 +185,8 @@ void reset_overlay_usage(void) {
     //memset(&use_overlay, 0, sizeof(use_overlay));
 }
 
+// Initializes the overlay mapping indices: standard entries map 1:1, followed by modifier combinations.
+// Global variables: overlay_map
 void reset_overlay_mapping(void) {
     for(int16_t i = 0; i < NUM_OVERLAYS*NUM_VARIATIONS; ++i) {
         overlay_map[i] = i;
@@ -217,6 +227,8 @@ void toggle_stagger(bool new_state);
 void oled_update_buffer(void);
 void poly_suspend(void);
 
+// Saves user keyboard configuration (language, brightness, latin extensions) to EEPROM.
+// Global variables: l_state, g_latin
 void save_user_eeconf(void) {
     poly_eeconf_t ee;
     ee.lang = l_state.lang;
@@ -226,6 +238,8 @@ void save_user_eeconf(void) {
     eeconfig_update_user_datablock(&ee);
 }
 
+// Loads user keyboard configuration from EEPROM with brightness validation against maximum.
+// Global variables: (none - returns result)
 poly_eeconf_t load_user_eeconf(void) {
     poly_eeconf_t ee;
     eeconfig_read_user_datablock(&ee);
@@ -236,6 +250,8 @@ poly_eeconf_t load_user_eeconf(void) {
     return ee;
 }
 
+// Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT, saves to EEPROM.
+// Global variables: l_state
 void inc_brightness(void) {
     if (l_state.contrast < FULL_BRIGHT) {
         l_state.contrast += BRIGHT_STEP;
@@ -247,6 +263,8 @@ void inc_brightness(void) {
     save_user_eeconf();
 }
 
+// Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT, saves to EEPROM.
+// Global variables: l_state
 void dec_brightness(void) {
     if (l_state.contrast > (MIN_BRIGHT+BRIGHT_STEP)) {
         l_state.contrast -= BRIGHT_STEP;
@@ -257,11 +275,15 @@ void dec_brightness(void) {
     save_user_eeconf();
 }
 
+// Selects all shift registers to communicate with all displays.
+// Global variables: (none - uses SPI functions only)
 void select_all_displays(void) {
     // make sure we are talking to all shift registers
     sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);
 }
 
+// Clears all displays by setting buffer to zero and sending to all shift registers.
+// Global variables: (none - delegates to display functions)
 void clear_all_displays(void) {
     select_all_displays();
 
@@ -269,23 +291,33 @@ void clear_all_displays(void) {
     kdisp_send_buffer();
 }
 
+// Initializes SPI hardware for display communication after hardware reset.
+// Global variables: (none - initializes hardware only)
 void early_hardware_init_post(void) {
     spi_hw_setup();
 }
 
+// Records current timestamp for idle timeout tracking and idle display animation.
+// Global variables: last_update
 void update_performed(void) {
     last_update = timer_read32();
 }
 
+// Retrieves persisted default layer from EEPROM configuration.
+// Global variables: (none - reads from EEPROM only)
 layer_state_t persistent_default_layer_get(void) {
     return (layer_state_t)eeconfig_read_default_layer();
 }
 
+// Persists default layer to EEPROM and activates it immediately.
+// Global variables: (none - updates EEPROM and layer state)
 void persistent_default_layer_set(uint16_t default_layer) {
     eeconfig_update_default_layer(default_layer);
     default_layer_set(default_layer);
 }
 
+// Requests full display refresh on all displays at once.
+// Global variables: g_refresh
 void request_disp_refresh(void) {
     g_refresh = ALL_AT_ONCE;
     //use the following for partial update (during housekeeping)
@@ -304,6 +336,8 @@ void request_disp_refresh(void) {
 //         _\////////////______\////////\//______\/////_____\////////\//______________\///////////______\////________\///____\///_____\////////__
 //
 
+// Handles incoming poly_sync data for the bridge with CRC32 validation.
+// Global variables: l_state
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(poly_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -317,6 +351,8 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     }
 }
 
+// Handles incoming latin_sync data with CRC32 validation, saves to EEPROM and refreshes display.
+// Global variables: g_latin
 void user_sync_latin_ex_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(latin_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -339,6 +375,8 @@ void user_sync_latin_ex_data_handler(uint8_t in_len, const void* in_data, uint8_
 #define DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT 9
 _Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COUNT, "Maximum cannot exceed DYNAMIC_KEYMAP_LAYER_COUNT");
 
+// Writes data to EEPROM at specified offset within the dynamic keymap region with bounds checking.
+// Global variables: (none - uses passed parameters and EEPROM)
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data) {
     uint16_t dynamic_keymap_eeprom_size = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
     void *   target                     = (void *)(DYNAMIC_KEYMAP_EEPROM_ADDR + offset);
@@ -352,6 +390,8 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
     }
 }
 
+// Handles VIA protocol commands on the bridge with CRC32 validation, including keymap resets and key press events.
+// Global variables: l_layer
 void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len >= (sizeof(uint32_t)+1) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -407,7 +447,9 @@ typedef enum {
     CORE1_CMD_RESET_BIT_IDX  = 0xcafe0003,
 } fifo_command_t;
 
-//main function for core1, do not use any prtintf or similar, stack is limited
+// Main function for core1, do not use any prtintf or similar, stack is limited!
+// Processes decompression and ROI update commands from core0 via FIFO, handles overlay buffer updates.
+// Global variables: core1_bit_index, core1_decomp_count, core1_idx, core1_max_bitlen, core1_buffer, core1_roi, overlays
 void core1_entry(void) {
     multicore_fifo_drain();
     while (true) {
@@ -459,6 +501,7 @@ void core1_entry(void) {
 
 // Decompress the supplied buffer on core1, will block if previous decompression is still ongoing
 // All fragments have to be processed in order and until the end, no parallel processing possible
+// Global variables: core0_decomp_count, core1_decomp_count, core1_bit_index, core1_max_bitlen, core1_idx, core1_buffer, hid_modifier
 void core1_decompress_fragment(uint8_t keycode, uint16_t overlay_idx, const uint8_t* compressed) {
     //wait in case decompression is still ongoing
     dmb();
@@ -485,10 +528,15 @@ void core1_decompress_fragment(uint8_t keycode, uint16_t overlay_idx, const uint
     multicore_fifo_push_blocking(CORE1_CMD_DECOMPRESS);
 }
 
+
+// Signals core1 to reset bit index for next region-of-interest update.
+// Global variables: (none - sends FIFO command only)
 void core1_roi_start(void) {
     multicore_fifo_push_blocking(CORE1_CMD_RESET_BIT_IDX);
 }
 
+// Queues a region-of-interest overlay update for core1 processing, waits if previous update is ongoing.
+// Global variables: core0_decomp_count, core1_decomp_count, core1_bit_index, core1_roi, core1_idx, core1_buffer, hid_modifier
 void core1_update_roi(uint8_t keycode, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi) {
     //wait in case decompression is still ongoing
     dmb();
@@ -519,6 +567,8 @@ void core1_update_roi(uint8_t keycode, uint16_t overlay_idx, const uint8_t* data
 
 
 
+// Handles incoming last key data on bridge with CRC32 validation, updates both local and global state.
+// Global variables: l_last, g_last
 void user_sync_lastkey_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(poly_last_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -533,6 +583,8 @@ void user_sync_lastkey_data_handler(uint8_t in_len, const void* in_data, uint8_t
     }
 }
 
+// Handles incoming layer data on bridge with CRC32 validation.
+// Global variables: l_layer
 void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(poly_layer_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -546,6 +598,8 @@ void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t o
     }
 }
 
+// Handles incoming overlay segment data on bridge with CRC32 validation, marks as used when complete.
+// Global variables: overlays
 void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -563,6 +617,8 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
     }
 }
 
+// Handles compressed overlay data on bridge with CRC32 validation, decompresses using core1 or local decompression.
+// Global variables: hid_bit_index, overlays (via core1 or local decompression)
 void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(compressed_overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
@@ -653,6 +709,8 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 static uint8_t flags = 0;
 static uint8_t overlay_flags = 0;
 
+// Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
+// Global variables: l_state, g_state, l_layer, g_layer, l_last, g_last, flags, overlay_flags, g_refresh, last_update
 void sync_and_refresh_displays(void) {
     bool layer_diff = false;
     bool state_diff = false;
@@ -787,11 +845,15 @@ void sync_and_refresh_displays(void) {
     }
 }
 
+// Sets layer state variable tracking the active keyboard layer.
+// Global variables: l_layer
 layer_state_t layer_state_set_user(layer_state_t state) {
     l_layer.layer = state;
     return state;
 }
 
+// Continuously monitors for idle timeout and dims/pulsates display accordingly.
+// Global variables: last_update, l_state, g_refresh
 void housekeeping_task_user(void) {
     sync_and_refresh_displays();
 
@@ -1161,6 +1223,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         )
 };
 
+// Maps default layer to corresponding function layer (FL0 or FL1).
+// Global variables: (none - uses passed parameters only)
 layer_state_t get_function_layer(layer_state_t def_layer) {
     switch (def_layer) {
         case _L0:
@@ -1219,6 +1283,8 @@ led_config_t g_led_config = { {// Key Matrix to LED Index
                                  4, 4, 4, 4, 4, 4, 4, 4
                              } };
 
+// Returns display text for special keys.
+// Global variables: l_state, l_layer
 const uint16_t* to_static_text(uint16_t keycode, led_t state) {
 
     const uint16_t* emoji = keycode_to_emoji(keycode);
@@ -1308,6 +1374,8 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
     }
 }
 
+// Renders key character to display using language translation, including modifiers etc.
+// Global variables: l_layer, l_state, g_latin
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const bool shift = ((l_layer.mods & MOD_MASK_SHIFT) != 0);
     const bool add_lang = get_highest_layer(l_layer.layer)==_ADDLANG1;
@@ -1408,6 +1476,8 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     return false;
 }
 
+// Returns builtin icon/symbol overlay text for keycode based on current modifiers and mod-tap states.
+// Global variables: l_layer
 const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     switch (keycode)
     {
@@ -1480,8 +1550,10 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     return NULL;
 }
 
+// Maps overlay index to modifier combination offset
 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5),
 // ALT_SHIFT(6), CTRL_ALT_SHIFT(7) and GUI_KEY(8)
+// Global variables: (none - uses passed parameters only)
 uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
     // GUI_KEY key cannot be combined with other modifiers in case of overlays
     // for the moment, so GUI_KEY takes priority over all modifiers
@@ -1494,6 +1566,8 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
     return idx + NUM_OVERLAYS * mods;
 }
 
+// Copies overlay bitmap for keycode to display buffer, combining with mask if requested.
+// Global variables: overlays, l_layer, l_state
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
     if(keycode>KC_RGUI || (keycode>KC_NUM_LOCK && keycode<KC_NUBS) || (keycode>KC_APP && keycode<KC_LEFT_CTRL)) {
         return false;
@@ -1517,6 +1591,8 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
     return true;
 }
 
+// Updates all display based on current layer and modifiers.
+// Global variables: l_layer, l_state, keymaps, overlays
 void update_displays(enum refresh_mode mode) {
     if(l_state.contrast<=DISP_OFF || (l_state.flags&DISP_IDLE)!=0) {
         return;
@@ -1604,6 +1680,8 @@ void update_displays(enum refresh_mode mode) {
     }
 }
 
+// Converts brightness level 0-7 to pulsating contrast value for idle display animation.
+// Global variables: (none - uses passed parameters only)
 uint8_t to_brightness(uint8_t b) {
     switch(b) {
         case 23: case 24: case 25: case 26: case 27: return 7;
@@ -1619,6 +1697,8 @@ uint8_t to_brightness(uint8_t b) {
     }
 }
 
+// Updates all displays to show idle pulsating animation with varying brightness pattern.
+// Global variables: l_layer (for keymap reference to determine display content)
 void kdisp_idle(uint8_t contrast) {
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t skip = 0;
@@ -1654,6 +1734,8 @@ void kdisp_idle(uint8_t contrast) {
     }
 }
 
+// Handles keypress events including unicode input, language modifications, and special commands.
+// Global variables: l_layer, l_last, g_latin, l_state
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     uint32_t t = timer_elapsed32(last_update);
@@ -1768,6 +1850,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     return display_wakeup(record);
 }
 
+// Post-processes keystrokes to handle display and state changes for various special keycodes.
+// Global variables: l_state, l_layer, g_layer
 void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     if (keycode == KC_CAPS_LOCK) {
         request_disp_refresh();
@@ -1922,6 +2006,8 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     update_performed();
 };
 
+// Displays splash screen with polykybd/split72 logo and initializes displays with refresh.
+// Global variables: (none - uses side detection and display functions)
 void show_splash_screen(void) {
     clear_all_displays();
     if(is_left_side()) {
@@ -1935,6 +2021,8 @@ void show_splash_screen(void) {
     update_displays(ALL_AT_ONCE);
 }
 
+// Configures all displays with contrast level; shows idle pulsating animation if enabled.
+// Global variables: (none - uses passed parameters only)
 void set_displays(uint8_t contrast, bool idle) {
     if(idle) {
         kdisp_idle(contrast);
@@ -1949,9 +2037,8 @@ void set_displays(uint8_t contrast, bool idle) {
     }
 }
 
-
-
-//disable first keypress if the displays are turned off
+// Disables keypress if displays are turned off/in idle mode; restores brightness on wakeup.
+// Global variables: l_state, last_update
 bool display_wakeup(keyrecord_t* record) {
     bool accept_keypress = true;
     if ((l_state.contrast==DISP_OFF || (l_state.flags & DISP_IDLE)!=0) && record->event.pressed) {
@@ -1969,11 +2056,15 @@ bool display_wakeup(keyrecord_t* record) {
     return accept_keypress;
 }
 
+// Updates local unicode input mode state and requests display refresh on mode change.
+// Global variables: l_state
 void unicode_input_mode_set_user(uint8_t unicode_mode) {
     l_state.unicode_mode = unicode_mode;
     request_disp_refresh();
 }
 
+// Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
+// Global variables: l_layer, l_state, com
 void keyboard_post_init_user(void) {
     // Customise these values to desired behaviour
     debug_enable = true;
@@ -2024,6 +2115,8 @@ void keyboard_post_init_user(void) {
 
 }
 
+// Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
+// Global variables: l_layer, g_layer, l_state, g_state, l_last, g_latin
 void keyboard_pre_init_user(void) {
     kdisp_hw_setup();
     kdisp_init(NUM_SHIFT_REGISTERS);
@@ -2055,6 +2148,8 @@ void keyboard_pre_init_user(void) {
     setPinInputHigh(I2C1_SDA_PIN);
 }
 
+// Initializes EEPROM configuration with default language, brightness, and latin extension settings.
+// Global variables: (none - initializes EEPROM only)
 void eeconfig_init_user(void) {
     uprint("Init EE config\n");
     poly_eeconf_t ee;
@@ -2066,6 +2161,8 @@ void eeconfig_init_user(void) {
 }
 
 
+// Converts a number to a u16_string.
+// Global variables: (none - uses passed parameters only)
 void num_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value) {
     if(value<10) {
         snprintf((char*) buffer, buffer_len, "%d", value);
@@ -2088,6 +2185,8 @@ void num_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value) {
     }
 }
 
+// Converts a number to a hex formated u16_string.
+// Global variables: (none - uses passed parameters only)
 void hex_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value) {
     if(value<16) {
         snprintf((char*) buffer, buffer_len, "%X", value);
@@ -2103,6 +2202,8 @@ void hex_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value) {
     }
 }
 
+// Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
+// Global variables: g_layer, l_state
 void oled_update_buffer(void) {
     uint16_t buffer[32];
 
@@ -2177,6 +2278,8 @@ void oled_update_buffer(void) {
     }
 }
 
+// Updates and displays status screen on OLED, or turns off display if status disabled.
+// Global variables: l_state
 void oled_status_screen(void) {
      if( (l_state.flags&STATUS_DISP_ON) == 0) {
         oled_off();
@@ -2190,6 +2293,8 @@ void oled_status_screen(void) {
     oled_write_raw((char *)get_scratch_buffer(), get_scratch_buffer_size());
 }
 
+// Displays scrolling Polykybd logo on OLED with direction based on side (left/right).
+// Global variables: (none - uses passed parameters and side detection only)
 void oled_render_logos(void) {
     if(is_left_side()) {
         oled_draw_poly();
@@ -2200,6 +2305,8 @@ void oled_render_logos(void) {
     }
 }
 
+// Main OLED task: displays logos during idle or status screen during normal operation.
+// Global variables: l_state
 bool oled_task_user(void) {
     if((l_state.flags&DISP_IDLE) != 0) {
         oled_render_logos();
@@ -2227,8 +2334,8 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [13] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
 };
 
-
-
+// Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.
+// Global variables: (none - uses passed parameters only)
 oled_rotation_t oled_init_user(oled_rotation_t rotation){
     oled_off();
     oled_clear();
@@ -2239,12 +2346,16 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
     return rotation;
 }
 
+// Clears overlay display flags, disables overlays and status display, sets contrast to OFF.
+// Global variables: l_state
 void poly_suspend(void) {
     l_state.overlay_flags = flag_off(l_state.overlay_flags, DISPLAY_OVERLAYS);
     l_state.flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE);// & ~((uint8_t)RGB_ON);
     l_state.contrast = DISP_OFF;
 }
 
+// Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
+// Global variables: l_state, last_update
 void suspend_power_down_kb(void) {
     poly_suspend();
     rgb_matrix_disable_noeeprom();
@@ -2254,6 +2365,8 @@ void suspend_power_down_kb(void) {
 }
 
 
+// Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
+// Global variables: l_state, last_update
 void suspend_wakeup_init_kb(void) {
     l_state.flags |= STATUS_DISP_ON;
     l_state.flags &= ~((uint8_t)DISP_IDLE);
@@ -2271,6 +2384,8 @@ void suspend_wakeup_init_kb(void) {
     suspend_wakeup_init_user();
 }
 
+// Translates letter keycode to language-specific character and returns corresponding keycode.
+// Global variables: l_state
 uint8_t translate_a_to_z(uint8_t keycode) {
     if(keycode>=KC_A && keycode<=KC_Z) {
         const uint16_t* translated = translate_keycode(l_state.lang, keycode, false, false);
@@ -2284,8 +2399,8 @@ uint8_t translate_a_to_z(uint8_t keycode) {
     return keycode;
 }
 
-
-
+// Fills overlay buffer segment with bitmap data and syncs to bridge if needed.
+// Global variables: overlays, l_layer
 void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
     if (keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
@@ -2333,6 +2448,8 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
     }
 }
 
+// Decompresses RLE-compressed overlay data and writes to overlay buffer, syncs to bridge if needed.
+// Global variables: hid_keycode, hid_modifier, hid_bit_index, overlays
 void decompress_overlay_buffer(uint8_t* compressed) {
     if (hid_keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
@@ -2398,6 +2515,8 @@ void decompress_overlay_buffer(uint8_t* compressed) {
     }
 }
 
+// Copies rectangular region of overlay data to buffer with bitwise operations and bit position tracking.
+// Global variables: (none - uses passed parameters only)
 uint16_t copy_rectangle_to_overlay_xy(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint16_t bitlen) {
     uint16_t bit_cnt = 0;
     uint8_t  start_y = bit_index / SCREEN_WIDTH;
@@ -2434,6 +2553,8 @@ uint16_t copy_rectangle_to_overlay_xy(uint16_t bit_index, uint8_t* dest, const v
     return 2880;
 }
 
+// Copies rectangle region of overlay data handling both compressed and uncompressed formats.
+// Global variables: (none - uses passed parameters only)
 uint16_t copy_rectangle_to_overlay(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint8_t data_len) {
     if(roi->compressed) {
         for (uint8_t i = 0; i < data_len; i++) {
@@ -2450,6 +2571,8 @@ uint16_t copy_rectangle_to_overlay(uint16_t bit_index, uint8_t* dest, const vola
     return bit_index >= ((roi->yy-1) * SCREEN_WIDTH + roi->xx) ? 2880 : bit_index;
 }
 
+// Fills region-of-interest of overlay buffer with data and syncs to bridge when needed.
+// Global variables: hid_keycode, hid_modifier, hid_bit_index, hid_roi, overlays
 void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     if (hid_keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
@@ -2515,6 +2638,8 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     }
 }
 
+// Unpacks 10-bit overlay mapping pairs from buffer and updates overlay_map array.
+// Global variables: overlay_map
 void set_10bit_overlay_mapping(uint8_t* mapping) {
     uint16_t from = UNSET_OVERLAY_MAPPING;
     for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
@@ -2537,6 +2662,8 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
 }
 
 
+// Notifies RGB/LED matrix of key event for animation effects based on key press state.
+// Global variables: (none - delegates to LED matrix handlers)
 void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 #if defined(LED_MATRIX_ENABLE)
     led_matrix_handle_key_event(row, col, pressed);
@@ -2546,6 +2673,8 @@ void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 #endif
 }
 
+// Handles VIA custom value commands: device ID, language change, overlay reception, mapping, and display control.
+// Global variables: l_state, l_layer, hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     const char * name = "P\x06.Split72 " FW_VERSION " HW" STR(DEVICE_VER) " ";
 
@@ -2859,12 +2988,16 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
 
 #ifndef VIA_ENABLE
 
+// Handles raw HID commands when VIA protocol is not enabled; forwards to custom VIA handler.
+// Global variables: (same as via_custom_value_command_kb: l_state, l_layer, etc)
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     via_custom_value_command_kb(data, length);
 }
 
 #else
 
+// Handles VIA protocol keymap commands: reset layers, set keycodes, set buffer data with bridge sync.
+// Global variables: l_layer (for display refresh)
 bool via_command_kb(uint8_t *data, uint8_t length) {
     uint8_t *command_id   = &(data[0]);
     uint8_t *command_data = &(data[1]);

@@ -90,9 +90,6 @@ typedef struct _via_sync_t {
 } via_sync_t;
 #endif
 
-uint16_t rle_count(uint16_t max, const uint8_t* compressed, uint8_t len);
-uint16_t rle_decompress(uint8_t* dest, uint16_t max, volatile const uint8_t* compressed, uint8_t len, uint16_t bit_index);
-
 enum key_split_pos { POS_NOT_FOUND, POS_LEFT, POS_RIGHT, POS_ON_BOTH };
 
 const char* pos_to_str(enum key_split_pos pos);
@@ -109,7 +106,6 @@ enum key_split_pos get_split_matrix_side(uint16_t keycode, uint8_t layer);
 bool is_on_current_split_matrix_side(uint16_t keycode, uint8_t layer);
 
 void display_message(uint8_t row, uint8_t col, const uint16_t* message, const GFXfont* font);
-
 
 void invert_display(uint8_t r, uint8_t c, bool state);
 

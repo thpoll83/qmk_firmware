@@ -2,6 +2,9 @@
 
 #include "fonts/gfxfont.h"
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #define SCREEN_WIDTH 72
 #define SCREEN_HEIGHT 40
 

@@ -1,5 +1,8 @@
 #include "helpers.h"
 
+#include "gpio.h"
+#include "wait.h"
+
 void peripherals_reset(void) {
     setPinOutput(HW_RST_PIN);
     writePinLow(HW_RST_PIN);

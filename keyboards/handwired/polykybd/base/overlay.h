@@ -1,0 +1,43 @@
+#pragma once
+
+#include <stdint.h>
+#include <stdbool.h>
+
+
+typedef struct roi_update_data_t{
+    uint8_t x;
+    uint8_t y;
+    uint8_t xx;
+    uint8_t yy;
+    bool compressed;
+} roi_update_data_t;
+
+uint8_t (*get_overlays(void))[72*40/8];
+
+uint8_t* get_overlay(uint16_t overlay_idx);
+
+uint16_t get_overlay_mapping(uint16_t overlay_idx);
+
+void set_overlay_mapping(uint16_t overlay_idx, uint16_t val);
+
+void set_overlay_usage(uint16_t overlay_idx);
+
+// Checks if the specified overlay is marked as being used.
+// Global variables: use_overlay
+bool is_overlay_used(uint16_t overlay_idx);
+
+// Clears all overlay buffer data by setting it to zero.
+// Global variables: overlays
+void reset_overlay_buffers(void);
+
+// Resets all overlay usage flags by clearing the entire usage array.
+// Global variables: use_overlay
+void reset_overlay_usage(void);
+
+// Initializes the overlay mapping indices: standard entries map 1:1, followed by modifier combinations.
+// Global variables: overlay_map
+void reset_overlay_mapping(void);
+
+// Copies rectangle region of overlay data handling both compressed and uncompressed formats.
+// Global variables: (none - uses passed parameters only)
+uint16_t copy_rectangle_to_overlay(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint8_t data_len);

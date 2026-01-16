@@ -1,13 +1,12 @@
-#include <stdint.h>
+#include "disp_array.h"
 #include <string.h>
-#include <stdbool.h>
 
-#include "polykybd.h"
+//#include "polykybd.h"
 #include "helpers.h"
 #include "spi_helper.h"
 #include "shift_reg.h"
 #include "spi_master.h"
-#include "disp_array.h"
+
 #include "fonts/base_font.h"
 #include "com.h"
 

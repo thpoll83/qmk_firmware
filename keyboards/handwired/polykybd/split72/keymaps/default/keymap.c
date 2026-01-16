@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include QMK_KEYBOARD_H
 
 #include "quantum/quantum_keycodes.h"
@@ -20,18 +21,22 @@
 #include "split72/keymaps/default/uni.h"
 
 #include "base/com.h"
+#include "base/rle.h"
+#include "base/e2prom.h"
+#include "base/overlay.h"
 #include "base/disp_array.h"
 #include "base/helpers.h"
+#include "base/update.h"
 #include "base/spi_helper.h"
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
 #include "base/fonts/NotoSans_Regular_Base_11pt.h"
 #include "base/fonts/NotoSans_Medium_Base_8pt.h"
 #include "base/fonts/gfx_used_fonts.h"
-
+#include "base/multicore/core1.h"
 #include "base/crc32.h"
 
-#include "base/multicore/core1.h"
+#include "multicore_exec.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -106,8 +111,6 @@ static enum lang_layer g_lang_init = INIT_LANG;
 const struct display_info disp_row_0 = { BITMASK1(0) };
 const struct display_info disp_row_3 = { BITMASK4(0) };
 
-enum refresh_mode { START_FIRST_HALF, START_SECOND_HALF, DONE_ALL, ALL_AT_ONCE };
-static volatile enum refresh_mode g_refresh = DONE_ALL;
 
 static poly_layer_t l_layer;
 static poly_layer_t g_layer;
@@ -120,34 +123,11 @@ static poly_last_t g_last;
 
 static latin_sync_t g_latin;
 
-static volatile int32_t last_update = 0;
-
-typedef struct roi_update_data_t{
-    uint8_t x;
-    uint8_t y;
-    uint8_t xx;
-    uint8_t yy;
-    bool compressed;
-} roi_update_data_t;
-
-#define USE_CORE1_FOR_DECOMPRESSION
-
-#ifdef USE_CORE1_FOR_DECOMPRESSION
-static volatile uint16_t core1_bit_index = 0;
-static volatile uint32_t core1_decomp_count = 0;
-static uint32_t core0_decomp_count = 0;
-
-static volatile uint8_t core1_buffer[HID_DATA_MAX];
-static volatile int16_t core1_max_bitlen;
-static volatile uint16_t core1_idx;
-static volatile roi_update_data_t core1_roi;
-#endif
-
-static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
-static /*volatile*/ uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
-static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
-
 static uint16_t hid_byte_count = 0;
+
+// extern volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
+// extern uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
+extern uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 
 //helpers for compressed overlay data
 static uint16_t hid_bit_index = 0;
@@ -158,45 +138,6 @@ static uint8_t hid_modifier = 0;
 //helpers for overlay data where only a region of interset is sent (instead of the full overlay)
 static roi_update_data_t hid_roi;
 
-// Marks specified overlay as being used by setting its bit in the usage array.
-// Global variables: use_overlay
-void set_overlay_usage(uint16_t overlay_idx) {
-    use_overlay[overlay_idx/8] |= (1<<(overlay_idx%8));
-}
-
-// Checks if the specified overlay is marked as being used.
-// Global variables: use_overlay
-bool is_overlay_used(uint16_t overlay_idx) {
-    return (use_overlay[overlay_idx/8] & (1<<(overlay_idx%8))) != 0;
-}
-
-// Clears all overlay buffer data by setting it to zero.
-// Global variables: overlays
-void reset_overlay_buffers(void) {
-    memset(&overlays, 0, sizeof(overlays));
-}
-
-// Resets all overlay usage flags by clearing the entire usage array.
-// Global variables: use_overlay
-void reset_overlay_usage(void) {
-    for(int16_t i = 0; i < sizeof(use_overlay); ++i) {
-        use_overlay[i] = 0;
-    }
-    //memset(&use_overlay, 0, sizeof(use_overlay));
-}
-
-// Initializes the overlay mapping indices: standard entries map 1:1, followed by modifier combinations.
-// Global variables: overlay_map
-void reset_overlay_mapping(void) {
-    for(int16_t i = 0; i < NUM_OVERLAYS*NUM_VARIATIONS; ++i) {
-        overlay_map[i] = i;
-    }
-    //the additional map entries for Ctrl+Alt+Shift and GUI Modifiers will point to the no_modifier version (0-NUM_OVERLAYS)
-    for(int16_t i = NUM_OVERLAYS*NUM_VARIATIONS; i < NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP; ++i) {
-        overlay_map[i] = i%NUM_OVERLAYS;
-    }
-
-}
 
 typedef struct _overlay_sync_t {
     uint32_t crc32;
@@ -297,32 +238,6 @@ void early_hardware_init_post(void) {
     spi_hw_setup();
 }
 
-// Records current timestamp for idle timeout tracking and idle display animation.
-// Global variables: last_update
-void update_performed(void) {
-    last_update = timer_read32();
-}
-
-// Retrieves persisted default layer from EEPROM configuration.
-// Global variables: (none - reads from EEPROM only)
-layer_state_t persistent_default_layer_get(void) {
-    return (layer_state_t)eeconfig_read_default_layer();
-}
-
-// Persists default layer to EEPROM and activates it immediately.
-// Global variables: (none - updates EEPROM and layer state)
-void persistent_default_layer_set(uint16_t default_layer) {
-    eeconfig_update_default_layer(default_layer);
-    default_layer_set(default_layer);
-}
-
-// Requests full display refresh on all displays at once.
-// Global variables: g_refresh
-void request_disp_refresh(void) {
-    g_refresh = ALL_AT_ONCE;
-    //use the following for partial update (during housekeeping)
-    // g_refresh = START_FIRST_HALF;
-}
 
 //
 // __/\\\\\\\\\\\\______________________________________________________________/\\\\\\\\\\\_____________________________________________
@@ -438,135 +353,6 @@ void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 }
 #endif
 
-uint16_t copy_rectangle_to_overlay(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint8_t data_len);
-
-#ifdef USE_CORE1_FOR_DECOMPRESSION
-typedef enum {
-    CORE1_CMD_DECOMPRESS     = 0xcafe0001,
-    CORE1_CMD_ROI_UPDATE     = 0xcafe0002,
-    CORE1_CMD_RESET_BIT_IDX  = 0xcafe0003,
-} fifo_command_t;
-
-// Main function for core1, do not use any prtintf or similar, stack is limited!
-// Processes decompression and ROI update commands from core0 via FIFO, handles overlay buffer updates.
-// Global variables: core1_bit_index, core1_decomp_count, core1_idx, core1_max_bitlen, core1_buffer, core1_roi, overlays
-void core1_entry(void) {
-    multicore_fifo_drain();
-    while (true) {
-        uint32_t cmd = multicore_fifo_pop_blocking();  // blocks if empty
-        switch (cmd) {
-            case CORE1_CMD_DECOMPRESS:{
-                    uint16_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
-                    core1_bit_index += rle_decompress(overlays[core1_idx]+core1_bit_index/8, PK_MAX(0,core1_max_bitlen), core1_buffer, data_len, core1_bit_index);
-
-                    if (core1_bit_index >= 360*8 -1) {
-                        set_overlay_usage(core1_idx);
-                        update_performed();
-                        request_disp_refresh();
-                        core1_bit_index = 0;
-                    }
-                    core1_decomp_count++;
-                    if(core1_decomp_count==0) { //handle overflow
-                        core1_decomp_count=1;
-                    }
-                    dmb();
-                } break;
-            case CORE1_CMD_ROI_UPDATE:{
-                    uint8_t data_len = ROI_MAX;
-                    if(core1_bit_index==0) {
-                        core1_bit_index = core1_roi.y * SCREEN_WIDTH + core1_roi.x;
-                        data_len = ROI_START;
-                    }
-                    core1_bit_index = copy_rectangle_to_overlay(core1_bit_index, overlays[core1_idx], core1_buffer, &core1_roi, data_len);
-                    if(core1_bit_index >= 2880) {
-                        set_overlay_usage(core1_idx);
-                        update_performed();
-                        request_disp_refresh();
-                        core1_bit_index = 0;
-                    }
-                    core1_decomp_count++;
-                    if(core1_decomp_count==0) { //handle overflow
-                        core1_decomp_count=1;
-                    }
-                    dmb();
-                } break;
-            case CORE1_CMD_RESET_BIT_IDX:
-                core1_bit_index = 0;
-                dmb();
-                break;
-            default: break;
-        }
-    }
-}
-
-// Decompress the supplied buffer on core1, will block if previous decompression is still ongoing
-// All fragments have to be processed in order and until the end, no parallel processing possible
-// Global variables: core0_decomp_count, core1_decomp_count, core1_bit_index, core1_max_bitlen, core1_idx, core1_buffer, hid_modifier
-void core1_decompress_fragment(uint8_t keycode, uint16_t overlay_idx, const uint8_t* compressed) {
-    //wait in case decompression is still ongoing
-    dmb();
-    while(core0_decomp_count!=core1_decomp_count) {
-        //no wait function needed as the uprintf inside the loop will already take some time
-        uprintf("CORE1: Waiting for decompression...\n");
-        dmb();
-    }
-    //copy data to dedicated buffers
-    uint8_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
-    core1_max_bitlen = 360 - core1_bit_index/8;
-    core1_idx = overlay_idx;
-    for(uint8_t i=0;i<data_len;++i) {
-        core1_buffer[i] = compressed[i]; //memcopy not avialable for volatile memory
-    }
-
-    uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d).\n", keycode, hid_modifier, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index);
-    core0_decomp_count++;
-    if(core0_decomp_count==0) { //handle overflow
-        core0_decomp_count=1;
-    }
-    dmb();
-    //allow core1 to start decompressing
-    multicore_fifo_push_blocking(CORE1_CMD_DECOMPRESS);
-}
-
-
-// Signals core1 to reset bit index for next region-of-interest update.
-// Global variables: (none - sends FIFO command only)
-void core1_roi_start(void) {
-    multicore_fifo_push_blocking(CORE1_CMD_RESET_BIT_IDX);
-}
-
-// Queues a region-of-interest overlay update for core1 processing, waits if previous update is ongoing.
-// Global variables: core0_decomp_count, core1_decomp_count, core1_bit_index, core1_roi, core1_idx, core1_buffer, hid_modifier
-void core1_update_roi(uint8_t keycode, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi) {
-    //wait in case decompression is still ongoing
-    dmb();
-    while(core0_decomp_count!=core1_decomp_count) {
-        //no wait function needed as the uprintf inside the loop will already take some time
-        uprintf("CORE1: Waiting for roi update...\n");
-        dmb();
-    }
-    //copy data to dedicated buffers
-    //core1_max_bitlen = 360 - core1_bit_index/8;
-    core1_roi = *roi;
-    core1_idx = overlay_idx;
-    const uint8_t data_len = core1_bit_index==0?ROI_START:ROI_MAX;
-    for(uint8_t i=0;i<data_len;++i) {
-        core1_buffer[i] =  data[i]; //memcopy not available for volatile memory
-    }
-
-    uprintf("CORE1: Key 0x%x (mod 0x%x) roi update: (added %d bytes, bit index: %d).\n", keycode, hid_modifier, data_len, core1_bit_index);
-    core0_decomp_count++;
-    if(core0_decomp_count==0) { //handle overflow
-        core0_decomp_count=1;
-    }
-    dmb();
-    //allow core1 to start decompressing
-    multicore_fifo_push_blocking(CORE1_CMD_ROI_UPDATE);
-}
-#endif
-
-
-
 // Handles incoming last key data on bridge with CRC32 validation, updates both local and global state.
 // Global variables: l_last, g_last
 void user_sync_lastkey_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
@@ -599,13 +385,12 @@ void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t o
 }
 
 // Handles incoming overlay segment data on bridge with CRC32 validation, marks as used when complete.
-// Global variables: overlays
 void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         const overlay_sync_t* ov = ((const overlay_sync_t *)in_data);
         if(crc32 == ov->crc32) {
-            memcpy(overlays[ov->adj_idx] + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
+            memcpy(get_overlay(ov->adj_idx) + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
             if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                 set_overlay_usage(ov->adj_idx);
                 request_disp_refresh();
@@ -618,20 +403,20 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
 }
 
 // Handles compressed overlay data on bridge with CRC32 validation, decompresses using core1 or local decompression.
-// Global variables: hid_bit_index, overlays (via core1 or local decompression)
+// Global variables: hid_bit_index
 void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(compressed_overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         const compressed_overlay_sync_t* ov = ((const compressed_overlay_sync_t *)in_data);
         if(crc32 == ov->crc32) {
-#ifdef USE_CORE1_FOR_DECOMPRESSION
-            core1_decompress_fragment(KC_NO, ov->adj_idx, ov->compressed);
+#ifdef USE_CORE1
+            core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed);
 #else
             if(ov->len == COMPRESSED_START) {
                 hid_bit_index = 0;
             }
             int16_t maxlen = 360 - hid_bit_index/8;
-            hid_bit_index += rle_decompress(overlays[ov->adj_idx]+hid_bit_index/8, PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
+            hid_bit_index += rle_decompress(get_overlay(ov->adj_idx)+hid_bit_index/8, PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
             if (hid_bit_index >= 360*8) {
                 set_overlay_usage(ov->adj_idx);
                 request_disp_refresh();
@@ -667,7 +452,7 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
             } else {
                 data_len = ROI_MAX;
             }
-            hid_bit_index = copy_rectangle_to_overlay(hid_bit_index, overlays[roi_ov->adj_idx], first?(&((roi_ov->data)[5])):roi_ov->data, &hid_roi, data_len);
+            hid_bit_index = copy_rectangle_to_overlay(hid_bit_index, get_overlay(roi_ov->adj_idx), first?(&((roi_ov->data)[5])):roi_ov->data, &hid_roi, data_len);
             if( hid_bit_index >= 2880) {
                 //finished roi update
                 ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
@@ -710,7 +495,7 @@ static uint8_t flags = 0;
 static uint8_t overlay_flags = 0;
 
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
-// Global variables: l_state, g_state, l_layer, g_layer, l_last, g_last, flags, overlay_flags, g_refresh, last_update
+// Global variables: l_state, g_state, l_layer, g_layer, l_last, g_last, flags, overlay_flags
 void sync_and_refresh_displays(void) {
     bool layer_diff = false;
     bool state_diff = false;
@@ -721,10 +506,6 @@ void sync_and_refresh_displays(void) {
             poly_eeconf_t ee   = load_user_eeconf();
             l_state.contrast = ee.brightness;
         }
-
-// #ifdef USE_CORE1_FOR_DECOMPRESSION
-//         uprintf("Status: %lu/%lu\n", core1_decomp_count, core0_decomp_count);
-// #endif
 
         if(flags!=l_state.flags) {
             //uprintf("Poly State Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", l_state.flags, BYTE_TO_FLAGS(l_state.flags));
@@ -835,13 +616,14 @@ void sync_and_refresh_displays(void) {
         request_disp_refresh();
     }
 
-    if (g_refresh == START_FIRST_HALF) {
+    enum refresh_mode refresh = get_refresh_mode();
+    if (refresh == START_FIRST_HALF) {
         update_displays(START_FIRST_HALF);
-        g_refresh = START_SECOND_HALF;
+        set_disp_refresh(START_SECOND_HALF);
     }
-    else if (g_refresh == START_SECOND_HALF || g_refresh == ALL_AT_ONCE) {
-        update_displays(g_refresh);
-        g_refresh = DONE_ALL;
+    else if (refresh == START_SECOND_HALF || refresh == ALL_AT_ONCE) {
+        update_displays(refresh);
+        set_disp_refresh(DONE_ALL);
     }
 }
 
@@ -853,13 +635,13 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 }
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
-// Global variables: last_update, l_state, g_refresh
+// Global variables: l_state
 void housekeeping_task_user(void) {
     sync_and_refresh_displays();
-
-    if(last_update>=0) {
+    uint32_t update = get_time_since_last_update();
+    if(update>=0) {
         //turn off displays
-        uint32_t elapsed_time_since_update = timer_elapsed32(last_update);
+        uint32_t elapsed_time_since_update = timer_elapsed32(update);
 
         if (is_usb_host_side()) {
             l_state.flags |= STATUS_DISP_ON;
@@ -885,7 +667,7 @@ void housekeeping_task_user(void) {
             } else if(elapsed_time_since_update > TURN_OFF_TIME) {
                 uprint("Turning off\n");
                 poly_suspend();
-                last_update=-1;
+                set_last_update(-1);
             } else if((l_state.flags & DISP_IDLE)!=0) {
                 int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
                 l_state.contrast = time_after%50;
@@ -1567,7 +1349,7 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
 }
 
 // Copies overlay bitmap for keycode to display buffer, combining with mask if requested.
-// Global variables: overlays, l_layer, l_state
+// Global variables: l_layer, l_state
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
     if(keycode>KC_RGUI || (keycode>KC_NUM_LOCK && keycode<KC_NUBS) || (keycode>KC_APP && keycode<KC_LEFT_CTRL)) {
         return false;
@@ -1577,7 +1359,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
         return false;
     }
     idx = adjust_overlay_idx_to_mod(idx, mods);
-    idx = overlay_map[idx];
+    idx = get_overlay_mapping(idx);
 
     if(!is_overlay_used(idx)) {
         return false;
@@ -1586,13 +1368,13 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
         combine_with_mask();
     }
 
-    kdisp_clear_bitmap_courtyard(28, 0, overlays[idx], 72, 40);
-    kdisp_draw_bitmap(28, 0, overlays[idx], 72, 40); //don't understnad why we start at offset 28... need to think about it
+    kdisp_clear_bitmap_courtyard(28, 0, get_overlay(idx), 72, 40);
+    kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40); //don't understnad why we start at offset 28... need to think about it
     return true;
 }
 
 // Updates all display based on current layer and modifiers.
-// Global variables: l_layer, l_state, keymaps, overlays
+// Global variables: l_layer, l_state, keymaps
 void update_displays(enum refresh_mode mode) {
     if(l_state.contrast<=DISP_OFF || (l_state.flags&DISP_IDLE)!=0) {
         return;
@@ -1738,7 +1520,7 @@ void kdisp_idle(uint8_t contrast) {
 // Global variables: l_layer, l_last, g_latin, l_state
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
-    uint32_t t = timer_elapsed32(last_update);
+    uint32_t t = get_time_since_last_update();
     if(record->event.pressed) {
         uprintf("wait %ld.%03ld\n", t/1000, t%1000);
         uprintf("press 0x%04x\n", keycode);
@@ -2038,12 +1820,12 @@ void set_displays(uint8_t contrast, bool idle) {
 }
 
 // Disables keypress if displays are turned off/in idle mode; restores brightness on wakeup.
-// Global variables: l_state, last_update
+// Global variables: l_state
 bool display_wakeup(keyrecord_t* record) {
     bool accept_keypress = true;
     if ((l_state.contrast==DISP_OFF || (l_state.flags & DISP_IDLE)!=0) && record->event.pressed) {
         if(l_state.contrast==DISP_OFF && (l_state.flags&DEAD_KEY_ON_WAKEUP)!=0) {
-            accept_keypress = timer_elapsed32(last_update) <= TURN_OFF_TIME;
+            accept_keypress = get_time_since_last_update()<= TURN_OFF_TIME;
         }
         poly_eeconf_t ee = load_user_eeconf();
         l_state.contrast = ee.brightness;
@@ -2097,8 +1879,8 @@ void keyboard_post_init_user(void) {
     //standard mapping is 1:1
     reset_overlay_mapping();
 
-#ifdef USE_CORE1_FOR_DECOMPRESSION
-    multicore_launch_core1();//start_core1();
+#ifdef USE_CORE1
+    multicore_launch_core1();
 #endif
 
     transaction_register_rpc(USER_SYNC_POLY_DATA,       user_sync_poly_data_handler);
@@ -2355,24 +2137,24 @@ void poly_suspend(void) {
 }
 
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
-// Global variables: l_state, last_update
+// Global variables: l_state
 void suspend_power_down_kb(void) {
     poly_suspend();
     rgb_matrix_disable_noeeprom();
     housekeeping_task_user();
     suspend_power_down_user();
-    last_update = -1;
+    set_last_update(-1);
 }
 
 
 // Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
-// Global variables: l_state, last_update
+// Global variables: l_state
 void suspend_wakeup_init_kb(void) {
     l_state.flags |= STATUS_DISP_ON;
     l_state.flags &= ~((uint8_t)DISP_IDLE);
     poly_eeconf_t ee = load_user_eeconf();
     l_state.contrast = ee.brightness;
-    last_update = 0;
+    set_last_update(0);
 
     //rgb_matrix_reload_from_eeprom();
     if(test_flag(l_state.flags, RGB_ON)) {
@@ -2400,7 +2182,7 @@ uint8_t translate_a_to_z(uint8_t keycode) {
 }
 
 // Fills overlay buffer segment with bitmap data and syncs to bridge if needed.
-// Global variables: overlays, l_layer
+// Global variables: l_layer
 void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
     if (keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
@@ -2415,7 +2197,7 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
         return;
     }
     idx = adjust_overlay_idx_to_mod(idx, mods);
-    idx = overlay_map[idx];
+    idx = get_overlay_mapping(idx);
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
     if(pos==POS_NOT_FOUND) {
@@ -2429,7 +2211,7 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
     }
     //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
     if (is_on_current_side(pos)) {
-        memcpy(overlays[idx] + segment_0_to_14 * BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
+        memcpy(get_overlay(idx) + segment_0_to_14 * BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
     }
     //only send to bridge when needed
     if (is_on_other_side(pos)) {
@@ -2449,7 +2231,7 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
 }
 
 // Decompresses RLE-compressed overlay data and writes to overlay buffer, syncs to bridge if needed.
-// Global variables: hid_keycode, hid_modifier, hid_bit_index, overlays
+// Global variables: hid_keycode, hid_modifier, hid_bit_index
 void decompress_overlay_buffer(uint8_t* compressed) {
     if (hid_keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
@@ -2463,7 +2245,7 @@ void decompress_overlay_buffer(uint8_t* compressed) {
         return;
     }
     idx = adjust_overlay_idx_to_mod(idx, hid_modifier);
-    idx = overlay_map[idx];
+    idx = get_overlay_mapping(idx);
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
     if(pos==POS_NOT_FOUND) {
@@ -2477,12 +2259,12 @@ void decompress_overlay_buffer(uint8_t* compressed) {
     }
 
     if (is_on_current_side(pos)) {
-#ifdef USE_CORE1_FOR_DECOMPRESSION
-        core1_decompress_fragment(keycode, idx, compressed);
+#ifdef USE_CORE1
+        core1_decompress_fragment(keycode, hid_modifier, idx, compressed);
 #else
         uint8_t compressed_len = hid_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
         int16_t maxlen = 360 - hid_bit_index/8;
-        hid_bit_index += rle_decompress(overlays[idx]+hid_bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, hid_bit_index);
+        hid_bit_index += rle_decompress(get_overlay(idx)+hid_bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, hid_bit_index);
         //uprintf("keycode 0x%x bits %d, bytes %d.\n",
         //   keycode, hid_bit_index, hid_bit_index/8);
 
@@ -2515,64 +2297,8 @@ void decompress_overlay_buffer(uint8_t* compressed) {
     }
 }
 
-// Copies rectangular region of overlay data to buffer with bitwise operations and bit position tracking.
-// Global variables: (none - uses passed parameters only)
-uint16_t copy_rectangle_to_overlay_xy(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint16_t bitlen) {
-    uint16_t bit_cnt = 0;
-    uint8_t  start_y = bit_index / SCREEN_WIDTH;
-    for (uint8_t dest_y = start_y; dest_y < roi->yy; dest_y++) {
-        uint8_t start_x = bit_cnt == 0 ? bit_index % SCREEN_WIDTH : roi->x;
-        if (start_x == roi->xx) {
-            start_x = roi->x;
-            dest_y++;
-            if (dest_y >= roi->yy) {
-                return bit_index;
-            }
-        } else if(start_x < roi->x) {
-            start_x = roi->x;
-        }
-        for (uint8_t dest_x = start_x; dest_x < roi->xx; dest_x++) {
-            bit_index = dest_y * SCREEN_WIDTH + dest_x;
-            uint8_t data_byte   = data[bit_cnt / 8];
-            uint8_t bit_in_byte = bit_cnt % 8;
-            bool    bit_is_set  = ((0x80 >> bit_in_byte) & data_byte) != 0;
-
-            if (bit_is_set) {
-                dest[bit_index / 8] |= 0x80 >> (bit_index % 8);
-            } else {
-                dest[bit_index / 8] &= ~(0x80 >> (bit_index % 8));
-            }
-
-            bit_cnt++;
-            if (bit_cnt >= bitlen) {
-                bit_index++; //for the next call
-                return bit_index;
-            }
-        }
-    }
-    return 2880;
-}
-
-// Copies rectangle region of overlay data handling both compressed and uncompressed formats.
-// Global variables: (none - uses passed parameters only)
-uint16_t copy_rectangle_to_overlay(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint8_t data_len) {
-    if(roi->compressed) {
-        for (uint8_t i = 0; i < data_len; i++) {
-            uint8_t buffer[16];
-            uint16_t num_bits = rle_decompress(buffer, 16, &data[i], 1, 0);
-            bit_index = copy_rectangle_to_overlay_xy(bit_index, dest, buffer, roi, num_bits);
-            if( bit_index >= 2880) {
-                return bit_index;
-            }
-        }
-    } else {
-        bit_index = copy_rectangle_to_overlay_xy(bit_index, dest, data, roi, data_len*8);
-    }
-    return bit_index >= ((roi->yy-1) * SCREEN_WIDTH + roi->xx) ? 2880 : bit_index;
-}
-
 // Fills region-of-interest of overlay buffer with data and syncs to bridge when needed.
-// Global variables: hid_keycode, hid_modifier, hid_bit_index, hid_roi, overlays
+// Global variables: hid_keycode, hid_modifier, hid_bit_index, hid_roi
 void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     if (hid_keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
@@ -2586,7 +2312,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
         return;
     }
     idx = adjust_overlay_idx_to_mod(idx, hid_modifier);
-    idx = overlay_map[idx];
+    idx = get_overlay_mapping(idx);
 
     enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
     if(pos==POS_NOT_FOUND) {
@@ -2600,11 +2326,11 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     }
 
     if (is_on_current_side(pos)) {
-        #ifdef USE_CORE1_FOR_DECOMPRESSION
+        #ifdef USE_CORE1
             if(first) {
                 core1_roi_start();
             }
-            core1_update_roi(keycode, idx, first?(&(data[5])):data, &hid_roi);
+            core1_update_roi(keycode, hid_modifier, idx, first?(&(data[5])):data, &hid_roi);
         #else
             uint16_t data_len = first?ROI_START:ROI_MAX;
 
@@ -2612,7 +2338,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             if(first) {
                 hid_bit_index = hid_roi.y * SCREEN_WIDTH + hid_roi.x;
             }
-            hid_bit_index = copy_rectangle_to_overlay(hid_bit_index, overlays[idx], first?(&(data[5])):data, &hid_roi, data_len)
+            hid_bit_index = copy_rectangle_to_overlay(hid_bit_index, get_overlay(idx), first?(&(data[5])):data, &hid_roi, data_len);
             if(hid_bit_index >= 2880) {
                 set_overlay_usage(idx);
                 update_performed();
@@ -2653,7 +2379,7 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
             from = to;
         } else {
             if(from<OVERLAY_MAP_IDX_CNT && to<OVERLAY_MAP_IDX_CNT) {
-                overlay_map[from] = to;
+                set_overlay_mapping(from, to);
                 uprintf("Setting overlay mapping from %u to %u\n", from, to);
             }
             from = UNSET_OVERLAY_MAPPING;
@@ -2874,13 +2600,14 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                     }
                     uprint("Stop idle.\n");
 } else {
-                    last_update = timer_read32() - FADE_OUT_TIME;
-                    if(last_update<0) {
-                        uprintf("Starting idle in %ld msec .\n", -last_update);
-                        last_update=0;
+                    int32_t update = timer_read32() - FADE_OUT_TIME;
+                    if(update<0) {
+                        uprintf("Starting idle in %ld msec .\n", -update);
+                        update=0;
                     } else {
                         uprint("Start idle.\n");
                     }
+                    set_last_update(update);
                 }
                 memset(data, 0, length);
                 memcpy(data, "P\x0f.", 3);

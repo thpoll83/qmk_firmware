@@ -5,10 +5,10 @@
             "includePath": [
                 "${workspaceFolder}/**"
             ],
-            "defines": [],
+            "defines": ["USE_CORE1", "VIA_ENABLE"],
             "compilerPath": "/usr/bin/gcc",
-            "cStandard": "gnu17",
-            "cppStandard": "gnu++17",
+            "cStandard": "gnu11",
+            //"cppStandard": "gnu++17",
             "intelliSenseMode": "linux-gcc-x64"
         }
     ],

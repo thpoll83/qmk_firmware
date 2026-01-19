@@ -4,13 +4,32 @@
 #include <stdbool.h>
 
 
-typedef struct roi_update_data_t{
+typedef struct _roi_update_data_t{
     uint8_t x;
     uint8_t y;
     uint8_t xx;
     uint8_t yy;
     bool compressed;
 } roi_update_data_t;
+
+typedef struct _overlay_fragment_context_t {
+    uint8_t           keycode;
+    uint8_t           modifier;
+    uint8_t           byte_len;
+    roi_update_data_t roi;
+    uint16_t          bit_index;
+    uint8_t           msg_count; //only used for the bridge
+} overlay_fragment_context_t;
+
+const overlay_fragment_context_t* get_fragment_context(void);
+overlay_fragment_context_t* access_fragment_context(void);
+void reset_fragment_context(void);
+void set_fragment_context_from_buffer(const uint8_t* buffer);
+void set_fragment_context_key(uint8_t keycode, uint8_t modifier);
+void set_fragment_context_bit_index(uint16_t bit_index);
+void set_fragment_context_byte_len(uint8_t byte_len);
+void set_fragment_context_msg_count(uint8_t msg_count);
+void set_fragment_context_roi(uint8_t x, uint8_t y, uint8_t xx, uint8_t yy, bool compressed);
 
 uint8_t (*get_overlays(void))[72*40/8];
 

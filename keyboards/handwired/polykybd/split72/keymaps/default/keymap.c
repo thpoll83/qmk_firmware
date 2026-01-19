@@ -17,6 +17,7 @@
 
 #include "polykybd.h"
 #include "split72/split72.h"
+#include "split72/status_oled.h"
 #include "split72/sync_helper.h"
 #include "split72/keymaps/default/uni.h"
 
@@ -30,13 +31,15 @@
 #include "base/spi_helper.h"
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
-#include "base/fonts/NotoSans_Regular_Base_11pt.h"
-#include "base/fonts/NotoSans_Medium_Base_8pt.h"
+// #include "base/fonts/NotoSans_Regular_Base_11pt.h"
+// #include "base/fonts/NotoSans_Medium_Base_8pt.h"
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/multicore/core1.h"
 #include "base/crc32.h"
 
+#include "state.h"
 #include "multicore_exec.h"
+#include "split_sync.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -44,6 +47,10 @@
 #include "layers.h"
 #include "keycode_helper.h"
 #include "uni.h"
+
+#include <stdint.h>
+#include <string.h>
+#include <stdbool.h>
 
 /*[[[cog
 import cog
@@ -112,54 +119,6 @@ const struct display_info disp_row_0 = { BITMASK1(0) };
 const struct display_info disp_row_3 = { BITMASK4(0) };
 
 
-static poly_layer_t l_layer;
-static poly_layer_t g_layer;
-
-static poly_sync_t l_state;
-static poly_sync_t g_state;
-
-static poly_last_t l_last;
-static poly_last_t g_last;
-
-static latin_sync_t g_latin;
-
-static uint16_t hid_byte_count = 0;
-
-// extern volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
-// extern uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
-extern uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
-
-//helpers for compressed overlay data
-static uint16_t hid_bit_index = 0;
-static uint16_t hid_bit_index_bridge = 0;
-static uint8_t hid_keycode = 0;
-static uint8_t hid_modifier = 0;
-
-//helpers for overlay data where only a region of interset is sent (instead of the full overlay)
-static roi_update_data_t hid_roi;
-
-
-typedef struct _overlay_sync_t {
-    uint32_t crc32;
-    uint16_t adj_idx;
-    uint8_t segment;
-    uint8_t overlay[BYTES_PER_SEGMENT];
-} overlay_sync_t;
-
-typedef struct _compressed_overlay_sync_t {
-    uint32_t crc32;
-    uint16_t adj_idx;
-    uint8_t len;
-    uint8_t compressed[COMPRESSED_MAX];
-} compressed_overlay_sync_t;
-
-typedef struct _roi_overlay_sync_t {
-    uint32_t crc32;
-    uint16_t adj_idx;
-    uint8_t data[ROI_MAX];
-    uint8_t msg_idx;
-} roi_overlay_sync_t;
-
 bool display_wakeup(keyrecord_t* record);
 void update_displays(enum refresh_mode mode);
 void set_displays(uint8_t contrast, bool idle);
@@ -168,53 +127,6 @@ void toggle_stagger(bool new_state);
 void oled_update_buffer(void);
 void poly_suspend(void);
 
-// Saves user keyboard configuration (language, brightness, latin extensions) to EEPROM.
-// Global variables: l_state, g_latin
-void save_user_eeconf(void) {
-    poly_eeconf_t ee;
-    ee.lang = l_state.lang;
-    ee.brightness = ~l_state.contrast;
-    ee.unused = 0;
-    memcpy(ee.latin_ex, g_latin.ex, sizeof(g_latin.ex));
-    eeconfig_update_user_datablock(&ee);
-}
-
-// Loads user keyboard configuration from EEPROM with brightness validation against maximum.
-// Global variables: (none - returns result)
-poly_eeconf_t load_user_eeconf(void) {
-    poly_eeconf_t ee;
-    eeconfig_read_user_datablock(&ee);
-    ee.brightness = ~ee.brightness;
-    if(ee.brightness>FULL_BRIGHT) {
-        ee.brightness = FULL_BRIGHT;
-    }
-    return ee;
-}
-
-// Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT, saves to EEPROM.
-// Global variables: l_state
-void inc_brightness(void) {
-    if (l_state.contrast < FULL_BRIGHT) {
-        l_state.contrast += BRIGHT_STEP;
-    }
-    if (l_state.contrast > FULL_BRIGHT) {
-        l_state.contrast = FULL_BRIGHT;
-    }
-
-    save_user_eeconf();
-}
-
-// Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT, saves to EEPROM.
-// Global variables: l_state
-void dec_brightness(void) {
-    if (l_state.contrast > (MIN_BRIGHT+BRIGHT_STEP)) {
-        l_state.contrast -= BRIGHT_STEP;
-    } else {
-        l_state.contrast = MIN_BRIGHT;
-    }
-
-    save_user_eeconf();
-}
 
 // Selects all shift registers to communicate with all displays.
 // Global variables: (none - uses SPI functions only)
@@ -236,235 +148,6 @@ void clear_all_displays(void) {
 // Global variables: (none - initializes hardware only)
 void early_hardware_init_post(void) {
     spi_hw_setup();
-}
-
-
-//
-// __/\\\\\\\\\\\\______________________________________________________________/\\\\\\\\\\\_____________________________________________
-//  _\/\\\////////\\\__________________________________________________________/\\\/////////\\\___________________________________________
-//   _\/\\\______\//\\\____________________/\\\________________________________\//\\\______\///_____/\\\__/\\\_____________________________
-//    _\/\\\_______\/\\\__/\\\\\\\\\_____/\\\\\\\\\\\__/\\\\\\\\\________________\////\\\___________\//\\\/\\\___/\\/\\\\\\_______/\\\\\\\\_
-//     _\/\\\_______\/\\\_\////////\\\___\////\\\////__\////////\\\__________________\////\\\_________\//\\\\\___\/\\\////\\\____/\\\//////__
-//      _\/\\\_______\/\\\___/\\\\\\\\\\_____\/\\\________/\\\\\\\\\\____________________\////\\\_______\//\\\____\/\\\__\//\\\__/\\\_________
-//       _\/\\\_______/\\\___/\\\/////\\\_____\/\\\_/\\___/\\\/////\\\_____________/\\\______\//\\\___/\\_/\\\_____\/\\\___\/\\\_\//\\\________
-//        _\/\\\\\\\\\\\\/___\//\\\\\\\\/\\____\//\\\\\___\//\\\\\\\\/\\___________\///\\\\\\\\\\\/___\//\\\\/______\/\\\___\/\\\__\///\\\\\\\\_
-//         _\////////////______\////////\//______\/////_____\////////\//______________\///////////______\////________\///____\///_____\////////__
-//
-
-// Handles incoming poly_sync data for the bridge with CRC32 validation.
-// Global variables: l_state
-void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len == sizeof(poly_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
-        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
-        if(crc32 == ((const poly_sync_t *)in_data)->crc32) {
-            memcpy(&l_state, in_data, sizeof(poly_sync_t));
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            //request_disp_refresh();
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
-        }
-    }
-}
-
-// Handles incoming latin_sync data with CRC32 validation, saves to EEPROM and refreshes display.
-// Global variables: g_latin
-void user_sync_latin_ex_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len == sizeof(latin_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
-        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
-        if(crc32 == ((const latin_sync_t *)in_data)->crc32) {
-            memcpy(&g_latin, in_data, sizeof(latin_sync_t));
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            save_user_eeconf();
-            request_disp_refresh();
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
-        }
-    }
-}
-
-#ifdef VIA_ENABLE
-
-#ifndef DYNAMIC_KEYMAP_EEPROM_ADDR
-#    define DYNAMIC_KEYMAP_EEPROM_ADDR VIA_EEPROM_CONFIG_END
-#endif
-#define DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT 9
-_Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COUNT, "Maximum cannot exceed DYNAMIC_KEYMAP_LAYER_COUNT");
-
-// Writes data to EEPROM at specified offset within the dynamic keymap region with bounds checking.
-// Global variables: (none - uses passed parameters and EEPROM)
-void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data) {
-    uint16_t dynamic_keymap_eeprom_size = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
-    void *   target                     = (void *)(DYNAMIC_KEYMAP_EEPROM_ADDR + offset);
-    const uint8_t *source                     = data;
-    for (uint16_t i = 0; i < size; i++) {
-        if (offset + i < dynamic_keymap_eeprom_size) {
-            eeprom_update_byte(target, *source);
-        }
-        source++;
-        target++;
-    }
-}
-
-// Handles VIA protocol commands on the bridge with CRC32 validation, including keymap resets and key press events.
-// Global variables: l_layer
-void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len >= (sizeof(uint32_t)+1) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
-        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
-        const via_sync_t* via_data = (const via_sync_t *)in_data;
-        if(crc32 == via_data->crc32) {
-            const uint8_t* command_data = &via_data->via_commands[1];
-            switch(via_data->via_commands[0]) {
-                case id_dynamic_keymap_reset:
-                    dynamic_keymap_reset();
-                    request_disp_refresh();
-                    break;
-                case id_dynamic_keymap_set_keycode:
-                    dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
-                    request_disp_refresh();
-                    break;
-                case id_dynamic_keymap_set_buffer: {
-                    uint16_t offset = (command_data[0] << 8) | command_data[1];
-                    uint16_t size   = command_data[2]; // size <= 28
-                    dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
-                    request_disp_refresh();
-                    break;
-                }
-                case id_custom_save:
-                case 'P':
-                    if(command_data[0]==14) {
-                        uint16_t keycode = ((uint16_t)command_data[2])<<8 | command_data[3];
-                        uint8_t r, c;
-                        enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(l_layer.layer), &r, &c, is_left_side());
-                        if(pos==POS_NOT_FOUND) {
-                            //actually it should be the previous layer instead of default, but it worked so far
-                            pos = get_split_matrix_pos(keycode, l_layer.def_layer, &r, &c, is_left_side());
-                        }
-                        if (is_on_current_side(pos)) {
-                            invert_display(r, c, command_data[4] == 0);
-                        }
-                    }
-                default: break;
-            }
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
-        }
-    }
-}
-#endif
-
-// Handles incoming last key data on bridge with CRC32 validation, updates both local and global state.
-// Global variables: l_last, g_last
-void user_sync_lastkey_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len == sizeof(poly_last_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
-        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
-        if(crc32 == ((const poly_last_t *)in_data)->crc32) {
-            memcpy(&l_last, in_data, sizeof(poly_last_t));
-            memcpy(&g_last, in_data, sizeof(poly_last_t));
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            request_disp_refresh();
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
-        }
-    }
-}
-
-// Handles incoming layer data on bridge with CRC32 validation.
-// Global variables: l_layer
-void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len == sizeof(poly_layer_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
-        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
-        if(crc32 == ((const poly_layer_t *)in_data)->crc32) {
-            memcpy(&l_layer, in_data, sizeof(poly_layer_t));
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            //request_disp_refresh();
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
-        }
-    }
-}
-
-// Handles incoming overlay segment data on bridge with CRC32 validation, marks as used when complete.
-void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len == sizeof(overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
-        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
-        const overlay_sync_t* ov = ((const overlay_sync_t *)in_data);
-        if(crc32 == ov->crc32) {
-            memcpy(get_overlay(ov->adj_idx) + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
-            if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
-                set_overlay_usage(ov->adj_idx);
-                request_disp_refresh();
-            }
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
-        }
-    }
-}
-
-// Handles compressed overlay data on bridge with CRC32 validation, decompresses using core1 or local decompression.
-// Global variables: hid_bit_index
-void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len == sizeof(compressed_overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
-        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
-        const compressed_overlay_sync_t* ov = ((const compressed_overlay_sync_t *)in_data);
-        if(crc32 == ov->crc32) {
-#ifdef USE_CORE1
-            core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed);
-#else
-            if(ov->len == COMPRESSED_START) {
-                hid_bit_index = 0;
-            }
-            int16_t maxlen = 360 - hid_bit_index/8;
-            hid_bit_index += rle_decompress(get_overlay(ov->adj_idx)+hid_bit_index/8, PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
-            if (hid_bit_index >= 360*8) {
-                set_overlay_usage(ov->adj_idx);
-                request_disp_refresh();
-                hid_bit_index = 0;
-            }
-#endif
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
-        }
-    }
-}
-
-void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len == sizeof(roi_overlay_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
-        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
-        const roi_overlay_sync_t* roi_ov = ((const roi_overlay_sync_t *)in_data);
-        if(crc32 == roi_ov->crc32) {
-            bool first = roi_ov->msg_idx==0;
-            uint16_t data_len;
-            if(first) {
-                //hid_bit_index = 0;
-                hid_bit_index_bridge = 0;
-                hid_keycode = roi_ov->data[0];
-                hid_modifier = roi_ov->data[1]&0x0f;
-                hid_roi.y = (roi_ov->data[2]&0x03) | ((roi_ov->data[1]>>2)&0x3c);
-                hid_roi.yy = roi_ov->data[2] >> 2;
-                hid_roi.x = roi_ov->data[3];
-                hid_roi.xx = roi_ov->data[4]&0x7f;
-                hid_roi.compressed = ((roi_ov->data[4]&0x80)!=0);
-                hid_bit_index = hid_roi.y * SCREEN_WIDTH + hid_roi.x;
-                data_len = ROI_START;
-            } else {
-                data_len = ROI_MAX;
-            }
-            hid_bit_index = copy_rectangle_to_overlay(hid_bit_index, get_overlay(roi_ov->adj_idx), first?(&((roi_ov->data)[5])):roi_ov->data, &hid_roi, data_len);
-            if( hid_bit_index >= 2880) {
-                //finished roi update
-                ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
-                set_overlay_usage(roi_ov->adj_idx);
-                request_disp_refresh();
-            } else {
-                ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            }
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
-        }
-    }
 }
 
 //void oled_on_off(bool on);
@@ -495,64 +178,70 @@ static uint8_t flags = 0;
 static uint8_t overlay_flags = 0;
 
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
-// Global variables: l_state, g_state, l_layer, g_layer, l_last, g_last, flags, overlay_flags
+// Global variables: flags, overlay_flags
 void sync_and_refresh_displays(void) {
     bool layer_diff = false;
     bool state_diff = false;
 
+    uint8_t local_flags;
+    uint8_t local_overlay_flags = get_local_state()->overlay_flags;
+    uint8_t global_flags = get_global_state()->flags;
+
     if (is_usb_host_side()) {
-        const bool back_from_idle_transition = flag_turned_on(l_state.flags, g_state.flags, IDLE_TRANSITION);
+
+        local_flags = set_flag(get_local_state()->flags, DBG_ON, debug_enable);
+        access_local_state()->flags = local_flags;
+
+        const bool back_from_idle_transition = flag_turned_on(local_flags, global_flags, IDLE_TRANSITION);
         if (back_from_idle_transition) {
             poly_eeconf_t ee   = load_user_eeconf();
-            l_state.contrast = ee.brightness;
+            access_local_state()->contrast = ee.brightness;
         }
 
-        if(flags!=l_state.flags) {
-            //uprintf("Poly State Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", l_state.flags, BYTE_TO_FLAGS(l_state.flags));
-            flags=l_state.flags;
+        if(flags!=local_flags) {
+            //uprintf("Poly State Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", local_flags, BYTE_TO_FLAGS(local_flags));
+            flags=local_flags;
         }
-        if(overlay_flags!=l_state.overlay_flags) {
-            //uprintf("Poly Ovrly Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", l_state.overlay_flags, BYTE_TO_OVERLAY_FLAGS(l_state.overlay_flags));
-            overlay_flags=l_state.overlay_flags;
+        if(overlay_flags!=local_overlay_flags) {
+            //uprintf("Poly Ovrly Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", local_overlay_flags, BYTE_TO_OVERLAY_FLAGS(local_overlay_flags));
+            overlay_flags=local_overlay_flags;
         }
 
-        l_state.flags = set_flag(l_state.flags, DBG_ON, debug_enable);
-        state_diff = differ(&l_state, &g_state, sizeof(poly_sync_t));
+        state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
-            // if(l_state.lang!=g_state.lang) {
-            //     uprintf("Sending lang change from %d to %d to bridge.\n", l_state.lang, g_state.lang);
-            // }
-            send_to_bridge(USER_SYNC_POLY_DATA, (void *)&l_state, sizeof(l_state), 10);
+            send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
         }
 
-        l_layer.led_state = host_keyboard_led_state();
-        l_layer.mods = get_mods();
-        layer_diff = differ(&l_layer, &g_layer, sizeof(poly_layer_t));
+        access_local_layer()->led_state = host_keyboard_led_state();
+        access_local_layer()->mods = get_mods();
+        layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         if ( layer_diff ) {
-            send_to_bridge(USER_SYNC_LAYER_DATA, (void *)&l_layer, sizeof(l_layer), 10);
+            send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 10);
         }
-        if ( differ(&l_last, &g_last, sizeof(poly_last_t)) ) {
-            send_to_bridge(USER_SYNC_LASTKEY_DATA, (void *)&l_last, sizeof(l_last), 5);
-            memcpy(&g_last, &l_last, sizeof(l_last));
+        if ( differ(get_local_last_latin(), get_global_last_latin(), sizeof(poly_last_t)) ) {
+            send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), 5);
+            copy_global_last_latin(get_local_last_latin());
         }
     } else {
-        layer_diff = differ(&l_layer, &g_layer, sizeof(poly_layer_t));
-        state_diff = differ(&l_state, &g_state, sizeof(poly_sync_t));
+        layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
+        state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
+
+        local_flags = get_local_state()->flags;
     }
 
-    const bool in_idle_mode = (l_state.flags & DISP_IDLE) != 0;
+    const bool in_idle_mode = (local_flags & DISP_IDLE) != 0;
 
     if(state_diff) {
-        const bool idle_changed         = has_flag_changed(l_state.flags, g_state.flags, DISP_IDLE);
-        const bool contrast_changed     = g_state.contrast != l_state.contrast;
-        const bool lang_changed         = g_state.lang != l_state.lang;
-        const bool status_disp_changed  = has_flag_changed(l_state.flags, g_state.flags, STATUS_DISP_ON);
-        const bool status_disp_on       = test_flag(l_state.flags, STATUS_DISP_ON);
-        const bool overlays_changed     = has_flag_changed(l_state.overlay_flags, g_state.overlay_flags, DISPLAY_OVERLAYS);
-        const bool reset_overlays       = test_flag(l_state.overlay_flags, RESET_BUFFERS);
-        const bool usage_reset          = test_flag(l_state.overlay_flags, USAGE_RESET);
-        const bool mapping_reset        = test_flag(l_state.overlay_flags, MAPPING_RESET);
-        const bool debug_changed        = has_flag_changed(l_state.flags, g_state.flags, DBG_ON);
+        const bool idle_changed         = has_flag_changed(local_flags, global_flags, DISP_IDLE);
+        const bool contrast_changed     = get_local_state()->contrast != get_global_state()->contrast;
+        const bool lang_changed         = get_local_state()->lang != get_global_state()->lang;
+        const bool status_disp_changed  = has_flag_changed(local_flags, global_flags, STATUS_DISP_ON);
+        const bool status_disp_on       = test_flag(local_flags, STATUS_DISP_ON);
+        const bool overlays_changed     = has_flag_changed(local_overlay_flags, get_global_state()->overlay_flags, DISPLAY_OVERLAYS);
+        const bool reset_overlays       = test_flag(local_overlay_flags, RESET_BUFFERS);
+        const bool usage_reset          = test_flag(local_overlay_flags, USAGE_RESET);
+        const bool mapping_reset        = test_flag(local_overlay_flags, MAPPING_RESET);
+        const bool debug_changed        = has_flag_changed(local_flags, global_flags, DBG_ON);
 
         if(idle_changed) {
             if(in_idle_mode) {
@@ -564,14 +253,14 @@ void sync_and_refresh_displays(void) {
         if(status_disp_changed && status_disp_on) {
             // rgb_matrix_reload_from_eeprom();
             // if(rgb_matrix_is_enabled()) {
-            //     l_state.flags = flag_on(l_state.flags, RGB_ON);
+            //     l_state.flags = flag_on(local_flags, RGB_ON);
             //     restored = true;
             // }
             oled_set_brightness(OLED_BRIGHTNESS);
         }
 
-        if(has_flag_changed(l_state.flags, g_state.flags, RGB_ON)) {
-            if (test_flag(l_state.flags, RGB_ON)) {
+        if(has_flag_changed(local_flags, global_flags, RGB_ON)) {
+            if (test_flag(local_flags, RGB_ON)) {
                 // if(restored) {
                 //     rgb_matrix_enable_noeeprom();
                 // } else {
@@ -588,31 +277,31 @@ void sync_and_refresh_displays(void) {
 
         if(reset_overlays) {
             reset_overlay_buffers();
-            l_state.overlay_flags = flag_off(l_state.overlay_flags, RESET_BUFFERS);
+            local_overlay_flags = flag_off(local_overlay_flags, RESET_BUFFERS);
         }
         if(usage_reset) {
             reset_overlay_usage();
-            l_state.overlay_flags = flag_off(l_state.overlay_flags, USAGE_RESET);
+            local_overlay_flags = flag_off(local_overlay_flags, USAGE_RESET);
         }
         if(mapping_reset) {
             reset_overlay_mapping();
-            l_state.overlay_flags = flag_off(l_state.overlay_flags, MAPPING_RESET);
+            local_overlay_flags = flag_off(local_overlay_flags, MAPPING_RESET);
         }
+        access_local_state()->overlay_flags = local_overlay_flags;
 
-        if( debug_changed || overlays_changed || reset_overlays || usage_reset || mapping_reset || lang_changed || l_state.unicode_mode!=g_state.unicode_mode) {
+        if( debug_changed || overlays_changed || reset_overlays || usage_reset || mapping_reset || lang_changed || get_local_state()->unicode_mode!=get_global_state()->unicode_mode) {
             request_disp_refresh();
             update_performed();
         }
 
         if (contrast_changed || idle_changed) {
-            set_displays(l_state.contrast, in_idle_mode);
+            set_displays(get_local_state()->contrast, in_idle_mode);
         }
-
-        memcpy(&g_state, &l_state, sizeof(l_state));
+        copy_global_state(get_local_state());
     }
 
     if(layer_diff) {
-        memcpy(&g_layer, &l_layer, sizeof(l_layer));
+        copy_global_layer(get_local_layer());
         request_disp_refresh();
     }
 
@@ -628,52 +317,56 @@ void sync_and_refresh_displays(void) {
 }
 
 // Sets layer state variable tracking the active keyboard layer.
-// Global variables: l_layer
 layer_state_t layer_state_set_user(layer_state_t state) {
-    l_layer.layer = state;
+    access_local_layer()->layer = state;
     return state;
 }
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
-// Global variables: l_state
 void housekeeping_task_user(void) {
     sync_and_refresh_displays();
-    uint32_t update = get_time_since_last_update();
+    uint32_t update = get_last_update();
     if(update>=0) {
         //turn off displays
         uint32_t elapsed_time_since_update = timer_elapsed32(update);
-
         if (is_usb_host_side()) {
-            l_state.flags |= STATUS_DISP_ON;
-            l_state.flags &= ~((uint8_t)IDLE_TRANSITION);
+            poly_sync_t* local_state = access_local_state();
+            uint8_t  contrast = local_state->contrast;
+            uint8_t  flags = local_state->flags;
 
-            if(elapsed_time_since_update > FADE_OUT_TIME && l_state.contrast >= MIN_BRIGHT && (l_state.flags & DISP_IDLE)==0) {
+            flags |= STATUS_DISP_ON;
+            flags &= ~((uint8_t)IDLE_TRANSITION);
+
+            if(elapsed_time_since_update > FADE_OUT_TIME && contrast >= MIN_BRIGHT && (flags & DISP_IDLE)==0) {
                 poly_eeconf_t ee = load_user_eeconf();
                 int32_t time_after = elapsed_time_since_update - FADE_OUT_TIME;
                 int16_t brightness = ((FADE_TRANSITION_TIME - time_after) * ee.brightness) / FADE_TRANSITION_TIME;
 
                 //transition to pulsing mode
                 if(brightness<=MIN_BRIGHT) {
-                    l_state.contrast = DISP_OFF;
-                    l_state.flags |= DISP_IDLE;
+                    contrast = DISP_OFF;
+                    flags |= DISP_IDLE;
                     uprint("Transition to pulsing\n");
                 } else if(brightness>FULL_BRIGHT) {
-                    l_state.contrast = FULL_BRIGHT;
+                    contrast = FULL_BRIGHT;
                     uprint("Limiting brightness\n");
                 } else{
-                    l_state.contrast = brightness;
+                    contrast = brightness;
                 }
-                l_state.flags |= IDLE_TRANSITION;
+                flags |= IDLE_TRANSITION;
             } else if(elapsed_time_since_update > TURN_OFF_TIME) {
                 uprint("Turning off\n");
                 poly_suspend();
                 set_last_update(-1);
-            } else if((l_state.flags & DISP_IDLE)!=0) {
+            } else if((flags & DISP_IDLE)!=0) {
                 int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
-                l_state.contrast = time_after%50;
+                contrast = time_after%50;
             } else {
-                l_state.flags &= ~((uint8_t)DISP_IDLE);
+                flags &= ~((uint8_t)DISP_IDLE);
             }
+
+            local_state->contrast = contrast;
+            local_state->flags = flags;
         }
     }
 }
@@ -1066,7 +759,6 @@ led_config_t g_led_config = { {// Key Matrix to LED Index
                              } };
 
 // Returns display text for special keys.
-// Global variables: l_state, l_layer
 const uint16_t* to_static_text(uint16_t keycode, led_t state) {
 
     const uint16_t* emoji = keycode_to_emoji(keycode);
@@ -1078,8 +770,9 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
         keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
     }
 
+    const poly_sync_t* local_state = get_local_state();
 #ifndef ENABLE_NUMLOCK_FOR_OSX
-    if(l_state.unicode_mode == UNICODE_MODE_MACOS && keycode >= KC_NUM_LOCK && keycode <=KC_KP_DOT) {
+    if(local_state->unicode_mode == UNICODE_MODE_MACOS && keycode >= KC_NUM_LOCK && keycode <=KC_KP_DOT) {
         switch(keycode) {
             case KC_NUM_LOCK: return u"";
             case KC_KP_7:     return u"7";
@@ -1098,58 +791,58 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
     }
 #endif
 
-    const uint16_t* text = keycode_to_static_text(keycode, state, l_state.flags);
+    const uint16_t* text = keycode_to_static_text(keycode, state, local_state->flags);
     if(text!=NULL) {
         return text;
     }
 
+    const poly_layer_t* local_layer = get_local_layer();
     switch (keycode) {
-        case QK_UNICODE_MODE_MACOS:         return l_state.unicode_mode == UNICODE_MODE_MACOS ? u"Mac\r\v" ICON_SWITCH_ON : u"Mac\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_LINUX:         return l_state.unicode_mode == UNICODE_MODE_LINUX ? u"Lnx\r\v" ICON_SWITCH_ON : u"Lnx\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_WINDOWS:       return l_state.unicode_mode == UNICODE_MODE_WINDOWS ? u"Win\r\v" ICON_SWITCH_ON : u"Win\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_BSD:           return l_state.unicode_mode == UNICODE_MODE_BSD ? u"BSD\r\v" ICON_SWITCH_ON : u"BSD\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_WINCOMPOSE:    return l_state.unicode_mode == UNICODE_MODE_WINCOMPOSE ? u"WinC\r\v" ICON_SWITCH_ON : u"WinC\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_EMACS:         return l_state.unicode_mode == UNICODE_MODE_EMACS ? u"Emcs\r\v" ICON_SWITCH_ON : u"Emcs\r\v" ICON_SWITCH_OFF;
-
-        case KC_L0:                         return l_layer.def_layer == _L0 ? u"Qwty\r\v" ICON_SWITCH_ON : u"Qwty\r\v" ICON_SWITCH_OFF;
-        case KC_L1:                         return l_layer.def_layer == _L1 ? u"Qwty!\r\v" ICON_SWITCH_ON : u"Qwty!\r\v" ICON_SWITCH_OFF;
-        case KC_L2:                         return l_layer.def_layer == _L2 ? u"Clmk\r\v" ICON_SWITCH_ON : u"Clmk\r\v" ICON_SWITCH_OFF;
-        case KC_L3:                         return l_layer.def_layer == _L3 ? u"Neo\r\v" ICON_SWITCH_ON : u"Neo\r\v" ICON_SWITCH_OFF;
-        case KC_L4:                         return l_layer.def_layer == _L4 ? u"Wkm\r\v" ICON_SWITCH_ON : u"Wkm\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_MACOS:         return local_state->unicode_mode == UNICODE_MODE_MACOS ? u"Mac\r\v" ICON_SWITCH_ON : u"Mac\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_LINUX:         return local_state->unicode_mode == UNICODE_MODE_LINUX ? u"Lnx\r\v" ICON_SWITCH_ON : u"Lnx\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_WINDOWS:       return local_state->unicode_mode == UNICODE_MODE_WINDOWS ? u"Win\r\v" ICON_SWITCH_ON : u"Win\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_BSD:           return local_state->unicode_mode == UNICODE_MODE_BSD ? u"BSD\r\v" ICON_SWITCH_ON : u"BSD\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_WINCOMPOSE:    return local_state->unicode_mode == UNICODE_MODE_WINCOMPOSE ? u"WinC\r\v" ICON_SWITCH_ON : u"WinC\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_EMACS:         return local_state->unicode_mode == UNICODE_MODE_EMACS ? u"Emcs\r\v" ICON_SWITCH_ON : u"Emcs\r\v" ICON_SWITCH_OFF;
+        case KC_L0:                         return local_layer->def_layer == _L0 ? u"Qwty\r\v" ICON_SWITCH_ON : u"Qwty\r\v" ICON_SWITCH_OFF;
+        case KC_L1:                         return local_layer->def_layer == _L1 ? u"Qwty!\r\v" ICON_SWITCH_ON : u"Qwty!\r\v" ICON_SWITCH_OFF;
+        case KC_L2:                         return local_layer->def_layer == _L2 ? u"Clmk\r\v" ICON_SWITCH_ON : u"Clmk\r\v" ICON_SWITCH_OFF;
+        case KC_L3:                         return local_layer->def_layer == _L3 ? u"Neo\r\v" ICON_SWITCH_ON : u"Neo\r\v" ICON_SWITCH_OFF;
+        case KC_L4:                         return local_layer->def_layer == _L4 ? u"Wkm\r\v" ICON_SWITCH_ON : u"Wkm\r\v" ICON_SWITCH_OFF;
 
         //Language selection keycodes
         /*[[[cog
         for lang in languages:
             pretty = f"{lang[0:2]}\\r\\t{lang[2:]}"
-            cog.outl(f'case KCL_{lang.upper()}: return l_state.lang == LANG_{lang.upper()} ? u"{pretty}\\r\\x05\\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"{pretty}";')
+            cog.outl(f'case KCL_{lang.upper()}: return local_state->lang == LANG_{lang.upper()} ? u"{pretty}\\r\\x05\\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"{pretty}";')
         ]]]*/
-        case KCL_ENUS: return l_state.lang == LANG_ENUS ? u"en\r\tUS\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"en\r\tUS";
-        case KCL_DEDE: return l_state.lang == LANG_DEDE ? u"de\r\tDE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"de\r\tDE";
-        case KCL_FRFR: return l_state.lang == LANG_FRFR ? u"fr\r\tFR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fr\r\tFR";
-        case KCL_ESES: return l_state.lang == LANG_ESES ? u"es\r\tES\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"es\r\tES";
-        case KCL_PTPT: return l_state.lang == LANG_PTPT ? u"pt\r\tPT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"pt\r\tPT";
-        case KCL_ITIT: return l_state.lang == LANG_ITIT ? u"it\r\tIT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"it\r\tIT";
-        case KCL_TRTR: return l_state.lang == LANG_TRTR ? u"tr\r\tTR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"tr\r\tTR";
-        case KCL_KOKR: return l_state.lang == LANG_KOKR ? u"ko\r\tKR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ko\r\tKR";
-        case KCL_JAJP: return l_state.lang == LANG_JAJP ? u"ja\r\tJP\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ja\r\tJP";
-        case KCL_ARSA: return l_state.lang == LANG_ARSA ? u"ar\r\tSA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ar\r\tSA";
-        case KCL_ELGR: return l_state.lang == LANG_ELGR ? u"el\r\tGR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"el\r\tGR";
-        case KCL_UKUA: return l_state.lang == LANG_UKUA ? u"uk\r\tUA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"uk\r\tUA";
-        case KCL_RURU: return l_state.lang == LANG_RURU ? u"ru\r\tRU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ru\r\tRU";
-        case KCL_BEBY: return l_state.lang == LANG_BEBY ? u"be\r\tBY\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"be\r\tBY";
-        case KCL_KKKZ: return l_state.lang == LANG_KKKZ ? u"kk\r\tKZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"kk\r\tKZ";
-        case KCL_BGBG: return l_state.lang == LANG_BGBG ? u"bg\r\tBG\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"bg\r\tBG";
-        case KCL_PLPL: return l_state.lang == LANG_PLPL ? u"pl\r\tPL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"pl\r\tPL";
-        case KCL_RORO: return l_state.lang == LANG_RORO ? u"ro\r\tRO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ro\r\tRO";
-        case KCL_ZHCN: return l_state.lang == LANG_ZHCN ? u"zh\r\tCN\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"zh\r\tCN";
-        case KCL_NLNL: return l_state.lang == LANG_NLNL ? u"nl\r\tNL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nl\r\tNL";
-        case KCL_HEIL: return l_state.lang == LANG_HEIL ? u"he\r\tIL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"he\r\tIL";
-        case KCL_SVSE: return l_state.lang == LANG_SVSE ? u"sv\r\tSE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"sv\r\tSE";
-        case KCL_FIFI: return l_state.lang == LANG_FIFI ? u"fi\r\tFI\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fi\r\tFI";
-        case KCL_NNNO: return l_state.lang == LANG_NNNO ? u"nn\r\tNO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nn\r\tNO";
-        case KCL_DADK: return l_state.lang == LANG_DADK ? u"da\r\tDK\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"da\r\tDK";
-        case KCL_HUHU: return l_state.lang == LANG_HUHU ? u"hu\r\tHU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"hu\r\tHU";
-        case KCL_CSCZ: return l_state.lang == LANG_CSCZ ? u"cs\r\tCZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"cs\r\tCZ";
+        case KCL_ENUS: return local_state->lang == LANG_ENUS ? u"en\r\tUS\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"en\r\tUS";
+        case KCL_DEDE: return local_state->lang == LANG_DEDE ? u"de\r\tDE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"de\r\tDE";
+        case KCL_FRFR: return local_state->lang == LANG_FRFR ? u"fr\r\tFR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fr\r\tFR";
+        case KCL_ESES: return local_state->lang == LANG_ESES ? u"es\r\tES\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"es\r\tES";
+        case KCL_PTPT: return local_state->lang == LANG_PTPT ? u"pt\r\tPT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"pt\r\tPT";
+        case KCL_ITIT: return local_state->lang == LANG_ITIT ? u"it\r\tIT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"it\r\tIT";
+        case KCL_TRTR: return local_state->lang == LANG_TRTR ? u"tr\r\tTR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"tr\r\tTR";
+        case KCL_KOKR: return local_state->lang == LANG_KOKR ? u"ko\r\tKR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ko\r\tKR";
+        case KCL_JAJP: return local_state->lang == LANG_JAJP ? u"ja\r\tJP\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ja\r\tJP";
+        case KCL_ARSA: return local_state->lang == LANG_ARSA ? u"ar\r\tSA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ar\r\tSA";
+        case KCL_ELGR: return local_state->lang == LANG_ELGR ? u"el\r\tGR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"el\r\tGR";
+        case KCL_UKUA: return local_state->lang == LANG_UKUA ? u"uk\r\tUA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"uk\r\tUA";
+        case KCL_RURU: return local_state->lang == LANG_RURU ? u"ru\r\tRU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ru\r\tRU";
+        case KCL_BEBY: return local_state->lang == LANG_BEBY ? u"be\r\tBY\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"be\r\tBY";
+        case KCL_KKKZ: return local_state->lang == LANG_KKKZ ? u"kk\r\tKZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"kk\r\tKZ";
+        case KCL_BGBG: return local_state->lang == LANG_BGBG ? u"bg\r\tBG\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"bg\r\tBG";
+        case KCL_PLPL: return local_state->lang == LANG_PLPL ? u"pl\r\tPL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"pl\r\tPL";
+        case KCL_RORO: return local_state->lang == LANG_RORO ? u"ro\r\tRO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ro\r\tRO";
+        case KCL_ZHCN: return local_state->lang == LANG_ZHCN ? u"zh\r\tCN\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"zh\r\tCN";
+        case KCL_NLNL: return local_state->lang == LANG_NLNL ? u"nl\r\tNL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nl\r\tNL";
+        case KCL_HEIL: return local_state->lang == LANG_HEIL ? u"he\r\tIL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"he\r\tIL";
+        case KCL_SVSE: return local_state->lang == LANG_SVSE ? u"sv\r\tSE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"sv\r\tSE";
+        case KCL_FIFI: return local_state->lang == LANG_FIFI ? u"fi\r\tFI\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fi\r\tFI";
+        case KCL_NNNO: return local_state->lang == LANG_NNNO ? u"nn\r\tNO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nn\r\tNO";
+        case KCL_DADK: return local_state->lang == LANG_DADK ? u"da\r\tDK\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"da\r\tDK";
+        case KCL_HUHU: return local_state->lang == LANG_HUHU ? u"hu\r\tHU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"hu\r\tHU";
+        case KCL_CSCZ: return local_state->lang == LANG_CSCZ ? u"cs\r\tCZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"cs\r\tCZ";
         //[[[end]]]
         default:
             return NULL;
@@ -1157,16 +850,18 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
 }
 
 // Renders key character to display using language translation, including modifiers etc.
-// Global variables: l_layer, l_state, g_latin
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
-    const bool shift = ((l_layer.mods & MOD_MASK_SHIFT) != 0);
-    const bool add_lang = get_highest_layer(l_layer.layer)==_ADDLANG1;
-    const bool alt = ((l_layer.mods & MOD_MASK_ALT) != 0);
+    const poly_layer_t* local_layer = get_local_layer();
+
+    const bool shift = ((local_layer->mods & MOD_MASK_SHIFT) != 0);
+    const bool add_lang = get_highest_layer(local_layer->layer)==_ADDLANG1;
+    const bool alt = ((local_layer->mods & MOD_MASK_ALT) != 0);
     const bool is_letter = keycode>=KC_A && keycode<=KC_Z;
     if(is_letter && add_lang) {
         //display the previously selected latin variation of the letter
+        const latin_sync_t* global_latin_table = get_global_latin_table();
         const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-        uint8_t variation = (shift || state.caps_lock) ? g_latin.ex[keycode-KC_A]>>4 : g_latin.ex[keycode-KC_A]&0xf;
+        uint8_t variation = (shift || state.caps_lock) ? global_latin_table->ex[keycode-KC_A]>>4 : global_latin_table->ex[keycode-KC_A]&0xf;
 
         const uint16_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
         if(def_variation!=NULL) {
@@ -1175,19 +870,22 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         }
         return false;
     }
+
     //variation selection on 0~9
+    uint16_t local_last_latin_keycode = get_local_last_latin_keycode();
     if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
-        if(add_lang && alt && l_last.latin_kc!=0) {
+        if(add_lang && alt && local_last_latin_keycode!=0) {
             //show all available alternatives for selected latin letter
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, latin_ex_map[offset+l_last.latin_kc-KC_A][keycode-KC_LAT0]);
+            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0]);
             return true;
         }
         return false;
     }
 
+    const poly_sync_t* local_state = get_local_state();
     if (mods & MOD_RALT) {
-        const uint16_t* letter = translate_keycode_only_altgr(l_state.lang, keycode);
+        const uint16_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
             const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
             int8_t v_set;
@@ -1199,10 +897,10 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 v_set = SETTING_SYM_VOFFSET;
                 h_set = SETTING_SYM_HOFFSET;
             }
-            int8_t v_off = get_setting(v_set, l_state.lang, VAR_SMALL);
-            int8_t v_off_alt = get_setting(v_set, l_state.lang, VAR_ALTGR);
+            int8_t v_off = get_setting(v_set, local_state->lang, VAR_SMALL);
+            int8_t v_off_alt = get_setting(v_set, local_state->lang, VAR_ALTGR);
             v_off = PK_MIN(v_off, v_off_alt);
-            int8_t h_off = get_setting(h_set, l_state.lang, VAR_SMALL);
+            int8_t h_off = get_setting(h_set, local_state->lang, VAR_SMALL);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
                 kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
                 return true;
@@ -1211,7 +909,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     }
 
     //translate to current language
-    const uint16_t* letter = translate_keycode(l_state.lang, keycode, shift, state.caps_lock);
+    const uint16_t* letter = translate_keycode(local_state->lang, keycode, shift, state.caps_lock);
     if (letter != NULL) {
         int8_t v_set;
         int8_t h_set;
@@ -1228,27 +926,27 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 h_set = SETTING_SYM_HOFFSET;
             }
         }
-        int8_t v_off = get_setting(v_set, l_state.lang, VAR_SMALL);
-        int8_t h_off = get_setting(h_set, l_state.lang, VAR_SMALL);
+        int8_t v_off = get_setting(v_set, local_state->lang, VAR_SMALL);
+        int8_t h_off = get_setting(h_set, local_state->lang, VAR_SMALL);
 
         kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
 
         //preview capital letter?
         if(!shift && !state.caps_lock) {
-            v_off = get_setting(v_set, l_state.lang, VAR_SHIFT);
-            h_off = get_setting(h_set, l_state.lang, VAR_SHIFT);
+            v_off = get_setting(v_set, local_state->lang, VAR_SHIFT);
+            h_off = get_setting(h_set, local_state->lang, VAR_SHIFT);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
-                letter = translate_keycode_only_shift(l_state.lang, keycode);
+                letter = translate_keycode_only_shift(local_state->lang, keycode);
                 if (letter != NULL) {
                     kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
                 }
             }
         }
         //preview alt representation
-        letter = translate_keycode_only_altgr(l_state.lang, keycode);
+        letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
-            v_off = get_setting(v_set, l_state.lang, VAR_ALTGR);
-            h_off = get_setting(h_set, l_state.lang, VAR_ALTGR);
+            v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
+            h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
                 kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
             }
@@ -1259,7 +957,6 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 }
 
 // Returns builtin icon/symbol overlay text for keycode based on current modifiers and mod-tap states.
-// Global variables: l_layer
 const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     switch (keycode)
     {
@@ -1268,7 +965,8 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
         default: break;
     }
 
-    if( (l_layer.mods & MOD_MASK_CTRL) != 0) {
+    uint8_t local_mods = get_local_layer()->mods;
+    if( (local_mods & MOD_MASK_CTRL) != 0) {
         switch(keycode) {
             case KC_A: return u"      " BOX_WITH_CHECK_MARK;
             case KC_C: return u"     " CLIPBOARD_COPY;
@@ -1283,7 +981,7 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_Y: return u"      " ARROWS_REDO;
             default: break;
         }
-    } else if((l_layer.mods & MOD_MASK_GUI) != 0) {
+    } else if((local_mods & MOD_MASK_GUI) != 0) {
         switch(keycode) {
             case KC_D:      return u"    " PRIVATE_PC;
             case KC_L:      return u"    " PRIVATE_LOCK;
@@ -1335,7 +1033,6 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
 // Maps overlay index to modifier combination offset
 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5),
 // ALT_SHIFT(6), CTRL_ALT_SHIFT(7) and GUI_KEY(8)
-// Global variables: (none - uses passed parameters only)
 uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
     // GUI_KEY key cannot be combined with other modifiers in case of overlays
     // for the moment, so GUI_KEY takes priority over all modifiers
@@ -1349,7 +1046,6 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
 }
 
 // Copies overlay bitmap for keycode to display buffer, combining with mask if requested.
-// Global variables: l_layer, l_state
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
     if(keycode>KC_RGUI || (keycode>KC_NUM_LOCK && keycode<KC_NUBS) || (keycode>KC_APP && keycode<KC_LEFT_CTRL)) {
         return false;
@@ -1374,18 +1070,20 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
 }
 
 // Updates all display based on current layer and modifiers.
-// Global variables: l_layer, l_state, keymaps
+// Global variables: keymaps
 void update_displays(enum refresh_mode mode) {
-    if(l_state.contrast<=DISP_OFF || (l_state.flags&DISP_IDLE)!=0) {
+    const poly_sync_t* local_state = get_local_state();
+    if(local_state->contrast<=DISP_OFF || (local_state->flags&DISP_IDLE)!=0) {
         return;
     }
 
     //uint8_t layer = get_highest_layer(layer_state);
+    const poly_layer_t* local_layer = get_local_layer();
 
-    const led_t state = l_layer.led_state;
-    const uint8_t mods = l_layer.mods;
+    const led_t state = local_layer->led_state;
+    const uint8_t mods = local_layer->mods;
     const bool capital_case = ((mods & MOD_MASK_SHIFT) != 0) || state.caps_lock;
-    const bool display_overlays = test_flag(l_state.overlay_flags, DISPLAY_OVERLAYS);
+    const bool display_overlays = test_flag(local_state->overlay_flags, DISPLAY_OVERLAYS);
     //the left side has an offset of 0, the right side an offset of MATRIX_ROWS_PER_SIDE
     const uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t start_row = 0;
@@ -1401,10 +1099,10 @@ void update_displays(enum refresh_mode mode) {
 
     const uint8_t max_rows = mode == START_FIRST_HALF ? 3 : MATRIX_ROWS_PER_SIDE;
 
-    const bool overlay_only = test_flag( l_state.overlay_flags, CLEAR_LEFT_TOP|CLEAR_LEFT_BOTTOM|CLEAR_RIGHT_TOP|CLEAR_RIGHT_BOTTOM);
-    const bool combine = !overlay_only && (l_state.overlay_flags & (CLEAR_LEFT_TOP|CLEAR_LEFT_BOTTOM|CLEAR_RIGHT_TOP|CLEAR_RIGHT_BOTTOM))!=0;
+    const bool overlay_only = test_flag( local_state->overlay_flags, CLEAR_LEFT_TOP|CLEAR_LEFT_BOTTOM|CLEAR_RIGHT_TOP|CLEAR_RIGHT_BOTTOM);
+    const bool combine = !overlay_only && (local_state->overlay_flags & (CLEAR_LEFT_TOP|CLEAR_LEFT_BOTTOM|CLEAR_RIGHT_TOP|CLEAR_RIGHT_BOTTOM))!=0;
     if(combine ) {
-        prepare_mask_buffer(l_state.overlay_flags);
+        prepare_mask_buffer(local_state->overlay_flags);
     }
 
     uint8_t skip = 0;
@@ -1420,11 +1118,11 @@ void update_displays(enum refresh_mode mode) {
             }
             else {
                 if (disp_idx != 255) {
-                    uint8_t layer = get_highest_layer(l_layer.layer);
+                    uint8_t layer = get_highest_layer(local_layer->layer);
                     uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
-                    keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(l_layer.layer&~(1<<layer)),r + offset,c) : highest_kc;
+                    keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(local_layer->layer&~(1<<layer)),r + offset,c) : highest_kc;
                     kdisp_enable(true);
-                    kdisp_set_contrast(l_state.contrast-1);
+                    kdisp_set_contrast(local_state->contrast-1);
                     if(keycode!=KC_TRNS) {
                         const uint16_t* text = to_static_text(keycode, state);
                         kdisp_set_buffer(0x00);
@@ -1463,7 +1161,6 @@ void update_displays(enum refresh_mode mode) {
 }
 
 // Converts brightness level 0-7 to pulsating contrast value for idle display animation.
-// Global variables: (none - uses passed parameters only)
 uint8_t to_brightness(uint8_t b) {
     switch(b) {
         case 23: case 24: case 25: case 26: case 27: return 7;
@@ -1480,7 +1177,6 @@ uint8_t to_brightness(uint8_t b) {
 }
 
 // Updates all displays to show idle pulsating animation with varying brightness pattern.
-// Global variables: l_layer (for keymap reference to determine display content)
 void kdisp_idle(uint8_t contrast) {
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t skip = 0;
@@ -1517,7 +1213,6 @@ void kdisp_idle(uint8_t contrast) {
 }
 
 // Handles keypress events including unicode input, language modifications, and special commands.
-// Global variables: l_layer, l_last, g_latin, l_state
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     uint32_t t = get_time_since_last_update();
@@ -1567,7 +1262,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         default:
             break;
     }
-    const bool addlang = get_highest_layer(l_layer.layer)==_ADDLANG1;
+
+    const bool addlang = get_highest_layer(get_local_layer()->layer)==_ADDLANG1;
+    const poly_layer_t* global_layer = get_global_layer();
     if (record->event.pressed) {
         switch (keycode) {
             case QK_BOOTLOADER:
@@ -1577,14 +1274,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
                 return true;
             case KC_A ... KC_Z:
-                l_last.latin_kc = keycode;
+                set_local_last_latin_keycode(keycode);
                 if((get_mods() & MOD_MASK_ALT) == 0 && addlang) {
                     const bool lshift = get_mods() == MOD_BIT(KC_LEFT_SHIFT);
                     const bool rshift = get_mods() == MOD_BIT(KC_RIGHT_SHIFT);
-                    const bool upper_case = lshift || rshift || g_layer.led_state.caps_lock;
+                    const bool upper_case = lshift || rshift || global_layer->led_state.caps_lock;
                     const uint8_t offset = upper_case ? 0 : 26;
                     if(latin_ex_map[offset+keycode-KC_A][0]) {
-                        uint8_t variation = upper_case ? g_latin.ex[keycode-KC_A]>>4 : g_latin.ex[keycode-KC_A]&0xf;
+                        const latin_sync_t* global_latin_table = get_global_latin_table();
+                        uint8_t variation = upper_case ? global_latin_table->ex[keycode-KC_A]>>4 : global_latin_table->ex[keycode-KC_A]&0xf;
 
                         //this is a work-around (at least for I-Bus on Linux we need to remove the shift, otherwise the Unicode sequence will not be recognized!)
                         if(lshift) unregister_code16(KC_LEFT_SHIFT);
@@ -1599,18 +1297,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             default:
                 break;
         }
+        uint16_t last_latin_keycode = get_local_last_latin_keycode();
 
         if((get_mods() & MOD_MASK_ALT) != 0 && addlang) {
             switch(keycode) {
                 case KC_LAT0 ... KC_LAT9:
-                    if( l_last.latin_kc!=0) {
-                        uint8_t current = g_latin.ex[l_last.latin_kc-KC_A];
-                        if((get_mods() & MOD_MASK_SHIFT) || g_layer.led_state.caps_lock) {
-                            g_latin.ex[l_last.latin_kc-KC_A] = ((keycode-KC_LAT0)<<4) | (current&0xf);
+                    if( last_latin_keycode!=0) {
+                        latin_sync_t* global_latin_table = access_global_latin_table();
+                        uint8_t current = global_latin_table->ex[last_latin_keycode-KC_A];
+                        if((get_mods() & MOD_MASK_SHIFT) || global_layer->led_state.caps_lock) {
+                            global_latin_table->ex[last_latin_keycode-KC_A] = ((keycode-KC_LAT0)<<4) | (current&0xf);
                         } else {
-                            g_latin.ex[l_last.latin_kc-KC_A] = (keycode-KC_LAT0) | (current&0xf0);
+                            global_latin_table->ex[last_latin_keycode-KC_A] = (keycode-KC_LAT0) | (current&0xf0);
                         }
-                        send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)&g_latin, sizeof(g_latin), 10);
+                        send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
 
                         save_user_eeconf();
                         request_disp_refresh();
@@ -1625,7 +1325,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
             return false;
         } else {
-            l_last.latin_kc = 0;
+            set_local_last_latin_keycode(0);
         }
     }
 
@@ -1633,80 +1333,80 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 }
 
 // Post-processes keystrokes to handle display and state changes for various special keycodes.
-// Global variables: l_state, l_layer, g_layer
 void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     if (keycode == KC_CAPS_LOCK) {
         request_disp_refresh();
     }
-
+    poly_sync_t* local_state = access_local_state();
+    poly_layer_t* local_layer = access_local_layer();
     if (!record->event.pressed) {
         switch (keycode) {
         case KC_RGB_TOG:
-            l_state.flags = toggle_flag(l_state.flags, RGB_ON);
+            local_state->flags = toggle_flag(local_state->flags, RGB_ON);
             break;
         case KC_DEADKEY:
-            l_state.flags = toggle_flag(l_state.flags, DEAD_KEY_ON_WAKEUP);
+            local_state->flags = toggle_flag(local_state->flags, DEAD_KEY_ON_WAKEUP);
             request_disp_refresh();
             break;
         case KC_TOGMODS:
-            l_state.flags = toggle_flag(l_state.flags, MODS_AS_TEXT);
+            local_state->flags = toggle_flag(local_state->flags, MODS_AS_TEXT);
             request_disp_refresh();
             break;
         case KC_TOGTEXT:
-            l_state.flags = toggle_flag(l_state.flags, MORE_TEXT);
+            local_state->flags = toggle_flag(local_state->flags, MORE_TEXT);
             request_disp_refresh();
             break;
         case KC_L0:
-            l_layer.def_layer = _L0;
-            persistent_default_layer_set(l_layer.def_layer);
+            local_layer->def_layer = _L0;
+            persistent_default_layer_set(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L1:
-            l_layer.def_layer = _L1;
-            persistent_default_layer_set(l_layer.def_layer);
+            local_layer->def_layer = _L1;
+            persistent_default_layer_set(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L2:
-            l_layer.def_layer = _L2;
-            persistent_default_layer_set(l_layer.def_layer);
+            local_layer->def_layer = _L2;
+            persistent_default_layer_set(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L3:
-            l_layer.def_layer = _L3;
-            persistent_default_layer_set(l_layer.def_layer);
+            local_layer->def_layer = _L3;
+            persistent_default_layer_set(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L4:
-            l_layer.def_layer = _L4;
-            persistent_default_layer_set(l_layer.def_layer);
+            local_layer->def_layer = _L4;
+            persistent_default_layer_set(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_BASE:
             layer_clear();
-            layer_on(l_layer.def_layer);
+            layer_on(local_layer->def_layer);
             break;
         case KC_RIGHT_SHIFT:
         case KC_LEFT_SHIFT:
             request_disp_refresh();
             break;
         case KC_D1Q:
-            l_state.contrast = FULL_BRIGHT/4;
+            local_state->contrast = FULL_BRIGHT/4;
             save_user_eeconf();
             break;
         case KC_D3Q:
-            l_state.contrast = (FULL_BRIGHT/4)*3;
+            local_state->contrast = (FULL_BRIGHT/4)*3;
             save_user_eeconf();
             break;
         case KC_DHLF:
-            l_state.contrast = FULL_BRIGHT/2;
+            local_state->contrast = FULL_BRIGHT/2;
             save_user_eeconf();
             break;
         case KC_DMAX:
-            l_state.contrast = FULL_BRIGHT;
+            local_state->contrast = FULL_BRIGHT;
             save_user_eeconf();
             break;
         case KC_DMIN:
-            l_state.contrast = 2;
+            local_state->contrast = 2;
             save_user_eeconf();
             break;
         case KC_DDIM:
@@ -1717,35 +1417,35 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             break;
         /*[[[cog
             for lang in languages:
-                cog.outl(f'case KCL_{lang.upper()}: l_state.lang = LANG_{lang.upper()}; save_user_eeconf(); layer_off(_LL); break;')
+                cog.outl(f'case KCL_{lang.upper()}: local_state->lang = LANG_{lang.upper()}; save_user_eeconf(); layer_off(_LL); break;')
             ]]]*/
-        case KCL_ENUS: l_state.lang = LANG_ENUS; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_DEDE: l_state.lang = LANG_DEDE; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_FRFR: l_state.lang = LANG_FRFR; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_ESES: l_state.lang = LANG_ESES; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_PTPT: l_state.lang = LANG_PTPT; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_ITIT: l_state.lang = LANG_ITIT; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_TRTR: l_state.lang = LANG_TRTR; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_KOKR: l_state.lang = LANG_KOKR; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_JAJP: l_state.lang = LANG_JAJP; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_ARSA: l_state.lang = LANG_ARSA; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_ELGR: l_state.lang = LANG_ELGR; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_UKUA: l_state.lang = LANG_UKUA; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_RURU: l_state.lang = LANG_RURU; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_BEBY: l_state.lang = LANG_BEBY; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_KKKZ: l_state.lang = LANG_KKKZ; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_BGBG: l_state.lang = LANG_BGBG; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_PLPL: l_state.lang = LANG_PLPL; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_RORO: l_state.lang = LANG_RORO; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_ZHCN: l_state.lang = LANG_ZHCN; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_NLNL: l_state.lang = LANG_NLNL; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_HEIL: l_state.lang = LANG_HEIL; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_SVSE: l_state.lang = LANG_SVSE; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_FIFI: l_state.lang = LANG_FIFI; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_NNNO: l_state.lang = LANG_NNNO; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_DADK: l_state.lang = LANG_DADK; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_HUHU: l_state.lang = LANG_HUHU; save_user_eeconf(); layer_off(_LL); break;
-        case KCL_CSCZ: l_state.lang = LANG_CSCZ; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ENUS: local_state->lang = LANG_ENUS; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_DEDE: local_state->lang = LANG_DEDE; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_FRFR: local_state->lang = LANG_FRFR; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ESES: local_state->lang = LANG_ESES; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_PTPT: local_state->lang = LANG_PTPT; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ITIT: local_state->lang = LANG_ITIT; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_TRTR: local_state->lang = LANG_TRTR; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_KOKR: local_state->lang = LANG_KOKR; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_JAJP: local_state->lang = LANG_JAJP; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ARSA: local_state->lang = LANG_ARSA; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ELGR: local_state->lang = LANG_ELGR; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_UKUA: local_state->lang = LANG_UKUA; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_RURU: local_state->lang = LANG_RURU; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_BEBY: local_state->lang = LANG_BEBY; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_KKKZ: local_state->lang = LANG_KKKZ; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_BGBG: local_state->lang = LANG_BGBG; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_PLPL: local_state->lang = LANG_PLPL; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_RORO: local_state->lang = LANG_RORO; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_ZHCN: local_state->lang = LANG_ZHCN; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_NLNL: local_state->lang = LANG_NLNL; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_HEIL: local_state->lang = LANG_HEIL; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_SVSE: local_state->lang = LANG_SVSE; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_FIFI: local_state->lang = LANG_FIFI; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_NNNO: local_state->lang = LANG_NNNO; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_DADK: local_state->lang = LANG_DADK; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_HUHU: local_state->lang = LANG_HUHU; save_user_eeconf(); layer_off(_LL); break;
+        case KCL_CSCZ: local_state->lang = LANG_CSCZ; save_user_eeconf(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
@@ -1764,7 +1464,7 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             break;
         case KC_LANG:
             if (IS_LAYER_ON(_LL)) {
-                l_state.lang = (l_state.lang + 1) % NUM_LANG;
+                local_state->lang = (local_state->lang + 1) % NUM_LANG;
                 save_user_eeconf();
                 layer_off(_LL);
             }
@@ -1789,7 +1489,6 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
 };
 
 // Displays splash screen with polykybd/split72 logo and initializes displays with refresh.
-// Global variables: (none - uses side detection and display functions)
 void show_splash_screen(void) {
     clear_all_displays();
     if(is_left_side()) {
@@ -1804,7 +1503,6 @@ void show_splash_screen(void) {
 }
 
 // Configures all displays with contrast level; shows idle pulsating animation if enabled.
-// Global variables: (none - uses passed parameters only)
 void set_displays(uint8_t contrast, bool idle) {
     if(idle) {
         kdisp_idle(contrast);
@@ -1820,17 +1518,17 @@ void set_displays(uint8_t contrast, bool idle) {
 }
 
 // Disables keypress if displays are turned off/in idle mode; restores brightness on wakeup.
-// Global variables: l_state
 bool display_wakeup(keyrecord_t* record) {
+    poly_sync_t* local_state = access_local_state();
     bool accept_keypress = true;
-    if ((l_state.contrast==DISP_OFF || (l_state.flags & DISP_IDLE)!=0) && record->event.pressed) {
-        if(l_state.contrast==DISP_OFF && (l_state.flags&DEAD_KEY_ON_WAKEUP)!=0) {
+    if ((local_state->contrast==DISP_OFF || (local_state->flags & DISP_IDLE)!=0) && record->event.pressed) {
+        if(local_state->contrast==DISP_OFF && (local_state->flags&DEAD_KEY_ON_WAKEUP)!=0) {
             accept_keypress = get_time_since_last_update()<= TURN_OFF_TIME;
         }
         poly_eeconf_t ee = load_user_eeconf();
-        l_state.contrast = ee.brightness;
-        l_state.flags &= ~((uint8_t)DISP_IDLE);
-        l_state.flags |= STATUS_DISP_ON;
+        local_state->contrast = ee.brightness;
+        local_state->flags &= ~((uint8_t)DISP_IDLE);
+        local_state->flags |= STATUS_DISP_ON;
         update_performed();
         request_disp_refresh();
     }
@@ -1839,14 +1537,13 @@ bool display_wakeup(keyrecord_t* record) {
 }
 
 // Updates local unicode input mode state and requests display refresh on mode change.
-// Global variables: l_state
 void unicode_input_mode_set_user(uint8_t unicode_mode) {
-    l_state.unicode_mode = unicode_mode;
+    access_local_state()->unicode_mode = unicode_mode;
     request_disp_refresh();
 }
 
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
-// Global variables: l_layer, l_state, com
+// Global variables: com
 void keyboard_post_init_user(void) {
     // Customise these values to desired behaviour
     debug_enable = true;
@@ -1857,13 +1554,14 @@ void keyboard_post_init_user(void) {
     //pointing_device_set_cpi(20000);
     pointing_device_set_cpi(650);
     //pimoroni_trackball_set_rgbw(0,0,255,100);
-    l_layer.def_layer = persistent_default_layer_get();
-    l_state.unicode_mode = get_unicode_input_mode();
+    layer_state_t default_layer = persistent_default_layer_get();
+    access_local_layer()->def_layer = default_layer;
+    access_local_state()->unicode_mode = get_unicode_input_mode();
     layer_clear();
-    layer_on(l_layer.def_layer);
+    layer_on(default_layer);
 
     //set these values, they will never change
-    com = is_keyboard_master() ? USB_HOST : BRIDGE;
+    set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
 
 
@@ -1873,7 +1571,6 @@ void keyboard_post_init_user(void) {
 
     //srand(halGetCounterValue());
 
-    memset(&g_state, 0, sizeof(g_state));
     reset_overlay_buffers();
     reset_overlay_usage();
     //standard mapping is 1:1
@@ -1898,7 +1595,6 @@ void keyboard_post_init_user(void) {
 }
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
-// Global variables: l_layer, g_layer, l_state, g_state, l_last, g_latin
 void keyboard_pre_init_user(void) {
     kdisp_hw_setup();
     kdisp_init(NUM_SHIFT_REGISTERS);
@@ -1912,26 +1608,22 @@ void keyboard_pre_init_user(void) {
 
     poly_eeconf_t ee = load_user_eeconf();
 
-    memset(&l_layer, 0, sizeof(l_layer));
-    memset(&g_layer, 0, sizeof(g_layer));
-    memset(&l_state, 0, sizeof(l_state));
-    memset(&g_state, 0, sizeof(g_state));
+    reset_all_states_and_layers();
+    poly_sync_t* local_state = access_local_state();
+    local_state->lang = ee.lang;
+    local_state->contrast = ee.brightness;
+    local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 
-    l_state.lang = ee.lang;
-    l_state.contrast = ee.brightness;
-    l_state.flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
+    memcpy(access_global_latin_table()->ex, ee.latin_ex, sizeof(ee.latin_ex));
 
-    memcpy(g_latin.ex, ee.latin_ex, sizeof(g_latin.ex));
-
-    set_displays(l_state.contrast, false);
-    l_last.latin_kc = 0;
+    set_displays(ee.brightness, false);
+    set_local_last_latin_keycode(0);
     show_splash_screen();
 
     setPinInputHigh(I2C1_SDA_PIN);
 }
 
 // Initializes EEPROM configuration with default language, brightness, and latin extension settings.
-// Global variables: (none - initializes EEPROM only)
 void eeconfig_init_user(void) {
     uprint("Init EE config\n");
     poly_eeconf_t ee;
@@ -1940,163 +1632,6 @@ void eeconfig_init_user(void) {
     ee.unused = 0;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     eeconfig_read_user_datablock(&ee);
-}
-
-
-// Converts a number to a u16_string.
-// Global variables: (none - uses passed parameters only)
-void num_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value) {
-    if(value<10) {
-        snprintf((char*) buffer, buffer_len, "%d", value);
-        buffer[1] = 0;
-        buffer[2] = 0;
-        buffer[3] = 0;
-    } else if(value>99) {
-        snprintf((char*) buffer, buffer_len, "%d %d %d", value/100, (value/10)%10, value%10);
-        buffer[1] = 0;
-        buffer[3] = 0;
-        buffer[5] = 0;
-        buffer[6] = 0;
-        buffer[7] = 0;
-    } else {
-        snprintf((char*) buffer, buffer_len, "%d %d", value/10, value%10);
-        buffer[1] = 0;
-        buffer[3] = 0;
-        buffer[4] = 0;
-        buffer[5] = 0;
-    }
-}
-
-// Converts a number to a hex formated u16_string.
-// Global variables: (none - uses passed parameters only)
-void hex_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value) {
-    if(value<16) {
-        snprintf((char*) buffer, buffer_len, "%X", value);
-        buffer[1] = 0;
-        buffer[2] = 0;
-        buffer[3] = 0;
-    } else {
-        snprintf((char*) buffer, buffer_len, "%X %X", value/16, value%16);
-        buffer[1] = 0;
-        buffer[3] = 0;
-        buffer[4] = 0;
-        buffer[5] = 0;
-    }
-}
-
-// Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
-// Global variables: g_layer, l_state
-void oled_update_buffer(void) {
-    uint16_t buffer[32];
-
-    kdisp_set_buffer(0);
-
-    const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
-    const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 0, 14, ICON_LAYER);
-    hex_to_u16_string((char*) buffer, sizeof(buffer), get_highest_layer(g_layer.layer));
-    kdisp_write_gfx_text(displayFont, 1, 20, 14, buffer);
-    if(side_is_undecided()) {
-        kdisp_write_gfx_text(displayFont, 1, 50, 14, u"Uknw");
-    } else {
-        kdisp_write_gfx_text(displayFont, 1, 38, 14, is_left_side() ? u"LEFT" : u"RIGHT");
-    }
-
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 108, 16, g_layer.led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 108, 38, g_layer.led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
-    if(g_layer.led_state.scroll_lock) {
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 112, 54, ARROWS_DOWNSTOP);
-    } else {
-        kdisp_write_gfx_text(smallFont, 1, 112, 56, is_usb_host_side() ? u"H" : u"B");
-    }
-
-    if(is_right_side()) {
-        kdisp_write_gfx_text(smallFont, 1, 0, 30, u"RGB");
-
-        if(!rgb_matrix_is_enabled()) {
-            kdisp_write_gfx_text(smallFont, 1, 34, 30, u"Off");
-        } else {
-            num_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
-            kdisp_write_gfx_text(smallFont, 1, 34, 30, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 58, 30, get_led_matrix_text(rgb_matrix_get_mode()));
-            kdisp_write_gfx_text(smallFont, 1, 0, 44, u"HSV");
-            hex_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_hue());
-            kdisp_write_gfx_text(smallFont, 1, 38, 44, buffer);
-            hex_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_sat());
-            kdisp_write_gfx_text(smallFont, 1, 60, 44, buffer);
-            hex_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_val());
-            kdisp_write_gfx_text(smallFont, 1, 82, 44, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 0, 58, u"Speed");
-            num_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_speed());
-            kdisp_write_gfx_text(smallFont, 1, 58, 58, buffer);
-        }
-    } else {
-        switch(l_layer.def_layer) {
-            case 0: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Qwerty"); break;
-            case 1: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Qwerty Stag!"); break;
-            case 2: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Colemak DH"); break;
-            case 3: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Neo"); break;
-            case 4: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Workman"); break;
-            default: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Unknown"); break;
-        }
-        kdisp_write_gfx_text(smallFont, 1, 0, 44, u"Dsp*");
-        num_to_u16_string((char*) buffer, sizeof(buffer), l_state.contrast);
-        kdisp_write_gfx_text(smallFont, 1, 42, 44, buffer);
-        uint8_t i=0;
-        for(;i<(l_state.contrast/5);++i) {
-            buffer[i] = 'l';
-        }
-        buffer[i] = 0;
-        buffer[i+1] = 0;
-        kdisp_write_gfx_text(smallFont, 1, 64, 44, buffer);
-
-        kdisp_write_gfx_text(smallFont, 1, 0, 58, u"WPM");
-        num_to_u16_string((char*) buffer, sizeof(buffer), get_current_wpm());
-        kdisp_write_gfx_text(smallFont, 1, 44, 58, buffer);
-
-        kdisp_write_gfx_text(smallFont, 1, 68, 58, u"L");
-        num_to_u16_string((char*) buffer, sizeof(buffer), l_state.lang);
-        kdisp_write_gfx_text(smallFont, 1, 84, 58, buffer);
-    }
-}
-
-// Updates and displays status screen on OLED, or turns off display if status disabled.
-// Global variables: l_state
-void oled_status_screen(void) {
-     if( (l_state.flags&STATUS_DISP_ON) == 0) {
-        oled_off();
-        return;
-    } else if( (l_state.flags&STATUS_DISP_ON) != 0) {
-        oled_on();
-    }
-
-    oled_update_buffer();
-    oled_clear();
-    oled_write_raw((char *)get_scratch_buffer(), get_scratch_buffer_size());
-}
-
-// Displays scrolling Polykybd logo on OLED with direction based on side (left/right).
-// Global variables: (none - uses passed parameters and side detection only)
-void oled_render_logos(void) {
-    if(is_left_side()) {
-        oled_draw_poly();
-        oled_scroll_right();
-    } else {
-        oled_draw_kybd();
-        oled_scroll_left();
-    }
-}
-
-// Main OLED task: displays logos during idle or status screen during normal operation.
-// Global variables: l_state
-bool oled_task_user(void) {
-    if((l_state.flags&DISP_IDLE) != 0) {
-        oled_render_logos();
-    } else {
-        oled_scroll_off();
-        oled_status_screen();
-    }
-    return false;
 }
 
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
@@ -2117,7 +1652,6 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
 };
 
 // Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.
-// Global variables: (none - uses passed parameters only)
 oled_rotation_t oled_init_user(oled_rotation_t rotation){
     oled_off();
     oled_clear();
@@ -2129,15 +1663,14 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
 }
 
 // Clears overlay display flags, disables overlays and status display, sets contrast to OFF.
-// Global variables: l_state
 void poly_suspend(void) {
-    l_state.overlay_flags = flag_off(l_state.overlay_flags, DISPLAY_OVERLAYS);
-    l_state.flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE);// & ~((uint8_t)RGB_ON);
-    l_state.contrast = DISP_OFF;
+    poly_sync_t* local_state = access_local_state();
+    local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
+    local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE);// & ~((uint8_t)RGB_ON);
+    local_state->contrast = DISP_OFF;
 }
 
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
-// Global variables: l_state
 void suspend_power_down_kb(void) {
     poly_suspend();
     rgb_matrix_disable_noeeprom();
@@ -2148,16 +1681,16 @@ void suspend_power_down_kb(void) {
 
 
 // Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
-// Global variables: l_state
 void suspend_wakeup_init_kb(void) {
-    l_state.flags |= STATUS_DISP_ON;
-    l_state.flags &= ~((uint8_t)DISP_IDLE);
+    poly_sync_t* local_state = access_local_state();
+    local_state->flags |= STATUS_DISP_ON;
+    local_state->flags &= ~((uint8_t)DISP_IDLE);
     poly_eeconf_t ee = load_user_eeconf();
-    l_state.contrast = ee.brightness;
+    local_state->contrast = ee.brightness;
     set_last_update(0);
 
     //rgb_matrix_reload_from_eeprom();
-    if(test_flag(l_state.flags, RGB_ON)) {
+    if(test_flag(local_state->flags, RGB_ON)) {
         rgb_matrix_enable_noeeprom();
     }
 
@@ -2167,10 +1700,9 @@ void suspend_wakeup_init_kb(void) {
 }
 
 // Translates letter keycode to language-specific character and returns corresponding keycode.
-// Global variables: l_state
 uint8_t translate_a_to_z(uint8_t keycode) {
     if(keycode>=KC_A && keycode<=KC_Z) {
-        const uint16_t* translated = translate_keycode(l_state.lang, keycode, false, false);
+        const uint16_t* translated = translate_keycode(access_local_state()->lang, keycode, false, false);
         if(translated!=NULL) {
             uint16_t new_keycode = translated[0] - 'a' + KC_A;
             if(new_keycode>=KC_A && new_keycode<=KC_Z) {
@@ -2182,8 +1714,8 @@ uint8_t translate_a_to_z(uint8_t keycode) {
 }
 
 // Fills overlay buffer segment with bitmap data and syncs to bridge if needed.
-// Global variables: l_layer
-void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
+void fill_overlay_buffer(uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
+    uint8_t keycode = get_fragment_context()->keycode;
     if (keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
         return;
@@ -2196,12 +1728,14 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
         uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
         return;
     }
+
+    uint8_t mods = get_fragment_context()->modifier;
     idx = adjust_overlay_idx_to_mod(idx, mods);
     idx = get_overlay_mapping(idx);
-
-    enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
+    layer_state_t def_layer = get_local_layer()->def_layer;
+    enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
     if(pos==POS_NOT_FOUND) {
-        layer_state_t layer = get_function_layer(l_layer.def_layer);
+        layer_state_t layer = get_function_layer(def_layer);
         if(layer!=0) {
             pos = get_split_matrix_side(keycode, layer);
         } else {
@@ -2209,7 +1743,7 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
             uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
         }
     }
-    //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(l_layer.def_layer));
+    //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(def_layer));
     if (is_on_current_side(pos)) {
         memcpy(get_overlay(idx) + segment_0_to_14 * BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
     }
@@ -2222,34 +1756,34 @@ void fill_overlay_buffer(uint8_t keycode, uint8_t mods, uint8_t segment_0_to_14,
         send_to_bridge(USER_SYNC_OVERLAY_DATA, (void*)&transfer, sizeof(transfer), 10);
     }
 
-    hid_byte_count += BYTES_PER_SEGMENT;
     if (segment_0_to_14 == NUM_SEGMENTS_PER_OVERLAY - 1) {
         set_overlay_usage(idx);
-        uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n", keycode, mods, hid_byte_count, idx, pos_to_str(pos));
-        hid_byte_count = 0;
+        uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n", keycode, mods, (segment_0_to_14+1)*BYTES_PER_SEGMENT, idx, pos_to_str(pos));
     }
 }
 
 // Decompresses RLE-compressed overlay data and writes to overlay buffer, syncs to bridge if needed.
-// Global variables: hid_keycode, hid_modifier, hid_bit_index
-void decompress_overlay_buffer(uint8_t* compressed) {
-    if (hid_keycode > KC_RGUI) {
+void decompress_overlay_buffer(uint8_t* compressed, bool first) {
+    uint8_t keycode = get_fragment_context()->keycode;
+    if (keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
         return;
     }
 
-    uint8_t keycode = translate_a_to_z(hid_keycode);
+    keycode = translate_a_to_z(keycode);
     uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
     if (idx >= 90) {
         uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
         return;
     }
-    idx = adjust_overlay_idx_to_mod(idx, hid_modifier);
+    uint8_t ctx_mod = get_fragment_context()->modifier;
+    idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
     idx = get_overlay_mapping(idx);
 
-    enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
+    layer_state_t def_layer = get_local_layer()->def_layer;
+    enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
     if(pos==POS_NOT_FOUND) {
-        layer_state_t layer = get_function_layer(l_layer.def_layer);
+        layer_state_t layer = get_function_layer(def_layer);
         if(layer!=0) {
             pos = get_split_matrix_side(keycode, layer);
         } else {
@@ -2258,20 +1792,23 @@ void decompress_overlay_buffer(uint8_t* compressed) {
         }
     }
 
+    uint16_t bit_index = get_fragment_context()->bit_index;
+    uint8_t compressed_len = first?COMPRESSED_START:COMPRESSED_MAX;
+
+
     if (is_on_current_side(pos)) {
 #ifdef USE_CORE1
-        core1_decompress_fragment(keycode, hid_modifier, idx, compressed);
+        core1_decompress_fragment(keycode, ctx_mod, idx, compressed);
 #else
-        uint8_t compressed_len = hid_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
-        int16_t maxlen = 360 - hid_bit_index/8;
-        hid_bit_index += rle_decompress(get_overlay(idx)+hid_bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, hid_bit_index);
+        int16_t maxlen = 360 - bit_index/8;
+        bit_index += rle_decompress(get_overlay(idx)+bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, bit_index);
         //uprintf("keycode 0x%x bits %d, bytes %d.\n",
         //   keycode, hid_bit_index, hid_bit_index/8);
 
-        if (hid_bit_index >= 360*8 -1) {
+        if (bit_index >= 360*8 -1) {
             set_overlay_usage(idx);
             uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
-                keycode, hid_modifier, pos_to_str(pos), hid_bit_index/8);
+                keycode, ctx_mod, pos_to_str(pos), bit_index/8);
             update_performed();
             request_disp_refresh();
         }
@@ -2280,43 +1817,47 @@ void decompress_overlay_buffer(uint8_t* compressed) {
 
     //only send to bridge when needed
     if (is_on_other_side(pos)) {
-        uint8_t compressed_len = hid_bit_index_bridge==0?COMPRESSED_START:COMPRESSED_MAX;
-        int16_t maxlen = 360 - hid_bit_index_bridge/8;
-        hid_bit_index_bridge += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
+// #ifdef USE_CORE1
+//         bit_index += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
+// #endif
         compressed_overlay_sync_t transfer;
         transfer.len = compressed_len;
         transfer.adj_idx = idx;
         memcpy(&transfer.compressed, compressed, compressed_len);
         send_to_bridge(USER_SYNC_COMPRESSED_DATA, (void*)&transfer, sizeof(transfer), 10);
 
-        if (hid_bit_index_bridge >= 360*8 -1) {
-            set_overlay_usage(idx);
-            uprintf("--> Sent keycode 0x%x (mod 0x%x) to bridge, total bytes %d.\n",
-                keycode, hid_modifier, hid_bit_index_bridge/8);
-        }
+        // if (bit_index >= 360*8 -1) {
+        //     set_overlay_usage(idx);
+        //     uprintf("--> Sent keycode 0x%x (mod 0x%x) to bridge, total bytes %d.\n",
+        //         keycode, ctx_mod, hid_bit_index_bridge/8);
+        // }
     }
+
+    set_fragment_context_bit_index(bit_index);
 }
 
 // Fills region-of-interest of overlay buffer with data and syncs to bridge when needed.
-// Global variables: hid_keycode, hid_modifier, hid_bit_index, hid_roi
 void fill_roi_overlay_buffer(uint8_t* data, bool first) {
-    if (hid_keycode > KC_RGUI) {
+    uint8_t keycode = get_fragment_context()->keycode;
+    if (keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
         return;
     }
 
-    uint8_t keycode = translate_a_to_z(hid_keycode);
+    keycode = translate_a_to_z(keycode);
     uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
     if (idx >= 90) {
         uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
         return;
     }
-    idx = adjust_overlay_idx_to_mod(idx, hid_modifier);
+    uint8_t ctx_mod = get_fragment_context()->modifier;
+    idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
     idx = get_overlay_mapping(idx);
 
-    enum key_split_pos pos = get_split_matrix_side(keycode, l_layer.def_layer);
+    layer_state_t def_layer = get_local_layer()->def_layer;
+    enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
     if(pos==POS_NOT_FOUND) {
-        layer_state_t layer = get_function_layer(l_layer.def_layer);
+        layer_state_t layer = get_function_layer(def_layer);
         if(layer!=0) {
             pos = get_split_matrix_side(keycode, layer);
         } else {
@@ -2326,24 +1867,26 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     }
 
     if (is_on_current_side(pos)) {
+        roi_update_data_t ctx_roi = get_fragment_context()->roi;
         #ifdef USE_CORE1
             if(first) {
                 core1_roi_start();
             }
-            core1_update_roi(keycode, hid_modifier, idx, first?(&(data[5])):data, &hid_roi);
+            core1_update_roi(keycode, ctx_mod, idx, first?(&(data[5])):data, &ctx_roi);
         #else
             uint16_t data_len = first?ROI_START:ROI_MAX;
-
+            uint16_t bit_index = get_fragment_context()->bit_index;
             //uint8_t x,y;
             if(first) {
-                hid_bit_index = hid_roi.y * SCREEN_WIDTH + hid_roi.x;
+                bit_index = ctx_roi.y * SCREEN_WIDTH + ctx_roi.x;
             }
-            hid_bit_index = copy_rectangle_to_overlay(hid_bit_index, get_overlay(idx), first?(&(data[5])):data, &hid_roi, data_len);
-            if(hid_bit_index >= 2880) {
+            bit_index = copy_rectangle_to_overlay(bit_index, get_overlay(idx), first?(&(data[5])):data, &ctx_roi, data_len);
+            if(bit_index >= 2880) {
                 set_overlay_usage(idx);
                 update_performed();
                 request_disp_refresh();
             }
+            set_fragment_context_bit_index(bit_index);
         #endif
     }
 
@@ -2352,20 +1895,19 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
 
         roi_overlay_sync_t transfer;
         transfer.adj_idx = idx;
-        transfer.msg_idx = hid_bit_index_bridge;
-        hid_bit_index_bridge++; //abusing the bridge index as counter
+        transfer.msg_idx = get_fragment_context()->msg_count;
+        set_fragment_context_msg_count(transfer.msg_idx+1);
         memcpy(&transfer.data, data, ROI_MAX);
 
         if (send_to_bridge(USER_SYNC_ROI_DATA, (void*)&transfer, sizeof(transfer), 10)==SYNC_ACK_SIG) {
-            set_overlay_usage(idx);
+            //set_overlay_usage(idx);
             uprintf("--> Finished ROI update for keycode 0x%x (mod 0x%x), sent to bridge: side %s in %d messages.\n",
-                keycode, hid_modifier, pos_to_str(pos), hid_bit_index_bridge);
+                keycode, ctx_mod, pos_to_str(pos), get_fragment_context()->msg_count);
         }
     }
 }
 
 // Unpacks 10-bit overlay mapping pairs from buffer and updates overlay_map array.
-// Global variables: overlay_map
 void set_10bit_overlay_mapping(uint8_t* mapping) {
     uint16_t from = UNSET_OVERLAY_MAPPING;
     for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
@@ -2389,7 +1931,6 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
 
 
 // Notifies RGB/LED matrix of key event for animation effects based on key press state.
-// Global variables: (none - delegates to LED matrix handlers)
 void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 #if defined(LED_MATRIX_ENABLE)
     led_matrix_handle_key_event(row, col, pressed);
@@ -2400,11 +1941,13 @@ void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 }
 
 // Handles VIA custom value commands: device ID, language change, overlay reception, mapping, and display control.
-// Global variables: l_state, l_layer, hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
+// Global variables: hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     const char * name = "P\x06.Split72 " FW_VERSION " HW" STR(DEVICE_VER) " ";
 
     if(length>1 && (data[0] == /*via_command_id::*/id_custom_save || data[0] == 'P')) {
+        const poly_layer_t* local_layer = get_local_layer();
+        poly_sync_t* local_state = access_local_state();
         switch(data[1]) {
             case id_custom_channel...id_qmk_led_matrix_channel: //unusable :(
                 break;
@@ -2414,7 +1957,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 7: //lang
                 memset(data, 0, length);
-                switch(l_state.lang) {
+                switch(local_state->lang) {
                     /*[[[cog
                     for lang in languages:
                         cog.outl(f'case LANG_{lang.upper()}: memcpy(data, "P\\x07.{lang}", 7); break;')
@@ -2481,7 +2024,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 {
                     uint8_t* start = &data[HID_DATA_IDX];
                     uint32_t decoded = LANG_TO_UI32_ARR(start);
-                    uint8_t new_lang = l_state.lang;
+                    uint8_t new_lang = local_state->lang;
 
                     for(uint8_t idx=0;idx<NUM_LANG;++idx) {
                         if(lang_uint32[idx]==decoded) {
@@ -2492,7 +2035,7 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
 
                     memset(data, 0, length);
                     if(new_lang<NUM_LANG) {
-                        l_state.lang = new_lang;
+                        local_state->lang = new_lang;
                         uprintf("Setting lang to %u.\n", new_lang);
                         request_disp_refresh();
                         update_performed();
@@ -2505,11 +2048,11 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 10: //receive overlay
                 {
-                    uint8_t keycode = data[HID_DATA_IDX];
+                    reset_fragment_context();
+                    set_fragment_context_key(data[HID_DATA_IDX], data[HID_DATA_IDX+1]);
                     uint8_t segment = data[HID_DATA_IDX+2];
-                    if(keycode>=KC_A && keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
-                        uint8_t mods = data[HID_DATA_IDX+1];
-                        fill_overlay_buffer(keycode, mods, segment, &data[HID_DATA_IDX+3]);
+                    if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
+                        fill_overlay_buffer(segment, &data[HID_DATA_IDX+3]);
                         if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                             update_performed();
                             request_disp_refresh();
@@ -2524,8 +2067,8 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 11: //overlays flags on
                 {
-                    const bool vis_changed = test_flag(data[HID_DATA_IDX]^l_state.overlay_flags, DISPLAY_OVERLAYS);
-                    l_state.overlay_flags = flag_on(l_state.overlay_flags, data[HID_DATA_IDX]);
+                    const bool vis_changed = test_flag(data[HID_DATA_IDX]^local_state->overlay_flags, DISPLAY_OVERLAYS);
+                    local_state->overlay_flags = flag_on(local_state->overlay_flags, data[HID_DATA_IDX]);
                     if(vis_changed) {
                         housekeeping_task_user();
                     }
@@ -2537,8 +2080,8 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
 
             case 12: //overlays flags off
                 {
-                    const bool vis_changed = test_flag(data[HID_DATA_IDX]^l_state.overlay_flags, DISPLAY_OVERLAYS);
-                    l_state.overlay_flags = flag_off(l_state.overlay_flags, data[HID_DATA_IDX]);
+                    const bool vis_changed = test_flag(data[HID_DATA_IDX]^local_state->overlay_flags, DISPLAY_OVERLAYS);
+                    local_state->overlay_flags = flag_off(local_state->overlay_flags, data[HID_DATA_IDX]);
                     if(vis_changed) {
                         housekeeping_task_user();
                     }
@@ -2549,11 +2092,11 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 13: //set brightness
                 if ( data[HID_DATA_IDX] <= FULL_BRIGHT) {
-                    l_state.contrast = data[HID_DATA_IDX];
+                    local_state->contrast = data[HID_DATA_IDX];
                     save_user_eeconf();
                     memset(data, 0, length);
                     memcpy(data, "P\x0d.", 3);
-                    uprintf("Set brightness to: %u.\n", l_state.contrast);
+                    uprintf("Set brightness to: %u.\n", local_state->contrast);
                 } else {
                     uprintf("Refused to set brightness to: %u.\n", data[HID_DATA_IDX]);
                     memset(data, 0, length);
@@ -2564,11 +2107,11 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 {
                     uint16_t keycode = ((uint16_t)data[HID_DATA_IDX])<<8 | data[HID_DATA_IDX+1];
                     uint8_t r, c;
-                    enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(l_layer.layer), &r, &c, is_left_side());
+                    enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(local_layer->layer), &r, &c, is_left_side());
                     const bool pressed = data[HID_DATA_IDX+2] == 0;
                     if(pos==POS_NOT_FOUND) {
                         //actually it should be the previous layer instead of default, but it worked so far
-                        pos = get_split_matrix_pos(keycode, l_layer.def_layer, &r, &c, is_left_side());
+                        pos = get_split_matrix_pos(keycode, local_layer->def_layer, &r, &c, is_left_side());
                     }
                     if (is_on_current_side(pos)) {
                         invert_display(r, c, pressed);
@@ -2591,10 +2134,10 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 break;
             case 15: //start/stop idle
                 if(data[HID_DATA_IDX]==0) {
-                    if((l_state.flags & (STATUS_DISP_ON|DISP_IDLE))==0) {
+                    if((local_state->flags & (STATUS_DISP_ON|DISP_IDLE))==0) {
                         suspend_wakeup_init_kb();
                     } else {
-                        l_state.flags &= ~((uint8_t)DISP_IDLE);
+                        local_state->flags &= ~((uint8_t)DISP_IDLE);
                         request_disp_refresh();
                         update_performed();
                     }
@@ -2613,18 +2156,16 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x0f.", 3);
                 break;
             case 16: //receive RLE compressed overlay
-                hid_bit_index = 0;
-                hid_bit_index_bridge = 0;
-                hid_keycode = data[HID_DATA_IDX];
-                hid_modifier = data[HID_DATA_IDX+1];
-                uprintf("Start with compressed data for keycode 0x%x (modifiers: 0x%x).\n", hid_keycode, hid_modifier);
+                reset_fragment_context();
+                set_fragment_context_key(data[HID_DATA_IDX], data[HID_DATA_IDX+1]);
+                uprintf("Start with compressed data for keycode 0x%x (modifiers: 0x%x).\n", get_fragment_context()->keycode, get_fragment_context()->modifier);
 
                 //fall through
             case 17: //receive RLE compressed overlay
                 {
                     bool first = data[HID_CMD_IDX]==16;
-                    if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
-                        decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX]);
+                    if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI) {
+                        decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX], first);
                         memset(data, 0, length);
                         memcpy(data, first ? "P\x10!" : "P\x11!", 3);
                     } else {
@@ -2634,25 +2175,13 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 }
                 break;
             case 18: //start roi overlay
-                hid_bit_index = 0;
-                hid_bit_index_bridge = 0;
-                hid_keycode = data[HID_DATA_IDX];
-                hid_modifier = data[HID_DATA_IDX+1]&0x0f;
-                hid_roi.y = (data[HID_DATA_IDX+2]&0x03) | ((data[HID_DATA_IDX+1]>>2)&0x3c);
-                hid_roi.yy = data[HID_DATA_IDX+2] >> 2;
-                hid_roi.x = data[HID_DATA_IDX+3];
-                hid_roi.xx = data[HID_DATA_IDX+4]&0x7f;
-                hid_roi.compressed = ((data[HID_DATA_IDX+4]&0x80)!=0);
+                set_fragment_context_from_buffer(&data[HID_DATA_IDX]);
                 //fall through
             case 19: //receive roi overlay
                 {
                     bool first = data[HID_CMD_IDX]==18;
-                    if(hid_keycode>=KC_A && hid_keycode<=KC_RIGHT_GUI) {
-                        fill_roi_overlay_buffer(&data[HID_DATA_IDX], data[1]==18);
-                        // if(!fill_roi_overlay_buffer(&data[HID_DATA_IDX], hid_roi_rle)) {
-                        //     update_performed();
-                        //     request_disp_refresh();
-                        // }
+                    if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI) {
+                        fill_roi_overlay_buffer(&data[HID_DATA_IDX], first);
                         memset(data, 0, length);
                         memcpy(data, first ? "P\x12!" : "P\x13!", 3);
                     } else {
@@ -2716,7 +2245,6 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
 #ifndef VIA_ENABLE
 
 // Handles raw HID commands when VIA protocol is not enabled; forwards to custom VIA handler.
-// Global variables: (same as via_custom_value_command_kb: l_state, l_layer, etc)
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     via_custom_value_command_kb(data, length);
 }
@@ -2724,7 +2252,6 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 #else
 
 // Handles VIA protocol keymap commands: reset layers, set keycodes, set buffer data with bridge sync.
-// Global variables: l_layer (for display refresh)
 bool via_command_kb(uint8_t *data, uint8_t length) {
     uint8_t *command_id   = &(data[0]);
     uint8_t *command_data = &(data[1]);

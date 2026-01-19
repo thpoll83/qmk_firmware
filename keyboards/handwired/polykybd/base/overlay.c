@@ -10,6 +10,59 @@ static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 static /*volatile*/ uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
 static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 
+static overlay_fragment_context_t g_fragment_context = {0};
+
+
+const overlay_fragment_context_t* get_fragment_context(void) {
+    return &g_fragment_context;
+}
+
+overlay_fragment_context_t* access_fragment_context(void) {
+    return &g_fragment_context;
+}
+
+void reset_fragment_context(void) {
+    memset(&g_fragment_context, 0, sizeof(overlay_fragment_context_t));
+}
+
+void set_fragment_context_from_buffer(const uint8_t *buffer) {
+    g_fragment_context.msg_count= 0;
+    g_fragment_context.bit_index = 0;
+    g_fragment_context.keycode = buffer[0];
+    g_fragment_context.modifier = buffer[1]&0x0f;
+    g_fragment_context.roi.y = (buffer[2]&0x03) | ((buffer[1]>>2)&0x3c);
+    g_fragment_context.roi.yy = buffer[2] >> 2;
+    g_fragment_context.roi.x = buffer[3];
+    g_fragment_context.roi.xx = buffer[4]&0x7f;
+    g_fragment_context.roi.compressed = ((buffer[4]&0x80)!=0);
+    g_fragment_context.msg_count= 0;
+}
+
+void set_fragment_context_key(uint8_t keycode, uint8_t modifier) {
+    g_fragment_context.keycode = keycode;
+    g_fragment_context.modifier = modifier;
+}
+
+void set_fragment_context_bit_index(uint16_t bit_index) {
+    g_fragment_context.bit_index = bit_index;
+}
+
+void set_fragment_context_byte_len(uint8_t byte_len) {
+    g_fragment_context.byte_len = byte_len;
+}
+
+void set_fragment_context_msg_count(uint8_t msg_count) {
+    g_fragment_context.msg_count = msg_count;
+}
+
+void set_fragment_context_roi(uint8_t x, uint8_t y, uint8_t xx, uint8_t yy, bool compressed) {
+    g_fragment_context.roi.x = x;
+    g_fragment_context.roi.y = y;
+    g_fragment_context.roi.xx = xx;
+    g_fragment_context.roi.yy = yy;
+    g_fragment_context.roi.compressed = compressed;
+}
+
 
 uint8_t (* get_overlays(void))[72*40/8] {
     return overlays;

@@ -33,5 +33,6 @@
     "workbench.colorCustomizations": {
         "editorGhostText.foreground": "#a5a5a5c3",
         "editorGhostText.background": "#e1cc4986"
-    }
+    },
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/../../../.compile/compile_commands.json"
 }

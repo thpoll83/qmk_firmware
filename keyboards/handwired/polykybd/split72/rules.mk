@@ -15,7 +15,7 @@ RGB_MATRIX_DRIVER = ws2812
 
 #source files
 QUANTUM_LIB_SRC += spi_master.c
-SRC += multicore_exec.c base/update.c base/e2prom.c base/rle.c base/com.c base/crc32.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c polykybd.c
+SRC += state.c split_sync.c multicore_exec.c status_oled.c sync_helper.c base/update.c base/e2prom.c base/rle.c base/com.c base/crc32.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c polykybd.c
 
 DEFAULT_FOLDER = handwired/polykybd/split72
 

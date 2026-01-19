@@ -46,42 +46,6 @@ struct display_info {
 #define LANG_TO_UI32_ARR(arr) (((uint32_t)(arr[0]))<<24 | ((uint32_t)(arr[1]))<<16 | ((uint32_t)(arr[2]))<<8 | (arr[3]))
 #define LANGSTR_TO_UI32(str) LANG_TO_UI32(str[0],str[1],str[2],str[3])
 
-typedef struct _poly_eeconf_t {
-    uint8_t lang;
-    uint8_t brightness;
-    uint16_t unused;
-    uint8_t latin_ex[26];
-} poly_eeconf_t;
-
-
-static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");
-
-typedef struct _poly_layer_t {
-    uint32_t      crc32;
-    layer_state_t layer;
-    layer_state_t def_layer;
-    led_t         led_state;
-    uint8_t       mods;
-} poly_layer_t;
-
-typedef struct _poly_sync_t {
-    uint32_t crc32;
-    uint8_t  lang;
-    uint8_t  contrast;
-    uint8_t  flags;
-    uint8_t  overlay_flags;
-    uint8_t  unicode_mode;
-} poly_sync_t;
-
-typedef struct _poly_last_t {
-    uint32_t crc32;
-    uint16_t latin_kc;
-} poly_last_t;
-
-typedef struct _latin_sync_t {
-    uint32_t crc32;
-    uint8_t  ex[26];
-} latin_sync_t;
 
 #ifdef VIA_ENABLE
 typedef struct _via_sync_t {

@@ -104,6 +104,7 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
         const compressed_overlay_sync_t* ov = ((const compressed_overlay_sync_t *)in_data);
         if(crc32 == ov->crc32) {
 #ifdef USE_CORE1
+            //keycode info is lost, so KC_NO used (only used for diagnostics)
             core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed);
 #else
             if(ov->len == COMPRESSED_START) {
@@ -130,31 +131,36 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
         const roi_overlay_sync_t* roi_ov = ((const roi_overlay_sync_t *)in_data);
         if(crc32 == roi_ov->crc32) {
             bool first = roi_ov->msg_idx==0;
-            uint16_t data_len;
+            const uint8_t* start = roi_ov->data;
             if(first) {
-                //hid_bit_index = 0;
-                //hid_bit_index_bridge = 0;
                 reset_fragment_context();
                 set_fragment_context_key(roi_ov->data[0], roi_ov->data[1]&0x0f);
                 uint8_t x = roi_ov->data[3];
                 uint8_t y = (roi_ov->data[2]&0x03) | ((roi_ov->data[1]>>2)&0x3c);
                 set_fragment_context_roi(x, y, roi_ov->data[4]&0x7f, roi_ov->data[2] >> 2, ((roi_ov->data[4]&0x80)!=0));
                 set_fragment_context_bit_index(y * SCREEN_WIDTH + x);
-                data_len = ROI_START;
-            } else {
-                data_len = ROI_MAX;
+                start = &((roi_ov->data)[5]);
             }
             const overlay_fragment_context_t* ctx = get_fragment_context();
-            uint16_t new_index = copy_rectangle_to_overlay(ctx->bit_index, get_overlay(roi_ov->adj_idx), first?(&((roi_ov->data)[5])):roi_ov->data, &ctx->roi, data_len);
-            if(new_index >= 2880) {
-                //finished roi update
-                ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
-                set_overlay_usage(roi_ov->adj_idx);
-                request_disp_refresh();
-            } else {
-                ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            }
-            set_fragment_context_bit_index(new_index);
+
+            #ifdef USE_CORE1
+                if(first) {
+                    core1_roi_start();
+                }
+                core1_update_roi(ctx->keycode, ctx->modifier, roi_ov->adj_idx, start, &ctx->roi);
+                ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK; // we cannot send SIG, we do not know if we are finished
+            #else
+                uint16_t new_index = copy_rectangle_to_overlay(ctx->bit_index, get_overlay(roi_ov->adj_idx), start, &ctx->roi, first?ROI_START:ROI_MAX);
+                if(new_index >= 2880) {
+                    //finished roi update
+                    ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
+                    set_overlay_usage(roi_ov->adj_idx);
+                    request_disp_refresh();
+                } else {
+                    ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+                }
+                set_fragment_context_bit_index(new_index);
+            #endif
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }

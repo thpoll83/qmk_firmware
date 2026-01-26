@@ -4,6 +4,9 @@
 #include "lang_lut.h"
 #include "quantum.h"
 
+#include "../state.h"
+#include "../hid_com.h"
+
 static const uint16_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*[[[cog
     import cog
@@ -1861,7 +1864,7 @@ const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
                 return caps_case;
             }
         } else {
-           shift = !shift;
+            shift = !shift;
         }
     }
 
@@ -1901,7 +1904,7 @@ const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
     last_letter = latin_sheet[f"A{letter_index-2}"].value
     last_index = ord(last_letter)
 
-    cog.outl(f"const uint16_t* latin_ex_map[26*2][{max_variation_index}] PROGMEM = {{")
+    cog.outl(f"const uint16_t* latin_ex_map[26*2][{max_variation_index}] = {{")
     idx = 0
     for k, values in d.items():
         delim = ", "
@@ -1918,7 +1921,7 @@ const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
             cog.outl(",")
         idx = idx + 1
 ]]]*/
-const uint16_t* latin_ex_map[26*2][10] PROGMEM = {
+const uint16_t* latin_ex_map[26*2][10] = {
   /* [0] 65/A */ { u"\xC0", u"\xC1", u"\xC2", u"\xC3", u"\xC4", u"\xC5", u"\xC6", u"\x100", u"\x102", u"\x104" },
   /* [1] 66/B */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   /* [2] 67/C */ { u"\xC7", u"\x106", u"\x108", u"\x10A", u"\x10C", NULL, NULL, NULL, NULL, NULL },
@@ -1975,7 +1978,7 @@ const uint16_t* latin_ex_map[26*2][10] PROGMEM = {
 };
 
 /*[[[cog
-#cog.outl(f"static const uint16_t latin_rev_ex_map[26*2][{max_variation_index}] PROGMEM = {{")
+#cog.outl(f"static const uint16_t latin_rev_ex_map[26*2][{max_variation_index}] = {{")
 #idx = 0
 #for k, values in d.items():
 #    delim = ", "
@@ -1994,3 +1997,58 @@ const uint16_t* latin_ex_map[26*2][10] PROGMEM = {
 ]]]*/
 // //[[[end]]]
 // };
+
+#define LANGSTR_TO_UI32(str) LANG_TO_UI32(str[0],str[1],str[2],str[3])
+
+static uint32_t lang_uint32 [] = {
+    /*[[[cog
+    for lang_key in lang_dict.values():
+        cog.outl(f"\tLANGSTR_TO_UI32(\"{lang_key.replace('-','')}\"),")
+    ]]]*/
+    LANGSTR_TO_UI32("enUS"),
+    LANGSTR_TO_UI32("deDE"),
+    LANGSTR_TO_UI32("frFR"),
+    LANGSTR_TO_UI32("esES"),
+    LANGSTR_TO_UI32("ptPT"),
+    LANGSTR_TO_UI32("itIT"),
+    LANGSTR_TO_UI32("trTR"),
+    LANGSTR_TO_UI32("koKR"),
+    LANGSTR_TO_UI32("jaJP"),
+    LANGSTR_TO_UI32("arSA"),
+    LANGSTR_TO_UI32("elGR"),
+    LANGSTR_TO_UI32("ukUA"),
+    LANGSTR_TO_UI32("ruRU"),
+    LANGSTR_TO_UI32("beBY"),
+    LANGSTR_TO_UI32("kkKZ"),
+    LANGSTR_TO_UI32("bgBG"),
+    LANGSTR_TO_UI32("plPL"),
+    LANGSTR_TO_UI32("roRO"),
+    LANGSTR_TO_UI32("zhCN"),
+    LANGSTR_TO_UI32("nlNL"),
+    LANGSTR_TO_UI32("heIL"),
+    LANGSTR_TO_UI32("svSE"),
+    LANGSTR_TO_UI32("fiFI"),
+    LANGSTR_TO_UI32("nnNO"),
+    LANGSTR_TO_UI32("daDK"),
+    LANGSTR_TO_UI32("huHU"),
+    LANGSTR_TO_UI32("csCZ"),
+    //[[[end]]]
+};
+
+uint32_t decode_lang(uint8_t index) {
+    return lang_uint32[index];
+}
+
+// Translates letter keycode to language-specific character and returns corresponding keycode.
+uint8_t translate_a_to_z(uint8_t keycode) {
+    if(keycode>=KC_A && keycode<=KC_Z) {
+        const uint16_t* translated = translate_keycode(access_local_state()->lang, keycode, false, false);
+        if(translated!=NULL) {
+            uint16_t new_keycode = translated[0] - 'a' + KC_A;
+            if(new_keycode>=KC_A && new_keycode<=KC_Z) {
+                keycode = (uint8_t) new_keycode;
+            }
+        }
+    }
+    return keycode;
+}

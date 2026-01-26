@@ -1,9 +1,9 @@
-#include "sync_helper.h"
+#include "bridge_helper.h"
 
 #include QMK_KEYBOARD_H
-#include "polykybd.h"
-#include "../base/crc32.h"
-#include "../split_sync.h"
+#include "quantum.h"
+#include "base/crc32.h"
+#include "split_sync.h"
 #include "config.h"
 
 #include <print.h>

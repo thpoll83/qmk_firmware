@@ -2,7 +2,7 @@
 
 #include "lang/named_glyphs.h"
 
-const uint32_t unicode_map[] PROGMEM = {
+const uint32_t unicode_map[] = {
     /*[[[cog
     import cog
     import os

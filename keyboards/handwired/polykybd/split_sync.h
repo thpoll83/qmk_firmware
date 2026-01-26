@@ -34,6 +34,12 @@ typedef struct _roi_overlay_sync_t {
     uint8_t msg_idx;
 } roi_overlay_sync_t;
 
+#ifdef VIA_ENABLE
+typedef struct _via_sync_t {
+    uint32_t crc32;
+    uint8_t  via_commands[32];
+} via_sync_t;
+#endif
 
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

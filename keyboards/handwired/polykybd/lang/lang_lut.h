@@ -98,3 +98,7 @@ enum settings_constants {
 
 int8_t get_setting(uint8_t setting, uint8_t lang, uint8_t variation);
 
+uint32_t decode_lang(uint8_t index);
+
+uint8_t translate_a_to_z(uint8_t keycode);
+

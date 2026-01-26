@@ -1,4 +1,7 @@
 #include "split_sync.h"
+
+#include "quantum.h"
+
 #include "multicore_exec.h"
 
 #include "base/overlay.h"
@@ -7,6 +10,8 @@
 #include "base/update.h"
 #include "base/crc32.h"
 #include "state.h"
+#include "side.h"
+#include "matrix_helper.h"
 
 #include "split72/split72.h"
 

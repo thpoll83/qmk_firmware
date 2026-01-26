@@ -9,7 +9,7 @@ from PIL import Image
 def main(fn, id):
   image = Image.open(fn)
   print("\nenum {{ {id}_width = {w}, {id}_height = {h} }};\n"
-        "const uint8_t PROGMEM {id}_data[] = {{\n"
+        "const uint8_t {id}_data[] = {{\n"
         .format(id=id, w=image.width, h=image.height), end='')
   for y in range(0, image.height):
     for x in range(0, (image.width + 7)//8 * 8):

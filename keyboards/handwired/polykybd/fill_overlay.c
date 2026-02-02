@@ -64,7 +64,6 @@ void fill_overlay_buffer(uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
             uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
         }
     }
-    //bool current = is_on_current_split_matrix_side(keycode, get_highest_layer(def_layer));
     if (is_on_current_side(pos)) {
         memcpy(get_overlay(idx) + segment_0_to_14 * BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
     }
@@ -123,8 +122,6 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
 #else
         int16_t maxlen = 360 - bit_index/8;
         bit_index += rle_decompress(get_overlay(idx)+bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, bit_index);
-        //uprintf("keycode 0x%x bits %d, bytes %d.\n",
-        //   keycode, hid_bit_index, hid_bit_index/8);
 
         if (bit_index >= 360*8 -1) {
             set_overlay_usage(idx);
@@ -138,20 +135,11 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
 
     //only send to bridge when needed
     if (is_on_other_side(pos)) {
-// #ifdef USE_CORE1
-//         bit_index += rle_count(PK_MAX(0,maxlen), compressed, compressed_len);
-// #endif
         compressed_overlay_sync_t transfer;
         transfer.len = compressed_len;
         transfer.adj_idx = idx;
         memcpy(&transfer.compressed, compressed, compressed_len);
         send_to_bridge(USER_SYNC_COMPRESSED_DATA, (void*)&transfer, sizeof(transfer), 10);
-
-        // if (bit_index >= 360*8 -1) {
-        //     set_overlay_usage(idx);
-        //     uprintf("--> Sent keycode 0x%x (mod 0x%x) to bridge, total bytes %d.\n",
-        //         keycode, ctx_mod, hid_bit_index_bridge/8);
-        // }
     }
 
     set_fragment_context_bit_index(bit_index);

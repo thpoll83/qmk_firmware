@@ -42,7 +42,7 @@ const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case QK_DEBUG_TOGGLE:               return ((state_flags & DBG_ON) == 0) ? u"Dbg\r\v" ICON_SWITCH_OFF : u"Dbg\r\v" ICON_SWITCH_ON;
         case RGB_RMOD:
         case RM_PREV:                       return u" " ICON_LEFT PRIVATE_LIGHT;
-        case KC_RGB_TOG:                    return u"  I/O";
+        case KC_RGB_TOG:                    return (state_flags & RGB_ON) == 0 ? u"RGB\r\v" ICON_SWITCH_OFF : u"RGB\r\v" ICON_SWITCH_ON;
         case RGB_MOD:
         case RM_NEXT:                       return PRIVATE_LIGHT ICON_RIGHT;
         case RGB_HUI:

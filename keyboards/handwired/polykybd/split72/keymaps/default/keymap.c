@@ -198,14 +198,11 @@ void sync_and_refresh_displays(void) {
     if(state_diff) {
         const bool idle_changed         = has_flag_changed(local_flags, global_flags, DISP_IDLE);
         const bool contrast_changed     = get_local_state()->contrast != get_global_state()->contrast;
-        const bool lang_changed         = get_local_state()->lang != get_global_state()->lang;
         const bool status_disp_changed  = has_flag_changed(local_flags, global_flags, STATUS_DISP_ON);
         const bool status_disp_on       = test_flag(local_flags, STATUS_DISP_ON);
-        const bool overlays_changed     = has_flag_changed(local_overlay_flags, get_global_state()->overlay_flags, DISPLAY_OVERLAYS);
         const bool reset_overlays       = test_flag(local_overlay_flags, RESET_BUFFERS);
         const bool usage_reset          = test_flag(local_overlay_flags, USAGE_RESET);
         const bool mapping_reset        = test_flag(local_overlay_flags, MAPPING_RESET);
-        const bool debug_changed        = has_flag_changed(local_flags, global_flags, DBG_ON);
 
         if(idle_changed) {
             if(in_idle_mode) {
@@ -213,29 +210,15 @@ void sync_and_refresh_displays(void) {
             }
         }
 
-        //bool restored = false;
         if(status_disp_changed && status_disp_on) {
-            // rgb_matrix_reload_from_eeprom();
-            // if(rgb_matrix_is_enabled()) {
-            //     l_state.flags = flag_on(local_flags, RGB_ON);
-            //     restored = true;
-            // }
             oled_set_brightness(OLED_BRIGHTNESS);
         }
 
         if(has_flag_changed(local_flags, global_flags, RGB_ON)) {
             if (test_flag(local_flags, RGB_ON)) {
-                // if(restored) {
-                //     rgb_matrix_enable_noeeprom();
-                // } else {
-                    rgb_matrix_enable();
-                //}
+                rgb_matrix_enable();
             } else {
-                //  if(!status_disp_on) {
-                //     rgb_matrix_disable_noeeprom();
-                // } else {
-                    rgb_matrix_disable();
-                //}
+                rgb_matrix_disable();
             }
         }
 
@@ -253,15 +236,12 @@ void sync_and_refresh_displays(void) {
         }
         access_local_state()->overlay_flags = local_overlay_flags;
 
-        if( debug_changed || overlays_changed || reset_overlays || usage_reset || mapping_reset || lang_changed || get_local_state()->unicode_mode!=get_global_state()->unicode_mode) {
-            request_disp_refresh();
-            update_performed();
-        }
-
         if (contrast_changed || idle_changed) {
             set_displays(get_local_state()->contrast, in_idle_mode);
         }
         copy_global_state(get_local_state());
+        request_disp_refresh();
+        update_performed();
     }
 
     if(layer_diff) {
@@ -1541,6 +1521,15 @@ void keyboard_post_init_user(void) {
         transaction_register_rpc(USER_SYNC_VIA_DATA,    user_sync_via_data_handler);
     #endif
 
+    poly_eeconf_t ee = load_user_eeconf();
+    poly_sync_t* local_state = access_local_state();
+    local_state->lang = ee.lang;
+    local_state->contrast = ee.brightness;
+    local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
+
+    memcpy(access_global_latin_table()->ex, ee.latin_ex, sizeof(ee.latin_ex));
+
+    set_displays(ee.brightness, false);
 }
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
@@ -1555,17 +1544,9 @@ void keyboard_pre_init_user(void) {
     kdisp_scroll_modehv(true, 3, 1);
     kdisp_scroll(false);
 
-    poly_eeconf_t ee = load_user_eeconf();
-
     reset_all_states_and_layers();
-    poly_sync_t* local_state = access_local_state();
-    local_state->lang = ee.lang;
-    local_state->contrast = ee.brightness;
-    local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 
-    memcpy(access_global_latin_table()->ex, ee.latin_ex, sizeof(ee.latin_ex));
-
-    set_displays(ee.brightness, false);
+    set_displays(50, false);
     set_local_last_latin_keycode(0);
     show_splash_screen();
 

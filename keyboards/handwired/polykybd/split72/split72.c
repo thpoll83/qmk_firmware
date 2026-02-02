@@ -1,6 +1,7 @@
 #include "split72.h"
 
 #include "quantum.h"
+//#include "usb_device_state.h"
 
 #include "side.h"
 #include "base/com.h"
@@ -71,5 +72,8 @@ void matrix_scan_kb(void) {
 }
 
 void matrix_slave_scan_kb(void) {
+    //if (usb_device_state != USB_DEVICE_STATE_CONFIGURED) {
+    //    rgb_matrix_disable_noeeprom();
+    //}
     matrix_scan_kb();
 }

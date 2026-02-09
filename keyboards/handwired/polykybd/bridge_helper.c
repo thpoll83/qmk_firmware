@@ -31,9 +31,7 @@ const char* tid_to_str(int8_t tid) {
     case USER_SYNC_OVERLAY_DATA: return "UserOverlay";
     case USER_SYNC_COMPRESSED_DATA: return "UserCompressed";
     case USER_SYNC_ROI_DATA: return "UserRoi";
-    #ifdef VIA_ENABLE
-    case USER_SYNC_VIA_DATA: return "UserVia";
-    #endif
+    case USER_SYNC_DYNAMIC_KEYMAP_DATA: return "UserDynMap";
     default: return "Not registered";
     }
 }

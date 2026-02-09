@@ -3,9 +3,11 @@
 #include "quantum.h"
 
 #include "multicore_exec.h"
+#include "hid_com.h"
 
 #include "base/overlay.h"
 #include "eeconfig.h"
+#include "dynamic_keymap.h"
 #include "base/disp_array.h"
 #include "base/update.h"
 #include "base/crc32.h"
@@ -166,19 +168,17 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
         }
     }
 }
-
-#ifdef VIA_ENABLE
-
-#ifndef DYNAMIC_KEYMAP_EEPROM_ADDR
-#    define DYNAMIC_KEYMAP_EEPROM_ADDR VIA_EEPROM_CONFIG_END
+#ifndef DYNAMIC_KEYMAP_EEPROM_START
+#   define DYNAMIC_KEYMAP_EEPROM_START (EECONFIG_SIZE + 3)
 #endif
+
 #define DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT 9
 _Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COUNT, "Maximum cannot exceed DYNAMIC_KEYMAP_LAYER_COUNT");
 
 // Writes data to EEPROM at specified offset within the dynamic keymap region with bounds checking.
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data) {
     uint16_t dynamic_keymap_eeprom_size = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
-    void *   target                     = (void *)(DYNAMIC_KEYMAP_EEPROM_ADDR + offset);
+    void *   target                     = (void *)(DYNAMIC_KEYMAP_EEPROM_START + offset);
     const uint8_t *source                     = data;
     for (uint16_t i = 0; i < size; i++) {
         if (offset + i < dynamic_keymap_eeprom_size) {
@@ -189,14 +189,14 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
     }
 }
 
-// Handles VIA protocol commands on the bridge with CRC32 validation, including keymap resets and key press events.
+// Handles dynamic keymap commands on the bridge with CRC32 validation, including keymap resets and key press events.
 void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len >= (sizeof(uint32_t)+1) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
-        const via_sync_t* via_data = (const via_sync_t *)in_data;
-        if(crc32 == via_data->crc32) {
-            const uint8_t* command_data = &via_data->via_commands[1];
-            switch(via_data->via_commands[0]) {
+        const dynamic_keymap_sync_t* data = (const dynamic_keymap_sync_t *)in_data;
+        if(crc32 == data->crc32) {
+            const uint8_t* command_data = &data->commands[1];
+            switch(data->commands[0]) {
                 case id_dynamic_keymap_reset:
                     dynamic_keymap_reset();
                     request_disp_refresh();
@@ -234,4 +234,4 @@ void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out
         }
     }
 }
-#endif
+

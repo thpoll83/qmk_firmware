@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**"
             ],
-            "defines": ["USE_CORE1", "VIA_ENABLE"],
+            "defines": ["USE_CORE1"],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu11",
             //"cppStandard": "gnu++17",

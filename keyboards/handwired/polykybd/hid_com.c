@@ -58,12 +58,49 @@ void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 }
 
 
-// Handles VIA custom value commands: device ID, language change, overlay reception, mapping, and display control.
+bool legacy_command_kb(uint8_t *data, uint8_t length) {
+    uint8_t *command_id   = &(data[0]);
+    uint8_t *command_data = &(data[1]);
+    uint8_t data_len = 0;
+
+    switch(*command_id) {
+        case id_dynamic_keymap_reset:
+            dynamic_keymap_reset();
+            data_len = 1;
+            break;
+        case id_dynamic_keymap_set_keycode:
+            dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+            data_len = 6;
+            break;
+        case id_dynamic_keymap_set_buffer: {
+            uint16_t offset = (command_data[0] << 8) | command_data[1];
+            uint16_t size   = command_data[2];
+            dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
+            data_len = RAW_EPSIZE;
+            break;
+        }
+        default:
+            return false;
+    }
+    dynamic_keymap_sync_t sync_data;
+    memcpy(&sync_data.commands, data, data_len);
+    send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 10);
+    request_disp_refresh();
+    raw_hid_send(data, length);
+    return true;
+}
+
+
+// Handles HID commands: device ID, language change, overlay reception, mapping, and display control.
 // Global variables: hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     const char * name = "P\x06.Split72 " FW_VERSION " HW" STR(DEVICE_VER) " ";
 
-    if(length>1 && (data[0] == /*via_command_id::id_custom_save*/0x09 || data[0] == 'P')) {
+    if (length<1) {
+        return;
+    }
+
+    if(data[0] == id_custom_save || data[0] == 'P') {
         const poly_layer_t* local_layer = get_local_layer();
         poly_sync_t* local_state = access_local_state();
         switch(data[1]) {
@@ -169,7 +206,6 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                             update_performed();
                             request_disp_refresh();
-                            
                         }
                         memset(data, 0, length);
                         memcpy(data, "P\x0a.", 3);
@@ -230,16 +266,16 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     if (is_on_current_side(pos)) {
                         invert_display(r, c, pressed);
                     }
-                    #ifdef VIA_ENABLE
+
                     //a key can be on both sides, so no else here
                     if (is_on_other_side(pos)) {
                         // send to bridge
                         const uint8_t data_len = 6;
-                        via_sync_t sync_data;
-                        memcpy(&sync_data.via_commands, data, data_len);
-                        send_to_bridge(USER_SYNC_VIA_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 3);
+                        dynamic_keymap_sync_t sync_data;
+                        memcpy(&sync_data.commands, data, data_len);
+                        send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 3);
                     }
-                    #endif
+
                     action_exec(MAKE_KEYEVENT(r, c, pressed));
                     switch_events_poly(r,c, pressed);
                     memset(data, 0, length);
@@ -256,7 +292,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         update_performed();
                     }
                     uprint("Stop idle.\n");
-} else {
+                } else {
                     int32_t update = timer_read32() - FADE_OUT_TIME;
                     if(update<0) {
                         uprintf("Starting idle in %ld msec .\n", -update);
@@ -350,45 +386,8 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
 
         }
-        #ifndef VIA_ENABLE
-            raw_hid_send(data, length);
-        #endif
+        raw_hid_send(data, length);
+    } else {
+        legacy_command_kb(data, length);
     }
 }
-
-// #ifdef VIA_ENABLE
-
-// // Handles VIA protocol keymap commands: reset layers, set keycodes, set buffer data with bridge sync.
-// bool via_command_kb(uint8_t *data, uint8_t length) {
-//     uint8_t *command_id   = &(data[0]);
-//     uint8_t *command_data = &(data[1]);
-//     uint8_t data_len = 0;
-
-//     switch(*command_id) {
-//         case id_dynamic_keymap_reset:
-//             dynamic_keymap_reset();
-//             data_len = 1;
-//             break;
-//         case id_dynamic_keymap_set_keycode:
-//             dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
-//             data_len = 6;
-//             break;
-//         case id_dynamic_keymap_set_buffer: {
-//             uint16_t offset = (command_data[0] << 8) | command_data[1];
-//             uint16_t size   = command_data[2]; // size <= 28
-//             dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
-//             data_len = 32;
-//             break;
-//         }
-//         default:
-//             return false;
-//     }
-//     via_sync_t sync_data;
-//     memcpy(&sync_data.via_commands, data, data_len);
-//     send_to_bridge(USER_SYNC_VIA_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 10);
-//     request_disp_refresh();
-//     raw_hid_send(data, length);
-//     return true;
-// }
-
-// #endif

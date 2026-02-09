@@ -57,7 +57,7 @@ void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 #endif
 }
 
-
+#ifdef DYNAMIC_KEYMAP_ENABLE
 bool legacy_command_kb(uint8_t *data, uint8_t length) {
     uint8_t *command_id   = &(data[0]);
     uint8_t *command_data = &(data[1]);
@@ -78,6 +78,17 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
             dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
             data_len = RAW_EPSIZE;
             break;
+        case id_dynamic_keymap_get_layer_count:
+            command_data[0] = dynamic_keymap_get_layer_count();
+            raw_hid_send(data, 2);
+            return true;
+        case id_dynamic_keymap_get_buffer: {
+            uint16_t offset = (command_data[0] << 8) | command_data[1];
+            uint16_t size   = command_data[2];
+            dynamic_keymap_get_buffer(offset, size, &command_data[3]);
+            raw_hid_send(data, length);
+            return true;
+        }
         }
         default:
             return false;
@@ -89,7 +100,11 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
     raw_hid_send(data, length);
     return true;
 }
-
+#else
+bool legacy_command_kb(uint8_t *data, uint8_t length) {
+    return false;
+}
+#endif
 
 // Handles HID commands: device ID, language change, overlay reception, mapping, and display control.
 // Global variables: hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge

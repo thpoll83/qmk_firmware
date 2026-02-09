@@ -168,9 +168,6 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
         }
     }
 }
-#ifndef DYNAMIC_KEYMAP_EEPROM_START
-#   define DYNAMIC_KEYMAP_EEPROM_START (EECONFIG_SIZE + 3)
-#endif
 
 #define DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT 9
 _Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COUNT, "Maximum cannot exceed DYNAMIC_KEYMAP_LAYER_COUNT");
@@ -178,7 +175,7 @@ _Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COU
 // Writes data to EEPROM at specified offset within the dynamic keymap region with bounds checking.
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data) {
     uint16_t dynamic_keymap_eeprom_size = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
-    void *   target                     = (void *)(DYNAMIC_KEYMAP_EEPROM_START + offset);
+    void *   target                     = (void *)(POLY_EEPROM_CONFIG_END + offset);
     const uint8_t *source                     = data;
     for (uint16_t i = 0; i < size; i++) {
         if (offset + i < dynamic_keymap_eeprom_size) {

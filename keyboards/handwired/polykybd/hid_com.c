@@ -60,15 +60,15 @@ void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 
 // Handles VIA custom value commands: device ID, language change, overlay reception, mapping, and display control.
 // Global variables: hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
-void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
+void raw_hid_receive(uint8_t *data, uint8_t length) {
     const char * name = "P\x06.Split72 " FW_VERSION " HW" STR(DEVICE_VER) " ";
 
-    if(length>1 && (data[0] == /*via_command_id::*/id_custom_save || data[0] == 'P')) {
+    if(length>1 && (data[0] == /*via_command_id::id_custom_save*/0x09 || data[0] == 'P')) {
         const poly_layer_t* local_layer = get_local_layer();
         poly_sync_t* local_state = access_local_state();
         switch(data[1]) {
-            case id_custom_channel...id_qmk_led_matrix_channel: //unusable :(
-                break;
+            // case id_custom_channel...id_qmk_led_matrix_channel: //maybe now usable :)
+            //     break;
             case 6: //id
                 memset(data, 0, length);
                 memcpy(data, name, strlen(name));
@@ -360,46 +360,39 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     }
 }
 
-#ifndef VIA_ENABLE
+// #ifdef VIA_ENABLE
 
-// Handles raw HID commands when VIA protocol is not enabled; forwards to custom VIA handler.
-void raw_hid_receive(uint8_t *data, uint8_t length) {
-    via_custom_value_command_kb(data, length);
-}
+// // Handles VIA protocol keymap commands: reset layers, set keycodes, set buffer data with bridge sync.
+// bool via_command_kb(uint8_t *data, uint8_t length) {
+//     uint8_t *command_id   = &(data[0]);
+//     uint8_t *command_data = &(data[1]);
+//     uint8_t data_len = 0;
 
-#else
+//     switch(*command_id) {
+//         case id_dynamic_keymap_reset:
+//             dynamic_keymap_reset();
+//             data_len = 1;
+//             break;
+//         case id_dynamic_keymap_set_keycode:
+//             dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+//             data_len = 6;
+//             break;
+//         case id_dynamic_keymap_set_buffer: {
+//             uint16_t offset = (command_data[0] << 8) | command_data[1];
+//             uint16_t size   = command_data[2]; // size <= 28
+//             dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
+//             data_len = 32;
+//             break;
+//         }
+//         default:
+//             return false;
+//     }
+//     via_sync_t sync_data;
+//     memcpy(&sync_data.via_commands, data, data_len);
+//     send_to_bridge(USER_SYNC_VIA_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 10);
+//     request_disp_refresh();
+//     raw_hid_send(data, length);
+//     return true;
+// }
 
-// Handles VIA protocol keymap commands: reset layers, set keycodes, set buffer data with bridge sync.
-bool via_command_kb(uint8_t *data, uint8_t length) {
-    uint8_t *command_id   = &(data[0]);
-    uint8_t *command_data = &(data[1]);
-    uint8_t data_len = 0;
-
-    switch(*command_id) {
-        case id_dynamic_keymap_reset:
-            dynamic_keymap_reset();
-            data_len = 1;
-            break;
-        case id_dynamic_keymap_set_keycode:
-            dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
-            data_len = 6;
-            break;
-        case id_dynamic_keymap_set_buffer: {
-            uint16_t offset = (command_data[0] << 8) | command_data[1];
-            uint16_t size   = command_data[2]; // size <= 28
-            dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
-            data_len = 32;
-            break;
-        }
-        default:
-            return false;
-    }
-    via_sync_t sync_data;
-    memcpy(&sync_data.via_commands, data, data_len);
-    send_to_bridge(USER_SYNC_VIA_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 10);
-    request_disp_refresh();
-    raw_hid_send(data, length);
-    return true;
-}
-
-#endif
+// #endif

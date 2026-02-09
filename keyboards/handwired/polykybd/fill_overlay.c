@@ -35,7 +35,7 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
 }
 
 // Fills overlay buffer segment with bitmap data and syncs to bridge if needed.
-void fill_overlay_buffer(uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
+void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
     uint8_t keycode = get_fragment_context()->keycode;
     if (keycode > KC_RGUI) {
         uprint("Warning: Supplied overlay keycode not supported.\n");
@@ -65,20 +65,20 @@ void fill_overlay_buffer(uint8_t segment_0_to_14, uint8_t* buffer_24bytes) {
         }
     }
     if (is_on_current_side(pos)) {
-        memcpy(get_overlay(idx) + segment_0_to_14 * BYTES_PER_SEGMENT, buffer_24bytes, BYTES_PER_SEGMENT);
+        memcpy(get_overlay(idx) + segment_index * BYTES_PER_SEGMENT, buffer, BYTES_PER_SEGMENT);
     }
     //only send to bridge when needed
     if (is_on_other_side(pos)) {
         overlay_sync_t transfer;
-        transfer.segment = segment_0_to_14;
+        transfer.segment = segment_index;
         transfer.adj_idx = idx;
-        memcpy(&transfer.overlay, buffer_24bytes, BYTES_PER_SEGMENT);
+        memcpy(&transfer.overlay, buffer, BYTES_PER_SEGMENT);
         send_to_bridge(USER_SYNC_OVERLAY_DATA, (void*)&transfer, sizeof(transfer), 10);
     }
 
-    if (segment_0_to_14 == NUM_SEGMENTS_PER_OVERLAY - 1) {
+    if (segment_index == NUM_SEGMENTS_PER_OVERLAY - 1) {
         set_overlay_usage(idx);
-        uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n", keycode, mods, (segment_0_to_14+1)*BYTES_PER_SEGMENT, idx, pos_to_str(pos));
+        uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n", keycode, mods, (segment_index+1)*BYTES_PER_SEGMENT, idx, pos_to_str(pos));
     }
 }
 

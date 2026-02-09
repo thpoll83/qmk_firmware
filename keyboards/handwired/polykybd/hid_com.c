@@ -116,26 +116,21 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 8: //lang list
                 memset(data, 0, length);
                 /*[[[cog
+                RAW_EPSIZE = 64
                 lang_list = "P\\x08."
                 for lang in languages:
                     lang_list += lang
-                    if len(lang_list)>=(32+3-3):
+                    if len(lang_list)>=RAW_EPSIZE:
                         cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)-3});')
                         cog.outl(f'raw_hid_send(data, length);')
                         cog.outl(f'memset(data, 0, length);')
                         lang_list = "P\\x08."
                 cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)-3});')
                 ]]]*/
-                memcpy(data, "P\x08.enUSdeDEfrFResESptPTitITtrTR", 31);
+                memcpy(data, "P\x08.enUSdeDEfrFResESptPTitITtrTRkoKRjaJParSAelGRukUAruRUbeBYkkKZ", 63);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.koKRjaJParSAelGRukUAruRUbeBY", 31);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.kkKZbgBGplPLroROzhCNnlNLheIL", 31);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.svSEfiFInnNOdaDKhuHUcsCZ", 27);
+                memcpy(data, "P\x08.bgBGplPLroROzhCNnlNLheILsvSEfiFInnNOdaDKhuHUcsCZ", 51);
                 //[[[end]]]
                 break;
             case 9: //change language
@@ -174,6 +169,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                             update_performed();
                             request_disp_refresh();
+                            
                         }
                         memset(data, 0, length);
                         memcpy(data, "P\x0a.", 3);

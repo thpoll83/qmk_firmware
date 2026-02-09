@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 // Fills overlay buffer segment with bitmap data and syncs to bridge if needed.
-void fill_overlay_buffer(uint8_t segment_0_to_14, uint8_t* buffer_24bytes);
+void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer);
 
 // Decompresses RLE-compressed overlay data and writes to overlay buffer, syncs to bridge if needed.
 void decompress_overlay_buffer(uint8_t* compressed, bool first);

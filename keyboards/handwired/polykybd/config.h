@@ -56,14 +56,14 @@
 #define RP2040_BOOTLOADER_DOUBLE_TAP_RESET_TIMEOUT 1000U
 
 // Master to slave:
-#define RPC_M2S_BUFFER_SIZE 48
+#define RPC_M2S_BUFFER_SIZE 72
 // Slave to master:
-#define RPC_S2M_BUFFER_SIZE 48
+#define RPC_S2M_BUFFER_SIZE 72
 
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.6.0"
+#define FW_VERSION "0.7.0"
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -80,10 +80,11 @@
 //######################################
 //#          Overlays specific         #
 //######################################
-#define HID_REPORT_SIZE 32
+#define HID_REPORT_SIZE RAW_EPSIZE // now 64, but might change
 
-#define NUM_SEGMENTS_PER_OVERLAY 15
-#define BYTES_PER_SEGMENT 24
+// segement * bytes = 360 (=2880/8 => all bits of an overlay)
+#define NUM_SEGMENTS_PER_OVERLAY 6
+#define BYTES_PER_SEGMENT 60
 
 #define HID_DATA_MAX (HID_REPORT_SIZE-2) // minus via cmd byte and minus polybybd cmd byte -> -2
 #define COMPRESSED_MAX HID_DATA_MAX

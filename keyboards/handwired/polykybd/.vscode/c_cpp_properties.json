@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**"
             ],
-            "defines": ["USE_CORE1"],
+            "defines": ["USE_CORE1", "DYNAMIC_KEYMAP_ENABLE"],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu11",
             //"cppStandard": "gnu++17",

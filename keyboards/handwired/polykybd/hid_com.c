@@ -124,6 +124,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 6: //id
                 memset(data, 0, length);
                 memcpy(data, name, strlen(name));
+                raw_hid_send(data, length);
                 break;
             case 7: //lang
                 memset(data, 0, length);
@@ -164,6 +165,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         memcpy(data, "P\x07!", 3);
                         break;
                 }
+                raw_hid_send(data, length);
                 break;
             case 8: //lang list
                 memset(data, 0, length);
@@ -184,6 +186,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memset(data, 0, length);
                 memcpy(data, "P\x08.bgBGplPLroROzhCNnlNLheILsvSEfiFInnNOdaDKhuHUcsCZ", 51);
                 //[[[end]]]
+                raw_hid_send(data, length);
                 break;
             case 9: //change language
                 {
@@ -209,6 +212,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         uprintf("Invalid language index %u.\n", new_lang);
                         memcpy(data, "P\x09!", 3);
                     }
+                    raw_hid_send(data, length);
                 }
                 break;
             case 10: //receive overlay
@@ -222,12 +226,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                             update_performed();
                             request_disp_refresh();
                         }
-                        memset(data, 0, length);
-                        memcpy(data, "P\x0a.", 3);
-                    } else {
-                        memset(data, 0, length);
-                        memcpy(data, "P\x0a!", 3);
                     }
+                    //     memset(data, 0, length);
+                    //     memcpy(data, "P\x0a.", 3);
+                    // } else {
+                    //     memset(data, 0, length);
+                    //     memcpy(data, "P\x0a!", 3);
+                    // }
                 }
                 break;
             case 11: //overlays flags on
@@ -240,6 +245,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     memset(data, 0, length);
                     memcpy(data, "P\x0b.", 3);
                     uprintf("Overlay flags 0x%x set.\n", data[HID_DATA_IDX]);
+                    raw_hid_send(data, length);
                 }
                 break;
 
@@ -253,6 +259,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     memset(data, 0, length);
                     memcpy(data, "P\x0c.", 3);
                     uprintf("Overlay flags 0x%x cleared.\n", data[HID_DATA_IDX]);
+                    raw_hid_send(data, length);
                 }
                 break;
             case 13: //set brightness
@@ -267,6 +274,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     memset(data, 0, length);
                     memcpy(data, "P\x0d!", 3);
                 }
+                raw_hid_send(data, length);
                 break;
             case 14: //key press
                 {
@@ -296,6 +304,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     memset(data, 0, length);
                     memcpy(data, "P\x0e.", 3);
                 }
+                raw_hid_send(data, length);
                 break;
             case 15: //start/stop idle
                 if(data[HID_DATA_IDX]==0) {
@@ -319,6 +328,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 }
                 memset(data, 0, length);
                 memcpy(data, "P\x0f.", 3);
+                raw_hid_send(data, length);
                 break;
             case 16: //receive RLE compressed overlay
                 reset_fragment_context();
@@ -331,12 +341,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     bool first = data[HID_CMD_IDX]==16;
                     if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI) {
                         decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX], first);
-                        memset(data, 0, length);
-                        memcpy(data, first ? "P\x10!" : "P\x11!", 3);
-                    } else {
-                        memset(data, 0, length);
-                        memcpy(data, first ? "P\x10!" : "P\x11!", 3);
                     }
+                    //     memset(data, 0, length);
+                    //     memcpy(data, first ? "P\x10!" : "P\x11!", 3);
+                    // } else {
+                    //     memset(data, 0, length);
+                    //     memcpy(data, first ? "P\x10!" : "P\x11!", 3);
+                    // }
                 }
                 break;
             case 18: //start roi overlay
@@ -347,12 +358,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     bool first = data[HID_CMD_IDX]==18;
                     if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI) {
                         fill_roi_overlay_buffer(&data[HID_DATA_IDX], first);
-                        memset(data, 0, length);
-                        memcpy(data, first ? "P\x12!" : "P\x13!", 3);
-                    } else {
-                        memset(data, 0, length);
-                        memcpy(data, first ? "P\x12!" : "P\x13!", 3);
                     }
+                    //     memset(data, 0, length);
+                    //     memcpy(data, first ? "P\x12!" : "P\x13!", 3);
+                    // } else {
+                    //     memset(data, 0, length);
+                    //     memcpy(data, first ? "P\x12!" : "P\x13!", 3);
+                    // }
                 }
                 break;
             case 20: //set unicode input mode
@@ -387,6 +399,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         memcpy(data, "P\x13!", 3);
                         break;
                 }
+                raw_hid_send(data, length);
                 break;
             case 21:
                 {
@@ -394,14 +407,16 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     memset(data, 0, length);
                     memcpy(data, "P\x14.", 3);
                     uprintf("Overlay mapping data received.\n");
+                    raw_hid_send(data, length);
                 }
                 break;
             default:
                 printf("Unknown command: %u.\n", data[HID_CMD_IDX]);
+                data[2] = '!';
+                raw_hid_send(data, length);
                 break;
 
         }
-        raw_hid_send(data, length);
     } else {
         legacy_command_kb(data, length);
     }

@@ -6,15 +6,14 @@ Development version of PolyKybd, which uses OLED displays in its keycaps.
 Hardware info at https://github.com/thpoll83/PolyKeyboard/tree/master/poly_kb_atom
 
 Keyboard Maintainer: thpoll83
-Hardware Supported: RP2040 (STM32F407 not maintained any more)
+Hardware Supported: RP2040
 
 # Build Notes
 
 ## Keyboard Variants
 
-- ~~`deprecated/4x2` and `deprecated4x5` were the first dev boards running QMK, these folders are not maintained and also will not compile.~~
-- `wave` was the first version of the 72-key split keyboard and is kept as a reference.
 - `split72` is the current hardware (HW rev2 and up) iteration of `wave` with slight differences. Only `split72` is actively developed.
+- `split42` in preparation
 
 ### Code generation
 
@@ -44,10 +43,10 @@ or
 
 ### Keymaps
 
-There is a `default` and `via` keymap, also for the slightly older revision 2: `revision2` and `revision2_via`. Example for a via keymap on revision 2:
+There is a `default` keymap, also for the slightly older revision 2: `revision2`:
 
-`make handwired/polykybd/split72:revision2_via:uf2-split-right`
-`make handwired/polykybd/split72:revision2_via:uf2-split-left`
+`make handwired/polykybd/split72:revision2:uf2-split-right`
+`make handwired/polykybd/split72:revision2:uf2-split-left`
 
 
 ## After merging master into branch update dependencies with

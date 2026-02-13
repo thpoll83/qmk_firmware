@@ -169,7 +169,6 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
     }
 }
 
-#define DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT 9
 _Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COUNT, "Maximum cannot exceed DYNAMIC_KEYMAP_LAYER_COUNT");
 
 // Writes data to EEPROM at specified offset within the dynamic keymap region with bounds checking.
@@ -187,7 +186,7 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
 }
 
 // Handles dynamic keymap commands on the bridge with CRC32 validation, including keymap resets and key press events.
-void user_sync_via_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len >= (sizeof(uint32_t)+1) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         const dynamic_keymap_sync_t* data = (const dynamic_keymap_sync_t *)in_data;

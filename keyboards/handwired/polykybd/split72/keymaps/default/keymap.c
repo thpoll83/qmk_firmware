@@ -241,7 +241,6 @@ void sync_and_refresh_displays(void) {
         }
         copy_global_state(get_local_state());
         request_disp_refresh();
-        update_performed();
     }
 
     if(layer_diff) {
@@ -495,27 +494,27 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,     TO(_UL),
         _______,    _______,    _______,    _______,    _______,    _______,    _______,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        KC_CAPS,    _______,    KC_UNDO,    KC_CUT,     KC_COPY,    KC_PASTE,   _______,    _______,
-        _______,    _______,    _______,    KC_BTN2,                _______,    _______,    _______,
+        KC_CAPS,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
+        _______,    _______,    _______,    _______,                _______,    _______,    _______,
 
                     KC_F6,      KC_F7,      KC_F8,      KC_F9,      KC_F10,      KC_F11,    KC_F12,
-                    KC_AGAIN,   KC_BTN2,    _______,    KC_SELECT,  _______,    _______,    TO(_SL),
-        _______,    KC_BTN3,    KC_OPER,    KC_CRSEL,   KC_EXSEL,   _______,    _______,    _______,
-        TO(_NL),    KC_RALT,    _______,    _______,    _______,    _______,    _______,    KC_INS,
-        KC_BTN1,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
+                    KC_BTN1,    KC_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
+        _______,    KC_BTN3,    _______,    _______,    _______,   _______,    _______,    _______,
+        TO(_NL),    _______,    _______,    _______,    _______,    _______,    _______,    KC_INS,
+        KC_RALT,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
         ),
     [_FL1] = LAYOUT_left_right_stacked(
         OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,      KC_F6,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,    KC_FIND,    _______,    _______,    _______,
-        _______,    _______,    KC_UNDO,    KC_CUT,     KC_COPY,    KC_PASTE,   _______,    _______,
+        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
+        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
         _______,    _______,    _______,    _______,                _______,    _______,    KC_INS,
 
                     KC_F7,      KC_F8,      KC_F9,      KC_F10,     KC_F11,     KC_F12,     TO(_UL),
-                    KC_AGAIN,   KC_BTN2,    _______,    KC_SELECT,  _______,    _______,    TO(_SL),
-        _______,    KC_BTN3,    KC_OPER,    KC_CRSEL,   KC_EXSEL,   _______,    _______,    KC_CAPS,
-        TO(_NL),    KC_RALT,    _______,    _______,    _______,    _______,    _______,    _______,
-        KC_BTN1,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
+                    KC_BTN1,    KC_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
+        _______,    KC_BTN3,    _______,    _______,    _______,    _______,    _______,    KC_CAPS,
+        TO(_NL),    _______,    _______,    _______,    _______,    _______,    _______,    _______,
+        KC_RALT,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
         ),
      //Num Layer
     [_NL] = LAYOUT_left_right_stacked(
@@ -1516,7 +1515,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_OVERLAY_DATA,        user_sync_overlay_data_handler);
     transaction_register_rpc(USER_SYNC_COMPRESSED_DATA,     user_sync_compressed_overlay_data_handler);
     transaction_register_rpc(USER_SYNC_ROI_DATA,            user_sync_roi_data_handler);
-    transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_overlay_data_handler);
+    transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_dynamic_keymap_data_handler);
 
     poly_eeconf_t ee = load_user_eeconf();
     poly_sync_t* local_state = access_local_state();

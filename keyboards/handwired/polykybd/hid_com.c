@@ -79,6 +79,7 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
             dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
             data_len = RAW_EPSIZE;
             break;
+        }
         case id_dynamic_keymap_get_layer_count:
             command_data[0] = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT;//dynamic_keymap_get_layer_count();
             uprintf("Get dynamic layer count: %u.\n", command_data[0]);
@@ -91,7 +92,6 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
             dynamic_keymap_get_buffer(offset, size, &command_data[3]);
             raw_hid_send(data, length);
             return true;
-        }
         }
         default:
             return false;
@@ -235,11 +235,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
             case 11: //overlays flags on
                 {
-                    const bool vis_changed = test_flag(data[HID_DATA_IDX]^local_state->overlay_flags, DISPLAY_OVERLAYS);
+                    //const bool vis_changed = test_flag(data[HID_DATA_IDX]^local_state->overlay_flags, DISPLAY_OVERLAYS);
                     local_state->overlay_flags = flag_on(local_state->overlay_flags, data[HID_DATA_IDX]);
-                    if(vis_changed) {
-                        housekeeping_task_user();
-                    }
+                    // if(vis_changed) {
+                    //     housekeeping_task_user();
+                    // }
                     memset(data, 0, length);
                     memcpy(data, "P\x0b.", 3);
                     uprintf("Overlay flags 0x%x set.\n", data[HID_DATA_IDX]);
@@ -249,11 +249,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 
             case 12: //overlays flags off
                 {
-                    const bool vis_changed = test_flag(data[HID_DATA_IDX]^local_state->overlay_flags, DISPLAY_OVERLAYS);
+                    //const bool vis_changed = test_flag(data[HID_DATA_IDX]^local_state->overlay_flags, DISPLAY_OVERLAYS);
                     local_state->overlay_flags = flag_off(local_state->overlay_flags, data[HID_DATA_IDX]);
-                    if(vis_changed) {
-                        housekeeping_task_user();
-                    }
+                    // if(vis_changed) {
+                    //     housekeeping_task_user();
+                    // }
                     memset(data, 0, length);
                     memcpy(data, "P\x0c.", 3);
                     uprintf("Overlay flags 0x%x cleared.\n", data[HID_DATA_IDX]);
@@ -277,7 +277,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 14: //key press
                 {
                     uint16_t keycode = ((uint16_t)data[HID_DATA_IDX])<<8 | data[HID_DATA_IDX+1];
-                    uint8_t r, c;
+                    uint8_t r = 0, c = 0;
                     enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(local_layer->layer), &r, &c, is_left_side());
                     const bool pressed = data[HID_DATA_IDX+2] == 0;
                     if(pos==POS_NOT_FOUND) {
@@ -370,31 +370,31 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     case 0: //Linux = 0
                         unicode_input_mode_set_user(UNICODE_MODE_LINUX);
                         memset(data, 0, length);
-                        memcpy(data, "P\x13.", 3);
+                        memcpy(data, "P\x14.", 3);
                         break;
                     case 1: //Mac = 1
                         unicode_input_mode_set_user(UNICODE_MODE_MACOS);
                         memset(data, 0, length);
-                        memcpy(data, "P\x13.", 3);
+                        memcpy(data, "P\x14.", 3);
                         break;
                     case 2: //Windows = 2
                         unicode_input_mode_set_user(UNICODE_MODE_WINDOWS);
                         memset(data, 0, length);
-                        memcpy(data, "P\x13.", 3);
+                        memcpy(data, "P\x14.", 3);
                         break;
                     case 3: //WinCompose = 3
                         unicode_input_mode_set_user(UNICODE_MODE_WINCOMPOSE);
                         memset(data, 0, length);
-                        memcpy(data, "P\x13.", 3);
+                        memcpy(data, "P\x14.", 3);
                         break;
                     case 4: //BSD = 4
                         unicode_input_mode_set_user(UNICODE_MODE_BSD);
                         memset(data, 0, length);
-                        memcpy(data, "P\x13.", 3);
+                        memcpy(data, "P\x14.", 3);
                         break;
                     default:
                         memset(data, 0, length);
-                        memcpy(data, "P\x13!", 3);
+                        memcpy(data, "P\x14!", 3);
                         break;
                 }
                 raw_hid_send(data, length);
@@ -403,7 +403,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 {
                     set_10bit_overlay_mapping(&data[HID_DATA_IDX]);
                     memset(data, 0, length);
-                    memcpy(data, "P\x14.", 3);
+                    memcpy(data, "P\x15.", 3);
                     uprintf("Overlay mapping data received.\n");
                     raw_hid_send(data, length);
                 }

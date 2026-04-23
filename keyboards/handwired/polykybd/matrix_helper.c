@@ -56,7 +56,6 @@ enum key_split_pos get_split_matrix_side(uint16_t keycode, uint8_t layer) {
         for (uint8_t c = 0; c < MATRIX_COLS; c++) {
             if (keycode_at_keymap_location(layer, r, c) == keycode) {
                 return pos == POS_LEFT ? POS_ON_BOTH : POS_RIGHT;
-                break;
             }
         }
     }

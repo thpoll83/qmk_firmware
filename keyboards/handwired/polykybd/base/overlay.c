@@ -35,7 +35,6 @@ void set_fragment_context_from_buffer(const uint8_t *buffer) {
     g_fragment_context.roi.x = buffer[3];
     g_fragment_context.roi.xx = buffer[4]&0x7f;
     g_fragment_context.roi.compressed = ((buffer[4]&0x80)!=0);
-    g_fragment_context.msg_count= 0;
 }
 
 void set_fragment_context_key(uint8_t keycode, uint8_t modifier) {

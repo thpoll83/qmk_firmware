@@ -208,11 +208,11 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     request_disp_refresh();
                     break;
                 }
-                case id_custom_save:
+                case id_custom_save: //handle the same way
                 case 'P':
                     if(command_data[0]==14) {
                         uint16_t keycode = ((uint16_t)command_data[2])<<8 | command_data[3];
-                        uint8_t r, c;
+                        uint8_t r = 0, c = 0;
                         enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(get_local_layer()->layer), &r, &c, is_left_side());
                         if(pos==POS_NOT_FOUND) {
                             //actually it should be the previous layer instead of default, but it worked so far
@@ -222,6 +222,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                             invert_display(r, c, command_data[4] == 0);
                         }
                     }
+                    break;
                 default: break;
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;

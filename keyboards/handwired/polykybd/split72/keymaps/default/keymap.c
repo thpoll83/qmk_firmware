@@ -173,18 +173,28 @@ void sync_and_refresh_displays(void) {
 
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
-            send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
+            if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10)) {
+                state_diff = false; // if failed to sync, do not consider it a diff and try again later
+                uprint("USER_SYNC_POLY_DATA failed to send\n");
+            }
         }
 
         access_local_layer()->led_state = host_keyboard_led_state();
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         if ( layer_diff ) {
-            send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 10);
+            if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 10)) {
+                layer_diff = false; // if failed to sync, do not consider it a diff and try again later
+                uprint("USER_SYNC_LAYER_DATA failed to send\n");
+            }
         }
         if ( differ(get_local_last_latin(), get_global_last_latin(), sizeof(poly_last_t)) ) {
-            send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), 5);
-            copy_global_last_latin(get_local_last_latin());
+            if(!send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), 5)) {
+                // if failed to sync, do not consider it a diff and try again later
+                uprint("USER_SYNC_LASTKEY_DATA failed to send\n");
+            } else {
+                copy_global_last_latin(get_local_last_latin());
+            }
         }
     } else {
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
@@ -1592,7 +1602,7 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
 void poly_suspend(void) {
     poly_sync_t* local_state = access_local_state();
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
-    local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE);// & ~((uint8_t)RGB_ON);
+    local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)RGB_ON);
     local_state->contrast = DISP_OFF;
 }
 
@@ -1600,7 +1610,7 @@ void poly_suspend(void) {
 void suspend_power_down_kb(void) {
     poly_suspend();
     rgb_matrix_disable_noeeprom();
-    housekeeping_task_user();
+    sync_and_refresh_displays();
     suspend_power_down_user();
     set_last_update(-1);
 }

@@ -286,7 +286,7 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
     sync_and_refresh_displays();
-    uint32_t update = get_last_update();
+    int32_t update = get_last_update();
     if(update>=0) {
         //turn off displays
         uint32_t elapsed_time_since_update = timer_elapsed32(update);
@@ -319,6 +319,8 @@ void housekeeping_task_user(void) {
                 uprint("Turning off\n");
                 poly_suspend();
                 set_last_update(-1);
+                contrast = local_state->contrast;
+                flags = local_state->flags;
             } else if((flags & DISP_IDLE)!=0) {
                 int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
                 contrast = time_after%50;

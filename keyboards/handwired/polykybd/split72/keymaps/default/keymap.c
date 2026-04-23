@@ -220,8 +220,16 @@ void sync_and_refresh_displays(void) {
             }
         }
 
-        if(status_disp_changed && status_disp_on) {
-            oled_set_brightness(OLED_BRIGHTNESS);
+        if(status_disp_changed) {
+            if(status_disp_on) {
+                oled_set_brightness(OLED_BRIGHTNESS);
+                if(test_flag(local_flags, RGB_ON)) {
+                    rgb_matrix_enable_noeeprom();
+                }
+            } else {
+                oled_off();
+                rgb_matrix_disable_noeeprom();
+            }
         }
 
         if(has_flag_changed(local_flags, global_flags, RGB_ON)) {
@@ -1602,7 +1610,7 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
 void poly_suspend(void) {
     poly_sync_t* local_state = access_local_state();
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
-    local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)RGB_ON);
+    local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE);// & ~((uint8_t)RGB_ON);
     local_state->contrast = DISP_OFF;
 }
 

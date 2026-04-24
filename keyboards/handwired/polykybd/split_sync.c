@@ -1,8 +1,6 @@
 #include "split_sync.h"
 
 #include "quantum.h"
-#include "rgb_matrix.h"
-#include "bridge_helper.h"
 
 #include "multicore_exec.h"
 #include "hid_com.h"
@@ -235,31 +233,5 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }
     }
-}
-
-typedef struct {
-    uint32_t     crc32;
-    rgb_config_t config;
-} rgb_save_sync_t;
-
-void user_sync_rgb_save_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len == sizeof(rgb_save_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data != NULL) {
-        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len - 4, 0);
-        if (crc32 == ((const rgb_save_sync_t *)in_data)->crc32) {
-            rgb_matrix_config = ((const rgb_save_sync_t *)in_data)->config;
-            eeconfig_update_rgb_matrix();
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
-        }
-    }
-}
-
-void sync_rgb_config_to_bridge(void) {
-    rgb_save_sync_t d = {
-        .crc32  = 0,
-        .config = rgb_matrix_config,
-    };
-    send_to_bridge(USER_SYNC_RGB_SAVE, &d, sizeof(d), 3);
 }
 

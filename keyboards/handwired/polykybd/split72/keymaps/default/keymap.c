@@ -162,6 +162,20 @@ void on_local_state_synced(const poly_sync_t* old_state, const poly_sync_t* new_
     }
 }
 
+// Continuously suppress RGB on the bridge when display is off.
+// The split transport may re-enable RGB by copying master's rgb_matrix_config; this
+// indicator callback runs every render cycle (before flush) and zeros the LED buffer,
+// ensuring LEDs stay dark regardless of what the transport wrote to enable.
+#ifdef RGB_MATRIX_ENABLE
+bool rgb_matrix_indicators_kb(void) {
+    if (!is_keyboard_master() && (get_local_state()->flags & STATUS_DISP_ON) == 0) {
+        rgb_matrix_set_color_all(0, 0, 0);
+        return false;
+    }
+    return rgb_matrix_indicators_user();
+}
+#endif
+
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
 // Global variables: flags, overlay_flags
 void sync_and_refresh_displays(void) {

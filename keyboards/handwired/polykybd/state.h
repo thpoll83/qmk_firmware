@@ -77,15 +77,27 @@ void set_global_latin_table(latin_sync_t value);
 void copy_global_latin_table(const latin_sync_t* value);
 
 
-// Saves user keyboard configuration (language, brightness, latin extensions) to EEPROM.
+// Writes only lang+brightness (4 bytes) to EEPROM. Use when only settings changed, not the latin table.
+void save_user_settings(void);
+
+// Writes only the 26-byte latin extension table to EEPROM. Use when only latin mappings changed.
+void save_user_latin(void);
+
+// Saves both settings and latin table (convenience wrapper around the two above).
 void save_user_eeconf(void);
 
 // Loads user keyboard configuration from EEPROM with brightness validation against maximum.
 poly_eeconf_t load_user_eeconf(void);
 
-// Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT, saves to EEPROM.
+// Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT (deferred EEPROM write).
 void inc_brightness(void);
 
-// Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT, saves to EEPROM.
+// Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT (deferred EEPROM write).
 void dec_brightness(void);
+
+// Marks settings as needing an EEPROM write (restarts the debounce window).
+void mark_settings_dirty(void);
+
+// Writes settings to EEPROM if a change is pending and the debounce period has elapsed.
+void brightness_save_if_pending(void);
 

@@ -263,7 +263,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 13: //set brightness
                 if ( data[HID_DATA_IDX] <= FULL_BRIGHT) {
                     local_state->contrast = data[HID_DATA_IDX];
-                    save_user_eeconf();
+                    save_user_settings();
                     memset(data, 0, length);
                     memcpy(data, "P\x0d.", 3);
                     uprintf("Set brightness to: %u.\n", local_state->contrast);

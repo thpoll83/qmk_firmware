@@ -26,7 +26,12 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     if (in_len == sizeof(poly_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         if(crc32 == ((const poly_sync_t *)in_data)->crc32) {
-            copy_local_state((const poly_sync_t *)in_data);
+            const poly_sync_t* incoming = (const poly_sync_t *)in_data;
+            const poly_sync_t* current  = get_local_state();
+            if (incoming->contrast != current->contrast || incoming->lang != current->lang) {
+                mark_settings_dirty();
+            }
+            copy_local_state(incoming);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
@@ -42,7 +47,7 @@ void user_sync_latin_ex_data_handler(uint8_t in_len, const void* in_data, uint8_
         if(crc32 == ((const latin_sync_t *)in_data)->crc32) {
             copy_global_latin_table((const latin_sync_t *)in_data);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            save_user_eeconf();
+            save_user_latin();
             request_disp_refresh();
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
@@ -71,7 +76,11 @@ void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t o
     if (in_len == sizeof(poly_layer_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         if(crc32 == ((const poly_layer_t *)in_data)->crc32) {
-            copy_local_layer((const poly_layer_t *)in_data);
+            const poly_layer_t* incoming = (const poly_layer_t *)in_data;
+            if (incoming->def_layer != get_local_layer()->def_layer) {
+                eeconfig_update_default_layer(incoming->def_layer);
+            }
+            copy_local_layer(incoming);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
             //request_disp_refresh();
         } else {
@@ -173,16 +182,10 @@ _Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COU
 
 // Writes data to EEPROM at specified offset within the dynamic keymap region with bounds checking.
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data) {
-    uint16_t dynamic_keymap_eeprom_size = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
-    void *   target                     = (void *)(POLY_EEPROM_CONFIG_END + offset);
-    const uint8_t *source                     = data;
-    for (uint16_t i = 0; i < size; i++) {
-        if (offset + i < dynamic_keymap_eeprom_size) {
-            eeprom_update_byte(target, *source);
-        }
-        source++;
-        target++;
-    }
+    uint16_t max = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
+    if (offset >= max) return;
+    uint16_t clamped = (offset + size > max) ? max - offset : size;
+    eeprom_update_block(data, (void *)(POLY_EEPROM_CONFIG_END + offset), clamped);
 }
 
 // Handles dynamic keymap commands on the bridge with CRC32 validation, including keymap resets and key press events.

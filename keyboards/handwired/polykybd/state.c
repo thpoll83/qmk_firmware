@@ -9,6 +9,10 @@ static poly_layer_t g_layer;
 static poly_sync_t l_state;
 static poly_sync_t g_state;
 
+static bool     g_brightness_dirty       = false;
+static uint32_t g_brightness_dirty_timer = 0;
+#define BRIGHTNESS_EEPROM_DEBOUNCE_MS 5000
+
 static poly_last_t l_last;
 static poly_last_t g_last;
 
@@ -142,15 +146,21 @@ void copy_global_latin_table(const latin_sync_t* value) {
 }
 
 
-// Saves user keyboard configuration (language, brightness, latin extensions) to EEPROM.
-// Global variables: l_state, g_latin
+// Writes only lang+brightness+unused (4 bytes) to EEPROM.
+void save_user_settings(void) {
+    const poly_eeconf_t ee = { .lang = l_state.lang, .brightness = (uint8_t)(~l_state.contrast), .unused = 0 };
+    eeprom_update_block(&ee, EECONFIG_USER_DATABLOCK, offsetof(poly_eeconf_t, latin_ex));
+}
+
+// Writes only the 26-byte latin extension table to EEPROM.
+void save_user_latin(void) {
+    eeprom_update_block(g_latin.ex, EECONFIG_USER_DATABLOCK + offsetof(poly_eeconf_t, latin_ex), sizeof(g_latin.ex));
+}
+
+// Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.
 void save_user_eeconf(void) {
-    poly_eeconf_t ee;
-    ee.lang = l_state.lang;
-    ee.brightness = ~l_state.contrast;
-    ee.unused = 0;
-    memcpy(ee.latin_ex, g_latin.ex, sizeof(g_latin.ex));
-    eeconfig_update_user_datablock(&ee);
+    save_user_settings();
+    save_user_latin();
 }
 
 // Loads user keyboard configuration from EEPROM with brightness validation against maximum.
@@ -165,7 +175,8 @@ poly_eeconf_t load_user_eeconf(void) {
     return ee;
 }
 
-// Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT, saves to EEPROM.
+// Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT.
+// EEPROM write is deferred; call brightness_save_if_pending() from housekeeping.
 // Global variables: l_state
 void inc_brightness(void) {
     if (l_state.contrast < FULL_BRIGHT) {
@@ -174,18 +185,35 @@ void inc_brightness(void) {
     if (l_state.contrast > FULL_BRIGHT) {
         l_state.contrast = FULL_BRIGHT;
     }
-
-    save_user_eeconf();
+    g_brightness_dirty       = true;
+    g_brightness_dirty_timer = timer_read32();
 }
 
-// Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT, saves to EEPROM.
+// Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT.
+// EEPROM write is deferred; call brightness_save_if_pending() from housekeeping.
 // Global variables: l_state
 void dec_brightness(void) {
-    if (l_state.contrast > (MIN_BRIGHT+BRIGHT_STEP)) {
+    if (l_state.contrast > (MIN_BRIGHT + BRIGHT_STEP)) {
         l_state.contrast -= BRIGHT_STEP;
     } else {
         l_state.contrast = MIN_BRIGHT;
     }
+    g_brightness_dirty       = true;
+    g_brightness_dirty_timer = timer_read32();
+}
 
-    save_user_eeconf();
+// Marks settings as needing an EEPROM write (restarts the debounce window).
+// Call on the bridge from on_local_state_synced() when lang or contrast changes.
+void mark_settings_dirty(void) {
+    g_brightness_dirty       = true;
+    g_brightness_dirty_timer = timer_read32();
+}
+
+// Writes settings to EEPROM once the debounce period has elapsed since the last change.
+// Call from housekeeping_task_user() on both sides.
+void brightness_save_if_pending(void) {
+    if (g_brightness_dirty && timer_elapsed32(g_brightness_dirty_timer) >= BRIGHTNESS_EEPROM_DEBOUNCE_MS) {
+        save_user_settings();
+        g_brightness_dirty = false;
+    }
 }

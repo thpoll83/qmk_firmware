@@ -32,6 +32,7 @@ const char* tid_to_str(int8_t tid) {
     case USER_SYNC_COMPRESSED_DATA: return "UserCompressed";
     case USER_SYNC_ROI_DATA: return "UserRoi";
     case USER_SYNC_DYNAMIC_KEYMAP_DATA: return "UserDynMap";
+    case USER_SYNC_RGB_SAVE:            return "UserRgbSave";
     default: return "Not registered";
     }
 }

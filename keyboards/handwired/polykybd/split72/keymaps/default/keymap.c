@@ -184,6 +184,15 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
     apply_rgb_adjust(rgb_held_keycode);
     return RGB_REPEAT_RATE_MS;
 }
+
+void sync_rgb_config_to_bridge(void) {
+    rgb_save_sync_t d = {
+        .crc32  = 0,
+        .config = rgb_matrix_config,
+    };
+    send_to_bridge(USER_SYNC_RGB_SAVE, &d, sizeof(d), 3);
+}
+
 #endif
 
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.

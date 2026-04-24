@@ -158,6 +158,32 @@ bool rgb_matrix_indicators_kb(void) {
     }
     return rgb_matrix_indicators_user();
 }
+
+#define RGB_REPEAT_INITIAL_DELAY_MS 400
+#define RGB_REPEAT_RATE_MS          40
+
+static uint16_t rgb_held_keycode        = KC_NO;
+static deferred_token rgb_repeat_token  = INVALID_DEFERRED_TOKEN;
+
+static void apply_rgb_adjust(uint16_t keycode) {
+    switch (keycode) {
+        case RGB_VAI: rgb_matrix_increase_val_noeeprom();   break;
+        case RGB_VAD: rgb_matrix_decrease_val_noeeprom();   break;
+        case RGB_HUI: rgb_matrix_increase_hue_noeeprom();   break;
+        case RGB_HUD: rgb_matrix_decrease_hue_noeeprom();   break;
+        case RGB_SAI: rgb_matrix_increase_sat_noeeprom();   break;
+        case RGB_SAD: rgb_matrix_decrease_sat_noeeprom();   break;
+        case RGB_SPI: rgb_matrix_increase_speed_noeeprom(); break;
+        case RGB_SPD: rgb_matrix_decrease_speed_noeeprom(); break;
+        default: break;
+    }
+}
+
+static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
+    if (rgb_held_keycode == KC_NO) return 0;
+    apply_rgb_adjust(rgb_held_keycode);
+    return RGB_REPEAT_RATE_MS;
+}
 #endif
 
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
@@ -1174,6 +1200,23 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     }
 
     switch (keycode) {
+#ifdef RGB_MATRIX_ENABLE
+        case RGB_VAI: case RGB_VAD:
+        case RGB_HUI: case RGB_HUD:
+        case RGB_SAI: case RGB_SAD:
+        case RGB_SPI: case RGB_SPD:
+            if (record->event.pressed) {
+                rgb_held_keycode = keycode;
+                apply_rgb_adjust(keycode);
+                rgb_repeat_token = defer_exec(RGB_REPEAT_INITIAL_DELAY_MS, rgb_repeat_callback, NULL);
+            } else {
+                rgb_held_keycode = KC_NO;
+                cancel_deferred_exec(rgb_repeat_token);
+                rgb_repeat_token = INVALID_DEFERRED_TOKEN;
+                eeconfig_update_rgb_matrix();
+            }
+            return false;
+#endif
         case KC_CRSEL:
             if (record->event.pressed) { SEND_STRING(SS_TAP(X_HOME) SS_TAP(X_HOME) SS_LSFT(SS_TAP(X_END)) SS_TAP(X_BACKSPACE) SS_TAP(X_BACKSPACE) SS_TAP(X_DOWN)); }
             uprint("Delete Line.\n");

@@ -21,19 +21,12 @@
 #include <string.h>
 
 
-// Called on the bridge immediately after local state is updated via split sync.
-// Must act here because the bridge's housekeeping task cannot run until the
-// serial slave unblocks after the master suspends (serial timeout = several seconds).
-__attribute__((weak)) void on_local_state_synced(const poly_sync_t* old_state, const poly_sync_t* new_state) {}
-
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == sizeof(poly_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         if(crc32 == ((const poly_sync_t *)in_data)->crc32) {
-            const poly_sync_t old_state = *get_local_state();
             copy_local_state((const poly_sync_t *)in_data);
-            on_local_state_synced(&old_state, (const poly_sync_t *)in_data);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

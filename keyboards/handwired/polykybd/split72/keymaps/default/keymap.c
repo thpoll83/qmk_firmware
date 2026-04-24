@@ -146,22 +146,6 @@ void early_hardware_init_post(void) {
 static uint8_t flags = 0;
 static uint8_t overlay_flags = 0;
 
-// Called on the bridge immediately after local state arrives via split sync.
-// The bridge's housekeeping task can't run until the serial slave unblocks after
-// the master suspends (timeout is several seconds), so display-off must happen here.
-void on_local_state_synced(const poly_sync_t* old_state, const poly_sync_t* new_state) {
-    bool was_on = (old_state->flags & STATUS_DISP_ON) != 0;
-    bool now_on = (new_state->flags & STATUS_DISP_ON) != 0;
-    if (was_on && !now_on) {
-        oled_off();
-#ifdef RGB_MATRIX_ENABLE
-        rgb_matrix_set_color_all(0, 0, 0);
-        rgb_matrix_update_pwm_buffers();
-        rgb_matrix_disable_noeeprom();
-#endif
-    }
-}
-
 // Continuously suppress RGB on the bridge when display is off.
 // The split transport may re-enable RGB by copying master's rgb_matrix_config; this
 // indicator callback runs every render cycle (before flush) and zeros the LED buffer,
@@ -263,8 +247,8 @@ void sync_and_refresh_displays(void) {
                 }
             } else {
                 oled_off();
-                //rgb_matrix_set_color_all(0, 0, 0);
-                //rgb_matrix_update_pwm_buffers();
+                rgb_matrix_set_color_all(0, 0, 0);
+                rgb_matrix_update_pwm_buffers();
                 rgb_matrix_disable_noeeprom();
             }
         }

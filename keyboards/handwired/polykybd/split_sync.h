@@ -40,9 +40,6 @@ typedef struct _dynamic_keymap_sync_t {
     uint8_t  commands[RAW_EPSIZE];
 } dynamic_keymap_sync_t;
 
-// Called on the bridge immediately after local state is updated via split sync.
-void on_local_state_synced(const poly_sync_t* old_state, const poly_sync_t* new_state);
-
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 

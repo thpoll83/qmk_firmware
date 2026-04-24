@@ -40,14 +40,11 @@ typedef struct _dynamic_keymap_sync_t {
     uint8_t  commands[RAW_EPSIZE];
 } dynamic_keymap_sync_t;
 
-typedef struct _rgb_save_sync_t{
-    uint32_t     crc32;
-    rgb_config_t config;
-} rgb_save_sync_t;
-
-
 // Handles incoming RGB config on bridge: updates rgb_matrix_config and saves to EEPROM.
 void user_sync_rgb_save_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+
+// Sends current RGB matrix config to slave so it saves to its own EEPROM.
+void sync_rgb_config_to_bridge(void);
 
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

@@ -863,8 +863,11 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         if(add_lang && alt && local_last_latin_keycode!=0) {
             //show all available alternatives for selected latin letter
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0]);
-            return true;
+            const uint16_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
+            if(variation!=NULL) {
+                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, variation);
+                return true;
+            }
         }
         return false;
     }

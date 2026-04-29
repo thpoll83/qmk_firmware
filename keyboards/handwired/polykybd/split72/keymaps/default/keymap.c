@@ -1656,7 +1656,7 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
 void poly_suspend(void) {
     poly_sync_t* local_state = access_local_state();
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
-    local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE);// & ~((uint8_t)RGB_ON);
+    local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);// & ~((uint8_t)RGB_ON);
     local_state->contrast = DISP_OFF;
 }
 

@@ -101,3 +101,9 @@ void mark_settings_dirty(void);
 // Writes settings to EEPROM if a change is pending and the debounce period has elapsed.
 void brightness_save_if_pending(void);
 
+// Queues a default-layer EEPROM write to be executed from housekeeping (not from a sync handler).
+void defer_default_layer_save(layer_state_t def_layer);
+
+// Writes the pending default layer to EEPROM if queued. Call from housekeeping_task_user().
+void default_layer_save_if_pending(void);
+

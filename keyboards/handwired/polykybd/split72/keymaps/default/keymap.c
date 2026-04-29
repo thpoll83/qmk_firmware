@@ -333,6 +333,7 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
     brightness_save_if_pending();
+    default_layer_save_if_pending();
     sync_and_refresh_displays();
     int32_t update = get_last_update();
     if(update>=0) {

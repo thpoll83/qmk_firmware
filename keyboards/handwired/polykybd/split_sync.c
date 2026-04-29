@@ -78,7 +78,7 @@ void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t o
         if(crc32 == ((const poly_layer_t *)in_data)->crc32) {
             const poly_layer_t* incoming = (const poly_layer_t *)in_data;
             if (incoming->def_layer != get_local_layer()->def_layer) {
-                eeconfig_update_default_layer(incoming->def_layer);
+                defer_default_layer_save(incoming->def_layer);
             }
             copy_local_layer(incoming);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;

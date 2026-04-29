@@ -13,6 +13,9 @@ static bool     g_brightness_dirty       = false;
 static uint32_t g_brightness_dirty_timer = 0;
 #define BRIGHTNESS_EEPROM_DEBOUNCE_MS 5000
 
+static bool          g_def_layer_dirty = false;
+static layer_state_t g_def_layer_pending = 0;
+
 static poly_last_t l_last;
 static poly_last_t g_last;
 
@@ -215,5 +218,20 @@ void brightness_save_if_pending(void) {
     if (g_brightness_dirty && timer_elapsed32(g_brightness_dirty_timer) >= BRIGHTNESS_EEPROM_DEBOUNCE_MS) {
         save_user_settings();
         g_brightness_dirty = false;
+    }
+}
+
+// Defers a default-layer EEPROM write to housekeeping — safe to call from split sync handlers.
+void defer_default_layer_save(layer_state_t def_layer) {
+    g_def_layer_pending = def_layer;
+    g_def_layer_dirty   = true;
+}
+
+// Writes the pending default layer to EEPROM if one is queued.
+// Call from housekeeping_task_user() on both sides.
+void default_layer_save_if_pending(void) {
+    if (g_def_layer_dirty) {
+        eeconfig_update_default_layer(g_def_layer_pending);
+        g_def_layer_dirty = false;
     }
 }

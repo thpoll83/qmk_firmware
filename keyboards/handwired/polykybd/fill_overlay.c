@@ -52,6 +52,7 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
 
     uint8_t mods = get_fragment_context()->modifier;
     idx = adjust_overlay_idx_to_mod(idx, mods);
+    idx = get_overlay_mapping(idx);
     layer_state_t def_layer = get_local_layer()->def_layer;
     enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
     if(pos==POS_NOT_FOUND) {
@@ -97,6 +98,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
     }
     uint8_t ctx_mod = get_fragment_context()->modifier;
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
+    idx = get_overlay_mapping(idx);
 
     layer_state_t def_layer = get_local_layer()->def_layer;
     enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
@@ -159,6 +161,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     }
     uint8_t ctx_mod = get_fragment_context()->modifier;
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
+    idx = get_overlay_mapping(idx);
 
     layer_state_t def_layer = get_local_layer()->def_layer;
     enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
@@ -228,7 +231,6 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
         } else {
             if(from<OVERLAY_MAP_IDX_CNT && to<OVERLAY_MAP_IDX_CNT) {
                 set_overlay_mapping(from, to);
-                set_overlay_usage(from);
                 uprintf("Setting overlay mapping from %u to %u\n", from, to);
             }
             from = UNSET_OVERLAY_MAPPING;

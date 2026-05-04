@@ -824,9 +824,10 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
         return false;
     }
     idx = adjust_overlay_idx_to_mod(idx, mods);
+    uint16_t display_idx = idx;
     idx = get_overlay_mapping(idx);
 
-    if(!is_overlay_used(idx)) {
+    if(!is_overlay_used(display_idx)) {
         return false;
     }
     if(combine) {
@@ -1327,6 +1328,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_COMPRESSED_DATA,     user_sync_compressed_overlay_data_handler);
     transaction_register_rpc(USER_SYNC_ROI_DATA,            user_sync_roi_data_handler);
     transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_dynamic_keymap_data_handler);
+    transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
 
     poly_eeconf_t ee = load_user_eeconf();
     poly_sync_t* local_state = access_local_state();

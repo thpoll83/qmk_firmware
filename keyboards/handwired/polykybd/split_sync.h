@@ -40,6 +40,11 @@ typedef struct _dynamic_keymap_sync_t {
     uint8_t  commands[RAW_EPSIZE];
 } dynamic_keymap_sync_t;
 
+typedef struct _overlay_map_sync_t {
+    uint32_t crc32;
+    uint8_t  mapping[HID_DATA_MAX];
+} overlay_map_sync_t;
+
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
@@ -63,6 +68,9 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data);
 
 void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+
+// Handles incoming overlay mapping data on bridge with CRC32 validation.
+void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
 // Keyboard level code can change where VIA stores the magic.
 // The magic is the build date YYMMDD encoded as BCD in 3 bytes,

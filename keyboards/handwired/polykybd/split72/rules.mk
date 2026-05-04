@@ -23,7 +23,6 @@ DEFAULT_FOLDER = handwired/polykybd/split72
 WS2812_DRIVER = vendor
 
 ENCODER_ENABLE = yes
-ENCODER_MAP_ENABLE = yes
 
 POINTING_DEVICE_ENABLE = yes
 POINTING_DEVICE_DRIVER = cirque_pinnacle_i2c #POINTING_DEVICE_DRIVER = pimoroni_trackball

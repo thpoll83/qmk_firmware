@@ -1,3 +1,5 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
 #include "corne42.h"
 
 #include "quantum.h"
@@ -27,20 +29,9 @@
  *   - Whether the SR chain order matches BITMASK1/2/3 ordering in corne42.h
  */
 static const struct display_info key_display[] = {
-    /* Row 0 (top row, 6 keys): SR1 bits 0–5 */
-    {BITMASK1(0)}, {BITMASK1(1)}, {BITMASK1(2)},
-    {BITMASK1(3)}, {BITMASK1(4)}, {BITMASK1(5)},
-    /* Row 1 (home row, 6 keys): SR1 bits 6–7, SR2 bits 0–3 */
-    {BITMASK1(6)}, {BITMASK1(7)}, {BITMASK2(0)},
-    {BITMASK2(1)}, {BITMASK2(2)}, {BITMASK2(3)},
-    /* Row 2 (bottom row, 6 keys): SR2 bits 4–7, SR3 bits 0–1 */
-    {BITMASK2(4)}, {BITMASK2(5)}, {BITMASK2(6)},
-    {BITMASK2(7)}, {BITMASK3(0)}, {BITMASK3(1)},
-    /* Row 3 (thumb cluster): cols 3–5 are the real thumb keys,
-       cols 0–2 are unused matrix positions (no physical key/display).
-       TODO: adjust col order to match PCB routing. */
-    {BITMASK3(5)}, {BITMASK3(5)}, {BITMASK3(5)}, /* cols 0-2: unused dummies */
-    {BITMASK3(2)}, {BITMASK3(3)}, {BITMASK3(4)}, /* cols 3-5: thumb keys */
+        {BITMASK1(0)}, {BITMASK1(1)}, {BITMASK1(2)}, {BITMASK1(3)}, {BITMASK1(4)}, {BITMASK1(5)}, {BITMASK1(6)}, {BITMASK1(7)},
+        {BITMASK2(0)}, {BITMASK2(1)}, {BITMASK2(2)}, {BITMASK2(3)}, {BITMASK2(4)}, {BITMASK2(5)}, {BITMASK2(6)}, {BITMASK2(7)},
+        {BITMASK3(0)}, {BITMASK3(1)}, {BITMASK3(2)}, {BITMASK3(3)}, {BITMASK3(4)}, {BITMASK3(5)}, {BITMASK3(6)}, {BITMASK3(7)}
 };
 
 const uint8_t* get_key_disp_bitmask(uint8_t index) {

@@ -408,6 +408,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     raw_hid_send(data, length);
                 }
                 break;
+            case 22: // get default layer
+                memset(data, 0, length);
+                memcpy(data, "P\x16.", 3);
+                data[3] = (uint8_t)local_layer->def_layer;
+                raw_hid_send(data, length);
+                break;
             default:
                 printf("Unknown command: %u.\n", data[HID_CMD_IDX]);
                 data[2] = '!';

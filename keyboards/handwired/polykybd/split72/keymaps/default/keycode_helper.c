@@ -1,3 +1,5 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
 #include "keycode_helper.h"
 
 const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {

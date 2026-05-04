@@ -17,7 +17,6 @@ SRC += status_oled.c base/update.c base/e2prom.c base/rle.c base/com.c base/crc3
 DEFAULT_FOLDER = handwired/polykybd/corne42
 
 ENCODER_ENABLE     = yes
-ENCODER_MAP_ENABLE = yes
 
 # No pointing device (no Cirque trackpad on corne42)
 

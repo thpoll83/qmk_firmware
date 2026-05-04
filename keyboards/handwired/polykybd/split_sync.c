@@ -15,7 +15,7 @@
 #include "side.h"
 #include "matrix_helper.h"
 
-#include "split72/split72.h"
+void invert_display(uint8_t r, uint8_t c, bool state);
 
 #include <stddef.h>
 #include <string.h>

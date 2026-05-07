@@ -217,6 +217,10 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
 }
 
 // Unpacks 10-bit overlay mapping pairs from buffer and updates overlay_map array.
+// `from` indexes overlay_map[] (0..OVERLAY_MAP_IDX_CNT-1, currently 810).
+// `to` indexes overlays[] (0..NUM_OVERLAYS*NUM_VARIATIONS-1, currently 630) — the
+// physical pool. A `to` >= NUM_OVERLAYS*NUM_VARIATIONS is an out-of-pool value
+// and would cause an OOB read in copy_overlay_to_buffer / fill_overlay_buffer.
 void set_10bit_overlay_mapping(uint8_t* mapping) {
     uint16_t from = UNSET_OVERLAY_MAPPING;
     for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
@@ -229,10 +233,16 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
         if(from==UNSET_OVERLAY_MAPPING) {
             from = to;
         } else {
-            if(from<OVERLAY_MAP_IDX_CNT && to<OVERLAY_MAP_IDX_CNT) {
-                set_overlay_mapping(from, to);
-                uprintf("Setting overlay mapping from %u to %u\n", from, to);
+            if(from < OVERLAY_MAP_IDX_CNT) {
+                if(to < NUM_OVERLAYS*NUM_VARIATIONS) {
+                    set_overlay_mapping(from, to);
+                    uprintf("Setting overlay mapping from %u to %u\n", from, to);
+                } else {
+                    uprintf("REJECTED overlay mapping from %u to %u (to out of pool, max %u)\n",
+                            from, to, NUM_OVERLAYS*NUM_VARIATIONS - 1);
+                }
             }
+            // from >= OVERLAY_MAP_IDX_CNT is the host's deliberate noop padding (e.g. 810/810); silent.
             from = UNSET_OVERLAY_MAPPING;
         }
     }

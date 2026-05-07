@@ -1036,11 +1036,12 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
         return false;
     }
     idx = adjust_overlay_idx_to_mod(idx, mods);
-    idx = get_overlay_mapping(idx);
-
+    // use_overlay[] is from-indexed (see set_10bit_overlay_mapping): check it
+    // here on the display position, before resolving to the pool slot.
     if(!is_overlay_used(idx)) {
         return false;
     }
+    idx = get_overlay_mapping(idx);
 
     kdisp_clear_bitmap_courtyard(28, 0, get_overlay(idx), 72, 40);
     kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40); //don't understnad why we start at offset 28... need to think about it

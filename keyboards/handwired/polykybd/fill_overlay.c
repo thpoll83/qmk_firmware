@@ -224,7 +224,8 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
 void set_10bit_overlay_mapping(uint8_t* mapping) {
     uint16_t from = UNSET_OVERLAY_MAPPING;
     for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
-        uint8_t start_bit = idx*OVERLAY_MAP_IDX_BITS;
+        // start_bit must be wide enough to hold idx*10 up to 480 — uint8_t wraps at idx=26.
+        uint16_t start_bit = (uint16_t)idx*OVERLAY_MAP_IDX_BITS;
         uint8_t start_byte = start_bit/8;
         uint8_t start_bit_in_byte = start_bit%8;
         uint8_t num_bits_in_byte2 = OVERLAY_MAP_IDX_BITS-(8-start_bit_in_byte);
@@ -236,6 +237,10 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
             if(from < OVERLAY_MAP_IDX_CNT) {
                 if(to < NUM_OVERLAYS*NUM_VARIATIONS) {
                     set_overlay_mapping(from, to);
+                    // use_overlay[] is from-indexed: a display position is
+                    // "in use" iff it has an overlay assigned. Establishing
+                    // the mapping is exactly that act, so set the bit here.
+                    set_overlay_usage(from);
                     uprintf("Setting overlay mapping from %u to %u\n", from, to);
                 } else {
                     uprintf("REJECTED overlay mapping from %u to %u (to out of pool, max %u)\n",

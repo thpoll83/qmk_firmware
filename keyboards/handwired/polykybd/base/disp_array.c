@@ -66,83 +66,6 @@
 
 
 uint8_t scratch_buffer[BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT];
-uint8_t mask_buffer[BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT];
-
-void combine_with_mask(void) {
-    for(int16_t i=0;i<BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT;++i) {
-        scratch_buffer[i] = scratch_buffer[i] & mask_buffer[i];
-    }
-}
-
-void prepare_mask_buffer(uint8_t oflags) {
-    oflags &= CLEAR_LEFT_TOP|CLEAR_LEFT_BOTTOM|CLEAR_RIGHT_TOP|CLEAR_RIGHT_BOTTOM;
-
-    int8_t x_start=(128-72)/2, y_start=0, width=72/2, height=40/2;
-    switch(oflags) {
-        case CLEAR_RIGHT_TOP|CLEAR_RIGHT_BOTTOM:
-            x_start += 72/2;
-            height = 40;
-            break;
-        case CLEAR_LEFT_TOP|CLEAR_LEFT_BOTTOM:
-            height = 40;
-            break;
-        case CLEAR_RIGHT_BOTTOM|CLEAR_LEFT_BOTTOM:
-            y_start = 40/2;
-            width = 72;
-            break;
-        case CLEAR_RIGHT_TOP|CLEAR_LEFT_TOP:
-            width = 72;
-            break;
-        case CLEAR_LEFT_BOTTOM:
-            y_start = 40/2;
-            break;
-        case CLEAR_LEFT_TOP:
-            break;
-        case CLEAR_RIGHT_BOTTOM:
-            x_start += 72/2;
-            y_start = 40/2;
-            break;
-        case CLEAR_RIGHT_TOP:
-            x_start += 72/2;
-            break;
-
-        //case with 3 areas (4 area case excluded, do not call this function)
-        default:
-            oflags = ~oflags & (CLEAR_LEFT_TOP|CLEAR_LEFT_BOTTOM|CLEAR_RIGHT_TOP|CLEAR_RIGHT_BOTTOM);
-            switch (oflags)
-            {
-                case CLEAR_LEFT_BOTTOM:
-                    y_start = 40/2;
-                    break;
-                case CLEAR_LEFT_TOP:
-                    break;
-                case CLEAR_RIGHT_BOTTOM:
-                    x_start += 72/2;
-                    y_start = 40/2;
-                    break;
-                case CLEAR_RIGHT_TOP:
-                    x_start += 72/2;
-                    break;
-                default: //impossible
-                    return;
-            }
-
-            kdisp_set_mask(0x00);
-            for (int x = x_start; x < (x_start + width); ++x) {
-                for (int y = y_start; y < (y_start + height); ++y) {
-                    mask_buffer[GET_BUFFER_OFFSET(x, y)] |= (1 << ((y)&0x7));
-                }
-            }
-            return;
-    }
-
-    kdisp_set_mask(0xff);
-    for (int x = x_start; x < (x_start + width); ++x) {
-        for (int y = y_start; y < (y_start + height); ++y) {
-            mask_buffer[GET_BUFFER_OFFSET(x, y)] &= ~(1 << ((y)&0x7));
-        }
-    }
-}
 
 uint8_t* get_scratch_buffer(void) {
     return scratch_buffer;
@@ -373,10 +296,6 @@ void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], i
 
 void kdisp_set_buffer(uint8_t vertical_pixel_row_of_8_pixels) {
     memset(scratch_buffer, vertical_pixel_row_of_8_pixels, BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT);
-}
-
-void kdisp_set_mask(uint8_t vertical_pixel_row_of_8_pixels) {
-    memset(mask_buffer, vertical_pixel_row_of_8_pixels, BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT);
 }
 
 void kdisp_send_buffer(void) {

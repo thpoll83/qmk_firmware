@@ -14,10 +14,10 @@ enum poly_flag {
 
 enum overlay_flag {
     DISPLAY_OVERLAYS    = 1 << 0,
-    CLEAR_LEFT_TOP      = 1 << 1,
-    CLEAR_LEFT_BOTTOM   = 1 << 2,
-    CLEAR_RIGHT_TOP     = 1 << 3,
-    CLEAR_RIGHT_BOTTOM  = 1 << 4,
+    MAPPING_ALLSET      = 1 << 1,
+    RESERVED_1          = 1 << 2,
+    RESERVED_2          = 1 << 3,
+    RESERVED_3          = 1 << 4,
     RESET_BUFFERS       = 1 << 5,
     USAGE_RESET         = 1 << 6,
     MAPPING_RESET       = 1 << 7

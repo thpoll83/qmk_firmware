@@ -98,6 +98,12 @@ void reset_overlay_usage(void) {
     //memset(&use_overlay, 0, sizeof(use_overlay));
 }
 
+void set_all_overlay_mapping(void) {
+    for(int16_t i = 0; i < sizeof(use_overlay); ++i) {
+        use_overlay[i] = 0xff;
+    }
+}
+
 void reset_overlay_mapping(void) {
     for(int16_t i = 0; i < NUM_OVERLAYS*NUM_VARIATIONS; ++i) {
         overlay_map[i] = i;

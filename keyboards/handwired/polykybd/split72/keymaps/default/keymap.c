@@ -260,6 +260,7 @@ void sync_and_refresh_displays(void) {
         const bool reset_overlays       = test_flag(local_overlay_flags, RESET_BUFFERS);
         const bool usage_reset          = test_flag(local_overlay_flags, USAGE_RESET);
         const bool mapping_reset        = test_flag(local_overlay_flags, MAPPING_RESET);
+        const bool mapping_allset       = test_flag(local_overlay_flags, MAPPING_ALLSET);
 
         if(idle_changed) {
             if(in_idle_mode) {
@@ -300,6 +301,10 @@ void sync_and_refresh_displays(void) {
         if(mapping_reset) {
             reset_overlay_mapping();
             local_overlay_flags = flag_off(local_overlay_flags, MAPPING_RESET);
+        }
+        if(mapping_allset) {
+            set_all_overlay_mapping();
+            local_overlay_flags = flag_off(local_overlay_flags, MAPPING_ALLSET);
         }
         access_local_state()->overlay_flags = local_overlay_flags;
 
@@ -1022,8 +1027,7 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     return NULL;
 }
 
-// Copies overlay bitmap for keycode to display buffer, combining with mask if requested.
-bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
+bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(keycode>KC_RGUI || (keycode>KC_NUM_LOCK && keycode<KC_NUBS) || (keycode>KC_APP && keycode<KC_LEFT_CTRL)) {
         return false;
     }
@@ -1036,9 +1040,6 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods, bool combine) {
 
     if(!is_overlay_used(idx)) {
         return false;
-    }
-    if(combine) {
-        combine_with_mask();
     }
 
     kdisp_clear_bitmap_courtyard(28, 0, get_overlay(idx), 72, 40);
@@ -1076,12 +1077,6 @@ void update_displays(enum refresh_mode mode) {
 
     const uint8_t max_rows = mode == START_FIRST_HALF ? 3 : MATRIX_ROWS_PER_SIDE;
 
-    const bool overlay_only = test_flag( local_state->overlay_flags, CLEAR_LEFT_TOP|CLEAR_LEFT_BOTTOM|CLEAR_RIGHT_TOP|CLEAR_RIGHT_BOTTOM);
-    const bool combine = !overlay_only && (local_state->overlay_flags & (CLEAR_LEFT_TOP|CLEAR_LEFT_BOTTOM|CLEAR_RIGHT_TOP|CLEAR_RIGHT_BOTTOM))!=0;
-    if(combine ) {
-        prepare_mask_buffer(local_state->overlay_flags);
-    }
-
     uint8_t skip = 0;
     for (uint8_t r = start_row; r < max_rows; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
@@ -1103,19 +1098,17 @@ void update_displays(enum refresh_mode mode) {
                     if(keycode!=KC_TRNS) {
                         const uint16_t* text = to_static_text(keycode, state);
                         kdisp_set_buffer(0x00);
-                        if(!overlay_only) {
-                            if(text==NULL) {
-                                if(!render_key(keycode, state, mods) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
-                                    uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
-                                    kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, 28, 23, unicode_map[chr], false);
-                                }
-                            } else {
-                                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text);
+                        if(text==NULL) {
+                            if(!render_key(keycode, state, mods) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
+                                uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
+                                kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, 28, 23, unicode_map[chr], false);
                             }
+                        } else {
+                            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text);
                         }
                         text = NULL;
                         if(display_overlays) {
-                            if(!copy_overlay_to_buffer(keycode, mods, combine)) {
+                            if(!copy_overlay_to_buffer(keycode, mods)) {
                                 text = keycode_to_disp_overlay(keycode, state); //fallback to hardcoded
                             }
                         } else {

@@ -53,6 +53,10 @@ void reset_overlay_buffers(void);
 // Global variables: use_overlay
 void reset_overlay_usage(void);
 
+// Marks every overlay slot as used (inverse of reset_overlay_usage).
+// Global variables: use_overlay
+void set_all_overlay_mapping(void);
+
 // Initializes the overlay mapping indices: standard entries map 1:1, followed by modifier combinations.
 // Global variables: overlay_map
 void reset_overlay_mapping(void);

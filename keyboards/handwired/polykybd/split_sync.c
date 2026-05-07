@@ -11,6 +11,7 @@
 #include "base/disp_array.h"
 #include "base/update.h"
 #include "base/crc32.h"
+#include "fill_overlay.h"
 #include "state.h"
 #include "side.h"
 #include "matrix_helper.h"
@@ -228,6 +229,20 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     break;
                 default: break;
             }
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
+        }
+    }
+}
+
+// Handles incoming overlay mapping data on bridge with CRC32 validation.
+void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len == sizeof(overlay_map_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data != NULL) {
+        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
+        const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
+        if (crc32 == data->crc32) {
+            set_10bit_overlay_mapping((uint8_t *)data->mapping);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

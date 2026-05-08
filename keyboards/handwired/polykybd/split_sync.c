@@ -112,7 +112,7 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
         if(crc32 == ov->crc32) {
             memcpy(get_overlay(ov->adj_idx) + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
             if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
-                set_overlay_usage(ov->adj_idx);
+                set_overlay_usage_post_upload(ov->adj_idx);
                 request_disp_refresh();
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
@@ -139,7 +139,7 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
             int16_t maxlen = 360 - hid_bit_index/8;
             hid_bit_index += rle_decompress(get_overlay(ov->adj_idx)+hid_bit_index/8, PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
             if (hid_bit_index >= 360*8) {
-                set_overlay_usage(ov->adj_idx);
+                set_overlay_usage_post_upload(ov->adj_idx);
                 request_disp_refresh();
                 hid_bit_index = 0;
             }
@@ -180,7 +180,7 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
                 if(new_index >= 2880) {
                     //finished roi update
                     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
-                    set_overlay_usage(roi_ov->adj_idx);
+                    set_overlay_usage_post_upload(roi_ov->adj_idx);
                     request_disp_refresh();
                 } else {
                     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;

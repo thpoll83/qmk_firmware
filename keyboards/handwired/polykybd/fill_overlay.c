@@ -90,7 +90,7 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
     }
 
     if (segment_index == NUM_SEGMENTS_PER_OVERLAY - 1) {
-        set_overlay_usage(idx);
+        set_overlay_usage_post_upload(idx);
         uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n",
                 keycode, mods, (segment_index+1)*BYTES_PER_SEGMENT, idx, pos_to_str(pos));
     }
@@ -126,7 +126,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
         bit_index += rle_decompress(get_overlay(idx)+bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, bit_index);
 
         if (bit_index >= 360*8 -1) {
-            set_overlay_usage(idx);
+            set_overlay_usage_post_upload(idx);
             uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
                 keycode, ctx_mod, pos_to_str(pos), bit_index/8);
             update_performed();
@@ -181,7 +181,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             }
             bit_index = copy_rectangle_to_overlay(bit_index, get_overlay(idx), first?(&(data[5])):data, &ctx_roi, data_len);
             if(bit_index >= 2880) {
-                set_overlay_usage(idx);
+                set_overlay_usage_post_upload(idx);
                 update_performed();
                 request_disp_refresh();
             }
@@ -245,4 +245,10 @@ void apply_overlay_action_flags(uint8_t flags) {
     if(test_flag(flags, USAGE_RESET))    reset_overlay_usage();
     if(test_flag(flags, MAPPING_RESET))  reset_overlay_mapping();
     if(test_flag(flags, MAPPING_ALLSET)) set_all_overlay_mapping();
+}
+
+void set_overlay_usage_post_upload(uint16_t idx) {
+    if (!test_flag(get_local_state()->overlay_flags, MIRROR_OVERLAYS)) {
+        set_overlay_usage(idx);
+    }
 }

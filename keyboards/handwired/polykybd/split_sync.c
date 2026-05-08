@@ -43,6 +43,9 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
                 apply_overlay_action_flags(newly_set);
                 // Clear the bits locally so housekeeping has nothing to do.
                 access_local_state()->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
+                // Housekeeping's state_diff branch (which used to call this at the end)
+                // won't fire now that local matches global — trigger the refresh ourselves.
+                request_disp_refresh();
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {

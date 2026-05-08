@@ -248,6 +248,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         // deferred handler in sync_and_refresh_displays has nothing to do.
                         send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
                         local_state->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
+                        // The deferred handler used to call request_disp_refresh() at the end
+                        // of its state_diff branch — we no longer get there for the action-flag
+                        // path because we cleared the bits ourselves, so trigger it explicitly.
+                        request_disp_refresh();
                     }
                     memset(data, 0, length);
                     memcpy(data, "P\x0b.", 3);

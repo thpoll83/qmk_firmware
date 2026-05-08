@@ -23,6 +23,11 @@ enum overlay_flag {
     MAPPING_RESET       = 1 << 7
 };
 
+// Bits that trigger an overlay self-action (reset/set). They are processed
+// immediately at HID receive (master) and bridge sync (slave) and cleared
+// in local_state right there — housekeeping never has to deal with them.
+#define OVERLAY_ACTION_FLAGS  ((uint8_t)(RESET_BUFFERS | USAGE_RESET | MAPPING_RESET | MAPPING_ALLSET))
+
 bool test_flag(uint8_t flags, uint8_t f) ;
 
 uint8_t flag_on(uint8_t flags, uint8_t f) ;

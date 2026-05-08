@@ -235,14 +235,23 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
             case 11: //overlays flags on
                 {
-                    //const bool vis_changed = test_flag(data[HID_DATA_IDX]^local_state->overlay_flags, DISPLAY_OVERLAYS);
-                    local_state->overlay_flags = flag_on(local_state->overlay_flags, data[HID_DATA_IDX]);
-                    // if(vis_changed) {
-                    //     housekeeping_task_user();
-                    // }
+                    uint8_t new_flags = data[HID_DATA_IDX];
+                    local_state->overlay_flags = flag_on(local_state->overlay_flags, new_flags);
+                    // Run the self-actions immediately so subsequent HID commands (e.g.
+                    // a send_overlay_mapping right after a reset_overlay_usage) see the
+                    // post-action state.
+                    apply_overlay_action_flags(new_flags);
+                    if(new_flags & OVERLAY_ACTION_FLAGS) {
+                        // Force-sync state to the slave NOW (with the action bits set) so it
+                        // runs the same action before any subsequent USER_SYNC_OVERLAY_MAP_DATA
+                        // bridge transactions land on it. Then clear the bits locally — the
+                        // deferred handler in sync_and_refresh_displays has nothing to do.
+                        send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
+                        local_state->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
+                    }
                     memset(data, 0, length);
                     memcpy(data, "P\x0b.", 3);
-                    uprintf("Overlay flags 0x%x set.\n", data[HID_DATA_IDX]);
+                    uprintf("Overlay flags 0x%x set.\n", new_flags);
                     raw_hid_send(data, length);
                 }
                 break;

@@ -257,10 +257,6 @@ void sync_and_refresh_displays(void) {
         const bool contrast_changed     = get_local_state()->contrast != get_global_state()->contrast;
         const bool status_disp_changed  = has_flag_changed(local_flags, global_flags, STATUS_DISP_ON);
         const bool status_disp_on       = test_flag(local_flags, STATUS_DISP_ON);
-        const bool reset_overlays       = test_flag(local_overlay_flags, RESET_BUFFERS);
-        const bool usage_reset          = test_flag(local_overlay_flags, USAGE_RESET);
-        const bool mapping_reset        = test_flag(local_overlay_flags, MAPPING_RESET);
-        const bool mapping_allset       = test_flag(local_overlay_flags, MAPPING_ALLSET);
 
         if(idle_changed) {
             if(in_idle_mode) {
@@ -290,23 +286,10 @@ void sync_and_refresh_displays(void) {
             }
         }
 
-        if(reset_overlays) {
-            reset_overlay_buffers();
-            local_overlay_flags = flag_off(local_overlay_flags, RESET_BUFFERS);
-        }
-        if(usage_reset) {
-            reset_overlay_usage();
-            local_overlay_flags = flag_off(local_overlay_flags, USAGE_RESET);
-        }
-        if(mapping_reset) {
-            reset_overlay_mapping();
-            local_overlay_flags = flag_off(local_overlay_flags, MAPPING_RESET);
-        }
-        if(mapping_allset) {
-            set_all_overlay_mapping();
-            local_overlay_flags = flag_off(local_overlay_flags, MAPPING_ALLSET);
-        }
-        access_local_state()->overlay_flags = local_overlay_flags;
+        // Overlay action flags (RESET_BUFFERS / USAGE_RESET / MAPPING_RESET /
+        // MAPPING_ALLSET) are dispatched and cleared at their entry points —
+        // hid_com.c case 11 on the master, user_sync_poly_data_handler on the
+        // slave. Nothing for us to do here.
 
         if (contrast_changed || idle_changed) {
             set_displays(get_local_state()->contrast, in_idle_mode);

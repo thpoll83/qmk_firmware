@@ -8,6 +8,7 @@
 #include "base/overlay.h"
 #include "eeconfig.h"
 #include "dynamic_keymap.h"
+#include "base/com.h"
 #include "base/disp_array.h"
 #include "base/update.h"
 #include "base/crc32.h"
@@ -32,7 +33,17 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
             if (incoming->contrast != current->contrast || incoming->lang != current->lang) {
                 mark_settings_dirty();
             }
+            // Detect action flags newly set in this sync and run them immediately,
+            // mirroring the master's case-11 handling. Without this, a mapping
+            // bridge transaction arriving before housekeeping runs would have its
+            // use_overlay bits wiped by a later deferred reset_overlay_usage().
+            uint8_t newly_set = (incoming->overlay_flags & ~current->overlay_flags);
             copy_local_state(incoming);
+            if(newly_set & OVERLAY_ACTION_FLAGS) {
+                apply_overlay_action_flags(newly_set);
+                // Clear the bits locally so housekeeping has nothing to do.
+                access_local_state()->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
+            }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

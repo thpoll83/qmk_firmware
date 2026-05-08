@@ -10,6 +10,7 @@
 #include "matrix_helper.h"
 #include "multicore_exec.h"
 #include "bridge_helper.h"
+#include "base/com.h"
 #include "base/overlay.h"
 #include "lang/lang_lut.h"
 
@@ -251,4 +252,11 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
             from = UNSET_OVERLAY_MAPPING;
         }
     }
+}
+
+void apply_overlay_action_flags(uint8_t flags) {
+    if(test_flag(flags, RESET_BUFFERS))  reset_overlay_buffers();
+    if(test_flag(flags, USAGE_RESET))    reset_overlay_usage();
+    if(test_flag(flags, MAPPING_RESET))  reset_overlay_mapping();
+    if(test_flag(flags, MAPPING_ALLSET)) set_all_overlay_mapping();
 }

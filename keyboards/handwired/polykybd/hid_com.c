@@ -241,16 +241,23 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // a send_overlay_mapping right after a reset_overlay_usage) see the
                     // post-action state.
                     apply_overlay_action_flags(new_flags);
-                    if(new_flags & OVERLAY_ACTION_FLAGS) {
-                        // Force-sync state to the slave NOW (with the action bits set) so it
-                        // runs the same action before any subsequent USER_SYNC_OVERLAY_MAP_DATA
-                        // bridge transactions land on it. Then clear the bits locally — the
-                        // deferred handler in sync_and_refresh_displays has nothing to do.
+                    // Force-sync state to slave whenever the host changes a bit that the slave
+                    // needs to act on immediately — either an action flag (which triggers a
+                    // mirror action on slave) or a synced state flag like MIRROR_OVERLAYS
+                    // (which changes how slave's upload bridge handlers interpret subsequent
+                    // overlay data). Without the latter, the host could set MIRROR_OVERLAYS
+                    // alone (no action bits) and slave wouldn't learn until housekeeping
+                    // ran — too late for the next upload bridge transaction.
+                    const bool needs_force_sync =
+                        (new_flags & OVERLAY_ACTION_FLAGS) || (new_flags & OVERLAY_SYNCED_STATE_FLAGS);
+                    if(needs_force_sync) {
                         send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
-                        local_state->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
-                        // The deferred handler used to call request_disp_refresh() at the end
-                        // of its state_diff branch — we no longer get there for the action-flag
-                        // path because we cleared the bits ourselves, so trigger it explicitly.
+                        if(new_flags & OVERLAY_ACTION_FLAGS) {
+                            // Clear action bits locally so housekeeping has nothing to do.
+                            local_state->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
+                        }
+                        // Trigger refresh — for action-flag path the deferred handler used
+                        // to do this at the end of its state_diff branch.
                         request_disp_refresh();
                     }
                     memset(data, 0, length);
@@ -262,11 +269,15 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 
             case 12: //overlays flags off
                 {
-                    //const bool vis_changed = test_flag(data[HID_DATA_IDX]^local_state->overlay_flags, DISPLAY_OVERLAYS);
-                    local_state->overlay_flags = flag_off(local_state->overlay_flags, data[HID_DATA_IDX]);
-                    // if(vis_changed) {
-                    //     housekeeping_task_user();
-                    // }
+                    uint8_t flags_to_clear = data[HID_DATA_IDX];
+                    local_state->overlay_flags = flag_off(local_state->overlay_flags, flags_to_clear);
+                    // Same reasoning as case 11: if a synced-state bit is being changed,
+                    // tell the slave NOW so it doesn't act on stale state for any
+                    // bridge transactions that follow.
+                    if(flags_to_clear & OVERLAY_SYNCED_STATE_FLAGS) {
+                        send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
+                        request_disp_refresh();
+                    }
                     memset(data, 0, length);
                     memcpy(data, "P\x0c.", 3);
                     uprintf("Overlay flags 0x%x cleared.\n", data[HID_DATA_IDX]);

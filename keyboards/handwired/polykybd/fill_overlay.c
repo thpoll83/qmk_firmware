@@ -19,6 +19,28 @@
 
 layer_state_t get_function_layer(layer_state_t def_layer);
 
+// Resolve which half(s) should receive an upload. With MIRROR_OVERLAYS set we
+// force POS_ON_BOTH so MRU mappings that cross the split find the bitmap on
+// the rendering side. Otherwise fall back to the keycode's matrix side, with
+// POS_ON_BOTH as a fail-safe when the keycode isn't on any active layer.
+static enum key_split_pos resolve_upload_side(uint8_t keycode) {
+    if (test_flag(get_local_state()->overlay_flags, MIRROR_OVERLAYS)) {
+        return POS_ON_BOTH;
+    }
+    layer_state_t def_layer = get_local_layer()->def_layer;
+    enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
+    if (pos == POS_NOT_FOUND) {
+        layer_state_t layer = get_function_layer(def_layer);
+        if (layer != 0) {
+            pos = get_split_matrix_side(keycode, layer);
+        } else {
+            pos = POS_ON_BOTH;
+            uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
+        }
+    }
+    return pos;
+}
+
 
 // Maps overlay index to modifier combination offset
 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5),
@@ -54,21 +76,11 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
     uint8_t mods = get_fragment_context()->modifier;
     idx = adjust_overlay_idx_to_mod(idx, mods);
     idx = get_overlay_mapping(idx);
-    layer_state_t def_layer = get_local_layer()->def_layer;
-    enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
-    if(pos==POS_NOT_FOUND) {
-        layer_state_t layer = get_function_layer(def_layer);
-        if(layer!=0) {
-            pos = get_split_matrix_side(keycode, layer);
-        } else {
-            pos = POS_ON_BOTH;
-            uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
-        }
-    }
+
+    enum key_split_pos pos = resolve_upload_side(keycode);
     if (is_on_current_side(pos)) {
         memcpy(get_overlay(idx) + segment_index * BYTES_PER_SEGMENT, buffer, BYTES_PER_SEGMENT);
     }
-    //only send to bridge when needed
     if (is_on_other_side(pos)) {
         overlay_sync_t transfer;
         transfer.segment = segment_index;
@@ -79,7 +91,8 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
 
     if (segment_index == NUM_SEGMENTS_PER_OVERLAY - 1) {
         set_overlay_usage(idx);
-        uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n", keycode, mods, (segment_index+1)*BYTES_PER_SEGMENT, idx, pos_to_str(pos));
+        uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n",
+                keycode, mods, (segment_index+1)*BYTES_PER_SEGMENT, idx, pos_to_str(pos));
     }
 }
 
@@ -101,21 +114,9 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
     idx = get_overlay_mapping(idx);
 
-    layer_state_t def_layer = get_local_layer()->def_layer;
-    enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
-    if(pos==POS_NOT_FOUND) {
-        layer_state_t layer = get_function_layer(def_layer);
-        if(layer!=0) {
-            pos = get_split_matrix_side(keycode, layer);
-        } else {
-            pos = POS_ON_BOTH;
-            uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
-        }
-    }
-
+    enum key_split_pos pos = resolve_upload_side(keycode);
     uint16_t bit_index = get_fragment_context()->bit_index;
     uint8_t compressed_len = first?COMPRESSED_START:COMPRESSED_MAX;
-
 
     if (is_on_current_side(pos)) {
 #ifdef USE_CORE1
@@ -134,7 +135,6 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
 #endif
     }
 
-    //only send to bridge when needed
     if (is_on_other_side(pos)) {
         compressed_overlay_sync_t transfer;
         transfer.len = compressed_len;
@@ -164,17 +164,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
     idx = get_overlay_mapping(idx);
 
-    layer_state_t def_layer = get_local_layer()->def_layer;
-    enum key_split_pos pos = get_split_matrix_side(keycode, def_layer);
-    if(pos==POS_NOT_FOUND) {
-        layer_state_t layer = get_function_layer(def_layer);
-        if(layer!=0) {
-            pos = get_split_matrix_side(keycode, layer);
-        } else {
-            pos = POS_ON_BOTH;
-            uprintf("Warning: Could not locate side for keycode 0x%x, using both as fail-safe option.\n", keycode);
-        }
-    }
+    enum key_split_pos pos = resolve_upload_side(keycode);
 
     if (is_on_current_side(pos)) {
         roi_update_data_t ctx_roi = get_fragment_context()->roi;
@@ -186,7 +176,6 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
         #else
             uint16_t data_len = first?ROI_START:ROI_MAX;
             uint16_t bit_index = get_fragment_context()->bit_index;
-            //uint8_t x,y;
             if(first) {
                 bit_index = ctx_roi.y * SCREEN_WIDTH + ctx_roi.x;
             }
@@ -200,9 +189,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
         #endif
     }
 
-    //only send to bridge when needed
     if (is_on_other_side(pos)) {
-
         roi_overlay_sync_t transfer;
         transfer.adj_idx = idx;
         transfer.msg_idx = get_fragment_context()->msg_count;
@@ -210,7 +197,6 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
         memcpy(&transfer.data, data, ROI_MAX);
 
         if (send_to_bridge(USER_SYNC_ROI_DATA, (void*)&transfer, sizeof(transfer), 10)==SYNC_ACK_SIG) {
-            //set_overlay_usage(idx);
             uprintf("--> Finished ROI update for keycode 0x%x (mod 0x%x), sent to bridge: side %s in %d messages.\n",
                 keycode, ctx_mod, pos_to_str(pos), get_fragment_context()->msg_count);
         }

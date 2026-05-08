@@ -15,7 +15,11 @@ enum poly_flag {
 enum overlay_flag {
     DISPLAY_OVERLAYS    = 1 << 0,
     MAPPING_ALLSET      = 1 << 1,
-    RESERVED_1          = 1 << 2,
+    // While set, every overlay upload is stored on both halves regardless of
+    // the upload's keycode side. The host turns this on before MRU sends so a
+    // mapping that crosses the split can find the bitmap on the side that
+    // actually has to render it. Off = legacy side-conditional storage.
+    MIRROR_OVERLAYS     = 1 << 2,
     RESERVED_2          = 1 << 3,
     RESERVED_3          = 1 << 4,
     RESET_BUFFERS       = 1 << 5,

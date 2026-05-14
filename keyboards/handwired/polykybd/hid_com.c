@@ -47,6 +47,15 @@ while lang_key:
 
 void invert_display(uint8_t r, uint8_t c, bool state);
 
+void hid_notify_firmware_ready(void) {
+    uint8_t data[RAW_EPSIZE];
+    memset(data, 0, RAW_EPSIZE);
+    data[0] = 'P';
+    data[1] = 0x17;
+    data[2] = '.';
+    raw_hid_send(data, RAW_EPSIZE);
+}
+
 
 // Notifies RGB/LED matrix of key event for animation effects based on key press state.
 void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {

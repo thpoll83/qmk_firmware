@@ -5,6 +5,8 @@
 #define LANG_TO_UI32(a,b,c,d) (((uint32_t)(a))<<24 | ((uint32_t)(b))<<16 | ((uint32_t)(c))<<8 | (d))
 #define LANG_TO_UI32_ARR(arr) (((uint32_t)(arr[0]))<<24 | ((uint32_t)(arr[1]))<<16 | ((uint32_t)(arr[2]))<<8 | (arr[3]))
 
+void hid_notify_firmware_ready(void);
+
 enum legacy_command_id {
     id_get_protocol_version                 = 0x01, // always 0x01
     id_get_keyboard_value                   = 0x02,

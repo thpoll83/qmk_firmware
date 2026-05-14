@@ -42,6 +42,7 @@
 #include "state.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
+#include "hid_com.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -322,6 +323,12 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
+    static bool s_firmware_ready_sent = false;
+    if (!s_firmware_ready_sent && is_keyboard_master()) {
+        hid_notify_firmware_ready();
+        s_firmware_ready_sent = true;
+    }
+
     brightness_save_if_pending();
     default_layer_save_if_pending();
     sync_and_refresh_displays();

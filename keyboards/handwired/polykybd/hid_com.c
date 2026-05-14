@@ -4,6 +4,7 @@
 #include "quantum.h"
 
 #include "raw_hid.h"
+#include "usb_device_state.h"
 
 #include "state.h"
 #include "side.h"
@@ -48,12 +49,17 @@ while lang_key:
 void invert_display(uint8_t r, uint8_t c, bool state);
 
 void hid_notify_firmware_ready(void) {
+    static bool s_sent = false;
+    if (s_sent || usb_device_state != USB_DEVICE_STATE_CONFIGURED) {
+        return;
+    }
     uint8_t data[RAW_EPSIZE];
     memset(data, 0, RAW_EPSIZE);
     data[0] = 'P';
     data[1] = 0x17;
     data[2] = '.';
     raw_hid_send(data, RAW_EPSIZE);
+    s_sent = true;
 }
 
 

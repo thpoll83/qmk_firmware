@@ -23,7 +23,7 @@ const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_EXEC:                       return u"Exec";
         case KC_NUM_LOCK:                   return !state.num_lock ? u"Nm" ICON_NUMLOCK_OFF : u"Nm" ICON_NUMLOCK_ON;
         case KC_KP_SLASH:                   return u"/";
-        case KC_KP_ASTERISK:
+        case KC_KP_ASTERISK:                return u"*";
         case KC_KP_MINUS:                   return u"-";
         case KC_KP_7:                       return !state.num_lock ? ARROWS_LEFTSTOP : u"7";
         case KC_KP_8:                       return !state.num_lock ? u"   " ICON_UP : u"8";

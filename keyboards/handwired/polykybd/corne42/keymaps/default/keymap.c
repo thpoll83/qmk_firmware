@@ -17,8 +17,8 @@
 #include <hardware/flash.h>
 
 #include "polykybd.h"
-#include "split72/split72.h"
-#include "split72/status_oled.h"
+#include "corne42/corne42.h"
+#include "corne42/status_oled.h"
 #include "bridge_helper.h"
 #include "uni.h"
 #include "side.h"
@@ -55,73 +55,43 @@
 #include <stdbool.h>
 
 #ifdef RGB_MATRIX_ENABLE
-// Forward-declare this helper function
 void rgb_matrix_update_pwm_buffers(void);
 #endif
 
-/*[[[cog
-import cog
-import os
-from textwrap import wrap
-from openpyxl import load_workbook
-wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "..", "..", "..", "lang", "lang_lut.xlsx"))
-sheet = wb['key_lut']
-
-languages = []
-lang_index = 0
-lang_key = sheet["B1"].value
-while lang_key:
-    lang_key = lang_key.replace("-", "")
-    languages.append(lang_key)
-    lang_index = lang_index + 1
-    lang_key = sheet.cell(row = 1, column = 2 + lang_index*4).value
-]]]*/
-//[[[end]]]
-
-
-//not used at the moment
-#define FLASH_TARGET_OFFSET (4 * 1024 * 1024) //we start at 4MB and use the remaining 4MB for resource data
+#define FLASH_TARGET_OFFSET (4 * 1024 * 1024)
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
 static enum lang_layer g_lang_init = INIT_LANG;
 
+/* disp_row_0 selects chain position 0 (row 0, col 0).
+   disp_row_3 selects chain position 18 (first thumb key, row 3 col 3).
+   Both must match key_display[] in corne42.c — update if PCB wiring changes. */
 const struct display_info disp_row_0 = { BITMASK1(0) };
-const struct display_info disp_row_3 = { BITMASK4(0) };
+const struct display_info disp_row_3 = { BITMASK3(2) };
 
 
 bool display_wakeup(keyrecord_t* record);
 void update_displays(enum refresh_mode mode);
 void set_displays(uint8_t contrast, bool idle);
 void set_selected_displays(int8_t old_value, int8_t new_value);
-void toggle_stagger(bool new_state);
 void oled_update_buffer(void);
 void poly_suspend(void);
 
 
-// Selects all shift registers to communicate with all displays.
-// Global variables: (none - uses SPI functions only)
 void select_all_displays(void) {
-    // make sure we are talking to all shift registers
     sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);
 }
 
-// Clears all displays by setting buffer to zero and sending to all shift registers.
-// Global variables: (none - delegates to display functions)
 void clear_all_displays(void) {
     select_all_displays();
-
     kdisp_set_buffer(0x00);
     kdisp_send_buffer();
 }
 
-// Initializes SPI hardware for display communication after hardware reset.
-// Global variables: (none - initializes hardware only)
 void early_hardware_init_post(void) {
     spi_hw_setup();
 }
-
-//void oled_on_off(bool on);
 
 #define BYTE_TO_BINARY_PATTERN "|%s%s%s%s%s%s%s%s"
 #define BYTE_TO_FLAGS(byte)  \
@@ -144,14 +114,9 @@ void early_hardware_init_post(void) {
   ((byte) & 0x02 ? "ClrLT|" : " --- |"), \
   ((byte) & 0x01 ? "Disp |" : " --- |")
 
-//helpers
 static uint8_t flags = 0;
 static uint8_t overlay_flags = 0;
 
-// Continuously suppress RGB on the bridge when display is off.
-// The split transport may re-enable RGB by copying master's rgb_matrix_config; this
-// indicator callback runs every render cycle (before flush) and zeros the LED buffer,
-// ensuring LEDs stay dark regardless of what the transport wrote to enable.
 #ifdef RGB_MATRIX_ENABLE
 bool rgb_matrix_indicators_kb(void) {
     if (!is_keyboard_master() && (get_local_state()->flags & STATUS_DISP_ON) == 0) {
@@ -188,8 +153,6 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 }
 #endif
 
-// Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
-// Global variables: flags, overlay_flags
 void sync_and_refresh_displays(void) {
     bool layer_diff = false;
     bool state_diff = false;
@@ -210,18 +173,16 @@ void sync_and_refresh_displays(void) {
         }
 
         if(flags!=local_flags) {
-            //uprintf("Poly State Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", local_flags, BYTE_TO_FLAGS(local_flags));
             flags=local_flags;
         }
         if(overlay_flags!=local_overlay_flags) {
-            //uprintf("Poly Ovrly Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", local_overlay_flags, BYTE_TO_OVERLAY_FLAGS(local_overlay_flags));
             overlay_flags=local_overlay_flags;
         }
 
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
             if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10)) {
-                state_diff = false; // if failed to sync, do not consider it a diff and try again later
+                state_diff = false;
                 uprint("USER_SYNC_POLY_DATA failed to send\n");
             }
         }
@@ -231,13 +192,12 @@ void sync_and_refresh_displays(void) {
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         if ( layer_diff ) {
             if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 10)) {
-                layer_diff = false; // if failed to sync, do not consider it a diff and try again later
+                layer_diff = false;
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
         if ( differ(get_local_last_latin(), get_global_last_latin(), sizeof(poly_last_t)) ) {
             if(!send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), 5)) {
-                // if failed to sync, do not consider it a diff and try again later
                 uprint("USER_SYNC_LASTKEY_DATA failed to send\n");
             } else {
                 copy_global_last_latin(get_local_last_latin());
@@ -267,17 +227,22 @@ void sync_and_refresh_displays(void) {
         if(status_disp_changed) {
             if(status_disp_on) {
                 oled_set_brightness(OLED_BRIGHTNESS);
+#ifdef RGB_MATRIX_ENABLE
                 if(test_flag(local_flags, RGB_ON)) {
                     rgb_matrix_enable_noeeprom();
                 }
+#endif
             } else {
                 oled_off();
+#ifdef RGB_MATRIX_ENABLE
                 rgb_matrix_set_color_all(0, 0, 0);
                 rgb_matrix_update_pwm_buffers();
                 rgb_matrix_disable_noeeprom();
+#endif
             }
         }
 
+#ifdef RGB_MATRIX_ENABLE
         if(has_flag_changed(local_flags, global_flags, RGB_ON)) {
             if (test_flag(local_flags, RGB_ON)) {
                 rgb_matrix_enable();
@@ -285,6 +250,7 @@ void sync_and_refresh_displays(void) {
                 rgb_matrix_disable();
             }
         }
+#endif
 
         // Overlay action flags (RESET_BUFFERS / USAGE_RESET / MAPPING_RESET /
         // MAPPING_ALLSET) are dispatched and cleared at their entry points —
@@ -314,20 +280,17 @@ void sync_and_refresh_displays(void) {
     }
 }
 
-// Sets layer state variable tracking the active keyboard layer.
 layer_state_t layer_state_set_user(layer_state_t state) {
     access_local_layer()->layer = state;
     return state;
 }
 
-// Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
     brightness_save_if_pending();
     default_layer_save_if_pending();
     sync_and_refresh_displays();
     int32_t update = get_last_update();
     if(update>=0) {
-        //turn off displays
         uint32_t elapsed_time_since_update = timer_elapsed32(update);
         if (is_usb_host_side()) {
             poly_sync_t* local_state = access_local_state();
@@ -342,7 +305,6 @@ void housekeeping_task_user(void) {
                 int32_t time_after = elapsed_time_since_update - FADE_OUT_TIME;
                 int16_t brightness = ((FADE_TRANSITION_TIME - time_after) * ee.brightness) / FADE_TRANSITION_TIME;
 
-                //transition to pulsing mode
                 if(brightness<=MIN_BRIGHT) {
                     contrast = DISP_OFF;
                     flags |= DISP_IDLE;
@@ -375,308 +337,200 @@ void housekeeping_task_user(void) {
 
 
 const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    //Base Layers
-/*
-                                                              ┌────────────────┐
-                                                              │     QWERTY     │
-                                                              └────────────────┘
-   ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
-   │  Esc   │   1   │   2   │   3   │   4   │   5   │  Nubs │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   6   │   7   │   8   │   9   │   0   │   -   │ BckSp  │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  TAB   │   q   │   w   │   e   │   r   │   t   │   `   ├─╯                ╰─┤  Hypr │   y   │   u   │   i   │   o   │   p   │   \    │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  FN    │   a   │   s   │   d   │   f   │   g   │   '   │  (MB1)             │  Intl │   h   │   j   │   k   │   l   │   =   │  Ret   │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────╮  ╭────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │ Shift  │   z   │   x   │   c   │   v   │   b   │  Nuhs │  Num!  │  │   [    │   ]   │   n   │   m   │   ,   │   ;   │  Up   │ Shift  │
-   └┬───────┼───────┼───────┼───────┼──────┬┴───────┼───────┼────────┤  ├────────┼───────┼───────┴┬──────┼───────┼───────┼───────┼───────┬┘
-    │ Ctrl  │  Os   │  Alt  │  Ctx  │      │  Space │  Del  │   Ret  │  │  Lang  │   /   │ Space  │      │   .   │  Left │  Down │ Right │
-    └───────┴───────┴───────┴───────┘      └────────┴───────┴────────╯  └────────┴───────┴────────┘      └───────┴───────┴───────┴───────┘
-*/
-    [_L0] = LAYOUT_left_right_stacked(
-        KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_NUBS,
-        KC_TAB,     KC_Q,       KC_W,       KC_E,       KC_R,       KC_T,       KC_GRAVE,
-        MO(_FL0),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   KC_MS_BTN1,
-        KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       TO(_EMJ0),   MO(_NL),
-        KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
-
-                    KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_BSPC,
-                    KC_HYPR,    KC_Y,       KC_U,       KC_I,       KC_O,       KC_P,       KC_BSLS,
-        KC_NO,      MO(_ADDLANG1),KC_H,     KC_J,       KC_K,       KC_L,       KC_EQUAL,   KC_ENTER,
-        KC_LBRC,    KC_RBRC,    KC_N,       KC_M,       KC_COMMA,   KC_SCLN,    KC_UP,      KC_RSFT,
-        KC_LANG,    KC_SLASH,    KC_SPC,                KC_DOT,     KC_LEFT,    KC_DOWN,    KC_RIGHT
-        ),
-
-/*
-                                                              ┌────────────────┐
-                                                              │     QWERTY!    │
-                                                              └────────────────┘
-   ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
-   │  Esc   │   1   │   2   │   3   │   4   │   5   │   6   │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   7   │   8   │   9   │   0   │   -   │   =   │  Hypr  │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  TAB   │   q   │   w   │   e   │   r   │   t   │   `   ├─╯                ╰─┤   y   │   u   │   i   │   o   │   p   │   [   │  Nubs  │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  FN    │   a   │   s   │   d   │   f   │   g   │   '   │  (MB1)             │   h   │   j   │   k   │   l   │   ;   │   ]   │    \   │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────╮  ╭────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │ Shift  │ Nuhs  │   z   │   x   │   c   │   v   │   b   │  Num!  │  │  Lang  │  Ctx  │   n   │   m   │   ,   │   .   │   /   │ Shift  │
-   └┬───────┼───────┼───────┼───────┼──────┬┴───────┼───────┼────────┤  ├────────┼───────┼───────┴┬──────┼───────┼───────┼───────┼───────┬┘
-    │ Ctrl  │  Os   │  Alt  │  Intl │      │  Space │  Del  │   Ins  │  │  Ret   │ BckSp │ Space  │      │ Left  │   Up  │  Down │ Right │
-    └───────┴───────┴───────┴───────┘      └────────┴───────┴────────╯  └────────┴───────┴────────┘      └───────┴───────┴───────┴───────┘
-*/
-
-    [_L1] = LAYOUT_left_right_stacked(
-        KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_6,
-        KC_TAB,     KC_Q,       KC_W,       KC_E,       KC_R,       KC_T,       KC_GRAVE,
-        MO(_FL1),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   KC_MS_BTN1,
-        KC_LSFT,    TO(_EMJ0),   KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       MO(_NL),
-        KC_LCTL,    KC_LWIN,    KC_LALT,    MO(_ADDLANG1),          KC_SPACE,   KC_DEL,     KC_ENTER,
-
-                    KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_EQUAL,   KC_HYPR,
-                    KC_Y,       KC_U,       KC_I,       KC_O,       KC_P,       KC_LBRC,    KC_NUBS,
-        KC_NO,      KC_H,       KC_J,       KC_K,       KC_L,       KC_SCLN,    KC_RBRC,    KC_BSLS,
-        KC_LANG,    KC_APP,     KC_N,       KC_M,       KC_COMMA,   KC_DOT,     KC_SLASH,   KC_RSFT,
-        KC_ENTER,   KC_BSPC,    KC_SPC,                 KC_LEFT,    KC_UP,      KC_DOWN,    KC_RIGHT
-        ),
-/*
-                                                              ┌────────────────┐
-                                                              │   Colemak DH   │
-                                                              └────────────────┘
-   ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
-   │  Esc   │   1   │   2   │   3   │   4   │   5   │  Nub  │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   6   │   7   │   8   │   9   │   0   │   -   │   =    │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  TAB   │   q   │   w   │   f   │   p   │   b   │   `   ├─╯                ╰─┤   j   │   l   │   u   │   y   │   ;   │   [   │  Intl  │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  FN    │   a   │   r   │   s   │   t   │   g   │   '   │  (MB1)             │   m   │   n   │   e   │   i   │   o   │   ]   │    \   │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────╮  ╭────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │ Shift  │   z   │   x   │   c   │   d   │   v   │  Nuhs |  Num!  │  │  Lang  │  Hypr │   k   │   h   │   ,   │   .   │   /   │ Shift  │
-   └┬───────┼───────┼───────┼───────┼──────┬┴───────┼───────┼────────┤  ├────────┼───────┼───────┴┬──────┼───────┼───────┼───────┼───────┬┘
-    │ Ctrl  │  Os   │  Alt  │  Ctx  │      │  Space │  Del  │   Ret  │  │  Ret   │ BckSp │ Space  │      │ Left  │   Up  │  Down │ Right │
-    └───────┴───────┴───────┴───────┘      └────────┴───────┴────────╯  └────────┴───────┴────────┘      └───────┴───────┴───────┴───────┘
-*/
-    [_L2] = LAYOUT_left_right_stacked(
-        KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_NUBS,
-        KC_TAB,     KC_Q,       KC_W,       KC_F,       KC_P,       KC_B,       KC_GRAVE,
-        MO(_FL1),   KC_A,       KC_R,       KC_S,       KC_T,       KC_G,       KC_QUOTE,   KC_MS_BTN1,
-        KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_D,       KC_V,       TO(_EMJ0),    MO(_NL),
-        KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
-
-                    KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_EQUAL,
-                    KC_J,       KC_L,       KC_U,       KC_Y,       KC_SCLN,    KC_LBRC,    MO(_ADDLANG1),
-        KC_NO,      KC_M,       KC_N,       KC_E,       KC_I,       KC_O,       KC_RBRC,    KC_BSLS,
-        KC_LANG,    KC_HYPR,    KC_K,       KC_H,       KC_COMMA,   KC_DOT,     KC_SLASH,   KC_RSFT,
-        KC_ENTER,   KC_BSPC,    KC_SPC,                 KC_LEFT,    KC_UP,      KC_DOWN,    KC_RIGHT
-        ),
-        /*
-                                                              ┌────────────────┐
-                                                              │       Neo      │
-                                                              └────────────────┘
-   ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
-   │  Esc   │   1   │   2   │   3   │   4   │   5   │   <   │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   6   │   7   │   8   │   9   │   0   │   -   │   `    │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  TAB   │   x   │   v   │   l   │   c   │   w   │   ^   ├─╯                ╰─┤   k   │   h   │   g   │   f   │   q   │   ß   │   ´    │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  FN    │   u   │   i   │   a   │   e   │   o   │   '   │  (MB1)             │   s   │   n   │   r   │   t   │   d   │   y   │   \    │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────╮  ╭────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │ Shift  │   #   │   ü   │   ö   │   ä   │   p   │   z   │  Num!  │  │  Lang  │   +   │   b   │   m   │   ,   │   .   │   j   │ Shift  │
-   └┬───────┼───────┼───────┼───────┼──────┬┴───────┼───────┼────────┤  ├────────┼───────┼───────┴┬──────┼───────┼───────┼───────┼───────┬┘
-    │ Ctrl  │  Os   │  Alt  │  Ctx  │      │  Space │  Del  │   Ret  │  │  Ret   │ BckSp │ Space  │      │ Left  │   Up  │  Down │ Right │
-    └───────┴───────┴───────┴───────┘      └────────┴───────┴────────╯  └────────┴───────┴────────┘      └───────┴───────┴───────┴───────┘
-*/
-    [_L3] = LAYOUT_left_right_stacked(
-        KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       DE_LABK,
-        KC_TAB,     KC_X,       KC_V,       KC_L,       KC_C,       KC_W,       DE_CIRC,
-        MO(_FL0),   KC_U,       KC_I,       KC_A,       KC_E,       KC_O,       KC_QUOTE,   KC_MS_BTN1,
-        KC_LSFT,    DE_HASH,    DE_UDIA,    DE_ODIA,    DE_ADIA,    KC_P,       DE_Z,       MO(_NL),
-        KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
-
-                    KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       DE_MINS,    DE_GRV,
-                    KC_K,       KC_H,       KC_G,       KC_F,       KC_Q,       DE_SS,      DE_ACUT,
-        KC_NO,      KC_S,       KC_N,       KC_R,       KC_T,       KC_D,       DE_Y,       KC_BSLS,
-        KC_LANG,    DE_PLUS,    KC_B,       KC_M,       KC_COMMA,   KC_DOT,     KC_J,       KC_RSFT,
-        KC_ENTER,   KC_BSPC,    KC_SPC,                 KC_LEFT,    KC_UP,      KC_DOWN,    KC_RIGHT
-        ),
-        /*
-                                                              ┌────────────────┐
-                                                              │    Workman     │
-                                                              └────────────────┘
-   ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
-   │  Esc   │   1   │   2   │   3   │   4   │   5   │   `   │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   6   │   7   │   8   │   9   │   0   │   -   │   =    │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  TAB   │   q   │   d   │   r   │   w   │   b   │  Hypr ├─╯                ╰─┤   j   │   f   │   u   │   p   │   ;   │   [   │   ]    │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  FN    │   a   │   s   │   h   │   t   │   g   │  Meh  │  (MB1)             │   y   │   n   │   e   │   o   │   i   │   '   │   \    │
-   ├────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────╮  ╭────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │ Shift  │   z   │   x   │   m   │   c   │   v   │  Intl │  Num!  │  │  Lang  │   k   │   b   │   l   │   ,   │   .   │   /   │ Shift  │
-   └┬───────┼───────┼───────┼───────┼──────┬┴───────┼───────┼────────┤  ├────────┼───────┼───────┴┬──────┼───────┼───────┼───────┼───────┬┘
-    │ Ctrl  │  Os   │  Alt  │  Ctx  │      │  Space │  Del  │   Ret  │  │  Ret   │ BckSp │ Space  │      │ Left  │   Up  │  Down │ Right │
-    └───────┴───────┴───────┴───────┘      └────────┴───────┴────────╯  └────────┴───────┴────────┘      └───────┴───────┴───────┴───────┘
-*/
-    [_L4] = LAYOUT_left_right_stacked(
-        KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_GRAVE,
-        KC_TAB,     KC_Q,       KC_D,       KC_R,       KC_W,       KC_B,       KC_HYPR,
-        MO(_FL1),   KC_A,       KC_S,       KC_H,       KC_T,       KC_G,       TO(_EMJ0),     KC_MS_BTN1,
-        KC_LSFT,    KC_Z,       KC_X,       KC_M,       KC_C,       KC_V,       MO(_ADDLANG1), MO(_NL),
-        KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
-
-                    KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_EQUAL,
-                    KC_J,       KC_F,       KC_U,       KC_P,       KC_SCLN,    KC_LBRC,    KC_RBRC,
-        KC_NO,      KC_Y,       KC_N,       KC_E,       KC_O,       KC_I,       KC_QUOTE,   KC_BSLS,
-        KC_LANG,    KC_K,       KC_B,       KC_L,       KC_COMMA,   KC_DOT,     KC_SLASH,   KC_RSFT,
-        KC_ENTER,   KC_BSPC,    KC_SPC,                 KC_LEFT,    KC_UP,      KC_DOWN,    KC_RIGHT
-        ),
-    //Function Layer (Fn)
-    [_FL0] = LAYOUT_left_right_stacked(
-        OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,     TO(_UL),
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        KC_CAPS,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,                _______,    _______,    _______,
-
-                    KC_F6,      KC_F7,      KC_F8,      KC_F9,      KC_F10,      KC_F11,    KC_F12,
-                    KC_BTN1,    KC_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
-        _______,    KC_BTN3,    _______,    _______,    _______,   _______,    _______,    _______,
-        TO(_NL),    _______,    _______,    _______,    _______,    _______,    _______,    KC_INS,
-        KC_RALT,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
-        ),
-    [_FL1] = LAYOUT_left_right_stacked(
-        OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,      KC_F6,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,                _______,    _______,    KC_INS,
-
-                    KC_F7,      KC_F8,      KC_F9,      KC_F10,     KC_F11,     KC_F12,     TO(_UL),
-                    KC_BTN1,    KC_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
-        _______,    KC_BTN3,    _______,    _______,    _______,    _______,    _______,    KC_CAPS,
-        TO(_NL),    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        KC_RALT,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
-        ),
-     //Num Layer
-    [_NL] = LAYOUT_left_right_stacked(
-        KC_NO,      KC_NUM,     KC_PSLS,    KC_PAST,    KC_PMNS,    KC_NO,      KC_NO,
-        KC_BTN1,    KC_KP_7,    KC_KP_8,    KC_KP_9,    KC_PPLS,    KC_INS,     KC_NO,
-        KC_NO,      KC_KP_4,    KC_KP_5,    KC_KP_6,    KC_PPLS,    KC_DEL,     KC_NO,     _______,
-        KC_NO,      KC_KP_1,    KC_KP_2,    KC_KP_3,    KC_PENT,    KC_NO,      KC_NO,     _______,
-        KC_BASE,    KC_KP_0,    KC_PDOT,    KC_PENT,                KC_MS_BTN2, KC_NO,     KC_NO,
-
-                    KC_NO,      KC_NO,      KC_NUM,     KC_PSLS,    KC_PAST,    KC_PMNS,   KC_NO,
-                    KC_NO,      KC_INS,     KC_KP_7,    KC_KP_8,    KC_KP_9,    KC_PPLS,   KC_NO,
-        _______,    KC_NO,      KC_DEL,     KC_KP_4,    KC_KP_5,    KC_KP_6,    KC_PPLS,   KC_NO,
-        _______,    _______,    KC_NO,      KC_KP_1,    KC_KP_2,    KC_KP_3,    KC_PENT,   KC_NO,
-        _______,    KC_NO,      KC_NO,                  KC_KP_0,    KC_PDOT,    KC_PENT,   KC_BASE
-        ),
-    //Util Layer
-    [_UL] = LAYOUT_left_right_stacked(
-        KC_NO,      KC_F13,     KC_F14,     KC_F15,     KC_F16,     KC_F17,     KC_F18,
-        KC_MYCM,    KC_CALC,    KC_PSCR,    KC_SCRL,    KC_BRK,     KC_NO,      KC_NO,
-        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      _______,
-        KC_LSFT,    KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
-        KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
-
-                    KC_F19,     KC_F20,     KC_F21,     KC_F22,     KC_F23,     KC_F24,     KC_NO,
-                    KC_NO,      KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_NO,      TO(_SL),
-        _______,    KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
-        KC_NO,      KC_NO,      KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_NO,      KC_NO,      KC_RSFT,
-        KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
-        ),
-    //Settings Layer
-    [_SL] = LAYOUT_left_right_stacked(
-        KC_DDIM,    KC_DMIN,    KC_D1Q,     KC_DHLF,    KC_D3Q,     KC_DMAX,    KC_DBRI,
-        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
-        KC_NO,      KC_L0,      KC_L1,      KC_L2,      KC_L3,      KC_L4,      KC_NO,      _______,
-        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_RBT,
-        KC_BASE,    LBL_TEXT,   KC_TOGMODS, KC_TOGTEXT,             KC_NO,      QK_MAKE,    QK_BOOT,
-
-
-        //             RM_PREV,    RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RM_NEXT,
-        //             KC_NO,      RM_SPDD,    RM_SPDU,    KC_NO,      RM_HUED,    RM_HUEU,    KC_NO,
-        // _______,    KC_NO,      RM_VALD,    RM_VALU,    KC_NO,      RM_SATD,    RM_SATU,    KC_NO,
-                    RGB_RMOD,   RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RGB_MOD,
-                    KC_NO,      RGB_SPD,    RGB_SPI,    KC_NO,      RGB_HUD,    RGB_HUI,    KC_NO,
-        _______,    KC_NO,      RGB_VAD,    RGB_VAI,    KC_NO,      RGB_SAD,    RGB_SAI,    KC_NO,
-        EE_CLR,     KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
-        DB_TOGG,    KC_DEADKEY, KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
-        ),
-    //Language Selection Layer
-    [_LL] = LAYOUT_left_right_stacked(
-        /*[[[cog
-        slang = sorted(languages)
-        lines = []
-        for lidx in range(0, 8):
-            line = ""
-            for idx in range(0, 5):
-                if (lidx*5+idx)>=len(slang):
-                    line = f"{line}KC_NO,\t\t"
-                else:
-                    line = f'{line}KCL_{slang[(lidx*5+idx)].upper()},\t'
-            lines.append(line)
-        cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[0]}");
-        cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[1]}");
-        cog.outl(f"QK_UNICODE_MODE_WINCOMPOSE,\t\tKC_NO,\t\t{lines[2]}\tKC_MS_BTN1,");
-        cog.outl(f"QK_UNICODE_MODE_EMACS,\t\t\tKC_NO,\t\t{lines[3]}\tKC_NO,");
-        cog.outl("KC_BASE,\t\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\t\tKC_NO,");
-        cog.outl("")
-        cog.outl(f"\t\t\t\t\t{lines[4]}KC_NO,\t\tQK_UNICODE_MODE_MACOS,");
-        cog.outl(f"\t\t\t\t\t{lines[5]}KC_NO,\t\tQK_UNICODE_MODE_LINUX,");
-        cog.outl(f"_______,\t\t\t{lines[6]}KC_NO,\t\tQK_UNICODE_MODE_WINDOWS,");
-        cog.outl(f"KC_NO,\t\t\t\t{lines[7]}KC_NO,\t\tQK_UNICODE_MODE_BSD,");
-        cog.outl("KC_NO,\t\t\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\tKC_BASE");
-        ]]]*/
-        KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,
-        KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_FIFI,
-        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FRFR,	KCL_HEIL,	KCL_HUHU,	KCL_ITIT,	KCL_JAJP,		KC_MS_BTN1,
-        QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_KKKZ,	KCL_KOKR,	KCL_NLNL,	KCL_NNNO,	KCL_PLPL,		KC_NO,
-        KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
-
-        					KCL_PTPT,	KCL_RORO,	KCL_RURU,	KCL_SVSE,	KCL_TRTR,	KC_NO,		QK_UNICODE_MODE_MACOS,
-        					KCL_UKUA,	KCL_ZHCN,	KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_LINUX,
-        _______,			KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_WINDOWS,
-        KC_NO,				KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
-        KC_NO,				KC_NO,		KC_NO,					KC_NO,		KC_NO,		KC_NO,		KC_BASE
-        //[[[end]]]
-        ),
-    [_ADDLANG1] = LAYOUT_left_right_stacked(
-        KC_NO,      KC_NO,      KC_LAT0,    KC_LAT1,    KC_LAT2,    KC_LAT3,    KC_LAT4,
-        KC_NO,      _______,    _______,    _______,    _______,    _______,    _______,
-        KC_NO,      _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        KC_NO,      KC_NO,      _______,    _______,                _______,    _______,    _______,
-
-                    KC_LAT5,    KC_LAT6,    KC_LAT7,    KC_LAT8,    KC_LAT9,    KC_NO,      KC_NO,
-                    _______,    _______,    _______,    _______,    _______,    _______,    KC_NO,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    KC_NO,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,                _______,    _______,    _______,    _______
-        ),
-    [_EMJ0] = LAYOUT_left_right_stacked(
-        EMJ(0),    EMJ(1),    EMJ(2),    EMJ(3),    EMJ(4),    EMJ(5),    EMJ(6),
-        EMJ(14),   EMJ(15),   EMJ(16),   EMJ(17),   EMJ(18),   EMJ(19),   EMJ(20),
-        EMJ(28),   EMJ(29),   EMJ(30),   EMJ(31),   EMJ(32),   EMJ(33),   EMJ(34),   _______,
-        EMJ(42),   EMJ(43),   EMJ(44),   EMJ(45),   EMJ(46),   EMJ(47),   EMJ(48),   EMJ(49),
-        KC_BASE,   EMJ(58),   EMJ(59),   EMJ(60),              EMJ(61),   EMJ(62),   EMJ(63),
-
-                  EMJ(7),    EMJ(8),    EMJ(9),    EMJ(10),   EMJ(11),   EMJ(12),   EMJ(13),
-                  EMJ(21),   EMJ(22),   EMJ(23),   EMJ(24),   EMJ(25),   EMJ(26),   EMJ(27),
-        _______,  EMJ(35),   EMJ(36),   EMJ(37),   EMJ(38),   EMJ(39),   EMJ(40),   EMJ(41),
-        EMJ(50),  EMJ(51),   EMJ(52),   EMJ(53),   EMJ(54),   EMJ(55),   EMJ(56),   EMJ(57),
-        EMJ(64),  EMJ(65),   EMJ(66),              EMJ(67),   EMJ(68),   EMJ(69),   TO(_EMJ1)
-        ),
-    [_EMJ1] = LAYOUT_left_right_stacked(
-        EMJ(70+0),    EMJ(70+1),    EMJ(70+2),    EMJ(70+3),    EMJ(70+4),    EMJ(70+5),    EMJ(70+6),
-        EMJ(70+14),   EMJ(70+15),   EMJ(70+16),   EMJ(70+17),   EMJ(70+18),   EMJ(70+19),   EMJ(70+20),
-        EMJ(70+28),   EMJ(70+29),   EMJ(70+30),   EMJ(70+31),   EMJ(70+32),   EMJ(70+33),   EMJ(70+34),   _______,
-        EMJ(70+42),   EMJ(70+43),   EMJ(70+44),   EMJ(70+45),   EMJ(70+46),   EMJ(70+47),   EMJ(70+48),   EMJ(70+49),
-        KC_BASE,      EMJ(70+58),   EMJ(70+59),   EMJ(70+60),                 EMJ(70+61),   EMJ(70+62),   EMJ(70+63),
-
-                     EMJ(70+7),    EMJ(70+8),    EMJ(70+9),    EMJ(70+10),   EMJ(70+11),   EMJ(70+12),   EMJ(70+13),
-                     EMJ(70+21),   EMJ(70+22),   EMJ(70+23),   EMJ(70+24),   EMJ(70+25),   EMJ(70+26),   EMJ(70+27),
-        _______,     EMJ(70+35),   EMJ(70+36),   EMJ(70+37),   EMJ(70+38),   EMJ(70+39),   EMJ(70+40),   EMJ(70+41),
-        EMJ(70+50),  EMJ(70+51),   EMJ(70+52),   EMJ(70+53),   EMJ(70+54),   EMJ(70+55),   EMJ(70+56),   EMJ(70+57),
-        EMJ(70+64),  EMJ(70+65),   EMJ(70+66),                 EMJ(70+67),   EMJ(70+68),   EMJ(70+69),   TO(_EMJ0)
-        )
+    /*
+     * Base layer 0 — Qwerty
+     *
+     * ┌─────┬────┬────┬────┬────┬────┐               ┌────┬────┬────┬────┬────┬──────┐
+     * │ Esc │ Q  │ W  │ E  │ R  │ T  │               │ Y  │ U  │ I  │ O  │ P  │ BkSp │
+     * ├─────┼────┼────┼────┼────┼────┤               ├────┼────┼────┼────┼────┼──────┤
+     * │ FN  │ A  │ S  │ D  │ F  │ G  │               │ H  │ J  │ K  │ L  │ =  │ Ret  │
+     * ├─────┼────┼────┼────┼────┼────┤               ├────┼────┼────┼────┼────┼──────┤
+     * │LSft │ Z  │ X  │ C  │ V  │ B  │               │ N  │ M  │ ,  │ ;  │ Up │RSft  │
+     * └─────┴────┴────┴──┬─┴──┬─┴──┬─┘               └──┬─┴──┬─┴──┬─┴────┴────┴──────┘
+     *                    │LCtl│Spc │Del              Lang│ /  │Left│
+     *                    └────┴────┴───                  └────┴────┘
+     */
+    [_L0] = LAYOUT_crkbd(
+        KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
+        MO(_FL0),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
+        KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
+        KC_LCTL, KC_SPC,  KC_DEL,
+        KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSPC,
+        KC_H,    KC_J,    KC_K,    KC_L,    KC_EQUAL,KC_ENTER,
+        KC_N,    KC_M,    KC_COMM, KC_SCLN, KC_UP,   KC_RSFT,
+        KC_LANG, KC_SLSH, KC_LEFT
+    ),
+    /*
+     * Base layer 1 — Qwerty Staggered
+     */
+    [_L1] = LAYOUT_crkbd(
+        KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
+        MO(_FL1),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
+        KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
+        KC_LCTL, KC_SPC,  KC_DEL,
+        KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSPC,
+        KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_BSLS,
+        KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,
+        KC_ENTER,KC_BSPC, KC_LEFT
+    ),
+    /*
+     * Base layer 2 — Colemak DH
+     */
+    [_L2] = LAYOUT_crkbd(
+        KC_ESC,  KC_Q,    KC_W,    KC_F,    KC_P,    KC_B,
+        MO(_FL1),KC_A,    KC_R,    KC_S,    KC_T,    KC_G,
+        KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_D,    KC_V,
+        KC_LCTL, KC_SPC,  KC_DEL,
+        KC_J,    KC_L,    KC_U,    KC_Y,    KC_SCLN, KC_BSPC,
+        KC_M,    KC_N,    KC_E,    KC_I,    KC_O,    KC_ENTER,
+        KC_K,    KC_H,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,
+        KC_LANG, KC_BSPC, KC_LEFT
+    ),
+    /*
+     * Base layer 3 — Neo
+     */
+    [_L3] = LAYOUT_crkbd(
+        KC_ESC,  KC_X,    KC_V,    KC_L,    KC_C,    KC_W,
+        MO(_FL0),KC_U,    KC_I,    KC_A,    KC_E,    KC_O,
+        KC_LSFT, DE_HASH, DE_UDIA, DE_ODIA, DE_ADIA, KC_P,
+        KC_LCTL, KC_SPC,  KC_DEL,
+        KC_K,    KC_H,    KC_G,    KC_F,    KC_Q,    KC_BSPC,
+        KC_S,    KC_N,    KC_R,    KC_T,    KC_D,    KC_ENTER,
+        KC_B,    KC_M,    KC_COMM, KC_DOT,  DE_Y,    KC_RSFT,
+        KC_LANG, KC_BSPC, KC_LEFT
+    ),
+    /*
+     * Base layer 4 — Workman
+     */
+    [_L4] = LAYOUT_crkbd(
+        KC_ESC,  KC_Q,    KC_D,    KC_R,    KC_W,    KC_B,
+        MO(_FL1),KC_A,    KC_S,    KC_H,    KC_T,    KC_G,
+        KC_LSFT, KC_Z,    KC_X,    KC_M,    KC_C,    KC_V,
+        KC_LCTL, KC_SPC,  KC_DEL,
+        KC_J,    KC_F,    KC_U,    KC_P,    KC_SCLN, KC_BSPC,
+        KC_Y,    KC_N,    KC_E,    KC_O,    KC_I,    KC_ENTER,
+        KC_K,    KC_L,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,
+        KC_LANG, KC_BSPC, KC_LEFT
+    ),
+    /*
+     * Function layer 0
+     */
+    [_FL0] = LAYOUT_crkbd(
+        OSL(_UL),KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
+        _______,  _______,_______,_______,_______,_______,
+        KC_CAPS,  _______,_______,_______,_______,_______,
+        _______,  _______,TO(_UL),
+        KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,
+        KC_BTN1, KC_BTN2, _______,  _______,  _______,  KC_F12,
+        TO(_NL),  _______,  _______,  _______,  _______,  KC_INS,
+        KC_HOME,  KC_PGUP, KC_END
+    ),
+    /*
+     * Function layer 1
+     */
+    [_FL1] = LAYOUT_crkbd(
+        OSL(_UL),KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
+        _______,  _______,_______,_______,_______,_______,
+        _______,  _______,_______,_______,_______,_______,
+        _______,  _______,KC_INS,
+        KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,
+        KC_BTN1, KC_BTN2, _______,  _______,  _______,  KC_F12,
+        TO(_NL),  _______,  _______,  _______,  KC_CAPS,  _______,
+        KC_HOME,  KC_PGUP, KC_END
+    ),
+    /*
+     * Numpad layer
+     */
+    [_NL] = LAYOUT_crkbd(
+        KC_NO,   KC_NUM,  KC_PSLS, KC_PAST, KC_PMNS, KC_NO,
+        KC_BTN1, KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS, KC_INS,
+        KC_NO,   KC_KP_4, KC_KP_5, KC_KP_6, KC_PPLS, KC_DEL,
+        KC_BASE, KC_KP_0, KC_PDOT,
+        KC_NO,   KC_INS,  KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS,
+        KC_NO,   KC_DEL,  KC_KP_4, KC_KP_5, KC_KP_6, KC_PPLS,
+        KC_BTN2, KC_NO,   KC_KP_1, KC_KP_2, KC_KP_3, KC_PENT,
+        KC_PENT, KC_KP_0, KC_BASE
+    ),
+    /*
+     * Utility layer
+     */
+    [_UL] = LAYOUT_crkbd(
+        KC_NO,   KC_F13,  KC_F14,  KC_F15,  KC_F16,  KC_F17,
+        KC_MYCM, KC_CALC, KC_PSCR, KC_SCRL, KC_BRK,  KC_NO,
+        KC_LSFT, KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
+        KC_BASE, KC_NO,   KC_NO,
+        KC_F18,  KC_F19,  KC_MPRV, KC_MPLY, KC_MSTP, KC_MNXT,
+        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_MUTE, KC_NO,
+        KC_NO,   KC_VOLD, KC_VOLU, KC_NO,   KC_NO,   KC_RSFT,
+        KC_NO,   KC_NO,   KC_BASE
+    ),
+    /*
+     * Settings layer
+     */
+    [_SL] = LAYOUT_crkbd(
+        KC_DDIM, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
+        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_DBRI,
+        KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
+        KC_BASE, LBL_TEXT,KC_TOGMODS,
+        KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_MAKE, QK_BOOT,
+        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
+        EE_CLR,  KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
+        DB_TOGG, KC_DEADKEY, KC_BASE
+    ),
+    /*
+     * Language selection layer
+     */
+    [_LL] = LAYOUT_crkbd(
+        KC_NO,              KCL_ARSA,  KCL_BEBY,  KCL_BGBG,  KCL_CSCZ,  KCL_DADK,
+        KC_NO,              KCL_DEDE,  KCL_ELGR,  KCL_ENUS,  KCL_ESES,  KCL_FIFI,
+        QK_UNICODE_MODE_WINCOMPOSE, KCL_FRFR, KCL_HEIL, KCL_HUHU, KCL_ITIT, KCL_JAJP,
+        KC_BASE,            KC_NO,     KC_NO,
+        KCL_KKKZ,  KCL_KOKR,  KCL_NLNL,  KCL_NNNO,  KCL_PLPL,  QK_UNICODE_MODE_MACOS,
+        KCL_PTPT,  KCL_RORO,  KCL_RURU,  KCL_SVSE,  KCL_TRTR,  QK_UNICODE_MODE_LINUX,
+        KCL_UKUA,  KCL_ZHCN,  KC_NO,     KC_NO,     KC_NO,     QK_UNICODE_MODE_WINDOWS,
+        QK_UNICODE_MODE_EMACS, QK_UNICODE_MODE_BSD, KC_BASE
+    ),
+    /*
+     * Additional latin variant layer
+     */
+    [_ADDLANG1] = LAYOUT_crkbd(
+        KC_NO,   KC_NO,   KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3,
+        KC_NO,   _______,  _______,  _______,  _______,  _______,
+        KC_NO,   _______,  _______,  _______,  _______,  _______,
+        KC_NO,   KC_NO,   _______,
+        KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
+        _______,  _______,  _______,  _______,  _______,  KC_NO,
+        _______,  _______,  _______,  _______,  _______,  KC_NO,
+        _______,  _______,  _______
+    ),
+    /*
+     * Emoji layer 0
+     */
+    [_EMJ0] = LAYOUT_crkbd(
+        EMJ(0),  EMJ(1),  EMJ(2),  EMJ(3),  EMJ(4),  EMJ(5),
+        EMJ(12), EMJ(13), EMJ(14), EMJ(15), EMJ(16), EMJ(17),
+        EMJ(24), EMJ(25), EMJ(26), EMJ(27), EMJ(28), EMJ(29),
+        KC_BASE, EMJ(36), EMJ(37),
+        EMJ(6),  EMJ(7),  EMJ(8),  EMJ(9),  EMJ(10), EMJ(11),
+        EMJ(18), EMJ(19), EMJ(20), EMJ(21), EMJ(22), EMJ(23),
+        EMJ(30), EMJ(31), EMJ(32), EMJ(33), EMJ(34), EMJ(35),
+        EMJ(38), KC_NO,   TO(_EMJ1)
+    ),
+    /*
+     * Emoji layer 1
+     */
+    [_EMJ1] = LAYOUT_crkbd(
+        EMJ(39), EMJ(40), EMJ(41), EMJ(42), EMJ(43), EMJ(44),
+        EMJ(51), EMJ(52), EMJ(53), EMJ(54), EMJ(55), EMJ(56),
+        EMJ(63), EMJ(64), EMJ(65), EMJ(66), EMJ(67), EMJ(68),
+        KC_BASE, EMJ(75), EMJ(76),
+        EMJ(45), EMJ(46), EMJ(47), EMJ(48), EMJ(49), EMJ(50),
+        EMJ(57), EMJ(58), EMJ(59), EMJ(60), EMJ(61), EMJ(62),
+        EMJ(69), EMJ(70), EMJ(71), EMJ(72), EMJ(73), EMJ(74),
+        EMJ(77), KC_NO,   TO(_EMJ0)
+    )
 };
 
-// Maps default layer to corresponding function layer (FL0 or FL1).
-// Global variables: (none - uses passed parameters only)
 layer_state_t get_function_layer(layer_state_t def_layer) {
     switch (def_layer) {
         case _L0:
@@ -688,54 +542,9 @@ layer_state_t get_function_layer(layer_state_t def_layer) {
             return _FL1;
         default:
             return 0;
-
     }
 }
 
-#define LX(x,y) ((x)/2),y
-led_config_t g_led_config = { {// Key Matrix to LED Index
-                              {6, 5, 4, 3, 2, 1, 0, NO_LED},
-                              {13, 12, 11, 10, 9, 8, 7, NO_LED},
-                              {20, 19, 18, 17, 16, 15, 14, NO_LED},
-                              {27, 26, 25, 24, 23, 22, 21, NO_LED},
-                              {35, 34, 33, 32, 31, 30, 29, 28},
-
-                              {NO_LED, 42, 41, 40, 39, 38, 37, 36},
-                              {NO_LED, 49, 48, 47, 46, 45, 44, 43},
-                              {NO_LED, 56, 55, 54, 53, 52, 51, 50},
-                              {NO_LED, 63, 62, 61, 60, 59, 58, 57},
-                              {71, 70, 69, 68, 67, 66, 65, 64}
-                             },
-                             {
-                                // LED Index to Physical Position
-                                                {LX(144, 9)},   {LX(129, 9)},   {LX(104, 5)},   {LX(79, 1)},    {LX(55, 5)},    {LX(30, 9)},    {LX(0, 9)},
-                                                {LX(144, 33)},  {LX(129, 33)},  {LX(104, 19)},  {LX(79, 25)},   {LX(55, 29)},   {LX(30, 33)},   {LX(0, 33)},
-                                                {LX(144, 58)},  {LX(129, 58)},  {LX(104, 54)},  {LX(79, 50)},   {LX(55, 54)},   {LX(30, 58)},   {LX(0, 58)},
-                                                {LX(144, 83)},  {LX(129, 83)},  {LX(104, 79)},  {LX(79, 75)},   {LX(55, 79)},   {LX(30, 83)},   {LX(0, 83)},
-                {LX(170, 99)},  {LX(170, 127)}, {LX(144, 118)}, {LX(129, 113)},                 {LX(79, 99)},   {LX(55, 103)},  {LX(30, 107)},  {LX(6, 107)},
-
-                                                {LX(446, 9)},   {LX(415, 9)},   {LX(390, 5)},   {LX(365, 1)},   {LX(341, 5)},   {LX(316, 9)},   {LX(286, 9)},
-                                                {LX(446, 33)},  {LX(415, 33)},  {LX(390, 19)},  {LX(365, 25)},  {LX(341, 29)},  {LX(316, 33)},  {LX(286, 33)},
-                                                {LX(446, 58)},  {LX(415, 58)},  {LX(390, 54)},  {LX(365, 50)},  {LX(341, 54)},  {LX(316, 58)},  {LX(286, 58)},
-                                                {LX(446, 83)},  {LX(415, 83)},  {LX(390, 79)},  {LX(365, 75)},  {LX(341, 79)},  {LX(316, 83)},  {LX(286, 83)},
-                                                {LX(440, 107)}, {LX(415, 107)}, {LX(390, 103)}, {LX(365, 99)},                  {LX(324, 113)}, {LX(290, 118)}, {LX(264, 127)},  {LX(264, 99)}
-                             },
-                             {
-                                 // LED Index to Flag
-                                 4, 4, 4, 4, 4, 4, 4,
-                                 4, 4, 4, 4, 4, 4, 4,
-                                 4, 4, 4, 4, 4, 4, 4,
-                                 4, 4, 4, 4, 4, 4, 4,
-                                 4, 4, 4, 4, 4, 4, 4, 4,
-
-                                 4, 4, 4, 4, 4, 4, 4,
-                                 4, 4, 4, 4, 4, 4, 4,
-                                 4, 4, 4, 4, 4, 4, 4,
-                                 4, 4, 4, 4, 4, 4, 4,
-                                 4, 4, 4, 4, 4, 4, 4, 4
-                             } };
-
-// Returns display text for special keys.
 const uint16_t* to_static_text(uint16_t keycode, led_t state) {
 
     const uint16_t* emoji = keycode_to_emoji(keycode);
@@ -786,13 +595,6 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
         case KC_L2:                         return local_layer->def_layer == _L2 ? u"Clmk\r\v" ICON_SWITCH_ON : u"Clmk\r\v" ICON_SWITCH_OFF;
         case KC_L3:                         return local_layer->def_layer == _L3 ? u"Neo\r\v" ICON_SWITCH_ON : u"Neo\r\v" ICON_SWITCH_OFF;
         case KC_L4:                         return local_layer->def_layer == _L4 ? u"Wkm\r\v" ICON_SWITCH_ON : u"Wkm\r\v" ICON_SWITCH_OFF;
-
-        //Language selection keycodes
-        /*[[[cog
-        for lang in languages:
-            pretty = f"{lang[0:2]}\\r\\t{lang[2:]}"
-            cog.outl(f'case KCL_{lang.upper()}: return local_state->lang == LANG_{lang.upper()} ? u"{pretty}\\r\\x05\\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"{pretty}";')
-        ]]]*/
         case KCL_ENUS: return local_state->lang == LANG_ENUS ? u"en\r\tUS\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"en\r\tUS";
         case KCL_DEDE: return local_state->lang == LANG_DEDE ? u"de\r\tDE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"de\r\tDE";
         case KCL_FRFR: return local_state->lang == LANG_FRFR ? u"fr\r\tFR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fr\r\tFR";
@@ -820,13 +622,11 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_DADK: return local_state->lang == LANG_DADK ? u"da\r\tDK\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"da\r\tDK";
         case KCL_HUHU: return local_state->lang == LANG_HUHU ? u"hu\r\tHU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"hu\r\tHU";
         case KCL_CSCZ: return local_state->lang == LANG_CSCZ ? u"cs\r\tCZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"cs\r\tCZ";
-        //[[[end]]]
         default:
             return NULL;
     }
 }
 
-// Renders key character to display using language translation, including modifiers etc.
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const poly_layer_t* local_layer = get_local_layer();
 
@@ -835,7 +635,6 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const bool alt = ((local_layer->mods & MOD_MASK_ALT) != 0);
     const bool is_letter = keycode>=KC_A && keycode<=KC_Z;
     if(is_letter && add_lang) {
-        //display the previously selected latin variation of the letter
         const latin_sync_t* global_latin_table = get_global_latin_table();
         const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
         uint8_t variation = (shift || state.caps_lock) ? global_latin_table->ex[keycode-KC_A]>>4 : global_latin_table->ex[keycode-KC_A]&0xf;
@@ -848,11 +647,9 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         return false;
     }
 
-    //variation selection on 0~9
     uint16_t local_last_latin_keycode = get_local_last_latin_keycode();
     if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
         if(add_lang && alt && local_last_latin_keycode!=0) {
-            //show all available alternatives for selected latin letter
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
             const uint16_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
             if(variation!=NULL) {
@@ -867,7 +664,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     if (mods & MOD_RALT) {
         const uint16_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
-            const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
+            const bool is_num = keycode>=KC_1 && keycode<=KC_0;
             int8_t v_set;
             int8_t h_set;
             if(is_num){
@@ -888,7 +685,6 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         }
     }
 
-    //translate to current language
     const uint16_t* letter = translate_keycode(local_state->lang, keycode, shift, state.caps_lock);
     if (letter != NULL) {
         int8_t v_set;
@@ -897,7 +693,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             v_set = SETTING_LETTER_VOFFSET;
             h_set = SETTING_LETTER_HOFFSET;
         } else {
-            const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
+            const bool is_num = keycode>=KC_1 && keycode<=KC_0;
             if(is_num){
                 v_set = SETTING_NUM_VOFFSET;
                 h_set = SETTING_NUM_HOFFSET;
@@ -911,7 +707,6 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
         kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
 
-        //preview capital letter?
         if(!shift && !state.caps_lock) {
             v_off = get_setting(v_set, local_state->lang, VAR_SHIFT);
             h_off = get_setting(h_set, local_state->lang, VAR_SHIFT);
@@ -922,7 +717,6 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 }
             }
         }
-        //preview alt representation
         letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
             v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
@@ -936,7 +730,6 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     return false;
 }
 
-// Returns builtin icon/symbol overlay text for keycode based on current modifiers and mod-tap states.
 const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     switch (keycode)
     {
@@ -1027,30 +820,25 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     idx = get_overlay_mapping(idx);
 
     kdisp_clear_bitmap_courtyard(28, 0, get_overlay(idx), 72, 40);
-    kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40); //don't understnad why we start at offset 28... need to think about it
+    kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40);
     return true;
 }
 
-// Updates all display based on current layer and modifiers.
-// Global variables: keymaps
 void update_displays(enum refresh_mode mode) {
     const poly_sync_t* local_state = get_local_state();
     if(local_state->contrast<=DISP_OFF || (local_state->flags&DISP_IDLE)!=0) {
         return;
     }
 
-    //uint8_t layer = get_highest_layer(layer_state);
     const poly_layer_t* local_layer = get_local_layer();
 
     const led_t state = local_layer->led_state;
     const uint8_t mods = local_layer->mods;
     const bool capital_case = ((mods & MOD_MASK_SHIFT) != 0) || state.caps_lock;
     const bool display_overlays = test_flag(local_state->overlay_flags, DISPLAY_OVERLAYS);
-    //the left side has an offset of 0, the right side an offset of MATRIX_ROWS_PER_SIDE
     const uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t start_row = 0;
 
-    //select first display (and later on shift that 0 till the end)
     if (mode == START_SECOND_HALF) {
         sr_shift_out_buffer_latch(disp_row_3.bitmask, sizeof(struct display_info));
         start_row = 3;
@@ -1066,8 +854,6 @@ void update_displays(enum refresh_mode mode) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
 
-            //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
-            //except there was a leading and missing physical key (KC_NO on base layer)
             uint16_t keycode = keymaps[_BL][r + offset][c];
             if (keycode == KC_NO) {
                 skip++;
@@ -1075,7 +861,7 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     uint8_t layer = get_highest_layer(local_layer->layer);
-                    uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
+                    uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c);
                     keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(local_layer->layer&~(1<<layer)),r + offset,c) : highest_kc;
                     kdisp_enable(true);
                     kdisp_set_contrast(local_state->contrast-1);
@@ -1093,10 +879,10 @@ void update_displays(enum refresh_mode mode) {
                         text = NULL;
                         if(display_overlays) {
                             if(!copy_overlay_to_buffer(keycode, mods)) {
-                                text = keycode_to_disp_overlay(keycode, state); //fallback to hardcoded
+                                text = keycode_to_disp_overlay(keycode, state);
                             }
                         } else {
-                            text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
+                            text = keycode_to_disp_overlay(keycode, state);
                         }
                         if(text) {
                             kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text, true);
@@ -1114,7 +900,6 @@ void update_displays(enum refresh_mode mode) {
     }
 }
 
-// Converts brightness level 0-7 to pulsating contrast value for idle display animation.
 uint8_t to_brightness(uint8_t b) {
     switch(b) {
         case 23: case 24: case 25: case 26: case 27: return 7;
@@ -1130,19 +915,15 @@ uint8_t to_brightness(uint8_t b) {
     }
 }
 
-// Updates all displays to show idle pulsating animation with varying brightness pattern.
 void kdisp_idle(uint8_t contrast) {
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t skip = 0;
     sr_shift_out_buffer_latch(disp_row_0.bitmask, sizeof(struct display_info));
 
-    //uint8_t idx = 0;
     for (uint8_t r = 0; r < MATRIX_ROWS_PER_SIDE; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
 
-            //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
-            //except there was a leading and missing physical key (KC_NO on base layer)
             uint16_t keycode = keymaps[_BL][r + offset][c];
             if (keycode == KC_NO) {
                 skip++;
@@ -1166,7 +947,6 @@ void kdisp_idle(uint8_t contrast) {
     }
 }
 
-// Handles keypress events including unicode input, language modifications, and special commands.
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     uint32_t t = get_time_since_last_update();
@@ -1214,18 +994,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             return false;
         case KC_OPER:
             if (record->event.pressed) {
-                SEND_STRING( // Go to the end of the line and tap delete.
+                SEND_STRING(
                     SS_TAP(X_END) SS_TAP(X_DEL)
-                    SS_TAP(X_SPC) // In case this has joined two wormatrix toaend_string splhhhhds together, insert one space.
+                    SS_TAP(X_SPC)
                     SS_LCTL(
-                        // Go to the beginning of the next word.
                         SS_TAP(X_RGHT) SS_TAP(X_LEFT)
-                        // Select back to the end of the previous word. This should select
-                        // all spaces and tabs between the joined lines from indentation
-                        // or trailing whitespace, including the space inserted earlier.
                         SS_LSFT(SS_TAP(X_LEFT) SS_TAP(X_RGHT))
                     )
-                    SS_TAP(X_SPC) // Replace the selection with a single space.
+                    SS_TAP(X_SPC)
                 );
                 uprint("Join Line.\n");
             }
@@ -1255,7 +1031,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                         const latin_sync_t* global_latin_table = get_global_latin_table();
                         uint8_t variation = upper_case ? global_latin_table->ex[keycode-KC_A]>>4 : global_latin_table->ex[keycode-KC_A]&0xf;
 
-                        //this is a work-around (at least for I-Bus on Linux we need to remove the shift, otherwise the Unicode sequence will not be recognized!)
                         if(lshift) unregister_code16(KC_LEFT_SHIFT);
                         if(rshift) unregister_code16(KC_RIGHT_SHIFT);
                         register_unicode(latin_ex_map[offset+keycode-KC_A][variation][0]);
@@ -1303,7 +1078,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     return display_wakeup(record);
 }
 
-// Post-processes keystrokes to handle display and state changes for various special keycodes.
 void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     if (keycode == KC_CAPS_LOCK) {
         request_disp_refresh();
@@ -1386,10 +1160,6 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_DBRI:
             inc_brightness();
             break;
-        /*[[[cog
-            for lang in languages:
-                cog.outl(f'case KCL_{lang.upper()}: local_state->lang = LANG_{lang.upper()}; save_user_settings(); layer_off(_LL); break;')
-            ]]]*/
         case KCL_ENUS: local_state->lang = LANG_ENUS; save_user_settings(); layer_off(_LL); break;
         case KCL_DEDE: local_state->lang = LANG_DEDE; save_user_settings(); layer_off(_LL); break;
         case KCL_FRFR: local_state->lang = LANG_FRFR; save_user_settings(); layer_off(_LL); break;
@@ -1417,7 +1187,6 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_DADK: local_state->lang = LANG_DADK; save_user_settings(); layer_off(_LL); break;
         case KCL_HUHU: local_state->lang = LANG_HUHU; save_user_settings(); layer_off(_LL); break;
         case KCL_CSCZ: local_state->lang = LANG_CSCZ; save_user_settings(); layer_off(_LL); break;
-        //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
             layer_off(_LL);
@@ -1443,37 +1212,27 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
                 layer_on(_LL);
             }
             break;
-        case RGB_MOD:
-        case RGB_RMOD:
-            request_disp_refresh();
-            break;
         default:
             break;
         }
     }
 
-    // uprintf("Key 0x%04X, col/row: %u/%u, %s, time: %u, int: %d, cnt: %u\n",
-    //     keycode, record->event.key.col, record->event.key.row, record->event.pressed ? "DN" : "UP",
-    //     record->event.time, record->tap.interrupted ? 1 : 0, record->tap.count);
-
     update_performed();
 };
 
-// Displays splash screen with polykybd/split72 logo and initializes displays with refresh.
 void show_splash_screen(void) {
     clear_all_displays();
     if(is_left_side()) {
         display_message(1, 1, u"POLY", &FreeSansBold24pt7b);
         display_message(2, 1, u"KYBD", &FreeSansBold24pt7b);
     } else {
-        display_message(1, 1, u"SPLIT", &FreeSansBold24pt7b);
-        display_message(3, 1, u" 7 2", &FreeSansBold24pt7b);
+        display_message(1, 1, u"CORNE", &FreeSansBold24pt7b);
+        display_message(2, 1, u" 4 2", &FreeSansBold24pt7b);
     }
     wait_ms(400);
     update_displays(ALL_AT_ONCE);
 }
 
-// Configures all displays with contrast level; shows idle pulsating animation if enabled.
 void set_displays(uint8_t contrast, bool idle) {
     if(idle) {
         kdisp_idle(contrast);
@@ -1488,7 +1247,6 @@ void set_displays(uint8_t contrast, bool idle) {
     }
 }
 
-// Disables keypress if displays are turned off/in idle mode; restores brightness on wakeup.
 bool display_wakeup(keyrecord_t* record) {
     poly_sync_t* local_state = access_local_state();
     bool accept_keypress = true;
@@ -1507,44 +1265,32 @@ bool display_wakeup(keyrecord_t* record) {
     return accept_keypress;
 }
 
-// Updates local unicode input mode state and requests display refresh on mode change.
 void unicode_input_mode_set_user(uint8_t unicode_mode) {
     access_local_state()->unicode_mode = unicode_mode;
     request_disp_refresh();
 }
 
-// Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
-// Global variables: com
 void keyboard_post_init_user(void) {
-    // Customise these values to desired behaviour
     debug_enable = true;
     debug_matrix = false;
     debug_keyboard = false;
     debug_mouse = false;
 
-    //pointing_device_set_cpi(20000);
-    pointing_device_set_cpi(650);
-    //pimoroni_trackball_set_rgbw(0,0,255,100);
     layer_state_t default_layer = persistent_default_layer_get();
     access_local_layer()->def_layer = default_layer;
     access_local_state()->unicode_mode = get_unicode_input_mode();
     layer_clear();
     layer_on(default_layer);
 
-    //set these values, they will never change
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
 
-
-    //encoder pins
+    /* encoder pins — update to actual PCB pins if different */
     setPinInputHigh(GP25);
     setPinInputHigh(GP29);
 
-    //srand(halGetCounterValue());
-
     reset_overlay_buffers();
     reset_overlay_usage();
-    //standard mapping is 1:1
     reset_overlay_mapping();
 
 #ifdef USE_CORE1
@@ -1565,14 +1311,13 @@ void keyboard_post_init_user(void) {
     poly_sync_t* local_state = access_local_state();
     local_state->lang = ee.lang;
     local_state->contrast = ee.brightness;
-    local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
+    local_state->flags = STATUS_DISP_ON;  /* no RGB on corne42 */
 
     memcpy(access_global_latin_table()->ex, ee.latin_ex, sizeof(ee.latin_ex));
 
     set_displays(ee.brightness, false);
 }
 
-// Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
 void keyboard_pre_init_user(void) {
     kdisp_hw_setup();
     kdisp_init(NUM_SHIFT_REGISTERS);
@@ -1590,10 +1335,10 @@ void keyboard_pre_init_user(void) {
     set_local_last_latin_keycode(0);
     show_splash_screen();
 
+    /* I2C SDA pin for the status OLED — verify pin matches PCB */
     setPinInputHigh(I2C1_SDA_PIN);
 }
 
-// Initializes EEPROM configuration with default language, brightness, and latin extension settings.
 void eeconfig_init_user(void) {
     uprint("Init EE config\n");
     poly_eeconf_t ee;
@@ -1605,23 +1350,22 @@ void eeconfig_init_user(void) {
 }
 
 const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    [0] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [1] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [2] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [3] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [4] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [5] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [6] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [7] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [8] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [9] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [10] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [11] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [12] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [13] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [0]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [1]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [2]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [3]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [4]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [5]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [6]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [7]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [8]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [9]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [10] = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [11] = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [12] = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [13] = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
 };
 
-// Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.
 oled_rotation_t oled_init_user(oled_rotation_t rotation){
     oled_off();
     oled_clear();
@@ -1632,25 +1376,20 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
     return rotation;
 }
 
-// Clears overlay display flags, disables overlays and status display, sets contrast to OFF.
 void poly_suspend(void) {
     poly_sync_t* local_state = access_local_state();
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
-    local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);// & ~((uint8_t)RGB_ON);
+    local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
     local_state->contrast = DISP_OFF;
 }
 
-// Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
 void suspend_power_down_kb(void) {
     poly_suspend();
-    rgb_matrix_disable_noeeprom();
     sync_and_refresh_displays();
     suspend_power_down_user();
     set_last_update(-1);
 }
 
-
-// Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
 void suspend_wakeup_init_kb(void) {
     poly_sync_t* local_state = access_local_state();
     local_state->flags |= STATUS_DISP_ON;
@@ -1658,11 +1397,6 @@ void suspend_wakeup_init_kb(void) {
     poly_eeconf_t ee = load_user_eeconf();
     local_state->contrast = ee.brightness;
     set_last_update(0);
-
-    //rgb_matrix_reload_from_eeprom();
-    if(test_flag(local_state->flags, RGB_ON)) {
-        rgb_matrix_enable_noeeprom();
-    }
 
     update_performed();
     housekeeping_task_user();

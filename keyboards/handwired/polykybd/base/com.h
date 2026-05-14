@@ -14,14 +14,31 @@ enum poly_flag {
 
 enum overlay_flag {
     DISPLAY_OVERLAYS    = 1 << 0,
-    CLEAR_LEFT_TOP      = 1 << 1,
-    CLEAR_LEFT_BOTTOM   = 1 << 2,
-    CLEAR_RIGHT_TOP     = 1 << 3,
-    CLEAR_RIGHT_BOTTOM  = 1 << 4,
+    MAPPING_ALLSET      = 1 << 1,
+    // While set, every overlay upload is stored on both halves regardless of
+    // the upload's keycode side. The host turns this on before MRU sends so a
+    // mapping that crosses the split can find the bitmap on the side that
+    // actually has to render it. Off = legacy side-conditional storage.
+    MIRROR_OVERLAYS     = 1 << 2,
+    RESERVED_2          = 1 << 3,
+    RESERVED_3          = 1 << 4,
     RESET_BUFFERS       = 1 << 5,
     USAGE_RESET         = 1 << 6,
     MAPPING_RESET       = 1 << 7
 };
+
+// Bits that trigger an overlay self-action (reset/set). They are processed
+// immediately at HID receive (master) and bridge sync (slave) and cleared
+// in local_state right there — housekeeping never has to deal with them.
+#define OVERLAY_ACTION_FLAGS  ((uint8_t)(RESET_BUFFERS | USAGE_RESET | MAPPING_RESET | MAPPING_ALLSET))
+
+// State-flag bits that affect slave-side decision-making (e.g. how slave's
+// bridge upload handlers interpret incoming overlay data) and therefore must
+// be force-synced from master to slave at the moment the host changes them,
+// not deferred to the next housekeeping cycle. Otherwise upload bridge
+// transactions can reach the slave before the slave learns the flag, causing
+// it to make stale decisions.
+#define OVERLAY_SYNCED_STATE_FLAGS  ((uint8_t)(MIRROR_OVERLAYS))
 
 bool test_flag(uint8_t flags, uint8_t f) ;
 

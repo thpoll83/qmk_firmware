@@ -8,14 +8,16 @@
 #include "base/overlay.h"
 #include "eeconfig.h"
 #include "dynamic_keymap.h"
+#include "base/com.h"
 #include "base/disp_array.h"
 #include "base/update.h"
 #include "base/crc32.h"
+#include "fill_overlay.h"
 #include "state.h"
 #include "side.h"
 #include "matrix_helper.h"
 
-#include "split72/split72.h"
+void invert_display(uint8_t r, uint8_t c, bool state);
 
 #include <stddef.h>
 #include <string.h>
@@ -31,7 +33,20 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
             if (incoming->contrast != current->contrast || incoming->lang != current->lang) {
                 mark_settings_dirty();
             }
+            // Detect action flags newly set in this sync and run them immediately,
+            // mirroring the master's case-11 handling. Without this, a mapping
+            // bridge transaction arriving before housekeeping runs would have its
+            // use_overlay bits wiped by a later deferred reset_overlay_usage().
+            uint8_t newly_set = (incoming->overlay_flags & ~current->overlay_flags);
             copy_local_state(incoming);
+            if(newly_set & OVERLAY_ACTION_FLAGS) {
+                apply_overlay_action_flags(newly_set);
+                // Clear the bits locally so housekeeping has nothing to do.
+                access_local_state()->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
+                // Housekeeping's state_diff branch (which used to call this at the end)
+                // won't fire now that local matches global — trigger the refresh ourselves.
+                request_disp_refresh();
+            }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
@@ -97,7 +112,7 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
         if(crc32 == ov->crc32) {
             memcpy(get_overlay(ov->adj_idx) + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
             if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
-                set_overlay_usage(ov->adj_idx);
+                set_overlay_usage_post_upload(ov->adj_idx);
                 request_disp_refresh();
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
@@ -124,7 +139,7 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
             int16_t maxlen = 360 - hid_bit_index/8;
             hid_bit_index += rle_decompress(get_overlay(ov->adj_idx)+hid_bit_index/8, PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
             if (hid_bit_index >= 360*8) {
-                set_overlay_usage(ov->adj_idx);
+                set_overlay_usage_post_upload(ov->adj_idx);
                 request_disp_refresh();
                 hid_bit_index = 0;
             }
@@ -165,7 +180,7 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
                 if(new_index >= 2880) {
                     //finished roi update
                     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
-                    set_overlay_usage(roi_ov->adj_idx);
+                    set_overlay_usage_post_upload(roi_ov->adj_idx);
                     request_disp_refresh();
                 } else {
                     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
@@ -228,6 +243,20 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     break;
                 default: break;
             }
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
+        }
+    }
+}
+
+// Handles incoming overlay mapping data on bridge with CRC32 validation.
+void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len == sizeof(overlay_map_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data != NULL) {
+        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
+        const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
+        if (crc32 == data->crc32) {
+            set_10bit_overlay_mapping((uint8_t *)data->mapping);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

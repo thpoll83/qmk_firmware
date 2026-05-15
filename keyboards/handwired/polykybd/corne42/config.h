@@ -49,8 +49,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SR_LATCH_PIN GP28
 
 /* Rotary encoder */
-#define ENCODERS_PAD_A     { GP25 }
-#define ENCODERS_PAD_B     { GP29 }
 #define ENCODER_RESOLUTION 2
 
 /* Status OLED — 128×32 SSD1306 (half-height vs split72's 128×64) */

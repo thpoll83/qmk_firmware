@@ -14,10 +14,6 @@ OLED_DRIVER = ssd1306
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/rle.c base/com.c base/crc32.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c
 
-DEFAULT_FOLDER = handwired/polykybd/corne42
-
-ENCODER_ENABLE     = yes
-
 # No pointing device (no Cirque trackpad on corne42)
 
 RAW_ENABLE     = yes

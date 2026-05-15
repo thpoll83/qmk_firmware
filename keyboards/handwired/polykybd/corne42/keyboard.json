@@ -14,6 +14,7 @@
         "bootmagic": false,
         "command": false,
         "console": true,
+        "encoder": true,
         "extrakey": true,
         "mousekey": true,
         "debug": true,
@@ -21,6 +22,14 @@
         "unicodemap": true,
         "deferred_exec": true,
         "nkro": true
+    },
+    "encoder": {
+        "rotary": [
+            {
+                "pin_a": "GP25",
+                "pin_b": "GP29"
+            }
+        ]
     },
     "layout_aliases": {
         "LAYOUT": "LAYOUT_crkbd"

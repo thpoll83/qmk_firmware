@@ -4,8 +4,8 @@
 #include "wait.h"
 
 void peripherals_reset(void) {
-    setPinOutput(HW_RST_PIN);
-    writePinLow(HW_RST_PIN);
+    gpio_set_pin_output(HW_RST_PIN);
+    gpio_write_pin_low(HW_RST_PIN);
     wait_us(2);
-    writePinHigh(HW_RST_PIN);
+    gpio_write_pin_high(HW_RST_PIN);
 }

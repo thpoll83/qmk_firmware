@@ -2,6 +2,8 @@
 //Execute the following command to do so (via cogapp):
 //cog -r lang_lut.h
 #pragma once
+#include <stdint.h>
+#include <stdbool.h>
 #include "named_glyphs.h"
 
 enum {ALPHA = 26, NUM = 10, ADDITIONAL = 18};

@@ -152,12 +152,12 @@ void copy_global_latin_table(const latin_sync_t* value) {
 // Writes only lang+brightness+unused (4 bytes) to EEPROM.
 void save_user_settings(void) {
     const poly_eeconf_t ee = { .lang = l_state.lang, .brightness = (uint8_t)(~l_state.contrast), .unused = 0 };
-    eeprom_update_block(&ee, EECONFIG_USER_DATABLOCK, offsetof(poly_eeconf_t, latin_ex));
+    eeconfig_update_user_datablock(&ee, 0, offsetof(poly_eeconf_t, latin_ex));
 }
 
 // Writes only the 26-byte latin extension table to EEPROM.
 void save_user_latin(void) {
-    eeprom_update_block(g_latin.ex, EECONFIG_USER_DATABLOCK + offsetof(poly_eeconf_t, latin_ex), sizeof(g_latin.ex));
+    eeconfig_update_user_datablock(g_latin.ex, offsetof(poly_eeconf_t, latin_ex), sizeof(g_latin.ex));
 }
 
 // Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.
@@ -170,7 +170,7 @@ void save_user_eeconf(void) {
 // Global variables: (none - returns result)
 poly_eeconf_t load_user_eeconf(void) {
     poly_eeconf_t ee;
-    eeconfig_read_user_datablock(&ee);
+    eeconfig_read_user_datablock(&ee, 0, sizeof(ee));
     ee.brightness = ~ee.brightness;
     if(ee.brightness>FULL_BRIGHT) {
         ee.brightness = FULL_BRIGHT;

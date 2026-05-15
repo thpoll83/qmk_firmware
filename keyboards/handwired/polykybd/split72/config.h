@@ -64,8 +64,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SR_LATCH_PIN GP28
 
 
-#define ENCODERS_PAD_A { GP25 }
-#define ENCODERS_PAD_B { GP29 }
 #define ENCODER_RESOLUTION 2
 
 //see also https://docs.qmk.fm/#/feature_pointing_device?id=split-keyboard-configuration

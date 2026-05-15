@@ -42,26 +42,16 @@ const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_KP_ENTER:                   return u"Enter";
         case QK_BOOTLOADER:                 return u"Boot";
         case QK_DEBUG_TOGGLE:               return ((state_flags & DBG_ON) == 0) ? u"Dbg\r\v" ICON_SWITCH_OFF : u"Dbg\r\v" ICON_SWITCH_ON;
-        case RGB_RMOD:
         case RM_PREV:                       return u" " ICON_LEFT PRIVATE_LIGHT;
         case KC_RGB_TOG:                    return (state_flags & RGB_ON) == 0 ? u"RGB\r\v" ICON_SWITCH_OFF : u"RGB\r\v" ICON_SWITCH_ON;
-        case RGB_MOD:
         case RM_NEXT:                       return PRIVATE_LIGHT ICON_RIGHT;
-        case RGB_HUI:
         case RM_HUEU:                       return u"Hue+";
-        case RGB_HUD:
         case RM_HUED:                       return u"Hue-";
-        case RGB_SAI:
         case RM_SATU:                       return u"Sat+";
-        case RGB_SAD:
         case RM_SATD:                       return u"Sat-";
-        case RGB_VAI:
         case RM_VALU:                       return u"Bri+";
-        case RGB_VAD:
         case RM_VALD:                       return u"Bri-";
-        case RGB_SPI:
         case RM_SPDU:                       return u"Spd+";
-        case RGB_SPD:
         case RM_SPDD:                       return u"Spd-";
         case RGB_MODE_PLAIN:                return u"Plan";
         case RGB_MODE_BREATHE:              return u"Brth";
@@ -71,16 +61,16 @@ const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_MEDIA_PLAY_PAUSE:           return u"  " ICON_RIGHT;
         case KC_MEDIA_STOP:                 return u"Stop";
         case KC_MEDIA_PREV_TRACK:           return ICON_LEFT ICON_LEFT;
-        case KC_MS_ACCEL0:                  return u">>";
-        case KC_MS_ACCEL1:                  return u">>>";
-        case KC_MS_ACCEL2:                  return u">>>>";
-        case KC_BTN1:                       return u"  " ICON_LMB;
-        case KC_BTN2:                       return u"  " ICON_RMB;
-        case KC_BTN3:                       return u"  " ICON_MMB;
-        case KC_MS_UP:                      return u"  " ICON_UP;
-        case KC_MS_DOWN:                    return u"  " ICON_DOWN;
-        case KC_MS_LEFT:                    return u"  " ICON_LEFT;
-        case KC_MS_RIGHT:                   return u"  " ICON_RIGHT;
+        case MS_ACL0:                  return u">>";
+        case MS_ACL1:                  return u">>>";
+        case MS_ACL2:                  return u">>>>";
+        case MS_BTN1:                       return u"  " ICON_LMB;
+        case MS_BTN2:                       return u"  " ICON_RMB;
+        case MS_BTN3:                       return u"  " ICON_MMB;
+        case MS_UP:                      return u"  " ICON_UP;
+        case MS_DOWN:                    return u"  " ICON_DOWN;
+        case MS_LEFT:                    return u"  " ICON_LEFT;
+        case MS_RGHT:                   return u"  " ICON_RIGHT;
         case KC_AUDIO_MUTE:                 return u"  " PRIVATE_MUTE;
         case KC_AUDIO_VOL_DOWN:             return u"  " PRIVATE_VOL_DOWN;
         case KC_AUDIO_VOL_UP:               return u"  " PRIVATE_VOL_UP;

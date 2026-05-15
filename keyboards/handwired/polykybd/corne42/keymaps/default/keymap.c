@@ -134,14 +134,14 @@ static deferred_token rgb_repeat_token  = INVALID_DEFERRED_TOKEN;
 
 static void apply_rgb_adjust(uint16_t keycode) {
     switch (keycode) {
-        case RGB_VAI: rgb_matrix_increase_val_noeeprom();   break;
-        case RGB_VAD: rgb_matrix_decrease_val_noeeprom();   break;
-        case RGB_HUI: rgb_matrix_increase_hue_noeeprom();   break;
-        case RGB_HUD: rgb_matrix_decrease_hue_noeeprom();   break;
-        case RGB_SAI: rgb_matrix_increase_sat_noeeprom();   break;
-        case RGB_SAD: rgb_matrix_decrease_sat_noeeprom();   break;
-        case RGB_SPI: rgb_matrix_increase_speed_noeeprom(); break;
-        case RGB_SPD: rgb_matrix_decrease_speed_noeeprom(); break;
+        case RM_VALU: rgb_matrix_increase_val_noeeprom();   break;
+        case RM_VALD: rgb_matrix_decrease_val_noeeprom();   break;
+        case RM_HUEU: rgb_matrix_increase_hue_noeeprom();   break;
+        case RM_HUED: rgb_matrix_decrease_hue_noeeprom();   break;
+        case RM_SATU: rgb_matrix_increase_sat_noeeprom();   break;
+        case RM_SATD: rgb_matrix_decrease_sat_noeeprom();   break;
+        case RM_SPDU: rgb_matrix_increase_speed_noeeprom(); break;
+        case RM_SPDD: rgb_matrix_decrease_speed_noeeprom(); break;
         default: break;
     }
 }
@@ -421,7 +421,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_CAPS,  _______,_______,_______,_______,_______,
         _______,  _______,TO(_UL),
         KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,
-        KC_BTN1, KC_BTN2, _______,  _______,  _______,  KC_F12,
+        MS_BTN1, MS_BTN2, _______,  _______,  _______,  KC_F12,
         TO(_NL),  _______,  _______,  _______,  _______,  KC_INS,
         KC_HOME,  KC_PGUP, KC_END
     ),
@@ -434,7 +434,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,  _______,_______,_______,_______,_______,
         _______,  _______,KC_INS,
         KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,
-        KC_BTN1, KC_BTN2, _______,  _______,  _______,  KC_F12,
+        MS_BTN1, MS_BTN2, _______,  _______,  _______,  KC_F12,
         TO(_NL),  _______,  _______,  _______,  KC_CAPS,  _______,
         KC_HOME,  KC_PGUP, KC_END
     ),
@@ -443,12 +443,12 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      */
     [_NL] = LAYOUT_crkbd(
         KC_NO,   KC_NUM,  KC_PSLS, KC_PAST, KC_PMNS, KC_NO,
-        KC_BTN1, KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS, KC_INS,
+        MS_BTN1, KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS, KC_INS,
         KC_NO,   KC_KP_4, KC_KP_5, KC_KP_6, KC_PPLS, KC_DEL,
         KC_BASE, KC_KP_0, KC_PDOT,
         KC_NO,   KC_INS,  KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS,
         KC_NO,   KC_DEL,  KC_KP_4, KC_KP_5, KC_KP_6, KC_PPLS,
-        KC_BTN2, KC_NO,   KC_KP_1, KC_KP_2, KC_KP_3, KC_PENT,
+        MS_BTN2, KC_NO,   KC_KP_1, KC_KP_2, KC_KP_3, KC_PENT,
         KC_PENT, KC_KP_0, KC_BASE
     ),
     /*
@@ -964,10 +964,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     switch (keycode) {
 #ifdef RGB_MATRIX_ENABLE
-        case RGB_VAI: case RGB_VAD:
-        case RGB_HUI: case RGB_HUD:
-        case RGB_SAI: case RGB_SAD:
-        case RGB_SPI: case RGB_SPD:
+        case RM_VALU: case RM_VALD:
+        case RM_HUEU: case RM_HUED:
+        case RM_SATU: case RM_SATD:
+        case RM_SPDU: case RM_SPDD:
             if (record->event.pressed) {
                 rgb_held_keycode = keycode;
                 apply_rgb_adjust(keycode);
@@ -976,7 +976,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 rgb_held_keycode = KC_NO;
                 cancel_deferred_exec(rgb_repeat_token);
                 rgb_repeat_token = INVALID_DEFERRED_TOKEN;
-                eeconfig_update_rgb_matrix();
+                eeconfig_update_rgb_matrix(&rgb_matrix_config);
             }
             return false;
 #endif
@@ -1286,8 +1286,8 @@ void keyboard_post_init_user(void) {
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
 
     /* encoder pins — update to actual PCB pins if different */
-    setPinInputHigh(GP25);
-    setPinInputHigh(GP29);
+    gpio_set_pin_input_high(GP25);
+    gpio_set_pin_input_high(GP29);
 
     reset_overlay_buffers();
     reset_overlay_usage();
@@ -1336,7 +1336,7 @@ void keyboard_pre_init_user(void) {
     show_splash_screen();
 
     /* I2C SDA pin for the status OLED — verify pin matches PCB */
-    setPinInputHigh(I2C1_SDA_PIN);
+    gpio_set_pin_input_high(I2C1_SDA_PIN);
 }
 
 void eeconfig_init_user(void) {
@@ -1346,24 +1346,24 @@ void eeconfig_init_user(void) {
     ee.brightness = ~FULL_BRIGHT;
     ee.unused = 0;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
-    eeconfig_read_user_datablock(&ee);
+    eeconfig_update_user_datablock(&ee, 0, sizeof(ee));
 }
 
 const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    [0]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [1]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [2]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [3]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [4]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [5]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [6]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [7]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [8]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [9]  = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [10] = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [11] = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [12] = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
-    [13] = { ENCODER_CCW_CW(KC_WH_D, KC_WH_U) },
+    [0]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [1]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [2]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [3]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [4]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [5]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [6]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [7]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [8]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [9]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [10] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [11] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [12] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [13] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
 };
 
 oled_rotation_t oled_init_user(oled_rotation_t rotation){

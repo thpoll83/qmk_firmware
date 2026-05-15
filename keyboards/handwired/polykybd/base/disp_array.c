@@ -407,13 +407,13 @@ void kdisp_enable(bool enable) {
 void kdisp_hw_setup(void) {
     //make sure the pins are output pins and low
     #if defined(KEY_DISPLAYS_VDD_PIN)
-        setPinOutput(KEY_DISPLAYS_VDD_PIN);
-        writePinLow(KEY_DISPLAYS_VDD_PIN);
+        gpio_set_pin_output(KEY_DISPLAYS_VDD_PIN);
+        gpio_write_pin_low(KEY_DISPLAYS_VDD_PIN);
     #endif
 
     #if defined(KEY_DISPLAYS_VBAT_PIN)
-        setPinOutput(KEY_DISPLAYS_VBAT_PIN);
-        writePinLow(KEY_DISPLAYS_VBAT_PIN);
+        gpio_set_pin_output(KEY_DISPLAYS_VBAT_PIN);
+        gpio_write_pin_low(KEY_DISPLAYS_VBAT_PIN);
     #endif
 
     sr_hw_setup();
@@ -422,15 +422,15 @@ void kdisp_hw_setup(void) {
 void kdisp_init(const int8_t num_shift_regs) {
     // first turn on logic power supply
     #if defined(KEY_DISPLAYS_VDD_PIN)
-        setPinOutput(KEY_DISPLAYS_VDD_PIN);
-        writePinHigh(KEY_DISPLAYS_VDD_PIN);
+        gpio_set_pin_output(KEY_DISPLAYS_VDD_PIN);
+        gpio_write_pin_high(KEY_DISPLAYS_VDD_PIN);
         wait_ms(5);
     #endif
 
     // and then the power supply for the displays
     #if defined(KEY_DISPLAYS_VBAT_PIN)
-        setPinOutput(KEY_DISPLAYS_VBAT_PIN);
-        writePinHigh(KEY_DISPLAYS_VBAT_PIN);
+        gpio_set_pin_output(KEY_DISPLAYS_VBAT_PIN);
+        gpio_write_pin_high(KEY_DISPLAYS_VBAT_PIN);
     #endif
 
     sr_init();

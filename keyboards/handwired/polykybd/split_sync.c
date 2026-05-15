@@ -7,6 +7,8 @@
 
 #include "base/overlay.h"
 #include "eeconfig.h"
+#include "eeprom.h"
+#include "nvm_eeprom_eeconfig_internal.h"
 #include "dynamic_keymap.h"
 #include "base/com.h"
 #include "base/disp_array.h"

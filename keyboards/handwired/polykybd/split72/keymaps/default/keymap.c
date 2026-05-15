@@ -169,14 +169,14 @@ static deferred_token rgb_repeat_token  = INVALID_DEFERRED_TOKEN;
 
 static void apply_rgb_adjust(uint16_t keycode) {
     switch (keycode) {
-        case RGB_VAI: rgb_matrix_increase_val_noeeprom();   break;
-        case RGB_VAD: rgb_matrix_decrease_val_noeeprom();   break;
-        case RGB_HUI: rgb_matrix_increase_hue_noeeprom();   break;
-        case RGB_HUD: rgb_matrix_decrease_hue_noeeprom();   break;
-        case RGB_SAI: rgb_matrix_increase_sat_noeeprom();   break;
-        case RGB_SAD: rgb_matrix_decrease_sat_noeeprom();   break;
-        case RGB_SPI: rgb_matrix_increase_speed_noeeprom(); break;
-        case RGB_SPD: rgb_matrix_decrease_speed_noeeprom(); break;
+        case RM_VALU: rgb_matrix_increase_val_noeeprom();   break;
+        case RM_VALD: rgb_matrix_decrease_val_noeeprom();   break;
+        case RM_HUEU: rgb_matrix_increase_hue_noeeprom();   break;
+        case RM_HUED: rgb_matrix_decrease_hue_noeeprom();   break;
+        case RM_SATU: rgb_matrix_increase_sat_noeeprom();   break;
+        case RM_SATD: rgb_matrix_decrease_sat_noeeprom();   break;
+        case RM_SPDU: rgb_matrix_increase_speed_noeeprom(); break;
+        case RM_SPDD: rgb_matrix_decrease_speed_noeeprom(); break;
         default: break;
     }
 }
@@ -395,7 +395,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L0] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_NUBS,
         KC_TAB,     KC_Q,       KC_W,       KC_E,       KC_R,       KC_T,       KC_GRAVE,
-        MO(_FL0),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   KC_MS_BTN1,
+        MO(_FL0),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   MS_BTN1,
         KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       TO(_EMJ0),   MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -426,7 +426,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L1] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_6,
         KC_TAB,     KC_Q,       KC_W,       KC_E,       KC_R,       KC_T,       KC_GRAVE,
-        MO(_FL1),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   KC_MS_BTN1,
+        MO(_FL1),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   MS_BTN1,
         KC_LSFT,    TO(_EMJ0),   KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    MO(_ADDLANG1),          KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -455,7 +455,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L2] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_NUBS,
         KC_TAB,     KC_Q,       KC_W,       KC_F,       KC_P,       KC_B,       KC_GRAVE,
-        MO(_FL1),   KC_A,       KC_R,       KC_S,       KC_T,       KC_G,       KC_QUOTE,   KC_MS_BTN1,
+        MO(_FL1),   KC_A,       KC_R,       KC_S,       KC_T,       KC_G,       KC_QUOTE,   MS_BTN1,
         KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_D,       KC_V,       TO(_EMJ0),    MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -484,7 +484,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L3] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       DE_LABK,
         KC_TAB,     KC_X,       KC_V,       KC_L,       KC_C,       KC_W,       DE_CIRC,
-        MO(_FL0),   KC_U,       KC_I,       KC_A,       KC_E,       KC_O,       KC_QUOTE,   KC_MS_BTN1,
+        MO(_FL0),   KC_U,       KC_I,       KC_A,       KC_E,       KC_O,       KC_QUOTE,   MS_BTN1,
         KC_LSFT,    DE_HASH,    DE_UDIA,    DE_ODIA,    DE_ADIA,    KC_P,       DE_Z,       MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -513,7 +513,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L4] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_GRAVE,
         KC_TAB,     KC_Q,       KC_D,       KC_R,       KC_W,       KC_B,       KC_HYPR,
-        MO(_FL1),   KC_A,       KC_S,       KC_H,       KC_T,       KC_G,       TO(_EMJ0),     KC_MS_BTN1,
+        MO(_FL1),   KC_A,       KC_S,       KC_H,       KC_T,       KC_G,       TO(_EMJ0),     MS_BTN1,
         KC_LSFT,    KC_Z,       KC_X,       KC_M,       KC_C,       KC_V,       MO(_ADDLANG1), MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -532,8 +532,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,    _______,    _______,    _______,                _______,    _______,    _______,
 
                     KC_F6,      KC_F7,      KC_F8,      KC_F9,      KC_F10,      KC_F11,    KC_F12,
-                    KC_BTN1,    KC_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
-        _______,    KC_BTN3,    _______,    _______,    _______,   _______,    _______,    _______,
+                    MS_BTN1,    MS_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
+        _______,    MS_BTN3,    _______,    _______,    _______,   _______,    _______,    _______,
         TO(_NL),    _______,    _______,    _______,    _______,    _______,    _______,    KC_INS,
         KC_RALT,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
         ),
@@ -545,18 +545,18 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,    _______,    _______,    _______,                _______,    _______,    KC_INS,
 
                     KC_F7,      KC_F8,      KC_F9,      KC_F10,     KC_F11,     KC_F12,     TO(_UL),
-                    KC_BTN1,    KC_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
-        _______,    KC_BTN3,    _______,    _______,    _______,    _______,    _______,    KC_CAPS,
+                    MS_BTN1,    MS_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
+        _______,    MS_BTN3,    _______,    _______,    _______,    _______,    _______,    KC_CAPS,
         TO(_NL),    _______,    _______,    _______,    _______,    _______,    _______,    _______,
         KC_RALT,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
         ),
      //Num Layer
     [_NL] = LAYOUT_left_right_stacked(
         KC_NO,      KC_NUM,     KC_PSLS,    KC_PAST,    KC_PMNS,    KC_NO,      KC_NO,
-        KC_BTN1,    KC_KP_7,    KC_KP_8,    KC_KP_9,    KC_PPLS,    KC_INS,     KC_NO,
+        MS_BTN1,    KC_KP_7,    KC_KP_8,    KC_KP_9,    KC_PPLS,    KC_INS,     KC_NO,
         KC_NO,      KC_KP_4,    KC_KP_5,    KC_KP_6,    KC_PPLS,    KC_DEL,     KC_NO,     _______,
         KC_NO,      KC_KP_1,    KC_KP_2,    KC_KP_3,    KC_PENT,    KC_NO,      KC_NO,     _______,
-        KC_BASE,    KC_KP_0,    KC_PDOT,    KC_PENT,                KC_MS_BTN2, KC_NO,     KC_NO,
+        KC_BASE,    KC_KP_0,    KC_PDOT,    KC_PENT,                MS_BTN2, KC_NO,     KC_NO,
 
                     KC_NO,      KC_NO,      KC_NUM,     KC_PSLS,    KC_PAST,    KC_PMNS,   KC_NO,
                     KC_NO,      KC_INS,     KC_KP_7,    KC_KP_8,    KC_KP_9,    KC_PPLS,   KC_NO,
@@ -590,9 +590,9 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         //             RM_PREV,    RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RM_NEXT,
         //             KC_NO,      RM_SPDD,    RM_SPDU,    KC_NO,      RM_HUED,    RM_HUEU,    KC_NO,
         // _______,    KC_NO,      RM_VALD,    RM_VALU,    KC_NO,      RM_SATD,    RM_SATU,    KC_NO,
-                    RGB_RMOD,   RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RGB_MOD,
-                    KC_NO,      RGB_SPD,    RGB_SPI,    KC_NO,      RGB_HUD,    RGB_HUI,    KC_NO,
-        _______,    KC_NO,      RGB_VAD,    RGB_VAI,    KC_NO,      RGB_SAD,    RGB_SAI,    KC_NO,
+                    RM_PREV,   RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RM_NEXT,
+                    KC_NO,      RM_SPDD,    RM_SPDU,    KC_NO,      RM_HUED,    RM_HUEU,    KC_NO,
+        _______,    KC_NO,      RM_VALD,    RM_VALU,    KC_NO,      RM_SATD,    RM_SATU,    KC_NO,
         EE_CLR,     KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
         DB_TOGG,    KC_DEADKEY, KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
@@ -623,7 +623,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         ]]]*/
         KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,
         KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_FIFI,
-        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FRFR,	KCL_HEIL,	KCL_HUHU,	KCL_ITIT,	KCL_JAJP,		KC_MS_BTN1,
+        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FRFR,	KCL_HEIL,	KCL_HUHU,	KCL_ITIT,	KCL_JAJP,		MS_BTN1,
         QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_KKKZ,	KCL_KOKR,	KCL_NLNL,	KCL_NNNO,	KCL_PLPL,		KC_NO,
         KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
 
@@ -1184,10 +1184,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     switch (keycode) {
 #ifdef RGB_MATRIX_ENABLE
-        case RGB_VAI: case RGB_VAD:
-        case RGB_HUI: case RGB_HUD:
-        case RGB_SAI: case RGB_SAD:
-        case RGB_SPI: case RGB_SPD:
+        case RM_VALU: case RM_VALD:
+        case RM_HUEU: case RM_HUED:
+        case RM_SATU: case RM_SATD:
+        case RM_SPDU: case RM_SPDD:
             if (record->event.pressed) {
                 rgb_held_keycode = keycode;
                 apply_rgb_adjust(keycode);
@@ -1196,7 +1196,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 rgb_held_keycode = KC_NO;
                 cancel_deferred_exec(rgb_repeat_token);
                 rgb_repeat_token = INVALID_DEFERRED_TOKEN;
-                eeconfig_update_rgb_matrix();
+                eeconfig_update_rgb_matrix(&rgb_matrix_config);
             }
             return false;
 #endif
@@ -1443,8 +1443,8 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
                 layer_on(_LL);
             }
             break;
-        case RGB_MOD:
-        case RGB_RMOD:
+        case RM_NEXT:
+        case RM_PREV:
             request_disp_refresh();
             break;
         default:
@@ -1537,8 +1537,8 @@ void keyboard_post_init_user(void) {
 
 
     //encoder pins
-    setPinInputHigh(GP25);
-    setPinInputHigh(GP29);
+    gpio_set_pin_input_high(GP25);
+    gpio_set_pin_input_high(GP29);
 
     //srand(halGetCounterValue());
 
@@ -1590,7 +1590,7 @@ void keyboard_pre_init_user(void) {
     set_local_last_latin_keycode(0);
     show_splash_screen();
 
-    setPinInputHigh(I2C1_SDA_PIN);
+    gpio_set_pin_input_high(I2C1_SDA_PIN);
 }
 
 // Initializes EEPROM configuration with default language, brightness, and latin extension settings.
@@ -1601,24 +1601,24 @@ void eeconfig_init_user(void) {
     ee.brightness = ~FULL_BRIGHT;
     ee.unused = 0;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
-    eeconfig_read_user_datablock(&ee);
+    eeconfig_update_user_datablock(&ee, 0, sizeof(ee));
 }
 
 const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    [0] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [1] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [2] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [3] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [4] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [5] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [6] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [7] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [8] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [9] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [10] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [11] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [12] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
-    [13] =  { ENCODER_CCW_CW(KC_WH_D, KC_WH_U)},
+    [0] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [1] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [2] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [3] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [4] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [5] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [6] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [7] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [8] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [9] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [10] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [11] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [12] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [13] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
 };
 
 // Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stdint.h>
+#include <stdbool.h>
+
 enum poly_flag {
     STATUS_DISP_ON      = 1 << 0,
     IDLE_TRANSITION     = 1 << 1,

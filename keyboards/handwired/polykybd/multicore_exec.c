@@ -107,7 +107,11 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
         core1_buffer[i] = compressed[i]; //memcopy not avialable for volatile memory
     }
 
+#ifdef CORE1_STACK_HWM
+    uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d, stack HWM: %lu).\n", keycode, mod, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index, (unsigned long)core1_stack_high_water_mark());
+#else
     uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d).\n", keycode, mod, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index);
+#endif
     core0_decomp_count++;
     if(core0_decomp_count==0) { //handle overflow
         core0_decomp_count=1;
@@ -146,7 +150,11 @@ void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const 
         core1_buffer[i] =  data[i]; //memcopy not available for volatile memory
     }
 
+#ifdef CORE1_STACK_HWM
+    uprintf("CORE1: Key 0x%x (mod 0x%x) roi update: (added %d bytes, bit index: %d, stack HWM: %lu).\n", keycode, mod, data_len, core1_bit_index, (unsigned long)core1_stack_high_water_mark());
+#else
     uprintf("CORE1: Key 0x%x (mod 0x%x) roi update: (added %d bytes, bit index: %d).\n", keycode, mod, data_len, core1_bit_index);
+#endif
     core0_decomp_count++;
     if(core0_decomp_count==0) { //handle overflow
         core0_decomp_count=1;

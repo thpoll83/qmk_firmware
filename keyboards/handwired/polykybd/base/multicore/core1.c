@@ -3,10 +3,30 @@
 
 #include "hardware/structs/scb.h"
 
-#define CORE1_STACK_SIZE 1024
+#define CORE1_STACK_SIZE 384
 
 static uint32_t core1_stack[CORE1_STACK_SIZE/4]
     __attribute__((aligned(8)));
+
+#ifdef CORE1_STACK_HWM
+// Stack high-water-mark instrumentation. Enable by adding CORE1_STACK_HWM to
+// rules.mk (OPT_DEFS += -DCORE1_STACK_HWM). See readme.md "For developers".
+#define CORE1_STACK_SENTINEL 0xDEADBEEFu
+
+// Walks core1_stack from the low address upward and returns the number of bytes
+// that have been written (i.e. no longer hold the sentinel). The deepest the stack
+// ever reached during execution. Safe to call from core0 while core1 is running —
+// reads are racy w.r.t. transient writes but the high-water mark is monotonic so
+// at worst we under-report by one frame.
+uint32_t core1_stack_high_water_mark(void) {
+    const size_t total = CORE1_STACK_SIZE / sizeof(uint32_t);
+    size_t untouched = 0;
+    while (untouched < total && core1_stack[untouched] == CORE1_STACK_SENTINEL) {
+        untouched++;
+    }
+    return (total - untouched) * sizeof(uint32_t);
+}
+#endif
 
 static void __attribute__ ((naked)) core1_trampoline(void) {
     __asm volatile ("pop {r0, r1, pc}");
@@ -58,6 +78,14 @@ int core1_wrapper(int (*entry)(void), void *stack_base) {
 }
 
 void multicore_launch_core1_with_stack(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes) {
+#ifdef CORE1_STACK_HWM
+    // Paint the stack with a sentinel so core1_stack_high_water_mark() can later
+    // report the deepest point reached. Must happen before the trampoline values
+    // are written to the top three slots below.
+    for (size_t i = 0; i < stack_size_bytes / sizeof(uint32_t); i++) {
+        stack_bottom[i] = CORE1_STACK_SENTINEL;
+    }
+#endif
     uint32_t *stack_ptr = stack_bottom + stack_size_bytes / sizeof(uint32_t);
     // Push values onto top of stack for core1_trampoline
 

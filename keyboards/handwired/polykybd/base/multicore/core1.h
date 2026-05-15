@@ -9,6 +9,10 @@ void multicore_launch_core1(void);
 
 void core1_entry(void);
 
+#ifdef CORE1_STACK_HWM
+uint32_t core1_stack_high_water_mark(void);
+#endif
+
 static inline void dmb(void) {
     __asm volatile ("dmb" ::: "memory");
 }

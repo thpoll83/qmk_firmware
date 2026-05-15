@@ -47,6 +47,10 @@ while lang_key:
 
 void invert_display(uint8_t r, uint8_t c, bool state);
 
+// Set on boot; cleared after the first GET_ID exchange so the host can detect
+// a firmware restart even when it never lost the USB connection.
+static bool s_fresh_boot = true;
+
 
 // Notifies RGB/LED matrix of key event for animation effects based on key press state.
 void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
@@ -122,6 +126,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 6: //id
                 memset(data, 0, length);
                 memcpy(data, name, strlen(name));
+                if (s_fresh_boot) {
+                    data[2] = '*'; // host sees '*' instead of '.' → firmware just booted
+                    s_fresh_boot = false;
+                }
                 raw_hid_send(data, length);
                 break;
             case 7: //lang

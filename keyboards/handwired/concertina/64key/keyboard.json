@@ -16,8 +16,6 @@
     },
     "features": {
         "bootmagic": true,
-        "command": false,
-        "console": false,
         "extrakey": true,
         "mousekey": true,
         "nkro": false
@@ -29,8 +27,11 @@
     "diode_direction": "COL2ROW",
     "processor": "atmega32u4",
     "bootloader": "caterina",
+    "layout_aliases": {
+        "LAYOUT_64key": "LAYOUT"
+    },
     "layouts": {
-        "LAYOUT_64key": {
+        "LAYOUT": {
             "layout": [
                 {"matrix": [2, 2], "x": 2.5, "y": 0.4},
                 {"matrix": [2, 1], "x": 3.5, "y": 0},

@@ -1,7 +1,6 @@
 {
     "keyboard_name": "reviung34",
     "manufacturer": "gtips",
-    "url": "",
     "maintainer": "gtips",
     "usb": {
         "vid": "0x6774",
@@ -27,16 +26,17 @@
         "rows": ["F4", "F5", "F6", "F7"]
     },
     "diode_direction": "COL2ROW",
-    "processor": "atmega32u4",
-    "bootloader": "caterina",
+    "development_board": "promicro",
     "community_layouts": [
         "split_3x5_2"
     ],
     "layout_aliases": {
-        "LAYOUT_split_3x5_2": "LAYOUT_reviung34"
+        "LAYOUT_split_3x5_2": "LAYOUT_2x1u_left",
+        "LAYOUT_reviung34": "LAYOUT_2x1u_left",
+        "LAYOUT_reviung34_2u": "LAYOUT_1x2u_left",
     },
     "layouts": {
-        "LAYOUT_reviung34": {
+        "LAYOUT_2x1u_left": {
             "layout": [
                 {"matrix": [0, 0], "x": 0, "y": 0},
                 {"matrix": [0, 1], "x": 1, "y": 0},
@@ -81,7 +81,7 @@
                 {"matrix": [3, 8], "x": 6, "y": 3, "w": 2}
             ]
         },
-        "LAYOUT_reviung34_2u": {
+        "LAYOUT_1x2u_left": {
             "layout": [
                 {"matrix": [0, 0], "x": 0, "y": 0},
                 {"matrix": [0, 1], "x": 1, "y": 0},

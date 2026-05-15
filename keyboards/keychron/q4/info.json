@@ -5,6 +5,7 @@
     "bootloader": "stm32-dfu",
     "diode_direction": "ROW2COL",
     "dip_switch": {
+        "enabled": true,
         "matrix_grid": [ [4, 4] ]
     },
     "dynamic_keymap": {
@@ -17,8 +18,6 @@
     },
     "features": {
         "bootmagic": true,
-        "command": false,
-        "console": false,
         "extrakey": true,
         "mousekey": true,
         "nkro": true,

@@ -8,10 +8,12 @@
     "pid": "0xAE01",
     "device_version": "0.0.4"
   },
+  "build": {
+    "lto": true
+  },
   "features": {
     "audio": true,
     "bootmagic": true,
-    "command": false,
     "console": true,
     "extrakey": true,
     "mousekey": false,

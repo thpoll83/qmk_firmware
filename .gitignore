@@ -25,6 +25,8 @@
 *.la
 *.stackdump
 *.sym
+index.html
+firmware_list.json
 
 # QMK-specific
 api_data/v1
@@ -62,6 +64,9 @@ build/
 cmake-build-debug
 CMakeLists.txt
 *.pdf
+*.zip
+.env
+.envrc
 
 # Let these ones be user specific, since we have so many different configurations
 *.code-workspace
@@ -92,6 +97,11 @@ tags
 *.mpeg
 *.ttf
 *.otf
+# Un-ignore limited image file formats in docs
+!docs/public/**.gif
+!docs/public/**.jpg
+!docs/public/**.jpeg
+!docs/public/**.png
 
 # Things Travis sees
 /.vs
@@ -116,5 +126,6 @@ compile_commands.json
 
 # VIA(L) files that don't belong in QMK repo
 via*.json
+/keyboards/**/keymaps/via/*
 /keyboards/**/keymaps/vial/*
 keyboards/handwired/polykybd/split72/keymaps/default/lang/.~lock.lang_lut.xlsx#

@@ -60,9 +60,13 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
             if(newly_set & BOOTLOADER_DISPLAY) {
                 display_bootloader_message();
 #ifdef RGB_MATRIX_ENABLE
+                // Switch to a persistent solid-red effect on the slave at the
+                // minimum visible brightness. set_color_all alone gets wiped by
+                // the next frame of whatever effect was running; SOLID_COLOR +
+                // sethsv keeps red latched until power-cycle.
                 rgb_matrix_enable_noeeprom();
-                rgb_matrix_set_color_all(255, 0, 0);
-                rgb_matrix_update_pwm_buffers();
+                rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+                rgb_matrix_sethsv_noeeprom(0, 255, 8);
 #endif
             }
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;

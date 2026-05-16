@@ -91,6 +91,10 @@ void clear_all_displays(void) {
 
 void display_bootloader_message(void) {
     clear_all_displays();
+    // Drive the OLEDs at minimum contrast — once the master is in ROM
+    // bootloader nothing else will restore brightness, so use as little
+    // current as possible while keeping the message readable.
+    set_displays(MIN_BRIGHT, false);
     display_message(1, 1, u"BOOT-",   &FreeSansBold24pt7b);
     display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
 }
@@ -127,7 +131,9 @@ static uint8_t overlay_flags = 0;
 bool rgb_matrix_indicators_kb(void) {
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
-            rgb_matrix_set_color_all(255, 0, 0);
+            // Backstop in case the SOLID_COLOR mode change in the sync
+            // handler didn't take effect — value matched to the sethsv val.
+            rgb_matrix_set_color_all(8, 0, 0);
             return false;
         }
         if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
@@ -166,6 +172,15 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 #endif
 
 void sync_and_refresh_displays(void) {
+    // On the slave, once the bootloader screen is up nothing else may touch
+    // the keycap OLEDs — otherwise update_displays() redraws every keycap
+    // from the overlay buffers and wipes "BOOT-LOADER!". Master is in ROM
+    // bootloader and cannot recover, so freezing slave state until
+    // power-cycle is fine.
+    if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
+        return;
+    }
+
     bool layer_diff = false;
     bool state_diff = false;
 
@@ -1035,8 +1050,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
                 display_bootloader_message();
 #ifdef RGB_MATRIX_ENABLE
+                // corne42 has no RGB matrix hardware, so this block is a
+                // no-op there — kept for parity with split72.
                 rgb_matrix_enable_noeeprom();
-                rgb_matrix_set_color_all(255, 0, 0);
+                rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+                rgb_matrix_sethsv_noeeprom(0, 255, 8);
+                rgb_matrix_set_color_all(8, 0, 0);
                 rgb_matrix_update_pwm_buffers();
 #endif
                 return true;

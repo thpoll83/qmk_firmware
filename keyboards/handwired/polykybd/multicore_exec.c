@@ -13,7 +13,7 @@
 #ifdef USE_CORE1
 static volatile uint16_t core1_bit_index = 0;
 static volatile uint32_t core1_decomp_count = 0;
-static uint32_t core0_decomp_count = 0;
+static volatile uint32_t core0_decomp_count = 0;
 
 static volatile uint8_t core1_buffer[HID_DATA_MAX];
 static volatile int16_t core1_max_bitlen;
@@ -33,6 +33,16 @@ extern uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/Pix
 // Processes decompression and ROI update commands from core0 via FIFO, handles overlay buffer updates.
 // Global variables: core1_bit_index, core1_decomp_count, core1_idx, core1_max_bitlen, core1_buffer, core1_roi
 void core1_entry(void) {
+    // PRIMASK=1 on core1 — without this core1 hangs whenever overlay/ROI data is processed
+    // after the upstream-QMK-master merge (May 2026). The trap is the strongly-overridden
+    // ChibiOS Vector80 (SIO_IRQ_PROC1) handler whose CH_IRQ_EPILOGUE triggers an NMI via
+    // ICSR.NMIPENDSET, which then runs the ChibiOS context-switch NMI handler on a core
+    // with no thread state, hanging it. The FIFO IRQ on RP2040 has known quirks
+    // (see pico-sdk issue #284) where it appears to fire despite NVIC->ISER bit being clear.
+    // core1 in this codebase has no IRQ-driven work — multicore_fifo_pop_blocking polls
+    // FIFO_ST and doesn't need an IRQ to wake — so masking all IRQs here is safe.
+    // See keyboards/handwired/polykybd/CLAUDE.md for the full investigation.
+    __asm volatile("cpsid i" ::: "memory");
     multicore_fifo_drain();
     while (true) {
         uint32_t cmd = multicore_fifo_pop_blocking();  // blocks if empty
@@ -97,7 +107,11 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
         core1_buffer[i] = compressed[i]; //memcopy not avialable for volatile memory
     }
 
+#ifdef CORE1_STACK_HWM
+    uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d, stack HWM: %lu).\n", keycode, mod, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index, (unsigned long)core1_stack_high_water_mark());
+#else
     uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d).\n", keycode, mod, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index);
+#endif
     core0_decomp_count++;
     if(core0_decomp_count==0) { //handle overflow
         core0_decomp_count=1;
@@ -108,6 +122,10 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
 }
 
 void core1_roi_start(void) {
+    // No wait or dmb needed: RESET touches only core1_bit_index (not the shared buffers),
+    // FIFO ordering guarantees any in-flight DECOMPRESS/ROI_UPDATE completes atomically
+    // before this RESET runs, and the immediately-following core1_update_roi() performs
+    // its own decomp-count wait before writing buffers.
     multicore_fifo_push_blocking(CORE1_CMD_RESET_BIT_IDX);
 }
 
@@ -128,7 +146,11 @@ void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const 
         core1_buffer[i] =  data[i]; //memcopy not available for volatile memory
     }
 
+#ifdef CORE1_STACK_HWM
+    uprintf("CORE1: Key 0x%x (mod 0x%x) roi update: (added %d bytes, bit index: %d, stack HWM: %lu).\n", keycode, mod, data_len, core1_bit_index, (unsigned long)core1_stack_high_water_mark());
+#else
     uprintf("CORE1: Key 0x%x (mod 0x%x) roi update: (added %d bytes, bit index: %d).\n", keycode, mod, data_len, core1_bit_index);
+#endif
     core0_decomp_count++;
     if(core0_decomp_count==0) { //handle overflow
         core0_decomp_count=1;

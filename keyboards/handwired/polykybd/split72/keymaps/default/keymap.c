@@ -117,11 +117,10 @@ void clear_all_displays(void) {
 
 void display_bootloader_message(void) {
     clear_all_displays();
-    // Drive the OLEDs at minimum contrast so the bootloader screen is as dim
-    // as possible — once the master is in ROM bootloader nothing else will
-    // restore the brightness, so we want to consume as little current as
-    // possible while keeping the message readable.
-    set_displays(MIN_BRIGHT, false);
+    // Dim OLED contrast. set_displays() sends SETCONTRAST(value - 1), so
+    // value=10 → hardware contrast 9/255 ≈ 18% of max — dim but legible.
+    // MIN_BRIGHT (1 → SETCONTRAST 0) was tested and proved unreadable.
+    set_displays(10, false);
     display_message(1, 1, u"BOOT-",   &FreeSansBold24pt7b);
     display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
 }

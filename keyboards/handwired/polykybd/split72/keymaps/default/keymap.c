@@ -169,7 +169,7 @@ bool rgb_matrix_indicators_kb(void) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
             // Backstop in case the SOLID_COLOR mode change in the sync
             // handler didn't take effect — value matched to the sethsv val.
-            rgb_matrix_set_color_all(8, 0, 0);
+            rgb_matrix_set_color_all(64, 0, 0);
             return false;
         }
         if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
@@ -1266,25 +1266,29 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     const poly_layer_t* global_layer = get_global_layer();
     if (record->event.pressed) {
         switch (keycode) {
-            case QK_BOOTLOADER:
+            case QK_BOOTLOADER: {
                 uprintf("Bootloader entered. Please copy new Firmware.\n");
                 // Tell the slave first — once we return true, QMK calls
                 // reset_keyboard() and the master goes dark before housekeeping
                 // could push a deferred state diff over UART.
                 access_local_state()->overlay_flags |= BOOTLOADER_DISPLAY;
-                send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
+                uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
+                uprintf("Master: BOOTLOADER_DISPLAY sync ack=%d\n", ack);
                 display_bootloader_message();
 #ifdef RGB_MATRIX_ENABLE
-                // Mode-switch latches the slave into solid red; set_color_all
+                // Mode-switch + sethsv keeps slave in dim solid red; set_color_all
                 // + update_pwm_buffers immediately flushes red to the master's
                 // LED driver (no further frames will render before reset).
+                // Value is scaled by RGB_MATRIX_MAXIMUM_BRIGHTNESS (100);
+                // val=64 → ~25 PWM, dim but reliably visible.
                 rgb_matrix_enable_noeeprom();
                 rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-                rgb_matrix_sethsv_noeeprom(0, 255, 8);
-                rgb_matrix_set_color_all(8, 0, 0);
+                rgb_matrix_sethsv_noeeprom(0, 255, 64);
+                rgb_matrix_set_color_all(64, 0, 0);
                 rgb_matrix_update_pwm_buffers();
 #endif
                 return true;
+            }
             case KC_A ... KC_Z:
                 set_local_last_latin_keycode(keycode);
                 if((get_mods() & MOD_MASK_ALT) == 0 && addlang) {

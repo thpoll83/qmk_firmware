@@ -61,13 +61,15 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
                 uprint("Slave: BOOTLOADER_DISPLAY received\n");
                 display_bootloader_message();
 #ifdef RGB_MATRIX_ENABLE
-                // Persistent solid red. Value scales through
-                // RGB_MATRIX_MAXIMUM_BRIGHTNESS (100); val=64 → ~25 PWM,
-                // dim but reliably visible.
+                // Persistent solid red at low brightness. Value scales
+                // through RGB_MATRIX_MAXIMUM_BRIGHTNESS (100); val=24 →
+                // ~9 PWM, clearly visible but dim. sync_and_refresh_displays
+                // re-asserts this each cycle as a self-heal in case standard
+                // QMK split sync flips rgb_matrix_config.enable back to 0.
                 rgb_matrix_enable_noeeprom();
                 rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-                rgb_matrix_sethsv_noeeprom(0, 255, 64);
-                rgb_matrix_set_color_all(64, 0, 0);
+                rgb_matrix_sethsv_noeeprom(0, 255, 24);
+                rgb_matrix_set_color_all(24, 0, 0);
                 rgb_matrix_update_pwm_buffers();
 #endif
             }

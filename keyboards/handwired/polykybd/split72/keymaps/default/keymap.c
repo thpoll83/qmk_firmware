@@ -166,9 +166,10 @@ static uint8_t overlay_flags = 0;
 bool rgb_matrix_indicators_kb(void) {
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
-            // Backstop in case the SOLID_COLOR mode change in the sync
-            // handler didn't take effect — value matched to the sethsv val.
-            rgb_matrix_set_color_all(64, 0, 0);
+            // Backstop on top of the SOLID_COLOR mode + re-assert in
+            // sync_and_refresh_displays. Only runs when effect != 0, so this
+            // only helps if rgb_matrix_config.enable is true.
+            rgb_matrix_set_color_all(24, 0, 0);
             return false;
         }
         if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
@@ -215,6 +216,23 @@ void sync_and_refresh_displays(void) {
     // The master will never recover from this (it's in the ROM bootloader),
     // so freezing the slave display state until power-cycle is fine.
     if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
+#ifdef RGB_MATRIX_ENABLE
+        // Re-assert solid red every cycle. Standard QMK split RGB sync or
+        // some transient state could flip rgb_matrix_config.enable to 0
+        // after our one-shot setup in user_sync_poly_data_handler; once
+        // enable=0 the matrix renders RGB_MATRIX_NONE and indicators_kb is
+        // skipped (rgb_matrix.c rgb_task_render: `if (effect)` gate), so
+        // the backstop is dead too. Idempotent calls fix the race.
+        if (!rgb_matrix_is_enabled()) {
+            rgb_matrix_enable_noeeprom();
+        }
+        if (rgb_matrix_get_mode() != RGB_MATRIX_SOLID_COLOR) {
+            rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+        }
+        if (rgb_matrix_get_val() != 24) {
+            rgb_matrix_sethsv_noeeprom(0, 255, 24);
+        }
+#endif
         return;
     }
 
@@ -1279,11 +1297,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 // + update_pwm_buffers immediately flushes red to the master's
                 // LED driver (no further frames will render before reset).
                 // Value is scaled by RGB_MATRIX_MAXIMUM_BRIGHTNESS (100);
-                // val=64 → ~25 PWM, dim but reliably visible.
+                // val=24 → ~9 PWM, clearly visible but dim.
                 rgb_matrix_enable_noeeprom();
                 rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-                rgb_matrix_sethsv_noeeprom(0, 255, 64);
-                rgb_matrix_set_color_all(64, 0, 0);
+                rgb_matrix_sethsv_noeeprom(0, 255, 24);
+                rgb_matrix_set_color_all(24, 0, 0);
                 rgb_matrix_update_pwm_buffers();
 #endif
                 return true;

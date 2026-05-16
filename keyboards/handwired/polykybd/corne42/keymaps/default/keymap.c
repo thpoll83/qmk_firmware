@@ -131,9 +131,9 @@ static uint8_t overlay_flags = 0;
 bool rgb_matrix_indicators_kb(void) {
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
-            // Backstop in case the SOLID_COLOR mode change in the sync
-            // handler didn't take effect — value matched to the sethsv val.
-            rgb_matrix_set_color_all(64, 0, 0);
+            // Backstop on top of SOLID_COLOR mode + re-assert. corne42 has
+            // no RGB hardware so this is dead code in practice.
+            rgb_matrix_set_color_all(24, 0, 0);
             return false;
         }
         if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
@@ -176,7 +176,7 @@ void sync_and_refresh_displays(void) {
     // the keycap OLEDs — otherwise update_displays() redraws every keycap
     // from the overlay buffers and wipes "BOOT-LOADER!". Master is in ROM
     // bootloader and cannot recover, so freezing slave state until
-    // power-cycle is fine.
+    // power-cycle is fine. corne42 has no RGB hardware so no RGB re-assert.
     if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
         return;
     }
@@ -1055,8 +1055,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 // no-op there — kept for parity with split72.
                 rgb_matrix_enable_noeeprom();
                 rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-                rgb_matrix_sethsv_noeeprom(0, 255, 64);
-                rgb_matrix_set_color_all(64, 0, 0);
+                rgb_matrix_sethsv_noeeprom(0, 255, 24);
+                rgb_matrix_set_color_all(24, 0, 0);
                 rgb_matrix_update_pwm_buffers();
 #endif
                 return true;

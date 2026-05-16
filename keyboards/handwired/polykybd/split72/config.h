@@ -84,12 +84,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SPLIT_POINTING_ENABLE
 
 // Pointing device is on the right split.
-#define POINTING_DEVICE_COMBINED
+// Use POINTING_DEVICE_COMBINED instead if a left trackpad is also added.
+#define POINTING_DEVICE_RIGHT
 
 // Limits the frequency that the sensor is polled for motion.
 #define POINTING_DEVICE_TASK_THROTTLE_MS 1
 
-#define POINTING_DEVICE_ROTATION_90_RIGHT
+// POINTING_DEVICE_ROTATION_90_RIGHT only applies in POINTING_DEVICE_COMBINED mode.
+#define POINTING_DEVICE_ROTATION_90
 //#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
 
 //#define POINTING_DEVICE_DEBUG

@@ -514,9 +514,23 @@ void send_raw_hid(uint8_t *data, uint8_t length) {
     send_report(USB_ENDPOINT_IN_RAW, data, length);
 }
 
+// Keyboard-level gate. Return false to skip pulling a packet off the Raw HID
+// OUT queue this main-loop pass (e.g. when a worker the receive callback hands
+// off to is still busy). The packet stays in the USB driver's OUT buffer queue
+// — sized RAW_OUT_CAPACITY (default 4) — so the host doesn't lose data; we
+// just give the rest of the keyboard task time to run.
+__attribute__((weak)) bool raw_hid_pre_receive_kb(void) {
+    return true;
+}
+
 void raw_hid_task(void) {
+    if (!raw_hid_pre_receive_kb()) {
+        return;
+    }
     uint8_t buffer[RAW_EPSIZE];
-    while (receive_report(USB_ENDPOINT_OUT_RAW, buffer, sizeof(buffer))) {
+    // Handle at most one packet per main-loop pass so matrix_task always gets a
+    // turn between two raw HID receives, even when the OUT queue is full.
+    if (receive_report(USB_ENDPOINT_OUT_RAW, buffer, sizeof(buffer))) {
         raw_hid_receive(buffer, sizeof(buffer));
     }
 }

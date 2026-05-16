@@ -91,12 +91,28 @@ void core1_entry(void) {
     }
 }
 
+bool core1_is_busy(void) {
+    dmb();
+    return core0_decomp_count != core1_decomp_count;
+}
+
+// Strong override of the weak hook in tmk_core/protocol/chibios/usb_main.c:
+// when core1 is still chewing on the previous fragment, refuse to pull the
+// next packet off the Raw HID OUT queue this main-loop pass. The packet stays
+// queued by the USB driver (RAW_OUT_CAPACITY=4) and matrix_task gets to run.
+bool raw_hid_pre_receive_kb(void);
+bool raw_hid_pre_receive_kb(void) {
+    return !core1_is_busy();
+}
+
 void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed) {
-    //wait in case decompression is still ongoing
+    // Defense in depth: callers that respect the raw_hid_pre_receive_kb() gate
+    // will never enter the wait. For any caller that didn't gate (e.g. the
+    // split-sync bridge path), spin without the uprintf — the previous wait
+    // body was burning core0 cycles in a format-and-sink path that starved
+    // matrix scan during back-pressure.
     dmb();
     while(core0_decomp_count!=core1_decomp_count) {
-        //no wait function needed as the uprintf inside the loop will already take some time
-        uprintf("CORE1: Waiting for decompression...\n");
         dmb();
     }
     //copy data to dedicated buffers
@@ -107,10 +123,15 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
         core1_buffer[i] = compressed[i]; //memcopy not avialable for volatile memory
     }
 
-#ifdef CORE1_STACK_HWM
+#ifdef POLY_DEBUG_HID
+#    ifdef CORE1_STACK_HWM
     uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d, stack HWM: %lu).\n", keycode, mod, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index, (unsigned long)core1_stack_high_water_mark());
-#else
+#    else
     uprintf("CORE1: Key 0x%x (mod 0x%x) fragment decompression: (added %d bytes, bit index: %d).\n", keycode, mod, core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX, core1_bit_index);
+#    endif
+#else
+    (void)keycode;
+    (void)mod;
 #endif
     core0_decomp_count++;
     if(core0_decomp_count==0) { //handle overflow
@@ -130,11 +151,9 @@ void core1_roi_start(void) {
 }
 
 void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi) {
-    //wait in case decompression is still ongoing
+    // See core1_decompress_fragment for the backpressure rationale.
     dmb();
     while(core0_decomp_count!=core1_decomp_count) {
-        //no wait function needed as the uprintf inside the loop will already take some time
-        uprintf("CORE1: Waiting for roi update...\n");
         dmb();
     }
     //copy data to dedicated buffers
@@ -146,10 +165,15 @@ void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const 
         core1_buffer[i] =  data[i]; //memcopy not available for volatile memory
     }
 
-#ifdef CORE1_STACK_HWM
+#ifdef POLY_DEBUG_HID
+#    ifdef CORE1_STACK_HWM
     uprintf("CORE1: Key 0x%x (mod 0x%x) roi update: (added %d bytes, bit index: %d, stack HWM: %lu).\n", keycode, mod, data_len, core1_bit_index, (unsigned long)core1_stack_high_water_mark());
-#else
+#    else
     uprintf("CORE1: Key 0x%x (mod 0x%x) roi update: (added %d bytes, bit index: %d).\n", keycode, mod, data_len, core1_bit_index);
+#    endif
+#else
+    (void)keycode;
+    (void)mod;
 #endif
     core0_decomp_count++;
     if(core0_decomp_count==0) { //handle overflow

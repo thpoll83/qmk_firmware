@@ -1423,6 +1423,14 @@ void poly_suspend(void) {
 }
 
 void suspend_power_down_kb(void) {
+    // Master entering the RP2040 ROM bootloader trips USB suspend on the
+    // slave a few ms after the sync handler painted the bootloader screen.
+    // Without this guard, poly_suspend() queues contrast=0 and the next
+    // sync_and_refresh_displays would turn the OLEDs off. Once
+    // BOOTLOADER_DISPLAY is set the only way out is power-cycle.
+    if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
+        return;
+    }
     poly_suspend();
     sync_and_refresh_displays();
     suspend_power_down_user();

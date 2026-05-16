@@ -1683,6 +1683,15 @@ void poly_suspend(void) {
 
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
 void suspend_power_down_kb(void) {
+    // Master entering the RP2040 ROM bootloader trips USB suspend on the
+    // slave a few ms after the sync handler painted the bootloader screen.
+    // Without this guard, poly_suspend() + rgb_matrix_disable_noeeprom()
+    // immediately wipe the red and queue contrast=0 → the slave goes black.
+    // Once BOOTLOADER_DISPLAY is set the only way out is power-cycle, so
+    // freezing the suspend path is correct.
+    if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
+        return;
+    }
     poly_suspend();
     rgb_matrix_disable_noeeprom();
     sync_and_refresh_displays();

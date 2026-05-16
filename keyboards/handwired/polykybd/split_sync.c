@@ -42,7 +42,10 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
             // mirroring the master's case-11 handling. Without this, a mapping
             // bridge transaction arriving before housekeeping runs would have its
             // use_overlay bits wiped by a later deferred reset_overlay_usage().
-            uint8_t newly_set = (incoming->overlay_flags & ~current->overlay_flags);
+            uint8_t newly_set     = (incoming->overlay_flags & ~current->overlay_flags);
+#ifdef RGB_MATRIX_ENABLE
+            uint8_t newly_cleared = (current->overlay_flags  & ~incoming->overlay_flags);
+#endif
             copy_local_state(incoming);
             if(newly_set & OVERLAY_ACTION_FLAGS) {
                 apply_overlay_action_flags(newly_set);
@@ -52,27 +55,16 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
                 // won't fire now that local matches global — trigger the refresh ourselves.
                 request_disp_refresh();
             }
-            // Master is about to enter the RP2040 ROM bootloader. Render the
-            // bootloader message on the slave's keycap displays and latch a
-            // solid red on the RGB matrix so the slave half stays visibly lit
-            // while master is dark. The flag is left set so rgb_matrix_indicators_kb
-            // keeps forcing red until the slave is power-cycled by the reflash.
             if(newly_set & BOOTLOADER_DISPLAY) {
                 uprint("Slave: BOOTLOADER_DISPLAY received\n");
                 display_bootloader_message();
-#ifdef RGB_MATRIX_ENABLE
-                // Persistent solid red at low brightness. Value scales
-                // through RGB_MATRIX_MAXIMUM_BRIGHTNESS (100); val=24 →
-                // ~9 PWM, clearly visible but dim. sync_and_refresh_displays
-                // re-asserts this each cycle as a self-heal in case standard
-                // QMK split sync flips rgb_matrix_config.enable back to 0.
-                rgb_matrix_enable_noeeprom();
-                rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-                rgb_matrix_sethsv_noeeprom(0, 255, 24);
-                rgb_matrix_set_color_all(24, 0, 0);
-                rgb_matrix_update_pwm_buffers();
-#endif
             }
+#ifdef RGB_MATRIX_ENABLE
+            // Disable RGB so the normal split transport restores master's config cleanly.
+            if(newly_cleared & BOOTLOADER_DISPLAY) {
+                rgb_matrix_disable_noeeprom();
+            }
+#endif
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

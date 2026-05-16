@@ -42,6 +42,7 @@
 #include "state.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
+#include "poly_util.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -99,34 +100,7 @@ void oled_update_buffer(void);
 void poly_suspend(void);
 
 
-// Selects all shift registers to communicate with all displays.
-// Global variables: (none - uses SPI functions only)
-void select_all_displays(void) {
-    // make sure we are talking to all shift registers
-    sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);
-}
-
-// Clears all displays by setting buffer to zero and sending to all shift registers.
-// Global variables: (none - delegates to display functions)
-void clear_all_displays(void) {
-    select_all_displays();
-
-    kdisp_set_buffer(0x00);
-    kdisp_send_buffer();
-}
-
-void display_bootloader_message(void) {
-    clear_all_displays();
-    // Dim OLED contrast. set_displays() sends SETCONTRAST(value - 1), so
-    // value=10 → hardware contrast 9/255 ≈ 18% of max — dim but legible.
-    // MIN_BRIGHT (1 → SETCONTRAST 0) was tested and proved unreadable.
-    set_displays(10, false);
-    display_message(1, 1, u"BOOT-",   &FreeSansBold24pt7b);
-    display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
-}
-
 // Initializes SPI hardware for display communication after hardware reset.
-// Global variables: (none - initializes hardware only)
 void early_hardware_init_post(void) {
     spi_hw_setup();
 }
@@ -166,9 +140,7 @@ static uint8_t overlay_flags = 0;
 bool rgb_matrix_indicators_kb(void) {
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
-            // Backstop on top of the SOLID_COLOR mode + re-assert in
-            // sync_and_refresh_displays. Only runs when effect != 0, so this
-            // only helps if rgb_matrix_config.enable is true.
+            // Backstop: force red even if rgb_matrix_config.enable gets cleared.
             rgb_matrix_set_color_all(24, 0, 0);
             return false;
         }
@@ -210,19 +182,9 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
 // Global variables: flags, overlay_flags
 void sync_and_refresh_displays(void) {
-    // On the slave, once the bootloader screen is up we want nothing else to
-    // touch the keycap OLEDs — otherwise the next state_diff branch redraws
-    // every keycap from the overlay buffers and wipes "BOOT-LOADER!".
-    // The master will never recover from this (it's in the ROM bootloader),
-    // so freezing the slave display state until power-cycle is fine.
+    // Freeze slave display while bootloader is active; re-assert RGB each cycle.
     if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
 #ifdef RGB_MATRIX_ENABLE
-        // Re-assert solid red every cycle. Standard QMK split RGB sync or
-        // some transient state could flip rgb_matrix_config.enable to 0
-        // after our one-shot setup in user_sync_poly_data_handler; once
-        // enable=0 the matrix renders RGB_MATRIX_NONE and indicators_kb is
-        // skipped (rgb_matrix.c rgb_task_render: `if (effect)` gate), so
-        // the backstop is dead too. Idempotent calls fix the race.
         if (!rgb_matrix_is_enabled()) {
             rgb_matrix_enable_noeeprom();
         }
@@ -1285,25 +1247,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         switch (keycode) {
             case QK_BOOTLOADER: {
                 uprintf("Bootloader entered. Please copy new Firmware.\n");
-                // Tell the slave first — once we return true, QMK calls
-                // reset_keyboard() and the master goes dark before housekeeping
-                // could push a deferred state diff over UART.
+                // Sync slave before returning true — QMK resets before housekeeping runs.
                 access_local_state()->overlay_flags |= BOOTLOADER_DISPLAY;
                 uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
                 uprintf("Master: BOOTLOADER_DISPLAY sync ack=%d\n", ack);
                 display_bootloader_message();
-#ifdef RGB_MATRIX_ENABLE
-                // Mode-switch + sethsv keeps slave in dim solid red; set_color_all
-                // + update_pwm_buffers immediately flushes red to the master's
-                // LED driver (no further frames will render before reset).
-                // Value is scaled by RGB_MATRIX_MAXIMUM_BRIGHTNESS (100);
-                // val=24 → ~9 PWM, clearly visible but dim.
-                rgb_matrix_enable_noeeprom();
-                rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-                rgb_matrix_sethsv_noeeprom(0, 255, 24);
-                rgb_matrix_set_color_all(24, 0, 0);
-                rgb_matrix_update_pwm_buffers();
-#endif
                 return true;
             }
             case KC_A ... KC_Z:
@@ -1704,12 +1652,7 @@ void poly_suspend(void) {
 
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
 void suspend_power_down_kb(void) {
-    // Master entering the RP2040 ROM bootloader trips USB suspend on the
-    // slave a few ms after the sync handler painted the bootloader screen.
-    // Without this guard, poly_suspend() + rgb_matrix_disable_noeeprom()
-    // immediately wipe the red and queue contrast=0 → the slave goes black.
-    // Once BOOTLOADER_DISPLAY is set the only way out is power-cycle, so
-    // freezing the suspend path is correct.
+    // USB suspend fires on slave when master enters bootloader; skip to keep displays lit.
     if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
         return;
     }

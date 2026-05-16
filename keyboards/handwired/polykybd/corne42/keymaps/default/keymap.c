@@ -42,6 +42,7 @@
 #include "state.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
+#include "poly_util.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -78,27 +79,6 @@ void set_selected_displays(int8_t old_value, int8_t new_value);
 void oled_update_buffer(void);
 void poly_suspend(void);
 
-
-void select_all_displays(void) {
-    sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);
-}
-
-void clear_all_displays(void) {
-    select_all_displays();
-    kdisp_set_buffer(0x00);
-    kdisp_send_buffer();
-}
-
-void display_bootloader_message(void) {
-    clear_all_displays();
-    // Dim OLED contrast. set_displays() sends SETCONTRAST(value - 1), so
-    // value=10 → hardware contrast 9/255 ≈ 18% of max — dim but legible.
-    // MIN_BRIGHT (1 → SETCONTRAST 0) was tested and proved unreadable.
-    set_displays(10, false);
-    display_message(1, 1, u"BOOT-",   &FreeSansBold24pt7b);
-    display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
-}
-
 void early_hardware_init_post(void) {
     spi_hw_setup();
 }
@@ -131,8 +111,7 @@ static uint8_t overlay_flags = 0;
 bool rgb_matrix_indicators_kb(void) {
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
-            // Backstop on top of SOLID_COLOR mode + re-assert. corne42 has
-            // no RGB hardware so this is dead code in practice.
+            // Backstop: force red even if rgb_matrix_config.enable gets cleared.
             rgb_matrix_set_color_all(24, 0, 0);
             return false;
         }
@@ -172,11 +151,7 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 #endif
 
 void sync_and_refresh_displays(void) {
-    // On the slave, once the bootloader screen is up nothing else may touch
-    // the keycap OLEDs — otherwise update_displays() redraws every keycap
-    // from the overlay buffers and wipes "BOOT-LOADER!". Master is in ROM
-    // bootloader and cannot recover, so freezing slave state until
-    // power-cycle is fine. corne42 has no RGB hardware so no RGB re-assert.
+    // Freeze slave display while bootloader is active.
     if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
         return;
     }
@@ -1043,22 +1018,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         switch (keycode) {
             case QK_BOOTLOADER: {
                 uprintf("Bootloader entered. Please copy new Firmware.\n");
-                // Tell the slave first — once we return true, QMK calls
-                // reset_keyboard() and the master goes dark before housekeeping
-                // could push a deferred state diff over UART.
+                // Sync slave before returning true — QMK resets before housekeeping runs.
                 access_local_state()->overlay_flags |= BOOTLOADER_DISPLAY;
                 uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
                 uprintf("Master: BOOTLOADER_DISPLAY sync ack=%d\n", ack);
                 display_bootloader_message();
-#ifdef RGB_MATRIX_ENABLE
-                // corne42 has no RGB matrix hardware, so this block is a
-                // no-op there — kept for parity with split72.
-                rgb_matrix_enable_noeeprom();
-                rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-                rgb_matrix_sethsv_noeeprom(0, 255, 24);
-                rgb_matrix_set_color_all(24, 0, 0);
-                rgb_matrix_update_pwm_buffers();
-#endif
                 return true;
             }
             case KC_A ... KC_Z:
@@ -1425,11 +1389,7 @@ void poly_suspend(void) {
 }
 
 void suspend_power_down_kb(void) {
-    // Master entering the RP2040 ROM bootloader trips USB suspend on the
-    // slave a few ms after the sync handler painted the bootloader screen.
-    // Without this guard, poly_suspend() queues contrast=0 and the next
-    // sync_and_refresh_displays would turn the OLEDs off. Once
-    // BOOTLOADER_DISPLAY is set the only way out is power-cycle.
+    // USB suspend fires on slave when master enters bootloader; skip to keep displays lit.
     if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
         return;
     }

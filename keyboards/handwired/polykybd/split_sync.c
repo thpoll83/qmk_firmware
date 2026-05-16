@@ -18,6 +18,9 @@
 #include "state.h"
 #include "side.h"
 #include "matrix_helper.h"
+#include "poly_util.h"
+
+void rgb_matrix_update_pwm_buffers(void);
 
 void invert_display(uint8_t r, uint8_t c, bool state);
 
@@ -39,7 +42,10 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
             // mirroring the master's case-11 handling. Without this, a mapping
             // bridge transaction arriving before housekeeping runs would have its
             // use_overlay bits wiped by a later deferred reset_overlay_usage().
-            uint8_t newly_set = (incoming->overlay_flags & ~current->overlay_flags);
+            uint8_t newly_set     = (incoming->overlay_flags & ~current->overlay_flags);
+#ifdef RGB_MATRIX_ENABLE
+            uint8_t newly_cleared = (current->overlay_flags  & ~incoming->overlay_flags);
+#endif
             copy_local_state(incoming);
             if(newly_set & OVERLAY_ACTION_FLAGS) {
                 apply_overlay_action_flags(newly_set);
@@ -49,6 +55,16 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
                 // won't fire now that local matches global — trigger the refresh ourselves.
                 request_disp_refresh();
             }
+            if(newly_set & BOOTLOADER_DISPLAY) {
+                uprint("Slave: BOOTLOADER_DISPLAY received\n");
+                display_bootloader_message();
+            }
+#ifdef RGB_MATRIX_ENABLE
+            // Disable RGB so the normal split transport restores master's config cleanly.
+            if(newly_cleared & BOOTLOADER_DISPLAY) {
+                rgb_matrix_disable_noeeprom();
+            }
+#endif
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

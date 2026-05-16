@@ -42,6 +42,7 @@
 #include "state.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
+#include "poly_util.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -99,24 +100,7 @@ void oled_update_buffer(void);
 void poly_suspend(void);
 
 
-// Selects all shift registers to communicate with all displays.
-// Global variables: (none - uses SPI functions only)
-void select_all_displays(void) {
-    // make sure we are talking to all shift registers
-    sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);
-}
-
-// Clears all displays by setting buffer to zero and sending to all shift registers.
-// Global variables: (none - delegates to display functions)
-void clear_all_displays(void) {
-    select_all_displays();
-
-    kdisp_set_buffer(0x00);
-    kdisp_send_buffer();
-}
-
 // Initializes SPI hardware for display communication after hardware reset.
-// Global variables: (none - initializes hardware only)
 void early_hardware_init_post(void) {
     spi_hw_setup();
 }
@@ -154,9 +138,16 @@ static uint8_t overlay_flags = 0;
 // ensuring LEDs stay dark regardless of what the transport wrote to enable.
 #ifdef RGB_MATRIX_ENABLE
 bool rgb_matrix_indicators_kb(void) {
-    if (!is_keyboard_master() && (get_local_state()->flags & STATUS_DISP_ON) == 0) {
-        rgb_matrix_set_color_all(0, 0, 0);
-        return false;
+    if (!is_keyboard_master()) {
+        if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
+            // Backstop: force red even if rgb_matrix_config.enable gets cleared.
+            rgb_matrix_set_color_all(24, 0, 0);
+            return false;
+        }
+        if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
+            rgb_matrix_set_color_all(0, 0, 0);
+            return false;
+        }
     }
     return rgb_matrix_indicators_user();
 }
@@ -191,6 +182,22 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
 // Global variables: flags, overlay_flags
 void sync_and_refresh_displays(void) {
+    // Freeze slave display while bootloader is active; re-assert RGB each cycle.
+    if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
+#ifdef RGB_MATRIX_ENABLE
+        if (!rgb_matrix_is_enabled()) {
+            rgb_matrix_enable_noeeprom();
+        }
+        if (rgb_matrix_get_mode() != RGB_MATRIX_SOLID_COLOR) {
+            rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+        }
+        if (rgb_matrix_get_val() != 24) {
+            rgb_matrix_sethsv_noeeprom(0, 255, 24);
+        }
+#endif
+        return;
+    }
+
     bool layer_diff = false;
     bool state_diff = false;
 
@@ -1238,12 +1245,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     const poly_layer_t* global_layer = get_global_layer();
     if (record->event.pressed) {
         switch (keycode) {
-            case QK_BOOTLOADER:
+            case QK_BOOTLOADER: {
                 uprintf("Bootloader entered. Please copy new Firmware.\n");
-                clear_all_displays();
-                display_message(1, 1, u"BOOT-", &FreeSansBold24pt7b);
-                display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
+                // Sync slave before returning true — QMK resets before housekeeping runs.
+                access_local_state()->overlay_flags |= BOOTLOADER_DISPLAY;
+                uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
+                uprintf("Master: BOOTLOADER_DISPLAY sync ack=%d\n", ack);
+                display_bootloader_message();
                 return true;
+            }
             case KC_A ... KC_Z:
                 set_local_last_latin_keycode(keycode);
                 if((get_mods() & MOD_MASK_ALT) == 0 && addlang) {
@@ -1642,6 +1652,10 @@ void poly_suspend(void) {
 
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
 void suspend_power_down_kb(void) {
+    // USB suspend fires on slave when master enters bootloader; skip to keep displays lit.
+    if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
+        return;
+    }
     poly_suspend();
     rgb_matrix_disable_noeeprom();
     sync_and_refresh_displays();

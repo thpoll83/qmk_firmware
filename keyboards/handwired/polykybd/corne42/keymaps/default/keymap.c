@@ -42,6 +42,7 @@
 #include "state.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
+#include "poly_util.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -78,17 +79,6 @@ void set_selected_displays(int8_t old_value, int8_t new_value);
 void oled_update_buffer(void);
 void poly_suspend(void);
 
-
-void select_all_displays(void) {
-    sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);
-}
-
-void clear_all_displays(void) {
-    select_all_displays();
-    kdisp_set_buffer(0x00);
-    kdisp_send_buffer();
-}
-
 void early_hardware_init_post(void) {
     spi_hw_setup();
 }
@@ -119,9 +109,16 @@ static uint8_t overlay_flags = 0;
 
 #ifdef RGB_MATRIX_ENABLE
 bool rgb_matrix_indicators_kb(void) {
-    if (!is_keyboard_master() && (get_local_state()->flags & STATUS_DISP_ON) == 0) {
-        rgb_matrix_set_color_all(0, 0, 0);
-        return false;
+    if (!is_keyboard_master()) {
+        if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
+            // Backstop: force red even if rgb_matrix_config.enable gets cleared.
+            rgb_matrix_set_color_all(24, 0, 0);
+            return false;
+        }
+        if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
+            rgb_matrix_set_color_all(0, 0, 0);
+            return false;
+        }
     }
     return rgb_matrix_indicators_user();
 }
@@ -154,6 +151,11 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 #endif
 
 void sync_and_refresh_displays(void) {
+    // Freeze slave display while bootloader is active.
+    if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
+        return;
+    }
+
     bool layer_diff = false;
     bool state_diff = false;
 
@@ -1014,12 +1016,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     const poly_layer_t* global_layer = get_global_layer();
     if (record->event.pressed) {
         switch (keycode) {
-            case QK_BOOTLOADER:
+            case QK_BOOTLOADER: {
                 uprintf("Bootloader entered. Please copy new Firmware.\n");
-                clear_all_displays();
-                display_message(1, 1, u"BOOT-", &FreeSansBold24pt7b);
-                display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
+                // Sync slave before returning true — QMK resets before housekeeping runs.
+                access_local_state()->overlay_flags |= BOOTLOADER_DISPLAY;
+                uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
+                uprintf("Master: BOOTLOADER_DISPLAY sync ack=%d\n", ack);
+                display_bootloader_message();
                 return true;
+            }
             case KC_A ... KC_Z:
                 set_local_last_latin_keycode(keycode);
                 if((get_mods() & MOD_MASK_ALT) == 0 && addlang) {
@@ -1384,6 +1389,10 @@ void poly_suspend(void) {
 }
 
 void suspend_power_down_kb(void) {
+    // USB suspend fires on slave when master enters bootloader; skip to keep displays lit.
+    if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
+        return;
+    }
     poly_suspend();
     sync_and_refresh_displays();
     suspend_power_down_user();

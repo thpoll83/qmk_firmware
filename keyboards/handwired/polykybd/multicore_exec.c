@@ -122,14 +122,10 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
 }
 
 void core1_roi_start(void) {
-    //wait for any prior in-flight command to finish before pushing RESET — otherwise the
-    //bit_index reset could land in the FIFO ahead of (or behind) work that still needed it.
-    dmb();
-    while(core0_decomp_count!=core1_decomp_count) {
-        uprintf("CORE1: Waiting for roi start...\n");
-        dmb();
-    }
-    dmb();
+    // No wait or dmb needed: RESET touches only core1_bit_index (not the shared buffers),
+    // FIFO ordering guarantees any in-flight DECOMPRESS/ROI_UPDATE completes atomically
+    // before this RESET runs, and the immediately-following core1_update_roi() performs
+    // its own decomp-count wait before writing buffers.
     multicore_fifo_push_blocking(CORE1_CMD_RESET_BIT_IDX);
 }
 

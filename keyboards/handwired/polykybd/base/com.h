@@ -23,7 +23,12 @@ enum overlay_flag {
     // mapping that crosses the split can find the bitmap on the side that
     // actually has to render it. Off = legacy side-conditional storage.
     MIRROR_OVERLAYS     = 1 << 2,
-    RESERVED_2          = 1 << 3,
+    // Set by master in the QK_BOOTLOADER case and force-synced via
+    // USER_SYNC_POLY_DATA before reset_keyboard() runs. Slave detects the
+    // 0->1 transition in user_sync_poly_data_handler() and renders the
+    // "BOOT-LOADER!" message + solid red RGB so the slave half stays lit
+    // while the master is in the RP2040 ROM bootloader.
+    BOOTLOADER_DISPLAY  = 1 << 3,
     RESERVED_3          = 1 << 4,
     RESET_BUFFERS       = 1 << 5,
     USAGE_RESET         = 1 << 6,

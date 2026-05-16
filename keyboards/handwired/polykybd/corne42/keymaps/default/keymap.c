@@ -89,6 +89,12 @@ void clear_all_displays(void) {
     kdisp_send_buffer();
 }
 
+void display_bootloader_message(void) {
+    clear_all_displays();
+    display_message(1, 1, u"BOOT-",   &FreeSansBold24pt7b);
+    display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
+}
+
 void early_hardware_init_post(void) {
     spi_hw_setup();
 }
@@ -119,9 +125,15 @@ static uint8_t overlay_flags = 0;
 
 #ifdef RGB_MATRIX_ENABLE
 bool rgb_matrix_indicators_kb(void) {
-    if (!is_keyboard_master() && (get_local_state()->flags & STATUS_DISP_ON) == 0) {
-        rgb_matrix_set_color_all(0, 0, 0);
-        return false;
+    if (!is_keyboard_master()) {
+        if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
+            rgb_matrix_set_color_all(255, 0, 0);
+            return false;
+        }
+        if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
+            rgb_matrix_set_color_all(0, 0, 0);
+            return false;
+        }
     }
     return rgb_matrix_indicators_user();
 }
@@ -1016,9 +1028,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         switch (keycode) {
             case QK_BOOTLOADER:
                 uprintf("Bootloader entered. Please copy new Firmware.\n");
-                clear_all_displays();
-                display_message(1, 1, u"BOOT-", &FreeSansBold24pt7b);
-                display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
+                // Tell the slave first — once we return true, QMK calls
+                // reset_keyboard() and the master goes dark before housekeeping
+                // could push a deferred state diff over UART.
+                access_local_state()->overlay_flags |= BOOTLOADER_DISPLAY;
+                send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
+                display_bootloader_message();
+#ifdef RGB_MATRIX_ENABLE
+                rgb_matrix_enable_noeeprom();
+                rgb_matrix_set_color_all(255, 0, 0);
+                rgb_matrix_update_pwm_buffers();
+#endif
                 return true;
             case KC_A ... KC_Z:
                 set_local_last_latin_keycode(keycode);

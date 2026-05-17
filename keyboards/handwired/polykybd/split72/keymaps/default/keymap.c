@@ -43,6 +43,7 @@
 #include "multicore_exec.h"
 #include "split_sync.h"
 #include "poly_util.h"
+#include "base/ota_flash.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -327,8 +328,72 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     return state;
 }
 
+// Push master's own firmware to slave over the split link (used when versions differ at boot).
+// Blocking — takes ~60-90 s for a 500 KB image at 230 400 baud.  Slave reboots at end.
+static void ota_auto_push_to_slave(void) {
+    const uint8_t *fw_data = ota_get_fw_base();
+    uint32_t fw_size = ota_get_own_fw_size();
+    uint32_t fw_crc  = ota_get_own_fw_crc();
+
+    ota_begin_sync_t begin_msg;
+    memset(&begin_msg, 0, sizeof(begin_msg));
+    begin_msg.image_size = fw_size;
+    begin_msg.image_crc  = fw_crc;
+    if (send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 5) != SYNC_ACK) {
+        uprint("OTA auto: BEGIN failed\n");
+        return;
+    }
+
+    uint32_t offset = 0;
+    while (offset < fw_size) {
+        ota_chunk_sync_t chunk_msg;
+        memset(&chunk_msg, 0, sizeof(chunk_msg));
+        chunk_msg.offset = offset;
+        uint32_t remaining = fw_size - offset;
+        uint8_t  copy_len  = (remaining >= OTA_CHUNK_SIZE) ? OTA_CHUNK_SIZE : (uint8_t)remaining;
+        memcpy(chunk_msg.data, fw_data + offset, copy_len);
+        if (send_to_bridge(USER_SYNC_OTA_CHUNK, &chunk_msg, sizeof(chunk_msg), 5) != SYNC_ACK) {
+            uprintf("OTA auto: CHUNK failed at offset %lu\n", offset);
+            return;
+        }
+        offset += OTA_CHUNK_SIZE;
+    }
+
+    uint32_t dummy = 0;
+    send_to_bridge(USER_SYNC_OTA_COMMIT, &dummy, sizeof(dummy), 5);
+    uprint("OTA auto: slave commit sent, slave will reboot\n");
+}
+
+// Send a version query to the slave; if versions differ, push this firmware to slave.
+static void ota_boot_check_slave(void) {
+    ota_query_sync_t query;
+    ota_query_sync_t reply;
+    memset(&query, 0, sizeof(query));
+    memset(&reply, 0, sizeof(reply));
+    strncpy(query.version, FW_VERSION, OTA_VERSION_LEN - 1);
+    query.fw_size = ota_get_own_fw_size();
+    query.crc32   = crc32_1byte(query.version, sizeof(query) - 4, 0);
+
+    bool ok = transaction_rpc_exec(USER_SYNC_OTA_QUERY,
+                                   sizeof(query), &query,
+                                   sizeof(reply), &reply);
+    if (!ok) {
+        uprint("OTA boot check: slave query failed\n");
+        return;
+    }
+
+    if (strncmp(reply.version, FW_VERSION, OTA_VERSION_LEN) != 0) {
+        uprintf("OTA boot check: slave %s != master %s — pushing update\n",
+                reply.version, FW_VERSION);
+        ota_auto_push_to_slave();
+    }
+}
+
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
+    if (ota_commit_pending()) {
+        ota_apply_and_reboot();
+    }
     brightness_save_if_pending();
     default_layer_save_if_pending();
     sync_and_refresh_displays();
@@ -1570,6 +1635,16 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_ROI_DATA,            user_sync_roi_data_handler);
     transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_dynamic_keymap_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
+    transaction_register_rpc(USER_SYNC_OTA_QUERY,           user_sync_ota_query_handler);
+    transaction_register_rpc(USER_SYNC_OTA_BEGIN,           user_sync_ota_begin_handler);
+    transaction_register_rpc(USER_SYNC_OTA_CHUNK,           user_sync_ota_chunk_handler);
+    transaction_register_rpc(USER_SYNC_OTA_COMMIT,          user_sync_ota_commit_handler);
+
+    ota_flash_init();
+
+    if (is_keyboard_master()) {
+        ota_boot_check_slave();
+    }
 
     poly_eeconf_t ee = load_user_eeconf();
     poly_sync_t* local_state = access_local_state();

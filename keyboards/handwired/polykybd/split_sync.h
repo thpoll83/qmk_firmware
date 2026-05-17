@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "state.h"
+#include "base/ota_flash.h"
 
 #include <stdint.h>
 
@@ -71,6 +72,38 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
 
 // Handles incoming overlay mapping data on bridge with CRC32 validation.
 void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+
+// ---------------------------------------------------------------------------
+// OTA split transactions
+// ---------------------------------------------------------------------------
+
+// Boot-time version query: master sends its FW_VERSION + fw_size; slave replies with its own.
+#define OTA_VERSION_LEN 16
+typedef struct _ota_query_sync_t {
+    uint32_t crc32;
+    char     version[OTA_VERSION_LEN];
+    uint32_t fw_size;
+} ota_query_sync_t;
+
+// Announce incoming firmware size + expected CRC32 to slave.
+typedef struct _ota_begin_sync_t {
+    uint32_t crc32;
+    uint32_t image_size;
+    uint32_t image_crc;
+} ota_begin_sync_t;
+
+// One chunk of firmware data (56 bytes).
+// Total struct = 4+4+56 = 64 bytes < RPC_M2S_BUFFER_SIZE (72).
+typedef struct _ota_chunk_sync_t {
+    uint32_t crc32;
+    uint32_t offset;
+    uint8_t  data[OTA_CHUNK_SIZE];
+} ota_chunk_sync_t;
+
+void user_sync_ota_query_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+void user_sync_ota_begin_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+void user_sync_ota_chunk_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+void user_sync_ota_commit_handler (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
 // Keyboard level code can change where VIA stores the magic.
 // The magic is the build date YYMMDD encoded as BCD in 3 bytes,

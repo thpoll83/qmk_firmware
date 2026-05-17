@@ -14,6 +14,7 @@
 #include "base/disp_array.h"
 #include "base/update.h"
 #include "base/crc32.h"
+#include "base/ota_flash.h"
 #include "fill_overlay.h"
 #include "state.h"
 #include "side.h"
@@ -283,3 +284,51 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
     }
 }
 
+// ---------------------------------------------------------------------------
+// OTA handlers (slave side)
+// ---------------------------------------------------------------------------
+
+// Boot-time version query.  Slave fills out_data with its own version+size.
+void user_sync_ota_query_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len != sizeof(ota_query_sync_t) || !in_data || out_len != sizeof(ota_query_sync_t) || !out_data) return;
+    ota_query_sync_t *reply = (ota_query_sync_t *)out_data;
+    memset(reply, 0, sizeof(*reply));
+    strncpy(reply->version, FW_VERSION, OTA_VERSION_LEN - 1);
+    reply->fw_size = ota_get_own_fw_size();
+    reply->crc32   = crc32_1byte(reply->version, sizeof(*reply) - 4, 0);
+}
+
+// Slave erases its staging area and saves the expected image CRC.
+void user_sync_ota_begin_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len != sizeof(ota_begin_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    const ota_begin_sync_t *msg = (const ota_begin_sync_t *)in_data;
+    uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
+    if (crc32 != msg->crc32) {
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        return;
+    }
+    ota_begin(msg->image_size, msg->image_crc);
+    ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
+}
+
+// Slave writes one firmware chunk to its staging area.
+void user_sync_ota_chunk_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len != sizeof(ota_chunk_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    const ota_chunk_sync_t *msg = (const ota_chunk_sync_t *)in_data;
+    uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
+    if (crc32 != msg->crc32) {
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        return;
+    }
+    bool ok = ota_write_chunk(msg->offset, msg->data, OTA_CHUNK_SIZE);
+    ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
+}
+
+// Slave verifies staged CRC and arms the commit flag.
+// The actual flash apply is deferred to housekeeping_task_user() so the ACK
+// can be returned before the split link goes dark during the reboot.
+void user_sync_ota_commit_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    bool ok = ota_finalize();
+    ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
+}

@@ -16,6 +16,8 @@
 #include "base/com.h"
 #include "base/overlay.h"
 #include "base/update.h"
+#include "base/ota_flash.h"
+#include "base/crc32.h"
 
 #include <print.h>
 #include <transactions.h>
@@ -450,6 +452,73 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 data[3] = (uint8_t)local_layer->def_layer;
                 raw_hid_send(data, length);
                 break;
+
+            // ------------------------------------------------------------------
+            // OTA firmware update commands (0x40 – 0x43)
+            // ------------------------------------------------------------------
+
+            case 0x40: { // OTA_BEGIN: data[2..5]=image_size, data[6..9]=image_crc
+                uint32_t image_size, image_crc;
+                memcpy(&image_size, &data[HID_DATA_IDX],   4);
+                memcpy(&image_crc,  &data[HID_DATA_IDX+4], 4);
+                ota_begin(image_size, image_crc);
+                // Relay to slave
+                ota_begin_sync_t begin_msg;
+                begin_msg.image_size = image_size;
+                begin_msg.image_crc  = image_crc;
+                begin_msg.crc32 = crc32_1byte(&begin_msg.image_size, sizeof(begin_msg) - 4, 0);
+                send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 10);
+                memset(data, 0, length);
+                memcpy(data, "P\x40.", 3);
+                uprintf("OTA begin: size=%lu crc=0x%08lx\n", image_size, image_crc);
+                raw_hid_send(data, length);
+                break;
+            }
+
+            case 0x41: { // OTA_CHUNK: data[2..5]=offset, data[6..61]=56 bytes of firmware
+                uint32_t offset;
+                memcpy(&offset, &data[HID_DATA_IDX], 4);
+                const uint8_t *chunk_data = &data[HID_DATA_IDX + 4];
+                // Write master's copy
+                bool ok = ota_write_chunk(offset, chunk_data, OTA_CHUNK_SIZE);
+                // Relay to slave
+                ota_chunk_sync_t chunk_msg;
+                chunk_msg.offset = offset;
+                memcpy(chunk_msg.data, chunk_data, OTA_CHUNK_SIZE);
+                chunk_msg.crc32 = crc32_1byte(&chunk_msg.offset, sizeof(chunk_msg) - 4, 0);
+                uint8_t slave_ack = send_to_bridge(USER_SYNC_OTA_CHUNK, &chunk_msg, sizeof(chunk_msg), 10);
+                memset(data, 0, length);
+                memcpy(data, (ok && slave_ack == SYNC_ACK) ? "P\x41." : "P\x41!", 3);
+                raw_hid_send(data, length);
+                break;
+            }
+
+            case 0x42: { // OTA_COMMIT: verify CRC, arm commit for both sides
+                // Relay commit to slave first (so slave ACKs before it reboots)
+                uint32_t dummy_crc = 0;
+                send_to_bridge(USER_SYNC_OTA_COMMIT, &dummy_crc, sizeof(dummy_crc), 10);
+                // Finalize master staging; apply is deferred to housekeeping
+                bool ok = ota_finalize();
+                memset(data, 0, length);
+                memcpy(data, ok ? "P\x42." : "P\x42!", 3);
+                uprintf("OTA commit: %s\n", ok ? "OK" : "CRC fail");
+                raw_hid_send(data, length);
+                break;
+            }
+
+            case 0x43: { // GET_FW_VERSION: return version string + fw_size + fw_crc
+                uint32_t fw_size = ota_get_own_fw_size();
+                uint32_t fw_crc  = ota_get_own_fw_crc();
+                memset(data, 0, length);
+                memcpy(data, "P\x43.", 3);
+                memcpy(&data[3], FW_VERSION, strlen(FW_VERSION));
+                memcpy(&data[3 + OTA_VERSION_LEN], &fw_size, 4);
+                memcpy(&data[3 + OTA_VERSION_LEN + 4], &fw_crc, 4);
+                uprintf("GET_FW_VERSION: %s size=%lu crc=0x%08lx\n", FW_VERSION, fw_size, fw_crc);
+                raw_hid_send(data, length);
+                break;
+            }
+
             default:
                 printf("Unknown command: %u.\n", data[HID_CMD_IDX]);
                 data[2] = '!';

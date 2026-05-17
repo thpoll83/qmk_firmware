@@ -437,6 +437,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     memcpy(map_sync.mapping, &data[HID_DATA_IDX], HID_DATA_MAX);
                     send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync, sizeof(overlay_map_sync_t), 10);
                     set_10bit_overlay_mapping(&data[HID_DATA_IDX]);
+                    request_disp_refresh();
                     memset(data, 0, length);
                     memcpy(data, "P\x15.", 3);
                     uprintf("Overlay mapping data received.\n");

@@ -40,13 +40,16 @@ enum overlay_flag {
 // in local_state right there — housekeeping never has to deal with them.
 #define OVERLAY_ACTION_FLAGS  ((uint8_t)(RESET_BUFFERS | USAGE_RESET | MAPPING_RESET | MAPPING_ALLSET))
 
-// State-flag bits that affect slave-side decision-making (e.g. how slave's
-// bridge upload handlers interpret incoming overlay data) and therefore must
+// State-flag bits that affect slave-side decision-making and therefore must
 // be force-synced from master to slave at the moment the host changes them,
-// not deferred to the next housekeeping cycle. Otherwise upload bridge
-// transactions can reach the slave before the slave learns the flag, causing
-// it to make stale decisions.
-#define OVERLAY_SYNCED_STATE_FLAGS  ((uint8_t)(MIRROR_OVERLAYS))
+// not deferred to the next housekeeping cycle.
+// MIRROR_OVERLAYS: upload bridge handlers use it immediately to decide whether
+//   set_overlay_usage_post_upload is a no-op — must arrive before any upload.
+// DISPLAY_OVERLAYS: adding it here makes enable_overlays() force-sync to slave
+//   via case 11, triggering a state_diff refresh on slave after all mapping
+//   chunks are guaranteed delivered — fixes ESC (and any key in a later chunk)
+//   not appearing until a modifier change.
+#define OVERLAY_SYNCED_STATE_FLAGS  ((uint8_t)(MIRROR_OVERLAYS | DISPLAY_OVERLAYS))
 
 bool test_flag(uint8_t flags, uint8_t f) ;
 

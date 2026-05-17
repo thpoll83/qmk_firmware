@@ -3,6 +3,13 @@
 #include "base/overlay.h"
 
 #include <stdint.h>
+#include <stdbool.h>
+
+// True while core1 still has a previously-dispatched DECOMPRESS or ROI_UPDATE
+// in flight. Callers use this for backpressure: instead of busy-waiting inside
+// the dispatcher (which would starve core0's keyboard task), they defer the
+// next packet until core1 catches up.
+bool core1_is_busy(void);
 
 // Decompress the supplied buffer on core1, will block if previous decompression is still ongoing
 // All fragments have to be processed in order and until the end, no parallel processing possible

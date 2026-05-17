@@ -275,6 +275,7 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
         const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
         if (crc32 == data->crc32) {
             set_10bit_overlay_mapping((uint8_t *)data->mapping);
+            request_disp_refresh();
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

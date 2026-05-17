@@ -100,7 +100,6 @@ bool core1_is_busy(void) {
 // when core1 is still chewing on the previous fragment, refuse to pull the
 // next packet off the Raw HID OUT queue this main-loop pass. The packet stays
 // queued by the USB driver (RAW_OUT_CAPACITY=4) and matrix_task gets to run.
-bool raw_hid_pre_receive_kb(void);
 bool raw_hid_pre_receive_kb(void) {
     return !core1_is_busy();
 }

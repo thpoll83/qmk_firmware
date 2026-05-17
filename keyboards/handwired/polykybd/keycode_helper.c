@@ -61,16 +61,16 @@ const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_MEDIA_PLAY_PAUSE:           return u"  " ICON_RIGHT;
         case KC_MEDIA_STOP:                 return u"Stop";
         case KC_MEDIA_PREV_TRACK:           return ICON_LEFT ICON_LEFT;
-        case MS_ACL0:                  return u">>";
-        case MS_ACL1:                  return u">>>";
-        case MS_ACL2:                  return u">>>>";
+        case MS_ACL0:                       return u">>";
+        case MS_ACL1:                       return u">>>";
+        case MS_ACL2:                       return u">>>>";
         case MS_BTN1:                       return u"  " ICON_LMB;
         case MS_BTN2:                       return u"  " ICON_RMB;
         case MS_BTN3:                       return u"  " ICON_MMB;
-        case MS_UP:                      return u"  " ICON_UP;
-        case MS_DOWN:                    return u"  " ICON_DOWN;
-        case MS_LEFT:                    return u"  " ICON_LEFT;
-        case MS_RGHT:                   return u"  " ICON_RIGHT;
+        case MS_UP:                         return u"  " ICON_UP;
+        case MS_DOWN:                       return u"  " ICON_DOWN;
+        case MS_LEFT:                       return u"  " ICON_LEFT;
+        case MS_RGHT:                       return u"  " ICON_RIGHT;
         case KC_AUDIO_MUTE:                 return u"  " PRIVATE_MUTE;
         case KC_AUDIO_VOL_DOWN:             return u"  " PRIVATE_VOL_DOWN;
         case KC_AUDIO_VOL_UP:               return u"  " PRIVATE_VOL_UP;
@@ -160,7 +160,7 @@ const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         //The following entries will over-rule language specific entries in the follow language lookup table,
         //however with this we can control them by flags and so far those where not language specific anyway.
         case KC_ENTER:                      return (state_flags & MORE_TEXT) != 0 ? u"Enter" : ARROWS_RETURN;
-        case KC_ESCAPE:	                    return (state_flags & MORE_TEXT) != 0 ? u"Esc" : TECHNICAL_ESCAPE;
+        case KC_ESCAPE:                     return (state_flags & MORE_TEXT) != 0 ? u"Esc" : TECHNICAL_ESCAPE;
         case KC_BACKSPACE:                  return (state_flags & MORE_TEXT) != 0 ? u"Bksp" : TECHNICAL_ERASELEFT;
         case KC_TAB:                        return (state_flags & MORE_TEXT) != 0 ? u"Tab" : ARROWS_TAB;
         case KC_SPACE:                      return (state_flags & MORE_TEXT) != 0 ? u"Space" : ICON_SPACE;

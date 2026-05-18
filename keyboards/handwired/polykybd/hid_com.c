@@ -20,6 +20,7 @@
 #include "base/update.h"
 #include "base/ota_flash.h"
 #include "base/crc32.h"
+#include "hardware/flash.h"
 
 #include <print.h>
 #include <transactions.h>

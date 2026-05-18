@@ -467,10 +467,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 begin_msg.image_size = image_size;
                 begin_msg.image_crc  = image_crc;
                 begin_msg.crc32 = crc32_1byte(&begin_msg.image_size, sizeof(begin_msg) - 4, 0);
-                send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 10);
+                uint8_t slave_ack_begin = send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 10);
                 memset(data, 0, length);
-                memcpy(data, "P\x40.", 3);
-                uprintf("OTA begin: size=%lu crc=0x%08lx\n", image_size, image_crc);
+                memcpy(data, (slave_ack_begin == SYNC_ACK) ? "P\x40." : "P\x40!", 3);
+                uprintf("OTA begin: size=%lu crc=0x%08lx master=1 slave_ack=0x%02x\n", image_size, image_crc, slave_ack_begin);
                 raw_hid_send(data, length);
                 break;
             }
@@ -496,12 +496,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 0x42: { // OTA_COMMIT: verify CRC, arm commit for both sides
                 // Relay commit to slave first (so slave ACKs before it reboots)
                 uint32_t dummy_crc = 0;
-                send_to_bridge(USER_SYNC_OTA_COMMIT, &dummy_crc, sizeof(dummy_crc), 10);
+                uint8_t slave_ack_commit = send_to_bridge(USER_SYNC_OTA_COMMIT, &dummy_crc, sizeof(dummy_crc), 10);
                 // Finalize master staging; apply is deferred to housekeeping
                 bool ok = ota_finalize();
                 memset(data, 0, length);
                 memcpy(data, ok ? "P\x42." : "P\x42!", 3);
-                uprintf("OTA commit: %s\n", ok ? "OK" : "CRC fail");
+                uprintf("OTA commit: %s slave_ack=0x%02x\n", ok ? "OK" : "CRC fail", slave_ack_commit);
                 raw_hid_send(data, length);
                 break;
             }

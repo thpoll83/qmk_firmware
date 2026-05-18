@@ -1,3 +1,5 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
 #include "bridge_helper.h"
 
 #include QMK_KEYBOARD_H
@@ -32,8 +34,12 @@ const char* tid_to_str(int8_t tid) {
     case USER_SYNC_COMPRESSED_DATA: return "UserCompressed";
     case USER_SYNC_ROI_DATA: return "UserRoi";
     case USER_SYNC_DYNAMIC_KEYMAP_DATA: return "UserDynMap";
-    case USER_SYNC_OVERLAY_MAP_DATA: return "UserOverlayMap";
-    default: return "Not registered";
+    case USER_SYNC_OVERLAY_MAP_DATA:    return "UserOverlayMap";
+    case USER_SYNC_OTA_QUERY:           return "OtaQuery";
+    case USER_SYNC_OTA_BEGIN:           return "OtaBegin";
+    case USER_SYNC_OTA_CHUNK:           return "OtaChunk";
+    case USER_SYNC_OTA_COMMIT:          return "OtaCommit";
+    default: return "Unknown";
     }
 }
 

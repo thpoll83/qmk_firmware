@@ -12,6 +12,38 @@
 #include <string.h>
 
 // ---------------------------------------------------------------------------
+// Dual-core flash safety: halt core1 via PSM reset before any flash_range_*
+// call to prevent a CPU LOCKUP on core1.
+//
+// Background: flash_range_erase/program call flash_flush_cache() internally,
+// which empties the XIP instruction cache while XIP is still in raw mode.
+// Core1's tight polling loop (multicore_fifo_pop_blocking) runs from flash.
+// After cache flush, core1's next instruction fetch causes a bus fault; the
+// HardFault handler (also in flash) faults again → Cortex-M0+ CPU LOCKUP.
+// With core1 in PSM reset it executes nothing, so the cache flush is safe.
+//
+// RP2040 PSM registers (datasheet §2.14):
+//   Base 0x40010000; FRCE_OFF +0x04; DONE +0x0C; PROC1 = bit 16.
+// ---------------------------------------------------------------------------
+#ifdef USE_CORE1
+#include "base/multicore/core1.h"
+
+#define _PSM_FRCE_OFF  (*(volatile uint32_t *)0x40010004u)
+#define _PSM_DONE      (*(volatile uint32_t *)0x4001000Cu)
+#define _PSM_PROC1_BIT (1u << 16)
+
+static void fw_staging_halt_core1(void) {
+    _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
+    while (!(_PSM_DONE & _PSM_PROC1_BIT)) {}
+}
+
+static void fw_staging_restart_core1(void) {
+    _PSM_FRCE_OFF &= ~_PSM_PROC1_BIT;
+    multicore_launch_core1();
+}
+#endif
+
+// ---------------------------------------------------------------------------
 // Linker-exported firmware boundary symbols
 // ---------------------------------------------------------------------------
 extern uint8_t __flash_binary_start;
@@ -59,9 +91,15 @@ static uint32_t crc32_large(const uint8_t *data, uint32_t size) {
 // ---------------------------------------------------------------------------
 static void flush_page(void) {
     uint32_t flash_offs = FW_STAGING_DATA_OFFSET + (s_next_offset - s_buf_fill);
+#ifdef USE_CORE1
+    fw_staging_halt_core1();
+#endif
     uint32_t irq = save_and_disable_interrupts();
     flash_range_program(flash_offs, s_page_buf, FLASH_PAGE_SIZE);
     restore_interrupts(irq);
+#ifdef USE_CORE1
+    fw_staging_restart_core1();
+#endif
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
     s_buf_fill = 0;
 }
@@ -103,6 +141,9 @@ void fw_staging_begin(uint32_t image_size, uint32_t image_crc) {
     uint32_t data_sectors = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
     uint32_t irq;
 
+#ifdef USE_CORE1
+    fw_staging_halt_core1();
+#endif
     irq = save_and_disable_interrupts();
     flash_range_erase(FW_STAGING_OFFSET, FLASH_SECTOR_SIZE);
     restore_interrupts(irq);
@@ -112,6 +153,9 @@ void fw_staging_begin(uint32_t image_size, uint32_t image_crc) {
         flash_range_erase(FW_STAGING_DATA_OFFSET + s * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
         restore_interrupts(irq);
     }
+#ifdef USE_CORE1
+    fw_staging_restart_core1();
+#endif
 }
 
 // Deferred begin: stores parameters, schedules sector-by-sector erase via
@@ -164,9 +208,15 @@ void fw_staging_process_deferred(void) {
     } else {
         offset = FW_STAGING_DATA_OFFSET + (s_erase_sector_next - 1) * FLASH_SECTOR_SIZE;
     }
+#ifdef USE_CORE1
+    fw_staging_halt_core1();
+#endif
     uint32_t irq = save_and_disable_interrupts();
     flash_range_erase(offset, FLASH_SECTOR_SIZE);
     restore_interrupts(irq);
+#ifdef USE_CORE1
+    fw_staging_restart_core1();
+#endif
     s_last_sector_ms = timer_read32();
 
     s_erase_sector_next++;
@@ -244,9 +294,15 @@ bool fw_staging_finalize(void) {
     w[1]           = s_image_size;
     w[2]           = s_image_crc;
     w[3]           = 0x00000000UL;
+#ifdef USE_CORE1
+    fw_staging_halt_core1();
+#endif
     uint32_t irq   = save_and_disable_interrupts();
     flash_range_program(FW_STAGING_OFFSET, hdr_page, FLASH_PAGE_SIZE);
     restore_interrupts(irq);
+#ifdef USE_CORE1
+    fw_staging_restart_core1();
+#endif
 
     s_commit_pending = true;
     return true;

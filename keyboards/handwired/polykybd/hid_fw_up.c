@@ -25,52 +25,51 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             memcpy(&image_size, &data[HID_DATA_IDX],   4);
             memcpy(&image_crc,  &data[HID_DATA_IDX+4], 4);
             bool master_ok = (image_size > 0 && image_size <= FW_UP_MAX_SIZE);
+
             fw_up_begin_sync_t begin_msg;
             begin_msg.image_size = image_size;
             begin_msg.image_crc  = image_crc;
-            begin_msg.crc32      = 0;  // filled by send_to_bridge
+            begin_msg.crc32      = 0;
 
-            // Kick slave's deferred erase.  10 retries tolerate intermittent UART
-            // blackouts from a slave mid-sector-erase (~50 ms irqs-disabled windows
-            // every 70 ms).  Return value is ignored — we proceed regardless and let
-            // the verification loop below confirm readiness.
-            //   SYNC_ACK_SIG → slave started a new erase (new firmware)
-            //   SYNC_CRC32_ERR → either UART timed out, slave still erasing from a
-            //                    previous session, or old-protocol slave (all fine)
-            send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 10);
+            // Track the image we've already erased so re-polls from the host
+            // don't trigger redundant master erases.
+            static uint32_t s_erased_size = 0;
+            static uint32_t s_erased_crc  = 0;
+            bool new_image = (image_size != s_erased_size || image_crc != s_erased_crc);
 
-            // Erase master staging synchronously (~50 ms/sector, interrupts briefly
-            // re-enabled between sectors so USB stays alive).  Runs in parallel with
-            // the slave's deferred erase.
-            if (master_ok) {
+            if (new_image && master_ok) {
+                s_erased_size = image_size;
+                s_erased_crc  = image_crc;
+                // Kick slave's deferred erase (3 retries), then erase master staging
+                // synchronously.  We do NOT loop here waiting for the slave — that
+                // would block the QMK main thread for seconds and starve the split
+                // transport, causing QMK to mark the slave as disconnected.  Instead
+                // we return immediately and let the host re-poll until we confirm
+                // the slave is ready (reply byte '~' = "keep polling").
+                send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 3);
                 fw_staging_begin(image_size, image_crc);
+                uprintf("FW_UP_BEGIN: new image size=%lu crc=0x%08lx, master erased\n",
+                        image_size, image_crc);
             }
 
-            // Verification loop: poll until slave reports ready (SYNC_ACK).
-            //   SYNC_ACK     → slave erase done, ready for chunks → slave_ok = true
-            //   SYNC_ACK_SIG → slave just started erasing (kick was missed and this
-            //                  poll triggered a fresh start) → keep polling
-            //   SYNC_CRC32_ERR → UART failure or slave still erasing → keep polling
-            //
-            // 60 polls × 100 ms = 6 s window.  Worst case: kick fails entirely, first
-            // poll starts slave erase at ~t=3.9 s (after 10-retry kick + master erase).
-            // Slave finishes at ~t=8.3 s → caught at poll ≈44.  Total ≈8.4 s < 15 s
-            // host timeout.
-            bool slave_ok = false;
-            for (uint8_t i = 0; i < 60 && !slave_ok; i++) {
-                begin_msg.crc32 = 0;
-                uint8_t ack = send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 1);
-                if (ack == SYNC_ACK) {
-                    slave_ok = true;
-                } else {
-                    wait_ms(100);
-                }
-            }
+            // Single slave readiness poll (no retry loop).  If slave is not ready
+            // we return '~' and the host re-polls after a short delay, allowing the
+            // QMK main loop to run the normal split transport between polls.
+            uint8_t slave_ack = master_ok
+                ? send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 1)
+                : SYNC_CRC32_ERR;
+            bool slave_ok = (slave_ack == SYNC_ACK);
 
             memset(data, 0, length);
-            memcpy(data, (master_ok && slave_ok) ? "P\x40." : "P\x40!", 3);
-            uprintf("FW_UP_BEGIN: size=%lu crc=0x%08lx master=%d slave_ok=%d\n",
-                    image_size, image_crc, master_ok, slave_ok);
+            if (!master_ok) {
+                memcpy(data, "P\x40!", 3);   // hard error: invalid image
+            } else if (slave_ok) {
+                memcpy(data, "P\x40.", 3);   // both halves ready — host may start chunks
+            } else {
+                memcpy(data, "P\x40~", 3);   // still erasing — host should re-poll
+            }
+            uprintf("FW_UP_BEGIN: slave_ack=0x%02x slave_ok=%d new_image=%d\n",
+                    slave_ack, slave_ok, new_image);
             raw_hid_send(data, length);
             return true;
         }

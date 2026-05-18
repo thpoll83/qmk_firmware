@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include <stdint.h>
+#include "quantum.h"
 
 // HID firmware-update command IDs (command byte in the HID report)
 #define CMD_FW_UP_BEGIN       0x40

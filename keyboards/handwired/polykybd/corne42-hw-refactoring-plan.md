@@ -296,8 +296,6 @@ SRC += status_oled.c \
        base/shift_reg.c base/spi_helper.c base/overlay.c \
        base/multicore/core1.c lang/lang_lut.c
 
-DEFAULT_FOLDER = handwired/polykybd/corne42
-
 ENCODER_ENABLE     = yes
 ENCODER_MAP_ENABLE = yes
 

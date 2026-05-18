@@ -1311,6 +1311,10 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_ROI_DATA,            user_sync_roi_data_handler);
     transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_dynamic_keymap_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_QUERY,         user_sync_fw_up_query_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_BEGIN,         user_sync_fw_up_begin_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_CHUNK,         user_sync_fw_up_chunk_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_COMMIT,        user_sync_fw_up_commit_handler);
 
     poly_eeconf_t ee = load_user_eeconf();
     poly_sync_t* local_state = access_local_state();

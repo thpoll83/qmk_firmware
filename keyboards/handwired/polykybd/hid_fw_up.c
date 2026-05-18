@@ -3,11 +3,11 @@
 #include "hid_fw_up.h"
 
 #include QMK_KEYBOARD_H
-#include "quantum.h"
 #include "raw_hid.h"
 #include "config.h"
 #include "split_fw_up.h"
 #include "bridge_helper.h"
+#include <transactions.h>
 #include "base/fw_staging.h"
 #include "hardware/flash.h"
 

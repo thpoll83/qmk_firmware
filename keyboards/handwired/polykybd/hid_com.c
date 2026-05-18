@@ -25,10 +25,6 @@
 #include <transactions.h>
 #include <dynamic_keymap.h>
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-
 
 /*[[[cog
 import cog

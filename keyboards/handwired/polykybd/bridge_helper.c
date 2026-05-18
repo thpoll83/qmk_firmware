@@ -26,20 +26,20 @@ bool is_usb_host_side(void) {
 const char* tid_to_str(int8_t tid) {
     switch (tid)
     {
-    case USER_SYNC_LAYER_DATA: return "UserLayer";
-    case USER_SYNC_POLY_DATA:  return "UserPoly";
-    case USER_SYNC_LASTKEY_DATA: return "UserLastKey";
-    case USER_SYNC_LATIN_EX_DATA: return "UserLatinEx";
-    case USER_SYNC_OVERLAY_DATA: return "UserOverlay";
-    case USER_SYNC_COMPRESSED_DATA: return "UserCompressed";
-    case USER_SYNC_ROI_DATA: return "UserRoi";
+    case USER_SYNC_LAYER_DATA:          return "UserLayer";
+    case USER_SYNC_POLY_DATA:           return "UserPoly";
+    case USER_SYNC_LASTKEY_DATA:        return "UserLastKey";
+    case USER_SYNC_LATIN_EX_DATA:       return "UserLatinEx";
+    case USER_SYNC_OVERLAY_DATA:        return "UserOverlay";
+    case USER_SYNC_COMPRESSED_DATA:     return "UserCompressed";
+    case USER_SYNC_ROI_DATA:            return "UserRoi";
     case USER_SYNC_DYNAMIC_KEYMAP_DATA: return "UserDynMap";
     case USER_SYNC_OVERLAY_MAP_DATA:    return "UserOverlayMap";
     case USER_SYNC_FW_UP_QUERY:         return "FwUpQuery";
     case USER_SYNC_FW_UP_BEGIN:         return "FwUpBegin";
     case USER_SYNC_FW_UP_CHUNK:         return "FwUpChunk";
     case USER_SYNC_FW_UP_COMMIT:        return "FwUpCommit";
-    default: return "Unknown";
+    default:                            return "Unknown";
     }
 }
 

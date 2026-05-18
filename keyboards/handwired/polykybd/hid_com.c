@@ -1,3 +1,5 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
 #include "hid_com.h"
 
 #include QMK_KEYBOARD_H

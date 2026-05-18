@@ -33,6 +33,13 @@ static uint32_t s_buf_fill;      // bytes pending in s_page_buf
 static bool     s_commit_pending;
 
 // ---------------------------------------------------------------------------
+// Deferred-erase state (used by slave handler to avoid blocking the split link)
+// ---------------------------------------------------------------------------
+static bool     s_erase_pending;
+static uint32_t s_erase_sector_count;  // total sectors to erase (header + data)
+static uint32_t s_erase_sector_next;   // next sector index not yet erased
+
+// ---------------------------------------------------------------------------
 // Helper: chain CRC32 over a large buffer in 60 000-byte chunks
 // (crc32_1byte length parameter is uint16_t, max 65535)
 // ---------------------------------------------------------------------------
@@ -51,8 +58,6 @@ static uint32_t crc32_large(const uint8_t *data, uint32_t size) {
 // Flush accumulated page buffer to staging flash
 // ---------------------------------------------------------------------------
 static void flush_page(void) {
-    // The page covers firmware bytes [s_next_offset - s_buf_fill .. s_next_offset - 1].
-    // Its flash offset within the staging data region is (s_next_offset - s_buf_fill).
     uint32_t flash_offs = OTA_STAGING_DATA_OFFSET + (s_next_offset - s_buf_fill);
     uint32_t irq = save_and_disable_interrupts();
     flash_range_program(flash_offs, s_page_buf, FLASH_PAGE_SIZE);
@@ -68,17 +73,22 @@ static void flush_page(void) {
 void ota_flash_init(void) {
     s_initialized    = true;
     s_commit_pending = false;
+    s_erase_pending  = false;
 }
 
+// Synchronous begin: erases staging sector-by-sector with interrupts briefly
+// re-enabled between sectors so USB and watchdog stay alive.  Use this on the
+// master (USB side); the host app timeout must cover the full erase duration
+// (~50 ms × ceil(image_size/4096) sectors).
 void ota_begin(uint32_t image_size, uint32_t image_crc) {
     if (!s_initialized) ota_flash_init();
 
     s_next_offset    = 0;
     s_buf_fill       = 0;
     s_commit_pending = false;
+    s_erase_pending  = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
 
-    // Reject malformed sizes — protects EEPROM from runaway writes.
     if (image_size == 0 || image_size > OTA_MAX_FW_SIZE) {
         s_image_size = 0;
         s_image_crc  = 0;
@@ -87,17 +97,78 @@ void ota_begin(uint32_t image_size, uint32_t image_crc) {
     s_image_size = image_size;
     s_image_crc  = image_crc;
 
-    // Erase header sector + data region in one pass.
-    // Aligning up to the next sector boundary covers the full data region.
-    uint32_t data_sectors = (OTA_MAX_FW_SIZE + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
-    uint32_t erase_size   = OTA_STAGING_HEADER_SIZE + data_sectors * FLASH_SECTOR_SIZE;
-    uint32_t irq = save_and_disable_interrupts();
-    flash_range_erase(OTA_STAGING_OFFSET, erase_size);
+    // Erase header sector then each data sector individually.
+    // Re-enabling interrupts between sectors keeps USB/watchdog responsive
+    // during the ~50 ms erase window per sector.
+    uint32_t data_sectors = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
+    uint32_t irq;
+
+    irq = save_and_disable_interrupts();
+    flash_range_erase(OTA_STAGING_OFFSET, FLASH_SECTOR_SIZE);
     restore_interrupts(irq);
+
+    for (uint32_t s = 0; s < data_sectors; s++) {
+        irq = save_and_disable_interrupts();
+        flash_range_erase(OTA_STAGING_DATA_OFFSET + s * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
+        restore_interrupts(irq);
+    }
+}
+
+// Deferred begin: stores parameters, schedules sector-by-sector erase via
+// ota_process_deferred() called from housekeeping_task_user().
+// Returns immediately — safe to call from a split-link transaction handler.
+void ota_begin_deferred(uint32_t image_size, uint32_t image_crc) {
+    if (!s_initialized) ota_flash_init();
+
+    s_next_offset    = 0;
+    s_buf_fill       = 0;
+    s_commit_pending = false;
+    memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
+
+    if (image_size == 0 || image_size > OTA_MAX_FW_SIZE) {
+        s_image_size    = 0;
+        s_image_crc     = 0;
+        s_erase_pending = false;
+        return;
+    }
+    s_image_size = image_size;
+    s_image_crc  = image_crc;
+
+    uint32_t data_sectors   = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
+    s_erase_sector_count    = 1 + data_sectors;  // index 0 = header, 1..N = data
+    s_erase_sector_next     = 0;
+    s_erase_pending         = true;
+}
+
+// Erase one staging sector per call.  Must be called repeatedly from
+// housekeeping_task_user() until ota_erase_pending() returns false.
+void ota_process_deferred(void) {
+    if (!s_erase_pending) return;
+
+    if (s_erase_sector_next >= s_erase_sector_count) {
+        s_erase_pending = false;
+        return;
+    }
+
+    uint32_t offset;
+    if (s_erase_sector_next == 0) {
+        offset = OTA_STAGING_OFFSET;   // header sector
+    } else {
+        offset = OTA_STAGING_DATA_OFFSET + (s_erase_sector_next - 1) * FLASH_SECTOR_SIZE;
+    }
+    uint32_t irq = save_and_disable_interrupts();
+    flash_range_erase(offset, FLASH_SECTOR_SIZE);
+    restore_interrupts(irq);
+
+    s_erase_sector_next++;
+    if (s_erase_sector_next >= s_erase_sector_count) {
+        s_erase_pending = false;
+    }
 }
 
 bool ota_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
     if (!s_initialized)                    return false;
+    if (s_erase_pending)                   return false;  // deferred erase not done yet
     if (offset != s_next_offset)           return false;
     if (offset >= s_image_size)            return false;
 
@@ -142,7 +213,6 @@ bool ota_finalize(void) {
     }
 
     // Write header magic — marks staging as valid for ota_apply_and_reboot()
-    // Header lives in the first (already erased) sector of the staging region.
     static uint8_t hdr_page[FLASH_PAGE_SIZE];
     memset(hdr_page, 0xFF, sizeof(hdr_page));
     uint32_t *w    = (uint32_t *)hdr_page;
@@ -205,7 +275,6 @@ static void __no_inline_not_in_flash_func(ota_do_apply)(uint32_t image_size) {
 }
 
 void ota_apply_and_reboot(void) {
-    // Read staged image header from XIP flash
     const uint32_t *hdr = (const uint32_t *)(XIP_BASE + OTA_STAGING_OFFSET);
     if (hdr[0] != OTA_STAGING_MAGIC) return;   // no valid staged image
 

@@ -300,7 +300,10 @@ void user_sync_ota_query_handler(uint8_t in_len, const void* in_data, uint8_t ou
     reply->crc32   = crc32_1byte(reply->version, sizeof(*reply) - 4, 0);
 }
 
-// Slave erases its staging area and saves the expected image CRC.
+// Slave schedules staging erase and saves the expected image CRC.
+// Uses deferred erase so the handler returns immediately without blocking
+// the split-link transport.  ota_process_deferred() in housekeeping does
+// the actual sector-by-sector erase (~50 ms per sector).
 void user_sync_ota_begin_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len != sizeof(ota_begin_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
     const ota_begin_sync_t *msg = (const ota_begin_sync_t *)in_data;
@@ -309,7 +312,7 @@ void user_sync_ota_begin_handler(uint8_t in_len, const void* in_data, uint8_t ou
         ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
         return;
     }
-    ota_begin(msg->image_size, msg->image_crc);
+    ota_begin_deferred(msg->image_size, msg->image_crc);
     ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
 }
 

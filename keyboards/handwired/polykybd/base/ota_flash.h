@@ -18,11 +18,21 @@
 #define OTA_CHUNK_SIZE 56
 
 // Must be called once before any other ota_* function.
-// Copies boot2 to RAM (required by the RAM-resident apply routine).
 void ota_flash_init(void);
 
-// Erase staging area and prepare for incoming firmware chunks.
+// Synchronous begin (master / USB side): erases staging flash sector-by-sector
+// with interrupts briefly re-enabled between sectors.  Blocks for ~50 ms per
+// sector (ceil(image_size/4096) + 1 sectors total).
 void ota_begin(uint32_t image_size, uint32_t image_crc);
+
+// Deferred begin (slave side): stores parameters and schedules the erase.
+// Returns immediately — safe inside a split-link transaction handler.
+// Call ota_process_deferred() from housekeeping_task_user() to drive the erase.
+void ota_begin_deferred(uint32_t image_size, uint32_t image_crc);
+
+// Erases one staging sector per call.  Call from housekeeping_task_user()
+// until ota_write_chunk() no longer returns false for offset==0.
+void ota_process_deferred(void);
 
 // Write one chunk of sequential firmware data to staging.
 // `offset` must equal the cumulative bytes already written; returns false on error.

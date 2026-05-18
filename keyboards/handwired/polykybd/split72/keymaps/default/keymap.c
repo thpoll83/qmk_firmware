@@ -344,6 +344,12 @@ static void ota_auto_push_to_slave(void) {
         return;
     }
 
+    // Slave uses deferred erase (~50 ms per sector).  Wait for it to finish
+    // before sending the first chunk — ota_write_chunk returns false while
+    // the erase is in progress, which would exhaust chunk retries.
+    uint32_t erase_sectors = (fw_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE + 1;
+    wait_ms(erase_sectors * 60);
+
     uint32_t offset = 0;
     while (offset < fw_size) {
         ota_chunk_sync_t chunk_msg;
@@ -394,6 +400,7 @@ void housekeeping_task_user(void) {
     if (ota_commit_pending()) {
         ota_apply_and_reboot();
     }
+    ota_process_deferred();
     brightness_save_if_pending();
     default_layer_save_if_pending();
     sync_and_refresh_displays();

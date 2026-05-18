@@ -3,7 +3,6 @@
 
 #include "hardware/flash.h"
 #include "hardware/sync.h"
-#include "compiler_support.h"
 
 #include <string.h>
 
@@ -13,11 +12,6 @@
 extern uint8_t __flash_binary_start;
 extern uint8_t __flash_binary_end;
 
-// ---------------------------------------------------------------------------
-// Boot2 copy — the apply routine re-enables XIP via boot2 after the copy
-// ---------------------------------------------------------------------------
-extern const uint8_t BOOT2_ROM[256];
-static uint32_t s_boot2_ram[64];
 static bool     s_initialized = false;
 
 // ---------------------------------------------------------------------------
@@ -67,23 +61,26 @@ static void flush_page(void) {
 // ---------------------------------------------------------------------------
 
 void ota_flash_init(void) {
-    if (!s_initialized) {
-        memcpy(s_boot2_ram, BOOT2_ROM, sizeof(s_boot2_ram));
-        __compiler_memory_barrier();
-        s_initialized = true;
-    }
+    s_initialized    = true;
     s_commit_pending = false;
 }
 
 void ota_begin(uint32_t image_size, uint32_t image_crc) {
     if (!s_initialized) ota_flash_init();
 
-    s_image_size     = image_size;
-    s_image_crc      = image_crc;
     s_next_offset    = 0;
     s_buf_fill       = 0;
     s_commit_pending = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
+
+    // Reject malformed sizes — protects EEPROM from runaway writes.
+    if (image_size == 0 || image_size > OTA_MAX_FW_SIZE) {
+        s_image_size = 0;
+        s_image_crc  = 0;
+        return;
+    }
+    s_image_size = image_size;
+    s_image_crc  = image_crc;
 
     // Erase header sector + data region in one pass.
     // Aligning up to the next sector boundary covers the full data region.
@@ -95,9 +92,15 @@ void ota_begin(uint32_t image_size, uint32_t image_crc) {
 }
 
 bool ota_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
-    if (offset != s_next_offset)           return false;
-    if (offset + len > s_image_size)       return false;
     if (!s_initialized)                    return false;
+    if (offset != s_next_offset)           return false;
+    if (offset >= s_image_size)            return false;
+
+    // Clamp trailing bytes for the partial last chunk — callers always pass
+    // OTA_CHUNK_SIZE so the pad bytes (0xFF) past s_image_size must be dropped.
+    if (offset + len > s_image_size) {
+        len = (uint8_t)(s_image_size - offset);
+    }
 
     const uint8_t *src       = data;
     uint8_t        remaining = len;

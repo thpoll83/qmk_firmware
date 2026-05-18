@@ -461,16 +461,19 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 uint32_t image_size, image_crc;
                 memcpy(&image_size, &data[HID_DATA_IDX],   4);
                 memcpy(&image_crc,  &data[HID_DATA_IDX+4], 4);
-                ota_begin(image_size, image_crc);
-                // Relay to slave
+                bool master_ok = (image_size > 0 && image_size <= OTA_MAX_FW_SIZE);
+                if (master_ok) {
+                    ota_begin(image_size, image_crc);
+                }
+                // Relay to slave (send_to_bridge fills the CRC32 header itself).
                 ota_begin_sync_t begin_msg;
                 begin_msg.image_size = image_size;
                 begin_msg.image_crc  = image_crc;
-                begin_msg.crc32 = crc32_1byte(&begin_msg.image_size, sizeof(begin_msg) - 4, 0);
-                send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 10);
+                uint8_t slave_ack = send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 10);
                 memset(data, 0, length);
-                memcpy(data, "P\x40.", 3);
-                uprintf("OTA begin: size=%lu crc=0x%08lx\n", image_size, image_crc);
+                memcpy(data, (master_ok && slave_ack == SYNC_ACK) ? "P\x40." : "P\x40!", 3);
+                uprintf("OTA begin: size=%lu crc=0x%08lx master=%d slave_ack=0x%02x\n",
+                        image_size, image_crc, master_ok, slave_ack);
                 raw_hid_send(data, length);
                 break;
             }
@@ -511,7 +514,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 uint32_t fw_crc  = ota_get_own_fw_crc();
                 memset(data, 0, length);
                 memcpy(data, "P\x43.", 3);
-                memcpy(&data[3], FW_VERSION, strlen(FW_VERSION));
+                // Bound the copy so a long FW_VERSION can't overflow into fw_size/fw_crc.
+                size_t version_len = strlen(FW_VERSION);
+                if (version_len >= OTA_VERSION_LEN) version_len = OTA_VERSION_LEN - 1;
+                memcpy(&data[3], FW_VERSION, version_len);
                 memcpy(&data[3 + OTA_VERSION_LEN], &fw_size, 4);
                 memcpy(&data[3 + OTA_VERSION_LEN + 4], &fw_crc, 4);
                 uprintf("GET_FW_VERSION: %s size=%lu crc=0x%08lx\n", FW_VERSION, fw_size, fw_crc);

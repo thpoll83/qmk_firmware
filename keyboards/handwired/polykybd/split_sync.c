@@ -312,6 +312,7 @@ void user_sync_ota_begin_handler(uint8_t in_len, const void* in_data, uint8_t ou
         ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
         return;
     }
+    uprintf("slave OTA_BEGIN: size=%lu crc=0x%08lx\n", msg->image_size, msg->image_crc);
     ota_begin_deferred(msg->image_size, msg->image_crc);
     ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
 }
@@ -322,10 +323,12 @@ void user_sync_ota_chunk_handler(uint8_t in_len, const void* in_data, uint8_t ou
     const ota_chunk_sync_t *msg = (const ota_chunk_sync_t *)in_data;
     uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
     if (crc32 != msg->crc32) {
+        uprintf("slave OTA_CHUNK: CRC32 err offset=%lu\n", msg->offset);
         ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
         return;
     }
     bool ok = ota_write_chunk(msg->offset, msg->data, OTA_CHUNK_SIZE);
+    uprintf("slave OTA_CHUNK: offset=%lu ok=%d\n", msg->offset, ok);
     ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
 }
 

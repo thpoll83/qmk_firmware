@@ -163,14 +163,29 @@ void ota_process_deferred(void) {
     s_erase_sector_next++;
     if (s_erase_sector_next >= s_erase_sector_count) {
         s_erase_pending = false;
+        uprintf("ota_process_deferred: erase complete (%lu sectors)\n", s_erase_sector_count);
+    } else {
+        uprintf("ota_process_deferred: erased sector %lu/%lu\n", s_erase_sector_next, s_erase_sector_count);
     }
 }
 
 bool ota_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
-    if (!s_initialized)                    return false;
-    if (s_erase_pending)                   return false;  // deferred erase not done yet
-    if (offset != s_next_offset)           return false;
-    if (offset >= s_image_size)            return false;
+    if (!s_initialized) {
+        uprintf("ota_write_chunk: not initialized\n");
+        return false;
+    }
+    if (s_erase_pending) {
+        uprintf("ota_write_chunk: erase still pending (sector %lu/%lu)\n", s_erase_sector_next, s_erase_sector_count);
+        return false;
+    }
+    if (offset != s_next_offset) {
+        uprintf("ota_write_chunk: offset mismatch got=%lu expected=%lu\n", offset, s_next_offset);
+        return false;
+    }
+    if (offset >= s_image_size) {
+        uprintf("ota_write_chunk: offset=%lu >= image_size=%lu\n", offset, s_image_size);
+        return false;
+    }
 
     // Clamp trailing bytes for the partial last chunk — callers always pass
     // OTA_CHUNK_SIZE so the pad bytes (0xFF) past s_image_size must be dropped.

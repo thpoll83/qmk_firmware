@@ -492,16 +492,22 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 uint32_t offset;
                 memcpy(&offset, &data[HID_DATA_IDX], 4);
                 const uint8_t *chunk_data = &data[HID_DATA_IDX + 4];
-                // Write master's copy
-                bool ok = ota_write_chunk(offset, chunk_data, OTA_CHUNK_SIZE);
-                // Relay to slave
+                uprintf("OTA_CHUNK: offset=%lu\n", offset);
+                // Relay to slave FIRST so master's s_next_offset only advances after slave ACKs.
+                // This keeps both write cursors in sync: if the relay fails, the host can safely
+                // retry the same chunk and master will accept it (offset still matches).
                 ota_chunk_sync_t chunk_msg;
                 chunk_msg.offset = offset;
                 memcpy(chunk_msg.data, chunk_data, OTA_CHUNK_SIZE);
-                chunk_msg.crc32 = crc32_1byte(&chunk_msg.offset, sizeof(chunk_msg) - 4, 0);
+                // send_to_bridge fills chunk_msg.crc32; pre-zeroing avoids stale data.
+                chunk_msg.crc32 = 0;
                 uint8_t slave_ack = send_to_bridge(USER_SYNC_OTA_CHUNK, &chunk_msg, sizeof(chunk_msg), 10);
+                uprintf("OTA_CHUNK: slave_ack=0x%02x, writing master\n", slave_ack);
+                // Only advance master's staging when slave confirmed receipt.
+                bool ok = (slave_ack == SYNC_ACK) && ota_write_chunk(offset, chunk_data, OTA_CHUNK_SIZE);
+                uprintf("OTA_CHUNK: write_ok=%d sending resp\n", ok);
                 memset(data, 0, length);
-                memcpy(data, (ok && slave_ack == SYNC_ACK) ? "P\x41." : "P\x41!", 3);
+                memcpy(data, ok ? "P\x41." : "P\x41!", 3);
                 raw_hid_send(data, length);
                 break;
             }

@@ -150,6 +150,14 @@ void ota_process_deferred(void) {
         return;
     }
 
+    // Rate-limit to one sector per 70ms: each sector takes ~50ms (irqs disabled),
+    // leaving ~20ms of UART-responsive time between erasures.  Without this gate
+    // housekeeping fires every ~1ms and the slave spends >98% of the erase period
+    // with interrupts off, making the split link completely unresponsive and
+    // causing every OTA_CHUNK transaction from the master to fail.
+    static uint32_t s_last_sector_ms = 0;
+    if (timer_elapsed32(s_last_sector_ms) < 70) return;
+
     uint32_t offset;
     if (s_erase_sector_next == 0) {
         offset = OTA_STAGING_OFFSET;   // header sector
@@ -159,6 +167,7 @@ void ota_process_deferred(void) {
     uint32_t irq = save_and_disable_interrupts();
     flash_range_erase(offset, FLASH_SECTOR_SIZE);
     restore_interrupts(irq);
+    s_last_sector_ms = timer_read32();
 
     s_erase_sector_next++;
     if (s_erase_sector_next >= s_erase_sector_count) {
@@ -241,6 +250,10 @@ bool ota_finalize(void) {
 
     s_commit_pending = true;
     return true;
+}
+
+bool ota_erase_pending(void) {
+    return s_erase_pending;
 }
 
 bool ota_commit_pending(void) {

@@ -42,6 +42,9 @@ bool ota_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len);
 // Returns true on CRC match; sets commit-pending flag on success.
 bool ota_finalize(void);
 
+// True while the deferred sector-by-sector erase (ota_begin_deferred) is still running.
+bool ota_erase_pending(void);
+
 // True after a successful ota_finalize(); cleared after ota_apply_and_reboot() is called.
 bool ota_commit_pending(void);
 

@@ -464,26 +464,41 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(&image_size, &data[HID_DATA_IDX],   4);
                 memcpy(&image_crc,  &data[HID_DATA_IDX+4], 4);
                 bool master_ok = (image_size > 0 && image_size <= OTA_MAX_FW_SIZE);
-                // Relay to slave FIRST — slave uses deferred erase and returns
-                // immediately, so the RPC completes before master starts erasing.
-                // This gives the slave a head start: both sides erase in parallel
-                // and finish at roughly the same time (~50 ms × sector count).
                 ota_begin_sync_t begin_msg;
                 begin_msg.image_size = image_size;
                 begin_msg.image_crc  = image_crc;
-                uint8_t slave_ack = send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 10);
-                // Master synchronous erase: sector-by-sector, re-enabling interrupts
-                // between each sector.  While master erases (~50 ms × sector count),
-                // the slave's deferred erase runs in its housekeeping_task_user().
-                // Both sides finish at approximately the same time, so the first
-                // OTA_CHUNK relayed after OTA_BEGIN ACK finds both sides ready.
+                begin_msg.crc32      = 0;  // filled by send_to_bridge
+
+                // Kick off slave's deferred erase (returns SYNC_CRC32_ERR=busy immediately).
+                // 3 retries in case the first attempt hits a USB scheduling gap.
+                send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 3);
+
+                // Erase master staging synchronously with interrupts briefly re-enabled
+                // between sectors.  The slave erases in parallel via its rate-limited
+                // ota_process_deferred() (one sector per 70ms).
                 if (master_ok) {
                     ota_begin(image_size, image_crc);
                 }
+
+                // Poll slave until its erase completes (SYNC_ACK) or we time out.
+                // Slave erase: (ceil(image_size/4096)+1) sectors × 70ms.
+                // For a 248 KB image that is 62 sectors × 70ms ≈ 4.3s.
+                // 120 polls × 70ms wait ≈ 8.4s ceiling.
+                bool slave_ok = false;
+                for (uint16_t i = 0; i < 120 && !slave_ok; i++) {
+                    begin_msg.crc32 = 0;
+                    uint8_t ack = send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 1);
+                    if (ack == SYNC_ACK) {
+                        slave_ok = true;
+                    } else {
+                        wait_ms(70);
+                    }
+                }
+
                 memset(data, 0, length);
-                memcpy(data, (master_ok && slave_ack == SYNC_ACK) ? "P\x40." : "P\x40!", 3);
-                uprintf("OTA begin: size=%lu crc=0x%08lx master=%d slave_ack=0x%02x\n",
-                        image_size, image_crc, master_ok, slave_ack);
+                memcpy(data, (master_ok && slave_ok) ? "P\x40." : "P\x40!", 3);
+                uprintf("OTA begin: size=%lu crc=0x%08lx master=%d slave_ok=%d\n",
+                        image_size, image_crc, master_ok, slave_ok);
                 raw_hid_send(data, length);
                 break;
             }

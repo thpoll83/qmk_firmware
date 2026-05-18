@@ -301,12 +301,13 @@ void user_sync_ota_query_handler(uint8_t in_len, const void* in_data, uint8_t ou
 }
 
 // Slave schedules staging erase and reports readiness back to master.
-// Protocol: master calls this once to start the erase, then re-polls
-// with the same params until SYNC_ACK (erase complete).  The handler
-// returns SYNC_CRC32_ERR ("busy") while ota_process_deferred() is still
-// running its rate-limited sector-by-sector erase in housekeeping.
-// The rate limit (70ms/sector) ensures the split link stays alive
-// between 50ms erase blackouts.
+// Protocol (two-phase):
+//   First call  (new image): start deferred erase, return SYNC_ACK ("erase started").
+//                            Master waits a calculated time before sending chunks.
+//   Re-poll     (same image): return SYNC_CRC32_ERR if erase still in progress,
+//                             SYNC_ACK once ota_erase_pending() clears.
+// The deferred erase is rate-limited to one sector per 70 ms in housekeeping so
+// the split UART stays responsive between 50 ms erase blackouts.
 void user_sync_ota_begin_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len != sizeof(ota_begin_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
     const ota_begin_sync_t *msg = (const ota_begin_sync_t *)in_data;
@@ -322,12 +323,14 @@ void user_sync_ota_begin_handler(uint8_t in_len, const void* in_data, uint8_t ou
     bool same_image = (msg->image_size == s_begun_size && msg->image_crc == s_begun_crc);
 
     if (!same_image) {
-        // New OTA session: start deferred erase and return busy immediately.
+        // New OTA session: kick off deferred erase and return SYNC_ACK immediately.
+        // Master will wait (sectors * 20 ms + margin) before sending chunks, so no
+        // polling flood is needed — just this one ACK to confirm the erase started.
         s_begun_size = msg->image_size;
         s_begun_crc  = msg->image_crc;
         ota_begin_deferred(msg->image_size, msg->image_crc);
         uprintf("slave OTA_BEGIN: size=%lu crc=0x%08lx started erase\n", msg->image_size, msg->image_crc);
-        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
         return;
     }
 

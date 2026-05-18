@@ -469,29 +469,35 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 begin_msg.image_crc  = image_crc;
                 begin_msg.crc32      = 0;  // filled by send_to_bridge
 
-                // Kick off slave's deferred erase (returns SYNC_CRC32_ERR=busy immediately).
-                // 3 retries in case the first attempt hits a USB scheduling gap.
+                // Kick off slave's deferred erase.  Slave returns SYNC_ACK immediately
+                // (meaning "erase started"), then erases one sector per ~70 ms in
+                // housekeeping_task_user().  3 retries cover USB scheduling gaps.
                 send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 3);
 
-                // Erase master staging synchronously with interrupts briefly re-enabled
-                // between sectors.  The slave erases in parallel via its rate-limited
-                // ota_process_deferred() (one sector per 70ms).
+                // Erase master staging synchronously (~50 ms/sector, interrupts briefly
+                // re-enabled between sectors so USB stays alive).  Runs in parallel with
+                // the slave's deferred erase.
                 if (master_ok) {
                     ota_begin(image_size, image_crc);
                 }
 
-                // Poll slave until its erase completes (SYNC_ACK) or we time out.
-                // Slave erase: (ceil(image_size/4096)+1) sectors × 70ms.
-                // For a 248 KB image that is 62 sectors × 70ms ≈ 4.3s.
-                // 120 polls × 70ms wait ≈ 8.4s ceiling.
+                // After master erase (~50 ms/sector), slave still needs ~20 ms/sector of
+                // remaining time (slave rate: 70 ms/sector, master rate: 50 ms/sector).
+                // Wait that delta plus a 500 ms margin, then verify with a short poll loop.
+                // This avoids the 120-poll flood that was thrashing the PIO UART state
+                // machines and leaving the RX SM misaligned for the first OTA_CHUNK.
+                uint32_t erase_sectors = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE + 1;
+                wait_ms(erase_sectors * 20 + 500);
+
+                // Verify slave completed its erase.  At most 20 × 100 ms = 2 s.
                 bool slave_ok = false;
-                for (uint16_t i = 0; i < 120 && !slave_ok; i++) {
+                for (uint8_t i = 0; i < 20 && !slave_ok; i++) {
                     begin_msg.crc32 = 0;
                     uint8_t ack = send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 1);
                     if (ack == SYNC_ACK) {
                         slave_ok = true;
                     } else {
-                        wait_ms(70);
+                        wait_ms(100);
                     }
                 }
 

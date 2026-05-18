@@ -356,7 +356,7 @@ static void ota_auto_push_to_slave(void) {
             uprintf("OTA auto: CHUNK failed at offset %lu\n", offset);
             return;
         }
-        offset += OTA_CHUNK_SIZE;
+        offset += copy_len;
     }
 
     uint32_t dummy = 0;

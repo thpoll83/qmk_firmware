@@ -501,12 +501,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 0x42: { // OTA_COMMIT: verify CRC, arm commit for both sides
                 // Relay commit to slave first (so slave ACKs before it reboots)
                 uint32_t dummy_crc = 0;
-                send_to_bridge(USER_SYNC_OTA_COMMIT, &dummy_crc, sizeof(dummy_crc), 10);
+                uint8_t slave_ack = send_to_bridge(USER_SYNC_OTA_COMMIT, &dummy_crc, sizeof(dummy_crc), 10);
                 // Finalize master staging; apply is deferred to housekeeping
                 bool ok = ota_finalize();
                 memset(data, 0, length);
                 memcpy(data, ok ? "P\x42." : "P\x42!", 3);
-                uprintf("OTA commit: %s\n", ok ? "OK" : "CRC fail");
+                uprintf("OTA commit: master=%s slave_ack=0x%02x\n", ok ? "OK" : "CRC fail", slave_ack);
                 raw_hid_send(data, length);
                 break;
             }

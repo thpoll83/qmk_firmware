@@ -339,7 +339,8 @@ static void ota_auto_push_to_slave(void) {
     memset(&begin_msg, 0, sizeof(begin_msg));
     begin_msg.image_size = fw_size;
     begin_msg.image_crc  = fw_crc;
-    if (send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 5) != SYNC_ACK) {
+    uint8_t kick = send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 5);
+    if (kick != SYNC_ACK && kick != SYNC_ACK_SIG) {
         uprint("OTA auto: BEGIN failed\n");
         return;
     }

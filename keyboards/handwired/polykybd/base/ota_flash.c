@@ -256,6 +256,10 @@ bool ota_erase_pending(void) {
     return s_erase_pending;
 }
 
+bool ota_staging_written(void) {
+    return s_next_offset > 0;
+}
+
 bool ota_commit_pending(void) {
     return s_commit_pending;
 }

@@ -158,6 +158,10 @@ static void __no_inline_not_in_flash_func(enter_rx_state)(void) {
     gpio_set_drive_strength(SERIAL_USART_TX_PIN, GPIO_DRIVE_STRENGTH_2MA);
     pio_sm_set_pins_with_mask(pio, tx_state_machine, 1U << SERIAL_USART_TX_PIN, 1U << SERIAL_USART_TX_PIN);
     pio_sm_set_consecutive_pindirs(pio, tx_state_machine, SERIAL_USART_TX_PIN, 1U, false);
+    // Reset the RX state machine program counter to step 0 (wait-for-start-bit) before
+    // re-enabling it.  A failed previous receive can leave the SM mid-byte; without a
+    // restart the next byte is misaligned and decoded as corrupt data.
+    pio_sm_restart(pio, rx_state_machine);
     pio_sm_set_enabled(pio, rx_state_machine, true);
     osalSysUnlock();
 }
@@ -182,13 +186,19 @@ static inline void leave_rx_state(void) {}
 #endif
 
 /**
- * @brief Clear the FIFO of the RX state machine.
+ * @brief Clear and reset the RX state machine after a failed transaction.
+ *
+ * Disabling the SM before restart prevents spurious IRQ triggers on the
+ * FIFO-not-empty source while the SM is being reset.  The SM is restarted
+ * to step 0 (wait-for-start-bit) so the next receive begins from a known
+ * clean state regardless of where the previous transaction left it.
  */
 inline void serial_transport_driver_clear(void) {
     osalSysLock();
-    while (!pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
-        pio_sm_clear_fifos(pio, rx_state_machine);
-    }
+    pio_sm_set_enabled(pio, rx_state_machine, false);
+    pio_sm_restart(pio, rx_state_machine);
+    pio_sm_clear_fifos(pio, rx_state_machine);
+    pio_sm_set_enabled(pio, rx_state_machine, true);
     osalSysUnlock();
 }
 

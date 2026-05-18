@@ -45,6 +45,11 @@ bool ota_finalize(void);
 // True while the deferred sector-by-sector erase (ota_begin_deferred) is still running.
 bool ota_erase_pending(void);
 
+// True if any chunk data has been written to staging since the last ota_begin/ota_begin_deferred.
+// Used by the slave handler to detect partial writes from a previous failed OTA attempt
+// that require re-erasing staging before accepting new chunks.
+bool ota_staging_written(void);
+
 // True after a successful ota_finalize(); cleared after ota_apply_and_reboot() is called.
 bool ota_commit_pending(void);
 

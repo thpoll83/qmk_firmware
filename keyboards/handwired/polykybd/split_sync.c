@@ -301,11 +301,16 @@ void user_sync_ota_query_handler(uint8_t in_len, const void* in_data, uint8_t ou
 }
 
 // Slave schedules staging erase and reports readiness back to master.
-// Protocol (two-phase):
-//   First call  (new image): start deferred erase, return SYNC_ACK ("erase started").
-//                            Master waits a calculated time before sending chunks.
-//   Re-poll     (same image): return SYNC_CRC32_ERR if erase still in progress,
-//                             SYNC_ACK once ota_erase_pending() clears.
+//
+// Protocol:
+//   New image   : start deferred erase, return SYNC_ACK_SIG ("erase started, not ready").
+//   Re-poll     : SYNC_CRC32_ERR while erasing, SYNC_ACK once complete.
+//                 s_begun_size/crc are NOT reset on "done" — additional polls of the
+//                 same image return SYNC_ACK without re-triggering the erase, so a
+//                 UART-missed ACK does not cause an unnecessary full re-erase cycle.
+//   Dirty retry : if chunks were written since the last erase (partial previous attempt),
+//                 re-erase before allowing more writes (NOR flash needs erase before 0→1).
+//
 // The deferred erase is rate-limited to one sector per 70 ms in housekeeping so
 // the split UART stays responsive between 50 ms erase blackouts.
 void user_sync_ota_begin_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
@@ -317,32 +322,38 @@ void user_sync_ota_begin_handler(uint8_t in_len, const void* in_data, uint8_t ou
         return;
     }
 
-    // Track params to distinguish a new OTA session from a re-poll.
     static uint32_t s_begun_size = 0;
     static uint32_t s_begun_crc  = 0;
     bool same_image = (msg->image_size == s_begun_size && msg->image_crc == s_begun_crc);
 
     if (!same_image) {
-        // New OTA session: kick off deferred erase and return SYNC_ACK immediately.
-        // Master will wait (sectors * 20 ms + margin) before sending chunks, so no
-        // polling flood is needed — just this one ACK to confirm the erase started.
         s_begun_size = msg->image_size;
         s_begun_crc  = msg->image_crc;
         ota_begin_deferred(msg->image_size, msg->image_crc);
         uprintf("slave OTA_BEGIN: size=%lu crc=0x%08lx started erase\n", msg->image_size, msg->image_crc);
-        ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK_SIG;  // "erase started, keep polling"
         return;
     }
 
-    // Re-poll: report current erase status.
+    // Re-poll: same image.
     if (ota_erase_pending()) {
         ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
         return;
     }
 
+    // Erase done.  If any chunks were written since the last erase (retry after a
+    // partial OTA failure), re-erase before handing off — NOR flash bits cannot go
+    // 0→1 without erasing first.
+    if (ota_staging_written()) {
+        ota_begin_deferred(msg->image_size, msg->image_crc);
+        uprintf("slave OTA_BEGIN: re-erasing dirty staging\n");
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK_SIG;
+        return;
+    }
+
+    // Staging is clean and erase is complete.  Keep s_begun_size/crc set so
+    // subsequent polls of the same image also return SYNC_ACK without restarting.
     uprintf("slave OTA_BEGIN: erase complete, ready\n");
-    s_begun_size = 0;
-    s_begun_crc  = 0;
     ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
 }
 

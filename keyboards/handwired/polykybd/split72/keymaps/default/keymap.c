@@ -43,7 +43,7 @@
 #include "multicore_exec.h"
 #include "split_sync.h"
 #include "poly_util.h"
-#include "base/ota_flash.h"
+#include "split_fw_up.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -330,78 +330,78 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 
 // Push master's own firmware to slave over the split link (used when versions differ at boot).
 // Blocking — takes ~60-90 s for a 500 KB image at 230 400 baud.  Slave reboots at end.
-static void ota_auto_push_to_slave(void) {
-    const uint8_t *fw_data = ota_get_fw_base();
-    uint32_t fw_size = ota_get_own_fw_size();
-    uint32_t fw_crc  = ota_get_own_fw_crc();
+static void hid_fw_up_auto_push_to_slave(void) {
+    const uint8_t *fw_data = fw_staging_get_fw_base();
+    uint32_t fw_size = fw_staging_get_own_fw_size();
+    uint32_t fw_crc  = fw_staging_get_own_fw_crc();
 
-    ota_begin_sync_t begin_msg;
+    fw_up_begin_sync_t begin_msg;
     memset(&begin_msg, 0, sizeof(begin_msg));
     begin_msg.image_size = fw_size;
     begin_msg.image_crc  = fw_crc;
-    uint8_t kick = send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 5);
+    uint8_t kick = send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 5);
     if (kick != SYNC_ACK && kick != SYNC_ACK_SIG) {
-        uprint("OTA auto: BEGIN failed\n");
+        uprint("FW_UP auto: BEGIN failed\n");
         return;
     }
 
     // Slave uses deferred erase (~50 ms per sector).  Wait for it to finish
-    // before sending the first chunk — ota_write_chunk returns false while
+    // before sending the first chunk — fw_staging_write_chunk returns false while
     // the erase is in progress, which would exhaust chunk retries.
     uint32_t erase_sectors = (fw_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE + 1;
     wait_ms(erase_sectors * 60);
 
     uint32_t offset = 0;
     while (offset < fw_size) {
-        ota_chunk_sync_t chunk_msg;
+        fw_up_chunk_sync_t chunk_msg;
         memset(&chunk_msg, 0, sizeof(chunk_msg));
         chunk_msg.offset = offset;
         uint32_t remaining = fw_size - offset;
-        uint8_t  copy_len  = (remaining >= OTA_CHUNK_SIZE) ? OTA_CHUNK_SIZE : (uint8_t)remaining;
+        uint8_t  copy_len  = (remaining >= FW_UP_CHUNK_SIZE) ? FW_UP_CHUNK_SIZE : (uint8_t)remaining;
         memcpy(chunk_msg.data, fw_data + offset, copy_len);
-        if (send_to_bridge(USER_SYNC_OTA_CHUNK, &chunk_msg, sizeof(chunk_msg), 5) != SYNC_ACK) {
-            uprintf("OTA auto: CHUNK failed at offset %lu\n", offset);
+        if (send_to_bridge(USER_SYNC_FW_UP_CHUNK, &chunk_msg, sizeof(chunk_msg), 5) != SYNC_ACK) {
+            uprintf("FW_UP auto: CHUNK failed at offset %lu\n", offset);
             return;
         }
         offset += copy_len;
     }
 
     uint32_t dummy = 0;
-    send_to_bridge(USER_SYNC_OTA_COMMIT, &dummy, sizeof(dummy), 5);
-    uprint("OTA auto: slave commit sent, slave will reboot\n");
+    send_to_bridge(USER_SYNC_FW_UP_COMMIT, &dummy, sizeof(dummy), 5);
+    uprint("FW_UP auto: slave commit sent, slave will reboot\n");
 }
 
 // Send a version query to the slave; if versions differ, push this firmware to slave.
-static void ota_boot_check_slave(void) {
-    ota_query_sync_t query;
-    ota_query_sync_t reply;
+static void hid_fw_up_boot_check_slave(void) {
+    fw_up_query_sync_t query;
+    fw_up_query_sync_t reply;
     memset(&query, 0, sizeof(query));
     memset(&reply, 0, sizeof(reply));
-    strncpy(query.version, FW_VERSION, OTA_VERSION_LEN - 1);
-    query.fw_size = ota_get_own_fw_size();
+    strncpy(query.version, FW_VERSION, FW_UP_VERSION_LEN - 1);
+    query.fw_size = fw_staging_get_own_fw_size();
     query.crc32   = crc32_1byte(query.version, sizeof(query) - 4, 0);
 
-    bool ok = transaction_rpc_exec(USER_SYNC_OTA_QUERY,
+    bool ok = transaction_rpc_exec(USER_SYNC_FW_UP_QUERY,
                                    sizeof(query), &query,
                                    sizeof(reply), &reply);
     if (!ok) {
-        uprint("OTA boot check: slave query failed\n");
+        uprint("FW_UP boot check: slave query failed\n");
         return;
     }
 
-    if (strncmp(reply.version, FW_VERSION, OTA_VERSION_LEN) != 0) {
-        uprintf("OTA boot check: slave %s != master %s — pushing update\n",
+    if (strncmp(reply.version, FW_VERSION, FW_UP_VERSION_LEN) != 0) {
+        uprintf("FW_UP boot check: slave %s != master %s — pushing update\n",
                 reply.version, FW_VERSION);
-        ota_auto_push_to_slave();
+        hid_fw_up_auto_push_to_slave();
     }
 }
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
-    if (ota_commit_pending()) {
-        ota_apply_and_reboot();
+    if (fw_staging_commit_pending()) {
+        fw_staging_apply_and_reboot();
     }
-    ota_process_deferred();
+    fw_staging_process_deferred();
     brightness_save_if_pending();
     default_layer_save_if_pending();
     sync_and_refresh_displays();
@@ -1643,15 +1643,15 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_ROI_DATA,            user_sync_roi_data_handler);
     transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_dynamic_keymap_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
-    transaction_register_rpc(USER_SYNC_OTA_QUERY,           user_sync_ota_query_handler);
-    transaction_register_rpc(USER_SYNC_OTA_BEGIN,           user_sync_ota_begin_handler);
-    transaction_register_rpc(USER_SYNC_OTA_CHUNK,           user_sync_ota_chunk_handler);
-    transaction_register_rpc(USER_SYNC_OTA_COMMIT,          user_sync_ota_commit_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_QUERY,         user_sync_fw_up_query_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_BEGIN,         user_sync_fw_up_begin_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_CHUNK,         user_sync_fw_up_chunk_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_COMMIT,        user_sync_fw_up_commit_handler);
 
-    ota_flash_init();
+    fw_staging_init();
 
     if (is_keyboard_master()) {
-        ota_boot_check_slave();
+        hid_fw_up_boot_check_slave();
     }
 
     poly_eeconf_t ee = load_user_eeconf();

@@ -464,14 +464,22 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(&image_size, &data[HID_DATA_IDX],   4);
                 memcpy(&image_crc,  &data[HID_DATA_IDX+4], 4);
                 bool master_ok = (image_size > 0 && image_size <= OTA_MAX_FW_SIZE);
-                if (master_ok) {
-                    ota_begin(image_size, image_crc);
-                }
-                // Relay to slave (send_to_bridge fills the CRC32 header itself).
+                // Relay to slave FIRST — slave uses deferred erase and returns
+                // immediately, so the RPC completes before master starts erasing.
+                // This gives the slave a head start: both sides erase in parallel
+                // and finish at roughly the same time (~50 ms × sector count).
                 ota_begin_sync_t begin_msg;
                 begin_msg.image_size = image_size;
                 begin_msg.image_crc  = image_crc;
                 uint8_t slave_ack = send_to_bridge(USER_SYNC_OTA_BEGIN, &begin_msg, sizeof(begin_msg), 10);
+                // Master synchronous erase: sector-by-sector, re-enabling interrupts
+                // between each sector.  While master erases (~50 ms × sector count),
+                // the slave's deferred erase runs in its housekeeping_task_user().
+                // Both sides finish at approximately the same time, so the first
+                // OTA_CHUNK relayed after OTA_BEGIN ACK finds both sides ready.
+                if (master_ok) {
+                    ota_begin(image_size, image_crc);
+                }
                 memset(data, 0, length);
                 memcpy(data, (master_ok && slave_ack == SYNC_ACK) ? "P\x40." : "P\x40!", 3);
                 uprintf("OTA begin: size=%lu crc=0x%08lx master=%d slave_ack=0x%02x\n",

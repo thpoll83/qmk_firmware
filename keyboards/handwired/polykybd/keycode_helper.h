@@ -70,10 +70,25 @@ enum my_keycodes {
     KCL_ENUS = QK_USER_0, KCL_DEDE, KCL_FRFR, KCL_ESES, KCL_PTPT, KCL_ITIT, KCL_TRTR, KCL_KOKR, KCL_JAJP, KCL_ARSA, KCL_ELGR, KCL_UKUA, KCL_RURU, KCL_BEBY, KCL_KKKZ, KCL_BGBG, KCL_PLPL, KCL_RORO, KCL_ZHCN, KCL_NLNL, KCL_HEIL, KCL_SVSE, KCL_FIFI, KCL_NNNO, KCL_DADK, KCL_HUHU, KCL_CSCZ,
     //[[[end]]]
         //Lables, no functionality:
-    LBL_TEXT
+    LBL_TEXT,
+
+    // ── Emoji category layer keycodes ────────────────────────────────────────
+    // Category tab keys: KC_EMJ_CAT_BASE + n  (n = 0 .. EMJ_NUM_CATEGORIES-1)
+    KC_EMJ_CAT_BASE,
+    // Page navigation (follow sequentially after CAT_BASE + 12 slots)
+    KC_EMJ_PAGE_PREV = KC_EMJ_CAT_BASE + 12,
+    KC_EMJ_PAGE_NEXT,
+    // Emoji slot keys: KC_EMJ_SLOT_BASE + n  (n = 0 .. EMJ_SLOTS_PER_PAGE-1)
+    KC_EMJ_SLOT_BASE,
+    // Sentinel — must stay <= QK_USER_MAX (0x7FFF)
+    KC_EMJ_END = KC_EMJ_SLOT_BASE + 51,
 };
 static_assert((int)KC_LAT9 <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_LAT9 < (int)KCL_ENUS, "Overlap detected");
-static_assert((int)LBL_TEXT <= (int)QK_USER_31, "Too many user custom key codes");
+static_assert((int)KC_EMJ_END <= 0x7FFF, "Emoji keycodes exceed QK_USER_MAX");
+
+// Convenience macros for the emoji category layer keymap entries.
+#define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))
+#define ESLOT(n)       ((uint16_t)((uint16_t)KC_EMJ_SLOT_BASE  + (uint16_t)(n)))
 
 const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags);

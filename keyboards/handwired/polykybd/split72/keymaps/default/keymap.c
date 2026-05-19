@@ -52,6 +52,7 @@
 #include "layers.h"
 #include "keycode_helper.h"
 #include "uni.h"
+#include "emoji/emoji_layer.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -227,6 +228,8 @@ void sync_and_refresh_displays(void) {
             overlay_flags=local_overlay_flags;
         }
 
+        access_local_state()->emj_category = emj_active_category();
+        access_local_state()->emj_page     = emj_active_page();
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
             if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10)) {
@@ -423,7 +426,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_NUBS,
         KC_TAB,     KC_Q,       KC_W,       KC_E,       KC_R,       KC_T,       KC_GRAVE,
         MO(_FL0),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   MS_BTN1,
-        KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       TO(_EMJ0),   MO(_NL),
+        KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       TO(_EMJ),   MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
                     KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_BSPC,
@@ -454,7 +457,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_6,
         KC_TAB,     KC_Q,       KC_W,       KC_E,       KC_R,       KC_T,       KC_GRAVE,
         MO(_FL1),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   MS_BTN1,
-        KC_LSFT,    TO(_EMJ0),   KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       MO(_NL),
+        KC_LSFT,    TO(_EMJ),   KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    MO(_ADDLANG1),          KC_SPACE,   KC_DEL,     KC_ENTER,
 
                     KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_EQUAL,   KC_HYPR,
@@ -483,7 +486,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_NUBS,
         KC_TAB,     KC_Q,       KC_W,       KC_F,       KC_P,       KC_B,       KC_GRAVE,
         MO(_FL1),   KC_A,       KC_R,       KC_S,       KC_T,       KC_G,       KC_QUOTE,   MS_BTN1,
-        KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_D,       KC_V,       TO(_EMJ0),    MO(_NL),
+        KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_D,       KC_V,       TO(_EMJ),    MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
                     KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_EQUAL,
@@ -540,7 +543,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L4] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_GRAVE,
         KC_TAB,     KC_Q,       KC_D,       KC_R,       KC_W,       KC_B,       KC_HYPR,
-        MO(_FL1),   KC_A,       KC_S,       KC_H,       KC_T,       KC_G,       TO(_EMJ0),     MS_BTN1,
+        MO(_FL1),   KC_A,       KC_S,       KC_H,       KC_T,       KC_G,       TO(_EMJ),     MS_BTN1,
         KC_LSFT,    KC_Z,       KC_X,       KC_M,       KC_C,       KC_V,       MO(_ADDLANG1), MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -674,31 +677,18 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
         _______,    _______,    _______,                _______,    _______,    _______,    _______
         ),
-    [_EMJ0] = LAYOUT_left_right_stacked(
-        EMJ(0),    EMJ(1),    EMJ(2),    EMJ(3),    EMJ(4),    EMJ(5),    EMJ(6),
-        EMJ(14),   EMJ(15),   EMJ(16),   EMJ(17),   EMJ(18),   EMJ(19),   EMJ(20),
-        EMJ(28),   EMJ(29),   EMJ(30),   EMJ(31),   EMJ(32),   EMJ(33),   EMJ(34),   _______,
-        EMJ(42),   EMJ(43),   EMJ(44),   EMJ(45),   EMJ(46),   EMJ(47),   EMJ(48),   EMJ(49),
-        KC_BASE,   EMJ(58),   EMJ(59),   EMJ(60),              EMJ(61),   EMJ(62),   EMJ(63),
+    [_EMJ] = LAYOUT_left_right_stacked(
+        KC_EMJ_PAGE_PREV, KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
+        ESLOT(0),         ESLOT(1),       ESLOT(2),       ESLOT(3),       ESLOT(4),       ESLOT(5),       ESLOT(6),
+        ESLOT(14),        ESLOT(15),      ESLOT(16),      ESLOT(17),      ESLOT(18),      ESLOT(19),      ESLOT(20),      KC_NO,
+        TO(_BL),          ESLOT(28),      ESLOT(29),      ESLOT(30),      ESLOT(31),      ESLOT(32),      ESLOT(33),      KC_NO,
+        TO(_BL),          ESLOT(40),      ESLOT(41),      ESLOT(42),      ESLOT(43),      ESLOT(44),      KC_NO,
 
-                  EMJ(7),    EMJ(8),    EMJ(9),    EMJ(10),   EMJ(11),   EMJ(12),   EMJ(13),
-                  EMJ(21),   EMJ(22),   EMJ(23),   EMJ(24),   EMJ(25),   EMJ(26),   EMJ(27),
-        _______,  EMJ(35),   EMJ(36),   EMJ(37),   EMJ(38),   EMJ(39),   EMJ(40),   EMJ(41),
-        EMJ(50),  EMJ(51),   EMJ(52),   EMJ(53),   EMJ(54),   EMJ(55),   EMJ(56),   EMJ(57),
-        EMJ(64),  EMJ(65),   EMJ(66),              EMJ(67),   EMJ(68),   EMJ(69),   TO(_EMJ1)
-        ),
-    [_EMJ1] = LAYOUT_left_right_stacked(
-        EMJ(70+0),    EMJ(70+1),    EMJ(70+2),    EMJ(70+3),    EMJ(70+4),    EMJ(70+5),    EMJ(70+6),
-        EMJ(70+14),   EMJ(70+15),   EMJ(70+16),   EMJ(70+17),   EMJ(70+18),   EMJ(70+19),   EMJ(70+20),
-        EMJ(70+28),   EMJ(70+29),   EMJ(70+30),   EMJ(70+31),   EMJ(70+32),   EMJ(70+33),   EMJ(70+34),   _______,
-        EMJ(70+42),   EMJ(70+43),   EMJ(70+44),   EMJ(70+45),   EMJ(70+46),   EMJ(70+47),   EMJ(70+48),   EMJ(70+49),
-        KC_BASE,      EMJ(70+58),   EMJ(70+59),   EMJ(70+60),                 EMJ(70+61),   EMJ(70+62),   EMJ(70+63),
-
-                     EMJ(70+7),    EMJ(70+8),    EMJ(70+9),    EMJ(70+10),   EMJ(70+11),   EMJ(70+12),   EMJ(70+13),
-                     EMJ(70+21),   EMJ(70+22),   EMJ(70+23),   EMJ(70+24),   EMJ(70+25),   EMJ(70+26),   EMJ(70+27),
-        _______,     EMJ(70+35),   EMJ(70+36),   EMJ(70+37),   EMJ(70+38),   EMJ(70+39),   EMJ(70+40),   EMJ(70+41),
-        EMJ(70+50),  EMJ(70+51),   EMJ(70+52),   EMJ(70+53),   EMJ(70+54),   EMJ(70+55),   EMJ(70+56),   EMJ(70+57),
-        EMJ(70+64),  EMJ(70+65),   EMJ(70+66),                 EMJ(70+67),   EMJ(70+68),   EMJ(70+69),   TO(_EMJ0)
+                    KC_EMJ_CAT(6),  KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(11), KC_EMJ_PAGE_NEXT,
+                    ESLOT(7),       ESLOT(8),       ESLOT(9),       ESLOT(10),      ESLOT(11),      ESLOT(12),      ESLOT(13),
+        KC_NO,      ESLOT(21),      ESLOT(22),      ESLOT(23),      ESLOT(24),      ESLOT(25),      ESLOT(26),      ESLOT(27),
+        KC_NO,      ESLOT(34),      ESLOT(35),      ESLOT(36),      ESLOT(37),      ESLOT(38),      ESLOT(39),      TO(_BL),
+        ESLOT(45),  ESLOT(46),      ESLOT(47),      ESLOT(48),      ESLOT(49),      ESLOT(50),      TO(_BL)
         )
 };
 
@@ -768,6 +758,9 @@ __attribute__((section(".rodata"))) led_config_t g_led_config = { {// Key Matrix
 
 // Returns display text for special keys.
 const uint16_t* to_static_text(uint16_t keycode, led_t state) {
+
+    const uint16_t *emj = emj_display_text(keycode);
+    if (emj != NULL) return emj;
 
     const uint16_t* emoji = keycode_to_emoji(keycode);
     if(emoji!=NULL) {
@@ -1209,6 +1202,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         uprintf("release 0x%04x\n", keycode);
     }
 
+    if (emj_process_keycode(keycode, record->event.pressed)) return false;
+
     if(process_unicodemap_poly(keycode, record)) {
         return  false;
     }
@@ -1596,6 +1591,8 @@ void keyboard_post_init_user(void) {
     gpio_set_pin_input_high(GP29);
 
     //srand(halGetCounterValue());
+
+    emj_init();
 
     reset_overlay_buffers();
     reset_overlay_usage();

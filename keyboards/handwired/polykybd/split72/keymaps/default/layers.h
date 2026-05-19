@@ -16,5 +16,4 @@ enum kb_layers {
     _SL,
     _LL,
     _ADDLANG1,
-    _EMJ0,
-    _EMJ1 };
+    _EMJ };

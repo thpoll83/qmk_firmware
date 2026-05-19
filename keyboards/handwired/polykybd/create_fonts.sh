@@ -74,6 +74,52 @@ fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emo
 fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emojis1_ -n0xfd00 0x1f440 0x1f453 0x1f47b 0x1f496 0x1f4a1 0x1f4b1 > "base/fonts/generated/7NotoEmoji_Medium_Emoji1 _20pt.h"
 fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emojis2_ -n0x10100 0x1F912 0x1F919 > "base/fonts/generated/7NotoEmoji_Medium_Emoji2_20pt.h"
 
+# ── Emoji category fonts — all SMP with -n0x10000, BMP without -n ────────────
+# Used by emoji/emoji_layer.c; cp_to_font_idx() assumes offset 0x10000 for SMP.
+echo "Emoji category fonts..."
+NOTO_EMOJI="fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf"
+NOTO_SYM2="fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf"
+
+# Cat 0 extra: faces 0x1F910-0x1F917 (0x1F600-0x1F64F already in Emoji0)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSmileys2_ -n0x10000 0x1F910 0x1F917 > "base/fonts/generated/8NotoEmoji_Medium_EmjSmileys2_20pt.h"
+
+# Cat 1: gestures & body
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjGestures_ -n0x10000 0x1F440 0x1F450 0x1F64C 0x1F64F > "base/fonts/generated/8NotoEmoji_Medium_EmjGestures_20pt.h"
+
+# Cat 2: fantasy & creatures
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFantasy_ -n0x10000 0x1F47B 0x1F48A > "base/fonts/generated/8NotoEmoji_Medium_EmjFantasy_20pt.h"
+
+# Cat 3: love & hearts — BMP 0x2764 + SMP 0x1F48B-0x1F496, 0x1F4A1-0x1F4B1
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjHeart_ 0x2764 0x2764 > "base/fonts/generated/8NotoSansSymbols2_EmjHeart_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjLove_ -n0x10000 0x1F48B 0x1F496 0x1F4A1 0x1F4B1 > "base/fonts/generated/8NotoEmoji_Medium_EmjLove_20pt.h"
+
+# Cat 4: animals
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals_ -n0x10000 0x1F400 0x1F43E > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals_20pt.h"
+
+# Cat 5: nature & plants
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPlants_ -n0x10000 0x1F330 0x1F344 > "base/fonts/generated/8NotoEmoji_Medium_EmjPlants_20pt.h"
+
+# Cat 6: weather — BMP 0x2600-0x2603, 0x2614, 0x26A1 + SMP 0x1F300-0x1F321
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP_ 0x2600 0x2603 0x2614 0x2614 0x26A1 0x26A1 > "base/fonts/generated/8NotoSansSymbols2_EmjWeatherBMP_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP_ -n0x10000 0x1F300 0x1F321 > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP_20pt.h"
+
+# Cat 7: food & drink
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood_ -n0x10000 0x1F347 0x1F37F > "base/fonts/generated/8NotoEmoji_Medium_EmjFood_20pt.h"
+
+# Cat 8: travel — BMP 0x2708 + SMP 0x1F680-0x1F6BE
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjTravelBMP_ 0x2708 0x2708 > "base/fonts/generated/8NotoSansSymbols2_EmjTravelBMP_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjTravel_ -n0x10000 0x1F680 0x1F6BE > "base/fonts/generated/8NotoEmoji_Medium_EmjTravel_20pt.h"
+
+# Cat 9: sports & entertainment — BMP 0x26BD-0x26BE + SMP 0x1F3A0-0x1F3CA
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjSportsBMP_ 0x26BD 0x26BE > "base/fonts/generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports_ -n0x10000 0x1F3A0 0x1F3CA > "base/fonts/generated/8NotoEmoji_Medium_EmjSports_20pt.h"
+
+# Cat 10: tools & objects
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjObjects_ -n0x10000 0x1F4BB 0x1F52E > "base/fonts/generated/8NotoEmoji_Medium_EmjObjects_20pt.h"
+
+# Cat 11: celebrations
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjCelebrate_ -n0x10000 0x1F380 0x1F393 > "base/fonts/generated/8NotoEmoji_Medium_EmjCelebrate_20pt.h"
+
 #fontconvert "-ffonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf" "-s20" -r50 -g -v _Emojis2_ -n0x10000 0x1f600 0x1f64f > "base/fonts/generated/7test-NotoEmoji_Medium_Emoji2_20pt.h"
 #fontconvert "-ffonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf" "-s20" -r50 -g -v _Flags_ -n0x10100 0x1F1E8 0x1F1FC > "base/fonts/generated/8NotoColorEmoji_Regular_Flags_20pt.h"
 

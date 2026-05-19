@@ -4,6 +4,7 @@
 
 #include "multicore_exec.h"
 #include "hid_com.h"
+#include "emoji/emoji_layer.h"
 
 #include "base/overlay.h"
 #include "eeconfig.h"
@@ -47,6 +48,7 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
             uint8_t newly_cleared = (current->overlay_flags  & ~incoming->overlay_flags);
 #endif
             copy_local_state(incoming);
+            emj_apply_sync(incoming->emj_category, incoming->emj_page);
             if(newly_set & OVERLAY_ACTION_FLAGS) {
                 apply_overlay_action_flags(newly_set);
                 // Clear the bits locally so housekeeping has nothing to do.

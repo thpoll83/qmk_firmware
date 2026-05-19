@@ -11,8 +11,7 @@ const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case SC_LAPO:                       return u"(    <\r     ~";
         case SC_RAPC:                       return u")    <\r     ~";
         case SC_SENT:                       return ARROWS_RETURN u"  " ICON_SHIFT;
-        case TO(_EMJ0):                     return u" " PRIVATE_EMOJI_1F600 u"\v" ICON_LAYER;
-        case TO(_EMJ1):                     return u" " PRIVATE_EMOJI_1F440 u"\v" ICON_LAYER;
+        case TO(_EMJ):                      return u" " PRIVATE_EMOJI_1F600 u"\v" ICON_LAYER;
         case KC_DEADKEY:                    return (state_flags & DEAD_KEY_ON_WAKEUP) == 0 ? u"WakeX\r\v" ICON_SWITCH_OFF : u"WakeX\r\v" ICON_SWITCH_ON;
         case LBL_TEXT:                      return u"Text:";
         case KC_TOGMODS:                    return (state_flags & MODS_AS_TEXT) == 0 ? u"Mods\r\v" ICON_SWITCH_OFF : u"Mods\r\v" ICON_SWITCH_ON;

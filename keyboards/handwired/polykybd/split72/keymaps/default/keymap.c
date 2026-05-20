@@ -402,8 +402,10 @@ void housekeeping_task_user(void) {
         fw_staging_apply_and_reboot();
     }
     fw_staging_process_deferred();
-    brightness_save_if_pending();
-    default_layer_save_if_pending();
+    if (!fw_staging_ota_active()) {
+        brightness_save_if_pending();
+        default_layer_save_if_pending();
+    }
     sync_and_refresh_displays();
     int32_t update = get_last_update();
     if(update>=0) {

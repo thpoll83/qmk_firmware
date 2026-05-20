@@ -67,6 +67,7 @@ extern uint8_t __flash_binary_start;
 extern uint8_t __flash_binary_end;
 
 static bool     s_initialized = false;
+static bool     s_ota_active  = false;
 
 // ---------------------------------------------------------------------------
 // Internal staging state
@@ -130,6 +131,7 @@ void fw_staging_init(void) {
     s_initialized    = true;
     s_commit_pending = false;
     s_erase_pending  = false;
+    s_ota_active     = false;
 #ifdef USE_CORE1
     s_core1_halted   = false;
 #endif
@@ -155,6 +157,7 @@ void fw_staging_begin(uint32_t image_size, uint32_t image_crc) {
     }
     s_image_size = image_size;
     s_image_crc  = image_crc;
+    s_ota_active = true;
 
     // Erase header sector then each data sector individually.
     // Re-enabling interrupts between sectors keeps USB/watchdog responsive
@@ -198,6 +201,7 @@ void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc) {
     }
     s_image_size = image_size;
     s_image_crc  = image_crc;
+    s_ota_active = true;
 
     uint32_t data_sectors   = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
     s_erase_sector_count    = 1 + data_sectors;  // index 0 = header, 1..N = data
@@ -308,6 +312,7 @@ bool fw_staging_finalize(void) {
     // Verify CRC32 of staged data
     const uint8_t *staged = (const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET);
     if (crc32_large(staged, s_image_size) != s_image_crc) {
+        s_ota_active = false;
 #ifdef USE_CORE1
         // CRC mismatch: update failed.  Restart core1 so the slave resumes
         // normal operation; the chip is NOT going to reboot.
@@ -336,11 +341,16 @@ bool fw_staging_finalize(void) {
     // and will hard-reset the chip.  Keeping core1 in PSM reset is safe.
 
     s_commit_pending = true;
+    s_ota_active     = false;
     return true;
 }
 
 bool fw_staging_erase_pending(void) {
     return s_erase_pending;
+}
+
+bool fw_staging_ota_active(void) {
+    return s_ota_active;
 }
 
 bool fw_staging_written(void) {

@@ -20,6 +20,8 @@
 #include "split72/split72.h"
 #include "split72/status_oled.h"
 #include "bridge_helper.h"
+#include "split_fw_up.h"
+#include "base/fw_staging.h"
 #include "uni.h"
 #include "side.h"
 #include "fill_overlay.h"
@@ -329,9 +331,15 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
-    brightness_save_if_pending();
-    default_layer_save_if_pending();
-    sync_and_refresh_displays();
+    // While a fw_up is in progress, skip EEPROM saves (wear-leveling consolidate
+    // is ~100 ms IRQ-off) and the display refresh path (slave update_displays
+    // can be ~50-100 ms over SPI, master state-push uses 10 retries × 80 ms).
+    // Both would starve the split UART that the chunk transport relies on.
+    if (!fw_staging_fw_up_active()) {
+        brightness_save_if_pending();
+        default_layer_save_if_pending();
+        sync_and_refresh_displays();
+    }
     int32_t update = get_last_update();
     if(update>=0) {
         //turn off displays
@@ -1574,6 +1582,13 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_ROI_DATA,            user_sync_roi_data_handler);
     transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_dynamic_keymap_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_QUERY,         user_sync_fw_up_query_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_BEGIN,         user_sync_fw_up_begin_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_CHUNK,         user_sync_fw_up_chunk_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_COMMIT,        user_sync_fw_up_commit_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_STATUS,        user_sync_fw_up_status_handler);
+
+    fw_staging_init();
 
     poly_eeconf_t ee = load_user_eeconf();
     poly_sync_t* local_state = access_local_state();

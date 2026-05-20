@@ -22,7 +22,7 @@
 // #define SPLIT_LED_STATE_ENABLE
 // #define SPLIT_MODS_ENABLE
 #define SPLIT_WPM_ENABLE
-#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA
+#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FW_UP_QUERY, USER_SYNC_FW_UP_BEGIN, USER_SYNC_FW_UP_CHUNK, USER_SYNC_FW_UP_COMMIT, USER_SYNC_FW_UP_STATUS
 
 #define EE_HANDS
 
@@ -59,6 +59,14 @@
 #define RPC_M2S_BUFFER_SIZE 72
 // Slave to master:
 #define RPC_S2M_BUFFER_SIZE 72
+
+// During fw_up the slave runs a deferred sector-by-sector erase (~50 ms per
+// sector, 62+ sectors).  Each 50 ms window makes the slave's UART unresponsive,
+// causing the split matrix transport to time out and increment connection_errors.
+// The default threshold of 10 is reached in ~4 sectors (200 ms), triggering a
+// 500 ms throttle that blocks all RPC calls.  Raise the threshold so the slave is
+// never declared "disconnected" during the full erase sequence.
+#define SPLIT_MAX_CONNECTION_ERRORS 200
 
 //######################################
 //#          PolyKybd specific         #

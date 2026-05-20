@@ -402,7 +402,7 @@ void housekeeping_task_user(void) {
         fw_staging_apply_and_reboot();
     }
     fw_staging_process_deferred();
-    if (!fw_staging_ota_active()) {
+    if (!fw_staging_fw_up_active()) {
         brightness_save_if_pending();
         default_layer_save_if_pending();
     }

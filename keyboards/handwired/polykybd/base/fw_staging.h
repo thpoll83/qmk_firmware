@@ -46,10 +46,10 @@ bool fw_staging_finalize(void);
 bool fw_staging_erase_pending(void);
 
 // True from fw_staging_begin/fw_staging_begin_deferred until fw_staging_finalize() returns
-// (success or failure).  Use this to suppress EEPROM saves during OTA to avoid a
+// (success or failure).  Use this to suppress EEPROM saves during a fw_up to avoid a
 // wear-leveling compact operation (backing_store_erase = 100 ms IRQ-disabled) racing
 // with incoming FW_UP_CHUNK transactions and exhausting all UART retries.
-bool fw_staging_ota_active(void);
+bool fw_staging_fw_up_active(void);
 
 // True if any chunk data has been written to staging since the last fw_staging_begin/fw_staging_begin_deferred.
 // Used by the slave handler to detect partial writes from a previous failed attempt

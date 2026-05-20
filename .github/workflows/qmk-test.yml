@@ -46,14 +46,21 @@ jobs:
       - name: Locate station directory
         id: ctnd
         run: |
-          # Use CTND_DIR env var if set; otherwise try /opt then home directory
+          # Use CTND_DIR env var if set; otherwise find the first candidate
+          # that actually has a venv (directory existing is not enough).
           dir="${CTND_DIR:-}"
           if [ -z "$dir" ]; then
-            if [ -d "/opt/polykybd-ctnd" ]; then
-              dir=/opt/polykybd-ctnd
-            else
-              dir="$HOME/polykybd-ctnd"
-            fi
+            for candidate in /opt/polykybd-ctnd "$HOME/polykybd-ctnd"; do
+              if [ -f "$candidate/venv/bin/python" ]; then
+                dir="$candidate"
+                break
+              fi
+            done
+          fi
+          if [ -z "$dir" ]; then
+            echo "ERROR: could not find a polykybd-ctnd install with a venv." >&2
+            echo "Set CTND_DIR in the runner environment or run scripts/setup.sh." >&2
+            exit 1
           fi
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
 

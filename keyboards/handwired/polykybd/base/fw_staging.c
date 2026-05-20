@@ -24,23 +24,38 @@
 //
 // RP2040 PSM registers (datasheet §2.14):
 //   Base 0x40010000; FRCE_OFF +0x04; DONE +0x0C; PROC1 = bit 16.
+//
+// Strategy: keep core1 halted for the *entire* slave-side update sequence
+// (begin_deferred → all sector erases → all page writes → finalize).
+// This avoids the ChibiOS Vector80/NMI danger window that arises each time
+// core1 is restarted from ROM: between ROM writing VTOR=0x10000100 and
+// cpsid i in core1_entry(), SIO_IRQ_PROC1 can fire and trigger a ChibiOS
+// NMI context switch on core1 with no thread state → hang.  With 60+
+// restarts per update the probability of hitting that window is high.
+// On the successful path fw_staging_apply_and_reboot() hard-resets the chip,
+// so core1 never needs to be restarted.  On the failure path (CRC mismatch),
+// fw_staging_finalize() restarts core1 explicitly.
 // ---------------------------------------------------------------------------
 #ifdef USE_CORE1
 #include "base/multicore/core1.h"
 
 #define _PSM_FRCE_OFF  (*(volatile uint32_t *)0x40010004u)
-#define _PSM_DONE      (*(volatile uint32_t *)0x4001000Cu)
 #define _PSM_PROC1_BIT (1u << 16)
+
+// True while this module holds a PSM reset on core1.
+static bool s_core1_halted = false;
 
 static void fw_staging_halt_core1(void) {
     _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
     // FRCE_OFF takes effect within a few cycles; DSB ensures the write
     // reaches the PSM peripheral before the caller touches flash.
     __asm volatile ("dsb" ::: "memory");
+    s_core1_halted = true;
 }
 
 static void fw_staging_restart_core1(void) {
     _PSM_FRCE_OFF &= ~_PSM_PROC1_BIT;
+    s_core1_halted = false;
     multicore_launch_core1();
 }
 #endif
@@ -94,13 +109,14 @@ static uint32_t crc32_large(const uint8_t *data, uint32_t size) {
 static void flush_page(void) {
     uint32_t flash_offs = FW_STAGING_DATA_OFFSET + (s_next_offset - s_buf_fill);
 #ifdef USE_CORE1
-    fw_staging_halt_core1();
+    bool already_halted = s_core1_halted;
+    if (!already_halted) fw_staging_halt_core1();
 #endif
     uint32_t irq = save_and_disable_interrupts();
     flash_range_program(flash_offs, s_page_buf, FLASH_PAGE_SIZE);
     restore_interrupts(irq);
 #ifdef USE_CORE1
-    fw_staging_restart_core1();
+    if (!already_halted) fw_staging_restart_core1();
 #endif
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
     s_buf_fill = 0;
@@ -114,6 +130,9 @@ void fw_staging_init(void) {
     s_initialized    = true;
     s_commit_pending = false;
     s_erase_pending  = false;
+#ifdef USE_CORE1
+    s_core1_halted   = false;
+#endif
 }
 
 // Synchronous begin: erases staging sector-by-sector with interrupts briefly
@@ -184,6 +203,15 @@ void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc) {
     s_erase_sector_count    = 1 + data_sectors;  // index 0 = header, 1..N = data
     s_erase_sector_next     = 0;
     s_erase_pending         = true;
+#ifdef USE_CORE1
+    // Halt core1 now and keep it halted for the entire update sequence
+    // (all sector erases + all page writes + finalize).  Restarting core1
+    // once per sector erase exposes the ChibiOS Vector80/NMI danger window
+    // on every restart; keeping it halted throughout eliminates that risk.
+    // On the success path the chip hard-resets, so core1 is never restarted.
+    // On the failure path fw_staging_finalize() restarts core1 explicitly.
+    fw_staging_halt_core1();
+#endif
 }
 
 // Erase one staging sector per call.  Must be called repeatedly from
@@ -210,15 +238,10 @@ void fw_staging_process_deferred(void) {
     } else {
         offset = FW_STAGING_DATA_OFFSET + (s_erase_sector_next - 1) * FLASH_SECTOR_SIZE;
     }
-#ifdef USE_CORE1
-    fw_staging_halt_core1();
-#endif
+    // core1 is already halted by fw_staging_begin_deferred(); no halt/restart here.
     uint32_t irq = save_and_disable_interrupts();
     flash_range_erase(offset, FLASH_SECTOR_SIZE);
     restore_interrupts(irq);
-#ifdef USE_CORE1
-    fw_staging_restart_core1();
-#endif
     s_last_sector_ms = timer_read32();
 
     s_erase_sector_next++;
@@ -285,10 +308,17 @@ bool fw_staging_finalize(void) {
     // Verify CRC32 of staged data
     const uint8_t *staged = (const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET);
     if (crc32_large(staged, s_image_size) != s_image_crc) {
+#ifdef USE_CORE1
+        // CRC mismatch: update failed.  Restart core1 so the slave resumes
+        // normal operation; the chip is NOT going to reboot.
+        if (s_core1_halted) fw_staging_restart_core1();
+#endif
         return false;
     }
 
-    // Write header magic — marks staging as valid for fw_staging_apply_and_reboot()
+    // Write header magic — marks staging as valid for fw_staging_apply_and_reboot().
+    // core1 is still halted (halted by fw_staging_begin_deferred); leave it halted.
+    // fw_staging_apply_and_reboot() will hard-reset the chip so core1 need not restart.
     static uint8_t hdr_page[FLASH_PAGE_SIZE];
     memset(hdr_page, 0xFF, sizeof(hdr_page));
     uint32_t *w    = (uint32_t *)hdr_page;
@@ -297,14 +327,13 @@ bool fw_staging_finalize(void) {
     w[2]           = s_image_crc;
     w[3]           = 0x00000000UL;
 #ifdef USE_CORE1
-    fw_staging_halt_core1();
+    if (!s_core1_halted) fw_staging_halt_core1();
 #endif
     uint32_t irq   = save_and_disable_interrupts();
     flash_range_program(FW_STAGING_OFFSET, hdr_page, FLASH_PAGE_SIZE);
     restore_interrupts(irq);
-#ifdef USE_CORE1
-    fw_staging_restart_core1();
-#endif
+    // Do NOT restart core1 here — fw_staging_apply_and_reboot() is called next
+    // and will hard-reset the chip.  Keeping core1 in PSM reset is safe.
 
     s_commit_pending = true;
     return true;

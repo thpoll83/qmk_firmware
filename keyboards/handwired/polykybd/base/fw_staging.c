@@ -34,7 +34,9 @@
 
 static void fw_staging_halt_core1(void) {
     _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
-    while (!(_PSM_DONE & _PSM_PROC1_BIT)) {}
+    // FRCE_OFF takes effect within a few cycles; DSB ensures the write
+    // reaches the PSM peripheral before the caller touches flash.
+    __asm volatile ("dsb" ::: "memory");
 }
 
 static void fw_staging_restart_core1(void) {

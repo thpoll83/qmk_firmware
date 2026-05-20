@@ -1,0 +1,70 @@
+name: Build and HIL Test
+
+on:
+  push:
+    branches: [PolyKeyboard, "PolyKybd/**"]
+  pull_request:
+
+jobs:
+  build:
+    name: Build firmware
+    runs-on: ubuntu-latest
+    outputs:
+      split72: ${{ steps.names.outputs.split72 }}
+      corne42: ${{ steps.names.outputs.corne42 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build split72 (primary)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb handwired/polykybd/split72 -km default
+
+      - name: Build corne42
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb handwired/polykybd/corne42 -km default
+
+      - id: names
+        run: |
+          echo "split72=$(ls handwired_polykybd_split72_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "corne42=$(ls handwired_polykybd_corne42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: "*.uf2"
+          retention-days: 7
+
+  hil-test:
+    name: HIL test (split72)
+    needs: build
+    runs-on: [self-hosted, polykybd-ctnd]
+    steps:
+      - name: Locate station directory
+        id: ctnd
+        run: |
+          # Use CTND_DIR env var if set; otherwise try /opt then home directory
+          dir="${CTND_DIR:-}"
+          if [ -z "$dir" ]; then
+            if [ -d "/opt/polykybd-ctnd" ]; then
+              dir=/opt/polykybd-ctnd
+            else
+              dir="$HOME/polykybd-ctnd"
+            fi
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: ${{ steps.ctnd.outputs.dir }}/firmware
+
+      - name: Flash and test
+        run: |
+          cd ${{ steps.ctnd.outputs.dir }}
+          venv/bin/python -m station.test_runner \
+            --left  "firmware/${{ needs.build.outputs.split72 }}" \
+            --right "firmware/${{ needs.build.outputs.split72 }}"

@@ -10,21 +10,27 @@ jobs:
     name: Build firmware
     runs-on: ubuntu-latest
     outputs:
-      firmware: ${{ steps.names.outputs.firmware }}
+      split72: ${{ steps.names.outputs.split72 }}
+      corne42: ${{ steps.names.outputs.corne42 }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Build PolyKybd corne42 firmware
+      - name: Build split72 (primary)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb handwired/polykybd/split72 -km default
+
+      - name: Build corne42
         uses: docker://qmkfm/qmk_cli
         with:
           args: qmk compile -kb handwired/polykybd/corne42 -km default
 
       - id: names
         run: |
-          fw=$(ls handwired_polykybd_corne42_default*.uf2 2>/dev/null | head -1)
-          echo "firmware=$fw" >> "$GITHUB_OUTPUT"
+          echo "split72=$(ls handwired_polykybd_split72_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "corne42=$(ls handwired_polykybd_corne42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -33,7 +39,7 @@ jobs:
           retention-days: 7
 
   hil-test:
-    name: HIL test on PolyKybd station
+    name: HIL test (split72)
     needs: build
     runs-on: [self-hosted, polykybd-ctnd]
     steps:
@@ -60,5 +66,5 @@ jobs:
         run: |
           cd ${{ steps.ctnd.outputs.dir }}
           venv/bin/python -m station.test_runner \
-            --left  "firmware/${{ needs.build.outputs.firmware }}" \
-            --right "firmware/${{ needs.build.outputs.firmware }}"
+            --left  "firmware/${{ needs.build.outputs.split72 }}" \
+            --right "firmware/${{ needs.build.outputs.split72 }}"

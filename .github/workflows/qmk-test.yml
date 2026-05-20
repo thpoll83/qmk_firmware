@@ -1,0 +1,64 @@
+name: Build and HIL Test
+
+on:
+  push:
+    branches: [PolyKeyboard, "PolyKybd/**"]
+  pull_request:
+
+jobs:
+  build:
+    name: Build firmware
+    runs-on: ubuntu-latest
+    outputs:
+      firmware: ${{ steps.names.outputs.firmware }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build PolyKybd corne42 firmware
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb handwired/polykybd/corne42 -km default
+
+      - id: names
+        run: |
+          fw=$(ls handwired_polykybd_corne42_default*.uf2 2>/dev/null | head -1)
+          echo "firmware=$fw" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: "*.uf2"
+          retention-days: 7
+
+  hil-test:
+    name: HIL test on PolyKybd station
+    needs: build
+    runs-on: [self-hosted, polykybd-ctnd]
+    steps:
+      - name: Locate station directory
+        id: ctnd
+        run: |
+          # Use CTND_DIR env var if set; otherwise try /opt then home directory
+          dir="${CTND_DIR:-}"
+          if [ -z "$dir" ]; then
+            if [ -d "/opt/polykybd-ctnd" ]; then
+              dir=/opt/polykybd-ctnd
+            else
+              dir="$HOME/polykybd-ctnd"
+            fi
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: ${{ steps.ctnd.outputs.dir }}/firmware
+
+      - name: Flash and test
+        run: |
+          cd ${{ steps.ctnd.outputs.dir }}
+          venv/bin/python -m station.test_runner \
+            --left  "firmware/${{ needs.build.outputs.firmware }}" \
+            --right "firmware/${{ needs.build.outputs.firmware }}"

@@ -331,6 +331,15 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
+    // fw_up state machine: apply on success path, advance deferred erase.
+    // Both must run regardless of fw_up_active so the slave's erase actually
+    // progresses and the master's apply-and-reboot fires after a successful
+    // commit.
+    if (fw_staging_commit_pending()) {
+        fw_staging_apply_and_reboot();
+    }
+    fw_staging_process_deferred();
+
     // While a fw_up is in progress, skip EEPROM saves (wear-leveling consolidate
     // is ~100 ms IRQ-off) and the display refresh path (slave update_displays
     // can be ~50-100 ms over SPI, master state-push uses 10 retries × 80 ms).

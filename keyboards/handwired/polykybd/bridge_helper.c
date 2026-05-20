@@ -10,6 +10,7 @@
 
 #include <print.h>
 #include <transactions.h>
+#include "split_common/split_util.h"
 
 #include <string.h>
 
@@ -48,6 +49,9 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
     uint8_t retry = 0;
     *((uint32_t *)buffer_with4crc_bytes) = crc32_1byte(&((uint8_t *)buffer_with4crc_bytes)[4], num_bytes-4, 0);
     for(; retry<max_retries; ++retry) {
+        // Log "disconnected" fast-fails separately from real UART timeouts so the
+        // two failure modes are distinguishable in the serial log.
+        bool connected = is_transport_connected();
         bool sync_success = transaction_rpc_exec(tid, num_bytes, buffer_with4crc_bytes, sizeof(poly_sync_reply_t), &reply);
         if(sync_success && (reply.ack == SYNC_ACK || reply.ack == SYNC_ACK_SIG)) {
             if(debug_enable && retry>0) {
@@ -56,7 +60,7 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
             return reply.ack;
         }
         if(debug_enable) {
-            uprintf("Bridge sync retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack != SYNC_CRC32_ERR, num_bytes);
+            uprintf("Bridge sync retry %d (tid: %s, success: %d, ack: %d, bytes: %d, conn: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack != SYNC_CRC32_ERR, num_bytes, (int)connected);
         }
     }
     if(debug_enable) {

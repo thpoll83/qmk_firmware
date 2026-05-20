@@ -75,6 +75,17 @@
 // Slave to master:
 #define RPC_S2M_BUFFER_SIZE 72
 
+// During OTA the slave runs a deferred sector-by-sector erase (~50 ms per
+// sector, 62+ sectors).  Each 50 ms window makes the slave's UART
+// unresponsive, causing the split matrix transport to time out and increment
+// connection_errors.  The default threshold of 10 is reached in ~4 sectors
+// (200 ms), triggering a 500 ms throttle that blocks all subsequent RPC calls
+// — including FW_UP_CHUNK — via is_transport_connected() returning false.
+// Raising the threshold to 200 ensures the slave is never declared
+// "disconnected" during the full erase sequence (worst-case ~62 × 3 = 186
+// consecutive failures with no inter-sector gap success).
+#define SPLIT_MAX_CONNECTION_ERRORS 200
+
 //######################################
 //#          PolyKybd specific         #
 //######################################

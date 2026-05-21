@@ -10,6 +10,10 @@
         "pid": "0x2008",
         "device_version": "1.0.0"
     },
+    "modules": [
+        "polykybd/crc32",
+        "polykybd/rle"
+    ],
     "features": {
         "bootmagic": false,
         "command": false,

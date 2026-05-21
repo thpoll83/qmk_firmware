@@ -5,7 +5,7 @@
 #include "config.h"
 #include "base/helpers.h"
 #include "base/update.h"
-#include "base/rle.h"
+#include "rle.h"
 #include "base/disp_array.h"
 #include "base/multicore/core1.h"
 #include "fill_overlay.h"   // for set_overlay_usage_post_upload

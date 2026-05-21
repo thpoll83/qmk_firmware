@@ -13,7 +13,7 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/update.h"
-#include "base/crc32.h"
+#include "crc32.h"
 #include "fill_overlay.h"
 #include "state.h"
 #include "side.h"

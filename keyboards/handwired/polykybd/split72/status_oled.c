@@ -21,7 +21,7 @@
 #include <stdio.h>
 
 //this should go away with some font refactoring!
-extern const GFXfont* ALL_FONTS [];
+extern const GFXfont* const ALL_FONTS [];
 #define ALL_FONT_SIZE_OLED_INT 43
 
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.

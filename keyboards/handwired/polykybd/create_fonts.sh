@@ -93,7 +93,7 @@ echo -e "#pragma once\n" > gfx_used_fonts.h
 ls -1 generated/*pt.h | while read line; do echo '#include "'${line}'"'; done >> gfx_used_fonts.h
 echo -e '#include "gfx_icons.h"\n' >> gfx_used_fonts.h
 echo -e '#include "FreeSansBold24pt7b.h"\n' >> gfx_used_fonts.h
-echo -e 'const GFXfont* ALL_FONTS [] = {' >> gfx_used_fonts.h
+echo -e 'const GFXfont* const ALL_FONTS [] = {' >> gfx_used_fonts.h
 echo -e '  &IconsFont,' >> gfx_used_fonts.h
 cat  generated/*pt.h | grep -oP 'const GFXfont \K\w+' | while read line; do echo "  &"${line}","; done >> gfx_used_fonts.h
 echo -e '};\n' >> gfx_used_fonts.h

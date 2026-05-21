@@ -700,7 +700,11 @@ layer_state_t get_function_layer(layer_state_t def_layer) {
 }
 
 #define LX(x,y) ((x)/2),y
-led_config_t g_led_config = { {// Key Matrix to LED Index
+// Placed in .rodata so the 296-byte table sits in flash rather than RAM.
+// QMK only reads g_led_config (verified in quantum/{led,rgb}_matrix/*.c); the
+// type stays non-const to match the upstream extern declaration in
+// quantum/rgb_matrix/rgb_matrix.h, so this is a placement override only.
+__attribute__((section(".rodata"))) led_config_t g_led_config = { {// Key Matrix to LED Index
                               {6, 5, 4, 3, 2, 1, 0, NO_LED},
                               {13, 12, 11, 10, 9, 8, 7, NO_LED},
                               {20, 19, 18, 17, 16, 15, 14, NO_LED},

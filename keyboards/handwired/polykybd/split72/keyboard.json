@@ -10,6 +10,10 @@
         "pid": "0x2007",
         "device_version": "3.2.0"
     },
+    "modules": [
+        "polykybd/polymod_crc32",
+        "polykybd/polymod_rle"
+    ],
     "features": {
         "bootmagic": false,
         "command": false,

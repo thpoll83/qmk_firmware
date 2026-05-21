@@ -26,7 +26,7 @@
 #include "poly_util.h"
 
 #include "base/com.h"
-#include "base/rle.h"
+#include "polymod_rle.h"
 #include "base/e2prom.h"
 #include "base/overlay.h"
 #include "base/disp_array.h"
@@ -37,7 +37,7 @@
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/multicore/core1.h"
-#include "base/crc32.h"
+#include "polymod_crc32.h"
 
 #include "state.h"
 #include "multicore_exec.h"

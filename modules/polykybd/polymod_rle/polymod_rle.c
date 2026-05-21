@@ -1,4 +1,6 @@
-#include "rle.h"
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+#include "polymod_rle.h"
 
 #include <stdbool.h>
 

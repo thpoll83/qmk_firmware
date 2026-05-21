@@ -1,7 +1,7 @@
 // Copyright (c) 2011 Stephan Brumme. All rights reserved.
 // see http://create.stephan-brumme.com/disclaimer.html
 
-#include "crc32.h"
+#include "polymod_crc32.h"
 
 static const uint32_t crc32Lookup[256] =
 { 0x00000000,0x77073096,0xEE0E612C,0x990951BA,0x076DC419,0x706AF48F,0xE963A535,0x9E6495A3,

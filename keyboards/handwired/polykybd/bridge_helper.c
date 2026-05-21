@@ -2,7 +2,7 @@
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
-#include "crc32.h"
+#include "polymod_crc32.h"
 #include "split_sync.h"
 #include "config.h"
 

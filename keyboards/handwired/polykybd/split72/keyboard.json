@@ -11,8 +11,8 @@
         "device_version": "3.2.0"
     },
     "modules": [
-        "polykybd/crc32",
-        "polykybd/rle"
+        "polykybd/polymod_crc32",
+        "polykybd/polymod_rle"
     ],
     "features": {
         "bootmagic": false,

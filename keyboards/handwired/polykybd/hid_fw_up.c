@@ -106,9 +106,23 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 s_logged_ready_status = true;
                 fw_up_log_slave_status("begin-ready");
             }
+            // Also log slave state periodically while waiting for erase: every
+            // ~16 polls of CRC_ERR (≈ 4 s at the host's 250 ms poll cadence) we
+            // print a snapshot so we can see whether erase_sector_next is
+            // actually advancing.  Without this the slave can be stuck and
+            // the only visible signal is "slave_ack=0x35" forever.
+            static uint16_t s_pending_poll_count = 0;
+            if (!slave_ok && slave_ack == SYNC_CRC32_ERR) {
+                if ((++s_pending_poll_count & 0x0F) == 0) {
+                    fw_up_log_slave_status("begin-pending");
+                }
+            } else {
+                s_pending_poll_count = 0;
+            }
             if (new_image) {
                 // Re-arm so a fresh fw_up after a previous failure also logs once.
                 s_logged_ready_status = false;
+                s_pending_poll_count = 0;
             }
             raw_hid_send(data, length);
             return true;

@@ -84,7 +84,10 @@ NOTO_SYM2="fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf"
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSmileys2_ -n0x10000 0x1F910 0x1F917 > "base/fonts/generated/8NotoEmoji_Medium_EmjSmileys2_20pt.h"
 
 # Cat 1: gestures & body
-fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjGestures_ -n0x10000 0x1F440 0x1F450 0x1F64C 0x1F64F > "base/fonts/generated/8NotoEmoji_Medium_EmjGestures_20pt.h"
+# Single range only — 0x1F64C-0x1F64F are already covered by _Emojis0_ (0x1F600-0x1F64F).
+# A multi-range gestures font would cover 0xF440-0xF64F with skip entries for the gap,
+# shadowing EmjLove (0xF48B-0xF4B1) and EmjObjects (0xF4BB-0xF52E) with empty glyphs.
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjGestures_ -n0x10000 0x1F440 0x1F450 > "base/fonts/generated/8NotoEmoji_Medium_EmjGestures_20pt.h"
 
 # Cat 2: fantasy & creatures
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFantasy_ -n0x10000 0x1F47B 0x1F48A > "base/fonts/generated/8NotoEmoji_Medium_EmjFantasy_20pt.h"

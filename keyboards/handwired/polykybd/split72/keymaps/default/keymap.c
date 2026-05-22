@@ -660,7 +660,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_EMJ] = LAYOUT_left_right_stacked(
         KC_EMJ_PAGE_PREV, KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
         KC_NO,      ESLOT(0),       ESLOT(1),       ESLOT(2),       ESLOT(3),       ESLOT(4),       ESLOT(5),
-        KC_NO,      ESLOT(12),      ESLOT(13),      ESLOT(13),      ESLOT(14),      ESLOT(15),      ESLOT(16),      KC_NO,
+        KC_NO,      ESLOT(12),      ESLOT(13),      KC_NO,          ESLOT(14),      ESLOT(15),      ESLOT(16),      KC_NO,
         KC_NO,      ESLOT(23),      ESLOT(24),      ESLOT(25),      ESLOT(26),      ESLOT(27),      ESLOT(28),      ESLOT(29),
         KC_BASE,    ESLOT(37),      ESLOT(38),      ESLOT(39),                      ESLOT(40),      ESLOT(41),      ESLOT(42),
 
@@ -1101,6 +1101,7 @@ void update_displays(enum refresh_mode mode) {
                         if(text) {
                             kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text, true);
                         }
+                        emj_draw_tab_indicator(keycode);
                         kdisp_send_buffer();
                     }
                 }

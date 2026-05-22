@@ -17,13 +17,16 @@
 // In split_sync.c user_sync_poly_data_handler(), after copy_local_state():
 //     emj_apply_sync(local_state->emj_category, local_state->emj_page);
 //
+// In keymap.c display loop, add ONE line before kdisp_send_buffer():
+//     emj_draw_tab_indicator(keycode);
+//
 // ───────────────────────────────────────────────────────────────────────────
 
 // Maximum number of emoji slots that can appear in a keymap layer.
-// The split72 layout exposes 51 slots; the corne42 exposes 24.
+// The split72 layout exposes 49 slots; the corne42 exposes 24.
 // Override before including this header if needed.
 #ifndef EMJ_SLOTS_PER_PAGE
-#  define EMJ_SLOTS_PER_PAGE 51
+#  define EMJ_SLOTS_PER_PAGE 49
 #endif
 
 // Maximum number of category tabs in the keymap.
@@ -52,3 +55,8 @@ void emj_apply_sync(uint8_t category, uint8_t page);
 // Accessors used by the split sync master side to read current state.
 uint8_t emj_active_category(void);
 uint8_t emj_active_page(void);
+
+// Draws a 2-px ∩-shaped indicator on the active category tab display.
+// Call after kdisp_write_gfx_text but before kdisp_send_buffer.
+// No-op for any keycode that is not the currently active category tab.
+void emj_draw_tab_indicator(uint16_t keycode);

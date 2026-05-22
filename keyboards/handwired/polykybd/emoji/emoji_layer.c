@@ -5,6 +5,7 @@
 #include "emoji_data.h"
 #include "keycode_helper.h"
 #include "base/update.h"
+#include "base/disp_array.h"
 #include "lang/named_glyphs.h"
 
 #include "quantum/unicode/unicode.h"
@@ -153,3 +154,23 @@ void emj_apply_sync(uint8_t category, uint8_t page) {
 
 uint8_t emj_active_category(void) { return s_category; }
 uint8_t emj_active_page(void)     { return s_page; }
+
+void emj_draw_tab_indicator(uint16_t keycode) {
+    if (keycode < KC_EMJ_CAT_BASE || keycode >= KC_EMJ_CAT_BASE + EMJ_NUM_CATEGORIES) return;
+    if ((uint8_t)(keycode - KC_EMJ_CAT_BASE) != s_category) return;
+
+    uint8_t *buf = get_scratch_buffer();
+    // Top 2 rows: page 0, bits 0+1 = 0x03 across all visible columns
+    for (uint8_t x = 0; x < SCREEN_WIDTH; x++) {
+        buf[x] |= 0x03;
+    }
+    // Left and right 2-px borders across 5 visible pages (40 pixel rows)
+    // SSD1306 buffer stride is 128 bytes per page regardless of visible width
+    for (uint8_t p = 0; p < 5; p++) {
+        uint16_t b = (uint16_t)p * 128u;
+        buf[b + 0]  |= 0xFF;
+        buf[b + 1]  |= 0xFF;
+        buf[b + 70] |= 0xFF;
+        buf[b + 71] |= 0xFF;
+    }
+}

@@ -92,9 +92,11 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjGestures_ -n0x10000 0x1F440 0x1F450
 # Cat 2: fantasy & creatures
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFantasy_ -n0x10000 0x1F47B 0x1F48A > "base/fonts/generated/8NotoEmoji_Medium_EmjFantasy_20pt.h"
 
-# Cat 3: love & hearts — BMP 0x2764 + SMP 0x1F48B-0x1F496, 0x1F4A1-0x1F4B1
+# Cat 3: love & hearts — BMP 0x2764 + SMP 0x1F48B-0x1F49F (single range includes colored hearts)
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjHeart_ 0x2764 0x2764 > "base/fonts/generated/8NotoSansSymbols2_EmjHeart_20pt.h"
-fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjLove_ -n0x10000 0x1F48B 0x1F496 0x1F4A1 0x1F4B1 > "base/fonts/generated/8NotoEmoji_Medium_EmjLove_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjLove_ -n0x10000 0x1F48B 0x1F49F > "base/fonts/generated/8NotoEmoji_Medium_EmjLove_20pt.h"
+# 💪 0x1F4AA (flexed biceps) — cat 1 (Gestures & Body); single glyph between EmjLove and EmjObjects
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjMuscle_ -n0x10000 0x1F4AA 0x1F4AA > "base/fonts/generated/8NotoEmoji_Medium_EmjMuscle_20pt.h"
 
 # Cat 4: animals
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals_ -n0x10000 0x1F400 0x1F43E > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals_20pt.h"

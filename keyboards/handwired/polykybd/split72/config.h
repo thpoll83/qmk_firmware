@@ -102,7 +102,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RAW_USAGE_ID 0x62
 #define RAW_EPSIZE 64
 
-#define DYNAMIC_KEYMAP_LAYER_COUNT 14
+#define DYNAMIC_KEYMAP_LAYER_COUNT 13
 
 /* Status OLED — 128×64 */
 #define OLED_DISPLAY_128X64

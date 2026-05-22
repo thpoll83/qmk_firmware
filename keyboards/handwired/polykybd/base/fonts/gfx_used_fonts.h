@@ -3,6 +3,8 @@
 #include "generated/0NotoSans_Regular_Base_14pt.h"
 #include "generated/1NotoSans_Regular_SupAndExtA_14pt.h"
 #include "generated/2NotoSans_Regular_CurrencySigns_14pt.h"
+#include "generated/2NotoSansSymbols2_EmjTravelBMP_20pt.h"
+#include "generated/2NotoSansSymbols2_EmjWeatherBMP_20pt.h"
 #include "generated/3NotoEmoji_Medium_Hyper_18pt.h"
 #include "generated/3NotoEmoji_Medium_Meh_20pt.h"
 #include "generated/3NotoEmoji_Medium_Settings_20pt.h"
@@ -43,8 +45,6 @@
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjHeart_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
-#include "generated/8NotoSansSymbols2_EmjTravelBMP_20pt.h"
-#include "generated/8NotoSansSymbols2_EmjWeatherBMP_20pt.h"
 #include "generated/NotoSansAR_Regular_FormsB_16pt.h"
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
 #include "generated/NotoSansJP_Regular_Hiragana_15pt.h"
@@ -67,6 +67,8 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSans_Regular_Base_14pt7b,
   &NotoSans_Regular_SupAndExtA_14pt16b,
   &NotoSans_Regular_CurrencySigns_14pt16b,
+  &NotoSansSymbols2_Regular_EmjTravelBMP_20pt16b,
+  &NotoSansSymbols2_Regular_EmjWeatherBMP_20pt16b,
   &NotoEmoji_Medium_Hyper_18pt16b,
   &NotoEmoji_Medium_Meh_20pt16b,
   &NotoEmoji_Medium_Settings_20pt16b,
@@ -107,8 +109,6 @@ const GFXfont* ALL_FONTS [] = {
   &NotoEmoji_Medium_EmjWeatherSMP_20pt16b,
   &NotoSansSymbols2_Regular_EmjHeart_20pt16b,
   &NotoSansSymbols2_Regular_EmjSportsBMP_20pt16b,
-  &NotoSansSymbols2_Regular_EmjTravelBMP_20pt16b,
-  &NotoSansSymbols2_Regular_EmjWeatherBMP_20pt16b,
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,
   &NotoSansJP_Regular_Hiragana_15pt16b,

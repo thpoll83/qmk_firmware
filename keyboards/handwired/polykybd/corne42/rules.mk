@@ -12,7 +12,7 @@ OLED_DRIVER = ssd1306
 
 # Source files — status_oled.c resolves to corne42/status_oled.c via QMK search order
 QUANTUM_LIB_SRC += spi_master.c
-SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c
+SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c
 
 # No pointing device (no Cirque trackpad on corne42)
 

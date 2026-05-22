@@ -106,11 +106,16 @@ void user_sync_fw_up_chunk_handler(uint8_t in_len, const void* in_data, uint8_t 
         uprintf("slave FW_UP_CHUNK: CRC32 err offset=%lu\n", msg->offset);
         ack = SYNC_CRC32_ERR;
     } else {
-        // BASELINE: slave dummy-accepts the chunk — does NOT write to staging.
-        // The slave's fw_staging_write_chunk path needs to be re-added next;
-        // see FW_UP_BASELINE.md for the bisection plan.
-        uprintf("slave FW_UP_CHUNK: offset=%lu (dummy accept)\n", msg->offset);
-        ack = SYNC_ACK;
+        // Step 1: slave actually writes the chunk into its staging buffer.
+        // 56 B per chunk → s_page_buf; every FLASH_PAGE_SIZE/56 ≈ 5 chunks
+        // the buffer fills and flush_page() halts core1 via PSM, disables
+        // IRQs, runs flash_range_program (~5 ms), restores IRQs, restarts
+        // core1.  ~1100 page writes over a full fw_up.  If any of these
+        // wedges the next chunk RPC, the master log will stop logging
+        // chunks and `slave status (chunk-fail)` will show whether the
+        // slave is fully hung or just slow.
+        bool ok = fw_staging_write_chunk(msg->offset, msg->data, FW_UP_CHUNK_SIZE);
+        ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
     }
     fw_staging_note_chunk_call(msg->offset, ack);
     ((poly_sync_reply_t *)out_data)->ack = ack;

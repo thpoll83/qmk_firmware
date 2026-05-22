@@ -5,6 +5,7 @@
 #include "emoji_data.h"
 #include "keycode_helper.h"
 #include "base/update.h"
+#include "lang/named_glyphs.h"
 
 #include "quantum/unicode/unicode.h"
 
@@ -64,13 +65,13 @@ void emj_init(void) {
 const uint16_t *emj_display_text(uint16_t keycode) {
     // ── Page-prev arrow — only shown when a previous page exists ──
     if (keycode == KC_EMJ_PAGE_PREV) {
-        return (s_page > 0) ? (const uint16_t *)u"\x2190" : (const uint16_t *)u"";
+        return (s_page > 0) ? (const uint16_t *)(u"  " ICON_LEFT) : (const uint16_t *)u"";
     }
 
     // ── Page-next arrow — only shown when a next page exists ──
     if (keycode == KC_EMJ_PAGE_NEXT) {
         return (s_page + 1 < page_count(s_category))
-               ? (const uint16_t *)u"\x2192"
+               ? (const uint16_t *)(u"  " ICON_RIGHT)
                : (const uint16_t *)u"";
     }
 

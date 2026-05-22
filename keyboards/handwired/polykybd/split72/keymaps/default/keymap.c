@@ -1625,7 +1625,6 @@ const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [10] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
     [11] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
     [12] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [13] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
 };
 
 // Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.

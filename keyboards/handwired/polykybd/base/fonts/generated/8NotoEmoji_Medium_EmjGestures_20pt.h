@@ -854,7 +854,7 @@ const GFXfont NotoEmoji_Medium_EmjGestures_20pt16b PROGMEM = {
   (uint8_t  *)NotoEmoji_Medium_EmjGestures_20pt16bBitmaps,
   (GFXglyph *)NotoEmoji_Medium_EmjGestures_20pt16bGlyphs,
   0xF440, // first
-  0xF64F, // last
+  0xF450, // last (truncated; 0x1F64C-0x1F64F served by Emojis0 which has real glyphs at those positions — keeping the original gap-fill range here would shadow EmjLove and EmjObjects with empty glyphs)
   50   //height
  };
 

@@ -29,6 +29,22 @@
 #include "generated/7NotoSansJP_Regular_Cjk96e3_15pt.h"
 #include "generated/7NotoSansJP_Regular_KangXi_15pt.h"
 #include "generated/7NotoSansSymbols2_Regular_Chess_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjAnimals_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjCelebrate_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjFantasy_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjFood_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjGestures_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjLove_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjObjects_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjPlants_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjSmileys2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjSports_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjTravel_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjWeatherSMP_20pt.h"
+#include "generated/8NotoSansSymbols2_EmjHeart_20pt.h"
+#include "generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
+#include "generated/8NotoSansSymbols2_EmjTravelBMP_20pt.h"
+#include "generated/8NotoSansSymbols2_EmjWeatherBMP_20pt.h"
 #include "generated/NotoSansAR_Regular_FormsB_16pt.h"
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
 #include "generated/NotoSansJP_Regular_Hiragana_15pt.h"
@@ -77,6 +93,22 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSansJP_Regular_Cjk96e3_15pt16b,
   &NotoSansJP_Regular_KangXi_15pt16b,
   &NotoSansSymbols2_Regular_Chess_20pt16b,
+  &NotoEmoji_Medium_EmjAnimals_20pt16b,
+  &NotoEmoji_Medium_EmjCelebrate_20pt16b,
+  &NotoEmoji_Medium_EmjFantasy_20pt16b,
+  &NotoEmoji_Medium_EmjFood_20pt16b,
+  &NotoEmoji_Medium_EmjGestures_20pt16b,
+  &NotoEmoji_Medium_EmjLove_20pt16b,
+  &NotoEmoji_Medium_EmjObjects_20pt16b,
+  &NotoEmoji_Medium_EmjPlants_20pt16b,
+  &NotoEmoji_Medium_EmjSmileys2_20pt16b,
+  &NotoEmoji_Medium_EmjSports_20pt16b,
+  &NotoEmoji_Medium_EmjTravel_20pt16b,
+  &NotoEmoji_Medium_EmjWeatherSMP_20pt16b,
+  &NotoSansSymbols2_Regular_EmjHeart_20pt16b,
+  &NotoSansSymbols2_Regular_EmjSportsBMP_20pt16b,
+  &NotoSansSymbols2_Regular_EmjTravelBMP_20pt16b,
+  &NotoSansSymbols2_Regular_EmjWeatherBMP_20pt16b,
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,
   &NotoSansJP_Regular_Hiragana_15pt16b,

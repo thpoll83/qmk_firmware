@@ -89,8 +89,13 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSmileys2_ -n0x10000 0x1F910 0x1F917
 # shadowing EmjLove (0xF48B-0xF4B1) and EmjObjects (0xF4BB-0xF52E) with empty glyphs.
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjGestures_ -n0x10000 0x1F440 0x1F450 > "base/fonts/generated/8NotoEmoji_Medium_EmjGestures_20pt.h"
 
-# Cat 2: fantasy & creatures
+# Cat 0 (fantasy/creature faces 0x1F47B-0x1F482) + Cat 2 (dancer 0x1F483, syringe/pill 0x1F489-0x1F48A) + Cat 3 (💄0x1F484, 💅0x1F485)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFantasy_ -n0x10000 0x1F47B 0x1F48A > "base/fonts/generated/8NotoEmoji_Medium_EmjFantasy_20pt.h"
+
+# Cat 2: people & jobs — buildings, clothing, people, dancer, syringe/pill
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjBuildings_ -n0x10000 0x1F3E0 0x1F3F0 > "base/fonts/generated/8NotoEmoji_Medium_EmjBuildings_20pt.h"
+# Single range covers clothing (0x1F451-0x1F465) and people/characters (0x1F466-0x1F47A)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople_ -n0x10000 0x1F451 0x1F47A > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople_20pt.h"
 
 # Cat 3: love & hearts — BMP 0x2764 + SMP 0x1F48B-0x1F49F (single range includes colored hearts)
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjHeart_ 0x2764 0x2764 > "base/fonts/generated/8NotoSansSymbols2_EmjHeart_20pt.h"
@@ -109,6 +114,12 @@ fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP_ 0x2600 0x2603 0x2614 0x2
 # ⛄⛅⛈ (0x26C4/5/8) — separate file so the gap 0x26A1-0x26C3 doesn't shadow ⚽⚾ (0x26BD-0x26BE)
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP2_ 0x26C4 0x26C8 > "base/fonts/generated/2NotoSansSymbols2_EmjWeatherBMP2_20pt.h"
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP_ -n0x10000 0x1F300 0x1F321 > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP_20pt.h"
+# Cat 6 addition: zodiac signs ♈-♓ (BMP 0x2648-0x2653)
+# PREFIX 1 required: 0x2648-0x2653 fall inside EmjWeatherBMP gap range (first=0x2600, last=0x26A1)
+# prefix 1 sorts before prefix 2, so zodiac font wins the lookup
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _Zodiac_ 0x2648 0x2653 > "base/fonts/generated/1NotoSansSymbols2_Regular_Zodiac_20pt.h"
+# Cat 6 addition: clock faces 🕐-🕧 (SMP 0x1F550-0x1F567)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClocks_ -n0x10000 0x1F550 0x1F567 > "base/fonts/generated/8NotoEmoji_Medium_EmjClocks_20pt.h"
 
 # Cat 7: food & drink
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood_ -n0x10000 0x1F347 0x1F37F > "base/fonts/generated/8NotoEmoji_Medium_EmjFood_20pt.h"

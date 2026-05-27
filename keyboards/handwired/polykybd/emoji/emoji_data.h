@@ -25,6 +25,13 @@ static const uint32_t emj_cat0[] = {
     0x1F916, 0x1F917,
     // Fantasy/creature faces merged from old Misc category
     0x1F47B, 0x1F47C, 0x1F47D, 0x1F47E, 0x1F47F, 0x1F480, 0x1F481, 0x1F482,
+    // Transition faces (Unicode 8 — covered by Emojis0, no new font)
+    0x1F641, 0x1F642, 0x1F643, 0x1F644, // 🙁🙂🙃🙄
+    // Unicode 9 faces (EmjFaces)
+    0x1F920, 0x1F921, 0x1F922, 0x1F923, 0x1F924, 0x1F925, 0x1F926, 0x1F927,
+    0x1F928, 0x1F929, 0x1F92A, 0x1F92B, 0x1F92C, 0x1F92D, 0x1F92E, 0x1F92F,
+    // Unicode 11-13 faces (EmjFaces2)
+    0x1F970, 0x1F971, 0x1F972, 0x1F973, 0x1F974, 0x1F975, 0x1F976, 0x1F97A,
 };
 
 // ── Category 1: Gestures & Body ─────────────────────────────────────────────
@@ -33,8 +40,9 @@ static const uint32_t emj_cat1[] = {
     0x1F446, 0x1F447, 0x1F448, 0x1F449, 0x1F44A, 0x1F44B,
     0x1F44C, 0x1F44D, 0x1F44E, 0x1F44F, 0x1F450, 0x1F4AA,
     0x1F64C, 0x1F64F,
-    // Anatomical body (Unicode 13+)
-    0x1FAC0, 0x1FAC1, 0x1FAC2, // 🫀🫁🫂 heart, lungs, hugging
+    // Hand gestures (Unicode 9+, EmjHands2)
+    0x1F91A, 0x1F91B, 0x1F91C, 0x1F91D, 0x1F91E, 0x1F91F, // 🤚🤛🤜🤝🤞🤟
+    0x1F932, // 🤲 palms up together
 };
 
 // ── Category 2: People & Jobs ───────────────────────────────────────────────
@@ -61,6 +69,8 @@ static const uint32_t emj_cat2[] = {
     // Clothing & medical (Unicode 12+)
     0x1FA70, 0x1FA71, 0x1FA72, 0x1FA73, 0x1FA74, // 🩰🩱🩲🩳🩴 ballet shoes, swimsuit, briefs, shorts, sandal
     0x1FA78, 0x1FA79, 0x1FA7A, // 🩸🩹🩺 drop of blood, bandage, stethoscope
+    // Body (moved from cat1)
+    0x1FAC0, 0x1FAC1, 0x1FAC2, // 🫀🫁🫂 anatomical heart, lungs, hugging
 };
 
 // ── Category 3: Love & Celebrations ─────────────────────────────────────────
@@ -90,6 +100,7 @@ static const uint32_t emj_cat4[] = {
     0x1F42F, 0x1F430, 0x1F431, 0x1F432, 0x1F433, 0x1F434, 0x1F435,
     0x1F436, 0x1F437, 0x1F438, 0x1F439, 0x1F43A, 0x1F43B, 0x1F43C,
     0x1F43D, 0x1F43E,
+    0x1F43F, // 🐿 chipmunk (extended base range)
     // Newer animals (Unicode 9+)
     0x1F981, 0x1F982, 0x1F983, 0x1F984, 0x1F985, 0x1F986, 0x1F987,
     0x1F988, 0x1F989, 0x1F98A, 0x1F98B, 0x1F98C, 0x1F98D, 0x1F98E, 0x1F98F,
@@ -100,6 +111,7 @@ static const uint32_t emj_cat4[] = {
     // Newer animals (Unicode 12-13+)
     0x1F9A1, 0x1F9A2, 0x1F9A3, 0x1F9A4, 0x1F9A5, 0x1F9A6, 0x1F9A7,
     0x1F9A8, 0x1F9A9, 0x1F9AA, 0x1F9AB, 0x1F9AC, 0x1F9AD, // 🦡🦢🦣🦤🦥🦦🦧🦨🦩🦪🦫🦬🦭
+    0x1F9AE, // 🦮 guide dog (extended EmjAnimals5 range)
 };
 
 // ── Category 5: Nature & Plants ──────────────────────────────────────────────
@@ -140,6 +152,7 @@ static const uint32_t emj_cat6[] = {
     0x1F556, 0x1F557, 0x1F558, 0x1F559, 0x1F55A, 0x1F55B,
     0x1F55C, 0x1F55D, 0x1F55E, 0x1F55F, 0x1F560, 0x1F561,
     0x1F562, 0x1F563, 0x1F564, 0x1F565, 0x1F566, 0x1F567,
+    0x1FA90, // 🪐 ringed planet (moved from cat10)
 };
 
 // ── Category 7: Food & Drink ─────────────────────────────────────────────────
@@ -197,6 +210,7 @@ static const uint32_t emj_cat9[] = {
     0x1F392,  // 🎒 backpack
     // Toys & activities (Unicode 12-13+)
     0x1FA80, 0x1FA81, 0x1FA82, 0x1FA83, 0x1FA84, 0x1FA85, 0x1FA86, // 🪀🪁🪂🪃🪄🪅🪆
+    0x1FA95, 0x1FA97, 0x1FA98, // 🪕🪗🪘 banjo, accordion, long drum (moved from cat10)
 };
 
 // ── Category 10: Tools & Objects ─────────────────────────────────────────────
@@ -209,10 +223,10 @@ static const uint32_t emj_cat10[] = {
     0x1F4E3, 0x1F4E4, 0x1F4E5, 0x1F4E6, 0x1F4E7, 0x1F4E8, 0x1F4E9, 0x1F4EA,
     0x1F4EB, 0x1F4EC, 0x1F4ED, 0x1F4EE, 0x1F4EF, 0x1F4F0, 0x1F527, 0x1F528, 0x1F529, 0x1F52A, 0x1F52B, 0x1F52C, 0x1F52D,
     0x1F52E,
-    // Household & tools (Unicode 12-13+)
-    0x1FA90, 0x1FA91, 0x1FA92, 0x1FA93, 0x1FA94, 0x1FA95, 0x1FA96,
-    0x1FA97, 0x1FA98, 0x1FA99, 0x1FA9A, 0x1FA9B, 0x1FA9C, 0x1FA9D,
-    0x1FA9E, 0x1FA9F, // 🪐🪑🪒🪓🪔🪕🪖🪗🪘🪙🪚🪛🪜🪝🪞🪟
+    // Household & tools (Unicode 12-13+; 🪐🪕🪗🪘 moved to cat6/cat9)
+    0x1FA91, 0x1FA92, 0x1FA93, 0x1FA94, 0x1FA96,
+    0x1FA99, 0x1FA9A, 0x1FA9B, 0x1FA9C, 0x1FA9D,
+    0x1FA9E, 0x1FA9F, // 🪑🪒🪓🪔🪖🪙🪚🪛🪜🪝🪞🪟
 };
 
 // ── Category table ──────────────────────────────────────────────────────────

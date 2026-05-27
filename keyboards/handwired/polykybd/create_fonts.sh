@@ -109,11 +109,12 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals_ -n0x10000 0x1F400 0x1F43E 
 # Cat 5: nature & plants
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPlants_ -n0x10000 0x1F330 0x1F344 > "base/fonts/generated/8NotoEmoji_Medium_EmjPlants_20pt.h"
 
-# Cat 6: weather — BMP 0x2600-0x2603, 0x2614, 0x26A1 + SMP 0x1F300-0x1F321
+# Cat 6: weather — BMP 0x2600-0x2603, 0x2614, 0x26A1 + SMP 0x1F300-0x1F32C
+# 0x1F310 🌐 globe and 0x1F324-0x1F32C (☁ variants, 🌪🌫🌬) are in the extended SMP range
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP_ 0x2600 0x2603 0x2614 0x2614 0x26A1 0x26A1 > "base/fonts/generated/2NotoSansSymbols2_EmjWeatherBMP_20pt.h"
 # ⛄⛅⛈ (0x26C4/5/8) — separate file so the gap 0x26A1-0x26C3 doesn't shadow ⚽⚾ (0x26BD-0x26BE)
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP2_ 0x26C4 0x26C8 > "base/fonts/generated/2NotoSansSymbols2_EmjWeatherBMP2_20pt.h"
-fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP_ -n0x10000 0x1F300 0x1F321 > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP_ -n0x10000 0x1F300 0x1F32C > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP_20pt.h"
 # Cat 6 addition: zodiac signs ♈-♓ (BMP 0x2648-0x2653)
 # PREFIX 1 required: 0x2648-0x2653 fall inside EmjWeatherBMP gap range (first=0x2600, last=0x26A1)
 # prefix 1 sorts before prefix 2, so zodiac font wins the lookup

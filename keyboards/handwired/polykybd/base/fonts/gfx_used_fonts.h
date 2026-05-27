@@ -2,9 +2,14 @@
 
 #include "generated/0NotoSans_Regular_Base_14pt.h"
 #include "generated/1NotoSans_Regular_SupAndExtA_14pt.h"
+#include "generated/1NotoSansSymbols2_EmjHandsBMP_20pt.h"
+#include "generated/1NotoSansSymbols2_EmjHandsBMP2_20pt.h"
+#include "generated/1NotoSansSymbols2_EmjSnowflake_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_Zodiac_20pt.h"
 #include "generated/2NotoSans_Regular_CurrencySigns_14pt.h"
 #include "generated/2NotoSansSymbols2_EmjTravelBMP_20pt.h"
 #include "generated/2NotoSansSymbols2_EmjWeatherBMP_20pt.h"
+#include "generated/2NotoSansSymbols2_EmjWeatherBMP2_20pt.h"
 #include "generated/3NotoEmoji_Medium_Hyper_18pt.h"
 #include "generated/3NotoEmoji_Medium_Meh_20pt.h"
 #include "generated/3NotoEmoji_Medium_Settings_20pt.h"
@@ -32,19 +37,57 @@
 #include "generated/7NotoSansJP_Regular_KangXi_15pt.h"
 #include "generated/7NotoSansSymbols2_Regular_Chess_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjAnimals_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjAnimals2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjAnimals3_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjAnimals4_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjAnimals5_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjBody2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjBuildings_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjCelebrate_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjClocks_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjClothing_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjClothing2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjEffects_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjFaces_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjFaces2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjFaces3_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjFantasy_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjFood_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjFood2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjFood3_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjFood4_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjFood5_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjGestures_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjHands2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjHands3_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjHearts_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjHousehold_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjInsects_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjLove_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjObjects1_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjObjects_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjObjects2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjParts_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjPeople_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjPeople2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjPeople3_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjPeople4_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjPlants_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjRaised_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjSciTools_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjSmileys2_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjSports_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjSports2_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjSports3_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjToys_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjTravel_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjTravelExt_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjWeatherSMP1_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP_20pt.h"
+#include "generated/8NotoEmoji_Medium_EmjWeatherSMP2_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjHeart_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
+#include "generated/8NotoSansSymbols2_EmjTravelBMP2_20pt.h"
 #include "generated/NotoSansAR_Regular_FormsB_16pt.h"
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
 #include "generated/NotoSansJP_Regular_Hiragana_15pt.h"
@@ -66,9 +109,14 @@ const GFXfont* ALL_FONTS [] = {
   &IconsFont,
   &NotoSans_Regular_Base_14pt7b,
   &NotoSans_Regular_SupAndExtA_14pt16b,
+  &NotoSansSymbols2_Regular_EmjHandsBMP_20pt16b,
+  &NotoEmoji_Medium_EmjHandsBMP2_20pt16b,
+  &NotoSansSymbols2_Regular_EmjSnowflake_20pt16b,
+  &NotoEmoji_Medium_Zodiac_20pt16b,
   &NotoSans_Regular_CurrencySigns_14pt16b,
-  &NotoSansSymbols2_Regular_EmjTravelBMP_20pt16b,
+  &NotoEmoji_Medium_EmjTravelBMP_20pt16b,
   &NotoSansSymbols2_Regular_EmjWeatherBMP_20pt16b,
+  &NotoSansSymbols2_Regular_EmjWeatherBMP2_20pt16b,
   &NotoEmoji_Medium_Hyper_18pt16b,
   &NotoEmoji_Medium_Meh_20pt16b,
   &NotoEmoji_Medium_Settings_20pt16b,
@@ -96,19 +144,57 @@ const GFXfont* ALL_FONTS [] = {
   &NotoSansJP_Regular_KangXi_15pt16b,
   &NotoSansSymbols2_Regular_Chess_20pt16b,
   &NotoEmoji_Medium_EmjAnimals_20pt16b,
+  &NotoEmoji_Medium_EmjAnimals2_20pt16b,
+  &NotoEmoji_Medium_EmjAnimals3_20pt16b,
+  &NotoEmoji_Medium_EmjAnimals4_20pt16b,
+  &NotoEmoji_Medium_EmjAnimals5_20pt16b,
+  &NotoEmoji_Medium_EmjBody2_20pt16b,
+  &NotoEmoji_Medium_EmjBuildings_20pt16b,
   &NotoEmoji_Medium_EmjCelebrate_20pt16b,
+  &NotoEmoji_Medium_EmjClocks_20pt16b,
+  &NotoEmoji_Medium_EmjClothing_20pt16b,
+  &NotoEmoji_Medium_EmjClothing2_20pt16b,
+  &NotoEmoji_Medium_EmjEffects_20pt16b,
+  &NotoEmoji_Medium_EmjFaces_20pt16b,
+  &NotoEmoji_Medium_EmjFaces2_20pt16b,
+  &NotoEmoji_Medium_EmjFaces3_20pt16b,
   &NotoEmoji_Medium_EmjFantasy_20pt16b,
   &NotoEmoji_Medium_EmjFood_20pt16b,
+  &NotoEmoji_Medium_EmjFood2_20pt16b,
+  &NotoEmoji_Medium_EmjFood3_20pt16b,
+  &NotoEmoji_Medium_EmjFood4_20pt16b,
+  &NotoEmoji_Medium_EmjFood5_20pt16b,
   &NotoEmoji_Medium_EmjGestures_20pt16b,
+  &NotoEmoji_Medium_EmjHands2_20pt16b,
+  &NotoEmoji_Medium_EmjHands3_20pt16b,
+  &NotoEmoji_Medium_EmjHearts_20pt16b,
+  &NotoEmoji_Medium_EmjHousehold_20pt16b,
+  &NotoEmoji_Medium_EmjInsects_20pt16b,
   &NotoEmoji_Medium_EmjLove_20pt16b,
+  &NotoEmoji_Medium_EmjObjects1_20pt16b,
   &NotoEmoji_Medium_EmjObjects_20pt16b,
+  &NotoEmoji_Medium_EmjObjects2_20pt16b,
+  &NotoEmoji_Medium_EmjParts_20pt16b,
+  &NotoEmoji_Medium_EmjPeople_20pt16b,
+  &NotoEmoji_Medium_EmjPeople2_20pt16b,
+  &NotoEmoji_Medium_EmjPeople3_20pt16b,
+  &NotoEmoji_Medium_EmjPeople4_20pt16b,
   &NotoEmoji_Medium_EmjPlants_20pt16b,
+  &NotoEmoji_Medium_EmjRaised_20pt16b,
+  &NotoEmoji_Medium_EmjSciTools_20pt16b,
   &NotoEmoji_Medium_EmjSmileys2_20pt16b,
   &NotoEmoji_Medium_EmjSports_20pt16b,
+  &NotoEmoji_Medium_EmjSports2_20pt16b,
+  &NotoEmoji_Medium_EmjSports3_20pt16b,
+  &NotoEmoji_Medium_EmjToys_20pt16b,
   &NotoEmoji_Medium_EmjTravel_20pt16b,
+  &NotoEmoji_Medium_EmjTravelExt_20pt16b,
+  &NotoEmoji_Medium_EmjWeatherSMP1_20pt16b,
   &NotoEmoji_Medium_EmjWeatherSMP_20pt16b,
+  &NotoEmoji_Medium_EmjWeatherSMP2_20pt16b,
   &NotoSansSymbols2_Regular_EmjHeart_20pt16b,
   &NotoSansSymbols2_Regular_EmjSportsBMP_20pt16b,
+  &NotoEmoji_Medium_EmjTravelBMP2_20pt16b,
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,
   &NotoSansJP_Regular_Hiragana_15pt16b,

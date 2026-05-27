@@ -76,11 +76,12 @@ const uint16_t *emj_display_text(uint16_t keycode) {
                : (const uint16_t *)u"";
     }
 
-    // ── Category tab — show first emoji of that category ──
+    // ── Category tab — show first emojifuer of that category ──
     if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_PAGE_PREV) {
         uint8_t cat = (uint8_t)(keycode - KC_EMJ_CAT_BASE);
         if (cat >= EMJ_NUM_CATEGORIES || EMJ_CATEGORIES[cat].count == 0) return (const uint16_t *)u"";
-        return make_emoji_str(EMJ_CATEGORIES[cat].codepoints[0]);
+        if (EMJ_CATEGORIES[cat].count == 1) return make_emoji_str(EMJ_CATEGORIES[cat].codepoints[0]);
+        return make_emoji_str(EMJ_CATEGORIES[cat].codepoints[1]);
     }
 
     // ── Emoji slot — show current category/page emoji ──
@@ -159,18 +160,16 @@ void emj_draw_tab_indicator(uint16_t keycode) {
     if (keycode < KC_EMJ_CAT_BASE || keycode >= KC_EMJ_PAGE_PREV) return;
     if ((uint8_t)(keycode - KC_EMJ_CAT_BASE) != s_category) return;
 
-    uint8_t *buf = get_scratch_buffer();
-    // Top 2 rows: page 0, bits 0+1 = 0x03 across all visible columns
-    for (uint8_t x = 0; x < SCREEN_WIDTH; x++) {
-        buf[x] |= 0x03;
-    }
-    // Left and right 2-px borders across 5 visible pages (40 pixel rows)
-    // SSD1306 buffer stride is 128 bytes per page regardless of visible width
-    for (uint8_t p = 0; p < 5; p++) {
-        uint16_t b = (uint16_t)p * 128u;
-        buf[b + 0]  |= 0xFF;
-        buf[b + 1]  |= 0xFF;
-        buf[b + 70] |= 0xFF;
-        buf[b + 71] |= 0xFF;
-    }
+    kdisp_fill_rect(28, 2, SCREEN_WIDTH, 1);
+    kdisp_fill_rect(29, 1, SCREEN_WIDTH-2, 1);
+    kdisp_fill_rect(30, 0, SCREEN_WIDTH-4, 1);
+    kdisp_fill_rect(28, 3, 2, SCREEN_HEIGHT-3);
+    kdisp_fill_rect(28+SCREEN_WIDTH-3, 3, 3, SCREEN_HEIGHT-3);
+}
+
+void emj_draw_tab_bottom(uint16_t keycode) {
+    if (keycode < KC_EMJ_CAT_BASE || keycode > KC_EMJ_PAGE_NEXT) return;
+    if ((uint8_t)(keycode - KC_EMJ_CAT_BASE) == s_category) return;
+
+    kdisp_fill_rect(28, SCREEN_HEIGHT-3, SCREEN_WIDTH, 3);
 }

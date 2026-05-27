@@ -130,10 +130,10 @@ The `_EMJ` layer organises emojis into 12 categories. The top row holds category
 | 👀 | Gestures & Body | 20 | 1 |
 | 🏠 | People & Jobs | 65 | 2 |
 | ❤ | Love & Hearts | 24 | 1 |
-| 🐀 | Animals | 63 | 2 |
+| 🐀 | Animals | 78 | 2 |
 | 🌰 | Nature & Plants | 20 | 1 |
 | ☀ | Weather & Sky | 88 | 2 |
-| 🍇 | Food & Drink | 58 | 2 |
+| 🍇 | Food & Drink | 73 | 2 |
 | ✈ | Travel & Places | 47 | 1 |
 | ⚽ | Sports & Entertainment | 50 | 2 |
 | 💻 | Tools & Objects | 62 | 2 |

@@ -81,7 +81,7 @@ enum my_keycodes {
     // Emoji slot keys: KC_EMJ_SLOT_BASE + n  (n = 0 .. EMJ_SLOTS_PER_PAGE-1)
     KC_EMJ_SLOT_BASE,
     // Sentinel — must stay <= QK_USER_MAX (0x7FFF)
-    KC_EMJ_END = KC_EMJ_SLOT_BASE + 49,
+    KC_EMJ_END = KC_EMJ_SLOT_BASE + 50,
 };
 static_assert((int)KC_LAT9 <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_LAT9 < (int)KCL_ENUS, "Overlap detected");

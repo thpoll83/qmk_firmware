@@ -60,3 +60,6 @@ uint8_t emj_active_page(void);
 // Call after kdisp_write_gfx_text but before kdisp_send_buffer.
 // No-op for any keycode that is not the currently active category tab.
 void emj_draw_tab_indicator(uint16_t keycode);
+
+void emj_draw_tab_bottom(uint16_t keycode); // similar to above but draws a horizontal bar at the bottom of the tab instead of a ∩-shaped indicator
+

@@ -14,15 +14,6 @@ typedef struct {
 
 // ── Category 0: Smileys & Faces ─────────────────────────────────────────────
 static const uint32_t emj_cat0[] = {
-    // Celebrations (moved from cat3; EmjCelebrate)
-    0x1F381, 0x1F389, 0x1F38A, // 🎁🎉🎊 gift, party popper, confetti ball
-    // Fantasy/creature faces (EmjFantasy)
-    0x1F47B, 0x1F47C, 0x1F47D, 0x1F47E, 0x1F47F, 0x1F480, 0x1F481, 0x1F482,
-    // Medical (moved from cat2; EmjFantasy range)
-    0x1F489, 0x1F48A, // 💉💊 syringe, pill
-    // Emotion/effect symbols (EmjEffects 0x1F4A0-0x1F4BA)
-    0x1F4A2, 0x1F4A4, 0x1F4A5, 0x1F4A6, 0x1F4A7, 0x1F4A8, 0x1F4A9, // 💢💤💥💦💧💨💩
-    0x1F4AB, 0x1F4AC, 0x1F4AD, 0x1F4AE, // 💫💬💭💮
     // Main smileys (Emojis0 0x1F600-0x1F64F)
     0x1F600, 0x1F601, 0x1F602, 0x1F603, 0x1F604, 0x1F605, 0x1F606,
     0x1F607, 0x1F608, 0x1F609, 0x1F60A, 0x1F60B, 0x1F60C, 0x1F60D,
@@ -50,17 +41,26 @@ static const uint32_t emj_cat0[] = {
     0x1F97A,
     // Unicode 14-15 faces (EmjFaces3; 🫦 moved to cat1)
     0x1FAE0, 0x1FAE1, 0x1FAE2, 0x1FAE3, 0x1FAE4, 0x1FAE5, 0x1FAE7, 0x1FAE8,
+    // Celebrations (moved from cat3; EmjCelebrate)
+    0x1F381, 0x1F389, 0x1F38A, // 🎁🎉🎊 gift, party popper, confetti ball
+    // Fantasy/creature faces (EmjFantasy)
+    0x1F47B, 0x1F47C, 0x1F47D, 0x1F47E, 0x1F47F, 0x1F480, 0x1F481, 0x1F482,
+    // Medical (moved from cat2; EmjFantasy range)
+    0x1F489, 0x1F48A, // 💉💊 syringe, pill
+    // Emotion/effect symbols (EmjEffects 0x1F4A0-0x1F4BA)
+    0x1F4A2, 0x1F4A4, 0x1F4A5, 0x1F4A6, 0x1F4A7, 0x1F4A8, 0x1F4A9, // 💢💤💥💦💧💨💩
+    0x1F4AB, 0x1F4AC, 0x1F4AD, 0x1F4AE, // 💫💬💭💮
 };
 
 // ── Category 1: Gestures & Body ─────────────────────────────────────────────
 static const uint32_t emj_cat1[] = {
-    // BMP gestures — prefix-1 fonts (inside WeatherBMP / DiamondCut gaps)
-    0x261D, // ☝ index pointing up (EmjHandsBMP)
-    0x270A, 0x270B, 0x270C, 0x270D, // ✊✋✌✍ (EmjHandsBMP2; ☞ 0x261E dropped)
     // Eyes, sensory & gestures (EmjGestures 0x1F440-0x1F450)
     0x1F440, 0x1F441, 0x1F442, 0x1F443, 0x1F444, 0x1F445,
     0x1F446, 0x1F447, 0x1F448, 0x1F449, 0x1F44A, 0x1F44B,
     0x1F44C, 0x1F44D, 0x1F44E, 0x1F44F, 0x1F450,
+    // BMP gestures — prefix-1 fonts (inside WeatherBMP / DiamondCut gaps)
+    0x261D, // ☝ index pointing up (EmjHandsBMP)
+    0x270A, 0x270B, 0x270C, 0x270D, // ✊✋✌✍ (EmjHandsBMP2; ☞ 0x261E dropped)
     // Flexed biceps (EmjEffects)
     0x1F4AA, // 💪
     // Raised hand with fingers splayed (EmjRaised)
@@ -167,7 +167,7 @@ static const uint32_t emj_cat4[] = {
     0x1F9A8, 0x1F9A9, 0x1F9AA, 0x1F9AB, 0x1F9AC, 0x1F9AD, // 🦡🦢🦣🦤🦥🦦🦧🦨🦩🦪🦫🦬🦭
     0x1F9AE, // 🦮 guide dog (extended EmjAnimals5 range)
     // Unicode 14-15 animals (EmjInsects extended)
-    0x1FABC, 0x1FABD, 0x1FABF, // 🪼🪽🪿 jellyfish, wing, goose
+    0x1FABC, // 🪼 jellyfish
 };
 
 // ── Category 5: Nature & Plants ──────────────────────────────────────────────
@@ -247,14 +247,11 @@ static const uint32_t emj_cat7[] = {
 // 🚲🚴🚵🚶 moved to cat9; 💈 moved here from cat2
 static const uint32_t emj_cat8[] = {
     // BMP travel places sorted by codepoint (EmjTravelBMP2)
-    0x26EA,  // ⛪ church
     0x26F0,  // ⛰ mountain
     0x26F1,  // ⛱ umbrella on ground
     0x26F2,  // ⛲ fountain
     0x26F4,  // ⛴ ferry
     0x26F5,  // ⛵ sailboat
-    0x26FA,  // ⛺ tent
-    0x26FD,  // ⛽ fuel pump
     0x2708,  // ✈ airplane (EmjTravelBMP)
     // SMP: barber pole (moved from cat2, EmjFantasy range)
     0x1F488, // 💈

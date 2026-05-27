@@ -680,15 +680,15 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_EMJ] = LAYOUT_left_right_stacked(
         KC_EMJ_PAGE_PREV, KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
         KC_NO,      ESLOT(0),       ESLOT(1),       ESLOT(2),       ESLOT(3),       ESLOT(4),       ESLOT(5),
-        KC_NO,      ESLOT(12),      ESLOT(13),      KC_NO,          ESLOT(14),      ESLOT(15),      ESLOT(16),      KC_NO,
-        KC_NO,      ESLOT(23),      ESLOT(24),      ESLOT(25),      ESLOT(26),      ESLOT(27),      ESLOT(28),      ESLOT(29),
-        KC_BASE,    ESLOT(37),      ESLOT(38),      ESLOT(39),                      ESLOT(40),      ESLOT(41),      ESLOT(42),
+        KC_NO,      ESLOT(12),      ESLOT(13),      ESLOT(14),      ESLOT(15),      ESLOT(16),      ESLOT(17),      KC_NO,
+        KC_NO,      ESLOT(24),      ESLOT(25),      ESLOT(26),      ESLOT(27),      ESLOT(28),      ESLOT(29),      ESLOT(30),
+        KC_BASE,    ESLOT(38),      ESLOT(39),      ESLOT(40),                      ESLOT(41),      ESLOT(42),      ESLOT(43),
 
                     KC_EMJ_CAT(6),  KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(11), KC_EMJ_PAGE_NEXT,
                     ESLOT(6),       ESLOT(7),       ESLOT(8),       ESLOT(9),       ESLOT(10),      ESLOT(11),      KC_NO,
-        KC_NO,      ESLOT(17),      ESLOT(18),      ESLOT(19),      ESLOT(20),      ESLOT(21),      ESLOT(22),      KC_NO,
-        ESLOT(30),  ESLOT(31),      ESLOT(32),      ESLOT(33),      ESLOT(34),      ESLOT(35),      ESLOT(36),      KC_NO,
-        ESLOT(43),  ESLOT(44),      ESLOT(45),                      ESLOT(46),      ESLOT(47),      ESLOT(48),      KC_BASE
+        KC_NO,      ESLOT(18),      ESLOT(19),      ESLOT(20),      ESLOT(21),      ESLOT(22),      ESLOT(23),      KC_NO,
+        ESLOT(31),  ESLOT(32),      ESLOT(33),      ESLOT(34),      ESLOT(35),      ESLOT(36),      ESLOT(37),      KC_NO,
+        ESLOT(44),  ESLOT(45),      ESLOT(46),                      ESLOT(47),      ESLOT(48),      ESLOT(49),      KC_BASE
         )
 };
 
@@ -1126,6 +1126,7 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text, true);
                         }
                         emj_draw_tab_indicator(keycode);
+                        emj_draw_tab_bottom(keycode);
                         kdisp_send_buffer();
                     }
                 }

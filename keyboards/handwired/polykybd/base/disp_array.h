@@ -46,3 +46,5 @@ uint8_t* get_scratch_buffer(void);
 
 int16_t get_scratch_buffer_size(void);
 
+void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height);
+

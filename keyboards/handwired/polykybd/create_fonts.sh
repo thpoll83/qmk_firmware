@@ -135,11 +135,12 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople4_ -n0x10000 0x1F9B8 0x1F9BF 
 # Cat 3: love & hearts — BMP 0x2764 + SMP 0x1F48B-0x1F49F (single range includes colored hearts)
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjHeart_ 0x2764 0x2764 > "base/fonts/generated/8NotoSansSymbols2_EmjHeart_20pt.h"
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjLove_ -n0x10000 0x1F48B 0x1F49F > "base/fonts/generated/8NotoEmoji_Medium_EmjLove_20pt.h"
-# Cat 3 addition: white/brown hearts + pinching hand 🤍🤎🤏 (Unicode 12+)
-# Indices 0xF90D-0xF90F: below EmjSmileys2 start (0xF910), clean gap
-fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHearts_ -n0x10000 0x1F90D 0x1F90F > "base/fonts/generated/8NotoEmoji_Medium_EmjHearts_20pt.h"
-# 💪 0x1F4AA (flexed biceps) — cat 1 (Gestures & Body); single glyph between EmjLove and EmjObjects
-fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjMuscle_ -n0x10000 0x1F4AA 0x1F4AA > "base/fonts/generated/8NotoEmoji_Medium_EmjMuscle_20pt.h"
+# Cat 3 addition: white/brown hearts + pinched fingers + pinching hand 🤌🤍🤎🤏 (Unicode 12-13+)
+# Indices 0xF90C-0xF90F: below EmjSmileys2 start (0xF910), clean gap
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHearts_ -n0x10000 0x1F90C 0x1F90F > "base/fonts/generated/8NotoEmoji_Medium_EmjHearts_20pt.h"
+# Cat 0/1/10: emotion/objects 💠-💺 (0x1F4A0-0x1F4BA); covers 💪 0x1F4AA (supersedes EmjMuscle)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjEffects_ -n0x10000 0x1F4A0 0x1F4BA > "base/fonts/generated/8NotoEmoji_Medium_EmjEffects_20pt.h"
+rm -f "base/fonts/generated/8NotoEmoji_Medium_EmjMuscle_20pt.h"
 
 # Cat 4: animals
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals_ -n0x10000 0x1F400 0x1F43F > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals_20pt.h"

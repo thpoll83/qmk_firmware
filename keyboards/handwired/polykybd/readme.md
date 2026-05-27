@@ -126,17 +126,17 @@ The `_EMJ` layer organises emojis into 12 categories. The top row holds category
 
 | Tab | Category | Emoji count | Pages |
 |-----|----------|-------------|-------|
-| 😀 | Smileys & Faces | 124 | 3 |
-| 👀 | Gestures & Body | 48 | 1 |
+| 😀 | Smileys & Faces | 135 | 3 |
+| 👀 | Gestures & Body | 49 | 1 |
 | 🏠 | People & Jobs | 111 | 3 |
 | ❤ | Love & Celebrations | 49 | 1 |
 | 🐀 | Animals | 113 | 3 |
 | 🌰 | Nature & Plants | 32 | 1 |
 | ☀ | Weather & Sky | 91 | 2 |
 | 🍇 | Food & Drink | 114 | 3 |
-| ✈ | Travel & Places | 77 | 2 |
+| ✈ | Travel & Places | 78 | 2 |
 | ⚽ | Sports & Entertainment | 81 | 2 |
-| 💻 | Tools & Objects | 150 | 4 |
+| 💻 | Tools & Objects | 164 | 4 |
 
 The tab key shows the first emoji of its category. Pressing a tab switches the grid immediately; pressing a slot key types that emoji via Unicode input. Categories with 2 pages use ◀ / ▶ to navigate.
 

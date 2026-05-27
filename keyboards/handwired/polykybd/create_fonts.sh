@@ -131,7 +131,7 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjTravel_ -n0x10000 0x1F680 0x1F6BE >
 
 # Cat 9: sports & entertainment — BMP 0x26BD-0x26BE + SMP 0x1F3A0-0x1F3CA
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjSportsBMP_ 0x26BD 0x26BE > "base/fonts/generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
-fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports_ -n0x10000 0x1F3A0 0x1F3CA > "base/fonts/generated/8NotoEmoji_Medium_EmjSports_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports_ -n0x10000 0x1F3A0 0x1F3CE > "base/fonts/generated/8NotoEmoji_Medium_EmjSports_20pt.h"
 
 # Cat 10: tools & objects
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjObjects_ -n0x10000 0x1F4BB 0x1F52E > "base/fonts/generated/8NotoEmoji_Medium_EmjObjects_20pt.h"

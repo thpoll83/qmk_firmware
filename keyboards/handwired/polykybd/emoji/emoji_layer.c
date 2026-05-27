@@ -77,7 +77,7 @@ const uint16_t *emj_display_text(uint16_t keycode) {
     }
 
     // ── Category tab — show first emoji of that category ──
-    if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_CAT_BASE + EMJ_NUM_CATEGORIES) {
+    if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_PAGE_PREV) {
         uint8_t cat = (uint8_t)(keycode - KC_EMJ_CAT_BASE);
         if (cat >= EMJ_NUM_CATEGORIES || EMJ_CATEGORIES[cat].count == 0) return (const uint16_t *)u"";
         return make_emoji_str(EMJ_CATEGORIES[cat].codepoints[0]);
@@ -98,13 +98,13 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
     if (!pressed) {
         // Only act on key-down; still consume key-up for handled keycodes.
         if (keycode == KC_EMJ_PAGE_PREV || keycode == KC_EMJ_PAGE_NEXT) return true;
-        if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_CAT_BASE + EMJ_NUM_CATEGORIES) return true;
+        if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_PAGE_PREV) return true;
         if (keycode >= KC_EMJ_SLOT_BASE && keycode < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) return true;
         return false;
     }
 
     // ── Category tab ──
-    if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_CAT_BASE + EMJ_NUM_CATEGORIES) {
+    if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_PAGE_PREV) {
         uint8_t cat = (uint8_t)(keycode - KC_EMJ_CAT_BASE);
         if (cat < EMJ_NUM_CATEGORIES && cat != s_category) {
             s_category = cat;
@@ -156,7 +156,7 @@ uint8_t emj_active_category(void) { return s_category; }
 uint8_t emj_active_page(void)     { return s_page; }
 
 void emj_draw_tab_indicator(uint16_t keycode) {
-    if (keycode < KC_EMJ_CAT_BASE || keycode >= KC_EMJ_CAT_BASE + EMJ_NUM_CATEGORIES) return;
+    if (keycode < KC_EMJ_CAT_BASE || keycode >= KC_EMJ_PAGE_PREV) return;
     if ((uint8_t)(keycode - KC_EMJ_CAT_BASE) != s_category) return;
 
     uint8_t *buf = get_scratch_buffer();

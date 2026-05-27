@@ -58,7 +58,7 @@ static const uint32_t emj_cat2[] = {
     0x1F9D5, 0x1F9D6, 0x1F9D7, 0x1F9D8, // 🧕🧖🧗🧘 headscarf, steam room, climbing, lotus
 };
 
-// ── Category 3: Love & Hearts ────────────────────────────────────────────────
+// ── Category 3: Love & Celebrations ─────────────────────────────────────────
 // 0x2764 is BMP — font file generated without -n (see create_fonts.sh)
 // 0x1F497-0x1F49F are colored hearts — requires EmjLove regenerated to 0x1F48B-0x1F49F
 static const uint32_t emj_cat3[] = {
@@ -68,6 +68,10 @@ static const uint32_t emj_cat3[] = {
     0x1F497, 0x1F498, 0x1F499, 0x1F49A, 0x1F49B, 0x1F49C,
     0x1F49D, 0x1F49E, 0x1F49F,
     0x1F484, 0x1F485,  // 💄💅 lipstick, nail polish
+    // Celebrations (merged from former cat11)
+    0x1F380, 0x1F381, 0x1F382, 0x1F383, 0x1F384, 0x1F385, 0x1F386,
+    0x1F387, 0x1F388, 0x1F389, 0x1F38A, 0x1F38B, 0x1F38C, 0x1F38D,
+    0x1F38E, 0x1F38F, 0x1F390, 0x1F391, 0x1F393,
 };
 
 // ── Category 4: Animals ──────────────────────────────────────────────────────
@@ -193,13 +197,6 @@ static const uint32_t emj_cat10[] = {
     0x1F52E,
 };
 
-// ── Category 11: Celebrations ────────────────────────────────────────────────
-static const uint32_t emj_cat11[] = {
-    0x1F380, 0x1F381, 0x1F382, 0x1F383, 0x1F384, 0x1F385, 0x1F386,
-    0x1F387, 0x1F388, 0x1F389, 0x1F38A, 0x1F38B, 0x1F38C, 0x1F38D,
-    0x1F38E, 0x1F38F, 0x1F390, 0x1F391, 0x1F393,
-};
-
 // ── Category table ──────────────────────────────────────────────────────────
 #define EMJ_CAT_ENTRY(arr) { arr, (uint8_t)(sizeof(arr) / sizeof(arr[0])) }
 
@@ -207,7 +204,7 @@ static const emj_category_t EMJ_CATEGORIES[] = {
     EMJ_CAT_ENTRY(emj_cat0),   // 0: Smileys    😀
     EMJ_CAT_ENTRY(emj_cat1),   // 1: Gestures   👋
     EMJ_CAT_ENTRY(emj_cat2),   // 2: People     🏠
-    EMJ_CAT_ENTRY(emj_cat3),   // 3: Love       ❤
+    EMJ_CAT_ENTRY(emj_cat3),   // 3: Love & Celebrations ❤
     EMJ_CAT_ENTRY(emj_cat4),   // 4: Animals    🐶
     EMJ_CAT_ENTRY(emj_cat5),   // 5: Nature     🌸
     EMJ_CAT_ENTRY(emj_cat6),   // 6: Weather    ☀
@@ -215,7 +212,6 @@ static const emj_category_t EMJ_CATEGORIES[] = {
     EMJ_CAT_ENTRY(emj_cat8),   // 8: Travel     ✈
     EMJ_CAT_ENTRY(emj_cat9),   // 9: Sports     ⚽
     EMJ_CAT_ENTRY(emj_cat10),  // 10: Objects   🔧
-    EMJ_CAT_ENTRY(emj_cat11),  // 11: Celebrate 🎉
 };
 
 #define EMJ_NUM_CATEGORIES ((uint8_t)(sizeof(EMJ_CATEGORIES) / sizeof(EMJ_CATEGORIES[0])))

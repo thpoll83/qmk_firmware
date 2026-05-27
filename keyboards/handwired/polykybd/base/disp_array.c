@@ -128,21 +128,32 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
     const GFXfont * currentFont = 0;
     uint16_t first = 0;
     uint16_t last = 0;
-    for (uint8_t idx = 0; idx < num_fonts; ++idx) {
-        currentFont = fonts[idx];
+    static uint8_t s_last_idx = 0; // last-hit cache: O(1) on same-font runs (e.g. 49-slot emoji page refresh)
+    bool cache_hit = false;
+    if (s_last_idx < num_fonts) {
+        currentFont = fonts[s_last_idx];
         first = pgm_read_word(&currentFont->first);
         last  = pgm_read_word(&currentFont->last);
-        if (ch < first || ch > last) {
-            if (idx == num_fonts - 1) {
-                currentFont = fonts[0];
-                first = pgm_read_word(&currentFont->first);
-                last  = pgm_read_word(&currentFont->last);
-                ch = u'!';
-                break;
-                //return 0; //no match at all
+        cache_hit = (ch >= first && ch <= last);
+    }
+    if (!cache_hit) {
+        for (uint8_t idx = 0; idx < num_fonts; ++idx) {
+            currentFont = fonts[idx];
+            first = pgm_read_word(&currentFont->first);
+            last  = pgm_read_word(&currentFont->last);
+            if (ch < first || ch > last) {
+                if (idx == num_fonts - 1) {
+                    currentFont = fonts[0];
+                    first = pgm_read_word(&currentFont->first);
+                    last  = pgm_read_word(&currentFont->last);
+                    ch = u'!';
+                    break;
+                    //return 0; //no match at all
+                }
+            } else {
+                s_last_idx = idx;
+                break; // found character in range of the current font
             }
-        } else {
-            break; // found character in range of the current font
         }
     }
     ch -= first;

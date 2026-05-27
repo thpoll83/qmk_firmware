@@ -40,6 +40,9 @@ static const uint32_t emj_cat0[] = {
     0x1F978, // 🥸 disguised face (Unicode 14, in EmjFaces2 range)
     // Unicode 14-15 faces (EmjFaces3)
     0x1FAE0, 0x1FAE1, 0x1FAE2, 0x1FAE3, 0x1FAE4, 0x1FAE5, 0x1FAE6, 0x1FAE7, 0x1FAE8,
+    // Emotion/effect symbols (Unicode 6+, EmjEffects font 0x1F4A0-0x1F4BA)
+    0x1F4A2, 0x1F4A4, 0x1F4A5, 0x1F4A6, 0x1F4A7, 0x1F4A8, 0x1F4A9, // 💢💤💥💦💧💨💩
+    0x1F4AB, 0x1F4AC, 0x1F4AD, 0x1F4AE, // 💫💬💭💮
 };
 
 // ── Category 1: Gestures & Body ─────────────────────────────────────────────
@@ -57,7 +60,8 @@ static const uint32_t emj_cat1[] = {
     0x270A, 0x270B, 0x270C, 0x270D, // ✊✋✌✍ raised fist, hand, victory, writing (EmjHandsBMP2)
     // Body parts (Unicode 12+, EmjParts — moved from cat2)
     0x1F9B4, 0x1F9B5, 0x1F9B6, 0x1F9B7, // 🦴🦵🦶🦷 bone, leg, foot, tooth
-    // Pinching hand (Unicode 12+, EmjHearts font gap)
+    // Pinched fingers + pinching hand (Unicode 13/12+, EmjHearts)
+    0x1F90C, // 🤌 pinched fingers
     0x1F90F, // 🤏 pinching hand
     // Unicode 14-15 hand gestures (EmjHands3)
     0x1FAF0, 0x1FAF1, 0x1FAF2, 0x1FAF3, 0x1FAF4, 0x1FAF5, 0x1FAF6, 0x1FAF7, 0x1FAF8,
@@ -256,6 +260,7 @@ static const uint32_t emj_cat8[] = {
     0x1F6BF, 0x1F6C0, 0x1F6C1, // 🚿🛀🛁 shower, bath, bathtub
     0x1F6C2, 0x1F6C3, 0x1F6C4, 0x1F6C5, // 🛂🛃🛄🛅 passport, customs, baggage, left luggage
     0x1F6D0, 0x1F6D1, 0x1F6D2, // 🛐🛑🛒 place of worship, stop sign, shopping cart (EmjTravelExt)
+    0x1F4BA, // 💺 seat/chair (EmjEffects)
 };
 
 // ── Category 9: Sports & Entertainment ───────────────────────────────────────
@@ -288,6 +293,11 @@ static const uint32_t emj_cat9[] = {
 
 // ── Category 10: Tools & Objects ─────────────────────────────────────────────
 static const uint32_t emj_cat10[] = {
+    // Misc objects & money (Unicode 6-7, EmjEffects font 0x1F4A0-0x1F4BA)
+    0x1F4A0, 0x1F4A1, 0x1F4A3, 0x1F4AF, // 💠💡💣💯
+    0x1F4B0, 0x1F4B1, 0x1F4B2, 0x1F4B3, // 💰💱💲💳
+    0x1F4B4, 0x1F4B5, 0x1F4B6, 0x1F4B7, // 💴💵💶💷
+    0x1F4B8, 0x1F4B9,                    // 💸💹
     0x1F4BB, 0x1F4BC, 0x1F4BD, 0x1F4BE, 0x1F4BF, 0x1F4C0, 0x1F4C1, 0x1F4C2,
     0x1F4C3, 0x1F4C4, 0x1F4C5, 0x1F4C6, 0x1F4C7, 0x1F4C8, 0x1F4C9, 0x1F4CA,
     0x1F4CB, 0x1F4CC, 0x1F4CD, 0x1F4CE, 0x1F4CF, 0x1F4D0, 0x1F4D1, 0x1F4D2,

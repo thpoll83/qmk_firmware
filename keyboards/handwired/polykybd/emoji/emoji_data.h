@@ -53,6 +53,9 @@ static const uint32_t emj_cat2[] = {
     0x1F483,          // 💃 dancer
     0x1F489, 0x1F48A, // 💉💊 syringe, pill
     0x1F486, 0x1F487, 0x1F488, // 💆💇💈 massage, haircut, barber
+    // Newer people (Unicode 10/11+)
+    0x1F930, 0x1F931,                    // 🤰🤱 pregnant, breastfeeding
+    0x1F9D5, 0x1F9D6, 0x1F9D7, 0x1F9D8, // 🧕🧖🧗🧘 headscarf, steam room, climbing, lotus
 };
 
 // ── Category 3: Love & Hearts ────────────────────────────────────────────────
@@ -83,6 +86,8 @@ static const uint32_t emj_cat4[] = {
     0x1F988, 0x1F989, 0x1F98A, 0x1F98B, 0x1F98C, 0x1F98D, 0x1F98E, 0x1F98F,
     // Newer animals (Unicode 10+)
     0x1F990, 0x1F991, 0x1F992, 0x1F993, 0x1F994, 0x1F995, 0x1F996, 0x1F997,
+    // Newer animals (Unicode 11+)
+    0x1F998, 0x1F999, 0x1F99A, 0x1F99B, 0x1F99C, 0x1F99D, 0x1F99E, 0x1F99F, 0x1F9A0,
 };
 
 // ── Category 5: Nature & Plants ──────────────────────────────────────────────
@@ -141,6 +146,10 @@ static const uint32_t emj_cat7[] = {
     // Newer foods (Unicode 10/11+)
     0x1F95F, 0x1F960, 0x1F961, 0x1F962, 0x1F963, 0x1F964, 0x1F965,
     0x1F966, 0x1F967, 0x1F968, 0x1F969, 0x1F96A, 0x1F96B,
+    0x1F96C, 0x1F96D, 0x1F96E, 0x1F96F,  // 🥬🥭🥮🥯 leafy green, mango, mooncake, bagel
+    // Newer foods (Unicode 12+)
+    0x1F9C0, 0x1F9C1, 0x1F9C2, 0x1F9C3, 0x1F9C4, 0x1F9C5,
+    0x1F9C6, 0x1F9C7, 0x1F9C8,           // 🧀🧁🧂🧃🧄🧅🧆🧇🧈
 };
 
 // ── Category 8: Travel & Places ──────────────────────────────────────────────
@@ -168,6 +177,7 @@ static const uint32_t emj_cat9[] = {
     0x1F3BC, 0x1F3BD, 0x1F3BE, 0x1F3BF, 0x1F3C0, 0x1F3C1, 0x1F3C2,
     0x1F3C3, 0x1F3C4, 0x1F3C5, 0x1F3C6, 0x1F3C7, 0x1F3C8, 0x1F3C9,
     0x1F3CA, 0x1F3CB, 0x1F3CC, 0x1F3CD, 0x1F3CE,  // 🏊🏋🏌🏍🏎
+    0x1F938, 0x1F939, 0x1F93A, 0x1F93C, 0x1F93D, 0x1F93E,  // 🤸🤹🤺🤼🤽🤾
     0x1F392,  // 🎒 backpack
 };
 

@@ -23,10 +23,10 @@
 // ───────────────────────────────────────────────────────────────────────────
 
 // Maximum number of emoji slots that can appear in a keymap layer.
-// The split72 layout exposes 49 slots; the corne42 exposes 24.
+// The split72 layout exposes 50 slots; the corne42 exposes 24.
 // Override before including this header if needed.
 #ifndef EMJ_SLOTS_PER_PAGE
-#  define EMJ_SLOTS_PER_PAGE 49
+#  define EMJ_SLOTS_PER_PAGE 50
 #endif
 
 // Maximum number of category tabs in the keymap.
@@ -56,10 +56,10 @@ void emj_apply_sync(uint8_t category, uint8_t page);
 uint8_t emj_active_category(void);
 uint8_t emj_active_page(void);
 
-// Draws a 2-px ∩-shaped indicator on the active category tab display.
+// Draws a 3-px tab indicator on the active categor.
 // Call after kdisp_write_gfx_text but before kdisp_send_buffer.
 // No-op for any keycode that is not the currently active category tab.
 void emj_draw_tab_indicator(uint16_t keycode);
 
-void emj_draw_tab_bottom(uint16_t keycode); // similar to above but draws a horizontal bar at the bottom of the tab instead of a ∩-shaped indicator
-
+// similar to above but draws a horizontal bar at the bottom of the tab
+void emj_draw_tab_bottom(uint16_t keycode);

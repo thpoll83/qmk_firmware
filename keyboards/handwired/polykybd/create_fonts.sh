@@ -105,6 +105,8 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjMuscle_ -n0x10000 0x1F4AA 0x1F4AA >
 
 # Cat 4: animals
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals_ -n0x10000 0x1F400 0x1F43E > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals_20pt.h"
+# Cat 4 addition: newer animals 🦁-🦏 (Unicode 9+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals2_ -n0x10000 0x1F981 0x1F98F > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals2_20pt.h"
 
 # Cat 5: nature & plants
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPlants_ -n0x10000 0x1F330 0x1F344 > "base/fonts/generated/8NotoEmoji_Medium_EmjPlants_20pt.h"
@@ -124,6 +126,8 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClocks_ -n0x10000 0x1F550 0x1F567 >
 
 # Cat 7: food & drink
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood_ -n0x10000 0x1F347 0x1F37F > "base/fonts/generated/8NotoEmoji_Medium_EmjFood_20pt.h"
+# Cat 7 addition: newer foods 🥐-🥞 (Unicode 9+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood2_ -n0x10000 0x1F950 0x1F95E > "base/fonts/generated/8NotoEmoji_Medium_EmjFood2_20pt.h"
 
 # Cat 8: travel — BMP 0x2708 + SMP 0x1F680-0x1F6BE
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjTravelBMP_ 0x2708 0x2708 > "base/fonts/generated/2NotoSansSymbols2_EmjTravelBMP_20pt.h"

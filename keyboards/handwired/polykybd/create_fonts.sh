@@ -100,6 +100,10 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople_ -n0x10000 0x1F451 0x1F47A >
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople2_ -n0x10000 0x1F930 0x1F931 > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople2_20pt.h"
 # Cat 2 addition: newer people 🧕🧖🧗🧘 (Unicode 10/11+)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople3_ -n0x10000 0x1F9D5 0x1F9D8 > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople3_20pt.h"
+# Cat 2 addition: clothing & medical 🩰-🩺 (Unicode 12+); gap at 0x1FA75-0x1FA77 is harmless
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClothing_ -n0x10000 0x1FA70 0x1FA7A > "base/fonts/generated/8NotoEmoji_Medium_EmjClothing_20pt.h"
+# Cat 1 addition: anatomical body 🫀🫁🫂 (Unicode 13+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjBody2_ -n0x10000 0x1FAC0 0x1FAC2 > "base/fonts/generated/8NotoEmoji_Medium_EmjBody2_20pt.h"
 
 # Cat 3: love & hearts — BMP 0x2764 + SMP 0x1F48B-0x1F49F (single range includes colored hearts)
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjHeart_ 0x2764 0x2764 > "base/fonts/generated/8NotoSansSymbols2_EmjHeart_20pt.h"
@@ -115,9 +119,13 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals2_ -n0x10000 0x1F981 0x1F98F
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals3_ -n0x10000 0x1F990 0x1F997 > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals3_20pt.h"
 # Cat 4 addition: newer animals 🦘-🦠 (Unicode 11+)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals4_ -n0x10000 0x1F998 0x1F9A0 > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals4_20pt.h"
+# Cat 4 addition: newer animals 🦡-🦭 (Unicode 12-13+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals5_ -n0x10000 0x1F9A1 0x1F9AD > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals5_20pt.h"
 
 # Cat 5: nature & plants
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPlants_ -n0x10000 0x1F330 0x1F344 > "base/fonts/generated/8NotoEmoji_Medium_EmjPlants_20pt.h"
+# Cat 5 addition: insects & nature objects 🪰-🪶 (Unicode 13+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjInsects_ -n0x10000 0x1FAB0 0x1FAB6 > "base/fonts/generated/8NotoEmoji_Medium_EmjInsects_20pt.h"
 
 # Cat 6: weather — BMP 0x2600-0x2603, 0x2614, 0x26A1 + SMP 0x1F300-0x1F32C
 # 0x1F310 🌐 globe and 0x1F324-0x1F32C (☁ variants, 🌪🌫🌬) are in the extended SMP range
@@ -140,6 +148,8 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood2_ -n0x10000 0x1F950 0x1F95E > 
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood3_ -n0x10000 0x1F95F 0x1F96F > "base/fonts/generated/8NotoEmoji_Medium_EmjFood3_20pt.h"
 # Cat 7 addition: newer foods 🧀-🧈 (Unicode 12+)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood4_ -n0x10000 0x1F9C0 0x1F9C8 > "base/fonts/generated/8NotoEmoji_Medium_EmjFood4_20pt.h"
+# Cat 7 addition: newer foods 🫐-🫖 (Unicode 13+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood5_ -n0x10000 0x1FAD0 0x1FAD6 > "base/fonts/generated/8NotoEmoji_Medium_EmjFood5_20pt.h"
 
 # Cat 8: travel — BMP 0x2708 + SMP 0x1F680-0x1F6BE
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjTravelBMP_ 0x2708 0x2708 > "base/fonts/generated/2NotoSansSymbols2_EmjTravelBMP_20pt.h"
@@ -150,9 +160,13 @@ fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjSportsBMP_ 0x26BD 0x26BE > "base/fon
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports_ -n0x10000 0x1F3A0 0x1F3CE > "base/fonts/generated/8NotoEmoji_Medium_EmjSports_20pt.h"
 # Cat 9 addition: newer activities 🤸🤹🤺🤼🤽🤾 (Unicode 9+)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports2_ -n0x10000 0x1F938 0x1F93E > "base/fonts/generated/8NotoEmoji_Medium_EmjSports2_20pt.h"
+# Cat 9 addition: toys & activities 🪀-🪆 (Unicode 12-13+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjToys_ -n0x10000 0x1FA80 0x1FA86 > "base/fonts/generated/8NotoEmoji_Medium_EmjToys_20pt.h"
 
 # Cat 10: tools & objects
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjObjects_ -n0x10000 0x1F4BB 0x1F52E > "base/fonts/generated/8NotoEmoji_Medium_EmjObjects_20pt.h"
+# Cat 10 addition: household & tools 🪐-🪟 (Unicode 12-13+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHousehold_ -n0x10000 0x1FA90 0x1FA9F > "base/fonts/generated/8NotoEmoji_Medium_EmjHousehold_20pt.h"
 
 # Cat 11: celebrations
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjCelebrate_ -n0x10000 0x1F380 0x1F393 > "base/fonts/generated/8NotoEmoji_Medium_EmjCelebrate_20pt.h"

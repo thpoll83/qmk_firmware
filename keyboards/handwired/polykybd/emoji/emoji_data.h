@@ -33,6 +33,8 @@ static const uint32_t emj_cat1[] = {
     0x1F446, 0x1F447, 0x1F448, 0x1F449, 0x1F44A, 0x1F44B,
     0x1F44C, 0x1F44D, 0x1F44E, 0x1F44F, 0x1F450, 0x1F4AA,
     0x1F64C, 0x1F64F,
+    // Anatomical body (Unicode 13+)
+    0x1FAC0, 0x1FAC1, 0x1FAC2, // 🫀🫁🫂 heart, lungs, hugging
 };
 
 // ── Category 2: People & Jobs ───────────────────────────────────────────────
@@ -56,6 +58,9 @@ static const uint32_t emj_cat2[] = {
     // Newer people (Unicode 10/11+)
     0x1F930, 0x1F931,                    // 🤰🤱 pregnant, breastfeeding
     0x1F9D5, 0x1F9D6, 0x1F9D7, 0x1F9D8, // 🧕🧖🧗🧘 headscarf, steam room, climbing, lotus
+    // Clothing & medical (Unicode 12+)
+    0x1FA70, 0x1FA71, 0x1FA72, 0x1FA73, 0x1FA74, // 🩰🩱🩲🩳🩴 ballet shoes, swimsuit, briefs, shorts, sandal
+    0x1FA78, 0x1FA79, 0x1FA7A, // 🩸🩹🩺 drop of blood, bandage, stethoscope
 };
 
 // ── Category 3: Love & Celebrations ─────────────────────────────────────────
@@ -92,6 +97,9 @@ static const uint32_t emj_cat4[] = {
     0x1F990, 0x1F991, 0x1F992, 0x1F993, 0x1F994, 0x1F995, 0x1F996, 0x1F997,
     // Newer animals (Unicode 11+)
     0x1F998, 0x1F999, 0x1F99A, 0x1F99B, 0x1F99C, 0x1F99D, 0x1F99E, 0x1F99F, 0x1F9A0,
+    // Newer animals (Unicode 12-13+)
+    0x1F9A1, 0x1F9A2, 0x1F9A3, 0x1F9A4, 0x1F9A5, 0x1F9A6, 0x1F9A7,
+    0x1F9A8, 0x1F9A9, 0x1F9AA, 0x1F9AB, 0x1F9AC, 0x1F9AD, // 🦡🦢🦣🦤🦥🦦🦧🦨🦩🦪🦫🦬🦭
 };
 
 // ── Category 5: Nature & Plants ──────────────────────────────────────────────
@@ -100,6 +108,8 @@ static const uint32_t emj_cat5[] = {
     0x1F337, 0x1F338, 0x1F339, 0x1F33A, 0x1F33B, 0x1F33C,
     0x1F33D, 0x1F33E, 0x1F33F, 0x1F340, 0x1F341, 0x1F342,
     0x1F343, 0x1F344,
+    // Insects & nature (Unicode 13+)
+    0x1FAB0, 0x1FAB1, 0x1FAB2, 0x1FAB3, 0x1FAB4, 0x1FAB5, 0x1FAB6, // 🪰🪱🪲🪳🪴🪵🪶
 };
 
 // ── Category 6: Weather & Sky ────────────────────────────────────────────────
@@ -154,6 +164,8 @@ static const uint32_t emj_cat7[] = {
     // Newer foods (Unicode 12+)
     0x1F9C0, 0x1F9C1, 0x1F9C2, 0x1F9C3, 0x1F9C4, 0x1F9C5,
     0x1F9C6, 0x1F9C7, 0x1F9C8,           // 🧀🧁🧂🧃🧄🧅🧆🧇🧈
+    // Newer foods (Unicode 13+)
+    0x1FAD0, 0x1FAD1, 0x1FAD2, 0x1FAD3, 0x1FAD4, 0x1FAD5, 0x1FAD6, // 🫐🫑🫒🫓🫔🫕🫖
 };
 
 // ── Category 8: Travel & Places ──────────────────────────────────────────────
@@ -183,6 +195,8 @@ static const uint32_t emj_cat9[] = {
     0x1F3CA, 0x1F3CB, 0x1F3CC, 0x1F3CD, 0x1F3CE,  // 🏊🏋🏌🏍🏎
     0x1F938, 0x1F939, 0x1F93A, 0x1F93C, 0x1F93D, 0x1F93E,  // 🤸🤹🤺🤼🤽🤾
     0x1F392,  // 🎒 backpack
+    // Toys & activities (Unicode 12-13+)
+    0x1FA80, 0x1FA81, 0x1FA82, 0x1FA83, 0x1FA84, 0x1FA85, 0x1FA86, // 🪀🪁🪂🪃🪄🪅🪆
 };
 
 // ── Category 10: Tools & Objects ─────────────────────────────────────────────
@@ -195,6 +209,10 @@ static const uint32_t emj_cat10[] = {
     0x1F4E3, 0x1F4E4, 0x1F4E5, 0x1F4E6, 0x1F4E7, 0x1F4E8, 0x1F4E9, 0x1F4EA,
     0x1F4EB, 0x1F4EC, 0x1F4ED, 0x1F4EE, 0x1F4EF, 0x1F4F0, 0x1F527, 0x1F528, 0x1F529, 0x1F52A, 0x1F52B, 0x1F52C, 0x1F52D,
     0x1F52E,
+    // Household & tools (Unicode 12-13+)
+    0x1FA90, 0x1FA91, 0x1FA92, 0x1FA93, 0x1FA94, 0x1FA95, 0x1FA96,
+    0x1FA97, 0x1FA98, 0x1FA99, 0x1FA9A, 0x1FA9B, 0x1FA9C, 0x1FA9D,
+    0x1FA9E, 0x1FA9F, // 🪐🪑🪒🪓🪔🪕🪖🪗🪘🪙🪚🪛🪜🪝🪞🪟
 };
 
 // ── Category table ──────────────────────────────────────────────────────────

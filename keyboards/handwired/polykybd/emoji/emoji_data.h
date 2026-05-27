@@ -32,7 +32,7 @@ static const uint32_t emj_cat1[] = {
     0x1F64C, 0x1F64F,
 };
 
-// ── Category 2: Fantasy & Creatures ─────────────────────────────────────────
+// ── Category 2: Misc ────────────────────────────────────────────────────────
 static const uint32_t emj_cat2[] = {
     0x1F47B, 0x1F47C, 0x1F47D, 0x1F47E, 0x1F47F, 0x1F480,
     0x1F481, 0x1F482, 0x1F483, 0x1F484, 0x1F485, 0x1F489, 0x1F48A,
@@ -72,17 +72,22 @@ static const uint32_t emj_cat5[] = {
 
 // ── Category 6: Weather & Sky ────────────────────────────────────────────────
 // BMP codepoints (0x2600…): font index = codepoint (no -n offset)
+// ⛄⛅⛈ (0x26C4/5/8) require EmjWeatherBMP2 font from create_fonts.sh
 static const uint32_t emj_cat6[] = {
-    0x2600,  // ☀ sun     (BMP)
-    0x2601,  // ☁ cloud   (BMP)
-    0x2602,  // ☂ umbrella (BMP)
-    0x2603,  // ☃ snowman (BMP)
-    0x2614,  // ☔ umbrella with rain (BMP)
-    0x26A1,  // ⚡ lightning (BMP)
-    0x1F300, 0x1F301, 0x1F302, 0x1F304, 0x1F305, 0x1F306,
+    0x2600,  // ☀ sun
+    0x2601,  // ☁ cloud
+    0x2602,  // ☂ umbrella
+    0x2603,  // ☃ snowman
+    0x2614,  // ☔ umbrella with rain
+    0x26A1,  // ⚡ lightning
+    0x26C4,  // ⛄ snowman without snow
+    0x26C5,  // ⛅ sun behind cloud
+    0x26C8,  // ⛈ cloud with lightning and rain
+    0x1F300, 0x1F301, 0x1F302, 0x1F303, 0x1F304, 0x1F305, 0x1F306,
     0x1F307, 0x1F308, 0x1F309, 0x1F30A, 0x1F30B, 0x1F30C,
-    0x1F30D, 0x1F30E, 0x1F30F, 0x1F311, 0x1F313, 0x1F315,
-    0x1F319, 0x1F31F, 0x1F320, 0x1F321,
+    0x1F30D, 0x1F30E, 0x1F30F, 0x1F311, 0x1F312, 0x1F313, 0x1F314,
+    0x1F315, 0x1F316, 0x1F317, 0x1F318, 0x1F319, 0x1F31A, 0x1F31B,
+    0x1F31C, 0x1F31D, 0x1F31E, 0x1F31F, 0x1F320, 0x1F321,
 };
 
 // ── Category 7: Food & Drink ─────────────────────────────────────────────────
@@ -149,7 +154,7 @@ static const uint32_t emj_cat11[] = {
 static const emj_category_t EMJ_CATEGORIES[] = {
     EMJ_CAT_ENTRY(emj_cat0),   // 0: Smileys    😀
     EMJ_CAT_ENTRY(emj_cat1),   // 1: Gestures   👋
-    EMJ_CAT_ENTRY(emj_cat2),   // 2: Fantasy    👻
+    EMJ_CAT_ENTRY(emj_cat2),   // 2: Misc        👻
     EMJ_CAT_ENTRY(emj_cat3),   // 3: Love       ❤
     EMJ_CAT_ENTRY(emj_cat4),   // 4: Animals    🐶
     EMJ_CAT_ENTRY(emj_cat5),   // 5: Nature     🌸

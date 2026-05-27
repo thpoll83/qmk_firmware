@@ -135,9 +135,9 @@ The `_EMJ` layer organises emojis into 12 categories. The top row holds category
 | ☀ | Weather & Sky | 88 | 2 |
 | 🍇 | Food & Drink | 58 | 2 |
 | ✈ | Travel & Places | 47 | 1 |
-| ⚽ | Sports & Entertainment | 45 | 1 |
+| ⚽ | Sports & Entertainment | 46 | 1 |
 | 💻 | Tools & Objects | 57 | 2 |
-| 🎀 | Celebrations | 20 | 1 |
+| 🎀 | Celebrations | 19 | 1 |
 
 The tab key shows the first emoji of its category. Pressing a tab switches the grid immediately; pressing a slot key types that emoji via Unicode input. Categories with 2 pages use ◀ / ▶ to navigate.
 

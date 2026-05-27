@@ -21,17 +21,25 @@ static const uint32_t emj_cat0[] = {
     0x1F61E, 0x1F61F, 0x1F620, 0x1F621, 0x1F622, 0x1F623, 0x1F624,
     0x1F625, 0x1F626, 0x1F627, 0x1F628, 0x1F629, 0x1F62A, 0x1F62B, 0x1F62C, 0x1F62D,
     0x1F62E, 0x1F62F, 0x1F630, 0x1F631, 0x1F632, 0x1F633, 0x1F634, 0x1F635, 0x1F636,
-    0x1F637, 0x1F910, 0x1F911, 0x1F912, 0x1F913, 0x1F914, 0x1F915,
+    0x1F637,
+    // Cat faces (Unicode 6 — covered by Emojis0)
+    0x1F638, 0x1F639, 0x1F63A, 0x1F63B, 0x1F63C, 0x1F63D, 0x1F63E, 0x1F63F, 0x1F640,
+    0x1F910, 0x1F911, 0x1F912, 0x1F913, 0x1F914, 0x1F915,
     0x1F916, 0x1F917, 0x1F918, 0x1F919, // sign of the horns, call me hand (EmjSmileys2 extended)
     // Fantasy/creature faces merged from old Misc category
     0x1F47B, 0x1F47C, 0x1F47D, 0x1F47E, 0x1F47F, 0x1F480, 0x1F481, 0x1F482,
     // Transition faces (Unicode 8 — covered by Emojis0, no new font)
     0x1F641, 0x1F642, 0x1F643, 0x1F644, // 🙁🙂🙃🙄
+    // Monkey faces (Unicode 6 — covered by Emojis0)
+    0x1F648, 0x1F649, 0x1F64A, // 🙈🙉🙊 see/hear/speak-no-evil
     // Unicode 9 faces (EmjFaces)
     0x1F920, 0x1F921, 0x1F922, 0x1F923, 0x1F924, 0x1F925, 0x1F926, 0x1F927,
     0x1F928, 0x1F929, 0x1F92A, 0x1F92B, 0x1F92C, 0x1F92D, 0x1F92E, 0x1F92F,
-    // Unicode 11-13 faces (EmjFaces2)
+    // Unicode 11-14 faces (EmjFaces2)
     0x1F970, 0x1F971, 0x1F972, 0x1F973, 0x1F974, 0x1F975, 0x1F976, 0x1F97A,
+    0x1F978, // 🥸 disguised face (Unicode 14, in EmjFaces2 range)
+    // Unicode 14-15 faces (EmjFaces3)
+    0x1FAE0, 0x1FAE1, 0x1FAE2, 0x1FAE3, 0x1FAE4, 0x1FAE5, 0x1FAE6, 0x1FAE7, 0x1FAE8,
 };
 
 // ── Category 1: Gestures & Body ─────────────────────────────────────────────
@@ -45,8 +53,14 @@ static const uint32_t emj_cat1[] = {
     0x1F932, // 🤲 palms up together
     0x1F590, // 🖐 raised hand with fingers splayed (EmjRaised)
     // BMP hand gestures — prefix-1 fonts beat WeatherBMP/DiamondCut gap entries
-    0x261D,  // ☝ index pointing up (EmjHandsBMP)
+    0x261D, 0x261E, // ☝☞ index pointing up/right (EmjHandsBMP extended)
     0x270A, 0x270B, 0x270C, 0x270D, // ✊✋✌✍ raised fist, hand, victory, writing (EmjHandsBMP2)
+    // Body parts (Unicode 12+, EmjParts — moved from cat2)
+    0x1F9B4, 0x1F9B5, 0x1F9B6, 0x1F9B7, // 🦴🦵🦶🦷 bone, leg, foot, tooth
+    // Pinching hand (Unicode 12+, EmjHearts font gap)
+    0x1F90F, // 🤏 pinching hand
+    // Unicode 14-15 hand gestures (EmjHands3)
+    0x1FAF0, 0x1FAF1, 0x1FAF2, 0x1FAF3, 0x1FAF4, 0x1FAF5, 0x1FAF6, 0x1FAF7, 0x1FAF8,
 };
 
 // ── Category 2: People & Jobs ───────────────────────────────────────────────
@@ -63,6 +77,10 @@ static const uint32_t emj_cat2[] = {
     0x1F466, 0x1F467, 0x1F468, 0x1F469, 0x1F46A, 0x1F46B, 0x1F46C,
     0x1F46D, 0x1F46E, 0x1F46F, 0x1F470, 0x1F471, 0x1F472, 0x1F473,
     0x1F474, 0x1F475, 0x1F476, 0x1F477, 0x1F478, 0x1F479, 0x1F47A,
+    // People gestures (Unicode 6 — covered by Emojis0)
+    0x1F645, 0x1F646, 0x1F647, // 🙅🙆🙇 no good, ok, bow
+    0x1F64B, // 🙋 happy person raising hand
+    0x1F64D, 0x1F64E, // 🙍🙎 person frowning, pouting
     // Jobs & activities
     0x1F483,          // 💃 dancer
     0x1F489, 0x1F48A, // 💉💊 syringe, pill
@@ -70,15 +88,17 @@ static const uint32_t emj_cat2[] = {
     // Newer people (Unicode 10/11+)
     0x1F930, 0x1F931,                              // 🤰🤱 pregnant, breastfeeding
     0x1F933, 0x1F934, 0x1F935, 0x1F936, 0x1F937,  // 🤳🤴🤵🤶🤷 selfie, prince, tuxedo, Mrs Claus, shrug
-    // Body parts (Unicode 12+, EmjParts)
-    0x1F9B4, 0x1F9B5, 0x1F9B6, 0x1F9B7,           // 🦴🦵🦶🦷 bone, leg, foot, tooth
+    // Superheroes & abilities (Unicode 11+, EmjPeople4)
+    0x1F9B8, 0x1F9B9, 0x1F9BA, 0x1F9BB, 0x1F9BC, 0x1F9BD, 0x1F9BE, 0x1F9BF,
     0x1F9D0, 0x1F9D1, 0x1F9D2, 0x1F9D3, 0x1F9D4,  // 🧐🧑🧒🧓🧔 monocle, adult, child, older adult, beard
     0x1F9D5, 0x1F9D6, 0x1F9D7, 0x1F9D8,           // 🧕🧖🧗🧘 headscarf, steam room, climbing, lotus
-    // Clothing & medical (Unicode 12+)
-    0x1FA70, 0x1FA71, 0x1FA72, 0x1FA73, 0x1FA74, // 🩰🩱🩲🩳🩴 ballet shoes, swimsuit, briefs, shorts, sandal
+    // Fantasy people (Unicode 12+, EmjPeople3 extended)
+    0x1F9D9, 0x1F9DA, 0x1F9DB, 0x1F9DC, 0x1F9DD, 0x1F9DE, 0x1F9DF, // 🧙🧚🧛🧜🧝🧞🧟
+    // Clothing & medical (Unicode 12+, 🩰-🩴 moved to cat9)
     0x1FA78, 0x1FA79, 0x1FA7A, // 🩸🩹🩺 drop of blood, bandage, stethoscope
-    // Body (moved from cat1)
+    // Body (Unicode 13+, EmjBody2 extended)
     0x1FAC0, 0x1FAC1, 0x1FAC2, // 🫀🫁🫂 anatomical heart, lungs, hugging
+    0x1FAC3, 0x1FAC4, 0x1FAC5, // 🫃🫄🫅 pregnant man, pregnant woman, person with crown
 };
 
 // ── Category 3: Love & Celebrations ─────────────────────────────────────────
@@ -91,6 +111,12 @@ static const uint32_t emj_cat3[] = {
     0x1F497, 0x1F498, 0x1F499, 0x1F49A, 0x1F49B, 0x1F49C,
     0x1F49D, 0x1F49E, 0x1F49F,
     0x1F484, 0x1F485,  // 💄💅 lipstick, nail polish
+    // Unicode 12+ hearts (EmjHearts)
+    0x1F90D, 0x1F90E, // 🤍🤎 white heart, brown heart
+    // Orange heart (Unicode 11+, EmjClothing2)
+    0x1F9E1, // 🧡 orange heart
+    // Colored hearts (Unicode 14+, EmjClothing range)
+    0x1FA75, 0x1FA76, 0x1FA77, // 🩵🩶🩷 light blue, grey, pink heart
     // Celebrations (merged from former cat11)
     0x1F380, 0x1F381, 0x1F382, 0x1F383, 0x1F384, 0x1F385, 0x1F386,
     0x1F387, 0x1F388, 0x1F389, 0x1F38A, 0x1F38B, 0x1F38C, 0x1F38D,
@@ -120,6 +146,8 @@ static const uint32_t emj_cat4[] = {
     0x1F9A1, 0x1F9A2, 0x1F9A3, 0x1F9A4, 0x1F9A5, 0x1F9A6, 0x1F9A7,
     0x1F9A8, 0x1F9A9, 0x1F9AA, 0x1F9AB, 0x1F9AC, 0x1F9AD, // 🦡🦢🦣🦤🦥🦦🦧🦨🦩🦪🦫🦬🦭
     0x1F9AE, // 🦮 guide dog (extended EmjAnimals5 range)
+    // Unicode 14-15 animals (EmjInsects extended)
+    0x1FABC, 0x1FABD, 0x1FABF, // 🪼🪽🪿 jellyfish, wing, goose
 };
 
 // ── Category 5: Nature & Plants ──────────────────────────────────────────────
@@ -131,6 +159,7 @@ static const uint32_t emj_cat5[] = {
     // Insects & nature (Unicode 13+)
     0x1FAB0, 0x1FAB1, 0x1FAB2, 0x1FAB3, 0x1FAB4, 0x1FAB5, 0x1FAB6, // 🪰🪱🪲🪳🪴🪵🪶
     0x1FAB7, 0x1FAB8, 0x1FAB9, 0x1FABA, // 🪷🪸🪹🪺 lotus, coral, empty nest, nest with eggs (Unicode 14)
+    0x1FABB, // 🪻 hyacinth (Unicode 15, EmjInsects extended)
 };
 
 // ── Category 6: Weather & Sky ────────────────────────────────────────────────
@@ -146,6 +175,7 @@ static const uint32_t emj_cat6[] = {
     0x26C4,  // ⛄ snowman without snow
     0x26C5,  // ⛅ sun behind cloud
     0x26C8,  // ⛈ cloud with lightning and rain
+    0x2744,  // ❄ snowflake (BMP — prefix-1 EmjSnowflake font, inside DiamondCut gap)
     0x1F300, 0x1F301, 0x1F302, 0x1F303, 0x1F304, 0x1F305, 0x1F306,
     0x1F307, 0x1F308, 0x1F309, 0x1F30A, 0x1F30B, 0x1F30C,
     0x1F30D, 0x1F30E, 0x1F30F, 0x1F310, 0x1F311, 0x1F312, 0x1F313, 0x1F314,
@@ -188,28 +218,56 @@ static const uint32_t emj_cat7[] = {
     0x1F9C6, 0x1F9C7, 0x1F9C8, 0x1F9C9, 0x1F9CA, 0x1F9CB, // 🧆🧇🧈🧉🧊🧋 waffle, butter, mate, ice, bubble tea
     // Newer foods (Unicode 13+)
     0x1FAD0, 0x1FAD1, 0x1FAD2, 0x1FAD3, 0x1FAD4, 0x1FAD5, 0x1FAD6, // 🫐🫑🫒🫓🫔🫕🫖
+    // Newer foods (Unicode 14-15+, EmjFood5 extended)
+    0x1FAD7, 0x1FAD8, 0x1FAD9, 0x1FADA, 0x1FADB, // 🫗🫘🫙🫚🫛 pouring, beans, jar, olive, pea pod
 };
 
 // ── Category 8: Travel & Places ──────────────────────────────────────────────
-// 0x2708 is BMP
+// 0x2708 is BMP; BMP travel items use EmjTravelBMP2 font (prefix 8, clean gap)
 static const uint32_t emj_cat8[] = {
     0x2708,  // ✈ airplane (BMP)
+    // BMP travel places (EmjTravelBMP2, indices 9962-9981, clean gap)
+    0x26EA,  // ⛪ church
+    0x26F0,  // ⛰ mountain
+    0x26F1,  // ⛱ umbrella on ground (beach)
+    0x26F2,  // ⛲ fountain
+    0x26F4,  // ⛴ ferry
+    0x26F5,  // ⛵ sailboat
+    0x26FA,  // ⛺ tent
+    0x26FD,  // ⛽ fuel pump
     0x1F680, 0x1F681, 0x1F682, 0x1F683, 0x1F684, 0x1F685, 0x1F686,
     0x1F687, 0x1F688, 0x1F689, 0x1F68A, 0x1F68B, 0x1F68C, 0x1F68D,
     0x1F68E, 0x1F68F, 0x1F690, 0x1F691, 0x1F692, 0x1F693, 0x1F694,
     0x1F695, 0x1F696, 0x1F697, 0x1F698, 0x1F699, 0x1F69A, 0x1F69B,
-    0x1F69C, 0x1F6A0, 0x1F6A2, 0x1F6A3, 0x1F6A4, 0x1F6A5,
-    0x1F6A6, 0x1F6A8, 0x1F6A9, 0x1F6AA, 0x1F6B2,
-    0x1F6B4, 0x1F6B5, // 🚴🚵 person biking, mountain biking (in EmjTravel range)
+    0x1F69C,
+    // Additional transit (in EmjTravel range)
+    0x1F69D, 0x1F69E, 0x1F69F, // 🚝🚞🚟 monorail, mountain railway, suspension railway
+    0x1F6A0, 0x1F6A1, // 🚠🚡 mountain cableway, aerial tramway
+    0x1F6A2, 0x1F6A3, 0x1F6A4, 0x1F6A5,
+    0x1F6A6, 0x1F6A7, // 🚦🚧 vertical traffic light, construction
+    0x1F6A8, 0x1F6A9, 0x1F6AA, 0x1F6B2,
+    0x1F6B4, 0x1F6B5, // 🚴🚵 person biking, mountain biking
     0x1F6B6, 0x1F6B9, 0x1F6BA, 0x1F6BB, 0x1F6BC, 0x1F6BD, 0x1F6BE,
+    // Additional road/water signs (in EmjTravel range)
+    0x1F6B0, 0x1F6B1, // 🚰🚱 potable water, non-potable water
+    0x1F6B3,          // 🚳 no bicycles
+    0x1F6B7, 0x1F6B8, // 🚷🚸 no pedestrians, children crossing
+    // Bathroom & transit (EmjTravel extended to 0x1F6C5)
+    0x1F6BF, 0x1F6C0, 0x1F6C1, // 🚿🛀🛁 shower, bath, bathtub
+    0x1F6C2, 0x1F6C3, 0x1F6C4, 0x1F6C5, // 🛂🛃🛄🛅 passport, customs, baggage, left luggage
     0x1F6D0, 0x1F6D1, 0x1F6D2, // 🛐🛑🛒 place of worship, stop sign, shopping cart (EmjTravelExt)
 };
 
 // ── Category 9: Sports & Entertainment ───────────────────────────────────────
-// 0x26BD, 0x26BE are BMP
+// 0x26BD, 0x26BE are BMP (EmjSportsBMP); BMP sports use EmjTravelBMP2 font
 static const uint32_t emj_cat9[] = {
     0x26BD,  // ⚽ soccer  (BMP)
     0x26BE,  // ⚾ baseball (BMP)
+    // BMP sports (EmjTravelBMP2)
+    0x26F3,  // ⛳ golf
+    0x26F7,  // ⛷ skier
+    0x26F8,  // ⛸ ice skate
+    0x26F9,  // ⛹ person bouncing ball
     0x1F3A0, 0x1F3A1, 0x1F3A2, 0x1F3A3, 0x1F3A4, 0x1F3A5, 0x1F3A6,
     0x1F3A7, 0x1F3A8, 0x1F3A9, 0x1F3AA, 0x1F3AB, 0x1F3AC, 0x1F3AD,
     0x1F3AE, 0x1F3AF, 0x1F3B0, 0x1F3B1, 0x1F3B2, 0x1F3B3, 0x1F3B4,
@@ -222,6 +280,10 @@ static const uint32_t emj_cat9[] = {
     // Toys & activities (Unicode 12-13+)
     0x1FA80, 0x1FA81, 0x1FA82, 0x1FA83, 0x1FA84, 0x1FA85, 0x1FA86, // 🪀🪁🪂🪃🪄🪅🪆
     0x1FA95, 0x1FA97, 0x1FA98, // 🪕🪗🪘 banjo, accordion, long drum (moved from cat10)
+    // Ballet shoes & swimwear (Unicode 12+, moved from cat2, EmjClothing font)
+    0x1FA70, 0x1FA71, 0x1FA72, 0x1FA73, 0x1FA74, // 🩰🩱🩲🩳🩴 ballet shoes, one-piece, briefs, shorts, sandal
+    // Clothing (Unicode 11+, EmjClothing2)
+    0x1F9E2, 0x1F9E3, 0x1F9E4, 0x1F9E5, 0x1F9E6, // 🧢🧣🧤🧥🧦 cap, scarf, gloves, coat, socks
 };
 
 // ── Category 10: Tools & Objects ─────────────────────────────────────────────
@@ -247,6 +309,10 @@ static const uint32_t emj_cat10[] = {
     0x1FA91, 0x1FA92, 0x1FA93, 0x1FA94, 0x1FA96,
     0x1FA99, 0x1FA9A, 0x1FA9B, 0x1FA9C, 0x1FA9D,
     0x1FA9E, 0x1FA9F, // 🪑🪒🪓🪔🪖🪙🪚🪛🪜🪝🪞🪟
+    // Science & tools (Unicode 11-12+, EmjSciTools)
+    0x1F9E9, 0x1F9EA, 0x1F9EB, 0x1F9EC, 0x1F9ED, 0x1F9EE, 0x1F9EF,
+    0x1F9F0, 0x1F9F1, 0x1F9F2, 0x1F9F3, 0x1F9F4, 0x1F9F5, 0x1F9F6,
+    0x1F9F7, 0x1F9F8, 0x1F9F9, 0x1F9FA, 0x1F9FB, 0x1F9FC, 0x1F9FD, 0x1F9FE, 0x1F9FF,
 };
 
 // ── Category table ──────────────────────────────────────────────────────────

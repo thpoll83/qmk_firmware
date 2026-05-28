@@ -137,14 +137,20 @@ New:
   commit, status).
 
 Modified:
+- `chconf.h` — **new**: overrides `CORTEX_ALTERNATE_SWITCH = TRUE` so the
+  ChibiOS context-switch trap is PendSV (maskable by PRIMASK) instead of
+  NMI (not maskable).  Required for slave-side flash erase to be safe — see
+  "Step-1 regression" below.
 - `config.h` — added 5 fw_up TIDs, `SPLIT_MAX_CONNECTION_ERRORS = 200`.
 - `bridge_helper.c` — fw_up TID names + `reply.ack` reset between retries.
 - `hid_com.c` — fall-through dispatch into `hid_fw_up_receive()`.
 - `rules.mk` / `split72/rules.mk` — added `hid_fw_up.c`,
   `split_fw_up.c`, `base/fw_staging.c`.
 - `split72/keymaps/default/keymap.c` — 5 `transaction_register_rpc()`
-  calls, `fw_staging_init()`, and `if (!fw_staging_fw_up_active())`
-  guard around brightness/default-layer saves + display refresh.
+  calls, `fw_staging_init()`, `fw_staging_process_deferred()` and
+  `fw_staging_commit_pending()` in `housekeeping_task_user`, and
+  `if (!fw_staging_fw_up_active())` guard around brightness/default-layer
+  saves + display refresh.
 
 ## How to test
 
@@ -160,3 +166,71 @@ qmk compile -kb handwired/polykybd/split72 -km default
 #   ~4458 × "FW_UP_CHUNK: offset=N", every one slave_ack=0xca
 #   FW_UP_COMMIT: relay-only master slave_ack=0x?? (will fail — expected)
 ```
+
+## Step-1 regression — flash erase hang on slave
+
+Adding the slave-side `fw_staging_write_chunk()` in step 1 surfaced a
+**pre-existing latent bug** in the architecture: the slave's
+`flash_range_erase` in `fw_staging_process_deferred()` was hanging,
+not advancing `s_erase_pending`, BEGIN polls timing out at 90 s.
+
+### Root cause
+
+`save_and_disable_interrupts()` sets PRIMASK=1 — masks all
+configurable-priority exceptions but **NOT NMI or HardFault**.
+`flash_range_erase()` then exits XIP for ~50 ms while the bootrom
+operates the SSI.  In the previous (working-by-accident) firmware,
+nothing tried to fire NMI on slave's core0 during that window.
+
+After the upstream merge that landed `g_led_config` and `ALL_FONTS` in
+`.rodata` (commit `66cfc10c`), flash layout shifted enough that the
+combination of:
+
+- ChibiOS RP2 port's `NMI_Handler` (the SMP context-switch handler when
+  `CORTEX_ALTERNATE_SWITCH=FALSE`, the default)
+- Vector80 (SIO_IRQ_PROC1) `CH_IRQ_EPILOGUE` writing `ICSR.NMIPENDSET`
+- the [pico-sdk SIO FIFO IRQ quirk](https://github.com/raspberrypi/pico-sdk/issues/284)
+  (FIFO IRQ keeps firing despite NVIC ISER being clear)
+
+...started reliably firing NMI on slave's core0 during the erase
+window.  NMI handler lives at flash address `0x10011649` (see CLAUDE.md
+"Bug: core1 hangs ..." vector address table).  Fetching from flash with
+XIP off → hang.
+
+The slave appears "alive" because its high-priority `SlaveThread`
+(handling RPCs) is on a separate stack and can still respond to BEGIN
+polls — it returns `SYNC_CRC32_ERR` ("erase in progress") because
+`s_erase_pending` is still true, since slave's main thread is stuck in
+the bootrom.  Master polls forever, host times out at 90 s.
+
+### Fix in this commit
+
+`chconf.h`: set `CORTEX_ALTERNATE_SWITCH = TRUE`.  Moves the ChibiOS
+context-switch trap from NMI to PendSV.  PendSV is held off by PRIMASK,
+so during `flash_range_erase`'s IRQ-disabled window the context-switch
+can't fire — and even when it does fire (after `restore_interrupts`),
+PendSV is dispatched normally.
+
+The existing `cpsid i` in `core1_entry` (`multicore_exec.c`) continues
+to protect core1 from the same SIO FIFO IRQ quirk; this chconf change
+is purely about giving core0 a maskable preemption trap during fw_up.
+
+### What this does NOT fix
+
+- The fundamental architectural issue: in-application flash on dual-core
+  RP2040 with an SMP RTOS is hostile (see web research summary in chat
+  history).  The proper long-term answer is a separate bootloader stage
+  (picowota-style) entered via reboot.
+- `flash_range_program` (used in `flush_page()` every 5 chunks) has the
+  same IRQ-disabled window and the same risk.  Should also be safer
+  now with the chconf change, but watch for chunk-time hangs.
+- Master-side flash erase (currently stubbed in baseline; needed for
+  step 3).  Same risk profile when re-introduced.
+
+### Sources
+
+- [pico-sdk flash.c](https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/hardware_flash/flash.c)
+- [pico-sdk #679 — bootrom block-erase hang](https://github.com/raspberrypi/pico-sdk/issues/679)
+- [pico-sdk #284 — SIO FIFO IRQ quirk](https://github.com/raspberrypi/pico-sdk/issues/284)
+- [FreeRTOS SMP RP2040 thread](https://forums.freertos.org/t/freertos-smp-on-rp2040-caused-flash-erase-and-write-fails/15891)
+- CLAUDE.md "Bug: core1 hangs ..." (this repo)

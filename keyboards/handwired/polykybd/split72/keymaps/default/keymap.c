@@ -842,7 +842,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
         const uint16_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
         if(def_variation!=NULL) {
-            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, latin_ex_map[offset+keycode-KC_A][variation]);
+            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, latin_ex_map[offset+keycode-KC_A][variation]);
             return true;
         }
         return false;
@@ -856,7 +856,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
             const uint16_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
             if(variation!=NULL) {
-                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, variation);
+                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, variation);
                 return true;
             }
         }
@@ -1085,10 +1085,10 @@ void update_displays(enum refresh_mode mode) {
                         if(text==NULL) {
                             if(!render_key(keycode, state, mods) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
-                                kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, 28, 23, unicode_map[chr], false);
+                                kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, unicode_map[chr], false);
                             }
                         } else {
-                            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text);
+                            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
                         }
                         text = NULL;
                         if(display_overlays) {
@@ -1099,7 +1099,7 @@ void update_displays(enum refresh_mode mode) {
                             text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
-                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, 28, 23, text, true);
+                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, true);
                         }
                         emj_draw_tab_indicator(keycode);
                         emj_draw_tab_bottom(keycode);

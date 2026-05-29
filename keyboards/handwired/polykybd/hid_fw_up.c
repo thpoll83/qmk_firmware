@@ -38,14 +38,16 @@ static void fw_up_log_slave_status(const char *tag) {
     const fw_staging_status_t *s = &reply.status;
     uprintf("slave status (%s): init=%u active=%u erase_pending=%u erase=%u/%u "
             "next_off=%lu begin_calls=%u chunk_calls=%u chunk_errs=%u "
-            "last_chunk_off=%lu last_ack=0x%02x\n",
+            "last_chunk_off=%lu last_ack=0x%02x pd_calls=%u pd_advances=%u\n",
             tag,
             (unsigned)s->initialized, (unsigned)s->fw_up_active, (unsigned)s->erase_pending,
             (unsigned)s->erase_sector_next, (unsigned)s->erase_sector_count,
             (unsigned long)s->next_offset,
             (unsigned)s->begin_handler_calls, (unsigned)s->chunk_handler_calls,
             (unsigned)s->chunk_handler_errors,
-            (unsigned long)s->last_chunk_offset, (unsigned)s->last_chunk_ack);
+            (unsigned long)s->last_chunk_offset, (unsigned)s->last_chunk_ack,
+            (unsigned)s->process_deferred_calls,
+            (unsigned)s->process_deferred_advances);
 }
 
 bool hid_fw_up_receive(uint8_t *data, uint8_t length) {

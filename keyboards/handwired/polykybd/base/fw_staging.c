@@ -95,6 +95,8 @@ static uint32_t s_erase_sector_next;   // next sector index not yet erased
 static uint16_t s_begin_handler_calls;
 static uint16_t s_chunk_handler_calls;
 static uint16_t s_chunk_handler_errors;
+static uint16_t s_process_deferred_calls;     // every entry into process_deferred
+static uint16_t s_process_deferred_advances;  // every actual sector erase
 static uint32_t s_last_chunk_offset;
 static uint8_t  s_last_chunk_ack;
 
@@ -235,6 +237,11 @@ void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc) {
 // Erase one staging sector per call.  Must be called repeatedly from
 // housekeeping_task_user() until fw_staging_erase_pending() returns false.
 void fw_staging_process_deferred(void) {
+    // Bump the call counter unconditionally — this is what proves the slave's
+    // housekeeping is actually invoking us (vs. silently never being scheduled,
+    // which is what the symptom would look like from the master side).
+    if (s_process_deferred_calls != UINT16_MAX) s_process_deferred_calls++;
+
     if (!s_erase_pending) return;
 
     if (s_erase_sector_next >= s_erase_sector_count) {
@@ -261,6 +268,10 @@ void fw_staging_process_deferred(void) {
     flash_range_erase(offset, FLASH_SECTOR_SIZE);
     restore_interrupts(irq);
     s_last_sector_ms = timer_read32();
+
+    // Bump the advance counter — proves we actually got back from
+    // flash_range_erase (i.e. the bootrom returned, didn't hang in XIP-off).
+    if (s_process_deferred_advances != UINT16_MAX) s_process_deferred_advances++;
 
     s_erase_sector_next++;
     if (s_erase_sector_next >= s_erase_sector_count) {
@@ -399,8 +410,10 @@ void fw_staging_get_status(fw_staging_status_t *out) {
     out->last_chunk_offset    = s_last_chunk_offset;
     out->begin_handler_calls  = s_begin_handler_calls;
     out->chunk_handler_calls  = s_chunk_handler_calls;
-    out->chunk_handler_errors = s_chunk_handler_errors;
-    out->pad                  = 0;
+    out->chunk_handler_errors      = s_chunk_handler_errors;
+    out->process_deferred_calls    = s_process_deferred_calls;
+    out->process_deferred_advances = s_process_deferred_advances;
+    out->pad                       = 0;
 }
 
 void fw_staging_note_begin_call(void) {

@@ -88,6 +88,8 @@ typedef struct _fw_staging_status_t {
     uint16_t begin_handler_calls;
     uint16_t chunk_handler_calls;
     uint16_t chunk_handler_errors;   // chunks that hit CRC mismatch / write fail
+    uint16_t process_deferred_calls; // times fw_staging_process_deferred() entered
+    uint16_t process_deferred_advances; // times a sector was actually erased
     uint16_t pad;
 } fw_staging_status_t;
 

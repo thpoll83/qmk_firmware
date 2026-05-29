@@ -414,3 +414,62 @@ mechanism and motivates the cooperative-park redesign.
 - `base/fw_staging.c`: `fw_staging_process_deferred()` restarts core1 at
   erase-complete (diagnostic probe; see inline comment dated 2026-05-29).
 - No other changes; erase/chunk/flush logic otherwise unchanged from `a37fb58a`.
+
+## 2026-05-29 (run 3) — core1 AND payload-size both exonerated; bracket-probe added
+
+### Probe result on hardware
+Flashed the run-2 core1-restart probe. Master log:
+
+- `begin-ready: … erase=62/62 erase_pending=0 … pd_advances=62`, BEGIN
+  `slave_ack=0xca`, and the begin-ready **status read succeeded** (printed all
+  counters) — slave provably alive here.
+- `FW_UP_CHUNK: offset=0` → **all 10 retries `success:0`, all stamped at the
+  same millisecond**, `slave_ack=0x35`, then ~3 min of `Failed to execute
+  slave_matrix` + failed `UserPoly`. Master stays healthy (USB briefly
+  re-enumerated, then recovered).
+
+**Identical to run 2.** Restarting core1 the instant erase completes changed
+nothing.
+
+### Two suspects eliminated
+1. **core1 is exonerated.** The chunk-0 lock is identical whether core1 is held
+   in PSM reset through the chunk phase (run 2) or restarted alive at
+   erase-complete (run 3). Core1 state is not the variable. The whole
+   NMI/Vector80/PSM line of inquiry is irrelevant to the chunk-phase hang.
+2. **Payload size is exonerated.** Normal overlay sync routinely pushes *larger*
+   M2S transactions to the slave and they work (overlays render):
+   `overlay_sync_t`=67 B, `compressed_overlay_sync_t`=69 B, `roi_overlay_sync_t`=69 B,
+   `dynamic_keymap_sync_t`=68 B — all > the **64 B** fw_up chunk, and all ≤
+   `RPC_M2S_BUFFER_SIZE`=72. So 64 B is not too big.
+
+### What the transport numbers say
+`send_to_bridge` → `transaction_rpc_exec(tid, 64, buf, sizeof(poly_sync_reply_t), …)`.
+Sizes pass (64 ≤ 72; reply tiny), so `success:0` is **not** a size reject — it's a
+failed UART round-trip. The slave answered a STATUS RPC microseconds before and
+is dead microseconds after, so either the first chunk transaction itself kills
+the slave, or the slave hangs in its main loop the instant erase finishes
+(before any chunk). And `fw_staging_write_chunk` at offset 0 is a **single 56 B
+`memcpy` into a static buffer** (no flash, no core1) — so the handler body is
+exonerated too.
+
+**Net: the failure is specific to the `FW_UP_CHUNK` transaction in the post-erase
+fw_up state — not core1, not size, not the handler body, not the erase (which
+completes).** This is the same shape as the long-standing note that
+`UserCompressed`/`UserRoi` fail to the slave in some states.
+
+### Bracket-probe added (this commit)
+`hid_fw_up.c` `CMD_FW_UP_CHUNK`, gated to `offset==0`, before relaying: a small
+status read (`fw_up_log_slave_status("pre-chunk")`) followed by a **64 B-M2S**
+status read (the status handler ignores `in_len`, so a padded request is benign
+and read-only). Decision tree for the next run:
+
+| Master log at offset 0 | Conclusion | Next move |
+|---|---|---|
+| `pre-chunk` OK **and** `64B-M2S status xfer -> OK` | transport fully alive post-erase → the `FW_UP_CHUNK` transaction itself is the culprit | inspect FW_UP_CHUNK registration/ID + slave chunk handler entry vs the working overlay handlers |
+| `pre-chunk` OK, `64B-M2S status xfer -> FAILED` | large-M2S transport is broken **only in the post-erase fw_up state** | what the deferred erase leaves changed for large transfers (IRQ/DMA/serial state); compare with normal overlay path |
+| `pre-chunk` … `RPC FAILED` | slave is already hung the instant erase finishes, before any chunk | the hang is in the slave's post-erase main loop / housekeeping, not the chunk at all |
+
+### What's in tree as of this commit
+- `hid_fw_up.c`: offset-0 bracket probe (small + 64 B-M2S status reads).
+- `base/fw_staging.c`: run-2 core1-restart probe still present (harmless now that
+  core1 is exonerated; left in so run-4 conditions match run-3).

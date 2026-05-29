@@ -135,6 +135,29 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             memcpy(&offset, &data[HID_DATA_IDX], 4);
             const uint8_t *chunk_data = &data[HID_DATA_IDX + 4];
             uprintf("FW_UP_CHUNK: offset=%lu\n", offset);
+            // DIAGNOSTIC (2026-05-29, run 3): bracket the very first chunk to
+            // localise the slave hang.  The core1-restart probe (run 3) did NOT
+            // help, and normal overlay sync pushes 67-69 B M2S to the slave fine
+            // — larger than this 64 B chunk — so neither core1 state nor payload
+            // size is the cause.  Do a small status read (transport known good at
+            // begin-ready) then a 64 B-M2S status read (the status handler ignores
+            // in_len, so a padded request is benign and read-only):
+            //   small OK, large OK   -> transport fine -> the FW_UP_CHUNK txn itself is the culprit
+            //   small OK, large FAIL -> large-M2S transport broken in post-erase fw_up state
+            //   small FAIL           -> slave already hung post-erase, before any chunk
+            // See FW_UP_BASELINE.md (run 3).
+            if (offset == 0) {
+                fw_up_log_slave_status("pre-chunk");
+                uint8_t              big_req[64];
+                fw_up_status_reply_t big_reply;
+                memset(big_req, 0xA5, sizeof(big_req));
+                memset(&big_reply, 0, sizeof(big_reply));
+                bool big_ok = transaction_rpc_exec(USER_SYNC_FW_UP_STATUS,
+                                                   sizeof(big_req), big_req,
+                                                   sizeof(big_reply), &big_reply);
+                uprintf("FW_UP probe: pre-chunk 64B-M2S status xfer -> %s\n",
+                        big_ok ? "OK" : "FAILED");
+            }
             // Relay to slave FIRST so master's s_next_offset only advances after slave ACKs.
             // This keeps both write cursors in sync: if the relay fails, the host can safely
             // retry the same chunk and master will accept it (offset still matches).

@@ -234,3 +234,114 @@ is purely about giving core0 a maskable preemption trap during fw_up.
 - [pico-sdk #284 — SIO FIFO IRQ quirk](https://github.com/raspberrypi/pico-sdk/issues/284)
 - [FreeRTOS SMP RP2040 thread](https://forums.freertos.org/t/freertos-smp-on-rp2040-caused-flash-erase-and-write-fails/15891)
 - CLAUDE.md "Bug: core1 hangs ..." (this repo)
+
+## 2026-05-29 — chconf reverted, slave still hangs, diagnostic counters added
+
+### What was tried
+`chconf.h` override set `CORTEX_ALTERNATE_SWITCH = TRUE` on the
+hypothesis that an unmaskable NMI fires on the slave's core0 during
+`flash_range_erase`'s IRQ-disabled window (bootrom XIP-off ~50 ms) and
+the NMI handler — at flash address `0x10011649` — wedges the core when
+the bus tries to fetch it. Moving the trap to PendSV (maskable by
+PRIMASK) should have made the erase window safe.
+
+### What happened on hardware
+The regression got **worse**, not better:
+
+- Master log shows BEGIN polling still timing out at 90 s.
+- New `slave status (begin-pending)` snapshots (added in commit
+  `0a663aa6`) show `erase=0/62` snapshot after snapshot — the slave's
+  erase progress never advances at all. Before the chconf change at
+  least some sectors were erasing before the hang.
+- COMMIT therefore fails on the master with "CRC mismatch on keyboard"
+  for the same reason as the previous run (slave staging is all 0xFF).
+- A restart (power-cycle of either half) clears the state; nothing
+  bricked. The slave is responsive enough between hangs that the
+  status RPC still answers.
+
+The chconf change is therefore reverted in `c52b0b0d`. It either had
+no effect (the macro is a ChibiOS port-internal symbol whose actual
+build-time activation we couldn't verify locally) or it had the
+opposite effect of what was intended.
+
+### What was added in its place
+Two new diagnostic counters in `base/fw_staging.c`, surfaced through
+the existing `USER_SYNC_FW_UP_STATUS` RPC:
+
+| Field | Meaning |
+|---|---|
+| `process_deferred_calls` | bumped on every entry into `fw_staging_process_deferred()` — proves the slave's `housekeeping_task_user()` is actually scheduling us. |
+| `process_deferred_advances` | bumped after `flash_range_erase` *returns* — proves the bootrom call completed and didn't hang in XIP-off. |
+
+Master's `fw_up_log_slave_status()` now prints them as
+`pd_calls=N pd_advances=M`. The periodic `begin-pending` snapshot
+fires every 16 BEGIN polls (~4 s at our 250 ms cadence) so a 90 s
+timeout gives us ~22 snapshots.
+
+### Decision tree for the next session
+
+Flash the new firmware and read the `pd_calls` / `pd_advances` /
+`erase_sector_next` trajectory across snapshots:
+
+| Pattern | Conclusion | Where to look next |
+|---|---|---|
+| `pd_calls=0` throughout | Slave's `housekeeping_task_user` is never scheduled — or our `fw_staging_process_deferred()` call inside it is being skipped. | `split72/keymaps/default/keymap.c` housekeeping — check fw_up suppression guard order, verify `fw_staging_init()` ran on slave. |
+| `pd_calls` grows steadily, `pd_advances=0`, `erase_sector_next=0` | First call to `flash_range_erase` enters bootrom and never returns. | The NMI-from-flash hypothesis is still alive, but chconf didn't move the handler. Try moving `fw_staging_process_deferred` body (or at least the `flash_range_erase` wrapper) into RAM with `__attribute__((section(".time_critical")))` or `__not_in_flash_func`. Or put the slave into a real lockout (multicore_lockout request → core0 alone running RAM-resident code) for the erase. |
+| `pd_calls` grows, `pd_advances` grows, but `erase_sector_next` doesn't keep up | Counter/state-machine bug — sector erase succeeded but the index isn't advancing. | Inspect the post-erase block in `fw_staging_process_deferred` — `s_erase_sector_next++` is conditional on something. |
+| `pd_advances` grows to 62 but `erase_pending` stays `1` | State-machine bug in the "all done" branch. | Same file, the `if (s_erase_sector_next >= s_erase_sector_count)` block. |
+| `pd_calls` and `pd_advances` both grow to 62, `erase_pending=0`, but BEGIN poll still returns `SYNC_CRC32_ERR` | Erase finished but the BEGIN-poll handler is reading stale state — race between status update and reply. | `split_fw_up.c` `user_sync_fw_up_begin_handler` — make sure it re-reads `erase_pending` after invoking process_deferred. |
+
+The most-likely outcome is row 2 (pd_calls grows, pd_advances=0).
+That definitively localises the hang to the bootrom call itself and
+points at the same NMI-during-XIP-off mechanism — but rules out the
+chconf approach. The next move would then be RAM-locating the
+critical handlers, not chasing more ChibiOS config knobs.
+
+### What's in tree as of `c52b0b0d`
+- `chconf.h` removed (chconf override reverted).
+- `base/fw_staging.{c,h}`: new `process_deferred_calls` /
+  `process_deferred_advances` counters, exposed in
+  `fw_staging_status_t`.
+- `hid_fw_up.c`: master's `fw_up_log_slave_status()` prints the new
+  fields as `pd_calls=N pd_advances=M`.
+- Step-1 slave-side write (`fw_staging_write_chunk` in chunk handler)
+  is still active — chunks attempted to write are still going through
+  `flush_page` every 5 chunks. If `pd_advances` stays 0 but BEGIN
+  somehow gets past erase, watch chunk processing too: the
+  `flush_page` path uses `flash_range_program`, identical risk
+  surface.
+
+### Open questions / things not tried yet
+1. **RAM-locate the erase scheduler.** Mark
+   `fw_staging_process_deferred` (or at minimum the bootrom call
+   wrapper) with `__not_in_flash_func(...)` so that whatever fires
+   during the XIP-off window, it doesn't need flash to find a
+   handler. Same for `flush_page` once chunks become real.
+2. **Confirm the slave actually rebuilt with the new code.** The
+   build artifacts for split72 and the per-half flashing flow matter
+   here — if only master got the new firmware, slave is still on
+   pre-counter code and snapshots will look bogus. Verify both
+   halves' build dates / git hash via the existing version RPC
+   before trusting the counter values.
+3. **Try the real multicore lockout API.** The current
+   `fw_staging_begin_deferred` halts core1 via PSM reset before the
+   erase loop; replace that with the SDK's
+   `multicore_lockout_start_blocking` (which is the supported API)
+   and see if the erase completes. PSM reset is heavy-handed and
+   leaves core1 in an undefined state.
+4. **Revisit the 70 ms rate limit.** If `pd_calls` is high but
+   `pd_advances` stays at 0, the gate `timer_elapsed32(s_last_sector_ms)
+   < 70` is fine. But if `pd_advances` advances and then stops, check
+   whether `s_last_sector_ms` got corrupted.
+
+### How to continue from a fresh session
+The new session will start on `claude/debug-fw-up-slave-hang-2o51C`
+(mirrored to baseline's tip after this commit). First steps:
+
+1. Build split72 default for both halves, flash both.
+2. Trigger fw_up from PolyKybdHost.
+3. Capture master serial log including all `slave status
+   (begin-pending)` lines.
+4. Read the `pd_calls` / `pd_advances` / `erase_sector_next` columns
+   across snapshots and match against the decision table above.
+5. Pick the matching follow-up and start there.

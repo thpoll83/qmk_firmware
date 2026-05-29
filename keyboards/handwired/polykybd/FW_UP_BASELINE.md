@@ -345,3 +345,72 @@ The new session will start on `claude/debug-fw-up-slave-hang-2o51C`
 4. Read the `pd_calls` / `pd_advances` / `erase_sector_next` columns
    across snapshots and match against the decision table above.
 5. Pick the matching follow-up and start there.
+
+## 2026-05-29 (run 2) — erase FIXED; slave hard-locks on first chunk; core1-restart probe
+
+### What the hardware actually did (refutes the row-2 prediction above)
+Build from `c52b0b0d`/`a37fb58a`, both halves flashed. Master log:
+
+- `FW_UP_GET_VERSION: 0.7.2`; new image `size=249628 crc=0x37b9f444`.
+- `begin-pending`: `erase=40/62 … pd_advances=40`; then `begin-ready`:
+  `erase=62/62 erase_pending=0 … pd_advances=62`, BEGIN returns
+  `slave_ack=0xca` (SYNC_ACK). **The deferred erase completes in full and
+  the slave stays alive throughout** (every poll answers). `pd_calls=65535`
+  is just the uint16 counter saturating over ~8 s — not significant.
+
+So the previous session's "most-likely row 2 (pd_advances=0)" prediction was
+**wrong**: reverting the chconf change fixed the erase path. That branch is
+closed.
+
+- **The failure moved to the first chunk.** `FW_UP_CHUNK: offset=0` → all 10
+  relay retries `success: 0` (transport dead, not a rejection) → `slave_ack=0x35`.
+  The slave then goes **permanently dark**: ~3 minutes of `Failed to execute
+  slave_matrix` + failed `UserPoly`/`UserRoi`/`UserOverlayMap`/`UserCompressed`,
+  ending in `Target disconnected, throttling connection attempts`. The slave
+  never recovers (replug/reflash needed). **The master stays fully healthy** —
+  keeps servicing HID and even live keystrokes. This is the "second half
+  unresponsive" / Cortex-M0+ CPU-LOCKUP mode.
+
+### Ruled out (with evidence)
+| Hypothesis | Verdict | Evidence |
+|---|---|---|
+| Chunk (64 B) > M2S buffer → local reject | refuted | `config.h` `RPC_M2S_BUFFER_SIZE 72` ≥ 64 |
+| `FW_UP_CHUNK` not registered on slave | refuted | `keymap.c` registers it unconditionally beside BEGIN/STATUS |
+| Slave `uprintf` blocks in handler | refuted | `process_deferred` uprintfs every sector; erase reached 62/62 |
+| Slave pushes to halted core1 via display path | refuted | display refresh gated on `!fw_up_active` (`keymap.c`); the later `UserRoi`/`UserCompressed` failures are *after* the lock, not its cause |
+
+### The crux
+`offset=0` does **no flash op** (`flush_page` only fires at 256 B, ~chunk 5) and
+**no core1 work** — so a flash/XIP fault cannot explain the chunk-0 lock. The one
+thing abnormal for the preceding 8 s is **core1 held in PSM reset**
+(`fw_staging_begin_deferred` halts it and keeps it halted for the whole sequence).
+Leading theory: once the chunk phase resumes normal scheduling, the slave's
+ChibiOS-SMP core0 signals core1 over the SIO FIFO; core1 (PSM-reset, not draining)
+never empties it; `multicore_fifo_push_blocking` blocks core0 **forever**.
+
+Note the master-side `slave status (chunk-fail)` snapshot **cannot** resolve this:
+the slave is already dead, so the STATUS RPC returns `RPC FAILED` and `chunk_calls`
+is unreadable. (In run 1 it was also dropped by console-TX overflow from the 10×
+retry burst.) The "is the chunk handler even reached?" question is unanswerable
+from the master once the slave locks.
+
+### The probe in this commit
+`fw_staging_process_deferred()` now restarts core1 the instant erase completes
+(before the first chunk), gated on `USE_CORE1`. Read the chunk acks on the master
+log (`0xca` = accepted, `0x35` = failed):
+
+| Probe result | Conclusion | Next move |
+|---|---|---|
+| chunk 0 still `0x35`, slave locks | core1-PSM-hold is **not** the cause | transport-level: slave RX of the 64 B M2S during fw_up, or ChibiOS-SMP state — instrument the slave's own console |
+| chunks 0–3 `0xca`, dies at `offset=224` (first `flush_page`) | the per-flush PSM halt/restart + `flash_range_program` cycle is the killer | **cooperative core1 park** (RAM-resident FIFO-draining spin loop instead of PSM reset) + RAM-locate `flush_page` |
+| all chunks `0xca`, fw_up completes | restarting core1 after erase is itself the fix | keep it, clean up, done |
+
+Expected: the **middle** row. With the probe, `flush_page` will halt+restart core1
+on every page (~976×, since core1 is now alive between flushes), re-exposing the
+Vector80/NMI restart window — so a lock at the first flush both confirms the
+mechanism and motivates the cooperative-park redesign.
+
+### What's in tree as of this commit
+- `base/fw_staging.c`: `fw_staging_process_deferred()` restarts core1 at
+  erase-complete (diagnostic probe; see inline comment dated 2026-05-29).
+- No other changes; erase/chunk/flush logic otherwise unchanged from `a37fb58a`.

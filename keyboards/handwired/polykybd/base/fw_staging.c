@@ -276,7 +276,18 @@ void fw_staging_process_deferred(void) {
     s_erase_sector_next++;
     if (s_erase_sector_next >= s_erase_sector_count) {
         s_erase_pending = false;
-        uprintf("fw_staging_process_deferred: erase complete (%lu sectors)\n", s_erase_sector_count);
+#ifdef USE_CORE1
+        // DIAGNOSTIC PROBE (2026-05-29): restart core1 the instant erase
+        // completes, before the first chunk arrives.  Hypothesis: holding
+        // core1 in PSM reset across the begin->chunk handoff hard-locks the
+        // slave on chunk 0 (core0 blocks forever on a full SIO FIFO signalling
+        // a non-draining core1 — chunk 0 does no flash, so a flash fault can't
+        // explain it).  If chunk 0 now ACKs and the lock instead moves to the
+        // first page flush (the chunk at offset 224), the per-flush halt/restart
+        // cycle is the culprit -> cooperative core1 park.  See CLAUDE.md fw_up.
+        if (s_core1_halted) fw_staging_restart_core1();
+#endif
+        uprintf("fw_staging_process_deferred: erase complete (%lu sectors), core1 restarted (probe)\n", s_erase_sector_count);
     } else {
         uprintf("fw_staging_process_deferred: erased sector %lu/%lu\n", s_erase_sector_next, s_erase_sector_count);
     }

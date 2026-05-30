@@ -72,6 +72,15 @@ const uint8_t *fw_staging_get_fw_base(void);
 // No-op (returns normally) if no valid staged image is found.
 void fw_staging_apply_and_reboot(void);
 
+// True if the staging header sector holds a valid, applyable image
+// (magic present, size in range).  Written by fw_staging_finalize() on CRC match.
+bool fw_staging_has_valid_staged_image(void);
+
+// Arm the deferred apply: housekeeping_task_user() will then run
+// fw_staging_apply_and_reboot() once.  Use only after a successful COMMIT
+// (fw_staging_has_valid_staged_image() == true).  PHASE 2: master only.
+void fw_staging_arm_apply(void);
+
 // ---------------------------------------------------------------------------
 // Diagnostic snapshot — populated by the slave's handlers so the master can
 // query "what does the slave think happened" after a failed FW_UP_CHUNK.

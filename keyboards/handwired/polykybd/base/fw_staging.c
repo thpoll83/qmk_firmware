@@ -136,6 +136,29 @@ static void flush_page(void) {
 }
 
 // ---------------------------------------------------------------------------
+// Write the staging header sector {magic, size, crc}.  Called by finalize on a
+// CRC match so the staged image is self-describing — fw_staging_apply_and_reboot()
+// validates the magic and reads the size from here.  The header sector was erased
+// in fw_staging_begin*(), so this single program is valid.
+// ---------------------------------------------------------------------------
+static void write_staging_header(uint32_t size, uint32_t crc) {
+    uint8_t  hdr[FLASH_PAGE_SIZE];
+    uint32_t words[3] = { FW_STAGING_MAGIC, size, crc };
+    memset(hdr, 0xFF, sizeof(hdr));
+    memcpy(hdr, words, sizeof(words));
+#ifdef USE_CORE1
+    bool already_halted = s_core1_halted;
+    if (!already_halted) fw_staging_halt_core1();
+#endif
+    uint32_t irq = save_and_disable_interrupts();
+    flash_range_program(FW_STAGING_OFFSET, hdr, FLASH_PAGE_SIZE);
+    restore_interrupts(irq);
+#ifdef USE_CORE1
+    if (!already_halted) fw_staging_restart_core1();
+#endif
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -362,17 +385,21 @@ bool fw_staging_finalize(void) {
     // window and made the master mis-report COMMIT as "CRC mismatch" — run 6.)
     bool ok = (s_staged_crc == s_image_crc);
 
-    // DECOUPLED (2026-05-30, run 6 decision): COMMIT verifies + reports success;
-    // it does NOT auto-apply/reboot.  Transfer+stage+verify is the locked-in
-    // milestone.  The RAM-resident self-flash (fw_staging_apply_and_reboot, which
-    // erases the slave from flash offset 0 and resets) hangs/bricks the slave and
-    // is being designed as a separate, explicit step.  See FW_UP_BASELINE.md run 6.
+    // On a CRC match, stamp the staging header {magic,size,crc} so the staged image
+    // is self-describing and fw_staging_apply_and_reboot() can validate + size it.
+    if (ok) {
+        write_staging_header(s_image_size, s_image_crc);
+    }
+
+    // DECOUPLED (2026-05-30, run 6): COMMIT verifies + reports success; it does NOT
+    // auto-apply/reboot.  s_commit_pending stays clear — the apply is armed only by
+    // the explicit FW_UP_APPLY command (fw_staging_arm_apply), phase 2 master-only.
     s_commit_pending = false;
     s_fw_up_active   = false;
 #ifdef USE_CORE1
-    // We are NOT rebooting, so core1 — halted in fw_staging_begin_deferred and
-    // kept halted through every chunk flush — must be restarted, or the slave
-    // resumes normal operation with a dead core1 (no RLE overlay decompression).
+    // We are NOT rebooting here, so core1 — halted in fw_staging_begin_deferred and
+    // kept halted through every chunk flush — must be restarted, or the half resumes
+    // normal operation with a dead core1 (no RLE overlay decompression).
     if (s_core1_halted) fw_staging_restart_core1();
 #endif
     return ok;
@@ -392,6 +419,15 @@ bool fw_staging_written(void) {
 
 bool fw_staging_commit_pending(void) {
     return s_commit_pending;
+}
+
+bool fw_staging_has_valid_staged_image(void) {
+    const uint32_t *hdr = (const uint32_t *)(XIP_BASE + FW_STAGING_OFFSET);
+    return (hdr[0] == FW_STAGING_MAGIC) && (hdr[1] > 0) && (hdr[1] <= FW_UP_MAX_SIZE);
+}
+
+void fw_staging_arm_apply(void) {
+    s_commit_pending = true;
 }
 
 uint32_t fw_staging_get_own_fw_size(void) {
@@ -449,6 +485,15 @@ void fw_staging_set_fw_up_active(bool active) {
 // Must run from RAM because it erases the flash region it was loaded from.
 // ---------------------------------------------------------------------------
 static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_size) {
+    // Halt core1 (PSM reset) BEFORE touching flash.  Inlined register writes so this
+    // RAM-resident routine never fetches from flash.  After finalize core1 is alive;
+    // if it kept executing from flash, the XIP-cache flush inside flash_range_*()
+    // would fault its next instruction fetch → Cortex-M0+ CPU LOCKUP.  We never
+    // restart it — the chip hard-resets at the end of this function.
+#ifdef USE_CORE1
+    *(volatile uint32_t *)0x40010004u |= (1u << 16);   // PSM FRCE_OFF, PROC1 bit
+    __asm volatile ("dsb" ::: "memory");
+#endif
     uint8_t  page_buf[FLASH_PAGE_SIZE];
     uint32_t irq = save_and_disable_interrupts();
 

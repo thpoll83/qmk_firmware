@@ -216,6 +216,23 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             return true;
         }
 
+        case CMD_FW_UP_APPLY: { // PHASE 2: install the staged image on the MASTER only
+            // Does NOT relay to the slave (slave self-apply is phase 3).  The master
+            // erases its own flash from offset 0, copies in the staged image, and
+            // resets — so we ACK *first* (the host expects the USB to drop), then arm
+            // the deferred apply that housekeeping_task_user() runs one iteration later.
+            bool ok = fw_staging_has_valid_staged_image();
+            memset(data, 0, length);
+            memcpy(data, ok ? "P\x44." : "P\x44!", 3);
+            raw_hid_send(data, length);
+            uprintf("FW_UP_APPLY: master self-apply %s\n",
+                    ok ? "armed (rebooting…)" : "REJECTED (no valid staged image)");
+            if (ok) {
+                fw_staging_arm_apply();   // housekeeping → fw_staging_apply_and_reboot()
+            }
+            return true;
+        }
+
         case CMD_FW_UP_GET_VERSION: { // return version string + fw_size + fw_crc
             uint32_t fw_size = fw_staging_get_own_fw_size();
             uint32_t fw_crc  = fw_staging_get_own_fw_crc();

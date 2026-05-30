@@ -626,3 +626,27 @@ Failed to execute slave_matrix    (slave dead, 48 s+, does not return)
 2. **Harden/debug the self-apply now:** check the staged image begins with valid
    boot2, verify the RAM-resident apply + pico-sdk boot2-copyout path, and split
    finalize so COMMIT ACKs before the slow work. Riskier (may brick repeatedly).
+
+### Resolution (chose option 1 — decouple, lock in the win)
+`fw_staging_finalize()` now:
+- verifies via a **running CRC** (`s_staged_crc`, accumulated byte-for-byte in
+  `fw_staging_write_chunk`) instead of re-scanning 244 KB — so the COMMIT handler
+  returns in ~one page-flush time and the split transaction no longer times out
+  (fixes the false "CRC mismatch" report);
+- does **NOT** arm `s_commit_pending` / write the staging header, so the
+  housekeeping auto-apply (`keymap.c` → `fw_staging_apply_and_reboot`) never
+  fires — **no self-flash, no reboot, no brick**;
+- **restarts core1** (held in PSM reset since `begin_deferred`) because we are no
+  longer hard-resetting the chip — otherwise the slave would resume with a dead
+  core1 (no RLE overlay decompression).
+
+Expected on hardware now: all 4458 chunks stream `0xca`, `FW_UP_COMMIT` **ACKs**
+(host shows success), and the slave **stays alive** on its existing firmware
+(staging written + received-CRC verified, but intentionally not applied). This is
+the stable "transfer + stage + verify = 100%" baseline.
+
+`fw_staging_apply_and_reboot()` / `fw_staging_do_apply()` remain in the tree,
+now dead code (never invoked), ready to be wired to a separate explicit
+apply step later — at which point the offset-0 self-erase + boot2/XIP handling
+must be designed/verified carefully (and the master made non-relay-only so both
+halves update coherently).

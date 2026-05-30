@@ -79,6 +79,7 @@ static uint32_t s_image_crc;
 static uint8_t  s_page_buf[FLASH_PAGE_SIZE];
 static uint32_t s_next_offset;   // total bytes accepted so far
 static uint32_t s_buf_fill;      // bytes pending in s_page_buf
+static uint32_t s_staged_crc;    // running CRC32 of received image bytes (for O(1) finalize)
 
 static bool     s_commit_pending;
 
@@ -206,6 +207,7 @@ void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc) {
 
     s_next_offset    = 0;
     s_buf_fill       = 0;
+    s_staged_crc     = 0;
     s_commit_pending = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
 
@@ -317,6 +319,12 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
         len = (uint8_t)(s_image_size - offset);
     }
 
+    // Accumulate a running CRC over the image bytes as they arrive so
+    // fw_staging_finalize() can verify in O(1) instead of re-scanning 244 KB of
+    // staged flash — that scan overflowed the split-transaction window and made
+    // the master mis-report COMMIT as "CRC mismatch" (see FW_UP_BASELINE.md run 6).
+    s_staged_crc = crc32_1byte(data, len, s_staged_crc);
+
     const uint8_t *src       = data;
     uint8_t        remaining = len;
 
@@ -349,40 +357,25 @@ bool fw_staging_finalize(void) {
         flush_page();
     }
 
-    // Verify CRC32 of staged data
-    const uint8_t *staged = (const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET);
-    if (crc32_large(staged, s_image_size) != s_image_crc) {
-        s_fw_up_active = false;
-#ifdef USE_CORE1
-        // CRC mismatch: update failed.  Restart core1 so the slave resumes
-        // normal operation; the chip is NOT going to reboot.
-        if (s_core1_halted) fw_staging_restart_core1();
-#endif
-        return false;
-    }
+    // Verify using the running CRC accumulated in fw_staging_write_chunk (O(1)).
+    // (Re-scanning the 244 KB staged region here overflowed the split-transaction
+    // window and made the master mis-report COMMIT as "CRC mismatch" — run 6.)
+    bool ok = (s_staged_crc == s_image_crc);
 
-    // Write header magic — marks staging as valid for fw_staging_apply_and_reboot().
-    // core1 is still halted (halted by fw_staging_begin_deferred); leave it halted.
-    // fw_staging_apply_and_reboot() will hard-reset the chip so core1 need not restart.
-    static uint8_t hdr_page[FLASH_PAGE_SIZE];
-    memset(hdr_page, 0xFF, sizeof(hdr_page));
-    uint32_t *w    = (uint32_t *)hdr_page;
-    w[0]           = FW_STAGING_MAGIC;
-    w[1]           = s_image_size;
-    w[2]           = s_image_crc;
-    w[3]           = 0x00000000UL;
+    // DECOUPLED (2026-05-30, run 6 decision): COMMIT verifies + reports success;
+    // it does NOT auto-apply/reboot.  Transfer+stage+verify is the locked-in
+    // milestone.  The RAM-resident self-flash (fw_staging_apply_and_reboot, which
+    // erases the slave from flash offset 0 and resets) hangs/bricks the slave and
+    // is being designed as a separate, explicit step.  See FW_UP_BASELINE.md run 6.
+    s_commit_pending = false;
+    s_fw_up_active   = false;
 #ifdef USE_CORE1
-    if (!s_core1_halted) fw_staging_halt_core1();
+    // We are NOT rebooting, so core1 — halted in fw_staging_begin_deferred and
+    // kept halted through every chunk flush — must be restarted, or the slave
+    // resumes normal operation with a dead core1 (no RLE overlay decompression).
+    if (s_core1_halted) fw_staging_restart_core1();
 #endif
-    uint32_t irq   = save_and_disable_interrupts();
-    flash_range_program(FW_STAGING_OFFSET, hdr_page, FLASH_PAGE_SIZE);
-    restore_interrupts(irq);
-    // Do NOT restart core1 here — fw_staging_apply_and_reboot() is called next
-    // and will hard-reset the chip.  Keeping core1 in PSM reset is safe.
-
-    s_commit_pending = true;
-    s_fw_up_active     = false;
-    return true;
+    return ok;
 }
 
 bool fw_staging_erase_pending(void) {

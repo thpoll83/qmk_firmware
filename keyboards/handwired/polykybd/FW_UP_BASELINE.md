@@ -826,3 +826,50 @@ RP2040 BOOTSEL/UF2 path): the app stages + sets a marker + reboots; a minimal st
 with no ChibiOS/NMI and no live app to corrupt does the offset-0 copy.  This is the
 "proper long-term answer" already flagged at the top of this doc, and run 2 is the
 empirical confirmation that the in-app shortcut is not viable as written.
+
+## 2026-05-30 (Phase 2 run 3) — do_apply HARDENED; the deterministic brick cause found
+
+### The actual (deterministic) brick cause — found by disassembling do_apply
+Run 2's NMI-during-4s-blackout was real but *secondary*.  The .elf shows the
+**primary, 100%-reproducible** kill: `do_apply`'s page copy called the toolchain
+`memcpy`, whose `__memcpy_veneer` jumps to `0x100010b9` — **`memcpy` lives in flash
+sector 1** (XIP offset 0x10b8).  `do_apply` erased ascending from sector 0:
+
+  - iter sec=0 → erases the vector table (0x100..0x1c0)
+  - iter sec=1 → erases **`memcpy`'s own code**
+  - next `memcpy(page_buf, …)` call → executes erased flash → HardFault → vectors
+    through the (also-erased) sector 0 → lockup at ~offset 0x1000, right at the start.
+
+That's why the master died almost immediately and identically every time.  `flush_page`
+never hit this because it only programs the staging region and never erases sector 1
+where `memcpy` lives.  (Audit: `flash_range_erase`/`flash_range_program` are RAM-resident
+and pre-resolve their ROM pointers via `ldr`+`blx reg`, NOT a flash `rom_func_lookup`,
+so they are the only safe calls to make from the apply window.)
+
+### The hardening (in tree, gated behind FW_UP_ENABLE_INAPP_APPLY)
+`fw_staging_do_apply` rewritten to hold all three invariants `flush_page` proves:
+1. **No flash-resident calls.** Page copy is an inline `ram_word_copy` (word loop
+   compiled into the RAM function — no `memcpy` veneer).  Verified on the .elf: the
+   only `bl` targets inside `do_apply` are `flash_range_erase`/`flash_range_program`
+   at `0x2000xxxx`; `ram_word_copy` is inlined (no symbol); **zero `bl 0x10xxxxxx`.**
+2. **Valid vectors as long as possible.** Copy the app body **[sector 1 .. N-1] first**,
+   then **sector 0 (vectors + HardFault/NMI) LAST**, immediately before reset — so a
+   stray exception during the long phase still dispatches through the original table;
+   only the final one-sector step has a bad-vector window.
+3. **Bounded IRQ-off window.** IRQs are re-enabled **between sectors** (not one ~4 s
+   blackout), so ChibiOS can't accumulate a pending NMI and fire it into a half-written
+   table.  core1 stays PSM-halted throughout (XIP-cache-flush safety).
+
+### How to test the hardened path (master-only, BOOTSEL-recoverable)
+Build with the apply path enabled and flash BOTH halves:
+```
+qmk compile -kb handwired/polykybd/split72 -km default -e EXTRAFLAGS=-DFW_UP_ENABLE_INAPP_APPLY
+```
+(or uncomment `#define FW_UP_ENABLE_INAPP_APPLY` in config.h).  Stage the **same**
+running image first, then "Apply Staged Firmware (master)".  Expected: master log
+`FW_UP_APPLY: master self-apply armed (rebooting…)`, USB drops, re-enumerates within
+a few seconds on the applied image.  If it still bricks: hold BOOTSEL on the master,
+reflash the .uf2 — and the in-app approach is dead, switch to reboot-to-bootloader.
+
+The **default build leaves apply DISABLED** (always NACKs, no self-flash), so the
+shipped firmware cannot brick from a button press regardless.

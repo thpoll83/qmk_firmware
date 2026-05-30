@@ -481,41 +481,81 @@ void fw_staging_set_fw_up_active(bool active) {
 }
 
 // ---------------------------------------------------------------------------
+// RAM-resident word copy.  We must NOT call the toolchain memcpy here: it lives
+// in flash (sector 1, 0x10b8) and the apply loop erases that sector — the next
+// flash-resident memcpy() call would then execute erased flash and HardFault.
+// This inline word loop compiles into the RAM function itself (no veneer, no
+// flash fetch).  src/dst are word-aligned (page buffer + 256 B pages).
+// ---------------------------------------------------------------------------
+static inline void __attribute__((always_inline))
+ram_word_copy(uint32_t *dst, const uint32_t *src, uint32_t nbytes) {
+    for (uint32_t i = 0; i < nbytes / 4; i++) dst[i] = src[i];
+}
+
+// ---------------------------------------------------------------------------
 // RAM-resident apply routine: copy staging → active firmware + hard-reset.
 // Must run from RAM because it erases the flash region it was loaded from.
+//
+// HARDENED (2026-05-30, after the run-2 master brick).  Three invariants the
+// previous version violated — each one independently bricked the part:
+//   1. NO flash-resident calls in the window.  The old code called the flash
+//      memcpy (sector 1); once sector 1 was erased the next call faulted.  We
+//      use ram_word_copy() instead.  flash_range_erase/program are verified
+//      RAM-resident and pre-resolve their ROM pointers (no rom_func_lookup).
+//   2. Keep a VALID vector table for as long as possible.  Sector 0 holds the
+//      live vectors + HardFault/NMI handlers.  We copy the app body
+//      [sector 1 .. end] FIRST and sector 0 LAST, so any stray exception during
+//      the long part still vectors through the original, intact table.  Only
+//      the final single-sector step exposes the (tiny) bad-vector window.
+//   3. Bound the IRQ-off window.  We re-enable IRQs between sectors (like
+//      flush_page) so ChibiOS can't accumulate a pending NMI across a multi-
+//      second blackout and fire it into a half-written table.
+// core1 stays PSM-halted the whole time (XIP-cache flush safety).
 // ---------------------------------------------------------------------------
 static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_size) {
-    // Halt core1 (PSM reset) BEFORE touching flash.  Inlined register writes so this
-    // RAM-resident routine never fetches from flash.  After finalize core1 is alive;
-    // if it kept executing from flash, the XIP-cache flush inside flash_range_*()
-    // would fault its next instruction fetch → Cortex-M0+ CPU LOCKUP.  We never
-    // restart it — the chip hard-resets at the end of this function.
 #ifdef USE_CORE1
+    // Halt core1 via PSM reset (inlined register write — no flash fetch).
     *(volatile uint32_t *)0x40010004u |= (1u << 16);   // PSM FRCE_OFF, PROC1 bit
     __asm volatile ("dsb" ::: "memory");
 #endif
-    uint8_t  page_buf[FLASH_PAGE_SIZE];
-    uint32_t irq = save_and_disable_interrupts();
-
+    static uint8_t page_buf[FLASH_PAGE_SIZE];   // static: not on a stack that may move
     uint32_t num_sectors = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
+    uint32_t pages = FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
 
-    for (uint32_t sec = 0; sec < num_sectors; sec++) {
-        uint32_t dst_offset  = sec * FLASH_SECTOR_SIZE;
-        uint32_t src_base    = XIP_BASE + FW_STAGING_DATA_OFFSET + sec * FLASH_SECTOR_SIZE;
+    // Copy one already-selected sector (dst_offset) from staging.  IRQs must be
+    // disabled around each flash_range_* pair; caller toggles them per sector.
+    // NB: declared as a normal inner loop, fully inlined into this RAM function.
+    #define APPLY_ONE_SECTOR(sec)                                                      \
+        do {                                                                           \
+            uint32_t _dst = (sec) * FLASH_SECTOR_SIZE;                                 \
+            uint32_t _src = XIP_BASE + FW_STAGING_DATA_OFFSET + (sec) * FLASH_SECTOR_SIZE; \
+            uint32_t _irq = save_and_disable_interrupts();                             \
+            flash_range_erase(_dst, FLASH_SECTOR_SIZE);                                \
+            for (uint32_t _pg = 0; _pg < pages; _pg++) {                               \
+                ram_word_copy((uint32_t *)page_buf,                                    \
+                              (const uint32_t *)(_src + _pg * FLASH_PAGE_SIZE),         \
+                              FLASH_PAGE_SIZE);                                        \
+                flash_range_program(_dst + _pg * FLASH_PAGE_SIZE, page_buf, FLASH_PAGE_SIZE); \
+            }                                                                          \
+            restore_interrupts(_irq);                                                  \
+        } while (0)
 
-        // After flash_range_erase returns, the SDK re-enables XIP (standard mode).
-        // It is therefore safe to read staging data via XIP between operations.
-        flash_range_erase(dst_offset, FLASH_SECTOR_SIZE);
-
-        uint32_t pages = FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
-        for (uint32_t pg = 0; pg < pages; pg++) {
-            // Copy staging page to stack buffer (RAM) before XIP is disabled by program().
-            memcpy(page_buf, (const void *)(src_base + pg * FLASH_PAGE_SIZE), FLASH_PAGE_SIZE);
-            flash_range_program(dst_offset + pg * FLASH_PAGE_SIZE, page_buf, FLASH_PAGE_SIZE);
-        }
+    // (2) App body first: sectors 1..N-1, leaving the live vector table (sector 0)
+    //     intact so exceptions during the long phase still dispatch correctly.
+    for (uint32_t sec = 1; sec < num_sectors; sec++) {
+        APPLY_ONE_SECTOR(sec);
     }
+    // Sector 0 LAST — shortest possible bad-vector window, immediately followed
+    // by reset.  IRQs are disabled inside APPLY_ONE_SECTOR and we never return to
+    // a context that needs the table.
+    if (num_sectors > 0) {
+        APPLY_ONE_SECTOR(0);
+    }
+    #undef APPLY_ONE_SECTOR
 
-    restore_interrupts(irq);
+    // Hard reset straight into the freshly-written image.  Disable IRQs first so
+    // nothing dispatches through sector 0 between here and the reset taking effect.
+    (void)save_and_disable_interrupts();
     NVIC_SystemReset();
 }
 

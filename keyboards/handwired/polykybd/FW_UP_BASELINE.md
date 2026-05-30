@@ -527,3 +527,52 @@ this build (verify the slave flash) or the wedge is before handler dispatch.
 - `split_fw_up.c`: under that macro, `fw_staging_write_chunk` is replaced by
   `ok = true` (the `in_len` guard + CRC check still run).
 - Bracket probe (`hid_fw_up.c`) and run-2 core1-restart (`fw_staging.c`) still present.
+
+## 2026-05-30 (run 5) — ROOT CAUSE FOUND & FIXED: uint8_t overflow in write_chunk
+
+### Probe result
+With `FW_UP_CHUNK_NOOP_PROBE` (skip only `fw_staging_write_chunk`), the master log
+streamed **all 4458 chunks** `slave_ack=0xca` from offset 0 to the end, reached
+COMMIT, and COMMIT failed CRC ("CRC mismatch on keyboard") — exactly the expected
+"success" outcome (nothing was actually staged). That conclusively places the hang
+**inside `fw_staging_write_chunk`**, not the transaction/transport/erase/core1.
+
+### Root cause
+`fw_staging_write_chunk`'s page-copy loop declared the working counts as **`uint8_t`**:
+```c
+uint8_t space = FLASH_PAGE_SIZE - s_buf_fill;   // FLASH_PAGE_SIZE == 256
+uint8_t copy  = (remaining < space) ? remaining : space;
+```
+`FLASH_PAGE_SIZE` is **256**. When the page buffer is empty (`s_buf_fill == 0`),
+`256 - 0 = 256` **truncates to 0** in a `uint8_t`, so `copy = min(remaining, 0) = 0`,
+`memcpy` copies nothing, `remaining` never decreases, and the loop **spins forever**.
+The slave's core0 is stuck in the chunk handler → never replies → master sees
+`success:0` → "slave hard-lock". It triggers on the **first chunk** (offset 0,
+`s_buf_fill==0`) and would also hit at every 256 B page boundary.
+
+This single bug explains **every** observation across runs 2–5: dies exactly on
+chunk 0; the "lock" is an infinite loop, not a fault (so no `_unhandled_exception`,
+nothing on the link); the no-op handler streams perfectly; and erase, core1 (NMI/
+Vector80/PSM), payload size, and the FW_UP_CHUNK transaction id were **all red
+herrings**.
+
+### Why it stayed hidden for ~6 weeks
+- The 2026-05-20 "verified transport baseline" (`b4a939f6`) used the no-op chunk
+  handler — `fw_staging_write_chunk` was never called, so the loop never ran.
+- Step-1 (`a0510144`, 05-22) introduced the real write **and** the bug, but the
+  slave-erase hang (the chconf saga) stopped execution at BEGIN — chunks were
+  never reached.
+- Only after the erase was fixed (chconf revert, run 2) did execution finally
+  reach chunk 0 — and immediately hit the overflow loop.
+
+### Fix (this commit)
+- `base/fw_staging.c`: widen `space`/`copy` to `uint32_t` (with a comment).
+- `config.h`: `FW_UP_CHUNK_NOOP_PROBE` disabled so the real write runs again.
+- Builds clean (`split72:default` → `.uf2`, exit 0).
+
+### Expected on next hardware run (flash BOTH halves)
+Chunks stream `slave_ack=0xca` AND actually land in slave staging, so
+`FW_UP_COMMIT` should pass CRC and the update should complete. If COMMIT now
+passes, the diagnostics still in tree (bracket probe in `hid_fw_up.c`, core1
+restart in `fw_staging.c`, the status counters, and this disabled no-op probe)
+can be removed in a cleanup commit.

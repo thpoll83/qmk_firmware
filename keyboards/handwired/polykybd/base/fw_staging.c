@@ -321,8 +321,12 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
     uint8_t        remaining = len;
 
     while (remaining > 0) {
-        uint8_t space = FLASH_PAGE_SIZE - s_buf_fill;
-        uint8_t copy  = (remaining < space) ? remaining : space;
+        // NB: space/copy MUST be wider than uint8_t — FLASH_PAGE_SIZE is 256, so
+        // (FLASH_PAGE_SIZE - s_buf_fill) is 256 when the page buffer is empty and
+        // truncates to 0 in a uint8_t, making copy=0 and spinning this loop
+        // forever (the chunk-0 slave hard-lock, found 2026-05-30).
+        uint32_t space = FLASH_PAGE_SIZE - s_buf_fill;
+        uint32_t copy  = (remaining < space) ? remaining : space;
 
         memcpy(s_page_buf + s_buf_fill, src, copy);
         s_buf_fill    += copy;

@@ -68,15 +68,14 @@
 // never declared "disconnected" during the full erase sequence.
 #define SPLIT_MAX_CONNECTION_ERRORS 200
 
-// DIAGNOSTIC (2026-05-30, run 4): in the slave's FW_UP_CHUNK handler, skip ONLY
-// fw_staging_write_chunk (keep the in_len guard + CRC) — exactly the 2026-05-20
-// "verified transport baseline" that streamed every chunk, applied to today's
-// code.  The run-3 bracket probe proved a same-size (64 B) FW_UP_STATUS txn
-// round-trips on the slave right before the chunk, yet the 64 B FW_UP_CHUNK
-// hard-locks it.  So this isolates fw_staging_write_chunk (chunks ACK now) from
-// the FW_UP_CHUNK transaction dispatch itself (chunks still fail).  REQUIRES
-// flashing the SLAVE half.  Remove once understood.  See FW_UP_BASELINE.md (run 4).
-#define FW_UP_CHUNK_NOOP_PROBE
+// 2026-05-30: the FW_UP_CHUNK_NOOP_PROBE below (skip only fw_staging_write_chunk)
+// streamed all 4458 chunks, proving the slave hang was INSIDE
+// fw_staging_write_chunk: `space = FLASH_PAGE_SIZE(256) - s_buf_fill` was a
+// uint8_t and truncated to 0 whenever the page buffer was empty (chunk 0 and
+// every 256 B boundary), spinning the copy loop forever. Fixed in
+// base/fw_staging.c (space/copy widened to uint32_t). Probe left here, disabled,
+// for regression reference. See FW_UP_BASELINE.md (run 5).
+// #define FW_UP_CHUNK_NOOP_PROBE
 
 //######################################
 //#          PolyKybd specific         #

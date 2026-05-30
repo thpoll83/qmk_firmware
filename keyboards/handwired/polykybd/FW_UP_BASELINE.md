@@ -769,3 +769,60 @@ warning from the RAM-resident `do_apply`).
 ### Next: phase 3
 Relay APPLY to the slave (coordinated: slave applies+resets, then master), only
 after the master self-apply is proven reliable here.
+
+## 2026-05-30 (Phase 2 run 2) — master BRICKED by do_apply; in-app apply DISABLED
+
+### What happened
+Staged the running image, hit "Apply Staged Firmware (master)". Logs: COMMIT
+`master_finalize=1`; `FW_UP_APPLY` armed; the master's USB dropped and **never came
+back** (host: 5×5 ID-query timeouts → "No such device"). Had to BOOTSEL + reflash
+the master. The fw console is silent after COMMIT because `do_apply` runs with IRQs
+off (no uprintf), and the host never reconnected → **the copy never completed**.
+
+### Root cause (verified against the .elf, not guessed)
+Disassembly of `fw_staging_do_apply` confirms it IS fully RAM-resident — every call
+inside resolves to RAM/ROM (`__memcpy_veneer`, `flash_range_erase/program`, the flash
+helpers are all `0x2000xxxx`); no hardware watchdog is armed; boot2 copyout is cached
+in RAM.  So the copy *mechanism* is fine.  The kill is what `do_apply` uniquely does
+that the proven `flush_page` never does:
+
+- It **erases flash from offset 0**, which holds the **running** firmware's vector
+  table (`__vectors_base__ = 0x10000100`), `HardFault_Handler` (`0x100002c6`), and the
+  ChibiOS SMP `NMI_Handler` (`0x100120cc`) — all inside the `[0 .. image_size)` span
+  it erases (this run image_size = 0x3D53C).
+- It keeps IRQs off for the **entire ~4 s** copy.  `save_and_disable_interrupts()`
+  sets PRIMASK=1, which does **NOT** mask NMI or HardFault.
+- ChibiOS's context switch is NMI-based (this repo's whole core1 saga).  Over a 4 s
+  window an unmaskable NMI/HardFault fires, vectors through the **just-erased** table,
+  and locks up mid-copy → boot2/app left invalid → BOOTSEL.
+
+`flush_page` survives 897×/run precisely because it only erases the **staging** region
+(≥1 MB) — the live vector table is never touched — and it toggles IRQs **per page**, so
+ChibiOS stays serviceable between flushes.  `do_apply` violates both invariants at once.
+
+### Action taken (this commit) — make it impossible to brick again
+- **`hid_fw_up.c`**: `CMD_FW_UP_APPLY` is gated behind `FW_UP_ENABLE_INAPP_APPLY`
+  (NOT defined).  By default it now **always replies `!` and arms nothing** — the
+  staged image is left untouched; the keyboard does not reboot or self-flash.
+- **Host** (`hid_fw_up.py` / `cmd_menu.py`): the `!` reply is reported as "apply not
+  available" (a safe no-op), and the menu confirmation says so up front.
+- `fw_staging_do_apply` / `fw_staging_arm_apply` remain in the tree, now unreachable
+  unless the macro is defined.
+
+### The redesign needed before in-app apply can be re-enabled
+In-app apply on this dual-core SMP-ChibiOS RP2040 must preserve the two invariants
+`flush_page` proves are necessary:
+1. **Never run with a destroyed vector table.**  Relocate VTOR to a RAM vector table
+   (with safe NMI/HardFault stubs) for the duration of the apply, OR copy the app body
+   **first** with sector 0 (boot2+vectors) erased/written **last and atomically**, so a
+   valid table exists at all times.
+2. **Bound the IRQs-off window.**  Copy sector-by-sector toggling IRQs between sectors
+   (like `flush_page`), not one ~4 s blackout, so ChibiOS preemption can't accumulate a
+   pending NMI that fires into a bad table.
+
+**The lower-risk path is to stop doing in-app apply at offset 0 entirely** and instead
+adopt a **reboot-to-bootloader** design (picowota / tinyuf2-style second stage, or the
+RP2040 BOOTSEL/UF2 path): the app stages + sets a marker + reboots; a minimal stage
+with no ChibiOS/NMI and no live app to corrupt does the offset-0 copy.  This is the
+"proper long-term answer" already flagged at the top of this doc, and run 2 is the
+empirical confirmation that the in-app shortcut is not viable as written.

@@ -217,11 +217,16 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
         }
 
         case CMD_FW_UP_APPLY: { // PHASE 2: install the staged image on the MASTER only
-            // Does NOT relay to the slave (slave self-apply is phase 3).  The master
-            // erases its own flash from offset 0, copies in the staged image, and
-            // resets — so we ACK *first* (the host expects the USB to drop), then arm
-            // the deferred apply that housekeeping_task_user() runs one iteration later.
+            // DISABLED BY DEFAULT (2026-05-30): the RAM-resident self-flash bricked
+            // the master — do_apply erases flash offset 0 (the live vector table +
+            // HardFault/NMI handlers) and runs ~4 s with IRQs off; an unmaskable
+            // exception (ChibiOS NMI context-switch / HardFault) then vectors through
+            // the erased table → lockup mid-copy → invalid boot2 → BOOTSEL.  See
+            // FW_UP_BASELINE.md "Phase 2 — run 2 (master bricked)".  The redesign
+            // (copy app body with IRQs toggled + vectors intact, then sector 0 last
+            // with VTOR relocated to RAM) is gated behind FW_UP_ENABLE_INAPP_APPLY.
             bool ok = fw_staging_has_valid_staged_image();
+#ifdef FW_UP_ENABLE_INAPP_APPLY
             memset(data, 0, length);
             memcpy(data, ok ? "P\x44." : "P\x44!", 3);
             raw_hid_send(data, length);
@@ -230,6 +235,15 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             if (ok) {
                 fw_staging_arm_apply();   // housekeeping → fw_staging_apply_and_reboot()
             }
+#else
+            // Safe default: never arm the brick-prone self-flash.  Report '!' so the
+            // host shows "apply not available" rather than silently doing nothing.
+            (void)ok;
+            memset(data, 0, length);
+            memcpy(data, "P\x44!", 3);
+            raw_hid_send(data, length);
+            uprintf("FW_UP_APPLY: in-app apply DISABLED (FW_UP_ENABLE_INAPP_APPLY off) — staged image left untouched\n");
+#endif
             return true;
         }
 

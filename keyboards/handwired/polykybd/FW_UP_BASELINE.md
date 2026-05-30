@@ -576,3 +576,53 @@ Chunks stream `slave_ack=0xca` AND actually land in slave staging, so
 passes, the diagnostics still in tree (bracket probe in `hid_fw_up.c`, core1
 restart in `fw_staging.c`, the status counters, and this disabled no-op probe)
 can be removed in a cleanup commit.
+
+## 2026-05-30 (run 6) — chunk path FIXED end-to-end; new hang is the self-apply
+
+### Result
+The uint8_t fix is confirmed on hardware. The master log streamed **all 4458
+chunks `slave_ack=0xca`** (offset 0 → 249256, full 243 KB) with the real
+`fw_staging_write_chunk` active — no chunk-0 hang. The entire image transferred
+and was written to slave staging.
+
+The slave's `finalize()` CRC over the full 244 KB staged image **matched** — we
+can infer this: on a CRC *mismatch* `finalize()` restarts core1 and returns
+(slave stays alive), but the slave instead goes *dead*, which only happens on
+the CRC-*match* path (writes header magic, arms `s_commit_pending`, returns ACK,
+then housekeeping calls the apply). So the transferred+staged image is
+byte-correct. **The whole transfer/staging path is verified working.**
+
+### New failure: COMMIT → self-apply
+```
+Bridge sync retry 0..9 (tid: FwUpCommit, success: 0, bytes: 4) → Failed to sync
+Failed to execute slave_matrix    (slave dead, 48 s+, does not return)
+```
+- `user_sync_fw_up_commit_handler` runs `fw_staging_finalize()` **synchronously**
+  in the split-transaction context: flush final page + **CRC over 244 KB** +
+  header program. That almost certainly exceeds the split-transaction timeout, so
+  the master sees COMMIT `success:0` (reported to host as "CRC mismatch") even
+  though finalize actually succeeds.
+- finalize then arms `s_commit_pending`; housekeeping calls
+  `fw_staging_apply_and_reboot()` → `fw_staging_do_apply()` — the RAM-resident
+  routine that **erases the slave's own flash from offset 0** (boot2 + app),
+  copies staging in, and `NVIC_SystemReset`s. The slave never comes back, so the
+  self-flash hangs or bricks (this code had never executed before run 6).
+
+### Where this leaves us
+- Transfer + staging + slave-side CRC verify: **working** (huge progress from
+  the chunk-0 hang).
+- Remaining blocker is the **self-apply+reboot** — a distinct, delicate subsystem
+  (RP2040 self-reflash from offset 0, boot2/XIP hazards), and currently
+  asymmetric: the master is relay-only (baseline steps 2–4 not done), so only the
+  **slave** self-applies+reboots while the master stays on old firmware.
+- `finalize()` should also be split: return the ACK *before* the long CRC/apply
+  so the COMMIT transaction doesn't time out and mis-report.
+
+### Options for next step (pick one)
+1. **Lock in the win:** make COMMIT verify-CRC + report success *without*
+   auto-applying/rebooting (gate the apply behind a separate explicit step), so
+   we have a stable "data path 100%, CRC verified on slave" baseline and stop
+   bricking the slave while the apply is designed carefully.
+2. **Harden/debug the self-apply now:** check the staged image begins with valid
+   boot2, verify the RAM-resident apply + pico-sdk boot2-copyout path, and split
+   finalize so COMMIT ACKs before the slow work. Riskier (may brick repeatedly).

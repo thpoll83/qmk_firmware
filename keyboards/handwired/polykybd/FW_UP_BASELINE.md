@@ -650,3 +650,58 @@ now dead code (never invoked), ready to be wired to a separate explicit
 apply step later — at which point the offset-0 self-erase + boot2/XIP handling
 must be designed/verified carefully (and the master made non-relay-only so both
 halves update coherently).
+
+## 2026-05-30 (Phase 1) — master stages its own copy (no longer relay-only)
+
+Chosen direction for the apply step: **in-app self-flash, phased**.  Phase 1 is
+the prerequisite — make the master stage + verify its OWN copy so both halves
+have a byte-identical, CRC-verified image before any apply exists.  This is also
+what lets phase 2 prove the self-flash on the (USB-recoverable) master first.
+
+### What changed (`hid_fw_up.c` only)
+The master is no longer a pure relay.  It now drives the **same proven deferred
+staging path as the slave**, reusing machinery that already runs on both halves:
+
+- **BEGIN**: calls `fw_staging_begin_deferred(size, crc)` for its own staging
+  (instead of nothing).  `housekeeping_task_user()` already calls
+  `fw_staging_process_deferred()` unconditionally on both halves, so the master's
+  62-sector erase advances one sector / 70 ms with USB staying alive — no
+  synchronous erase, no USB dropout.  BEGIN now reports ready (`.`) only when the
+  master's own erase is done (`!fw_staging_erase_pending()`) **and** the slave
+  reports `SYNC_ACK`; otherwise `~` and the host re-polls.  Both erases run in
+  parallel.
+- **CHUNK**: after the slave ACKs the relayed chunk, the master writes the same
+  chunk to its own staging via `fw_staging_write_chunk()`.  Relay-first preserves
+  the existing retry-safety — a failed relay leaves the master's `s_next_offset`
+  untouched so the host can retry the same offset on both halves.
+- **COMMIT**: relays to the slave, then calls `fw_staging_finalize()` for the
+  master's own copy.  Post-decouple `finalize()` verifies the O(1) running CRC,
+  clears `fw_up_active`, restarts core1, and (deliberately) does **not** apply or
+  reboot.  ACK is `.` only if both halves' finalize succeed.
+
+No changes to `keymap.c`, `config.h`, `split_fw_up.c`, or the host — the protocol
+is unchanged (BEGIN/CHUNK/COMMIT, `~` re-poll), and the housekeeping wiring that
+drives the slave's deferred erase now drives the master's too.
+
+### Why this is safe (no brick risk in phase 1)
+Phase 1 only ever touches the **staging region (≥ 1 MB offset)** — it never writes
+the active firmware at offset 0.  Worst case is a transport hang (recoverable by
+replug), not a brick.  The synchronous `fw_staging_begin()` is now unused (the
+master uses the deferred path); left in the tree.
+
+### Expected on hardware (flash BOTH halves)
+- BEGIN: a short burst of `~` while both halves erase in parallel (master log
+  shows `master+slave staging`), then `.`.
+- All 4458 chunks: `slave_ack=0xca master_write_ok=1`.
+- COMMIT: `slave_ack=0xca master_finalize=1`, host shows success.
+- Both halves stay alive on their existing firmware, each now holding a staged +
+  CRC-verified copy of the new image (nothing applied yet).
+- Builds clean (`split72:default` → `.uf2`, exit 0; only the pre-existing
+  `.rodata` warning from the RAM-resident `do_apply`).
+
+### Next: phase 2
+Add an explicit `FW_UP_APPLY` (0x44) command + a hardened `fw_staging_do_apply()`
+(halt core1, fully RAM-resident copy, minimal IRQ-off, accept the one-sector
+boot2 brick-window which is BOOTSEL/UF2-recoverable).  **Enable it on the master
+first** (recoverable by holding BOOTSEL) to prove the self-flash before wiring it
+to the slave in phase 3.

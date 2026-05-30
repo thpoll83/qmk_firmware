@@ -705,3 +705,67 @@ Add an explicit `FW_UP_APPLY` (0x44) command + a hardened `fw_staging_do_apply()
 boot2 brick-window which is BOOTSEL/UF2-recoverable).  **Enable it on the master
 first** (recoverable by holding BOOTSEL) to prove the self-flash before wiring it
 to the slave in phase 3.
+
+## 2026-05-30 (Phase 1) — VERIFIED ON HARDWARE
+Flashed both halves. Master log: `FW_UP_BEGIN … (master+slave staging)`, the
+master's own deferred erase ran to `erase complete (62 sectors)` in parallel with
+the slave, BEGIN held `~` until both were ready then returned `.`; all 4458 chunks
+`slave_ack=0xca master_write_ok=1`; COMMIT host-side `ok=True`. Both halves stayed
+alive (overlays re-rendered, core1 + split sync working). Both halves now hold a
+byte-identical, CRC-verified staged copy. Phase 1 complete.
+
+## 2026-05-30 (Phase 2) — explicit master-only self-apply (FW_UP_APPLY 0x44)
+
+In-app self-flash, **master only** (BOOTSEL-recoverable) to prove the self-flash
+mechanism before the slave is ever touched (phase 3).
+
+### Firmware (`hid_fw_up.{c,h}`, `base/fw_staging.{c,h}`)
+- **`CMD_FW_UP_APPLY` (0x44)** master handler: validates
+  `fw_staging_has_valid_staged_image()`, ACKs (`P\x44.` / `!`) **before** rebooting
+  (host expects the USB to drop), then `fw_staging_arm_apply()`.  It does **NOT**
+  relay APPLY to the slave — the slave's `s_commit_pending` is never armed, so the
+  slave never self-applies.
+- **`fw_staging_finalize()`** now, on CRC match, stamps the staging header sector
+  with `{FW_STAGING_MAGIC, size, crc}` (new `write_staging_header()`), so the staged
+  image is self-describing and `fw_staging_apply_and_reboot()` can validate + size
+  it (even across a power cycle).  It still does **not** arm the apply.
+- **`fw_staging_do_apply()` hardened**: halts core1 via an **inlined** PSM FRCE_OFF
+  write at the top (before any flash op) — the previous version left core1 running
+  from flash, which would CPU-LOCKUP on the XIP-cache flush.  The copy stays fully
+  RAM-resident, IRQs off for the whole ~4 s (no watchdog is armed, verified), then
+  `NVIC_SystemReset()`.
+- **`fw_staging_has_valid_staged_image()` / `fw_staging_arm_apply()`** added.
+- `keymap.c` housekeeping already runs `apply_and_reboot()` when `commit_pending` —
+  unchanged; only the master arms it.
+
+### Host (`hid_fw_up.py`, `cmd_menu.py`)
+- `apply_staged_firmware(hid)`: sends 0x44; treats explicit `!` as "no staged image"
+  (hard fail) and a missing reply as "rebooting" → `wait_for_reconnect(30 s)`.
+- New tray entry **“Apply Staged Firmware (master)…”** with a strong experimental /
+  BOOTSEL-recovery confirmation.  Apply is a **separate explicit action** from
+  staging — staging never auto-applies.
+
+### Brick-risk profile (why master-first)
+The only unrecoverable-looking failure is a power loss in the one-sector window
+between erasing and reprogramming boot2 at flash offset 0 → device drops to BOOTSEL
+(USB mass-storage) and is recovered by re-flashing the `.uf2`.  On the **master**
+that's a BOOTSEL button press; the **slave** would need physical access, which is
+exactly why the slave is deferred to phase 3.
+
+### How to test (flash BOTH halves with this build first)
+1. Stage the **same** firmware that's currently running (via “Flash Firmware”) so
+   that even though only the master self-applies, both halves end on the same image.
+2. Confirm stage+verify succeeds (host “staged and verified”).
+3. Run **“Apply Staged Firmware (master)…”** → confirm.
+   - Master log: `FW_UP_APPLY: master self-apply armed (rebooting…)`.
+   - Master USB drops, then re-enumerates within a few seconds on the applied image.
+   - Host shows “Firmware applied — the keyboard rebooted and reconnected.”
+4. Verify the master is alive and normal (typing, overlays).  If it does not come
+   back: hold BOOTSEL on the master, drop the `.uf2`, done.
+
+Builds clean (`split72:default` → `.uf2`, exit 0; only the pre-existing `.rodata`
+warning from the RAM-resident `do_apply`).
+
+### Next: phase 3
+Relay APPLY to the slave (coordinated: slave applies+resets, then master), only
+after the master self-apply is proven reliable here.

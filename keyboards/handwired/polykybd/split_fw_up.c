@@ -114,7 +114,21 @@ void user_sync_fw_up_chunk_handler(uint8_t in_len, const void* in_data, uint8_t 
         // wedges the next chunk RPC, the master log will stop logging
         // chunks and `slave status (chunk-fail)` will show whether the
         // slave is fully hung or just slow.
+#ifdef FW_UP_CHUNK_NOOP_PROBE
+        // PROBE (run 4): skip ONLY the staging write — keep the in_len guard and
+        // the CRC check above (the 2026-05-20 "verified transport baseline"
+        // b4a939f6 did exactly this and streamed every chunk).  The run-3/4
+        // bracket probe proved a same-size 64 B FW_UP_STATUS txn round-trips on
+        // the slave microseconds before this chunk, so the only change from that
+        // streaming baseline is removing fw_staging_write_chunk:
+        //   chunks ACK now    -> the wedge is inside fw_staging_write_chunk
+        //   chunks still fail  -> the FW_UP_CHUNK transaction dispatch itself
+        //                         wedges (or the slave isn't running this build)
+        // See config.h FW_UP_CHUNK_NOOP_PROBE / FW_UP_BASELINE.md (run 4).
+        bool ok = true;
+#else
         bool ok = fw_staging_write_chunk(msg->offset, msg->data, FW_UP_CHUNK_SIZE);
+#endif
         ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
     }
     fw_staging_note_chunk_call(msg->offset, ack);

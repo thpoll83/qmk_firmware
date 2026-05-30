@@ -473,3 +473,57 @@ and read-only). Decision tree for the next run:
 - `hid_fw_up.c`: offset-0 bracket probe (small + 64 B-M2S status reads).
 - `base/fw_staging.c`: run-2 core1-restart probe still present (harmless now that
   core1 is exonerated; left in so run-4 conditions match run-3).
+
+## 2026-05-30 (run 4) — bracket probe lands on Row 1: the FW_UP_CHUNK txn itself
+
+### Probe result on hardware
+```
+slave status (begin-ready): … erase=62/62 … pd_calls=35992 pd_advances=62
+FW_UP_CHUNK: offset=0
+slave status (pre-chunk):   … erase=62/62 … pd_calls=35995 pd_advances=62
+FW_UP probe: pre-chunk 64B-M2S status xfer -> OK
+Bridge sync retry 0 (tid: FwUpChunk, success: 0, ack: 0, bytes: 64)   … ×10 → slave dead
+```
+This is **Row 1, unambiguous**:
+- `pre-chunk` small status read **OK**, and `pd_calls` advanced 35992→35995 between
+  the two reads — the slave is alive and running its housekeeping loop.
+- A **64 B-M2S `FW_UP_STATUS` transaction succeeds** right before the chunk.
+- The **64 B `FW_UP_CHUNK`** transaction — identical M2S size, same transport,
+  same millisecond — fails `success:0` and the slave hard-locks.
+
+So the failure is **specific to the `FW_UP_CHUNK` transaction**. Definitively
+*not* transport, *not* payload size, *not* post-erase transport state, *not*
+core1 (all eliminated runs 2–4).
+
+### Why runs 2–4 were identical (the thing I missed)
+Across runs 2–4 the **slave's chunk-handling code never changed**: run 2 was the
+core1-restart-at-erase (slave, but erase-only), runs 3–4 were master-side
+instrumentation (`hid_fw_up.c` relay/probe). The slave `user_sync_fw_up_chunk_handler`
++ `fw_staging_write_chunk` path has been byte-identical the whole time, so an
+identical failure was guaranteed. **To change the outcome we must change the
+slave chunk path and flash the SLAVE half.**
+
+### Run-4 experiment: skip ONLY the slave staging write
+Note: the 2026-05-20 "verified transport baseline" (`b4a939f6`) already ran a
+no-op chunk handler and streamed every chunk — but that predates step-1's real
+write (`a0510144`, 05-22) and the erase-fix (`c52b0b0d`, 05-29), so no-op-vs-real
+has never been A/B'd on today's code. `config.h` `#define FW_UP_CHUNK_NOOP_PROBE`
+makes `user_sync_fw_up_chunk_handler` skip **only** `fw_staging_write_chunk`
+(keeping the `in_len` guard + CRC) — i.e. exactly that streaming baseline applied
+to current code, so the sole variable is the staging write. **Must flash the
+SLAVE.** Decision tree:
+
+| Master log on first chunk | Conclusion | Next move |
+|---|---|---|
+| `FwUpChunk … success:1` + `slave_ack=0xca`, fw_up runs to COMMIT (which fails CRC — nothing was staged) | FW_UP_CHUNK transport/dispatch is fine → the hang is in the **handler body** (`fw_staging_write_chunk` / its CRC) | re-enable the body incrementally (CRC only, then memcpy, then flush) to find the wedge |
+| `FwUpChunk … success:1` but `ack` ≠ 0xca | slave/master `fw_up_chunk_sync_t` size mismatch (in_len guard rejected) → **halves are not the same build** | rebuild + reflash both halves, re-test |
+| `FwUpChunk … success:0`, slave dies (unchanged) | the FW_UP_CHUNK **transaction/dispatch itself** wedges, independent of handler — or the slave isn't actually running this build | confirm the slave was reflashed; then diff `USER_SYNC_FW_UP_CHUNK` enum/registration vs the working `FW_UP_STATUS` |
+
+A no-op that changes nothing is itself informative: it means the slave didn't get
+this build (verify the slave flash) or the wedge is before handler dispatch.
+
+### What's in tree as of this commit
+- `config.h`: `FW_UP_CHUNK_NOOP_PROBE` defined (diagnostic — remove later).
+- `split_fw_up.c`: under that macro, `fw_staging_write_chunk` is replaced by
+  `ok = true` (the `in_len` guard + CRC check still run).
+- Bracket probe (`hid_fw_up.c`) and run-2 core1-restart (`fw_staging.c`) still present.

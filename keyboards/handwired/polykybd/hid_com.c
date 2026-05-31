@@ -16,6 +16,7 @@
 #include "base/com.h"
 #include "base/overlay.h"
 #include "base/update.h"
+#include "poly_util.h"
 
 #include <print.h>
 #include <transactions.h>
@@ -454,7 +455,16 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 data[3] = (uint8_t)local_layer->def_layer;
                 raw_hid_send(data, length);
                 break;
-            // case 23 (0x17) is reserved for the host-triggered bootloader-jump command.
+            case 23: // enter bootloader (host-triggered; mirrors a QK_BOOTLOADER press)
+                uprint("Host requested bootloader.\n");
+                poly_announce_bootloader();
+                memset(data, 0, length);
+                memcpy(data, "P\x17.", 3);
+                raw_hid_send(data, length);
+                // The host does not wait for this reply — jump straight to the
+                // bootloader, exactly as QMK does for the QK_BOOTLOADER keycode.
+                reset_keyboard();
+                break;
             case 24: //display off
                 // Turn the status OLED and every keycap OLED off on host request, so the
                 // panels don't sit lit (e.g. after a HIL test/deploy) and age/burn in.

@@ -2,10 +2,16 @@
 
 #include "quantum.h"
 
+#include "state.h"
+#include "bridge_helper.h"
+#include "base/com.h"
 #include "base/disp_array.h"
 #include "base/shift_reg.h"
 #include "base/helpers.h"
 #include "base/fonts/FreeSansBold24pt7b.h"
+
+#include <print.h>
+#include <transactions.h>
 
 const uint8_t* get_key_disp_bitmask(uint8_t index);
 uint8_t get_disp_bitmask_size(void);
@@ -35,6 +41,19 @@ void display_bootloader_message(void) {
     set_displays(20, false);
     display_message(1, 1, u"BOOT-",   &FreeSansBold24pt7b);
     display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
+}
+
+// Announce an imminent bootloader jump: flag it, sync the slave half so it
+// shows the bootloader message too, then show the message locally. The caller
+// resets afterwards — via QMK for the QK_BOOTLOADER keymap path, or via
+// reset_keyboard() for the host-triggered HID command (hid_com.c case 23).
+void poly_announce_bootloader(void) {
+    uprintf("Bootloader entered. Please copy new Firmware.\n");
+    // Sync slave before the reset — QMK resets before housekeeping runs.
+    access_local_state()->overlay_flags |= BOOTLOADER_DISPLAY;
+    uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
+    uprintf("Master: BOOTLOADER_DISPLAY sync ack=%d\n", ack);
+    display_bootloader_message();
 }
 
 void display_message(uint8_t row, uint8_t col, const uint16_t* message, const GFXfont* font) {

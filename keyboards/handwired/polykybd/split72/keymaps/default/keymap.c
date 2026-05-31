@@ -20,6 +20,8 @@
 #include "split72/split72.h"
 #include "split72/status_oled.h"
 #include "bridge_helper.h"
+#include "split_fw_up.h"
+#include "base/fw_staging.h"
 #include "uni.h"
 #include "side.h"
 #include "fill_overlay.h"
@@ -329,9 +331,27 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
-    brightness_save_if_pending();
-    default_layer_save_if_pending();
-    sync_and_refresh_displays();
+    // fw_up state machine: apply on success path, advance deferred erase.
+    // Both must run regardless of fw_up_active so the slave's erase actually
+    // progresses and the master's apply-and-reboot fires after a successful
+    // commit.
+    if (fw_staging_commit_pending()) {
+        fw_staging_apply_and_reboot();
+    }
+    if (fw_staging_reboot_pending()) {
+        mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
+    }
+    fw_staging_process_deferred();
+
+    // While a fw_up is in progress, skip EEPROM saves (wear-leveling consolidate
+    // is ~100 ms IRQ-off) and the display refresh path (slave update_displays
+    // can be ~50-100 ms over SPI, master state-push uses 10 retries × 80 ms).
+    // Both would starve the split UART that the chunk transport relies on.
+    if (!fw_staging_fw_up_active()) {
+        brightness_save_if_pending();
+        default_layer_save_if_pending();
+        sync_and_refresh_displays();
+    }
     int32_t update = get_last_update();
     if(update>=0) {
         //turn off displays
@@ -1254,6 +1274,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 poly_announce_bootloader();
                 return true;
             }
+            case QK_REBOOT: {
+                uprintf("Reboot requested — rebooting both halves.\n");
+                // Reboot the slave too, so both halves restart together (like a
+                // replug).  A master-only reset leaves the slave running stale →
+                // the rebooted master can't re-sync to it and hangs on the boot
+                // splash.  QMK resets the master right after we return true (before
+                // housekeeping runs again), so the slave must be told here.
+                fw_up_apply_sync_t reboot_msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC };
+                uint8_t ack = send_to_bridge(USER_SYNC_REBOOT, &reboot_msg, sizeof(reboot_msg), 5);
+                uprintf("Master: slave reboot ack=%d\n", ack);
+                return true;   // let QMK's QK_REBOOT handler reset the master
+            }
             case KC_A ... KC_Z:
                 set_local_last_latin_keycode(keycode);
                 if((get_mods() & MOD_MASK_ALT) == 0 && addlang) {
@@ -1523,9 +1555,22 @@ void unicode_input_mode_set_user(uint8_t unicode_mode) {
     request_disp_refresh();
 }
 
+#ifdef FW_UP_BOOT_TRACE
+// Diagnostic only (build with -DFW_UP_BOOT_TRACE): overwrite the keycaps with a
+// single digit at boot milestones so a hang in early boot is visible — the last
+// digit shown on each half tells us how far that half got before it stopped.
+static void boot_trace(const uint16_t* digit) {
+    clear_all_displays();
+    display_message(1, 1, digit, &FreeSansBold24pt7b);
+}
+#endif
+
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
 // Global variables: com
 void keyboard_post_init_user(void) {
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"1");
+#endif
     // Customise these values to desired behaviour
     debug_enable = true;
     debug_matrix = false;
@@ -1557,8 +1602,14 @@ void keyboard_post_init_user(void) {
     //standard mapping is 1:1
     reset_overlay_mapping();
 
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"2");
+#endif
 #ifdef USE_CORE1
     multicore_launch_core1();
+#endif
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"3");
 #endif
 
     transaction_register_rpc(USER_SYNC_POLY_DATA,           user_sync_poly_data_handler);
@@ -1570,6 +1621,15 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_ROI_DATA,            user_sync_roi_data_handler);
     transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_dynamic_keymap_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_QUERY,         user_sync_fw_up_query_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_BEGIN,         user_sync_fw_up_begin_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_CHUNK,         user_sync_fw_up_chunk_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_COMMIT,        user_sync_fw_up_commit_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_STATUS,        user_sync_fw_up_status_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_APPLY,         user_sync_fw_up_apply_handler);
+    transaction_register_rpc(USER_SYNC_REBOOT,              user_sync_reboot_handler);
+
+    fw_staging_init();
 
     poly_eeconf_t ee = load_user_eeconf();
     poly_sync_t* local_state = access_local_state();
@@ -1580,7 +1640,15 @@ void keyboard_post_init_user(void) {
     memcpy(access_global_latin_table()->ex, ee.latin_ex, sizeof(ee.latin_ex));
 
     set_displays(ee.brightness, false);
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"4");
+#endif
 }
+
+// is_keyboard_left_impl() reads handedness directly (uncached) and is valid this
+// early; is_keyboard_left() only returns the right value after split_pre_init(),
+// which runs later (in keyboard_init, after keyboard_pre_init_user).
+bool is_keyboard_left_impl(void);
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
 void keyboard_pre_init_user(void) {
@@ -1598,7 +1666,15 @@ void keyboard_pre_init_user(void) {
 
     set_displays(50, false);
     set_local_last_latin_keycode(0);
+    // Resolve the side BEFORE the splash so each half shows its own logo
+    // (left = "POLY KYBD", right = "SPLIT 72") instead of both showing the
+    // right-side text.  set_side() otherwise runs only in post_init, after the
+    // splash, so the splash always saw side == UNDECIDED → both rendered "SPLIT 72".
+    set_side(is_keyboard_left_impl() ? LEFT_SIDE : RIGHT_SIDE);
     show_splash_screen();
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"0");
+#endif
 
     gpio_set_pin_input_high(I2C1_SDA_PIN);
 }

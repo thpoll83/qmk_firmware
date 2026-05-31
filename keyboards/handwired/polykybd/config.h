@@ -22,7 +22,7 @@
 // #define SPLIT_LED_STATE_ENABLE
 // #define SPLIT_MODS_ENABLE
 #define SPLIT_WPM_ENABLE
-#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA
+#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FW_UP_QUERY, USER_SYNC_FW_UP_BEGIN, USER_SYNC_FW_UP_CHUNK, USER_SYNC_FW_UP_COMMIT, USER_SYNC_FW_UP_STATUS, USER_SYNC_FW_UP_APPLY, USER_SYNC_REBOOT
 
 #define EE_HANDS
 
@@ -60,10 +60,37 @@
 // Slave to master:
 #define RPC_S2M_BUFFER_SIZE 72
 
+// During fw_up the slave runs a deferred sector-by-sector erase (~50 ms per
+// sector, 62+ sectors).  Each 50 ms window makes the slave's UART unresponsive,
+// causing the split matrix transport to time out and increment connection_errors.
+// The default threshold of 10 is reached in ~4 sectors (200 ms), triggering a
+// 500 ms throttle that blocks all RPC calls.  Raise the threshold so the slave is
+// never declared "disconnected" during the full erase sequence.
+#define SPLIT_MAX_CONNECTION_ERRORS 200
+
+// 2026-05-30: the FW_UP_CHUNK_NOOP_PROBE below (skip only fw_staging_write_chunk)
+// streamed all 4458 chunks, proving the slave hang was INSIDE
+// fw_staging_write_chunk: `space = FLASH_PAGE_SIZE(256) - s_buf_fill` was a
+// uint8_t and truncated to 0 whenever the page buffer was empty (chunk 0 and
+// every 256 B boundary), spinning the copy loop forever. Fixed in
+// base/fw_staging.c (space/copy widened to uint32_t). Probe left here, disabled,
+// for regression reference. See FW_UP_BASELINE.md (run 5).
+// #define FW_UP_CHUNK_NOOP_PROBE
+
+// 2026-05-30: in-application self-apply (FW_UP_APPLY, master-only).  DISABLED by
+// default — the first attempt bricked the master (do_apply erased flash sector 1,
+// which holds the toolchain memcpy it then called → HardFault through the also-
+// erased vector table).  fw_staging.c do_apply has since been HARDENED: RAM-only
+// word copy (no flash memcpy), app body copied first / sector-0 vectors last, and
+// IRQs toggled per sector.  Verified via .elf audit that do_apply makes zero
+// flash-resident calls.  Enable ONLY to test the hardened path; failure is still
+// master-only and BOOTSEL/UF2-recoverable.  See FW_UP_BASELINE.md "Phase 2 run 3".
+// #define FW_UP_ENABLE_INAPP_APPLY
+
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.7.2"
+#define FW_VERSION "0.8.0"
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

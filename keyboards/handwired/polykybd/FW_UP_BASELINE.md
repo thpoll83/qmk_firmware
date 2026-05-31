@@ -912,3 +912,24 @@ Re-flash both halves with the new apply-enabled build and (a) press QK_REBOOT �
 reboot cleanly with NO replug; (b) stage + Apply — master should re-enumerate on the new
 image with NO replug.  If both reboot cleanly, the apply path is done for the master;
 phase 3 (relay apply to slave) becomes viable.
+
+## TODO (do on the NEXT code change to fw_up) — reduce log spam
+User request (2026-05-31): the fw_up firmware logging is far too spammy now that the
+path works; cut it back to milestones.  Do NOT do a code-only churn change for this —
+fold it into the next substantive edit.  Specifically:
+- **`hid_fw_up.c` CMD_FW_UP_CHUNK**: drop the per-chunk `uprintf("FW_UP_CHUNK: offset=%lu")`
+  and `uprintf("FW_UP_CHUNK: slave_ack=0x%02x master_write_ok=%d")` — they fire ~4458×
+  each and dominate the log.  The host already shows chunk progress.
+- **`hid_fw_up.c` offset-0 bracket probe** (the `pre-chunk` status read + `64B-M2S status
+  xfer` block): obsolete — the chunk path is proven (runs 5/6/4); remove it.
+- **`hid_fw_up.c` slave-status dumps**: keep at most the one `begin-ready` snapshot; drop
+  the periodic `begin-pending` (every 16 polls) and the `chunk-fail` dump, or gate them
+  behind a new `FW_UP_VERBOSE` macro (default off).
+- **`base/fw_staging.c`**: the per-sector `fw_staging_process_deferred: erased sector
+  N/63` uprintf fires 63×; reduce to a single "erase complete (N sectors)" line (the
+  "complete" one already exists) or gate behind `FW_UP_VERBOSE`.
+- **Keep** (these are the useful milestones): one BEGIN line, COMMIT result
+  (`slave_ack/master_finalize`), APPLY result.  Net target: a handful of lines per
+  update instead of ~9000.
+- Consider a single `#ifdef FW_UP_VERBOSE` gate in fw_up so the diagnostics can be
+  switched back on for a future bisect without re-adding them.

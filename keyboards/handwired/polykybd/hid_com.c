@@ -46,6 +46,10 @@ while lang_key:
 //[[[end]]]
 
 void invert_display(uint8_t r, uint8_t c, bool state);
+// Defined in each board's keymap.c (split72 / corne42); declared here so the
+// shared HID dispatcher can drive the display-off command (case 24).
+void poly_suspend(void);
+void sync_and_refresh_displays(void);
 
 // Set on boot; cleared after the first GET_ID exchange so the host can detect
 // a firmware restart even when it never lost the USB connection.
@@ -448,6 +452,24 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memset(data, 0, length);
                 memcpy(data, "P\x16.", 3);
                 data[3] = (uint8_t)local_layer->def_layer;
+                raw_hid_send(data, length);
+                break;
+            // case 23 (0x17) is reserved for the host-triggered bootloader-jump command.
+            case 24: //display off
+                // Turn the status OLED and every keycap OLED off on host request, so the
+                // panels don't sit lit (e.g. after a HIL test/deploy) and age/burn in.
+                // Mirrors the USB-suspend display path (suspend_power_down_kb): poly_suspend()
+                // clears STATUS_DISP_ON/DISP_IDLE/IDLE_TRANSITION and sets contrast = DISP_OFF,
+                // sync_and_refresh_displays() pushes that to the slave half and switches both
+                // halves' panels off, and set_last_update(-1) stops the idle housekeeping block
+                // from re-asserting STATUS_DISP_ON on the next tick. Nothing is written to
+                // EEPROM, so a key press (display_wakeup) or the idle-wake command (case 15,
+                // data byte 0) restores the saved brightness; the keyboard stays USB-enumerated.
+                poly_suspend();
+                sync_and_refresh_displays();
+                set_last_update(-1);
+                memset(data, 0, length);
+                memcpy(data, "P\x18.", 3);
                 raw_hid_send(data, length);
                 break;
             default:

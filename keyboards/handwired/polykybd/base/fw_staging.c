@@ -313,8 +313,10 @@ void fw_staging_process_deferred(void) {
         // first page flush (the chunk at offset 224), the per-flush halt/restart
         // cycle is the culprit -> cooperative core1 park.  See CLAUDE.md fw_up.
         if (s_core1_halted) fw_staging_restart_core1();
+        uprintf("fw_staging_process_deferred: erase complete (%lu sectors), core1 restarted\n", s_erase_sector_count);
+#else
+        uprintf("fw_staging_process_deferred: erase complete (%lu sectors)\n", s_erase_sector_count);
 #endif
-        uprintf("fw_staging_process_deferred: erase complete (%lu sectors), core1 restarted (probe)\n", s_erase_sector_count);
     } else {
 #ifdef FW_UP_VERBOSE
         uprintf("fw_staging_process_deferred: erased sector %lu/%lu\n", s_erase_sector_next, s_erase_sector_count);

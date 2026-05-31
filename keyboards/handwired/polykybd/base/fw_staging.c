@@ -532,8 +532,12 @@ ram_word_copy(uint32_t *dst, const uint32_t *src, uint32_t nbytes) {
 // ---------------------------------------------------------------------------
 static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_size) {
 #ifdef USE_CORE1
-    // Halt core1 via PSM reset (inlined register write — no flash fetch).
-    *(volatile uint32_t *)0x40010004u |= (1u << 16);   // PSM FRCE_OFF, PROC1 bit
+    // Halt core1 via PSM reset.  _PSM_FRCE_OFF / _PSM_PROC1_BIT are #defines
+    // (pure preprocessor text substitution → an inlined register write, no flash
+    // fetch), so this is byte-for-byte identical machine code to the raw literal
+    // it replaces — same as fw_staging_halt_core1(), inlined here for the
+    // not-in-flash apply path.
+    _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
     __asm volatile ("dsb" ::: "memory");
 #endif
     static uint8_t page_buf[FLASH_PAGE_SIZE];   // static (.bss): never on a moving stack

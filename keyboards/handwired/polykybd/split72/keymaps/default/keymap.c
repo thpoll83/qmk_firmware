@@ -1649,6 +1649,11 @@ void keyboard_post_init_user(void) {
 #endif
 }
 
+// is_keyboard_left_impl() reads handedness directly (uncached) and is valid this
+// early; is_keyboard_left() only returns the right value after split_pre_init(),
+// which runs later (in keyboard_init, after keyboard_pre_init_user).
+bool is_keyboard_left_impl(void);
+
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
 void keyboard_pre_init_user(void) {
     kdisp_hw_setup();
@@ -1665,6 +1670,11 @@ void keyboard_pre_init_user(void) {
 
     set_displays(50, false);
     set_local_last_latin_keycode(0);
+    // Resolve the side BEFORE the splash so each half shows its own logo
+    // (left = "POLY KYBD", right = "SPLIT 72") instead of both showing the
+    // right-side text.  set_side() otherwise runs only in post_init, after the
+    // splash, so the splash always saw side == UNDECIDED → both rendered "SPLIT 72".
+    set_side(is_keyboard_left_impl() ? LEFT_SIDE : RIGHT_SIDE);
     show_splash_screen();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(u"0");

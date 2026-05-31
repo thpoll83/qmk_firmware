@@ -554,7 +554,24 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     }
     #undef APPLY_ONE_SECTOR
 
-    NVIC_SystemReset();   // straight into the freshly-written image; never returns
+    // Full-chip reset via the watchdog — NOT NVIC_SystemReset().  NVIC_SystemReset
+    // only resets the M0+ core (AIRCR.SYSRESETREQ) and leaves USB/PLL/peripheral
+    // state behind, which hangs at early boot until a replug (same warm-reset bug
+    // the QK_REBOOT keycode hits; see poly_util.c mcu_reset()).  We can't call the
+    // flash-resident watchdog_reboot() from here (invariant 1: no flash calls in
+    // the apply window), so we inline the same effect with register writes:
+    //   PSM_WDSEL  = reset everything except ROSC/XOSC   (0x1ffff & ~0x3 = 0x1fffc)
+    //   WATCHDOG_SCRATCH4 = 0  → bootrom takes the normal flash boot path
+    //   WATCHDOG_CTRL |= TRIGGER → immediate full reset
+    // (RP2040 datasheet §4.7; mirrors pico-sdk watchdog_reboot(0,0,0).)
+    #define _PSM_WDSEL       (*(volatile uint32_t *)(0x40010000u + 0x08u))
+    #define _WD_CTRL         (*(volatile uint32_t *)(0x40058000u + 0x00u))
+    #define _WD_SCRATCH4     (*(volatile uint32_t *)(0x40058000u + 0x1cu))
+    _PSM_WDSEL    = 0x0001ffffu & ~0x00000003u;   // all blocks except ROSC(0x1)+XOSC(0x2)
+    _WD_SCRATCH4  = 0u;                            // normal flash boot, not reboot-to-addr
+    _WD_CTRL     |= 0x80000000u;                   // WATCHDOG_CTRL_TRIGGER_BITS
+    __asm volatile ("dsb" ::: "memory");
+    while (1) { /* wait for the watchdog reset to take effect */ }
 }
 
 void fw_staging_apply_and_reboot(void) {

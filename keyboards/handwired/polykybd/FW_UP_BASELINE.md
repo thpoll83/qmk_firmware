@@ -873,3 +873,42 @@ reflash the .uf2 — and the in-app approach is dead, switch to reboot-to-bootlo
 
 The **default build leaves apply DISABLED** (always NACKs, no self-flash), so the
 shipped firmware cannot brick from a button press regardless.
+
+## 2026-05-31 (Phase 2 run 4) — hardened apply WORKS; warm-reset boot-hang found & fixed
+
+### Result: the hardened do_apply did NOT brick the master
+Flashed both halves with the apply-enabled build, staged the running image, hit Apply.
+Master log streamed all chunks `master_write_ok=1`, COMMIT `master_finalize=1`, APPLY
+armed, USB dropped — **and the master came back on the applied image after one replug**.
+No BOOTSEL/UF2 recovery needed.  The deterministic memcpy-in-flash brick (run 2/3) and
+the self-overwrite IRQ hazard are both resolved; the in-app self-flash mechanism itself
+is now working.
+
+### New (pre-existing) bug surfaced: warm-reset hangs at early boot until replug
+After apply the master "booted up but got stuck when booting"; unplug+replug then booted
+fine.  Crucially the user reports **the same hang from the QK_REBOOT keycode** — so this
+is NOT caused by fw_up.  Shared root cause, confirmed in the tree:
+- QK_REBOOT → `soft_reset_keyboard()` (quantum.c:237) → `mcu_reset()`, and QMK's RP2040
+  `mcu_reset()` (`platforms/chibios/bootloaders/rp2040.c`) is just `NVIC_SystemReset()`.
+- `do_apply` also ended in `NVIC_SystemReset()`.
+On RP2040 `NVIC_SystemReset()` asserts only `AIRCR.SYSRESETREQ` → resets the M0+ core but
+leaves USB, the PLLs and peripherals in their prior state.  That partial-reset state
+intermittently wedges early boot until a power cycle (the replug).
+
+### Fix (this commit) — full-chip watchdog reset for BOTH reboot paths
+- `poly_util.c`: strong override of the weak `mcu_reset()` → `watchdog_reboot(0,0,0)`
+  (programs `PSM_WDSEL` to reset everything except ROSC/XOSC, then triggers the
+  watchdog — a clean full-chip reset ≈ power cycle).  Fixes the QK_REBOOT keycode hang
+  for the whole keyboard.
+- `base/fw_staging.c` `do_apply`: replaced `NVIC_SystemReset()` with the **inlined**
+  equivalent (PSM_WDSEL + WATCHDOG_SCRATCH4=0 + WATCHDOG_CTRL TRIGGER register writes)
+  so the apply window keeps invariant (1) "no flash-resident calls".  ELF-audited: still
+  zero `bl 0x10xxxxxx` inside do_apply; it now references 0x40058000/0x40010008.
+- mcu_reset is weak in QMK (other boards override it, e.g. zsa/voyager), so the strong
+  override wins at link with no QMK-core edit.
+
+### Next test
+Re-flash both halves with the new apply-enabled build and (a) press QK_REBOOT — should
+reboot cleanly with NO replug; (b) stage + Apply — master should re-enumerate on the new
+image with NO replug.  If both reboot cleanly, the apply path is done for the master;
+phase 3 (relay apply to slave) becomes viable.

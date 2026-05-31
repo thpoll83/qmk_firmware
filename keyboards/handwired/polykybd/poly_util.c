@@ -7,6 +7,28 @@
 #include "base/helpers.h"
 #include "base/fonts/FreeSansBold24pt7b.h"
 
+#include "hardware/watchdog.h"
+
+// ---------------------------------------------------------------------------
+// RP2040 warm-reset fix (QK_REBOOT / soft_reset_keyboard path).
+//
+// QMK's default RP2040 mcu_reset() (platforms/chibios/bootloaders/rp2040.c) is
+// just NVIC_SystemReset(), which on RP2040 asserts only AIRCR.SYSRESETREQ — it
+// resets the Cortex-M0+ core but leaves USB, the PLLs and most peripherals in
+// their prior state.  That half-reset state intermittently hangs at early boot
+// until the cable is replugged (observed both on the fw-up self-apply reboot and
+// on the QK_REBOOT keycode).
+//
+// watchdog_reboot(0,0,0) instead programs PSM_WDSEL to reset *everything* except
+// the ROSC/XOSC and triggers the watchdog → a clean full-chip reset equivalent to
+// a power cycle.  mcu_reset() is a weak symbol in the QMK bootloader layer (other
+// boards override it, e.g. zsa/voyager), so this strong override wins at link.
+// ---------------------------------------------------------------------------
+void mcu_reset(void) {
+    watchdog_reboot(0, 0, 0);   // pc=0,sp=0 → normal flash boot; delay 0 → immediate
+    while (1) { /* wait for the watchdog to fire */ }
+}
+
 const uint8_t* get_key_disp_bitmask(uint8_t index);
 uint8_t get_disp_bitmask_size(void);
 

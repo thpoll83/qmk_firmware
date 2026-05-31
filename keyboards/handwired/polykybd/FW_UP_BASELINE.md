@@ -913,7 +913,18 @@ reboot cleanly with NO replug; (b) stage + Apply — master should re-enumerate 
 image with NO replug.  If both reboot cleanly, the apply path is done for the master;
 phase 3 (relay apply to slave) becomes viable.
 
-## TODO (do on the NEXT code change to fw_up) — reduce log spam
+## DONE (2026-05-31, this commit) — reduce log spam (gated behind FW_UP_VERBOSE)
+Folded into the both-halves-reboot change (below).  The spammy sites are now wrapped in
+`#ifdef FW_UP_VERBOSE` (default OFF):
+- `hid_fw_up.c` per-chunk `FW_UP_CHUNK: offset=%lu` and `slave_ack=… master_write_ok=…`
+  (the ~4458× lines) plus the offset-0 `pre-chunk` / `64B-M2S status xfer` bracket probe.
+- `base/fw_staging.c` per-sector `erased sector N/63` (63×).
+Kept unconditional (the milestones): the BEGIN/new-image line, COMMIT result, APPLY
+result, GET_VERSION, the `begin-ready` snapshot, the once-per-burst `chunk-fail` dump.
+Build with `-DFW_UP_VERBOSE` (e.g. `-e EXTRAFLAGS=-DFW_UP_VERBOSE`) to restore the full
+diagnostics for a future bisect.  Original spec (kept for reference):
+
+### Original TODO — reduce log spam
 User request (2026-05-31): the fw_up firmware logging is far too spammy now that the
 path works; cut it back to milestones.  Do NOT do a code-only churn change for this —
 fold it into the next substantive edit.  Specifically:
@@ -933,3 +944,62 @@ fold it into the next substantive edit.  Specifically:
   update instead of ~9000.
 - Consider a single `#ifdef FW_UP_VERBOSE` gate in fw_up so the diagnostics can be
   switched back on for a future bisect without re-adding them.
+
+## 2026-05-31 (run 5) — watchdog reset comes back but master stuck on splash; ROOT CAUSE = master-only reset; FIX = reboot BOTH halves
+
+### Test result of the run-4 watchdog-reset build
+QK_REBOOT/Apply no longer kills USB for good — the master DID watchdog-reset and
+re-enumerate (host log: reconnect after ~25 s of host-side retries, then live HID).  But
+the master then **stuck on its boot splash** (here the USB/master half is the right side
+→ "SPLIT 72") and never advanced to normal operation; only a replug recovered it.  So the
+warm-reset USB half-reset is fixed, but a *second* layer was hiding behind it.
+
+### Root cause (host + fw logs, decisive)
+- Host log: after reconnect the master is **alive but stalled** — the first command
+  (`Reset Overlays AND Usage`) returns an **empty reply**; every `send_overlay_mapping`
+  logs `Drained 0 of 2 HID ACKs`; it limps for minutes (NOT hard-frozen, NOT a core1 hang).
+- The master's per-key display refresh is **gated behind a successful slave sync**: in
+  `sync_and_refresh_displays()` (keymap.c) a failed `send_to_bridge(USER_SYNC_POLY_DATA,…)`
+  sets `state_diff = false` ("try again later"), which also skips the `request_disp_refresh()`
+  inside the same `if(state_diff)` block.  So when the slave is unreachable the master
+  **never refreshes its own keycaps** → stuck on the splash forever.
+- Why the slave is unreachable: a master-only reset (QK_REBOOT *and* fw_up Apply — Apply
+  reboots the **master only**, hid_fw_up.c) leaves the slave running stale.  User confirmed
+  a replug power-cycles **both** halves (slave is fed over the inter-half cable) — which is
+  exactly why a replug fixes it and a warm reset does not.
+
+### Fix (this commit) — make a reset reset BOTH halves (mirror a replug)
+New split transactions `USER_SYNC_FW_UP_APPLY` and `USER_SYNC_REBOOT`, guarded by
+`FW_UP_SYNC_MAGIC` + CRC so a stray transaction can't trigger a reboot:
+- **fw_up Apply** (`hid_fw_up.c`, under FW_UP_ENABLE_INAPP_APPLY): master sends the slave
+  `USER_SYNC_FW_UP_APPLY`; the slave handler (`split_fw_up.c`) verifies a valid staged
+  image and calls `fw_staging_arm_apply()`, so its housekeeping runs `apply_and_reboot()`.
+  The master then arms its own apply.  Both halves install the staged image and reboot →
+  both come up on the new firmware (this also fixes that the slave's staged image was
+  **never applied** before — Apply was master-only).
+- **QK_REBOOT** (`keymap.c` `process_record_user`): master sends `USER_SYNC_REBOOT`; the
+  slave handler calls `fw_staging_arm_reboot()` and its housekeeping runs `mcu_reset()`.
+  Then the master returns true and QMK resets it.  Coordinated inline like QK_BOOTLOADER
+  (QMK resets the master before housekeeping would run again).
+- Slave deferred-reboot plumbing: `fw_staging_arm_reboot()` / `fw_staging_reboot_pending()`
+  (fw_staging.c), checked at the top of `housekeeping_task_user()` next to the existing
+  commit-pending apply.
+
+### IMPORTANT bootstrap caveat (OLD→NEW transition)
+The slave obeys `USER_SYNC_FW_UP_APPLY` / `USER_SYNC_REBOOT` only once it is **already
+running firmware that registers those handlers**.  An OLD slave (no handler) won't ACK, so
+for that one transition the master reboots alone (= old behaviour).  To validate/adopt:
+**flash BOTH halves once (BOOTSEL + UF2) with this build**; after that, QK_REBOOT and
+in-app Apply reboot both halves.
+
+### Build / audit
+Both builds compile (default apply-disabled + `-DFW_UP_ENABLE_INAPP_APPLY`).  ELF audit:
+`user_sync_fw_up_apply_handler`, `user_sync_reboot_handler`, `fw_staging_arm_reboot`,
+`fw_staging_reboot_pending` all linked; `mcu_reset` still strong (T); `do_apply` still has
+zero flash `bl`.  Apply-enabled `.bin` = 251568 B (+140 B vs run 4).
+
+### Known follow-up (deferred — own change, own test)
+Robustness (B): decouple the master's *own* display refresh from slave-sync success in
+`sync_and_refresh_displays()`, so a missing/slow slave can never pin the master on the
+splash (refresh own keycaps even when the bridge sync fails; gate only `copy_global_state()`
+on sync success, not `request_disp_refresh()`).  Touches load-bearing refresh logic.

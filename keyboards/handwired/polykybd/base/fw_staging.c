@@ -82,6 +82,7 @@ static uint32_t s_buf_fill;      // bytes pending in s_page_buf
 static uint32_t s_staged_crc;    // running CRC32 of received image bytes (for O(1) finalize)
 
 static bool     s_commit_pending;
+static bool     s_reboot_pending;   // deferred plain reboot (QK_REBOOT slave path)
 
 // ---------------------------------------------------------------------------
 // Deferred-erase state (used by slave handler to avoid blocking the split link)
@@ -165,6 +166,7 @@ static void write_staging_header(uint32_t size, uint32_t crc) {
 void fw_staging_init(void) {
     s_initialized          = true;
     s_commit_pending       = false;
+    s_reboot_pending       = false;
     s_erase_pending        = false;
     s_fw_up_active         = false;
     // Diagnostic counters: leave the cumulative call counts in place across
@@ -314,7 +316,9 @@ void fw_staging_process_deferred(void) {
 #endif
         uprintf("fw_staging_process_deferred: erase complete (%lu sectors), core1 restarted (probe)\n", s_erase_sector_count);
     } else {
+#ifdef FW_UP_VERBOSE
         uprintf("fw_staging_process_deferred: erased sector %lu/%lu\n", s_erase_sector_next, s_erase_sector_count);
+#endif
     }
 }
 
@@ -428,6 +432,14 @@ bool fw_staging_has_valid_staged_image(void) {
 
 void fw_staging_arm_apply(void) {
     s_commit_pending = true;
+}
+
+void fw_staging_arm_reboot(void) {
+    s_reboot_pending = true;
+}
+
+bool fw_staging_reboot_pending(void) {
+    return s_reboot_pending;
 }
 
 uint32_t fw_staging_get_own_fw_size(void) {

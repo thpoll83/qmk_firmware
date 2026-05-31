@@ -338,6 +338,9 @@ void housekeeping_task_user(void) {
     if (fw_staging_commit_pending()) {
         fw_staging_apply_and_reboot();
     }
+    if (fw_staging_reboot_pending()) {
+        mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
+    }
     fw_staging_process_deferred();
 
     // While a fw_up is in progress, skip EEPROM saves (wear-leveling consolidate
@@ -1275,6 +1278,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 display_bootloader_message();
                 return true;
             }
+            case QK_REBOOT: {
+                uprintf("Reboot requested — rebooting both halves.\n");
+                // Reboot the slave too, so both halves restart together (like a
+                // replug).  A master-only reset leaves the slave running stale →
+                // the rebooted master can't re-sync to it and hangs on the boot
+                // splash.  QMK resets the master right after we return true (before
+                // housekeeping runs again), so the slave must be told here.
+                fw_up_apply_sync_t reboot_msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC };
+                uint8_t ack = send_to_bridge(USER_SYNC_REBOOT, &reboot_msg, sizeof(reboot_msg), 5);
+                uprintf("Master: slave reboot ack=%d\n", ack);
+                return true;   // let QMK's QK_REBOOT handler reset the master
+            }
             case KC_A ... KC_Z:
                 set_local_last_latin_keycode(keycode);
                 if((get_mods() & MOD_MASK_ALT) == 0 && addlang) {
@@ -1596,6 +1611,8 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_FW_UP_CHUNK,         user_sync_fw_up_chunk_handler);
     transaction_register_rpc(USER_SYNC_FW_UP_COMMIT,        user_sync_fw_up_commit_handler);
     transaction_register_rpc(USER_SYNC_FW_UP_STATUS,        user_sync_fw_up_status_handler);
+    transaction_register_rpc(USER_SYNC_FW_UP_APPLY,         user_sync_fw_up_apply_handler);
+    transaction_register_rpc(USER_SYNC_REBOOT,              user_sync_reboot_handler);
 
     fw_staging_init();
 

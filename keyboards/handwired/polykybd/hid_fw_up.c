@@ -138,6 +138,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             uint32_t offset;
             memcpy(&offset, &data[HID_DATA_IDX], 4);
             const uint8_t *chunk_data = &data[HID_DATA_IDX + 4];
+#ifdef FW_UP_VERBOSE
             uprintf("FW_UP_CHUNK: offset=%lu\n", offset);
             // DIAGNOSTIC (2026-05-29, run 3): bracket the very first chunk to
             // localise the slave hang.  The core1-restart probe (run 3) did NOT
@@ -162,6 +163,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 uprintf("FW_UP probe: pre-chunk 64B-M2S status xfer -> %s\n",
                         big_ok ? "OK" : "FAILED");
             }
+#endif
             // Relay to slave FIRST so master's s_next_offset only advances after slave ACKs.
             // This keeps both write cursors in sync: if the relay fails, the host can safely
             // retry the same chunk and master will accept it (offset still matches).
@@ -192,7 +194,9 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
                 if (!ok) uprintf("FW_UP_CHUNK: master staging write FAILED offset=%lu\n", offset);
             }
+#ifdef FW_UP_VERBOSE
             uprintf("FW_UP_CHUNK: slave_ack=0x%02x master_write_ok=%d\n", slave_ack, ok);
+#endif
             memset(data, 0, length);
             memcpy(data, ok ? "P\x41." : "P\x41!", 3);
             raw_hid_send(data, length);
@@ -233,6 +237,17 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             uprintf("FW_UP_APPLY: master self-apply %s\n",
                     ok ? "armed (rebooting…)" : "REJECTED (no valid staged image)");
             if (ok) {
+                // Tell the slave to install its staged image and reboot too, so
+                // BOTH halves restart together (like a replug).  A master-only
+                // reboot leaves the slave running stale → the rebooted master
+                // can't re-sync to it and hangs on the boot splash.  This also
+                // finally updates the slave's firmware: it staged + committed the
+                // image but, before this, was never told to apply it.  (The slave
+                // obeys this only once it already runs firmware that has the apply
+                // handler — see FW_UP_BASELINE.md for the OLD→NEW bootstrap note.)
+                fw_up_apply_sync_t apply_msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC };
+                uint8_t slave_ack = send_to_bridge(USER_SYNC_FW_UP_APPLY, &apply_msg, sizeof(apply_msg), 5);
+                uprintf("FW_UP_APPLY: slave apply+reboot ack=0x%02x\n", slave_ack);
                 fw_staging_arm_apply();   // housekeeping → fw_staging_apply_and_reboot()
             }
 #else

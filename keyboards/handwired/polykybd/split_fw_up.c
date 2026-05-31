@@ -143,3 +143,38 @@ void user_sync_fw_up_commit_handler(uint8_t in_len, const void* in_data, uint8_t
     bool ok = fw_staging_finalize();
     ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
 }
+
+// Master commands the slave to install its staged image and reboot, so BOTH
+// halves restart together (like a replug).  Without this the slave keeps running
+// its old firmware in a stale state, and the rebooted master cannot re-establish
+// the split link — it hangs on the boot splash (the right half's "SPLIT 72").
+// Guarded by a magic + CRC and a valid-staged-image check so a stray transaction
+// can never trigger an apply.  The apply is deferred to the slave's housekeeping
+// so we ACK the master before our split link goes dark.
+void user_sync_fw_up_apply_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len != sizeof(fw_up_apply_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    const fw_up_apply_sync_t *msg = (const fw_up_apply_sync_t *)in_data;
+    uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
+    if (crc32 != msg->crc32 || msg->magic != FW_UP_SYNC_MAGIC || !fw_staging_has_valid_staged_image()) {
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        return;
+    }
+    fw_staging_arm_apply();   // housekeeping_task_user() → fw_staging_apply_and_reboot()
+    ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
+}
+
+// Master commands the slave to reboot (QK_REBOOT path — no firmware apply).
+// Same rationale as the apply handler: a master-only reset leaves the slave
+// stale and the master stuck on the splash; rebooting both mirrors a replug.
+// Deferred to the slave's housekeeping so we ACK first, then reset cleanly.
+void user_sync_reboot_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len != sizeof(fw_up_apply_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    const fw_up_apply_sync_t *msg = (const fw_up_apply_sync_t *)in_data;
+    uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
+    if (crc32 != msg->crc32 || msg->magic != FW_UP_SYNC_MAGIC) {
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        return;
+    }
+    fw_staging_arm_reboot();   // housekeeping_task_user() → mcu_reset()
+    ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
+}

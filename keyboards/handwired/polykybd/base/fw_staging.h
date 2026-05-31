@@ -81,6 +81,13 @@ bool fw_staging_has_valid_staged_image(void);
 // (fw_staging_has_valid_staged_image() == true).  PHASE 2: master only.
 void fw_staging_arm_apply(void);
 
+// Arm a deferred plain reboot (QK_REBOOT slave path): the slave's
+// housekeeping_task_user() then calls mcu_reset() once.  Unlike
+// fw_staging_arm_apply(), this does NOT install the staged image — it just
+// reboots, so both halves can restart together when the master reboots.
+void fw_staging_arm_reboot(void);
+bool fw_staging_reboot_pending(void);
+
 // ---------------------------------------------------------------------------
 // Diagnostic snapshot — populated by the slave's handlers so the master can
 // query "what does the slave think happened" after a failed FW_UP_CHUNK.

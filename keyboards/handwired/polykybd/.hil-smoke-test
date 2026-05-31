@@ -1,0 +1,14 @@
+HIL workflow smoke test
+=======================
+
+This is a throwaway marker file used to open a no-op pull request against the
+PolyKeyboard branch so the "Build and HIL Test" workflow (.github/workflows/
+qmk-test.yml) runs end-to-end:
+
+  1. build      - compile split72 (default + POLYKYBD_HIL force-master) and corne42
+  2. hil-test   - flash the force-master uf2 to both halves and run station.test_runner
+                  on the self-hosted polykybd-ctnd rig
+
+Safe to delete once the run is confirmed green.
+
+Triggered: 2026-05-31

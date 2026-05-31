@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       split72: ${{ steps.names.outputs.split72 }}
+      split72_hil: ${{ steps.names.outputs.split72_hil }}
       corne42: ${{ steps.names.outputs.corne42 }}
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +23,15 @@ jobs:
         with:
           args: qmk compile -kb handwired/polykybd/split72 -km default
 
+      # HIL build: same firmware but with POLYKYBD_HIL, which forces the left
+      # half to be master (EE_HANDS) instead of VBUS detection. On the rig both
+      # halves are USB-powered, so stock VBUS detection makes both think they
+      # are master. This is the artifact the test station flashes to both sides.
+      - name: Build split72 (HIL force-master)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb handwired/polykybd/split72 -km default -e POLYKYBD_HIL=yes -e TARGET=handwired_polykybd_split72_hil
+
       - name: Build corne42
         uses: docker://qmkfm/qmk_cli
         with:
@@ -30,6 +40,7 @@ jobs:
       - id: names
         run: |
           echo "split72=$(ls handwired_polykybd_split72_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split72_hil=$(ls handwired_polykybd_split72_hil*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "corne42=$(ls handwired_polykybd_corne42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
@@ -73,5 +84,5 @@ jobs:
         run: |
           cd ${{ steps.ctnd.outputs.dir }}
           venv/bin/python -m station.test_runner \
-            --left  "firmware/${{ needs.build.outputs.split72 }}" \
-            --right "firmware/${{ needs.build.outputs.split72 }}"
+            --left  "firmware/${{ needs.build.outputs.split72_hil }}" \
+            --right "firmware/${{ needs.build.outputs.split72_hil }}"

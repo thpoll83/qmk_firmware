@@ -114,7 +114,21 @@ void user_sync_fw_up_chunk_handler(uint8_t in_len, const void* in_data, uint8_t 
         // wedges the next chunk RPC, the master log will stop logging
         // chunks and `slave status (chunk-fail)` will show whether the
         // slave is fully hung or just slow.
+#ifdef FW_UP_CHUNK_NOOP_PROBE
+        // PROBE (run 4): skip ONLY the staging write — keep the in_len guard and
+        // the CRC check above (the 2026-05-20 "verified transport baseline"
+        // b4a939f6 did exactly this and streamed every chunk).  The run-3/4
+        // bracket probe proved a same-size 64 B FW_UP_STATUS txn round-trips on
+        // the slave microseconds before this chunk, so the only change from that
+        // streaming baseline is removing fw_staging_write_chunk:
+        //   chunks ACK now    -> the wedge is inside fw_staging_write_chunk
+        //   chunks still fail  -> the FW_UP_CHUNK transaction dispatch itself
+        //                         wedges (or the slave isn't running this build)
+        // See config.h FW_UP_CHUNK_NOOP_PROBE / FW_UP_BASELINE.md (run 4).
+        bool ok = true;
+#else
         bool ok = fw_staging_write_chunk(msg->offset, msg->data, FW_UP_CHUNK_SIZE);
+#endif
         ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
     }
     fw_staging_note_chunk_call(msg->offset, ack);
@@ -128,4 +142,39 @@ void user_sync_fw_up_commit_handler(uint8_t in_len, const void* in_data, uint8_t
     if (out_len != sizeof(poly_sync_reply_t) || !out_data) return;
     bool ok = fw_staging_finalize();
     ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
+}
+
+// Master commands the slave to install its staged image and reboot, so BOTH
+// halves restart together (like a replug).  Without this the slave keeps running
+// its old firmware in a stale state, and the rebooted master cannot re-establish
+// the split link — it hangs on the boot splash (the right half's "SPLIT 72").
+// Guarded by a magic + CRC and a valid-staged-image check so a stray transaction
+// can never trigger an apply.  The apply is deferred to the slave's housekeeping
+// so we ACK the master before our split link goes dark.
+void user_sync_fw_up_apply_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len != sizeof(fw_up_apply_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    const fw_up_apply_sync_t *msg = (const fw_up_apply_sync_t *)in_data;
+    uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
+    if (crc32 != msg->crc32 || msg->magic != FW_UP_SYNC_MAGIC || !fw_staging_has_valid_staged_image()) {
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        return;
+    }
+    fw_staging_arm_apply();   // housekeeping_task_user() → fw_staging_apply_and_reboot()
+    ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
+}
+
+// Master commands the slave to reboot (QK_REBOOT path — no firmware apply).
+// Same rationale as the apply handler: a master-only reset leaves the slave
+// stale and the master stuck on the splash; rebooting both mirrors a replug.
+// Deferred to the slave's housekeeping so we ACK first, then reset cleanly.
+void user_sync_reboot_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len != sizeof(fw_up_apply_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    const fw_up_apply_sync_t *msg = (const fw_up_apply_sync_t *)in_data;
+    uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
+    if (crc32 != msg->crc32 || msg->magic != FW_UP_SYNC_MAGIC) {
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        return;
+    }
+    fw_staging_arm_reboot();   // housekeeping_task_user() → mcu_reset()
+    ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
 }

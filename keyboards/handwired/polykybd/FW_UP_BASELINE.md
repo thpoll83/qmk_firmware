@@ -345,3 +345,719 @@ The new session will start on `claude/debug-fw-up-slave-hang-2o51C`
 4. Read the `pd_calls` / `pd_advances` / `erase_sector_next` columns
    across snapshots and match against the decision table above.
 5. Pick the matching follow-up and start there.
+
+## 2026-05-29 (run 2) — erase FIXED; slave hard-locks on first chunk; core1-restart probe
+
+### What the hardware actually did (refutes the row-2 prediction above)
+Build from `c52b0b0d`/`a37fb58a`, both halves flashed. Master log:
+
+- `FW_UP_GET_VERSION: 0.7.2`; new image `size=249628 crc=0x37b9f444`.
+- `begin-pending`: `erase=40/62 … pd_advances=40`; then `begin-ready`:
+  `erase=62/62 erase_pending=0 … pd_advances=62`, BEGIN returns
+  `slave_ack=0xca` (SYNC_ACK). **The deferred erase completes in full and
+  the slave stays alive throughout** (every poll answers). `pd_calls=65535`
+  is just the uint16 counter saturating over ~8 s — not significant.
+
+So the previous session's "most-likely row 2 (pd_advances=0)" prediction was
+**wrong**: reverting the chconf change fixed the erase path. That branch is
+closed.
+
+- **The failure moved to the first chunk.** `FW_UP_CHUNK: offset=0` → all 10
+  relay retries `success: 0` (transport dead, not a rejection) → `slave_ack=0x35`.
+  The slave then goes **permanently dark**: ~3 minutes of `Failed to execute
+  slave_matrix` + failed `UserPoly`/`UserRoi`/`UserOverlayMap`/`UserCompressed`,
+  ending in `Target disconnected, throttling connection attempts`. The slave
+  never recovers (replug/reflash needed). **The master stays fully healthy** —
+  keeps servicing HID and even live keystrokes. This is the "second half
+  unresponsive" / Cortex-M0+ CPU-LOCKUP mode.
+
+### Ruled out (with evidence)
+| Hypothesis | Verdict | Evidence |
+|---|---|---|
+| Chunk (64 B) > M2S buffer → local reject | refuted | `config.h` `RPC_M2S_BUFFER_SIZE 72` ≥ 64 |
+| `FW_UP_CHUNK` not registered on slave | refuted | `keymap.c` registers it unconditionally beside BEGIN/STATUS |
+| Slave `uprintf` blocks in handler | refuted | `process_deferred` uprintfs every sector; erase reached 62/62 |
+| Slave pushes to halted core1 via display path | refuted | display refresh gated on `!fw_up_active` (`keymap.c`); the later `UserRoi`/`UserCompressed` failures are *after* the lock, not its cause |
+
+### The crux
+`offset=0` does **no flash op** (`flush_page` only fires at 256 B, ~chunk 5) and
+**no core1 work** — so a flash/XIP fault cannot explain the chunk-0 lock. The one
+thing abnormal for the preceding 8 s is **core1 held in PSM reset**
+(`fw_staging_begin_deferred` halts it and keeps it halted for the whole sequence).
+Leading theory: once the chunk phase resumes normal scheduling, the slave's
+ChibiOS-SMP core0 signals core1 over the SIO FIFO; core1 (PSM-reset, not draining)
+never empties it; `multicore_fifo_push_blocking` blocks core0 **forever**.
+
+Note the master-side `slave status (chunk-fail)` snapshot **cannot** resolve this:
+the slave is already dead, so the STATUS RPC returns `RPC FAILED` and `chunk_calls`
+is unreadable. (In run 1 it was also dropped by console-TX overflow from the 10×
+retry burst.) The "is the chunk handler even reached?" question is unanswerable
+from the master once the slave locks.
+
+### The probe in this commit
+`fw_staging_process_deferred()` now restarts core1 the instant erase completes
+(before the first chunk), gated on `USE_CORE1`. Read the chunk acks on the master
+log (`0xca` = accepted, `0x35` = failed):
+
+| Probe result | Conclusion | Next move |
+|---|---|---|
+| chunk 0 still `0x35`, slave locks | core1-PSM-hold is **not** the cause | transport-level: slave RX of the 64 B M2S during fw_up, or ChibiOS-SMP state — instrument the slave's own console |
+| chunks 0–3 `0xca`, dies at `offset=224` (first `flush_page`) | the per-flush PSM halt/restart + `flash_range_program` cycle is the killer | **cooperative core1 park** (RAM-resident FIFO-draining spin loop instead of PSM reset) + RAM-locate `flush_page` |
+| all chunks `0xca`, fw_up completes | restarting core1 after erase is itself the fix | keep it, clean up, done |
+
+Expected: the **middle** row. With the probe, `flush_page` will halt+restart core1
+on every page (~976×, since core1 is now alive between flushes), re-exposing the
+Vector80/NMI restart window — so a lock at the first flush both confirms the
+mechanism and motivates the cooperative-park redesign.
+
+### What's in tree as of this commit
+- `base/fw_staging.c`: `fw_staging_process_deferred()` restarts core1 at
+  erase-complete (diagnostic probe; see inline comment dated 2026-05-29).
+- No other changes; erase/chunk/flush logic otherwise unchanged from `a37fb58a`.
+
+## 2026-05-29 (run 3) — core1 AND payload-size both exonerated; bracket-probe added
+
+### Probe result on hardware
+Flashed the run-2 core1-restart probe. Master log:
+
+- `begin-ready: … erase=62/62 erase_pending=0 … pd_advances=62`, BEGIN
+  `slave_ack=0xca`, and the begin-ready **status read succeeded** (printed all
+  counters) — slave provably alive here.
+- `FW_UP_CHUNK: offset=0` → **all 10 retries `success:0`, all stamped at the
+  same millisecond**, `slave_ack=0x35`, then ~3 min of `Failed to execute
+  slave_matrix` + failed `UserPoly`. Master stays healthy (USB briefly
+  re-enumerated, then recovered).
+
+**Identical to run 2.** Restarting core1 the instant erase completes changed
+nothing.
+
+### Two suspects eliminated
+1. **core1 is exonerated.** The chunk-0 lock is identical whether core1 is held
+   in PSM reset through the chunk phase (run 2) or restarted alive at
+   erase-complete (run 3). Core1 state is not the variable. The whole
+   NMI/Vector80/PSM line of inquiry is irrelevant to the chunk-phase hang.
+2. **Payload size is exonerated.** Normal overlay sync routinely pushes *larger*
+   M2S transactions to the slave and they work (overlays render):
+   `overlay_sync_t`=67 B, `compressed_overlay_sync_t`=69 B, `roi_overlay_sync_t`=69 B,
+   `dynamic_keymap_sync_t`=68 B — all > the **64 B** fw_up chunk, and all ≤
+   `RPC_M2S_BUFFER_SIZE`=72. So 64 B is not too big.
+
+### What the transport numbers say
+`send_to_bridge` → `transaction_rpc_exec(tid, 64, buf, sizeof(poly_sync_reply_t), …)`.
+Sizes pass (64 ≤ 72; reply tiny), so `success:0` is **not** a size reject — it's a
+failed UART round-trip. The slave answered a STATUS RPC microseconds before and
+is dead microseconds after, so either the first chunk transaction itself kills
+the slave, or the slave hangs in its main loop the instant erase finishes
+(before any chunk). And `fw_staging_write_chunk` at offset 0 is a **single 56 B
+`memcpy` into a static buffer** (no flash, no core1) — so the handler body is
+exonerated too.
+
+**Net: the failure is specific to the `FW_UP_CHUNK` transaction in the post-erase
+fw_up state — not core1, not size, not the handler body, not the erase (which
+completes).** This is the same shape as the long-standing note that
+`UserCompressed`/`UserRoi` fail to the slave in some states.
+
+### Bracket-probe added (this commit)
+`hid_fw_up.c` `CMD_FW_UP_CHUNK`, gated to `offset==0`, before relaying: a small
+status read (`fw_up_log_slave_status("pre-chunk")`) followed by a **64 B-M2S**
+status read (the status handler ignores `in_len`, so a padded request is benign
+and read-only). Decision tree for the next run:
+
+| Master log at offset 0 | Conclusion | Next move |
+|---|---|---|
+| `pre-chunk` OK **and** `64B-M2S status xfer -> OK` | transport fully alive post-erase → the `FW_UP_CHUNK` transaction itself is the culprit | inspect FW_UP_CHUNK registration/ID + slave chunk handler entry vs the working overlay handlers |
+| `pre-chunk` OK, `64B-M2S status xfer -> FAILED` | large-M2S transport is broken **only in the post-erase fw_up state** | what the deferred erase leaves changed for large transfers (IRQ/DMA/serial state); compare with normal overlay path |
+| `pre-chunk` … `RPC FAILED` | slave is already hung the instant erase finishes, before any chunk | the hang is in the slave's post-erase main loop / housekeeping, not the chunk at all |
+
+### What's in tree as of this commit
+- `hid_fw_up.c`: offset-0 bracket probe (small + 64 B-M2S status reads).
+- `base/fw_staging.c`: run-2 core1-restart probe still present (harmless now that
+  core1 is exonerated; left in so run-4 conditions match run-3).
+
+## 2026-05-30 (run 4) — bracket probe lands on Row 1: the FW_UP_CHUNK txn itself
+
+### Probe result on hardware
+```
+slave status (begin-ready): … erase=62/62 … pd_calls=35992 pd_advances=62
+FW_UP_CHUNK: offset=0
+slave status (pre-chunk):   … erase=62/62 … pd_calls=35995 pd_advances=62
+FW_UP probe: pre-chunk 64B-M2S status xfer -> OK
+Bridge sync retry 0 (tid: FwUpChunk, success: 0, ack: 0, bytes: 64)   … ×10 → slave dead
+```
+This is **Row 1, unambiguous**:
+- `pre-chunk` small status read **OK**, and `pd_calls` advanced 35992→35995 between
+  the two reads — the slave is alive and running its housekeeping loop.
+- A **64 B-M2S `FW_UP_STATUS` transaction succeeds** right before the chunk.
+- The **64 B `FW_UP_CHUNK`** transaction — identical M2S size, same transport,
+  same millisecond — fails `success:0` and the slave hard-locks.
+
+So the failure is **specific to the `FW_UP_CHUNK` transaction**. Definitively
+*not* transport, *not* payload size, *not* post-erase transport state, *not*
+core1 (all eliminated runs 2–4).
+
+### Why runs 2–4 were identical (the thing I missed)
+Across runs 2–4 the **slave's chunk-handling code never changed**: run 2 was the
+core1-restart-at-erase (slave, but erase-only), runs 3–4 were master-side
+instrumentation (`hid_fw_up.c` relay/probe). The slave `user_sync_fw_up_chunk_handler`
++ `fw_staging_write_chunk` path has been byte-identical the whole time, so an
+identical failure was guaranteed. **To change the outcome we must change the
+slave chunk path and flash the SLAVE half.**
+
+### Run-4 experiment: skip ONLY the slave staging write
+Note: the 2026-05-20 "verified transport baseline" (`b4a939f6`) already ran a
+no-op chunk handler and streamed every chunk — but that predates step-1's real
+write (`a0510144`, 05-22) and the erase-fix (`c52b0b0d`, 05-29), so no-op-vs-real
+has never been A/B'd on today's code. `config.h` `#define FW_UP_CHUNK_NOOP_PROBE`
+makes `user_sync_fw_up_chunk_handler` skip **only** `fw_staging_write_chunk`
+(keeping the `in_len` guard + CRC) — i.e. exactly that streaming baseline applied
+to current code, so the sole variable is the staging write. **Must flash the
+SLAVE.** Decision tree:
+
+| Master log on first chunk | Conclusion | Next move |
+|---|---|---|
+| `FwUpChunk … success:1` + `slave_ack=0xca`, fw_up runs to COMMIT (which fails CRC — nothing was staged) | FW_UP_CHUNK transport/dispatch is fine → the hang is in the **handler body** (`fw_staging_write_chunk` / its CRC) | re-enable the body incrementally (CRC only, then memcpy, then flush) to find the wedge |
+| `FwUpChunk … success:1` but `ack` ≠ 0xca | slave/master `fw_up_chunk_sync_t` size mismatch (in_len guard rejected) → **halves are not the same build** | rebuild + reflash both halves, re-test |
+| `FwUpChunk … success:0`, slave dies (unchanged) | the FW_UP_CHUNK **transaction/dispatch itself** wedges, independent of handler — or the slave isn't actually running this build | confirm the slave was reflashed; then diff `USER_SYNC_FW_UP_CHUNK` enum/registration vs the working `FW_UP_STATUS` |
+
+A no-op that changes nothing is itself informative: it means the slave didn't get
+this build (verify the slave flash) or the wedge is before handler dispatch.
+
+### What's in tree as of this commit
+- `config.h`: `FW_UP_CHUNK_NOOP_PROBE` defined (diagnostic — remove later).
+- `split_fw_up.c`: under that macro, `fw_staging_write_chunk` is replaced by
+  `ok = true` (the `in_len` guard + CRC check still run).
+- Bracket probe (`hid_fw_up.c`) and run-2 core1-restart (`fw_staging.c`) still present.
+
+## 2026-05-30 (run 5) — ROOT CAUSE FOUND & FIXED: uint8_t overflow in write_chunk
+
+### Probe result
+With `FW_UP_CHUNK_NOOP_PROBE` (skip only `fw_staging_write_chunk`), the master log
+streamed **all 4458 chunks** `slave_ack=0xca` from offset 0 to the end, reached
+COMMIT, and COMMIT failed CRC ("CRC mismatch on keyboard") — exactly the expected
+"success" outcome (nothing was actually staged). That conclusively places the hang
+**inside `fw_staging_write_chunk`**, not the transaction/transport/erase/core1.
+
+### Root cause
+`fw_staging_write_chunk`'s page-copy loop declared the working counts as **`uint8_t`**:
+```c
+uint8_t space = FLASH_PAGE_SIZE - s_buf_fill;   // FLASH_PAGE_SIZE == 256
+uint8_t copy  = (remaining < space) ? remaining : space;
+```
+`FLASH_PAGE_SIZE` is **256**. When the page buffer is empty (`s_buf_fill == 0`),
+`256 - 0 = 256` **truncates to 0** in a `uint8_t`, so `copy = min(remaining, 0) = 0`,
+`memcpy` copies nothing, `remaining` never decreases, and the loop **spins forever**.
+The slave's core0 is stuck in the chunk handler → never replies → master sees
+`success:0` → "slave hard-lock". It triggers on the **first chunk** (offset 0,
+`s_buf_fill==0`) and would also hit at every 256 B page boundary.
+
+This single bug explains **every** observation across runs 2–5: dies exactly on
+chunk 0; the "lock" is an infinite loop, not a fault (so no `_unhandled_exception`,
+nothing on the link); the no-op handler streams perfectly; and erase, core1 (NMI/
+Vector80/PSM), payload size, and the FW_UP_CHUNK transaction id were **all red
+herrings**.
+
+### Why it stayed hidden for ~6 weeks
+- The 2026-05-20 "verified transport baseline" (`b4a939f6`) used the no-op chunk
+  handler — `fw_staging_write_chunk` was never called, so the loop never ran.
+- Step-1 (`a0510144`, 05-22) introduced the real write **and** the bug, but the
+  slave-erase hang (the chconf saga) stopped execution at BEGIN — chunks were
+  never reached.
+- Only after the erase was fixed (chconf revert, run 2) did execution finally
+  reach chunk 0 — and immediately hit the overflow loop.
+
+### Fix (this commit)
+- `base/fw_staging.c`: widen `space`/`copy` to `uint32_t` (with a comment).
+- `config.h`: `FW_UP_CHUNK_NOOP_PROBE` disabled so the real write runs again.
+- Builds clean (`split72:default` → `.uf2`, exit 0).
+
+### Expected on next hardware run (flash BOTH halves)
+Chunks stream `slave_ack=0xca` AND actually land in slave staging, so
+`FW_UP_COMMIT` should pass CRC and the update should complete. If COMMIT now
+passes, the diagnostics still in tree (bracket probe in `hid_fw_up.c`, core1
+restart in `fw_staging.c`, the status counters, and this disabled no-op probe)
+can be removed in a cleanup commit.
+
+## 2026-05-30 (run 6) — chunk path FIXED end-to-end; new hang is the self-apply
+
+### Result
+The uint8_t fix is confirmed on hardware. The master log streamed **all 4458
+chunks `slave_ack=0xca`** (offset 0 → 249256, full 243 KB) with the real
+`fw_staging_write_chunk` active — no chunk-0 hang. The entire image transferred
+and was written to slave staging.
+
+The slave's `finalize()` CRC over the full 244 KB staged image **matched** — we
+can infer this: on a CRC *mismatch* `finalize()` restarts core1 and returns
+(slave stays alive), but the slave instead goes *dead*, which only happens on
+the CRC-*match* path (writes header magic, arms `s_commit_pending`, returns ACK,
+then housekeeping calls the apply). So the transferred+staged image is
+byte-correct. **The whole transfer/staging path is verified working.**
+
+### New failure: COMMIT → self-apply
+```
+Bridge sync retry 0..9 (tid: FwUpCommit, success: 0, bytes: 4) → Failed to sync
+Failed to execute slave_matrix    (slave dead, 48 s+, does not return)
+```
+- `user_sync_fw_up_commit_handler` runs `fw_staging_finalize()` **synchronously**
+  in the split-transaction context: flush final page + **CRC over 244 KB** +
+  header program. That almost certainly exceeds the split-transaction timeout, so
+  the master sees COMMIT `success:0` (reported to host as "CRC mismatch") even
+  though finalize actually succeeds.
+- finalize then arms `s_commit_pending`; housekeeping calls
+  `fw_staging_apply_and_reboot()` → `fw_staging_do_apply()` — the RAM-resident
+  routine that **erases the slave's own flash from offset 0** (boot2 + app),
+  copies staging in, and `NVIC_SystemReset`s. The slave never comes back, so the
+  self-flash hangs or bricks (this code had never executed before run 6).
+
+### Where this leaves us
+- Transfer + staging + slave-side CRC verify: **working** (huge progress from
+  the chunk-0 hang).
+- Remaining blocker is the **self-apply+reboot** — a distinct, delicate subsystem
+  (RP2040 self-reflash from offset 0, boot2/XIP hazards), and currently
+  asymmetric: the master is relay-only (baseline steps 2–4 not done), so only the
+  **slave** self-applies+reboots while the master stays on old firmware.
+- `finalize()` should also be split: return the ACK *before* the long CRC/apply
+  so the COMMIT transaction doesn't time out and mis-report.
+
+### Options for next step (pick one)
+1. **Lock in the win:** make COMMIT verify-CRC + report success *without*
+   auto-applying/rebooting (gate the apply behind a separate explicit step), so
+   we have a stable "data path 100%, CRC verified on slave" baseline and stop
+   bricking the slave while the apply is designed carefully.
+2. **Harden/debug the self-apply now:** check the staged image begins with valid
+   boot2, verify the RAM-resident apply + pico-sdk boot2-copyout path, and split
+   finalize so COMMIT ACKs before the slow work. Riskier (may brick repeatedly).
+
+### Resolution (chose option 1 — decouple, lock in the win)
+`fw_staging_finalize()` now:
+- verifies via a **running CRC** (`s_staged_crc`, accumulated byte-for-byte in
+  `fw_staging_write_chunk`) instead of re-scanning 244 KB — so the COMMIT handler
+  returns in ~one page-flush time and the split transaction no longer times out
+  (fixes the false "CRC mismatch" report);
+- does **NOT** arm `s_commit_pending` / write the staging header, so the
+  housekeeping auto-apply (`keymap.c` → `fw_staging_apply_and_reboot`) never
+  fires — **no self-flash, no reboot, no brick**;
+- **restarts core1** (held in PSM reset since `begin_deferred`) because we are no
+  longer hard-resetting the chip — otherwise the slave would resume with a dead
+  core1 (no RLE overlay decompression).
+
+Expected on hardware now: all 4458 chunks stream `0xca`, `FW_UP_COMMIT` **ACKs**
+(host shows success), and the slave **stays alive** on its existing firmware
+(staging written + received-CRC verified, but intentionally not applied). This is
+the stable "transfer + stage + verify = 100%" baseline.
+
+`fw_staging_apply_and_reboot()` / `fw_staging_do_apply()` remain in the tree,
+now dead code (never invoked), ready to be wired to a separate explicit
+apply step later — at which point the offset-0 self-erase + boot2/XIP handling
+must be designed/verified carefully (and the master made non-relay-only so both
+halves update coherently).
+
+## 2026-05-30 (Phase 1) — master stages its own copy (no longer relay-only)
+
+Chosen direction for the apply step: **in-app self-flash, phased**.  Phase 1 is
+the prerequisite — make the master stage + verify its OWN copy so both halves
+have a byte-identical, CRC-verified image before any apply exists.  This is also
+what lets phase 2 prove the self-flash on the (USB-recoverable) master first.
+
+### What changed (`hid_fw_up.c` only)
+The master is no longer a pure relay.  It now drives the **same proven deferred
+staging path as the slave**, reusing machinery that already runs on both halves:
+
+- **BEGIN**: calls `fw_staging_begin_deferred(size, crc)` for its own staging
+  (instead of nothing).  `housekeeping_task_user()` already calls
+  `fw_staging_process_deferred()` unconditionally on both halves, so the master's
+  62-sector erase advances one sector / 70 ms with USB staying alive — no
+  synchronous erase, no USB dropout.  BEGIN now reports ready (`.`) only when the
+  master's own erase is done (`!fw_staging_erase_pending()`) **and** the slave
+  reports `SYNC_ACK`; otherwise `~` and the host re-polls.  Both erases run in
+  parallel.
+- **CHUNK**: after the slave ACKs the relayed chunk, the master writes the same
+  chunk to its own staging via `fw_staging_write_chunk()`.  Relay-first preserves
+  the existing retry-safety — a failed relay leaves the master's `s_next_offset`
+  untouched so the host can retry the same offset on both halves.
+- **COMMIT**: relays to the slave, then calls `fw_staging_finalize()` for the
+  master's own copy.  Post-decouple `finalize()` verifies the O(1) running CRC,
+  clears `fw_up_active`, restarts core1, and (deliberately) does **not** apply or
+  reboot.  ACK is `.` only if both halves' finalize succeed.
+
+No changes to `keymap.c`, `config.h`, `split_fw_up.c`, or the host — the protocol
+is unchanged (BEGIN/CHUNK/COMMIT, `~` re-poll), and the housekeeping wiring that
+drives the slave's deferred erase now drives the master's too.
+
+### Why this is safe (no brick risk in phase 1)
+Phase 1 only ever touches the **staging region (≥ 1 MB offset)** — it never writes
+the active firmware at offset 0.  Worst case is a transport hang (recoverable by
+replug), not a brick.  The synchronous `fw_staging_begin()` is now unused (the
+master uses the deferred path); left in the tree.
+
+### Expected on hardware (flash BOTH halves)
+- BEGIN: a short burst of `~` while both halves erase in parallel (master log
+  shows `master+slave staging`), then `.`.
+- All 4458 chunks: `slave_ack=0xca master_write_ok=1`.
+- COMMIT: `slave_ack=0xca master_finalize=1`, host shows success.
+- Both halves stay alive on their existing firmware, each now holding a staged +
+  CRC-verified copy of the new image (nothing applied yet).
+- Builds clean (`split72:default` → `.uf2`, exit 0; only the pre-existing
+  `.rodata` warning from the RAM-resident `do_apply`).
+
+### Next: phase 2
+Add an explicit `FW_UP_APPLY` (0x44) command + a hardened `fw_staging_do_apply()`
+(halt core1, fully RAM-resident copy, minimal IRQ-off, accept the one-sector
+boot2 brick-window which is BOOTSEL/UF2-recoverable).  **Enable it on the master
+first** (recoverable by holding BOOTSEL) to prove the self-flash before wiring it
+to the slave in phase 3.
+
+## 2026-05-30 (Phase 1) — VERIFIED ON HARDWARE
+Flashed both halves. Master log: `FW_UP_BEGIN … (master+slave staging)`, the
+master's own deferred erase ran to `erase complete (62 sectors)` in parallel with
+the slave, BEGIN held `~` until both were ready then returned `.`; all 4458 chunks
+`slave_ack=0xca master_write_ok=1`; COMMIT host-side `ok=True`. Both halves stayed
+alive (overlays re-rendered, core1 + split sync working). Both halves now hold a
+byte-identical, CRC-verified staged copy. Phase 1 complete.
+
+## 2026-05-30 (Phase 2) — explicit master-only self-apply (FW_UP_APPLY 0x44)
+
+In-app self-flash, **master only** (BOOTSEL-recoverable) to prove the self-flash
+mechanism before the slave is ever touched (phase 3).
+
+### Firmware (`hid_fw_up.{c,h}`, `base/fw_staging.{c,h}`)
+- **`CMD_FW_UP_APPLY` (0x44)** master handler: validates
+  `fw_staging_has_valid_staged_image()`, ACKs (`P\x44.` / `!`) **before** rebooting
+  (host expects the USB to drop), then `fw_staging_arm_apply()`.  It does **NOT**
+  relay APPLY to the slave — the slave's `s_commit_pending` is never armed, so the
+  slave never self-applies.
+- **`fw_staging_finalize()`** now, on CRC match, stamps the staging header sector
+  with `{FW_STAGING_MAGIC, size, crc}` (new `write_staging_header()`), so the staged
+  image is self-describing and `fw_staging_apply_and_reboot()` can validate + size
+  it (even across a power cycle).  It still does **not** arm the apply.
+- **`fw_staging_do_apply()` hardened**: halts core1 via an **inlined** PSM FRCE_OFF
+  write at the top (before any flash op) — the previous version left core1 running
+  from flash, which would CPU-LOCKUP on the XIP-cache flush.  The copy stays fully
+  RAM-resident, IRQs off for the whole ~4 s (no watchdog is armed, verified), then
+  `NVIC_SystemReset()`.
+- **`fw_staging_has_valid_staged_image()` / `fw_staging_arm_apply()`** added.
+- `keymap.c` housekeeping already runs `apply_and_reboot()` when `commit_pending` —
+  unchanged; only the master arms it.
+
+### Host (`hid_fw_up.py`, `cmd_menu.py`)
+- `apply_staged_firmware(hid)`: sends 0x44; treats explicit `!` as "no staged image"
+  (hard fail) and a missing reply as "rebooting" → `wait_for_reconnect(30 s)`.
+- New tray entry **“Apply Staged Firmware (master)…”** with a strong experimental /
+  BOOTSEL-recovery confirmation.  Apply is a **separate explicit action** from
+  staging — staging never auto-applies.
+
+### Brick-risk profile (why master-first)
+The only unrecoverable-looking failure is a power loss in the one-sector window
+between erasing and reprogramming boot2 at flash offset 0 → device drops to BOOTSEL
+(USB mass-storage) and is recovered by re-flashing the `.uf2`.  On the **master**
+that's a BOOTSEL button press; the **slave** would need physical access, which is
+exactly why the slave is deferred to phase 3.
+
+### How to test (flash BOTH halves with this build first)
+1. Stage the **same** firmware that's currently running (via “Flash Firmware”) so
+   that even though only the master self-applies, both halves end on the same image.
+2. Confirm stage+verify succeeds (host “staged and verified”).
+3. Run **“Apply Staged Firmware (master)…”** → confirm.
+   - Master log: `FW_UP_APPLY: master self-apply armed (rebooting…)`.
+   - Master USB drops, then re-enumerates within a few seconds on the applied image.
+   - Host shows “Firmware applied — the keyboard rebooted and reconnected.”
+4. Verify the master is alive and normal (typing, overlays).  If it does not come
+   back: hold BOOTSEL on the master, drop the `.uf2`, done.
+
+Builds clean (`split72:default` → `.uf2`, exit 0; only the pre-existing `.rodata`
+warning from the RAM-resident `do_apply`).
+
+### Next: phase 3
+Relay APPLY to the slave (coordinated: slave applies+resets, then master), only
+after the master self-apply is proven reliable here.
+
+## 2026-05-30 (Phase 2 run 2) — master BRICKED by do_apply; in-app apply DISABLED
+
+### What happened
+Staged the running image, hit "Apply Staged Firmware (master)". Logs: COMMIT
+`master_finalize=1`; `FW_UP_APPLY` armed; the master's USB dropped and **never came
+back** (host: 5×5 ID-query timeouts → "No such device"). Had to BOOTSEL + reflash
+the master. The fw console is silent after COMMIT because `do_apply` runs with IRQs
+off (no uprintf), and the host never reconnected → **the copy never completed**.
+
+### Root cause (verified against the .elf, not guessed)
+Disassembly of `fw_staging_do_apply` confirms it IS fully RAM-resident — every call
+inside resolves to RAM/ROM (`__memcpy_veneer`, `flash_range_erase/program`, the flash
+helpers are all `0x2000xxxx`); no hardware watchdog is armed; boot2 copyout is cached
+in RAM.  So the copy *mechanism* is fine.  The kill is what `do_apply` uniquely does
+that the proven `flush_page` never does:
+
+- It **erases flash from offset 0**, which holds the **running** firmware's vector
+  table (`__vectors_base__ = 0x10000100`), `HardFault_Handler` (`0x100002c6`), and the
+  ChibiOS SMP `NMI_Handler` (`0x100120cc`) — all inside the `[0 .. image_size)` span
+  it erases (this run image_size = 0x3D53C).
+- It keeps IRQs off for the **entire ~4 s** copy.  `save_and_disable_interrupts()`
+  sets PRIMASK=1, which does **NOT** mask NMI or HardFault.
+- ChibiOS's context switch is NMI-based (this repo's whole core1 saga).  Over a 4 s
+  window an unmaskable NMI/HardFault fires, vectors through the **just-erased** table,
+  and locks up mid-copy → boot2/app left invalid → BOOTSEL.
+
+`flush_page` survives 897×/run precisely because it only erases the **staging** region
+(≥1 MB) — the live vector table is never touched — and it toggles IRQs **per page**, so
+ChibiOS stays serviceable between flushes.  `do_apply` violates both invariants at once.
+
+### Action taken (this commit) — make it impossible to brick again
+- **`hid_fw_up.c`**: `CMD_FW_UP_APPLY` is gated behind `FW_UP_ENABLE_INAPP_APPLY`
+  (NOT defined).  By default it now **always replies `!` and arms nothing** — the
+  staged image is left untouched; the keyboard does not reboot or self-flash.
+- **Host** (`hid_fw_up.py` / `cmd_menu.py`): the `!` reply is reported as "apply not
+  available" (a safe no-op), and the menu confirmation says so up front.
+- `fw_staging_do_apply` / `fw_staging_arm_apply` remain in the tree, now unreachable
+  unless the macro is defined.
+
+### The redesign needed before in-app apply can be re-enabled
+In-app apply on this dual-core SMP-ChibiOS RP2040 must preserve the two invariants
+`flush_page` proves are necessary:
+1. **Never run with a destroyed vector table.**  Relocate VTOR to a RAM vector table
+   (with safe NMI/HardFault stubs) for the duration of the apply, OR copy the app body
+   **first** with sector 0 (boot2+vectors) erased/written **last and atomically**, so a
+   valid table exists at all times.
+2. **Bound the IRQs-off window.**  Copy sector-by-sector toggling IRQs between sectors
+   (like `flush_page`), not one ~4 s blackout, so ChibiOS preemption can't accumulate a
+   pending NMI that fires into a bad table.
+
+**The lower-risk path is to stop doing in-app apply at offset 0 entirely** and instead
+adopt a **reboot-to-bootloader** design (picowota / tinyuf2-style second stage, or the
+RP2040 BOOTSEL/UF2 path): the app stages + sets a marker + reboots; a minimal stage
+with no ChibiOS/NMI and no live app to corrupt does the offset-0 copy.  This is the
+"proper long-term answer" already flagged at the top of this doc, and run 2 is the
+empirical confirmation that the in-app shortcut is not viable as written.
+
+## 2026-05-30 (Phase 2 run 3) — do_apply HARDENED; the deterministic brick cause found
+
+### The actual (deterministic) brick cause — found by disassembling do_apply
+Run 2's NMI-during-4s-blackout was real but *secondary*.  The .elf shows the
+**primary, 100%-reproducible** kill: `do_apply`'s page copy called the toolchain
+`memcpy`, whose `__memcpy_veneer` jumps to `0x100010b9` — **`memcpy` lives in flash
+sector 1** (XIP offset 0x10b8).  `do_apply` erased ascending from sector 0:
+
+  - iter sec=0 → erases the vector table (0x100..0x1c0)
+  - iter sec=1 → erases **`memcpy`'s own code**
+  - next `memcpy(page_buf, …)` call → executes erased flash → HardFault → vectors
+    through the (also-erased) sector 0 → lockup at ~offset 0x1000, right at the start.
+
+That's why the master died almost immediately and identically every time.  `flush_page`
+never hit this because it only programs the staging region and never erases sector 1
+where `memcpy` lives.  (Audit: `flash_range_erase`/`flash_range_program` are RAM-resident
+and pre-resolve their ROM pointers via `ldr`+`blx reg`, NOT a flash `rom_func_lookup`,
+so they are the only safe calls to make from the apply window.)
+
+### The hardening (in tree, gated behind FW_UP_ENABLE_INAPP_APPLY)
+`fw_staging_do_apply` rewritten to hold all three invariants `flush_page` proves:
+1. **No flash-resident calls.** Page copy is an inline `ram_word_copy` (word loop
+   compiled into the RAM function — no `memcpy` veneer).  Verified on the .elf: the
+   only `bl` targets inside `do_apply` are `flash_range_erase`/`flash_range_program`
+   at `0x2000xxxx`; `ram_word_copy` is inlined (no symbol); **zero `bl 0x10xxxxxx`.**
+2. **Valid vectors as long as possible.** Copy the app body **[sector 1 .. N-1] first**,
+   then **sector 0 (vectors + HardFault/NMI) LAST**, immediately before reset — so a
+   stray exception during the long phase still dispatches through the original table;
+   only the final one-sector step has a bad-vector window.
+3. **Bounded IRQ-off window.** IRQs are re-enabled **between sectors** (not one ~4 s
+   blackout), so ChibiOS can't accumulate a pending NMI and fire it into a half-written
+   table.  core1 stays PSM-halted throughout (XIP-cache-flush safety).
+
+### How to test the hardened path (master-only, BOOTSEL-recoverable)
+Build with the apply path enabled and flash BOTH halves:
+```
+qmk compile -kb handwired/polykybd/split72 -km default -e EXTRAFLAGS=-DFW_UP_ENABLE_INAPP_APPLY
+```
+(or uncomment `#define FW_UP_ENABLE_INAPP_APPLY` in config.h).  Stage the **same**
+running image first, then "Apply Staged Firmware (master)".  Expected: master log
+`FW_UP_APPLY: master self-apply armed (rebooting…)`, USB drops, re-enumerates within
+a few seconds on the applied image.  If it still bricks: hold BOOTSEL on the master,
+reflash the .uf2 — and the in-app approach is dead, switch to reboot-to-bootloader.
+
+The **default build leaves apply DISABLED** (always NACKs, no self-flash), so the
+shipped firmware cannot brick from a button press regardless.
+
+## 2026-05-31 (Phase 2 run 4) — hardened apply WORKS; warm-reset boot-hang found & fixed
+
+### Result: the hardened do_apply did NOT brick the master
+Flashed both halves with the apply-enabled build, staged the running image, hit Apply.
+Master log streamed all chunks `master_write_ok=1`, COMMIT `master_finalize=1`, APPLY
+armed, USB dropped — **and the master came back on the applied image after one replug**.
+No BOOTSEL/UF2 recovery needed.  The deterministic memcpy-in-flash brick (run 2/3) and
+the self-overwrite IRQ hazard are both resolved; the in-app self-flash mechanism itself
+is now working.
+
+### New (pre-existing) bug surfaced: warm-reset hangs at early boot until replug
+After apply the master "booted up but got stuck when booting"; unplug+replug then booted
+fine.  Crucially the user reports **the same hang from the QK_REBOOT keycode** — so this
+is NOT caused by fw_up.  Shared root cause, confirmed in the tree:
+- QK_REBOOT → `soft_reset_keyboard()` (quantum.c:237) → `mcu_reset()`, and QMK's RP2040
+  `mcu_reset()` (`platforms/chibios/bootloaders/rp2040.c`) is just `NVIC_SystemReset()`.
+- `do_apply` also ended in `NVIC_SystemReset()`.
+On RP2040 `NVIC_SystemReset()` asserts only `AIRCR.SYSRESETREQ` → resets the M0+ core but
+leaves USB, the PLLs and peripherals in their prior state.  That partial-reset state
+intermittently wedges early boot until a power cycle (the replug).
+
+### Fix (this commit) — full-chip watchdog reset for BOTH reboot paths
+- `poly_util.c`: strong override of the weak `mcu_reset()` → `watchdog_reboot(0,0,0)`
+  (programs `PSM_WDSEL` to reset everything except ROSC/XOSC, then triggers the
+  watchdog — a clean full-chip reset ≈ power cycle).  Fixes the QK_REBOOT keycode hang
+  for the whole keyboard.
+- `base/fw_staging.c` `do_apply`: replaced `NVIC_SystemReset()` with the **inlined**
+  equivalent (PSM_WDSEL + WATCHDOG_SCRATCH4=0 + WATCHDOG_CTRL TRIGGER register writes)
+  so the apply window keeps invariant (1) "no flash-resident calls".  ELF-audited: still
+  zero `bl 0x10xxxxxx` inside do_apply; it now references 0x40058000/0x40010008.
+- mcu_reset is weak in QMK (other boards override it, e.g. zsa/voyager), so the strong
+  override wins at link with no QMK-core edit.
+
+### Next test
+Re-flash both halves with the new apply-enabled build and (a) press QK_REBOOT — should
+reboot cleanly with NO replug; (b) stage + Apply — master should re-enumerate on the new
+image with NO replug.  If both reboot cleanly, the apply path is done for the master;
+phase 3 (relay apply to slave) becomes viable.
+
+## DONE (2026-05-31, this commit) — reduce log spam (gated behind FW_UP_VERBOSE)
+Folded into the both-halves-reboot change (below).  The spammy sites are now wrapped in
+`#ifdef FW_UP_VERBOSE` (default OFF):
+- `hid_fw_up.c` per-chunk `FW_UP_CHUNK: offset=%lu` and `slave_ack=… master_write_ok=…`
+  (the ~4458× lines) plus the offset-0 `pre-chunk` / `64B-M2S status xfer` bracket probe.
+- `base/fw_staging.c` per-sector `erased sector N/63` (63×).
+Kept unconditional (the milestones): the BEGIN/new-image line, COMMIT result, APPLY
+result, GET_VERSION, the `begin-ready` snapshot, the once-per-burst `chunk-fail` dump.
+Build with `-DFW_UP_VERBOSE` (e.g. `-e EXTRAFLAGS=-DFW_UP_VERBOSE`) to restore the full
+diagnostics for a future bisect.  Original spec (kept for reference):
+
+### Original TODO — reduce log spam
+User request (2026-05-31): the fw_up firmware logging is far too spammy now that the
+path works; cut it back to milestones.  Do NOT do a code-only churn change for this —
+fold it into the next substantive edit.  Specifically:
+- **`hid_fw_up.c` CMD_FW_UP_CHUNK**: drop the per-chunk `uprintf("FW_UP_CHUNK: offset=%lu")`
+  and `uprintf("FW_UP_CHUNK: slave_ack=0x%02x master_write_ok=%d")` — they fire ~4458×
+  each and dominate the log.  The host already shows chunk progress.
+- **`hid_fw_up.c` offset-0 bracket probe** (the `pre-chunk` status read + `64B-M2S status
+  xfer` block): obsolete — the chunk path is proven (runs 5/6/4); remove it.
+- **`hid_fw_up.c` slave-status dumps**: keep at most the one `begin-ready` snapshot; drop
+  the periodic `begin-pending` (every 16 polls) and the `chunk-fail` dump, or gate them
+  behind a new `FW_UP_VERBOSE` macro (default off).
+- **`base/fw_staging.c`**: the per-sector `fw_staging_process_deferred: erased sector
+  N/63` uprintf fires 63×; reduce to a single "erase complete (N sectors)" line (the
+  "complete" one already exists) or gate behind `FW_UP_VERBOSE`.
+- **Keep** (these are the useful milestones): one BEGIN line, COMMIT result
+  (`slave_ack/master_finalize`), APPLY result.  Net target: a handful of lines per
+  update instead of ~9000.
+- Consider a single `#ifdef FW_UP_VERBOSE` gate in fw_up so the diagnostics can be
+  switched back on for a future bisect without re-adding them.
+
+## 2026-05-31 (run 5) — watchdog reset comes back but master stuck on splash; ROOT CAUSE = master-only reset; FIX = reboot BOTH halves
+
+### Test result of the run-4 watchdog-reset build
+QK_REBOOT/Apply no longer kills USB for good — the master DID watchdog-reset and
+re-enumerate (host log: reconnect after ~25 s of host-side retries, then live HID).  But
+the master then **stuck on its boot splash** (here the USB/master half is the right side
+→ "SPLIT 72") and never advanced to normal operation; only a replug recovered it.  So the
+warm-reset USB half-reset is fixed, but a *second* layer was hiding behind it.
+
+### Root cause (host + fw logs, decisive)
+- Host log: after reconnect the master is **alive but stalled** — the first command
+  (`Reset Overlays AND Usage`) returns an **empty reply**; every `send_overlay_mapping`
+  logs `Drained 0 of 2 HID ACKs`; it limps for minutes (NOT hard-frozen, NOT a core1 hang).
+- The master's per-key display refresh is **gated behind a successful slave sync**: in
+  `sync_and_refresh_displays()` (keymap.c) a failed `send_to_bridge(USER_SYNC_POLY_DATA,…)`
+  sets `state_diff = false` ("try again later"), which also skips the `request_disp_refresh()`
+  inside the same `if(state_diff)` block.  So when the slave is unreachable the master
+  **never refreshes its own keycaps** → stuck on the splash forever.
+- Why the slave is unreachable: a master-only reset (QK_REBOOT *and* fw_up Apply — Apply
+  reboots the **master only**, hid_fw_up.c) leaves the slave running stale.  User confirmed
+  a replug power-cycles **both** halves (slave is fed over the inter-half cable) — which is
+  exactly why a replug fixes it and a warm reset does not.
+
+### Fix (this commit) — make a reset reset BOTH halves (mirror a replug)
+New split transactions `USER_SYNC_FW_UP_APPLY` and `USER_SYNC_REBOOT`, guarded by
+`FW_UP_SYNC_MAGIC` + CRC so a stray transaction can't trigger a reboot:
+- **fw_up Apply** (`hid_fw_up.c`, under FW_UP_ENABLE_INAPP_APPLY): master sends the slave
+  `USER_SYNC_FW_UP_APPLY`; the slave handler (`split_fw_up.c`) verifies a valid staged
+  image and calls `fw_staging_arm_apply()`, so its housekeeping runs `apply_and_reboot()`.
+  The master then arms its own apply.  Both halves install the staged image and reboot →
+  both come up on the new firmware (this also fixes that the slave's staged image was
+  **never applied** before — Apply was master-only).
+- **QK_REBOOT** (`keymap.c` `process_record_user`): master sends `USER_SYNC_REBOOT`; the
+  slave handler calls `fw_staging_arm_reboot()` and its housekeeping runs `mcu_reset()`.
+  Then the master returns true and QMK resets it.  Coordinated inline like QK_BOOTLOADER
+  (QMK resets the master before housekeeping would run again).
+- Slave deferred-reboot plumbing: `fw_staging_arm_reboot()` / `fw_staging_reboot_pending()`
+  (fw_staging.c), checked at the top of `housekeeping_task_user()` next to the existing
+  commit-pending apply.
+
+### IMPORTANT bootstrap caveat (OLD→NEW transition)
+The slave obeys `USER_SYNC_FW_UP_APPLY` / `USER_SYNC_REBOOT` only once it is **already
+running firmware that registers those handlers**.  An OLD slave (no handler) won't ACK, so
+for that one transition the master reboots alone (= old behaviour).  To validate/adopt:
+**flash BOTH halves once (BOOTSEL + UF2) with this build**; after that, QK_REBOOT and
+in-app Apply reboot both halves.
+
+### Build / audit
+Both builds compile (default apply-disabled + `-DFW_UP_ENABLE_INAPP_APPLY`).  ELF audit:
+`user_sync_fw_up_apply_handler`, `user_sync_reboot_handler`, `fw_staging_arm_reboot`,
+`fw_staging_reboot_pending` all linked; `mcu_reset` still strong (T); `do_apply` still has
+zero flash `bl`.  Apply-enabled `.bin` = 251568 B (+140 B vs run 4).
+
+### Known follow-up (deferred — own change, own test)
+Robustness (B): decouple the master's *own* display refresh from slave-sync success in
+`sync_and_refresh_displays()`, so a missing/slow slave can never pin the master on the
+splash (refresh own keycaps even when the bridge sync fails; gate only `copy_global_state()`
+on sync success, not `request_disp_refresh()`).  Touches load-bearing refresh logic.
+
+## 2026-05-31 (run 5 RESULTS + run 6) — both-halves reboot WORKS for QK_REBOOT; dual fw-up apply hangs BOTH halves in early boot
+
+### Test results of the run-5 build (commit 89bcca0c, both halves flashed with it)
+- **QK_REBOOT: WORKS** — both halves reboot cleanly to normal operation, no replug.  The
+  "reboot both halves" mechanism is proven good.
+- **In-app Apply: still hangs.**  fw_up itself is clean now (BEGIN→chunks→COMMIT all ACK,
+  log spam gone), APPLY arms, *both* halves reboot — then **both hang in early boot**:
+  stuck on the boot splash, typing dead.  A full power-cycle (both halves unpowered)
+  recovers to normal, so the *applied image is fine* — it's a warm-reboot/early-boot hang.
+
+### Key facts
+- "SPLIT 72 on both halves" is the **normal splash**, NOT a fault/handedness issue:
+  `show_splash_screen()` runs in `keyboard_pre_init_user()` *before* `set_side()` (which is
+  in `keyboard_post_init_user()`), so `is_left_side()` is false on both halves at splash
+  time → both render the right-side text.  Healthy boot clears it once init finishes.
+- Run 4 (master-only do_apply) the master reached its main loop; now (BOTH halves do_apply)
+  both hang earlier.  The new factor is the slave also rebooting via its own do_apply.
+- Note: `sync_and_refresh_displays()`'s `if(!send_to_bridge(...)) { state_diff=false; }` is
+  effectively **dead code** — `send_to_bridge` returns SYNC_ACK(0xca)/SYNC_CRC32_ERR(0x35),
+  never 0, so the branch never runs.  So the master's refresh is NOT gated on slave-sync
+  success (earlier theory was wrong); the hang is genuinely early-boot, not refresh-gating.
+- Flash layout rules out EEPROM/handedness corruption: `do_apply` writes 0..~0x3E000;
+  staging is at 0x100000 (read-only source); EEPROM/wear-leveling is elsewhere.
+
+### Leading hypothesis + run-6 fix attempt
+do_apply halts core1 via `psm_hw->frce_off` PROC1 and never clears it (it resets instead).
+The watchdog reset does NOT clear PSM control registers, so a leftover FRCE_OFF.PROC1 would
+keep core1 dead after the reboot → `multicore_launch_core1()` FIFO handshake blocks forever
+→ hang on the splash.  (Caveat: run-4 master came back, implying FRCE_OFF *did* clear that
+time — so this may be racy, or the slave's brand-new do_apply path is the one that sticks.)
+**Fix (run 6):** in `do_apply`, clear `FRCE_OFF.PROC1` (PSM CLR alias 0x40013004) right
+before the watchdog trigger — sends core1 back to the bootrom FIFO-wait, does not run the
+rewritten flash, keeps the apply window flash-call-free (ELF-audited).
+
+### Diagnostic shipped alongside (gated `FW_UP_BOOT_TRACE`, default OFF)
+`boot_trace()` overwrites the keycaps with a digit at boot milestones so a hang location is
+visible: splash=pre-init, 0=after splash (QMK core/split/USB init), 1=post_init start,
+2=just before `multicore_launch_core1`, 3=just after, 4=post_init end, legends=healthy.
+Built with `-DFW_UP_ENABLE_INAPP_APPLY -DFW_UP_BOOT_TRACE`.  Awaiting the stuck-digit report
+(esp. 2 vs 3 — i.e. whether the core1 launch is the hang) to confirm/redirect the fix.
+
+### RESOLVED (2026-05-31, commit ae70cafc) — the core1 force-off WAS the cause ✅
+Hardware test of the run-6 build: the in-app dual Apply now boots **both halves to normal
+operation, no replug**.  Firmware log post-APPLY shows the master re-enumerating and
+processing HID (`Overlay flags 0x60 set`), live keypresses (`release 0x00e1`), and overlays
+syncing to the slave (`UserCompressed … Success on retry 2`) — full recovery.  Confirms the
+hypothesis: `do_apply` left `FRCE_OFF.PROC1` asserted, it survived the watchdog reset, and
+`multicore_launch_core1()` hung post-reboot.  This is why the hang required BOTH halves to
+do_apply (both held core1 off) and why a cold power-cycle — which clears the PSM — always
+recovered.  The fix (clear FRCE_OFF.PROC1 before the watchdog trigger) is in the default
+code path (no flag).  The `FW_UP_BOOT_TRACE` digits are kept as a gated boot probe (default
+OFF), like `CORE1_STACK_HWM`.
+
+End-to-end status: QK_REBOOT and in-app fw-up Apply both reboot BOTH halves cleanly to normal
+operation with no replug.  Still-open (lower priority): robustness (B) above (decouple the
+master's own refresh from slave-sync), and the slave only obeys the apply/reboot transactions
+once already running firmware that has them (OLD→NEW bootstrap = flash both halves once).

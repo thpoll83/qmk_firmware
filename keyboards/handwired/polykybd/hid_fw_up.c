@@ -72,27 +72,31 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             if (new_image && master_ok) {
                 s_erased_size = image_size;
                 s_erased_crc  = image_crc;
-                // BASELINE: master is a pure relay during fw_up — no master
-                // staging erase, no master core1 halt/restart.  Master flash
-                // work must be re-added piecewise from here; see FW_UP_BASELINE.md.
+                // PHASE 1 (2026-05-30): the master now stages its OWN copy as well.
+                // Use the deferred erase — the same proven path as the slave — so
+                // the master's USB stays alive: housekeeping_task_user() drives the
+                // master's fw_staging_process_deferred() one sector per 70 ms.
+                // begin_deferred also halts the master's core1 and sets fw_up_active.
+                fw_staging_begin_deferred(image_size, image_crc);
+                // Kick the slave's deferred erase so both halves erase in parallel.
                 send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 3);
-                fw_staging_set_fw_up_active(true);
-                uprintf("FW_UP_BEGIN: new image size=%lu crc=0x%08lx (relay-only master)\n",
+                uprintf("FW_UP_BEGIN: new image size=%lu crc=0x%08lx (master+slave staging)\n",
                         image_size, image_crc);
             }
 
-            // Single slave readiness poll (no retry loop).  If slave is not ready
-            // we return '~' and the host re-polls after a short delay, allowing the
-            // QMK main loop to run the normal split transport between polls.
+            // Single slave readiness poll (no retry loop).  If either half is not
+            // ready we return '~' and the host re-polls after a short delay, letting
+            // the QMK main loop advance both deferred erases between polls.
             uint8_t slave_ack = master_ok
                 ? send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 1)
                 : SYNC_CRC32_ERR;
-            bool slave_ok = (slave_ack == SYNC_ACK);
+            bool slave_ok    = (slave_ack == SYNC_ACK);
+            bool master_done = !fw_staging_erase_pending();   // master's own staging erased?
 
             memset(data, 0, length);
             if (!master_ok) {
                 memcpy(data, "P\x40!", 3);   // hard error: invalid image
-            } else if (slave_ok) {
+            } else if (slave_ok && master_done) {
                 memcpy(data, "P\x40.", 3);   // both halves ready — host may start chunks
             } else {
                 memcpy(data, "P\x40~", 3);   // still erasing — host should re-poll
@@ -104,7 +108,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // chunks — if anything is wrong with slave state here it will explain
             // the very-first-chunk failure we keep seeing.
             static bool s_logged_ready_status = false;
-            if (slave_ok && !s_logged_ready_status) {
+            if (slave_ok && master_done && !s_logged_ready_status) {
                 s_logged_ready_status = true;
                 fw_up_log_slave_status("begin-ready");
             }
@@ -134,7 +138,32 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             uint32_t offset;
             memcpy(&offset, &data[HID_DATA_IDX], 4);
             const uint8_t *chunk_data = &data[HID_DATA_IDX + 4];
+#ifdef FW_UP_VERBOSE
             uprintf("FW_UP_CHUNK: offset=%lu\n", offset);
+            // DIAGNOSTIC (2026-05-29, run 3): bracket the very first chunk to
+            // localise the slave hang.  The core1-restart probe (run 3) did NOT
+            // help, and normal overlay sync pushes 67-69 B M2S to the slave fine
+            // — larger than this 64 B chunk — so neither core1 state nor payload
+            // size is the cause.  Do a small status read (transport known good at
+            // begin-ready) then a 64 B-M2S status read (the status handler ignores
+            // in_len, so a padded request is benign and read-only):
+            //   small OK, large OK   -> transport fine -> the FW_UP_CHUNK txn itself is the culprit
+            //   small OK, large FAIL -> large-M2S transport broken in post-erase fw_up state
+            //   small FAIL           -> slave already hung post-erase, before any chunk
+            // See FW_UP_BASELINE.md (run 3).
+            if (offset == 0) {
+                fw_up_log_slave_status("pre-chunk");
+                uint8_t              big_req[64];
+                fw_up_status_reply_t big_reply;
+                memset(big_req, 0xA5, sizeof(big_req));
+                memset(&big_reply, 0, sizeof(big_reply));
+                bool big_ok = transaction_rpc_exec(USER_SYNC_FW_UP_STATUS,
+                                                   sizeof(big_req), big_req,
+                                                   sizeof(big_reply), &big_reply);
+                uprintf("FW_UP probe: pre-chunk 64B-M2S status xfer -> %s\n",
+                        big_ok ? "OK" : "FAILED");
+            }
+#endif
             // Relay to slave FIRST so master's s_next_offset only advances after slave ACKs.
             // This keeps both write cursors in sync: if the relay fails, the host can safely
             // retry the same chunk and master will accept it (offset still matches).
@@ -143,7 +172,6 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
             chunk_msg.crc32 = 0;
             uint8_t slave_ack = send_to_bridge(USER_SYNC_FW_UP_CHUNK, &chunk_msg, sizeof(chunk_msg), 10);
-            uprintf("FW_UP_CHUNK: slave_ack=0x%02x (relay-only, no master write)\n", slave_ack);
             // First-failure diagnostic: when a chunk doesn't reach the slave,
             // immediately query the slave's internal state so we can tell from
             // the master serial log whether the slave is fully hung (status RPC
@@ -157,28 +185,80 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             } else if (slave_ack == SYNC_ACK) {
                 s_logged_failure_status = false;  // re-arm after recovery
             }
-            // BASELINE: master does NOT write to its own staging.
-            // "ok" is just whether the slave accepted the relayed chunk.
+            // PHASE 1: the master writes the same chunk to its OWN staging, but
+            // only after the slave accepted it.  Relaying first keeps both write
+            // cursors in lock-step — a failed relay leaves the master's s_next_offset
+            // untouched, so the host can safely retry the same offset on both halves.
             bool ok = (slave_ack == SYNC_ACK);
+            if (ok) {
+                ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
+                if (!ok) uprintf("FW_UP_CHUNK: master staging write FAILED offset=%lu\n", offset);
+            }
+#ifdef FW_UP_VERBOSE
+            uprintf("FW_UP_CHUNK: slave_ack=0x%02x master_write_ok=%d\n", slave_ack, ok);
+#endif
             memset(data, 0, length);
             memcpy(data, ok ? "P\x41." : "P\x41!", 3);
             raw_hid_send(data, length);
             return true;
         }
 
-        case CMD_FW_UP_COMMIT: { // verify CRC, arm commit for both sides
-            // BASELINE: master does NOT finalize its own staging (no data
-            // written).  Relay commit to slave, clear fw_up_active.  fw_up
-            // does not yet actually update master firmware in this mode —
-            // only the slave path is exercised.  See FW_UP_BASELINE.md.
+        case CMD_FW_UP_COMMIT: { // verify staged CRC on both halves (no apply/reboot yet)
+            // Relay COMMIT to the slave first (it finalizes + verifies its own
+            // staged copy), then finalize the master's own staged copy.  Decoupled
+            // milestone: fw_staging_finalize() verifies the O(1) running CRC, clears
+            // fw_up_active and restarts core1 — it does NOT apply or reboot.  Actually
+            // installing the staged image is the explicit FW_UP_APPLY step (phase 2).
             uint32_t dummy_crc = 0;
-            uint8_t slave_ack = send_to_bridge(USER_SYNC_FW_UP_COMMIT, &dummy_crc, sizeof(dummy_crc), 10);
-            fw_staging_set_fw_up_active(false);
-            bool ok = (slave_ack == SYNC_ACK);
+            uint8_t slave_ack  = send_to_bridge(USER_SYNC_FW_UP_COMMIT, &dummy_crc, sizeof(dummy_crc), 10);
+            bool master_ok = fw_staging_finalize();   // also clears fw_up_active + restarts master core1
+            bool ok = (slave_ack == SYNC_ACK) && master_ok;
             memset(data, 0, length);
             memcpy(data, ok ? "P\x42." : "P\x42!", 3);
-            uprintf("FW_UP_COMMIT: relay-only master slave_ack=0x%02x\n", slave_ack);
+            uprintf("FW_UP_COMMIT: slave_ack=0x%02x master_finalize=%d\n", slave_ack, master_ok);
             raw_hid_send(data, length);
+            return true;
+        }
+
+        case CMD_FW_UP_APPLY: { // PHASE 2: install the staged image on the MASTER only
+            // DISABLED BY DEFAULT (2026-05-30): the RAM-resident self-flash bricked
+            // the master — do_apply erases flash offset 0 (the live vector table +
+            // HardFault/NMI handlers) and runs ~4 s with IRQs off; an unmaskable
+            // exception (ChibiOS NMI context-switch / HardFault) then vectors through
+            // the erased table → lockup mid-copy → invalid boot2 → BOOTSEL.  See
+            // FW_UP_BASELINE.md "Phase 2 — run 2 (master bricked)".  The redesign
+            // (copy app body with IRQs toggled + vectors intact, then sector 0 last
+            // with VTOR relocated to RAM) is gated behind FW_UP_ENABLE_INAPP_APPLY.
+            bool ok = fw_staging_has_valid_staged_image();
+#ifdef FW_UP_ENABLE_INAPP_APPLY
+            memset(data, 0, length);
+            memcpy(data, ok ? "P\x44." : "P\x44!", 3);
+            raw_hid_send(data, length);
+            uprintf("FW_UP_APPLY: master self-apply %s\n",
+                    ok ? "armed (rebooting…)" : "REJECTED (no valid staged image)");
+            if (ok) {
+                // Tell the slave to install its staged image and reboot too, so
+                // BOTH halves restart together (like a replug).  A master-only
+                // reboot leaves the slave running stale → the rebooted master
+                // can't re-sync to it and hangs on the boot splash.  This also
+                // finally updates the slave's firmware: it staged + committed the
+                // image but, before this, was never told to apply it.  (The slave
+                // obeys this only once it already runs firmware that has the apply
+                // handler — see FW_UP_BASELINE.md for the OLD→NEW bootstrap note.)
+                fw_up_apply_sync_t apply_msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC };
+                uint8_t slave_ack = send_to_bridge(USER_SYNC_FW_UP_APPLY, &apply_msg, sizeof(apply_msg), 5);
+                uprintf("FW_UP_APPLY: slave apply+reboot ack=0x%02x\n", slave_ack);
+                fw_staging_arm_apply();   // housekeeping → fw_staging_apply_and_reboot()
+            }
+#else
+            // Safe default: never arm the brick-prone self-flash.  Report '!' so the
+            // host shows "apply not available" rather than silently doing nothing.
+            (void)ok;
+            memset(data, 0, length);
+            memcpy(data, "P\x44!", 3);
+            raw_hid_send(data, length);
+            uprintf("FW_UP_APPLY: in-app apply DISABLED (FW_UP_ENABLE_INAPP_APPLY off) — staged image left untouched\n");
+#endif
             return true;
         }
 

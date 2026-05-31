@@ -79,8 +79,10 @@ static uint32_t s_image_crc;
 static uint8_t  s_page_buf[FLASH_PAGE_SIZE];
 static uint32_t s_next_offset;   // total bytes accepted so far
 static uint32_t s_buf_fill;      // bytes pending in s_page_buf
+static uint32_t s_staged_crc;    // running CRC32 of received image bytes (for O(1) finalize)
 
 static bool     s_commit_pending;
+static bool     s_reboot_pending;   // deferred plain reboot (QK_REBOOT slave path)
 
 // ---------------------------------------------------------------------------
 // Deferred-erase state (used by slave handler to avoid blocking the split link)
@@ -135,12 +137,36 @@ static void flush_page(void) {
 }
 
 // ---------------------------------------------------------------------------
+// Write the staging header sector {magic, size, crc}.  Called by finalize on a
+// CRC match so the staged image is self-describing — fw_staging_apply_and_reboot()
+// validates the magic and reads the size from here.  The header sector was erased
+// in fw_staging_begin*(), so this single program is valid.
+// ---------------------------------------------------------------------------
+static void write_staging_header(uint32_t size, uint32_t crc) {
+    uint8_t  hdr[FLASH_PAGE_SIZE];
+    uint32_t words[3] = { FW_STAGING_MAGIC, size, crc };
+    memset(hdr, 0xFF, sizeof(hdr));
+    memcpy(hdr, words, sizeof(words));
+#ifdef USE_CORE1
+    bool already_halted = s_core1_halted;
+    if (!already_halted) fw_staging_halt_core1();
+#endif
+    uint32_t irq = save_and_disable_interrupts();
+    flash_range_program(FW_STAGING_OFFSET, hdr, FLASH_PAGE_SIZE);
+    restore_interrupts(irq);
+#ifdef USE_CORE1
+    if (!already_halted) fw_staging_restart_core1();
+#endif
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 void fw_staging_init(void) {
     s_initialized          = true;
     s_commit_pending       = false;
+    s_reboot_pending       = false;
     s_erase_pending        = false;
     s_fw_up_active         = false;
     // Diagnostic counters: leave the cumulative call counts in place across
@@ -206,6 +232,7 @@ void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc) {
 
     s_next_offset    = 0;
     s_buf_fill       = 0;
+    s_staged_crc     = 0;
     s_commit_pending = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
 
@@ -276,9 +303,24 @@ void fw_staging_process_deferred(void) {
     s_erase_sector_next++;
     if (s_erase_sector_next >= s_erase_sector_count) {
         s_erase_pending = false;
+#ifdef USE_CORE1
+        // DIAGNOSTIC PROBE (2026-05-29): restart core1 the instant erase
+        // completes, before the first chunk arrives.  Hypothesis: holding
+        // core1 in PSM reset across the begin->chunk handoff hard-locks the
+        // slave on chunk 0 (core0 blocks forever on a full SIO FIFO signalling
+        // a non-draining core1 — chunk 0 does no flash, so a flash fault can't
+        // explain it).  If chunk 0 now ACKs and the lock instead moves to the
+        // first page flush (the chunk at offset 224), the per-flush halt/restart
+        // cycle is the culprit -> cooperative core1 park.  See CLAUDE.md fw_up.
+        if (s_core1_halted) fw_staging_restart_core1();
+        uprintf("fw_staging_process_deferred: erase complete (%lu sectors), core1 restarted\n", s_erase_sector_count);
+#else
         uprintf("fw_staging_process_deferred: erase complete (%lu sectors)\n", s_erase_sector_count);
+#endif
     } else {
+#ifdef FW_UP_VERBOSE
         uprintf("fw_staging_process_deferred: erased sector %lu/%lu\n", s_erase_sector_next, s_erase_sector_count);
+#endif
     }
 }
 
@@ -306,12 +348,22 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
         len = (uint8_t)(s_image_size - offset);
     }
 
+    // Accumulate a running CRC over the image bytes as they arrive so
+    // fw_staging_finalize() can verify in O(1) instead of re-scanning 244 KB of
+    // staged flash — that scan overflowed the split-transaction window and made
+    // the master mis-report COMMIT as "CRC mismatch" (see FW_UP_BASELINE.md run 6).
+    s_staged_crc = crc32_1byte(data, len, s_staged_crc);
+
     const uint8_t *src       = data;
     uint8_t        remaining = len;
 
     while (remaining > 0) {
-        uint8_t space = FLASH_PAGE_SIZE - s_buf_fill;
-        uint8_t copy  = (remaining < space) ? remaining : space;
+        // NB: space/copy MUST be wider than uint8_t — FLASH_PAGE_SIZE is 256, so
+        // (FLASH_PAGE_SIZE - s_buf_fill) is 256 when the page buffer is empty and
+        // truncates to 0 in a uint8_t, making copy=0 and spinning this loop
+        // forever (the chunk-0 slave hard-lock, found 2026-05-30).
+        uint32_t space = FLASH_PAGE_SIZE - s_buf_fill;
+        uint32_t copy  = (remaining < space) ? remaining : space;
 
         memcpy(s_page_buf + s_buf_fill, src, copy);
         s_buf_fill    += copy;
@@ -334,40 +386,29 @@ bool fw_staging_finalize(void) {
         flush_page();
     }
 
-    // Verify CRC32 of staged data
-    const uint8_t *staged = (const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET);
-    if (crc32_large(staged, s_image_size) != s_image_crc) {
-        s_fw_up_active = false;
-#ifdef USE_CORE1
-        // CRC mismatch: update failed.  Restart core1 so the slave resumes
-        // normal operation; the chip is NOT going to reboot.
-        if (s_core1_halted) fw_staging_restart_core1();
-#endif
-        return false;
+    // Verify using the running CRC accumulated in fw_staging_write_chunk (O(1)).
+    // (Re-scanning the 244 KB staged region here overflowed the split-transaction
+    // window and made the master mis-report COMMIT as "CRC mismatch" — run 6.)
+    bool ok = (s_staged_crc == s_image_crc);
+
+    // On a CRC match, stamp the staging header {magic,size,crc} so the staged image
+    // is self-describing and fw_staging_apply_and_reboot() can validate + size it.
+    if (ok) {
+        write_staging_header(s_image_size, s_image_crc);
     }
 
-    // Write header magic — marks staging as valid for fw_staging_apply_and_reboot().
-    // core1 is still halted (halted by fw_staging_begin_deferred); leave it halted.
-    // fw_staging_apply_and_reboot() will hard-reset the chip so core1 need not restart.
-    static uint8_t hdr_page[FLASH_PAGE_SIZE];
-    memset(hdr_page, 0xFF, sizeof(hdr_page));
-    uint32_t *w    = (uint32_t *)hdr_page;
-    w[0]           = FW_STAGING_MAGIC;
-    w[1]           = s_image_size;
-    w[2]           = s_image_crc;
-    w[3]           = 0x00000000UL;
+    // DECOUPLED (2026-05-30, run 6): COMMIT verifies + reports success; it does NOT
+    // auto-apply/reboot.  s_commit_pending stays clear — the apply is armed only by
+    // the explicit FW_UP_APPLY command (fw_staging_arm_apply), phase 2 master-only.
+    s_commit_pending = false;
+    s_fw_up_active   = false;
 #ifdef USE_CORE1
-    if (!s_core1_halted) fw_staging_halt_core1();
+    // We are NOT rebooting here, so core1 — halted in fw_staging_begin_deferred and
+    // kept halted through every chunk flush — must be restarted, or the half resumes
+    // normal operation with a dead core1 (no RLE overlay decompression).
+    if (s_core1_halted) fw_staging_restart_core1();
 #endif
-    uint32_t irq   = save_and_disable_interrupts();
-    flash_range_program(FW_STAGING_OFFSET, hdr_page, FLASH_PAGE_SIZE);
-    restore_interrupts(irq);
-    // Do NOT restart core1 here — fw_staging_apply_and_reboot() is called next
-    // and will hard-reset the chip.  Keeping core1 in PSM reset is safe.
-
-    s_commit_pending = true;
-    s_fw_up_active     = false;
-    return true;
+    return ok;
 }
 
 bool fw_staging_erase_pending(void) {
@@ -384,6 +425,23 @@ bool fw_staging_written(void) {
 
 bool fw_staging_commit_pending(void) {
     return s_commit_pending;
+}
+
+bool fw_staging_has_valid_staged_image(void) {
+    const uint32_t *hdr = (const uint32_t *)(XIP_BASE + FW_STAGING_OFFSET);
+    return (hdr[0] == FW_STAGING_MAGIC) && (hdr[1] > 0) && (hdr[1] <= FW_UP_MAX_SIZE);
+}
+
+void fw_staging_arm_apply(void) {
+    s_commit_pending = true;
+}
+
+void fw_staging_arm_reboot(void) {
+    s_reboot_pending = true;
+}
+
+bool fw_staging_reboot_pending(void) {
+    return s_reboot_pending;
 }
 
 uint32_t fw_staging_get_own_fw_size(void) {
@@ -437,33 +495,113 @@ void fw_staging_set_fw_up_active(bool active) {
 }
 
 // ---------------------------------------------------------------------------
+// RAM-resident word copy.  We must NOT call the toolchain memcpy here: it lives
+// in flash (sector 1, 0x10b8) and the apply loop erases that sector — the next
+// flash-resident memcpy() call would then execute erased flash and HardFault.
+// This inline word loop compiles into the RAM function itself (no veneer, no
+// flash fetch).  src/dst are word-aligned (page buffer + 256 B pages).
+// ---------------------------------------------------------------------------
+static inline void __attribute__((always_inline))
+ram_word_copy(uint32_t *dst, const uint32_t *src, uint32_t nbytes) {
+    for (uint32_t i = 0; i < nbytes / 4; i++) dst[i] = src[i];
+}
+
+// ---------------------------------------------------------------------------
 // RAM-resident apply routine: copy staging → active firmware + hard-reset.
 // Must run from RAM because it erases the flash region it was loaded from.
+//
+// HARDENED (2026-05-30, after the run-2 master brick).  Invariants — each one
+// independently bricked the part or would let it execute corrupt code:
+//   1. NO flash-resident calls in the window.  The old code called the flash
+//      memcpy (sector 1); once sector 1 was erased the next call executed erased
+//      flash → HardFault → vectored through the also-erased sector 0 → lockup.
+//      We use ram_word_copy() (inlined) instead.  flash_range_erase/program are
+//      verified RAM-resident and pre-resolve their ROM pointers (no lookup).
+//   2. IRQs OFF for the ENTIRE copy.  This routine OVERWRITES THE RUNNING
+//      FIRMWARE (offset 0).  Unlike flush_page (which writes the *staging*
+//      region and may safely toggle IRQs between pages because the running code
+//      stays intact), here we must NEVER return control to the running system
+//      mid-copy — an IRQ/NMI would dispatch handler/thread code out of a sector
+//      we have already erased or half-rewritten.  So: one save_and_disable
+//      around the whole loop.  With core1 PSM-halted and no flash execution by
+//      this function, PRIMASK=1 then blocks the only real exception sources
+//      (Vector80→NMI can't fire; no HardFault because nothing runs from flash).
+//   3. Sector 0 (vectors + HardFault/NMI handlers) written LAST — defensive:
+//      minimises the span of time a valid vector table doesn't exist, in case
+//      some unforeseen HardFault fires despite (2).
 // ---------------------------------------------------------------------------
 static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_size) {
-    uint8_t  page_buf[FLASH_PAGE_SIZE];
-    uint32_t irq = save_and_disable_interrupts();
-
+#ifdef USE_CORE1
+    // Halt core1 via PSM reset.  _PSM_FRCE_OFF / _PSM_PROC1_BIT are #defines
+    // (pure preprocessor text substitution → an inlined register write, no flash
+    // fetch), so this is byte-for-byte identical machine code to the raw literal
+    // it replaces — same as fw_staging_halt_core1(), inlined here for the
+    // not-in-flash apply path.
+    _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
+    __asm volatile ("dsb" ::: "memory");
+#endif
+    static uint8_t page_buf[FLASH_PAGE_SIZE];   // static (.bss): never on a moving stack
     uint32_t num_sectors = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
+    uint32_t pages = FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
 
-    for (uint32_t sec = 0; sec < num_sectors; sec++) {
-        uint32_t dst_offset  = sec * FLASH_SECTOR_SIZE;
-        uint32_t src_base    = XIP_BASE + FW_STAGING_DATA_OFFSET + sec * FLASH_SECTOR_SIZE;
+    // IRQs OFF for the entire copy — see invariant (2).  Never restored; we reset.
+    (void)save_and_disable_interrupts();
 
-        // After flash_range_erase returns, the SDK re-enables XIP (standard mode).
-        // It is therefore safe to read staging data via XIP between operations.
-        flash_range_erase(dst_offset, FLASH_SECTOR_SIZE);
+    // Erase+program one sector from staging.  Reads source via XIP (re-enabled by
+    // flash_range_erase on return) into the RAM page buffer BEFORE program() drops
+    // XIP again.  Staging (≥1 MB) is never erased here, so it stays XIP-readable.
+    #define APPLY_ONE_SECTOR(sec)                                                         \
+        do {                                                                              \
+            uint32_t _dst = (sec) * FLASH_SECTOR_SIZE;                                    \
+            uint32_t _src = XIP_BASE + FW_STAGING_DATA_OFFSET + (sec) * FLASH_SECTOR_SIZE;\
+            flash_range_erase(_dst, FLASH_SECTOR_SIZE);                                   \
+            for (uint32_t _pg = 0; _pg < pages; _pg++) {                                  \
+                ram_word_copy((uint32_t *)page_buf,                                       \
+                              (const uint32_t *)(_src + _pg * FLASH_PAGE_SIZE),            \
+                              FLASH_PAGE_SIZE);                                           \
+                flash_range_program(_dst + _pg * FLASH_PAGE_SIZE, page_buf, FLASH_PAGE_SIZE); \
+            }                                                                             \
+        } while (0)
 
-        uint32_t pages = FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
-        for (uint32_t pg = 0; pg < pages; pg++) {
-            // Copy staging page to stack buffer (RAM) before XIP is disabled by program().
-            memcpy(page_buf, (const void *)(src_base + pg * FLASH_PAGE_SIZE), FLASH_PAGE_SIZE);
-            flash_range_program(dst_offset + pg * FLASH_PAGE_SIZE, page_buf, FLASH_PAGE_SIZE);
-        }
+    // App body first: sectors 1..N-1, leaving sector 0's vectors written last.
+    for (uint32_t sec = 1; sec < num_sectors; sec++) {
+        APPLY_ONE_SECTOR(sec);
     }
+    if (num_sectors > 0) {
+        APPLY_ONE_SECTOR(0);   // vectors LAST
+    }
+    #undef APPLY_ONE_SECTOR
 
-    restore_interrupts(irq);
-    NVIC_SystemReset();
+    // Full-chip reset via the watchdog — NOT NVIC_SystemReset().  NVIC_SystemReset
+    // only resets the M0+ core (AIRCR.SYSRESETREQ) and leaves USB/PLL/peripheral
+    // state behind, which hangs at early boot until a replug (same warm-reset bug
+    // the QK_REBOOT keycode hits; see poly_util.c mcu_reset()).  We can't call the
+    // flash-resident watchdog_reboot() from here (invariant 1: no flash calls in
+    // the apply window), so we inline the same effect with register writes:
+    //   PSM_WDSEL  = reset everything except ROSC/XOSC   (0x1ffff & ~0x3 = 0x1fffc)
+    //   WATCHDOG_SCRATCH4 = 0  → bootrom takes the normal flash boot path
+    //   WATCHDOG_CTRL |= TRIGGER → immediate full reset
+    // (RP2040 datasheet §4.7; mirrors pico-sdk watchdog_reboot(0,0,0).)
+    #define _PSM_WDSEL       (*(volatile uint32_t *)(0x40010000u + 0x08u))
+    #define _WD_CTRL         (*(volatile uint32_t *)(0x40058000u + 0x00u))
+    #define _WD_SCRATCH4     (*(volatile uint32_t *)(0x40058000u + 0x1cu))
+#ifdef USE_CORE1
+    // Release core1 from the PSM force-off asserted at the top of this function,
+    // so it is NOT left held in reset across the watchdog reboot.  The watchdog
+    // reset does not clear the PSM control registers, so a leftover FRCE_OFF.PROC1
+    // would keep core1 dead after the reboot — and post_init's
+    // multicore_launch_core1() FIFO handshake would then block forever (core1
+    // never drains the FIFO), hanging the keyboard on the boot splash.  Clearing
+    // it here only sends core1 back to the bootrom FIFO-wait loop; it does NOT
+    // run the just-rewritten flash.
+    *(volatile uint32_t *)(0x40010000u + 0x3000u + 0x04u) = (1u << 16);  // PSM FRCE_OFF CLR, PROC1
+    __asm volatile ("dsb" ::: "memory");
+#endif
+    _PSM_WDSEL    = 0x0001ffffu & ~0x00000003u;   // all blocks except ROSC(0x1)+XOSC(0x2)
+    _WD_SCRATCH4  = 0u;                            // normal flash boot, not reboot-to-addr
+    _WD_CTRL     |= 0x80000000u;                   // WATCHDOG_CTRL_TRIGGER_BITS
+    __asm volatile ("dsb" ::: "memory");
+    while (1) { /* wait for the watchdog reset to take effect */ }
 }
 
 void fw_staging_apply_and_reboot(void) {

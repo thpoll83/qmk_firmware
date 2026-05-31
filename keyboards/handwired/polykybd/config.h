@@ -90,7 +90,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.7.2"
+#define FW_VERSION "0.8.0"
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

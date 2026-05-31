@@ -1044,3 +1044,20 @@ visible: splash=pre-init, 0=after splash (QMK core/split/USB init), 1=post_init 
 2=just before `multicore_launch_core1`, 3=just after, 4=post_init end, legends=healthy.
 Built with `-DFW_UP_ENABLE_INAPP_APPLY -DFW_UP_BOOT_TRACE`.  Awaiting the stuck-digit report
 (esp. 2 vs 3 — i.e. whether the core1 launch is the hang) to confirm/redirect the fix.
+
+### RESOLVED (2026-05-31, commit ae70cafc) — the core1 force-off WAS the cause ✅
+Hardware test of the run-6 build: the in-app dual Apply now boots **both halves to normal
+operation, no replug**.  Firmware log post-APPLY shows the master re-enumerating and
+processing HID (`Overlay flags 0x60 set`), live keypresses (`release 0x00e1`), and overlays
+syncing to the slave (`UserCompressed … Success on retry 2`) — full recovery.  Confirms the
+hypothesis: `do_apply` left `FRCE_OFF.PROC1` asserted, it survived the watchdog reset, and
+`multicore_launch_core1()` hung post-reboot.  This is why the hang required BOTH halves to
+do_apply (both held core1 off) and why a cold power-cycle — which clears the PSM — always
+recovered.  The fix (clear FRCE_OFF.PROC1 before the watchdog trigger) is in the default
+code path (no flag).  The `FW_UP_BOOT_TRACE` digits are kept as a gated boot probe (default
+OFF), like `CORE1_STACK_HWM`.
+
+End-to-end status: QK_REBOOT and in-app fw-up Apply both reboot BOTH halves cleanly to normal
+operation with no replug.  Still-open (lower priority): robustness (B) above (decouple the
+master's own refresh from slave-sync), and the slave only obeys the apply/reboot transactions
+once already running firmware that has them (OLD→NEW bootstrap = flash both halves once).

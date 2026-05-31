@@ -1003,3 +1003,44 @@ Robustness (B): decouple the master's *own* display refresh from slave-sync succ
 `sync_and_refresh_displays()`, so a missing/slow slave can never pin the master on the
 splash (refresh own keycaps even when the bridge sync fails; gate only `copy_global_state()`
 on sync success, not `request_disp_refresh()`).  Touches load-bearing refresh logic.
+
+## 2026-05-31 (run 5 RESULTS + run 6) — both-halves reboot WORKS for QK_REBOOT; dual fw-up apply hangs BOTH halves in early boot
+
+### Test results of the run-5 build (commit 89bcca0c, both halves flashed with it)
+- **QK_REBOOT: WORKS** — both halves reboot cleanly to normal operation, no replug.  The
+  "reboot both halves" mechanism is proven good.
+- **In-app Apply: still hangs.**  fw_up itself is clean now (BEGIN→chunks→COMMIT all ACK,
+  log spam gone), APPLY arms, *both* halves reboot — then **both hang in early boot**:
+  stuck on the boot splash, typing dead.  A full power-cycle (both halves unpowered)
+  recovers to normal, so the *applied image is fine* — it's a warm-reboot/early-boot hang.
+
+### Key facts
+- "SPLIT 72 on both halves" is the **normal splash**, NOT a fault/handedness issue:
+  `show_splash_screen()` runs in `keyboard_pre_init_user()` *before* `set_side()` (which is
+  in `keyboard_post_init_user()`), so `is_left_side()` is false on both halves at splash
+  time → both render the right-side text.  Healthy boot clears it once init finishes.
+- Run 4 (master-only do_apply) the master reached its main loop; now (BOTH halves do_apply)
+  both hang earlier.  The new factor is the slave also rebooting via its own do_apply.
+- Note: `sync_and_refresh_displays()`'s `if(!send_to_bridge(...)) { state_diff=false; }` is
+  effectively **dead code** — `send_to_bridge` returns SYNC_ACK(0xca)/SYNC_CRC32_ERR(0x35),
+  never 0, so the branch never runs.  So the master's refresh is NOT gated on slave-sync
+  success (earlier theory was wrong); the hang is genuinely early-boot, not refresh-gating.
+- Flash layout rules out EEPROM/handedness corruption: `do_apply` writes 0..~0x3E000;
+  staging is at 0x100000 (read-only source); EEPROM/wear-leveling is elsewhere.
+
+### Leading hypothesis + run-6 fix attempt
+do_apply halts core1 via `psm_hw->frce_off` PROC1 and never clears it (it resets instead).
+The watchdog reset does NOT clear PSM control registers, so a leftover FRCE_OFF.PROC1 would
+keep core1 dead after the reboot → `multicore_launch_core1()` FIFO handshake blocks forever
+→ hang on the splash.  (Caveat: run-4 master came back, implying FRCE_OFF *did* clear that
+time — so this may be racy, or the slave's brand-new do_apply path is the one that sticks.)
+**Fix (run 6):** in `do_apply`, clear `FRCE_OFF.PROC1` (PSM CLR alias 0x40013004) right
+before the watchdog trigger — sends core1 back to the bootrom FIFO-wait, does not run the
+rewritten flash, keeps the apply window flash-call-free (ELF-audited).
+
+### Diagnostic shipped alongside (gated `FW_UP_BOOT_TRACE`, default OFF)
+`boot_trace()` overwrites the keycaps with a digit at boot milestones so a hang location is
+visible: splash=pre-init, 0=after splash (QMK core/split/USB init), 1=post_init start,
+2=just before `multicore_launch_core1`, 3=just after, 4=post_init end, legends=healthy.
+Built with `-DFW_UP_ENABLE_INAPP_APPLY -DFW_UP_BOOT_TRACE`.  Awaiting the stuck-digit report
+(esp. 2 vs 3 — i.e. whether the core1 launch is the hang) to confirm/redirect the fix.

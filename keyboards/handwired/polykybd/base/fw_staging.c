@@ -579,6 +579,18 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     #define _PSM_WDSEL       (*(volatile uint32_t *)(0x40010000u + 0x08u))
     #define _WD_CTRL         (*(volatile uint32_t *)(0x40058000u + 0x00u))
     #define _WD_SCRATCH4     (*(volatile uint32_t *)(0x40058000u + 0x1cu))
+#ifdef USE_CORE1
+    // Release core1 from the PSM force-off asserted at the top of this function,
+    // so it is NOT left held in reset across the watchdog reboot.  The watchdog
+    // reset does not clear the PSM control registers, so a leftover FRCE_OFF.PROC1
+    // would keep core1 dead after the reboot — and post_init's
+    // multicore_launch_core1() FIFO handshake would then block forever (core1
+    // never drains the FIFO), hanging the keyboard on the boot splash.  Clearing
+    // it here only sends core1 back to the bootrom FIFO-wait loop; it does NOT
+    // run the just-rewritten flash.
+    *(volatile uint32_t *)(0x40010000u + 0x3000u + 0x04u) = (1u << 16);  // PSM FRCE_OFF CLR, PROC1
+    __asm volatile ("dsb" ::: "memory");
+#endif
     _PSM_WDSEL    = 0x0001ffffu & ~0x00000003u;   // all blocks except ROSC(0x1)+XOSC(0x2)
     _WD_SCRATCH4  = 0u;                            // normal flash boot, not reboot-to-addr
     _WD_CTRL     |= 0x80000000u;                   // WATCHDOG_CTRL_TRIGGER_BITS

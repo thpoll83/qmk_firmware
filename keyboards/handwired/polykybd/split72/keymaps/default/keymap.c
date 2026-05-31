@@ -1559,9 +1559,22 @@ void unicode_input_mode_set_user(uint8_t unicode_mode) {
     request_disp_refresh();
 }
 
+#ifdef FW_UP_BOOT_TRACE
+// Diagnostic only (build with -DFW_UP_BOOT_TRACE): overwrite the keycaps with a
+// single digit at boot milestones so a hang in early boot is visible — the last
+// digit shown on each half tells us how far that half got before it stopped.
+static void boot_trace(const uint16_t* digit) {
+    clear_all_displays();
+    display_message(1, 1, digit, &FreeSansBold24pt7b);
+}
+#endif
+
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
 // Global variables: com
 void keyboard_post_init_user(void) {
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"1");
+#endif
     // Customise these values to desired behaviour
     debug_enable = true;
     debug_matrix = false;
@@ -1593,8 +1606,14 @@ void keyboard_post_init_user(void) {
     //standard mapping is 1:1
     reset_overlay_mapping();
 
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"2");
+#endif
 #ifdef USE_CORE1
     multicore_launch_core1();
+#endif
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"3");
 #endif
 
     transaction_register_rpc(USER_SYNC_POLY_DATA,           user_sync_poly_data_handler);
@@ -1625,6 +1644,9 @@ void keyboard_post_init_user(void) {
     memcpy(access_global_latin_table()->ex, ee.latin_ex, sizeof(ee.latin_ex));
 
     set_displays(ee.brightness, false);
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"4");
+#endif
 }
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
@@ -1644,6 +1666,9 @@ void keyboard_pre_init_user(void) {
     set_displays(50, false);
     set_local_last_latin_keycode(0);
     show_splash_screen();
+#ifdef FW_UP_BOOT_TRACE
+    boot_trace(u"0");
+#endif
 
     gpio_set_pin_input_high(I2C1_SDA_PIN);
 }

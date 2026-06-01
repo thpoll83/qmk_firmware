@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-extern const GFXfont* ALL_FONTS[];
+extern const GFXfont* const ALL_FONTS[];
 #define ALL_FONT_SIZE_OLED_INT 43
 
 /*

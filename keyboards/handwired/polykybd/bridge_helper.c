@@ -2,7 +2,7 @@
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
-#include "base/crc32.h"
+#include "polymod_crc32.h"
 #include "split_sync.h"
 #include "config.h"
 
@@ -33,6 +33,11 @@ const char* tid_to_str(int8_t tid) {
     case USER_SYNC_ROI_DATA: return "UserRoi";
     case USER_SYNC_DYNAMIC_KEYMAP_DATA: return "UserDynMap";
     case USER_SYNC_OVERLAY_MAP_DATA: return "UserOverlayMap";
+    case USER_SYNC_FW_UP_QUERY:  return "FwUpQuery";
+    case USER_SYNC_FW_UP_BEGIN:  return "FwUpBegin";
+    case USER_SYNC_FW_UP_CHUNK:  return "FwUpChunk";
+    case USER_SYNC_FW_UP_COMMIT: return "FwUpCommit";
+    case USER_SYNC_FW_UP_STATUS: return "FwUpStatus";
     default: return "Not registered";
     }
 }
@@ -42,6 +47,10 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
     uint8_t retry = 0;
     *((uint32_t *)buffer_with4crc_bytes) = crc32_1byte(&((uint8_t *)buffer_with4crc_bytes)[4], num_bytes-4, 0);
     for(; retry<max_retries; ++retry) {
+        // Reset the reply each iteration: transaction_rpc_exec() leaves it
+        // untouched when transport_write/read fails, so without this the log
+        // line below would print the previous successful call's ack value.
+        reply.ack = SYNC_CRC32_ERR;
         bool sync_success = transaction_rpc_exec(tid, num_bytes, buffer_with4crc_bytes, sizeof(poly_sync_reply_t), &reply);
         if(sync_success && (reply.ack == SYNC_ACK || reply.ack == SYNC_ACK_SIG)) {
             if(debug_enable && retry>0) {

@@ -124,7 +124,7 @@ void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t heigh
     @param    ch  The 16-bit font-indexed character
 */
 /**************************************************************************/
-int8_t kdisp_write_gfx_char(const GFXfont **fonts, uint8_t num_fonts, int8_t x, int8_t y, uint16_t ch, bool clear_cy) {
+int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint16_t ch, bool clear_cy) {
     const GFXfont * currentFont = 0;
     uint16_t first = 0;
     uint16_t last = 0;
@@ -187,11 +187,11 @@ int8_t kdisp_write_gfx_char(const GFXfont **fonts, uint8_t num_fonts, int8_t x, 
     return pgm_read_byte(&glyph->xAdvance);
 }
 
-void kdisp_write_gfx_text(const GFXfont **fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text) {
+void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text) {
     kdisp_write_gfx_text_cy(fonts, num_fonts, x, y, text, false);
 }
 
-void kdisp_write_gfx_text_cy(const GFXfont **fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text, bool clear_cy) {
+void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text, bool clear_cy) {
     int8_t x_cursor = x;
     int8_t y_cursor = y;
     while (*text != 0) {

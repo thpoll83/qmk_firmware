@@ -2,7 +2,7 @@
 #include "config.h" //for all constants
 
 #include "disp_array.h"
-#include "rle.h"
+#include "polymod_rle.h"
 
 #include <string.h>
 

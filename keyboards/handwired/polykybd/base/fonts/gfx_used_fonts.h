@@ -105,7 +105,7 @@
 
 #include "FreeSansBold24pt7b.h"
 
-const GFXfont* ALL_FONTS [] = {
+const GFXfont* const ALL_FONTS [] = {
   &IconsFont,
   &NotoSans_Regular_Base_14pt7b,
   &NotoSans_Regular_SupAndExtA_14pt16b,

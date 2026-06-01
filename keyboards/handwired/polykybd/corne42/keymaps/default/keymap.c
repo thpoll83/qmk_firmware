@@ -26,7 +26,7 @@
 #include "poly_util.h"
 
 #include "base/com.h"
-#include "base/rle.h"
+#include "polymod_rle.h"
 #include "base/e2prom.h"
 #include "base/overlay.h"
 #include "base/disp_array.h"
@@ -37,7 +37,7 @@
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/multicore/core1.h"
-#include "base/crc32.h"
+#include "polymod_crc32.h"
 
 #include "state.h"
 #include "multicore_exec.h"
@@ -1012,12 +1012,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     if (record->event.pressed) {
         switch (keycode) {
             case QK_BOOTLOADER: {
-                uprintf("Bootloader entered. Please copy new Firmware.\n");
-                // Sync slave before returning true — QMK resets before housekeeping runs.
-                access_local_state()->overlay_flags |= BOOTLOADER_DISPLAY;
-                uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
-                uprintf("Master: BOOTLOADER_DISPLAY sync ack=%d\n", ack);
-                display_bootloader_message();
+                // Shared with the host-triggered bootloader HID command (hid_com.c case 23).
+                poly_announce_bootloader();
                 return true;
             }
             case KC_A ... KC_Z:

@@ -1,4 +1,5 @@
 #include "hid_com.h"
+#include "hid_fw_up.h"
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
@@ -16,6 +17,7 @@
 #include "base/com.h"
 #include "base/overlay.h"
 #include "base/update.h"
+#include "poly_util.h"
 
 #include <print.h>
 #include <transactions.h>
@@ -46,6 +48,10 @@ while lang_key:
 //[[[end]]]
 
 void invert_display(uint8_t r, uint8_t c, bool state);
+// Defined in each board's keymap.c (split72 / corne42); declared here so the
+// shared HID dispatcher can drive the display-off command (case 24).
+void poly_suspend(void);
+void sync_and_refresh_displays(void);
 
 // Set on boot; cleared after the first GET_ID exchange so the host can detect
 // a firmware restart even when it never lost the USB connection.
@@ -450,7 +456,38 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 data[3] = (uint8_t)local_layer->def_layer;
                 raw_hid_send(data, length);
                 break;
+            case 23: // enter bootloader (host-triggered; mirrors a QK_BOOTLOADER press)
+                uprint("Host requested bootloader.\n");
+                poly_announce_bootloader();
+                memset(data, 0, length);
+                memcpy(data, "P\x17.", 3);
+                raw_hid_send(data, length);
+                // The host does not wait for this reply — jump straight to the
+                // bootloader, exactly as QMK does for the QK_BOOTLOADER keycode.
+                reset_keyboard();
+                break;
+            case 24: //display off
+                // Turn the status OLED and every keycap OLED off on host request, so the
+                // panels don't sit lit (e.g. after a HIL test/deploy) and age/burn in.
+                // Mirrors the USB-suspend display path (suspend_power_down_kb): poly_suspend()
+                // clears STATUS_DISP_ON/DISP_IDLE/IDLE_TRANSITION and sets contrast = DISP_OFF,
+                // sync_and_refresh_displays() pushes that to the slave half and switches both
+                // halves' panels off, and set_last_update(-1) stops the idle housekeeping block
+                // from re-asserting STATUS_DISP_ON on the next tick. Nothing is written to
+                // EEPROM, so a key press (display_wakeup) or the idle-wake command (case 15,
+                // data byte 0) restores the saved brightness; the keyboard stays USB-enumerated.
+                poly_suspend();
+                sync_and_refresh_displays();
+                set_last_update(-1);
+                memset(data, 0, length);
+                memcpy(data, "P\x18.", 3);
+                raw_hid_send(data, length);
+                break;
             default:
+                // Try the fw_up command range (0x40..0x43) before failing.
+                if (hid_fw_up_receive(data, length)) {
+                    break;
+                }
                 printf("Unknown command: %u.\n", data[HID_CMD_IDX]);
                 data[2] = '!';
                 raw_hid_send(data, length);

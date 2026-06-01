@@ -93,7 +93,9 @@ jobs:
         run: |
           cd ${{ steps.ctnd.outputs.dir }}
           set -o pipefail
-          venv/bin/python -m station.test_runner \
+          # -u: unbuffered, so the log survives even if a native lib aborts the
+          # process at exit (test_runner itself os._exit()s with the real code).
+          venv/bin/python -u -m station.test_runner \
             --left  "firmware/${{ needs.build.outputs.split72_hil_left }}" \
             --right "firmware/${{ needs.build.outputs.split72_hil_right }}" \
             2>&1 | tee /tmp/hil-test.log

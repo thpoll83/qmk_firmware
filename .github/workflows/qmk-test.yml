@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       split72: ${{ steps.names.outputs.split72 }}
-      split72_hil: ${{ steps.names.outputs.split72_hil }}
+      split72_hil_left: ${{ steps.names.outputs.split72_hil_left }}
+      split72_hil_right: ${{ steps.names.outputs.split72_hil_right }}
       corne42: ${{ steps.names.outputs.corne42 }}
     steps:
       - uses: actions/checkout@v4
@@ -23,14 +24,21 @@ jobs:
         with:
           args: qmk compile -kb handwired/polykybd/split72 -km default
 
-      # HIL build: same firmware but with POLYKYBD_HIL, which forces the left
-      # half to be master (EE_HANDS) instead of VBUS detection. On the rig both
-      # halves are USB-powered, so stock VBUS detection makes both think they
-      # are master. This is the artifact the test station flashes to both sides.
-      - name: Build split72 (HIL force-master)
+      # HIL builds: same firmware but with POLYKYBD_HIL, which fixes the split
+      # role at compile time per side instead of using VBUS detection. On the rig
+      # both halves are USB-powered, so stock VBUS detection makes both think they
+      # are master; the two identical boards are told apart only by the station,
+      # which flashes the left image to the left board and the right image to the
+      # right board. left = forced master, right = forced slave (usb_disconnect).
+      - name: Build split72 (HIL left/master)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb handwired/polykybd/split72 -km default -e POLYKYBD_HIL=yes -e TARGET=handwired_polykybd_split72_hil
+          args: qmk compile -kb handwired/polykybd/split72 -km default -e POLYKYBD_HIL=left -e TARGET=handwired_polykybd_split72_hil_left
+
+      - name: Build split72 (HIL right/slave)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb handwired/polykybd/split72 -km default -e POLYKYBD_HIL=right -e TARGET=handwired_polykybd_split72_hil_right
 
       - name: Build corne42
         uses: docker://qmkfm/qmk_cli
@@ -40,7 +48,8 @@ jobs:
       - id: names
         run: |
           echo "split72=$(ls handwired_polykybd_split72_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
-          echo "split72_hil=$(ls handwired_polykybd_split72_hil*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split72_hil_left=$(ls handwired_polykybd_split72_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split72_hil_right=$(ls handwired_polykybd_split72_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "corne42=$(ls handwired_polykybd_corne42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
@@ -85,8 +94,8 @@ jobs:
           cd ${{ steps.ctnd.outputs.dir }}
           set -o pipefail
           venv/bin/python -m station.test_runner \
-            --left  "firmware/${{ needs.build.outputs.split72_hil }}" \
-            --right "firmware/${{ needs.build.outputs.split72_hil }}" \
+            --left  "firmware/${{ needs.build.outputs.split72_hil_left }}" \
+            --right "firmware/${{ needs.build.outputs.split72_hil_right }}" \
             2>&1 | tee /tmp/hil-test.log
 
       # When the flash/test step fails, surface the test_runner output plus a

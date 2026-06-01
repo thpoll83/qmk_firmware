@@ -9,11 +9,18 @@ CFLAGS += -Wno-strict-prototypes
 # is_keyboard_master_impl override).
 SRC += side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c fill_overlay.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c
 
-# HIL test station build: force handedness-based master selection (left half =
-# master) instead of VBUS detection, because both halves are USB-powered on the
-# rig. Opt-in only — pass `-e POLYKYBD_HIL=yes` to qmk compile. Applies to all
-# polykybd variants (split72, corne42). Normal builds leave it unset and keep
-# stock USB_VBUS_PIN detection. The override lives in polykybd.c.
-ifeq ($(strip $(POLYKYBD_HIL)), yes)
+# HIL test station build: fix the split role at compile time per side instead of
+# using VBUS detection, because both halves are USB-powered on the rig and the
+# two identical boards are told apart only by the test station, which flashes a
+# per-side image. Opt-in only — pass one of:
+#   -e POLYKYBD_HIL=left    left half  -> forced master
+#   -e POLYKYBD_HIL=right   right half -> forced slave (usb_disconnect)
+#   -e POLYKYBD_HIL=yes      alias for 'left' (master)
+# Applies to all polykybd variants (split72, corne42). Normal builds leave it
+# unset and keep stock USB_VBUS_PIN detection. The override lives in polykybd.c.
+ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
     OPT_DEFS += -DPOLYKYBD_HIL
+    ifeq ($(strip $(POLYKYBD_HIL)), right)
+        OPT_DEFS += -DPOLYKYBD_HIL_SLAVE
+    endif
 endif

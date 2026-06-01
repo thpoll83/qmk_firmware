@@ -285,7 +285,6 @@ static const uint32_t emj_cat9[] = {
     // BMP sports (EmjSportsBMP / EmjTravelBMP2)
     0x26BD, 0x26BE, // ⚽⚾ soccer, baseball
     0x26F3,         // ⛳ golf
-    0x26F7, 0x26F8, 0x26F9, // ⛷⛸⛹ skier, ice skate, bouncing ball
     // Backpack
     0x1F392, // 🎒
     // Entertainment & sports (EmjSports 0x1F3A0-0x1F3CE)

@@ -18,16 +18,16 @@ static uint8_t s_page     = 0;
 // Hardwired tab icons from PR description; 0 = fall back to first codepoint of category.
 static const uint32_t emj_tab_icons[] = {
     0x1F600,  // cat  0: 😀 Smileys & Faces
-    0x1F44B,  // cat  1: 👋 Gestures & Body
-    0x1F3C3,  // cat  2: 🏃 People & Jobs
-    0x2764,   // cat  3: ❤ Love & Celebrations
-    0x1F436,  // cat  4: 🐶 Animals
-    0x1F338,  // cat  5: 🌸 Nature & Plants
-    0x2600,   // cat  6: ☀ Weather & Sky
-    0x1F34E,  // cat  7: 🍎 Food & Drink
-    0x2708,   // cat  8: ✈ Travel & Places
-    0x26BD,   // cat  9: ⚽ Sports & Entertainment
-    0x1F527,  // cat 10: 🔧 Tools & Objects
+    0x1F449,  // cat  1: 👉 Gestures & Body
+    0x1F46A,  // cat  2: 👪 People & Jobs
+    0x1F495,  // cat  3: 💕 Love & Celebrations
+    0x1F404,  // cat  4: 🐄 Animals
+    0x1F334,  // cat  5: 🌴 Nature & Plants
+    0x26C5,   // cat  6: ⛅ Weather & Sky
+    0x1F369,  // cat  7: 🍩 Food & Drink
+    0x26F5,   // cat  8: ⛵ Travel & Places
+    0x1F3C0,  // cat  9: 🏀 Sports & Entertainment
+    0x1F4CE,  // cat 10: 📎 Tools & Objects
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -120,6 +120,9 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
         if (keycode >= KC_EMJ_SLOT_BASE && keycode < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) return true;
         return false;
     }
+
+    // Reset idle timer on any emoji keydown so display stays on while typing emojis.
+    update_performed();
 
     // ── Category tab ──
     if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_PAGE_PREV) {

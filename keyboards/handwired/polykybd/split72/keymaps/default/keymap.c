@@ -1645,11 +1645,6 @@ void keyboard_post_init_user(void) {
 #endif
 }
 
-// is_keyboard_left_impl() reads handedness directly (uncached) and is valid this
-// early; is_keyboard_left() only returns the right value after split_pre_init(),
-// which runs later (in keyboard_init, after keyboard_pre_init_user).
-bool is_keyboard_left_impl(void);
-
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
 void keyboard_pre_init_user(void) {
     kdisp_hw_setup();
@@ -1670,7 +1665,18 @@ void keyboard_pre_init_user(void) {
     // (left = "POLY KYBD", right = "SPLIT 72") instead of both showing the
     // right-side text.  set_side() otherwise runs only in post_init, after the
     // splash, so the splash always saw side == UNDECIDED → both rendered "SPLIT 72".
-    set_side(is_keyboard_left_impl() ? LEFT_SIDE : RIGHT_SIDE);
+    //
+    // Read handedness with the pure eeconfig_read_handedness(), NOT
+    // is_keyboard_left_impl(): the EE_HANDS branch of is_keyboard_left_impl() runs
+    // `if (!eeconfig_is_enabled()) eeconfig_init();`.  Called this early — right
+    // after eeprom_driver_init() in keyboard_setup, before the wear-leveling store
+    // is validated — it can see eeconfig as "not enabled" and run eeconfig_init()
+    // → nvm_eeconfig_erase() → eeprom_driver_format(), which wipes the *entire*
+    // emulated EEPROM including the per-half EE_HANDS marker.  Both halves then
+    // lose their stored side and fall back to a master-derived handedness.
+    // eeprom_driver_init() has already run, so the direct read is valid here and,
+    // being read-only, can never trigger that erase.
+    set_side(eeconfig_read_handedness() ? LEFT_SIDE : RIGHT_SIDE);
     show_splash_screen();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(u"0");

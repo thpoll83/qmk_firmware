@@ -3,7 +3,7 @@
 Project progress is documented on https://ko-fi.com/polykb
 
 Development version of PolyKybd, which uses OLED displays in its keycaps.
-Hardware info at https://github.com/thpoll83/PolyKeyboard/tree/master/poly_kb_atom
+Hardware info at https://github.com/thpoll83/PolyKybd
 
 Keyboard Maintainer: thpoll83
 Hardware Supported: RP2040

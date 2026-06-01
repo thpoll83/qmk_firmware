@@ -1,11 +1,11 @@
 ---
 name: merge-upstream-into-branch
-description: Merge upstream/master into the current branch (typically PolyKeyboard), resolve any conflicts, and push. Use after mirror-master-with-upstream to bring PolyKybd customisations up to date with the latest QMK changes.
+description: Merge upstream/master into the current branch (typically PolyKybd), resolve any conflicts, and push. Use after mirror-master-with-upstream to bring PolyKybd customisations up to date with the latest QMK changes.
 ---
 
 # Merge upstream into branch
 
-Integrates `qmk/qmk_firmware:master` into the current branch (normally `PolyKeyboard`).
+Integrates `qmk/qmk_firmware:master` into the current branch (normally `PolyKybd`).
 Conflicts are expected — the files most likely to conflict are listed in the pitfalls section below.
 
 Repo root: `/home/thpoll/Repos/qmk_firmware`
@@ -18,7 +18,7 @@ Repo root: `/home/thpoll/Repos/qmk_firmware`
    git branch --show-current
    ```
    - If the working tree is dirty, stop and ask the user to stash or commit first.
-   - Confirm the current branch is the intended target (usually `PolyKeyboard`). If the user is on a short-lived feature branch, warn them — they may want to merge into `PolyKeyboard` first.
+   - Confirm the current branch is the intended target (usually `PolyKybd`). If the user is on a short-lived feature branch, warn them — they may want to merge into `PolyKybd` first.
 
 2. **Fetch upstream** (skip if `mirror-master-with-upstream` was just run):
    ```bash
@@ -96,9 +96,9 @@ These files are modified by PolyKybd and are also touched periodically by upstre
 
 ## Notes / pitfalls
 
-- **Merge, don't rebase `PolyKeyboard`**. Rebasing 196+ custom commits onto a 1034-commit upstream delta would rewrite all SHA history, requiring a force-push and invalidating any open PRs. Merge commits are the right call for a long-lived integration branch.
+- **Merge, don't rebase `PolyKybd`**. Rebasing 196+ custom commits onto a 1034-commit upstream delta would rewrite all SHA history, requiring a force-push and invalidating any open PRs. Merge commits are the right call for a long-lived integration branch.
 - **Run `mirror-master-with-upstream` first** so `origin/master` is current — it's a good checkpoint even if this skill doesn't depend on it.
-- **Do not merge upstream directly into a short-lived feature branch** — merge into `PolyKeyboard` first, then rebase the feature branch onto the updated `PolyKeyboard`.
+- **Do not merge upstream directly into a short-lived feature branch** — merge into `PolyKybd` first, then rebase the feature branch onto the updated `PolyKybd`.
 - If upstream has **removed a file** that PolyKybd still uses (shows as a `CONFLICT (modify/delete)`), keep the file and add a comment explaining it was removed upstream but retained for PolyKybd compatibility.
 - **Codegen files** (`lang/lang_lut.c`, `base/fonts/generated/*.h`) are never touched by upstream — any conflict there is surprising and should be flagged to the user.
 - **Submodule update is not optional**: upstream QMK routinely bumps ChibiOS, pico-sdk, and chibios-contrib. The new pico-sdk may contain USB driver fixes. Building against the old submodule checkouts produces a binary that compiles cleanly but can have runtime failures (broken HID, USB enumeration issues). Always run `git submodule update` between merging and building.

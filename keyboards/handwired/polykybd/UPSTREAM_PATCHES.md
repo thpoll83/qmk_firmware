@@ -1,7 +1,7 @@
 # Upstream Patches
 
 Files outside `keyboards/handwired/polykybd/` that the PolyKybd build depends
-on. Re-apply these whenever upstream QMK master is merged into PolyKeyboard
+on. Re-apply these whenever upstream QMK master is merged into PolyKybd
 and the patched file shows up as a merge conflict (or silently overwritten).
 
 To check the current state at any time:

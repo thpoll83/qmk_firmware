@@ -2,7 +2,7 @@ name: Build and HIL Test
 
 on:
   push:
-    branches: [PolyKeyboard, "PolyKybd/**"]
+    branches: [PolyKybd, "PolyKybd/**"]
   pull_request:
 
 jobs:

@@ -48,7 +48,7 @@ the dead-end commits from the earlier debug branch (`claude/debug-fw-up-slave-ha
 
 7. **Real `serial_transport_driver_clear()` cleanup between retries.**
    Already in tree via commit `68fd2039` in the parent branch
-   (PolyKeyboard).  `pio_sm_restart` cleans PIO RX state; the function
+   (PolyKybd).  `pio_sm_restart` cleans PIO RX state; the function
    plus `enter_rx_state()` restart the SM after each failed receive.
 
 8. **Bridge helper retry-log fix.**  `send_to_bridge` now resets

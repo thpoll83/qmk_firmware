@@ -12,3 +12,4 @@ qmk-test.yml) runs end-to-end:
 Safe to delete once the run is confirmed green.
 
 Triggered: 2026-05-31
+Re-triggered: 2026-06-01 (after polykybd-ctnd#10 picotool flashing fix)

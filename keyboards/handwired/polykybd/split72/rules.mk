@@ -37,11 +37,3 @@ HOLD_ON_OTHER_KEY_PRESS = yes
 PERMISSIVE_HOLD = yes
 
 DYNAMIC_KEYMAP_ENABLE = yes
-
-# In-app firmware apply (FW_UP_APPLY): both halves install the staged image and
-# reboot onto it (no replug). On by default now that it is hardware-verified;
-# build with FW_UP_INAPP_APPLY=no to ship stage-only firmware instead.
-FW_UP_INAPP_APPLY ?= yes
-ifeq ($(strip $(FW_UP_INAPP_APPLY)), yes)
-    OPT_DEFS += -DFW_UP_ENABLE_INAPP_APPLY
-endif

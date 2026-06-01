@@ -62,6 +62,13 @@ jobs:
     name: HIL test (split72)
     needs: build
     runs-on: [self-hosted, polykybd-ctnd]
+    # download-artifact needs actions:read; posting the diagnostics comment needs
+    # pull-requests:write. Setting permissions explicitly replaces the default set,
+    # so both are listed; no other scopes are granted to the job token.
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
     steps:
       - name: Locate station directory
         id: ctnd
@@ -100,45 +107,66 @@ jobs:
             --right "firmware/${{ needs.build.outputs.split72_hil_right }}" \
             2>&1 | tee /tmp/hil-test.log
 
-      # When the flash/test step fails, surface the test_runner output plus a
-      # snapshot of the rig's USB / HID / block-device / picotool state in the
-      # job summary, so failures are self-explanatory without SSHing into the rig.
-      - name: Diagnostics on failure
+      # On failure, collect a deliberately SANITIZED snapshot for triage. This goes
+      # into the job summary and a PR comment (next step), both of which can be
+      # public, so it must not leak host/device identifiers. Excluded on purpose:
+      #   - dmesg (kernel log: device serials, bus addresses, other-process output)
+      #   - picotool -a / full picotool info (unique board id) — only a BOOTSEL count
+      #   - full lsusb / lsblk — only counts of the relevant VID/PIDs
+      #   - file ownership and absolute home paths (the test log is path-redacted)
+      # Kept: test_runner output (per-test PASS/FAIL), how many PolyKybd devices
+      # enumerated, how many RP2040s are stuck in BOOTSEL, the raw-HID node count,
+      # and the downloaded firmware artifact names/sizes.
+      - name: Collect diagnostics on failure
         if: failure()
         run: |
           dir="${{ steps.ctnd.outputs.dir }}"
+          poly=$(lsusb 2>/dev/null | grep -c '2021:2007' || true)
+          boot=$(lsusb 2>/dev/null | grep -c '2e8a:0003' || true)
+          hidraw=$(ls -1 /dev/hidraw* 2>/dev/null | wc -l | tr -d ' ' || true)
           {
             echo "## ❌ HIL test failed — rig diagnostics"
             echo ""
             echo "<details><summary>test_runner output</summary>"
             echo ""
             echo '```'
-            cat /tmp/hil-test.log 2>/dev/null || echo "(no test_runner output captured — failed before launch)"
+            # Redact absolute home paths so the rig's username never reaches a
+            # public comment, even if some library prints a source path.
+            sed -E 's#/home/[A-Za-z0-9._-]+#/home/USER#g; s#/Users/[A-Za-z0-9._-]+#/Users/USER#g' /tmp/hil-test.log 2>/dev/null \
+              || echo "(no test_runner output — failed before launch)"
             echo '```'
             echo "</details>"
             echo ""
-            echo "### USB devices (lsusb)"
+            echo "| probe | value |"
+            echo "|---|---|"
+            echo "| PolyKybd USB devices (2021:2007) | ${poly:-0} |"
+            echo "| RP2040s in BOOTSEL (2e8a:0003) | ${boot:-0} |"
+            echo "| /dev/hidraw* nodes | ${hidraw:-0} |"
+            echo ""
+            echo "### Firmware artifacts (name, size)"
             echo '```'
-            lsusb 2>&1 || true
+            ( cd "$dir/firmware" 2>/dev/null && ls -1sh *.uf2 2>/dev/null ) || echo "(none)"
             echo '```'
-            echo "### Raw HID interfaces (/dev/hidraw*)"
-            echo '```'
-            ls -l /dev/hidraw* 2>&1 || echo "(none present)"
-            echo '```'
-            echo "### Block devices (lsblk)"
-            echo '```'
-            lsblk -o NAME,LABEL,FSTYPE,SIZE,MOUNTPOINT 2>&1 || true
-            echo '```'
-            echo "### picotool info (RP2040 in BOOTSEL, if any)"
-            echo '```'
-            sudo picotool info -a 2>&1 || echo "(no RP2040 in BOOTSEL / picotool unavailable)"
-            echo '```'
-            echo "### Firmware artifacts downloaded"
-            echo '```'
-            ls -l "$dir/firmware" 2>&1 || true
-            echo '```'
-            echo "### Recent kernel USB log (dmesg, last 40 lines)"
-            echo '```'
-            dmesg 2>/dev/null | tail -n 40 || echo "(dmesg unavailable without privileges)"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY" > /tmp/hil-diagnostics.md
+
+      # Mirror the sanitized diagnostics into a PR comment so the failure cause is
+      # readable via the API (and by anything watching the PR), not only on the run
+      # page. pull_request events only — a push has no PR to comment on. The marker
+      # lets consumers find the latest diagnostics programmatically.
+      - name: Post diagnostics as PR comment
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let diag = '(diagnostics file not found — the test step failed before producing output)';
+            try { diag = fs.readFileSync('/tmp/hil-diagnostics.md', 'utf8'); } catch (e) {}
+            let body = '<!-- hil-diagnostics -->\n' + diag;
+            const MAX = 65000;
+            if (body.length > MAX) body = body.slice(0, MAX) + '\n\n…(truncated)';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

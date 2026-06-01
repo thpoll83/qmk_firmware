@@ -18,7 +18,7 @@ static uint8_t s_page     = 0;
 // Hardwired tab icons from PR description; 0 = fall back to first codepoint of category.
 static const uint32_t emj_tab_icons[] = {
     0x1F600,  // cat  0: 😀 Smileys & Faces
-    0x1F449,  // cat  1: 👉 Gestures & Body
+    0x1F64F,  // cat  1: 🙏 Gestures & Body
     0x1F46A,  // cat  2: 👪 People & Jobs
     0x1F495,  // cat  3: 💕 Love & Celebrations
     0x1F404,  // cat  4: 🐄 Animals

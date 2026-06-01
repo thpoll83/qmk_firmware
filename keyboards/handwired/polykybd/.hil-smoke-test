@@ -15,3 +15,4 @@ Triggered: 2026-05-31
 Re-triggered: 2026-06-01 (after polykybd-ctnd#10 picotool flashing fix)
 Re-triggered: 2026-06-01 (rig deployed on fixed branch: picotool + UDisks-ignore)
 Re-triggered: 2026-06-01 (per-side forced master + hidraw VID 4b50->2021 fix)
+Re-triggered: 2026-06-01 (hidapi package fix on the rig venv)

@@ -15,6 +15,21 @@
 static uint8_t s_category = 0;
 static uint8_t s_page     = 0;
 
+// Hardwired tab icons from PR description; 0 = fall back to first codepoint of category.
+static const uint32_t emj_tab_icons[] = {
+    0x1F600,  // cat  0: 😀 Smileys & Faces
+    0x1F44B,  // cat  1: 👋 Gestures & Body
+    0,        // cat  2: People & Jobs → first of category (🏠)
+    0x2764,   // cat  3: ❤ Love & Celebrations
+    0x1F436,  // cat  4: 🐶 Animals
+    0x1F338,  // cat  5: 🌸 Nature & Plants
+    0x2600,   // cat  6: ☀ Weather & Sky
+    0x1F34E,  // cat  7: 🍎 Food & Drink
+    0x2708,   // cat  8: ✈ Travel & Places
+    0x26BD,   // cat  9: ⚽ Sports & Entertainment
+    0x1F527,  // cat 10: 🔧 Tools & Objects
+};
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 // Returns the number of pages for a given category given the slot count per page.
@@ -77,12 +92,13 @@ const uint16_t *emj_display_text(uint16_t keycode) {
                : (const uint16_t *)u"";
     }
 
-    // ── Category tab — show first emojifuer of that category ──
+    // ── Category tab — hardwired icon, falling back to first codepoint ──
     if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_PAGE_PREV) {
         uint8_t cat = (uint8_t)(keycode - KC_EMJ_CAT_BASE);
         if (cat >= EMJ_NUM_CATEGORIES || EMJ_CATEGORIES[cat].count == 0) return (const uint16_t *)u"";
-        if (EMJ_CATEGORIES[cat].count == 1) return make_emoji_str(EMJ_CATEGORIES[cat].codepoints[0]);
-        return make_emoji_str(EMJ_CATEGORIES[cat].codepoints[1]);
+        uint32_t cp = (cat < ARRAY_SIZE(emj_tab_icons)) ? emj_tab_icons[cat] : 0;
+        if (cp == 0) cp = EMJ_CATEGORIES[cat].codepoints[0];
+        return make_emoji_str(cp);
     }
 
     // ── Emoji slot — show current category/page emoji ──

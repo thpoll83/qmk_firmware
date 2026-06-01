@@ -6,7 +6,7 @@ description: Fast-forward the fork's master branch to match upstream/master exac
 # Mirror master with upstream
 
 Keeps `thpoll83/qmk_firmware:master` as a byte-for-byte mirror of `qmk/qmk_firmware:master`.
-This branch should never carry custom commits — all PolyKybd work lives on `PolyKeyboard`.
+This branch should never carry custom commits — all PolyKybd work lives on `PolyKybd`.
 
 Repo root: `/home/thpoll/Repos/qmk_firmware`
 
@@ -17,7 +17,7 @@ Repo root: `/home/thpoll/Repos/qmk_firmware`
    git fetch upstream
    git log --oneline upstream/master..master
    ```
-   If any commits are listed, report them and abort. Ask the user whether those commits were intended for `PolyKeyboard` instead.
+   If any commits are listed, report them and abort. Ask the user whether those commits were intended for `PolyKybd` instead.
 
 2. **Check how far behind master is**:
    ```bash
@@ -46,12 +46,12 @@ Repo root: `/home/thpoll/Repos/qmk_firmware`
 6. **Report**:
    - How many commits were pulled in.
    - New HEAD SHA and the upstream commit message it corresponds to.
-   - Reminder: run `/merge-upstream-into-branch` next if you also want `PolyKeyboard` updated.
+   - Reminder: run `/merge-upstream-into-branch` next if you also want `PolyKybd` updated.
 
 ## Notes / pitfalls
 
 - **Never use `git reset --hard`** to move master — if `--ff-only` fails it means something unexpected happened; surface it rather than destroying state.
-- This skill only touches `master`. It does not affect `PolyKeyboard` or any feature branch.
+- This skill only touches `master`. It does not affect `PolyKybd` or any feature branch.
 - If the user has not added the upstream remote yet, add it first:
   ```bash
   git remote add upstream https://github.com/qmk/qmk_firmware.git

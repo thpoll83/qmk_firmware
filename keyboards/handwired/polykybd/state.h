@@ -18,6 +18,9 @@ typedef struct _poly_sync_t {
     uint8_t  flags;
     uint8_t  overlay_flags;
     uint8_t  unicode_mode;
+    // Emoji layer state — synced so both halves show the same category/page.
+    uint8_t  emj_category;
+    uint8_t  emj_page;
 } poly_sync_t;
 
 typedef struct _poly_last_t {

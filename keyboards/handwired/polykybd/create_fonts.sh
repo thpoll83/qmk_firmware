@@ -74,6 +74,154 @@ fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emo
 fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emojis1_ -n0xfd00 0x1f440 0x1f453 0x1f47b 0x1f496 0x1f4a1 0x1f4b1 > "base/fonts/generated/7NotoEmoji_Medium_Emoji1 _20pt.h"
 fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emojis2_ -n0x10100 0x1F912 0x1F919 > "base/fonts/generated/7NotoEmoji_Medium_Emoji2_20pt.h"
 
+# ── Emoji category fonts — all SMP with -n0x10000, BMP without -n ────────────
+# Used by emoji/emoji_layer.c; cp_to_font_idx() assumes offset 0x10000 for SMP.
+echo "Emoji category fonts..."
+NOTO_EMOJI="fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf"
+NOTO_SYM2="fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf"
+
+# Cat 0 extra: faces 0x1F910-0x1F917 (0x1F600-0x1F64F already in Emoji0, incl. 🙁🙂🙃🙄)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSmileys2_ -n0x10000 0x1F910 0x1F919 > "base/fonts/generated/8NotoEmoji_Medium_EmjSmileys2_20pt.h"
+# Cat 0 addition: Unicode 9 faces 🤠-🤯 (0x1F920-0x1F92F); fits between EmjSmileys2 and EmjPeople2
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFaces_ -n0x10000 0x1F920 0x1F92F > "base/fonts/generated/8NotoEmoji_Medium_EmjFaces_20pt.h"
+# Cat 0 addition: Unicode 11-13 faces 🥰-🥺 (0x1F970-0x1F97A); gap 0x1F977-0x1F979 harmless
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFaces2_ -n0x10000 0x1F970 0x1F97A > "base/fonts/generated/8NotoEmoji_Medium_EmjFaces2_20pt.h"
+
+echo "Emoji category fonts: gestures & body..."
+# Cat 1: gestures & body
+# Single range only — 0x1F64C-0x1F64F are already covered by _Emojis0_ (0x1F600-0x1F64F).
+# A multi-range gestures font would cover 0xF440-0xF64F with skip entries for the gap,
+# shadowing EmjLove (0xF48B-0xF4B1) and EmjObjects (0xF4BB-0xF52E) with empty glyphs.
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjGestures_ -n0x10000 0x1F440 0x1F450 > "base/fonts/generated/8NotoEmoji_Medium_EmjGestures_20pt.h"
+# Cat 1 addition: new hand gestures 🤚-🤟 (0x1F91A-0x1F91F); fits between EmjSmileys2 (ends 0xF919) and EmjFaces (starts 0xF920)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHands2_ -n0x10000 0x1F91A 0x1F91F > "base/fonts/generated/8NotoEmoji_Medium_EmjHands2_20pt.h"
+# Cat 1 addition: 🖐 raised hand with fingers splayed (0x1F590); gap between EmjObjects end (0xF52E) and Emojis0 start (0xF600)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjRaised_ -n0x10000 0x1F590 0x1F590 > "base/fonts/generated/8NotoEmoji_Medium_EmjRaised_20pt.h"
+# Cat 1 addition: BMP hand gestures — prefix 1 required
+# 0x261D-0x261E (☝☞, indices 9757-9758) fall inside EmjWeatherBMP gap (first=0x2600, last=0x26A1) — needs prefix 1
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjHandsBMP_ 0x261D 0x261E > "base/fonts/generated/1NotoSansSymbols2_EmjHandsBMP_20pt.h"
+# 0x270A-0x270D (✊✋✌✍, indices 9994-9997) fall inside DiamondCut gap (first=0x2702, last=0x2756) — needs prefix 1
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHandsBMP2_ 0x270A 0x270D > "base/fonts/generated/1NotoSansSymbols2_EmjHandsBMP2_20pt.h"
+
+# Cat 0 (fantasy/creature faces 0x1F47B-0x1F482) + Cat 2 (dancer 0x1F483, syringe/pill 0x1F489-0x1F48A) + Cat 3 (💄0x1F484, 💅0x1F485)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFantasy_ -n0x10000 0x1F47B 0x1F48A > "base/fonts/generated/8NotoEmoji_Medium_EmjFantasy_20pt.h"
+
+echo "Emoji category fonts: people, clothing, body parts, superheroes..."
+# Cat 2: people & jobs — buildings, clothing, people, dancer, syringe/pill
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjBuildings_ -n0x10000 0x1F3E0 0x1F3F0 > "base/fonts/generated/8NotoEmoji_Medium_EmjBuildings_20pt.h"
+# Single range covers clothing (0x1F451-0x1F465) and people/characters (0x1F466-0x1F47A)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople_ -n0x10000 0x1F451 0x1F47A > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople_20pt.h"
+# Cat 2 addition: newer people 🤰🤱-🤷 (Unicode 9+); extended to 0x1F937 to add prince/tuxedo/Mrs Claus/shrug
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople2_ -n0x10000 0x1F930 0x1F937 > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople2_20pt.h"
+# Cat 2 addition: body parts 🦴🦵🦶🦷 (Unicode 12+); gap between EmjAnimals5 end (0xF9AE) and EmjPeople3 start (0xF9D0)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjParts_ -n0x10000 0x1F9B4 0x1F9B7 > "base/fonts/generated/8NotoEmoji_Medium_EmjParts_20pt.h"
+# Cat 2 addition: newer people 🧐-🧟 (Unicode 10/11/12+); extended to 0x1F9DF to add fantasy people
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople3_ -n0x10000 0x1F9D0 0x1F9DF > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople3_20pt.h"
+# Cat 9 addition: clothing 🧡🧢-🧦 (Unicode 11+); 0x1F9E1=orange heart(cat3) + 0x1F9E2-0x1F9E6(cat9)
+# Gap: above EmjPeople3 end (0xF9DF), below EmjSciTools start (0xF9E9)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClothing2_ -n0x10000 0x1F9E1 0x1F9E6 > "base/fonts/generated/8NotoEmoji_Medium_EmjClothing2_20pt.h"
+# Cat 10 addition: science & tools 🧩-🧿 (Unicode 11-12+)
+# Gap: above EmjClothing2 end (0xF9E6), below EmjInsects start (0xFAB0)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSciTools_ -n0x10000 0x1F9E9 0x1F9FF > "base/fonts/generated/8NotoEmoji_Medium_EmjSciTools_20pt.h"
+# Cat 2 addition: clothing & medical 🩰-🩺 (Unicode 12+); gap at 0x1FA75-0x1FA77 is harmless
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClothing_ -n0x10000 0x1FA70 0x1FA7A > "base/fonts/generated/8NotoEmoji_Medium_EmjClothing_20pt.h"
+# Cat 2 addition: anatomical body 🫀🫁🫂🫃🫄🫅 (Unicode 13-14+; extended to 0x1FAC5)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjBody2_ -n0x10000 0x1FAC0 0x1FAC5 > "base/fonts/generated/8NotoEmoji_Medium_EmjBody2_20pt.h"
+# Cat 0 addition: Unicode 14-15 faces 🫠-🫨 (0x1FAE0-0x1FAE8); above EmjBody2 end (0xFAC5), below EmjHands3 start (0xFAF0)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFaces3_ -n0x10000 0x1FAE0 0x1FAE8 > "base/fonts/generated/8NotoEmoji_Medium_EmjFaces3_20pt.h"
+# Cat 1 addition: Unicode 14-15 hand gestures 🫰-🫸 (0x1FAF0-0x1FAF8); above EmjFaces3 end (0xFAE8)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHands3_ -n0x10000 0x1FAF0 0x1FAF8 > "base/fonts/generated/8NotoEmoji_Medium_EmjHands3_20pt.h"
+# Cat 2 addition: superheroes & accessories 🦸-🦿 (Unicode 11+); fits between EmjParts end (0xF9B7) and EmjFood4 start (0xF9C0)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople4_ -n0x10000 0x1F9B8 0x1F9BF > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople4_20pt.h"
+
+echo "Emoji category fonts: love, hearts, weather, zodiac..."
+# Cat 3: love & hearts — BMP 0x2764 + SMP 0x1F48B-0x1F49F (single range includes colored hearts)
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjHeart_ 0x2764 0x2764 > "base/fonts/generated/8NotoSansSymbols2_EmjHeart_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjLove_ -n0x10000 0x1F48B 0x1F49F > "base/fonts/generated/8NotoEmoji_Medium_EmjLove_20pt.h"
+# Cat 3 addition: white/brown hearts + pinched fingers + pinching hand 🤌🤍🤎🤏 (Unicode 12-13+)
+# Indices 0xF90C-0xF90F: below EmjSmileys2 start (0xF910), clean gap
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHearts_ -n0x10000 0x1F90C 0x1F90F > "base/fonts/generated/8NotoEmoji_Medium_EmjHearts_20pt.h"
+# Cat 0/1/10: emotion/objects 💠-💺 (0x1F4A0-0x1F4BA); covers 💪 0x1F4AA (supersedes EmjMuscle)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjEffects_ -n0x10000 0x1F4A0 0x1F4BA > "base/fonts/generated/8NotoEmoji_Medium_EmjEffects_20pt.h"
+rm -f "base/fonts/generated/8NotoEmoji_Medium_EmjMuscle_20pt.h"
+
+echo "Emoji category fonts: animals, nature, weather, food..."
+# Cat 4: animals
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals_ -n0x10000 0x1F400 0x1F43F > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals_20pt.h"
+# Cat 4 addition: newer animals 🦁-🦏 (Unicode 9+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals2_ -n0x10000 0x1F981 0x1F98F > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals2_20pt.h"
+# Cat 4 addition: newer animals 🦐-🦗 (Unicode 10+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals3_ -n0x10000 0x1F990 0x1F997 > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals3_20pt.h"
+# Cat 4 addition: newer animals 🦘-🦠 (Unicode 11+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals4_ -n0x10000 0x1F998 0x1F9A0 > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals4_20pt.h"
+# Cat 4 addition: newer animals 🦡-🦭 (Unicode 12-13+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjAnimals5_ -n0x10000 0x1F9A1 0x1F9AE > "base/fonts/generated/8NotoEmoji_Medium_EmjAnimals5_20pt.h"
+
+# Cat 5: nature & plants
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPlants_ -n0x10000 0x1F330 0x1F344 > "base/fonts/generated/8NotoEmoji_Medium_EmjPlants_20pt.h"
+# Cat 5 addition: insects & nature objects 🪰-🪻 (Unicode 13-15+); extended to 0x1FABF for 🪼🪽🪿(cat4) + 🪻(cat5)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjInsects_ -n0x10000 0x1FAB0 0x1FABC > "base/fonts/generated/8NotoEmoji_Medium_EmjInsects_20pt.h"
+
+echo "Emoji category fonts: weather, zodiac, clocks..."
+# Cat 6: weather — BMP 0x2600-0x2603, 0x2614, 0x26A1 + SMP 0x1F300-0x1F32C
+# 0x1F310 🌐 globe and 0x1F324-0x1F32C (☁ variants, 🌪🌫🌬) are in the extended SMP range
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP_ 0x2600 0x2603 0x2614 0x2614 0x26A1 0x26A1 > "base/fonts/generated/2NotoSansSymbols2_EmjWeatherBMP_20pt.h"
+# ⛄⛅⛈ (0x26C4/5/8) — separate file so the gap 0x26A1-0x26C3 doesn't shadow ⚽⚾ (0x26BD-0x26BE)
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP2_ 0x26C4 0x26C8 > "base/fonts/generated/2NotoSansSymbols2_EmjWeatherBMP2_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP1_ -n0x10000 0x1F300 0x1F321 > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP1_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP2_ -n0x10000 0x1F324 0x1F32C > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP2_20pt.h"
+
+# Cat 6 addition: zodiac signs ♈-♓ (BMP 0x2648-0x2653)
+# PREFIX 1 required: 0x2648-0x2653 fall inside EmjWeatherBMP gap range (first=0x2600, last=0x26A1)
+# prefix 1 sorts before prefix 2, so zodiac font wins the lookup
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _Zodiac_ 0x2648 0x2653 > "base/fonts/generated/1NotoSansSymbols2_Regular_Zodiac_20pt.h"
+# Cat 6 addition: ❄ snowflake (BMP 0x2744, index 10052)
+# PREFIX 1 required: 10052 falls inside DiamondCut gap (first=0x2702=9986, last=0x2756=10070)
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjSnowflake_ 0x2744 0x2744 > "base/fonts/generated/1NotoSansSymbols2_EmjSnowflake_20pt.h"
+# Cat 6 addition: clock faces 🕐-🕧 (SMP 0x1F550-0x1F567)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClocks_ -n0x10000 0x1F550 0x1F567 > "base/fonts/generated/8NotoEmoji_Medium_EmjClocks_20pt.h"
+
+echo "Emoji category fonts: food & drink..."
+# Cat 7: food & drink
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood_ -n0x10000 0x1F347 0x1F37F > "base/fonts/generated/8NotoEmoji_Medium_EmjFood_20pt.h"
+# Cat 7 addition: newer foods 🥐-🥞 (Unicode 9+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood2_ -n0x10000 0x1F950 0x1F95E > "base/fonts/generated/8NotoEmoji_Medium_EmjFood2_20pt.h"
+# Cat 7 addition: newer foods 🥟-🥯 (Unicode 10/11+, extended to include 🥬🥭🥮🥯)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood3_ -n0x10000 0x1F95F 0x1F96F > "base/fonts/generated/8NotoEmoji_Medium_EmjFood3_20pt.h"
+# Cat 7 addition: newer foods 🧀-🧈 (Unicode 12+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood4_ -n0x10000 0x1F9C0 0x1F9CB > "base/fonts/generated/8NotoEmoji_Medium_EmjFood4_20pt.h"
+# Cat 7 addition: newer foods 🫐-🫛 (Unicode 13-15+); extended to 0x1FADB for 🫗🫘🫙🫚🫛
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjFood5_ -n0x10000 0x1FAD0 0x1FADB > "base/fonts/generated/8NotoEmoji_Medium_EmjFood5_20pt.h"
+
+# Cat 8: travel — BMP 0x2708 + SMP 0x1F680-0x1F6C5 (extended to include shower/bath/transit)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjTravelBMP_ 0x2708 0x2708 > "base/fonts/generated/2NotoSansSymbols2_EmjTravelBMP_20pt.h"
+# Cat 8 addition: BMP travel places/sports ⛰⛱⛲⛳⛴ (0x26F0-0x26F5 selective)
+# Indices 9962-9981: clean gap between EmjWeatherBMP2 end (0x26C8=9928) and DiamondCut start (0x2702=9986)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjTravelBMP2_ 0x26F0 0x26F5 > "base/fonts/generated/8NotoSansSymbols2_EmjTravelBMP2_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjTravel_ -n0x10000 0x1F680 0x1F6C5 > "base/fonts/generated/8NotoEmoji_Medium_EmjTravel_20pt.h"
+# Cat 8 addition: 🛐🛑🛒 (0x1F6D0-0x1F6D2); gap between EmjTravel end (0xF6C5) and next fonts
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjTravelExt_ -n0x10000 0x1F6D0 0x1F6D2 > "base/fonts/generated/8NotoEmoji_Medium_EmjTravelExt_20pt.h"
+
+echo "Emoji category fonts: sports, activities, objects..."
+# Cat 9: sports & entertainment — BMP 0x26BD-0x26BE + SMP 0x1F3A0-0x1F3CE
+fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjSportsBMP_ 0x26BD 0x26BE > "base/fonts/generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports_ -n0x10000 0x1F3A0 0x1F3CE > "base/fonts/generated/8NotoEmoji_Medium_EmjSports_20pt.h"
+# Cat 9 addition: newer activities 🤸🤹🤺🤼🤽🤾 (Unicode 9+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports2_ -n0x10000 0x1F938 0x1F93A > "base/fonts/generated/8NotoEmoji_Medium_EmjSports2_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports3_ -n0x10000 0x1F93C 0x1F93F > "base/fonts/generated/8NotoEmoji_Medium_EmjSports3_20pt.h"
+# Cat 9 addition: toys & activities 🪀-🪆 (Unicode 12-13+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjToys_ -n0x10000 0x1FA80 0x1FA86 > "base/fonts/generated/8NotoEmoji_Medium_EmjToys_20pt.h"
+
+echo "Emoji category fonts: objects, celebrations..."
+# Cat 10: tools & objects
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjObjects1_ -n0x10000 0x1F4BB 0x1F4FD > "base/fonts/generated/8NotoEmoji_Medium_EmjObjects1_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjObjects2_ -n0x10000 0x1F4FF 0x1F52E > "base/fonts/generated/8NotoEmoji_Medium_EmjObjects2_20pt.h"
+# Cat 10 addition: household & tools 🪐-🪟 (Unicode 12-13+)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHousehold_ -n0x10000 0x1FA90 0x1FA9F > "base/fonts/generated/8NotoEmoji_Medium_EmjHousehold_20pt.h"
+
+# Cat 11: celebrations
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjCelebrate_ -n0x10000 0x1F380 0x1F393 > "base/fonts/generated/8NotoEmoji_Medium_EmjCelebrate_20pt.h"
+
 #fontconvert "-ffonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf" "-s20" -r50 -g -v _Emojis2_ -n0x10000 0x1f600 0x1f64f > "base/fonts/generated/7test-NotoEmoji_Medium_Emoji2_20pt.h"
 #fontconvert "-ffonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf" "-s20" -r50 -g -v _Flags_ -n0x10100 0x1F1E8 0x1F1FC > "base/fonts/generated/8NotoColorEmoji_Regular_Flags_20pt.h"
 

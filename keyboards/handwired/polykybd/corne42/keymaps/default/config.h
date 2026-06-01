@@ -5,3 +5,6 @@
 #define EECONFIG_USER_DATA_SIZE 30
 
 #define USB_VBUS_PIN GP24
+
+// Corne42 has 24 emoji slots per page (4 rows × 6 keys per side)
+#define EMJ_SLOTS_PER_PAGE 24

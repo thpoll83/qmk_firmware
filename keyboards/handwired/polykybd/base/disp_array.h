@@ -7,6 +7,7 @@
 
 #define SCREEN_WIDTH 72
 #define SCREEN_HEIGHT 40
+#define BUFFER_X 28
 
 int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint16_t c, bool clear_cy);
 
@@ -45,4 +46,6 @@ void kdisp_setup(bool turn_on);
 uint8_t* get_scratch_buffer(void);
 
 int16_t get_scratch_buffer_size(void);
+
+void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height);
 

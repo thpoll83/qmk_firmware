@@ -221,16 +221,13 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
         }
 
         case CMD_FW_UP_APPLY: { // PHASE 2: install the staged image on the MASTER only
-            // DISABLED BY DEFAULT (2026-05-30): the RAM-resident self-flash bricked
-            // the master — do_apply erases flash offset 0 (the live vector table +
-            // HardFault/NMI handlers) and runs ~4 s with IRQs off; an unmaskable
-            // exception (ChibiOS NMI context-switch / HardFault) then vectors through
-            // the erased table → lockup mid-copy → invalid boot2 → BOOTSEL.  See
-            // FW_UP_BASELINE.md "Phase 2 — run 2 (master bricked)".  The redesign
-            // (copy app body with IRQs toggled + vectors intact, then sector 0 last
-            // with VTOR relocated to RAM) is gated behind FW_UP_ENABLE_INAPP_APPLY.
+            // Hardware-verified self-flash (always built in): do_apply copies the
+            // staged image to flash offset 0 while keeping the live vector table
+            // intact until last — app body first with IRQs toggled per sector, then
+            // sector 0 with VTOR relocated to RAM — so the brick the naive
+            // erase-from-zero caused (FW_UP_BASELINE.md "Phase 2 — run 2") can't
+            // recur.  Failure is still master-only and BOOTSEL/UF2-recoverable.
             bool ok = fw_staging_has_valid_staged_image();
-#ifdef FW_UP_ENABLE_INAPP_APPLY
             memset(data, 0, length);
             memcpy(data, ok ? "P\x44." : "P\x44!", 3);
             raw_hid_send(data, length);
@@ -250,15 +247,6 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 uprintf("FW_UP_APPLY: slave apply+reboot ack=0x%02x\n", slave_ack);
                 fw_staging_arm_apply();   // housekeeping → fw_staging_apply_and_reboot()
             }
-#else
-            // Safe default: never arm the brick-prone self-flash.  Report '!' so the
-            // host shows "apply not available" rather than silently doing nothing.
-            (void)ok;
-            memset(data, 0, length);
-            memcpy(data, "P\x44!", 3);
-            raw_hid_send(data, length);
-            uprintf("FW_UP_APPLY: in-app apply DISABLED (FW_UP_ENABLE_INAPP_APPLY off) — staged image left untouched\n");
-#endif
             return true;
         }
 

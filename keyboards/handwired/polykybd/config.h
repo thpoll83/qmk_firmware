@@ -77,16 +77,6 @@
 // for regression reference. See FW_UP_BASELINE.md (run 5).
 // #define FW_UP_CHUNK_NOOP_PROBE
 
-// 2026-05-30: in-application self-apply (FW_UP_APPLY, master-only).  DISABLED by
-// default — the first attempt bricked the master (do_apply erased flash sector 1,
-// which holds the toolchain memcpy it then called → HardFault through the also-
-// erased vector table).  fw_staging.c do_apply has since been HARDENED: RAM-only
-// word copy (no flash memcpy), app body copied first / sector-0 vectors last, and
-// IRQs toggled per sector.  Verified via .elf audit that do_apply makes zero
-// flash-resident calls.  Enable ONLY to test the hardened path; failure is still
-// master-only and BOOTSEL/UF2-recoverable.  See FW_UP_BASELINE.md "Phase 2 run 3".
-// #define FW_UP_ENABLE_INAPP_APPLY
-
 //######################################
 //#          PolyKybd specific         #
 //######################################

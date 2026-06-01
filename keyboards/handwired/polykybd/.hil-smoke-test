@@ -17,3 +17,4 @@ Re-triggered: 2026-06-01 (rig deployed on fixed branch: picotool + UDisks-ignore
 Re-triggered: 2026-06-01 (per-side forced master + hidraw VID 4b50->2021 fix)
 Re-triggered: 2026-06-01 (hidapi package fix on the rig venv)
 Re-triggered: 2026-06-01 (hid package end-to-end: enumerate + Device open)
+Re-triggered: 2026-06-01 (both HID tests PASS; os._exit avoids teardown abort)

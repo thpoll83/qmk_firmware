@@ -183,8 +183,8 @@ void emj_draw_tab_indicator(uint16_t keycode) {
     //kdisp_fill_rect(BUFFER_X, 2, SCREEN_WIDTH, 1);
     kdisp_fill_rect(BUFFER_X + 1, 1, SCREEN_WIDTH - 2, 1);
     kdisp_fill_rect(BUFFER_X + 2, 0, SCREEN_WIDTH - 4, 1);
-    kdisp_fill_rect(BUFFER_X, 2, 3, SCREEN_HEIGHT - 3);
-    kdisp_fill_rect(BUFFER_X + SCREEN_WIDTH - 2, 3, 3, SCREEN_HEIGHT - 3);
+    kdisp_fill_rect(BUFFER_X, 2, 3, SCREEN_HEIGHT - 2);
+    kdisp_fill_rect(BUFFER_X + SCREEN_WIDTH - 2, 2, 3, SCREEN_HEIGHT - 2);
 }
 
 void emj_draw_tab_bottom(uint16_t keycode) {

@@ -1,14 +1,15 @@
 HIL workflow trigger — no-op marker (safe to delete).
 
-This file exists only to give a pull request a diff so that
-.github/workflows/qmk-test.yml (Build and HIL Test) runs:
+Gives a pull request a diff so .github/workflows/qmk-test.yml (Build and HIL
+Test) runs:
 
-  1. build (ubuntu-latest): split72 default, split72 POLYKYBD_HIL force-master
-     uf2 (flashed to both halves on the rig), corne42 default.
-  2. hil-test (self-hosted polykybd-ctnd): downloads the artifact and runs
-     station.test_runner — now the expanded HID suite in polykybd-ctnd
-     (station/hil_tests.py, 15 tests). Each test reports as its own
-     pass/fail bullet in the job Step Summary.
+  1. build (ubuntu-latest): split72 default, split72 POLYKYBD_HIL=left (master)
+     and POLYKYBD_HIL=right (slave/usb_disconnect) per-side images, corne42.
+  2. hil-test (self-hosted polykybd-ctnd): flashes the LEFT image to the left
+     half and the RIGHT image to the right half, then runs station.test_runner
+     — the expanded HID suite (station/hil_tests.py, 15 tests). Each test is its
+     own pass/fail bullet in the job Step Summary; a failing run additionally
+     dumps rig diagnostics (lsusb / hidraw / lsblk / picotool / dmesg).
 
-No firmware/source changes. Delete this file and close the PR once the run
-is confirmed green.
+Re-trigger #2 — validating the redeployed station against the per-side firmware.
+No firmware/source changes. Delete this file and close the PR once green.

@@ -37,6 +37,22 @@ void display_bootloader_message(void) {
     display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
 }
 
+void display_fw_apply_message(void) {
+    #ifdef RGB_MATRIX_ENABLE
+        rgb_matrix_enable_noeeprom();
+        rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+        // Solid blue-green so the apply screen is clearly distinct from the
+        // bootloader's red. Brightness matches the bootloader/slave convention.
+        rgb_matrix_set_color_all(0, 24, 24);
+        rgb_matrix_update_pwm_buffers();
+    #endif
+
+    clear_all_displays();
+    set_displays(20, false);
+    display_message(1, 1, u"APPLY", &FreeSansBold24pt7b);
+    display_message(3, 1, u"WAIT!", &FreeSansBold24pt7b);
+}
+
 void display_message(uint8_t row, uint8_t col, const uint16_t* message, const GFXfont* font) {
 
     const GFXfont* displayFont[] = { font };

@@ -59,10 +59,19 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
                 uprint("Slave: BOOTLOADER_DISPLAY received\n");
                 display_bootloader_message();
             }
+            if(newly_set & FW_APPLY_DISPLAY) {
+                uprint("Slave: FW_APPLY_DISPLAY received\n");
+                display_fw_apply_message();
+            }
 #ifdef RGB_MATRIX_ENABLE
             // Disable RGB so the normal split transport restores master's config cleanly.
-            if(newly_cleared & BOOTLOADER_DISPLAY) {
+            if(newly_cleared & (BOOTLOADER_DISPLAY | FW_APPLY_DISPLAY)) {
                 rgb_matrix_disable_noeeprom();
+            }
+            if(newly_cleared & FW_APPLY_DISPLAY) {
+                // Master released the apply lockout (e.g. watchdog timeout) without
+                // resetting — restore the normal display on this half.
+                request_disp_refresh();
             }
 #endif
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;

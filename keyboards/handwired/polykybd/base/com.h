@@ -29,7 +29,15 @@ enum overlay_flag {
     // "BOOT-LOADER!" message + solid red RGB so the slave half stays lit
     // while the master is in the RP2040 ROM bootloader.
     BOOTLOADER_DISPLAY  = 1 << 3,
-    RESERVED_3          = 1 << 4,
+    // Set by master when the host requests FW_UP_APPLY (cmd 0x44, the
+    // irreversible "copy staged image to flash + reboot" step) and force-synced
+    // via USER_SYNC_POLY_DATA before the apply runs. While set, both halves lock
+    // the key matrix (no keystrokes reach the host so a stray key can't interrupt
+    // the apply), force the RGB matrix to a solid blue-green, and show an
+    // "APPLY/WAIT" message — mirroring BOOTLOADER_DISPLAY. The transfer/staging
+    // phase (BEGIN/CHUNK/COMMIT) is CRC32-verified and deliberately NOT locked:
+    // typing during it is harmless and a corrupt transfer is simply rejected.
+    FW_APPLY_DISPLAY    = 1 << 4,
     RESET_BUFFERS       = 1 << 5,
     USAGE_RESET         = 1 << 6,
     MAPPING_RESET       = 1 << 7

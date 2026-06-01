@@ -42,6 +42,14 @@ Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
 
+### HID firmware-apply safety mode (`FW_APPLY_DISPLAY`)
+The HID firmware update has two phases. The **transfer/staging** phase (`FW_UP_BEGIN`/`CHUNK`/`COMMIT`, host code in `PolyKybdHost/polyhost/device/hid_fw_up.py`) writes to a staging region while the keyboard keeps running its current firmware; it is CRC32-verified end-to-end, so typing during it is harmless and a corrupt/interrupted transfer is simply rejected — **no lockout**. The **apply** phase (`FW_UP_APPLY`, cmd `0x44`) is the only irreversible step (copy staging → flash + reboot, both halves), so it engages a lockout that mirrors the existing `BOOTLOADER_DISPLAY` mechanism:
+
+- `FW_APPLY_DISPLAY` (`base/com.h`, bit 4, was `RESERVED_3`) is set by the master in `hid_com.c`'s `0x44` case and **force-synced to the slave** via `USER_SYNC_POLY_DATA` before any reset.
+- While set: `process_record_user` drops every key event (matrix lockout, both halves — slave events relay to master), `rgb_matrix_indicators_kb` + `sync_and_refresh_displays` hold a solid **blue-green** and freeze the display, `suspend_power_down_kb` skips blanking, and `display_fw_apply_message()` (`poly_util.c`) shows **"APPLY/WAIT"** on both halves. The slave renders via `user_sync_poly_data_handler` (`split_sync.c`).
+- The actual copy+reset is a **weak hook** `polykybd_apply_staged_image()` (default no-op — there is no in-app apply backend in-tree yet; the real implementation overrides it and never returns). A housekeeping watchdog `fw_apply_safety_tick()` force-clears the lockout after `FW_APPLY_HOLD_MS` (10 s) as a recovery net.
+- **Scope note:** only the **split72** keymap is wired for the matrix lockout/freeze/watchdog. The shared files (`com.h`, `hid_com.c`, `poly_util.c`, `split_sync.c`) compile for `corne42` too, but `corne42/keymaps/default/keymap.c` was not given the keymap-level hooks.
+
 ## Font generation
 
 Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from the [`AdafruitGFX/`](../AdafruitGFX/CLAUDE.md) repo.

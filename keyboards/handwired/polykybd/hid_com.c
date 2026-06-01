@@ -16,6 +16,7 @@
 #include "base/com.h"
 #include "base/overlay.h"
 #include "base/update.h"
+#include "poly_util.h"
 
 #include <print.h>
 #include <transactions.h>
@@ -50,6 +51,85 @@ void invert_display(uint8_t r, uint8_t c, bool state);
 // Set on boot; cleared after the first GET_ID exchange so the host can detect
 // a firmware restart even when it never lost the USB connection.
 static bool s_fresh_boot = true;
+
+// ---------------------------------------------------------------------------
+// HID firmware-apply safety mode
+//
+// FW_UP_APPLY (cmd 0x44) is the only irreversible step of the HID firmware
+// update: the staged image is copied over the running flash and both halves
+// reboot. The transfer/staging phase (BEGIN/CHUNK/COMMIT) is CRC32-verified and
+// harmless to interrupt, so it is deliberately NOT locked. APPLY, by contrast,
+// must not be interrupted by a keystroke or other HID traffic — so we enter a
+// bootloader-style lockout (matrix frozen, solid blue-green RGB, "APPLY/WAIT"
+// on both halves) before handing off to the apply backend.
+//
+// The actual "copy staging -> 0x0 and reset" backend is provided as a weak
+// symbol (polykybd_apply_staged_image): a firmware that implements in-app apply
+// overrides it; its implementation never returns (it resets). Builds without an
+// apply backend keep the safe default, which leaves the lockout screen up until
+// the housekeeping watchdog (fw_apply_safety_tick) clears it.
+// ---------------------------------------------------------------------------
+#define CMD_FW_UP_APPLY   0x44
+
+// Max time the apply lockout may stay engaged before the watchdog force-clears
+// it. A real apply resets well within this window; the timeout only matters as
+// a recovery net (e.g. no apply backend, or a backend that failed to reset).
+#define FW_APPLY_HOLD_MS  10000
+
+static uint32_t s_fw_apply_started = 0;
+
+bool is_fw_apply_active(void) {
+    return (get_local_state()->overlay_flags & FW_APPLY_DISPLAY) != 0;
+}
+
+void fw_apply_safety_enter(void) {
+    poly_sync_t* local_state = access_local_state();
+    if (local_state->overlay_flags & FW_APPLY_DISPLAY) {
+        return; // already engaged
+    }
+    // Sync the flag to the slave before anything that could reset — same
+    // ordering the QK_BOOTLOADER path uses. The slave renders its own
+    // apply screen in user_sync_poly_data_handler().
+    local_state->overlay_flags |= FW_APPLY_DISPLAY;
+    uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
+    uprintf("Master: FW_APPLY_DISPLAY sync ack=%d\n", ack);
+    s_fw_apply_started = timer_read32();
+    display_fw_apply_message();
+}
+
+void fw_apply_safety_exit(void) {
+    poly_sync_t* local_state = access_local_state();
+    if ((local_state->overlay_flags & FW_APPLY_DISPLAY) == 0) {
+        return;
+    }
+    local_state->overlay_flags &= ~((uint8_t)FW_APPLY_DISPLAY);
+    send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
+#if defined(RGB_MATRIX_ENABLE)
+    rgb_matrix_disable_noeeprom();
+#endif
+    request_disp_refresh();
+}
+
+void fw_apply_safety_tick(void) {
+    if ((get_local_state()->overlay_flags & FW_APPLY_DISPLAY) == 0) {
+        return;
+    }
+    // Only the master arms the watchdog (it owns the timer); the slave follows
+    // the flag and is cleared by the next sync from the master.
+    if (is_usb_host_side() && timer_elapsed32(s_fw_apply_started) > FW_APPLY_HOLD_MS) {
+        uprint("FW_APPLY watchdog: clearing apply lockout (no reset occurred).\n");
+        fw_apply_safety_exit();
+    }
+}
+
+// Weak default: this build has no in-app apply backend. A firmware that
+// implements staged-image apply overrides this symbol; that implementation
+// copies the verified staging image to offset 0 on both halves and resets, so
+// it never returns. The default no-op leaves the lockout screen up for the
+// watchdog to clear and lets the host's apply call time out waiting for a
+// reconnect that will not come (it then reports "apply unavailable").
+__attribute__((weak)) void polykybd_apply_staged_image(void) {
+}
 
 
 // Notifies RGB/LED matrix of key event for animation effects based on key press state.
@@ -449,6 +529,21 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x16.", 3);
                 data[3] = (uint8_t)local_layer->def_layer;
                 raw_hid_send(data, length);
+                break;
+            case CMD_FW_UP_APPLY: // 0x44 — apply staged firmware (irreversible)
+                // Engage the bootloader-style safety lockout on BOTH halves
+                // before anything can reset: matrix frozen, blue-green RGB,
+                // "APPLY/WAIT" message. ACK so the host enters its "applying —
+                // wait for reconnect" state, then hand off to the apply backend.
+                fw_apply_safety_enter();
+                memset(data, 0, length);
+                memcpy(data, "P\x44.", 3);
+                raw_hid_send(data, length);
+                // Real backend copies staging -> flash on both halves and
+                // resets (never returns). The weak default is a no-op; the
+                // housekeeping watchdog then clears the lockout and the host's
+                // apply call times out reporting "apply unavailable".
+                polykybd_apply_staged_image();
                 break;
             default:
                 printf("Unknown command: %u.\n", data[HID_CMD_IDX]);

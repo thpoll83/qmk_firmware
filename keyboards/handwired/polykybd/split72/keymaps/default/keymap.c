@@ -24,6 +24,7 @@
 #include "side.h"
 #include "fill_overlay.h"
 #include "poly_util.h"
+#include "hid_com.h"
 
 #include "base/com.h"
 #include "polymod_rle.h"
@@ -138,6 +139,12 @@ static uint8_t overlay_flags = 0;
 // ensuring LEDs stay dark regardless of what the transport wrote to enable.
 #ifdef RGB_MATRIX_ENABLE
 bool rgb_matrix_indicators_kb(void) {
+    // Apply-lockout backstop on BOTH halves: hold blue-green every render cycle
+    // so nothing can wash it out while the staged image is being applied.
+    if (get_local_state()->overlay_flags & FW_APPLY_DISPLAY) {
+        rgb_matrix_set_color_all(0, 24, 24);
+        return false;
+    }
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
             // Backstop: force red even if rgb_matrix_config.enable gets cleared.
@@ -182,6 +189,24 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
 // Global variables: flags, overlay_flags
 void sync_and_refresh_displays(void) {
+    // Freeze BOTH halves while a firmware apply is in progress: keep the
+    // "APPLY/WAIT" message static and re-assert blue-green every cycle so a
+    // normal refresh can't overwrite it before the apply resets the device.
+    if (get_local_state()->overlay_flags & FW_APPLY_DISPLAY) {
+#ifdef RGB_MATRIX_ENABLE
+        if (!rgb_matrix_is_enabled()) {
+            rgb_matrix_enable_noeeprom();
+        }
+        if (rgb_matrix_get_mode() != RGB_MATRIX_SOLID_COLOR) {
+            rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+        }
+        // Hue 128 = cyan/blue-green, full saturation, val 24.
+        if (rgb_matrix_get_hue() != 128 || rgb_matrix_get_val() != 24) {
+            rgb_matrix_sethsv_noeeprom(128, 255, 24);
+        }
+#endif
+        return;
+    }
     // Freeze slave display while bootloader is active; re-assert RGB each cycle.
     if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
 #ifdef RGB_MATRIX_ENABLE
@@ -329,6 +354,7 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
+    fw_apply_safety_tick();
     brightness_save_if_pending();
     default_layer_save_if_pending();
     sync_and_refresh_displays();
@@ -1180,6 +1206,13 @@ void kdisp_idle(uint8_t contrast) {
 // Handles keypress events including unicode input, language modifications, and special commands.
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
+    // While a firmware apply is in progress, drop every key event so a
+    // keystroke can't reach the host or interrupt the apply. Slave key events
+    // are relayed here too, so this locks the whole keyboard.
+    if (is_fw_apply_active()) {
+        return false;
+    }
+
     uint32_t t = get_time_since_last_update();
     if(record->event.pressed) {
         uprintf("wait %ld.%03ld\n", t/1000, t%1000);
@@ -1657,7 +1690,8 @@ void poly_suspend(void) {
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
 void suspend_power_down_kb(void) {
     // USB suspend fires on slave when master enters bootloader; skip to keep displays lit.
-    if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
+    // Same for a firmware apply: keep the lockout screen up rather than blanking.
+    if (get_local_state()->overlay_flags & (BOOTLOADER_DISPLAY | FW_APPLY_DISPLAY)) {
         return;
     }
     poly_suspend();

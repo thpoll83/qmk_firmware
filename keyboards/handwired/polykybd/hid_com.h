@@ -29,3 +29,27 @@ enum legacy_command_id {
     id_dynamic_keymap_set_encoder           = 0x15,
     id_unhandled                            = 0xFF,
 };
+
+#include <stdbool.h>
+
+// --- HID firmware-apply safety mode (see hid_com.c for the full rationale) ---
+
+// True while the irreversible FW_UP_APPLY lockout is engaged on this half.
+// Used by process_record to drop all key events so a keystroke can't interrupt
+// the apply.
+bool is_fw_apply_active(void);
+
+// Engage / release the apply lockout (matrix freeze + blue-green RGB +
+// "APPLY/WAIT" on both halves). enter() force-syncs the flag to the slave.
+void fw_apply_safety_enter(void);
+void fw_apply_safety_exit(void);
+
+// Watchdog: call from housekeeping_task_user() on both sides. Force-clears the
+// lockout if it has been engaged longer than the apply could legitimately take
+// (recovery net for builds with no apply backend / a backend that failed).
+void fw_apply_safety_tick(void);
+
+// Weak hook: the staged-image apply backend. Default is a no-op; a firmware
+// with in-app apply overrides it (copies staging -> flash on both halves and
+// resets — never returns).
+void polykybd_apply_staged_image(void);

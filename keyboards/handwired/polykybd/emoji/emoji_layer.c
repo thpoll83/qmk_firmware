@@ -19,7 +19,7 @@ static uint8_t s_page     = 0;
 static const uint32_t emj_tab_icons[] = {
     0x1F600,  // cat  0: 😀 Smileys & Faces
     0x1F44B,  // cat  1: 👋 Gestures & Body
-    0,        // cat  2: People & Jobs → first of category (🏠)
+    0x1F3C3,  // cat  2: 🏃 People & Jobs
     0x2764,   // cat  3: ❤ Love & Celebrations
     0x1F436,  // cat  4: 🐶 Animals
     0x1F338,  // cat  5: 🌸 Nature & Plants

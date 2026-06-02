@@ -42,6 +42,7 @@
 #include "state.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
+#include "split_fw_up.h"
 #include "poly_util.h"
 
 #include "lang/lang_lut.h"
@@ -291,6 +292,12 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 }
 
 void housekeeping_task_user(void) {
+    // Slave path for the handedness-change command (USER_SYNC_REBOOT): the
+    // reboot is armed in the transaction handler and fired here, so both halves
+    // restart together onto the new left/right assignment.
+    if (fw_staging_reboot_pending()) {
+        mcu_reset();   // clean full-chip reset; never returns
+    }
     brightness_save_if_pending();
     default_layer_save_if_pending();
     sync_and_refresh_displays();
@@ -1304,6 +1311,10 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_ROI_DATA,            user_sync_roi_data_handler);
     transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_dynamic_keymap_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
+    // Reboot coordination — also the carrier for the host's handedness-change
+    // command (hid_com.c case 25), so the slave persists its new EE_HANDS marker
+    // and reboots together with the master.
+    transaction_register_rpc(USER_SYNC_REBOOT,              user_sync_reboot_handler);
 
     poly_eeconf_t ee = load_user_eeconf();
     poly_sync_t* local_state = access_local_state();

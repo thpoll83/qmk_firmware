@@ -56,11 +56,21 @@ typedef struct _fw_up_status_reply_t {
 // stray transaction triggers an unexpected reboot.  Shared by the FW_UP
 // apply-and-reboot and the plain QK_REBOOT paths; the transaction ID
 // (USER_SYNC_FW_UP_APPLY vs USER_SYNC_REBOOT) selects the slave's action.
+//
+// The USER_SYNC_REBOOT path also doubles as the handedness-change carrier: QMK
+// caps split transactions at 32 and the table is already full, so rather than
+// add a dedicated transaction the reboot message gains two optional fields.
+// When set_handedness != 0 the slave persists `is_left` to its EE_HANDS marker
+// before rebooting, so both halves come up on the corrected left/right
+// assignment (see hid_com.c case 25).  The plain reboot/apply senders leave
+// these zero via designated initialisers, so their behaviour is unchanged.
 #define FW_UP_SYNC_MAGIC 0xB007B007u
 
 typedef struct _fw_up_apply_sync_t {
-    uint32_t crc32;   // [0..3] CRC over the magic, filled in by send_to_bridge()
-    uint32_t magic;   // [4..7] must equal FW_UP_SYNC_MAGIC
+    uint32_t crc32;          // [0..3] CRC over the bytes below, filled in by send_to_bridge()
+    uint32_t magic;          // [4..7] must equal FW_UP_SYNC_MAGIC
+    uint8_t  set_handedness; // [8]    reboot path only: 1 = persist `is_left` before reboot
+    uint8_t  is_left;        // [9]    slave's new handedness when set_handedness != 0 (1 = left)
 } fw_up_apply_sync_t;
 
 void user_sync_fw_up_query_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

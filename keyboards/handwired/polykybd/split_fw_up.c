@@ -175,6 +175,12 @@ void user_sync_reboot_handler(uint8_t in_len, const void* in_data, uint8_t out_l
         ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
         return;
     }
+    // Handedness-change carrier (see fw_up_apply_sync_t): when requested, persist
+    // this (slave) half's new EE_HANDS marker before the reboot so it comes up on
+    // the corrected left/right assignment.  Plain QK_REBOOT leaves this zero.
+    if (msg->set_handedness) {
+        eeconfig_update_handedness(msg->is_left != 0);
+    }
     fw_staging_arm_reboot();   // housekeeping_task_user() → mcu_reset()
     ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
 }

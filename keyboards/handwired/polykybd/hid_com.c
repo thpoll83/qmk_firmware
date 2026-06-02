@@ -1,5 +1,6 @@
 #include "hid_com.h"
 #include "hid_fw_up.h"
+#include "split_fw_up.h"
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
@@ -482,6 +483,38 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memset(data, 0, length);
                 memcpy(data, "P\x18.", 3);
                 raw_hid_send(data, length);
+                break;
+            case 25: //set handedness (which half is left / which is right)
+                // The host can only address the master (USB) half, so the payload
+                // is expressed relative to it:
+                //   data byte == 0 → this (master/USB) half = LEFT,  slave = RIGHT
+                //   data byte != 0 → this (master/USB) half = RIGHT, slave = LEFT
+                // Master/slave is decided by VBUS (which half holds the USB cable),
+                // independent of handedness — so this fixes a half whose EE_HANDS
+                // marker is wrong without reflashing.  We persist the master's
+                // handedness, push the opposite to the slave over the split link,
+                // ACK the host, then reboot the master.  The slave reboots itself
+                // via the armed handler, so both halves come up on the corrected
+                // assignment (set_side() and the split matrix offset are only
+                // resolved at boot, hence the reboot).
+                {
+                    bool master_is_left = (data[HID_DATA_IDX] == 0);
+                    eeconfig_update_handedness(master_is_left);
+                    // Reuse the USER_SYNC_REBOOT transaction (the split table is full
+                    // at QMK's 32-transaction cap): the slave persists the opposite
+                    // handedness, then reboots.  set_handedness=1 distinguishes this
+                    // from a plain QK_REBOOT.
+                    fw_up_apply_sync_t msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC,
+                                               .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };
+                    uint8_t ack = send_to_bridge(USER_SYNC_REBOOT, &msg, sizeof(msg), 5);
+                    uprintf("Set handedness: master=%s, slave ack=%d.\n", master_is_left ? "LEFT" : "RIGHT", ack);
+                    memset(data, 0, length);
+                    memcpy(data, "P\x19.", 3);
+                    raw_hid_send(data, length);
+                    // Reboot the master last — like QK_REBOOT, so both halves
+                    // restart together and re-read their new handedness at boot.
+                    soft_reset_keyboard();
+                }
                 break;
             default:
                 // Try the fw_up command range (0x40..0x43) before failing.

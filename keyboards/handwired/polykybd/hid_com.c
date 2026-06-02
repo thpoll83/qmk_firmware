@@ -348,7 +348,14 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     if((local_state->flags & (STATUS_DISP_ON|DISP_IDLE))==0) {
                         suspend_wakeup_init_kb();
                     } else {
+                        if (local_state->flags & DISP_IDLE) {
+                            // Contrast is cycling 0-49 during pulsing; restore saved brightness
+                            // so display_wakeup() conditions don't leave the display dark.
+                            poly_eeconf_t ee = load_user_eeconf();
+                            local_state->contrast = ee.brightness;
+                        }
                         local_state->flags &= ~((uint8_t)DISP_IDLE);
+                        local_state->flags |= STATUS_DISP_ON;
                         request_disp_refresh();
                         update_performed();
                     }

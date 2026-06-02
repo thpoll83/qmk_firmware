@@ -12,6 +12,9 @@ jobs:
   bump:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    concurrency:
+      group: bump-version-PolyKybd
+      cancel-in-progress: false
 
     steps:
       - uses: actions/checkout@v4
@@ -78,12 +81,7 @@ jobs:
 
       - name: Commit and push
         run: |
-          VERSION=$(python3 -c "
-import re
-c = open('keyboards/handwired/polykybd/config.h').read()
-m = re.search(r'#define FW_VERSION \"(\\d+\\.\\d+\\.\\d+)\"', c)
-print(m.group(1))
-")
+          VERSION=$(sed -n 's/^#define FW_VERSION "\([^"]*\)".*/\1/p' keyboards/handwired/polykybd/config.h)
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add keyboards/handwired/polykybd/config.h

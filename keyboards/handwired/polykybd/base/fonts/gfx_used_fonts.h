@@ -1,6 +1,8 @@
 #pragma once
 
 #include "generated/0NotoSans_Regular_Base_14pt.h"
+#include "generated/1NotoSans_Regular_LatinExtA_14pt.h"
+#include "generated/1NotoSans_Regular_LatinExtB_14pt.h"
 #include "generated/1NotoSans_Regular_SupAndExtA_14pt.h"
 #include "generated/1NotoSansSymbols2_EmjHandsBMP_20pt.h"
 #include "generated/1NotoSansSymbols2_EmjHandsBMP2_20pt.h"
@@ -108,6 +110,8 @@
 const GFXfont* const ALL_FONTS [] = {
   &IconsFont,
   &NotoSans_Regular_Base_14pt7b,
+  &NotoSans_Regular_LatinExtA_14pt16b,
+  &NotoSans_Regular_LatinExtB_14pt16b,
   &NotoSans_Regular_SupAndExtA_14pt16b,
   &NotoSansSymbols2_Regular_EmjHandsBMP_20pt16b,
   &NotoEmoji_Medium_EmjHandsBMP2_20pt16b,

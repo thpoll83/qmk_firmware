@@ -31,6 +31,9 @@ size_ar=16
 echo "Noto Sans..."
 fontconvert "-ffonts/noto-sans/NotoSans-Regular.ttf" "-s${size_lat}" -v _Base_ 0x20 0x7e > "base/fonts/generated/0NotoSans_Regular_Base_${size_lat}pt.h"
 fontconvert "-ffonts/noto-sans/NotoSans-Regular.ttf" "-s${size_lat}" -r44 -v _SupAndExtA_  0xa1 0x17e > "base/fonts/generated/1NotoSans_Regular_SupAndExtA_${size_lat}pt.h"
+# Latin Extended-A (0x0100-0x017F) and Latin Extended-B (0x0180-0x024F) — emoji-layer "Latin" tab (cat 11)
+fontconvert "-ffonts/noto-sans/NotoSans-Regular.ttf" "-s${size_lat}" -r44 -v _LatinExtA_  0x100 0x17f > "base/fonts/generated/1NotoSans_Regular_LatinExtA_${size_lat}pt.h"
+fontconvert "-ffonts/noto-sans/NotoSans-Regular.ttf" "-s${size_lat}" -r44 -v _LatinExtB_  0x180 0x24f > "base/fonts/generated/1NotoSans_Regular_LatinExtB_${size_lat}pt.h"
 fontconvert "-ffonts/noto-sans/NotoSans-Regular.ttf" "-s${size_lat}" -v _LetterMod_ 0x2c6 0x2dd > "base/fonts/generated/NotoSans_Regular_LetterMod_${size_lat}pt.h"
 fontconvert "-ffonts/noto-sans/NotoSans-Regular.ttf" "-s${size_lat}" -v _Greek_  0x384 0x385 0x391 0x3a1 0x3a3 0x3c9 > "base/fonts/generated/NotoSans_Regular_Greek_${size_lat}pt.h"
 fontconvert "-ffonts/noto-sans/NotoSans-Regular.ttf" "-s${size_cyr}" -v _Cyrillic_  0x401 0x46b 0x490 0x4bb 0x4d8 0x4e9 > "base/fonts/generated/NotoSans_Regular_Cyrillic_${size_cyr}pt.h"

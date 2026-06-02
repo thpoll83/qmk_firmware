@@ -28,6 +28,7 @@ static const uint32_t emj_tab_icons[] = {
     0x26F5,   // cat  8: ⛵ Travel & Places
     0x1F3C0,  // cat  9: 🏀 Sports & Entertainment
     0x1F4CE,  // cat 10: 📎 Tools & Objects
+    0x0100,   // cat 11: Ā  Latin Extended-A & B (BMP — font index == codepoint)
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

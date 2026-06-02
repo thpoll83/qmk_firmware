@@ -118,7 +118,7 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
 // Handles HID commands: device ID, language change, overlay reception, mapping, and display control.
 // Global variables: hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
 void raw_hid_receive(uint8_t *data, uint8_t length) {
-    const char * name = "P\x06.Split72 " FW_VERSION " HW" STR(DEVICE_VER) " ";
+    const char * name = "P\x06.Split72 " FW_VERSION " P" STR(PROTOCOL_VERSION) " HW" STR(DEVICE_VER) " ";
 
     if (length<1) {
         return;
@@ -134,7 +134,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memset(data, 0, length);
                 memcpy(data, name, strlen(name));
                 if (s_fresh_boot) {
-                    data[2] = '*'; // host sees '*' instead of '.' → firmware just booted
+                    data[2] = '*'; // host sees '*' instead of '.' -> firmware just booted
                     s_fresh_boot = false;
                 }
                 raw_hid_send(data, length);
@@ -240,39 +240,20 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                             request_disp_refresh();
                         }
                     }
-                    //     memset(data, 0, length);
-                    //     memcpy(data, "P\x0a.", 3);
-                    // } else {
-                    //     memset(data, 0, length);
-                    //     memcpy(data, "P\x0a!", 3);
-                    // }
                 }
                 break;
             case 11: //overlays flags on
                 {
                     uint8_t new_flags = data[HID_DATA_IDX];
                     local_state->overlay_flags = flag_on(local_state->overlay_flags, new_flags);
-                    // Run the self-actions immediately so subsequent HID commands (e.g.
-                    // a send_overlay_mapping right after a reset_overlay_usage) see the
-                    // post-action state.
                     apply_overlay_action_flags(new_flags);
-                    // Force-sync state to slave whenever the host changes a bit that the slave
-                    // needs to act on immediately — either an action flag (which triggers a
-                    // mirror action on slave) or a synced state flag like MIRROR_OVERLAYS
-                    // (which changes how slave's upload bridge handlers interpret subsequent
-                    // overlay data). Without the latter, the host could set MIRROR_OVERLAYS
-                    // alone (no action bits) and slave wouldn't learn until housekeeping
-                    // ran — too late for the next upload bridge transaction.
                     const bool needs_force_sync =
                         (new_flags & OVERLAY_ACTION_FLAGS) || (new_flags & OVERLAY_SYNCED_STATE_FLAGS);
                     if(needs_force_sync) {
                         send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
                         if(new_flags & OVERLAY_ACTION_FLAGS) {
-                            // Clear action bits locally so housekeeping has nothing to do.
                             local_state->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
                         }
-                        // Trigger refresh — for action-flag path the deferred handler used
-                        // to do this at the end of its state_diff branch.
                         request_disp_refresh();
                     }
                     memset(data, 0, length);
@@ -286,9 +267,6 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 {
                     uint8_t flags_to_clear = data[HID_DATA_IDX];
                     local_state->overlay_flags = flag_off(local_state->overlay_flags, flags_to_clear);
-                    // Same reasoning as case 11: if a synced-state bit is being changed,
-                    // tell the slave NOW so it doesn't act on stale state for any
-                    // bridge transactions that follow.
                     if(flags_to_clear & OVERLAY_SYNCED_STATE_FLAGS) {
                         send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
                         request_disp_refresh();
@@ -320,16 +298,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(local_layer->layer), &r, &c, is_left_side());
                     const bool pressed = data[HID_DATA_IDX+2] == 0;
                     if(pos==POS_NOT_FOUND) {
-                        //actually it should be the previous layer instead of default, but it worked so far
                         pos = get_split_matrix_pos(keycode, local_layer->def_layer, &r, &c, is_left_side());
                     }
                     if (is_on_current_side(pos)) {
                         invert_display(r, c, pressed);
                     }
 
-                    //a key can be on both sides, so no else here
                     if (is_on_other_side(pos)) {
-                        // send to bridge
                         const uint8_t data_len = 6;
                         dynamic_keymap_sync_t sync_data;
                         memcpy(&sync_data.commands, data, data_len);
@@ -379,12 +354,6 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI) {
                         decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX], first);
                     }
-                    //     memset(data, 0, length);
-                    //     memcpy(data, first ? "P\x10!" : "P\x11!", 3);
-                    // } else {
-                    //     memset(data, 0, length);
-                    //     memcpy(data, first ? "P\x10!" : "P\x11!", 3);
-                    // }
                 }
                 break;
             case 18: //start roi overlay
@@ -396,12 +365,6 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI) {
                         fill_roi_overlay_buffer(&data[HID_DATA_IDX], first);
                     }
-                    //     memset(data, 0, length);
-                    //     memcpy(data, first ? "P\x12!" : "P\x13!", 3);
-                    // } else {
-                    //     memset(data, 0, length);
-                    //     memcpy(data, first ? "P\x12!" : "P\x13!", 3);
-                    // }
                 }
                 break;
             case 20: //set unicode input mode
@@ -463,20 +426,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memset(data, 0, length);
                 memcpy(data, "P\x17.", 3);
                 raw_hid_send(data, length);
-                // The host does not wait for this reply — jump straight to the
-                // bootloader, exactly as QMK does for the QK_BOOTLOADER keycode.
                 reset_keyboard();
                 break;
             case 24: //display off
-                // Turn the status OLED and every keycap OLED off on host request, so the
-                // panels don't sit lit (e.g. after a HIL test/deploy) and age/burn in.
-                // Mirrors the USB-suspend display path (suspend_power_down_kb): poly_suspend()
-                // clears STATUS_DISP_ON/DISP_IDLE/IDLE_TRANSITION and sets contrast = DISP_OFF,
-                // sync_and_refresh_displays() pushes that to the slave half and switches both
-                // halves' panels off, and set_last_update(-1) stops the idle housekeeping block
-                // from re-asserting STATUS_DISP_ON on the next tick. Nothing is written to
-                // EEPROM, so a key press (display_wakeup) or the idle-wake command (case 15,
-                // data byte 0) restores the saved brightness; the keyboard stays USB-enumerated.
                 poly_suspend();
                 sync_and_refresh_displays();
                 set_last_update(-1);
@@ -485,25 +437,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 raw_hid_send(data, length);
                 break;
             case 25: //set handedness (which half is left / which is right)
-                // The host can only address the master (USB) half, so the payload
-                // is expressed relative to it:
-                //   data byte == 0 → this (master/USB) half = LEFT,  slave = RIGHT
-                //   data byte != 0 → this (master/USB) half = RIGHT, slave = LEFT
-                // Master/slave is decided by VBUS (which half holds the USB cable),
-                // independent of handedness — so this fixes a half whose EE_HANDS
-                // marker is wrong without reflashing.  We persist the master's
-                // handedness, push the opposite to the slave over the split link,
-                // ACK the host, then reboot the master.  The slave reboots itself
-                // via the armed handler, so both halves come up on the corrected
-                // assignment (set_side() and the split matrix offset are only
-                // resolved at boot, hence the reboot).
                 {
                     bool master_is_left = (data[HID_DATA_IDX] == 0);
                     eeconfig_update_handedness(master_is_left);
-                    // Reuse the USER_SYNC_REBOOT transaction (the split table is full
-                    // at QMK's 32-transaction cap): the slave persists the opposite
-                    // handedness, then reboots.  set_handedness=1 distinguishes this
-                    // from a plain QK_REBOOT.
                     fw_up_apply_sync_t msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC,
                                                .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };
                     uint8_t ack = send_to_bridge(USER_SYNC_REBOOT, &msg, sizeof(msg), 5);
@@ -511,13 +447,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     memset(data, 0, length);
                     memcpy(data, "P\x19.", 3);
                     raw_hid_send(data, length);
-                    // Reboot the master last — like QK_REBOOT, so both halves
-                    // restart together and re-read their new handedness at boot.
                     soft_reset_keyboard();
                 }
                 break;
             default:
-                // Try the fw_up command range (0x40..0x43) before failing.
                 if (hid_fw_up_receive(data, length)) {
                     break;
                 }

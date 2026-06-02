@@ -36,7 +36,7 @@
 
 #define NOP_FUDGE 0.4
 
-//This number can be calculated by dividing the MCU’s clock speed
+//This number can be calculated by dividing the MCU's clock speed
 //by the desired SPI clock speed. For example, an MCU running at 8 MHz
 //wanting to talk to an SPI device at 4 MHz would set the divisor to 2
 #define SPI_DIVISOR (CPU_CLOCK / 10000000) //rp1040 runs at 133Mhz, SPI at 10Mhz
@@ -81,6 +81,7 @@
 //#          PolyKybd specific         #
 //######################################
 #define FW_VERSION "0.8.1"
+#define PROTOCOL_VERSION 1
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

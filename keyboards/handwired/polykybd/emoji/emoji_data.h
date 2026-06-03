@@ -142,6 +142,8 @@ static const uint32_t emj_cat3[] = {
     0x1F9E1, // 🧡
     // Colored hearts (EmjClothing range)
     0x1FA75, 0x1FA76, 0x1FA77, // 🩵🩶🩷
+    // Stars, sparkles & heart-mark (NotoSansSymbols2 BMP — SymBmp1/SymBmp4)
+    0x2605, 0x2606, 0x2726, 0x2727, 0x2763, // ★ ☆ ✦ ✧ ❣
 };
 
 // ── Category 4: Animals ──────────────────────────────────────────────────────
@@ -181,11 +183,13 @@ static const uint32_t emj_cat5[] = {
     0x1FAB0, 0x1FAB1, 0x1FAB2, 0x1FAB3, 0x1FAB4, 0x1FAB5, 0x1FAB6, // 🪰🪱🪲🪳🪴🪵🪶
     0x1FAB7, 0x1FAB8, 0x1FAB9, 0x1FABA, // 🪷🪸🪹🪺 lotus, coral, empty nest, nest with eggs (Unicode 14)
     0x1FABB, // 🪻 hyacinth (Unicode 15, EmjInsects extended)
+    // Shamrock & florettes (NotoSansSymbols2 BMP — SymBmp1/SymBmp4)
+    0x2618, 0x2740, 0x2741, 0x274B, // ☘ ❀ ❁ ❋
 };
 
 // ── Category 6: Weather & Sky ────────────────────────────────────────────────
 // BMP codepoints (0x2600…): font index = codepoint (no -n offset)
-// ⛄⛅⛈ (0x26C4/5/8) require EmjWeatherBMP2 font from create_fonts.sh
+// All BMP weather glyphs are provided by the merged SymBmp1 / SymBmp2 / SymBmp6 fonts.
 static const uint32_t emj_cat6[] = {
     0x2600,  // ☀ sun
     0x2601,  // ☁ cloud
@@ -196,7 +200,7 @@ static const uint32_t emj_cat6[] = {
     0x26C4,  // ⛄ snowman without snow
     0x26C5,  // ⛅ sun behind cloud
     0x26C8,  // ⛈ cloud with lightning and rain
-    0x2744,  // ❄ snowflake (BMP — prefix-1 EmjSnowflake font, inside DiamondCut gap)
+    0x2744,  // ❄ snowflake (BMP — SymBmp4)
     0x1F300, 0x1F301, 0x1F302, 0x1F303, 0x1F304, 0x1F305, 0x1F306,
     0x1F307, 0x1F308, 0x1F309, 0x1F30A, 0x1F30B, 0x1F30C,
     0x1F30D, 0x1F30E, 0x1F30F, 0x1F310, 0x1F311, 0x1F312, 0x1F313, 0x1F314,
@@ -213,6 +217,8 @@ static const uint32_t emj_cat6[] = {
     0x1F55C, 0x1F55D, 0x1F55E, 0x1F55F, 0x1F560, 0x1F561,
     0x1F562, 0x1F563, 0x1F564, 0x1F565, 0x1F566, 0x1F567,
     0x1FA90, // 🪐 ringed planet (moved from cat10)
+    // Comet & alt sun (NotoSansSymbols2 BMP — SymBmp1)
+    0x2604, 0x263C, // ☄ comet, ☼ white sun with rays
 };
 
 // ── Category 7: Food & Drink ─────────────────────────────────────────────────
@@ -241,6 +247,7 @@ static const uint32_t emj_cat7[] = {
     0x1FAD0, 0x1FAD1, 0x1FAD2, 0x1FAD3, 0x1FAD4, 0x1FAD5, 0x1FAD6, // 🫐🫑🫒🫓🫔🫕🫖
     // Newer foods (Unicode 14-15+, EmjFood5 extended)
     0x1FAD7, 0x1FAD8, 0x1FAD9, 0x1FADA, 0x1FADB, // 🫗🫘🫙🫚🫛 pouring, beans, jar, olive, pea pod
+    0x2615, // ☕ hot beverage (NotoSansSymbols2 BMP — SymBmp1)
 };
 
 // ── Category 8: Travel & Places ──────────────────────────────────────────────
@@ -283,7 +290,7 @@ static const uint32_t emj_cat8[] = {
 // ── Category 9: Sports & Entertainment ───────────────────────────────────────
 // Clothing items (👑-👢) and cycling/walking moved here from cat2/cat8
 static const uint32_t emj_cat9[] = {
-    // BMP sports (EmjSportsBMP / EmjTravelBMP2)
+    // BMP sports (SymBmp6 / EmjTravelBMP2)
     0x26BD, 0x26BE, // ⚽⚾ soccer, baseball
     0x26F3,         // ⛳ golf
     // Backpack
@@ -314,9 +321,12 @@ static const uint32_t emj_cat9[] = {
     0x1FA80, 0x1FA81, 0x1FA82, 0x1FA83, 0x1FA84, 0x1FA85, 0x1FA86,
     // Instruments
     0x1FA95, 0x1FA97, 0x1FA98, // 🪕🪗🪘 banjo, accordion, long drum
-    // Chess pieces (BMP 0x2654-0x265F; prefix-1 _Chess_ font, no offset)
+    // Chess pieces (BMP 0x2654-0x265F; SymBmp2, no offset)
     0x2654, 0x2655, 0x2656, 0x2657, 0x2658, 0x2659, // ♔♕♖♗♘♙ white king→pawn
     0x265A, 0x265B, 0x265C, 0x265D, 0x265E, 0x265F, // ♚♛♜♝♞♟ black king→pawn
+    // Card suits & dice (NotoSansSymbols2 BMP — SymBmp2)
+    0x2660, 0x2661, 0x2662, 0x2663, 0x2664, 0x2665, 0x2666, 0x2667, // ♠♡♢♣♤♥♦♧
+    0x2680, 0x2681, 0x2682, 0x2683, 0x2684, 0x2685, // ⚀⚁⚂⚃⚄⚅ dice
 };
 
 // ── Category 10: Tools & Objects ─────────────────────────────────────────────
@@ -355,6 +365,17 @@ static const uint32_t emj_cat10[] = {
     0x1FA91, 0x1FA92, 0x1FA93, 0x1FA94, 0x1FA96,
     0x1FA99, 0x1FA9A, 0x1FA9B, 0x1FA9C, 0x1FA9D,
     0x1FA9E, 0x1FA9F, // 🪑🪒🪓🪔🪖🪙🪚🪛🪜🪝🪞🪟
+    // Symbols & tools (BMP — SymBmp1/3/5/6; tools ⚒-⚜ from NotoEmoji ToolsBMP)
+    0x260E,                                 // ☎ telephone
+    0x2620, 0x2622, 0x2623,                 // ☠ skull, ☢ radioactive, ☣ biohazard
+    0x267F,                                 // ♿ wheelchair
+    0x2692, 0x2693, 0x2694, 0x2695, 0x2696, // ⚒ ⚓ ⚔ ⚕ ⚖
+    0x2697, 0x2699, 0x269B, 0x269C,         // ⚗ ⚙ ⚛ ⚜
+    0x26A0,                                 // ⚠ warning
+    0x26CF, 0x26D1, 0x26D3, 0x26D4,         // ⛏ pick, ⛑ helmet, ⛓ chains, ⛔ no entry
+    0x2702, 0x2709,                         // ✂ scissors, ✉ envelope
+    0x270F, 0x2712,                         // ✏ pencil, ✒ nib
+    0x2713, 0x2714, 0x2717, 0x2718,         // ✓ ✔ ✗ ✘ check / cross marks
 };
 
 // ── Category 11: Latin Extended-A & Latin Extended-B ─────────────────────────

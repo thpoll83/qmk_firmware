@@ -8,10 +8,12 @@
 #include "generated/1NotoSansSymbols2_Regular_SymBmp2_20pt.h"
 #include "generated/1NotoSansSymbols2_Regular_SymBmp3_20pt.h"
 #include "generated/1NotoSansSymbols2_Regular_SymBmp4_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_SymBmp5_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_SymBmp6_20pt.h"
+#include "generated/1NotoEmoji_Medium_ToolsBMP_20pt.h"
 #include "generated/1NotoSansSymbols2_Regular_Zodiac_20pt.h"
 #include "generated/2NotoSans_Regular_CurrencySigns_14pt.h"
 #include "generated/2NotoSansSymbols2_EmjTravelBMP_20pt.h"
-#include "generated/2NotoSansSymbols2_EmjWeatherBMP2_20pt.h"
 #include "generated/3NotoEmoji_Medium_Hyper_18pt.h"
 #include "generated/3NotoEmoji_Medium_Meh_20pt.h"
 #include "generated/3NotoEmoji_Medium_Settings_20pt.h"
@@ -83,7 +85,6 @@
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP1_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP2_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjHeart_20pt.h"
-#include "generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjTravelBMP2_20pt.h"
 #include "generated/NotoSansAR_Regular_FormsB_16pt.h"
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
@@ -112,10 +113,12 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansSymbols2_Regular_SymBmp2_20pt16b,
   &NotoSansSymbols2_Regular_SymBmp3_20pt16b,
   &NotoSansSymbols2_Regular_SymBmp4_20pt16b,
+  &NotoSansSymbols2_Regular_SymBmp5_20pt16b,
+  &NotoSansSymbols2_Regular_SymBmp6_20pt16b,
+  &NotoEmoji_Medium_ToolsBMP_20pt16b,
   &NotoEmoji_Medium_Zodiac_20pt16b,
   &NotoSans_Regular_CurrencySigns_14pt16b,
   &NotoEmoji_Medium_EmjTravelBMP_20pt16b,
-  &NotoSansSymbols2_Regular_EmjWeatherBMP2_20pt16b,
   &NotoEmoji_Medium_Hyper_18pt16b,
   &NotoEmoji_Medium_Meh_20pt16b,
   &NotoEmoji_Medium_Settings_20pt16b,
@@ -187,7 +190,6 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoEmoji_Medium_EmjWeatherSMP1_20pt16b,
   &NotoEmoji_Medium_EmjWeatherSMP2_20pt16b,
   &NotoSansSymbols2_Regular_EmjHeart_20pt16b,
-  &NotoSansSymbols2_Regular_EmjSportsBMP_20pt16b,
   &NotoEmoji_Medium_EmjTravelBMP2_20pt16b,
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,

@@ -166,9 +166,8 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjInsects_ -n0x10000 0x1FAB0 0x1FABC 
 echo "Emoji category fonts: weather, zodiac, clocks..."
 # Cat 6: weather — BMP 0x2600-0x2603, 0x2614, 0x26A1 + SMP 0x1F300-0x1F32C
 # 0x1F310 🌐 globe and 0x1F324-0x1F32C (☁ variants, 🌪🌫🌬) are in the extended SMP range.
-# BMP weather (☀☁☂☃ 0x2600-0x2603, ☔ 0x2614, ⚡ 0x26A1) are merged into _SymBmp1_/_SymBmp2_ (see "Symbols").
-# ⛄⛅⛈ (0x26C4/5/8) stay separate — tight range, disjoint from ⚽⚾ (0x26BD-0x26BE).
-fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP2_ 0x26C4 0x26C8 > "base/fonts/generated/2NotoSansSymbols2_EmjWeatherBMP2_20pt.h"
+# BMP weather glyphs (☀☁☂☃ 0x2600-0x2603, ☔ 0x2614, ⚡ 0x26A1, ⛄⛅⛈ 0x26C4/5/8) are now in
+# the merged _SymBmp1_ / _SymBmp2_ / _SymBmp6_ fonts (see "Symbols").
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP1_ -n0x10000 0x1F300 0x1F321 > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP1_20pt.h"
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP2_ -n0x10000 0x1F324 0x1F32C > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP2_20pt.h"
 
@@ -201,8 +200,7 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjTravel_ -n0x10000 0x1F680 0x1F6C5 >
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjTravelExt_ -n0x10000 0x1F6D0 0x1F6D2 > "base/fonts/generated/8NotoEmoji_Medium_EmjTravelExt_20pt.h"
 
 echo "Emoji category fonts: sports, activities, objects..."
-# Cat 9: sports & entertainment — BMP 0x26BD-0x26BE + SMP 0x1F3A0-0x1F3CE
-fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjSportsBMP_ 0x26BD 0x26BE > "base/fonts/generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
+# Cat 9: sports & entertainment — BMP 0x26BD-0x26BE (⚽⚾) now in merged _SymBmp6_; SMP 0x1F3A0-0x1F3CE below
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports_ -n0x10000 0x1F3A0 0x1F3CE > "base/fonts/generated/8NotoEmoji_Medium_EmjSports_20pt.h"
 # Cat 9 addition: newer activities 🤸🤹🤺🤼🤽🤾 (Unicode 9+)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSports2_ -n0x10000 0x1F938 0x1F93A > "base/fonts/generated/8NotoEmoji_Medium_EmjSports2_20pt.h"
@@ -226,19 +224,24 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjCelebrate_ -n0x10000 0x1F380 0x1F39
 echo "Symbols..."
 fontconvert "-ffonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf" "-s20" -r50 -v _Technical_ 0x2387 0x2388 0x238b 0x238b 0x2399 0x2399 > "base/fonts/generated/3NotoSansSymbols_Regular_Technical_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Technical2_ 0x2318 0x2318 0x2325 0x2326 0x232B 0x232B > "base/fonts/generated/3NotoSansSymbols2_Regular_Technical_20pt.h"
-# Merged Symbols2 BMP fonts (0x25AC-0x2756).  These four cover every Symbols2 glyph in the
-# 0x26xx/0x27xx region with DISJOINT [first,last] ranges, so they no longer bracket-shadow the
-# interleaved NotoEmoji islands (Zodiac, HandsBMP2, TravelBMP/BMP2) — overlap-free, no prefix
-# trick needed. They replace the old SymbolsAndShapes / EmjWeatherBMP / EmjHandsBMP / Chess /
-# DiamondCut / EmjSnowflake fonts (same Symbols2 typeface, identical glyphs).
-#   _SymBmp1_ 0x25AC-0x261E : ▬ ☀☁☂☃ ☑ ☔ ☝☞   (SymbolsAndShapes + weather-low + HandsBMP)
-#   _SymBmp2_ 0x2654-0x26A1 : ♔-♟ chess + ⚡       (Chess + weather-high)
-#   _SymBmp3_ 0x2702        : ✂                     (DiamondCut scissors)
-#   _SymBmp4_ 0x2744-0x2756 : ❄ ❖                   (Snowflake + DiamondCut ❖)
-fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp1_ 0x25AC 0x25AC 0x2600 0x2603 0x2611 0x2611 0x2614 0x2614 0x261D 0x261E > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp1_20pt.h"
-fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp2_ 0x2654 0x265F 0x26A1 0x26A1 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp2_20pt.h"
+# Merged & extended Symbols2 BMP fonts (0x25AC-0x2763). DISJOINT ranges split around the
+# interleaved NotoEmoji islands (Zodiac, ToolsBMP, TravelBMP/BMP2, HandsBMP2) — overlap-free,
+# no prefix trick. They replace SymbolsAndShapes / EmjWeatherBMP(2) / EmjHandsBMP / Chess /
+# DiamondCut / EmjSnowflake / EmjSportsBMP (all NotoSansSymbols2) and add many extra symbols.
+#   _SymBmp1_ 0x25AC-0x263C : ▬ ☀☁☂☃☄★☆ ☎ ☑ ☔☕ ☘ ☝☞ ☠☢☣ ☼
+#   _SymBmp2_ 0x2654-0x2685 : ♔-♟ chess, ♠♡♢♣♤♥♦♧ suits, ♨ ♿, ⚀-⚅ dice
+#   _SymBmp3_ 0x2702        : ✂ scissors
+#   _SymBmp4_ 0x270F-0x2763 : ✏✐✑✒ ✓✔✕✖✗✘ ✦✧ ❀❁ ❄ ❋ ❖ ❣
+#   _SymBmp5_ 0x2709        : ✉ envelope  (between NotoEmoji ✈0x2708 and ✊0x270A)
+#   _SymBmp6_ 0x26A0-0x26D4 : ⚠⚡ ⚽⚾ ⛄⛅⛈ ⛏ ⛑ ⛓⛔   (absorbs EmjWeatherBMP2 + EmjSportsBMP)
+# Tools/alchemical 0x2692-0x269C (⚒⚓⚔⚕⚖⚗⚙⚛⚜) are absent from NotoSansSymbols2 — sourced from NotoEmoji.
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp1_ 0x25AC 0x25AC 0x2600 0x2606 0x260E 0x260E 0x2611 0x2611 0x2614 0x2615 0x2618 0x2618 0x261D 0x261E 0x2620 0x2620 0x2622 0x2623 0x263C 0x263C > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp1_20pt.h"
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp2_ 0x2654 0x2668 0x267F 0x267F 0x2680 0x2685 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp2_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp3_ 0x2702 0x2702 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp3_20pt.h"
-fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp4_ 0x2744 0x2744 0x2756 0x2756 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp4_20pt.h"
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp4_ 0x270F 0x2718 0x2726 0x2727 0x2740 0x2741 0x2744 0x2744 0x274B 0x274B 0x2756 0x2756 0x2763 0x2763 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp4_20pt.h"
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp5_ 0x2709 0x2709 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp5_20pt.h"
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp6_ 0x26A0 0x26A1 0x26BD 0x26BE 0x26C4 0x26C8 0x26CF 0x26CF 0x26D1 0x26D1 0x26D3 0x26D4 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp6_20pt.h"
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _ToolsBMP_ 0x2692 0x269C > "base/fonts/generated/1NotoEmoji_Medium_ToolsBMP_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Arrows_ 	0x2B6F 0x2B73 0x2B7E 0x2B7E 0x2B8C 0x2B8C 0x2B8E 0x2B8E 0x2BA0 0x2BA0 > "base/fonts/generated/3NotoSansSymbols2_Regular_Arrows_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Util_ -n0x11000 0x1F568 0x1F56A 0x1F5A9 0x1F5AB 0x1F5B3 0x1F5BC 0x1F5CA 0x1F5CA > "base/fonts/generated/4NotoSansSymbols2_Regular_Util_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s18" -r50 -v _Window_ -n0x11000 0x1F5D5 0x1F5DB > "base/fonts/generated/5NotoSansSymbols2_Regular_Window_18pt.h"

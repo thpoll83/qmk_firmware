@@ -22,13 +22,13 @@ static const uint32_t emj_tab_icons[] = {
     0x1F46A,  // cat  2: 👪 People & Jobs
     0x1F495,  // cat  3: 💕 Love & Celebrations
     0x1F404,  // cat  4: 🐄 Animals
-    0x1F334,  // cat  5: 🌴 Nature & Plants
+    0x1F349,  // cat  5: 🍉 Nature, Plants & Food
     0x26C5,   // cat  6: ⛅ Weather & Sky
-    0x1F369,  // cat  7: 🍩 Food & Drink
-    0x26F5,   // cat  8: ⛵ Travel & Places
-    0x1F3C0,  // cat  9: 🏀 Sports & Entertainment
-    0x1F4CE,  // cat 10: 📎 Tools & Objects
-    0x0100,   // cat 11: Ā  Latin Extended-A & B (BMP — font index == codepoint)
+    0x26F5,   // cat  7: ⛵ Travel & Places
+    0x1F3C0,  // cat  8: 🏀 Sports & Entertainment
+    0x1F4CE,  // cat  9: 📎 Tools & Objects
+    0x0100,   // cat 10: Ā  Latin Extended-A & B (BMP — font index == codepoint)
+    0x2756,   // cat 11: ❖ Symbols & Marks (checks, brackets, arrows…)
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

@@ -194,6 +194,27 @@ static const uint32_t emj_cat5[] = {
     0x2618, 0x2740, 0x2741, 0x274B, // ☘ ❀ ❁ ❋
     // Florettes (Dingbats — SymBmp4)
     0x273B, 0x273C, 0x273D, 0x273E, 0x273F, // ✻✼✽✾✿
+    // ── Food & Drink (merged from the former Food category; tab icon 🍉) ──
+    0x1F347, 0x1F348, 0x1F349, 0x1F34A, 0x1F34B, 0x1F34C, 0x1F34D,
+    0x1F34E, 0x1F34F, 0x1F350, 0x1F351, 0x1F352, 0x1F353,
+    0x1F336,  // 🌶 hot pepper (covered by EmjPlants font range)
+    0x1F354,
+    0x1F355, 0x1F356, 0x1F357, 0x1F358, 0x1F359, 0x1F35A, 0x1F35B,
+    0x1F35C, 0x1F35D, 0x1F35E, 0x1F35F, 0x1F360, 0x1F361, 0x1F362,
+    0x1F363, 0x1F364, 0x1F365, 0x1F366, 0x1F367, 0x1F368, 0x1F369,
+    0x1F36A, 0x1F36B, 0x1F36C, 0x1F36D, 0x1F36E, 0x1F36F, 0x1F370,
+    0x1F371, 0x1F372, 0x1F373, 0x1F374, 0x1F375, 0x1F376, 0x1F377,
+    0x1F378, 0x1F379, 0x1F37A, 0x1F37B, 0x1F37C, 0x1F37D, 0x1F37E, 0x1F37F,
+    0x1F950, 0x1F951, 0x1F952, 0x1F953, 0x1F954, 0x1F955, 0x1F956, 0x1F957,
+    0x1F958, 0x1F959, 0x1F95A, 0x1F95B, 0x1F95C, 0x1F95D, 0x1F95E,
+    0x1F95F, 0x1F960, 0x1F961, 0x1F962, 0x1F963, 0x1F964, 0x1F965,
+    0x1F966, 0x1F967, 0x1F968, 0x1F969, 0x1F96A, 0x1F96B,
+    0x1F96C, 0x1F96D, 0x1F96E, 0x1F96F,  // 🥬🥭🥮🥯
+    0x1F9C0, 0x1F9C1, 0x1F9C2, 0x1F9C3, 0x1F9C4, 0x1F9C5,
+    0x1F9C6, 0x1F9C7, 0x1F9C8, 0x1F9C9, 0x1F9CA, 0x1F9CB, // 🧆🧇🧈🧉🧊🧋
+    0x1FAD0, 0x1FAD1, 0x1FAD2, 0x1FAD3, 0x1FAD4, 0x1FAD5, 0x1FAD6, // 🫐🫑🫒🫓🫔🫕🫖
+    0x1FAD7, 0x1FAD8, 0x1FAD9, 0x1FADA, 0x1FADB, // 🫗🫘🫙🫚🫛
+    0x2615, // ☕ hot beverage (NotoSansSymbols2 BMP — SymBmp1)
 };
 
 // ── Category 6: Weather & Sky ────────────────────────────────────────────────
@@ -231,39 +252,12 @@ static const uint32_t emj_cat6[] = {
     0x2609, 0x26C6, 0x26C7, // ☉ sun, ⛆ rain, ⛇ black snowman (SymBmp1/SymBmp6)
 };
 
-// ── Category 7: Food & Drink ─────────────────────────────────────────────────
-static const uint32_t emj_cat7[] = {
-    0x1F347, 0x1F348, 0x1F349, 0x1F34A, 0x1F34B, 0x1F34C, 0x1F34D,
-    0x1F34E, 0x1F34F, 0x1F350, 0x1F351, 0x1F352, 0x1F353,
-    0x1F336,  // 🌶 hot pepper (covered by EmjPlants font range)
-    0x1F354,
-    0x1F355, 0x1F356, 0x1F357, 0x1F358, 0x1F359, 0x1F35A, 0x1F35B,
-    0x1F35C, 0x1F35D, 0x1F35E, 0x1F35F, 0x1F360, 0x1F361, 0x1F362,
-    0x1F363, 0x1F364, 0x1F365, 0x1F366, 0x1F367, 0x1F368, 0x1F369,
-    0x1F36A, 0x1F36B, 0x1F36C, 0x1F36D, 0x1F36E, 0x1F36F, 0x1F370,
-    0x1F371, 0x1F372, 0x1F373, 0x1F374, 0x1F375, 0x1F376, 0x1F377,
-    0x1F378, 0x1F379, 0x1F37A, 0x1F37B, 0x1F37C, 0x1F37D, 0x1F37E, 0x1F37F,
-    // Newer foods (Unicode 9+)
-    0x1F950, 0x1F951, 0x1F952, 0x1F953, 0x1F954, 0x1F955, 0x1F956, 0x1F957,
-    0x1F958, 0x1F959, 0x1F95A, 0x1F95B, 0x1F95C, 0x1F95D, 0x1F95E,
-    // Newer foods (Unicode 10/11+)
-    0x1F95F, 0x1F960, 0x1F961, 0x1F962, 0x1F963, 0x1F964, 0x1F965,
-    0x1F966, 0x1F967, 0x1F968, 0x1F969, 0x1F96A, 0x1F96B,
-    0x1F96C, 0x1F96D, 0x1F96E, 0x1F96F,  // 🥬🥭🥮🥯 leafy green, mango, mooncake, bagel
-    // Newer foods (Unicode 12+)
-    0x1F9C0, 0x1F9C1, 0x1F9C2, 0x1F9C3, 0x1F9C4, 0x1F9C5,
-    0x1F9C6, 0x1F9C7, 0x1F9C8, 0x1F9C9, 0x1F9CA, 0x1F9CB, // 🧆🧇🧈🧉🧊🧋 waffle, butter, mate, ice, bubble tea
-    // Newer foods (Unicode 13+)
-    0x1FAD0, 0x1FAD1, 0x1FAD2, 0x1FAD3, 0x1FAD4, 0x1FAD5, 0x1FAD6, // 🫐🫑🫒🫓🫔🫕🫖
-    // Newer foods (Unicode 14-15+, EmjFood5 extended)
-    0x1FAD7, 0x1FAD8, 0x1FAD9, 0x1FADA, 0x1FADB, // 🫗🫘🫙🫚🫛 pouring, beans, jar, olive, pea pod
-    0x2615, // ☕ hot beverage (NotoSansSymbols2 BMP — SymBmp1)
-};
+// (Former Category 7 "Food & Drink" has been merged into Category 5 "Nature, Plants & Food".)
 
-// ── Category 8: Travel & Places ──────────────────────────────────────────────
+// ── Category 7: Travel & Places ──────────────────────────────────────────────
 // BMP items (no font offset); SMP use EmjTravel (-n0x10000)
 // 🚲🚴🚵🚶 moved to cat9; 💈 moved here from cat2
-static const uint32_t emj_cat8[] = {
+static const uint32_t emj_cat7[] = {  // Travel & Places (was cat8)
     // BMP travel places sorted by codepoint (EmjTravelBMP2)
     0x26F0,  // ⛰ mountain
     0x26F1,  // ⛱ umbrella on ground
@@ -298,9 +292,9 @@ static const uint32_t emj_cat8[] = {
     0x2668, // ♨ hot springs (NotoSansSymbols2 BMP — SymBmp2)
 };
 
-// ── Category 9: Sports & Entertainment ───────────────────────────────────────
+// ── Category 8: Sports & Entertainment ───────────────────────────────────────
 // Clothing items (👑-👢) and cycling/walking moved here from cat2/cat8
-static const uint32_t emj_cat9[] = {
+static const uint32_t emj_cat8[] = {  // Sports & Entertainment (was cat9)
     // BMP sports (SymBmp6 / EmjTravelBMP2)
     0x26BD, 0x26BE, // ⚽⚾ soccer, baseball
     0x26F3,         // ⛳ golf
@@ -344,8 +338,8 @@ static const uint32_t emj_cat9[] = {
     0x26C0, 0x26C1, 0x26C2, 0x26C3,         // ⛀⛁⛂⛃ draughts/checkers
 };
 
-// ── Category 10: Tools & Objects ─────────────────────────────────────────────
-static const uint32_t emj_cat10[] = {
+// ── Category 9: Tools & Objects ──────────────────────────────────────────────
+static const uint32_t emj_cat9[] = {  // Tools & Objects (was cat10)
     // Misc objects & money (Unicode 6-7, EmjEffects font 0x1F4A0-0x1F4BA)
     0x1F4A0, 0x1F4A1, 0x1F4A3, 0x1F4AF, // 💠💡💣💯
     0x1F4B0, 0x1F4B1, 0x1F4B2, 0x1F4B3, // 💰💱💲💳
@@ -380,45 +374,27 @@ static const uint32_t emj_cat10[] = {
     0x1FA91, 0x1FA92, 0x1FA93, 0x1FA94, 0x1FA96,
     0x1FA99, 0x1FA9A, 0x1FA9B, 0x1FA9C, 0x1FA9D,
     0x1FA9E, 0x1FA9F, // 🪑🪒🪓🪔🪖🪙🪚🪛🪜🪝🪞🪟
-    // Symbols & tools (BMP — SymBmp1/3/5/6; tools ⚒-⚜ from NotoEmoji ToolsBMP)
+    // Symbols, tools & office (BMP — SymBmp1/3/5/6; ⚒-⚜ from NotoEmoji ToolsBMP).
+    // Abstract marks / brackets / arrows live in Category 11 "Symbols".
     0x260E,                                 // ☎ telephone
     0x2620, 0x2622, 0x2623,                 // ☠ skull, ☢ radioactive, ☣ biohazard
     0x267F,                                 // ♿ wheelchair
     0x2692, 0x2693, 0x2694, 0x2695, 0x2696, // ⚒ ⚓ ⚔ ⚕ ⚖
     0x2697, 0x2699, 0x269B, 0x269C,         // ⚗ ⚙ ⚛ ⚜
-    0x26A0,                                 // ⚠ warning
+    0x26A0, 0x2621, 0x26BF,                 // ⚠ warning, ☡ caution, ⚿ key
     0x26CF, 0x26D1, 0x26D3, 0x26D4,         // ⛏ pick, ⛑ helmet, ⛓ chains, ⛔ no entry
-    0x2702, 0x2709,                         // ✂ scissors, ✉ envelope
-    0x270F, 0x2712,                         // ✏ pencil, ✒ nib
-    0x2713, 0x2714, 0x2717, 0x2718,         // ✓ ✔ ✗ ✘ check / cross marks
-    // More marks, office, crosses, ornaments, brackets & dingbat arrows (SymBmp1/3/4/6)
-    0x2610, 0x2612,                         // ☐ ☒ ballot box (empty / with X)
-    0x2621, 0x26BF,                         // ☡ caution, ⚿ key
-    0x2715, 0x2716,                         // ✕ ✖ multiplication X
+    0x2702, 0x2709, 0x270F, 0x2712,         // ✂ scissors, ✉ envelope, ✏ pencil, ✒ nib
     0x2700, 0x2701, 0x2703, 0x2704,         // ✀✁✃✄ scissors variants
     0x2706, 0x2707,                         // ✆ phone-location, ✇ tape drive
     0x270E, 0x2710, 0x2711,                 // ✎✐✑ pencil / nib variants
-    0x2719, 0x271A, 0x271B, 0x271C,         // ✙✚✛✜ crosses
-    0x274D, 0x274F, 0x2750, 0x2751, 0x2752, // ❍ shadowed circle, ❏❐❑❒ shadowed squares
-    0x2753, 0x2757,                         // ❓ ❗ question / exclamation
-    0x2758, 0x2759, 0x275A,                 // ❘❙❚ vertical bars
-    0x275B, 0x275C, 0x275D, 0x275E, 0x275F, 0x2760, // ❛-❠ quotation-mark ornaments
-    0x2768, 0x2769, 0x276A, 0x276B, 0x276C, 0x276D, 0x276E, 0x276F, // ❨-❯ bracket ornaments
-    0x2770, 0x2771, 0x2772, 0x2773, 0x2774, 0x2775,                 // ❰-❵ bracket ornaments
-    0x2794,                                                         // ➔ wide-headed arrow
-    0x2798, 0x2799, 0x279A, 0x279B, 0x279C, 0x279D, 0x279E, 0x279F, // ➘-➟ arrows
-    0x27A0, 0x27A1, 0x27A2, 0x27A3, 0x27A4, 0x27A5, 0x27A6, 0x27A7, // ➠-➧ arrows
-    0x27A8, 0x27A9, 0x27AA, 0x27AB, 0x27AC, 0x27AD, 0x27AE, 0x27AF, // ➨-➯ arrows
-    0x27B1, 0x27B2, 0x27B3, 0x27B4, 0x27B5, 0x27B6, 0x27B7, 0x27B8, // ➱-➸ arrows
-    0x27B9, 0x27BA, 0x27BB, 0x27BC, 0x27BD, 0x27BE,                 // ➹-➾ arrows
 };
 
-// ── Category 11: Latin Extended-A & Latin Extended-B ─────────────────────────
+// ── Category 10: Latin Extended-A & Latin Extended-B ─────────────────────────
 // BMP codepoints (< 0x10000): font index == codepoint (no -n offset). Latin
 // Extended-A (0x0100-0x017E) is rendered by the _SupAndExtA_ font (0xa1-0x17e);
 // Latin Extended-B (0x0180-0x024F) by the dedicated _LatinExtB_ font.
 // 0x017F (long s) is omitted — _SupAndExtA_ ends at 0x017E.
-static const uint32_t emj_cat11[] = {
+static const uint32_t emj_cat10[] = {  // Latin Extended-A & B (was cat11)
     // Latin Extended-A (0x0100-0x017E)
     0x0100, 0x0101, 0x0102, 0x0103, 0x0104, 0x0105, 0x0106, 0x0107,
     0x0108, 0x0109, 0x010A, 0x010B, 0x010C, 0x010D, 0x010E, 0x010F,
@@ -465,22 +441,55 @@ static const uint32_t emj_cat11[] = {
     0x0248, 0x0249, 0x024A, 0x024B, 0x024C, 0x024D, 0x024E, 0x024F,
 };
 
+// ── Category 11: Symbols & Marks ─────────────────────────────────────────────
+// Abstract marks, ornaments and arrows. Dingbats come from SymBmp1/SymBmp4; the
+// key-action arrows 0x2B6F-0x2BA0 come from the _Arrows_ font (also used as keycap
+// legends in the normal key-render UI).
+static const uint32_t emj_cat11[] = {
+    // Check / cross / ballot marks
+    0x2610, 0x2612,                         // ☐ ☒ ballot box (empty / with X)
+    0x2713, 0x2714, 0x2717, 0x2718,         // ✓ ✔ ✗ ✘ check / ballot X
+    0x2715, 0x2716,                         // ✕ ✖ multiplication X
+    0x2753, 0x2757,                         // ❓ ❗ question / exclamation
+    0x2719, 0x271A, 0x271B, 0x271C,         // ✙✚✛✜ crosses
+    // Shapes & bars
+    0x274D, 0x274F, 0x2750, 0x2751, 0x2752, // ❍ ❏❐❑❒ shadowed circle / squares
+    0x2758, 0x2759, 0x275A,                 // ❘❙❚ vertical bars
+    // Quotation-mark & bracket ornaments
+    0x275B, 0x275C, 0x275D, 0x275E, 0x275F, 0x2760, // ❛-❠
+    0x2768, 0x2769, 0x276A, 0x276B, 0x276C, 0x276D, 0x276E, 0x276F, // ❨-❯
+    0x2770, 0x2771, 0x2772, 0x2773, 0x2774, 0x2775,                 // ❰-❵
+    // Dingbat arrows
+    0x2794,                                                         // ➔
+    0x2798, 0x2799, 0x279A, 0x279B, 0x279C, 0x279D, 0x279E, 0x279F, // ➘-➟
+    0x27A0, 0x27A1, 0x27A2, 0x27A3, 0x27A4, 0x27A5, 0x27A6, 0x27A7, // ➠-➧
+    0x27A8, 0x27A9, 0x27AA, 0x27AB, 0x27AC, 0x27AD, 0x27AE, 0x27AF, // ➨-➯
+    0x27B1, 0x27B2, 0x27B3, 0x27B4, 0x27B5, 0x27B6, 0x27B7, 0x27B8, // ➱-➸
+    0x27B9, 0x27BA, 0x27BB, 0x27BC, 0x27BD, 0x27BE,                 // ➹-➾
+    // Key-action arrows (also keycap legends; _Arrows_ font 0x2B6F-0x2BA0)
+    0x2B6F,                                 // ⭯ refresh / reload
+    0x2B70, 0x2B71, 0x2B72, 0x2B73,         // ⭰⭱⭲⭳ to-bar (home/end/tab-stop)
+    0x2B7E,                                 // ⭾ horizontal tab
+    0x2B8C, 0x2B8E,                         // ⮌ ⮎ undo / redo
+    0x2BA0,                                 // ⮠ return / enter
+};
+
 // ── Category table ──────────────────────────────────────────────────────────
 #define EMJ_CAT_ENTRY(arr) { arr, (uint16_t)(sizeof(arr) / sizeof(arr[0])) }
 
 static const emj_category_t EMJ_CATEGORIES[] = {
-    EMJ_CAT_ENTRY(emj_cat0),   // 0: Smileys    😀
-    EMJ_CAT_ENTRY(emj_cat1),   // 1: Gestures   👋
-    EMJ_CAT_ENTRY(emj_cat2),   // 2: People     🏠
-    EMJ_CAT_ENTRY(emj_cat3),   // 3: Love & Celebrations ❤
-    EMJ_CAT_ENTRY(emj_cat4),   // 4: Animals    🐶
-    EMJ_CAT_ENTRY(emj_cat5),   // 5: Nature     🌸
-    EMJ_CAT_ENTRY(emj_cat6),   // 6: Weather    ☀
-    EMJ_CAT_ENTRY(emj_cat7),   // 7: Food       🍎
-    EMJ_CAT_ENTRY(emj_cat8),   // 8: Travel     ✈
-    EMJ_CAT_ENTRY(emj_cat9),   // 9: Sports     ⚽
-    EMJ_CAT_ENTRY(emj_cat10),  // 10: Objects   🔧
-    EMJ_CAT_ENTRY(emj_cat11),  // 11: Latin Extended-A & B  Ā
+    EMJ_CAT_ENTRY(emj_cat0),   // 0: Smileys & Faces        😀
+    EMJ_CAT_ENTRY(emj_cat1),   // 1: Gestures & Body        👋
+    EMJ_CAT_ENTRY(emj_cat2),   // 2: People & Jobs          🏠
+    EMJ_CAT_ENTRY(emj_cat3),   // 3: Love & Celebrations    ❤
+    EMJ_CAT_ENTRY(emj_cat4),   // 4: Animals                🐶
+    EMJ_CAT_ENTRY(emj_cat5),   // 5: Nature, Plants & Food  🍉  (Food merged in)
+    EMJ_CAT_ENTRY(emj_cat6),   // 6: Weather & Sky          ☀
+    EMJ_CAT_ENTRY(emj_cat7),   // 7: Travel & Places        ✈
+    EMJ_CAT_ENTRY(emj_cat8),   // 8: Sports & Entertainment ⚽
+    EMJ_CAT_ENTRY(emj_cat9),   // 9: Tools & Objects        🔧
+    EMJ_CAT_ENTRY(emj_cat10),  // 10: Latin Extended-A & B  Ā
+    EMJ_CAT_ENTRY(emj_cat11),  // 11: Symbols & Marks       ❖  (checks, brackets, arrows…)
 };
 
 #define EMJ_NUM_CATEGORIES ((uint8_t)(sizeof(EMJ_CATEGORIES) / sizeof(EMJ_CATEGORIES[0])))

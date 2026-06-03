@@ -314,6 +314,9 @@ static const uint32_t emj_cat9[] = {
     0x1FA80, 0x1FA81, 0x1FA82, 0x1FA83, 0x1FA84, 0x1FA85, 0x1FA86,
     // Instruments
     0x1FA95, 0x1FA97, 0x1FA98, // 🪕🪗🪘 banjo, accordion, long drum
+    // Chess pieces (BMP 0x2654-0x265F; prefix-1 _Chess_ font, no offset)
+    0x2654, 0x2655, 0x2656, 0x2657, 0x2658, 0x2659, // ♔♕♖♗♘♙ white king→pawn
+    0x265A, 0x265B, 0x265C, 0x265D, 0x265E, 0x265F, // ♚♛♜♝♞♟ black king→pawn
 };
 
 // ── Category 10: Tools & Objects ─────────────────────────────────────────────
@@ -352,9 +355,6 @@ static const uint32_t emj_cat10[] = {
     0x1FA91, 0x1FA92, 0x1FA93, 0x1FA94, 0x1FA96,
     0x1FA99, 0x1FA9A, 0x1FA9B, 0x1FA9C, 0x1FA9D,
     0x1FA9E, 0x1FA9F, // 🪑🪒🪓🪔🪖🪙🪚🪛🪜🪝🪞🪟
-    // Chess pieces (BMP 0x2654-0x265F; prefix-1 _Chess_ font, no offset)
-    0x2654, 0x2655, 0x2656, 0x2657, 0x2658, 0x2659, // ♔♕♖♗♘♙ white king→pawn
-    0x265A, 0x265B, 0x265C, 0x265D, 0x265E, 0x265F, // ♚♛♜♝♞♟ black king→pawn
 };
 
 // ── Category 11: Latin Extended-A & Latin Extended-B ─────────────────────────

@@ -128,32 +128,76 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
     const GFXfont * currentFont = 0;
     uint16_t first = 0;
     uint16_t last = 0;
-    static uint8_t s_last_idx = 0; // last-hit cache: O(1) on same-font runs (e.g. 49-slot emoji page refresh)
-    bool cache_hit = false;
-    if (s_last_idx < num_fonts) {
-        currentFont = fonts[s_last_idx];
+
+    // Font selection: pick the first font in `fonts` whose [first,last] contains
+    // `ch`. Array order is precedence — ranges may overlap deliberately (a narrow
+    // gap-filler font placed ahead of a wide sparse font). A small MRU cache of
+    // recently-hit font indices skips the O(N) scan on the common case (runs of
+    // same-font glyphs: a 49-key emoji page, a Latin label).
+    //
+    // Correctness: only *disjoint* fonts (range overlaps no other font) are ever
+    // cached. A hit on such a font is unambiguous — it is the unique container of
+    // `ch`, hence necessarily the scan winner. Fonts that participate in an overlap
+    // are never cached and always fall through to the priority-ordered scan, so
+    // overlap precedence is preserved. Disjointness is computed once per font set.
+    enum { FONT_MRU_N = 4 };
+    static const GFXfont *const *s_set = 0;     // font set the cache was built for
+    static uint8_t s_set_n   = 0;
+    static uint8_t s_disjoint[16];              // bitmap: 1 = font[i] is cacheable (≤128 fonts)
+    static uint8_t s_mru[FONT_MRU_N];           // MRU list of cacheable font indices
+    static uint8_t s_mru_len = 0;
+
+    if (fonts != s_set || num_fonts != s_set_n) {
+        s_set = fonts; s_set_n = num_fonts; s_mru_len = 0;
+        memset(s_disjoint, 0, sizeof(s_disjoint));
+        if (num_fonts <= 128) {
+            for (uint8_t i = 0; i < num_fonts; ++i) {
+                uint16_t fi = pgm_read_word(&fonts[i]->first);
+                uint16_t li = pgm_read_word(&fonts[i]->last);
+                bool overlaps = false;
+                for (uint8_t j = 0; j < num_fonts; ++j) {
+                    if (j == i) continue;
+                    uint16_t fj = pgm_read_word(&fonts[j]->first);
+                    uint16_t lj = pgm_read_word(&fonts[j]->last);
+                    if (fi <= lj && fj <= li) { overlaps = true; break; }
+                }
+                if (!overlaps) s_disjoint[i >> 3] |= (uint8_t)(1u << (i & 7));
+            }
+        }
+    }
+
+    bool hit = false;
+    for (uint8_t k = 0; k < s_mru_len; ++k) {
+        uint8_t idx = s_mru[k];
+        currentFont = fonts[idx];
         first = pgm_read_word(&currentFont->first);
         last  = pgm_read_word(&currentFont->last);
-        cache_hit = (ch >= first && ch <= last);
+        if (ch >= first && ch <= last) {
+            for (uint8_t m = k; m > 0; --m) s_mru[m] = s_mru[m - 1];
+            s_mru[0] = idx;                     // move to front
+            hit = true;
+            break;
+        }
     }
-    if (!cache_hit) {
+
+    if (!hit) {
+        uint8_t found = 0xFF;
         for (uint8_t idx = 0; idx < num_fonts; ++idx) {
             currentFont = fonts[idx];
             first = pgm_read_word(&currentFont->first);
             last  = pgm_read_word(&currentFont->last);
-            if (ch < first || ch > last) {
-                if (idx == num_fonts - 1) {
-                    currentFont = fonts[0];
-                    first = pgm_read_word(&currentFont->first);
-                    last  = pgm_read_word(&currentFont->last);
-                    ch = u'!';
-                    break;
-                    //return 0; //no match at all
-                }
-            } else {
-                s_last_idx = idx;
-                break; // found character in range of the current font
-            }
+            if (ch >= first && ch <= last) { found = idx; break; }
+        }
+        if (found == 0xFF) {
+            currentFont = fonts[0];             // no match — fall back to '!'
+            first = pgm_read_word(&currentFont->first);
+            last  = pgm_read_word(&currentFont->last);
+            ch = u'!';
+        } else if (s_disjoint[found >> 3] & (uint8_t)(1u << (found & 7))) {
+            uint8_t m = (s_mru_len < FONT_MRU_N) ? s_mru_len : (FONT_MRU_N - 1);
+            for (; m > 0; --m) s_mru[m] = s_mru[m - 1];
+            s_mru[0] = found;                   // cache cacheable winner
+            if (s_mru_len < FONT_MRU_N) ++s_mru_len;
         }
     }
     ch -= first;

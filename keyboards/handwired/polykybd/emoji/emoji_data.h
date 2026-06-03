@@ -389,12 +389,12 @@ static const uint32_t emj_cat9[] = {  // Tools & Objects (was cat10)
     0x270E, 0x2710, 0x2711,                 // ✎✐✑ pencil / nib variants
 };
 
-// ── Category 10: Latin Extended-A & Latin Extended-B ─────────────────────────
+// ── Category 11: Latin Extended-A & Latin Extended-B ─────────────────────────
 // BMP codepoints (< 0x10000): font index == codepoint (no -n offset). Latin
 // Extended-A (0x0100-0x017E) is rendered by the _SupAndExtA_ font (0xa1-0x17e);
 // Latin Extended-B (0x0180-0x024F) by the dedicated _LatinExtB_ font.
 // 0x017F (long s) is omitted — _SupAndExtA_ ends at 0x017E.
-static const uint32_t emj_cat10[] = {  // Latin Extended-A & B (was cat11)
+static const uint32_t emj_cat11[] = {  // Latin Extended-A & B
     // Latin Extended-A (0x0100-0x017E)
     0x0100, 0x0101, 0x0102, 0x0103, 0x0104, 0x0105, 0x0106, 0x0107,
     0x0108, 0x0109, 0x010A, 0x010B, 0x010C, 0x010D, 0x010E, 0x010F,
@@ -441,11 +441,11 @@ static const uint32_t emj_cat10[] = {  // Latin Extended-A & B (was cat11)
     0x0248, 0x0249, 0x024A, 0x024B, 0x024C, 0x024D, 0x024E, 0x024F,
 };
 
-// ── Category 11: Symbols & Marks ─────────────────────────────────────────────
+// ── Category 10: Symbols & Marks ─────────────────────────────────────────────
 // Abstract marks, ornaments and arrows. Dingbats come from SymBmp1/SymBmp4; the
 // key-action arrows 0x2B6F-0x2BA0 come from the _Arrows_ font (also used as keycap
 // legends in the normal key-render UI).
-static const uint32_t emj_cat11[] = {
+static const uint32_t emj_cat10[] = {  // Symbols & Marks
     // Check / cross / ballot marks
     0x2610, 0x2612,                         // ☐ ☒ ballot box (empty / with X)
     0x2713, 0x2714, 0x2717, 0x2718,         // ✓ ✔ ✗ ✘ check / ballot X
@@ -488,8 +488,8 @@ static const emj_category_t EMJ_CATEGORIES[] = {
     EMJ_CAT_ENTRY(emj_cat7),   // 7: Travel & Places        ✈
     EMJ_CAT_ENTRY(emj_cat8),   // 8: Sports & Entertainment ⚽
     EMJ_CAT_ENTRY(emj_cat9),   // 9: Tools & Objects        🔧
-    EMJ_CAT_ENTRY(emj_cat10),  // 10: Latin Extended-A & B  Ā
-    EMJ_CAT_ENTRY(emj_cat11),  // 11: Symbols & Marks       ❖  (checks, brackets, arrows…)
+    EMJ_CAT_ENTRY(emj_cat10),  // 10: Symbols & Marks       ✔  (checks, brackets, arrows…)
+    EMJ_CAT_ENTRY(emj_cat11),  // 11: Latin Extended-A & B  Ā
 };
 
 #define EMJ_NUM_CATEGORIES ((uint8_t)(sizeof(EMJ_CATEGORIES) / sizeof(EMJ_CATEGORIES[0])))

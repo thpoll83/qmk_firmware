@@ -84,7 +84,6 @@
 #include "generated/8NotoEmoji_Medium_EmjTravelExt_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP1_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP2_20pt.h"
-#include "generated/8NotoSansSymbols2_EmjHeart_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjTravelBMP2_20pt.h"
 #include "generated/NotoSansAR_Regular_FormsB_16pt.h"
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
@@ -189,7 +188,6 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoEmoji_Medium_EmjTravelExt_20pt16b,
   &NotoEmoji_Medium_EmjWeatherSMP1_20pt16b,
   &NotoEmoji_Medium_EmjWeatherSMP2_20pt16b,
-  &NotoSansSymbols2_Regular_EmjHeart_20pt16b,
   &NotoEmoji_Medium_EmjTravelBMP2_20pt16b,
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,

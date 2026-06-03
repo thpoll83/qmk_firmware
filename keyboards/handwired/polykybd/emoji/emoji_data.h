@@ -83,6 +83,8 @@ static const uint32_t emj_cat1[] = {
     0x1FAE6, // 🫦
     // Unicode 14-15 hand gestures (EmjHands3)
     0x1FAF0, 0x1FAF1, 0x1FAF2, 0x1FAF3, 0x1FAF4, 0x1FAF5, 0x1FAF6, 0x1FAF7, 0x1FAF8,
+    // Manicule / pointing-hand variants (NotoSansSymbols2 BMP — SymBmp1)
+    0x261A, 0x261B, 0x261C, 0x261E, 0x261F, // ☚☛☜☞☟ (☝ 0x261D above)
 };
 
 // ── Category 2: People & Jobs ───────────────────────────────────────────────
@@ -144,6 +146,11 @@ static const uint32_t emj_cat3[] = {
     0x1FA75, 0x1FA76, 0x1FA77, // 🩵🩶🩷
     // Stars, sparkles & heart-mark (NotoSansSymbols2 BMP — SymBmp1/SymBmp4)
     0x2605, 0x2606, 0x2726, 0x2727, 0x2763, // ★ ☆ ✦ ✧ ❣
+    // Decorative stars, asterisks, sparkles, snowflakes & floral hearts (Dingbats — SymBmp4)
+    0x2722, 0x2723, 0x2724, 0x2725, 0x2729, 0x272A, 0x272B, 0x272C,
+    0x272D, 0x272E, 0x272F, 0x2730, 0x2731, 0x2732, 0x2733, 0x2734,
+    0x2735, 0x2736, 0x2737, 0x2738, 0x2739, 0x273A, 0x2742, 0x2743,
+    0x2745, 0x2746, 0x2747, 0x2748, 0x2765, 0x2766, 0x2767,
 };
 
 // ── Category 4: Animals ──────────────────────────────────────────────────────
@@ -185,6 +192,8 @@ static const uint32_t emj_cat5[] = {
     0x1FABB, // 🪻 hyacinth (Unicode 15, EmjInsects extended)
     // Shamrock & florettes (NotoSansSymbols2 BMP — SymBmp1/SymBmp4)
     0x2618, 0x2740, 0x2741, 0x274B, // ☘ ❀ ❁ ❋
+    // Florettes (Dingbats — SymBmp4)
+    0x273B, 0x273C, 0x273D, 0x273E, 0x273F, // ✻✼✽✾✿
 };
 
 // ── Category 6: Weather & Sky ────────────────────────────────────────────────
@@ -219,6 +228,7 @@ static const uint32_t emj_cat6[] = {
     0x1FA90, // 🪐 ringed planet (moved from cat10)
     // Comet & alt sun (NotoSansSymbols2 BMP — SymBmp1)
     0x2604, 0x263C, // ☄ comet, ☼ white sun with rays
+    0x2609, 0x26C6, 0x26C7, // ☉ sun, ⛆ rain, ⛇ black snowman (SymBmp1/SymBmp6)
 };
 
 // ── Category 7: Food & Drink ─────────────────────────────────────────────────
@@ -285,6 +295,7 @@ static const uint32_t emj_cat8[] = {
     0x1F6C2, 0x1F6C3, 0x1F6C4, 0x1F6C5, // 🛂🛃🛄🛅
     // Additional places (EmjTravelExt)
     0x1F6D0, 0x1F6D1, 0x1F6D2, // 🛐🛑🛒
+    0x2668, // ♨ hot springs (NotoSansSymbols2 BMP — SymBmp2)
 };
 
 // ── Category 9: Sports & Entertainment ───────────────────────────────────────
@@ -327,6 +338,10 @@ static const uint32_t emj_cat9[] = {
     // Card suits & dice (NotoSansSymbols2 BMP — SymBmp2)
     0x2660, 0x2661, 0x2662, 0x2663, 0x2664, 0x2665, 0x2666, 0x2667, // ♠♡♢♣♤♥♦♧
     0x2680, 0x2681, 0x2682, 0x2683, 0x2684, 0x2685, // ⚀⚁⚂⚃⚄⚅ dice
+    // Draughts, shogi & dotted game circles (NotoSansSymbols2 BMP — SymBmp2/SymBmp6)
+    0x2616, 0x2617,                         // ☖☗ shogi pieces
+    0x2686, 0x2687, 0x2688, 0x2689,         // ⚆⚇⚈⚉ circles with dots
+    0x26C0, 0x26C1, 0x26C2, 0x26C3,         // ⛀⛁⛂⛃ draughts/checkers
 };
 
 // ── Category 10: Tools & Objects ─────────────────────────────────────────────
@@ -376,6 +391,26 @@ static const uint32_t emj_cat10[] = {
     0x2702, 0x2709,                         // ✂ scissors, ✉ envelope
     0x270F, 0x2712,                         // ✏ pencil, ✒ nib
     0x2713, 0x2714, 0x2717, 0x2718,         // ✓ ✔ ✗ ✘ check / cross marks
+    // More marks, office, crosses, ornaments, brackets & dingbat arrows (SymBmp1/3/4/6)
+    0x2610, 0x2612,                         // ☐ ☒ ballot box (empty / with X)
+    0x2621, 0x26BF,                         // ☡ caution, ⚿ key
+    0x2715, 0x2716,                         // ✕ ✖ multiplication X
+    0x2700, 0x2701, 0x2703, 0x2704,         // ✀✁✃✄ scissors variants
+    0x2706, 0x2707,                         // ✆ phone-location, ✇ tape drive
+    0x270E, 0x2710, 0x2711,                 // ✎✐✑ pencil / nib variants
+    0x2719, 0x271A, 0x271B, 0x271C,         // ✙✚✛✜ crosses
+    0x274D, 0x274F, 0x2750, 0x2751, 0x2752, // ❍ shadowed circle, ❏❐❑❒ shadowed squares
+    0x2753, 0x2757,                         // ❓ ❗ question / exclamation
+    0x2758, 0x2759, 0x275A,                 // ❘❙❚ vertical bars
+    0x275B, 0x275C, 0x275D, 0x275E, 0x275F, 0x2760, // ❛-❠ quotation-mark ornaments
+    0x2768, 0x2769, 0x276A, 0x276B, 0x276C, 0x276D, 0x276E, 0x276F, // ❨-❯ bracket ornaments
+    0x2770, 0x2771, 0x2772, 0x2773, 0x2774, 0x2775,                 // ❰-❵ bracket ornaments
+    0x2794,                                                         // ➔ wide-headed arrow
+    0x2798, 0x2799, 0x279A, 0x279B, 0x279C, 0x279D, 0x279E, 0x279F, // ➘-➟ arrows
+    0x27A0, 0x27A1, 0x27A2, 0x27A3, 0x27A4, 0x27A5, 0x27A6, 0x27A7, // ➠-➧ arrows
+    0x27A8, 0x27A9, 0x27AA, 0x27AB, 0x27AC, 0x27AD, 0x27AE, 0x27AF, // ➨-➯ arrows
+    0x27B1, 0x27B2, 0x27B3, 0x27B4, 0x27B5, 0x27B6, 0x27B7, 0x27B8, // ➱-➸ arrows
+    0x27B9, 0x27BA, 0x27BB, 0x27BC, 0x27BD, 0x27BE,                 // ➹-➾ arrows
 };
 
 // ── Category 11: Latin Extended-A & Latin Extended-B ─────────────────────────

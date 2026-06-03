@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+env:
+  KB: handwired/polykybd/split72
+  KM: default
+
 jobs:
   release:
     name: Build and release firmware
@@ -20,23 +24,25 @@ jobs:
       - name: Build split72
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb handwired/polykybd/split72 -km default
+          args: qmk compile -kb ${{ env.KB }} -km ${{ env.KM }}
 
       - name: Install ARM binutils
-        run: sudo apt-get install -y --no-install-recommends binutils-arm-none-eabi
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends binutils-arm-none-eabi
 
       - name: Extract .bin from ELF
         run: |
+          TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
           arm-none-eabi-objcopy -O binary \
-            .build/handwired_polykybd_split72_default.elf \
-            handwired_polykybd_split72_default.bin
+            .build/${TARGET}.elf \
+            ${TARGET}.bin
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
           gh release create "${{ github.ref_name }}" \
             --generate-notes \
             --title "PolyKybd Firmware ${{ github.ref_name }}" \
-            handwired_polykybd_split72_default.uf2 \
-            handwired_polykybd_split72_default.bin
+            ${TARGET}.uf2 \
+            ${TARGET}.bin

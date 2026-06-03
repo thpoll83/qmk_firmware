@@ -66,7 +66,6 @@
 #include "generated/8NotoEmoji_Medium_EmjInsects_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjLove_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjObjects1_20pt.h"
-#include "generated/8NotoEmoji_Medium_EmjObjects_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjObjects2_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjParts_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjPeople_20pt.h"
@@ -84,7 +83,6 @@
 #include "generated/8NotoEmoji_Medium_EmjTravel_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjTravelExt_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP1_20pt.h"
-#include "generated/8NotoEmoji_Medium_EmjWeatherSMP_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP2_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjHeart_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
@@ -174,7 +172,6 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoEmoji_Medium_EmjInsects_20pt16b,
   &NotoEmoji_Medium_EmjLove_20pt16b,
   &NotoEmoji_Medium_EmjObjects1_20pt16b,
-  &NotoEmoji_Medium_EmjObjects_20pt16b,
   &NotoEmoji_Medium_EmjObjects2_20pt16b,
   &NotoEmoji_Medium_EmjParts_20pt16b,
   &NotoEmoji_Medium_EmjPeople_20pt16b,
@@ -192,7 +189,6 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoEmoji_Medium_EmjTravel_20pt16b,
   &NotoEmoji_Medium_EmjTravelExt_20pt16b,
   &NotoEmoji_Medium_EmjWeatherSMP1_20pt16b,
-  &NotoEmoji_Medium_EmjWeatherSMP_20pt16b,
   &NotoEmoji_Medium_EmjWeatherSMP2_20pt16b,
   &NotoSansSymbols2_Regular_EmjHeart_20pt16b,
   &NotoSansSymbols2_Regular_EmjSportsBMP_20pt16b,

@@ -100,10 +100,8 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjGestures_ -n0x10000 0x1F440 0x1F450
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHands2_ -n0x10000 0x1F91A 0x1F91F > "base/fonts/generated/8NotoEmoji_Medium_EmjHands2_20pt.h"
 # Cat 1 addition: 🖐 raised hand with fingers splayed (0x1F590); gap between EmjObjects end (0xF52E) and Emojis0 start (0xF600)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjRaised_ -n0x10000 0x1F590 0x1F590 > "base/fonts/generated/8NotoEmoji_Medium_EmjRaised_20pt.h"
-# Cat 1 addition: BMP hand gestures — prefix 1 required
-# 0x261D-0x261E (☝☞, indices 9757-9758) fall inside EmjWeatherBMP gap (first=0x2600, last=0x26A1) — needs prefix 1
-fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjHandsBMP_ 0x261D 0x261E > "base/fonts/generated/1NotoSansSymbols2_EmjHandsBMP_20pt.h"
-# 0x270A-0x270D (✊✋✌✍, indices 9994-9997) fall inside DiamondCut gap (first=0x2702, last=0x2756) — needs prefix 1
+# Cat 1: BMP hand gestures.  ☝☞ (0x261D-0x261E, Symbols2) are merged into _SymBmp1_ (see "Symbols").
+# ✊✋✌✍ (0x270A-0x270D, NotoEmoji) stay separate; the Symbols2 ranges are split around this island.
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjHandsBMP2_ 0x270A 0x270D > "base/fonts/generated/1NotoSansSymbols2_EmjHandsBMP2_20pt.h"
 
 # Cat 0 (fantasy/creature faces 0x1F47B-0x1F482) + Cat 2 (dancer 0x1F483, syringe/pill 0x1F489-0x1F48A) + Cat 3 (💄0x1F484, 💅0x1F485)
@@ -167,20 +165,17 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjInsects_ -n0x10000 0x1FAB0 0x1FABC 
 
 echo "Emoji category fonts: weather, zodiac, clocks..."
 # Cat 6: weather — BMP 0x2600-0x2603, 0x2614, 0x26A1 + SMP 0x1F300-0x1F32C
-# 0x1F310 🌐 globe and 0x1F324-0x1F32C (☁ variants, 🌪🌫🌬) are in the extended SMP range
-fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP_ 0x2600 0x2603 0x2614 0x2614 0x26A1 0x26A1 > "base/fonts/generated/2NotoSansSymbols2_EmjWeatherBMP_20pt.h"
-# ⛄⛅⛈ (0x26C4/5/8) — separate file so the gap 0x26A1-0x26C3 doesn't shadow ⚽⚾ (0x26BD-0x26BE)
+# 0x1F310 🌐 globe and 0x1F324-0x1F32C (☁ variants, 🌪🌫🌬) are in the extended SMP range.
+# BMP weather (☀☁☂☃ 0x2600-0x2603, ☔ 0x2614, ⚡ 0x26A1) are merged into _SymBmp1_/_SymBmp2_ (see "Symbols").
+# ⛄⛅⛈ (0x26C4/5/8) stay separate — tight range, disjoint from ⚽⚾ (0x26BD-0x26BE).
 fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjWeatherBMP2_ 0x26C4 0x26C8 > "base/fonts/generated/2NotoSansSymbols2_EmjWeatherBMP2_20pt.h"
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP1_ -n0x10000 0x1F300 0x1F321 > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP1_20pt.h"
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjWeatherSMP2_ -n0x10000 0x1F324 0x1F32C > "base/fonts/generated/8NotoEmoji_Medium_EmjWeatherSMP2_20pt.h"
 
-# Cat 6 addition: zodiac signs ♈-♓ (BMP 0x2648-0x2653)
-# PREFIX 1 required: 0x2648-0x2653 fall inside EmjWeatherBMP gap range (first=0x2600, last=0x26A1)
-# prefix 1 sorts before prefix 2, so zodiac font wins the lookup
+# Cat 6 addition: zodiac signs ♈-♓ (BMP 0x2648-0x2653, NotoEmoji).
+# Stays separate (NotoEmoji); the Symbols2 ranges _SymBmp1_/_SymBmp2_ are split around this island.
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _Zodiac_ 0x2648 0x2653 > "base/fonts/generated/1NotoSansSymbols2_Regular_Zodiac_20pt.h"
-# Cat 6 addition: ❄ snowflake (BMP 0x2744, index 10052)
-# PREFIX 1 required: 10052 falls inside DiamondCut gap (first=0x2702=9986, last=0x2756=10070)
-fontconvert "-f$NOTO_SYM2" -s20 -r50 -v _EmjSnowflake_ 0x2744 0x2744 > "base/fonts/generated/1NotoSansSymbols2_EmjSnowflake_20pt.h"
+# ❄ snowflake (BMP 0x2744, Symbols2) is merged into _SymBmp4_ (see "Symbols").
 # Cat 6 addition: clock faces 🕐-🕧 (SMP 0x1F550-0x1F567)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClocks_ -n0x10000 0x1F550 0x1F567 > "base/fonts/generated/8NotoEmoji_Medium_EmjClocks_20pt.h"
 
@@ -231,13 +226,20 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjCelebrate_ -n0x10000 0x1F380 0x1F39
 echo "Symbols..."
 fontconvert "-ffonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf" "-s20" -r50 -v _Technical_ 0x2387 0x2388 0x238b 0x238b 0x2399 0x2399 > "base/fonts/generated/3NotoSansSymbols_Regular_Technical_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Technical2_ 0x2318 0x2318 0x2325 0x2326 0x232B 0x232B > "base/fonts/generated/3NotoSansSymbols2_Regular_Technical_20pt.h"
-fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymbolsAndShapes_ 0x25AC 0x25AC 0x2611 0x2611 > "base/fonts/generated/3NotoSansSymbols2_Regular_SymbolsAndShapes_20pt.h"
-# Chess pieces ♔-♟ (BMP 0x2654-0x265F) — cat 9 "Sports & Entertainment"
-# PREFIX 1 required: 0x2654-0x265F fall inside EmjWeatherBMP range (first=0x2600, last=0x26A1)
-# prefix 1 sorts before prefix 2, so the chess font wins the lookup (same as Zodiac)
-fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Chess_ 0x2654 0x265F > "base/fonts/generated/1NotoSansSymbols2_Regular_Chess_20pt.h"
+# Merged Symbols2 BMP fonts (0x25AC-0x2756).  These four cover every Symbols2 glyph in the
+# 0x26xx/0x27xx region with DISJOINT [first,last] ranges, so they no longer bracket-shadow the
+# interleaved NotoEmoji islands (Zodiac, HandsBMP2, TravelBMP/BMP2) — overlap-free, no prefix
+# trick needed. They replace the old SymbolsAndShapes / EmjWeatherBMP / EmjHandsBMP / Chess /
+# DiamondCut / EmjSnowflake fonts (same Symbols2 typeface, identical glyphs).
+#   _SymBmp1_ 0x25AC-0x261E : ▬ ☀☁☂☃ ☑ ☔ ☝☞   (SymbolsAndShapes + weather-low + HandsBMP)
+#   _SymBmp2_ 0x2654-0x26A1 : ♔-♟ chess + ⚡       (Chess + weather-high)
+#   _SymBmp3_ 0x2702        : ✂                     (DiamondCut scissors)
+#   _SymBmp4_ 0x2744-0x2756 : ❄ ❖                   (Snowflake + DiamondCut ❖)
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp1_ 0x25AC 0x25AC 0x2600 0x2603 0x2611 0x2611 0x2614 0x2614 0x261D 0x261E > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp1_20pt.h"
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp2_ 0x2654 0x265F 0x26A1 0x26A1 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp2_20pt.h"
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp3_ 0x2702 0x2702 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp3_20pt.h"
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymBmp4_ 0x2744 0x2744 0x2756 0x2756 > "base/fonts/generated/1NotoSansSymbols2_Regular_SymBmp4_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Arrows_ 	0x2B6F 0x2B73 0x2B7E 0x2B7E 0x2B8C 0x2B8C 0x2B8E 0x2B8E 0x2BA0 0x2BA0 > "base/fonts/generated/3NotoSansSymbols2_Regular_Arrows_20pt.h"
-fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _DiamondCut_ 0x2702 0x2702 0x2756 0x2756 > "base/fonts/generated/3NotoSansSymbols2_Regular_DiamondCut_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Util_ -n0x11000 0x1F568 0x1F56A 0x1F5A9 0x1F5AB 0x1F5B3 0x1F5BC 0x1F5CA 0x1F5CA > "base/fonts/generated/4NotoSansSymbols2_Regular_Util_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s18" -r50 -v _Window_ -n0x11000 0x1F5D5 0x1F5DB > "base/fonts/generated/5NotoSansSymbols2_Regular_Window_18pt.h"
 

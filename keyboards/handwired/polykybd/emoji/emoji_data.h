@@ -9,7 +9,7 @@
 
 typedef struct {
     const uint32_t *codepoints;
-    uint8_t         count;
+    uint16_t        count;
 } emj_category_t;
 
 // ── Category 0: Smileys & Faces ─────────────────────────────────────────────
@@ -410,7 +410,7 @@ static const uint32_t emj_cat11[] = {
 };
 
 // ── Category table ──────────────────────────────────────────────────────────
-#define EMJ_CAT_ENTRY(arr) { arr, (uint8_t)(sizeof(arr) / sizeof(arr[0])) }
+#define EMJ_CAT_ENTRY(arr) { arr, (uint16_t)(sizeof(arr) / sizeof(arr[0])) }
 
 static const emj_category_t EMJ_CATEGORIES[] = {
     EMJ_CAT_ENTRY(emj_cat0),   // 0: Smileys    😀

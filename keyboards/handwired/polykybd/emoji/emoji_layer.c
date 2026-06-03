@@ -36,7 +36,7 @@ static const uint32_t emj_tab_icons[] = {
 // Returns the number of pages for a given category given the slot count per page.
 static uint8_t page_count(uint8_t cat) {
     if (cat >= EMJ_NUM_CATEGORIES) return 1;
-    uint8_t count = EMJ_CATEGORIES[cat].count;
+    uint16_t count = EMJ_CATEGORIES[cat].count;
     if (count == 0) return 1;
     return (uint8_t)((count + EMJ_SLOTS_PER_PAGE - 1) / EMJ_SLOTS_PER_PAGE);
 }

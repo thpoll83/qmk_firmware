@@ -232,7 +232,10 @@ echo "Symbols..."
 fontconvert "-ffonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf" "-s20" -r50 -v _Technical_ 0x2387 0x2388 0x238b 0x238b 0x2399 0x2399 > "base/fonts/generated/3NotoSansSymbols_Regular_Technical_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Technical2_ 0x2318 0x2318 0x2325 0x2326 0x232B 0x232B > "base/fonts/generated/3NotoSansSymbols2_Regular_Technical_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _SymbolsAndShapes_ 0x25AC 0x25AC 0x2611 0x2611 > "base/fonts/generated/3NotoSansSymbols2_Regular_SymbolsAndShapes_20pt.h"
-fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Chess_ 0x2654 0x265F > "base/fonts/generated/7NotoSansSymbols2_Regular_Chess_20pt.h"
+# Chess pieces ♔-♟ (BMP 0x2654-0x265F) — cat 10 "Tools & Objects"
+# PREFIX 1 required: 0x2654-0x265F fall inside EmjWeatherBMP range (first=0x2600, last=0x26A1)
+# prefix 1 sorts before prefix 2, so the chess font wins the lookup (same as Zodiac)
+fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Chess_ 0x2654 0x265F > "base/fonts/generated/1NotoSansSymbols2_Regular_Chess_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Arrows_ 	0x2B6F 0x2B73 0x2B7E 0x2B7E 0x2B8C 0x2B8C 0x2B8E 0x2B8E 0x2BA0 0x2BA0 > "base/fonts/generated/3NotoSansSymbols2_Regular_Arrows_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _DiamondCut_ 0x2702 0x2702 0x2756 0x2756 > "base/fonts/generated/3NotoSansSymbols2_Regular_DiamondCut_20pt.h"
 fontconvert "-ffonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf" "-s20" -r50 -v _Util_ -n0x11000 0x1F568 0x1F56A 0x1F5A9 0x1F5AB 0x1F5B3 0x1F5BC 0x1F5CA 0x1F5CA > "base/fonts/generated/4NotoSansSymbols2_Regular_Util_20pt.h"

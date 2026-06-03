@@ -6,6 +6,7 @@
 #include "generated/1NotoSansSymbols2_EmjHandsBMP_20pt.h"
 #include "generated/1NotoSansSymbols2_EmjHandsBMP2_20pt.h"
 #include "generated/1NotoSansSymbols2_EmjSnowflake_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_Chess_20pt.h"
 #include "generated/1NotoSansSymbols2_Regular_Zodiac_20pt.h"
 #include "generated/2NotoSans_Regular_CurrencySigns_14pt.h"
 #include "generated/2NotoSansSymbols2_EmjTravelBMP_20pt.h"
@@ -36,7 +37,6 @@
 #include "generated/7NotoSansJP_Regular_Cjk5eff_15pt.h"
 #include "generated/7NotoSansJP_Regular_Cjk96e3_15pt.h"
 #include "generated/7NotoSansJP_Regular_KangXi_15pt.h"
-#include "generated/7NotoSansSymbols2_Regular_Chess_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjAnimals_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjAnimals2_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjAnimals3_20pt.h"
@@ -114,6 +114,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansSymbols2_Regular_EmjHandsBMP_20pt16b,
   &NotoEmoji_Medium_EmjHandsBMP2_20pt16b,
   &NotoSansSymbols2_Regular_EmjSnowflake_20pt16b,
+  &NotoSansSymbols2_Regular_Chess_20pt16b,
   &NotoEmoji_Medium_Zodiac_20pt16b,
   &NotoSans_Regular_CurrencySigns_14pt16b,
   &NotoEmoji_Medium_EmjTravelBMP_20pt16b,
@@ -144,7 +145,6 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansJP_Regular_Cjk5eff_15pt16b,
   &NotoSansJP_Regular_Cjk96e3_15pt16b,
   &NotoSansJP_Regular_KangXi_15pt16b,
-  &NotoSansSymbols2_Regular_Chess_20pt16b,
   &NotoEmoji_Medium_EmjAnimals_20pt16b,
   &NotoEmoji_Medium_EmjAnimals2_20pt16b,
   &NotoEmoji_Medium_EmjAnimals3_20pt16b,

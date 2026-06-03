@@ -17,7 +17,7 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 
 ## Firmware overview (`keyboards/handwired/polykybd/`)
 
-The firmware runs on a **Raspberry Pi RP2040** (133 MHz dual-core ARM M0+) and is a heavily customised QMK build. The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.
+The firmware runs on a **Raspberry Pi RP2040** (133 MHz dual-core ARM M0+) and is a heavily customised QMK build. This is **custom hardware with 8 MB of external QSPI flash** (NOT the stock 2 MB) — so flash budget is generous; a full `split72:default` build is only ~470 KB (~6 %). The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.
 
 The host software (`PolyKybdHost/`) communicates with this firmware over a custom HID report protocol (64-byte reports, v0.7.0+).
 

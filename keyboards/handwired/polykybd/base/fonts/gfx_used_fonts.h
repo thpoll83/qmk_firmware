@@ -1,22 +1,24 @@
 #pragma once
 
 #include "generated/0NotoSans_Regular_Base_14pt.h"
+#include "generated/1NotoSans_Regular_LatinExtB_14pt.h"
 #include "generated/1NotoSans_Regular_SupAndExtA_14pt.h"
-#include "generated/1NotoSansSymbols2_EmjHandsBMP_20pt.h"
 #include "generated/1NotoSansSymbols2_EmjHandsBMP2_20pt.h"
-#include "generated/1NotoSansSymbols2_EmjSnowflake_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_SymBmp1_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_SymBmp2_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_SymBmp3_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_SymBmp4_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_SymBmp5_20pt.h"
+#include "generated/1NotoSansSymbols2_Regular_SymBmp6_20pt.h"
+#include "generated/1NotoEmoji_Medium_ToolsBMP_20pt.h"
 #include "generated/1NotoSansSymbols2_Regular_Zodiac_20pt.h"
 #include "generated/2NotoSans_Regular_CurrencySigns_14pt.h"
 #include "generated/2NotoSansSymbols2_EmjTravelBMP_20pt.h"
-#include "generated/2NotoSansSymbols2_EmjWeatherBMP_20pt.h"
-#include "generated/2NotoSansSymbols2_EmjWeatherBMP2_20pt.h"
 #include "generated/3NotoEmoji_Medium_Hyper_18pt.h"
 #include "generated/3NotoEmoji_Medium_Meh_20pt.h"
 #include "generated/3NotoEmoji_Medium_Settings_20pt.h"
 #include "generated/3NotoEmoji_Medium_World_20pt.h"
 #include "generated/3NotoSansSymbols2_Regular_Arrows_20pt.h"
-#include "generated/3NotoSansSymbols2_Regular_DiamondCut_20pt.h"
-#include "generated/3NotoSansSymbols2_Regular_SymbolsAndShapes_20pt.h"
 #include "generated/3NotoSansSymbols2_Regular_Technical_20pt.h"
 #include "generated/3NotoSansSymbols_Regular_Technical_20pt.h"
 #include "generated/4NotoEmoji_Medium_Copy_18pt.h"
@@ -35,7 +37,6 @@
 #include "generated/7NotoSansJP_Regular_Cjk5eff_15pt.h"
 #include "generated/7NotoSansJP_Regular_Cjk96e3_15pt.h"
 #include "generated/7NotoSansJP_Regular_KangXi_15pt.h"
-#include "generated/7NotoSansSymbols2_Regular_Chess_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjAnimals_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjAnimals2_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjAnimals3_20pt.h"
@@ -65,7 +66,6 @@
 #include "generated/8NotoEmoji_Medium_EmjInsects_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjLove_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjObjects1_20pt.h"
-#include "generated/8NotoEmoji_Medium_EmjObjects_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjObjects2_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjParts_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjPeople_20pt.h"
@@ -83,10 +83,7 @@
 #include "generated/8NotoEmoji_Medium_EmjTravel_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjTravelExt_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP1_20pt.h"
-#include "generated/8NotoEmoji_Medium_EmjWeatherSMP_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP2_20pt.h"
-#include "generated/8NotoSansSymbols2_EmjHeart_20pt.h"
-#include "generated/8NotoSansSymbols2_EmjSportsBMP_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjTravelBMP2_20pt.h"
 #include "generated/NotoSansAR_Regular_FormsB_16pt.h"
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
@@ -108,22 +105,24 @@
 const GFXfont* const ALL_FONTS [] = {
   &IconsFont,
   &NotoSans_Regular_Base_14pt7b,
+  &NotoSans_Regular_LatinExtB_14pt16b,
   &NotoSans_Regular_SupAndExtA_14pt16b,
-  &NotoSansSymbols2_Regular_EmjHandsBMP_20pt16b,
   &NotoEmoji_Medium_EmjHandsBMP2_20pt16b,
-  &NotoSansSymbols2_Regular_EmjSnowflake_20pt16b,
+  &NotoSansSymbols2_Regular_SymBmp1_20pt16b,
+  &NotoSansSymbols2_Regular_SymBmp2_20pt16b,
+  &NotoSansSymbols2_Regular_SymBmp3_20pt16b,
+  &NotoSansSymbols2_Regular_SymBmp4_20pt16b,
+  &NotoSansSymbols2_Regular_SymBmp5_20pt16b,
+  &NotoSansSymbols2_Regular_SymBmp6_20pt16b,
+  &NotoEmoji_Medium_ToolsBMP_20pt16b,
   &NotoEmoji_Medium_Zodiac_20pt16b,
   &NotoSans_Regular_CurrencySigns_14pt16b,
   &NotoEmoji_Medium_EmjTravelBMP_20pt16b,
-  &NotoSansSymbols2_Regular_EmjWeatherBMP_20pt16b,
-  &NotoSansSymbols2_Regular_EmjWeatherBMP2_20pt16b,
   &NotoEmoji_Medium_Hyper_18pt16b,
   &NotoEmoji_Medium_Meh_20pt16b,
   &NotoEmoji_Medium_Settings_20pt16b,
   &NotoEmoji_Medium_World_20pt16b,
   &NotoSansSymbols2_Regular_Arrows_20pt16b,
-  &NotoSansSymbols2_Regular_DiamondCut_20pt16b,
-  &NotoSansSymbols2_Regular_SymbolsAndShapes_20pt16b,
   &NotoSansSymbols2_Regular_Technical2_20pt16b,
   &NotoSansSymbols_Regular_Technical_20pt16b,
   &NotoEmoji_Medium_ClipCpy_18pt16b,
@@ -142,7 +141,6 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansJP_Regular_Cjk5eff_15pt16b,
   &NotoSansJP_Regular_Cjk96e3_15pt16b,
   &NotoSansJP_Regular_KangXi_15pt16b,
-  &NotoSansSymbols2_Regular_Chess_20pt16b,
   &NotoEmoji_Medium_EmjAnimals_20pt16b,
   &NotoEmoji_Medium_EmjAnimals2_20pt16b,
   &NotoEmoji_Medium_EmjAnimals3_20pt16b,
@@ -172,7 +170,6 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoEmoji_Medium_EmjInsects_20pt16b,
   &NotoEmoji_Medium_EmjLove_20pt16b,
   &NotoEmoji_Medium_EmjObjects1_20pt16b,
-  &NotoEmoji_Medium_EmjObjects_20pt16b,
   &NotoEmoji_Medium_EmjObjects2_20pt16b,
   &NotoEmoji_Medium_EmjParts_20pt16b,
   &NotoEmoji_Medium_EmjPeople_20pt16b,
@@ -190,10 +187,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoEmoji_Medium_EmjTravel_20pt16b,
   &NotoEmoji_Medium_EmjTravelExt_20pt16b,
   &NotoEmoji_Medium_EmjWeatherSMP1_20pt16b,
-  &NotoEmoji_Medium_EmjWeatherSMP_20pt16b,
   &NotoEmoji_Medium_EmjWeatherSMP2_20pt16b,
-  &NotoSansSymbols2_Regular_EmjHeart_20pt16b,
-  &NotoSansSymbols2_Regular_EmjSportsBMP_20pt16b,
   &NotoEmoji_Medium_EmjTravelBMP2_20pt16b,
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,

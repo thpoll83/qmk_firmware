@@ -79,6 +79,7 @@ static const uint32_t emj_cat1[] = {
     0x1F932, // 🤲 palms up together
     // Body parts (EmjParts)
     0x1F9B4, 0x1F9B5, 0x1F9B6, 0x1F9B7, // 🦴🦵🦶🦷
+    0x1F9E0, // 🧠 brain
     // Mechanical arm (moved from cat2, EmjPeople4)
     0x1F9BE,
     // Anatomical organs (moved from cat2, EmjBody2)
@@ -133,6 +134,7 @@ static const uint32_t emj_cat3[] = {
     0x1F380, // 🎀 ribbon
     0x1F382, 0x1F383, 0x1F384, 0x1F385, 0x1F386,
     0x1F387, 0x1F388, // 🎇🎈 sparkler, balloon
+    0x1F9E7, 0x1F9E8, // 🧧🧨 red envelope, firecracker
     0x1F38B, 0x1F38C, 0x1F38D, 0x1F38E, 0x1F38F,
     0x1F390, 0x1F391, 0x1F393, // 🎐🎑🎓
     // Cosmetics

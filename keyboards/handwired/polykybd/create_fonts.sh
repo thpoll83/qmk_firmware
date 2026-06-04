@@ -116,10 +116,9 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople_ -n0x10000 0x1F451 0x1F47A >
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople2_ -n0x10000 0x1F930 0x1F937 > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople2_20pt.h"
 # Cat 2 addition: body parts 🦴🦵🦶🦷 (Unicode 12+); gap between EmjAnimals5 end (0xF9AE) and EmjPeople3 start (0xF9D0)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjParts_ -n0x10000 0x1F9B4 0x1F9B7 > "base/fonts/generated/8NotoEmoji_Medium_EmjParts_20pt.h"
-# Cat 2 addition: newer people 🧐-🧟 + 🧠 brain (Unicode 10/11/12+); extended to 0x1F9E0 to add brain
+# 🧐-🧟 + 🧠 brain (Unicode 10/11/12+, U+1F9D0-1F9E0); gap above EmjParts end (0x1F9B7), below EmjClothing2 start (0x1F9E1)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople3_ -n0x10000 0x1F9D0 0x1F9E0 > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople3_20pt.h"
-# Cat 9 addition: clothing 🧡🧢-🧦🧧🧨 (Unicode 11+); 0x1F9E1=orange heart(cat3) + 0x1F9E2-0x1F9E8(cat9/cat3)
-# Gap: above EmjPeople3 end (0xF9E0), below EmjSciTools start (0xF9E9)
+# 🧡🧢-🧦🧧🧨 orange-heart, clothing, red-envelope, firecracker (Unicode 11+, U+1F9E1-1F9E8); gap above EmjPeople3 end (0x1F9E0), below EmjSciTools start (0x1F9E9)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClothing2_ -n0x10000 0x1F9E1 0x1F9E8 > "base/fonts/generated/8NotoEmoji_Medium_EmjClothing2_20pt.h"
 # Cat 10 addition: science & tools 🧩-🧿 (Unicode 11-12+)
 # Gap: above EmjClothing2 end (0xF9E8), below EmjInsects start (0xFAB0)

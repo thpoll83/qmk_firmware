@@ -44,17 +44,17 @@ fontconvert "-ffonts/Noto_Sans_Hebrew/static/NotoSansHebrew-Medium.ttf" "-s${siz
 fontconvert "-ffonts/noto-sans/NotoSans-Regular.ttf" "-s${size_lat}" -r44 -v _SZ_  0x1E9E 0x1E9E > "base/fonts/generated/NotoSans_Regular_SZ_${size_lat}pt.h"
 
 echo "Japanese..."
-fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -v _KangXi_ 0x2f00 0x2f00 0x2f08 0x2f08 0x2f17 0x2f18 0x2f1d 0x2f25 0x2f2b 0x2f2d 0x2f38 0x2f3f 0x2f47 0x2f4a 0x2f54 0x2f55 0x2f65 0x2f65 0x2f75 0x2f75 0x2fa6 0x2fa6 > "base/fonts/generated/7NotoSansJP_Regular_KangXi_${size_jp}pt.h"
-fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -v _Cjk4e2d_ 0x4e2d 0x4e2d > "base/fonts/generated/7NotoSansJP_Regular_Cjk4e2d_${size_jp}pt.h"
-fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -v _Cjk5eff_ 0x5eff 0x5eff > "base/fonts/generated/7NotoSansJP_Regular_Cjk5eff_${size_jp}pt.h"
-fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -v _Cjk96e3_ 0x96e3 0x96e3 > "base/fonts/generated/7NotoSansJP_Regular_Cjk96e3_${size_jp}pt.h"
-fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -v _Hiragana_ 0x3041 0x3096 0x3099 0x309f > "base/fonts/generated/NotoSansJP_Regular_Hiragana_${size_jp}pt.h"
-fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -v _Punct_ 0x3001 0x3002 0x3008 0x3011 > "base/fonts/generated/NotoSansJP_Regular_Punct_${size_jp}pt.h"
-fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -v _Punct2_ 0x30fb 0x30fc > "base/fonts/generated/NotoSansJP_Regular_Punct2_${size_jp}pt.h"
+fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -w400 -v _KangXi_ 0x2f00 0x2f00 0x2f08 0x2f08 0x2f17 0x2f18 0x2f1d 0x2f25 0x2f2b 0x2f2d 0x2f38 0x2f3f 0x2f47 0x2f4a 0x2f54 0x2f55 0x2f65 0x2f65 0x2f75 0x2f75 0x2fa6 0x2fa6 > "base/fonts/generated/7NotoSansJP_Regular_KangXi_${size_jp}pt.h"
+fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -w400 -v _Cjk4e2d_ 0x4e2d 0x4e2d > "base/fonts/generated/7NotoSansJP_Regular_Cjk4e2d_${size_jp}pt.h"
+fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -w400 -v _Cjk5eff_ 0x5eff 0x5eff > "base/fonts/generated/7NotoSansJP_Regular_Cjk5eff_${size_jp}pt.h"
+fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -w400 -v _Cjk96e3_ 0x96e3 0x96e3 > "base/fonts/generated/7NotoSansJP_Regular_Cjk96e3_${size_jp}pt.h"
+fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -w400 -v _Hiragana_ 0x3041 0x3096 0x3099 0x309f > "base/fonts/generated/NotoSansJP_Regular_Hiragana_${size_jp}pt.h"
+fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -w400 -v _Punct_ 0x3001 0x3002 0x3008 0x3011 > "base/fonts/generated/NotoSansJP_Regular_Punct_${size_jp}pt.h"
+fontconvert "-ffonts/noto-sans-jp/NotoSansJP-Regular.ttf" "-s${size_jp}" -w400 -v _Punct2_ 0x30fb 0x30fc > "base/fonts/generated/NotoSansJP_Regular_Punct2_${size_jp}pt.h"
 
 echo "Korean..."
-fontconvert "-ffonts/noto-serif-kr/NotoSerifKR-Medium.otf" "-s${size_kr}" -r51 -v _Vowels_ 0x1161 0x1169 0x116d 0x116e 0x1172 0x1175 > "base/fonts/generated/NotoSerifKR_Regular_Vowels_${size_kr}pt.h"
-fontconvert "-ffonts/noto-serif-kr/NotoSerifKR-Medium.otf" "-s${size_kr}" -v _Consonants_ 0x1100 0x1112 > "base/fonts/generated/NotoSerifKR_Regular_Consonants_${size_kr}pt.h"
+fontconvert "-ffonts/noto-serif-kr/NotoSerifKR-Medium.otf" "-s${size_kr}" -w400 -r51 -v _Vowels_ 0x1161 0x1169 0x116d 0x116e 0x1172 0x1175 > "base/fonts/generated/NotoSerifKR_Regular_Vowels_${size_kr}pt.h"
+fontconvert "-ffonts/noto-serif-kr/NotoSerifKR-Medium.otf" "-s${size_kr}" -w400 -v _Consonants_ 0x1100 0x1112 > "base/fonts/generated/NotoSerifKR_Regular_Consonants_${size_kr}pt.h"
 
 echo "Arabic..."
 fontconvert "-ffonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf" "-s${size_ar}" -r40 -v _Isolated_ 0x60c 0x60c 0x61b 0x61b 0x61f 0x669 > "base/fonts/generated/NotoSansAR_Regular_Isolated_${size_ar}pt.h"
@@ -116,13 +116,12 @@ fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople_ -n0x10000 0x1F451 0x1F47A >
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople2_ -n0x10000 0x1F930 0x1F937 > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople2_20pt.h"
 # Cat 2 addition: body parts 🦴🦵🦶🦷 (Unicode 12+); gap between EmjAnimals5 end (0xF9AE) and EmjPeople3 start (0xF9D0)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjParts_ -n0x10000 0x1F9B4 0x1F9B7 > "base/fonts/generated/8NotoEmoji_Medium_EmjParts_20pt.h"
-# Cat 2 addition: newer people 🧐-🧟 (Unicode 10/11/12+); extended to 0x1F9DF to add fantasy people
-fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople3_ -n0x10000 0x1F9D0 0x1F9DF > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople3_20pt.h"
-# Cat 9 addition: clothing 🧡🧢-🧦 (Unicode 11+); 0x1F9E1=orange heart(cat3) + 0x1F9E2-0x1F9E6(cat9)
-# Gap: above EmjPeople3 end (0xF9DF), below EmjSciTools start (0xF9E9)
-fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClothing2_ -n0x10000 0x1F9E1 0x1F9E6 > "base/fonts/generated/8NotoEmoji_Medium_EmjClothing2_20pt.h"
+# 🧐-🧟 + 🧠 brain (Unicode 10/11/12+, U+1F9D0-1F9E0); gap above EmjParts end (0x1F9B7), below EmjClothing2 start (0x1F9E1)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjPeople3_ -n0x10000 0x1F9D0 0x1F9E0 > "base/fonts/generated/8NotoEmoji_Medium_EmjPeople3_20pt.h"
+# 🧡🧢-🧦🧧🧨 orange-heart, clothing, red-envelope, firecracker (Unicode 11+, U+1F9E1-1F9E8); gap above EmjPeople3 end (0x1F9E0), below EmjSciTools start (0x1F9E9)
+fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClothing2_ -n0x10000 0x1F9E1 0x1F9E8 > "base/fonts/generated/8NotoEmoji_Medium_EmjClothing2_20pt.h"
 # Cat 10 addition: science & tools 🧩-🧿 (Unicode 11-12+)
-# Gap: above EmjClothing2 end (0xF9E6), below EmjInsects start (0xFAB0)
+# Gap: above EmjClothing2 end (0xF9E8), below EmjInsects start (0xFAB0)
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjSciTools_ -n0x10000 0x1F9E9 0x1F9FF > "base/fonts/generated/8NotoEmoji_Medium_EmjSciTools_20pt.h"
 # Cat 2 addition: clothing & medical 🩰-🩺 (Unicode 12+); gap at 0x1FA75-0x1FA77 is harmless
 fontconvert "-f$NOTO_EMOJI" -s20 -r50 -v _EmjClothing_ -n0x10000 0x1FA70 0x1FA7A > "base/fonts/generated/8NotoEmoji_Medium_EmjClothing_20pt.h"

@@ -1,4 +1,4 @@
-// fontconvert -ffonts/noto-sans-jp/NotoSansJP-Regular.ttf -s15 -v _Cjk5eff_ 0x5eff 0x5eff 
+// fontconvert -ffonts/noto-sans-jp/NotoSansJP-Regular.ttf -s15 -w400 -v _Cjk5eff_ 0x5eff 0x5eff 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
 /* num ranges: 1 */

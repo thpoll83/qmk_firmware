@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'PolyKybd-fw-v*'
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -36,13 +37,25 @@ jobs:
             .build/${TARGET}.elf \
             ${TARGET}.bin
 
-      - name: Create GitHub Release
+      # Idempotent: a tag push creates the release; re-running for an existing
+      # release (e.g. a manual workflow_dispatch from the tag, or a re-pushed
+      # tag) just (re-)uploads the assets with --clobber. Guarded to tag refs so
+      # a dispatch from a branch builds as a smoke test without cutting a release.
+      - name: Create or update GitHub Release
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
         run: |
           TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
-          gh release create "${{ github.ref_name }}" \
-            --generate-notes \
-            --title "PolyKybd Firmware ${{ github.ref_name }}" \
-            ${TARGET}.uf2 \
-            ${TARGET}.bin
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — uploading assets (clobbering duplicates)."
+            gh release upload "$TAG" "${TARGET}.uf2" "${TARGET}.bin" --clobber
+          else
+            echo "Creating release $TAG."
+            gh release create "$TAG" \
+              --generate-notes \
+              --title "PolyKybd Firmware $TAG" \
+              "${TARGET}.uf2" \
+              "${TARGET}.bin"
+          fi

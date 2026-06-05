@@ -15,19 +15,13 @@
 
     glyph_index = 2
     glyph_key = sheet["A2"].value
-    # Column B is the display codepoint. For ~40 legacy UI-icon glyphs it still holds
-    # the BMP Private-Use-Area address (0xE000-0xF8FF) that the old -n0x11000 icon
-    # fonts used; map those back to their real SMP codepoint (+0x11000) so the
-    # firmware is fully PUA-free. Real codepoints (emoji 0x1Fxxx) and the genuine
-    # custom icons (0x80-0x93) fall outside that window and pass through unchanged.
-    # Idempotent: if column B is later updated to the real codepoint in the
-    # spreadsheet, the value is no longer in the PUA window so this remap is a no-op.
-    def disp_lit(b):
-        v = int(str(b), 16)
-        return f"{v + 0x11000:X}" if 0xE000 <= v <= 0xF8FF else str(b)
+    # Column B = the real Unicode codepoint (HEX INPUT), emitted as a char32
+    # (U"...") literal. SMP codepoints (emoji, symbols, the UI icons) are stored
+    # directly — no BMP Private-Use-Area shift. (The genuine custom icons at
+    # 0x80-0x93 have no Unicode codepoint and legitimately stay private.)
     glyph_code = sheet["B2"].value
     while glyph_key and glyph_code:
-        cog.outl(f'#define {glyph_key : <28}\tU"\\x{disp_lit(glyph_code)}"')
+        cog.outl(f'#define {glyph_key : <28}\tU"\\x{glyph_code}"')
 
         glyph_index = glyph_index + 1
         glyph_key = sheet[f"A{glyph_index}"].value

@@ -757,12 +757,12 @@ __attribute__((section(".rodata"))) led_config_t g_led_config = { {// Key Matrix
                              } };
 
 // Returns display text for special keys.
-const uint16_t* to_static_text(uint16_t keycode, led_t state) {
+const uint32_t* to_static_text(uint16_t keycode, led_t state) {
 
-    const uint16_t *emj = emj_display_text(keycode);
+    const uint32_t *emj = emj_display_text(keycode);
     if (emj != NULL) return emj;
 
-    const uint16_t* emoji = keycode_to_emoji(keycode);
+    const uint32_t* emoji = keycode_to_emoji(keycode);
     if(emoji!=NULL) {
         return emoji;
     }
@@ -775,75 +775,75 @@ const uint16_t* to_static_text(uint16_t keycode, led_t state) {
 #ifndef ENABLE_NUMLOCK_FOR_OSX
     if(local_state->unicode_mode == UNICODE_MODE_MACOS && keycode >= KC_NUM_LOCK && keycode <=KC_KP_DOT) {
         switch(keycode) {
-            case KC_NUM_LOCK: return u"";
-            case KC_KP_7:     return u"7";
-            case KC_KP_8:     return u"8";
-            case KC_KP_9:     return u"9";
-            case KC_KP_4:     return u"4";
-            case KC_KP_5:     return u"5";
-            case KC_KP_6:     return u"6";
-            case KC_KP_1:     return u"1";
-            case KC_KP_2:     return u"2";
-            case KC_KP_3:     return u"3";
-            case KC_KP_0:     return u"0";
-            case KC_KP_DOT:   return u".";
+            case KC_NUM_LOCK: return U"";
+            case KC_KP_7:     return U"7";
+            case KC_KP_8:     return U"8";
+            case KC_KP_9:     return U"9";
+            case KC_KP_4:     return U"4";
+            case KC_KP_5:     return U"5";
+            case KC_KP_6:     return U"6";
+            case KC_KP_1:     return U"1";
+            case KC_KP_2:     return U"2";
+            case KC_KP_3:     return U"3";
+            case KC_KP_0:     return U"0";
+            case KC_KP_DOT:   return U".";
             default: break;
         }
     }
 #endif
 
-    const uint16_t* text = keycode_to_static_text(keycode, state, local_state->flags);
+    const uint32_t* text = keycode_to_static_text(keycode, state, local_state->flags);
     if(text!=NULL) {
         return text;
     }
 
     const poly_layer_t* local_layer = get_local_layer();
     switch (keycode) {
-        case QK_UNICODE_MODE_MACOS:         return local_state->unicode_mode == UNICODE_MODE_MACOS ? u"Mac\r\v" ICON_SWITCH_ON : u"Mac\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_LINUX:         return local_state->unicode_mode == UNICODE_MODE_LINUX ? u"Lnx\r\v" ICON_SWITCH_ON : u"Lnx\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_WINDOWS:       return local_state->unicode_mode == UNICODE_MODE_WINDOWS ? u"Win\r\v" ICON_SWITCH_ON : u"Win\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_BSD:           return local_state->unicode_mode == UNICODE_MODE_BSD ? u"BSD\r\v" ICON_SWITCH_ON : u"BSD\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_WINCOMPOSE:    return local_state->unicode_mode == UNICODE_MODE_WINCOMPOSE ? u"WinC\r\v" ICON_SWITCH_ON : u"WinC\r\v" ICON_SWITCH_OFF;
-        case QK_UNICODE_MODE_EMACS:         return local_state->unicode_mode == UNICODE_MODE_EMACS ? u"Emcs\r\v" ICON_SWITCH_ON : u"Emcs\r\v" ICON_SWITCH_OFF;
-        case KC_L0:                         return local_layer->def_layer == _L0 ? u"Qwty\r\v" ICON_SWITCH_ON : u"Qwty\r\v" ICON_SWITCH_OFF;
-        case KC_L1:                         return local_layer->def_layer == _L1 ? u"Qwty!\r\v" ICON_SWITCH_ON : u"Qwty!\r\v" ICON_SWITCH_OFF;
-        case KC_L2:                         return local_layer->def_layer == _L2 ? u"Clmk\r\v" ICON_SWITCH_ON : u"Clmk\r\v" ICON_SWITCH_OFF;
-        case KC_L3:                         return local_layer->def_layer == _L3 ? u"Neo\r\v" ICON_SWITCH_ON : u"Neo\r\v" ICON_SWITCH_OFF;
-        case KC_L4:                         return local_layer->def_layer == _L4 ? u"Wkm\r\v" ICON_SWITCH_ON : u"Wkm\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_MACOS:         return local_state->unicode_mode == UNICODE_MODE_MACOS ? U"Mac\r\v" ICON_SWITCH_ON : U"Mac\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_LINUX:         return local_state->unicode_mode == UNICODE_MODE_LINUX ? U"Lnx\r\v" ICON_SWITCH_ON : U"Lnx\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_WINDOWS:       return local_state->unicode_mode == UNICODE_MODE_WINDOWS ? U"Win\r\v" ICON_SWITCH_ON : U"Win\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_BSD:           return local_state->unicode_mode == UNICODE_MODE_BSD ? U"BSD\r\v" ICON_SWITCH_ON : U"BSD\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_WINCOMPOSE:    return local_state->unicode_mode == UNICODE_MODE_WINCOMPOSE ? U"WinC\r\v" ICON_SWITCH_ON : U"WinC\r\v" ICON_SWITCH_OFF;
+        case QK_UNICODE_MODE_EMACS:         return local_state->unicode_mode == UNICODE_MODE_EMACS ? U"Emcs\r\v" ICON_SWITCH_ON : U"Emcs\r\v" ICON_SWITCH_OFF;
+        case KC_L0:                         return local_layer->def_layer == _L0 ? U"Qwty\r\v" ICON_SWITCH_ON : U"Qwty\r\v" ICON_SWITCH_OFF;
+        case KC_L1:                         return local_layer->def_layer == _L1 ? U"Qwty!\r\v" ICON_SWITCH_ON : U"Qwty!\r\v" ICON_SWITCH_OFF;
+        case KC_L2:                         return local_layer->def_layer == _L2 ? U"Clmk\r\v" ICON_SWITCH_ON : U"Clmk\r\v" ICON_SWITCH_OFF;
+        case KC_L3:                         return local_layer->def_layer == _L3 ? U"Neo\r\v" ICON_SWITCH_ON : U"Neo\r\v" ICON_SWITCH_OFF;
+        case KC_L4:                         return local_layer->def_layer == _L4 ? U"Wkm\r\v" ICON_SWITCH_ON : U"Wkm\r\v" ICON_SWITCH_OFF;
 
         //Language selection keycodes
         /*[[[cog
         for lang in languages:
             pretty = f"{lang[0:2]}\\r\\t{lang[2:]}"
-            cog.outl(f'case KCL_{lang.upper()}: return local_state->lang == LANG_{lang.upper()} ? u"{pretty}\\r\\x05\\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"{pretty}";')
+            cog.outl(f'case KCL_{lang.upper()}: return local_state->lang == LANG_{lang.upper()} ? U"{pretty}\\r\\x05\\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"{pretty}";')
         ]]]*/
-        case KCL_ENUS: return local_state->lang == LANG_ENUS ? u"en\r\tUS\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"en\r\tUS";
-        case KCL_DEDE: return local_state->lang == LANG_DEDE ? u"de\r\tDE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"de\r\tDE";
-        case KCL_FRFR: return local_state->lang == LANG_FRFR ? u"fr\r\tFR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fr\r\tFR";
-        case KCL_ESES: return local_state->lang == LANG_ESES ? u"es\r\tES\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"es\r\tES";
-        case KCL_PTPT: return local_state->lang == LANG_PTPT ? u"pt\r\tPT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"pt\r\tPT";
-        case KCL_ITIT: return local_state->lang == LANG_ITIT ? u"it\r\tIT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"it\r\tIT";
-        case KCL_TRTR: return local_state->lang == LANG_TRTR ? u"tr\r\tTR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"tr\r\tTR";
-        case KCL_KOKR: return local_state->lang == LANG_KOKR ? u"ko\r\tKR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ko\r\tKR";
-        case KCL_JAJP: return local_state->lang == LANG_JAJP ? u"ja\r\tJP\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ja\r\tJP";
-        case KCL_ARSA: return local_state->lang == LANG_ARSA ? u"ar\r\tSA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ar\r\tSA";
-        case KCL_ELGR: return local_state->lang == LANG_ELGR ? u"el\r\tGR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"el\r\tGR";
-        case KCL_UKUA: return local_state->lang == LANG_UKUA ? u"uk\r\tUA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"uk\r\tUA";
-        case KCL_RURU: return local_state->lang == LANG_RURU ? u"ru\r\tRU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ru\r\tRU";
-        case KCL_BEBY: return local_state->lang == LANG_BEBY ? u"be\r\tBY\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"be\r\tBY";
-        case KCL_KKKZ: return local_state->lang == LANG_KKKZ ? u"kk\r\tKZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"kk\r\tKZ";
-        case KCL_BGBG: return local_state->lang == LANG_BGBG ? u"bg\r\tBG\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"bg\r\tBG";
-        case KCL_PLPL: return local_state->lang == LANG_PLPL ? u"pl\r\tPL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"pl\r\tPL";
-        case KCL_RORO: return local_state->lang == LANG_RORO ? u"ro\r\tRO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"ro\r\tRO";
-        case KCL_ZHCN: return local_state->lang == LANG_ZHCN ? u"zh\r\tCN\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"zh\r\tCN";
-        case KCL_NLNL: return local_state->lang == LANG_NLNL ? u"nl\r\tNL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nl\r\tNL";
-        case KCL_HEIL: return local_state->lang == LANG_HEIL ? u"he\r\tIL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"he\r\tIL";
-        case KCL_SVSE: return local_state->lang == LANG_SVSE ? u"sv\r\tSE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"sv\r\tSE";
-        case KCL_FIFI: return local_state->lang == LANG_FIFI ? u"fi\r\tFI\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"fi\r\tFI";
-        case KCL_NNNO: return local_state->lang == LANG_NNNO ? u"nn\r\tNO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"nn\r\tNO";
-        case KCL_DADK: return local_state->lang == LANG_DADK ? u"da\r\tDK\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"da\r\tDK";
-        case KCL_HUHU: return local_state->lang == LANG_HUHU ? u"hu\r\tHU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"hu\r\tHU";
-        case KCL_CSCZ: return local_state->lang == LANG_CSCZ ? u"cs\r\tCZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : u"cs\r\tCZ";
+        case KCL_ENUS: return local_state->lang == LANG_ENUS ? U"en\r\tUS\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"en\r\tUS";
+        case KCL_DEDE: return local_state->lang == LANG_DEDE ? U"de\r\tDE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"de\r\tDE";
+        case KCL_FRFR: return local_state->lang == LANG_FRFR ? U"fr\r\tFR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"fr\r\tFR";
+        case KCL_ESES: return local_state->lang == LANG_ESES ? U"es\r\tES\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"es\r\tES";
+        case KCL_PTPT: return local_state->lang == LANG_PTPT ? U"pt\r\tPT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"pt\r\tPT";
+        case KCL_ITIT: return local_state->lang == LANG_ITIT ? U"it\r\tIT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"it\r\tIT";
+        case KCL_TRTR: return local_state->lang == LANG_TRTR ? U"tr\r\tTR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"tr\r\tTR";
+        case KCL_KOKR: return local_state->lang == LANG_KOKR ? U"ko\r\tKR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ko\r\tKR";
+        case KCL_JAJP: return local_state->lang == LANG_JAJP ? U"ja\r\tJP\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ja\r\tJP";
+        case KCL_ARSA: return local_state->lang == LANG_ARSA ? U"ar\r\tSA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ar\r\tSA";
+        case KCL_ELGR: return local_state->lang == LANG_ELGR ? U"el\r\tGR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"el\r\tGR";
+        case KCL_UKUA: return local_state->lang == LANG_UKUA ? U"uk\r\tUA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"uk\r\tUA";
+        case KCL_RURU: return local_state->lang == LANG_RURU ? U"ru\r\tRU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ru\r\tRU";
+        case KCL_BEBY: return local_state->lang == LANG_BEBY ? U"be\r\tBY\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"be\r\tBY";
+        case KCL_KKKZ: return local_state->lang == LANG_KKKZ ? U"kk\r\tKZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"kk\r\tKZ";
+        case KCL_BGBG: return local_state->lang == LANG_BGBG ? U"bg\r\tBG\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"bg\r\tBG";
+        case KCL_PLPL: return local_state->lang == LANG_PLPL ? U"pl\r\tPL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"pl\r\tPL";
+        case KCL_RORO: return local_state->lang == LANG_RORO ? U"ro\r\tRO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ro\r\tRO";
+        case KCL_ZHCN: return local_state->lang == LANG_ZHCN ? U"zh\r\tCN\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"zh\r\tCN";
+        case KCL_NLNL: return local_state->lang == LANG_NLNL ? U"nl\r\tNL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"nl\r\tNL";
+        case KCL_HEIL: return local_state->lang == LANG_HEIL ? U"he\r\tIL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"he\r\tIL";
+        case KCL_SVSE: return local_state->lang == LANG_SVSE ? U"sv\r\tSE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"sv\r\tSE";
+        case KCL_FIFI: return local_state->lang == LANG_FIFI ? U"fi\r\tFI\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"fi\r\tFI";
+        case KCL_NNNO: return local_state->lang == LANG_NNNO ? U"nn\r\tNO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"nn\r\tNO";
+        case KCL_DADK: return local_state->lang == LANG_DADK ? U"da\r\tDK\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"da\r\tDK";
+        case KCL_HUHU: return local_state->lang == LANG_HUHU ? U"hu\r\tHU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"hu\r\tHU";
+        case KCL_CSCZ: return local_state->lang == LANG_CSCZ ? U"cs\r\tCZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"cs\r\tCZ";
         //[[[end]]]
         default:
             return NULL;
@@ -864,7 +864,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
         uint8_t variation = (shift || state.caps_lock) ? global_latin_table->ex[keycode-KC_A]>>4 : global_latin_table->ex[keycode-KC_A]&0xf;
 
-        const uint16_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
+        const uint32_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
         if(def_variation!=NULL) {
             kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, latin_ex_map[offset+keycode-KC_A][variation]);
             return true;
@@ -878,7 +878,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         if(add_lang && alt && local_last_latin_keycode!=0) {
             //show all available alternatives for selected latin letter
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-            const uint16_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
+            const uint32_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
             if(variation!=NULL) {
                 kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, variation);
                 return true;
@@ -889,7 +889,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
     const poly_sync_t* local_state = get_local_state();
     if (mods & MOD_RALT) {
-        const uint16_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
+        const uint32_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
             const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
             int8_t v_set;
@@ -913,7 +913,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     }
 
     //translate to current language
-    const uint16_t* letter = translate_keycode(local_state->lang, keycode, shift, state.caps_lock);
+    const uint32_t* letter = translate_keycode(local_state->lang, keycode, shift, state.caps_lock);
     if (letter != NULL) {
         int8_t v_set;
         int8_t h_set;
@@ -961,37 +961,37 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 }
 
 // Returns builtin icon/symbol overlay text for keycode based on current modifiers and mod-tap states.
-const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
+const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     switch (keycode)
     {
-        case KC_F2: return u"      " PRIVATE_NOTE;
-        case KC_F5: return u"     " ARROWS_CIRCLE;
+        case KC_F2: return U"      " PRIVATE_NOTE;
+        case KC_F5: return U"     " ARROWS_CIRCLE;
         default: break;
     }
 
     uint8_t local_mods = get_local_layer()->mods;
     if( (local_mods & MOD_MASK_CTRL) != 0) {
         switch(keycode) {
-            case KC_A: return u"      " BOX_WITH_CHECK_MARK;
-            case KC_C: return u"     " CLIPBOARD_COPY;
-            case KC_D: return u"\t " PRIVATE_DELETE;
-            case KC_F: return u"    " PRIVATE_FIND;
-            case KC_X: return u"\t\b\b" CLIPBOARD_CUT;
-            case KC_V: return u"     " CLIPBOARD_PASTE;
-            case KC_S: return u"\t" PRIVATE_FLOPPY;
-            case KC_O: return u"\t" FILE_OPEN;
-            case KC_P: return u"\t" PRIVATE_PRINTER;
-            case KC_Z: return u"      " ARROWS_UNDO;
-            case KC_Y: return u"      " ARROWS_REDO;
+            case KC_A: return U"      " BOX_WITH_CHECK_MARK;
+            case KC_C: return U"     " CLIPBOARD_COPY;
+            case KC_D: return U"\t " PRIVATE_DELETE;
+            case KC_F: return U"    " PRIVATE_FIND;
+            case KC_X: return U"\t\b\b" CLIPBOARD_CUT;
+            case KC_V: return U"     " CLIPBOARD_PASTE;
+            case KC_S: return U"\t" PRIVATE_FLOPPY;
+            case KC_O: return U"\t" FILE_OPEN;
+            case KC_P: return U"\t" PRIVATE_PRINTER;
+            case KC_Z: return U"      " ARROWS_UNDO;
+            case KC_Y: return U"      " ARROWS_REDO;
             default: break;
         }
     } else if((local_mods & MOD_MASK_GUI) != 0) {
         switch(keycode) {
-            case KC_D:      return u"    " PRIVATE_PC;
-            case KC_L:      return u"    " PRIVATE_LOCK;
-            case KC_P:      return u"    " PRIVATE_SCREEN;
-            case KC_UP:     return u"     " PRIVATE_MAXIMIZE;
-            case KC_DOWN:   return u"     " PRIVATE_WINDOW;
+            case KC_D:      return U"    " PRIVATE_PC;
+            case KC_L:      return U"    " PRIVATE_LOCK;
+            case KC_P:      return U"    " PRIVATE_SCREEN;
+            case KC_UP:     return U"     " PRIVATE_MAXIMIZE;
+            case KC_DOWN:   return U"     " PRIVATE_WINDOW;
             default: break;
         }
     }
@@ -999,35 +999,35 @@ const uint16_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     if(IS_QK_MOD_TAP(keycode)) {
         uint8_t mods = QK_MOD_TAP_GET_MODS(keycode);
         if((mods & MOD_MASK_CSAG) == MOD_MASK_CSAG) {
-            return u"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
+            return U"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
         } else if((mods & MOD_MASK_SAG) == MOD_MASK_SAG) {
-            return u"    " ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
+            return U"    " ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
         } else if((mods & MOD_MASK_CAG) == MOD_MASK_CAG) {
-            return u"    " CURRENCY_SIGN NOT_SIGN KATAKANA_MIDDLE_DOT;
+            return U"    " CURRENCY_SIGN NOT_SIGN KATAKANA_MIDDLE_DOT;
         } else if((mods & MOD_MASK_CSG) == MOD_MASK_CSG) {
-            return u"    " CURRENCY_SIGN ICON_SHIFT KATAKANA_MIDDLE_DOT;
+            return U"    " CURRENCY_SIGN ICON_SHIFT KATAKANA_MIDDLE_DOT;
         } else if((mods & MOD_MASK_CSA) == MOD_MASK_CSA) {
-            return u"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN;
+            return U"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN;
         } else if((mods & MOD_MASK_AG) == MOD_MASK_AG) {
-            return u"    " NOT_SIGN KATAKANA_MIDDLE_DOT;
+            return U"    " NOT_SIGN KATAKANA_MIDDLE_DOT;
         } else if((mods & MOD_MASK_SG) == MOD_MASK_SG) {
-            return u"    " ICON_SHIFT KATAKANA_MIDDLE_DOT;
+            return U"    " ICON_SHIFT KATAKANA_MIDDLE_DOT;
         } else if((mods & MOD_MASK_SA) == MOD_MASK_SA) {
-            return u"    " CURRENCY_SIGN NOT_SIGN;
+            return U"    " CURRENCY_SIGN NOT_SIGN;
         } else if((mods & MOD_MASK_CG) == MOD_MASK_CG) {
-            return u"    " CURRENCY_SIGN KATAKANA_MIDDLE_DOT;
+            return U"    " CURRENCY_SIGN KATAKANA_MIDDLE_DOT;
         } else if((mods & MOD_MASK_CA) == MOD_MASK_CA) {
-            return u"    " CURRENCY_SIGN NOT_SIGN;
+            return U"    " CURRENCY_SIGN NOT_SIGN;
         } else if((mods & MOD_MASK_CS) == MOD_MASK_CS) {
-            return u"    " CURRENCY_SIGN ICON_SHIFT;
+            return U"    " CURRENCY_SIGN ICON_SHIFT;
         } else if(mods & MOD_MASK_CTRL) {
-            return u"    " CURRENCY_SIGN;
+            return U"    " CURRENCY_SIGN;
         } else if(mods & MOD_MASK_ALT) {
-            return u"    " NOT_SIGN;
+            return U"    " NOT_SIGN;
         } else if (mods & MOD_MASK_SHIFT) {
-            return u"    " ICON_SHIFT;
+            return U"    " ICON_SHIFT;
         } else {
-            return u"   " KATAKANA_MIDDLE_DOT;
+            return U"   " KATAKANA_MIDDLE_DOT;
         }
     }
 
@@ -1104,7 +1104,7 @@ void update_displays(enum refresh_mode mode) {
                     kdisp_enable(true);
                     kdisp_set_contrast(local_state->contrast-1);
                     if(keycode!=KC_TRNS) {
-                        const uint16_t* text = to_static_text(keycode, state);
+                        const uint32_t* text = to_static_text(keycode, state);
                         kdisp_set_buffer(0x00);
                         if(text==NULL) {
                             if(!render_key(keycode, state, mods) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
@@ -1502,11 +1502,11 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
 void show_splash_screen(void) {
     clear_all_displays();
     if(is_left_side()) {
-        display_message(1, 1, u"POLY", &FreeSansBold24pt7b);
-        display_message(2, 1, u"KYBD", &FreeSansBold24pt7b);
+        display_message(1, 1, U"POLY", &FreeSansBold24pt7b);
+        display_message(2, 1, U"KYBD", &FreeSansBold24pt7b);
     } else {
-        display_message(1, 1, u"SPLIT", &FreeSansBold24pt7b);
-        display_message(3, 1, u" 7 2", &FreeSansBold24pt7b);
+        display_message(1, 1, U"SPLIT", &FreeSansBold24pt7b);
+        display_message(3, 1, U" 7 2", &FreeSansBold24pt7b);
     }
     wait_ms(400);
     update_displays(ALL_AT_ONCE);
@@ -1556,7 +1556,7 @@ void unicode_input_mode_set_user(uint8_t unicode_mode) {
 // Diagnostic only (build with -DFW_UP_BOOT_TRACE): overwrite the keycaps with a
 // single digit at boot milestones so a hang in early boot is visible — the last
 // digit shown on each half tells us how far that half got before it stopped.
-static void boot_trace(const uint16_t* digit) {
+static void boot_trace(const uint32_t* digit) {
     clear_all_displays();
     display_message(1, 1, digit, &FreeSansBold24pt7b);
 }
@@ -1566,7 +1566,7 @@ static void boot_trace(const uint16_t* digit) {
 // Global variables: com
 void keyboard_post_init_user(void) {
 #ifdef FW_UP_BOOT_TRACE
-    boot_trace(u"1");
+    boot_trace(U"1");
 #endif
     // Customise these values to desired behaviour
     debug_enable = true;
@@ -1602,13 +1602,13 @@ void keyboard_post_init_user(void) {
     reset_overlay_mapping();
 
 #ifdef FW_UP_BOOT_TRACE
-    boot_trace(u"2");
+    boot_trace(U"2");
 #endif
 #ifdef USE_CORE1
     multicore_launch_core1();
 #endif
 #ifdef FW_UP_BOOT_TRACE
-    boot_trace(u"3");
+    boot_trace(U"3");
 #endif
 
     transaction_register_rpc(USER_SYNC_POLY_DATA,           user_sync_poly_data_handler);
@@ -1640,7 +1640,7 @@ void keyboard_post_init_user(void) {
 
     set_displays(ee.brightness, false);
 #ifdef FW_UP_BOOT_TRACE
-    boot_trace(u"4");
+    boot_trace(U"4");
 #endif
 }
 
@@ -1678,7 +1678,7 @@ void keyboard_pre_init_user(void) {
     set_side(eeconfig_read_handedness() ? LEFT_SIDE : RIGHT_SIDE);
     show_splash_screen();
 #ifdef FW_UP_BOOT_TRACE
-    boot_trace(u"0");
+    boot_trace(U"0");
 #endif
 
     gpio_set_pin_input_high(I2C1_SDA_PIN);

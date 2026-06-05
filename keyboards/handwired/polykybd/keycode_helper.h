@@ -91,4 +91,4 @@ static_assert((int)KC_EMJ_END <= 0x7FFF, "Emoji keycodes exceed QK_USER_MAX");
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))
 #define ESLOT(n)       ((uint16_t)((uint16_t)KC_EMJ_SLOT_BASE  + (uint16_t)(n)))
 
-const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags);
+const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags);

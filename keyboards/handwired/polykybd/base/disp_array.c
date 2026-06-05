@@ -75,7 +75,7 @@ int16_t get_scratch_buffer_size(void) {
     return BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT;
 }
 
-inline GFXglyph *pgm_read_glyph_ptr(const GFXfont *font, uint16_t c) {
+inline GFXglyph *pgm_read_glyph_ptr(const GFXfont *font, uint32_t c) {
 #ifdef __AVR__
     return &(((GFXglyph *)pgm_read_pointer(&font->glyph))[c]);
 #else
@@ -121,13 +121,13 @@ void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t heigh
    @brief   Draw a single character
     @param    x   Bottom left corner x coordinate
     @param    y   Bottom left corner y coordinate
-    @param    ch  The 16-bit font-indexed character
+    @param    ch  The 32-bit Unicode codepoint (SMP codepoints > 0xFFFF allowed)
 */
 /**************************************************************************/
-int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint16_t ch, bool clear_cy) {
+int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, bool clear_cy) {
     const GFXfont * currentFont = 0;
-    uint16_t first = 0;
-    uint16_t last = 0;
+    uint32_t first = 0;
+    uint32_t last = 0;
 
     // Font selection: pick the first font in `fonts` whose [first,last] contains
     // `ch`. Array order is precedence — ranges may overlap deliberately (a narrow
@@ -152,13 +152,13 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
         memset(s_disjoint, 0, sizeof(s_disjoint));
         if (num_fonts <= 128) {
             for (uint8_t i = 0; i < num_fonts; ++i) {
-                uint16_t fi = pgm_read_word(&fonts[i]->first);
-                uint16_t li = pgm_read_word(&fonts[i]->last);
+                uint32_t fi = pgm_read_dword(&fonts[i]->first);
+                uint32_t li = pgm_read_dword(&fonts[i]->last);
                 bool overlaps = false;
                 for (uint8_t j = 0; j < num_fonts; ++j) {
                     if (j == i) continue;
-                    uint16_t fj = pgm_read_word(&fonts[j]->first);
-                    uint16_t lj = pgm_read_word(&fonts[j]->last);
+                    uint32_t fj = pgm_read_dword(&fonts[j]->first);
+                    uint32_t lj = pgm_read_dword(&fonts[j]->last);
                     if (fi <= lj && fj <= li) { overlaps = true; break; }
                 }
                 if (!overlaps) s_disjoint[i >> 3] |= (uint8_t)(1u << (i & 7));
@@ -170,8 +170,8 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
     for (uint8_t k = 0; k < s_mru_len; ++k) {
         uint8_t idx = s_mru[k];
         currentFont = fonts[idx];
-        first = pgm_read_word(&currentFont->first);
-        last  = pgm_read_word(&currentFont->last);
+        first = pgm_read_dword(&currentFont->first);
+        last  = pgm_read_dword(&currentFont->last);
         if (ch >= first && ch <= last) {
             for (uint8_t m = k; m > 0; --m) s_mru[m] = s_mru[m - 1];
             s_mru[0] = idx;                     // move to front
@@ -184,15 +184,15 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
         uint8_t found = 0xFF;
         for (uint8_t idx = 0; idx < num_fonts; ++idx) {
             currentFont = fonts[idx];
-            first = pgm_read_word(&currentFont->first);
-            last  = pgm_read_word(&currentFont->last);
+            first = pgm_read_dword(&currentFont->first);
+            last  = pgm_read_dword(&currentFont->last);
             if (ch >= first && ch <= last) { found = idx; break; }
         }
         if (found == 0xFF) {
             currentFont = fonts[0];             // no match — fall back to '!'
-            first = pgm_read_word(&currentFont->first);
-            last  = pgm_read_word(&currentFont->last);
-            ch = u'!';
+            first = pgm_read_dword(&currentFont->first);
+            last  = pgm_read_dword(&currentFont->last);
+            ch = U'!';
         } else if (s_disjoint[found >> 3] & (uint8_t)(1u << (found & 7))) {
             uint8_t m = (s_mru_len < FONT_MRU_N) ? s_mru_len : (FONT_MRU_N - 1);
             for (; m > 0; --m) s_mru[m] = s_mru[m - 1];
@@ -231,39 +231,39 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
     return pgm_read_byte(&glyph->xAdvance);
 }
 
-void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text) {
+void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text) {
     kdisp_write_gfx_text_cy(fonts, num_fonts, x, y, text, false);
 }
 
-void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text, bool clear_cy) {
+void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, bool clear_cy) {
     int8_t x_cursor = x;
     int8_t y_cursor = y;
     while (*text != 0) {
         switch(*text) {
-            case u'\x05'://enquiry
+            case U'\x05'://enquiry
                 y_cursor += 2;
                 break;
-            case u'\x18'://cancel
+            case U'\x18'://cancel
                 x_cursor = x;
                 y_cursor = y;
                 break;
-            case u'\b':
+            case U'\b':
                 x_cursor = x_cursor>1 ? x_cursor - 2 : 0;
                 break;
-            case u'\f':
+            case U'\f':
                 y_cursor = y_cursor>1 ? y_cursor - 2 : 0;
                 break;
-            case u'\t':
+            case U'\t':
                 x_cursor += ((x_cursor-x)/36+1)*36;
                 break;
-            case u'\n':
+            case U'\n':
                 y_cursor += pgm_read_byte(&fonts[0]->yAdvance);
                 x_cursor = x;
                 break;
-            case u'\v':
+            case U'\v':
                 y_cursor += ((y_cursor-y)/15+1)*15;
                 break;
-            case u'\r':
+            case U'\r':
                 x_cursor = x;
                 break;
             default:

@@ -50,25 +50,20 @@ static uint32_t codepoint_for_slot(uint8_t slot) {
     return cat->codepoints[idx];
 }
 
-// Maps a Unicode codepoint to the font-file index understood by kdisp_write_gfx_char /
-// the UTF-16 display string.
-//
-// SMP emoji fonts in this codebase are generated with fontconvert -n0x10000, which stores
-// glyph at (codepoint - 0x10000). BMP emoji fonts have no offset (index == codepoint).
-static inline uint16_t cp_to_font_idx(uint32_t cp) {
-    return (cp >= 0x10000) ? (uint16_t)(cp - 0x10000) : (uint16_t)cp;
-}
-
 // ── Display buffer ───────────────────────────────────────────────────────────
 // Single static buffer — safe because to_static_text() is called single-threadedly
 // in QMK's matrix scan loop. The caller uses the pointer before the next call.
+//
+// The display string now carries real 32-bit Unicode codepoints: every glyph font
+// (SMP included) is keyed on its real codepoint, so the emoji codepoint goes into
+// the string verbatim — no Private-Use-Area shift.
 
-static uint16_t s_disp_buf[4];  // space x 2 + glyph + NUL
+static uint32_t s_disp_buf[4];  // space x 2 + glyph + NUL
 
-static const uint16_t *make_emoji_str(uint32_t cp) {
+static const uint32_t *make_emoji_str(uint32_t cp) {
     s_disp_buf[0] = ' ';
     s_disp_buf[1] = ' ';
-    s_disp_buf[2] = cp_to_font_idx(cp);
+    s_disp_buf[2] = cp;
     s_disp_buf[3] = 0;
     return s_disp_buf;
 }
@@ -80,23 +75,23 @@ void emj_init(void) {
     s_page     = 0;
 }
 
-const uint16_t *emj_display_text(uint16_t keycode) {
+const uint32_t *emj_display_text(uint16_t keycode) {
     // ── Page-prev arrow — only shown when a previous page exists ──
     if (keycode == KC_EMJ_PAGE_PREV) {
-        return (s_page > 0) ? (const uint16_t *)(u"  " ICON_LEFT) : (const uint16_t *)u"";
+        return (s_page > 0) ? (const uint32_t *)(U"  " ICON_LEFT) : (const uint32_t *)U"";
     }
 
     // ── Page-next arrow — only shown when a next page exists ──
     if (keycode == KC_EMJ_PAGE_NEXT) {
         return (s_page + 1 < page_count(s_category))
-               ? (const uint16_t *)(u"  " ICON_RIGHT)
-               : (const uint16_t *)u"";
+               ? (const uint32_t *)(U"  " ICON_RIGHT)
+               : (const uint32_t *)U"";
     }
 
     // ── Category tab — hardwired icon, falling back to first codepoint ──
     if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_PAGE_PREV) {
         uint8_t cat = (uint8_t)(keycode - KC_EMJ_CAT_BASE);
-        if (cat >= EMJ_NUM_CATEGORIES || EMJ_CATEGORIES[cat].count == 0) return (const uint16_t *)u"";
+        if (cat >= EMJ_NUM_CATEGORIES || EMJ_CATEGORIES[cat].count == 0) return (const uint32_t *)U"";
         uint32_t cp = (cat < ARRAY_SIZE(emj_tab_icons)) ? emj_tab_icons[cat] : 0;
         if (cp == 0) cp = EMJ_CATEGORIES[cat].codepoints[0];
         return make_emoji_str(cp);
@@ -106,7 +101,7 @@ const uint16_t *emj_display_text(uint16_t keycode) {
     if (keycode >= KC_EMJ_SLOT_BASE && keycode < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) {
         uint8_t slot = (uint8_t)(keycode - KC_EMJ_SLOT_BASE);
         uint32_t cp  = codepoint_for_slot(slot);
-        if (cp == 0) return (const uint16_t *)u"";
+        if (cp == 0) return (const uint32_t *)U"";
         return make_emoji_str(cp);
     }
 

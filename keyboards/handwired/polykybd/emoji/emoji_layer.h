@@ -8,7 +8,7 @@
 // ── Integration points ──────────────────────────────────────────────────────
 //
 // In keymap.c to_static_text(), add ONE line before the existing keycode_to_emoji() call:
-//     const uint16_t *emj = emj_display_text(keycode);
+//     const uint32_t *emj = emj_display_text(keycode);
 //     if (emj) return emj;
 //
 // In keymap.c process_record_user(), add ONE line before process_unicodemap_poly():
@@ -43,7 +43,7 @@ void emj_init(void);
 // Returns a display string for category tabs, page arrows and emoji slots,
 // or NULL if keycode is unrelated to the emoji layer.
 // The returned pointer is valid until the next call to this function.
-const uint16_t *emj_display_text(uint16_t keycode);
+const uint32_t *emj_display_text(uint16_t keycode);
 
 // Handles category tab, page prev/next and emoji slot key events.
 // Returns true if the keycode was consumed (caller should return false).

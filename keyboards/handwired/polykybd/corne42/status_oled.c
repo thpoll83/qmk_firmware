@@ -30,7 +30,7 @@ extern const GFXfont* const ALL_FONTS[];
  *   Row 3 (y≈31): WPM + language
  */
 void oled_update_buffer(void) {
-    uint16_t buffer[32];
+    uint32_t buffer[32];
 
     kdisp_set_buffer(0);
 
@@ -40,12 +40,12 @@ void oled_update_buffer(void) {
 
     /* Row 1: layer icon + layer number + side */
     kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 0, 11, ICON_LAYER);
-    hex_to_u16_string((char*)buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
+    hex_to_u32_string((char*)buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
     kdisp_write_gfx_text(displayFont, 1, 16, 11, buffer);
     if (side_is_undecided()) {
-        kdisp_write_gfx_text(smallFont, 1, 40, 11, u"?");
+        kdisp_write_gfx_text(smallFont, 1, 40, 11, U"?");
     } else {
-        kdisp_write_gfx_text(smallFont, 1, 36, 11, is_left_side() ? u"L" : u"R");
+        kdisp_write_gfx_text(smallFont, 1, 36, 11, is_left_side() ? U"L" : U"R");
     }
 
     /* Row 1 right: lock indicators */
@@ -56,29 +56,29 @@ void oled_update_buffer(void) {
 
     /* Row 2: default layout name (both sides — no RGB on corne42) */
     switch (get_local_layer()->def_layer) {
-        case 0: kdisp_write_gfx_text(smallFont, 1, 0, 22, u"Qwerty");      break;
-        case 1: kdisp_write_gfx_text(smallFont, 1, 0, 22, u"Qwerty Stag!"); break;
-        case 2: kdisp_write_gfx_text(smallFont, 1, 0, 22, u"Colemak DH");  break;
-        case 3: kdisp_write_gfx_text(smallFont, 1, 0, 22, u"Neo");          break;
-        case 4: kdisp_write_gfx_text(smallFont, 1, 0, 22, u"Workman");      break;
-        default: kdisp_write_gfx_text(smallFont, 1, 0, 22, u"Unknown");     break;
+        case 0: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Qwerty");      break;
+        case 1: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Qwerty Stag!"); break;
+        case 2: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Colemak DH");  break;
+        case 3: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Neo");          break;
+        case 4: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Workman");      break;
+        default: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Unknown");     break;
     }
 
     /* Row 2 right: USB/Batt indicator */
-    kdisp_write_gfx_text(smallFont, 1, 112, 22, is_usb_host_side() ? u"H" : u"B");
+    kdisp_write_gfx_text(smallFont, 1, 112, 22, is_usb_host_side() ? U"H" : U"B");
 
     /* Row 3: display brightness bar + WPM + language */
     const poly_sync_t* local_state = get_local_state();
-    kdisp_write_gfx_text(smallFont, 1, 0, 31, u"Dsp*");
-    num_to_u16_string((char*)buffer, sizeof(buffer), local_state->contrast);
+    kdisp_write_gfx_text(smallFont, 1, 0, 31, U"Dsp*");
+    num_to_u32_string((char*)buffer, sizeof(buffer), local_state->contrast);
     kdisp_write_gfx_text(smallFont, 1, 40, 31, buffer);
 
-    kdisp_write_gfx_text(smallFont, 1, 62, 31, u"W");
-    num_to_u16_string((char*)buffer, sizeof(buffer), get_current_wpm());
+    kdisp_write_gfx_text(smallFont, 1, 62, 31, U"W");
+    num_to_u32_string((char*)buffer, sizeof(buffer), get_current_wpm());
     kdisp_write_gfx_text(smallFont, 1, 74, 31, buffer);
 
-    kdisp_write_gfx_text(smallFont, 1, 96, 31, u"L");
-    num_to_u16_string((char*)buffer, sizeof(buffer), local_state->lang);
+    kdisp_write_gfx_text(smallFont, 1, 96, 31, U"L");
+    num_to_u32_string((char*)buffer, sizeof(buffer), local_state->lang);
     kdisp_write_gfx_text(smallFont, 1, 108, 31, buffer);
 }
 

@@ -39,8 +39,9 @@ jobs:
 
       # Idempotent: a tag push creates the release; re-running for an existing
       # release (e.g. a manual workflow_dispatch from the tag, or a re-pushed
-      # tag) just (re-)uploads the assets with --clobber. Guarded to tag refs so
-      # a dispatch from a branch builds as a smoke test without cutting a release.
+      # tag) just (re-)uploads the assets with --clobber. If two runs race for
+      # the same tag, the create that loses falls back to upload. Guarded to tag
+      # refs so a dispatch from a branch builds as a smoke test, not a release.
       - name: Create or update GitHub Release
         if: github.ref_type == 'tag'
         env:
@@ -52,10 +53,11 @@ jobs:
             echo "Release $TAG already exists — uploading assets (clobbering duplicates)."
             gh release upload "$TAG" "${TARGET}.uf2" "${TARGET}.bin" --clobber
           else
-            echo "Creating release $TAG."
+            echo "Creating release $TAG (falls back to upload if a concurrent run won the create)."
             gh release create "$TAG" \
               --generate-notes \
               --title "PolyKybd Firmware $TAG" \
               "${TARGET}.uf2" \
-              "${TARGET}.bin"
+              "${TARGET}.bin" \
+            || gh release upload "$TAG" "${TARGET}.uf2" "${TARGET}.bin" --clobber
           fi

@@ -74,7 +74,7 @@ fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s18" -r50 -v _Loc
 fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s18" -r50 -v _ClipCpy_ -n0x11000 0x1F4CB 0x1F4CB > "base/fonts/generated/4NotoEmoji_Medium_Copy_18pt.h"
 fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s12" -r50 -v _Note_ -n0x11000 0x1f4dd 0x1f4dd > "base/fonts/generated/5NotoEmoji_Medium_Note_12pt.h"
 fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emojis0_ -b32 0x1f600 0x1f64f > "base/fonts/generated/6NotoEmoji_Medium_Emoji0_20pt.h"
-fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emojis1_ -b32 0x1f440 0x1f453 0x1f47b 0x1f496 0x1f4a1 0x1f4b1 > "base/fonts/generated/9NotoEmoji_Medium_Emoji1 _20pt.h"
+fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emojis1_ -b32 0x1f440 0x1f453 0x1f47b 0x1f496 0x1f4a1 0x1f4b1 > "base/fonts/generated/9NotoEmoji_Medium_Emoji1_20pt.h"
 fontconvert "-ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf" "-s20" -r50 -v _Emojis2_ -b32 0x1F912 0x1F919 > "base/fonts/generated/7NotoEmoji_Medium_Emoji2_20pt.h"
 
 # ── Emoji category fonts — all SMP with -b32 (real codepoints), BMP without ──

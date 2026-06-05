@@ -84,7 +84,7 @@
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP1_20pt.h"
 #include "generated/8NotoEmoji_Medium_EmjWeatherSMP2_20pt.h"
 #include "generated/8NotoSansSymbols2_EmjTravelBMP2_20pt.h"
-#include "generated/9NotoEmoji_Medium_Emoji1 _20pt.h"
+#include "generated/9NotoEmoji_Medium_Emoji1_20pt.h"
 #include "generated/NotoSansAR_Regular_FormsB_16pt.h"
 #include "generated/NotoSansAR_Regular_Isolated_16pt.h"
 #include "generated/NotoSansJP_Regular_Hiragana_15pt.h"

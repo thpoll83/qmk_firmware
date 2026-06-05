@@ -36,6 +36,8 @@
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
+#include "base/fonts/flag_fonts.h"        // language-layer country flags (fonts/gen-lang-fonts.sh)
+#include "base/fonts/lang_label_font.h"   // tiny label font under the flags
 #include "base/multicore/core1.h"
 #include "polymod_crc32.h"
 
@@ -597,33 +599,35 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KC_L2:                         return local_layer->def_layer == _L2 ? U"Clmk\r\v" ICON_SWITCH_ON : U"Clmk\r\v" ICON_SWITCH_OFF;
         case KC_L3:                         return local_layer->def_layer == _L3 ? U"Neo\r\v" ICON_SWITCH_ON : U"Neo\r\v" ICON_SWITCH_OFF;
         case KC_L4:                         return local_layer->def_layer == _L4 ? U"Wkm\r\v" ICON_SWITCH_ON : U"Wkm\r\v" ICON_SWITCH_OFF;
-        case KCL_ENUS: return local_state->lang == LANG_ENUS ? U"en\r\tUS\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"en\r\tUS";
-        case KCL_DEDE: return local_state->lang == LANG_DEDE ? U"de\r\tDE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"de\r\tDE";
-        case KCL_FRFR: return local_state->lang == LANG_FRFR ? U"fr\r\tFR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"fr\r\tFR";
-        case KCL_ESES: return local_state->lang == LANG_ESES ? U"es\r\tES\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"es\r\tES";
-        case KCL_PTPT: return local_state->lang == LANG_PTPT ? U"pt\r\tPT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"pt\r\tPT";
-        case KCL_ITIT: return local_state->lang == LANG_ITIT ? U"it\r\tIT\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"it\r\tIT";
-        case KCL_TRTR: return local_state->lang == LANG_TRTR ? U"tr\r\tTR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"tr\r\tTR";
-        case KCL_KOKR: return local_state->lang == LANG_KOKR ? U"ko\r\tKR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ko\r\tKR";
-        case KCL_JAJP: return local_state->lang == LANG_JAJP ? U"ja\r\tJP\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ja\r\tJP";
-        case KCL_ARSA: return local_state->lang == LANG_ARSA ? U"ar\r\tSA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ar\r\tSA";
-        case KCL_ELGR: return local_state->lang == LANG_ELGR ? U"el\r\tGR\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"el\r\tGR";
-        case KCL_UKUA: return local_state->lang == LANG_UKUA ? U"uk\r\tUA\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"uk\r\tUA";
-        case KCL_RURU: return local_state->lang == LANG_RURU ? U"ru\r\tRU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ru\r\tRU";
-        case KCL_BEBY: return local_state->lang == LANG_BEBY ? U"be\r\tBY\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"be\r\tBY";
-        case KCL_KKKZ: return local_state->lang == LANG_KKKZ ? U"kk\r\tKZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"kk\r\tKZ";
-        case KCL_BGBG: return local_state->lang == LANG_BGBG ? U"bg\r\tBG\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"bg\r\tBG";
-        case KCL_PLPL: return local_state->lang == LANG_PLPL ? U"pl\r\tPL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"pl\r\tPL";
-        case KCL_RORO: return local_state->lang == LANG_RORO ? U"ro\r\tRO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"ro\r\tRO";
-        case KCL_ZHCN: return local_state->lang == LANG_ZHCN ? U"zh\r\tCN\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"zh\r\tCN";
-        case KCL_NLNL: return local_state->lang == LANG_NLNL ? U"nl\r\tNL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"nl\r\tNL";
-        case KCL_HEIL: return local_state->lang == LANG_HEIL ? U"he\r\tIL\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"he\r\tIL";
-        case KCL_SVSE: return local_state->lang == LANG_SVSE ? U"sv\r\tSE\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"sv\r\tSE";
-        case KCL_FIFI: return local_state->lang == LANG_FIFI ? U"fi\r\tFI\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"fi\r\tFI";
-        case KCL_NNNO: return local_state->lang == LANG_NNNO ? U"nn\r\tNO\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"nn\r\tNO";
-        case KCL_DADK: return local_state->lang == LANG_DADK ? U"da\r\tDK\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"da\r\tDK";
-        case KCL_HUHU: return local_state->lang == LANG_HUHU ? U"hu\r\tHU\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"hu\r\tHU";
-        case KCL_CSCZ: return local_state->lang == LANG_CSCZ ? U"cs\r\tCZ\r\x05\x05" BLACK_RECTANGLE BLACK_RECTANGLE : U"cs\r\tCZ";
+        // The flag + selection frame are drawn by render_lang_flag_key(); here we
+        // only return the tiny language code shown under the flag.
+        case KCL_ENUS: return U"en-US";
+        case KCL_DEDE: return U"de-DE";
+        case KCL_FRFR: return U"fr-FR";
+        case KCL_ESES: return U"es-ES";
+        case KCL_PTPT: return U"pt-PT";
+        case KCL_ITIT: return U"it-IT";
+        case KCL_TRTR: return U"tr-TR";
+        case KCL_KOKR: return U"ko-KR";
+        case KCL_JAJP: return U"ja-JP";
+        case KCL_ARSA: return U"ar-SA";
+        case KCL_ELGR: return U"el-GR";
+        case KCL_UKUA: return U"uk-UA";
+        case KCL_RURU: return U"ru-RU";
+        case KCL_BEBY: return U"be-BY";
+        case KCL_KKKZ: return U"kk-KZ";
+        case KCL_BGBG: return U"bg-BG";
+        case KCL_PLPL: return U"pl-PL";
+        case KCL_RORO: return U"ro-RO";
+        case KCL_ZHCN: return U"zh-CN";
+        case KCL_NLNL: return U"nl-NL";
+        case KCL_HEIL: return U"he-IL";
+        case KCL_SVSE: return U"sv-SE";
+        case KCL_FIFI: return U"fi-FI";
+        case KCL_NNNO: return U"nn-NO";
+        case KCL_DADK: return U"da-DK";
+        case KCL_HUHU: return U"hu-HU";
+        case KCL_CSCZ: return U"cs-CZ";
         default:
             return NULL;
     }
@@ -826,6 +830,64 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     return true;
 }
 
+// ─── Language-layer flag rendering ──────────────────────────────────────────
+// Each KCL_* key in the language layer (_LL) shows its country flag in the top
+// 28 px with the language code in a tiny font in the bottom 12 px, plus a 1 px
+// frame around the keycap for the currently-selected language.  Flag glyphs live
+// in flag_fonts.h at codepoints FLAG_CP_BASE + LANG_* (see fonts/gen-lang-fonts.sh);
+// the label uses the tiny NotoSans font.  Each is drawn with its own single-font
+// array so kdisp_write_gfx_char's baseline-alignment shift stays 0 and the y
+// positions below are exact.
+#define FLAG_CP_BASE       0xE000u
+#define FLAG_TOP_Y         0          // flag top edge, px from the keycap top
+#define LABEL_BASELINE_Y   36         // tiny-font baseline for the language code
+
+static const GFXfont* const lang_flag_fonts[]  = { &NotoColorEmoji_Regular_LangFlags_20pt7b };
+static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b };
+
+// Pixel width of a tiny-font ASCII label, for horizontal centring.
+static int8_t lang_label_width(const uint32_t* text) {
+    int16_t w = 0;
+    const GFXfont* f = &NotoSans_Regular_Tiny_6pt7b;
+    const uint32_t first = pgm_read_dword(&f->first);
+    const uint32_t last  = pgm_read_dword(&f->last);
+    for (; *text; ++text) {
+        if (*text >= first && *text <= last) {
+            w += (int8_t)pgm_read_byte(&f->glyph[*text - first].xAdvance);
+        }
+    }
+    return (int8_t)w;
+}
+
+// Draw one language key: country flag centred up top, language code (e.g.
+// U"en-US") centred below, and a frame around the keycap when it is the active
+// language.
+static void render_lang_flag_key(uint16_t keycode, const uint32_t* label, uint8_t current_lang) {
+    const uint8_t  idx = (uint8_t)(keycode - KCL_ENUS);   // == LANG_* enum value
+    const GFXfont* ff  = &NotoColorEmoji_Regular_LangFlags_20pt7b;
+
+    // Flag: centre horizontally; subtracting the glyph yOffset lands the top edge
+    // at FLAG_TOP_Y regardless of the glyph's baseline metrics.
+    const int8_t fw  = (int8_t)pgm_read_byte(&ff->glyph[idx].width);
+    const int8_t fyo = (int8_t)pgm_read_byte(&ff->glyph[idx].yOffset);
+    const int8_t fx  = (int8_t)(BUFFER_X + (SCREEN_WIDTH - fw) / 2);
+    kdisp_write_gfx_char(lang_flag_fonts, 1, fx, (int8_t)(FLAG_TOP_Y - fyo),
+                         FLAG_CP_BASE + idx, false);
+
+    // Label: centre horizontally below the flag.
+    const int8_t tw = lang_label_width(label);
+    const int8_t tx = (int8_t)(BUFFER_X + (SCREEN_WIDTH - tw) / 2);
+    kdisp_write_gfx_text(lang_label_fonts, 1, tx, LABEL_BASELINE_Y, label);
+
+    // Selected language: 1 px frame around the visible keycap.
+    if (current_lang == idx) {
+        kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 1);
+        kdisp_fill_rect(BUFFER_X, SCREEN_HEIGHT - 1, SCREEN_WIDTH, 1);
+        kdisp_fill_rect(BUFFER_X, 0, 1, SCREEN_HEIGHT);
+        kdisp_fill_rect((int8_t)(BUFFER_X + SCREEN_WIDTH - 1), 0, 1, SCREEN_HEIGHT);
+    }
+}
+
 void update_displays(enum refresh_mode mode) {
     const poly_sync_t* local_state = get_local_state();
     if(local_state->contrast<=DISP_OFF || (local_state->flags&DISP_IDLE)!=0) {
@@ -868,6 +930,12 @@ void update_displays(enum refresh_mode mode) {
                     kdisp_enable(true);
                     kdisp_set_contrast(local_state->contrast-1);
                     if(keycode!=KC_TRNS) {
+                        if (keycode >= KCL_ENUS && keycode <= KCL_CSCZ) {
+                            // Language layer: country flag + tiny language code.
+                            kdisp_set_buffer(0x00);
+                            render_lang_flag_key(keycode, to_static_text(keycode, state), local_state->lang);
+                            kdisp_send_buffer();
+                        } else {
                         const uint32_t* text = to_static_text(keycode, state);
                         kdisp_set_buffer(0x00);
                         if(text==NULL) {
@@ -890,6 +958,7 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, true);
                         }
                         kdisp_send_buffer();
+                        }
                     }
                 }
                 sr_shift_once_latch();

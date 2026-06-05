@@ -4,7 +4,16 @@ on:
   push:
     tags:
       - 'PolyKybd-fw-v*'
+  # `release` events ignore [skip ci]. Release tags here land on the auto-bump
+  # "[skip ci]" commit (bump-version.yml), which suppresses the tag-push trigger
+  # above — so publishing the release is what reliably starts the build.
+  release:
+    types: [published]
   workflow_dispatch: {}
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -37,16 +46,17 @@ jobs:
             .build/${TARGET}.elf \
             ${TARGET}.bin
 
-      # Idempotent: a tag push creates the release; re-running for an existing
-      # release (e.g. a manual workflow_dispatch from the tag, or a re-pushed
-      # tag) just (re-)uploads the assets with --clobber. If two runs race for
-      # the same tag, the create that loses falls back to upload. Guarded to tag
-      # refs so a dispatch from a branch builds as a smoke test, not a release.
+      # Runs on a tag push, on publishing a release, or on a manual dispatch.
+      # Idempotent: creates the release if missing, otherwise (re-)uploads the
+      # assets with --clobber; a create that loses a race falls back to upload.
+      # The `release` trigger matters because release tags land on the auto-bump
+      # "[skip ci]" commit, which suppresses the tag-push trigger. Guarded so a
+      # workflow_dispatch from a branch builds as a smoke test, not a release.
       - name: Create or update GitHub Release
-        if: github.ref_type == 'tag'
+        if: github.event_name == 'release' || github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
         run: |
           TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
           if gh release view "$TAG" >/dev/null 2>&1; then

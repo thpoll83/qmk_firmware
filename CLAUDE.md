@@ -55,11 +55,13 @@ RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), uni
 
 ## Font generation
 
-Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from the [`AdafruitGFX/`](../AdafruitGFX/CLAUDE.md) repo.
+Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from the [`AdafruitGFX/`](../AdafruitGFX/CLAUDE.md) repo. Generation is **config-driven** via `keyboards/handwired/polykybd/fonts/` — full docs in [`fonts/README.md`](keyboards/handwired/polykybd/fonts/README.md).
 
-- Fonts must be downloaded first: run `keyboards/handwired/polykybd/fonts/dl-fonts.sh` (or download Noto fonts manually)
-- `keyboards/handwired/polykybd/create_fonts.sh` calls `fontconvert` for each character range and writes `.h` files to `base/fonts/generated/`
-- `base/fonts/gfx_used_fonts.h` is auto-generated: includes all `.h` files and builds `ALL_FONTS[]` array
+- **`fonts/fonts.yaml`** — single source of truth: an ordered list of font entries (font file, size, variant, codepoint ranges, weight, bits, …) grouped into categories with shared defaults. The list order **is** the `ALL_FONTS[]` priority (front-to-back lookup; first match wins on overlapping ranges) — categories only decide which header a font lands in.
+- **`fonts/generate_fonts.py`** — reads the YAML, runs `fontconvert` per entry, writes one header per category to `base/fonts/generated/`, and composes `base/fonts/gfx_used_fonts.h` (the `ALL_FONTS[]` table, with `IconsFont` prepended). `--check` flags stale headers for CI. Needs PyYAML + `fontconvert` on PATH (or `$FONTCONVERT`).
+- **`fonts/dl-fonts.sh`** — downloads the Noto source fonts first.
+- `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
+- **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.
 
 See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
 

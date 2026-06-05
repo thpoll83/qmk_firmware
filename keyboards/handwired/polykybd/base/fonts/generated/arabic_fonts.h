@@ -1,4 +1,43 @@
-// fontconvert -ffonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf -s16 -r40 -v _Isolated_ 0x60c 0x60c 0x61b 0x61b 0x61f 0x669 
+#pragma once
+
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf -s 16 -v _FormsB_ -r 40 65269 65269 65275 65275 
+// Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
+
+/* num ranges: 2 */
+const uint8_t NotoSansArabic_Regular_FormsB_16pt16bBitmaps[] PROGMEM = {
+  /* range 0 (0xfef5 - 0xfef5): */  0x78, 0x40, 0x3F, 0xF1, 0xC4, 0x78, 0x30, 0x00, 0x0C, 0x00, 0x03, 0x03,
+  0x00, 0xE1, 0xE0, 0x38, 0x3C, 0x0C, 0x03, 0xC3, 0x00, 0x78, 0xC0, 0x0F,
+  0x70, 0x00, 0xFC, 0x00, 0x1E, 0x00, 0x03, 0x80, 0x01, 0xF0, 0x00, 0x7E,
+  0x00, 0x39, 0x80, 0x1C, 0x70, 0x0E, 0x1C, 0x07, 0x07, 0x07, 0xFF, 0x81,
+  0xFF, 0xE0, 0x7F, 0xE0
+  /* range 1 (0xfefb - 0xfefb): */  , 0x00, 0x38, 0x00, 0x30, 0x00, 0x60, 0x00, 0xC6,
+  0x01, 0xDE, 0x03, 0x9E, 0x06, 0x0F, 0x0C, 0x0F, 0x18, 0x0F, 0x70, 0x07,
+  0xE0, 0x07, 0x80, 0x07, 0x00, 0x1F, 0x00, 0x3F, 0x00, 0xE6, 0x03, 0x8E,
+  0x0E, 0x1C, 0x38, 0x39, 0xFF, 0xE3, 0xFF, 0xC7, 0xFE, 0x00
+ };
+
+const GFXglyph NotoSansArabic_Regular_FormsB_16pt16bGlyphs[] PROGMEM = {
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0xfef5 - 0xfef5)
+  {     0,  18,  23,  18,   -2,  -22 },   // 0xFEF5 uniFEF5  (#0)
+  {     0,   0,   0,   0,    0,    0 },   // 0xFEF6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0xFEF7 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0xFEF8 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0xFEF9 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0xFEFA (skip)
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 1 (0xfefb - 0xfefb)
+  {    52,  15,  22,  18,    1,  -21 } }; // 0xFEFB uniFEFB  (#1)
+
+const GFXfont NotoSansArabic_Regular_FormsB_16pt16b PROGMEM = {
+  (uint8_t  *)NotoSansArabic_Regular_FormsB_16pt16bBitmaps,
+  (GFXglyph *)NotoSansArabic_Regular_FormsB_16pt16bGlyphs,
+  0xFEF5, // first
+  0xFEFB, // last
+  40   //height
+ };
+
+// Approx. 150 bytes
+
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf -s 16 -v _Isolated_ -r 40 1548 1548 1563 1563 1567 1641 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
 /* num ranges: 3 */

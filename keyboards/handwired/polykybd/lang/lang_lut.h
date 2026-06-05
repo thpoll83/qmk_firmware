@@ -1,3 +1,6 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 //File content partially generated!
 //Execute the following command to do so (via cogapp):
 //cog -r lang_lut.h
@@ -57,11 +60,11 @@ enum lang_layer {
     //[[[end]]]
     NUM_LANG };
 
-const uint16_t* translate_keycode_only_shift(uint8_t used_lang, uint16_t keycode);
+const uint32_t* translate_keycode_only_shift(uint8_t used_lang, uint16_t keycode);
 
-const uint16_t* translate_keycode_only_altgr(uint8_t used_lang, uint16_t keycode);
+const uint32_t* translate_keycode_only_altgr(uint8_t used_lang, uint16_t keycode);
 
-const uint16_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shift, bool caps_lock);
+const uint32_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shift, bool caps_lock);
 
 enum settings_keys {
     /*[[[cog

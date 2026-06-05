@@ -58,7 +58,7 @@ enum my_keycodes {
       for idx in range(10):
           cog.out(f"KC_LAT{idx}, ")
     ]]]*/
-    KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
+    KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9, 
     //[[[end]]]
     /*[[[cog
         for lang in languages:
@@ -67,7 +67,7 @@ enum my_keycodes {
             else:
                 cog.out(f"KCL_{lang}, ")
     ]]]*/
-    KCL_ENUS = QK_USER_0, KCL_DEDE, KCL_FRFR, KCL_ESES, KCL_PTPT, KCL_ITIT, KCL_TRTR, KCL_KOKR, KCL_JAJP, KCL_ARSA, KCL_ELGR, KCL_UKUA, KCL_RURU, KCL_BEBY, KCL_KKKZ, KCL_BGBG, KCL_PLPL, KCL_RORO, KCL_ZHCN, KCL_NLNL, KCL_HEIL, KCL_SVSE, KCL_FIFI, KCL_NNNO, KCL_DADK, KCL_HUHU, KCL_CSCZ,
+    KCL_ENUS = QK_USER_0, KCL_DEDE, KCL_FRFR, KCL_ESES, KCL_PTPT, KCL_ITIT, KCL_TRTR, KCL_KOKR, KCL_JAJP, KCL_ARSA, KCL_ELGR, KCL_UKUA, KCL_RURU, KCL_BEBY, KCL_KKKZ, KCL_BGBG, KCL_PLPL, KCL_RORO, KCL_ZHCN, KCL_NLNL, KCL_HEIL, KCL_SVSE, KCL_FIFI, KCL_NNNO, KCL_DADK, KCL_HUHU, KCL_CSCZ, 
     //[[[end]]]
         //Lables, no functionality:
     LBL_TEXT,
@@ -91,4 +91,4 @@ static_assert((int)KC_EMJ_END <= 0x7FFF, "Emoji keycodes exceed QK_USER_MAX");
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))
 #define ESLOT(n)       ((uint16_t)((uint16_t)KC_EMJ_SLOT_BASE  + (uint16_t)(n)))
 
-const uint16_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags);
+const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags);

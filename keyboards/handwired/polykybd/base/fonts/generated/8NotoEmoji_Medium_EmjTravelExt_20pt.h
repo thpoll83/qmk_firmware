@@ -1,4 +1,4 @@
-// fontconvert -ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s20 -r50 -v _EmjTravelExt_ -n0x10000 0x1F6D0 0x1F6D2 
+// fontconvert -ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s20 -r50 -v _EmjTravelExt_ -b32 0x1F6D0 0x1F6D2 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
 /* num ranges: 1 */
@@ -62,8 +62,8 @@ const GFXglyph NotoEmoji_Medium_EmjTravelExt_20pt16bGlyphs[] PROGMEM = {
 const GFXfont NotoEmoji_Medium_EmjTravelExt_20pt16b PROGMEM = {
   (uint8_t  *)NotoEmoji_Medium_EmjTravelExt_20pt16bBitmaps,
   (GFXglyph *)NotoEmoji_Medium_EmjTravelExt_20pt16bGlyphs,
-  0xF6D0, // first
-  0xF6D2, // last
+  0x1F6D0, // first
+  0x1F6D2, // last
   50   //height
  };
 

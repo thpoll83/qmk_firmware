@@ -12,27 +12,30 @@
 
 #include <stdio.h>
 
-void num_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value) {
-    if (value < 10) {
-        snprintf((char*)buffer, buffer_len, "%d", value);
-        buffer[1] = 0; buffer[2] = 0; buffer[3] = 0;
-    } else if (value > 99) {
-        snprintf((char*)buffer, buffer_len, "%d %d %d", value/100, (value/10)%10, value%10);
-        buffer[1] = 0; buffer[3] = 0; buffer[5] = 0; buffer[6] = 0; buffer[7] = 0;
-    } else {
-        snprintf((char*)buffer, buffer_len, "%d %d", value/10, value%10);
-        buffer[1] = 0; buffer[3] = 0; buffer[4] = 0; buffer[5] = 0;
-    }
+// Render `value` as a char32 (U"...") display string into `buffer`. The display
+// pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
+// glyph is one uint32_t codepoint. `buffer_len` is the byte size of the buffer.
+static inline void digits_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value, uint8_t base) {
+    uint32_t* out = (uint32_t*)buffer;
+    uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
+    uint8_t   i   = 0;
+    if (value >= base * base && i < cap) out[i++] = U'0' + (value / (base * base)) % base;
+    if (value >= base       && i < cap) out[i++] = U'0' + (value / base) % base;
+    if (i < cap) out[i++] = U'0' + (value % base);
+    if (i < cap) out[i] = 0;
 }
 
-void hex_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value) {
-    if (value < 16) {
-        snprintf((char*)buffer, buffer_len, "%X", value);
-        buffer[1] = 0; buffer[2] = 0; buffer[3] = 0;
-    } else {
-        snprintf((char*)buffer, buffer_len, "%X %X", value/16, value%16);
-        buffer[1] = 0; buffer[3] = 0; buffer[4] = 0; buffer[5] = 0;
-    }
+void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
+    digits_to_u32_string(buffer, buffer_len, value, 10);
+}
+
+void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
+    uint32_t* out = (uint32_t*)buffer;
+    uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
+    uint8_t   i   = 0;
+    if (value >= 16 && i < cap) { uint8_t hi = value / 16; out[i++] = (hi < 10 ? U'0' + hi : U'A' + hi - 10); }
+    if (i < cap) { uint8_t lo = value % 16; out[i++] = (lo < 10 ? U'0' + lo : U'A' + lo - 10); }
+    if (i < cap) out[i] = 0;
 }
 
 void oled_status_screen(void) {

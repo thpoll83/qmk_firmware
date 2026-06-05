@@ -1,4 +1,3 @@
-DEFAULT_FOLDER = handwired/polykybd/split72
 
 # pico-sdk host header uses K&R-style empty () prototype; suppress the warning it triggers
 CFLAGS += -Wno-strict-prototypes

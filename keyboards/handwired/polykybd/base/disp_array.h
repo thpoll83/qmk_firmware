@@ -1,3 +1,6 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 #pragma once
 
 #include "fonts/gfxfont.h"
@@ -9,11 +12,11 @@
 #define SCREEN_HEIGHT 40
 #define BUFFER_X 28
 
-int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint16_t c, bool clear_cy);
+int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c, bool clear_cy);
 
-void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text);
+void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text);
 
-void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint16_t *text, bool clear_cy);
+void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, bool clear_cy);
 
 void kdisp_write_base_char(int8_t x, int8_t y, char c);
 

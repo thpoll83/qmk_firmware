@@ -26,7 +26,7 @@ extern const GFXfont* const ALL_FONTS [];
 
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
 void oled_update_buffer(void) {
-    uint16_t buffer[32];
+    uint32_t buffer[32];
 
     kdisp_set_buffer(0);
 
@@ -34,12 +34,12 @@ void oled_update_buffer(void) {
     const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
     kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 0, 14, ICON_LAYER);
-    hex_to_u16_string((char*) buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
+    hex_to_u32_string((char*) buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
     kdisp_write_gfx_text(displayFont, 1, 20, 14, buffer);
     if(side_is_undecided()) {
-        kdisp_write_gfx_text(displayFont, 1, 50, 14, u"Uknw");
+        kdisp_write_gfx_text(displayFont, 1, 50, 14, U"Uknw");
     } else {
-        kdisp_write_gfx_text(displayFont, 1, 38, 14, is_left_side() ? u"LEFT" : u"RIGHT");
+        kdisp_write_gfx_text(displayFont, 1, 38, 14, is_left_side() ? U"LEFT" : U"RIGHT");
     }
 
     kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
@@ -47,41 +47,41 @@ void oled_update_buffer(void) {
     if(global_layer->led_state.scroll_lock) {
         kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 112, 54, ARROWS_DOWNSTOP);
     } else {
-        kdisp_write_gfx_text(smallFont, 1, 112, 56, is_usb_host_side() ? u"H" : u"B");
+        kdisp_write_gfx_text(smallFont, 1, 112, 56, is_usb_host_side() ? U"H" : U"B");
     }
 
     if(is_right_side()) {
-        kdisp_write_gfx_text(smallFont, 1, 0, 30, u"RGB");
+        kdisp_write_gfx_text(smallFont, 1, 0, 30, U"RGB");
 
         if(!rgb_matrix_is_enabled()) {
-            kdisp_write_gfx_text(smallFont, 1, 34, 30, u"Off");
+            kdisp_write_gfx_text(smallFont, 1, 34, 30, U"Off");
         } else {
-            num_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
+            num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
             kdisp_write_gfx_text(smallFont, 1, 34, 30, buffer);
             kdisp_write_gfx_text(smallFont, 1, 58, 30, get_led_matrix_text(rgb_matrix_get_mode()));
-            kdisp_write_gfx_text(smallFont, 1, 0, 44, u"HSV");
-            hex_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_hue());
+            kdisp_write_gfx_text(smallFont, 1, 0, 44, U"HSV");
+            hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_hue());
             kdisp_write_gfx_text(smallFont, 1, 38, 44, buffer);
-            hex_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_sat());
+            hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_sat());
             kdisp_write_gfx_text(smallFont, 1, 60, 44, buffer);
-            hex_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_val());
+            hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_val());
             kdisp_write_gfx_text(smallFont, 1, 82, 44, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 0, 58, u"Speed");
-            num_to_u16_string((char*) buffer, sizeof(buffer), rgb_matrix_get_speed());
+            kdisp_write_gfx_text(smallFont, 1, 0, 58, U"Speed");
+            num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_speed());
             kdisp_write_gfx_text(smallFont, 1, 58, 58, buffer);
         }
     } else {
         switch(get_local_layer()->def_layer) {
-            case 0: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Qwerty"); break;
-            case 1: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Qwerty Stag!"); break;
-            case 2: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Colemak DH"); break;
-            case 3: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Neo"); break;
-            case 4: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Workman"); break;
-            default: kdisp_write_gfx_text(smallFont, 1, 0, 30, u"Unknown"); break;
+            case 0: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Qwerty"); break;
+            case 1: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Qwerty Stag!"); break;
+            case 2: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Colemak DH"); break;
+            case 3: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Neo"); break;
+            case 4: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Workman"); break;
+            default: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Unknown"); break;
         }
         const poly_sync_t* local_state = get_local_state();
-        kdisp_write_gfx_text(smallFont, 1, 0, 44, u"Dsp*");
-        num_to_u16_string((char*) buffer, sizeof(buffer), local_state->contrast);
+        kdisp_write_gfx_text(smallFont, 1, 0, 44, U"Dsp*");
+        num_to_u32_string((char*) buffer, sizeof(buffer), local_state->contrast);
         kdisp_write_gfx_text(smallFont, 1, 42, 44, buffer);
         uint8_t i=0;
         for(;i<(local_state->contrast/5);++i) {
@@ -91,12 +91,12 @@ void oled_update_buffer(void) {
         buffer[i+1] = 0;
         kdisp_write_gfx_text(smallFont, 1, 64, 44, buffer);
 
-        kdisp_write_gfx_text(smallFont, 1, 0, 58, u"WPM");
-        num_to_u16_string((char*) buffer, sizeof(buffer), get_current_wpm());
+        kdisp_write_gfx_text(smallFont, 1, 0, 58, U"WPM");
+        num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
         kdisp_write_gfx_text(smallFont, 1, 44, 58, buffer);
 
-        kdisp_write_gfx_text(smallFont, 1, 68, 58, u"L");
-        num_to_u16_string((char*) buffer, sizeof(buffer), local_state->lang);
+        kdisp_write_gfx_text(smallFont, 1, 68, 58, U"L");
+        num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
         kdisp_write_gfx_text(smallFont, 1, 84, 58, buffer);
     }
 }

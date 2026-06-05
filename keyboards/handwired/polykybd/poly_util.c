@@ -1,3 +1,6 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 #include "poly_util.h"
 
 #include "quantum.h"
@@ -60,8 +63,8 @@ void display_bootloader_message(void) {
     clear_all_displays();
     // Contrast 10 → SETCONTRAST 9/255; contrast 1 tested unreadable.
     set_displays(20, false);
-    display_message(1, 1, u"BOOT-",   &FreeSansBold24pt7b);
-    display_message(3, 0, u"LOADER!", &FreeSansBold24pt7b);
+    display_message(1, 1, U"BOOT-",   &FreeSansBold24pt7b);
+    display_message(3, 0, U"LOADER!", &FreeSansBold24pt7b);
 }
 
 // Announce an imminent bootloader jump: flag it, sync the slave half so it
@@ -77,7 +80,7 @@ void poly_announce_bootloader(void) {
     display_bootloader_message();
 }
 
-void display_message(uint8_t row, uint8_t col, const uint16_t* message, const GFXfont* font) {
+void display_message(uint8_t row, uint8_t col, const uint32_t* message, const GFXfont* font) {
 
     const GFXfont* displayFont[] = { font };
     uint8_t index = 0;
@@ -91,7 +94,7 @@ void display_message(uint8_t row, uint8_t col, const uint16_t* message, const GF
             kdisp_set_buffer(0x00);
 
             if (c >= col && message[index] != 0) {
-                const uint16_t text[2] = { message[index], 0 };
+                const uint32_t text[2] = { message[index], 0 };
                 kdisp_write_gfx_text(displayFont, 1, 49, 38, text);
                 index++;
             }

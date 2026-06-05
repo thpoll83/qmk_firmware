@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* Utility: encode an 8-bit value as space-separated digit glyphs into a UTF-16 buffer */
-void num_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value);
-void hex_to_u16_string(char* buffer, uint8_t buffer_len, uint8_t value);
+/* Utility: encode an 8-bit value as digit glyphs into a char32 (UTF-32) buffer */
+void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);
+void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);
 
 /* Board-specific callbacks — implemented in split72/status_oled.c or corne42/status_oled.c */
 void oled_update_buffer(void);

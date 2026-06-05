@@ -1,4 +1,4 @@
-// fontconvert -ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s14 -r50 -v _FileOpen_ -n0x11000 0x1F4C2 0x1F4C2 
+// fontconvert -ffonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s14 -r50 -v _FileOpen_ -b32 0x1F4C2 0x1F4C2 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
 /* num ranges: 1 */
@@ -22,8 +22,8 @@ const GFXglyph NotoEmoji_Medium_FileOpen_14pt16bGlyphs[] PROGMEM = {
 const GFXfont NotoEmoji_Medium_FileOpen_14pt16b PROGMEM = {
   (uint8_t  *)NotoEmoji_Medium_FileOpen_14pt16bBitmaps,
   (GFXglyph *)NotoEmoji_Medium_FileOpen_14pt16bGlyphs,
-  0xE4C2, // first
-  0xE4C2, // last
+  0x1F4C2, // first
+  0x1F4C2, // last
   50   //height
  };
 

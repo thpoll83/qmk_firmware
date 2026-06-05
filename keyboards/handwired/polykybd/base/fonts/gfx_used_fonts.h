@@ -25,7 +25,8 @@
 #include "generated/4NotoEmoji_Medium_FileOpen_14pt.h"
 #include "generated/4NotoSansSymbols2_Regular_Util_20pt.h"
 #include "generated/5NotoEmoji_Medium_Brightness_16pt.h"
-#include "generated/5NotoEmoji_Medium_LockFind_18pt.h"
+#include "generated/5NotoEmoji_Medium_Find_18pt.h"
+#include "generated/5NotoEmoji_Medium_Lock_18pt.h"
 #include "generated/5NotoEmoji_Medium_Note_12pt.h"
 #include "generated/5NotoSansSymbols2_Regular_Window_18pt.h"
 #include "generated/6NotoEmoji_Medium_AI_20pt.h"
@@ -129,7 +130,8 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoEmoji_Medium_FileOpen_14pt16b,
   &NotoSansSymbols2_Regular_Util_20pt16b,
   &NotoEmoji_Medium_Brightness_16pt16b,
-  &NotoEmoji_Medium_LockFind_18pt16b,
+  &NotoEmoji_Medium_Find_18pt16b,
+  &NotoEmoji_Medium_Lock_18pt16b,
   &NotoEmoji_Medium_Note_12pt16b,
   &NotoSansSymbols2_Regular_Window_18pt16b,
   &NotoEmoji_Medium_AI_20pt16b,

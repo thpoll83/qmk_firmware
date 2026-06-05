@@ -12,12 +12,19 @@
 
     glyph_index = 2
     glyph_key = sheet["A2"].value
-    # Column B = real Unicode codepoint (HEX INPUT). Column D was the legacy PUA
-    # display code (codepoint shifted into the BMP). With 32-bit display strings we
-    # emit the real codepoint directly as a char32 (U"...") literal.
+    # Column B is the display codepoint. For ~40 legacy UI-icon glyphs it still holds
+    # the BMP Private-Use-Area address (0xE000-0xF8FF) that the old -n0x11000 icon
+    # fonts used; map those back to their real SMP codepoint (+0x11000) so the
+    # firmware is fully PUA-free. Real codepoints (emoji 0x1Fxxx) and the genuine
+    # custom icons (0x80-0x93) fall outside that window and pass through unchanged.
+    # Idempotent: if column B is later updated to the real codepoint in the
+    # spreadsheet, the value is no longer in the PUA window so this remap is a no-op.
+    def disp_lit(b):
+        v = int(str(b), 16)
+        return f"{v + 0x11000:X}" if 0xE000 <= v <= 0xF8FF else str(b)
     glyph_code = sheet["B2"].value
     while glyph_key and glyph_code:
-        cog.outl(f"#define {glyph_key : <28}\tU\"\\x{glyph_code}\"")
+        cog.outl(f'#define {glyph_key : <28}\tU"\\x{disp_lit(glyph_code)}"')
 
         glyph_index = glyph_index + 1
         glyph_key = sheet[f"A{glyph_index}"].value
@@ -770,46 +777,46 @@
 #define HIRAGANA_DIGRAPH_YORI       	U"\x309F"
 #define KATAKANA_MIDDLE_DOT         	U"\x30FB"
 #define KH_PSOUNDM                  	U"\x30FC"
-#define PRIVATE_AI                  	U"\xE300"
-#define PRIVATE_WORLD               	U"\xE310"
-#define PRIVATE_DISP_BRIGHT         	U"\xE311"
-#define PRIVATE_DISP_DARK           	U"\xE315"
-#define PRIVATE_DISP_DARKER         	U"\xE316"
-#define PRIVATE_DISP_HALF           	U"\xE317"
-#define PRIVATE_DISP_BRIGHTER       	U"\xE318"
-#define PRIVATE_HOME                	U"\xE3E0"
-#define PRIVATE_MEH                 	U"\xE410"
-#define PRIVATE_LIGHT               	U"\xE4A1"
-#define PRIVATE_HYPER               	U"\xE4AB"
-#define FILE_OPEN                   	U"\xe4C2"
-#define CLIPBOARD_COPY              	U"\xe4CB"
-#define PRIVATE_NOTE                	U"\xE4dd"
-#define PRIVATE_FIND                	U"\xE50E"
-#define PRIVATE_LOCK                	U"\xE512"
-#define PRIVATE_SETTINGS            	U"\xE527"
-#define PRIVATE_MUTE                	U"\xe568"
-#define PRIVATE_VOL_DOWN            	U"\xe569"
-#define PRIVATE_VOL_UP              	U"\xe56a"
-#define PRIVATE_CALC                	U"\xE5A9"
-#define PRIVATE_FLOPPY              	U"\xE5AB"
-#define PRIVATE_PC                  	U"\xe5B3"
-#define PRIVATE_HDD                 	U"\xe5B4"
-#define PRIVATE_SCREEN              	U"\xe5B5"
-#define PRIVATE_PRINTER             	U"\xe5B6"
-#define PRIVATE_FAX                 	U"\xe5B7"
-#define PRIVATE_CD                  	U"\xe5B8"
-#define PRIVATE_DOCUMENT            	U"\xe5B9"
-#define PRIVATE_MIXED_DOCUMENT      	U"\xe5Ba"
-#define PRIVATE_IMAGE_DOCUMENT      	U"\xe5Bb"
-#define PRIVATE_IMAGE               	U"\xe5bc"
-#define CLIPBOARD_PASTE             	U"\xE5CA"
-#define PRIVATE_MINIMIZE            	U"\xE5D5"
-#define PRIVATE_MAXIMIZE            	U"\xE5D6"
-#define PRIVATE_WINDOW              	U"\xE5D7"
-#define PRIVATE_RELOAD              	U"\xE5D8"
-#define PRIVATE_DELETE              	U"\xE5D9"
-#define PRIVATE_FONT_INC            	U"\xE5DA"
-#define PRIVATE_FONT_DEC            	U"\xE5DB"
+#define PRIVATE_AI                  	U"\x1F300"
+#define PRIVATE_WORLD               	U"\x1F310"
+#define PRIVATE_DISP_BRIGHT         	U"\x1F311"
+#define PRIVATE_DISP_DARK           	U"\x1F315"
+#define PRIVATE_DISP_DARKER         	U"\x1F316"
+#define PRIVATE_DISP_HALF           	U"\x1F317"
+#define PRIVATE_DISP_BRIGHTER       	U"\x1F318"
+#define PRIVATE_HOME                	U"\x1F3E0"
+#define PRIVATE_MEH                 	U"\x1F410"
+#define PRIVATE_LIGHT               	U"\x1F4A1"
+#define PRIVATE_HYPER               	U"\x1F4AB"
+#define FILE_OPEN                   	U"\x1F4C2"
+#define CLIPBOARD_COPY              	U"\x1F4CB"
+#define PRIVATE_NOTE                	U"\x1F4DD"
+#define PRIVATE_FIND                	U"\x1F50E"
+#define PRIVATE_LOCK                	U"\x1F512"
+#define PRIVATE_SETTINGS            	U"\x1F527"
+#define PRIVATE_MUTE                	U"\x1F568"
+#define PRIVATE_VOL_DOWN            	U"\x1F569"
+#define PRIVATE_VOL_UP              	U"\x1F56A"
+#define PRIVATE_CALC                	U"\x1F5A9"
+#define PRIVATE_FLOPPY              	U"\x1F5AB"
+#define PRIVATE_PC                  	U"\x1F5B3"
+#define PRIVATE_HDD                 	U"\x1F5B4"
+#define PRIVATE_SCREEN              	U"\x1F5B5"
+#define PRIVATE_PRINTER             	U"\x1F5B6"
+#define PRIVATE_FAX                 	U"\x1F5B7"
+#define PRIVATE_CD                  	U"\x1F5B8"
+#define PRIVATE_DOCUMENT            	U"\x1F5B9"
+#define PRIVATE_MIXED_DOCUMENT      	U"\x1F5BA"
+#define PRIVATE_IMAGE_DOCUMENT      	U"\x1F5BB"
+#define PRIVATE_IMAGE               	U"\x1F5BC"
+#define CLIPBOARD_PASTE             	U"\x1F5CA"
+#define PRIVATE_MINIMIZE            	U"\x1F5D5"
+#define PRIVATE_MAXIMIZE            	U"\x1F5D6"
+#define PRIVATE_WINDOW              	U"\x1F5D7"
+#define PRIVATE_RELOAD              	U"\x1F5D8"
+#define PRIVATE_DELETE              	U"\x1F5D9"
+#define PRIVATE_FONT_INC            	U"\x1F5DA"
+#define PRIVATE_FONT_DEC            	U"\x1F5DB"
 #define PRIVATE_EMOJI_1F600         	U"\x1F600"
 #define PRIVATE_EMOJI_1F601         	U"\x1F601"
 #define PRIVATE_EMOJI_1F602         	U"\x1F602"

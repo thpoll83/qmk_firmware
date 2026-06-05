@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'PolyKybd-fw-v*'
 
 permissions:
   contents: write

@@ -193,7 +193,7 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
             first = pgm_read_dword(&currentFont->first);
             last  = pgm_read_dword(&currentFont->last);
             ch = U'!';
-        } else if (s_disjoint[found >> 3] & (uint8_t)(1u << (found & 7))) {
+        } else if (found < 128 && (s_disjoint[found >> 3] & (uint8_t)(1u << (found & 7)))) {
             uint8_t m = (s_mru_len < FONT_MRU_N) ? s_mru_len : (FONT_MRU_N - 1);
             for (; m > 0; --m) s_mru[m] = s_mru[m - 1];
             s_mru[0] = found;                   // cache cacheable winner

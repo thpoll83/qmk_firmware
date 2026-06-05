@@ -1,3 +1,6 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 #pragma once
 
 #define RP2040
@@ -119,7 +122,6 @@
 #define OVERLAY_MAP_IDX_CNT_PER_REPORT (HID_DATA_MAX*8/OVERLAY_MAP_IDX_BITS)
 #define UNSET_OVERLAY_MAPPING 0xffff
 
-#define DEBOUNCE    5
 #define PICO_FLASH_SIZE_BYTES (8 * 1024 * 1024)
 
 #define OLED_FONT_START	32

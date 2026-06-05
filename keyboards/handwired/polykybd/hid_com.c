@@ -1,3 +1,6 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 #include "hid_com.h"
 #include "hid_fw_up.h"
 #include "split_fw_up.h"

@@ -1,3 +1,6 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 /*
 Copyright 2015 Jun Wako <wakojun@gmail.com>
 

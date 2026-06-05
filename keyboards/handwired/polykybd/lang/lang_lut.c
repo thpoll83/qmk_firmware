@@ -1,3 +1,6 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 //File content partially generated!
 //Execute the following command to do so (via cogapp):
 //cog -r lang_lut.c

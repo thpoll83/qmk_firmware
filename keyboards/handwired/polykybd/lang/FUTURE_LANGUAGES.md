@@ -81,6 +81,16 @@ want the popular option.
    ◌ on keycaps. This is expected and matches physical Indic/Thai keycaps.
 5. **No firmware IME** — the OS handles all shaping / conjuncts / reordering /
    transliteration. Same architecture already used for ru/el/ar/he.
+6. **Flag + language label** (language-selection layer) — every new language
+   needs a country flag. Add its ISO-3166-1 alpha-2 code to `COUNTRIES=()` in
+   `fonts/gen-lang-fonts.sh` **in the exact same order as `enum lang_layer`**
+   (flag codepoint = `FLAG_CP_BASE 0xE000 + LANG_*` index — order MUST match or
+   flags misalign), then regenerate `base/fonts/flag_fonts.h` with the pinned
+   fontconvert + NotoColorEmoji (`-F` sequence option). Caveat: languages that
+   share a country (e.g. Serbian Cyrillic & Serbian Latin both = RS → 🇷🇸) get
+   the **same** flag and "sr" label, so they are indistinguishable on the
+   selection layer — prefer a single entry per country unless the labels are
+   disambiguated.
 
 ## Glyph-coverage facts (verified 2026-06-06 against `named_glyphs.h`)
 - Latin-1 Supplement + Latin Extended-A fully present → **all European Latin

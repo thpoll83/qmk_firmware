@@ -287,25 +287,25 @@ void kdisp_write_gfx_vtext(const GFXfont *font, int8_t col_x, const uint32_t *te
     const uint32_t last   = pgm_read_dword(&font->last);
     const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
 
-    // First pass: total advance (column length) and horizontal (baseline) extent.
+    // First pass: total advance (column length) and the left (baseline) extent.
     int16_t total = 0;
-    int8_t  min_x = 127, max_x = -128;
+    int8_t  min_x = 127;
     for (const uint32_t *p = text; *p; ++p) {
         if (*p < first || *p > last) continue;
         const GFXglyph *g = pgm_read_glyph_ptr(font, *p - first);
         int8_t yo = pgm_read_byte(&g->yOffset);
-        int8_t h  = pgm_read_byte(&g->height);
-        if (col_x + yo     < min_x) min_x = (int8_t)(col_x + yo);
-        if (col_x + yo + h > max_x) max_x = (int8_t)(col_x + yo + h);
+        if (col_x + yo < min_x) min_x = (int8_t)(col_x + yo);
         total += pgm_read_byte(&g->xAdvance);
     }
     if (total <= 0) return;
 
     const int8_t top_y = (int8_t)((SCREEN_HEIGHT - total) / 2);
     if (selected) {
-        // Full-height bar, 2 px wider than the text on each side.
-        kdisp_fill_rect((int8_t)(min_x - 3), 0,
-                        (int8_t)(max_x - min_x + 6), SCREEN_HEIGHT);
+        // Full-height bar: from 3 px left of the text to the last visible column
+        // (the vertical label sits against the keycap's right edge).
+        const int8_t bx = (int8_t)(min_x - 3);
+        kdisp_fill_rect(bx, 0, (int8_t)((BUFFER_X + SCREEN_WIDTH - 1) - bx + 1),
+                        SCREEN_HEIGHT);
     }
 
     // Second pass: render each glyph rotated, advancing upward from the bottom.

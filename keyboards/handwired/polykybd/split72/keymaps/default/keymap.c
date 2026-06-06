@@ -1069,8 +1069,8 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // FLAG_CP_BASE + LANG_* (see fonts/gen-lang-fonts.sh); the label uses the tiny
 // NotoSans font.
 #define FLAG_CP_BASE   0xE000u
-#define FLAG_LEFT_X    (BUFFER_X - 3)    // flag glyph left (content reaches the left edge)
-#define LABEL_COL_X    (BUFFER_X + 64)   // baseline column of the vertical label
+#define FLAG_LEFT_X    (BUFFER_X - 2)    // flag glyph left (keeps the left border on-screen)
+#define LABEL_COL_X    (BUFFER_X + 66)   // baseline column of the vertical label
 
 static const GFXfont* const lang_flag_fonts[] = { &NotoColorEmoji_Regular_LangFlags_20pt7b };
 

@@ -66,6 +66,10 @@ enum lang_layer {
     LANG_SRRS,
     LANG_MKMK,
     LANG_FAIR,
+    LANG_HIIN,
+    LANG_MRIN,
+    LANG_NENP,
+    LANG_MNMN,
     //[[[end]]]
     NUM_LANG };
 

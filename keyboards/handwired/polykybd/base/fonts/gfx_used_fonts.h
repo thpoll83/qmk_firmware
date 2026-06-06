@@ -5,6 +5,7 @@
 #include "generated/jp_fonts.h"
 #include "generated/kr_fonts.h"
 #include "generated/arabic_fonts.h"
+#include "generated/devanagari_fonts.h"
 #include "generated/symbol_fonts.h"
 #include "generated/emoji_fonts.h"
 
@@ -102,6 +103,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,
   &NotoSansArabic_Regular_PerArab_16pt16b,
+  &NotoSansDevanagari_Regular_Deva_16pt16b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct2_15pt16b,
   &NotoSansJP_Regular_Punct_15pt16b,

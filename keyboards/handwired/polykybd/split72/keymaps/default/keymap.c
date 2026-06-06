@@ -655,14 +655,14 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         ]]]*/
         KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,	
         KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_ETEE,	
-        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FAIR,	KCL_FIFI,	KCL_FRFR,	KCL_HEIL,	KCL_HRHR,		MS_BTN1,
-        QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_HUHU,	KCL_ITIT,	KCL_JAJP,	KCL_KKKZ,	KCL_KOKR,		KC_NO,
+        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FAIR,	KCL_FIFI,	KCL_FRFR,	KCL_HEIL,	KCL_HIIN,		MS_BTN1,
+        QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_HRHR,	KCL_HUHU,	KCL_ITIT,	KCL_JAJP,	KCL_KKKZ,		KC_NO,
         KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
 
-        					KCL_LTLT,	KCL_LVLV,	KCL_MKMK,	KCL_NLNL,	KCL_NNNO,	KC_NO,		QK_UNICODE_MODE_MACOS,
-        					KCL_PLPL,	KCL_PTBR,	KCL_PTPT,	KCL_RORO,	KCL_RURU,	KC_NO,		QK_UNICODE_MODE_LINUX,
-        _______,			KCL_SKSK,	KCL_SRRS,	KCL_SVSE,	KCL_TRTR,	KCL_UKUA,	KC_NO,		QK_UNICODE_MODE_WINDOWS,
-        KC_NO,				KCL_ZHCN,	KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
+        					KCL_KOKR,	KCL_LTLT,	KCL_LVLV,	KCL_MKMK,	KCL_MNMN,	KC_NO,		QK_UNICODE_MODE_MACOS,
+        					KCL_MRIN,	KCL_NENP,	KCL_NLNL,	KCL_NNNO,	KCL_PLPL,	KC_NO,		QK_UNICODE_MODE_LINUX,
+        _______,			KCL_PTBR,	KCL_PTPT,	KCL_RORO,	KCL_RURU,	KCL_SKSK,	KC_NO,		QK_UNICODE_MODE_WINDOWS,
+        KC_NO,				KCL_SRRS,	KCL_SVSE,	KCL_TRTR,	KCL_UKUA,	KCL_ZHCN,	KC_NO,		QK_UNICODE_MODE_BSD,
         KC_NO,				KC_NO,		KC_NO,					KC_NO,		KC_NO,		KC_NO,		KC_BASE
         //[[[end]]]
         ),
@@ -856,6 +856,10 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_SRRS: return U"sr-RS";
         case KCL_MKMK: return U"mk-MK";
         case KCL_FAIR: return U"fa-IR";
+        case KCL_HIIN: return U"hi-IN";
+        case KCL_MRIN: return U"mr-IN";
+        case KCL_NENP: return U"ne-NP";
+        case KCL_MNMN: return U"mn-MN";
         //[[[end]]]
         default:
             return NULL;
@@ -1518,6 +1522,10 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_SRRS: local_state->lang = LANG_SRRS; save_user_settings(); layer_off(_LL); break;
         case KCL_MKMK: local_state->lang = LANG_MKMK; save_user_settings(); layer_off(_LL); break;
         case KCL_FAIR: local_state->lang = LANG_FAIR; save_user_settings(); layer_off(_LL); break;
+        case KCL_HIIN: local_state->lang = LANG_HIIN; save_user_settings(); layer_off(_LL); break;
+        case KCL_MRIN: local_state->lang = LANG_MRIN; save_user_settings(); layer_off(_LL); break;
+        case KCL_NENP: local_state->lang = LANG_NENP; save_user_settings(); layer_off(_LL); break;
+        case KCL_MNMN: local_state->lang = LANG_MNMN; save_user_settings(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:

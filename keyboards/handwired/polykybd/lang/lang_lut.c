@@ -2491,7 +2491,7 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  mr-IN*/  0,40,0,52,
 		/*  ne-NP*/  0,40,0,52,
 		/*  mn-MN*/  0,-128,0,50,
-		/*  ur-PK*/  0,42,0,52
+		/*  ur-PK*/  0,32,0,52
 	},
 	// {letter.voffset}
 	{
@@ -2535,7 +2535,7 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  mr-IN*/  0,0,0,13,
 		/*  ne-NP*/  0,0,0,13,
 		/*  mn-MN*/  0,-128,0,13,
-		/*  ur-PK*/  0,0,0,13
+		/*  ur-PK*/  0,4,0,13
 	},
 	// {num.hoffset}
 	{

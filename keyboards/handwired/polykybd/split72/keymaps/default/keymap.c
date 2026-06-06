@@ -949,27 +949,54 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 h_set = SETTING_SYM_HOFFSET;
             }
         }
-        int8_t v_off = get_setting(v_set, local_state->lang, VAR_SMALL);
-        int8_t h_off = get_setting(h_set, local_state->lang, VAR_SMALL);
+        int8_t v_small = get_setting(v_set, local_state->lang, VAR_SMALL);
+        int8_t h_small = get_setting(h_set, local_state->lang, VAR_SMALL);
+        int8_t base_x = 28+h_small;
+        int8_t base_v = v_small;
 
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
-
-        //preview capital letter?
+        // Resolve the shift preview BEFORE drawing, so a wide base + wide preview
+        // (e.g. the Arabic SAD/DAD key — both ~39 px) can be laid out as a pair:
+        // the preview is placed clear of the base and clamped on screen; if it then
+        // still has to overlap (two such glyphs cannot both fit a 72 px window) the
+        // flat base is lifted and the preview dropped so the two read diagonally
+        // instead of as one connected glyph.  Only this unshifted preview view is
+        // affected — when shift is held there is no preview and the active glyph
+        // keeps the normal VAR_SMALL baseline, so tall letters / high marks never
+        // clip.  All of this is generic and glyph-width driven (no per-language code).
+        const uint32_t* shift_letter = NULL;
+        int8_t preview_x = 0, preview_v = 0;
         if(!shift && !state.caps_lock) {
-            v_off = get_setting(v_set, local_state->lang, VAR_SHIFT);
-            h_off = get_setting(h_set, local_state->lang, VAR_SHIFT);
-            if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
-                letter = translate_keycode_only_shift(local_state->lang, keycode);
-                if (letter != NULL) {
-                    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
+            int8_t v_pv = get_setting(v_set, local_state->lang, VAR_SHIFT);
+            int8_t h_pv = get_setting(h_set, local_state->lang, VAR_SHIFT);
+            if(v_pv!=HIDE_KEY && h_pv!=HIDE_KEY) {
+                shift_letter = translate_keycode_only_shift(local_state->lang, keycode);
+                if (shift_letter != NULL) {
+                    int8_t bmin, bmax, pmin, pmax;
+                    kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, letter, &bmin, &bmax);
+                    kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, shift_letter, &pmin, &pmax);
+                    preview_x = 28+h_pv;
+                    if (preview_x + pmin < base_x + bmax + 2)             // keep clear of the base
+                        preview_x = base_x + bmax + 2 - pmin;
+                    if (preview_x + pmax > BUFFER_X + SCREEN_WIDTH - 1)   // clamp to the right edge
+                        preview_x = (BUFFER_X + SCREEN_WIDTH - 1) - pmax;
+                    preview_v = v_pv;
+                    if (preview_x + pmin <= base_x + bmax) {              // forced to overlap -> stagger
+                        base_v    -= 6;                                   // lift the flat base
+                        preview_v += 4;                                   // drop the preview
+                    }
                 }
             }
         }
+
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, base_x, 23+base_v, letter);
+        if (shift_letter != NULL)
+            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, preview_x, 23+preview_v, shift_letter);
+
         //preview alt representation
         letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
-            v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
-            h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
+            int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
+            int8_t h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
                 kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
             }

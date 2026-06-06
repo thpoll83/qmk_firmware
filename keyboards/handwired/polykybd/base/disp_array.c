@@ -277,6 +277,46 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
     }
 }
 
+void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text, int8_t *out_min, int8_t *out_max) {
+    int16_t x = 0;          // cursor, same advance rules as kdisp_write_gfx_text_cy
+    int16_t mn = 127, mx = -128;
+    while (*text != 0) {
+        switch (*text) {
+            case U'\x05': case U'\f': case U'\v': break;   // vertical-only controls
+            case U'\x18': case U'\r':         x = 0; break; // reset x to origin
+            case U'\b':                       x = x > 1 ? x - 2 : 0; break;
+            case U'\t':                       x += ((x) / 36 + 1) * 36; break;
+            case U'\n':                       x = 0; break;
+            default: {
+                // Locate the font whose [first,last] contains the codepoint (linear
+                // scan; this is a cold measuring path, no MRU cache needed).
+                uint32_t ch = *text, first = 0, last = 0;
+                const GFXfont *f = 0;
+                for (uint8_t i = 0; i < num_fonts; ++i) {
+                    first = pgm_read_dword(&fonts[i]->first);
+                    last  = pgm_read_dword(&fonts[i]->last);
+                    if (ch >= first && ch <= last) { f = fonts[i]; break; }
+                }
+                if (!f) { f = fonts[0]; first = pgm_read_dword(&f->first); ch = U'!'; }
+                const GFXglyph *g = pgm_read_glyph_ptr(f, ch - first);
+                int8_t w  = pgm_read_byte(&g->width);
+                int8_t xo = pgm_read_byte(&g->xOffset);
+                if (w > 0) {
+                    int16_t l = x + xo, r = x + xo + w - 1;
+                    if (l < mn) mn = l;
+                    if (r > mx) mx = r;
+                }
+                x += pgm_read_byte(&g->xAdvance);
+                break;
+            }
+        }
+        text++;
+    }
+    if (mx < mn) { mn = 0; mx = 0; }      // empty / whitespace-only
+    *out_min = (int8_t)mn;
+    *out_max = (int8_t)mx;
+}
+
 // Draw `text` as a vertical column, each glyph rotated -90° (counter-clockwise),
 // reading bottom-to-top, with the glyph baseline along x = col_x and the column
 // vertically centred in the visible height.  When `selected`, a solid bar is

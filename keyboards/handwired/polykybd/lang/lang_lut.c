@@ -115,7 +115,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_A,                CYRILLIC_A,                   NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_A,                CYRILLIC_A,                   NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_A,                CYRILLIC_A,                   NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_SHEEN,                 NULL,                         ARABIC_SHEEN,                 NULL
     },
     {/* KC_B: */
     /*  en-US    */  U"b",                         U"B",                         NULL,                         NULL,
@@ -152,7 +153,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_BE,               CYRILLIC_BE,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_BE,               CYRILLIC_BE,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_BE,               CYRILLIC_BE,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_THAL,                  NULL,                         ARABIC_THAL,                  NULL
     },
     {/* KC_C: */
     /*  en-US    */  U"c",                         U"C",                         NULL,                         NULL,
@@ -189,7 +191,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_TSE,              CYRILLIC_TSE,                 NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_TSE,              CYRILLIC_TSE,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_TSE,              CYRILLIC_TSE,                 NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_ZAIN,                  ARABIC_JEH,                   ARABIC_ZAIN,                  NULL
     },
     {/* KC_D: */
     /*  en-US    */  U"d",                         U"D",                         NULL,                         NULL,
@@ -226,7 +229,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_DE,               CYRILLIC_DE,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_DE,               CYRILLIC_DE,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_DE,               CYRILLIC_DE,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_FARSI_YEH,             NULL,                         ARABIC_FARSI_YEH,             NULL
     },
     {/* KC_E: */
     /*  en-US    */  U"e",                         U"E",                         NULL,                         NULL,
@@ -263,7 +267,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         EURO_SIGN,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         EURO_SIGN,
     /*  sr-RS    */  CYRILLIC_SM_IE,               CYRILLIC_IE,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_IE,               CYRILLIC_IE,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_IE,               CYRILLIC_IE,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_THEH,                  NULL,                         ARABIC_THEH,                  NULL
     },
     {/* KC_F: */
     /*  en-US    */  U"f",                         U"F",                         NULL,                         NULL,
@@ -300,7 +305,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_EF,               CYRILLIC_EF,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_EF,               CYRILLIC_EF,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_EF,               CYRILLIC_EF,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_BEH,                   NULL,                         ARABIC_BEH,                   NULL
     },
     {/* KC_G: */
     /*  en-US    */  U"g",                         U"G",                         NULL,                         NULL,
@@ -337,7 +343,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_GHE,              CYRILLIC_GHE,                 NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_GHE,              CYRILLIC_GHE,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_GHE,              CYRILLIC_GHE,                 NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_LAM,                   NULL,                         ARABIC_LAM,                   NULL
     },
     {/* KC_H: */
     /*  en-US    */  U"h",                         U"H",                         NULL,                         NULL,
@@ -374,7 +381,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_HA,               CYRILLIC_HA,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_HA,               CYRILLIC_HA,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_HA,               CYRILLIC_HA,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_ALEF,                  NULL,                         ARABIC_ALEF,                  NULL
     },
     {/* KC_I: */
     /*  en-US    */  U"i",                         U"I",                         NULL,                         NULL,
@@ -411,7 +419,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_I,                CYRILLIC_I,                   NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_I,                CYRILLIC_I,                   NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_I,                CYRILLIC_I,                   NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_HEH,                   NULL,                         ARABIC_HEH,                   NULL
     },
     {/* KC_J: */
     /*  en-US    */  U"j",                         U"J",                         NULL,                         NULL,
@@ -448,7 +457,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_JE,               CYRILLIC_JE,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_JE,               CYRILLIC_JE,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_JE,               CYRILLIC_JE,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_TEH,                   NULL,                         ARABIC_TEH,                   NULL
     },
     {/* KC_K: */
     /*  en-US    */  U"k",                         U"K",                         NULL,                         NULL,
@@ -485,7 +495,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_KA,               CYRILLIC_KA,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_KA,               CYRILLIC_KA,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_KA,               CYRILLIC_KA,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_NOON,                  NULL,                         ARABIC_NOON,                  NULL
     },
     {/* KC_L: */
     /*  en-US    */  U"l",                         U"L",                         NULL,                         NULL,
@@ -522,7 +533,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_EL,               CYRILLIC_EL,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_EL,               CYRILLIC_EL,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_EL,               CYRILLIC_EL,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_MEEM,                  NULL,                         ARABIC_MEEM,                  NULL
     },
     {/* KC_M: */
     /*  en-US    */  U"m",                         U"M",                         NULL,                         NULL,
@@ -559,7 +571,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_EM,               CYRILLIC_EM,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_EM,               CYRILLIC_EM,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_EM,               CYRILLIC_EM,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_PEH,                   NULL,                         ARABIC_PEH,                   NULL
     },
     {/* KC_N: */
     /*  en-US    */  U"n",                         U"N",                         NULL,                         NULL,
@@ -596,7 +609,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_EN,               CYRILLIC_EN,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_EN,               CYRILLIC_EN,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_EN,               CYRILLIC_EN,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_DAL,                   NULL,                         ARABIC_DAL,                   NULL
     },
     {/* KC_O: */
     /*  en-US    */  U"o",                         U"O",                         NULL,                         NULL,
@@ -633,7 +647,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_O,                CYRILLIC_O,                   NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_O,                CYRILLIC_O,                   NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_O,                CYRILLIC_O,                   NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_KHAH,                  NULL,                         ARABIC_KHAH,                  NULL
     },
     {/* KC_P: */
     /*  en-US    */  U"p",                         U"P",                         NULL,                         NULL,
@@ -670,7 +685,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_PE,               CYRILLIC_PE,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_PE,               CYRILLIC_PE,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_PE,               CYRILLIC_PE,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_HAH,                   NULL,                         ARABIC_HAH,                   NULL
     },
     {/* KC_Q: */
     /*  en-US    */  U"q",                         U"Q",                         NULL,                         NULL,
@@ -707,7 +723,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_LJE,              CYRILLIC_LJE,                 NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_LJE,              CYRILLIC_LJE,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_LJE,              CYRILLIC_LJE,                 NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_DAD,                   NULL,                         ARABIC_DAD,                   NULL
     },
     {/* KC_R: */
     /*  en-US    */  U"r",                         U"R",                         NULL,                         NULL,
@@ -744,7 +761,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_ER,               CYRILLIC_ER,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_ER,               CYRILLIC_ER,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_ER,               CYRILLIC_ER,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_QAF,                   NULL,                         ARABIC_QAF,                   NULL
     },
     {/* KC_S: */
     /*  en-US    */  U"s",                         U"S",                         NULL,                         NULL,
@@ -781,7 +799,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         LATIN_0161,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_ES,               CYRILLIC_ES,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_ES,               CYRILLIC_ES,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_ES,               CYRILLIC_ES,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_SEEN,                  NULL,                         ARABIC_SEEN,                  NULL
     },
     {/* KC_T: */
     /*  en-US    */  U"t",                         U"T",                         NULL,                         NULL,
@@ -818,7 +837,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_TE,               CYRILLIC_TE,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_TE,               CYRILLIC_TE,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_TE,               CYRILLIC_TE,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_FEH,                   NULL,                         ARABIC_FEH,                   NULL
     },
     {/* KC_U: */
     /*  en-US    */  U"u",                         U"U",                         NULL,                         NULL,
@@ -855,7 +875,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_U,                CYRILLIC_U,                   NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_U,                CYRILLIC_U,                   NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_U,                CYRILLIC_U,                   NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_AIN,                   NULL,                         ARABIC_AIN,                   NULL
     },
     {/* KC_V: */
     /*  en-US    */  U"v",                         U"V",                         NULL,                         NULL,
@@ -892,7 +913,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_VE,               CYRILLIC_VE,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_VE,               CYRILLIC_VE,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_VE,               CYRILLIC_VE,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_REH,                   NULL,                         ARABIC_REH,                   NULL
     },
     {/* KC_W: */
     /*  en-US    */  U"w",                         U"W",                         NULL,                         NULL,
@@ -929,7 +951,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_NJE,              CYRILLIC_NJE,                 NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_NJE,              CYRILLIC_NJE,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_NJE,              CYRILLIC_NJE,                 NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_SAD,                   NULL,                         ARABIC_SAD,                   NULL
     },
     {/* KC_X: */
     /*  en-US    */  U"x",                         U"X",                         NULL,                         NULL,
@@ -966,7 +989,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_DZHE,             CYRILLIC_DZHE,                NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_DZHE,             CYRILLIC_DZHE,                NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_DZHE,             CYRILLIC_DZHE,                NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_TAH,                   NULL,                         ARABIC_TAH,                   NULL
     },
     {/* KC_Y: */
     /*  en-US    */  U"y",                         U"Y",                         NULL,                         NULL,
@@ -1003,7 +1027,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_ZE,               CYRILLIC_ZE,                  NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_DZE,              CYRILLIC_DZE,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_DZE,              CYRILLIC_DZE,                 NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_GHAIN,                 NULL,                         ARABIC_GHAIN,                 NULL
     },
     {/* KC_Z: */
     /*  en-US    */  U"z",                         U"Z",                         NULL,                         NULL,
@@ -1040,7 +1065,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         LATIN_017E,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_DZE,              CYRILLIC_DZE,                 NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_ZE,               CYRILLIC_ZE,                  NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_ZE,               CYRILLIC_ZE,                  NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_ZAH,                   NULL,                         ARABIC_ZAH,                   NULL
     },
     {/* KC_1: */
     /*  en-US    */  U"1",                         U"!",                         U"1",                         NULL,
@@ -1077,7 +1103,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"1",                         U"!",                         U"1",                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"1",                         U"!",                         U"1",                         NULL,
-    /*  mk-MK    */  U"1",                         U"!",                         U"1",                         NULL
+    /*  mk-MK    */  U"1",                         U"!",                         U"1",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_2: */
     /*  en-US    */  U"2",                         U"@",                         U"2",                         NULL,
@@ -1114,7 +1141,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"2",                         U""",                         U"2",                         U"@",
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"2",                         U""",                         U"2",                         NULL,
-    /*  mk-MK    */  U"2",                         U""",                         U"2",                         NULL
+    /*  mk-MK    */  U"2",                         U""",                         U"2",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_3: */
     /*  en-US    */  U"3",                         U"#",                         U"3",                         NULL,
@@ -1151,7 +1179,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"3",                         U"#",                         U"3",                         POUND_SIGN,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"3",                         U"#",                         U"3",                         NULL,
-    /*  mk-MK    */  U"3",                         U"#",                         U"3",                         NULL
+    /*  mk-MK    */  U"3",                         U"#",                         U"3",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_4: */
     /*  en-US    */  U"4",                         U"$",                         U"4",                         NULL,
@@ -1188,7 +1217,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"4",                         CURRENCY_SIGN,                U"4",                         U"$",
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"4",                         U"$",                         U"4",                         NULL,
-    /*  mk-MK    */  U"4",                         U"$",                         U"4",                         NULL
+    /*  mk-MK    */  U"4",                         U"$",                         U"4",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_5: */
     /*  en-US    */  U"5",                         U"%",                         U"5",                         NULL,
@@ -1225,7 +1255,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"5",                         U"%",                         U"5",                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"5",                         U"%",                         U"5",                         NULL,
-    /*  mk-MK    */  U"5",                         U"%",                         U"5",                         NULL
+    /*  mk-MK    */  U"5",                         U"%",                         U"5",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_6: */
     /*  en-US    */  U"6",                         U"^",                         U"6",                         NULL,
@@ -1262,7 +1293,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"6",                         U"&",                         U"6",                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"6",                         U"&",                         U"6",                         NULL,
-    /*  mk-MK    */  U"6",                         U"&",                         U"6",                         NULL
+    /*  mk-MK    */  U"6",                         U"&",                         U"6",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_7: */
     /*  en-US    */  U"7",                         U"&",                         U"7",                         NULL,
@@ -1299,7 +1331,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"7",                         U"/",                         U"7",                         U"{",
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"7",                         U"/",                         U"7",                         NULL,
-    /*  mk-MK    */  U"7",                         U"/",                         U"7",                         NULL
+    /*  mk-MK    */  U"7",                         U"/",                         U"7",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_8: */
     /*  en-US    */  U"8",                         U"*",                         U"8",                         NULL,
@@ -1336,7 +1369,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"8",                         U"(",                         U"8",                         U"[",
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"8",                         U"(",                         U"8",                         NULL,
-    /*  mk-MK    */  U"8",                         U"(",                         U"8",                         NULL
+    /*  mk-MK    */  U"8",                         U"(",                         U"8",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_9: */
     /*  en-US    */  U"9",                         U"(",                         U"9",                         NULL,
@@ -1373,7 +1407,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"9",                         U")",                         U"9",                         U"]",
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"9",                         U")",                         U"9",                         NULL,
-    /*  mk-MK    */  U"9",                         U")",                         U"9",                         NULL
+    /*  mk-MK    */  U"9",                         U")",                         U"9",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_0: */
     /*  en-US    */  ZERO,                         U")",                         ZERO,                         NULL,
@@ -1410,7 +1445,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  ZERO,                         U"=",                         ZERO,                         U"}",
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  ZERO,                         U"=",                         ZERO,                         NULL,
-    /*  mk-MK    */  ZERO,                         U"=",                         ZERO,                         NULL
+    /*  mk-MK    */  ZERO,                         U"=",                         ZERO,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_ENTER: */
     /*  en-US    */  ARROWS_RETURN,                NULL,                         NULL,                         NULL,
@@ -1447,7 +1483,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_ESCAPE: */
     /*  en-US    */  U"Esc",                       NULL,                         NULL,                         NULL,
@@ -1484,7 +1521,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_BACKSPACE: */
     /*  en-US    */  TECHNICAL_ERASELEFT,          NULL,                         NULL,                         NULL,
@@ -1521,7 +1559,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_TAB: */
     /*  en-US    */  ARROWS_TAB,                   NULL,                         NULL,                         NULL,
@@ -1558,7 +1597,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_SPACE: */
     /*  en-US    */  ICON_SPACE,                   NULL,                         NULL,                         NULL,
@@ -1595,7 +1635,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_MINUS: */
     /*  en-US    */  U"-",                         U"_",                         U"-",                         NULL,
@@ -1632,7 +1673,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"+",                         U"?",                         U"+",                         BACKSLASH,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"'",                         U"?",                         U"'",                         NULL,
-    /*  mk-MK    */  U"'",                         U"?",                         U"'",                         NULL
+    /*  mk-MK    */  U"'",                         U"?",                         U"'",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_EQUAL: */
     /*  en-US    */  EQUALS,                       U"+",                         EQUALS,                       NULL,
@@ -1669,7 +1711,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  ACUTE_ACCENT,                 U"`",                         ACUTE_ACCENT,                 NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"+",                         U"*",                         U"+",                         NULL,
-    /*  mk-MK    */  U"+",                         U"*",                         U"+",                         NULL
+    /*  mk-MK    */  U"+",                         U"*",                         U"+",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_LBRC: */
     /*  en-US    */  U"[",                         U"{",                         U"[",                         NULL,
@@ -1706,7 +1749,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  LATIN_00FC,                   LATIN_00DC,                   NULL,                         NULL,
     /*  pt-BR    */  ACUTE_ACCENT,                 U"`",                         ACUTE_ACCENT,                 NULL,
     /*  sr-RS    */  CYRILLIC_SM_SHA,              CYRILLIC_SHA,                 NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_SHA,              CYRILLIC_SHA,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_SHA,              CYRILLIC_SHA,                 NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_JEEM,                  NULL,                         ARABIC_JEEM,                  NULL
     },
     {/* KC_RBRC: */
     /*  en-US    */  U"]",                         U"}",                         U"]",                         NULL,
@@ -1743,7 +1787,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  LATIN_00F5,                   LATIN_00D5,                   NULL,                         NULL,
     /*  pt-BR    */  U"[",                         U"{",                         U"[",                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_DJE,              CYRILLIC_DJE,                 NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_GJE,              CYRILLIC_GJE,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_GJE,              CYRILLIC_GJE,                 NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_TCHEH,                 NULL,                         ARABIC_TCHEH,                 NULL
     },
     {/* KC_BACKSLASH: */
     /*  en-US    */  BACKSLASH,                    U"|",                         BACKSLASH,                    NULL,
@@ -1780,7 +1825,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  U"]",                         U"}",                         U"]",                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_NONUS_HASH: */
     /*  en-US    */  U"#",                         U"~",                         U"#",                         NULL,
@@ -1817,7 +1863,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"'",                         U"*",                         U"'",                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_ZHE,              CYRILLIC_ZHE,                 NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_ZHE,              CYRILLIC_ZHE,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_ZHE,              CYRILLIC_ZHE,                 NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_SEMICOLON: */
     /*  en-US    */  U";",                         U":",                         U";",                         NULL,
@@ -1854,7 +1901,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  LATIN_00F6,                   LATIN_00D6,                   NULL,                         NULL,
     /*  pt-BR    */  LATIN_00E7,                   LATIN_00C7,                   NULL,                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_CHE,              CYRILLIC_CHE,                 NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_CHE,              CYRILLIC_CHE,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_CHE,              CYRILLIC_CHE,                 NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_KEHEH,                 NULL,                         ARABIC_KEHEH,                 NULL
     },
     {/* KC_QUOTE: */
     /*  en-US    */  U"'",                         QUOTE,                        U"'",                         NULL,
@@ -1891,7 +1939,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  LATIN_00E4,                   LATIN_00C4,                   NULL,                         NULL,
     /*  pt-BR    */  U"~",                         U"^",                         U"~",                         NULL,
     /*  sr-RS    */  CYRILLIC_SM_TSHE,             CYRILLIC_TSHE,                NULL,                         NULL,
-    /*  mk-MK    */  CYRILLIC_SM_KJE,              CYRILLIC_KJE,                 NULL,                         NULL
+    /*  mk-MK    */  CYRILLIC_SM_KJE,              CYRILLIC_KJE,                 NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_GAF,                   NULL,                         ARABIC_GAF,                   NULL
     },
     {/* KC_GRAVE: */
     /*  en-US    */  GRAVE_ACCENT,                 U"~",                         GRAVE_ACCENT,                 NULL,
@@ -1928,7 +1977,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_COMMA: */
     /*  en-US    */  COMMA,                        U"<",                         COMMA,                        NULL,
@@ -1965,7 +2015,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  ARABIC_WAW,                   NULL,                         ARABIC_WAW,                   NULL
     },
     {/* KC_DOT: */
     /*  en-US    */  U".",                         U">",                         U".",                         NULL,
@@ -2002,7 +2053,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_SLASH: */
     /*  en-US    */  U"/",                         U"?",                         U"/",                         NULL,
@@ -2039,7 +2091,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mk-MK    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_NONUS_BACKSLASH: */
     /*  en-US    */  U"<",                         U">",                         U"<",                         NULL,
@@ -2076,7 +2129,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  et-EE    */  U"<",                         U">",                         U"<",                         U"|",
     /*  pt-BR    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  sr-RS    */  U"<",                         U">",                         U"<",                         NULL,
-    /*  mk-MK    */  U"<",                         U">",                         U"<",                         NULL
+    /*  mk-MK    */  U"<",                         U">",                         U"<",                         NULL,
+    /*  fa-IR    */  NULL,                         NULL,                         NULL,                         NULL
     },
     //[[[end]]]
 };
@@ -2161,7 +2215,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  et-EE*/  0,-128,0,52,
 		/*  pt-BR*/  0,-128,0,52,
 		/*  sr-RS*/  0,-128,0,50,
-		/*  mk-MK*/  0,-128,0,50
+		/*  mk-MK*/  0,-128,0,50,
+		/*  fa-IR*/  0,42,0,52
 	},
 	// {letter.voffset}
 	{
@@ -2199,7 +2254,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  et-EE*/  0,-128,0,12,
 		/*  pt-BR*/  0,-128,0,12,
 		/*  sr-RS*/  0,-128,0,13,
-		/*  mk-MK*/  0,-128,0,13
+		/*  mk-MK*/  0,-128,0,13,
+		/*  fa-IR*/  0,0,0,13
 	},
 	// {num.hoffset}
 	{
@@ -2237,7 +2293,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  et-EE*/  0,30,0,52,
 		/*  pt-BR*/  0,30,0,52,
 		/*  sr-RS*/  0,30,0,50,
-		/*  mk-MK*/  0,30,0,50
+		/*  mk-MK*/  0,30,0,50,
+		/*  fa-IR*/  0,27,0,52
 	},
 	// {num.voffset}
 	{
@@ -2275,7 +2332,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  et-EE*/  0,0,0,12,
 		/*  pt-BR*/  0,0,0,12,
 		/*  sr-RS*/  0,0,0,13,
-		/*  mk-MK*/  0,0,0,13
+		/*  mk-MK*/  0,0,0,13,
+		/*  fa-IR*/  0,0,0,13
 	},
 	// {sym.hoffset}
 	{
@@ -2313,7 +2371,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  et-EE*/  0,30,0,52,
 		/*  pt-BR*/  0,30,0,52,
 		/*  sr-RS*/  0,30,0,50,
-		/*  mk-MK*/  0,30,0,50
+		/*  mk-MK*/  0,30,0,50,
+		/*  fa-IR*/  0,42,0,52
 	},
 	// {sym.voffset}
 	{
@@ -2351,7 +2410,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  et-EE*/  0,0,0,12,
 		/*  pt-BR*/  0,0,0,12,
 		/*  sr-RS*/  0,0,0,13,
-		/*  mk-MK*/  0,0,0,13
+		/*  mk-MK*/  0,0,0,13,
+		/*  fa-IR*/  0,0,0,13
 	}
 //[[[end]]]
 };
@@ -2580,6 +2640,7 @@ static uint32_t lang_uint32 [] = {
     LANGSTR_TO_UI32("ptBR"),
     LANGSTR_TO_UI32("srRS"),
     LANGSTR_TO_UI32("mkMK"),
+    LANGSTR_TO_UI32("faIR"),
     //[[[end]]]
 };
 

@@ -101,6 +101,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoEmoji_Medium_Emojis1_20pt16b,
   &NotoSansArabic_Regular_FormsB_16pt16b,
   &NotoSansArabic_Regular_Isolated_16pt16b,
+  &NotoSansArabic_Regular_PerArab_16pt16b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct2_15pt16b,
   &NotoSansJP_Regular_Punct_15pt16b,

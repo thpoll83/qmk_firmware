@@ -118,5 +118,141 @@ mapping column + flag, NOT a `forced_country_match.txt` fold:
 All are Latin-script → **no new font/glyphs**, just a new mapping column + flag.
 For contrast, the *folds* that DID happen (identical keymaps, handled host-side in
 `PolyKybdHost/polyhost/res/forced_country_match.txt`): Austrian→`de`,
-Bosnian/Montenegrin/Slovenian→`hr`, and every Arab state→`ar` via the xkb `ara`
+Bosnian/Montenegrin/Slovenian→`hr`, and every Arab state→`ara` via the xkb `ara`
 code. Rule of thumb: **identical keymap → fold; different keymap → own entry.**
+
+---
+
+# Implementation playbook — hard-won mechanics (2026-06-06)
+
+Everything below is the "how" that cost real iterations. Read it before touching
+layouts again; it will save a session.
+
+## A. Re-cog ALL generated files (not just lang_lut)
+`lang_lut.xlsx` feeds **five** cog-generated files. Adding/changing a language
+means re-running cog on every one or the language is half-wired:
+- `lang/lang_lut.c` + `lang/lang_lut.h` — the LUT, `poly_settings`, the
+  `enum lang_layer` + `NUM_LANG`.
+- `lang/named_glyphs.h` — the `#define <NAME> U"\xXXXX"` table.
+- `keycode_helper.h` — the `KCL_*` keycodes (`KCL_x - KCL_ENUS == LANG_x`).
+- `hid_com.c` — the `GET_LANG_LIST` response.
+- `split72/keymaps/default/keymap.c` — the `_LL` language-selection layer cog
+  block (the grid of `KCL_*` keys).
+
+Command: `python3 -m cogapp -r <file>` (`pip install cogapp`).
+**Symptom of forgetting:** "new languages not selectable" — only `lang_lut` was
+re-cogged, so the `_LL` layer / `KCL_*` enum / HID list were stale.
+
+## B. Editing `lang_lut.xlsx` without corrupting it (CRITICAL)
+Some cells are **formulas** (e.g. `LATIN_xxxx = =TEXTJOIN(...)`) and cog reads
+their **cached** values via openpyxl `data_only=True`.
+- **NEVER save the workbook with openpyxl** — it discards formula caches, so cog
+  then emits literal `"LATIN_0161"` tokens (build breaks) or `NULL`s. This was a
+  major earlier bug.
+- Edit **surgically inside the .zip**: rewrite only `xl/worksheets/sheetN.xml`,
+  leaving every other byte/cache intact. **sheet1 = named_glyphs, sheet2 =
+  key_lut, sheet3 = latin_sup_ex** (confirm via `xl/workbook.xml` + rels).
+- Column model (both key rows and `poly_settings` rows): language columns start
+  at **col B (index 2)**, **4 columns per language** = `[VAR_SMALL, VAR_SHIFT,
+  VAR_CAPS, VAR_ALTGR]`. Lang index `i` → base col `2 + i*4`. Row 1 = the
+  language-code header (`hi-IN`, …); a blank header cell ends the list.
+- Empty cells are placeholders `<c r="A1085" s="7"/>`. Replace with a string
+  cell `<c r=".." t="inlineStr"><is><t xml:space="preserve">VALUE</t></is></c>`
+  or a numeric/settings cell `<c r=".."><v>-26</v></c>`. To insert mid-row,
+  rebuild the whole `<row>` in column order. `named_glyphs` already has blank
+  row elements out to row 1125 (dimension `A1:I1125`) — just fill them.
+- **Verify after every edit:** reopen with `openpyxl(data_only=True,
+  read_only=True)` and spot-check, then `git diff lang_lut.c` and confirm ONLY
+  the intended cells changed — if some *other* language's accented letters turned
+  into literal `LATIN_xxxx` tokens, you wiped the cache: discard and redo.
+
+## C. cog `make_key` cell semantics (key_lut → C)
+A cell becomes a C token thus: if it starts with `u"` **or** is a name present
+in the `named_glyphs` sheet **or** contains multiple space-separated tokens →
+emitted **verbatim** (with `u"`→`U"`); otherwise wrapped as `U"<cell>"`; empty →
+`NULL`. So a bare reference like `DEVA_DC_0902` **must exist in named_glyphs** to
+be emitted unwrapped. (Gotcha: a literal `"` in a cell makes `U"""` — use the
+`QUOTE` named glyph instead.)
+
+## D. Keycap display geometry — the thing that bit us 3× on ur-PK
+- The per-keycap OLED is **72×40 px**, but the render buffer is **128 px wide**
+  and the panel shows the **centre 72 px**: visible window = buffer
+  `x ∈ [BUFFER_X, BUFFER_X+SCREEN_WIDTH) = [28, 100)` (`base/disp_array.h`:
+  `SCREEN_WIDTH 72`, `BUFFER_X 28`).
+- Every draw uses origin `x = 28 + h_off`, baseline `y = 23 + v_off`. So
+  **`h_off = 0` is the LEFT edge of the visible area, not the centre.** Usable
+  `h_off` ≈ `[0, 72]`. A glyph is fully visible iff
+  `28 + h_off + xOffset ≥ 28` and `… + width ≤ 99`.
+- A glyph drawn at `x < 28` is in the buffer but **off-screen** → it
+  "disappears". (First ur-PK regression: a `-26` h_off put the base at x≈2.)
+
+## E. `poly_settings` offsets + the VAR_SMALL trap
+- Setting rows live in the **key_lut sheet after the key rows**, named in col A:
+  `{letter.hoffset} {letter.voffset} {num.hoffset} {num.voffset} {sym.hoffset}
+  {sym.voffset}` (the first col-A value starting with `{` ends the key loop and
+  begins the settings loop).
+- Each = a 4-tuple per language `[SMALL, SHIFT, CAPS, ALTGR]`; empty → `0`;
+  literal `HIDE` → `-128` (`HIDE_KEY`, suppresses that preview).
+- Routing: `KC_A..KC_Z` → letter offsets; `KC_1..KC_0` → num; else → sym.
+- **VAR_SMALL is the offset of the ACTIVE glyph** — the base when unshifted AND
+  the shift letter when shift is held. **Never raise VAR_SMALL to make room for
+  a preview**: it clips tall letters / high marks (e.g. Arabic SHADDA vanished)
+  when shift is held. Only VAR_SHIFT / VAR_ALTGR are preview-only and free.
+
+## F. Dual base+preview rendering & generic auto-placement (2026-06-06)
+`keycode_to_disp_text()` draws, for the active layer letter: the active glyph at
+VAR_SMALL; an unshifted **shift preview** at VAR_SHIFT (skipped on shift/caps or
+HIDE); an **altgr preview** at VAR_ALTGR. Latin langs usually `HIDE` the shift
+preview; Arabic-script langs (ar/fa/ur) show base+shift (both real letters).
+- Added `kdisp_gfx_text_bounds()` (`base/disp_array.c/.h`) — measures a string's
+  pixel min/max x without drawing (mirrors the cursor advance).
+- The shift preview is now placed **generically, glyph-width driven** (no
+  per-language code): start at the VAR_SHIFT x, push right to clear the base's
+  measured right edge, clamp to the window's right edge. Only a preview that
+  would actually overlap/overflow moves, so other languages are untouched.
+- For two glyphs too wide to ever separate in 72 px (only ur-PK `ص`/`ض`, both
+  39 px), when overlap is unavoidable the **flat base is lifted and the preview
+  dropped** so they read diagonally. This is in the unshifted preview path only,
+  so it never moves the shift-held active glyph (see E).
+
+## G. Combining marks → dotted circle (matras / harakat / Thai tone marks)
+Isolated combining marks render invisibly or as a stray dot (nothing to attach
+to). Composite each onto a **dotted circle U+25CC**, as the Unicode charts and
+physical InScript keycaps do.
+- Mechanism: **fontconvert `-C` composite mode** (added 2026-06-06 in
+  AdafruitGFX). In `-S` sequence mode it shapes each comma-group with HarfBuzz
+  and composites ALL glyphs of the group into ONE 1-bit bitmap using the GPOS
+  x/y offsets (mono path; opt-in, default behaviour unchanged). Example:
+  `-S "25CC 0901, 25CC 0902, …" -F0xE100 -C` → one glyph per mark at PUA
+  `0xE100..`, mark correctly attached to the circle.
+- Wire-up: a `fonts.yaml` entry with `sequence:` + `extra_args: ['-F0xE100','-C']`
+  (devanagari category); `DEVA_DC_xxxx` named glyphs → those PUA codepoints in
+  the named_glyphs sheet; remap the matra cells (VAR_SMALL/CAPS and any combining
+  VAR_SHIFT) from bare `DEVANAGARI_xxxx` → `DEVA_DC_xxxx`. **Keep the fonts.yaml
+  sequence order identical to the DEVA_DC_* codepoint order.** Drop any old `\v`
+  control-char nudges — the composite is self-positioned.
+- **PUA `0xE100+` is free in `ALL_FONTS`** (the lang-layer flags use a SEPARATE
+  array at `0xE000+`, not in ALL_FONTS; IconsFont sits at low codepoints).
+
+## H. Verify display WITHOUT hardware (the biggest time-saver)
+`kdisp_write_gfx_char` is trivial to mirror: draw the 1-bit glyph bitmap at
+`(cursor + xOffset, baseline + yOffset)`, advance by `xAdvance`; bitmaps are
+row-major, continuous, byte-padded per glyph; `first`/`last`/`height` in the
+struct. So a ~30-line Python parser of a fontconvert `.h` + the same draw loop on
+a 128-wide canvas, **cropped to [28,100)** and saved as PNG (`pypng`), reproduces
+**exactly** what a keycap shows. Render candidates before building. For composited
+matras, prototype the GPOS placement with `uharfbuzz` + `freetype-py`, confirm
+visually, then port to `-C` and re-verify by simulating the generated header.
+Libs: `pip install pypng fonttools uharfbuzz freetype-py`.
+
+## I. Toolchain in the container
+- ARM: `sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi`
+  (skip `apt-get update` — broken distro PPAs make the chained install fail).
+- qmk: venv (`pip install qmk cogapp pyyaml`), `export QMK_HOME=<repo>`, build
+  `qmk compile -kb handwired/polykybd/split72 -km default` (~0.5 MB `.uf2`).
+- fontconvert pinned build: `fontconvert/cmake-build-debug/` (FreeType 2.13.3 /
+  HarfBuzz 2.6.7); rebuild with `cmake --build .`; committed font headers must be
+  produced with it (provenance comment references `/tmp/fontconvert_pinned`), via
+  `generate_fonts.py --fontconvert /tmp/fontconvert_pinned` then `--check`.
+- Produce a flashable artifact: `qmk compile` writes `.uf2`; for a raw `.bin`,
+  `arm-none-eabi-objcopy -O binary .build/…default.elf …default.bin`.

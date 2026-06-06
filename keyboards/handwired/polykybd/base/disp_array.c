@@ -277,6 +277,61 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
     }
 }
 
+// Draw `text` as a vertical column, each glyph rotated -90° (counter-clockwise),
+// reading bottom-to-top, with the glyph baseline along x = col_x and the column
+// vertically centred in the visible height.  When `selected`, a solid bar is
+// filled behind the text and the glyphs are punched out of it (dark on white);
+// otherwise the glyphs are drawn lit (white on dark).  Single font, no fallback.
+void kdisp_write_gfx_vtext(const GFXfont *font, int8_t col_x, const uint32_t *text, bool selected) {
+    const uint32_t first  = pgm_read_dword(&font->first);
+    const uint32_t last   = pgm_read_dword(&font->last);
+    const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
+
+    // First pass: total advance (column length) and horizontal (baseline) extent.
+    int16_t total = 0;
+    int8_t  min_x = 127, max_x = -128;
+    for (const uint32_t *p = text; *p; ++p) {
+        if (*p < first || *p > last) continue;
+        const GFXglyph *g = pgm_read_glyph_ptr(font, *p - first);
+        int8_t yo = pgm_read_byte(&g->yOffset);
+        int8_t h  = pgm_read_byte(&g->height);
+        if (col_x + yo     < min_x) min_x = (int8_t)(col_x + yo);
+        if (col_x + yo + h > max_x) max_x = (int8_t)(col_x + yo + h);
+        total += pgm_read_byte(&g->xAdvance);
+    }
+    if (total <= 0) return;
+
+    const int8_t top_y = (int8_t)((SCREEN_HEIGHT - total) / 2);
+    if (selected) {
+        kdisp_fill_rect((int8_t)(min_x - 1), (int8_t)(top_y - 1),
+                        (int8_t)(max_x - min_x + 2), (int8_t)(total + 2));
+    }
+
+    // Second pass: render each glyph rotated, advancing upward from the bottom.
+    int16_t vcur = top_y + total;
+    for (const uint32_t *p = text; *p; ++p) {
+        if (*p < first || *p > last) continue;
+        const GFXglyph *g = pgm_read_glyph_ptr(font, *p - first);
+        uint16_t bo = pgm_read_word(&g->bitmapOffset);
+        int8_t   w  = pgm_read_byte(&g->width),  h  = pgm_read_byte(&g->height);
+        int8_t   xo = pgm_read_byte(&g->xOffset), yo = pgm_read_byte(&g->yOffset);
+        uint8_t  bit = 0, bits = 0;
+        for (int8_t gy = 0; gy < h; ++gy) {
+            for (int8_t gx = 0; gx < w; ++gx) {
+                if (!(bit++ & 7)) bits = pgm_read_byte(&bitmap[bo++]);
+                if (bits & 0x80) {
+                    int8_t sx = (int8_t)(col_x + yo + gy);
+                    int8_t sy = (int8_t)(vcur  - xo - gx);
+                    if (selected) { CLEAR_PIXEL_CLIPPED(sx, sy); }
+                    else          { SET_PIXEL_CLIPPED(sx, sy); }
+                }
+                bits <<= 1;
+            }
+        }
+        vcur -= pgm_read_byte(&g->xAdvance);
+    }
+}
+
 void kdisp_write_base_char(int8_t x, int8_t y, const char ch) {
     int8_t font_index = (uint8_t)ch;  // font based on unsigned type for index
     if (font_index < BASIC_FONT_START || font_index > BASIC_FONT_END) {

@@ -831,61 +831,34 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 }
 
 // ─── Language-layer flag rendering ──────────────────────────────────────────
-// Each KCL_* key in the language layer (_LL) shows its country flag in the top
-// 28 px with the language code in a tiny font in the bottom 12 px, plus a 1 px
-// frame around the keycap for the currently-selected language.  Flag glyphs live
-// in flag_fonts.h at codepoints FLAG_CP_BASE + LANG_* (see fonts/gen-lang-fonts.sh);
-// the label uses the tiny NotoSans font.  Each is drawn with its own single-font
-// array so kdisp_write_gfx_char's baseline-alignment shift stays 0 and the y
-// positions below are exact.
-#define FLAG_CP_BASE       0xE000u
-#define FLAG_TOP_Y         0          // flag top edge, px from the keycap top
-#define LABEL_BASELINE_Y   36         // tiny-font baseline for the language code
+// Each KCL_* key in the language layer (_LL) shows its country flag at full
+// keycap height on the left, with the language code (e.g. U"en-US") running
+// vertically up the right side in a tiny font.  The currently-selected language's
+// code is drawn as dark text on a filled bar (see kdisp_write_gfx_vtext) rather
+// than with a frame.  Flag glyphs live in flag_fonts.h at codepoints
+// FLAG_CP_BASE + LANG_* (see fonts/gen-lang-fonts.sh); the label uses the tiny
+// NotoSans font.
+#define FLAG_CP_BASE   0xE000u
+#define FLAG_LEFT_X    (BUFFER_X + 3)    // flag left edge
+#define LABEL_COL_X    (BUFFER_X + 63)   // baseline column of the vertical label
 
-static const GFXfont* const lang_flag_fonts[]  = { &NotoColorEmoji_Regular_LangFlags_20pt7b };
-static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b };
+static const GFXfont* const lang_flag_fonts[] = { &NotoColorEmoji_Regular_LangFlags_20pt7b };
 
-// Pixel width of a tiny-font ASCII label, for horizontal centring.
-static int8_t lang_label_width(const uint32_t* text) {
-    int16_t w = 0;
-    const GFXfont* f = &NotoSans_Regular_Tiny_6pt7b;
-    const uint32_t first = pgm_read_dword(&f->first);
-    const uint32_t last  = pgm_read_dword(&f->last);
-    for (; *text; ++text) {
-        if (*text >= first && *text <= last) {
-            w += (int8_t)pgm_read_byte(&f->glyph[*text - first].xAdvance);
-        }
-    }
-    return (int8_t)w;
-}
-
-// Draw one language key: country flag centred up top, language code (e.g.
-// U"en-US") centred below, and a frame around the keycap when it is the active
-// language.
+// Draw one language key: full-height country flag on the left, language code
+// running vertically up the right side (inverted bar when it is the active lang).
 static void render_lang_flag_key(uint16_t keycode, const uint32_t* label, uint8_t current_lang) {
     const uint8_t  idx = (uint8_t)(keycode - KCL_ENUS);   // == LANG_* enum value
     const GFXfont* ff  = &NotoColorEmoji_Regular_LangFlags_20pt7b;
 
-    // Flag: centre horizontally; subtracting the glyph yOffset lands the top edge
-    // at FLAG_TOP_Y regardless of the glyph's baseline metrics.
-    const int8_t fw  = (int8_t)pgm_read_byte(&ff->glyph[idx].width);
+    // Flag: left-aligned, full height — subtracting the glyph yOffset lands the
+    // top edge at y = 0 regardless of the glyph's baseline metrics.
     const int8_t fyo = (int8_t)pgm_read_byte(&ff->glyph[idx].yOffset);
-    const int8_t fx  = (int8_t)(BUFFER_X + (SCREEN_WIDTH - fw) / 2);
-    kdisp_write_gfx_char(lang_flag_fonts, 1, fx, (int8_t)(FLAG_TOP_Y - fyo),
+    kdisp_write_gfx_char(lang_flag_fonts, 1, FLAG_LEFT_X, (int8_t)(-fyo),
                          FLAG_CP_BASE + idx, false);
 
-    // Label: centre horizontally below the flag.
-    const int8_t tw = lang_label_width(label);
-    const int8_t tx = (int8_t)(BUFFER_X + (SCREEN_WIDTH - tw) / 2);
-    kdisp_write_gfx_text(lang_label_fonts, 1, tx, LABEL_BASELINE_Y, label);
-
-    // Selected language: 1 px frame around the visible keycap.
-    if (current_lang == idx) {
-        kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 1);
-        kdisp_fill_rect(BUFFER_X, SCREEN_HEIGHT - 1, SCREEN_WIDTH, 1);
-        kdisp_fill_rect(BUFFER_X, 0, 1, SCREEN_HEIGHT);
-        kdisp_fill_rect((int8_t)(BUFFER_X + SCREEN_WIDTH - 1), 0, 1, SCREEN_HEIGHT);
-    }
+    // Language code: vertical, up the right side; inverted bar when selected.
+    kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
+                          current_lang == idx);
 }
 
 void update_displays(enum refresh_mode mode) {

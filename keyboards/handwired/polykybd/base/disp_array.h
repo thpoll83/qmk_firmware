@@ -18,6 +18,11 @@ void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t
 
 void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, bool clear_cy);
 
+// Vertical (rotated -90°, bottom-to-top) single-font text, centred in the visible
+// height with its baseline along x = col_x.  `selected` draws it as dark text on
+// a filled bar (else lit text on the dark background).  Used by the lang layer.
+void kdisp_write_gfx_vtext(const GFXfont *font, int8_t col_x, const uint32_t *text, bool selected);
+
 void kdisp_write_base_char(int8_t x, int8_t y, char c);
 
 void kdisp_draw_bitmap(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height);

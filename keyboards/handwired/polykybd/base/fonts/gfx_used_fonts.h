@@ -104,6 +104,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansArabic_Regular_Isolated_16pt16b,
   &NotoSansArabic_Regular_PerArab_16pt16b,
   &NotoSansDevanagari_Regular_Deva_16pt16b,
+  &NotoSansDevanagari_Regular_DevaMatra_16pt7b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct2_15pt16b,
   &NotoSansJP_Regular_Punct_15pt16b,

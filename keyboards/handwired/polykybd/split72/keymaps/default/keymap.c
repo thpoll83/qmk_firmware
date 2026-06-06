@@ -1155,7 +1155,7 @@ void update_displays(enum refresh_mode mode) {
                     kdisp_enable(true);
                     kdisp_set_contrast(local_state->contrast-1);
                     if(keycode!=KC_TRNS) {
-                        if (keycode >= KCL_ENUS && keycode <= KCL_CSCZ) {
+                        if (keycode >= KCL_ENUS && keycode < KCL_ENUS + NUM_LANG) {
                             // Language layer: country flag + tiny language code.
                             kdisp_set_buffer(0x00);
                             render_lang_flag_key(keycode, to_static_text(keycode, state), local_state->lang);

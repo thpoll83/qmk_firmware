@@ -120,7 +120,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_094B,              DEVANAGARI_0913,              DEVANAGARI_094B,              NULL,
     /*  mr-IN    */  DEVANAGARI_094B,              DEVANAGARI_0913,              DEVANAGARI_094B,              NULL,
     /*  ne-NP    */  DEVANAGARI_094B,              DEVANAGARI_0913,              DEVANAGARI_094B,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_SHORT_I,          CYRILLIC_SHORT_I,             NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_SHORT_I,          CYRILLIC_SHORT_I,             NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_MEEM,                  ARABIC_JEH,                   ARABIC_MEEM,                  NULL
     },
     {/* KC_B: */
     /*  en-US    */  U"b",                         U"B",                         NULL,                         NULL,
@@ -162,7 +163,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0935,              DEVANAGARI_0934,              DEVANAGARI_0935,              NULL,
     /*  mr-IN    */  DEVANAGARI_0935,              DEVANAGARI_0934,              DEVANAGARI_0935,              NULL,
     /*  ne-NP    */  DEVANAGARI_0935,              DEVANAGARI_0934,              DEVANAGARI_0935,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_EM,               CYRILLIC_EM,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_EM,               CYRILLIC_EM,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_SHEEN,                 ARABIC_WAW_HAMZA_A,           ARABIC_SHEEN,                 NULL
     },
     {/* KC_C: */
     /*  en-US    */  U"c",                         U"C",                         NULL,                         NULL,
@@ -204,7 +206,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_092E,              DEVANAGARI_0923,              DEVANAGARI_092E,              NULL,
     /*  mr-IN    */  DEVANAGARI_092E,              DEVANAGARI_0923,              DEVANAGARI_092E,              NULL,
     /*  ne-NP    */  DEVANAGARI_092E,              DEVANAGARI_0923,              DEVANAGARI_092E,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_IO,               CYRILLIC_IO,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_IO,               CYRILLIC_IO,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_YEH_BARREE,            ARABIC_YEH_BARREE_HAMZA,      ARABIC_YEH_BARREE,            NULL
     },
     {/* KC_D: */
     /*  en-US    */  U"d",                         U"D",                         NULL,                         NULL,
@@ -246,7 +249,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_094D,              DEVANAGARI_0905,              DEVANAGARI_094D,              NULL,
     /*  mr-IN    */  DEVANAGARI_094D,              DEVANAGARI_0905,              DEVANAGARI_094D,              NULL,
     /*  ne-NP    */  DEVANAGARI_094D,              DEVANAGARI_0905,              DEVANAGARI_094D,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_BE,               CYRILLIC_BE,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_BE,               CYRILLIC_BE,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_REH,                   ARABIC_RREH,                  ARABIC_REH,                   NULL
     },
     {/* KC_E: */
     /*  en-US    */  U"e",                         U"E",                         NULL,                         NULL,
@@ -288,7 +292,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_093E,              DEVANAGARI_0906,              DEVANAGARI_093E,              NULL,
     /*  mr-IN    */  DEVANAGARI_093E,              DEVANAGARI_0906,              DEVANAGARI_093E,              NULL,
     /*  ne-NP    */  DEVANAGARI_093E,              DEVANAGARI_0906,              DEVANAGARI_093E,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_U,                CYRILLIC_U,                   NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_U,                CYRILLIC_U,                   NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_HEH_DOACHASHMEE,       ARABIC_THAL,                  ARABIC_HEH_DOACHASHMEE,       NULL
     },
     {/* KC_F: */
     /*  en-US    */  U"f",                         U"F",                         NULL,                         NULL,
@@ -330,7 +335,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_093F,              DEVANAGARI_0907,              DEVANAGARI_093F,              NULL,
     /*  mr-IN    */  DEVANAGARI_093F,              DEVANAGARI_0907,              DEVANAGARI_093F,              NULL,
     /*  ne-NP    */  DEVANAGARI_093F,              DEVANAGARI_0907,              DEVANAGARI_093F,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_BARRED_O,         CYRILLIC_BARRED_O,            NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_BARRED_O,         CYRILLIC_BARRED_O,            NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_NOON,                  ARABIC_NOON_GHUNNA,           ARABIC_NOON,                  NULL
     },
     {/* KC_G: */
     /*  en-US    */  U"g",                         U"G",                         NULL,                         NULL,
@@ -372,7 +378,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0941,              DEVANAGARI_0909,              DEVANAGARI_0941,              NULL,
     /*  mr-IN    */  DEVANAGARI_0941,              DEVANAGARI_0909,              DEVANAGARI_0941,              NULL,
     /*  ne-NP    */  DEVANAGARI_0941,              DEVANAGARI_0909,              DEVANAGARI_0941,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_A,                CYRILLIC_A,                   NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_A,                CYRILLIC_A,                   NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_LAM,                   ARABIC_HEH_GOAL_HAMZA,        ARABIC_LAM,                   NULL
     },
     {/* KC_H: */
     /*  en-US    */  U"h",                         U"H",                         NULL,                         NULL,
@@ -414,7 +421,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_092A,              DEVANAGARI_092B,              DEVANAGARI_092A,              NULL,
     /*  mr-IN    */  DEVANAGARI_092A,              DEVANAGARI_092B,              DEVANAGARI_092A,              NULL,
     /*  ne-NP    */  DEVANAGARI_092A,              DEVANAGARI_092B,              DEVANAGARI_092A,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_HA,               CYRILLIC_HA,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_HA,               CYRILLIC_HA,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_HEH_GOAL,              ARABIC_HAMZA,                 ARABIC_HEH_GOAL,              NULL
     },
     {/* KC_I: */
     /*  en-US    */  U"i",                         U"I",                         NULL,                         NULL,
@@ -456,7 +464,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0917,              DEVANAGARI_0918,              DEVANAGARI_0917,              NULL,
     /*  mr-IN    */  DEVANAGARI_0917,              DEVANAGARI_0918,              DEVANAGARI_0917,              NULL,
     /*  ne-NP    */  DEVANAGARI_0917,              DEVANAGARI_0918,              DEVANAGARI_0917,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_SHA,              CYRILLIC_SHA,                 NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_SHA,              CYRILLIC_SHA,                 NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_BEH,                   ARABIC_TATWEEL,               ARABIC_BEH,                   NULL
     },
     {/* KC_J: */
     /*  en-US    */  U"j",                         U"J",                         NULL,                         NULL,
@@ -498,7 +507,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0930,              DEVANAGARI_0931,              DEVANAGARI_0930,              NULL,
     /*  mr-IN    */  DEVANAGARI_0930,              DEVANAGARI_0931,              DEVANAGARI_0930,              NULL,
     /*  ne-NP    */  DEVANAGARI_0930,              DEVANAGARI_0931,              DEVANAGARI_0930,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_ER,               CYRILLIC_ER,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_ER,               CYRILLIC_ER,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_ALEF,                  ARABIC_ALEF_MADDA_A,          ARABIC_ALEF,                  NULL
     },
     {/* KC_K: */
     /*  en-US    */  U"k",                         U"K",                         NULL,                         NULL,
@@ -540,7 +550,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0915,              DEVANAGARI_0916,              DEVANAGARI_0915,              NULL,
     /*  mr-IN    */  DEVANAGARI_0915,              DEVANAGARI_0916,              DEVANAGARI_0915,              NULL,
     /*  ne-NP    */  DEVANAGARI_0915,              DEVANAGARI_0916,              DEVANAGARI_0915,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_O,                CYRILLIC_O,                   NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_O,                CYRILLIC_O,                   NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_KEHEH,                 ARABIC_GAF,                   ARABIC_KEHEH,                 NULL
     },
     {/* KC_L: */
     /*  en-US    */  U"l",                         U"L",                         NULL,                         NULL,
@@ -582,7 +593,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0924,              DEVANAGARI_0925,              DEVANAGARI_0924,              NULL,
     /*  mr-IN    */  DEVANAGARI_0924,              DEVANAGARI_0925,              DEVANAGARI_0924,              NULL,
     /*  ne-NP    */  DEVANAGARI_0924,              DEVANAGARI_0925,              DEVANAGARI_0924,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_EL,               CYRILLIC_EL,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_EL,               CYRILLIC_EL,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_FARSI_YEH,             ARABIC_YEH,                   ARABIC_FARSI_YEH,             NULL
     },
     {/* KC_M: */
     /*  en-US    */  U"m",                         U"M",                         NULL,                         NULL,
@@ -624,7 +636,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0938,              DEVANAGARI_0936,              DEVANAGARI_0938,              NULL,
     /*  mr-IN    */  DEVANAGARI_0938,              DEVANAGARI_0936,              DEVANAGARI_0938,              NULL,
     /*  ne-NP    */  DEVANAGARI_0938,              DEVANAGARI_0936,              DEVANAGARI_0938,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_TE,               CYRILLIC_TE,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_TE,               CYRILLIC_TE,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_AIN,                   NULL,                         ARABIC_AIN,                   NULL
     },
     {/* KC_N: */
     /*  en-US    */  U"n",                         U"N",                         NULL,                         NULL,
@@ -666,7 +679,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0932,              DEVANAGARI_0933,              DEVANAGARI_0932,              NULL,
     /*  mr-IN    */  DEVANAGARI_0932,              DEVANAGARI_0933,              DEVANAGARI_0932,              NULL,
     /*  ne-NP    */  DEVANAGARI_0932,              DEVANAGARI_0933,              DEVANAGARI_0932,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_I,                CYRILLIC_I,                   NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_I,                CYRILLIC_I,                   NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_GHAIN,                 ARABIC_YEH_HAMZA_A,           ARABIC_GHAIN,                 NULL
     },
     {/* KC_O: */
     /*  en-US    */  U"o",                         U"O",                         NULL,                         NULL,
@@ -708,7 +722,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0926,              DEVANAGARI_0927,              DEVANAGARI_0926,              NULL,
     /*  mr-IN    */  DEVANAGARI_0926,              DEVANAGARI_0927,              DEVANAGARI_0926,              NULL,
     /*  ne-NP    */  DEVANAGARI_0926,              DEVANAGARI_0927,              DEVANAGARI_0926,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_STRAIGHT_U,       CYRILLIC_STRAIGHT_U,          NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_STRAIGHT_U,       CYRILLIC_STRAIGHT_U,          NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_JEEM,                  ARABIC_TCHEH,                 ARABIC_JEEM,                  NULL
     },
     {/* KC_P: */
     /*  en-US    */  U"p",                         U"P",                         NULL,                         NULL,
@@ -750,7 +765,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_091C,              DEVANAGARI_091D,              DEVANAGARI_091C,              NULL,
     /*  mr-IN    */  DEVANAGARI_091C,              DEVANAGARI_091D,              DEVANAGARI_091C,              NULL,
     /*  ne-NP    */  DEVANAGARI_091C,              DEVANAGARI_091D,              DEVANAGARI_091C,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_ZE,               CYRILLIC_ZE,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_ZE,               CYRILLIC_ZE,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_HAH,                   ARABIC_KHAH,                  ARABIC_HAH,                   NULL
     },
     {/* KC_Q: */
     /*  en-US    */  U"q",                         U"Q",                         NULL,                         NULL,
@@ -792,7 +808,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_094C,              DEVANAGARI_0914,              DEVANAGARI_094C,              NULL,
     /*  mr-IN    */  DEVANAGARI_094C,              DEVANAGARI_0914,              DEVANAGARI_094C,              NULL,
     /*  ne-NP    */  DEVANAGARI_094C,              DEVANAGARI_0914,              DEVANAGARI_094C,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_EF,               CYRILLIC_EF,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_EF,               CYRILLIC_EF,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_TAH,                   ARABIC_ZAH,                   ARABIC_TAH,                   NULL
     },
     {/* KC_R: */
     /*  en-US    */  U"r",                         U"R",                         NULL,                         NULL,
@@ -834,7 +851,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0940,              DEVANAGARI_0908,              DEVANAGARI_0940,              NULL,
     /*  mr-IN    */  DEVANAGARI_0940,              DEVANAGARI_0908,              DEVANAGARI_0940,              NULL,
     /*  ne-NP    */  DEVANAGARI_0940,              DEVANAGARI_0908,              DEVANAGARI_0940,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_ZHE,              CYRILLIC_ZHE,                 NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_ZHE,              CYRILLIC_ZHE,                 NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_DAL,                   ARABIC_DDAL,                  ARABIC_DAL,                   NULL
     },
     {/* KC_S: */
     /*  en-US    */  U"s",                         U"S",                         NULL,                         NULL,
@@ -876,7 +894,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0947,              DEVANAGARI_090F,              DEVANAGARI_0947,              NULL,
     /*  mr-IN    */  DEVANAGARI_0947,              DEVANAGARI_090F,              DEVANAGARI_0947,              NULL,
     /*  ne-NP    */  DEVANAGARI_0947,              DEVANAGARI_090F,              DEVANAGARI_0947,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_YERU,             CYRILLIC_YERU,                NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_YERU,             CYRILLIC_YERU,                NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_WAW,                   ARABIC_ZAIN,                  ARABIC_WAW,                   NULL
     },
     {/* KC_T: */
     /*  en-US    */  U"t",                         U"T",                         NULL,                         NULL,
@@ -918,7 +937,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0942,              DEVANAGARI_090A,              DEVANAGARI_0942,              NULL,
     /*  mr-IN    */  DEVANAGARI_0942,              DEVANAGARI_090A,              DEVANAGARI_0942,              NULL,
     /*  ne-NP    */  DEVANAGARI_0942,              DEVANAGARI_090A,              DEVANAGARI_0942,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_E,                CYRILLIC_E,                   NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_E,                CYRILLIC_E,                   NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_TTEH,                  ARABIC_THEH,                  ARABIC_TTEH,                  NULL
     },
     {/* KC_U: */
     /*  en-US    */  U"u",                         U"U",                         NULL,                         NULL,
@@ -960,7 +980,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0939,              DEVANAGARI_0919,              DEVANAGARI_0939,              NULL,
     /*  mr-IN    */  DEVANAGARI_0939,              DEVANAGARI_0919,              DEVANAGARI_0939,              NULL,
     /*  ne-NP    */  DEVANAGARI_0939,              DEVANAGARI_0919,              DEVANAGARI_0939,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_GHE,              CYRILLIC_GHE,                 NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_GHE,              CYRILLIC_GHE,                 NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_TEH,                   ARABIC_TEH_MARBUTA_GOAL,      ARABIC_TEH,                   NULL
     },
     {/* KC_V: */
     /*  en-US    */  U"v",                         U"V",                         NULL,                         NULL,
@@ -1002,7 +1023,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0928,              DEVANAGARI_0929,              DEVANAGARI_0928,              NULL,
     /*  mr-IN    */  DEVANAGARI_0928,              DEVANAGARI_0929,              DEVANAGARI_0928,              NULL,
     /*  ne-NP    */  DEVANAGARI_0928,              DEVANAGARI_0929,              DEVANAGARI_0928,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_ES,               CYRILLIC_ES,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_ES,               CYRILLIC_ES,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_SEEN,                  NULL,                         ARABIC_SEEN,                  NULL
     },
     {/* KC_W: */
     /*  en-US    */  U"w",                         U"W",                         NULL,                         NULL,
@@ -1044,7 +1066,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0948,              DEVANAGARI_0910,              DEVANAGARI_0948,              NULL,
     /*  mr-IN    */  DEVANAGARI_0948,              DEVANAGARI_0910,              DEVANAGARI_0948,              NULL,
     /*  ne-NP    */  DEVANAGARI_0948,              DEVANAGARI_0910,              DEVANAGARI_0948,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_TSE,              CYRILLIC_TSE,                 NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_TSE,              CYRILLIC_TSE,                 NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_SAD,                   ARABIC_DAD,                   ARABIC_SAD,                   NULL
     },
     {/* KC_X: */
     /*  en-US    */  U"x",                         U"X",                         NULL,                         NULL,
@@ -1086,7 +1109,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0902,              DEVANAGARI_0901,              DEVANAGARI_0902,              NULL,
     /*  mr-IN    */  DEVANAGARI_0902,              DEVANAGARI_0901,              DEVANAGARI_0902,              NULL,
     /*  ne-NP    */  DEVANAGARI_0902,              DEVANAGARI_0901,              DEVANAGARI_0902,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_CHE,              CYRILLIC_CHE,                 NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_CHE,              CYRILLIC_CHE,                 NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_FEH,                   NULL,                         ARABIC_FEH,                   NULL
     },
     {/* KC_Y: */
     /*  en-US    */  U"y",                         U"Y",                         NULL,                         NULL,
@@ -1128,7 +1152,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_092C,              DEVANAGARI_092D,              DEVANAGARI_092C,              NULL,
     /*  mr-IN    */  DEVANAGARI_092C,              DEVANAGARI_092D,              DEVANAGARI_092C,              NULL,
     /*  ne-NP    */  DEVANAGARI_092C,              DEVANAGARI_092D,              DEVANAGARI_092C,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_EN,               CYRILLIC_EN,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_EN,               CYRILLIC_EN,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_PEH,                   ARABIC_SHADDA,                ARABIC_PEH,                   NULL
     },
     {/* KC_Z: */
     /*  en-US    */  U"z",                         U"Z",                         NULL,                         NULL,
@@ -1170,7 +1195,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0946,              DEVANAGARI_090E,              DEVANAGARI_0946,              NULL,
     /*  mr-IN    */  DEVANAGARI_0946,              DEVANAGARI_090E,              DEVANAGARI_0946,              NULL,
     /*  ne-NP    */  DEVANAGARI_0946,              DEVANAGARI_090E,              DEVANAGARI_0946,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_YA,               CYRILLIC_YA,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_YA,               CYRILLIC_YA,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_QAF,                   NULL,                         ARABIC_QAF,                   NULL
     },
     {/* KC_1: */
     /*  en-US    */  U"1",                         U"!",                         U"1",                         NULL,
@@ -1212,7 +1238,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0967,              DEVANAGARI_090D,              DEVANAGARI_0967,              NULL,
     /*  mr-IN    */  DEVANAGARI_0967,              DEVANAGARI_090D,              DEVANAGARI_0967,              NULL,
     /*  ne-NP    */  DEVANAGARI_0967,              DEVANAGARI_090D,              DEVANAGARI_0967,              NULL,
-    /*  mn-MN    */  U"1",                         NUMERO_SIGN,                  U"1",                         NULL
+    /*  mn-MN    */  U"1",                         NUMERO_SIGN,                  U"1",                         NULL,
+    /*  ur-PK    */  U"1",                         U"!",                         U"1",                         NULL
     },
     {/* KC_2: */
     /*  en-US    */  U"2",                         U"@",                         U"2",                         NULL,
@@ -1254,7 +1281,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0968,              DEVANAGARI_0945,              DEVANAGARI_0968,              NULL,
     /*  mr-IN    */  DEVANAGARI_0968,              DEVANAGARI_0945,              DEVANAGARI_0968,              NULL,
     /*  ne-NP    */  DEVANAGARI_0968,              DEVANAGARI_0945,              DEVANAGARI_0968,              NULL,
-    /*  mn-MN    */  U"2",                         U"-",                         U"2",                         NULL
+    /*  mn-MN    */  U"2",                         U"-",                         U"2",                         NULL,
+    /*  ur-PK    */  U"2",                         U"@",                         U"2",                         NULL
     },
     {/* KC_3: */
     /*  en-US    */  U"3",                         U"#",                         U"3",                         NULL,
@@ -1296,7 +1324,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0969,              U"#",                         DEVANAGARI_0969,              NULL,
     /*  mr-IN    */  DEVANAGARI_0969,              U"#",                         DEVANAGARI_0969,              NULL,
     /*  ne-NP    */  DEVANAGARI_0969,              U"#",                         DEVANAGARI_0969,              NULL,
-    /*  mn-MN    */  U"3",                         QUOTE,                        U"3",                         NULL
+    /*  mn-MN    */  U"3",                         QUOTE,                        U"3",                         NULL,
+    /*  ur-PK    */  U"3",                         U"#",                         U"3",                         NULL
     },
     {/* KC_4: */
     /*  en-US    */  U"4",                         U"$",                         U"4",                         NULL,
@@ -1338,7 +1367,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_096A,              U"$",                         DEVANAGARI_096A,              NULL,
     /*  mr-IN    */  DEVANAGARI_096A,              U"$",                         DEVANAGARI_096A,              NULL,
     /*  ne-NP    */  DEVANAGARI_096A,              U"$",                         DEVANAGARI_096A,              NULL,
-    /*  mn-MN    */  U"4",                         NULL,                         U"4",                         NULL
+    /*  mn-MN    */  U"4",                         NULL,                         U"4",                         NULL,
+    /*  ur-PK    */  U"4",                         U"$",                         U"4",                         NULL
     },
     {/* KC_5: */
     /*  en-US    */  U"5",                         U"%",                         U"5",                         NULL,
@@ -1380,7 +1410,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_096B,              U"%",                         DEVANAGARI_096B,              NULL,
     /*  mr-IN    */  DEVANAGARI_096B,              U"%",                         DEVANAGARI_096B,              NULL,
     /*  ne-NP    */  DEVANAGARI_096B,              U"%",                         DEVANAGARI_096B,              NULL,
-    /*  mn-MN    */  U"5",                         U":",                         U"5",                         NULL
+    /*  mn-MN    */  U"5",                         U":",                         U"5",                         NULL,
+    /*  ur-PK    */  U"5",                         NULL,                         U"5",                         NULL
     },
     {/* KC_6: */
     /*  en-US    */  U"6",                         U"^",                         U"6",                         NULL,
@@ -1422,7 +1453,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_096C,              U"^",                         DEVANAGARI_096C,              NULL,
     /*  mr-IN    */  DEVANAGARI_096C,              U"^",                         DEVANAGARI_096C,              NULL,
     /*  ne-NP    */  DEVANAGARI_096C,              U"^",                         DEVANAGARI_096C,              NULL,
-    /*  mn-MN    */  U"6",                         U".",                         U"6",                         NULL
+    /*  mn-MN    */  U"6",                         U".",                         U"6",                         NULL,
+    /*  ur-PK    */  U"6",                         U"^",                         U"6",                         NULL
     },
     {/* KC_7: */
     /*  en-US    */  U"7",                         U"&",                         U"7",                         NULL,
@@ -1464,7 +1496,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_096D,              U"&",                         DEVANAGARI_096D,              NULL,
     /*  mr-IN    */  DEVANAGARI_096D,              U"&",                         DEVANAGARI_096D,              NULL,
     /*  ne-NP    */  DEVANAGARI_096D,              U"&",                         DEVANAGARI_096D,              NULL,
-    /*  mn-MN    */  U"7",                         U"_",                         U"7",                         NULL
+    /*  mn-MN    */  U"7",                         U"_",                         U"7",                         NULL,
+    /*  ur-PK    */  U"7",                         NULL,                         U"7",                         NULL
     },
     {/* KC_8: */
     /*  en-US    */  U"8",                         U"*",                         U"8",                         NULL,
@@ -1506,7 +1539,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_096E,              U"*",                         DEVANAGARI_096E,              NULL,
     /*  mr-IN    */  DEVANAGARI_096E,              U"*",                         DEVANAGARI_096E,              NULL,
     /*  ne-NP    */  DEVANAGARI_096E,              U"*",                         DEVANAGARI_096E,              NULL,
-    /*  mn-MN    */  U"8",                         U",",                         U"8",                         NULL
+    /*  mn-MN    */  U"8",                         U",",                         U"8",                         NULL,
+    /*  ur-PK    */  U"8",                         NULL,                         U"8",                         NULL
     },
     {/* KC_9: */
     /*  en-US    */  U"9",                         U"(",                         U"9",                         NULL,
@@ -1548,7 +1582,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_096F,              U"(",                         DEVANAGARI_096F,              NULL,
     /*  mr-IN    */  DEVANAGARI_096F,              U"(",                         DEVANAGARI_096F,              NULL,
     /*  ne-NP    */  DEVANAGARI_096F,              U"(",                         DEVANAGARI_096F,              NULL,
-    /*  mn-MN    */  U"9",                         U"%",                         U"9",                         NULL
+    /*  mn-MN    */  U"9",                         U"%",                         U"9",                         NULL,
+    /*  ur-PK    */  U"9",                         U")",                         U"9",                         NULL
     },
     {/* KC_0: */
     /*  en-US    */  ZERO,                         U")",                         ZERO,                         NULL,
@@ -1590,7 +1625,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0966,              U")",                         DEVANAGARI_0966,              NULL,
     /*  mr-IN    */  DEVANAGARI_0966,              U")",                         DEVANAGARI_0966,              NULL,
     /*  ne-NP    */  DEVANAGARI_0966,              U")",                         DEVANAGARI_0966,              NULL,
-    /*  mn-MN    */  ZERO,                         U"?",                         ZERO,                         NULL
+    /*  mn-MN    */  ZERO,                         U"?",                         ZERO,                         NULL,
+    /*  ur-PK    */  ZERO,                         U"(",                         ZERO,                         NULL
     },
     {/* KC_ENTER: */
     /*  en-US    */  ARROWS_RETURN,                NULL,                         NULL,                         NULL,
@@ -1632,7 +1668,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  mr-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ne-NP    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ur-PK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_ESCAPE: */
     /*  en-US    */  U"Esc",                       NULL,                         NULL,                         NULL,
@@ -1674,7 +1711,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  mr-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ne-NP    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ur-PK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_BACKSPACE: */
     /*  en-US    */  TECHNICAL_ERASELEFT,          NULL,                         NULL,                         NULL,
@@ -1716,7 +1754,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  mr-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ne-NP    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ur-PK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_TAB: */
     /*  en-US    */  ARROWS_TAB,                   NULL,                         NULL,                         NULL,
@@ -1758,7 +1797,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  mr-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ne-NP    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ur-PK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_SPACE: */
     /*  en-US    */  ICON_SPACE,                   NULL,                         NULL,                         NULL,
@@ -1800,7 +1840,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  mr-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ne-NP    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ur-PK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_MINUS: */
     /*  en-US    */  U"-",                         U"_",                         U"-",                         NULL,
@@ -1842,7 +1883,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  U"-",                         DEVANAGARI_0903,              U"-",                         NULL,
     /*  mr-IN    */  U"-",                         DEVANAGARI_0903,              U"-",                         NULL,
     /*  ne-NP    */  U"-",                         DEVANAGARI_0903,              U"-",                         NULL,
-    /*  mn-MN    */  CYRILLIC_SM_IE,               CYRILLIC_IE,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_IE,               CYRILLIC_IE,                  NULL,                         NULL,
+    /*  ur-PK    */  U"-",                         U"_",                         U"-",                         NULL
     },
     {/* KC_EQUAL: */
     /*  en-US    */  EQUALS,                       U"+",                         EQUALS,                       NULL,
@@ -1884,7 +1926,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0943,              DEVANAGARI_090B,              DEVANAGARI_0943,              NULL,
     /*  mr-IN    */  DEVANAGARI_0943,              DEVANAGARI_090B,              DEVANAGARI_0943,              NULL,
     /*  ne-NP    */  DEVANAGARI_0943,              DEVANAGARI_090B,              DEVANAGARI_0943,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_SHCHA,            CYRILLIC_SHCHA,               NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_SHCHA,            CYRILLIC_SHCHA,               NULL,                         NULL,
+    /*  ur-PK    */  U"=",                         U"+",                         U"=",                         NULL
     },
     {/* KC_LBRC: */
     /*  en-US    */  U"[",                         U"{",                         U"[",                         NULL,
@@ -1926,7 +1969,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_0921,              DEVANAGARI_0922,              DEVANAGARI_0921,              NULL,
     /*  mr-IN    */  DEVANAGARI_0921,              DEVANAGARI_0922,              DEVANAGARI_0921,              NULL,
     /*  ne-NP    */  DEVANAGARI_0921,              DEVANAGARI_0922,              DEVANAGARI_0921,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_KA,               CYRILLIC_KA,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_KA,               CYRILLIC_KA,                  NULL,                         NULL,
+    /*  ur-PK    */  U"]",                         U"}",                         U"]",                         NULL
     },
     {/* KC_RBRC: */
     /*  en-US    */  U"]",                         U"}",                         U"]",                         NULL,
@@ -1968,7 +2012,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_093C,              DEVANAGARI_091E,              DEVANAGARI_093C,              NULL,
     /*  mr-IN    */  DEVANAGARI_093C,              DEVANAGARI_091E,              DEVANAGARI_093C,              NULL,
     /*  ne-NP    */  DEVANAGARI_093C,              DEVANAGARI_091E,              DEVANAGARI_093C,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_HARD_SIGN,        CYRILLIC_HARD_SIGN,           NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_HARD_SIGN,        CYRILLIC_HARD_SIGN,           NULL,                         NULL,
+    /*  ur-PK    */  U"[",                         U"{",                         U"[",                         NULL
     },
     {/* KC_BACKSLASH: */
     /*  en-US    */  BACKSLASH,                    U"|",                         BACKSLASH,                    NULL,
@@ -2010,7 +2055,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  mr-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ne-NP    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mn-MN    */  U"!",                         U"|",                         U"!",                         NULL
+    /*  mn-MN    */  U"!",                         U"|",                         U"!",                         NULL,
+    /*  ur-PK    */  BACKSLASH,                    U"|",                         BACKSLASH,                    NULL
     },
     {/* KC_NONUS_HASH: */
     /*  en-US    */  U"#",                         U"~",                         U"#",                         NULL,
@@ -2052,7 +2098,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  mr-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ne-NP    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  mn-MN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ur-PK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_SEMICOLON: */
     /*  en-US    */  U";",                         U":",                         U";",                         NULL,
@@ -2094,7 +2141,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_091A,              DEVANAGARI_091B,              DEVANAGARI_091A,              NULL,
     /*  mr-IN    */  DEVANAGARI_091A,              DEVANAGARI_091B,              DEVANAGARI_091A,              NULL,
     /*  ne-NP    */  DEVANAGARI_091A,              DEVANAGARI_091B,              DEVANAGARI_091A,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_DE,               CYRILLIC_DE,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_DE,               CYRILLIC_DE,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_SEMICOLON,             U":",                         ARABIC_SEMICOLON,             NULL
     },
     {/* KC_QUOTE: */
     /*  en-US    */  U"'",                         QUOTE,                        U"'",                         NULL,
@@ -2136,7 +2184,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_091F,              DEVANAGARI_0920,              DEVANAGARI_091F,              NULL,
     /*  mr-IN    */  DEVANAGARI_091F,              DEVANAGARI_0920,              DEVANAGARI_091F,              NULL,
     /*  ne-NP    */  DEVANAGARI_091F,              DEVANAGARI_0920,              DEVANAGARI_091F,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_PE,               CYRILLIC_PE,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_PE,               CYRILLIC_PE,                  NULL,                         NULL,
+    /*  ur-PK    */  U"'",                         QUOTE,                        U"'",                         NULL
     },
     {/* KC_GRAVE: */
     /*  en-US    */  GRAVE_ACCENT,                 U"~",                         GRAVE_ACCENT,                 NULL,
@@ -2178,7 +2227,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_094A,              DEVANAGARI_0912,              DEVANAGARI_094A,              NULL,
     /*  mr-IN    */  DEVANAGARI_094A,              DEVANAGARI_0912,              DEVANAGARI_094A,              NULL,
     /*  ne-NP    */  DEVANAGARI_094A,              DEVANAGARI_0912,              DEVANAGARI_094A,              NULL,
-    /*  mn-MN    */  U"=",                         U"+",                         U"=",                         NULL
+    /*  mn-MN    */  U"=",                         U"+",                         U"=",                         NULL,
+    /*  ur-PK    */  U"`",                         U"~",                         U"`",                         NULL
     },
     {/* KC_COMMA: */
     /*  en-US    */  COMMA,                        U"<",                         COMMA,                        NULL,
@@ -2220,7 +2270,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  U",",                         DEVANAGARI_0937,              U",",                         NULL,
     /*  mr-IN    */  U",",                         DEVANAGARI_0937,              U",",                         NULL,
     /*  ne-NP    */  U",",                         DEVANAGARI_0937,              U",",                         NULL,
-    /*  mn-MN    */  CYRILLIC_SM_SOFT_SIGN,        CYRILLIC_SOFT_SIGN,           NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_SOFT_SIGN,        CYRILLIC_SOFT_SIGN,           NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_COMMA,                 U">",                         ARABIC_COMMA,                 NULL
     },
     {/* KC_DOT: */
     /*  en-US    */  U".",                         U">",                         U".",                         NULL,
@@ -2262,7 +2313,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  U".",                         DEVANAGARI_0964,              U".",                         NULL,
     /*  mr-IN    */  U".",                         DEVANAGARI_0964,              U".",                         NULL,
     /*  ne-NP    */  U".",                         DEVANAGARI_0964,              U".",                         NULL,
-    /*  mn-MN    */  CYRILLIC_SM_VE,               CYRILLIC_VE,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_VE,               CYRILLIC_VE,                  NULL,                         NULL,
+    /*  ur-PK    */  ARABIC_FULL_STOP,             U"<",                         ARABIC_FULL_STOP,             NULL
     },
     {/* KC_SLASH: */
     /*  en-US    */  U"/",                         U"?",                         U"/",                         NULL,
@@ -2304,7 +2356,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  DEVANAGARI_092F,              DEVANAGARI_095F,              DEVANAGARI_092F,              NULL,
     /*  mr-IN    */  DEVANAGARI_092F,              DEVANAGARI_095F,              DEVANAGARI_092F,              NULL,
     /*  ne-NP    */  DEVANAGARI_092F,              DEVANAGARI_095F,              DEVANAGARI_092F,              NULL,
-    /*  mn-MN    */  CYRILLIC_SM_YU,               CYRILLIC_YU,                  NULL,                         NULL
+    /*  mn-MN    */  CYRILLIC_SM_YU,               CYRILLIC_YU,                  NULL,                         NULL,
+    /*  ur-PK    */  U"/",                         ARABIC_QMARK,                 U"/",                         NULL
     },
     {/* KC_NONUS_BACKSLASH: */
     /*  en-US    */  U"<",                         U">",                         U"<",                         NULL,
@@ -2346,7 +2399,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  hi-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  mr-IN    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ne-NP    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  mn-MN    */  U"(",                         U")",                         U"(",                         NULL
+    /*  mn-MN    */  U"(",                         U")",                         U"(",                         NULL,
+    /*  ur-PK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     //[[[end]]]
 };
@@ -2436,7 +2490,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  hi-IN*/  0,40,0,52,
 		/*  mr-IN*/  0,40,0,52,
 		/*  ne-NP*/  0,40,0,52,
-		/*  mn-MN*/  0,-128,0,50
+		/*  mn-MN*/  0,-128,0,50,
+		/*  ur-PK*/  0,42,0,52
 	},
 	// {letter.voffset}
 	{
@@ -2479,7 +2534,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  hi-IN*/  0,0,0,13,
 		/*  mr-IN*/  0,0,0,13,
 		/*  ne-NP*/  0,0,0,13,
-		/*  mn-MN*/  0,-128,0,13
+		/*  mn-MN*/  0,-128,0,13,
+		/*  ur-PK*/  0,0,0,13
 	},
 	// {num.hoffset}
 	{
@@ -2522,7 +2578,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  hi-IN*/  0,28,0,52,
 		/*  mr-IN*/  0,28,0,52,
 		/*  ne-NP*/  0,28,0,52,
-		/*  mn-MN*/  0,30,0,50
+		/*  mn-MN*/  0,30,0,50,
+		/*  ur-PK*/  0,27,0,52
 	},
 	// {num.voffset}
 	{
@@ -2565,7 +2622,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  hi-IN*/  0,0,0,13,
 		/*  mr-IN*/  0,0,0,13,
 		/*  ne-NP*/  0,0,0,13,
-		/*  mn-MN*/  0,0,0,13
+		/*  mn-MN*/  0,0,0,13,
+		/*  ur-PK*/  0,0,0,13
 	},
 	// {sym.hoffset}
 	{
@@ -2608,7 +2666,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  hi-IN*/  0,40,0,52,
 		/*  mr-IN*/  0,40,0,52,
 		/*  ne-NP*/  0,40,0,52,
-		/*  mn-MN*/  0,30,0,50
+		/*  mn-MN*/  0,30,0,50,
+		/*  ur-PK*/  0,42,0,52
 	},
 	// {sym.voffset}
 	{
@@ -2651,7 +2710,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  hi-IN*/  0,0,0,13,
 		/*  mr-IN*/  0,0,0,13,
 		/*  ne-NP*/  0,0,0,13,
-		/*  mn-MN*/  0,0,0,13
+		/*  mn-MN*/  0,0,0,13,
+		/*  ur-PK*/  0,0,0,13
 	}
 //[[[end]]]
 };
@@ -2885,6 +2945,7 @@ static uint32_t lang_uint32 [] = {
     LANGSTR_TO_UI32("mrIN"),
     LANGSTR_TO_UI32("neNP"),
     LANGSTR_TO_UI32("mnMN"),
+    LANGSTR_TO_UI32("urPK"),
     //[[[end]]]
 };
 

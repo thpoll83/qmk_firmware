@@ -189,6 +189,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     case LANG_MRIN: memcpy(data, "P\x07.mrIN", 7); break;
                     case LANG_NENP: memcpy(data, "P\x07.neNP", 7); break;
                     case LANG_MNMN: memcpy(data, "P\x07.mnMN", 7); break;
+                    case LANG_URPK: memcpy(data, "P\x07.urPK", 7); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -216,7 +217,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.bgBGplPLroROzhCNnlNLheILsvSEfiFInnNOdaDKhuHUcsCZhrHRskSKltLT", 63);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.lvLVetEEptBRsrRSmkMKfaIRhiINmrINneNPmnMN", 43);
+                memcpy(data, "P\x08.lvLVetEEptBRsrRSmkMKfaIRhiINmrINneNPmnMNurPK", 47);
                 //[[[end]]]
                 raw_hid_send(data, length);
                 break;

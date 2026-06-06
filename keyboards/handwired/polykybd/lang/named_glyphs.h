@@ -1095,4 +1095,8 @@
 #define DEVANAGARI_096E             	U"\x96E"
 #define DEVANAGARI_096F             	U"\x96F"
 #define DEVANAGARI_0972             	U"\x972"
+#define ARABIC_HEH_GOAL_HAMZA       	U"\x6C2"
+#define ARABIC_TEH_MARBUTA_GOAL     	U"\x6C3"
+#define ARABIC_YEH_BARREE_HAMZA     	U"\x6D3"
+#define ARABIC_FULL_STOP            	U"\x6D4"
 //[[[end]]]

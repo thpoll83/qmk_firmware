@@ -17,6 +17,7 @@ sources:
   noto-sans-jp:        fonts/noto-sans-jp/NotoSansJP-Regular.ttf
   noto-serif-kr:       fonts/noto-serif-kr/NotoSerifKR-Medium.otf
   noto-sans-arabic:    fonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf
+  noto-sans-devanagari: fonts/noto-sans-devanagari/NotoSansDevanagari-Regular.ttf
   noto-emoji:          fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf
   noto-sans-symbols:   fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
   noto-sans-symbols2:  fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
@@ -51,6 +52,9 @@ categories:
   arabic:
     output: arabic_fonts.h
     defaults: {source: noto-sans-arabic, size: 16, render_height: 40}
+  devanagari:
+    output: devanagari_fonts.h
+    defaults: {source: noto-sans-devanagari, size: 16, render_height: 40}
   symbols:
     output: symbol_fonts.h
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
@@ -150,6 +154,9 @@ fonts:
   - {category: emoji, variant: _Emojis1_, bits: 32, ranges: [[0x1f440, 0x1f453], [0x1f47b, 0x1f496], [0x1f4a1, 0x1f4b1]]}
   - {category: arabic, variant: _FormsB_, ranges: [[0xfef5, 0xfef5], [0xfefb, 0xfefb]]}
   - {category: arabic, variant: _Isolated_, ranges: [[0x60c, 0x60c], [0x61b, 0x61b], [0x61f, 0x669]]}
+  - {category: arabic, variant: _PerArab_, ranges: [[0x679, 0x679], [0x67e, 0x67e], [0x686, 0x686], [0x688, 0x688], [0x691, 0x691], [0x698, 0x698], [0x6a9, 0x6a9], [0x6af, 0x6af], [0x6ba, 0x6ba], [0x6be, 0x6be], [0x6c1, 0x6c3], [0x6cc, 0x6cc], [0x6d2, 0x6d4], [0x6f0, 0x6f9]], note: 'Perso-Arabic letters for Persian/Urdu + Extended Arabic-Indic digits (06F0-06F9).'}
+  - {category: devanagari, variant: _Deva_, ranges: [[0x900, 0x97f]], note: 'Devanagari block for Hindi/Marathi/Nepali InScript (consonants, vowel signs/matras, independent vowels, virama, anusvara, digits).'}
+  - {category: devanagari, variant: _DevaMatra_, extra_args: ['-F0xE100', '-C'], sequence: '25CC 0901, 25CC 0902, 25CC 0903, 25CC 093C, 25CC 093E, 25CC 093F, 25CC 0940, 25CC 0941, 25CC 0942, 25CC 0943, 25CC 0944, 25CC 0945, 25CC 0946, 25CC 0947, 25CC 0948, 25CC 0949, 25CC 094A, 25CC 094B, 25CC 094C, 25CC 094D', note: 'Devanagari combining marks (matras / anusvara / candrabindu / visarga / nukta / virama) each composited ONTO a dotted circle U+25CC via HarfBuzz GPOS (fontconvert -C), one glyph per mark at PUA 0xE100.. in Unicode block order (0xE100=U+0901 … 0xE113=U+094D). Bare combining marks render invisibly/ambiguously with no base; the dotted-circle form is how InScript keycaps and the Unicode charts show isolated matras. Addressed via the DEVA_DC_* named glyphs by hi-IN/mr-IN/ne-NP. Keep this sequence order in sync with the DEVA_DC_* rows in lang/lang_lut.xlsx (named_glyphs).'}
   - {category: jp, variant: _Hiragana_, ranges: [[0x3041, 0x3096], [0x3099, 0x309f]]}
   - {category: jp, variant: _Punct2_, ranges: [[0x30fb, 0x30fc]]}
   - {category: jp, variant: _Punct_, ranges: [[0x3001, 0x3002], [0x3008, 0x3011]]}

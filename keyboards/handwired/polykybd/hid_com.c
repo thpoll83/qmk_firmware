@@ -176,6 +176,20 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     case LANG_DADK: memcpy(data, "P\x07.daDK", 7); break;
                     case LANG_HUHU: memcpy(data, "P\x07.huHU", 7); break;
                     case LANG_CSCZ: memcpy(data, "P\x07.csCZ", 7); break;
+                    case LANG_HRHR: memcpy(data, "P\x07.hrHR", 7); break;
+                    case LANG_SKSK: memcpy(data, "P\x07.skSK", 7); break;
+                    case LANG_LTLT: memcpy(data, "P\x07.ltLT", 7); break;
+                    case LANG_LVLV: memcpy(data, "P\x07.lvLV", 7); break;
+                    case LANG_ETEE: memcpy(data, "P\x07.etEE", 7); break;
+                    case LANG_PTBR: memcpy(data, "P\x07.ptBR", 7); break;
+                    case LANG_SRRS: memcpy(data, "P\x07.srRS", 7); break;
+                    case LANG_MKMK: memcpy(data, "P\x07.mkMK", 7); break;
+                    case LANG_FAIR: memcpy(data, "P\x07.faIR", 7); break;
+                    case LANG_HIIN: memcpy(data, "P\x07.hiIN", 7); break;
+                    case LANG_MRIN: memcpy(data, "P\x07.mrIN", 7); break;
+                    case LANG_NENP: memcpy(data, "P\x07.neNP", 7); break;
+                    case LANG_MNMN: memcpy(data, "P\x07.mnMN", 7); break;
+                    case LANG_URPK: memcpy(data, "P\x07.urPK", 7); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -200,7 +214,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.enUSdeDEfrFResESptPTitITtrTRkoKRjaJParSAelGRukUAruRUbeBYkkKZ", 63);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.bgBGplPLroROzhCNnlNLheILsvSEfiFInnNOdaDKhuHUcsCZ", 51);
+                memcpy(data, "P\x08.bgBGplPLroROzhCNnlNLheILsvSEfiFInnNOdaDKhuHUcsCZhrHRskSKltLT", 63);
+                raw_hid_send(data, length);
+                memset(data, 0, length);
+                memcpy(data, "P\x08.lvLVetEEptBRsrRSmkMKfaIRhiINmrINneNPmnMNurPK", 47);
                 //[[[end]]]
                 raw_hid_send(data, length);
                 break;

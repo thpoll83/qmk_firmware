@@ -631,37 +631,39 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     //Language Selection Layer
     [_LL] = LAYOUT_left_right_stacked(
         /*[[[cog
-        slang = sorted(languages)
+        # Sort country-first then language so same-country variants (e.g. hi-IN, mr-IN) stay adjacent.
+        slang = sorted(languages, key=lambda c: (c[2:], c[:2]))
+        # 6 language slots per row x 8 rows = 48 capacity (uses the formerly-blank col2/col6 keys).
         lines = []
         for lidx in range(0, 8):
             line = ""
-            for idx in range(0, 5):
-                if (lidx*5+idx)>=len(slang):
+            for idx in range(0, 6):
+                if (lidx*6+idx)>=len(slang):
                     line = f"{line}KC_NO,\t\t"
                 else:
-                    line = f'{line}KCL_{slang[(lidx*5+idx)].upper()},\t'
+                    line = f'{line}KCL_{slang[(lidx*6+idx)].upper()},\t'
             lines.append(line)
-        cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[0]}");
-        cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[1]}");
-        cog.outl(f"QK_UNICODE_MODE_WINCOMPOSE,\t\tKC_NO,\t\t{lines[2]}\tMS_BTN1,");
-        cog.outl(f"QK_UNICODE_MODE_EMACS,\t\t\tKC_NO,\t\t{lines[3]}\tKC_NO,");
+        cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[0]}");
+        cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[1]}");
+        cog.outl(f"QK_UNICODE_MODE_WINCOMPOSE,\t\t{lines[2]}\tMS_BTN1,");
+        cog.outl(f"QK_UNICODE_MODE_EMACS,\t\t\t{lines[3]}\tKC_NO,");
         cog.outl("KC_BASE,\t\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\t\tKC_NO,");
         cog.outl("")
-        cog.outl(f"\t\t\t\t\t{lines[4]}KC_NO,\t\tQK_UNICODE_MODE_MACOS,");
-        cog.outl(f"\t\t\t\t\t{lines[5]}KC_NO,\t\tQK_UNICODE_MODE_LINUX,");
-        cog.outl(f"_______,\t\t\t{lines[6]}KC_NO,\t\tQK_UNICODE_MODE_WINDOWS,");
-        cog.outl(f"KC_NO,\t\t\t\t{lines[7]}KC_NO,\t\tQK_UNICODE_MODE_BSD,");
+        cog.outl(f"\t\t\t\t\t{lines[4]}QK_UNICODE_MODE_MACOS,");
+        cog.outl(f"\t\t\t\t\t{lines[5]}QK_UNICODE_MODE_LINUX,");
+        cog.outl(f"_______,\t\t\t{lines[6]}QK_UNICODE_MODE_WINDOWS,");
+        cog.outl(f"KC_NO,\t\t\t\t{lines[7]}QK_UNICODE_MODE_BSD,");
         cog.outl("KC_NO,\t\t\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\tKC_BASE");
         ]]]*/
-        KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,
-        KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_FIFI,
-        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FRFR,	KCL_HEIL,	KCL_HUHU,	KCL_ITIT,	KCL_JAJP,		MS_BTN1,
-        QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_KKKZ,	KCL_KOKR,	KCL_NLNL,	KCL_NNNO,	KCL_PLPL,		KC_NO,
+        KC_NO,							KCL_BGBG,	KCL_PTBR,	KCL_BEBY,	KCL_ZHCN,	KCL_CSCZ,	KCL_DEDE,	
+        KC_NO,							KCL_DADK,	KCL_ETEE,	KCL_ESES,	KCL_FIFI,	KCL_FRFR,	KCL_ELGR,	
+        QK_UNICODE_MODE_WINCOMPOSE,		KCL_HRHR,	KCL_HUHU,	KCL_HEIL,	KCL_HIIN,	KCL_MRIN,	KCL_FAIR,		MS_BTN1,
+        QK_UNICODE_MODE_EMACS,			KCL_ITIT,	KCL_JAJP,	KCL_KOKR,	KCL_KKKZ,	KCL_LTLT,	KCL_LVLV,		KC_NO,
         KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
 
-        					KCL_PTPT,	KCL_RORO,	KCL_RURU,	KCL_SVSE,	KCL_TRTR,	KC_NO,		QK_UNICODE_MODE_MACOS,
-        					KCL_UKUA,	KCL_ZHCN,	KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_LINUX,
-        _______,			KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_WINDOWS,
+        					KCL_MKMK,	KCL_MNMN,	KCL_NLNL,	KCL_NNNO,	KCL_NENP,	KCL_URPK,	QK_UNICODE_MODE_MACOS,
+        					KCL_PLPL,	KCL_PTPT,	KCL_RORO,	KCL_SRRS,	KCL_RURU,	KCL_ARSA,	QK_UNICODE_MODE_LINUX,
+        _______,			KCL_SVSE,	KCL_SKSK,	KCL_TRTR,	KCL_UKUA,	KCL_ENUS,	KC_NO,		QK_UNICODE_MODE_WINDOWS,
         KC_NO,				KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
         KC_NO,				KC_NO,		KC_NO,					KC_NO,		KC_NO,		KC_NO,		KC_BASE
         //[[[end]]]
@@ -847,6 +849,20 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_DADK: return U"da-DK";
         case KCL_HUHU: return U"hu-HU";
         case KCL_CSCZ: return U"cs-CZ";
+        case KCL_HRHR: return U"hr-HR";
+        case KCL_SKSK: return U"sk-SK";
+        case KCL_LTLT: return U"lt-LT";
+        case KCL_LVLV: return U"lv-LV";
+        case KCL_ETEE: return U"et-EE";
+        case KCL_PTBR: return U"pt-BR";
+        case KCL_SRRS: return U"sr-RS";
+        case KCL_MKMK: return U"mk-MK";
+        case KCL_FAIR: return U"fa-IR";
+        case KCL_HIIN: return U"hi-IN";
+        case KCL_MRIN: return U"mr-IN";
+        case KCL_NENP: return U"ne-NP";
+        case KCL_MNMN: return U"mn-MN";
+        case KCL_URPK: return U"ur-PK";
         //[[[end]]]
         default:
             return NULL;
@@ -933,27 +949,54 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 h_set = SETTING_SYM_HOFFSET;
             }
         }
-        int8_t v_off = get_setting(v_set, local_state->lang, VAR_SMALL);
-        int8_t h_off = get_setting(h_set, local_state->lang, VAR_SMALL);
+        int8_t v_small = get_setting(v_set, local_state->lang, VAR_SMALL);
+        int8_t h_small = get_setting(h_set, local_state->lang, VAR_SMALL);
+        int8_t base_x = 28+h_small;
+        int8_t base_v = v_small;
 
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
-
-        //preview capital letter?
+        // Resolve the shift preview BEFORE drawing, so a wide base + wide preview
+        // (e.g. the Arabic SAD/DAD key — both ~39 px) can be laid out as a pair:
+        // the preview is placed clear of the base and clamped on screen; if it then
+        // still has to overlap (two such glyphs cannot both fit a 72 px window) the
+        // flat base is lifted and the preview dropped so the two read diagonally
+        // instead of as one connected glyph.  Only this unshifted preview view is
+        // affected — when shift is held there is no preview and the active glyph
+        // keeps the normal VAR_SMALL baseline, so tall letters / high marks never
+        // clip.  All of this is generic and glyph-width driven (no per-language code).
+        const uint32_t* shift_letter = NULL;
+        int8_t preview_x = 0, preview_v = 0;
         if(!shift && !state.caps_lock) {
-            v_off = get_setting(v_set, local_state->lang, VAR_SHIFT);
-            h_off = get_setting(h_set, local_state->lang, VAR_SHIFT);
-            if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
-                letter = translate_keycode_only_shift(local_state->lang, keycode);
-                if (letter != NULL) {
-                    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
+            int8_t v_pv = get_setting(v_set, local_state->lang, VAR_SHIFT);
+            int8_t h_pv = get_setting(h_set, local_state->lang, VAR_SHIFT);
+            if(v_pv!=HIDE_KEY && h_pv!=HIDE_KEY) {
+                shift_letter = translate_keycode_only_shift(local_state->lang, keycode);
+                if (shift_letter != NULL) {
+                    int8_t bmin, bmax, pmin, pmax;
+                    kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, letter, &bmin, &bmax);
+                    kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, shift_letter, &pmin, &pmax);
+                    preview_x = 28+h_pv;
+                    if (preview_x + pmin < base_x + bmax + 2)             // keep clear of the base
+                        preview_x = base_x + bmax + 2 - pmin;
+                    if (preview_x + pmax > BUFFER_X + SCREEN_WIDTH - 1)   // clamp to the right edge
+                        preview_x = (BUFFER_X + SCREEN_WIDTH - 1) - pmax;
+                    preview_v = v_pv;
+                    if (preview_x + pmin <= base_x + bmax) {              // forced to overlap -> stagger
+                        base_v    -= 6;                                   // lift the flat base
+                        preview_v += 4;                                   // drop the preview
+                    }
                 }
             }
         }
+
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, base_x, 23+base_v, letter);
+        if (shift_letter != NULL)
+            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, preview_x, 23+preview_v, shift_letter);
+
         //preview alt representation
         letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
-            v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
-            h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
+            int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
+            int8_t h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
                 kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
             }
@@ -1141,7 +1184,7 @@ void update_displays(enum refresh_mode mode) {
                     kdisp_enable(true);
                     kdisp_set_contrast(local_state->contrast-1);
                     if(keycode!=KC_TRNS) {
-                        if (keycode >= KCL_ENUS && keycode <= KCL_CSCZ) {
+                        if (keycode >= KCL_ENUS && keycode < KCL_ENUS + NUM_LANG) {
                             // Language layer: country flag + tiny language code.
                             kdisp_set_buffer(0x00);
                             render_lang_flag_key(keycode, to_static_text(keycode, state), local_state->lang);
@@ -1500,6 +1543,20 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_DADK: local_state->lang = LANG_DADK; save_user_settings(); layer_off(_LL); break;
         case KCL_HUHU: local_state->lang = LANG_HUHU; save_user_settings(); layer_off(_LL); break;
         case KCL_CSCZ: local_state->lang = LANG_CSCZ; save_user_settings(); layer_off(_LL); break;
+        case KCL_HRHR: local_state->lang = LANG_HRHR; save_user_settings(); layer_off(_LL); break;
+        case KCL_SKSK: local_state->lang = LANG_SKSK; save_user_settings(); layer_off(_LL); break;
+        case KCL_LTLT: local_state->lang = LANG_LTLT; save_user_settings(); layer_off(_LL); break;
+        case KCL_LVLV: local_state->lang = LANG_LVLV; save_user_settings(); layer_off(_LL); break;
+        case KCL_ETEE: local_state->lang = LANG_ETEE; save_user_settings(); layer_off(_LL); break;
+        case KCL_PTBR: local_state->lang = LANG_PTBR; save_user_settings(); layer_off(_LL); break;
+        case KCL_SRRS: local_state->lang = LANG_SRRS; save_user_settings(); layer_off(_LL); break;
+        case KCL_MKMK: local_state->lang = LANG_MKMK; save_user_settings(); layer_off(_LL); break;
+        case KCL_FAIR: local_state->lang = LANG_FAIR; save_user_settings(); layer_off(_LL); break;
+        case KCL_HIIN: local_state->lang = LANG_HIIN; save_user_settings(); layer_off(_LL); break;
+        case KCL_MRIN: local_state->lang = LANG_MRIN; save_user_settings(); layer_off(_LL); break;
+        case KCL_NENP: local_state->lang = LANG_NENP; save_user_settings(); layer_off(_LL); break;
+        case KCL_MNMN: local_state->lang = LANG_MNMN; save_user_settings(); layer_off(_LL); break;
+        case KCL_URPK: local_state->lang = LANG_URPK; save_user_settings(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:

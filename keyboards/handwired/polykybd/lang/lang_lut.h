@@ -57,6 +57,20 @@ enum lang_layer {
     LANG_DADK,
     LANG_HUHU,
     LANG_CSCZ,
+    LANG_HRHR,
+    LANG_SKSK,
+    LANG_LTLT,
+    LANG_LVLV,
+    LANG_ETEE,
+    LANG_PTBR,
+    LANG_SRRS,
+    LANG_MKMK,
+    LANG_FAIR,
+    LANG_HIIN,
+    LANG_MRIN,
+    LANG_NENP,
+    LANG_MNMN,
+    LANG_URPK,
     //[[[end]]]
     NUM_LANG };
 

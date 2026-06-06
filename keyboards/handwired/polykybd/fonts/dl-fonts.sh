@@ -41,6 +41,8 @@ fetch "$BASE/notoserifkr/NotoSerifKR%5Bwght%5D.ttf" \
 
 fetch "$BASE/notosansarabic/NotoSansArabic%5Bwdth%2Cwght%5D.ttf" \
       "noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf"
+fetch "$BASE/notosansdevanagari/NotoSansDevanagari%5Bwdth%2Cwght%5D.ttf" \
+      "noto-sans-devanagari/NotoSansDevanagari-Regular.ttf"
 
 fetch "$BASE/notoemoji/NotoEmoji%5Bwght%5D.ttf" \
       "Noto_Emoji/static/NotoEmoji-Medium.ttf"

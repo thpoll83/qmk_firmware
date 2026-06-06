@@ -303,8 +303,9 @@ void kdisp_write_gfx_vtext(const GFXfont *font, int8_t col_x, const uint32_t *te
 
     const int8_t top_y = (int8_t)((SCREEN_HEIGHT - total) / 2);
     if (selected) {
-        kdisp_fill_rect((int8_t)(min_x - 1), (int8_t)(top_y - 1),
-                        (int8_t)(max_x - min_x + 2), (int8_t)(total + 2));
+        // Full-height bar, 2 px wider than the text on each side.
+        kdisp_fill_rect((int8_t)(min_x - 3), 0,
+                        (int8_t)(max_x - min_x + 6), SCREEN_HEIGHT);
     }
 
     // Second pass: render each glyph rotated, advancing upward from the bottom.

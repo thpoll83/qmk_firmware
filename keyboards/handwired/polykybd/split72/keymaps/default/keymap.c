@@ -1069,21 +1069,24 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // FLAG_CP_BASE + LANG_* (see fonts/gen-lang-fonts.sh); the label uses the tiny
 // NotoSans font.
 #define FLAG_CP_BASE   0xE000u
-#define FLAG_LEFT_X    (BUFFER_X + 3)    // flag left edge
-#define LABEL_COL_X    (BUFFER_X + 63)   // baseline column of the vertical label
+#define FLAG_LEFT_X    (BUFFER_X - 3)    // flag glyph left (content reaches the left edge)
+#define LABEL_COL_X    (BUFFER_X + 64)   // baseline column of the vertical label
 
 static const GFXfont* const lang_flag_fonts[] = { &NotoColorEmoji_Regular_LangFlags_20pt7b };
 
-// Draw one language key: full-height country flag on the left, language code
-// running vertically up the right side (inverted bar when it is the active lang).
+// Draw one language key: oversized country flag on the left (vertically centred
+// and clipped so the flag content fills the keycap height), language code running
+// vertically up the right side (inverted bar when it is the active language).
 static void render_lang_flag_key(uint16_t keycode, const uint32_t* label, uint8_t current_lang) {
     const uint8_t  idx = (uint8_t)(keycode - KCL_ENUS);   // == LANG_* enum value
     const GFXfont* ff  = &NotoColorEmoji_Regular_LangFlags_20pt7b;
 
-    // Flag: left-aligned, full height — subtracting the glyph yOffset lands the
-    // top edge at y = 0 regardless of the glyph's baseline metrics.
+    // Flag: the glyph is taller than the keycap, so centre it vertically — the
+    // empty top/bottom margins clip off and the flag content fills the height.
+    const int8_t fh  = (int8_t)pgm_read_byte(&ff->glyph[idx].height);
     const int8_t fyo = (int8_t)pgm_read_byte(&ff->glyph[idx].yOffset);
-    kdisp_write_gfx_char(lang_flag_fonts, 1, FLAG_LEFT_X, (int8_t)(-fyo),
+    kdisp_write_gfx_char(lang_flag_fonts, 1, FLAG_LEFT_X,
+                         (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
                          FLAG_CP_BASE + idx, false);
 
     // Language code: vertical, up the right side; inverted bar when selected.

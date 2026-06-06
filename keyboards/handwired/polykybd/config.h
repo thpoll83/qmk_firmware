@@ -83,7 +83,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.8.6"
+#define FW_VERSION "0.8.7"
 #define PROTOCOL_VERSION 1
 
 #define FULL_BRIGHT 50

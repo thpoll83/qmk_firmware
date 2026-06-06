@@ -38,7 +38,7 @@ LABEL_OUT="base/fonts/lang_label_font.h"
 FLAG_BASE="0xE000"                            # keep in sync with FLAG_CP_BASE in the keymap
 
 # ISO 3166-1 alpha-2 country code per language, in enum lang_layer order.
-COUNTRIES=(US DE FR ES PT IT TR KR JP SA GR UA RU BY KZ BG PL RO CN NL IL SE FI NO DK HU CZ)
+COUNTRIES=(US DE FR ES PT IT TR KR JP SA GR UA RU BY KZ BG PL RO CN NL IL SE FI NO DK HU CZ HR)
 
 # Regional-indicator codepoint (hex) for an ASCII A-Z letter.
 ri() { printf '%X' "$(( 0x1F1E6 + $(printf '%d' "'$1") - 65 ))"; }

@@ -57,6 +57,7 @@ enum lang_layer {
     LANG_DADK,
     LANG_HUHU,
     LANG_CSCZ,
+    LANG_HRHR,
     //[[[end]]]
     NUM_LANG };
 

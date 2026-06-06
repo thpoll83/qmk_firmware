@@ -100,3 +100,23 @@ want the popular option.
 - Perso-Arabic core (پچژگکی) and Urdu extras (ٹڈڑںہھے) **missing** — add to the
   existing Arabic font range.
 - Devanagari (U+0900–097F): **0 glyphs** → genuine new font (NotoSansDevanagari).
+
+## Regional variants to add as SEPARATE entries (NOT compat folds)
+
+These share a *language* with an existing entry but use a **genuinely different
+physical layout**, so — exactly like `pt-BR` vs `pt-PT` — they need their own
+mapping column + flag, NOT a `forced_country_match.txt` fold:
+
+| Layout | Locale / xkb | Differs from | Why separate |
+|--------|--------------|--------------|--------------|
+| Latin-American Spanish | es-419 / `latam` | es-ES | different symbol & dead-key positions; ~400M speakers |
+| Swiss (German/French) | de-CH / fr-CH / `ch` | de-DE & fr-FR | own QWERTZ; ä ö ü reached via different keys |
+| Belgian | fr-BE / nl-BE / `be` | fr-FR (AZERTY) | Belgian AZERTY differs from French AZERTY |
+| British | en-GB / `gb` | en-US | £ " @ # \ ¬ positions differ |
+| Canadian French | fr-CA / `ca` | fr-FR | CSA / Multilingual-Standard layout, distinct |
+
+All are Latin-script → **no new font/glyphs**, just a new mapping column + flag.
+For contrast, the *folds* that DID happen (identical keymaps, handled host-side in
+`PolyKybdHost/polyhost/res/forced_country_match.txt`): Austrian→`de`,
+Bosnian/Montenegrin/Slovenian→`hr`, and every Arab state→`ar` via the xkb `ara`
+code. Rule of thumb: **identical keymap → fold; different keymap → own entry.**

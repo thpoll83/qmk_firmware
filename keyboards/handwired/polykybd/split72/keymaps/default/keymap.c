@@ -653,16 +653,16 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         cog.outl(f"KC_NO,\t\t\t\t{lines[7]}KC_NO,\t\tQK_UNICODE_MODE_BSD,");
         cog.outl("KC_NO,\t\t\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\tKC_BASE");
         ]]]*/
-        KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,
-        KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_FIFI,
-        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FRFR,	KCL_HEIL,	KCL_HUHU,	KCL_ITIT,	KCL_JAJP,		MS_BTN1,
-        QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_KKKZ,	KCL_KOKR,	KCL_NLNL,	KCL_NNNO,	KCL_PLPL,		KC_NO,
+        KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,	
+        KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_ETEE,	
+        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FAIR,	KCL_FIFI,	KCL_FRFR,	KCL_HEIL,	KCL_HRHR,		MS_BTN1,
+        QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_HUHU,	KCL_ITIT,	KCL_JAJP,	KCL_KKKZ,	KCL_KOKR,		KC_NO,
         KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
 
-        					KCL_PTPT,	KCL_RORO,	KCL_RURU,	KCL_SVSE,	KCL_TRTR,	KC_NO,		QK_UNICODE_MODE_MACOS,
-        					KCL_UKUA,	KCL_ZHCN,	KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_LINUX,
-        _______,			KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_WINDOWS,
-        KC_NO,				KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
+        					KCL_LTLT,	KCL_LVLV,	KCL_MKMK,	KCL_NLNL,	KCL_NNNO,	KC_NO,		QK_UNICODE_MODE_MACOS,
+        					KCL_PLPL,	KCL_PTBR,	KCL_PTPT,	KCL_RORO,	KCL_RURU,	KC_NO,		QK_UNICODE_MODE_LINUX,
+        _______,			KCL_SKSK,	KCL_SRRS,	KCL_SVSE,	KCL_TRTR,	KCL_UKUA,	KC_NO,		QK_UNICODE_MODE_WINDOWS,
+        KC_NO,				KCL_ZHCN,	KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
         KC_NO,				KC_NO,		KC_NO,					KC_NO,		KC_NO,		KC_NO,		KC_BASE
         //[[[end]]]
         ),
@@ -847,6 +847,15 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_DADK: return U"da-DK";
         case KCL_HUHU: return U"hu-HU";
         case KCL_CSCZ: return U"cs-CZ";
+        case KCL_HRHR: return U"hr-HR";
+        case KCL_SKSK: return U"sk-SK";
+        case KCL_LTLT: return U"lt-LT";
+        case KCL_LVLV: return U"lv-LV";
+        case KCL_ETEE: return U"et-EE";
+        case KCL_PTBR: return U"pt-BR";
+        case KCL_SRRS: return U"sr-RS";
+        case KCL_MKMK: return U"mk-MK";
+        case KCL_FAIR: return U"fa-IR";
         //[[[end]]]
         default:
             return NULL;
@@ -1500,6 +1509,15 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_DADK: local_state->lang = LANG_DADK; save_user_settings(); layer_off(_LL); break;
         case KCL_HUHU: local_state->lang = LANG_HUHU; save_user_settings(); layer_off(_LL); break;
         case KCL_CSCZ: local_state->lang = LANG_CSCZ; save_user_settings(); layer_off(_LL); break;
+        case KCL_HRHR: local_state->lang = LANG_HRHR; save_user_settings(); layer_off(_LL); break;
+        case KCL_SKSK: local_state->lang = LANG_SKSK; save_user_settings(); layer_off(_LL); break;
+        case KCL_LTLT: local_state->lang = LANG_LTLT; save_user_settings(); layer_off(_LL); break;
+        case KCL_LVLV: local_state->lang = LANG_LVLV; save_user_settings(); layer_off(_LL); break;
+        case KCL_ETEE: local_state->lang = LANG_ETEE; save_user_settings(); layer_off(_LL); break;
+        case KCL_PTBR: local_state->lang = LANG_PTBR; save_user_settings(); layer_off(_LL); break;
+        case KCL_SRRS: local_state->lang = LANG_SRRS; save_user_settings(); layer_off(_LL); break;
+        case KCL_MKMK: local_state->lang = LANG_MKMK; save_user_settings(); layer_off(_LL); break;
+        case KCL_FAIR: local_state->lang = LANG_FAIR; save_user_settings(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:

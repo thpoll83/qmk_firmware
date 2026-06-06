@@ -71,6 +71,11 @@ enum lang_layer {
     LANG_NENP,
     LANG_MNMN,
     LANG_URPK,
+    LANG_ENGB,
+    LANG_ESMX,
+    LANG_DECH,
+    LANG_FRBE,
+    LANG_FRCA,
     //[[[end]]]
     NUM_LANG };
 

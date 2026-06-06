@@ -655,16 +655,16 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         cog.outl(f"KC_NO,\t\t\t\t{lines[7]}QK_UNICODE_MODE_BSD,");
         cog.outl("KC_NO,\t\t\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\tKC_BASE");
         ]]]*/
-        KC_NO,							KCL_BGBG,	KCL_PTBR,	KCL_BEBY,	KCL_ZHCN,	KCL_CSCZ,	KCL_DEDE,	
-        KC_NO,							KCL_DADK,	KCL_ETEE,	KCL_ESES,	KCL_FIFI,	KCL_FRFR,	KCL_ELGR,	
-        QK_UNICODE_MODE_WINCOMPOSE,		KCL_HRHR,	KCL_HUHU,	KCL_HEIL,	KCL_HIIN,	KCL_MRIN,	KCL_FAIR,		MS_BTN1,
-        QK_UNICODE_MODE_EMACS,			KCL_ITIT,	KCL_JAJP,	KCL_KOKR,	KCL_KKKZ,	KCL_LTLT,	KCL_LVLV,		KC_NO,
+        KC_NO,							KCL_FRBE,	KCL_BGBG,	KCL_PTBR,	KCL_BEBY,	KCL_FRCA,	KCL_DECH,	
+        KC_NO,							KCL_ZHCN,	KCL_CSCZ,	KCL_DEDE,	KCL_DADK,	KCL_ETEE,	KCL_ESES,	
+        QK_UNICODE_MODE_WINCOMPOSE,		KCL_FIFI,	KCL_FRFR,	KCL_ENGB,	KCL_ELGR,	KCL_HRHR,	KCL_HUHU,		MS_BTN1,
+        QK_UNICODE_MODE_EMACS,			KCL_HEIL,	KCL_HIIN,	KCL_MRIN,	KCL_FAIR,	KCL_ITIT,	KCL_JAJP,		KC_NO,
         KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
 
-        					KCL_MKMK,	KCL_MNMN,	KCL_NLNL,	KCL_NNNO,	KCL_NENP,	KCL_URPK,	QK_UNICODE_MODE_MACOS,
-        					KCL_PLPL,	KCL_PTPT,	KCL_RORO,	KCL_SRRS,	KCL_RURU,	KCL_ARSA,	QK_UNICODE_MODE_LINUX,
-        _______,			KCL_SVSE,	KCL_SKSK,	KCL_TRTR,	KCL_UKUA,	KCL_ENUS,	KC_NO,		QK_UNICODE_MODE_WINDOWS,
-        KC_NO,				KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
+        					KCL_KOKR,	KCL_KKKZ,	KCL_LTLT,	KCL_LVLV,	KCL_MKMK,	KCL_MNMN,	QK_UNICODE_MODE_MACOS,
+        					KCL_ESMX,	KCL_NLNL,	KCL_NNNO,	KCL_NENP,	KCL_URPK,	KCL_PLPL,	QK_UNICODE_MODE_LINUX,
+        _______,			KCL_PTPT,	KCL_RORO,	KCL_SRRS,	KCL_RURU,	KCL_ARSA,	KCL_SVSE,	QK_UNICODE_MODE_WINDOWS,
+        KC_NO,				KCL_SKSK,	KCL_TRTR,	KCL_UKUA,	KCL_ENUS,	KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
         KC_NO,				KC_NO,		KC_NO,					KC_NO,		KC_NO,		KC_NO,		KC_BASE
         //[[[end]]]
         ),
@@ -863,6 +863,11 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_NENP: return U"ne-NP";
         case KCL_MNMN: return U"mn-MN";
         case KCL_URPK: return U"ur-PK";
+        case KCL_ENGB: return U"en-GB";
+        case KCL_ESMX: return U"es-MX";
+        case KCL_DECH: return U"de-CH";
+        case KCL_FRBE: return U"fr-BE";
+        case KCL_FRCA: return U"fr-CA";
         //[[[end]]]
         default:
             return NULL;
@@ -1557,6 +1562,11 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_NENP: local_state->lang = LANG_NENP; save_user_settings(); layer_off(_LL); break;
         case KCL_MNMN: local_state->lang = LANG_MNMN; save_user_settings(); layer_off(_LL); break;
         case KCL_URPK: local_state->lang = LANG_URPK; save_user_settings(); layer_off(_LL); break;
+        case KCL_ENGB: local_state->lang = LANG_ENGB; save_user_settings(); layer_off(_LL); break;
+        case KCL_ESMX: local_state->lang = LANG_ESMX; save_user_settings(); layer_off(_LL); break;
+        case KCL_DECH: local_state->lang = LANG_DECH; save_user_settings(); layer_off(_LL); break;
+        case KCL_FRBE: local_state->lang = LANG_FRBE; save_user_settings(); layer_off(_LL); break;
+        case KCL_FRCA: local_state->lang = LANG_FRCA; save_user_settings(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:

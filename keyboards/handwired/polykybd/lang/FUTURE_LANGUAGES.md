@@ -103,6 +103,17 @@ want the popular option.
 
 ## Regional variants to add as SEPARATE entries (NOT compat folds)
 
+> **STATUS (2026-06-06): IMPLEMENTED.** All five Latin regional variants below
+> are now in the firmware as `LANG_ENGB`, `LANG_ESMX`, `LANG_DECH`, `LANG_FRBE`,
+> `LANG_FRCA` (enum indices 41–45). Mapping columns were generated from the
+> authoritative xkb `symbols/{gb,latam,ch,be,ca}` data (see
+> `lang/_gen_latin_cols.py` + `lang/_patch_xlsx.py`), flags added to
+> `fonts/gen-lang-fonts.sh` `COUNTRIES[]`, and the host fold `mx=latam` added to
+> `PolyKybdHost/polyhost/res/forced_country_match.txt` (es-419 was realised as
+> **es-MX**, flag 🇲🇽, since "419" is not an ISO-3166 country the flag/label
+> machinery can use). Swiss is a single `de-CH` entry (Swiss German QWERTZ;
+> `fr-CH` is the same physical layout). `split72:default` builds clean.
+
 These share a *language* with an existing entry but use a **genuinely different
 physical layout**, so — exactly like `pt-BR` vs `pt-PT` — they need their own
 mapping column + flag, NOT a `forced_country_match.txt` fold:

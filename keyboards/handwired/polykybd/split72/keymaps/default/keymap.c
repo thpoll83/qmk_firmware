@@ -631,38 +631,40 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     //Language Selection Layer
     [_LL] = LAYOUT_left_right_stacked(
         /*[[[cog
-        slang = sorted(languages)
+        # Sort country-first then language so same-country variants (e.g. hi-IN, mr-IN) stay adjacent.
+        slang = sorted(languages, key=lambda c: (c[2:], c[:2]))
+        # 6 language slots per row x 8 rows = 48 capacity (uses the formerly-blank col2/col6 keys).
         lines = []
         for lidx in range(0, 8):
             line = ""
-            for idx in range(0, 5):
-                if (lidx*5+idx)>=len(slang):
+            for idx in range(0, 6):
+                if (lidx*6+idx)>=len(slang):
                     line = f"{line}KC_NO,\t\t"
                 else:
-                    line = f'{line}KCL_{slang[(lidx*5+idx)].upper()},\t'
+                    line = f'{line}KCL_{slang[(lidx*6+idx)].upper()},\t'
             lines.append(line)
-        cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[0]}");
-        cog.outl(f"KC_NO,\t\t\t\t\t\t\tKC_NO,\t\t{lines[1]}");
-        cog.outl(f"QK_UNICODE_MODE_WINCOMPOSE,\t\tKC_NO,\t\t{lines[2]}\tMS_BTN1,");
-        cog.outl(f"QK_UNICODE_MODE_EMACS,\t\t\tKC_NO,\t\t{lines[3]}\tKC_NO,");
+        cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[0]}");
+        cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[1]}");
+        cog.outl(f"QK_UNICODE_MODE_WINCOMPOSE,\t\t{lines[2]}\tMS_BTN1,");
+        cog.outl(f"QK_UNICODE_MODE_EMACS,\t\t\t{lines[3]}\tKC_NO,");
         cog.outl("KC_BASE,\t\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\t\tKC_NO,");
         cog.outl("")
-        cog.outl(f"\t\t\t\t\t{lines[4]}KC_NO,\t\tQK_UNICODE_MODE_MACOS,");
-        cog.outl(f"\t\t\t\t\t{lines[5]}KC_NO,\t\tQK_UNICODE_MODE_LINUX,");
-        cog.outl(f"_______,\t\t\t{lines[6]}KC_NO,\t\tQK_UNICODE_MODE_WINDOWS,");
-        cog.outl(f"KC_NO,\t\t\t\t{lines[7]}KC_NO,\t\tQK_UNICODE_MODE_BSD,");
+        cog.outl(f"\t\t\t\t\t{lines[4]}QK_UNICODE_MODE_MACOS,");
+        cog.outl(f"\t\t\t\t\t{lines[5]}QK_UNICODE_MODE_LINUX,");
+        cog.outl(f"_______,\t\t\t{lines[6]}QK_UNICODE_MODE_WINDOWS,");
+        cog.outl(f"KC_NO,\t\t\t\t{lines[7]}QK_UNICODE_MODE_BSD,");
         cog.outl("KC_NO,\t\t\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\tKC_BASE");
         ]]]*/
-        KC_NO,							KC_NO,		KCL_ARSA,	KCL_BEBY,	KCL_BGBG,	KCL_CSCZ,	KCL_DADK,	
-        KC_NO,							KC_NO,		KCL_DEDE,	KCL_ELGR,	KCL_ENUS,	KCL_ESES,	KCL_ETEE,	
-        QK_UNICODE_MODE_WINCOMPOSE,		KC_NO,		KCL_FAIR,	KCL_FIFI,	KCL_FRFR,	KCL_HEIL,	KCL_HIIN,		MS_BTN1,
-        QK_UNICODE_MODE_EMACS,			KC_NO,		KCL_HRHR,	KCL_HUHU,	KCL_ITIT,	KCL_JAJP,	KCL_KKKZ,		KC_NO,
+        KC_NO,							KCL_BGBG,	KCL_PTBR,	KCL_BEBY,	KCL_ZHCN,	KCL_CSCZ,	KCL_DEDE,	
+        KC_NO,							KCL_DADK,	KCL_ETEE,	KCL_ESES,	KCL_FIFI,	KCL_FRFR,	KCL_ELGR,	
+        QK_UNICODE_MODE_WINCOMPOSE,		KCL_HRHR,	KCL_HUHU,	KCL_HEIL,	KCL_HIIN,	KCL_MRIN,	KCL_FAIR,		MS_BTN1,
+        QK_UNICODE_MODE_EMACS,			KCL_ITIT,	KCL_JAJP,	KCL_KOKR,	KCL_KKKZ,	KCL_LTLT,	KCL_LVLV,		KC_NO,
         KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
 
-        					KCL_KOKR,	KCL_LTLT,	KCL_LVLV,	KCL_MKMK,	KCL_MNMN,	KC_NO,		QK_UNICODE_MODE_MACOS,
-        					KCL_MRIN,	KCL_NENP,	KCL_NLNL,	KCL_NNNO,	KCL_PLPL,	KC_NO,		QK_UNICODE_MODE_LINUX,
-        _______,			KCL_PTBR,	KCL_PTPT,	KCL_RORO,	KCL_RURU,	KCL_SKSK,	KC_NO,		QK_UNICODE_MODE_WINDOWS,
-        KC_NO,				KCL_SRRS,	KCL_SVSE,	KCL_TRTR,	KCL_UKUA,	KCL_URPK,	KC_NO,		QK_UNICODE_MODE_BSD,
+        					KCL_MKMK,	KCL_MNMN,	KCL_NLNL,	KCL_NNNO,	KCL_NENP,	KCL_URPK,	QK_UNICODE_MODE_MACOS,
+        					KCL_PLPL,	KCL_PTPT,	KCL_RORO,	KCL_SRRS,	KCL_RURU,	KCL_ARSA,	QK_UNICODE_MODE_LINUX,
+        _______,			KCL_SVSE,	KCL_SKSK,	KCL_TRTR,	KCL_UKUA,	KCL_ENUS,	KC_NO,		QK_UNICODE_MODE_WINDOWS,
+        KC_NO,				KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
         KC_NO,				KC_NO,		KC_NO,					KC_NO,		KC_NO,		KC_NO,		KC_BASE
         //[[[end]]]
         ),

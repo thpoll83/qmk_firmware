@@ -6,6 +6,10 @@
 #include "generated/kr_fonts.h"
 #include "generated/arabic_fonts.h"
 #include "generated/devanagari_fonts.h"
+#include "generated/bengali_fonts.h"
+#include "generated/telugu_fonts.h"
+#include "generated/tamil_fonts.h"
+#include "generated/thai_fonts.h"
 #include "generated/symbol_fonts.h"
 #include "generated/emoji_fonts.h"
 
@@ -105,6 +109,14 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansArabic_Regular_PerArab_16pt16b,
   &NotoSansDevanagari_Regular_Deva_16pt16b,
   &NotoSansDevanagari_Regular_DevaMatra_16pt7b,
+  &NotoSansBengali_Regular_Bengali_16pt16b,
+  &NotoSansBengali_Regular_BengaliMatra_16pt7b,
+  &NotoSansTelugu_Regular_Telugu_16pt16b,
+  &NotoSansTelugu_Regular_TeluguMatra_16pt7b,
+  &NotoSansTamil_Regular_Tamil_16pt16b,
+  &NotoSansTamil_Regular_TamilMatra_16pt7b,
+  &NotoSansThai_Regular_Thai_16pt16b,
+  &NotoSansThai_Regular_ThaiMatra_16pt7b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct2_15pt16b,
   &NotoSansJP_Regular_Punct_15pt16b,

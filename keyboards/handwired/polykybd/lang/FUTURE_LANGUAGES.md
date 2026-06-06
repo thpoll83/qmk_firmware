@@ -16,7 +16,35 @@ Adding a language therefore = three things:
 
 ---
 
-## Deferred batch (revisit later): Bengali, Thai, Telugu, Tamil
+## Deferred batch — NOW IMPLEMENTED (2026-06-06): Bengali, Thai, Telugu, Tamil
+
+> **STATUS: DONE.** Added as `LANG_THTH`, `LANG_BNIN`, `LANG_TEIN`, `LANG_TAIN`
+> (enum indices 46–49).
+> - **Fonts**: NotoSansBengali / NotoSansTelugu / NotoSansTamil / NotoSansThai
+>   added to `fonts/fonts.yaml` as new categories (`bengali`/`telugu`/`tamil`/`thai`),
+>   each with a block-range entry **and** a `-C` dotted-circle matra/tone-mark
+>   composite entry at its own PUA range (bn 0xE120, te 0xE140, ta 0xE160,
+>   th 0xE180 — clear of DEVA_DC 0xE100–13 and the flags at 0xE000+). Headers
+>   regenerated with the **pinned** fontconvert; `generate_fonts.py --check` passes
+>   (existing headers byte-identical).
+> - **Mappings**: bn/te/ta are InScript clones of hi-IN — each Devanagari codepoint
+>   shifted into the target block (+0x80 / +0x300 / +0x280) and **validated against
+>   the target font's cmap** (`lang/_gen_script_cols.py`); slots with no glyph in
+>   the target script are left NULL → English fallback. Thai is the **Kedmanee**
+>   layout transcribed from xkb `symbols/th`. New `BENGALI_*/TELUGU_*/TAMIL_*/THAI_*`
+>   (base) and `*_DC_*` (composite) named glyphs were appended to the
+>   `named_glyphs` sheet via `lang/_patch_named_glyphs.py`.
+> - **Flags**: TH IN IN IN appended to `fonts/gen-lang-fonts.sh` `COUNTRIES[]`
+>   (50 flags total).
+> - **Host**: no fold needed — Thai `th` and India `in` xkb layouts already exist
+>   (bn/te/ta share country IN with hi-IN, same as the existing Indic entries).
+> - **Caveat (Tamil)**: Tamil has far fewer consonants than Devanagari, so the
+>   InScript clone leaves several keys on the English fallback. This is the
+>   documented "InScript map is a clone" limitation; a dedicated **Tamil99** map
+>   (a separate column, not a clone) remains the better long-term option.
+> - `split72:default` builds clean (~570 KB flash, well within the 8 MB budget).
+
+### Original research notes (kept for reference)
 
 | Language | Locale | Speakers (~) | Script / block | Std layout | Noto font | New font? |
 |----------|--------|-------------|----------------|------------|-----------|-----------|

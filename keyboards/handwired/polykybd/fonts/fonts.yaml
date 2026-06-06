@@ -18,6 +18,10 @@ sources:
   noto-serif-kr:       fonts/noto-serif-kr/NotoSerifKR-Medium.otf
   noto-sans-arabic:    fonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf
   noto-sans-devanagari: fonts/noto-sans-devanagari/NotoSansDevanagari-Regular.ttf
+  noto-sans-bengali:   fonts/noto-sans-bengali/NotoSansBengali-Regular.ttf
+  noto-sans-telugu:    fonts/noto-sans-telugu/NotoSansTelugu-Regular.ttf
+  noto-sans-tamil:     fonts/noto-sans-tamil/NotoSansTamil-Regular.ttf
+  noto-sans-thai:      fonts/noto-sans-thai/NotoSansThai-Regular.ttf
   noto-emoji:          fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf
   noto-sans-symbols:   fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
   noto-sans-symbols2:  fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
@@ -55,6 +59,18 @@ categories:
   devanagari:
     output: devanagari_fonts.h
     defaults: {source: noto-sans-devanagari, size: 16, render_height: 40}
+  bengali:
+    output: bengali_fonts.h
+    defaults: {source: noto-sans-bengali, size: 16, render_height: 40}
+  telugu:
+    output: telugu_fonts.h
+    defaults: {source: noto-sans-telugu, size: 16, render_height: 40}
+  tamil:
+    output: tamil_fonts.h
+    defaults: {source: noto-sans-tamil, size: 16, render_height: 40}
+  thai:
+    output: thai_fonts.h
+    defaults: {source: noto-sans-thai, size: 16, render_height: 40}
   symbols:
     output: symbol_fonts.h
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
@@ -157,6 +173,14 @@ fonts:
   - {category: arabic, variant: _PerArab_, ranges: [[0x679, 0x679], [0x67e, 0x67e], [0x686, 0x686], [0x688, 0x688], [0x691, 0x691], [0x698, 0x698], [0x6a9, 0x6a9], [0x6af, 0x6af], [0x6ba, 0x6ba], [0x6be, 0x6be], [0x6c1, 0x6c3], [0x6cc, 0x6cc], [0x6d2, 0x6d4], [0x6f0, 0x6f9]], note: 'Perso-Arabic letters for Persian/Urdu + Extended Arabic-Indic digits (06F0-06F9).'}
   - {category: devanagari, variant: _Deva_, ranges: [[0x900, 0x97f]], note: 'Devanagari block for Hindi/Marathi/Nepali InScript (consonants, vowel signs/matras, independent vowels, virama, anusvara, digits).'}
   - {category: devanagari, variant: _DevaMatra_, extra_args: ['-F0xE100', '-C'], sequence: '25CC 0901, 25CC 0902, 25CC 0903, 25CC 093C, 25CC 093E, 25CC 093F, 25CC 0940, 25CC 0941, 25CC 0942, 25CC 0943, 25CC 0944, 25CC 0945, 25CC 0946, 25CC 0947, 25CC 0948, 25CC 0949, 25CC 094A, 25CC 094B, 25CC 094C, 25CC 094D', note: 'Devanagari combining marks (matras / anusvara / candrabindu / visarga / nukta / virama) each composited ONTO a dotted circle U+25CC via HarfBuzz GPOS (fontconvert -C), one glyph per mark at PUA 0xE100.. in Unicode block order (0xE100=U+0901 … 0xE113=U+094D). Bare combining marks render invisibly/ambiguously with no base; the dotted-circle form is how InScript keycaps and the Unicode charts show isolated matras. Addressed via the DEVA_DC_* named glyphs by hi-IN/mr-IN/ne-NP. Keep this sequence order in sync with the DEVA_DC_* rows in lang/lang_lut.xlsx (named_glyphs).'}
+  - {category: bengali, variant: _Bengali_, ranges: [[0x980, 0x9ff]], note: 'Bengali block for bn-IN InScript (consonants, independent vowels, vowel signs, virama, digits). InScript clone of Hindi, codepoints shifted +0x80 into the Bengali block.'}
+  - {category: bengali, variant: _BengaliMatra_, extra_args: ['-F0xE120', '-C'], sequence: '25CC 0981, 25CC 0982, 25CC 0983, 25CC 09BC, 25CC 09BE, 25CC 09BF, 25CC 09C0, 25CC 09C1, 25CC 09C2, 25CC 09C3, 25CC 09C7, 25CC 09C8, 25CC 09CB, 25CC 09CC, 25CC 09CD', note: 'Bengali combining marks composited onto a dotted circle U+25CC (fontconvert -C), one glyph per mark at PUA 0xE120.. in block order. Addressed via the BENG_DC_* named glyphs by bn-IN. Keep this order in sync with the BENG_DC_* rows in lang/lang_lut.xlsx.'}
+  - {category: telugu, variant: _Telugu_, ranges: [[0xc00, 0xc7f]], note: 'Telugu block for te-IN InScript (codepoints shifted +0x300 from Devanagari).'}
+  - {category: telugu, variant: _TeluguMatra_, extra_args: ['-F0xE140', '-C'], sequence: '25CC 0C01, 25CC 0C02, 25CC 0C03, 25CC 0C3C, 25CC 0C3E, 25CC 0C3F, 25CC 0C40, 25CC 0C41, 25CC 0C42, 25CC 0C43, 25CC 0C46, 25CC 0C47, 25CC 0C48, 25CC 0C4A, 25CC 0C4B, 25CC 0C4C, 25CC 0C4D', note: 'Telugu combining marks composited onto a dotted circle (fontconvert -C), one glyph per mark at PUA 0xE140.. in block order. Addressed via the TELU_DC_* named glyphs by te-IN.'}
+  - {category: tamil, variant: _Tamil_, ranges: [[0xb80, 0xbff]], note: 'Tamil block for ta-IN InScript (codepoints shifted +0x280 from Devanagari). Tamil has far fewer consonants than Devanagari, so InScript keys with no Tamil counterpart fall back to English (clone limitation; Tamil99 would be a separate full map).'}
+  - {category: tamil, variant: _TamilMatra_, extra_args: ['-F0xE160', '-C'], sequence: '25CC 0B82, 25CC 0B83, 25CC 0BBE, 25CC 0BBF, 25CC 0BC0, 25CC 0BC1, 25CC 0BC2, 25CC 0BC6, 25CC 0BC7, 25CC 0BC8, 25CC 0BCA, 25CC 0BCB, 25CC 0BCC, 25CC 0BCD', note: 'Tamil combining marks composited onto a dotted circle (fontconvert -C), one glyph per mark at PUA 0xE160.. in block order. Addressed via the TAML_DC_* named glyphs by ta-IN.'}
+  - {category: thai, variant: _Thai_, ranges: [[0xe00, 0xe7f]], note: 'Thai block for th-TH Kedmanee (consonants, spacing vowels, leading vowels, digits, baht/symbols). Transcribed from xkb symbols/th; OS handles all input - keycaps are display-only.'}
+  - {category: thai, variant: _ThaiMatra_, extra_args: ['-F0xE180', '-C'], sequence: '25CC 0E31, 25CC 0E34, 25CC 0E35, 25CC 0E36, 25CC 0E37, 25CC 0E38, 25CC 0E39, 25CC 0E3A, 25CC 0E47, 25CC 0E48, 25CC 0E49, 25CC 0E4A, 25CC 0E4B, 25CC 0E4C, 25CC 0E4D', note: 'Thai above/below combining vowels and tone marks composited onto a dotted circle U+25CC (fontconvert -C), one glyph per mark at PUA 0xE180.. in block order. Addressed via the THAI_DC_* named glyphs by th-TH.'}
   - {category: jp, variant: _Hiragana_, ranges: [[0x3041, 0x3096], [0x3099, 0x309f]]}
   - {category: jp, variant: _Punct2_, ranges: [[0x30fb, 0x30fc]]}
   - {category: jp, variant: _Punct_, ranges: [[0x3001, 0x3002], [0x3008, 0x3011]]}

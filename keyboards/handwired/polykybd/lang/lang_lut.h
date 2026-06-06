@@ -76,6 +76,10 @@ enum lang_layer {
     LANG_DECH,
     LANG_FRBE,
     LANG_FRCA,
+    LANG_THTH,
+    LANG_BNIN,
+    LANG_TEIN,
+    LANG_TAIN,
     //[[[end]]]
     NUM_LANG };
 

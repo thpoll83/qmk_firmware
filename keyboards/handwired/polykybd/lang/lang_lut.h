@@ -63,6 +63,8 @@ enum lang_layer {
     LANG_LVLV,
     LANG_ETEE,
     LANG_PTBR,
+    LANG_SRRS,
+    LANG_MKMK,
     //[[[end]]]
     NUM_LANG };
 

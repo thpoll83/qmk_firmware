@@ -4,6 +4,16 @@
 **Author:** Research analysis for the PolyKybd language-layout roadmap
 **Scope:** Which keyboard-layout languages are most worth supporting *next*, ranked by the size of the **PC/computer-using** market (not raw native-speaker counts), weighted toward layouts not yet supported or planned.
 
+> **Implementation status (2026-06-07):** the top new-gap recommendations have been
+> shipped — **zh-TW (Bopomofo/Zhuyin)** `LANG_ZHTW`, **ka-GE (Georgian)** `LANG_KAGE`,
+> **hy-AM (Armenian)** `LANG_HYAM`, and **id-ID (Indonesian)** `LANG_IDID` (enum indices
+> 50–53). Indonesian was implemented exactly as this report recommends — **as a fold,
+> not a distinct layout**: its key column is empty (every key falls back to en-US, i.e.
+> plain US QWERTY) and the host maps `id=us`; it exists only so the keyboard can show an
+> 🇮🇩 flag and switch the OS locale. zh-TW similarly folds `tw=us` (Bopomofo is an IME on
+> a US base). Georgian/Armenian use new NotoSans{Georgian,Armenian} fonts; Bopomofo uses
+> NotoSansTC. Still open from the ranking: Azerbaijani (az-AZ) and Icelandic (is-IS).
+
 ---
 
 ## Executive summary

@@ -22,6 +22,9 @@ sources:
   noto-sans-telugu:    fonts/noto-sans-telugu/NotoSansTelugu-Regular.ttf
   noto-sans-tamil:     fonts/noto-sans-tamil/NotoSansTamil-Regular.ttf
   noto-sans-thai:      fonts/noto-sans-thai/NotoSansThai-Regular.ttf
+  noto-sans-georgian:  fonts/noto-sans-georgian/NotoSansGeorgian-Regular.ttf
+  noto-sans-armenian:  fonts/noto-sans-armenian/NotoSansArmenian-Regular.ttf
+  noto-sans-tc:        fonts/noto-sans-tc/NotoSansTC-Regular.ttf
   noto-emoji:          fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf
   noto-sans-symbols:   fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
   noto-sans-symbols2:  fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
@@ -71,6 +74,15 @@ categories:
   thai:
     output: thai_fonts.h
     defaults: {source: noto-sans-thai, size: 16, render_height: 40}
+  georgian:
+    output: georgian_fonts.h
+    defaults: {source: noto-sans-georgian, size: 18, render_height: 40, weight: 500}
+  armenian:
+    output: armenian_fonts.h
+    defaults: {source: noto-sans-armenian, size: 18, render_height: 40, weight: 500}
+  bopomofo:
+    output: bopomofo_fonts.h
+    defaults: {source: noto-sans-tc, size: 18, render_height: 40, weight: 500}
   symbols:
     output: symbol_fonts.h
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
@@ -181,6 +193,9 @@ fonts:
   - {category: tamil, variant: _TamilMatra_, extra_args: ['-F0xE160', '-C'], sequence: '25CC 0B82, 25CC 0B83, 25CC 0BBE, 25CC 0BBF, 25CC 0BC0, 25CC 0BC1, 25CC 0BC2, 25CC 0BC6, 25CC 0BC7, 25CC 0BC8, 25CC 0BCA, 25CC 0BCB, 25CC 0BCC, 25CC 0BCD', note: 'Tamil combining marks composited onto a dotted circle (fontconvert -C), one glyph per mark at PUA 0xE160.. in block order. Addressed via the TAML_DC_* named glyphs by ta-IN.'}
   - {category: thai, variant: _Thai_, ranges: [[0xe00, 0xe7f]], note: 'Thai block for th-TH Kedmanee (consonants, spacing vowels, leading vowels, digits, baht/symbols). Transcribed from xkb symbols/th; OS handles all input - keycaps are display-only.'}
   - {category: thai, variant: _ThaiMatra_, extra_args: ['-F0xE180', '-C'], sequence: '25CC 0E31, 25CC 0E34, 25CC 0E35, 25CC 0E36, 25CC 0E37, 25CC 0E38, 25CC 0E39, 25CC 0E3A, 25CC 0E47, 25CC 0E48, 25CC 0E49, 25CC 0E4A, 25CC 0E4B, 25CC 0E4C, 25CC 0E4D', note: 'Thai above/below combining vowels and tone marks composited onto a dotted circle U+25CC (fontconvert -C), one glyph per mark at PUA 0xE180.. in block order. Addressed via the THAI_DC_* named glyphs by th-TH.'}
+  - {category: georgian, variant: _Georgian_, ranges: [[0x10a0, 0x10ff]], note: 'Georgian (Mkhedruli + Mtavruli) block for ka-GE, transcribed from xkb symbols/ge basic. Unicameral — no case, no combining marks.'}
+  - {category: armenian, variant: _Armenian_, ranges: [[0x530, 0x58f]], note: 'Armenian block (letters + punctuation + dram sign) for hy-AM, transcribed from xkb symbols/am basic. Bicameral, no combining marks.'}
+  - {category: bopomofo, variant: _Bopomofo_, ranges: [[0x3105, 0x312f]], note: 'Bopomofo/Zhuyin symbols for zh-TW (standard 大千 layout). Tone marks (U+02C7/02CA/02CB/02D9) are already covered by the latin _LetterMod_ font. No combining marks.'}
   - {category: jp, variant: _Hiragana_, ranges: [[0x3041, 0x3096], [0x3099, 0x309f]]}
   - {category: jp, variant: _Punct2_, ranges: [[0x30fb, 0x30fc]]}
   - {category: jp, variant: _Punct_, ranges: [[0x3001, 0x3002], [0x3008, 0x3011]]}

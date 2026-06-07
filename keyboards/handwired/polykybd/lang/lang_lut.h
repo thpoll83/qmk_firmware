@@ -80,6 +80,10 @@ enum lang_layer {
     LANG_BNIN,
     LANG_TEIN,
     LANG_TAIN,
+    LANG_ZHTW,
+    LANG_KAGE,
+    LANG_HYAM,
+    LANG_IDID,
     //[[[end]]]
     NUM_LANG };
 

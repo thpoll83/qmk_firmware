@@ -14,7 +14,14 @@ from xml.sax.saxutils import escape
 
 XLSX=sys.argv[1]
 ADD=json.load(open(sys.argv[2]))
-START=1105                                   # first row after DEVA_DC_094D (1104)
+# first blank row after the last contiguous filled (name+code) row
+from openpyxl import load_workbook
+_wb=load_workbook(XLSX,data_only=True,read_only=True); _sh=_wb['named_glyphs']
+_r=2
+while _sh.cell(row=_r,column=1).value not in (None,'') and _sh.cell(row=_r,column=2).value not in (None,''):
+    _r+=1
+_wb.close()
+START=_r                                     # first blank row after last filled glyph
 
 def rowxml(n, name, code):
     return (f'<row r="{n}" customFormat="false" ht="12.8" hidden="false" '

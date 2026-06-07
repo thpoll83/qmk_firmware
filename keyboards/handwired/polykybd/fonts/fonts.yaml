@@ -49,7 +49,7 @@ categories:
     defaults: {source: noto-sans, size: 14}
   hebrew:
     output: hebrew_fonts.h
-    defaults: {source: noto-sans-hebrew, size: 22}
+    defaults: {source: noto-sans-hebrew, size: 22, weight: 400}
   jp:
     output: jp_fonts.h
     defaults: {source: noto-sans-jp, size: 15, weight: 400}
@@ -70,7 +70,7 @@ categories:
     defaults: {source: noto-sans-telugu, size: 16, render_height: 40}
   tamil:
     output: tamil_fonts.h
-    defaults: {source: noto-sans-tamil, size: 16, render_height: 40}
+    defaults: {source: noto-sans-tamil, size: 14, render_height: 40}
   thai:
     output: thai_fonts.h
     defaults: {source: noto-sans-thai, size: 16, render_height: 40}

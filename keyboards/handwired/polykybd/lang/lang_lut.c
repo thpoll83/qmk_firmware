@@ -3426,7 +3426,7 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  te-IN*/  0,0,0,13,
 		/*  ta-IN*/  0,0,0,13,
 		/*  zh-TW*/  0,-128,0,12,
-		/*  ka-GE*/  0,-128,0,12,
+		/*  ka-GE*/  3,-128,0,12,
 		/*  hy-AM*/  0,-128,0,12,
 		/*  id-ID*/  0,0,0,0,
 		/*  az-AZ*/  0,-128,0,13,

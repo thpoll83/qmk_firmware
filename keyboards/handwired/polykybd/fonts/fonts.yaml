@@ -76,7 +76,7 @@ categories:
     defaults: {source: noto-sans-thai, size: 16, render_height: 40}
   georgian:
     output: georgian_fonts.h
-    defaults: {source: noto-sans-georgian, size: 18, render_height: 40, weight: 500}
+    defaults: {source: noto-sans-georgian, size: 17, render_height: 40, weight: 500}
   armenian:
     output: armenian_fonts.h
     defaults: {source: noto-sans-armenian, size: 18, render_height: 40, weight: 500}

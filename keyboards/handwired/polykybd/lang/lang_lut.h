@@ -84,6 +84,9 @@ enum lang_layer {
     LANG_KAGE,
     LANG_HYAM,
     LANG_IDID,
+    LANG_AZAZ,
+    LANG_ISIS,
+    LANG_VIVN,
     //[[[end]]]
     NUM_LANG };
 

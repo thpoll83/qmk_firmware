@@ -13,6 +13,7 @@
 #include "generated/georgian_fonts.h"
 #include "generated/armenian_fonts.h"
 #include "generated/bopomofo_fonts.h"
+#include "generated/vietnamese_fonts.h"
 #include "generated/symbol_fonts.h"
 #include "generated/emoji_fonts.h"
 
@@ -32,6 +33,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansSymbols2_Regular_SymBmp6_20pt16b,
   &NotoEmoji_Medium_Zodiac_20pt16b,
   &NotoSans_Regular_LatinExtB_14pt16b,
+  &NotoSans_Regular_Schwa_14pt16b,
   &NotoSans_Regular_SupAndExtA_14pt16b,
   &NotoEmoji_Medium_EmjTravelBMP_20pt16b,
   &NotoSans_Regular_CurrencySigns_14pt16b,
@@ -123,6 +125,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansGeorgian_Regular_Georgian_18pt16b,
   &NotoSansArmenian_Regular_Armenian_18pt16b,
   &NotoSansTC_Regular_Bopomofo_18pt16b,
+  &NotoSans_Regular_VietTones_16pt7b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct2_15pt16b,
   &NotoSansJP_Regular_Punct_15pt16b,

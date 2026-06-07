@@ -1298,6 +1298,30 @@ const GFXfont NotoSans_Regular_LatinExtB_14pt16b PROGMEM = {
 
 // Approx. 10299 bytes
 
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans/NotoSans-Regular.ttf -s 14 -v _Schwa_ -r 44 601 601 
+// Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
+
+/* num ranges: 1 */
+const uint8_t NotoSans_Regular_Schwa_14pt16bBitmaps[] PROGMEM = {
+  /* range 0 (0x259 - 0x259): */  0x3F, 0x83, 0xFF, 0x18, 0x38, 0x00, 0xE0, 0x03, 0x80, 0x1C, 0x00, 0xFF,
+  0xFF, 0xFF, 0xFF, 0x01, 0xD8, 0x0E, 0xC0, 0x67, 0x07, 0x1F, 0xF0, 0x7F,
+  0x00
+ };
+
+const GFXglyph NotoSans_Regular_Schwa_14pt16bGlyphs[] PROGMEM = {
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0x259 - 0x259)
+  {     0,  13,  15,  15,    1,  -14 } }; // 0x259 uni0259  (#0)
+
+const GFXfont NotoSans_Regular_Schwa_14pt16b PROGMEM = {
+  (uint8_t  *)NotoSans_Regular_Schwa_14pt16bBitmaps,
+  (GFXglyph *)NotoSans_Regular_Schwa_14pt16bGlyphs,
+  0x259, // first
+  0x259, // last
+  44   //height
+ };
+
+// Approx. 39 bytes
+
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans/NotoSans-Regular.ttf -s 14 -v _SupAndExtA_ -r 44 161 382 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 

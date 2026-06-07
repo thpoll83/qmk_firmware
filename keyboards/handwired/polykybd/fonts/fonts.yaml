@@ -83,6 +83,9 @@ categories:
   bopomofo:
     output: bopomofo_fonts.h
     defaults: {source: noto-sans-tc, size: 18, render_height: 40, weight: 500}
+  vietnamese:
+    output: vietnamese_fonts.h
+    defaults: {source: noto-sans, size: 16, render_height: 40}
   symbols:
     output: symbol_fonts.h
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
@@ -105,6 +108,7 @@ fonts:
   - {category: symbols, variant: _SymBmp6_, ranges: [[0x269d, 0x26ef]]}
   - {category: emoji, variant: _Zodiac_, ranges: [[0x2648, 0x2653]], note: 'Cat 6 addition: zodiac signs ♈-♓ (BMP 0x2648-0x2653, NotoEmoji). Stays separate (NotoEmoji); the Symbols2 ranges _SymBmp1_/_SymBmp2_ are split around this island.'}
   - {category: latin, variant: _LatinExtB_, render_height: 44, ranges: [[0x180, 0x24f]], note: 'Latin Extended-B (0x0180-0x024F) — emoji-layer "Latin" tab (cat 11). Latin Extended-A (0x0100-0x017E) is already covered by _SupAndExtA_ above.'}
+  - {category: latin, variant: _Schwa_, render_height: 44, ranges: [[0x259, 0x259]], note: 'Latin small letter schwa (U+0259) for Azerbaijani az-AZ — sits just past the _LatinExtB_ range (IPA Extensions). Capital schwa Ə U+018F is already in _LatinExtB_.'}
   - {category: latin, variant: _SupAndExtA_, render_height: 44, ranges: [[0xa1, 0x17e]]}
   - {category: emoji, variant: _EmjTravelBMP_, ranges: [[0x2708, 0x2708]], note: 'Cat 8: travel — BMP 0x2708 + SMP 0x1F680-0x1F6C5 (extended to include shower/bath/transit)'}
   - {category: latin, variant: _CurrencySigns_, ranges: [[0x20aa, 0x20ac], [0x20b4, 0x20b4], [0x2116, 0x2116]]}
@@ -196,6 +200,7 @@ fonts:
   - {category: georgian, variant: _Georgian_, ranges: [[0x10a0, 0x10ff]], note: 'Georgian (Mkhedruli + Mtavruli) block for ka-GE, transcribed from xkb symbols/ge basic. Unicameral — no case, no combining marks.'}
   - {category: armenian, variant: _Armenian_, ranges: [[0x530, 0x58f]], note: 'Armenian block (letters + punctuation + dram sign) for hy-AM, transcribed from xkb symbols/am basic. Bicameral, no combining marks.'}
   - {category: bopomofo, variant: _Bopomofo_, ranges: [[0x3105, 0x312f]], note: 'Bopomofo/Zhuyin symbols for zh-TW (standard 大千 layout). Tone marks (U+02C7/02CA/02CB/02D9) are already covered by the latin _LetterMod_ font. No combining marks.'}
+  - {category: vietnamese, variant: _VietTones_, extra_args: ['-F0xE1A0', '-C'], sequence: '25CC 0300, 25CC 0301, 25CC 0303, 25CC 0309, 25CC 0323', note: 'Vietnamese (TCVN) combining tone marks - grave/acute/tilde/hook-above/dot-below - composited onto a dotted circle U+25CC (fontconvert -C), PUA 0xE1A0.. in codepoint order. Addressed via the VIET_DC_* named glyphs by vi-VN. The precomposed Vietnamese letters (ă â ê ô đ ư ơ ₫) are covered by the existing latin / currency ranges.'}
   - {category: jp, variant: _Hiragana_, ranges: [[0x3041, 0x3096], [0x3099, 0x309f]]}
   - {category: jp, variant: _Punct2_, ranges: [[0x30fb, 0x30fc]]}
   - {category: jp, variant: _Punct_, ranges: [[0x3001, 0x3002], [0x3008, 0x3011]]}

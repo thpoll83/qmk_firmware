@@ -12,7 +12,16 @@
 > plain US QWERTY) and the host maps `id=us`; it exists only so the keyboard can show an
 > 🇮🇩 flag and switch the OS locale. zh-TW similarly folds `tw=us` (Bopomofo is an IME on
 > a US base). Georgian/Armenian use new NotoSans{Georgian,Armenian} fonts; Bopomofo uses
-> NotoSansTC. Still open from the ranking: Azerbaijani (az-AZ) and Icelandic (is-IS).
+> NotoSansTC.
+>
+> **Update (2026-06-07):** also shipped **az-AZ (Azerbaijani Latin)** `LANG_AZAZ`,
+> **is-IS (Icelandic)** `LANG_ISIS`, and **vi-VN (Vietnamese TCVN/AltGr)** `LANG_VIVN`
+> (enum indices 54–56). az-AZ and is-IS are Latin clones (is-IS needs no new assets;
+> az-AZ adds only the schwa ə U+0259 glyph + a one-codepoint font range). vi-VN is the
+> *dedicated TCVN* layout — ă â ê ô đ ư ơ ₫ on the number/bracket row plus the five
+> combining tone marks (grave/hook/tilde/acute/dot-below) rendered as dotted-circle
+> composites at PUA 0xE1A0. (Telex, the more common everyday IME, would instead be a
+> no-op fold onto en-US since it types on bare QWERTY — see §3.)
 
 ---
 

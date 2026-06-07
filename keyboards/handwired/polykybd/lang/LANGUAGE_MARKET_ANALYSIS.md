@@ -55,7 +55,7 @@ Three corrections matter:
 
 For each candidate we estimate a **Computer-User Value (CUV)** proxy:
 
-```
+```text
 CUV ≈ (internet users in countries where the layout dominates)
         × (desktop/PC usage share, as a fraction of those users who type on a PC keyboard)
         × (layout-distinctiveness factor d, 0–1: share who actually use the

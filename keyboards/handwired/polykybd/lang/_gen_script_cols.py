@@ -15,10 +15,13 @@ Outputs:
   /tmp/named_glyphs_add.json   [[name, hexcode], ...] contiguous append to sheet1
   /tmp/fonts_yaml_add.yaml     the ALL_FONTS entries to splice into fonts.yaml
 """
-import json, re
+import json, re, os, tempfile
+from pathlib import Path
 from fontTools.ttLib import TTFont
 
-FONTS = "/home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/"
+FONTS = str(Path(__file__).resolve().parents[1] / "fonts") + "/"   # repo-relative
+OUT = tempfile.gettempdir()
+KEYSYMDEF = os.environ.get("KEYSYMDEF_H", "/usr/include/X11/keysymdef.h")
 def cmap_of(p):
     return set(TTFont(FONTS+p).getBestCmap().keys())
 
@@ -76,9 +79,8 @@ INDIC=[("bn-IN","bn",0x80,"BENGALI","BENG_DC",0xE120),
        ("te-IN","te",0x300,"TELUGU","TELU_DC",0xE140),
        ("ta-IN","ta",0x280,"TAMIL","TAML_DC",0xE160)]
 
-for langname, key, off, PFX, DCPFX, pua_base in INDIC:
-    cm=CMAP[key]
-    dc_marks=set()                 # target mark codepoints used -> composite
+def make_conv(cm, off, PFX, DCPFX, dc_marks):
+    """Indic shift+cmap converter; explicit params avoid loop-variable capture (B023)."""
     def conv(tok):
         p=parse_deva(tok)
         if p is None: return None
@@ -90,6 +92,12 @@ for langname, key, off, PFX, DCPFX, pua_base in INDIC:
             add_named(f"{PFX}_{cp:04X}", cp); return ("str", f"{PFX}_{cp:04X}")
         else:                                  # combining mark -> composite
             dc_marks.add(cp); return ("str", f"{DCPFX}_{cp:04X}")
+    return conv
+
+for langname, key, off, PFX, DCPFX, pua_base in INDIC:
+    cm=CMAP[key]
+    dc_marks=set()                 # target mark codepoints used -> composite
+    conv=make_conv(cm, off, PFX, DCPFX, dc_marks)
     colmap={}
     for r in range(2,56):
         quad=hi_cells.get(r,[None]*4)
@@ -122,7 +130,9 @@ for langname, key, off, PFX, DCPFX, pua_base in INDIC:
 # ============================================================================
 # keysym name -> codepoint, parsed from keysymdef.h (Thai_*), plus ASCII helpers
 THAI_KS={}
-for line in open("/usr/include/X11/keysymdef.h"):
+if not os.path.exists(KEYSYMDEF):
+    raise SystemExit(f"keysymdef.h not found at {KEYSYMDEF} - install libx11-dev or set KEYSYMDEF_H")
+for line in open(KEYSYMDEF):
     m=re.search(r'#define XK_(Thai_\w+)\s+0x[0-9a-fA-F]+\s+/\*\s*U\+([0-9A-Fa-f]{4})', line)
     if m: THAI_KS[m.group(1)]=int(m.group(2),16)
 
@@ -190,9 +200,9 @@ if th_seq:
     fonts_yaml.append({"lang":"th-TH","key":"th","block":(0xE00,0xE7F),
                        "pua_base":0xE180,"seq":", ".join(th_seq)})
 
-json.dump(cols_out, open("/tmp/script_cols.json","w"), indent=1)
-json.dump(named_add, open("/tmp/named_glyphs_add.json","w"), indent=1)
-json.dump(fonts_yaml, open("/tmp/fonts_yaml_add.json","w"), indent=1)
+json.dump(cols_out, open(os.path.join(OUT,"script_cols.json"),"w"), indent=1)
+json.dump(named_add, open(os.path.join(OUT,"named_glyphs_add.json"),"w"), indent=1)
+json.dump(fonts_yaml, open(os.path.join(OUT,"fonts_yaml_add.json"),"w"), indent=1)
 print(f"langs: {list(cols_out)}")
 for ln,cm in cols_out.items():
     nonset=[r for r in cm if r<56 and any(c is not None for c in cm[r])]

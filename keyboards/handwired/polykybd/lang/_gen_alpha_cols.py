@@ -9,9 +9,15 @@ Cyrillic/Greek/Hebrew alphabets.
 
 Outputs: /tmp/alpha_cols.json, /tmp/alpha_named.json, /tmp/alpha_fonts.json
 """
-import json, re
+import json, re, os, tempfile
+from pathlib import Path
 from fontTools.ttLib import TTFont
-F="/home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/"
+# repo-relative: this file is .../polykybd/lang/_gen_alpha_cols.py
+F = str(Path(__file__).resolve().parents[1] / "fonts") + "/"
+OUT = tempfile.gettempdir()
+KEYSYMDEF = os.environ.get("KEYSYMDEF_H", "/usr/include/X11/keysymdef.h")
+if not os.path.exists(KEYSYMDEF):
+    raise SystemExit(f"keysymdef.h not found at {KEYSYMDEF} - install libx11-dev or set KEYSYMDEF_H")
 def cmap(p): return set(TTFont(F+p).getBestCmap().keys())
 CM={"ka":cmap("noto-sans-georgian/NotoSansGeorgian-Regular.ttf"),
     "hy":cmap("noto-sans-armenian/NotoSansArmenian-Regular.ttf"),
@@ -28,7 +34,7 @@ ROW.update({"KC_MINUS":43,"KC_EQUAL":44,"KC_LBRC":45,"KC_RBRC":46,
 
 # keysym -> codepoint from keysymdef.h (Georgian_*, Armenian_*)
 KS={}
-for line in open("/usr/include/X11/keysymdef.h"):
+for line in open(KEYSYMDEF):
     m=re.search(r'#define XK_((?:Georgian|Armenian)_\w+)\s+0x[0-9a-fA-F]+\s+/\*\s*U\+([0-9A-Fa-f]{4,6})',line)
     if m: KS[m.group(1)]=int(m.group(2),16)
 
@@ -147,9 +153,9 @@ fonts.append({"lang":"zh-TW","cat":"bopomofo","src":"noto-sans-tc","range":[0x31
 # ---- id-ID Indonesian: plain US QWERTY (no overrides) ----------------------
 cols["id-ID"]={}        # empty -> all keys fall back to en-US; flag + host fold only
 
-json.dump(cols,open("/tmp/alpha_cols.json","w"),indent=1)
-json.dump(named,open("/tmp/alpha_named.json","w"),indent=1)
-json.dump(fonts,open("/tmp/alpha_fonts.json","w"),indent=1)
+json.dump(cols,open(os.path.join(OUT,"alpha_cols.json"),"w"),indent=1)
+json.dump(named,open(os.path.join(OUT,"alpha_named.json"),"w"),indent=1)
+json.dump(fonts,open(os.path.join(OUT,"alpha_fonts.json"),"w"),indent=1)
 print("langs:",list(cols))
 for ln,c in cols.items():
     print(f"  {ln}: {len([r for r in c if r<56 and any(x for x in c[r])])} mapped keys")

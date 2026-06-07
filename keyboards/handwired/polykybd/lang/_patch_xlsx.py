@@ -11,9 +11,11 @@ byte so formula caches in sheet1/sheet3/sharedStrings stay intact), updates
 Optional LCID map adds the Windows locale id in the 4th header sub-column
 (purely informational; cog never reads it).
 """
-import sys, json, re, zipfile, shutil, os
+import sys, json, re, zipfile, shutil, os, tempfile
 from xml.sax.saxutils import escape
 
+if len(sys.argv) < 4:
+    sys.exit("usage: _patch_xlsx.py <xlsx> <spec.json> <comma,sep,lang,order>")
 XLSX = sys.argv[1]
 SPEC = json.load(open(sys.argv[2]))
 ORDER = sys.argv[3].split(",")            # explicit lang order to append
@@ -62,7 +64,7 @@ newmaxcol = 2 + (n+len(ORDER))*4 - 1       # last col used (incl LCID at base+3)
 print(f"new max col index = {newmaxcol} ({colname(newmaxcol)})")
 
 # read sheet2.xml
-tmp="/tmp/_xlsx_work"; shutil.rmtree(tmp,ignore_errors=True); os.makedirs(tmp)
+tmp=tempfile.mkdtemp(prefix="xlsx_work_")
 with zipfile.ZipFile(XLSX) as z:
     names=z.namelist()
     z.extractall(tmp)

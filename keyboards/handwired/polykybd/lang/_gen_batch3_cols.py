@@ -10,9 +10,11 @@ just like the Indic/Thai matras.
 
 Outputs: /tmp/b3_cols.json, /tmp/b3_named.json, /tmp/b3_fonts.json
 """
-import json
+import json, os, tempfile
+from pathlib import Path
 from fontTools.ttLib import TTFont
-F="/home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/"
+F = str(Path(__file__).resolve().parents[1] / "fonts") + "/"   # repo-relative
+OUT = tempfile.gettempdir()
 NS=set(TTFont(F+"noto-sans/NotoSans-Regular.ttf").getBestCmap().keys())
 
 ROW={}; L="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -142,9 +144,9 @@ fonts.append({"kind":"composite","cat":"vietnamese","variant":"_VietTones_","src
               "pua":0xE1A0,"seq":", ".join(seq),
               "note":"Vietnamese combining tone marks (grave/hook/tilde/acute/dot-below) on a dotted circle U+25CC, PUA 0xE1A0.., addressed via VIET_DC_* by vi-VN."})
 
-json.dump(cols,open("/tmp/b3_cols.json","w"),indent=1)
-json.dump(named,open("/tmp/b3_named.json","w"),indent=1)
-json.dump(fonts,open("/tmp/b3_fonts.json","w"),indent=1)
+json.dump(cols,open(os.path.join(OUT,"b3_cols.json"),"w"),indent=1)
+json.dump(named,open(os.path.join(OUT,"b3_named.json"),"w"),indent=1)
+json.dump(fonts,open(os.path.join(OUT,"b3_fonts.json"),"w"),indent=1)
 print("langs:",list(cols))
 for ln,c in cols.items(): print(f"  {ln}: {len([r for r in c if r<56 and any(x for x in c[r])])} keys")
 print("named additions:",len(named),named)

@@ -9,9 +9,11 @@ order, mimicking the inlineStr format the existing DEVA_DC_* rows already use.
 Only sheet1.xml is rewritten; every other zip entry (incl. the formula caches in
 latin_sup_ex / the rest of named_glyphs) is copied byte-for-byte.
 """
-import sys, json, re, zipfile, shutil, os
+import sys, json, re, zipfile, shutil, os, tempfile
 from xml.sax.saxutils import escape
 
+if len(sys.argv) < 3:
+    sys.exit("usage: _patch_named_glyphs.py <xlsx> <named_glyphs_add.json>")
 XLSX=sys.argv[1]
 ADD=json.load(open(sys.argv[2]))
 # first blank row after the last contiguous filled (name+code) row
@@ -30,7 +32,7 @@ def rowxml(n, name, code):
             f'<c r="B{n}" t="inlineStr"><is><t xml:space="preserve">{escape(code)}</t></is></c>'
             f'</row>')
 
-tmp="/tmp/_ng_work"; shutil.rmtree(tmp,ignore_errors=True); os.makedirs(tmp)
+tmp=tempfile.mkdtemp(prefix="ng_work_")
 with zipfile.ZipFile(XLSX) as z: z.extractall(tmp)
 p=os.path.join(tmp,"xl/worksheets/sheet1.xml")
 xml=open(p,encoding="utf-8").read()

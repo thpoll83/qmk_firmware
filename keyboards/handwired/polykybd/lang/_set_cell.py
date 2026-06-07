@@ -6,9 +6,11 @@ copied byte-for-byte.
 
 usage: _set_cell.py <xlsx> <row> <col1based> <value> [num|str]
 """
-import sys, re, zipfile, shutil, os
+import sys, re, zipfile, shutil, os, tempfile
 from xml.sax.saxutils import escape
 
+if len(sys.argv) < 5:
+    sys.exit("usage: _set_cell.py <xlsx> <row> <col1based> <value> [num|str]")
 XLSX=sys.argv[1]; ROW=int(sys.argv[2]); COL=int(sys.argv[3]); VAL=sys.argv[4]
 KIND=sys.argv[5] if len(sys.argv)>5 else "num"
 
@@ -20,7 +22,7 @@ REF=f"{colname(COL)}{ROW}"
 CELL=(f'<c r="{REF}"><v>{VAL}</v></c>' if KIND=="num"
       else f'<c r="{REF}" t="inlineStr"><is><t xml:space="preserve">{escape(VAL)}</t></is></c>')
 
-tmp="/tmp/_setcell_work"; shutil.rmtree(tmp,ignore_errors=True); os.makedirs(tmp)
+tmp=tempfile.mkdtemp(prefix="setcell_work_")
 with zipfile.ZipFile(XLSX) as z: z.extractall(tmp)
 p=os.path.join(tmp,"xl/worksheets/sheet2.xml")
 xml=open(p,encoding="utf-8").read()

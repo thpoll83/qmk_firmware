@@ -38,7 +38,27 @@ LABEL_OUT="base/fonts/lang_label_font.h"
 FLAG_BASE="0xE000"                            # keep in sync with FLAG_CP_BASE in the keymap
 
 # ISO 3166-1 alpha-2 country code per language, in enum lang_layer order.
-COUNTRIES=(US DE FR ES PT IT TR KR JP SA GR UA RU BY KZ BG PL RO CN NL IL SE FI NO DK HU CZ HR SK LT LV EE BR RS MK IR IN IN NP MN PK GB MX CH BE CA TH IN IN IN TW GE AM ID AZ IS VN)
+# DERIVED from the single source of truth, lang/lang_lut.xlsx: the "YY" part of
+# each "xx-YY" language name in key_lut row 1, in column (= enum) order. Never
+# hand-edit this list - add the language to the spreadsheet and re-run.
+mapfile -t COUNTRIES < <("${PYTHON:-python3}" - lang/lang_lut.xlsx <<'PY'
+import sys
+from openpyxl import load_workbook
+sheet = load_workbook(sys.argv[1], read_only=True, data_only=True)["key_lut"]
+i = 0
+while True:
+    name = sheet.cell(row=1, column=2 + i * 4).value
+    if not name:
+        break
+    print(name.split("-")[1].upper())   # es-MX -> MX, th-TH -> TH, ...
+    i += 1
+PY
+)
+if [ "${#COUNTRIES[@]}" -eq 0 ]; then
+    echo "ERROR: could not read the language list from lang/lang_lut.xlsx" \
+         "(need ${PYTHON:-python3} with openpyxl)." >&2
+    exit 1
+fi
 
 # Regional-indicator codepoint (hex) for an ASCII A-Z letter.
 ri() { printf '%X' "$(( 0x1F1E6 + $(printf '%d' "'$1") - 65 ))"; }

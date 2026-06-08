@@ -35,10 +35,12 @@ except ImportError:
 # does not affect the rendered bytes (fontconvert parses options order-free); it
 # only shapes the provenance comment fontconvert prints on the first line.
 FIELD_FLAGS = [
-    ("size", "-s"), ("variant", "-v"), ("grayscale", "-g"), ("render_height", "-r"),
-    ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
+    ("size", "-s"), ("variant", "-v"), ("grayscale", "-g"), ("normalize", "-N"),
+    ("render_height", "-r"),
+    ("yadvance", "-Y"), ("xshift", "-X"), ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
     ("contrast", "-c"), ("gamma", "-G"), ("saturation", "-B"), ("sharpness", "-U"),
-    ("outline", "-O"), ("offset", "-o"), ("neg_offset", "-n"), ("bits", "-b"),
+    ("outline", "-O"), ("invert", "-I"), ("edge", "-E"),
+    ("offset", "-o"), ("neg_offset", "-n"), ("bits", "-b"),
 ]
 GFXFONT_RE = re.compile(r"const\s+GFXfont\s+(\w+)\s+PROGMEM", re.M)
 
@@ -64,12 +66,13 @@ def build_argv(fc: str, e: dict, sources: dict, root: Path) -> list[str]:
         sys.exit(f"font entry references unknown source {src!r}: {e}")
     argv = [fc, "-f", str(root / sources[src])]
     for field, flag in FIELD_FLAGS:
-        if field not in e or e[field] in (None, False):
+        val = e.get(field)
+        if val in (None, False):                 # absent / disabled (also 0)
             continue
-        if flag in ("-g",):                      # boolean flags
+        if val is True:                          # bare boolean flag (-g/-N/-I/-E/…)
             argv.append(flag)
-        else:
-            argv += [flag, str(e[field])]
+        else:                                    # flag with a value
+            argv += [flag, str(val)]
     argv += [str(a) for a in e.get("extra_args", [])]
     if e.get("sequence"):
         argv += ["-S", str(e["sequence"])]       # sequence mode ignores ranges

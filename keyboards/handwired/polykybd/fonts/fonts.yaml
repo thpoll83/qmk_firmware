@@ -26,6 +26,7 @@ sources:
   noto-sans-armenian:  fonts/noto-sans-armenian/NotoSansArmenian-Regular.ttf
   noto-sans-tc:        fonts/noto-sans-tc/NotoSansTC-Regular.ttf
   noto-emoji:          fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf
+  noto-cemoji:         fonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf
   noto-sans-symbols:   fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
   noto-sans-symbols2:  fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
 
@@ -91,13 +92,53 @@ categories:
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
   emoji:
     output: emoji_fonts.h
+    # Default: monochrome NotoEmoji line-art (the original).  Most emoji read
+    # best as the crisp b/w glyphs; only the full-body "puppet" human figures
+    # (see the emoji_fig category) get the colour treatment.
     defaults: {source: noto-emoji, size: 20, render_height: 50}
+  emoji_fig:
+    output: emoji_fig_fonts.h
+    # Colour override for NotoEmoji's full-body human figures, which it draws as
+    # abstract round-head "finger puppet" shapes / solid silhouettes that read
+    # poorly.  These are the "col4" recipe from the visual study: NotoColorEmoji
+    # composited+dithered, per-glyph auto-levels (-N), inverted to an outlined
+    # icon (-I), crisp interior edges (-E), clean 1px outline (-O1), at full
+    # keycap height (r40, yadvance 48 -> y=0..40, zero clip).  Sports/activity
+    # figures are intentionally NOT here — their b/w line-art is cleaner.  These
+    # entries are listed FIRST in `fonts:` so they win priority over the b/w
+    # emoji glyphs that also cover these codepoints.
+    defaults: {source: noto-cemoji, size: 20, render_height: 40, yadvance: 48,
+               grayscale: true, dither: fs, normalize: true,
+               invert: true, edge: true, outline: 1, bits: 32}
 
 # ORDERED list == ALL_FONTS[] priority. Each entry inherits its category
 # defaults; any field below overrides them. `bits: 32` marks SMP (>U+FFFF)
 # ranges so the real codepoint is written into the struct (no PUA shift).
 fonts:
   - {category: latin, variant: _Base_, ranges: [[0x20, 0x7e]]}
+  # --- Colour overrides for NotoEmoji's "puppet" human figures. Listed FIRST so
+  # they win priority over the b/w emoji glyphs covering the same codepoints.
+  # Explicit set chosen by the user; each range is a contiguous all-colour run.
+  # Solid-silhouette figures (family, pregnant, hugging, lotus, climbing...) and
+  # the sports/activity line-art stay b/w (their b/w line-art is cleaner). ---
+  - {category: emoji_fig, variant: _PpSanta_,    normalize: false, invert: false, ranges: [[0x1f385, 0x1f385]]}  # 🎅 filled (white beard reads better un-inverted)
+  - {category: emoji_fig, variant: _PpPeopleA_,  ranges: [[0x1f466, 0x1f469]]}  # 👦👧👨👩
+  # Couples are full-body; render them as "portraits": ~1.6x size (r64, capped to
+  # 72 wide) positioned so the heads sit at the top and the legs clip below the
+  # 40px keycap (yadvance 67 -> glyph top at y=0, bottom at 64).  Upper ~62% shows.
+  - {category: emoji_fig, variant: _PpCouples_,  render_height: 64, max_width: 72, yadvance: 67, xshift: -12, ranges: [[0x1f46b, 0x1f46d]]}  # 👫👬👭 portrait (xshift -12 cancels the 2-space prefix push)
+  - {category: emoji_fig, variant: _PpRoles_,    ranges: [[0x1f46e, 0x1f478]]}  # 👮..👸 roles (👹 ogre stays b/w)
+  - {category: emoji_fig, variant: _PpInfoGuardDance_, ranges: [[0x1f481, 0x1f483]]} # 💁💂💃
+  - {category: emoji_fig, variant: _PpGroom_,    ranges: [[0x1f486, 0x1f487]]}  # 💆💇
+  - {category: emoji_fig, variant: _PpCoupleHeart_, ranges: [[0x1f491, 0x1f491]]} # 💑
+  - {category: emoji_fig, variant: _PpGestA_,    ranges: [[0x1f645, 0x1f647]]}  # 🙅🙆🙇
+  - {category: emoji_fig, variant: _PpRaiseHand_, ranges: [[0x1f64b, 0x1f64b]]} # 🙋
+  - {category: emoji_fig, variant: _PpFrownPout_, ranges: [[0x1f64d, 0x1f64e]]} # 🙍🙎
+  - {category: emoji_fig, variant: _PpFacepalm_, ranges: [[0x1f926, 0x1f926]]}  # 🤦
+  - {category: emoji_fig, variant: _PpRoyals_,   ranges: [[0x1f934, 0x1f937]]}  # 🤴🤵🤶🤷 prince, tuxedo, Mrs Claus, shrug (contiguous)
+  - {category: emoji_fig, variant: _PpHeroes_,   ranges: [[0x1f9b8, 0x1f9b9]]}  # 🦸🦹
+  - {category: emoji_fig, variant: _PpPersons_,  ranges: [[0x1f9d1, 0x1f9d6]]}  # 🧑..🧖  (🧗🧘 stay b/w)
+  - {category: emoji_fig, variant: _PpFantasy_,  ranges: [[0x1f9d9, 0x1f9df]]}  # 🧙..🧟 mage..zombie
   - {category: emoji, variant: _ToolsBMP_, ranges: [[0x2692, 0x269c]]}
   - {category: emoji, variant: _EmjHandsBMP2_, ranges: [[0x270a, 0x270d]], note: 'Cat 1: BMP hand gestures.  ☝☞ (0x261D-0x261E, Symbols2) are merged into _SymBmp1_ (see "Symbols"). ✊✋✌✍ (0x270A-0x270D, NotoEmoji) stay separate; the Symbols2 ranges are split around this island.'}
   - {category: symbols, variant: _SymBmp1_, ranges: [[0x25ac, 0x25ac], [0x2600, 0x2647]], note: 'Symbols2 BMP fonts — full contiguous Misc-Symbols + Dingbats coverage (0x25AC-0x27BF), DISJOINT ranges split around the interleaved NotoEmoji islands (Zodiac 0x2648-53, ToolsBMP 0x2692-9C, TravelBMP2 0x26F0-F5, TravelBMP 0x2708, HandsBMP2 0x270A-0D). Overlap-free, no prefix trick. Replace SymbolsAndShapes / EmjWeatherBMP(2) / EmjHandsBMP / Chess / DiamondCut / EmjSnowflake / EmjSportsBMP / EmjHeart (all NotoSansSymbols2). Glyphs in the gaps (I-Ching, road signs, …) are rendered but simply not referenced by any emoji category. _SymBmp1_ 0x25AC, 0x2600-0x2647   _SymBmp2_ 0x2654-0x2691   _SymBmp6_ 0x269D-0x26EF _SymBmp3_ 0x26F6-0x2707           _SymBmp5_ 0x2709          _SymBmp4_ 0x270E-0x27BF Tools/alchemical 0x2692-0x269C (⚒⚓⚔⚕⚖⚗⚙⚛⚜) are absent from NotoSansSymbols2 — sourced from NotoEmoji.'}
@@ -112,7 +153,7 @@ fonts:
   - {category: latin, variant: _SupAndExtA_, render_height: 44, ranges: [[0xa1, 0x17e]]}
   - {category: emoji, variant: _EmjTravelBMP_, ranges: [[0x2708, 0x2708]], note: 'Cat 8: travel — BMP 0x2708 + SMP 0x1F680-0x1F6C5 (extended to include shower/bath/transit)'}
   - {category: latin, variant: _CurrencySigns_, ranges: [[0x20aa, 0x20ac], [0x20b4, 0x20b4], [0x2116, 0x2116]]}
-  - {category: emoji, variant: _Hyper_, size: 18, render_height: 48, bits: 32, ranges: [[0x1f4ab, 0x1f4ab]]}
+  - {category: emoji, variant: _Hyper_, size: 18, bits: 32, ranges: [[0x1f4ab, 0x1f4ab]]}
   - {category: emoji, variant: _Meh_, bits: 32, ranges: [[0x1f410, 0x1f410]]}
   - {category: emoji, variant: _Settings_, bits: 32, ranges: [[0x1f527, 0x1f527]]}
   - {category: emoji, variant: _World_, bits: 32, ranges: [[0x1f310, 0x1f310]]}
@@ -122,7 +163,7 @@ fonts:
   - {category: emoji, variant: _ClipCpy_, size: 18, bits: 32, ranges: [[0x1f4cb, 0x1f4cb]]}
   - {category: emoji, variant: _FileOpen_, size: 14, bits: 32, ranges: [[0x1f4c2, 0x1f4c2]]}
   - {category: symbols, variant: _Util_, bits: 32, ranges: [[0x1f568, 0x1f56a], [0x1f5a9, 0x1f5ab], [0x1f5b3, 0x1f5bc], [0x1f5ca, 0x1f5ca]]}
-  - {category: emoji, variant: _Brightness_, size: 16, render_height: 45, bits: 32, ranges: [[0x1f311, 0x1f318]]}
+  - {category: emoji, variant: _Brightness_, size: 16, bits: 32, ranges: [[0x1f311, 0x1f318]]}
   - {category: emoji, variant: _Find_, size: 18, bits: 32, ranges: [[0x1f50e, 0x1f50e]]}
   - {category: emoji, variant: _Lock_, size: 18, bits: 32, ranges: [[0x1f512, 0x1f512]]}
   - {category: emoji, variant: _Note_, size: 12, bits: 32, ranges: [[0x1f4dd, 0x1f4dd]]}

@@ -16,6 +16,7 @@
 #include "generated/vietnamese_fonts.h"
 #include "generated/symbol_fonts.h"
 #include "generated/emoji_fonts.h"
+#include "generated/emoji_fig_fonts.h"
 
 #include "gfx_icons.h"
 #include "FreeSansBold24pt7b.h"
@@ -23,6 +24,21 @@
 const GFXfont* const ALL_FONTS [] = {
   &IconsFont,
   &NotoSans_Regular_Base_14pt7b,
+  &NotoColorEmoji_Regular_PpSanta_20pt16b,
+  &NotoColorEmoji_Regular_PpPeopleA_20pt16b,
+  &NotoColorEmoji_Regular_PpCouples_20pt16b,
+  &NotoColorEmoji_Regular_PpRoles_20pt16b,
+  &NotoColorEmoji_Regular_PpInfoGuardDance_20pt16b,
+  &NotoColorEmoji_Regular_PpGroom_20pt16b,
+  &NotoColorEmoji_Regular_PpCoupleHeart_20pt16b,
+  &NotoColorEmoji_Regular_PpGestA_20pt16b,
+  &NotoColorEmoji_Regular_PpRaiseHand_20pt16b,
+  &NotoColorEmoji_Regular_PpFrownPout_20pt16b,
+  &NotoColorEmoji_Regular_PpFacepalm_20pt16b,
+  &NotoColorEmoji_Regular_PpRoyals_20pt16b,
+  &NotoColorEmoji_Regular_PpHeroes_20pt16b,
+  &NotoColorEmoji_Regular_PpPersons_20pt16b,
+  &NotoColorEmoji_Regular_PpFantasy_20pt16b,
   &NotoEmoji_Medium_ToolsBMP_20pt16b,
   &NotoEmoji_Medium_EmjHandsBMP2_20pt16b,
   &NotoSansSymbols2_Regular_SymBmp1_20pt16b,

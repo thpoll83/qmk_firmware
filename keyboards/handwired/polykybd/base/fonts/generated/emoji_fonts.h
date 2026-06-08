@@ -523,7 +523,7 @@ const GFXfont NotoEmoji_Medium_EmjTravelBMP_20pt16b PROGMEM = {
 
 // Approx. 214 bytes
 
-// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s 18 -v _Hyper_ -r 48 -b 32 128171 128171 
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s 18 -v _Hyper_ -r 50 -b 32 128171 128171 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
 /* num ranges: 1 */
@@ -552,7 +552,7 @@ const GFXfont NotoEmoji_Medium_Hyper_18pt16b PROGMEM = {
   (GFXglyph *)NotoEmoji_Medium_Hyper_18pt16bGlyphs,
   0x1F4AB, // first
   0x1F4AB, // last
-  48   //height
+  50   //height
  };
 
 // Approx. 167 bytes
@@ -728,7 +728,7 @@ const GFXfont NotoEmoji_Medium_FileOpen_14pt16b PROGMEM = {
 
 // Approx. 123 bytes
 
-// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s 16 -v _Brightness_ -r 45 -b 32 127761 127768 
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s 16 -v _Brightness_ -r 50 -b 32 127761 127768 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
 /* num ranges: 1 */
@@ -838,7 +838,7 @@ const GFXfont NotoEmoji_Medium_Brightness_16pt16b PROGMEM = {
   (GFXglyph *)NotoEmoji_Medium_Brightness_16pt16bGlyphs,
   0x1F311, // first
   0x1F318, // last
-  45   //height
+  50   //height
  };
 
 // Approx. 1103 bytes

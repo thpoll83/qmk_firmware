@@ -26,14 +26,19 @@
 > **Update (2026-06-08):** shipped **zh-HK (Hong Kong, Cangjie)** `LANG_ZHHK`
 > (enum index 57) — the rank-12 gap. It needed **no new assets**: the Cangjie
 > radical legends (Kangxi-radical block U+2F00–2FD5 plus 中/廿/難 at U+4E2D/5EFF/96E3)
-> already exist in the tree, because the current **zh-CN column is itself a Cangjie
-> radical layout** (radical on the base/caps keycap, the Latin letter as the shift
-> preview). zh-HK therefore mirrors that exact column, with its own 🇭🇰 flag and the
-> zh-HK locale, so it relabels identically to zh-CN-Cangjie but switches the OS to
-> Hong Kong Chinese. (Note for a future pass: mainland zh-CN is in practice Pinyin on
-> bare QWERTY, so the Cangjie legends arguably belong on zh-HK/zh-TW rather than
-> zh-CN — left unchanged here to avoid touching the shipped zh-CN layout. Z still
-> shows the Latin "Z"; a full Cangjie would add 重 U+91CD, deferred.)
+> already existed in the tree, because the old **zh-CN column was itself a Cangjie
+> radical layout**. zh-HK was seeded from that column, then completed with the last
+> missing radical **Z = 重 (U+91CD)** (new `_Cjk91cd_` single-codepoint NotoSansJP
+> font + `CJK_91CD` glyph).
+>
+> **Then zh-CN was re-pointed to Pinyin (2026-06-08):** mainland Chinese is in
+> practice typed with a Pinyin IME on a **plain US-QWERTY** board (the keycaps carry
+> no Han glyphs), so zh-CN's key column was **emptied** — it now folds onto en-US like
+> id-ID, with the host mapping `cn=us` in `forced_country_match.txt`. The Cangjie
+> radical legends therefore now live **only on zh-HK** (Zhuyin/Bopomofo on zh-TW),
+> which matches real-world keyboards: zh-CN = plain QWERTY (Pinyin), zh-HK = Cangjie
+> radicals, zh-TW = Zhuyin. Layout count stays 58 (zh-CN remains a selectable
+> language + 🇨🇳 flag; only its keycaps changed).
 
 ---
 

@@ -137,7 +137,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_SUN,           U"a",                         KANGXI_RADICAL_SUN,           NULL
     },
     {/* KC_B: */
     /*  en-US    */  U"b",                         U"B",                         NULL,                         NULL,
@@ -196,7 +197,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_MOON,          U"b",                         KANGXI_RADICAL_MOON,          NULL
     },
     {/* KC_C: */
     /*  en-US    */  U"c",                         U"C",                         NULL,                         NULL,
@@ -255,7 +257,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_GOLD,          U"c",                         KANGXI_RADICAL_GOLD,          NULL
     },
     {/* KC_D: */
     /*  en-US    */  U"d",                         U"D",                         NULL,                         NULL,
@@ -314,7 +317,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_TREE,          U"d",                         KANGXI_RADICAL_TREE,          NULL
     },
     {/* KC_E: */
     /*  en-US    */  U"e",                         U"E",                         NULL,                         NULL,
@@ -373,7 +377,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_WATER,         U"e",                         KANGXI_RADICAL_WATER,         NULL
     },
     {/* KC_F: */
     /*  en-US    */  U"f",                         U"F",                         NULL,                         NULL,
@@ -432,7 +437,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_FIRE,          U"f",                         KANGXI_RADICAL_FIRE,          NULL
     },
     {/* KC_G: */
     /*  en-US    */  U"g",                         U"G",                         NULL,                         NULL,
@@ -491,7 +497,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_EARTH,         U"g",                         KANGXI_RADICAL_EARTH,         NULL
     },
     {/* KC_H: */
     /*  en-US    */  U"h",                         U"H",                         NULL,                         NULL,
@@ -550,7 +557,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_BAMBOO,        U"h",                         KANGXI_RADICAL_BAMBOO,        NULL
     },
     {/* KC_I: */
     /*  en-US    */  U"i",                         U"I",                         NULL,                         NULL,
@@ -609,7 +617,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  U"i",                         I_WITH_DOT,                   NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_HALBERD,       U"i",                         KANGXI_RADICAL_HALBERD,       NULL
     },
     {/* KC_J: */
     /*  en-US    */  U"j",                         U"J",                         NULL,                         NULL,
@@ -668,7 +677,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_TEN,           U"j",                         KANGXI_RADICAL_TEN,           NULL
     },
     {/* KC_K: */
     /*  en-US    */  U"k",                         U"K",                         NULL,                         NULL,
@@ -727,7 +737,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_BIG,           U"k",                         KANGXI_RADICAL_BIG,           NULL
     },
     {/* KC_L: */
     /*  en-US    */  U"l",                         U"L",                         NULL,                         NULL,
@@ -786,7 +797,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  CJK_4E2D,                     U"l",                         CJK_4E2D,                     NULL
     },
     {/* KC_M: */
     /*  en-US    */  U"m",                         U"M",                         NULL,                         NULL,
@@ -845,7 +857,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_ONE,           U"m",                         KANGXI_RADICAL_ONE,           NULL
     },
     {/* KC_N: */
     /*  en-US    */  U"n",                         U"N",                         NULL,                         NULL,
@@ -904,7 +917,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_BOW,           U"n",                         KANGXI_RADICAL_BOW,           NULL
     },
     {/* KC_O: */
     /*  en-US    */  U"o",                         U"O",                         NULL,                         NULL,
@@ -963,7 +977,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_MAN,           U"o",                         KANGXI_RADICAL_MAN,           NULL
     },
     {/* KC_P: */
     /*  en-US    */  U"p",                         U"P",                         NULL,                         NULL,
@@ -1022,7 +1037,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_HEART,         U"p",                         KANGXI_RADICAL_HEART,         NULL
     },
     {/* KC_Q: */
     /*  en-US    */  U"q",                         U"Q",                         NULL,                         NULL,
@@ -1081,7 +1097,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_HAND,          U"q",                         KANGXI_RADICAL_HAND,          NULL
     },
     {/* KC_R: */
     /*  en-US    */  U"r",                         U"R",                         NULL,                         NULL,
@@ -1140,7 +1157,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_MOUTH,         U"r",                         KANGXI_RADICAL_MOUTH,         NULL
     },
     {/* KC_S: */
     /*  en-US    */  U"s",                         U"S",                         NULL,                         NULL,
@@ -1199,7 +1217,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_CORPSE,        U"s",                         KANGXI_RADICAL_CORPSE,        NULL
     },
     {/* KC_T: */
     /*  en-US    */  U"t",                         U"T",                         NULL,                         NULL,
@@ -1258,7 +1277,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  CJK_5EFF,                     U"t",                         CJK_5EFF,                     NULL
     },
     {/* KC_U: */
     /*  en-US    */  U"u",                         U"U",                         NULL,                         NULL,
@@ -1317,7 +1337,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_MOUNTAIN,      U"u",                         KANGXI_RADICAL_MOUNTAIN,      NULL
     },
     {/* KC_V: */
     /*  en-US    */  U"v",                         U"V",                         NULL,                         NULL,
@@ -1376,7 +1397,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_WOMAN,         U"v",                         KANGXI_RADICAL_WOMAN,         NULL
     },
     {/* KC_W: */
     /*  en-US    */  U"w",                         U"W",                         NULL,                         NULL,
@@ -1435,7 +1457,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  UMLAUT_U_SMALL,               UMLAUT_U,                     NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_FIELD,         U"w",                         KANGXI_RADICAL_FIELD,         NULL
     },
     {/* KC_X: */
     /*  en-US    */  U"x",                         U"X",                         NULL,                         NULL,
@@ -1494,7 +1517,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  CJK_96E3,                     U"x",                         CJK_96E3,                     NULL
     },
     {/* KC_Y: */
     /*  en-US    */  U"y",                         U"Y",                         NULL,                         NULL,
@@ -1553,7 +1577,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  KANGXI_RADICAL_DIVINATION,    U"y",                         KANGXI_RADICAL_DIVINATION,    NULL
     },
     {/* KC_Z: */
     /*  en-US    */  U"z",                         U"Z",                         NULL,                         NULL,
@@ -1612,7 +1637,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  U"Z",                         U"z",                         U"z",                         NULL
     },
     {/* KC_1: */
     /*  en-US    */  U"1",                         U"!",                         U"1",                         NULL,
@@ -1671,7 +1697,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  LATIN_0103,                   LATIN_0102,                   NULL,                         U"1"
+    /*  vi-VN    */  LATIN_0103,                   LATIN_0102,                   NULL,                         U"1",
+    /*  zh-HK    */  U"1",                         U"!",                         U"1",                         NULL
     },
     {/* KC_2: */
     /*  en-US    */  U"2",                         U"@",                         U"2",                         NULL,
@@ -1730,7 +1757,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  U"2",                         QUOTE,                        U"2",                         NULL,
     /*  is-IS    */  U"2",                         QUOTE,                        U"2",                         NULL,
-    /*  vi-VN    */  LATIN_00E2,                   LATIN_00C2,                   NULL,                         U"2"
+    /*  vi-VN    */  LATIN_00E2,                   LATIN_00C2,                   NULL,                         U"2",
+    /*  zh-HK    */  U"2",                         MIDDLE_DOT,                   U"2",                         NULL
     },
     {/* KC_3: */
     /*  en-US    */  U"3",                         U"#",                         U"3",                         NULL,
@@ -1789,7 +1817,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  U"3",                         NUMERO_SIGN,                  U"3",                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  LATIN_00EA,                   LATIN_00CA,                   NULL,                         U"3"
+    /*  vi-VN    */  LATIN_00EA,                   LATIN_00CA,                   NULL,                         U"3",
+    /*  zh-HK    */  U"3",                         LANGLE_BRACKET,               U"3",                         NULL
     },
     {/* KC_4: */
     /*  en-US    */  U"4",                         U"$",                         U"4",                         NULL,
@@ -1848,7 +1877,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  U"4",                         U";",                         U"4",                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  LATIN_00F4,                   LATIN_00D4,                   NULL,                         U"4"
+    /*  vi-VN    */  LATIN_00F4,                   LATIN_00D4,                   NULL,                         U"4",
+    /*  zh-HK    */  U"4",                         YEN_SIGN,                     U"4",                         NULL
     },
     {/* KC_5: */
     /*  en-US    */  U"5",                         U"%",                         U"5",                         NULL,
@@ -1907,7 +1937,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  VIET_DC_0300,                 U"%",                         VIET_DC_0300,                 U"5"
+    /*  vi-VN    */  VIET_DC_0300,                 U"%",                         VIET_DC_0300,                 U"5",
+    /*  zh-HK    */  U"5",                         RANGLE_BRACKET,               U"5",                         NULL
     },
     {/* KC_6: */
     /*  en-US    */  U"6",                         U"^",                         U"6",                         NULL,
@@ -1966,7 +1997,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  U"6",                         U":",                         U"6",                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  VIET_DC_0309,                 U"^",                         VIET_DC_0309,                 U"6"
+    /*  vi-VN    */  VIET_DC_0309,                 U"^",                         VIET_DC_0309,                 U"6",
+    /*  zh-HK    */  U"6",                         LWCORNER_BRACKET,             U"6",                         NULL
     },
     {/* KC_7: */
     /*  en-US    */  U"7",                         U"&",                         U"7",                         NULL,
@@ -2025,7 +2057,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  U"7",                         U"?",                         U"7",                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  VIET_DC_0303,                 U"&",                         VIET_DC_0303,                 U"7"
+    /*  vi-VN    */  VIET_DC_0303,                 U"&",                         VIET_DC_0303,                 U"7",
+    /*  zh-HK    */  U"7",                         RWCORNER_BRACKET,             U"7",                         NULL
     },
     {/* KC_8: */
     /*  en-US    */  U"8",                         U"*",                         U"8",                         NULL,
@@ -2084,7 +2117,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  VIET_DC_0301,                 U"*",                         VIET_DC_0301,                 U"8"
+    /*  vi-VN    */  VIET_DC_0301,                 U"*",                         VIET_DC_0301,                 U"8",
+    /*  zh-HK    */  U"8",                         U". . .",                     U"8",                         NULL
     },
     {/* KC_9: */
     /*  en-US    */  U"9",                         U"(",                         U"9",                         NULL,
@@ -2143,7 +2177,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  VIET_DC_0323,                 U"(",                         VIET_DC_0323,                 U"9"
+    /*  vi-VN    */  VIET_DC_0323,                 U"(",                         VIET_DC_0323,                 U"9",
+    /*  zh-HK    */  U"9",                         U"(",                         U"9",                         NULL
     },
     {/* KC_0: */
     /*  en-US    */  ZERO,                         U")",                         ZERO,                         NULL,
@@ -2202,7 +2237,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  LATIN_0111,                   LATIN_0110,                   NULL,                         ZERO
+    /*  vi-VN    */  LATIN_0111,                   LATIN_0110,                   NULL,                         ZERO,
+    /*  zh-HK    */  NULL,                         U")",                         NULL,                         NULL
     },
     {/* KC_ENTER: */
     /*  en-US    */  ARROWS_RETURN,                NULL,                         NULL,                         NULL,
@@ -2261,7 +2297,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_ESCAPE: */
     /*  en-US    */  U"Esc",                       NULL,                         NULL,                         NULL,
@@ -2320,7 +2357,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_BACKSPACE: */
     /*  en-US    */  TECHNICAL_ERASELEFT,          NULL,                         NULL,                         NULL,
@@ -2379,7 +2417,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_TAB: */
     /*  en-US    */  ARROWS_TAB,                   NULL,                         NULL,                         NULL,
@@ -2438,7 +2477,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_SPACE: */
     /*  en-US    */  ICON_SPACE,                   NULL,                         NULL,                         NULL,
@@ -2497,7 +2537,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_MINUS: */
     /*  en-US    */  U"-",                         U"_",                         U"-",                         NULL,
@@ -2556,7 +2597,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  UMLAUT_O_SMALL,               UMLAUT_O,                     NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  ICON_LEFT,                    LCORNER_BRKT,                 ICON_LEFT,                    NULL
     },
     {/* KC_EQUAL: */
     /*  en-US    */  EQUALS,                       U"+",                         EQUALS,                       NULL,
@@ -2615,7 +2657,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  U"-",                         U"_",                         U"-",                         NULL,
-    /*  vi-VN    */  DONG_SIGN,                    U"+",                         DONG_SIGN,                    NULL
+    /*  vi-VN    */  DONG_SIGN,                    U"+",                         DONG_SIGN,                    NULL,
+    /*  zh-HK    */  ICON_RIGHT,                   RCORNER_BRKT,                 ICON_RIGHT,                   NULL
     },
     {/* KC_LBRC: */
     /*  en-US    */  U"[",                         U"{",                         U"[",                         NULL,
@@ -2674,7 +2717,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  UMLAUT_O_SMALL,               UMLAUT_O,                     NULL,                         NULL,
     /*  is-IS    */  LATIN_00F0,                   LATIN_00D0,                   NULL,                         NULL,
-    /*  vi-VN    */  LATIN_01B0,                   LATIN_01AF,                   NULL,                         NULL
+    /*  vi-VN    */  LATIN_01B0,                   LATIN_01AF,                   NULL,                         NULL,
+    /*  zh-HK    */  U"[",                         LLENTICULAR_BRACKET,          U"[",                         NULL
     },
     {/* KC_RBRC: */
     /*  en-US    */  U"]",                         U"}",                         U"]",                         NULL,
@@ -2733,7 +2777,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  G_WITH_BREVE_SMALL,           G_WITH_BREVE,                 NULL,                         NULL,
     /*  is-IS    */  U"'",                         U"?",                         U"'",                         NULL,
-    /*  vi-VN    */  LATIN_01A1,                   LATIN_01A0,                   NULL,                         NULL
+    /*  vi-VN    */  LATIN_01A1,                   LATIN_01A0,                   NULL,                         NULL,
+    /*  zh-HK    */  U"]",                         RLENTICULAR_BRACKET,          U"]",                         NULL
     },
     {/* KC_BACKSLASH: */
     /*  en-US    */  BACKSLASH,                    U"|",                         BACKSLASH,                    NULL,
@@ -2792,7 +2837,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  BACKSLASH,                    U"/",                         BACKSLASH,                    NULL,
     /*  is-IS    */  U"+",                         U"*",                         U"+",                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  CJK_IDEOG_COMMA,              KANGXI_RADICAL_ONE,           CJK_IDEOG_COMMA,              NULL
     },
     {/* KC_NONUS_HASH: */
     /*  en-US    */  U"#",                         U"~",                         U"#",                         NULL,
@@ -2851,7 +2897,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  BACKSLASH,                    U"/",                         BACKSLASH,                    NULL,
     /*  is-IS    */  U"+",                         U"*",                         U"+",                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  U"#",                         U"~",                         U"#",                         NULL
     },
     {/* KC_SEMICOLON: */
     /*  en-US    */  U";",                         U":",                         U";",                         NULL,
@@ -2910,7 +2957,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  I_DOTLESS_SMALL,              U"I",                         NULL,                         NULL,
     /*  is-IS    */  LETTER_AE_SMALL,              LATIN_00C6,                   NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  U";",                         U":",                         U";",                         NULL
     },
     {/* KC_QUOTE: */
     /*  en-US    */  U"'",                         QUOTE,                        U"'",                         NULL,
@@ -2969,7 +3017,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  LATIN_0259,                   LATIN_018F,                   NULL,                         NULL,
     /*  is-IS    */  ACUTE_ACCENT,                 ACUTE_ACCENT,                 ACUTE_ACCENT,                 NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  U"'",                         QUOTE,                        U"'",                         NULL
     },
     {/* KC_GRAVE: */
     /*  en-US    */  GRAVE_ACCENT,                 U"~",                         GRAVE_ACCENT,                 NULL,
@@ -3028,7 +3077,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  MOD_RING,                     DIAERESIS,                    MOD_RING,                     NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  GRAVE_ACCENT,                 U"~",                         GRAVE_ACCENT,                 NULL
     },
     {/* KC_COMMA: */
     /*  en-US    */  COMMA,                        U"<",                         COMMA,                        NULL,
@@ -3087,7 +3137,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  C_WITH_CEDILLA_SMALL,         C_WITH_CEDILLA,               NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  COMMA,                        LANGLE_BRACKET_DBL,           COMMA,                        NULL
     },
     {/* KC_DOT: */
     /*  en-US    */  U".",                         U">",                         U".",                         NULL,
@@ -3146,7 +3197,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  S_WITH_CEDILLA_SMALL,         S_WITH_CEDILLA,               NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  CJK_IDEOG_FSTOP,              RANGLE_BRACKET_DBL,           NULL,                         NULL
     },
     {/* KC_SLASH: */
     /*  en-US    */  U"/",                         U"?",                         U"/",                         NULL,
@@ -3205,7 +3257,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  U".",                         COMMA,                        U".",                         NULL,
     /*  is-IS    */  LATIN_00FE,                   LATIN_00DE,                   NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  U"/",                         U"?",                         U"/",                         NULL
     },
     {/* KC_NONUS_BACKSLASH: */
     /*  en-US    */  U"<",                         U">",                         U"<",                         NULL,
@@ -3264,7 +3317,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  id-ID    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  zh-HK    */  CJK_IDEOG_COMMA,              KANGXI_RADICAL_ONE,           CJK_IDEOG_COMMA,              NULL
     },
     //[[[end]]]
 };
@@ -3371,7 +3425,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  id-ID*/  0,0,0,0,
 		/*  az-AZ*/  0,-128,0,50,
 		/*  is-IS*/  0,-128,0,50,
-		/*  vi-VN*/  0,-128,0,50
+		/*  vi-VN*/  0,-128,0,50,
+		/*  zh-HK*/  0,42,0,0
 	},
 	// {letter.voffset}
 	{
@@ -3431,7 +3486,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  id-ID*/  0,0,0,0,
 		/*  az-AZ*/  0,-128,0,13,
 		/*  is-IS*/  0,-128,0,13,
-		/*  vi-VN*/  0,-128,0,13
+		/*  vi-VN*/  0,-128,0,13,
+		/*  zh-HK*/  0,10,0,0
 	},
 	// {num.hoffset}
 	{
@@ -3491,7 +3547,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  id-ID*/  0,0,0,0,
 		/*  az-AZ*/  0,28,0,50,
 		/*  is-IS*/  0,28,0,50,
-		/*  vi-VN*/  0,28,0,50
+		/*  vi-VN*/  0,28,0,50,
+		/*  zh-HK*/  0,34,0,0
 	},
 	// {num.voffset}
 	{
@@ -3551,7 +3608,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  id-ID*/  0,0,0,0,
 		/*  az-AZ*/  0,0,0,13,
 		/*  is-IS*/  0,0,0,13,
-		/*  vi-VN*/  0,0,0,13
+		/*  vi-VN*/  0,0,0,13,
+		/*  zh-HK*/  0,10,0,0
 	},
 	// {sym.hoffset}
 	{
@@ -3611,7 +3669,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  id-ID*/  0,0,0,0,
 		/*  az-AZ*/  0,28,0,50,
 		/*  is-IS*/  0,28,0,50,
-		/*  vi-VN*/  0,28,0,50
+		/*  vi-VN*/  0,28,0,50,
+		/*  zh-HK*/  0,34,0,0
 	},
 	// {sym.voffset}
 	{
@@ -3671,7 +3730,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  id-ID*/  0,0,0,0,
 		/*  az-AZ*/  0,0,0,13,
 		/*  is-IS*/  0,0,0,13,
-		/*  vi-VN*/  0,0,0,13
+		/*  vi-VN*/  0,0,0,13,
+		/*  zh-HK*/  0,10,0,0
 	}
 //[[[end]]]
 };
@@ -3930,6 +3990,7 @@ static uint32_t lang_uint32 [] = {
     LANGSTR_TO_UI32("azAZ"),
     LANGSTR_TO_UI32("isIS"),
     LANGSTR_TO_UI32("viVN"),
+    LANGSTR_TO_UI32("zhHK"),
     //[[[end]]]
 };
 

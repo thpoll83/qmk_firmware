@@ -20,7 +20,7 @@ XLSX = sys.argv[1]
 SPEC = json.load(open(sys.argv[2]))
 ORDER = sys.argv[3].split(",")            # explicit lang order to append
 LCID = {"en-GB":2057,"es-MX":2058,"de-CH":2055,"fr-BE":2060,"fr-CA":3084,
-        "th-TH":1054,"bn-IN":1093,"te-IN":1098,"ta-IN":1097}
+        "th-TH":1054,"bn-IN":1093,"te-IN":1098,"ta-IN":1097,"zh-HK":3076}
 
 def colname(n):                            # 1-based index -> A1 letters
     s=""

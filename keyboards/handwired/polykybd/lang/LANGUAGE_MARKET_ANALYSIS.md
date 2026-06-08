@@ -22,6 +22,18 @@
 > combining tone marks (grave/hook/tilde/acute/dot-below) rendered as dotted-circle
 > composites at PUA 0xE1A0. (Telex, the more common everyday IME, would instead be a
 > no-op fold onto en-US since it types on bare QWERTY — see §3.)
+>
+> **Update (2026-06-08):** shipped **zh-HK (Hong Kong, Cangjie)** `LANG_ZHHK`
+> (enum index 57) — the rank-12 gap. It needed **no new assets**: the Cangjie
+> radical legends (Kangxi-radical block U+2F00–2FD5 plus 中/廿/難 at U+4E2D/5EFF/96E3)
+> already exist in the tree, because the current **zh-CN column is itself a Cangjie
+> radical layout** (radical on the base/caps keycap, the Latin letter as the shift
+> preview). zh-HK therefore mirrors that exact column, with its own 🇭🇰 flag and the
+> zh-HK locale, so it relabels identically to zh-CN-Cangjie but switches the OS to
+> Hong Kong Chinese. (Note for a future pass: mainland zh-CN is in practice Pinyin on
+> bare QWERTY, so the Cangjie legends arguably belong on zh-HK/zh-TW rather than
+> zh-CN — left unchanged here to avoid touching the shipped zh-CN layout. Z still
+> shows the Latin "Z"; a full Cangjie would add 重 U+91CD, deferred.)
 
 ---
 

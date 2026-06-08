@@ -92,40 +92,46 @@ categories:
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
   emoji:
     output: emoji_fonts.h
-    # PROTOTYPE: emoji glyphs come from NotoColorEmoji (colour BGRA strikes)
-    # composited over white and dithered to 1-bit (grayscale=true, dither=fs).
-    # No contrast lift — the plain baseline keeps the non-smiley emoji from
-    # washing out too bright on the mono OLEDs.
-    #
-    # Vertical fit (tuned with PolyKybdHost/tools/oled_preview.py, the firmware-
-    # faithful renderer): the firmware draws a glyph at
-    #     y = BASELINE(23) + (yAdvance - IconsFont.yAdvance(40)) + yOffset
-    # NotoColorEmoji fills the whole box and sits high (yOffset ~= -31 at 40 px),
-    # so at the default yAdvance it clips the keycap top at *every* size.
-    # render_height=40 renders a full keycap-height glyph; yadvance=48 then
-    # shifts it down by (48-40)=8 px so it lands exactly at y=0..40 — full-size,
-    # zero clipping (verified across 717 glyphs).  size is ignored for colour
-    # strikes; yadvance only moves the glyph, it does not rescale it.
-    # Per-glyph optimisation pass ("col4" from the visual study):
-    #   normalize (-N): auto-levels — stretch each glyph so its 99th-percentile
-    #     brightest pixel maps to white (a lone hot pixel can't cap the gain),
-    #     keeping black at 0.  Recovers dark-colour emoji (dark faces, eggplant,
-    #     dark moons) that would otherwise dither to a few dots.
-    #   invert (-I): flip the dithered bits inside the glyph; with -N first this
-    #     yields an even, outline/icon look (bright fills hollow out, features pop).
-    #   edge (-E): overlay the glyph's interior feature edges, forced lit, so
-    #     eyes/mouth/details stay crisp instead of dissolving into dither.
-    #   outline: 1 (-O1): a clean 1px silhouette around the alpha shape; edges are
-    #     kept clear of the boundary so it stays a single line (not doubled).
+    # Default: monochrome NotoEmoji line-art (the original).  Most emoji read
+    # best as the crisp b/w glyphs; only the full-body "puppet" human figures
+    # (see the emoji_fig category) get the colour treatment.
+    defaults: {source: noto-emoji, size: 20, render_height: 50}
+  emoji_fig:
+    output: emoji_fig_fonts.h
+    # Colour override for NotoEmoji's full-body human figures, which it draws as
+    # abstract round-head "finger puppet" shapes / solid silhouettes that read
+    # poorly.  These are the "col4" recipe from the visual study: NotoColorEmoji
+    # composited+dithered, per-glyph auto-levels (-N), inverted to an outlined
+    # icon (-I), crisp interior edges (-E), clean 1px outline (-O1), at full
+    # keycap height (r40, yadvance 48 -> y=0..40, zero clip).  Sports/activity
+    # figures are intentionally NOT here — their b/w line-art is cleaner.  These
+    # entries are listed FIRST in `fonts:` so they win priority over the b/w
+    # emoji glyphs that also cover these codepoints.
     defaults: {source: noto-cemoji, size: 20, render_height: 40, yadvance: 48,
                grayscale: true, dither: fs, normalize: true,
-               invert: true, edge: true, outline: 1}
+               invert: true, edge: true, outline: 1, bits: 32}
 
 # ORDERED list == ALL_FONTS[] priority. Each entry inherits its category
 # defaults; any field below overrides them. `bits: 32` marks SMP (>U+FFFF)
 # ranges so the real codepoint is written into the struct (no PUA shift).
 fonts:
   - {category: latin, variant: _Base_, ranges: [[0x20, 0x7e]]}
+  # --- Colour overrides for NotoEmoji's "puppet" full-body human figures. Listed
+  # FIRST so they win priority over the b/w emoji glyphs covering the same
+  # codepoints.  Each range is a contiguous run of figures chosen for colour;
+  # solid-silhouette figures and sports/activity line-art stay b/w (cleaner). ---
+  - {category: emoji_fig, variant: _PpCouples_,       ranges: [[0x1f46b, 0x1f46d]]}  # couple, 2 men, 2 women
+  - {category: emoji_fig, variant: _PpInfoGuardDance_, ranges: [[0x1f481, 0x1f483]]} # info-desk, guard, dancer
+  - {category: emoji_fig, variant: _PpGroom_,         ranges: [[0x1f486, 0x1f487]]}  # massage, haircut
+  - {category: emoji_fig, variant: _PpGestA_,         ranges: [[0x1f645, 0x1f647]]}  # no-good, ok, bow
+  - {category: emoji_fig, variant: _PpRaiseHand_,     ranges: [[0x1f64b, 0x1f64b]]}  # raising hand
+  - {category: emoji_fig, variant: _PpFrownPout_,     ranges: [[0x1f64d, 0x1f64e]]}  # frowning, pouting
+  - {category: emoji_fig, variant: _PpFacepalm_,      ranges: [[0x1f926, 0x1f926]]}  # facepalm
+  - {category: emoji_fig, variant: _PpShrug_,         ranges: [[0x1f937, 0x1f937]]}  # shrug
+  - {category: emoji_fig, variant: _PpSteamy_,        ranges: [[0x1f9d6, 0x1f9d6]]}  # person in steamy room
+  - {category: emoji_fig, variant: _PpFairy_,         ranges: [[0x1f9da, 0x1f9da]]}  # fairy
+  - {category: emoji_fig, variant: _PpMerperson_,     ranges: [[0x1f9dc, 0x1f9dc]]}  # merperson
+  - {category: emoji_fig, variant: _PpGenie_,         ranges: [[0x1f9de, 0x1f9de]]}  # genie
   - {category: emoji, variant: _ToolsBMP_, ranges: [[0x2692, 0x269c]]}
   - {category: emoji, variant: _EmjHandsBMP2_, ranges: [[0x270a, 0x270d]], note: 'Cat 1: BMP hand gestures.  ☝☞ (0x261D-0x261E, Symbols2) are merged into _SymBmp1_ (see "Symbols"). ✊✋✌✍ (0x270A-0x270D, NotoEmoji) stay separate; the Symbols2 ranges are split around this island.'}
   - {category: symbols, variant: _SymBmp1_, ranges: [[0x25ac, 0x25ac], [0x2600, 0x2647]], note: 'Symbols2 BMP fonts — full contiguous Misc-Symbols + Dingbats coverage (0x25AC-0x27BF), DISJOINT ranges split around the interleaved NotoEmoji islands (Zodiac 0x2648-53, ToolsBMP 0x2692-9C, TravelBMP2 0x26F0-F5, TravelBMP 0x2708, HandsBMP2 0x270A-0D). Overlap-free, no prefix trick. Replace SymbolsAndShapes / EmjWeatherBMP(2) / EmjHandsBMP / Chess / DiamondCut / EmjSnowflake / EmjSportsBMP / EmjHeart (all NotoSansSymbols2). Glyphs in the gaps (I-Ching, road signs, …) are rendered but simply not referenced by any emoji category. _SymBmp1_ 0x25AC, 0x2600-0x2647   _SymBmp2_ 0x2654-0x2691   _SymBmp6_ 0x269D-0x26EF _SymBmp3_ 0x26F6-0x2707           _SymBmp5_ 0x2709          _SymBmp4_ 0x270E-0x27BF Tools/alchemical 0x2692-0x269C (⚒⚓⚔⚕⚖⚗⚙⚛⚜) are absent from NotoSansSymbols2 — sourced from NotoEmoji.'}

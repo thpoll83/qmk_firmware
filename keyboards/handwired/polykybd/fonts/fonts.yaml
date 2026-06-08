@@ -96,11 +96,17 @@ categories:
     # composited over white and dithered to 1-bit (grayscale=true, dither=fs).
     # No contrast lift — the plain baseline keeps the non-smiley emoji from
     # washing out too bright on the mono OLEDs.
-    # NotoColorEmoji fills the whole glyph box (unlike the old line-art, which
-    # had an empty top margin), so render_height is capped at 30: at the y=23
-    # text baseline a full-box glyph then spans y=0..30 and clears the 40 px
-    # keycap top instead of being clipped.  size is ignored for colour strikes.
-    defaults: {source: noto-cemoji, size: 20, render_height: 30,
+    #
+    # Vertical fit (tuned with PolyKybdHost/tools/oled_preview.py, the firmware-
+    # faithful renderer): the firmware draws a glyph at
+    #     y = BASELINE(23) + (yAdvance - IconsFont.yAdvance(40)) + yOffset
+    # NotoColorEmoji fills the whole box and sits high (yOffset ~= -31 at 40 px),
+    # so at the default yAdvance it clips the keycap top at *every* size.
+    # render_height=40 renders a full keycap-height glyph; yadvance=48 then
+    # shifts it down by (48-40)=8 px so it lands exactly at y=0..40 — full-size,
+    # zero clipping (verified across 717 glyphs).  size is ignored for colour
+    # strikes; yadvance only moves the glyph, it does not rescale it.
+    defaults: {source: noto-cemoji, size: 20, render_height: 40, yadvance: 48,
                grayscale: true, dither: fs}
 
 # ORDERED list == ALL_FONTS[] priority. Each entry inherits its category
@@ -122,7 +128,7 @@ fonts:
   - {category: latin, variant: _SupAndExtA_, render_height: 44, ranges: [[0xa1, 0x17e]]}
   - {category: emoji, variant: _EmjTravelBMP_, ranges: [[0x2708, 0x2708]], note: 'Cat 8: travel — BMP 0x2708 + SMP 0x1F680-0x1F6C5 (extended to include shower/bath/transit)'}
   - {category: latin, variant: _CurrencySigns_, ranges: [[0x20aa, 0x20ac], [0x20b4, 0x20b4], [0x2116, 0x2116]]}
-  - {category: emoji, variant: _Hyper_, size: 18, render_height: 30, bits: 32, ranges: [[0x1f4ab, 0x1f4ab]]}
+  - {category: emoji, variant: _Hyper_, size: 18, bits: 32, ranges: [[0x1f4ab, 0x1f4ab]]}
   - {category: emoji, variant: _Meh_, bits: 32, ranges: [[0x1f410, 0x1f410]]}
   - {category: emoji, variant: _Settings_, bits: 32, ranges: [[0x1f527, 0x1f527]]}
   - {category: emoji, variant: _World_, bits: 32, ranges: [[0x1f310, 0x1f310]]}
@@ -132,7 +138,7 @@ fonts:
   - {category: emoji, variant: _ClipCpy_, size: 18, bits: 32, ranges: [[0x1f4cb, 0x1f4cb]]}
   - {category: emoji, variant: _FileOpen_, size: 14, bits: 32, ranges: [[0x1f4c2, 0x1f4c2]]}
   - {category: symbols, variant: _Util_, bits: 32, ranges: [[0x1f568, 0x1f56a], [0x1f5a9, 0x1f5ab], [0x1f5b3, 0x1f5bc], [0x1f5ca, 0x1f5ca]]}
-  - {category: emoji, variant: _Brightness_, size: 16, render_height: 30, bits: 32, ranges: [[0x1f311, 0x1f318]]}
+  - {category: emoji, variant: _Brightness_, size: 16, bits: 32, ranges: [[0x1f311, 0x1f318]]}
   - {category: emoji, variant: _Find_, size: 18, bits: 32, ranges: [[0x1f50e, 0x1f50e]]}
   - {category: emoji, variant: _Lock_, size: 18, bits: 32, ranges: [[0x1f512, 0x1f512]]}
   - {category: emoji, variant: _Note_, size: 12, bits: 32, ranges: [[0x1f4dd, 0x1f4dd]]}

@@ -36,7 +36,7 @@ except ImportError:
 # only shapes the provenance comment fontconvert prints on the first line.
 FIELD_FLAGS = [
     ("size", "-s"), ("variant", "-v"), ("grayscale", "-g"), ("render_height", "-r"),
-    ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
+    ("yadvance", "-Y"), ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
     ("contrast", "-c"), ("gamma", "-G"), ("saturation", "-B"), ("sharpness", "-U"),
     ("outline", "-O"), ("offset", "-o"), ("neg_offset", "-n"), ("bits", "-b"),
 ]

@@ -133,7 +133,7 @@ const GFXfont NotoColorEmoji_Regular_PpPeopleA_20pt16b PROGMEM = {
 
 // Approx. 875 bytes
 
-// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf -s 20 -v _PpCouples_ -g -N -r 64 -Y 67 -W 72 -D fs -O 1 -I -E -b 32 128107 128109 
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf -s 20 -v _PpCouples_ -g -N -r 64 -Y 67 -X -12 -W 72 -D fs -O 1 -I -E -b 32 128107 128109 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
 /* num ranges: 1 */
@@ -278,9 +278,9 @@ const uint8_t NotoColorEmoji_Regular_PpCouples_20pt16bBitmaps[] PROGMEM = {
 
 const GFXglyph NotoColorEmoji_Regular_PpCouples_20pt16bGlyphs[] PROGMEM = {
 // bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0x1f46b - 0x1f46d)
-  {     0,  68,  64,  68,    0,  -50 },   // 0x1F46B   (#0)
-  {   544,  68,  64,  68,    0,  -50 },   // 0x1F46C   (#1)
-  {  1088,  68,  64,  68,    0,  -50 } }; // 0x1F46D   (#2)
+  {     0,  68,  64,  68,  -12,  -50 },   // 0x1F46B   (#0)
+  {   544,  68,  64,  68,  -12,  -50 },   // 0x1F46C   (#1)
+  {  1088,  68,  64,  68,  -12,  -50 } }; // 0x1F46D   (#2)
 
 const GFXfont NotoColorEmoji_Regular_PpCouples_20pt16b PROGMEM = {
   (uint8_t  *)NotoColorEmoji_Regular_PpCouples_20pt16bBitmaps,

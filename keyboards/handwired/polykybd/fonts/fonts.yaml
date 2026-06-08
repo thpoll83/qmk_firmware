@@ -126,7 +126,7 @@ fonts:
   # Couples are full-body; render them as "portraits": ~1.6x size (r64, capped to
   # 72 wide) positioned so the heads sit at the top and the legs clip below the
   # 40px keycap (yadvance 67 -> glyph top at y=0, bottom at 64).  Upper ~62% shows.
-  - {category: emoji_fig, variant: _PpCouples_,  render_height: 64, max_width: 72, yadvance: 67, ranges: [[0x1f46b, 0x1f46d]]}  # 👫👬👭 portrait
+  - {category: emoji_fig, variant: _PpCouples_,  render_height: 64, max_width: 72, yadvance: 67, xshift: -12, ranges: [[0x1f46b, 0x1f46d]]}  # 👫👬👭 portrait (xshift -12 cancels the 2-space prefix push)
   - {category: emoji_fig, variant: _PpRoles_,    ranges: [[0x1f46e, 0x1f478]]}  # 👮..👸 roles (👹 ogre stays b/w)
   - {category: emoji_fig, variant: _PpInfoGuardDance_, ranges: [[0x1f481, 0x1f483]]} # 💁💂💃
   - {category: emoji_fig, variant: _PpGroom_,    ranges: [[0x1f486, 0x1f487]]}  # 💆💇

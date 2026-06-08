@@ -37,7 +37,7 @@ except ImportError:
 FIELD_FLAGS = [
     ("size", "-s"), ("variant", "-v"), ("grayscale", "-g"), ("normalize", "-N"),
     ("render_height", "-r"),
-    ("yadvance", "-Y"), ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
+    ("yadvance", "-Y"), ("xshift", "-X"), ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
     ("contrast", "-c"), ("gamma", "-G"), ("saturation", "-B"), ("sharpness", "-U"),
     ("outline", "-O"), ("invert", "-I"), ("edge", "-E"),
     ("offset", "-o"), ("neg_offset", "-n"), ("bits", "-b"),

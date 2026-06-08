@@ -6,7 +6,7 @@ copied byte-for-byte.
 
 usage: _set_cell.py <xlsx> <row> <col1based> <value> [num|str]
 """
-import sys, re, zipfile, shutil, os, tempfile
+import sys, re, zipfile, shutil, os, tempfile, atexit
 from xml.sax.saxutils import escape
 
 if len(sys.argv) < 5:
@@ -18,18 +18,23 @@ except ValueError:
     sys.exit("row and col1based must be integers")
 if ROW<1 or COL<1:
     sys.exit("row and col1based must be >= 1")
+if not os.path.isfile(XLSX):
+    sys.exit(f"file not found: {XLSX}")
 VAL=sys.argv[4]
 KIND=sys.argv[5] if len(sys.argv)>5 else "num"
 
 def colname(n):
     s=""
-    while n: n,r=divmod(n-1,26); s=chr(65+r)+s
+    while n:
+        n, r = divmod(n-1, 26)
+        s = chr(65+r) + s
     return s
 REF=f"{colname(COL)}{ROW}"
 CELL=(f'<c r="{REF}"><v>{VAL}</v></c>' if KIND=="num"
       else f'<c r="{REF}" t="inlineStr"><is><t xml:space="preserve">{escape(VAL)}</t></is></c>')
 
 tmp=tempfile.mkdtemp(prefix="setcell_work_")
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)   # always clean up, even on error
 with zipfile.ZipFile(XLSX) as z: z.extractall(tmp)
 p=os.path.join(tmp,"xl/worksheets/sheet2.xml")
 xml=open(p,encoding="utf-8").read()

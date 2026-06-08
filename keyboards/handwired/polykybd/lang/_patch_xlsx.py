@@ -11,7 +11,7 @@ byte so formula caches in sheet1/sheet3/sharedStrings stay intact), updates
 Optional LCID map adds the Windows locale id in the 4th header sub-column
 (purely informational; cog never reads it).
 """
-import sys, json, re, zipfile, shutil, os, tempfile
+import sys, json, re, zipfile, shutil, os, tempfile, atexit
 from xml.sax.saxutils import escape
 
 if len(sys.argv) < 4:
@@ -65,6 +65,7 @@ print(f"new max col index = {newmaxcol} ({colname(newmaxcol)})")
 
 # read sheet2.xml
 tmp=tempfile.mkdtemp(prefix="xlsx_work_")
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)   # always clean up, even on error
 with zipfile.ZipFile(XLSX) as z:
     names=z.namelist()
     z.extractall(tmp)

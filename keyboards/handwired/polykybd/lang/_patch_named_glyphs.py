@@ -9,7 +9,7 @@ order, mimicking the inlineStr format the existing DEVA_DC_* rows already use.
 Only sheet1.xml is rewritten; every other zip entry (incl. the formula caches in
 latin_sup_ex / the rest of named_glyphs) is copied byte-for-byte.
 """
-import sys, json, re, zipfile, shutil, os, tempfile
+import sys, json, re, zipfile, shutil, os, tempfile, atexit
 from xml.sax.saxutils import escape
 
 if len(sys.argv) < 3:
@@ -33,6 +33,7 @@ def rowxml(n, name, code):
             f'</row>')
 
 tmp=tempfile.mkdtemp(prefix="ng_work_")
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)   # always clean up, even on error
 with zipfile.ZipFile(XLSX) as z: z.extractall(tmp)
 p=os.path.join(tmp,"xl/worksheets/sheet1.xml")
 xml=open(p,encoding="utf-8").read()

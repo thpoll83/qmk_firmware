@@ -52,7 +52,7 @@ typedef struct _overlay_map_sync_t {
 // top row identically. Sent only when the lists change (mru_sync_pending()).
 typedef struct _mru_sync_t {
     uint32_t crc32;
-    uint32_t emoji[MRU_CAP];
+    uint16_t emoji[MRU_CAP];
     uint8_t  lang[MRU_CAP];
 } mru_sync_t;
 

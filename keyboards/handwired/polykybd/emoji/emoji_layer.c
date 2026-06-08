@@ -69,6 +69,51 @@ static const uint32_t *make_emoji_str(uint32_t cp) {
     return s_disp_buf;
 }
 
+// ── MRU packing ───────────────────────────────────────────────────────────────
+// The MRU stores a 16-bit code: 4 bits category | 12 bits glyph offset, instead
+// of the full 32-bit codepoint. Decode resolves it back through the static
+// category table (always valid within a firmware build; EEPROM is reset on
+// update). MRU_EMOJI_EMPTY (0xFFFF) decodes to 0 (blank slot).
+
+static uint16_t emj_pack(uint8_t cat, uint16_t off) {
+    return (uint16_t)(((uint16_t)cat << 12) | (off & 0x0FFF));
+}
+
+static uint32_t emj_decode(uint16_t code) {
+    if (code == MRU_EMOJI_EMPTY) return 0;
+    uint8_t  cat = (uint8_t)(code >> 12);
+    uint16_t off = (uint16_t)(code & 0x0FFF);
+    if (cat >= EMJ_NUM_CATEGORIES) return 0;
+    if (off >= EMJ_CATEGORIES[cat].count) return 0;
+    return EMJ_CATEGORIES[cat].codepoints[off];
+}
+
+// Built-in default recents loaded by the "Preset" key — common, widely-supported
+// emoji. Resolved to packed codes by scanning the category table (so the preset
+// stays a plain codepoint list, independent of table offsets).
+static const uint32_t emj_preset_cps[MRU_CAP] = {
+    0x1F600, 0x1F602, 0x1F60D, 0x1F44D, 0x2764,  0x1F389,
+    0x1F64F, 0x1F525, 0x2705,  0x1F622, 0x1F914, 0x1F44B,
+};
+
+static uint16_t emj_find_code(uint32_t cp) {
+    for (uint8_t cat = 0; cat < EMJ_NUM_CATEGORIES; ++cat) {
+        const emj_category_t *c = &EMJ_CATEGORIES[cat];
+        for (uint16_t off = 0; off < c->count; ++off) {
+            if (c->codepoints[off] == cp) return emj_pack(cat, off);
+        }
+    }
+    return MRU_EMOJI_EMPTY;   // not in any category — leave the slot blank
+}
+
+static void emj_mru_preset(void) {
+    uint16_t codes[MRU_CAP];
+    for (uint8_t i = 0; i < MRU_CAP; ++i) {
+        codes[i] = emj_find_code(emj_preset_cps[i]);
+    }
+    mru_emoji_set_all(codes);
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 void emj_init(void) {
@@ -87,7 +132,7 @@ const uint32_t *emj_display_text(uint16_t keycode) {
 
     // ── MRU recents row — most-recently-used emoji, or blank when empty ──
     if (keycode >= KC_EMJ_MRU_BASE && keycode < KC_EMJ_MRU_BASE + MRU_CAP) {
-        uint32_t cp = mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE));
+        uint32_t cp = emj_decode(mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE)));
         return (cp == 0) ? (const uint32_t *)U"" : make_emoji_str(cp);
     }
 
@@ -151,26 +196,28 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
     }
 
     // ── MRU controls ──
-    if (keycode == KC_EMJ_PRESET) { mru_emoji_preset(); return true; }
-    if (keycode == KC_EMJ_CLEAR)  { mru_emoji_clear();  return true; }
+    if (keycode == KC_EMJ_PRESET) { emj_mru_preset();  return true; }
+    if (keycode == KC_EMJ_CLEAR)  { mru_emoji_clear(); return true; }
 
     // ── MRU recents slot — re-send and bump to front ──
     if (keycode >= KC_EMJ_MRU_BASE && keycode < KC_EMJ_MRU_BASE + MRU_CAP) {
-        uint32_t cp = mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE));
+        uint16_t code = mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE));
+        uint32_t cp   = emj_decode(code);
         if (cp != 0) {
             register_unicode(cp);
-            mru_emoji_push(cp);
+            mru_emoji_push(code);
         }
         return true;
     }
 
     // ── Emoji slot — send Unicode and remember it ──
     if (keycode >= KC_EMJ_SLOT_BASE && keycode < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) {
-        uint8_t slot = (uint8_t)(keycode - KC_EMJ_SLOT_BASE);
-        uint32_t cp  = codepoint_for_slot(slot);
+        uint8_t  slot = (uint8_t)(keycode - KC_EMJ_SLOT_BASE);
+        uint16_t off  = (uint16_t)((uint16_t)s_page * EMJ_SLOTS_PER_PAGE + slot);
+        uint32_t cp   = codepoint_for_slot(slot);
         if (cp != 0) {
             register_unicode(cp);
-            mru_emoji_push(cp);
+            mru_emoji_push(emj_pack(s_category, off));   // off valid when cp != 0
         }
         return true;
     }

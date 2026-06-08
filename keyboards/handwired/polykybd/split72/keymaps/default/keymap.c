@@ -1881,8 +1881,8 @@ void eeconfig_init_user(void) {
     ee.brightness = ~FULL_BRIGHT;
     ee.unused = 0;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
-    // Empty MRU recents: 0 == empty emoji slot, 0xFF == empty lang slot.
-    memset(ee.mru_emoji, 0, sizeof(ee.mru_emoji));
+    // Empty MRU recents: 0xFFFF == empty emoji code, 0xFF == empty lang slot.
+    memset(ee.mru_emoji, 0xFF, sizeof(ee.mru_emoji));
     memset(ee.mru_lang, MRU_LANG_EMPTY, sizeof(ee.mru_lang));
     eeconfig_update_user_datablock(&ee, 0, sizeof(ee));
 }

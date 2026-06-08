@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #define ENABLE_COMPILE_KEYCODE
 
-#define EECONFIG_USER_DATA_SIZE 92
+#define EECONFIG_USER_DATA_SIZE 66
 
 #define USB_VBUS_PIN GP24
 

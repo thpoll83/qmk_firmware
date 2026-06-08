@@ -7,28 +7,11 @@
 #include <string.h>
 
 // ── Backing storage ──────────────────────────────────────────────────────────
-static uint32_t s_emoji[MRU_CAP];
+static uint16_t s_emoji[MRU_CAP];   // packed category|offset codes
 static uint8_t  s_lang[MRU_CAP];
 
 static bool s_dirty        = false;   // differs from EEPROM
 static bool s_sync_pending = false;   // master needs to push to slave
-
-// Built-in default recents loaded by the "Preset" key. Picked from common,
-// widely-supported glyphs that the generated emoji fonts cover.
-static const uint32_t s_emoji_preset[MRU_CAP] = {
-    0x1F600, // 😀 grinning face
-    0x1F602, // 😂 face with tears of joy
-    0x1F60D, // 😍 smiling face with heart-eyes
-    0x1F44D, // 👍 thumbs up
-    0x2764,  // ❤ red heart
-    0x1F389, // 🎉 party popper
-    0x1F64F, // 🙏 folded hands
-    0x1F525, // 🔥 fire
-    0x2705,  // ✅ check mark button
-    0x1F622, // 😢 crying face
-    0x1F914, // 🤔 thinking face
-    0x1F44B, // 👋 waving hand
-};
 
 // LANG_* enum indices (see lang/lang_lut.h). Common everyday languages.
 static const uint8_t s_lang_preset[MRU_CAP] = {
@@ -48,7 +31,7 @@ static const uint8_t s_lang_preset[MRU_CAP] = {
 
 // ── Generic front-insert with de-dup, parameterised over element size ─────────
 // Returns true if the list content changed.
-static bool push_u32(uint32_t *list, uint32_t empty, uint32_t value) {
+static bool push_u16(uint16_t *list, uint16_t empty, uint16_t value) {
     if (value == empty) return false;
     // Find an existing copy (so a re-pick just bumps it to the front).
     uint8_t found = MRU_CAP;
@@ -96,11 +79,11 @@ void mru_init(void) {
     s_sync_pending = false;
 }
 
-void mru_emoji_push(uint32_t cp) {
-    if (push_u32(s_emoji, MRU_EMOJI_EMPTY, cp)) mark_changed();
+void mru_emoji_push(uint16_t code) {
+    if (push_u16(s_emoji, MRU_EMOJI_EMPTY, code)) mark_changed();
 }
 
-uint32_t mru_emoji_get(uint8_t pos) {
+uint16_t mru_emoji_get(uint8_t pos) {
     return (pos < MRU_CAP) ? s_emoji[pos] : MRU_EMOJI_EMPTY;
 }
 
@@ -109,8 +92,8 @@ void mru_emoji_clear(void) {
     mark_changed();
 }
 
-void mru_emoji_preset(void) {
-    memcpy(s_emoji, s_emoji_preset, sizeof(s_emoji));
+void mru_emoji_set_all(const uint16_t codes[MRU_CAP]) {
+    memcpy(s_emoji, codes, sizeof(s_emoji));
     mark_changed();
 }
 
@@ -134,10 +117,10 @@ void mru_lang_preset(void) {
 
 bool mru_dirty(void)           { return s_dirty; }
 void mru_clear_dirty(void)     { s_dirty = false; }
-const uint32_t* mru_emoji_array(void) { return s_emoji; }
+const uint16_t* mru_emoji_array(void) { return s_emoji; }
 const uint8_t*  mru_lang_array(void)  { return s_lang; }
 
-void mru_load(const uint32_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]) {
+void mru_load(const uint16_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]) {
     memcpy(s_emoji, emoji, sizeof(s_emoji));
     memcpy(s_lang,  lang,  sizeof(s_lang));
     s_dirty        = false;   // freshly loaded == matches EEPROM
@@ -147,7 +130,7 @@ void mru_load(const uint32_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]) {
 bool mru_sync_pending(void)       { return s_sync_pending; }
 void mru_clear_sync_pending(void) { s_sync_pending = false; }
 
-void mru_apply_sync(const uint32_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]) {
+void mru_apply_sync(const uint16_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]) {
     if (memcmp(s_emoji, emoji, sizeof(s_emoji)) != 0 ||
         memcmp(s_lang,  lang,  sizeof(s_lang))  != 0) {
         memcpy(s_emoji, emoji, sizeof(s_emoji));

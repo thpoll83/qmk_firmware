@@ -36,8 +36,6 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoColorEmoji_Regular_PpFrownPout_20pt16b,
   &NotoColorEmoji_Regular_PpFacepalm_20pt16b,
   &NotoColorEmoji_Regular_PpRoyals_20pt16b,
-  &NotoColorEmoji_Regular_PpMrsClaus_20pt16b,
-  &NotoColorEmoji_Regular_PpShrug_20pt16b,
   &NotoColorEmoji_Regular_PpHeroes_20pt16b,
   &NotoColorEmoji_Regular_PpPersons_20pt16b,
   &NotoColorEmoji_Regular_PpFantasy_20pt16b,

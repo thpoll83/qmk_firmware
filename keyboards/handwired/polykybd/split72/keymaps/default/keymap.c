@@ -633,22 +633,22 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         /*[[[cog
         # Sort country-first then language so same-country variants (e.g. hi-IN, mr-IN) stay adjacent.
         slang = sorted(languages, key=lambda c: (c[2:], c[:2]))
-        # 6 language slots per row. Rows 1-4 of each half hold langs 0..47.  The
-        # bottom row of each half is also used, EXCEPT the left half's last slot,
-        # which is the Enter key on the base layer (KC_ENTER in _L0) - left blank.
-        lines = []
-        for lidx in range(0, 8):
-            line = ""
-            for idx in range(0, 6):
-                n = lidx*6+idx
-                line = f'{line}KCL_{slang[n].upper()},\t' if n < len(slang) else f"{line}KC_NO,\t\t"
-            lines.append(line)
         def slot(n):
             return f'KCL_{slang[n].upper()},\t' if n < len(slang) else "KC_NO,\t\t"
-        # left bottom row: 5 langs (48..52) + the Enter-key slot (KC_NO)
+        def halfrow(start):
+            return "".join(slot(start+k) for k in range(6))
+        # 6 language slots per half-row, assigned row-by-row ACROSS both halves so
+        # the country-sorted sequence stays visually contiguous (left->right,
+        # top->bottom): visual row r shows langs 12*r..12*r+5 on the left half and
+        # 12*r+6..12*r+11 on the right half.  Rows 1-4 thus hold langs 0..47.
+        lines = [""]*8
+        for r in range(0, 4):
+            lines[r]   = halfrow(12*r)      # left half rows 1-4
+            lines[r+4] = halfrow(12*r+6)    # right half rows 1-4
+        # The bottom (5th) row continues the sequence with langs 48..56.  The left
+        # half's last slot is the base-layer Enter key (KC_ENTER in _L0) and the
+        # right half's first slot is the mirrored Enter on _L1 - both left blank.
         left_row5  = "".join(slot(48+k) for k in range(5)) + "KC_NO,\t\t"
-        # right bottom row: the first slot is the Enter key on the 2nd default
-        # layer (_L1) - blank it like the left Enter; then langs 53.. (53..56 exist).
         right_row5 = "KC_NO,\t\t" + "".join(slot(53+k) for k in range(5))
         cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[0]}");
         cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[1]}");
@@ -663,14 +663,14 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         cog.outl(f"{right_row5}KC_BASE");
         ]]]*/
         KC_NO,							KCL_HYAM,	KCL_AZAZ,	KCL_FRBE,	KCL_BGBG,	KCL_PTBR,	KCL_BEBY,	
-        KC_NO,							KCL_FRCA,	KCL_DECH,	KCL_ZHCN,	KCL_CSCZ,	KCL_DEDE,	KCL_DADK,	
-        QK_UNICODE_MODE_WINCOMPOSE,		KCL_ETEE,	KCL_ESES,	KCL_FIFI,	KCL_FRFR,	KCL_ENGB,	KCL_KAGE,		MS_BTN1,
-        QK_UNICODE_MODE_EMACS,			KCL_ELGR,	KCL_HRHR,	KCL_HUHU,	KCL_IDID,	KCL_HEIL,	KCL_BNIN,		KC_NO,
+        KC_NO,							KCL_ETEE,	KCL_ESES,	KCL_FIFI,	KCL_FRFR,	KCL_ENGB,	KCL_KAGE,	
+        QK_UNICODE_MODE_WINCOMPOSE,		KCL_HIIN,	KCL_MRIN,	KCL_TAIN,	KCL_TEIN,	KCL_FAIR,	KCL_ISIS,		MS_BTN1,
+        QK_UNICODE_MODE_EMACS,			KCL_MKMK,	KCL_MNMN,	KCL_ESMX,	KCL_NLNL,	KCL_NNNO,	KCL_NENP,		KC_NO,
         KC_BASE,						KCL_ARSA,	KCL_SVSE,	KCL_SKSK,	KCL_THTH,	KCL_TRTR,	KC_NO,		
 
-        					KCL_HIIN,	KCL_MRIN,	KCL_TAIN,	KCL_TEIN,	KCL_FAIR,	KCL_ISIS,	QK_UNICODE_MODE_MACOS,
-        					KCL_ITIT,	KCL_JAJP,	KCL_KOKR,	KCL_KKKZ,	KCL_LTLT,	KCL_LVLV,	QK_UNICODE_MODE_LINUX,
-        _______,			KCL_MKMK,	KCL_MNMN,	KCL_ESMX,	KCL_NLNL,	KCL_NNNO,	KCL_NENP,	QK_UNICODE_MODE_WINDOWS,
+        					KCL_FRCA,	KCL_DECH,	KCL_ZHCN,	KCL_CSCZ,	KCL_DEDE,	KCL_DADK,	QK_UNICODE_MODE_MACOS,
+        					KCL_ELGR,	KCL_HRHR,	KCL_HUHU,	KCL_IDID,	KCL_HEIL,	KCL_BNIN,	QK_UNICODE_MODE_LINUX,
+        _______,			KCL_ITIT,	KCL_JAJP,	KCL_KOKR,	KCL_KKKZ,	KCL_LTLT,	KCL_LVLV,	QK_UNICODE_MODE_WINDOWS,
         KC_NO,				KCL_URPK,	KCL_PLPL,	KCL_PTPT,	KCL_RORO,	KCL_SRRS,	KCL_RURU,	QK_UNICODE_MODE_BSD,
         KC_NO,		KCL_ZHTW,	KCL_UKUA,	KCL_ENUS,	KCL_VIVN,	KC_NO,		KC_BASE
         //[[[end]]]

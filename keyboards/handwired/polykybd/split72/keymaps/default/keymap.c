@@ -633,39 +633,46 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         /*[[[cog
         # Sort country-first then language so same-country variants (e.g. hi-IN, mr-IN) stay adjacent.
         slang = sorted(languages, key=lambda c: (c[2:], c[:2]))
-        # 6 language slots per row x 8 rows = 48 capacity (uses the formerly-blank col2/col6 keys).
-        lines = []
-        for lidx in range(0, 8):
-            line = ""
-            for idx in range(0, 6):
-                if (lidx*6+idx)>=len(slang):
-                    line = f"{line}KC_NO,\t\t"
-                else:
-                    line = f'{line}KCL_{slang[(lidx*6+idx)].upper()},\t'
-            lines.append(line)
+        def slot(n):
+            return f'KCL_{slang[n].upper()},\t' if n < len(slang) else "KC_NO,\t\t"
+        def halfrow(start):
+            return "".join(slot(start+k) for k in range(6))
+        # 6 language slots per half-row, assigned row-by-row ACROSS both halves so
+        # the country-sorted sequence stays visually contiguous (left->right,
+        # top->bottom): visual row r shows langs 12*r..12*r+5 on the left half and
+        # 12*r+6..12*r+11 on the right half.  Rows 1-4 thus hold langs 0..47.
+        lines = [""]*8
+        for r in range(0, 4):
+            lines[r]   = halfrow(12*r)      # left half rows 1-4
+            lines[r+4] = halfrow(12*r+6)    # right half rows 1-4
+        # The bottom (5th) row continues the sequence with langs 48..56.  The left
+        # half's last slot is the base-layer Enter key (KC_ENTER in _L0) and the
+        # right half's first slot is the mirrored Enter on _L1 - both left blank.
+        left_row5  = "".join(slot(48+k) for k in range(5)) + "KC_NO,\t\t"
+        right_row5 = "KC_NO,\t\t" + "".join(slot(53+k) for k in range(5))
         cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[0]}");
         cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[1]}");
         cog.outl(f"QK_UNICODE_MODE_WINCOMPOSE,\t\t{lines[2]}\tMS_BTN1,");
         cog.outl(f"QK_UNICODE_MODE_EMACS,\t\t\t{lines[3]}\tKC_NO,");
-        cog.outl("KC_BASE,\t\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\t\tKC_NO,");
+        cog.outl(f"KC_BASE,\t\t\t\t\t\t{left_row5}");
         cog.outl("")
         cog.outl(f"\t\t\t\t\t{lines[4]}QK_UNICODE_MODE_MACOS,");
         cog.outl(f"\t\t\t\t\t{lines[5]}QK_UNICODE_MODE_LINUX,");
         cog.outl(f"_______,\t\t\t{lines[6]}QK_UNICODE_MODE_WINDOWS,");
         cog.outl(f"KC_NO,\t\t\t\t{lines[7]}QK_UNICODE_MODE_BSD,");
-        cog.outl("KC_NO,\t\t\t\tKC_NO,\t\tKC_NO,\t\t\t\t\tKC_NO,\t\tKC_NO,\t\tKC_NO,\t\tKC_BASE");
+        cog.outl(f"{right_row5}KC_BASE");
         ]]]*/
-        KC_NO,							KCL_BGBG,	KCL_PTBR,	KCL_BEBY,	KCL_ZHCN,	KCL_CSCZ,	KCL_DEDE,	
-        KC_NO,							KCL_DADK,	KCL_ETEE,	KCL_ESES,	KCL_FIFI,	KCL_FRFR,	KCL_ELGR,	
-        QK_UNICODE_MODE_WINCOMPOSE,		KCL_HRHR,	KCL_HUHU,	KCL_HEIL,	KCL_HIIN,	KCL_MRIN,	KCL_FAIR,		MS_BTN1,
-        QK_UNICODE_MODE_EMACS,			KCL_ITIT,	KCL_JAJP,	KCL_KOKR,	KCL_KKKZ,	KCL_LTLT,	KCL_LVLV,		KC_NO,
-        KC_BASE,						KC_NO,		KC_NO,		KC_NO,					KC_NO,		KC_NO,			KC_NO,
+        KC_NO,							KCL_HYAM,	KCL_AZAZ,	KCL_FRBE,	KCL_BGBG,	KCL_PTBR,	KCL_BEBY,	
+        KC_NO,							KCL_ETEE,	KCL_ESES,	KCL_FIFI,	KCL_FRFR,	KCL_ENGB,	KCL_KAGE,	
+        QK_UNICODE_MODE_WINCOMPOSE,		KCL_BNIN,	KCL_HIIN,	KCL_MRIN,	KCL_TAIN,	KCL_TEIN,	KCL_FAIR,		MS_BTN1,
+        QK_UNICODE_MODE_EMACS,			KCL_LVLV,	KCL_MKMK,	KCL_MNMN,	KCL_ESMX,	KCL_NLNL,	KCL_NNNO,		KC_NO,
+        KC_BASE,						KCL_RURU,	KCL_ARSA,	KCL_SVSE,	KCL_SKSK,	KCL_THTH,	KC_NO,		
 
-        					KCL_MKMK,	KCL_MNMN,	KCL_NLNL,	KCL_NNNO,	KCL_NENP,	KCL_URPK,	QK_UNICODE_MODE_MACOS,
-        					KCL_PLPL,	KCL_PTPT,	KCL_RORO,	KCL_SRRS,	KCL_RURU,	KCL_ARSA,	QK_UNICODE_MODE_LINUX,
-        _______,			KCL_SVSE,	KCL_SKSK,	KCL_TRTR,	KCL_UKUA,	KCL_ENUS,	KC_NO,		QK_UNICODE_MODE_WINDOWS,
-        KC_NO,				KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		KC_NO,		QK_UNICODE_MODE_BSD,
-        KC_NO,				KC_NO,		KC_NO,					KC_NO,		KC_NO,		KC_NO,		KC_BASE
+        					KCL_FRCA,	KCL_DECH,	KCL_ZHCN,	KCL_CSCZ,	KCL_DEDE,	KCL_DADK,	QK_UNICODE_MODE_MACOS,
+        					KCL_ELGR,	KCL_ZHHK,	KCL_HRHR,	KCL_HUHU,	KCL_IDID,	KCL_HEIL,	QK_UNICODE_MODE_LINUX,
+        _______,			KCL_ISIS,	KCL_ITIT,	KCL_JAJP,	KCL_KOKR,	KCL_KKKZ,	KCL_LTLT,	QK_UNICODE_MODE_WINDOWS,
+        KC_NO,				KCL_NENP,	KCL_URPK,	KCL_PLPL,	KCL_PTPT,	KCL_RORO,	KCL_SRRS,	QK_UNICODE_MODE_BSD,
+        KC_NO,		KCL_TRTR,	KCL_ZHTW,	KCL_UKUA,	KCL_ENUS,	KCL_VIVN,	KC_BASE
         //[[[end]]]
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(
@@ -863,6 +870,23 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_NENP: return U"ne-NP";
         case KCL_MNMN: return U"mn-MN";
         case KCL_URPK: return U"ur-PK";
+        case KCL_ENGB: return U"en-GB";
+        case KCL_ESMX: return U"es-MX";
+        case KCL_DECH: return U"de-CH";
+        case KCL_FRBE: return U"fr-BE";
+        case KCL_FRCA: return U"fr-CA";
+        case KCL_THTH: return U"th-TH";
+        case KCL_BNIN: return U"bn-IN";
+        case KCL_TEIN: return U"te-IN";
+        case KCL_TAIN: return U"ta-IN";
+        case KCL_ZHTW: return U"zh-TW";
+        case KCL_KAGE: return U"ka-GE";
+        case KCL_HYAM: return U"hy-AM";
+        case KCL_IDID: return U"id-ID";
+        case KCL_AZAZ: return U"az-AZ";
+        case KCL_ISIS: return U"is-IS";
+        case KCL_VIVN: return U"vi-VN";
+        case KCL_ZHHK: return U"zh-HK";
         //[[[end]]]
         default:
             return NULL;
@@ -1557,6 +1581,23 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_NENP: local_state->lang = LANG_NENP; save_user_settings(); layer_off(_LL); break;
         case KCL_MNMN: local_state->lang = LANG_MNMN; save_user_settings(); layer_off(_LL); break;
         case KCL_URPK: local_state->lang = LANG_URPK; save_user_settings(); layer_off(_LL); break;
+        case KCL_ENGB: local_state->lang = LANG_ENGB; save_user_settings(); layer_off(_LL); break;
+        case KCL_ESMX: local_state->lang = LANG_ESMX; save_user_settings(); layer_off(_LL); break;
+        case KCL_DECH: local_state->lang = LANG_DECH; save_user_settings(); layer_off(_LL); break;
+        case KCL_FRBE: local_state->lang = LANG_FRBE; save_user_settings(); layer_off(_LL); break;
+        case KCL_FRCA: local_state->lang = LANG_FRCA; save_user_settings(); layer_off(_LL); break;
+        case KCL_THTH: local_state->lang = LANG_THTH; save_user_settings(); layer_off(_LL); break;
+        case KCL_BNIN: local_state->lang = LANG_BNIN; save_user_settings(); layer_off(_LL); break;
+        case KCL_TEIN: local_state->lang = LANG_TEIN; save_user_settings(); layer_off(_LL); break;
+        case KCL_TAIN: local_state->lang = LANG_TAIN; save_user_settings(); layer_off(_LL); break;
+        case KCL_ZHTW: local_state->lang = LANG_ZHTW; save_user_settings(); layer_off(_LL); break;
+        case KCL_KAGE: local_state->lang = LANG_KAGE; save_user_settings(); layer_off(_LL); break;
+        case KCL_HYAM: local_state->lang = LANG_HYAM; save_user_settings(); layer_off(_LL); break;
+        case KCL_IDID: local_state->lang = LANG_IDID; save_user_settings(); layer_off(_LL); break;
+        case KCL_AZAZ: local_state->lang = LANG_AZAZ; save_user_settings(); layer_off(_LL); break;
+        case KCL_ISIS: local_state->lang = LANG_ISIS; save_user_settings(); layer_off(_LL); break;
+        case KCL_VIVN: local_state->lang = LANG_VIVN; save_user_settings(); layer_off(_LL); break;
+        case KCL_ZHHK: local_state->lang = LANG_ZHHK; save_user_settings(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:

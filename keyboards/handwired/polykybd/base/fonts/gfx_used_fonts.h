@@ -6,6 +6,14 @@
 #include "generated/kr_fonts.h"
 #include "generated/arabic_fonts.h"
 #include "generated/devanagari_fonts.h"
+#include "generated/bengali_fonts.h"
+#include "generated/telugu_fonts.h"
+#include "generated/tamil_fonts.h"
+#include "generated/thai_fonts.h"
+#include "generated/georgian_fonts.h"
+#include "generated/armenian_fonts.h"
+#include "generated/bopomofo_fonts.h"
+#include "generated/vietnamese_fonts.h"
 #include "generated/symbol_fonts.h"
 #include "generated/emoji_fonts.h"
 
@@ -25,6 +33,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansSymbols2_Regular_SymBmp6_20pt16b,
   &NotoEmoji_Medium_Zodiac_20pt16b,
   &NotoSans_Regular_LatinExtB_14pt16b,
+  &NotoSans_Regular_Schwa_14pt16b,
   &NotoSans_Regular_SupAndExtA_14pt16b,
   &NotoEmoji_Medium_EmjTravelBMP_20pt16b,
   &NotoSans_Regular_CurrencySigns_14pt16b,
@@ -50,6 +59,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansJP_Regular_Cjk4e2d_15pt16b,
   &NotoSansJP_Regular_Cjk5eff_15pt16b,
   &NotoSansJP_Regular_Cjk96e3_15pt16b,
+  &NotoSansJP_Regular_Cjk91cd_15pt16b,
   &NotoSansJP_Regular_KangXi_15pt16b,
   &NotoEmoji_Medium_EmjAnimals2_20pt16b,
   &NotoEmoji_Medium_EmjAnimals3_20pt16b,
@@ -105,6 +115,18 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansArabic_Regular_PerArab_16pt16b,
   &NotoSansDevanagari_Regular_Deva_16pt16b,
   &NotoSansDevanagari_Regular_DevaMatra_16pt7b,
+  &NotoSansBengali_Regular_Bengali_16pt16b,
+  &NotoSansBengali_Regular_BengaliMatra_16pt7b,
+  &NotoSansTelugu_Regular_Telugu_16pt16b,
+  &NotoSansTelugu_Regular_TeluguMatra_16pt7b,
+  &NotoSansTamil_Regular_Tamil_14pt16b,
+  &NotoSansTamil_Regular_TamilMatra_14pt7b,
+  &NotoSansThai_Regular_Thai_16pt16b,
+  &NotoSansThai_Regular_ThaiMatra_16pt7b,
+  &NotoSansGeorgian_Regular_Georgian_17pt16b,
+  &NotoSansArmenian_Regular_Armenian_16pt16b,
+  &NotoSansTC_Regular_Bopomofo_16pt16b,
+  &NotoSans_Regular_VietTones_16pt7b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct2_15pt16b,
   &NotoSansJP_Regular_Punct_15pt16b,

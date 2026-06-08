@@ -1599,7 +1599,7 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  bg-BG    */  CYRILLIC_SM_YU,               CYRILLIC_YU,                  NULL,                         NULL,
     /*  pl-PL    */  U"y",                         U"Y",                         NULL,                         NULL,
     /*  ro-RO    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  zh-CN    */  U"Z",                         U"z",                         U"z",                         NULL,
+    /*  zh-CN    */  CJK_91CD,                     U"z",                         CJK_91CD,                     NULL,
     /*  nl-NL    */  NULL,                         NULL,                         NULL,                         DBL_ANGLE_QMARK_L,
     /*  he-IL    */  HEBREW_ZAYIN,                 NULL,                         NULL,                         NULL,
     /*  sv-SE    */  NULL,                         NULL,                         NULL,                         NULL,
@@ -1638,7 +1638,7 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  az-AZ    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  is-IS    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  vi-VN    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  zh-HK    */  U"Z",                         U"z",                         U"z",                         NULL
+    /*  zh-HK    */  CJK_91CD,                     U"z",                         CJK_91CD,                     NULL
     },
     {/* KC_1: */
     /*  en-US    */  U"1",                         U"!",                         U"1",                         NULL,

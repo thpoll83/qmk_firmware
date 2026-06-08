@@ -86,6 +86,35 @@ const GFXfont NotoSansJP_Regular_Cjk96e3_15pt16b PROGMEM = {
 
 // Approx. 106 bytes
 
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans-jp/NotoSansJP-Regular.ttf -s 15 -v _Cjk91cd_ -w 400 37325 37325 
+// Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
+
+/* num ranges: 1 */
+const uint8_t NotoSansJP_Regular_Cjk91cd_15pt16bBitmaps[] PROGMEM = {
+  /* range 0 (0x91cd - 0x91cd): */  0x00, 0x00, 0x04, 0x00, 0x01, 0xFF, 0x83, 0xFF, 0xFF, 0x80, 0xFF, 0x70,
+  0x00, 0x00, 0x1C, 0x00, 0x00, 0x07, 0x00, 0x0F, 0xFF, 0xFF, 0xFC, 0x00,
+  0x70, 0x00, 0x00, 0x1C, 0x00, 0x07, 0xFF, 0xFF, 0x81, 0xFF, 0xFF, 0xE0,
+  0x60, 0x70, 0x18, 0x18, 0x1C, 0x06, 0x07, 0xFF, 0xFF, 0x81, 0x81, 0xC0,
+  0x60, 0x60, 0x70, 0x18, 0x18, 0x1C, 0x06, 0x07, 0xFF, 0xFF, 0x80, 0x01,
+  0xC0, 0x00, 0x00, 0x70, 0x00, 0x3F, 0xFF, 0xFF, 0x0F, 0xFF, 0xFF, 0xC0,
+  0x01, 0xC0, 0x00, 0x00, 0x70, 0x00, 0x00, 0x1C, 0x00, 0x3F, 0xFF, 0xFF,
+  0xF0
+ };
+
+const GFXglyph NotoSansJP_Regular_Cjk91cd_15pt16bGlyphs[] PROGMEM = {
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0x91cd - 0x91cd)
+  {     0,  26,  26,  29,    2,  -24 } }; // 0x91CD   (#0)
+
+const GFXfont NotoSansJP_Regular_Cjk91cd_15pt16b PROGMEM = {
+  (uint8_t  *)NotoSansJP_Regular_Cjk91cd_15pt16bBitmaps,
+  (GFXglyph *)NotoSansJP_Regular_Cjk91cd_15pt16bGlyphs,
+  0x91CD, // first
+  0x91CD, // last
+  43   //height
+ };
+
+// Approx. 99 bytes
+
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans-jp/NotoSansJP-Regular.ttf -s 15 -v _KangXi_ -w 400 12032 12032 12040 12040 12055 12056 12061 12069 12075 12077 12088 12095 12103 12106 12116 12117 12133 12133 12149 12149 12198 12198 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 

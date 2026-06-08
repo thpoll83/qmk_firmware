@@ -59,6 +59,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansJP_Regular_Cjk4e2d_15pt16b,
   &NotoSansJP_Regular_Cjk5eff_15pt16b,
   &NotoSansJP_Regular_Cjk96e3_15pt16b,
+  &NotoSansJP_Regular_Cjk91cd_15pt16b,
   &NotoSansJP_Regular_KangXi_15pt16b,
   &NotoEmoji_Medium_EmjAnimals2_20pt16b,
   &NotoEmoji_Medium_EmjAnimals3_20pt16b,

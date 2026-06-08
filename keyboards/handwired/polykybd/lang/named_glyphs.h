@@ -1589,4 +1589,5 @@
 #define VIET_DC_0303                	U"\xE1A2"
 #define VIET_DC_0309                	U"\xE1A3"
 #define VIET_DC_0323                	U"\xE1A4"
+#define CJK_91CD                    	U"\x91CD"
 //[[[end]]]

@@ -134,6 +134,7 @@ fonts:
   - {category: jp, variant: _Cjk4e2d_, ranges: [[0x4e2d, 0x4e2d]]}
   - {category: jp, variant: _Cjk5eff_, ranges: [[0x5eff, 0x5eff]]}
   - {category: jp, variant: _Cjk96e3_, ranges: [[0x96e3, 0x96e3]]}
+  - {category: jp, variant: _Cjk91cd_, ranges: [[0x91cd, 0x91cd]], note: 'Cangjie Z radical 重 U+91CD (zh-CN / zh-HK Cangjie layout).'}
   - {category: jp, variant: _KangXi_, ranges: [[0x2f00, 0x2f00], [0x2f08, 0x2f08], [0x2f17, 0x2f18], [0x2f1d, 0x2f25], [0x2f2b, 0x2f2d], [0x2f38, 0x2f3f], [0x2f47, 0x2f4a], [0x2f54, 0x2f55], [0x2f65, 0x2f65], [0x2f75, 0x2f75], [0x2fa6, 0x2fa6]]}
   - {category: emoji, variant: _EmjAnimals2_, bits: 32, ranges: [[0x1f981, 0x1f98f]], note: 'Cat 4 addition: newer animals 🦁-🦏 (Unicode 9+)'}
   - {category: emoji, variant: _EmjAnimals3_, bits: 32, ranges: [[0x1f990, 0x1f997]], note: 'Cat 4 addition: newer animals 🦐-🦗 (Unicode 10+)'}

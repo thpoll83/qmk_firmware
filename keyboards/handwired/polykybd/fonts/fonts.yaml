@@ -26,6 +26,7 @@ sources:
   noto-sans-armenian:  fonts/noto-sans-armenian/NotoSansArmenian-Regular.ttf
   noto-sans-tc:        fonts/noto-sans-tc/NotoSansTC-Regular.ttf
   noto-emoji:          fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf
+  noto-cemoji:         fonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf
   noto-sans-symbols:   fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
   noto-sans-symbols2:  fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
 
@@ -91,7 +92,13 @@ categories:
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
   emoji:
     output: emoji_fonts.h
-    defaults: {source: noto-emoji, size: 20, render_height: 50}
+    # PROTOTYPE: emoji glyphs come from NotoColorEmoji (colour BGRA strikes)
+    # composited over white and dithered to 1-bit (grayscale=true, dither=fs)
+    # with a mild contrast lift (contrast=1.3) for punch on the mono OLEDs —
+    # replacing the former monochrome NotoEmoji line-art (source: noto-emoji).
+    # size is ignored for fixed-strike colour fonts; render_height drives output.
+    defaults: {source: noto-cemoji, size: 20, render_height: 50,
+               grayscale: true, dither: fs, contrast: 1.3}
 
 # ORDERED list == ALL_FONTS[] priority. Each entry inherits its category
 # defaults; any field below overrides them. `bits: 32` marks SMP (>U+FFFF)

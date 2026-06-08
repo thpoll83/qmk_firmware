@@ -24,6 +24,7 @@
 const GFXfont* const ALL_FONTS [] = {
   &IconsFont,
   &NotoSans_Regular_Base_14pt7b,
+  &NotoColorEmoji_Regular_PpSanta_20pt16b,
   &NotoColorEmoji_Regular_PpPeopleA_20pt16b,
   &NotoColorEmoji_Regular_PpPeopleB_20pt16b,
   &NotoColorEmoji_Regular_PpInfoGuardDance_20pt16b,

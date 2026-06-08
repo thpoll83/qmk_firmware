@@ -121,8 +121,9 @@ fonts:
   # Explicit set chosen by the user; each range is a contiguous all-colour run.
   # Solid-silhouette figures (family, pregnant, hugging, lotus, climbing...) and
   # the sports/activity line-art stay b/w (their b/w line-art is cleaner). ---
+  - {category: emoji_fig, variant: _PpSanta_,    ranges: [[0x1f385, 0x1f385]]}  # 🎅 Santa
   - {category: emoji_fig, variant: _PpPeopleA_,  ranges: [[0x1f466, 0x1f469]]}  # 👦👧👨👩
-  - {category: emoji_fig, variant: _PpPeopleB_,  ranges: [[0x1f46b, 0x1f479]]}  # 👫..👹 couples, roles, ogre
+  - {category: emoji_fig, variant: _PpPeopleB_,  ranges: [[0x1f46b, 0x1f478]]}  # 👫..👸 couples, roles (👹 ogre stays b/w)
   - {category: emoji_fig, variant: _PpInfoGuardDance_, ranges: [[0x1f481, 0x1f483]]} # 💁💂💃
   - {category: emoji_fig, variant: _PpGroom_,    ranges: [[0x1f486, 0x1f487]]}  # 💆💇
   - {category: emoji_fig, variant: _PpCoupleHeart_, ranges: [[0x1f491, 0x1f491]]} # 💑

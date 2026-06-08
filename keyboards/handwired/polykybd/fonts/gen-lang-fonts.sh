@@ -41,7 +41,10 @@ FLAG_BASE="0xE000"                            # keep in sync with FLAG_CP_BASE i
 # DERIVED from the single source of truth, lang/lang_lut.xlsx: the "YY" part of
 # each "xx-YY" language name in key_lut row 1, in column (= enum) order. Never
 # hand-edit this list - add the language to the spreadsheet and re-run.
-mapfile -t COUNTRIES < <("${PYTHON:-python3}" - lang/lang_lut.xlsx <<'PY'
+# Capture the extractor's stdout AND exit status first, so a partial dump
+# followed by a Python error fails the whole script instead of silently
+# truncating COUNTRIES (which would shift every LANG_* flag off its enum index).
+countries="$("${PYTHON:-python3}" - lang/lang_lut.xlsx <<'PY'
 import sys
 from openpyxl import load_workbook
 sheet = load_workbook(sys.argv[1], read_only=True, data_only=True)["key_lut"]
@@ -53,12 +56,17 @@ while True:
     print(name.split("-")[1].upper())   # es-MX -> MX, th-TH -> TH, ...
     i += 1
 PY
-)
-if [ "${#COUNTRIES[@]}" -eq 0 ]; then
+)" || {
     echo "ERROR: could not read the language list from lang/lang_lut.xlsx" \
          "(need ${PYTHON:-python3} with openpyxl)." >&2
     exit 1
+}
+if [ -z "$countries" ]; then
+    echo "ERROR: empty language list from lang/lang_lut.xlsx" \
+         "(need ${PYTHON:-python3} with openpyxl)." >&2
+    exit 1
 fi
+mapfile -t COUNTRIES <<<"$countries"
 
 # Regional-indicator codepoint (hex) for an ASCII A-Z letter.
 ri() { printf '%X' "$(( 0x1F1E6 + $(printf '%d' "'$1") - 65 ))"; }

@@ -11,7 +11,14 @@ from xml.sax.saxutils import escape
 
 if len(sys.argv) < 5:
     sys.exit("usage: _set_cell.py <xlsx> <row> <col1based> <value> [num|str]")
-XLSX=sys.argv[1]; ROW=int(sys.argv[2]); COL=int(sys.argv[3]); VAL=sys.argv[4]
+XLSX=sys.argv[1]
+try:
+    ROW=int(sys.argv[2]); COL=int(sys.argv[3])
+except ValueError:
+    sys.exit("row and col1based must be integers")
+if ROW<1 or COL<1:
+    sys.exit("row and col1based must be >= 1")
+VAL=sys.argv[4]
 KIND=sys.argv[5] if len(sys.argv)>5 else "num"
 
 def colname(n):

@@ -106,8 +106,14 @@ categories:
     # shifts it down by (48-40)=8 px so it lands exactly at y=0..40 — full-size,
     # zero clipping (verified across 717 glyphs).  size is ignored for colour
     # strikes; yadvance only moves the glyph, it does not rescale it.
+    # normalize: per-glyph auto-levels (fontconvert -N) — stretch each glyph so
+    # its brightest pixel maps to white, keeping black at 0.  Dark-colour emoji
+    # (dark-red/purple faces, eggplant, dark moons) are low-luminance in
+    # greyscale and would otherwise dither down to a few scattered dots; this
+    # recovers their shape.  Already-bright emoji are untouched (skipped when
+    # the max is already ~white).
     defaults: {source: noto-cemoji, size: 20, render_height: 40, yadvance: 48,
-               grayscale: true, dither: fs}
+               grayscale: true, dither: fs, normalize: true}
 
 # ORDERED list == ALL_FONTS[] priority. Each entry inherits its category
 # defaults; any field below overrides them. `bits: 32` marks SMP (>U+FFFF)

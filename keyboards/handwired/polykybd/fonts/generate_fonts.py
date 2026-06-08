@@ -35,7 +35,8 @@ except ImportError:
 # does not affect the rendered bytes (fontconvert parses options order-free); it
 # only shapes the provenance comment fontconvert prints on the first line.
 FIELD_FLAGS = [
-    ("size", "-s"), ("variant", "-v"), ("grayscale", "-g"), ("render_height", "-r"),
+    ("size", "-s"), ("variant", "-v"), ("grayscale", "-g"), ("normalize", "-N"),
+    ("render_height", "-r"),
     ("yadvance", "-Y"), ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
     ("contrast", "-c"), ("gamma", "-G"), ("saturation", "-B"), ("sharpness", "-U"),
     ("outline", "-O"), ("offset", "-o"), ("neg_offset", "-n"), ("bits", "-b"),
@@ -66,7 +67,7 @@ def build_argv(fc: str, e: dict, sources: dict, root: Path) -> list[str]:
     for field, flag in FIELD_FLAGS:
         if field not in e or e[field] in (None, False):
             continue
-        if flag in ("-g",):                      # boolean flags
+        if flag in ("-g", "-N"):                 # boolean flags
             argv.append(flag)
         else:
             argv += [flag, str(e[field])]

@@ -478,6 +478,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 24: //display off
                 poly_suspend();
                 sync_and_refresh_displays();
+                // Treat host display-off (e.g. system going to sleep) as a cue to
+                // persist the MRU recents — but only if they actually changed.
+                save_user_mru_if_dirty();
                 set_last_update(-1);
                 memset(data, 0, length);
                 memcpy(data, "P\x18.", 3);
@@ -496,6 +499,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     raw_hid_send(data, length);
                     soft_reset_keyboard();
                 }
+                break;
+            case 26: //save MRU recents to EEPROM (host shutdown/suspend signal)
+                save_user_mru_if_dirty();
+                memset(data, 0, length);
+                memcpy(data, "P\x1A.", 3);
+                raw_hid_send(data, length);
                 break;
             default:
                 if (hid_fw_up_receive(data, length)) {

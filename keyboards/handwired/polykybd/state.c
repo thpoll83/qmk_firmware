@@ -169,6 +169,27 @@ void save_user_eeconf(void) {
     save_user_latin();
 }
 
+// Writes the MRU blob (emoji + lang recents) to EEPROM, but only when it changed
+// since the last load/save. Keeps the write off the hot path so flash wear and
+// the ~50 ms consolidation erase only ever happen on a real suspend.
+void save_user_mru_if_dirty(void) {
+    if (!mru_dirty()) {
+        return;
+    }
+    eeconfig_update_user_datablock(mru_emoji_array(), offsetof(poly_eeconf_t, mru_emoji),
+                                   MRU_CAP * sizeof(uint32_t));
+    eeconfig_update_user_datablock(mru_lang_array(), offsetof(poly_eeconf_t, mru_lang),
+                                   MRU_CAP * sizeof(uint8_t));
+    mru_clear_dirty();
+}
+
+// Loads the persisted MRU lists from EEPROM into the RAM lists.
+void load_user_mru(void) {
+    poly_eeconf_t ee;
+    eeconfig_read_user_datablock(&ee, 0, sizeof(ee));
+    mru_load(ee.mru_emoji, ee.mru_lang);
+}
+
 // Loads user keyboard configuration from EEPROM with brightness validation against maximum.
 // Global variables: (none - returns result)
 poly_eeconf_t load_user_eeconf(void) {

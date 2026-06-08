@@ -48,6 +48,14 @@ typedef struct _overlay_map_sync_t {
     uint8_t  mapping[HID_DATA_MAX];
 } overlay_map_sync_t;
 
+// Emoji + language MRU recents, pushed master->slave so both halves render the
+// top row identically. Sent only when the lists change (mru_sync_pending()).
+typedef struct _mru_sync_t {
+    uint32_t crc32;
+    uint32_t emoji[MRU_CAP];
+    uint8_t  lang[MRU_CAP];
+} mru_sync_t;
+
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
@@ -74,6 +82,9 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
 
 // Handles incoming overlay mapping data on bridge with CRC32 validation.
 void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+
+// Handles incoming MRU (emoji + language recents) data on bridge with CRC32 validation.
+void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
 // Keyboard level code can change where VIA stores the magic.
 // The magic is the build date YYMMDD encoded as BCD in 3 bytes,

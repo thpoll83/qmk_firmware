@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include "quantum.h"
+#include "mru.h"
 
 typedef struct _poly_layer_t {
     uint32_t      crc32;
@@ -24,6 +25,8 @@ typedef struct _poly_sync_t {
     // Emoji layer state — synced so both halves show the same category/page.
     uint8_t  emj_category;
     uint8_t  emj_page;
+    // Language layer page — synced so both halves show the same page of languages.
+    uint8_t  lang_page;
 } poly_sync_t;
 
 typedef struct _poly_last_t {
@@ -41,6 +44,10 @@ typedef struct _poly_eeconf_t {
     uint8_t brightness;
     uint16_t unused;
     uint8_t latin_ex[26];
+    // MRU recents for the emoji / language selection layers. Persisted only on a
+    // power-suspension event (and the host save command), and only when dirty.
+    uint32_t mru_emoji[MRU_CAP];
+    uint8_t  mru_lang[MRU_CAP];
 } poly_eeconf_t;
 
 
@@ -88,6 +95,13 @@ void save_user_settings(void);
 
 // Writes only the 26-byte latin extension table to EEPROM. Use when only latin mappings changed.
 void save_user_latin(void);
+
+// Writes the emoji/language MRU lists to EEPROM, but only if they changed since
+// the last load/save (mru_dirty()). Master-only; call from suspend / host save.
+void save_user_mru_if_dirty(void);
+
+// Loads the persisted MRU lists from EEPROM into the RAM lists (mru_load()).
+void load_user_mru(void);
 
 // Saves both settings and latin table (convenience wrapper around the two above).
 void save_user_eeconf(void);

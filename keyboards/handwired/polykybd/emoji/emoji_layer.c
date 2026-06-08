@@ -4,6 +4,7 @@
 #include "emoji_layer.h"
 #include "emoji_data.h"
 #include "keycode_helper.h"
+#include "mru.h"
 #include "base/update.h"
 #include "base/disp_array.h"
 #include "lang/named_glyphs.h"
@@ -76,16 +77,18 @@ void emj_init(void) {
 }
 
 const uint32_t *emj_display_text(uint16_t keycode) {
-    // ── Page-prev arrow — only shown when a previous page exists ──
+    // ── Page arrows — always live because paging wraps in both directions ──
     if (keycode == KC_EMJ_PAGE_PREV) {
-        return (s_page > 0) ? (const uint32_t *)(U"  " ICON_LEFT) : (const uint32_t *)U"";
+        return (page_count(s_category) > 1) ? (const uint32_t *)(U"  " ICON_LEFT) : (const uint32_t *)U"";
+    }
+    if (keycode == KC_EMJ_PAGE_NEXT) {
+        return (page_count(s_category) > 1) ? (const uint32_t *)(U"  " ICON_RIGHT) : (const uint32_t *)U"";
     }
 
-    // ── Page-next arrow — only shown when a next page exists ──
-    if (keycode == KC_EMJ_PAGE_NEXT) {
-        return (s_page + 1 < page_count(s_category))
-               ? (const uint32_t *)(U"  " ICON_RIGHT)
-               : (const uint32_t *)U"";
+    // ── MRU recents row — most-recently-used emoji, or blank when empty ──
+    if (keycode >= KC_EMJ_MRU_BASE && keycode < KC_EMJ_MRU_BASE + MRU_CAP) {
+        uint32_t cp = mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE));
+        return (cp == 0) ? (const uint32_t *)U"" : make_emoji_str(cp);
     }
 
     // ── Category tab — hardwired icon, falling back to first codepoint ──
@@ -112,7 +115,9 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
     if (!pressed) {
         // Only act on key-down; still consume key-up for handled keycodes.
         if (keycode == KC_EMJ_PAGE_PREV || keycode == KC_EMJ_PAGE_NEXT) return true;
+        if (keycode == KC_EMJ_PRESET || keycode == KC_EMJ_CLEAR) return true;
         if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_PAGE_PREV) return true;
+        if (keycode >= KC_EMJ_MRU_BASE && keycode < KC_EMJ_MRU_BASE + MRU_CAP) return true;
         if (keycode >= KC_EMJ_SLOT_BASE && keycode < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) return true;
         return false;
     }
@@ -131,28 +136,41 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
         return true;
     }
 
-    // ── Paging ──
+    // ── Paging (wraps in both directions) ──
     if (keycode == KC_EMJ_PAGE_PREV) {
-        if (s_page > 0) {
-            s_page--;
-            request_disp_refresh();
-        }
+        uint8_t pages = page_count(s_category);
+        s_page = (uint8_t)((s_page + pages - 1) % pages);
+        request_disp_refresh();
         return true;
     }
     if (keycode == KC_EMJ_PAGE_NEXT) {
-        if (s_page + 1 < page_count(s_category)) {
-            s_page++;
-            request_disp_refresh();
+        uint8_t pages = page_count(s_category);
+        s_page = (uint8_t)((s_page + 1) % pages);
+        request_disp_refresh();
+        return true;
+    }
+
+    // ── MRU controls ──
+    if (keycode == KC_EMJ_PRESET) { mru_emoji_preset(); return true; }
+    if (keycode == KC_EMJ_CLEAR)  { mru_emoji_clear();  return true; }
+
+    // ── MRU recents slot — re-send and bump to front ──
+    if (keycode >= KC_EMJ_MRU_BASE && keycode < KC_EMJ_MRU_BASE + MRU_CAP) {
+        uint32_t cp = mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE));
+        if (cp != 0) {
+            register_unicode(cp);
+            mru_emoji_push(cp);
         }
         return true;
     }
 
-    // ── Emoji slot — send Unicode ──
+    // ── Emoji slot — send Unicode and remember it ──
     if (keycode >= KC_EMJ_SLOT_BASE && keycode < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) {
         uint8_t slot = (uint8_t)(keycode - KC_EMJ_SLOT_BASE);
         uint32_t cp  = codepoint_for_slot(slot);
         if (cp != 0) {
             register_unicode(cp);
+            mru_emoji_push(cp);
         }
         return true;
     }

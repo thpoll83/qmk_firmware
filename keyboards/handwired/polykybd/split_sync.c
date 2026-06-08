@@ -8,6 +8,8 @@
 #include "multicore_exec.h"
 #include "hid_com.h"
 #include "emoji/emoji_layer.h"
+#include "lang_layer.h"
+#include "mru.h"
 
 #include "base/overlay.h"
 #include "eeconfig.h"
@@ -52,6 +54,7 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
 #endif
             copy_local_state(incoming);
             emj_apply_sync(incoming->emj_category, incoming->emj_page);
+            lang_apply_page_sync(incoming->lang_page);
             if(newly_set & OVERLAY_ACTION_FLAGS) {
                 apply_overlay_action_flags(newly_set);
                 // Clear the bits locally so housekeeping has nothing to do.
@@ -273,14 +276,39 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
     }
 }
 
+// The MRU recents ride on the overlay-map transaction id (multiplexed by payload
+// size) so we stay within QMK's 32-transaction limit. The two payloads must keep
+// distinct sizes for the size-based dispatch in the handler below to work.
+_Static_assert(sizeof(mru_sync_t) != sizeof(overlay_map_sync_t),
+               "MRU and overlay-map payloads must differ in size (shared transaction id)");
+
 // Handles incoming overlay mapping data on bridge with CRC32 validation.
+// Also dispatches MRU snapshots, which share this transaction id (distinct size).
 void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len == sizeof(mru_sync_t)) {
+        user_sync_mru_data_handler(in_len, in_data, out_len, out_data);
+        return;
+    }
     if (in_len == sizeof(overlay_map_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data != NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
         if (crc32 == data->crc32) {
             set_10bit_overlay_mapping((uint8_t *)data->mapping);
             request_disp_refresh();
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
+        }
+    }
+}
+
+// Handles incoming MRU recents (emoji + language) on the bridge with CRC32 validation.
+void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len == sizeof(mru_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data != NULL) {
+        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
+        const mru_sync_t* data = (const mru_sync_t *)in_data;
+        if (crc32 == data->crc32) {
+            mru_apply_sync(data->emoji, data->lang);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

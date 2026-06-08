@@ -116,22 +116,25 @@ categories:
 # ranges so the real codepoint is written into the struct (no PUA shift).
 fonts:
   - {category: latin, variant: _Base_, ranges: [[0x20, 0x7e]]}
-  # --- Colour overrides for NotoEmoji's "puppet" full-body human figures. Listed
-  # FIRST so they win priority over the b/w emoji glyphs covering the same
-  # codepoints.  Each range is a contiguous run of figures chosen for colour;
-  # solid-silhouette figures and sports/activity line-art stay b/w (cleaner). ---
-  - {category: emoji_fig, variant: _PpCouples_,       ranges: [[0x1f46b, 0x1f46d]]}  # couple, 2 men, 2 women
-  - {category: emoji_fig, variant: _PpInfoGuardDance_, ranges: [[0x1f481, 0x1f483]]} # info-desk, guard, dancer
-  - {category: emoji_fig, variant: _PpGroom_,         ranges: [[0x1f486, 0x1f487]]}  # massage, haircut
-  - {category: emoji_fig, variant: _PpGestA_,         ranges: [[0x1f645, 0x1f647]]}  # no-good, ok, bow
-  - {category: emoji_fig, variant: _PpRaiseHand_,     ranges: [[0x1f64b, 0x1f64b]]}  # raising hand
-  - {category: emoji_fig, variant: _PpFrownPout_,     ranges: [[0x1f64d, 0x1f64e]]}  # frowning, pouting
-  - {category: emoji_fig, variant: _PpFacepalm_,      ranges: [[0x1f926, 0x1f926]]}  # facepalm
-  - {category: emoji_fig, variant: _PpShrug_,         ranges: [[0x1f937, 0x1f937]]}  # shrug
-  - {category: emoji_fig, variant: _PpSteamy_,        ranges: [[0x1f9d6, 0x1f9d6]]}  # person in steamy room
-  - {category: emoji_fig, variant: _PpFairy_,         ranges: [[0x1f9da, 0x1f9da]]}  # fairy
-  - {category: emoji_fig, variant: _PpMerperson_,     ranges: [[0x1f9dc, 0x1f9dc]]}  # merperson
-  - {category: emoji_fig, variant: _PpGenie_,         ranges: [[0x1f9de, 0x1f9de]]}  # genie
+  # --- Colour overrides for NotoEmoji's "puppet" human figures. Listed FIRST so
+  # they win priority over the b/w emoji glyphs covering the same codepoints.
+  # Explicit set chosen by the user; each range is a contiguous all-colour run.
+  # Solid-silhouette figures (family, pregnant, hugging, lotus, climbing...) and
+  # the sports/activity line-art stay b/w (their b/w line-art is cleaner). ---
+  - {category: emoji_fig, variant: _PpPeopleA_,  ranges: [[0x1f466, 0x1f469]]}  # 👦👧👨👩
+  - {category: emoji_fig, variant: _PpPeopleB_,  ranges: [[0x1f46b, 0x1f479]]}  # 👫..👹 couples, roles, ogre
+  - {category: emoji_fig, variant: _PpInfoGuardDance_, ranges: [[0x1f481, 0x1f483]]} # 💁💂💃
+  - {category: emoji_fig, variant: _PpGroom_,    ranges: [[0x1f486, 0x1f487]]}  # 💆💇
+  - {category: emoji_fig, variant: _PpCoupleHeart_, ranges: [[0x1f491, 0x1f491]]} # 💑
+  - {category: emoji_fig, variant: _PpGestA_,    ranges: [[0x1f645, 0x1f647]]}  # 🙅🙆🙇
+  - {category: emoji_fig, variant: _PpRaiseHand_, ranges: [[0x1f64b, 0x1f64b]]} # 🙋
+  - {category: emoji_fig, variant: _PpFrownPout_, ranges: [[0x1f64d, 0x1f64e]]} # 🙍🙎
+  - {category: emoji_fig, variant: _PpFacepalm_, ranges: [[0x1f926, 0x1f926]]}  # 🤦
+  - {category: emoji_fig, variant: _PpRoyals_,   ranges: [[0x1f934, 0x1f935]]}  # 🤴🤵  (🤶 Mrs Claus stays b/w)
+  - {category: emoji_fig, variant: _PpShrug_,    ranges: [[0x1f937, 0x1f937]]}  # 🤷
+  - {category: emoji_fig, variant: _PpHeroes_,   ranges: [[0x1f9b8, 0x1f9b9]]}  # 🦸🦹
+  - {category: emoji_fig, variant: _PpPersons_,  ranges: [[0x1f9d1, 0x1f9d6]]}  # 🧑..🧖  (🧗🧘 stay b/w)
+  - {category: emoji_fig, variant: _PpFantasy_,  ranges: [[0x1f9d9, 0x1f9df]]}  # 🧙..🧟 mage..zombie
   - {category: emoji, variant: _ToolsBMP_, ranges: [[0x2692, 0x269c]]}
   - {category: emoji, variant: _EmjHandsBMP2_, ranges: [[0x270a, 0x270d]], note: 'Cat 1: BMP hand gestures.  ☝☞ (0x261D-0x261E, Symbols2) are merged into _SymBmp1_ (see "Symbols"). ✊✋✌✍ (0x270A-0x270D, NotoEmoji) stay separate; the Symbols2 ranges are split around this island.'}
   - {category: symbols, variant: _SymBmp1_, ranges: [[0x25ac, 0x25ac], [0x2600, 0x2647]], note: 'Symbols2 BMP fonts — full contiguous Misc-Symbols + Dingbats coverage (0x25AC-0x27BF), DISJOINT ranges split around the interleaved NotoEmoji islands (Zodiac 0x2648-53, ToolsBMP 0x2692-9C, TravelBMP2 0x26F0-F5, TravelBMP 0x2708, HandsBMP2 0x270A-0D). Overlap-free, no prefix trick. Replace SymbolsAndShapes / EmjWeatherBMP(2) / EmjHandsBMP / Chess / DiamondCut / EmjSnowflake / EmjSportsBMP / EmjHeart (all NotoSansSymbols2). Glyphs in the gaps (I-Ching, road signs, …) are rendered but simply not referenced by any emoji category. _SymBmp1_ 0x25AC, 0x2600-0x2647   _SymBmp2_ 0x2654-0x2691   _SymBmp6_ 0x269D-0x26EF _SymBmp3_ 0x26F6-0x2707           _SymBmp5_ 0x2709          _SymBmp4_ 0x270E-0x27BF Tools/alchemical 0x2692-0x269C (⚒⚓⚔⚕⚖⚗⚙⚛⚜) are absent from NotoSansSymbols2 — sourced from NotoEmoji.'}

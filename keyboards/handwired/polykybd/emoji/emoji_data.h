@@ -114,6 +114,7 @@ static const uint32_t emj_cat2[] = {
     // Newer people (Unicode 10/11+, EmjPeople2)
     0x1F930, 0x1F931,                             // 🤰🤱
     0x1F933, 0x1F934, 0x1F935, 0x1F936, 0x1F937, // 🤳🤴🤵🤶🤷
+    0x1F385,                                      // 🎅 Santa (moved here from cat3)
     // Superheroes (🦺-🦽 to cat10; 🦾 to cat1)
     0x1F9B8, 0x1F9B9, // 🦸🦹 superhero, supervillain
     0x1F9BF,          // 🦿 mechanical leg
@@ -123,7 +124,7 @@ static const uint32_t emj_cat2[] = {
     // Fantasy people (EmjPeople3 extended)
     0x1F9D9, 0x1F9DA, 0x1F9DB, 0x1F9DC, 0x1F9DD, 0x1F9DE, 0x1F9DF,
     // Body (EmjBody2; 🫀🫁 to cat1; 🩸🩹🩺 to cat10)
-    0x1FAC2, 0x1FAC3, 0x1FAC4, 0x1FAC5, // 🫂🫃🫄🫅
+    0x1FAC2, 0x1FAC3, 0x1FAC4, // 🫂🫃🫄  (🫅 removed — covered elsewhere)
 };
 
 // ── Category 3: Love & Celebrations ─────────────────────────────────────────
@@ -132,7 +133,7 @@ static const uint32_t emj_cat3[] = {
     0x2764,  // ❤ (BMP — font index = 0x2764, no offset)
     // Celebrations (🎁🎉🎊 moved to cat0; EmjCelebrate)
     0x1F380, // 🎀 ribbon
-    0x1F382, 0x1F383, 0x1F384, 0x1F385, 0x1F386,
+    0x1F382, 0x1F383, 0x1F384, 0x1F386,
     0x1F387, 0x1F388, // 🎇🎈 sparkler, balloon
     0x1F9E7, 0x1F9E8, // 🧧🧨 red envelope, firecracker
     0x1F38B, 0x1F38C, 0x1F38D, 0x1F38E, 0x1F38F,

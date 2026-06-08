@@ -647,8 +647,9 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
             return f'KCL_{slang[n].upper()},\t' if n < len(slang) else "KC_NO,\t\t"
         # left bottom row: 5 langs (48..52) + the Enter-key slot (KC_NO)
         left_row5  = "".join(slot(48+k) for k in range(5)) + "KC_NO,\t\t"
-        # right bottom row: langs 53.. (only 53..56 exist, rest KC_NO)
-        right_row5 = "".join(slot(53+k) for k in range(6))
+        # right bottom row: the first slot is the Enter key on the 2nd default
+        # layer (_L1) - blank it like the left Enter; then langs 53.. (53..56 exist).
+        right_row5 = "KC_NO,\t\t" + "".join(slot(53+k) for k in range(5))
         cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[0]}");
         cog.outl(f"KC_NO,\t\t\t\t\t\t\t{lines[1]}");
         cog.outl(f"QK_UNICODE_MODE_WINCOMPOSE,\t\t{lines[2]}\tMS_BTN1,");
@@ -671,7 +672,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         					KCL_ITIT,	KCL_JAJP,	KCL_KOKR,	KCL_KKKZ,	KCL_LTLT,	KCL_LVLV,	QK_UNICODE_MODE_LINUX,
         _______,			KCL_MKMK,	KCL_MNMN,	KCL_ESMX,	KCL_NLNL,	KCL_NNNO,	KCL_NENP,	QK_UNICODE_MODE_WINDOWS,
         KC_NO,				KCL_URPK,	KCL_PLPL,	KCL_PTPT,	KCL_RORO,	KCL_SRRS,	KCL_RURU,	QK_UNICODE_MODE_BSD,
-        KCL_ZHTW,	KCL_UKUA,	KCL_ENUS,	KCL_VIVN,	KC_NO,		KC_NO,		KC_BASE
+        KC_NO,		KCL_ZHTW,	KCL_UKUA,	KCL_ENUS,	KCL_VIVN,	KC_NO,		KC_BASE
         //[[[end]]]
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(

@@ -106,14 +106,20 @@ categories:
     # shifts it down by (48-40)=8 px so it lands exactly at y=0..40 — full-size,
     # zero clipping (verified across 717 glyphs).  size is ignored for colour
     # strikes; yadvance only moves the glyph, it does not rescale it.
-    # normalize: per-glyph auto-levels (fontconvert -N) — stretch each glyph so
-    # its brightest pixel maps to white, keeping black at 0.  Dark-colour emoji
-    # (dark-red/purple faces, eggplant, dark moons) are low-luminance in
-    # greyscale and would otherwise dither down to a few scattered dots; this
-    # recovers their shape.  Already-bright emoji are untouched (skipped when
-    # the max is already ~white).
+    # Per-glyph optimisation pass ("col4" from the visual study):
+    #   normalize (-N): auto-levels — stretch each glyph so its 99th-percentile
+    #     brightest pixel maps to white (a lone hot pixel can't cap the gain),
+    #     keeping black at 0.  Recovers dark-colour emoji (dark faces, eggplant,
+    #     dark moons) that would otherwise dither to a few dots.
+    #   invert (-I): flip the dithered bits inside the glyph; with -N first this
+    #     yields an even, outline/icon look (bright fills hollow out, features pop).
+    #   edge (-E): overlay the glyph's interior feature edges, forced lit, so
+    #     eyes/mouth/details stay crisp instead of dissolving into dither.
+    #   outline: 1 (-O1): a clean 1px silhouette around the alpha shape; edges are
+    #     kept clear of the boundary so it stays a single line (not doubled).
     defaults: {source: noto-cemoji, size: 20, render_height: 40, yadvance: 48,
-               grayscale: true, dither: fs, normalize: true}
+               grayscale: true, dither: fs, normalize: true,
+               invert: true, edge: true, outline: 1}
 
 # ORDERED list == ALL_FONTS[] priority. Each entry inherits its category
 # defaults; any field below overrides them. `bits: 32` marks SMP (>U+FFFF)

@@ -39,7 +39,8 @@ FIELD_FLAGS = [
     ("render_height", "-r"),
     ("yadvance", "-Y"), ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
     ("contrast", "-c"), ("gamma", "-G"), ("saturation", "-B"), ("sharpness", "-U"),
-    ("outline", "-O"), ("offset", "-o"), ("neg_offset", "-n"), ("bits", "-b"),
+    ("outline", "-O"), ("invert", "-I"), ("edge", "-E"),
+    ("offset", "-o"), ("neg_offset", "-n"), ("bits", "-b"),
 ]
 GFXFONT_RE = re.compile(r"const\s+GFXfont\s+(\w+)\s+PROGMEM", re.M)
 
@@ -67,7 +68,7 @@ def build_argv(fc: str, e: dict, sources: dict, root: Path) -> list[str]:
     for field, flag in FIELD_FLAGS:
         if field not in e or e[field] in (None, False):
             continue
-        if flag in ("-g", "-N"):                 # boolean flags
+        if flag in ("-g", "-N", "-I", "-E"):     # boolean flags
             argv.append(flag)
         else:
             argv += [flag, str(e[field])]

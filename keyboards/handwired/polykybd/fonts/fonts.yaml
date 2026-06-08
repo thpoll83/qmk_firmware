@@ -131,7 +131,8 @@ fonts:
   - {category: emoji_fig, variant: _PpRaiseHand_, ranges: [[0x1f64b, 0x1f64b]]} # 🙋
   - {category: emoji_fig, variant: _PpFrownPout_, ranges: [[0x1f64d, 0x1f64e]]} # 🙍🙎
   - {category: emoji_fig, variant: _PpFacepalm_, ranges: [[0x1f926, 0x1f926]]}  # 🤦
-  - {category: emoji_fig, variant: _PpRoyals_,   ranges: [[0x1f934, 0x1f935]]}  # 🤴🤵  (🤶 Mrs Claus stays b/w)
+  - {category: emoji_fig, variant: _PpRoyals_,   ranges: [[0x1f934, 0x1f935]]}  # 🤴🤵
+  - {category: emoji_fig, variant: _PpMrsClaus_, ranges: [[0x1f936, 0x1f936]]}  # 🤶 Mrs Claus
   - {category: emoji_fig, variant: _PpShrug_,    ranges: [[0x1f937, 0x1f937]]}  # 🤷
   - {category: emoji_fig, variant: _PpHeroes_,   ranges: [[0x1f9b8, 0x1f9b9]]}  # 🦸🦹
   - {category: emoji_fig, variant: _PpPersons_,  ranges: [[0x1f9d1, 0x1f9d6]]}  # 🧑..🧖  (🧗🧘 stay b/w)

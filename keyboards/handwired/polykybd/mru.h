@@ -17,22 +17,28 @@
 // explicit host save command) — and only when they actually changed since the
 // last save (the `dirty` flag), to avoid pointless flash wear.
 
-// The emoji recents are stored as a compact 16-bit code rather than the raw
-// 32-bit codepoint: 4 bits select the emoji category (tab) and 12 bits index the
-// glyph within that category (EMJ_CATEGORIES[cat].codepoints[offset]). The
-// emoji layer owns the pack/unpack; mru.c just stores the opaque code. This is
-// safe because the EEPROM is reset on every firmware update (build-date magic +
-// EECONFIG size), so a stored code is always interpreted against the same table
-// layout that produced it.
+// The emoji recents are stored as a compact code rather than the raw 32-bit
+// codepoint: 4 bits select the emoji category (tab) and 10 bits index the glyph
+// within that category (EMJ_CATEGORIES[cat].codepoints[offset]). The emoji layer
+// owns the pack/unpack; mru.c stores the 14-bit code in a uint16 at runtime and
+// bit-packs it for EEPROM / split-sync. Safe because the EEPROM is reset on every
+// firmware update (build-date magic + EECONFIG size), so a stored code is always
+// interpreted against the same table layout that produced it.
+//
+// 10-bit offset caps a category at 1024 glyphs (largest today is ~300).
 
 #define MRU_CAP          12u    // visible MRU slots per layer (top row minus 2 ends)
-#define MRU_EMOJI_EMPTY  0xFFFFu  // cat 15 / offset 0xFFF — never a valid code
+#define MRU_EMOJI_EMPTY  0x3FFFu  // 14-bit all-ones (cat 15) — never a valid code
 #define MRU_LANG_EMPTY   0xFFu
+
+// Emoji codes serialise to 14 bits each; languages stay one byte.
+#define MRU_EMOJI_BITS    14u
+#define MRU_EMOJI_PACKED  ((MRU_CAP * MRU_EMOJI_BITS + 7u) / 8u)   // 21 bytes
 
 // Clears both lists (RAM only). Call once at init.
 void mru_init(void);
 
-// ── Emoji recents (packed 16-bit category|offset codes) ──────────────────────
+// ── Emoji recents (14-bit category|offset codes, held in a uint16) ───────────
 // Insert `code` at the front, de-duplicating (moves an existing entry to front)
 // and evicting the oldest when full. No-op for code == MRU_EMOJI_EMPTY.
 void     mru_emoji_push(uint16_t code);
@@ -52,14 +58,15 @@ void     mru_lang_preset(void);
 // True when the lists differ from what was last loaded/saved to EEPROM.
 bool            mru_dirty(void);
 void            mru_clear_dirty(void);
-// Raw backing arrays for (de)serialisation by state.c.
-const uint16_t* mru_emoji_array(void);
+// Bit-pack the emoji recents into MRU_EMOJI_PACKED bytes (for EEPROM / sync).
+void            mru_emoji_pack(uint8_t out[MRU_EMOJI_PACKED]);
+// Raw language array (one byte per slot) for (de)serialisation by state.c.
 const uint8_t*  mru_lang_array(void);
-// Replace the lists from an EEPROM blob (clears dirty, schedules a slave resync).
-void            mru_load(const uint16_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]);
+// Replace the lists from a stored blob (clears dirty, schedules a slave resync).
+void            mru_load(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uint8_t lang[MRU_CAP]);
 
 // ── Split sync (master pushes to slave) ──────────────────────────────────────
 bool mru_sync_pending(void);
 void mru_clear_sync_pending(void);
 // Slave applies an incoming snapshot (does not mark dirty — slave never saves).
-void mru_apply_sync(const uint16_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]);
+void mru_apply_sync(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uint8_t lang[MRU_CAP]);

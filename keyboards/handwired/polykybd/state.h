@@ -46,8 +46,8 @@ typedef struct _poly_eeconf_t {
     uint8_t latin_ex[26];
     // MRU recents for the emoji / language selection layers. Persisted only on a
     // power-suspension event (and the host save command), and only when dirty.
-    // Emoji are packed 16-bit category|offset codes; languages are LANG_* indices.
-    uint16_t mru_emoji[MRU_CAP];
+    // Emoji are bit-packed 14-bit category|offset codes; languages are LANG_* bytes.
+    uint8_t  mru_emoji[MRU_EMOJI_PACKED];
     uint8_t  mru_lang[MRU_CAP];
 } poly_eeconf_t;
 

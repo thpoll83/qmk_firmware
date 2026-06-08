@@ -52,9 +52,12 @@ typedef struct _overlay_map_sync_t {
 // top row identically. Sent only when the lists change (mru_sync_pending()).
 typedef struct _mru_sync_t {
     uint32_t crc32;
-    uint16_t emoji[MRU_CAP];
+    uint8_t  emoji[MRU_EMOJI_PACKED];
     uint8_t  lang[MRU_CAP];
 } mru_sync_t;
+// crc + packed emoji + lang are contiguous (no padding before `lang`); only these
+// bytes are transmitted, so the uint32 crc's tail padding never goes on the wire.
+#define MRU_SYNC_BYTES (4u + MRU_EMOJI_PACKED + MRU_CAP)
 
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

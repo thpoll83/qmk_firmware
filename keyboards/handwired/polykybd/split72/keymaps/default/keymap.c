@@ -247,11 +247,12 @@ void sync_and_refresh_displays(void) {
         // halves render the top row identically.
         if (mru_sync_pending()) {
             mru_sync_t mru_msg;
-            memcpy(mru_msg.emoji, mru_emoji_array(), sizeof(mru_msg.emoji));
-            memcpy(mru_msg.lang,  mru_lang_array(),  sizeof(mru_msg.lang));
+            mru_emoji_pack(mru_msg.emoji);
+            memcpy(mru_msg.lang, mru_lang_array(), sizeof(mru_msg.lang));
             // Multiplexed onto the overlay-map transaction id (distinct payload
-            // size) to stay within QMK's 32-transaction limit.
-            uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, sizeof(mru_msg), 10);
+            // size) to stay within QMK's 32-transaction limit. Only the packed
+            // bytes are sent (MRU_SYNC_BYTES), not the struct's crc tail padding.
+            uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, 10);
             if (mru_ack == SYNC_ACK || mru_ack == SYNC_ACK_SIG) {
                 mru_clear_sync_pending();
             } else {

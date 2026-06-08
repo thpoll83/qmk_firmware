@@ -76,13 +76,13 @@ static const uint32_t *make_emoji_str(uint32_t cp) {
 // update). MRU_EMOJI_EMPTY (0xFFFF) decodes to 0 (blank slot).
 
 static uint16_t emj_pack(uint8_t cat, uint16_t off) {
-    return (uint16_t)(((uint16_t)cat << 12) | (off & 0x0FFF));
+    return (uint16_t)(((uint16_t)cat << 10) | (off & 0x03FF));
 }
 
 static uint32_t emj_decode(uint16_t code) {
     if (code == MRU_EMOJI_EMPTY) return 0;
-    uint8_t  cat = (uint8_t)(code >> 12);
-    uint16_t off = (uint16_t)(code & 0x0FFF);
+    uint8_t  cat = (uint8_t)(code >> 10);
+    uint16_t off = (uint16_t)(code & 0x03FF);
     if (cat >= EMJ_NUM_CATEGORIES) return 0;
     if (off >= EMJ_CATEGORIES[cat].count) return 0;
     return EMJ_CATEGORIES[cat].codepoints[off];

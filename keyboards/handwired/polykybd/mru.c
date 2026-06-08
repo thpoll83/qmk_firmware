@@ -62,6 +62,29 @@ static bool push_u8(uint8_t *list, uint8_t empty, uint8_t value) {
     return true;
 }
 
+// ── 14-bit-per-entry bit packing (LSB-first) for the emoji codes ─────────────
+static void emoji_pack(const uint16_t codes[MRU_CAP], uint8_t out[MRU_EMOJI_PACKED]) {
+    memset(out, 0, MRU_EMOJI_PACKED);
+    uint32_t bit = 0;
+    for (uint8_t i = 0; i < MRU_CAP; ++i) {
+        uint16_t v = codes[i] & 0x3FFF;
+        for (uint8_t b = 0; b < MRU_EMOJI_BITS; ++b, ++bit) {
+            if (v & (1u << b)) out[bit >> 3] |= (uint8_t)(1u << (bit & 7u));
+        }
+    }
+}
+
+static void emoji_unpack(const uint8_t in[MRU_EMOJI_PACKED], uint16_t codes[MRU_CAP]) {
+    uint32_t bit = 0;
+    for (uint8_t i = 0; i < MRU_CAP; ++i) {
+        uint16_t v = 0;
+        for (uint8_t b = 0; b < MRU_EMOJI_BITS; ++b, ++bit) {
+            if (in[bit >> 3] & (uint8_t)(1u << (bit & 7u))) v |= (uint16_t)(1u << b);
+        }
+        codes[i] = v;
+    }
+}
+
 static void mark_changed(void) {
     s_dirty        = true;
     s_sync_pending = true;
@@ -117,12 +140,12 @@ void mru_lang_preset(void) {
 
 bool mru_dirty(void)           { return s_dirty; }
 void mru_clear_dirty(void)     { s_dirty = false; }
-const uint16_t* mru_emoji_array(void) { return s_emoji; }
+void mru_emoji_pack(uint8_t out[MRU_EMOJI_PACKED]) { emoji_pack(s_emoji, out); }
 const uint8_t*  mru_lang_array(void)  { return s_lang; }
 
-void mru_load(const uint16_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]) {
-    memcpy(s_emoji, emoji, sizeof(s_emoji));
-    memcpy(s_lang,  lang,  sizeof(s_lang));
+void mru_load(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uint8_t lang[MRU_CAP]) {
+    emoji_unpack(emoji_packed, s_emoji);
+    memcpy(s_lang, lang, sizeof(s_lang));
     s_dirty        = false;   // freshly loaded == matches EEPROM
     s_sync_pending = true;    // but the slave still needs a copy
 }
@@ -130,7 +153,9 @@ void mru_load(const uint16_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]) {
 bool mru_sync_pending(void)       { return s_sync_pending; }
 void mru_clear_sync_pending(void) { s_sync_pending = false; }
 
-void mru_apply_sync(const uint16_t emoji[MRU_CAP], const uint8_t lang[MRU_CAP]) {
+void mru_apply_sync(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uint8_t lang[MRU_CAP]) {
+    uint16_t emoji[MRU_CAP];
+    emoji_unpack(emoji_packed, emoji);
     if (memcmp(s_emoji, emoji, sizeof(s_emoji)) != 0 ||
         memcmp(s_lang,  lang,  sizeof(s_lang))  != 0) {
         memcpy(s_emoji, emoji, sizeof(s_emoji));

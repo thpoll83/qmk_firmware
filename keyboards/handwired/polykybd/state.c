@@ -176,8 +176,9 @@ void save_user_mru_if_dirty(void) {
     if (!mru_dirty()) {
         return;
     }
-    eeconfig_update_user_datablock(mru_emoji_array(), offsetof(poly_eeconf_t, mru_emoji),
-                                   MRU_CAP * sizeof(uint16_t));
+    uint8_t packed[MRU_EMOJI_PACKED];
+    mru_emoji_pack(packed);
+    eeconfig_update_user_datablock(packed, offsetof(poly_eeconf_t, mru_emoji), MRU_EMOJI_PACKED);
     eeconfig_update_user_datablock(mru_lang_array(), offsetof(poly_eeconf_t, mru_lang),
                                    MRU_CAP * sizeof(uint8_t));
     mru_clear_dirty();

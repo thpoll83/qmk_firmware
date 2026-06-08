@@ -82,7 +82,7 @@ categories:
     defaults: {source: noto-sans-armenian, size: 16, render_height: 40, weight: 500}
   bopomofo:
     output: bopomofo_fonts.h
-    defaults: {source: noto-sans-tc, size: 18, render_height: 40, weight: 500}
+    defaults: {source: noto-sans-tc, size: 16, render_height: 40, weight: 500}
   vietnamese:
     output: vietnamese_fonts.h
     defaults: {source: noto-sans, size: 16, render_height: 40}

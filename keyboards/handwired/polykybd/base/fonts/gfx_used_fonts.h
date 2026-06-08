@@ -125,7 +125,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansThai_Regular_ThaiMatra_16pt7b,
   &NotoSansGeorgian_Regular_Georgian_17pt16b,
   &NotoSansArmenian_Regular_Armenian_16pt16b,
-  &NotoSansTC_Regular_Bopomofo_18pt16b,
+  &NotoSansTC_Regular_Bopomofo_16pt16b,
   &NotoSans_Regular_VietTones_16pt7b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct2_15pt16b,

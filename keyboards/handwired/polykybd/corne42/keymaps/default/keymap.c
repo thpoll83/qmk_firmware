@@ -189,11 +189,27 @@ void sync_and_refresh_displays(void) {
 
         access_local_state()->emj_category = emj_active_category();
         access_local_state()->emj_page     = emj_active_page();
+        access_local_state()->lang_page    = lang_active_page();
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
             if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10)) {
                 state_diff = false;
                 uprint("USER_SYNC_POLY_DATA failed to send\n");
+            }
+        }
+
+        // Push the MRU recents to the slave only when they changed, so both
+        // halves render the recents identically (multiplexed onto the overlay-map
+        // transaction id by its distinct payload size, as on split72).
+        if (mru_sync_pending()) {
+            mru_sync_t mru_msg;
+            mru_emoji_pack(mru_msg.emoji);
+            memcpy(mru_msg.lang, mru_lang_array(), sizeof(mru_msg.lang));
+            uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, 10);
+            if (mru_ack == SYNC_ACK || mru_ack == SYNC_ACK_SIG) {
+                mru_clear_sync_pending();
+            } else {
+                uprint("USER_SYNC_MRU_DATA failed to send\n");
             }
         }
 
@@ -498,14 +514,18 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /*
      * Language selection layer
      */
+    // Language selection layer. Top-left row = MRU recents (LMRU); the middle
+    // fills with page-relative language slots (LSLOT) paged through all NUM_LANG
+    // languages via the wrapping arrows. Preset/Clear on the left thumbs; the six
+    // unicode-input-mode keys keep their edge/thumb positions.
     [_LL] = LAYOUT_crkbd(
-        KC_NO,              KCL_ARSA,  KCL_BEBY,  KCL_BGBG,  KCL_CSCZ,  KCL_DADK,
-        KC_NO,              KCL_DEDE,  KCL_ELGR,  KCL_ENUS,  KCL_ESES,  KCL_FIFI,
-        QK_UNICODE_MODE_WINCOMPOSE, KCL_FRFR, KCL_HEIL, KCL_HUHU, KCL_ITIT, KCL_JAJP,
-        KC_BASE,            KC_NO,     KC_NO,
-        KCL_KKKZ,  KCL_KOKR,  KCL_NLNL,  KCL_NNNO,  KCL_PLPL,  QK_UNICODE_MODE_MACOS,
-        KCL_PTPT,  KCL_RORO,  KCL_RURU,  KCL_SVSE,  KCL_TRTR,  QK_UNICODE_MODE_LINUX,
-        KCL_UKUA,  KCL_ZHCN,  KC_NO,     KC_NO,     KC_NO,     QK_UNICODE_MODE_WINDOWS,
+        LMRU(0),           LMRU(1),    LMRU(2),    LMRU(3),    LMRU(4),    LMRU(5),
+        KC_LANG_PAGE_PREV, LSLOT(0),   LSLOT(1),   LSLOT(2),   LSLOT(3),   LSLOT(4),
+        QK_UNICODE_MODE_WINCOMPOSE, LSLOT(5), LSLOT(6), LSLOT(7), LSLOT(8),  LSLOT(9),
+        KC_BASE,           KC_LANG_PRESET, KC_LANG_CLEAR,
+        LSLOT(10), LSLOT(11), LSLOT(12), LSLOT(13), LSLOT(14), QK_UNICODE_MODE_MACOS,
+        LSLOT(15), LSLOT(16), LSLOT(17), LSLOT(18), LSLOT(19), QK_UNICODE_MODE_LINUX,
+        LSLOT(20), LSLOT(21), LSLOT(22), LSLOT(23), KC_LANG_PAGE_NEXT, QK_UNICODE_MODE_WINDOWS,
         QK_UNICODE_MODE_EMACS, QK_UNICODE_MODE_BSD, KC_BASE
     ),
     /*
@@ -522,17 +542,19 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,  _______,  _______
     ),
     /*
-     * Emoji layer — 10 category tabs, 24 slots per page
+     * Emoji layer — left half: 12 category tabs (rows 0-1) + 6 MRU recents
+     * (row 2); right half: the current tab's 18 slots (3 rows). Paging and the
+     * Preset/Clear MRU controls live on the thumbs.
      */
     [_EMJ] = LAYOUT_crkbd(
-        KC_EMJ_PAGE_PREV, KC_EMJ_CAT(0), KC_EMJ_CAT(1), KC_EMJ_CAT(2), KC_EMJ_CAT(3), KC_EMJ_CAT(4),
-        ESLOT(0),         ESLOT(1),      ESLOT(2),      ESLOT(3),      ESLOT(4),      ESLOT(5),
-        ESLOT(12),        ESLOT(13),     ESLOT(14),     ESLOT(15),     ESLOT(16),     ESLOT(17),
-        TO(_BL),          KC_NO,         KC_NO,
-        KC_EMJ_CAT(5),    KC_EMJ_CAT(6), KC_EMJ_CAT(7), KC_EMJ_CAT(8), KC_EMJ_CAT(9), KC_EMJ_PAGE_NEXT,
-        ESLOT(6),         ESLOT(7),      ESLOT(8),      ESLOT(9),      ESLOT(10),     ESLOT(11),
-        ESLOT(18),        ESLOT(19),     ESLOT(20),     ESLOT(21),     ESLOT(22),     ESLOT(23),
-        KC_NO,            KC_NO,         TO(_BL)
+        KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
+        KC_EMJ_CAT(6),  KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(11),
+        EMRU(0),        EMRU(1),        EMRU(2),        EMRU(3),        EMRU(4),        EMRU(5),
+        TO(_BL),        KC_EMJ_PRESET,  KC_EMJ_CLEAR,
+        ESLOT(0),       ESLOT(1),       ESLOT(2),       ESLOT(3),       ESLOT(4),       ESLOT(5),
+        ESLOT(6),       ESLOT(7),       ESLOT(8),       ESLOT(9),       ESLOT(10),      ESLOT(11),
+        ESLOT(12),      ESLOT(13),      ESLOT(14),      ESLOT(15),      ESLOT(16),      ESLOT(17),
+        KC_EMJ_PAGE_PREV, KC_EMJ_PAGE_NEXT, TO(_BL)
     )
 };
 
@@ -846,13 +868,25 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 #define FLAG_LEFT_X    (BUFFER_X - 2)    // flag glyph left (keeps the left border on-screen)
 #define LABEL_COL_X    (BUFFER_X + 66)   // baseline column of the vertical label
 
-static const GFXfont* const lang_flag_fonts[] = { &NotoColorEmoji_Regular_LangFlags_20pt7b };
+static const GFXfont* const lang_flag_fonts[]  = { &NotoColorEmoji_Regular_LangFlags_20pt7b };
+static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b };
+
+// Draw a Preset/Clear MRU control key: a tiny label plus a left/right arrow icon.
+static void render_mru_ctrl_key(bool preset) {
+    if (preset) {
+        kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 14, 18, U"Preset");
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 44, 23, ICON_RIGHT);
+    } else {
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 4, 23, ICON_LEFT);
+        kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 24, 18, U"Clear");
+    }
+}
 
 // Draw one language key: oversized country flag on the left (vertically centred
 // and clipped so the flag content fills the keycap height), language code running
 // vertically up the right side (inverted bar when it is the active language).
-static void render_lang_flag_key(uint16_t keycode, const uint32_t* label, uint8_t current_lang) {
-    const uint8_t  idx = (uint8_t)(keycode - KCL_ENUS);   // == LANG_* enum value
+// idx is the LANG_* enum value (resolved via lang_index_for_keycode for slot/MRU keys).
+static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
     const GFXfont* ff  = &NotoColorEmoji_Regular_LangFlags_20pt7b;
 
     // Flag: the glyph is taller than the keycap, so centre it vertically — the
@@ -910,10 +944,17 @@ void update_displays(enum refresh_mode mode) {
                     kdisp_enable(true);
                     kdisp_set_contrast(local_state->contrast-1);
                     if(keycode!=KC_TRNS) {
-                        if (keycode >= KCL_ENUS && keycode <= KCL_CSCZ) {
-                            // Language layer: country flag + tiny language code.
+                        int16_t lang_idx = lang_index_for_keycode(keycode);
+                        if (lang_idx >= 0) {
+                            // Language layer (KCL_/LMRU/LSLOT): flag + tiny code.
                             kdisp_set_buffer(0x00);
-                            render_lang_flag_key(keycode, to_static_text(keycode, state), local_state->lang);
+                            render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state), local_state->lang);
+                            kdisp_send_buffer();
+                        } else if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET ||
+                                   keycode == KC_EMJ_CLEAR  || keycode == KC_LANG_CLEAR) {
+                            // MRU Preset/Clear control keys.
+                            kdisp_set_buffer(0x00);
+                            render_mru_ctrl_key(keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET);
                             kdisp_send_buffer();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
@@ -1221,6 +1262,32 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
             local_state->overlay_flags &= ~SAVE_EEPROM;
             break;
+        // ── Language layer: paging, MRU controls, and slot/MRU selection ──
+        case KC_LANG_PAGE_PREV:
+            lang_page_prev();
+            request_disp_refresh();
+            break;
+        case KC_LANG_PAGE_NEXT:
+            lang_page_next();
+            request_disp_refresh();
+            break;
+        case KC_LANG_PRESET:
+            mru_lang_preset();
+            break;
+        case KC_LANG_CLEAR:
+            mru_lang_clear();
+            break;
+        case KC_LANG_MRU_BASE ... KC_LANG_SLOT_BASE - 1:
+        case KC_LANG_SLOT_BASE ... KC_LANG_END - 1: {
+            int16_t li = lang_index_for_keycode(keycode);
+            if (li >= 0) {
+                local_state->lang = (uint8_t)li;
+                mru_lang_push((uint8_t)li);
+                mark_settings_dirty();
+                layer_off(_LL);
+            }
+            break;
+        }
         case KCL_ENUS: local_state->lang = LANG_ENUS; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_DEDE: local_state->lang = LANG_DEDE; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_FRFR: local_state->lang = LANG_FRFR; mark_settings_dirty(); layer_off(_LL); break;

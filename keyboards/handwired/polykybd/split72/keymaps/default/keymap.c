@@ -1173,9 +1173,10 @@ static void render_mru_ctrl_key(bool preset) {
         kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 14, 18, U"Preset");
         kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 44, 23, ICON_RIGHT);
     } else {
-        // "Clear" in the full-size keycap font on the top line, back-arrow centred below.
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 13, 15, U"Clear");
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 28, 34, ICON_LEFT);
+        // Mirror of "Preset": back-arrow points left into the recents row, label in
+        // the small keycap-label font (not the full-size font, which overflowed).
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 10, 23, ICON_LEFT);
+        kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 26, 18, U"Clear");
     }
 }
 
@@ -1996,6 +1997,15 @@ void suspend_power_down_kb(void) {
     save_all_dirty();
     suspend_power_down_user();
     set_last_update(-1);
+}
+
+// Called by QMK before every reset (QK_REBOOT, QK_BOOTLOADER, and the host-triggered
+// HID bootloader command, all via shutdown_quantum). Flush dirty user state to EEPROM
+// here too — without this, a reboot/bootloader jump that isn't preceded by a USB
+// suspend would discard any MRU/settings/layer changes still held in RAM.
+bool shutdown_user(bool jump_to_bootloader) {
+    save_all_dirty();
+    return true;
 }
 
 

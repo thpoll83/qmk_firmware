@@ -204,9 +204,9 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
         return true;
     }
 
-    // ── MRU controls ──
-    if (keycode == KC_EMJ_PRESET) { emj_mru_preset();  return true; }
-    if (keycode == KC_EMJ_CLEAR)  { mru_emoji_clear(); return true; }
+    // ── MRU controls ── (refresh so the recents row redraws immediately)
+    if (keycode == KC_EMJ_PRESET) { emj_mru_preset();  request_disp_refresh(); return true; }
+    if (keycode == KC_EMJ_CLEAR)  { mru_emoji_clear(); request_disp_refresh(); return true; }
 
     // ── MRU recents slot — re-send and bump to front ──
     if (keycode >= KC_EMJ_MRU_BASE && keycode < KC_EMJ_MRU_BASE + MRU_CAP) {

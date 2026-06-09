@@ -70,7 +70,7 @@ See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build 
 
 ## Future language candidates
 
-Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-generated from `lang_lut.xlsx` via cog), (2) re-running `fonts/gen-lang-fonts.sh` to generate the flag glyph and update `flag_fonts.h`, (3) updating the host's `_LANG_REGION` map in `PolyKybdHost/polyhost/host.py` if the country code isn't already there (all ISO 3166-1 codes are covered as of 2026-06).
+Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-generated from `lang_lut.xlsx` via cog), (2) re-running `fonts/gen-lang-fonts.sh` to generate the flag glyph and update `flag_fonts.h`, (3) updating the host's `_LANG_REGION` map in `PolyKybdHost/polyhost/host.py` if the country code isn't already there. The host map covers all standard ISO 3166-1 alpha-2 country codes; only non-standard or private-use codes need a new entry added manually.
 
 ### Oceania
 | Code | Language / Country | Notes |
@@ -79,7 +79,7 @@ Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-
 | `en-NZ` | English / New Zealand | High tech adoption; ~5 M users |
 | `tl-PH` | Filipino / Philippines | Largest Pacific-adjacent user base; geographically SE Asia — host places it in **Asia** submenu via `PH` |
 | `mi-NZ` | Māori / New Zealand | Official NZ language; Latin + macrons (ā ē ī ō ū) + okina; active digital revitalisation |
-| `haw-US` | Hawaiian / United States | Polynesian; Latin + okina (ʻ) + kahakō macrons; note: `US` country code puts it in **Americas** — would need a custom code (e.g. `haw-HI`) to land in Oceania |
+| `haw-US` | Hawaiian / United States | Polynesian; Latin + okina (ʻ) + kahakō macrons; `US` country code puts it in **Americas**. To land in Oceania a pseudo-locale like `haw-HI` could be used, but `HI` is not an ISO 3166-1 code — it would need a manual `"HI": "Oceania"` entry in the host's `_LANG_REGION` map, and `lang_lut.c` would store the non-standard code verbatim. |
 | `sm-WS` | Samoan / Samoa | Most widely spoken Polynesian language; large diaspora in NZ/AU; Latin with macrons |
 | `fj-FJ` | Fijian / Fiji | Most developed Pacific island nation outside AU/NZ; Latin-based |
 

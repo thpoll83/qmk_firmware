@@ -912,8 +912,9 @@ static void render_mru_ctrl_key(bool preset) {
         kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 14, 18, U"Preset");
         kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 44, 23, ICON_RIGHT);
     } else {
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 4, 23, ICON_LEFT);
-        kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 24, 18, U"Clear");
+        // "Clear" in the full-size keycap font on the top line, back-arrow centred below.
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 13, 15, U"Clear");
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 28, 34, ICON_LEFT);
     }
 }
 
@@ -923,6 +924,24 @@ static void draw_mru_top_bar(uint16_t keycode) {
     bool is_mru = (keycode >= KC_EMJ_MRU_BASE  && keycode < KC_EMJ_MRU_BASE  + MRU_CAP) ||
                   (keycode >= KC_LANG_MRU_BASE && keycode < KC_LANG_MRU_BASE + MRU_CAP);
     if (is_mru) kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 3);
+}
+
+// Layers below the host-write cap are remappable and live in the dynamic keymap
+// (EEPROM); layers at/above it (the language/emoji function layers) are served straight
+// from the compiled keymap in flash, so they never read the dynamic keymap and always
+// reflect the flashed firmware. Used by both the display and the key-event path.
+static uint16_t poly_keycode_at(uint8_t layer, uint8_t row, uint8_t col) {
+    if (layer >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) {
+        return keymaps[layer][row][col];   // static, compiled-in (flash)
+    }
+    return keycode_at_keymap_location(layer, row, col);
+}
+
+// Override QMK's weak resolver so key events on the static function layers come from the
+// compiled keymap too (no encoder/dip maps are enabled on this board).
+uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
+    if (key.row >= MATRIX_ROWS || key.col >= MATRIX_COLS) return KC_NO;
+    return poly_keycode_at(layer, key.row, key.col);
 }
 
 // Draw one language key: oversized country flag on the left (vertically centred
@@ -982,8 +1001,8 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     uint8_t layer = get_highest_layer(local_layer->layer);
-                    uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c);
-                    keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(local_layer->layer&~(1<<layer)),r + offset,c) : highest_kc;
+                    uint16_t highest_kc = poly_keycode_at(layer,r + offset,c);
+                    keycode = (highest_kc == KC_TRNS) ? poly_keycode_at(get_highest_layer(local_layer->layer&~(1<<layer)),r + offset,c) : highest_kc;
                     kdisp_enable(true);
                     kdisp_set_contrast(local_state->contrast-1);
                     if(keycode!=KC_TRNS) {

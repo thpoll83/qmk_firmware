@@ -658,16 +658,16 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // the paged language slots fill the rows above. No Preset key — Clear sits on
     // the right thumb (former right base key); the left base key still exits.
     [_LL] = LAYOUT_left_right_stacked(
-        KC_NO,                      LSLOT(0),   LSLOT(1),   LSLOT(2),   LSLOT(3),   LSLOT(4),   LSLOT(5),
-        KC_LANG_PAGE_PREV,          LSLOT(6),   LSLOT(7),   LSLOT(8),   LSLOT(9),   LSLOT(10),  LSLOT(11),
+        KC_LANG_PAGE_PREV,          LSLOT(0),   LSLOT(1),   LSLOT(2),   LSLOT(3),   LSLOT(4),   LSLOT(5),
+        QK_UNICODE_MODE_MACOS,      LSLOT(6),   LSLOT(7),   LSLOT(8),   LSLOT(9),   LSLOT(10),  LSLOT(11),
         QK_UNICODE_MODE_WINCOMPOSE, LSLOT(12),  LSLOT(13),  LSLOT(14),  LSLOT(15),  LSLOT(16),  LSLOT(17),  MS_BTN1,
         QK_UNICODE_MODE_EMACS,      LSLOT(18),  LSLOT(19),  LSLOT(20),  LSLOT(21),  LSLOT(22),  LSLOT(23),  KC_NO,
         KC_BASE,                    LMRU(0),    LMRU(1),    LMRU(2),                LMRU(3),    LMRU(4),    LMRU(5),
 
-                    LSLOT(24),  LSLOT(25),  LSLOT(26),  LSLOT(27),  LSLOT(28),  LSLOT(29),  KC_NO,
-                    LSLOT(30),  LSLOT(31),  LSLOT(32),  LSLOT(33),  LSLOT(34),  LSLOT(35),  KC_LANG_PAGE_NEXT,
-        QK_UNICODE_MODE_MACOS,   LSLOT(36),  LSLOT(37),  LSLOT(38),  LSLOT(39),  LSLOT(40),  LSLOT(41),  QK_UNICODE_MODE_LINUX,
-        QK_UNICODE_MODE_WINDOWS, LSLOT(42),  LSLOT(43),  LSLOT(44),  LSLOT(45),  LSLOT(46),  LSLOT(47),  QK_UNICODE_MODE_BSD,
+                    LSLOT(24),  LSLOT(25),  LSLOT(26),  LSLOT(27),  LSLOT(28),  LSLOT(29),  KC_LANG_PAGE_NEXT,
+                    LSLOT(30),  LSLOT(31),  LSLOT(32),  LSLOT(33),  LSLOT(34),  LSLOT(35),  QK_UNICODE_MODE_WINDOWS,
+        KC_NO,                   LSLOT(36),  LSLOT(37),  LSLOT(38),  LSLOT(39),  LSLOT(40),  LSLOT(41),  QK_UNICODE_MODE_LINUX,
+        KC_NO,                   LSLOT(42),  LSLOT(43),  LSLOT(44),  LSLOT(45),  LSLOT(46),  LSLOT(47),  QK_UNICODE_MODE_BSD,
         LMRU(6),    LMRU(7),    LMRU(8),                LMRU(9),    LMRU(10),   LMRU(11),   KC_LANG_CLEAR
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(
@@ -1173,8 +1173,9 @@ static void render_mru_ctrl_key(bool preset) {
         kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 14, 18, U"Preset");
         kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 44, 23, ICON_RIGHT);
     } else {
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 4, 23, ICON_LEFT);
-        kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 24, 18, U"Clear");
+        // "Clear" in the full-size keycap font on the top line, back-arrow centred below.
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 13, 15, U"Clear");
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 28, 34, ICON_LEFT);
     }
 }
 
@@ -1184,6 +1185,24 @@ static void draw_mru_top_bar(uint16_t keycode) {
     bool is_mru = (keycode >= KC_EMJ_MRU_BASE  && keycode < KC_EMJ_MRU_BASE  + MRU_CAP) ||
                   (keycode >= KC_LANG_MRU_BASE && keycode < KC_LANG_MRU_BASE + MRU_CAP);
     if (is_mru) kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 3);
+}
+
+// Layers below the host-write cap are remappable and live in the dynamic keymap
+// (EEPROM); layers at/above it (the language/emoji function layers) are served straight
+// from the compiled keymap in flash, so they never read the dynamic keymap and always
+// reflect the flashed firmware. Used by both the display and the key-event path.
+static uint16_t poly_keycode_at(uint8_t layer, uint8_t row, uint8_t col) {
+    if (layer >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) {
+        return keymaps[layer][row][col];   // static, compiled-in (flash)
+    }
+    return keycode_at_keymap_location(layer, row, col);
+}
+
+// Override QMK's weak resolver so key events on the static function layers come from the
+// compiled keymap too (no encoder/dip maps are enabled on this board).
+uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
+    if (key.row >= MATRIX_ROWS || key.col >= MATRIX_COLS) return KC_NO;
+    return poly_keycode_at(layer, key.row, key.col);
 }
 
 void update_displays(enum refresh_mode mode) {
@@ -1228,8 +1247,8 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     uint8_t layer = get_highest_layer(local_layer->layer);
-                    uint16_t highest_kc = keycode_at_keymap_location(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
-                    keycode = (highest_kc == KC_TRNS) ? keycode_at_keymap_location(get_highest_layer(local_layer->layer&~(1<<layer)),r + offset,c) : highest_kc;
+                    uint16_t highest_kc = poly_keycode_at(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
+                    keycode = (highest_kc == KC_TRNS) ? poly_keycode_at(get_highest_layer(local_layer->layer&~(1<<layer)),r + offset,c) : highest_kc;
                     kdisp_enable(true);
                     kdisp_set_contrast(local_state->contrast-1);
                     if(keycode!=KC_TRNS) {

@@ -1260,27 +1260,32 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             break;
         case KC_L0:
             local_layer->def_layer = _L0;
-            persistent_default_layer_set(local_layer->def_layer);
+            default_layer_set(local_layer->def_layer);
+            defer_default_layer_save(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L1:
             local_layer->def_layer = _L1;
-            persistent_default_layer_set(local_layer->def_layer);
+            default_layer_set(local_layer->def_layer);
+            defer_default_layer_save(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L2:
             local_layer->def_layer = _L2;
-            persistent_default_layer_set(local_layer->def_layer);
+            default_layer_set(local_layer->def_layer);
+            defer_default_layer_save(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L3:
             local_layer->def_layer = _L3;
-            persistent_default_layer_set(local_layer->def_layer);
+            default_layer_set(local_layer->def_layer);
+            defer_default_layer_save(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L4:
             local_layer->def_layer = _L4;
-            persistent_default_layer_set(local_layer->def_layer);
+            default_layer_set(local_layer->def_layer);
+            defer_default_layer_save(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_BASE:

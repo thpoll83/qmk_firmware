@@ -54,6 +54,8 @@
 #include "keycode_helper.h"
 #include "uni.h"
 #include "emoji/emoji_layer.h"
+#include "lang_layer.h"
+#include "mru.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -300,8 +302,10 @@ void housekeeping_task_user(void) {
     if (fw_staging_reboot_pending()) {
         mcu_reset();   // clean full-chip reset; never returns
     }
-    // User state is flushed to EEPROM only at suspend (save_all_dirty); nothing
-    // is persisted on the typing hot path.
+    // User state is flushed to EEPROM at suspend (save_all_dirty) or on demand
+    // via the store key (KC_STORE_EE); the only housekeeping write is draining
+    // that one-shot store request (locally on master, via SAVE_EEPROM on slave).
+    save_all_if_requested();
     sync_and_refresh_displays();
     int32_t update = get_last_update();
     if(update>=0) {
@@ -487,8 +491,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
         KC_BASE, LBL_TEXT,KC_TOGMODS,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_MAKE, QK_BOOT,
-        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
-        EE_CLR,  KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
+        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_RBT,
+        EE_CLR,  KC_STORE_EE, KC_NO, KC_NO, KC_NO,   KC_NO,
         DB_TOGG, KC_DEADKEY, KC_BASE
     ),
     /*
@@ -1208,6 +1212,15 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_DBRI:
             inc_brightness();
             break;
+        case KC_STORE_EE:
+            // Manual "commit everything to EEPROM" — defer our own write to
+            // housekeeping and signal the slave via the SAVE_EEPROM sync flag
+            // (set, push state, clear locally), mirroring split72.
+            request_eeprom_save();
+            local_state->overlay_flags |= SAVE_EEPROM;
+            send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
+            local_state->overlay_flags &= ~SAVE_EEPROM;
+            break;
         case KCL_ENUS: local_state->lang = LANG_ENUS; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_DEDE: local_state->lang = LANG_DEDE; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_FRFR: local_state->lang = LANG_FRFR; mark_settings_dirty(); layer_off(_LL); break;
@@ -1338,6 +1351,8 @@ void keyboard_post_init_user(void) {
     gpio_set_pin_input_high(GP29);
 
     emj_init();
+    lang_init();
+    mru_init();
 
     reset_overlay_buffers();
     reset_overlay_usage();
@@ -1368,6 +1383,10 @@ void keyboard_post_init_user(void) {
     local_state->flags = STATUS_DISP_ON;  /* no RGB on corne42 */
 
     memcpy(access_global_latin_table()->ex, ee.latin_ex, sizeof(ee.latin_ex));
+
+    // Restore the MRU recents (emoji-slot selection on _EMJ already pushes to the
+    // emoji MRU, which is persisted on suspend via save_all_dirty).
+    mru_load(ee.mru_emoji, ee.mru_lang);
 
     set_displays(ee.brightness, false);
 }

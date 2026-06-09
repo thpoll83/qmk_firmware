@@ -19,6 +19,14 @@ static uint32_t g_brightness_dirty_timer = 0;
 static bool          g_def_layer_dirty = false;
 static layer_state_t g_def_layer_pending = 0;
 
+// Latin extension table needs a flush (set on edit / on a sync from the master).
+static bool g_latin_dirty = false;
+
+// One-shot "flush all user state" request, raised by the store key (locally on
+// the master, via the SAVE_EEPROM sync flag on the slave) and drained from
+// housekeeping so the actual flash write never happens inside a sync handler.
+static bool g_save_pending = false;
+
 static poly_last_t l_last;
 static poly_last_t g_last;
 
@@ -258,5 +266,46 @@ void default_layer_save_if_pending(void) {
     if (g_def_layer_dirty) {
         eeconfig_update_default_layer(g_def_layer_pending);
         g_def_layer_dirty = false;
+    }
+}
+
+// Marks the latin extension table as needing an EEPROM write. Used in place of a
+// direct save_user_latin() on both the edit path and the slave's sync handler,
+// so the flash write is deferred out of the UART transaction callback.
+void mark_latin_dirty(void) {
+    g_latin_dirty = true;
+}
+
+// Writes the latin table if a change is pending. Call from housekeeping_task_user().
+void latin_save_if_pending(void) {
+    if (g_latin_dirty) {
+        save_user_latin();
+        g_latin_dirty = false;
+    }
+}
+
+// Flushes every dirty user-state block to EEPROM in one go (settings, latin,
+// default layer, MRU). Each block is dirty-gated, so untouched ones are skipped.
+// Bypasses the brightness debounce timer — call only at flush points (suspend,
+// host shutdown signal, the store key), never on the typing hot path.
+void save_all_dirty(void) {
+    if (g_brightness_dirty) { save_user_settings(); g_brightness_dirty = false; }
+    if (g_latin_dirty)      { save_user_latin();    g_latin_dirty = false; }
+    if (g_def_layer_dirty)  { eeconfig_update_default_layer(g_def_layer_pending); g_def_layer_dirty = false; }
+    save_user_mru_if_dirty();
+}
+
+// Requests a deferred flush-all. Safe to call from a sync handler — it only sets
+// a flag; save_all_if_requested() does the actual write from housekeeping.
+void request_eeprom_save(void) {
+    g_save_pending = true;
+}
+
+// Drains a pending store request by flushing all dirty state. Call from
+// housekeeping_task_user() on both sides.
+void save_all_if_requested(void) {
+    if (g_save_pending) {
+        save_all_dirty();
+        g_save_pending = false;
     }
 }

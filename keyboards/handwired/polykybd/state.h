@@ -129,3 +129,19 @@ void defer_default_layer_save(layer_state_t def_layer);
 // Writes the pending default layer to EEPROM if queued. Call from housekeeping_task_user().
 void default_layer_save_if_pending(void);
 
+// Marks the latin extension table as needing an EEPROM write (deferred).
+void mark_latin_dirty(void);
+
+// Writes the latin table to EEPROM if a change is pending. Call from housekeeping_task_user().
+void latin_save_if_pending(void);
+
+// Flushes every dirty user-state block (settings, latin, default layer, MRU) to
+// EEPROM at once. Call only at flush points (suspend / host shutdown / store key).
+void save_all_dirty(void);
+
+// Requests a deferred flush-all — safe from a sync handler (sets a flag only).
+void request_eeprom_save(void);
+
+// Performs the flush-all if one was requested. Call from housekeeping_task_user().
+void save_all_if_requested(void);
+

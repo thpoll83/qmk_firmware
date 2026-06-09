@@ -29,7 +29,12 @@ enum overlay_flag {
     // "BOOT-LOADER!" message + solid red RGB so the slave half stays lit
     // while the master is in the RP2040 ROM bootloader.
     BOOTLOADER_DISPLAY  = 1 << 3,
-    RESERVED_3          = 1 << 4,
+    // Master->slave "flush user state to EEPROM now" signal. Set by the master
+    // when the user presses the store key (KC_STORE_EE), force-synced via
+    // USER_SYNC_POLY_DATA, then cleared. The slave detects the 0->1 transition
+    // in user_sync_poly_data_handler() and requests a deferred save (drained in
+    // housekeeping, never written inside the sync handler).
+    SAVE_EEPROM         = 1 << 4,
     RESET_BUFFERS       = 1 << 5,
     USAGE_RESET         = 1 << 6,
     MAPPING_RESET       = 1 << 7

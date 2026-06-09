@@ -320,7 +320,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 13: //set brightness
                 if ( data[HID_DATA_IDX] <= FULL_BRIGHT) {
                     local_state->contrast = data[HID_DATA_IDX];
-                    save_user_settings();
+                    mark_settings_dirty();
                     memset(data, 0, length);
                     memcpy(data, "P\x0d.", 3);
                     uprintf("Set brightness to: %u.\n", local_state->contrast);
@@ -479,8 +479,8 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 poly_suspend();
                 sync_and_refresh_displays();
                 // Treat host display-off (e.g. system going to sleep) as a cue to
-                // persist the MRU recents — but only if they actually changed.
-                save_user_mru_if_dirty();
+                // flush all dirty user state to EEPROM (dirty-gated, so cheap).
+                save_all_dirty();
                 set_last_update(-1);
                 memset(data, 0, length);
                 memcpy(data, "P\x18.", 3);
@@ -500,8 +500,8 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     soft_reset_keyboard();
                 }
                 break;
-            case 26: //save MRU recents to EEPROM (host shutdown/suspend signal)
-                save_user_mru_if_dirty();
+            case 26: //flush all user state to EEPROM (host shutdown/suspend signal)
+                save_all_dirty();
                 memset(data, 0, length);
                 memcpy(data, "P\x1A.", 3);
                 raw_hid_send(data, length);

@@ -67,6 +67,13 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
                 uprint("Slave: BOOTLOADER_DISPLAY received\n");
                 display_bootloader_message();
             }
+            if(newly_set & SAVE_EEPROM) {
+                // Master pressed the store key — flush our own EEPROM too, but
+                // defer the write to housekeeping (never inside this handler).
+                request_eeprom_save();
+                // Edge-consumed: clear locally so it doesn't linger as a diff.
+                access_local_state()->overlay_flags &= ~SAVE_EEPROM;
+            }
 #ifdef RGB_MATRIX_ENABLE
             // Disable RGB so the normal split transport restores master's config cleanly.
             if(newly_cleared & BOOTLOADER_DISPLAY) {
@@ -88,7 +95,9 @@ void user_sync_latin_ex_data_handler(uint8_t in_len, const void* in_data, uint8_
         if(crc32 == ((const latin_sync_t *)in_data)->crc32) {
             copy_global_latin_table((const latin_sync_t *)in_data);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            save_user_latin();
+            // Defer the flash write out of this UART transaction callback —
+            // housekeeping's latin_save_if_pending() (or the next flush) does it.
+            mark_latin_dirty();
             request_disp_refresh();
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

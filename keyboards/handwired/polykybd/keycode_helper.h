@@ -54,6 +54,7 @@ enum my_keycodes {
     KC_TOGMODS,
     KC_TOGTEXT,
     KC_RGB_TOG,
+    KC_STORE_EE,   // flush all user state to EEPROM now (both halves)
     /*[[[cog
       for idx in range(10):
           cog.out(f"KC_LAT{idx}, ")

@@ -248,7 +248,7 @@ void sync_and_refresh_displays(void) {
         if (mru_sync_pending()) {
             mru_sync_t mru_msg;
             mru_emoji_pack(mru_msg.emoji);
-            memcpy(mru_msg.lang, mru_lang_array(), sizeof(mru_msg.lang));
+            mru_lang_pack(mru_msg.lang);
             // Multiplexed onto the overlay-map transaction id (distinct payload
             // size) to stay within QMK's 32-transaction limit. Only the packed
             // bytes are sent (MRU_SYNC_BYTES), not the struct's crc tail padding.
@@ -654,18 +654,21 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // remaining rows are page-relative language slots (LSLOT) that page through
     // the full country-sorted list via the wrapping arrows (KC_LANG_PAGE_*).
     // The six unicode-input-mode keys keep their side-column positions.
+    // MRU recents live on the BOTTOM row of each block (marked with a top bar);
+    // the paged language slots fill the rows above. No Preset key — Clear sits on
+    // the right thumb (former right base key); the left base key still exits.
     [_LL] = LAYOUT_left_right_stacked(
-        KC_LANG_PRESET,             LMRU(0),    LMRU(1),    LMRU(2),    LMRU(3),    LMRU(4),    LMRU(5),
-        KC_LANG_PAGE_PREV,          LSLOT(0),   LSLOT(1),   LSLOT(2),   LSLOT(3),   LSLOT(4),   LSLOT(5),
-        QK_UNICODE_MODE_WINCOMPOSE, LSLOT(6),   LSLOT(7),   LSLOT(8),   LSLOT(9),   LSLOT(10),  LSLOT(11),  MS_BTN1,
-        QK_UNICODE_MODE_EMACS,      LSLOT(12),  LSLOT(13),  LSLOT(14),  LSLOT(15),  LSLOT(16),  LSLOT(17),  KC_NO,
-        KC_BASE,                    LSLOT(18),  LSLOT(19),  LSLOT(20),              LSLOT(21),  LSLOT(22),  LSLOT(23),
+        KC_NO,                      LSLOT(0),   LSLOT(1),   LSLOT(2),   LSLOT(3),   LSLOT(4),   LSLOT(5),
+        KC_LANG_PAGE_PREV,          LSLOT(6),   LSLOT(7),   LSLOT(8),   LSLOT(9),   LSLOT(10),  LSLOT(11),
+        QK_UNICODE_MODE_WINCOMPOSE, LSLOT(12),  LSLOT(13),  LSLOT(14),  LSLOT(15),  LSLOT(16),  LSLOT(17),  MS_BTN1,
+        QK_UNICODE_MODE_EMACS,      LSLOT(18),  LSLOT(19),  LSLOT(20),  LSLOT(21),  LSLOT(22),  LSLOT(23),  KC_NO,
+        KC_BASE,                    LMRU(0),    LMRU(1),    LMRU(2),                LMRU(3),    LMRU(4),    LMRU(5),
 
-                    LMRU(6),    LMRU(7),    LMRU(8),    LMRU(9),    LMRU(10),   LMRU(11),   KC_LANG_CLEAR,
-                    LSLOT(24),  LSLOT(25),  LSLOT(26),  LSLOT(27),  LSLOT(28),  LSLOT(29),  KC_LANG_PAGE_NEXT,
-        QK_UNICODE_MODE_MACOS,   LSLOT(30),  LSLOT(31),  LSLOT(32),  LSLOT(33),  LSLOT(34),  LSLOT(35),  QK_UNICODE_MODE_LINUX,
-        QK_UNICODE_MODE_WINDOWS, LSLOT(36),  LSLOT(37),  LSLOT(38),  LSLOT(39),  LSLOT(40),  LSLOT(41),  QK_UNICODE_MODE_BSD,
-        LSLOT(42),  LSLOT(43),  LSLOT(44),              LSLOT(45),  LSLOT(46),  LSLOT(47),  KC_BASE
+                    LSLOT(24),  LSLOT(25),  LSLOT(26),  LSLOT(27),  LSLOT(28),  LSLOT(29),  KC_NO,
+                    LSLOT(30),  LSLOT(31),  LSLOT(32),  LSLOT(33),  LSLOT(34),  LSLOT(35),  KC_LANG_PAGE_NEXT,
+        QK_UNICODE_MODE_MACOS,   LSLOT(36),  LSLOT(37),  LSLOT(38),  LSLOT(39),  LSLOT(40),  LSLOT(41),  QK_UNICODE_MODE_LINUX,
+        QK_UNICODE_MODE_WINDOWS, LSLOT(42),  LSLOT(43),  LSLOT(44),  LSLOT(45),  LSLOT(46),  LSLOT(47),  QK_UNICODE_MODE_BSD,
+        LMRU(6),    LMRU(7),    LMRU(8),                LMRU(9),    LMRU(10),   LMRU(11),   KC_LANG_CLEAR
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(
         KC_NO,      KC_NO,      KC_LAT0,    KC_LAT1,    KC_LAT2,    KC_LAT3,    KC_LAT4,
@@ -683,18 +686,21 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // Emoji picker. Row 0 = MRU recents (Preset/Clear on the corners), row 1 =
     // category tabs with the wrapping page arrows on the ends, rows 2-4 = the
     // 38 emoji slots of the current category/page.
+    // Emoji recents on the BOTTOM row of each block (top-bar marked); category
+    // tabs stay on the second row, slots fill the rest. No Preset key — Clear is
+    // on the right thumb (former right base key); the left base key still exits.
     [_EMJ] = LAYOUT_left_right_stacked(
-        KC_EMJ_PRESET,    EMRU(0),        EMRU(1),        EMRU(2),        EMRU(3),        EMRU(4),        EMRU(5),
+        KC_NO,            ESLOT(0),       ESLOT(1),       ESLOT(2),       ESLOT(3),       ESLOT(4),       ESLOT(5),
         KC_EMJ_PAGE_PREV, KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
-        KC_NO,      ESLOT(0),       ESLOT(1),       ESLOT(2),       ESLOT(3),       ESLOT(4),       ESLOT(5),       KC_NO,
-        KC_NO,      ESLOT(6),       ESLOT(7),       ESLOT(8),       ESLOT(9),       ESLOT(10),      ESLOT(11),      ESLOT(12),
-        KC_BASE,    ESLOT(13),      ESLOT(14),      ESLOT(15),                      ESLOT(16),      ESLOT(17),      ESLOT(18),
+        KC_NO,      ESLOT(6),       ESLOT(7),       ESLOT(8),       ESLOT(9),       ESLOT(10),      ESLOT(11),      KC_NO,
+        KC_NO,      ESLOT(12),      ESLOT(13),      ESLOT(14),      ESLOT(15),      ESLOT(16),      ESLOT(17),      ESLOT(18),
+        KC_BASE,    EMRU(0),        EMRU(1),        EMRU(2),                        EMRU(3),        EMRU(4),        EMRU(5),
 
-                    EMRU(6),        EMRU(7),        EMRU(8),        EMRU(9),        EMRU(10),       EMRU(11),       KC_EMJ_CLEAR,
+                    ESLOT(19),      ESLOT(20),      ESLOT(21),      ESLOT(22),      ESLOT(23),      ESLOT(24),      KC_NO,
                     KC_EMJ_CAT(6),  KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(11), KC_EMJ_PAGE_NEXT,
-        KC_NO,      ESLOT(19),      ESLOT(20),      ESLOT(21),      ESLOT(22),      ESLOT(23),      ESLOT(24),      KC_NO,
-        ESLOT(25),  ESLOT(26),      ESLOT(27),      ESLOT(28),      ESLOT(29),      ESLOT(30),      ESLOT(31),      KC_NO,
-        ESLOT(32),  ESLOT(33),      ESLOT(34),                      ESLOT(35),      ESLOT(36),      ESLOT(37),      KC_BASE
+        KC_NO,      ESLOT(25),      ESLOT(26),      ESLOT(27),      ESLOT(28),      ESLOT(29),      ESLOT(30),      KC_NO,
+        ESLOT(31),  ESLOT(32),      ESLOT(33),      ESLOT(34),      ESLOT(35),      ESLOT(36),      ESLOT(37),      KC_NO,
+        EMRU(6),    EMRU(7),        EMRU(8),                        EMRU(9),        EMRU(10),       EMRU(11),       KC_EMJ_CLEAR
         )
 };
 
@@ -1172,6 +1178,14 @@ static void render_mru_ctrl_key(bool preset) {
     }
 }
 
+// MRU recents (emoji or language) get a full-width bar along the TOP edge —
+// the mirror image of the category tabs' bottom bar — to set the row apart.
+static void draw_mru_top_bar(uint16_t keycode) {
+    bool is_mru = (keycode >= KC_EMJ_MRU_BASE  && keycode < KC_EMJ_MRU_BASE  + MRU_CAP) ||
+                  (keycode >= KC_LANG_MRU_BASE && keycode < KC_LANG_MRU_BASE + MRU_CAP);
+    if (is_mru) kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 3);
+}
+
 void update_displays(enum refresh_mode mode) {
     const poly_sync_t* local_state = get_local_state();
     if(local_state->contrast<=DISP_OFF || (local_state->flags&DISP_IDLE)!=0) {
@@ -1225,6 +1239,7 @@ void update_displays(enum refresh_mode mode) {
                             // (paged slots and the top-row MRU recents alike).
                             kdisp_set_buffer(0x00);
                             render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state), local_state->lang);
+                            draw_mru_top_bar(keycode);
                             kdisp_send_buffer();
                         } else if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET ||
                                    keycode == KC_EMJ_CLEAR  || keycode == KC_LANG_CLEAR) {
@@ -1256,6 +1271,7 @@ void update_displays(enum refresh_mode mode) {
                         }
                         emj_draw_tab_indicator(keycode);
                         emj_draw_tab_bottom(keycode);
+                        draw_mru_top_bar(keycode);
                         kdisp_send_buffer();
                         }
                     }
@@ -1896,9 +1912,10 @@ void eeconfig_init_user(void) {
     ee.brightness = ~FULL_BRIGHT;
     ee.unused = 0;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
-    // Empty MRU recents: 0xFFFF == empty emoji code, 0xFF == empty lang slot.
-    memset(ee.mru_emoji, 0xFF, sizeof(ee.mru_emoji));
-    memset(ee.mru_lang, MRU_LANG_EMPTY, sizeof(ee.mru_lang));
+    // Empty MRU recents: the serialised form uses 0 == empty for both lists, so
+    // a zeroed block reads back as "no recent" (no stray category-0 / lang-0).
+    memset(ee.mru_emoji, 0, sizeof(ee.mru_emoji));
+    memset(ee.mru_lang, 0, sizeof(ee.mru_lang));
     eeconfig_update_user_datablock(&ee, 0, sizeof(ee));
 }
 

@@ -204,7 +204,7 @@ void sync_and_refresh_displays(void) {
         if (mru_sync_pending()) {
             mru_sync_t mru_msg;
             mru_emoji_pack(mru_msg.emoji);
-            memcpy(mru_msg.lang, mru_lang_array(), sizeof(mru_msg.lang));
+            mru_lang_pack(mru_msg.lang);
             uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, 10);
             if (mru_ack == SYNC_ACK || mru_ack == SYNC_ACK_SIG) {
                 mru_clear_sync_pending();
@@ -518,15 +518,18 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // fills with page-relative language slots (LSLOT) paged through all NUM_LANG
     // languages via the wrapping arrows. Preset/Clear on the left thumbs; the six
     // unicode-input-mode keys keep their edge/thumb positions.
+    // MRU language recents on the bottom-left row (top-bar marked); paged slots
+    // fill the rest. No Preset key — Clear is on the right thumb (former right
+    // base key); the left thumb still exits. Unicode-mode keys keep their edges.
     [_LL] = LAYOUT_crkbd(
-        LMRU(0),           LMRU(1),    LMRU(2),    LMRU(3),    LMRU(4),    LMRU(5),
-        KC_LANG_PAGE_PREV, LSLOT(0),   LSLOT(1),   LSLOT(2),   LSLOT(3),   LSLOT(4),
-        QK_UNICODE_MODE_WINCOMPOSE, LSLOT(5), LSLOT(6), LSLOT(7), LSLOT(8),  LSLOT(9),
-        KC_BASE,           KC_LANG_PRESET, KC_LANG_CLEAR,
+        QK_UNICODE_MODE_WINCOMPOSE, LSLOT(0), LSLOT(1), LSLOT(2), LSLOT(3), LSLOT(4),
+        KC_LANG_PAGE_PREV,          LSLOT(5), LSLOT(6), LSLOT(7), LSLOT(8), LSLOT(9),
+        LMRU(0),   LMRU(1),   LMRU(2),   LMRU(3),   LMRU(4),   LMRU(5),
+        KC_BASE,   KC_NO,     KC_NO,
         LSLOT(10), LSLOT(11), LSLOT(12), LSLOT(13), LSLOT(14), QK_UNICODE_MODE_MACOS,
         LSLOT(15), LSLOT(16), LSLOT(17), LSLOT(18), LSLOT(19), QK_UNICODE_MODE_LINUX,
         LSLOT(20), LSLOT(21), LSLOT(22), LSLOT(23), KC_LANG_PAGE_NEXT, QK_UNICODE_MODE_WINDOWS,
-        QK_UNICODE_MODE_EMACS, QK_UNICODE_MODE_BSD, KC_BASE
+        QK_UNICODE_MODE_EMACS, QK_UNICODE_MODE_BSD, KC_LANG_CLEAR
     ),
     /*
      * Additional latin variant layer
@@ -542,19 +545,20 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,  _______,  _______
     ),
     /*
-     * Emoji layer — left half: 12 category tabs (rows 0-1) + 6 MRU recents
-     * (row 2); right half: the current tab's 18 slots (3 rows). Paging and the
-     * Preset/Clear MRU controls live on the thumbs.
+     * Emoji layer — left half: 12 category tabs (rows 0-1) + 6 MRU recents on the
+     * bottom-left row (top-bar marked); right half: the current tab's 18 slots
+     * (3 rows). Paging on the right thumbs; no Preset — Clear is on the right
+     * thumb (former right base key); the left thumb still exits.
      */
     [_EMJ] = LAYOUT_crkbd(
         KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
         KC_EMJ_CAT(6),  KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(11),
         EMRU(0),        EMRU(1),        EMRU(2),        EMRU(3),        EMRU(4),        EMRU(5),
-        TO(_BL),        KC_EMJ_PRESET,  KC_EMJ_CLEAR,
+        TO(_BL),        KC_NO,          KC_NO,
         ESLOT(0),       ESLOT(1),       ESLOT(2),       ESLOT(3),       ESLOT(4),       ESLOT(5),
         ESLOT(6),       ESLOT(7),       ESLOT(8),       ESLOT(9),       ESLOT(10),      ESLOT(11),
         ESLOT(12),      ESLOT(13),      ESLOT(14),      ESLOT(15),      ESLOT(16),      ESLOT(17),
-        KC_EMJ_PAGE_PREV, KC_EMJ_PAGE_NEXT, TO(_BL)
+        KC_EMJ_PAGE_PREV, KC_EMJ_PAGE_NEXT, KC_EMJ_CLEAR
     )
 };
 
@@ -913,6 +917,14 @@ static void render_mru_ctrl_key(bool preset) {
     }
 }
 
+// MRU recents (emoji or language) get a full-width bar along the TOP edge to set
+// the recents row apart (the mirror of the category tabs' bottom bar).
+static void draw_mru_top_bar(uint16_t keycode) {
+    bool is_mru = (keycode >= KC_EMJ_MRU_BASE  && keycode < KC_EMJ_MRU_BASE  + MRU_CAP) ||
+                  (keycode >= KC_LANG_MRU_BASE && keycode < KC_LANG_MRU_BASE + MRU_CAP);
+    if (is_mru) kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 3);
+}
+
 // Draw one language key: oversized country flag on the left (vertically centred
 // and clipped so the flag content fills the keycap height), language code running
 // vertically up the right side (inverted bar when it is the active language).
@@ -980,6 +992,7 @@ void update_displays(enum refresh_mode mode) {
                             // Language layer (KCL_/LMRU/LSLOT): flag + tiny code.
                             kdisp_set_buffer(0x00);
                             render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state), local_state->lang);
+                            draw_mru_top_bar(keycode);
                             kdisp_send_buffer();
                         } else if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET ||
                                    keycode == KC_EMJ_CLEAR  || keycode == KC_LANG_CLEAR) {
@@ -1009,6 +1022,7 @@ void update_displays(enum refresh_mode mode) {
                         if(text) {
                             kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, true);
                         }
+                        draw_mru_top_bar(keycode);
                         kdisp_send_buffer();
                         }
                     }
@@ -1492,9 +1506,10 @@ void eeconfig_init_user(void) {
     ee.brightness = ~FULL_BRIGHT;
     ee.unused = 0;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
-    // Empty MRU recents: 0xFFFF == empty emoji code, 0xFF == empty lang slot.
-    memset(ee.mru_emoji, 0xFF, sizeof(ee.mru_emoji));
-    memset(ee.mru_lang, MRU_LANG_EMPTY, sizeof(ee.mru_lang));
+    // Empty MRU recents: the serialised form uses 0 == empty for both lists, so
+    // a zeroed block reads back as "no recent" (no stray category-0 / lang-0).
+    memset(ee.mru_emoji, 0, sizeof(ee.mru_emoji));
+    memset(ee.mru_lang, 0, sizeof(ee.mru_lang));
     eeconfig_update_user_datablock(&ee, 0, sizeof(ee));
 }
 

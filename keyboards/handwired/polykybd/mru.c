@@ -71,11 +71,14 @@ static bool push_u8(uint8_t *list, uint8_t empty, uint8_t value) {
 }
 
 // ── 14-bit-per-entry bit packing (LSB-first) for the emoji codes ─────────────
+// Serialised form uses 0 == empty (so a zeroed/cleared EEPROM block decodes to
+// "no recent" rather than category 0 / glyph 0): a real code is stored as
+// code+1, empty as 0. The +1 always fits in 14 bits (max real code ≈ 12287).
 static void emoji_pack(const uint16_t codes[MRU_CAP], uint8_t out[MRU_EMOJI_PACKED]) {
     memset(out, 0, MRU_EMOJI_PACKED);
     uint32_t bit = 0;
     for (uint8_t i = 0; i < MRU_CAP; ++i) {
-        uint16_t v = codes[i] & 0x3FFF;
+        uint16_t v = (codes[i] == MRU_EMOJI_EMPTY) ? 0 : (uint16_t)((codes[i] + 1u) & 0x3FFF);
         for (uint8_t b = 0; b < MRU_EMOJI_BITS; ++b, ++bit) {
             if (v & (1u << b)) out[bit >> 3] |= (uint8_t)(1u << (bit & 7u));
         }
@@ -89,7 +92,20 @@ static void emoji_unpack(const uint8_t in[MRU_EMOJI_PACKED], uint16_t codes[MRU_
         for (uint8_t b = 0; b < MRU_EMOJI_BITS; ++b, ++bit) {
             if (in[bit >> 3] & (uint8_t)(1u << (bit & 7u))) v |= (uint16_t)(1u << b);
         }
-        codes[i] = v;
+        codes[i] = (v == 0) ? MRU_EMOJI_EMPTY : (uint16_t)(v - 1u);
+    }
+}
+
+// Serialise the language list with the same 0 == empty convention (lang+1, or 0).
+static void lang_pack_into(uint8_t out[MRU_CAP]) {
+    for (uint8_t i = 0; i < MRU_CAP; ++i) {
+        out[i] = (s_lang[i] == MRU_LANG_EMPTY) ? 0u : (uint8_t)(s_lang[i] + 1u);
+    }
+}
+
+static void lang_unpack_into(const uint8_t in[MRU_CAP], uint8_t dst[MRU_CAP]) {
+    for (uint8_t i = 0; i < MRU_CAP; ++i) {
+        dst[i] = (in[i] == 0u) ? MRU_LANG_EMPTY : (uint8_t)(in[i] - 1u);
     }
 }
 
@@ -149,11 +165,11 @@ void mru_lang_preset(void) {
 bool mru_dirty(void)           { return s_dirty; }
 void mru_clear_dirty(void)     { s_dirty = false; }
 void mru_emoji_pack(uint8_t out[MRU_EMOJI_PACKED]) { emoji_pack(s_emoji, out); }
-const uint8_t*  mru_lang_array(void)  { return s_lang; }
+void mru_lang_pack(uint8_t out[MRU_CAP])           { lang_pack_into(out); }
 
 void mru_load(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uint8_t lang[MRU_CAP]) {
     emoji_unpack(emoji_packed, s_emoji);
-    memcpy(s_lang, lang, sizeof(s_lang));
+    lang_unpack_into(lang, s_lang);
     s_dirty        = false;   // freshly loaded == matches EEPROM
     s_sync_pending = true;    // but the slave still needs a copy
 }
@@ -163,11 +179,13 @@ void mru_clear_sync_pending(void) { s_sync_pending = false; }
 
 void mru_apply_sync(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uint8_t lang[MRU_CAP]) {
     uint16_t emoji[MRU_CAP];
+    uint8_t  lng[MRU_CAP];
     emoji_unpack(emoji_packed, emoji);
+    lang_unpack_into(lang, lng);
     if (memcmp(s_emoji, emoji, sizeof(s_emoji)) != 0 ||
-        memcmp(s_lang,  lang,  sizeof(s_lang))  != 0) {
+        memcmp(s_lang,  lng,   sizeof(s_lang))  != 0) {
         memcpy(s_emoji, emoji, sizeof(s_emoji));
-        memcpy(s_lang,  lang,  sizeof(s_lang));
+        memcpy(s_lang,  lng,   sizeof(s_lang));
         // The slave persists its own copy too (saved on suspend), so mark the
         // received snapshot dirty — it now differs from this half's EEPROM.
         // Deliberately not s_sync_pending: only the master pushes, so the slave

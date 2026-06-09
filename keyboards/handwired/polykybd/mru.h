@@ -60,8 +60,8 @@ bool            mru_dirty(void);
 void            mru_clear_dirty(void);
 // Bit-pack the emoji recents into MRU_EMOJI_PACKED bytes (for EEPROM / sync).
 void            mru_emoji_pack(uint8_t out[MRU_EMOJI_PACKED]);
-// Raw language array (one byte per slot) for (de)serialisation by state.c.
-const uint8_t*  mru_lang_array(void);
+// Serialise the language recents (one byte per slot, 0 == empty) for EEPROM/sync.
+void            mru_lang_pack(uint8_t out[MRU_CAP]);
 // Replace the lists from a stored blob (clears dirty, schedules a slave resync).
 void            mru_load(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uint8_t lang[MRU_CAP]);
 

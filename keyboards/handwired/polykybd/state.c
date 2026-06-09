@@ -12,9 +12,7 @@ static poly_layer_t g_layer;
 static poly_sync_t l_state;
 static poly_sync_t g_state;
 
-static bool     g_brightness_dirty       = false;
-static uint32_t g_brightness_dirty_timer = 0;
-#define BRIGHTNESS_EEPROM_DEBOUNCE_MS 5000
+static bool g_brightness_dirty = false;   // lang + brightness need a flush
 
 static bool          g_def_layer_dirty = false;
 static layer_state_t g_def_layer_pending = 0;
@@ -212,7 +210,7 @@ poly_eeconf_t load_user_eeconf(void) {
 }
 
 // Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT.
-// EEPROM write is deferred; call brightness_save_if_pending() from housekeeping.
+// EEPROM write is deferred to the next flush (suspend / store key) via the dirty flag.
 // Global variables: l_state
 void inc_brightness(void) {
     if (l_state.contrast < FULL_BRIGHT) {
@@ -221,12 +219,11 @@ void inc_brightness(void) {
     if (l_state.contrast > FULL_BRIGHT) {
         l_state.contrast = FULL_BRIGHT;
     }
-    g_brightness_dirty       = true;
-    g_brightness_dirty_timer = timer_read32();
+    g_brightness_dirty = true;
 }
 
 // Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT.
-// EEPROM write is deferred; call brightness_save_if_pending() from housekeeping.
+// EEPROM write is deferred to the next flush (suspend / store key) via the dirty flag.
 // Global variables: l_state
 void dec_brightness(void) {
     if (l_state.contrast > (MIN_BRIGHT + BRIGHT_STEP)) {
@@ -234,39 +231,19 @@ void dec_brightness(void) {
     } else {
         l_state.contrast = MIN_BRIGHT;
     }
-    g_brightness_dirty       = true;
-    g_brightness_dirty_timer = timer_read32();
+    g_brightness_dirty = true;
 }
 
-// Marks settings as needing an EEPROM write (restarts the debounce window).
-// Call on the bridge from on_local_state_synced() when lang or contrast changes.
+// Marks settings (lang + brightness) as needing an EEPROM write at the next flush.
 void mark_settings_dirty(void) {
-    g_brightness_dirty       = true;
-    g_brightness_dirty_timer = timer_read32();
+    g_brightness_dirty = true;
 }
 
-// Writes settings to EEPROM once the debounce period has elapsed since the last change.
-// Call from housekeeping_task_user() on both sides.
-void brightness_save_if_pending(void) {
-    if (g_brightness_dirty && timer_elapsed32(g_brightness_dirty_timer) >= BRIGHTNESS_EEPROM_DEBOUNCE_MS) {
-        save_user_settings();
-        g_brightness_dirty = false;
-    }
-}
-
-// Defers a default-layer EEPROM write to housekeeping — safe to call from split sync handlers.
+// Defers a default-layer EEPROM write — safe to call from split sync handlers.
+// The actual write happens at the next flush (save_all_dirty).
 void defer_default_layer_save(layer_state_t def_layer) {
     g_def_layer_pending = def_layer;
     g_def_layer_dirty   = true;
-}
-
-// Writes the pending default layer to EEPROM if one is queued.
-// Call from housekeeping_task_user() on both sides.
-void default_layer_save_if_pending(void) {
-    if (g_def_layer_dirty) {
-        eeconfig_update_default_layer(g_def_layer_pending);
-        g_def_layer_dirty = false;
-    }
 }
 
 // Marks the latin extension table as needing an EEPROM write. Used in place of a
@@ -276,18 +253,10 @@ void mark_latin_dirty(void) {
     g_latin_dirty = true;
 }
 
-// Writes the latin table if a change is pending. Call from housekeeping_task_user().
-void latin_save_if_pending(void) {
-    if (g_latin_dirty) {
-        save_user_latin();
-        g_latin_dirty = false;
-    }
-}
-
 // Flushes every dirty user-state block to EEPROM in one go (settings, latin,
 // default layer, MRU). Each block is dirty-gated, so untouched ones are skipped.
-// Bypasses the brightness debounce timer — call only at flush points (suspend,
-// host shutdown signal, the store key), never on the typing hot path.
+// Call only at flush points (suspend, host shutdown signal, the store key),
+// never on the typing hot path.
 void save_all_dirty(void) {
     if (g_brightness_dirty) { save_user_settings(); g_brightness_dirty = false; }
     if (g_latin_dirty)      { save_user_latin();    g_latin_dirty = false; }

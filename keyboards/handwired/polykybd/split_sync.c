@@ -95,8 +95,8 @@ void user_sync_latin_ex_data_handler(uint8_t in_len, const void* in_data, uint8_
         if(crc32 == ((const latin_sync_t *)in_data)->crc32) {
             copy_global_latin_table((const latin_sync_t *)in_data);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            // Defer the flash write out of this UART transaction callback —
-            // housekeeping's latin_save_if_pending() (or the next flush) does it.
+            // Defer the flash write out of this UART transaction callback — the
+            // next flush (suspend / store key, save_all_dirty) persists it.
             mark_latin_dirty();
             request_disp_refresh();
         } else {

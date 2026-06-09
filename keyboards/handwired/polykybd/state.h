@@ -117,23 +117,14 @@ void inc_brightness(void);
 // Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT (deferred EEPROM write).
 void dec_brightness(void);
 
-// Marks settings as needing an EEPROM write (restarts the debounce window).
+// Marks settings (lang + brightness) as needing an EEPROM write at the next flush.
 void mark_settings_dirty(void);
 
-// Writes settings to EEPROM if a change is pending and the debounce period has elapsed.
-void brightness_save_if_pending(void);
-
-// Queues a default-layer EEPROM write to be executed from housekeeping (not from a sync handler).
+// Queues a default-layer EEPROM write — safe from a sync handler. Written at the next flush.
 void defer_default_layer_save(layer_state_t def_layer);
 
-// Writes the pending default layer to EEPROM if queued. Call from housekeeping_task_user().
-void default_layer_save_if_pending(void);
-
-// Marks the latin extension table as needing an EEPROM write (deferred).
+// Marks the latin extension table as needing an EEPROM write (deferred to the next flush).
 void mark_latin_dirty(void);
-
-// Writes the latin table to EEPROM if a change is pending. Call from housekeeping_task_user().
-void latin_save_if_pending(void);
 
 // Flushes every dirty user-state block (settings, latin, default layer, MRU) to
 // EEPROM at once. Call only at flush points (suspend / host shutdown / store key).

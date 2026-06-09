@@ -300,9 +300,8 @@ void housekeeping_task_user(void) {
     if (fw_staging_reboot_pending()) {
         mcu_reset();   // clean full-chip reset; never returns
     }
-    brightness_save_if_pending();
-    default_layer_save_if_pending();
-    latin_save_if_pending();
+    // User state is flushed to EEPROM only at suspend (save_all_dirty); nothing
+    // is persisted on the typing hot path.
     sync_and_refresh_displays();
     int32_t update = get_last_update();
     if(update>=0) {
@@ -1107,7 +1106,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                         }
                         send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
 
-                        save_user_latin();
+                        mark_latin_dirty();
                         request_disp_refresh();
                     }
                     break;
@@ -1185,23 +1184,23 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             break;
         case KC_D1Q:
             local_state->contrast = FULL_BRIGHT/4;
-            save_user_settings();
+            mark_settings_dirty();
             break;
         case KC_D3Q:
             local_state->contrast = (FULL_BRIGHT/4)*3;
-            save_user_settings();
+            mark_settings_dirty();
             break;
         case KC_DHLF:
             local_state->contrast = FULL_BRIGHT/2;
-            save_user_settings();
+            mark_settings_dirty();
             break;
         case KC_DMAX:
             local_state->contrast = FULL_BRIGHT;
-            save_user_settings();
+            mark_settings_dirty();
             break;
         case KC_DMIN:
             local_state->contrast = 2;
-            save_user_settings();
+            mark_settings_dirty();
             break;
         case KC_DDIM:
             dec_brightness();
@@ -1209,33 +1208,33 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_DBRI:
             inc_brightness();
             break;
-        case KCL_ENUS: local_state->lang = LANG_ENUS; save_user_settings(); layer_off(_LL); break;
-        case KCL_DEDE: local_state->lang = LANG_DEDE; save_user_settings(); layer_off(_LL); break;
-        case KCL_FRFR: local_state->lang = LANG_FRFR; save_user_settings(); layer_off(_LL); break;
-        case KCL_ESES: local_state->lang = LANG_ESES; save_user_settings(); layer_off(_LL); break;
-        case KCL_PTPT: local_state->lang = LANG_PTPT; save_user_settings(); layer_off(_LL); break;
-        case KCL_ITIT: local_state->lang = LANG_ITIT; save_user_settings(); layer_off(_LL); break;
-        case KCL_TRTR: local_state->lang = LANG_TRTR; save_user_settings(); layer_off(_LL); break;
-        case KCL_KOKR: local_state->lang = LANG_KOKR; save_user_settings(); layer_off(_LL); break;
-        case KCL_JAJP: local_state->lang = LANG_JAJP; save_user_settings(); layer_off(_LL); break;
-        case KCL_ARSA: local_state->lang = LANG_ARSA; save_user_settings(); layer_off(_LL); break;
-        case KCL_ELGR: local_state->lang = LANG_ELGR; save_user_settings(); layer_off(_LL); break;
-        case KCL_UKUA: local_state->lang = LANG_UKUA; save_user_settings(); layer_off(_LL); break;
-        case KCL_RURU: local_state->lang = LANG_RURU; save_user_settings(); layer_off(_LL); break;
-        case KCL_BEBY: local_state->lang = LANG_BEBY; save_user_settings(); layer_off(_LL); break;
-        case KCL_KKKZ: local_state->lang = LANG_KKKZ; save_user_settings(); layer_off(_LL); break;
-        case KCL_BGBG: local_state->lang = LANG_BGBG; save_user_settings(); layer_off(_LL); break;
-        case KCL_PLPL: local_state->lang = LANG_PLPL; save_user_settings(); layer_off(_LL); break;
-        case KCL_RORO: local_state->lang = LANG_RORO; save_user_settings(); layer_off(_LL); break;
-        case KCL_ZHCN: local_state->lang = LANG_ZHCN; save_user_settings(); layer_off(_LL); break;
-        case KCL_NLNL: local_state->lang = LANG_NLNL; save_user_settings(); layer_off(_LL); break;
-        case KCL_HEIL: local_state->lang = LANG_HEIL; save_user_settings(); layer_off(_LL); break;
-        case KCL_SVSE: local_state->lang = LANG_SVSE; save_user_settings(); layer_off(_LL); break;
-        case KCL_FIFI: local_state->lang = LANG_FIFI; save_user_settings(); layer_off(_LL); break;
-        case KCL_NNNO: local_state->lang = LANG_NNNO; save_user_settings(); layer_off(_LL); break;
-        case KCL_DADK: local_state->lang = LANG_DADK; save_user_settings(); layer_off(_LL); break;
-        case KCL_HUHU: local_state->lang = LANG_HUHU; save_user_settings(); layer_off(_LL); break;
-        case KCL_CSCZ: local_state->lang = LANG_CSCZ; save_user_settings(); layer_off(_LL); break;
+        case KCL_ENUS: local_state->lang = LANG_ENUS; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_DEDE: local_state->lang = LANG_DEDE; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_FRFR: local_state->lang = LANG_FRFR; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ESES: local_state->lang = LANG_ESES; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_PTPT: local_state->lang = LANG_PTPT; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ITIT: local_state->lang = LANG_ITIT; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_TRTR: local_state->lang = LANG_TRTR; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_KOKR: local_state->lang = LANG_KOKR; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_JAJP: local_state->lang = LANG_JAJP; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ARSA: local_state->lang = LANG_ARSA; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ELGR: local_state->lang = LANG_ELGR; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_UKUA: local_state->lang = LANG_UKUA; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_RURU: local_state->lang = LANG_RURU; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_BEBY: local_state->lang = LANG_BEBY; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_KKKZ: local_state->lang = LANG_KKKZ; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_BGBG: local_state->lang = LANG_BGBG; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_PLPL: local_state->lang = LANG_PLPL; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_RORO: local_state->lang = LANG_RORO; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ZHCN: local_state->lang = LANG_ZHCN; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_NLNL: local_state->lang = LANG_NLNL; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_HEIL: local_state->lang = LANG_HEIL; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_SVSE: local_state->lang = LANG_SVSE; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_FIFI: local_state->lang = LANG_FIFI; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_NNNO: local_state->lang = LANG_NNNO; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_DADK: local_state->lang = LANG_DADK; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_HUHU: local_state->lang = LANG_HUHU; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_CSCZ: local_state->lang = LANG_CSCZ; mark_settings_dirty(); layer_off(_LL); break;
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
             layer_off(_LL);
@@ -1254,7 +1253,7 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_LANG:
             if (IS_LAYER_ON(_LL)) {
                 local_state->lang = (local_state->lang + 1) % NUM_LANG;
-                save_user_settings();
+                mark_settings_dirty();
                 layer_off(_LL);
             }
             else {
@@ -1447,6 +1446,10 @@ void suspend_power_down_kb(void) {
     }
     poly_suspend();
     sync_and_refresh_displays();
+    // Flush all dirty user state to EEPROM on real power suspension (each half
+    // independently). Dirty-gated, and after the final sync so a flash
+    // consolidation can't corrupt a live split transaction.
+    save_all_dirty();
     suspend_power_down_user();
     set_last_update(-1);
 }

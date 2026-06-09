@@ -361,9 +361,11 @@ void housekeeping_task_user(void) {
     // progresses and the master's apply-and-reboot fires after a successful
     // commit.
     if (fw_staging_commit_pending()) {
+        save_all_dirty();   // persist MRU/settings before the firmware swap — this path resets via watchdog (never returns) and skips shutdown_quantum. Transfer is done by commit, so the blocking flash write is safe here.
         fw_staging_apply_and_reboot();
     }
     if (fw_staging_reboot_pending()) {
+        save_all_dirty();   // persist before the full-chip reset — this path skips shutdown_quantum too
         mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
     }
     fw_staging_process_deferred();

@@ -316,6 +316,7 @@ void housekeeping_task_user(void) {
     // reboot is armed in the transaction handler and fired here, so both halves
     // restart together onto the new left/right assignment.
     if (fw_staging_reboot_pending()) {
+        save_all_dirty();   // persist before the full-chip reset — this path skips shutdown_quantum
         mcu_reset();   // clean full-chip reset; never returns
     }
     // User state is flushed to EEPROM at suspend (save_all_dirty) or on demand

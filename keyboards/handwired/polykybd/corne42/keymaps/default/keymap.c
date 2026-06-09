@@ -581,6 +581,9 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
     const uint32_t *emj = emj_display_text(keycode);
     if (emj != NULL) return emj;
 
+    const uint32_t *lng = lang_display_text(keycode);
+    if (lng != NULL) return lng;
+
     const uint32_t* emoji = keycode_to_emoji(keycode);
     if(emoji!=NULL) {
         return emoji;

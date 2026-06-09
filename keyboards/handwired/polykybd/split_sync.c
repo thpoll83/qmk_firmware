@@ -318,6 +318,7 @@ void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out
         const mru_sync_t* data = (const mru_sync_t *)in_data;
         if (crc32 == data->crc32) {
             mru_apply_sync(data->emoji, data->lang);
+            request_disp_refresh();   // redraw the recents row on the slave
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

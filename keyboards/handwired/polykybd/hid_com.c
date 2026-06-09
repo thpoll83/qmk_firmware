@@ -500,7 +500,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     soft_reset_keyboard();
                 }
                 break;
-            case 26: //flush all user state to EEPROM (host shutdown/suspend signal)
+            // Flush all dirty user state to EEPROM (host shutdown/suspend signal).
+            // Master-only: HID commands run on the USB half. The slave flushes
+            // independently via its own suspend hook. (Distinct from KC_STORE_EE,
+            // which sets SAVE_EEPROM and syncs that flag to the slave — see base/com.h.)
+            case 26:
                 save_all_dirty();
                 memset(data, 0, length);
                 memcpy(data, "P\x1A.", 3);

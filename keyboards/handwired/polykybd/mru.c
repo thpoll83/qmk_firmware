@@ -7,6 +7,12 @@
 
 #include <string.h>
 
+// keycode_helper.h can't include mru.h, so KC_EMJ_SLOT_BASE / KC_LANG_SLOT_BASE
+// hardcode the MRU row width as "+ 12". Guard that magic number against MRU_CAP
+// here so a change to MRU_CAP fails the build instead of silently overlapping
+// the MRU and slot keycode ranges.
+_Static_assert(MRU_CAP == 12, "MRU_CAP must match the +12 offset in keycode_helper.h (KC_EMJ_SLOT_BASE / KC_LANG_SLOT_BASE)");
+
 // ── Backing storage ──────────────────────────────────────────────────────────
 static uint16_t s_emoji[MRU_CAP];   // packed category|offset codes
 static uint8_t  s_lang[MRU_CAP];

@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "state.h"
+#include "mru.h"     // MRU_EMOJI_PACKED / MRU_CAP used by mru_sync_t below
 
 #include <stdint.h>
 

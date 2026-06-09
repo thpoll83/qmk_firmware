@@ -215,6 +215,7 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
         if (cp != 0) {
             register_unicode(cp);
             mru_emoji_push(code);
+            request_disp_refresh();   // recents reordered — redraw the row
         }
         return true;
     }
@@ -227,6 +228,7 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
         if (cp != 0) {
             register_unicode(cp);
             mru_emoji_push(emj_pack(s_category, off));   // off valid when cp != 0
+            request_disp_refresh();   // new entry pushed to recents — redraw the row
         }
         return true;
     }

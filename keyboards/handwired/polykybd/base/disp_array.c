@@ -429,6 +429,11 @@ void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], i
         }
         if(first!=127) {
             if(num_empty==0) {
+                // Top edge: taper the cleared span over 3 rows (insets 8/4/2),
+                // mirroring the exponential 2/4/8 fade the outer/bottom edge gets
+                // below — so the courtyard "lazily" narrows toward the glyph top
+                // instead of clearing the full first..last span abruptly.
+                clear_line(x+first+8, x+last-8, bmp_y + y-3);
                 clear_line(x+first+4, x+last-4, bmp_y + y-2);
                 clear_line(x+first+2, x+last-2, bmp_y + y-1);
             } else {

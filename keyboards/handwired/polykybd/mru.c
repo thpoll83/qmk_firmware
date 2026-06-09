@@ -160,6 +160,11 @@ void mru_apply_sync(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uint8_t 
         memcmp(s_lang,  lang,  sizeof(s_lang))  != 0) {
         memcpy(s_emoji, emoji, sizeof(s_emoji));
         memcpy(s_lang,  lang,  sizeof(s_lang));
+        // The slave persists its own copy too (saved on suspend), so mark the
+        // received snapshot dirty — it now differs from this half's EEPROM.
+        // Deliberately not s_sync_pending: only the master pushes, so the slave
+        // must never echo the snapshot back.
+        s_dirty = true;
         request_disp_refresh();
     }
 }

@@ -98,7 +98,8 @@ void save_user_settings(void);
 void save_user_latin(void);
 
 // Writes the emoji/language MRU lists to EEPROM, but only if they changed since
-// the last load/save (mru_dirty()). Master-only; call from suspend / host save.
+// the last load/save (mru_dirty()). Called on both halves from suspend (and on
+// the master from the host save command); each half persists its own copy.
 void save_user_mru_if_dirty(void);
 
 // Loads the persisted MRU lists from EEPROM into the RAM lists (mru_load()).

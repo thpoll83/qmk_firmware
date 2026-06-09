@@ -1932,11 +1932,12 @@ void suspend_power_down_kb(void) {
     poly_suspend();
     rgb_matrix_disable_noeeprom();
     sync_and_refresh_displays();
-    // Persist the MRU recents on real power suspension. Master owns EEPROM (the
-    // slave must never block its UART on a flash write); save only when changed.
-    if (is_usb_host_side()) {
-        save_user_mru_if_dirty();
-    }
+    // Persist the MRU recents on real power suspension — on whichever half holds
+    // them dirty. Both halves load at boot and the slave marks its copy dirty
+    // when the master pushes a change, so each persists its own EEPROM. The write
+    // is dirty-gated and sits at the very end of the suspend sequence (after the
+    // final sync), so a flash consolidation can't corrupt a live split transaction.
+    save_user_mru_if_dirty();
     suspend_power_down_user();
     set_last_update(-1);
 }

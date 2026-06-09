@@ -68,5 +68,6 @@ void            mru_load(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uin
 // ── Split sync (master pushes to slave) ──────────────────────────────────────
 bool mru_sync_pending(void);
 void mru_clear_sync_pending(void);
-// Slave applies an incoming snapshot (does not mark dirty — slave never saves).
+// Slave applies an incoming snapshot. Marks the lists dirty (the slave persists
+// its own EEPROM copy on suspend) but not sync_pending (only the master pushes).
 void mru_apply_sync(const uint8_t emoji_packed[MRU_EMOJI_PACKED], const uint8_t lang[MRU_CAP]);

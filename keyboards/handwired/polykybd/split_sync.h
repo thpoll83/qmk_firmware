@@ -82,6 +82,11 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data);
 
+// Single-keycode write capped to the host-writable layers (same bound as
+// dynamic_keymap_set_buffer_poly) so the function layers (language, emoji, …) at
+// indices >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT stay read-only.
+void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode);
+
 void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
 // Handles incoming overlay mapping data on bridge with CRC32 validation.

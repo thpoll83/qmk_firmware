@@ -238,6 +238,14 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
     eeprom_update_block(data, (void *)(POLY_EEPROM_CONFIG_END + offset), clamped);
 }
 
+// Same layer cap as dynamic_keymap_set_buffer_poly, but for single-keycode writes:
+// the host may only remap layers below DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT, so the
+// language/emoji/etc. function layers above it can't be clobbered from the host.
+void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode) {
+    if (layer >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) return;
+    dynamic_keymap_set_keycode(layer, row, column, keycode);
+}
+
 // Handles dynamic keymap commands on the bridge with CRC32 validation, including keymap resets and key press events.
 void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len >= (sizeof(uint32_t)+1) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
@@ -251,7 +259,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     request_disp_refresh();
                     break;
                 case id_dynamic_keymap_set_keycode:
-                    dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+                    dynamic_keymap_set_keycode_poly(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
                     request_disp_refresh();
                     break;
                 case id_dynamic_keymap_set_buffer: {

@@ -83,7 +83,7 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
             data_len = 1;
             break;
         case id_dynamic_keymap_set_keycode:
-            dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+            dynamic_keymap_set_keycode_poly(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
             data_len = 6;
             break;
         case id_dynamic_keymap_set_buffer: {

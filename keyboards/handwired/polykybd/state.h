@@ -53,6 +53,11 @@ typedef struct _poly_eeconf_t {
 
 
 static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");
+// The user datablock must fit inside the budget reserved ahead of the pinned
+// dynamic-keymap base (see DYNAMIC_KEYMAP_EEPROM_ADDR in config.h); otherwise it
+// would overlap the stored keymap. Raise POLY_EECONFIG_USER_RESERVED (a one-time
+// keymap relocation/reset) if this trips.
+static_assert(EECONFIG_USER_DATA_SIZE <= POLY_EECONFIG_USER_RESERVED, "poly_eeconf_t exceeds POLY_EECONFIG_USER_RESERVED — bump the reservation (one-time reset)");
 
 void reset_all_states_and_layers(void);
 

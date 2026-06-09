@@ -61,3 +61,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RAW_EPSIZE     64
 
 #define DYNAMIC_KEYMAP_LAYER_COUNT 13
+
+// Pin the dynamic-keymap / POLY custom-config base to a FIXED EEPROM address so that
+// growing EECONFIG_USER_DATA_SIZE (e.g. adding MRU/feature data) does NOT relocate the
+// stored keymap and force a "reset keymap" on every flash. We reserve a fixed user-data
+// budget rather than tracking the live EECONFIG_USER_DATA_SIZE; the actual size must stay
+// <= the reservation (static_assert in state.h). Bumping the reservation relocates the
+// keymap once (one final reset), then it stays put across firmware updates.
+#define POLY_EECONFIG_USER_RESERVED 128
+#define DYNAMIC_KEYMAP_EEPROM_ADDR  (EECONFIG_BASE_SIZE + EECONFIG_KB_DATA_SIZE + POLY_EECONFIG_USER_RESERVED)
+#define POLY_EEPROM_MAGIC_ADDR      DYNAMIC_KEYMAP_EEPROM_ADDR

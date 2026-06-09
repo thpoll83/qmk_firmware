@@ -1512,6 +1512,12 @@ void keyboard_pre_init_user(void) {
 
     set_displays(50, false);
     set_local_last_latin_keycode(0);
+    // Resolve the side BEFORE the splash so each half shows its own logo (set_side()
+    // otherwise runs only in post_init, after the splash). Use the pure
+    // eeconfig_read_handedness() rather than is_keyboard_left_impl() — the latter's
+    // EE_HANDS branch can run eeconfig_init() this early and wipe the per-half marker.
+    // See split72 keymap.c for the full rationale.
+    set_side(eeconfig_read_handedness() ? LEFT_SIDE : RIGHT_SIDE);
     show_splash_screen();
 
     /* I2C SDA pin for the status OLED — verify pin matches PCB */

@@ -68,6 +68,33 @@ See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build 
 
 ---
 
+## Future language candidates
+
+Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-generated from `lang_lut.xlsx` via cog), (2) re-running `fonts/gen-lang-fonts.sh` to generate the flag glyph and update `flag_fonts.h`, (3) updating the host's `_LANG_REGION` map in `PolyKybdHost/polyhost/host.py` if the country code isn't already there (all ISO 3166-1 codes are covered as of 2026-06).
+
+### Oceania
+| Code | Language / Country | Notes |
+|------|--------------------|-------|
+| `en-AU` | English / Australia | Largest tech market in Oceania; distinct locale (date format, spelling) |
+| `en-NZ` | English / New Zealand | High tech adoption; ~5 M users |
+| `tl-PH` | Filipino / Philippines | Largest Pacific-adjacent user base; geographically SE Asia — host places it in **Asia** submenu via `PH` |
+| `mi-NZ` | Māori / New Zealand | Official NZ language; Latin + macrons (ā ē ī ō ū) + okina; active digital revitalisation |
+| `haw-US` | Hawaiian / United States | Polynesian; Latin + okina (ʻ) + kahakō macrons; note: `US` country code puts it in **Americas** — would need a custom code (e.g. `haw-HI`) to land in Oceania |
+| `sm-WS` | Samoan / Samoa | Most widely spoken Polynesian language; large diaspora in NZ/AU; Latin with macrons |
+| `fj-FJ` | Fijian / Fiji | Most developed Pacific island nation outside AU/NZ; Latin-based |
+
+### Africa
+| Code | Language / Country | Notes |
+|------|--------------------|-------|
+| `en-ZA` | English / South Africa | Largest tech ecosystem on the continent |
+| `ar-EG` | Arabic / Egypt | ~90 M internet users; complements existing `ar-SA` with Egyptian locale |
+| `sw-KE` | Swahili / Kenya | ~200 M speakers across East Africa; Kenya is the continent's leading tech hub; genuinely distinct from existing entries |
+| `am-ET` | Amharic / Ethiopia | Unique Ge'ez (Ethiopic) script; ~120 M people; fast-growing tech sector |
+| `yo-NG` | Yoruba / Nigeria | ~50 M speakers; Nigeria has Africa's largest developer community; Latin with tone diacritics |
+| `af-ZA` | Afrikaans / South Africa | Germanic/Latin; well-established digital presence; distinct from `en-ZA` |
+
+---
+
 ## Investigations in progress
 
 ### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)

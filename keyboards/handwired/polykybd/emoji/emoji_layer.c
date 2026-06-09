@@ -70,8 +70,9 @@ static const uint32_t *make_emoji_str(uint32_t cp) {
 }
 
 // ── MRU packing ───────────────────────────────────────────────────────────────
-// The MRU stores a 16-bit code: 4 bits category | 12 bits glyph offset, instead
-// of the full 32-bit codepoint. Decode resolves it back through the static
+// The MRU stores a 16-bit code: 4 bits category | 10 bits glyph offset
+// (MRU_EMOJI_BITS = 14), instead of the full 32-bit codepoint. Decode resolves
+// it back through the static
 // category table (always valid within a firmware build; EEPROM is reset on
 // update). MRU_EMOJI_EMPTY (0xFFFF) decodes to 0 (blank slot).
 

@@ -3,6 +3,7 @@
 
 #include "mru.h"
 #include "base/update.h"
+#include "lang/lang_lut.h"   // LANG_* enum indices used by s_lang_preset
 
 #include <string.h>
 
@@ -13,20 +14,21 @@ static uint8_t  s_lang[MRU_CAP];
 static bool s_dirty        = false;   // differs from EEPROM
 static bool s_sync_pending = false;   // master needs to push to slave
 
-// LANG_* enum indices (see lang/lang_lut.h). Common everyday languages.
+// Common everyday languages, by LANG_* enum symbol (lang/lang_lut.h) so the
+// preset stays correct if the enum is ever reordered.
 static const uint8_t s_lang_preset[MRU_CAP] = {
-    0,   // LANG_ENUS  en-US
-    41,  // LANG_ENGB  en-GB
-    1,   // LANG_DEDE  de-DE
-    2,   // LANG_FRFR  fr-FR
-    3,   // LANG_ESES  es-ES
-    5,   // LANG_ITIT  it-IT
-    32,  // LANG_PTBR  pt-BR
-    12,  // LANG_RURU  ru-RU
-    18,  // LANG_ZHCN  zh-CN
-    8,   // LANG_JAJP  ja-JP
-    7,   // LANG_KOKR  ko-KR
-    9,   // LANG_ARSA  ar-SA
+    LANG_ENUS,  // en-US
+    LANG_ENGB,  // en-GB
+    LANG_DEDE,  // de-DE
+    LANG_FRFR,  // fr-FR
+    LANG_ESES,  // es-ES
+    LANG_ITIT,  // it-IT
+    LANG_PTBR,  // pt-BR
+    LANG_RURU,  // ru-RU
+    LANG_ZHCN,  // zh-CN
+    LANG_JAJP,  // ja-JP
+    LANG_KOKR,  // ko-KR
+    LANG_ARSA,  // ar-SA
 };
 
 // ── Generic front-insert with de-dup, parameterised over element size ─────────

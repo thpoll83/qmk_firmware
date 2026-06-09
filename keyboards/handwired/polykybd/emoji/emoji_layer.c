@@ -80,6 +80,14 @@ static uint16_t emj_pack(uint8_t cat, uint16_t off) {
     return (uint16_t)(((uint16_t)cat << 10) | (off & 0x03FF));
 }
 
+// emj_pack encodes the category in bits [13:10] (4 bits) and the offset in
+// [9:0]. MRU_EMOJI_EMPTY (0x3FFF) is reserved as the "no recent" sentinel — it
+// equals (category 15 | offset 0x3FF). With at most 15 categories (indices
+// 0..14) the largest real code is 0x3BFF, so no real code can collide with the
+// sentinel. Adding a 16th category would break that, so fail the build instead.
+_Static_assert(EMJ_NUM_CATEGORIES <= 15,
+               "emoji category 15 would encode as MRU_EMOJI_EMPTY (0x3FFF) — the reserved empty sentinel");
+
 static uint32_t emj_decode(uint16_t code) {
     if (code == MRU_EMOJI_EMPTY) return 0;
     uint8_t  cat = (uint8_t)(code >> 10);

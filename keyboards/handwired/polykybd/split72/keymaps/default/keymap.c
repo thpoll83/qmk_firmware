@@ -1156,7 +1156,7 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
     const int8_t fyo = (int8_t)pgm_read_byte(&ff->glyph[idx].yOffset);
     kdisp_write_gfx_char(lang_flag_fonts, 1, FLAG_LEFT_X,
                          (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
-                         FLAG_CP_BASE + idx, false);
+                         FLAG_CP_BASE + idx, true);
 
     // Language code: vertical, up the right side; inverted bar when selected.
     kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
@@ -1257,8 +1257,8 @@ void update_displays(enum refresh_mode mode) {
                             // Language layer: country flag + tiny language code
                             // (paged slots and the top-row MRU recents alike).
                             kdisp_set_buffer(0x00);
-                            render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state), local_state->lang);
                             draw_mru_top_bar(keycode);
+                            render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state), local_state->lang);
                             kdisp_send_buffer();
                         } else if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET ||
                                    keycode == KC_EMJ_CLEAR  || keycode == KC_LANG_CLEAR) {
@@ -1269,13 +1269,18 @@ void update_displays(enum refresh_mode mode) {
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
                         kdisp_set_buffer(0x00);
+                        // Draw the tab frame / row bar FIRST, then the emoji glyph with
+                        // courtyard clearing so the icon punches a clean margin through it.
+                        emj_draw_tab_indicator(keycode);
+                        emj_draw_tab_bottom(keycode);
+                        draw_mru_top_bar(keycode);
                         if(text==NULL) {
                             if(!render_key(keycode, state, mods) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
                                 kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, unicode_map[chr], false);
                             }
                         } else {
-                            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
+                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, true);
                         }
                         text = NULL;
                         if(display_overlays) {
@@ -1288,9 +1293,6 @@ void update_displays(enum refresh_mode mode) {
                         if(text) {
                             kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, true);
                         }
-                        emj_draw_tab_indicator(keycode);
-                        emj_draw_tab_bottom(keycode);
-                        draw_mru_top_bar(keycode);
                         kdisp_send_buffer();
                         }
                     }

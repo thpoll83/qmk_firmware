@@ -234,7 +234,7 @@ void sync_and_refresh_displays(void) {
 
         access_local_state()->emj_category = emj_active_category();
         access_local_state()->emj_page     = emj_active_page();
-        access_local_state()->lang_page    = lang_active_page();
+        access_local_state()->lang_page    = lang_pack_state();
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
             if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10)) {
@@ -652,24 +652,24 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         EE_CLR,     KC_STORE_EE, KC_NO,     KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
         DB_TOGG,    KC_DEADKEY, KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
-    // Language Selection Layer. Row 0 = MRU recents (Preset/Clear corners); the
-    // remaining rows are page-relative language slots (LSLOT) that page through
-    // the full country-sorted list via the wrapping arrows (KC_LANG_PAGE_*).
-    // The six unicode-input-mode keys keep their side-column positions.
-    // MRU recents live on the BOTTOM row of each block (marked with a top bar);
-    // the paged language slots fill the rows above. No Preset key — Clear sits on
-    // the right thumb (former right base key); the left base key still exits.
+    // Language Selection Layer — mirrors the emoji picker. TOP row of the LEFT
+    // block = the six continent region tabs (LCAT) with the wrapping page-prev
+    // arrow on the outer end; TOP row of the RIGHT block = the six unicode-input
+    // mode keys with page-next on the outer end. The active region's language
+    // slots (LSLOT) fill the middle rows; the 12 MRU recents sit on the BOTTOM
+    // row of each block (top-bar marked). No Preset key — Clear is on the right
+    // thumb (former right base key); the left base key still exits.
     [_LL] = LAYOUT_left_right_stacked(
-        KC_LANG_PAGE_PREV,          LSLOT(0),   LSLOT(1),   LSLOT(2),   LSLOT(3),   LSLOT(4),   LSLOT(5),
-        QK_UNICODE_MODE_MACOS,      LSLOT(6),   LSLOT(7),   LSLOT(8),   LSLOT(9),   LSLOT(10),  LSLOT(11),
-        QK_UNICODE_MODE_WINCOMPOSE, LSLOT(12),  LSLOT(13),  LSLOT(14),  LSLOT(15),  LSLOT(16),  LSLOT(17),  MS_BTN1,
-        QK_UNICODE_MODE_EMACS,      LSLOT(18),  LSLOT(19),  LSLOT(20),  LSLOT(21),  LSLOT(22),  LSLOT(23),  KC_NO,
-        KC_BASE,                    LMRU(0),    LMRU(1),    LMRU(2),                LMRU(3),    LMRU(4),    LMRU(5),
+        KC_LANG_PAGE_PREV, LCAT(0),    LCAT(1),    LCAT(2),    LCAT(3),    LCAT(4),    LCAT(5),
+        KC_NO,             LSLOT(0),   LSLOT(1),   LSLOT(2),   LSLOT(3),   LSLOT(4),   LSLOT(5),
+        KC_NO,      LSLOT(6),   LSLOT(7),   LSLOT(8),   LSLOT(9),   LSLOT(10),  LSLOT(11),  MS_BTN1,
+        KC_NO,      LSLOT(12),  LSLOT(13),  LSLOT(14),  LSLOT(15),  LSLOT(16),  LSLOT(17),  LSLOT(18),
+        KC_BASE,    LMRU(0),    LMRU(1),    LMRU(2),                LMRU(3),    LMRU(4),    LMRU(5),
 
-                    LSLOT(24),  LSLOT(25),  LSLOT(26),  LSLOT(27),  LSLOT(28),  LSLOT(29),  KC_LANG_PAGE_NEXT,
-                    LSLOT(30),  LSLOT(31),  LSLOT(32),  LSLOT(33),  LSLOT(34),  LSLOT(35),  QK_UNICODE_MODE_WINDOWS,
-        KC_NO,                   LSLOT(36),  LSLOT(37),  LSLOT(38),  LSLOT(39),  LSLOT(40),  LSLOT(41),  QK_UNICODE_MODE_LINUX,
-        KC_NO,                   LSLOT(42),  LSLOT(43),  LSLOT(44),  LSLOT(45),  LSLOT(46),  LSLOT(47),  QK_UNICODE_MODE_BSD,
+                    QK_UNICODE_MODE_MACOS, QK_UNICODE_MODE_WINCOMPOSE, QK_UNICODE_MODE_EMACS, QK_UNICODE_MODE_WINDOWS, QK_UNICODE_MODE_LINUX, QK_UNICODE_MODE_BSD, KC_LANG_PAGE_NEXT,
+                    LSLOT(19),  LSLOT(20),  LSLOT(21),  LSLOT(22),  LSLOT(23),  LSLOT(24),  KC_NO,
+        KC_NO,      LSLOT(25),  LSLOT(26),  LSLOT(27),  LSLOT(28),  LSLOT(29),  LSLOT(30),  KC_NO,
+        LSLOT(31),  LSLOT(32),  LSLOT(33),  LSLOT(34),  LSLOT(35),  LSLOT(36),  LSLOT(37),  KC_NO,
         LMRU(6),    LMRU(7),    LMRU(8),                LMRU(9),    LMRU(10),   LMRU(11),   KC_LANG_CLEAR
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(
@@ -1181,6 +1181,18 @@ static void render_mru_ctrl_key(bool preset) {
     }
 }
 
+// Language region tab — the continent name centred in the keycap (continent
+// silhouettes will replace the text later). The active-tab frame / inactive
+// bottom bar is drawn separately by lang_draw_tab_indicator/bottom.
+static void render_lang_region_tab(uint16_t keycode) {
+    const uint32_t* label = lang_region_label((uint8_t)(keycode - KC_LANG_CAT_BASE));
+    int8_t lo = 0, hi = 0;
+    kdisp_gfx_text_bounds(lang_label_fonts, 1, label, &lo, &hi);
+    int8_t w = (int8_t)(hi - lo);
+    int8_t x = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - lo);
+    kdisp_write_gfx_text(lang_label_fonts, 1, x, 22, label);
+}
+
 // MRU recents (emoji or language) get a full-width bar along the TOP edge —
 // the mirror image of the category tabs' bottom bar — to set the row apart.
 static void draw_mru_top_bar(uint16_t keycode) {
@@ -1267,6 +1279,13 @@ void update_displays(enum refresh_mode mode) {
                             // Top-row MRU controls: "Preset" / "Clear".
                             kdisp_set_buffer(0x00);
                             render_mru_ctrl_key(keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET);
+                            kdisp_send_buffer();
+                        } else if (keycode >= KC_LANG_CAT_BASE && keycode < KC_LANG_PAGE_PREV) {
+                            // Language region tab — continent label + active frame.
+                            kdisp_set_buffer(0x00);
+                            lang_draw_tab_indicator(keycode);
+                            lang_draw_tab_bottom(keycode);
+                            render_lang_region_tab(keycode);
                             kdisp_send_buffer();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
@@ -1611,7 +1630,10 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
             local_state->overlay_flags &= ~SAVE_EEPROM;
             break;
-        // ── Language layer: paging, MRU controls, and slot/MRU selection ──
+        // ── Language layer: region tabs, paging, MRU controls, slot/MRU select ──
+        case KC_LANG_CAT_BASE ... KC_LANG_PAGE_PREV - 1:
+            lang_select_region((uint8_t)(keycode - KC_LANG_CAT_BASE));
+            break;
         case KC_LANG_PAGE_PREV:
             lang_page_prev();
             request_disp_refresh();

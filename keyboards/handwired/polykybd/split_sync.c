@@ -54,7 +54,7 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
 #endif
             copy_local_state(incoming);
             emj_apply_sync(incoming->emj_category, incoming->emj_page);
-            lang_apply_page_sync(incoming->lang_page);
+            lang_apply_sync(incoming->lang_page);
             if(newly_set & OVERLAY_ACTION_FLAGS) {
                 apply_overlay_action_flags(newly_set);
                 // Clear the bits locally so housekeeping has nothing to do.

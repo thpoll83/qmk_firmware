@@ -6,8 +6,9 @@
 
 // Emoji picker: 38 slots/page (rows 2-4; the top row is the MRU, row 1 the tabs).
 #define EMJ_SLOTS_PER_PAGE 38
-// Language picker: 48 slots/page (rows 1-4 middle columns; the top row is the MRU).
-#define LANG_SLOTS_PER_PAGE 48
+// Language picker: 38 slots/page (rows 1-3 + thumbs; top row = region tabs +
+// unicode-mode keys, bottom row = MRU). Mirrors the emoji slot layout.
+#define LANG_SLOTS_PER_PAGE 38
 
 #define USB_VBUS_PIN GP24
 

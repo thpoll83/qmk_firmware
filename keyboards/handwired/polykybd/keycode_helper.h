@@ -89,11 +89,14 @@ enum my_keycodes {
     // Sentinel — must stay <= QK_USER_MAX (0x7FFF)
     KC_EMJ_END = KC_EMJ_SLOT_BASE + 50,
 
-    // ── Language selection layer keycodes (paged) ────────────────────────────
-    // The _LL layer uses generic, page-relative slot keycodes (resolved to a
-    // LANG_* index at render/press time) so the same physical keys can page
-    // through more languages than fit on screen at once.
-    KC_LANG_PAGE_PREV,
+    // ── Language selection layer keycodes (region tabs + paged slots) ─────────
+    // The _LL layer mirrors the emoji layer: a top row of continent region tabs
+    // (KC_LANG_CAT_BASE + n), then generic page-relative slot keycodes (resolved
+    // to a LANG_* index at render/press time) so the same physical keys can page
+    // through every language in the active region.
+    KC_LANG_CAT_BASE,                              // region tabs: + n (n = 0 .. NUM_LANG_REGIONS-1)
+    // Page navigation (follow sequentially after CAT_BASE + 12 slots, like emoji)
+    KC_LANG_PAGE_PREV = KC_LANG_CAT_BASE + 12,
     KC_LANG_PAGE_NEXT,
     KC_LANG_PRESET,
     KC_LANG_CLEAR,
@@ -110,6 +113,7 @@ static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MA
 #define ESLOT(n)       ((uint16_t)((uint16_t)KC_EMJ_SLOT_BASE  + (uint16_t)(n)))
 #define EMRU(n)        ((uint16_t)((uint16_t)KC_EMJ_MRU_BASE   + (uint16_t)(n)))
 // Convenience macros for the language selection layer keymap entries.
+#define LCAT(n)        ((uint16_t)((uint16_t)KC_LANG_CAT_BASE  + (uint16_t)(n)))
 #define LSLOT(n)       ((uint16_t)((uint16_t)KC_LANG_SLOT_BASE + (uint16_t)(n)))
 #define LMRU(n)        ((uint16_t)((uint16_t)KC_LANG_MRU_BASE  + (uint16_t)(n)))
 

@@ -127,7 +127,7 @@ void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t heigh
     @param    ch  The 32-bit Unicode codepoint (SMP codepoints > 0xFFFF allowed)
 */
 /**************************************************************************/
-int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, bool clear_cy) {
+int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, int8_t cy_radius) {
     const GFXfont * currentFont = 0;
     uint32_t first = 0;
     uint32_t last = 0;
@@ -215,8 +215,8 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
     int8_t   xo = pgm_read_byte(&glyph->xOffset), yo = pgm_read_byte(&glyph->yOffset);
     int8_t  xx, yy, bits = 0, bit = 0;
 
-    if(clear_cy) {
-        kdisp_clear_bitmap_courtyard(x+xo, y+yo, &bitmap[bo], w, h);
+    if(cy_radius > 0) {
+        kdisp_clear_bitmap_courtyard(x+xo, y+yo, &bitmap[bo], w, h, cy_radius);
     }
 
     for (yy = 0; yy < h; yy++) {
@@ -235,10 +235,10 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
 }
 
 void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text) {
-    kdisp_write_gfx_text_cy(fonts, num_fonts, x, y, text, false);
+    kdisp_write_gfx_text_cy(fonts, num_fonts, x, y, text, 0);
 }
 
-void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, bool clear_cy) {
+void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius) {
     int8_t x_cursor = x;
     int8_t y_cursor = y;
     while (*text != 0) {
@@ -270,7 +270,7 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
                 x_cursor = x;
                 break;
             default:
-                x_cursor += kdisp_write_gfx_char(fonts, num_fonts, x_cursor, y_cursor, *text, clear_cy);
+                x_cursor += kdisp_write_gfx_char(fonts, num_fonts, x_cursor, y_cursor, *text, cy_radius);
                 break;
         }
         text++;
@@ -410,47 +410,44 @@ void clear_line(int8_t from_x, int8_t to_x, int8_t y) {
     }
 }
 
-void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height) {
+void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius) {
+    // Clear a "courtyard" behind the glyph: every buffer pixel within Chebyshev
+    // distance `radius` of any glyph-on pixel — i.e. a square-kernel morphological
+    // dilation of the glyph mask. This traces the glyph contour with an even margin:
+    // unlike a per-row [first,last] span it never bridges horizontally-separated
+    // strokes (e.g. the two marks of " or the legs of M), and unlike per-column
+    // extents it does not fill interior vertical gaps (= , ü , " keep their holes).
+    // Implemented per horizontal run of on-pixels (so a solid row is a few clears,
+    // not one-per-pixel): each run [run_start, run_end] is cleared, widened by
+    // `radius` on each side, across the rows [bmp_y-radius, bmp_y+radius].
+    // clear_line / CLEAR_PIXEL_CLIPPED clip to the buffer, so the margin spilling
+    // past the glyph edges (the intended courtyard) is fine. The glyph itself is
+    // drawn right after this call, so clearing its own pixels here is harmless.
+    // `radius` is the courtyard width (KDISP_CY_DEFAULT for overlays; the lang-layer
+    // flags pass a smaller value so their borders stay tight).
+    if (radius <= 0) return;
     uint16_t offset = 0;
-    int8_t first = 127;
-    int8_t last=0;
-    int8_t num_empty = 0;
     int8_t bits = 0, bit = 0;
     for (int8_t bmp_y = 0; bmp_y < bmp_height; ++bmp_y) {
-        num_empty++;
+        int8_t run_start = -1;
         for (int8_t bmp_x = 0; bmp_x < bmp_width; ++bmp_x) {
             if (!(bit++ & 7)) {
                 bits = pgm_read_byte(&pgm_bmp[offset++]);
             }
-            if (bits & 0x80) {
-                first = PK_MIN(bmp_x-3, first);
-                last = PK_MAX(bmp_x+3, last);
-                num_empty = 0;
-            }
+            bool on = (bits & 0x80) != 0;
             bits <<= 1;
-
-        }
-        if(first!=127) {
-            if(num_empty==0) {
-                // Top edge: taper the cleared span over 3 rows (insets 8/4/2),
-                // mirroring the exponential 2/4/8 fade the outer/bottom edge gets
-                // below — so the courtyard "lazily" narrows toward the glyph top
-                // instead of clearing the full first..last span abruptly.
-                clear_line(x+first+8, x+last-8, bmp_y + y-3);
-                clear_line(x+first+4, x+last-4, bmp_y + y-2);
-                clear_line(x+first+2, x+last-2, bmp_y + y-1);
-            } else {
-                num_empty = PK_MIN(num_empty, 6);
+            if (on) {
+                if (run_start < 0) run_start = bmp_x;     // run begins
+            } else if (run_start >= 0) {                   // run [run_start, bmp_x-1] ends
+                for (int8_t dy = -radius; dy <= radius; ++dy) {
+                    clear_line(x + run_start - radius, x + bmp_x + radius, bmp_y + y + dy);
+                }
+                run_start = -1;
             }
-            clear_line(x+first, x+last, bmp_y + y);
-            uint8_t dist;
-            PK_POW(dist, 2, (num_empty+1));
-            first+=dist;
-            last -=dist;
-            if(first>=last) {
-                first = 127;
-                last=0;
-                num_empty = 0;
+        }
+        if (run_start >= 0) {                              // run runs to the row's end
+            for (int8_t dy = -radius; dy <= radius; ++dy) {
+                clear_line(x + run_start - radius, x + bmp_width + radius, bmp_y + y + dy);
             }
         }
     }

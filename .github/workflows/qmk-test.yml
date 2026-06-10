@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       split72: ${{ steps.names.outputs.split72 }}
+      split72_bin: ${{ steps.names.outputs.split72_bin }}
       split72_hil_left: ${{ steps.names.outputs.split72_hil_left }}
       split72_hil_right: ${{ steps.names.outputs.split72_hil_right }}
       corne42: ${{ steps.names.outputs.corne42 }}
@@ -23,6 +24,14 @@ jobs:
         uses: docker://qmkfm/qmk_cli
         with:
           args: qmk compile -kb handwired/polykybd/split72 -km default
+
+      # The HID firmware-update path takes the raw RP2040 .bin (not the .uf2),
+      # which the host streams over HID. objcopy the just-built .elf so the rig
+      # can drive the keyboard's own update path (stage+verify) as a HIL test.
+      - name: Objcopy split72 .bin (for HID firmware-update test)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: arm-none-eabi-objcopy -O binary .build/handwired_polykybd_split72_default.elf handwired_polykybd_split72_default.bin
 
       # HIL builds: same firmware but with POLYKYBD_HIL, which fixes the split
       # role at compile time per side instead of using VBUS detection. On the rig
@@ -48,6 +57,7 @@ jobs:
       - id: names
         run: |
           echo "split72=$(ls handwired_polykybd_split72_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split72_bin=$(ls handwired_polykybd_split72_default*.bin 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "split72_hil_left=$(ls handwired_polykybd_split72_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "split72_hil_right=$(ls handwired_polykybd_split72_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "corne42=$(ls handwired_polykybd_corne42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
@@ -55,7 +65,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
-          path: "*.uf2"
+          path: |
+            *.uf2
+            *.bin
           retention-days: 7
 
   hil-test:
@@ -105,6 +117,7 @@ jobs:
           venv/bin/python -u -m station.test_runner \
             --left  "firmware/${{ needs.build.outputs.split72_hil_left }}" \
             --right "firmware/${{ needs.build.outputs.split72_hil_right }}" \
+            --bin   "firmware/${{ needs.build.outputs.split72_bin }}" \
             2>&1 | tee /tmp/hil-test.log
 
       # On failure, collect a deliberately SANITIZED snapshot for triage. This goes

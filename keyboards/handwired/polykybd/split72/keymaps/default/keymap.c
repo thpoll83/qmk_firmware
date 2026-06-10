@@ -236,7 +236,17 @@ void sync_and_refresh_displays(void) {
         access_local_state()->lang_page    = lang_pack_state();
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
-            if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10)) {
+            // Periodic syncs use a SINGLE attempt (was 10). They re-fire every
+            // housekeeping pass while a diff persists, so in-call retries are
+            // redundant. With SPLIT_MAX_CONNECTION_ERRORS raised to 200 (for the
+            // fw-update erase), transaction_rpc_exec() keeps reporting "connected"
+            // for ~4 s while the slave is transiently unreachable (e.g. the
+            // post-cold-flash settling window) instead of fast-failing — so each
+            // retry pays a full ~40 ms UART timeout and 10× of them blocks the
+            // main loop (and USB/HID servicing) ~400 ms PER sync. One attempt
+            // bounds the stall to ~tens of ms and the next loop retries. No effect
+            // on the normal path, where the slave ACKs on the first attempt.
+            if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 1)) {
                 state_diff = false; // if failed to sync, do not consider it a diff and try again later
                 uprint("USER_SYNC_POLY_DATA failed to send\n");
             }
@@ -251,7 +261,7 @@ void sync_and_refresh_displays(void) {
             // Multiplexed onto the overlay-map transaction id (distinct payload
             // size) to stay within QMK's 32-transaction limit. Only the packed
             // bytes are sent (MRU_SYNC_BYTES), not the struct's crc tail padding.
-            uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, 10);
+            uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, 1);
             if (mru_ack == SYNC_ACK || mru_ack == SYNC_ACK_SIG) {
                 mru_clear_sync_pending();
             } else {
@@ -263,13 +273,13 @@ void sync_and_refresh_displays(void) {
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         if ( layer_diff ) {
-            if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 10)) {
+            if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 1)) {
                 layer_diff = false; // if failed to sync, do not consider it a diff and try again later
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
         if ( differ(get_local_last_latin(), get_global_last_latin(), sizeof(poly_last_t)) ) {
-            if(!send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), 5)) {
+            if(!send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), 1)) {
                 // if failed to sync, do not consider it a diff and try again later
                 uprint("USER_SYNC_LASTKEY_DATA failed to send\n");
             } else {

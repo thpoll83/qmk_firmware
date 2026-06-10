@@ -333,6 +333,15 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
         uprintf("fw_staging_write_chunk: erase still pending (sector %lu/%lu)\n", s_erase_sector_next, s_erase_sector_count);
         return false;
     }
+    if (offset < s_next_offset) {
+        // Duplicate of an already-staged chunk: the host retries a chunk when the
+        // ACK got lost on the way back (slave UART reply corrupted, or the USB
+        // reply to the host timed out).  The data is already in staging and the
+        // running CRC already includes it — ACK again without rewriting, so the
+        // retry protocol stays idempotent (NOR flash cannot rewrite anyway).
+        uprintf("fw_staging_write_chunk: duplicate offset=%lu (next=%lu) — ack\n", offset, s_next_offset);
+        return true;
+    }
     if (offset != s_next_offset) {
         uprintf("fw_staging_write_chunk: offset mismatch got=%lu expected=%lu\n", offset, s_next_offset);
         return false;

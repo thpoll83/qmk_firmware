@@ -191,7 +191,13 @@ void sync_and_refresh_displays(void) {
         access_local_state()->lang_page    = lang_pack_state();
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
-            if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10)) {
+            // Single attempt (was 10): these periodic syncs re-fire every
+            // housekeeping pass while a diff persists, so in-call retries only
+            // pile up full ~40 ms UART timeouts and stall the main loop (and
+            // USB/HID) when the slave is transiently unreachable — e.g. the
+            // post-cold-flash settling window, kept "connected" for ~4 s by the
+            // raised SPLIT_MAX_CONNECTION_ERRORS. See split72 keymap for detail.
+            if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 1)) {
                 state_diff = false;
                 uprint("USER_SYNC_POLY_DATA failed to send\n");
             }
@@ -204,7 +210,7 @@ void sync_and_refresh_displays(void) {
             mru_sync_t mru_msg;
             mru_emoji_pack(mru_msg.emoji);
             mru_lang_pack(mru_msg.lang);
-            uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, 10);
+            uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, 1);
             if (mru_ack == SYNC_ACK || mru_ack == SYNC_ACK_SIG) {
                 mru_clear_sync_pending();
             } else {
@@ -216,13 +222,13 @@ void sync_and_refresh_displays(void) {
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         if ( layer_diff ) {
-            if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 10)) {
+            if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 1)) {
                 layer_diff = false;
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
         if ( differ(get_local_last_latin(), get_global_last_latin(), sizeof(poly_last_t)) ) {
-            if(!send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), 5)) {
+            if(!send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), 1)) {
                 uprint("USER_SYNC_LASTKEY_DATA failed to send\n");
             } else {
                 copy_global_last_latin(get_local_last_latin());

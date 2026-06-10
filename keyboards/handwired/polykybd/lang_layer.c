@@ -18,24 +18,29 @@
 // with the host whenever the language list or the region mapping changes.
 //
 // Region order: 0 Americas · 1 Europe · 2 Middle East & Caucasus · 3 Africa ·
-//               4 Asia · 5 Oceania   (Africa & Oceania are currently empty).
+//               4 Asia · 5 Oceania
+// Within a region: alphabetical by country code; same-country entries keep
+// enum (= GET_LANG_LIST) order — matching the host's stable sort.
 
 static const uint8_t REGION_OFFSET[NUM_LANG_REGIONS + 1] = {
-    0, 4, 34, 41, 41, 58, 58,
+    0, 7, 37, 46, 54, 74, 81,
 };
 
 static const uint8_t REGION_LANGS[NUM_LANG] = {
-    // Americas (4)
-    32, 45, 42,  0,
+    // Americas (7): es-AR pt-BR fr-CA en-CA es-MX en-US hw-US
+    78, 32, 45, 77, 42,  0, 64,
     // Europe (30)
     44, 15, 13, 43, 26,  1, 24, 31,  3, 22,  2, 41, 10, 27, 25, 55,
      5, 29, 30, 34, 19, 23, 16,  4, 17, 33, 12, 21, 28, 11,
-    // Middle East & Caucasus (7)
-    52, 54, 51, 20, 35,  9,  6,
-    // Africa (0) — empty
-    // Asia (17)
-    18, 57, 53, 36, 37, 47, 48, 49,  8,  7, 14, 39, 38, 40, 46, 50, 56,
-    // Oceania (0) — empty
+    // Middle East & Caucasus (9): hy-AM az-AZ ka-GE he-IL ar-IQ ku-IQ fa-IR ar-SA tr-TR
+    52, 54, 51, 20, 73, 74, 35,  9,  6,
+    // Africa (8): ar-EG am-ET sw-KE ar-MA yo-NG en-NG en-ZA af-ZA
+    67, 69, 68, 72, 70, 71, 65, 66,
+    // Asia (20): zh-CN zh-HK id-ID hi-IN mr-IN bn-IN te-IN ta-IN ja-JP ko-KR
+    //            kk-KZ mn-MN ms-MY ne-NP tl-PH ur-PK th-TH zh-TW uz-UZ vi-VN
+    18, 57, 53, 36, 37, 47, 48, 49,  8,  7, 14, 39, 75, 38, 63, 40, 46, 50, 76, 56,
+    // Oceania (7): en-AU fj-FJ en-NZ mi-NZ ty-PF en-PG sm-WS
+    58, 62, 59, 60, 80, 79, 61,
 };
 
 static const uint32_t *const REGION_LABELS[NUM_LANG_REGIONS] = {

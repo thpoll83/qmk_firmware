@@ -890,6 +890,29 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_ISIS: return U"is-IS";
         case KCL_VIVN: return U"vi-VN";
         case KCL_ZHHK: return U"zh-HK";
+        case KCL_ENAU: return U"en-AU";
+        case KCL_ENNZ: return U"en-NZ";
+        case KCL_MINZ: return U"mi-NZ";
+        case KCL_SMWS: return U"sm-WS";
+        case KCL_FJFJ: return U"fj-FJ";
+        case KCL_TLPH: return U"tl-PH";
+        case KCL_HWUS: return U"hw-US";
+        case KCL_ENZA: return U"en-ZA";
+        case KCL_AFZA: return U"af-ZA";
+        case KCL_AREG: return U"ar-EG";
+        case KCL_SWKE: return U"sw-KE";
+        case KCL_AMET: return U"am-ET";
+        case KCL_YONG: return U"yo-NG";
+        case KCL_ENNG: return U"en-NG";
+        case KCL_ARMA: return U"ar-MA";
+        case KCL_ARIQ: return U"ar-IQ";
+        case KCL_KUIQ: return U"ku-IQ";
+        case KCL_MSMY: return U"ms-MY";
+        case KCL_UZUZ: return U"uz-UZ";
+        case KCL_ENCA: return U"en-CA";
+        case KCL_ESAR: return U"es-AR";
+        case KCL_ENPG: return U"en-PG";
+        case KCL_TYPF: return U"ty-PF";
         //[[[end]]]
         default:
             return NULL;
@@ -1714,6 +1737,29 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_ISIS: local_state->lang = LANG_ISIS; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_VIVN: local_state->lang = LANG_VIVN; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_ZHHK: local_state->lang = LANG_ZHHK; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ENAU: local_state->lang = LANG_ENAU; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ENNZ: local_state->lang = LANG_ENNZ; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_MINZ: local_state->lang = LANG_MINZ; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_SMWS: local_state->lang = LANG_SMWS; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_FJFJ: local_state->lang = LANG_FJFJ; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_TLPH: local_state->lang = LANG_TLPH; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_HWUS: local_state->lang = LANG_HWUS; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ENZA: local_state->lang = LANG_ENZA; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_AFZA: local_state->lang = LANG_AFZA; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_AREG: local_state->lang = LANG_AREG; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_SWKE: local_state->lang = LANG_SWKE; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_AMET: local_state->lang = LANG_AMET; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_YONG: local_state->lang = LANG_YONG; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ENNG: local_state->lang = LANG_ENNG; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ARMA: local_state->lang = LANG_ARMA; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ARIQ: local_state->lang = LANG_ARIQ; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_KUIQ: local_state->lang = LANG_KUIQ; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_MSMY: local_state->lang = LANG_MSMY; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_UZUZ: local_state->lang = LANG_UZUZ; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ENCA: local_state->lang = LANG_ENCA; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ESAR: local_state->lang = LANG_ESAR; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_ENPG: local_state->lang = LANG_ENPG; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_TYPF: local_state->lang = LANG_TYPF; mark_settings_dirty(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:

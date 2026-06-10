@@ -44,6 +44,30 @@ fetch "$BASE/notosansarabic/NotoSansArabic%5Bwdth%2Cwght%5D.ttf" \
 fetch "$BASE/notosansdevanagari/NotoSansDevanagari%5Bwdth%2Cwght%5D.ttf" \
       "noto-sans-devanagari/NotoSansDevanagari-Regular.ttf"
 
+fetch "$BASE/notosansbengali/NotoSansBengali%5Bwdth%2Cwght%5D.ttf" \
+      "noto-sans-bengali/NotoSansBengali-Regular.ttf"
+
+fetch "$BASE/notosanstelugu/NotoSansTelugu%5Bwdth%2Cwght%5D.ttf" \
+      "noto-sans-telugu/NotoSansTelugu-Regular.ttf"
+
+fetch "$BASE/notosanstamil/NotoSansTamil%5Bwdth%2Cwght%5D.ttf" \
+      "noto-sans-tamil/NotoSansTamil-Regular.ttf"
+
+fetch "$BASE/notosansthai/NotoSansThai%5Bwdth%2Cwght%5D.ttf" \
+      "noto-sans-thai/NotoSansThai-Regular.ttf"
+
+fetch "$BASE/notosansgeorgian/NotoSansGeorgian%5Bwdth%2Cwght%5D.ttf" \
+      "noto-sans-georgian/NotoSansGeorgian-Regular.ttf"
+
+fetch "$BASE/notosansarmenian/NotoSansArmenian%5Bwdth%2Cwght%5D.ttf" \
+      "noto-sans-armenian/NotoSansArmenian-Regular.ttf"
+
+fetch "$BASE/notosanstc/NotoSansTC%5Bwght%5D.ttf" \
+      "noto-sans-tc/NotoSansTC-Regular.ttf"
+
+fetch "$BASE/notosansethiopic/NotoSansEthiopic%5Bwdth%2Cwght%5D.ttf" \
+      "noto-sans-ethiopic/NotoSansEthiopic-Regular.ttf"
+
 fetch "$BASE/notoemoji/NotoEmoji%5Bwght%5D.ttf" \
       "Noto_Emoji/static/NotoEmoji-Medium.ttf"
 

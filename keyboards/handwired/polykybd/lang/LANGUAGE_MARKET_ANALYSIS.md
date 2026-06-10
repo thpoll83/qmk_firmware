@@ -31,6 +31,14 @@
 > missing radical **Z = 重 (U+91CD)** (new `_Cjk91cd_` single-codepoint NotoSansJP
 > font + `CJK_91CD` glyph).
 >
+> **Update (2026-06-10, "world batch"):** the Oceania + Africa candidates from
+> CLAUDE.md plus two computer-user picks per non-Europe tab shipped as enum
+> indices 58–80 (layout count 58 → 81): en-AU en-NZ mi-NZ sm-WS fj-FJ tl-PH
+> hw-US en-ZA af-ZA ar-EG sw-KE am-ET yo-NG en-NG ar-MA ar-IQ ku-IQ ms-MY uz-UZ
+> en-CA es-AR en-PG ty-PF. The fold-vs-clone-vs-new-layout calls follow this
+> report's methodology — see `FUTURE_LANGUAGES.md` "2026-06 world batch" for
+> the breakdown.
+>
 > **Then zh-CN was re-pointed to Pinyin (2026-06-08):** mainland Chinese is in
 > practice typed with a Pinyin IME on a **plain US-QWERTY** board (the keycaps carry
 > no Han glyphs), so zh-CN's key column was **emptied** — it now folds onto en-US like

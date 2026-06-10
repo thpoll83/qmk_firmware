@@ -34,7 +34,7 @@ The host software (`PolyKybdHost/`) communicates with this firmware over a custo
 | `split_sync.c` | CRC32-validated transactions that synchronise overlays and state to the other half |
 | `state.c` | `poly_sync_t` / `poly_layer_t` — shared state structs with CRC32, persisted via EEPROM |
 | `multicore_exec.c` | Offloads RLE decompression to RP2040 core1 via FIFO, keeping QMK's core0 responsive |
-| `lang/lang_lut.c` | 25-language lookup table (code-generated from `lang_lut.xlsx` via cog) |
+| `lang/lang_lut.c` | 81-language lookup table (code-generated from `lang_lut.xlsx` via cog) |
 
 ### HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
@@ -62,7 +62,7 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
 - **`fonts/generate_fonts.py`** — reads the YAML, runs `fontconvert` per entry, writes one header per category to `base/fonts/generated/`, and composes `base/fonts/gfx_used_fonts.h` (the `ALL_FONTS[]` table, with `IconsFont` prepended). `--check` flags stale headers for CI. Needs PyYAML + `fontconvert` on PATH (or `$FONTCONVERT`).
 - **`fonts/dl-fonts.sh`** — downloads the Noto source fonts first.
 - `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
-- **`fonts/gen-lang-fonts.sh`** — generates the two standalone headers for the language-selection layer (`_LL`): `base/fonts/flag_fonts.h` (27 country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`) and `base/fonts/lang_label_font.h` (a 6 px NotoSans label font). These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `split72/keymaps/default/keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes.
+- **`fonts/gen-lang-fonts.sh`** — generates the two standalone headers for the language-selection layer (`_LL`): `base/fonts/flag_fonts.h` (country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically) and `base/fonts/lang_label_font.h` (a 6 px NotoSans label font). These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `split72/keymaps/default/keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes.
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.
 
 See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
@@ -71,7 +71,19 @@ See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build 
 
 ## Future language candidates
 
-Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-generated from `lang_lut.xlsx` via cog), (2) re-running `fonts/gen-lang-fonts.sh` to generate the flag glyph and update `flag_fonts.h`, (3) updating the host's `_LANG_REGION` map in `PolyKybdHost/polyhost/host.py` if the country code isn't already there. The host map covers all standard ISO 3166-1 alpha-2 country codes; only non-standard or private-use codes need a new entry added manually.
+Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-generated from `lang_lut.xlsx` via cog), (2) re-running `fonts/gen-lang-fonts.sh` to generate the flag glyph and update `flag_fonts.h`, (3) updating the host's `LANG_REGION` map in `PolyKybdHost/polyhost/services/lang_regions.py` if the country code isn't already there. The host map covers all standard ISO 3166-1 alpha-2 country codes; only non-standard or private-use codes need a new entry added manually. Full mechanics in [`lang/FUTURE_LANGUAGES.md`](keyboards/handwired/polykybd/lang/FUTURE_LANGUAGES.md) (the "Implementation playbook").
+
+> **STATUS (2026-06-10): the whole Oceania + Africa candidate set below is IMPLEMENTED**, together
+> with two extra computer-user picks per non-Europe region tab (see the
+> "2026-06 world batch" section in `lang/FUTURE_LANGUAGES.md`): Americas `en-CA` `es-AR`,
+> Middle East `ar-IQ` `ku-IQ` (Sorani), Africa `en-NG` `ar-MA`, Asia `ms-MY` `uz-UZ`,
+> Oceania `en-PG` `ty-PF`. 23 new entries, `NUM_LANG` 58 → 81 (6 GET_LANG_LIST packets).
+> Protocol codes are fixed 2+2 chars, so ISO-639-2/3 languages use pseudo-codes stored
+> verbatim: Hawaiian = **`hw-US`** (not `haw`), Sorani = **`ku-IQ`** (not `ckb`), and PNG is
+> covered as **`en-PG`** (Tok Pisin has no 2-letter code and types on plain Latin anyway).
+> `am-ET` got a real Ethiopic column (xkb `et(olpc)`, new NotoSansEthiopic font);
+> the plain-QWERTY locales (`en-AU/NZ/ZA/CA/PG`, `fj-FJ`, `tl-PH`, `sw-KE`, `ms-MY`) are
+> id-ID-style folds (flag + OS locale switch, en-US keycaps).
 
 ### Oceania
 | Code | Language / Country | Notes |
@@ -80,7 +92,7 @@ Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-
 | `en-NZ` | English / New Zealand | High tech adoption; ~5 M users |
 | `tl-PH` | Filipino / Philippines | Largest Pacific-adjacent user base; geographically SE Asia — host places it in **Asia** submenu via `PH` |
 | `mi-NZ` | Māori / New Zealand | Official NZ language; Latin + macrons (ā ē ī ō ū) + okina; active digital revitalisation |
-| `haw-US` | Hawaiian / United States | Polynesian; Latin + okina (ʻ) + kahakō macrons; `US` country code puts it in **Americas**. To land in Oceania a pseudo-locale like `haw-HI` could be used, but `HI` is not an ISO 3166-1 code — it would need a manual `"HI": "Oceania"` entry in the host's `_LANG_REGION` map, and `lang_lut.c` would store the non-standard code verbatim. |
+| `hw-US` | Hawaiian / United States | Polynesian; Latin + okina (ʻ) + kahakō macrons; `US` country code puts it in **Americas**. Implemented as pseudo-code `hw-US` — the HID protocol carries fixed 4-char codes, so ISO-639-2 `haw` cannot be stored. |
 | `sm-WS` | Samoan / Samoa | Most widely spoken Polynesian language; large diaspora in NZ/AU; Latin with macrons |
 | `fj-FJ` | Fijian / Fiji | Most developed Pacific island nation outside AU/NZ; Latin-based |
 

@@ -411,61 +411,41 @@ void clear_line(int8_t from_x, int8_t to_x, int8_t y) {
 }
 
 void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height) {
+    // Clear a "courtyard" behind the glyph: every buffer pixel within Chebyshev
+    // distance CY_RADIUS of any glyph-on pixel — i.e. a square-kernel morphological
+    // dilation of the glyph mask. This traces the glyph contour with an even margin:
+    // unlike a per-row [first,last] span it never bridges horizontally-separated
+    // strokes (e.g. the two marks of " or the legs of M), and unlike per-column
+    // extents it does not fill interior vertical gaps (= , ü , " keep their holes).
+    // Implemented per horizontal run of on-pixels (so a solid row is a few clears,
+    // not one-per-pixel): each run [run_start, run_end] is cleared, widened by
+    // CY_RADIUS on each side, across the rows [bmp_y-CY_RADIUS, bmp_y+CY_RADIUS].
+    // clear_line / CLEAR_PIXEL_CLIPPED clip to the buffer, so the margin spilling
+    // past the glyph edges (the intended courtyard) is fine. The glyph itself is
+    // drawn right after this call, so clearing its own pixels here is harmless.
+    enum { CY_RADIUS = 3 };
     uint16_t offset = 0;
-    int8_t first = 127;
-    int8_t last=0;
-    int8_t num_empty = 0;
     int8_t bits = 0, bit = 0;
-    bool   prev_empty = true;   // was the previous row empty? — detects a glyph block's top edge
-    int8_t top_count = 0;       // content rows since the current block's top edge (0 = topmost)
     for (int8_t bmp_y = 0; bmp_y < bmp_height; ++bmp_y) {
-        num_empty++;
+        int8_t run_start = -1;
         for (int8_t bmp_x = 0; bmp_x < bmp_width; ++bmp_x) {
             if (!(bit++ & 7)) {
                 bits = pgm_read_byte(&pgm_bmp[offset++]);
             }
-            if (bits & 0x80) {
-                first = PK_MIN(bmp_x-3, first);
-                last = PK_MAX(bmp_x+3, last);
-                num_empty = 0;
-            }
+            bool on = (bits & 0x80) != 0;
             bits <<= 1;
-
-        }
-        if(first!=127) {
-            if(num_empty==0) {
-                // Content row. Taper the cleared span as it approaches the glyph's
-                // top edge so we don't blindly clear the full first..last span
-                // between two lonely far-apart pixels on the first lines. The taper
-                // is continuous (monotonic insets 16/12/8/4/2/0): a thin margin fades
-                // in two rows ABOVE the top edge (insets 16/12 — kept like before),
-                // the top content line is narrowest (inset 8), then it widens over
-                // the next two rows (4/2) to the full span and stays full for the
-                // body. mirrors the exponential fade the outer/bottom edge gets as it
-                // moves away from the glyph below. top_count restarts at every new
-                // content block (prev_empty) so multi-part glyphs (e.g. umlaut dots
-                // above a body) each fade in at their own top.
-                top_count = prev_empty ? 0 : (top_count < 3 ? top_count + 1 : 3);
-                if(top_count==0) {
-                    clear_line(x+first+16, x+last-16, bmp_y + y-2);  // thin margin above,
-                    clear_line(x+first+12, x+last-12, bmp_y + y-1);  // fading to a point
+            if (on) {
+                if (run_start < 0) run_start = bmp_x;     // run begins
+            } else if (run_start >= 0) {                   // run [run_start, bmp_x-1] ends
+                for (int8_t dy = -CY_RADIUS; dy <= CY_RADIUS; ++dy) {
+                    clear_line(x + run_start - CY_RADIUS, x + bmp_x + CY_RADIUS, bmp_y + y + dy);
                 }
-                int8_t inset = (top_count==0) ? 8 : (top_count==1) ? 4 : (top_count==2) ? 2 : 0;
-                clear_line(x+first+inset, x+last-inset, bmp_y + y);
-                prev_empty = false;
-            } else {
-                num_empty = PK_MIN(num_empty, 6);
-                clear_line(x+first, x+last, bmp_y + y);
-                prev_empty = true;
+                run_start = -1;
             }
-            uint8_t dist;
-            PK_POW(dist, 2, (num_empty+1));
-            first+=dist;
-            last -=dist;
-            if(first>=last) {
-                first = 127;
-                last=0;
-                num_empty = 0;
+        }
+        if (run_start >= 0) {                              // run runs to the row's end
+            for (int8_t dy = -CY_RADIUS; dy <= CY_RADIUS; ++dy) {
+                clear_line(x + run_start - CY_RADIUS, x + bmp_width + CY_RADIUS, bmp_y + y + dy);
             }
         }
     }

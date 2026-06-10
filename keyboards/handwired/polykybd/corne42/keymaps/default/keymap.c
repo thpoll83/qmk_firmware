@@ -198,6 +198,11 @@ void sync_and_refresh_displays(void) {
             // post-cold-flash settling window, kept "connected" for ~4 s by the
             // raised SPLIT_MAX_CONNECTION_ERRORS. See split72 keymap for detail.
             if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 1)) {
+                // Failed: clearing state_diff skips the copy_global_state() below,
+                // so global stays != local and differ() re-fires the send next
+                // pass. The diff IS the retry queue; global only advances to local
+                // on a successful sync — so 1 vs 10 attempts changes only where
+                // retries happen, never whether the update is delivered.
                 state_diff = false;
                 uprint("USER_SYNC_POLY_DATA failed to send\n");
             }
@@ -223,7 +228,7 @@ void sync_and_refresh_displays(void) {
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         if ( layer_diff ) {
             if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 1)) {
-                layer_diff = false;
+                layer_diff = false; // skip copy_global_layer() below; diff persists, re-fires next pass
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
@@ -291,12 +296,12 @@ void sync_and_refresh_displays(void) {
         if (contrast_changed || idle_changed) {
             set_displays(get_local_state()->contrast, in_idle_mode);
         }
-        copy_global_state(get_local_state());
+        copy_global_state(get_local_state());   // advance global only on a synced change (see send site)
         request_disp_refresh();
     }
 
     if(layer_diff) {
-        copy_global_layer(get_local_layer());
+        copy_global_layer(get_local_layer());   // advance global only on a synced change (see send site)
         request_disp_refresh();
     }
 

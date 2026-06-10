@@ -1000,6 +1000,19 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_ENFM: return U"en-FM";
         case KCL_FRNC: return U"fr-NC";
         case KCL_TOTO: return U"to-TO";
+        case KCL_EUES: return U"eu-ES";
+        case KCL_GLES: return U"gl-ES";
+        case KCL_RMCH: return U"rm-CH";
+        case KCL_CYGB: return U"cy-GB";
+        case KCL_GAIE: return U"ga-IE";
+        case KCL_MTMT: return U"mt-MT";
+        case KCL_LBLU: return U"lb-LU";
+        case KCL_SENO: return U"se-NO";
+        case KCL_GNPY: return U"gn-PY";
+        case KCL_QUPE: return U"qu-PE";
+        case KCL_AYBO: return U"ay-BO";
+        case KCL_NVUS: return U"nv-US";
+        case KCL_NHMX: return U"nh-MX";
         //[[[end]]]
         default:
             return NULL;
@@ -1916,6 +1929,19 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_ENFM: local_state->lang = LANG_ENFM; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_FRNC: local_state->lang = LANG_FRNC; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_TOTO: local_state->lang = LANG_TOTO; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_EUES: local_state->lang = LANG_EUES; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_GLES: local_state->lang = LANG_GLES; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_RMCH: local_state->lang = LANG_RMCH; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_CYGB: local_state->lang = LANG_CYGB; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_GAIE: local_state->lang = LANG_GAIE; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_MTMT: local_state->lang = LANG_MTMT; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_LBLU: local_state->lang = LANG_LBLU; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_SENO: local_state->lang = LANG_SENO; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_GNPY: local_state->lang = LANG_GNPY; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_QUPE: local_state->lang = LANG_QUPE; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_AYBO: local_state->lang = LANG_AYBO; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_NVUS: local_state->lang = LANG_NVUS; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_NHMX: local_state->lang = LANG_NHMX; mark_settings_dirty(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:

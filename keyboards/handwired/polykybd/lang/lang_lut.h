@@ -173,6 +173,19 @@ enum lang_layer {
     LANG_ENFM,
     LANG_FRNC,
     LANG_TOTO,
+    LANG_EUES,
+    LANG_GLES,
+    LANG_RMCH,
+    LANG_CYGB,
+    LANG_GAIE,
+    LANG_MTMT,
+    LANG_LBLU,
+    LANG_SENO,
+    LANG_GNPY,
+    LANG_QUPE,
+    LANG_AYBO,
+    LANG_NVUS,
+    LANG_NHMX,
     //[[[end]]]
     NUM_LANG };
 

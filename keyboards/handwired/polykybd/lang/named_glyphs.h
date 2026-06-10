@@ -1662,4 +1662,8 @@
 #define ETHIOPIC_1370               	U"\x1370"
 #define ETHIOPIC_1371               	U"\x1371"
 #define ETHIOPIC_137B               	U"\x137B"
+#define A_WITH_ACUTE                	U"\xC1"
+#define A_WITH_ACUTE_SMALL          	U"\xE1"
+#define LATIN_01EA                  	U"\x1EA"
+#define LATIN_01EB                  	U"\x1EB"
 //[[[end]]]

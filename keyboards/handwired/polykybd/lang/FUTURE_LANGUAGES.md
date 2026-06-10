@@ -16,6 +16,64 @@ Adding a language therefore = three things:
 
 ---
 
+## 2026-06 Europe + Americas minority/sibling batch — Wave 1 IMPLEMENTED (2026-06-10): 13 Latin locales
+
+> **STATUS: DONE (Wave 1).** 13 new entries (enum indices 143–155, `NUM_LANG`
+> 143 → 156, GET_LANG_LIST now 11 ASCII packets), **all Latin — no new font**.
+> The "natural-sibling / minority-recognition" set from the CLAUDE.md gap
+> analysis, region tabs **Europe** (+8) and **Americas** (+5):
+>
+> - **Europe (+8)**: `eu-ES` Basque · `gl-ES` Galician (clone es-ES) · `rm-CH`
+>   Romansh (clone de-CH) · `lb-LU` Luxembourgish (clone fr-CH) · `cy-GB` Welsh
+>   (clone en-GB + AltGr ŵ ŷ) · `ga-IE` Irish (clone en-GB + AltGr fadas á é í ó ú,
+>   xkb `ie`) · `mt-MT` **Maltese** (clone en-GB + ċ ġ ħ ż on the bracket/`<>`
+>   keys + €/£ + AltGr grave vowels, xkb `mt`) · `se-NO` **Northern Sami**
+>   (partial new map from xkb `no(smi)`: á š ŧ č ž đ ŋ on the home positions with
+>   the displaced q w y x as AltGr previews, Nordic å ø æ on `[ ; '`).
+> - **Americas (+5)**: `gn-PY` Guarani · `qu-PE` Quechua · `ay-BO` Aymara ·
+>   `nh-MX` Nahuatl (all clone es-MX/latam) · `nv-US` **Navajo** (US base + AltGr
+>   ł ą ę į ǫ).
+>
+> **Why these are clones/folds, not new layouts**: Basque/Galician type on the
+> Spanish layout; Romansh/Luxembourgish on the Swiss QWERTZ; Guarani/Quechua/
+> Aymara/Nahuatl on the Latin-American "latam" layout — so each is a cell-for-cell
+> clone of its source column (AltGr legends inherited). Welsh/Irish/Navajo add a
+> handful of AltGr letters on top of a UK/US base; **Maltese and Northern Sami are
+> the only genuine new mappings** (transcribed from xkb).
+>
+> **New named glyphs (4)**: `A_WITH_ACUTE`/`A_WITH_ACUTE_SMALL` (Á á, Irish & Sami
+> fada) and `LATIN_01EA`/`LATIN_01EB` (Ǫ ǫ, Navajo). All four already fall inside
+> the rendered Latin font ranges (`_SupAndExtA_` 0xA1–0x17E and `_LatinExtB_`
+> 0x180–0x24F), so **no font regeneration** was needed — just the name→codepoint
+> rows. Every other glyph (ċ ġ ħ ż, ŋ ŧ č š ž đ, ŵ ŷ, ł ą ę į, ĩ ũ, å ø æ) already
+> existed as a named glyph.
+>
+> **Frozen table**: only `nh-MX` (Nahuatl, no ISO-639-1 code) needed a pseudo-code
+> — `nh` appended to `PRIVATE_LANGS` in `iso_lang_country.py` (synced byte-identical
+> to all 3 repos, `cmp`-verified). The other 12 are standard ISO 639-1/3166-1.
+>
+> **Host**: only `lu=ch,fr` added to `forced_country_match.txt` (Luxembourg has no
+> xkb layout); everything else resolves natively (eu/gl→es, rm→ch, cy→gb, mt→mt,
+> se→no) or via existing folds (ga via `ie=gb,us`; gn/qu/ay/nh via latam; nv via
+> us). No `LANG_REGION` / `LANG_REGION_OVERRIDE` change (all countries already
+> mapped to the right continent). `poly_kybd_mock_test.py` updated 143 → 156.
+>
+> Mechanics: `lang/_gen_euam_cols.py` → `/tmp/euam_cols.json` + `/tmp/euam_named.json`
+> → `_patch_named_glyphs.py` + `_patch_xlsx.py` (surgical sheet rewrites, caches
+> intact) → re-cog of all 6 generated files → `lang/_gen_region_tables.py`
+> regenerated `lang_layer.c` REGION_OFFSET/REGION_LANGS from the host
+> `lang_regions.py` grouping. **Flags** (`flag_fonts.h`) regenerated with the
+> pinned fontconvert (existing 143 byte-identical, +13 new). Both `split72:default`
+> and `corne42:default` build clean; all 419 host tests pass.
+>
+> **Wave 2 (next, needs new fonts)**: Middle East `ps-AF` Pashto (extends the
+> Arabic font) + the indigenous syllabaries `ck-US` **Cherokee** (Cherokee
+> syllabary), `iu-CA` **Inuktitut** + `cr-CA` **Cree** (Canadian Aboriginal
+> Syllabics). These are deferred from this batch because they each require a new
+> Noto font + the pinned-fontconvert regeneration.
+
+---
+
 ## 2026-06 compat easy-win batch — IMPLEMENTED (2026-06-10): 62 fold/clone locales
 
 > **STATUS: DONE.** 62 new entries (enum indices 81–142, `NUM_LANG` 81 → 143,

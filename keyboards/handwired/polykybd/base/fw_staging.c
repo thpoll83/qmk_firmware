@@ -428,6 +428,10 @@ bool fw_staging_fw_up_active(void) {
     return s_fw_up_active;
 }
 
+uint32_t fw_staging_next_offset(void) {
+    return s_next_offset;
+}
+
 bool fw_staging_written(void) {
     return s_next_offset > 0;
 }

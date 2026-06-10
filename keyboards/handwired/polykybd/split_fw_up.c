@@ -97,9 +97,14 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
 }
 
 // Slave writes one firmware chunk to its staging area.
+// Replies with the identity-bound fw_up_chunk_reply_t (ack + post-RPC write
+// cursor) so the master can tell a genuine ACK from a stale previous reply —
+// see the struct comment in split_fw_up.h.
 void user_sync_fw_up_chunk_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len != sizeof(fw_up_chunk_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    if (in_len != sizeof(fw_up_chunk_sync_t) || !in_data || out_len != sizeof(fw_up_chunk_reply_t) || !out_data) return;
     const fw_up_chunk_sync_t *msg = (const fw_up_chunk_sync_t *)in_data;
+    fw_up_chunk_reply_t *reply = (fw_up_chunk_reply_t *)out_data;
+    memset(reply, 0, sizeof(*reply));
     uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
     uint8_t ack;
     if (crc32 != msg->crc32) {
@@ -132,7 +137,8 @@ void user_sync_fw_up_chunk_handler(uint8_t in_len, const void* in_data, uint8_t 
         ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
     }
     fw_staging_note_chunk_call(msg->offset, ack);
-    ((poly_sync_reply_t *)out_data)->ack = ack;
+    reply->ack         = ack;
+    reply->next_offset = fw_staging_next_offset();
 }
 
 // Slave verifies staged CRC and arms the commit flag.

@@ -7,6 +7,7 @@
 #include "config.h"
 #include "split_fw_up.h"
 #include "bridge_helper.h"
+#include "polymod_crc32.h"
 #include <transactions.h>
 #include "base/fw_staging.h"
 #include "hardware/flash.h"
@@ -167,11 +168,39 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // Relay to slave FIRST so master's s_next_offset only advances after slave ACKs.
             // This keeps both write cursors in sync: if the relay fails, the host can safely
             // retry the same chunk and master will accept it (offset still matches).
+            //
+            // The reply is the identity-bound fw_up_chunk_reply_t, NOT the bare 1-byte
+            // poly_sync_reply_t: a chunk only counts as delivered when the slave's
+            // post-RPC write cursor moved PAST this chunk's offset.  With the bare ACK,
+            // a stale reply left over from the previous chunk was indistinguishable
+            // from the real one and silently desynchronised the cursors — the slave
+            // ended up one chunk behind and rejected the whole rest of the stream
+            // (2026-06-10, updates dying at 6% / 83%).  A duplicate re-send of an
+            // already-staged chunk has next_offset > offset and passes (idempotent).
             fw_up_chunk_sync_t chunk_msg;
             chunk_msg.offset = offset;
             memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
-            chunk_msg.crc32 = 0;
-            uint8_t slave_ack = send_to_bridge(USER_SYNC_FW_UP_CHUNK, &chunk_msg, sizeof(chunk_msg), 10);
+            chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
+            uint8_t slave_ack = SYNC_CRC32_ERR;
+            for (uint8_t retry = 0; retry < 10; ++retry) {
+                fw_up_chunk_reply_t chunk_reply;
+                memset(&chunk_reply, 0, sizeof(chunk_reply));
+                chunk_reply.ack = SYNC_CRC32_ERR;
+                bool sync_success = transaction_rpc_exec(USER_SYNC_FW_UP_CHUNK, sizeof(chunk_msg), &chunk_msg,
+                                                         sizeof(chunk_reply), &chunk_reply);
+                if (sync_success && chunk_reply.ack == SYNC_ACK && chunk_reply.next_offset > offset) {
+                    slave_ack = SYNC_ACK;
+                    if (debug_enable && retry > 0) {
+                        uprintf("FW_UP_CHUNK relay ok on retry %u (offset=%lu slave_next=%lu)\n",
+                                retry, offset, chunk_reply.next_offset);
+                    }
+                    break;
+                }
+                if (debug_enable) {
+                    uprintf("FW_UP_CHUNK relay retry %u (offset=%lu success=%d ack=0x%02x slave_next=%lu)\n",
+                            retry, offset, (int)sync_success, chunk_reply.ack, chunk_reply.next_offset);
+                }
+            }
             // First-failure diagnostic: when a chunk doesn't reach the slave,
             // immediately query the slave's internal state so we can tell from
             // the master serial log whether the slave is fully hung (status RPC
@@ -199,6 +228,25 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
 #endif
             memset(data, 0, length);
             memcpy(data, ok ? "P\x41." : "P\x41!", 3);
+            if (!ok) {
+                // Tell the host where the stream can be resumed: the lower of the
+                // two halves' write cursors.  Both halves ACK duplicate chunks
+                // idempotently, so the host can rewind to this offset and re-send
+                // from there instead of aborting the whole update.  If the slave
+                // is unreachable its cursor is unknown — report the master's own
+                // (the host will retry the current chunk with backoff).
+                uint32_t resume = fw_staging_next_offset();
+                fw_up_status_request_t sreq = { .crc32 = 0, .dummy = 0 };
+                fw_up_status_reply_t   srep;
+                memset(&srep, 0, sizeof(srep));
+                if (transaction_rpc_exec(USER_SYNC_FW_UP_STATUS, sizeof(sreq), &sreq, sizeof(srep), &srep) &&
+                    srep.crc32 == crc32_1byte((const uint8_t *)&srep.status, sizeof(srep.status), 0) &&
+                    srep.status.next_offset < resume) {
+                    resume = srep.status.next_offset;
+                }
+                memcpy(&data[3], &resume, 4);
+                uprintf("FW_UP_CHUNK: NACK offset=%lu resume=%lu\n", offset, resume);
+            }
             raw_hid_send(data, length);
             return true;
         }

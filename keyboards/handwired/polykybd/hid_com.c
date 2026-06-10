@@ -538,6 +538,37 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x1A.", 3);
                 raw_hid_send(data, length);
                 break;
+            case 27: //packed lang list: 1 count byte + (ISO 639-1 idx, ISO 3166-1 idx) per lang
+                memset(data, 0, length);
+                /*[[[cog
+                import sys
+                sys.path.insert(0, os.path.join(os.path.dirname(cog.inFile), "lang"))
+                from iso_lang_country import encode_pair
+                # Payload: count, then 2 index bytes per language (see lang/iso_lang_country.py).
+                packed = [len(languages)]
+                for lang in languages:
+                    packed += list(encode_pair(lang))
+                CHUNK = RAW_EPSIZE - 3  # 61 payload bytes after the 3-byte "P\x1b." header
+                for off in range(0, len(packed), CHUNK):
+                    seg = packed[off:off+CHUNK]
+                    # All bytes emitted as \xNN (incl. header) so no literal char ever
+                    # follows a hex escape -> avoids C's greedy \x escape swallowing it.
+                    lit = "\\x50\\x1b\\x2e" + "".join(f"\\x{b:02x}" for b in seg)
+                    cog.outl(f'memcpy(data, "{lit}", {3 + len(seg)});')
+                    cog.outl('raw_hid_send(data, length);')
+                    if off + CHUNK < len(packed):
+                        cog.outl('memset(data, 0, length);')
+                ]]]*/
+                memcpy(data, "\x50\x1b\x2e\x51\x25\xe8\x20\x38\x2f\x4a\x27\x43\x82\xb7\x48\x6d\xa4\xe0\x54\x79\x4a\x71\x07\xc0\x24\x58\xaa\xe5\x87\xbe\x0d\x23\x50\x7c\x0e\x15\x80\xb2\x86\xbc\xb6\x2f\x73\xa5\x38\x66\x99\xc4\x2c\x45\x74\xa6\x1f\x3a\x3d\x63\x1b\x37\x3b\x61\x8f\xc9\x61\x84", 64);
+                raw_hid_send(data, length);
+                memset(data, 0, length);
+                memcpy(data, "\x50\x1b\x2e\x63\x86\x28\x3f\x82\x1e\x95\xbd\x67\x8f\x2a\x6b\x39\x68\x6a\x68\x71\xa7\x69\x92\xab\xb1\x25\x4c\x27\x9c\x20\x2a\x2f\x13\x2f\x25\x9e\xd9\x12\x68\x9c\x68\x9b\x68\xb6\xe3\x4c\x4e\x3e\x06\x41\x64\x0b\x0f\x47\x6c\xae\xf0\xb6\x5e\x25\x0c\x25\xaa\x66", 64);
+                raw_hid_send(data, length);
+                memset(data, 0, length);
+                memcpy(data, "\x50\x1b\x2e\xaa\x91\xf3\x2d\x46\xa1\xb0\xb8\xe8\x25\xf6\x03\xf6\x07\x40\x9a\x72\x05\x44\xb4\xa3\x25\xa3\x07\x88\x07\x6a\x57\x6a\x6b\x9d\xac\xea\x25\x25\x27\x09\x25\xaf\xa8\xae", 44);
+                raw_hid_send(data, length);
+                //[[[end]]]
+                break;
             default:
                 if (hid_fw_up_receive(data, length)) {
                     break;

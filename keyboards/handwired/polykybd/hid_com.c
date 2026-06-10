@@ -37,6 +37,11 @@ import cog
 import os
 from textwrap import wrap
 from openpyxl import load_workbook
+# Shared cog constant for all language-list report generators below (mirrors the
+# C RAW_EPSIZE macro = raw HID report size). Defined here, in the first cog block,
+# so the per-command blocks chunk payloads against one value instead of each
+# redefining it.
+RAW_EPSIZE = 64
 wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "lang", "lang_lut.xlsx"))
 sheet = wb['key_lut']
 
@@ -588,8 +593,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 packed = [len(languages)]
                 for lang in languages:
                     packed += list(encode_pair(lang))
-                RAW_EPSIZE = 64        # raw HID report size; was set by the retired cmd 8 block
-                CHUNK = RAW_EPSIZE - 3  # 61 payload bytes after the 3-byte "P\x1b." header
+                CHUNK = RAW_EPSIZE - 3  # 61 payload bytes after the 3-byte "P\x1b." header (RAW_EPSIZE from the top cog block)
                 for off in range(0, len(packed), CHUNK):
                     seg = packed[off:off+CHUNK]
                     # All bytes emitted as \xNN (incl. header) so no literal char ever

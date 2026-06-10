@@ -54,6 +54,7 @@ enum my_keycodes {
     KC_TOGMODS,
     KC_TOGTEXT,
     KC_RGB_TOG,
+    KC_STORE_EE,   // flush all user state to EEPROM now (both halves)
     /*[[[cog
       for idx in range(10):
           cog.out(f"KC_LAT{idx}, ")
@@ -78,17 +79,42 @@ enum my_keycodes {
     // Page navigation (follow sequentially after CAT_BASE + 12 slots)
     KC_EMJ_PAGE_PREV = KC_EMJ_CAT_BASE + 12,
     KC_EMJ_PAGE_NEXT,
+    // Top-row MRU controls: "Preset" loads the built-in recents, "Clear" empties them.
+    KC_EMJ_PRESET,
+    KC_EMJ_CLEAR,
+    // MRU slot keys: KC_EMJ_MRU_BASE + n  (n = 0 .. MRU_CAP-1)
+    KC_EMJ_MRU_BASE,
     // Emoji slot keys: KC_EMJ_SLOT_BASE + n  (n = 0 .. EMJ_SLOTS_PER_PAGE-1)
-    KC_EMJ_SLOT_BASE,
+    KC_EMJ_SLOT_BASE = KC_EMJ_MRU_BASE + 12,
     // Sentinel — must stay <= QK_USER_MAX (0x7FFF)
     KC_EMJ_END = KC_EMJ_SLOT_BASE + 50,
+
+    // ── Language selection layer keycodes (region tabs + paged slots) ─────────
+    // The _LL layer mirrors the emoji layer: a top row of continent region tabs
+    // (KC_LANG_CAT_BASE + n), then generic page-relative slot keycodes (resolved
+    // to a LANG_* index at render/press time) so the same physical keys can page
+    // through every language in the active region.
+    KC_LANG_CAT_BASE,                              // region tabs: + n (n = 0 .. NUM_LANG_REGIONS-1)
+    // Page navigation (follow sequentially after CAT_BASE + 12 slots, like emoji)
+    KC_LANG_PAGE_PREV = KC_LANG_CAT_BASE + 12,
+    KC_LANG_PAGE_NEXT,
+    KC_LANG_PRESET,
+    KC_LANG_CLEAR,
+    KC_LANG_MRU_BASE,                              // + n  (n = 0 .. MRU_CAP-1)
+    KC_LANG_SLOT_BASE = KC_LANG_MRU_BASE + 12,     // + n  (n = 0 .. LANG_SLOTS_PER_PAGE-1)
+    KC_LANG_END = KC_LANG_SLOT_BASE + 58,          // headroom for all NUM_LANG slots
 };
 static_assert((int)KC_LAT9 <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_LAT9 < (int)KCL_ENUS, "Overlap detected");
-static_assert((int)KC_EMJ_END <= 0x7FFF, "Emoji keycodes exceed QK_USER_MAX");
+static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))
 #define ESLOT(n)       ((uint16_t)((uint16_t)KC_EMJ_SLOT_BASE  + (uint16_t)(n)))
+#define EMRU(n)        ((uint16_t)((uint16_t)KC_EMJ_MRU_BASE   + (uint16_t)(n)))
+// Convenience macros for the language selection layer keymap entries.
+#define LCAT(n)        ((uint16_t)((uint16_t)KC_LANG_CAT_BASE  + (uint16_t)(n)))
+#define LSLOT(n)       ((uint16_t)((uint16_t)KC_LANG_SLOT_BASE + (uint16_t)(n)))
+#define LMRU(n)        ((uint16_t)((uint16_t)KC_LANG_MRU_BASE  + (uint16_t)(n)))
 
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags);

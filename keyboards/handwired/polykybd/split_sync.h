@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "state.h"
+#include "mru.h"     // MRU_EMOJI_PACKED / MRU_CAP used by mru_sync_t below
 
 #include <stdint.h>
 
@@ -48,6 +49,17 @@ typedef struct _overlay_map_sync_t {
     uint8_t  mapping[HID_DATA_MAX];
 } overlay_map_sync_t;
 
+// Emoji + language MRU recents, pushed master->slave so both halves render the
+// top row identically. Sent only when the lists change (mru_sync_pending()).
+typedef struct _mru_sync_t {
+    uint32_t crc32;
+    uint8_t  emoji[MRU_EMOJI_PACKED];
+    uint8_t  lang[MRU_CAP];
+} mru_sync_t;
+// crc + packed emoji + lang are contiguous (no padding before `lang`); only these
+// bytes are transmitted, so the uint32 crc's tail padding never goes on the wire.
+#define MRU_SYNC_BYTES (4u + MRU_EMOJI_PACKED + MRU_CAP)
+
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
@@ -70,10 +82,18 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data);
 
+// Single-keycode write capped to the host-writable layers (same bound as
+// dynamic_keymap_set_buffer_poly) so the function layers (language, emoji, …) at
+// indices >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT stay read-only.
+void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode);
+
 void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
 // Handles incoming overlay mapping data on bridge with CRC32 validation.
 void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+
+// Handles incoming MRU (emoji + language recents) data on bridge with CRC32 validation.
+void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
 // Keyboard level code can change where VIA stores the magic.
 // The magic is the build date YYMMDD encoded as BCD in 3 bytes,

@@ -8,6 +8,8 @@
 #include "multicore_exec.h"
 #include "hid_com.h"
 #include "emoji/emoji_layer.h"
+#include "lang_layer.h"
+#include "mru.h"
 
 #include "base/overlay.h"
 #include "eeconfig.h"
@@ -52,6 +54,7 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
 #endif
             copy_local_state(incoming);
             emj_apply_sync(incoming->emj_category, incoming->emj_page);
+            lang_apply_sync(incoming->lang_page);
             if(newly_set & OVERLAY_ACTION_FLAGS) {
                 apply_overlay_action_flags(newly_set);
                 // Clear the bits locally so housekeeping has nothing to do.
@@ -63,6 +66,13 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
             if(newly_set & BOOTLOADER_DISPLAY) {
                 uprint("Slave: BOOTLOADER_DISPLAY received\n");
                 display_bootloader_message();
+            }
+            if(newly_set & SAVE_EEPROM) {
+                // Master pressed the store key — flush our own EEPROM too, but
+                // defer the write to housekeeping (never inside this handler).
+                request_eeprom_save();
+                // Edge-consumed: clear locally so it doesn't linger as a diff.
+                access_local_state()->overlay_flags &= ~SAVE_EEPROM;
             }
 #ifdef RGB_MATRIX_ENABLE
             // Disable RGB so the normal split transport restores master's config cleanly.
@@ -85,7 +95,9 @@ void user_sync_latin_ex_data_handler(uint8_t in_len, const void* in_data, uint8_
         if(crc32 == ((const latin_sync_t *)in_data)->crc32) {
             copy_global_latin_table((const latin_sync_t *)in_data);
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-            save_user_latin();
+            // Defer the flash write out of this UART transaction callback — the
+            // next flush (suspend / store key, save_all_dirty) persists it.
+            mark_latin_dirty();
             request_disp_refresh();
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
@@ -226,6 +238,14 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
     eeprom_update_block(data, (void *)(POLY_EEPROM_CONFIG_END + offset), clamped);
 }
 
+// Same layer cap as dynamic_keymap_set_buffer_poly, but for single-keycode writes:
+// the host may only remap layers below DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT, so the
+// language/emoji/etc. function layers above it can't be clobbered from the host.
+void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode) {
+    if (layer >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) return;
+    dynamic_keymap_set_keycode(layer, row, column, keycode);
+}
+
 // Handles dynamic keymap commands on the bridge with CRC32 validation, including keymap resets and key press events.
 void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len >= (sizeof(uint32_t)+1) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
@@ -239,7 +259,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     request_disp_refresh();
                     break;
                 case id_dynamic_keymap_set_keycode:
-                    dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+                    dynamic_keymap_set_keycode_poly(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
                     request_disp_refresh();
                     break;
                 case id_dynamic_keymap_set_buffer: {
@@ -273,14 +293,40 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
     }
 }
 
+// The MRU recents ride on the overlay-map transaction id (multiplexed by payload
+// size) so we stay within QMK's 32-transaction limit. The two payloads must keep
+// distinct sizes for the size-based dispatch in the handler below to work.
+_Static_assert(MRU_SYNC_BYTES != sizeof(overlay_map_sync_t),
+               "MRU and overlay-map payloads must differ in size (shared transaction id)");
+
 // Handles incoming overlay mapping data on bridge with CRC32 validation.
+// Also dispatches MRU snapshots, which share this transaction id (distinct size).
 void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len == MRU_SYNC_BYTES) {
+        user_sync_mru_data_handler(in_len, in_data, out_len, out_data);
+        return;
+    }
     if (in_len == sizeof(overlay_map_sync_t) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data != NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
         if (crc32 == data->crc32) {
             set_10bit_overlay_mapping((uint8_t *)data->mapping);
             request_disp_refresh();
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+        } else {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
+        }
+    }
+}
+
+// Handles incoming MRU recents (emoji + language) on the bridge with CRC32 validation.
+void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len == MRU_SYNC_BYTES && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data != NULL) {
+        uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
+        const mru_sync_t* data = (const mru_sync_t *)in_data;
+        if (crc32 == data->crc32) {
+            mru_apply_sync(data->emoji, data->lang);
+            request_disp_refresh();   // redraw the recents row on the slave
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;

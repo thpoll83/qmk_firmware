@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include "quantum.h"
+#include "mru.h"
 
 typedef struct _poly_layer_t {
     uint32_t      crc32;
@@ -24,6 +25,8 @@ typedef struct _poly_sync_t {
     // Emoji layer state — synced so both halves show the same category/page.
     uint8_t  emj_category;
     uint8_t  emj_page;
+    // Language layer page — synced so both halves show the same page of languages.
+    uint8_t  lang_page;
 } poly_sync_t;
 
 typedef struct _poly_last_t {
@@ -41,10 +44,20 @@ typedef struct _poly_eeconf_t {
     uint8_t brightness;
     uint16_t unused;
     uint8_t latin_ex[26];
+    // MRU recents for the emoji / language selection layers. Persisted only on a
+    // power-suspension event (and the host save command), and only when dirty.
+    // Emoji are bit-packed 14-bit category|offset codes; languages are LANG_* bytes.
+    uint8_t  mru_emoji[MRU_EMOJI_PACKED];
+    uint8_t  mru_lang[MRU_CAP];
 } poly_eeconf_t;
 
 
 static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");
+// The user datablock must fit inside the budget reserved ahead of the pinned
+// dynamic-keymap base (see DYNAMIC_KEYMAP_EEPROM_ADDR in config.h); otherwise it
+// would overlap the stored keymap. Raise POLY_EECONFIG_USER_RESERVED (a one-time
+// keymap relocation/reset) if this trips.
+static_assert(EECONFIG_USER_DATA_SIZE <= POLY_EECONFIG_USER_RESERVED, "poly_eeconf_t exceeds POLY_EECONFIG_USER_RESERVED — bump the reservation (one-time reset)");
 
 void reset_all_states_and_layers(void);
 
@@ -89,6 +102,14 @@ void save_user_settings(void);
 // Writes only the 26-byte latin extension table to EEPROM. Use when only latin mappings changed.
 void save_user_latin(void);
 
+// Writes the emoji/language MRU lists to EEPROM, but only if they changed since
+// the last load/save (mru_dirty()). Called on both halves from suspend (and on
+// the master from the host save command); each half persists its own copy.
+void save_user_mru_if_dirty(void);
+
+// Loads the persisted MRU lists from EEPROM into the RAM lists (mru_load()).
+void load_user_mru(void);
+
 // Saves both settings and latin table (convenience wrapper around the two above).
 void save_user_eeconf(void);
 
@@ -101,15 +122,22 @@ void inc_brightness(void);
 // Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT (deferred EEPROM write).
 void dec_brightness(void);
 
-// Marks settings as needing an EEPROM write (restarts the debounce window).
+// Marks settings (lang + brightness) as needing an EEPROM write at the next flush.
 void mark_settings_dirty(void);
 
-// Writes settings to EEPROM if a change is pending and the debounce period has elapsed.
-void brightness_save_if_pending(void);
-
-// Queues a default-layer EEPROM write to be executed from housekeeping (not from a sync handler).
+// Queues a default-layer EEPROM write — safe from a sync handler. Written at the next flush.
 void defer_default_layer_save(layer_state_t def_layer);
 
-// Writes the pending default layer to EEPROM if queued. Call from housekeeping_task_user().
-void default_layer_save_if_pending(void);
+// Marks the latin extension table as needing an EEPROM write (deferred to the next flush).
+void mark_latin_dirty(void);
+
+// Flushes every dirty user-state block (settings, latin, default layer, MRU) to
+// EEPROM at once. Call only at flush points (suspend / host shutdown / store key).
+void save_all_dirty(void);
+
+// Requests a deferred flush-all — safe from a sync handler (sets a flag only).
+void request_eeprom_save(void);
+
+// Performs the flush-all if one was requested. Call from housekeeping_task_user().
+void save_all_if_requested(void);
 

@@ -115,6 +115,18 @@ Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-
 - `keymap.c` `housekeeping_task_user()`: added `default_layer_save_if_pending()` call on both sides.
 - `brightness_save_if_pending()` was already deferred (5 s debounce, housekeeping) — no change needed there.
 
+**Superseded (2026-06, PR #63 "unify emoji & language layers")**: persistence moved to a
+**suspend-only dirty-flag model**. `defer_default_layer_save()` now just sets `g_def_layer_dirty`
+(+ pending value) and the actual write is folded into the centralized `save_all_dirty()` in
+`state.c`, which flushes every dirty block (settings / latin / default layer / MRU) at the real
+flush points only: USB suspend (`suspend_power_down_kb`), the host shutdown signal
+(`shutdown_user`), the firmware-update / `mcu_reset` paths in housekeeping, and the manual store
+key (`KC_STORE_EE` → `request_eeprom_save` → `save_all_if_requested`). Consequently
+`default_layer_save_if_pending()` was **removed** and is no longer called from
+`housekeeping_task_user()` — do NOT re-add a per-housekeeping default-layer drain (that was the
+old model and reintroduces the frequent in-housekeeping EEPROM write this very bug was about).
+Base-layer changes apply immediately and persist on the next suspend/reset/store.
+
 **How to confirm the fix worked**: reproduce by switching the default layer while typing on both halves. If the slave stays responsive, the sync-handler path is fixed.
 
 **If the bug reappears after this fix**, the remaining risk is the RP2040 wear-leveling consolidation (~50 ms page erase) coinciding with a split UART transaction window, triggered by `brightness_save_if_pending()` firing in housekeeping 5 s after a brightness key press. This is a statistical coincidence, not a guaranteed block. Mitigations to try in order:

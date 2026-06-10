@@ -83,7 +83,7 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
             data_len = 1;
             break;
         case id_dynamic_keymap_set_keycode:
-            dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+            dynamic_keymap_set_keycode_poly(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
             data_len = 6;
             break;
         case id_dynamic_keymap_set_buffer: {
@@ -320,7 +320,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 13: //set brightness
                 if ( data[HID_DATA_IDX] <= FULL_BRIGHT) {
                     local_state->contrast = data[HID_DATA_IDX];
-                    save_user_settings();
+                    mark_settings_dirty();
                     memset(data, 0, length);
                     memcpy(data, "P\x0d.", 3);
                     uprintf("Set brightness to: %u.\n", local_state->contrast);
@@ -478,6 +478,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 24: //display off
                 poly_suspend();
                 sync_and_refresh_displays();
+                // Treat host display-off (e.g. system going to sleep) as a cue to
+                // flush all dirty user state to EEPROM (dirty-gated, so cheap).
+                save_all_dirty();
                 set_last_update(-1);
                 memset(data, 0, length);
                 memcpy(data, "P\x18.", 3);
@@ -496,6 +499,16 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     raw_hid_send(data, length);
                     soft_reset_keyboard();
                 }
+                break;
+            // Flush all dirty user state to EEPROM (host shutdown/suspend signal).
+            // Master-only: HID commands run on the USB half. The slave flushes
+            // independently via its own suspend hook. (Distinct from KC_STORE_EE,
+            // which sets SAVE_EEPROM and syncs that flag to the slave — see base/com.h.)
+            case 26:
+                save_all_dirty();
+                memset(data, 0, length);
+                memcpy(data, "P\x1A.", 3);
+                raw_hid_send(data, length);
                 break;
             default:
                 if (hid_fw_up_receive(data, length)) {

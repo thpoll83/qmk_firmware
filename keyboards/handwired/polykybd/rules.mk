@@ -6,7 +6,7 @@ CFLAGS += -Wno-strict-prototypes
 # it must NOT be listed here too (a second copy in SRC causes a duplicate
 # definition at link time once the file defines symbols, e.g. the POLYKYBD_HIL
 # is_keyboard_master_impl override).
-SRC += side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c fill_overlay.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c
+SRC += side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c fill_overlay.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c
 
 # HIL test station build: fix the split role at compile time per side instead of
 # using VBUS detection, because both halves are USB-powered on the rig and the

@@ -105,7 +105,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RAW_USAGE_ID 0x62
 #define RAW_EPSIZE 64
 
+// Host-remappable layers (VIA-style dynamic keymap in EEPROM) are 0..8 — see the
+// DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT write cap below. Layers 9..12 (_SL, _LL,
+// _ADDLANG1, _EMJ) are served straight from the compiled keymap in flash by
+// poly_keycode_at()/keymap_key_to_keycode() in keymap.c, so they can't be remapped and
+// always reflect the flashed firmware (no keymap reset, no stale layout). QMK requires
+// DYNAMIC_KEYMAP_LAYER_COUNT >= the number of compiled layers, so it stays 13 even
+// though only 0..8 are actually dynamic.
 #define DYNAMIC_KEYMAP_LAYER_COUNT 13
+
+// Pin the dynamic-keymap / POLY custom-config base to a FIXED EEPROM address so that
+// growing EECONFIG_USER_DATA_SIZE (e.g. adding MRU/feature data) does NOT relocate the
+// stored keymap and force a "reset keymap" on every flash. We reserve a fixed user-data
+// budget rather than tracking the live EECONFIG_USER_DATA_SIZE; the actual size must stay
+// <= the reservation (static_assert in state.h). Bumping the reservation relocates the
+// keymap once (one final reset), then it stays put across firmware updates.
+#define POLY_EECONFIG_USER_RESERVED 128
+#define DYNAMIC_KEYMAP_EEPROM_ADDR  (EECONFIG_BASE_SIZE + EECONFIG_KB_DATA_SIZE + POLY_EECONFIG_USER_RESERVED)
+#define POLY_EEPROM_MAGIC_ADDR      DYNAMIC_KEYMAP_EEPROM_ADDR
 
 /* Status OLED — 128×64 */
 #define OLED_DISPLAY_128X64

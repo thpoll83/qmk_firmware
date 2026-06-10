@@ -122,6 +122,18 @@ void inc_brightness(void);
 // Decrements brightness by BRIGHT_STEP with clamping to MIN_BRIGHT (deferred EEPROM write).
 void dec_brightness(void);
 
+// Sets contrast to a deliberate user-chosen level and records it as the brightness
+// to persist (deferred EEPROM write). Transient contrast changes (suspend, idle
+// fade) must NOT use this — they write l_state.contrast directly.
+void set_user_brightness(uint8_t value);
+
+// Records the intended user brightness without marking settings dirty (boot-time
+// load, slave adopting an awake master's synced contrast).
+void note_user_brightness(uint8_t value);
+
+// The brightness to restore after idle/suspend (tracks unflushed changes).
+uint8_t get_user_brightness(void);
+
 // Marks settings (lang + brightness) as needing an EEPROM write at the next flush.
 void mark_settings_dirty(void);
 

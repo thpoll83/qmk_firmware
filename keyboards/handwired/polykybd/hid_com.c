@@ -319,8 +319,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
             case 13: //set brightness
                 if ( data[HID_DATA_IDX] <= FULL_BRIGHT) {
-                    local_state->contrast = data[HID_DATA_IDX];
-                    mark_settings_dirty();
+                    set_user_brightness(data[HID_DATA_IDX]);
                     memset(data, 0, length);
                     memcpy(data, "P\x0d.", 3);
                     uprintf("Set brightness to: %u.\n", local_state->contrast);
@@ -364,10 +363,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         suspend_wakeup_init_kb();
                     } else {
                         if (local_state->flags & DISP_IDLE) {
-                            // Contrast is cycling 0-49 during pulsing; restore saved brightness
-                            // so display_wakeup() conditions don't leave the display dark.
-                            poly_eeconf_t ee = load_user_eeconf();
-                            local_state->contrast = ee.brightness;
+                            // Contrast is cycling 0-49 during pulsing; restore the user
+                            // brightness so display_wakeup() conditions don't leave the
+                            // display dark.
+                            local_state->contrast = get_user_brightness();
                         }
                         local_state->flags &= ~((uint8_t)DISP_IDLE);
                         local_state->flags |= STATUS_DISP_ON;

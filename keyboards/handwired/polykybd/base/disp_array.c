@@ -416,6 +416,8 @@ void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], i
     int8_t last=0;
     int8_t num_empty = 0;
     int8_t bits = 0, bit = 0;
+    bool   prev_empty = true;   // was the previous row empty? — detects a glyph block's top edge
+    int8_t top_count = 0;       // content rows since the current block's top edge (0 = topmost)
     for (int8_t bmp_y = 0; bmp_y < bmp_height; ++bmp_y) {
         num_empty++;
         for (int8_t bmp_x = 0; bmp_x < bmp_width; ++bmp_x) {
@@ -432,17 +434,22 @@ void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], i
         }
         if(first!=127) {
             if(num_empty==0) {
-                // Top edge: taper the cleared span over 3 rows (insets 8/4/2),
-                // mirroring the exponential 2/4/8 fade the outer/bottom edge gets
-                // below — so the courtyard "lazily" narrows toward the glyph top
-                // instead of clearing the full first..last span abruptly.
-                clear_line(x+first+8, x+last-8, bmp_y + y-3);
-                clear_line(x+first+4, x+last-4, bmp_y + y-2);
-                clear_line(x+first+2, x+last-2, bmp_y + y-1);
+                // Content row. Taper the cleared span over the glyph's own first 3
+                // rows (insets 8/4/2: narrowest at the very top line, widening down
+                // to the full first..last span), mirroring the exponential 2/4/8 fade
+                // the outer/bottom edge gets as it moves away from the glyph below.
+                // This avoids blindly clearing the full span between two lonely far-
+                // apart pixels on the top line — the courtyard fades in toward the
+                // glyph body instead. top_count restarts at every new content block.
+                top_count = prev_empty ? 0 : (top_count < 3 ? top_count + 1 : 3);
+                int8_t inset = (top_count==0) ? 8 : (top_count==1) ? 4 : (top_count==2) ? 2 : 0;
+                clear_line(x+first+inset, x+last-inset, bmp_y + y);
+                prev_empty = false;
             } else {
                 num_empty = PK_MIN(num_empty, 6);
+                clear_line(x+first, x+last, bmp_y + y);
+                prev_empty = true;
             }
-            clear_line(x+first, x+last, bmp_y + y);
             uint8_t dist;
             PK_POW(dist, 2, (num_empty+1));
             first+=dist;

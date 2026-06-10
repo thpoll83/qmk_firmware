@@ -14,6 +14,13 @@ static poly_sync_t g_state;
 
 static bool g_brightness_dirty = false;   // lang + brightness need a flush
 
+// The brightness the user actually chose — the value that gets persisted.
+// l_state.contrast also carries transient values (DISP_OFF during suspend,
+// faded/pulsing levels during idle), and the flush points (suspend/shutdown)
+// run exactly when such a transient is live, so the save path must read this
+// snapshot instead of the live contrast.
+static uint8_t g_user_brightness = FULL_BRIGHT;
+
 static bool          g_def_layer_dirty = false;
 static layer_state_t g_def_layer_pending = 0;
 
@@ -160,7 +167,7 @@ void copy_global_latin_table(const latin_sync_t* value) {
 
 // Writes only lang+brightness+unused (4 bytes) to EEPROM.
 void save_user_settings(void) {
-    const poly_eeconf_t ee = { .lang = l_state.lang, .brightness = (uint8_t)(~l_state.contrast), .unused = 0 };
+    const poly_eeconf_t ee = { .lang = l_state.lang, .brightness = (uint8_t)(~g_user_brightness), .unused = 0 };
     eeconfig_update_user_datablock(&ee, 0, offsetof(poly_eeconf_t, latin_ex));
 }
 
@@ -221,6 +228,7 @@ void inc_brightness(void) {
     if (l_state.contrast > FULL_BRIGHT) {
         l_state.contrast = FULL_BRIGHT;
     }
+    g_user_brightness  = l_state.contrast;
     g_brightness_dirty = true;
 }
 
@@ -233,7 +241,30 @@ void dec_brightness(void) {
     } else {
         l_state.contrast = MIN_BRIGHT;
     }
+    g_user_brightness  = l_state.contrast;
     g_brightness_dirty = true;
+}
+
+// Sets the display contrast to a deliberate user-chosen level and records it as
+// the brightness to persist at the next flush. Use for the preset keys and the
+// host's set-brightness command; transient contrast changes (suspend, idle fade)
+// must write l_state.contrast directly so they are never persisted.
+void set_user_brightness(uint8_t value) {
+    l_state.contrast   = value;
+    g_user_brightness  = value;
+    g_brightness_dirty = true;
+}
+
+// Records the intended user brightness without marking settings dirty (boot-time
+// load, slave adopting an awake master's synced contrast).
+void note_user_brightness(uint8_t value) {
+    g_user_brightness = value;
+}
+
+// The brightness to restore after idle/suspend. Unlike a load_user_eeconf()
+// round-trip this tracks changes that have not been flushed to EEPROM yet.
+uint8_t get_user_brightness(void) {
+    return g_user_brightness;
 }
 
 // Marks settings (lang + brightness) as needing an EEPROM write at the next flush.

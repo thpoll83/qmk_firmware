@@ -219,8 +219,7 @@ void sync_and_refresh_displays(void) {
 
         const bool back_from_idle_transition = flag_turned_on(local_flags, global_flags, IDLE_TRANSITION);
         if (back_from_idle_transition) {
-            poly_eeconf_t ee   = load_user_eeconf();
-            access_local_state()->contrast = ee.brightness;
+            access_local_state()->contrast = get_user_brightness();
         }
 
         if(flags!=local_flags) {
@@ -394,9 +393,8 @@ void housekeeping_task_user(void) {
             flags &= ~((uint8_t)IDLE_TRANSITION);
 
             if(elapsed_time_since_update > FADE_OUT_TIME && contrast >= MIN_BRIGHT && (flags & DISP_IDLE)==0) {
-                poly_eeconf_t ee = load_user_eeconf();
                 int32_t time_after = elapsed_time_since_update - FADE_OUT_TIME;
-                int16_t brightness = ((FADE_TRANSITION_TIME - time_after) * ee.brightness) / FADE_TRANSITION_TIME;
+                int16_t brightness = ((FADE_TRANSITION_TIME - time_after) * get_user_brightness()) / FADE_TRANSITION_TIME;
 
                 //transition to pulsing mode
                 if(brightness<=MIN_BRIGHT) {
@@ -1593,24 +1591,19 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             request_disp_refresh();
             break;
         case KC_D1Q:
-            local_state->contrast = FULL_BRIGHT/4;
-            mark_settings_dirty();
+            set_user_brightness(FULL_BRIGHT/4);
             break;
         case KC_D3Q:
-            local_state->contrast = (FULL_BRIGHT/4)*3;
-            mark_settings_dirty();
+            set_user_brightness((FULL_BRIGHT/4)*3);
             break;
         case KC_DHLF:
-            local_state->contrast = FULL_BRIGHT/2;
-            mark_settings_dirty();
+            set_user_brightness(FULL_BRIGHT/2);
             break;
         case KC_DMAX:
-            local_state->contrast = FULL_BRIGHT;
-            mark_settings_dirty();
+            set_user_brightness(FULL_BRIGHT);
             break;
         case KC_DMIN:
-            local_state->contrast = 2;
-            mark_settings_dirty();
+            set_user_brightness(2);
             break;
         case KC_DDIM:
             dec_brightness();
@@ -1800,8 +1793,7 @@ bool display_wakeup(keyrecord_t* record) {
         if(local_state->contrast==DISP_OFF && (local_state->flags&DEAD_KEY_ON_WAKEUP)!=0) {
             accept_keypress = get_time_since_last_update()<= TURN_OFF_TIME;
         }
-        poly_eeconf_t ee = load_user_eeconf();
-        local_state->contrast = ee.brightness;
+        local_state->contrast = get_user_brightness();
         local_state->flags &= ~((uint8_t)DISP_IDLE);
         local_state->flags |= STATUS_DISP_ON;
         update_performed();
@@ -1901,6 +1893,7 @@ void keyboard_post_init_user(void) {
     poly_sync_t* local_state = access_local_state();
     local_state->lang = ee.lang;
     local_state->contrast = ee.brightness;
+    note_user_brightness(ee.brightness);
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 
     memcpy(access_global_latin_table()->ex, ee.latin_ex, sizeof(ee.latin_ex));
@@ -2039,8 +2032,7 @@ void suspend_wakeup_init_kb(void) {
     poly_sync_t* local_state = access_local_state();
     local_state->flags |= STATUS_DISP_ON;
     local_state->flags &= ~((uint8_t)DISP_IDLE);
-    poly_eeconf_t ee = load_user_eeconf();
-    local_state->contrast = ee.brightness;
+    local_state->contrast = get_user_brightness();
     set_last_update(0);
 
     //rgb_matrix_reload_from_eeprom();

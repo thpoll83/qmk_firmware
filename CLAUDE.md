@@ -39,9 +39,35 @@ The host software (`PolyKybdHost/`) communicates with this firmware over a custo
 ### HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)
+- **`PROTOCOL_VERSION`** (`config.h`, reported in the GET_ID string) gates host
+  features. **v2** added `GET_LANG_LIST_PACKED` (cmd `27` / `0x1b`): the language
+  list as a count byte + one `(ISO 639-1 idx, ISO 3166-1 alpha-2 idx)` **2-byte
+  pair per language** instead of the 4 ASCII chars of cmd `0x08` — 81 langs go
+  from 6 reports to 3, and the firmware `.rodata` shrinks (2 emitted bytes/lang vs
+  4). cmd `0x08` (ASCII) stays for old hosts; the host prefers cmd `27` only when
+  it reads protocol ≥ 2, else falls back. The index↔code tables are the **frozen,
+  append-only** `lang/iso_lang_country.py` (see "Language list encoding" below).
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)
+
+### Language list encoding (`lang/iso_lang_country.py`)
+The packed list (cmd `27`) maps each 4-char code to two 1-byte indices: the
+language's position in the ISO 639-1 table and the country's in ISO 3166-1
+alpha-2. `lang/iso_lang_country.py` is the **frozen, append-only** index table —
+generated once from the `iso-codes` package then frozen (indices never reorder;
+new ISO codes append at the next free slot; private pseudo-codes with no ISO
+639-1 entry, e.g. `hw`, live in a reserved block above the standard codes). The
+`hid_com.c` case-27 cog imports it and emits the index bytes, so the table is a
+**build-time artifact only** — it is *not* compiled into the firmware.
+- ⚠️ **Single source of truth across three repos**: this file is byte-identical
+  to `PolyKybdHost/polyhost/services/iso_lang_country.py` and
+  `polykybd-ctnd/station/iso_lang_country.py`. When it changes, copy it to all
+  three (verify with `cmp`); a mismatch silently decodes wrong languages on the
+  host/rig. Adding a standard ISO language needs no table change (the code is
+  already present); only a new private pseudo-code requires appending an entry.
+- Re-run `cog -r hid_com.c` after any change to the list or the table (needs
+  `cogapp` + `openpyxl`).
 
 ### Display rendering pipeline
 1. Host sends compressed bitmap → `fill_overlay.c` decompresses (optionally on core1) → `overlays[idx][360]`

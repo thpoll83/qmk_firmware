@@ -84,7 +84,8 @@
 //#          PolyKybd specific         #
 //######################################
 #define FW_VERSION "0.8.16"
-#define PROTOCOL_VERSION 1
+// v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
+#define PROTOCOL_VERSION 2
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

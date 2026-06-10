@@ -23,26 +23,41 @@
 // enum (= GET_LANG_LIST) order — matching the host's stable sort.
 
 static const uint8_t REGION_OFFSET[NUM_LANG_REGIONS + 1] = {
-    0, 6, 36, 45, 53, 73, 81,
+    0, 21, 59, 78, 101, 129, 143,
 };
 
 static const uint8_t REGION_LANGS[NUM_LANG] = {
-    // Americas (6): es-AR pt-BR fr-CA en-CA es-MX en-US
-    78, 32, 45, 77, 42,  0,
-    // Europe (30)
-    44, 15, 13, 43, 26,  1, 24, 31,  3, 22,  2, 41, 10, 27, 25, 55,
-     5, 29, 30, 34, 19, 23, 16,  4, 17, 33, 12, 21, 28, 11,
-    // Middle East & Caucasus (9): hy-AM az-AZ ka-GE he-IL ar-IQ ku-IQ fa-IR ar-SA tr-TR
-    52, 54, 51, 20, 73, 74, 35,  9,  6,
-    // Africa (8): ar-EG am-ET sw-KE ar-MA yo-NG en-NG en-ZA af-ZA
-    67, 69, 68, 72, 70, 71, 65, 66,
-    // Asia (20): zh-CN zh-HK id-ID hi-IN mr-IN bn-IN te-IN ta-IN ja-JP ko-KR
-    //            kk-KZ mn-MN ms-MY ne-NP tl-PH ur-PK th-TH zh-TW uz-UZ vi-VN
-    18, 57, 53, 36, 37, 47, 48, 49,  8,  7, 14, 39, 75, 38, 63, 40, 46, 50, 76, 56,
-    // Oceania (8): en-AU fj-FJ en-NZ mi-NZ ty-PF en-PG hw-US sm-WS
+    // Americas (21): es-AR es-BO pt-BR fr-CA en-CA es-CL es-CO es-CR es-DO es-EC
+    //                es-GT es-HN es-MX es-NI es-PA es-PE es-PY es-SV en-US es-UY es-VE
+    78, 88, 32, 45, 77, 84, 81, 90, 87, 85, 86, 92, 42, 95, 93, 82,
+    89, 91,  0, 94, 83,
+    // Europe (38): de-AT bs-BA fr-BE nl-BE bg-BG be-BY de-CH fr-CH cs-CZ de-DE
+    //              da-DK et-EE es-ES ca-ES fi-FI fo-FO fr-FR en-GB el-GR hr-HR
+    //              hu-HU en-IE is-IS it-IT lt-LT lv-LV mk-MK nn-NO nl-NL pl-PL
+    //              pt-PT ro-RO sr-RS ru-RU se-SV? sl-SI sk-SK uk-UA
+    96, 100, 44, 97, 15, 13, 43, 101, 26,  1, 24, 31,  3, 98, 22, 103,
+     2, 41, 10, 27, 25, 99, 55,  5, 29, 30, 34, 19, 23, 16,  4, 17,
+    33, 12, 21, 102, 28, 11,
+    // Middle East & Caucasus (19): ar-AE hy-AM az-AZ ar-BH ka-GE he-IL ar-IQ ku-IQ
+    //                              fa-IR ar-JO ar-KW ar-LB ar-OM ar-PS ar-QA ar-SA
+    //                              ar-SY tr-TR ar-YE
+    104, 52, 54, 113, 51, 20, 73, 74, 35, 106, 109, 107, 110, 111, 112,  9,
+    105,  6, 108,
+    // Africa (23): pt-AO fr-CD fr-CI fr-CM ar-DZ ar-EG am-ET en-GH sw-KE ar-LY
+    //              ar-MA fr-MG pt-MZ yo-NG en-NG ar-SD fr-SN ar-TN sw-TZ en-UG
+    //              en-ZA af-ZA en-ZM
+    127, 118, 119, 120, 114, 67, 69, 123, 68, 117, 72, 122, 128, 70, 71, 115,
+    121, 116, 126, 124, 65, 66, 125,
+    // Asia (28): bn-BD zh-CN zh-HK id-ID hi-IN mr-IN bn-IN te-IN ta-IN en-IN
+    //            ja-JP ky-KG kk-KZ mn-MN en-LK ms-MY ne-NP tl-PH en-PH ur-PK
+    //            en-PK ko-KR en-SG tg-TJ th-TH zh-TW uz-UZ vi-VN
+    129, 18, 57, 53, 36, 37, 47, 48, 49, 130,  8, 135,  7, 14, 134, 39,
+    75, 38, 63, 132, 40, 131, 133, 46, 136, 50, 76, 56,
+    // Oceania (14): en-AU fj-FJ en-FM en-GU fr-NC en-NZ mi-NZ ty-PF en-PG en-SB
+    //               to-TO hw-US en-VU sm-WS
     // (hw-US: geographic override — Hawaiian is Polynesian, despite the US
     //  country code; mirrored by LANG_REGION_OVERRIDE on the host.)
-    58, 62, 59, 60, 80, 79, 64, 61,
+    58, 62, 140, 137, 141, 59, 60, 80, 79, 138, 142, 64, 139, 61,
 };
 
 static const uint32_t *const REGION_LABELS[NUM_LANG_REGIONS] = {

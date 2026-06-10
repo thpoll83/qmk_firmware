@@ -99,6 +99,13 @@ See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build 
 
 Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-generated from `lang_lut.xlsx` via cog), (2) re-running `fonts/gen-lang-fonts.sh` to generate the flag glyph and update `flag_fonts.h`, (3) updating the host's `LANG_REGION` map in `PolyKybdHost/polyhost/services/lang_regions.py` if the country code isn't already there. The host map covers all standard ISO 3166-1 alpha-2 country codes; only non-standard or private-use codes need a new entry added manually. Full mechanics in [`lang/FUTURE_LANGUAGES.md`](keyboards/handwired/polykybd/lang/FUTURE_LANGUAGES.md) (the "Implementation playbook").
 
+> **STATUS (2026-06-10): `NUM_LANG` is now 143** (10 GET_LANG_LIST ASCII packets) after the
+> **2026-06 compat easy-win batch** — 62 fold/clone locales (no new font), 4–15 per region
+> tab, ranked by computer users; see the "2026-06 compat easy-win batch" section in
+> `lang/FUTURE_LANGUAGES.md`. Distinct-layout entries are **clones** (AltGr legends inherited);
+> US-QWERTY locales are folds. Adding more fold/clone languages needs no `LANG_REGION` edit
+> (all ISO country codes are already mapped) and no frozen-table edit (all standard ISO codes).
+>
 > **STATUS (2026-06-10): the whole Oceania + Africa candidate set below is IMPLEMENTED**, together
 > with two extra computer-user picks per non-Europe region tab (see the
 > "2026-06 world batch" section in `lang/FUTURE_LANGUAGES.md`): Americas `en-CA` `es-AR`,

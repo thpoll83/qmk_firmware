@@ -16,6 +16,55 @@ Adding a language therefore = three things:
 
 ---
 
+## 2026-06 compat easy-win batch — IMPLEMENTED (2026-06-10): 62 fold/clone locales
+
+> **STATUS: DONE.** 62 new entries (enum indices 81–142, `NUM_LANG` 81 → 143,
+> GET_LANG_LIST now 10 ASCII packets), all **easy wins** — no new font, every
+> distinct-layout entry is a **clone** of an existing column (so its AltGr
+> legends are inherited verbatim) and only true US-QWERTY locales are empty
+> **folds**. Ranked by computer/internet users, 4–15 extra per region tab:
+>
+> - **Americas (+15)** Spanish, clone es-MX (latam): es-CO es-PE es-VE es-CL
+>   es-EC es-GT es-DO es-BO es-PY es-CR es-SV es-HN es-PA es-UY es-NI
+> - **Europe (+8)**: de-AT (clone de-DE) · nl-BE (clone fr-BE) · ca-ES (clone
+>   es-ES) · en-IE (fold) · bs-BA, sl-SI (clone hr-HR) · fr-CH (clone de-CH) ·
+>   fo-FO (clone da-DK)
+> - **Middle East & Caucasus (+10)** Arabic, clone ar-SA (ara): ar-AE ar-SY
+>   ar-JO ar-LB ar-YE ar-KW ar-OM ar-PS ar-QA ar-BH
+> - **Africa (+15)**: ar-DZ ar-SD ar-TN ar-LY (clone ar-SA) · fr-CD fr-CI fr-CM
+>   fr-SN fr-MG (clone fr-FR) · pt-AO pt-MZ (clone pt-PT) · en-GH en-UG en-ZM
+>   sw-TZ (fold)
+> - **Asia (+8)**: bn-BD (clone bn-IN — real Bengali, the standout) · en-IN
+>   en-PK en-PH en-SG en-LK (fold) · ky-KG tg-TJ (clone ru-RU, Cyrillic)
+> - **Oceania (+6)**: en-GU en-SB en-VU en-FM (fold) · fr-NC (clone fr-FR) ·
+>   to-TO (clone sm-WS)
+>
+> **AltGr correctness**: clones copy all four variants per key (VAR_SMALL/SHIFT/
+> CAPS/**ALTGR**) and rows 56–61 (the settings/offset block), so an es-CO board
+> shows the latam AltGr legends, ar-AE the ar-SA Arabic-Indic digits on AltGr,
+> fr-CD the French AZERTY AltGr (€ etc.), exactly like their source layouts.
+> The 14 English/Swahili folds intentionally carry no AltGr (en-US fallback).
+>
+> **No frozen-table change**: every language and country code is already in
+> `iso_lang_country.py` (standard ISO 639-1 / 3166-1), so the 3-repo frozen
+> index table is byte-untouched (verified by `cmp`). Flags occupy PUA
+> 0xE000–0xE08E, still clear of the 0xE100 matra composites.
+>
+> Mechanics: `lang/_gen_compat62_cols.py` → `/tmp/compat62_cols.json` →
+> `_patch_xlsx.py` (surgical sheet2 rewrite, formula caches intact) → re-cog of
+> all 6 generated files (`lang_lut.{c,h}`, `named_glyphs.h`, `keycode_helper.h`,
+> `hid_com.c`, `split72/keymaps/default/keymap.c`) → flags regenerated with the
+> **pinned** fontconvert (existing 81 byte-identical) → `lang_layer.c`
+> REGION_OFFSET/REGION_LANGS regenerated from the host `lang_regions.py`
+> grouping (country-asc, enum-tie). Host: 62 folds added to
+> `forced_country_match.txt` (xx→latam/ara/fr/pt/ru/us…); the country-keyed
+> fold has the pre-existing limit that en-IN/en-PK fall back to US only when the
+> native IN/PK layout is *not* installed (the native layout wins the country
+> match first — same as tl-PH/zh-TW). `poly_kybd_mock_test.py` updated to 143.
+> Both `split72:default` and `corne42:default` build clean; all host tests pass.
+
+---
+
 ## 2026-06 world batch — IMPLEMENTED (2026-06-10): Oceania + Africa candidates + per-tab computer-user picks
 
 > **STATUS: DONE.** 23 new entries (enum indices 58–80, `NUM_LANG` 58 → 81,

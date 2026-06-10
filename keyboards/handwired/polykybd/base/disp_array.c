@@ -434,14 +434,22 @@ void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], i
         }
         if(first!=127) {
             if(num_empty==0) {
-                // Content row. Taper the cleared span over the glyph's own first 3
-                // rows (insets 8/4/2: narrowest at the very top line, widening down
-                // to the full first..last span), mirroring the exponential 2/4/8 fade
-                // the outer/bottom edge gets as it moves away from the glyph below.
-                // This avoids blindly clearing the full span between two lonely far-
-                // apart pixels on the top line — the courtyard fades in toward the
-                // glyph body instead. top_count restarts at every new content block.
+                // Content row. Taper the cleared span as it approaches the glyph's
+                // top edge so we don't blindly clear the full first..last span
+                // between two lonely far-apart pixels on the first lines. The taper
+                // is continuous (monotonic insets 16/12/8/4/2/0): a thin margin fades
+                // in two rows ABOVE the top edge (insets 16/12 — kept like before),
+                // the top content line is narrowest (inset 8), then it widens over
+                // the next two rows (4/2) to the full span and stays full for the
+                // body. mirrors the exponential fade the outer/bottom edge gets as it
+                // moves away from the glyph below. top_count restarts at every new
+                // content block (prev_empty) so multi-part glyphs (e.g. umlaut dots
+                // above a body) each fade in at their own top.
                 top_count = prev_empty ? 0 : (top_count < 3 ? top_count + 1 : 3);
+                if(top_count==0) {
+                    clear_line(x+first+16, x+last-16, bmp_y + y-2);  // thin margin above,
+                    clear_line(x+first+12, x+last-12, bmp_y + y-1);  // fading to a point
+                }
                 int8_t inset = (top_count==0) ? 8 : (top_count==1) ? 4 : (top_count==2) ? 2 : 0;
                 clear_line(x+first+inset, x+last-inset, bmp_y + y);
                 prev_empty = false;

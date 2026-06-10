@@ -247,7 +247,13 @@ void sync_and_refresh_displays(void) {
             // bounds the stall to ~tens of ms and the next loop retries. No effect
             // on the normal path, where the slave ACKs on the first attempt.
             if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 1)) {
-                state_diff = false; // if failed to sync, do not consider it a diff and try again later
+                // Failed: clear state_diff so the copy_global_state() below is
+                // SKIPPED — global stays != local, so next pass differ() is still
+                // true and re-fires the send. The diff IS the retry queue; global
+                // only advances to local on a successful sync, so 1 vs 10 attempts
+                // changes only WHERE retries happen, never whether the update is
+                // eventually delivered.
+                state_diff = false;
                 uprint("USER_SYNC_POLY_DATA failed to send\n");
             }
         }
@@ -274,7 +280,8 @@ void sync_and_refresh_displays(void) {
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         if ( layer_diff ) {
             if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 1)) {
-                layer_diff = false; // if failed to sync, do not consider it a diff and try again later
+                layer_diff = false; // failed: skip copy_global_layer() below so the diff
+                                    // persists and the send re-fires next pass (see state above)
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
@@ -337,12 +344,12 @@ void sync_and_refresh_displays(void) {
         if (contrast_changed || idle_changed) {
             set_displays(get_local_state()->contrast, in_idle_mode);
         }
-        copy_global_state(get_local_state());
+        copy_global_state(get_local_state());   // advance global only on a synced change (see send site)
         request_disp_refresh();
     }
 
     if(layer_diff) {
-        copy_global_layer(get_local_layer());
+        copy_global_layer(get_local_layer());   // advance global only on a synced change (see send site)
         request_disp_refresh();
     }
 

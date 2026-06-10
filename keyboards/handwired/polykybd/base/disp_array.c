@@ -339,7 +339,10 @@ void kdisp_write_gfx_vtext(const GFXfont *font, int8_t col_x, const uint32_t *te
     }
     if (total <= 0) return;
 
-    const int8_t top_y = (int8_t)((SCREEN_HEIGHT - total) / 2);
+    int8_t top_y = (int8_t)((SCREEN_HEIGHT - total) / 2);
+    // A column longer than the screen (e.g. the "mn-MN" label) centres to a
+    // bottom row below the panel — pull it up so the first glyph stays visible.
+    if (top_y + total > SCREEN_HEIGHT - 1) top_y = (int8_t)(SCREEN_HEIGHT - 1 - total);
     if (selected) {
         // Full-height bar: from 3 px left of the text to the last visible column
         // (the vertical label sits against the keycap's right edge).

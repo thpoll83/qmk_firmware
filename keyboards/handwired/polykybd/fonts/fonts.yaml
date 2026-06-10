@@ -25,6 +25,7 @@ sources:
   noto-sans-georgian:  fonts/noto-sans-georgian/NotoSansGeorgian-Regular.ttf
   noto-sans-armenian:  fonts/noto-sans-armenian/NotoSansArmenian-Regular.ttf
   noto-sans-tc:        fonts/noto-sans-tc/NotoSansTC-Regular.ttf
+  noto-sans-ethiopic:  fonts/noto-sans-ethiopic/NotoSansEthiopic-Regular.ttf
   noto-emoji:          fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf
   noto-cemoji:         fonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf
   noto-sans-symbols:   fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
@@ -87,6 +88,9 @@ categories:
   vietnamese:
     output: vietnamese_fonts.h
     defaults: {source: noto-sans, size: 16, render_height: 40}
+  ethiopic:
+    output: ethiopic_fonts.h
+    defaults: {source: noto-sans-ethiopic, size: 16, render_height: 40}
   symbols:
     output: symbol_fonts.h
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
@@ -242,6 +246,11 @@ fonts:
   - {category: georgian, variant: _Georgian_, ranges: [[0x10a0, 0x10ff]], note: 'Georgian (Mkhedruli + Mtavruli) block for ka-GE, transcribed from xkb symbols/ge basic. Unicameral — no case, no combining marks.'}
   - {category: armenian, variant: _Armenian_, ranges: [[0x530, 0x58f]], note: 'Armenian block (letters + punctuation + dram sign) for hy-AM, transcribed from xkb symbols/am basic. Bicameral, no combining marks.'}
   - {category: bopomofo, variant: _Bopomofo_, ranges: [[0x3105, 0x312f]], note: 'Bopomofo/Zhuyin symbols for zh-TW (standard 大千 layout). Tone marks (U+02C7/02CA/02CB/02D9) are already covered by the latin _LetterMod_ font. No combining marks.'}
+  - {category: ethiopic, variant: _Ethiopic_, ranges: [[0x1200, 0x137c]], note: 'Ethiopic block (Geez syllabograms, punctuation, numerals) for am-ET, transcribed from xkb symbols/et olpc. Unassigned codepoints inside the block are skipped by fontconvert. The OS-side phonetic IME composes the vowel orders; keycaps show the base (first-order) syllabograms.'}
+  - {category: latin, variant: _Okina_, render_height: 44, ranges: [[0x2bb, 0x2bb]], note: 'ʻ MODIFIER LETTER TURNED COMMA — Hawaiian okina (hw-US), Samoan koma liliu (sm-WS) and the Uzbek-Latin tutuq belgisi (uz-UZ).'}
+  - {category: latin, variant: _LatinExtAdd_, render_height: 44, ranges: [[0x1e62, 0x1e63], [0x1eb8, 0x1eb9], [0x1ecc, 0x1ecd]], note: 'Latin Extended Additional dot-below letters Ṣṣ Ẹẹ Ọọ for Yoruba yo-NG (xkb ng yoruba).'}
+  - {category: latin, variant: _Naira_, ranges: [[0x20a6, 0x20a6]], note: '₦ NAIRA SIGN for en-NG / yo-NG (xkb ng: Shift+4).'}
+  - {category: arabic, variant: _Sorani_, ranges: [[0x695, 0x695], [0x6a4, 0x6a4], [0x6b5, 0x6b5], [0x6c6, 0x6c6], [0x6ce, 0x6ce], [0x6d5, 0x6d5]], note: 'Sorani Kurdish extras for ku-IQ beyond the fa-IR Perso-Arabic set: ڕ ڤ ڵ ۆ ێ ە.'}
   - {category: vietnamese, variant: _VietTones_, extra_args: ['-F0xE1A0', '-C'], sequence: '25CC 0300, 25CC 0301, 25CC 0303, 25CC 0309, 25CC 0323', note: 'Vietnamese (TCVN) combining tone marks - grave/acute/tilde/hook-above/dot-below - composited onto a dotted circle U+25CC (fontconvert -C), PUA 0xE1A0.. in codepoint order. Addressed via the VIET_DC_* named glyphs by vi-VN. The precomposed Vietnamese letters (ă â ê ô đ ư ơ ₫) are covered by the existing latin / currency ranges.'}
   - {category: jp, variant: _Hiragana_, ranges: [[0x3041, 0x3096], [0x3099, 0x309f]]}
   - {category: jp, variant: _Punct2_, ranges: [[0x30fb, 0x30fc]]}

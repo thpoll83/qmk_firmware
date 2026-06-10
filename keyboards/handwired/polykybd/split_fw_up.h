@@ -35,6 +35,23 @@ typedef struct _fw_up_chunk_sync_t {
     uint8_t  data[FW_UP_CHUNK_SIZE];
 } fw_up_chunk_sync_t;
 
+// Chunk reply — identity-bound ACK.  Every chunk used to be answered with the
+// same bare 1-byte ACK (poly_sync_reply_t), so a stale reply left over from
+// the PREVIOUS chunk was indistinguishable from the current one: the master
+// counted the chunk as delivered while the slave never staged it, and the two
+// write cursors drifted apart (observed 2026-06-10: slave next_off one chunk
+// behind the stream; every later offset rejected; update dead at 6% / 83%).
+// next_offset is the slave's write cursor AFTER processing this RPC; the
+// master only accepts the chunk when ack == SYNC_ACK *and* next_offset has
+// moved PAST the chunk's offset.  A stale previous-chunk reply has
+// next_offset == offset and is rejected; a duplicate re-send of an
+// already-staged chunk has next_offset > offset and passes (idempotent).
+typedef struct _fw_up_chunk_reply_t {
+    uint8_t  ack;
+    uint8_t  _pad[3];
+    uint32_t next_offset;
+} fw_up_chunk_reply_t;
+
 // Diagnostic status query: master sends an empty/CRC-only request, slave
 // fills the reply with fw_staging internal counters (begin/chunk handler
 // call counts, current next_offset, erase progress, last chunk ack).  Used

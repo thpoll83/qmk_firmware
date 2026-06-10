@@ -207,6 +207,29 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     case LANG_ISIS: memcpy(data, "P\x07.isIS", 7); break;
                     case LANG_VIVN: memcpy(data, "P\x07.viVN", 7); break;
                     case LANG_ZHHK: memcpy(data, "P\x07.zhHK", 7); break;
+                    case LANG_ENAU: memcpy(data, "P\x07.enAU", 7); break;
+                    case LANG_ENNZ: memcpy(data, "P\x07.enNZ", 7); break;
+                    case LANG_MINZ: memcpy(data, "P\x07.miNZ", 7); break;
+                    case LANG_SMWS: memcpy(data, "P\x07.smWS", 7); break;
+                    case LANG_FJFJ: memcpy(data, "P\x07.fjFJ", 7); break;
+                    case LANG_TLPH: memcpy(data, "P\x07.tlPH", 7); break;
+                    case LANG_HWUS: memcpy(data, "P\x07.hwUS", 7); break;
+                    case LANG_ENZA: memcpy(data, "P\x07.enZA", 7); break;
+                    case LANG_AFZA: memcpy(data, "P\x07.afZA", 7); break;
+                    case LANG_AREG: memcpy(data, "P\x07.arEG", 7); break;
+                    case LANG_SWKE: memcpy(data, "P\x07.swKE", 7); break;
+                    case LANG_AMET: memcpy(data, "P\x07.amET", 7); break;
+                    case LANG_YONG: memcpy(data, "P\x07.yoNG", 7); break;
+                    case LANG_ENNG: memcpy(data, "P\x07.enNG", 7); break;
+                    case LANG_ARMA: memcpy(data, "P\x07.arMA", 7); break;
+                    case LANG_ARIQ: memcpy(data, "P\x07.arIQ", 7); break;
+                    case LANG_KUIQ: memcpy(data, "P\x07.kuIQ", 7); break;
+                    case LANG_MSMY: memcpy(data, "P\x07.msMY", 7); break;
+                    case LANG_UZUZ: memcpy(data, "P\x07.uzUZ", 7); break;
+                    case LANG_ENCA: memcpy(data, "P\x07.enCA", 7); break;
+                    case LANG_ESAR: memcpy(data, "P\x07.esAR", 7); break;
+                    case LANG_ENPG: memcpy(data, "P\x07.enPG", 7); break;
+                    case LANG_TYPF: memcpy(data, "P\x07.tyPF", 7); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -237,7 +260,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.lvLVetEEptBRsrRSmkMKfaIRhiINmrINneNPmnMNurPKenGBesMXdeCHfrBE", 63);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.frCAthTHbnINteINtaINzhTWkaGEhyAMidIDazAZisISviVNzhHK", 55);
+                memcpy(data, "P\x08.frCAthTHbnINteINtaINzhTWkaGEhyAMidIDazAZisISviVNzhHKenAUenNZ", 63);
+                raw_hid_send(data, length);
+                memset(data, 0, length);
+                memcpy(data, "P\x08.miNZsmWSfjFJtlPHhwUSenZAafZAarEGswKEamETyoNGenNGarMAarIQkuIQ", 63);
+                raw_hid_send(data, length);
+                memset(data, 0, length);
+                memcpy(data, "P\x08.msMYuzUZenCAesARenPGtyPF", 27);
                 //[[[end]]]
                 raw_hid_send(data, length);
                 break;

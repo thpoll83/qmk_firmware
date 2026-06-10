@@ -1061,3 +1061,39 @@ End-to-end status: QK_REBOOT and in-app fw-up Apply both reboot BOTH halves clea
 operation with no replug.  Still-open (lower priority): robustness (B) above (decouple the
 master's own refresh from slave-sync), and the slave only obeys the apply/reboot transactions
 once already running firmware that has them (OLD→NEW bootstrap = flash both halves once).
+
+---
+
+## 2026-06-10 — stale-ACK chunk desync (root cause of the 6 % / 83 % field failures)
+
+**Symptom**: a full-image update dies mid-stream; the host gets a chunk NACK and
+every retry of that offset is rejected too.  `slave status (chunk-fail)` shows
+the slave's `next_off` exactly ONE CHUNK BEHIND the failing offset (e.g. failing
+42560, slave expecting 42504) — the master ACK'd a chunk to the host that the
+slave never staged.
+
+**Root cause**: every chunk RPC was answered with the same bare 1-byte ACK
+(`poly_sync_reply_t`).  A stale reply left over from the *previous* chunk is
+byte-identical to the current one, so a transport hiccup could deliver an
+"ACK" for a chunk whose request never executed on the slave.  The cursors
+desync; with strict `offset == s_next_offset` checking the rest of the stream
+is unrecoverable.  Updates only became visibly unreliable once the image grew
+to ~12 k chunks (~670 KB) — the per-chunk race probability was always there.
+
+**Fix (in tree)**:
+1. `fw_up_chunk_reply_t` — the slave echoes its post-RPC write cursor; the
+   master only counts a chunk as delivered when `ack == SYNC_ACK` **and**
+   `next_offset > offset`.  Stale previous-chunk replies (`next_offset ==
+   offset`) can no longer be mistaken for the real ACK.
+2. Duplicate chunks (`offset < s_next_offset`) are ACK'd idempotently on both
+   halves (`fw_staging_write_chunk`), so re-sends after a lost ACK are safe.
+3. A chunk NACK to the host carries a 4-byte resume offset (the lower of the
+   two halves' cursors); the host rewinds the stream there and continues
+   instead of aborting (PolyKybdHost `hid_fw_up.py`).
+4. A failed/cancelled update sends a best-effort COMMIT as abort —
+   `fw_staging_finalize()` clears `fw_up_active` and restarts core1 on both
+   halves regardless of the CRC verdict, so the keyboard stays usable.
+
+**Bootstrap caveat**: these fixes only help once a firmware containing them is
+running.  Flashing *through* an older racy firmware remains a per-chunk
+lottery — for that one transition use the UF2 bootloader drive on both halves.

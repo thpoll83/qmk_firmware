@@ -2386,6 +2386,204 @@ const GFXfont NotoSans_Regular_CurrencySigns_14pt16b PROGMEM = {
 
 // Approx. 995 bytes
 
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans/NotoSans-Regular.ttf -s 14 -v _Okina_ -r 44 699 699 
+// Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
+
+/* num ranges: 1 */
+const uint8_t NotoSans_Regular_Okina_14pt16bBitmaps[] PROGMEM = {
+  /* range 0 (0x2bb - 0x2bb): */  0x13, 0x37, 0x76, 0xE0
+ };
+
+const GFXglyph NotoSans_Regular_Okina_14pt16bGlyphs[] PROGMEM = {
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0x2bb - 0x2bb)
+  {     0,   4,   7,   5,    0,  -19 } }; // 0x2BB uni02BB  (#0)
+
+const GFXfont NotoSans_Regular_Okina_14pt16b PROGMEM = {
+  (uint8_t  *)NotoSans_Regular_Okina_14pt16bBitmaps,
+  (GFXglyph *)NotoSans_Regular_Okina_14pt16bGlyphs,
+  0x2BB, // first
+  0x2BB, // last
+  44   //height
+ };
+
+// Approx. 18 bytes
+
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans/NotoSans-Regular.ttf -s 14 -v _LatinExtAdd_ -r 44 7778 7779 7864 7865 7884 7885 
+// Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
+
+/* num ranges: 3 */
+const uint8_t NotoSans_Regular_LatinExtAdd_14pt16bBitmaps[] PROGMEM = {
+  /* range 0 (0x1e62 - 0x1e63): */  0x0F, 0xC1, 0xFF, 0x9E, 0x1C, 0xE0, 0x06, 0x00, 0x30, 0x01, 0x80, 0x0E,
+  0x00, 0x3C, 0x00, 0xF8, 0x01, 0xF0, 0x03, 0xE0, 0x07, 0x00, 0x1C, 0x00,
+  0xE0, 0x07, 0x00, 0x3E, 0x03, 0xBF, 0xF8, 0xFF, 0x80, 0x00, 0x00, 0x00,
+  0x18, 0x01, 0xC0, 0x06, 0x00, 0x1F, 0x8F, 0xFD, 0x81, 0x70, 0x0E, 0x00,
+  0xE0, 0x1F, 0x00, 0xFC, 0x07, 0xC0, 0x1C, 0x03, 0x80, 0x38, 0x0F, 0xFF,
+  0x9F, 0xE0, 0x00, 0x00, 0x00, 0xC0, 0x38, 0x03, 0x00
+  /* range 1 (0x1eb8 - 0x1eb9): */  , 0xFF, 0xFF, 0xFF,
+  0xFF, 0xE0, 0x0C, 0x01, 0x80, 0x30, 0x06, 0x00, 0xC0, 0x1F, 0xFB, 0xFF,
+  0x60, 0x0C, 0x01, 0x80, 0x30, 0x06, 0x00, 0xC0, 0x18, 0x03, 0xFF, 0xFF,
+  0xF0, 0x00, 0x00, 0x03, 0x00, 0xE0, 0x0C, 0x00, 0x1F, 0x83, 0xFC, 0x70,
+  0xEE, 0x06, 0xC0, 0x7C, 0x07, 0xFF, 0xFF, 0xFF, 0xC0, 0x0C, 0x00, 0xC0,
+  0x0E, 0x00, 0x70, 0x13, 0xFE, 0x1F, 0xE0, 0x00, 0x00, 0x00, 0x60, 0x0E,
+  0x00, 0x60
+  /* range 2 (0x1ecc - 0x1ecd): */  , 0x03, 0xF0, 0x07, 0xFF, 0x03, 0xE1, 0xE1, 0xE0, 0x1C, 0x70,
+  0x03, 0xB8, 0x00, 0xEE, 0x00, 0x1B, 0x80, 0x07, 0xC0, 0x01, 0xF0, 0x00,
+  0x7C, 0x00, 0x1F, 0x00, 0x07, 0xC0, 0x01, 0xF8, 0x00, 0x6E, 0x00, 0x39,
+  0xC0, 0x0E, 0x70, 0x07, 0x0F, 0x03, 0x81, 0xFF, 0xC0, 0x1F, 0xE0, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x07, 0x00, 0x00, 0xC0, 0x00, 0x0F,
+  0x81, 0xFF, 0x1C, 0x3D, 0xC0, 0x6E, 0x03, 0xE0, 0x1F, 0x00, 0x78, 0x03,
+  0xC0, 0x1E, 0x01, 0xF0, 0x0F, 0xC0, 0x67, 0x07, 0x1F, 0xF0, 0x7F, 0x00,
+  0x00, 0x00, 0x00, 0x30, 0x03, 0x80, 0x0C, 0x00
+ };
+
+const GFXglyph NotoSans_Regular_LatinExtAdd_14pt16bGlyphs[] PROGMEM = {
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0x1e62 - 0x1e63)
+  {     0,  13,  25,  15,    1,  -19 },   // 0x1E62 uni1E62  (#0)
+  {    41,  11,  20,  13,    1,  -14 },   // 0x1E63 uni1E63  (#1)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E64 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E65 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E66 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E67 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E68 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E69 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E6A (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E6B (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E6C (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E6D (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E6E (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E6F (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E70 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E71 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E72 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E73 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E74 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E75 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E76 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E77 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E78 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E79 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E7A (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E7B (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E7C (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E7D (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E7E (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E7F (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E80 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E81 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E82 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E83 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E84 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E85 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E86 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E87 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E88 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E89 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E8A (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E8B (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E8C (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E8D (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E8E (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E8F (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E90 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E91 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E92 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E93 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E94 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E95 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E96 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E97 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E98 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E99 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E9A (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E9B (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E9C (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E9D (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E9E (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1E9F (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA0 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA1 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA2 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA3 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA4 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA5 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA7 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA8 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EA9 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EAA (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EAB (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EAC (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EAD (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EAE (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EAF (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EB0 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EB1 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EB2 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EB3 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EB4 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EB5 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EB6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EB7 (skip)
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 1 (0x1eb8 - 0x1eb9)
+  {    69,  11,  25,  15,    3,  -19 },   // 0x1EB8 uni1EB8  (#2)
+  {   104,  12,  20,  15,    2,  -14 },   // 0x1EB9 uni1EB9  (#3)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EBA (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EBB (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EBC (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EBD (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EBE (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EBF (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC0 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC1 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC2 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC3 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC4 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC5 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC7 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC8 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1EC9 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1ECA (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x1ECB (skip)
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 2 (0x1ecc - 0x1ecd)
+  {   134,  18,  25,  21,    2,  -19 },   // 0x1ECC uni1ECC  (#4)
+  {   191,  13,  20,  17,    2,  -14 } }; // 0x1ECD uni1ECD  (#5)
+
+const GFXfont NotoSans_Regular_LatinExtAdd_14pt16b PROGMEM = {
+  (uint8_t  *)NotoSans_Regular_LatinExtAdd_14pt16bBitmaps,
+  (GFXglyph *)NotoSans_Regular_LatinExtAdd_14pt16bGlyphs,
+  0x1E62, // first
+  0x1ECD, // last
+  44   //height
+ };
+
+// Approx. 987 bytes
+
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans/NotoSans-Regular.ttf -s 14 -v _Naira_ 8358 8358 
+// Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
+
+/* num ranges: 1 */
+const uint8_t NotoSans_Regular_Naira_14pt16bBitmaps[] PROGMEM = {
+  /* range 0 (0x20a6 - 0x20a6): */  0x38, 0x18, 0x78, 0x30, 0xF0, 0x61, 0xE0, 0xC3, 0x61, 0x86, 0xC3, 0x0D,
+  0xC6, 0x7F, 0xFF, 0xFF, 0xFE, 0x73, 0x30, 0xE6, 0x67, 0xFF, 0xFF, 0xFF,
+  0xE7, 0x1B, 0x0E, 0x3E, 0x1C, 0x3C, 0x38, 0x78, 0x70, 0xF0, 0xE0, 0xE1,
+  0xC1, 0xC0
+ };
+
+const GFXglyph NotoSans_Regular_Naira_14pt16bGlyphs[] PROGMEM = {
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0x20a6 - 0x20a6)
+  {     0,  15,  20,  16,    0,  -19 } }; // 0x20A6 uni20A6  (#0)
+
+const GFXfont NotoSans_Regular_Naira_14pt16b PROGMEM = {
+  (uint8_t  *)NotoSans_Regular_Naira_14pt16bBitmaps,
+  (GFXglyph *)NotoSans_Regular_Naira_14pt16bGlyphs,
+  0x20A6, // first
+  0x20A6, // last
+  37   //height
+ };
+
+// Approx. 52 bytes
+
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/handwired/polykybd/fonts/noto-sans/NotoSans-Regular.ttf -s 16 -v _Cyrillic_ 1025 1131 1168 1211 1240 1257 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 

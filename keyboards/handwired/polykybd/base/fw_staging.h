@@ -51,6 +51,12 @@ bool fw_staging_erase_pending(void);
 // with incoming FW_UP_CHUNK transactions and exhausting all UART retries.
 bool fw_staging_fw_up_active(void);
 
+// Current write cursor (bytes accepted into staging).  This half's "next
+// expected chunk offset" — the slave echoes it in fw_up_chunk_reply_t and the
+// master reports the lower of the two halves' cursors to the host in a chunk
+// NACK so the updater can rewind and resync (see hid_fw_up.c).
+uint32_t fw_staging_next_offset(void);
+
 // True if any chunk data has been written to staging since the last fw_staging_begin/fw_staging_begin_deferred.
 // Used by the slave handler to detect partial writes from a previous failed attempt
 // that require re-erasing staging before accepting new chunks.

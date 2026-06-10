@@ -674,16 +674,24 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // slots (LSLOT) fill the middle rows; the 12 MRU recents sit on the BOTTOM
     // row of each block (top-bar marked). No Preset key — Clear is on the right
     // thumb (former right base key); the left base key still exits.
+    //
+    // Slot numbering is ROW-MAJOR ACROSS BOTH HALVES: each physical row is filled
+    // left-half then right-half before moving down, so languages read
+    // left-to-right across the whole keyboard rather than down the left half and
+    // then down the right. Per-row counts are 6+6, 6+6, 7+7 (= 38 slots):
+    //   row 1  left 0..5   right 6..11
+    //   row 2  left 12..17 right 18..23
+    //   row 3  left 24..30 right 31..37
     [_LL] = LAYOUT_left_right_stacked(
         KC_LANG_PAGE_PREV, LCAT(0),    LCAT(1),    LCAT(2),    LCAT(3),    LCAT(4),    LCAT(5),
         KC_NO,             LSLOT(0),   LSLOT(1),   LSLOT(2),   LSLOT(3),   LSLOT(4),   LSLOT(5),
-        KC_NO,      LSLOT(6),   LSLOT(7),   LSLOT(8),   LSLOT(9),   LSLOT(10),  LSLOT(11),  MS_BTN1,
-        KC_NO,      LSLOT(12),  LSLOT(13),  LSLOT(14),  LSLOT(15),  LSLOT(16),  LSLOT(17),  LSLOT(18),
+        KC_NO,      LSLOT(12),  LSLOT(13),  LSLOT(14),  LSLOT(15),  LSLOT(16),  LSLOT(17),  MS_BTN1,
+        KC_NO,      LSLOT(24),  LSLOT(25),  LSLOT(26),  LSLOT(27),  LSLOT(28),  LSLOT(29),  LSLOT(30),
         KC_BASE,    LMRU(0),    LMRU(1),    LMRU(2),                LMRU(3),    LMRU(4),    LMRU(5),
 
                     QK_UNICODE_MODE_MACOS, QK_UNICODE_MODE_WINCOMPOSE, QK_UNICODE_MODE_EMACS, QK_UNICODE_MODE_WINDOWS, QK_UNICODE_MODE_LINUX, QK_UNICODE_MODE_BSD, KC_LANG_PAGE_NEXT,
-                    LSLOT(19),  LSLOT(20),  LSLOT(21),  LSLOT(22),  LSLOT(23),  LSLOT(24),  KC_NO,
-        KC_NO,      LSLOT(25),  LSLOT(26),  LSLOT(27),  LSLOT(28),  LSLOT(29),  LSLOT(30),  KC_NO,
+                    LSLOT(6),   LSLOT(7),   LSLOT(8),   LSLOT(9),   LSLOT(10),  LSLOT(11),  KC_NO,
+        KC_NO,      LSLOT(18),  LSLOT(19),  LSLOT(20),  LSLOT(21),  LSLOT(22),  LSLOT(23),  KC_NO,
         LSLOT(31),  LSLOT(32),  LSLOT(33),  LSLOT(34),  LSLOT(35),  LSLOT(36),  LSLOT(37),  KC_NO,
         LMRU(6),    LMRU(7),    LMRU(8),                LMRU(9),    LMRU(10),   LMRU(11),   KC_LANG_CLEAR
         ),

@@ -23,12 +23,12 @@
 // enum (= GET_LANG_LIST) order — matching the host's stable sort.
 
 static const uint8_t REGION_OFFSET[NUM_LANG_REGIONS + 1] = {
-    0, 7, 37, 46, 54, 74, 81,
+    0, 6, 36, 45, 53, 73, 81,
 };
 
 static const uint8_t REGION_LANGS[NUM_LANG] = {
-    // Americas (7): es-AR pt-BR fr-CA en-CA es-MX en-US hw-US
-    78, 32, 45, 77, 42,  0, 64,
+    // Americas (6): es-AR pt-BR fr-CA en-CA es-MX en-US
+    78, 32, 45, 77, 42,  0,
     // Europe (30)
     44, 15, 13, 43, 26,  1, 24, 31,  3, 22,  2, 41, 10, 27, 25, 55,
      5, 29, 30, 34, 19, 23, 16,  4, 17, 33, 12, 21, 28, 11,
@@ -39,8 +39,10 @@ static const uint8_t REGION_LANGS[NUM_LANG] = {
     // Asia (20): zh-CN zh-HK id-ID hi-IN mr-IN bn-IN te-IN ta-IN ja-JP ko-KR
     //            kk-KZ mn-MN ms-MY ne-NP tl-PH ur-PK th-TH zh-TW uz-UZ vi-VN
     18, 57, 53, 36, 37, 47, 48, 49,  8,  7, 14, 39, 75, 38, 63, 40, 46, 50, 76, 56,
-    // Oceania (7): en-AU fj-FJ en-NZ mi-NZ ty-PF en-PG sm-WS
-    58, 62, 59, 60, 80, 79, 61,
+    // Oceania (8): en-AU fj-FJ en-NZ mi-NZ ty-PF en-PG hw-US sm-WS
+    // (hw-US: geographic override — Hawaiian is Polynesian, despite the US
+    //  country code; mirrored by LANG_REGION_OVERRIDE on the host.)
+    58, 62, 59, 60, 80, 79, 64, 61,
 };
 
 static const uint32_t *const REGION_LABELS[NUM_LANG_REGIONS] = {

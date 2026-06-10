@@ -1048,7 +1048,14 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
             int8_t h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
-                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
+                // Clamp to the right edge like the shift preview — wide glyphs
+                // (e.g. @ on the French/Tahitian 0 key) otherwise clip off-screen.
+                int8_t amin, amax;
+                kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, letter, &amin, &amax);
+                int8_t alt_x = 28+h_off;
+                if (alt_x + amax > BUFFER_X + SCREEN_WIDTH - 1)
+                    alt_x = (int8_t)((BUFFER_X + SCREEN_WIDTH - 1) - amax);
+                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, alt_x, 23+v_off, letter);
             }
         }
         return true;

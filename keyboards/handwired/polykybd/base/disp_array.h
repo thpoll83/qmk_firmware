@@ -12,11 +12,16 @@
 #define SCREEN_HEIGHT 40
 #define BUFFER_X 28
 
-int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c, bool clear_cy);
+// Courtyard radius (Chebyshev) for the glyph-mask dilation behind a glyph.
+// `cy_radius` 0 disables the courtyard clear; KDISP_CY_DEFAULT is the standard
+// margin used behind overlay glyphs. The lang-layer flags use a smaller radius.
+#define KDISP_CY_DEFAULT 3
+
+int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c, int8_t cy_radius);
 
 void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text);
 
-void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, bool clear_cy);
+void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius);
 
 // Measure the horizontal pixel bounding box of `text` (relative to the draw
 // origin x) without drawing — mirrors the cursor advance of kdisp_write_gfx_text.
@@ -34,7 +39,7 @@ void kdisp_write_base_char(int8_t x, int8_t y, char c);
 
 void kdisp_draw_bitmap(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height);
 
-void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height);
+void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius);
 
 void kdisp_set_buffer(uint8_t vertical_pixel_row_of_8_pixels);
 

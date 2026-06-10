@@ -892,7 +892,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     }
     idx = get_overlay_mapping(idx);
 
-    kdisp_clear_bitmap_courtyard(28, 0, get_overlay(idx), 72, 40);
+    kdisp_clear_bitmap_courtyard(28, 0, get_overlay(idx), 72, 40, KDISP_CY_DEFAULT);
     kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40);
     return true;
 }
@@ -976,7 +976,7 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
     const int8_t fyo = (int8_t)pgm_read_byte(&ff->glyph[idx].yOffset);
     kdisp_write_gfx_char(lang_flag_fonts, 1, FLAG_LEFT_X,
                          (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
-                         FLAG_CP_BASE + idx, true);
+                         FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
 
     // Language code: vertical, up the right side; inverted bar when selected.
     kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
@@ -1054,10 +1054,10 @@ void update_displays(enum refresh_mode mode) {
                         if(text==NULL) {
                             if(!render_key(keycode, state, mods) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
-                                kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, unicode_map[chr], false);
+                                kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, unicode_map[chr], 0);
                             }
                         } else {
-                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, true);
+                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         text = NULL;
                         if(display_overlays) {
@@ -1068,7 +1068,7 @@ void update_displays(enum refresh_mode mode) {
                             text = keycode_to_disp_overlay(keycode, state);
                         }
                         if(text) {
-                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, true);
+                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         kdisp_send_buffer();
                         }

@@ -77,10 +77,21 @@ else wrapped `U"<cell>"`; empty → `NULL`.
   `_LatinExtAdd_` fonts have `yAdvance` 44 vs the base 40, so AltGr previews draw
   ~4 px low (oled_preview models this as `gy += yAdvance - base_yAdvance`). On the
   40 px panel: pure accent vowels (á à) clear it at **voffset 9**, but
-  **descenders/ogoneks (ŷ ỹ ą ę į ǫ, q, y) bottom at y≈42–43 → use voffset 5**.
-  Base-font AltGr letters (plain q/w) are fine at 9. **Always measure with
-  oled_preview (§9).** Never raise `VAR_SMALL` to make room — it clips the active
-  glyph.
+  **descenders/ogoneks (ŷ ỹ ą ę į ǫ, q, y) bottom at y≈42–43**. **Always measure
+  with oled_preview `--overshoot` (§9).** Never raise `VAR_SMALL` to make room —
+  it clips the active glyph.
+- **`\f` per-glyph nudge — the preferred clip fix.** A form-feed (`0x0C`) in a
+  cell moves the cursor **up 2 px**, so `u"\f\f" MICRO_SIGN` lifts µ 4 px while
+  leaving the rest of the category untouched — how de-DE (µ ¶) and he-IL (the
+  Hebrew points) keep tall AltGr glyphs on-panel. Prefer this per-glyph fix over a
+  category voffset drop when only one or two glyphs spill (µ ¶ ç, Arabic چ پ ژ,
+  archaic Georgian, accented descenders). It composes with a named glyph (a
+  multi-token cell). The **standard AltGr V-offset is 12** (13 lands the baseline
+  of the 44 px-`yAdvance` fonts exactly on the 40 px edge → a 1 px clip); a few
+  letter categories sit at 9. Reserve a category-wide drop for when *most* of the
+  column clips.
+  ⚠️ A fast analytical (bbox) clip-scan does **not** model `\f` cursor lifts, so it
+  over-reports already-nudged cells — only a real pixel render (`--overshoot`) is truth.
 
 ## 4. Fonts & named glyphs
 
@@ -171,12 +182,20 @@ Use the existing tool — **do not write another renderer**:
 cd PolyKybdHost/tools
 /tmp/pkvenv/bin/python oled_preview.py --lang xx-YY                 # contact sheet of all keys
 /tmp/pkvenv/bin/python oled_preview.py --lang xx-YY --key KC_Q --cell-scale 5   # one key, big
+/tmp/pkvenv/bin/python oled_preview.py --lang xx-YY --key KC_Q --overshoot 8 --cell-scale 8  # measure clip
+/tmp/pkvenv/bin/python oled_preview.py --lang xx-YY --channels     # overlap check
 ```
 It reads `lang_lut.xlsx` + `named_glyphs.h` + the generated fonts and reproduces
-the firmware draw exactly (incl. the `yAdvance` shift). Inspect every new key for
-**bottom clipping** (the descender trap, §3) and **missing glyphs** (a blank
-preview = font range doesn't cover the codepoint → widen it, §4). Iterate voffset
-until clear, re-render, confirm.
+the firmware draw exactly (incl. the `yAdvance` shift). **The render keeps up to
+`--overshoot` px (default 2) outside the 72×40 viewport on a red margin with any
+clipped pixels in yellow** — so **bottom clipping** (the descender trap, §3) is
+visible instead of silently dropped; raise `--overshoot` to see how far a glyph
+spills, fix with a `\f` nudge (§3), re-render. **`--channels`** colours base=green,
+Shift=blue, AltGr=red, so any **overlap** between the three shows as a mixed colour
+(cyan/yellow/magenta/white). Also catch **missing glyphs** (a blank preview = font
+range doesn't cover the codepoint → widen it, §4) and **redundant AltGr** (a legend
+that renders the same glyph as the key's inherited Shift/Base — drop the cell, it
+just draws the character twice).
 
 Also bump the host fixture: `PolyKybdHost/tests/device/poly_kybd_mock_test.py`
 (`_ALL_FIRMWARE_LANGS` + count) — the new codes append after the last one, in
@@ -191,7 +210,10 @@ unless asked.
 
 ## Pitfalls (all hit this session)
 - NULL `VAR_SMALL` → whole key falls back to en-US (§3).
-- AltGr descenders clip at voffset 9 → use 5; measure with oled_preview (§3/§9).
+- AltGr descenders clip → prefer a per-glyph `\f` nudge over a category voffset
+  drop (standard V-offset is 12); measure with `oled_preview --overshoot` (§3/§9).
+- Redundant AltGr (renders the same glyph as the inherited Shift/Base) draws the
+  character twice — drop the cell. `--channels` spots overlaps (§9).
 - A blank AltGr preview = the font's range doesn't include the codepoint, even if
   the named glyph exists — widen the `fonts.yaml` range and regen (§4).
 - `--only` doesn't rewrite the ALL_FONTS index — new categories need the index

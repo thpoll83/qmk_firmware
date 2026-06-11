@@ -525,6 +525,19 @@ matras, prototype the GPOS placement with `uharfbuzz` + `freetype-py`, confirm
 visually, then port to `-C` and re-verify by simulating the generated header.
 Libs: `pip install pypng fonttools uharfbuzz freetype-py`.
 
+The production renderer is **`PolyKybdHost/tools/oled_preview.py`** (don't write a
+new one). Two diagnostics added 2026-06-11: **`--overshoot N`** keeps up to N px
+outside the 72×40 viewport on a **red margin with clipped pixels in yellow** —
+without it the preview clips silently like the hardware, so a cut-off glyph is
+invisible (default 2; raise it to measure spill); **`--channels`** colours
+base=green / Shift=blue / AltGr=red so any overlap between the three mixes
+(cyan/yellow/magenta/white). Fix a clipped AltGr glyph with a **`\f` per-glyph
+nudge** (form-feed `0x0C` = cursor up 2 px, `u"\f\f" MICRO_SIGN`) rather than
+dropping the whole category — the standard AltGr V-offset is **12** (13 lands the
+44 px-`yAdvance` baselines on the bottom edge → 1 px clip). Also drop any AltGr
+cell that renders the same glyph as the key's inherited Shift/Base (it draws the
+character twice).
+
 ## I. Toolchain in the container
 - ARM: `sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi`
   (skip `apt-get update` — broken distro PPAs make the chained install fail).

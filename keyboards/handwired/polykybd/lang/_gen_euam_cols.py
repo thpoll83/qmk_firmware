@@ -53,14 +53,19 @@ S = lambda v: ["str", v]
 N = lambda v: ["num", v]
 
 # Settings (rows 56-61); fr-FR/Latin style with AltGr preview offsets.
-# letter.voffset[VAR_ALTGR] = 9 (NOT 13): the tall _SupAndExtA_/_LatinExtB_ glyphs
-# (yAdvance 44 vs the base 40) and ogonek/descender letters (ą ę į ǫ, ŷ, q, y)
-# draw ~4 px low (oled_preview.py models this as gy += yAdvance-base_yAdvance), so
-# 13 clipped them at the 40 px panel bottom. 9 lifts them clear — same fix as the
-# world batch. Verify with PolyKybdHost/tools/oled_preview.py --lang <code>.
+# letter.voffset[VAR_ALTGR] is set per language below (ALTGR_VOFF); 9 here is the
+# default for the base/se-NO case.
 SET_LATIN = {56: [None, S("HIDE"), None, N(50)], 57: [None, S("HIDE"), None, N(9)],
              58: [None, N(28), None, N(50)],     59: [None, N(0), None, N(13)],
              60: [None, N(28), None, N(50)],     61: [None, N(0), None, N(13)]}
+
+# letter.voffset[VAR_ALTGR] per language. The AltGr preview draws ~4 px low because
+# the _SupAndExtA_/_LatinExtB_/_LatinExtAdd_ fonts have yAdvance 44 vs the base 40
+# (oled_preview.py models this as gy += yAdvance-base). Pure accent vowels (á à è)
+# clear the 40 px bottom at 9, but DESCENDERS — Welsh ŷ, Guarani ỹ and the Navajo
+# ogonek vowels ą ę į ǫ — bottom at y≈42-43 at 9, so they need 5 (measured bottom
+# ≤ 39 with tools/oled_preview.py). se-NO's AltGr q/w/y/x are base-font (no +4) → 9.
+ALTGR_VOFF = {"ga-IE": 9, "mt-MT": 9, "se-NO": 9, "cy-GB": 5, "gn-PY": 5, "nv-US": 5}
 
 # Override applied to the clone-based AltGr-letter layouts so they inherit the
 # clone's hoffset/num/sym settings but use the un-clipped letter AltGr voffset.
@@ -203,11 +208,9 @@ ORDER = ["eu-ES", "gl-ES", "rm-CH", "cy-GB", "ga-IE", "mt-MT", "lb-LU", "se-NO",
          "gn-PY", "qu-PE", "ay-BO", "nv-US", "nh-MX"]
 assert set(ORDER) == set(SPEC)
 
-# Clone-based AltGr-letter layouts inherit a v=13 letter voffset from their clone
-# source; switch just that to the un-clipped 9 (nv-US/se-NO already get it via
-# SET_LATIN). cy/ga/mt have accented AltGr letters; gn adds the nasal vowels.
-for _L in ("cy-GB", "ga-IE", "mt-MT", "gn-PY"):
-    SPEC[_L][57] = ALTGR_V9[57]
+# Apply the per-language AltGr letter voffset (overrides the clone / SET_LATIN value).
+for _L, _v in ALTGR_VOFF.items():
+    SPEC[_L][57] = [None, S("HIDE"), None, N(_v)]
 
 spec_json = {n: {str(r): v for r, v in SPEC[n].items()} for n in ORDER}
 json.dump(spec_json, open("/tmp/euam_cols.json", "w"), indent=1)

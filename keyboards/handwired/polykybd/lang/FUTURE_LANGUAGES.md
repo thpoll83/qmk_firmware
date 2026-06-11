@@ -16,6 +16,65 @@ Adding a language therefore = three things:
 
 ---
 
+## 2026-06 AltGr-legend audit + backfill — IMPLEMENTED (2026-06-11): 43 existing locales
+
+**Not new languages — this filled in *missing AltGr (level-3) legends* on locales we
+already shipped.** Many fold/clone entries from the earlier batches carried a base+shift
+column but a sparse or empty AltGr column, so keycaps under-reported what the OS layout
+actually produces on `AltGr`/`AltGr+Shift`. The audit cross-checked every locale's AltGr
+column against its **xkb native** level-3/4 and backfilled the high-value gaps.
+
+**Method (reusable):** for each locale, `awk` the matching `xkb_symbols "<variant>"` block
+out of `/usr/share/X11/xkb/symbols/<file>`, map keysyms → codepoints via `keysymdef.h`
+(`/* U+XXXX */` comments) + the `Uxxxx`/single-char fallbacks, **drop combining marks**
+(`unicodedata.category startswith "M"` — they'd need a dotted-circle base, see playbook G),
+and diff against the current `lang_lut.xlsx` AltGr cells. Curate to letters + currency +
+high-value symbols (skip generic typographic « » – — …). Apply by editing
+`xl/worksheets/sheet2.xml` in-place (playbook B), `cog -r lang_lut.c`, build, verify with
+`oled_preview.py --lang xx-YY` before/after.
+
+**Four waves (all build clean, `NUM_LANG` unchanged at 160):**
+
+| Wave | Commit | Locales | Notes |
+|------|--------|---------|-------|
+| 1 | `46d8cc1a` | **ar-SA → all 17 Arabic country clones**, uk-UA, eu-ES, pl-PL, nl-NL, en-ZA, en-IE | Arabic edit on the `ar-SA` parent propagated to every `ar-*` clone (legends inherited). en-ZA←af-ZA, en-IE←ga-IE pick up the sibling's AltGr. |
+| 2 | `6870f967` | se-NO, mn-MN, ka-GE, ca-ES, kk-KZ, zh-CN, lt-LT, is-IS, pt-BR | Sami currency+carons, Mongolian ы Ы э Э, **archaic Georgian ჱ ჲ ჳ ჵ ჶ ჴ**, ŀ, ё, pinyin ü, @, €, § ª. |
+| 3+4 | `653d4ac9` | hi-IN, mr-IN, bn-BD, ru-RU, be-BY, az-AZ, en-PH, tl-PH, en-LK | Devanagari **nukta क़ ग़ ज़ ड़ फ़ + ॐ**, Bengali vowels + ৳, **₽ ₱ ₼** currency, ґ, ñ, diaeresis vowels. |
+| en-CA | (this batch) | en-CA | Canadian Multilingual Standard (`ca(multix)`) — base is exactly US-QWERTY, so the 21 CMS AltGr legends (± @ £ ¤ { } [ ] ½ ¬ ° µ § ¶ € ~ \| < >) overlay cleanly onto the existing US fold. |
+
+**New named glyphs created (21):** 3 Latin carons (`LATIN_01E5/01E9/01EF`), 6 archaic Georgian
+(`GEORGIAN_10F1..10F6`), 6 Devanagari (`DEVANAGARI_0958/095A/095B/095C/095E/0950`), 3 Bengali
+(`BENGALI_09CE/09BD/09F3`), 3 currency (`RUBLE_SIGN`/`PESO_SIGN`/`MANAT_SIGN`). All other legends
+reused existing tokens or stored ASCII (@ $ < > { } [ ] ~ \|) as **bare chars** — `make_key`
+wraps a bare cell in `U"…"` automatically (playbook C), so no glyph entry is needed for ASCII.
+
+**Font work (the only non-trivial part):** ₽ ₱ ₼ weren't in any font. Extended the
+`_CurrencySigns_` range in `fonts.yaml` (`+[0x20b1],[0x20bc,0x20bd]`) and regenerated the
+**latin** category with the pinned `fontconvert` — the diff was localized to the currency
+variant only (verify with `git diff` before committing; other variants must stay byte-identical).
+All Devanagari/Bengali/Georgian targets were **already inside existing font ranges** (grep the
+generated `*_fonts.h` for `uniXXXX` before creating a token — NotoSans is missing ǧ (`01E7`),
+which is why se-NO's G key was dropped).
+
+**Audit over-claims caught by before/after verification (dropped):** fr-FR/fr-BE/nl-BE (`@`
+was already mapped, on `KC_0` / `KC_2`; æ/œ marginal); he-IL (already carries the Yiddish
+digraphs ױ װ ײ among its 28 legends). Always diff against the *live* cell, not a guess —
+the xkb "native" map put `@` on a key we'd already covered elsewhere.
+
+### Cree (`cr-CA`) — no real layout to import (investigated 2026-06-11)
+The Wave-2 plan listed a "real CLDR Cree layout" as a follow-up. **CLDR has no Cree keyboard
+in any release or `main`** (only Inuktitut `iu`). The authoritative Cree keyboards (Keyman
+FirstVoices `fv_plains_cree`/`fv_swampy_cree`/…, Buffalo-Jump `bj_cree_*`) are either **mobile
+touch-layouts** (T_* keys, no physical-key map) or **roman→syllabic composing systems** — you
+type roman letters and the syllable **rotates by the following vowel**, so there is no direct
+key→syllable mapping like Cherokee's CLDR Windows layout had. The current `cr-CA` showcase
+(roman base + AltGr **citation-syllabic** hints: vowels ᐊᐁᐃᐅ, consonants in their `-a` forms
+ᐸ ᑕ ᑲ …) already reflects that documented system and the standard Plains Cree syllabary, so it
+was **left unchanged** rather than fabricate a layout. If a syllabic Cree keycap set is ever
+wanted, it has to be authored from the syllabary chart, not imported.
+
+---
+
 ## 2026-06 Europe + Americas minority/sibling batch — Wave 1 IMPLEMENTED (2026-06-10): 13 Latin locales
 
 > **STATUS: DONE (Wave 1).** 13 new entries (enum indices 143–155, `NUM_LANG`

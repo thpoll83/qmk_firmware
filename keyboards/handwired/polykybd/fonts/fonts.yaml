@@ -164,7 +164,7 @@ fonts:
   - {category: latin, variant: _Schwa_, render_height: 44, ranges: [[0x259, 0x259]], note: 'Latin small letter schwa (U+0259) for Azerbaijani az-AZ — sits just past the _LatinExtB_ range (IPA Extensions). Capital schwa Ə U+018F is already in _LatinExtB_.'}
   - {category: latin, variant: _SupAndExtA_, render_height: 44, ranges: [[0xa1, 0x17e]]}
   - {category: emoji, variant: _EmjTravelBMP_, ranges: [[0x2708, 0x2708]], note: 'Cat 8: travel — BMP 0x2708 + SMP 0x1F680-0x1F6C5 (extended to include shower/bath/transit)'}
-  - {category: latin, variant: _CurrencySigns_, ranges: [[0x20aa, 0x20ac], [0x20b4, 0x20b4], [0x2116, 0x2116]]}
+  - {category: latin, variant: _CurrencySigns_, ranges: [[0x20aa, 0x20ac], [0x20b1, 0x20b1], [0x20b4, 0x20b4], [0x20bc, 0x20bd], [0x2116, 0x2116]], note: 'Added ₱ peso (20B1, en-PH/tl-PH), ₼ manat (20BC, az-AZ), ₽ ruble (20BD, ru-RU).'}
   - {category: emoji, variant: _Hyper_, size: 18, bits: 32, ranges: [[0x1f4ab, 0x1f4ab]]}
   - {category: emoji, variant: _Meh_, bits: 32, ranges: [[0x1f410, 0x1f410]]}
   - {category: emoji, variant: _Settings_, bits: 32, ranges: [[0x1f527, 0x1f527]]}

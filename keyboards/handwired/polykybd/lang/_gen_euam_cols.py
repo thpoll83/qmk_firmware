@@ -53,13 +53,23 @@ S = lambda v: ["str", v]
 N = lambda v: ["num", v]
 
 # Settings (rows 56-61); fr-FR/Latin style with AltGr preview offsets.
-SET_LATIN = {56: [None, S("HIDE"), None, N(50)], 57: [None, S("HIDE"), None, N(13)],
+# letter.voffset[VAR_ALTGR] = 9 (NOT 13): the tall _SupAndExtA_/_LatinExtB_ glyphs
+# (yAdvance 44 vs the base 40) and ogonek/descender letters (ą ę į ǫ, ŷ, q, y)
+# draw ~4 px low (oled_preview.py models this as gy += yAdvance-base_yAdvance), so
+# 13 clipped them at the 40 px panel bottom. 9 lifts them clear — same fix as the
+# world batch. Verify with PolyKybdHost/tools/oled_preview.py --lang <code>.
+SET_LATIN = {56: [None, S("HIDE"), None, N(50)], 57: [None, S("HIDE"), None, N(9)],
              58: [None, N(28), None, N(50)],     59: [None, N(0), None, N(13)],
              60: [None, N(28), None, N(50)],     61: [None, N(0), None, N(13)]}
 
-# ── new named glyphs (Latin-1 / Ext-B, already inside the rendered font ranges) ─
+# Override applied to the clone-based AltGr-letter layouts so they inherit the
+# clone's hoffset/num/sym settings but use the un-clipped letter AltGr voffset.
+ALTGR_V9 = {57: [None, S("HIDE"), None, N(9)]}
+
+# ── new named glyphs (Latin-1 / Ext-A/B / Ext-Additional) ────────────────────
 NAMED = [["A_WITH_ACUTE", "C1"], ["A_WITH_ACUTE_SMALL", "E1"],   # Á á (Irish/Sami fada)
-         ["LATIN_01EA", "1EA"], ["LATIN_01EB", "1EB"]]           # Ǫ ǫ (Navajo)
+         ["LATIN_01EA", "1EA"], ["LATIN_01EB", "1EB"],           # Ǫ ǫ (Navajo)
+         ["LATIN_1EBD", "1EBD"], ["LATIN_1EF9", "1EF9"]]         # ẽ ỹ (Guarani nasal)
 
 # ── helper: a letter key [small, SHIFT, CAPS=None, ALTGR] ─────────────────────
 def L(small, shift, altgr=None):
@@ -118,6 +128,18 @@ SE_NO = {
     "KC_QUOTE":           L("LATIN_00E6", "LATIN_00C6"),   # æ Æ
 }
 
+# Guarani: types on the Latin-American (latam) layout — the nasal vowels are made
+# with the dead tilde — so it clones es-MX and adds the six nasal vowels as AltGr
+# previews (ã ẽ ĩ õ ũ ỹ) so the keycaps actually show Guarani's distinctive set.
+GN_PY = {
+    "KC_A": L("a", "A", "LATIN_00E3"),   # ã
+    "KC_E": L("e", "E", "LATIN_1EBD"),   # ẽ
+    "KC_I": L("i", "I", "LATIN_0129"),   # ĩ
+    "KC_O": L("o", "O", "LATIN_00F5"),   # õ
+    "KC_U": L("u", "U", "LATIN_0169"),   # ũ
+    "KC_Y": L("y", "Y", "LATIN_1EF9"),   # ỹ
+}
+
 # ── clone helper (mirrors _gen_world_cols.clone_col) ─────────────────────────
 def clone_col(sheet, langs, src):
     base = langs[src]
@@ -165,7 +187,7 @@ SPEC = {
     "gl-ES": clone_col(sh, langs, "es-ES"),
     "rm-CH": clone_col(sh, langs, "de-CH"),
     "lb-LU": clone_col(sh, langs, "fr-CH"),
-    "gn-PY": clone_col(sh, langs, "es-MX"),
+    "gn-PY": overlay(clone_col(sh, langs, "es-MX"), GN_PY),
     "qu-PE": clone_col(sh, langs, "es-MX"),
     "ay-BO": clone_col(sh, langs, "es-MX"),
     "nh-MX": clone_col(sh, langs, "es-MX"),
@@ -180,6 +202,12 @@ SPEC = {
 ORDER = ["eu-ES", "gl-ES", "rm-CH", "cy-GB", "ga-IE", "mt-MT", "lb-LU", "se-NO",
          "gn-PY", "qu-PE", "ay-BO", "nv-US", "nh-MX"]
 assert set(ORDER) == set(SPEC)
+
+# Clone-based AltGr-letter layouts inherit a v=13 letter voffset from their clone
+# source; switch just that to the un-clipped 9 (nv-US/se-NO already get it via
+# SET_LATIN). cy/ga/mt have accented AltGr letters; gn adds the nasal vowels.
+for _L in ("cy-GB", "ga-IE", "mt-MT", "gn-PY"):
+    SPEC[_L][57] = ALTGR_V9[57]
 
 spec_json = {n: {str(r): v for r, v in SPEC[n].items()} for n in ORDER}
 json.dump(spec_json, open("/tmp/euam_cols.json", "w"), indent=1)

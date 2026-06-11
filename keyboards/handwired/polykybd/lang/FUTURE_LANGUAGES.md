@@ -66,6 +66,19 @@ Adding a language therefore = three things:
 > pinned fontconvert (existing 143 byte-identical, +13 new). Both `split72:default`
 > and `corne42:default` build clean; all 419 host tests pass.
 >
+> **Post-test fixes (2026-06-11, verified with `PolyKybdHost/tools/oled_preview.py`)**:
+> - **AltGr letters clipped ~3–4 px at the panel bottom** (cy-GB ŷ, ga-IE/mt-MT
+>   accented vowels, nv-US ą ę į ǫ, se-NO q): the `_SupAndExtA_`/`_LatinExtB_`
+>   fonts have yAdvance 44 vs the base 40, so the AltGr preview draws ~4 px low.
+>   Lowered the letter `VAR_ALTGR` voffset 13 → 9 (same fix the world batch used
+>   for mi-NZ/sm-WS macrons).
+> - **gn-PY showed no Guarani nasal vowels**: it was a plain es-MX clone. Added
+>   ã ẽ ĩ õ ũ ỹ as AltGr previews. ẽ (U+1EBD) / ỹ (U+1EF9) are Latin Extended
+>   Additional and were **outside the `_LatinExtAdd_` font range** (Yoruba-only),
+>   so they rendered blank — widened that font entry in `fonts.yaml` and
+>   regenerated `latin_fonts.h` with the pinned fontconvert (new
+>   `generate_fonts.py --only latin`; the other category headers are untouched).
+>
 > **Wave 2 (next, needs new fonts)**: Middle East `ps-AF` Pashto (extends the
 > Arabic font) + the indigenous syllabaries `ck-US` **Cherokee** (Cherokee
 > syllabary), `iu-CA` **Inuktitut** + `cr-CA` **Cree** (Canadian Aboriginal

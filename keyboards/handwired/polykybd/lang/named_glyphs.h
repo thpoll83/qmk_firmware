@@ -1666,4 +1666,6 @@
 #define A_WITH_ACUTE_SMALL          	U"\xE1"
 #define LATIN_01EA                  	U"\x1EA"
 #define LATIN_01EB                  	U"\x1EB"
+#define LATIN_1EBD                  	U"\x1EBD"
+#define LATIN_1EF9                  	U"\x1EF9"
 //[[[end]]]

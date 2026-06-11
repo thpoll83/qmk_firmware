@@ -242,9 +242,18 @@ def build_cree():
     cols.update(SET_SYLLABIC)
     return cols
 
-SPEC = {"ps-AF": build_pashto(), "ck-US": build_cherokee(),
-        "iu-CA": build_inuktitut(), "cr-CA": build_cree()}
-ORDER = ["ps-AF", "ck-US", "iu-CA", "cr-CA"]
+# cr-CA Cree is a ROMAN FOLD, not a syllabary layout: Win/macOS ship no Cree
+# keyboard; Cree is typed with third-party "Build-a-Syllable" keyboards that
+# COMPOSE syllabics from multiple roman keystrokes (k+e -> ᑫ). Per the 1:1 rule
+# (show direct key->glyph, never composed sequences) the keycaps stay roman.
+SET_FOLD = {56: [None, S("HIDE"), None, None], 57: [None, S("HIDE"), None, None],
+            58: [None, N(35), None, None],     59: [None, N(0), None, None],
+            60: [None, N(35), None, None],     61: [None, N(0), None, None]}
+
+# ps-AF already shipped; ck-US Cherokee deferred until the real Cherokee Nation
+# layout (the OS one) can be sourced — its sites are network-blocked here.
+SPEC = {"iu-CA": build_inuktitut(), "cr-CA": dict(SET_FOLD)}
+ORDER = ["iu-CA", "cr-CA"]
 
 spec_json = {n: {str(r): v for r, v in SPEC[n].items()} for n in ORDER}
 json.dump(spec_json, open("/tmp/w2_cols.json", "w"), indent=1)

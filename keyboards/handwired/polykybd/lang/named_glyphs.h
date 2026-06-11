@@ -1902,4 +1902,13 @@
 #define UCAS_1673                   	U"\x1673"
 #define UCAS_1675                   	U"\x1675"
 #define CHEROKEE_13C0               	U"\x13C0"
+#define LATIN_01E5                  	U"\x01E5"
+#define LATIN_01E9                  	U"\x01E9"
+#define LATIN_01EF                  	U"\x01EF"
+#define GEORGIAN_10F1               	U"\x10F1"
+#define GEORGIAN_10F2               	U"\x10F2"
+#define GEORGIAN_10F3               	U"\x10F3"
+#define GEORGIAN_10F4               	U"\x10F4"
+#define GEORGIAN_10F5               	U"\x10F5"
+#define GEORGIAN_10F6               	U"\x10F6"
 //[[[end]]]

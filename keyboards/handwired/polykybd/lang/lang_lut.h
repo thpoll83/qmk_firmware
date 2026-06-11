@@ -186,6 +186,7 @@ enum lang_layer {
     LANG_AYBO,
     LANG_NVUS,
     LANG_NHMX,
+    LANG_PSAF,
     //[[[end]]]
     NUM_LANG };
 

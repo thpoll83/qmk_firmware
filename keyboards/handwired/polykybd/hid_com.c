@@ -305,6 +305,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     case LANG_AYBO: memcpy(data, "P\x07.ayBO", 7); break;
                     case LANG_NVUS: memcpy(data, "P\x07.nvUS", 7); break;
                     case LANG_NHMX: memcpy(data, "P\x07.nhMX", 7); break;
+                    case LANG_PSAF: memcpy(data, "P\x07.psAF", 7); break;
                     //[[[end]]]
                     default:
                         memcpy(data, "P\x07!", 3);
@@ -356,7 +357,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(data, "P\x08.kyKGtgTJenGUenSBenVUenFMfrNCtoTOeuESglESrmCHcyGBgaIEmtMTlbLU", 63);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "P\x08.seNOgnPYquPEayBOnvUSnhMX", 27);
+                memcpy(data, "P\x08.seNOgnPYquPEayBOnvUSnhMXpsAF", 31);
                 //[[[end]]]
                 raw_hid_send(data, length);
                 break;
@@ -649,7 +650,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     if off + CHUNK < len(packed):
                         cog.outl('memset(data, 0, length);')
                 ]]]*/
-                memcpy(data, "\x50\x1b\x2e\x9c\x25\xe8\x20\x38\x2f\x4a\x27\x43\x82\xb7\x48\x6d\xa4\xe0\x54\x79\x4a\x71\x07\xc0\x24\x58\xaa\xe5\x87\xbe\x0d\x23\x50\x7c\x0e\x15\x80\xb2\x86\xbc\xb6\x2f\x73\xa5\x38\x66\x99\xc4\x2c\x45\x74\xa6\x1f\x3a\x3d\x63\x1b\x37\x3b\x61\x8f\xc9\x61\x84", 64);
+                memcpy(data, "\x50\x1b\x2e\x9d\x25\xe8\x20\x38\x2f\x4a\x27\x43\x82\xb7\x48\x6d\xa4\xe0\x54\x79\x4a\x71\x07\xc0\x24\x58\xaa\xe5\x87\xbe\x0d\x23\x50\x7c\x0e\x15\x80\xb2\x86\xbc\xb6\x2f\x73\xa5\x38\x66\x99\xc4\x2c\x45\x74\xa6\x1f\x3a\x3d\x63\x1b\x37\x3b\x61\x8f\xc9\x61\x84", 64);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
                 memcpy(data, "\x50\x1b\x2e\x63\x86\x28\x3f\x82\x1e\x95\xbd\x67\x8f\x2a\x6b\x39\x68\x6a\x68\x71\xa7\x69\x92\xab\xb1\x25\x4c\x27\x9c\x20\x2a\x2f\x13\x2f\x25\x9e\xd9\x12\x68\x9c\x68\x9b\x68\xb6\xe3\x4c\x4e\x3e\x06\x41\x64\x0b\x0f\x47\x6c\xae\xf0\xb6\x5e\x25\x0c\x25\xaa\x66", 64);
@@ -664,7 +665,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(data, "\x50\x1b\x2e\xcc\x2f\x8d\x25\x51\x25\xe6\x25\xf7\x9a\xe4\x82\x07\x82\x9e\x12\x12\x25\x68\x25\xb1\x25\xb0\x25\xc5\x25\x81\x5a\x73\x9d\xda\x25\x5b\x25\xc1\x25\xf1\x25\x48\x2f\xa0\xa3\xdf\x29\x43\x33\x43\x84\x2a\x1e\x4c\x31\x65\x6c\x98\x5c\x85\x8c\xa6\x34\xb9", 64);
                 raw_hid_send(data, length);
                 memset(data, 0, length);
-                memcpy(data, "\x50\x1b\x2e\x83\xad\x0a\x1c\x77\xe8\xb9\x9c", 11);
+                memcpy(data, "\x50\x1b\x2e\x83\xad\x0a\x1c\x77\xe8\xb9\x9c\x81\x02", 13);
                 raw_hid_send(data, length);
                 //[[[end]]]
                 break;

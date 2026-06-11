@@ -23,7 +23,7 @@
 // enum (= GET_LANG_LIST) order — matching the host's stable sort.
 
 static const uint8_t REGION_OFFSET[NUM_LANG_REGIONS + 1] = {
-    0, 26, 72, 91, 114, 142, 156,
+    0, 26, 72, 91, 114, 143, 157,
 };
 
 static const uint8_t REGION_LANGS[NUM_LANG] = {
@@ -47,11 +47,11 @@ static const uint8_t REGION_LANGS[NUM_LANG] = {
     //              pt-MZ yo-NG en-NG ar-SD fr-SN ar-TN sw-TZ en-UG en-ZA af-ZA en-ZM
     127, 118, 119, 120, 114,  67,  69, 123,  68, 117,  72, 122, 128,  70,  71, 115,
     121, 116, 126, 124,  65,  66, 125,
-    // Asia (28): bn-BD zh-CN zh-HK id-ID hi-IN mr-IN bn-IN te-IN ta-IN en-IN ja-JP ky-KG ko-KR
-    //            kk-KZ en-LK mn-MN ms-MY ne-NP tl-PH en-PH ur-PK en-PK en-SG th-TH tg-TJ zh-TW
-    //            uz-UZ vi-VN
-    129,  18,  57,  53,  36,  37,  47,  48,  49, 130,   8, 135,   7,  14, 134,  39,
-     75,  38,  63, 132,  40, 131, 133,  46, 136,  50,  76,  56,
+    // Asia (29): ps-AF bn-BD zh-CN zh-HK id-ID hi-IN mr-IN bn-IN te-IN ta-IN en-IN ja-JP ky-KG
+    //            ko-KR kk-KZ en-LK mn-MN ms-MY ne-NP tl-PH en-PH ur-PK en-PK en-SG th-TH tg-TJ
+    //            zh-TW uz-UZ vi-VN
+    156, 129,  18,  57,  53,  36,  37,  47,  48,  49, 130,   8, 135,   7,  14, 134,
+     39,  75,  38,  63, 132,  40, 131, 133,  46, 136,  50,  76,  56,
     // Oceania (14): en-AU fj-FJ en-FM en-GU fr-NC en-NZ mi-NZ ty-PF en-PG en-SB to-TO hw-US
     //               en-VU sm-WS
     // (hw-US: geographic override — Hawaiian is Polynesian, despite the US

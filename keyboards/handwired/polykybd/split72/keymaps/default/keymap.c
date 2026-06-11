@@ -1013,6 +1013,7 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_AYBO: return U"ay-BO";
         case KCL_NVUS: return U"nv-US";
         case KCL_NHMX: return U"nh-MX";
+        case KCL_PSAF: return U"ps-AF";
         //[[[end]]]
         default:
             return NULL;
@@ -1942,6 +1943,7 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_AYBO: local_state->lang = LANG_AYBO; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_NVUS: local_state->lang = LANG_NVUS; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_NHMX: local_state->lang = LANG_NHMX; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_PSAF: local_state->lang = LANG_PSAF; mark_settings_dirty(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:

@@ -85,7 +85,12 @@
 //######################################
 #define FW_VERSION "0.8.21"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
-#define PROTOCOL_VERSION 2
+// v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
+//     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
+//     carried no information (always ".", never read by the host) and arrived
+//     only after the blocking UART bridge to the slave, leaving stale replies
+//     that poisoned later commands' reads on the host.
+#define PROTOCOL_VERSION 3
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

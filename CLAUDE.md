@@ -49,7 +49,14 @@ The host software (`PolyKybdHost/`) communicates with this firmware over a custo
   host (protocol ≥ 2) uses cmd `27` exclusively with **no ASCII fallback**, and
   firmware older than v2 is unsupported; the rig asserts cmd `0x08` NACKs. The
   index↔code tables are the **frozen, append-only** `lang/iso_lang_country.py`
-  (see "Language list encoding" below).
+  (see "Language list encoding" below). **v3** made `SEND_OVERLAY_MAPPING`
+  (cmd `21`) **silent** — no per-chunk ACK, matching the other bulk overlay
+  commands (`0x0A`, `0x10`/`0x11`, `0x12`/`0x13`). The old ACK was informationless
+  (always `.`), discarded unread by the host, and arrived only after the blocking
+  UART bridge to the slave — escaped ACKs were the main source of stale replies
+  the host had to drain. The host (protocol 3) no longer drains after mapping
+  sends; ordering for `enable_overlays` (case 11) is preserved because HID
+  reports dispatch sequentially and the bridge completes before case 21 returns.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)

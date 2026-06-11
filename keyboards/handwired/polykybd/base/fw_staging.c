@@ -11,6 +11,14 @@
 
 #include <string.h>
 
+// Flash-partition invariants (see the map in fw_staging.h). Compile-time guards
+// so any future offset change that would let the regions overlap fails the build
+// rather than corrupting a staged update or the resource region at run time.
+_Static_assert(FW_UP_MAX_SIZE <= FW_STAGING_OFFSET,
+               "a staged image cannot be larger than the firmware partition");
+_Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_RESOURCE_OFFSET,
+               "staging area overruns the resource region (FLASH_TARGET_OFFSET)");
+
 // ---------------------------------------------------------------------------
 // Dual-core flash safety: halt core1 via PSM reset before any flash_range_*
 // call to prevent a CPU LOCKUP on core1.

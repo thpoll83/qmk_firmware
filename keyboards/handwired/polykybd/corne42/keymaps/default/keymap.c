@@ -32,6 +32,7 @@
 #include "base/disp_array.h"
 #include "base/helpers.h"
 #include "base/update.h"
+#include "base/fw_staging.h"
 #include "base/spi_helper.h"
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
@@ -65,7 +66,7 @@
 void rgb_matrix_update_pwm_buffers(void);
 #endif
 
-#define FLASH_TARGET_OFFSET (4 * 1024 * 1024)
+#define FLASH_TARGET_OFFSET FW_RESOURCE_OFFSET //4 MB; single source = base/fw_staging.h flash map
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 

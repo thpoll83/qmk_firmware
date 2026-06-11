@@ -88,7 +88,7 @@ while lang_key:
 
 
 //not used at the moment
-#define FLASH_TARGET_OFFSET (4 * 1024 * 1024) //we start at 4MB and use the remaining 4MB for resource data
+#define FLASH_TARGET_OFFSET FW_RESOURCE_OFFSET //4 MB; single source = base/fw_staging.h flash map (staging ends here, resources use the remaining 4 MB)
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 

@@ -98,7 +98,7 @@ categories:
     defaults: {source: noto-sans-canadian-aboriginal, size: 16, render_height: 40}
   cherokee:
     output: cherokee_fonts.h
-    defaults: {source: noto-sans-cherokee, size: 16, render_height: 40}
+    defaults: {source: noto-sans-cherokee, size: 13, render_height: 40}
   symbols:
     output: symbol_fonts.h
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}

@@ -1901,4 +1901,5 @@
 #define UCAS_1671                   	U"\x1671"
 #define UCAS_1673                   	U"\x1673"
 #define UCAS_1675                   	U"\x1675"
+#define CHEROKEE_13C0               	U"\x13C0"
 //[[[end]]]

@@ -185,9 +185,13 @@ def build_inuktitut():
     cols.update(SET_SYLLABIC)
     return cols
 
-SET_SYLLABIC = {56: [None, N(36), None, None], 57: [None, N(0), None, None],
-                58: [None, N(36), None, None], 59: [None, N(0), None, None],
-                60: [None, N(36), None, None], 61: [None, N(0), None, None]}
+# VAR_ALTGR h/v offsets (index 3) put the AltGr hint at the right edge (h=50 ->
+# right-clamped by the firmware) and ~9 px low so a Latin descender (q/p/y) clears
+# the 40 px keycap. Cherokee uses the shift preview (h=36) too, so letter keys can
+# show base + shift syllable + AltGr Latin all at once.
+SET_SYLLABIC = {56: [None, N(24), None, N(64)], 57: [None, N(0), None, N(9)],
+                58: [None, N(24), None, N(64)], 59: [None, N(0), None, N(9)],
+                60: [None, N(24), None, N(64)], 61: [None, N(0), None, N(9)]}
 
 # ── Cherokee (no xkb): syllabary chart laid across the keys (showcase) ────────
 # 85 syllables U+13A0..13F4 placed base+shift on the letter/number rows in chart
@@ -290,17 +294,34 @@ def chero_cell(s):
             toks.append(ch)
     if not toks:
         return None
-    return S(" ".join(toks))   # multiple -> cog concatenates adjacent U"" literals
+    # A keycap shows one glyph. The Cherokee Nation layout puts multi-syllable word
+    # macros on the number row base (1->ᏣᎳᎩ, 2->ᎣᏏᏲ, 3->ᏩᏙ; the digit is on AltR);
+    # those are "composed of multiple glyphs", so per the layout-matching rule we do
+    # not paint them — the key keeps its single-glyph Shift syllable and falls back
+    # to the plain digit for the base.
+    if len(toks) > 1:
+        return None
+    return S(toks[0])
 
 def build_cherokee():
     m = parse_cldr(os.path.join(_HERE, "layouts", "chr-windows.xml"))
     base, shift = m.get("", {}), m.get("shift", {})
+    # AltGr layer: the Cherokee Nation board's "Latin escape" (AltGr+letter -> the
+    # Latin letter), the plain digit/symbol on the number row, and one extra syllable
+    # on the grave key. All single glyphs (1:1), so they make good per-key hints.
+    altr = next((m[k] for k in m if "altR" in k and "shift" not in k), {})
     cols = {}
     for iso, kc in ISO2KC.items():
         b = chero_cell(base.get(iso))
+        sh = chero_cell(shift.get(iso))
+        ag = chero_cell(altr.get(iso))
         if b is None:
-            continue
-        cols[ROW[kc]] = [b, chero_cell(shift.get(iso)), b, None]   # CAPS=base
+            # macro keys (1/2/3): the base already falls back to the en-US digit,
+            # which is exactly what AltGr types there - drop the redundant hint.
+            ag = None
+        if b is None and sh is None and ag is None:
+            continue                                              # nothing paintable -> en-US fallback
+        cols[ROW[kc]] = [b, sh, b, ag]                            # CAPS=base; b=None on the macro keys
     cols.update(SET_SYLLABIC)
     return cols
 

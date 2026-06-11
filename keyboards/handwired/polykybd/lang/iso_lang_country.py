@@ -55,7 +55,21 @@ def encode_packed(codes) -> bytes:
     return bytes(out)
 
 
-def decode_packed(buf) -> list:
-    """Inverse of encode_packed. buf[0] = count, then count*(lang,country) pairs."""
+def decode_packed(buf, on_skip=None) -> list:
+    """Inverse of encode_packed. buf[0] = count, then count*(lang,country) pairs.
+
+    An index pair that falls outside the known tables — e.g. a language a firmware
+    newer than this frozen table reports — is skipped instead of aborting the whole
+    list, so one unknown code never costs you every other language. When given,
+    on_skip(position, lang_idx, country_idx) is called for each skipped pair so the
+    caller can log it.
+    """
     count = buf[0]
-    return [decode_pair(buf[1 + 2 * i], buf[2 + 2 * i]) for i in range(count)]
+    out = []
+    for i in range(count):
+        li, ci = buf[1 + 2 * i], buf[2 + 2 * i]
+        if 0 <= li < len(LANG_CODES) and 0 <= ci < len(COUNTRY_CODES):
+            out.append(LANG_CODES[li] + COUNTRY_CODES[ci])
+        elif on_skip is not None:
+            on_skip(i, li, ci)
+    return out

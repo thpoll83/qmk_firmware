@@ -23,15 +23,15 @@
 // enum (= GET_LANG_LIST) order — matching the host's stable sort.
 
 static const uint8_t REGION_OFFSET[NUM_LANG_REGIONS + 1] = {
-    0, 28, 74, 93, 116, 145, 159,
+    0, 29, 75, 94, 117, 146, 160,
 };
 
 static const uint8_t REGION_LANGS[NUM_LANG] = {
-    // Americas (28): es-AR es-BO ay-BO pt-BR fr-CA en-CA iu-CA cr-CA es-CL es-CO es-CR es-DO
+    // Americas (29): es-AR es-BO ay-BO pt-BR fr-CA en-CA iu-CA cr-CA es-CL es-CO es-CR es-DO
     //                es-EC es-GT es-HN es-MX nh-MX es-NI es-PA es-PE qu-PE es-PY gn-PY es-SV
-    //                en-US nv-US es-UY es-VE
+    //                en-US nv-US ck-US es-UY es-VE
      78,  88, 153,  32,  45,  77, 157, 158,  84,  81,  90,  87,  85,  86,  92,  42,
-    155,  95,  93,  82, 152,  89, 151,  91,   0, 154,  94,  83,
+    155,  95,  93,  82, 152,  89, 151,  91,   0, 154, 159,  94,  83,
     // Europe (46): de-AT bs-BA fr-BE nl-BE bg-BG be-BY de-CH fr-CH rm-CH cs-CZ de-DE da-DK
     //              et-EE es-ES ca-ES eu-ES gl-ES fi-FI fo-FO fr-FR en-GB cy-GB el-GR hr-HR
     //              hu-HU en-IE ga-IE is-IS it-IT lt-LT lb-LU lv-LV mk-MK mt-MT nl-NL nn-NO

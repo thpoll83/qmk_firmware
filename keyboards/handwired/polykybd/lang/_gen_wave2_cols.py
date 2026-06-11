@@ -14,7 +14,8 @@ Cree have no xkb layout, so they use a documented systematic syllabary arrangeme
 Outputs: /tmp/w2_cols.json, /tmp/w2_named.json, /tmp/w2_fonts.json (codepoint sets
 per script, for the fonts.yaml ranges).
 """
-import json, re
+import json, re, os
+_HERE = os.path.dirname(os.path.abspath(__file__))
 
 XKB = "/usr/share/X11/xkb/symbols"
 KEYSYMDEF = "/usr/include/X11/keysymdef.h"
@@ -242,18 +243,89 @@ def build_cree():
     cols.update(SET_SYLLABIC)
     return cols
 
-# cr-CA Cree is a ROMAN FOLD, not a syllabary layout: Win/macOS ship no Cree
-# keyboard; Cree is typed with third-party "Build-a-Syllable" keyboards that
-# COMPOSE syllabics from multiple roman keystrokes (k+e -> ᑫ). Per the 1:1 rule
-# (show direct key->glyph, never composed sequences) the keycaps stay roman.
-SET_FOLD = {56: [None, S("HIDE"), None, None], 57: [None, S("HIDE"), None, None],
-            58: [None, N(35), None, None],     59: [None, N(0), None, None],
-            60: [None, N(35), None, None],     61: [None, N(0), None, None]}
+# ── CLDR keyboard parser (lang/layouts/<loc>-<plat>.xml, via dl-layouts.sh) ───
+# CLDR ISO key position -> QMK keycode.
+ISO2KC = {"E00": "KC_GRAVE", "E11": "KC_MINUS", "E12": "KC_EQUAL",
+          "D11": "KC_LBRC", "D12": "KC_RBRC", "C10": "KC_SEMICOLON",
+          "C11": "KC_QUOTE", "C12": "KC_NONUS_HASH", "B00": "KC_NONUS_BACKSLASH",
+          "B08": "KC_COMMA", "B09": "KC_DOT", "B10": "KC_SLASH"}
+for _i, _c in enumerate("1234567890"): ISO2KC[f"E{_i+1:02d}"] = f"KC_{_c}"
+for _i, _c in enumerate("QWERTYUIOP"): ISO2KC[f"D{_i+1:02d}"] = f"KC_{_c}"
+for _i, _c in enumerate("ASDFGHJKL"):  ISO2KC[f"C{_i+1:02d}"] = f"KC_{_c}"
+for _i, _c in enumerate("ZXCVBNM"):    ISO2KC[f"B{_i+1:02d}"] = f"KC_{_c}"
 
-# ps-AF already shipped; ck-US Cherokee deferred until the real Cherokee Nation
-# layout (the OS one) can be sourced — its sites are network-blocked here.
-SPEC = {"iu-CA": build_inuktitut(), "cr-CA": dict(SET_FOLD)}
-ORDER = ["iu-CA", "cr-CA"]
+def parse_cldr(path):
+    """-> {modifier: {iso: output_string}}. modifier '' = base, 'shift' = shifted."""
+    txt = open(path, encoding="utf-8").read()
+    ent = {"&apos;": "'", "&quot;": '"', "&amp;": "&", "&lt;": "<", "&gt;": ">"}
+    out = {}
+    for km in re.finditer(r'<keyMap( modifiers="([^"]*)")?>(.*?)</keyMap>', txt, re.S):
+        mod = (km.group(2) or "").split()[0] if km.group(2) else ""
+        d = {}
+        for m in re.finditer(r'<map iso="(\w+)" to="([^"]*)"', km.group(3)):
+            to = m.group(2)
+            # CLDR \u{XXXX} / \uXXXX escapes -> the actual character
+            to = re.sub(r'\\u\{([0-9A-Fa-f]+)\}', lambda mm: chr(int(mm.group(1), 16)), to)
+            to = re.sub(r'\\u([0-9A-Fa-f]{4})', lambda mm: chr(int(mm.group(1), 16)), to)
+            for k, v in ent.items():
+                to = to.replace(k, v)
+            d[m.group(1)] = to
+        out.setdefault(mod, {}).update(d)
+    return out
+
+# ── Cherokee ck-US: the Cherokee Nation layout (DIRECT 1:1), from CLDR windows ─
+def chero_cell(s):
+    if not s:
+        return None
+    if len(s) == 1 and s.isdigit():
+        return N(int(s))
+    toks = []
+    for ch in s:
+        cp = ord(ch)
+        if 0x13A0 <= cp <= 0x13FD:
+            fontset["cherokee"].add(cp); toks.append(glyph(cp, "CHEROKEE"))
+        elif cp in ASCII_NAMED:
+            toks.append(ASCII_NAMED[cp])
+        elif 0x21 <= cp <= 0x7E:
+            toks.append(ch)
+    if not toks:
+        return None
+    return S(" ".join(toks))   # multiple -> cog concatenates adjacent U"" literals
+
+def build_cherokee():
+    m = parse_cldr(os.path.join(_HERE, "layouts", "chr-windows.xml"))
+    base, shift = m.get("", {}), m.get("shift", {})
+    cols = {}
+    for iso, kc in ISO2KC.items():
+        b = chero_cell(base.get(iso))
+        if b is None:
+            continue
+        cols[ROW[kc]] = [b, chero_cell(shift.get(iso)), b, None]   # CAPS=base
+    cols.update(SET_SYLLABIC)
+    return cols
+
+# ── Cree cr-CA: roman board + 1:1 AltGr syllabic HINT per key (the rotation
+# system — consonant shape + vowel rotation). We show the base citation syllabic
+# (the -a form / standalone vowel); the vowel rotation stays composed (typed). ──
+CREE_HINT = {  # roman QWERTY key -> Unified Canadian Aboriginal Syllabics citation cp
+    "KC_A": 0x140A, "KC_E": 0x1401, "KC_I": 0x1403, "KC_O": 0x1405,   # vowels ᐊᐁᐃᐅ
+    "KC_P": 0x1438, "KC_T": 0x1455, "KC_K": 0x1472, "KC_C": 0x1490,   # pa ta ka ca
+    "KC_M": 0x14AA, "KC_N": 0x14C7, "KC_S": 0x14F4, "KC_Y": 0x152D,   # ma na sa ya
+    "KC_W": 0x1417, "KC_L": 0x14DA, "KC_R": 0x154B}                   # wa la ra
+SET_CREE = {56: [None, S("HIDE"), None, N(50)], 57: [None, S("HIDE"), None, N(9)],
+            58: [None, N(35), None, None],      59: [None, N(0), None, None],
+            60: [None, N(35), None, None],      61: [None, N(0), None, None]}
+def build_cree_hints():
+    cols = {}
+    for kc, cp in CREE_HINT.items():
+        fontset["canadian"].add(cp)
+        lo = kc[3].lower()
+        cols[ROW[kc]] = [S(lo), S(lo.upper()), None, S(glyph(cp, "UCAS"))]
+    cols.update(SET_CREE)
+    return cols
+
+SPEC = {"iu-CA": build_inuktitut(), "cr-CA": build_cree_hints(), "ck-US": build_cherokee()}
+ORDER = ["iu-CA", "cr-CA", "ck-US"]
 
 spec_json = {n: {str(r): v for r, v in SPEC[n].items()} for n in ORDER}
 json.dump(spec_json, open("/tmp/w2_cols.json", "w"), indent=1)

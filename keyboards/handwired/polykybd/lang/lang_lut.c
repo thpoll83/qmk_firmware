@@ -239,7 +239,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0634,                  ARABIC_069A,                  ARABIC_0634,                  NULL,
     /*  iu-CA    */  UCAS_1591,                    UCAS_148D,                    UCAS_1591,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"a",                         U"A",                         NULL,                         UCAS_140A,
+    /*  ck-US    */  CHEROKEE_13A0,                CHEROKEE_13CC,                CHEROKEE_13A0,                NULL
     },
     {/* KC_B: */
     /*  en-US    */  U"b",                         U"B",                         NULL,                         NULL,
@@ -400,7 +401,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0630,                  NULL,                         ARABIC_0630,                  ARABIC_0625,
     /*  iu-CA    */  UCAS_1455,                    UCAS_157C,                    UCAS_1455,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13A8,                CHEROKEE_13F0,                CHEROKEE_13A8,                NULL
     },
     {/* KC_C: */
     /*  en-US    */  U"c",                         U"C",                         NULL,                         NULL,
@@ -561,7 +563,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0632,                  ARABIC_0698,                  ARABIC_0632,                  NULL,
     /*  iu-CA    */  UCAS_1583,                    UCAS_154B,                    UCAS_1583,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"c",                         U"C",                         NULL,                         UCAS_1490,
+    /*  ck-US    */  CHEROKEE_13D3,                CHEROKEE_13DF,                CHEROKEE_13D3,                NULL
     },
     {/* KC_D: */
     /*  en-US    */  U"d",                         U"D",                         NULL,                         NULL,
@@ -722,7 +725,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_06CC,                  ARABIC_064A,                  ARABIC_06CC,                  ARABIC_0649,
     /*  iu-CA    */  UCAS_1581,                    UCAS_1548,                    UCAS_1581,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13D7,                CHEROKEE_13D0,                CHEROKEE_13D7,                NULL
     },
     {/* KC_E: */
     /*  en-US    */  U"e",                         U"E",                         NULL,                         NULL,
@@ -883,7 +887,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_062B,                  NULL,                         ARABIC_062B,                  EURO_SIGN,
     /*  iu-CA    */  UCAS_157F,                    UCAS_1546,                    UCAS_157F,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"e",                         U"E",                         NULL,                         UCAS_1401,
+    /*  ck-US    */  CHEROKEE_13A1,                CHEROKEE_13E3,                CHEROKEE_13A1,                NULL
     },
     {/* KC_F: */
     /*  en-US    */  U"f",                         U"F",                         NULL,                         NULL,
@@ -1044,7 +1049,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0628,                  ARABIC_067E,                  ARABIC_0628,                  ARABIC_06BA,
     /*  iu-CA    */  UCAS_146F,                    UCAS_1555,                    UCAS_146F,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13A9,                CHEROKEE_13C8,                CHEROKEE_13A9,                NULL
     },
     {/* KC_G: */
     /*  en-US    */  U"g",                         U"G",                         NULL,                         NULL,
@@ -1205,7 +1211,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0644,                  ARABIC_0623,                  ARABIC_0644,                  ARABIC_06B7,
     /*  iu-CA    */  UCAS_1450,                    U"(",                         UCAS_1450,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13A6,                CHEROKEE_13E5,                CHEROKEE_13A6,                NULL
     },
     {/* KC_H: */
     /*  en-US    */  U"h",                         U"H",                         NULL,                         NULL,
@@ -1366,7 +1373,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0627,                  ARABIC_0622,                  ARABIC_0627,                  ARABIC_0671,
     /*  iu-CA    */  UCAS_14F1,                    U")",                         UCAS_14F1,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13AF,                CHEROKEE_13B2,                CHEROKEE_13AF,                NULL
     },
     {/* KC_I: */
     /*  en-US    */  U"i",                         U"I",                         NULL,                         NULL,
@@ -1527,7 +1535,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  iu-CA    */  UCAS_14C2,                    UCAS_15A4,                    UCAS_14C2,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"i",                         U"I",                         NULL,                         UCAS_1403,
+    /*  ck-US    */  CHEROKEE_13A2,                CHEROKEE_13F1,                CHEROKEE_13A2,                NULL
     },
     {/* KC_J: */
     /*  en-US    */  U"j",                         U"J",                         NULL,                         NULL,
@@ -1688,7 +1697,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_062A,                  ARABIC_067C,                  ARABIC_062A,                  ARABIC_0679,
     /*  iu-CA    */  UCAS_14A7,                    UCAS_152A,                    UCAS_14A7,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13DA,                CHEROKEE_13AB,                CHEROKEE_13DA,                NULL
     },
     {/* KC_K: */
     /*  en-US    */  U"k",                         U"K",                         NULL,                         NULL,
@@ -1849,7 +1859,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0646,                  ARABIC_06BC,                  ARABIC_0646,                  U">",
     /*  iu-CA    */  UCAS_14C4,                    UCAS_1557,                    UCAS_14C4,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"k",                         U"K",                         NULL,                         UCAS_1472,
+    /*  ck-US    */  CHEROKEE_13B8,                CHEROKEE_13A7,                CHEROKEE_13B8,                NULL
     },
     {/* KC_L: */
     /*  en-US    */  U"l",                         U"L",                         NULL,                         NULL,
@@ -2010,7 +2021,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0645,                  ARABIC_0629,                  ARABIC_0645,                  U"<",
     /*  iu-CA    */  UCAS_14D7,                    UCAS_15A2,                    UCAS_14D7,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"l",                         U"L",                         NULL,                         UCAS_14DA,
+    /*  ck-US    */  CHEROKEE_13B5,                CHEROKEE_13AE,                CHEROKEE_13B5,                NULL
     },
     {/* KC_M: */
     /*  en-US    */  U"m",                         U"M",                         NULL,                         NULL,
@@ -2171,7 +2183,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0693,                  ARABIC_0624,                  ARABIC_0693,                  ARABIC_0691,
     /*  iu-CA    */  UCAS_14AA,                    UCAS_14DA,                    UCAS_14AA,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"m",                         U"M",                         NULL,                         UCAS_14AA,
+    /*  ck-US    */  CHEROKEE_13C5,                CHEROKEE_13B7,                CHEROKEE_13C5,                NULL
     },
     {/* KC_N: */
     /*  en-US    */  U"n",                         U"N",                         NULL,                         NULL,
@@ -2332,7 +2345,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_062F,                  ARABIC_0689,                  ARABIC_062F,                  ARABIC_0688,
     /*  iu-CA    */  UCAS_14F4,                    UCAS_14C7,                    UCAS_14F4,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"n",                         U"N",                         NULL,                         UCAS_14C7,
+    /*  ck-US    */  CHEROKEE_13BE,                CHEROKEE_13BB,                CHEROKEE_13BE,                NULL
     },
     {/* KC_O: */
     /*  en-US    */  U"o",                         U"O",                         NULL,                         NULL,
@@ -2493,7 +2507,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_062E,                  ARABIC_0681,                  ARABIC_062E,                  U"'",
     /*  iu-CA    */  UCAS_14D5,                    UCAS_15A0,                    UCAS_14D5,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"o",                         U"O",                         NULL,                         UCAS_1405,
+    /*  ck-US    */  CHEROKEE_13A3,                CHEROKEE_13EC,                CHEROKEE_13A3,                NULL
     },
     {/* KC_P: */
     /*  en-US    */  U"p",                         U"P",                         NULL,                         NULL,
@@ -2654,7 +2669,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_062D,                  ARABIC_0685,                  ARABIC_062D,                  QUOTE,
     /*  iu-CA    */  UCAS_1528,                    UCAS_15A6,                    UCAS_1528,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"p",                         U"P",                         NULL,                         UCAS_1438,
+    /*  ck-US    */  CHEROKEE_13C1,                CHEROKEE_13EA,                CHEROKEE_13C1,                NULL
     },
     {/* KC_Q: */
     /*  en-US    */  U"q",                         U"Q",                         NULL,                         NULL,
@@ -2815,7 +2831,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0636,                  NULL,                         ARABIC_0636,                  NULL,
     /*  iu-CA    */  UCAS_158F,                    UCAS_148B,                    UCAS_158F,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13AA,                CHEROKEE_13C6,                CHEROKEE_13AA,                NULL
     },
     {/* KC_R: */
     /*  en-US    */  U"r",                         U"R",                         NULL,                         NULL,
@@ -2976,7 +2993,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0642,                  NULL,                         ARABIC_0642,                  NULL,
     /*  iu-CA    */  UCAS_146D,                    UCAS_1596,                    UCAS_146D,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"r",                         U"R",                         NULL,                         UCAS_154B,
+    /*  ck-US    */  CHEROKEE_13DB,                CHEROKEE_13CF,                CHEROKEE_13DB,                NULL
     },
     {/* KC_S: */
     /*  en-US    */  U"s",                         U"S",                         NULL,                         NULL,
@@ -3137,7 +3155,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0633,                  ARABIC_0626,                  ARABIC_0633,                  ARABIC_06D2,
     /*  iu-CA    */  UCAS_1405,                    UCAS_1433,                    UCAS_1405,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"s",                         U"S",                         NULL,                         UCAS_14F4,
+    /*  ck-US    */  CHEROKEE_13CD,                CHEROKEE_13CE,                CHEROKEE_13CD,                NULL
     },
     {/* KC_T: */
     /*  en-US    */  U"t",                         U"T",                         NULL,                         NULL,
@@ -3298,7 +3317,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0641,                  NULL,                         ARABIC_0641,                  NULL,
     /*  iu-CA    */  UCAS_144E,                    UCAS_1671,                    UCAS_144E,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"t",                         U"T",                         NULL,                         UCAS_1455,
+    /*  ck-US    */  CHEROKEE_13D4,                CHEROKEE_13D8,                CHEROKEE_13D4,                NULL
     },
     {/* KC_U: */
     /*  en-US    */  U"u",                         U"U",                         NULL,                         NULL,
@@ -3459,7 +3479,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0639,                  NULL,                         ARABIC_0639,                  NULL,
     /*  iu-CA    */  UCAS_14A5,                    UCAS_1675,                    UCAS_14A5,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13A4,                CHEROKEE_13AD,                CHEROKEE_13A4,                NULL
     },
     {/* KC_V: */
     /*  en-US    */  U"v",                         U"V",                         NULL,                         NULL,
@@ -3620,7 +3641,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0631,                  ARABIC_0621,                  ARABIC_0631,                  NULL,
     /*  iu-CA    */  UCAS_1472,                    U"?",                         UCAS_1472,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13A5,                CHEROKEE_13DE,                CHEROKEE_13A5,                NULL
     },
     {/* KC_W: */
     /*  en-US    */  U"w",                         U"W",                         NULL,                         NULL,
@@ -3781,7 +3803,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0635,                  NULL,                         ARABIC_0635,                  NULL,
     /*  iu-CA    */  UCAS_1403,                    UCAS_1431,                    UCAS_1403,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"w",                         U"W",                         NULL,                         UCAS_1417,
+    /*  ck-US    */  CHEROKEE_13B3,                CHEROKEE_13EB,                CHEROKEE_13B3,                NULL
     },
     {/* KC_X: */
     /*  en-US    */  U"x",                         U"X",                         NULL,                         NULL,
@@ -3942,7 +3965,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_06D0,                  ARABIC_0637,                  ARABIC_06D0,                  U";",
     /*  iu-CA    */  UCAS_140A,                    UCAS_1438,                    UCAS_140A,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13F4,                CHEROKEE_13ED,                CHEROKEE_13F4,                NULL
     },
     {/* KC_Y: */
     /*  en-US    */  U"y",                         U"Y",                         NULL,                         NULL,
@@ -4103,7 +4127,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_063A,                  NULL,                         ARABIC_063A,                  NULL,
     /*  iu-CA    */  UCAS_14EF,                    UCAS_1673,                    UCAS_14EF,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  U"y",                         U"Y",                         NULL,                         UCAS_152D,
+    /*  ck-US    */  CHEROKEE_13EF,                CHEROKEE_13F2,                CHEROKEE_13EF,                NULL
     },
     {/* KC_Z: */
     /*  en-US    */  U"z",                         U"Z",                         NULL,                         NULL,
@@ -4264,7 +4289,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_06CD,                  ARABIC_0638,                  ARABIC_06CD,                  U"?",
     /*  iu-CA    */  UCAS_1593,                    UCAS_1490,                    UCAS_1593,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13AC,                CHEROKEE_13C3,                CHEROKEE_13AC,                NULL
     },
     {/* KC_1: */
     /*  en-US    */  U"1",                         U"!",                         U"1",                         NULL,
@@ -4425,7 +4451,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"1",                         U"!",                         U"1",                         U"|",
     /*  ps-AF    */  ARABIC_06F1,                  U"!",                         ARABIC_06F1,                  U"`",
     /*  iu-CA    */  UCAS_1595,                    U"1",                         UCAS_1595,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13E3 CHEROKEE_13B3 CHEROKEE_13A9,CHEROKEE_13B1,                CHEROKEE_13E3 CHEROKEE_13B3 CHEROKEE_13A9,NULL
     },
     {/* KC_2: */
     /*  en-US    */  U"2",                         U"@",                         U"2",                         NULL,
@@ -4586,7 +4613,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_06F2,                  ARABIC_066C,                  ARABIC_06F2,                  U"@",
     /*  iu-CA    */  UCAS_1449,                    U"2",                         UCAS_1449,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13A3 CHEROKEE_13CF CHEROKEE_13F2,CHEROKEE_13C7,                CHEROKEE_13A3 CHEROKEE_13CF CHEROKEE_13F2,NULL
     },
     {/* KC_3: */
     /*  en-US    */  U"3",                         U"#",                         U"3",                         NULL,
@@ -4747,7 +4775,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"3",                         U"#",                         U"3",                         MIDDLE_DOT,
     /*  ps-AF    */  ARABIC_06F3,                  ARABIC_066B,                  ARABIC_06F3,                  U"#",
     /*  iu-CA    */  UCAS_1550,                    U"3",                         UCAS_1550,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13E9 CHEROKEE_13D9,  CHEROKEE_13E7,                CHEROKEE_13E9 CHEROKEE_13D9,  NULL
     },
     {/* KC_4: */
     /*  en-US    */  U"4",                         U"$",                         U"4",                         NULL,
@@ -4908,7 +4937,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"4",                         U"$",                         U"4",                         U"~",
     /*  ps-AF    */  ARABIC_06F4,                  NULL,                         ARABIC_06F4,                  U"$",
     /*  iu-CA    */  UCAS_1483,                    U"4",                         UCAS_1483,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13D9,                CHEROKEE_13B0,                CHEROKEE_13D9,                NULL
     },
     {/* KC_5: */
     /*  en-US    */  U"5",                         U"%",                         U"5",                         NULL,
@@ -5069,7 +5099,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_06F5,                  ARABIC_066A,                  ARABIC_06F5,                  U"%",
     /*  iu-CA    */  UCAS_1466,                    U"5",                         UCAS_1466,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13E6,                CHEROKEE_13B9,                CHEROKEE_13E6,                NULL
     },
     {/* KC_6: */
     /*  en-US    */  U"6",                         U"^",                         U"6",                         NULL,
@@ -5230,7 +5261,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"6",                         U"&",                         U"6",                         NOT_SIGN,
     /*  ps-AF    */  ARABIC_06F6,                  NULL,                         ARABIC_06F6,                  U"^",
     /*  iu-CA    */  UCAS_1585,                    U"6",                         UCAS_1585,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13DC,                CHEROKEE_13DD,                CHEROKEE_13DC,                NULL
     },
     {/* KC_7: */
     /*  en-US    */  U"7",                         U"&",                         U"7",                         NULL,
@@ -5391,7 +5423,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_06F7,                  NULL,                         ARABIC_06F7,                  U"&",
     /*  iu-CA    */  UCAS_14BB,                    U"7",                         UCAS_14BB,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13CB,                CHEROKEE_13E1,                CHEROKEE_13CB,                NULL
     },
     {/* KC_8: */
     /*  en-US    */  U"8",                         U"*",                         U"8",                         NULL,
@@ -5552,7 +5585,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_06F8,                  NULL,                         ARABIC_06F8,                  NULL,
     /*  iu-CA    */  UCAS_14D0,                    U"8",                         UCAS_14D0,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13D6,                CHEROKEE_13BA,                CHEROKEE_13D6,                NULL
     },
     {/* KC_9: */
     /*  en-US    */  U"9",                         U"(",                         U"9",                         NULL,
@@ -5713,7 +5747,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_06F9,                  U")",                         ARABIC_06F9,                  NULL,
     /*  iu-CA    */  UCAS_14EA,                    U"9",                         UCAS_14EA,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13D2,                U"(",                         CHEROKEE_13D2,                NULL
     },
     {/* KC_0: */
     /*  en-US    */  ZERO,                         U")",                         ZERO,                         NULL,
@@ -5874,7 +5909,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_06F0,                  U"(",                         ARABIC_06F0,                  NULL,
     /*  iu-CA    */  UCAS_153E,                    NULL,                         UCAS_153E,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13C4,                U")",                         CHEROKEE_13C4,                NULL
     },
     {/* KC_ENTER: */
     /*  en-US    */  ARROWS_RETURN,                NULL,                         NULL,                         NULL,
@@ -6035,7 +6071,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  iu-CA    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_ESCAPE: */
     /*  en-US    */  U"Esc",                       NULL,                         NULL,                         NULL,
@@ -6196,7 +6233,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  iu-CA    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_BACKSPACE: */
     /*  en-US    */  TECHNICAL_ERASELEFT,          NULL,                         NULL,                         NULL,
@@ -6357,7 +6395,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  iu-CA    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_TAB: */
     /*  en-US    */  ARROWS_TAB,                   NULL,                         NULL,                         NULL,
@@ -6518,7 +6557,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  iu-CA    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_SPACE: */
     /*  en-US    */  ICON_SPACE,                   NULL,                         NULL,                         NULL,
@@ -6679,7 +6719,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  iu-CA    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_MINUS: */
     /*  en-US    */  U"-",                         U"_",                         U"-",                         NULL,
@@ -6840,7 +6881,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"'",                         U"?",                         U"'",                         BACKSLASH,
     /*  ps-AF    */  U"-",                         ARABIC_0640,                  U"-",                         U"_",
     /*  iu-CA    */  U"-",                         U"_",                         U"-",                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13BF,                CHEROKEE_13BC,                CHEROKEE_13BF,                NULL
     },
     {/* KC_EQUAL: */
     /*  en-US    */  EQUALS,                       U"+",                         EQUALS,                       NULL,
@@ -7001,7 +7043,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  INVERTED_QMARK,               INVERTED_EMARK,               INVERTED_QMARK,               NULL,
     /*  ps-AF    */  U"=",                         U"+",                         U"=",                         NULL,
     /*  iu-CA    */  UCAS_155D,                    U"=",                         UCAS_155D,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13F3,                CHEROKEE_13BD,                CHEROKEE_13F3,                NULL
     },
     {/* KC_LBRC: */
     /*  en-US    */  U"[",                         U"{",                         U"[",                         NULL,
@@ -7162,7 +7205,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  ACUTE_ACCENT,                 DIAERESIS,                    ACUTE_ACCENT,                 NULL,
     /*  ps-AF    */  ARABIC_062C,                  U"]",                         ARABIC_062C,                  U"}",
     /*  iu-CA    */  UCAS_14A1,                    UCAS_1505,                    UCAS_14A1,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13D5,                CHEROKEE_13D1,                CHEROKEE_13D5,                NULL
     },
     {/* KC_RBRC: */
     /*  en-US    */  U"]",                         U"}",                         U"]",                         NULL,
@@ -7323,7 +7367,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"+",                         U"*",                         U"+",                         U"~",
     /*  ps-AF    */  ARABIC_0686,                  U"[",                         ARABIC_0686,                  U"{",
     /*  iu-CA    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13B6,                CHEROKEE_13E4,                CHEROKEE_13B6,                NULL
     },
     {/* KC_BACKSLASH: */
     /*  en-US    */  BACKSLASH,                    U"|",                         BACKSLASH,                    NULL,
@@ -7484,7 +7529,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"}",                         U"]",                         U"}",                         GRAVE_ACCENT,
     /*  ps-AF    */  BACKSLASH,                    U"*",                         BACKSLASH,                    U"|",
     /*  iu-CA    */  BACKSLASH,                    U"|",                         BACKSLASH,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  NULL,                         NULL,                         NULL,                         NULL
     },
     {/* KC_NONUS_HASH: */
     /*  en-US    */  U"#",                         U"~",                         U"#",                         NULL,
@@ -7645,7 +7691,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"}",                         U"]",                         U"}",                         GRAVE_ACCENT,
     /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  iu-CA    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13E9,                CHEROKEE_13EE,                CHEROKEE_13E9,                NULL
     },
     {/* KC_SEMICOLON: */
     /*  en-US    */  U";",                         U":",                         U";",                         NULL,
@@ -7806,7 +7853,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  N_WITH_TILDE_SMALL,           N_WITH_TILDE,                 N_WITH_TILDE_SMALL,           NULL,
     /*  ps-AF    */  ARABIC_06A9,                  U":",                         ARABIC_06A9,                  ARABIC_0643,
     /*  iu-CA    */  U";",                         U":",                         U";",                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13E8,                CHEROKEE_13E0,                CHEROKEE_13E8,                NULL
     },
     {/* KC_QUOTE: */
     /*  en-US    */  U"'",                         QUOTE,                        U"'",                         NULL,
@@ -7967,7 +8015,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"{",                         U"[",                         U"{",                         U"^",
     /*  ps-AF    */  ARABIC_06AB,                  ARABIC_061B,                  ARABIC_06AB,                  ARABIC_06AF,
     /*  iu-CA    */  U"'",                         QUOTE,                        U"'",                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  U"'",                         QUOTE,                        U"'",                         NULL
     },
     {/* KC_GRAVE: */
     /*  en-US    */  GRAVE_ACCENT,                 U"~",                         GRAVE_ACCENT,                 NULL,
@@ -8128,7 +8177,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"|",                         DEGREE,                       U"|",                         NOT_SIGN,
     /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  iu-CA    */  UCAS_157B,                    UCAS_1575,                    UCAS_157B,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  U"`",                         CHEROKEE_13CA,                U"`",                         NULL
     },
     {/* KC_COMMA: */
     /*  en-US    */  COMMA,                        U"<",                         COMMA,                        NULL,
@@ -8289,7 +8339,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0648,                  ARABIC_060C,                  ARABIC_0648,                  U",",
     /*  iu-CA    */  U",",                         U"<",                         U",",                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  U",",                         CHEROKEE_13E2,                U",",                         NULL
     },
     {/* KC_DOT: */
     /*  en-US    */  U".",                         U">",                         U".",                         NULL,
@@ -8450,7 +8501,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  ARABIC_0696,                  U".",                         ARABIC_0696,                  ARABIC_06C7,
     /*  iu-CA    */  U".",                         U">",                         U".",                         NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  U".",                         CHEROKEE_13B4,                U".",                         NULL
     },
     {/* KC_SLASH: */
     /*  en-US    */  U"/",                         U"?",                         U"/",                         NULL,
@@ -8611,7 +8663,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  ps-AF    */  U"/",                         ARABIC_061F,                  U"/",                         ARABIC_06C9,
     /*  iu-CA    */  UCAS_152D,                    UCAS_1559,                    UCAS_152D,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  CHEROKEE_13C2,                CHEROKEE_13C9,                CHEROKEE_13C2,                NULL
     },
     {/* KC_NONUS_BACKSLASH: */
     /*  en-US    */  U"<",                         U">",                         U"<",                         NULL,
@@ -8772,7 +8825,8 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  nh-MX    */  U"<",                         U">",                         U"<",                         BACKSLASH,
     /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  iu-CA    */  UCAS_1579,                    UCAS_1577,                    UCAS_1579,                    NULL,
-    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL
+    /*  cr-CA    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ck-US    */  NULL,                         NULL,                         NULL,                         NULL
     },
     //[[[end]]]
 };
@@ -8981,7 +9035,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  nh-MX*/  0,-128,0,50,
 		/*  ps-AF*/  0,42,0,52,
 		/*  iu-CA*/  0,36,0,0,
-		/*  cr-CA*/  0,-128,0,0
+		/*  cr-CA*/  0,-128,0,50,
+		/*  ck-US*/  0,36,0,0
 	},
 	// {letter.voffset}
 	{
@@ -9143,7 +9198,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  nh-MX*/  0,-128,0,13,
 		/*  ps-AF*/  0,0,0,13,
 		/*  iu-CA*/  0,0,0,0,
-		/*  cr-CA*/  0,-128,0,0
+		/*  cr-CA*/  0,-128,0,9,
+		/*  ck-US*/  0,0,0,0
 	},
 	// {num.hoffset}
 	{
@@ -9305,7 +9361,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  nh-MX*/  0,28,0,50,
 		/*  ps-AF*/  0,27,0,52,
 		/*  iu-CA*/  0,36,0,0,
-		/*  cr-CA*/  0,35,0,0
+		/*  cr-CA*/  0,35,0,0,
+		/*  ck-US*/  0,36,0,0
 	},
 	// {num.voffset}
 	{
@@ -9467,7 +9524,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  nh-MX*/  0,0,0,13,
 		/*  ps-AF*/  0,0,0,13,
 		/*  iu-CA*/  0,0,0,0,
-		/*  cr-CA*/  0,0,0,0
+		/*  cr-CA*/  0,0,0,0,
+		/*  ck-US*/  0,0,0,0
 	},
 	// {sym.hoffset}
 	{
@@ -9629,7 +9687,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  nh-MX*/  0,28,0,50,
 		/*  ps-AF*/  0,42,0,52,
 		/*  iu-CA*/  0,36,0,0,
-		/*  cr-CA*/  0,35,0,0
+		/*  cr-CA*/  0,35,0,0,
+		/*  ck-US*/  0,36,0,0
 	},
 	// {sym.voffset}
 	{
@@ -9791,7 +9850,8 @@ static const int8_t poly_settings [SETTINGS_NUM][NUM_LANG * 4] = {
 		/*  nh-MX*/  0,0,0,13,
 		/*  ps-AF*/  0,0,0,13,
 		/*  iu-CA*/  0,0,0,0,
-		/*  cr-CA*/  0,0,0,0
+		/*  cr-CA*/  0,0,0,0,
+		/*  ck-US*/  0,0,0,0
 	}
 //[[[end]]]
 };
@@ -10152,6 +10212,7 @@ static uint32_t lang_uint32 [] = {
     LANGSTR_TO_UI32("psAF"),
     LANGSTR_TO_UI32("iuCA"),
     LANGSTR_TO_UI32("crCA"),
+    LANGSTR_TO_UI32("ckUS"),
     //[[[end]]]
 };
 

@@ -32,6 +32,7 @@
 #include "base/disp_array.h"
 #include "base/helpers.h"
 #include "base/update.h"
+#include "base/fw_staging.h"
 #include "base/spi_helper.h"
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
@@ -65,7 +66,7 @@
 void rgb_matrix_update_pwm_buffers(void);
 #endif
 
-#define FLASH_TARGET_OFFSET (4 * 1024 * 1024)
+#define FLASH_TARGET_OFFSET FW_RESOURCE_OFFSET //4 MB; single source = base/fw_staging.h flash map
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
@@ -705,6 +706,18 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
     }
 }
 
+// See split72/keymaps/default/keymap.c — a bare combining mark (nukta "+nukta" hint)
+// is invisible alone when AltGr is held, so it is composed onto the base glyph.
+static bool altgr_is_bare_combining(const uint32_t* s) {
+    uint32_t cp = 0;
+    for (; *s; ++s) {
+        if (*s < 0x20) continue;
+        if (cp) return false;
+        cp = *s;
+    }
+    return cp == 0x093C || cp == 0x09BC;  // Devanagari / Bengali nukta
+}
+
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const poly_layer_t* local_layer = get_local_layer();
 
@@ -757,6 +770,17 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             v_off = PK_MIN(v_off, v_off_alt);
             int8_t h_off = get_setting(h_set, local_state->lang, VAR_SMALL);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
+                if (altgr_is_bare_combining(letter)) {   // compose nukta onto the base
+                    const uint32_t* base = translate_keycode(local_state->lang, keycode, false, false);
+                    if (base != NULL) {
+                        uint32_t composed[10]; uint8_t ci = 0;
+                        for (const uint32_t* p = base;   *p && ci < 8; ++p) composed[ci++] = *p;
+                        for (const uint32_t* p = letter; *p && ci < 9; ++p) if (*p >= 0x20) composed[ci++] = *p;
+                        composed[ci] = 0;
+                        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, composed);
+                        return true;
+                    }
+                }
                 kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
                 return true;
             }

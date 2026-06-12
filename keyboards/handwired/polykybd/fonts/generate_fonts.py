@@ -141,12 +141,22 @@ def main() -> None:
     ap.add_argument("--config", default=str(here / "fonts.yaml"))
     ap.add_argument("--check", action="store_true",
                     help="diff against committed headers, write nothing, fail on drift")
+    ap.add_argument("--only", metavar="CATEGORY",
+                    help="regenerate only this category's header (skips the ALL_FONTS "
+                         "index and the stale-header cleanup, so the other category "
+                         "headers and their source fonts are left untouched)")
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
     sources, categories = cfg["sources"], cfg["categories"]
     index, entries = cfg["index"], cfg["fonts"]
+    if args.only:
+        if args.only not in categories:
+            sys.exit(f"--only: unknown category {args.only!r}")
+        entries = [e for e in entries if e.get("category") == args.only]
+        if not entries:
+            sys.exit(f"--only: no font entries in category {args.only!r}")
 
     log(f"Generating {len(entries)} fonts via {args.fontconvert} ...", args.quiet)
     cat_blocks, symbols = render(args.fontconvert, entries, sources, categories,
@@ -157,8 +167,9 @@ def main() -> None:
     for cat, meta in categories.items():
         if cat_blocks.get(cat):
             outputs[gen_dir / meta["output"]] = compose_category(cat_blocks[cat])
-    outputs[root / "base" / "fonts" / index["output"]] = \
-        compose_index(index, categories, cat_blocks, symbols)
+    if not args.only:                             # --only never rewrites the ALL_FONTS index
+        outputs[root / "base" / "fonts" / index["output"]] = \
+            compose_index(index, categories, cat_blocks, symbols)
 
     if args.check:
         drift = False
@@ -178,11 +189,13 @@ def main() -> None:
         return
 
     gen_dir.mkdir(parents=True, exist_ok=True)
-    # remove leftover per-font headers from the old shell pipeline
-    keep = {p.name for p in outputs if p.parent == gen_dir}
-    for stale in gen_dir.glob("*.h"):
-        if stale.name not in keep:
-            stale.unlink()
+    # remove leftover per-font headers from the old shell pipeline (full runs only;
+    # --only regenerates a single header and must not touch the other categories)
+    if not args.only:
+        keep = {p.name for p in outputs if p.parent == gen_dir}
+        for stale in gen_dir.glob("*.h"):
+            if stale.name not in keep:
+                stale.unlink()
     for path, content in outputs.items():
         path.write_text(content)
         log(f"wrote {path.relative_to(root)}", args.quiet)

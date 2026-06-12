@@ -5,11 +5,28 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// Flash offsets (relative to start of physical flash, i.e. XIP_BASE + offset = XIP address)
-#define FW_STAGING_OFFSET      0x100000UL      // staging region starts at 1 MB
+// ── PolyKybd RP2040 flash map (8 MB external QSPI) ───────────────────────────
+// All offsets are from the start of physical flash (XIP_BASE + offset = XIP addr):
+//
+//   0x000000 .. 0x200000   running firmware         (linker flash1 XIP = 2 MB)
+//   0x200000 .. 0x400000   firmware-update staging  (4 KB header + staged image)
+//   0x400000 .. 0x800000   resource / overlay data  (FW_RESOURCE_OFFSET)
+//
+// FW_STAGING_OFFSET is kept equal to the linker's flash1 length (2 MB — see
+// RP2040_FLASH.ld, FLASH_LEN default 2048k) so the firmware can NEVER grow into
+// the staging area: a build over 2 MB fails to LINK instead of silently
+// overwriting a staged update. FW_UP_MAX_SIZE keeps the 4 KB staging header +
+// image below the resource region. These invariants are checked by
+// _Static_assert in fw_staging.c.
+//
+// Raised from a 1 MB firmware / 1 MB staging split to 2 MB / 2 MB on 2026-06 as
+// the image neared the old 1 MB boundary (the previously-unused 0x200000-0x400000
+// window became the staging area; resources stay at 4 MB).
+#define FW_STAGING_OFFSET      0x200000UL      // staging starts at 2 MB (== linker flash1 length)
 #define FW_STAGING_HEADER_SIZE 0x001000UL      // first 4 KB of staging = header sector
 #define FW_STAGING_DATA_OFFSET (FW_STAGING_OFFSET + FW_STAGING_HEADER_SIZE)
-#define FW_UP_MAX_SIZE         0x100000UL      // max 1 MB firmware image
+#define FW_RESOURCE_OFFSET     0x400000UL      // resource/overlay region (== FLASH_TARGET_OFFSET in keymap.c)
+#define FW_UP_MAX_SIZE         0x1FF000UL      // max staged image: 2 MB staging region minus the 4 KB header
 #define FW_STAGING_MAGIC       0xD1F1A51BUL
 
 // Bytes per firmware-update chunk (HID and split-RPC payload).

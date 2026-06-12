@@ -88,7 +88,7 @@ while lang_key:
 
 
 //not used at the moment
-#define FLASH_TARGET_OFFSET (4 * 1024 * 1024) //we start at 4MB and use the remaining 4MB for resource data
+#define FLASH_TARGET_OFFSET FW_RESOURCE_OFFSET //4 MB; single source = base/fw_staging.h flash map (staging ends here, resources use the remaining 4 MB)
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
@@ -1000,10 +1000,40 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KCL_ENFM: return U"en-FM";
         case KCL_FRNC: return U"fr-NC";
         case KCL_TOTO: return U"to-TO";
+        case KCL_EUES: return U"eu-ES";
+        case KCL_GLES: return U"gl-ES";
+        case KCL_RMCH: return U"rm-CH";
+        case KCL_CYGB: return U"cy-GB";
+        case KCL_GAIE: return U"ga-IE";
+        case KCL_MTMT: return U"mt-MT";
+        case KCL_LBLU: return U"lb-LU";
+        case KCL_SENO: return U"se-NO";
+        case KCL_GNPY: return U"gn-PY";
+        case KCL_QUPE: return U"qu-PE";
+        case KCL_AYBO: return U"ay-BO";
+        case KCL_NVUS: return U"nv-US";
+        case KCL_NHMX: return U"nh-MX";
+        case KCL_PSAF: return U"ps-AF";
+        case KCL_IUCA: return U"iu-CA";
+        case KCL_CRCA: return U"cr-CA";
+        case KCL_CKUS: return U"ck-US";
         //[[[end]]]
         default:
             return NULL;
     }
+}
+
+// True if `s` is a single bare combining mark (ignoring positioning control codes) —
+// e.g. the Devanagari/Bengali nukta used as an AltGr "+nukta" hint. Drawn on its own
+// such a mark is invisible, so the AltGr-held view composes it onto the base glyph.
+static bool altgr_is_bare_combining(const uint32_t* s) {
+    uint32_t cp = 0;
+    for (; *s; ++s) {
+        if (*s < 0x20) continue;          // skip preview-positioning control codes
+        if (cp) return false;             // more than one visible glyph -> not a bare mark
+        cp = *s;
+    }
+    return cp == 0x093C || cp == 0x09BC;  // Devanagari / Bengali nukta (extend as needed)
 }
 
 // Renders key character to display using language translation, including modifiers etc.
@@ -1062,6 +1092,21 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             v_off = PK_MIN(v_off, v_off_alt);
             int8_t h_off = get_setting(h_set, local_state->lang, VAR_SMALL);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
+                // A bare combining mark (the nukta "+nukta" AltGr hint) is invisible on
+                // its own when AltGr is actually held — compose it onto the base
+                // consonant (क + ़ = क़) so the held view shows the real output. The
+                // unshifted preview still draws the lone dot via the cell's own controls.
+                if (altgr_is_bare_combining(letter)) {
+                    const uint32_t* base = translate_keycode(local_state->lang, keycode, false, false);
+                    if (base != NULL) {
+                        uint32_t composed[10]; uint8_t ci = 0;
+                        for (const uint32_t* p = base;   *p && ci < 8; ++p) composed[ci++] = *p;
+                        for (const uint32_t* p = letter; *p && ci < 9; ++p) if (*p >= 0x20) composed[ci++] = *p;
+                        composed[ci] = 0;
+                        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, composed);
+                        return true;
+                    }
+                }
                 kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
                 return true;
             }
@@ -1916,6 +1961,23 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KCL_ENFM: local_state->lang = LANG_ENFM; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_FRNC: local_state->lang = LANG_FRNC; mark_settings_dirty(); layer_off(_LL); break;
         case KCL_TOTO: local_state->lang = LANG_TOTO; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_EUES: local_state->lang = LANG_EUES; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_GLES: local_state->lang = LANG_GLES; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_RMCH: local_state->lang = LANG_RMCH; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_CYGB: local_state->lang = LANG_CYGB; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_GAIE: local_state->lang = LANG_GAIE; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_MTMT: local_state->lang = LANG_MTMT; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_LBLU: local_state->lang = LANG_LBLU; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_SENO: local_state->lang = LANG_SENO; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_GNPY: local_state->lang = LANG_GNPY; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_QUPE: local_state->lang = LANG_QUPE; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_AYBO: local_state->lang = LANG_AYBO; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_NVUS: local_state->lang = LANG_NVUS; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_NHMX: local_state->lang = LANG_NHMX; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_PSAF: local_state->lang = LANG_PSAF; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_IUCA: local_state->lang = LANG_IUCA; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_CRCA: local_state->lang = LANG_CRCA; mark_settings_dirty(); layer_off(_LL); break;
+        case KCL_CKUS: local_state->lang = LANG_CKUS; mark_settings_dirty(); layer_off(_LL); break;
         //[[[end]]]
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:

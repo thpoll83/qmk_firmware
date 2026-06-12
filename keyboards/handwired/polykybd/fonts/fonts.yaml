@@ -30,6 +30,8 @@ sources:
   noto-cemoji:         fonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf
   noto-sans-symbols:   fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
   noto-sans-symbols2:  fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
+  noto-sans-canadian-aboriginal: fonts/noto-sans-canadian-aboriginal/NotoSansCanadianAboriginal-Regular.ttf
+  noto-sans-cherokee:  fonts/noto-sans-cherokee/NotoSansCherokee-Regular.ttf
 
 # The composed index header that the firmware includes (base/fonts/<output>).
 index:
@@ -91,6 +93,12 @@ categories:
   ethiopic:
     output: ethiopic_fonts.h
     defaults: {source: noto-sans-ethiopic, size: 16, render_height: 40}
+  canadian:
+    output: canadian_fonts.h
+    defaults: {source: noto-sans-canadian-aboriginal, size: 16, render_height: 40}
+  cherokee:
+    output: cherokee_fonts.h
+    defaults: {source: noto-sans-cherokee, size: 13, render_height: 40}
   symbols:
     output: symbol_fonts.h
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
@@ -156,7 +164,7 @@ fonts:
   - {category: latin, variant: _Schwa_, render_height: 44, ranges: [[0x259, 0x259]], note: 'Latin small letter schwa (U+0259) for Azerbaijani az-AZ — sits just past the _LatinExtB_ range (IPA Extensions). Capital schwa Ə U+018F is already in _LatinExtB_.'}
   - {category: latin, variant: _SupAndExtA_, render_height: 44, ranges: [[0xa1, 0x17e]]}
   - {category: emoji, variant: _EmjTravelBMP_, ranges: [[0x2708, 0x2708]], note: 'Cat 8: travel — BMP 0x2708 + SMP 0x1F680-0x1F6C5 (extended to include shower/bath/transit)'}
-  - {category: latin, variant: _CurrencySigns_, ranges: [[0x20aa, 0x20ac], [0x20b4, 0x20b4], [0x2116, 0x2116]]}
+  - {category: latin, variant: _CurrencySigns_, ranges: [[0x20aa, 0x20ac], [0x20b1, 0x20b1], [0x20b4, 0x20b4], [0x20bc, 0x20bd], [0x2116, 0x2116]], note: 'Added ₱ peso (20B1, en-PH/tl-PH), ₼ manat (20BC, az-AZ), ₽ ruble (20BD, ru-RU).'}
   - {category: emoji, variant: _Hyper_, size: 18, bits: 32, ranges: [[0x1f4ab, 0x1f4ab]]}
   - {category: emoji, variant: _Meh_, bits: 32, ranges: [[0x1f410, 0x1f410]]}
   - {category: emoji, variant: _Settings_, bits: 32, ranges: [[0x1f527, 0x1f527]]}
@@ -248,9 +256,12 @@ fonts:
   - {category: bopomofo, variant: _Bopomofo_, ranges: [[0x3105, 0x312f]], note: 'Bopomofo/Zhuyin symbols for zh-TW (standard 大千 layout). Tone marks (U+02C7/02CA/02CB/02D9) are already covered by the latin _LetterMod_ font. No combining marks.'}
   - {category: ethiopic, variant: _Ethiopic_, ranges: [[0x1200, 0x137c]], note: 'Ethiopic block (Geez syllabograms, punctuation, numerals) for am-ET, transcribed from xkb symbols/et olpc. Unassigned codepoints inside the block are skipped by fontconvert. The OS-side phonetic IME composes the vowel orders; keycaps show the base (first-order) syllabograms.'}
   - {category: latin, variant: _Okina_, render_height: 44, ranges: [[0x2bb, 0x2bb]], note: 'ʻ MODIFIER LETTER TURNED COMMA — Hawaiian okina (hw-US), Samoan koma liliu (sm-WS) and the Uzbek-Latin tutuq belgisi (uz-UZ).'}
-  - {category: latin, variant: _LatinExtAdd_, render_height: 44, ranges: [[0x1e62, 0x1e63], [0x1eb8, 0x1eb9], [0x1ecc, 0x1ecd]], note: 'Latin Extended Additional dot-below letters Ṣṣ Ẹẹ Ọọ for Yoruba yo-NG (xkb ng yoruba).'}
+  - {category: latin, variant: _LatinExtAdd_, render_height: 44, ranges: [[0x1e62, 0x1e63], [0x1eb8, 0x1eb9], [0x1ebd, 0x1ebd], [0x1ecc, 0x1ecd], [0x1ef9, 0x1ef9]], note: 'Latin Extended Additional: dot-below Ṣṣ Ẹẹ Ọọ for Yoruba yo-NG (xkb ng yoruba), tilde ẽ ỹ for Guarani gn-PY nasal vowels.'}
   - {category: latin, variant: _Naira_, ranges: [[0x20a6, 0x20a6]], note: '₦ NAIRA SIGN for en-NG / yo-NG (xkb ng: Shift+4).'}
   - {category: arabic, variant: _Sorani_, ranges: [[0x695, 0x695], [0x6a4, 0x6a4], [0x6b5, 0x6b5], [0x6c6, 0x6c6], [0x6ce, 0x6ce], [0x6d5, 0x6d5]], note: 'Sorani Kurdish extras for ku-IQ beyond the fa-IR Perso-Arabic set: ڕ ڤ ڵ ۆ ێ ە.'}
+  - {category: arabic, variant: _Pashto_, ranges: [[0x66a, 0x66c], [0x671, 0x671], [0x67c, 0x67c], [0x681, 0x681], [0x685, 0x685], [0x689, 0x689], [0x693, 0x693], [0x696, 0x696], [0x69a, 0x69a], [0x6ab, 0x6ab], [0x6b7, 0x6b7], [0x6bc, 0x6bc], [0x6c7, 0x6c7], [0x6c9, 0x6c9], [0x6cd, 0x6cd], [0x6d0, 0x6d0]], note: 'Pashto extras for ps-AF beyond Perso-Arabic/Sorani (xkb af(ps)): ټ ځ څ ډ ړ ږ ښ ګ ڼ ۇ ۉ ۍ ې + ٪٫٬ ٱ. (Ornate Quranic parens ﴾﴿ U+FD3E/F dropped — far from this range, they would balloon the contiguous glyph table.)'}
+  - {category: canadian, variant: _CanAborig_, ranges: [[0x1401, 0x1675]], note: 'Unified Canadian Aboriginal Syllabics for Inuktitut iu-CA (xkb ca(ike)) + the Cree cr-CA AltGr citation-syllabic hints (down to e=0x1401). Sparse but the span is small vs the 2 MB budget.'}
+  - {category: cherokee, variant: _Cherokee_, ranges: [[0x13a0, 0x13f4]], note: 'Cherokee syllabary for ck-US (the Cherokee Nation direct layout, CLDR windows chr).'}
   - {category: vietnamese, variant: _VietTones_, extra_args: ['-F0xE1A0', '-C'], sequence: '25CC 0300, 25CC 0301, 25CC 0303, 25CC 0309, 25CC 0323', note: 'Vietnamese (TCVN) combining tone marks - grave/acute/tilde/hook-above/dot-below - composited onto a dotted circle U+25CC (fontconvert -C), PUA 0xE1A0.. in codepoint order. Addressed via the VIET_DC_* named glyphs by vi-VN. The precomposed Vietnamese letters (ă â ê ô đ ư ơ ₫) are covered by the existing latin / currency ranges.'}
   - {category: jp, variant: _Hiragana_, ranges: [[0x3041, 0x3096], [0x3099, 0x309f]]}
   - {category: jp, variant: _Punct2_, ranges: [[0x30fb, 0x30fc]]}

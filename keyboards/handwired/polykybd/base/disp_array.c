@@ -189,7 +189,17 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
             currentFont = fonts[idx];
             first = pgm_read_dword(&currentFont->first);
             last  = pgm_read_dword(&currentFont->last);
-            if (ch >= first && ch <= last) { found = idx; break; }
+            if (ch >= first && ch <= last) {
+                // A font with non-contiguous ranges is padded with empty 0x0 gap
+                // glyphs from first..last; skip such a gap so a later font that
+                // actually has this codepoint wins (e.g. Pashto letters shadowed by
+                // _PerArab_'s wider span).  A real space is (w,h)=(1,1), advance>0,
+                // so it is never skipped.
+                const GFXglyph *gg = pgm_read_glyph_ptr(currentFont, ch - first);
+                if (pgm_read_byte(&gg->width) == 0 && pgm_read_byte(&gg->height) == 0
+                    && pgm_read_byte(&gg->xAdvance) == 0) continue;
+                found = idx; break;
+            }
         }
         if (found == 0xFF) {
             currentFont = fonts[0];             // no match — fall back to '!'
@@ -246,6 +256,9 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
             case U'\x05'://enquiry
                 y_cursor += 2;
                 break;
+            case U'\x06'://acknowledge - nudge right 2px (symmetric with \b left, \x05 down)
+                x_cursor += 2;
+                break;
             case U'\x18'://cancel
                 x_cursor = x;
                 y_cursor = y;
@@ -285,6 +298,7 @@ void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const
             case U'\x05': case U'\f': case U'\v': break;   // vertical-only controls
             case U'\x18': case U'\r':         x = 0; break; // reset x to origin
             case U'\b':                       x = x > 1 ? x - 2 : 0; break;
+            case U'\x06':                     x += 2; break; // nudge right 2px
             case U'\t':                       x += ((x) / 36 + 1) * 36; break;
             case U'\n':                       x = 0; break;
             default: {

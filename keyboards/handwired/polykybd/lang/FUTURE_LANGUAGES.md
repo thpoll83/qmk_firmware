@@ -16,6 +16,156 @@ Adding a language therefore = three things:
 
 ---
 
+## 2026-06 AltGr-legend audit + backfill — IMPLEMENTED (2026-06-11): 43 existing locales
+
+**Not new languages — this filled in *missing AltGr (level-3) legends* on locales we
+already shipped.** Many fold/clone entries from the earlier batches carried a base+shift
+column but a sparse or empty AltGr column, so keycaps under-reported what the OS layout
+actually produces on `AltGr`/`AltGr+Shift`. The audit cross-checked every locale's AltGr
+column against its **xkb native** level-3/4 and backfilled the high-value gaps.
+
+**Method (reusable):** for each locale, `awk` the matching `xkb_symbols "<variant>"` block
+out of `/usr/share/X11/xkb/symbols/<file>`, map keysyms → codepoints via `keysymdef.h`
+(`/* U+XXXX */` comments) + the `Uxxxx`/single-char fallbacks, **drop combining marks**
+(`unicodedata.category startswith "M"` — they'd need a dotted-circle base, see playbook G),
+and diff against the current `lang_lut.xlsx` AltGr cells. Curate to letters + currency +
+high-value symbols (skip generic typographic « » – — …). Apply by editing
+`xl/worksheets/sheet2.xml` in-place (playbook B), `cog -r lang_lut.c`, build, verify with
+`oled_preview.py --lang xx-YY` before/after.
+
+**⚠️ Platform scope of the AltGr legends.** These come from **xkb (Linux)**. Spot-checked
+2026-06-11 (de/fr/es vs CLDR): xkb **level-3 ≡ Windows AltGr exactly** (0 diffs) — so the
+legends are correct on Linux *and* Windows — but **macOS Option diverges almost completely**
+(de 8/11, fr 18/20, es 7/7 keys differ; Option is a different layer of typographic/math
+glyphs ∞ … ‹ ¶ ª). Base/Shift are platform-consistent; only the AltGr **hint** is
+macOS-wrong, and there is one legend set (no per-platform switch), so AltGr is
+**Linux/Windows-canonical** by design. Cross-platform check = CLDR
+`keyboards/{windows,osx}/<loc>-t-k0-{windows,osx}.xml` (the `altR` / bare-`opt` keyMaps).
+
+**Four waves (all build clean, `NUM_LANG` unchanged at 160):**
+
+| Wave | Commit | Locales | Notes |
+|------|--------|---------|-------|
+| 1 | `46d8cc1a` | **ar-SA → all 17 Arabic country clones**, uk-UA, eu-ES, pl-PL, nl-NL, en-ZA, en-IE | Arabic edit on the `ar-SA` parent propagated to every `ar-*` clone (legends inherited). en-ZA←af-ZA, en-IE←ga-IE pick up the sibling's AltGr. |
+| 2 | `6870f967` | se-NO, mn-MN, ka-GE, ca-ES, kk-KZ, zh-CN, lt-LT, is-IS, pt-BR | Sami currency+carons, Mongolian ы Ы э Э, **archaic Georgian ჱ ჲ ჳ ჵ ჶ ჴ**, ŀ, ё, pinyin ü, @, €, § ª. |
+| 3+4 | `653d4ac9` | hi-IN, mr-IN, bn-BD, ru-RU, be-BY, az-AZ, en-PH, tl-PH, en-LK | Devanagari **nukta क़ ग़ ज़ ड़ फ़ + ॐ**, Bengali vowels + ৳, **₽ ₱ ₼** currency, ґ, ñ, diaeresis vowels. |
+| en-CA | (this batch) | en-CA | Canadian Multilingual Standard (`ca(multix)`) — base is exactly US-QWERTY, so the 21 CMS AltGr legends (± @ £ ¤ { } [ ] ½ ¬ ° µ § ¶ € ~ \| < >) overlay cleanly onto the existing US fold. |
+
+**New named glyphs created (21):** 3 Latin carons (`LATIN_01E5/01E9/01EF`), 6 archaic Georgian
+(`GEORGIAN_10F1..10F6`), 6 Devanagari (`DEVANAGARI_0958/095A/095B/095C/095E/0950`), 3 Bengali
+(`BENGALI_09CE/09BD/09F3`), 3 currency (`RUBLE_SIGN`/`PESO_SIGN`/`MANAT_SIGN`). All other legends
+reused existing tokens or stored ASCII (@ $ < > { } [ ] ~ \|) as **bare chars** — `make_key`
+wraps a bare cell in `U"…"` automatically (playbook C), so no glyph entry is needed for ASCII.
+
+**Font work (the only non-trivial part):** ₽ ₱ ₼ weren't in any font. Extended the
+`_CurrencySigns_` range in `fonts.yaml` (`+[0x20b1],[0x20bc,0x20bd]`) and regenerated the
+**latin** category with the pinned `fontconvert` — the diff was localized to the currency
+variant only (verify with `git diff` before committing; other variants must stay byte-identical).
+All Devanagari/Bengali/Georgian targets were **already inside existing font ranges** (grep the
+generated `*_fonts.h` for `uniXXXX` before creating a token — NotoSans is missing ǧ (`01E7`),
+which is why se-NO's G key was dropped).
+
+**Audit over-claims caught by before/after verification (dropped):** fr-FR/fr-BE/nl-BE (`@`
+was already mapped, on `KC_0` / `KC_2`; æ/œ marginal); he-IL (already carries the Yiddish
+digraphs ױ װ ײ among its 28 legends). Always diff against the *live* cell, not a guess —
+the xkb "native" map put `@` on a key we'd already covered elsewhere.
+
+**Combining-mark AltGr (Devanagari/Bengali nukta) — display update (2026-06-12):** the nukta
+consonants (क़ ग़ ज़ ड़ फ़) are shown on AltGr as just the **nukta dot** `U+093C` (a small
+"+nukta" hint in the corner), not the full precomposed letter — the full glyph overlapped
+the Shift consonant on the 72px keycap. ⚠️ But a **lone combining mark renders to 0 pixels
+when AltGr is actually HELD** (the active view), so the keycap went blank. `render_key`
+(split72 **and** corne42) now detects a bare combining-mark AltGr (`altgr_is_bare_combining`:
+Devanagari `093C` / Bengali `09BC`) and **composes it onto the base consonant** (क + ़ = क़)
+for the held view, while the unshifted preview still shows the lone dot via the cell's own
+positioning controls. Extend `altgr_is_bare_combining` if a new layout puts another bare
+combining mark on AltGr.
+
+### Cree (`cr-CA`) — no real layout to import (investigated 2026-06-11)
+The Wave-2 plan listed a "real CLDR Cree layout" as a follow-up. **CLDR has no Cree keyboard
+in any release or `main`** (only Inuktitut `iu`). The authoritative Cree keyboards (Keyman
+FirstVoices `fv_plains_cree`/`fv_swampy_cree`/…, Buffalo-Jump `bj_cree_*`) are either **mobile
+touch-layouts** (T_* keys, no physical-key map) or **roman→syllabic composing systems** — you
+type roman letters and the syllable **rotates by the following vowel**, so there is no direct
+key→syllable mapping like Cherokee's CLDR Windows layout had. The current `cr-CA` showcase
+(roman base + AltGr **citation-syllabic** hints: vowels ᐊᐁᐃᐅ, consonants in their `-a` forms
+ᐸ ᑕ ᑲ …) already reflects that documented system and the standard Plains Cree syllabary, so it
+was **left unchanged** rather than fabricate a layout. If a syllabic Cree keycap set is ever
+wanted, it has to be authored from the syllabary chart, not imported.
+
+---
+
+## 2026-06 Europe + Americas minority/sibling batch — Wave 1 IMPLEMENTED (2026-06-10): 13 Latin locales
+
+> **STATUS: DONE (Wave 1).** 13 new entries (enum indices 143–155, `NUM_LANG`
+> 143 → 156, GET_LANG_LIST now 11 ASCII packets), **all Latin — no new font**.
+> The "natural-sibling / minority-recognition" set from the CLAUDE.md gap
+> analysis, region tabs **Europe** (+8) and **Americas** (+5):
+>
+> - **Europe (+8)**: `eu-ES` Basque · `gl-ES` Galician (clone es-ES) · `rm-CH`
+>   Romansh (clone de-CH) · `lb-LU` Luxembourgish (clone fr-CH) · `cy-GB` Welsh
+>   (clone en-GB + AltGr ŵ ŷ) · `ga-IE` Irish (clone en-GB + AltGr fadas á é í ó ú,
+>   xkb `ie`) · `mt-MT` **Maltese** (clone en-GB + ċ ġ ħ ż on the bracket/`<>`
+>   keys + €/£ + AltGr grave vowels, xkb `mt`) · `se-NO` **Northern Sami**
+>   (partial new map from xkb `no(smi)`: á š ŧ č ž đ ŋ on the home positions with
+>   the displaced q w y x as AltGr previews, Nordic å ø æ on `[ ; '`).
+> - **Americas (+5)**: `gn-PY` Guarani · `qu-PE` Quechua · `ay-BO` Aymara ·
+>   `nh-MX` Nahuatl (all clone es-MX/latam) · `nv-US` **Navajo** (US base + AltGr
+>   ł ą ę į ǫ).
+>
+> **Why these are clones/folds, not new layouts**: Basque/Galician type on the
+> Spanish layout; Romansh/Luxembourgish on the Swiss QWERTZ; Guarani/Quechua/
+> Aymara/Nahuatl on the Latin-American "latam" layout — so each is a cell-for-cell
+> clone of its source column (AltGr legends inherited). Welsh/Irish/Navajo add a
+> handful of AltGr letters on top of a UK/US base; **Maltese and Northern Sami are
+> the only genuine new mappings** (transcribed from xkb).
+>
+> **New named glyphs (4)**: `A_WITH_ACUTE`/`A_WITH_ACUTE_SMALL` (Á á, Irish & Sami
+> fada) and `LATIN_01EA`/`LATIN_01EB` (Ǫ ǫ, Navajo). All four already fall inside
+> the rendered Latin font ranges (`_SupAndExtA_` 0xA1–0x17E and `_LatinExtB_`
+> 0x180–0x24F), so **no font regeneration** was needed — just the name→codepoint
+> rows. Every other glyph (ċ ġ ħ ż, ŋ ŧ č š ž đ, ŵ ŷ, ł ą ę į, ĩ ũ, å ø æ) already
+> existed as a named glyph.
+>
+> **Frozen table**: only `nh-MX` (Nahuatl, no ISO-639-1 code) needed a pseudo-code
+> — `nh` appended to `PRIVATE_LANGS` in `iso_lang_country.py` (synced byte-identical
+> to all 3 repos, `cmp`-verified). The other 12 are standard ISO 639-1/3166-1.
+>
+> **Host**: only `lu=ch,fr` added to `forced_country_match.txt` (Luxembourg has no
+> xkb layout); everything else resolves natively (eu/gl→es, rm→ch, cy→gb, mt→mt,
+> se→no) or via existing folds (ga via `ie=gb,us`; gn/qu/ay/nh via latam; nv via
+> us). No `LANG_REGION` / `LANG_REGION_OVERRIDE` change (all countries already
+> mapped to the right continent). `poly_kybd_mock_test.py` updated 143 → 156.
+>
+> Mechanics: `lang/_gen_euam_cols.py` → `/tmp/euam_cols.json` + `/tmp/euam_named.json`
+> → `_patch_named_glyphs.py` + `_patch_xlsx.py` (surgical sheet rewrites, caches
+> intact) → re-cog of all 6 generated files → `lang/_gen_region_tables.py`
+> regenerated `lang_layer.c` REGION_OFFSET/REGION_LANGS from the host
+> `lang_regions.py` grouping. **Flags** (`flag_fonts.h`) regenerated with the
+> pinned fontconvert (existing 143 byte-identical, +13 new). Both `split72:default`
+> and `corne42:default` build clean; all 419 host tests pass.
+>
+> **Post-test fixes (2026-06-11, verified with `PolyKybdHost/tools/oled_preview.py`)**:
+> - **AltGr letters clipped ~3–4 px at the panel bottom** (cy-GB ŷ, ga-IE/mt-MT
+>   accented vowels, nv-US ą ę į ǫ, se-NO q): the `_SupAndExtA_`/`_LatinExtB_`
+>   fonts have yAdvance 44 vs the base 40, so the AltGr preview draws ~4 px low.
+>   Lowered the letter `VAR_ALTGR` voffset 13 → 9 (same fix the world batch used
+>   for mi-NZ/sm-WS macrons).
+> - **gn-PY showed no Guarani nasal vowels**: it was a plain es-MX clone. Added
+>   ã ẽ ĩ õ ũ ỹ as AltGr previews. ẽ (U+1EBD) / ỹ (U+1EF9) are Latin Extended
+>   Additional and were **outside the `_LatinExtAdd_` font range** (Yoruba-only),
+>   so they rendered blank — widened that font entry in `fonts.yaml` and
+>   regenerated `latin_fonts.h` with the pinned fontconvert (new
+>   `generate_fonts.py --only latin`; the other category headers are untouched).
+>
+> **Wave 2 (next, needs new fonts)**: Middle East `ps-AF` Pashto (extends the
+> Arabic font) + the indigenous syllabaries `ck-US` **Cherokee** (Cherokee
+> syllabary), `iu-CA` **Inuktitut** + `cr-CA` **Cree** (Canadian Aboriginal
+> Syllabics). These are deferred from this batch because they each require a new
+> Noto font + the pinned-fontconvert regeneration.
+
+---
+
 ## 2026-06 compat easy-win batch — IMPLEMENTED (2026-06-10): 62 fold/clone locales
 
 > **STATUS: DONE.** 62 new entries (enum indices 81–142, `NUM_LANG` 81 → 143,
@@ -394,6 +544,19 @@ a 128-wide canvas, **cropped to [28,100)** and saved as PNG (`pypng`), reproduce
 matras, prototype the GPOS placement with `uharfbuzz` + `freetype-py`, confirm
 visually, then port to `-C` and re-verify by simulating the generated header.
 Libs: `pip install pypng fonttools uharfbuzz freetype-py`.
+
+The production renderer is **`PolyKybdHost/tools/oled_preview.py`** (don't write a
+new one). Two diagnostics added 2026-06-11: **`--overshoot N`** keeps up to N px
+outside the 72×40 viewport on a **red margin with clipped pixels in yellow** —
+without it the preview clips silently like the hardware, so a cut-off glyph is
+invisible (default 2; raise it to measure spill); **`--channels`** colours
+base=green / Shift=blue / AltGr=red so any overlap between the three mixes
+(cyan/yellow/magenta/white). Fix a clipped AltGr glyph with a **`\f` per-glyph
+nudge** (form-feed `0x0C` = cursor up 2 px, `u"\f\f" MICRO_SIGN`) rather than
+dropping the whole category — the standard AltGr V-offset is **12** (13 lands the
+44 px-`yAdvance` baselines on the bottom edge → 1 px clip). Also drop any AltGr
+cell that renders the same glyph as the key's inherited Shift/Base (it draws the
+character twice).
 
 ## I. Toolchain in the container
 - ARM: `sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi`

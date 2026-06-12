@@ -15,6 +15,8 @@
 #include "generated/bopomofo_fonts.h"
 #include "generated/vietnamese_fonts.h"
 #include "generated/ethiopic_fonts.h"
+#include "generated/canadian_fonts.h"
+#include "generated/cherokee_fonts.h"
 #include "generated/symbol_fonts.h"
 #include "generated/emoji_fonts.h"
 #include "generated/emoji_fig_fonts.h"
@@ -144,10 +146,13 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSansArmenian_Regular_Armenian_16pt16b,
   &NotoSansTC_Regular_Bopomofo_16pt16b,
   &NotoSansEthiopic_Regular_Ethiopic_16pt16b,
+  &NotoSansCanadianAboriginal_Regular_CanAborig_16pt16b,
+  &NotoSansCherokee_Regular_Cherokee_13pt16b,
   &NotoSans_Regular_Okina_14pt16b,
   &NotoSans_Regular_LatinExtAdd_14pt16b,
   &NotoSans_Regular_Naira_14pt16b,
   &NotoSansArabic_Regular_Sorani_16pt16b,
+  &NotoSansArabic_Regular_Pashto_16pt16b,
   &NotoSans_Regular_VietTones_16pt7b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct2_15pt16b,

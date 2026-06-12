@@ -21,7 +21,9 @@ _LANG = (
 
 # Private-use language pseudo-codes with no ISO 639-1 entry, appended above the
 # standard block. hw = Hawaiian (ISO 639-2/3 'haw' cannot fit the 2-char field).
-PRIVATE_LANGS = ["hw"]
+# nh = Nahuatl (ISO 639-3 'nah'), ck = Cherokee (ISO 639-2/3 'chr') — both stored
+# verbatim in the 2-char lang field.
+PRIVATE_LANGS = ["hw", "nh", "ck"]
 
 _COUNTRY = (
     "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW"
@@ -54,7 +56,21 @@ def encode_packed(codes) -> bytes:
     return bytes(out)
 
 
-def decode_packed(buf) -> list:
-    """Inverse of encode_packed. buf[0] = count, then count*(lang,country) pairs."""
+def decode_packed(buf, on_skip=None) -> list:
+    """Inverse of encode_packed. buf[0] = count, then count*(lang,country) pairs.
+
+    An index pair that falls outside the known tables — e.g. a language a firmware
+    newer than this frozen table reports — is skipped instead of aborting the whole
+    list, so one unknown code never costs you every other language. When given,
+    on_skip(position, lang_idx, country_idx) is called for each skipped pair so the
+    caller can log it.
+    """
     count = buf[0]
-    return [decode_pair(buf[1 + 2 * i], buf[2 + 2 * i]) for i in range(count)]
+    out = []
+    for i in range(count):
+        li, ci = buf[1 + 2 * i], buf[2 + 2 * i]
+        if 0 <= li < len(LANG_CODES) and 0 <= ci < len(COUNTRY_CODES):
+            out.append(LANG_CODES[li] + COUNTRY_CODES[ci])
+        elif on_skip is not None:
+            on_skip(i, li, ci)
+    return out

@@ -538,17 +538,22 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 }
                 raw_hid_send(data, length);
                 break;
-            case 21:
+            case 21: //receive overlay mapping
                 {
+                    // Deliberately no ACK (protocol v3+): like the other bulk
+                    // overlay commands (10, 16/17, 18/19) this is fire-and-forget.
+                    // The old per-chunk ACK was sent only after the blocking UART
+                    // bridge below, so it arrived hundreds of ms late and the host
+                    // discarded it unread — leftover ACKs poisoned the reply
+                    // stream of later commands. Ordering for enable_overlays
+                    // (case 11) still holds: reports are dispatched sequentially
+                    // and the bridge completes before this case returns.
                     overlay_map_sync_t map_sync;
                     memcpy(map_sync.mapping, &data[HID_DATA_IDX], HID_DATA_MAX);
                     send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync, sizeof(overlay_map_sync_t), 10);
                     set_10bit_overlay_mapping(&data[HID_DATA_IDX]);
                     request_disp_refresh();
-                    memset(data, 0, length);
-                    memcpy(data, "P\x15.", 3);
                     uprintf("Overlay mapping data received.\n");
-                    raw_hid_send(data, length);
                 }
                 break;
             case 22: // get default layer

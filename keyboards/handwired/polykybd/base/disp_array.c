@@ -256,6 +256,9 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
             case U'\x05'://enquiry
                 y_cursor += 2;
                 break;
+            case U'\x06'://acknowledge - nudge right 2px (symmetric with \b left, \x05 down)
+                x_cursor += 2;
+                break;
             case U'\x18'://cancel
                 x_cursor = x;
                 y_cursor = y;
@@ -295,6 +298,7 @@ void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const
             case U'\x05': case U'\f': case U'\v': break;   // vertical-only controls
             case U'\x18': case U'\r':         x = 0; break; // reset x to origin
             case U'\b':                       x = x > 1 ? x - 2 : 0; break;
+            case U'\x06':                     x += 2; break; // nudge right 2px
             case U'\t':                       x += ((x) / 36 + 1) * 36; break;
             case U'\n':                       x = 0; break;
             default: {

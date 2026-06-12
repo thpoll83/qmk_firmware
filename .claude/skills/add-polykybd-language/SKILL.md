@@ -55,6 +55,12 @@ Rule of thumb: **identical keymap → fold; different keymap → its own column.
   keyMap and the bare-`opt` keyMap).
 - Resolve named keysyms with `/usr/include/X11/keysymdef.h` (`Arabic_dad` →
   `/* U+0636 */`). `0x100xxxx` literals = `U+xxxx`. `Uxxxx` keysyms = `U+xxxx`.
+  ⚠️ **Deprecated keysyms have NO `U+` comment — resolve by keysym *value*, not
+  name.** `Arabic_heh` is `0x05e7 /* deprecated */`; the `U+0647` comment lives on
+  its alias `Arabic_ha` (same `0x05e7`). A name-only resolver returns None and
+  *silently drops the key* (this is why ps-AF key I showed the en-US `i` instead of
+  ه). Build `ks→cp` from the commented entries, then look the name's value up there.
+  Re-audit any Arabic-script layout that places ه via `Arabic_heh` (ar-*, fa-IR, ku-IQ).
 - **No xkb layout** (Cherokee, Cree): use the script's standard syllabary
   arrangement and say so — the user verifies on hardware.
 - **Protocol codes are fixed 2+2 chars.** ISO-639-2/3 languages need a 2-char
@@ -102,6 +108,13 @@ else wrapped `U"<cell>"`; empty → `NULL`.
   column clips.
   ⚠️ A fast analytical (bbox) clip-scan does **not** model `\f` cursor lifts, so it
   over-reports already-nudged cells — only a real pixel render (`--overshoot`) is truth.
+- **Full 2px nudge set: `\f` up / `\x05` down / `\b` left / `\x06` right** (firmware
+  `disp_array.c` draw+bounds, mirrored in `oled_preview`). For non-trivial per-key
+  placement (Arabic/Indic, where base+Shift+AltGr crowd a 72px keycap), don't
+  hand-count escapes — use the **interactive keycap tuner**:
+  `PolyKybdHost/tools/gen_keycap_tuner.py --lang xx-YY` emits an offline HTML that
+  renders firmware-identically, nudges each glyph, flags clip/overlap live, and
+  exports the cells + offsets (see `PolyKybdHost/tools/KEYCAP_TUNER.md`).
 
 ## 4. Fonts & named glyphs
 
@@ -119,6 +132,12 @@ else wrapped `U"<cell>"`; empty → `NULL`.
   (`gfx_used_fonts.h`)** — `--only` skips the index, so either do a full
   `generate_fonts.py` run (needs all source fonts) or add the `#include` +
   `&Font` pointer to `gfx_used_fonts.h` by hand.
+  ⚠️ **Symptom of forgetting: a whole script renders blank.** The font is generated
+  but unreachable, and the lookup instead matches an *earlier* font whose contiguous
+  range spans those codepoints as empty `0x0` gap-glyphs (every Pashto letter hid
+  behind `_PerArab_`'s `0x679..0x6f9` span). `kdisp_write_gfx_char` now *skips* an
+  empty gap-glyph (`w=0,h=0,xAdvance=0`) so a later real font wins — but the entry
+  must still be in the index, or there's no later font to find.
 - **Byte-repro**: regenerate with `/tmp/fontconvert_pinned` and the canonical
   source font; the diff on an existing header should be **only** your new block.
   Many small glyph names → auto-generate them (`[[f"CHEROKEE_{cp:04X}",
@@ -205,7 +224,15 @@ Shift=blue, AltGr=red, so any **overlap** between the three shows as a mixed col
 (cyan/yellow/magenta/white). Also catch **missing glyphs** (a blank preview = font
 range doesn't cover the codepoint → widen it, §4) and **redundant AltGr** (a legend
 that renders the same glyph as the key's inherited Shift/Base — drop the cell, it
-just draws the character twice).
+just draws the character twice). `--check-bounds` audits a whole lang (or `ALL`) for
+out-of-bounds/overlap, and a single-key render now prints those warnings too.
+
+`oled_preview` (and the keycap tuner, §3) reproduce `keymap.c render_key` +
+`disp_array.c` **exactly** — so they're only trustworthy if kept in lockstep with the
+firmware. The one parity trap found the hard way: `bounds` returns the **rightMOST
+pixel** (`x + xOffset + width - 1`, with a `width>0` guard), *not* one-past — that
+value drives the Shift clearance / right-edge clamp, so an off-by-one shifts
+clamp-driven placement 1px vs the device. Mirror any render change in all three.
 
 Also bump the host fixture: `PolyKybdHost/tests/device/poly_kybd_mock_test.py`
 (`_ALL_FIRMWARE_LANGS` + count) — the new codes append after the last one, in

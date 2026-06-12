@@ -70,6 +70,17 @@ was already mapped, on `KC_0` / `KC_2`; æ/œ marginal); he-IL (already carries 
 digraphs ױ װ ײ among its 28 legends). Always diff against the *live* cell, not a guess —
 the xkb "native" map put `@` on a key we'd already covered elsewhere.
 
+**Combining-mark AltGr (Devanagari/Bengali nukta) — display update (2026-06-12):** the nukta
+consonants (क़ ग़ ज़ ड़ फ़) are shown on AltGr as just the **nukta dot** `U+093C` (a small
+"+nukta" hint in the corner), not the full precomposed letter — the full glyph overlapped
+the Shift consonant on the 72px keycap. ⚠️ But a **lone combining mark renders to 0 pixels
+when AltGr is actually HELD** (the active view), so the keycap went blank. `render_key`
+(split72 **and** corne42) now detects a bare combining-mark AltGr (`altgr_is_bare_combining`:
+Devanagari `093C` / Bengali `09BC`) and **composes it onto the base consonant** (क + ़ = क़)
+for the held view, while the unshifted preview still shows the lone dot via the cell's own
+positioning controls. Extend `altgr_is_bare_combining` if a new layout puts another bare
+combining mark on AltGr.
+
 ### Cree (`cr-CA`) — no real layout to import (investigated 2026-06-11)
 The Wave-2 plan listed a "real CLDR Cree layout" as a follow-up. **CLDR has no Cree keyboard
 in any release or `main`** (only Inuktitut `iu`). The authoritative Cree keyboards (Keyman

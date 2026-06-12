@@ -43,6 +43,16 @@ Rule of thumb: **identical keymap → fold; different keymap → its own column.
   `awk '/xkb_symbols "<variant>"/{f=1} f{print} /^};/{if(f)exit}' <file>`.
   Examples used: `af(ps)` Pashto, `ca(ike)` Inuktitut, `no(smi)` Sami,
   `ir(ku_ara)` Sorani, `mt`/`ie`/`gb`/`ch`/`latam`.
+- **⚠️ Platform caveat — xkb = Linux, matches Windows, but NOT macOS at AltGr.**
+  Verified 2026-06-11 (de/fr/es vs CLDR): xkb **level-3 ≡ Windows AltGr exactly**
+  (0 diffs), so AltGr legends from xkb are right on Linux *and* Windows. **macOS
+  Option diverges almost completely** (de 8/11, fr 18/20, es 7/7 keys differ — it
+  yields typographic/math glyphs ∞ … ‹ ¶ ª, a different layer). Base/Shift are
+  platform-consistent; only the AltGr **hint** is macOS-wrong, and the firmware
+  carries one legend set (no per-platform switch) — so treat AltGr as
+  **Linux/Windows-canonical**. To check a locale cross-platform, diff against CLDR
+  `keyboards/{windows,osx}/<loc>-t-k0-{windows,osx}.xml` (release-42; the `altR`
+  keyMap and the bare-`opt` keyMap).
 - Resolve named keysyms with `/usr/include/X11/keysymdef.h` (`Arabic_dad` →
   `/* U+0636 */`). `0x100xxxx` literals = `U+xxxx`. `Uxxxx` keysyms = `U+xxxx`.
 - **No xkb layout** (Cherokee, Cree): use the script's standard syllabary

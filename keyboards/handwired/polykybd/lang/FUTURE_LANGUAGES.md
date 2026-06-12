@@ -33,6 +33,15 @@ high-value symbols (skip generic typographic « » – — …). Apply by editin
 `xl/worksheets/sheet2.xml` in-place (playbook B), `cog -r lang_lut.c`, build, verify with
 `oled_preview.py --lang xx-YY` before/after.
 
+**⚠️ Platform scope of the AltGr legends.** These come from **xkb (Linux)**. Spot-checked
+2026-06-11 (de/fr/es vs CLDR): xkb **level-3 ≡ Windows AltGr exactly** (0 diffs) — so the
+legends are correct on Linux *and* Windows — but **macOS Option diverges almost completely**
+(de 8/11, fr 18/20, es 7/7 keys differ; Option is a different layer of typographic/math
+glyphs ∞ … ‹ ¶ ª). Base/Shift are platform-consistent; only the AltGr **hint** is
+macOS-wrong, and there is one legend set (no per-platform switch), so AltGr is
+**Linux/Windows-canonical** by design. Cross-platform check = CLDR
+`keyboards/{windows,osx}/<loc>-t-k0-{windows,osx}.xml` (the `altR` / bare-`opt` keyMaps).
+
 **Four waves (all build clean, `NUM_LANG` unchanged at 160):**
 
 | Wave | Commit | Locales | Notes |

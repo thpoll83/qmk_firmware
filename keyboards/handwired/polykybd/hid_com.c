@@ -37,6 +37,11 @@ import cog
 import os
 from textwrap import wrap
 from openpyxl import load_workbook
+# Shared cog constant for all language-list report generators below (mirrors the
+# C RAW_EPSIZE macro = raw HID report size). Defined here, in the first cog block,
+# so the per-command blocks chunk payloads against one value instead of each
+# redefining it.
+RAW_EPSIZE = 64
 wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "lang", "lang_lut.xlsx"))
 sheet = wb['key_lut']
 
@@ -316,52 +321,15 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 }
                 raw_hid_send(data, length);
                 break;
-            case 8: //lang list
+            case 8: // GET_LANG_LIST (legacy ASCII list) — RETIRED in protocol v2.
+                // Superseded by GET_LANG_LIST_PACKED (cmd 27), which sends the
+                // same list as compact 2-byte ISO index pairs. Protocol-v2 hosts
+                // use cmd 27 exclusively; NACK the old command so any stale host
+                // that still asks for the ASCII list fails loudly instead of
+                // parsing a missing/partial reply. (Dropping the table here also
+                // frees the ~570 bytes of .rodata the ASCII list occupied.)
                 memset(data, 0, length);
-                /*[[[cog
-                RAW_EPSIZE = 64
-                lang_list = "P\\x08."
-                for lang in languages:
-                    lang_list += lang
-                    if len(lang_list)>=RAW_EPSIZE:
-                        cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)-3});')
-                        cog.outl(f'raw_hid_send(data, length);')
-                        cog.outl(f'memset(data, 0, length);')
-                        lang_list = "P\\x08."
-                cog.outl(f'memcpy(data, "{lang_list}", {len(lang_list)-3});')
-                ]]]*/
-                memcpy(data, "P\x08.enUSdeDEfrFResESptPTitITtrTRkoKRjaJParSAelGRukUAruRUbeBYkkKZ", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.bgBGplPLroROzhCNnlNLheILsvSEfiFInnNOdaDKhuHUcsCZhrHRskSKltLT", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.lvLVetEEptBRsrRSmkMKfaIRhiINmrINneNPmnMNurPKenGBesMXdeCHfrBE", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.frCAthTHbnINteINtaINzhTWkaGEhyAMidIDazAZisISviVNzhHKenAUenNZ", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.miNZsmWSfjFJtlPHhwUSenZAafZAarEGswKEamETyoNGenNGarMAarIQkuIQ", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.msMYuzUZenCAesARenPGtyPFesCOesPEesVEesCLesECesGTesDOesBOesPY", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.esCResSVesHNesPAesUYesNIdeATnlBEcaESenIEbsBAfrCHslSIfoFOarAE", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.arSYarJOarLBarYEarKWarOMarPSarQAarBHarDZarSDarTNarLYfrCDfrCI", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.frCMfrSNfrMGenGHenUGenZMswTZptAOptMZbnBDenINenPKenPHenSGenLK", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.kyKGtgTJenGUenSBenVUenFMfrNCtoTOeuESglESrmCHcyGBgaIEmtMTlbLU", 63);
-                raw_hid_send(data, length);
-                memset(data, 0, length);
-                memcpy(data, "P\x08.seNOgnPYquPEayBOnvUSnhMXpsAFiuCAcrCAckUS", 43);
-                //[[[end]]]
+                memcpy(data, "P\x08!", 3);
                 raw_hid_send(data, length);
                 break;
             case 9: //change language
@@ -642,7 +610,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 packed = [len(languages)]
                 for lang in languages:
                     packed += list(encode_pair(lang))
-                CHUNK = RAW_EPSIZE - 3  # 61 payload bytes after the 3-byte "P\x1b." header
+                CHUNK = RAW_EPSIZE - 3  # 61 payload bytes after the 3-byte "P\x1b." header (RAW_EPSIZE from the top cog block)
                 for off in range(0, len(packed), CHUNK):
                     seg = packed[off:off+CHUNK]
                     # All bytes emitted as \xNN (incl. header) so no literal char ever

@@ -42,11 +42,14 @@ The host software (`PolyKybdHost/`) communicates with this firmware over a custo
 - **`PROTOCOL_VERSION`** (`config.h`, reported in the GET_ID string) gates host
   features. **v2** added `GET_LANG_LIST_PACKED` (cmd `27` / `0x1b`): the language
   list as a count byte + one `(ISO 639-1 idx, ISO 3166-1 alpha-2 idx)` **2-byte
-  pair per language** instead of the 4 ASCII chars of cmd `0x08` — 81 langs go
-  from 6 reports to 3, and the firmware `.rodata` shrinks (2 emitted bytes/lang vs
-  4). cmd `0x08` (ASCII) stays for old hosts; the host prefers cmd `27` only when
-  it reads protocol ≥ 2, else falls back. The index↔code tables are the **frozen,
-  append-only** `lang/iso_lang_country.py` (see "Language list encoding" below).
+  pair per language** instead of the 4 ASCII chars of cmd `0x08` — it halves the
+  emitted bytes/lang and the report count. As of the **P2-only cleanup**, cmd `27`
+  is the **only** language-list command: the legacy ASCII cmd `0x08` has been
+  **retired and now NACKs** (`P\x08!`), dropping its ~570 B `.rodata` table. The
+  host (protocol ≥ 2) uses cmd `27` exclusively with **no ASCII fallback**, and
+  firmware older than v2 is unsupported; the rig asserts cmd `0x08` NACKs. The
+  index↔code tables are the **frozen, append-only** `lang/iso_lang_country.py`
+  (see "Language list encoding" below).
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)

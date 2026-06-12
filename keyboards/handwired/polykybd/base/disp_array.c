@@ -189,7 +189,17 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
             currentFont = fonts[idx];
             first = pgm_read_dword(&currentFont->first);
             last  = pgm_read_dword(&currentFont->last);
-            if (ch >= first && ch <= last) { found = idx; break; }
+            if (ch >= first && ch <= last) {
+                // A font with non-contiguous ranges is padded with empty 0x0 gap
+                // glyphs from first..last; skip such a gap so a later font that
+                // actually has this codepoint wins (e.g. Pashto letters shadowed by
+                // _PerArab_'s wider span).  A real space is (w,h)=(1,1), advance>0,
+                // so it is never skipped.
+                const GFXglyph *gg = pgm_read_glyph_ptr(currentFont, ch - first);
+                if (pgm_read_byte(&gg->width) == 0 && pgm_read_byte(&gg->height) == 0
+                    && pgm_read_byte(&gg->xAdvance) == 0) continue;
+                found = idx; break;
+            }
         }
         if (found == 0xFF) {
             currentFont = fonts[0];             // no match — fall back to '!'

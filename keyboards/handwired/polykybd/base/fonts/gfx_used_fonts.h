@@ -152,6 +152,7 @@ const GFXfont* const ALL_FONTS [] = {
   &NotoSans_Regular_LatinExtAdd_14pt16b,
   &NotoSans_Regular_Naira_14pt16b,
   &NotoSansArabic_Regular_Sorani_16pt16b,
+  &NotoSansArabic_Regular_Pashto_16pt16b,
   &NotoSans_Regular_VietTones_16pt7b,
   &NotoSansJP_Regular_Hiragana_15pt16b,
   &NotoSansJP_Regular_Punct2_15pt16b,

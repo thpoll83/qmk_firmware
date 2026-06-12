@@ -1023,6 +1023,19 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
     }
 }
 
+// True if `s` is a single bare combining mark (ignoring positioning control codes) —
+// e.g. the Devanagari/Bengali nukta used as an AltGr "+nukta" hint. Drawn on its own
+// such a mark is invisible, so the AltGr-held view composes it onto the base glyph.
+static bool altgr_is_bare_combining(const uint32_t* s) {
+    uint32_t cp = 0;
+    for (; *s; ++s) {
+        if (*s < 0x20) continue;          // skip preview-positioning control codes
+        if (cp) return false;             // more than one visible glyph -> not a bare mark
+        cp = *s;
+    }
+    return cp == 0x093C || cp == 0x09BC;  // Devanagari / Bengali nukta (extend as needed)
+}
+
 // Renders key character to display using language translation, including modifiers etc.
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const poly_layer_t* local_layer = get_local_layer();
@@ -1079,6 +1092,21 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             v_off = PK_MIN(v_off, v_off_alt);
             int8_t h_off = get_setting(h_set, local_state->lang, VAR_SMALL);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
+                // A bare combining mark (the nukta "+nukta" AltGr hint) is invisible on
+                // its own when AltGr is actually held — compose it onto the base
+                // consonant (क + ़ = क़) so the held view shows the real output. The
+                // unshifted preview still draws the lone dot via the cell's own controls.
+                if (altgr_is_bare_combining(letter)) {
+                    const uint32_t* base = translate_keycode(local_state->lang, keycode, false, false);
+                    if (base != NULL) {
+                        uint32_t composed[10]; uint8_t ci = 0;
+                        for (const uint32_t* p = base;   *p && ci < 8; ++p) composed[ci++] = *p;
+                        for (const uint32_t* p = letter; *p && ci < 9; ++p) if (*p >= 0x20) composed[ci++] = *p;
+                        composed[ci] = 0;
+                        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, composed);
+                        return true;
+                    }
+                }
                 kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
                 return true;
             }

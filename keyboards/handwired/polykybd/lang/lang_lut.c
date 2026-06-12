@@ -1533,7 +1533,7 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*  ay-BO    */  NULL,                         NULL,                         NULL,                         NULL,
     /*  nv-US    */  U"i",                         U"I",                         NULL,                         LATIN_012F,
     /*  nh-MX    */  NULL,                         NULL,                         NULL,                         NULL,
-    /*  ps-AF    */  NULL,                         NULL,                         NULL,                         NULL,
+    /*  ps-AF    */  ARABIC_HEH,                   NULL,                         NULL,                         NULL,
     /*  iu-CA    */  UCAS_14C2,                    UCAS_15A4,                    UCAS_14C2,                    NULL,
     /*  cr-CA    */  U"i",                         U"I",                         NULL,                         UCAS_1403,
     /*  ck-US    */  CHEROKEE_13A2,                CHEROKEE_13F1,                CHEROKEE_13A2,                U"i"

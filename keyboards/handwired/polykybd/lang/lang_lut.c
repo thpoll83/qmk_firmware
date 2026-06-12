@@ -40,10 +40,10 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
             return "NULL"
         else:
             str_text = str(text).strip()
-            # Display strings are now 32-bit (char32_t / U"...") so SMP codepoints
-            # need no PUA shift.  Promote any literal char16 (u"...") to char32
-            # (U"...") so it concatenates with the now-U"..." named glyphs.
-            if str_text.startswith('u"') or str_text in named_glyphs or len(str_text.split())>1:
+            # Display strings are 32-bit (char32_t / U"...").  Cells are stored as
+            # U"..." literals (or named glyphs); a bare cell is wrapped U"...".  Any
+            # legacy char16 u"..." is still promoted to U"..." for safety.
+            if str_text.startswith('u"') or str_text.startswith('U"') or str_text in named_glyphs or len(str_text.split())>1:
                 return str_text.replace('u"', 'U"')
             return f'U"{str_text}"'
 

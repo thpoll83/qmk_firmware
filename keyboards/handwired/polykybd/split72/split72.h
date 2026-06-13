@@ -34,6 +34,15 @@ struct display_info {
 #define BITMASK4(x) .bitmask = {~0, (uint8_t)(~(1<<x)), ~0, ~0, ~0}
 #define BITMASK5(x) .bitmask = {(uint8_t)(~(1<<x)), ~0, ~0, ~0, ~0}
 
+// Variant parameters consumed by the shared poly_keymap.c:
+//   POLY_DISP_ROW_0 / _3 — which keycap display the row-0 / second-half scan starts on
+//   POLY_SPLASH_*        — the right-half boot splash (left half is always "POLY"/"KYBD")
+#define POLY_DISP_ROW_0   BITMASK1(0)
+#define POLY_DISP_ROW_3   BITMASK4(0)
+#define POLY_SPLASH_R1    U"SPLIT"
+#define POLY_SPLASH_R2    U" 7 2"
+#define POLY_SPLASH_R2_ROW 3
+
 void invert_display(uint8_t r, uint8_t c, bool state);
 
 const uint8_t* get_key_disp_bitmask(uint8_t index);

@@ -25,5 +25,7 @@
 #elif defined(KEYBOARD_handwired_polykybd_split42)
 // split42 was formerly named "corne42" (renamed 2026-06; same 42-key hardware).
 #    include "split42/split42.h"
+#else
+#    error "Unknown polykybd variant — expected KEYBOARD_handwired_polykybd_split72 or _split42"
 #endif
 

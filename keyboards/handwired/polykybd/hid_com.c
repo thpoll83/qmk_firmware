@@ -57,7 +57,7 @@ while lang_key:
 //[[[end]]]
 
 void invert_display(uint8_t r, uint8_t c, bool state);
-// Defined in each board's keymap.c (split72 / split42); declared here so the
+// Defined in the shared keyboard-level poly_keymap.c; declared here so the
 // shared HID dispatcher can drive the display-off command (case 24).
 void poly_suspend(void);
 void sync_and_refresh_displays(void);

@@ -41,8 +41,15 @@ or
 
 ## Build
 
-`make handwired/polykybd/split72:default`
+Replace `<variant>` with `split72` or `split42` (the 42-key board, formerly `corne42`):
+
+`make handwired/polykybd/<variant>:default`
+`qmk compile -kb handwired/polykybd/<variant> -km default`
+
+For example:
+
 `qmk compile -kb handwired/polykybd/split72 -km default`
+`qmk compile -kb handwired/polykybd/split42 -km default`
 
 ### Flash split setup via EE Hands
 

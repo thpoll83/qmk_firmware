@@ -75,7 +75,7 @@ consonants (क़ ग़ ज़ ड़ फ़) are shown on AltGr as just the *
 "+nukta" hint in the corner), not the full precomposed letter — the full glyph overlapped
 the Shift consonant on the 72px keycap. ⚠️ But a **lone combining mark renders to 0 pixels
 when AltGr is actually HELD** (the active view), so the keycap went blank. `render_key`
-(split72 **and** corne42) now detects a bare combining-mark AltGr (`altgr_is_bare_combining`:
+(split72 **and** split42) now detects a bare combining-mark AltGr (`altgr_is_bare_combining`:
 Devanagari `093C` / Bengali `09BC`) and **composes it onto the base consonant** (क + ़ = क़)
 for the held view, while the unshifted preview still shows the lone dot via the cell's own
 positioning controls. Extend `altgr_is_bare_combining` if a new layout puts another bare
@@ -143,7 +143,7 @@ wanted, it has to be authored from the syllabary chart, not imported.
 > regenerated `lang_layer.c` REGION_OFFSET/REGION_LANGS from the host
 > `lang_regions.py` grouping. **Flags** (`flag_fonts.h`) regenerated with the
 > pinned fontconvert (existing 143 byte-identical, +13 new). Both `split72:default`
-> and `corne42:default` build clean; all 419 host tests pass.
+> and `split42:default` build clean; all 419 host tests pass.
 >
 > **Post-test fixes (2026-06-11, verified with `PolyKybdHost/tools/oled_preview.py`)**:
 > - **AltGr letters clipped ~3–4 px at the panel bottom** (cy-GB ŷ, ga-IE/mt-MT
@@ -211,7 +211,7 @@ wanted, it has to be authored from the syllabary chart, not imported.
 > fold has the pre-existing limit that en-IN/en-PK fall back to US only when the
 > native IN/PK layout is *not* installed (the native layout wins the country
 > match first — same as tl-PH/zh-TW). `poly_kybd_mock_test.py` updated to 143.
-> Both `split72:default` and `corne42:default` build clean; all host tests pass.
+> Both `split72:default` and `split42:default` build clean; all host tests pass.
 
 ---
 
@@ -272,7 +272,7 @@ wanted, it has to be authored from the syllabary chart, not imported.
 > my/ca/pg/uz→us, pf→fr, eg/ma/iq→ara, ar→latam), GET_LANG_LIST tests updated
 > to 6 packets / 81 langs. `dl-fonts.sh` also gained the previously-missing
 > fetch entries (bengali/telugu/tamil/thai/georgian/armenian/tc + ethiopic).
-> Both `split72:default` and `corne42:default` build clean;
+> Both `split72:default` and `split42:default` build clean;
 > `generate_fonts.py --check` passes.
 
 ---

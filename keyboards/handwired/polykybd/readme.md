@@ -13,7 +13,17 @@ Hardware Supported: RP2040
 ## Keyboard Variants
 
 - `split72` is the current hardware (HW rev2 and up) iteration of `wave` with slight differences. Only `split72` is actively developed.
-- `split42` in preparation
+- `split42` is the 42-key (CRKBD-footprint) variant. **It was previously named `corne42` and was renamed to `split42` in 2026-06** — same hardware, same `LAYOUT_crkbd` footprint, same USB PID. If you have an older checkout or external reference to `handwired/polykybd/corne42`, use `handwired/polykybd/split42` instead.
+
+> **Shared keymap logic** — both variants compile the same `poly_keymap.c` at the
+> keyboard level (rendering, HID/overlay handling, language selection, idle/suspend,
+> split sync, firmware-update state machine). Each variant's
+> `keymaps/default/keymap.c` carries only its data (`keymaps[]`, `encoder_map[]`,
+> and — RGB variants only — `g_led_config`). Variant differences resolve at compile
+> time via `polykybd.h` (which pulls the active variant header), the per-variant
+> `POLY_DISP_ROW_*` / `POLY_SPLASH_*` macros, and `RGB_MATRIX_ENABLE` /
+> `POINTING_DEVICE_ENABLE` guards. Add a language once (in `poly_keymap.c` via cog)
+> and both keyboards pick it up.
 
 ### Code generation
 

@@ -26,6 +26,7 @@ The host software (`PolyKybdHost/`) communicates with this firmware over a custo
 
 | File | Role |
 |------|------|
+| `poly_keymap.c` | **Shared keymap logic, compiled for every variant** — rendering (`render_key`, `update_displays`, `to_static_text`), HID/overlay handling, language selection, idle/suspend, split sync glue, the firmware-update state machine, and all QMK `*_user`/`*_kb` callbacks. Holds the keymap-side cog blocks (the language tables). |
 | `hid_com.c` | `raw_hid_receive()` — main HID command dispatcher (21 command IDs, `0x01`–`0x15`) |
 | `fill_overlay.c` | Receives overlay segments from host, decompresses RLE, writes to overlay memory |
 | `base/overlay.c` | Overlay memory: `overlays[810][360]` — 90 keycap slots × 9 modifier variants × 360 bytes |
@@ -35,6 +36,30 @@ The host software (`PolyKybdHost/`) communicates with this firmware over a custo
 | `state.c` | `poly_sync_t` / `poly_layer_t` — shared state structs with CRC32, persisted via EEPROM |
 | `multicore_exec.c` | Offloads RLE decompression to RP2040 core1 via FIFO, keeping QMK's core0 responsive |
 | `lang/lang_lut.c` | 81-language lookup table (code-generated from `lang_lut.xlsx` via cog) |
+
+### Keyboard variants & the shared keymap (`poly_keymap.c`)
+
+Two hardware variants share one firmware: **`split72`** (72-key, RGB matrix,
+Cirque trackpad, 128×64 status OLED) and **`split42`** (42-key CRKBD footprint,
+no RGB, no trackpad, 128×32 status OLED). **`split42` was renamed from `corne42`
+in 2026-06** — same hardware/PID/`LAYOUT_crkbd`; old `corne42` paths are gone.
+
+All behaviour lives in the keyboard-level `poly_keymap.c` (compiled for both via
+`rules.mk` `SRC`). Each variant's `<variant>/keymaps/default/keymap.c` is **data
+only**: `keymaps[]`, `encoder_map[]`, and (RGB variants) `g_led_config`. Variant
+differences resolve at compile time:
+- `polykybd.h` `#include`s the active variant header (selected by QMK's
+  `-DKEYBOARD_handwired_polykybd_<variant>`), so `QMK_KEYBOARD_H` reaches
+  `struct display_info` + the `BITMASK*` macros.
+- Per-variant header macros: `POLY_DISP_ROW_0/3` (scan-start displays) and
+  `POLY_SPLASH_R1/R2/R2_ROW` (boot splash).
+- `RGB_MATRIX_ENABLE` / `POINTING_DEVICE_ENABLE` guard the RGB and trackpad paths.
+
+**Consequence:** a feature added to `poly_keymap.c` (e.g. a language via cog)
+lands on both keyboards at once — they can't drift apart. Don't re-introduce
+per-variant copies of the keymap logic (that drift is exactly what this
+extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
+`run_cog.sh` targets `poly_keymap.c`.
 
 ### HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
@@ -98,7 +123,7 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
 - **`fonts/generate_fonts.py`** — reads the YAML, runs `fontconvert` per entry, writes one header per category to `base/fonts/generated/`, and composes `base/fonts/gfx_used_fonts.h` (the `ALL_FONTS[]` table, with `IconsFont` prepended). `--check` flags stale headers for CI. Needs PyYAML + `fontconvert` on PATH (or `$FONTCONVERT`).
 - **`fonts/dl-fonts.sh`** — downloads the Noto source fonts first.
 - `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
-- **`fonts/gen-lang-fonts.sh`** — generates the two standalone headers for the language-selection layer (`_LL`): `base/fonts/flag_fonts.h` (country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically) and `base/fonts/lang_label_font.h` (a 6 px NotoSans label font). These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `split72/keymaps/default/keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes.
+- **`fonts/gen-lang-fonts.sh`** — generates the two standalone headers for the language-selection layer (`_LL`): `base/fonts/flag_fonts.h` (country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically) and `base/fonts/lang_label_font.h` (a 6 px NotoSans label font). These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes.
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.
 
 See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
@@ -203,7 +228,7 @@ Base-layer changes apply immediately and persist on the next suspend/reset/store
 **Relevant files**:
 - `keyboards/handwired/polykybd/split_sync.c` — all `user_sync_*_data_handler` functions
 - `keyboards/handwired/polykybd/state.c` / `state.h` — deferred-write helpers
-- `keyboards/handwired/polykybd/split72/keymaps/default/keymap.c` — `housekeeping_task_user()`
+- `keyboards/handwired/polykybd/poly_keymap.c` — `housekeeping_task_user()`
 
 ---
 
@@ -221,7 +246,7 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 **If the bug reappears**: Check whether a split transport failure (the other bug above) is preventing the suspend state from reaching the slave — if the slave never receives `STATUS_DISP_ON=0` it will keep its displays on indefinitely. The two bugs can look identical from the outside.
 
 **Relevant files**:
-- `keyboards/handwired/polykybd/split72/keymaps/default/keymap.c` — `poly_suspend()`, `suspend_power_down_kb()`, `sync_and_refresh_displays()`
+- `keyboards/handwired/polykybd/poly_keymap.c` — `poly_suspend()`, `suspend_power_down_kb()`, `sync_and_refresh_displays()`
 - `keyboards/handwired/polykybd/base/com.h` — flag bit definitions (`STATUS_DISP_ON`, `IDLE_TRANSITION`, `DISP_IDLE`)
 
 ---
@@ -295,7 +320,7 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 - `keyboards/handwired/polykybd/state.c` / `state.h` — `g_user_brightness`, `set/note/get_user_brightness()`
 - `keyboards/handwired/polykybd/split_sync.c` — `user_sync_poly_data_handler` awake-guard
 - `keyboards/handwired/polykybd/hid_com.c` — cmd 13 (set brightness), cmd 15 (stop idle)
-- `keyboards/handwired/polykybd/split72/keymaps/default/keymap.c`, `corne42/keymaps/default/keymap.c` — preset keys, idle/wake restore paths, boot seeding
+- `keyboards/handwired/polykybd/poly_keymap.c` — preset keys, idle/wake restore paths, boot seeding (shared by split72 + split42)
 
 ---
 

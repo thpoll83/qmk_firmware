@@ -57,7 +57,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* Status OLED — 128×32 SSD1306 (half-height vs split72's 128×64) */
 #define OLED_DISPLAY_128X32
 
-/* No RGB matrix — corne42 has no underglow or per-key LEDs */
+/* No RGB matrix — split42 has no underglow or per-key LEDs */
 
 #define RAW_USAGE_PAGE 0xFF61
 #define RAW_USAGE_ID   0x62

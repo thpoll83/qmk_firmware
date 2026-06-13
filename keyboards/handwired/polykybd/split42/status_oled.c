@@ -3,7 +3,7 @@
 #include "status_oled.h"
 #include "../oled_helper.h"
 
-#include "corne42.h"
+#include "split42.h"
 #include "../bridge_helper.h"
 #include "../state.h"
 #include "../side.h"
@@ -54,7 +54,7 @@ void oled_update_buffer(void) {
     kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 114, 11,
         global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
 
-    /* Row 2: default layout name (both sides — no RGB on corne42) */
+    /* Row 2: default layout name (both sides — no RGB on split42) */
     switch (get_local_layer()->def_layer) {
         case 0: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Qwerty");      break;
         case 1: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Qwerty Stag!"); break;

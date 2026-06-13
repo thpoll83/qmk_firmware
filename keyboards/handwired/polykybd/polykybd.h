@@ -16,4 +16,16 @@
 
 #pragma once
 
+// Pull in the active variant's main header (struct display_info, the BITMASK*
+// macros and the POLY_DISP_ROW_* / POLY_SPLASH_* parameters) so any source that
+// reaches us through QMK_KEYBOARD_H — in particular the shared poly_keymap.c —
+// sees the variant definitions. QMK passes -DKEYBOARD_<filesafe-name>.
+#if defined(KEYBOARD_handwired_polykybd_split72)
+#    include "split72/split72.h"
+#elif defined(KEYBOARD_handwired_polykybd_split42)
+// split42 was formerly named "corne42" (renamed 2026-06; same 42-key hardware).
+#    include "split42/split42.h"
+#else
+#    error "Unknown polykybd variant — expected KEYBOARD_handwired_polykybd_split72 or _split42"
+#endif
 

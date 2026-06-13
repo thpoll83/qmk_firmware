@@ -14,7 +14,7 @@ jobs:
       split72_bin: ${{ steps.names.outputs.split72_bin }}
       split72_hil_left: ${{ steps.names.outputs.split72_hil_left }}
       split72_hil_right: ${{ steps.names.outputs.split72_hil_right }}
-      corne42: ${{ steps.names.outputs.corne42 }}
+      split42: ${{ steps.names.outputs.split42 }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,10 +49,10 @@ jobs:
         with:
           args: qmk compile -kb handwired/polykybd/split72 -km default -e POLYKYBD_HIL=right -e TARGET=handwired_polykybd_split72_hil_right
 
-      - name: Build corne42
+      - name: Build split42
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb handwired/polykybd/corne42 -km default
+          args: qmk compile -kb handwired/polykybd/split42 -km default
 
       - id: names
         run: |
@@ -60,7 +60,7 @@ jobs:
           echo "split72_bin=$(ls handwired_polykybd_split72_default*.bin 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "split72_hil_left=$(ls handwired_polykybd_split72_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "split72_hil_right=$(ls handwired_polykybd_split72_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
-          echo "corne42=$(ls handwired_polykybd_corne42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split42=$(ls handwired_polykybd_split42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:

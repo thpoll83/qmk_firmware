@@ -22,7 +22,7 @@
 // POLYKYBD_HIL=right image (slave) to the right board. This runs in
 // split_pre_init(), before the split transport is up.
 //
-// Lives here at the keyboard level so split72 and corne42 share one
+// Lives here at the keyboard level so split72 and split42 share one
 // implementation. Normal keyboards never define POLYKYBD_HIL and keep stock
 // VBUS detection, so plugging USB into either half still makes that half the
 // master.

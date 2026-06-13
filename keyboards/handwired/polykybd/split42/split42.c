@@ -1,6 +1,6 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "corne42.h"
+#include "split42.h"
 
 #include "quantum.h"
 
@@ -26,7 +26,7 @@
  * TODO: Verify bitmask assignments against the actual PCB wiring:
  *   - Which shift register drives which row group
  *   - Which col positions in row 3 are the thumb keys
- *   - Whether the SR chain order matches BITMASK1/2/3 ordering in corne42.h
+ *   - Whether the SR chain order matches BITMASK1/2/3 ordering in split42.h
  */
 static const struct display_info key_display[] = {
         {BITMASK1(0)}, {BITMASK1(1)}, {BITMASK1(2)}, {BITMASK1(3)}, {BITMASK1(4)}, {BITMASK1(5)}, {BITMASK1(6)}, {BITMASK1(7)},
@@ -45,7 +45,7 @@ uint8_t get_disp_bitmask_size(void) {
 void invert_display(uint8_t r, uint8_t c, bool state) {
     /*
      * Right-side rows are 4–7. On split72 the right side had col 0 absent,
-     * requiring c--. Check whether corne42 needs the same adjustment.
+     * requiring c--. Check whether split42 needs the same adjustment.
      * TODO: update this offset if the right-half matrix layout requires it.
      */
     r = r % MATRIX_ROWS_PER_SIDE;

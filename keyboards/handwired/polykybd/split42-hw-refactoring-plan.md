@@ -1,8 +1,14 @@
-# PolyKybd corne42 — New Hardware Variant Plan
+> **HISTORICAL / RENAMED.** This document was written while the 42-key variant
+> was called **corne42**. The variant was renamed to **split42** in 2026-06
+> (same hardware, same `LAYOUT_crkbd` footprint, same USB PID). All `corne42`
+> paths below have been retargeted to `split42`. The keymap.c contents this
+> plan describes now live in the shared `poly_keymap.c` (see `readme.md`).
+
+# PolyKybd split42 — New Hardware Variant Plan
 
 ## Context
 
-Add a second keyboard hardware variant `corne42` alongside the existing `split72`. The corne42 is a 42-key split layout (CRKBD / Corne style) that shares the PolyKybd per-keycap OLED display system but differs in:
+Add a second keyboard hardware variant `split42` alongside the existing `split72`. The split42 is a 42-key split layout (CRKBD / Corne style) that shares the PolyKybd per-keycap OLED display system but differs in:
 - **42 keys** instead of 72 (21 per side: 6×3 grid + 3 thumb keys)
 - **No RGB matrix** LEDs
 - **Different key matrix** (4 rows × 6 cols per side instead of 5 rows × 8 cols)
@@ -50,12 +56,12 @@ Goal: maximum code reuse with split72. The keycap OLED rendering (72×40 px SPI 
 void invert_display(uint8_t r, uint8_t c, bool state);
 ```
 
-Both `split72.c` and `corne42.c` define this function; the linker resolves it at build time. No behavioral change.
+Both `split72.c` and `split42.c` define this function; the linker resolves it at build time. No behavioral change.
 
 ### 1B. `polykybd/config.h` → move split72-specific blocks to `split72/config.h`
 
 Move out of shared `config.h` (they are split72-only):
-- `#define OLED_DISPLAY_128X64` (line 107) — corne42 uses 128×32
+- `#define OLED_DISPLAY_128X64` (line 107) — split42 uses 128×32
 - All `ENABLE_RGB_MATRIX_*` defines (lines 125–165)
 - `RGB_MATRIX_FRAMEBUFFER_EFFECTS`, `RGB_MATRIX_KEYPRESSES`, `RGB_MATRIX_*_STEP`, `RGB_MATRIX_MAXIMUM_BRIGHTNESS`, `RGB_MATRIX_LED_FLUSH_LIMIT` (lines 117–170)
 
@@ -63,11 +69,11 @@ Move out of shared `config.h` (they are split72-only):
 
 ---
 
-## Phase 2 — Create `corne42/` variant directory
+## Phase 2 — Create `split42/` variant directory
 
 Mirror the structure of `split72/` with these files:
 
-### 2A. `corne42/config.h` (NEW)
+### 2A. `split42/config.h` (NEW)
 
 ```c
 #pragma once
@@ -118,9 +124,9 @@ Mirror the structure of `split72/` with these files:
 #define DYNAMIC_KEYMAP_LAYER_COUNT 14
 ```
 
-> **Hardware TODO**: Update all GP pin numbers to match the actual corne42 PCB schematic.
+> **Hardware TODO**: Update all GP pin numbers to match the actual split42 PCB schematic.
 
-### 2B. `corne42/corne42.h` (NEW)
+### 2B. `split42/split42.h` (NEW)
 
 Same interface as `split72/split72.h` but with 3-byte bitmask:
 
@@ -146,9 +152,9 @@ const uint8_t* get_key_disp_bitmask(uint8_t index);
 uint8_t get_disp_bitmask_size(void);
 ```
 
-> **Hardware TODO**: Confirm the BITMASK macro ordering matches which shift register is shifted out first on the corne42 PCB. In split72, the BITMASK macros are ordered so that the first byte in the array is shifted out *last* (SPI convention: MSB of the chain).
+> **Hardware TODO**: Confirm the BITMASK macro ordering matches which shift register is shifted out first on the split42 PCB. In split72, the BITMASK macros are ordered so that the first byte in the array is shifted out *last* (SPI convention: MSB of the chain).
 
-### 2C. `corne42/corne42.c` (NEW)
+### 2C. `split42/split42.c` (NEW)
 
 The `key_display[]` table maps `LAYOUT_TO_INDEX(row, col)` to shift-register bitmasks. Layout: `MATRIX_ROWS_PER_SIDE × MATRIX_COLS = 4×6 = 24` entries per side.
 
@@ -157,7 +163,7 @@ CRKBD physical layout per side:
 - Row 3: 3 thumb keys (only 3 of 6 col positions are wired) = 3 keycap displays + 3 unused slots
 
 ```c
-#include "corne42.h"
+#include "split42.h"
 #include "quantum.h"
 #include "../side.h"
 #include "../base/com.h"
@@ -193,7 +199,7 @@ uint8_t get_disp_bitmask_size(void) {
 
 void invert_display(uint8_t r, uint8_t c, bool state) {
     /* TODO: add right-side column offset if needed (see split72's c-- for rows 5-8).
-       Depends on whether right-side col 0 is absent in corne42's layout. */
+       Depends on whether right-side col 0 is absent in split42's layout. */
     r = r % MATRIX_ROWS_PER_SIDE;
     const uint8_t disp_idx = LAYOUT_TO_INDEX(r, c);
     const uint8_t table_size = (uint8_t)(sizeof(key_display) / sizeof(key_display[0]));
@@ -228,15 +234,15 @@ void matrix_slave_scan_kb(void) { matrix_scan_kb(); }
 ```
 
 > **Hardware TODOs**:
-> - Identify which 3 of the 6 columns in row 3 are the thumb keys on the corne42 PCB.
+> - Identify which 3 of the 6 columns in row 3 are the thumb keys on the split42 PCB.
 > - Determine whether right-side rows need a column offset (like split72's `c--` for rows 5–8).
 > - Fill in final `key_display[]` bitmask assignments matching the actual SR chain wiring.
 
-### 2D. `corne42/keyboard.json` (NEW)
+### 2D. `split42/keyboard.json` (NEW)
 
 ```json
 {
-    "keyboard_name": "PolyKybd Corne42",
+    "keyboard_name": "PolyKybd Split42",
     "manufacturer": "PolyFabriq",
     "url": "https://ko-fi.com/polykb",
     "maintainer": "[thpoll]",
@@ -275,7 +281,7 @@ void matrix_slave_scan_kb(void) { matrix_scan_kb(); }
 
 > **TODO**: Fill in all 42 key positions. Standard CRKBD x/y layout is well-documented and can be adapted from any public CRKBD keyboard.json in the QMK repository.
 
-### 2E. `corne42/rules.mk` (NEW)
+### 2E. `split42/rules.mk` (NEW)
 
 ```makefile
 # Split keyboard setup
@@ -286,9 +292,9 @@ SPLIT_KEYBOARD = yes
 OLED_ENABLE = yes
 OLED_DRIVER = ssd1306
 
-# No RGB matrix (corne42 has no underglow/per-key LEDs)
+# No RGB matrix (split42 has no underglow/per-key LEDs)
 
-# Source files — status_oled.c resolves to corne42/status_oled.c via QMK search order
+# Source files — status_oled.c resolves to split42/status_oled.c via QMK search order
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c \
        base/update.c base/e2prom.c base/rle.c base/com.c base/crc32.c \
@@ -296,12 +302,12 @@ SRC += status_oled.c \
        base/shift_reg.c base/spi_helper.c base/overlay.c \
        base/multicore/core1.c lang/lang_lut.c
 
-DEFAULT_FOLDER = handwired/polykybd/corne42
+DEFAULT_FOLDER = handwired/polykybd/split42
 
 ENCODER_ENABLE     = yes
 ENCODER_MAP_ENABLE = yes
 
-# No pointing device (no Cirque trackpad on corne42)
+# No pointing device (no Cirque trackpad on split42)
 
 RAW_ENABLE              = yes
 WPM_ENABLE              = yes
@@ -311,7 +317,7 @@ PERMISSIVE_HOLD         = yes
 DYNAMIC_KEYMAP_ENABLE   = yes
 ```
 
-### 2F. `corne42/status_oled.h` (NEW)
+### 2F. `split42/status_oled.h` (NEW)
 
 Same interface as `split72/status_oled.h`:
 
@@ -322,11 +328,11 @@ void oled_draw_kybd(void);
 void oled_draw_poly(void);
 ```
 
-### 2G. `corne42/status_oled.c` (NEW)
+### 2G. `split42/status_oled.c` (NEW)
 
 Start from `split72/status_oled.c` and apply these changes:
 
-**1. Includes**: Change `#include "split72.h"` → `#include "corne42.h"` and `#include "split72/status_oled.h"` → `#include "corne42/status_oled.h"`.
+**1. Includes**: Change `#include "split72.h"` → `#include "split42.h"` and `#include "split72/status_oled.h"` → `#include "split42/status_oled.h"`.
 
 **2. Remove all `rgb_matrix_*` calls**: The right-side `if(is_right_side()) { ... "RGB" ... }` block in `oled_update_buffer()` draws RGB mode, HSV, and speed — remove the entire block. Replace it with a symmetric display (e.g., same default-layer/WPM info as the left side, or brightness + WPM + language).
 
@@ -344,19 +350,19 @@ The num/caps/scroll lock icons currently drawn at y=16, y=38, y=54 need to colla
 
 `oled_task_user()`, `oled_status_screen()`, and `oled_render_logos()` are structurally identical to split72 — copy verbatim.
 
-### 2H. `corne42/halconf.h` (NEW — identical to split72)
+### 2H. `split42/halconf.h` (NEW — identical to split72)
 
 Copy `split72/halconf.h` unchanged. Same RP2040 HAL requirements (I2C, SPI, PIO serial, same baud rate).
 
-### 2I. `corne42/mcuconf.h` (NEW — identical to split72)
+### 2I. `split42/mcuconf.h` (NEW — identical to split72)
 
 Copy `split72/mcuconf.h` unchanged. Same RP2040 MCU configuration.
 
 ---
 
-## Phase 3 — Create `corne42/keymaps/default/` keymap
+## Phase 3 — Create `split42/keymaps/default/` keymap
 
-### 3A. `corne42/keymaps/default/config.h` (NEW)
+### 3A. `split42/keymaps/default/config.h` (NEW)
 
 ```c
 #define ENABLE_COMPILE_KEYCODE
@@ -364,21 +370,21 @@ Copy `split72/mcuconf.h` unchanged. Same RP2040 MCU configuration.
 #define USB_VBUS_PIN GP24
 ```
 
-### 3B. `corne42/keymaps/default/rules.mk` (NEW)
+### 3B. `split42/keymaps/default/rules.mk` (NEW)
 
 ```makefile
 SRC += keycode_helper.c
 ```
 
-### 3C. `corne42/keymaps/default/layers.h` (NEW)
+### 3C. `split42/keymaps/default/layers.h` (NEW)
 
 Copy from `split72/keymaps/default/layers.h`. Keep the same 14-layer enum (or reduce if fewer layers are desired for a 42-key board).
 
-### 3D. `corne42/keymaps/default/keycode_helper.c/.h` (NEW — copy from split72)
+### 3D. `split42/keymaps/default/keycode_helper.c/.h` (NEW — copy from split72)
 
 These files handle language keycode mappings and are independent of physical key count. Copy directly from `split72/keymaps/default/`.
 
-### 3E. `corne42/keymaps/default/keymap.c` (NEW)
+### 3E. `split42/keymaps/default/keymap.c` (NEW)
 
 Start from `split72/keymaps/default/keymap.c` and apply these targeted changes:
 
@@ -388,8 +394,8 @@ Start from `split72/keymaps/default/keymap.c` and apply these targeted changes:
 #include "split72/split72.h"
 #include "split72/status_oled.h"
 // With:
-#include "corne42/corne42.h"
-#include "corne42/status_oled.h"
+#include "split42/split42.h"
+#include "split42/status_oled.h"
 ```
 
 **2. Remove RGB-matrix code** (search `rgb_matrix_` and `RGB_MATRIX_ENABLE` throughout):
@@ -437,14 +443,14 @@ void suspend_wakeup_init_kb(void) {
 
 | Item | File | Details |
 |------|------|---------|
-| Matrix pin assignments | `corne42/config.h` | Actual GP pin numbers for MATRIX_ROW_PINS and MATRIX_COL_PINS |
-| Which 3 thumb columns are wired | `corne42/corne42.c` | Row 3 col positions for thumb keys (left and right side may differ) |
-| Right-side column offset | `corne42/corne42.c` `invert_display()` | Whether right side rows need `c--` (depends on PCB routing, like split72 line 33) |
-| Shift register bit-to-key mapping | `corne42/corne42.c` `key_display[]` | Final bitmask assignments matching actual SR chain wiring order |
-| BITMASK macro SR ordering | `corne42/corne42.h` | Which bitmask index corresponds to which physical shift register |
-| 128×32 logo bitmaps | `corne42/status_oled.c` | New `oled_draw_kybd()` and `oled_draw_poly()` arrays (512 bytes each) |
-| keyboard.json layout | `corne42/keyboard.json` | All 42 key positions with x/y and matrix[] coordinates |
-| USB PID uniqueness | `corne42/keyboard.json` | Confirm `0x2008` is not in use by another PolyFabriq device |
+| Matrix pin assignments | `split42/config.h` | Actual GP pin numbers for MATRIX_ROW_PINS and MATRIX_COL_PINS |
+| Which 3 thumb columns are wired | `split42/split42.c` | Row 3 col positions for thumb keys (left and right side may differ) |
+| Right-side column offset | `split42/split42.c` `invert_display()` | Whether right side rows need `c--` (depends on PCB routing, like split72 line 33) |
+| Shift register bit-to-key mapping | `split42/split42.c` `key_display[]` | Final bitmask assignments matching actual SR chain wiring order |
+| BITMASK macro SR ordering | `split42/split42.h` | Which bitmask index corresponds to which physical shift register |
+| 128×32 logo bitmaps | `split42/status_oled.c` | New `oled_draw_kybd()` and `oled_draw_poly()` arrays (512 bytes each) |
+| keyboard.json layout | `split42/keyboard.json` | All 42 key positions with x/y and matrix[] coordinates |
+| USB PID uniqueness | `split42/keyboard.json` | Confirm `0x2008` is not in use by another PolyFabriq device |
 
 ---
 
@@ -452,7 +458,7 @@ void suspend_wakeup_init_kb(void) {
 
 `polykybd/config.h` line 96 defines `NUM_OVERLAYS 90`. The overlay array is `overlays[90×7][360]` ≈ 226 KB of SRAM. For a 42-key board, reducing to 48 (next power-of-2 above 42) would free ~80 KB:
 
-- **Firmware change**: `#define NUM_OVERLAYS 48` in `corne42/config.h` (override the shared default)
+- **Firmware change**: `#define NUM_OVERLAYS 48` in `split42/config.h` (override the shared default)
 - **Host software change**: `PolyKybdHost` must be told the device has 48 overlay slots (affects how it maps keycodes to slots)
 
 This is low-risk but requires coordination between firmware and host software. Defer until the basic variant works.
@@ -463,21 +469,21 @@ This is low-risk but requires coordination between firmware and host software. D
 
 ### NEW files to create (15)
 ```
-corne42/config.h
-corne42/corne42.h
-corne42/corne42.c
-corne42/keyboard.json
-corne42/rules.mk
-corne42/status_oled.h
-corne42/status_oled.c
-corne42/halconf.h                     ← copy split72/halconf.h
-corne42/mcuconf.h                     ← copy split72/mcuconf.h
-corne42/keymaps/default/config.h
-corne42/keymaps/default/rules.mk
-corne42/keymaps/default/layers.h      ← copy split72/keymaps/default/layers.h
-corne42/keymaps/default/keycode_helper.h  ← copy split72/keymaps/default/
-corne42/keymaps/default/keycode_helper.c  ← copy split72/keymaps/default/
-corne42/keymaps/default/keymap.c
+split42/config.h
+split42/split42.h
+split42/split42.c
+split42/keyboard.json
+split42/rules.mk
+split42/status_oled.h
+split42/status_oled.c
+split42/halconf.h                     ← copy split72/halconf.h
+split42/mcuconf.h                     ← copy split72/mcuconf.h
+split42/keymaps/default/config.h
+split42/keymaps/default/rules.mk
+split42/keymaps/default/layers.h      ← copy split72/keymaps/default/layers.h
+split42/keymaps/default/keycode_helper.h  ← copy split72/keymaps/default/
+split42/keymaps/default/keycode_helper.c  ← copy split72/keymaps/default/
+split42/keymaps/default/keymap.c
 ```
 
 ### MODIFIED files (3)
@@ -495,8 +501,8 @@ polykybd/split72/config.h   — add OLED_DISPLAY_128X64 + all ENABLE_RGB_MATRIX_
 # 1. Confirm no regressions in split72 after the shared-file edits
 qmk compile -kb handwired/polykybd/split72 -km default
 
-# 2. Build corne42 variant
-qmk compile -kb handwired/polykybd/corne42 -km default
+# 2. Build split42 variant
+qmk compile -kb handwired/polykybd/split42 -km default
 
 # 3. Flash and verify on hardware:
 #    - Status OLED shows splash at 128×32

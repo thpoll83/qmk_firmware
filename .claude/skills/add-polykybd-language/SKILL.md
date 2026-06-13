@@ -161,15 +161,18 @@ fixed generator (don't try to edit existing cells). Verify integrity: reopen
 read-only, confirm old langs still show their cached tokens (e.g. es-ES KC_SCLN =
 `N_WITH_TILDE_SMALL`, not `LATIN_xxxx`).
 
-## 6. Re-cog the 6 generated files
+## 6. Re-cog the generated files
 
-`lang_lut.xlsx` feeds **six** cog files — re-cog **all** or the language is
-half-wired ("not selectable" = stale `_LL`/`KCL_`/HID list):
+`lang_lut.xlsx` feeds the cog files below — re-cog **all** or the language is
+half-wired ("not selectable" = stale `_LL`/`KCL_`/HID list). The keymap language
+tables now live in the **shared** `poly_keymap.c` (compiled for both split72 and
+split42), so there is a single keymap cog target — not one per variant:
 
 ```bash
 for f in lang/lang_lut.h lang/lang_lut.c lang/named_glyphs.h keycode_helper.h \
-         hid_com.c split72/keymaps/default/keymap.c corne42/keymaps/default/keymap.c; do
+         hid_com.c poly_keymap.c; do
   /tmp/pkvenv/bin/python -m cogapp -r "$f"; done
+# (or just: bash run_cog.sh)
 ```
 If only cell *values* changed (not the language list/order), `keycode_helper.h`,
 `hid_com.c`, the keymaps and `lang_layer.c` won't change — a good scope check.
@@ -198,7 +201,7 @@ If only cell *values* changed (not the language list/order), `keycode_helper.h`,
 ```bash
 export QMK_HOME=$PWD/../../../..    # the qmk_firmware root
 PATH=/tmp/pkvenv/bin:$PATH qmk compile -kb handwired/polykybd/split72 -km default
-PATH=/tmp/pkvenv/bin:$PATH qmk compile -kb handwired/polykybd/corne42 -km default
+PATH=/tmp/pkvenv/bin:$PATH qmk compile -kb handwired/polykybd/split42 -km default
 ```
 Budget: firmware runs in a **2 MB flash partition** (`FW_STAGING_OFFSET`); a build
 >2 MB fails to link (intended). Currently ~0.76 MB. A `.bin` for HID-flashing:

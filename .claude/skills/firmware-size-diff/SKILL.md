@@ -124,7 +124,7 @@ Also add a last line with a percentage number of how much RAM of the total 264kB
   - QMK build date string in `version.h` — rebuild within the same minute or check whether the only differing region is the version string.
   - `__FILE__` paths inside `assert()` / log calls — if a refactor moves code between files, expect string-table churn.
   - If the disassembly diff is only inside `.rodata`-referencing loads with no instruction changes, the bytes differ in `.rodata`, not the code. Confirm with `arm-none-eabi-size -A` showing `.text` unchanged but `.rodata` moved.
-- **Variants**: default to `split72`. Diff `corne42` too if the user asks, or if `git stash show --name-only stash@{0}` (run before the stash pop) lists files under `keyboards/handwired/polykybd/corne42/`.
+- **Variants**: default to `split72`. Diff `split42` too if the user asks, or if `git stash show --name-only stash@{0}` (run before the stash pop) lists files under `keyboards/handwired/polykybd/split42/` or the shared `keyboards/handwired/polykybd/poly_keymap.c` (the latter affects both variants). (`split42` was formerly `corne42`.)
 - **Codegen outputs**: `lang/lang_lut.c` and `base/fonts/generated/*.h` come from cog/`create_fonts.sh`. If they're touched, mention that size changes may reflect regenerated data rather than hand-written code.
 - **Clean builds are required** for both passes — see step 3 rationale. Don't try to optimise this away.
 - **Don't** modify the user's branch, push, or amend. The skill only uses `git stash`.

@@ -6,8 +6,8 @@
 
 #define USB_VBUS_PIN GP24
 
-// Corne42 emoji layer: right half shows the current tab's 18 slots (3 rows × 6).
+// Split42 emoji layer: right half shows the current tab's 18 slots (3 rows × 6).
 #define EMJ_SLOTS_PER_PAGE 18
-// Corne42 language layer: right half shows the active region's 18 slots
+// Split42 language layer: right half shows the active region's 18 slots
 // (3 rows × 6), paged; left half = region tabs + unicode-mode keys + MRU.
 #define LANG_SLOTS_PER_PAGE 18

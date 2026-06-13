@@ -23,14 +23,14 @@
 // ───────────────────────────────────────────────────────────────────────────
 
 // Maximum number of emoji slots that can appear in a keymap layer.
-// The split72 layout exposes 50 slots; the corne42 exposes 24.
+// The split72 layout exposes 50 slots; the split42 exposes 24.
 // Override before including this header if needed.
 #ifndef EMJ_SLOTS_PER_PAGE
 #  define EMJ_SLOTS_PER_PAGE 50
 #endif
 
 // Maximum number of category tabs in the keymap.
-// split72 has 12 tabs; corne42 has 10.
+// split72 has 12 tabs; split42 has 10.
 #ifndef EMJ_NUM_CATS_VISIBLE
 #  define EMJ_NUM_CATS_VISIBLE 12
 #endif

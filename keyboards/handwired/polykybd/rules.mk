@@ -18,7 +18,7 @@ SRC += poly_keymap.c side.c state.c split_sync.c split_fw_up.c multicore_exec.c 
 #   -e POLYKYBD_HIL=left    left half  -> forced master
 #   -e POLYKYBD_HIL=right   right half -> forced slave (usb_disconnect)
 #   -e POLYKYBD_HIL=yes      alias for 'left' (master)
-# Applies to all polykybd variants (split72, corne42). Normal builds leave it
+# Applies to all polykybd variants (split72, split42). Normal builds leave it
 # unset and keep stock USB_VBUS_PIN detection. The override lives in polykybd.c.
 ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
     OPT_DEFS += -DPOLYKYBD_HIL

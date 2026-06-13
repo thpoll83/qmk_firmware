@@ -1,15 +1,15 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// corne42 VARIANT DATA ONLY. All shared keymap behaviour lives in
+// split42 VARIANT DATA ONLY. All shared keymap behaviour lives in
 // keyboards/handwired/polykybd/poly_keymap.c (compiled for every variant), so
 // this 42-key variant stays in lockstep with split72. This file defines only
 // the data the linker pulls from the keymap TU:
 //   * keymaps[]      — the layer definitions (LAYOUT_crkbd)
 //   * encoder_map[]  — the rotary-encoder action map
-// (corne42 has no RGB matrix, so there is no g_led_config here.)
+// (split42 has no RGB matrix, so there is no g_led_config here.)
 #include QMK_KEYBOARD_H
-#include "corne42/corne42.h"
+#include "split42/split42.h"
 #include "layers.h"
 #include "keycode_helper.h"
 #include "emoji/emoji_layer.h"

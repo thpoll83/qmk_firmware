@@ -431,6 +431,9 @@ void housekeeping_task_user(void) {
         // store request (on the master locally, on the slave via SAVE_EEPROM).
         save_all_if_requested();
         sync_and_refresh_displays();
+        if (is_usb_host_side()) {
+            link_stats_tick();   // periodic split-link CRC/transport error-rate line
+        }
     }
     int32_t update = get_last_update();
     if(update>=0) {

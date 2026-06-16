@@ -79,6 +79,15 @@
 void rgb_matrix_update_pwm_buffers(void);
 #endif
 
+// In-call retry count for the periodic master->slave state pushes in
+// sync_and_refresh_displays(). Kept small: each failed attempt pays a full UART
+// timeout (SPLIT_MAX_CONNECTION_ERRORS is raised, so failures don't fast-fail),
+// so this bounds the worst-case main-loop stall while still riding through a
+// single transient UART glitch within the same housekeeping pass — which the
+// diff re-fire alone does NOT cover for transient state (see the comment at the
+// USER_SYNC_POLY_DATA send site).
+#define PERIODIC_SYNC_RETRIES 3
+
 /*[[[cog
 import cog
 import os
@@ -252,23 +261,27 @@ void sync_and_refresh_displays(void) {
         access_local_state()->lang_page    = lang_pack_state();
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
-            // Periodic syncs use a SINGLE attempt (was 10). They re-fire every
-            // housekeeping pass while a diff persists, so in-call retries are
-            // redundant. With SPLIT_MAX_CONNECTION_ERRORS raised to 200 (for the
-            // fw-update erase), transaction_rpc_exec() keeps reporting "connected"
-            // for ~4 s while the slave is transiently unreachable (e.g. the
-            // post-cold-flash settling window) instead of fast-failing — so each
-            // retry pays a full ~40 ms UART timeout and 10× of them blocks the
-            // main loop (and USB/HID servicing) ~400 ms PER sync. One attempt
-            // bounds the stall to ~tens of ms and the next loop retries. No effect
-            // on the normal path, where the slave ACKs on the first attempt.
-            if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 1)) {
+            // Periodic syncs use a SMALL retry count (PERIODIC_SYNC_RETRIES, was
+            // briefly 1, originally 10). The diff re-fires every housekeeping pass
+            // while a diff persists, but that re-fire only guarantees delivery of
+            // state that PERSISTS: the re-fire sends the CURRENT snapshot, and
+            // global advances to local only on a successful sync. A TRANSIENT that
+            // reverts to == global before the next successful sync (a briefly-held
+            // momentary layer, or an RGB/disp transition seen during the
+            // post-flash settling window) is therefore dropped, or leaves the
+            // slave visibly stale for a pass or more. A few in-call retries ride
+            // through a single UART glitch within the same pass so the transient
+            // lands. The stall this guards against: with SPLIT_MAX_CONNECTION_ERRORS
+            // raised to 200 (for the fw-update erase) a failed attempt no longer
+            // fast-fails — it pays a full ~40 ms UART timeout — so the worst-case
+            // stall is bounded to ~PERIODIC_SYNC_RETRIES × 40 ms (and the active
+            // fw-update path skips this code entirely). No effect on the normal
+            // path, where the slave ACKs on the first attempt.
+            if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), PERIODIC_SYNC_RETRIES)) {
                 // Failed: clear state_diff so the copy_global_state() below is
                 // SKIPPED — global stays != local, so next pass differ() is still
                 // true and re-fires the send. The diff IS the retry queue; global
-                // only advances to local on a successful sync, so 1 vs 10 attempts
-                // changes only WHERE retries happen, never whether the update is
-                // eventually delivered.
+                // only advances to local on a successful sync.
                 state_diff = false;
                 uprint("USER_SYNC_POLY_DATA failed to send\n");
             }
@@ -283,7 +296,7 @@ void sync_and_refresh_displays(void) {
             // Multiplexed onto the overlay-map transaction id (distinct payload
             // size) to stay within QMK's 32-transaction limit. Only the packed
             // bytes are sent (MRU_SYNC_BYTES), not the struct's crc tail padding.
-            uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, 1);
+            uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, PERIODIC_SYNC_RETRIES);
             if (mru_ack == SYNC_ACK || mru_ack == SYNC_ACK_SIG) {
                 mru_clear_sync_pending();
             } else {
@@ -295,14 +308,14 @@ void sync_and_refresh_displays(void) {
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         if ( layer_diff ) {
-            if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), 1)) {
+            if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES)) {
                 layer_diff = false; // failed: skip copy_global_layer() below so the diff
                                     // persists and the send re-fires next pass (see state above)
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
         if ( differ(get_local_last_latin(), get_global_last_latin(), sizeof(poly_last_t)) ) {
-            if(!send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), 1)) {
+            if(!send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), PERIODIC_SYNC_RETRIES)) {
                 // if failed to sync, do not consider it a diff and try again later
                 uprint("USER_SYNC_LASTKEY_DATA failed to send\n");
             } else {

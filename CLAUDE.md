@@ -344,3 +344,100 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 - `keyboards/handwired/polykybd/split_sync.c` — `user_sync_overlay_map_data_handler`
 - `keyboards/handwired/polykybd/hid_com.c` — case 21
 - `keyboards/handwired/polykybd/base/com.h` — `OVERLAY_SYNCED_STATE_FLAGS`
+
+---
+
+### Split-link integrity: wire noise, the app-level CRC32, retries, and the health counter
+
+**The split UART has no payload integrity check of its own — the per-transaction
+CRC32 in `split_sync.c` is the only thing that catches a bit flipped by wire
+noise in flight.** This is the single most important fact about the link, and
+the reason the CRC32 was added (intermittent sync corruption that looked random).
+
+**The link (verified 2026-06-16)**: `SERIAL_DRIVER = vendor` → the RP2040 **PIO
+half-duplex, single-wire** driver (`serial_vendor.c`) on **`SERIAL_USART_TX_PIN
+GP5`** (no RX pin, no `SERIAL_USART_FULL_DUPLEX` → one shared wire). Baud is
+**230400** (`SELECT_SOFT_SERIAL_SPEED 1` in both variants' `halconf.h` →
+`serial_usart.h` maps that to 230400; 8× PIO oversampling). TX is driven at
+**12 mA** (`GPIO_DRIVE_STRENGTH_12MA`, `serial_vendor.c`) — fast, strong edges
+that ring/reflect on a longer split cable.
+
+**What QMK's transport guarantees (almost nothing)** — traced in
+`platforms/chibios/drivers/serial_protocol.c`:
+- A **1-byte handshake token**: master sends the transaction id, slave echoes
+  `tid ^ NUM_TOTAL_TRANSACTIONS`. Proves *a* transaction of that id is starting —
+  says nothing about the data bytes.
+- A **20 ms** receive timeout (`SERIAL_USART_TIMEOUT`).
+- The actual `initiator2target` / `target2initiator` **payload buffers travel
+  raw** — no CRC, no checksum, not even parity. A flipped bit inside the 64-byte
+  buffer is delivered to the slave callback and the transaction reports
+  **success**. Without the app-level CRC32 the slave applies garbage state
+  (contrast/flags/layer/overlay bytes) silently. ⚠️ Do **not** remove the CRC32
+  thinking the transport covers it — it does not.
+- Note the **reply** (`poly_sync_reply_t`, 1 ACK byte) has **no CRC** either; a
+  corrupted reply can turn a real `SYNC_ACK` into a non-ACK → master retries (safe,
+  idempotent) or, ~1/256, into a false ACK. Low impact, but it's why a tiny
+  fraction of `crc_err` counts can be reply corruption rather than payload.
+
+**How CRC32 + retries + noise interact** (the model that drives the retry-count
+choice). With `p` = probability a single frame is corrupted (and caught by CRC32),
+`N` independent attempts fail this housekeeping pass with prob ≈ `p^N`:
+- **CRC32 detects** corruption → slave returns `SYNC_CRC32_ERR` (not `SYNC_ACK`).
+- **Retries recover** → `send_to_bridge` re-sends; all handlers are idempotent.
+- Retries trade latency/CPU for resilience; **they do not reduce `p`.** A high
+  `SPLIT_MAX_CONNECTION_ERRORS` (200, raised for the fw-update erase) is itself a
+  tell that `p` is non-trivial.
+
+**Periodic syncs use `PERIODIC_SYNC_RETRIES` (=3)** in `poly_keymap.c`
+`sync_and_refresh_displays()` (poly/MRU/layer/last-key). Was briefly cut to **1**
+(to avoid the ~400 ms main-loop stall that 10 retries × ~40 ms timeout costs once
+`SPLIT_MAX_CONNECTION_ERRORS=200` stops failures fast-failing). **1 was too few**:
+the diff re-fire only guarantees eventual delivery of state that *persists* (it
+re-sends the current snapshot; global advances only on success), so a *transient*
+that reverts to == global before the next successful sync is dropped, and even a
+persistent transition leaves the slave visibly stale for a pass+. Field symptoms
+at retries=1: layer updates occasionally not propagating (briefly-held momentary
+layer lost), and the RGB matrix flashing on the slave for a fraction of a second
+(stale disp/RGB until the deferred sync lands). 3 rides through a single glitch
+within the same pass while bounding the worst-case stall to ~3 × 40 ms (the active
+fw-update path skips this code).
+
+**Measuring `p` — the split-link health counter** (`bridge_helper.c`,
+master-side, added 2026-06-16). Every `send_to_bridge` frame is counted and
+classified: `ok` / `crc_err` (slave NACK or corrupted reply — payload integrity
+miss) / `transport_fail` (timeout/handshake) / `giveup` (retries exhausted).
+`link_stats_tick()` (called from the master's housekeeping, gated on
+`debug_enable`, ≤ once per `LINK_STATS_LOG_INTERVAL` = 60 s, quiet when idle)
+prints:
+
+```
+Split link: 12345 tx (+312) crc_err=4 transport_fail=1 giveup=0 err=0.0%
+```
+
+`err%` is the all-time detected-error rate over all frames — a direct read on the
+wire. **Use it to validate any link change** (baud/cable/drive/termination) by
+watching the number move, instead of by feel. `giveup` should stay ~0 with
+retries=3; if it climbs, attack `p` at the source.
+
+**Reducing `p` at the source (the real root fix), in order of leverage**:
+1. **Lower the baud** — biggest, cheapest software lever. 230400 → 115200
+   (`SELECT_SOFT_SERIAL_SPEED 2`) roughly doubles the per-bit sampling margin.
+   Cost: overlay transfers (the bulk of UART bytes) ~2× slower; tiny state/layer
+   syncs imperceptibly. A/B-test it against the health counter before keeping it.
+2. **Driver edge rate** — the 12 mA TX drive in `serial_vendor.c` is strong; a
+   slower edge helps signal integrity but lives in QMK core (would be a tracked
+   local divergence, not a config knob).
+3. **Hardware** — single-wire half-duplex over a TRRS-style cable is the classic
+   culprit: ~100 Ω series resistor near the driver (damp reflections), a ground
+   conductor twisted with the data line, shorter/shielded cable, solid common
+   ground, good connector contact; rule out RGB/SPI/I²C coupling.
+4. **Full-duplex two-wire** (if a spare conductor exists) removes single-wire
+   bus-turnaround hazards — hardware change.
+
+**Relevant files**:
+- `keyboards/handwired/polykybd/split_sync.c` — per-transaction CRC32 (the only payload check)
+- `keyboards/handwired/polykybd/bridge_helper.c` / `.h` — `send_to_bridge` retries + `link_stats_tick()` counters
+- `keyboards/handwired/polykybd/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`, the `link_stats_tick()` call
+- `keyboards/handwired/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`, `SERIAL_USART_TX_PIN`
+- `<variant>/halconf.h` — `SELECT_SOFT_SERIAL_SPEED` (baud)
+- `platforms/chibios/drivers/serial_protocol.c`, `drivers/vendor/RP/RP2040/serial_vendor.c` — QMK transport (no payload integrity)

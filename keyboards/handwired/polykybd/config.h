@@ -18,7 +18,18 @@
 
 // Split keyboard
 // https://docs.qmk.fm/#/feature_split_keyboard?id=split-keyboard
+// Full-duplex two-wire link (GP5 TX, GP4 RX). Replaces the previous single-wire
+// half-duplex: removes the bus-turnaround/line-float hazard and drives push-pull
+// both ways (no pull-up needed) — fewer wire-noise glitches on the split UART.
+// The physical cable is wired STRAIGHT (GP5<->GP5, GP4<->GP4), so we rely on
+// SERIAL_USART_PIN_SWAP, which swaps TX/RX only on the MASTER half's init path
+// (serial_vendor.c: master_init swaps, slave_init does not). One identical image
+// on both halves therefore produces the logical crossover at runtime by role —
+// no per-side build, no EEPROM handedness needed.
 #define SERIAL_USART_TX_PIN GP5
+#define SERIAL_USART_RX_PIN GP4
+#define SERIAL_USART_FULL_DUPLEX
+#define SERIAL_USART_PIN_SWAP
 
 #define SPLIT_TRANSPORT_MIRROR
 // #define SPLIT_LAYER_STATE_ENABLE

@@ -349,6 +349,39 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 
 ### Split-link integrity: wire noise, the app-level CRC32, retries, and the health counter
 
+> **RESOLVED (2026-06-16): migrated the split UART to full-duplex two-wire — the
+> ongoing corruption is gone.** `config.h` now sets `SERIAL_USART_FULL_DUPLEX` +
+> `SERIAL_USART_TX_PIN GP5` / `SERIAL_USART_RX_PIN GP4` + `SERIAL_USART_PIN_SWAP`.
+> GP4 was always wired (a second conductor) but unused — there was no PIO
+> full-duplex when the board was brought up; the vendor PIO driver supports it
+> now. The cable is **straight** (GP5↔GP5, GP4↔GP4); `SERIAL_USART_PIN_SWAP`
+> gives the crossover by swapping TX/RX **only on the master half's init path**
+> (`serial_vendor.c`: `serial_transport_driver_master_init` swaps,
+> `..._slave_init` does not), so **one identical image** produces the logical
+> crossover at runtime by role — no per-side build, no EEPROM handedness. Works
+> for the normal single image (USB half = master) and the HIL rig (roles forced
+> per image via `POLYKYBD_HIL`, same `is_keyboard_master()`).
+>
+> **Measured result** via the health counter below: half-duplex was corrupting the
+> small frequent syncs (`Failed to sync … UserLayer/UserPoly` lines — i.e. exactly
+> the layer-drop + RGB-flash symptoms). On full-duplex, across **858 tx including
+> deliberate heavy overlay/RGB load, `crc_err`/`giveup` stayed frozen at the
+> boot-only burst (39/13) with `transport_fail=0`** — i.e. **zero** steady-state
+> errors; `err%` only decays as the boot burst dilutes (14.3 → 4.5 % and falling).
+> The boot burst is unmonitored (it precedes HID-console attach — the counter
+> caught what the live log couldn't) and harmless (persistent state, re-delivered
+> by the diff re-fire once the link settles). Why it works: full-duplex removes the
+> single-wire **bus-turnaround/line-float** hazard and drives push-pull both ways
+> (no pull-up), and gives the reply direction its own clean line.
+>
+> **Consequently the transport-level CRC patch and the upstream QMK PR are SHELVED**
+> — they would have fixed *ongoing* payload corruption, which no longer occurs. The
+> app-level CRC32 + `PERIODIC_SYNC_RETRIES=3` stay as the cheap backstop that
+> absorbs the boot burst. Reopen only if `crc_err`/`giveup` start climbing in
+> *steady state* (watch the counter). The analysis below is retained as the record
+> of why the link behaves as it does — note the "half-duplex/single-wire/230400/
+> 12 mA" descriptions are now historical (pre-2026-06-16).
+
 **The split UART has no payload integrity check of its own — the per-transaction
 CRC32 in `split_sync.c` is the only thing that catches a bit flipped by wire
 noise in flight.** This is the single most important fact about the link, and
@@ -431,13 +464,14 @@ retries=3; if it climbs, attack `p` at the source.
    culprit: ~100 Ω series resistor near the driver (damp reflections), a ground
    conductor twisted with the data line, shorter/shielded cable, solid common
    ground, good connector contact; rule out RGB/SPI/I²C coupling.
-4. **Full-duplex two-wire** (if a spare conductor exists) removes single-wire
-   bus-turnaround hazards — hardware change.
+4. **Full-duplex two-wire** ✅ **DONE (2026-06-16)** — see the RESOLVED note at the
+   top of this section. Removed the single-wire bus-turnaround hazard and drove the
+   steady-state error rate to zero, so options 1–3 above were never needed.
 
 **Relevant files**:
 - `keyboards/handwired/polykybd/split_sync.c` — per-transaction CRC32 (the only payload check)
 - `keyboards/handwired/polykybd/bridge_helper.c` / `.h` — `send_to_bridge` retries + `link_stats_tick()` counters
 - `keyboards/handwired/polykybd/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`, the `link_stats_tick()` call
-- `keyboards/handwired/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`, `SERIAL_USART_TX_PIN`
+- `keyboards/handwired/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`; the full-duplex defines (`SERIAL_USART_FULL_DUPLEX`, `SERIAL_USART_TX_PIN GP5`, `SERIAL_USART_RX_PIN GP4`, `SERIAL_USART_PIN_SWAP`)
 - `<variant>/halconf.h` — `SELECT_SOFT_SERIAL_SPEED` (baud)
 - `platforms/chibios/drivers/serial_protocol.c`, `drivers/vendor/RP/RP2040/serial_vendor.c` — QMK transport (no payload integrity)

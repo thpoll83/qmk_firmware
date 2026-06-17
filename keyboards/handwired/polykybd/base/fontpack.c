@@ -31,6 +31,11 @@ static uint8_t        s_pack_count;
 static uint16_t       s_content_version;
 static bool           s_loaded;
 
+// Resident set remembered from the last assemble, so a pack (re)flash can
+// reload + reassemble without the caller re-passing it.
+static const GFXfont *const *s_resident;
+static uint8_t               s_resident_n;
+
 const GFXfont *const *g_all_fonts     = NULL;
 uint8_t               g_all_font_count = 0;
 
@@ -93,6 +98,8 @@ bool fontpack_load_at(const uint8_t *base) {
 
 void fontpack_assemble(const GFXfont *const *resident, uint8_t n_resident) {
     if (n_resident > FONTPACK_MAX_FONTS) n_resident = FONTPACK_MAX_FONTS;
+    s_resident   = resident;
+    s_resident_n = n_resident;
     uint8_t k = 0;
     for (uint8_t i = 0; i < n_resident; ++i) s_all[k++] = resident[i];
     if (s_loaded) {
@@ -116,5 +123,10 @@ bool fontpack_load(void) {
 void fontpack_init(const GFXfont *const *resident, uint8_t n_resident) {
     fontpack_load();
     fontpack_assemble(resident, n_resident);
+}
+
+void fontpack_reload(void) {
+    fontpack_load();
+    fontpack_assemble(s_resident, s_resident_n);
 }
 #endif

@@ -429,6 +429,10 @@ static int8_t jitter_axis(uint32_t epoch, uint32_t salt, int8_t lo, int8_t hi) {
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
+    // Abort a stalled font-pack flash so an abandoned transfer can't leave core1
+    // parked (overlay decompression disabled) indefinitely.
+    fontpack_flash_housekeeping();
+
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful

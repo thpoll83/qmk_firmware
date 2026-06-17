@@ -3,6 +3,7 @@
 
 #include "hid_com.h"
 #include "hid_fw_up.h"
+#include "hid_fontpack.h"
 #include "split_fw_up.h"
 
 #include QMK_KEYBOARD_H
@@ -701,6 +702,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
             default:
                 if (hid_fw_up_receive(data, length)) {
+                    break;
+                }
+                if (hid_fontpack_receive(data, length)) {
                     break;
                 }
                 printf("Unknown command: %u.\n", data[HID_CMD_IDX]);

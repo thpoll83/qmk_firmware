@@ -117,3 +117,24 @@ void fontpack_init(const GFXfont *const *resident, uint8_t n_resident);
 bool     fontpack_present(void);          // a valid pack is currently loaded
 uint16_t fontpack_content_version(void);  // loaded pack's content_version (0 if none)
 uint8_t  fontpack_font_count(void);       // number of pack fonts (0 if none)
+
+// Re-load the pack from flash and re-assemble g_all_fonts using the resident set
+// remembered by the last fontpack_init()/fontpack_assemble(). Called after a
+// pack (re)flash so new glyphs render without a reboot.
+void fontpack_reload(void);
+
+// ── Pack flashing over HID (firmware-side; transport in hid_fontpack.c) ───────
+//
+// Single fixed slot at the start of the resource region, written IN PLACE. An
+// interrupted flash just leaves "no pack" (resident-only) — a safe degraded
+// state, not a brick — so no separate staging area is needed (unlike firmware
+// update). Mirrors fw_staging's dual-core flash safety (core1 held across the
+// sequence; flash ops with interrupts disabled).
+#define FONTPACK_FLASH_MAX_SIZE 0x100000UL   // 1 MB cap within the 4 MB resource region
+
+bool     fontpack_flash_begin(uint32_t pack_size);                    // arm + reset cursors
+bool     fontpack_flash_write(uint32_t offset, const uint8_t *data, uint8_t len);
+bool     fontpack_flash_finalize(void);     // flush tail + reload; true if a valid pack is live
+bool     fontpack_flash_active(void);
+uint32_t fontpack_flash_next_offset(void);  // bytes accepted so far (resume point on NACK)
+void     fontpack_flash_housekeeping(void); // call from housekeeping_task_user() (idle-abort)

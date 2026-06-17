@@ -20,8 +20,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
-extern const GFXfont* const ALL_FONTS[];
-#define ALL_FONT_SIZE_OLED_INT 43
+// Status-OLED chrome (layer/lock icons, arrows) lives in the resident font set,
+// which sits at the front of the runtime g_all_fonts[] table.
+#include "base/fontpack.h"
 
 /*
  * Status screen layout for 128×32 OLED:
@@ -39,7 +40,7 @@ void oled_update_buffer(void) {
     const GFXfont* smallFont[]   = { &NotoSans_Medium8pt7b };
 
     /* Row 1: layer icon + layer number + side */
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 0, 11, ICON_LAYER);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 11, ICON_LAYER);
     hex_to_u32_string((char*)buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
     kdisp_write_gfx_text(displayFont, 1, 16, 11, buffer);
     if (side_is_undecided()) {
@@ -49,9 +50,9 @@ void oled_update_buffer(void) {
     }
 
     /* Row 1 right: lock indicators */
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 100, 11,
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 100, 11,
         global_layer->led_state.num_lock  ? ICON_NUMLOCK_ON  : ICON_NUMLOCK_OFF);
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 114, 11,
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 114, 11,
         global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
 
     /* Row 2: default layout name (both sides — no RGB on split42) */

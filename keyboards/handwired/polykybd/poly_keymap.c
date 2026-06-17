@@ -50,6 +50,7 @@
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
+#include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
 #include "base/fonts/flag_fonts.h"        // language-layer country flags (fonts/gen-lang-fonts.sh)
 #include "base/fonts/lang_label_font.h"   // tiny label font under the flags
 #include "base/multicore/core1.h"
@@ -796,7 +797,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
         const uint32_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
         if(def_variation!=NULL) {
-            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, latin_ex_map[offset+keycode-KC_A][variation]);
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, latin_ex_map[offset+keycode-KC_A][variation]);
             return true;
         }
         return false;
@@ -810,7 +811,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
             const uint32_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
             if(variation!=NULL) {
-                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, variation);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, variation);
                 return true;
             }
         }
@@ -847,11 +848,11 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                         for (const uint32_t* p = base;   *p && ci < 8; ++p) composed[ci++] = *p;
                         for (const uint32_t* p = letter; *p && ci < 9; ++p) if (*p >= 0x20) composed[ci++] = *p;
                         composed[ci] = 0;
-                        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, composed);
+                        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 28+h_off, 23+v_off, composed);
                         return true;
                     }
                 }
-                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 28+h_off, 23+v_off, letter);
                 return true;
             }
         }
@@ -898,8 +899,8 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 shift_letter = translate_keycode_only_shift(local_state->lang, keycode);
                 if (shift_letter != NULL) {
                     int8_t bmin, bmax, pmin, pmax;
-                    kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, letter, &bmin, &bmax);
-                    kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, shift_letter, &pmin, &pmax);
+                    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, letter, &bmin, &bmax);
+                    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, shift_letter, &pmin, &pmax);
                     preview_x = 28+h_pv;
                     if (preview_x + pmin < base_x + bmax + 2)             // keep clear of the base
                         preview_x = base_x + bmax + 2 - pmin;
@@ -914,9 +915,9 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             }
         }
 
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, base_x, 23+base_v, letter);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, base_x, 23+base_v, letter);
         if (shift_letter != NULL)
-            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, preview_x, 23+preview_v, shift_letter);
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, preview_x, 23+preview_v, shift_letter);
 
         //preview alt representation
         letter = translate_keycode_only_altgr(local_state->lang, keycode);
@@ -927,11 +928,11 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // Clamp to the right edge like the shift preview — wide glyphs
                 // (e.g. @ on the French/Tahitian 0 key) otherwise clip off-screen.
                 int8_t amin, amax;
-                kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, letter, &amin, &amax);
+                kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, letter, &amin, &amax);
                 int8_t alt_x = 28+h_off;
                 if (alt_x + amax > BUFFER_X + SCREEN_WIDTH - 1)
                     alt_x = (int8_t)((BUFFER_X + SCREEN_WIDTH - 1) - amax);
-                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, alt_x, 23+v_off, letter);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, alt_x, 23+v_off, letter);
             }
         }
         return true;
@@ -1076,11 +1077,11 @@ static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b 
 static void render_mru_ctrl_key(bool preset) {
     if (preset) {
         kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 14, 18, U"Preset");
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 44, 23, ICON_RIGHT);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X + 44, 23, ICON_RIGHT);
     } else {
         // Mirror of "Preset": back-arrow points left into the recents row, label in
         // the small keycap-label font (not the full-size font, which overflowed).
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 10, 23, ICON_LEFT);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X + 10, 23, ICON_LEFT);
         kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 26, 18, U"Clear");
     }
 }
@@ -1268,10 +1269,10 @@ void update_displays(enum refresh_mode mode) {
                         if(text==NULL) {
                             if(!render_key(keycode, state, mods) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
-                                kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, unicode_map[chr], 0);
+                                kdisp_write_gfx_char(g_all_fonts, g_all_font_count, BUFFER_X, 23, unicode_map[chr], 0);
                             }
                         } else {
-                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
+                            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         text = NULL;
                         if(display_overlays) {
@@ -1282,7 +1283,7 @@ void update_displays(enum refresh_mode mode) {
                             text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
-                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
+                            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         kdisp_send_buffer();
                         }
@@ -2001,6 +2002,11 @@ void keyboard_post_init_user(void) {
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
 void keyboard_pre_init_user(void) {
+    // Load the external-flash font pack and assemble g_all_fonts = resident ++
+    // pack BEFORE the first render (show_splash_screen() below draws keycaps).
+    // No valid pack (erased/corrupt/ABI mismatch) -> resident-only fonts.
+    fontpack_init(RESIDENT_FONTS, (uint8_t)RESIDENT_FONT_COUNT);
+
     kdisp_hw_setup();
     kdisp_init(NUM_SHIFT_REGISTERS);
     peripherals_reset();

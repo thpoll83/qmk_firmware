@@ -275,7 +275,15 @@ def resident_symbols(cfg: dict, fonts_dir: Path) -> set[str]:
 
 
 def all_fonts_order(fonts_dir: Path) -> list[str]:
-    """The ALL_FONTS[] order from the committed gfx_used_fonts.h."""
+    """The full font priority order (resident + pack).
+
+    The firmware's gfx_used_fonts.h only compiles RESIDENT_FONTS[], so the full
+    order lives in the committed generated/all_fonts_order.json. Fall back to a
+    legacy ALL_FONTS[] table in gfx_used_fonts.h if the JSON is absent.
+    """
+    order_json = fonts_dir / "generated" / "all_fonts_order.json"
+    if order_json.exists():
+        return json.loads(order_json.read_text())["order"]
     idx = (fonts_dir / "gfx_used_fonts.h").read_text()
     body = idx.split("ALL_FONTS")[1]
     return re.findall(r"&(\w+)\s*,", body.split("};")[0])
@@ -320,16 +328,15 @@ def build_pack_from_tree(fonts_dir: Path, cfg: dict, content_version: int = 0):
     return build_pack(order, resident, parsed, content_version)
 
 
-def manifest_from_texts(index_text: str, category_texts: dict[str, str],
+def manifest_from_texts(order: list[str], category_texts: dict[str, str],
                         cfg: dict, content_version: int = 0):
     """build_pack() sourced from in-memory header text (for generate_fonts --check).
 
-    `category_texts` maps category name -> that category's header text;
-    `index_text` is the composed gfx_used_fonts.h. Mirrors build_pack_from_tree
+    `order` is the full font priority order (resident + pack); `category_texts`
+    maps category name -> that category's header text. Mirrors build_pack_from_tree
     without touching disk, so the manifest stays consistent with a freshly
     regenerated (but not-yet-written) header set.
     """
-    order = re.findall(r"&(\w+)\s*,", index_text.split("ALL_FONTS")[1].split("};")[0])
     idx = cfg.get("index", {})
     resident = set(idx.get("prepend_fonts", [])) | set(idx.get("resident_fonts", []))
     parsed: dict[str, ParsedFont] = {}

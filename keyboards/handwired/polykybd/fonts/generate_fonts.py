@@ -23,7 +23,7 @@ Options:
 Font files must be present first (run fonts/dl-fonts.sh).  See fonts/README.md.
 """
 from __future__ import annotations
-import argparse, os, re, shutil, subprocess, sys
+import argparse, json, os, re, shutil, subprocess, sys
 from pathlib import Path
 
 try:
@@ -123,7 +123,18 @@ def compose_category(blocks: list[str]) -> str:
     return "#pragma once\n\n" + "\n".join(blocks)
 
 
-def compose_index(index: dict, categories: dict, cat_blocks: dict, symbols: list[str]) -> str:
+def full_order(index: dict, symbols: list[str]) -> list[str]:
+    """The full font priority order: prepended fonts, then the generated ones."""
+    return list(index.get("prepend_fonts", [])) + list(symbols)
+
+
+def compose_index(index: dict, categories: dict, cat_blocks: dict,
+                  symbols: list[str], resident: set[str]) -> str:
+    """gfx_used_fonts.h: the firmware compiles only RESIDENT_FONTS[] (the
+    functional minimum). The remaining fonts live in the external-flash font
+    pack and are appended at runtime by fontpack_assemble() into g_all_fonts[].
+    The full order (for the build tooling) is written to all_fonts_order.json.
+    """
     lines = ["#pragma once", ""]
     for cat, meta in categories.items():
         if cat_blocks.get(cat):                  # only include non-empty categories
@@ -131,12 +142,17 @@ def compose_index(index: dict, categories: dict, cat_blocks: dict, symbols: list
     lines.append("")
     for inc in index.get("extra_includes", []):
         lines.append(f'#include "{inc}"')
-    lines += ["", "const GFXfont* const ALL_FONTS [] = {"]
-    for sym in index.get("prepend_fonts", []):
-        lines.append(f"  &{sym},")
-    for sym in symbols:
-        lines.append(f"  &{sym},")
-    lines += ["};", "", "#define ALL_FONT_SIZE (sizeof(ALL_FONTS) / sizeof(GFXfont*))", ""]
+    lines += ["",
+              "// Functional-minimum fonts compiled into the firmware image. The rest live",
+              "// in the external-flash font pack (base/fontpack.h) and are appended at",
+              "// runtime into g_all_fonts[]. Unreferenced pack-font data is dropped by the",
+              "// linker (--gc-sections), shrinking the image. See fonts/README.md.",
+              "const GFXfont* const RESIDENT_FONTS [] = {"]
+    for sym in full_order(index, symbols):
+        if sym in resident:
+            lines.append(f"  &{sym},")
+    lines += ["};", "",
+              "#define RESIDENT_FONT_COUNT (sizeof(RESIDENT_FONTS) / sizeof(GFXfont*))", ""]
     return "\n".join(lines)
 
 
@@ -182,14 +198,24 @@ def main() -> None:
         if cat_blocks.get(cat):
             outputs[gen_dir / meta["output"]] = compose_category(cat_blocks[cat])
     pack_data = None
-    if not args.only:                             # --only never rewrites the ALL_FONTS index
-        index_text = compose_index(index, categories, cat_blocks, symbols)
-        outputs[root / "base" / "fonts" / index["output"]] = index_text
+    if not args.only:                             # --only never rewrites the index
+        # Resident set: prepend + index.resident_fonts + every resident category.
+        resident = set(index.get("prepend_fonts", [])) | set(index.get("resident_fonts", []))
+        for cat, meta in categories.items():
+            if meta.get("resident") and cat_blocks.get(cat):
+                resident |= set(fontpack.parse_gfx_header(
+                    compose_category(cat_blocks[cat])).keys())
+        order = full_order(index, symbols)
+        outputs[root / "base" / "fonts" / index["output"]] = \
+            compose_index(index, categories, cat_blocks, symbols, resident)
+        # Full priority order for the build tooling (firmware index has resident only).
+        outputs[gen_dir / "all_fonts_order.json"] = \
+            json.dumps({"order": order}, indent=2) + "\n"
         # Derive the font-pack manifest from the freshly composed (in-memory)
         # headers so it stays consistent with them under --check.
         cat_texts = {c: compose_category(b) for c, b in cat_blocks.items() if b}
         pack_data, manifest = fontpack.manifest_from_texts(
-            index_text, cat_texts, cfg, content_version=args.content_version)
+            order, cat_texts, cfg, content_version=args.content_version)
         outputs[gen_dir / PACK_MANIFEST] = fontpack.manifest_json(pack_data, manifest)
 
     if args.check:

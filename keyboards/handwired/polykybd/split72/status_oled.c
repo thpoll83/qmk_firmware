@@ -20,9 +20,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
-//this should go away with some font refactoring!
-extern const GFXfont* const ALL_FONTS [];
-#define ALL_FONT_SIZE_OLED_INT 43
+// Status-OLED chrome (layer/lock icons, arrows) lives in the resident font set,
+// which sits at the front of the runtime g_all_fonts[] table.
+#include "base/fontpack.h"
 
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
 void oled_update_buffer(void) {
@@ -33,7 +33,7 @@ void oled_update_buffer(void) {
     const poly_layer_t* global_layer = get_global_layer();
     const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 0, 14, ICON_LAYER);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 14, ICON_LAYER);
     hex_to_u32_string((char*) buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
     kdisp_write_gfx_text(displayFont, 1, 20, 14, buffer);
     if(side_is_undecided()) {
@@ -42,10 +42,10 @@ void oled_update_buffer(void) {
         kdisp_write_gfx_text(displayFont, 1, 38, 14, is_left_side() ? U"LEFT" : U"RIGHT");
     }
 
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 108, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
     if(global_layer->led_state.scroll_lock) {
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 112, 54, ARROWS_DOWNSTOP);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 112, 54, ARROWS_DOWNSTOP);
     } else {
         kdisp_write_gfx_text(smallFont, 1, 112, 56, is_usb_host_side() ? U"H" : U"B");
     }

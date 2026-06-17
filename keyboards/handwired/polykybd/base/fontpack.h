@@ -82,3 +82,38 @@ _Static_assert(sizeof(fontpack_font_t) == 20, "fontpack font record must be 20 b
 // uint16 + 5×int8 + 1 pad). The firmware casts glyph_off straight to GFXglyph*,
 // so this MUST hold on the target. The Python serializer emits the same 8 bytes.
 _Static_assert(sizeof(GFXglyph) == 8, "GFXglyph must be 8 bytes for direct pack cast");
+
+// ── Runtime loader (firmware) ────────────────────────────────────────────────
+//
+// The rendered font table is assembled at boot as:
+//     g_all_fonts = RESIDENT_FONTS[]  ++  <pack fonts resolved from flash>
+// and the renderer (base/disp_array.c) uses g_all_fonts / g_all_font_count in
+// place of the old static ALL_FONTS[]. Resident-first is safe because no
+// resident font and pack font ever render the same codepoint (build-time
+// invariant; the resident set is the functional minimum — see fonts/README.md).
+
+#include <stdbool.h>
+
+// Assembled lookup table (resident fonts first, then the pack's). Always valid
+// after fontpack_init(); resident-only when no pack is present.
+extern const GFXfont* const* g_all_fonts;
+extern uint8_t               g_all_font_count;
+
+// Validate + load the pack from `base` (a raw XIP pointer to a "PlyF" image).
+// Returns true on a valid pack (magic + ABI + CRC + bounds); false (erased /
+// corrupt / ABI mismatch) leaves the loader in the resident-only state.
+// fontpack_load() uses the firmware's flash slot; fontpack_load_at() is the
+// position-independent core (testable from any base pointer).
+bool fontpack_load_at(const uint8_t *base);
+bool fontpack_load(void);
+
+// Build g_all_fonts = resident[0..n) followed by the loaded pack's fonts.
+// Safe with no pack loaded (g_all_fonts becomes resident-only).
+void fontpack_assemble(const GFXfont *const *resident, uint8_t n_resident);
+
+// Convenience: fontpack_load() then fontpack_assemble(resident, n_resident).
+void fontpack_init(const GFXfont *const *resident, uint8_t n_resident);
+
+bool     fontpack_present(void);          // a valid pack is currently loaded
+uint16_t fontpack_content_version(void);  // loaded pack's content_version (0 if none)
+uint8_t  fontpack_font_count(void);       // number of pack fonts (0 if none)

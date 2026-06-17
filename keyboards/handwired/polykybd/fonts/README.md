@@ -82,8 +82,13 @@ python3 fontpack.py selftest                    # round-trip self test (no input
 `generate_fonts.py --check` also verifies the committed manifest is consistent
 with the headers (it is regenerated from the same in-memory font data). Mark a
 category `resident: true` in `fonts.yaml` to keep it compiled into the firmware
-instead of the pack. The firmware loader (a later step) refuses a pack whose
-`abi_version` ≠ `FONTPACK_ABI_VERSION` and falls back to resident-only fonts.
+instead of the pack. The firmware loader (`base/fontpack.c`, called from
+`keyboard_pre_init_user`) validates the pack at boot (magic + `abi_version` +
+CRC32 + bounds) and assembles `g_all_fonts = RESIDENT_FONTS ++ pack`; a missing,
+erased, corrupt or ABI-mismatched pack falls back to resident-only fonts. The
+full font priority order (resident + pack) is committed in
+`generated/all_fonts_order.json` for the build tooling, since the firmware index
+(`gfx_used_fonts.h`) now compiles only `RESIDENT_FONTS[]`.
 
 ## Editing `fonts.yaml`
 

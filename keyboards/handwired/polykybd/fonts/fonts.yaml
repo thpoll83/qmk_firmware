@@ -45,6 +45,13 @@ index:
   # Fonts inserted at the FRONT of ALL_FONTS, before the generated ones.
   prepend_fonts:
     - IconsFont
+  # Extra fonts kept RESIDENT (compiled in, never in the font pack) even though
+  # their category is otherwise packed. These supply UI *chrome* that must render
+  # with no pack present. NotoSansSymbols2 Arrows (U+2B6F–2BA0, ~0.9 KB) draws the
+  # Tab / Enter(Return) / Undo / Redo / refresh-circle / nav arrow-stop key icons
+  # (ARROWS_* in lang/named_glyphs.h, used by poly_keymap.c + status_oled.c).
+  resident_fonts:
+    - NotoSansSymbols2_Regular_Arrows_20pt16b
 
 # Each category -> one generated header, with defaults inherited by its fonts.
 categories:

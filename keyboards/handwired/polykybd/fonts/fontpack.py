@@ -262,7 +262,9 @@ def _load_yaml(path: Path) -> dict:
 
 def resident_symbols(cfg: dict, fonts_dir: Path) -> set[str]:
     """Symbols that stay compiled into the firmware (NOT in the pack)."""
-    res = set(cfg.get("index", {}).get("prepend_fonts", []))     # IconsFont etc.
+    idx = cfg.get("index", {})
+    res = set(idx.get("prepend_fonts", []))      # IconsFont etc.
+    res |= set(idx.get("resident_fonts", []))    # UI-chrome fonts in packed cats
     cats = cfg["categories"]
     for cat, meta in cats.items():
         if meta.get("resident"):
@@ -328,7 +330,8 @@ def manifest_from_texts(index_text: str, category_texts: dict[str, str],
     regenerated (but not-yet-written) header set.
     """
     order = re.findall(r"&(\w+)\s*,", index_text.split("ALL_FONTS")[1].split("};")[0])
-    resident = set(cfg.get("index", {}).get("prepend_fonts", []))
+    idx = cfg.get("index", {})
+    resident = set(idx.get("prepend_fonts", [])) | set(idx.get("resident_fonts", []))
     parsed: dict[str, ParsedFont] = {}
     cats = cfg["categories"]
     for cat, text in category_texts.items():

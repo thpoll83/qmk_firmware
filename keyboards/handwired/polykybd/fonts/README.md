@@ -54,7 +54,10 @@ updated independently over HID, so the firmware itself shrinks (~812 KB → ~352
 measured) and most updates ship a much smaller image. A "functional minimum" set
 stays compiled in so the keyboard works with **no pack present**: `IconsFont`
 (`index.prepend_fonts`) plus every category tagged `resident: true` (currently
-`latin` — ASCII + Latin-extended + Cyrillic + Greek) plus the status-OLED fonts.
+`latin` — ASCII + Latin-extended + Cyrillic + Greek) plus the status-OLED fonts,
+plus any UI-chrome fonts listed in `index.resident_fonts` (the NotoSansSymbols2
+Arrows font — Tab / Enter / Undo / Redo / nav arrow-stops — even though its
+`symbols` category is otherwise packed).
 
 The pack is **position-independent**: every internal reference is a byte offset
 from the pack base, so the same binary works from either A/B flash slot. The

@@ -461,6 +461,8 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         }
                         local_state->flags &= ~((uint8_t)DISP_IDLE);
                         local_state->flags |= STATUS_DISP_ON;
+                        local_state->idle_dx = 0;   // recentre legend (drop jitter offset)
+                        local_state->idle_dy = 0;
                         request_disp_refresh();
                         update_performed();
                     }
@@ -644,6 +646,34 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 memcpy(data, "\x50\x1b\x2e\x83\xad\x0a\x1c\x77\xe8\xb9\x9c\x81\x02\x49\x25\x1a\x25\xba\xe8", 19);
                 raw_hid_send(data, length);
                 //[[[end]]]
+                break;
+            case 28: //get/set idle (anti-burn-in) display style (protocol v4+)
+                {
+                    // data[HID_DATA_IDX] == 0xFF -> query (reply current style in data[3]).
+                    // Otherwise set the style (0 = pulse, 1 = jitter); persisted at the
+                    // next EEPROM flush (suspend / store key).
+                    uint8_t arg = data[HID_DATA_IDX];
+                    memset(data, 0, length);
+                    if (arg == 0xFF) {
+                        memcpy(data, "P\x1c.", 3);
+                        data[3] = get_idle_style();
+                    } else if (arg < IDLE_STYLE_COUNT) {
+                        set_idle_style(arg);
+                        if (arg == IDLE_STYLE_PULSE) {
+                            // Recentre immediately if we switch away from jitter mid-idle.
+                            local_state->idle_dx = 0;
+                            local_state->idle_dy = 0;
+                            request_disp_refresh();
+                        }
+                        memcpy(data, "P\x1c.", 3);
+                        data[3] = arg;
+                        uprintf("Set idle style to %u.\n", arg);
+                    } else {
+                        memcpy(data, "P\x1c!", 3);
+                        uprintf("Refused idle style %u.\n", arg);
+                    }
+                    raw_hid_send(data, length);
+                }
                 break;
             default:
                 if (hid_fw_up_receive(data, length)) {

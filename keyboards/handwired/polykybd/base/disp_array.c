@@ -70,6 +70,17 @@
 
 uint8_t scratch_buffer[BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT];
 
+// Global pixel offset added to every gfx-char/text draw. Normally 0; the idle
+// "jitter" anti-burn-in path sets it for the duration of a relocation redraw and
+// restores it to 0 afterwards (see update_displays in poly_keymap.c).
+static int8_t s_draw_ox = 0;
+static int8_t s_draw_oy = 0;
+
+void kdisp_set_draw_offset(int8_t ox, int8_t oy) {
+    s_draw_ox = ox;
+    s_draw_oy = oy;
+}
+
 uint8_t* get_scratch_buffer(void) {
     return scratch_buffer;
 }
@@ -128,6 +139,8 @@ void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t heigh
 */
 /**************************************************************************/
 int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, int8_t cy_radius) {
+    x += s_draw_ox;   // anti-burn-in jitter offset (0 except during an idle relocation redraw)
+    y += s_draw_oy;
     const GFXfont * currentFont = 0;
     uint32_t first = 0;
     uint32_t last = 0;

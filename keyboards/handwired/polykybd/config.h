@@ -94,14 +94,16 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.8.25"
+#define FW_VERSION "0.8.26"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
 //     carried no information (always ".", never read by the host) and arrived
 //     only after the blocking UART bridge to the slave, leaving stale replies
 //     that poisoned later commands' reads on the host.
-#define PROTOCOL_VERSION 3
+// v4: adds GET/SET_IDLE_STYLE (cmd 28) — selects the idle (anti-burn-in) display
+//     style (0 = legacy pulse, 1 = jitter). Persisted in EEPROM; host toggle.
+#define PROTOCOL_VERSION 4
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -114,6 +116,20 @@
 #define FADE_OUT_TIME 120000
 //10 min
 #define TURN_OFF_TIME 1200000
+
+// Idle "jitter" style: while pulsing, the rendered legend is relocated by a small
+// random offset once per pulse cycle so the lit pixels migrate and don't burn in.
+// Bounds are kept conservative so single-char legends stay on-screen (the renderer
+// clips as a backstop); they bracket the base draw origin (BUFFER_X=28, baseline 23).
+#define IDLE_JITTER_DX_MIN (-6)
+#define IDLE_JITTER_DX_MAX (10)
+#define IDLE_JITTER_DY_MIN (-4)
+#define IDLE_JITTER_DY_MAX (6)
+// One pulse cycle is 50 contrast steps × 300 ms (~15 s); relocate at each boundary.
+#define IDLE_JITTER_CYCLE_STEPS 50
+// Contrast used for the one relocation redraw (the live value is the pulsing 0-49
+// counter at that instant); kdisp_idle() resumes the per-key pulse on the next tick.
+#define IDLE_JITTER_REDRAW_CONTRAST 2
 
 //######################################
 //#          Overlays specific         #

@@ -86,6 +86,12 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   the host had to drain. The host (protocol 3) no longer drains after mapping
   sends; ordering for `enable_overlays` (case 11) is preserved because HID
   reports dispatch sequentially and the bridge completes before case 21 returns.
+  **v4** added `GET/SET_IDLE_STYLE` (cmd `28` / `0x1c`): selects the idle
+  (anti-burn-in) display style — payload `0xFF` queries (reply byte = current
+  style), else sets it (`0` = legacy pulse, `1` = jitter); out-of-range NACKs.
+  Persisted in `poly_eeconf_t.idle_style` (flushed at the next suspend/store) so
+  it survives reboots. The host (PolyKybdHost) toggles it over this command; the
+  rig has a v4-gated round-trip HIL test. See "Idle anti-burn-in styles" below.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)
@@ -115,6 +121,36 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
 
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.
+
+### Idle anti-burn-in styles (`poly_keymap.c`)
+When the keyboard idles, the keycap legends would otherwise burn the **same**
+pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
+`poly_idle_style` in `state.h`):
+- **`IDLE_STYLE_PULSE` (0, default, legacy):** `kdisp_idle()` only modulates each
+  keycap's SSD1306 contrast register (a per-key out-of-phase "breathing"). The
+  buffer is never re-rendered, so the lit pixels never move — the burn-in risk.
+- **`IDLE_STYLE_JITTER` (1):** keeps the pulse, but once per ~15 s pulse cycle the
+  master picks a small bounded random offset (`IDLE_JITTER_*` in `config.h`) and
+  **relocates** the legend so the lit pixels migrate. Mechanics:
+  - `housekeeping_task_user()` (master only, `is_usb_host_side()`) computes the
+    per-cycle offset into `poly_sync_t.idle_dx/idle_dy` (synced to the slave like
+    `contrast`, so both halves relocate in lockstep — **no extra UART traffic**:
+    the offset rides the existing per-300 ms poly sync, and the slave just renders
+    whatever offset arrives, so it needs no idle-style of its own).
+  - `update_displays()` normally early-returns while `DISP_IDLE` is set; in jitter
+    it re-renders **only when `idle_dx/idle_dy` changed** (a static last-offset
+    guard), drawing once at the new spot at a low fixed contrast; `kdisp_idle()`
+    resumes the pulse on the next tick. The offset is applied globally via
+    `kdisp_set_draw_offset()` in `disp_array.c` (added to every gfx-char/text
+    draw, reset to 0 after) — so **text legends** jitter; full-bleed **overlay
+    images** (`copy_overlay_to_buffer`) do not (they'd clip), a deliberate limit.
+  - Offsets are reset to 0 on every wake/suspend path (`display_wakeup`,
+    `poly_suspend`, `suspend_wakeup_init_kb`, cmd 15 stop-idle) so a refresh right
+    after waking is centred. Bounds are conservative (single-char legends never
+    clip; `SET_PIXEL_CLIPPED` is the backstop).
+  A "Matrix-style" idle animation was considered but shelved — it defeats the
+  "glance at the dimmed legend and resume typing" hint the pulse preserves; jitter
+  was chosen as the default-preserving, legibility-preserving fix.
 
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.

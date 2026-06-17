@@ -405,6 +405,25 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     return state;
 }
 
+// Idle "jitter" anti-burn-in state (master-side; the offset is synced to the
+// slave through poly_sync_t). g_jitter_epoch counts pulse cycles so the legend is
+// relocated once per cycle; UINT32_MAX forces a fresh offset on each idle entry.
+static uint32_t g_jitter_epoch = UINT32_MAX;
+static int8_t   g_jitter_dx = 0;
+static int8_t   g_jitter_dy = 0;
+
+// Deterministic small pseudo-random offset for a given pulse cycle (epoch) and
+// axis salt, clamped to [lo, hi]. Deterministic so a glance is reproducible and
+// the value is stable for the whole epoch; only the master evaluates it.
+static int8_t jitter_axis(uint32_t epoch, uint32_t salt, int8_t lo, int8_t hi) {
+    uint32_t h = (epoch + salt) * 2654435761u;
+    h ^= h >> 15;
+    h *= 2246822519u;
+    h ^= h >> 13;
+    uint8_t range = (uint8_t)(hi - lo + 1);
+    return (int8_t)(lo + (int8_t)(h % range));
+}
+
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
     // fw_up state machine: apply on success path, advance deferred erase.
@@ -440,6 +459,8 @@ void housekeeping_task_user(void) {
             poly_sync_t* local_state = access_local_state();
             uint8_t  contrast = local_state->contrast;
             uint8_t  flags = local_state->flags;
+            int8_t   idle_dx = 0;   // anti-burn-in jitter offset; 0 unless idle+JITTER
+            int8_t   idle_dy = 0;
 
             flags |= STATUS_DISP_ON;
             flags &= ~((uint8_t)IDLE_TRANSITION);
@@ -452,6 +473,7 @@ void housekeeping_task_user(void) {
                 if(brightness<=MIN_BRIGHT) {
                     contrast = DISP_OFF;
                     flags |= DISP_IDLE;
+                    g_jitter_epoch = UINT32_MAX;   // force a fresh jitter offset for this idle session
                     uprint("Transition to pulsing\n");
                 } else if(brightness>FULL_BRIGHT) {
                     contrast = FULL_BRIGHT;
@@ -469,12 +491,27 @@ void housekeeping_task_user(void) {
             } else if((flags & DISP_IDLE)!=0) {
                 int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
                 contrast = time_after%50;
+                // Jitter style: relocate the legend once per pulse cycle so the lit
+                // pixels migrate. The offset is constant within a cycle and synced to
+                // the slave; update_displays() re-renders only when it changes.
+                if(get_idle_style() == IDLE_STYLE_JITTER) {
+                    uint32_t epoch = (uint32_t)time_after / IDLE_JITTER_CYCLE_STEPS;
+                    if(epoch != g_jitter_epoch) {
+                        g_jitter_epoch = epoch;
+                        g_jitter_dx = jitter_axis(epoch, 0x1u, IDLE_JITTER_DX_MIN, IDLE_JITTER_DX_MAX);
+                        g_jitter_dy = jitter_axis(epoch, 0x2u, IDLE_JITTER_DY_MIN, IDLE_JITTER_DY_MAX);
+                    }
+                    idle_dx = g_jitter_dx;
+                    idle_dy = g_jitter_dy;
+                }
             } else {
                 flags &= ~((uint8_t)DISP_IDLE);
             }
 
             local_state->contrast = contrast;
             local_state->flags = flags;
+            local_state->idle_dx = idle_dx;
+            local_state->idle_dy = idle_dy;
         }
     }
 }
@@ -1088,9 +1125,24 @@ uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
 
 void update_displays(enum refresh_mode mode) {
     const poly_sync_t* local_state = get_local_state();
-    if(local_state->contrast<=DISP_OFF || (local_state->flags&DISP_IDLE)!=0) {
+    const bool idle = (local_state->flags & DISP_IDLE) != 0;
+    // Anti-burn-in jitter: while idle we normally do NOT re-render — kdisp_idle()
+    // just pulses the existing buffer. Re-render only when the jitter offset
+    // changed, to relocate the legend to its new spot for this pulse cycle.
+    static int8_t s_last_dx = 0, s_last_dy = 0;
+    if(idle) {
+        if(local_state->idle_dx == s_last_dx && local_state->idle_dy == s_last_dy) {
+            return;
+        }
+    } else if(local_state->contrast<=DISP_OFF) {
         return;
     }
+    // The offset is applied only while idle; a normal render is always centred.
+    const int8_t draw_ox = idle ? local_state->idle_dx : 0;
+    const int8_t draw_oy = idle ? local_state->idle_dy : 0;
+    s_last_dx = draw_ox;
+    s_last_dy = draw_oy;
+    kdisp_set_draw_offset(draw_ox, draw_oy);
 
     //uint8_t layer = get_highest_layer(layer_state);
     const poly_layer_t* local_layer = get_local_layer();
@@ -1131,7 +1183,7 @@ void update_displays(enum refresh_mode mode) {
                     uint16_t highest_kc = poly_keycode_at(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
                     keycode = (highest_kc == KC_TRNS) ? poly_keycode_at(get_highest_layer(local_layer->layer&~(1<<layer)),r + offset,c) : highest_kc;
                     kdisp_enable(true);
-                    kdisp_set_contrast(local_state->contrast-1);
+                    kdisp_set_contrast(idle ? IDLE_JITTER_REDRAW_CONTRAST : (uint8_t)(local_state->contrast-1));
                     if(keycode!=KC_TRNS) {
                         int16_t lang_idx = lang_index_for_keycode(keycode);
                         if (lang_idx >= 0) {
@@ -1193,6 +1245,7 @@ void update_displays(enum refresh_mode mode) {
             sr_shift_once_latch();
         }
     }
+    kdisp_set_draw_offset(0, 0);   // clear the jitter offset so non-idle renders stay centred
 }
 
 // Converts brightness level 0-7 to pulsating contrast value for idle display animation.
@@ -1767,6 +1820,8 @@ bool display_wakeup(keyrecord_t* record) {
         local_state->contrast = get_user_brightness();
         local_state->flags &= ~((uint8_t)DISP_IDLE);
         local_state->flags |= STATUS_DISP_ON;
+        local_state->idle_dx = 0;   // recentre the legend on wake (drop any jitter offset)
+        local_state->idle_dy = 0;
         update_performed();
         request_disp_refresh();
     }
@@ -1867,6 +1922,7 @@ void keyboard_post_init_user(void) {
     local_state->lang = ee.lang;
     local_state->contrast = ee.brightness;
     note_user_brightness(ee.brightness);
+    note_idle_style(ee.idle_style);
 #ifdef RGB_MATRIX_ENABLE
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 #else
@@ -1957,6 +2013,8 @@ void poly_suspend(void) {
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
     local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);// & ~((uint8_t)RGB_ON);
     local_state->contrast = DISP_OFF;
+    local_state->idle_dx = 0;
+    local_state->idle_dy = 0;
 }
 
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
@@ -1997,6 +2055,8 @@ void suspend_wakeup_init_kb(void) {
     local_state->flags |= STATUS_DISP_ON;
     local_state->flags &= ~((uint8_t)DISP_IDLE);
     local_state->contrast = get_user_brightness();
+    local_state->idle_dx = 0;
+    local_state->idle_dy = 0;
     set_last_update(0);
 
     //rgb_matrix_reload_from_eeprom();

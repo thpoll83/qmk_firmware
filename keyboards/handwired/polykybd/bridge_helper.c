@@ -23,13 +23,19 @@ static enum com_state com = NOT_INITIALIZED;
 // CRC32 in split_sync.c is the only thing that detects a bit flipped in flight.
 // Counting the outcomes here lets us measure the link's real error behaviour
 // (the bit-error rate `p`) and quantitatively compare cable / baud / drive
-// changes instead of guessing. Cumulative since boot; link_stats_tick() emits a
-// compact summary line once per interval. Touched only on core0 (the master's
-// main loop) — no ISR access, so plain (non-volatile) is fine.
+// changes instead of guessing. Cumulative since boot; a compact summary is
+// emitted from send_to_bridge() every LINK_STATS_LOG_EVERY frames — count-based,
+// so the cadence follows real traffic (dense during overlay bursts, sparse when
+// idle, silent with no traffic) without needing a timer. Touched only on core0
+// (the master's main loop) — no ISR access, so plain (non-volatile) is fine.
+#ifndef LINK_STATS_LOG_EVERY
+#    define LINK_STATS_LOG_EVERY 200   // emit one health line per N frames sent
+#endif
 static uint32_t ls_attempts       = 0;  // frames sent (transaction_rpc_exec calls)
 static uint32_t ls_crc_err        = 0;  // slave NACK'd / non-ACK reply → payload corrupted in flight
 static uint32_t ls_transport_fail = 0;  // transport returned false (timeout / handshake / no reply)
 static uint32_t ls_call_giveup    = 0;  // send_to_bridge() calls that exhausted every retry
+static uint32_t ls_last_log       = 0;  // ls_attempts at the last emitted summary
 
 void set_com_state(enum com_state state) {
     com = state;
@@ -63,6 +69,20 @@ const char* tid_to_str(int8_t tid) {
 uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t num_bytes, const uint8_t max_retries) {
     poly_sync_reply_t reply;
     uint8_t retry = 0;
+
+    // Periodic split-link health line, once per LINK_STATS_LOG_EVERY frames sent.
+    // Count-based (no timer): the cadence tracks real traffic. Checked once per
+    // call on fully-settled cumulative counts, so it covers every exit path.
+    if (debug_enable && (ls_attempts - ls_last_log) >= LINK_STATS_LOG_EVERY) {
+        ls_last_log = ls_attempts;
+        uint32_t errs    = ls_crc_err + ls_transport_fail;
+        uint32_t permille = ls_attempts ? (uint32_t)(((uint64_t)errs * 1000U) / ls_attempts) : 0U;
+        uprintf("Split link: %lu tx crc_err=%lu transport_fail=%lu giveup=%lu err=%lu.%lu%%\n",
+                (unsigned long)ls_attempts, (unsigned long)ls_crc_err,
+                (unsigned long)ls_transport_fail, (unsigned long)ls_call_giveup,
+                (unsigned long)(permille / 10U), (unsigned long)(permille % 10U));
+    }
+
     *((uint32_t *)buffer_with4crc_bytes) = crc32_1byte(&((uint8_t *)buffer_with4crc_bytes)[4], num_bytes-4, 0);
     for(; retry<max_retries; ++retry) {
         // Reset the reply each iteration: transaction_rpc_exec() leaves it
@@ -96,37 +116,6 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
     }
 
     return SYNC_CRC32_ERR;
-}
-
-// Emit a compact split-link health line at most once per LINK_STATS_LOG_INTERVAL
-// (ms), and only when something has been sent since the last line. Call from the
-// master's housekeeping. Gated on debug_enable to match the retry logs (and to
-// keep it off the console in normal use). The percentage is the all-time
-// detected-error rate (CRC + transport) over all frames — a direct read on the
-// wire's bit-error behaviour `p`.
-#ifndef LINK_STATS_LOG_INTERVAL
-#    define LINK_STATS_LOG_INTERVAL 60000
-#endif
-void link_stats_tick(void) {
-    static uint32_t last_log      = 0;
-    static uint32_t last_attempts = 0;
-
-    if (!debug_enable) return;
-    if (timer_elapsed32(last_log) < LINK_STATS_LOG_INTERVAL) return;
-    last_log = timer_read32();
-
-    uint32_t attempts = ls_attempts;
-    if (attempts == last_attempts) return;   // idle window — stay quiet
-    uint32_t window = attempts - last_attempts;
-    last_attempts = attempts;
-
-    uint32_t errs    = ls_crc_err + ls_transport_fail;
-    uint32_t permille = attempts ? (uint32_t)(((uint64_t)errs * 1000U) / attempts) : 0U;
-    uprintf("Split link: %lu tx (+%lu) crc_err=%lu transport_fail=%lu giveup=%lu err=%lu.%lu%%\n",
-            (unsigned long)attempts, (unsigned long)window,
-            (unsigned long)ls_crc_err, (unsigned long)ls_transport_fail,
-            (unsigned long)ls_call_giveup,
-            (unsigned long)(permille / 10U), (unsigned long)(permille % 10U));
 }
 
 bool differ(const void* b1, const void* b2, uint8_t byte_count) {

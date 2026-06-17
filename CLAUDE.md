@@ -440,12 +440,12 @@ fw-update path skips this code).
 master-side, added 2026-06-16). Every `send_to_bridge` frame is counted and
 classified: `ok` / `crc_err` (slave NACK or corrupted reply — payload integrity
 miss) / `transport_fail` (timeout/handshake) / `giveup` (retries exhausted).
-`link_stats_tick()` (called from the master's housekeeping, gated on
-`debug_enable`, ≤ once per `LINK_STATS_LOG_INTERVAL` = 60 s, quiet when idle)
-prints:
+`send_to_bridge` emits a compact summary every `LINK_STATS_LOG_EVERY` = 200
+frames (count-based, no timer — the cadence follows real traffic, so it's dense
+during overlay bursts and silent when idle; gated on `debug_enable`):
 
 ```text
-Split link: 12345 tx (+312) crc_err=4 transport_fail=1 giveup=0 err=0.0%
+Split link: 12345 tx crc_err=4 transport_fail=1 giveup=0 err=0.0%
 ```
 
 `err%` is the all-time detected-error rate over all frames — a direct read on the
@@ -471,8 +471,8 @@ retries=3; if it climbs, attack `p` at the source.
 
 **Relevant files**:
 - `keyboards/handwired/polykybd/split_sync.c` — per-transaction CRC32 (the only payload check)
-- `keyboards/handwired/polykybd/bridge_helper.c` / `.h` — `send_to_bridge` retries + `link_stats_tick()` counters
-- `keyboards/handwired/polykybd/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`, the `link_stats_tick()` call
+- `keyboards/handwired/polykybd/bridge_helper.c` / `.h` — `send_to_bridge` retries + the link health counters / `LINK_STATS_LOG_EVERY` summary
+- `keyboards/handwired/polykybd/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`
 - `keyboards/handwired/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`; the full-duplex defines (`SERIAL_USART_FULL_DUPLEX`, `SERIAL_USART_TX_PIN GP5`, `SERIAL_USART_RX_PIN GP4`, `SERIAL_USART_PIN_SWAP`)
 - `<variant>/halconf.h` — `SELECT_SOFT_SERIAL_SPEED` (baud)
 - `platforms/chibios/drivers/serial_protocol.c`, `drivers/vendor/RP/RP2040/serial_vendor.c` — QMK transport (no payload integrity)

@@ -318,6 +318,21 @@ def build_pack(order: list[str], resident: set[str], parsed: dict[str, ParsedFon
     return data, manifest
 
 
+def extra_pack_fonts(cfg: dict, fonts_dir: Path) -> dict[str, ParsedFont]:
+    """Fonts appended to the pack from standalone headers (index.pack_extra_fonts)
+    — e.g. the language-layer flags, which are generated outside fonts.yaml."""
+    out: dict[str, ParsedFont] = {}
+    for e in cfg.get("index", {}).get("pack_extra_fonts", []):
+        hdr = fonts_dir / e["header"]
+        if hdr.exists():
+            out.update(parse_gfx_header(hdr.read_text()))
+    return out
+
+
+def extra_pack_symbols(cfg: dict) -> list[str]:
+    return [e["symbol"] for e in cfg.get("index", {}).get("pack_extra_fonts", [])]
+
+
 def build_pack_from_tree(fonts_dir: Path, cfg: dict, content_version: int = 0):
     """build_pack() sourced from the committed headers on disk."""
     order = all_fonts_order(fonts_dir)
@@ -325,17 +340,19 @@ def build_pack_from_tree(fonts_dir: Path, cfg: dict, content_version: int = 0):
     parsed: dict[str, ParsedFont] = {}
     for hdr in (fonts_dir / "generated").glob("*.h"):
         parsed.update(parse_gfx_header(hdr.read_text()))
+    parsed.update(extra_pack_fonts(cfg, fonts_dir))
     return build_pack(order, resident, parsed, content_version)
 
 
 def manifest_from_texts(order: list[str], category_texts: dict[str, str],
-                        cfg: dict, content_version: int = 0):
+                        cfg: dict, fonts_dir: Path, content_version: int = 0):
     """build_pack() sourced from in-memory header text (for generate_fonts --check).
 
     `order` is the full font priority order (resident + pack); `category_texts`
-    maps category name -> that category's header text. Mirrors build_pack_from_tree
-    without touching disk, so the manifest stays consistent with a freshly
-    regenerated (but not-yet-written) header set.
+    maps category name -> that category's header text. `pack_extra_fonts` (e.g.
+    flags) are read from their standalone headers under `fonts_dir`. Mirrors
+    build_pack_from_tree so the manifest stays consistent with a freshly
+    regenerated header set.
     """
     idx = cfg.get("index", {})
     resident = set(idx.get("prepend_fonts", [])) | set(idx.get("resident_fonts", []))
@@ -346,6 +363,7 @@ def manifest_from_texts(order: list[str], category_texts: dict[str, str],
         parsed.update(fonts)
         if cats.get(cat, {}).get("resident"):
             resident |= set(fonts.keys())
+    parsed.update(extra_pack_fonts(cfg, fonts_dir))
     return build_pack(order, resident, parsed, content_version)
 
 

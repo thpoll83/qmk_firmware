@@ -124,8 +124,10 @@ def compose_category(blocks: list[str]) -> str:
 
 
 def full_order(index: dict, symbols: list[str]) -> list[str]:
-    """The full font priority order: prepended fonts, then the generated ones."""
-    return list(index.get("prepend_fonts", [])) + list(symbols)
+    """The full font priority order: prepended fonts, then the generated ones,
+    then any pack-only extras (e.g. flags) appended at the end of the pack."""
+    extras = [e["symbol"] for e in index.get("pack_extra_fonts", [])]
+    return list(index.get("prepend_fonts", [])) + list(symbols) + extras
 
 
 def compose_index(index: dict, categories: dict, cat_blocks: dict,
@@ -215,7 +217,8 @@ def main() -> None:
         # headers so it stays consistent with them under --check.
         cat_texts = {c: compose_category(b) for c, b in cat_blocks.items() if b}
         pack_data, manifest = fontpack.manifest_from_texts(
-            order, cat_texts, cfg, content_version=args.content_version)
+            order, cat_texts, cfg, root / "base" / "fonts",
+            content_version=args.content_version)
         outputs[gen_dir / PACK_MANIFEST] = fontpack.manifest_json(pack_data, manifest)
 
     if args.check:

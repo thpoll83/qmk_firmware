@@ -1,7 +1,7 @@
 {
   "abi_version": 1,
-  "font_count": 126,
-  "total_size": 407720,
+  "font_count": 127,
+  "total_size": 470620,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -758,6 +758,12 @@
       "symbol": "NotoSerifKR_Medium_Vowels_21pt16b",
       "first": 4449,
       "last": 4469
+    },
+    {
+      "all_fonts_index": 140,
+      "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
+      "first": 57344,
+      "last": 57503
     }
   ]
 }

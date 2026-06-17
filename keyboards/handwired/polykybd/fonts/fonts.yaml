@@ -52,6 +52,14 @@ index:
   # (ARROWS_* in lang/named_glyphs.h, used by poly_keymap.c + status_oled.c).
   resident_fonts:
     - NotoSansSymbols2_Regular_Arrows_20pt16b
+  # Fonts appended to the END of the external-flash font pack that are generated
+  # OUTSIDE the main fonts.yaml pipeline (so they have no `fonts:` entry). Each is
+  # parsed from its standalone header. The language-layer country flags
+  # (gen-lang-fonts.sh, codepoints 0xE000+idx) ship here instead of resident, so
+  # the ~63 KB flag font leaves the firmware image; render_lang_flag_key() draws
+  # them via g_all_fonts and falls back to the xx-YY label when no pack is present.
+  pack_extra_fonts:
+    - {symbol: NotoColorEmoji_Regular_LangFlags_20pt7b, header: flag_fonts.h}
 
 # Each category -> one generated header, with defaults inherited by its fonts.
 categories:

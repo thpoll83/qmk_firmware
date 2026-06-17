@@ -23,6 +23,10 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
 // the idle "jitter" anti-burn-in relocation redraw. Pass 0,0 to disable.
 void kdisp_set_draw_offset(int8_t ox, int8_t oy);
 
+// Glyph for codepoint `c` in a font set, or NULL if no font covers it (skips
+// empty gap glyphs, no '!' fallback). For coverage tests + metric reads.
+const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t c);
+
 void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text);
 
 void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius);

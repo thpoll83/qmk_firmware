@@ -51,7 +51,9 @@
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
-#include "base/fonts/flag_fonts.h"        // language-layer country flags (fonts/gen-lang-fonts.sh)
+// Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
+// now ship in the external-flash font pack, resolved via g_all_fonts — they are
+// NOT compiled in. The tiny label font stays resident (no-pack fallback label).
 #include "base/fonts/lang_label_font.h"   // tiny label font under the flags
 #include "base/multicore/core1.h"
 #include "polymod_crc32.h"
@@ -1049,21 +1051,25 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 #define FLAG_LEFT_X    (BUFFER_X - 2)    // flag glyph left (keeps the left border on-screen)
 #define LABEL_COL_X    (BUFFER_X + 66)   // baseline column of the vertical label
 
-static const GFXfont* const lang_flag_fonts[] = { &NotoColorEmoji_Regular_LangFlags_20pt7b };
-
 // Draw one language key: oversized country flag on the left (vertically centred
 // and clipped so the flag content fills the keycap height), language code running
 // vertically up the right side (inverted bar when it is the active language).
+//
+// The flag glyphs (FLAG_CP_BASE + idx) live in the external-flash font pack, so
+// they resolve through g_all_fonts only when a pack is present. With no pack the
+// flag is simply omitted — the xx-YY code label below it still identifies the
+// language (graceful fallback). The tiny label font stays resident.
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
-    const GFXfont* ff  = &NotoColorEmoji_Regular_LangFlags_20pt7b;
-
-    // Flag: the glyph is taller than the keycap, so centre it vertically — the
-    // empty top/bottom margins clip off and the flag content fills the height.
-    const int8_t fh  = (int8_t)pgm_read_byte(&ff->glyph[idx].height);
-    const int8_t fyo = (int8_t)pgm_read_byte(&ff->glyph[idx].yOffset);
-    kdisp_write_gfx_char(lang_flag_fonts, 1, FLAG_LEFT_X,
-                         (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
-                         FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
+    const GFXglyph* g = kdisp_gfx_glyph(g_all_fonts, g_all_font_count, FLAG_CP_BASE + idx);
+    if (g) {
+        // The glyph is taller than the keycap, so centre it vertically — the
+        // empty top/bottom margins clip off and the flag content fills the height.
+        const int8_t fh  = (int8_t)pgm_read_byte(&g->height);
+        const int8_t fyo = (int8_t)pgm_read_byte(&g->yOffset);
+        kdisp_write_gfx_char(g_all_fonts, g_all_font_count, FLAG_LEFT_X,
+                             (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
+                             FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
+    }
 
     // Language code: vertical, up the right side; inverted bar when selected.
     kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
@@ -1131,7 +1137,7 @@ uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
 // to 0 in that axis) — the legend is never partially cut off at any offset.
 static void clamp_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, int8_t* dx, int8_t* dy) {
     int8_t xmin, xmax, ymin, ymax;
-    kdisp_gfx_text_bbox(ALL_FONTS, ALL_FONT_SIZE, text, &xmin, &xmax, &ymin, &ymax);
+    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, text, &xmin, &xmax, &ymin, &ymax);
     int16_t axmin = ox + xmin, axmax = ox + xmax;   // glyph extent at the un-jittered origin
     int16_t aymin = oy + ymin, aymax = oy + ymax;
     int16_t lo, hi;
@@ -1166,7 +1172,7 @@ static void render_idle_key(uint16_t keycode, led_t state) {
         int8_t dx = local_state->idle_dx, dy = local_state->idle_dy;
         clamp_idle_offset(text, BUFFER_X, 23, &dx, &dy);
         kdisp_set_draw_offset(dx, dy);
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
         kdisp_set_draw_offset(0, 0);
     }
     kdisp_send_buffer();

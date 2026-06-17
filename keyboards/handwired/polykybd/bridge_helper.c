@@ -93,7 +93,7 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
         ls_attempts++;
         if(sync_success && (reply.ack == SYNC_ACK || reply.ack == SYNC_ACK_SIG)) {
             if(debug_enable && retry>0) {
-                uprintf("Success on retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack != SYNC_CRC32_ERR, num_bytes);
+                uprintf("Success on retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack, num_bytes);
             }
             return reply.ack;
         }
@@ -107,7 +107,7 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
             ls_transport_fail++;
         }
         if(debug_enable) {
-            uprintf("Bridge sync retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack != SYNC_CRC32_ERR, num_bytes);
+            uprintf("Bridge sync retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack, num_bytes);
         }
     }
     ls_call_giveup++;

@@ -1,21 +1,25 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// HID transport for flashing the external-flash font pack. Parallels hid_fw_up.c
-// but targets the resource region and, on commit, reloads fonts WITHOUT a reboot
-// (the pack is data, not code). Single fixed slot, written in place.
-//
-// MASTER-SIDE ONLY for now: the slave half also renders keycaps and needs its
-// own copy of the pack, so a follow-up bridges BEGIN/CHUNK/COMMIT to the slave
-// (mirroring split_fw_up.c). Until then, flashing updates the master half's
-// fonts only; the slave keeps showing resident-only fallback for pack scripts.
+// HID transport for flashing the external-flash "PlyF" font pack to BOTH halves.
+// It reuses the firmware-update machinery: fw_staging with FW_TARGET_FONTPACK
+// (deferred erase, page accumulation, dual-core flash safety, the slave bridge
+// and relay-first chunk protocol) — only the flash region and the finalize
+// action differ (write in place at the resource region; on commit re-load fonts
+// with NO reboot). The slave routes by the `target` byte carried in the BEGIN
+// transaction and remembers it for the chunk/commit transactions.
 
 #include "hid_fontpack.h"
 
+#include QMK_KEYBOARD_H
 #include "raw_hid.h"
 #include "config.h"
+#include "split_fw_up.h"
+#include "bridge_helper.h"
+#include "polymod_crc32.h"
+#include <transactions.h>
+#include "base/fw_staging.h"
 #include "base/fontpack.h"
-#include "base/fw_staging.h"   // FW_UP_CHUNK_SIZE
 
 #include <print.h>
 #include <string.h>
@@ -25,29 +29,86 @@
 bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
     switch (data[1]) {
 
-        case CMD_FONTPACK_BEGIN: {   // data[2..5]=pack_size, data[6..9]=content_version
-            uint32_t pack_size, content_version;
-            memcpy(&pack_size,       &data[HID_DATA_IDX],     4);
-            memcpy(&content_version, &data[HID_DATA_IDX + 4], 4);
-            bool ok = fontpack_flash_begin(pack_size);
+        case CMD_FONTPACK_BEGIN: {   // data[2..5]=pack_size, data[6..9]=pack_crc (whole pack)
+            uint32_t pack_size, pack_crc;
+            memcpy(&pack_size, &data[HID_DATA_IDX],     4);
+            memcpy(&pack_crc,  &data[HID_DATA_IDX + 4], 4);
+            bool master_ok = (pack_size >= sizeof(fontpack_header_t) &&
+                              pack_size <= FONTPACK_FLASH_MAX_SIZE);
+
+            fw_up_begin_sync_t begin_msg;
+            memset(&begin_msg, 0, sizeof(begin_msg));   // deterministic padding for the CRC
+            begin_msg.image_size = pack_size;
+            begin_msg.image_crc  = pack_crc;
+            begin_msg.target     = FW_TARGET_FONTPACK;
+            begin_msg.crc32      = 0;
+
+            // Dedup re-polls so a new image kicks the erase once (mirrors hid_fw_up).
+            static uint32_t s_erased_size = 0;
+            static uint32_t s_erased_crc  = 0;
+            bool new_image = (pack_size != s_erased_size || pack_crc != s_erased_crc);
+
+            if (new_image && master_ok) {
+                s_erased_size = pack_size;
+                s_erased_crc  = pack_crc;
+                // Master stages its OWN copy (deferred erase via housekeeping) and
+                // kicks the slave's deferred erase, both targeting the font pack.
+                fw_staging_begin_deferred_target(pack_size, pack_crc, FW_TARGET_FONTPACK);
+                send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 3);
+                uprintf("FONTPACK_BEGIN: new pack size=%lu crc=0x%08lx (master+slave staging)\n",
+                        (unsigned long)pack_size, (unsigned long)pack_crc);
+            }
+
+            uint8_t slave_ack = master_ok
+                ? send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 1)
+                : SYNC_CRC32_ERR;
+            bool slave_ok    = (slave_ack == SYNC_ACK);
+            bool master_done = !fw_staging_erase_pending();
+
             memset(data, 0, length);
-            memcpy(data, ok ? "P\x50." : "P\x50!", 3);
+            if (!master_ok) {
+                memcpy(data, "P\x50!", 3);   // invalid size
+            } else if (slave_ok && master_done) {
+                memcpy(data, "P\x50.", 3);   // both halves erased — host may stream chunks
+            } else {
+                memcpy(data, "P\x50~", 3);   // still erasing — host re-polls
+            }
             raw_hid_send(data, length);
-            uprintf("FONTPACK_BEGIN: size=%lu cver=%lu -> %s\n",
-                    (unsigned long)pack_size, (unsigned long)content_version,
-                    ok ? "ready" : "rejected");
             return true;
         }
 
         case CMD_FONTPACK_CHUNK: {   // data[2..5]=offset, data[6..]=FW_UP_CHUNK_SIZE bytes
             uint32_t offset;
             memcpy(&offset, &data[HID_DATA_IDX], 4);
-            bool ok = fontpack_flash_write(offset, &data[HID_DATA_IDX + 4], FW_UP_CHUNK_SIZE);
+            const uint8_t *chunk_data = &data[HID_DATA_IDX + 4];
+
+            // Relay to the slave FIRST (identity-bound reply: a chunk only counts
+            // once the slave's write cursor moved PAST this offset), then write the
+            // master's own copy — so a failed relay leaves both cursors in lock-step.
+            fw_up_chunk_sync_t chunk_msg;
+            chunk_msg.offset = offset;
+            memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
+            chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
+            uint8_t slave_ack = SYNC_CRC32_ERR;
+            for (uint8_t retry = 0; retry < 10; ++retry) {
+                fw_up_chunk_reply_t reply;
+                memset(&reply, 0, sizeof(reply));
+                reply.ack = SYNC_CRC32_ERR;
+                bool ok_rpc = transaction_rpc_exec(USER_SYNC_FW_UP_CHUNK, sizeof(chunk_msg), &chunk_msg,
+                                                   sizeof(reply), &reply);
+                if (ok_rpc && reply.ack == SYNC_ACK && reply.next_offset > offset) {
+                    slave_ack = SYNC_ACK;
+                    break;
+                }
+            }
+            bool ok = (slave_ack == SYNC_ACK);
+            if (ok) ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
+
             memset(data, 0, length);
             memcpy(data, ok ? "P\x51." : "P\x51!", 3);
             if (!ok) {
-                // Report where to resume so the host can rewind instead of aborting.
-                uint32_t resume = fontpack_flash_next_offset();
+                // Resume point = lower of the two halves' cursors (both ACK dups).
+                uint32_t resume = fw_staging_next_offset();
                 memcpy(&data[3], &resume, 4);
                 uprintf("FONTPACK_CHUNK: NACK offset=%lu resume=%lu\n",
                         (unsigned long)offset, (unsigned long)resume);
@@ -56,26 +117,29 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             return true;
         }
 
-        case CMD_FONTPACK_COMMIT: {  // verify CRC from flash + reload (no reboot)
-            bool ok = fontpack_flash_finalize();
+        case CMD_FONTPACK_COMMIT: {   // slave finalize+reload, then master finalize+reload (no reboot)
+            uint32_t dummy = 0;
+            uint8_t slave_ack = send_to_bridge(USER_SYNC_FW_UP_COMMIT, &dummy, sizeof(dummy), 10);
+            bool master_ok = fw_staging_finalize();   // FONTPACK target: verifies CRC + fontpack_reload()
+            bool ok = (slave_ack == SYNC_ACK) && master_ok;
             memset(data, 0, length);
             memcpy(data, ok ? "P\x52." : "P\x52!", 3);
             if (ok) {
                 uint16_t cver = fontpack_content_version();
                 memcpy(&data[3], &cver, 2);
             }
-            raw_hid_send(data, length);
-            uprintf("FONTPACK_COMMIT: %s (present=%d fonts=%u cver=%u)\n",
-                    ok ? "live" : "INVALID (resident-only)",
+            uprintf("FONTPACK_COMMIT: slave=0x%02x master=%d -> %s (present=%d fonts=%u cver=%u)\n",
+                    slave_ack, master_ok, ok ? "live" : "INVALID",
                     fontpack_present(), fontpack_font_count(), fontpack_content_version());
+            raw_hid_send(data, length);
             return true;
         }
 
-        case CMD_FONTPACK_STATUS: {  // present, abi_version, content_version, expected_abi
+        case CMD_FONTPACK_STATUS: {   // present, expected_abi, content_version, font_count
             memset(data, 0, length);
             memcpy(data, "P\x53.", 3);
             data[3] = fontpack_present() ? 1 : 0;
-            data[4] = (uint8_t)FONTPACK_ABI_VERSION;                 // expected/compiled-in ABI
+            data[4] = (uint8_t)FONTPACK_ABI_VERSION;
             uint16_t cver = fontpack_content_version();
             memcpy(&data[5], &cver, 2);
             data[7] = fontpack_font_count();

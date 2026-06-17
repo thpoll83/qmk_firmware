@@ -37,15 +37,26 @@
 // Must be called once before any other fw_staging_* function.
 void fw_staging_init(void);
 
+// Staging target: which flash region a begin/chunk/finalize sequence writes to,
+// and how finalize completes. FIRMWARE stages to the 2 MB firmware-update region
+// (header sector + image) and finalize stamps the staging header for a later
+// apply+reboot. FONTPACK writes the "PlyF" font pack in place at the resource
+// region (no header sector) and finalize re-loads the fonts — no reboot. The
+// streaming/paging/deferred-erase machinery is identical; only the base offset,
+// the header sector, and the finalize action differ.
+typedef enum { FW_TARGET_FIRMWARE = 0, FW_TARGET_FONTPACK = 1 } fw_target_t;
+
 // Synchronous begin (master / USB side): erases staging flash sector-by-sector
 // with interrupts briefly re-enabled between sectors.  Blocks for ~50 ms per
 // sector (ceil(image_size/4096) + 1 sectors total).
-void fw_staging_begin(uint32_t image_size, uint32_t image_crc);
+void fw_staging_begin(uint32_t image_size, uint32_t image_crc);              // FIRMWARE target
+void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t target);
 
 // Deferred begin (slave side): stores parameters and schedules the erase.
 // Returns immediately — safe inside a split-link transaction handler.
 // Call fw_staging_process_deferred() from housekeeping_task_user() to drive the erase.
-void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc);
+void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc);     // FIRMWARE target
+void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, uint8_t target);
 
 // Erases one staging sector per call.  Call from housekeeping_task_user()
 // until fw_staging_write_chunk() no longer returns false for offset==0.

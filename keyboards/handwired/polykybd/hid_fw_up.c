@@ -61,8 +61,10 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             bool master_ok = (image_size > 0 && image_size <= FW_UP_MAX_SIZE);
 
             fw_up_begin_sync_t begin_msg;
+            memset(&begin_msg, 0, sizeof(begin_msg));   // deterministic padding for the CRC
             begin_msg.image_size = image_size;
             begin_msg.image_crc  = image_crc;
+            begin_msg.target     = FW_TARGET_FIRMWARE;
             begin_msg.crc32      = 0;
 
             // Track the image so re-polls from the host don't redo the slave kick.

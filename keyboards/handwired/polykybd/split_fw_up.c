@@ -61,15 +61,19 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
         return;
     }
 
-    static uint32_t s_begun_size = 0;
-    static uint32_t s_begun_crc  = 0;
-    bool same_image = (msg->image_size == s_begun_size && msg->image_crc == s_begun_crc);
+    static uint32_t s_begun_size   = 0;
+    static uint32_t s_begun_crc    = 0;
+    static uint8_t  s_begun_target = 0xFF;
+    bool same_image = (msg->image_size == s_begun_size && msg->image_crc == s_begun_crc &&
+                       msg->target == s_begun_target);
 
     if (!same_image) {
-        s_begun_size = msg->image_size;
-        s_begun_crc  = msg->image_crc;
-        fw_staging_begin_deferred(msg->image_size, msg->image_crc);
-        uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx started erase\n", msg->image_size, msg->image_crc);
+        s_begun_size   = msg->image_size;
+        s_begun_crc    = msg->image_crc;
+        s_begun_target = msg->target;
+        fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
+        uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx target=%u started erase\n",
+                msg->image_size, msg->image_crc, msg->target);
         ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK_SIG;  // "erase started, keep polling"
         return;
     }
@@ -84,7 +88,7 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
     // partial failure), re-erase before handing off — NOR flash bits cannot go
     // 0→1 without erasing first.
     if (fw_staging_written()) {
-        fw_staging_begin_deferred(msg->image_size, msg->image_crc);
+        fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         uprintf("slave FW_UP_BEGIN: re-erasing dirty staging\n");
         ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK_SIG;
         return;

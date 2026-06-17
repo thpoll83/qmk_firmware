@@ -31,6 +31,14 @@ try:
 except ImportError:
     sys.exit("PyYAML is required:  pip install pyyaml")
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fontpack  # noqa: E402  (sibling module: PlyF font-pack serializer/validator)
+
+# Committed structural manifest for the external-flash font pack (the build
+# artifact that ships to the host). The manifest pins the pack's font order and
+# ranges so a checkout is verifiable and step-3 firmware can derive its index map.
+PACK_MANIFEST = "fontpack.manifest.json"
+
 # Order in which a font entry's fields map onto fontconvert flags.  Flag order
 # does not affect the rendered bytes (fontconvert parses options order-free); it
 # only shapes the provenance comment fontconvert prints on the first line.
@@ -145,6 +153,12 @@ def main() -> None:
                     help="regenerate only this category's header (skips the ALL_FONTS "
                          "index and the stale-header cleanup, so the other category "
                          "headers and their source fonts are left untouched)")
+    ap.add_argument("--emit-pack", metavar="PATH", default="",
+                    help="also write the binary font pack (PlyF) to PATH (the "
+                         "release artifact flashed to the keyboard). The manifest "
+                         "is always (re)written next to the generated headers.")
+    ap.add_argument("--content-version", type=int, default=0,
+                    help="content_version stamped into the emitted pack header")
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args()
 
@@ -167,9 +181,16 @@ def main() -> None:
     for cat, meta in categories.items():
         if cat_blocks.get(cat):
             outputs[gen_dir / meta["output"]] = compose_category(cat_blocks[cat])
+    pack_data = None
     if not args.only:                             # --only never rewrites the ALL_FONTS index
-        outputs[root / "base" / "fonts" / index["output"]] = \
-            compose_index(index, categories, cat_blocks, symbols)
+        index_text = compose_index(index, categories, cat_blocks, symbols)
+        outputs[root / "base" / "fonts" / index["output"]] = index_text
+        # Derive the font-pack manifest from the freshly composed (in-memory)
+        # headers so it stays consistent with them under --check.
+        cat_texts = {c: compose_category(b) for c, b in cat_blocks.items() if b}
+        pack_data, manifest = fontpack.manifest_from_texts(
+            index_text, cat_texts, cfg, content_version=args.content_version)
+        outputs[gen_dir / PACK_MANIFEST] = fontpack.manifest_json(pack_data, manifest)
 
     if args.check:
         drift = False
@@ -199,6 +220,9 @@ def main() -> None:
     for path, content in outputs.items():
         path.write_text(content)
         log(f"wrote {path.relative_to(root)}", args.quiet)
+    if args.emit_pack and pack_data is not None:
+        Path(args.emit_pack).write_bytes(pack_data)
+        log(f"wrote {args.emit_pack} ({len(pack_data):,} B font pack)", args.quiet)
     log(f"Done: {len(symbols)} fonts in ALL_FONTS "
         f"(+{len(index.get('prepend_fonts', []))} prepended).", args.quiet)
 

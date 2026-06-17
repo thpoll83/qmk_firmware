@@ -40,9 +40,47 @@ Outputs (overwritten in place):
 |------|----------|
 | `base/fonts/generated/<cat>_fonts.h` | one header per category, holding that category's `GFXfont` definitions |
 | `base/fonts/gfx_used_fonts.h` | `#include`s the category headers + builds the `ALL_FONTS[]` lookup table |
+| `base/fonts/generated/fontpack.manifest.json` | structural manifest of the external-flash font pack (committed; the pack ABI contract — see below) |
 
 The generator deletes any stale `generated/*.h` that the config no longer
 produces, so the directory always reflects `fonts.yaml`.
+
+## Font pack (external-flash, position-independent `PlyF`)
+
+Most of the glyph data — emoji, symbols, CJK, Indic, Arabic, … (~400 KB, the
+bulk of the firmware image) — does **not** need to live in the firmware. It can
+be split into a **font pack** stored in the external-flash resource region and
+updated independently over HID, so the firmware itself shrinks (~812 KB → ~352 KB
+measured) and most updates ship a much smaller image. A "functional minimum" set
+stays compiled in so the keyboard works with **no pack present**: `IconsFont`
+(`index.prepend_fonts`) plus every category tagged `resident: true` (currently
+`latin` — ASCII + Latin-extended + Cyrillic + Greek) plus the status-OLED fonts.
+
+The pack is **position-independent**: every internal reference is a byte offset
+from the pack base, so the same binary works from either A/B flash slot. The
+on-flash format is defined once in [`base/fontpack.h`](../base/fontpack.h) (the C
+contract) and produced/validated by [`fontpack.py`](fontpack.py) (the build-side
+tool). It is built straight from the committed headers — no `fontconvert` or TTFs
+needed.
+
+```bash
+# Build the binary pack + (re)write the committed manifest:
+python3 generate_fonts.py --emit-pack /tmp/fontpack.bin --content-version 3
+# Or, standalone (no fontconvert), straight from the committed headers:
+python3 fontpack.py build --out /tmp/fontpack.bin --content-version 3
+
+# Offline validator (magic / ABI / CRC / bounds, + manifest cross-check):
+python3 fontpack.py validate /tmp/fontpack.bin \
+    --manifest ../base/fonts/generated/fontpack.manifest.json
+python3 fontpack.py dump /tmp/fontpack.bin      # list fonts + ranges
+python3 fontpack.py selftest                    # round-trip self test (no inputs)
+```
+
+`generate_fonts.py --check` also verifies the committed manifest is consistent
+with the headers (it is regenerated from the same in-memory font data). Mark a
+category `resident: true` in `fonts.yaml` to keep it compiled into the firmware
+instead of the pack. The firmware loader (a later step) refuses a pack whose
+`abi_version` ≠ `FONTPACK_ABI_VERSION` and falls back to resident-only fonts.
 
 ## Editing `fonts.yaml`
 

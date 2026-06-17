@@ -50,6 +50,12 @@ index:
 categories:
   latin:
     output: latin_fonts.h
+    # resident == compiled into the firmware image (the "functional minimum"),
+    # NOT shipped in the external-flash font pack. The latin category covers
+    # ASCII + Latin-extended + Cyrillic + Greek keycaps, so the keyboard stays
+    # usable for those layouts with no pack present. See base/fontpack.h and
+    # fonts/fontpack.py. (IconsFont — index.prepend_fonts — is resident too.)
+    resident: true
     defaults: {source: noto-sans, size: 14}
   hebrew:
     output: hebrew_fonts.h

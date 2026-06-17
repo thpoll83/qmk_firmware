@@ -17,7 +17,7 @@
 static enum com_state com = NOT_INITIALIZED;
 
 // ── Split-link quality counters (master side) ───────────────────────────────
-// Each transaction_rpc_exec() call is one frame on the single-wire UART. The
+// Each transaction_rpc_exec() call is one frame on the split UART link. The
 // QMK vendor transport carries the payload with no integrity check of its own
 // (only a 1-byte handshake token + a 20 ms timeout), so the per-transaction
 // CRC32 in split_sync.c is the only thing that detects a bit flipped in flight.

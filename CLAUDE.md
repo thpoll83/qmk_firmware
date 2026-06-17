@@ -387,7 +387,8 @@ CRC32 in `split_sync.c` is the only thing that catches a bit flipped by wire
 noise in flight.** This is the single most important fact about the link, and
 the reason the CRC32 was added (intermittent sync corruption that looked random).
 
-**The link (verified 2026-06-16)**: `SERIAL_DRIVER = vendor` → the RP2040 **PIO
+**The link, pre-migration (HISTORICAL — the half-duplex setup in use until the
+2026-06-16 full-duplex switch in the RESOLVED note above)**: `SERIAL_DRIVER = vendor` → the RP2040 **PIO
 half-duplex, single-wire** driver (`serial_vendor.c`) on **`SERIAL_USART_TX_PIN
 GP5`** (no RX pin, no `SERIAL_USART_FULL_DUPLEX` → one shared wire). Baud is
 **230400** (`SELECT_SOFT_SERIAL_SPEED 1` in both variants' `halconf.h` →
@@ -443,7 +444,7 @@ miss) / `transport_fail` (timeout/handshake) / `giveup` (retries exhausted).
 `debug_enable`, ≤ once per `LINK_STATS_LOG_INTERVAL` = 60 s, quiet when idle)
 prints:
 
-```
+```text
 Split link: 12345 tx (+312) crc_err=4 transport_fail=1 giveup=0 err=0.0%
 ```
 

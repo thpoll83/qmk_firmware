@@ -103,7 +103,12 @@
 //     that poisoned later commands' reads on the host.
 // v4: adds GET/SET_IDLE_STYLE (cmd 28) — selects the idle (anti-burn-in) display
 //     style (0 = legacy pulse, 1 = jitter). Persisted in EEPROM; host toggle.
-#define PROTOCOL_VERSION 4
+// v5: SET_BRIGHTNESS (cmd 13) gains a flags byte (data[HID_DATA_IDX+1]):
+//     VOLATILE (daylight/auto value, applied only in auto mode, never persisted)
+//     + AUTO_ON / AUTO_OFF to engage/leave host-driven brightness. flags==0 is
+//     the legacy persisted set, so older hosts keep working. The keyboard's
+//     KC_DAUTO key toggles auto mode locally.
+#define PROTOCOL_VERSION 5
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

@@ -410,10 +410,32 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
             case 13: //set brightness
                 if ( data[HID_DATA_IDX] <= FULL_BRIGHT) {
-                    set_user_brightness(data[HID_DATA_IDX]);
+                    // data[HID_DATA_IDX]   = brightness level (0..FULL_BRIGHT)
+                    // data[HID_DATA_IDX+1] = flags (0 from pre-flag hosts ->
+                    //                        plain persisted set, as before).
+                    uint8_t br_flags = data[HID_DATA_IDX + 1];
+                    if (br_flags & BR_FLAG_AUTO_OFF) {
+                        // Leave host-auto; revert to the persisted manual value.
+                        // The level byte is ignored on an AUTO_OFF message.
+                        set_brightness_auto_mode(false);
+                    } else {
+                        if (br_flags & BR_FLAG_AUTO_ON) {
+                            set_brightness_auto_mode(true);
+                        }
+                        if (br_flags & BR_FLAG_VOLATILE) {
+                            // Daylight/auto update: applied only while auto mode
+                            // is engaged, never persisted.
+                            set_auto_brightness_value(data[HID_DATA_IDX]);
+                        } else {
+                            // Explicit set (host slider / polyctl): persists and
+                            // leaves auto mode, exactly like a keyboard key.
+                            set_user_brightness(data[HID_DATA_IDX]);
+                        }
+                    }
                     memset(data, 0, length);
                     memcpy(data, "P\x0d.", 3);
-                    uprintf("Set brightness to: %u.\n", local_state->contrast);
+                    uprintf("Set brightness to: %u (flags 0x%x, auto %u).\n",
+                            local_state->contrast, br_flags, get_brightness_auto_mode());
                 } else {
                     uprintf("Refused to set brightness to: %u.\n", data[HID_DATA_IDX]);
                     memset(data, 0, length);
@@ -454,10 +476,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         suspend_wakeup_init_kb();
                     } else {
                         if (local_state->flags & DISP_IDLE) {
-                            // Contrast is cycling 0-49 during pulsing; restore the user
-                            // brightness so display_wakeup() conditions don't leave the
-                            // display dark.
-                            local_state->contrast = get_user_brightness();
+                            // Contrast is cycling 0-49 during pulsing; restore the active
+                            // brightness (host-auto value or user brightness) so
+                            // display_wakeup() conditions don't leave the display dark.
+                            local_state->contrast = get_active_brightness();
                         }
                         local_state->flags &= ~((uint8_t)DISP_IDLE);
                         local_state->flags |= STATUS_DISP_ON;

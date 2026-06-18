@@ -34,6 +34,13 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
 // base glyph).  Both are 0 for empty/blank text.
 void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text, int8_t *out_min, int8_t *out_max);
 
+// Full pixel bounding box of `text` relative to the draw origin (x from the origin
+// x, y from the baseline), mirroring every cursor rule — and the per-glyph vertical
+// shift — of kdisp_write_gfx_text_cy. Lets a caller clamp a draw offset so the
+// glyph stays fully on-screen (idle anti-burn-in jitter). All four are 0 for blank text.
+void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,
+                         int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax);
+
 // Vertical (rotated -90°, bottom-to-top) single-font text, centred in the visible
 // height with its baseline along x = col_x.  `selected` draws it as dark text on
 // a filled bar (else lit text on the dark background).  Used by the lang layer.

@@ -1123,6 +1123,54 @@ uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
     return poly_keycode_at(layer, key.row, key.col);
 }
 
+// Clamp a desired idle jitter offset so the legend's bounding box (measured at the
+// draw origin ox/oy) stays inside the visible window [BUFFER_X, BUFFER_X+SCREEN_WIDTH-1]
+// x [0, SCREEN_HEIGHT-1]. Glyph-driven, so it is correct for any script: a narrow
+// Latin letter may travel far, a full-width CJK glyph barely or not at all (clamped
+// to 0 in that axis) — the legend is never partially cut off at any offset.
+static void clamp_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, int8_t* dx, int8_t* dy) {
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(ALL_FONTS, ALL_FONT_SIZE, text, &xmin, &xmax, &ymin, &ymax);
+    int16_t axmin = ox + xmin, axmax = ox + xmax;   // glyph extent at the un-jittered origin
+    int16_t aymin = oy + ymin, aymax = oy + ymax;
+    int16_t lo, hi;
+    lo = (int16_t)BUFFER_X - axmin;                          // keep left edge >= BUFFER_X
+    hi = (int16_t)(BUFFER_X + SCREEN_WIDTH - 1) - axmax;     // keep right edge <= last visible col
+    *dx = (hi < lo) ? 0 : (int8_t)PK_MIN(PK_MAX((int16_t)*dx, lo), hi);
+    lo = -aymin;                                             // keep top >= 0
+    hi = (int16_t)(SCREEN_HEIGHT - 1) - aymax;               // keep bottom <= last visible row
+    *dy = (hi < lo) ? 0 : (int8_t)PK_MIN(PK_MAX((int16_t)*dy, lo), hi);
+}
+
+// Idle (anti-burn-in) per-key render: draws ONLY the resting normal legend — no
+// shift/AltGr preview, no overlay image, no tab/MRU chrome — relocated by the synced
+// jitter offset, clamped per glyph so it is always fully visible. Keeps all idle-mode
+// rendering in one place instead of threading an "idle" flag through the awake path.
+static void render_idle_key(uint16_t keycode, led_t state) {
+    const poly_sync_t* local_state = get_local_state();
+    uint32_t unimap[2] = {0, 0};
+    const uint32_t* text = to_static_text(keycode, state);
+    if (text == NULL) {
+        // letter / symbol legends come from the language table (unshifted, no AltGr)
+        text = translate_keycode(local_state->lang, keycode, false, state.caps_lock);
+    }
+    if (text == NULL && (keycode & QK_UNICODEMAP_PAIR) == QK_UNICODEMAP_PAIR) {
+        uint16_t chr = state.caps_lock ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode)
+                                       : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
+        unimap[0] = unicode_map[chr];
+        text = unimap;
+    }
+    kdisp_set_buffer(0x00);
+    if (text != NULL && text[0] != 0) {
+        int8_t dx = local_state->idle_dx, dy = local_state->idle_dy;
+        clamp_idle_offset(text, BUFFER_X, 23, &dx, &dy);
+        kdisp_set_draw_offset(dx, dy);
+        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
+        kdisp_set_draw_offset(0, 0);
+    }
+    kdisp_send_buffer();
+}
+
 void update_displays(enum refresh_mode mode) {
     const poly_sync_t* local_state = get_local_state();
     const bool idle = (local_state->flags & DISP_IDLE) != 0;
@@ -1137,12 +1185,11 @@ void update_displays(enum refresh_mode mode) {
     } else if(local_state->contrast<=DISP_OFF) {
         return;
     }
-    // The offset is applied only while idle; a normal render is always centred.
-    const int8_t draw_ox = idle ? local_state->idle_dx : 0;
-    const int8_t draw_oy = idle ? local_state->idle_dy : 0;
-    s_last_dx = draw_ox;
-    s_last_dy = draw_oy;
-    kdisp_set_draw_offset(draw_ox, draw_oy);
+    // Remember the offset we render this pass so the guard above can skip until it
+    // changes again. The offset itself is applied per key by render_idle_key (clamped
+    // to each glyph's bounds); awake rendering is always centred.
+    s_last_dx = idle ? local_state->idle_dx : 0;
+    s_last_dy = idle ? local_state->idle_dy : 0;
 
     //uint8_t layer = get_highest_layer(layer_state);
     const poly_layer_t* local_layer = get_local_layer();
@@ -1185,6 +1232,10 @@ void update_displays(enum refresh_mode mode) {
                     kdisp_enable(true);
                     kdisp_set_contrast(idle ? IDLE_JITTER_REDRAW_CONTRAST : (uint8_t)(local_state->contrast-1));
                     if(keycode!=KC_TRNS) {
+                        if(idle) {
+                            // Idle shows only the resting legend, jittered + clamped.
+                            render_idle_key(keycode, state);
+                        } else {
                         int16_t lang_idx = lang_index_for_keycode(keycode);
                         if (lang_idx >= 0) {
                             // Language layer: country flag + tiny language code
@@ -1234,6 +1285,7 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         kdisp_send_buffer();
+                        }
                         }
                     }
                 }

@@ -119,12 +119,15 @@
 
 // Idle "jitter" style: while pulsing, the rendered legend is relocated by a small
 // random offset once per pulse cycle so the lit pixels migrate and don't burn in.
-// Bounds are kept conservative so single-char legends stay on-screen (the renderer
-// clips as a backstop); they bracket the base draw origin (BUFFER_X=28, baseline 23).
-#define IDLE_JITTER_DX_MIN (-6)
-#define IDLE_JITTER_DX_MAX (10)
-#define IDLE_JITTER_DY_MIN (-4)
-#define IDLE_JITTER_DY_MAX (6)
+// These are only the *proposed* offset envelope (a deliberately generous range);
+// render_idle_key() then clamps the offset per key to that glyph's measured bounding
+// box, so the legend is always fully on-screen regardless of these values and of the
+// script (Latin, CJK, Arabic, …). A glyph with no slack in an axis simply does not
+// move in it. So tune these for how far small legends roam, not for clip-safety.
+#define IDLE_JITTER_DX_MIN (-10)
+#define IDLE_JITTER_DX_MAX (18)
+#define IDLE_JITTER_DY_MIN (-6)
+#define IDLE_JITTER_DY_MAX (10)
 // One pulse cycle is 50 contrast steps × 300 ms (~15 s); relocate at each boundary.
 #define IDLE_JITTER_CYCLE_STEPS 50
 // Contrast used for the one relocation redraw (the live value is the pulsing 0-49

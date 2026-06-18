@@ -303,17 +303,25 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
     }
 }
 
-void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text, int8_t *out_min, int8_t *out_max) {
-    int16_t x = 0;          // cursor, same advance rules as kdisp_write_gfx_text_cy
-    int16_t mn = 127, mx = -128;
+void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,
+                         int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax) {
+    // Cursor relative to the draw origin: x from 0, y from the baseline (0). Mirrors
+    // every cursor rule of kdisp_write_gfx_text_cy, including the vertical controls,
+    // so the measured box matches what would actually be drawn — both axes.
+    int16_t x = 0, y = 0;
+    int16_t xmn = 127, xmx = -128, ymn = 127, ymx = -128;
+    const int16_t base_yadv = pgm_read_byte(&fonts[0]->yAdvance);
     while (*text != 0) {
         switch (*text) {
-            case U'\x05': case U'\f': case U'\v': break;   // vertical-only controls
-            case U'\x18': case U'\r':         x = 0; break; // reset x to origin
+            case U'\x05':                     y += 2; break; // down 2px
+            case U'\f':                       y = y > 1 ? y - 2 : 0; break; // up 2px
+            case U'\v':                       y += ((y) / 15 + 1) * 15; break;
+            case U'\x18':                     x = 0; y = 0; break; // cancel -> origin
+            case U'\r':                       x = 0; break;
             case U'\b':                       x = x > 1 ? x - 2 : 0; break;
             case U'\x06':                     x += 2; break; // nudge right 2px
             case U'\t':                       x += ((x) / 36 + 1) * 36; break;
-            case U'\n':                       x = 0; break;
+            case U'\n':                       y += base_yadv; x = 0; break;
             default: {
                 // Locate the font whose [first,last] contains the codepoint (linear
                 // scan; this is a cold measuring path, no MRU cache needed).
@@ -327,11 +335,20 @@ void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const
                 if (!f) { f = fonts[0]; first = pgm_read_dword(&f->first); ch = U'!'; }
                 const GFXglyph *g = pgm_read_glyph_ptr(f, ch - first);
                 int8_t w  = pgm_read_byte(&g->width);
+                int8_t h  = pgm_read_byte(&g->height);
                 int8_t xo = pgm_read_byte(&g->xOffset);
-                if (w > 0) {
+                int8_t yo = pgm_read_byte(&g->yOffset);
+                if (w > 0 && h > 0) {
                     int16_t l = x + xo, r = x + xo + w - 1;
-                    if (l < mn) mn = l;
-                    if (r > mx) mx = r;
+                    if (l < xmn) xmn = l;
+                    if (r > xmx) xmx = r;
+                    // kdisp_write_gfx_char shifts each glyph by (font yAdvance - fonts[0]
+                    // yAdvance) before applying yOffset; mirror it so the vertical box
+                    // matches the rasterised pixels.
+                    int16_t yadj = (int16_t)pgm_read_byte(&f->yAdvance) - base_yadv;
+                    int16_t t = y + yadj + yo, b = t + h - 1;
+                    if (t < ymn) ymn = t;
+                    if (b > ymx) ymx = b;
                 }
                 x += pgm_read_byte(&g->xAdvance);
                 break;
@@ -339,9 +356,16 @@ void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const
         }
         text++;
     }
-    if (mx < mn) { mn = 0; mx = 0; }      // empty / whitespace-only
-    *out_min = (int8_t)mn;
-    *out_max = (int8_t)mx;
+    if (xmx < xmn) { xmn = 0; xmx = 0; ymn = 0; ymx = 0; }   // empty / whitespace-only
+    *out_xmin = (int8_t)xmn;
+    *out_xmax = (int8_t)xmx;
+    *out_ymin = (int8_t)ymn;
+    *out_ymax = (int8_t)ymx;
+}
+
+void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text, int8_t *out_min, int8_t *out_max) {
+    int8_t ymin, ymax;
+    kdisp_gfx_text_bbox(fonts, num_fonts, text, out_min, out_max, &ymin, &ymax);
 }
 
 // Draw `text` as a vertical column, each glyph rotated -90° (counter-clockwise),

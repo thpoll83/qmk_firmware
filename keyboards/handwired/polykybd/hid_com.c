@@ -418,19 +418,21 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         // Leave host-auto; revert to the persisted manual value.
                         // The level byte is ignored on an AUTO_OFF message.
                         set_brightness_auto_mode(false);
-                    } else {
+                    } else if (br_flags & BR_FLAG_VOLATILE) {
                         if (br_flags & BR_FLAG_AUTO_ON) {
                             set_brightness_auto_mode(true);
                         }
-                        if (br_flags & BR_FLAG_VOLATILE) {
-                            // Daylight/auto update: applied only while auto mode
-                            // is engaged, never persisted.
-                            set_auto_brightness_value(data[HID_DATA_IDX]);
-                        } else {
-                            // Explicit set (host slider / polyctl): persists and
-                            // leaves auto mode, exactly like a keyboard key.
-                            set_user_brightness(data[HID_DATA_IDX]);
-                        }
+                        // Daylight/auto update: applied only while auto mode
+                        // is engaged, never persisted.
+                        set_auto_brightness_value(data[HID_DATA_IDX]);
+                    } else if (br_flags & BR_FLAG_AUTO_ON) {
+                        // Engage auto mode without turning this packet into a
+                        // persisted manual write (which would clear auto again).
+                        set_brightness_auto_mode(true);
+                    } else {
+                        // Explicit set (host slider / polyctl): persists and
+                        // leaves auto mode, exactly like a keyboard key.
+                        set_user_brightness(data[HID_DATA_IDX]);
                     }
                     memset(data, 0, length);
                     memcpy(data, "P\x0d.", 3);

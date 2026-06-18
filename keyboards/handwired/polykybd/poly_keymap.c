@@ -1587,12 +1587,10 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             break;
         case KC_DAUTO:
             // Toggle host-driven (daylight/auto) brightness vs. manual control.
-            // Guard on press: the surrounding switch runs on press AND release,
-            // so an unguarded toggle would cancel itself.
-            if (record->event.pressed) {
-                toggle_brightness_auto_mode();
-                request_disp_refresh();
-            }
+            // This switch is inside `if (!record->event.pressed)`, so it already
+            // runs once per keypress (on release) — no extra guard needed.
+            toggle_brightness_auto_mode();
+            request_disp_refresh();
             break;
         case KC_STORE_EE:
             // Manual "commit everything to EEPROM" — for users who want to be

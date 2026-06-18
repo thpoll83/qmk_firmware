@@ -277,7 +277,7 @@ void sync_and_refresh_displays(void) {
             // stall is bounded to ~PERIODIC_SYNC_RETRIES × 40 ms (and the active
             // fw-update path skips this code entirely). No effect on the normal
             // path, where the slave ACKs on the first attempt.
-            if(!send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), PERIODIC_SYNC_RETRIES)) {
+            if(!sync_succeeded(send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), PERIODIC_SYNC_RETRIES))) {
                 // Failed: clear state_diff so the copy_global_state() below is
                 // SKIPPED — global stays != local, so next pass differ() is still
                 // true and re-fires the send. The diff IS the retry queue; global
@@ -297,7 +297,7 @@ void sync_and_refresh_displays(void) {
             // size) to stay within QMK's 32-transaction limit. Only the packed
             // bytes are sent (MRU_SYNC_BYTES), not the struct's crc tail padding.
             uint8_t mru_ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, &mru_msg, MRU_SYNC_BYTES, PERIODIC_SYNC_RETRIES);
-            if (mru_ack == SYNC_ACK || mru_ack == SYNC_ACK_SIG) {
+            if (sync_succeeded(mru_ack)) {
                 mru_clear_sync_pending();
             } else {
                 uprint("USER_SYNC_MRU_DATA failed to send\n");
@@ -308,18 +308,18 @@ void sync_and_refresh_displays(void) {
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         if ( layer_diff ) {
-            if(!send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES)) {
+            if(!sync_succeeded(send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES))) {
                 layer_diff = false; // failed: skip copy_global_layer() below so the diff
                                     // persists and the send re-fires next pass (see state above)
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
         if ( differ(get_local_last_latin(), get_global_last_latin(), sizeof(poly_last_t)) ) {
-            if(!send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), PERIODIC_SYNC_RETRIES)) {
+            if(sync_succeeded(send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), PERIODIC_SYNC_RETRIES))) {
+                copy_global_last_latin(get_local_last_latin());
+            } else {
                 // if failed to sync, do not consider it a diff and try again later
                 uprint("USER_SYNC_LASTKEY_DATA failed to send\n");
-            } else {
-                copy_global_last_latin(get_local_last_latin());
             }
         }
     } else {

@@ -347,6 +347,52 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 
 ---
 
+### Bug: slave half stuck in the idle pulsing frame — keypress/shift won't wake it, only a brightness key does
+
+**Symptom (field, 2026-06-18)**: After the displays went into the idle *pulsing*
+animation, the **slave** half froze on one pulse frame ("some keycaps off, others
+very dim") and **did not update at all** — neither a keypress nor Shift brought it
+back. The master woke normally and kept logging key events. Pressing a manual
+brightness key restored the slave.
+
+**Root cause**: `send_to_bridge()` returns the slave's reply ack **byte**, or
+`SYNC_CRC32_ERR` once it exhausts its retries. **All three returns are non-zero**
+(`SYNC_ACK 0xCA`, `SYNC_ACK_SIG 0x4D`, `SYNC_CRC32_ERR 0x35`), but three callers in
+`poly_keymap.c` `sync_and_refresh_displays()` tested it as a bool —
+`if(!send_to_bridge(...))`. `!0x35 == false`, so the failure branch
+(`state_diff/layer_diff = false`, "failed to send") was **dead code**: on a
+give-up the master fell through, ran `copy_global_state()`/`copy_global_layer()`,
+**advanced `global` to `local`**, and so produced no diff next pass → the lost
+sync was **never re-fired**. (The accompanying comment block — "the diff IS the
+retry queue; global only advances on a successful sync" — described the *intended*
+behaviour that the `!` test silently defeated.)
+
+Why it only bit the *pulsing→awake* transition: the pulsing contrast changes every
+housekeeping pass, so a dropped frame is replaced by the next fresh diff and is
+invisible. **Wake-from-idle is single-shot** (`display_wakeup()` clears
+`DISP_IDLE` + restores `contrast` once). If that lone sync's give-up was
+mis-classified as success, the master stopped re-sending and the slave — which
+only pulses because the master *tells* it to, the idle math is `is_usb_host_side()`
+only — stayed on its last received pulse frame indefinitely. A brightness key
+mutates `contrast` again → a brand-new diff → fresh send → recovery (matching "the
+manual brightness control brought it back"). Also explains why no
+`USER_SYNC_POLY_DATA failed to send` line ever appeared in the logs.
+
+**Fix (2026-06-18)**: added `static inline bool sync_succeeded(uint8_t ack)`
+(`split_sync.h`, by the `SYNC_*` defines) returning `ack == SYNC_ACK || ack ==
+SYNC_ACK_SIG`, and routed all `sync_and_refresh_displays()` send sites through it
+(POLY / LAYER / LASTKEY, plus the already-correct MRU send for uniformity). A
+genuine give-up now keeps the diff so the send re-fires next pass, as the comments
+always claimed. ⚠️ Never bool-test `send_to_bridge()` directly — every return value
+is non-zero; classify it with `sync_succeeded()`.
+
+**Relevant files**:
+- `keyboards/handwired/polykybd/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
+- `keyboards/handwired/polykybd/split_sync.h` — `sync_succeeded()` helper + `SYNC_*` values
+- `keyboards/handwired/polykybd/bridge_helper.c` — `send_to_bridge()` (returns the ack byte / `SYNC_CRC32_ERR`)
+
+---
+
 ### Split-link integrity: wire noise, the app-level CRC32, retries, and the health counter
 
 > **RESOLVED (2026-06-16): migrated the split UART to full-duplex two-wire — the

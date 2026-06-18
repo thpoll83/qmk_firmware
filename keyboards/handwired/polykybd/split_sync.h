@@ -8,6 +8,7 @@
 #include "mru.h"     // MRU_EMOJI_PACKED / MRU_CAP used by mru_sync_t below
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define SYNC_ACK_SIG    0b01001101
 #define SYNC_ACK        0b11001010
@@ -16,6 +17,16 @@
 typedef struct _poly_sync_reply_t {
     uint8_t ack;
 } poly_sync_reply_t;
+
+// send_to_bridge() returns the slave's reply ack byte, or SYNC_CRC32_ERR after
+// exhausting its retries. ALL of SYNC_ACK / SYNC_ACK_SIG / SYNC_CRC32_ERR are
+// non-zero, so a bare truthiness test — `if(!send_to_bridge(...))` — is NOT a
+// failure check: it is false for the failure value too, so the caller would
+// treat a give-up as success and advance its global snapshot, never re-firing
+// the lost sync. Always classify the return through this helper.
+static inline bool sync_succeeded(uint8_t ack) {
+    return ack == SYNC_ACK || ack == SYNC_ACK_SIG;
+}
 
 
 typedef struct _overlay_sync_t {

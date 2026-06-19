@@ -59,8 +59,12 @@ enum my_keycodes {
       for idx in range(10):
           cog.out(f"KC_LAT{idx}, ")
     ]]]*/
-    KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9, 
+    KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
     //[[[end]]]
+    // Toggle host-driven (daylight/auto) display brightness vs. manual control.
+    // Appended at the end of the QK_KB_0 range so existing keycode values (incl.
+    // KC_LAT*) and the QK_USER_0-based KCL_* range below are NOT renumbered.
+    KC_DAUTO,
     /*[[[cog
         for lang in languages:
             if lang == "ENUS":

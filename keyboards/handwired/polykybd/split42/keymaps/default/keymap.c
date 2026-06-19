@@ -148,7 +148,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      */
     [_SL] = LAYOUT_crkbd(
         KC_DDIM, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
-        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_DBRI,
+        KC_DAUTO,KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_DBRI,
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
         KC_BASE, LBL_TEXT,KC_TOGMODS,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_MAKE, QK_BOOT,

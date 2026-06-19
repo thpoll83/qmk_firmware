@@ -137,6 +137,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_DHLF:                       return U"  " PRIVATE_DISP_HALF;
         case KC_DMIN:                       return U"  " PRIVATE_DISP_DARK;
         case KC_DMAX:                       return U"  " PRIVATE_DISP_BRIGHT;
+        case KC_DAUTO:                      return U" Auto";
         case KC_LANG:                       return (state_flags & MORE_TEXT) != 0 ? U"Lang" : PRIVATE_WORLD;
         case SH_TOGG:                       return U"SwpH";
         case QK_MAKE:                       return U"Make";

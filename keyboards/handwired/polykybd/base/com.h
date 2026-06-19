@@ -3,6 +3,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// Flags for HID SET_BRIGHTNESS (cmd 13), in data[HID_DATA_IDX+1]. 0 (the value
+// a pre-flag host leaves there) == a plain persisted set, preserving the old
+// behaviour. See hid_com.c case 13 and state.c brightness helpers.
+#define BR_FLAG_VOLATILE  (1 << 0)  // daylight/auto value: applied only in auto mode, never persisted
+#define BR_FLAG_AUTO_ON   (1 << 1)  // engage host-driven (auto) brightness mode
+#define BR_FLAG_AUTO_OFF  (1 << 2)  // leave auto mode, revert to persisted manual brightness
+
 enum poly_flag {
     STATUS_DISP_ON      = 1 << 0,
     IDLE_TRANSITION     = 1 << 1,

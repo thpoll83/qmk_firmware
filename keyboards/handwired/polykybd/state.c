@@ -24,6 +24,16 @@ static uint8_t g_user_brightness = FULL_BRIGHT;
 // Active idle (anti-burn-in) display style — persisted alongside lang+brightness.
 static uint8_t g_idle_style = IDLE_STYLE_PULSE;
 
+// Host-driven (daylight/auto) brightness mode. While engaged, the keyboard
+// applies the host's VOLATILE brightness updates and restores to the last auto
+// value after idle/wake — but that value is NEVER persisted to EEPROM. Any
+// deliberate set (keyboard brightness keys, or a host explicit/non-volatile
+// set) leaves auto mode so the manual choice wins until auto is re-engaged.
+// RAM-only: defaults off at boot; the host re-asserts it on connect from its
+// daylight setting.
+static bool    g_auto_brightness      = false;
+static uint8_t g_last_auto_brightness = FULL_BRIGHT;
+
 static bool          g_def_layer_dirty = false;
 static layer_state_t g_def_layer_pending = 0;
 
@@ -236,6 +246,7 @@ void inc_brightness(void) {
         l_state.contrast = FULL_BRIGHT;
     }
     g_user_brightness  = l_state.contrast;
+    g_auto_brightness  = false;   // deliberate change — leave host-auto mode
     g_brightness_dirty = true;
 }
 
@@ -249,6 +260,7 @@ void dec_brightness(void) {
         l_state.contrast = MIN_BRIGHT;
     }
     g_user_brightness  = l_state.contrast;
+    g_auto_brightness  = false;   // deliberate change — leave host-auto mode
     g_brightness_dirty = true;
 }
 
@@ -259,7 +271,42 @@ void dec_brightness(void) {
 void set_user_brightness(uint8_t value) {
     l_state.contrast   = value;
     g_user_brightness  = value;
+    g_auto_brightness  = false;   // deliberate change — leave host-auto mode
     g_brightness_dirty = true;
+}
+
+// True while host-driven (daylight/auto) brightness is engaged.
+bool get_brightness_auto_mode(void) {
+    return g_auto_brightness;
+}
+
+// Engage/disengage host-driven brightness. RAM-only (never persisted); applies
+// the resulting active brightness to the display via the normal sync/refresh.
+void set_brightness_auto_mode(bool on) {
+    g_auto_brightness = on;
+    l_state.contrast  = get_active_brightness();
+}
+
+// Toggle for the KC_DAUTO key.
+void toggle_brightness_auto_mode(void) {
+    set_brightness_auto_mode(!g_auto_brightness);
+}
+
+// Apply a host auto/daylight brightness update. Remembered as the restore
+// target and applied only while auto mode is engaged. NEVER persisted, and it
+// does not change the deliberate user brightness or the auto mode itself.
+void set_auto_brightness_value(uint8_t value) {
+    g_last_auto_brightness = value;
+    if (g_auto_brightness) {
+        l_state.contrast = value;
+    }
+}
+
+// The brightness currently in effect: the last host auto value while auto mode
+// is engaged, otherwise the deliberate user brightness. Idle/suspend/fade
+// restore paths use this so they restore whatever is actually driving.
+uint8_t get_active_brightness(void) {
+    return g_auto_brightness ? g_last_auto_brightness : g_user_brightness;
 }
 
 // Records the intended user brightness without marking settings dirty (boot-time

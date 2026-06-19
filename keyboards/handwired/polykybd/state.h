@@ -151,8 +151,22 @@ void set_user_brightness(uint8_t value);
 // load, slave adopting an awake master's synced contrast).
 void note_user_brightness(uint8_t value);
 
-// The brightness to restore after idle/suspend (tracks unflushed changes).
+// The deliberate user brightness — the value that gets persisted (tracks
+// unflushed changes). Restore paths should use get_active_brightness() instead.
 uint8_t get_user_brightness(void);
+
+// Host-driven (daylight/auto) brightness mode (RAM-only, never persisted).
+bool get_brightness_auto_mode(void);
+void set_brightness_auto_mode(bool on);
+void toggle_brightness_auto_mode(void);
+
+// Apply a host auto/daylight brightness update: volatile, applied only while
+// auto mode is engaged, never persisted, leaves the deliberate brightness intact.
+void set_auto_brightness_value(uint8_t value);
+
+// The brightness currently in effect: auto ? last host auto value : the user
+// brightness. Idle/suspend/fade restore paths use this.
+uint8_t get_active_brightness(void);
 
 // Marks settings (lang + brightness) as needing an EEPROM write at the next flush.
 void mark_settings_dirty(void);

@@ -244,7 +244,7 @@ void sync_and_refresh_displays(void) {
 
         const bool back_from_idle_transition = flag_turned_on(local_flags, global_flags, IDLE_TRANSITION);
         if (back_from_idle_transition) {
-            access_local_state()->contrast = get_user_brightness();
+            access_local_state()->contrast = get_active_brightness();
         }
 
         if(flags!=local_flags) {
@@ -459,7 +459,7 @@ void housekeeping_task_user(void) {
 
             if(elapsed_time_since_update > FADE_OUT_TIME && contrast >= MIN_BRIGHT && (flags & DISP_IDLE)==0) {
                 int32_t time_after = elapsed_time_since_update - FADE_OUT_TIME;
-                int16_t brightness = ((FADE_TRANSITION_TIME - time_after) * get_user_brightness()) / FADE_TRANSITION_TIME;
+                int16_t brightness = ((FADE_TRANSITION_TIME - time_after) * get_active_brightness()) / FADE_TRANSITION_TIME;
 
                 //transition to pulsing mode
                 if(brightness<=MIN_BRIGHT) {
@@ -1592,6 +1592,13 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_DBRI:
             inc_brightness();
             break;
+        case KC_DAUTO:
+            // Toggle host-driven (daylight/auto) brightness vs. manual control.
+            // This switch is inside `if (!record->event.pressed)`, so it already
+            // runs once per keypress (on release) — no extra guard needed.
+            toggle_brightness_auto_mode();
+            request_disp_refresh();
+            break;
         case KC_STORE_EE:
             // Manual "commit everything to EEPROM" — for users who want to be
             // sure their changes survive a hard power-cut without suspending.
@@ -1876,7 +1883,7 @@ bool display_wakeup(keyrecord_t* record) {
         if(local_state->contrast==DISP_OFF && (local_state->flags&DEAD_KEY_ON_WAKEUP)!=0) {
             accept_keypress = get_time_since_last_update()<= TURN_OFF_TIME;
         }
-        local_state->contrast = get_user_brightness();
+        local_state->contrast = get_active_brightness();
         local_state->flags &= ~((uint8_t)DISP_IDLE);
         local_state->flags |= STATUS_DISP_ON;
         reset_idle_jitter();   // fresh, centred idle session next time
@@ -2111,7 +2118,7 @@ void suspend_wakeup_init_kb(void) {
     poly_sync_t* local_state = access_local_state();
     local_state->flags |= STATUS_DISP_ON;
     local_state->flags &= ~((uint8_t)DISP_IDLE);
-    local_state->contrast = get_user_brightness();
+    local_state->contrast = get_active_brightness();
     reset_idle_jitter();
     set_last_update(0);
 

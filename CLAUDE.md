@@ -153,7 +153,12 @@ pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
     fight `kdisp_idle()` and redraw the awake chrome) — the keycaps already hold the
     last centred awake render when idle begins, and `kdisp_idle()` owns all idle
     visuals from there. `render_idle_key()` draws **only the resting normal legend** —
-    no shift/AltGr preview, no overlay image, no tab/MRU chrome.
+    no shift/AltGr preview, no overlay image, no tab/MRU chrome. The relocated keycode
+    is resolved through **`display_keycode_at()`** — the shared helper (also used by the
+    awake `update_displays`) that honours the active momentary stack **and the default
+    layer** (`def_layer`, folded in so a Colemak/Neo base shows its own legends, not
+    `_BL`) with a one-level transparent fallback — so a jittered key matches what was on
+    screen rather than snapping to the base layer.
   - **The travel range is derived per glyph from its own on-screen slack** — there is
     deliberately **no global `±N` offset envelope**. `render_idle_key()` measures the
     legend with `kdisp_gfx_text_bbox()` (full x+y box, mirroring the draw's cursor

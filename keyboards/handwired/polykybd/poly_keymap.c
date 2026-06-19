@@ -1104,6 +1104,23 @@ uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
     return poly_keycode_at(layer, key.row, key.col);
 }
 
+// Resolve the keycode whose legend a physical key is currently showing, honouring the
+// active layer stack with a one-level transparent fallback. The single source of truth
+// for both the awake render (update_displays) and the idle relocation (kdisp_idle), so
+// a jittered legend always matches what was last drawn awake instead of snapping to the
+// base layer. The effective state folds in the default layer (`def_layer`, tracked
+// separately from the momentary `layer` stack — e.g. a Colemak/Neo base) so a key with
+// no momentary layer active still shows its default-layer legend, not _BL.
+static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t col) {
+    layer_state_t eff = lyr->layer | ((layer_state_t)1 << lyr->def_layer);
+    uint8_t layer = get_highest_layer(eff);
+    uint16_t kc = poly_keycode_at(layer, row, col);
+    if (kc == KC_TRNS) {
+        kc = poly_keycode_at(get_highest_layer(eff & ~((layer_state_t)1 << layer)), row, col);
+    }
+    return kc;
+}
+
 // Roll a per-glyph idle jitter offset: a uniform random position within the legend's
 // OWN on-screen slack, measured from its bounding box at the draw origin (ox/oy). The
 // range is glyph-derived — never a global cap — so a slim "i" roams its full free
@@ -1219,9 +1236,7 @@ void update_displays(enum refresh_mode mode) {
             }
             else {
                 if (disp_idx != 255) {
-                    uint8_t layer = get_highest_layer(local_layer->layer);
-                    uint16_t highest_kc = poly_keycode_at(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
-                    keycode = (highest_kc == KC_TRNS) ? poly_keycode_at(get_highest_layer(local_layer->layer&~(1<<layer)),r + offset,c) : highest_kc;
+                    keycode = display_keycode_at(local_layer, r + offset, c);
                     kdisp_enable(true);
                     kdisp_set_contrast((uint8_t)(local_state->contrast-1));
                     if(keycode!=KC_TRNS) {
@@ -1318,7 +1333,8 @@ void kdisp_idle(uint8_t contrast) {
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t skip = 0;
     const bool jitter = get_local_state()->idle_style == IDLE_STYLE_JITTER;
-    const led_t led_state = get_local_layer()->led_state;
+    const poly_layer_t* local_layer = get_local_layer();
+    const led_t led_state = local_layer->led_state;
     sr_shift_out_buffer_latch(disp_row_0.bitmask, sizeof(struct display_info));
 
     //uint8_t idx = 0;
@@ -1328,19 +1344,26 @@ void kdisp_idle(uint8_t contrast) {
 
             //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
             //except there was a leading and missing physical key (KC_NO on base layer)
-            uint16_t keycode = keymaps[_BL][r + offset][c];
-            if (keycode == KC_NO) {
+            // base_kc drives the physical-layout skip and the per-key pulse phase (both
+            // layout-, not layer-, dependent); the relocated legend itself is resolved
+            // from the active layer below so it matches the awake render.
+            uint16_t base_kc = keymaps[_BL][r + offset][c];
+            if (base_kc == KC_NO) {
                 skip++;
             } else {
                 if (disp_idx != 255) {
-                    uint8_t idle_brightness = to_brightness((contrast+(c%3+r)*keycode+offset+r)%50);
+                    uint8_t idle_brightness = to_brightness((contrast+(c%3+r)*base_kc+offset+r)%50);
                     if(idle_brightness==0) {
                         // Lit -> dark edge in JITTER style: relocate this key now,
-                        // while it is invisible. render_idle_key() rolls a fresh offset
-                        // within this glyph's own slack; the currently selected display
-                        // is this key's, so it draws straight into it.
-                        if(jitter && !s_idle_was_dark[r][c] && keycode != KC_TRNS) {
-                            render_idle_key(keycode, led_state, s_idle_roll++);
+                        // while it is invisible. The legend is resolved from the active
+                        // layer (display_keycode_at) so it matches the awake render, not
+                        // the base layer; render_idle_key() rolls a fresh offset within
+                        // this glyph's slack and draws into the currently selected display.
+                        if(jitter && !s_idle_was_dark[r][c]) {
+                            uint16_t kc = display_keycode_at(local_layer, r + offset, c);
+                            if(kc != KC_TRNS) {
+                                render_idle_key(kc, led_state, s_idle_roll++);
+                            }
                         }
                         s_idle_was_dark[r][c] = 1;
                         kdisp_enable(false);

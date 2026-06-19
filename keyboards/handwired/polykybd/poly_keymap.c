@@ -1144,14 +1144,17 @@ static void roll_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, uint32_
     *dy = (yhi < ylo) ? 0 : jitter_axis(seed, 0x1000u, (int8_t)ylo, (int8_t)yhi);
 }
 
-// Idle (anti-burn-in) per-key render: draws ONLY the resting normal legend — no
-// shift/AltGr preview, no overlay image, no tab/MRU chrome — relocated to a fresh
-// random spot within THIS glyph's own slack (roll_idle_offset, seeded by `seed`), so
-// it is always fully visible. Renders into the currently selected display's buffer, so
-// it works from inside kdisp_idle()'s shift-register walk (the caller selects the
-// key). Keeps all idle-mode rendering in one place instead of threading an "idle" flag
-// through the awake path.
-static void render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
+// Idle (anti-burn-in) per-key relocation: redraws ONLY the resting normal legend — no
+// shift/AltGr preview, no overlay image, no tab/MRU chrome — at a fresh random spot
+// within THIS glyph's own slack (roll_idle_offset, seeded by `seed`), always fully
+// visible. Renders into the currently selected display's buffer, so it works from
+// inside kdisp_idle()'s shift-register walk (the caller selects the key, with the panel
+// switched OFF, so the move is invisible). Returns false WITHOUT touching the buffer
+// when the keycode has no plain-text legend (a language flag, emoji, region tab, MRU
+// control, …): those can't be jittered (full-bleed images), so we leave their current
+// frame in place instead of blanking it — e.g. the language-layer flags stay put and
+// keep pulsing rather than disappearing on the first idle cycle.
+static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     const poly_sync_t* local_state = get_local_state();
     uint32_t unimap[2] = {0, 0};
     const uint32_t* text = to_static_text(keycode, state);
@@ -1165,15 +1168,17 @@ static void render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
         unimap[0] = unicode_map[chr];
         text = unimap;
     }
-    kdisp_set_buffer(0x00);
-    if (text != NULL && text[0] != 0) {
-        int8_t dx, dy;
-        roll_idle_offset(text, BUFFER_X, 23, seed, &dx, &dy);
-        kdisp_set_draw_offset(dx, dy);
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
-        kdisp_set_draw_offset(0, 0);
+    if (text == NULL || text[0] == 0) {
+        return false;   // no text legend — keep the key's current frame
     }
+    int8_t dx, dy;
+    roll_idle_offset(text, BUFFER_X, 23, seed, &dx, &dy);
+    kdisp_set_buffer(0x00);
+    kdisp_set_draw_offset(dx, dy);
+    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
+    kdisp_set_draw_offset(0, 0);
     kdisp_send_buffer();
+    return true;
 }
 
 // Per-key "was dark on the previous kdisp_idle() pass" latch (this half only), so a
@@ -1354,19 +1359,23 @@ void kdisp_idle(uint8_t contrast) {
                 if (disp_idx != 255) {
                     uint8_t idle_brightness = to_brightness((contrast+(c%3+r)*base_kc+offset+r)%50);
                     if(idle_brightness==0) {
-                        // Lit -> dark edge in JITTER style: relocate this key now,
-                        // while it is invisible. The legend is resolved from the active
-                        // layer (display_keycode_at) so it matches the awake render, not
-                        // the base layer; render_idle_key() rolls a fresh offset within
-                        // this glyph's slack and draws into the currently selected display.
-                        if(jitter && !s_idle_was_dark[r][c]) {
+                        // Lit -> dark edge in JITTER style: relocate this key now. Turn
+                        // the panel OFF *first*, THEN write the new frame while it is
+                        // dark — so the move is never seen; the glyph reappears already
+                        // at its new spot on the next bright cycle (writing before the
+                        // off-switch made it flash at the old contrast — a visible jump
+                        // just before the key dimmed out). The legend is resolved from
+                        // the active layer (display_keycode_at) so it matches the awake
+                        // render, not the base layer.
+                        bool dark_edge = !s_idle_was_dark[r][c];
+                        s_idle_was_dark[r][c] = 1;
+                        kdisp_enable(false);
+                        if(jitter && dark_edge) {
                             uint16_t kc = display_keycode_at(local_layer, r + offset, c);
                             if(kc != KC_TRNS) {
                                 render_idle_key(kc, led_state, s_idle_roll++);
                             }
                         }
-                        s_idle_was_dark[r][c] = 1;
-                        kdisp_enable(false);
                     } else {
                         s_idle_was_dark[r][c] = 0;
                         kdisp_enable(true);

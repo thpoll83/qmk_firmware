@@ -136,12 +136,18 @@ pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
   - `kdisp_idle()` already computes a **per-key brightness** (`to_brightness((contrast
     + per-key phase) % 50)`) and walks every key on this half with the shift register
     selecting each in turn. On the **lit→dark edge** (`idle_brightness==0` and the
-    `s_idle_was_dark[r][c]` latch was clear) in JITTER style, it rolls a per-key
-    `(dx,dy)` via `jitter_axis(s_idle_roll++, …)` and calls **`render_idle_key(keycode,
-    led_state, dx, dy)`** to redraw *that one key* straight into the currently selected
-    display. The key is dark at that moment, so the move is invisible; it reappears at
-    the new spot on its next bright cycle (~once per ~15 s per key). `s_idle_was_dark`
-    gates it to once per dark episode (a 1-bit-per-key latch, this-half-only).
+    `s_idle_was_dark[r][c]` latch was clear) in JITTER style it **switches that key's
+    panel OFF first, then** calls **`render_idle_key(kc, led_state, seed)`** to redraw
+    *that one key* straight into the currently selected (now-dark) display. Writing the
+    new frame *after* the off-switch is what makes the move invisible — the glyph
+    reappears already at its new spot on the next bright cycle (~once per ~15 s per key);
+    writing before the off-switch flashed it at the old contrast first (a visible jump
+    just before the key dimmed out). `s_idle_was_dark` gates it to once per dark episode
+    (a 1-bit-per-key latch, this-half-only). `render_idle_key()` **returns false without
+    touching the buffer** when the keycode has no plain-text legend (a language flag,
+    emoji, region tab, MRU control — full-bleed images that can't be jittered), so those
+    keys keep their current frame and just pulse instead of being blanked (the
+    language-layer flags no longer disappear on the first idle cycle).
   - **No shared offset, so nothing extra crosses the UART.** Each half runs
     `kdisp_idle()` on its own keys with the synced pulse `contrast`; only the **style
     bit** is synced (`poly_sync_t.idle_style`, set from `housekeeping_task_user()` on

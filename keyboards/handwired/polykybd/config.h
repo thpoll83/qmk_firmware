@@ -130,6 +130,10 @@
 // "i" roams its full free width while a wide "w" or a full-width CJK legend moves only
 // as far as it can without clipping. A fixed ±N cap would be counter-productive here
 // (it would throttle the slim glyph and edge-bias the wide one).
+// How often a key relocates: the breathing curve dips dark ~twice per ~15 s pulse
+// cycle, so we'd otherwise move each key ~every 7.5 s. Relocate only every Nth dark
+// episode to slow the drift (3 -> ~every 22 s per key). Raise for a calmer display.
+#define IDLE_JITTER_PERIOD 3
 
 //######################################
 //#          Overlays specific         #

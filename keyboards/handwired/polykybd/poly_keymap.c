@@ -1182,16 +1182,23 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
 }
 
 // Per-key "was dark on the previous kdisp_idle() pass" latch (this half only), so a
-// key relocates exactly once per pulse-dark episode rather than every pass while it
+// key relocates at most once per pulse-dark episode rather than every pass while it
 // is dark. Reset on every wake/suspend/stop-idle path (reset_idle_jitter) so a fresh
 // idle session starts from the centred awake legend and re-relocates cleanly.
 static uint8_t s_idle_was_dark[MATRIX_ROWS_PER_SIDE][MATRIX_COLS];
+// Per-key dark-episode counter: the breathing curve dips dark ~twice per ~15 s pulse
+// cycle, so relocating on every dark edge would move each key ~every 7.5 s. We only
+// relocate every IDLE_JITTER_PERIOD-th dark episode to slow that down (the count is
+// taken mod the period, so a fresh session relocates on the very first episode then
+// every Nth after — it moves off-centre promptly, then drifts more slowly).
+static uint8_t s_idle_episode[MATRIX_ROWS_PER_SIDE][MATRIX_COLS];
 // Rolling seed for the per-key offset hash — bumped on every relocation so each lands
 // somewhere new (no per-key PRNG state to keep).
 static uint16_t s_idle_roll = 0;
 
 void reset_idle_jitter(void) {
     memset(s_idle_was_dark, 0, sizeof(s_idle_was_dark));
+    memset(s_idle_episode, 0, sizeof(s_idle_episode));
 }
 
 void update_displays(enum refresh_mode mode) {
@@ -1370,7 +1377,9 @@ void kdisp_idle(uint8_t contrast) {
                         bool dark_edge = !s_idle_was_dark[r][c];
                         s_idle_was_dark[r][c] = 1;
                         kdisp_enable(false);
-                        if(jitter && dark_edge) {
+                        // Only relocate every IDLE_JITTER_PERIOD-th dark episode, so the
+                        // legend drifts slowly rather than on every ~7.5 s dark valley.
+                        if(jitter && dark_edge && (s_idle_episode[r][c]++ % IDLE_JITTER_PERIOD) == 0) {
                             uint16_t kc = display_keycode_at(local_layer, r + offset, c);
                             if(kc != KC_TRNS) {
                                 render_idle_key(kc, led_state, s_idle_roll++);

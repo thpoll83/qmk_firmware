@@ -19,6 +19,10 @@
 
 int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c, int8_t cy_radius);
 
+// Sets a global pixel offset added to every subsequent gfx-char/text draw, used by
+// the idle "jitter" anti-burn-in relocation redraw. Pass 0,0 to disable.
+void kdisp_set_draw_offset(int8_t ox, int8_t oy);
+
 void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text);
 
 void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius);
@@ -29,6 +33,13 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
 // caller can place adjacent text clear of it (e.g. a shift-preview next to a wide
 // base glyph).  Both are 0 for empty/blank text.
 void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text, int8_t *out_min, int8_t *out_max);
+
+// Full pixel bounding box of `text` relative to the draw origin (x from the origin
+// x, y from the baseline), mirroring every cursor rule — and the per-glyph vertical
+// shift — of kdisp_write_gfx_text_cy. Lets a caller clamp a draw offset so the
+// glyph stays fully on-screen (idle anti-burn-in jitter). All four are 0 for blank text.
+void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,
+                         int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax);
 
 // Vertical (rotated -90°, bottom-to-top) single-font text, centred in the visible
 // height with its baseline along x = col_x.  `selected` draws it as dark text on

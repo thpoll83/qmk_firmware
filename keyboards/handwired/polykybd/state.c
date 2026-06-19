@@ -21,6 +21,9 @@ static bool g_brightness_dirty = false;   // lang + brightness need a flush
 // snapshot instead of the live contrast.
 static uint8_t g_user_brightness = FULL_BRIGHT;
 
+// Active idle (anti-burn-in) display style — persisted alongside lang+brightness.
+static uint8_t g_idle_style = IDLE_STYLE_PULSE;
+
 static bool          g_def_layer_dirty = false;
 static layer_state_t g_def_layer_pending = 0;
 
@@ -165,9 +168,10 @@ void copy_global_latin_table(const latin_sync_t* value) {
 }
 
 
-// Writes only lang+brightness+unused (4 bytes) to EEPROM.
+// Writes only lang+brightness+idle_style+unused (4 bytes) to EEPROM.
 void save_user_settings(void) {
-    const poly_eeconf_t ee = { .lang = l_state.lang, .brightness = (uint8_t)(~g_user_brightness), .unused = 0 };
+    const poly_eeconf_t ee = { .lang = l_state.lang, .brightness = (uint8_t)(~g_user_brightness),
+                               .idle_style = g_idle_style, .unused = 0 };
     eeconfig_update_user_datablock(&ee, 0, offsetof(poly_eeconf_t, latin_ex));
 }
 
@@ -214,6 +218,9 @@ poly_eeconf_t load_user_eeconf(void) {
     ee.brightness = ~ee.brightness;
     if(ee.brightness>FULL_BRIGHT) {
         ee.brightness = FULL_BRIGHT;
+    }
+    if(ee.idle_style >= IDLE_STYLE_COUNT) {
+        ee.idle_style = IDLE_STYLE_PULSE;   // unwritten/garbage EEPROM -> safe default
     }
     return ee;
 }
@@ -270,6 +277,26 @@ uint8_t get_user_brightness(void) {
 // Marks settings (lang + brightness) as needing an EEPROM write at the next flush.
 void mark_settings_dirty(void) {
     g_brightness_dirty = true;
+}
+
+// The active idle (anti-burn-in) display style.
+uint8_t get_idle_style(void) {
+    return g_idle_style;
+}
+
+// Sets the idle style and marks the settings block dirty (flushed at the next
+// suspend / store). Out-of-range values are ignored.
+void set_idle_style(uint8_t style) {
+    if (style >= IDLE_STYLE_COUNT) {
+        return;
+    }
+    g_idle_style = style;
+    g_brightness_dirty = true;
+}
+
+// Records the idle style without marking settings dirty (boot-time EEPROM load).
+void note_idle_style(uint8_t style) {
+    g_idle_style = (style < IDLE_STYLE_COUNT) ? style : IDLE_STYLE_PULSE;
 }
 
 // Defers a default-layer EEPROM write — safe to call from split sync handlers.

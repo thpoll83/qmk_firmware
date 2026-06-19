@@ -7,6 +7,15 @@
 #include "quantum.h"
 #include "mru.h"
 
+// Idle (anti-burn-in) display style, persisted in poly_eeconf_t.idle_style and
+// toggled over HID (cmd 28). PULSE is the legacy contrast-only breathing; JITTER
+// adds a per-cycle relocation of the legend so the lit pixels migrate over time.
+enum poly_idle_style {
+    IDLE_STYLE_PULSE  = 0,
+    IDLE_STYLE_JITTER = 1,
+    IDLE_STYLE_COUNT
+};
+
 typedef struct _poly_layer_t {
     uint32_t      crc32;
     layer_state_t layer;
@@ -27,6 +36,12 @@ typedef struct _poly_sync_t {
     uint8_t  emj_page;
     // Language layer page — synced so both halves show the same page of languages.
     uint8_t  lang_page;
+    // Anti-burn-in idle jitter offset for the rendered legend (signed pixels).
+    // 0/0 in the legacy pulse style; the master picks a new small random offset
+    // each pulse cycle in JITTER style and syncs it so both halves relocate in
+    // lockstep. update_displays() re-renders only when these change.
+    int8_t   idle_dx;
+    int8_t   idle_dy;
 } poly_sync_t;
 
 typedef struct _poly_last_t {
@@ -42,13 +57,19 @@ typedef struct _latin_sync_t {
 typedef struct _poly_eeconf_t {
     uint8_t lang;
     uint8_t brightness;
-    uint16_t unused;
+    uint8_t idle_style;   // enum poly_idle_style (carved out of the former uint16_t unused)
+    uint8_t unused;
     uint8_t latin_ex[26];
     // MRU recents for the emoji / language selection layers. Persisted only on a
     // power-suspension event (and the host save command), and only when dirty.
     // Emoji are bit-packed 14-bit category|offset codes; languages are LANG_* bytes.
     uint8_t  mru_emoji[MRU_EMOJI_PACKED];
     uint8_t  mru_lang[MRU_CAP];
+    // Restores the trailing byte the former `uint16_t unused` added via 2-byte
+    // struct alignment, so splitting it into idle_style+unused keeps sizeof at
+    // EECONFIG_USER_DATA_SIZE and leaves latin_ex/mru at their original offsets
+    // (existing EEPROMs stay readable).
+    uint8_t  reserved;
 } poly_eeconf_t;
 
 
@@ -136,6 +157,16 @@ uint8_t get_user_brightness(void);
 
 // Marks settings (lang + brightness) as needing an EEPROM write at the next flush.
 void mark_settings_dirty(void);
+
+// The active idle (anti-burn-in) display style — see enum poly_idle_style.
+uint8_t get_idle_style(void);
+
+// Sets the idle style and marks settings dirty (deferred EEPROM write). Out-of-range
+// values are ignored. Used by the HID toggle (cmd 28).
+void set_idle_style(uint8_t style);
+
+// Records the idle style without marking settings dirty (boot-time EEPROM load).
+void note_idle_style(uint8_t style);
 
 // Queues a default-layer EEPROM write — safe from a sync handler. Written at the next flush.
 void defer_default_layer_save(layer_state_t def_layer);

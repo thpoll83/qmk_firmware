@@ -122,19 +122,14 @@
 //10 min
 #define TURN_OFF_TIME 1200000
 
-// Idle "jitter" style: while pulsing, each key independently relocates its own
-// legend to a fresh random offset the moment that key's out-of-phase pulse dims it
-// to black (kdisp_idle), so the lit pixels migrate and don't burn in — keys roam
-// individually rather than in lockstep. These are only the *proposed* offset
-// envelope (a deliberately generous range); render_idle_key() then clamps the
-// offset per key to that glyph's measured bounding box, so the legend is always
-// fully on-screen regardless of these values and of the script (Latin, CJK,
-// Arabic, …). A glyph with no slack in an axis simply does not move in it. So tune
-// these for how far small legends roam, not for clip-safety.
-#define IDLE_JITTER_DX_MIN (-10)
-#define IDLE_JITTER_DX_MAX (18)
-#define IDLE_JITTER_DY_MIN (-6)
-#define IDLE_JITTER_DY_MAX (10)
+// Idle "jitter" style: while pulsing, each key independently relocates its own legend
+// to a fresh random spot the moment that key's out-of-phase pulse dims it to black
+// (kdisp_idle), so the lit pixels migrate and don't burn in — keys roam individually
+// rather than in lockstep. There is deliberately NO global offset envelope: the travel
+// range is derived per glyph from its own on-screen slack (roll_idle_offset), so a slim
+// "i" roams its full free width while a wide "w" or a full-width CJK legend moves only
+// as far as it can without clipping. A fixed ±N cap would be counter-productive here
+// (it would throttle the slim glyph and edge-bias the wide one).
 
 //######################################
 //#          Overlays specific         #

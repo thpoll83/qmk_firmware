@@ -1104,33 +1104,37 @@ uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
     return poly_keycode_at(layer, key.row, key.col);
 }
 
-// Clamp a desired idle jitter offset so the legend's bounding box (measured at the
-// draw origin ox/oy) stays inside the visible window [BUFFER_X, BUFFER_X+SCREEN_WIDTH-1]
-// x [0, SCREEN_HEIGHT-1]. Glyph-driven, so it is correct for any script: a narrow
-// Latin letter may travel far, a full-width CJK glyph barely or not at all (clamped
-// to 0 in that axis) — the legend is never partially cut off at any offset.
-static void clamp_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, int8_t* dx, int8_t* dy) {
+// Roll a per-glyph idle jitter offset: a uniform random position within the legend's
+// OWN on-screen slack, measured from its bounding box at the draw origin (ox/oy). The
+// range is glyph-derived — never a global cap — so a slim "i" roams its full free
+// width while a wide "w" stays within its small margin, each using all (and only) the
+// space it actually has. A global ±N envelope would be counter-productive here: it
+// would throttle the slim glyph (lots of slack, but capped) and edge-bias the wide one
+// (most rolls clamp to the same boundary). A glyph with no slack in an axis simply
+// doesn't move in it. The result is always fully on-screen for any script, so no
+// separate clamp step is needed.
+static void roll_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, uint32_t seed,
+                             int8_t* dx, int8_t* dy) {
     int8_t xmin, xmax, ymin, ymax;
     kdisp_gfx_text_bbox(ALL_FONTS, ALL_FONT_SIZE, text, &xmin, &xmax, &ymin, &ymax);
     int16_t axmin = ox + xmin, axmax = ox + xmax;   // glyph extent at the un-jittered origin
     int16_t aymin = oy + ymin, aymax = oy + ymax;
-    int16_t lo, hi;
-    lo = (int16_t)BUFFER_X - axmin;                          // keep left edge >= BUFFER_X
-    hi = (int16_t)(BUFFER_X + SCREEN_WIDTH - 1) - axmax;     // keep right edge <= last visible col
-    *dx = (hi < lo) ? 0 : (int8_t)PK_MIN(PK_MAX((int16_t)*dx, lo), hi);
-    lo = -aymin;                                             // keep top >= 0
-    hi = (int16_t)(SCREEN_HEIGHT - 1) - aymax;               // keep bottom <= last visible row
-    *dy = (hi < lo) ? 0 : (int8_t)PK_MIN(PK_MAX((int16_t)*dy, lo), hi);
+    int16_t xlo = (int16_t)BUFFER_X - axmin;                      // keep left edge >= BUFFER_X
+    int16_t xhi = (int16_t)(BUFFER_X + SCREEN_WIDTH - 1) - axmax; // keep right edge on-screen
+    int16_t ylo = -aymin;                                         // keep top >= 0
+    int16_t yhi = (int16_t)(SCREEN_HEIGHT - 1) - aymax;           // keep bottom on-screen
+    *dx = (xhi < xlo) ? 0 : jitter_axis(seed, 0x0000u, (int8_t)xlo, (int8_t)xhi);
+    *dy = (yhi < ylo) ? 0 : jitter_axis(seed, 0x1000u, (int8_t)ylo, (int8_t)yhi);
 }
 
 // Idle (anti-burn-in) per-key render: draws ONLY the resting normal legend — no
-// shift/AltGr preview, no overlay image, no tab/MRU chrome — relocated by the given
-// (dx,dy) offset, clamped per glyph so it is always fully visible. Renders into the
-// currently selected display's buffer, so it works both from update_displays() and
-// from inside kdisp_idle()'s shift-register walk (the caller selects the key). Keeps
-// all idle-mode rendering in one place instead of threading an "idle" flag through
-// the awake path.
-static void render_idle_key(uint16_t keycode, led_t state, int8_t dx, int8_t dy) {
+// shift/AltGr preview, no overlay image, no tab/MRU chrome — relocated to a fresh
+// random spot within THIS glyph's own slack (roll_idle_offset, seeded by `seed`), so
+// it is always fully visible. Renders into the currently selected display's buffer, so
+// it works from inside kdisp_idle()'s shift-register walk (the caller selects the
+// key). Keeps all idle-mode rendering in one place instead of threading an "idle" flag
+// through the awake path.
+static void render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     const poly_sync_t* local_state = get_local_state();
     uint32_t unimap[2] = {0, 0};
     const uint32_t* text = to_static_text(keycode, state);
@@ -1146,7 +1150,8 @@ static void render_idle_key(uint16_t keycode, led_t state, int8_t dx, int8_t dy)
     }
     kdisp_set_buffer(0x00);
     if (text != NULL && text[0] != 0) {
-        clamp_idle_offset(text, BUFFER_X, 23, &dx, &dy);
+        int8_t dx, dy;
+        roll_idle_offset(text, BUFFER_X, 23, seed, &dx, &dy);
         kdisp_set_draw_offset(dx, dy);
         kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
         kdisp_set_draw_offset(0, 0);
@@ -1331,15 +1336,11 @@ void kdisp_idle(uint8_t contrast) {
                     uint8_t idle_brightness = to_brightness((contrast+(c%3+r)*keycode+offset+r)%50);
                     if(idle_brightness==0) {
                         // Lit -> dark edge in JITTER style: relocate this key now,
-                        // while it is invisible. The currently selected display is
-                        // this key's, so render_idle_key() draws straight into it.
+                        // while it is invisible. render_idle_key() rolls a fresh offset
+                        // within this glyph's own slack; the currently selected display
+                        // is this key's, so it draws straight into it.
                         if(jitter && !s_idle_was_dark[r][c] && keycode != KC_TRNS) {
-                            int8_t dx = jitter_axis(s_idle_roll, ((uint32_t)(r*MATRIX_COLS+c)<<1)|0u,
-                                                    IDLE_JITTER_DX_MIN, IDLE_JITTER_DX_MAX);
-                            int8_t dy = jitter_axis(s_idle_roll, ((uint32_t)(r*MATRIX_COLS+c)<<1)|1u,
-                                                    IDLE_JITTER_DY_MIN, IDLE_JITTER_DY_MAX);
-                            s_idle_roll++;
-                            render_idle_key(keycode, led_state, dx, dy);
+                            render_idle_key(keycode, led_state, s_idle_roll++);
                         }
                         s_idle_was_dark[r][c] = 1;
                         kdisp_enable(false);

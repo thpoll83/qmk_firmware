@@ -154,19 +154,20 @@ pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
     last centred awake render when idle begins, and `kdisp_idle()` owns all idle
     visuals from there. `render_idle_key()` draws **only the resting normal legend** —
     no shift/AltGr preview, no overlay image, no tab/MRU chrome.
-  - **The offset is clamped per key to that glyph's own bounds**, so the legend is
-    *always fully visible* at every jitter position — for any script, not just
-    Latin. `render_idle_key()` measures the legend with `kdisp_gfx_text_bbox()`
-    (full x+y box, mirroring the draw's cursor rules and per-glyph yAdvance shift;
-    `kdisp_gfx_text_bounds()` is now a wrapper over it) and `clamp_idle_offset()`
-    bounds the rolled `(dx,dy)` so the box stays inside the visible window
-    `[BUFFER_X, BUFFER_X+SCREEN_WIDTH-1] × [0, SCREEN_HEIGHT-1]` (= `[28,99]×[0,39]`).
-    A glyph with no slack in an axis (e.g. a full-width CJK legend) simply doesn't
-    move in it — no clipping, no special-casing. `SET_PIXEL_CLIPPED` in
-    `disp_array.c` remains the memory-safety backstop, but is not relied on for
-    visibility. The `IDLE_JITTER_DX/DY_*` envelope in `config.h` is only the
-    *proposed* range (the per-key clamp makes it clip-safe) — tune it for how far
-    small legends roam.
+  - **The travel range is derived per glyph from its own on-screen slack** — there is
+    deliberately **no global `±N` offset envelope**. `render_idle_key()` measures the
+    legend with `kdisp_gfx_text_bbox()` (full x+y box, mirroring the draw's cursor
+    rules and per-glyph yAdvance shift; `kdisp_gfx_text_bounds()` is now a wrapper over
+    it) and `roll_idle_offset()` rolls a **uniform random position within that glyph's
+    free space** inside the visible window `[BUFFER_X, BUFFER_X+SCREEN_WIDTH-1] × [0,
+    SCREEN_HEIGHT-1]` (= `[28,99]×[0,39]`). So a slim `i` roams its full free width
+    while a wide `w` (or a full-width CJK legend) moves only as far as it can without
+    clipping — each uses all *and only* the room it has, for any script. A fixed cap
+    would be counter-productive: it would throttle the slim glyph and edge-bias the
+    wide one (most rolls clamping to the same boundary). A glyph with no slack in an
+    axis simply doesn't move in it — no clipping, no special-casing. `SET_PIXEL_CLIPPED`
+    in `disp_array.c` remains the memory-safety backstop, but is not relied on for
+    visibility.
   - The per-key latch is cleared by **`reset_idle_jitter()`** on every wake/suspend
     path (`display_wakeup`, `poly_suspend`, `suspend_wakeup_init_kb`, cmd 15
     stop-idle), so a fresh idle session starts from the centred awake legend and

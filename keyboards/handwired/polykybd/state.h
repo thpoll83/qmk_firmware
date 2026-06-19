@@ -36,12 +36,11 @@ typedef struct _poly_sync_t {
     uint8_t  emj_page;
     // Language layer page — synced so both halves show the same page of languages.
     uint8_t  lang_page;
-    // Anti-burn-in idle jitter offset for the rendered legend (signed pixels).
-    // 0/0 in the legacy pulse style; the master picks a new small random offset
-    // each pulse cycle in JITTER style and syncs it so both halves relocate in
-    // lockstep. update_displays() re-renders only when these change.
-    int8_t   idle_dx;
-    int8_t   idle_dy;
+    // Active idle (anti-burn-in) style, synced so the slave jitters in lockstep
+    // with the master. In JITTER style each half relocates its own keys' legends
+    // independently as they pulse dark (see kdisp_idle); there is no shared offset
+    // to sync — only the style bit (and the pulse `contrast`) cross the link.
+    uint8_t  idle_style;
 } poly_sync_t;
 
 typedef struct _poly_last_t {

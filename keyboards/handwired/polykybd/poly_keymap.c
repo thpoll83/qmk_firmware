@@ -1064,9 +1064,13 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
     if (g) {
         // The glyph is taller than the keycap, so centre it vertically — the
         // empty top/bottom margins clip off and the flag content fills the height.
+        // Compensate BOTH the glyph's x and y bearing (kdisp_write_gfx_char draws
+        // at x+xOffset, y+yOffset) so the flag's content lands flush at
+        // FLAG_LEFT_X regardless of the glyph's left bearing (was x-shifted).
         const int8_t fh  = (int8_t)pgm_read_byte(&g->height);
         const int8_t fyo = (int8_t)pgm_read_byte(&g->yOffset);
-        kdisp_write_gfx_char(g_all_fonts, g_all_font_count, FLAG_LEFT_X,
+        const int8_t fxo = (int8_t)pgm_read_byte(&g->xOffset);
+        kdisp_write_gfx_char(g_all_fonts, g_all_font_count, (int8_t)(FLAG_LEFT_X - fxo),
                              (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
                              FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
     }

@@ -443,6 +443,13 @@ void housekeeping_task_user(void) {
     }
     fw_staging_process_deferred();
 
+    // Drain the slave's deferred FONTPACK reload (the ~50 ms full-body verify was
+    // moved off the COMMIT split-transaction callback so it can't overrun the
+    // ~20 ms window). Refresh the keycaps once the new pack's fonts are live.
+    if (fw_staging_process_fontpack_reload()) {
+        request_disp_refresh();
+    }
+
     // While a fw_up is in progress, skip EEPROM saves (wear-leveling consolidate
     // is ~100 ms IRQ-off) and the display refresh path (slave update_displays
     // can be ~50-100 ms over SPI, master state-push uses 10 retries × 80 ms).

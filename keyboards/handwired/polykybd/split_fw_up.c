@@ -150,7 +150,11 @@ void user_sync_fw_up_chunk_handler(uint8_t in_len, const void* in_data, uint8_t 
 // can be returned before the split link goes dark during the reboot.
 void user_sync_fw_up_commit_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (out_len != sizeof(poly_sync_reply_t) || !out_data) return;
-    bool ok = fw_staging_finalize();
+    // Defer the heavy FONTPACK reload out of this transaction callback: the
+    // ~50 ms full-body verify+reassemble overran the ~20 ms split-transaction
+    // window, so the master timed out and mis-reported COMMIT as a CRC failure
+    // even though the pack loaded. Firmware-target finalize is O(1) (unaffected).
+    bool ok = fw_staging_finalize_defer_reload();
     ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
 }
 

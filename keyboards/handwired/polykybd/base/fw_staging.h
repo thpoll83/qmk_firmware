@@ -70,6 +70,16 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len);
 // Returns true on CRC match; sets commit-pending flag on success.
 bool fw_staging_finalize(void);
 
+// Slave-side finalize: like fw_staging_finalize() but defers the heavy FONTPACK
+// reload (full-body CRC + reassemble) out of the split-transaction callback to
+// housekeeping, so the ~50 ms verify can't overrun the ~20 ms transaction window.
+// ACKs on the O(1) transport CRC (byte-identity with the master's verified pack).
+bool fw_staging_finalize_defer_reload(void);
+
+// Drain the deferred FONTPACK reload (call from housekeeping_task_user()).
+// Returns true iff it reloaded this call, so the caller can refresh the display.
+bool fw_staging_process_fontpack_reload(void);
+
 // True while the deferred sector-by-sector erase (fw_staging_begin_deferred) is still running.
 bool fw_staging_erase_pending(void);
 

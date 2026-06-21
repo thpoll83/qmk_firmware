@@ -109,6 +109,9 @@ static uint32_t s_staged_crc;    // running CRC32 of received image bytes (for O
 
 static bool     s_commit_pending;
 static bool     s_reboot_pending;   // deferred plain reboot (QK_REBOOT slave path)
+static bool     s_fontpack_reload_pending;  // slave: defer the heavy FONTPACK reload to housekeeping
+
+static bool fw_staging_finalize_impl(bool defer_fontpack_reload);
 
 // ---------------------------------------------------------------------------
 // Deferred-erase state (used by slave handler to avoid blocking the split link)
@@ -432,6 +435,33 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
 }
 
 bool fw_staging_finalize(void) {
+    return fw_staging_finalize_impl(false);
+}
+
+// Slave-side finalize. Identical to fw_staging_finalize() EXCEPT the heavy
+// FONTPACK reload (a full-body CRC32 + reassemble over the whole ~459 KB pack,
+// ~50 ms) is DEFERRED to housekeeping instead of run inline. The slave runs
+// finalize inside the USER_SYNC_FW_UP_COMMIT split-transaction callback, whose
+// receive window is ~20 ms — the inline reload overran it, so the master timed
+// out and mis-reported COMMIT as a CRC failure even though the pack loaded fine
+// (same class of bug as the master-side re-scan, run 6). The O(1) transport CRC
+// here already proves our staged bytes are identical to the master's (which
+// independently passed the full pack CRC + load), so we ACK on that and let
+// fw_staging_process_fontpack_reload() do the reload off the transaction path.
+bool fw_staging_finalize_defer_reload(void) {
+    return fw_staging_finalize_impl(true);
+}
+
+// Drain the deferred FONTPACK reload from housekeeping_task_user(). Returns true
+// iff it actually reloaded this call (so the caller can request a display refresh).
+bool fw_staging_process_fontpack_reload(void) {
+    if (!s_fontpack_reload_pending) return false;
+    s_fontpack_reload_pending = false;
+    fontpack_reload();
+    return true;
+}
+
+static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
     if (!s_initialized) return false;
 
     // Flush any partial final page (padded with 0xFF already from fw_staging_begin/flush_page)
@@ -449,8 +479,16 @@ bool fw_staging_finalize(void) {
         // this independently re-validates the pack's own header CRC32 and rebuilds
         // g_all_fonts. No reboot: fonts render immediately. ok also requires the
         // pack to pass its own integrity check, not just the transport CRC.
-        fontpack_reload();
-        ok = fontpack_present();
+        if (defer_fontpack_reload) {
+            // Slave: defer the ~50 ms full-body verify+reassemble out of the split
+            // transaction (see fw_staging_finalize_defer_reload). ok stays = the
+            // O(1) transport CRC, which already guarantees byte-identity with the
+            // master's verified pack, so the deferred reload cannot fail here.
+            s_fontpack_reload_pending = true;
+        } else {
+            fontpack_reload();
+            ok = fontpack_present();
+        }
     } else if (ok) {
         // FIRMWARE: stamp the staging header {magic,size,crc} so the staged image
         // is self-describing and fw_staging_apply_and_reboot() can validate + size it.

@@ -55,14 +55,21 @@ index:
   # PrintScreen ⎙) and the on-keyboard menu chrome (settings ⚙, language 🌐, and
   # the settings-layer brightness moons 🌑–🌖) legible with NO pack flashed — so a
   # freshly-flashed keyboard can navigate its own UI before any font pack lands.
-  # ~2.5 KB total; the rest of these categories stay in the pack.
+  # The Util / Hyper / Meh fonts add the utility-layer legends (screenshot 🖼,
+  # calculator 🖩, my-computer 🖳, clipboard) and the Hyper 💫 / Meh 🐐 modifier
+  # symbols; GuiKey adds the GUI/Super ❖ legend. ~6 KB total; the rest of these
+  # categories stay in the pack.
   resident_fonts:
     - NotoSansSymbols2_Regular_Arrows_20pt16b
     - NotoSansSymbols2_Regular_Technical2_20pt16b
     - NotoSansSymbols_Regular_Technical_20pt16b
+    - NotoSansSymbols2_Regular_GuiKey_20pt16b
+    - NotoSansSymbols2_Regular_Util_20pt16b
     - NotoEmoji_Medium_Settings_20pt16b
     - NotoEmoji_Medium_World_20pt16b
     - NotoEmoji_Medium_Brightness_16pt16b
+    - NotoEmoji_Medium_Hyper_18pt16b
+    - NotoEmoji_Medium_Meh_20pt16b
   # Fonts appended to the END of the external-flash font pack that are generated
   # OUTSIDE the main fonts.yaml pipeline (so they have no `fonts:` entry). Each is
   # parsed from its standalone header. The language-layer country flags
@@ -204,6 +211,7 @@ fonts:
   - {category: symbols, variant: _Arrows_, ranges: [[0x2b6f, 0x2b73], [0x2b7e, 0x2b7e], [0x2b8c, 0x2b8c], [0x2b8e, 0x2b8e], [0x2ba0, 0x2ba0]]}
   - {category: symbols, variant: _Technical2_, ranges: [[0x2318, 0x2318], [0x2325, 0x2326], [0x232b, 0x232b]]}
   - {category: symbols, variant: _Technical_, source: noto-sans-symbols, ranges: [[0x2387, 0x2388], [0x238b, 0x238b], [0x2399, 0x2399]]}
+  - {category: symbols, variant: _GuiKey_, ranges: [[0x2756, 0x2756]], note: 'GUI/Super key legend ❖ (DINGBAT_BLACK_DIA_X, U+2756). Kept resident (index.resident_fonts) so the GUI modifier renders with no pack; also present in _SymBmp4_ but resident wins.'}
   - {category: emoji, variant: _ClipCpy_, size: 18, bits: 32, ranges: [[0x1f4cb, 0x1f4cb]]}
   - {category: emoji, variant: _FileOpen_, size: 14, bits: 32, ranges: [[0x1f4c2, 0x1f4c2]]}
   - {category: symbols, variant: _Util_, bits: 32, ranges: [[0x1f568, 0x1f56a], [0x1f5a9, 0x1f5ab], [0x1f5b3, 0x1f5bc], [0x1f5ca, 0x1f5ca]]}

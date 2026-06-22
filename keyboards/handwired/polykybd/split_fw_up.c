@@ -80,6 +80,11 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
             uint32_t slot_off = 0, slot_size = 0;
             if (fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
                 fw_staging_set_fontpack_slot(slot_off, slot_size);
+            } else {
+                // Unknown bundle id — NACK so we never stage to a stale slot (the
+                // master guards the same way with its slot_ok check).
+                ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+                return;
             }
         }
         fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);

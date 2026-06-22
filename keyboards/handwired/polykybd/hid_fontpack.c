@@ -75,6 +75,8 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 // Master stages its OWN copy (deferred erase via housekeeping) and
                 // kicks the slave's deferred erase, both targeting this bundle slot.
                 fw_staging_begin_deferred_target(pack_size, pack_crc, FW_TARGET_FONTPACK);
+                // Fire-and-forget: kicks the slave's deferred erase. Readiness is
+                // polled by the slave_ack send_to_bridge below (and on re-polls).
                 send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 3);
                 uprintf("FONTPACK_BEGIN: bundle=%u size=%lu crc=0x%08lx (master+slave staging)\n",
                         bundle, (unsigned long)pack_size, (unsigned long)pack_crc);

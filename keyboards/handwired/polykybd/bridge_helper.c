@@ -92,9 +92,9 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
         bool sync_success = transaction_rpc_exec(tid, num_bytes, buffer_with4crc_bytes, sizeof(poly_sync_reply_t), &reply);
         ls_attempts++;
         if(sync_success && (reply.ack == SYNC_ACK || reply.ack == SYNC_ACK_SIG)) {
-            if(debug_enable && retry>0) {
-                uprintf("Success on retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack, num_bytes);
-            }
+            // A recovered retry is a non-event — the LINK_STATS summary already
+            // counts retries/errors. Announcing every success spammed the console
+            // unusably during a font-pack flash (thousands of bridged frames).
             return reply.ack;
         }
         // Failed attempt. sync_success==true means the transport delivered a

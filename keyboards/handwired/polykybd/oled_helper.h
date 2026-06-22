@@ -11,10 +11,12 @@ void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);
 
 /* Board-specific callbacks — implemented in split72/status_oled.c or split42/status_oled.c */
 void oled_update_buffer(void);
+void oled_update_buffer_fw_update(void);   /* "Updating fonts/firmware …" screen */
 void oled_draw_kybd(void);
 void oled_draw_poly(void);
 
 /* Shared OLED task functions — implemented in oled_helper.c */
 void oled_status_screen(void);
+void oled_fw_update_screen(void);
 void oled_render_logos(void);
 bool oled_task_user(void);

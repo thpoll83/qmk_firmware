@@ -94,6 +94,12 @@ bool fw_staging_erase_pending(void);
 // with incoming FW_UP_CHUNK transactions and exhausting all UART retries.
 bool fw_staging_fw_up_active(void);
 
+// 0xFF when idle, else the FW_TARGET_* of the in-progress flash (FIRMWARE/FONTPACK),
+// for an on-screen "updating …" label. fw_staging_image_size() is the total image
+// size for a progress bar (0 when idle).
+uint8_t  fw_staging_active_target(void);
+uint32_t fw_staging_image_size(void);
+
 // Current write cursor (bytes accepted into staging).  This half's "next
 // expected chunk offset" — the slave echoes it in fw_up_chunk_reply_t and the
 // master reports the lower of the two halves' cursors to the host in a chunk

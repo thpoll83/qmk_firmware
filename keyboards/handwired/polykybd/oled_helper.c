@@ -6,6 +6,7 @@
 #include "side.h"
 #include "base/com.h"
 #include "base/disp_array.h"
+#include "base/fw_staging.h"
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
@@ -61,8 +62,22 @@ void oled_render_logos(void) {
     }
 }
 
+// Shown on both halves while a font-pack / firmware flash is in progress, so the
+// user knows the keyboard is busy updating (it can't service keys meanwhile) and
+// must not be unplugged. Forced on regardless of the display-off state. The status
+// fonts are resident, so this renders even while the font pack is mid-flash.
+void oled_fw_update_screen(void) {
+    oled_on();
+    oled_update_buffer_fw_update();
+    oled_clear();
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+}
+
 bool oled_task_user(void) {
-    if ((get_local_state()->flags & DISP_IDLE) != 0) {
+    if (fw_staging_fw_up_active()) {
+        oled_scroll_off();
+        oled_fw_update_screen();
+    } else if ((get_local_state()->flags & DISP_IDLE) != 0) {
         oled_render_logos();
     } else {
         oled_scroll_off();

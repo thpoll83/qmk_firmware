@@ -529,6 +529,16 @@ bool fw_staging_fw_up_active(void) {
     return s_fw_up_active;
 }
 
+// 0xFF when idle, else the FW_TARGET_* of the in-progress flash (for a UI label).
+uint8_t fw_staging_active_target(void) {
+    return s_fw_up_active ? s_target : 0xFFu;
+}
+
+// Total bytes of the image currently being staged (for a progress bar). 0 if idle.
+uint32_t fw_staging_image_size(void) {
+    return s_fw_up_active ? s_image_size : 0u;
+}
+
 uint32_t fw_staging_next_offset(void) {
     return s_next_offset;
 }

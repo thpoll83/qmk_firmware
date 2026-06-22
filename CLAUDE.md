@@ -215,7 +215,9 @@ flashed over HID separately. `fontpack_assemble()` builds `g_all_fonts = residen
 `base/fontpack.c/.h` (C loader), `fonts/fontpack.py` (build-side serializer),
 `base/fonts/generated/fontpack.manifest.json` (committed pack ABI contract),
 `hid_fontpack.c` + `PolyKybdHost/polyhost/device/hid_fontpack.py` (HID transport),
-`polyhost/cli/polyctl.py` (`fontpack status|flash|wipe`).
+`polyhost/cli/polyctl.py` (`fontpack status|sync|flash <id>|wipe [id]` — per-bundle
+since the split-pack change; `status` shows device-vs-shipped versions, `sync`
+flashes all stale bundles, `flash <id>` force-flashes one).
 
 - **Make a pack font resident** (so UI chrome renders with no pack): add its
   generated symbol name to `index.resident_fonts` in `fonts.yaml`, then regenerate.

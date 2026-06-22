@@ -54,7 +54,8 @@
 // Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
-#include "base/fonts/lang_label_font.h"   // tiny label font under the flags
+#include "base/fonts/lang_label_font.h"   // tiny (6px) label font under the flags
+#include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "base/multicore/core1.h"
 #include "polymod_crc32.h"
 
@@ -1067,8 +1068,10 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // flag is simply omitted — the xx-YY code label below it still identifies the
 // language (graceful fallback). The tiny label font stays resident.
 static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b };
-// Larger resident font for the no-pack fallback (the xx-YY code drawn big).
-static const GFXfont* const lang_code_fonts[]  = { &NotoSans_Regular_Base_14pt7b };
+// Mid (10px) utility font for the no-pack fallback code — between Tiny and Base,
+// so a full "ll-CC" fits on one line (~52px) yet stays readable. Reuse this
+// `mid_fonts` array for any misc utility-key text that wants a middle size.
+static const GFXfont* const mid_fonts[]        = { &NotoSans_Regular_Mid_10pt7b };
 
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
     const GFXfont* flag_font = NULL;
@@ -1101,21 +1104,16 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
                               current_lang == idx);
     } else {
         // No font pack flashed: the flag glyphs are pack-only. Show the "ll-CC"
-        // code as two big centred lines (ll over CC) so it's actually readable
-        // (the tiny vertical label is dropped here); underline the active language.
-        // A full "ll-CC" at this size is ~73 px — just over the 72 px keycap — so
-        // stacking the two pairs keeps it large without clipping.
-        uint32_t l1[3] = { label[0], label[1], 0 };
-        uint32_t l2[3] = { label[3], label[4], 0 };   // label[2] is the '-'
-        int8_t lo = 0, hi = 0, w = 0, left = 0;
-        kdisp_gfx_text_bounds(lang_code_fonts, 1, l1, &lo, &hi);
-        w = (int8_t)(hi - lo); left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2);
-        kdisp_write_gfx_text(lang_code_fonts, 1, (int8_t)(left - lo), 16, l1);
-        kdisp_gfx_text_bounds(lang_code_fonts, 1, l2, &lo, &hi);
-        w = (int8_t)(hi - lo); left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2);
-        kdisp_write_gfx_text(lang_code_fonts, 1, (int8_t)(left - lo), 33, l2);
+        // code on one centred line in the mid (10px) utility font — readable, and
+        // a full code (~52px) fits the 72px keycap. The tiny vertical label is
+        // dropped here; underline the active language.
+        int8_t lo = 0, hi = 0;
+        kdisp_gfx_text_bounds(mid_fonts, 1, label, &lo, &hi);
+        int8_t w    = (int8_t)(hi - lo);
+        int8_t left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2);
+        kdisp_write_gfx_text(mid_fonts, 1, (int8_t)(left - lo), 24, label);
         if (current_lang == idx) {
-            kdisp_fill_rect(left, 36, w, 2);   // underline the country line = active
+            kdisp_fill_rect(left, 28, w, 2);   // underline = active language
         }
     }
 }

@@ -479,7 +479,11 @@ static int8_t jitter_axis(uint32_t epoch, uint32_t salt, int8_t lo, int8_t hi) {
 void poly_prepare_for_flash(void) {
     layer_clear();                 // momentary/toggle layers off -> default layer active
     request_disp_refresh();
-    update_displays(ALL_AT_ONCE);  // render now, while updates are still allowed
+    // Push the base layer + refresh to the SLAVE and render the master, before
+    // fw_up freezes display sync — so BOTH halves show legible base legends and
+    // typing produces plain characters during the flash. sync_and_refresh_displays
+    // both bridges the layer/state to the slave and calls update_displays().
+    sync_and_refresh_displays();
 }
 
 void housekeeping_task_user(void) {

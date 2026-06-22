@@ -10,6 +10,7 @@
 #include "polymod_crc32.h"
 #include <transactions.h>
 #include "base/fw_staging.h"
+#include "base/update.h"   // poly_prepare_for_flash()
 #include "hardware/flash.h"
 
 #include <print.h>
@@ -75,6 +76,9 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             if (new_image && master_ok) {
                 s_erased_size = image_size;
                 s_erased_crc  = image_crc;
+                // Drop to the base layer + refresh before the flash holds the main
+                // loop, so the user can still type plain characters meanwhile.
+                poly_prepare_for_flash();
                 // PHASE 1 (2026-05-30): the master now stages its OWN copy as well.
                 // Use the deferred erase — the same proven path as the slave — so
                 // the master's USB stays alive: housekeeping_task_user() drives the

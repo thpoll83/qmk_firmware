@@ -85,14 +85,17 @@ void oled_update_buffer(void) {
 }
 
 // "Updating fonts/firmware …" screen (128x32) shown while a flash is in progress.
-// The progress bar spans BOTH status OLEDs (left half 0–50 %, right half 50–100 %).
 void oled_update_buffer_fw_update(void) {
+    uint32_t buffer[8];
     kdisp_set_buffer(0);
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    bool fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
-    kdisp_write_gfx_text(smallFont, 1, 0, 11, fonts ? U"Updating fonts" : U"Updating firmware");
-    kdisp_write_gfx_text(smallFont, 1, 0, 23, U"do not unplug");
-    oled_fw_update_progress_bar(27);
+    bool    fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
+    uint8_t pct   = fw_update_percent();
+    kdisp_write_gfx_text(smallFont, 1, 0, 10, fonts ? U"Updating fonts" : U"Updating firmware");
+    num_to_u32_string((char*)buffer, sizeof(buffer), pct);          // percent above the bar
+    kdisp_write_gfx_text(smallFont, 1, 0, 22, buffer);
+    kdisp_write_gfx_text(smallFont, 1, 24, 22, U"% — do not unplug");
+    oled_fw_update_progress_bar(25, pct);
 }
 
 /*

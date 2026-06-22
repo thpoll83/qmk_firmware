@@ -472,6 +472,16 @@ static int8_t jitter_axis(uint32_t epoch, uint32_t salt, int8_t lo, int8_t hi) {
 }
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
+// Drop to the base/default layer and render it once, just before a flash holds
+// the main loop — so typed keys are plain characters and the keycaps show legible
+// legends during the (mostly-blocking) transfer. Called from the HID BEGIN
+// handlers BEFORE fw_up activates (which freezes display updates).
+void poly_prepare_for_flash(void) {
+    layer_clear();                 // momentary/toggle layers off -> default layer active
+    request_disp_refresh();
+    update_displays(ALL_AT_ONCE);  // render now, while updates are still allowed
+}
+
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs

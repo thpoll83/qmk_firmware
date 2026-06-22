@@ -20,6 +20,7 @@
 #include <transactions.h>
 #include "base/fw_staging.h"
 #include "base/fontpack.h"
+#include "base/update.h"   // poly_prepare_for_flash()
 
 #include <print.h>
 #include <string.h>
@@ -68,6 +69,9 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 s_erased_size   = pack_size;
                 s_erased_crc    = pack_crc;
                 s_erased_bundle = bundle;
+                // Drop to the base layer + refresh before the flash holds the main
+                // loop, so the user can still type plain characters meanwhile.
+                poly_prepare_for_flash();
                 // Master stages its OWN copy (deferred erase via housekeeping) and
                 // kicks the slave's deferred erase, both targeting this bundle slot.
                 fw_staging_begin_deferred_target(pack_size, pack_crc, FW_TARGET_FONTPACK);

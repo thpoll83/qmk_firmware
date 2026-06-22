@@ -18,8 +18,9 @@ void oled_draw_poly(void);
 /* Shared OLED task functions — implemented in oled_helper.c */
 void oled_status_screen(void);
 void oled_fw_update_screen(void);
-/* Flash progress bar with its top row at `top_y`, spanning BOTH status OLEDs:
-   the left half draws 0–50 %, the right half 50–100 % (continuous left→right). */
-void oled_fw_update_progress_bar(int8_t top_y);
+/* Flash progress bar with its top row at `top_y`: a 6 px bar over a 1 px track,
+   `pct` (0..100) filling the full width of EACH status OLED (both halves move). */
+void oled_fw_update_progress_bar(int8_t top_y, uint8_t pct);
+uint8_t fw_update_percent(void);   /* 0..100 progress of the in-flight flash */
 void oled_render_logos(void);
 bool oled_task_user(void);

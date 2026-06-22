@@ -62,21 +62,23 @@ void oled_render_logos(void) {
     }
 }
 
-// Progress bar across BOTH status OLEDs (drawn into the kdisp scratch buffer, so
-// it must be called from oled_update_buffer_fw_update before the blit). The bar is
-// one continuous strip over the two displays: the physical-left half renders the
-// first 50 % of progress across its full width, the right half the last 50 % — so
-// it fills left→right end to end. The progress is the current bundle's bytes.
-void oled_fw_update_progress_bar(int8_t top_y) {
+// Progress bar drawn into the kdisp scratch buffer (call from
+// oled_update_buffer_fw_update before the blit). `pct` 0..100 fills the full width
+// of EACH status OLED, so both halves show the same moving bar (the master can't
+// re-render often while it streams chunks, but at least its bar isn't stuck on one
+// half). 6 px tall over a 1 px full-width track.
+void oled_fw_update_progress_bar(int8_t top_y, uint8_t pct) {
+    if (pct > 100) pct = 100;
+    uint8_t fill = (uint8_t)((uint16_t)pct * 127u / 100u);   // 0..127 across the display
+    kdisp_fill_rect(0, top_y, 127, 1);                       // full-width track
+    if (fill) kdisp_fill_rect(0, (int8_t)(top_y + 1), (int8_t)fill, 6);  // filled portion (6 px)
+}
+
+// Shared 0..100 progress of the in-flight flash (current bundle's bytes).
+uint8_t fw_update_percent(void) {
     uint32_t total = fw_staging_image_size();
     uint32_t done  = fw_staging_next_offset();
-    uint8_t  pct   = total ? (uint8_t)(((uint64_t)done * 100) / total) : 0;
-    uint16_t fill  = (uint16_t)pct * 256u / 100u;     // 0..256 across the two displays
-    uint8_t  myf   = is_left_side() ? (fill < 128u ? (uint8_t)fill : 127u)
-                                    : (fill > 128u ? (uint8_t)(fill - 128u) : 0u);
-    if (myf > 127u) myf = 127u;
-    kdisp_fill_rect(0, top_y, 127, 1);                                  // full-width track
-    if (myf) kdisp_fill_rect(0, (int8_t)(top_y + 1), (int8_t)myf, 3);   // filled portion
+    return total ? (uint8_t)(((uint64_t)done * 100) / total) : 0;
 }
 
 // Shown on both halves while a font-pack / firmware flash is in progress, so the

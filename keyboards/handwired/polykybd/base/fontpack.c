@@ -65,9 +65,23 @@ bool fontpack_load_at(const uint8_t *base) {
         return false;  // erased flash / not a pack
     }
     if (h->abi_version != FONTPACK_ABI_VERSION) return false;
+    // A deliberately-empty pack (font_count == 0, header only) is the WIPE
+    // sentinel: a valid PlyF header with no fonts. It loads as "present but
+    // empty" so g_all_fonts == resident only (fontpack_assemble appends nothing),
+    // letting a `fontpack wipe` clear the pack via the normal BEGIN/CHUNK/COMMIT
+    // flow (COMMIT's present-check passes) without a bespoke erase command. An
+    // ERASED region (0xFF, no magic) is already handled above and also yields
+    // resident-only — this just makes the wipe report success cleanly.
+    if (h->font_count == 0) {
+        if (h->total_size != sizeof(fontpack_header_t)) return false;
+        s_content_version = h->content_version;
+        s_pack_count      = 0;
+        s_loaded          = true;
+        return true;
+    }
     if (h->font_table_off != sizeof(fontpack_header_t)) return false;
     if (h->total_size <= sizeof(fontpack_header_t)) return false;
-    if (h->font_count == 0 || h->font_count > FONTPACK_MAX_FONTS) return false;
+    if (h->font_count > FONTPACK_MAX_FONTS) return false;
     if ((uint32_t)h->font_table_off + (uint32_t)h->font_count * sizeof(fontpack_font_t) > h->total_size) {
         return false;
     }

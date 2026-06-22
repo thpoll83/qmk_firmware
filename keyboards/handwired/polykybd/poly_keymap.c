@@ -1078,12 +1078,32 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
         // Compensate BOTH the glyph's x and y bearing (kdisp_write_gfx_char draws
         // at x+xOffset, y+yOffset) so the flag's content lands flush at
         // FLAG_LEFT_X regardless of the glyph's left bearing (was x-shifted).
-        const int8_t fh  = (int8_t)pgm_read_byte(&g->height);
-        const int8_t fyo = (int8_t)pgm_read_byte(&g->yOffset);
-        const int8_t fxo = (int8_t)pgm_read_byte(&g->xOffset);
-        kdisp_write_gfx_char(g_all_fonts, g_all_font_count, (int8_t)(FLAG_LEFT_X - fxo),
-                             (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
-                             FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
+        //
+        // Render through a SINGLE-font array holding just the flag font — NOT
+        // g_all_fonts. kdisp_write_gfx_char baseline-aligns each glyph to fonts[0]
+        // (`y += currentFont->yAdvance - fonts[0]->yAdvance`). With g_all_fonts,
+        // fonts[0] is IconsFont (yAdvance 40) vs the flag's 54 → a spurious +14 px
+        // downward shift (the gap-at-top regression introduced when flags moved
+        // into the pack). The old compiled-in path used a dedicated {flag_font}
+        // array, so the adjustment was 0 — find the flag font in g_all_fonts and
+        // pass it alone to restore that.
+        const GFXfont* flag_font = NULL;
+        for (uint8_t i = 0; i < g_all_font_count; ++i) {
+            if ((uint32_t)(FLAG_CP_BASE + idx) >= pgm_read_dword(&g_all_fonts[i]->first) &&
+                (uint32_t)(FLAG_CP_BASE + idx) <= pgm_read_dword(&g_all_fonts[i]->last)) {
+                flag_font = g_all_fonts[i];
+                break;
+            }
+        }
+        if (flag_font) {
+            const GFXfont* flag_only[1] = { flag_font };
+            const int8_t fh  = (int8_t)pgm_read_byte(&g->height);
+            const int8_t fyo = (int8_t)pgm_read_byte(&g->yOffset);
+            const int8_t fxo = (int8_t)pgm_read_byte(&g->xOffset);
+            kdisp_write_gfx_char(flag_only, 1, (int8_t)(FLAG_LEFT_X - fxo),
+                                 (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
+                                 FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
+        }
         // Language code: vertical, up the right side; inverted bar when selected.
         kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
                               current_lang == idx);

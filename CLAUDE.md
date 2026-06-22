@@ -119,6 +119,29 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
 2. On key event, `split72.c` selects the keycap via shift-register bitmask and calls `kdisp_invert()` for instant visual feedback
 3. Active window change → host sends new overlay set → firmware swaps all 72 keycap images
 
+**Per-keycap rendering gotchas (`base/disp_array.c`)** — learned the hard way:
+- **`kdisp_write_gfx_char` baseline-aligns every glyph to `fonts[0]`**:
+  `y += currentFont->yAdvance - fonts[0]->yAdvance`. So drawing a *single* icon
+  whose font differs in height from `g_all_fonts[0]` (IconsFont, yAdvance 40)
+  shifts it vertically by the difference. This was the **language-flag gap-at-top
+  regression** when flags moved into the pack (flag yAdvance 54 − 40 = +14 px down,
+  filling 0..39 → 14..53). **Fix pattern: draw such a glyph through a *single-font
+  array* `{ that_font }`** so `fonts[0]` is the glyph's own font (adjustment 0), as
+  the old compiled-in `{ &flag_font }` path did. `kdisp_gfx_glyph_font(fonts, n, cp,
+  &out_font)` returns the glyph **and** its owning font in one scan for exactly this
+  (`kdisp_gfx_glyph` is the `out_font = NULL` wrapper).
+- **GFXfont bitmaps are continuous-bit-packed, byte-padded per *glyph* — NOT per
+  scanline.** Index bits as `bit = yy*w + xx; byte = bitmapOffset + bit/8; msb-first`.
+  A per-scanline-stride reader produces garbage that *looks* like dithering noise.
+- **To preview a keycap faithfully, use `PolyKybdHost/tools/oled_preview.py`** (its
+  `gfx_font` loader + `oled_to_rgb`) — it parses the generated headers correctly and
+  renders the real 72×40 OLED look. A hand-rolled renderer cost two wrong "flag
+  offset" guesses this session before the real cause (the baseline-align above) was
+  found. `gfx_font.load_all_fonts(base/fonts)` includes `flag_fonts.h`, so it can
+  render pack/flag glyphs too. **Caveat:** the preview models glyph `xOffset/yOffset`
+  but NOT the `kdisp` baseline-align shift, so it won't reproduce that bug — reason
+  about `fonts[0]` separately.
+
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.
 
@@ -180,6 +203,62 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
 - `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
 - **`fonts/gen-lang-fonts.sh`** — generates the two standalone headers for the language-selection layer (`_LL`): `base/fonts/flag_fonts.h` (country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically) and `base/fonts/lang_label_font.h` (a 6 px NotoSans label font). These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes.
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.
+
+See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
+
+### Font pack: resident fonts (compiled-in) + external-flash pack
+
+Fonts are split into a small **resident** set compiled into the firmware image and
+a large **pack** (`PlyF`) that lives in the **4–8 MB resource region** and is
+flashed over HID separately. `fontpack_assemble()` builds `g_all_fonts = resident
+++ pack` at boot; with no pack, only the resident set is present. Files:
+`base/fontpack.c/.h` (C loader), `fonts/fontpack.py` (build-side serializer),
+`base/fonts/generated/fontpack.manifest.json` (committed pack ABI contract),
+`hid_fontpack.c` + `PolyKybdHost/polyhost/device/hid_fontpack.py` (HID transport),
+`polyhost/cli/polyctl.py` (`fontpack status|flash|wipe`).
+
+- **Make a pack font resident** (so UI chrome renders with no pack): add its
+  generated symbol name to `index.resident_fonts` in `fonts.yaml`, then regenerate.
+  It moves out of the pack into `RESIDENT_FONTS[]`. **Front-to-back precedence means
+  a resident font WINS over an overlapping pack copy**, so for a *single* glyph
+  inside a big pack range (e.g. GUI ❖ U+2756 in the 12 KB `_SymBmp4_`, emoji-layer 😀
+  U+1F600 in `_Emojis0_`) add a **tiny dedicated resident font** (`_GuiKey_`,
+  `_EmjLayer_`) covering just that codepoint rather than making the whole big font
+  resident. The current resident UI-chrome set (≈9 KB) is the modifier symbols
+  (Technical/Technical2 = Ctrl/Alt/GUI/Option/Del/Backspace/Esc/PrintScreen), the
+  menu icons (Settings ⚙, World 🌐), Brightness moons, Hyper/Meh, GuiKey, Util
+  (screenshot/calc/my-computer/paste), EmjLayer, plus the always-resident Arrows.
+- **Regenerate** with `FONTCONVERT=<pinned> python3 generate_fonts.py`. **Byte-repro
+  gotcha:** the per-category headers embed the fontconvert *binary path* in a
+  provenance comment, so run from the **same path** the committed headers used
+  (`/tmp/fontconvert_pinned`) or every category header shows a 1-line diff. Flipping
+  a font resident↔pack should change **only** `gfx_used_fonts.h`,
+  `fontpack.manifest.json`, `all_fonts_order.json` (and the new font's category
+  header) — if other category headers diff, the toolchain/source drifted.
+- **Standalone label fonts** (not in `fonts.yaml`/`ALL_FONTS`) are generated by
+  `gen-lang-fonts.sh` and used via dedicated single-font arrays: `_Tiny_` 6 px
+  (`lang_label_font.h`, lang-code labels) and `_Mid_` 10 px (`util_font.h`,
+  `mid_fonts[]` — a size between Tiny and Base for misc utility-key text; a full
+  `ll-CC` fits one line at 10 px but overflows 72 px at 14 px).
+- **HID flow** (`BEGIN`/`CHUNK`/`COMMIT`, cmds `0x50`–`0x53`): reuses the
+  `fw_staging` machinery (deferred sector erase, slave bridge). ⚠️ **The slave's
+  `COMMIT` runs `fw_staging_finalize()` *inside* the `USER_SYNC_FW_UP_COMMIT`
+  split-transaction callback (~20 ms window).** For the FONTPACK target that
+  re-CRCs the whole ~459 KB pack (`fontpack_load_at`, ~50 ms) → the master timed out
+  and mis-reported `COMMIT` as a CRC failure even though the pack loaded (same class
+  of bug the master-side finalize comment warns about, "run 6"). **Fix:**
+  `fw_staging_finalize_defer_reload()` ACKs on the O(1) transport CRC (already proves
+  byte-identity with the master's verified pack) and defers the heavy reload to
+  `fw_staging_process_fontpack_reload()` in housekeeping. **Never do heavy work in a
+  split-transaction handler.**
+- **Wipe** = flash a 32-byte **empty pack** (`font_count == 0`), the sentinel
+  `fontpack_load_at()` accepts as a valid empty pack → `g_all_fonts` = resident only.
+  `polyctl fontpack wipe` builds it and flashes it via the normal flow (only one
+  sector erased, fast). The pack persists across *firmware* flashing (different flash
+  region), so a wipe is the only way to test the resident-only path.
+- **The old 127-font pack still loads on newer firmware** (ABI unchanged,
+  `font_count` is read from the header); resident wins on any overlap, the duplicate
+  pack copies are harmless. No need to re-flash the pack after a resident change.
 
 See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
 
@@ -441,6 +520,39 @@ is non-zero; classify it with `sync_succeeded()`.
 - `keyboards/handwired/polykybd/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
 - `keyboards/handwired/polykybd/split_sync.h` — `sync_succeeded()` helper + `SYNC_*` values
 - `keyboards/handwired/polykybd/bridge_helper.c` — `send_to_bridge()` (returns the ack byte / `SYNC_CRC32_ERR`)
+
+---
+
+### Bug: keyboard hangs on the boot splash after a firmware apply (slave not rebooted)
+
+**Symptom (field, 2026-06-22)**: After a successful HID firmware flash + apply, the
+master rebooted onto the new firmware but **hung on the boot splash** ("SPLIT 72");
+no USB enumerated for minutes (`No Interface` in the host log) until the **slave
+half was replugged**. Afterwards the split link showed a high steady error rate
+(`err=36%`) because master ran new firmware while the slave still ran the old one.
+
+**Root cause**: `CMD_FW_UP_APPLY` (`hid_fw_up.c`) tells the slave to install its
+staged image and reboot in lockstep via `send_to_bridge(USER_SYNC_FW_UP_APPLY, …)`,
+then arms the master's own reboot **regardless of the slave's ack**. That bridge was
+sent with only **5 retries**, so one unlucky drop on this single critical
+transaction left the slave on old firmware; the rebooted master then waits for a
+slave handshake at split init that never comes → hang. (The master booting alone
+into mismatched firmware is exactly why the apply bridges to the slave at all.)
+
+**Fix (2026-06-22)**: bump the slave-apply bridge to **20 retries** and **re-fire the
+whole round once** if it still hasn't acked. Safe: the slave apply handler is
+idempotent (validates the staged image + arms a *deferred* reboot), and
+`send_to_bridge` is **synchronous** (returns only after the slave handled the
+message), so by the time the master proceeds to reboot the slave has already armed
+its own. Worst case adds ~1 s, only on a bad link.
+
+**Recovery if it recurs**: re-run the flash + **Apply** (re-bridges the install to
+the slave, which already has the image staged), or flash the slave directly via
+BOOTSEL/UF2. The high `err%` clears once both halves run matching firmware.
+
+**Relevant files**:
+- `keyboards/handwired/polykybd/hid_fw_up.c` — `CMD_FW_UP_APPLY` (slave bridge retries)
+- `keyboards/handwired/polykybd/split_fw_up.c` — `user_sync_fw_up_apply_handler` (deferred, ACK-first)
 
 ---
 

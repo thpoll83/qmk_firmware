@@ -184,19 +184,25 @@ static uint8_t overlay_flags = 0;
 static bool     s_flash_rgb_active      = false;
 static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;
+static uint8_t  s_flash_rgb_target      = 0xFF;   // FW_TARGET_* of the active flash (held across the tail)
 
 bool rgb_matrix_indicators_kb(void) {
     if (s_flash_rgb_active) {
         uint8_t phase = (uint8_t)(timer_read32() >> 3);         // ~2 s cycle
         uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
         uint8_t v     = 10 + (tri >> 1);                        // ~10..73
-        rgb_matrix_set_color_all(0, v, v);                     // breathing cyan = "updating"
+        if (s_flash_rgb_target == FW_TARGET_FONTPACK) {
+            rgb_matrix_set_color_all(0, v, v);                 // breathing cyan = font pack
+        } else {
+            // Firmware flash/apply reboots the board — orange = "do not type".
+            rgb_matrix_set_color_all(v, v >> 2, 0);            // breathing orange
+        }
         return false;
     }
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
-            // Backstop: force red even if rgb_matrix_config.enable gets cleared.
-            rgb_matrix_set_color_all(24, 0, 0);
+            // Bootloader: no typing possible — force orange (matches the firmware-flash cue).
+            rgb_matrix_set_color_all(24, 6, 0);
             return false;
         }
         if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
@@ -209,7 +215,10 @@ bool rgb_matrix_indicators_kb(void) {
 
 // Drive the flash RGB attention effect from the fw_up state (master + slave).
 static void flash_rgb_tick(void) {
-    if (fw_staging_fw_up_active()) s_flash_rgb_seen = timer_read();
+    if (fw_staging_fw_up_active()) {
+        s_flash_rgb_seen   = timer_read();
+        s_flash_rgb_target = fw_staging_active_target();   // remember for the hold tail
+    }
     bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
     if (want && !s_flash_rgb_active) {
         s_flash_rgb_active      = true;

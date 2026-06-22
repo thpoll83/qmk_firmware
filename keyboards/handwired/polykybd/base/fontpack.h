@@ -128,6 +128,9 @@ uint16_t fontpack_bundle_version(uint8_t id);    // slot `id` content_version (0
 // Resolve a bundle id to its flash slot offset (relative to FW_RESOURCE_OFFSET)
 // and reserved size. Returns false for an unknown id.
 bool     fontpack_slot(uint8_t id, uint32_t *offset, uint32_t *size);
+// Human-readable bundle name for the slot at flash offset `slot_off` (for the
+// on-screen "Updating fonts: <name>" label). NULL for an unknown offset.
+const char *fontpack_slot_name(uint32_t slot_off);
 // True if the bundle at this slot offset loaded as a valid PlyF (incl. an empty
 // wipe sentinel) on the last fontpack_load(). For the per-bundle flash success gate.
 bool     fontpack_slot_present(uint32_t slot_off);

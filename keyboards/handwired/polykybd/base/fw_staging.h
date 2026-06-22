@@ -63,6 +63,11 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
 // before the FONTPACK begin on BOTH halves (master + slave). No effect on FIRMWARE.
 void fw_staging_set_fontpack_slot(uint32_t slot_off, uint32_t slot_size);
 
+// Active FONTPACK bundle slot offset (relative to FW_RESOURCE_OFFSET) of the
+// in-flight flash — for the on-screen bundle-name label. Pair with
+// fontpack_slot_name(). Only meaningful while the active target is FW_TARGET_FONTPACK.
+uint32_t fw_staging_fontpack_slot_off(void);
+
 // Erases one staging sector per call.  Call from housekeeping_task_user()
 // until fw_staging_write_chunk() no longer returns false for offset==0.
 void fw_staging_process_deferred(void);

@@ -109,7 +109,19 @@ void oled_update_buffer_fw_update(void) {
     const GFXfont* small[] = { &NotoSans_Medium8pt7b };
     bool    fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
     uint8_t pct   = fw_update_percent();
-    kdisp_write_gfx_text(small, 1, 0, 14, fonts ? U"Updating fonts" : U"Updating firmware");
+    if (fonts) {
+        // Name the bundle being written (its flash slot is fixed) so progress is
+        // visible as the flash advances bundle-by-bundle — useful on the master,
+        // whose progress bar can't repaint while it streams chunks back-to-back.
+        const char* bname = fontpack_slot_name(fw_staging_fontpack_slot_off());
+        kdisp_write_gfx_text(small, 1, 0, 14, U"Fonts:");
+        if (bname) {
+            ascii_to_u32_string((char*) buffer, sizeof(buffer), bname);
+            kdisp_write_gfx_text(small, 1, 44, 14, buffer);
+        }
+    } else {
+        kdisp_write_gfx_text(small, 1, 0, 14, U"Updating firmware");
+    }
     kdisp_write_gfx_text(small, 1, 0, 32, U"do not unplug");
     num_to_u32_string((char*) buffer, sizeof(buffer), pct);          // percent above the bar
     kdisp_write_gfx_text(small, 1, 0, 50, buffer);

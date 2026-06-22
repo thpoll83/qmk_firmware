@@ -196,6 +196,17 @@ bool fontpack_slot(uint8_t id, uint32_t *offset, uint32_t *size) {
     return false;
 }
 
+// Human-readable bundle name for the slot at flash offset `slot_off` (the on-screen
+// "Updating fonts: <name>" label). Names come straight from the generated layout
+// X-macro, so they can never drift from the slot table. Returns NULL for an unknown
+// offset.
+const char *fontpack_slot_name(uint32_t slot_off) {
+#define X(name, idx, off, sz) if ((slot_off) == (off)) return #name;
+    FONTPACK_BUNDLE_LIST
+#undef X
+    return NULL;
+}
+
 // Did the slot at this flash offset load as a valid PlyF on the last fontpack_load()?
 // True for a valid EMPTY (wiped) bundle too — so a wipe COMMIT reports success even
 // when every bundle is now empty (when fontpack_present() is false). Used by the

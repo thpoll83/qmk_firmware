@@ -107,6 +107,13 @@ void fw_staging_set_fontpack_slot(uint32_t slot_off, uint32_t slot_size) {
     s_fontpack_slot_size = slot_size;
 }
 
+// Active FONTPACK bundle slot offset (relative to FW_RESOURCE_OFFSET) of the
+// in-flight flash, so the status OLED can name the bundle being written. Only
+// meaningful while fw_staging_active_target() == FW_TARGET_FONTPACK.
+uint32_t fw_staging_fontpack_slot_off(void) {
+    return s_fontpack_slot_off;
+}
+
 // ---------------------------------------------------------------------------
 // Internal staging state
 // ---------------------------------------------------------------------------

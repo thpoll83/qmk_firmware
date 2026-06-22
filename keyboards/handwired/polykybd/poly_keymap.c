@@ -190,7 +190,7 @@ bool rgb_matrix_indicators_kb(void) {
     if (s_flash_rgb_active) {
         uint8_t phase = (uint8_t)(timer_read32() >> 3);         // ~2 s cycle
         uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
-        uint8_t v     = 10 + (tri >> 1);                        // ~10..73
+        uint8_t v     = 5 + (tri >> 2);                         // ~5..36 (half brightness — bright enough)
         if (s_flash_rgb_target == FW_TARGET_FONTPACK) {
             rgb_matrix_set_color_all(0, v, v);                 // breathing cyan = font pack
         } else {
@@ -1684,34 +1684,48 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             local_state->flags = toggle_flag(local_state->flags, MORE_TEXT);
             request_disp_refresh();
             break;
+        // Default-layer selectors. `def_layer` holds a layer INDEX (_L0.._L4) — the
+        // same value display_keycode_at() folds in as `1 << def_layer` to pick the
+        // keycap legends. Drive QMK's resolved layer through the SAME momentary
+        // mechanism the boot path (keyboard_post_init) and KC_BASE use —
+        // layer_clear() + layer_on(index) — NOT default_layer_set(): that QMK API
+        // takes a layer_state_t BITMASK, so passing it the index set the wrong base
+        // (e.g. _L2=2 -> 0b10 = layer 1), making the keys type a different layer than
+        // the keycaps showed. Persistence still round-trips the index via eeconfig
+        // (defer_default_layer_save -> persistent_default_layer_get at boot).
         case KC_L0:
             local_layer->def_layer = _L0;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L1:
             local_layer->def_layer = _L1;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L2:
             local_layer->def_layer = _L2;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L3:
             local_layer->def_layer = _L3;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L4:
             local_layer->def_layer = _L4;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_BASE:

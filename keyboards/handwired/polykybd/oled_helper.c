@@ -30,6 +30,19 @@ void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
     digits_to_u32_string(buffer, buffer_len, value, 10);
 }
 
+// Widen an ASCII C string into the 32-bit codepoint string the kdisp text pipeline
+// expects (kdisp_write_gfx_text takes const uint32_t*). NUL-terminated, never
+// overruns `buffer_len`. Used for the font-pack bundle name on the flash screen.
+void ascii_to_u32_string(char* buffer, uint8_t buffer_len, const char* s) {
+    uint32_t* out = (uint32_t*)buffer;
+    uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
+    uint8_t   i   = 0;
+    if (s) {
+        for (; s[i] && (i + 1u) < cap; ++i) out[i] = (uint32_t)(uint8_t)s[i];
+    }
+    if (i < cap) out[i] = 0;
+}
+
 void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
     uint32_t* out = (uint32_t*)buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);

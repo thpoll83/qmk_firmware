@@ -85,27 +85,40 @@ void oled_update_buffer(void) {
 }
 
 // "Updating fonts/firmware …" screen (128x32) shown while a flash is in progress.
+// kdisp_set_buffer(0) clears the scratch first. For a FIRMWARE flash the master can't
+// repaint a moving bar mid-stream, so it shows a static notice and the slave the bar.
 void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
     bool    fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
     uint8_t pct   = fw_update_percent();
+
+    if (!fonts && is_keyboard_master()) {
+        // Firmware, master half: static notice (only 32 px tall → two lines).
+        kdisp_write_gfx_text(smallFont, 1, 0, 12, U"PolyKybd");
+        kdisp_write_gfx_text(smallFont, 1, 0, 28, U"FW Update...");
+        return;
+    }
+
     if (fonts) {
-        // Name the bundle being written (fixed slot) so progress shows bundle-by-
-        // bundle even when the master's bar can't repaint mid-stream.
+        // Name the bundle being written (fixed slot) so progress shows bundle-by-bundle.
         const char* bname = fontpack_slot_name(fw_staging_fontpack_slot_off());
         kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Fonts:");
         if (bname) {
             ascii_to_u32_string((char*)buffer, sizeof(buffer), bname);
             kdisp_write_gfx_text(smallFont, 1, 44, 10, buffer);
         }
+        num_to_u32_string((char*)buffer, sizeof(buffer), pct);
+        kdisp_write_gfx_text(smallFont, 1, 0, 22, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 24, 22, U"% — do not unplug");
     } else {
-        kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Updating firmware");
+        // Firmware, slave half: live progress.
+        kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Progress:");
+        num_to_u32_string((char*)buffer, sizeof(buffer), pct);
+        kdisp_write_gfx_text(smallFont, 1, 60, 10, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 84, 10, U"%");
     }
-    num_to_u32_string((char*)buffer, sizeof(buffer), pct);          // percent above the bar
-    kdisp_write_gfx_text(smallFont, 1, 0, 22, buffer);
-    kdisp_write_gfx_text(smallFont, 1, 24, 22, U"% — do not unplug");
     oled_fw_update_progress_bar(25, pct);
 }
 

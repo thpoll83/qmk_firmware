@@ -184,18 +184,20 @@ static uint8_t overlay_flags = 0;
 static bool     s_flash_rgb_active      = false;
 static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;
-static uint8_t  s_flash_rgb_target      = 0xFF;   // FW_TARGET_* of the active flash (held across the tail)
 
 bool rgb_matrix_indicators_kb(void) {
     if (s_flash_rgb_active) {
         uint8_t phase = (uint8_t)(timer_read32() >> 3);         // ~2 s cycle
         uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
         uint8_t v     = 5 + (tri >> 2);                         // ~5..36 (half brightness — bright enough)
-        if (s_flash_rgb_target == FW_TARGET_FONTPACK) {
-            rgb_matrix_set_color_all(0, v, v);                 // breathing cyan = font pack
-        } else {
-            // Firmware flash/apply reboots the board — orange = "do not type".
+        if (fw_staging_commit_pending()) {
+            // Applying the staged firmware → reboot imminent, you can't type → orange.
             rgb_matrix_set_color_all(v, v >> 2, 0);            // breathing orange
+        } else {
+            // Staging a font pack OR firmware: the board still runs and you can keep
+            // typing, so use the calm cyan/green-blue cue (orange is reserved for the
+            // apply + bootloader = "can't type" states).
+            rgb_matrix_set_color_all(0, v, v);                 // breathing cyan
         }
         return false;
     }
@@ -215,9 +217,11 @@ bool rgb_matrix_indicators_kb(void) {
 
 // Drive the flash RGB attention effect from the fw_up state (master + slave).
 static void flash_rgb_tick(void) {
-    if (fw_staging_fw_up_active()) {
+    // Light the matrix while a flash is staging, and also while an apply is pending
+    // (commit_pending) so a standalone "apply staged firmware" still shows the orange
+    // reboot cue even though no chunks are streaming.
+    if (fw_staging_fw_up_active() || fw_staging_commit_pending()) {
         s_flash_rgb_seen   = timer_read();
-        s_flash_rgb_target = fw_staging_active_target();   // remember for the hold tail
     }
     bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
     if (want && !s_flash_rgb_active) {

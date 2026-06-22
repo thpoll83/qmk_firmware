@@ -103,26 +103,38 @@ void oled_update_buffer(void) {
 }
 
 // "Updating fonts/firmware …" screen (128x64) shown while a flash is in progress.
+// kdisp_set_buffer(0) clears the scratch first. For a FIRMWARE flash the master
+// streams chunks back-to-back and can't repaint a moving bar, so it shows a static
+// "PolyKybd Firmware Update…" notice and the slave shows the live progress bar.
 void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
     const GFXfont* small[] = { &NotoSans_Medium8pt7b };
     bool    fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
     uint8_t pct   = fw_update_percent();
+
+    if (!fonts && is_keyboard_master()) {
+        // Firmware, master half: static notice (its bar can't move mid-stream).
+        kdisp_write_gfx_text(small, 1, 0, 14, U"PolyKybd");
+        kdisp_write_gfx_text(small, 1, 0, 34, U"Firmware");
+        kdisp_write_gfx_text(small, 1, 0, 54, U"Update...");
+        return;
+    }
+
     if (fonts) {
         // Name the bundle being written (its flash slot is fixed) so progress is
-        // visible as the flash advances bundle-by-bundle — useful on the master,
-        // whose progress bar can't repaint while it streams chunks back-to-back.
+        // visible as the flash advances bundle-by-bundle.
         const char* bname = fontpack_slot_name(fw_staging_fontpack_slot_off());
         kdisp_write_gfx_text(small, 1, 0, 14, U"Fonts:");
         if (bname) {
             ascii_to_u32_string((char*) buffer, sizeof(buffer), bname);
             kdisp_write_gfx_text(small, 1, 44, 14, buffer);
         }
+        kdisp_write_gfx_text(small, 1, 0, 32, U"do not unplug");
     } else {
-        kdisp_write_gfx_text(small, 1, 0, 14, U"Updating firmware");
+        // Firmware, slave half: live progress.
+        kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");
     }
-    kdisp_write_gfx_text(small, 1, 0, 32, U"do not unplug");
     num_to_u32_string((char*) buffer, sizeof(buffer), pct);          // percent above the bar
     kdisp_write_gfx_text(small, 1, 0, 50, buffer);
     kdisp_write_gfx_text(small, 1, 24, 50, U"%");

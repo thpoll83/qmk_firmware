@@ -506,8 +506,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         }
                         local_state->flags &= ~((uint8_t)DISP_IDLE);
                         local_state->flags |= STATUS_DISP_ON;
-                        local_state->idle_dx = 0;   // recentre legend (drop jitter offset)
-                        local_state->idle_dy = 0;
+                        reset_idle_jitter();   // fresh, centred idle session next time
                         request_disp_refresh();
                         update_performed();
                     }
@@ -704,12 +703,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         data[3] = get_idle_style();
                     } else if (arg < IDLE_STYLE_COUNT) {
                         set_idle_style(arg);
-                        if (arg == IDLE_STYLE_PULSE) {
-                            // Recentre immediately if we switch away from jitter mid-idle.
-                            local_state->idle_dx = 0;
-                            local_state->idle_dy = 0;
-                            request_disp_refresh();
-                        }
+                        // The style is synced to the slave from housekeeping; both
+                        // halves relocate their own keys, so there is no shared
+                        // offset to reset here.
                         memcpy(data, "P\x1c.", 3);
                         data[3] = arg;
                         uprintf("Set idle style to %u.\n", arg);

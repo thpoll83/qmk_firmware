@@ -26,37 +26,54 @@
 
 #define HID_DATA_IDX 2
 
+// Which bundle the in-progress BEGIN/CHUNK/COMMIT sequence targets — remembered
+// so COMMIT can report the just-flashed bundle's content_version.
+static uint8_t s_fontpack_bundle = 0;
+
 bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
     switch (data[1]) {
 
-        case CMD_FONTPACK_BEGIN: {   // data[2..5]=pack_size, data[6..9]=pack_crc (whole pack)
+        case CMD_FONTPACK_BEGIN: {   // data[2..5]=pack_size, data[6..9]=pack_crc, data[10]=bundle_id
             uint32_t pack_size, pack_crc;
             memcpy(&pack_size, &data[HID_DATA_IDX],     4);
             memcpy(&pack_crc,  &data[HID_DATA_IDX + 4], 4);
-            bool master_ok = (pack_size >= sizeof(fontpack_header_t) &&
-                              pack_size <= FONTPACK_FLASH_MAX_SIZE);
+            uint8_t  bundle = data[HID_DATA_IDX + 8];
+            s_fontpack_bundle = bundle;
+
+            // Resolve the bundle's fixed slot; an unknown id (or a pack bigger than
+            // the slot) is rejected. The stager writes in place at the slot.
+            uint32_t slot_off = 0, slot_size = 0;
+            bool     slot_ok  = fontpack_slot(bundle, &slot_off, &slot_size);
+            bool master_ok = (slot_ok && pack_size >= sizeof(fontpack_header_t) &&
+                              pack_size <= slot_size);
+            if (slot_ok) fw_staging_set_fontpack_slot(slot_off, slot_size);
 
             fw_up_begin_sync_t begin_msg;
             memset(&begin_msg, 0, sizeof(begin_msg));   // deterministic padding for the CRC
             begin_msg.image_size = pack_size;
             begin_msg.image_crc  = pack_crc;
             begin_msg.target     = FW_TARGET_FONTPACK;
+            begin_msg.bundle     = bundle;
             begin_msg.crc32      = 0;
 
             // Dedup re-polls so a new image kicks the erase once (mirrors hid_fw_up).
-            static uint32_t s_erased_size = 0;
-            static uint32_t s_erased_crc  = 0;
-            bool new_image = (pack_size != s_erased_size || pack_crc != s_erased_crc);
+            // Keyed on bundle too, so switching bundles re-triggers the slot erase.
+            static uint32_t s_erased_size   = 0;
+            static uint32_t s_erased_crc    = 0;
+            static uint8_t  s_erased_bundle = 0xFF;
+            bool new_image = (pack_size != s_erased_size || pack_crc != s_erased_crc ||
+                              bundle != s_erased_bundle);
 
             if (new_image && master_ok) {
-                s_erased_size = pack_size;
-                s_erased_crc  = pack_crc;
+                s_erased_size   = pack_size;
+                s_erased_crc    = pack_crc;
+                s_erased_bundle = bundle;
                 // Master stages its OWN copy (deferred erase via housekeeping) and
-                // kicks the slave's deferred erase, both targeting the font pack.
+                // kicks the slave's deferred erase, both targeting this bundle slot.
                 fw_staging_begin_deferred_target(pack_size, pack_crc, FW_TARGET_FONTPACK);
                 send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 3);
-                uprintf("FONTPACK_BEGIN: new pack size=%lu crc=0x%08lx (master+slave staging)\n",
-                        (unsigned long)pack_size, (unsigned long)pack_crc);
+                uprintf("FONTPACK_BEGIN: bundle=%u size=%lu crc=0x%08lx (master+slave staging)\n",
+                        bundle, (unsigned long)pack_size, (unsigned long)pack_crc);
             }
 
             uint8_t slave_ack = master_ok
@@ -125,12 +142,13 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             memset(data, 0, length);
             memcpy(data, ok ? "P\x52." : "P\x52!", 3);
             if (ok) {
-                uint16_t cver = fontpack_content_version();
+                uint16_t cver = fontpack_bundle_version(s_fontpack_bundle);
                 memcpy(&data[3], &cver, 2);
             }
-            uprintf("FONTPACK_COMMIT: slave=0x%02x master=%d -> %s (present=%d fonts=%u cver=%u)\n",
-                    slave_ack, master_ok, ok ? "live" : "INVALID",
-                    fontpack_present(), fontpack_font_count(), fontpack_content_version());
+            uprintf("FONTPACK_COMMIT: bundle=%u slave=0x%02x master=%d -> %s (present=%d fonts=%u cver=%u)\n",
+                    s_fontpack_bundle, slave_ack, master_ok, ok ? "live" : "INVALID",
+                    fontpack_bundle_present(s_fontpack_bundle), fontpack_font_count(),
+                    fontpack_bundle_version(s_fontpack_bundle));
             raw_hid_send(data, length);
             return true;
         }

@@ -118,6 +118,17 @@ bool     fontpack_present(void);          // a valid pack is currently loaded
 uint16_t fontpack_content_version(void);  // loaded pack's content_version (0 if none)
 uint8_t  fontpack_font_count(void);       // number of pack fonts (0 if none)
 
+// ── Split-pack bundles ───────────────────────────────────────────────────────
+// The pack is flashed as N independently-versioned bundles, each in a fixed slot
+// (the generated fonts/generated/fontpack_layout.h). `id` is the bundle's index
+// in that table (its on-wire id, also the order of the GET_ID version block).
+uint8_t  fontpack_bundle_count(void);            // N (== FONTPACK_BUNDLE_COUNT)
+bool     fontpack_bundle_present(uint8_t id);    // a valid bundle is in slot `id`
+uint16_t fontpack_bundle_version(uint8_t id);    // slot `id` content_version (0 if absent)
+// Resolve a bundle id to its flash slot offset (relative to FW_RESOURCE_OFFSET)
+// and reserved size. Returns false for an unknown id.
+bool     fontpack_slot(uint8_t id, uint32_t *offset, uint32_t *size);
+
 // Re-load the pack from flash and re-assemble g_all_fonts using the resident set
 // remembered by the last fontpack_init()/fontpack_assemble(). Called by
 // fw_staging_finalize() after a FONTPACK flash so new glyphs render without a

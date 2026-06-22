@@ -81,10 +81,17 @@ static bool     s_fw_up_active = false;
 // Target of the current begin/chunk/finalize sequence (set at begin).
 static uint8_t  s_target = FW_TARGET_FIRMWARE;
 
-// FONTPACK writes the pack in place at the start of the resource region; FIRMWARE
-// stages at FW_STAGING_DATA_OFFSET behind a 4 KB header sector.
+// FONTPACK bundle slot within the resource region (set by fw_staging_set_fontpack_slot
+// before begin). Each bundle is flashed to its own fixed sector-aligned slot, so the
+// write base is FW_RESOURCE_OFFSET + slot offset and the size cap is the slot size.
+static uint32_t s_fontpack_slot_off  = 0;
+static uint32_t s_fontpack_slot_size = FONTPACK_FLASH_MAX_SIZE;
+
+// FONTPACK writes the pack bundle in place at its slot in the resource region;
+// FIRMWARE stages at FW_STAGING_DATA_OFFSET behind a 4 KB header sector.
 static inline uint32_t target_data_offset(void) {
-    return (s_target == FW_TARGET_FONTPACK) ? FW_RESOURCE_OFFSET : FW_STAGING_DATA_OFFSET;
+    return (s_target == FW_TARGET_FONTPACK) ? (FW_RESOURCE_OFFSET + s_fontpack_slot_off)
+                                            : FW_STAGING_DATA_OFFSET;
 }
 // FIRMWARE prepends a header sector (erased + stamped); FONTPACK has none (the
 // pack carries its own header at byte 0).
@@ -92,7 +99,12 @@ static inline bool target_has_header(void) {
     return s_target != FW_TARGET_FONTPACK;
 }
 static inline uint32_t target_max_size(void) {
-    return (s_target == FW_TARGET_FONTPACK) ? FONTPACK_FLASH_MAX_SIZE : FW_UP_MAX_SIZE;
+    return (s_target == FW_TARGET_FONTPACK) ? s_fontpack_slot_size : FW_UP_MAX_SIZE;
+}
+
+void fw_staging_set_fontpack_slot(uint32_t slot_off, uint32_t slot_size) {
+    s_fontpack_slot_off  = slot_off;
+    s_fontpack_slot_size = slot_size;
 }
 
 // ---------------------------------------------------------------------------

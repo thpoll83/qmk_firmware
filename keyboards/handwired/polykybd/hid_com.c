@@ -21,6 +21,7 @@
 #include "lang/lang_lut.h"
 #include "base/com.h"
 #include "base/overlay.h"
+#include "base/fontpack.h"
 #include "base/update.h"
 #include "poly_util.h"
 
@@ -139,15 +140,34 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         switch(data[1]) {
             // case id_custom_channel...id_qmk_led_matrix_channel: //maybe now usable :)
             //     break;
-            case 6: //id
+            case 6: { //id
                 memset(data, 0, length);
-                memcpy(data, name, strlen(name));
+                size_t nlen = strlen(name);
+                memcpy(data, name, nlen);
                 if (s_fresh_boot) {
                     data[2] = '*'; // host sees '*' instead of '.' -> firmware just booted
                     s_fresh_boot = false;
                 }
+                // Per-bundle font-pack content versions, placed AFTER the string's
+                // NUL terminator so the FW/protocol/HW string stays free to grow.
+                // Block = ['V'][count][u16 little-endian version × count] in bundle
+                // order (PROTOCOL_VERSION >= 6). Older hosts stop at the NUL and
+                // ignore it; the host flashes only bundles whose device version is
+                // behind its shipped version.
+                uint8_t bcount = fontpack_bundle_count();
+                size_t  off    = nlen + 1;   // skip the NUL
+                if (off + 2u + (size_t)bcount * 2u <= length) {
+                    data[off++] = 'V';
+                    data[off++] = bcount;
+                    for (uint8_t b = 0; b < bcount; ++b) {
+                        uint16_t v = fontpack_bundle_version(b);
+                        data[off++] = (uint8_t)(v & 0xFF);
+                        data[off++] = (uint8_t)(v >> 8);
+                    }
+                }
                 raw_hid_send(data, length);
                 break;
+            }
             case 7: //lang
                 memset(data, 0, length);
                 switch(local_state->lang) {

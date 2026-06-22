@@ -58,6 +58,11 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
 void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc);     // FIRMWARE target
 void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, uint8_t target);
 
+// FONTPACK target only: select the bundle slot (offset relative to FW_RESOURCE_OFFSET
+// + reserved size) the next begin/chunk/finalize sequence writes to. Must be called
+// before the FONTPACK begin on BOTH halves (master + slave). No effect on FIRMWARE.
+void fw_staging_set_fontpack_slot(uint32_t slot_off, uint32_t slot_size);
+
 // Erases one staging sector per call.  Call from housekeeping_task_user()
 // until fw_staging_write_chunk() no longer returns false for offset==0.
 void fw_staging_process_deferred(void);

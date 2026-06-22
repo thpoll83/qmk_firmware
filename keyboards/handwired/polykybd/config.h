@@ -108,7 +108,12 @@
 //     + AUTO_ON / AUTO_OFF to engage/leave host-driven brightness. flags==0 is
 //     the legacy persisted set, so older hosts keep working. The keyboard's
 //     KC_DAUTO key toggles auto mode locally.
-#define PROTOCOL_VERSION 5
+// v6: GET_ID (cmd 6) reply now carries a per-bundle font-pack version block after
+//     the NUL-terminated id string — ['V'][count][u16 content_version × count] in
+//     bundle order — so the host flashes only the font-pack bundles that are
+//     missing/stale on the device. The pack is flashed per-bundle (FONTPACK_BEGIN
+//     carries a bundle_id; each bundle has its own fixed flash slot).
+#define PROTOCOL_VERSION 6
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

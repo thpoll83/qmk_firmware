@@ -4,6 +4,8 @@
 
 #include "quantum.h"
 #include "polymod_crc32.h"
+#include "base/fw_staging.h"   // fw_staging_set_fontpack_slot
+#include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 
 #include <string.h>
 
@@ -64,13 +66,22 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
     static uint32_t s_begun_size   = 0;
     static uint32_t s_begun_crc    = 0;
     static uint8_t  s_begun_target = 0xFF;
+    static uint8_t  s_begun_bundle = 0xFF;
     bool same_image = (msg->image_size == s_begun_size && msg->image_crc == s_begun_crc &&
-                       msg->target == s_begun_target);
+                       msg->target == s_begun_target && msg->bundle == s_begun_bundle);
 
     if (!same_image) {
         s_begun_size   = msg->image_size;
         s_begun_crc    = msg->image_crc;
         s_begun_target = msg->target;
+        s_begun_bundle = msg->bundle;
+        // FONTPACK: point the stager at this bundle's fixed slot before erasing.
+        if (msg->target == FW_TARGET_FONTPACK) {
+            uint32_t slot_off = 0, slot_size = 0;
+            if (fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
+                fw_staging_set_fontpack_slot(slot_off, slot_size);
+            }
+        }
         fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx target=%u started erase\n",
                 msg->image_size, msg->image_crc, msg->target);

@@ -30,6 +30,7 @@ typedef struct _fw_up_begin_sync_t {
     uint32_t image_size;
     uint32_t image_crc;
     uint8_t  target;
+    uint8_t  bundle;   // FONTPACK target: which bundle slot (fontpack_slot()); 0 for FIRMWARE
 } fw_up_begin_sync_t;
 
 // One chunk of firmware data (FW_UP_CHUNK_SIZE bytes).

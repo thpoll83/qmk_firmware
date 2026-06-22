@@ -21,3 +21,8 @@ void request_disp_refresh(void);
 void set_disp_refresh(enum refresh_mode mode);
 
 enum refresh_mode get_refresh_mode(void) ;
+
+// Clears the per-key idle anti-burn-in "was dark" latch so the next idle session
+// starts from the centred awake legend and relocates every key cleanly. Call on any
+// wake / suspend / stop-idle path. Defined in poly_keymap.c.
+void reset_idle_jitter(void);

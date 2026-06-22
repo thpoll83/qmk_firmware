@@ -405,16 +405,10 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     return state;
 }
 
-// Idle "jitter" anti-burn-in state (master-side; the offset is synced to the
-// slave through poly_sync_t). g_jitter_epoch counts pulse cycles so the legend is
-// relocated once per cycle; UINT32_MAX forces a fresh offset on each idle entry.
-static uint32_t g_jitter_epoch = UINT32_MAX;
-static int8_t   g_jitter_dx = 0;
-static int8_t   g_jitter_dy = 0;
-
-// Deterministic small pseudo-random offset for a given pulse cycle (epoch) and
-// axis salt, clamped to [lo, hi]. Deterministic so a glance is reproducible and
-// the value is stable for the whole epoch; only the master evaluates it.
+// Small deterministic pseudo-random offset for a given seed and axis salt, mapped
+// into [lo, hi]. Used per key, per dark-episode (see kdisp_idle): the seed is a
+// rolling counter so each relocation lands somewhere new, the salt separates the X
+// and Y axes. Cheap integer hash — no PRNG state to carry on either half.
 static int8_t jitter_axis(uint32_t epoch, uint32_t salt, int8_t lo, int8_t hi) {
     uint32_t h = (epoch + salt) * 2654435761u;
     h ^= h >> 15;
@@ -459,8 +453,6 @@ void housekeeping_task_user(void) {
             poly_sync_t* local_state = access_local_state();
             uint8_t  contrast = local_state->contrast;
             uint8_t  flags = local_state->flags;
-            int8_t   idle_dx = 0;   // anti-burn-in jitter offset; 0 unless idle+JITTER
-            int8_t   idle_dy = 0;
 
             flags |= STATUS_DISP_ON;
             flags &= ~((uint8_t)IDLE_TRANSITION);
@@ -473,7 +465,6 @@ void housekeeping_task_user(void) {
                 if(brightness<=MIN_BRIGHT) {
                     contrast = DISP_OFF;
                     flags |= DISP_IDLE;
-                    g_jitter_epoch = UINT32_MAX;   // force a fresh jitter offset for this idle session
                     uprint("Transition to pulsing\n");
                 } else if(brightness>FULL_BRIGHT) {
                     contrast = FULL_BRIGHT;
@@ -491,27 +482,17 @@ void housekeeping_task_user(void) {
             } else if((flags & DISP_IDLE)!=0) {
                 int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
                 contrast = time_after%50;
-                // Jitter style: relocate the legend once per pulse cycle so the lit
-                // pixels migrate. The offset is constant within a cycle and synced to
-                // the slave; update_displays() re-renders only when it changes.
-                if(get_idle_style() == IDLE_STYLE_JITTER) {
-                    uint32_t epoch = (uint32_t)time_after / IDLE_JITTER_CYCLE_STEPS;
-                    if(epoch != g_jitter_epoch) {
-                        g_jitter_epoch = epoch;
-                        g_jitter_dx = jitter_axis(epoch, 0x1u, IDLE_JITTER_DX_MIN, IDLE_JITTER_DX_MAX);
-                        g_jitter_dy = jitter_axis(epoch, 0x2u, IDLE_JITTER_DY_MIN, IDLE_JITTER_DY_MAX);
-                    }
-                    idle_dx = g_jitter_dx;
-                    idle_dy = g_jitter_dy;
-                }
+                // In JITTER style each key relocates its own legend independently as
+                // it pulses dark (kdisp_idle) — there is no shared per-cycle offset
+                // to compute here; only the pulse `contrast` drives both halves.
             } else {
                 flags &= ~((uint8_t)DISP_IDLE);
             }
 
             local_state->contrast = contrast;
             local_state->flags = flags;
-            local_state->idle_dx = idle_dx;
-            local_state->idle_dy = idle_dy;
+            // Sync the active idle style so the slave jitters in lockstep with us.
+            local_state->idle_style = get_idle_style();
         }
     }
 }
@@ -1123,30 +1104,57 @@ uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
     return poly_keycode_at(layer, key.row, key.col);
 }
 
-// Clamp a desired idle jitter offset so the legend's bounding box (measured at the
-// draw origin ox/oy) stays inside the visible window [BUFFER_X, BUFFER_X+SCREEN_WIDTH-1]
-// x [0, SCREEN_HEIGHT-1]. Glyph-driven, so it is correct for any script: a narrow
-// Latin letter may travel far, a full-width CJK glyph barely or not at all (clamped
-// to 0 in that axis) — the legend is never partially cut off at any offset.
-static void clamp_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, int8_t* dx, int8_t* dy) {
+// Resolve the keycode whose legend a physical key is currently showing, honouring the
+// active layer stack with a one-level transparent fallback. The single source of truth
+// for both the awake render (update_displays) and the idle relocation (kdisp_idle), so
+// a jittered legend always matches what was last drawn awake instead of snapping to the
+// base layer. The effective state folds in the default layer (`def_layer`, tracked
+// separately from the momentary `layer` stack — e.g. a Colemak/Neo base) so a key with
+// no momentary layer active still shows its default-layer legend, not _BL.
+static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t col) {
+    layer_state_t eff = lyr->layer | ((layer_state_t)1 << lyr->def_layer);
+    uint8_t layer = get_highest_layer(eff);
+    uint16_t kc = poly_keycode_at(layer, row, col);
+    if (kc == KC_TRNS) {
+        kc = poly_keycode_at(get_highest_layer(eff & ~((layer_state_t)1 << layer)), row, col);
+    }
+    return kc;
+}
+
+// Roll a per-glyph idle jitter offset: a uniform random position within the legend's
+// OWN on-screen slack, measured from its bounding box at the draw origin (ox/oy). The
+// range is glyph-derived — never a global cap — so a slim "i" roams its full free
+// width while a wide "w" stays within its small margin, each using all (and only) the
+// space it actually has. A global ±N envelope would be counter-productive here: it
+// would throttle the slim glyph (lots of slack, but capped) and edge-bias the wide one
+// (most rolls clamp to the same boundary). A glyph with no slack in an axis simply
+// doesn't move in it. The result is always fully on-screen for any script, so no
+// separate clamp step is needed.
+static void roll_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, uint32_t seed,
+                             int8_t* dx, int8_t* dy) {
     int8_t xmin, xmax, ymin, ymax;
     kdisp_gfx_text_bbox(ALL_FONTS, ALL_FONT_SIZE, text, &xmin, &xmax, &ymin, &ymax);
     int16_t axmin = ox + xmin, axmax = ox + xmax;   // glyph extent at the un-jittered origin
     int16_t aymin = oy + ymin, aymax = oy + ymax;
-    int16_t lo, hi;
-    lo = (int16_t)BUFFER_X - axmin;                          // keep left edge >= BUFFER_X
-    hi = (int16_t)(BUFFER_X + SCREEN_WIDTH - 1) - axmax;     // keep right edge <= last visible col
-    *dx = (hi < lo) ? 0 : (int8_t)PK_MIN(PK_MAX((int16_t)*dx, lo), hi);
-    lo = -aymin;                                             // keep top >= 0
-    hi = (int16_t)(SCREEN_HEIGHT - 1) - aymax;               // keep bottom <= last visible row
-    *dy = (hi < lo) ? 0 : (int8_t)PK_MIN(PK_MAX((int16_t)*dy, lo), hi);
+    int16_t xlo = (int16_t)BUFFER_X - axmin;                      // keep left edge >= BUFFER_X
+    int16_t xhi = (int16_t)(BUFFER_X + SCREEN_WIDTH - 1) - axmax; // keep right edge on-screen
+    int16_t ylo = -aymin;                                         // keep top >= 0
+    int16_t yhi = (int16_t)(SCREEN_HEIGHT - 1) - aymax;           // keep bottom on-screen
+    *dx = (xhi < xlo) ? 0 : jitter_axis(seed, 0x0000u, (int8_t)xlo, (int8_t)xhi);
+    *dy = (yhi < ylo) ? 0 : jitter_axis(seed, 0x1000u, (int8_t)ylo, (int8_t)yhi);
 }
 
-// Idle (anti-burn-in) per-key render: draws ONLY the resting normal legend — no
-// shift/AltGr preview, no overlay image, no tab/MRU chrome — relocated by the synced
-// jitter offset, clamped per glyph so it is always fully visible. Keeps all idle-mode
-// rendering in one place instead of threading an "idle" flag through the awake path.
-static void render_idle_key(uint16_t keycode, led_t state) {
+// Idle (anti-burn-in) per-key relocation: redraws ONLY the resting normal legend — no
+// shift/AltGr preview, no overlay image, no tab/MRU chrome — at a fresh random spot
+// within THIS glyph's own slack (roll_idle_offset, seeded by `seed`), always fully
+// visible. Renders into the currently selected display's buffer, so it works from
+// inside kdisp_idle()'s shift-register walk (the caller selects the key, with the panel
+// switched OFF, so the move is invisible). Returns false WITHOUT touching the buffer
+// when the keycode has no plain-text legend (a language flag, emoji, region tab, MRU
+// control, …): those can't be jittered (full-bleed images), so we leave their current
+// frame in place instead of blanking it — e.g. the language-layer flags stay put and
+// keep pulsing rather than disappearing on the first idle cycle.
+static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     const poly_sync_t* local_state = get_local_state();
     uint32_t unimap[2] = {0, 0};
     const uint32_t* text = to_static_text(keycode, state);
@@ -1160,36 +1168,50 @@ static void render_idle_key(uint16_t keycode, led_t state) {
         unimap[0] = unicode_map[chr];
         text = unimap;
     }
-    kdisp_set_buffer(0x00);
-    if (text != NULL && text[0] != 0) {
-        int8_t dx = local_state->idle_dx, dy = local_state->idle_dy;
-        clamp_idle_offset(text, BUFFER_X, 23, &dx, &dy);
-        kdisp_set_draw_offset(dx, dy);
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
-        kdisp_set_draw_offset(0, 0);
+    if (text == NULL || text[0] == 0) {
+        return false;   // no text legend — keep the key's current frame
     }
+    int8_t dx, dy;
+    roll_idle_offset(text, BUFFER_X, 23, seed, &dx, &dy);
+    kdisp_set_buffer(0x00);
+    kdisp_set_draw_offset(dx, dy);
+    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
+    kdisp_set_draw_offset(0, 0);
     kdisp_send_buffer();
+    return true;
+}
+
+// Per-key "was dark on the previous kdisp_idle() pass" latch (this half only), so a
+// key relocates at most once per pulse-dark episode rather than every pass while it
+// is dark. Reset on every wake/suspend/stop-idle path (reset_idle_jitter) so a fresh
+// idle session starts from the centred awake legend and re-relocates cleanly.
+static uint8_t s_idle_was_dark[MATRIX_ROWS_PER_SIDE][MATRIX_COLS];
+// Per-key dark-episode counter: the breathing curve dips dark ~twice per ~15 s pulse
+// cycle, so relocating on every dark edge would move each key ~every 7.5 s. We only
+// relocate every IDLE_JITTER_PERIOD-th dark episode to slow that down (the count is
+// taken mod the period, so a fresh session relocates on the very first episode then
+// every Nth after — it moves off-centre promptly, then drifts more slowly).
+static uint8_t s_idle_episode[MATRIX_ROWS_PER_SIDE][MATRIX_COLS];
+// Rolling seed for the per-key offset hash — bumped on every relocation so each lands
+// somewhere new (no per-key PRNG state to keep).
+static uint16_t s_idle_roll = 0;
+
+void reset_idle_jitter(void) {
+    memset(s_idle_was_dark, 0, sizeof(s_idle_was_dark));
+    memset(s_idle_episode, 0, sizeof(s_idle_episode));
 }
 
 void update_displays(enum refresh_mode mode) {
     const poly_sync_t* local_state = get_local_state();
     const bool idle = (local_state->flags & DISP_IDLE) != 0;
-    // Anti-burn-in jitter: while idle we normally do NOT re-render — kdisp_idle()
-    // just pulses the existing buffer. Re-render only when the jitter offset
-    // changed, to relocate the legend to its new spot for this pulse cycle.
-    static int8_t s_last_dx = 0, s_last_dy = 0;
-    if(idle) {
-        if(local_state->idle_dx == s_last_dx && local_state->idle_dy == s_last_dy) {
-            return;
-        }
-    } else if(local_state->contrast<=DISP_OFF) {
+    // While idle we never full-re-render here: kdisp_idle() pulses the existing
+    // buffer and (in JITTER style) relocates each key's legend itself as that key
+    // dims. A full update_displays() pass at idle would fight that and redraw the
+    // awake chrome. The displays already hold the last centred awake render when we
+    // enter idle, so there is nothing to do until we wake.
+    if(idle || local_state->contrast<=DISP_OFF) {
         return;
     }
-    // Remember the offset we render this pass so the guard above can skip until it
-    // changes again. The offset itself is applied per key by render_idle_key (clamped
-    // to each glyph's bounds); awake rendering is always centred.
-    s_last_dx = idle ? local_state->idle_dx : 0;
-    s_last_dy = idle ? local_state->idle_dy : 0;
 
     //uint8_t layer = get_highest_layer(layer_state);
     const poly_layer_t* local_layer = get_local_layer();
@@ -1226,16 +1248,10 @@ void update_displays(enum refresh_mode mode) {
             }
             else {
                 if (disp_idx != 255) {
-                    uint8_t layer = get_highest_layer(local_layer->layer);
-                    uint16_t highest_kc = poly_keycode_at(layer,r + offset,c); //if we encounter a transparent key go down one layer (but only one!)
-                    keycode = (highest_kc == KC_TRNS) ? poly_keycode_at(get_highest_layer(local_layer->layer&~(1<<layer)),r + offset,c) : highest_kc;
+                    keycode = display_keycode_at(local_layer, r + offset, c);
                     kdisp_enable(true);
-                    kdisp_set_contrast(idle ? IDLE_JITTER_REDRAW_CONTRAST : (uint8_t)(local_state->contrast-1));
+                    kdisp_set_contrast((uint8_t)(local_state->contrast-1));
                     if(keycode!=KC_TRNS) {
-                        if(idle) {
-                            // Idle shows only the resting legend, jittered + clamped.
-                            render_idle_key(keycode, state);
-                        } else {
                         int16_t lang_idx = lang_index_for_keycode(keycode);
                         if (lang_idx >= 0) {
                             // Language layer: country flag + tiny language code
@@ -1286,7 +1302,6 @@ void update_displays(enum refresh_mode mode) {
                         }
                         kdisp_send_buffer();
                         }
-                        }
                     }
                 }
                 sr_shift_once_latch();
@@ -1316,10 +1331,22 @@ uint8_t to_brightness(uint8_t b) {
     }
 }
 
-// Updates all displays to show idle pulsating animation with varying brightness pattern.
+// Updates all displays to show idle pulsating animation with varying brightness
+// pattern. In JITTER style this is also where anti-burn-in relocation happens: the
+// instant a key's out-of-phase pulse dims it to black, we redraw that one key's
+// resting legend at a fresh random offset (clamped to its glyph). The move is
+// invisible because the key is dark at that moment; it reappears at the new spot on
+// its next bright cycle. Each half relocates only its own keys, so there is no
+// cross-half offset to sync — the keys roam individually rather than in lockstep.
+// The glyph is re-derived from the keycode each time, so nothing is stored in the
+// OLED's own memory; only a 1-bit-per-key "was dark" latch (s_idle_was_dark) gates
+// the once-per-episode redraw.
 void kdisp_idle(uint8_t contrast) {
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t skip = 0;
+    const bool jitter = get_local_state()->idle_style == IDLE_STYLE_JITTER;
+    const poly_layer_t* local_layer = get_local_layer();
+    const led_t led_state = local_layer->led_state;
     sr_shift_out_buffer_latch(disp_row_0.bitmask, sizeof(struct display_info));
 
     //uint8_t idx = 0;
@@ -1329,15 +1356,37 @@ void kdisp_idle(uint8_t contrast) {
 
             //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
             //except there was a leading and missing physical key (KC_NO on base layer)
-            uint16_t keycode = keymaps[_BL][r + offset][c];
-            if (keycode == KC_NO) {
+            // base_kc drives the physical-layout skip and the per-key pulse phase (both
+            // layout-, not layer-, dependent); the relocated legend itself is resolved
+            // from the active layer below so it matches the awake render.
+            uint16_t base_kc = keymaps[_BL][r + offset][c];
+            if (base_kc == KC_NO) {
                 skip++;
             } else {
                 if (disp_idx != 255) {
-                    uint8_t idle_brightness = to_brightness((contrast+(c%3+r)*keycode+offset+r)%50);
+                    uint8_t idle_brightness = to_brightness((contrast+(c%3+r)*base_kc+offset+r)%50);
                     if(idle_brightness==0) {
+                        // Lit -> dark edge in JITTER style: relocate this key now. Turn
+                        // the panel OFF *first*, THEN write the new frame while it is
+                        // dark — so the move is never seen; the glyph reappears already
+                        // at its new spot on the next bright cycle (writing before the
+                        // off-switch made it flash at the old contrast — a visible jump
+                        // just before the key dimmed out). The legend is resolved from
+                        // the active layer (display_keycode_at) so it matches the awake
+                        // render, not the base layer.
+                        bool dark_edge = !s_idle_was_dark[r][c];
+                        s_idle_was_dark[r][c] = 1;
                         kdisp_enable(false);
+                        // Only relocate every IDLE_JITTER_PERIOD-th dark episode, so the
+                        // legend drifts slowly rather than on every ~7.5 s dark valley.
+                        if(jitter && dark_edge && (s_idle_episode[r][c]++ % IDLE_JITTER_PERIOD) == 0) {
+                            uint16_t kc = display_keycode_at(local_layer, r + offset, c);
+                            if(kc != KC_TRNS) {
+                                render_idle_key(kc, led_state, s_idle_roll++);
+                            }
+                        }
                     } else {
+                        s_idle_was_dark[r][c] = 0;
                         kdisp_enable(true);
                         kdisp_set_contrast(idle_brightness-1);
                     }
@@ -1879,8 +1928,7 @@ bool display_wakeup(keyrecord_t* record) {
         local_state->contrast = get_active_brightness();
         local_state->flags &= ~((uint8_t)DISP_IDLE);
         local_state->flags |= STATUS_DISP_ON;
-        local_state->idle_dx = 0;   // recentre the legend on wake (drop any jitter offset)
-        local_state->idle_dy = 0;
+        reset_idle_jitter();   // fresh, centred idle session next time
         update_performed();
         request_disp_refresh();
     }
@@ -2072,8 +2120,7 @@ void poly_suspend(void) {
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
     local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);// & ~((uint8_t)RGB_ON);
     local_state->contrast = DISP_OFF;
-    local_state->idle_dx = 0;
-    local_state->idle_dy = 0;
+    reset_idle_jitter();
 }
 
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
@@ -2114,8 +2161,7 @@ void suspend_wakeup_init_kb(void) {
     local_state->flags |= STATUS_DISP_ON;
     local_state->flags &= ~((uint8_t)DISP_IDLE);
     local_state->contrast = get_active_brightness();
-    local_state->idle_dx = 0;
-    local_state->idle_dy = 0;
+    reset_idle_jitter();
     set_last_update(0);
 
     //rgb_matrix_reload_from_eeprom();

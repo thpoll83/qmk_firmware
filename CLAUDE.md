@@ -129,40 +129,63 @@ pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
 - **`IDLE_STYLE_PULSE` (0, default, legacy):** `kdisp_idle()` only modulates each
   keycap's SSD1306 contrast register (a per-key out-of-phase "breathing"). The
   buffer is never re-rendered, so the lit pixels never move — the burn-in risk.
-- **`IDLE_STYLE_JITTER` (1):** keeps the pulse, but once per ~15 s pulse cycle the
-  master picks a small random offset and **relocates** the legend so the lit pixels
-  migrate. Mechanics:
-  - `housekeeping_task_user()` (master only, `is_usb_host_side()`) computes the
-    per-cycle offset into `poly_sync_t.idle_dx/idle_dy` (synced to the slave like
-    `contrast`, so both halves relocate in lockstep — **no extra UART traffic**:
-    the offset rides the existing per-300 ms poly sync, and the slave just renders
-    whatever offset arrives, so it needs no idle-style of its own). The
-    `IDLE_JITTER_DX/DY_*` envelope in `config.h` is only the *proposed* range — it
-    no longer has to be clip-safe (the per-key clamp below makes it so), so it's
-    tuned for how far small legends roam.
-  - `update_displays()` normally early-returns while `DISP_IDLE` is set; in jitter
-    it re-renders **only when `idle_dx/idle_dy` changed** (a static last-offset
-    guard). Each drawable key is then routed to **`render_idle_key()`** (the single
-    place all idle rendering lives), which draws **only the resting normal legend**
-    — no shift/AltGr preview, no overlay image, no tab/MRU chrome (those keycodes
-    aren't on the base layer at idle anyway), at the low fixed `IDLE_JITTER_REDRAW_CONTRAST`;
-    `kdisp_idle()` resumes the pulse on the next tick.
-  - **The offset is clamped per key to that glyph's own bounds**, so the legend is
-    *always fully visible* at every jitter position — for any script, not just
-    Latin. `render_idle_key()` measures the legend with `kdisp_gfx_text_bbox()`
-    (full x+y box, mirroring the draw's cursor rules and per-glyph yAdvance shift;
-    `kdisp_gfx_text_bounds()` is now a wrapper over it) and `clamp_idle_offset()`
-    bounds the synced `idle_dx/idle_dy` so the box stays inside the visible window
-    `[BUFFER_X, BUFFER_X+SCREEN_WIDTH-1] × [0, SCREEN_HEIGHT-1]` (= `[28,99]×[0,39]`).
-    A glyph with no slack in an axis (e.g. a full-width CJK legend) simply doesn't
-    move in it — no clipping, no special-casing. This **replaces** the old global
-    `kdisp_set_draw_offset()` + fixed-`±N` approach, whose Latin-sized constants
-    clipped zero-bearing glyphs (`A W X Y T V`, `J`) on the flush-left origin and
-    were wrong for wide scripts. `SET_PIXEL_CLIPPED` in `disp_array.c` remains the
-    memory-safety backstop, but is no longer relied on for visibility.
-  - Offsets are reset to 0 on every wake/suspend path (`display_wakeup`,
-    `poly_suspend`, `suspend_wakeup_init_kb`, cmd 15 stop-idle) so a refresh right
-    after waking is centred.
+- **`IDLE_STYLE_JITTER` (1):** keeps the pulse, but **each key independently**
+  relocates its own legend to a fresh random spot the instant that key's
+  out-of-phase pulse dims it to black — so the lit pixels migrate per key, not in
+  lockstep. Mechanics (all in `kdisp_idle()`):
+  - `kdisp_idle()` already computes a **per-key brightness** (`to_brightness((contrast
+    + per-key phase) % 50)`) and walks every key on this half with the shift register
+    selecting each in turn. On the **lit→dark edge** (`idle_brightness==0` and the
+    `s_idle_was_dark[r][c]` latch was clear) in JITTER style it **switches that key's
+    panel OFF first, then** calls **`render_idle_key(kc, led_state, seed)`** to redraw
+    *that one key* straight into the currently selected (now-dark) display. Writing the
+    new frame *after* the off-switch is what makes the move invisible — the glyph
+    reappears already at its new spot on the next bright cycle (~once per ~15 s per key);
+    writing before the off-switch flashed it at the old contrast first (a visible jump
+    just before the key dimmed out). `s_idle_was_dark` gates it to once per dark episode
+    (a 1-bit-per-key latch, this-half-only). `render_idle_key()` **returns false without
+    touching the buffer** when the keycode has no plain-text legend (a language flag,
+    emoji, region tab, MRU control — full-bleed images that can't be jittered), so those
+    keys keep their current frame and just pulse instead of being blanked (the
+    language-layer flags no longer disappear on the first idle cycle).
+  - **No shared offset, so nothing extra crosses the UART.** Each half runs
+    `kdisp_idle()` on its own keys with the synced pulse `contrast`; only the **style
+    bit** is synced (`poly_sync_t.idle_style`, set from `housekeeping_task_user()` on
+    the master, adopted by the slave's `copy_local_state`) so the slave jitters iff
+    the master's style says so. The legend is **re-derived from the keycode** on every
+    relocation — nothing is stored in the OLED's own memory (the panel only holds the
+    last frame we send).
+  - `update_displays()` **early-returns while `DISP_IDLE` is set** (it would otherwise
+    fight `kdisp_idle()` and redraw the awake chrome) — the keycaps already hold the
+    last centred awake render when idle begins, and `kdisp_idle()` owns all idle
+    visuals from there. `render_idle_key()` draws **only the resting normal legend** —
+    no shift/AltGr preview, no overlay image, no tab/MRU chrome. The relocated keycode
+    is resolved through **`display_keycode_at()`** — the shared helper (also used by the
+    awake `update_displays`) that honours the active momentary stack **and the default
+    layer** (`def_layer`, folded in so a Colemak/Neo base shows its own legends, not
+    `_BL`) with a one-level transparent fallback — so a jittered key matches what was on
+    screen rather than snapping to the base layer.
+  - **The travel range is derived per glyph from its own on-screen slack** — there is
+    deliberately **no global `±N` offset envelope**. `render_idle_key()` measures the
+    legend with `kdisp_gfx_text_bbox()` (full x+y box, mirroring the draw's cursor
+    rules and per-glyph yAdvance shift; `kdisp_gfx_text_bounds()` is now a wrapper over
+    it) and `roll_idle_offset()` rolls a **uniform random position within that glyph's
+    free space** inside the visible window `[BUFFER_X, BUFFER_X+SCREEN_WIDTH-1] × [0,
+    SCREEN_HEIGHT-1]` (= `[28,99]×[0,39]`). So a slim `i` roams its full free width
+    while a wide `w` (or a full-width CJK legend) moves only as far as it can without
+    clipping — each uses all *and only* the room it has, for any script. A fixed cap
+    would be counter-productive: it would throttle the slim glyph and edge-bias the
+    wide one (most rolls clamping to the same boundary). A glyph with no slack in an
+    axis simply doesn't move in it — no clipping, no special-casing. `SET_PIXEL_CLIPPED`
+    in `disp_array.c` remains the memory-safety backstop, but is not relied on for
+    visibility.
+  - The per-key latch is cleared by **`reset_idle_jitter()`** on every wake/suspend
+    path (`display_wakeup`, `poly_suspend`, `suspend_wakeup_init_kb`, cmd 15
+    stop-idle), so a fresh idle session starts from the centred awake legend and
+    relocates every key cleanly. (This **replaces** the earlier global-offset jitter,
+    where the master picked one `idle_dx/idle_dy` per ~15 s cycle, synced it, and all
+    keys shifted together — the per-key version is the nicer effect *and* drops the
+    synced offset.)
   A "Matrix-style" idle animation was considered but shelved — it defeats the
   "glance at the dimmed legend and resume typing" hint the pulse preserves; jitter
   was chosen as the default-preserving, legibility-preserving fix.

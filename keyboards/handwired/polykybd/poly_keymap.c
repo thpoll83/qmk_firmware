@@ -173,7 +173,26 @@ static uint8_t overlay_flags = 0;
 // indicator callback runs every render cycle (before flush) and zeros the LED buffer,
 // ensuring LEDs stay dark regardless of what the transport wrote to enable.
 #ifdef RGB_MATRIX_ENABLE
+// Font-pack / firmware flash: light the whole matrix (breathing cyan) so the user
+// sees the board is busy updating and must not unplug it. The override below only
+// writes the per-frame LED buffer — the persistent mode/hue/sat/val config is
+// untouched, so the previous effect resumes automatically when flashing ends.
+// housekeeping_task_user() drives s_flash_rgb_active with a short hold (so the
+// brief gaps between the six bundles don't flicker it) and re-enables RGB if it
+// was off, disabling it again afterwards.
+#define FLASH_RGB_HOLD_MS 1500
+static bool     s_flash_rgb_active      = false;
+static bool     s_flash_rgb_was_enabled = false;
+static uint16_t s_flash_rgb_seen        = 0;
+
 bool rgb_matrix_indicators_kb(void) {
+    if (s_flash_rgb_active) {
+        uint8_t phase = (uint8_t)(timer_read32() >> 3);         // ~2 s cycle
+        uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
+        uint8_t v     = 10 + (tri >> 1);                        // ~10..73
+        rgb_matrix_set_color_all(0, v, v);                     // breathing cyan = "updating"
+        return false;
+    }
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
             // Backstop: force red even if rgb_matrix_config.enable gets cleared.
@@ -186,6 +205,21 @@ bool rgb_matrix_indicators_kb(void) {
         }
     }
     return rgb_matrix_indicators_user();
+}
+
+// Drive the flash RGB attention effect from the fw_up state (master + slave).
+static void flash_rgb_tick(void) {
+    if (fw_staging_fw_up_active()) s_flash_rgb_seen = timer_read();
+    bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
+    if (want && !s_flash_rgb_active) {
+        s_flash_rgb_active      = true;
+        s_flash_rgb_was_enabled = rgb_matrix_is_enabled();
+        if (!s_flash_rgb_was_enabled) rgb_matrix_enable_noeeprom();
+    } else if (!want && s_flash_rgb_active) {
+        s_flash_rgb_active = false;
+        s_flash_rgb_seen   = 0;
+        if (!s_flash_rgb_was_enabled) rgb_matrix_disable_noeeprom();  // mode/color auto-restore
+    }
 }
 
 #define RGB_REPEAT_INITIAL_DELAY_MS 400
@@ -430,6 +464,9 @@ static int8_t jitter_axis(uint32_t epoch, uint32_t salt, int8_t lo, int8_t hi) {
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
 void housekeeping_task_user(void) {
+#ifdef RGB_MATRIX_ENABLE
+    flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
+#endif
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful

@@ -196,6 +196,16 @@ bool fontpack_slot(uint8_t id, uint32_t *offset, uint32_t *size) {
     return false;
 }
 
+// Did the slot at this flash offset load as a valid PlyF on the last fontpack_load()?
+// True for a valid EMPTY (wiped) bundle too — so a wipe COMMIT reports success even
+// when every bundle is now empty (when fontpack_present() is false). Used by the
+// FONTPACK finalize to gate per-bundle, not on the whole pack.
+bool fontpack_slot_present(uint32_t slot_off) {
+    for (uint8_t i = 0; i < FONTPACK_N_SLOTS; ++i)
+        if (s_slots[i].offset == slot_off) return s_slot_present[i];
+    return false;
+}
+
 uint8_t  fontpack_bundle_count(void)            { return (uint8_t)FONTPACK_N_SLOTS; }
 uint16_t fontpack_bundle_version(uint8_t id) {
     for (uint8_t i = 0; i < FONTPACK_N_SLOTS; ++i)

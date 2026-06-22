@@ -499,7 +499,10 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
             s_fontpack_reload_pending = true;
         } else {
             fontpack_reload();
-            ok = fontpack_present();
+            // Gate on the JUST-FLASHED slot loading as a valid PlyF (an empty wipe
+            // sentinel counts), not the whole-pack fontpack_present() — which is
+            // false after a full wipe and would falsely fail the last bundle.
+            ok = fontpack_slot_present(s_fontpack_slot_off);
         }
     } else if (ok) {
         // FIRMWARE: stamp the staging header {magic,size,crc} so the staged image

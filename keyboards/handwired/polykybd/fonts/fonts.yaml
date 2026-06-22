@@ -80,6 +80,33 @@ index:
   pack_extra_fonts:
     - {symbol: NotoColorEmoji_Regular_LangFlags_20pt7b, header: flag_fonts.h}
 
+# Split-pack bundles: the non-resident pack is also emitted as one PlyF per
+# script family, laid out in fixed sector-aligned slots inside the 2 MB fontpack
+# window (behind a 4 KB directory). The host flashes only the bundles that are
+# missing/stale on the device (per-bundle content_version in the GET_ID reply).
+# `list` order == slot order in flash == version order in the GET_ID block, so it
+# is APPEND-ONLY (a bundle's index is its on-wire id). Put the bundle most likely
+# to grow (emoji) last with slot_kb: rest so its growth never shifts the others.
+# Every non-resident font must map to exactly one bundle (by category, or by
+# pack_extra symbol for the standalone flags); generate_fonts.py fails the build
+# if a bundle overflows its slot. Slot sizes are KB, multiples of 4 (sector).
+bundles:
+  layout_version: 1
+  region_kb: 2048          # 2 MB fontpack window (FW_RESOURCE_OFFSET .. +2 MB)
+  dir_sectors: 1           # 4 KB directory sector at the region base
+  # NB: the `latin` category is resident: true (compiled into the firmware, the
+  # functional minimum so the keyboard renders ASCII/Cyrillic/Greek with NO pack),
+  # so it is NOT a bundle here — only non-resident pack fonts get bundles.
+  list:
+    - {id: symbol,   slot_kb: 96,   categories: [symbols]}
+    - {id: mideast,  slot_kb: 96,   categories: [arabic, hebrew, ethiopic]}
+    - {id: syllabic, slot_kb: 96,   categories: [canadian, cherokee]}
+    - {id: asia,     slot_kb: 128,  categories: [jp, kr, bopomofo, devanagari,
+                                                 bengali, telugu, tamil, thai,
+                                                 vietnamese, georgian, armenian]}
+    - {id: flags,    slot_kb: 128,  pack_extra: [NotoColorEmoji_Regular_LangFlags_20pt7b]}
+    - {id: emoji,    slot_kb: rest, categories: [emoji, emoji_fig]}
+
 # Each category -> one generated header, with defaults inherited by its fonts.
 categories:
   latin:

@@ -125,9 +125,18 @@ def parse_gfx_header(text: str) -> dict[str, ParsedFont]:
 # ─────────────────────────── serialize / deserialize ────────────────────────
 
 def serialize_pack(fonts: list[ParsedFont], content_version: int = 0,
-                   abi_version: int = ABI_VERSION) -> bytes:
-    """Build a "PlyF" pack from an ordered list of fonts (order == priority)."""
+                   abi_version: int = ABI_VERSION,
+                   global_indices: list[int] | None = None) -> bytes:
+    """Build a "PlyF" pack from an ordered list of fonts (order == priority).
+
+    `global_indices`, when given, is a parallel list of each font's position in
+    the full ALL_FONTS priority order; it is written into the per-font record's
+    `reserved` u16 so a multi-bundle firmware can merge fonts from several packs
+    back into global priority order. Omitted (single-pack path) → reserved = 0,
+    which is what every legacy reader already ignores (byte-identical output)."""
     n = len(fonts)
+    if global_indices is not None and len(global_indices) != n:
+        raise ValueError("global_indices length must match fonts")
     table_off = HEADER_SIZE
 
     # Layout: header, font table, all glyph arrays, all bitmap blobs.
@@ -153,7 +162,8 @@ def serialize_pack(fonts: list[ParsedFont], content_version: int = 0,
     total_size = cur
 
     table = b"".join(
-        struct.pack(FONT_FMT, bitmap_offs[i], glyph_offs[i], f.first, f.last, f.yadvance, 0)
+        struct.pack(FONT_FMT, bitmap_offs[i], glyph_offs[i], f.first, f.last, f.yadvance,
+                    (global_indices[i] if global_indices is not None else 0))
         for i, f in enumerate(fonts))
 
     body = bytearray(total_size - HEADER_SIZE)
@@ -365,6 +375,155 @@ def manifest_from_texts(order: list[str], category_texts: dict[str, str],
             resident |= set(fonts.keys())
     parsed.update(extra_pack_fonts(cfg, fonts_dir))
     return build_pack(order, resident, parsed, content_version)
+
+
+# ─────────────────────────── bundles (split pack) ───────────────────────────
+#
+# The single pack above is also emitted as N independent "bundles" — one PlyF per
+# script family — laid out in fixed, sector-aligned slots inside the 2 MB fontpack
+# window, behind a small directory. Each bundle is a normal abi-1 PlyF; the only
+# extra is that every font record carries its global ALL_FONTS index (the spare
+# `reserved` u16), so the firmware merges the fonts of all present bundles back
+# into global priority order. Grouping + slot sizes live in fonts.yaml `bundles:`.
+
+SECTOR_SIZE = 0x1000   # 4 KB flash sector — slot offsets/sizes are sector-aligned
+
+
+def compute_bundle_layout(cfg: dict) -> dict:
+    """Resolve fonts.yaml `bundles:` into concrete slot offsets/sizes.
+
+    Returns {layout_version, region, dir_offset, dir_size, sector, slots:[{id,
+    index, offset, size}]}. Offsets are relative to the fontpack region base
+    (FW_RESOURCE_OFFSET). The last slot may use slot_kb: rest to claim the tail."""
+    b = cfg["bundles"]
+    region = int(b["region_kb"]) * 1024
+    dir_size = int(b.get("dir_sectors", 1)) * SECTOR_SIZE
+    slots, off = [], dir_size
+    lst = b["list"]
+    for i, e in enumerate(lst):
+        if e.get("slot_kb") == "rest":
+            size = region - off
+        else:
+            size = int(e["slot_kb"]) * 1024
+        if size <= 0 or size % SECTOR_SIZE:
+            raise ValueError(f"bundle {e['id']!r}: slot size {size} not a positive "
+                             f"multiple of {SECTOR_SIZE}")
+        slots.append({"id": e["id"], "index": i, "offset": off, "size": size})
+        off += size
+    if off > region:
+        raise ValueError(f"bundle slots ({off} B) exceed the {region} B fontpack region")
+    return {"layout_version": int(b["layout_version"]), "region": region,
+            "dir_offset": 0, "dir_size": dir_size, "sector": SECTOR_SIZE, "slots": slots}
+
+
+def symbol_categories_from_texts(category_texts: dict[str, str]) -> dict[str, str]:
+    """{font symbol -> category name} parsed from per-category header text."""
+    out: dict[str, str] = {}
+    for cat, text in category_texts.items():
+        for sym in parse_gfx_header(text):
+            out[sym] = cat
+    return out
+
+
+def symbol_categories_from_tree(fonts_dir: Path, cfg: dict) -> dict[str, str]:
+    gen = fonts_dir / "generated"
+    texts = {cat: (gen / meta["output"]).read_text()
+             for cat, meta in cfg["categories"].items()
+             if (gen / meta["output"]).exists()}
+    return symbol_categories_from_texts(texts)
+
+
+def build_bundles(order: list[str], resident: set[str], parsed: dict[str, ParsedFont],
+                  sym2cat: dict[str, str], cfg: dict,
+                  content_versions: dict[str, int] | None = None):
+    """Split the pack into per-family bundles.
+
+    Returns (bundles, layout) where each bundle is a dict {id, index, data,
+    content_version, slot, fonts}. A font joins a bundle by its `pack_extra`
+    symbol (flags) or by its category's bundle membership; every non-resident
+    ALL_FONTS entry must map to exactly one bundle, and each bundle must fit its
+    reserved slot — both are hard errors (the build-time overflow guard)."""
+    layout = compute_bundle_layout(cfg)
+    lst = cfg["bundles"]["list"]
+    cat2bi, sym2bi = {}, {}
+    for i, e in enumerate(lst):
+        for c in e.get("categories", []):
+            cat2bi[c] = i
+        for s in e.get("pack_extra", []):
+            sym2bi[s] = i
+
+    members: list[list[tuple[int, ParsedFont]]] = [[] for _ in lst]
+    for gi, sym in enumerate(order):
+        if sym in resident:
+            continue
+        if sym not in parsed:
+            raise ValueError(f"ALL_FONTS entry {sym!r} not found in generated headers")
+        if sym in sym2bi:
+            bi = sym2bi[sym]
+        else:
+            cat = sym2cat.get(sym)
+            if cat not in cat2bi:
+                raise ValueError(f"font {sym!r} (category {cat!r}) maps to no bundle "
+                                 f"— add its category to a fonts.yaml bundle")
+            bi = cat2bi[cat]
+        members[bi].append((gi, parsed[sym]))
+
+    cvers = content_versions or {}
+    bundles = []
+    for i, e in enumerate(lst):
+        mem = members[i]
+        for _, pf in mem:
+            if len(pf.glyphs) != pf.expected_glyph_count():
+                raise ValueError(
+                    f"{pf.symbol}: {len(pf.glyphs)} glyphs != last-first+1="
+                    f"{pf.expected_glyph_count()}")
+        cver = int(cvers.get(e["id"], 0))
+        data = serialize_pack([pf for _, pf in mem], content_version=cver,
+                              global_indices=[gi for gi, _ in mem])
+        slot = layout["slots"][i]
+        if len(data) > slot["size"]:
+            raise ValueError(f"bundle {e['id']!r}: {len(data)} B exceeds its "
+                             f"{slot['size']} B slot — enlarge slot_kb in fonts.yaml")
+        bundles.append({
+            "id": e["id"], "index": i, "data": data, "content_version": cver, "slot": slot,
+            "fonts": [{"all_fonts_index": gi, "symbol": pf.symbol,
+                       "first": pf.first, "last": pf.last} for gi, pf in mem]})
+    return bundles, layout
+
+
+def bundles_manifest_json(bundles: list[dict], layout: dict) -> str:
+    """Deterministic per-bundle ABI contract (no volatile content_version)."""
+    doc = {"abi_version": ABI_VERSION, "layout_version": layout["layout_version"],
+           "region_size": layout["region"], "dir_offset": layout["dir_offset"],
+           "dir_size": layout["dir_size"], "bundle_count": len(bundles),
+           "bundles": [{"id": b["id"], "index": b["index"],
+                        "slot_offset": b["slot"]["offset"], "slot_size": b["slot"]["size"],
+                        "total_size": len(b["data"]), "font_count": len(b["fonts"]),
+                        "fonts": b["fonts"]} for b in bundles]}
+    return json.dumps(doc, indent=2) + "\n"
+
+
+def bundle_layout_header(bundles: list[dict], layout: dict) -> str:
+    """C header shared by firmware + host: region, directory, per-bundle slots."""
+    lines = [
+        "// AUTO-GENERATED by fonts/generate_fonts.py — do not edit.",
+        "// Font-pack bundle flash layout (slots are relative to FW_RESOURCE_OFFSET).",
+        "#pragma once", "",
+        f"#define FONTPACK_LAYOUT_VERSION {layout['layout_version']}u",
+        f"#define FONTPACK_REGION_SIZE    0x{layout['region']:X}UL",
+        f"#define FONTPACK_DIR_OFFSET     0x{layout['dir_offset']:X}UL",
+        f"#define FONTPACK_DIR_SIZE       0x{layout['dir_size']:X}UL",
+        f"#define FONTPACK_SECTOR_SIZE    0x{layout['sector']:X}UL",
+        f"#define FONTPACK_BUNDLE_COUNT   {len(bundles)}u", "",
+        "// X(id, index, slot_offset, slot_size)",
+        "#define FONTPACK_BUNDLE_LIST \\"]
+    for b in bundles:
+        s = b["slot"]
+        lines.append(f"    X({b['id']}, {b['index']}, 0x{s['offset']:X}UL, "
+                     f"0x{s['size']:X}UL) \\")
+    lines[-1] = lines[-1].rstrip(" \\")     # drop trailing continuation
+    lines.append("")
+    return "\n".join(lines) + "\n"
 
 
 def manifest_json(data: bytes, manifest: list[dict]) -> str:

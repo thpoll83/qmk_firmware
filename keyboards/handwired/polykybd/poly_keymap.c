@@ -1067,6 +1067,8 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // flag is simply omitted — the xx-YY code label below it still identifies the
 // language (graceful fallback). The tiny label font stays resident.
 static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b };
+// Larger resident font for the no-pack fallback (the xx-YY code drawn big).
+static const GFXfont* const lang_code_fonts[]  = { &NotoSans_Regular_Base_14pt7b };
 
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
     const GFXglyph* g = kdisp_gfx_glyph(g_all_fonts, g_all_font_count, FLAG_CP_BASE + idx);
@@ -1082,20 +1084,28 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
         kdisp_write_gfx_char(g_all_fonts, g_all_font_count, (int8_t)(FLAG_LEFT_X - fxo),
                              (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
                              FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
+        // Language code: vertical, up the right side; inverted bar when selected.
+        kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
+                              current_lang == idx);
     } else {
-        // No font pack flashed: the flag glyphs are pack-only. Fall back to the
-        // xx-YY code drawn large + horizontally in the flag area so the key is
-        // still identifiable (the thin vertical label below is easy to miss).
-        int8_t lo = 0, hi = 0;
-        kdisp_gfx_text_bounds(lang_label_fonts, 1, label, &lo, &hi);
-        int8_t lw = (int8_t)(hi - lo);
-        int8_t lx = (int8_t)(BUFFER_X + (SCREEN_WIDTH - 8 - lw) / 2 - lo);
-        kdisp_write_gfx_text(lang_label_fonts, 1, lx, 24, label);
+        // No font pack flashed: the flag glyphs are pack-only. Show the "ll-CC"
+        // code as two big centred lines (ll over CC) so it's actually readable
+        // (the tiny vertical label is dropped here); underline the active language.
+        // A full "ll-CC" at this size is ~73 px — just over the 72 px keycap — so
+        // stacking the two pairs keeps it large without clipping.
+        uint32_t l1[3] = { label[0], label[1], 0 };
+        uint32_t l2[3] = { label[3], label[4], 0 };   // label[2] is the '-'
+        int8_t lo = 0, hi = 0, w = 0, left = 0;
+        kdisp_gfx_text_bounds(lang_code_fonts, 1, l1, &lo, &hi);
+        w = (int8_t)(hi - lo); left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2);
+        kdisp_write_gfx_text(lang_code_fonts, 1, (int8_t)(left - lo), 16, l1);
+        kdisp_gfx_text_bounds(lang_code_fonts, 1, l2, &lo, &hi);
+        w = (int8_t)(hi - lo); left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2);
+        kdisp_write_gfx_text(lang_code_fonts, 1, (int8_t)(left - lo), 33, l2);
+        if (current_lang == idx) {
+            kdisp_fill_rect(left, 36, w, 2);   // underline the country line = active
+        }
     }
-
-    // Language code: vertical, up the right side; inverted bar when selected.
-    kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
-                          current_lang == idx);
 }
 
 // The "Preset" / "Clear" MRU control keys that bracket the top recents row.

@@ -31,6 +31,7 @@
 const GFXfont* const RESIDENT_FONTS [] = {
   &IconsFont,
   &NotoSans_Regular_Base_14pt7b,
+  &NotoEmoji_Medium_EmjLayer_20pt16b,
   &NotoSans_Regular_LatinExtB_14pt16b,
   &NotoSans_Regular_Schwa_14pt16b,
   &NotoSans_Regular_SupAndExtA_14pt16b,

@@ -50,8 +50,19 @@ index:
   # with no pack present. NotoSansSymbols2 Arrows (U+2B6F–2BA0, ~0.9 KB) draws the
   # Tab / Enter(Return) / Undo / Redo / refresh-circle / nav arrow-stop key icons
   # (ARROWS_* in lang/named_glyphs.h, used by poly_keymap.c + status_oled.c).
+  # The Technical/Technical2 + Settings/World/Brightness fonts keep the modifier
+  # legends (Ctrl ⎈ / Alt ⎇ / GUI ⌘ / Option ⌥ / Del ⌦ / Backspace ⌫ / Esc ⎋ /
+  # PrintScreen ⎙) and the on-keyboard menu chrome (settings ⚙, language 🌐, and
+  # the settings-layer brightness moons 🌑–🌖) legible with NO pack flashed — so a
+  # freshly-flashed keyboard can navigate its own UI before any font pack lands.
+  # ~2.5 KB total; the rest of these categories stay in the pack.
   resident_fonts:
     - NotoSansSymbols2_Regular_Arrows_20pt16b
+    - NotoSansSymbols2_Regular_Technical2_20pt16b
+    - NotoSansSymbols_Regular_Technical_20pt16b
+    - NotoEmoji_Medium_Settings_20pt16b
+    - NotoEmoji_Medium_World_20pt16b
+    - NotoEmoji_Medium_Brightness_16pt16b
   # Fonts appended to the END of the external-flash font pack that are generated
   # OUTSIDE the main fonts.yaml pipeline (so they have no `fonts:` entry). Each is
   # parsed from its standalone header. The language-layer country flags

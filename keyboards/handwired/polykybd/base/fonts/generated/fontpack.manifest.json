@@ -1,7 +1,7 @@
 {
   "abi_version": 1,
-  "font_count": 127,
-  "total_size": 470620,
+  "font_count": 122,
+  "total_size": 467736,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -166,30 +166,6 @@
       "last": 128016
     },
     {
-      "all_fonts_index": 33,
-      "symbol": "NotoEmoji_Medium_Settings_20pt16b",
-      "first": 128295,
-      "last": 128295
-    },
-    {
-      "all_fonts_index": 34,
-      "symbol": "NotoEmoji_Medium_World_20pt16b",
-      "first": 127760,
-      "last": 127760
-    },
-    {
-      "all_fonts_index": 36,
-      "symbol": "NotoSansSymbols2_Regular_Technical2_20pt16b",
-      "first": 8984,
-      "last": 9003
-    },
-    {
-      "all_fonts_index": 37,
-      "symbol": "NotoSansSymbols_Regular_Technical_20pt16b",
-      "first": 9095,
-      "last": 9113
-    },
-    {
       "all_fonts_index": 38,
       "symbol": "NotoEmoji_Medium_ClipCpy_18pt16b",
       "first": 128203,
@@ -206,12 +182,6 @@
       "symbol": "NotoSansSymbols2_Regular_Util_20pt16b",
       "first": 128360,
       "last": 128458
-    },
-    {
-      "all_fonts_index": 41,
-      "symbol": "NotoEmoji_Medium_Brightness_16pt16b",
-      "first": 127761,
-      "last": 127768
     },
     {
       "all_fonts_index": 42,
@@ -688,28 +658,28 @@
       "last": 4988
     },
     {
-      "all_fonts_index": 121,
-      "symbol": "NotoSansCanadianAboriginal_Regular_CanAborig_16pt16b",
-      "first": 5121,
-      "last": 5749
-    },
-    {
-      "all_fonts_index": 122,
-      "symbol": "NotoSansCherokee_Regular_Cherokee_13pt16b",
-      "first": 5024,
-      "last": 5108
-    },
-    {
-      "all_fonts_index": 126,
+      "all_fonts_index": 124,
       "symbol": "NotoSansArabic_Regular_Sorani_16pt16b",
       "first": 1685,
       "last": 1749
     },
     {
-      "all_fonts_index": 127,
+      "all_fonts_index": 125,
       "symbol": "NotoSansArabic_Regular_Pashto_16pt16b",
       "first": 1642,
       "last": 1744
+    },
+    {
+      "all_fonts_index": 126,
+      "symbol": "NotoSansCanadianAboriginal_Regular_CanAborig_16pt16b",
+      "first": 5121,
+      "last": 5749
+    },
+    {
+      "all_fonts_index": 127,
+      "symbol": "NotoSansCherokee_Regular_Cherokee_13pt16b",
+      "first": 5024,
+      "last": 5108
     },
     {
       "all_fonts_index": 128,

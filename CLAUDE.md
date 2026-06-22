@@ -92,6 +92,14 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   Persisted in `poly_eeconf_t.idle_style` (flushed at the next suspend/store) so
   it survives reboots. The host (PolyKybdHost) toggles it over this command; the
   rig has a v4-gated round-trip HIL test. See "Idle anti-burn-in styles" below.
+  **v5** added the brightness flags (`SET_BRIGHTNESS` cmd 13 payload byte: volatile /
+  host-auto). **v6** appends a **per-bundle font-pack version block** to the `GET_ID`
+  (cmd 6) reply — AFTER the NUL-terminated id string: `['V'][count][u16 little-endian
+  content_version × count]` in bundle-slot order. The host reads it to flash only the
+  font-pack bundles the keyboard is missing/behind on (no extra query); older hosts
+  stop at the NUL and ignore it. See "Font pack" below. **Bump `FW_VERSION` +
+  `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
+  lockstep** — the host connect gate is exact-match.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)
@@ -219,6 +227,36 @@ flashed over HID separately. `fontpack_assemble()` builds `g_all_fonts = residen
 since the split-pack change; `status` shows device-vs-shipped versions, `sync`
 flashes all stale bundles, `flash <id>` force-flashes one).
 
+- **Split pack (protocol 6+): the pack is N independently-versioned BUNDLES, not
+  one blob.** `fonts/fonts.yaml` `bundles:` groups the non-resident categories into
+  ordered bundles (currently 6: `symbol`, `mideast`, `syllabic`, `asia`, `flags`,
+  `emoji`), each a standalone `PlyF` flashed to its **own fixed sector-aligned slot**
+  in a **2 MB** window at `FW_RESOURCE_OFFSET` (`fontpack_layout.h`, generated). The
+  set of valid slot headers **is** the directory — there is **no separate directory
+  sector** (avoids a consistency class of bug). Each bundle's per-font record carries
+  the font's **global ALL_FONTS index** (the spare `reserved` u16); `fontpack_load()`
+  reads every slot and `fontpack_assemble()` merge-sorts all present bundles' fonts
+  back into global priority order, reproducing the old single-pack `g_all_fonts`
+  exactly. The build emits per-bundle `.plyf` + `fontpack_bundles.manifest.json`
+  (ABI contract) + `fontpack_layout.h` (the X-macro slot table firmware **and** host
+  share) via `generate_fonts.py --emit-bundles DIR` / `--bundle-version ID=N`.
+  - **Auto on connect:** the firmware reports every bundle's `content_version` in the
+    `GET_ID` v6 block; the host (`fontpack_bundle.py` + `PolyCore._fontpack_autocheck_job`)
+    flashes only the bundles the device is missing/behind on, each to its slot. The
+    bundles ship in `PolyKybdHost/polyhost/res/fontpack/<id>.plyf` + `bundles.json`.
+  - **Adding/regenerating a bundle:** bump that bundle's `content_version` (so the
+    host re-flashes it) and reship the `.plyf` + `bundles.json`. `latin` stays
+    **resident** (it is `resident: true`), so it is NOT a bundle — the keyboard always
+    renders ASCII text with no pack. The build-time guard fails if a bundle overflows
+    its slot. Order in `bundles.list` is **append-only** (the index is the on-wire id
+    and the slot order; growth-prone `emoji` is last with `slot_kb: rest`).
+  - **Flash UX (split72):** while any flash runs the status OLED shows an "Updating
+    fonts/firmware — do not unplug" screen with a full-width progress bar, and the RGB
+    matrix breathes (cyan = font pack, orange = firmware/bootloader = "can't type");
+    `poly_prepare_for_flash()` (HID BEGIN) drops to the base layer + bridges it to the
+    slave so typing still works. See `oled_helper.c`, `poly_keymap.c` (`flash_rgb_tick`,
+    `rgb_matrix_indicators_kb`), `base/fw_staging.c` (`fw_staging_active_target`).
+
 - **Make a pack font resident** (so UI chrome renders with no pack): add its
   generated symbol name to `index.resident_fonts` in `fonts.yaml`, then regenerate.
   It moves out of the pack into `RESIDENT_FONTS[]`. **Front-to-back precedence means
@@ -243,7 +281,11 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   `mid_fonts[]` — a size between Tiny and Base for misc utility-key text; a full
   `ll-CC` fits one line at 10 px but overflows 72 px at 14 px).
 - **HID flow** (`BEGIN`/`CHUNK`/`COMMIT`, cmds `0x50`–`0x53`): reuses the
-  `fw_staging` machinery (deferred sector erase, slave bridge). ⚠️ **The slave's
+  `fw_staging` machinery (deferred sector erase, slave bridge). `FONTPACK_BEGIN`
+  carries a **`bundle_id` byte** (data[10]); the master resolves it to the slot via
+  `fontpack_slot()`, bounds the pack to the slot size, and `fw_staging_set_fontpack_slot()`
+  points the stager at `FW_RESOURCE_OFFSET + slot_off`. The slave resolves the same
+  slot from the bridged `fw_up_begin_sync_t.bundle`. ⚠️ **The slave's
   `COMMIT` runs `fw_staging_finalize()` *inside* the `USER_SYNC_FW_UP_COMMIT`
   split-transaction callback (~20 ms window).** For the FONTPACK target that
   re-CRCs the whole ~459 KB pack (`fontpack_load_at`, ~50 ms) → the master timed out
@@ -253,11 +295,14 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   byte-identity with the master's verified pack) and defers the heavy reload to
   `fw_staging_process_fontpack_reload()` in housekeeping. **Never do heavy work in a
   split-transaction handler.**
-- **Wipe** = flash a 32-byte **empty pack** (`font_count == 0`), the sentinel
-  `fontpack_load_at()` accepts as a valid empty pack → `g_all_fonts` = resident only.
-  `polyctl fontpack wipe` builds it and flashes it via the normal flow (only one
-  sector erased, fast). The pack persists across *firmware* flashing (different flash
-  region), so a wipe is the only way to test the resident-only path.
+- **Wipe** = flash a 32-byte **empty pack** (`font_count == 0`), a valid empty PlyF
+  sentinel → that slot contributes no fonts. `polyctl fontpack wipe [id]` wipes one
+  slot, or **all** slots when `id` is omitted. ⚠️ **The FONTPACK COMMIT gates success
+  on `fontpack_slot_present(slot_off)` (the just-flashed slot loaded as a valid PlyF,
+  empty sentinel included), NOT on the whole-pack `fontpack_present()`** — the
+  multi-slot loader defines `fontpack_present()` as "≥1 bundle has fonts", which is
+  false after a full wipe and falsely failed the last bundle's COMMIT (fixed; was a
+  field bug). The pack persists across *firmware* flashing (different flash region).
 - **The old 127-font pack still loads on newer firmware** (ABI unchanged,
   `font_count` is read from the header); resident wins on any overlap, the duplicate
   pack copies are harmless. No need to re-flash the pack after a resident change.

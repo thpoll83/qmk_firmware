@@ -27,6 +27,12 @@ void kdisp_set_draw_offset(int8_t ox, int8_t oy);
 // empty gap glyphs, no '!' fallback). For coverage tests + metric reads.
 const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t c);
 
+// As above, but also writes the owning font to *out_font (or NULL when not
+// found / out_font is NULL) — lets a caller redraw a glyph through a single-font
+// array to avoid kdisp_write_gfx_char's baseline-align-to-fonts[0] shift.
+const GFXglyph *kdisp_gfx_glyph_font(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t c,
+                                     const GFXfont **out_font);
+
 void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text);
 
 void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius);

@@ -1071,7 +1071,9 @@ static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b 
 static const GFXfont* const lang_code_fonts[]  = { &NotoSans_Regular_Base_14pt7b };
 
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
-    const GFXglyph* g = kdisp_gfx_glyph(g_all_fonts, g_all_font_count, FLAG_CP_BASE + idx);
+    const GFXfont* flag_font = NULL;
+    const GFXglyph* g = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count,
+                                             FLAG_CP_BASE + idx, &flag_font);
     if (g) {
         // The glyph is taller than the keycap, so centre it vertically — the
         // empty top/bottom margins clip off and the flag content fills the height.
@@ -1084,26 +1086,16 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
         // (`y += currentFont->yAdvance - fonts[0]->yAdvance`). With g_all_fonts,
         // fonts[0] is IconsFont (yAdvance 40) vs the flag's 54 → a spurious +14 px
         // downward shift (the gap-at-top regression introduced when flags moved
-        // into the pack). The old compiled-in path used a dedicated {flag_font}
-        // array, so the adjustment was 0 — find the flag font in g_all_fonts and
-        // pass it alone to restore that.
-        const GFXfont* flag_font = NULL;
-        for (uint8_t i = 0; i < g_all_font_count; ++i) {
-            if ((uint32_t)(FLAG_CP_BASE + idx) >= pgm_read_dword(&g_all_fonts[i]->first) &&
-                (uint32_t)(FLAG_CP_BASE + idx) <= pgm_read_dword(&g_all_fonts[i]->last)) {
-                flag_font = g_all_fonts[i];
-                break;
-            }
-        }
-        if (flag_font) {
-            const GFXfont* flag_only[1] = { flag_font };
-            const int8_t fh  = (int8_t)pgm_read_byte(&g->height);
-            const int8_t fyo = (int8_t)pgm_read_byte(&g->yOffset);
-            const int8_t fxo = (int8_t)pgm_read_byte(&g->xOffset);
-            kdisp_write_gfx_char(flag_only, 1, (int8_t)(FLAG_LEFT_X - fxo),
-                                 (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
-                                 FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
-        }
+        // into the pack). Passing the owning font alone makes that adjustment 0,
+        // as the old compiled-in { &flag_font } path did. (kdisp_gfx_glyph_font
+        // returned flag_font from the same scan, so no second lookup.)
+        const GFXfont* flag_only[1] = { flag_font };
+        const int8_t fh  = (int8_t)pgm_read_byte(&g->height);
+        const int8_t fyo = (int8_t)pgm_read_byte(&g->yOffset);
+        const int8_t fxo = (int8_t)pgm_read_byte(&g->xOffset);
+        kdisp_write_gfx_char(flag_only, 1, (int8_t)(FLAG_LEFT_X - fxo),
+                             (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
+                             FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
         // Language code: vertical, up the right side; inverted bar when selected.
         kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
                               current_lang == idx);

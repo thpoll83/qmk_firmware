@@ -73,7 +73,10 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
     // Periodic split-link health line, once per LINK_STATS_LOG_EVERY frames sent.
     // Count-based (no timer): the cadence tracks real traffic. Checked once per
     // call on fully-settled cumulative counts, so it covers every exit path.
-    if (debug_enable && (ls_attempts - ls_last_log) >= LINK_STATS_LOG_EVERY) {
+    // Emitted unconditionally (uprintf, not debug_enable-gated): this is a passive
+    // wire-health diagnostic with no key content, so it stays available even with
+    // debug off (debug_enable now defaults false to suppress keystroke logging).
+    if ((ls_attempts - ls_last_log) >= LINK_STATS_LOG_EVERY) {
         ls_last_log = ls_attempts;
         uint32_t errs    = ls_crc_err + ls_transport_fail;
         uint32_t permille = ls_attempts ? (uint32_t)(((uint64_t)errs * 1000U) / ls_attempts) : 0U;

@@ -264,6 +264,11 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
 // Global variables: flags, overlay_flags
+// One-shot: force the master to push the default layer / layer state to the slave
+// once after boot, regardless of diff. Armed at boot (and again in init), cleared
+// on the first successful layer sync. See the use site in sync_and_refresh_displays.
+static bool g_force_layer_resync = true;
+
 void sync_and_refresh_displays(void) {
     // Freeze slave display while bootloader is active; re-assert RGB each cycle.
     if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
@@ -358,10 +363,19 @@ void sync_and_refresh_displays(void) {
         access_local_layer()->led_state = host_keyboard_led_state();
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
-        if ( layer_diff ) {
-            if(!sync_succeeded(send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES))) {
+        // Force one layer push to the slave after boot even with no diff: each half
+        // loads its OWN default layer from EEPROM, and the master only pushes on a
+        // diff — so if the active default layer equals the master's last-synced
+        // `global` (e.g. _L0/Qwerty = all-zero after a fresh boot/fw-apply reboot),
+        // a slave that booted with a stale default layer would never be corrected
+        // until the next manual layer change. The one-shot resync fixes that.
+        if ( layer_diff || g_force_layer_resync ) {
+            if(sync_succeeded(send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES))) {
+                layer_diff = true;             // ensure global advances (copy_global_layer below)
+                g_force_layer_resync = false;  // boot resync delivered to the slave
+            } else {
                 layer_diff = false; // failed: skip copy_global_layer() below so the diff
-                                    // persists and the send re-fires next pass (see state above)
+                                    // persists and the send re-fires next pass (force flag stays set)
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
@@ -2101,6 +2115,7 @@ void keyboard_post_init_user(void) {
     access_local_state()->unicode_mode = get_unicode_input_mode();
     layer_clear();
     layer_on(default_layer);
+    g_force_layer_resync = true;   // push this boot's default layer to the slave once
 
     //set these values, they will never change
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);

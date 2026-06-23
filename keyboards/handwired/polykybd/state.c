@@ -33,6 +33,10 @@ static uint8_t g_idle_style = IDLE_STYLE_PULSE;
 // daylight setting.
 static bool    g_auto_brightness      = false;
 static uint8_t g_last_auto_brightness = FULL_BRIGHT;
+// True once the host has pushed at least one auto/daylight value this session.
+// Until then, engaging auto must NOT jump to the FULL_BRIGHT default above —
+// fall back to the user's own brightness instead (see get_active_brightness).
+static bool    g_auto_value_known     = false;
 
 static bool          g_def_layer_dirty = false;
 static layer_state_t g_def_layer_pending = 0;
@@ -297,16 +301,21 @@ void toggle_brightness_auto_mode(void) {
 // does not change the deliberate user brightness or the auto mode itself.
 void set_auto_brightness_value(uint8_t value) {
     g_last_auto_brightness = value;
+    g_auto_value_known     = true;
     if (g_auto_brightness) {
         l_state.contrast = value;
     }
 }
 
 // The brightness currently in effect: the last host auto value while auto mode
-// is engaged, otherwise the deliberate user brightness. Idle/suspend/fade
-// restore paths use this so they restore whatever is actually driving.
+// is engaged AND the host has actually pushed one, otherwise the deliberate user
+// brightness. Idle/suspend/fade restore paths use this so they restore whatever
+// is actually driving. The `g_auto_value_known` guard stops a just-engaged auto
+// mode (e.g. the KC_DAUTO key) from snapping to FULL_BRIGHT before the host's
+// first daylight value arrives — it holds the user's brightness until then.
 uint8_t get_active_brightness(void) {
-    return g_auto_brightness ? g_last_auto_brightness : g_user_brightness;
+    return (g_auto_brightness && g_auto_value_known) ? g_last_auto_brightness
+                                                     : g_user_brightness;
 }
 
 // Records the intended user brightness without marking settings dirty (boot-time

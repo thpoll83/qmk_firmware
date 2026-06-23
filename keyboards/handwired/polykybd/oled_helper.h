@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "base/fonts/gfxfont.h"
 
 /* Utility: encode an 8-bit value as digit glyphs into a char32 (UTF-32) buffer */
 void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);
@@ -23,6 +24,9 @@ void oled_fw_update_screen(void);
 /* Flash progress bar with its top row at `top_y`: a 6 px bar over a 1 px track,
    `pct` (0..100) filling the full width of EACH status OLED (both halves move). */
 void oled_fw_update_progress_bar(int8_t top_y, int8_t bottom_y, uint8_t pct);
+/* Draw `pct` right-aligned so it ends just before `pct_sign_x` (where the caller
+   draws "%"), so 2-/3-digit numbers grow left instead of overrunning the sign. */
+void oled_fw_update_percent(const GFXfont *const *font, int8_t pct_sign_x, int8_t y, uint8_t pct);
 uint8_t fw_update_percent(void);   /* 0..100 progress of the in-flight flash */
 void oled_render_logos(void);
 bool oled_task_user(void);

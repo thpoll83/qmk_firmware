@@ -109,14 +109,12 @@ void oled_update_buffer_fw_update(void) {
             ascii_to_u32_string((char*)buffer, sizeof(buffer), bname);
             kdisp_write_gfx_text(smallFont, 1, 44, 10, buffer);
         }
-        num_to_u32_string((char*)buffer, sizeof(buffer), pct);
-        kdisp_write_gfx_text(smallFont, 1, 0, 22, buffer);
+        oled_fw_update_percent(smallFont, 24, 22, pct);
         kdisp_write_gfx_text(smallFont, 1, 24, 22, U"% — do not unplug");
     } else {
         // Firmware, slave half: live progress.
         kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Progress:");
-        num_to_u32_string((char*)buffer, sizeof(buffer), pct);
-        kdisp_write_gfx_text(smallFont, 1, 60, 10, buffer);
+        oled_fw_update_percent(smallFont, 84, 10, pct);
         kdisp_write_gfx_text(smallFont, 1, 84, 10, U"%");
     }
     oled_fw_update_progress_bar(25, 31, pct);

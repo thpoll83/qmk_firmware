@@ -84,6 +84,20 @@ void oled_fw_update_progress_bar(int8_t top_y, int8_t bottom_y, uint8_t pct) {
     if (fill) kdisp_fill_rect(0, top_y, fill, height);
 }
 
+// Draw `pct` (0..100) as digits RIGHT-ALIGNED so the number's right edge ends a
+// couple px before `pct_sign_x` — the fixed x where the caller then draws the
+// "%" sign. The number grows leftward as it gains digits, so a 2- or 3-digit
+// value no longer overruns the "%" (the old left-anchored draw overwrote it).
+void oled_fw_update_percent(const GFXfont *const *font, int8_t pct_sign_x, int8_t y, uint8_t pct) {
+    uint32_t buf[6];
+    num_to_u32_string((char*) buf, sizeof(buf), pct);
+    int8_t lo = 0, hi = 0;
+    kdisp_gfx_text_bounds(font, 1, buf, &lo, &hi);   // pixel extents at draw-origin 0
+    int8_t x = (int8_t)(pct_sign_x - 2 - hi);        // right edge ~2 px before the "%"
+    if (x < 0) x = 0;
+    kdisp_write_gfx_text(font, 1, x, y, buf);
+}
+
 // Shared 0..100 progress of the in-flight flash (current bundle's bytes).
 uint8_t fw_update_percent(void) {
     uint32_t total = fw_staging_image_size();

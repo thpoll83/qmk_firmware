@@ -11,6 +11,10 @@
 #include "../base/text_helper.h"
 #include "../base/fonts/NotoSans_Regular_Base_11pt.h"
 #include "../base/fonts/NotoSans_Medium_Base_8pt.h"
+// _Mid_ (10px) utility font: defined in util_font.h, whose definitions are owned by
+// poly_keymap.c's translation unit. Reference it via extern here rather than
+// re-including the header (which would duplicate its PROGMEM tables at link time).
+extern const GFXfont NotoSans_Regular_Mid_10pt7b;
 #include "../lang/named_glyphs.h"
 #include "../oled_helper.h"
 

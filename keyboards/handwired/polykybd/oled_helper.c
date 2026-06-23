@@ -80,7 +80,6 @@ void oled_render_logos(void) {
 void oled_fw_update_progress_bar(int8_t top_y, int8_t bottom_y, uint8_t pct) {
     if (pct > 100) pct = 100;
     uint8_t fill = (uint8_t)((uint16_t)pct * 127u / 100u);   // 0..127 across the display
-    kdisp_fill_rect(0, top_y, 127, 1);                       // full-width track
     uint8_t height = bottom_y - top_y;
     if (fill) kdisp_fill_rect(0, top_y, fill, height);
 }

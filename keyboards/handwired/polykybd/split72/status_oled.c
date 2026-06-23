@@ -120,33 +120,33 @@ void oled_update_buffer_fw_update(void) {
     if(fonts) {
         if(is_keyboard_master()) {
             const char* fontpack_name = fontpack_slot_name(fw_staging_fontpack_slot_off());
-            kdisp_write_gfx_text(small, 1, 0, 14, U"Fontspack:");
+            kdisp_write_gfx_text(small, 1, 0, 14, U"Fontpack:");
             if (fontpack_name) {
                 ascii_to_u32_string((char*) buffer, sizeof(buffer), fontpack_name);
-                kdisp_write_gfx_text(small, 1, 34, 14, buffer);
+                kdisp_write_gfx_text(small, 1, 0, 36, buffer);
             } else {
-                kdisp_write_gfx_text(small, 1, 34, 14, U"<EMPTY>");
+                kdisp_write_gfx_text(small, 1, 0, 36, U"<EMPTY>");
             }
-            kdisp_write_gfx_text(small, 1, 0, 54, U"Upload...");
+            kdisp_write_gfx_text(small, 1, 0, 58, U"Upload...");
             return;
         }
         kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");
         num_to_u32_string((char*) buffer, sizeof(buffer), pct);
-        kdisp_write_gfx_text(small, 1, 0, 34, buffer);
-        kdisp_write_gfx_text(small, 1, 24, 34, U"%");
+        kdisp_write_gfx_text(small, 1, 56, 36, buffer);
+        kdisp_write_gfx_text(small, 1, 70, 36, U"%");
         oled_fw_update_progress_bar(50, 63, pct);
     } else {
         if(is_keyboard_master()) {
             // Firmware, master half: static notice (its bar can't move mid-stream).
             kdisp_write_gfx_text(small, 1, 0, 14, U"PolyKybd");
-            kdisp_write_gfx_text(small, 1, 0, 34, U"Firmware");
-            kdisp_write_gfx_text(small, 1, 0, 54, U"Update...");
+            kdisp_write_gfx_text(small, 1, 0, 36, U"Firmware");
+            kdisp_write_gfx_text(small, 1, 0, 58, U"Update...");
             return;
         }
         kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");
         num_to_u32_string((char*) buffer, sizeof(buffer), pct);
-        kdisp_write_gfx_text(small, 1, 0, 34, buffer);
-        kdisp_write_gfx_text(small, 1, 24, 34, U"%");
+        kdisp_write_gfx_text(small, 1, 0, 36, buffer);
+        kdisp_write_gfx_text(small, 1, 24, 36, U"%");
         oled_fw_update_progress_bar(50, 63, pct);
     }
 }

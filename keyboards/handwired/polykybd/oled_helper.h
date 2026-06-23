@@ -22,7 +22,7 @@ void oled_status_screen(void);
 void oled_fw_update_screen(void);
 /* Flash progress bar with its top row at `top_y`: a 6 px bar over a 1 px track,
    `pct` (0..100) filling the full width of EACH status OLED (both halves move). */
-void oled_fw_update_progress_bar(int8_t top_y, uint8_t pct);
+void oled_fw_update_progress_bar(int8_t top_y, int8_t bottom_y, uint8_t pct);
 uint8_t fw_update_percent(void);   /* 0..100 progress of the in-flight flash */
 void oled_render_logos(void);
 bool oled_task_user(void);

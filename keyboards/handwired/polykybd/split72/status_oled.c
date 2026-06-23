@@ -109,36 +109,42 @@ void oled_update_buffer(void) {
 void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
-    const GFXfont* small[] = { &NotoSans_Medium8pt7b };
-    bool    fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
+    const GFXfont* small[] = { &NotoSans_Regular_Mid_10pt7b };
+    const bool fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
     uint8_t pct   = fw_update_percent();
 
-    if (!fonts && is_keyboard_master()) {
-        // Firmware, master half: static notice (its bar can't move mid-stream).
-        kdisp_write_gfx_text(small, 1, 0, 14, U"PolyKybd");
-        kdisp_write_gfx_text(small, 1, 0, 34, U"Firmware");
-        kdisp_write_gfx_text(small, 1, 0, 54, U"Update...");
-        return;
-    }
-
-    if (fonts) {
-        // Name the bundle being written (its flash slot is fixed) so progress is
-        // visible as the flash advances bundle-by-bundle.
-        const char* bname = fontpack_slot_name(fw_staging_fontpack_slot_off());
-        kdisp_write_gfx_text(small, 1, 0, 14, U"Fonts:");
-        if (bname) {
-            ascii_to_u32_string((char*) buffer, sizeof(buffer), bname);
-            kdisp_write_gfx_text(small, 1, 44, 14, buffer);
+    if(fonts) {
+        if(is_keyboard_master()) {
+            const char* fontpack_name = fontpack_slot_name(fw_staging_fontpack_slot_off());
+            kdisp_write_gfx_text(small, 1, 0, 14, U"Fontspack:");
+            if (fontpack_name) {
+                ascii_to_u32_string((char*) buffer, sizeof(buffer), fontpack_name);
+                kdisp_write_gfx_text(small, 1, 34, 14, buffer);
+            } else {
+                kdisp_write_gfx_text(small, 1, 34, 14, U"<EMPTY>");
+            }
+            kdisp_write_gfx_text(small, 1, 0, 54, U"Upload...");
+            return;
         }
-        kdisp_write_gfx_text(small, 1, 0, 32, U"do not unplug");
-    } else {
-        // Firmware, slave half: live progress.
         kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");
+        num_to_u32_string((char*) buffer, sizeof(buffer), pct);
+        kdisp_write_gfx_text(small, 1, 0, 34, buffer);
+        kdisp_write_gfx_text(small, 1, 24, 34, U"%");
+        oled_fw_update_progress_bar(50, 63, pct);
+    } else {
+        if(is_keyboard_master()) {
+            // Firmware, master half: static notice (its bar can't move mid-stream).
+            kdisp_write_gfx_text(small, 1, 0, 14, U"PolyKybd");
+            kdisp_write_gfx_text(small, 1, 0, 34, U"Firmware");
+            kdisp_write_gfx_text(small, 1, 0, 54, U"Update...");
+            return;
+        }
+        kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");
+        num_to_u32_string((char*) buffer, sizeof(buffer), pct);
+        kdisp_write_gfx_text(small, 1, 0, 34, buffer);
+        kdisp_write_gfx_text(small, 1, 24, 34, U"%");
+        oled_fw_update_progress_bar(50, 63, pct);
     }
-    num_to_u32_string((char*) buffer, sizeof(buffer), pct);          // percent above the bar
-    kdisp_write_gfx_text(small, 1, 0, 50, buffer);
-    kdisp_write_gfx_text(small, 1, 24, 50, U"%");
-    oled_fw_update_progress_bar(56, pct);
 }
 
 void oled_draw_kybd(void) {

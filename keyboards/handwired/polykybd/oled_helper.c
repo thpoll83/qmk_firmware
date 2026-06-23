@@ -76,15 +76,13 @@ void oled_render_logos(void) {
 }
 
 // Progress bar drawn into the kdisp scratch buffer (call from
-// oled_update_buffer_fw_update before the blit). `pct` 0..100 fills the full width
-// of EACH status OLED, so both halves show the same moving bar (the master can't
-// re-render often while it streams chunks, but at least its bar isn't stuck on one
-// half). 6 px tall over a 1 px full-width track.
-void oled_fw_update_progress_bar(int8_t top_y, uint8_t pct) {
+// oled_update_buffer_fw_update before the blit).
+void oled_fw_update_progress_bar(int8_t top_y, int8_t bottom_y, uint8_t pct) {
     if (pct > 100) pct = 100;
     uint8_t fill = (uint8_t)((uint16_t)pct * 127u / 100u);   // 0..127 across the display
     kdisp_fill_rect(0, top_y, 127, 1);                       // full-width track
-    if (fill) kdisp_fill_rect(0, (int8_t)(top_y + 1), (int8_t)fill, 6);  // filled portion (6 px)
+    uint8_t height = bottom_y - top_y;
+    if (fill) kdisp_fill_rect(0, top_y, fill, height);
 }
 
 // Shared 0..100 progress of the in-flight flash (current bundle's bytes).

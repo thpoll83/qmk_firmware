@@ -180,7 +180,7 @@ static uint8_t overlay_flags = 0;
 // housekeeping_task_user() drives s_flash_rgb_active with a short hold (so the
 // brief gaps between the six bundles don't flicker it) and re-enables RGB if it
 // was off, disabling it again afterwards.
-#define FLASH_RGB_HOLD_MS 1500
+#define FLASH_RGB_HOLD_MS 2500
 static bool     s_flash_rgb_active      = false;
 static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;

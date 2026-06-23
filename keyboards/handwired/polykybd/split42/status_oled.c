@@ -119,7 +119,7 @@ void oled_update_buffer_fw_update(void) {
         kdisp_write_gfx_text(smallFont, 1, 60, 10, buffer);
         kdisp_write_gfx_text(smallFont, 1, 84, 10, U"%");
     }
-    oled_fw_update_progress_bar(25, pct);
+    oled_fw_update_progress_bar(25, 31, pct);
 }
 
 /*

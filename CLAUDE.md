@@ -786,3 +786,57 @@ retries=3; if it climbs, attack `p` at the source.
 - `keyboards/handwired/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`; the full-duplex defines (`SERIAL_USART_FULL_DUPLEX`, `SERIAL_USART_TX_PIN GP5`, `SERIAL_USART_RX_PIN GP4`, `SERIAL_USART_PIN_SWAP`)
 - `<variant>/halconf.h` — `SELECT_SOFT_SERIAL_SPEED` (baud)
 - `platforms/chibios/drivers/serial_protocol.c`, `drivers/vendor/RP/RP2040/serial_vendor.c` — QMK transport (no payload integrity)
+
+---
+
+### Bug: HIL "get current language" (cmd 7) times out once early in the run — boot-time forced layer-resync stalling the main loop on the flaky rig link
+
+**Symptom (HIL rig, 2026-06-24)**: The `get current language` test (cmd `0x07`)
+times out (`GET_LANG response: None`) and **fails the run**, while the *same*
+command answers fine everywhere else in the *same* run — 3× during the runner's
+settle phase and again in the later language round-trip read-back. It reproduced
+**identically across two consecutive runs** (always test #4, right after the three
+GET_IDs), so it is not pure randomness.
+
+**Root cause (diagnosis, not yet fixed)**: the boot-time **forced layer-resync**
+in `poly_keymap.c` `sync_and_refresh_displays()`. `g_force_layer_resync` starts
+`true` and the master re-sends `USER_SYNC_LAYER_DATA` **every housekeeping pass
+until the slave ACKs**, at `PERIODIC_SYNC_RETRIES` (3) per attempt
+(`send_to_bridge`). On the rig the slave (the `*_hil_right` image) is **slow to ACK
+at boot** (the rig's master→slave link is documented-flaky — same reason
+`test_get_id_stress` tolerates misses), so the resync **spins and blocks the master
+main loop** for ~3 × the bridge timeout per pass, right in the early window where
+the host is issuing its first HID queries — deterministically landing on cmd 7
+(test #4). Once the slave finally ACKs, `g_force_layer_resync` clears and the loop
+is responsive again (the later `GET_ID stress` shows 0 retries / 3–7 ms latency).
+
+**Why it is almost certainly rig-only (and why it did not block the merge)**: on
+real hardware the split link is the reliable **full-duplex two-wire** setup (see
+the split-link RESOLVED note above — zero steady-state errors). There the slave
+ACKs the **first** attempt, so `g_force_layer_resync` clears on pass 1 with
+negligible stall and no HID command is delayed. The flake only manifests on the
+rig's slow-ACK link. PR #85 merged with this HIL test red for exactly this reason.
+
+**What the forced resync is and why it exists** (don't remove it blindly): each
+half loads its **own** default layer from EEPROM, and the master only pushes
+`USER_SYNC_LAYER_DATA` on a *diff*. So when the active default layer equals the
+master's last-synced `global` (e.g. `_L0`/Qwerty = all-zero `global` after a fresh
+boot or a fw-apply reboot), a slave that came up with a **stale** default layer
+would never be corrected until the next manual layer change. The one-shot resync
+forces a single push to fix that. It is gated by `g_force_layer_resync` (set at
+boot, cleared on the first successful push); on failure the flag stays set so the
+push re-fires — which is exactly the spin that stalls the rig.
+
+**If hardening is wanted** (so it can't spin/stall even on a slow-ACK link, without
+losing the fresh-boot correction on good hardware): make the forced push a true
+one-shot — attempt it **once** (ideally gated on the split transport being
+connected so the single try has a real chance) and clear the flag regardless of
+ACK, rather than re-firing every pass; or back off its retry cadence instead of
+hammering each housekeeping pass. A genuine slave-stale case would then still be
+corrected by the next real layer diff. Not done — left optional since real hardware
+is unaffected.
+
+**Relevant files**:
+- `keyboards/handwired/polykybd/poly_keymap.c` — `g_force_layer_resync`, the forced-push branch in `sync_and_refresh_displays()` (`if ( layer_diff || g_force_layer_resync )`)
+- `keyboards/handwired/polykybd/bridge_helper.c` — `send_to_bridge()` (per-attempt blocking cost = `PERIODIC_SYNC_RETRIES` × bridge timeout)
+- `polykybd-ctnd` `station/hil_tests.py` — the `get current language` test (no miss-tolerance, unlike `test_get_id_stress`)

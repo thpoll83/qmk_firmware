@@ -1531,13 +1531,19 @@ void kdisp_idle(uint8_t contrast) {
 // Handles keypress events including unicode input, language modifications, and special commands.
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
-    uint32_t t = get_time_since_last_update();
-    if(record->event.pressed) {
-        uprintf("wait %ld.%03ld\n", t/1000, t%1000);
-        uprintf("press 0x%04x\n", keycode);
-    } else {
-        uprintf("wait %ld.%03ld\n", t/1000, t%1000);
-        uprintf("release 0x%04x\n", keycode);
+    // SECURITY: the keycode of every keystroke (passwords included) must NOT be
+    // streamed to the HID console in normal operation — any local process can open
+    // that console interface and read it. Gate this logging on debug_enable (off by
+    // default; toggle at runtime with the DB_TOGG key, which needs physical access).
+    if (debug_enable) {
+        uint32_t t = get_time_since_last_update();
+        if(record->event.pressed) {
+            uprintf("wait %ld.%03ld\n", t/1000, t%1000);
+            uprintf("press 0x%04x\n", keycode);
+        } else {
+            uprintf("wait %ld.%03ld\n", t/1000, t%1000);
+            uprintf("release 0x%04x\n", keycode);
+        }
     }
 
     if (emj_process_keycode(keycode, record->event.pressed)) return false;
@@ -2100,7 +2106,11 @@ void keyboard_post_init_user(void) {
     boot_trace(U"1");
 #endif
     // Customise these values to desired behaviour
-    debug_enable = true;
+    // SECURITY: default OFF. debug_enable now gates keystroke logging to the HID
+    // console (process_record_user) and the host-driven active-control HID commands
+    // (cmd 14 key injection, cmd 23 bootloader entry). Enable at runtime with the
+    // DB_TOGG key (physical access required) when you actually want demo/debug.
+    debug_enable = false;
     debug_matrix = false;
     debug_keyboard = false;
     debug_mouse = false;

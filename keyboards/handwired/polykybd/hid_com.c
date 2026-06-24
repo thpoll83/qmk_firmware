@@ -467,7 +467,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 raw_hid_send(data, length);
                 break;
             case 14: //key press
-                {
+                // SECURITY: this injects a real key event into QMK (action_exec), i.e.
+                // the keyboard types into the host's focused app on the host's command —
+                // a keystroke-injection primitive. It's a demo/dev feature, so gate it on
+                // debug_enable (off by default; unlock with the DB_TOGG key, which needs
+                // physical access). When debug is off, NACK instead of injecting.
+                if (debug_enable) {
                     uint16_t keycode = ((uint16_t)data[HID_DATA_IDX])<<8 | data[HID_DATA_IDX+1];
                     uint8_t r = 0, c = 0;
                     enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(local_layer->layer), &r, &c, is_left_side());
@@ -490,6 +495,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     switch_events_poly(r,c, pressed);
                     memset(data, 0, length);
                     memcpy(data, "P\x0e.", 3);
+                } else {
+                    memset(data, 0, length);
+                    memcpy(data, "P\x0e!", 3);   // NACK: key injection requires debug mode
                 }
                 raw_hid_send(data, length);
                 break;

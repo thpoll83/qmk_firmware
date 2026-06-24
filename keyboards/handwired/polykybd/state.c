@@ -327,25 +327,37 @@ void note_user_brightness(uint8_t value) {
     g_user_brightness = value;
 }
 
-// Pack the host-auto state into one EEPROM byte: bit7 = mode engaged, bits0-6 =
-// last auto value (0..FULL_BRIGHT fits in 7 bits). 0 when auto is off.
+// Pack the host-auto state into one EEPROM byte: bit7 = mode engaged, bit6 = a
+// real host value is known, bits0-5 = last auto value (0..FULL_BRIGHT < 64). The
+// known bit matters: engaging auto before the host pushes a value must NOT persist
+// the default g_last_auto_brightness as if real — otherwise the next boot would
+// treat it as known and snap to it (the very FULL_BRIGHT jump get_active_brightness
+// guards against at runtime). 0 when auto is off.
 uint8_t pack_auto_brightness(void) {
-    return g_auto_brightness ? (uint8_t)(0x80u | (g_last_auto_brightness & 0x7Fu)) : 0u;
+    if (!g_auto_brightness)  return 0u;       // auto off
+    if (!g_auto_value_known) return 0x80u;    // auto on, no host value yet (bit6 clear)
+    return (uint8_t)(0x80u | 0x40u | (g_last_auto_brightness & 0x3Fu));  // mode + known + value
 }
 
-// Restore the host-auto state at boot from the packed byte. If auto was engaged,
-// come up in auto mode at the last persisted auto value (g_auto_value_known so
-// get_active_brightness uses it) — the host refreshes it on connect. Off-state
+// Restore the host-auto state at boot from the packed byte. If auto was engaged
+// AND a real host value was stored, come up in auto mode at that value
+// (g_auto_value_known so get_active_brightness uses it) — the host refreshes it on
+// connect. If auto was engaged with no host value yet, come up in auto mode but
+// fall back to the manual brightness (g_auto_value_known stays false). Off-state
 // leaves the manual brightness (l_state.contrast = ee.brightness) untouched.
 void load_auto_brightness(uint8_t packed) {
-    bool    on    = (packed & 0x80u) != 0;
-    uint8_t value = packed & 0x7Fu;
-    if (value > FULL_BRIGHT) value = FULL_BRIGHT;
+    bool on = (packed & 0x80u) != 0;
     g_auto_brightness = on;
     if (on) {
-        g_last_auto_brightness = value;
-        g_auto_value_known     = true;
-        l_state.contrast       = value;
+        if (packed & 0x40u) {                  // a real host auto value was persisted
+            uint8_t value = packed & 0x3Fu;
+            if (value > FULL_BRIGHT) value = FULL_BRIGHT;
+            g_last_auto_brightness = value;
+            g_auto_value_known     = true;
+        }
+        // else: auto engaged but no host value yet -> g_auto_value_known stays false,
+        // so get_active_brightness() returns the manual brightness until the host pushes.
+        l_state.contrast = get_active_brightness();
     }
 }
 

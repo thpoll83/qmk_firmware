@@ -537,7 +537,12 @@ RAM-only) at the stale `~g_user_brightness` until the host re-engages — "both
 halves came up at 2 after a firmware reboot" (field, 2026-06-23). Fix: the
 **host-auto mode + last auto value are now persisted** in the freed
 `poly_eeconf_t.auto_brightness` byte (`pack_auto_brightness`/`load_auto_brightness`
-in `state.c`, bit7 = mode engaged, bits0-6 = value). `set_brightness_auto_mode` /
+in `state.c`, bit7 = mode engaged, **bit6 = a real host value is known**, bits0-5 =
+value). The known bit is essential: engaging auto *before* the host pushes a value
+must NOT persist the default `g_last_auto_brightness` as if real — else the next
+boot snaps to it (the FULL_BRIGHT jump `get_active_brightness` guards at runtime).
+On load, auto-on-but-not-known comes up in auto mode but falls back to the manual
+brightness until the host pushes. `set_brightness_auto_mode` /
 `set_auto_brightness_value` set `g_brightness_dirty` so the state flushes at the
 next suspend/store; `keyboard_post_init_user` calls `load_auto_brightness()` so a
 reboot while host-auto was engaged comes up at the **last auto value** (with

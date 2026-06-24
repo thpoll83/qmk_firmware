@@ -66,7 +66,7 @@ Repo root: `/home/thpoll/Repos/qmk_firmware`
    Activate the QMK virtualenv and do a quick compile check:
    ```bash
    source ~/qmk_env/bin/activate
-   qmk compile -kb handwired/polykybd/split72 -km default 2>&1 | tail -20
+   qmk compile -kb polykybd/split72 -km default 2>&1 | tail -20
    ```
    If it fails, diagnose before pushing. **Do not push a firmware that was built before step 6 — the old submodule checkouts (especially pico-sdk) can cause subtle runtime bugs like broken HID communication even when the build succeeds.**
 

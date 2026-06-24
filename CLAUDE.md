@@ -1,6 +1,6 @@
 # CLAUDE.md — qmk_firmware (PolyKybd)
 
-This file provides guidance to Claude Code (claude.ai/code) when working in this QMK fork. The PolyKybd-specific firmware lives at `keyboards/handwired/polykybd/`.
+This file provides guidance to Claude Code (claude.ai/code) when working in this QMK fork. The PolyKybd-specific firmware lives at `keyboards/polykybd/`.
 
 For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGFX/`), see [`../CLAUDE.md`](../CLAUDE.md).
 
@@ -15,12 +15,12 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 - **Toolchain**: `sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi` → `arm-none-eabi-gcc` (13.2.x). This is what `qmk setup` installs on Debian/Ubuntu; the PyPI `qmk` package is only the bootstrapper (`config/clone/console/env/setup`) and does **not** bundle the compiler. There is no `bin/qmk` in this fork — the full CLI lives in `lib/python`.
 - **qmk CLI**: `pip install qmk` (use a venv if system pip errors building `halo` — a Debian setuptools quirk), then `qmk config user.qmk_home=<repo>` (or `export QMK_HOME=<repo>`) so it discovers `compile`/`flash` from the repo's `lib/python`, plus `pip install -r requirements.txt`.
 - **Submodules** (empty in a fresh clone): `make git-submodule`. The minimum for split72 is `lib/chibios lib/chibios-contrib lib/pico-sdk lib/printf lib/lufa` (printf and lufa are needed even on RP2040 — `quantum/logging` and the ChibiOS USB stack pull them in).
-- **Build**: `qmk compile -kb handwired/polykybd/split72 -km default` (or `make handwired/polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
+- **Build**: `qmk compile -kb polykybd/split72 -km default` (or `make polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
 - **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 
-## Firmware overview (`keyboards/handwired/polykybd/`)
+## Firmware overview (`keyboards/polykybd/`)
 
 The firmware runs on a **Raspberry Pi RP2040** (133 MHz dual-core ARM M0+) and is a heavily customised QMK build. This is **custom hardware with 8 MB of external QSPI flash** (NOT the stock 2 MB). The 8 MB is **partitioned** (see `base/fw_staging.h` for the authoritative map): **0–2 MB running firmware** (the linker `flash1` XIP window), **2–4 MB firmware-update staging**, **4–8 MB resource/overlay data** (`FLASH_TARGET_OFFSET`). So the budget that matters for adding languages/fonts is the **2 MB firmware partition**, of which `split72:default` currently uses ~0.76 MB (~38 %). `FW_STAGING_OFFSET` is kept equal to the linker `flash1` length so a build that exceeds 2 MB fails to *link* rather than silently growing into the staging area (this firmware/staging split was raised from 1 MB → 2 MB in 2026-06 as the image neared the old boundary). The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.
 
@@ -53,7 +53,7 @@ All behaviour lives in the keyboard-level `poly_keymap.c` (compiled for both via
 only**: `keymaps[]`, `encoder_map[]`, and (RGB variants) `g_led_config`. Variant
 differences resolve at compile time:
 - `polykybd.h` `#include`s the active variant header (selected by QMK's
-  `-DKEYBOARD_handwired_polykybd_<variant>`), so `QMK_KEYBOARD_H` reaches
+  `-DKEYBOARD_polykybd_<variant>`), so `QMK_KEYBOARD_H` reaches
   `struct display_info` + the `BITMASK*` macros.
 - Per-variant header macros: `POLY_DISP_ROW_0/3` (scan-start displays) and
   `POLY_SPLASH_R1/R2/R2_ROW` (boot splash).
@@ -226,7 +226,7 @@ RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), uni
 
 ## Font generation
 
-Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from the [`AdafruitGFX/`](../AdafruitGFX/CLAUDE.md) repo. Generation is **config-driven** via `keyboards/handwired/polykybd/fonts/` — full docs in [`fonts/README.md`](keyboards/handwired/polykybd/fonts/README.md).
+Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from the [`AdafruitGFX/`](../AdafruitGFX/CLAUDE.md) repo. Generation is **config-driven** via `keyboards/polykybd/fonts/` — full docs in [`fonts/README.md`](keyboards/polykybd/fonts/README.md).
 
 - **`fonts/fonts.yaml`** — single source of truth: an ordered list of font entries (font file, size, variant, codepoint ranges, weight, bits, …) grouped into categories with shared defaults. The list order **is** the `ALL_FONTS[]` priority (front-to-back lookup; first match wins on overlapping ranges) — categories only decide which header a font lands in.
 - **`fonts/generate_fonts.py`** — reads the YAML, runs `fontconvert` per entry, writes one header per category to `base/fonts/generated/`, and composes `base/fonts/gfx_used_fonts.h` (the `ALL_FONTS[]` table, with `IconsFont` prepended). `--check` flags stale headers for CI. Needs PyYAML + `fontconvert` on PATH (or `$FONTCONVERT`).
@@ -336,7 +336,7 @@ See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build 
 
 ## Future language candidates
 
-Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-generated from `lang_lut.xlsx` via cog), (2) re-running `fonts/gen-lang-fonts.sh` to generate the flag glyph and update `flag_fonts.h`, (3) updating the host's `LANG_REGION` map in `PolyKybdHost/polyhost/services/lang_regions.py` if the country code isn't already there. The host map covers all standard ISO 3166-1 alpha-2 country codes; only non-standard or private-use codes need a new entry added manually. Full mechanics in [`lang/FUTURE_LANGUAGES.md`](keyboards/handwired/polykybd/lang/FUTURE_LANGUAGES.md) (the "Implementation playbook").
+Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-generated from `lang_lut.xlsx` via cog), (2) re-running `fonts/gen-lang-fonts.sh` to generate the flag glyph and update `flag_fonts.h`, (3) updating the host's `LANG_REGION` map in `PolyKybdHost/polyhost/services/lang_regions.py` if the country code isn't already there. The host map covers all standard ISO 3166-1 alpha-2 country codes; only non-standard or private-use codes need a new entry added manually. Full mechanics in [`lang/FUTURE_LANGUAGES.md`](keyboards/polykybd/lang/FUTURE_LANGUAGES.md) (the "Implementation playbook").
 
 > **STATUS (2026-06-10): `NUM_LANG` is now 156** (11 GET_LANG_LIST ASCII packets) after the
 > **2026-06 Europe + Americas minority/sibling batch (Wave 1)** — 13 Latin locales (no new
@@ -430,9 +430,9 @@ Base-layer changes apply immediately and persist on the next suspend/reset/store
 3. **Proper fix: offload EEPROM writes to core 1.** The keyboard already uses core 1 for RLE decompression via `multicore_exec.c` and the FIFO dispatch. Instead of calling `save_user_settings()` / `save_user_latin()` / `eeconfig_update_default_layer()` directly on core 0, post the write as a job to core 1 via the FIFO. Core 1 does the blocking flash operation while core 0 (QMK main loop, UART, USB) keeps running uninterrupted — eliminating the framing-corruption risk entirely. Main caveat: core 1 is currently single-purpose (RLE decompression), so the two job types must not collide; check that core 1 is idle before posting, or add a small job queue. EEPROM writes and RLE decompression are unlikely to overlap in practice since both are rare and burst-style.
 
 **Relevant files**:
-- `keyboards/handwired/polykybd/split_sync.c` — all `user_sync_*_data_handler` functions
-- `keyboards/handwired/polykybd/state.c` / `state.h` — deferred-write helpers
-- `keyboards/handwired/polykybd/poly_keymap.c` — `housekeeping_task_user()`
+- `keyboards/polykybd/split_sync.c` — all `user_sync_*_data_handler` functions
+- `keyboards/polykybd/state.c` / `state.h` — deferred-write helpers
+- `keyboards/polykybd/poly_keymap.c` — `housekeeping_task_user()`
 
 ---
 
@@ -450,8 +450,8 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 **If the bug reappears**: Check whether a split transport failure (the other bug above) is preventing the suspend state from reaching the slave — if the slave never receives `STATUS_DISP_ON=0` it will keep its displays on indefinitely. The two bugs can look identical from the outside.
 
 **Relevant files**:
-- `keyboards/handwired/polykybd/poly_keymap.c` — `poly_suspend()`, `suspend_power_down_kb()`, `sync_and_refresh_displays()`
-- `keyboards/handwired/polykybd/base/com.h` — flag bit definitions (`STATUS_DISP_ON`, `IDLE_TRANSITION`, `DISP_IDLE`)
+- `keyboards/polykybd/poly_keymap.c` — `poly_suspend()`, `suspend_power_down_kb()`, `sync_and_refresh_displays()`
+- `keyboards/polykybd/base/com.h` — flag bit definitions (`STATUS_DISP_ON`, `IDLE_TRANSITION`, `DISP_IDLE`)
 
 ---
 
@@ -476,13 +476,13 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 **Top remaining suspect — ChibiOS context switch via NMI**. ChibiOS `ARMv6-M-RP2` port with `CH_CFG_SMP_MODE=TRUE` (set in `platforms/chibios/boards/GENERIC_RP_RP2040/configs/chconf.h`) and `CORTEX_ALTERNATE_SWITCH=FALSE` (default) uses **NMI as the context-switch vector** (strong `NMI_Handler` in `lib/chibios/os/common/ports/ARMv6-M-RP2/chcore.c`) and a strong `Vector80` (SIO_IRQ_PROC1) FIFO drain in the same file whose `CH_IRQ_EPILOGUE` triggers NMI via `__port_exit_from_isr` writing `ICSR.NMIPENDSET`. But: NMI is unmaskable by PRIMASK, so this *can't* be what cpsid is preventing — unless the chain is "Vector80 fires (IRQ 16, maskable) → handler triggers NMI". In that case, masking Vector80 (the IRQ) prevents NMI from being triggered. PRIMASK=1 would do that. Catch: `NVIC->ISER` bit 16 is consistently 0 in our captures, meaning Vector80 shouldn't fire. Either our capture has a timing gap that misses a transient ISER bit being set, or some other path triggers it.
 
 **What's currently in tree (post-cleanup, 2026-05-15; updated 2026-05-16)**:
-- `keyboards/handwired/polykybd/multicore_exec.c` — `__asm volatile("cpsid i" ::: "memory");` at the top of `core1_entry` (with an explanatory comment pointing at this doc). Also: `core0_decomp_count` changed from plain `static uint32_t` to `static volatile uint32_t` (real correctness fix — the compiler could otherwise hoist the load out of the wait loops).
-- `keyboards/handwired/polykybd/base/multicore/core1.c` — `CORE1_STACK_SIZE` set to 384 (originally 256, briefly bumped to 1024 during the investigation, then sized based on measurement: peak observed ~164 bytes via the `CORE1_STACK_HWM` probe — see `keyboards/handwired/polykybd/readme.md` "For developers" → "Diagnostics"). The same file ships an `#ifdef CORE1_STACK_HWM` painting/walking probe that is off by default.
+- `keyboards/polykybd/multicore_exec.c` — `__asm volatile("cpsid i" ::: "memory");` at the top of `core1_entry` (with an explanatory comment pointing at this doc). Also: `core0_decomp_count` changed from plain `static uint32_t` to `static volatile uint32_t` (real correctness fix — the compiler could otherwise hoist the load out of the wait loops).
+- `keyboards/polykybd/base/multicore/core1.c` — `CORE1_STACK_SIZE` set to 384 (originally 256, briefly bumped to 1024 during the investigation, then sized based on measurement: peak observed ~164 bytes via the `CORE1_STACK_HWM` probe — see `keyboards/polykybd/readme.md` "For developers" → "Diagnostics"). The same file ships an `#ifdef CORE1_STACK_HWM` painting/walking probe that is off by default.
 - All diagnostic instrumentation has been removed from `multicore_exec.c`, `base/overlay.c`, and `base/rle.c` apart from the gated HWM probe.
 - **Reverted as not-actually-a-race (2026-05-16)**: an earlier cleanup added a `core0_decomp_count != core1_decomp_count` wait to `core1_roi_start()` framed as a "race fix". On re-analysis it was redundant — `CORE1_CMD_RESET_BIT_IDX` only mutates `core1_bit_index`, FIFO ordering guarantees any in-flight DECOMPRESS/ROI_UPDATE finishes atomically before RESET runs, and every caller immediately follows `core1_roi_start()` with `core1_update_roi()` which has its own wait + buffer-write + dmb + push. Now reduced to the bare `multicore_fifo_push_blocking(CORE1_CMD_RESET_BIT_IDX)`.
 
 **Local divergence from SDK that may matter**:
-- `keyboards/handwired/polykybd/base/multicore/core1.c` reimplements `multicore_launch_core1_*` locally and does NOT call `irq_init_priorities()` (the post-merge SDK version of `core1_wrapper` does, see `lib/pico-sdk/src/rp2_common/pico_multicore/multicore.c:89`). Unverified whether this matters — `irq_init_priorities` only sets `NVIC->IPR` priorities and doesn't enable IRQs, but the priorities affect handler interaction.
+- `keyboards/polykybd/base/multicore/core1.c` reimplements `multicore_launch_core1_*` locally and does NOT call `irq_init_priorities()` (the post-merge SDK version of `core1_wrapper` does, see `lib/pico-sdk/src/rp2_common/pico_multicore/multicore.c:89`). Unverified whether this matters — `irq_init_priorities` only sets `NVIC->IPR` priorities and doesn't enable IRQs, but the priorities affect handler interaction.
 - The local `core1_wrapper` has `runtime_run_per_core_initializers()` commented out (function doesn't exist in post-merge SDK anyway).
 
 **Vector address lookup completed (2026-05-15)**. With `cpsid i` reinstated (firmware working), captured the handler address at each vector slot from the live `VTOR=0x10000100` and resolved against the `.elf` symbol table:
@@ -521,10 +521,10 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 **Fix**: `state.c` keeps a `g_user_brightness` snapshot that is updated **only** at deliberate set-points — `inc/dec_brightness()`, the new `set_user_brightness()` (used by the `KC_D*` preset keys and HID cmd 13), `note_user_brightness()` at boot-time EEPROM load, and on the slave when adopting an *awake* master's synced contrast (`contrast > DISP_OFF` and `DISP_IDLE|IDLE_TRANSITION` clear). `save_user_settings()` persists `~g_user_brightness` instead of `~l_state.contrast`. All idle/suspend *restore* paths (`back_from_idle_transition`, fade target, `display_wakeup()`, `suspend_wakeup_init_kb()`, HID stop-idle) now read `get_user_brightness()` instead of re-loading EEPROM — which also means an unflushed brightness change survives an idle/wake cycle (EEPROM was stale there under the suspend-only flush model). The suspend-only flush model itself is unchanged.
 
 **Relevant files**:
-- `keyboards/handwired/polykybd/state.c` / `state.h` — `g_user_brightness`, `set/note/get_user_brightness()`
-- `keyboards/handwired/polykybd/split_sync.c` — `user_sync_poly_data_handler` awake-guard
-- `keyboards/handwired/polykybd/hid_com.c` — cmd 13 (set brightness), cmd 15 (stop idle)
-- `keyboards/handwired/polykybd/poly_keymap.c` — preset keys, idle/wake restore paths, boot seeding (shared by split72 + split42)
+- `keyboards/polykybd/state.c` / `state.h` — `g_user_brightness`, `set/note/get_user_brightness()`
+- `keyboards/polykybd/split_sync.c` — `user_sync_poly_data_handler` awake-guard
+- `keyboards/polykybd/hid_com.c` — cmd 13 (set brightness), cmd 15 (stop idle)
+- `keyboards/polykybd/poly_keymap.c` — preset keys, idle/wake restore paths, boot seeding (shared by split72 + split42)
 
 **Follow-up (2026-06-23): host-auto state now persists across reboots.** The
 `g_user_brightness` model above keeps the *manual* brightness clean, but it is
@@ -572,9 +572,9 @@ brightness every boot), so the slave can't independently bank a stale auto value
 **Fix 3 — ESC (and any key in a later mapping chunk) not appearing** (`base/com.h`): The MRU host sends overlay mappings in chunks of 24 pairs per HID report. For programs with many overlays (e.g. an IDE with all A–Z + numbers), ESC (display_flat_idx=37) falls in the second chunk. Fix 1's per-chunk refresh fires after chunk 1 lands — at that point ESC's usage bit is still 0 — so ESC shows fallback text. Chunk 2 fires another refresh and should correct it, but this creates a transient window. The reliable fix: add `DISPLAY_OVERLAYS` to `OVERLAY_SYNCED_STATE_FLAGS` so that `enable_overlays()` (called by the host after **all** mapping chunks are confirmed ACK'd) force-syncs state to the slave via case 11. The slave detects `state_diff`, calls `request_disp_refresh()`, and renders with all chunks already in place — guaranteed final correct refresh.
 
 **Relevant files**:
-- `keyboards/handwired/polykybd/split_sync.c` — `user_sync_overlay_map_data_handler`
-- `keyboards/handwired/polykybd/hid_com.c` — case 21
-- `keyboards/handwired/polykybd/base/com.h` — `OVERLAY_SYNCED_STATE_FLAGS`
+- `keyboards/polykybd/split_sync.c` — `user_sync_overlay_map_data_handler`
+- `keyboards/polykybd/hid_com.c` — case 21
+- `keyboards/polykybd/base/com.h` — `OVERLAY_SYNCED_STATE_FLAGS`
 
 ---
 
@@ -618,9 +618,9 @@ always claimed. ⚠️ Never bool-test `send_to_bridge()` directly — every ret
 is non-zero; classify it with `sync_succeeded()`.
 
 **Relevant files**:
-- `keyboards/handwired/polykybd/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
-- `keyboards/handwired/polykybd/split_sync.h` — `sync_succeeded()` helper + `SYNC_*` values
-- `keyboards/handwired/polykybd/bridge_helper.c` — `send_to_bridge()` (returns the ack byte / `SYNC_CRC32_ERR`)
+- `keyboards/polykybd/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
+- `keyboards/polykybd/split_sync.h` — `sync_succeeded()` helper + `SYNC_*` values
+- `keyboards/polykybd/bridge_helper.c` — `send_to_bridge()` (returns the ack byte / `SYNC_CRC32_ERR`)
 
 ---
 
@@ -652,8 +652,8 @@ the slave, which already has the image staged), or flash the slave directly via
 BOOTSEL/UF2. The high `err%` clears once both halves run matching firmware.
 
 **Relevant files**:
-- `keyboards/handwired/polykybd/hid_fw_up.c` — `CMD_FW_UP_APPLY` (slave bridge retries)
-- `keyboards/handwired/polykybd/split_fw_up.c` — `user_sync_fw_up_apply_handler` (deferred, ACK-first)
+- `keyboards/polykybd/hid_fw_up.c` — `CMD_FW_UP_APPLY` (slave bridge retries)
+- `keyboards/polykybd/split_fw_up.c` — `user_sync_fw_up_apply_handler` (deferred, ACK-first)
 
 ---
 
@@ -780,9 +780,9 @@ retries=3; if it climbs, attack `p` at the source.
    steady-state error rate to zero, so options 1–3 above were never needed.
 
 **Relevant files**:
-- `keyboards/handwired/polykybd/split_sync.c` — per-transaction CRC32 (the only payload check)
-- `keyboards/handwired/polykybd/bridge_helper.c` / `.h` — `send_to_bridge` retries + the link health counters / `LINK_STATS_LOG_EVERY` summary
-- `keyboards/handwired/polykybd/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`
-- `keyboards/handwired/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`; the full-duplex defines (`SERIAL_USART_FULL_DUPLEX`, `SERIAL_USART_TX_PIN GP5`, `SERIAL_USART_RX_PIN GP4`, `SERIAL_USART_PIN_SWAP`)
+- `keyboards/polykybd/split_sync.c` — per-transaction CRC32 (the only payload check)
+- `keyboards/polykybd/bridge_helper.c` / `.h` — `send_to_bridge` retries + the link health counters / `LINK_STATS_LOG_EVERY` summary
+- `keyboards/polykybd/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`
+- `keyboards/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`; the full-duplex defines (`SERIAL_USART_FULL_DUPLEX`, `SERIAL_USART_TX_PIN GP5`, `SERIAL_USART_RX_PIN GP4`, `SERIAL_USART_PIN_SWAP`)
 - `<variant>/halconf.h` — `SELECT_SOFT_SERIAL_SPEED` (baud)
 - `platforms/chibios/drivers/serial_protocol.c`, `drivers/vendor/RP/RP2040/serial_vendor.c` — QMK transport (no payload integrity)

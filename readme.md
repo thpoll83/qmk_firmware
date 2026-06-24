@@ -1,36 +1,64 @@
-# Quantum Mechanical Keyboard Firmware
+# PolyKybd Firmware (QMK fork)
 
-[![Current Version](https://img.shields.io/github/tag/qmk/qmk_firmware.svg)](https://github.com/qmk/qmk_firmware/tags)
-[![Discord](https://img.shields.io/discord/440868230475677696.svg)](https://discord.gg/qmk)
-[![Docs Status](https://img.shields.io/badge/docs-ready-orange.svg)](https://docs.qmk.fm)
-[![GitHub contributors](https://img.shields.io/github/contributors/qmk/qmk_firmware.svg)](https://github.com/qmk/qmk_firmware/pulse/monthly)
-[![GitHub forks](https://img.shields.io/github/forks/qmk/qmk_firmware.svg?style=social&label=Fork)](https://github.com/qmk/qmk_firmware/)
+This repository is a fork of [QMK](https://github.com/qmk/qmk_firmware) that hosts
+the firmware for **PolyKybd** — a split mechanical keyboard with a small OLED
+display under every keycap. The PolyKybd-specific firmware lives at
+[`keyboards/polykybd/`](/keyboards/polykybd/); the rest of the tree is upstream QMK,
+kept so the customisations can ride on QMK's build system, HID stack and ChibiOS
+RP2040 port.
 
-This is a keyboard firmware based on the [tmk\_keyboard firmware](https://github.com/tmk/tmk_keyboard) with some useful features for Atmel AVR and ARM controllers, and more specifically, the [OLKB product line](https://olkb.com), the [ErgoDox EZ](https://ergodox-ez.com) keyboard, and the Clueboard product line.
+Project progress and hardware info:
 
-## Documentation
+* Hardware & build log: [github.com/thpoll83/PolyKybd](https://github.com/thpoll83/PolyKybd)
+* Support the project: [ko-fi.com/polykb](https://ko-fi.com/polykb)
 
-* [See the official documentation on docs.qmk.fm](https://docs.qmk.fm)
+## What is PolyKybd?
 
-The docs are powered by [VitePress](https://vitepress.dev/). They are also viewable offline; see [Previewing the Documentation](https://docs.qmk.fm/#/contributing?id=previewing-the-documentation) for more details.
+PolyKybd runs on a **Raspberry Pi RP2040** with 8 MB of external QSPI flash. It is a
+split keyboard (left + right halves over UART) with up to **72 per-keycap OLED
+displays** (72×40 px monochrome) plus a 128×64 status OLED. A companion host
+application, [PolyKybdHost](https://github.com/thpoll83/PolyKybdHost), tracks the
+active window and pushes per-app overlays, language layouts and icons to the keycaps
+over a custom 64-byte HID report protocol.
 
-You can request changes by making a fork and opening a [pull request](https://github.com/qmk/qmk_firmware/pulls).
+### Variants
 
-## Supported Keyboards
+Two hardware variants share one firmware (the shared logic lives in
+`keyboards/polykybd/poly_keymap.c`):
 
-* [Planck](/keyboards/planck/)
-* [Preonic](/keyboards/preonic/)
-* [ErgoDox EZ](/keyboards/ergodox_ez/)
-* [Clueboard](/keyboards/clueboard/)
-* [Cluepad](/keyboards/clueboard/17/)
-* [Atreus](/keyboards/atreus/)
+* **`split72`** — 72-key, RGB matrix, Cirque trackpad, 128×64 status OLED (actively developed).
+* **`split42`** — 42-key CRKBD-footprint variant (formerly `corne42`, renamed 2026-06).
 
-The project also includes community support for [lots of other keyboards](/keyboards/).
+## Building
 
-## Maintainers
+The full keyboard documentation is in [`keyboards/polykybd/readme.md`](/keyboards/polykybd/readme.md).
+In short, replace `<variant>` with `split72` or `split42`:
 
-QMK is developed and maintained by Jack Humbert of OLKB with contributions from the community, and of course, [Hasu](https://github.com/tmk). The OLKB product firmwares are maintained by [Jack Humbert](https://github.com/jackhumbert), the Ergodox EZ by [ZSA Technology Labs](https://github.com/zsa), the Clueboard by [Zach White](https://github.com/skullydazed), and the Atreus by [Phil Hagelberg](https://github.com/technomancy).
+```bash
+qmk compile -kb polykybd/<variant> -km default
+# or
+make polykybd/<variant>:default
+```
 
-## Official Website
+The `.uf2` is for manual bootloader-drive recovery; the deliverable for flashing over
+HID via PolyKybdHost is the raw `.bin`
+(`arm-none-eabi-objcopy -O binary .build/polykybd_split72_default.elf out.bin`).
 
-[qmk.fm](https://qmk.fm) is the official website of QMK, where you can find links to this page, the documentation, and the keyboards supported by QMK.
+## Related repositories
+
+| Repo | Role |
+|------|------|
+| [thpoll83/PolyKybd](https://github.com/thpoll83/PolyKybd) | Hardware design (PCB, case, schematics) |
+| [thpoll83/PolyKybdHost](https://github.com/thpoll83/PolyKybdHost) | Host application — overlay/window tracking, firmware updater |
+| [thpoll83/polykybd-ctnd](https://github.com/thpoll83/polykybd-ctnd) | Hardware-in-the-loop test & deploy station / CI runner |
+| [thpoll83/polykybd-docs](https://github.com/thpoll83/polykybd-docs) | Project documentation site |
+
+## Upstream QMK
+
+PolyKybd is built on QMK, the [Quantum Mechanical Keyboard Firmware](https://github.com/qmk/qmk_firmware),
+which is based on the [tmk\_keyboard firmware](https://github.com/tmk/tmk_keyboard).
+QMK's documentation lives at [docs.qmk.fm](https://docs.qmk.fm), and QMK is developed
+and maintained by Jack Humbert of OLKB with contributions from the community and
+[Hasu](https://github.com/tmk). All upstream QMK keyboards and features remain in this
+tree; only `keyboards/polykybd/` and a handful of supporting build hooks are
+PolyKybd-specific.

@@ -3,7 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/handwired/polykybd/**",
+                "${workspaceFolder}/polykybd/**",
                 "${workspaceFolder}/**"
             ],
             "defines": [],

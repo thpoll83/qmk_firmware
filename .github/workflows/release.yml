@@ -19,7 +19,7 @@ permissions:
   contents: write
 
 env:
-  KB: handwired/polykybd/split72
+  KB: polykybd/split72
   KM: default
 
 jobs:

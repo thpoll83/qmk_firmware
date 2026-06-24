@@ -143,8 +143,8 @@ void oled_update_buffer_fw_update(void) {
             return;
         }
         kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");
-        oled_fw_update_percent(small, 24, 36, pct);
-        kdisp_write_gfx_text(small, 1, 24, 36, U"%");
+        oled_fw_update_percent(small, 70, 36, pct);
+        kdisp_write_gfx_text(small, 1, 70, 36, U"%");
         oled_fw_update_progress_bar(50, 63, pct);
     }
 }

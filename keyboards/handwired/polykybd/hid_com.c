@@ -597,25 +597,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 raw_hid_send(data, length);
                 break;
             case 23: // enter bootloader (host-triggered; mirrors a QK_BOOTLOADER press)
-                // SECURITY: dropping into the RP2040 bootloader (BOOTSEL) is destructive
-                // and, ungated, lets any HID-reachable process force the keyboard offline
-                // at will (DoS) and stage a UF2-drive reflash. Gate on debug_enable (off
-                // by default; unlock with DB_TOGG — physical access). The normal staging
-                // firmware-update path (cmds 0x40..0x44) is unaffected; this only gates
-                // the manual "activate bootloader" recovery action.
-                if (debug_enable) {
-                    uprint("Host requested bootloader.\n");
-                    poly_announce_bootloader();
-                    memset(data, 0, length);
-                    memcpy(data, "P\x17.", 3);
-                    raw_hid_send(data, length);
-                    reset_keyboard();
-                } else {
-                    uprint("Host requested bootloader — refused (debug off).\n");
-                    memset(data, 0, length);
-                    memcpy(data, "P\x17!", 3);   // NACK: bootloader entry requires debug mode
-                    raw_hid_send(data, length);
-                }
+                uprint("Host requested bootloader.\n");
+                poly_announce_bootloader();
+                memset(data, 0, length);
+                memcpy(data, "P\x17.", 3);
+                raw_hid_send(data, length);
+                reset_keyboard();
                 break;
             case 24: //display off
                 poly_suspend();

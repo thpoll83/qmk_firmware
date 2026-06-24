@@ -2171,6 +2171,11 @@ void keyboard_post_init_user(void) {
     local_state->lang = ee.lang;
     local_state->contrast = ee.brightness;
     note_user_brightness(ee.brightness);
+    // If host-auto brightness was engaged before the reboot, come up in auto mode
+    // at the last auto value instead of the deliberate manual brightness (which the
+    // host never refreshes, so a stale low manual value would otherwise show until
+    // the host re-engages). Overrides local_state->contrast when auto was on.
+    load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
 #ifdef RGB_MATRIX_ENABLE
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
@@ -2183,7 +2188,7 @@ void keyboard_post_init_user(void) {
     // Restore the MRU recents and schedule a one-time push to the slave half.
     mru_load(ee.mru_emoji, ee.mru_lang);
 
-    set_displays(ee.brightness, false);
+    set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif
@@ -2240,7 +2245,7 @@ void eeconfig_init_user(void) {
     poly_eeconf_t ee;
     ee.lang = g_lang_init;
     ee.brightness = ~FULL_BRIGHT;
-    ee.unused = 0;
+    ee.auto_brightness = 0;   // host-auto off on a fresh EEPROM
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // Empty MRU recents: the serialised form uses 0 == empty for both lists, so
     // a zeroed block reads back as "no recent" (no stray category-0 / lang-0).

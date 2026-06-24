@@ -526,6 +526,32 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 - `keyboards/handwired/polykybd/hid_com.c` — cmd 13 (set brightness), cmd 15 (stop idle)
 - `keyboards/handwired/polykybd/poly_keymap.c` — preset keys, idle/wake restore paths, boot seeding (shared by split72 + split42)
 
+**Follow-up (2026-06-23): host-auto state now persists across reboots.** The
+`g_user_brightness` model above keeps the *manual* brightness clean, but it is
+**only** updated at deliberate set-points — host-auto/daylight (VOLATILE) pushes
+never touch it. So once `g_user_brightness` held a low value (e.g. an old
+pre-v5 host that pushed daylight values as plain *persisted* sets wrote a
+night-time `2`, or the `KC_DMIN` preset), auto mode *masked* it at runtime but
+every reboot re-exposed it: the keyboard boots in **manual** mode (auto is
+RAM-only) at the stale `~g_user_brightness` until the host re-engages — "both
+halves came up at 2 after a firmware reboot" (field, 2026-06-23). Fix: the
+**host-auto mode + last auto value are now persisted** in the freed
+`poly_eeconf_t.auto_brightness` byte (`pack_auto_brightness`/`load_auto_brightness`
+in `state.c`, bit7 = mode engaged, bits0-6 = value). `set_brightness_auto_mode` /
+`set_auto_brightness_value` set `g_brightness_dirty` so the state flushes at the
+next suspend/store; `keyboard_post_init_user` calls `load_auto_brightness()` so a
+reboot while host-auto was engaged comes up at the **last auto value** (with
+`g_auto_value_known` set) instead of the stale manual one — `set_displays()` now
+uses `local_state->contrast` (the restored active brightness), not `ee.brightness`.
+The stale `g_user_brightness` stays in EEPROM but is no longer shown while auto is
+on. Old EEPROMs read the byte as 0 (auto off) — clean migration. ⚠️ This is the
+**one** place an auto-derived value is persisted; it is kept SEPARATE from
+`g_user_brightness` (the manual value), so the brightness-0 separation above is
+intact. Also: the slave's `user_sync_poly_data_handler` adopt no longer
+`mark_settings_dirty()` — it tracks the master's awake contrast in RAM (for
+idle/wake restore) but never persists it (the master is authoritative and syncs
+brightness every boot), so the slave can't independently bank a stale auto value.
+
 ---
 
 ### Bug: slave does not show overlay icons after MRU program switch until modifier change

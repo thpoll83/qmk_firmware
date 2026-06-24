@@ -185,7 +185,7 @@ void copy_global_latin_table(const latin_sync_t* value) {
 // Writes only lang+brightness+idle_style+unused (4 bytes) to EEPROM.
 void save_user_settings(void) {
     const poly_eeconf_t ee = { .lang = l_state.lang, .brightness = (uint8_t)(~g_user_brightness),
-                               .idle_style = g_idle_style, .unused = 0 };
+                               .idle_style = g_idle_style, .auto_brightness = pack_auto_brightness() };
     eeconfig_update_user_datablock(&ee, 0, offsetof(poly_eeconf_t, latin_ex));
 }
 
@@ -284,11 +284,13 @@ bool get_brightness_auto_mode(void) {
     return g_auto_brightness;
 }
 
-// Engage/disengage host-driven brightness. RAM-only (never persisted); applies
-// the resulting active brightness to the display via the normal sync/refresh.
+// Engage/disengage host-driven brightness, applying the resulting active
+// brightness to the display. The mode (and last value, below) is persisted so a
+// reboot in auto mode restores the auto brightness, not the stale manual value.
 void set_brightness_auto_mode(bool on) {
     g_auto_brightness = on;
     l_state.contrast  = get_active_brightness();
+    g_brightness_dirty = true;   // persist the new auto-mode state (flushed at suspend/store)
 }
 
 // Toggle for the KC_DAUTO key.
@@ -304,6 +306,7 @@ void set_auto_brightness_value(uint8_t value) {
     g_auto_value_known     = true;
     if (g_auto_brightness) {
         l_state.contrast = value;
+        g_brightness_dirty = true;   // remember the latest auto value for the next boot
     }
 }
 
@@ -322,6 +325,28 @@ uint8_t get_active_brightness(void) {
 // load, slave adopting an awake master's synced contrast).
 void note_user_brightness(uint8_t value) {
     g_user_brightness = value;
+}
+
+// Pack the host-auto state into one EEPROM byte: bit7 = mode engaged, bits0-6 =
+// last auto value (0..FULL_BRIGHT fits in 7 bits). 0 when auto is off.
+uint8_t pack_auto_brightness(void) {
+    return g_auto_brightness ? (uint8_t)(0x80u | (g_last_auto_brightness & 0x7Fu)) : 0u;
+}
+
+// Restore the host-auto state at boot from the packed byte. If auto was engaged,
+// come up in auto mode at the last persisted auto value (g_auto_value_known so
+// get_active_brightness uses it) — the host refreshes it on connect. Off-state
+// leaves the manual brightness (l_state.contrast = ee.brightness) untouched.
+void load_auto_brightness(uint8_t packed) {
+    bool    on    = (packed & 0x80u) != 0;
+    uint8_t value = packed & 0x7Fu;
+    if (value > FULL_BRIGHT) value = FULL_BRIGHT;
+    g_auto_brightness = on;
+    if (on) {
+        g_last_auto_brightness = value;
+        g_auto_value_known     = true;
+        l_state.contrast       = value;
+    }
 }
 
 // The brightness to restore after idle/suspend. Unlike a load_user_eeconf()

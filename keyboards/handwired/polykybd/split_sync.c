@@ -44,15 +44,16 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
             if (incoming->lang != current->lang) {
                 mark_settings_dirty();
             }
-            // Adopt the synced contrast as the intended user brightness only while
-            // the master is awake: suspend/idle/fade syncs carry transient values
-            // (DISP_OFF, faded or pulsing levels) that must never be persisted as
-            // the brightness — that would make the displays come up dark/wrong on
-            // the next boot or wake.
+            // Track the master's awake contrast in RAM so the slave's idle/wake
+            // restore uses the right level — but do NOT persist it. In host-auto
+            // mode the master's contrast IS the auto value, and persisting that as
+            // the slave's manual brightness made the slave boot at a stale auto
+            // value (e.g. a night-time 2). The master is authoritative and syncs
+            // brightness on every boot, so the slave never needs its own EEPROM
+            // copy. (Transient suspend/idle/fade levels are still excluded.)
             if (incoming->contrast != current->contrast && incoming->contrast > DISP_OFF &&
                 (incoming->flags & ((uint8_t)DISP_IDLE | (uint8_t)IDLE_TRANSITION)) == 0) {
                 note_user_brightness(incoming->contrast);
-                mark_settings_dirty();
             }
             // Detect action flags newly set in this sync and run them immediately,
             // mirroring the master's case-11 handling. Without this, a mapping

@@ -37,15 +37,36 @@
 // Must be called once before any other fw_staging_* function.
 void fw_staging_init(void);
 
+// Staging target: which flash region a begin/chunk/finalize sequence writes to,
+// and how finalize completes. FIRMWARE stages to the 2 MB firmware-update region
+// (header sector + image) and finalize stamps the staging header for a later
+// apply+reboot. FONTPACK writes the "PlyF" font pack in place at the resource
+// region (no header sector) and finalize re-loads the fonts — no reboot. The
+// streaming/paging/deferred-erase machinery is identical; only the base offset,
+// the header sector, and the finalize action differ.
+typedef enum { FW_TARGET_FIRMWARE = 0, FW_TARGET_FONTPACK = 1 } fw_target_t;
+
 // Synchronous begin (master / USB side): erases staging flash sector-by-sector
 // with interrupts briefly re-enabled between sectors.  Blocks for ~50 ms per
 // sector (ceil(image_size/4096) + 1 sectors total).
-void fw_staging_begin(uint32_t image_size, uint32_t image_crc);
+void fw_staging_begin(uint32_t image_size, uint32_t image_crc);              // FIRMWARE target
+void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t target);
 
 // Deferred begin (slave side): stores parameters and schedules the erase.
 // Returns immediately — safe inside a split-link transaction handler.
 // Call fw_staging_process_deferred() from housekeeping_task_user() to drive the erase.
-void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc);
+void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc);     // FIRMWARE target
+void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, uint8_t target);
+
+// FONTPACK target only: select the bundle slot (offset relative to FW_RESOURCE_OFFSET
+// + reserved size) the next begin/chunk/finalize sequence writes to. Must be called
+// before the FONTPACK begin on BOTH halves (master + slave). No effect on FIRMWARE.
+void fw_staging_set_fontpack_slot(uint32_t slot_off, uint32_t slot_size);
+
+// Active FONTPACK bundle slot offset (relative to FW_RESOURCE_OFFSET) of the
+// in-flight flash — for the on-screen bundle-name label. Pair with
+// fontpack_slot_name(). Only meaningful while the active target is FW_TARGET_FONTPACK.
+uint32_t fw_staging_fontpack_slot_off(void);
 
 // Erases one staging sector per call.  Call from housekeeping_task_user()
 // until fw_staging_write_chunk() no longer returns false for offset==0.
@@ -59,6 +80,16 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len);
 // Returns true on CRC match; sets commit-pending flag on success.
 bool fw_staging_finalize(void);
 
+// Slave-side finalize: like fw_staging_finalize() but defers the heavy FONTPACK
+// reload (full-body CRC + reassemble) out of the split-transaction callback to
+// housekeeping, so the ~50 ms verify can't overrun the ~20 ms transaction window.
+// ACKs on the O(1) transport CRC (byte-identity with the master's verified pack).
+bool fw_staging_finalize_defer_reload(void);
+
+// Drain the deferred FONTPACK reload (call from housekeeping_task_user()).
+// Returns true iff it reloaded this call, so the caller can refresh the display.
+bool fw_staging_process_fontpack_reload(void);
+
 // True while the deferred sector-by-sector erase (fw_staging_begin_deferred) is still running.
 bool fw_staging_erase_pending(void);
 
@@ -67,6 +98,12 @@ bool fw_staging_erase_pending(void);
 // wear-leveling compact operation (backing_store_erase = 100 ms IRQ-disabled) racing
 // with incoming FW_UP_CHUNK transactions and exhausting all UART retries.
 bool fw_staging_fw_up_active(void);
+
+// 0xFF when idle, else the FW_TARGET_* of the in-progress flash (FIRMWARE/FONTPACK),
+// for an on-screen "updating …" label. fw_staging_image_size() is the total image
+// size for a progress bar (0 when idle).
+uint8_t  fw_staging_active_target(void);
+uint32_t fw_staging_image_size(void);
 
 // Current write cursor (bytes accepted into staging).  This half's "next
 // expected chunk offset" — the slave echoes it in fw_up_chunk_reply_t and the

@@ -113,6 +113,42 @@ inline uint8_t *pgm_read_bitmap_ptr(const GFXfont *font) {
 #endif  //__AVR__
 }
 
+// Locate the glyph for codepoint `ch` in a font set, scanning front-to-back and
+// skipping empty (0x0) gap glyphs, exactly like the renderer's own lookup.
+// Returns NULL when no font actually covers `ch` (no '!' fallback) — callers use
+// this both to test coverage and to read glyph metrics. Used by the language
+// layer to draw a country flag only when the font pack supplying it is present.
+// As kdisp_gfx_glyph(), but also reports the font that owns the glyph (when
+// out_font != NULL). The language layer uses this to redraw the flag through a
+// single-font array { flag_font }: kdisp_write_gfx_char baseline-aligns every
+// glyph to fonts[0]->yAdvance, so drawing a pack font via the full g_all_fonts
+// (fonts[0] == IconsFont) shifts it by their yAdvance difference — passing the
+// owning font alone makes that adjustment zero.
+const GFXglyph *kdisp_gfx_glyph_font(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t ch,
+                                     const GFXfont **out_font) {
+    for (uint8_t idx = 0; idx < num_fonts; ++idx) {
+        const GFXfont *f = fonts[idx];
+        uint32_t first = pgm_read_dword(&f->first);
+        uint32_t last  = pgm_read_dword(&f->last);
+        if (ch >= first && ch <= last) {
+            const GFXglyph *gg = pgm_read_glyph_ptr(f, ch - first);
+            if (pgm_read_byte(&gg->width) == 0 && pgm_read_byte(&gg->height) == 0 &&
+                pgm_read_byte(&gg->xAdvance) == 0) {
+                continue;  // non-contiguous-range padding; a later font may have it
+            }
+            if (out_font) *out_font = f;
+            return gg;
+        }
+    }
+    if (out_font) *out_font = NULL;
+    return NULL;
+}
+
+const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t ch) {
+    return kdisp_gfx_glyph_font(fonts, num_fonts, ch, NULL);
+}
+
+
 void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
     for (int x = x_start; x < (x_start + width); ++x) {
         for (int y = y_start; y < (y_start + height); ++y) {

@@ -4,6 +4,8 @@
 
 #include "quantum.h"
 #include "polymod_crc32.h"
+#include "base/fw_staging.h"   // fw_staging_set_fontpack_slot
+#include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 
 #include <string.h>
 
@@ -61,15 +63,33 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
         return;
     }
 
-    static uint32_t s_begun_size = 0;
-    static uint32_t s_begun_crc  = 0;
-    bool same_image = (msg->image_size == s_begun_size && msg->image_crc == s_begun_crc);
+    static uint32_t s_begun_size   = 0;
+    static uint32_t s_begun_crc    = 0;
+    static uint8_t  s_begun_target = 0xFF;
+    static uint8_t  s_begun_bundle = 0xFF;
+    bool same_image = (msg->image_size == s_begun_size && msg->image_crc == s_begun_crc &&
+                       msg->target == s_begun_target && msg->bundle == s_begun_bundle);
 
     if (!same_image) {
-        s_begun_size = msg->image_size;
-        s_begun_crc  = msg->image_crc;
-        fw_staging_begin_deferred(msg->image_size, msg->image_crc);
-        uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx started erase\n", msg->image_size, msg->image_crc);
+        s_begun_size   = msg->image_size;
+        s_begun_crc    = msg->image_crc;
+        s_begun_target = msg->target;
+        s_begun_bundle = msg->bundle;
+        // FONTPACK: point the stager at this bundle's fixed slot before erasing.
+        if (msg->target == FW_TARGET_FONTPACK) {
+            uint32_t slot_off = 0, slot_size = 0;
+            if (fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
+                fw_staging_set_fontpack_slot(slot_off, slot_size);
+            } else {
+                // Unknown bundle id — NACK so we never stage to a stale slot (the
+                // master guards the same way with its slot_ok check).
+                ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+                return;
+            }
+        }
+        fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
+        uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx target=%u started erase\n",
+                msg->image_size, msg->image_crc, msg->target);
         ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK_SIG;  // "erase started, keep polling"
         return;
     }
@@ -84,7 +104,7 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
     // partial failure), re-erase before handing off — NOR flash bits cannot go
     // 0→1 without erasing first.
     if (fw_staging_written()) {
-        fw_staging_begin_deferred(msg->image_size, msg->image_crc);
+        fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         uprintf("slave FW_UP_BEGIN: re-erasing dirty staging\n");
         ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK_SIG;
         return;
@@ -146,7 +166,11 @@ void user_sync_fw_up_chunk_handler(uint8_t in_len, const void* in_data, uint8_t 
 // can be returned before the split link goes dark during the reboot.
 void user_sync_fw_up_commit_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (out_len != sizeof(poly_sync_reply_t) || !out_data) return;
-    bool ok = fw_staging_finalize();
+    // Defer the heavy FONTPACK reload out of this transaction callback: the
+    // ~50 ms full-body verify+reassemble overran the ~20 ms split-transaction
+    // window, so the master timed out and mis-reported COMMIT as a CRC failure
+    // even though the pack loaded. Firmware-target finalize is O(1) (unaffected).
+    bool ok = fw_staging_finalize_defer_reload();
     ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
 }
 

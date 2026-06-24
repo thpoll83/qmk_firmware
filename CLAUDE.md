@@ -92,6 +92,14 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   Persisted in `poly_eeconf_t.idle_style` (flushed at the next suspend/store) so
   it survives reboots. The host (PolyKybdHost) toggles it over this command; the
   rig has a v4-gated round-trip HIL test. See "Idle anti-burn-in styles" below.
+  **v5** added the brightness flags (`SET_BRIGHTNESS` cmd 13 payload byte: volatile /
+  host-auto). **v6** appends a **per-bundle font-pack version block** to the `GET_ID`
+  (cmd 6) reply — AFTER the NUL-terminated id string: `['V'][count][u16 little-endian
+  content_version × count]` in bundle-slot order. The host reads it to flash only the
+  font-pack bundles the keyboard is missing/behind on (no extra query); older hosts
+  stop at the NUL and ignore it. See "Font pack" below. **Bump `FW_VERSION` +
+  `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
+  lockstep** — the host connect gate is exact-match.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)
@@ -118,6 +126,29 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
 1. Host sends compressed bitmap → `fill_overlay.c` decompresses (optionally on core1) → `overlays[idx][360]`
 2. On key event, `split72.c` selects the keycap via shift-register bitmask and calls `kdisp_invert()` for instant visual feedback
 3. Active window change → host sends new overlay set → firmware swaps all 72 keycap images
+
+**Per-keycap rendering gotchas (`base/disp_array.c`)** — learned the hard way:
+- **`kdisp_write_gfx_char` baseline-aligns every glyph to `fonts[0]`**:
+  `y += currentFont->yAdvance - fonts[0]->yAdvance`. So drawing a *single* icon
+  whose font differs in height from `g_all_fonts[0]` (IconsFont, yAdvance 40)
+  shifts it vertically by the difference. This was the **language-flag gap-at-top
+  regression** when flags moved into the pack (flag yAdvance 54 − 40 = +14 px down,
+  filling 0..39 → 14..53). **Fix pattern: draw such a glyph through a *single-font
+  array* `{ that_font }`** so `fonts[0]` is the glyph's own font (adjustment 0), as
+  the old compiled-in `{ &flag_font }` path did. `kdisp_gfx_glyph_font(fonts, n, cp,
+  &out_font)` returns the glyph **and** its owning font in one scan for exactly this
+  (`kdisp_gfx_glyph` is the `out_font = NULL` wrapper).
+- **GFXfont bitmaps are continuous-bit-packed, byte-padded per *glyph* — NOT per
+  scanline.** Index bits as `bit = yy*w + xx; byte = bitmapOffset + bit/8; msb-first`.
+  A per-scanline-stride reader produces garbage that *looks* like dithering noise.
+- **To preview a keycap faithfully, use `PolyKybdHost/tools/oled_preview.py`** (its
+  `gfx_font` loader + `oled_to_rgb`) — it parses the generated headers correctly and
+  renders the real 72×40 OLED look. A hand-rolled renderer cost two wrong "flag
+  offset" guesses this session before the real cause (the baseline-align above) was
+  found. `gfx_font.load_all_fonts(base/fonts)` includes `flag_fonts.h`, so it can
+  render pack/flag glyphs too. **Caveat:** the preview models glyph `xOffset/yOffset`
+  but NOT the `kdisp` baseline-align shift, so it won't reproduce that bug — reason
+  about `fonts[0]` separately.
 
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.
@@ -203,6 +234,101 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
 - `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
 - **`fonts/gen-lang-fonts.sh`** — generates the two standalone headers for the language-selection layer (`_LL`): `base/fonts/flag_fonts.h` (country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically) and `base/fonts/lang_label_font.h` (a 6 px NotoSans label font). These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes.
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.
+
+See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
+
+### Font pack: resident fonts (compiled-in) + external-flash pack
+
+Fonts are split into a small **resident** set compiled into the firmware image and
+a large **pack** (`PlyF`) that lives in the **4–8 MB resource region** and is
+flashed over HID separately. `fontpack_assemble()` builds `g_all_fonts = resident
+++ pack` at boot; with no pack, only the resident set is present. Files:
+`base/fontpack.c/.h` (C loader), `fonts/fontpack.py` (build-side serializer),
+`base/fonts/generated/fontpack.manifest.json` (committed pack ABI contract),
+`hid_fontpack.c` + `PolyKybdHost/polyhost/device/hid_fontpack.py` (HID transport),
+`polyhost/cli/polyctl.py` (`fontpack status|sync|flash <id>|wipe [id]` — per-bundle
+since the split-pack change; `status` shows device-vs-shipped versions, `sync`
+flashes all stale bundles, `flash <id>` force-flashes one).
+
+- **Split pack (protocol 6+): the pack is N independently-versioned BUNDLES, not
+  one blob.** `fonts/fonts.yaml` `bundles:` groups the non-resident categories into
+  ordered bundles (currently 6: `symbol`, `mideast`, `syllabic`, `asia`, `flags`,
+  `emoji`), each a standalone `PlyF` flashed to its **own fixed sector-aligned slot**
+  in a **2 MB** window at `FW_RESOURCE_OFFSET` (`fontpack_layout.h`, generated). The
+  set of valid slot headers **is** the directory — there is **no separate directory
+  sector** (avoids a consistency class of bug). Each bundle's per-font record carries
+  the font's **global ALL_FONTS index** (the spare `reserved` u16); `fontpack_load()`
+  reads every slot and `fontpack_assemble()` merge-sorts all present bundles' fonts
+  back into global priority order, reproducing the old single-pack `g_all_fonts`
+  exactly. The build emits per-bundle `.plyf` + `fontpack_bundles.manifest.json`
+  (ABI contract) + `fontpack_layout.h` (the X-macro slot table firmware **and** host
+  share) via `generate_fonts.py --emit-bundles DIR` / `--bundle-version ID=N`.
+  - **Auto on connect:** the firmware reports every bundle's `content_version` in the
+    `GET_ID` v6 block; the host (`fontpack_bundle.py` + `PolyCore._fontpack_autocheck_job`)
+    flashes only the bundles the device is missing/behind on, each to its slot. The
+    bundles ship in `PolyKybdHost/polyhost/res/fontpack/<id>.plyf` + `bundles.json`.
+  - **Adding/regenerating a bundle:** bump that bundle's `content_version` (so the
+    host re-flashes it) and reship the `.plyf` + `bundles.json`. `latin` stays
+    **resident** (it is `resident: true`), so it is NOT a bundle — the keyboard always
+    renders ASCII text with no pack. The build-time guard fails if a bundle overflows
+    its slot. Order in `bundles.list` is **append-only** (the index is the on-wire id
+    and the slot order; growth-prone `emoji` is last with `slot_kb: rest`).
+  - **Flash UX (split72):** while any flash runs the status OLED shows an "Updating
+    fonts/firmware — do not unplug" screen with a full-width progress bar, and the RGB
+    matrix breathes (cyan = font pack, orange = firmware/bootloader = "can't type");
+    `poly_prepare_for_flash()` (HID BEGIN) drops to the base layer + bridges it to the
+    slave so typing still works. See `oled_helper.c`, `poly_keymap.c` (`flash_rgb_tick`,
+    `rgb_matrix_indicators_kb`), `base/fw_staging.c` (`fw_staging_active_target`).
+
+- **Make a pack font resident** (so UI chrome renders with no pack): add its
+  generated symbol name to `index.resident_fonts` in `fonts.yaml`, then regenerate.
+  It moves out of the pack into `RESIDENT_FONTS[]`. **Front-to-back precedence means
+  a resident font WINS over an overlapping pack copy**, so for a *single* glyph
+  inside a big pack range (e.g. GUI ❖ U+2756 in the 12 KB `_SymBmp4_`, emoji-layer 😀
+  U+1F600 in `_Emojis0_`) add a **tiny dedicated resident font** (`_GuiKey_`,
+  `_EmjLayer_`) covering just that codepoint rather than making the whole big font
+  resident. The current resident UI-chrome set (≈9 KB) is the modifier symbols
+  (Technical/Technical2 = Ctrl/Alt/GUI/Option/Del/Backspace/Esc/PrintScreen), the
+  menu icons (Settings ⚙, World 🌐), Brightness moons, Hyper/Meh, GuiKey, Util
+  (screenshot/calc/my-computer/paste), EmjLayer, plus the always-resident Arrows.
+- **Regenerate** with `FONTCONVERT=<pinned> python3 generate_fonts.py`. **Byte-repro
+  gotcha:** the per-category headers embed the fontconvert *binary path* in a
+  provenance comment, so run from the **same path** the committed headers used
+  (`/tmp/fontconvert_pinned`) or every category header shows a 1-line diff. Flipping
+  a font resident↔pack should change **only** `gfx_used_fonts.h`,
+  `fontpack.manifest.json`, `all_fonts_order.json` (and the new font's category
+  header) — if other category headers diff, the toolchain/source drifted.
+- **Standalone label fonts** (not in `fonts.yaml`/`ALL_FONTS`) are generated by
+  `gen-lang-fonts.sh` and used via dedicated single-font arrays: `_Tiny_` 6 px
+  (`lang_label_font.h`, lang-code labels) and `_Mid_` 10 px (`util_font.h`,
+  `mid_fonts[]` — a size between Tiny and Base for misc utility-key text; a full
+  `ll-CC` fits one line at 10 px but overflows 72 px at 14 px).
+- **HID flow** (`BEGIN`/`CHUNK`/`COMMIT`, cmds `0x50`–`0x53`): reuses the
+  `fw_staging` machinery (deferred sector erase, slave bridge). `FONTPACK_BEGIN`
+  carries a **`bundle_id` byte** (data[10]); the master resolves it to the slot via
+  `fontpack_slot()`, bounds the pack to the slot size, and `fw_staging_set_fontpack_slot()`
+  points the stager at `FW_RESOURCE_OFFSET + slot_off`. The slave resolves the same
+  slot from the bridged `fw_up_begin_sync_t.bundle`. ⚠️ **The slave's
+  `COMMIT` runs `fw_staging_finalize()` *inside* the `USER_SYNC_FW_UP_COMMIT`
+  split-transaction callback (~20 ms window).** For the FONTPACK target that
+  re-CRCs the whole ~459 KB pack (`fontpack_load_at`, ~50 ms) → the master timed out
+  and mis-reported `COMMIT` as a CRC failure even though the pack loaded (same class
+  of bug the master-side finalize comment warns about, "run 6"). **Fix:**
+  `fw_staging_finalize_defer_reload()` ACKs on the O(1) transport CRC (already proves
+  byte-identity with the master's verified pack) and defers the heavy reload to
+  `fw_staging_process_fontpack_reload()` in housekeeping. **Never do heavy work in a
+  split-transaction handler.**
+- **Wipe** = flash a 32-byte **empty pack** (`font_count == 0`), a valid empty PlyF
+  sentinel → that slot contributes no fonts. `polyctl fontpack wipe [id]` wipes one
+  slot, or **all** slots when `id` is omitted. ⚠️ **The FONTPACK COMMIT gates success
+  on `fontpack_slot_present(slot_off)` (the just-flashed slot loaded as a valid PlyF,
+  empty sentinel included), NOT on the whole-pack `fontpack_present()`** — the
+  multi-slot loader defines `fontpack_present()` as "≥1 bundle has fonts", which is
+  false after a full wipe and falsely failed the last bundle's COMMIT (fixed; was a
+  field bug). The pack persists across *firmware* flashing (different flash region).
+- **The old 127-font pack still loads on newer firmware** (ABI unchanged,
+  `font_count` is read from the header); resident wins on any overlap, the duplicate
+  pack copies are harmless. No need to re-flash the pack after a resident change.
 
 See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
 
@@ -400,6 +526,37 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 - `keyboards/handwired/polykybd/hid_com.c` — cmd 13 (set brightness), cmd 15 (stop idle)
 - `keyboards/handwired/polykybd/poly_keymap.c` — preset keys, idle/wake restore paths, boot seeding (shared by split72 + split42)
 
+**Follow-up (2026-06-23): host-auto state now persists across reboots.** The
+`g_user_brightness` model above keeps the *manual* brightness clean, but it is
+**only** updated at deliberate set-points — host-auto/daylight (VOLATILE) pushes
+never touch it. So once `g_user_brightness` held a low value (e.g. an old
+pre-v5 host that pushed daylight values as plain *persisted* sets wrote a
+night-time `2`, or the `KC_DMIN` preset), auto mode *masked* it at runtime but
+every reboot re-exposed it: the keyboard boots in **manual** mode (auto is
+RAM-only) at the stale `~g_user_brightness` until the host re-engages — "both
+halves came up at 2 after a firmware reboot" (field, 2026-06-23). Fix: the
+**host-auto mode + last auto value are now persisted** in the freed
+`poly_eeconf_t.auto_brightness` byte (`pack_auto_brightness`/`load_auto_brightness`
+in `state.c`, bit7 = mode engaged, **bit6 = a real host value is known**, bits0-5 =
+value). The known bit is essential: engaging auto *before* the host pushes a value
+must NOT persist the default `g_last_auto_brightness` as if real — else the next
+boot snaps to it (the FULL_BRIGHT jump `get_active_brightness` guards at runtime).
+On load, auto-on-but-not-known comes up in auto mode but falls back to the manual
+brightness until the host pushes. `set_brightness_auto_mode` /
+`set_auto_brightness_value` set `g_brightness_dirty` so the state flushes at the
+next suspend/store; `keyboard_post_init_user` calls `load_auto_brightness()` so a
+reboot while host-auto was engaged comes up at the **last auto value** (with
+`g_auto_value_known` set) instead of the stale manual one — `set_displays()` now
+uses `local_state->contrast` (the restored active brightness), not `ee.brightness`.
+The stale `g_user_brightness` stays in EEPROM but is no longer shown while auto is
+on. Old EEPROMs read the byte as 0 (auto off) — clean migration. ⚠️ This is the
+**one** place an auto-derived value is persisted; it is kept SEPARATE from
+`g_user_brightness` (the manual value), so the brightness-0 separation above is
+intact. Also: the slave's `user_sync_poly_data_handler` adopt no longer
+`mark_settings_dirty()` — it tracks the master's awake contrast in RAM (for
+idle/wake restore) but never persists it (the master is authoritative and syncs
+brightness every boot), so the slave can't independently bank a stale auto value.
+
 ---
 
 ### Bug: slave does not show overlay icons after MRU program switch until modifier change
@@ -464,6 +621,39 @@ is non-zero; classify it with `sync_succeeded()`.
 - `keyboards/handwired/polykybd/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
 - `keyboards/handwired/polykybd/split_sync.h` — `sync_succeeded()` helper + `SYNC_*` values
 - `keyboards/handwired/polykybd/bridge_helper.c` — `send_to_bridge()` (returns the ack byte / `SYNC_CRC32_ERR`)
+
+---
+
+### Bug: keyboard hangs on the boot splash after a firmware apply (slave not rebooted)
+
+**Symptom (field, 2026-06-22)**: After a successful HID firmware flash + apply, the
+master rebooted onto the new firmware but **hung on the boot splash** ("SPLIT 72");
+no USB enumerated for minutes (`No Interface` in the host log) until the **slave
+half was replugged**. Afterwards the split link showed a high steady error rate
+(`err=36%`) because master ran new firmware while the slave still ran the old one.
+
+**Root cause**: `CMD_FW_UP_APPLY` (`hid_fw_up.c`) tells the slave to install its
+staged image and reboot in lockstep via `send_to_bridge(USER_SYNC_FW_UP_APPLY, …)`,
+then arms the master's own reboot **regardless of the slave's ack**. That bridge was
+sent with only **5 retries**, so one unlucky drop on this single critical
+transaction left the slave on old firmware; the rebooted master then waits for a
+slave handshake at split init that never comes → hang. (The master booting alone
+into mismatched firmware is exactly why the apply bridges to the slave at all.)
+
+**Fix (2026-06-22)**: bump the slave-apply bridge to **20 retries** and **re-fire the
+whole round once** if it still hasn't acked. Safe: the slave apply handler is
+idempotent (validates the staged image + arms a *deferred* reboot), and
+`send_to_bridge` is **synchronous** (returns only after the slave handled the
+message), so by the time the master proceeds to reboot the slave has already armed
+its own. Worst case adds ~1 s, only on a bad link.
+
+**Recovery if it recurs**: re-run the flash + **Apply** (re-bridges the install to
+the slave, which already has the image staged), or flash the slave directly via
+BOOTSEL/UF2. The high `err%` clears once both halves run matching firmware.
+
+**Relevant files**:
+- `keyboards/handwired/polykybd/hid_fw_up.c` — `CMD_FW_UP_APPLY` (slave bridge retries)
+- `keyboards/handwired/polykybd/split_fw_up.c` — `user_sync_fw_up_apply_handler` (deferred, ACK-first)
 
 ---
 

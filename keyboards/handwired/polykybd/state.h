@@ -57,7 +57,7 @@ typedef struct _poly_eeconf_t {
     uint8_t lang;
     uint8_t brightness;
     uint8_t idle_style;   // enum poly_idle_style (carved out of the former uint16_t unused)
-    uint8_t unused;
+    uint8_t auto_brightness;  // host-auto state: bit7 = mode engaged, bit6 = host value known, bits0-5 = last auto value
     uint8_t latin_ex[26];
     // MRU recents for the emoji / language selection layers. Persisted only on a
     // power-suspension event (and the host save command), and only when dirty.
@@ -161,8 +161,19 @@ void set_brightness_auto_mode(bool on);
 void toggle_brightness_auto_mode(void);
 
 // Apply a host auto/daylight brightness update: volatile, applied only while
-// auto mode is engaged, never persisted, leaves the deliberate brightness intact.
+// auto mode is engaged, leaves the deliberate brightness intact. The mode + last
+// value ARE persisted (see pack/load_auto_brightness) so the keyboard restores
+// host-auto brightness after a reboot instead of the stale manual value.
 void set_auto_brightness_value(uint8_t value);
+
+// Persist/restore the host-auto state across reboots, packed into the single
+// poly_eeconf_t.auto_brightness byte (bit7 = mode engaged, bit6 = a real host
+// value is known, bits0-5 = last auto value). load_auto_brightness() is called at
+// boot; a reboot while host-auto was engaged then comes up at the last auto
+// brightness (or the manual one if no host value had arrived yet), not the stale
+// manual value.
+uint8_t pack_auto_brightness(void);
+void load_auto_brightness(uint8_t packed);
 
 // The brightness currently in effect: auto ? last host auto value : the user
 // brightness. Idle/suspend/fade restore paths use this.

@@ -45,11 +45,78 @@ index:
   # Fonts inserted at the FRONT of ALL_FONTS, before the generated ones.
   prepend_fonts:
     - IconsFont
+  # Extra fonts kept RESIDENT (compiled in, never in the font pack) even though
+  # their category is otherwise packed. These supply UI *chrome* that must render
+  # with no pack present. NotoSansSymbols2 Arrows (U+2B6F–2BA0, ~0.9 KB) draws the
+  # Tab / Enter(Return) / Undo / Redo / refresh-circle / nav arrow-stop key icons
+  # (ARROWS_* in lang/named_glyphs.h, used by poly_keymap.c + status_oled.c).
+  # The Technical/Technical2 + Settings/World/Brightness fonts keep the modifier
+  # legends (Ctrl ⎈ / Alt ⎇ / GUI ⌘ / Option ⌥ / Del ⌦ / Backspace ⌫ / Esc ⎋ /
+  # PrintScreen ⎙) and the on-keyboard menu chrome (settings ⚙, language 🌐, and
+  # the settings-layer brightness moons 🌑–🌖) legible with NO pack flashed — so a
+  # freshly-flashed keyboard can navigate its own UI before any font pack lands.
+  # The Util / Hyper / Meh fonts add the utility-layer legends (screenshot 🖼,
+  # calculator 🖩, my-computer 🖳, clipboard) and the Hyper 💫 / Meh 🐐 modifier
+  # symbols; GuiKey adds the GUI/Super ❖ legend. ~6 KB total; the rest of these
+  # categories stay in the pack.
+  resident_fonts:
+    - NotoSansSymbols2_Regular_Arrows_20pt16b
+    - NotoSansSymbols2_Regular_Technical2_20pt16b
+    - NotoSansSymbols_Regular_Technical_20pt16b
+    - NotoSansSymbols2_Regular_GuiKey_20pt16b
+    - NotoSansSymbols2_Regular_Util_20pt16b
+    - NotoEmoji_Medium_Settings_20pt16b
+    - NotoEmoji_Medium_World_20pt16b
+    - NotoEmoji_Medium_Brightness_16pt16b
+    - NotoEmoji_Medium_Hyper_18pt16b
+    - NotoEmoji_Medium_Meh_20pt16b
+    - NotoEmoji_Medium_EmjLayer_20pt16b
+  # Fonts appended to the END of the external-flash font pack that are generated
+  # OUTSIDE the main fonts.yaml pipeline (so they have no `fonts:` entry). Each is
+  # parsed from its standalone header. The language-layer country flags
+  # (gen-lang-fonts.sh, codepoints 0xE000+idx) ship here instead of resident, so
+  # the ~63 KB flag font leaves the firmware image; render_lang_flag_key() draws
+  # them via g_all_fonts and falls back to the xx-YY label when no pack is present.
+  pack_extra_fonts:
+    - {symbol: NotoColorEmoji_Regular_LangFlags_20pt7b, header: flag_fonts.h}
+
+# Split-pack bundles: the non-resident pack is also emitted as one PlyF per
+# script family, laid out in fixed sector-aligned slots inside the 2 MB fontpack
+# window (behind a 4 KB directory). The host flashes only the bundles that are
+# missing/stale on the device (per-bundle content_version in the GET_ID reply).
+# `list` order == slot order in flash == version order in the GET_ID block, so it
+# is APPEND-ONLY (a bundle's index is its on-wire id). Put the bundle most likely
+# to grow (emoji) last with slot_kb: rest so its growth never shifts the others.
+# Every non-resident font must map to exactly one bundle (by category, or by
+# pack_extra symbol for the standalone flags); generate_fonts.py fails the build
+# if a bundle overflows its slot. Slot sizes are KB, multiples of 4 (sector).
+bundles:
+  layout_version: 1
+  region_kb: 2048          # 2 MB fontpack window (FW_RESOURCE_OFFSET .. +2 MB)
+  dir_sectors: 1           # 4 KB directory sector at the region base
+  # NB: the `latin` category is resident: true (compiled into the firmware, the
+  # functional minimum so the keyboard renders ASCII/Cyrillic/Greek with NO pack),
+  # so it is NOT a bundle here — only non-resident pack fonts get bundles.
+  list:
+    - {id: symbol,   slot_kb: 96,   categories: [symbols]}
+    - {id: mideast,  slot_kb: 96,   categories: [arabic, hebrew, ethiopic]}
+    - {id: syllabic, slot_kb: 96,   categories: [canadian, cherokee]}
+    - {id: asia,     slot_kb: 128,  categories: [jp, kr, bopomofo, devanagari,
+                                                 bengali, telugu, tamil, thai,
+                                                 vietnamese, georgian, armenian]}
+    - {id: flags,    slot_kb: 128,  pack_extra: [NotoColorEmoji_Regular_LangFlags_20pt7b]}
+    - {id: emoji,    slot_kb: rest, categories: [emoji, emoji_fig]}
 
 # Each category -> one generated header, with defaults inherited by its fonts.
 categories:
   latin:
     output: latin_fonts.h
+    # resident == compiled into the firmware image (the "functional minimum"),
+    # NOT shipped in the external-flash font pack. The latin category covers
+    # ASCII + Latin-extended + Cyrillic + Greek keycaps, so the keyboard stays
+    # usable for those layouts with no pack present. See base/fontpack.h and
+    # fonts/fontpack.py. (IconsFont — index.prepend_fonts — is resident too.)
+    resident: true
     defaults: {source: noto-sans, size: 14}
   hebrew:
     output: hebrew_fonts.h
@@ -160,6 +227,7 @@ fonts:
   - {category: symbols, variant: _SymBmp5_, ranges: [[0x2709, 0x2709]]}
   - {category: symbols, variant: _SymBmp6_, ranges: [[0x269d, 0x26ef]]}
   - {category: emoji, variant: _Zodiac_, ranges: [[0x2648, 0x2653]], note: 'Cat 6 addition: zodiac signs ♈-♓ (BMP 0x2648-0x2653, NotoEmoji). Stays separate (NotoEmoji); the Symbols2 ranges _SymBmp1_/_SymBmp2_ are split around this island.'}
+  - {category: emoji, variant: _EmjLayer_, bits: 32, ranges: [[0x1f600, 0x1f600]], note: 'Grinning face 😀 (U+1F600) — the emoji-layer indicator on the default layer (TO(_EMJ) in keycode_helper.c). Kept resident (index.resident_fonts) so it renders with no pack; also present in _Emojis0_ but resident wins.'}
   - {category: latin, variant: _LatinExtB_, render_height: 44, ranges: [[0x180, 0x24f]], note: 'Latin Extended-B (0x0180-0x024F) — emoji-layer "Latin" tab (cat 11). Latin Extended-A (0x0100-0x017E) is already covered by _SupAndExtA_ above.'}
   - {category: latin, variant: _Schwa_, render_height: 44, ranges: [[0x259, 0x259]], note: 'Latin small letter schwa (U+0259) for Azerbaijani az-AZ — sits just past the _LatinExtB_ range (IPA Extensions). Capital schwa Ə U+018F is already in _LatinExtB_.'}
   - {category: latin, variant: _SupAndExtA_, render_height: 44, ranges: [[0xa1, 0x17e]]}
@@ -172,6 +240,7 @@ fonts:
   - {category: symbols, variant: _Arrows_, ranges: [[0x2b6f, 0x2b73], [0x2b7e, 0x2b7e], [0x2b8c, 0x2b8c], [0x2b8e, 0x2b8e], [0x2ba0, 0x2ba0]]}
   - {category: symbols, variant: _Technical2_, ranges: [[0x2318, 0x2318], [0x2325, 0x2326], [0x232b, 0x232b]]}
   - {category: symbols, variant: _Technical_, source: noto-sans-symbols, ranges: [[0x2387, 0x2388], [0x238b, 0x238b], [0x2399, 0x2399]]}
+  - {category: symbols, variant: _GuiKey_, ranges: [[0x2756, 0x2756]], note: 'GUI/Super key legend ❖ (DINGBAT_BLACK_DIA_X, U+2756). Kept resident (index.resident_fonts) so the GUI modifier renders with no pack; also present in _SymBmp4_ but resident wins.'}
   - {category: emoji, variant: _ClipCpy_, size: 18, bits: 32, ranges: [[0x1f4cb, 0x1f4cb]]}
   - {category: emoji, variant: _FileOpen_, size: 14, bits: 32, ranges: [[0x1f4c2, 0x1f4c2]]}
   - {category: symbols, variant: _Util_, bits: 32, ranges: [[0x1f568, 0x1f56a], [0x1f5a9, 0x1f5ab], [0x1f5b3, 0x1f5bc], [0x1f5ca, 0x1f5ca]]}

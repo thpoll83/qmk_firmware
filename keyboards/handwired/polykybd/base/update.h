@@ -18,6 +18,12 @@ int32_t get_time_since_last_update(void);
 // Global variables: g_refresh
 void request_disp_refresh(void);
 
+// Called just before a font-pack / firmware flash begins (which blocks normal
+// interaction): drop to the base/default layer and render it once, so the user
+// can still type plain characters and the keycaps show legible legends while the
+// flash holds the main loop. Must run before fw_up freezes display updates.
+void poly_prepare_for_flash(void);
+
 void set_disp_refresh(enum refresh_mode mode);
 
 enum refresh_mode get_refresh_mode(void) ;

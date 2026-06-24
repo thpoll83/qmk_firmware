@@ -20,8 +20,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
-extern const GFXfont* const ALL_FONTS[];
-#define ALL_FONT_SIZE_OLED_INT 43
+// Status-OLED chrome (layer/lock icons, arrows) lives in the resident font set,
+// which sits at the front of the runtime g_all_fonts[] table.
+#include "base/fontpack.h"
+#include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
 
 /*
  * Status screen layout for 128×32 OLED:
@@ -39,7 +41,7 @@ void oled_update_buffer(void) {
     const GFXfont* smallFont[]   = { &NotoSans_Medium8pt7b };
 
     /* Row 1: layer icon + layer number + side */
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 0, 11, ICON_LAYER);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 11, ICON_LAYER);
     hex_to_u32_string((char*)buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
     kdisp_write_gfx_text(displayFont, 1, 16, 11, buffer);
     if (side_is_undecided()) {
@@ -49,9 +51,9 @@ void oled_update_buffer(void) {
     }
 
     /* Row 1 right: lock indicators */
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 100, 11,
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 100, 11,
         global_layer->led_state.num_lock  ? ICON_NUMLOCK_ON  : ICON_NUMLOCK_OFF);
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE_OLED_INT, 114, 11,
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 114, 11,
         global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
 
     /* Row 2: default layout name (both sides — no RGB on split42) */
@@ -80,6 +82,42 @@ void oled_update_buffer(void) {
     kdisp_write_gfx_text(smallFont, 1, 96, 31, U"L");
     num_to_u32_string((char*)buffer, sizeof(buffer), local_state->lang);
     kdisp_write_gfx_text(smallFont, 1, 108, 31, buffer);
+}
+
+// "Updating fonts/firmware …" screen (128x32) shown while a flash is in progress.
+// kdisp_set_buffer(0) clears the scratch first. For a FIRMWARE flash the master can't
+// repaint a moving bar mid-stream, so it shows a static notice and the slave the bar.
+void oled_update_buffer_fw_update(void) {
+    uint32_t buffer[8];
+    kdisp_set_buffer(0);
+    const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
+    bool    fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
+    uint8_t pct   = fw_update_percent();
+
+    if (!fonts && is_keyboard_master()) {
+        // Firmware, master half: static notice (only 32 px tall → two lines).
+        kdisp_write_gfx_text(smallFont, 1, 0, 12, U"PolyKybd");
+        kdisp_write_gfx_text(smallFont, 1, 0, 28, U"FW Update...");
+        return;
+    }
+
+    if (fonts) {
+        // Name the bundle being written (fixed slot) so progress shows bundle-by-bundle.
+        const char* bname = fontpack_slot_name(fw_staging_fontpack_slot_off());
+        kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Fonts:");
+        if (bname) {
+            ascii_to_u32_string((char*)buffer, sizeof(buffer), bname);
+            kdisp_write_gfx_text(smallFont, 1, 44, 10, buffer);
+        }
+        oled_fw_update_percent(smallFont, 24, 22, pct);
+        kdisp_write_gfx_text(smallFont, 1, 24, 22, U"% — do not unplug");
+    } else {
+        // Firmware, slave half: live progress.
+        kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Progress:");
+        oled_fw_update_percent(smallFont, 84, 10, pct);
+        kdisp_write_gfx_text(smallFont, 1, 84, 10, U"%");
+    }
+    oled_fw_update_progress_bar(25, 31, pct);
 }
 
 /*

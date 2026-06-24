@@ -4,6 +4,7 @@
 #include "quantum.h"
 
 #include "fw_staging.h"
+#include "fontpack.h"        // FONTPACK target: fontpack_reload()/present + max size
 #include "polymod_crc32.h"
 
 #include "hardware/flash.h"
@@ -77,6 +78,42 @@ extern uint8_t __flash_binary_end;
 static bool     s_initialized = false;
 static bool     s_fw_up_active = false;
 
+// Target of the current begin/chunk/finalize sequence (set at begin).
+static uint8_t  s_target = FW_TARGET_FIRMWARE;
+
+// FONTPACK bundle slot within the resource region (set by fw_staging_set_fontpack_slot
+// before begin). Each bundle is flashed to its own fixed sector-aligned slot, so the
+// write base is FW_RESOURCE_OFFSET + slot offset and the size cap is the slot size.
+static uint32_t s_fontpack_slot_off  = 0;
+static uint32_t s_fontpack_slot_size = FONTPACK_FLASH_MAX_SIZE;
+
+// FONTPACK writes the pack bundle in place at its slot in the resource region;
+// FIRMWARE stages at FW_STAGING_DATA_OFFSET behind a 4 KB header sector.
+static inline uint32_t target_data_offset(void) {
+    return (s_target == FW_TARGET_FONTPACK) ? (FW_RESOURCE_OFFSET + s_fontpack_slot_off)
+                                            : FW_STAGING_DATA_OFFSET;
+}
+// FIRMWARE prepends a header sector (erased + stamped); FONTPACK has none (the
+// pack carries its own header at byte 0).
+static inline bool target_has_header(void) {
+    return s_target != FW_TARGET_FONTPACK;
+}
+static inline uint32_t target_max_size(void) {
+    return (s_target == FW_TARGET_FONTPACK) ? s_fontpack_slot_size : FW_UP_MAX_SIZE;
+}
+
+void fw_staging_set_fontpack_slot(uint32_t slot_off, uint32_t slot_size) {
+    s_fontpack_slot_off  = slot_off;
+    s_fontpack_slot_size = slot_size;
+}
+
+// Active FONTPACK bundle slot offset (relative to FW_RESOURCE_OFFSET) of the
+// in-flight flash, so the status OLED can name the bundle being written. Only
+// meaningful while fw_staging_active_target() == FW_TARGET_FONTPACK.
+uint32_t fw_staging_fontpack_slot_off(void) {
+    return s_fontpack_slot_off;
+}
+
 // ---------------------------------------------------------------------------
 // Internal staging state
 // ---------------------------------------------------------------------------
@@ -91,6 +128,9 @@ static uint32_t s_staged_crc;    // running CRC32 of received image bytes (for O
 
 static bool     s_commit_pending;
 static bool     s_reboot_pending;   // deferred plain reboot (QK_REBOOT slave path)
+static bool     s_fontpack_reload_pending;  // slave: defer the heavy FONTPACK reload to housekeeping
+
+static bool fw_staging_finalize_impl(bool defer_fontpack_reload);
 
 // ---------------------------------------------------------------------------
 // Deferred-erase state (used by slave handler to avoid blocking the split link)
@@ -129,7 +169,7 @@ static uint32_t crc32_large(const uint8_t *data, uint32_t size) {
 // Flush accumulated page buffer to staging flash
 // ---------------------------------------------------------------------------
 static void flush_page(void) {
-    uint32_t flash_offs = FW_STAGING_DATA_OFFSET + (s_next_offset - s_buf_fill);
+    uint32_t flash_offs = target_data_offset() + (s_next_offset - s_buf_fill);
 #ifdef USE_CORE1
     bool already_halted = s_core1_halted;
     if (!already_halted) fw_staging_halt_core1();
@@ -192,15 +232,21 @@ void fw_staging_init(void) {
 // master (USB side); the host app timeout must cover the full erase duration
 // (~50 ms × ceil(image_size/4096) sectors).
 void fw_staging_begin(uint32_t image_size, uint32_t image_crc) {
+    fw_staging_begin_target(image_size, image_crc, FW_TARGET_FIRMWARE);
+}
+
+void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t target) {
     if (!s_initialized) fw_staging_init();
 
+    s_target         = target;
     s_next_offset    = 0;
     s_buf_fill       = 0;
+    s_staged_crc     = 0;
     s_commit_pending = false;
     s_erase_pending  = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
 
-    if (image_size == 0 || image_size > FW_UP_MAX_SIZE) {
+    if (image_size == 0 || image_size > target_max_size()) {
         s_image_size = 0;
         s_image_crc  = 0;
         return;
@@ -209,7 +255,7 @@ void fw_staging_begin(uint32_t image_size, uint32_t image_crc) {
     s_image_crc  = image_crc;
     s_fw_up_active = true;
 
-    // Erase header sector then each data sector individually.
+    // Erase the header sector (FIRMWARE only) then each data sector individually.
     // Re-enabling interrupts between sectors keeps USB/watchdog responsive
     // during the ~50 ms erase window per sector.
     uint32_t data_sectors = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
@@ -218,13 +264,15 @@ void fw_staging_begin(uint32_t image_size, uint32_t image_crc) {
 #ifdef USE_CORE1
     fw_staging_halt_core1();
 #endif
-    irq = save_and_disable_interrupts();
-    flash_range_erase(FW_STAGING_OFFSET, FLASH_SECTOR_SIZE);
-    restore_interrupts(irq);
+    if (target_has_header()) {
+        irq = save_and_disable_interrupts();
+        flash_range_erase(FW_STAGING_OFFSET, FLASH_SECTOR_SIZE);
+        restore_interrupts(irq);
+    }
 
     for (uint32_t s = 0; s < data_sectors; s++) {
         irq = save_and_disable_interrupts();
-        flash_range_erase(FW_STAGING_DATA_OFFSET + s * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
+        flash_range_erase(target_data_offset() + s * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
         restore_interrupts(irq);
     }
 #ifdef USE_CORE1
@@ -236,15 +284,20 @@ void fw_staging_begin(uint32_t image_size, uint32_t image_crc) {
 // fw_staging_process_deferred() called from housekeeping_task_user().
 // Returns immediately — safe to call from a split-link transaction handler.
 void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc) {
+    fw_staging_begin_deferred_target(image_size, image_crc, FW_TARGET_FIRMWARE);
+}
+
+void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, uint8_t target) {
     if (!s_initialized) fw_staging_init();
 
+    s_target         = target;
     s_next_offset    = 0;
     s_buf_fill       = 0;
     s_staged_crc     = 0;
     s_commit_pending = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
 
-    if (image_size == 0 || image_size > FW_UP_MAX_SIZE) {
+    if (image_size == 0 || image_size > target_max_size()) {
         s_image_size    = 0;
         s_image_crc     = 0;
         s_erase_pending = false;
@@ -255,7 +308,8 @@ void fw_staging_begin_deferred(uint32_t image_size, uint32_t image_crc) {
     s_fw_up_active = true;
 
     uint32_t data_sectors   = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
-    s_erase_sector_count    = 1 + data_sectors;  // index 0 = header, 1..N = data
+    // FIRMWARE: index 0 = header sector, 1..N = data. FONTPACK: 0..N-1 = data (no header).
+    s_erase_sector_count    = (target_has_header() ? 1u : 0u) + data_sectors;
     s_erase_sector_next     = 0;
     s_erase_pending         = true;
 #ifdef USE_CORE1
@@ -293,10 +347,14 @@ void fw_staging_process_deferred(void) {
     if (timer_elapsed32(s_last_sector_ms) < 70) return;
 
     uint32_t offset;
-    if (s_erase_sector_next == 0) {
-        offset = FW_STAGING_OFFSET;   // header sector
+    if (target_has_header()) {
+        // FIRMWARE: sector 0 = header, sectors 1..N = data.
+        offset = (s_erase_sector_next == 0)
+                     ? FW_STAGING_OFFSET
+                     : target_data_offset() + (s_erase_sector_next - 1) * FLASH_SECTOR_SIZE;
     } else {
-        offset = FW_STAGING_DATA_OFFSET + (s_erase_sector_next - 1) * FLASH_SECTOR_SIZE;
+        // FONTPACK: no header — sectors 0..N-1 are data.
+        offset = target_data_offset() + s_erase_sector_next * FLASH_SECTOR_SIZE;
     }
     // core1 is already halted by fw_staging_begin_deferred(); no halt/restart here.
     uint32_t irq = save_and_disable_interrupts();
@@ -396,6 +454,33 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
 }
 
 bool fw_staging_finalize(void) {
+    return fw_staging_finalize_impl(false);
+}
+
+// Slave-side finalize. Identical to fw_staging_finalize() EXCEPT the heavy
+// FONTPACK reload (a full-body CRC32 + reassemble over the whole ~459 KB pack,
+// ~50 ms) is DEFERRED to housekeeping instead of run inline. The slave runs
+// finalize inside the USER_SYNC_FW_UP_COMMIT split-transaction callback, whose
+// receive window is ~20 ms — the inline reload overran it, so the master timed
+// out and mis-reported COMMIT as a CRC failure even though the pack loaded fine
+// (same class of bug as the master-side re-scan, run 6). The O(1) transport CRC
+// here already proves our staged bytes are identical to the master's (which
+// independently passed the full pack CRC + load), so we ACK on that and let
+// fw_staging_process_fontpack_reload() do the reload off the transaction path.
+bool fw_staging_finalize_defer_reload(void) {
+    return fw_staging_finalize_impl(true);
+}
+
+// Drain the deferred FONTPACK reload from housekeeping_task_user(). Returns true
+// iff it actually reloaded this call (so the caller can request a display refresh).
+bool fw_staging_process_fontpack_reload(void) {
+    if (!s_fontpack_reload_pending) return false;
+    s_fontpack_reload_pending = false;
+    fontpack_reload();
+    return true;
+}
+
+static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
     if (!s_initialized) return false;
 
     // Flush any partial final page (padded with 0xFF already from fw_staging_begin/flush_page)
@@ -408,9 +493,27 @@ bool fw_staging_finalize(void) {
     // window and made the master mis-report COMMIT as "CRC mismatch" — run 6.)
     bool ok = (s_staged_crc == s_image_crc);
 
-    // On a CRC match, stamp the staging header {magic,size,crc} so the staged image
-    // is self-describing and fw_staging_apply_and_reboot() can validate + size it.
-    if (ok) {
+    if (ok && !target_has_header()) {
+        // FONTPACK: the pack is now fully written in place. Re-load it from XIP —
+        // this independently re-validates the pack's own header CRC32 and rebuilds
+        // g_all_fonts. No reboot: fonts render immediately. ok also requires the
+        // pack to pass its own integrity check, not just the transport CRC.
+        if (defer_fontpack_reload) {
+            // Slave: defer the ~50 ms full-body verify+reassemble out of the split
+            // transaction (see fw_staging_finalize_defer_reload). ok stays = the
+            // O(1) transport CRC, which already guarantees byte-identity with the
+            // master's verified pack, so the deferred reload cannot fail here.
+            s_fontpack_reload_pending = true;
+        } else {
+            fontpack_reload();
+            // Gate on the JUST-FLASHED slot loading as a valid PlyF (an empty wipe
+            // sentinel counts), not the whole-pack fontpack_present() — which is
+            // false after a full wipe and would falsely fail the last bundle.
+            ok = fontpack_slot_present(s_fontpack_slot_off);
+        }
+    } else if (ok) {
+        // FIRMWARE: stamp the staging header {magic,size,crc} so the staged image
+        // is self-describing and fw_staging_apply_and_reboot() can validate + size it.
         write_staging_header(s_image_size, s_image_crc);
     }
 
@@ -434,6 +537,16 @@ bool fw_staging_erase_pending(void) {
 
 bool fw_staging_fw_up_active(void) {
     return s_fw_up_active;
+}
+
+// 0xFF when idle, else the FW_TARGET_* of the in-progress flash (for a UI label).
+uint8_t fw_staging_active_target(void) {
+    return s_fw_up_active ? s_target : 0xFFu;
+}
+
+// Total bytes of the image currently being staged (for a progress bar). 0 if idle.
+uint32_t fw_staging_image_size(void) {
+    return s_fw_up_active ? s_image_size : 0u;
 }
 
 uint32_t fw_staging_next_offset(void) {

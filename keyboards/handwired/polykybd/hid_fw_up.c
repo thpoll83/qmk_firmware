@@ -10,6 +10,7 @@
 #include "polymod_crc32.h"
 #include <transactions.h>
 #include "base/fw_staging.h"
+#include "base/update.h"   // poly_prepare_for_flash()
 #include "hardware/flash.h"
 
 #include <print.h>
@@ -61,8 +62,10 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             bool master_ok = (image_size > 0 && image_size <= FW_UP_MAX_SIZE);
 
             fw_up_begin_sync_t begin_msg;
+            memset(&begin_msg, 0, sizeof(begin_msg));   // deterministic padding for the CRC
             begin_msg.image_size = image_size;
             begin_msg.image_crc  = image_crc;
+            begin_msg.target     = FW_TARGET_FIRMWARE;
             begin_msg.crc32      = 0;
 
             // Track the image so re-polls from the host don't redo the slave kick.
@@ -73,6 +76,9 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             if (new_image && master_ok) {
                 s_erased_size = image_size;
                 s_erased_crc  = image_crc;
+                // Drop to the base layer + refresh before the flash holds the main
+                // loop, so the user can still type plain characters meanwhile.
+                poly_prepare_for_flash();
                 // PHASE 1 (2026-05-30): the master now stages its OWN copy as well.
                 // Use the deferred erase — the same proven path as the slave — so
                 // the master's USB stays alive: housekeeping_task_user() drives the
@@ -291,7 +297,20 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 // obeys this only once it already runs firmware that has the apply
                 // handler — see FW_UP_BASELINE.md for the OLD→NEW bootstrap note.)
                 fw_up_apply_sync_t apply_msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC };
-                uint8_t slave_ack = send_to_bridge(USER_SYNC_FW_UP_APPLY, &apply_msg, sizeof(apply_msg), 5);
+                // Hardened handoff (field 2026-06-22): an under-retried bridge here
+                // let the slave miss the apply once — the master then rebooted alone
+                // and hung on the boot splash waiting for a slave that never
+                // restarted (manual replug required). Use 20 retries and re-fire the
+                // whole round once if the slave still hasn't acked. The slave apply
+                // is idempotent (it only validates the staged image + arms a deferred
+                // reboot), send_to_bridge is synchronous (returns only after the slave
+                // has handled it, so it's safe to reboot the master once we see the
+                // ack), and we're about to reboot anyway — the extra worst-case ~1 s
+                // is free insurance against a one-shot drop on this critical step.
+                uint8_t slave_ack = send_to_bridge(USER_SYNC_FW_UP_APPLY, &apply_msg, sizeof(apply_msg), 20);
+                if (slave_ack != SYNC_ACK) {
+                    slave_ack = send_to_bridge(USER_SYNC_FW_UP_APPLY, &apply_msg, sizeof(apply_msg), 20);
+                }
                 uprintf("FW_UP_APPLY: slave apply+reboot ack=0x%02x\n", slave_ack);
                 fw_staging_arm_apply();   // housekeeping → fw_staging_apply_and_reboot()
             }

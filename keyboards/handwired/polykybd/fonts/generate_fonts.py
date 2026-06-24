@@ -23,13 +23,24 @@ Options:
 Font files must be present first (run fonts/dl-fonts.sh).  See fonts/README.md.
 """
 from __future__ import annotations
-import argparse, os, re, shutil, subprocess, sys
+import argparse, json, os, re, shutil, subprocess, sys
 from pathlib import Path
 
 try:
     import yaml
 except ImportError:
     sys.exit("PyYAML is required:  pip install pyyaml")
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fontpack  # noqa: E402  (sibling module: PlyF font-pack serializer/validator)
+
+# Committed structural manifest for the external-flash font pack (the build
+# artifact that ships to the host). The manifest pins the pack's font order and
+# ranges so a checkout is verifiable and step-3 firmware can derive its index map.
+PACK_MANIFEST = "fontpack.manifest.json"
+# Split-pack: per-bundle ABI contract + the C flash-layout header (firmware/host).
+BUNDLES_MANIFEST = "fontpack_bundles.manifest.json"
+BUNDLE_LAYOUT_H = "fontpack_layout.h"
 
 # Order in which a font entry's fields map onto fontconvert flags.  Flag order
 # does not affect the rendered bytes (fontconvert parses options order-free); it
@@ -115,7 +126,20 @@ def compose_category(blocks: list[str]) -> str:
     return "#pragma once\n\n" + "\n".join(blocks)
 
 
-def compose_index(index: dict, categories: dict, cat_blocks: dict, symbols: list[str]) -> str:
+def full_order(index: dict, symbols: list[str]) -> list[str]:
+    """The full font priority order: prepended fonts, then the generated ones,
+    then any pack-only extras (e.g. flags) appended at the end of the pack."""
+    extras = [e["symbol"] for e in index.get("pack_extra_fonts", [])]
+    return list(index.get("prepend_fonts", [])) + list(symbols) + extras
+
+
+def compose_index(index: dict, categories: dict, cat_blocks: dict,
+                  symbols: list[str], resident: set[str]) -> str:
+    """gfx_used_fonts.h: the firmware compiles only RESIDENT_FONTS[] (the
+    functional minimum). The remaining fonts live in the external-flash font
+    pack and are appended at runtime by fontpack_assemble() into g_all_fonts[].
+    The full order (for the build tooling) is written to all_fonts_order.json.
+    """
     lines = ["#pragma once", ""]
     for cat, meta in categories.items():
         if cat_blocks.get(cat):                  # only include non-empty categories
@@ -123,12 +147,17 @@ def compose_index(index: dict, categories: dict, cat_blocks: dict, symbols: list
     lines.append("")
     for inc in index.get("extra_includes", []):
         lines.append(f'#include "{inc}"')
-    lines += ["", "const GFXfont* const ALL_FONTS [] = {"]
-    for sym in index.get("prepend_fonts", []):
-        lines.append(f"  &{sym},")
-    for sym in symbols:
-        lines.append(f"  &{sym},")
-    lines += ["};", "", "#define ALL_FONT_SIZE (sizeof(ALL_FONTS) / sizeof(GFXfont*))", ""]
+    lines += ["",
+              "// Functional-minimum fonts compiled into the firmware image. The rest live",
+              "// in the external-flash font pack (base/fontpack.h) and are appended at",
+              "// runtime into g_all_fonts[]. Unreferenced pack-font data is dropped by the",
+              "// linker (--gc-sections), shrinking the image. See fonts/README.md.",
+              "const GFXfont* const RESIDENT_FONTS [] = {"]
+    for sym in full_order(index, symbols):
+        if sym in resident:
+            lines.append(f"  &{sym},")
+    lines += ["};", "",
+              "#define RESIDENT_FONT_COUNT (sizeof(RESIDENT_FONTS) / sizeof(GFXfont*))", ""]
     return "\n".join(lines)
 
 
@@ -145,6 +174,18 @@ def main() -> None:
                     help="regenerate only this category's header (skips the ALL_FONTS "
                          "index and the stale-header cleanup, so the other category "
                          "headers and their source fonts are left untouched)")
+    ap.add_argument("--emit-pack", metavar="PATH", default="",
+                    help="also write the binary font pack (PlyF) to PATH (the "
+                         "release artifact flashed to the keyboard). The manifest "
+                         "is always (re)written next to the generated headers.")
+    ap.add_argument("--content-version", type=int, default=0,
+                    help="content_version stamped into the emitted pack header")
+    ap.add_argument("--emit-bundles", metavar="DIR", default="",
+                    help="also write each split-pack bundle PlyF as <id>.plyf into "
+                         "DIR (the per-family release artifacts shipped to the host)")
+    ap.add_argument("--bundle-version", metavar="ID=N", action="append", default=[],
+                    help="content_version for one bundle, e.g. --bundle-version emoji=3 "
+                         "(repeatable; bundles default to 0)")
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args()
 
@@ -167,9 +208,49 @@ def main() -> None:
     for cat, meta in categories.items():
         if cat_blocks.get(cat):
             outputs[gen_dir / meta["output"]] = compose_category(cat_blocks[cat])
-    if not args.only:                             # --only never rewrites the ALL_FONTS index
+    pack_data = None
+    bundles = None
+    if not args.only:                             # --only never rewrites the index
+        # Resident set: prepend + index.resident_fonts + every resident category.
+        resident = set(index.get("prepend_fonts", [])) | set(index.get("resident_fonts", []))
+        for cat, meta in categories.items():
+            if meta.get("resident") and cat_blocks.get(cat):
+                resident |= set(fontpack.parse_gfx_header(
+                    compose_category(cat_blocks[cat])).keys())
+        order = full_order(index, symbols)
         outputs[root / "base" / "fonts" / index["output"]] = \
-            compose_index(index, categories, cat_blocks, symbols)
+            compose_index(index, categories, cat_blocks, symbols, resident)
+        # Full priority order for the build tooling (firmware index has resident only).
+        outputs[gen_dir / "all_fonts_order.json"] = \
+            json.dumps({"order": order}, indent=2) + "\n"
+        # Derive the font-pack manifest from the freshly composed (in-memory)
+        # headers so it stays consistent with them under --check.
+        cat_texts = {c: compose_category(b) for c, b in cat_blocks.items() if b}
+        pack_data, manifest = fontpack.manifest_from_texts(
+            order, cat_texts, cfg, root / "base" / "fonts",
+            content_version=args.content_version)
+        outputs[gen_dir / PACK_MANIFEST] = fontpack.manifest_json(pack_data, manifest)
+
+        # Split-pack bundles: one PlyF per family + their committed manifest + the
+        # C flash-layout header shared with firmware/host. Built from the same
+        # in-memory headers so --check catches drift; binaries emitted below.
+        if "bundles" in cfg:
+            parsed_all: dict = {}
+            for txt in cat_texts.values():
+                parsed_all.update(fontpack.parse_gfx_header(txt))
+            parsed_all.update(fontpack.extra_pack_fonts(cfg, root / "base" / "fonts"))
+            sym2cat = fontpack.symbol_categories_from_texts(cat_texts)
+            bundle_vers = {}
+            for spec in args.bundle_version:
+                bid, _, num = spec.partition("=")
+                if not num.isdigit():
+                    sys.exit(f"--bundle-version: bad spec {spec!r} (want ID=N)")
+                bundle_vers[bid] = int(num)
+            emitted_bundles, layout = fontpack.build_bundles(
+                order, resident, parsed_all, sym2cat, cfg, content_versions=bundle_vers)
+            bundles = emitted_bundles
+            outputs[gen_dir / BUNDLES_MANIFEST] = fontpack.bundles_manifest_json(bundles, layout)
+            outputs[gen_dir / BUNDLE_LAYOUT_H] = fontpack.bundle_layout_header(bundles, layout)
 
     if args.check:
         drift = False
@@ -199,6 +280,17 @@ def main() -> None:
     for path, content in outputs.items():
         path.write_text(content)
         log(f"wrote {path.relative_to(root)}", args.quiet)
+    if args.emit_pack and pack_data is not None:
+        Path(args.emit_pack).write_bytes(pack_data)
+        log(f"wrote {args.emit_pack} ({len(pack_data):,} B font pack)", args.quiet)
+    if args.emit_bundles and bundles is not None:
+        out_dir = Path(args.emit_bundles)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for b in bundles:
+            (out_dir / f"{b['id']}.plyf").write_bytes(b["data"])
+            log(f"wrote {out_dir / (b['id'] + '.plyf')} "
+                f"({len(b['data']):,} B / {b['slot']['size']:,} B slot, "
+                f"{len(b['fonts'])} fonts)", args.quiet)
     log(f"Done: {len(symbols)} fonts in ALL_FONTS "
         f"(+{len(index.get('prepend_fonts', []))} prepended).", args.quiet)
 

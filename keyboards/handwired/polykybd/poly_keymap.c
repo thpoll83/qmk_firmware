@@ -50,8 +50,12 @@
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
-#include "base/fonts/flag_fonts.h"        // language-layer country flags (fonts/gen-lang-fonts.sh)
-#include "base/fonts/lang_label_font.h"   // tiny label font under the flags
+#include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
+// Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
+// now ship in the external-flash font pack, resolved via g_all_fonts — they are
+// NOT compiled in. The tiny label font stays resident (no-pack fallback label).
+#include "base/fonts/lang_label_font.h"   // tiny (6px) label font under the flags
+#include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "base/multicore/core1.h"
 #include "polymod_crc32.h"
 
@@ -169,11 +173,38 @@ static uint8_t overlay_flags = 0;
 // indicator callback runs every render cycle (before flush) and zeros the LED buffer,
 // ensuring LEDs stay dark regardless of what the transport wrote to enable.
 #ifdef RGB_MATRIX_ENABLE
+// Font-pack / firmware flash: light the whole matrix (breathing cyan) so the user
+// sees the board is busy updating and must not unplug it. The override below only
+// writes the per-frame LED buffer — the persistent mode/hue/sat/val config is
+// untouched, so the previous effect resumes automatically when flashing ends.
+// housekeeping_task_user() drives s_flash_rgb_active with a short hold (so the
+// brief gaps between the six bundles don't flicker it) and re-enables RGB if it
+// was off, disabling it again afterwards.
+#define FLASH_RGB_HOLD_MS 2500
+static bool     s_flash_rgb_active      = false;
+static bool     s_flash_rgb_was_enabled = false;
+static uint16_t s_flash_rgb_seen        = 0;
+
 bool rgb_matrix_indicators_kb(void) {
+    if (s_flash_rgb_active) {
+        uint8_t phase = (uint8_t)(timer_read32() >> 3);         // ~2 s cycle
+        uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
+        uint8_t v     = 5 + (tri >> 2);                         // ~5..36 (half brightness — bright enough)
+        if (fw_staging_commit_pending()) {
+            // Applying the staged firmware → reboot imminent, you can't type → orange.
+            rgb_matrix_set_color_all(v, v >> 2, 0);            // breathing orange
+        } else {
+            // Staging a font pack OR firmware: the board still runs and you can keep
+            // typing, so use the calm cyan/green-blue cue (orange is reserved for the
+            // apply + bootloader = "can't type" states).
+            rgb_matrix_set_color_all(0, v, v);                 // breathing cyan
+        }
+        return false;
+    }
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
-            // Backstop: force red even if rgb_matrix_config.enable gets cleared.
-            rgb_matrix_set_color_all(24, 0, 0);
+            // Bootloader: no typing possible — force orange (matches the firmware-flash cue).
+            rgb_matrix_set_color_all(24, 6, 0);
             return false;
         }
         if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
@@ -182,6 +213,26 @@ bool rgb_matrix_indicators_kb(void) {
         }
     }
     return rgb_matrix_indicators_user();
+}
+
+// Drive the flash RGB attention effect from the fw_up state (master + slave).
+static void flash_rgb_tick(void) {
+    // Light the matrix while a flash is staging, and also while an apply is pending
+    // (commit_pending) so a standalone "apply staged firmware" still shows the orange
+    // reboot cue even though no chunks are streaming.
+    if (fw_staging_fw_up_active() || fw_staging_commit_pending()) {
+        s_flash_rgb_seen   = timer_read();
+    }
+    bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
+    if (want && !s_flash_rgb_active) {
+        s_flash_rgb_active      = true;
+        s_flash_rgb_was_enabled = rgb_matrix_is_enabled();
+        if (!s_flash_rgb_was_enabled) rgb_matrix_enable_noeeprom();
+    } else if (!want && s_flash_rgb_active) {
+        s_flash_rgb_active = false;
+        s_flash_rgb_seen   = 0;
+        if (!s_flash_rgb_was_enabled) rgb_matrix_disable_noeeprom();  // mode/color auto-restore
+    }
 }
 
 #define RGB_REPEAT_INITIAL_DELAY_MS 400
@@ -213,6 +264,11 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
 // Global variables: flags, overlay_flags
+// One-shot: force the master to push the default layer / layer state to the slave
+// once after boot, regardless of diff. Armed at boot (and again in init), cleared
+// on the first successful layer sync. See the use site in sync_and_refresh_displays.
+static bool g_force_layer_resync = true;
+
 void sync_and_refresh_displays(void) {
     // Freeze slave display while bootloader is active; re-assert RGB each cycle.
     if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
@@ -307,10 +363,19 @@ void sync_and_refresh_displays(void) {
         access_local_layer()->led_state = host_keyboard_led_state();
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
-        if ( layer_diff ) {
-            if(!sync_succeeded(send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES))) {
+        // Force one layer push to the slave after boot even with no diff: each half
+        // loads its OWN default layer from EEPROM, and the master only pushes on a
+        // diff — so if the active default layer equals the master's last-synced
+        // `global` (e.g. _L0/Qwerty = all-zero after a fresh boot/fw-apply reboot),
+        // a slave that booted with a stale default layer would never be corrected
+        // until the next manual layer change. The one-shot resync fixes that.
+        if ( layer_diff || g_force_layer_resync ) {
+            if(sync_succeeded(send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES))) {
+                layer_diff = true;             // ensure global advances (copy_global_layer below)
+                g_force_layer_resync = false;  // boot resync delivered to the slave
+            } else {
                 layer_diff = false; // failed: skip copy_global_layer() below so the diff
-                                    // persists and the send re-fires next pass (see state above)
+                                    // persists and the send re-fires next pass (force flag stays set)
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
@@ -419,7 +484,24 @@ static int8_t jitter_axis(uint32_t epoch, uint32_t salt, int8_t lo, int8_t hi) {
 }
 
 // Continuously monitors for idle timeout and dims/pulsates display accordingly.
+// Drop to the base/default layer and render it once, just before a flash holds
+// the main loop — so typed keys are plain characters and the keycaps show legible
+// legends during the (mostly-blocking) transfer. Called from the HID BEGIN
+// handlers BEFORE fw_up activates (which freezes display updates).
+void poly_prepare_for_flash(void) {
+    layer_clear();                 // momentary/toggle layers off -> default layer active
+    request_disp_refresh();
+    // Push the base layer + refresh to the SLAVE and render the master, before
+    // fw_up freezes display sync — so BOTH halves show legible base legends and
+    // typing produces plain characters during the flash. sync_and_refresh_displays
+    // both bridges the layer/state to the slave and calls update_displays().
+    sync_and_refresh_displays();
+}
+
 void housekeeping_task_user(void) {
+#ifdef RGB_MATRIX_ENABLE
+    flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
+#endif
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful
@@ -433,6 +515,13 @@ void housekeeping_task_user(void) {
         mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
     }
     fw_staging_process_deferred();
+
+    // Drain the slave's deferred FONTPACK reload (the ~50 ms full-body verify was
+    // moved off the COMMIT split-transaction callback so it can't overrun the
+    // ~20 ms window). Refresh the keycaps once the new pack's fonts are live.
+    if (fw_staging_process_fontpack_reload()) {
+        request_disp_refresh();
+    }
 
     // While a fw_up is in progress, skip EEPROM saves (wear-leveling consolidate
     // is ~100 ms IRQ-off) and the display refresh path (slave update_displays
@@ -777,7 +866,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
         const uint32_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
         if(def_variation!=NULL) {
-            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, latin_ex_map[offset+keycode-KC_A][variation]);
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, latin_ex_map[offset+keycode-KC_A][variation]);
             return true;
         }
         return false;
@@ -791,7 +880,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
             const uint32_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
             if(variation!=NULL) {
-                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, variation);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, variation);
                 return true;
             }
         }
@@ -828,11 +917,11 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                         for (const uint32_t* p = base;   *p && ci < 8; ++p) composed[ci++] = *p;
                         for (const uint32_t* p = letter; *p && ci < 9; ++p) if (*p >= 0x20) composed[ci++] = *p;
                         composed[ci] = 0;
-                        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, composed);
+                        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 28+h_off, 23+v_off, composed);
                         return true;
                     }
                 }
-                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, 28+h_off, 23+v_off, letter);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 28+h_off, 23+v_off, letter);
                 return true;
             }
         }
@@ -879,8 +968,8 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 shift_letter = translate_keycode_only_shift(local_state->lang, keycode);
                 if (shift_letter != NULL) {
                     int8_t bmin, bmax, pmin, pmax;
-                    kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, letter, &bmin, &bmax);
-                    kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, shift_letter, &pmin, &pmax);
+                    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, letter, &bmin, &bmax);
+                    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, shift_letter, &pmin, &pmax);
                     preview_x = 28+h_pv;
                     if (preview_x + pmin < base_x + bmax + 2)             // keep clear of the base
                         preview_x = base_x + bmax + 2 - pmin;
@@ -895,9 +984,9 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             }
         }
 
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, base_x, 23+base_v, letter);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, base_x, 23+base_v, letter);
         if (shift_letter != NULL)
-            kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, preview_x, 23+preview_v, shift_letter);
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, preview_x, 23+preview_v, shift_letter);
 
         //preview alt representation
         letter = translate_keycode_only_altgr(local_state->lang, keycode);
@@ -908,11 +997,11 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // Clamp to the right edge like the shift preview — wide glyphs
                 // (e.g. @ on the French/Tahitian 0 key) otherwise clip off-screen.
                 int8_t amin, amax;
-                kdisp_gfx_text_bounds(ALL_FONTS, ALL_FONT_SIZE, letter, &amin, &amax);
+                kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, letter, &amin, &amax);
                 int8_t alt_x = 28+h_off;
                 if (alt_x + amax > BUFFER_X + SCREEN_WIDTH - 1)
                     alt_x = (int8_t)((BUFFER_X + SCREEN_WIDTH - 1) - amax);
-                kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, alt_x, 23+v_off, letter);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, alt_x, 23+v_off, letter);
             }
         }
         return true;
@@ -1029,39 +1118,77 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 #define FLAG_LEFT_X    (BUFFER_X - 2)    // flag glyph left (keeps the left border on-screen)
 #define LABEL_COL_X    (BUFFER_X + 66)   // baseline column of the vertical label
 
-static const GFXfont* const lang_flag_fonts[] = { &NotoColorEmoji_Regular_LangFlags_20pt7b };
-
 // Draw one language key: oversized country flag on the left (vertically centred
 // and clipped so the flag content fills the keycap height), language code running
 // vertically up the right side (inverted bar when it is the active language).
+//
+// The flag glyphs (FLAG_CP_BASE + idx) live in the external-flash font pack, so
+// they resolve through g_all_fonts only when a pack is present. With no pack the
+// flag is simply omitted — the xx-YY code label below it still identifies the
+// language (graceful fallback). The tiny label font stays resident.
+static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b };
+// Mid (10px) utility font for the no-pack fallback code — between Tiny and Base,
+// so a full "ll-CC" fits on one line (~52px) yet stays readable. Reuse this
+// `mid_fonts` array for any misc utility-key text that wants a middle size.
+static const GFXfont* const mid_fonts[]        = { &NotoSans_Regular_Mid_10pt7b };
+
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
-    const GFXfont* ff  = &NotoColorEmoji_Regular_LangFlags_20pt7b;
-
-    // Flag: the glyph is taller than the keycap, so centre it vertically — the
-    // empty top/bottom margins clip off and the flag content fills the height.
-    const int8_t fh  = (int8_t)pgm_read_byte(&ff->glyph[idx].height);
-    const int8_t fyo = (int8_t)pgm_read_byte(&ff->glyph[idx].yOffset);
-    kdisp_write_gfx_char(lang_flag_fonts, 1, FLAG_LEFT_X,
-                         (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
-                         FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
-
-    // Language code: vertical, up the right side; inverted bar when selected.
-    kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
-                          current_lang == idx);
+    const GFXfont* flag_font = NULL;
+    const GFXglyph* g = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count,
+                                             FLAG_CP_BASE + idx, &flag_font);
+    if (g) {
+        // The glyph is taller than the keycap, so centre it vertically — the
+        // empty top/bottom margins clip off and the flag content fills the height.
+        // Compensate BOTH the glyph's x and y bearing (kdisp_write_gfx_char draws
+        // at x+xOffset, y+yOffset) so the flag's content lands flush at
+        // FLAG_LEFT_X regardless of the glyph's left bearing (was x-shifted).
+        //
+        // Render through a SINGLE-font array holding just the flag font — NOT
+        // g_all_fonts. kdisp_write_gfx_char baseline-aligns each glyph to fonts[0]
+        // (`y += currentFont->yAdvance - fonts[0]->yAdvance`). With g_all_fonts,
+        // fonts[0] is IconsFont (yAdvance 40) vs the flag's 54 → a spurious +14 px
+        // downward shift (the gap-at-top regression introduced when flags moved
+        // into the pack). Passing the owning font alone makes that adjustment 0,
+        // as the old compiled-in { &flag_font } path did. (kdisp_gfx_glyph_font
+        // returned flag_font from the same scan, so no second lookup.)
+        const GFXfont* flag_only[1] = { flag_font };
+        const int8_t fh  = (int8_t)pgm_read_byte(&g->height);
+        const int8_t fyo = (int8_t)pgm_read_byte(&g->yOffset);
+        const int8_t fxo = (int8_t)pgm_read_byte(&g->xOffset);
+        kdisp_write_gfx_char(flag_only, 1, (int8_t)(FLAG_LEFT_X - fxo),
+                             (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
+                             FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
+        // Language code: vertical, up the right side; inverted bar when selected.
+        kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
+                              current_lang == idx);
+    } else {
+        // No font pack flashed: the flag glyphs are pack-only. Show the "ll-CC"
+        // code on one centred line in the mid (10px) utility font — readable, and
+        // a full code (~52px) fits the 72px keycap. The tiny vertical label is
+        // dropped here; underline the active language.
+        int8_t lo = 0, hi = 0;
+        kdisp_gfx_text_bounds(mid_fonts, 1, label, &lo, &hi);
+        int8_t w    = (int8_t)(hi - lo);
+        int8_t left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2);
+        kdisp_write_gfx_text(mid_fonts, 1, (int8_t)(left - lo), 24, label);
+        if (current_lang == idx) {
+            kdisp_fill_rect(left, 28, w, 2);   // underline = active language
+        }
+    }
 }
 
 // The "Preset" / "Clear" MRU control keys that bracket the top recents row.
 // The label sits next to the recents (Preset right-aligned on the left corner,
 // Clear left-aligned on the right corner) with an arrow pointing into the row.
-static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b };
+// (lang_label_fonts is declared above render_lang_flag_key.)
 static void render_mru_ctrl_key(bool preset) {
     if (preset) {
         kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 14, 18, U"Preset");
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 44, 23, ICON_RIGHT);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X + 44, 23, ICON_RIGHT);
     } else {
         // Mirror of "Preset": back-arrow points left into the recents row, label in
         // the small keycap-label font (not the full-size font, which overflowed).
-        kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X + 10, 23, ICON_LEFT);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X + 10, 23, ICON_LEFT);
         kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 26, 18, U"Clear");
     }
 }
@@ -1133,7 +1260,7 @@ static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t
 static void roll_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, uint32_t seed,
                              int8_t* dx, int8_t* dy) {
     int8_t xmin, xmax, ymin, ymax;
-    kdisp_gfx_text_bbox(ALL_FONTS, ALL_FONT_SIZE, text, &xmin, &xmax, &ymin, &ymax);
+    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, text, &xmin, &xmax, &ymin, &ymax);
     int16_t axmin = ox + xmin, axmax = ox + xmax;   // glyph extent at the un-jittered origin
     int16_t aymin = oy + ymin, aymax = oy + ymax;
     int16_t xlo = (int16_t)BUFFER_X - axmin;                      // keep left edge >= BUFFER_X
@@ -1175,7 +1302,7 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     roll_idle_offset(text, BUFFER_X, 23, seed, &dx, &dy);
     kdisp_set_buffer(0x00);
     kdisp_set_draw_offset(dx, dy);
-    kdisp_write_gfx_text(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
     kdisp_set_draw_offset(0, 0);
     kdisp_send_buffer();
     return true;
@@ -1284,10 +1411,10 @@ void update_displays(enum refresh_mode mode) {
                         if(text==NULL) {
                             if(!render_key(keycode, state, mods) && (keycode&QK_UNICODEMAP_PAIR)==QK_UNICODEMAP_PAIR){
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
-                                kdisp_write_gfx_char(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, unicode_map[chr], 0);
+                                kdisp_write_gfx_char(g_all_fonts, g_all_font_count, BUFFER_X, 23, unicode_map[chr], 0);
                             }
                         } else {
-                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
+                            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         text = NULL;
                         if(display_overlays) {
@@ -1298,7 +1425,7 @@ void update_displays(enum refresh_mode mode) {
                             text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
-                            kdisp_write_gfx_text_cy(ALL_FONTS, ALL_FONT_SIZE, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
+                            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         kdisp_send_buffer();
                         }
@@ -1581,34 +1708,48 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             local_state->flags = toggle_flag(local_state->flags, MORE_TEXT);
             request_disp_refresh();
             break;
+        // Default-layer selectors. `def_layer` holds a layer INDEX (_L0.._L4) — the
+        // same value display_keycode_at() folds in as `1 << def_layer` to pick the
+        // keycap legends. Drive QMK's resolved layer through the SAME momentary
+        // mechanism the boot path (keyboard_post_init) and KC_BASE use —
+        // layer_clear() + layer_on(index) — NOT default_layer_set(): that QMK API
+        // takes a layer_state_t BITMASK, so passing it the index set the wrong base
+        // (e.g. _L2=2 -> 0b10 = layer 1), making the keys type a different layer than
+        // the keycaps showed. Persistence still round-trips the index via eeconfig
+        // (defer_default_layer_save -> persistent_default_layer_get at boot).
         case KC_L0:
             local_layer->def_layer = _L0;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L1:
             local_layer->def_layer = _L1;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L2:
             local_layer->def_layer = _L2;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L3:
             local_layer->def_layer = _L3;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_L4:
             local_layer->def_layer = _L4;
-            default_layer_set(local_layer->def_layer);
             defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_BASE:
@@ -1984,6 +2125,7 @@ void keyboard_post_init_user(void) {
     access_local_state()->unicode_mode = get_unicode_input_mode();
     layer_clear();
     layer_on(default_layer);
+    g_force_layer_resync = true;   // push this boot's default layer to the slave once
 
     //set these values, they will never change
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);
@@ -2039,6 +2181,11 @@ void keyboard_post_init_user(void) {
     local_state->lang = ee.lang;
     local_state->contrast = ee.brightness;
     note_user_brightness(ee.brightness);
+    // If host-auto brightness was engaged before the reboot, come up in auto mode
+    // at the last auto value instead of the deliberate manual brightness (which the
+    // host never refreshes, so a stale low manual value would otherwise show until
+    // the host re-engages). Overrides local_state->contrast when auto was on.
+    load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
 #ifdef RGB_MATRIX_ENABLE
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
@@ -2051,7 +2198,7 @@ void keyboard_post_init_user(void) {
     // Restore the MRU recents and schedule a one-time push to the slave half.
     mru_load(ee.mru_emoji, ee.mru_lang);
 
-    set_displays(ee.brightness, false);
+    set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif
@@ -2059,6 +2206,11 @@ void keyboard_post_init_user(void) {
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
 void keyboard_pre_init_user(void) {
+    // Load the external-flash font pack and assemble g_all_fonts = resident ++
+    // pack BEFORE the first render (show_splash_screen() below draws keycaps).
+    // No valid pack (erased/corrupt/ABI mismatch) -> resident-only fonts.
+    fontpack_init(RESIDENT_FONTS, (uint8_t)RESIDENT_FONT_COUNT);
+
     kdisp_hw_setup();
     kdisp_init(NUM_SHIFT_REGISTERS);
     peripherals_reset();
@@ -2103,7 +2255,7 @@ void eeconfig_init_user(void) {
     poly_eeconf_t ee;
     ee.lang = g_lang_init;
     ee.brightness = ~FULL_BRIGHT;
-    ee.unused = 0;
+    ee.auto_brightness = 0;   // host-auto off on a fresh EEPROM
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // Empty MRU recents: the serialised form uses 0 == empty for both lists, so
     // a zeroed block reads back as "no recent" (no stray category-0 / lang-0).

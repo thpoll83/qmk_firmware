@@ -1,0 +1,784 @@
+{
+  "abi_version": 1,
+  "layout_version": 1,
+  "region_size": 2097152,
+  "dir_offset": 0,
+  "dir_size": 4096,
+  "bundle_count": 6,
+  "bundles": [
+    {
+      "id": "symbol",
+      "index": 0,
+      "slot_offset": 4096,
+      "slot_size": 98304,
+      "total_size": 29792,
+      "font_count": 7,
+      "fonts": [
+        {
+          "all_fonts_index": 19,
+          "symbol": "NotoSansSymbols2_Regular_SymBmp1_20pt16b",
+          "first": 9644,
+          "last": 9799
+        },
+        {
+          "all_fonts_index": 20,
+          "symbol": "NotoSansSymbols2_Regular_SymBmp2_20pt16b",
+          "first": 9812,
+          "last": 9873
+        },
+        {
+          "all_fonts_index": 21,
+          "symbol": "NotoSansSymbols2_Regular_SymBmp3_20pt16b",
+          "first": 9974,
+          "last": 9991
+        },
+        {
+          "all_fonts_index": 22,
+          "symbol": "NotoSansSymbols2_Regular_SymBmp4_20pt16b",
+          "first": 9998,
+          "last": 10175
+        },
+        {
+          "all_fonts_index": 23,
+          "symbol": "NotoSansSymbols2_Regular_SymBmp5_20pt16b",
+          "first": 9993,
+          "last": 9993
+        },
+        {
+          "all_fonts_index": 24,
+          "symbol": "NotoSansSymbols2_Regular_SymBmp6_20pt16b",
+          "first": 9885,
+          "last": 9967
+        },
+        {
+          "all_fonts_index": 47,
+          "symbol": "NotoSansSymbols2_Regular_Window_18pt16b",
+          "first": 128469,
+          "last": 128475
+        }
+      ]
+    },
+    {
+      "id": "mideast",
+      "index": 1,
+      "slot_offset": 102400,
+      "slot_size": 98304,
+      "total_size": 35404,
+      "font_count": 8,
+      "fonts": [
+        {
+          "all_fonts_index": 106,
+          "symbol": "NotoSansArabic_Regular_FormsB_16pt16b",
+          "first": 65269,
+          "last": 65275
+        },
+        {
+          "all_fonts_index": 107,
+          "symbol": "NotoSansArabic_Regular_Isolated_16pt16b",
+          "first": 1548,
+          "last": 1641
+        },
+        {
+          "all_fonts_index": 108,
+          "symbol": "NotoSansArabic_Regular_PerArab_16pt16b",
+          "first": 1657,
+          "last": 1785
+        },
+        {
+          "all_fonts_index": 122,
+          "symbol": "NotoSansEthiopic_Regular_Ethiopic_16pt16b",
+          "first": 4608,
+          "last": 4988
+        },
+        {
+          "all_fonts_index": 126,
+          "symbol": "NotoSansArabic_Regular_Sorani_16pt16b",
+          "first": 1685,
+          "last": 1749
+        },
+        {
+          "all_fonts_index": 127,
+          "symbol": "NotoSansArabic_Regular_Pashto_16pt16b",
+          "first": 1642,
+          "last": 1744
+        },
+        {
+          "all_fonts_index": 134,
+          "symbol": "NotoSansHebrew_Medium_HebrewDots_22pt16b",
+          "first": 1456,
+          "last": 1479
+        },
+        {
+          "all_fonts_index": 135,
+          "symbol": "NotoSansHebrew_Medium_Hebrew_16pt16b",
+          "first": 1488,
+          "last": 1524
+        }
+      ]
+    },
+    {
+      "id": "syllabic",
+      "index": 2,
+      "slot_offset": 200704,
+      "slot_size": 98304,
+      "total_size": 46644,
+      "font_count": 2,
+      "fonts": [
+        {
+          "all_fonts_index": 128,
+          "symbol": "NotoSansCanadianAboriginal_Regular_CanAborig_16pt16b",
+          "first": 5121,
+          "last": 5749
+        },
+        {
+          "all_fonts_index": 129,
+          "symbol": "NotoSansCherokee_Regular_Cherokee_13pt16b",
+          "first": 5024,
+          "last": 5108
+        }
+      ]
+    },
+    {
+      "id": "asia",
+      "index": 3,
+      "slot_offset": 299008,
+      "slot_size": 131072,
+      "total_size": 62380,
+      "font_count": 24,
+      "fonts": [
+        {
+          "all_fonts_index": 52,
+          "symbol": "NotoSansJP_Regular_Cjk4e2d_15pt16b",
+          "first": 20013,
+          "last": 20013
+        },
+        {
+          "all_fonts_index": 53,
+          "symbol": "NotoSansJP_Regular_Cjk5eff_15pt16b",
+          "first": 24319,
+          "last": 24319
+        },
+        {
+          "all_fonts_index": 54,
+          "symbol": "NotoSansJP_Regular_Cjk96e3_15pt16b",
+          "first": 38627,
+          "last": 38627
+        },
+        {
+          "all_fonts_index": 55,
+          "symbol": "NotoSansJP_Regular_Cjk91cd_15pt16b",
+          "first": 37325,
+          "last": 37325
+        },
+        {
+          "all_fonts_index": 56,
+          "symbol": "NotoSansJP_Regular_KangXi_15pt16b",
+          "first": 12032,
+          "last": 12198
+        },
+        {
+          "all_fonts_index": 109,
+          "symbol": "NotoSansDevanagari_Regular_Deva_16pt16b",
+          "first": 2304,
+          "last": 2431
+        },
+        {
+          "all_fonts_index": 110,
+          "symbol": "NotoSansDevanagari_Regular_DevaMatra_16pt7b",
+          "first": 57600,
+          "last": 57619
+        },
+        {
+          "all_fonts_index": 111,
+          "symbol": "NotoSansBengali_Regular_Bengali_16pt16b",
+          "first": 2432,
+          "last": 2559
+        },
+        {
+          "all_fonts_index": 112,
+          "symbol": "NotoSansBengali_Regular_BengaliMatra_16pt7b",
+          "first": 57632,
+          "last": 57646
+        },
+        {
+          "all_fonts_index": 113,
+          "symbol": "NotoSansTelugu_Regular_Telugu_16pt16b",
+          "first": 3072,
+          "last": 3199
+        },
+        {
+          "all_fonts_index": 114,
+          "symbol": "NotoSansTelugu_Regular_TeluguMatra_16pt7b",
+          "first": 57664,
+          "last": 57680
+        },
+        {
+          "all_fonts_index": 115,
+          "symbol": "NotoSansTamil_Regular_Tamil_14pt16b",
+          "first": 2944,
+          "last": 3071
+        },
+        {
+          "all_fonts_index": 116,
+          "symbol": "NotoSansTamil_Regular_TamilMatra_14pt7b",
+          "first": 57696,
+          "last": 57709
+        },
+        {
+          "all_fonts_index": 117,
+          "symbol": "NotoSansThai_Regular_Thai_16pt16b",
+          "first": 3584,
+          "last": 3711
+        },
+        {
+          "all_fonts_index": 118,
+          "symbol": "NotoSansThai_Regular_ThaiMatra_16pt7b",
+          "first": 57728,
+          "last": 57742
+        },
+        {
+          "all_fonts_index": 119,
+          "symbol": "NotoSansGeorgian_Regular_Georgian_17pt16b",
+          "first": 4256,
+          "last": 4351
+        },
+        {
+          "all_fonts_index": 120,
+          "symbol": "NotoSansArmenian_Regular_Armenian_16pt16b",
+          "first": 1328,
+          "last": 1423
+        },
+        {
+          "all_fonts_index": 121,
+          "symbol": "NotoSansTC_Regular_Bopomofo_16pt16b",
+          "first": 12549,
+          "last": 12591
+        },
+        {
+          "all_fonts_index": 130,
+          "symbol": "NotoSans_Regular_VietTones_16pt7b",
+          "first": 57760,
+          "last": 57764
+        },
+        {
+          "all_fonts_index": 131,
+          "symbol": "NotoSansJP_Regular_Hiragana_15pt16b",
+          "first": 12353,
+          "last": 12447
+        },
+        {
+          "all_fonts_index": 132,
+          "symbol": "NotoSansJP_Regular_Punct2_15pt16b",
+          "first": 12539,
+          "last": 12540
+        },
+        {
+          "all_fonts_index": 133,
+          "symbol": "NotoSansJP_Regular_Punct_15pt16b",
+          "first": 12289,
+          "last": 12305
+        },
+        {
+          "all_fonts_index": 140,
+          "symbol": "NotoSerifKR_Medium_Consonants_21pt16b",
+          "first": 4352,
+          "last": 4370
+        },
+        {
+          "all_fonts_index": 141,
+          "symbol": "NotoSerifKR_Medium_Vowels_21pt16b",
+          "first": 4449,
+          "last": 4469
+        }
+      ]
+    },
+    {
+      "id": "flags",
+      "index": 4,
+      "slot_offset": 430080,
+      "slot_size": 131072,
+      "total_size": 62932,
+      "font_count": 1,
+      "fonts": [
+        {
+          "all_fonts_index": 142,
+          "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
+          "first": 57344,
+          "last": 57503
+        }
+      ]
+    },
+    {
+      "id": "emoji",
+      "index": 5,
+      "slot_offset": 561152,
+      "slot_size": 1536000,
+      "total_size": 227460,
+      "font_count": 77,
+      "fonts": [
+        {
+          "all_fonts_index": 2,
+          "symbol": "NotoColorEmoji_Regular_PpSanta_20pt16b",
+          "first": 127877,
+          "last": 127877
+        },
+        {
+          "all_fonts_index": 3,
+          "symbol": "NotoColorEmoji_Regular_PpPeopleA_20pt16b",
+          "first": 128102,
+          "last": 128105
+        },
+        {
+          "all_fonts_index": 4,
+          "symbol": "NotoColorEmoji_Regular_PpCouples_20pt16b",
+          "first": 128107,
+          "last": 128109
+        },
+        {
+          "all_fonts_index": 5,
+          "symbol": "NotoColorEmoji_Regular_PpRoles_20pt16b",
+          "first": 128110,
+          "last": 128120
+        },
+        {
+          "all_fonts_index": 6,
+          "symbol": "NotoColorEmoji_Regular_PpInfoGuardDance_20pt16b",
+          "first": 128129,
+          "last": 128131
+        },
+        {
+          "all_fonts_index": 7,
+          "symbol": "NotoColorEmoji_Regular_PpGroom_20pt16b",
+          "first": 128134,
+          "last": 128135
+        },
+        {
+          "all_fonts_index": 8,
+          "symbol": "NotoColorEmoji_Regular_PpCoupleHeart_20pt16b",
+          "first": 128145,
+          "last": 128145
+        },
+        {
+          "all_fonts_index": 9,
+          "symbol": "NotoColorEmoji_Regular_PpGestA_20pt16b",
+          "first": 128581,
+          "last": 128583
+        },
+        {
+          "all_fonts_index": 10,
+          "symbol": "NotoColorEmoji_Regular_PpRaiseHand_20pt16b",
+          "first": 128587,
+          "last": 128587
+        },
+        {
+          "all_fonts_index": 11,
+          "symbol": "NotoColorEmoji_Regular_PpFrownPout_20pt16b",
+          "first": 128589,
+          "last": 128590
+        },
+        {
+          "all_fonts_index": 12,
+          "symbol": "NotoColorEmoji_Regular_PpFacepalm_20pt16b",
+          "first": 129318,
+          "last": 129318
+        },
+        {
+          "all_fonts_index": 13,
+          "symbol": "NotoColorEmoji_Regular_PpRoyals_20pt16b",
+          "first": 129332,
+          "last": 129335
+        },
+        {
+          "all_fonts_index": 14,
+          "symbol": "NotoColorEmoji_Regular_PpHeroes_20pt16b",
+          "first": 129464,
+          "last": 129465
+        },
+        {
+          "all_fonts_index": 15,
+          "symbol": "NotoColorEmoji_Regular_PpPersons_20pt16b",
+          "first": 129489,
+          "last": 129494
+        },
+        {
+          "all_fonts_index": 16,
+          "symbol": "NotoColorEmoji_Regular_PpFantasy_20pt16b",
+          "first": 129497,
+          "last": 129503
+        },
+        {
+          "all_fonts_index": 17,
+          "symbol": "NotoEmoji_Medium_ToolsBMP_20pt16b",
+          "first": 9874,
+          "last": 9884
+        },
+        {
+          "all_fonts_index": 18,
+          "symbol": "NotoEmoji_Medium_EmjHandsBMP2_20pt16b",
+          "first": 9994,
+          "last": 9997
+        },
+        {
+          "all_fonts_index": 25,
+          "symbol": "NotoEmoji_Medium_Zodiac_20pt16b",
+          "first": 9800,
+          "last": 9811
+        },
+        {
+          "all_fonts_index": 30,
+          "symbol": "NotoEmoji_Medium_EmjTravelBMP_20pt16b",
+          "first": 9992,
+          "last": 9992
+        },
+        {
+          "all_fonts_index": 40,
+          "symbol": "NotoEmoji_Medium_ClipCpy_18pt16b",
+          "first": 128203,
+          "last": 128203
+        },
+        {
+          "all_fonts_index": 41,
+          "symbol": "NotoEmoji_Medium_FileOpen_14pt16b",
+          "first": 128194,
+          "last": 128194
+        },
+        {
+          "all_fonts_index": 44,
+          "symbol": "NotoEmoji_Medium_Find_18pt16b",
+          "first": 128270,
+          "last": 128270
+        },
+        {
+          "all_fonts_index": 45,
+          "symbol": "NotoEmoji_Medium_Lock_18pt16b",
+          "first": 128274,
+          "last": 128274
+        },
+        {
+          "all_fonts_index": 46,
+          "symbol": "NotoEmoji_Medium_Note_12pt16b",
+          "first": 128221,
+          "last": 128221
+        },
+        {
+          "all_fonts_index": 48,
+          "symbol": "NotoEmoji_Medium_AI_20pt16b",
+          "first": 127744,
+          "last": 127744
+        },
+        {
+          "all_fonts_index": 49,
+          "symbol": "NotoEmoji_Medium_Emojis0_20pt16b",
+          "first": 128512,
+          "last": 128591
+        },
+        {
+          "all_fonts_index": 50,
+          "symbol": "NotoEmoji_Medium_Light_20pt16b",
+          "first": 128161,
+          "last": 128161
+        },
+        {
+          "all_fonts_index": 51,
+          "symbol": "NotoEmoji_Medium_Emojis2_20pt16b",
+          "first": 129298,
+          "last": 129305
+        },
+        {
+          "all_fonts_index": 57,
+          "symbol": "NotoEmoji_Medium_EmjAnimals2_20pt16b",
+          "first": 129409,
+          "last": 129423
+        },
+        {
+          "all_fonts_index": 58,
+          "symbol": "NotoEmoji_Medium_EmjAnimals3_20pt16b",
+          "first": 129424,
+          "last": 129431
+        },
+        {
+          "all_fonts_index": 59,
+          "symbol": "NotoEmoji_Medium_EmjAnimals4_20pt16b",
+          "first": 129432,
+          "last": 129440
+        },
+        {
+          "all_fonts_index": 60,
+          "symbol": "NotoEmoji_Medium_EmjAnimals5_20pt16b",
+          "first": 129441,
+          "last": 129454
+        },
+        {
+          "all_fonts_index": 61,
+          "symbol": "NotoEmoji_Medium_EmjAnimals_20pt16b",
+          "first": 128000,
+          "last": 128063
+        },
+        {
+          "all_fonts_index": 62,
+          "symbol": "NotoEmoji_Medium_EmjBody2_20pt16b",
+          "first": 129728,
+          "last": 129733
+        },
+        {
+          "all_fonts_index": 63,
+          "symbol": "NotoEmoji_Medium_EmjBuildings_20pt16b",
+          "first": 127968,
+          "last": 127984
+        },
+        {
+          "all_fonts_index": 64,
+          "symbol": "NotoEmoji_Medium_EmjCelebrate_20pt16b",
+          "first": 127872,
+          "last": 127891
+        },
+        {
+          "all_fonts_index": 65,
+          "symbol": "NotoEmoji_Medium_EmjClocks_20pt16b",
+          "first": 128336,
+          "last": 128359
+        },
+        {
+          "all_fonts_index": 66,
+          "symbol": "NotoEmoji_Medium_EmjClothing2_20pt16b",
+          "first": 129505,
+          "last": 129512
+        },
+        {
+          "all_fonts_index": 67,
+          "symbol": "NotoEmoji_Medium_EmjClothing_20pt16b",
+          "first": 129648,
+          "last": 129658
+        },
+        {
+          "all_fonts_index": 68,
+          "symbol": "NotoEmoji_Medium_EmjEffects_20pt16b",
+          "first": 128160,
+          "last": 128186
+        },
+        {
+          "all_fonts_index": 69,
+          "symbol": "NotoEmoji_Medium_EmjFaces2_20pt16b",
+          "first": 129392,
+          "last": 129402
+        },
+        {
+          "all_fonts_index": 70,
+          "symbol": "NotoEmoji_Medium_EmjFaces3_20pt16b",
+          "first": 129760,
+          "last": 129768
+        },
+        {
+          "all_fonts_index": 71,
+          "symbol": "NotoEmoji_Medium_EmjFaces_20pt16b",
+          "first": 129312,
+          "last": 129327
+        },
+        {
+          "all_fonts_index": 72,
+          "symbol": "NotoEmoji_Medium_EmjFantasy_20pt16b",
+          "first": 128123,
+          "last": 128138
+        },
+        {
+          "all_fonts_index": 73,
+          "symbol": "NotoEmoji_Medium_EmjFood2_20pt16b",
+          "first": 129360,
+          "last": 129374
+        },
+        {
+          "all_fonts_index": 74,
+          "symbol": "NotoEmoji_Medium_EmjFood3_20pt16b",
+          "first": 129375,
+          "last": 129391
+        },
+        {
+          "all_fonts_index": 75,
+          "symbol": "NotoEmoji_Medium_EmjFood4_20pt16b",
+          "first": 129472,
+          "last": 129483
+        },
+        {
+          "all_fonts_index": 76,
+          "symbol": "NotoEmoji_Medium_EmjFood5_20pt16b",
+          "first": 129744,
+          "last": 129755
+        },
+        {
+          "all_fonts_index": 77,
+          "symbol": "NotoEmoji_Medium_EmjFood_20pt16b",
+          "first": 127815,
+          "last": 127871
+        },
+        {
+          "all_fonts_index": 78,
+          "symbol": "NotoEmoji_Medium_EmjGestures_20pt16b",
+          "first": 128064,
+          "last": 128080
+        },
+        {
+          "all_fonts_index": 79,
+          "symbol": "NotoEmoji_Medium_EmjHands2_20pt16b",
+          "first": 129306,
+          "last": 129311
+        },
+        {
+          "all_fonts_index": 80,
+          "symbol": "NotoEmoji_Medium_EmjHands3_20pt16b",
+          "first": 129776,
+          "last": 129784
+        },
+        {
+          "all_fonts_index": 81,
+          "symbol": "NotoEmoji_Medium_EmjHearts_20pt16b",
+          "first": 129292,
+          "last": 129295
+        },
+        {
+          "all_fonts_index": 82,
+          "symbol": "NotoEmoji_Medium_EmjHousehold_20pt16b",
+          "first": 129680,
+          "last": 129695
+        },
+        {
+          "all_fonts_index": 83,
+          "symbol": "NotoEmoji_Medium_EmjInsects_20pt16b",
+          "first": 129712,
+          "last": 129724
+        },
+        {
+          "all_fonts_index": 84,
+          "symbol": "NotoEmoji_Medium_EmjLove_20pt16b",
+          "first": 128139,
+          "last": 128159
+        },
+        {
+          "all_fonts_index": 85,
+          "symbol": "NotoEmoji_Medium_EmjObjects1_20pt16b",
+          "first": 128187,
+          "last": 128253
+        },
+        {
+          "all_fonts_index": 86,
+          "symbol": "NotoEmoji_Medium_EmjObjects2_20pt16b",
+          "first": 128255,
+          "last": 128302
+        },
+        {
+          "all_fonts_index": 87,
+          "symbol": "NotoEmoji_Medium_EmjParts_20pt16b",
+          "first": 129460,
+          "last": 129463
+        },
+        {
+          "all_fonts_index": 88,
+          "symbol": "NotoEmoji_Medium_EmjPeople2_20pt16b",
+          "first": 129328,
+          "last": 129335
+        },
+        {
+          "all_fonts_index": 89,
+          "symbol": "NotoEmoji_Medium_EmjPeople3_20pt16b",
+          "first": 129488,
+          "last": 129504
+        },
+        {
+          "all_fonts_index": 90,
+          "symbol": "NotoEmoji_Medium_EmjPeople4_20pt16b",
+          "first": 129464,
+          "last": 129471
+        },
+        {
+          "all_fonts_index": 91,
+          "symbol": "NotoEmoji_Medium_EmjPeople_20pt16b",
+          "first": 128081,
+          "last": 128122
+        },
+        {
+          "all_fonts_index": 92,
+          "symbol": "NotoEmoji_Medium_EmjPlants_20pt16b",
+          "first": 127792,
+          "last": 127812
+        },
+        {
+          "all_fonts_index": 93,
+          "symbol": "NotoEmoji_Medium_EmjRaised_20pt16b",
+          "first": 128400,
+          "last": 128400
+        },
+        {
+          "all_fonts_index": 94,
+          "symbol": "NotoEmoji_Medium_EmjSciTools_20pt16b",
+          "first": 129513,
+          "last": 129535
+        },
+        {
+          "all_fonts_index": 95,
+          "symbol": "NotoEmoji_Medium_EmjSmileys2_20pt16b",
+          "first": 129296,
+          "last": 129305
+        },
+        {
+          "all_fonts_index": 96,
+          "symbol": "NotoEmoji_Medium_EmjSports2_20pt16b",
+          "first": 129336,
+          "last": 129338
+        },
+        {
+          "all_fonts_index": 97,
+          "symbol": "NotoEmoji_Medium_EmjSports3_20pt16b",
+          "first": 129340,
+          "last": 129343
+        },
+        {
+          "all_fonts_index": 98,
+          "symbol": "NotoEmoji_Medium_EmjSports_20pt16b",
+          "first": 127904,
+          "last": 127950
+        },
+        {
+          "all_fonts_index": 99,
+          "symbol": "NotoEmoji_Medium_EmjToys_20pt16b",
+          "first": 129664,
+          "last": 129670
+        },
+        {
+          "all_fonts_index": 100,
+          "symbol": "NotoEmoji_Medium_EmjTravelExt_20pt16b",
+          "first": 128720,
+          "last": 128722
+        },
+        {
+          "all_fonts_index": 101,
+          "symbol": "NotoEmoji_Medium_EmjTravel_20pt16b",
+          "first": 128640,
+          "last": 128709
+        },
+        {
+          "all_fonts_index": 102,
+          "symbol": "NotoEmoji_Medium_EmjWeatherSMP1_20pt16b",
+          "first": 127744,
+          "last": 127777
+        },
+        {
+          "all_fonts_index": 103,
+          "symbol": "NotoEmoji_Medium_EmjWeatherSMP2_20pt16b",
+          "first": 127780,
+          "last": 127788
+        },
+        {
+          "all_fonts_index": 104,
+          "symbol": "NotoEmoji_Medium_EmjTravelBMP2_20pt16b",
+          "first": 9968,
+          "last": 9973
+        },
+        {
+          "all_fonts_index": 105,
+          "symbol": "NotoEmoji_Medium_Emojis1_20pt16b",
+          "first": 128064,
+          "last": 128177
+        }
+      ]
+    }
+  ]
+}

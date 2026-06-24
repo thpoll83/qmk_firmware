@@ -20,11 +20,17 @@ typedef struct _fw_up_query_sync_t {
     uint32_t fw_size;
 } fw_up_query_sync_t;
 
-// Announce incoming firmware size + expected CRC32 to slave.
+// Announce incoming firmware/font-pack size + expected CRC32 to slave.
+// `target` (fw_target_t) selects which flash region the slave stages into and how
+// it finalizes — 0 = FIRMWARE (also what older senders leave it), 1 = FONTPACK.
+// Chunk/commit transactions carry no target; the slave's fw_staging remembers it
+// from this begin.
 typedef struct _fw_up_begin_sync_t {
     uint32_t crc32;
     uint32_t image_size;
     uint32_t image_crc;
+    uint8_t  target;
+    uint8_t  bundle;   // FONTPACK target: which bundle slot (fontpack_slot()); 0 for FIRMWARE
 } fw_up_begin_sync_t;
 
 // One chunk of firmware data (FW_UP_CHUNK_SIZE bytes).

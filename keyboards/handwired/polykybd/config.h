@@ -94,7 +94,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.8.31"
+#define FW_VERSION "0.9.0"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -108,7 +108,12 @@
 //     + AUTO_ON / AUTO_OFF to engage/leave host-driven brightness. flags==0 is
 //     the legacy persisted set, so older hosts keep working. The keyboard's
 //     KC_DAUTO key toggles auto mode locally.
-#define PROTOCOL_VERSION 5
+// v6: GET_ID (cmd 6) reply now carries a per-bundle font-pack version block after
+//     the NUL-terminated id string — ['V'][count][u16 content_version × count] in
+//     bundle order — so the host flashes only the font-pack bundles that are
+//     missing/stale on the device. The pack is flashed per-bundle (FONTPACK_BEGIN
+//     carries a bundle_id; each bundle has its own fixed flash slot).
+#define PROTOCOL_VERSION 6
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

@@ -134,11 +134,16 @@ enum my_keycodes {
     KC_OS_LINE_HOME,      // move to start of line
     KC_OS_LINE_END,       // move to end of line
     KC_OS_ACTION_END,
+
+    // OS status / control key: its legend shows the active OS + auto-or-pin badge
+    // (the "see and verify the mode" key); pressing it cycles auto -> pin Windows
+    // -> macOS -> Linux -> Android -> iOS -> auto. Not part of os_action_table.
+    KC_OS_ICON,
 };
 static_assert((int)KC_LAT9 <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_LAT9 < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
-static_assert((int)KC_OS_ACTION_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
+static_assert((int)KC_OS_ICON <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

@@ -592,7 +592,11 @@ void housekeeping_task_user(void) {
     // would clobber the just-synced value. Cheap (a couple of branches) and the
     // diff-gated poly sync only crosses the UART when the value actually changes.
     if (is_usb_host_side()) {
-        access_local_state()->active_os = get_active_os();
+        uint8_t os = (uint8_t)(get_active_os() | (get_os_auto_mode() ? POLY_OS_AUTO_FLAG : 0));
+        if (access_local_state()->active_os != os) {
+            access_local_state()->active_os = os;
+            request_disp_refresh();   // OS or auto/pin mode changed -> re-render legends + icon
+        }
     }
 }
 
@@ -1596,7 +1600,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             // OS-semantic action key: emit the chord for the active OS. active_os
             // is synced from the master, so this resolves correctly on either half.
             if (record->event.pressed) {
-                emit_os_action((uint16_t)(keycode - KC_OS_ACTION_BASE), get_local_state()->active_os);
+                emit_os_action((uint16_t)(keycode - KC_OS_ACTION_BASE),
+                               get_local_state()->active_os & POLY_OS_VALUE_MASK);
             }
             return false;
         case KC_OPER:
@@ -1803,6 +1808,19 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             // This switch is inside `if (!record->event.pressed)`, so it already
             // runs once per keypress (on release) — no extra guard needed.
             toggle_brightness_auto_mode();
+            request_disp_refresh();
+            break;
+        case KC_OS_ICON:
+            // Cycle the active-OS selection: auto -> pin Windows -> macOS -> Linux
+            // -> Android -> iOS -> auto. A manual pin overrides detection/host and
+            // survives reboots (the only way to select Android). Runs once on release.
+            if (get_os_auto_mode()) {
+                set_user_os(POLY_OS_WINDOWS);                 // auto -> first pin
+            } else if (get_active_os() >= POLY_OS_IOS) {
+                set_os_auto_mode(true);                       // last pin -> back to auto
+            } else {
+                set_user_os((uint8_t)(get_active_os() + 1));  // next pin
+            }
             request_disp_refresh();
             break;
         case KC_STORE_EE:

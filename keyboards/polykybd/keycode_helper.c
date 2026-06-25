@@ -1,6 +1,17 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "keycode_helper.h"
+#include "state.h"
+
+// The active OS (synced into poly_sync_t.active_os), used to pick OS-aware legends.
+static inline uint8_t kc_active_os(void) {
+    return get_local_state()->active_os & POLY_OS_VALUE_MASK;
+}
+// macOS and iOS use the Command(⌘)/Option(⌥) glyphs; the others use ❖/⎇.
+static inline bool kc_os_is_apple(void) {
+    uint8_t o = kc_active_os();
+    return o == POLY_OS_MACOS || o == POLY_OS_IOS;
+}
 
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {
     switch (keycode) {
@@ -118,10 +129,13 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_F24:                        return U" F24";
         case KC_LEFT_CTRL:
         case KC_RIGHT_CTRL:                 return (state_flags & MODS_AS_TEXT) != 0 ? U"Ctrl" : TECHNICAL_CONTROL;
-        case KC_LEFT_ALT:                   return (state_flags & MODS_AS_TEXT) != 0 ? U"Alt" : TECHNICAL_OPTION;
-        case KC_RIGHT_ALT:                  return (state_flags & MODS_AS_TEXT) != 0 ? U"RAlt" : TECHNICAL_OPTION;
+        // OS-aware modifier legends: macOS/iOS show ⌥ Option / ⌘ Command, other
+        // OSes show ⎇ Alt / ❖ GUI(Super). All glyphs are resident (Technical2/
+        // Technical/GuiKey), so they render with no font pack.
+        case KC_LEFT_ALT:                   return (state_flags & MODS_AS_TEXT) != 0 ? U"Alt"  : (kc_os_is_apple() ? TECHNICAL_OPTION : TECHNICAL_ALTERNATIVE);
+        case KC_RIGHT_ALT:                  return (state_flags & MODS_AS_TEXT) != 0 ? U"RAlt" : (kc_os_is_apple() ? TECHNICAL_OPTION : TECHNICAL_ALTERNATIVE);
         case KC_LGUI:
-        case KC_RGUI:                       return (state_flags & MODS_AS_TEXT) != 0 ? U"GUI" : DINGBAT_BLACK_DIA_X;
+        case KC_RGUI:                       return (state_flags & MODS_AS_TEXT) != 0 ? U"GUI"  : (kc_os_is_apple() ? TECHNICAL_COMMAND : DINGBAT_BLACK_DIA_X);
         case KC_LEFT:                       return U"  " ICON_LEFT;
         case KC_RIGHT:                      return U"  " ICON_RIGHT;
         case KC_UP:                         return U"  " ICON_UP;
@@ -176,6 +190,18 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_OS_WORD_RIGHT:              return U"Word" ICON_RIGHT;
         case KC_OS_LINE_HOME:               return U"Line" ICON_LEFT;
         case KC_OS_LINE_END:                return U"Line" ICON_RIGHT;
+        // OS status / control: top line = active OS, bottom = auto vs manual pin.
+        case KC_OS_ICON: {
+            const bool autom = (get_local_state()->active_os & POLY_OS_AUTO_FLAG) != 0;
+            switch (get_local_state()->active_os & POLY_OS_VALUE_MASK) {
+                case POLY_OS_WINDOWS: return autom ? U"Win\r\v auto" : U"Win\r\v  pin";
+                case POLY_OS_MACOS:   return autom ? U"Mac\r\v auto" : U"Mac\r\v  pin";
+                case POLY_OS_LINUX:   return autom ? U"Lnx\r\v auto" : U"Lnx\r\v  pin";
+                case POLY_OS_ANDROID: return autom ? U"And\r\v auto" : U"And\r\v  pin";
+                case POLY_OS_IOS:     return autom ? U"iOS\r\v auto" : U"iOS\r\v  pin";
+                default:              return autom ? U"OS?\r\v auto" : U"OS?\r\v  pin";
+            }
+        }
 
         //The following entries will over-rule language specific entries in the follow language lookup table,
         //however with this we can control them by flags and so far those where not language specific anyway.

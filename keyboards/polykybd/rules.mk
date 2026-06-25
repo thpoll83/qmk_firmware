@@ -2,6 +2,14 @@
 # pico-sdk host header uses K&R-style empty () prototype; suppress the warning it triggers
 CFLAGS += -Wno-strict-prototypes
 
+# OS detection (QMK feature): fingerprints the USB enumeration (wLength pattern) to
+# guess the host OS. Used as the AUTO-mode fallback for the active-OS state — the
+# only source on machines where the host app can't run (locked-down) or doesn't
+# exist (Android, which it reports as Linux). The host push (HID cmd 29) wins when
+# present. Do NOT also set OS_DETECTION_DEBUG_ENABLE — it conflicts with
+# DYNAMIC_KEYMAP/VIA (see quantum/os_detection.h).
+OS_DETECTION_ENABLE = yes
+
 # polykybd.c is the keyboard-named source — QMK compiles it automatically, so
 # it must NOT be listed here too (a second copy in SRC causes a duplicate
 # definition at link time once the file defines symbols, e.g. the POLYKYBD_HIL

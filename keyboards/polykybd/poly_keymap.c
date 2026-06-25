@@ -584,6 +584,15 @@ void housekeeping_task_user(void) {
             local_state->idle_style = get_idle_style();
         }
     }
+    // Refresh the synced active-OS on the MASTER every pass — it is the single
+    // source of truth (resolves manual pin / host push / USB detection); the slave
+    // adopts it via copy_local_state for its legends/actions. Must be master-only:
+    // get_active_os() reads this half's own state, which on the slave is empty and
+    // would clobber the just-synced value. Cheap (a couple of branches) and the
+    // diff-gated poly sync only crosses the UART when the value actually changes.
+    if (is_usb_host_side()) {
+        access_local_state()->active_os = get_active_os();
+    }
 }
 
 
@@ -2089,6 +2098,28 @@ void unicode_input_mode_set_user(uint8_t unicode_mode) {
     request_disp_refresh();
 }
 
+#ifdef OS_DETECTION_ENABLE
+// QMK fires this (master only — detection is USB-enumeration based) once the
+// detected OS stabilises. Feed it into the auto-mode resolver as the LOW-priority
+// source: set_detected_os applies only while in auto mode and only until the host
+// pushes an OS (host wins). The active_os refresh in housekeeping then syncs it to
+// the slave. Note: QMK reports Android and ChromeOS as OS_LINUX (shared USB stack),
+// so Android can only ever be selected by a manual pin (set_user_os), not here.
+bool process_detected_host_os_kb(os_variant_t os) {
+    if (!process_detected_host_os_user(os)) {
+        return false;
+    }
+    switch (os) {
+        case OS_WINDOWS: set_detected_os(POLY_OS_WINDOWS); break;
+        case OS_MACOS:   set_detected_os(POLY_OS_MACOS);   break;
+        case OS_IOS:     set_detected_os(POLY_OS_IOS);     break;
+        case OS_LINUX:   set_detected_os(POLY_OS_LINUX);   break;
+        case OS_UNSURE:                                    break;  // keep current
+    }
+    return true;
+}
+#endif
+
 #ifdef FW_UP_BOOT_TRACE
 // Diagnostic only (build with -DFW_UP_BOOT_TRACE): overwrite the keycaps with a
 // single digit at boot milestones so a hang in early boot is visible — the last
@@ -2187,6 +2218,12 @@ void keyboard_post_init_user(void) {
     // the host re-engages). Overrides local_state->contrast when auto was on.
     load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
+    // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
+    // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
+    // (e.g. Android) sticks. Seed local_state->active_os so the first render before
+    // housekeeping runs already reflects the restored OS.
+    load_os_state(ee.os_state);
+    local_state->active_os = get_active_os();
 #ifdef RGB_MATRIX_ENABLE
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 #else

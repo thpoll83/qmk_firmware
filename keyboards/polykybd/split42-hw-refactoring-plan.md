@@ -243,7 +243,7 @@ void matrix_slave_scan_kb(void) { matrix_scan_kb(); }
 ```json
 {
     "keyboard_name": "PolyKybd Split42",
-    "manufacturer": "PolyFabriq",
+    "manufacturer": "PolyTasten",
     "url": "https://ko-fi.com/polykb",
     "maintainer": "[thpoll]",
     "bootloader": "rp2040",
@@ -450,7 +450,7 @@ void suspend_wakeup_init_kb(void) {
 | BITMASK macro SR ordering | `split42/split42.h` | Which bitmask index corresponds to which physical shift register |
 | 128×32 logo bitmaps | `split42/status_oled.c` | New `oled_draw_kybd()` and `oled_draw_poly()` arrays (512 bytes each) |
 | keyboard.json layout | `split42/keyboard.json` | All 42 key positions with x/y and matrix[] coordinates |
-| USB PID uniqueness | `split42/keyboard.json` | Confirm `0x2008` is not in use by another PolyFabriq device |
+| USB PID uniqueness | `split42/keyboard.json` | Confirm `0x2008` is not in use by another PolyTasten device |
 
 ---
 

@@ -204,16 +204,13 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,    _______,    KC_NO,      KC_KP_1,    KC_KP_2,    KC_KP_3,    KC_PENT,   KC_NO,
         _______,    KC_NO,      KC_NO,                  KC_KP_0,    KC_PDOT,    KC_PENT,   KC_BASE
         ),
-    //Util Layer — the left block's free slots host the OS-semantic action keys
-    // (KC_OS_*): one key per action, each emitting the right chord for the active
-    // OS (Ctrl+C vs Cmd+C, Win+L vs Ctrl+Cmd+Q, …). All placed on previously-empty
-    // KC_NO slots, so nothing was displaced.
+    //Util Layer
     [_UL] = LAYOUT_left_right_stacked(
         KC_NO,      KC_F13,     KC_F14,     KC_F15,     KC_F16,     KC_F17,     KC_F18,
         KC_MYCM,    KC_CALC,    KC_PSCR,    KC_SCRL,    KC_BRK,     KC_NO,      KC_NO,
-        KC_OS_COPY, KC_OS_CUT,  KC_OS_PASTE,KC_OS_UNDO, KC_OS_REDO, KC_OS_SELALL,KC_OS_FIND, _______,
-        KC_LSFT,    KC_OS_LOCK, KC_OS_SCRSHOT,KC_OS_SEARCH,KC_OS_APP_SWITCH,KC_OS_WIN_SWITCH,KC_OS_EMOJI,KC_OS_WORD_LEFT,
-        KC_BASE,    KC_OS_WORD_RIGHT,KC_OS_LINE_HOME,KC_OS_LINE_END,         KC_NO,      KC_NO,      KC_NO,
+        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      _______,
+        KC_LSFT,    KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
+        KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
                     KC_F19,     KC_F20,     KC_F21,     KC_F22,     KC_F23,     KC_F24,     KC_NO,
                     KC_NO,      KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_NO,      TO(_SL),
@@ -221,13 +218,17 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,      KC_NO,      KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_NO,      KC_NO,      KC_RSFT,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
-    //Settings Layer
+    //Settings Layer — the left block's free slots also host the OS-semantic action
+    // keys (KC_OS_*): each emits the right chord for the active OS (Ctrl+C vs Cmd+C,
+    // Win+L vs Ctrl+Cmd+Q, …). KC_OS_ICON shows/cycles the active OS. All on
+    // previously-empty KC_NO slots, beside the OS controls. (App/Win-switch are the
+    // two actions that didn't fit here — their keycodes exist, just unmapped.)
     [_SL] = LAYOUT_left_right_stacked(
         KC_DDIM,    KC_DMIN,    KC_D1Q,     KC_DHLF,    KC_D3Q,     KC_DMAX,    KC_DBRI,
-        KC_DAUTO,   KC_OS_ICON, KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
-        KC_NO,      KC_L0,      KC_L1,      KC_L2,      KC_L3,      KC_L4,      KC_NO,      _______,
-        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_RBT,
-        KC_BASE,    LBL_TEXT,   KC_TOGMODS, KC_TOGTEXT,             KC_NO,      QK_MAKE,    QK_BOOT,
+        KC_DAUTO,   KC_OS_ICON, KC_OS_COPY, KC_OS_CUT,  KC_OS_PASTE,KC_OS_UNDO, KC_OS_REDO,
+        KC_OS_SELALL,KC_L0,     KC_L1,      KC_L2,      KC_L3,      KC_L4,      KC_OS_FIND, _______,
+        KC_OS_LOCK, KC_OS_SCRSHOT,KC_OS_SEARCH,KC_OS_EMOJI,KC_OS_WORD_LEFT,KC_OS_WORD_RIGHT,KC_OS_LINE_HOME, QK_RBT,
+        KC_BASE,    LBL_TEXT,   KC_TOGMODS, KC_TOGTEXT,             KC_OS_LINE_END, QK_MAKE, QK_BOOT,
 
 
         //             RM_PREV,    RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RM_NEXT,

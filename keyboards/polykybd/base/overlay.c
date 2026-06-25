@@ -4,7 +4,13 @@
 #include "disp_array.h"
 #include "polymod_rle.h"
 
+#include <print.h>
 #include <string.h>
+
+// Bit capacity of one keycap overlay row (72x40 = 2880 bits = 360 bytes). Single
+// source of truth for the copy-loop "done"/overflow sentinel so the bounds stay
+// correct if the display geometry ever changes.
+#define OVERLAY_BIT_CAPACITY (SCREEN_WIDTH * SCREEN_HEIGHT)
 
 static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 static /*volatile*/ uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
@@ -25,7 +31,7 @@ void reset_fragment_context(void) {
     memset(&g_fragment_context, 0, sizeof(overlay_fragment_context_t));
 }
 
-void set_fragment_context_from_buffer(const uint8_t *buffer) {
+roi_bounds_t set_fragment_context_from_buffer(const uint8_t *buffer) {
     g_fragment_context.msg_count= 0;
     g_fragment_context.bit_index = 0;
     g_fragment_context.keycode = buffer[0];
@@ -35,6 +41,26 @@ void set_fragment_context_from_buffer(const uint8_t *buffer) {
     g_fragment_context.roi.x = buffer[3];
     g_fragment_context.roi.xx = buffer[4]&0x7f;
     g_fragment_context.roi.compressed = ((buffer[4]&0x80)!=0);
+    // SECURITY: the ROI bounds are raw host bytes (y/yy up to 63, x up to 255,
+    // xx up to 127) but the keycap is only 72x40. Unclamped, copy_rectangle_to_overlay_xy
+    // would index a 360-byte overlay row well past its end (OOB write into adjacent
+    // overlays[]). Clip to the visible window so x/y are valid start coords and
+    // xx/yy are valid exclusive ends. (A second backstop lives in the copy loop.)
+    // NOTE: x/y are INCLUSIVE start pixels (max SCREEN_-1) while xx/yy are
+    // EXCLUSIVE ends (max SCREEN_); width = xx-x, so a 1px ROI (xx==x+1) is valid
+    // and x==xx is an empty (no-write) region — this clamp imposes no min size.
+    bool clamped = false;
+    if (g_fragment_context.roi.xx > SCREEN_WIDTH)   { g_fragment_context.roi.xx = SCREEN_WIDTH;      clamped = true; }
+    if (g_fragment_context.roi.yy > SCREEN_HEIGHT)  { g_fragment_context.roi.yy = SCREEN_HEIGHT;     clamped = true; }
+    if (g_fragment_context.roi.x  >= SCREEN_WIDTH)  { g_fragment_context.roi.x  = SCREEN_WIDTH  - 1; clamped = true; }
+    if (g_fragment_context.roi.y  >= SCREEN_HEIGHT) { g_fragment_context.roi.y  = SCREEN_HEIGHT - 1; clamped = true; }
+    // Enforce the x<=xx / y<=yy invariant: an inverted/empty range from malformed
+    // host input must produce no write (degenerate ROI), never an underflowing loop.
+    if (g_fragment_context.roi.x > g_fragment_context.roi.xx) { g_fragment_context.roi.x = g_fragment_context.roi.xx; clamped = true; }
+    if (g_fragment_context.roi.y > g_fragment_context.roi.yy) { g_fragment_context.roi.y = g_fragment_context.roi.yy; clamped = true; }
+    // Report clamping so the HID layer can log a misbehaving/hostile host instead
+    // of silently swallowing out-of-bounds ROI bounds.
+    return clamped ? ROI_BOUNDS_CLAMPED : ROI_BOUNDS_OK;
 }
 
 void set_fragment_context_key(uint8_t keycode, uint8_t modifier) {
@@ -67,7 +93,28 @@ uint8_t (* get_overlays(void))[72*40/8] {
     return overlays;
 }
 
+// Throwaway row returned for an out-of-range overlay index — so an OOB access
+// neither reads past the pool nor corrupts a real slot. Writes land here and are
+// dropped; reads come back blank instead of slot 0's legitimate keycap image.
+static uint8_t s_overlay_discard[72*40/8];
+
 uint8_t* get_overlay(uint16_t overlay_idx) {
+    // SECURITY: this is the single place overlays[] is dereferenced. The index
+    // arrives from the host-programmed mapping (get_overlay_mapping -> overlay_map[],
+    // cmd 21) and is only validated at write time today, so an out-of-range value
+    // here would read/write past the pool. Route it to a discard row instead —
+    // memory-safe AND non-destructive (no real slot is read or overwritten; slot 0
+    // would have been a legitimate keycap image). Logged once so a stale/buggy
+    // mapping doesn't disappear silently, one-shot to avoid flooding the render path.
+    if (overlay_idx >= NUM_OVERLAYS*NUM_VARIATIONS) {
+        static bool s_logged = false;
+        if (!s_logged) {
+            s_logged = true;
+            uprintf("get_overlay: index %u out of range (max %u) — discarding.\n",
+                    (unsigned)overlay_idx, (unsigned)(NUM_OVERLAYS*NUM_VARIATIONS - 1));
+        }
+        return s_overlay_discard;
+    }
     return overlays[overlay_idx];
 }
 
@@ -130,6 +177,13 @@ uint16_t copy_rectangle_to_overlay_xy(uint16_t bit_index, uint8_t* dest, const v
         }
         for (uint8_t dest_x = start_x; dest_x < roi->xx; dest_x++) {
             bit_index = dest_y * SCREEN_WIDTH + dest_x;
+            // SECURITY backstop: dest is a single SCREEN_WIDTH*SCREEN_HEIGHT-bit
+            // (360-byte) overlay row. Even if a caller hands us an out-of-range roi
+            // (e.g. via the split bridge), never write past it — bail at the row
+            // boundary, returning the geometry-derived "done" sentinel callers test.
+            if (bit_index >= OVERLAY_BIT_CAPACITY) {
+                return OVERLAY_BIT_CAPACITY;
+            }
             uint8_t data_byte   = data[bit_cnt / 8];
             uint8_t bit_in_byte = bit_cnt % 8;
             bool    bit_is_set  = ((0x80 >> bit_in_byte) & data_byte) != 0;
@@ -147,7 +201,7 @@ uint16_t copy_rectangle_to_overlay_xy(uint16_t bit_index, uint8_t* dest, const v
             }
         }
     }
-    return 2880;
+    return OVERLAY_BIT_CAPACITY;
 }
 
 uint16_t copy_rectangle_to_overlay(uint16_t bit_index, uint8_t* dest, const volatile uint8_t* data, const volatile roi_update_data_t* roi, const uint8_t data_len) {
@@ -156,12 +210,12 @@ uint16_t copy_rectangle_to_overlay(uint16_t bit_index, uint8_t* dest, const vola
             uint8_t buffer[16];
             uint16_t num_bits = rle_decompress(buffer, 16, &data[i], 1, 0);
             bit_index = copy_rectangle_to_overlay_xy(bit_index, dest, buffer, roi, num_bits);
-            if( bit_index >= 2880) {
+            if( bit_index >= OVERLAY_BIT_CAPACITY) {
                 return bit_index;
             }
         }
     } else {
         bit_index = copy_rectangle_to_overlay_xy(bit_index, dest, data, roi, data_len*8);
     }
-    return bit_index >= ((roi->yy-1) * SCREEN_WIDTH + roi->xx) ? 2880 : bit_index;
+    return bit_index >= ((roi->yy-1) * SCREEN_WIDTH + roi->xx) ? OVERLAY_BIT_CAPACITY : bit_index;
 }

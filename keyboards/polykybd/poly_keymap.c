@@ -27,6 +27,7 @@
 #include "debug.h"
 
 #include <transactions.h>
+#include "split_util.h"   // is_transport_connected() — gate the boot layer-resync one-shot
 #include <hardware/flash.h>
 
 #include "polykybd.h"
@@ -370,13 +371,25 @@ void sync_and_refresh_displays(void) {
         // `global` (e.g. _L0/Qwerty = all-zero after a fresh boot/fw-apply reboot),
         // a slave that booted with a stale default layer would never be corrected
         // until the next manual layer change. The one-shot resync fixes that.
-        if ( layer_diff || g_force_layer_resync ) {
-            if(sync_succeeded(send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES))) {
+        //
+        // It is a TRUE one-shot: fired only once the split transport is connected,
+        // then cleared regardless of the ACK. The old version re-fired every
+        // housekeeping pass until the slave ACKed, which on a slow-ACK link spun the
+        // master main loop for ~3 × bridge-timeout per pass and stalled the host's
+        // first HID queries (the HIL boot-window flake). Gating on
+        // is_transport_connected() gives the single try a real chance; if it still
+        // drops, a genuinely-stale slave is corrected by the next real layer diff.
+        bool force_resync = g_force_layer_resync && is_transport_connected();
+        if ( layer_diff || force_resync ) {
+            bool sent = sync_succeeded(send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES));
+            if (force_resync) {
+                g_force_layer_resync = false;  // one-shot: never re-fire, even on a drop
+            }
+            if (sent) {
                 layer_diff = true;             // ensure global advances (copy_global_layer below)
-                g_force_layer_resync = false;  // boot resync delivered to the slave
             } else {
-                layer_diff = false; // failed: skip copy_global_layer() below so the diff
-                                    // persists and the send re-fires next pass (force flag stays set)
+                layer_diff = false; // failed: skip copy_global_layer() below so a real diff
+                                    // persists and the send re-fires next pass
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }

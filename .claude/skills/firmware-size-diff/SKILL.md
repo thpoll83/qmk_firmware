@@ -11,7 +11,7 @@ Two questions this skill answers:
 2. **Code identity** — for refactors that should be behaviour-preserving: is the generated `.text` byte-for-byte identical to baseline? If not, *where* did it diverge?
 
 Repo root: `/home/thomaspollak/Repos/qmk_firmware`
-Build output: `.build/handwired_polykybd_split72_default.{elf,uf2}`
+Build output: `.build/polykybd_split72_default.{elf,uf2}`
 Toolchain on PATH: `arm-none-eabi-size`, `arm-none-eabi-objcopy`, `arm-none-eabi-objdump`, `arm-none-eabi-nm`.
 
 ## When to expect which result
@@ -39,10 +39,10 @@ Tell the user up-front which mode applies based on the nature of the change (or 
 
 3. **Clean + build baseline.** A clean build is required for trustworthy `.text` comparison — incremental builds can leave stale objects from the "after" state in `.build/`:
    ```bash
-   make handwired/polykybd/split72:default:clean
-   make handwired/polykybd/split72:default -j$(nproc)
-   cp .build/handwired_polykybd_split72_default.elf /tmp/fw-baseline.elf
-   cp .build/handwired_polykybd_split72_default.uf2 /tmp/fw-baseline.uf2
+   make polykybd/split72:default:clean
+   make polykybd/split72:default -j$(nproc)
+   cp .build/polykybd_split72_default.elf /tmp/fw-baseline.elf
+   cp .build/polykybd_split72_default.uf2 /tmp/fw-baseline.uf2
    arm-none-eabi-objcopy -O binary --only-section=.text /tmp/fw-baseline.elf /tmp/fw-baseline.text.bin
    ```
    On failure: `git stash pop` and report.
@@ -50,10 +50,10 @@ Tell the user up-front which mode applies based on the nature of the change (or 
 4. **Restore working changes and clean-build candidate:**
    ```bash
    git stash pop
-   make handwired/polykybd/split72:default:clean
-   make handwired/polykybd/split72:default -j$(nproc)
-   cp .build/handwired_polykybd_split72_default.elf /tmp/fw-after.elf
-   cp .build/handwired_polykybd_split72_default.uf2 /tmp/fw-after.uf2
+   make polykybd/split72:default:clean
+   make polykybd/split72:default -j$(nproc)
+   cp .build/polykybd_split72_default.elf /tmp/fw-after.elf
+   cp .build/polykybd_split72_default.uf2 /tmp/fw-after.uf2
    arm-none-eabi-objcopy -O binary --only-section=.text /tmp/fw-after.elf /tmp/fw-after.text.bin
    ```
 
@@ -124,7 +124,7 @@ Also add a last line with a percentage number of how much RAM of the total 264kB
   - QMK build date string in `version.h` — rebuild within the same minute or check whether the only differing region is the version string.
   - `__FILE__` paths inside `assert()` / log calls — if a refactor moves code between files, expect string-table churn.
   - If the disassembly diff is only inside `.rodata`-referencing loads with no instruction changes, the bytes differ in `.rodata`, not the code. Confirm with `arm-none-eabi-size -A` showing `.text` unchanged but `.rodata` moved.
-- **Variants**: default to `split72`. Diff `split42` too if the user asks, or if `git stash show --name-only stash@{0}` (run before the stash pop) lists files under `keyboards/handwired/polykybd/split42/` or the shared `keyboards/handwired/polykybd/poly_keymap.c` (the latter affects both variants). (`split42` was formerly `corne42`.)
+- **Variants**: default to `split72`. Diff `split42` too if the user asks, or if `git stash show --name-only stash@{0}` (run before the stash pop) lists files under `keyboards/polykybd/split42/` or the shared `keyboards/polykybd/poly_keymap.c` (the latter affects both variants). (`split42` was formerly `corne42`.)
 - **Codegen outputs**: `lang/lang_lut.c` and `base/fonts/generated/*.h` come from cog/`create_fonts.sh`. If they're touched, mention that size changes may reflect regenerated data rather than hand-written code.
 - **Clean builds are required** for both passes — see step 3 rationale. Don't try to optimise this away.
 - **Don't** modify the user's branch, push, or amend. The skill only uses `git stash`.

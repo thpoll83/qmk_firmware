@@ -27,7 +27,7 @@ architecture; this is the operational recipe.
    `fonts.yaml` entry's `ranges` covers that codepoint and its generated symbol
    name (in `base/fonts/generated/*.h`, e.g. `NotoEmoji_Medium_Settings_20pt16b`).
    ```bash
-   cd keyboards/handwired/polykybd
+   cd keyboards/polykybd
    grep -n "<KEY>" keycode_helper.c           # e.g. TO(_EMJ) -> PRIVATE_EMOJI_1F600
    grep -n "PRIVATE_<NAME>\|0x1f600" lang/named_glyphs.h
    grep -n "0x1f600" fonts/fonts.yaml         # which variant/range
@@ -66,16 +66,16 @@ architecture; this is the operational recipe.
 6. **Build both variants** and confirm the size bump is roughly the glyph size:
    ```bash
    export QMK_HOME=$PWD/../../../..   # repo root
-   qmk compile -kb handwired/polykybd/split72 -km default
-   qmk compile -kb handwired/polykybd/split42 -km default
-   arm-none-eabi-size .build/handwired_polykybd_split72_default.elf
+   qmk compile -kb polykybd/split72 -km default
+   qmk compile -kb polykybd/split42 -km default
+   arm-none-eabi-size .build/polykybd_split72_default.elf
    ```
 
 7. **(Optional) ship a matching slim pack + the .bin**:
    ```bash
    FONTCONVERT=/tmp/fontconvert_pinned python3 fonts/generate_fonts.py \
        --emit-pack /tmp/pack.plyf --content-version <N>
-   arm-none-eabi-objcopy -O binary .build/handwired_polykybd_split72_default.elf out.bin
+   arm-none-eabi-objcopy -O binary .build/polykybd_split72_default.elf out.bin
    ```
 
 ## Verify it renders with no pack

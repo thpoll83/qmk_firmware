@@ -44,7 +44,7 @@ jobs:
           python3 - <<'PYEOF'
           import re
 
-          path = "keyboards/handwired/polykybd/config.h"
+          path = "keyboards/polykybd/config.h"
           with open(path) as f:
               content = f.read()
 
@@ -84,9 +84,9 @@ jobs:
 
       - name: Commit and push
         run: |
-          VERSION=$(sed -n 's/^#define FW_VERSION "\([^"]*\)".*/\1/p' keyboards/handwired/polykybd/config.h)
+          VERSION=$(sed -n 's/^#define FW_VERSION "\([^"]*\)".*/\1/p' keyboards/polykybd/config.h)
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add keyboards/handwired/polykybd/config.h
+          git add keyboards/polykybd/config.h
           git diff --cached --quiet || git commit -m "chore: bump firmware version to ${VERSION} [skip ci]"
           git push

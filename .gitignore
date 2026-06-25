@@ -128,4 +128,4 @@ compile_commands.json
 via*.json
 /keyboards/**/keymaps/via/*
 /keyboards/**/keymaps/vial/*
-keyboards/handwired/polykybd/split72/keymaps/default/lang/.~lock.lang_lut.xlsx#
+keyboards/polykybd/split72/keymaps/default/lang/.~lock.lang_lut.xlsx#

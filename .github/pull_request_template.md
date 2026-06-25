@@ -18,6 +18,6 @@
 > stay in sync.
 
 ## Testing
-- [ ] Compiled successfully (`qmk compile -kb handwired/polykybd/split72 -km default`)
+- [ ] Compiled successfully (`qmk compile -kb polykybd/split72 -km default`)
 - [ ] Flashed and tested on hardware
 - [ ] If protocol changed: host updated and tested together

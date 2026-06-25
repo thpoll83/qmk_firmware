@@ -12,7 +12,7 @@ source. The firmware never composes characters and needs no IME.
 
 Repos (siblings): `qmk_firmware/` (firmware + LUT), `PolyKybdHost/` (host +
 `tools/oled_preview.py`), `polykybd-ctnd/` (HIL rig). All PolyKybd lang files live
-under `qmk_firmware/keyboards/handwired/polykybd/` (called **PK/** below).
+under `qmk_firmware/keyboards/polykybd/` (called **PK/** below).
 Authoritative deep-dive: `PK/lang/FUTURE_LANGUAGES.md` (read it first).
 
 ## 0. Toolchain (once per container)
@@ -200,8 +200,8 @@ If only cell *values* changed (not the language list/order), `keycode_helper.h`,
 
 ```bash
 export QMK_HOME=$PWD/../../../..    # the qmk_firmware root
-PATH=/tmp/pkvenv/bin:$PATH qmk compile -kb handwired/polykybd/split72 -km default
-PATH=/tmp/pkvenv/bin:$PATH qmk compile -kb handwired/polykybd/split42 -km default
+PATH=/tmp/pkvenv/bin:$PATH qmk compile -kb polykybd/split72 -km default
+PATH=/tmp/pkvenv/bin:$PATH qmk compile -kb polykybd/split42 -km default
 ```
 Budget: firmware runs in a **2 MB flash partition** (`FW_STAGING_OFFSET`); a build
 >2 MB fails to link (intended). Currently ~0.76 MB. A `.bin` for HID-flashing:

@@ -5,7 +5,7 @@ description: Generate PolyKybd firmware release notes for a version range, group
 
 # PolyKybd release notes
 
-Produce release notes for the PolyKybd firmware (`keyboards/handwired/polykybd/`)
+Produce release notes for the PolyKybd firmware (`keyboards/polykybd/`)
 between two firmware versions, **grouped per version**, in the project's
 house style: playful (emoji, a one-line theme per version) **and** technically
 precise (name the actual mechanism — pins, command IDs, files, the root cause).
@@ -13,7 +13,7 @@ precise (name the actual mechanism — pins, command IDs, files, the root cause)
 Releases are **GitHub Releases** tagged `PolyKybd-fw-vX.Y.Z` (there are **no git
 tags** in the tree). Each version's boundary in history is a
 `chore: bump firmware version to X.Y.Z [skip ci]` commit. `FW_VERSION` lives in
-`keyboards/handwired/polykybd/config.h`.
+`keyboards/polykybd/config.h`.
 
 ## Resolve the range first
 
@@ -29,7 +29,7 @@ tags** in the tree). Each version's boundary in history is a
    - Fallback with no GitHub access: `git tag` is empty here, so use the
      **second-newest** bump commit as the last-released boundary.
 2. **Most recent version** = current tree:
-   `grep 'define FW_VERSION' keyboards/handwired/polykybd/config.h`
+   `grep 'define FW_VERSION' keyboards/polykybd/config.h`
    (equivalently the newest `bump firmware version to …` commit).
 3. If the most-recent version **equals** the last release, there's nothing
    unreleased — say so, and offer notes for the previous interval instead.
@@ -51,7 +51,7 @@ git log --no-merges --oneline <bump-0.8.21>..<bump-0.8.22> | grep -v "bump firmw
 ```
 
 Do this for each consecutive pair across the range. A version with **no**
-`keyboards/handwired/polykybd/` changes between its bumps is a docs/housekeeping
+`keyboards/polykybd/` changes between its bumps is a docs/housekeeping
 release — say so honestly, don't invent content. For the **newest, not-yet-bumped**
 work, use `<newest-bump>..HEAD`.
 
@@ -100,5 +100,5 @@ Output the notes in chat as Markdown by default. Offer to (a) drop them into a
 - **A bump interval can be empty** of polykybd changes (e.g. 0.8.24 was docs-only).
   Don't fabricate firmware changes — label it housekeeping.
 - **The split-sync / core1 / suspend bugs** all have detailed write-ups in
-  `keyboards/handwired/polykybd/CLAUDE.md` ("Investigations in progress"); reuse
+  `keyboards/polykybd/CLAUDE.md` ("Investigations in progress"); reuse
   that root-cause text rather than re-deriving it from the diff.

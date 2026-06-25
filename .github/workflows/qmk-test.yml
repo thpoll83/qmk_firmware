@@ -23,7 +23,7 @@ jobs:
       - name: Build split72 (primary)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb handwired/polykybd/split72 -km default
+          args: qmk compile -kb polykybd/split72 -km default
 
       # The HID firmware-update path takes the raw RP2040 .bin (not the .uf2),
       # which the host streams over HID. objcopy the just-built .elf so the rig
@@ -31,7 +31,7 @@ jobs:
       - name: Objcopy split72 .bin (for HID firmware-update test)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: arm-none-eabi-objcopy -O binary .build/handwired_polykybd_split72_default.elf handwired_polykybd_split72_default.bin
+          args: arm-none-eabi-objcopy -O binary .build/polykybd_split72_default.elf polykybd_split72_default.bin
 
       # HIL builds: same firmware but with POLYKYBD_HIL, which fixes the split
       # role at compile time per side instead of using VBUS detection. On the rig
@@ -42,25 +42,25 @@ jobs:
       - name: Build split72 (HIL left/master)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb handwired/polykybd/split72 -km default -e POLYKYBD_HIL=left -e TARGET=handwired_polykybd_split72_hil_left
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_hil_left
 
       - name: Build split72 (HIL right/slave)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb handwired/polykybd/split72 -km default -e POLYKYBD_HIL=right -e TARGET=handwired_polykybd_split72_hil_right
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_hil_right
 
       - name: Build split42
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb handwired/polykybd/split42 -km default
+          args: qmk compile -kb polykybd/split42 -km default
 
       - id: names
         run: |
-          echo "split72=$(ls handwired_polykybd_split72_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
-          echo "split72_bin=$(ls handwired_polykybd_split72_default*.bin 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
-          echo "split72_hil_left=$(ls handwired_polykybd_split72_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
-          echo "split72_hil_right=$(ls handwired_polykybd_split72_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
-          echo "split42=$(ls handwired_polykybd_split42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split72=$(ls polykybd_split72_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split72_bin=$(ls polykybd_split72_default*.bin 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split72_hil_left=$(ls polykybd_split72_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split72_hil_right=$(ls polykybd_split72_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "split42=$(ls polykybd_split42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:

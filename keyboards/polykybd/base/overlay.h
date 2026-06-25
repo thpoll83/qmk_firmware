@@ -21,10 +21,21 @@ typedef struct _overlay_fragment_context_t {
     uint8_t           msg_count; //only used for the bridge
 } overlay_fragment_context_t;
 
+// Outcome of decoding an ROI overlay header (see set_fragment_context_from_buffer).
+// Named so the call site reads unambiguously instead of testing a bare bool.
+typedef enum {
+    ROI_BOUNDS_OK = 0,       // host bounds were within the display
+    ROI_BOUNDS_CLAMPED = 1,  // out-of-range bounds had to be clamped (log it)
+} roi_bounds_t;
+
 const overlay_fragment_context_t* get_fragment_context(void);
 overlay_fragment_context_t* access_fragment_context(void);
 void reset_fragment_context(void);
-void set_fragment_context_from_buffer(const uint8_t* buffer);
+// Decode an ROI overlay header from a HID payload into the fragment context,
+// clamping out-of-range ROI coords to the display. Returns ROI_BOUNDS_CLAMPED if
+// any value had to be clamped (the host sent out-of-bounds bounds), so the caller
+// can log it, else ROI_BOUNDS_OK.
+roi_bounds_t set_fragment_context_from_buffer(const uint8_t* buffer);
 void set_fragment_context_key(uint8_t keycode, uint8_t modifier);
 void set_fragment_context_bit_index(uint16_t bit_index);
 void set_fragment_context_byte_len(uint8_t byte_len);

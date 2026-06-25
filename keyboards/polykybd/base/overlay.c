@@ -45,6 +45,9 @@ void set_fragment_context_from_buffer(const uint8_t *buffer) {
     // would index a 360-byte overlay row well past its end (OOB write into adjacent
     // overlays[]). Clip to the visible window so x/y are valid start coords and
     // xx/yy are valid exclusive ends. (A second backstop lives in the copy loop.)
+    // NOTE: x/y are INCLUSIVE start pixels (max SCREEN_-1) while xx/yy are
+    // EXCLUSIVE ends (max SCREEN_); width = xx-x, so a 1px ROI (xx==x+1) is valid
+    // and x==xx is an empty (no-write) region — this clamp imposes no min size.
     if (g_fragment_context.roi.xx > SCREEN_WIDTH)   g_fragment_context.roi.xx = SCREEN_WIDTH;
     if (g_fragment_context.roi.yy > SCREEN_HEIGHT)  g_fragment_context.roi.yy = SCREEN_HEIGHT;
     if (g_fragment_context.roi.x  >= SCREEN_WIDTH)  g_fragment_context.roi.x  = SCREEN_WIDTH  - 1;

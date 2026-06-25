@@ -30,7 +30,7 @@ void reset_fragment_context(void) {
     memset(&g_fragment_context, 0, sizeof(overlay_fragment_context_t));
 }
 
-bool set_fragment_context_from_buffer(const uint8_t *buffer) {
+roi_bounds_t set_fragment_context_from_buffer(const uint8_t *buffer) {
     g_fragment_context.msg_count= 0;
     g_fragment_context.bit_index = 0;
     g_fragment_context.keycode = buffer[0];
@@ -59,7 +59,7 @@ bool set_fragment_context_from_buffer(const uint8_t *buffer) {
     if (g_fragment_context.roi.y > g_fragment_context.roi.yy) { g_fragment_context.roi.y = g_fragment_context.roi.yy; clamped = true; }
     // Report clamping so the HID layer can log a misbehaving/hostile host instead
     // of silently swallowing out-of-bounds ROI bounds.
-    return clamped;
+    return clamped ? ROI_BOUNDS_CLAMPED : ROI_BOUNDS_OK;
 }
 
 void set_fragment_context_key(uint8_t keycode, uint8_t modifier) {

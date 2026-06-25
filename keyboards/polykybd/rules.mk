@@ -49,6 +49,11 @@ ifeq ($(strip $(POLYKYBD_LOOP_PROFILE)), yes)
     SRC += profiling/loop_profile.c
 endif
 
+# FW-2: vendored Monocypher (BSD-2-Clause / CC0) provides the Ed25519 image-signature
+# verify used by fw_staging.c (firmware signing). Verify-only; warn-only until
+# FW_REQUIRE_SIGNATURE is defined.
+SRC += base/crypto/monocypher.c base/crypto/monocypher-ed25519.c
+
 # HIL test station build: fix the split role at compile time per side instead of
 # using VBUS detection, because both halves are USB-powered on the rig and the
 # two identical boards are told apart only by the test station, which flashes a

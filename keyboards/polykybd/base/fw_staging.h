@@ -169,6 +169,18 @@ void fw_staging_apply_and_reboot(void);
 // (magic present, size in range).  Written by fw_staging_finalize() on CRC match.
 bool fw_staging_has_valid_staged_image(void);
 
+// ── Firmware image signature (FW-2) ─────────────────────────────────────────
+// Ed25519 signature length over the staged firmware image.
+#define FW_SIG_LEN 64
+
+// Provide the detached Ed25519 signature for the image being staged (FIRMWARE
+// target). Set by the host's CMD_FW_UP_SIGNATURE before COMMIT. fw_staging_finalize()
+// then verifies it (master only) against FW_SIGNING_PUBKEY in fw_pubkey.h:
+//   - Phase A (default): verify + log only; the result does NOT block COMMIT.
+//   - With FW_REQUIRE_SIGNATURE defined: a missing/invalid signature fails COMMIT.
+// Reset to "absent" on every fw_staging_begin*(). No-op for the FONTPACK target.
+void fw_staging_set_signature(const uint8_t sig[FW_SIG_LEN]);
+
 // Arm the deferred apply: housekeeping_task_user() will then run
 // fw_staging_apply_and_reboot() once.  Use only after a successful COMMIT
 // (fw_staging_has_valid_staged_image() == true).  PHASE 2: master only.

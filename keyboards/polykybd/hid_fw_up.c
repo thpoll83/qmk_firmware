@@ -237,6 +237,26 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             return true;
         }
 
+        case CMD_FW_UP_SIGNATURE: { // FW-2: data[2]=part(0/1), data[3..34]=32 sig bytes
+            // The 64-byte Ed25519 image signature arrives in two 32-byte parts
+            // (it doesn't fit one 64-byte HID report). Reassemble, then hand it to
+            // the stager; the master verifies it at COMMIT (fw_staging_finalize).
+            static uint8_t s_sig_buf[FW_SIG_LEN];
+            uint8_t part = data[HID_DATA_IDX];
+            bool ok = (part < 2);
+            if (ok) {
+                memcpy(&s_sig_buf[(uint16_t)part * 32], &data[HID_DATA_IDX + 1], 32);
+                if (part == 1) {
+                    fw_staging_set_signature(s_sig_buf);
+                }
+            }
+            memset(data, 0, length);
+            memcpy(data, ok ? "P\x45." : "P\x45!", 3);
+            raw_hid_send(data, length);
+            uprintf("FW_UP_SIGNATURE: part=%u %s\n", part, ok ? "stored" : "BAD");
+            return true;
+        }
+
         case CMD_FW_UP_COMMIT: { // verify staged CRC on both halves (no apply/reboot yet)
             // Relay COMMIT to the slave first (it finalizes + verifies its own
             // staged copy), then finalize the master's own staged copy.  Decoupled

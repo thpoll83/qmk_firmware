@@ -6,6 +6,8 @@
 #include "fw_staging.h"
 #include "fontpack.h"        // FONTPACK target: fontpack_reload()/present + max size
 #include "polymod_crc32.h"
+#include "crypto/monocypher-ed25519.h"   // FW-2: Ed25519 image signature verify
+#include "fw_pubkey.h"                    // FW-2: FW_SIGNING_PUBKEY (image signing key)
 
 #include "hardware/flash.h"
 #include "hardware/sync.h"
@@ -126,6 +128,11 @@ static uint32_t s_next_offset;   // total bytes accepted so far
 static uint32_t s_buf_fill;      // bytes pending in s_page_buf
 static uint32_t s_staged_crc;    // running CRC32 of received image bytes (for O(1) finalize)
 
+// FW-2: detached Ed25519 signature over the staged FIRMWARE image, set by the host
+// (CMD_FW_UP_SIGNATURE) before COMMIT. Verified in fw_staging_finalize() on the master.
+static uint8_t  s_signature[FW_SIG_LEN];
+static bool     s_signature_present;
+
 static bool     s_commit_pending;
 static bool     s_reboot_pending;   // deferred plain reboot (QK_REBOOT slave path)
 static bool     s_fontpack_reload_pending;  // slave: defer the heavy FONTPACK reload to housekeeping
@@ -242,6 +249,7 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
     s_next_offset    = 0;
     s_buf_fill       = 0;
     s_staged_crc     = 0;
+    s_signature_present = false;  // FW-2: each new image must re-supply its signature
     s_commit_pending = false;
     s_erase_pending  = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
@@ -294,6 +302,7 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     s_next_offset    = 0;
     s_buf_fill       = 0;
     s_staged_crc     = 0;
+    s_signature_present = false;  // FW-2: each new image must re-supply its signature
     s_commit_pending = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
 
@@ -453,6 +462,24 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
     return true;
 }
 
+void fw_staging_set_signature(const uint8_t sig[FW_SIG_LEN]) {
+    memcpy(s_signature, sig, FW_SIG_LEN);
+    s_signature_present = true;
+}
+
+// FW-2: verify the staged FIRMWARE image's Ed25519 signature against the embedded
+// public key. The image is read straight from XIP flash (memory-mapped), so no RAM
+// copy of the (up to ~2 MB) image is needed. Returns:
+//    1 = valid signature, -1 = present but invalid, 0 = no signature supplied.
+// HEAVY (SHA-512 over the whole image, ~0.4 s) — master only; never inside a split
+// transaction window.
+static int fw_staging_check_signature(void) {
+    if (!s_signature_present) return 0;
+    const uint8_t *img = (const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET);
+    // monocypher crypto_ed25519_check() returns 0 on success, -1 on any failure.
+    return (crypto_ed25519_check(s_signature, FW_SIGNING_PUBKEY, img, s_image_size) == 0) ? 1 : -1;
+}
+
 bool fw_staging_finalize(void) {
     return fw_staging_finalize_impl(false);
 }
@@ -529,9 +556,34 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
             ok = fontpack_slot_present(s_fontpack_slot_off);
         }
     } else if (ok) {
+        // FW-2: verify the image signature on the MASTER before stamping the header.
+        // The heavy SHA-512 must not run inside the slave's ~20 ms split-transaction
+        // window, so the slave skips it — its staged bytes are CRC-identical to the
+        // master's verified image, and the master is what gates the apply.
+        if (is_keyboard_master()) {
+            int sig = fw_staging_check_signature();
+            if (sig == 1) {
+                uprintf("FW_UP: image signature OK\n");
+            } else if (sig == -1) {
+                uprintf("FW_UP: image signature INVALID\n");
+            } else {
+                uprintf("FW_UP: image UNSIGNED (no signature supplied)\n");
+            }
+#ifdef FW_REQUIRE_SIGNATURE
+            // Enforcement (flip on once a real key is provisioned and releases are
+            // signed): reject anything but a valid signature. Phase A leaves this
+            // undefined → verify-and-warn only, so flashing keeps working today.
+            if (sig != 1) {
+                uprintf("FW_UP: REJECTED — FW_REQUIRE_SIGNATURE and image not validly signed\n");
+                ok = false;
+            }
+#endif
+        }
         // FIRMWARE: stamp the staging header {magic,size,crc} so the staged image
         // is self-describing and fw_staging_apply_and_reboot() can validate + size it.
-        write_staging_header(s_image_size, s_image_crc);
+        if (ok) {
+            write_staging_header(s_image_size, s_image_crc);
+        }
     }
 
     // DECOUPLED (2026-05-30, run 6): COMMIT verifies + reports success; it does NOT

@@ -140,8 +140,8 @@ enum my_keycodes {
     // -> macOS -> Linux -> Android -> iOS -> auto. Not part of os_action_table.
     KC_OS_ICON,
 };
-static_assert((int)KC_LAT9 <= (int)QK_KB_31, "Too many custom QK key codes");
-static_assert((int)KC_LAT9 < (int)KCL_ENUS, "Overlap detected");
+static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
+static_assert((int)KC_DAUTO < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_ICON <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 

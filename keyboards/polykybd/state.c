@@ -442,8 +442,8 @@ void set_user_os(uint8_t os) {
 // spoken so firmware detection yields to it for the rest of the session.
 void set_host_os(uint8_t os) {
     if (os >= POLY_OS_COUNT) return;
-    g_host_os_seen = true;
-    if (!g_os_auto) return;                 // a manual pin is in charge
+    if (!g_os_auto) return;                 // a manual pin is in charge — ignore the push entirely
+    g_host_os_seen = true;                  // only mark "host spoke" once we actually accept it
     if (g_resolved_os == os && g_os_known) return;
     g_resolved_os = os;
     g_os_known    = true;

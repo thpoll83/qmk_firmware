@@ -2262,7 +2262,9 @@ void keyboard_post_init_user(void) {
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before
     // housekeeping runs already reflects the restored OS.
     load_os_state(ee.os_state);
-    local_state->active_os = get_active_os();
+    // Seed with the same OS|auto-flag encoding housekeeping uses, so the first
+    // render/sync before housekeeping runs shows the correct auto/pin badge.
+    local_state->active_os = (uint8_t)(get_active_os() | (get_os_auto_mode() ? POLY_OS_AUTO_FLAG : 0));
 #ifdef RGB_MATRIX_ENABLE
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 #else

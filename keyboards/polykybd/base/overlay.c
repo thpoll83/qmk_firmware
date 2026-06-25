@@ -4,6 +4,7 @@
 #include "disp_array.h"
 #include "polymod_rle.h"
 
+#include <print.h>
 #include <string.h>
 
 static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
@@ -67,14 +68,27 @@ uint8_t (* get_overlays(void))[72*40/8] {
     return overlays;
 }
 
+// Throwaway row returned for an out-of-range overlay index — so an OOB access
+// neither reads past the pool nor corrupts a real slot. Writes land here and are
+// dropped; reads come back blank instead of slot 0's legitimate keycap image.
+static uint8_t s_overlay_discard[72*40/8];
+
 uint8_t* get_overlay(uint16_t overlay_idx) {
     // SECURITY: this is the single place overlays[] is dereferenced. The index
     // arrives from the host-programmed mapping (get_overlay_mapping -> overlay_map[],
-    // cmd 21) and is only validated at write time today; bound it here so a stale or
-    // missing mapping can never index past the pool (OOB read/write). Out-of-range
-    // falls back to slot 0.
+    // cmd 21) and is only validated at write time today, so an out-of-range value
+    // here would read/write past the pool. Route it to a discard row instead —
+    // memory-safe AND non-destructive (no real slot is read or overwritten; slot 0
+    // would have been a legitimate keycap image). Logged once so a stale/buggy
+    // mapping doesn't disappear silently, one-shot to avoid flooding the render path.
     if (overlay_idx >= NUM_OVERLAYS*NUM_VARIATIONS) {
-        overlay_idx = 0;
+        static bool s_logged = false;
+        if (!s_logged) {
+            s_logged = true;
+            uprintf("get_overlay: index %u out of range (max %u) — discarding.\n",
+                    (unsigned)overlay_idx, (unsigned)(NUM_OVERLAYS*NUM_VARIATIONS - 1));
+        }
+        return s_overlay_discard;
     }
     return overlays[overlay_idx];
 }

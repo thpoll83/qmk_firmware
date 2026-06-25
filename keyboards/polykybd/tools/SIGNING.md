@@ -59,9 +59,13 @@ python3 keyboards/polykybd/tools/sign_firmware.py --privkey fw_signing_key.bin o
 # -> out.bin.sig (64 bytes)
 ```
 
-Automated (releases): the **`polykybd-fw-sign`** workflow signs every `.bin`
-attached to a published release using `FW_SIGNING_KEY` and uploads the matching
-`.bin.sig`. Trigger it by publishing a release (or `workflow_dispatch` with a tag).
+Automated (releases): signing is built **into the existing release build**
+(`.github/workflows/release.yml`). On a `PolyKybd-fw-v*` tag / published release it
+builds split72, objcopies the `.bin`, then the **Sign .bin (FW-2)** step signs it
+with `FW_SIGNING_KEY` and the release step uploads `<target>.bin.sig` alongside the
+`.uf2`/`.bin`. The signing step is a **no-op when `FW_SIGNING_KEY` is unset**, so
+releases keep working (unsigned) until you add the secret — nothing to wire up
+beyond the one-time key setup above.
 
 PolyKybdHost picks up `<image>.bin.sig` next to the `.bin` automatically and sends
 it during the flash.
@@ -74,10 +78,21 @@ re-sign releases. (Until a keyboard runs firmware carrying the new public key, i
 can't verify signatures made with the new private key — rotate the firmware first
 while still in warn-only mode.)
 
-## Not yet done (for the enforcement flip)
+## Scope: master-only verification (deliberate)
 
-Phase A verifies on the **master** half only (the heavy SHA-512 must not run in
-the slave's ~20 ms split-transaction window; the slave's staged bytes are
-CRC-identical to the master's verified image, and the master gates the apply).
-Before defining `FW_REQUIRE_SIGNATURE`, add deferred slave-side verification so a
-slave can't accept an unsigned image on its own.
+Verification runs on the **master** half only — the heavy SHA-512 must not run in
+the slave's ~20 ms split-transaction window, and the slave's staged bytes are
+CRC-identical to the master's verified image (the master gates the apply over the
+split link). This is **intentionally not** extended to independent slave-side
+verification, including once `FW_REQUIRE_SIGNATURE` is enabled:
+
+> Compromising the slave directly requires already sitting at the machine with a
+> cable into the bridge/UART port — and anyone with that physical access can just
+> flash any image over BOOTSEL/UF2, which is strictly easier than forging a split
+> transaction. Signature verification defends the **remote/host** surface (any
+> process that can talk the HID flash protocol), which is fully covered by the
+> master check. So slave verification would add transaction-window risk and code
+> for no real-world threat reduction.
+
+The enforcement flip is therefore just `OPT_DEFS += -DFW_REQUIRE_SIGNATURE` once a
+real key is provisioned and releases are signed — no slave-side work required.

@@ -84,6 +84,21 @@ jobs:
             echo "No crafted notes on the release-notes branch for $TAG — auto-generating."
           fi
 
+      # FW-2: sign the .bin with the project's Ed25519 key so the firmware can
+      # verify image authenticity at flash time. No-op (unsigned release) when the
+      # FW_SIGNING_KEY secret is not set, so releases work before a key exists.
+      - name: Sign .bin (FW-2)
+        env:
+          FW_SIGNING_KEY: ${{ secrets.FW_SIGNING_KEY }}
+        run: |
+          if [ -z "${FW_SIGNING_KEY:-}" ]; then
+            echo "::notice::FW_SIGNING_KEY not set — releasing UNSIGNED firmware (verify is warn-only)."
+            exit 0
+          fi
+          python3 -m pip install --quiet cryptography
+          TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
+          python3 keyboards/polykybd/tools/sign_firmware.py "${TARGET}.bin"
+
       # Runs on a tag push, on publishing a release, or on a manual dispatch.
       # Idempotent: creates the release if missing, otherwise (re-)uploads the
       # assets with --clobber; a create that loses a race falls back to upload.
@@ -101,6 +116,8 @@ jobs:
           TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
           PACK_VER=$(cat keyboards/polykybd/doom/pack/PACK_VERSION)
           ASSETS=( "${TARGET}.uf2" "${TARGET}.bin" "doom_pack_v${PACK_VER}.plyx" )
+          # Include the detached signature when the Sign step produced one (FW-2).
+          [ -f "${TARGET}.bin.sig" ] && ASSETS+=("${TARGET}.bin.sig")
           if [ "$HAVE_NOTES" = "1" ]; then
             NOTES_ARGS=( --title "$TITLE" --notes-file _release_body.md )
           else

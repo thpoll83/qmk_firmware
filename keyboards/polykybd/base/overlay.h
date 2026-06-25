@@ -24,7 +24,10 @@ typedef struct _overlay_fragment_context_t {
 const overlay_fragment_context_t* get_fragment_context(void);
 overlay_fragment_context_t* access_fragment_context(void);
 void reset_fragment_context(void);
-void set_fragment_context_from_buffer(const uint8_t* buffer);
+// Decode an ROI overlay header from a HID payload into the fragment context,
+// clamping out-of-range ROI coords to the display. Returns true if any value had
+// to be clamped (i.e. the host sent out-of-bounds bounds), so the caller can log it.
+bool set_fragment_context_from_buffer(const uint8_t* buffer);
 void set_fragment_context_key(uint8_t keycode, uint8_t modifier);
 void set_fragment_context_bit_index(uint16_t bit_index);
 void set_fragment_context_byte_len(uint8_t byte_len);

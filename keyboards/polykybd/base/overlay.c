@@ -30,7 +30,7 @@ void reset_fragment_context(void) {
     memset(&g_fragment_context, 0, sizeof(overlay_fragment_context_t));
 }
 
-void set_fragment_context_from_buffer(const uint8_t *buffer) {
+bool set_fragment_context_from_buffer(const uint8_t *buffer) {
     g_fragment_context.msg_count= 0;
     g_fragment_context.bit_index = 0;
     g_fragment_context.keycode = buffer[0];
@@ -48,14 +48,18 @@ void set_fragment_context_from_buffer(const uint8_t *buffer) {
     // NOTE: x/y are INCLUSIVE start pixels (max SCREEN_-1) while xx/yy are
     // EXCLUSIVE ends (max SCREEN_); width = xx-x, so a 1px ROI (xx==x+1) is valid
     // and x==xx is an empty (no-write) region — this clamp imposes no min size.
-    if (g_fragment_context.roi.xx > SCREEN_WIDTH)   g_fragment_context.roi.xx = SCREEN_WIDTH;
-    if (g_fragment_context.roi.yy > SCREEN_HEIGHT)  g_fragment_context.roi.yy = SCREEN_HEIGHT;
-    if (g_fragment_context.roi.x  >= SCREEN_WIDTH)  g_fragment_context.roi.x  = SCREEN_WIDTH  - 1;
-    if (g_fragment_context.roi.y  >= SCREEN_HEIGHT) g_fragment_context.roi.y  = SCREEN_HEIGHT - 1;
+    bool clamped = false;
+    if (g_fragment_context.roi.xx > SCREEN_WIDTH)   { g_fragment_context.roi.xx = SCREEN_WIDTH;      clamped = true; }
+    if (g_fragment_context.roi.yy > SCREEN_HEIGHT)  { g_fragment_context.roi.yy = SCREEN_HEIGHT;     clamped = true; }
+    if (g_fragment_context.roi.x  >= SCREEN_WIDTH)  { g_fragment_context.roi.x  = SCREEN_WIDTH  - 1; clamped = true; }
+    if (g_fragment_context.roi.y  >= SCREEN_HEIGHT) { g_fragment_context.roi.y  = SCREEN_HEIGHT - 1; clamped = true; }
     // Enforce the x<=xx / y<=yy invariant: an inverted/empty range from malformed
     // host input must produce no write (degenerate ROI), never an underflowing loop.
-    if (g_fragment_context.roi.x > g_fragment_context.roi.xx) g_fragment_context.roi.x = g_fragment_context.roi.xx;
-    if (g_fragment_context.roi.y > g_fragment_context.roi.yy) g_fragment_context.roi.y = g_fragment_context.roi.yy;
+    if (g_fragment_context.roi.x > g_fragment_context.roi.xx) { g_fragment_context.roi.x = g_fragment_context.roi.xx; clamped = true; }
+    if (g_fragment_context.roi.y > g_fragment_context.roi.yy) { g_fragment_context.roi.y = g_fragment_context.roi.yy; clamped = true; }
+    // Report clamping so the HID layer can log a misbehaving/hostile host instead
+    // of silently swallowing out-of-bounds ROI bounds.
+    return clamped;
 }
 
 void set_fragment_context_key(uint8_t keycode, uint8_t modifier) {

@@ -548,7 +548,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 }
                 break;
             case 18: //start roi overlay
-                set_fragment_context_from_buffer(&data[HID_DATA_IDX]);
+                if (set_fragment_context_from_buffer(&data[HID_DATA_IDX])) {
+                    const overlay_fragment_context_t *fc = get_fragment_context();
+                    uprintf("ROI overlay: host sent out-of-bounds ROI for keycode %u — "
+                            "clamped to x=%u y=%u xx=%u yy=%u.\n",
+                            fc->keycode, fc->roi.x, fc->roi.y, fc->roi.xx, fc->roi.yy);
+                }
                 //fall through
             case 19: //receive roi overlay
                 {

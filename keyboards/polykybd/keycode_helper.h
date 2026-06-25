@@ -107,10 +107,38 @@ enum my_keycodes {
     KC_LANG_MRU_BASE,                              // + n  (n = 0 .. MRU_CAP-1)
     KC_LANG_SLOT_BASE = KC_LANG_MRU_BASE + 12,     // + n  (n = 0 .. LANG_SLOTS_PER_PAGE-1)
     KC_LANG_END = KC_LANG_SLOT_BASE + 58,          // headroom for all NUM_LANG slots
+
+    // ── OS-semantic action keycodes ──────────────────────────────────────────
+    // Each resolves at PRESS time to the correct key chord for the *active* OS
+    // (get_local_state()->active_os) via the [action][os] table in os_actions.c —
+    // e.g. KC_OS_COPY emits Ctrl+C on Windows/Linux but Cmd+C on macOS, KC_OS_LOCK
+    // emits Win+L / Ctrl+Cmd+Q / Super+L. Drop them into keymaps[] like any keycode;
+    // they give the "full palette on every OS" without per-OS layers. Append-only —
+    // os_action_table[] and the label switch in keycode_helper.c track this order.
+    KC_OS_ACTION_BASE,
+    KC_OS_COPY = KC_OS_ACTION_BASE,
+    KC_OS_CUT,
+    KC_OS_PASTE,
+    KC_OS_UNDO,
+    KC_OS_REDO,
+    KC_OS_SELALL,
+    KC_OS_FIND,
+    KC_OS_LOCK,
+    KC_OS_SCRSHOT,        // region screenshot
+    KC_OS_SEARCH,         // launcher / spotlight
+    KC_OS_APP_SWITCH,     // application switcher
+    KC_OS_WIN_SWITCH,     // window switcher
+    KC_OS_EMOJI,          // emoji picker
+    KC_OS_WORD_LEFT,      // move cursor one word left
+    KC_OS_WORD_RIGHT,     // move cursor one word right
+    KC_OS_LINE_HOME,      // move to start of line
+    KC_OS_LINE_END,       // move to end of line
+    KC_OS_ACTION_END,
 };
 static_assert((int)KC_LAT9 <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_LAT9 < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
+static_assert((int)KC_OS_ACTION_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

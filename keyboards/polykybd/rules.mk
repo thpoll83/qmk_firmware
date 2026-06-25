@@ -17,7 +17,7 @@ OS_DETECTION_ENABLE = yes
 # poly_keymap.c holds the shared keymap logic compiled for every variant
 # (split72, split42). Each variant's keymaps/default/keymap.c carries only its
 # data (keymaps[] / encoder_map[] / g_led_config).
-SRC += poly_keymap.c side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c
+SRC += poly_keymap.c side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c os_actions.c
 
 # HIL test station build: fix the split role at compile time per side instead of
 # using VBUS detection, because both halves are USB-powered on the rig and the

@@ -69,6 +69,7 @@
 
 #include "layers.h"
 #include "keycode_helper.h"
+#include "os_actions.h"
 #include "uni.h"
 #include "emoji/emoji_layer.h"
 #include "lang_layer.h"
@@ -1590,6 +1591,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_EXSEL:
             if (record->event.pressed) { SEND_STRING(SS_TAP(X_HOME) SS_LSFT(SS_TAP(X_END))); }
             uprint("Select Line.\n");
+            return false;
+        case KC_OS_ACTION_BASE ... KC_OS_ACTION_END - 1:
+            // OS-semantic action key: emit the chord for the active OS. active_os
+            // is synced from the master, so this resolves correctly on either half.
+            if (record->event.pressed) {
+                emit_os_action((uint16_t)(keycode - KC_OS_ACTION_BASE), get_local_state()->active_os);
+            }
             return false;
         case KC_OPER:
             if (record->event.pressed) {

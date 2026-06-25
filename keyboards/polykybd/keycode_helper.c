@@ -157,6 +157,26 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_OPER:                       return U"Line\r\v    join";
         case KC_CRSEL:                      return U"Line\r\v    del";
 
+        // OS-semantic action keys (KC_OS_*): plain labels for now; an OS-aware
+        // legend (⌘ vs ⌃) follows with the modifier-legend swap.
+        case KC_OS_COPY:                    return U"Copy";
+        case KC_OS_CUT:                     return U"Cut";
+        case KC_OS_PASTE:                   return U"Paste";
+        case KC_OS_UNDO:                    return U"Undo";
+        case KC_OS_REDO:                    return U"Redo";
+        case KC_OS_SELALL:                  return U"SelAll";
+        case KC_OS_FIND:                    return U"Find";
+        case KC_OS_LOCK:                    return U"Lock";
+        case KC_OS_SCRSHOT:                 return U"Snip";
+        case KC_OS_SEARCH:                  return U"Srch";
+        case KC_OS_APP_SWITCH:              return U"App\r\v  sw";
+        case KC_OS_WIN_SWITCH:              return U"Win\r\v  sw";
+        case KC_OS_EMOJI:                   return U"Emoji";
+        case KC_OS_WORD_LEFT:               return U"Word" ICON_LEFT;
+        case KC_OS_WORD_RIGHT:              return U"Word" ICON_RIGHT;
+        case KC_OS_LINE_HOME:               return U"Line" ICON_LEFT;
+        case KC_OS_LINE_END:                return U"Line" ICON_RIGHT;
+
         //The following entries will over-rule language specific entries in the follow language lookup table,
         //however with this we can control them by flags and so far those where not language specific anyway.
         case KC_ENTER:                      return (state_flags & MORE_TEXT) != 0 ? U"Enter" : ARROWS_RETURN;

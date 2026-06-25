@@ -204,13 +204,16 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,    _______,    KC_NO,      KC_KP_1,    KC_KP_2,    KC_KP_3,    KC_PENT,   KC_NO,
         _______,    KC_NO,      KC_NO,                  KC_KP_0,    KC_PDOT,    KC_PENT,   KC_BASE
         ),
-    //Util Layer
+    //Util Layer — the left block's free slots host the OS-semantic action keys
+    // (KC_OS_*): one key per action, each emitting the right chord for the active
+    // OS (Ctrl+C vs Cmd+C, Win+L vs Ctrl+Cmd+Q, …). All placed on previously-empty
+    // KC_NO slots, so nothing was displaced.
     [_UL] = LAYOUT_left_right_stacked(
         KC_NO,      KC_F13,     KC_F14,     KC_F15,     KC_F16,     KC_F17,     KC_F18,
         KC_MYCM,    KC_CALC,    KC_PSCR,    KC_SCRL,    KC_BRK,     KC_NO,      KC_NO,
-        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      _______,
-        KC_LSFT,    KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
-        KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
+        KC_OS_COPY, KC_OS_CUT,  KC_OS_PASTE,KC_OS_UNDO, KC_OS_REDO, KC_OS_SELALL,KC_OS_FIND, _______,
+        KC_LSFT,    KC_OS_LOCK, KC_OS_SCRSHOT,KC_OS_SEARCH,KC_OS_APP_SWITCH,KC_OS_WIN_SWITCH,KC_OS_EMOJI,KC_OS_WORD_LEFT,
+        KC_BASE,    KC_OS_WORD_RIGHT,KC_OS_LINE_HOME,KC_OS_LINE_END,         KC_NO,      KC_NO,      KC_NO,
 
                     KC_F19,     KC_F20,     KC_F21,     KC_F22,     KC_F23,     KC_F24,     KC_NO,
                     KC_NO,      KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_NO,      TO(_SL),

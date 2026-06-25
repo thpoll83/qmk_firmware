@@ -68,6 +68,14 @@ uint8_t (* get_overlays(void))[72*40/8] {
 }
 
 uint8_t* get_overlay(uint16_t overlay_idx) {
+    // SECURITY: this is the single place overlays[] is dereferenced. The index
+    // arrives from the host-programmed mapping (get_overlay_mapping -> overlay_map[],
+    // cmd 21) and is only validated at write time today; bound it here so a stale or
+    // missing mapping can never index past the pool (OOB read/write). Out-of-range
+    // falls back to slot 0.
+    if (overlay_idx >= NUM_OVERLAYS*NUM_VARIATIONS) {
+        overlay_idx = 0;
+    }
     return overlays[overlay_idx];
 }
 

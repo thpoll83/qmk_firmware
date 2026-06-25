@@ -35,6 +35,15 @@ void set_fragment_context_from_buffer(const uint8_t *buffer) {
     g_fragment_context.roi.x = buffer[3];
     g_fragment_context.roi.xx = buffer[4]&0x7f;
     g_fragment_context.roi.compressed = ((buffer[4]&0x80)!=0);
+    // SECURITY: the ROI bounds are raw host bytes (y/yy up to 63, x up to 255,
+    // xx up to 127) but the keycap is only 72x40. Unclamped, copy_rectangle_to_overlay_xy
+    // would index a 360-byte overlay row well past its end (OOB write into adjacent
+    // overlays[]). Clip to the visible window so x/y are valid start coords and
+    // xx/yy are valid exclusive ends. (A second backstop lives in the copy loop.)
+    if (g_fragment_context.roi.xx > SCREEN_WIDTH)   g_fragment_context.roi.xx = SCREEN_WIDTH;
+    if (g_fragment_context.roi.yy > SCREEN_HEIGHT)  g_fragment_context.roi.yy = SCREEN_HEIGHT;
+    if (g_fragment_context.roi.x  >= SCREEN_WIDTH)  g_fragment_context.roi.x  = SCREEN_WIDTH  - 1;
+    if (g_fragment_context.roi.y  >= SCREEN_HEIGHT) g_fragment_context.roi.y  = SCREEN_HEIGHT - 1;
 }
 
 void set_fragment_context_key(uint8_t keycode, uint8_t modifier) {
@@ -130,6 +139,12 @@ uint16_t copy_rectangle_to_overlay_xy(uint16_t bit_index, uint8_t* dest, const v
         }
         for (uint8_t dest_x = start_x; dest_x < roi->xx; dest_x++) {
             bit_index = dest_y * SCREEN_WIDTH + dest_x;
+            // SECURITY backstop: dest is a single 360-byte (2880-bit) overlay row.
+            // Even if a caller hands us an out-of-range roi (e.g. via the split
+            // bridge), never write past it — bail at the row boundary.
+            if (bit_index >= SCREEN_WIDTH * SCREEN_HEIGHT) {
+                return 2880;
+            }
             uint8_t data_byte   = data[bit_cnt / 8];
             uint8_t bit_in_byte = bit_cnt % 8;
             bool    bit_is_set  = ((0x80 >> bit_in_byte) & data_byte) != 0;

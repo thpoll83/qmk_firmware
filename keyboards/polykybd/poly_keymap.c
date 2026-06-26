@@ -1358,10 +1358,15 @@ void reset_idle_jitter(void) {
 // Draw a legend horizontally CENTRED in the visible key window
 // [BUFFER_X, BUFFER_X+SCREEN_WIDTH), baseline at y, instead of left-aligned at
 // BUFFER_X. Used for the bottom (thumb) row so its mixed chrome/icon legends
-// (arrows, Base, Make, toggles, world, …) sit centred. Measures the glyph ink
-// extent (kdisp_gfx_text_bounds), so any manual leading-space padding in the
-// legend string is absorbed automatically — no need to strip it.
+// (arrows, Base, Make, toggles, world, …) sit centred.
+//
+// Leading spaces are skipped first: many legends carry manual left-padding (e.g.
+// the arrows are U"  " + icon), and the Base font's space glyph is a degenerate
+// 1×1 ink box, so kdisp_gfx_text_bounds would count those spaces as ink at x=0,
+// inflate the measured width, and push the real glyph right of centre. Skipping
+// them makes the measure+draw start at the first real glyph, truly centred.
 static void draw_legend_cx(const uint32_t* text, int8_t y) {
+    while (*text == U' ') text++;          // drop manual leading padding (skews bbox)
     int8_t lo = 0, hi = 0;
     kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &lo, &hi);
     const int8_t w    = (int8_t)(hi - lo + 1);

@@ -1943,3 +1943,7 @@
 #define ICON_APP_SWITCH             	U"\x1F5D4"
 #define ICON_WINDOW_SWITCH          	U"\x1F5BD"
 #define ICON_CLOSE                  	U"\x22A0"
+// Resident IconsFont OS logos (gfx_icons.h, 0x98/0x99) — the GUI/Super-key legend
+// for the host-detected Linux desktops (POLY_OS_LINUX_GNOME/KDE).
+#define ICON_OS_GNOME               	U"\x98"
+#define ICON_OS_KDE                 	U"\x99"

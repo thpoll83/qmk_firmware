@@ -20,9 +20,9 @@ static inline const uint32_t* kc_os_gui_icon(void) {
     switch (kc_active_os()) {
         case POLY_OS_WINDOWS: return ICON_OS_WINDOWS;
         case POLY_OS_MACOS:   return TECHNICAL_COMMAND;
-        case POLY_OS_LINUX:
-        case POLY_OS_LINUX_GNOME:
-        case POLY_OS_LINUX_KDE: return ICON_OS_LINUX;     // GNOME/KDE share the penguin
+        case POLY_OS_LINUX:       return ICON_OS_LINUX;    // generic / unknown DE → penguin
+        case POLY_OS_LINUX_GNOME: return ICON_OS_GNOME;    // GNOME foot
+        case POLY_OS_LINUX_KDE:   return ICON_OS_KDE;      // KDE/Plasma logo
         case POLY_OS_ANDROID: return ICON_OS_ANDROID;
         case POLY_OS_IOS:     return TECHNICAL_COMMAND;   // iOS collapsed into macOS
         default:              return DINGBAT_BLACK_DIA_X;

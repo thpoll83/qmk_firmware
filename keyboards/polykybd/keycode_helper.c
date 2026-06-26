@@ -12,6 +12,18 @@ static inline bool kc_os_is_apple(void) {
     uint8_t o = kc_active_os();
     return o == POLY_OS_MACOS || o == POLY_OS_IOS;
 }
+// GUI/Super key icon per active OS — a distinct resident glyph each, like the Mac ⌘:
+// Windows 4-pane, macOS ⌘, Linux 🐧, Android 🤖, iOS 📱; ❖ when nothing is detected.
+static inline const uint32_t* kc_os_gui_icon(void) {
+    switch (kc_active_os()) {
+        case POLY_OS_WINDOWS: return ICON_OS_WINDOWS;
+        case POLY_OS_MACOS:   return TECHNICAL_COMMAND;
+        case POLY_OS_LINUX:   return ICON_OS_LINUX;
+        case POLY_OS_ANDROID: return ICON_OS_ANDROID;
+        case POLY_OS_IOS:     return ICON_OS_IOS;
+        default:              return DINGBAT_BLACK_DIA_X;
+    }
+}
 
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {
     switch (keycode) {
@@ -135,7 +147,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_LEFT_ALT:                   return (state_flags & MODS_AS_TEXT) != 0 ? U"Alt"  : (kc_os_is_apple() ? TECHNICAL_OPTION : TECHNICAL_ALTERNATIVE);
         case KC_RIGHT_ALT:                  return (state_flags & MODS_AS_TEXT) != 0 ? U"RAlt" : (kc_os_is_apple() ? TECHNICAL_OPTION : TECHNICAL_ALTERNATIVE);
         case KC_LGUI:
-        case KC_RGUI:                       return (state_flags & MODS_AS_TEXT) != 0 ? U"GUI"  : (kc_os_is_apple() ? TECHNICAL_COMMAND : DINGBAT_BLACK_DIA_X);
+        case KC_RGUI:                       return (state_flags & MODS_AS_TEXT) != 0 ? U"GUI"  : kc_os_gui_icon();
         case KC_LEFT:                       return U"  " ICON_LEFT;
         case KC_RIGHT:                      return U"  " ICON_RIGHT;
         case KC_UP:                         return U"  " ICON_UP;

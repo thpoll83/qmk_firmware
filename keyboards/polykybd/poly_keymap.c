@@ -1081,7 +1081,21 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     }
 
     uint8_t local_mods = get_local_layer()->mods;
-    if( (local_mods & MOD_MASK_CTRL) != 0) {
+    // OS-aware shortcut-preview icons. The "editing" shortcuts (copy/paste/undo/…)
+    // hang off the OS's primary command modifier: Cmd (GUI) on macOS/iOS, Ctrl
+    // everywhere else — so on a Mac these show under Cmd, not Ctrl (where Ctrl+C
+    // does not copy). The "window-management" shortcuts (lock/show-desktop/display/
+    // maximize/minimize) hang off the GUI/Super key on Windows & Linux desktops; on
+    // macOS Cmd is already the editing modifier (so e.g. Cmd+L is NOT lock and shows
+    // nothing here), and on Android the Search key is not a window manager.
+    const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+    const bool apple = (active_os == POLY_OS_MACOS || active_os == POLY_OS_IOS);
+    const bool editing_held = (local_mods & (apple ? MOD_MASK_GUI : MOD_MASK_CTRL)) != 0;
+    const bool wm_held = !apple
+                      && (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_LINUX
+                          || active_os == POLY_OS_UNKNOWN)
+                      && (local_mods & MOD_MASK_GUI) != 0;
+    if (editing_held) {
         switch(keycode) {
             case KC_A: return U"      " BOX_WITH_CHECK_MARK;
             case KC_C: return U"     " CLIPBOARD_COPY;
@@ -1096,7 +1110,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_Y: return U"      " ARROWS_REDO;
             default: break;
         }
-    } else if((local_mods & MOD_MASK_GUI) != 0) {
+    } else if (wm_held) {
         switch(keycode) {
             case KC_D:      return U"    " PRIVATE_PC;
             case KC_L:      return U"    " PRIVATE_LOCK;

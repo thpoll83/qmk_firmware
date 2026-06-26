@@ -11,7 +11,7 @@
       "index": 0,
       "slot_offset": 4096,
       "slot_size": 98304,
-      "total_size": 30236,
+      "total_size": 31844,
       "font_count": 9,
       "fonts": [
         {
@@ -64,9 +64,9 @@
         },
         {
           "all_fonts_index": 143,
-          "symbol": "NotoSansMath_Regular_WordArrows_20pt16b",
+          "symbol": "NotoSansMath_Regular_MathHints_20pt16b",
           "first": 8672,
-          "last": 8674
+          "last": 8864
         }
       ]
     },

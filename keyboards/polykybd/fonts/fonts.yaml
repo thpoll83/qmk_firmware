@@ -358,6 +358,9 @@ fonts:
   # 0x1F5BD (🖽 ICON_WINDOW_SWITCH, tiled frame) — singleton so its first..last span
   # never reaches _Util_'s 0x1F5CA (CLIPBOARD_PASTE) and shadow it with an empty glyph.
   - {category: symbols, variant: _WinSwitch_, size: 18, bits: 32, ranges: [[0x1f5bd, 0x1f5bd]]}
-  # Dashed word-nav arrows ⇠⇢ (U+21E0/21E2, ICON_WORD_LEFT/RIGHT). Absent from both
-  # NotoSansSymbols v1 (solid arrows only) and Symbols2 — sourced from NotoSansMath.
-  - {category: symbols, variant: _WordArrows_, source: noto-sans-math, ranges: [[0x21e0, 0x21e0], [0x21e2, 0x21e2]]}
+  # NotoSansMath hint glyphs (none are in Symbols v1/Symbols2): dashed word-nav
+  # arrows ⇠⇢ (U+21E0/21E2, ICON_WORD_LEFT/RIGHT) and the boxed-X close mark
+  # ⊠ (U+22A0, ICON_CLOSE) — a lighter "close window" than the heavy ⛝ U+26DD.
+  # (The 0x21E0..0x22A0 span emits ~190 empty placeholder glyphs between the three
+  # real ones, like _Util_ does — negligible in the 96 KB symbol slot.)
+  - {category: symbols, variant: _MathHints_, source: noto-sans-math, ranges: [[0x21e0, 0x21e0], [0x21e2, 0x21e2], [0x22a0, 0x22a0]]}

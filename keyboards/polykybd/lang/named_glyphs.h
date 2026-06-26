@@ -1935,11 +1935,11 @@
 // (outside the cog table above) rather than in lang_lut.xlsx: the formula-driven
 // rows in that sheet only round-trip through a real spreadsheet app, so appending
 // rows headlessly strips their cached values and breaks the regen. Codepoints:
-// ⇠⇢ word nav (NotoSansMath), ☰ launcher / ⛝ close (NotoSansSymbols2 BMP),
+// ⇠⇢ word nav + ⊠ close (NotoSansMath), ☰ launcher (NotoSansSymbols2 BMP),
 // 🗔 app-switch / 🖽 window-switch (NotoSansSymbols2 SMP).
 #define ICON_WORD_LEFT              	U"\x21E0"
 #define ICON_WORD_RIGHT             	U"\x21E2"
 #define ICON_LAUNCHER               	U"\x2630"
 #define ICON_APP_SWITCH             	U"\x1F5D4"
 #define ICON_WINDOW_SWITCH          	U"\x1F5BD"
-#define ICON_CLOSE                  	U"\x26DD"
+#define ICON_CLOSE                  	U"\x22A0"

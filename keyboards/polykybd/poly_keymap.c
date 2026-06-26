@@ -1142,11 +1142,21 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_P:      return U"    " PRIVATE_SCREEN;
             case KC_UP:     return U"     " PRIVATE_MAXIMIZE;
             case KC_DOWN:   return U"     " PRIVATE_WINDOW;
-            // OS-aware shortcut hints (wave B): Win/Super+Tab window switcher,
-            // Win/Super+S launcher/search. Tab base is narrow (4 spaces clear it).
-            case KC_TAB:    return U"    " ICON_WINDOW_SWITCH; // Win/Super+Tab
-            case KC_S:      return U"   "  ICON_LAUNCHER;      // Win+S / Super+S search
             default: break;
+        }
+        // Win+Tab (Task View) / Win+S (search) — wave B. These are Windows (and
+        // best-guess for an unknown OS) bindings. On Linux the launcher/switcher
+        // chord is desktop-specific (KDE: Super-tap launcher + Alt+Tab switcher;
+        // GNOME: the Super overview), so Super+Tab / Super+S would point at a
+        // shortcut the DE may not bind (it does nothing on KDE Plasma). Linux
+        // window switching is already shown as Alt+Tab via the Alt branch above,
+        // so skip these two on Linux rather than mislead.
+        if (active_os != POLY_OS_LINUX) {
+            switch(keycode) {
+                case KC_TAB: return U"    " ICON_WINDOW_SWITCH; // Win+Tab Task View
+                case KC_S:   return U"   "  ICON_LAUNCHER;      // Win+S search
+                default: break;
+            }
         }
     }
     }

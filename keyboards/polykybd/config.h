@@ -120,6 +120,12 @@
 //     QMK OS_DETECTION as the auto-mode fallback (only source on host-less / locked
 //     machines). Persisted in poly_eeconf_t.os_state. Drives the modifier-legend
 //     swap, the OS icon, and the semantic action keys. See enum poly_os in state.h.
+// v8: distinguishes GNOME and KDE from generic Linux (new enum poly_os values
+//     POLY_OS_LINUX_GNOME/KDE, set by the host from $XDG_CURRENT_DESKTOP and pushed
+//     over cmd 29) so the GUI/Super-key hints + OS icon match the desktop environment.
+//     Adds display-only shortcut-hint glyphs (word-nav, launcher, app/window switch,
+//     close) to the symbol font-pack bundle (content_version bumped). No new command;
+//     the host must match v8 to connect (exact-match gate) and reflash the bundle.
 #define PROTOCOL_VERSION 8
 
 #define FULL_BRIGHT 50

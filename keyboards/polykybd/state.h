@@ -38,8 +38,8 @@ enum poly_os {
 
 // poly_sync_t.active_os packs the resolved OS in the low bits plus the auto-mode
 // flag in bit7, so the slave can render the OS *and* the auto/pin badge from the
-// one synced byte. Readers that want the bare OS (e.g. emit_os_action) mask with
-// POLY_OS_VALUE_MASK; the icon decodes POLY_OS_AUTO_FLAG for the badge.
+// one synced byte. Readers that want the bare OS (e.g. keycode_to_disp_overlay)
+// mask with POLY_OS_VALUE_MASK; the icon decodes POLY_OS_AUTO_FLAG for the badge.
 #define POLY_OS_VALUE_MASK 0x7Fu
 #define POLY_OS_AUTO_FLAG  0x80u
 

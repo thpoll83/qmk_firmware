@@ -1355,6 +1355,20 @@ void reset_idle_jitter(void) {
     memset(s_idle_episode, 0, sizeof(s_idle_episode));
 }
 
+// Draw a legend horizontally CENTRED in the visible key window
+// [BUFFER_X, BUFFER_X+SCREEN_WIDTH), baseline at y, instead of left-aligned at
+// BUFFER_X. Used for the bottom (thumb) row so its mixed chrome/icon legends
+// (arrows, Base, Make, toggles, world, …) sit centred. Measures the glyph ink
+// extent (kdisp_gfx_text_bounds), so any manual leading-space padding in the
+// legend string is absorbed automatically — no need to strip it.
+static void draw_legend_cx(const uint32_t* text, int8_t y) {
+    int8_t lo = 0, hi = 0;
+    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &lo, &hi);
+    const int8_t w    = (int8_t)(hi - lo + 1);
+    const int8_t left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - lo);
+    kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, left, y, text, KDISP_CY_DEFAULT);
+}
+
 void update_displays(enum refresh_mode mode) {
     const poly_sync_t* local_state = get_local_state();
     const bool idle = (local_state->flags & DISP_IDLE) != 0;
@@ -1440,6 +1454,9 @@ void update_displays(enum refresh_mode mode) {
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
                                 kdisp_write_gfx_char(g_all_fonts, g_all_font_count, BUFFER_X, 23, unicode_map[chr], 0);
                             }
+                        } else if (r == MATRIX_ROWS_PER_SIDE - 1) {
+                            // Bottom (thumb) row: centre the legend horizontally.
+                            draw_legend_cx(text, 23);
                         } else {
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
@@ -1570,6 +1587,28 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         } else {
             uprintf("wait %ld.%03ld\n", t/1000, t%1000);
             uprintf("release 0x%04x\n", keycode);
+        }
+    }
+
+    // macOS/iOS: swap the GUI and Alt keys (keycode here, legend in keycode_helper)
+    // so the physical modifier row matches a Mac's Ctrl–Option–Command order — the
+    // GUI key acts as Option/Alt and the Alt key as Command/GUI, on both halves.
+    // Only the four basic modifier keycodes are remapped, and only on an Apple OS.
+    {
+        const uint8_t os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+        if (os == POLY_OS_MACOS || os == POLY_OS_IOS) {
+            uint16_t swapped = 0;
+            switch (keycode) {
+                case KC_LGUI: swapped = KC_LALT; break;
+                case KC_RGUI: swapped = KC_RALT; break;
+                case KC_LALT: swapped = KC_LGUI; break;
+                case KC_RALT: swapped = KC_RGUI; break;
+            }
+            if (swapped) {
+                if (record->event.pressed) register_code(swapped);
+                else                       unregister_code(swapped);
+                return false;
+            }
         }
     }
 

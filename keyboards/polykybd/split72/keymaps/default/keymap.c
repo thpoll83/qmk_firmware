@@ -224,7 +224,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // cycling KC_OS_ICON; the per-OS semantic action keys are not mapped here.
     [_SL] = LAYOUT_left_right_stacked(
         KC_DDIM,    KC_DMIN,    KC_D1Q,     KC_DHLF,    KC_D3Q,     KC_DMAX,    KC_DBRI,
-        KC_DAUTO,   KC_OS_SET_AUTO, KC_OS_SET_WINDOWS, KC_OS_SET_MACOS, KC_OS_SET_LINUX, KC_OS_SET_ANDROID, KC_OS_SET_IOS,
+        KC_DAUTO,   KC_OS_SET_AUTO, KC_OS_SET_WINDOWS, KC_OS_SET_MACOS, KC_OS_SET_LINUX, KC_OS_SET_ANDROID, KC_NO,
         KC_NO,      KC_L0,      KC_L1,      KC_L2,      KC_L3,      KC_L4,      KC_NO,      _______,
         KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_RBT,
         KC_BASE,    LBL_TEXT,   KC_TOGMODS, KC_TOGTEXT,             KC_NO,      QK_MAKE,    QK_BOOT,

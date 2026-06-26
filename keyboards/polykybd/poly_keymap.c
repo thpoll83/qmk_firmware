@@ -1060,6 +1060,16 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
         // macOS/iOS: editing lives on Cmd (GUI). Multi-modifier mac chords first.
         const bool cmd  = (local_mods & MOD_MASK_GUI) != 0;
         const bool ctrl = (local_mods & MOD_MASK_CTRL) != 0;
+        // Word nav on macOS is Option(Alt)+arrows (line nav is Cmd+arrows, below),
+        // so they live on different modifiers and never collide. Guard on !cmd so a
+        // Cmd+Option chord falls through to the Cmd (line-nav) switch instead.
+        if ((local_mods & MOD_MASK_ALT) != 0 && !cmd) {
+            switch(keycode) {
+                case KC_LEFT:  return U"    " ICON_WORD_LEFT;
+                case KC_RIGHT: return U"    " ICON_WORD_RIGHT;
+                default: break;
+            }
+        }
         if (cmd && ctrl) {
             switch(keycode) {
                 case KC_Q: return U"    " PRIVATE_LOCK;       // Ctrl+Cmd+Q = lock screen
@@ -1081,6 +1091,15 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 // Cmd+Z = undo, Cmd+Shift+Z = redo (mac has no Cmd+Y redo, and
                 // Cmd+D is "duplicate" not delete — neither is shown).
                 case KC_Z: return shift ? U"      " ARROWS_REDO : U"      " ARROWS_UNDO;
+                // OS-aware shortcut hints (wave B). Tab uses the narrow ARROWS_TAB
+                // base legend, so 4 spaces clear it; Space gets 3.
+                case KC_TAB:   return U"    " ICON_APP_SWITCH;    // Cmd+Tab app switcher
+                case KC_SPACE: return U"   "  ICON_LAUNCHER;      // Cmd+Space (Spotlight)
+                case KC_W:     return U"    " ICON_CLOSE;         // Cmd+W close
+                case KC_Q:     return U"    " ICON_CLOSE;         // Cmd+Q quit
+                case KC_GRV:   return U"    " ICON_WINDOW_SWITCH; // Cmd+` window switcher
+                case KC_LEFT:  return U"    " ARROWS_LEFTSTOP;    // Cmd+Left  line start
+                case KC_RIGHT: return U"    " ARROWS_RIGHTSTOP;   // Cmd+Right line end
                 default: break;
             }
         }
@@ -1104,6 +1123,16 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             // Ctrl+Z = undo.
             case KC_Y: return U"      " ARROWS_REDO;
             case KC_Z: return shift ? U"      " ARROWS_REDO : U"      " ARROWS_UNDO;
+            // OS-aware shortcut hints (wave B): word nav + close on Ctrl.
+            case KC_LEFT:  return U"    " ICON_WORD_LEFT;   // Ctrl+Left  word left
+            case KC_RIGHT: return U"    " ICON_WORD_RIGHT;  // Ctrl+Right word right
+            case KC_W:     return U"    " ICON_CLOSE;       // Ctrl+W close
+            default: break;
+        }
+    } else if ((local_mods & MOD_MASK_ALT) != 0) {
+        switch(keycode) {
+            case KC_TAB: return U"    " ICON_APP_SWITCH;    // Alt+Tab app switcher
+            case KC_F4:  return U"    " ICON_CLOSE;         // Alt+F4 close
             default: break;
         }
     } else if (wm_held) {
@@ -1113,6 +1142,10 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_P:      return U"    " PRIVATE_SCREEN;
             case KC_UP:     return U"     " PRIVATE_MAXIMIZE;
             case KC_DOWN:   return U"     " PRIVATE_WINDOW;
+            // OS-aware shortcut hints (wave B): Win/Super+Tab window switcher,
+            // Win/Super+S launcher/search. Tab base is narrow (4 spaces clear it).
+            case KC_TAB:    return U"    " ICON_WINDOW_SWITCH; // Win/Super+Tab
+            case KC_S:      return U"   "  ICON_LAUNCHER;      // Win+S / Super+S search
             default: break;
         }
     }

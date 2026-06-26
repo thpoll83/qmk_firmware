@@ -78,6 +78,12 @@ fetch "$BASE/notosanssymbols/NotoSansSymbols%5Bwght%5D.ttf" \
 fetch "$BASE/notosanssymbols2/NotoSansSymbols2-Regular.ttf" \
       "Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf"
 
+# NotoSansMath supplies the dashed word-nav arrows (U+21E0/21E2), which are
+# absent from both NotoSansSymbols v1 (only the solid 0x2190-99 arrows) and
+# Symbols2 — used by the OS-aware "word left/right" shortcut hints.
+fetch "$BASE/notosansmath/NotoSansMath-Regular.ttf" \
+      "Noto_Sans_Math/NotoSansMath-Regular.ttf"
+
 # NotoColorEmoji lives in a separate repo; upstream filename differs from
 # the path create_fonts.sh references (NotoColorEmoji-Regular.ttf)
 fetch "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf" \

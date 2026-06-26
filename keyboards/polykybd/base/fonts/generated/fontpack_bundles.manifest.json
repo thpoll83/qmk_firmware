@@ -11,8 +11,8 @@
       "index": 0,
       "slot_offset": 4096,
       "slot_size": 98304,
-      "total_size": 29792,
-      "font_count": 7,
+      "total_size": 30236,
+      "font_count": 9,
       "fonts": [
         {
           "all_fonts_index": 19,
@@ -53,8 +53,20 @@
         {
           "all_fonts_index": 47,
           "symbol": "NotoSansSymbols2_Regular_Window_18pt16b",
-          "first": 128469,
+          "first": 128468,
           "last": 128475
+        },
+        {
+          "all_fonts_index": 142,
+          "symbol": "NotoSansSymbols2_Regular_WinSwitch_18pt16b",
+          "first": 128445,
+          "last": 128445
+        },
+        {
+          "all_fonts_index": 143,
+          "symbol": "NotoSansMath_Regular_WordArrows_20pt16b",
+          "first": 8672,
+          "last": 8674
         }
       ]
     },
@@ -301,7 +313,7 @@
       "font_count": 1,
       "fonts": [
         {
-          "all_fonts_index": 142,
+          "all_fonts_index": 144,
           "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
           "first": 57344,
           "last": 57503

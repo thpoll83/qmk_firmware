@@ -140,7 +140,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_F23:                        return U" F23";
         case KC_F24:                        return U" F24";
         case KC_LEFT_CTRL:
-        case KC_RIGHT_CTRL:                 return (state_flags & MODS_AS_TEXT) != 0 ? U"Ctrl" : TECHNICAL_CONTROL;
+        case KC_RIGHT_CTRL:                 return (state_flags & MODS_AS_TEXT) != 0 ? U"Ctrl" : (kc_os_is_apple() ? ICON_MAC_CONTROL : TECHNICAL_CONTROL);
         // OS-aware modifier legends: macOS/iOS show ⌥ Option / ⌘ Command, other
         // OSes show ⎇ Alt / ❖ GUI(Super). All glyphs are resident (Technical2/
         // Technical/GuiKey), so they render with no font pack.

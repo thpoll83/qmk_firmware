@@ -58,6 +58,7 @@
 #define ICON_OS_LINUX               	U"\x95"
 #define ICON_OS_ANDROID             	U"\x96"
 #define ICON_OS_IOS                 	U"\x97"
+#define ICON_MAC_CONTROL            	U"\x98"
 #define INVERTED_EMARK              	U"\xa1"
 #define CENT_SIGN                   	U"\xa2"
 #define POUND_SIGN                  	U"\xa3"

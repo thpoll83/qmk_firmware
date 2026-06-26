@@ -1,6 +1,31 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "keycode_helper.h"
+#include "state.h"
+
+// The active OS (synced into poly_sync_t.active_os), used to pick OS-aware legends.
+static inline uint8_t kc_active_os(void) {
+    return get_local_state()->active_os & POLY_OS_VALUE_MASK;
+}
+// macOS and iOS use the Command(⌘)/Option(⌥) glyphs; the others use ❖/⎇.
+static inline bool kc_os_is_apple(void) {
+    uint8_t o = kc_active_os();
+    return o == POLY_OS_MACOS || o == POLY_OS_IOS;
+}
+// GUI/Super key icon per active OS — a distinct resident glyph each:
+// Windows 4-pane, Linux 🐧, Android head, ❖ when nothing is detected. macOS/iOS
+// are handled by the Apple modifier swap below (the GUI key shows ⌥), so they
+// never reach this; kept here as a safe fallback (⌘) if the swap is ever bypassed.
+static inline const uint32_t* kc_os_gui_icon(void) {
+    switch (kc_active_os()) {
+        case POLY_OS_WINDOWS: return ICON_OS_WINDOWS;
+        case POLY_OS_MACOS:   return TECHNICAL_COMMAND;
+        case POLY_OS_LINUX:   return ICON_OS_LINUX;
+        case POLY_OS_ANDROID: return ICON_OS_ANDROID;
+        case POLY_OS_IOS:     return TECHNICAL_COMMAND;   // iOS collapsed into macOS
+        default:              return DINGBAT_BLACK_DIA_X;
+    }
+}
 
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {
     switch (keycode) {
@@ -117,11 +142,16 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_F23:                        return U" F23";
         case KC_F24:                        return U" F24";
         case KC_LEFT_CTRL:
-        case KC_RIGHT_CTRL:                 return (state_flags & MODS_AS_TEXT) != 0 ? U"Ctrl" : TECHNICAL_CONTROL;
-        case KC_LEFT_ALT:                   return (state_flags & MODS_AS_TEXT) != 0 ? U"Alt" : TECHNICAL_OPTION;
-        case KC_RIGHT_ALT:                  return (state_flags & MODS_AS_TEXT) != 0 ? U"RAlt" : TECHNICAL_OPTION;
+        case KC_RIGHT_CTRL:                 return (state_flags & MODS_AS_TEXT) != 0 ? U"Ctrl" : (kc_os_is_apple() ? ICON_MAC_CONTROL : TECHNICAL_CONTROL);
+        // OS-aware modifier legends. On macOS/iOS the GUI and Alt keys are SWAPPED
+        // (both legend and keycode — see process_record) so the physical row matches
+        // a Mac's Ctrl–Option–Command order: the GUI key becomes Option ⌥ and the
+        // Alt key becomes Command ⌘. Other OSes keep ⎇ Alt and the per-OS GUI icon.
+        // All glyphs are resident (Technical2/GuiKey/IconsFont) — render with no pack.
+        case KC_LEFT_ALT:                   return (state_flags & MODS_AS_TEXT) != 0 ? (kc_os_is_apple() ? U"Cmd"  : U"Alt")  : (kc_os_is_apple() ? TECHNICAL_COMMAND : TECHNICAL_ALTERNATIVE);
+        case KC_RIGHT_ALT:                  return (state_flags & MODS_AS_TEXT) != 0 ? (kc_os_is_apple() ? U"Cmd"  : U"RAlt") : (kc_os_is_apple() ? TECHNICAL_COMMAND : TECHNICAL_ALTERNATIVE);
         case KC_LGUI:
-        case KC_RGUI:                       return (state_flags & MODS_AS_TEXT) != 0 ? U"GUI" : DINGBAT_BLACK_DIA_X;
+        case KC_RGUI:                       return (state_flags & MODS_AS_TEXT) != 0 ? (kc_os_is_apple() ? U"Opt"  : U"GUI")  : (kc_os_is_apple() ? TECHNICAL_OPTION  : kc_os_gui_icon());
         case KC_LEFT:                       return U"  " ICON_LEFT;
         case KC_RIGHT:                      return U"  " ICON_RIGHT;
         case KC_UP:                         return U"  " ICON_UP;
@@ -156,6 +186,55 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_EXSEL:                      return U"Line\r\v    sel";
         case KC_OPER:                       return U"Line\r\v    join";
         case KC_CRSEL:                      return U"Line\r\v    del";
+
+        // OS-semantic action keys (KC_OS_*): plain labels for now; an OS-aware
+        // legend (⌘ vs ⌃) follows with the modifier-legend swap.
+        case KC_OS_COPY:                    return U"Copy";
+        case KC_OS_CUT:                     return U"Cut";
+        case KC_OS_PASTE:                   return U"Paste";
+        case KC_OS_UNDO:                    return U"Undo";
+        case KC_OS_REDO:                    return U"Redo";
+        case KC_OS_SELALL:                  return U"SelAll";
+        case KC_OS_FIND:                    return U"Find";
+        case KC_OS_LOCK:                    return U"Lock";
+        case KC_OS_SCRSHOT:                 return U"Snip";
+        case KC_OS_SEARCH:                  return U"Srch";
+        case KC_OS_APP_SWITCH:              return U"App\r\v  sw";
+        case KC_OS_WIN_SWITCH:              return U"Win\r\v  sw";
+        case KC_OS_EMOJI:                   return U"Emoji";
+        case KC_OS_WORD_LEFT:               return U"Word" ICON_LEFT;
+        case KC_OS_WORD_RIGHT:              return U"Word" ICON_RIGHT;
+        case KC_OS_LINE_HOME:               return U"Line" ICON_LEFT;
+        case KC_OS_LINE_END:                return U"Line" ICON_RIGHT;
+        // OS status / control: top line = active OS, bottom = auto vs manual pin.
+        case KC_OS_ICON: {
+            const bool autom = (get_local_state()->active_os & POLY_OS_AUTO_FLAG) != 0;
+            switch (get_local_state()->active_os & POLY_OS_VALUE_MASK) {
+                case POLY_OS_WINDOWS: return autom ? U"Win\r\v auto" : U"Win\r\v  pin";
+                case POLY_OS_MACOS:   return autom ? U"Mac\r\v auto" : U"Mac\r\v  pin";
+                case POLY_OS_LINUX:   return autom ? U"Lnx\r\v auto" : U"Lnx\r\v  pin";
+                case POLY_OS_ANDROID: return autom ? U"And\r\v auto" : U"And\r\v  pin";
+                case POLY_OS_IOS:     return autom ? U"iOS\r\v auto" : U"iOS\r\v  pin";
+                default:              return autom ? U"OS?\r\v auto" : U"OS?\r\v  pin";
+            }
+        }
+        // OS selection keys: name on top, a toggle glyph below marking the active
+        // choice (radio-style — exactly one is ON). AUTO is ON in auto mode; each
+        // pin key is ON when that OS is the active pinned one.
+        case KC_OS_SET_AUTO ... KC_OS_SET_END - 1: {
+            const uint8_t sel   = (uint8_t)(keycode - KC_OS_SET_BASE);
+            const bool    autom = (get_local_state()->active_os & POLY_OS_AUTO_FLAG) != 0;
+            const uint8_t cur   = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+            const bool    on    = (sel == POLY_OS_UNKNOWN) ? autom : (!autom && sel == cur);
+            switch (sel) {
+                case POLY_OS_UNKNOWN: return on ? U"Auto\r\v" ICON_SWITCH_ON : U"Auto\r\v" ICON_SWITCH_OFF;
+                case POLY_OS_WINDOWS: return on ? U"Win\r\v"  ICON_SWITCH_ON : U"Win\r\v"  ICON_SWITCH_OFF;
+                case POLY_OS_MACOS:   return on ? U"Mac\r\v"  ICON_SWITCH_ON : U"Mac\r\v"  ICON_SWITCH_OFF;
+                case POLY_OS_LINUX:   return on ? U"Lnx\r\v"  ICON_SWITCH_ON : U"Lnx\r\v"  ICON_SWITCH_OFF;
+                case POLY_OS_ANDROID: return on ? U"And\r\v"  ICON_SWITCH_ON : U"And\r\v"  ICON_SWITCH_OFF;
+                default:              return U"";   // iOS collapsed into macOS — not a pinnable selection
+            }
+        }
 
         //The following entries will over-rule language specific entries in the follow language lookup table,
         //however with this we can control them by flags and so far those where not language specific anyway.

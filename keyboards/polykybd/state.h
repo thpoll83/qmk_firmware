@@ -16,6 +16,33 @@ enum poly_idle_style {
     IDLE_STYLE_COUNT
 };
 
+// Active host-OS identity — a FIRST-CLASS state, deliberately DECOUPLED from
+// unicode_mode (which stays a "how do I type codepoints" concern, host cmd 20).
+// active_os drives the modifier-legend swap (Cmd/Opt vs Ctrl/Alt), the OS icon,
+// and the semantic action keys (Lock/Search/Copy/… resolve per-OS at press time).
+// Values are append-only: persisted in poly_eeconf_t.os_state and carried on the
+// wire (HID cmd 29), so never reorder or reuse — add new OSes at the end.
+// Sources are reconciled by resolve/get_active_os(): a manual pin wins; otherwise
+// host push (cmd 29) beats firmware USB detection (QMK os_detection). Android and
+// iOS exist for the manual pin / iOS USB-detect — note QMK detection reports
+// Android (and ChromeOS) as Linux, so Android can only ever come from a manual pin.
+enum poly_os {
+    POLY_OS_UNKNOWN = 0,
+    POLY_OS_WINDOWS = 1,
+    POLY_OS_MACOS   = 2,
+    POLY_OS_LINUX   = 3,
+    POLY_OS_ANDROID = 4,
+    POLY_OS_IOS     = 5,
+    POLY_OS_COUNT
+};
+
+// poly_sync_t.active_os packs the resolved OS in the low bits plus the auto-mode
+// flag in bit7, so the slave can render the OS *and* the auto/pin badge from the
+// one synced byte. Readers that want the bare OS (e.g. emit_os_action) mask with
+// POLY_OS_VALUE_MASK; the icon decodes POLY_OS_AUTO_FLAG for the badge.
+#define POLY_OS_VALUE_MASK 0x7Fu
+#define POLY_OS_AUTO_FLAG  0x80u
+
 typedef struct _poly_layer_t {
     uint32_t      crc32;
     layer_state_t layer;
@@ -41,6 +68,11 @@ typedef struct _poly_sync_t {
     // independently as they pulse dark (see kdisp_idle); there is no shared offset
     // to sync — only the style bit (and the pulse `contrast`) cross the link.
     uint8_t  idle_style;
+    // Active host-OS identity (enum poly_os). Resolved on the master from the
+    // manual pin / host push / USB detection (get_active_os) and synced here so the
+    // slave's keycaps render the same legends and its semantic action keys emit the
+    // same per-OS sequences. The master refreshes it every housekeeping pass.
+    uint8_t  active_os;
 } poly_sync_t;
 
 typedef struct _poly_last_t {
@@ -64,11 +96,14 @@ typedef struct _poly_eeconf_t {
     // Emoji are bit-packed 14-bit category|offset codes; languages are LANG_* bytes.
     uint8_t  mru_emoji[MRU_EMOJI_PACKED];
     uint8_t  mru_lang[MRU_CAP];
-    // Restores the trailing byte the former `uint16_t unused` added via 2-byte
-    // struct alignment, so splitting it into idle_style+unused keeps sizeof at
+    // Persisted active-OS state, packed by pack_os_state(): bit7 = manual pin
+    // engaged (0 = auto mode, the default — so a fresh/zeroed EEPROM comes up in
+    // auto), bit6 = a real OS value is known, bits0-5 = enum poly_os value (the
+    // pin in manual mode, the last resolved OS in auto). Was the trailing
+    // alignment `reserved` byte, so repurposing it keeps sizeof at
     // EECONFIG_USER_DATA_SIZE and leaves latin_ex/mru at their original offsets
-    // (existing EEPROMs stay readable).
-    uint8_t  reserved;
+    // (old EEPROMs read it as 0 = auto/unknown — a clean default migration).
+    uint8_t  os_state;
 } poly_eeconf_t;
 
 
@@ -191,6 +226,37 @@ void set_idle_style(uint8_t style);
 
 // Records the idle style without marking settings dirty (boot-time EEPROM load).
 void note_idle_style(uint8_t style);
+
+// ---- Active host-OS (enum poly_os) — see the poly_os comment in this header. ----
+
+// The OS currently in effect: the manual pin while pinned, else the last resolved
+// (host/detection) OS in auto mode, else POLY_OS_UNKNOWN. Rendering/semantic-action
+// code on the MASTER uses this; the slave reads the synced poly_sync_t.active_os.
+uint8_t get_active_os(void);
+
+// True while auto mode is engaged (detection + host pushes accepted). Manual mode
+// (a pin) ignores both. Auto is the default for a fresh EEPROM.
+bool get_os_auto_mode(void);
+
+// Engage/leave auto mode without changing the pin/resolved value (deferred flush).
+void set_os_auto_mode(bool on);
+
+// Pin the OS explicitly (manual mode): wins over host + detection, survives
+// reboots. The only path that can select Android. Deferred EEPROM flush.
+void set_user_os(uint8_t os);
+
+// Host-pushed OS (HID cmd 29): applied only in auto mode; beats detection for the
+// rest of the session (set_detected_os yields once the host has spoken).
+void set_host_os(uint8_t os);
+
+// Firmware USB-detected OS (QMK os_detection callback): applied only in auto mode
+// and only while the host has NOT pushed one this session. Deferred EEPROM flush.
+void set_detected_os(uint8_t os);
+
+// Persist/restore the active-OS state across reboots, packed into the single
+// poly_eeconf_t.os_state byte (see pack/load below). load_os_state() runs at boot.
+uint8_t pack_os_state(void);
+void load_os_state(uint8_t packed);
 
 // Queues a default-layer EEPROM write — safe from a sync handler. Written at the next flush.
 void defer_default_layer_save(layer_state_t def_layer);

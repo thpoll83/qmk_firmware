@@ -38,6 +38,22 @@ static uint8_t g_last_auto_brightness = FULL_BRIGHT;
 // fall back to the user's own brightness instead (see get_active_brightness).
 static bool    g_auto_value_known     = false;
 
+// ---- Active host-OS (enum poly_os). Mirrors the brightness auto/manual model. ----
+// g_user_os is the manual PIN (only set at deliberate set-points); g_resolved_os is
+// the last value learned from host/detection while in auto mode. The mode + the
+// relevant value are persisted in poly_eeconf_t.os_state (pack/load_os_state) so a
+// reboot restores them — a daily host-switcher stays in auto (re-resolves per plug),
+// an Android/locked-down user pins manually and it sticks.
+static uint8_t g_user_os      = POLY_OS_UNKNOWN;  // the manual pin
+static uint8_t g_resolved_os  = POLY_OS_UNKNOWN;  // last host/detection result (auto mode)
+static bool    g_os_auto      = true;             // default: auto (accept host + detection)
+static bool    g_os_known     = false;            // a real OS has been resolved/pinned
+// Host has pushed an OS this session -> firmware USB detection yields to it (host
+// wins). RAM-only, so it resets on every boot/re-enumeration, which is correct:
+// detection then fills in again until/unless the host re-pushes.
+static bool    g_host_os_seen = false;
+static bool    g_os_dirty     = false;
+
 static bool          g_def_layer_dirty = false;
 static layer_state_t g_def_layer_pending = 0;
 
@@ -392,6 +408,91 @@ void note_idle_style(uint8_t style) {
     g_idle_style = (style < IDLE_STYLE_COUNT) ? style : IDLE_STYLE_PULSE;
 }
 
+// ---- Active host-OS (enum poly_os) ----
+
+// The OS in effect: the manual pin while pinned, else the last resolved OS in auto
+// mode (only once one is actually known — UNKNOWN until host/detection speaks).
+uint8_t get_active_os(void) {
+    if (!g_os_auto) return g_user_os;
+    return g_os_known ? g_resolved_os : (uint8_t)POLY_OS_UNKNOWN;
+}
+
+bool get_os_auto_mode(void) {
+    return g_os_auto;
+}
+
+// Engage/leave auto mode without disturbing the stored pin/resolved value.
+void set_os_auto_mode(bool on) {
+    if (g_os_auto == on) return;
+    g_os_auto   = on;
+    g_os_dirty  = true;
+}
+
+// Pin the OS explicitly — manual mode. Wins over host + detection and survives
+// reboots; the only way to select Android (USB detection can't tell it from Linux).
+void set_user_os(uint8_t os) {
+    if (os >= POLY_OS_COUNT) return;
+    g_user_os  = os;
+    g_os_auto  = false;
+    g_os_known = true;
+    g_os_dirty = true;
+}
+
+// Host-pushed OS (HID cmd 29). Applied only in auto mode; marks the host as having
+// spoken so firmware detection yields to it for the rest of the session.
+void set_host_os(uint8_t os) {
+    if (os >= POLY_OS_COUNT) return;
+    if (!g_os_auto) return;                 // a manual pin is in charge — ignore the push entirely
+    g_host_os_seen = true;                  // only mark "host spoke" once we actually accept it
+    if (g_resolved_os == os && g_os_known) return;
+    g_resolved_os = os;
+    g_os_known    = true;
+    g_os_dirty    = true;
+}
+
+// Firmware USB-detected OS (QMK os_detection). Applied only in auto mode and only
+// until the host pushes one (host wins). Detection re-runs on each re-enumeration.
+void set_detected_os(uint8_t os) {
+    if (os >= POLY_OS_COUNT) return;
+    if (!g_os_auto || g_host_os_seen) return;
+    if (g_resolved_os == os && g_os_known) return;
+    g_resolved_os = os;
+    g_os_known    = true;
+    g_os_dirty    = true;
+}
+
+// Pack the active-OS state into one EEPROM byte. bit7 = manual pin engaged (so a
+// zeroed/fresh EEPROM = auto, the default), bit6 = a real value is known, bits0-5 =
+// the value (the pin in manual mode, the last resolved OS in auto — stored so a
+// reboot shows the right OS immediately, before host/detection re-confirm).
+uint8_t pack_os_state(void) {
+    uint8_t b = 0;
+    uint8_t val;
+    if (!g_os_auto) { b |= 0x80u; val = g_user_os; }   // manual pin
+    else            { val = g_resolved_os; }            // auto: last resolved
+    if (g_os_known) b |= 0x40u;
+    return (uint8_t)(b | (val & 0x3Fu));
+}
+
+// Restore the active-OS state at boot from the packed byte (0 from an old EEPROM =
+// auto, unknown — the desired default).
+void load_os_state(uint8_t packed) {
+    g_os_auto  = (packed & 0x80u) == 0;     // bit7 set => manual pin
+    g_os_known = (packed & 0x40u) != 0;
+    uint8_t val = packed & 0x3Fu;
+    if (val >= POLY_OS_COUNT) { val = POLY_OS_UNKNOWN; g_os_known = false; }
+    if (g_os_auto) g_resolved_os = g_os_known ? val : (uint8_t)POLY_OS_UNKNOWN;
+    else           g_user_os     = g_os_known ? val : (uint8_t)POLY_OS_UNKNOWN;
+}
+
+// Writes the single os_state byte to EEPROM. Separate from save_user_settings()
+// because os_state sits at the end of poly_eeconf_t (the former alignment byte),
+// not in the contiguous lang/brightness/idle/auto settings block.
+static void save_user_os(void) {
+    uint8_t packed = pack_os_state();
+    eeconfig_update_user_datablock(&packed, offsetof(poly_eeconf_t, os_state), sizeof(packed));
+}
+
 // Defers a default-layer EEPROM write — safe to call from split sync handlers.
 // The actual write happens at the next flush (save_all_dirty).
 void defer_default_layer_save(layer_state_t def_layer) {
@@ -412,6 +513,7 @@ void mark_latin_dirty(void) {
 // never on the typing hot path.
 void save_all_dirty(void) {
     if (g_brightness_dirty) { save_user_settings(); g_brightness_dirty = false; }
+    if (g_os_dirty)         { save_user_os();       g_os_dirty = false; }
     if (g_latin_dirty)      { save_user_latin();    g_latin_dirty = false; }
     if (g_def_layer_dirty)  { eeconfig_update_default_layer(g_def_layer_pending); g_def_layer_dirty = false; }
     save_user_mru_if_dirty();

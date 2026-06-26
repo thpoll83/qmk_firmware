@@ -70,6 +70,7 @@
 
 #include "layers.h"
 #include "keycode_helper.h"
+#include "os_actions.h"
 #include "uni.h"
 #include "emoji/emoji_layer.h"
 #include "lang_layer.h"
@@ -595,6 +596,19 @@ void housekeeping_task_user(void) {
             local_state->flags = flags;
             // Sync the active idle style so the slave jitters in lockstep with us.
             local_state->idle_style = get_idle_style();
+        }
+    }
+    // Refresh the synced active-OS on the MASTER every pass — it is the single
+    // source of truth (resolves manual pin / host push / USB detection); the slave
+    // adopts it via copy_local_state for its legends/actions. Must be master-only:
+    // get_active_os() reads this half's own state, which on the slave is empty and
+    // would clobber the just-synced value. Cheap (a couple of branches) and the
+    // diff-gated poly sync only crosses the UART when the value actually changes.
+    if (is_usb_host_side()) {
+        uint8_t os = (uint8_t)(get_active_os() | (get_os_auto_mode() ? POLY_OS_AUTO_FLAG : 0));
+        if (access_local_state()->active_os != os) {
+            access_local_state()->active_os = os;
+            request_disp_refresh();   // OS or auto/pin mode changed -> re-render legends + icon
         }
     }
 }
@@ -1341,6 +1355,25 @@ void reset_idle_jitter(void) {
     memset(s_idle_episode, 0, sizeof(s_idle_episode));
 }
 
+// Draw a legend horizontally CENTRED in the visible key window
+// [BUFFER_X, BUFFER_X+SCREEN_WIDTH), baseline at y, instead of left-aligned at
+// BUFFER_X. Used for the bottom (thumb) row so its mixed chrome/icon legends
+// (arrows, Base, Make, toggles, world, …) sit centred.
+//
+// Leading spaces are skipped first: many legends carry manual left-padding (e.g.
+// the arrows are U"  " + icon), and the Base font's space glyph is a degenerate
+// 1×1 ink box, so kdisp_gfx_text_bounds would count those spaces as ink at x=0,
+// inflate the measured width, and push the real glyph right of centre. Skipping
+// them makes the measure+draw start at the first real glyph, truly centred.
+static void draw_legend_cx(const uint32_t* text, int8_t y) {
+    while (*text == U' ') text++;          // drop manual leading padding (skews bbox)
+    int8_t lo = 0, hi = 0;
+    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &lo, &hi);
+    const int8_t w    = (int8_t)(hi - lo + 1);
+    const int8_t left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - lo);
+    kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, left, y, text, KDISP_CY_DEFAULT);
+}
+
 void update_displays(enum refresh_mode mode) {
     const poly_sync_t* local_state = get_local_state();
     const bool idle = (local_state->flags & DISP_IDLE) != 0;
@@ -1426,6 +1459,9 @@ void update_displays(enum refresh_mode mode) {
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
                                 kdisp_write_gfx_char(g_all_fonts, g_all_font_count, BUFFER_X, 23, unicode_map[chr], 0);
                             }
+                        } else if (r == MATRIX_ROWS_PER_SIDE - 1) {
+                            // Bottom (thumb) row: centre the legend horizontally.
+                            draw_legend_cx(text, 23);
                         } else {
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
@@ -1542,6 +1578,11 @@ void kdisp_idle(uint8_t contrast) {
 }
 
 // Handles keypress events including unicode input, language modifications, and special commands.
+// Per-key latch (bit0=LGUI, 1=RGUI, 2=LALT, 3=RALT) recording that the Apple
+// GUI/Alt swap was applied on press, so release unregisters the same modifier even
+// if the active OS changed while the key was held. See the swap block below.
+static uint8_t s_apple_swap_latch = 0;
+
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     // SECURITY: the keycode of every keystroke (passwords included) must NOT be
@@ -1556,6 +1597,35 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         } else {
             uprintf("wait %ld.%03ld\n", t/1000, t%1000);
             uprintf("release 0x%04x\n", keycode);
+        }
+    }
+
+    // macOS/iOS: swap the GUI and Alt keys (keycode here, legend in keycode_helper)
+    // so the physical modifier row matches a Mac's Ctrl–Option–Command order — the
+    // GUI key acts as Option/Alt and the Alt key as Command/GUI, on both halves.
+    // Only the four basic modifier keycodes are remapped, and only on an Apple OS.
+    // The swap is LATCHED per key (s_apple_swap_latch) at press time and reused at
+    // release, so an active_os change mid-hold can't unregister the opposite mod and
+    // leave a stuck modifier — the key always releases whatever it pressed.
+    {
+        uint8_t  bit = 0;
+        uint16_t swapped = 0;
+        switch (keycode) {
+            case KC_LGUI: swapped = KC_LALT; bit = 1u << 0; break;
+            case KC_RGUI: swapped = KC_RALT; bit = 1u << 1; break;
+            case KC_LALT: swapped = KC_LGUI; bit = 1u << 2; break;
+            case KC_RALT: swapped = KC_RGUI; bit = 1u << 3; break;
+        }
+        if (bit) {
+            const uint8_t os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+            const bool swap_now = record->event.pressed
+                ? (os == POLY_OS_MACOS || os == POLY_OS_IOS)
+                : (s_apple_swap_latch & bit) != 0;
+            if (swap_now) {
+                if (record->event.pressed) { s_apple_swap_latch |= bit;            register_code(swapped); }
+                else                       { s_apple_swap_latch &= (uint8_t)~bit;  unregister_code(swapped); }
+                return false;
+            }
         }
     }
 
@@ -1594,6 +1664,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_EXSEL:
             if (record->event.pressed) { SEND_STRING(SS_TAP(X_HOME) SS_LSFT(SS_TAP(X_END))); }
             uprint("Select Line.\n");
+            return false;
+        case KC_OS_ACTION_BASE ... KC_OS_ACTION_END - 1:
+            // OS-semantic action key: emit the chord for the active OS. active_os
+            // is synced from the master, so this resolves correctly on either half.
+            if (record->event.pressed) {
+                emit_os_action((uint16_t)(keycode - KC_OS_ACTION_BASE),
+                               get_local_state()->active_os & POLY_OS_VALUE_MASK);
+            }
             return false;
         case KC_OPER:
             if (record->event.pressed) {
@@ -1801,6 +1879,33 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             toggle_brightness_auto_mode();
             request_disp_refresh();
             break;
+        case KC_OS_ICON:
+            // Cycle the active-OS selection: auto -> pin Windows -> macOS -> Linux
+            // -> Android -> iOS -> auto. A manual pin overrides detection/host and
+            // survives reboots (the only way to select Android). Runs once on release.
+            if (get_os_auto_mode()) {
+                set_user_os(POLY_OS_WINDOWS);                 // auto -> first pin
+            } else if (get_active_os() >= POLY_OS_IOS) {
+                set_os_auto_mode(true);                       // last pin -> back to auto
+            } else {
+                set_user_os((uint8_t)(get_active_os() + 1));  // next pin
+            }
+            request_disp_refresh();
+            break;
+        case KC_OS_SET_AUTO ... KC_OS_SET_END - 1: {
+            // Direct OS selection (settings layer): KC_OS_SET_AUTO clears the pin
+            // (back to host/USB detection); the others pin a specific OS. The
+            // offset from KC_OS_SET_BASE is the poly_os value. We are already inside
+            // the `if (!record->event.pressed)` block, so this runs once on release.
+            uint8_t sel = (uint8_t)(keycode - KC_OS_SET_BASE);
+            if (sel == POLY_OS_UNKNOWN) {
+                set_os_auto_mode(true);   // auto: detection / host wins
+            } else {
+                set_user_os(sel);         // pin this OS (survives reboot)
+            }
+            request_disp_refresh();
+            break;
+        }
         case KC_STORE_EE:
             // Manual "commit everything to EEPROM" — for users who want to be
             // sure their changes survive a hard power-cut without suspending.
@@ -2102,6 +2207,28 @@ void unicode_input_mode_set_user(uint8_t unicode_mode) {
     request_disp_refresh();
 }
 
+#ifdef OS_DETECTION_ENABLE
+// QMK fires this (master only — detection is USB-enumeration based) once the
+// detected OS stabilises. Feed it into the auto-mode resolver as the LOW-priority
+// source: set_detected_os applies only while in auto mode and only until the host
+// pushes an OS (host wins). The active_os refresh in housekeeping then syncs it to
+// the slave. Note: QMK reports Android and ChromeOS as OS_LINUX (shared USB stack),
+// so Android can only ever be selected by a manual pin (set_user_os), not here.
+bool process_detected_host_os_kb(os_variant_t os) {
+    if (!process_detected_host_os_user(os)) {
+        return false;
+    }
+    switch (os) {
+        case OS_WINDOWS: set_detected_os(POLY_OS_WINDOWS); break;
+        case OS_MACOS:   set_detected_os(POLY_OS_MACOS);   break;
+        case OS_IOS:     set_detected_os(POLY_OS_IOS);     break;
+        case OS_LINUX:   set_detected_os(POLY_OS_LINUX);   break;
+        case OS_UNSURE:                                    break;  // keep current
+    }
+    return true;
+}
+#endif
+
 #ifdef FW_UP_BOOT_TRACE
 // Diagnostic only (build with -DFW_UP_BOOT_TRACE): overwrite the keycaps with a
 // single digit at boot milestones so a hang in early boot is visible — the last
@@ -2200,6 +2327,14 @@ void keyboard_post_init_user(void) {
     // the host re-engages). Overrides local_state->contrast when auto was on.
     load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
+    // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
+    // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
+    // (e.g. Android) sticks. Seed local_state->active_os so the first render before
+    // housekeeping runs already reflects the restored OS.
+    load_os_state(ee.os_state);
+    // Seed with the same OS|auto-flag encoding housekeeping uses, so the first
+    // render/sync before housekeeping runs shows the correct auto/pin badge.
+    local_state->active_os = (uint8_t)(get_active_os() | (get_os_auto_mode() ? POLY_OS_AUTO_FLAG : 0));
 #ifdef RGB_MATRIX_ENABLE
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 #else

@@ -729,6 +729,46 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     raw_hid_send(data, length);
                 }
                 break;
+            case 29: //get/set active host-OS identity (protocol v7+)
+                {
+                    // data[HID_DATA_IDX]   = arg:
+                    //   0xFF -> query (reply data[3] = active OS, data[4] = auto-mode flag)
+                    //   0xFE -> engage auto mode (clear the manual pin; detection+host resume)
+                    //   else -> set the OS (enum poly_os); data[HID_DATA_IDX+1] flags:
+                    //           bit0 = 1 -> manual PIN (wins, persists); 0 -> host-auto push.
+                    // The OS is its own state, independent of the unicode mode (cmd 20):
+                    // it drives the modifier-legend swap, the OS icon, and the semantic
+                    // action keys. Synced to the slave from housekeeping (active_os).
+                    uint8_t arg   = data[HID_DATA_IDX];
+                    uint8_t flags = data[HID_DATA_IDX + 1];
+                    memset(data, 0, length);
+                    if (arg == 0xFF) {
+                        memcpy(data, "P\x1d.", 3);
+                        data[3] = get_active_os();
+                        data[4] = get_os_auto_mode() ? 1 : 0;
+                    } else if (arg == 0xFE) {
+                        set_os_auto_mode(true);
+                        memcpy(data, "P\x1d.", 3);
+                        data[3] = get_active_os();
+                        data[4] = 1;
+                        uprint("OS auto mode engaged.\n");
+                    } else if (arg < POLY_OS_COUNT) {
+                        if (flags & 0x01) {
+                            set_user_os(arg);     // manual pin
+                        } else {
+                            set_host_os(arg);     // host-auto push
+                        }
+                        memcpy(data, "P\x1d.", 3);
+                        data[3] = get_active_os();
+                        data[4] = get_os_auto_mode() ? 1 : 0;
+                        uprintf("Set OS to %u (pin=%u), active=%u.\n", arg, (unsigned)(flags & 0x01), data[3]);
+                    } else {
+                        memcpy(data, "P\x1d!", 3);
+                        uprintf("Refused OS %u.\n", arg);
+                    }
+                    raw_hid_send(data, length);
+                }
+                break;
             default:
                 if (hid_fw_up_receive(data, length)) {
                     break;

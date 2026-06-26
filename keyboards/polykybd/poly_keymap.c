@@ -1573,6 +1573,11 @@ void kdisp_idle(uint8_t contrast) {
 }
 
 // Handles keypress events including unicode input, language modifications, and special commands.
+// Per-key latch (bit0=LGUI, 1=RGUI, 2=LALT, 3=RALT) recording that the Apple
+// GUI/Alt swap was applied on press, so release unregisters the same modifier even
+// if the active OS changed while the key was held. See the swap block below.
+static uint8_t s_apple_swap_latch = 0;
+
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     // SECURITY: the keycode of every keystroke (passwords included) must NOT be
@@ -1594,19 +1599,26 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // so the physical modifier row matches a Mac's Ctrl–Option–Command order — the
     // GUI key acts as Option/Alt and the Alt key as Command/GUI, on both halves.
     // Only the four basic modifier keycodes are remapped, and only on an Apple OS.
+    // The swap is LATCHED per key (s_apple_swap_latch) at press time and reused at
+    // release, so an active_os change mid-hold can't unregister the opposite mod and
+    // leave a stuck modifier — the key always releases whatever it pressed.
     {
-        const uint8_t os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
-        if (os == POLY_OS_MACOS || os == POLY_OS_IOS) {
-            uint16_t swapped = 0;
-            switch (keycode) {
-                case KC_LGUI: swapped = KC_LALT; break;
-                case KC_RGUI: swapped = KC_RALT; break;
-                case KC_LALT: swapped = KC_LGUI; break;
-                case KC_RALT: swapped = KC_RGUI; break;
-            }
-            if (swapped) {
-                if (record->event.pressed) register_code(swapped);
-                else                       unregister_code(swapped);
+        uint8_t  bit = 0;
+        uint16_t swapped = 0;
+        switch (keycode) {
+            case KC_LGUI: swapped = KC_LALT; bit = 1u << 0; break;
+            case KC_RGUI: swapped = KC_RALT; bit = 1u << 1; break;
+            case KC_LALT: swapped = KC_LGUI; bit = 1u << 2; break;
+            case KC_RALT: swapped = KC_RGUI; bit = 1u << 3; break;
+        }
+        if (bit) {
+            const uint8_t os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+            const bool swap_now = record->event.pressed
+                ? (os == POLY_OS_MACOS || os == POLY_OS_IOS)
+                : (s_apple_swap_latch & bit) != 0;
+            if (swap_now) {
+                if (record->event.pressed) { s_apple_swap_latch |= bit;            register_code(swapped); }
+                else                       { s_apple_swap_latch &= (uint8_t)~bit;  unregister_code(swapped); }
                 return false;
             }
         }

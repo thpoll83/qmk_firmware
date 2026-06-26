@@ -152,7 +152,8 @@ enum my_keycodes {
     KC_OS_SET_MACOS,                         // + POLY_OS_MACOS   (2)
     KC_OS_SET_LINUX,                         // + POLY_OS_LINUX   (3)
     KC_OS_SET_ANDROID,                       // + POLY_OS_ANDROID (4)
-    KC_OS_SET_IOS,                           // + POLY_OS_IOS     (5)
+    // No KC_OS_SET_IOS: iOS is collapsed into macOS (identical keyboard operation),
+    // so it is not separately user-selectable. POLY_OS_IOS still exists for detection.
     KC_OS_SET_END,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");

@@ -232,8 +232,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
                 case POLY_OS_MACOS:   return on ? U"Mac\r\v"  ICON_SWITCH_ON : U"Mac\r\v"  ICON_SWITCH_OFF;
                 case POLY_OS_LINUX:   return on ? U"Lnx\r\v"  ICON_SWITCH_ON : U"Lnx\r\v"  ICON_SWITCH_OFF;
                 case POLY_OS_ANDROID: return on ? U"And\r\v"  ICON_SWITCH_ON : U"And\r\v"  ICON_SWITCH_OFF;
-                case POLY_OS_IOS:     return on ? U"iOS\r\v"  ICON_SWITCH_ON : U"iOS\r\v"  ICON_SWITCH_OFF;
-                default:              return U"";
+                default:              return U"";   // iOS collapsed into macOS — not a pinnable selection
             }
         }
 

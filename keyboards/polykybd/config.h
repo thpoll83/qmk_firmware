@@ -94,7 +94,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.9.12"
+#define FW_VERSION "0.9.13"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -120,7 +120,7 @@
 //     QMK OS_DETECTION as the auto-mode fallback (only source on host-less / locked
 //     machines). Persisted in poly_eeconf_t.os_state. Drives the modifier-legend
 //     swap, the OS icon, and the semantic action keys. See enum poly_os in state.h.
-#define PROTOCOL_VERSION 7
+#define PROTOCOL_VERSION 8
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

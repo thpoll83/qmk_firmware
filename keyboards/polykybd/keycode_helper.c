@@ -20,7 +20,9 @@ static inline const uint32_t* kc_os_gui_icon(void) {
     switch (kc_active_os()) {
         case POLY_OS_WINDOWS: return ICON_OS_WINDOWS;
         case POLY_OS_MACOS:   return TECHNICAL_COMMAND;
-        case POLY_OS_LINUX:   return ICON_OS_LINUX;
+        case POLY_OS_LINUX:
+        case POLY_OS_LINUX_GNOME:
+        case POLY_OS_LINUX_KDE: return ICON_OS_LINUX;     // GNOME/KDE share the penguin
         case POLY_OS_ANDROID: return ICON_OS_ANDROID;
         case POLY_OS_IOS:     return TECHNICAL_COMMAND;   // iOS collapsed into macOS
         default:              return DINGBAT_BLACK_DIA_X;
@@ -213,6 +215,8 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
                 case POLY_OS_WINDOWS: return autom ? U"Win\r\v auto" : U"Win\r\v  pin";
                 case POLY_OS_MACOS:   return autom ? U"Mac\r\v auto" : U"Mac\r\v  pin";
                 case POLY_OS_LINUX:   return autom ? U"Lnx\r\v auto" : U"Lnx\r\v  pin";
+                case POLY_OS_LINUX_GNOME: return U"Gnm\r\v auto";   // DE is host-detected (auto-only)
+                case POLY_OS_LINUX_KDE:   return U"Kde\r\v auto";
                 case POLY_OS_ANDROID: return autom ? U"And\r\v auto" : U"And\r\v  pin";
                 case POLY_OS_IOS:     return autom ? U"iOS\r\v auto" : U"iOS\r\v  pin";
                 default:              return autom ? U"OS?\r\v auto" : U"OS?\r\v  pin";

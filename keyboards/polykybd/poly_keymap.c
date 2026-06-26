@@ -1105,8 +1105,14 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
         }
     } else {
     // Windows / Linux / Android / undetected: editing on Ctrl, window-mgmt on GUI.
-    const bool wm_held = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_LINUX
-                          || active_os == POLY_OS_UNKNOWN)
+    // The two host-detected Linux desktops (GNOME/KDE) behave as Linux here, but a
+    // few Super-key hints differ between them — see the wm_held switch below.
+    const bool gnome = (active_os == POLY_OS_LINUX_GNOME);
+    const bool win_or_unknown = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_UNKNOWN);
+    const bool linux_any = (active_os == POLY_OS_LINUX
+                            || active_os == POLY_OS_LINUX_GNOME
+                            || active_os == POLY_OS_LINUX_KDE);
+    const bool wm_held = (win_or_unknown || linux_any)
                       && (local_mods & MOD_MASK_GUI) != 0;
     if ((local_mods & MOD_MASK_CTRL) != 0) {
         switch(keycode) {
@@ -1137,26 +1143,28 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
         }
     } else if (wm_held) {
         switch(keycode) {
-            case KC_D:      return U"    " PRIVATE_PC;
-            case KC_L:      return U"    " PRIVATE_LOCK;
-            case KC_P:      return U"    " PRIVATE_SCREEN;
-            case KC_UP:     return U"     " PRIVATE_MAXIMIZE;
-            case KC_DOWN:   return U"     " PRIVATE_WINDOW;
+            case KC_D:
+                // Show desktop: Win+D and KDE Super+D. GNOME has no default
+                // show-desktop chord, so don't show it there.
+                if (!gnome) return U"    " PRIVATE_PC;
+                break;
+            case KC_L:      return U"    " PRIVATE_LOCK;       // Win/Super+L lock
+            case KC_P:      return U"    " PRIVATE_SCREEN;     // Win/Super+P display
+            case KC_UP:     return U"     " PRIVATE_MAXIMIZE;  // Super+Up maximize
+            case KC_DOWN:   return U"     " PRIVATE_WINDOW;    // Super+Down minimize
+            // Super+Tab switches: Windows (Task View) and GNOME (switch apps). On
+            // KDE / generic Linux the switcher is Alt+Tab (shown via the Alt branch),
+            // and Super+Tab is unbound — so don't show it there.
+            case KC_TAB:
+                if (win_or_unknown || gnome) return U"    " ICON_WINDOW_SWITCH;
+                break;
+            // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses
+            // the Super overview and KDE a Super-tap / Alt+Space — neither binds
+            // Super+S — so show it only on Windows (and the unknown default).
+            case KC_S:
+                if (win_or_unknown) return U"   "  ICON_LAUNCHER;
+                break;
             default: break;
-        }
-        // Win+Tab (Task View) / Win+S (search) — wave B. These are Windows (and
-        // best-guess for an unknown OS) bindings. On Linux the launcher/switcher
-        // chord is desktop-specific (KDE: Super-tap launcher + Alt+Tab switcher;
-        // GNOME: the Super overview), so Super+Tab / Super+S would point at a
-        // shortcut the DE may not bind (it does nothing on KDE Plasma). Linux
-        // window switching is already shown as Alt+Tab via the Alt branch above,
-        // so skip these two on Linux rather than mislead.
-        if (active_os != POLY_OS_LINUX) {
-            switch(keycode) {
-                case KC_TAB: return U"    " ICON_WINDOW_SWITCH; // Win+Tab Task View
-                case KC_S:   return U"   "  ICON_LAUNCHER;      // Win+S search
-                default: break;
-            }
         }
     }
     }

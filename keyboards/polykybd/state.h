@@ -33,6 +33,13 @@ enum poly_os {
     POLY_OS_LINUX   = 3,
     POLY_OS_ANDROID = 4,
     POLY_OS_IOS     = 5,
+    // Host-detected Linux desktop environments (from XDG_CURRENT_DESKTOP, pushed
+    // over cmd 29). They refine the Super-key shortcut hints — GNOME and KDE bind
+    // the launcher/window-switcher differently — and otherwise behave as Linux.
+    // Not manually pinnable (the KC_OS_SET_* keys stop at Android); a manual Linux
+    // pin or USB detection yields the generic POLY_OS_LINUX.
+    POLY_OS_LINUX_GNOME = 6,
+    POLY_OS_LINUX_KDE   = 7,
     POLY_OS_COUNT
 };
 

@@ -1046,7 +1046,50 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     }
 
     uint8_t local_mods = get_local_layer()->mods;
-    if( (local_mods & MOD_MASK_CTRL) != 0) {
+    // OS-aware shortcut-preview icons. The "editing" shortcuts (copy/paste/undo/…)
+    // hang off the OS's primary command modifier: Cmd (GUI) on macOS/iOS, Ctrl
+    // everywhere else — so on a Mac these show under Cmd, not Ctrl (where Ctrl+C
+    // does not copy). The "window-management" shortcuts (lock/show-desktop/display/
+    // maximize/minimize) hang off the GUI/Super key on Windows & Linux desktops; on
+    // macOS Cmd is already the editing modifier (so e.g. Cmd+L is NOT lock and shows
+    // nothing here), and on Android the Search key is not a window manager.
+    const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+    const bool apple = (active_os == POLY_OS_MACOS || active_os == POLY_OS_IOS);
+    const bool shift = (local_mods & MOD_MASK_SHIFT) != 0;
+    if (apple) {
+        // macOS/iOS: editing lives on Cmd (GUI). Multi-modifier mac chords first.
+        const bool cmd  = (local_mods & MOD_MASK_GUI) != 0;
+        const bool ctrl = (local_mods & MOD_MASK_CTRL) != 0;
+        if (cmd && ctrl) {
+            switch(keycode) {
+                case KC_Q: return U"    " PRIVATE_LOCK;       // Ctrl+Cmd+Q = lock screen
+                case KC_F: return U"     " PRIVATE_MAXIMIZE;  // Ctrl+Cmd+F = fullscreen
+                default: break;
+            }
+        }
+        if (cmd) {
+            switch(keycode) {
+                case KC_A: return U"      " BOX_WITH_CHECK_MARK;
+                case KC_C: return U"     " CLIPBOARD_COPY;
+                case KC_F: return U"    " PRIVATE_FIND;
+                case KC_X: return U"\t\b\b" CLIPBOARD_CUT;
+                case KC_V: return U"     " CLIPBOARD_PASTE;
+                case KC_S: return U"\t" PRIVATE_FLOPPY;
+                case KC_O: return U"\t" FILE_OPEN;
+                case KC_P: return U"\t" PRIVATE_PRINTER;
+                case KC_M: return U"     " PRIVATE_WINDOW;    // Cmd+M = minimize
+                // Cmd+Z = undo, Cmd+Shift+Z = redo (mac has no Cmd+Y redo, and
+                // Cmd+D is "duplicate" not delete — neither is shown).
+                case KC_Z: return shift ? U"      " ARROWS_REDO : U"      " ARROWS_UNDO;
+                default: break;
+            }
+        }
+    } else {
+    // Windows / Linux / Android / undetected: editing on Ctrl, window-mgmt on GUI.
+    const bool wm_held = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_LINUX
+                          || active_os == POLY_OS_UNKNOWN)
+                      && (local_mods & MOD_MASK_GUI) != 0;
+    if ((local_mods & MOD_MASK_CTRL) != 0) {
         switch(keycode) {
             case KC_A: return U"      " BOX_WITH_CHECK_MARK;
             case KC_C: return U"     " CLIPBOARD_COPY;
@@ -1057,11 +1100,13 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_S: return U"\t" PRIVATE_FLOPPY;
             case KC_O: return U"\t" FILE_OPEN;
             case KC_P: return U"\t" PRIVATE_PRINTER;
-            case KC_Z: return U"      " ARROWS_UNDO;
+            // Ctrl+Y = redo (Windows), Ctrl+Shift+Z = redo (Linux/cross-app);
+            // Ctrl+Z = undo.
             case KC_Y: return U"      " ARROWS_REDO;
+            case KC_Z: return shift ? U"      " ARROWS_REDO : U"      " ARROWS_UNDO;
             default: break;
         }
-    } else if((local_mods & MOD_MASK_GUI) != 0) {
+    } else if (wm_held) {
         switch(keycode) {
             case KC_D:      return U"    " PRIVATE_PC;
             case KC_L:      return U"    " PRIVATE_LOCK;
@@ -1070,6 +1115,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_DOWN:   return U"     " PRIVATE_WINDOW;
             default: break;
         }
+    }
     }
 
     if(IS_QK_MOD_TAP(keycode)) {

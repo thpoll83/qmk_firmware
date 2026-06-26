@@ -139,11 +139,26 @@ enum my_keycodes {
     // (the "see and verify the mode" key); pressing it cycles auto -> pin Windows
     // -> macOS -> Linux -> Android -> iOS -> auto. Not part of os_action_table.
     KC_OS_ICON,
+
+    // OS selection keys (settings layer): one key per choice instead of the single
+    // cycling KC_OS_ICON. KC_OS_SET_AUTO clears the manual pin (back to host/USB
+    // detection); the rest pin a specific OS. The offset from KC_OS_SET_BASE is the
+    // poly_os value, so KC_OS_SET_AUTO sits on the POLY_OS_UNKNOWN(0) slot and is
+    // treated as "auto", while KC_OS_SET_WINDOWS == base + POLY_OS_WINDOWS, etc.
+    // Append-only — the process_record range and the legend block track this order.
+    KC_OS_SET_BASE,
+    KC_OS_SET_AUTO = KC_OS_SET_BASE,        // + POLY_OS_UNKNOWN (0) -> auto mode
+    KC_OS_SET_WINDOWS,                       // + POLY_OS_WINDOWS (1)
+    KC_OS_SET_MACOS,                         // + POLY_OS_MACOS   (2)
+    KC_OS_SET_LINUX,                         // + POLY_OS_LINUX   (3)
+    KC_OS_SET_ANDROID,                       // + POLY_OS_ANDROID (4)
+    KC_OS_SET_IOS,                           // + POLY_OS_IOS     (5)
+    KC_OS_SET_END,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_DAUTO < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
-static_assert((int)KC_OS_ICON <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
+static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

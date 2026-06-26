@@ -1836,6 +1836,20 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             }
             request_disp_refresh();
             break;
+        case KC_OS_SET_AUTO ... KC_OS_SET_END - 1: {
+            // Direct OS selection (settings layer): KC_OS_SET_AUTO clears the pin
+            // (back to host/USB detection); the others pin a specific OS. The
+            // offset from KC_OS_SET_BASE is the poly_os value. We are already inside
+            // the `if (!record->event.pressed)` block, so this runs once on release.
+            uint8_t sel = (uint8_t)(keycode - KC_OS_SET_BASE);
+            if (sel == POLY_OS_UNKNOWN) {
+                set_os_auto_mode(true);   // auto: detection / host wins
+            } else {
+                set_user_os(sel);         // pin this OS (survives reboot)
+            }
+            request_disp_refresh();
+            break;
+        }
         case KC_STORE_EE:
             // Manual "commit everything to EEPROM" — for users who want to be
             // sure their changes survive a hard power-cut without suspending.

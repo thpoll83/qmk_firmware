@@ -202,6 +202,24 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
                 default:              return autom ? U"OS?\r\v auto" : U"OS?\r\v  pin";
             }
         }
+        // OS selection keys: name on top, a toggle glyph below marking the active
+        // choice (radio-style — exactly one is ON). AUTO is ON in auto mode; each
+        // pin key is ON when that OS is the active pinned one.
+        case KC_OS_SET_AUTO ... KC_OS_SET_END - 1: {
+            const uint8_t sel   = (uint8_t)(keycode - KC_OS_SET_BASE);
+            const bool    autom = (get_local_state()->active_os & POLY_OS_AUTO_FLAG) != 0;
+            const uint8_t cur   = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+            const bool    on    = (sel == POLY_OS_UNKNOWN) ? autom : (!autom && sel == cur);
+            switch (sel) {
+                case POLY_OS_UNKNOWN: return on ? U"Auto\r\v" ICON_SWITCH_ON : U"Auto\r\v" ICON_SWITCH_OFF;
+                case POLY_OS_WINDOWS: return on ? U"Win\r\v"  ICON_SWITCH_ON : U"Win\r\v"  ICON_SWITCH_OFF;
+                case POLY_OS_MACOS:   return on ? U"Mac\r\v"  ICON_SWITCH_ON : U"Mac\r\v"  ICON_SWITCH_OFF;
+                case POLY_OS_LINUX:   return on ? U"Lnx\r\v"  ICON_SWITCH_ON : U"Lnx\r\v"  ICON_SWITCH_OFF;
+                case POLY_OS_ANDROID: return on ? U"And\r\v"  ICON_SWITCH_ON : U"And\r\v"  ICON_SWITCH_OFF;
+                case POLY_OS_IOS:     return on ? U"iOS\r\v"  ICON_SWITCH_ON : U"iOS\r\v"  ICON_SWITCH_OFF;
+                default:              return U"";
+            }
+        }
 
         //The following entries will over-rule language specific entries in the follow language lookup table,
         //however with this we can control them by flags and so far those where not language specific anyway.

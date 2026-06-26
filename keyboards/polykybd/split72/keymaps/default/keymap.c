@@ -218,17 +218,16 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,      KC_NO,      KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_NO,      KC_NO,      KC_RSFT,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
-    //Settings Layer — the left block's free slots also host the OS-semantic action
-    // keys (KC_OS_*): each emits the right chord for the active OS (Ctrl+C vs Cmd+C,
-    // Win+L vs Ctrl+Cmd+Q, …). KC_OS_ICON shows/cycles the active OS. All on
-    // previously-empty KC_NO slots, beside the OS controls. (App/Win-switch are the
-    // two actions that didn't fit here — their keycodes exist, just unmapped.)
+    //Settings Layer — row 2 hosts the OS selection keys: KC_OS_SET_AUTO returns to
+    // auto (host/USB detection) and the rest pin a specific OS. They are radio-style
+    // (the active choice shows a lit toggle in its legend). This replaces the single
+    // cycling KC_OS_ICON; the per-OS semantic action keys are not mapped here.
     [_SL] = LAYOUT_left_right_stacked(
         KC_DDIM,    KC_DMIN,    KC_D1Q,     KC_DHLF,    KC_D3Q,     KC_DMAX,    KC_DBRI,
-        KC_DAUTO,   KC_OS_ICON, KC_OS_COPY, KC_OS_CUT,  KC_OS_PASTE,KC_OS_UNDO, KC_OS_REDO,
-        KC_OS_SELALL,KC_L0,     KC_L1,      KC_L2,      KC_L3,      KC_L4,      KC_OS_FIND, _______,
-        KC_OS_LOCK, KC_OS_SCRSHOT,KC_OS_SEARCH,KC_OS_EMOJI,KC_OS_WORD_LEFT,KC_OS_WORD_RIGHT,KC_OS_LINE_HOME, QK_RBT,
-        KC_BASE,    LBL_TEXT,   KC_TOGMODS, KC_TOGTEXT,             KC_OS_LINE_END, QK_MAKE, QK_BOOT,
+        KC_DAUTO,   KC_OS_SET_AUTO, KC_OS_SET_WINDOWS, KC_OS_SET_MACOS, KC_OS_SET_LINUX, KC_OS_SET_ANDROID, KC_OS_SET_IOS,
+        KC_NO,      KC_L0,      KC_L1,      KC_L2,      KC_L3,      KC_L4,      KC_NO,      _______,
+        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_RBT,
+        KC_BASE,    LBL_TEXT,   KC_TOGMODS, KC_TOGTEXT,             KC_NO,      QK_MAKE,    QK_BOOT,
 
 
         //             RM_PREV,    RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RM_NEXT,

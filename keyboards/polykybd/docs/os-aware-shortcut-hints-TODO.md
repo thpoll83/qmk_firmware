@@ -7,10 +7,11 @@ now follow the active OS; redo/lock/minimize/fullscreen fixed). This doc is the 
 for **wave B**: six additional OS-aware hints whose glyphs must live in the **font
 pack** (NOT resident).
 
-The glyphs here were prototyped as hand-drawn resident `IconsFont` entries and
-verified to render at 72×40, then **reverted** because the maintainer wants them
-non-resident (in the pack). Pick this up in a session where `fontconvert` is
-buildable.
+All six glyphs are sourced **straight from Noto** (no custom art) and go in the font
+pack (NOT resident). They were briefly prototyped as hand-drawn resident `IconsFont`
+entries and verified at 72×40, then **reverted** — the maintainer wants them
+non-resident and is fine using the Noto glyphs directly. Pick this up in a session
+where `fontconvert` is buildable.
 
 ---
 
@@ -46,105 +47,59 @@ single-Cmd combos, so Cmd+` is the chosen hint.)
 All six map to a real Unicode codepoint so `named_glyphs.h` + `keycode_to_disp_overlay`
 reference them like the existing pack hints (e.g. `CLIPBOARD_COPY = U"\x1F4CB"`):
 
-| Define | Codepoint | Char | Source |
-|--------|-----------|------|--------|
-| `ICON_WORD_LEFT`     | `U+21E0` | ⇠ | NotoSansSymbols (v1, arrows) — **hand-draw preferred** (see below) |
-| `ICON_WORD_RIGHT`    | `U+21E2` | ⇢ | "" |
-| `ICON_LAUNCHER`      | `U+2630` | ☰ | NotoSansSymbols2 (renders cleanly — could just add the range) |
-| `ICON_APP_SWITCH`    | `U+1F5D4` | 🗔 | **hand-draw** (Noto's is a faint empty window) |
-| `ICON_WINDOW_SWITCH` | `U+1F5BD` | 🖽 | **hand-draw** (Noto's is too busy at 72×40) |
-| `ICON_CLOSE`         | `U+26DD` | ⛝ | NotoSansSymbols2 (renders cleanly) |
+All six are real Noto glyphs — **use them directly, no hand-drawing.** Map each to
+its Unicode codepoint so `named_glyphs.h` + `keycode_to_disp_overlay` reference them
+like the existing pack hints (e.g. `CLIPBOARD_COPY = U"\x1F4CB"`):
 
-⚠️ Probing showed: **`U+21E0`/`U+21E2` are tofu boxes in NotoSansSymbols2** (the v2
-font shipped in `fonts/`), and **`U+1F5D4`/`U+1F5BD` render poorly** at this size.
-`U+2630` and `U+26DD` are already present in the current pack and render fine. So a
-straight `fonts.yaml` range addition only gives you two of the six in good shape.
+| Define | Codepoint | Char | Source font | Notes |
+|--------|-----------|------|-------------|-------|
+| `ICON_LAUNCHER`      | `U+2630` | ☰ | **NotoSansSymbols2** | renders clean |
+| `ICON_CLOSE`         | `U+26DD` | ⛝ | **NotoSansSymbols2** | renders clean |
+| `ICON_APP_SWITCH`    | `U+1F5D4` | 🗔 | **NotoSansSymbols2** | window + cursor; render at ~34 px |
+| `ICON_WINDOW_SWITCH` | `U+1F5BD` | 🖽 | **NotoSansSymbols2** | tiled frame; render at ~34 px |
+| `ICON_WORD_LEFT`     | `U+21E0` | ⇠ | **NotoSansSymbols v1** | base Arrows block — see fetch note |
+| `ICON_WORD_RIGHT`    | `U+21E2` | ⇢ | **NotoSansSymbols v1** | "" |
 
-### Recommended approach: a tiny hand-authored pack font
+⚠️ **The only availability gotcha is ⇠/⇢ (`U+21E0`/`U+21E2`).** They live in the base
+Arrows block (`U+2190–21FF`), which is in **Noto Sans Symbols *v1*** — the repo's
+`fonts/` ships only **Symbols *2***, where those codepoints are `.notdef` (tofu box).
+Verified against the font cmap: `2630`, `26DD`, `1F5D4`, `1F5BD` are all in Symbols2;
+`21E0`, `21E2` are not. So fetch v1 (next section) for the two dashed arrows; the
+other four come straight from Symbols2.
 
-Because four of the six don't come out well from the Noto TTFs, author a small
-dedicated GFXfont header (like `gfx_icons.h` but **not** resident — listed under a
-pack bundle in `fonts.yaml`/`bundles`), containing the six glyphs at their real
-codepoints. The approved hand-drawn 1-bit designs are reproduced by this script
-(run with the repo `.venv` that has Pillow):
+🗔/🖽 are slightly thin/busy at small sizes (🗔 is a window outline with a tiny mouse
+cursor; 🖽 has a decorative ragged border) but were chosen and accepted as-is — render
+them around **34 px** tall (the preview sweet spot), not smaller.
 
-```python
-# hint_glyphs.py — approved hand-drawn designs (1-bit), verified at 72x40 via
-# PolyKybdHost/tools/oled_preview.py. Heights chosen so the Tab-key hints clear
-# the narrow ARROWS_TAB base legend.
-def _grid(w,h): return [["."]*w for _ in range(h)]
-def _rows(g): return ["".join(r) for r in g]
-def _hline(g,x0,x1,y,t=1):
-    for yy in range(y,y+t):
-        for x in range(x0,x1+1):
-            if 0<=yy<len(g) and 0<=x<len(g[0]): g[yy][x]="#"
-def _vline(g,x,y0,y1,t=1):
-    for xx in range(x,x+t):
-        for y in range(y0,y1+1):
-            if 0<=y<len(g) and 0<=xx<len(g[0]): g[y][xx]="#"
-def _rect(g,x0,y0,x1,y1,t=2):
-    _hline(g,x0,x1,y0,t); _hline(g,x0,x1,y1-t+1,t); _vline(g,x0,y0,y1,t); _vline(g,x1-t+1,y0,y1,t)
-def _fill(g,x0,y0,x1,y1):
-    for y in range(y0,y1+1):
-        for x in range(x0,x1+1):
-            if 0<=y<len(g) and 0<=x<len(g[0]): g[y][x]="#"
-def _diag(g,x0,y0,x1,y1,t=2):
-    n=max(abs(x1-x0),abs(y1-y0))
-    for i in range(n+1):
-        x=round(x0+(x1-x0)*i/n); y=round(y0+(y1-y0)*i/n)
-        for dx in range(t):
-            for dy in range(t):
-                if 0<=y+dy<len(g) and 0<=x+dx<len(g[0]): g[y+dy][x+dx]="#"
+### Approach: add the codepoints as `fonts.yaml` ranges (all-Noto)
 
-def word_left():            # 26x13 dashed left arrow
-    W,H=26,13; g=_grid(W,H); my=H//2
-    _diag(g,1,my,8,1); _diag(g,1,my,8,H-2)
-    x=8
-    while x<W-1: _hline(g,x,min(x+2,W-1),my-1,2); x+=5
-    return _rows(g)
-def word_right():
-    return ["".join(reversed(r)) for r in word_left()]
-def launcher():             # 28x20 hamburger (3 bars)
-    W,H=28,20; g=_grid(W,H)
-    for y in (1,9,17): _fill(g,0,y,W-1,y+3)
-    return _rows(g)
-def app_switch():           # 24x20 two overlapping windows
-    W,H=24,20; g=_grid(W,H)
-    _rect(g,6,0,23,13,2); _fill(g,6,0,23,2)
-    for y in range(4,20):
-        for x in range(0,18): g[y][x]="."
-    _rect(g,1,5,17,19,2); _fill(g,1,5,17,7)
-    return _rows(g)
-def window_switch():        # 22x20 2x2 tiled frame
-    W,H=22,20; g=_grid(W,H)
-    _rect(g,1,1,20,18,2); _vline(g,10,1,18,2); _hline(g,1,20,9,2)
-    return _rows(g)
-def close_box():            # 26x26 squared saltire (box + X)
-    W,H=26,26; g=_grid(W,H)
-    _rect(g,1,1,24,24,2); _diag(g,3,3,22,22,2); _diag(g,22,3,3,22,2)
-    return _rows(g)
-```
+No custom art. Add the six codepoints to a **pack bundle** as `fonts.yaml` entries and
+regenerate with `fontconvert`:
 
-Pack each row-grid to a GFXglyph the same way `gfx_icons.h` is built (MSB-first,
-continuous-bit-packed, byte-padded per glyph; `xOffset = 0` so the leading spaces in
-the hint strings position it; `yOffset = (40 - h)//2 - 23` to vertically centre at
-baseline 23). The integrator that did this for the resident prototype is preserved in
-the session scratchpad (`integrate_hints.py`) — adapt it to emit a standalone pack
-header instead of appending to `IconsFont`.
+- **From NotoSansSymbols2** (already a source in `fonts.yaml`): `2630`, `26DD`,
+  `1F5D4`, `1F5BD`. The `symbol` bundle is the natural home (it already holds the
+  misc-symbol BMP glyphs). A single small range entry (or a few singletons) covers
+  them; pick a `render_height`/`size` that lands 🗔/🖽 near ~34 px at the keycap.
+- **From NotoSansSymbols v1** for `21E0`/`21E2`: run `fonts/dl-fonts.sh` (it fetches
+  the Noto sources) so the v1 Symbols TTF with the base Arrows block is present, add
+  it as a font source in `fonts.yaml`, and add the two codepoints.
 
-Alternatively, if you'd rather use Noto for ⇠/⇢/☰/⛝ (so only 🗔/🖽 are hand-drawn),
-run `fonts/dl-fonts.sh` to fetch **NotoSansSymbols (v1)** for the dashed arrows
-(v2 lacks them) and add the four codepoints as `fonts.yaml` ranges in a pack bundle.
+Keep every entry **non-resident** (do NOT add to `index.resident_fonts`).
+
+> If a glyph still reads poorly on hardware at the chosen size, the fallback is a tiny
+> hand-authored 1-bit GFXfont header (the resident prototype's designs + integrator
+> live in this session's git history on the reverted `claude/os-aware-shortcut-hint-icons`
+> commits) — but with the sizes above that shouldn't be needed.
 
 ---
 
 ## 3. fontpack wiring
 
-1. Add the new font (hand-authored header or `fonts.yaml` ranges) to a **pack bundle**
-   — `symbol` is the natural home for these (it already holds the misc-symbol BMP
-   glyphs). Keep it **non-resident** (do NOT add to `index.resident_fonts`).
-2. Regenerate with the pinned `fontconvert` (only needed if you take the `fonts.yaml`
-   route; the hand-authored header needs no fontconvert):
+1. Add the six codepoints as `fonts.yaml` ranges in the **`symbol`** pack bundle (it
+   already holds the misc-symbol BMP glyphs). Four come from NotoSansSymbols2; add
+   NotoSansSymbols v1 as a source for `21E0`/`21E2`. Keep them **non-resident** (do
+   NOT add to `index.resident_fonts`).
+2. Regenerate with the pinned `fontconvert`:
    `FONTCONVERT=/tmp/fontconvert_pinned python3 fonts/generate_fonts.py`
 3. Rebuild the bundles + bump the `symbol` bundle `content_version` so hosts re-flash:
    `python3 fonts/generate_fonts.py --emit-bundles <dir> --bundle-version symbol=<N+1>`

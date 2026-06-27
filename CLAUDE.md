@@ -795,7 +795,24 @@ retries=3; if it climbs, attack `p` at the source.
 
 ---
 
-### Bug: HIL "get current language" (cmd 7) times out once early in the run — boot-time forced layer-resync stalling the main loop on the flaky rig link
+### Bug: HIL "get current language" (cmd 7) times out once early in the run — boot-time busy window stalling the main loop
+
+> **⚠️ CORRECTION (2026-06-27): the "flaky rig link" premise this note was written
+> on is WRONG.** The rig runs the **same clean full-duplex two-wire split link as a
+> shipping keyboard** (identical `config.h` defines; the crossover is done by role
+> at runtime via `SERIAL_USART_PIN_SWAP`, not a different cable). There is **no
+> "flaky / slow-ACK rig link"** — that phrasing below is superseded. The real
+> differentiator is **timing/readiness, not link quality**: the rig fires its first
+> HID queries within ~2 s of the master booting, inside the master's boot-time busy
+> window (initial 72-keycap OLED render + the one-shot split sync to the
+> just-booted slave), and the slave — independently flashed and rebooted on the rig
+> (`usb_disconnect()` image) — can still be coming up then. A human user never pokes
+> the keyboard that early. The forced-resync analysis below is also partly stale:
+> the one-shot gate (`fc6ee693`, `is_transport_connected()`-gated, cleared even on a
+> drop) already removed the per-pass spin. Treat the boot-window timing as the cause;
+> the exact internal mechanism for the multi-second silence is unconfirmed (no trace).
+> The rig-side mitigations live in `polykybd-ctnd` (sustained settle #37, packed-list
+> headroom #38).
 
 **Symptom (HIL rig, 2026-06-24)**: The `get current language` test (cmd `0x07`)
 times out (`GET_LANG response: None`) and **fails the run**, while the *same*
@@ -809,8 +826,8 @@ in `poly_keymap.c` `sync_and_refresh_displays()`. `g_force_layer_resync` starts
 `true` and the master re-sends `USER_SYNC_LAYER_DATA` **every housekeeping pass
 until the slave ACKs**, at `PERIODIC_SYNC_RETRIES` (3) per attempt
 (`send_to_bridge`). On the rig the slave (the `*_hil_right` image) is **slow to ACK
-at boot** (the rig's master→slave link is documented-flaky — same reason
-`test_get_id_stress` tolerates misses), so the resync **spins and blocks the master
+at boot** (it is independently flashed + rebooted and still coming up — NOT a link
+problem; see the correction banner above), so the resync **spins and blocks the master
 main loop** for ~3 × the bridge timeout per pass, right in the early window where
 the host is issuing its first HID queries — deterministically landing on cmd 7
 (test #4). Once the slave finally ACKs, `g_force_layer_resync` clears and the loop
@@ -821,7 +838,8 @@ real hardware the split link is the reliable **full-duplex two-wire** setup (see
 the split-link RESOLVED note above — zero steady-state errors). There the slave
 ACKs the **first** attempt, so `g_force_layer_resync` clears on pass 1 with
 negligible stall and no HID command is delayed. The flake only manifests on the
-rig's slow-ACK link. PR #85 merged with this HIL test red for exactly this reason.
+rig because of *when* it queries (mid-boot) and the slave's boot latency — not link
+quality. PR #85 merged with this HIL test red for exactly this reason.
 
 **What the forced resync is and why it exists** (don't remove it blindly): each
 half loads its **own** default layer from EEPROM, and the master only pushes
@@ -833,8 +851,8 @@ forces a single push to fix that. It is gated by `g_force_layer_resync` (set at
 boot, cleared on the first successful push); on failure the flag stays set so the
 push re-fires — which is exactly the spin that stalls the rig.
 
-**If hardening is wanted** (so it can't spin/stall even on a slow-ACK link, without
-losing the fresh-boot correction on good hardware): make the forced push a true
+**If hardening is wanted** (so it can't spin/stall even when the slave is slow to
+come up at boot, without losing the fresh-boot correction): make the forced push a true
 one-shot — attempt it **once** (ideally gated on the split transport being
 connected so the single try has a real chance) and clear the flag regardless of
 ACK, rather than re-firing every pass; or back off its retry cadence instead of

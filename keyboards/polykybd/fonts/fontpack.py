@@ -388,6 +388,18 @@ def manifest_from_texts(order: list[str], category_texts: dict[str, str],
 
 SECTOR_SIZE = 0x1000   # 4 KB flash sector — slot offsets/sizes are sector-aligned
 
+# Reserved high gidx band for `pack_extra` fonts (currently just the LangFlags
+# pack font in the `flags` bundle). The stored `reserved` u16 is ONLY a sort key
+# for the firmware's merge (fontpack_assemble insertion-sorts pack fonts by it);
+# a pack_extra font like the flags glyph lives in disjoint PUA (0xE000+) and
+# overlaps nothing, so its exact rank never changes a lookup — it just needs to
+# sort last. Pinning it into a fixed high band (instead of its dense position at
+# the END of ALL_FONTS) means appending a hint font at the tail of fonts.yaml no
+# longer shifts the trailing pack_extra's index, so only the EDITED bundle's
+# .plyf changes — flags.plyf stays byte-stable and needs no reship/version bump.
+# See CLAUDE.md "Font pack" → "gidx is a sort key, not a dense position".
+PACK_EXTRA_GIDX_BASE = 0xF000
+
 
 def compute_bundle_layout(cfg: dict) -> dict:
     """Resolve fonts.yaml `bundles:` into concrete slot offsets/sizes.
@@ -453,6 +465,7 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
             sym2bi[s] = i
 
     members: list[list[tuple[int, ParsedFont]]] = [[] for _ in lst]
+    extra_n = 0
     for gi, sym in enumerate(order):
         if sym in resident:
             continue
@@ -460,13 +473,18 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
             raise ValueError(f"ALL_FONTS entry {sym!r} not found in generated headers")
         if sym in sym2bi:
             bi = sym2bi[sym]
+            # pack_extra (trailing, disjoint) → pinned high band, not dense `gi`,
+            # so tail appends don't shift it (see PACK_EXTRA_GIDX_BASE above).
+            stored = PACK_EXTRA_GIDX_BASE + extra_n
+            extra_n += 1
         else:
             cat = sym2cat.get(sym)
             if cat not in cat2bi:
                 raise ValueError(f"font {sym!r} (category {cat!r}) maps to no bundle "
                                  f"— add its category to a fonts.yaml bundle")
             bi = cat2bi[cat]
-        members[bi].append((gi, parsed[sym]))
+            stored = gi
+        members[bi].append((stored, parsed[sym]))
 
     cvers = content_versions or {}
     bundles = []

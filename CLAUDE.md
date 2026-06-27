@@ -279,6 +279,27 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     renders ASCII text with no pack. The build-time guard fails if a bundle overflows
     its slot. Order in `bundles.list` is **append-only** (the index is the on-wire id
     and the slot order; growth-prone `emoji` is last with `slot_kb: rest`).
+  - **The per-font `reserved` gidx is a SORT KEY, not a dense array position.**
+    `fontpack_assemble()` (`base/fontpack.c`) places the resident set first, then
+    **insertion-sorts the pack fonts by their stored gidx** — nothing indexes an
+    array *by* gidx, so gaps / sparse / out-of-order values are all fine, and the
+    order only changes a *lookup* for two pack fonts that share a codepoint. The
+    build keeps pack ranges **disjoint across bundles** (verified: 0 cross-bundle
+    `[first,last]` overlaps), so for the pack the gidx order is functionally
+    irrelevant — a stale gidx in an un-reshipped bundle is **harmless**. ⚠️ The one
+    invariant: if two pack fonts intentionally overlap, keep them in the **same
+    bundle** (intra-bundle order is fixed and never goes stale) — never split an
+    overlapping pair across bundles.
+  - **Appending a hint/glyph font only reships the EDITED bundle (since the
+    pack_extra pin).** Appending a font at the tail of `fonts.yaml` used to shift
+    the trailing `pack_extra` (flags) font's dense gidx → `flags.plyf` changed too,
+    forcing a second reship+bump (e.g. symbol v3→v4 *and* flags v2→v3). Fixed in
+    `fonts/fontpack.py`: `pack_extra` fonts get a **fixed high gidx band**
+    (`PACK_EXTRA_GIDX_BASE = 0xF000`) instead of their dense position, so a tail
+    append no longer moves them. flags is disjoint PUA (0xE000+) and still sorts
+    last, so the assembled order is byte-identical (asserted during the change).
+    The first flags regen after this lands adopts the pinned gidx (a one-time
+    `flags.plyf` reship); thereafter only the bundle you actually edited changes.
   - **Flash UX (split72):** while any flash runs the status OLED shows an "Updating
     fonts/firmware — do not unplug" screen with a full-width progress bar, and the RGB
     matrix breathes (cyan = font pack, orange = firmware/bootloader = "can't type");

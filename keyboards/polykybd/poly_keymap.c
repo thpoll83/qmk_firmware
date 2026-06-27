@@ -1047,17 +1047,17 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
 
     uint8_t local_mods = get_local_layer()->mods;
     // OS-aware shortcut-preview icons. The "editing" shortcuts (copy/paste/undo/…)
-    // hang off the OS's primary command modifier: Cmd (GUI) on macOS/iOS, Ctrl
+    // hang off the OS's primary command modifier: Cmd (GUI) on macOS, Ctrl
     // everywhere else — so on a Mac these show under Cmd, not Ctrl (where Ctrl+C
     // does not copy). The "window-management" shortcuts (lock/show-desktop/display/
     // maximize/minimize) hang off the GUI/Super key on Windows & Linux desktops; on
     // macOS Cmd is already the editing modifier (so e.g. Cmd+L is NOT lock and shows
     // nothing here), and on Android the Search key is not a window manager.
     const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
-    const bool apple = (active_os == POLY_OS_MACOS || active_os == POLY_OS_IOS);
+    const bool apple = (active_os == POLY_OS_MACOS);
     const bool shift = (local_mods & MOD_MASK_SHIFT) != 0;
     if (apple) {
-        // macOS/iOS: editing lives on Cmd (GUI). Multi-modifier mac chords first.
+        // macOS: editing lives on Cmd (GUI). Multi-modifier mac chords first.
         const bool cmd  = (local_mods & MOD_MASK_GUI) != 0;
         const bool ctrl = (local_mods & MOD_MASK_CTRL) != 0;
         // Word nav on macOS is Option(Alt)+arrows (line nav is Cmd+arrows, below),
@@ -1697,10 +1697,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         }
     }
 
-    // macOS/iOS: swap the GUI and Alt keys (keycode here, legend in keycode_helper)
+    // macOS: swap the GUI and Alt keys (keycode here, legend in keycode_helper)
     // so the physical modifier row matches a Mac's Ctrl–Option–Command order — the
     // GUI key acts as Option/Alt and the Alt key as Command/GUI, on both halves.
-    // Only the four basic modifier keycodes are remapped, and only on an Apple OS.
+    // Only the four basic modifier keycodes are remapped, and only on macOS.
     // The swap is LATCHED per key (s_apple_swap_latch) at press time and reused at
     // release, so an active_os change mid-hold can't unregister the opposite mod and
     // leave a stuck modifier — the key always releases whatever it pressed.
@@ -1716,7 +1716,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         if (bit) {
             const uint8_t os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
             const bool swap_now = record->event.pressed
-                ? (os == POLY_OS_MACOS || os == POLY_OS_IOS)
+                ? (os == POLY_OS_MACOS)
                 : (s_apple_swap_latch & bit) != 0;
             if (swap_now) {
                 if (record->event.pressed) { s_apple_swap_latch |= bit;            register_code(swapped); }
@@ -1978,12 +1978,12 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             break;
         case KC_OS_ICON:
             // Cycle the active-OS selection: auto -> pin Windows -> macOS -> Linux
-            // -> Android -> iOS -> auto. A manual pin overrides detection/host and
-            // survives reboots (the only way to select Android). Runs once on release.
+            // -> Android -> auto. A manual pin overrides detection/host and survives
+            // reboots (the only way to select Android). Runs once on release.
             if (get_os_auto_mode()) {
                 set_user_os(POLY_OS_WINDOWS);                 // auto -> first pin
-            } else if (get_active_os() >= POLY_OS_IOS) {
-                set_os_auto_mode(true);                       // last pin -> back to auto
+            } else if (get_active_os() >= POLY_OS_ANDROID) {
+                set_os_auto_mode(true);                       // last pin (Android) -> back to auto
             } else {
                 set_user_os((uint8_t)(get_active_os() + 1));  // next pin
             }
@@ -2318,7 +2318,7 @@ bool process_detected_host_os_kb(os_variant_t os) {
     switch (os) {
         case OS_WINDOWS: set_detected_os(POLY_OS_WINDOWS); break;
         case OS_MACOS:   set_detected_os(POLY_OS_MACOS);   break;
-        case OS_IOS:     set_detected_os(POLY_OS_IOS);     break;
+        case OS_IOS:     set_detected_os(POLY_OS_MACOS);   break;  // iOS folded into macOS
         case OS_LINUX:   set_detected_os(POLY_OS_LINUX);   break;
         case OS_UNSURE:                                    break;  // keep current
     }

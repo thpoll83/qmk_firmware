@@ -1,7 +1,7 @@
 {
   "abi_version": 1,
-  "font_count": 119,
-  "total_size": 464452,
+  "font_count": 122,
+  "total_size": 466728,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -186,7 +186,7 @@
     {
       "all_fonts_index": 47,
       "symbol": "NotoSansSymbols2_Regular_Window_18pt16b",
-      "first": 128469,
+      "first": 128468,
       "last": 128475
     },
     {
@@ -713,6 +713,24 @@
     },
     {
       "all_fonts_index": 142,
+      "symbol": "NotoSansSymbols2_Regular_WinSwitch_18pt16b",
+      "first": 128445,
+      "last": 128445
+    },
+    {
+      "all_fonts_index": 143,
+      "symbol": "NotoSansMath_Regular_MathHints_20pt16b",
+      "first": 8672,
+      "last": 8864
+    },
+    {
+      "all_fonts_index": 144,
+      "symbol": "NotoEmoji_Medium_Dictation_20pt16b",
+      "first": 128483,
+      "last": 128483
+    },
+    {
+      "all_fonts_index": 145,
       "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
       "first": 57344,
       "last": 57503

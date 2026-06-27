@@ -7,22 +7,22 @@
 static inline uint8_t kc_active_os(void) {
     return get_local_state()->active_os & POLY_OS_VALUE_MASK;
 }
-// macOS and iOS use the Command(⌘)/Option(⌥) glyphs; the others use ❖/⎇.
+// macOS uses the Command(⌘)/Option(⌥) glyphs; the others use ❖/⎇.
 static inline bool kc_os_is_apple(void) {
-    uint8_t o = kc_active_os();
-    return o == POLY_OS_MACOS || o == POLY_OS_IOS;
+    return kc_active_os() == POLY_OS_MACOS;
 }
 // GUI/Super key icon per active OS — a distinct resident glyph each:
-// Windows 4-pane, Linux 🐧, Android head, ❖ when nothing is detected. macOS/iOS
-// are handled by the Apple modifier swap below (the GUI key shows ⌥), so they
-// never reach this; kept here as a safe fallback (⌘) if the swap is ever bypassed.
+// Windows 4-pane, Linux 🐧, Android head, ❖ when nothing is detected. macOS is
+// handled by the Apple modifier swap below (the GUI key shows ⌥), so it never
+// reaches this; kept here as a safe fallback (⌘) if the swap is ever bypassed.
 static inline const uint32_t* kc_os_gui_icon(void) {
     switch (kc_active_os()) {
         case POLY_OS_WINDOWS: return ICON_OS_WINDOWS;
         case POLY_OS_MACOS:   return TECHNICAL_COMMAND;
-        case POLY_OS_LINUX:   return ICON_OS_LINUX;
+        case POLY_OS_LINUX:       return ICON_OS_LINUX;    // generic / unknown DE → penguin
+        case POLY_OS_LINUX_GNOME: return ICON_OS_GNOME;    // GNOME foot
+        case POLY_OS_LINUX_KDE:   return ICON_OS_KDE;      // KDE/Plasma logo
         case POLY_OS_ANDROID: return ICON_OS_ANDROID;
-        case POLY_OS_IOS:     return TECHNICAL_COMMAND;   // iOS collapsed into macOS
         default:              return DINGBAT_BLACK_DIA_X;
     }
 }
@@ -143,7 +143,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_F24:                        return U" F24";
         case KC_LEFT_CTRL:
         case KC_RIGHT_CTRL:                 return (state_flags & MODS_AS_TEXT) != 0 ? U"Ctrl" : (kc_os_is_apple() ? ICON_MAC_CONTROL : TECHNICAL_CONTROL);
-        // OS-aware modifier legends. On macOS/iOS the GUI and Alt keys are SWAPPED
+        // OS-aware modifier legends. On macOS the GUI and Alt keys are SWAPPED
         // (both legend and keycode — see process_record) so the physical row matches
         // a Mac's Ctrl–Option–Command order: the GUI key becomes Option ⌥ and the
         // Alt key becomes Command ⌘. Other OSes keep ⎇ Alt and the per-OS GUI icon.
@@ -213,8 +213,9 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
                 case POLY_OS_WINDOWS: return autom ? U"Win\r\v auto" : U"Win\r\v  pin";
                 case POLY_OS_MACOS:   return autom ? U"Mac\r\v auto" : U"Mac\r\v  pin";
                 case POLY_OS_LINUX:   return autom ? U"Lnx\r\v auto" : U"Lnx\r\v  pin";
+                case POLY_OS_LINUX_GNOME: return U"Gnm\r\v auto";   // DE is host-detected (auto-only)
+                case POLY_OS_LINUX_KDE:   return U"Kde\r\v auto";
                 case POLY_OS_ANDROID: return autom ? U"And\r\v auto" : U"And\r\v  pin";
-                case POLY_OS_IOS:     return autom ? U"iOS\r\v auto" : U"iOS\r\v  pin";
                 default:              return autom ? U"OS?\r\v auto" : U"OS?\r\v  pin";
             }
         }
@@ -232,7 +233,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
                 case POLY_OS_MACOS:   return on ? U"Mac\r\v"  ICON_SWITCH_ON : U"Mac\r\v"  ICON_SWITCH_OFF;
                 case POLY_OS_LINUX:   return on ? U"Lnx\r\v"  ICON_SWITCH_ON : U"Lnx\r\v"  ICON_SWITCH_OFF;
                 case POLY_OS_ANDROID: return on ? U"And\r\v"  ICON_SWITCH_ON : U"And\r\v"  ICON_SWITCH_OFF;
-                default:              return U"";   // iOS collapsed into macOS — not a pinnable selection
+                default:              return U"";   // reserved iOS slot + host-only DEs aren't pinnable
             }
         }
 

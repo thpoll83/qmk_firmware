@@ -1928,3 +1928,43 @@
 #define PESO_SIGN                   	U"\x20B1"
 #define MANAT_SIGN                  	U"\x20BC"
 //[[[end]]]
+
+// OS-aware shortcut-preview hint glyphs (wave B). Real Noto codepoints rendered
+// from the font pack (NOT resident) — see keycode_to_disp_overlay() in
+// poly_keymap.c and the symbol-bundle entries in fonts/fonts.yaml. Defined here
+// (outside the cog table above) rather than in lang_lut.xlsx: the formula-driven
+// rows in that sheet only round-trip through a real spreadsheet app, so appending
+// rows headlessly strips their cached values and breaks the regen. Codepoints:
+// ⇠⇢ word nav + ⊠ close (NotoSansMath), ☰ launcher (NotoSansSymbols2 BMP),
+// 🗔 app-switch / 🖽 window-switch (NotoSansSymbols2 SMP).
+#define ICON_WORD_LEFT              	U"\x21E0"
+#define ICON_WORD_RIGHT             	U"\x21E2"
+#define ICON_LAUNCHER               	U"\x2630"
+#define ICON_APP_SWITCH             	U"\x1F5D4"
+#define ICON_WINDOW_SWITCH          	U"\x1F5BD"
+#define ICON_CLOSE                  	U"\x22A0"
+// Windows-only Super-chord hint glyphs (wave C). 🗣 dictation is the only NEW
+// glyph here (added to the symbol bundle as a NotoEmoji-Medium singleton —
+// _Dictation_ in fonts/fonts.yaml, symbol content_version bumped); the rest reuse
+// already-shipped glyphs: ⚙ settings (resident ToolsBMP), 🗗 minimize (= the
+// existing PRIVATE_WINDOW), and the NotoEmoji-Medium mono emoji 🔄/📶/📜/📑/👁
+// (taskbar-cycle / cast / clipboard-history / quick-link-menu / peek-desktop)
+// from the shipped emoji bundle. See keycode_to_disp_overlay()'s win_or_unknown
+// branch. All are display-only previews of the Win+<key> shortcut.
+#define ICON_DICTATION              	U"\x1F5E3"
+#define ICON_SETTINGS               	U"\x2699"
+#define ICON_TASK_CYCLE             	U"\x1F504"
+#define ICON_CAST                   	U"\x1F4F6"
+#define ICON_CLIP_HISTORY           	U"\x1F4DC"
+#define ICON_QUICK_MENU             	U"\x1F4D1"
+#define ICON_PEEK                   	U"\x1F441"
+// Win+R "run" prompt — a 16 pt '>' and '_' (2 pt larger than the 14 pt base font)
+// drawn from the resident IconsFont (gfx_icons.h 0x9A/0x9B), so the legend reads at
+// a size closer to the emoji hints with no font-pack dependency. Distinct PUA slots,
+// NOT the ASCII '>'/'_', so normal keycaps keep the base-size glyphs.
+#define ICON_PROMPT_GT              	U"\x9A"
+#define ICON_PROMPT_US              	U"\x9B"
+// Resident IconsFont OS logos (gfx_icons.h, 0x98/0x99) — the GUI/Super-key legend
+// for the host-detected Linux desktops (POLY_OS_LINUX_GNOME/KDE).
+#define ICON_OS_GNOME               	U"\x98"
+#define ICON_OS_KDE                 	U"\x99"

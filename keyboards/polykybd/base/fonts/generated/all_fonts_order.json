@@ -142,6 +142,9 @@
     "NotoSans_Regular_SZ_14pt16b",
     "NotoSerifKR_Medium_Consonants_21pt16b",
     "NotoSerifKR_Medium_Vowels_21pt16b",
+    "NotoSansSymbols2_Regular_WinSwitch_18pt16b",
+    "NotoSansMath_Regular_MathHints_20pt16b",
+    "NotoEmoji_Medium_Dictation_20pt16b",
     "NotoColorEmoji_Regular_LangFlags_20pt7b"
   ]
 }

@@ -481,6 +481,11 @@ void load_os_state(uint8_t packed) {
     g_os_known = (packed & 0x40u) != 0;
     uint8_t val = packed & 0x3Fu;
     if (val >= POLY_OS_COUNT) { val = POLY_OS_UNKNOWN; g_os_known = false; }
+    // Migrate the retired POLY_OS_IOS (5): a protocol-7 EEPROM may still hold it
+    // (pinned or last-detected). iOS is now folded into macOS, so normalise it here
+    // — the single load point — so runtime active_os is never the reserved 5 and the
+    // Apple legends / modifier swap (which test == POLY_OS_MACOS) stay correct.
+    if (val == POLY_OS_IOS) { val = POLY_OS_MACOS; }
     if (g_os_auto) g_resolved_os = g_os_known ? val : (uint8_t)POLY_OS_UNKNOWN;
     else           g_user_os     = g_os_known ? val : (uint8_t)POLY_OS_UNKNOWN;
 }

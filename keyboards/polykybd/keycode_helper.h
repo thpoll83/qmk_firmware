@@ -137,7 +137,9 @@ enum my_keycodes {
 
     // OS status / control key: its legend shows the active OS + auto-or-pin badge
     // (the "see and verify the mode" key); pressing it cycles auto -> pin Windows
-    // -> macOS -> Linux -> Android -> iOS -> auto. Not part of os_action_table.
+    // -> macOS -> Linux -> Android -> auto. (iOS is folded into macOS, and the
+    // host-detected GNOME/KDE desktops are not separately cyclable.) Not part of
+    // os_action_table.
     KC_OS_ICON,
 
     // OS selection keys (settings layer): one key per choice instead of the single
@@ -152,8 +154,10 @@ enum my_keycodes {
     KC_OS_SET_MACOS,                         // + POLY_OS_MACOS   (2)
     KC_OS_SET_LINUX,                         // + POLY_OS_LINUX   (3)
     KC_OS_SET_ANDROID,                       // + POLY_OS_ANDROID (4)
-    // No KC_OS_SET_IOS: iOS is collapsed into macOS (identical keyboard operation),
-    // so it is not separately user-selectable. POLY_OS_IOS still exists for detection.
+    // No KC_OS_SET_IOS: iOS is folded into macOS (identical keyboard operation), so
+    // it is not separately user-selectable. POLY_OS_IOS (enum slot 5) is kept only as
+    // a reserved tombstone — it is not a detection target (QMK OS_IOS maps to
+    // POLY_OS_MACOS) and a persisted legacy 5 is migrated to macOS on load.
     KC_OS_SET_END,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");

@@ -30,6 +30,7 @@ sources:
   noto-cemoji:         fonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf
   noto-sans-symbols:   fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
   noto-sans-symbols2:  fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
+  noto-sans-math:      fonts/Noto_Sans_Math/NotoSansMath-Regular.ttf
   noto-sans-canadian-aboriginal: fonts/noto-sans-canadian-aboriginal/NotoSansCanadianAboriginal-Regular.ttf
   noto-sans-cherokee:  fonts/noto-sans-cherokee/NotoSansCherokee-Regular.ttf
 
@@ -248,7 +249,14 @@ fonts:
   - {category: emoji, variant: _Find_, size: 18, bits: 32, ranges: [[0x1f50e, 0x1f50e]]}
   - {category: emoji, variant: _Lock_, size: 18, bits: 32, ranges: [[0x1f512, 0x1f512]]}
   - {category: emoji, variant: _Note_, size: 12, bits: 32, ranges: [[0x1f4dd, 0x1f4dd]]}
-  - {category: symbols, variant: _Window_, size: 18, bits: 32, ranges: [[0x1f5d5, 0x1f5db]]}
+  # 0x1F5D4 (🗔 ICON_APP_SWITCH, window+cursor) extends the window-management family
+  # downward by one; renders at the same size/treatment as minimize/maximize/window.
+  # Extending _Window_'s range in place adds a glyph without moving _Window_ in the
+  # priority order, so no other font's global ALL_FONTS index shifts. The two NEW
+  # wave-B hint fonts (_WinSwitch_, _WordArrows_) are appended at the END of this
+  # list (see below) so they take the highest indices and shift nothing ahead of
+  # them — keeping the change isolated to the symbol bundle (+ the trailing flags).
+  - {category: symbols, variant: _Window_, size: 18, bits: 32, ranges: [[0x1f5d4, 0x1f5db]]}
   - {category: emoji, variant: _AI_, bits: 32, ranges: [[0x1f300, 0x1f300]]}
   - {category: emoji, variant: _Emojis0_, bits: 32, ranges: [[0x1f600, 0x1f64f]]}
   - {category: emoji, variant: _Light_, bits: 32, ranges: [[0x1f4a1, 0x1f4a1]]}
@@ -343,3 +351,22 @@ fonts:
   - {category: latin, variant: _SZ_, render_height: 44, ranges: [[0x1e9e, 0x1e9e]]}
   - {category: kr, variant: _Consonants_, ranges: [[0x1100, 0x1112]]}
   - {category: kr, variant: _Vowels_, render_height: 51, ranges: [[0x1161, 0x1169], [0x116d, 0x116e], [0x1172, 0x1175]]}
+  # Wave-B OS-aware shortcut-hint fonts, appended LAST so they take the highest
+  # ALL_FONTS indices and never shift an existing font's index (only the trailing
+  # pack_extra flags font moves). Both are symbol-bundle, non-resident, and overlap
+  # no other range, so their low priority is irrelevant. See keycode_to_disp_overlay().
+  # 0x1F5BD (🖽 ICON_WINDOW_SWITCH, tiled frame) — singleton so its first..last span
+  # never reaches _Util_'s 0x1F5CA (CLIPBOARD_PASTE) and shadow it with an empty glyph.
+  - {category: symbols, variant: _WinSwitch_, size: 18, bits: 32, ranges: [[0x1f5bd, 0x1f5bd]]}
+  # NotoSansMath hint glyphs (none are in Symbols v1/Symbols2): dashed word-nav
+  # arrows ⇠⇢ (U+21E0/21E2, ICON_WORD_LEFT/RIGHT) and the boxed-X close mark
+  # ⊠ (U+22A0, ICON_CLOSE) — a lighter "close window" than the heavy ⛝ U+26DD.
+  # (The 0x21E0..0x22A0 span emits ~190 empty placeholder glyphs between the three
+  # real ones, like _Util_ does — negligible in the 96 KB symbol slot.)
+  - {category: symbols, variant: _MathHints_, source: noto-sans-math, ranges: [[0x21e0, 0x21e0], [0x21e2, 0x21e2], [0x22a0, 0x22a0]]}
+  # Wave-C: 🗣 dictation (U+1F5E3, ICON_DICTATION) for the Windows-only Win+H hint.
+  # NotoSansSymbols2 has no glyph at 1F5E3 (notdef), so it is sourced from
+  # NotoEmoji-Medium (mono) like the Tools/alchemical SymBmp glyphs above. Singleton
+  # span (no shadowing), appended LAST so it takes the highest ALL_FONTS index and
+  # shifts only the trailing flags font. Bumps the symbol bundle content_version.
+  - {category: symbols, variant: _Dictation_, source: noto-emoji, bits: 32, ranges: [[0x1f5e3, 0x1f5e3]]}

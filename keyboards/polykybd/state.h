@@ -23,16 +23,28 @@ enum poly_idle_style {
 // Values are append-only: persisted in poly_eeconf_t.os_state and carried on the
 // wire (HID cmd 29), so never reorder or reuse — add new OSes at the end.
 // Sources are reconciled by resolve/get_active_os(): a manual pin wins; otherwise
-// host push (cmd 29) beats firmware USB detection (QMK os_detection). Android and
-// iOS exist for the manual pin / iOS USB-detect — note QMK detection reports
-// Android (and ChromeOS) as Linux, so Android can only ever come from a manual pin.
+// host push (cmd 29) beats firmware USB detection (QMK os_detection). Android can
+// only ever come from a manual pin — QMK detection reports Android (and ChromeOS)
+// as Linux.
 enum poly_os {
     POLY_OS_UNKNOWN = 0,
     POLY_OS_WINDOWS = 1,
     POLY_OS_MACOS   = 2,
     POLY_OS_LINUX   = 3,
     POLY_OS_ANDROID = 4,
-    POLY_OS_IOS     = 5,
+    // 5 = reserved, **currently not used**. Was POLY_OS_IOS; folded into macOS
+    // (identical Cmd/Opt behaviour, and the host never runs on iOS). The slot is
+    // kept and never reused, to honour the append-only wire contract (cmd 29 /
+    // persisted os_state — a protocol-7 keyboard may still hold this value) and to
+    // keep the GNOME/KDE values below pinned at 6/7, matching the host.
+    POLY_OS_IOS     = 5,   // reserved / not used — folded into POLY_OS_MACOS
+    // Host-detected Linux desktop environments (from XDG_CURRENT_DESKTOP, pushed
+    // over cmd 29). They refine the Super-key shortcut hints — GNOME and KDE bind
+    // the launcher/window-switcher differently — and otherwise behave as Linux.
+    // Not manually pinnable (the KC_OS_SET_* keys stop at Android); a manual Linux
+    // pin or USB detection yields the generic POLY_OS_LINUX.
+    POLY_OS_LINUX_GNOME = 6,
+    POLY_OS_LINUX_KDE   = 7,
     POLY_OS_COUNT
 };
 

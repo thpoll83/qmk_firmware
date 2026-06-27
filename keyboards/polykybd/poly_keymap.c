@@ -1183,7 +1183,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"     " PRIVATE_WINDOW;     // Win+M minimize all
                 break;
             case KC_R:
-                if (win_or_unknown) return U"   "   U">_";              // Win+R run dialog
+                if (win_or_unknown) return U"   "   ICON_PROMPT_GT ICON_PROMPT_US; // Win+R run dialog
                 break;
             case KC_T:
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar

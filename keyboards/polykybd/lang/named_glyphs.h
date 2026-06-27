@@ -1958,6 +1958,12 @@
 #define ICON_CLIP_HISTORY           	U"\x1F4DC"
 #define ICON_QUICK_MENU             	U"\x1F4D1"
 #define ICON_PEEK                   	U"\x1F441"
+// Win+R "run" prompt — a 16 pt '>' and '_' (2 pt larger than the 14 pt base font)
+// drawn from the resident IconsFont (gfx_icons.h 0x9A/0x9B), so the legend reads at
+// a size closer to the emoji hints with no font-pack dependency. Distinct PUA slots,
+// NOT the ASCII '>'/'_', so normal keycaps keep the base-size glyphs.
+#define ICON_PROMPT_GT              	U"\x9A"
+#define ICON_PROMPT_US              	U"\x9B"
 // Resident IconsFont OS logos (gfx_icons.h, 0x98/0x99) — the GUI/Super-key legend
 // for the host-detected Linux desktops (POLY_OS_LINUX_GNOME/KDE).
 #define ICON_OS_GNOME               	U"\x98"

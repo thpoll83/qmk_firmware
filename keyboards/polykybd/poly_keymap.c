@@ -1164,6 +1164,45 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_S:
                 if (win_or_unknown) return U"   "  ICON_LAUNCHER;
                 break;
+            // Windows-only Super-chords (wave C). These have no standard GNOME/KDE
+            // equivalent, so they are gated on win_or_unknown only. Dictation (Win+H)
+            // is Windows-specific: macOS triggers it with a double-tap Fn/Ctrl (not a
+            // GUI+letter chord the hint engine can preview), and Linux/Android bind no
+            // standard dictation chord.
+            // Leading-space counts tuned per glyph (oled_preview) so each wide emoji
+            // glyph sits as far right as it fits without clipping the 72 px window —
+            // matching the existing hints' placement. M reuses the 5-space minimize
+            // legend (= Super+Down); X's narrower glyph takes 4.
+            case KC_H:
+                if (win_or_unknown) return U"   "   ICON_DICTATION;     // Win+H dictation
+                break;
+            case KC_I:
+                if (win_or_unknown) return U"   "   ICON_SETTINGS;      // Win+I settings
+                break;
+            case KC_M:
+                if (win_or_unknown) return U"     " PRIVATE_WINDOW;     // Win+M minimize all
+                break;
+            case KC_R:
+                if (win_or_unknown) return U"   "   U">_";              // Win+R run dialog
+                break;
+            case KC_T:
+                if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
+                break;
+            case KC_K:
+                if (win_or_unknown) return U"   "   ICON_CAST;          // Win+K cast
+                break;
+            case KC_V:
+                if (win_or_unknown) return U"   "   ICON_CLIP_HISTORY;  // Win+V clipboard history
+                break;
+            case KC_X:
+                if (win_or_unknown) return U"    "  ICON_QUICK_MENU;    // Win+X quick-link menu
+                break;
+            case KC_COMMA:
+                if (win_or_unknown) return U"   "   ICON_PEEK;          // Win+, peek desktop
+                break;
+            case KC_DOT:
+                if (win_or_unknown) return U"   "   PRIVATE_EMOJI_1F600; // Win+. emoji panel
+                break;
             default: break;
         }
     }

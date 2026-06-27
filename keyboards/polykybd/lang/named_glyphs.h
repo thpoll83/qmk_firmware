@@ -1943,6 +1943,21 @@
 #define ICON_APP_SWITCH             	U"\x1F5D4"
 #define ICON_WINDOW_SWITCH          	U"\x1F5BD"
 #define ICON_CLOSE                  	U"\x22A0"
+// Windows-only Super-chord hint glyphs (wave C). 🗣 dictation is the only NEW
+// glyph here (added to the symbol bundle as a NotoEmoji-Medium singleton —
+// _Dictation_ in fonts/fonts.yaml, symbol content_version bumped); the rest reuse
+// already-shipped glyphs: ⚙ settings (resident ToolsBMP), 🗗 minimize (= the
+// existing PRIVATE_WINDOW), and the NotoEmoji-Medium mono emoji 🔄/📶/📜/📑/👁
+// (taskbar-cycle / cast / clipboard-history / quick-link-menu / peek-desktop)
+// from the shipped emoji bundle. See keycode_to_disp_overlay()'s win_or_unknown
+// branch. All are display-only previews of the Win+<key> shortcut.
+#define ICON_DICTATION              	U"\x1F5E3"
+#define ICON_SETTINGS               	U"\x2699"
+#define ICON_TASK_CYCLE             	U"\x1F504"
+#define ICON_CAST                   	U"\x1F4F6"
+#define ICON_CLIP_HISTORY           	U"\x1F4DC"
+#define ICON_QUICK_MENU             	U"\x1F4D1"
+#define ICON_PEEK                   	U"\x1F441"
 // Resident IconsFont OS logos (gfx_icons.h, 0x98/0x99) — the GUI/Super-key legend
 // for the host-detected Linux desktops (POLY_OS_LINUX_GNOME/KDE).
 #define ICON_OS_GNOME               	U"\x98"

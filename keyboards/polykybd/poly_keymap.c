@@ -266,10 +266,24 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
 // Global variables: flags, overlay_flags
-// One-shot: force the master to push the default layer / layer state to the slave
-// once after boot, regardless of diff. Armed at boot (and again in init), cleared
-// on the first successful layer sync. See the use site in sync_and_refresh_displays.
+// Force the master to push the default layer / layer state to the slave after boot,
+// regardless of diff. Armed at boot (and again in init), cleared on the first
+// successful layer sync OR once the bounded try budget is spent. See the use site
+// in sync_and_refresh_displays.
+//
+// BOUNDED retry (not a true one-shot): the previous true-one-shot version fired
+// exactly once the transport reported connected, then cleared regardless of ACK —
+// but right after a fw-apply reboot the slave's split-sync handler may not be ready
+// to ACK yet even though the transport already reads connected, so that single send
+// dropped and the slave kept its STALE default layer with nothing to re-fire it (no
+// later "real" layer diff if the user never changes layers — the recurring
+// wrong-slave-default-layer-after-fw-update field bug). So retry until the slave
+// actually ACKs, but cap the attempts so a slow-ACK link (the HIL rig at boot) can't
+// spin the main loop through the host's first HID queries the way the old UNBOUNDED
+// re-fire-every-pass version did.
+#define FORCE_LAYER_RESYNC_TRIES 12
 static bool g_force_layer_resync = true;
+static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 
 void sync_and_refresh_displays(void) {
     // Freeze slave display while bootloader is active; re-assert RGB each cycle.
@@ -383,7 +397,14 @@ void sync_and_refresh_displays(void) {
         if ( layer_diff || force_resync ) {
             bool sent = sync_succeeded(send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES));
             if (force_resync) {
-                g_force_layer_resync = false;  // one-shot: never re-fire, even on a drop
+                // Clear on success, else burn one try; give up once the budget is
+                // spent (a genuinely-stale slave is then corrected by the next real
+                // layer diff). Bounded so a slow-ACK link can't spin indefinitely.
+                if (sent) {
+                    g_force_layer_resync = false;
+                } else if (g_force_resync_tries == 0 || --g_force_resync_tries == 0) {
+                    g_force_layer_resync = false;
+                }
             }
             if (sent) {
                 layer_diff = true;             // ensure global advances (copy_global_layer below)
@@ -503,6 +524,20 @@ static int8_t jitter_axis(uint32_t epoch, uint32_t salt, int8_t lo, int8_t hi) {
 // legends during the (mostly-blocking) transfer. Called from the HID BEGIN
 // handlers BEFORE fw_up activates (which freezes display updates).
 void poly_prepare_for_flash(void) {
+    // Exit idle FIRST. If the keyboard had dimmed/idled (DISP_IDLE, or contrast
+    // pulsed down to DISP_OFF) when the flash begins, the keycaps were dark and
+    // update_displays() early-returns while DISP_IDLE is set — so the legible
+    // base legends never get drawn and "some keys are not lit" during the flash.
+    // Force a full wake (mirrors suspend_wakeup_init_kb / the cmd-15 stop-idle
+    // path) so contrast is restored and the refresh below actually renders.
+    poly_sync_t* local_state = access_local_state();
+    if ((local_state->flags & DISP_IDLE) != 0 || local_state->contrast == DISP_OFF) {
+        local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
+        local_state->flags |= STATUS_DISP_ON;
+        local_state->contrast = get_active_brightness();
+        reset_idle_jitter();       // fresh centred legends, not jittered offsets
+        update_performed();
+    }
     layer_clear();                 // momentary/toggle layers off -> default layer active
     request_disp_refresh();
     // Push the base layer + refresh to the SLAVE and render the master, before
@@ -2401,7 +2436,8 @@ void keyboard_post_init_user(void) {
     access_local_state()->unicode_mode = get_unicode_input_mode();
     layer_clear();
     layer_on(default_layer);
-    g_force_layer_resync = true;   // push this boot's default layer to the slave once
+    g_force_layer_resync = true;   // push this boot's default layer to the slave
+    g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;  // (re-arm the bounded budget)
 
     //set these values, they will never change
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);

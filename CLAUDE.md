@@ -279,6 +279,17 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     renders ASCII text with no pack. The build-time guard fails if a bundle overflows
     its slot. Order in `bundles.list` is **append-only** (the index is the on-wire id
     and the slot order; growth-prone `emoji` is last with `slot_kb: rest`).
+  - **Reshipping a bundle to the host — there is NO ship script.** Regenerate with
+    `generate_fonts.py --emit-bundles DIR --bundle-version ID=N …`, copy the changed
+    `<id>.plyf` to `PolyKybdHost/polyhost/res/fontpack/`, then hand-rebuild
+    `bundles.json` from the firmware `fontpack_bundles.manifest.json` (id / index /
+    slot_offset / slot_size) + each `.plyf` (`size = len(data)`, `sha256 =
+    sha256(data).hexdigest()[:16]`) + the version map. ⚠️ **`--bundle-version`
+    defaults UNSPECIFIED bundles to `content_version 0`** — pass *every* id
+    (`symbol=4 mideast=1 syllabic=1 asia=1 flags=3 emoji=1`) or you silently reset
+    the others. `cmp` each regenerated `.plyf` against the shipped one to see which
+    actually changed, and bump+reship only those (see the gidx note above re: why
+    appending a glyph now changes only the edited bundle).
   - **Flash UX (split72):** while any flash runs the status OLED shows an "Updating
     fonts/firmware — do not unplug" screen with a full-width progress bar, and the RGB
     matrix breathes (cyan = font pack, orange = firmware/bootloader = "can't type");
@@ -297,6 +308,16 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   (Technical/Technical2 = Ctrl/Alt/GUI/Option/Del/Backspace/Esc/PrintScreen), the
   menu icons (Settings ⚙, World 🌐), Brightness moons, Hyper/Meh, GuiKey, Util
   (screenshot/calc/my-computer/paste), EmjLayer, plus the always-resident Arrows.
+- **A single bigger/custom glyph → inject it into the resident IconsFont
+  (`base/fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
+  (prepended), so *extending it with another glyph* (append bitmap bytes + a `GFXglyph`
+  record, bump the font's `last`) shifts **no pack index** and needs no reship — it
+  ships with the firmware. The Win+R `>_` hint does this: a 16 pt `>`/`_` (2 pt over the
+  14 pt base) generated via `fontconvert` and injected at PUA `0x9A`/`0x9B`
+  (`ICON_PROMPT_GT`/`_US`), referenced only by that hint so normal `>`/`_` keycaps keep
+  the base size. ⚠️ Adding a whole **new resident *font*** instead (an extra entry in
+  `index.resident_fonts`) prepends ahead of the pack → **every pack font's gidx shifts**
+  → a full-pack reship; avoid that for one or two glyphs.
 - **Regenerate** with `FONTCONVERT=<pinned> python3 generate_fonts.py`. **Byte-repro
   gotcha:** the per-category headers embed the fontconvert *binary path* in a
   provenance comment, so run from the **same path** the committed headers used

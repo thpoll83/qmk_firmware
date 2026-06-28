@@ -1,0 +1,73 @@
+# Source Noto fonts for the PolyKybd keycap font packs — single source of truth.
+#
+# Consumed by:
+#   - dl-fonts.sh                         (downloads each `url` to `dest`, relative
+#                                          to this fonts dir)
+#   - PolyKybdHost font_downloader.py     (the host's "Download Noto…" button;
+#                                          downloads `url`, stores under basename(dest))
+#
+# ⚠️ This file is mirrored byte-identically in the host repo at
+#    PolyKybdHost/polyhost/res/fonts/noto-fonts.yaml — keep both in sync (verify
+#    with `cmp`).  The host ships installed with no firmware checkout, so it carries
+#    its own copy.
+#
+# Most Noto families are variable-only on Google Fonts now; FreeType renders them
+# transparently, so they drop in for the static filenames create_fonts.sh expects.
+fonts:
+  - name: Noto Sans
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans/NotoSans-Regular.ttf
+  - name: Noto Sans Hebrew
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanshebrew/NotoSansHebrew%5Bwdth%2Cwght%5D.ttf
+    dest: Noto_Sans_Hebrew/static/NotoSansHebrew-Medium.ttf
+  - name: Noto Sans JP
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf
+    dest: noto-sans-jp/NotoSansJP-Regular.ttf
+  - name: Noto Serif KR
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notoserifkr/NotoSerifKR%5Bwght%5D.ttf
+    dest: noto-serif-kr/NotoSerifKR-Medium.otf
+  - name: Noto Sans Arabic
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansarabic/NotoSansArabic%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf
+  - name: Noto Sans Devanagari
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansdevanagari/NotoSansDevanagari%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans-devanagari/NotoSansDevanagari-Regular.ttf
+  - name: Noto Sans Bengali
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansbengali/NotoSansBengali%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans-bengali/NotoSansBengali-Regular.ttf
+  - name: Noto Sans Telugu
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstelugu/NotoSansTelugu%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans-telugu/NotoSansTelugu-Regular.ttf
+  - name: Noto Sans Tamil
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstamil/NotoSansTamil%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans-tamil/NotoSansTamil-Regular.ttf
+  - name: Noto Sans Thai
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansthai/NotoSansThai%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans-thai/NotoSansThai-Regular.ttf
+  - name: Noto Sans Georgian
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansgeorgian/NotoSansGeorgian%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans-georgian/NotoSansGeorgian-Regular.ttf
+  - name: Noto Sans Armenian
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansarmenian/NotoSansArmenian%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans-armenian/NotoSansArmenian-Regular.ttf
+  - name: Noto Sans TC
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf
+    dest: noto-sans-tc/NotoSansTC-Regular.ttf
+  - name: Noto Sans Ethiopic
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansethiopic/NotoSansEthiopic%5Bwdth%2Cwght%5D.ttf
+    dest: noto-sans-ethiopic/NotoSansEthiopic-Regular.ttf
+  - name: Noto Emoji (monochrome)
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notoemoji/NotoEmoji%5Bwght%5D.ttf
+    dest: Noto_Emoji/static/NotoEmoji-Medium.ttf
+  - name: Noto Sans Symbols
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssymbols/NotoSansSymbols%5Bwght%5D.ttf
+    dest: Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
+  # NotoSansSymbols2 still has a static build on Google Fonts
+  - name: Noto Sans Symbols 2
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssymbols2/NotoSansSymbols2-Regular.ttf
+    dest: Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
+  # NotoColorEmoji lives in a separate repo; upstream filename differs from the
+  # path create_fonts.sh references (NotoColorEmoji-Regular.ttf)
+  - name: Noto Color Emoji
+    url: https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf
+    dest: Noto_CEmoji/NotoColorEmoji-Regular.ttf

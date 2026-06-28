@@ -236,7 +236,12 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
 
 - **`fonts/fonts.yaml`** — single source of truth: an ordered list of font entries (font file, size, variant, codepoint ranges, weight, bits, …) grouped into categories with shared defaults. The list order **is** the `ALL_FONTS[]` priority (front-to-back lookup; first match wins on overlapping ranges) — categories only decide which header a font lands in.
 - **`fonts/generate_fonts.py`** — reads the YAML, runs `fontconvert` per entry, writes one header per category to `base/fonts/generated/`, and composes `base/fonts/gfx_used_fonts.h` (the `ALL_FONTS[]` table, with `IconsFont` prepended). `--check` flags stale headers for CI. Needs PyYAML + `fontconvert` on PATH (or `$FONTCONVERT`).
-- **`fonts/dl-fonts.sh`** — downloads the Noto source fonts first.
+- **`fonts/dl-fonts.sh`** — downloads the Noto source fonts first. The font list
+  (url + dest) lives in **`fonts/noto-fonts.yaml`** (single source of truth); the
+  script just parses it (PyYAML) and fetches each entry. ⚠️ `noto-fonts.yaml` is
+  mirrored **byte-identically** in the host repo at
+  `PolyKybdHost/polyhost/res/fonts/noto-fonts.yaml` (its "Download Noto…" button in
+  the font-pack extend dialog reads the same catalog) — keep both in sync (`cmp`).
 - `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
 - **`fonts/gen-lang-fonts.sh`** — generates the two standalone headers for the language-selection layer (`_LL`): `base/fonts/flag_fonts.h` (country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically) and `base/fonts/lang_label_font.h` (a 6 px NotoSans label font). These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes.
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.

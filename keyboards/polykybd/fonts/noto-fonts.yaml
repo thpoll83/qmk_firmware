@@ -56,6 +56,12 @@ fonts:
   - name: Noto Sans Ethiopic
     url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansethiopic/NotoSansEthiopic%5Bwdth%2Cwght%5D.ttf
     dest: noto-sans-ethiopic/NotoSansEthiopic-Regular.ttf
+  - name: Noto Sans Canadian Aboriginal
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanscanadianaboriginal/NotoSansCanadianAboriginal%5Bwght%5D.ttf
+    dest: noto-sans-canadian-aboriginal/NotoSansCanadianAboriginal-Regular.ttf
+  - name: Noto Sans Cherokee
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanscherokee/NotoSansCherokee%5Bwght%5D.ttf
+    dest: noto-sans-cherokee/NotoSansCherokee-Regular.ttf
   - name: Noto Emoji (monochrome)
     url: https://raw.githubusercontent.com/google/fonts/main/ofl/notoemoji/NotoEmoji%5Bwght%5D.ttf
     dest: Noto_Emoji/static/NotoEmoji-Medium.ttf

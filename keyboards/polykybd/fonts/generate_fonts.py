@@ -137,11 +137,15 @@ _SETTINGS_FIELDS = [f for f, _ in FIELD_FLAGS] + ["source", "variant", "category
                                                  "sequence", "seq_first"]
 
 
-def render_settings(entries, symbols, order, categories) -> dict:
+def render_settings(entries, symbols, order, categories, sources) -> dict:
     """Map each generated font's GLOBAL ALL_FONTS index -> the fonts.yaml render
     settings it was generated with.  `symbols[i]` is the GFXfont symbol for
     `entries[i]`; the global index is its position in `order` (the full ALL_FONTS
-    priority list).  Consumed by the host edit dialog to prefill the controls."""
+    priority list).  Consumed by the host edit dialog to prefill the controls.
+
+    Also records `source_file` (the basename of the source font), so the host can
+    auto-resolve the .ttf from its download cache (basename matches noto-fonts.yaml)
+    instead of making the user re-pick it."""
     pos = {sym: i for i, sym in enumerate(order)}
     by_idx = {}
     for entry, sym in zip(entries, symbols):
@@ -149,7 +153,11 @@ def render_settings(entries, symbols, order, categories) -> dict:
         if gi is None:
             continue
         e = resolve(entry, categories)
-        by_idx[str(gi)] = {k: e[k] for k in _SETTINGS_FIELDS if k in e}
+        rec = {k: e[k] for k in _SETTINGS_FIELDS if k in e}
+        src = e.get("source")
+        if src in sources:
+            rec["source_file"] = os.path.basename(sources[src])
+        by_idx[str(gi)] = rec
     return {"by_global_index": by_idx}
 
 
@@ -252,7 +260,7 @@ def main() -> None:
             json.dumps({"order": order}, indent=2) + "\n"
         # Per-font render settings keyed by global index, for the host edit dialog.
         outputs[gen_dir / RENDER_SETTINGS] = \
-            json.dumps(render_settings(entries, symbols, order, categories),
+            json.dumps(render_settings(entries, symbols, order, categories, sources),
                        indent=2) + "\n"
         # Derive the font-pack manifest from the freshly composed (in-memory)
         # headers so it stays consistent with them under --check.

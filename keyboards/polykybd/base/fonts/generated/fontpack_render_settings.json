@@ -3,7 +3,8 @@
     "1": {
       "size": 14,
       "variant": "_Base_",
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "2": {
       "size": 20,
@@ -17,7 +18,8 @@
       "invert": false,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "3": {
       "size": 20,
@@ -31,7 +33,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "4": {
       "size": 20,
@@ -47,7 +50,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "5": {
       "size": 20,
@@ -61,7 +65,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "6": {
       "size": 20,
@@ -75,7 +80,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "7": {
       "size": 20,
@@ -89,7 +95,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "8": {
       "size": 20,
@@ -103,7 +110,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "9": {
       "size": 20,
@@ -117,7 +125,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "10": {
       "size": 20,
@@ -131,7 +140,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "11": {
       "size": 20,
@@ -145,7 +155,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "12": {
       "size": 20,
@@ -159,7 +170,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "13": {
       "size": 20,
@@ -173,7 +185,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "14": {
       "size": 20,
@@ -187,7 +200,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "15": {
       "size": 20,
@@ -201,7 +215,8 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "16": {
       "size": 20,
@@ -215,827 +230,953 @@
       "invert": true,
       "edge": true,
       "bits": 32,
-      "source": "noto-cemoji"
+      "source": "noto-cemoji",
+      "source_file": "NotoColorEmoji-Regular.ttf"
     },
     "17": {
       "size": 20,
       "variant": "_ToolsBMP_",
       "render_height": 50,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "18": {
       "size": 20,
       "variant": "_EmjHandsBMP2_",
       "render_height": 50,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "19": {
       "size": 20,
       "variant": "_SymBmp1_",
       "render_height": 50,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "20": {
       "size": 20,
       "variant": "_SymBmp2_",
       "render_height": 50,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "21": {
       "size": 20,
       "variant": "_SymBmp3_",
       "render_height": 50,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "22": {
       "size": 20,
       "variant": "_SymBmp4_",
       "render_height": 50,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "23": {
       "size": 20,
       "variant": "_SymBmp5_",
       "render_height": 50,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "24": {
       "size": 20,
       "variant": "_SymBmp6_",
       "render_height": 50,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "25": {
       "size": 20,
       "variant": "_Zodiac_",
       "render_height": 50,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "26": {
       "size": 20,
       "variant": "_EmjLayer_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "27": {
       "size": 14,
       "variant": "_LatinExtB_",
       "render_height": 44,
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "28": {
       "size": 14,
       "variant": "_Schwa_",
       "render_height": 44,
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "29": {
       "size": 14,
       "variant": "_SupAndExtA_",
       "render_height": 44,
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "30": {
       "size": 20,
       "variant": "_EmjTravelBMP_",
       "render_height": 50,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "31": {
       "size": 14,
       "variant": "_CurrencySigns_",
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "32": {
       "size": 18,
       "variant": "_Hyper_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "33": {
       "size": 20,
       "variant": "_Meh_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "34": {
       "size": 20,
       "variant": "_Settings_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "35": {
       "size": 20,
       "variant": "_World_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "36": {
       "size": 20,
       "variant": "_Arrows_",
       "render_height": 50,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "37": {
       "size": 20,
       "variant": "_Technical2_",
       "render_height": 50,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "38": {
       "size": 20,
       "variant": "_Technical_",
       "render_height": 50,
-      "source": "noto-sans-symbols"
+      "source": "noto-sans-symbols",
+      "source_file": "NotoSansSymbols-Regular.ttf"
     },
     "39": {
       "size": 20,
       "variant": "_GuiKey_",
       "render_height": 50,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "40": {
       "size": 18,
       "variant": "_ClipCpy_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "41": {
       "size": 14,
       "variant": "_FileOpen_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "42": {
       "size": 20,
       "variant": "_Util_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "43": {
       "size": 16,
       "variant": "_Brightness_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "44": {
       "size": 18,
       "variant": "_Find_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "45": {
       "size": 18,
       "variant": "_Lock_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "46": {
       "size": 12,
       "variant": "_Note_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "47": {
       "size": 18,
       "variant": "_Window_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-sans-symbols2"
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     },
     "48": {
       "size": 20,
       "variant": "_AI_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "49": {
       "size": 20,
       "variant": "_Emojis0_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "50": {
       "size": 20,
       "variant": "_Light_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "51": {
       "size": 20,
       "variant": "_Emojis2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "52": {
       "size": 15,
       "variant": "_Cjk4e2d_",
       "weight": 400,
-      "source": "noto-sans-jp"
+      "source": "noto-sans-jp",
+      "source_file": "NotoSansJP-Regular.ttf"
     },
     "53": {
       "size": 15,
       "variant": "_Cjk5eff_",
       "weight": 400,
-      "source": "noto-sans-jp"
+      "source": "noto-sans-jp",
+      "source_file": "NotoSansJP-Regular.ttf"
     },
     "54": {
       "size": 15,
       "variant": "_Cjk96e3_",
       "weight": 400,
-      "source": "noto-sans-jp"
+      "source": "noto-sans-jp",
+      "source_file": "NotoSansJP-Regular.ttf"
     },
     "55": {
       "size": 15,
       "variant": "_Cjk91cd_",
       "weight": 400,
-      "source": "noto-sans-jp"
+      "source": "noto-sans-jp",
+      "source_file": "NotoSansJP-Regular.ttf"
     },
     "56": {
       "size": 15,
       "variant": "_KangXi_",
       "weight": 400,
-      "source": "noto-sans-jp"
+      "source": "noto-sans-jp",
+      "source_file": "NotoSansJP-Regular.ttf"
     },
     "57": {
       "size": 20,
       "variant": "_EmjAnimals2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "58": {
       "size": 20,
       "variant": "_EmjAnimals3_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "59": {
       "size": 20,
       "variant": "_EmjAnimals4_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "60": {
       "size": 20,
       "variant": "_EmjAnimals5_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "61": {
       "size": 20,
       "variant": "_EmjAnimals_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "62": {
       "size": 20,
       "variant": "_EmjBody2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "63": {
       "size": 20,
       "variant": "_EmjBuildings_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "64": {
       "size": 20,
       "variant": "_EmjCelebrate_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "65": {
       "size": 20,
       "variant": "_EmjClocks_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "66": {
       "size": 20,
       "variant": "_EmjClothing2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "67": {
       "size": 20,
       "variant": "_EmjClothing_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "68": {
       "size": 20,
       "variant": "_EmjEffects_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "69": {
       "size": 20,
       "variant": "_EmjFaces2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "70": {
       "size": 20,
       "variant": "_EmjFaces3_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "71": {
       "size": 20,
       "variant": "_EmjFaces_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "72": {
       "size": 20,
       "variant": "_EmjFantasy_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "73": {
       "size": 20,
       "variant": "_EmjFood2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "74": {
       "size": 20,
       "variant": "_EmjFood3_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "75": {
       "size": 20,
       "variant": "_EmjFood4_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "76": {
       "size": 20,
       "variant": "_EmjFood5_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "77": {
       "size": 20,
       "variant": "_EmjFood_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "78": {
       "size": 20,
       "variant": "_EmjGestures_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "79": {
       "size": 20,
       "variant": "_EmjHands2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "80": {
       "size": 20,
       "variant": "_EmjHands3_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "81": {
       "size": 20,
       "variant": "_EmjHearts_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "82": {
       "size": 20,
       "variant": "_EmjHousehold_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "83": {
       "size": 20,
       "variant": "_EmjInsects_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "84": {
       "size": 20,
       "variant": "_EmjLove_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "85": {
       "size": 20,
       "variant": "_EmjObjects1_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "86": {
       "size": 20,
       "variant": "_EmjObjects2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "87": {
       "size": 20,
       "variant": "_EmjParts_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "88": {
       "size": 20,
       "variant": "_EmjPeople2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "89": {
       "size": 20,
       "variant": "_EmjPeople3_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "90": {
       "size": 20,
       "variant": "_EmjPeople4_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "91": {
       "size": 20,
       "variant": "_EmjPeople_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "92": {
       "size": 20,
       "variant": "_EmjPlants_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "93": {
       "size": 20,
       "variant": "_EmjRaised_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "94": {
       "size": 20,
       "variant": "_EmjSciTools_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "95": {
       "size": 20,
       "variant": "_EmjSmileys2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "96": {
       "size": 20,
       "variant": "_EmjSports2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "97": {
       "size": 20,
       "variant": "_EmjSports3_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "98": {
       "size": 20,
       "variant": "_EmjSports_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "99": {
       "size": 20,
       "variant": "_EmjToys_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "100": {
       "size": 20,
       "variant": "_EmjTravelExt_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "101": {
       "size": 20,
       "variant": "_EmjTravel_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "102": {
       "size": 20,
       "variant": "_EmjWeatherSMP1_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "103": {
       "size": 20,
       "variant": "_EmjWeatherSMP2_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "104": {
       "size": 20,
       "variant": "_EmjTravelBMP2_",
       "render_height": 50,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "105": {
       "size": 20,
       "variant": "_Emojis1_",
       "render_height": 50,
       "bits": 32,
-      "source": "noto-emoji"
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     },
     "106": {
       "size": 16,
       "variant": "_FormsB_",
       "render_height": 40,
-      "source": "noto-sans-arabic"
+      "source": "noto-sans-arabic",
+      "source_file": "NotoSansArabic-Regular.ttf"
     },
     "107": {
       "size": 16,
       "variant": "_Isolated_",
       "render_height": 40,
-      "source": "noto-sans-arabic"
+      "source": "noto-sans-arabic",
+      "source_file": "NotoSansArabic-Regular.ttf"
     },
     "108": {
       "size": 16,
       "variant": "_PerArab_",
       "render_height": 40,
-      "source": "noto-sans-arabic"
+      "source": "noto-sans-arabic",
+      "source_file": "NotoSansArabic-Regular.ttf"
     },
     "109": {
       "size": 16,
       "variant": "_Deva_",
       "render_height": 40,
-      "source": "noto-sans-devanagari"
+      "source": "noto-sans-devanagari",
+      "source_file": "NotoSansDevanagari-Regular.ttf"
     },
     "110": {
       "size": 16,
       "variant": "_DevaMatra_",
       "render_height": 40,
       "source": "noto-sans-devanagari",
-      "sequence": "25CC 0901, 25CC 0902, 25CC 0903, 25CC 093C, 25CC 093E, 25CC 093F, 25CC 0940, 25CC 0941, 25CC 0942, 25CC 0943, 25CC 0944, 25CC 0945, 25CC 0946, 25CC 0947, 25CC 0948, 25CC 0949, 25CC 094A, 25CC 094B, 25CC 094C, 25CC 094D"
+      "sequence": "25CC 0901, 25CC 0902, 25CC 0903, 25CC 093C, 25CC 093E, 25CC 093F, 25CC 0940, 25CC 0941, 25CC 0942, 25CC 0943, 25CC 0944, 25CC 0945, 25CC 0946, 25CC 0947, 25CC 0948, 25CC 0949, 25CC 094A, 25CC 094B, 25CC 094C, 25CC 094D",
+      "source_file": "NotoSansDevanagari-Regular.ttf"
     },
     "111": {
       "size": 16,
       "variant": "_Bengali_",
       "render_height": 40,
-      "source": "noto-sans-bengali"
+      "source": "noto-sans-bengali",
+      "source_file": "NotoSansBengali-Regular.ttf"
     },
     "112": {
       "size": 16,
       "variant": "_BengaliMatra_",
       "render_height": 40,
       "source": "noto-sans-bengali",
-      "sequence": "25CC 0981, 25CC 0982, 25CC 0983, 25CC 09BC, 25CC 09BE, 25CC 09BF, 25CC 09C0, 25CC 09C1, 25CC 09C2, 25CC 09C3, 25CC 09C7, 25CC 09C8, 25CC 09CB, 25CC 09CC, 25CC 09CD"
+      "sequence": "25CC 0981, 25CC 0982, 25CC 0983, 25CC 09BC, 25CC 09BE, 25CC 09BF, 25CC 09C0, 25CC 09C1, 25CC 09C2, 25CC 09C3, 25CC 09C7, 25CC 09C8, 25CC 09CB, 25CC 09CC, 25CC 09CD",
+      "source_file": "NotoSansBengali-Regular.ttf"
     },
     "113": {
       "size": 16,
       "variant": "_Telugu_",
       "render_height": 40,
-      "source": "noto-sans-telugu"
+      "source": "noto-sans-telugu",
+      "source_file": "NotoSansTelugu-Regular.ttf"
     },
     "114": {
       "size": 16,
       "variant": "_TeluguMatra_",
       "render_height": 40,
       "source": "noto-sans-telugu",
-      "sequence": "25CC 0C01, 25CC 0C02, 25CC 0C03, 25CC 0C3C, 25CC 0C3E, 25CC 0C3F, 25CC 0C40, 25CC 0C41, 25CC 0C42, 25CC 0C43, 25CC 0C46, 25CC 0C47, 25CC 0C48, 25CC 0C4A, 25CC 0C4B, 25CC 0C4C, 25CC 0C4D"
+      "sequence": "25CC 0C01, 25CC 0C02, 25CC 0C03, 25CC 0C3C, 25CC 0C3E, 25CC 0C3F, 25CC 0C40, 25CC 0C41, 25CC 0C42, 25CC 0C43, 25CC 0C46, 25CC 0C47, 25CC 0C48, 25CC 0C4A, 25CC 0C4B, 25CC 0C4C, 25CC 0C4D",
+      "source_file": "NotoSansTelugu-Regular.ttf"
     },
     "115": {
       "size": 14,
       "variant": "_Tamil_",
       "render_height": 40,
-      "source": "noto-sans-tamil"
+      "source": "noto-sans-tamil",
+      "source_file": "NotoSansTamil-Regular.ttf"
     },
     "116": {
       "size": 14,
       "variant": "_TamilMatra_",
       "render_height": 40,
       "source": "noto-sans-tamil",
-      "sequence": "25CC 0B82, 25CC 0B83, 25CC 0BBE, 25CC 0BBF, 25CC 0BC0, 25CC 0BC1, 25CC 0BC2, 25CC 0BC6, 25CC 0BC7, 25CC 0BC8, 25CC 0BCA, 25CC 0BCB, 25CC 0BCC, 25CC 0BCD"
+      "sequence": "25CC 0B82, 25CC 0B83, 25CC 0BBE, 25CC 0BBF, 25CC 0BC0, 25CC 0BC1, 25CC 0BC2, 25CC 0BC6, 25CC 0BC7, 25CC 0BC8, 25CC 0BCA, 25CC 0BCB, 25CC 0BCC, 25CC 0BCD",
+      "source_file": "NotoSansTamil-Regular.ttf"
     },
     "117": {
       "size": 16,
       "variant": "_Thai_",
       "render_height": 40,
-      "source": "noto-sans-thai"
+      "source": "noto-sans-thai",
+      "source_file": "NotoSansThai-Regular.ttf"
     },
     "118": {
       "size": 16,
       "variant": "_ThaiMatra_",
       "render_height": 40,
       "source": "noto-sans-thai",
-      "sequence": "25CC 0E31, 25CC 0E34, 25CC 0E35, 25CC 0E36, 25CC 0E37, 25CC 0E38, 25CC 0E39, 25CC 0E3A, 25CC 0E47, 25CC 0E48, 25CC 0E49, 25CC 0E4A, 25CC 0E4B, 25CC 0E4C, 25CC 0E4D"
+      "sequence": "25CC 0E31, 25CC 0E34, 25CC 0E35, 25CC 0E36, 25CC 0E37, 25CC 0E38, 25CC 0E39, 25CC 0E3A, 25CC 0E47, 25CC 0E48, 25CC 0E49, 25CC 0E4A, 25CC 0E4B, 25CC 0E4C, 25CC 0E4D",
+      "source_file": "NotoSansThai-Regular.ttf"
     },
     "119": {
       "size": 17,
       "variant": "_Georgian_",
       "render_height": 40,
       "weight": 500,
-      "source": "noto-sans-georgian"
+      "source": "noto-sans-georgian",
+      "source_file": "NotoSansGeorgian-Regular.ttf"
     },
     "120": {
       "size": 16,
       "variant": "_Armenian_",
       "render_height": 40,
       "weight": 500,
-      "source": "noto-sans-armenian"
+      "source": "noto-sans-armenian",
+      "source_file": "NotoSansArmenian-Regular.ttf"
     },
     "121": {
       "size": 16,
       "variant": "_Bopomofo_",
       "render_height": 40,
       "weight": 500,
-      "source": "noto-sans-tc"
+      "source": "noto-sans-tc",
+      "source_file": "NotoSansTC-Regular.ttf"
     },
     "122": {
       "size": 16,
       "variant": "_Ethiopic_",
       "render_height": 40,
-      "source": "noto-sans-ethiopic"
+      "source": "noto-sans-ethiopic",
+      "source_file": "NotoSansEthiopic-Regular.ttf"
     },
     "123": {
       "size": 14,
       "variant": "_Okina_",
       "render_height": 44,
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "124": {
       "size": 14,
       "variant": "_LatinExtAdd_",
       "render_height": 44,
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "125": {
       "size": 14,
       "variant": "_Naira_",
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "126": {
       "size": 16,
       "variant": "_Sorani_",
       "render_height": 40,
-      "source": "noto-sans-arabic"
+      "source": "noto-sans-arabic",
+      "source_file": "NotoSansArabic-Regular.ttf"
     },
     "127": {
       "size": 16,
       "variant": "_Pashto_",
       "render_height": 40,
-      "source": "noto-sans-arabic"
+      "source": "noto-sans-arabic",
+      "source_file": "NotoSansArabic-Regular.ttf"
     },
     "128": {
       "size": 16,
       "variant": "_CanAborig_",
       "render_height": 40,
-      "source": "noto-sans-canadian-aboriginal"
+      "source": "noto-sans-canadian-aboriginal",
+      "source_file": "NotoSansCanadianAboriginal-Regular.ttf"
     },
     "129": {
       "size": 13,
       "variant": "_Cherokee_",
       "render_height": 40,
-      "source": "noto-sans-cherokee"
+      "source": "noto-sans-cherokee",
+      "source_file": "NotoSansCherokee-Regular.ttf"
     },
     "130": {
       "size": 16,
       "variant": "_VietTones_",
       "render_height": 40,
       "source": "noto-sans",
-      "sequence": "25CC 0300, 25CC 0301, 25CC 0303, 25CC 0309, 25CC 0323"
+      "sequence": "25CC 0300, 25CC 0301, 25CC 0303, 25CC 0309, 25CC 0323",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "131": {
       "size": 15,
       "variant": "_Hiragana_",
       "weight": 400,
-      "source": "noto-sans-jp"
+      "source": "noto-sans-jp",
+      "source_file": "NotoSansJP-Regular.ttf"
     },
     "132": {
       "size": 15,
       "variant": "_Punct2_",
       "weight": 400,
-      "source": "noto-sans-jp"
+      "source": "noto-sans-jp",
+      "source_file": "NotoSansJP-Regular.ttf"
     },
     "133": {
       "size": 15,
       "variant": "_Punct_",
       "weight": 400,
-      "source": "noto-sans-jp"
+      "source": "noto-sans-jp",
+      "source_file": "NotoSansJP-Regular.ttf"
     },
     "134": {
       "size": 22,
       "variant": "_HebrewDots_",
       "weight": 400,
-      "source": "noto-sans-hebrew"
+      "source": "noto-sans-hebrew",
+      "source_file": "NotoSansHebrew-Medium.ttf"
     },
     "135": {
       "size": 16,
       "variant": "_Hebrew_",
       "weight": 400,
-      "source": "noto-sans-hebrew"
+      "source": "noto-sans-hebrew",
+      "source_file": "NotoSansHebrew-Medium.ttf"
     },
     "136": {
       "size": 16,
       "variant": "_Cyrillic_",
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "137": {
       "size": 14,
       "variant": "_Greek_",
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "138": {
       "size": 14,
       "variant": "_LetterMod_",
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "139": {
       "size": 14,
       "variant": "_SZ_",
       "render_height": 44,
-      "source": "noto-sans"
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     },
     "140": {
       "size": 21,
       "variant": "_Consonants_",
       "weight": 400,
-      "source": "noto-serif-kr"
+      "source": "noto-serif-kr",
+      "source_file": "NotoSerifKR-Medium.otf"
     },
     "141": {
       "size": 21,
       "variant": "_Vowels_",
       "render_height": 51,
       "weight": 400,
-      "source": "noto-serif-kr"
+      "source": "noto-serif-kr",
+      "source_file": "NotoSerifKR-Medium.otf"
     }
   }
 }

@@ -36,7 +36,7 @@ while IFS=$'\t' read -r url dest; do
     [ -n "$url" ] && fetch "$url" "$dest"
 done < <(python3 - "$YAML" <<'PY'
 import sys, yaml
-with open(sys.argv[1]) as f:
+with open(sys.argv[1], encoding="utf-8") as f:
     doc = yaml.safe_load(f)
 for e in doc.get("fonts", []):
     print(f"{e['url']}\t{e['dest']}")

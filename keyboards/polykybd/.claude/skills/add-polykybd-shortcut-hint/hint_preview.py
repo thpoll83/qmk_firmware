@@ -15,21 +15,28 @@ codepoint, starting at BUFFER_X, advancing by each glyph's xAdvance, baseline-al
 per font. Hints sit RIGHT-of-center (~x46-50 in the 72px window), not mathematically
 centered — match that. Wide emoji need FEWER leading spaces than narrow symbol glyphs.
 """
-import argparse, sys, os
+import argparse
+import os
+import sys
 
-# Resolve the gfx_font loader from the PolyKybdHost tools dir.
+# Resolve the gfx_font loader from the PolyKybdHost tools dir. HERE is this skill
+# dir (qmk_firmware/keyboards/polykybd/.claude/skills/add-polykybd-shortcut-hint),
+# so PolyKybdHost (a sibling of qmk_firmware) is six levels up.
 HERE = os.path.dirname(os.path.abspath(__file__))
 for cand in ("tools",  # cwd == PolyKybdHost
-             os.path.join(HERE, "../../../../../PolyKybdHost/tools"),
+             os.path.abspath(os.path.join(HERE, "../../../../../../PolyKybdHost/tools")),
              "/home/user/PolyKybdHost/tools"):
     if os.path.exists(os.path.join(cand, "gfx_font.py")):
-        sys.path.insert(0, cand); break
+        sys.path.insert(0, cand)
+        break
 from gfx_font import GfxGlyphRenderer, load_all_fonts, OLED_W, OLED_H, BUFFER_X  # noqa: E402
 
+
 def _fontdir():
+    # base/fonts is three levels up from this skill dir (…/polykybd/base/fonts).
     for cand in ("../qmk_firmware/keyboards/polykybd/base/fonts",
                  "/home/user/qmk_firmware/keyboards/polykybd/base/fonts",
-                 os.path.join(HERE, "../../base/fonts")):
+                 os.path.abspath(os.path.join(HERE, "../../../base/fonts"))):
         if os.path.isdir(cand):
             return cand
     sys.exit("cannot locate base/fonts — run from the PolyKybdHost repo root")
@@ -39,7 +46,9 @@ SP = 0x20
 
 def lit(cps):
     from PIL import Image
-    img = Image.new("L", (OLED_W, OLED_H), 0); px = img.load(); x = BUFFER_X
+    img = Image.new("L", (OLED_W, OLED_H), 0)
+    px = img.load()
+    x = BUFFER_X
     for cp in cps:
         x = R._blit(px, cp, x)
     pts = [(xx, yy) for yy in range(OLED_H) for xx in range(OLED_W) if px[xx, yy]]
@@ -48,7 +57,6 @@ def lit(cps):
 def owning_font(cp):
     for f in load_all_fonts(_fontdir()):
         if f.first <= cp <= f.last:
-            g = f.glyphs[cp - f.first]
             _, pts = lit([cp])
             return f.name, len(pts)
     return None, 0
@@ -72,11 +80,13 @@ def cmd_sweep(cp):
     for nsp in range(0, 7):
         _, pts = lit([SP] * nsp + [cp])
         if not pts:
-            print(f"  {nsp} sp -> BLANK"); continue
-        xs = [p[0] for p in pts]; mn, mx = min(xs), max(xs)
+            print(f"  {nsp} sp -> BLANK")
+            continue
+        xs = [p[0] for p in pts]
+        mn, mx = min(xs), max(xs)
         clip = mx >= 71 or mn <= 0
         print(f"  {nsp} sp -> x[{mn:2d}..{mx:2d}] center={(mn+mx)//2}{'  CLIP' if clip else ''}")
-        if mx <= 69:
+        if not clip:                       # exclude left- or right-clipped offsets
             best = nsp
         if least_clip is None or mx < least_clip[0]:
             least_clip = (mx, nsp)
@@ -91,9 +101,12 @@ def cmd_sweep(cp):
     else:
         print("  --> glyph is BLANK at every offset — wrong codepoint / notdef")
 
-def cmd_string(spaces, cps, out):
+def cmd_string(prefix, cps, out):
+    # Render the prefix verbatim (its actual codepoints), not len(prefix) spaces,
+    # so a literal firmware prefix like U"\t\b\b" previews faithfully — not just
+    # the common leading-space case.
     from PIL import Image
-    img, pts = lit([SP] * len(spaces) + cps)
+    img, pts = lit([ord(ch) for ch in prefix] + cps)
     scale = 8
     big = img.convert("RGB").resize((OLED_W * scale, OLED_H * scale), Image.NEAREST)
     big.save(out)
@@ -104,7 +117,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", nargs="+", metavar="HEXCP")
     ap.add_argument("--sweep", metavar="HEXCP")
-    ap.add_argument("--string", metavar="SPACES")
+    ap.add_argument("--string", metavar="PREFIX")
     ap.add_argument("cps", nargs="*", metavar="HEXCP")
     ap.add_argument("--out", default="/tmp/hint_preview.png")
     a = ap.parse_args()

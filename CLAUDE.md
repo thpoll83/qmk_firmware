@@ -263,10 +263,11 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   in a **2 MB** window at `FW_RESOURCE_OFFSET` (`fontpack_layout.h`, generated). The
   set of valid slot headers **is** the directory — there is **no separate directory
   sector** (avoids a consistency class of bug). Each bundle's per-font record carries
-  the font's **global ALL_FONTS index** (the spare `reserved` u16); `fontpack_load()`
-  reads every slot and `fontpack_assemble()` merge-sorts all present bundles' fonts
-  back into global priority order, reproducing the old single-pack `g_all_fonts`
-  exactly. The build emits per-bundle `.plyf` + `fontpack_bundles.manifest.json`
+  the font's **gidx sort key** (the spare `reserved` u16 — a dense ALL_FONTS position
+  for normal fonts, a pinned high band for `pack_extra`; it is a *sort key*, not a
+  dense array position — see the gidx note below); `fontpack_load()` reads every slot
+  and `fontpack_assemble()` insertion-sorts all present bundles' fonts by it back into
+  global priority order, reproducing the old single-pack `g_all_fonts` exactly. The build emits per-bundle `.plyf` + `fontpack_bundles.manifest.json`
   (ABI contract) + `fontpack_layout.h` (the X-macro slot table firmware **and** host
   share) via `generate_fonts.py --emit-bundles DIR` / `--bundle-version ID=N`.
   - **Auto on connect:** the firmware reports every bundle's `content_version` in the

@@ -476,6 +476,12 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
             # pack_extra (trailing, disjoint) → pinned high band, not dense `gi`,
             # so tail appends don't shift it (see PACK_EXTRA_GIDX_BASE above).
             stored = PACK_EXTRA_GIDX_BASE + extra_n
+            # `reserved`/gidx is a u16; fail the build loudly rather than wrap if the
+            # reserved band ever fills (and keep it clear of a real font's dense gi).
+            if stored > 0xFFFF:
+                raise ValueError(
+                    f"pack_extra gidx overflow: {stored:#06x} > 0xFFFF — too many "
+                    f"pack_extra fonts for the band at {PACK_EXTRA_GIDX_BASE:#06x}")
             extra_n += 1
         else:
             cat = sym2cat.get(sym)

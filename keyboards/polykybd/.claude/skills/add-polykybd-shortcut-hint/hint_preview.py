@@ -68,6 +68,7 @@ def cmd_check(cps):
 def cmd_sweep(cp):
     print(f"leading-space sweep for U+{cp:05X} (pick the largest with max_x <= 69, no clip):")
     best = None
+    least_clip = None          # fallback: (max_x, nsp) with the smallest right overrun
     for nsp in range(0, 7):
         _, pts = lit([SP] * nsp + [cp])
         if not pts:
@@ -77,7 +78,18 @@ def cmd_sweep(cp):
         print(f"  {nsp} sp -> x[{mn:2d}..{mx:2d}] center={(mn+mx)//2}{'  CLIP' if clip else ''}")
         if mx <= 69:
             best = nsp
-    print(f"  --> recommended: {best} leading spaces")
+        if least_clip is None or mx < least_clip[0]:
+            least_clip = (mx, nsp)
+    if best is not None:
+        print(f"  --> recommended: {best} leading spaces")
+    elif least_clip is not None:
+        # Every count clipped — the glyph is too wide to sit fully in the 72px
+        # window at any offset. Surface the least-bad option; the glyph likely
+        # needs to be rendered smaller (e.g. a smaller pt size in the bundle).
+        print(f"  --> no non-clipping fit (glyph too wide); least-clipping is "
+              f"{least_clip[1]} sp (max_x={least_clip[0]}) — consider a smaller glyph")
+    else:
+        print("  --> glyph is BLANK at every offset — wrong codepoint / notdef")
 
 def cmd_string(spaces, cps, out):
     from PIL import Image

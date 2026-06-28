@@ -41,6 +41,11 @@ PACK_MANIFEST = "fontpack.manifest.json"
 # Split-pack: per-bundle ABI contract + the C flash-layout header (firmware/host).
 BUNDLES_MANIFEST = "fontpack_bundles.manifest.json"
 BUNDLE_LAYOUT_H = "fontpack_layout.h"
+# Per-font render settings (global ALL_FONTS index -> the fonts.yaml options it was
+# generated with), shipped to the host so its font-pack *edit* dialog can prefill
+# the exact settings a glyph was built with.  Mirrored in PolyKybdHost
+# (polyhost/res/fontpack/fontpack_render_settings.json) — keep in sync.
+RENDER_SETTINGS = "fontpack_render_settings.json"
 
 # Order in which a font entry's fields map onto fontconvert flags.  Flag order
 # does not affect the rendered bytes (fontconvert parses options order-free); it
@@ -124,6 +129,28 @@ def render(fc: str, entries, sources, categories, root: Path, quiet: bool):
 
 def compose_category(blocks: list[str]) -> str:
     return "#pragma once\n\n" + "\n".join(blocks)
+
+
+# Render-option fields a host can re-apply when rebuilding a glyph (the fontconvert
+# flags), plus a little provenance.  Booleans/numbers as fonts.yaml carries them.
+_SETTINGS_FIELDS = [f for f, _ in FIELD_FLAGS] + ["source", "variant", "category",
+                                                 "sequence", "seq_first"]
+
+
+def render_settings(entries, symbols, order, categories) -> dict:
+    """Map each generated font's GLOBAL ALL_FONTS index -> the fonts.yaml render
+    settings it was generated with.  `symbols[i]` is the GFXfont symbol for
+    `entries[i]`; the global index is its position in `order` (the full ALL_FONTS
+    priority list).  Consumed by the host edit dialog to prefill the controls."""
+    pos = {sym: i for i, sym in enumerate(order)}
+    by_idx = {}
+    for entry, sym in zip(entries, symbols):
+        gi = pos.get(sym)
+        if gi is None:
+            continue
+        e = resolve(entry, categories)
+        by_idx[str(gi)] = {k: e[k] for k in _SETTINGS_FIELDS if k in e}
+    return {"by_global_index": by_idx}
 
 
 def full_order(index: dict, symbols: list[str]) -> list[str]:
@@ -223,6 +250,10 @@ def main() -> None:
         # Full priority order for the build tooling (firmware index has resident only).
         outputs[gen_dir / "all_fonts_order.json"] = \
             json.dumps({"order": order}, indent=2) + "\n"
+        # Per-font render settings keyed by global index, for the host edit dialog.
+        outputs[gen_dir / RENDER_SETTINGS] = \
+            json.dumps(render_settings(entries, symbols, order, categories),
+                       indent=2) + "\n"
         # Derive the font-pack manifest from the freshly composed (in-memory)
         # headers so it stays consistent with them under --check.
         cat_texts = {c: compose_category(b) for c, b in cat_blocks.items() if b}

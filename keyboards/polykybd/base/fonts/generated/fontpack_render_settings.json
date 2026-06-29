@@ -954,6 +954,8 @@
       "render_height": 40,
       "source": "noto-sans-devanagari",
       "sequence": "25CC 0901, 25CC 0902, 25CC 0903, 25CC 093C, 25CC 093E, 25CC 093F, 25CC 0940, 25CC 0941, 25CC 0942, 25CC 0943, 25CC 0944, 25CC 0945, 25CC 0946, 25CC 0947, 25CC 0948, 25CC 0949, 25CC 094A, 25CC 094B, 25CC 094C, 25CC 094D",
+      "composite": true,
+      "seq_first": 57600,
       "source_file": "NotoSansDevanagari-Regular.ttf"
     },
     "111": {
@@ -969,6 +971,8 @@
       "render_height": 40,
       "source": "noto-sans-bengali",
       "sequence": "25CC 0981, 25CC 0982, 25CC 0983, 25CC 09BC, 25CC 09BE, 25CC 09BF, 25CC 09C0, 25CC 09C1, 25CC 09C2, 25CC 09C3, 25CC 09C7, 25CC 09C8, 25CC 09CB, 25CC 09CC, 25CC 09CD",
+      "composite": true,
+      "seq_first": 57632,
       "source_file": "NotoSansBengali-Regular.ttf"
     },
     "113": {
@@ -984,6 +988,8 @@
       "render_height": 40,
       "source": "noto-sans-telugu",
       "sequence": "25CC 0C01, 25CC 0C02, 25CC 0C03, 25CC 0C3C, 25CC 0C3E, 25CC 0C3F, 25CC 0C40, 25CC 0C41, 25CC 0C42, 25CC 0C43, 25CC 0C46, 25CC 0C47, 25CC 0C48, 25CC 0C4A, 25CC 0C4B, 25CC 0C4C, 25CC 0C4D",
+      "composite": true,
+      "seq_first": 57664,
       "source_file": "NotoSansTelugu-Regular.ttf"
     },
     "115": {
@@ -999,6 +1005,8 @@
       "render_height": 40,
       "source": "noto-sans-tamil",
       "sequence": "25CC 0B82, 25CC 0B83, 25CC 0BBE, 25CC 0BBF, 25CC 0BC0, 25CC 0BC1, 25CC 0BC2, 25CC 0BC6, 25CC 0BC7, 25CC 0BC8, 25CC 0BCA, 25CC 0BCB, 25CC 0BCC, 25CC 0BCD",
+      "composite": true,
+      "seq_first": 57696,
       "source_file": "NotoSansTamil-Regular.ttf"
     },
     "117": {
@@ -1014,6 +1022,8 @@
       "render_height": 40,
       "source": "noto-sans-thai",
       "sequence": "25CC 0E31, 25CC 0E34, 25CC 0E35, 25CC 0E36, 25CC 0E37, 25CC 0E38, 25CC 0E39, 25CC 0E3A, 25CC 0E47, 25CC 0E48, 25CC 0E49, 25CC 0E4A, 25CC 0E4B, 25CC 0E4C, 25CC 0E4D",
+      "composite": true,
+      "seq_first": 57728,
       "source_file": "NotoSansThai-Regular.ttf"
     },
     "119": {
@@ -1101,6 +1111,8 @@
       "render_height": 40,
       "source": "noto-sans",
       "sequence": "25CC 0300, 25CC 0301, 25CC 0303, 25CC 0309, 25CC 0323",
+      "composite": true,
+      "seq_first": 57760,
       "source_file": "NotoSans-Regular.ttf"
     },
     "131": {

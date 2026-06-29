@@ -154,6 +154,18 @@ def render_settings(entries, symbols, order, categories, sources) -> dict:
             continue
         e = resolve(entry, categories)
         rec = {k: e[k] for k in _SETTINGS_FIELDS if k in e}
+        # Sequence-mode glyphs carry their composite (-C) flag and base codepoint
+        # (-F) in extra_args; surface them explicitly so the host editor doesn't have
+        # to infer them (the matra/combining-mark fonts use `-F0xE1xx -C`).
+        xa = [str(a) for a in e.get("extra_args", [])]
+        if "-C" in xa:
+            rec["composite"] = True
+        for a in xa:
+            if a.startswith("-F") and len(a) > 2:
+                try:
+                    rec["seq_first"] = int(a[2:], 0)
+                except ValueError:
+                    pass
         src = e.get("source")
         if src in sources:
             rec["source_file"] = os.path.basename(sources[src])

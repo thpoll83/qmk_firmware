@@ -1156,12 +1156,14 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     // behaviour (Win+Ctrl+C still previews copy, etc.) is unchanged.
     if (wm_held && win_or_unknown && (local_mods & MOD_MASK_CTRL) != 0) {
         switch(keycode) {
-            case KC_D:     return U"     " ICON_NEW_DESKTOP;   // Win+Ctrl+D new virtual desktop
-            case KC_LEFT:  return U"      " ICON_DESKTOP_PREV; // Win+Ctrl+Left  previous desktop
-            case KC_RIGHT: return U"      " ICON_DESKTOP_NEXT; // Win+Ctrl+Right next desktop
-            case KC_F4:    return U"      " ICON_CLOSE;        // Win+Ctrl+F4 close desktop
-            case KC_F:     return U"   "    ICON_NET_SEARCH;   // Win+Ctrl+F search network computers
-            case KC_B:     if (shift) return U"      " ICON_GFX_RESTART; break; // Win+Ctrl+Shift+B restart graphics
+            // Virtual-desktop chords: a compact monitor glyph (ICON_DESKTOP_SMALL)
+            // composed with +/←/→/x so the action reads next to the screen.
+            case KC_D:     return U"    " ICON_DESKTOP_SMALL U"+";        // Win+Ctrl+D new virtual desktop
+            case KC_LEFT:  return U"     " ICON_LEFT ICON_DESKTOP_SMALL;  // Win+Ctrl+Left  previous desktop
+            case KC_RIGHT: return U"     " ICON_DESKTOP_SMALL ICON_RIGHT; // Win+Ctrl+Right next desktop
+            case KC_F4:    return U"    " ICON_DESKTOP_SMALL U"x";        // Win+Ctrl+F4 close desktop
+            case KC_F:     return U"     " ICON_NET;                      // Win+Ctrl+F search network computers
+            case KC_B:     if (shift) return U"     " ICON_SKULL; break;  // Win+Ctrl+Shift+B restart graphics
             default: break;
         }
     } else if (wm_held && win_or_unknown && (local_mods & MOD_MASK_ALT) != 0) {
@@ -1267,25 +1269,25 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             // glyph (hint_preview) so each sits as far right as it fits without
             // clipping the 72 px window, matching the existing hints' placement.
             case KC_A:
-                if (win_or_unknown) return U"   "   ICON_NOTIFICATION;  // Win+A Action Center/Quick Settings
+                if (win_or_unknown) return U"      " ICON_LIGHTNING;    // Win+A Action Center/Quick Settings
                 break;
             case KC_E:
-                if (win_or_unknown) return U"   "   ICON_FOLDER;        // Win+E File Explorer
+                if (win_or_unknown) return U"    "  ICON_EXPLORER;      // Win+E File Explorer (folder pixmap)
                 break;
             case KC_U:
                 if (win_or_unknown) return U"      " ICON_ACCESSIBILITY;// Win+U Accessibility settings
                 break;
             case KC_B:
-                if (win_or_unknown) return U"      " ICON_UP;           // Win+B focus system tray
+                if (win_or_unknown) return U"   "   ICON_NOTIFICATION;  // Win+B focus system tray (bell)
                 break;
             case KC_HOME:
                 if (win_or_unknown) return U"     " ICON_FOCUS_WINDOW;  // Win+Home minimize all but active
                 break;
             case KC_LEFT:
-                if (win_or_unknown) return U"      " ICON_LEFT;         // Win+Left snap window left
+                if (win_or_unknown) return U"      " ICON_SNAP_LEFT;    // Win+Left snap window left (edge bar)
                 break;
             case KC_RIGHT:
-                if (win_or_unknown) return U"      " ICON_RIGHT;        // Win+Right snap window right
+                if (win_or_unknown) return U"      " ICON_SNAP_RIGHT;   // Win+Right snap window right (edge bar)
                 break;
             case KC_SCLN:
                 if (win_or_unknown) return U"   "   ICON_GIF;           // Win+; GIF / emoji panel
@@ -1296,16 +1298,27 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_PSCR:
                 if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
                 break;
+            // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out;
+            // the sign is drawn inside the lens (ICON_MAG_PLUS / ICON_MAG_MINUS).
             case KC_EQL:
-            case KC_MINS:
             case KC_KP_PLUS:
+                if (win_or_unknown) return U"      " ICON_MAG_PLUS;     // Win + '+' Magnifier zoom in
+                break;
+            case KC_MINS:
             case KC_KP_MINUS:
-                if (win_or_unknown) return U"   "   ICON_MAGNIFIER;     // Win + (+/-) Magnifier zoom
+                if (win_or_unknown) return U"      " ICON_MAG_MINUS;    // Win + '-' Magnifier zoom out
                 break;
-            case KC_1: case KC_2: case KC_3: case KC_4: case KC_5:
-            case KC_6: case KC_7: case KC_8: case KC_9:
-                if (win_or_unknown) return U"   "   ICON_TASKBAR_PIN;   // Win+1..9 open taskbar app N
-                break;
+            // Win+1..9 open the taskbar app pinned at position N: a small pushpin
+            // followed by the digit. Per-key so the digit matches the chord.
+            case KC_1: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"1"; break;
+            case KC_2: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"2"; break;
+            case KC_3: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"3"; break;
+            case KC_4: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"4"; break;
+            case KC_5: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"5"; break;
+            case KC_6: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"6"; break;
+            case KC_7: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"7"; break;
+            case KC_8: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"8"; break;
+            case KC_9: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"9"; break;
             default: break;
         }
     }
@@ -1730,9 +1743,11 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                             if(keycode_hint_wants_frame(keycode)) {
                                 // 2px rounded frame around the Win+R ">_" run-dialog
-                                // hint (nested 1px outlines; buffer coords).
-                                kdisp_draw_round_rect(62, 4, 36, 32, 4);
-                                kdisp_draw_round_rect(63, 5, 34, 30, 3);
+                                // hint (nested 1px outlines; buffer coords). Sits 3px
+                                // lower than the original to match the prompt glyph's
+                                // +3px yOffset shift (gfx_icons.h 0x9A/0x9B).
+                                kdisp_draw_round_rect(62, 7, 36, 32, 4);
+                                kdisp_draw_round_rect(63, 8, 34, 30, 3);
                             }
                         }
                         kdisp_send_buffer();

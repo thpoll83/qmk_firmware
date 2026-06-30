@@ -1968,33 +1968,36 @@
 // for the host-detected Linux desktops (POLY_OS_LINUX_GNOME/KDE).
 #define ICON_OS_GNOME               	U"\x98"
 #define ICON_OS_KDE                 	U"\x99"
-// Windows Super-chord hint glyphs (wave D). All reuse ALREADY-SHIPPED glyphs — no
-// new font generation, no font-pack reship. The snap arrows ◀▶ (ICON_LEFT/RIGHT
-// 0x83/0x84), tray ▲ (ICON_UP 0x81) and close ⊠ (ICON_CLOSE) are referenced
-// directly; the defines below name the remaining shipped pack/resident glyphs used
-// by keycode_to_disp_overlay()'s win_or_unknown branch. All are display-only
-// previews of the Win+<key> shortcut:
-//   🔔 Action Center (Win+A)          📁 File Explorer (Win+E)
-//   ♿ Accessibility (Win+U)           ❐ minimize-others (Win+Home)
-//   ✚ new virtual desktop (Win+Ctrl+D)❮❯ switch desktop (Win+Ctrl+←/→)
-//   📽 GIF panel (Win+;)               ✄ Snipping Tool (Win+Shift+S)
-//   📹 screen recording (Win+Alt+R)    📌 taskbar app N (Win+1..9)
-//   🗘 restart graphics (Win+Ctrl+Shift+B)  💻 System Properties (Win+Pause)
-//   🔍 Magnifier (Win + +/−)           📷 screenshot (Win+PrtScn)
-//   🌐 search network computers (Win+Ctrl+F, resident World font)
-#define ICON_NOTIFICATION           	U"\x1F514"
-#define ICON_FOLDER                 	U"\x1F4C1"
+// Windows Super-chord hint glyphs (wave D), as drawn by keycode_to_disp_overlay()'s
+// win_or_unknown branch. All are display-only previews of the Win+<key> shortcut.
+// Mostly shipped resident/pack glyphs; five are NEW hand-encoded resident IconsFont
+// glyphs (gfx_icons.h PUA 0x9C-0xA0) so they ship with the firmware and need no
+// pack reship: the Explorer folder pixmap (read from the Explorer overlay icon),
+// 🖧 networked computers, the small pushpin, and the magnifier-with-+/− pair.
+//   ⚡ Action Center (Win+A)            🗁 File Explorer (Win+E, resident pixmap)
+//   ♿ Accessibility (Win+U)            ❐ minimize-others (Win+Home)
+//   🖵+ new desktop (Win+Ctrl+D)        ←🖵 / 🖵→ switch desktop (Win+Ctrl+←/→)
+//   🖵x close desktop (Win+Ctrl+F4)     📽 GIF panel (Win+;)
+//   ✄ Snipping Tool (Win+Shift+S)      📹 screen recording (Win+Alt+R)
+//   📌N taskbar app (Win+1..9)          🔔 system tray (Win+B)
+//   ☠ restart graphics (Win+Ctrl+Shift+B)  💻 System Properties (Win+Pause)
+//   🔍+ / 🔍− Magnifier (Win + +/−)     📷 screenshot (Win+PrtScn)
+//   🖧 search network computers (Win+Ctrl+F)
+#define ICON_LIGHTNING              	U"\x26A1"   // Win+A action center / quick settings
+#define ICON_NOTIFICATION           	U"\x1F514"  // Win+B focus system tray (bell)
+#define ICON_EXPLORER               	U"\x9C"     // Win+E (resident folder pixmap, gfx_icons.h)
 #define ICON_ACCESSIBILITY          	U"\x267F"
 #define ICON_FOCUS_WINDOW           	U"\x2750"
-#define ICON_NEW_DESKTOP            	U"\x271A"
-#define ICON_DESKTOP_PREV           	U"\x276E"
-#define ICON_DESKTOP_NEXT           	U"\x276F"
+#define ICON_DESKTOP_SMALL          	U"\xA1"     // compact virtual-desktop monitor (resident, gfx_icons.h)
+#define ICON_SNAP_LEFT              	U"\xA2"     // Win+Left  snap window to left edge (tall bar + arrow)
+#define ICON_SNAP_RIGHT             	U"\xA3"     // Win+Right snap window to right edge
 #define ICON_GIF                    	U"\x1F4FD"
 #define ICON_SNIP                   	U"\x2704"
 #define ICON_SCREEN_RECORD          	U"\x1F4F9"
-#define ICON_TASKBAR_PIN            	U"\x1F4CC"
-#define ICON_GFX_RESTART            	U"\x1F5D8"
+#define ICON_PIN_SMALL              	U"\x9E"     // Win+1..9 small pushpin (composed with the digit)
+#define ICON_SKULL                  	U"\x2620"   // Win+Ctrl+Shift+B restart graphics driver
 #define ICON_SYSTEM_PROPS           	U"\x1F4BB"
-#define ICON_MAGNIFIER              	U"\x1F50D"
+#define ICON_MAG_PLUS               	U"\x9F"     // Win + '+' magnifier zoom in  (resident, gfx_icons.h)
+#define ICON_MAG_MINUS              	U"\xA0"     // Win + '-' magnifier zoom out (resident, gfx_icons.h)
 #define ICON_SCREENSHOT             	U"\x1F4F7"
-#define ICON_NET_SEARCH             	U"\x1F310"
+#define ICON_NET                    	U"\x9D"     // Win+Ctrl+F networked computers 🖧 (resident, gfx_icons.h)

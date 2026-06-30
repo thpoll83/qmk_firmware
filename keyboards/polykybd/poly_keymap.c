@@ -1158,10 +1158,10 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
         switch(keycode) {
             // Virtual-desktop chords: a compact monitor glyph (ICON_DESKTOP_SMALL)
             // composed with +/←/→/x so the action reads next to the screen.
-            case KC_D:     return U"    " ICON_DESKTOP_SMALL U"+";        // Win+Ctrl+D new virtual desktop
-            case KC_LEFT:  return U"     " ICON_LEFT ICON_DESKTOP_SMALL;  // Win+Ctrl+Left  previous desktop
-            case KC_RIGHT: return U"     " ICON_DESKTOP_SMALL ICON_RIGHT; // Win+Ctrl+Right next desktop
-            case KC_F4:    return U"    " ICON_DESKTOP_SMALL U"x";        // Win+Ctrl+F4 close desktop
+            case KC_D:     return U"   " ICON_DESKTOP_SMALL U"+";         // Win+Ctrl+D new virtual desktop
+            case KC_LEFT:  return U"    " ICON_LEFT ICON_DESKTOP_SMALL;   // Win+Ctrl+Left  previous desktop
+            case KC_RIGHT: return U"    " ICON_DESKTOP_SMALL ICON_RIGHT;  // Win+Ctrl+Right next desktop
+            case KC_F4:    return U"   " ICON_DESKTOP_SMALL U"x";         // Win+Ctrl+F4 close desktop
             case KC_F:     return U"     " ICON_NET;                      // Win+Ctrl+F search network computers
             case KC_B:     if (shift) return U"     " ICON_SKULL; break;  // Win+Ctrl+Shift+B restart graphics
             default: break;

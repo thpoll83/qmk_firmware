@@ -90,3 +90,5 @@ int16_t get_scratch_buffer_size(void);
 
 void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height);
 
+void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r);
+

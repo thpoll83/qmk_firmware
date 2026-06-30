@@ -1149,6 +1149,27 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                             || active_os == POLY_OS_LINUX_KDE);
     const bool wm_held = (win_or_unknown || linux_any)
                       && (local_mods & MOD_MASK_GUI) != 0;
+    // Windows multi-modifier Super chords (wave D) take precedence over the Ctrl/Alt
+    // editing hints below — e.g. Win+Ctrl+D is "new virtual desktop", not Ctrl's
+    // "delete". Gated win_or_unknown only (no standard GNOME/KDE equivalent). A chord
+    // not matched here falls through to the normal Ctrl/Alt hint so existing
+    // behaviour (Win+Ctrl+C still previews copy, etc.) is unchanged.
+    if (wm_held && win_or_unknown && (local_mods & MOD_MASK_CTRL) != 0) {
+        switch(keycode) {
+            case KC_D:     return U"     " ICON_NEW_DESKTOP;   // Win+Ctrl+D new virtual desktop
+            case KC_LEFT:  return U"      " ICON_DESKTOP_PREV; // Win+Ctrl+Left  previous desktop
+            case KC_RIGHT: return U"      " ICON_DESKTOP_NEXT; // Win+Ctrl+Right next desktop
+            case KC_F4:    return U"      " ICON_CLOSE;        // Win+Ctrl+F4 close desktop
+            case KC_F:     return U"   "    ICON_NET_SEARCH;   // Win+Ctrl+F search network computers
+            case KC_B:     if (shift) return U"      " ICON_GFX_RESTART; break; // Win+Ctrl+Shift+B restart graphics
+            default: break;
+        }
+    } else if (wm_held && win_or_unknown && (local_mods & MOD_MASK_ALT) != 0) {
+        switch(keycode) {
+            case KC_R: return U"   " ICON_SCREEN_RECORD;       // Win+Alt+R start/stop screen recording
+            default: break;
+        }
+    }
     if ((local_mods & MOD_MASK_CTRL) != 0) {
         switch(keycode) {
             case KC_A: return U"      " BOX_WITH_CHECK_MARK;
@@ -1196,8 +1217,9 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses
             // the Super overview and KDE a Super-tap / Alt+Space — neither binds
             // Super+S — so show it only on Windows (and the unknown default).
+            // Win+Shift+S is the Snipping Tool (region capture) — shown via shift.
             case KC_S:
-                if (win_or_unknown) return U"   "  ICON_LAUNCHER;
+                if (win_or_unknown) return shift ? U"     " ICON_SNIP : U"   " ICON_LAUNCHER;
                 break;
             // Windows-only Super-chords (wave C). These have no standard GNOME/KDE
             // equivalent, so they are gated on win_or_unknown only. Dictation (Win+H)
@@ -1218,7 +1240,10 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"     " PRIVATE_WINDOW;     // Win+M minimize all
                 break;
             case KC_R:
-                if (win_or_unknown) return U"   "   ICON_PROMPT_GT ICON_PROMPT_US; // Win+R run dialog
+                // Win+R run dialog. Drawn right-of-centre (5 spaces) with a 2px
+                // rounded-rectangle frame added by keycode_hint_wants_frame() in the
+                // render path (the frame can't be expressed in the hint string).
+                if (win_or_unknown) return U"     " ICON_PROMPT_GT ICON_PROMPT_US;
                 break;
             case KC_T:
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
@@ -1237,6 +1262,49 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 break;
             case KC_DOT:
                 if (win_or_unknown) return U"   "   PRIVATE_EMOJI_1F600; // Win+. emoji panel
+                break;
+            // More Windows-only Super-chords (wave D). Leading-space counts tuned per
+            // glyph (hint_preview) so each sits as far right as it fits without
+            // clipping the 72 px window, matching the existing hints' placement.
+            case KC_A:
+                if (win_or_unknown) return U"   "   ICON_NOTIFICATION;  // Win+A Action Center/Quick Settings
+                break;
+            case KC_E:
+                if (win_or_unknown) return U"   "   ICON_FOLDER;        // Win+E File Explorer
+                break;
+            case KC_U:
+                if (win_or_unknown) return U"      " ICON_ACCESSIBILITY;// Win+U Accessibility settings
+                break;
+            case KC_B:
+                if (win_or_unknown) return U"      " ICON_UP;           // Win+B focus system tray
+                break;
+            case KC_HOME:
+                if (win_or_unknown) return U"     " ICON_FOCUS_WINDOW;  // Win+Home minimize all but active
+                break;
+            case KC_LEFT:
+                if (win_or_unknown) return U"      " ICON_LEFT;         // Win+Left snap window left
+                break;
+            case KC_RIGHT:
+                if (win_or_unknown) return U"      " ICON_RIGHT;        // Win+Right snap window right
+                break;
+            case KC_SCLN:
+                if (win_or_unknown) return U"   "   ICON_GIF;           // Win+; GIF / emoji panel
+                break;
+            case KC_PAUSE:
+                if (win_or_unknown) return U"   "   ICON_SYSTEM_PROPS;  // Win+Pause System Properties
+                break;
+            case KC_PSCR:
+                if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
+                break;
+            case KC_EQL:
+            case KC_MINS:
+            case KC_KP_PLUS:
+            case KC_KP_MINUS:
+                if (win_or_unknown) return U"   "   ICON_MAGNIFIER;     // Win + (+/-) Magnifier zoom
+                break;
+            case KC_1: case KC_2: case KC_3: case KC_4: case KC_5:
+            case KC_6: case KC_7: case KC_8: case KC_9:
+                if (win_or_unknown) return U"   "   ICON_TASKBAR_PIN;   // Win+1..9 open taskbar app N
                 break;
             default: break;
         }
@@ -1279,6 +1347,20 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     }
 
     return NULL;
+}
+
+// True when the hint just drawn for (keycode, mods) should get the rounded-rect
+// frame — currently only the Win+R run-dialog ">_" prompt. The frame can't be
+// expressed in the hint string (it's a drawn outline), so the render path queries
+// this after drawing the hint text and calls kdisp_draw_round_rect(). The gate
+// mirrors the Win+R case in keycode_to_disp_overlay()'s win_or_unknown branch.
+static bool keycode_hint_wants_frame(uint16_t keycode) {
+    if (keycode != KC_R) return false;
+    const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+    const bool win_or_unknown = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_UNKNOWN);
+    if (!win_or_unknown) return false;
+    const uint8_t m = get_local_layer()->mods;
+    return (m & MOD_MASK_GUI) && !(m & MOD_MASK_CTRL) && !(m & MOD_MASK_ALT);
 }
 
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
@@ -1646,6 +1728,12 @@ void update_displays(enum refresh_mode mode) {
                         }
                         if(text) {
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
+                            if(keycode_hint_wants_frame(keycode)) {
+                                // 2px rounded frame around the Win+R ">_" run-dialog
+                                // hint (nested 1px outlines; buffer coords).
+                                kdisp_draw_round_rect(62, 4, 36, 32, 4);
+                                kdisp_draw_round_rect(63, 5, 34, 30, 3);
+                            }
                         }
                         kdisp_send_buffer();
                         }

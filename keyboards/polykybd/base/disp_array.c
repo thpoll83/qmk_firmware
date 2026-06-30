@@ -165,6 +165,32 @@ void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t heigh
     }
 }
 
+// Draw a 1px rounded-rectangle outline: four straight edges + four quarter-circle
+// corners (the Adafruit-GFX midpoint-circle helper). Coordinates are buffer
+// coordinates; pixels are clipped. Used for the Win+R run-dialog hint frame
+// (drawn twice, nested, for a 2px border — see keycode_to_disp_overlay()).
+void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r) {
+    if (width < 2 || height < 2) return;
+    int x0 = x, y0 = y, x1 = x + width - 1, y1 = y + height - 1;
+    if (r < 0) r = 0;
+    if (r > (width - 1) / 2)  r = (width - 1) / 2;
+    if (r > (height - 1) / 2) r = (height - 1) / 2;
+    // straight edges
+    for (int i = x0 + r; i <= x1 - r; ++i) { SET_PIXEL_CLIPPED(i, y0); SET_PIXEL_CLIPPED(i, y1); }
+    for (int j = y0 + r; j <= y1 - r; ++j) { SET_PIXEL_CLIPPED(x0, j); SET_PIXEL_CLIPPED(x1, j); }
+    // corner arcs (centres at the four inset corner points)
+    int cxl = x0 + r, cxr = x1 - r, cyt = y0 + r, cyb = y1 - r;
+    int f = 1 - r, ddF_x = 1, ddF_y = -2 * r, px = 0, py = r;
+    while (px < py) {
+        if (f >= 0) { py--; ddF_y += 2; f += ddF_y; }
+        px++; ddF_x += 2; f += ddF_x;
+        SET_PIXEL_CLIPPED(cxr + px, cyt - py); SET_PIXEL_CLIPPED(cxr + py, cyt - px); // top-right
+        SET_PIXEL_CLIPPED(cxl - px, cyt - py); SET_PIXEL_CLIPPED(cxl - py, cyt - px); // top-left
+        SET_PIXEL_CLIPPED(cxr + px, cyb + py); SET_PIXEL_CLIPPED(cxr + py, cyb + px); // bottom-right
+        SET_PIXEL_CLIPPED(cxl - px, cyb + py); SET_PIXEL_CLIPPED(cxl - py, cyb + px); // bottom-left
+    }
+}
+
 // Draw a character
 /**************************************************************************/
 /*!

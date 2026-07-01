@@ -1163,7 +1163,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
             case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
             case KC_F:     return U"     " ICON_NET;                      // Win+Ctrl+F search network computers
-            case KC_B:     if (shift) return U"    " ICON_GFX_DEAD; break;  // Win+Ctrl+Shift+B restart graphics (skull in monitor)
+            case KC_B:     if (shift) return U"    " ICON_GFX_RESTART; break; // Win+Ctrl+Shift+B restart graphics (⟳ in monitor)
             default: break;
         }
     } else if (wm_held && win_or_unknown && (local_mods & MOD_MASK_ALT) != 0) {

@@ -1764,9 +1764,10 @@ void update_displays(enum refresh_mode mode) {
                                 // 2px rounded run-dialog frame around the Win+R ">_"
                                 // hint (nested 1px outlines; buffer coords). Sized to
                                 // enclose the base-font ">_" at 4 leading spaces
-                                // (buffer x57..83, y4..24 — see tools/gfx_font.py sim).
-                                kdisp_draw_round_rect(54, 2, 33, 26, 4);
-                                kdisp_draw_round_rect(55, 3, 31, 24, 3);
+                                // (buffer x57..83, y4..24) with 1px clearance above the
+                                // '>' and below the '_' (see tools/gfx_font.py sim).
+                                kdisp_draw_round_rect(54, 1, 33, 27, 4);
+                                kdisp_draw_round_rect(55, 2, 31, 25, 3);
                             } else if(keycode_hint_wants_gfx_restart(keycode)) {
                                 // Win+Ctrl+Shift+B: composite the reload glyph 🗘
                                 // (half-scaled, 2x2-OR) into the monitor's screen
@@ -1781,7 +1782,7 @@ void update_displays(enum refresh_mode mode) {
                                 // for both, plus a vertical bar for zoom-in.
                                 int8_t mag = keycode_hint_wants_mag(keycode);
                                 if (mag != 0) {
-                                    const int8_t cx = 66, cy = 13, hl = 9;
+                                    const int8_t cx = 66, cy = 13, hl = 5;
                                     kdisp_fill_rect(cx - hl, cy, (int8_t)(2 * hl + 1), 2);
                                     if (mag > 0) kdisp_fill_rect(cx, cy - hl, 2, (int8_t)(2 * hl + 1));
                                 }

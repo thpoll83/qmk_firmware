@@ -43,8 +43,6 @@
 #define ICON_LMB                    	U"\x86"
 #define ICON_MMB                    	U"\x87"
 #define ICON_RMB                    	U"\x88"
-#define ICON_VOL_UP                 	U"\x89"
-#define ICON_VOL_DOWN               	U"\x008A"
 #define ICON_BACKSPACE              	U"\x008B"
 #define ICON_NUMLOCK_OFF            	U"\x008C"
 #define ICON_NUMLOCK_ON             	U"\x008D"

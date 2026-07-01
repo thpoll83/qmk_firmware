@@ -1237,10 +1237,11 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"      " PRIVATE_MINIMIZE;  // Win+M minimize all (🗕)
                 break;
             case KC_R:
-                // Win+R run dialog. Drawn right-of-centre (5 spaces) with a 2px
-                // rounded-rectangle frame added by keycode_hint_wants_frame() in the
-                // render path (the frame can't be expressed in the hint string).
-                if (win_or_unknown) return U"     " ICON_PROMPT_GT ICON_PROMPT_US;
+                // Win+R run dialog: the plain ASCII ">_" prompt from the base font
+                // (4 spaces, right-of-centre) with a 2px rounded-rectangle run-dialog
+                // frame added by keycode_hint_wants_frame() in the render path (the
+                // frame can't be expressed in the hint string).
+                if (win_or_unknown) return U"    >_";
                 break;
             case KC_T:
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
@@ -1293,15 +1294,16 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_PSCR:
                 if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
                 break;
-            // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out;
-            // the sign is drawn inside the lens (ICON_MAG_PLUS / ICON_MAG_MINUS).
+            // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out.
+            // Both draw the pack magnifier 🔍 (ICON_MAGNIFIER); the +/- sign is drawn
+            // programmatically into the lens by update_displays() (keycode_hint_wants_mag).
             case KC_EQL:
             case KC_KP_PLUS:
-                if (win_or_unknown) return U"      " ICON_MAG_PLUS;     // Win + '+' Magnifier zoom in
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER;       // Win + '+' Magnifier zoom in
                 break;
             case KC_MINS:
             case KC_KP_MINUS:
-                if (win_or_unknown) return U"      " ICON_MAG_MINUS;    // Win + '-' Magnifier zoom out
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER;       // Win + '-' Magnifier zoom out
                 break;
             // (Win+1..9 taskbar-app hints removed for now — pending a smarter
             //  numbered-slot treatment.)
@@ -1375,6 +1377,22 @@ static bool keycode_hint_wants_gfx_restart(uint16_t keycode) {
     if (!win_or_unknown) return false;
     const uint8_t m = get_local_layer()->mods;
     return (m & MOD_MASK_GUI) && (m & MOD_MASK_CTRL) && (m & MOD_MASK_SHIFT);
+}
+
+// For the Win + '+'/'-' Magnifier hint: returns +1 (zoom in), -1 (zoom out) or 0.
+// The hint string draws the pack magnifier 🔍; the render path then draws the
+// +/- sign programmatically into the lens (a horizontal bar, plus a vertical bar
+// for zoom-in) so the two directions share one pack glyph. Gated like the Win+R
+// frame (GUI held, no Ctrl/Alt), matching the mag cases in keycode_to_disp_overlay().
+static int8_t keycode_hint_wants_mag(uint16_t keycode) {
+    const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+    const bool win_or_unknown = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_UNKNOWN);
+    if (!win_or_unknown) return 0;
+    const uint8_t m = get_local_layer()->mods;
+    if (!((m & MOD_MASK_GUI) && !(m & MOD_MASK_CTRL) && !(m & MOD_MASK_ALT))) return 0;
+    if (keycode == KC_EQL || keycode == KC_KP_PLUS)  return 1;
+    if (keycode == KC_MINS || keycode == KC_KP_MINUS) return -1;
+    return 0;
 }
 
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
@@ -1743,12 +1761,12 @@ void update_displays(enum refresh_mode mode) {
                         if(text) {
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                             if(keycode_hint_wants_frame(keycode)) {
-                                // 2px rounded frame around the Win+R ">_" run-dialog
-                                // hint (nested 1px outlines; buffer coords). Sits 3px
-                                // lower than the original to match the prompt glyph's
-                                // +3px yOffset shift (gfx_icons.h 0x9A/0x9B).
-                                kdisp_draw_round_rect(62, 7, 36, 32, 4);
-                                kdisp_draw_round_rect(63, 8, 34, 30, 3);
+                                // 2px rounded run-dialog frame around the Win+R ">_"
+                                // hint (nested 1px outlines; buffer coords). Sized to
+                                // enclose the base-font ">_" at 4 leading spaces
+                                // (buffer x57..83, y4..24 — see tools/gfx_font.py sim).
+                                kdisp_draw_round_rect(54, 2, 33, 26, 4);
+                                kdisp_draw_round_rect(55, 3, 31, 24, 3);
                             } else if(keycode_hint_wants_gfx_restart(keycode)) {
                                 // Win+Ctrl+Shift+B: composite the reload glyph 🗘
                                 // (half-scaled, 2x2-OR) into the monitor's screen
@@ -1756,6 +1774,17 @@ void update_displays(enum refresh_mode mode) {
                                 // monitor bbox (see tools/gfx_font.py sim): 13x17 at
                                 // buffer (70,7) centres it in the upper screen area.
                                 kdisp_draw_glyph_half_at(g_all_fonts, g_all_font_count, 70, 7, U'\x1F5D8');
+                            } else {
+                                // Win + '+'/'-' Magnifier: draw the +/- sign into the
+                                // pack 🔍 lens. Lens centre (buffer 66,13) + bar half-
+                                // length from the tools/gfx_font.py sim; horizontal bar
+                                // for both, plus a vertical bar for zoom-in.
+                                int8_t mag = keycode_hint_wants_mag(keycode);
+                                if (mag != 0) {
+                                    const int8_t cx = 66, cy = 13, hl = 9;
+                                    kdisp_fill_rect(cx - hl, cy, (int8_t)(2 * hl + 1), 2);
+                                    if (mag > 0) kdisp_fill_rect(cx, cy - hl, 2, (int8_t)(2 * hl + 1));
+                                }
                             }
                         }
                         kdisp_send_buffer();

@@ -53,7 +53,6 @@
 #define ICON_SHIFT                  	U"\x90"
 #define ICON_SWITCH_ON              	U"\x91"
 #define ICON_SWITCH_OFF             	U"\x92"
-#define ICON_BONGO_CAT              	U"\x93"
 #define ICON_OS_WINDOWS             	U"\x94"
 #define ICON_OS_LINUX               	U"\x95"
 #define ICON_OS_ANDROID             	U"\x96"
@@ -1958,12 +1957,8 @@
 #define ICON_CLIP_HISTORY           	U"\x1F4DC"
 #define ICON_QUICK_MENU             	U"\x1F4D1"
 #define ICON_PEEK                   	U"\x1F441"
-// Win+R "run" prompt — a 16 pt '>' and '_' (2 pt larger than the 14 pt base font)
-// drawn from the resident IconsFont (gfx_icons.h 0x9A/0x9B), so the legend reads at
-// a size closer to the emoji hints with no font-pack dependency. Distinct PUA slots,
-// NOT the ASCII '>'/'_', so normal keycaps keep the base-size glyphs.
-#define ICON_PROMPT_GT              	U"\x9A"
-#define ICON_PROMPT_US              	U"\x9B"
+// Win+R "run" prompt renders the plain ASCII ">_" from the base font (no custom
+// glyph) with the run-dialog frame drawn by keycode_hint_wants_frame().
 // Resident IconsFont OS logos (gfx_icons.h, 0x98/0x99) — the GUI/Super-key legend
 // for the host-detected Linux desktops (POLY_OS_LINUX_GNOME/KDE).
 #define ICON_OS_GNOME               	U"\x98"
@@ -2002,7 +1997,6 @@
 #define ICON_GFX_RESTART            	U"\x1F5B5"  // Win+Ctrl+Shift+B restart graphics: monitor 🖵 (symbol font pack); the 🗘 reload glyph is overdrawn in the screen cavity by update_displays()
 #define ICON_GFX_RELOAD             	U"\x1F5D8"  // 🗘 clockwise reload — half-scaled + composited into ICON_GFX_RESTART's screen by update_displays()
 #define ICON_SYSTEM_PROPS           	U"\x1F4BB"
-#define ICON_MAG_PLUS               	U"\x9E"     // Win + '+' magnifier zoom in  (resident, gfx_icons.h)
-#define ICON_MAG_MINUS              	U"\x9F"     // Win + '-' magnifier zoom out (resident, gfx_icons.h)
+#define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); the +/- sign is drawn into the lens by update_displays() via keycode_hint_wants_mag()
 #define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
 #define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)

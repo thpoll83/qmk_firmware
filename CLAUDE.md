@@ -334,12 +334,15 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   (`base/fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
   (prepended), so *extending it with another glyph* (append bitmap bytes + a `GFXglyph`
   record, bump the font's `last`) shifts **no pack index** and needs no reship — it
-  ships with the firmware. The Win+R `>_` hint does this: a 16 pt `>`/`_` (2 pt over the
-  14 pt base) generated via `fontconvert` and injected at PUA `0x9A`/`0x9B`
-  (`ICON_PROMPT_GT`/`_US`), referenced only by that hint so normal `>`/`_` keycaps keep
-  the base size. ⚠️ Adding a whole **new resident *font*** instead (an extra entry in
-  `index.resident_fonts`) prepends ahead of the pack → **every pack font's gidx shifts**
-  → a full-pack reship; avoid that for one or two glyphs.
+  ships with the firmware — the OS logos, mouse buttons and lock-key glyphs at
+  `0x94`–`0x99` etc. are exactly this. ⚠️ Adding a whole **new resident *font***
+  instead (an extra entry in `index.resident_fonts`) prepends ahead of the pack →
+  **every pack font's gidx shifts** → a full-pack reship; avoid that for one or two
+  glyphs. (Conversely, when a hint can use a *pack* glyph or a base-font character,
+  prefer that over a resident icon — the Win+R `>_` was reverted from a bespoke
+  16 pt `0x9A`/`0x9B` pair to the plain base-font `">_"` + a drawn frame, and the
+  Win+`+`/`-` magnifier from resident `0x9E`/`0x9F` to the pack 🔍 with a
+  programmatically-drawn `+`/`-`, reclaiming those C1 slots — 2026-07.)
   - ⚠️ **IconsFont is a range font `0x80..last`; slots `0xA0`+ COLLIDE with printable
     Latin-1** (`0xA0` nbsp, `0xA2..0xA5` = ¢£¤¥, …). Because `IconsFont` is
     `g_all_fonts[0]` it **wins** the lookup, so a custom icon parked at e.g. `0xA4`

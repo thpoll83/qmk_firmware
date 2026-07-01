@@ -1,7 +1,7 @@
 {
   "abi_version": 1,
   "font_count": 122,
-  "total_size": 466728,
+  "total_size": 468268,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -721,7 +721,7 @@
       "all_fonts_index": 143,
       "symbol": "NotoSansMath_Regular_MathHints_20pt16b",
       "first": 8672,
-      "last": 8864
+      "last": 9032
     },
     {
       "all_fonts_index": 144,

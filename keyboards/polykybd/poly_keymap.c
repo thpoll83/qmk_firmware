@@ -1284,10 +1284,10 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"     " ICON_FOCUS_WINDOW;  // Win+Home minimize all but active
                 break;
             case KC_LEFT:
-                if (win_or_unknown) return U"      " ICON_SNAP_LEFT;    // Win+Left snap window left (edge bar)
+                if (win_or_unknown) return U"     " ICON_SNAP_LEFT;     // Win+Left snap window left (⍇ pack glyph)
                 break;
             case KC_RIGHT:
-                if (win_or_unknown) return U"      " ICON_SNAP_RIGHT;   // Win+Right snap window right (edge bar)
+                if (win_or_unknown) return U"     " ICON_SNAP_RIGHT;    // Win+Right snap window right (⍈ pack glyph)
                 break;
             case KC_SCLN:
                 if (win_or_unknown) return U"   "   ICON_GIF;           // Win+; GIF / emoji panel

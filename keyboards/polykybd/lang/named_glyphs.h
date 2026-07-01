@@ -1988,8 +1988,8 @@
 #define ICON_EXPLORER               	U"\x9C"     // Win+E (resident folder pixmap, gfx_icons.h)
 #define ICON_ACCESSIBILITY          	U"\x267F"
 #define ICON_FOCUS_WINDOW           	U"\x2752"   // Win+Home minimize all but active (shadowed window)
-#define ICON_SNAP_LEFT              	U"\xA0"     // Win+Left  snap window to left edge (tall bar + arrow)
-#define ICON_SNAP_RIGHT             	U"\xA1"     // Win+Right snap window to right edge
+#define ICON_SNAP_LEFT              	U"\x2347"   // Win+Left  snap window to left edge (⍇ APL quad-left, symbol font pack)
+#define ICON_SNAP_RIGHT             	U"\x2348"   // Win+Right snap window to right edge (⍈ APL quad-right, symbol font pack)
 #define ICON_GIF                    	U"\x1F3AC"  // Win+; GIF panel (clapperboard)
 #define ICON_SNIP                   	U"\x1F4F8"  // Win+Shift+S Snipping Tool (camera + flash)
 #define ICON_SCREEN_RECORD          	U"\x1F4F9"

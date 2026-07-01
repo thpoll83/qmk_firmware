@@ -1288,7 +1288,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_GIF;           // Win+; GIF / emoji panel
                 break;
             case KC_PAUSE:
-                if (win_or_unknown) return U"      " ICON_SLIDERS;      // Win+Pause System Properties (level sliders)
+                if (win_or_unknown) return U"    " ICON_SLIDERS;        // Win+Pause System Properties (🎛 knobs, pack)
                 break;
             case KC_PSCR:
                 if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot

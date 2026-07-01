@@ -1997,7 +1997,7 @@
 #define ICON_SCREEN_RECORD          	U"\x1F4F9"
 #define ICON_SETTINGS_SM            	U"\xA2"     // Win+I settings gear, downscaled (resident, gfx_icons.h)
 #define ICON_CAST_SM                	U"\xA3"     // Win+K cast, downscaled (resident, gfx_icons.h)
-#define ICON_SLIDERS                	U"\xA4"     // Win+Pause system properties (two mirrored level sliders, resident)
+#define ICON_SLIDERS                	U"\x1F39B"  // Win+Pause system properties (🎛 knobs, symbol font pack)
 #define ICON_SKULL                  	U"\x2620"   // (unused) skull & crossbones
 #define ICON_GFX_RESTART            	U"\xA5"     // Win+Ctrl+Shift+B restart graphics: ⟳ refresh arrow inside a monitor (resident, gfx_icons.h)
 #define ICON_SYSTEM_PROPS           	U"\x1F4BB"

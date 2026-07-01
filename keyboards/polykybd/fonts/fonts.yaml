@@ -370,3 +370,4 @@ fonts:
   # span (no shadowing), appended LAST so it takes the highest ALL_FONTS index and
   # shifts only the trailing flags font. Bumps the symbol bundle content_version.
   - {category: symbols, variant: _Dictation_, source: noto-emoji, bits: 32, ranges: [[0x1f5e3, 0x1f5e3]]}
+  - {category: symbols, variant: _Network_, size: 18, bits: 32, ranges: [[0x1f5a7, 0x1f5a7]]}  # 🖧 Win+Ctrl+F search-network hint (moved out of resident IconsFont)

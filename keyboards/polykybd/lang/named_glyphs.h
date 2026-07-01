@@ -2002,4 +2002,4 @@
 #define ICON_MAG_PLUS               	U"\x9E"     // Win + '+' magnifier zoom in  (resident, gfx_icons.h)
 #define ICON_MAG_MINUS              	U"\x9F"     // Win + '-' magnifier zoom out (resident, gfx_icons.h)
 #define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
-#define ICON_NET                    	U"\x9D"     // Win+Ctrl+F networked computers 🖧 (resident, gfx_icons.h)
+#define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)

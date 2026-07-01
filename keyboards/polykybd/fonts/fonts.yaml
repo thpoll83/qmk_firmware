@@ -371,4 +371,4 @@ fonts:
   # shifts only the trailing flags font. Bumps the symbol bundle content_version.
   - {category: symbols, variant: _Dictation_, source: noto-emoji, bits: 32, ranges: [[0x1f5e3, 0x1f5e3]]}
   - {category: symbols, variant: _Network_, size: 18, bits: 32, ranges: [[0x1f5a7, 0x1f5a7]]}  # 🖧 Win+Ctrl+F search-network hint (moved out of resident IconsFont)
-  - {category: symbols, variant: _Knobs_, source: noto-emoji, size: 17, bits: 32, ranges: [[0x1f39b, 0x1f39b]]}  # 🎛 Win+Pause System-Properties hint (replaces resident ICON_SLIDERS)
+  - {category: symbols, variant: _Knobs_, source: noto-emoji, size: 18, bits: 32, ranges: [[0x1f39b, 0x1f39b]]}  # 🎛 Win+Pause System-Properties hint (replaces resident ICON_SLIDERS)

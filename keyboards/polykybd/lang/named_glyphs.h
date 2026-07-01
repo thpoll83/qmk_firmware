@@ -1995,11 +1995,12 @@
 #define ICON_GIF                    	U"\x1F3AC"  // Win+; GIF panel (clapperboard)
 #define ICON_SNIP                   	U"\x1F4F8"  // Win+Shift+S Snipping Tool (camera + flash)
 #define ICON_SCREEN_RECORD          	U"\x1F4F9"
-#define ICON_SETTINGS_SM            	U"\xA2"     // Win+I settings gear, downscaled (resident, gfx_icons.h)
-#define ICON_CAST_SM                	U"\xA3"     // Win+K cast, downscaled (resident, gfx_icons.h)
+#define ICON_SETTINGS_SM            	U"\x2699"   // Win+I settings gear ⚙ (full-size emoji font pack)
+#define ICON_CAST_SM                	U"\x1F4F6"  // Win+K cast 📶 (full-size emoji font pack)
 #define ICON_SLIDERS                	U"\x1F39B"  // Win+Pause system properties (🎛 knobs, symbol font pack)
 #define ICON_SKULL                  	U"\x2620"   // (unused) skull & crossbones
-#define ICON_GFX_RESTART            	U"\xA5"     // Win+Ctrl+Shift+B restart graphics: ⟳ refresh arrow inside a monitor (resident, gfx_icons.h)
+#define ICON_GFX_RESTART            	U"\x1F5B5"  // Win+Ctrl+Shift+B restart graphics: monitor 🖵 (symbol font pack); the 🗘 reload glyph is overdrawn in the screen cavity by update_displays()
+#define ICON_GFX_RELOAD             	U"\x1F5D8"  // 🗘 clockwise reload — half-scaled + composited into ICON_GFX_RESTART's screen by update_displays()
 #define ICON_SYSTEM_PROPS           	U"\x1F4BB"
 #define ICON_MAG_PLUS               	U"\x9E"     // Win + '+' magnifier zoom in  (resident, gfx_icons.h)
 #define ICON_MAG_MINUS              	U"\x9F"     // Win + '-' magnifier zoom out (resident, gfx_icons.h)

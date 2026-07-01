@@ -1158,7 +1158,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
             case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
             case KC_F:     return U"    " ICON_NET;                       // Win+Ctrl+F search network computers (🖧 pack glyph)
-            case KC_B:     if (shift) return U"    " ICON_GFX_RESTART; break; // Win+Ctrl+Shift+B restart graphics (⟳ in monitor)
+            case KC_B:     if (shift) return U"    " ICON_GFX_RESTART; break; // Win+Ctrl+Shift+B restart graphics (monitor; reload 🗘 composited into its screen by update_displays via keycode_hint_wants_gfx_restart)
             default: break;
         }
     } else if (wm_held && win_or_unknown && (local_mods & MOD_MASK_ALT) != 0) {
@@ -1231,7 +1231,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_DICTATION;     // Win+H dictation
                 break;
             case KC_I:
-                if (win_or_unknown) return U"    "  ICON_SETTINGS_SM;   // Win+I settings (smaller gear)
+                if (win_or_unknown) return U"   "   ICON_SETTINGS_SM;   // Win+I settings (full-size ⚙ pack glyph)
                 break;
             case KC_M:
                 if (win_or_unknown) return U"      " PRIVATE_MINIMIZE;  // Win+M minimize all (🗕)
@@ -1246,7 +1246,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
                 break;
             case KC_K:
-                if (win_or_unknown) return U"    "  ICON_CAST_SM;       // Win+K cast (smaller)
+                if (win_or_unknown) return U"   "   ICON_CAST_SM;       // Win+K cast (full-size 📶 pack glyph)
                 break;
             case KC_V:
                 if (win_or_unknown) return U"   "   ICON_CLIP_HISTORY;  // Win+V clipboard history
@@ -1360,6 +1360,21 @@ static bool keycode_hint_wants_frame(uint16_t keycode) {
     if (!win_or_unknown) return false;
     const uint8_t m = get_local_layer()->mods;
     return (m & MOD_MASK_GUI) && !(m & MOD_MASK_CTRL) && !(m & MOD_MASK_ALT);
+}
+
+// True when the hint just drawn is the Win+Ctrl+Shift+B "restart graphics" monitor
+// (ICON_GFX_RESTART = 🖵) — the render path then composites the reload 🗘 glyph at
+// half scale into the monitor's screen cavity. Like the Win+R frame, the overlay
+// can't live in the hint string (it's a downsampled second glyph at fixed buffer
+// coords), so update_displays() queries this after drawing the monitor. Mirrors
+// the Win+Ctrl+Shift+B case in keycode_to_disp_overlay()'s win_or_unknown branch.
+static bool keycode_hint_wants_gfx_restart(uint16_t keycode) {
+    if (keycode != KC_B) return false;
+    const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
+    const bool win_or_unknown = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_UNKNOWN);
+    if (!win_or_unknown) return false;
+    const uint8_t m = get_local_layer()->mods;
+    return (m & MOD_MASK_GUI) && (m & MOD_MASK_CTRL) && (m & MOD_MASK_SHIFT);
 }
 
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
@@ -1734,6 +1749,13 @@ void update_displays(enum refresh_mode mode) {
                                 // +3px yOffset shift (gfx_icons.h 0x9A/0x9B).
                                 kdisp_draw_round_rect(62, 7, 36, 32, 4);
                                 kdisp_draw_round_rect(63, 8, 34, 30, 3);
+                            } else if(keycode_hint_wants_gfx_restart(keycode)) {
+                                // Win+Ctrl+Shift+B: composite the reload glyph 🗘
+                                // (half-scaled, 2x2-OR) into the monitor's screen
+                                // cavity. Buffer top-left derived from the rendered
+                                // monitor bbox (see tools/gfx_font.py sim): 13x17 at
+                                // buffer (70,7) centres it in the upper screen area.
+                                kdisp_draw_glyph_half_at(g_all_fonts, g_all_font_count, 70, 7, U'\x1F5D8');
                             }
                         }
                         kdisp_send_buffer();

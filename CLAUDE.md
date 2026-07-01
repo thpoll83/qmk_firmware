@@ -347,14 +347,31 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     those keys render the icon instead of the currency glyph (field/CodeRabbit,
     2026-07). **Put custom resident icons in the non-printable C1 range `0x80–0x9F`
     (or a real PUA), never `0xA0+`.** The Win-hint wave-D glyphs violated this
-    (`0xA2–0xA5` = settings/cast/sliders/restart) — pending relocation.
+    (`0xA2–0xA5` = settings/cast/sliders/restart) — **RESOLVED 2026-07**: all four
+    migrated to the pack (settings→⚙ U+2699, cast→📶 U+1F4F6, sliders→🎛 U+1F39B,
+    gfx-restart→🖵 U+1F5B5 + a half-scaled 🗘 overlay), so `IconsFont`'s `last` was
+    dropped from `0xA5` to `0x9F` — the whole `0xA0+` tail is gone and **no printable
+    Latin-1 is shadowed anymore** (¢£¤¥ render from NotoSans again). The only mid-range
+    gap left is `0x9D` (C1 control, harmless).
   - **Removing a glyph from the MIDDLE of the range** (e.g. after migrating a hint
     to the pack): you can't delete it (the array must stay contiguous `first..last`).
     Turn its record into a **gap** `{off,0,0,0,0,0}` and drop its bitmap bytes, then
     **shift every later glyph's `bitmapOffset` down by the removed byte count**. Gap
     glyphs (w==h==xAdvance==0) are skipped by the renderer and fall through to the
     next font — so gapping `0xA0/0xA1` (the old snap arrows) actually *un-shadowed*
-    the real nbsp/¡. (The host preview `tools/gfx_font.py` skips gaps too.)
+    the real nbsp/¡. (The host preview `tools/gfx_font.py` skips gaps too.) **If the
+    removed glyphs are the TAIL of the range** (as `0xA2/0xA3/0xA5` were, with the
+    intervening `0xA0/0xA1/0xA4` already gaps), just lower the `GFXfont` `last` past
+    them instead of leaving trailing gaps — that un-shadows every codepoint above the
+    new `last` at once.
+  - **Compositing a smaller second glyph inside a hint** (e.g. the 🗘 reload inside
+    the Win+Ctrl+Shift+B monitor): `kdisp_draw_glyph_half_at()` (`disp_array.c`) blits
+    any pack/resident glyph at half size (2×2-OR downsample — keeps thin strokes that
+    plain decimation drops) at fixed **buffer** coords (x offset by `BUFFER_X`=28, y
+    NOT offset). A `keycode_hint_wants_*()` gate in `poly_keymap.c` (mirroring the
+    Win+R frame pattern) triggers it in `update_displays()` after the base hint text.
+    Derive the buffer coords from `tools/gfx_font.py` (it replicates the baseline-align
+    math, so its rendered bbox matches hardware).
   - **Pack-category headers (`symbol_fonts.h`, etc.) are NOT compiled into the
     firmware** — only `RESIDENT_FONTS[]` + `IconsFont` are `#include`d. So adding pack
     glyphs (⍇/⍈, 🖧) does **not** grow the image; *removing* a resident glyph shrinks

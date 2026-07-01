@@ -1,7 +1,7 @@
 {
   "abi_version": 1,
   "font_count": 124,
-  "total_size": 468624,
+  "total_size": 468640,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -737,7 +737,7 @@
     },
     {
       "all_fonts_index": 146,
-      "symbol": "NotoEmoji_Medium_Knobs_17pt16b",
+      "symbol": "NotoEmoji_Medium_Knobs_18pt16b",
       "first": 127899,
       "last": 127899
     },

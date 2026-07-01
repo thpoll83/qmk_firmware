@@ -148,6 +148,37 @@ const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, 
     return kdisp_gfx_glyph_font(fonts, num_fonts, ch, NULL);
 }
 
+// Blit a glyph at half resolution (2x2-OR downsample) with its top-left at buffer
+// coords (x,y). Each destination pixel is lit if ANY of the four source pixels in
+// its 2x2 block is set — this keeps thin strokes (e.g. the reload arrows) visible
+// where plain decimation would drop them. No baseline align: (x,y) is the literal
+// top-left, so the caller places it precisely (used for the Win+Ctrl+Shift+B
+// reload glyph composited into the monitor's screen).
+void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
+    const GFXfont *font = NULL;
+    const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
+    if (glyph == NULL || font == NULL) return;
+    const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
+    uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
+    int16_t w = pgm_read_byte(&glyph->width);
+    int16_t h = pgm_read_byte(&glyph->height);
+    int16_t hw = w / 2, hh = h / 2;
+    for (int16_t dy = 0; dy < hh; ++dy) {
+        for (int16_t dx = 0; dx < hw; ++dx) {
+            bool lit = false;
+            for (int16_t oy = 0; oy < 2 && !lit; ++oy) {
+                for (int16_t ox = 0; ox < 2; ++ox) {
+                    int16_t sx = dx * 2 + ox, sy = dy * 2 + oy;
+                    uint32_t bit = (uint32_t)sy * w + sx;
+                    uint8_t byte = pgm_read_byte(&bitmap[bo + (bit >> 3)]);
+                    if (byte & (0x80 >> (bit & 7))) { lit = true; break; }
+                }
+            }
+            if (lit) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+        }
+    }
+}
+
 
 void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
     for (int x = x_start; x < (x_start + width); ++x) {

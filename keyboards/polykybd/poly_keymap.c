@@ -1158,7 +1158,10 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
             case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
             case KC_F:     return U"    " ICON_NET;                       // Win+Ctrl+F search network computers (🖧 pack glyph)
-            case KC_B:     if (shift) return U"    " ICON_GFX_RESTART; break; // Win+Ctrl+Shift+B restart graphics (monitor; reload 🗘 composited into its screen by update_displays via keycode_hint_wants_gfx_restart)
+            // Win+Ctrl+Shift+B restart graphics: monitor 🖵, then MOVE (\x0E) the cursor
+            // to buffer (0x46,0x07)=(70,7) and HALF-draw (\x0F) the reload 🗘 into its
+            // screen cavity. (\x0E takes the next two codepoints as x,y.)
+            case KC_B:     if (shift) return U"    " ICON_GFX_RESTART U"\x0E\x46\x07\x0F" ICON_GFX_RELOAD; break;
             default: break;
         }
     } else if (wm_held && win_or_unknown && (local_mods & MOD_MASK_ALT) != 0) {
@@ -1237,11 +1240,11 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"      " PRIVATE_MINIMIZE;  // Win+M minimize all (🗕)
                 break;
             case KC_R:
-                // Win+R run dialog: the plain ASCII ">_" prompt from the base font
-                // (4 spaces, right-of-centre) with a 2px rounded-rectangle run-dialog
-                // frame added by keycode_hint_wants_frame() in the render path (the
-                // frame can't be expressed in the hint string).
-                if (win_or_unknown) return U"    >_";
+                // Win+R run dialog. MOVE (\x0E) to (0x36,0x01)=(54,1) and draw the 2px
+                // nested run-dialog FRAME (\x12) sized (0x21,0x1B)=(33,27); then reset the
+                // cursor to the origin (\x18) and draw the base-font ">_" (4 spaces,
+                // right-of-centre) inside it.
+                if (win_or_unknown) return U"\x0E\x36\x01\x12\x21\x1B\x18" U"    >_";
                 break;
             case KC_T:
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
@@ -1294,19 +1297,17 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_PSCR:
                 if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
                 break;
-            // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out.
-            // Both draw the pack magnifier 🔍 (ICON_MAGNIFIER); the +/- sign is drawn
-            // programmatically into the lens by update_displays() (keycode_hint_wants_mag).
+            // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out. Both
+            // draw the pack magnifier 🔍, then MOVE (\x0E) to the lens centre (0x42,0x0D)
+            // =(66,13) and draw the sign there — \x10 a '+', \x11 a '-'.
             case KC_EQL:
             case KC_KP_PLUS:
-                if (win_or_unknown) return U"   " ICON_MAGNIFIER;       // Win + '+' Magnifier zoom in
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER U"\x0E\x42\x0D\x10"; // Win + '+' zoom in
                 break;
             case KC_MINS:
             case KC_KP_MINUS:
-                if (win_or_unknown) return U"   " ICON_MAGNIFIER;       // Win + '-' Magnifier zoom out
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER U"\x0E\x42\x0D\x11"; // Win + '-' zoom out
                 break;
-            // (Win+1..9 taskbar-app hints removed for now — pending a smarter
-            //  numbered-slot treatment.)
             default: break;
         }
     }
@@ -1348,51 +1349,6 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     }
 
     return NULL;
-}
-
-// True when the hint just drawn for (keycode, mods) should get the rounded-rect
-// frame — currently only the Win+R run-dialog ">_" prompt. The frame can't be
-// expressed in the hint string (it's a drawn outline), so the render path queries
-// this after drawing the hint text and calls kdisp_draw_round_rect(). The gate
-// mirrors the Win+R case in keycode_to_disp_overlay()'s win_or_unknown branch.
-static bool keycode_hint_wants_frame(uint16_t keycode) {
-    if (keycode != KC_R) return false;
-    const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
-    const bool win_or_unknown = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_UNKNOWN);
-    if (!win_or_unknown) return false;
-    const uint8_t m = get_local_layer()->mods;
-    return (m & MOD_MASK_GUI) && !(m & MOD_MASK_CTRL) && !(m & MOD_MASK_ALT);
-}
-
-// True when the hint just drawn is the Win+Ctrl+Shift+B "restart graphics" monitor
-// (ICON_GFX_RESTART = 🖵) — the render path then composites the reload 🗘 glyph at
-// half scale into the monitor's screen cavity. Like the Win+R frame, the overlay
-// can't live in the hint string (it's a downsampled second glyph at fixed buffer
-// coords), so update_displays() queries this after drawing the monitor. Mirrors
-// the Win+Ctrl+Shift+B case in keycode_to_disp_overlay()'s win_or_unknown branch.
-static bool keycode_hint_wants_gfx_restart(uint16_t keycode) {
-    if (keycode != KC_B) return false;
-    const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
-    const bool win_or_unknown = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_UNKNOWN);
-    if (!win_or_unknown) return false;
-    const uint8_t m = get_local_layer()->mods;
-    return (m & MOD_MASK_GUI) && (m & MOD_MASK_CTRL) && (m & MOD_MASK_SHIFT);
-}
-
-// For the Win + '+'/'-' Magnifier hint: returns +1 (zoom in), -1 (zoom out) or 0.
-// The hint string draws the pack magnifier 🔍; the render path then draws the
-// +/- sign programmatically into the lens (a horizontal bar, plus a vertical bar
-// for zoom-in) so the two directions share one pack glyph. Gated like the Win+R
-// frame (GUI held, no Ctrl/Alt), matching the mag cases in keycode_to_disp_overlay().
-static int8_t keycode_hint_wants_mag(uint16_t keycode) {
-    const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
-    const bool win_or_unknown = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_UNKNOWN);
-    if (!win_or_unknown) return 0;
-    const uint8_t m = get_local_layer()->mods;
-    if (!((m & MOD_MASK_GUI) && !(m & MOD_MASK_CTRL) && !(m & MOD_MASK_ALT))) return 0;
-    if (keycode == KC_EQL || keycode == KC_KP_PLUS)  return 1;
-    if (keycode == KC_MINS || keycode == KC_KP_MINUS) return -1;
-    return 0;
 }
 
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
@@ -1759,34 +1715,11 @@ void update_displays(enum refresh_mode mode) {
                             text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
+                            // The hint string is a self-contained display list: any
+                            // frame / half-scale composite / +/- sign is encoded inline
+                            // (see the \x0E-\x12 ops in kdisp_write_gfx_text_cy), so no
+                            // per-keycode special-case is needed here.
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
-                            if(keycode_hint_wants_frame(keycode)) {
-                                // 2px rounded run-dialog frame around the Win+R ">_"
-                                // hint (nested 1px outlines; buffer coords). Sized to
-                                // enclose the base-font ">_" at 4 leading spaces
-                                // (buffer x57..83, y4..24) with 1px clearance above the
-                                // '>' and below the '_' (see tools/gfx_font.py sim).
-                                kdisp_draw_round_rect(54, 1, 33, 27, 4);
-                                kdisp_draw_round_rect(55, 2, 31, 25, 3);
-                            } else if(keycode_hint_wants_gfx_restart(keycode)) {
-                                // Win+Ctrl+Shift+B: composite the reload glyph 🗘
-                                // (half-scaled, 2x2-OR) into the monitor's screen
-                                // cavity. Buffer top-left derived from the rendered
-                                // monitor bbox (see tools/gfx_font.py sim): 13x17 at
-                                // buffer (70,7) centres it in the upper screen area.
-                                kdisp_draw_glyph_half_at(g_all_fonts, g_all_font_count, 70, 7, U'\x1F5D8');
-                            } else {
-                                // Win + '+'/'-' Magnifier: draw the +/- sign into the
-                                // pack 🔍 lens. Lens centre (buffer 66,13) + bar half-
-                                // length from the tools/gfx_font.py sim; horizontal bar
-                                // for both, plus a vertical bar for zoom-in.
-                                int8_t mag = keycode_hint_wants_mag(keycode);
-                                if (mag != 0) {
-                                    const int8_t cx = 66, cy = 13, hl = 5;
-                                    kdisp_fill_rect(cx - hl, cy, (int8_t)(2 * hl + 1), 2);
-                                    if (mag > 0) kdisp_fill_rect(cx, cy - hl, 2, (int8_t)(2 * hl + 1));
-                                }
-                            }
                         }
                         kdisp_send_buffer();
                         }

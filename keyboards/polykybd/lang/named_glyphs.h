@@ -1974,7 +1974,7 @@
 //   🖵+ new desktop (Win+Ctrl+D)        ←🖵 / 🖵→ switch desktop (Win+Ctrl+←/→)
 //   🖵x close desktop (Win+Ctrl+F4)     📽 GIF panel (Win+;)
 //   📸 Snipping Tool (Win+Shift+S)      📹 screen recording (Win+Alt+R)
-//   📌N taskbar app (Win+1..9)          🔊 system tray (Win+B)
+//   🔊 system tray (Win+B)
 //   🖵🗘 restart graphics (Win+Ctrl+Shift+B)  🎛 System Properties (Win+Pause)
 //   🔍+ / 🔍− Magnifier (Win + +/−)     📷 screenshot (Win+PrtScn)
 //   🖧 search network computers (Win+Ctrl+F)

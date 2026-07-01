@@ -130,19 +130,15 @@ void reset_all_states_and_layers(void);
 
 const poly_layer_t* get_local_layer(void);
 poly_layer_t* access_local_layer(void);
-void set_local_layer(poly_layer_t value);
 void copy_local_layer(const poly_layer_t *value);
 const poly_layer_t* get_global_layer(void);
-void set_global_layer(poly_layer_t value);
 void copy_global_layer(const poly_layer_t *value);
 
 const poly_sync_t* get_local_state(void);
 poly_sync_t* access_local_state(void);
-void set_local_state(poly_sync_t value);
 void copy_local_state(const poly_sync_t* value);
 const poly_sync_t* get_global_state(void);
 poly_sync_t* access_global_state(void);
-void set_global_state(poly_sync_t value);
 void copy_global_state(const poly_sync_t* value);
 
 const poly_last_t* get_local_last_latin(void);
@@ -153,13 +149,11 @@ void copy_local_last_latin(const poly_last_t* value);
 
 const poly_last_t* get_global_last_latin(void);
 poly_last_t* access_global_last_latin(void);
-void set_global_last_latin_keycode(uint16_t keycode);
 uint16_t get_global_last_latin_keycode(void);
 void copy_global_last_latin(const poly_last_t* value);
 
 const latin_sync_t* get_global_latin_table(void);
 latin_sync_t* access_global_latin_table(void);
-void set_global_latin_table(latin_sync_t value);
 void copy_global_latin_table(const latin_sync_t* value);
 
 

@@ -86,10 +86,6 @@ poly_layer_t* access_local_layer(void) {
     return &l_layer;
 }
 
-void set_local_layer(poly_layer_t value) {
-    l_layer = value;
-}
-
 void copy_local_layer(const poly_layer_t *value) {
     memcpy(&l_layer, value, sizeof(poly_layer_t));
 }
@@ -97,10 +93,6 @@ void copy_local_layer(const poly_layer_t *value) {
 // Getters and setters for g_layer
 const poly_layer_t* get_global_layer(void) {
     return &g_layer;
-}
-
-void set_global_layer(poly_layer_t value) {
-    g_layer = value;
 }
 
 void copy_global_layer(const poly_layer_t *value) {
@@ -117,10 +109,6 @@ poly_sync_t* access_local_state(void) {
     return &l_state;
 }
 
-void set_local_state(poly_sync_t value) {
-    l_state = value;
-}
-
 void copy_local_state(const poly_sync_t* value) {
     memcpy(&l_state, value, sizeof(poly_sync_t));
 }
@@ -132,10 +120,6 @@ const poly_sync_t* get_global_state(void) {
 
 poly_sync_t* access_global_state(void) {
     return &g_state;
-}
-
-void set_global_state(poly_sync_t value) {
-    g_state = value;
 }
 
 void copy_global_state(const poly_sync_t* value) {
@@ -172,10 +156,6 @@ poly_last_t* access_global_last_latin_keycode(void) {
     return &g_last;
 }
 
-void set_global_last_latin_keycode(uint16_t keycode) {
-    g_last.latin_kc = keycode;
-}
-
 void copy_global_last_latin(const poly_last_t* value) {
     memcpy(&g_last, value, sizeof(poly_last_t));
 }
@@ -187,10 +167,6 @@ const latin_sync_t* get_global_latin_table(void) {
 
 latin_sync_t* access_global_latin_table(void) {
     return &g_latin;
-}
-
-void set_global_latin_table(latin_sync_t value) {
-    g_latin = value;
 }
 
 void copy_global_latin_table(const latin_sync_t* value) {

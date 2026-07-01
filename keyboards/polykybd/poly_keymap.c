@@ -114,9 +114,6 @@ while lang_key:
 //[[[end]]]
 
 
-//not used at the moment
-#define FLASH_TARGET_OFFSET FW_RESOURCE_OFFSET //4 MB; single source = base/fw_staging.h flash map (staging ends here, resources use the remaining 4 MB)
-const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
 static enum lang_layer g_lang_init = INIT_LANG;
@@ -142,8 +139,6 @@ void poly_suspend(void);
 void early_hardware_init_post(void) {
     spi_hw_setup();
 }
-
-//void oled_on_off(bool on);
 
 #define BYTE_TO_BINARY_PATTERN "|%s%s%s%s%s%s%s%s"
 #define BYTE_TO_FLAGS(byte)  \

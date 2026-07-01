@@ -334,12 +334,51 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   (`base/fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
   (prepended), so *extending it with another glyph* (append bitmap bytes + a `GFXglyph`
   record, bump the font's `last`) shifts **no pack index** and needs no reship — it
-  ships with the firmware. The Win+R `>_` hint does this: a 16 pt `>`/`_` (2 pt over the
-  14 pt base) generated via `fontconvert` and injected at PUA `0x9A`/`0x9B`
-  (`ICON_PROMPT_GT`/`_US`), referenced only by that hint so normal `>`/`_` keycaps keep
-  the base size. ⚠️ Adding a whole **new resident *font*** instead (an extra entry in
-  `index.resident_fonts`) prepends ahead of the pack → **every pack font's gidx shifts**
-  → a full-pack reship; avoid that for one or two glyphs.
+  ships with the firmware — the OS logos, mouse buttons and lock-key glyphs at
+  `0x94`–`0x99` etc. are exactly this. ⚠️ Adding a whole **new resident *font***
+  instead (an extra entry in `index.resident_fonts`) prepends ahead of the pack →
+  **every pack font's gidx shifts** → a full-pack reship; avoid that for one or two
+  glyphs. (Conversely, when a hint can use a *pack* glyph or a base-font character,
+  prefer that over a resident icon — the Win+R `>_` was reverted from a bespoke
+  16 pt `0x9A`/`0x9B` pair to the plain base-font `">_"` + a drawn frame, and the
+  Win+`+`/`-` magnifier from resident `0x9E`/`0x9F` to the pack 🔍 with a
+  programmatically-drawn `+`/`-`, reclaiming those C1 slots — 2026-07.)
+  - ⚠️ **IconsFont is a range font `0x80..last`; slots `0xA0`+ COLLIDE with printable
+    Latin-1** (`0xA0` nbsp, `0xA2..0xA5` = ¢£¤¥, …). Because `IconsFont` is
+    `g_all_fonts[0]` it **wins** the lookup, so a custom icon parked at e.g. `0xA4`
+    *shadows* the real ¤ — and `CURRENCY_SIGN` (U+00A4) is used in real legends, so
+    those keys render the icon instead of the currency glyph (field/CodeRabbit,
+    2026-07). **Put custom resident icons in the non-printable C1 range `0x80–0x9F`
+    (or a real PUA), never `0xA0+`.** The Win-hint wave-D glyphs violated this
+    (`0xA2–0xA5` = settings/cast/sliders/restart) — **RESOLVED 2026-07**: all four
+    migrated to the pack (settings→⚙ U+2699, cast→📶 U+1F4F6, sliders→🎛 U+1F39B,
+    gfx-restart→🖵 U+1F5B5 + a half-scaled 🗘 overlay), so `IconsFont`'s `last` was
+    dropped from `0xA5` to `0x9F` — the whole `0xA0+` tail is gone and **no printable
+    Latin-1 is shadowed anymore** (¢£¤¥ render from NotoSans again). The only mid-range
+    gap left is `0x9D` (C1 control, harmless).
+  - **Removing a glyph from the MIDDLE of the range** (e.g. after migrating a hint
+    to the pack): you can't delete it (the array must stay contiguous `first..last`).
+    Turn its record into a **gap** `{off,0,0,0,0,0}` and drop its bitmap bytes, then
+    **shift every later glyph's `bitmapOffset` down by the removed byte count**. Gap
+    glyphs (w==h==xAdvance==0) are skipped by the renderer and fall through to the
+    next font — so gapping `0xA0/0xA1` (the old snap arrows) actually *un-shadowed*
+    the real nbsp/¡. (The host preview `tools/gfx_font.py` skips gaps too.) **If the
+    removed glyphs are the TAIL of the range** (as `0xA2/0xA3/0xA5` were, with the
+    intervening `0xA0/0xA1/0xA4` already gaps), just lower the `GFXfont` `last` past
+    them instead of leaving trailing gaps — that un-shadows every codepoint above the
+    new `last` at once.
+  - **Compositing a smaller second glyph inside a hint** (e.g. the 🗘 reload inside
+    the Win+Ctrl+Shift+B monitor): `kdisp_draw_glyph_half_at()` (`disp_array.c`) blits
+    any pack/resident glyph at half size (2×2-OR downsample — keeps thin strokes that
+    plain decimation drops) at fixed **buffer** coords (x offset by `BUFFER_X`=28, y
+    NOT offset). A `keycode_hint_wants_*()` gate in `poly_keymap.c` (mirroring the
+    Win+R frame pattern) triggers it in `update_displays()` after the base hint text.
+    Derive the buffer coords from `tools/gfx_font.py` (it replicates the baseline-align
+    math, so its rendered bbox matches hardware).
+  - **Pack-category headers (`symbol_fonts.h`, etc.) are NOT compiled into the
+    firmware** — only `RESIDENT_FONTS[]` + `IconsFont` are `#include`d. So adding pack
+    glyphs (⍇/⍈, 🖧) does **not** grow the image; *removing* a resident glyph shrinks
+    it. Confirmed by grep: no firmware `.c` includes `symbol_fonts.h`.
 - **Regenerate** with `FONTCONVERT=<pinned> python3 generate_fonts.py`. **Byte-repro
   gotcha:** the per-category headers embed the fontconvert *binary path* in a
   provenance comment, so run from the **same path** the committed headers used

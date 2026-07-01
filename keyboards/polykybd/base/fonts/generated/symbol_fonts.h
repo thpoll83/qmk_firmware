@@ -3453,10 +3453,10 @@ const GFXfont NotoSansSymbols2_Regular_WinSwitch_18pt16b PROGMEM = {
 
 // Approx. 125 bytes
 
-// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Math/NotoSansMath-Regular.ttf -s 20 -v _MathHints_ -r 50 8672 8672 8674 8674 8864 8864 
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Math/NotoSansMath-Regular.ttf -s 20 -v _MathHints_ -r 50 8672 8672 8674 8674 8864 8864 9031 9032 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
 
-/* num ranges: 3 */
+/* num ranges: 4 */
 const uint8_t NotoSansMath_Regular_MathHints_20pt16bBitmaps[] PROGMEM = {
   /* range 0 (0x21e0 - 0x21e0): */  0x00, 0xE0, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00,
   0x00, 0x03, 0xC0, 0x00, 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x3E, 0x00,
@@ -3479,6 +3479,23 @@ const uint8_t NotoSansMath_Regular_MathHints_20pt16bBitmaps[] PROGMEM = {
   0x0F, 0x1F, 0x9C, 0x01, 0xE7, 0xEE, 0x00, 0x3D, 0xFF, 0x00, 0x07, 0xFF,
   0x80, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
   0xF0
+  /* range 3 (0x2347 - 0x2348): */  , 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF8, 0x00, 0x03,
+  0xE0, 0x00, 0x0F, 0x80, 0x00, 0x3E, 0x00, 0x00, 0xF8, 0x00, 0x03, 0xE0,
+  0x00, 0x0F, 0x80, 0x00, 0x3E, 0x00, 0x00, 0xF8, 0x00, 0x03, 0xE0, 0x40,
+  0x0F, 0x82, 0x00, 0x3E, 0x18, 0x00, 0xF8, 0xE0, 0x03, 0xE7, 0x80, 0x0F,
+  0xBF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFB, 0xFF, 0xFF, 0xE7, 0x80, 0x0F, 0x8E,
+  0x00, 0x3E, 0x18, 0x00, 0xF8, 0x20, 0x03, 0xE0, 0x40, 0x0F, 0x80, 0x00,
+  0x3E, 0x00, 0x00, 0xF8, 0x00, 0x03, 0xE0, 0x00, 0x0F, 0x80, 0x00, 0x3E,
+  0x00, 0x00, 0xF8, 0x00, 0x03, 0xE0, 0x00, 0x0F, 0xFF, 0xFF, 0xFF, 0xFF,
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+  0xF8, 0x00, 0x03, 0xE0, 0x00, 0x0F, 0x80, 0x00, 0x3E, 0x00, 0x00, 0xF8,
+  0x00, 0x03, 0xE0, 0x00, 0x0F, 0x80, 0x00, 0x3E, 0x00, 0x00, 0xF8, 0x00,
+  0x03, 0xE0, 0x08, 0x0F, 0x80, 0x10, 0x3E, 0x00, 0x60, 0xF8, 0x01, 0xC3,
+  0xE0, 0x07, 0x8F, 0xFF, 0xFF, 0xBF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF3, 0xE0,
+  0x07, 0x8F, 0x80, 0x1C, 0x3E, 0x00, 0x60, 0xF8, 0x01, 0x03, 0xE0, 0x08,
+  0x0F, 0x80, 0x00, 0x3E, 0x00, 0x00, 0xF8, 0x00, 0x03, 0xE0, 0x00, 0x0F,
+  0x80, 0x00, 0x3E, 0x00, 0x00, 0xF8, 0x00, 0x03, 0xE0, 0x00, 0x0F, 0xFF,
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
  };
 
 const GFXglyph NotoSansMath_Regular_MathHints_20pt16bGlyphs[] PROGMEM = {
@@ -3677,17 +3694,186 @@ const GFXglyph NotoSansMath_Regular_MathHints_20pt16bGlyphs[] PROGMEM = {
   {     0,   0,   0,   0,    0,    0 },   // 0x229E (skip)
   {     0,   0,   0,   0,    0,    0 },   // 0x229F (skip)
 // bmpOff,   w,   h,xAdv, xOff, yOff      range 2 (0x22a0 - 0x22a0)
-  {   132,  26,  26,  29,    2,  -23 } }; // 0x22A0 uni22A0  (#2)
+  {   132,  26,  26,  29,    2,  -23 },   // 0x22A0 uni22A0  (#2)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22A1 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22A2 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22A3 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22A4 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22A5 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22A6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22A7 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22A8 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22A9 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22AA (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22AB (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22AC (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22AD (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22AE (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22AF (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B0 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B1 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B2 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B3 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B4 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B5 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B7 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B8 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22B9 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22BA (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22BB (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22BC (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22BD (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22BE (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22BF (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C0 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C1 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C2 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C3 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C4 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C5 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C7 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C8 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22C9 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22CA (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22CB (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22CC (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22CD (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22CE (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22CF (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D0 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D1 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D2 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D3 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D4 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D5 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D7 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D8 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22D9 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22DA (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22DB (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22DC (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22DD (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22DE (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22DF (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E0 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E1 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E2 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E3 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E4 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E5 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E7 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E8 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22E9 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22EA (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22EB (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22EC (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22ED (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22EE (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22EF (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F0 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F1 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F2 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F3 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F4 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F5 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F6 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F7 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F8 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22F9 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22FA (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22FB (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22FC (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22FD (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22FE (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x22FF (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2300 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2301 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2302 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2303 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2304 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2305 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2306 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2307 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2308 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2309 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x230A (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x230B (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x230C (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x230D (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x230E (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x230F (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2310 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2311 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2312 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2313 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2314 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2315 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2316 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2317 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2318 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2319 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x231A (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x231B (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x231C (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x231D (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x231E (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x231F (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2320 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2321 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2322 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2323 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2324 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2325 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2326 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2327 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2328 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2329 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x232A (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x232B (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x232C (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x232D (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x232E (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x232F (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2330 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2331 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2332 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2333 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2334 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2335 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2336 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2337 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2338 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2339 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x233A (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x233B (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x233C (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x233D (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x233E (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x233F (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2340 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2341 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2342 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2343 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2344 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2345 (skip)
+  {     0,   0,   0,   0,    0,    0 },   // 0x2346 (skip)
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 3 (0x2347 - 0x2348)
+  {   217,  22,  36,  28,    3,  -31 },   // 0x2347 uni2347  (#3)
+  {   316,  22,  36,  28,    3,  -31 } }; // 0x2348 uni2348  (#4)
 
 const GFXfont NotoSansMath_Regular_MathHints_20pt16b PROGMEM = {
   (uint8_t  *)NotoSansMath_Regular_MathHints_20pt16bBitmaps,
   (GFXglyph *)NotoSansMath_Regular_MathHints_20pt16bGlyphs,
   0x21E0, // first
-  0x22A0, // last
+  0x2348, // last
   50   //height
  };
 
-// Approx. 1575 bytes
+// Approx. 2949 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s 20 -v _Dictation_ -r 50 -b 32 128483 128483 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -3726,3 +3912,72 @@ const GFXfont NotoEmoji_Medium_Dictation_20pt16b PROGMEM = {
  };
 
 // Approx. 209 bytes
+
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 18 -v _Network_ -r 50 -b 32 128423 128423 
+// Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
+
+/* num ranges: 1 */
+const uint8_t NotoSansSymbols2_Regular_Network_18pt16bBitmaps[] PROGMEM = {
+  /* range 0 (0x1f5a7 - 0x1f5a7): */  0x00, 0x0F, 0xFE, 0x00, 0x00, 0x03, 0xFF, 0xE0, 0x00, 0x00, 0x60, 0x0C,
+  0x00, 0x00, 0x0C, 0x01, 0x80, 0x00, 0x01, 0x80, 0x30, 0x00, 0x00, 0x30,
+  0x06, 0x00, 0x00, 0x06, 0x00, 0xC0, 0x00, 0x00, 0xC0, 0x18, 0x00, 0x00,
+  0x18, 0x03, 0x00, 0x00, 0x03, 0xFF, 0xE0, 0x00, 0x00, 0x7F, 0xFC, 0x00,
+  0x00, 0x07, 0xFF, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x4F, 0xF9,
+  0x80, 0x00, 0x38, 0x00, 0x38, 0x00, 0x07, 0x00, 0x07, 0x00, 0x02, 0xD0,
+  0x00, 0xE8, 0x00, 0x70, 0x00, 0x07, 0x00, 0x0F, 0x00, 0x01, 0xE0, 0x01,
+  0x80, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0xFF, 0xE0, 0x03, 0xFF,
+  0xFF, 0xFC, 0x00, 0x7F, 0xFC, 0x01, 0x80, 0x0C, 0x01, 0x80, 0x30, 0x01,
+  0x80, 0x30, 0x06, 0x00, 0x30, 0x06, 0x00, 0xC4, 0x46, 0x00, 0xC0, 0x19,
+  0xFC, 0xC0, 0x18, 0x03, 0x11, 0x18, 0x03, 0x80, 0x61, 0x43, 0x00, 0xFF,
+  0xFC, 0x00, 0x7F, 0xFF, 0xFF, 0x80, 0x0F, 0xFF, 0xFF, 0xF0, 0x01, 0xFF,
+  0xE3, 0xF0, 0x00, 0x07, 0xF1, 0xFF, 0x80, 0x01, 0xFF, 0x00
+ };
+
+const GFXglyph NotoSansSymbols2_Regular_Network_18pt16bGlyphs[] PROGMEM = {
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0x1f5a7 - 0x1f5a7)
+  {     0,  35,  35,  39,    2,  -31 } }; // 0x1F5A7 u1F5A7  (#0)
+
+const GFXfont NotoSansSymbols2_Regular_Network_18pt16b PROGMEM = {
+  (uint8_t  *)NotoSansSymbols2_Regular_Network_18pt16bBitmaps,
+  (GFXglyph *)NotoSansSymbols2_Regular_Network_18pt16bGlyphs,
+  0x1F5A7, // first
+  0x1F5A7, // last
+  50   //height
+ };
+
+// Approx. 168 bytes
+
+// /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s 18 -v _Knobs_ -r 50 -b 32 127899 127899 
+// Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
+
+/* num ranges: 1 */
+const uint8_t NotoEmoji_Medium_Knobs_18pt16bBitmaps[] PROGMEM = {
+  /* range 0 (0x1f39b - 0x1f39b): */  0x7F, 0xFF, 0xFF, 0xFF, 0xD0, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+  0x00, 0xC0, 0x00, 0x00, 0x00, 0x18, 0x0F, 0x00, 0x0F, 0x03, 0x06, 0x18,
+  0x06, 0x18, 0x61, 0x3C, 0x81, 0x3C, 0x8C, 0x2F, 0x90, 0x27, 0xD1, 0x8B,
+  0xE5, 0x0A, 0x7D, 0x31, 0x79, 0xA1, 0x67, 0xA6, 0x2F, 0xF4, 0x2F, 0xF4,
+  0xC5, 0xFE, 0x85, 0xFE, 0x98, 0xDF, 0xA0, 0x5F, 0xA3, 0x09, 0xE4, 0x09,
+  0xE4, 0x60, 0xC3, 0x00, 0xC3, 0x0C, 0x07, 0x80, 0x07, 0x81, 0x80, 0x00,
+  0x00, 0x00, 0x30, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0xC0,
+  0x00, 0x00, 0x00, 0x18, 0x0F, 0x00, 0x0F, 0x03, 0x06, 0x18, 0x06, 0x18,
+  0x61, 0x3C, 0x81, 0x3D, 0x8C, 0x2F, 0xD0, 0x2F, 0x91, 0x8B, 0xF9, 0x0B,
+  0xE5, 0x31, 0x78, 0x21, 0x79, 0xA6, 0x2F, 0xF4, 0x2F, 0xF4, 0xC5, 0xFE,
+  0x85, 0xFE, 0x98, 0x5F, 0xA0, 0x5F, 0xA3, 0x09, 0xE4, 0x09, 0xE4, 0x60,
+  0xC3, 0x00, 0xC3, 0x0C, 0x07, 0x80, 0x07, 0xC1, 0x80, 0x00, 0x00, 0x00,
+  0x30, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0xBF, 0xFF, 0xFF,
+  0xFF, 0xE0
+ };
+
+const GFXglyph NotoEmoji_Medium_Knobs_18pt16bGlyphs[] PROGMEM = {
+// bmpOff,   w,   h,xAdv, xOff, yOff      range 0 (0x1f39b - 0x1f39b)
+  {     0,  35,  36,  45,    5,  -29 } }; // 0x1F39B u1F39B  (#0)
+
+const GFXfont NotoEmoji_Medium_Knobs_18pt16b PROGMEM = {
+  (uint8_t  *)NotoEmoji_Medium_Knobs_18pt16bBitmaps,
+  (GFXglyph *)NotoEmoji_Medium_Knobs_18pt16bGlyphs,
+  0x1F39B, // first
+  0x1F39B, // last
+  50   //height
+ };
+
+// Approx. 172 bytes

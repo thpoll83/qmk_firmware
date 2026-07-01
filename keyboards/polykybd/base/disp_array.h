@@ -33,6 +33,13 @@ const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, 
 const GFXglyph *kdisp_gfx_glyph_font(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t c,
                                      const GFXfont **out_font);
 
+// Composite a glyph downsampled 2x (2x2-OR) with its top-left at buffer coords
+// (x,y) — no baseline align, (x,y) is the literal top-left. OR-combining each 2x2
+// source block keeps thin strokes visible at half size (plain decimation drops
+// them). Used to overlay a small secondary icon inside another glyph (the
+// Win+Ctrl+Shift+B reload 🗘 drawn into the monitor's screen cavity).
+void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c);
+
 void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text);
 
 void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius);
@@ -89,4 +96,6 @@ uint8_t* get_scratch_buffer(void);
 int16_t get_scratch_buffer_size(void);
 
 void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height);
+
+void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r);
 

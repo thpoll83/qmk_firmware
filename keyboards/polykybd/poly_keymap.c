@@ -1144,6 +1144,31 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                             || active_os == POLY_OS_LINUX_KDE);
     const bool wm_held = (win_or_unknown || linux_any)
                       && (local_mods & MOD_MASK_GUI) != 0;
+    // Windows multi-modifier Super chords (wave D) take precedence over the Ctrl/Alt
+    // editing hints below — e.g. Win+Ctrl+D is "new virtual desktop", not Ctrl's
+    // "delete". Gated win_or_unknown only (no standard GNOME/KDE equivalent). A chord
+    // not matched here falls through to the normal Ctrl/Alt hint so existing
+    // behaviour (Win+Ctrl+C still previews copy, etc.) is unchanged.
+    if (wm_held && win_or_unknown && (local_mods & MOD_MASK_CTRL) != 0) {
+        switch(keycode) {
+            // Virtual-desktop chords: a compact monitor glyph (ICON_DESKTOP_SMALL)
+            // composed with +/←/→/x so the action reads next to the screen.
+            case KC_D:     return U"  " PRIVATE_SCREEN U"+";             // Win+Ctrl+D new virtual desktop
+            case KC_LEFT:  return U"  " ICON_LEFT PRIVATE_SCREEN;        // Win+Ctrl+Left  previous desktop
+            case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
+            case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
+            case KC_F:     return U"    " ICON_NET;                       // Win+Ctrl+F search network computers (🖧 pack glyph)
+            // Win+Ctrl+Shift+B restart graphics: monitor 🖵, then MOVE to the screen
+            // cavity and HALF-draw the reload 🗘 into it.
+            case KC_B:     if (shift) return U"    " ICON_GFX_RESTART HINT_MOVE(HINT_POS_SCREEN) HINT_HALF ICON_GFX_RELOAD; break;
+            default: break;
+        }
+    } else if (wm_held && win_or_unknown && (local_mods & MOD_MASK_ALT) != 0) {
+        switch(keycode) {
+            case KC_R: return U"   " ICON_SCREEN_RECORD;       // Win+Alt+R start/stop screen recording
+            default: break;
+        }
+    }
     if ((local_mods & MOD_MASK_CTRL) != 0) {
         switch(keycode) {
             case KC_A: return U"      " BOX_WITH_CHECK_MARK;
@@ -1191,8 +1216,9 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses
             // the Super overview and KDE a Super-tap / Alt+Space — neither binds
             // Super+S — so show it only on Windows (and the unknown default).
+            // Win+Shift+S is the Snipping Tool (region capture) — shown via shift.
             case KC_S:
-                if (win_or_unknown) return U"   "  ICON_LAUNCHER;
+                if (win_or_unknown) return shift ? U"   " ICON_SNIP : U"   " ICON_LAUNCHER;
                 break;
             // Windows-only Super-chords (wave C). These have no standard GNOME/KDE
             // equivalent, so they are gated on win_or_unknown only. Dictation (Win+H)
@@ -1207,19 +1233,22 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_DICTATION;     // Win+H dictation
                 break;
             case KC_I:
-                if (win_or_unknown) return U"   "   ICON_SETTINGS;      // Win+I settings
+                if (win_or_unknown) return U"   "   ICON_SETTINGS;      // Win+I settings (⚙ pack glyph)
                 break;
             case KC_M:
-                if (win_or_unknown) return U"     " PRIVATE_WINDOW;     // Win+M minimize all
+                if (win_or_unknown) return U"      " PRIVATE_MINIMIZE;  // Win+M minimize all (🗕)
                 break;
             case KC_R:
-                if (win_or_unknown) return U"   "   ICON_PROMPT_GT ICON_PROMPT_US; // Win+R run dialog
+                // Win+R run dialog: draw the run-dialog FRAME at its top-left, reset the
+                // cursor to the origin, then draw the base-font ">_" (4 spaces,
+                // right-of-centre) inside it.
+                if (win_or_unknown) return HINT_MOVE(HINT_POS_RUNBOX) HINT_FRAME(HINT_SZ_RUNBOX) HINT_RESET U"    >_";
                 break;
             case KC_T:
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
                 break;
             case KC_K:
-                if (win_or_unknown) return U"   "   ICON_CAST;          // Win+K cast
+                if (win_or_unknown) return U"   "   ICON_CAST;          // Win+K cast (📶 pack glyph)
                 break;
             case KC_V:
                 if (win_or_unknown) return U"   "   ICON_CLIP_HISTORY;  // Win+V clipboard history
@@ -1232,6 +1261,50 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 break;
             case KC_DOT:
                 if (win_or_unknown) return U"   "   PRIVATE_EMOJI_1F600; // Win+. emoji panel
+                break;
+            // More Windows-only Super-chords (wave D). Leading-space counts tuned per
+            // glyph (hint_preview) so each sits as far right as it fits without
+            // clipping the 72 px window, matching the existing hints' placement.
+            case KC_A:
+                if (win_or_unknown) return U"      " ICON_LIGHTNING;    // Win+A Action Center/Quick Settings
+                break;
+            case KC_E:
+                if (win_or_unknown) return U"    "  ICON_EXPLORER;      // Win+E File Explorer (folder pixmap)
+                break;
+            case KC_U:
+                if (win_or_unknown) return U"      " ICON_ACCESSIBILITY;// Win+U Accessibility settings
+                break;
+            case KC_B:
+                if (win_or_unknown) return U"   "   ICON_SYS_TRAY;      // Win+B focus system tray (speaker)
+                break;
+            case KC_HOME:
+                if (win_or_unknown) return U"     " ICON_FOCUS_WINDOW;  // Win+Home minimize all but active
+                break;
+            case KC_LEFT:
+                if (win_or_unknown) return U"     " ICON_SNAP_LEFT;     // Win+Left snap window left (⍇ pack glyph)
+                break;
+            case KC_RIGHT:
+                if (win_or_unknown) return U"     " ICON_SNAP_RIGHT;    // Win+Right snap window right (⍈ pack glyph)
+                break;
+            case KC_SCLN:
+                if (win_or_unknown) return U"   "   ICON_GIF;           // Win+; GIF / emoji panel
+                break;
+            case KC_PAUSE:
+                if (win_or_unknown) return U"    " ICON_SLIDERS;        // Win+Pause System Properties (🎛 knobs, pack)
+                break;
+            case KC_PSCR:
+                if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
+                break;
+            // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out. Both
+            // draw the pack magnifier 🔍, then MOVE the cursor so a plain base-font '+'/'-'
+            // lands centred in the lens.
+            case KC_EQL:
+            case KC_KP_PLUS:
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMIN) U"+";  // Win + '+' zoom in
+                break;
+            case KC_MINS:
+            case KC_KP_MINUS:
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMOUT) U"-"; // Win + '-' zoom out
                 break;
             default: break;
         }
@@ -1640,6 +1713,10 @@ void update_displays(enum refresh_mode mode) {
                             text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
+                            // The hint string is a self-contained display list: any
+                            // frame / half-scale composite / +/- sign is encoded inline
+                            // (see the \x0E-\x12 ops in kdisp_write_gfx_text_cy), so no
+                            // per-keycode special-case is needed here.
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         kdisp_send_buffer();

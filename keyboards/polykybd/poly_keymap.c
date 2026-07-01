@@ -1158,10 +1158,9 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
             case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
             case KC_F:     return U"    " ICON_NET;                       // Win+Ctrl+F search network computers (🖧 pack glyph)
-            // Win+Ctrl+Shift+B restart graphics: monitor 🖵, then MOVE (\x0E) the cursor
-            // to buffer (0x46,0x07)=(70,7) and HALF-draw (\x0F) the reload 🗘 into its
-            // screen cavity. (\x0E takes the next two codepoints as x,y.)
-            case KC_B:     if (shift) return U"    " ICON_GFX_RESTART U"\x0E\x46\x07\x0F" ICON_GFX_RELOAD; break;
+            // Win+Ctrl+Shift+B restart graphics: monitor 🖵, then MOVE to the screen
+            // cavity and HALF-draw the reload 🗘 into it.
+            case KC_B:     if (shift) return U"    " ICON_GFX_RESTART HINT_MOVE(HINT_POS_SCREEN) HINT_HALF ICON_GFX_RELOAD; break;
             default: break;
         }
     } else if (wm_held && win_or_unknown && (local_mods & MOD_MASK_ALT) != 0) {
@@ -1240,11 +1239,10 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"      " PRIVATE_MINIMIZE;  // Win+M minimize all (🗕)
                 break;
             case KC_R:
-                // Win+R run dialog. MOVE (\x0E) to (0x36,0x01)=(54,1) and draw the 2px
-                // nested run-dialog FRAME (\x12) sized (0x21,0x1B)=(33,27); then reset the
-                // cursor to the origin (\x18) and draw the base-font ">_" (4 spaces,
+                // Win+R run dialog: draw the run-dialog FRAME at its top-left, reset the
+                // cursor to the origin, then draw the base-font ">_" (4 spaces,
                 // right-of-centre) inside it.
-                if (win_or_unknown) return U"\x0E\x36\x01\x12\x21\x1B\x18" U"    >_";
+                if (win_or_unknown) return HINT_MOVE(HINT_POS_RUNBOX) HINT_FRAME(HINT_SZ_RUNBOX) HINT_RESET U"    >_";
                 break;
             case KC_T:
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
@@ -1298,15 +1296,14 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
                 break;
             // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out. Both
-            // draw the pack magnifier 🔍, then MOVE (\x0E) to the lens centre (0x42,0x0D)
-            // =(66,13) and draw the sign there — \x10 a '+', \x11 a '-'.
+            // draw the pack magnifier 🔍, then MOVE to the lens centre and draw the sign.
             case KC_EQL:
             case KC_KP_PLUS:
-                if (win_or_unknown) return U"   " ICON_MAGNIFIER U"\x0E\x42\x0D\x10"; // Win + '+' zoom in
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_LENS) HINT_PLUS;  // Win + '+' zoom in
                 break;
             case KC_MINS:
             case KC_KP_MINUS:
-                if (win_or_unknown) return U"   " ICON_MAGNIFIER U"\x0E\x42\x0D\x11"; // Win + '-' zoom out
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_LENS) HINT_MINUS; // Win + '-' zoom out
                 break;
             default: break;
         }

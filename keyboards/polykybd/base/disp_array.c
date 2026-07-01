@@ -192,6 +192,38 @@ void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height
     }
 }
 
+// Selected-tab chrome: a 3px border on north/east/west (open at the bottom) with
+// the two top corners chamfered 45°. The SSD1306 page layout (1 byte = 8 vertical
+// px) makes this cheap — every stroke is a plain memset, no per-pixel writes:
+//   * north band  = one memset of page 0 across the width (rows 0..2 → 0x07),
+//   * east/west rails = one memset per 8-row page over the 3 rail columns (0xFF).
+// The north memset runs FIRST so the rails' 0xFF overwrites page 0 at the rail
+// columns (full-height corners). Callers draw this frame onto a freshly-cleared
+// buffer and then draw the tab glyph on top (which ORs in), so the assign is safe
+// — it can't clobber a glyph, and the glyph fills the interior rows the north band
+// cleared.
+void kdisp_draw_tab_frame(void) {
+    const uint8_t xw = BUFFER_X;                     // west rail columns: xw .. xw+2
+    const uint8_t xe = BUFFER_X + SCREEN_WIDTH - 3;  // east rail columns: xe .. xe+2
+    memset(&scratch_buffer[BUFFER_X], 0x07, SCREEN_WIDTH);   // north band, page 0 rows 0..2
+    for (uint8_t p = 0; p < BUFFER_BYTE_VIS_HEIGHT; ++p) {
+        memset(&scratch_buffer[p * BUFFER_BYTE_WIDTH + xw], 0xFF, 3);
+        memset(&scratch_buffer[p * BUFFER_BYTE_WIDTH + xe], 0xFF, 3);
+    }
+    CLEAR_PIXEL(BUFFER_X,     0); CLEAR_PIXEL(BUFFER_X + 1, 0); CLEAR_PIXEL(BUFFER_X,     1);
+    CLEAR_PIXEL(BUFFER_X + SCREEN_WIDTH - 1, 0); CLEAR_PIXEL(BUFFER_X + SCREEN_WIDTH - 2, 0);
+    CLEAR_PIXEL(BUFFER_X + SCREEN_WIDTH - 1, 1);
+}
+
+// Non-selected-tab marker: a 3px underline along the bottom of the visible window
+// — an OR of the bottom-three-rows mask across the width (all in one page).
+void kdisp_draw_tab_underline(void) {
+    const uint8_t p = (SCREEN_HEIGHT - 3) >> 3;   // page holding rows 37..39
+    for (uint8_t x = BUFFER_X; x < BUFFER_X + SCREEN_WIDTH; ++x) {
+        scratch_buffer[p * BUFFER_BYTE_WIDTH + x] |= 0xE0;   // rows 37..39
+    }
+}
+
 void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
     for (int x = x_start; x < (x_start + width); ++x) {
         for (int y = y_start; y < (y_start + height); ++y) {

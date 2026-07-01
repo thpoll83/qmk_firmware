@@ -103,6 +103,38 @@ jobs:
           fi
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
 
+      - name: Sync station to current ctnd main
+        # CI runs the *installed* station copy located above, NOT a fresh checkout
+        # — it relies on the rig's polykybd-update.timer to keep that copy current.
+        # When that self-update lags (rig busy/offline for a while), HIL runs stale
+        # station code and already-merged fixes don't apply — so the suite flakes on
+        # a problem that was fixed days ago (e.g. the sustained-settle boot-burst
+        # gate). Force the install to origin/main before every run so CI always
+        # exercises current station code. Best-effort: a fetch/network failure logs
+        # a warning and proceeds on the installed copy (config.yaml / venv / firmware
+        # are untracked, so a hard checkout leaves them intact).
+        run: |
+          dir="${{ steps.ctnd.outputs.dir }}"
+          if [ ! -d "$dir/.git" ]; then
+            echo "WARNING: $dir is not a git checkout — running the installed station as-is" >&2
+            exit 0
+          fi
+          before=$(git -C "$dir" rev-parse --short HEAD 2>/dev/null || echo none)
+          req_before=$(sha1sum "$dir/requirements.txt" 2>/dev/null | cut -d' ' -f1 || true)
+          if git -C "$dir" fetch --quiet origin main \
+             && git -C "$dir" checkout -q -f -B main origin/main; then
+            after=$(git -C "$dir" rev-parse --short HEAD)
+            echo "station synced to origin/main: $before -> $after"
+            req_after=$(sha1sum "$dir/requirements.txt" 2>/dev/null | cut -d' ' -f1 || true)
+            if [ "$req_before" != "$req_after" ]; then
+              echo "requirements.txt changed — reinstalling station deps"
+              "$dir/venv/bin/pip" install -q -r "$dir/requirements.txt" \
+                || echo "WARNING: pip install failed — continuing with existing deps" >&2
+            fi
+          else
+            echo "WARNING: could not sync $dir to origin/main — running the installed station as-is" >&2
+          fi
+
       - uses: actions/download-artifact@v4
         with:
           name: firmware

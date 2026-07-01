@@ -1996,7 +1996,8 @@
 #define ICON_SETTINGS_SM            	U"\xA2"     // Win+I settings gear, downscaled (resident, gfx_icons.h)
 #define ICON_CAST_SM                	U"\xA3"     // Win+K cast, downscaled (resident, gfx_icons.h)
 #define ICON_SLIDERS                	U"\xA4"     // Win+Pause system properties (two mirrored level sliders, resident)
-#define ICON_SKULL                  	U"\x2620"   // Win+Ctrl+Shift+B restart graphics driver
+#define ICON_SKULL                  	U"\x2620"   // (unused) skull & crossbones
+#define ICON_GFX_DEAD               	U"\xA5"     // Win+Ctrl+Shift+B restart graphics: skull inside a monitor (resident, gfx_icons.h)
 #define ICON_SYSTEM_PROPS           	U"\x1F4BB"
 #define ICON_MAG_PLUS               	U"\x9E"     // Win + '+' magnifier zoom in  (resident, gfx_icons.h)
 #define ICON_MAG_MINUS              	U"\x9F"     // Win + '-' magnifier zoom out (resident, gfx_icons.h)

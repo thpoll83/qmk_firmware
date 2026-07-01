@@ -394,13 +394,6 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
             case U'\x0F':   // HALF: draw the next codepoint half-scale (2x2-OR) at the cursor, no advance
                 if (text[1]) { kdisp_draw_glyph_half_at(fonts, num_fonts, x_cursor, y_cursor, text[1]); text++; }
                 break;
-            case U'\x10':   // PLUS: 11px '+' centred on the cursor (e.g. magnifier zoom-in)
-                kdisp_fill_rect(x_cursor - 5, y_cursor, 11, 2);
-                kdisp_fill_rect(x_cursor, y_cursor - 5, 2, 11);
-                break;
-            case U'\x11':   // MINUS: 11px '-' centred on the cursor (e.g. magnifier zoom-out)
-                kdisp_fill_rect(x_cursor - 5, y_cursor, 11, 2);
-                break;
             case U'\x12':   // FRAME: 2px nested rounded rect at the cursor (next two codepoints = w, h)
                 if (text[1] && text[2]) {
                     int8_t fw = (int8_t)text[1], fh = (int8_t)text[2];

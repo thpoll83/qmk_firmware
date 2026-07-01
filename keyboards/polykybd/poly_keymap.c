@@ -1296,14 +1296,15 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
                 break;
             // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out. Both
-            // draw the pack magnifier 🔍, then MOVE to the lens centre and draw the sign.
+            // draw the pack magnifier 🔍, then MOVE the cursor so a plain base-font '+'/'-'
+            // lands centred in the lens.
             case KC_EQL:
             case KC_KP_PLUS:
-                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_LENS) HINT_PLUS;  // Win + '+' zoom in
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMIN) U"+";  // Win + '+' zoom in
                 break;
             case KC_MINS:
             case KC_KP_MINUS:
-                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_LENS) HINT_MINUS; // Win + '-' zoom out
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMOUT) U"-"; // Win + '-' zoom out
                 break;
             default: break;
         }

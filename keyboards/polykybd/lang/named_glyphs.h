@@ -1969,13 +1969,12 @@
 // Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
-#define HINT_PLUS        U"\x10"       // 11px '+' centred on the cursor
-#define HINT_MINUS       U"\x11"       // 11px '-' centred on the cursor
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
 #define HINT_RESET       U"\x18"       // reset cursor to the text origin
 // Fixed buffer positions / sizes (two bytes each; decimal in the comment):
 #define HINT_POS_SCREEN  U"\x46\x07"   // (70, 7)  reload glyph in the monitor's screen cavity
-#define HINT_POS_LENS    U"\x42\x0D"   // (66,13)  magnifier lens centre
+#define HINT_POS_ZOOMIN  U"\x3B\x19"   // (59,25)  cursor so a base-font '+' centres in the lens
+#define HINT_POS_ZOOMOUT U"\x3E\x16"   // (62,22)  cursor so a base-font '-' centres in the lens
 #define HINT_POS_RUNBOX  U"\x36\x01"   // (54, 1)  Win+R run-dialog frame top-left
 #define HINT_SZ_RUNBOX   U"\x21\x1B"   // 33 x 27  Win+R run-dialog frame size
 // Windows Super-chord hint glyphs (wave D), as drawn by keycode_to_disp_overlay()'s

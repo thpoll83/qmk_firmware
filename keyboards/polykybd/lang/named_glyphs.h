@@ -1973,9 +1973,9 @@
 //   ♿ Accessibility (Win+U)            ❐ minimize-others (Win+Home)
 //   🖵+ new desktop (Win+Ctrl+D)        ←🖵 / 🖵→ switch desktop (Win+Ctrl+←/→)
 //   🖵x close desktop (Win+Ctrl+F4)     📽 GIF panel (Win+;)
-//   ✄ Snipping Tool (Win+Shift+S)      📹 screen recording (Win+Alt+R)
-//   📌N taskbar app (Win+1..9)          🔔 system tray (Win+B)
-//   ☠ restart graphics (Win+Ctrl+Shift+B)  💻 System Properties (Win+Pause)
+//   📸 Snipping Tool (Win+Shift+S)      📹 screen recording (Win+Alt+R)
+//   📌N taskbar app (Win+1..9)          🔊 system tray (Win+B)
+//   🖵🗘 restart graphics (Win+Ctrl+Shift+B)  🎛 System Properties (Win+Pause)
 //   🔍+ / 🔍− Magnifier (Win + +/−)     📷 screenshot (Win+PrtScn)
 //   🖧 search network computers (Win+Ctrl+F)
 #define ICON_LIGHTNING              	U"\x26A1"   // Win+A action center / quick settings
@@ -1991,10 +1991,8 @@
 #define ICON_SETTINGS_SM            	U"\x2699"   // Win+I settings gear ⚙ (full-size emoji font pack)
 #define ICON_CAST_SM                	U"\x1F4F6"  // Win+K cast 📶 (full-size emoji font pack)
 #define ICON_SLIDERS                	U"\x1F39B"  // Win+Pause system properties (🎛 knobs, symbol font pack)
-#define ICON_SKULL                  	U"\x2620"   // (unused) skull & crossbones
 #define ICON_GFX_RESTART            	U"\x1F5B5"  // Win+Ctrl+Shift+B restart graphics: monitor 🖵 (symbol font pack); the 🗘 reload glyph is overdrawn in the screen cavity by update_displays()
 #define ICON_GFX_RELOAD             	U"\x1F5D8"  // 🗘 clockwise reload — half-scaled + composited into ICON_GFX_RESTART's screen by update_displays()
-#define ICON_SYSTEM_PROPS           	U"\x1F4BB"
 #define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); the +/- sign is drawn into the lens by update_displays() via keycode_hint_wants_mag()
 #define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
 #define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)

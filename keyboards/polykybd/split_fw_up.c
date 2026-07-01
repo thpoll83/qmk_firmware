@@ -7,7 +7,50 @@
 #include "base/fw_staging.h"   // fw_staging_set_fontpack_slot
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 
+#include <transactions.h>
+#include <print.h>
 #include <string.h>
+
+// ---------------------------------------------------------------------------
+// HID firmware update — master-side chunk relay
+// ---------------------------------------------------------------------------
+
+// Relay one upload chunk to the slave with up to 10 retries. Builds the CRC'd
+// fw_up_chunk_sync_t and sends USER_SYNC_FW_UP_CHUNK, accepting only an
+// identity-bound reply whose write cursor advanced PAST `offset` (so a stale
+// previous-chunk ACK can't silently desynchronise the two halves' cursors).
+// Returns true on a slave ACK. Shared by the firmware-update and font-pack
+// chunk paths, which used to carry a byte-identical copy of this loop. When
+// `log_tag` is non-NULL and debug is enabled it logs each retry (the
+// firmware-update path passes "FW_UP_CHUNK"); the font-pack path passes NULL
+// for a quiet relay, matching its prior behaviour.
+bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, const char *log_tag) {
+    fw_up_chunk_sync_t chunk_msg;
+    chunk_msg.offset = offset;
+    memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
+    chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
+    uint8_t slave_ack = SYNC_CRC32_ERR;
+    for (uint8_t retry = 0; retry < 10; ++retry) {
+        fw_up_chunk_reply_t reply;
+        memset(&reply, 0, sizeof(reply));
+        reply.ack = SYNC_CRC32_ERR;
+        bool ok_rpc = transaction_rpc_exec(USER_SYNC_FW_UP_CHUNK, sizeof(chunk_msg), &chunk_msg,
+                                           sizeof(reply), &reply);
+        if (ok_rpc && reply.ack == SYNC_ACK && reply.next_offset > offset) {
+            slave_ack = SYNC_ACK;
+            if (log_tag && debug_enable && retry > 0) {
+                uprintf("%s relay ok on retry %u (offset=%lu slave_next=%lu)\n",
+                        log_tag, retry, offset, reply.next_offset);
+            }
+            break;
+        }
+        if (log_tag && debug_enable) {
+            uprintf("%s relay retry %u (offset=%lu success=%d ack=0x%02x slave_next=%lu)\n",
+                    log_tag, retry, offset, (int)ok_rpc, reply.ack, reply.next_offset);
+        }
+    }
+    return slave_ack == SYNC_ACK;
+}
 
 // ---------------------------------------------------------------------------
 // HID firmware update — slave-side split transaction handlers

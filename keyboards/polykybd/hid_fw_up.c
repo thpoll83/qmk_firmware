@@ -183,30 +183,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // ended up one chunk behind and rejected the whole rest of the stream
             // (2026-06-10, updates dying at 6% / 83%).  A duplicate re-send of an
             // already-staged chunk has next_offset > offset and passes (idempotent).
-            fw_up_chunk_sync_t chunk_msg;
-            chunk_msg.offset = offset;
-            memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
-            chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
-            uint8_t slave_ack = SYNC_CRC32_ERR;
-            for (uint8_t retry = 0; retry < 10; ++retry) {
-                fw_up_chunk_reply_t chunk_reply;
-                memset(&chunk_reply, 0, sizeof(chunk_reply));
-                chunk_reply.ack = SYNC_CRC32_ERR;
-                bool sync_success = transaction_rpc_exec(USER_SYNC_FW_UP_CHUNK, sizeof(chunk_msg), &chunk_msg,
-                                                         sizeof(chunk_reply), &chunk_reply);
-                if (sync_success && chunk_reply.ack == SYNC_ACK && chunk_reply.next_offset > offset) {
-                    slave_ack = SYNC_ACK;
-                    if (debug_enable && retry > 0) {
-                        uprintf("FW_UP_CHUNK relay ok on retry %u (offset=%lu slave_next=%lu)\n",
-                                retry, offset, chunk_reply.next_offset);
-                    }
-                    break;
-                }
-                if (debug_enable) {
-                    uprintf("FW_UP_CHUNK relay retry %u (offset=%lu success=%d ack=0x%02x slave_next=%lu)\n",
-                            retry, offset, (int)sync_success, chunk_reply.ack, chunk_reply.next_offset);
-                }
-            }
+            uint8_t slave_ack = fw_up_relay_chunk_to_slave(offset, chunk_data, "FW_UP_CHUNK") ? SYNC_ACK : SYNC_CRC32_ERR;
             // First-failure diagnostic: when a chunk doesn't reach the slave,
             // immediately query the slave's internal state so we can tell from
             // the master serial log whether the slave is fully hung (status RPC

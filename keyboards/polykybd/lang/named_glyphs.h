@@ -1941,7 +1941,7 @@
 #define ICON_WORD_RIGHT             	U"\x21E2"
 #define ICON_LAUNCHER               	U"\x2630"
 #define ICON_APP_SWITCH             	U"\x1F5D4"
-#define ICON_WINDOW_SWITCH          	U"\x1F5BD"
+#define ICON_WINDOW_SWITCH          	U"\xA4"
 #define ICON_CLOSE                  	U"\x22A0"
 // Windows-only Super-chord hint glyphs (wave C). 🗣 dictation is the only NEW
 // glyph here (added to the symbol bundle as a NotoEmoji-Medium singleton —
@@ -1988,15 +1988,17 @@
 #define ICON_EXPLORER               	U"\x9C"     // Win+E (resident folder pixmap, gfx_icons.h)
 #define ICON_ACCESSIBILITY          	U"\x267F"
 #define ICON_FOCUS_WINDOW           	U"\x2752"   // Win+Home minimize all but active (shadowed window)
-#define ICON_SNAP_LEFT              	U"\xA1"     // Win+Left  snap window to left edge (tall bar + arrow)
-#define ICON_SNAP_RIGHT             	U"\xA2"     // Win+Right snap window to right edge
+#define ICON_SNAP_LEFT              	U"\xA0"     // Win+Left  snap window to left edge (tall bar + arrow)
+#define ICON_SNAP_RIGHT             	U"\xA1"     // Win+Right snap window to right edge
 #define ICON_GIF                    	U"\x1F3AC"  // Win+; GIF panel (clapperboard)
-#define ICON_SNIP                   	U"\x1F4F7"  // Win+Shift+S Snipping Tool (camera / screen capture)
+#define ICON_SNIP                   	U"\x1F4F8"  // Win+Shift+S Snipping Tool (camera + flash)
 #define ICON_SCREEN_RECORD          	U"\x1F4F9"
-#define ICON_PIN_SMALL              	U"\x9E"     // Win+1..9 small pushpin (composed with the digit)
+#define ICON_SETTINGS_SM            	U"\xA2"     // Win+I settings gear, 4px smaller (resident, gfx_icons.h)
+#define ICON_CAST_SM                	U"\xA3"     // Win+K cast, 4px smaller (resident, gfx_icons.h)
+#define ICON_DISK_STACK             	U"\xA5"     // Win+Pause system properties (two stacked disks, resident)
 #define ICON_SKULL                  	U"\x2620"   // Win+Ctrl+Shift+B restart graphics driver
 #define ICON_SYSTEM_PROPS           	U"\x1F4BB"
-#define ICON_MAG_PLUS               	U"\x9F"     // Win + '+' magnifier zoom in  (resident, gfx_icons.h)
-#define ICON_MAG_MINUS              	U"\xA0"     // Win + '-' magnifier zoom out (resident, gfx_icons.h)
-#define ICON_SCREENSHOT             	U"\x1F4F8"  // Win+PrtScn full-screen screenshot (camera + flash)
+#define ICON_MAG_PLUS               	U"\x9E"     // Win + '+' magnifier zoom in  (resident, gfx_icons.h)
+#define ICON_MAG_MINUS              	U"\x9F"     // Win + '-' magnifier zoom out (resident, gfx_icons.h)
+#define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
 #define ICON_NET                    	U"\x9D"     // Win+Ctrl+F networked computers 🖧 (resident, gfx_icons.h)

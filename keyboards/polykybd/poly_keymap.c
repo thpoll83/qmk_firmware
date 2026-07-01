@@ -1214,7 +1214,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             // KDE / generic Linux the switcher is Alt+Tab (shown via the Alt branch),
             // and Super+Tab is unbound — so don't show it there.
             case KC_TAB:
-                if (win_or_unknown || gnome) return U"    " ICON_WINDOW_SWITCH;
+                if (win_or_unknown || gnome) return U"     " ICON_WINDOW_SWITCH;
                 break;
             // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses
             // the Super overview and KDE a Super-tap / Alt+Space — neither binds
@@ -1236,7 +1236,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_DICTATION;     // Win+H dictation
                 break;
             case KC_I:
-                if (win_or_unknown) return U"   "   ICON_SETTINGS;      // Win+I settings
+                if (win_or_unknown) return U"    "  ICON_SETTINGS_SM;   // Win+I settings (smaller gear)
                 break;
             case KC_M:
                 if (win_or_unknown) return U"     " PRIVATE_WINDOW;     // Win+M minimize all
@@ -1251,7 +1251,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
                 break;
             case KC_K:
-                if (win_or_unknown) return U"   "   ICON_CAST;          // Win+K cast
+                if (win_or_unknown) return U"    "  ICON_CAST_SM;       // Win+K cast (smaller)
                 break;
             case KC_V:
                 if (win_or_unknown) return U"   "   ICON_CLIP_HISTORY;  // Win+V clipboard history
@@ -1293,7 +1293,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_GIF;           // Win+; GIF / emoji panel
                 break;
             case KC_PAUSE:
-                if (win_or_unknown) return U"   "   ICON_SYSTEM_PROPS;  // Win+Pause System Properties
+                if (win_or_unknown) return U"      " ICON_DISK_STACK;   // Win+Pause System Properties (stacked disks)
                 break;
             case KC_PSCR:
                 if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
@@ -1308,17 +1308,8 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_KP_MINUS:
                 if (win_or_unknown) return U"      " ICON_MAG_MINUS;    // Win + '-' Magnifier zoom out
                 break;
-            // Win+1..9 open the taskbar app pinned at position N: a small pushpin
-            // followed by the digit. Per-key so the digit matches the chord.
-            case KC_1: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"1"; break;
-            case KC_2: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"2"; break;
-            case KC_3: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"3"; break;
-            case KC_4: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"4"; break;
-            case KC_5: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"5"; break;
-            case KC_6: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"6"; break;
-            case KC_7: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"7"; break;
-            case KC_8: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"8"; break;
-            case KC_9: if (win_or_unknown) return U"      " ICON_PIN_SMALL U"9"; break;
+            // (Win+1..9 taskbar-app hints removed for now — pending a smarter
+            //  numbered-slot treatment.)
             default: break;
         }
     }

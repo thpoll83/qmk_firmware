@@ -37,37 +37,36 @@ static const uint8_t s_lang_preset[MRU_CAP] = {
     LANG_ARSA,  // ar-SA
 };
 
-// ── Generic front-insert with de-dup, parameterised over element size ─────────
-// Returns true if the list content changed.
-static bool push_u16(uint16_t *list, uint16_t empty, uint16_t value) {
-    if (value == empty) return false;
-    // Find an existing copy (so a re-pick just bumps it to the front).
-    uint8_t found = MRU_CAP;
-    for (uint8_t i = 0; i < MRU_CAP; ++i) {
-        if (list[i] == value) { found = i; break; }
+// ── Generic front-insert with de-dup ─────────────────────────────────────────
+// Both lists (emoji u16, lang u8) need the same "move-to-front, de-dup" push, so
+// the logic lives once in a byte-wise helper and the two typed wrappers below
+// adapt it. Move `value` to the front of `count` `elem_size`-byte elements: a
+// re-pick bumps the existing entry to the front, a new value evicts the oldest,
+// and the `empty` sentinel is never inserted. Returns true if the list changed.
+// Byte comparison is exact for the unsigned-integer element types used here.
+static bool mru_push(void *list, uint8_t count, size_t elem_size,
+                     const void *empty, const void *value) {
+    uint8_t *base = (uint8_t *)list;
+    if (memcmp(value, empty, elem_size) == 0) return false;
+    uint8_t found = count;
+    for (uint8_t i = 0; i < count; ++i) {
+        if (memcmp(base + (size_t)i * elem_size, value, elem_size) == 0) { found = i; break; }
     }
-    if (found == 0) return false;                 // already most-recent: no change
-    uint8_t top = (found < MRU_CAP) ? found : (MRU_CAP - 1);
-    for (uint8_t i = top; i > 0; --i) {
-        list[i] = list[i - 1];                    // shift older entries down
+    if (found == 0) return false;                              // already most-recent: no change
+    uint8_t top = (found < count) ? found : (uint8_t)(count - 1);
+    for (uint8_t i = top; i > 0; --i) {                        // shift older entries down
+        memcpy(base + (size_t)i * elem_size, base + (size_t)(i - 1) * elem_size, elem_size);
     }
-    list[0] = value;
+    memcpy(base, value, elem_size);
     return true;
 }
 
+static bool push_u16(uint16_t *list, uint16_t empty, uint16_t value) {
+    return mru_push(list, MRU_CAP, sizeof value, &empty, &value);
+}
+
 static bool push_u8(uint8_t *list, uint8_t empty, uint8_t value) {
-    if (value == empty) return false;
-    uint8_t found = MRU_CAP;
-    for (uint8_t i = 0; i < MRU_CAP; ++i) {
-        if (list[i] == value) { found = i; break; }
-    }
-    if (found == 0) return false;
-    uint8_t top = (found < MRU_CAP) ? found : (MRU_CAP - 1);
-    for (uint8_t i = top; i > 0; --i) {
-        list[i] = list[i - 1];
-    }
-    list[0] = value;
-    return true;
+    return mru_push(list, MRU_CAP, sizeof value, &empty, &value);
 }
 
 // ── 14-bit-per-entry bit packing (LSB-first) for the emoji codes ─────────────

@@ -72,12 +72,12 @@ fonts:
   - name: Noto Sans Symbols 2
     url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssymbols2/NotoSansSymbols2-Regular.ttf
     dest: Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
-  # Math is single-weight (no wght axis) → static file.  Not referenced by
-  # fonts.yaml, so it is NOT built into any bundle; it's listed here only so it can
-  # be downloaded and used as a build/peek source in the font-pack tools.
+  # Math is single-weight (no wght axis) → static file.  Used by the `_MathHints_`
+  # symbol entry (dashed word-nav arrows) and as a build/peek source in the
+  # font-pack tools.  `dest` must match the `noto-sans-math` source in fonts.yaml.
   - name: Noto Sans Math
     url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansmath/NotoSansMath-Regular.ttf
-    dest: noto-sans-math/NotoSansMath-Regular.ttf
+    dest: Noto_Sans_Math/NotoSansMath-Regular.ttf
   # NotoColorEmoji lives in a separate repo; upstream filename differs from the
   # path create_fonts.sh references (NotoColorEmoji-Regular.ttf)
   - name: Noto Color Emoji

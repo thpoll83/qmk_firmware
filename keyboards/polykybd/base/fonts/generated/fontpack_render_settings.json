@@ -1189,6 +1189,29 @@
       "weight": 400,
       "source": "noto-serif-kr",
       "source_file": "NotoSerifKR-Medium.otf"
+    },
+    "142": {
+      "size": 18,
+      "variant": "_WinSwitch_",
+      "render_height": 50,
+      "bits": 32,
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
+    },
+    "143": {
+      "size": 20,
+      "variant": "_MathHints_",
+      "render_height": 50,
+      "source": "noto-sans-math",
+      "source_file": "NotoSansMath-Regular.ttf"
+    },
+    "144": {
+      "size": 20,
+      "variant": "_Dictation_",
+      "render_height": 50,
+      "bits": 32,
+      "source": "noto-emoji",
+      "source_file": "NotoEmoji-Medium.ttf"
     }
   }
 }

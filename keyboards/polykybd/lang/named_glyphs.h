@@ -1979,12 +1979,11 @@
 #define HINT_SZ_RUNBOX   U"\x21\x1B"   // 33 x 27  Win+R run-dialog frame size
 // Windows Super-chord hint glyphs (wave D), as drawn by keycode_to_disp_overlay()'s
 // win_or_unknown branch. All are display-only previews of the Win+<key> shortcut.
-// The NEW hand-encoded resident IconsFont glyphs (gfx_icons.h) ship with the
-// firmware and need no pack reship: the Explorer folder pixmap (read from the
-// Explorer overlay icon), the magnifier-with-+/− pair, and the downscaled
-// settings/cast, sliders and restart-graphics (⟳-in-monitor) icons. The snap
-// arrows (⍇/⍈, Win+←/→) and 🖧 network glyph (Win+Ctrl+F) come from the symbol
-// FONT PACK, not resident.
+// Only the Explorer folder pixmap (ICON_EXPLORER, \x9C) is a resident IconsFont
+// glyph (gfx_icons.h) that ships with the firmware. Everything else here — the
+// magnifier 🔍, gear/cast/knobs, restart-graphics monitor+reload, the snap arrows
+// ⍇/⍈ (Win+←/→) and the 🖧 network glyph (Win+Ctrl+F) — renders from the symbol/
+// emoji FONT PACK, so it needs the PolyKybdHost pack shipped to appear.
 //   ⚡ Action Center (Win+A)            🗁 File Explorer (Win+E, resident pixmap)
 //   ♿ Accessibility (Win+U)            ❐ minimize-others (Win+Home)
 //   🖵+ new desktop (Win+Ctrl+D)        ←🖵 / 🖵→ switch desktop (Win+Ctrl+←/→)
@@ -2004,11 +2003,9 @@
 #define ICON_GIF                    	U"\x1F3AC"  // Win+; GIF panel (clapperboard)
 #define ICON_SNIP                   	U"\x1F4F8"  // Win+Shift+S Snipping Tool (camera + flash)
 #define ICON_SCREEN_RECORD          	U"\x1F4F9"
-#define ICON_SETTINGS_SM            	U"\x2699"   // Win+I settings gear ⚙ (full-size emoji font pack)
-#define ICON_CAST_SM                	U"\x1F4F6"  // Win+K cast 📶 (full-size emoji font pack)
 #define ICON_SLIDERS                	U"\x1F39B"  // Win+Pause system properties (🎛 knobs, symbol font pack)
-#define ICON_GFX_RESTART            	U"\x1F5B5"  // Win+Ctrl+Shift+B restart graphics: monitor 🖵 (symbol font pack); the 🗘 reload glyph is overdrawn in the screen cavity by update_displays()
-#define ICON_GFX_RELOAD             	U"\x1F5D8"  // 🗘 clockwise reload — half-scaled + composited into ICON_GFX_RESTART's screen by update_displays()
-#define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); the +/- sign is drawn into the lens by update_displays() via keycode_hint_wants_mag()
+#define ICON_GFX_RESTART            	U"\x1F5B5"  // Win+Ctrl+Shift+B restart graphics: monitor 🖵 (symbol font pack); the 🗘 reload glyph is half-composited into its screen by the HINT_HALF op in the hint string
+#define ICON_GFX_RELOAD             	U"\x1F5D8"  // 🗘 clockwise reload — half-scaled into ICON_GFX_RESTART's screen (see HINT_HALF)
+#define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); a base-font +/- is MOVE-positioned into the lens by the hint string
 #define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
 #define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)

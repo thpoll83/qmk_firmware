@@ -1984,15 +1984,14 @@
 //   🔍+ / 🔍− Magnifier (Win + +/−)     📷 screenshot (Win+PrtScn)
 //   🖧 search network computers (Win+Ctrl+F)
 #define ICON_LIGHTNING              	U"\x26A1"   // Win+A action center / quick settings
-#define ICON_NOTIFICATION           	U"\x1F514"  // Win+B focus system tray (bell)
+#define ICON_SYS_TRAY               	U"\x1F50A"  // Win+B focus system tray (speaker)
 #define ICON_EXPLORER               	U"\x9C"     // Win+E (resident folder pixmap, gfx_icons.h)
 #define ICON_ACCESSIBILITY          	U"\x267F"
-#define ICON_FOCUS_WINDOW           	U"\x2750"
-#define ICON_DESKTOP_SMALL          	U"\xA1"     // compact virtual-desktop monitor (resident, gfx_icons.h)
-#define ICON_SNAP_LEFT              	U"\xA2"     // Win+Left  snap window to left edge (tall bar + arrow)
-#define ICON_SNAP_RIGHT             	U"\xA3"     // Win+Right snap window to right edge
-#define ICON_GIF                    	U"\x1F4FD"
-#define ICON_SNIP                   	U"\x2704"
+#define ICON_FOCUS_WINDOW           	U"\x2752"   // Win+Home minimize all but active (shadowed window)
+#define ICON_SNAP_LEFT              	U"\xA1"     // Win+Left  snap window to left edge (tall bar + arrow)
+#define ICON_SNAP_RIGHT             	U"\xA2"     // Win+Right snap window to right edge
+#define ICON_GIF                    	U"\x1F3AC"  // Win+; GIF panel (clapperboard)
+#define ICON_SNIP                   	U"\x1F4F7"  // Win+Shift+S Snipping Tool (camera / screen capture)
 #define ICON_SCREEN_RECORD          	U"\x1F4F9"
 #define ICON_PIN_SMALL              	U"\x9E"     // Win+1..9 small pushpin (composed with the digit)
 #define ICON_SKULL                  	U"\x2620"   // Win+Ctrl+Shift+B restart graphics driver

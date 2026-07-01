@@ -1158,10 +1158,10 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
         switch(keycode) {
             // Virtual-desktop chords: a compact monitor glyph (ICON_DESKTOP_SMALL)
             // composed with +/←/→/x so the action reads next to the screen.
-            case KC_D:     return U"   " ICON_DESKTOP_SMALL U"+";         // Win+Ctrl+D new virtual desktop
-            case KC_LEFT:  return U"    " ICON_LEFT ICON_DESKTOP_SMALL;   // Win+Ctrl+Left  previous desktop
-            case KC_RIGHT: return U"    " ICON_DESKTOP_SMALL ICON_RIGHT;  // Win+Ctrl+Right next desktop
-            case KC_F4:    return U"   " ICON_DESKTOP_SMALL U"x";         // Win+Ctrl+F4 close desktop
+            case KC_D:     return U"  " PRIVATE_SCREEN U"+";             // Win+Ctrl+D new virtual desktop
+            case KC_LEFT:  return U"  " ICON_LEFT PRIVATE_SCREEN;        // Win+Ctrl+Left  previous desktop
+            case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
+            case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
             case KC_F:     return U"     " ICON_NET;                      // Win+Ctrl+F search network computers
             case KC_B:     if (shift) return U"     " ICON_SKULL; break;  // Win+Ctrl+Shift+B restart graphics
             default: break;
@@ -1221,7 +1221,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             // Super+S — so show it only on Windows (and the unknown default).
             // Win+Shift+S is the Snipping Tool (region capture) — shown via shift.
             case KC_S:
-                if (win_or_unknown) return shift ? U"     " ICON_SNIP : U"   " ICON_LAUNCHER;
+                if (win_or_unknown) return shift ? U"   " ICON_SNIP : U"   " ICON_LAUNCHER;
                 break;
             // Windows-only Super-chords (wave C). These have no standard GNOME/KDE
             // equivalent, so they are gated on win_or_unknown only. Dictation (Win+H)
@@ -1278,7 +1278,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"      " ICON_ACCESSIBILITY;// Win+U Accessibility settings
                 break;
             case KC_B:
-                if (win_or_unknown) return U"   "   ICON_NOTIFICATION;  // Win+B focus system tray (bell)
+                if (win_or_unknown) return U"   "   ICON_SYS_TRAY;      // Win+B focus system tray (speaker)
                 break;
             case KC_HOME:
                 if (win_or_unknown) return U"     " ICON_FOCUS_WINDOW;  // Win+Home minimize all but active

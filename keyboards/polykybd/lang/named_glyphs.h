@@ -1970,10 +1970,12 @@
 #define ICON_OS_KDE                 	U"\x99"
 // Windows Super-chord hint glyphs (wave D), as drawn by keycode_to_disp_overlay()'s
 // win_or_unknown branch. All are display-only previews of the Win+<key> shortcut.
-// Mostly shipped resident/pack glyphs; five are NEW hand-encoded resident IconsFont
-// glyphs (gfx_icons.h PUA 0x9C-0xA0) so they ship with the firmware and need no
-// pack reship: the Explorer folder pixmap (read from the Explorer overlay icon),
-// 🖧 networked computers, the small pushpin, and the magnifier-with-+/− pair.
+// The NEW hand-encoded resident IconsFont glyphs (gfx_icons.h) ship with the
+// firmware and need no pack reship: the Explorer folder pixmap (read from the
+// Explorer overlay icon), the magnifier-with-+/− pair, and the downscaled
+// settings/cast, sliders and restart-graphics (⟳-in-monitor) icons. The snap
+// arrows (⍇/⍈, Win+←/→) and 🖧 network glyph (Win+Ctrl+F) come from the symbol
+// FONT PACK, not resident.
 //   ⚡ Action Center (Win+A)            🗁 File Explorer (Win+E, resident pixmap)
 //   ♿ Accessibility (Win+U)            ❐ minimize-others (Win+Home)
 //   🖵+ new desktop (Win+Ctrl+D)        ←🖵 / 🖵→ switch desktop (Win+Ctrl+←/→)

@@ -191,15 +191,8 @@ void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
     }
 }
 
-// Draw a character
-/**************************************************************************/
-/*!
-   @brief   Draw a single character
-    @param    x   Bottom left corner x coordinate
-    @param    y   Bottom left corner y coordinate
-    @param    ch  The 32-bit Unicode codepoint (SMP codepoints > 0xFFFF allowed)
-*/
-/**************************************************************************/
+// Draw a single character at bottom-left (x,y); ch is a 32-bit Unicode codepoint
+// (SMP codepoints > 0xFFFF allowed).
 int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, int8_t cy_radius) {
     x += s_draw_ox;   // anti-burn-in jitter offset (0 except during an idle relocation redraw)
     y += s_draw_oy;

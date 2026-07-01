@@ -166,20 +166,29 @@ static uint32_t crc32_large(const uint8_t *data, uint32_t size) {
 }
 
 // ---------------------------------------------------------------------------
-// Flush accumulated page buffer to staging flash
+// flash_range_program wrapped in the IRQ-disable + (conditional) core1-halt guard
+// the bootrom flash ops require.  s_core1_halted lets a caller that has already
+// halted core1 (e.g. inside a wider erase) reuse it without a redundant restart.
 // ---------------------------------------------------------------------------
-static void flush_page(void) {
-    uint32_t flash_offs = target_data_offset() + (s_next_offset - s_buf_fill);
+static void flash_program_guarded(uint32_t flash_offs, const uint8_t *buf, uint32_t size) {
 #ifdef USE_CORE1
     bool already_halted = s_core1_halted;
     if (!already_halted) fw_staging_halt_core1();
 #endif
     uint32_t irq = save_and_disable_interrupts();
-    flash_range_program(flash_offs, s_page_buf, FLASH_PAGE_SIZE);
+    flash_range_program(flash_offs, buf, size);
     restore_interrupts(irq);
 #ifdef USE_CORE1
     if (!already_halted) fw_staging_restart_core1();
 #endif
+}
+
+// ---------------------------------------------------------------------------
+// Flush accumulated page buffer to staging flash
+// ---------------------------------------------------------------------------
+static void flush_page(void) {
+    uint32_t flash_offs = target_data_offset() + (s_next_offset - s_buf_fill);
+    flash_program_guarded(flash_offs, s_page_buf, FLASH_PAGE_SIZE);
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
     s_buf_fill = 0;
 }
@@ -195,16 +204,7 @@ static void write_staging_header(uint32_t size, uint32_t crc) {
     uint32_t words[3] = { FW_STAGING_MAGIC, size, crc };
     memset(hdr, 0xFF, sizeof(hdr));
     memcpy(hdr, words, sizeof(words));
-#ifdef USE_CORE1
-    bool already_halted = s_core1_halted;
-    if (!already_halted) fw_staging_halt_core1();
-#endif
-    uint32_t irq = save_and_disable_interrupts();
-    flash_range_program(FW_STAGING_OFFSET, hdr, FLASH_PAGE_SIZE);
-    restore_interrupts(irq);
-#ifdef USE_CORE1
-    if (!already_halted) fw_staging_restart_core1();
-#endif
+    flash_program_guarded(FW_STAGING_OFFSET, hdr, FLASH_PAGE_SIZE);
 }
 
 // ---------------------------------------------------------------------------

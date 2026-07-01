@@ -60,6 +60,18 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
     return idx + NUM_OVERLAYS * mods;
 }
 
+// Computes the 0..89 overlay slot index for a (translate_a_to_z'd) overlay keycode.
+// Returns false and logs when the index is out of range.
+static bool overlay_slot_index(uint8_t keycode, uint16_t* out_idx) {
+    uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
+    if (idx >= 90) {
+        uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
+        return false;
+    }
+    *out_idx = idx;
+    return true;
+}
+
 // Fills overlay buffer segment with bitmap data and syncs to bridge if needed.
 void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
     uint8_t keycode = get_fragment_context()->keycode;
@@ -70,9 +82,8 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
 
     keycode = translate_a_to_z(keycode);
 
-    uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
-    if (idx >= 90) {
-        uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
+    uint16_t idx;
+    if (!overlay_slot_index(keycode, &idx)) {
         return;
     }
 
@@ -108,9 +119,8 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
     }
 
     keycode = translate_a_to_z(keycode);
-    uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
-    if (idx >= 90) {
-        uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
+    uint16_t idx;
+    if (!overlay_slot_index(keycode, &idx)) {
         return;
     }
     uint8_t ctx_mod = get_fragment_context()->modifier;
@@ -158,9 +168,8 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     }
 
     keycode = translate_a_to_z(keycode);
-    uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
-    if (idx >= 90) {
-        uprint("Warning: Calculated index for overlay out of bounds. Dropping overlay.\n");
+    uint16_t idx;
+    if (!overlay_slot_index(keycode, &idx)) {
         return;
     }
     uint8_t ctx_mod = get_fragment_context()->modifier;

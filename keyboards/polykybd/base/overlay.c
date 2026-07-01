@@ -142,7 +142,6 @@ void reset_overlay_usage(void) {
     for(int16_t i = 0; i < sizeof(use_overlay); ++i) {
         use_overlay[i] = 0;
     }
-    //memset(&use_overlay, 0, sizeof(use_overlay));
 }
 
 void set_all_overlay_mapping(void) {

@@ -79,6 +79,16 @@ void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
 #endif
 }
 
+// Writes the 3-byte HID response header into `data`: 'P', the command id, then
+// '.' for ACK or '!' for NACK — replacing the repeated `memcpy(data, "P\xNN.", 3)`
+// literals (the command byte reads as a real number here, not a hex escape).
+// Callers still own the surrounding memset and the raw_hid_send.
+static inline void hid_reply(uint8_t *data, uint8_t cmd, bool ok) {
+    data[0] = 'P';
+    data[1] = cmd;
+    data[2] = ok ? '.' : '!';
+}
+
 bool legacy_command_kb(uint8_t *data, uint8_t length) {
     uint8_t *command_id   = &(data[0]);
     uint8_t *command_data = &(data[1]);
@@ -337,7 +347,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     case LANG_CKUS: memcpy(data, "P\x07.ckUS", 7); break;
                     //[[[end]]]
                     default:
-                        memcpy(data, "P\x07!", 3);
+                        hid_reply(data, 0x07, false);
                         break;
                 }
                 raw_hid_send(data, length);
@@ -350,7 +360,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 // parsing a missing/partial reply. (Dropping the table here also
                 // frees the ~570 bytes of .rodata the ASCII list occupied.)
                 memset(data, 0, length);
-                memcpy(data, "P\x08!", 3);
+                hid_reply(data, 0x08, false);
                 raw_hid_send(data, length);
                 break;
             case 9: //change language
@@ -372,10 +382,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         uprintf("Setting lang to %u.\n", new_lang);
                         request_disp_refresh();
                         update_performed();
-                        memcpy(data, "P\x09.", 3);
+                        hid_reply(data, 0x09, true);
                     } else {
                         uprintf("Invalid language index %u.\n", new_lang);
-                        memcpy(data, "P\x09!", 3);
+                        hid_reply(data, 0x09, false);
                     }
                     raw_hid_send(data, length);
                 }
@@ -409,7 +419,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         request_disp_refresh();
                     }
                     memset(data, 0, length);
-                    memcpy(data, "P\x0b.", 3);
+                    hid_reply(data, 0x0b, true);
                     uprintf("Overlay flags 0x%x set.\n", new_flags);
                     raw_hid_send(data, length);
                 }
@@ -424,7 +434,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         request_disp_refresh();
                     }
                     memset(data, 0, length);
-                    memcpy(data, "P\x0c.", 3);
+                    hid_reply(data, 0x0c, true);
                     uprintf("Overlay flags 0x%x cleared.\n", data[HID_DATA_IDX]);
                     raw_hid_send(data, length);
                 }
@@ -456,13 +466,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         set_user_brightness(data[HID_DATA_IDX]);
                     }
                     memset(data, 0, length);
-                    memcpy(data, "P\x0d.", 3);
+                    hid_reply(data, 0x0d, true);
                     uprintf("Set brightness to: %u (flags 0x%x, auto %u).\n",
                             local_state->contrast, br_flags, get_brightness_auto_mode());
                 } else {
                     uprintf("Refused to set brightness to: %u.\n", data[HID_DATA_IDX]);
                     memset(data, 0, length);
-                    memcpy(data, "P\x0d!", 3);
+                    hid_reply(data, 0x0d, false);
                 }
                 raw_hid_send(data, length);
                 break;
@@ -494,10 +504,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     action_exec(MAKE_KEYEVENT(r, c, pressed));
                     switch_events_poly(r,c, pressed);
                     memset(data, 0, length);
-                    memcpy(data, "P\x0e.", 3);
+                    hid_reply(data, 0x0e, true);
                 } else {
                     memset(data, 0, length);
-                    memcpy(data, "P\x0e!", 3);   // NACK: key injection requires debug mode
+                    hid_reply(data, 0x0e, false);   // NACK: key injection requires debug mode
                 }
                 raw_hid_send(data, length);
                 break;
@@ -530,7 +540,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     set_last_update(update);
                 }
                 memset(data, 0, length);
-                memcpy(data, "P\x0f.", 3);
+                hid_reply(data, 0x0f, true);
                 raw_hid_send(data, length);
                 break;
             case 16: //receive RLE compressed overlay
@@ -568,31 +578,31 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     case 0: //Linux = 0
                         unicode_input_mode_set_user(UNICODE_MODE_LINUX);
                         memset(data, 0, length);
-                        memcpy(data, "P\x14.", 3);
+                        hid_reply(data, 0x14, true);
                         break;
                     case 1: //Mac = 1
                         unicode_input_mode_set_user(UNICODE_MODE_MACOS);
                         memset(data, 0, length);
-                        memcpy(data, "P\x14.", 3);
+                        hid_reply(data, 0x14, true);
                         break;
                     case 2: //Windows = 2
                         unicode_input_mode_set_user(UNICODE_MODE_WINDOWS);
                         memset(data, 0, length);
-                        memcpy(data, "P\x14.", 3);
+                        hid_reply(data, 0x14, true);
                         break;
                     case 3: //WinCompose = 3
                         unicode_input_mode_set_user(UNICODE_MODE_WINCOMPOSE);
                         memset(data, 0, length);
-                        memcpy(data, "P\x14.", 3);
+                        hid_reply(data, 0x14, true);
                         break;
                     case 4: //BSD = 4
                         unicode_input_mode_set_user(UNICODE_MODE_BSD);
                         memset(data, 0, length);
-                        memcpy(data, "P\x14.", 3);
+                        hid_reply(data, 0x14, true);
                         break;
                     default:
                         memset(data, 0, length);
-                        memcpy(data, "P\x14!", 3);
+                        hid_reply(data, 0x14, false);
                         break;
                 }
                 raw_hid_send(data, length);
@@ -617,7 +627,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
             case 22: // get default layer
                 memset(data, 0, length);
-                memcpy(data, "P\x16.", 3);
+                hid_reply(data, 0x16, true);
                 data[3] = (uint8_t)local_layer->def_layer;
                 raw_hid_send(data, length);
                 break;
@@ -625,7 +635,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 uprint("Host requested bootloader.\n");
                 poly_announce_bootloader();
                 memset(data, 0, length);
-                memcpy(data, "P\x17.", 3);
+                hid_reply(data, 0x17, true);
                 raw_hid_send(data, length);
                 reset_keyboard();
                 break;
@@ -637,7 +647,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 save_all_dirty();
                 set_last_update(-1);
                 memset(data, 0, length);
-                memcpy(data, "P\x18.", 3);
+                hid_reply(data, 0x18, true);
                 raw_hid_send(data, length);
                 break;
             case 25: //set handedness (which half is left / which is right)
@@ -649,7 +659,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     uint8_t ack = send_to_bridge(USER_SYNC_REBOOT, &msg, sizeof(msg), 5);
                     uprintf("Set handedness: master=%s, slave ack=%d.\n", master_is_left ? "LEFT" : "RIGHT", ack);
                     memset(data, 0, length);
-                    memcpy(data, "P\x19.", 3);
+                    hid_reply(data, 0x19, true);
                     raw_hid_send(data, length);
                     soft_reset_keyboard();
                 }
@@ -661,7 +671,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 26:
                 save_all_dirty();
                 memset(data, 0, length);
-                memcpy(data, "P\x1A.", 3);
+                hid_reply(data, 0x1A, true);
                 raw_hid_send(data, length);
                 break;
             case 27: //packed lang list: 1 count byte + (ISO 639-1 idx, ISO 3166-1 idx) per lang
@@ -712,18 +722,18 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     uint8_t arg = data[HID_DATA_IDX];
                     memset(data, 0, length);
                     if (arg == 0xFF) {
-                        memcpy(data, "P\x1c.", 3);
+                        hid_reply(data, 0x1c, true);
                         data[3] = get_idle_style();
                     } else if (arg < IDLE_STYLE_COUNT) {
                         set_idle_style(arg);
                         // The style is synced to the slave from housekeeping; both
                         // halves relocate their own keys, so there is no shared
                         // offset to reset here.
-                        memcpy(data, "P\x1c.", 3);
+                        hid_reply(data, 0x1c, true);
                         data[3] = arg;
                         uprintf("Set idle style to %u.\n", arg);
                     } else {
-                        memcpy(data, "P\x1c!", 3);
+                        hid_reply(data, 0x1c, false);
                         uprintf("Refused idle style %u.\n", arg);
                     }
                     raw_hid_send(data, length);
@@ -743,12 +753,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     uint8_t flags = data[HID_DATA_IDX + 1];
                     memset(data, 0, length);
                     if (arg == 0xFF) {
-                        memcpy(data, "P\x1d.", 3);
+                        hid_reply(data, 0x1d, true);
                         data[3] = get_active_os();
                         data[4] = get_os_auto_mode() ? 1 : 0;
                     } else if (arg == 0xFE) {
                         set_os_auto_mode(true);
-                        memcpy(data, "P\x1d.", 3);
+                        hid_reply(data, 0x1d, true);
                         data[3] = get_active_os();
                         data[4] = 1;
                         uprint("OS auto mode engaged.\n");
@@ -758,12 +768,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         } else {
                             set_host_os(arg);     // host-auto push
                         }
-                        memcpy(data, "P\x1d.", 3);
+                        hid_reply(data, 0x1d, true);
                         data[3] = get_active_os();
                         data[4] = get_os_auto_mode() ? 1 : 0;
                         uprintf("Set OS to %u (pin=%u), active=%u.\n", arg, (unsigned)(flags & 0x01), data[3]);
                     } else {
-                        memcpy(data, "P\x1d!", 3);
+                        hid_reply(data, 0x1d, false);
                         uprintf("Refused OS %u.\n", arg);
                     }
                     raw_hid_send(data, length);

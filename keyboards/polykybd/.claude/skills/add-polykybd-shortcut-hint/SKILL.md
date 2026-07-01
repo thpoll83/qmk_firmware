@@ -152,3 +152,18 @@ Always **send the user a real-keycap render** (step 7) before committing.
   inject into the resident IconsFont (`gfx_icons.h`, `g_all_fonts[0]`) instead.
 - **Verify the chord is real for the gated OS** (e.g. mac dictation is Fn-Fn, not a
   Cmd chord — so it's Windows-only). Don't show a hint for a chord the OS doesn't bind.
+- **Glyph sourcing cheatsheet** (which font actually has a symbol): the APL quad
+  arrows ⍇/⍈ (U+2347/8, used for Win+←/→ snap) are **notdef in NotoSansSymbols/2**
+  and live in **NotoSansMath** (already a `fonts.yaml` source; `_MathHints_` also
+  supplies the dashed word-nav arrows). ⟳ (U+27F3) is notdef in every available
+  Noto face → **draw it** (a composited resident IconsFont glyph). 🎚/🎛 (U+1F39A/B,
+  candidate for Win+Pause) exist in the **mono NotoEmoji** (the pack source) but are
+  notdef in the *color* font — fine, pack bundles use the mono one. Always `--check`
+  lit-pixel count > 0 before committing to a codepoint.
+- **A full `generate_fonts.py` regen needs ALL Noto sources present** — `dl-fonts.sh`
+  fetches them; if it's missing any (it lacked canadian-aboriginal/cherokee until
+  2026-07), `--check` fails partway with `Font load error: 1`. Fetch the missing one
+  and re-run rather than assuming a real drift.
+- **Resident-icon codepoint safety**: never park a custom resident IconsFont glyph at
+  `0xA0+` (printable Latin-1 — IconsFont shadows it). Use C1 `0x80–0x9F` or a PUA. See
+  qmk `CLAUDE.md` "Font pack" (the IconsFont collision / gap-removal notes).

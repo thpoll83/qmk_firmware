@@ -340,6 +340,25 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   the base size. ⚠️ Adding a whole **new resident *font*** instead (an extra entry in
   `index.resident_fonts`) prepends ahead of the pack → **every pack font's gidx shifts**
   → a full-pack reship; avoid that for one or two glyphs.
+  - ⚠️ **IconsFont is a range font `0x80..last`; slots `0xA0`+ COLLIDE with printable
+    Latin-1** (`0xA0` nbsp, `0xA2..0xA5` = ¢£¤¥, …). Because `IconsFont` is
+    `g_all_fonts[0]` it **wins** the lookup, so a custom icon parked at e.g. `0xA4`
+    *shadows* the real ¤ — and `CURRENCY_SIGN` (U+00A4) is used in real legends, so
+    those keys render the icon instead of the currency glyph (field/CodeRabbit,
+    2026-07). **Put custom resident icons in the non-printable C1 range `0x80–0x9F`
+    (or a real PUA), never `0xA0+`.** The Win-hint wave-D glyphs violated this
+    (`0xA2–0xA5` = settings/cast/sliders/restart) — pending relocation.
+  - **Removing a glyph from the MIDDLE of the range** (e.g. after migrating a hint
+    to the pack): you can't delete it (the array must stay contiguous `first..last`).
+    Turn its record into a **gap** `{off,0,0,0,0,0}` and drop its bitmap bytes, then
+    **shift every later glyph's `bitmapOffset` down by the removed byte count**. Gap
+    glyphs (w==h==xAdvance==0) are skipped by the renderer and fall through to the
+    next font — so gapping `0xA0/0xA1` (the old snap arrows) actually *un-shadowed*
+    the real nbsp/¡. (The host preview `tools/gfx_font.py` skips gaps too.)
+  - **Pack-category headers (`symbol_fonts.h`, etc.) are NOT compiled into the
+    firmware** — only `RESIDENT_FONTS[]` + `IconsFont` are `#include`d. So adding pack
+    glyphs (⍇/⍈, 🖧) does **not** grow the image; *removing* a resident glyph shrinks
+    it. Confirmed by grep: no firmware `.c` includes `symbol_fonts.h`.
 - **Regenerate** with `FONTCONVERT=<pinned> python3 generate_fonts.py`. **Byte-repro
   gotcha:** the per-category headers embed the fontconvert *binary path* in a
   provenance comment, so run from the **same path** the committed headers used

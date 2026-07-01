@@ -84,6 +84,13 @@ fetch "$BASE/notosanssymbols2/NotoSansSymbols2-Regular.ttf" \
 fetch "$BASE/notosansmath/NotoSansMath-Regular.ttf" \
       "Noto_Sans_Math/NotoSansMath-Regular.ttf"
 
+# Syllabic scripts for the "syllabic" font-pack bundle (Cree/Inuktitut UCAS,
+# Cherokee) — variable-font builds; FreeType renders the default instance.
+fetch "$BASE/notosanscanadianaboriginal/NotoSansCanadianAboriginal%5Bwght%5D.ttf" \
+      "noto-sans-canadian-aboriginal/NotoSansCanadianAboriginal-Regular.ttf"
+fetch "$BASE/notosanscherokee/NotoSansCherokee%5Bwght%5D.ttf" \
+      "noto-sans-cherokee/NotoSansCherokee-Regular.ttf"
+
 # NotoColorEmoji lives in a separate repo; upstream filename differs from
 # the path create_fonts.sh references (NotoColorEmoji-Regular.ttf)
 fetch "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf" \

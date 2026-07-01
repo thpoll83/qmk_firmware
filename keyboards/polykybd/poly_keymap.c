@@ -1214,7 +1214,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             // KDE / generic Linux the switcher is Alt+Tab (shown via the Alt branch),
             // and Super+Tab is unbound — so don't show it there.
             case KC_TAB:
-                if (win_or_unknown || gnome) return U"     " ICON_WINDOW_SWITCH;
+                if (win_or_unknown || gnome) return U"    " ICON_WINDOW_SWITCH;
                 break;
             // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses
             // the Super overview and KDE a Super-tap / Alt+Space — neither binds
@@ -1236,7 +1236,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_DICTATION;     // Win+H dictation
                 break;
             case KC_I:
-                if (win_or_unknown) return U"    "  ICON_SETTINGS_SM;   // Win+I settings (smaller gear)
+                if (win_or_unknown) return U"     " ICON_SETTINGS_SM;   // Win+I settings (smaller gear)
                 break;
             case KC_M:
                 if (win_or_unknown) return U"     " PRIVATE_WINDOW;     // Win+M minimize all
@@ -1251,7 +1251,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
                 break;
             case KC_K:
-                if (win_or_unknown) return U"    "  ICON_CAST_SM;       // Win+K cast (smaller)
+                if (win_or_unknown) return U"     " ICON_CAST_SM;       // Win+K cast (smaller)
                 break;
             case KC_V:
                 if (win_or_unknown) return U"   "   ICON_CLIP_HISTORY;  // Win+V clipboard history
@@ -1293,7 +1293,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_GIF;           // Win+; GIF / emoji panel
                 break;
             case KC_PAUSE:
-                if (win_or_unknown) return U"      " ICON_DISK_STACK;   // Win+Pause System Properties (stacked disks)
+                if (win_or_unknown) return U"      " ICON_SLIDERS;      // Win+Pause System Properties (level sliders)
                 break;
             case KC_PSCR:
                 if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot

@@ -1941,7 +1941,7 @@
 #define ICON_WORD_RIGHT             	U"\x21E2"
 #define ICON_LAUNCHER               	U"\x2630"
 #define ICON_APP_SWITCH             	U"\x1F5D4"
-#define ICON_WINDOW_SWITCH          	U"\xA4"
+#define ICON_WINDOW_SWITCH          	U"\x1F5BD"  // 🖽 dedicated WinSwitch font (Util range shadows it as a gap; firmware skips the gap)
 #define ICON_CLOSE                  	U"\x22A0"
 // Windows-only Super-chord hint glyphs (wave C). 🗣 dictation is the only NEW
 // glyph here (added to the symbol bundle as a NotoEmoji-Medium singleton —
@@ -1993,9 +1993,9 @@
 #define ICON_GIF                    	U"\x1F3AC"  // Win+; GIF panel (clapperboard)
 #define ICON_SNIP                   	U"\x1F4F8"  // Win+Shift+S Snipping Tool (camera + flash)
 #define ICON_SCREEN_RECORD          	U"\x1F4F9"
-#define ICON_SETTINGS_SM            	U"\xA2"     // Win+I settings gear, 4px smaller (resident, gfx_icons.h)
-#define ICON_CAST_SM                	U"\xA3"     // Win+K cast, 4px smaller (resident, gfx_icons.h)
-#define ICON_DISK_STACK             	U"\xA5"     // Win+Pause system properties (two stacked disks, resident)
+#define ICON_SETTINGS_SM            	U"\xA2"     // Win+I settings gear, downscaled (resident, gfx_icons.h)
+#define ICON_CAST_SM                	U"\xA3"     // Win+K cast, downscaled (resident, gfx_icons.h)
+#define ICON_SLIDERS                	U"\xA4"     // Win+Pause system properties (two mirrored level sliders, resident)
 #define ICON_SKULL                  	U"\x2620"   // Win+Ctrl+Shift+B restart graphics driver
 #define ICON_SYSTEM_PROPS           	U"\x1F4BB"
 #define ICON_MAG_PLUS               	U"\x9E"     // Win + '+' magnifier zoom in  (resident, gfx_icons.h)

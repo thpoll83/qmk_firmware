@@ -41,7 +41,7 @@ endif
 # Normal builds pay zero bytes — doom_mode.h stubs every hook to an inline no-op.
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     OPT_DEFS += -DPOLYKYBD_DOOM
-    SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c
+    SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c doom/qmk_shim.c
     # First engine slice from the vendored rp2040-doom snapshot (doom/engine/):
     # pure math/data units with no platform backend, compiled as-is to prove the
     # engine sources build inside QMK's flag/include environment.
@@ -52,17 +52,40 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     # engine's own config.h (engine/src/config.h, our generated stand-in for the
     # upstream CMake one) wins inside engine files via same-directory resolution.
     CFLAGS += -Ikeyboards/polykybd/doom/engine/src \
-              -Ikeyboards/polykybd/doom/engine/src/doom
+              -Ikeyboards/polykybd/doom/engine/src/doom \
+              -Ikeyboards/polykybd/doom/engine/src/pico
     # DOOM_TINY's i_system.h uses pico-sdk semaphores for the core0/core1 frame
     # handoff; the QMK RP2040 platform doesn't expose pico_sync headers by
     # default. Headers only — if/when the sem_* calls survive to link, the
     # pico_sync sources get added (or the handoff is rewired to our core1 FIFO).
-    CFLAGS += -Ilib/pico-sdk/src/common/pico_sync/include
+    CFLAGS += -Ilib/pico-sdk/src/common/pico_sync/include \
+              -Ilib/pico-sdk/src/common/pico_binary_info/include \
+              -Ilib/pico-sdk/src/common/pico_time/include
     # The vintage id headers use K&R `()` prototypes (d_think.h actionf_v,
     # d_loop.h). QMK's common_rules.mk force-enables -Wstrict-prototypes AFTER
     # keyboard CFLAGS, but EXTRAFLAGS lands last on the compile line, so this
     # wins. Doom dev builds only — normal builds keep the strict warning.
-    EXTRAFLAGS += -Wno-strict-prototypes
+    # The unused-* trio mirrors upstream's own small_doom_common compile options
+    # (the heavily #ifdef'd tiny build leaves dead locals/functions behind).
+    # -Wno-error demotions (not full suppressions — the warnings stay visible):
+    # the id code returns const objects through non-const wad_file_t* and prints
+    # XIP addresses with %p from integer macros; upstream builds without -Werror.
+    EXTRAFLAGS += -Wno-strict-prototypes \
+                  -Wno-unused-function \
+                  -Wno-unused-but-set-variable \
+                  -Wno-unused-variable \
+                  -Wno-error=format \
+                  -Wno-error=discarded-qualifiers \
+                  -Wno-error=maybe-uninitialized \
+                  -Wno-error=cpp
+    # Force-include the doom_tiny define set. The config.h route alone is not
+    # enough: several engine files test feature guards BEFORE their first
+    # include (e.g. m_config.c's !NO_USE_BOUND_CONFIG wrap / SDL include), which
+    # upstream covers by passing defines on the compiler command line — this
+    # does the same. Build-wide but doom-builds-only; verified no QMK/ChibiOS/
+    # pico-sdk-compiled source reads any of these macros (PICO_ON_DEVICE=1 is
+    # simply true for this target).
+    EXTRAFLAGS += -include keyboards/polykybd/doom/engine/src/doom_tiny_defs.h
     SRC += doom/engine/src/tables.c \
            doom/engine/src/m_bbox.c \
            doom/engine/src/m_fixed.c \
@@ -74,4 +97,85 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
            doom/engine/src/doom/dstrings.c \
            doom/engine/src/doom/d_items.c \
            doom/engine/src/doom/sounds.c
+    # Slice 3: memory + WAD layer (zone allocator on the borrowed pool; WHX wad
+    # memory-mapped at the XIP resource address — USE_MEMORY_WAD/NO_FILE_ACCESS,
+    # so only the memory w_file backend is compiled).
+    SRC += doom/engine/src/z_zone.c \
+           doom/engine/src/w_wad.c \
+           doom/engine/src/w_main.c \
+           doom/engine/src/w_file.c \
+           doom/engine/src/w_file_memory.c \
+           doom/engine/src/d_event.c \
+           doom/engine/src/deh_str.c
+    # Slice 4a: remaining support layer (game lib minus platform backends and
+    # the music stack — i_main.c stays out, QMK owns main()).
+    SRC += doom/engine/src/m_argv.c \
+           doom/engine/src/m_misc.c \
+           doom/engine/src/m_config.c \
+           doom/engine/src/m_controls.c \
+           doom/engine/src/v_video.c \
+           doom/engine/src/sha1.c \
+           doom/engine/src/memio.c \
+           doom/engine/src/w_checksum.c \
+           doom/engine/src/d_loop.c \
+           doom/engine/src/d_iwad.c \
+           doom/engine/src/aes_prng.c \
+           doom/engine/src/net_client.c \
+           doom/engine/src/tiny_huff.c \
+           doom/engine/src/musx_decoder.c \
+           doom/engine/src/image_decoder.c
+    # Slice 4b: the whole src/doom game core (the `doom` CMake target list).
+    SRC += doom/engine/src/doom/am_map.c \
+           doom/engine/src/doom/deh_ammo.c \
+           doom/engine/src/doom/deh_bexstr.c \
+           doom/engine/src/doom/deh_cheat.c \
+           doom/engine/src/doom/deh_doom.c \
+           doom/engine/src/doom/deh_frame.c \
+           doom/engine/src/doom/deh_misc.c \
+           doom/engine/src/doom/deh_ptr.c \
+           doom/engine/src/doom/deh_sound.c \
+           doom/engine/src/doom/deh_thing.c \
+           doom/engine/src/doom/deh_weapon.c \
+           doom/engine/src/doom/d_main.c \
+           doom/engine/src/doom/d_net.c \
+           doom/engine/src/doom/f_finale.c \
+           doom/engine/src/doom/f_wipe.c \
+           doom/engine/src/doom/g_game.c \
+           doom/engine/src/doom/hu_lib.c \
+           doom/engine/src/doom/hu_stuff.c \
+           doom/engine/src/doom/info.c \
+           doom/engine/src/doom/m_menu.c \
+           doom/engine/src/doom/p_ceilng.c \
+           doom/engine/src/doom/p_doors.c \
+           doom/engine/src/doom/p_enemy.c \
+           doom/engine/src/doom/p_floor.c \
+           doom/engine/src/doom/p_inter.c \
+           doom/engine/src/doom/p_lights.c \
+           doom/engine/src/doom/p_map.c \
+           doom/engine/src/doom/p_maputl.c \
+           doom/engine/src/doom/p_mobj.c \
+           doom/engine/src/doom/p_plats.c \
+           doom/engine/src/doom/p_pspr.c \
+           doom/engine/src/doom/p_saveg.c \
+           doom/engine/src/doom/p_setup.c \
+           doom/engine/src/doom/p_sight.c \
+           doom/engine/src/doom/p_spec.c \
+           doom/engine/src/doom/p_switch.c \
+           doom/engine/src/doom/p_telept.c \
+           doom/engine/src/doom/p_tick.c \
+           doom/engine/src/doom/p_user.c \
+           doom/engine/src/doom/r_bsp.c \
+           doom/engine/src/doom/r_data.c \
+           doom/engine/src/doom/r_data_whd.c \
+           doom/engine/src/doom/r_draw.c \
+           doom/engine/src/doom/r_main.c \
+           doom/engine/src/doom/r_plane.c \
+           doom/engine/src/doom/r_segs.c \
+           doom/engine/src/doom/r_sky.c \
+           doom/engine/src/doom/r_things.c \
+           doom/engine/src/doom/s_sound.c \
+           doom/engine/src/doom/statdump.c \
+           doom/engine/src/doom/st_lib.c \
+           doom/engine/src/doom/st_stuff.c \
+           doom/engine/src/doom/wi_stuff.c
 endif

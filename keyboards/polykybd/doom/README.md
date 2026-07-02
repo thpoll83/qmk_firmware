@@ -61,23 +61,44 @@ Without `POLYKYBD_DOOM=yes` nothing here is compiled and every hook in
 ## Engine integration state
 
 The rp2040-doom snapshot (`f1f43171`) is vendored under [`engine/`](engine/PROVENANCE.md)
-and a **first slice already compiles inside the QMK build** (see the
-`POLYKYBD_DOOM` block in `../rules.mk`): tables, fixed-point math, bbox,
-cheats, RNG, doomdef/doomstat/dstrings/d_items/sounds — 11 units, pulling the
-core header graph (doomstat/d_player/info/p_pspr/d_loop) through QMK's
-flag/include environment. Port conventions established there:
+and **the complete game core compiles and links inside the QMK build** (~85
+translation units — everything upstream's `doom_tiny` device target compiles
+except its pico platform backends): the whole `src/doom` game/renderer C code,
+zone memory, the WHX WAD layer (`USE_MEMORY_WAD` at `TINY_WAD_ADDR=0x10600000`),
+d_loop, net_client, the WHX decoders (tiny_huff/musx/image), and the support
+layer. `qmk_shim.c` replaces upstream's `src/pico/{i_system,i_timer,
+i_picosound}.c`: zone memory comes from the borrowed overlay-pool arena
+(`doom_arena_zone`), time from the 1 MHz hardware timer, sound/music are a
+silent backend (real `I_GetSfxLumpNum` so S_* caching works), plus a
+single-player `piconet_*` stub and video-backend globals.
+
+**The only unresolved interface is the renderer**: the 10 `pd_*` functions
+from `pd_render.cpp` (3,115 lines, C++, `PICODOOM_RENDER_NEWHOPE`) — port it,
+root `D_DoomMain` from `doom_mode.c`, pump input into `D_PostEvent`, and wire
+`doom_blit` as the output. Until the engine is rooted, `--gc-sections`
+discards all engine code, so the flagged image is byte-for-byte the size of
+the scaffold-only build (verified: text 115,836 both ways).
+
+Port conventions:
 
 - engine include dirs are appended **last** in `CFLAGS` (existing resolution
-  can't change); `engine/src/config.h` is our stand-in for the CMake-generated
-  one and wins inside engine files by same-directory quote-include;
-- `EXTRAFLAGS += -Wno-strict-prototypes` (doom builds only) absorbs the vintage
-  K&R `()` prototypes that QMK's forced `-Wstrict-prototypes` would reject.
+  can't change); `engine/src/config.h` stands in for the CMake-generated one;
+- the full upstream compile-definition set lives in
+  `engine/src/doom_tiny_defs.h`, force-included via `EXTRAFLAGS -include`
+  (several engine files test feature guards before their first `#include`,
+  which upstream covers with command-line defines);
+- every source edit against upstream is marked `POLYKYBD_QMK` — grep for the
+  full delta (currently: i_system.h pico_sync semaphores only);
+- `-Wno-error=` demotions in `../rules.mk` absorb the vintage-code warning
+  classes (format/discarded-qualifiers/maybe-uninitialized/cpp) that QMK's
+  `-Werror` would fatalize; they stay visible as warnings.
 
 ## Next milestones (from the study's effort table)
 
-1. **Engine port** (the long pole), continue slice-by-slice: z_zone on the
-   borrowed pool, w_wad on the XIP-mapped WHX, an i_system/i_timer shim over
-   QMK, then the renderer with the keycap blitter as its video backend.
+1. **Port `pd_render.cpp`** (the last unresolved engine piece) and root
+   `D_DoomMain`: at that point every missing symbol is a real integration
+   decision, not a compile problem. Then wire input (`doom_process_record`
+   → `D_PostEvent`) and video (`I_VideoBuffer`/pd output → `doom_blit`).
    `doom1.whx` (1,800,344 B) is refetchable — see `engine/PROVENANCE.md`.
 2. Keycap blitter as the engine's video backend + status-OLED HUD.
 3. `doomwad` staging slot at flash `0x600000` (reuse the FONTPACK

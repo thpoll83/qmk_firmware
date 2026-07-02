@@ -32,6 +32,12 @@ void doom_tick(void);
 // silently (replying would inject stale reports into the host's read stream).
 bool doom_hid_frozen(uint8_t cmd);
 
+// Arena layout inside the borrowed overlay pool (see DOOM_FEASIBILITY.md,
+// "Game-mode RAM budget"). Valid only while game mode is active — the shim's
+// I_ZoneBase hands the zone region to the engine's Z_Init.
+uint8_t *doom_arena_framebuffer(void);   // 320x200 8bpp frame, DOOM_FB_SIZE bytes
+uint8_t *doom_arena_zone(int *size);     // the rest of the pool (engine zone memory)
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }

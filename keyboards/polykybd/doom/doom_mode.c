@@ -42,6 +42,23 @@ bool doom_mode_active(void) {
     return s_active;
 }
 
+// The pool is NUM_OVERLAYS*NUM_VARIATIONS overlay rows of 360 B = 226,800 B
+// (base/overlay.c). Game-mode layout: framebuffer first, zone memory after.
+#define DOOM_POOL_SIZE (NUM_OVERLAYS * NUM_VARIATIONS * (72 * 40 / 8))
+_Static_assert(DOOM_POOL_SIZE >= DOOM_FB_SIZE + 128 * 1024,
+               "overlay pool too small for framebuffer + a viable zone");
+
+uint8_t *doom_arena_framebuffer(void) {
+    return s_fb;
+}
+
+uint8_t *doom_arena_zone(int *size) {
+    if (size) {
+        *size = DOOM_POOL_SIZE - DOOM_FB_SIZE;
+    }
+    return s_fb ? s_fb + DOOM_FB_SIZE : NULL;
+}
+
 static void doom_enter(void) {
     // Never take the pool while the fw/font-pack stager owns the split link and
     // flash — the two "exclusive" modes don't compose.

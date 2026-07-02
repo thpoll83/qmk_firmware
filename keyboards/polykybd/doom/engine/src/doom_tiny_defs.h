@@ -23,10 +23,14 @@
 // Marks every PolyKybd-port divergence inside engine sources — grep for it to
 // see the full delta vs upstream.
 #define POLYKYBD_QMK 1
-// Upstream gets this from the pico-sdk CMake build; QMK's vendored SDK subset
-// never defines it. We ARE on device — without this the engine takes its
-// host/SDL paths.
+// Upstream gets these from the pico-sdk CMake build; QMK's vendored SDK subset
+// never defines them. We ARE a pico-sdk device target — without them the engine
+// takes its host/SDL paths. panic() comes from QMK's pico_sdk_shims.c.
+#define PICO_BUILD 1
 #define PICO_ON_DEVICE 1
+// No binary_info metadata in the QMK image (bi_decl() collapses to a no-op —
+// the header still needs to be on the include path).
+#define PICO_NO_BINARY_INFO 1
 
 #define PICO_HEAP_SIZE 0
 #define USE_ZONE_FOR_MALLOC 1
@@ -117,6 +121,12 @@
 #define NO_RDRAW 1
 
 #define NO_USE_NET 1
+// Keep upstream's piconet layer selected (the doom_tiny device build always
+// has it; NO_USE_NET without it is an untested combination that doesn't even
+// compile in d_loop.c). We do NOT compile upstream's pico-I2C piconet.c —
+// piconet.h is the seam the split-UART lockstep tic transport (the study's
+// USER_SYNC_DOOM_TIC) will implement instead.
+#define USE_PICO_NET 1
 
 #define SAVE_COMPRESSED 1
 #define LOAD_COMPRESSED 1

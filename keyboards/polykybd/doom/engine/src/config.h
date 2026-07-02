@@ -14,3 +14,8 @@
 /* no libsamplerate, libpng, dirent, mmap on the keyboard */
 #define HAVE_DECL_STRCASECMP 1
 #define HAVE_DECL_STRNCASECMP 1
+
+/* The full rp2040-doom "doom_tiny" compile-definition set — upstream passes it
+ * on the compiler command line per CMake target; we scope it to engine files by
+ * riding this config.h (pulled in early by every engine unit via doomtype.h). */
+#include "doom_tiny_defs.h"

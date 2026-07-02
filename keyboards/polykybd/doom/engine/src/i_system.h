@@ -67,8 +67,14 @@ void I_Error (const char *error, ...) NORETURN PRINTF_ATTR(1, 2);
 #endif
 
 #if DOOM_TINY
+#if POLYKYBD_QMK
+// PolyKybd port: the render/display frame handoff is owned by the firmware
+// (core1 FIFO + keycap blitter), not pico_sync semaphores — QMK's ChibiOS
+// build has no pico_time/pico_sync runtime.
+#else
 #include "pico/sem.h"
 extern semaphore_t render_frame_ready, display_frame_freed;
+#endif
 #endif
 
 void I_Tactile (int on, int off, int total);

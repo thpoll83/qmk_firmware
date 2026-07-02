@@ -53,6 +53,11 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     # upstream CMake one) wins inside engine files via same-directory resolution.
     CFLAGS += -Ikeyboards/polykybd/doom/engine/src \
               -Ikeyboards/polykybd/doom/engine/src/doom
+    # DOOM_TINY's i_system.h uses pico-sdk semaphores for the core0/core1 frame
+    # handoff; the QMK RP2040 platform doesn't expose pico_sync headers by
+    # default. Headers only — if/when the sem_* calls survive to link, the
+    # pico_sync sources get added (or the handoff is rewired to our core1 FIFO).
+    CFLAGS += -Ilib/pico-sdk/src/common/pico_sync/include
     # The vintage id headers use K&R `()` prototypes (d_think.h actionf_v,
     # d_loop.h). QMK's common_rules.mk force-enables -Wstrict-prototypes AFTER
     # keyboard CFLAGS, but EXTRAFLAGS lands last on the compile line, so this

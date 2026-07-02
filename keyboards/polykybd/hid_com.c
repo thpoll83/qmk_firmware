@@ -89,6 +89,14 @@ static inline void hid_reply(uint8_t *data, uint8_t cmd, bool ok) {
     data[2] = ok ? '.' : '!';
 }
 
+// Bytes of report payload actually present at &data[header] (header = the count of
+// bytes before the payload, e.g. report-id + command + sub-fields). Centralises the
+// "clamp a host length/size to what the fixed-size report holds" arithmetic so the
+// bounds checks below can't drift into off-by-ones (SECURITY: FW-3 / FW-5 / FW-7).
+static inline uint16_t hid_payload_avail(uint8_t length, uint8_t header) {
+    return length > header ? (uint16_t)(length - header) : 0;
+}
+
 bool legacy_command_kb(uint8_t *data, uint8_t length) {
     uint8_t *command_id   = &(data[0]);
     uint8_t *command_data = &(data[1]);
@@ -111,7 +119,7 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
             // over-reads the report buffer (and, once this report is bridged verbatim,
             // the slave's copy). Clamp to the bytes actually present and write the
             // clamped value back so the bridged report carries the safe size too.
-            uint16_t avail = (length > 4) ? (uint16_t)(length - 4) : 0;
+            uint16_t avail = hid_payload_avail(length, 4);
             if (size > avail) { size = avail; command_data[2] = (uint8_t)size; }
             uprintf("Set dynamic buffer offset: %u, size: %u\n", offset, size);
             dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
@@ -129,7 +137,7 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
             // SECURITY (FW-3): clamp the host `size` to the report space at
             // &command_data[3]. dynamic_keymap_get_buffer writes `size` bytes there with
             // no destination bound, so an unclamped 0..255 overruns the report buffer.
-            uint16_t avail = (length > 4) ? (uint16_t)(length - 4) : 0;
+            uint16_t avail = hid_payload_avail(length, 4);
             if (size > avail) size = avail;
             uprintf("Get dynamic buffer offset: %u, size: %u\n", offset, size);
             dynamic_keymap_get_buffer(offset, size, &command_data[3]);
@@ -415,7 +423,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         // zero-padded local so the copy stays in bounds (the byte that
                         // can't fit in the report reads as 0 instead of OOB garbage).
                         uint8_t off   = HID_DATA_IDX + 3;
-                        uint8_t avail = (length > off) ? (uint8_t)(length - off) : 0;
+                        uint8_t avail = (uint8_t)hid_payload_avail(length, off);
                         if (avail > BYTES_PER_SEGMENT) avail = BYTES_PER_SEGMENT;
                         uint8_t seg[BYTES_PER_SEGMENT];
                         memset(seg, 0, sizeof(seg));

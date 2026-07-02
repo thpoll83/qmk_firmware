@@ -246,10 +246,14 @@ poly_glyph_script` in `state.h` (`GLYPH_STD=0`, `GLYPH_TENGWAR=1`, append-only).
 - **Render hook — one choke point in `render_key()`** (`poly_keymap.c`): right after
   `local_state` is fetched, when `glyph_script != GLYPH_STD` and the key is a plain
   letter/digit on the normal layer (not the `_ADDLANG1` latin-variation layer), it
-  draws the override glyph centered and returns. Overlays, shift/AltGr previews and
-  OS-hints (`keycode_to_disp_overlay`) are separate paths — untouched. It **falls
-  through to the normal legend** when the glyph isn't in `g_all_fonts` (i.e. the
-  `fantasy` bundle isn't flashed), so a pack-less keyboard shows Latin, never blanks.
+  draws the override glyph centered and **returns**, so it replaces the *whole* base
+  legend — including the unshifted view's shift-preview (Tengwar is caseless, so the
+  shift preview is deliberately dropped). Overlays and OS-hints
+  (`keycode_to_disp_overlay`) are drawn on **separate paths** (`update_displays` /
+  overlay memory) and are genuinely untouched. Two fall-throughs to the real legend:
+  when an **AltGr** key is held (`mods & MOD_RALT` — the AltGr symbol is a different
+  character, not a cased letter, so it wins), and when the glyph isn't in `g_all_fonts`
+  (the `fantasy` bundle isn't flashed), so a pack-less keyboard shows Latin, never blanks.
 - **Codepoints are relocated, NOT native.** The `flags` bundle already occupies the
   CSUR PUA `0xE000+`, so raw tengwar codepoints would render a language flag. The
   `fantasy` bundle's font is emitted (fontconvert sequence `-F` remap, `fonts.yaml`)

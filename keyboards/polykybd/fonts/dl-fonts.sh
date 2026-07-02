@@ -100,7 +100,7 @@ fetch "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoC
 # (Lord-of-the-Rings tengwar). Glyphs are on the CSUR Private-Use block; the
 # generator relocates them to a private range via the sequence -F remap. There is
 # no Noto Tengwar font, so this is sourced from its upstream OFL repository.
-fetch "https://raw.githubusercontent.com/Tosche/Alcarin-Tengwar/master/Fonts%20Static/AlcarinTengwar-Regular.otf" \
+fetch "https://raw.githubusercontent.com/Tosche/Alcarin-Tengwar/main/Fonts%20Static/AlcarinTengwar-Regular.otf" \
       "tengwar/AlcarinTengwar-Regular.otf"
 
 echo "Done."

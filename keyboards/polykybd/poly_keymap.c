@@ -1141,29 +1141,34 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     // nothing here), and on Android the Search key is not a window manager.
     const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
     const bool apple = (active_os == POLY_OS_MACOS);
-    const bool shift = (local_mods & MOD_MASK_SHIFT) != 0;
+    // Collapse left/right modifier sides into one logical set (bit0 Ctrl, bit1 Shift,
+    // bit2 Alt, bit3 GUI — the MOD_L* bit values) so every hint below matches the EXACT
+    // set of modifiers held. Extra modifiers now disqualify a chord instead of leaking a
+    // subset match (Win+Ctrl+Shift+X no longer shows the Win+Ctrl+X hint, Win+Ctrl+C no
+    // longer falls through to plain Ctrl+C, etc.). Side (L/R) is intentionally ignored.
+    const uint8_t mods_now = (uint8_t)((local_mods | (local_mods >> 4)) & 0x0F);
     if (apple) {
-        // macOS: editing lives on Cmd (GUI). Multi-modifier mac chords first.
-        const bool cmd  = (local_mods & MOD_MASK_GUI) != 0;
-        const bool ctrl = (local_mods & MOD_MASK_CTRL) != 0;
-        // Word nav on macOS is Option(Alt)+arrows (line nav is Cmd+arrows, below),
-        // so they live on different modifiers and never collide. Guard on !cmd so a
-        // Cmd+Option chord falls through to the Cmd (line-nav) switch instead.
-        if ((local_mods & MOD_MASK_ALT) != 0 && !cmd) {
-            switch(keycode) {
-                case KC_LEFT:  return U"    " ICON_WORD_LEFT;
-                case KC_RIGHT: return U"    " ICON_WORD_RIGHT;
-                default: break;
-            }
-        }
-        if (cmd && ctrl) {
+        // macOS: editing lives on Cmd (GUI). Each block is an exact modifier set.
+        if (mods_now == (MOD_LGUI | MOD_LCTL)) {
             switch(keycode) {
                 case KC_Q: return U"    " PRIVATE_LOCK;       // Ctrl+Cmd+Q = lock screen
                 case KC_F: return U"     " PRIVATE_MAXIMIZE;  // Ctrl+Cmd+F = fullscreen
                 default: break;
             }
-        }
-        if (cmd) {
+        } else if (mods_now == MOD_LALT) {
+            // Word nav on macOS is Option(Alt)+arrows (line nav is Cmd+arrows, below).
+            switch(keycode) {
+                case KC_LEFT:  return U"    " ICON_WORD_LEFT;
+                case KC_RIGHT: return U"    " ICON_WORD_RIGHT;
+                default: break;
+            }
+        } else if (mods_now == (MOD_LGUI | MOD_LSFT)) {
+            // Cmd+Shift+Z = redo (mac has no Cmd+Y redo).
+            switch(keycode) {
+                case KC_Z: return U"      " ARROWS_REDO;
+                default: break;
+            }
+        } else if (mods_now == MOD_LGUI) {
             switch(keycode) {
                 case KC_A: return U"      " BOX_WITH_CHECK_MARK;
                 case KC_C: return U"     " CLIPBOARD_COPY;
@@ -1174,9 +1179,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 case KC_O: return U"\t" FILE_OPEN;
                 case KC_P: return U"\t" PRIVATE_PRINTER;
                 case KC_M: return U"     " PRIVATE_WINDOW;    // Cmd+M = minimize
-                // Cmd+Z = undo, Cmd+Shift+Z = redo (mac has no Cmd+Y redo, and
-                // Cmd+D is "duplicate" not delete — neither is shown).
-                case KC_Z: return shift ? U"      " ARROWS_REDO : U"      " ARROWS_UNDO;
+                case KC_Z: return U"      " ARROWS_UNDO;      // Cmd+Z = undo (Cmd+Shift+Z redo above)
                 // OS-aware shortcut hints (wave B). Tab uses the narrow ARROWS_TAB
                 // base legend, so 4 spaces clear it; Space gets 3.
                 case KC_TAB:   return U"    " ICON_APP_SWITCH;    // Cmd+Tab app switcher
@@ -1192,20 +1195,24 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     } else {
     // Windows / Linux / Android / undetected: editing on Ctrl, window-mgmt on GUI.
     // The two host-detected Linux desktops (GNOME/KDE) behave as Linux here, but a
-    // few Super-key hints differ between them — see the wm_held switch below.
+    // few Super-key hints differ between them — see the Super (GUI) switch below.
     const bool gnome = (active_os == POLY_OS_LINUX_GNOME);
     const bool win_or_unknown = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_UNKNOWN);
     const bool linux_any = (active_os == POLY_OS_LINUX
                             || active_os == POLY_OS_LINUX_GNOME
                             || active_os == POLY_OS_LINUX_KDE);
-    const bool wm_held = (win_or_unknown || linux_any)
-                      && (local_mods & MOD_MASK_GUI) != 0;
-    // Windows multi-modifier Super chords (wave D) take precedence over the Ctrl/Alt
-    // editing hints below — e.g. Win+Ctrl+D is "new virtual desktop", not Ctrl's
-    // "delete". Gated win_or_unknown only (no standard GNOME/KDE equivalent). A chord
-    // not matched here falls through to the normal Ctrl/Alt hint so existing
-    // behaviour (Win+Ctrl+C still previews copy, etc.) is unchanged.
-    if (wm_held && win_or_unknown && (local_mods & MOD_MASK_CTRL) != 0) {
+    const bool wm = (win_or_unknown || linux_any);   // OSes whose window-mgmt hangs off GUI/Super
+    // Windows multi-modifier Super chords (wave D), each on its EXACT modifier set. An
+    // unmatched key returns nothing (no fall-through to the Ctrl/Alt editing hints) —
+    // Win+Ctrl+C is a different chord from Ctrl+C, so it no longer previews "copy".
+    if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LCTL | MOD_LSFT)) {
+        switch(keycode) {
+            // Win+Ctrl+Shift+B restart graphics: monitor 🖵, then MOVE to the screen
+            // cavity and HALF-draw the reload 🗘 into it.
+            case KC_B: return U"    " ICON_GFX_RESTART HINT_MOVE(HINT_POS_SCREEN) HINT_HALF ICON_GFX_RELOAD;
+            default: break;
+        }
+    } else if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LCTL)) {
         switch(keycode) {
             // Virtual-desktop chords: a compact monitor glyph (ICON_DESKTOP_SMALL)
             // composed with +/←/→/x so the action reads next to the screen.
@@ -1214,18 +1221,24 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
             case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
             case KC_F:     return U"    " ICON_NET;                       // Win+Ctrl+F search network computers (🖧 pack glyph)
-            // Win+Ctrl+Shift+B restart graphics: monitor 🖵, then MOVE to the screen
-            // cavity and HALF-draw the reload 🗘 into it.
-            case KC_B:     if (shift) return U"    " ICON_GFX_RESTART HINT_MOVE(HINT_POS_SCREEN) HINT_HALF ICON_GFX_RELOAD; break;
+            case KC_V:     return U"   "  ICON_VOLUME_MIXER;              // Win+Ctrl+V volume mixer (🔊 pack glyph; mixer flyout on Win 11 24H2+)
+            case KC_N:     return U"    "  ICON_NARRATOR;                 // Win+Ctrl+N Narrator settings (👂 pack glyph)
+            case KC_Q:     return U"   "   ICON_QUICK_ASSIST;             // Win+Ctrl+Q Quick Assist (🤝 pack glyph)
+            case KC_S:     return U"   "   ICON_SPEECH_REC;               // Win+Ctrl+S Speech Recognition (🎤 pack glyph)
             default: break;
         }
-    } else if (wm_held && win_or_unknown && (local_mods & MOD_MASK_ALT) != 0) {
+    } else if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LALT)) {
         switch(keycode) {
             case KC_R: return U"   " ICON_SCREEN_RECORD;       // Win+Alt+R start/stop screen recording
             default: break;
         }
     }
-    if ((local_mods & MOD_MASK_CTRL) != 0) {
+    if (mods_now == (MOD_LCTL | MOD_LSFT)) {
+        switch(keycode) {
+            case KC_Z: return U"      " ARROWS_REDO;        // Ctrl+Shift+Z redo (Linux/cross-app)
+            default: break;
+        }
+    } else if (mods_now == MOD_LCTL) {
         switch(keycode) {
             case KC_A: return U"      " BOX_WITH_CHECK_MARK;
             case KC_C: return U"     " CLIPBOARD_COPY;
@@ -1236,23 +1249,26 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_S: return U"\t" PRIVATE_FLOPPY;
             case KC_O: return U"\t" FILE_OPEN;
             case KC_P: return U"\t" PRIVATE_PRINTER;
-            // Ctrl+Y = redo (Windows), Ctrl+Shift+Z = redo (Linux/cross-app);
-            // Ctrl+Z = undo.
-            case KC_Y: return U"      " ARROWS_REDO;
-            case KC_Z: return shift ? U"      " ARROWS_REDO : U"      " ARROWS_UNDO;
+            case KC_Y: return U"      " ARROWS_REDO;         // Ctrl+Y redo (Windows)
+            case KC_Z: return U"      " ARROWS_UNDO;         // Ctrl+Z undo (Ctrl+Shift+Z redo above)
             // OS-aware shortcut hints (wave B): word nav + close on Ctrl.
             case KC_LEFT:  return U"    " ICON_WORD_LEFT;   // Ctrl+Left  word left
             case KC_RIGHT: return U"    " ICON_WORD_RIGHT;  // Ctrl+Right word right
             case KC_W:     return U"    " ICON_CLOSE;       // Ctrl+W close
             default: break;
         }
-    } else if ((local_mods & MOD_MASK_ALT) != 0) {
+    } else if (mods_now == MOD_LALT) {
         switch(keycode) {
             case KC_TAB: return U"    " ICON_APP_SWITCH;    // Alt+Tab app switcher
             case KC_F4:  return U"    " ICON_CLOSE;         // Alt+F4 close
             default: break;
         }
-    } else if (wm_held) {
+    } else if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LSFT)) {
+        switch(keycode) {
+            case KC_S: return U"   " ICON_SNIP;             // Win+Shift+S Snipping Tool (region capture)
+            default: break;
+        }
+    } else if (wm && mods_now == MOD_LGUI) {
         switch(keycode) {
             case KC_D:
                 // Show desktop: Win+D and KDE Super+D. GNOME has no default
@@ -1269,12 +1285,12 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_TAB:
                 if (win_or_unknown || gnome) return U"    " ICON_WINDOW_SWITCH;
                 break;
-            // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses
-            // the Super overview and KDE a Super-tap / Alt+Space — neither binds
-            // Super+S — so show it only on Windows (and the unknown default).
-            // Win+Shift+S is the Snipping Tool (region capture) — shown via shift.
+            // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses the
+            // Super overview and KDE a Super-tap / Alt+Space — neither binds Super+S — so
+            // show it only on Windows (and the unknown default). Win+Shift+S (Snipping
+            // Tool) is handled in its own block above.
             case KC_S:
-                if (win_or_unknown) return shift ? U"   " ICON_SNIP : U"   " ICON_LAUNCHER;
+                if (win_or_unknown) return U"   " ICON_LAUNCHER;
                 break;
             // Windows-only Super-chords (wave C). These have no standard GNOME/KDE
             // equivalent, so they are gated on win_or_unknown only. Dictation (Win+H)
@@ -1331,7 +1347,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"      " ICON_ACCESSIBILITY;// Win+U Accessibility settings
                 break;
             case KC_B:
-                if (win_or_unknown) return U"   "   ICON_SYS_TRAY;      // Win+B focus system tray (speaker)
+                if (win_or_unknown) return U"   "   ICON_MAC_CONTROL;   // Win+B focus system tray (⌃ mac-control caret / show-hidden-icons chevron)
                 break;
             case KC_HOME:
                 if (win_or_unknown) return U"     " ICON_FOCUS_WINDOW;  // Win+Home minimize all but active
@@ -1361,6 +1377,19 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_MINS:
             case KC_KP_MINUS:
                 if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMOUT) U"-"; // Win + '-' zoom out
+                break;
+            // Wave E — more Windows-only Super chords.
+            case KC_Q:
+                if (win_or_unknown) return U"   "   ICON_TEXT_RECOG;   // Win+Q Click to Do — text recognition (🔤 pack glyph)
+                break;
+            case KC_G:
+                if (win_or_unknown) return U"   "   ICON_GAME_BAR;     // Win+G Xbox Game Bar (🎮 pack glyph)
+                break;
+            case KC_F:
+                if (win_or_unknown) return U"   "   ICON_FEEDBACK;     // Win+F Feedback Hub (📣 pack glyph)
+                break;
+            case KC_C:
+                if (win_or_unknown) return U"   "   ICON_COPILOT;      // Win+C Copilot (🤖 pack glyph)
                 break;
             default: break;
         }

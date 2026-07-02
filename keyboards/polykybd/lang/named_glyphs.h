@@ -1989,12 +1989,12 @@
 //   🖵+ new desktop (Win+Ctrl+D)        ←🖵 / 🖵→ switch desktop (Win+Ctrl+←/→)
 //   🖵x close desktop (Win+Ctrl+F4)     📽 GIF panel (Win+;)
 //   📸 Snipping Tool (Win+Shift+S)      📹 screen recording (Win+Alt+R)
-//   🔊 system tray (Win+B)
+//   ⌃ system tray (Win+B, mac-control caret)
 //   🖵🗘 restart graphics (Win+Ctrl+Shift+B)  🎛 System Properties (Win+Pause)
 //   🔍+ / 🔍− Magnifier (Win + +/−)     📷 screenshot (Win+PrtScn)
-//   🖧 search network computers (Win+Ctrl+F)
+//   🖧 search network computers (Win+Ctrl+F)  🔊 volume mixer (Win+Ctrl+V)
 #define ICON_LIGHTNING              	U"\x26A1"   // Win+A action center / quick settings
-#define ICON_SYS_TRAY               	U"\x1F50A"  // Win+B focus system tray (speaker)
+// (ICON_SYS_TRAY retired — Win+B now uses ICON_MAC_CONTROL; the 🔊 speaker moved to Win+Ctrl+V's ICON_VOLUME_MIXER)
 #define ICON_EXPLORER               	U"\x9C"     // Win+E (resident folder pixmap, gfx_icons.h)
 #define ICON_ACCESSIBILITY          	U"\x267F"
 #define ICON_FOCUS_WINDOW           	U"\x2752"   // Win+Home minimize all but active (shadowed window)
@@ -2009,3 +2009,11 @@
 #define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); a base-font +/- is MOVE-positioned into the lens by the hint string
 #define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
 #define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)
+#define ICON_VOLUME_MIXER           	U"\x1F50A"  // Win+Ctrl+V volume mixer 🔊 (loudspeaker, emoji font pack; opens the mixer flyout on Win 11 24H2+)
+#define ICON_GAME_BAR               	U"\x1F3AE"  // Win+G Xbox Game Bar (🎮 controller, emoji font pack)
+#define ICON_FEEDBACK               	U"\x1F4E3"  // Win+F Feedback Hub (📣 megaphone, emoji font pack)
+#define ICON_COPILOT                	U"\x1F916"  // Win+C Copilot (🤖 robot, emoji font pack)
+#define ICON_NARRATOR               	U"\x1F442"  // Win+Ctrl+N Narrator settings (👂 ear = reads aloud, emoji font pack)
+#define ICON_QUICK_ASSIST           	U"\x1F91D"  // Win+Ctrl+Q Quick Assist (🤝 handshake, emoji font pack)
+#define ICON_SPEECH_REC             	U"\x1F3A4"  // Win+Ctrl+S Speech Recognition (🎤 microphone, emoji font pack)
+#define ICON_TEXT_RECOG             	U"\x1F524"  // Win+Q Click to Do — recognise/select text incl. from images (🔤 letters, emoji font pack)

@@ -24,6 +24,11 @@ static uint8_t g_user_brightness = FULL_BRIGHT;
 // Active idle (anti-burn-in) display style — persisted alongside lang+brightness.
 static uint8_t g_idle_style = IDLE_STYLE_PULSE;
 
+// Active glyph-script override (enum poly_glyph_script). Persisted at the tail of
+// poly_eeconf_t (its own byte, like os_state) and flushed via g_glyph_dirty.
+static uint8_t g_glyph_script = GLYPH_STD;
+static bool    g_glyph_dirty  = false;
+
 // Host-driven (daylight/auto) brightness mode. While engaged, the keyboard
 // applies the host's VOLATILE brightness updates and restores to the last auto
 // value after idle/wake — but that value is NEVER persisted to EEPROM. Any
@@ -228,6 +233,9 @@ poly_eeconf_t load_user_eeconf(void) {
     if(ee.idle_style >= IDLE_STYLE_COUNT) {
         ee.idle_style = IDLE_STYLE_PULSE;   // unwritten/garbage EEPROM -> safe default
     }
+    if(ee.glyph_script >= GLYPH_SCRIPT_COUNT) {
+        ee.glyph_script = GLYPH_STD;        // uninitialised (pre-v9) EEPROM byte -> normal legends
+    }
     return ee;
 }
 
@@ -384,6 +392,27 @@ void note_idle_style(uint8_t style) {
     g_idle_style = (style < IDLE_STYLE_COUNT) ? style : IDLE_STYLE_PULSE;
 }
 
+// The active glyph-script override (GLYPH_STD = normal language legends).
+uint8_t get_glyph_script(void) {
+    return g_glyph_script;
+}
+
+// Sets the glyph script and marks it dirty (flushed at the next suspend / store).
+// Out-of-range values are ignored. The awake re-render is driven from housekeeping
+// (the master syncs glyph_script + calls request_disp_refresh on change).
+void set_glyph_script(uint8_t script) {
+    if (script >= GLYPH_SCRIPT_COUNT || script == g_glyph_script) {
+        return;   // out-of-range or no-op: don't mark dirty / churn the split sync
+    }
+    g_glyph_script = script;
+    g_glyph_dirty  = true;
+}
+
+// Records the glyph script without marking dirty (boot-time EEPROM load).
+void note_glyph_script(uint8_t script) {
+    g_glyph_script = (script < GLYPH_SCRIPT_COUNT) ? script : GLYPH_STD;
+}
+
 // ---- Active host-OS (enum poly_os) ----
 
 // The OS in effect: the manual pin while pinned, else the last resolved OS in auto
@@ -474,6 +503,14 @@ static void save_user_os(void) {
     eeconfig_update_user_datablock(&packed, offsetof(poly_eeconf_t, os_state), sizeof(packed));
 }
 
+// Writes the single glyph_script byte to EEPROM. Separate from save_user_settings()
+// because glyph_script sits at the tail of poly_eeconf_t, not in the contiguous
+// lang/brightness/idle/auto settings block.
+static void save_user_glyph_script(void) {
+    eeconfig_update_user_datablock(&g_glyph_script, offsetof(poly_eeconf_t, glyph_script),
+                                   sizeof(g_glyph_script));
+}
+
 // Defers a default-layer EEPROM write — safe to call from split sync handlers.
 // The actual write happens at the next flush (save_all_dirty).
 void defer_default_layer_save(layer_state_t def_layer) {
@@ -495,6 +532,7 @@ void mark_latin_dirty(void) {
 void save_all_dirty(void) {
     if (g_brightness_dirty) { save_user_settings(); g_brightness_dirty = false; }
     if (g_os_dirty)         { save_user_os();       g_os_dirty = false; }
+    if (g_glyph_dirty)      { save_user_glyph_script(); g_glyph_dirty = false; }
     if (g_latin_dirty)      { save_user_latin();    g_latin_dirty = false; }
     if (g_def_layer_dirty)  { eeconfig_update_default_layer(g_def_layer_pending); g_def_layer_dirty = false; }
     save_user_mru_if_dirty();

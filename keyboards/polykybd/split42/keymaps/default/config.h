@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #define ENABLE_COMPILE_KEYCODE
 
-#define EECONFIG_USER_DATA_SIZE 64
+#define EECONFIG_USER_DATA_SIZE 65   // +1 for poly_eeconf_t.glyph_script (within POLY_EECONFIG_USER_RESERVED=128, no keymap relocation)
 
 #define USB_VBUS_PIN GP24
 

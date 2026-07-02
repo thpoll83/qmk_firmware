@@ -7,7 +7,7 @@
 #define FONTPACK_DIR_OFFSET     0x0UL
 #define FONTPACK_DIR_SIZE       0x1000UL
 #define FONTPACK_SECTOR_SIZE    0x1000UL
-#define FONTPACK_BUNDLE_COUNT   6u
+#define FONTPACK_BUNDLE_COUNT   7u
 
 // X(id, index, slot_offset, slot_size)
 #define FONTPACK_BUNDLE_LIST \
@@ -16,5 +16,6 @@
     X(syllabic, 2, 0x31000UL, 0x18000UL) \
     X(asia, 3, 0x49000UL, 0x20000UL) \
     X(flags, 4, 0x69000UL, 0x20000UL) \
-    X(emoji, 5, 0x89000UL, 0x177000UL)
+    X(emoji, 5, 0x89000UL, 0xC0000UL) \
+    X(fantasy, 6, 0x149000UL, 0xB7000UL)
 

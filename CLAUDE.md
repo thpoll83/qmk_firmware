@@ -103,7 +103,15 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   (cmd 6) reply — AFTER the NUL-terminated id string: `['V'][count][u16 little-endian
   content_version × count]` in bundle-slot order. The host reads it to flash only the
   font-pack bundles the keyboard is missing/behind on (no extra query); older hosts
-  stop at the NUL and ignore it. See "Font pack" below. **Bump `FW_VERSION` +
+  stop at the NUL and ignore it. See "Font pack" below. **v9** added
+  `GET/SET_GLYPH_SCRIPT` (cmd `30` / `0x1e`): a glyph-script **override** that swaps
+  the language-layer letter/digit legends for an alternative script (`0` = standard/off,
+  `1` = Tengwar), leaving overlays and OS-hints untouched. `0xFF` queries (reply byte =
+  current script), else sets it; out-of-range NACKs. Persisted in
+  `poly_eeconf_t.glyph_script`, synced via `poly_sync_t.glyph_script`. The Tengwar
+  glyphs ship in a new **`fantasy`** font-pack bundle (the host flashes it on connect);
+  with no bundle the override falls back to Latin. See "Glyph-script override" below.
+  **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep** — the host connect gate is exact-match.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
@@ -226,6 +234,40 @@ pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
   A "Matrix-style" idle animation was considered but shelved — it defeats the
   "glance at the dimmed legend and resume typing" hint the pulse preserves; jitter
   was chosen as the default-preserving, legibility-preserving fix.
+
+### Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+)
+An OS-independent **override** of the language-layer legends with an alternative
+script (fantasy / retro). State: `poly_eeconf_t.glyph_script` (persisted, appended
+tail byte like `os_state`; `EECONFIG_USER_DATA_SIZE` grew 64→65, still ≤ the 128-byte
+`POLY_EECONFIG_USER_RESERVED` so **no keymap relocation / user reset**) +
+`poly_sync_t.glyph_script` (master-authoritative, synced like `active_os`;
+`housekeeping_task_user()` sets it and `request_disp_refresh()`s on change). `enum
+poly_glyph_script` in `state.h` (`GLYPH_STD=0`, `GLYPH_TENGWAR=1`, append-only).
+- **Render hook — one choke point in `render_key()`** (`poly_keymap.c`): right after
+  `local_state` is fetched, when `glyph_script != GLYPH_STD` and the key is a plain
+  letter/digit on the normal layer (not the `_ADDLANG1` latin-variation layer), it
+  draws the override glyph centered and **returns**, so it replaces the *whole* base
+  legend — including the unshifted view's shift-preview (Tengwar is caseless, so the
+  shift preview is deliberately dropped). Overlays and OS-hints
+  (`keycode_to_disp_overlay`) are drawn on **separate paths** (`update_displays` /
+  overlay memory) and are genuinely untouched. Two fall-throughs to the real legend:
+  when an **AltGr** key is held (`mods & MOD_RALT` — the AltGr symbol is a different
+  character, not a cased letter, so it wins), and when the glyph isn't in `g_all_fonts`
+  (the `fantasy` bundle isn't flashed), so a pack-less keyboard shows Latin, never blanks.
+- **Codepoints are relocated, NOT native.** The `flags` bundle already occupies the
+  CSUR PUA `0xE000+`, so raw tengwar codepoints would render a language flag. The
+  `fantasy` bundle's font is emitted (fontconvert sequence `-F` remap, `fonts.yaml`)
+  into a private dense range **`0xE800..0xE823`** (letters `a..z` → `0xE800+`, digits
+  `1..0` → `0xE81A+`); `glyph_script_codepoint()` maps `KC_*` → that range. The
+  CSUR-tengwa-per-key choice (Dan Smith QWERTY-column convention) lives only in the
+  font's generation sequence, so the firmware just needs the dense index.
+- **Font**: Alcarin Tengwar (OFL 1.1) — there is **no Noto Tengwar**. Keep shipped
+  user-facing strings generic ("Fantasy" / "Tengwar"), not "Lord of the Rings"/
+  "Tolkien" (Tolkien-Estate trademark caveat applies to any tengwar in a sold product;
+  the OFL font itself is fine to embed). Host: HID cmd 30 in `PolyKybd.get/set_glyph_script`,
+  tray "Glyph Script" submenu + a "Reset glyph script to Standard" button in the
+  settings dialog; `polyctl glyph-script [standard|tengwar]`. Rig: `test_glyph_script_round_trip`
+  (`min_protocol: 9`).
 
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.

@@ -779,6 +779,30 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     raw_hid_send(data, length);
                 }
                 break;
+            case 30: //get/set glyph-script override (protocol v9+)
+                {
+                    // data[HID_DATA_IDX] == 0xFF -> query (reply current script in data[3]).
+                    // Otherwise set the script (0 = standard/off, 1 = Tengwar, ...); the
+                    // override replaces the language-layer letter/digit legends only and
+                    // is persisted at the next EEPROM flush (suspend / store key). The
+                    // awake re-render + slave sync are driven from housekeeping.
+                    uint8_t arg = data[HID_DATA_IDX];
+                    memset(data, 0, length);
+                    if (arg == 0xFF) {
+                        hid_reply(data, 0x1e, true);
+                        data[3] = get_glyph_script();
+                    } else if (arg < GLYPH_SCRIPT_COUNT) {
+                        set_glyph_script(arg);
+                        hid_reply(data, 0x1e, true);
+                        data[3] = arg;
+                        uprintf("Set glyph script to %u.\n", arg);
+                    } else {
+                        hid_reply(data, 0x1e, false);
+                        uprintf("Refused glyph script %u.\n", arg);
+                    }
+                    raw_hid_send(data, length);
+                }
+                break;
             default:
                 if (hid_fw_up_receive(data, length)) {
                     break;

@@ -96,4 +96,11 @@ fetch "$BASE/notosanscherokee/NotoSansCherokee%5Bwght%5D.ttf" \
 fetch "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf" \
       "Noto_CEmoji/NotoColorEmoji-Regular.ttf"
 
+# Alcarin Tengwar (OFL 1.1) — the "fantasy" font-pack bundle's alternative script
+# (Lord-of-the-Rings tengwar). Glyphs are on the CSUR Private-Use block; the
+# generator relocates them to a private range via the sequence -F remap. There is
+# no Noto Tengwar font, so this is sourced from its upstream OFL repository.
+fetch "https://raw.githubusercontent.com/Tosche/Alcarin-Tengwar/main/Fonts%20Static/AlcarinTengwar-Regular.otf" \
+      "tengwar/AlcarinTengwar-Regular.otf"
+
 echo "Done."

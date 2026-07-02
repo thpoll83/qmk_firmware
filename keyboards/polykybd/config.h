@@ -94,7 +94,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.9.22"
+#define FW_VERSION "0.9.23"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -126,7 +126,14 @@
 //     Adds display-only shortcut-hint glyphs (word-nav, launcher, app/window switch,
 //     close) to the symbol font-pack bundle (content_version bumped). No new command;
 //     the host must match v8 to connect (exact-match gate) and reflash the bundle.
-#define PROTOCOL_VERSION 8
+// v9: adds GET/SET_GLYPH_SCRIPT (cmd 30 / 0x1e) — a glyph-script OVERRIDE that
+//     replaces the language-layer letter/digit legends with an alternative script
+//     (0 = standard/off, 1 = Tengwar), leaving overlays and OS-hints untouched.
+//     0xFF queries (reply byte = current script), else sets it; out-of-range NACKs.
+//     Persisted in poly_eeconf_t.glyph_script; synced to the slave via poly_sync_t.
+//     The Tengwar glyphs ship in a new "fantasy" font-pack bundle, which the host
+//     flashes on connect. Host must match v9 to connect (exact-match gate).
+#define PROTOCOL_VERSION 9
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

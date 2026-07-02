@@ -4,7 +4,7 @@
   "region_size": 2097152,
   "dir_offset": 0,
   "dir_size": 4096,
-  "bundle_count": 6,
+  "bundle_count": 7,
   "bundles": [
     {
       "id": "symbol",
@@ -342,7 +342,7 @@
       "id": "emoji",
       "index": 5,
       "slot_offset": 561152,
-      "slot_size": 1536000,
+      "slot_size": 786432,
       "total_size": 227460,
       "font_count": 77,
       "fonts": [
@@ -807,6 +807,22 @@
           "symbol": "NotoEmoji_Medium_Emojis1_20pt16b",
           "first": 128064,
           "last": 128177
+        }
+      ]
+    },
+    {
+      "id": "fantasy",
+      "index": 6,
+      "slot_offset": 1347584,
+      "slot_size": 749568,
+      "total_size": 3840,
+      "font_count": 1,
+      "fonts": [
+        {
+          "all_fonts_index": 147,
+          "symbol": "AlcarinTengwar_Regular_Tengwar_20pt7b",
+          "first": 59392,
+          "last": 59427
         }
       ]
     }

@@ -58,11 +58,27 @@ Without `POLYKYBD_DOOM=yes` nothing here is compiled and every hook in
   display slots (bounds-guarded); the demo targets split72.
 - RGB matrix / trackpad untouched; damage-flash repurposing comes later.
 
+## Engine integration state
+
+The rp2040-doom snapshot (`f1f43171`) is vendored under [`engine/`](engine/PROVENANCE.md)
+and a **first slice already compiles inside the QMK build** (see the
+`POLYKYBD_DOOM` block in `../rules.mk`): tables, fixed-point math, bbox,
+cheats, RNG, doomdef/doomstat/dstrings/d_items/sounds — 11 units, pulling the
+core header graph (doomstat/d_player/info/p_pspr/d_loop) through QMK's
+flag/include environment. Port conventions established there:
+
+- engine include dirs are appended **last** in `CFLAGS` (existing resolution
+  can't change); `engine/src/config.h` is our stand-in for the CMake-generated
+  one and wins inside engine files by same-directory quote-include;
+- `EXTRAFLAGS += -Wno-strict-prototypes` (doom builds only) absorbs the vintage
+  K&R `()` prototypes that QMK's forced `-Wstrict-prototypes` would reject.
+
 ## Next milestones (from the study's effort table)
 
-1. **Engine port** (the long pole): port rp2040-doom's core out of
-   pico-sdk/CMake into this build — sources mirrored at `~/rp2040-doom`
-   (branch `rp2040`), `doom1.whx` (1,800,344 B) bundled there.
+1. **Engine port** (the long pole), continue slice-by-slice: z_zone on the
+   borrowed pool, w_wad on the XIP-mapped WHX, an i_system/i_timer shim over
+   QMK, then the renderer with the keycap blitter as its video backend.
+   `doom1.whx` (1,800,344 B) is refetchable — see `engine/PROVENANCE.md`.
 2. Keycap blitter as the engine's video backend + status-OLED HUD.
 3. `doomwad` staging slot at flash `0x600000` (reuse the FONTPACK
    `BEGIN/CHUNK/COMMIT` flow) + `polyctl doom install`.

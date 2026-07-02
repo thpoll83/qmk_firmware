@@ -42,4 +42,31 @@ endif
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     OPT_DEFS += -DPOLYKYBD_DOOM
     SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c
+    # First engine slice from the vendored rp2040-doom snapshot (doom/engine/):
+    # pure math/data units with no platform backend, compiled as-is to prove the
+    # engine sources build inside QMK's flag/include environment.
+    # The engine include dirs are appended LAST, so every existing include keeps
+    # resolving exactly as before (first -I hit wins — QMK code still finds
+    # keyboards/polykybd/config.h first); only the engine's cross-directory
+    # includes (src/doom -> src, e.g. "doomtype.h") resolve through these. The
+    # engine's own config.h (engine/src/config.h, our generated stand-in for the
+    # upstream CMake one) wins inside engine files via same-directory resolution.
+    CFLAGS += -Ikeyboards/polykybd/doom/engine/src \
+              -Ikeyboards/polykybd/doom/engine/src/doom
+    # The vintage id headers use K&R `()` prototypes (d_think.h actionf_v,
+    # d_loop.h). QMK's common_rules.mk force-enables -Wstrict-prototypes AFTER
+    # keyboard CFLAGS, but EXTRAFLAGS lands last on the compile line, so this
+    # wins. Doom dev builds only — normal builds keep the strict warning.
+    EXTRAFLAGS += -Wno-strict-prototypes
+    SRC += doom/engine/src/tables.c \
+           doom/engine/src/m_bbox.c \
+           doom/engine/src/m_fixed.c \
+           doom/engine/src/d_mode.c \
+           doom/engine/src/m_cheat.c \
+           doom/engine/src/doom/m_random.c \
+           doom/engine/src/doom/doomdef.c \
+           doom/engine/src/doom/doomstat.c \
+           doom/engine/src/doom/dstrings.c \
+           doom/engine/src/doom/d_items.c \
+           doom/engine/src/doom/sounds.c
 endif

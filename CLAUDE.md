@@ -354,6 +354,15 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     the others. `cmp` each regenerated `.plyf` against the shipped one to see which
     actually changed, and bump+reship only those (see the gidx note above re: why
     appending a glyph now changes only the edited bundle).
+    - **Bump `content_version` MINIMALLY (+1 over the shipped value), don't jump.**
+      No font-pack bundle has ever been deployed to a device, so the version only
+      needs to exceed what a device already has (0 / nothing) — any increment works,
+      and a small, monotonic step keeps the diff-vs-base readable and the host's
+      `decide_stale_bundles` comparison obvious. Don't ratchet a version up across
+      iterations (e.g. 4→7→8 while tuning); land the reship at base+1 (symbol 4→5,
+      2026-07). ⚠️ The value lives in the `.plyf` header *and* `bundles.json` — they
+      must match, so changing it means regenerating the `.plyf` with the new
+      `--bundle-version`, not just editing the JSON.
   - **Flash UX (split72):** while any flash runs the status OLED shows an "Updating
     fonts/firmware — do not unplug" screen with a full-width progress bar, and the RGB
     matrix breathes (cyan = font pack, orange = firmware/bootloader = "can't type");
@@ -409,14 +418,28 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     intervening `0xA0/0xA1/0xA4` already gaps), just lower the `GFXfont` `last` past
     them instead of leaving trailing gaps — that un-shadows every codepoint above the
     new `last` at once.
-  - **Compositing a smaller second glyph inside a hint** (e.g. the 🗘 reload inside
-    the Win+Ctrl+Shift+B monitor): `kdisp_draw_glyph_half_at()` (`disp_array.c`) blits
-    any pack/resident glyph at half size (2×2-OR downsample — keeps thin strokes that
-    plain decimation drops) at fixed **buffer** coords (x offset by `BUFFER_X`=28, y
-    NOT offset). A `keycode_hint_wants_*()` gate in `poly_keymap.c` (mirroring the
-    Win+R frame pattern) triggers it in `update_displays()` after the base hint text.
-    Derive the buffer coords from `tools/gfx_font.py` (it replicates the baseline-align
-    math, so its rendered bbox matches hardware).
+  - **A shortcut-hint string is a mini DISPLAY LIST, not just text** (2026-07). The
+    hint returned by `keycode_to_disp_overlay()` is interpreted by
+    `kdisp_write_gfx_text_cy()` (`disp_array.c`), which understands control-code ops
+    on top of the plain glyphs — so extra art (frames, composited icons, drawn signs)
+    lives **in the hint string**, and `update_displays()` has **no per-keycode
+    special-case** (the old `keycode_hint_wants_frame/_gfx_restart/_mag` gates were
+    removed). The ops, built via the `HINT_*` macros in `lang/named_glyphs.h`:
+    - `HINT_MOVE(pos)` = `\x0E` + 2 codepoints (x,y) — move the cursor to buffer coords.
+    - `HINT_HALF` = `\x0F` — draw the NEXT glyph at half size (2×2-OR downsample via
+      `kdisp_draw_glyph_half_at()`; keeps thin strokes plain decimation drops; **round
+      the halved dims up** `(w+1)/2` + bounds-check, or an odd-width glyph loses its
+      last column — the 🗘 reload is 27×35). Used for the Win+Ctrl+Shift+B monitor+🗘.
+    - `HINT_FRAME(sz)` = `\x12` + 2 codepoints (w,h) — 2px nested rounded rect at the
+      cursor (the Win+R run-dialog box). `HINT_RESET` = `\x18` resets to the origin.
+    - Magnifier `+`/`-` are just base-font `"+"`/`"-"` MOVE-positioned into the lens —
+      no bespoke primitive (dropped the `\x10`/`\x11` draw ops as too special-purpose).
+    - Fixed positions/sizes are named `HINT_POS_*` / `HINT_SZ_*`. ⚠️ **You cannot write
+      decimal coords in a `U"…"` literal** (no way to turn a number into a byte), hence
+      named position macros holding `\xHH\xHH`; and **each `\xHH` escape must be
+      followed by `\x`/`\u` or a split literal** or the compiler greedily merges the
+      hex into one huge codepoint. Derive buffer coords from `tools/gfx_font.py` (it
+      replicates the baseline-align math + the ops, so its render matches hardware).
   - **Pack-category headers (`symbol_fonts.h`, etc.) are NOT compiled into the
     firmware** — only `RESIDENT_FONTS[]` + `IconsFont` are `#include`d. So adding pack
     glyphs (⍇/⍈, 🖧) does **not** grow the image; *removing* a resident glyph shrinks

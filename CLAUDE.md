@@ -111,12 +111,16 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   `poly_eeconf_t.glyph_script`, synced via `poly_sync_t.glyph_script`. The Tengwar
   glyphs ship in a new **`fantasy`** font-pack bundle (the host flashes it on connect);
   with no bundle the override falls back to Latin. See "Glyph-script override" below.
-  **v10** expands the glyph-script set (cmd 30 unchanged — still one script byte) with
-  9 more scripts, values `2..10`: Elder Futhark runes, Aurebesh, Standard Galactic
-  Alphabet, Cirth/Angerthas, IBM VGA/CP437, Commodore 64, Amiga Topaz, APL, Braille —
-  all in the (regrown) `fantasy` bundle (`content_version` bumped 1→2). No wire-format
-  change; because the connect gate is exact-match, a v10 host only talks to v10 firmware
-  (which has every script), so the host needs no per-script fallback. **Bump `FW_VERSION` +
+  **v10** makes the glyph script an **open-ended index** and ships 9 more scripts,
+  values `2..10`: Elder Futhark runes, Aurebesh, Standard Galactic Alphabet,
+  Cirth/Angerthas, IBM VGA/CP437, Commodore 64, Amiga Topaz, APL, Braille — all in the
+  (regrown) `fantasy` bundle (`content_version` bumped 1→2). The wire format is unchanged
+  (one script byte); the semantic change is that the firmware now **accepts any index
+  `0..0xFE`** — an index it doesn't know, or whose font isn't flashed, renders the normal
+  legend instead of NACKing. This **decouples "add a font face" from the protocol**: within
+  v10 the script set can grow freely (the host may offer more scripts than a keyboard has;
+  older keyboards degrade gracefully), so **adding scripts never bumps the protocol again** —
+  only a real wire/semantic change would. `0xFF` stays the query sentinel. **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep** — the host connect gate is exact-match.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
@@ -250,6 +254,17 @@ tail byte like `os_state`; `EECONFIG_USER_DATA_SIZE` grew 64→65, still ≤ the
 poly_glyph_script` in `state.h` — append-only: `GLYPH_STD=0`, `GLYPH_TENGWAR=1`, then
 the v10 expansion `GLYPH_RUNES=2, GLYPH_AUREBESH=3, GLYPH_SGA=4, GLYPH_CIRTH=5,
 GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
+- **Open-ended index (v10+): cmd 30 accepts ANY value `0..0xFE`; unknown → normal.**
+  `set_glyph_script()`/`note_glyph_script()`/`load_user_eeconf()` store the byte
+  verbatim (only the erased-EEPROM `0xFF` maps to `GLYPH_STD`); `hid_com.c` case 30 no
+  longer NACKs an out-of-range index. `glyph_script_codepoint()` returns 0 for any
+  `script >= GLYPH_SCRIPT_COUNT`, so an index this firmware doesn't know falls through
+  to the normal legend (same path as a known script whose font isn't flashed). This is
+  what lets the host offer scripts a given keyboard lacks and lets **new font faces ship
+  without a protocol bump** — DON'T re-add a range NACK. Storing verbatim also means a
+  choice made before the matching font-pack update survives it. Adding a `GLYPH_*` value
+  therefore needs NO `PROTOCOL_VERSION` change — just the enum entry, the
+  `glyph_script_blocks[]` row, the font, and the host `GlyphScript`/label.
 - **Render hook — one choke point in `render_key()`** (`poly_keymap.c`): right after
   `local_state` is fetched, when `glyph_script != GLYPH_STD` and the key is a plain
   letter/digit on the normal layer (not the `_ADDLANG1` latin-variation layer), it

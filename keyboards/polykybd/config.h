@@ -133,13 +133,19 @@
 //     Persisted in poly_eeconf_t.glyph_script; synced to the slave via poly_sync_t.
 //     The Tengwar glyphs ship in a new "fantasy" font-pack bundle, which the host
 //     flashes on connect. Host must match v9 to connect (exact-match gate).
-// v10: expands the glyph-script set (cmd 30) with 9 more scripts — Elder Futhark
-//     runes, Aurebesh, Standard Galactic Alphabet, Cirth/Angerthas, IBM VGA/CP437,
-//     Commodore 64, Amiga Topaz, APL, Braille — all shipped in the (regrown)
-//     "fantasy" bundle (content_version bumped). No wire-format change: cmd 30 still
-//     carries one script byte; the enum poly_glyph_script just gains values 2..10.
-//     Because the connect gate is exact-match, a v10 host only ever talks to v10
-//     firmware (which has every script), so the host needs no per-script fallback.
+// v10: glyph-script (cmd 30) becomes an OPEN-ENDED INDEX and ships 9 more scripts —
+//     Elder Futhark runes, Aurebesh, Standard Galactic Alphabet, Cirth/Angerthas,
+//     IBM VGA/CP437, Commodore 64, Amiga Topaz, APL, Braille (all in the regrown
+//     "fantasy" bundle, content_version bumped). The wire format is unchanged (one
+//     script byte); the semantic change is that the firmware now ACCEPTS ANY index
+//     0..0xFE — an index it doesn't know, or whose font isn't flashed, just renders
+//     the normal legend instead of NACKing. This DECOUPLES "add a font face" from the
+//     protocol: within v10 the script set can grow freely (host offers more scripts
+//     than a keyboard has; older keyboards degrade gracefully), so **adding scripts
+//     never bumps the protocol again** — only a real wire/semantic change would.
+//     0xFF stays the query sentinel. (v10 is the one-time bump that establishes this
+//     open-ended contract, distinguishing it from the pre-v10 Tengwar-only firmware
+//     that NACKed unknown indices.)
 #define PROTOCOL_VERSION 10
 
 #define FULL_BRIGHT 50

@@ -2016,3 +2016,4 @@
 #define ICON_NARRATOR               	U"\x1F442"  // Win+Ctrl+N Narrator settings (👂 ear = reads aloud, emoji font pack)
 #define ICON_QUICK_ASSIST           	U"\x1F91D"  // Win+Ctrl+Q Quick Assist (🤝 handshake, emoji font pack)
 #define ICON_SPEECH_REC             	U"\x1F3A4"  // Win+Ctrl+S Speech Recognition (🎤 microphone, emoji font pack)
+#define ICON_TEXT_RECOG             	U"\x1F524"  // Win+Q Click to Do — recognise/select text incl. from images (🔤 letters, emoji font pack)

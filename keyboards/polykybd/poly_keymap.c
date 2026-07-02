@@ -1229,12 +1229,11 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_TAB:
                 if (win_or_unknown || gnome) return U"    " ICON_WINDOW_SWITCH;
                 break;
-            // Launcher/search on a Super chord is Windows-only — Win+S and Win+Q both
-            // open Search. GNOME uses the Super overview and KDE a Super-tap / Alt+Space
-            // — neither binds Super+S — so show it only on Windows (and the unknown
-            // default). Win+Shift+S (Snipping Tool) is handled in its own block above.
+            // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses the
+            // Super overview and KDE a Super-tap / Alt+Space — neither binds Super+S — so
+            // show it only on Windows (and the unknown default). Win+Shift+S (Snipping
+            // Tool) is handled in its own block above.
             case KC_S:
-            case KC_Q:
                 if (win_or_unknown) return U"   " ICON_LAUNCHER;
                 break;
             // Windows-only Super-chords (wave C). These have no standard GNOME/KDE
@@ -1324,6 +1323,9 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMOUT) U"-"; // Win + '-' zoom out
                 break;
             // Wave E — more Windows-only Super chords.
+            case KC_Q:
+                if (win_or_unknown) return U"   "   ICON_TEXT_RECOG;   // Win+Q Click to Do — text recognition (🔤 pack glyph)
+                break;
             case KC_G:
                 if (win_or_unknown) return U"   "   ICON_GAME_BAR;     // Win+G Xbox Game Bar (🎮 pack glyph)
                 break;

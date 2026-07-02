@@ -640,6 +640,12 @@ void housekeeping_task_user(void) {
             access_local_state()->active_os = os;
             request_disp_refresh();   // OS or auto/pin mode changed -> re-render legends + icon
         }
+        // Master-authoritative glyph-script override; the slave adopts it via
+        // copy_local_state and re-renders its own legends on the synced diff.
+        if (access_local_state()->glyph_script != get_glyph_script()) {
+            access_local_state()->glyph_script = get_glyph_script();
+            request_disp_refresh();   // script changed -> re-render letter/digit legends
+        }
     }
 }
 
@@ -908,6 +914,29 @@ static bool altgr_is_bare_combining(const uint32_t* s) {
 }
 
 // Renders key character to display using language translation, including modifiers etc.
+// Glyph-script override codepoints. Each alternative script's glyphs are emitted
+// into a private, dense, collision-free PUA range (fontconvert sequence -F remap),
+// NOT the source font's native codepoints — the flags font-pack bundle already
+// occupies 0xE000+, so a raw CSUR tengwa would render a language flag instead.
+//
+// Tengwar ("fantasy" bundle): 36 glyphs at 0xE800..0xE823, ordered letters a..z
+// then digits 1..0. The CSUR-tengwa-per-key choice (Dan Smith QWERTY-column
+// convention) lives in the font's generation sequence (fonts.yaml), so the
+// firmware only needs the dense index here.
+#define TENGWAR_BASE 0xE800u
+
+// Resolves the override codepoint for a key under the active glyph script, or 0
+// when the key/script has no override (falls through to the normal legend). Only
+// plain letters/digits are overridden; symbols, function keys, etc. are left alone.
+static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
+    if (script == GLYPH_TENGWAR) {
+        if (keycode >= KC_A && keycode <= KC_Z) return TENGWAR_BASE + (uint32_t)(keycode - KC_A);
+        // KC_1..KC_0 are contiguous (1 first, 0 last) -> dense indices 26..35.
+        if (keycode >= KC_1 && keycode <= KC_0) return TENGWAR_BASE + 26u + (uint32_t)(keycode - KC_1);
+    }
+    return 0;
+}
+
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const poly_layer_t* local_layer = get_local_layer();
 
@@ -945,6 +974,25 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     }
 
     const poly_sync_t* local_state = get_local_state();
+
+    // Glyph-script override: on the normal language layer, replace a letter/digit's
+    // legend with the selected alternative script (e.g. Tengwar), centered in the
+    // keycap. Overlays and OS-hints are drawn elsewhere and are untouched. Falls
+    // through to the normal legend when the script has no glyph for this key OR the
+    // font-pack bundle providing it is not present (so a keyboard without the
+    // "fantasy" bundle still shows Latin rather than blanks).
+    if (local_state->glyph_script != GLYPH_STD && !add_lang) {
+        uint32_t cp = glyph_script_codepoint(local_state->glyph_script, keycode);
+        if (cp != 0 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL) {
+            const uint32_t s[2] = { cp, 0 };
+            int8_t gmin, gmax;
+            kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, s, &gmin, &gmax);
+            int8_t gx = (int8_t)(BUFFER_X + (SCREEN_WIDTH - (gmax - gmin + 1)) / 2 - gmin);
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, gx, 23, s);
+            return true;
+        }
+    }
+
     if (mods & MOD_RALT) {
         const uint32_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
@@ -2571,6 +2619,7 @@ void keyboard_post_init_user(void) {
     // the host re-engages). Overrides local_state->contrast when auto was on.
     load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
+    note_glyph_script(ee.glyph_script);
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before
@@ -2579,6 +2628,8 @@ void keyboard_post_init_user(void) {
     // Seed with the same OS|auto-flag encoding housekeeping uses, so the first
     // render/sync before housekeeping runs shows the correct auto/pin badge.
     local_state->active_os = (uint8_t)(get_active_os() | (get_os_auto_mode() ? POLY_OS_AUTO_FLAG : 0));
+    // Seed the glyph-script override so the first render reflects the persisted script.
+    local_state->glyph_script = get_glyph_script();
 #ifdef RGB_MATRIX_ENABLE
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 #else

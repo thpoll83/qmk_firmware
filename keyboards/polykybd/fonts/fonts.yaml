@@ -33,6 +33,8 @@ sources:
   noto-sans-math:      fonts/Noto_Sans_Math/NotoSansMath-Regular.ttf
   noto-sans-canadian-aboriginal: fonts/noto-sans-canadian-aboriginal/NotoSansCanadianAboriginal-Regular.ttf
   noto-sans-cherokee:  fonts/noto-sans-cherokee/NotoSansCherokee-Regular.ttf
+  # Alcarin Tengwar (OFL 1.1) — the "fantasy" glyph-script bundle (no Noto Tengwar exists).
+  alcarin-tengwar:     fonts/tengwar/AlcarinTengwar-Regular.otf
 
 # The composed index header that the firmware includes (base/fonts/<output>).
 index:
@@ -106,7 +108,15 @@ bundles:
                                                  bengali, telugu, tamil, thai,
                                                  vietnamese, georgian, armenian]}
     - {id: flags,    slot_kb: 128,  pack_extra: [NotoColorEmoji_Regular_LangFlags_20pt7b]}
-    - {id: emoji,    slot_kb: rest, categories: [emoji, emoji_fig]}
+    # emoji was the trailing `rest` bundle; the append-only `fantasy` bundle now
+    # takes the tail, so emoji gets a fixed, generous slot (768 KB ≈ 3.4× its
+    # current ~222 KB — ample headroom) and its slot_offset is unchanged, so a
+    # deployed emoji.plyf stays valid and is NOT reshipped (content unchanged).
+    - {id: emoji,    slot_kb: 768,  categories: [emoji, emoji_fig]}
+    # "fantasy" glyph-script bundle (Tengwar; HID cmd 30). Appended last (its index
+    # is its on-wire id) with slot_kb: rest so it absorbs the remaining window and
+    # has room for future fantasy/retro scripts.
+    - {id: fantasy,  slot_kb: rest, categories: [tengwar]}
 
 # Each category -> one generated header, with defaults inherited by its fonts.
 categories:
@@ -167,6 +177,14 @@ categories:
   cherokee:
     output: cherokee_fonts.h
     defaults: {source: noto-sans-cherokee, size: 13, render_height: 40}
+  tengwar:
+    # Glyph-script OVERRIDE (not a language): Tengwar letters/digits for the
+    # "fantasy" bundle. The font entry uses sequence -F to relocate the CSUR
+    # tengwar glyphs to a private range (0xE800..) so they don't collide with the
+    # flags / matra PUA. Rendered at 30 px, yAdvance 40 (matches IconsFont so the
+    # kdisp baseline-align is neutral, like the normal letters).
+    output: tengwar_fonts.h
+    defaults: {source: alcarin-tengwar, size: 20, render_height: 30, yadvance: 40}
   symbols:
     output: symbol_fonts.h
     defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
@@ -372,3 +390,11 @@ fonts:
   - {category: symbols, variant: _Dictation_, source: noto-emoji, bits: 32, ranges: [[0x1f5e3, 0x1f5e3]]}
   - {category: symbols, variant: _Network_, size: 18, bits: 32, ranges: [[0x1f5a7, 0x1f5a7]]}  # 🖧 Win+Ctrl+F search-network hint (moved out of resident IconsFont)
   - {category: symbols, variant: _Knobs_, source: noto-emoji, size: 18, bits: 32, ranges: [[0x1f39b, 0x1f39b]]}  # 🎛 Win+Pause System-Properties hint (replaces resident ICON_SLIDERS)
+  # Tengwar glyph-script override ("fantasy" bundle, HID cmd 30). 36 CSUR tengwar
+  # relocated to a private range 0xE800.. (sequence -F) to avoid the flags/matra
+  # PUA. Sequence order = Dan Smith QWERTY-column keys a..z then digits 1..0, so
+  # the firmware maps key -> 0xE800 + dense-index (render_key glyph-script override).
+  # Appended LAST so it takes the highest ALL_FONTS index and shifts no existing
+  # bundle's gidx (flags is pinned via PACK_EXTRA_GIDX_BASE); disjoint range, so its
+  # priority position is irrelevant to lookups.
+  - {category: tengwar, variant: _Tengwar_, extra_args: ['-F0xE800'], sequence: 'E002, E013, E00B, E00A, E009, E00E, E012, E016, E01D, E01A, E01E, E022, E01B, E017, E021, E025, E001, E00D, E006, E011, E019, E00F, E005, E007, E015, E003, E000, E004, E008, E00C, E010, E014, E018, E01C, E020, E024'}

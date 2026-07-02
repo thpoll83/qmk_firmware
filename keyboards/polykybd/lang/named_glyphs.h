@@ -2009,4 +2009,4 @@
 #define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); a base-font +/- is MOVE-positioned into the lens by the hint string
 #define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
 #define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)
-#define ICON_VOLUME_MIXER           	U"\x1F509"  // Win+Ctrl+V volume mixer 🔉 (speaker w/ one wave, emoji font pack)
+#define ICON_VOLUME_MIXER           	U"\x1F509"  // Win+Ctrl+V volume mixer 🔉 (speaker w/ one wave, emoji font pack; opens the mixer flyout on Win 11 24H2+)

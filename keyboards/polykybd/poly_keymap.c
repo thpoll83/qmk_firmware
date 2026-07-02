@@ -925,6 +925,11 @@ static bool altgr_is_bare_combining(const uint32_t* s) {
 // firmware only needs the dense index here.
 #define TENGWAR_BASE 0xE800u
 
+// The dense mapping below relies on the USB-HID keycodes being contiguous
+// (KC_A..KC_Z, and KC_1..KC_0 with 0 last); guard that against any future change.
+_Static_assert(KC_Z - KC_A == 25, "KC_A..KC_Z must be contiguous for the glyph-script map");
+_Static_assert(KC_0 - KC_1 == 9,  "KC_1..KC_0 must be contiguous for the glyph-script map");
+
 // Resolves the override codepoint for a key under the active glyph script, or 0
 // when the key/script has no override (falls through to the normal legend). Only
 // plain letters/digits are overridden; symbols, function keys, etc. are left alone.
@@ -980,8 +985,11 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // keycap. Overlays and OS-hints are drawn elsewhere and are untouched. Falls
     // through to the normal legend when the script has no glyph for this key OR the
     // font-pack bundle providing it is not present (so a keyboard without the
-    // "fantasy" bundle still shows Latin rather than blanks).
-    if (local_state->glyph_script != GLYPH_STD && !add_lang) {
+    // "fantasy" bundle still shows Latin rather than blanks). While AltGr is held we
+    // fall through to the real AltGr symbol (translate_keycode_only_altgr below) —
+    // the override is only for the resting/base letter legend, and the AltGr output
+    // is a genuinely different character, not a cased form of the same letter.
+    if (local_state->glyph_script != GLYPH_STD && !add_lang && !(mods & MOD_RALT)) {
         uint32_t cp = glyph_script_codepoint(local_state->glyph_script, keycode);
         if (cp != 0 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL) {
             const uint32_t s[2] = { cp, 0 };

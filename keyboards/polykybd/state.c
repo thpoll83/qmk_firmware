@@ -401,8 +401,8 @@ uint8_t get_glyph_script(void) {
 // Out-of-range values are ignored. The awake re-render is driven from housekeeping
 // (the master syncs glyph_script + calls request_disp_refresh on change).
 void set_glyph_script(uint8_t script) {
-    if (script >= GLYPH_SCRIPT_COUNT) {
-        return;
+    if (script >= GLYPH_SCRIPT_COUNT || script == g_glyph_script) {
+        return;   // out-of-range or no-op: don't mark dirty / churn the split sync
     }
     g_glyph_script = script;
     g_glyph_dirty  = true;

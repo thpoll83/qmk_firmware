@@ -95,11 +95,33 @@ Port conventions:
 
 ## Next milestones (from the study's effort table)
 
-1. **Port `pd_render.cpp`** (the last unresolved engine piece) and root
-   `D_DoomMain`: at that point every missing symbol is a real integration
-   decision, not a compile problem. Then wire input (`doom_process_record`
-   → `D_PostEvent`) and video (`I_VideoBuffer`/pd output → `doom_blit`).
-   `doom1.whx` (1,800,344 B) is refetchable — see `engine/PROVENANCE.md`.
+1. **Port `pd_render.cpp` + the scanout** (the last unresolved engine piece),
+   then root `D_DoomMain`. Architecture findings for whoever picks this up:
+   - `pd_render.cpp` (3,115 lines, C++, needs `CXXFLAGS` for the engine
+     include dirs) does NOT write a framebuffer — it builds per-frame column
+     lists, split across core0/core1 via pico_sync semaphores
+     (`core1_do_flats`/`core1_do_regular`/…) and using both RP2040
+     **interpolators** (QMK never touches interp0/1, so they're free; upstream
+     i_video.c already has `interp_save/restore_static` helpers).
+   - The pixels materialize in upstream `src/pico/i_video.c`: a
+     `scanline_func(uint32_t *dest, int scanline)` table
+     (none/double/single/wipe) renders one line at a time from the pd lists +
+     the `vpatch` overlay lists (HUD/menu/status), palette-mapped via a 256-
+     entry table. Upstream calls it from the scanvideo IRQ (beam racing) —
+     **our replacement is a plain per-frame loop over the 200 scanlines**
+     writing into the borrowed-pool canvas, palette→**luma** LUT instead of
+     palette→RGB565, then `doom_blit` dithers to the keycaps.
+   - The pico_sync semaphores need either compiled `pico_sync` sources
+     (hardware spinlock based — check interaction with the `cpsid i` core1
+     mask, see `multicore_exec.c`) or a rewrite of the handoff onto the
+     firmware's core1 FIFO; in game mode core1 is idle (no RLE jobs) and the
+     study assigns it to the game anyway.
+   - `i_system.h`'s `render_frame_ready`/`display_frame_freed` semaphores are
+     currently compiled out under `POLYKYBD_QMK` — pd_render references them,
+     so that guard is where the new handoff plugs in.
+2. Wire input (`doom_process_record` → `D_PostEvent`) and video
+   (`I_VideoBuffer`/scanout → `doom_blit`); `doom1.whx` (1,800,344 B) is
+   refetchable — see `engine/PROVENANCE.md`.
 2. Keycap blitter as the engine's video backend + status-OLED HUD.
 3. `doomwad` staging slot at flash `0x600000` (reuse the FONTPACK
    `BEGIN/CHUNK/COMMIT` flow) + `polyctl doom install`.

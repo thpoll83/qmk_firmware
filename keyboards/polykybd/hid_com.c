@@ -106,6 +106,13 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
         case id_dynamic_keymap_set_buffer: {
             uint16_t offset = (command_data[0] << 8) | command_data[1];
             uint16_t size   = command_data[2];
+            // SECURITY (FW-5): `size` is a host byte (0..255) but the payload lives in
+            // the fixed-size report at &command_data[3]. Reading `size` bytes past it
+            // over-reads the report buffer (and, once this report is bridged verbatim,
+            // the slave's copy). Clamp to the bytes actually present and write the
+            // clamped value back so the bridged report carries the safe size too.
+            uint16_t avail = (length > 4) ? (uint16_t)(length - 4) : 0;
+            if (size > avail) { size = avail; command_data[2] = (uint8_t)size; }
             uprintf("Set dynamic buffer offset: %u, size: %u\n", offset, size);
             dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
             data_len = RAW_EPSIZE;
@@ -119,6 +126,11 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
         case id_dynamic_keymap_get_buffer: {
             uint16_t offset = (command_data[0] << 8) | command_data[1];
             uint16_t size   = command_data[2];
+            // SECURITY (FW-3): clamp the host `size` to the report space at
+            // &command_data[3]. dynamic_keymap_get_buffer writes `size` bytes there with
+            // no destination bound, so an unclamped 0..255 overruns the report buffer.
+            uint16_t avail = (length > 4) ? (uint16_t)(length - 4) : 0;
+            if (size > avail) size = avail;
             uprintf("Get dynamic buffer offset: %u, size: %u\n", offset, size);
             dynamic_keymap_get_buffer(offset, size, &command_data[3]);
             raw_hid_send(data, length);
@@ -396,7 +408,19 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     set_fragment_context_key(data[HID_DATA_IDX], data[HID_DATA_IDX+1]);
                     uint8_t segment = data[HID_DATA_IDX+2];
                     if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
-                        fill_overlay_buffer(segment, &data[HID_DATA_IDX+3]);
+                        // SECURITY (FW-7): the 60-byte segment payload starts at
+                        // data[HID_DATA_IDX+3]; with the 3-byte header that is one byte
+                        // more than a 64-byte report can hold, so fill_overlay_buffer's
+                        // 60-byte copy read 1 byte past the report. Bounce through a
+                        // zero-padded local so the copy stays in bounds (the byte that
+                        // can't fit in the report reads as 0 instead of OOB garbage).
+                        uint8_t off   = HID_DATA_IDX + 3;
+                        uint8_t avail = (length > off) ? (uint8_t)(length - off) : 0;
+                        if (avail > BYTES_PER_SEGMENT) avail = BYTES_PER_SEGMENT;
+                        uint8_t seg[BYTES_PER_SEGMENT];
+                        memset(seg, 0, sizeof(seg));
+                        memcpy(seg, &data[off], avail);
+                        fill_overlay_buffer(segment, seg);
                         if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                             update_performed();
                             request_disp_refresh();

@@ -1992,7 +1992,7 @@
 //   🔊 system tray (Win+B)
 //   🖵🗘 restart graphics (Win+Ctrl+Shift+B)  🎛 System Properties (Win+Pause)
 //   🔍+ / 🔍− Magnifier (Win + +/−)     📷 screenshot (Win+PrtScn)
-//   🖧 search network computers (Win+Ctrl+F)
+//   🖧 search network computers (Win+Ctrl+F)  🔉 volume mixer (Win+Ctrl+V)
 #define ICON_LIGHTNING              	U"\x26A1"   // Win+A action center / quick settings
 #define ICON_SYS_TRAY               	U"\x1F50A"  // Win+B focus system tray (speaker)
 #define ICON_EXPLORER               	U"\x9C"     // Win+E (resident folder pixmap, gfx_icons.h)
@@ -2009,3 +2009,4 @@
 #define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); a base-font +/- is MOVE-positioned into the lens by the hint string
 #define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
 #define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)
+#define ICON_VOLUME_MIXER           	U"\x1F509"  // Win+Ctrl+V volume mixer 🔉 (speaker w/ one wave, emoji font pack)

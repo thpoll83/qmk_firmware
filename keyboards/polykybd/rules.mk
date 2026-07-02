@@ -34,3 +34,12 @@ ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
         OPT_DEFS += -DPOLYKYBD_HIL_SLAVE
     endif
 endif
+
+# "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
+# doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
+# the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).
+# Normal builds pay zero bytes — doom_mode.h stubs every hook to an inline no-op.
+ifeq ($(strip $(POLYKYBD_DOOM)), yes)
+    OPT_DEFS += -DPOLYKYBD_DOOM
+    SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c
+endif

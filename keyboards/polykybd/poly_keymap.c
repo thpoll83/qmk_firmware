@@ -70,6 +70,7 @@
 
 #include "layers.h"
 #include "keycode_helper.h"
+#include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "os_actions.h"
 #include "uni.h"
 #include "emoji/emoji_layer.h"
@@ -576,6 +577,10 @@ void housekeeping_task_user(void) {
         // (KC_STORE_EE); the only housekeeping write is draining that one-shot
         // store request (on the master locally, on the slave via SAVE_EEPROM).
         save_all_if_requested();
+        // Doom easter egg frame tick (no-op unless POLYKYBD_DOOM + game mode).
+        // Runs before the display sync: it keeps last_update fresh so the
+        // idle/fade pipeline below never fights the game blitter.
+        doom_tick();
         sync_and_refresh_displays();
     }
     int32_t update = get_last_update();
@@ -1699,6 +1704,11 @@ static void draw_legend_cx(const uint32_t* text, int8_t y) {
 }
 
 void update_displays(enum refresh_mode mode) {
+    // Doom easter egg: while game mode owns the keycaps, the blitter is the
+    // only writer — a legend re-render here would tear the game frame.
+    if (doom_mode_active()) {
+        return;
+    }
     const poly_sync_t* local_state = get_local_state();
     const bool idle = (local_state->flags & DISP_IDLE) != 0;
     // While idle we never full-re-render here: kdisp_idle() pulses the existing
@@ -1912,6 +1922,13 @@ void kdisp_idle(uint8_t contrast) {
 static uint8_t s_apple_swap_latch = 0;
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+
+    // Doom easter egg: in game mode every key event is swallowed (fed to the
+    // game, never the host); outside game mode this only advances the trigger
+    // matcher. Inline no-op false unless built with POLYKYBD_DOOM.
+    if (doom_process_record(keycode, record->event.pressed)) {
+        return false;
+    }
 
     // SECURITY: the keycode of every keystroke (passwords included) must NOT be
     // streamed to the HID console in normal operation — any local process can open

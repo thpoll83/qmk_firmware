@@ -94,7 +94,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.9.27"
+#define FW_VERSION "0.9.28"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -133,7 +133,14 @@
 //     Persisted in poly_eeconf_t.glyph_script; synced to the slave via poly_sync_t.
 //     The Tengwar glyphs ship in a new "fantasy" font-pack bundle, which the host
 //     flashes on connect. Host must match v9 to connect (exact-match gate).
-#define PROTOCOL_VERSION 9
+// v10: expands the glyph-script set (cmd 30) with 9 more scripts — Elder Futhark
+//     runes, Aurebesh, Standard Galactic Alphabet, Cirth/Angerthas, IBM VGA/CP437,
+//     Commodore 64, Amiga Topaz, APL, Braille — all shipped in the (regrown)
+//     "fantasy" bundle (content_version bumped). No wire-format change: cmd 30 still
+//     carries one script byte; the enum poly_glyph_script just gains values 2..10.
+//     Because the connect gate is exact-match, a v10 host only ever talks to v10
+//     firmware (which has every script), so the host needs no per-script fallback.
+#define PROTOCOL_VERSION 10
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

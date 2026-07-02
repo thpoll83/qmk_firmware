@@ -343,7 +343,7 @@
       "index": 5,
       "slot_offset": 561152,
       "slot_size": 786432,
-      "total_size": 227460,
+      "total_size": 215272,
       "font_count": 77,
       "fonts": [
         {
@@ -815,14 +815,68 @@
       "index": 6,
       "slot_offset": 1347584,
       "slot_size": 749568,
-      "total_size": 3840,
-      "font_count": 1,
+      "total_size": 24324,
+      "font_count": 10,
       "fonts": [
         {
           "all_fonts_index": 147,
           "symbol": "AlcarinTengwar_Regular_Tengwar_20pt7b",
           "first": 59392,
           "last": 59427
+        },
+        {
+          "all_fonts_index": 148,
+          "symbol": "NotoSansRunic_Regular_Runes_20pt7b",
+          "first": 59456,
+          "last": 59481
+        },
+        {
+          "all_fonts_index": 149,
+          "symbol": "unifont_csur_Aurebesh_20pt7b",
+          "first": 59520,
+          "last": 59545
+        },
+        {
+          "all_fonts_index": 150,
+          "symbol": "Sga_Regular_Sga_20pt7b",
+          "first": 59584,
+          "last": 59619
+        },
+        {
+          "all_fonts_index": 151,
+          "symbol": "unifont_csur_Cirth_20pt7b",
+          "first": 59648,
+          "last": 59673
+        },
+        {
+          "all_fonts_index": 152,
+          "symbol": "Px_IBM_VGA8_Ibmvga_20pt7b",
+          "first": 59712,
+          "last": 59747
+        },
+        {
+          "all_fonts_index": 153,
+          "symbol": "PetMe64_C64_20pt7b",
+          "first": 59776,
+          "last": 59811
+        },
+        {
+          "all_fonts_index": 154,
+          "symbol": "Amiga_Regular_Amiga_20pt7b",
+          "first": 59840,
+          "last": 59875
+        },
+        {
+          "all_fonts_index": 155,
+          "symbol": "unifont_Apl_20pt7b",
+          "first": 59904,
+          "last": 59939
+        },
+        {
+          "all_fonts_index": 156,
+          "symbol": "unifont_Braille_20pt7b",
+          "first": 59968,
+          "last": 60003
         }
       ]
     }

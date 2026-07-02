@@ -1989,12 +1989,12 @@
 //   🖵+ new desktop (Win+Ctrl+D)        ←🖵 / 🖵→ switch desktop (Win+Ctrl+←/→)
 //   🖵x close desktop (Win+Ctrl+F4)     📽 GIF panel (Win+;)
 //   📸 Snipping Tool (Win+Shift+S)      📹 screen recording (Win+Alt+R)
-//   🔊 system tray (Win+B)
+//   ⌃ system tray (Win+B, mac-control caret)
 //   🖵🗘 restart graphics (Win+Ctrl+Shift+B)  🎛 System Properties (Win+Pause)
 //   🔍+ / 🔍− Magnifier (Win + +/−)     📷 screenshot (Win+PrtScn)
-//   🖧 search network computers (Win+Ctrl+F)  🔉 volume mixer (Win+Ctrl+V)
+//   🖧 search network computers (Win+Ctrl+F)  🔊 volume mixer (Win+Ctrl+V)
 #define ICON_LIGHTNING              	U"\x26A1"   // Win+A action center / quick settings
-#define ICON_SYS_TRAY               	U"\x1F50A"  // Win+B focus system tray (speaker)
+// (ICON_SYS_TRAY retired — Win+B now uses ICON_MAC_CONTROL; the 🔊 speaker moved to Win+Ctrl+V's ICON_VOLUME_MIXER)
 #define ICON_EXPLORER               	U"\x9C"     // Win+E (resident folder pixmap, gfx_icons.h)
 #define ICON_ACCESSIBILITY          	U"\x267F"
 #define ICON_FOCUS_WINDOW           	U"\x2752"   // Win+Home minimize all but active (shadowed window)
@@ -2009,4 +2009,4 @@
 #define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); a base-font +/- is MOVE-positioned into the lens by the hint string
 #define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
 #define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)
-#define ICON_VOLUME_MIXER           	U"\x1F509"  // Win+Ctrl+V volume mixer 🔉 (speaker w/ one wave, emoji font pack; opens the mixer flyout on Win 11 24H2+)
+#define ICON_VOLUME_MIXER           	U"\x1F50A"  // Win+Ctrl+V volume mixer 🔊 (loudspeaker, emoji font pack; opens the mixer flyout on Win 11 24H2+)

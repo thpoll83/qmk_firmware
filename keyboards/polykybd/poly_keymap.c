@@ -1158,7 +1158,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
             case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
             case KC_F:     return U"    " ICON_NET;                       // Win+Ctrl+F search network computers (🖧 pack glyph)
-            case KC_V:     return U"   "  ICON_VOLUME_MIXER;              // Win+Ctrl+V volume mixer (🔉 pack glyph; mixer flyout on Win 11 24H2+)
+            case KC_V:     return U"   "  ICON_VOLUME_MIXER;              // Win+Ctrl+V volume mixer (🔊 pack glyph; mixer flyout on Win 11 24H2+)
             // Win+Ctrl+Shift+B restart graphics: monitor 🖵, then MOVE to the screen
             // cavity and HALF-draw the reload 🗘 into it.
             case KC_B:     if (shift) return U"    " ICON_GFX_RESTART HINT_MOVE(HINT_POS_SCREEN) HINT_HALF ICON_GFX_RELOAD; break;
@@ -1276,7 +1276,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"      " ICON_ACCESSIBILITY;// Win+U Accessibility settings
                 break;
             case KC_B:
-                if (win_or_unknown) return U"   "   ICON_SYS_TRAY;      // Win+B focus system tray (speaker)
+                if (win_or_unknown) return U"   "   ICON_MAC_CONTROL;   // Win+B focus system tray (⌃ mac-control caret / show-hidden-icons chevron)
                 break;
             case KC_HOME:
                 if (win_or_unknown) return U"     " ICON_FOCUS_WINDOW;  // Win+Home minimize all but active

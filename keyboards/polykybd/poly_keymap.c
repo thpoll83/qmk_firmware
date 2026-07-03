@@ -533,7 +533,15 @@ void poly_prepare_for_flash(void) {
         reset_idle_jitter();       // fresh centred legends, not jittered offsets
         update_performed();
     }
-    layer_clear();                 // momentary/toggle layers off -> default layer active
+    // Momentary/toggle layers off, then back onto the PolyKybd default layout.
+    // A bare layer_clear() falls through to QMK's *saved* default layer
+    // (default_layer_state), NOT the Poly def_layer — which is a layer INDEX
+    // driven through layer_on(), same as the KC_L*/KC_BASE selectors and the
+    // boot path — so a Colemak/Neo base dropped to QWERTY here, and that
+    // cleared layer state was bridged to the slave, leaving the slave on the
+    // QMK default layer after the flash.
+    layer_clear();
+    layer_on(access_local_layer()->def_layer);
     request_disp_refresh();
     // Push the base layer + refresh to the SLAVE and render the master, before
     // fw_up freezes display sync — so BOTH halves show legible base legends and

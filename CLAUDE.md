@@ -290,7 +290,11 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
 - **Fonts** (all in the `fantasy` bundle; keep user-facing strings generic — trademark
   caveat on the fictional scripts, though the *fonts* are fine to embed): Tengwar =
   Alcarin (OFL, no Noto Tengwar exists); Runes = Noto Sans Runic (OFL); Aurebesh /
-  Cirth / APL / Braille = GNU Unifont (GPL + font-embedding exception); SGA = the CC0
+  Cirth = GNU Unifont CSUR (GPL + font-embedding exception; kept on the blocky 16 px
+  bitmap because no license-clean smooth outline font exists for those CSUR blocks —
+  the free Aurebesh/Cirth outline fonts are personal-use-only); APL / Braille = DejaVu
+  Sans (Bitstream Vera + Arev, permissive — smooth outline, replacing Unifont's 16 px
+  bitmap; the APL quad U+2395, absent from DejaVu, maps to U+25A1 □); SGA = the CC0
   `standardgalactic/alphabet` font; IBM VGA/CP437 = VileR PxPlus (CC-BY-SA-4.0, Debian
   `fonts-pc`); C64 = KreativeKorp **PetMe64** (KSRFL, solid ROM font — the OFL
   Homecomputer "Sixtyfour" was rejected for its baked-in CRT scanlines); Amiga = OFL

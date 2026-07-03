@@ -1,7 +1,7 @@
 {
   "abi_version": 1,
   "font_count": 134,
-  "total_size": 480744,
+  "total_size": 480140,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -755,7 +755,7 @@
     },
     {
       "all_fonts_index": 149,
-      "symbol": "unifont_csur_Aurebesh_20pt7b",
+      "symbol": "unifont_csur_Aurebesh_14pt7b",
       "first": 59520,
       "last": 59545
     },
@@ -767,7 +767,7 @@
     },
     {
       "all_fonts_index": 151,
-      "symbol": "unifont_csur_Cirth_20pt7b",
+      "symbol": "unifont_csur_Cirth_16pt7b",
       "first": 59648,
       "last": 59673
     },
@@ -791,13 +791,13 @@
     },
     {
       "all_fonts_index": 155,
-      "symbol": "unifont_Apl_20pt7b",
+      "symbol": "DejaVuSans_Apl_20pt7b",
       "first": 59904,
       "last": 59939
     },
     {
       "all_fonts_index": 156,
-      "symbol": "unifont_Braille_20pt7b",
+      "symbol": "DejaVuSans_Braille_20pt7b",
       "first": 59968,
       "last": 60003
     },

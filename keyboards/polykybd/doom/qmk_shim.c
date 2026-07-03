@@ -28,6 +28,7 @@
 
 #include "doomdef.h"          // SCREENWIDTH
 #include "picodoom.h"         // pd_init()
+#include "z_zone.h"           // zone allocator (core1 malloc redirection)
 
 #include "doom_mode.h"
 #include "doom_arena.h"
@@ -36,6 +37,7 @@
 #include "pico/platform.h"    // panic()
 #include "pico/sem.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 
 #ifdef POLYKYBD_DOOM
@@ -86,6 +88,95 @@ void doom_shim_drain_core1_log(void) {
 // heartbeat): 1 = zone handed over, 2 = I_InitGraphics entered, 3 = pd_init
 // done, 4 = first tic input pump ran.
 volatile uint8_t doom_shim_progress;
+
+// I_Error lands here (i_system.h, POLYKYBD_QMK branch of the NO_IERROR
+// macro) instead of upstream's bare __breakpoint(): a bkpt with no debugger
+// halts the core with zero trace — the shortptr range trap failed exactly
+// this way in the field (2026-07-03, "progress=1 heartbeats, no output").
+// lib/printf's vprintf funnels through the wrapped putchar_, so from core1
+// the message lands in the relay ring and doom_tick surfaces it on the
+// console; then park the core (ESC-hold exit resets core1 regardless).
+void doom_shim_error(const char *fmt, ...) {
+    printf("doom: I_Error: ");
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+    printf("\n");
+    for (;;) {
+        __asm volatile("wfe");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// core1 allocator redirection (LDFLAGS --wrap=malloc/calloc/free/realloc/
+// strdup). Upstream's device build wraps malloc/calloc/free into the zone
+// (USE_ZONE_FOR_MALLOC + pico_wrap_function); without it any engine
+// allocation that survives the tiny-build #ifdefs would go to newlib malloc,
+// whose lock/sbrk path is as core1-hostile as the console. Defense-in-depth:
+// nm shows no live malloc/strdup call site in the current image (the
+// suspected M_SetConfigDir->strdup path compiles out under
+// NO_USE_BOUND_CONFIG — the 2026-07-03 progress=1 stall was actually the
+// shortptr bkpt trap, see doom_tiny_defs.h PICO_RP2040), but one config flip
+// away it comes back, and the wrap keeps it on the zone where upstream has it.
+// Core-aware rather than mode-aware: the engine runs exclusively on core1,
+// QMK exclusively on core0, so core0 always gets the real newlib heap.
+// Z_MallocNoUser never returns NULL (it errors out), so no NULL handling.
+// ---------------------------------------------------------------------------
+
+extern void *__real_malloc(size_t size);
+extern void *__real_calloc(size_t count, size_t size);
+extern void  __real_free(void *mem);
+extern void *__real_realloc(void *mem, size_t size);
+extern char *__real_strdup(const char *s);
+
+void *__wrap_malloc(size_t size) {
+    if (get_core_num() == 0) {
+        return __real_malloc(size);
+    }
+    return Z_MallocNoUser((int)size, PU_STATIC);
+}
+
+void *__wrap_calloc(size_t count, size_t size) {
+    if (get_core_num() == 0) {
+        return __real_calloc(count, size);
+    }
+    void *p = Z_MallocNoUser((int)(count * size), PU_STATIC);
+    memset(p, 0, count * size);
+    return p;
+}
+
+void __wrap_free(void *mem) {
+    if (get_core_num() == 0) {
+        __real_free(mem);
+        return;
+    }
+    if (mem != NULL) {
+        Z_Free(mem);
+    }
+}
+
+void *__wrap_realloc(void *mem, size_t size) {
+    if (get_core_num() == 0) {
+        return __real_realloc(mem, size);
+    }
+    if (mem == NULL) {
+        return Z_MallocNoUser((int)size, PU_STATIC);
+    }
+    // No Z_Realloc, and upstream's device build doesn't wrap realloc either —
+    // no engine device path should get here. Fail loud (relayed via the ring).
+    panic("doom: realloc on core1");
+}
+
+char *__wrap_strdup(const char *s) {
+    if (get_core_num() == 0) {
+        return __real_strdup(s);
+    }
+    size_t n = strlen(s) + 1;
+    char  *p = Z_MallocNoUser((int)n, PU_STATIC);
+    memcpy(p, s, n);
+    return p;
+}
 
 // Frame handoff between the renderer and the core0 blit loop — upstream
 // defines these in its scanvideo i_video.c, which we replace. Zero-initialised

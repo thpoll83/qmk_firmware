@@ -51,6 +51,14 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     # on real hardware, 2026-07-03). putchar_ is lib/printf's output funnel
     # (quantum/logging/print.c).
     LDFLAGS += -Wl,--wrap=putchar_
+    # Same principle for the allocator: core1 allocations go to the zone
+    # (upstream wraps malloc/calloc/free via pico_wrap_function +
+    # USE_ZONE_FOR_MALLOC), core0 keeps the real newlib heap. Defense-in-depth:
+    # no live engine malloc/strdup call site survives the tiny-build #ifdefs
+    # today (nm-verified), but newlib's lock/sbrk path is as core1-hostile as
+    # the console, so keep it covered. Implementations in doom/qmk_shim.c.
+    LDFLAGS += -Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=free \
+               -Wl,--wrap=realloc -Wl,--wrap=strdup
     SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c doom/qmk_shim.c
     # First engine slice from the vendored rp2040-doom snapshot (doom/engine/):
     # pure math/data units with no platform backend, compiled as-is to prove the

@@ -28,6 +28,18 @@
 // takes its host/SDL paths. panic() comes from QMK's pico_sdk_shims.c.
 #define PICO_BUILD 1
 #define PICO_ON_DEVICE 1
+// PICO_RP2040 normally comes from pico/platform.h, which only TUs that include
+// pico-sdk headers see (pd_render.cpp via hardware/interp.h). Every other
+// engine TU left it undefined, so doomtype.h's shortptr_t compiled its
+// RP2350 branch: SHORTPTR_BASE 0x20030000 (our zone at ~0x2002xxxx is BELOW
+// that -> encode underflow) plus an unconditional `asm("bkpt #0")` range trap
+// that halts core1 silently with no debugger attached — field test 2's
+// progress=1 stall, first memblock_to_shortptr in Z_Init. Defining it here
+// makes ALL engine TUs take the RP2040 branch (base 0x20000000, encode keeps
+// addr bits [17:2] — covers all of main SRAM incl. the arena) and agree on ONE
+// shortptr ABI. Identical to pico/platform.h's unguarded `#define PICO_RP2040
+// 1`, so TUs seeing both are fine (same replacement list).
+#define PICO_RP2040 1
 // No binary_info metadata in the QMK image (bi_decl() collapses to a no-op —
 // the header still needs to be on the include path).
 #define PICO_NO_BINARY_INFO 1

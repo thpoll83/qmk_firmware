@@ -60,6 +60,14 @@ extern uint8_t *exit_screen_kb_buffer_80;
 
 #if !NO_IERROR || !PICO_ON_DEVICE
 void I_Error (const char *error, ...) NORETURN PRINTF_ATTR(1, 2);
+#elif POLYKYBD_QMK
+// Upstream's bkpt halts the core SILENTLY with no debugger attached (the
+// shortptr range trap cost a whole hardware round this way). Route engine
+// errors to the shim instead: prints the message through the core1 log relay
+// (visible in the HID console via doom_tick's drain) and parks the core —
+// ESC-hold exit still recovers the keyboard.
+void doom_shim_error(const char *fmt, ...) PRINTF_ATTR(1, 2);
+#define I_Error(args...) doom_shim_error(args)
 #else
 #include "pico.h"
 //#define I_Error(args...) ((void)0)

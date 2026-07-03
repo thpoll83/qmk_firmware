@@ -132,6 +132,32 @@ not re-initialised — test one game entry per power cycle first. HID GET_ID
 etc. keep answering during play (only the pool-writing overlay commands are
 frozen); the slave half keeps its normal legends (master-only milestone).
 
+### Hardware-test log
+
+- **Round 1 (2026-07-03): core1 wedged mid-printf.** The engine froze inside
+  its 4th boot `printf` — core1 must never enter QMK's console path (sendchar
+  → `usb_endpoint_in_send` does `osalSysLock()` + a blocking ChibiOS-thread
+  suspend core1 doesn't have). Fixed with the `-Wl,--wrap=putchar_` core-aware
+  relay in `qmk_shim.c` (core1 → lock-free ring, drained by `doom_tick`), plus
+  the `doom_shim_progress` breadcrumb + 2 s no-frame heartbeat.
+- **Round 2 (2026-07-03): core1 halted in `Z_Init` — silent `bkpt`.** Log
+  showed the zone line then only `progress=1` heartbeats. `doomtype.h`'s
+  `shortptr_t` needs `PICO_RP2040`, which upstream gets from pico-sdk CMake;
+  only TUs including pico headers (pd_render.cpp) saw it — every other engine
+  TU compiled the RP2350 branch: `SHORTPTR_BASE 0x20030000` (our zone at
+  ~0x2002xxxx is *below* it) **plus an unconditional `asm("bkpt #0")` range
+  trap** that halts the core silently with no debugger. First
+  `memblock_to_shortptr` in `Z_Init` → dead core1. Two fixes: `PICO_RP2040 1`
+  in `doom_tiny_defs.h` (one shortptr ABI for all TUs — confirmed by
+  disassembly: encode is now `(v<<14)>>16`, no bkpt), and `I_Error` — which
+  the `NO_IERROR` device build defines as **another bare `__breakpoint()`** —
+  rerouted to `doom_shim_error()` (prints through the core1 log relay, then
+  parks; 41 call sites). Also added defense-in-depth `--wrap` of
+  malloc/calloc/free/realloc/strdup → zone on core1 (no live call site today,
+  but one config flip away). Lesson: **audit vendored device code for
+  debugger-assumed traps (`bkpt`/`__breakpoint`) — on a headless core they
+  are indistinguishable from a hang.**
+
 ## Engine integration state (history)
 
 The rp2040-doom snapshot (`f1f43171`) is vendored under [`engine/`](engine/PROVENANCE.md)

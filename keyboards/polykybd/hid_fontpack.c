@@ -121,7 +121,15 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                                                    sizeof(reply), &reply);
                 if (ok_rpc && reply.ack == SYNC_ACK && reply.next_offset > offset) {
                     slave_ack = SYNC_ACK;
+                    if (debug_enable && retry > 0) {
+                        uprintf("FONTPACK_CHUNK relay ok on retry %u (offset=%lu slave_next=%lu)\n",
+                                retry, (unsigned long)offset, (unsigned long)reply.next_offset);
+                    }
                     break;
+                }
+                if (debug_enable) {
+                    uprintf("FONTPACK_CHUNK relay retry %u (offset=%lu success=%d ack=0x%02x slave_next=%lu)\n",
+                            retry, (unsigned long)offset, (int)ok_rpc, reply.ack, (unsigned long)reply.next_offset);
                 }
             }
             bool ok = (slave_ack == SYNC_ACK);

@@ -76,14 +76,7 @@ void oled_update_buffer(void) {
             kdisp_write_gfx_text(smallFont, 1, 58, 58, buffer);
         }
     } else {
-        switch(get_local_layer()->def_layer) {
-            case 0: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Qwerty"); break;
-            case 1: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Qwerty Stag!"); break;
-            case 2: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Colemak DH"); break;
-            case 3: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Neo"); break;
-            case 4: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Workman"); break;
-            default: kdisp_write_gfx_text(smallFont, 1, 0, 30, U"Unknown"); break;
-        }
+        oled_draw_layout_name(smallFont, 0, 30, get_local_layer()->def_layer);
         const poly_sync_t* local_state = get_local_state();
         kdisp_write_gfx_text(smallFont, 1, 0, 44, U"Dsp*");
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->contrast);

@@ -96,6 +96,11 @@ typedef struct _fw_up_apply_sync_t {
     uint8_t  is_left;        // [9]    slave's new handedness when set_handedness != 0 (1 = left)
 } fw_up_apply_sync_t;
 
+// Master-side: relay one upload chunk (offset + FW_UP_CHUNK_SIZE bytes) to the
+// slave with retries. `log_tag` non-NULL enables per-retry debug logging (pass
+// NULL for a quiet relay). Returns true on slave ACK. See split_fw_up.c.
+bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, const char *log_tag);
+
 void user_sync_fw_up_query_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 void user_sync_fw_up_begin_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 void user_sync_fw_up_chunk_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

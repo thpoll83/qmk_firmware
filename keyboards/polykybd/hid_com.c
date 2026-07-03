@@ -393,10 +393,17 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 10: //receive overlay
                 {
                     reset_fragment_context();
-                    set_fragment_context_key(data[HID_DATA_IDX], data[HID_DATA_IDX+1]);
-                    uint8_t segment = data[HID_DATA_IDX+2];
+                    // Protocol 10: modifier (low nibble, 0..8) and segment index
+                    // (high nibble, 0..5) share one header byte, so the 60-byte
+                    // segment payload starts at HID_DATA_IDX+2 and fits the report
+                    // exactly (2 fixed + keycode + packed + 60 = 64). The old
+                    // layout put modifier and segment in separate bytes, leaving
+                    // only 59 bytes for a 60-byte segment -> a 1-byte over-read.
+                    uint8_t packed  = data[HID_DATA_IDX+1];
+                    uint8_t segment = packed >> 4;
+                    set_fragment_context_key(data[HID_DATA_IDX], packed & 0x0F);
                     if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
-                        fill_overlay_buffer(segment, &data[HID_DATA_IDX+3]);
+                        fill_overlay_buffer(segment, &data[HID_DATA_IDX+2]);
                         if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                             update_performed();
                             request_disp_refresh();

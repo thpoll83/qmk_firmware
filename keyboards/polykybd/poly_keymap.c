@@ -116,6 +116,15 @@ while lang_key:
 
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
+// The KCL_* (keycode_helper.h) and LANG_* (lang_lut.h) enums are both generated
+// from the SAME ordered language list, so LANG_xx == (KCL_xx - KCL_ENUS). The
+// language-keycode handling in to_static_text()/process_record_user() relies on
+// that identity to index a table / compute local_state->lang from the keycode
+// offset instead of a 160-case switch. Assert it at both ends so a future
+// divergence between the two generators is a build error, not a silent mis-map.
+static_assert((int)LANG_DEDE == (int)(KCL_DEDE - KCL_ENUS), "KCL_/LANG_ enum order drift");
+static_assert((int)LANG_CKUS == (int)(KCL_CKUS - KCL_ENUS), "KCL_/LANG_ enum order drift");
+
 static enum lang_layer g_lang_init = INIT_LANG;
 
 // keymaps[] / encoder_map[] / g_led_config are variant data, defined in each
@@ -727,174 +736,179 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KC_L3:                         return local_layer->def_layer == _L3 ? U"Neo\r\v" ICON_SWITCH_ON : U"Neo\r\v" ICON_SWITCH_OFF;
         case KC_L4:                         return local_layer->def_layer == _L4 ? U"Wkm\r\v" ICON_SWITCH_ON : U"Wkm\r\v" ICON_SWITCH_OFF;
 
-        //Language selection keycodes
-        // The flag + selection frame are drawn by render_lang_flag_key(); here we
-        // only return the tiny language code shown under the flag.
-        /*[[[cog
-        for lang in languages:
-            cog.outl(f'case KCL_{lang.upper()}: return U"{lang[0:2]}-{lang[2:]}";')
-        ]]]*/
-        case KCL_ENUS: return U"en-US";
-        case KCL_DEDE: return U"de-DE";
-        case KCL_FRFR: return U"fr-FR";
-        case KCL_ESES: return U"es-ES";
-        case KCL_PTPT: return U"pt-PT";
-        case KCL_ITIT: return U"it-IT";
-        case KCL_TRTR: return U"tr-TR";
-        case KCL_KOKR: return U"ko-KR";
-        case KCL_JAJP: return U"ja-JP";
-        case KCL_ARSA: return U"ar-SA";
-        case KCL_ELGR: return U"el-GR";
-        case KCL_UKUA: return U"uk-UA";
-        case KCL_RURU: return U"ru-RU";
-        case KCL_BEBY: return U"be-BY";
-        case KCL_KKKZ: return U"kk-KZ";
-        case KCL_BGBG: return U"bg-BG";
-        case KCL_PLPL: return U"pl-PL";
-        case KCL_RORO: return U"ro-RO";
-        case KCL_ZHCN: return U"zh-CN";
-        case KCL_NLNL: return U"nl-NL";
-        case KCL_HEIL: return U"he-IL";
-        case KCL_SVSE: return U"sv-SE";
-        case KCL_FIFI: return U"fi-FI";
-        case KCL_NNNO: return U"nn-NO";
-        case KCL_DADK: return U"da-DK";
-        case KCL_HUHU: return U"hu-HU";
-        case KCL_CSCZ: return U"cs-CZ";
-        case KCL_HRHR: return U"hr-HR";
-        case KCL_SKSK: return U"sk-SK";
-        case KCL_LTLT: return U"lt-LT";
-        case KCL_LVLV: return U"lv-LV";
-        case KCL_ETEE: return U"et-EE";
-        case KCL_PTBR: return U"pt-BR";
-        case KCL_SRRS: return U"sr-RS";
-        case KCL_MKMK: return U"mk-MK";
-        case KCL_FAIR: return U"fa-IR";
-        case KCL_HIIN: return U"hi-IN";
-        case KCL_MRIN: return U"mr-IN";
-        case KCL_NENP: return U"ne-NP";
-        case KCL_MNMN: return U"mn-MN";
-        case KCL_URPK: return U"ur-PK";
-        case KCL_ENGB: return U"en-GB";
-        case KCL_ESMX: return U"es-MX";
-        case KCL_DECH: return U"de-CH";
-        case KCL_FRBE: return U"fr-BE";
-        case KCL_FRCA: return U"fr-CA";
-        case KCL_THTH: return U"th-TH";
-        case KCL_BNIN: return U"bn-IN";
-        case KCL_TEIN: return U"te-IN";
-        case KCL_TAIN: return U"ta-IN";
-        case KCL_ZHTW: return U"zh-TW";
-        case KCL_KAGE: return U"ka-GE";
-        case KCL_HYAM: return U"hy-AM";
-        case KCL_IDID: return U"id-ID";
-        case KCL_AZAZ: return U"az-AZ";
-        case KCL_ISIS: return U"is-IS";
-        case KCL_VIVN: return U"vi-VN";
-        case KCL_ZHHK: return U"zh-HK";
-        case KCL_ENAU: return U"en-AU";
-        case KCL_ENNZ: return U"en-NZ";
-        case KCL_MINZ: return U"mi-NZ";
-        case KCL_SMWS: return U"sm-WS";
-        case KCL_FJFJ: return U"fj-FJ";
-        case KCL_TLPH: return U"tl-PH";
-        case KCL_HWUS: return U"hw-US";
-        case KCL_ENZA: return U"en-ZA";
-        case KCL_AFZA: return U"af-ZA";
-        case KCL_AREG: return U"ar-EG";
-        case KCL_SWKE: return U"sw-KE";
-        case KCL_AMET: return U"am-ET";
-        case KCL_YONG: return U"yo-NG";
-        case KCL_ENNG: return U"en-NG";
-        case KCL_ARMA: return U"ar-MA";
-        case KCL_ARIQ: return U"ar-IQ";
-        case KCL_KUIQ: return U"ku-IQ";
-        case KCL_MSMY: return U"ms-MY";
-        case KCL_UZUZ: return U"uz-UZ";
-        case KCL_ENCA: return U"en-CA";
-        case KCL_ESAR: return U"es-AR";
-        case KCL_ENPG: return U"en-PG";
-        case KCL_TYPF: return U"ty-PF";
-        case KCL_ESCO: return U"es-CO";
-        case KCL_ESPE: return U"es-PE";
-        case KCL_ESVE: return U"es-VE";
-        case KCL_ESCL: return U"es-CL";
-        case KCL_ESEC: return U"es-EC";
-        case KCL_ESGT: return U"es-GT";
-        case KCL_ESDO: return U"es-DO";
-        case KCL_ESBO: return U"es-BO";
-        case KCL_ESPY: return U"es-PY";
-        case KCL_ESCR: return U"es-CR";
-        case KCL_ESSV: return U"es-SV";
-        case KCL_ESHN: return U"es-HN";
-        case KCL_ESPA: return U"es-PA";
-        case KCL_ESUY: return U"es-UY";
-        case KCL_ESNI: return U"es-NI";
-        case KCL_DEAT: return U"de-AT";
-        case KCL_NLBE: return U"nl-BE";
-        case KCL_CAES: return U"ca-ES";
-        case KCL_ENIE: return U"en-IE";
-        case KCL_BSBA: return U"bs-BA";
-        case KCL_FRCH: return U"fr-CH";
-        case KCL_SLSI: return U"sl-SI";
-        case KCL_FOFO: return U"fo-FO";
-        case KCL_ARAE: return U"ar-AE";
-        case KCL_ARSY: return U"ar-SY";
-        case KCL_ARJO: return U"ar-JO";
-        case KCL_ARLB: return U"ar-LB";
-        case KCL_ARYE: return U"ar-YE";
-        case KCL_ARKW: return U"ar-KW";
-        case KCL_AROM: return U"ar-OM";
-        case KCL_ARPS: return U"ar-PS";
-        case KCL_ARQA: return U"ar-QA";
-        case KCL_ARBH: return U"ar-BH";
-        case KCL_ARDZ: return U"ar-DZ";
-        case KCL_ARSD: return U"ar-SD";
-        case KCL_ARTN: return U"ar-TN";
-        case KCL_ARLY: return U"ar-LY";
-        case KCL_FRCD: return U"fr-CD";
-        case KCL_FRCI: return U"fr-CI";
-        case KCL_FRCM: return U"fr-CM";
-        case KCL_FRSN: return U"fr-SN";
-        case KCL_FRMG: return U"fr-MG";
-        case KCL_ENGH: return U"en-GH";
-        case KCL_ENUG: return U"en-UG";
-        case KCL_ENZM: return U"en-ZM";
-        case KCL_SWTZ: return U"sw-TZ";
-        case KCL_PTAO: return U"pt-AO";
-        case KCL_PTMZ: return U"pt-MZ";
-        case KCL_BNBD: return U"bn-BD";
-        case KCL_ENIN: return U"en-IN";
-        case KCL_ENPK: return U"en-PK";
-        case KCL_ENPH: return U"en-PH";
-        case KCL_ENSG: return U"en-SG";
-        case KCL_ENLK: return U"en-LK";
-        case KCL_KYKG: return U"ky-KG";
-        case KCL_TGTJ: return U"tg-TJ";
-        case KCL_ENGU: return U"en-GU";
-        case KCL_ENSB: return U"en-SB";
-        case KCL_ENVU: return U"en-VU";
-        case KCL_ENFM: return U"en-FM";
-        case KCL_FRNC: return U"fr-NC";
-        case KCL_TOTO: return U"to-TO";
-        case KCL_EUES: return U"eu-ES";
-        case KCL_GLES: return U"gl-ES";
-        case KCL_RMCH: return U"rm-CH";
-        case KCL_CYGB: return U"cy-GB";
-        case KCL_GAIE: return U"ga-IE";
-        case KCL_MTMT: return U"mt-MT";
-        case KCL_LBLU: return U"lb-LU";
-        case KCL_SENO: return U"se-NO";
-        case KCL_GNPY: return U"gn-PY";
-        case KCL_QUPE: return U"qu-PE";
-        case KCL_AYBO: return U"ay-BO";
-        case KCL_NVUS: return U"nv-US";
-        case KCL_NHMX: return U"nh-MX";
-        case KCL_PSAF: return U"ps-AF";
-        case KCL_IUCA: return U"iu-CA";
-        case KCL_CRCA: return U"cr-CA";
-        case KCL_CKUS: return U"ck-US";
-        //[[[end]]]
+        // Language selection keycodes: the tiny "xx-YY" code shown under the flag
+        // (the flag + selection frame are drawn by render_lang_flag_key()). KCL_ENUS..
+        // are contiguous (QK_USER_0-based), so index a cog-generated table by offset.
+        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1: {
+            static const uint32_t* const lang_code[NUM_LANG] = {
+                /*[[[cog
+                for lang in languages:
+                    cog.outl(f'U"{lang[0:2]}-{lang[2:]}",')
+                ]]]*/
+                U"en-US",
+                U"de-DE",
+                U"fr-FR",
+                U"es-ES",
+                U"pt-PT",
+                U"it-IT",
+                U"tr-TR",
+                U"ko-KR",
+                U"ja-JP",
+                U"ar-SA",
+                U"el-GR",
+                U"uk-UA",
+                U"ru-RU",
+                U"be-BY",
+                U"kk-KZ",
+                U"bg-BG",
+                U"pl-PL",
+                U"ro-RO",
+                U"zh-CN",
+                U"nl-NL",
+                U"he-IL",
+                U"sv-SE",
+                U"fi-FI",
+                U"nn-NO",
+                U"da-DK",
+                U"hu-HU",
+                U"cs-CZ",
+                U"hr-HR",
+                U"sk-SK",
+                U"lt-LT",
+                U"lv-LV",
+                U"et-EE",
+                U"pt-BR",
+                U"sr-RS",
+                U"mk-MK",
+                U"fa-IR",
+                U"hi-IN",
+                U"mr-IN",
+                U"ne-NP",
+                U"mn-MN",
+                U"ur-PK",
+                U"en-GB",
+                U"es-MX",
+                U"de-CH",
+                U"fr-BE",
+                U"fr-CA",
+                U"th-TH",
+                U"bn-IN",
+                U"te-IN",
+                U"ta-IN",
+                U"zh-TW",
+                U"ka-GE",
+                U"hy-AM",
+                U"id-ID",
+                U"az-AZ",
+                U"is-IS",
+                U"vi-VN",
+                U"zh-HK",
+                U"en-AU",
+                U"en-NZ",
+                U"mi-NZ",
+                U"sm-WS",
+                U"fj-FJ",
+                U"tl-PH",
+                U"hw-US",
+                U"en-ZA",
+                U"af-ZA",
+                U"ar-EG",
+                U"sw-KE",
+                U"am-ET",
+                U"yo-NG",
+                U"en-NG",
+                U"ar-MA",
+                U"ar-IQ",
+                U"ku-IQ",
+                U"ms-MY",
+                U"uz-UZ",
+                U"en-CA",
+                U"es-AR",
+                U"en-PG",
+                U"ty-PF",
+                U"es-CO",
+                U"es-PE",
+                U"es-VE",
+                U"es-CL",
+                U"es-EC",
+                U"es-GT",
+                U"es-DO",
+                U"es-BO",
+                U"es-PY",
+                U"es-CR",
+                U"es-SV",
+                U"es-HN",
+                U"es-PA",
+                U"es-UY",
+                U"es-NI",
+                U"de-AT",
+                U"nl-BE",
+                U"ca-ES",
+                U"en-IE",
+                U"bs-BA",
+                U"fr-CH",
+                U"sl-SI",
+                U"fo-FO",
+                U"ar-AE",
+                U"ar-SY",
+                U"ar-JO",
+                U"ar-LB",
+                U"ar-YE",
+                U"ar-KW",
+                U"ar-OM",
+                U"ar-PS",
+                U"ar-QA",
+                U"ar-BH",
+                U"ar-DZ",
+                U"ar-SD",
+                U"ar-TN",
+                U"ar-LY",
+                U"fr-CD",
+                U"fr-CI",
+                U"fr-CM",
+                U"fr-SN",
+                U"fr-MG",
+                U"en-GH",
+                U"en-UG",
+                U"en-ZM",
+                U"sw-TZ",
+                U"pt-AO",
+                U"pt-MZ",
+                U"bn-BD",
+                U"en-IN",
+                U"en-PK",
+                U"en-PH",
+                U"en-SG",
+                U"en-LK",
+                U"ky-KG",
+                U"tg-TJ",
+                U"en-GU",
+                U"en-SB",
+                U"en-VU",
+                U"en-FM",
+                U"fr-NC",
+                U"to-TO",
+                U"eu-ES",
+                U"gl-ES",
+                U"rm-CH",
+                U"cy-GB",
+                U"ga-IE",
+                U"mt-MT",
+                U"lb-LU",
+                U"se-NO",
+                U"gn-PY",
+                U"qu-PE",
+                U"ay-BO",
+                U"nv-US",
+                U"nh-MX",
+                U"ps-AF",
+                U"iu-CA",
+                U"cr-CA",
+                U"ck-US",
+                //[[[end]]]
+            };
+            return lang_code[keycode - KCL_ENUS];
+        }
         default:
             return NULL;
     }
@@ -2275,171 +2289,15 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             }
             break;
         }
-        /*[[[cog
-            for lang in languages:
-                cog.outl(f'case KCL_{lang.upper()}: local_state->lang = LANG_{lang.upper()}; mark_settings_dirty(); layer_off(_LL); break;')
-            ]]]*/
-        case KCL_ENUS: local_state->lang = LANG_ENUS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_DEDE: local_state->lang = LANG_DEDE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRFR: local_state->lang = LANG_FRFR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESES: local_state->lang = LANG_ESES; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PTPT: local_state->lang = LANG_PTPT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ITIT: local_state->lang = LANG_ITIT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TRTR: local_state->lang = LANG_TRTR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KOKR: local_state->lang = LANG_KOKR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_JAJP: local_state->lang = LANG_JAJP; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARSA: local_state->lang = LANG_ARSA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ELGR: local_state->lang = LANG_ELGR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_UKUA: local_state->lang = LANG_UKUA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_RURU: local_state->lang = LANG_RURU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BEBY: local_state->lang = LANG_BEBY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KKKZ: local_state->lang = LANG_KKKZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BGBG: local_state->lang = LANG_BGBG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PLPL: local_state->lang = LANG_PLPL; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_RORO: local_state->lang = LANG_RORO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ZHCN: local_state->lang = LANG_ZHCN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NLNL: local_state->lang = LANG_NLNL; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HEIL: local_state->lang = LANG_HEIL; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SVSE: local_state->lang = LANG_SVSE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FIFI: local_state->lang = LANG_FIFI; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NNNO: local_state->lang = LANG_NNNO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_DADK: local_state->lang = LANG_DADK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HUHU: local_state->lang = LANG_HUHU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CSCZ: local_state->lang = LANG_CSCZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HRHR: local_state->lang = LANG_HRHR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SKSK: local_state->lang = LANG_SKSK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_LTLT: local_state->lang = LANG_LTLT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_LVLV: local_state->lang = LANG_LVLV; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ETEE: local_state->lang = LANG_ETEE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PTBR: local_state->lang = LANG_PTBR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SRRS: local_state->lang = LANG_SRRS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MKMK: local_state->lang = LANG_MKMK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FAIR: local_state->lang = LANG_FAIR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HIIN: local_state->lang = LANG_HIIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MRIN: local_state->lang = LANG_MRIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NENP: local_state->lang = LANG_NENP; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MNMN: local_state->lang = LANG_MNMN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_URPK: local_state->lang = LANG_URPK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENGB: local_state->lang = LANG_ENGB; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESMX: local_state->lang = LANG_ESMX; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_DECH: local_state->lang = LANG_DECH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRBE: local_state->lang = LANG_FRBE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCA: local_state->lang = LANG_FRCA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_THTH: local_state->lang = LANG_THTH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BNIN: local_state->lang = LANG_BNIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TEIN: local_state->lang = LANG_TEIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TAIN: local_state->lang = LANG_TAIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ZHTW: local_state->lang = LANG_ZHTW; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KAGE: local_state->lang = LANG_KAGE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HYAM: local_state->lang = LANG_HYAM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_IDID: local_state->lang = LANG_IDID; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AZAZ: local_state->lang = LANG_AZAZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ISIS: local_state->lang = LANG_ISIS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_VIVN: local_state->lang = LANG_VIVN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ZHHK: local_state->lang = LANG_ZHHK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENAU: local_state->lang = LANG_ENAU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENNZ: local_state->lang = LANG_ENNZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MINZ: local_state->lang = LANG_MINZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SMWS: local_state->lang = LANG_SMWS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FJFJ: local_state->lang = LANG_FJFJ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TLPH: local_state->lang = LANG_TLPH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HWUS: local_state->lang = LANG_HWUS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENZA: local_state->lang = LANG_ENZA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AFZA: local_state->lang = LANG_AFZA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AREG: local_state->lang = LANG_AREG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SWKE: local_state->lang = LANG_SWKE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AMET: local_state->lang = LANG_AMET; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_YONG: local_state->lang = LANG_YONG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENNG: local_state->lang = LANG_ENNG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARMA: local_state->lang = LANG_ARMA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARIQ: local_state->lang = LANG_ARIQ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KUIQ: local_state->lang = LANG_KUIQ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MSMY: local_state->lang = LANG_MSMY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_UZUZ: local_state->lang = LANG_UZUZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENCA: local_state->lang = LANG_ENCA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESAR: local_state->lang = LANG_ESAR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENPG: local_state->lang = LANG_ENPG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TYPF: local_state->lang = LANG_TYPF; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESCO: local_state->lang = LANG_ESCO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESPE: local_state->lang = LANG_ESPE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESVE: local_state->lang = LANG_ESVE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESCL: local_state->lang = LANG_ESCL; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESEC: local_state->lang = LANG_ESEC; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESGT: local_state->lang = LANG_ESGT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESDO: local_state->lang = LANG_ESDO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESBO: local_state->lang = LANG_ESBO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESPY: local_state->lang = LANG_ESPY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESCR: local_state->lang = LANG_ESCR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESSV: local_state->lang = LANG_ESSV; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESHN: local_state->lang = LANG_ESHN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESPA: local_state->lang = LANG_ESPA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESUY: local_state->lang = LANG_ESUY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESNI: local_state->lang = LANG_ESNI; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_DEAT: local_state->lang = LANG_DEAT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NLBE: local_state->lang = LANG_NLBE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CAES: local_state->lang = LANG_CAES; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENIE: local_state->lang = LANG_ENIE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BSBA: local_state->lang = LANG_BSBA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCH: local_state->lang = LANG_FRCH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SLSI: local_state->lang = LANG_SLSI; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FOFO: local_state->lang = LANG_FOFO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARAE: local_state->lang = LANG_ARAE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARSY: local_state->lang = LANG_ARSY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARJO: local_state->lang = LANG_ARJO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARLB: local_state->lang = LANG_ARLB; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARYE: local_state->lang = LANG_ARYE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARKW: local_state->lang = LANG_ARKW; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AROM: local_state->lang = LANG_AROM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARPS: local_state->lang = LANG_ARPS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARQA: local_state->lang = LANG_ARQA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARBH: local_state->lang = LANG_ARBH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARDZ: local_state->lang = LANG_ARDZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARSD: local_state->lang = LANG_ARSD; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARTN: local_state->lang = LANG_ARTN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARLY: local_state->lang = LANG_ARLY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCD: local_state->lang = LANG_FRCD; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCI: local_state->lang = LANG_FRCI; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCM: local_state->lang = LANG_FRCM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRSN: local_state->lang = LANG_FRSN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRMG: local_state->lang = LANG_FRMG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENGH: local_state->lang = LANG_ENGH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENUG: local_state->lang = LANG_ENUG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENZM: local_state->lang = LANG_ENZM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SWTZ: local_state->lang = LANG_SWTZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PTAO: local_state->lang = LANG_PTAO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PTMZ: local_state->lang = LANG_PTMZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BNBD: local_state->lang = LANG_BNBD; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENIN: local_state->lang = LANG_ENIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENPK: local_state->lang = LANG_ENPK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENPH: local_state->lang = LANG_ENPH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENSG: local_state->lang = LANG_ENSG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENLK: local_state->lang = LANG_ENLK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KYKG: local_state->lang = LANG_KYKG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TGTJ: local_state->lang = LANG_TGTJ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENGU: local_state->lang = LANG_ENGU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENSB: local_state->lang = LANG_ENSB; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENVU: local_state->lang = LANG_ENVU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENFM: local_state->lang = LANG_ENFM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRNC: local_state->lang = LANG_FRNC; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TOTO: local_state->lang = LANG_TOTO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_EUES: local_state->lang = LANG_EUES; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_GLES: local_state->lang = LANG_GLES; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_RMCH: local_state->lang = LANG_RMCH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CYGB: local_state->lang = LANG_CYGB; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_GAIE: local_state->lang = LANG_GAIE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MTMT: local_state->lang = LANG_MTMT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_LBLU: local_state->lang = LANG_LBLU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SENO: local_state->lang = LANG_SENO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_GNPY: local_state->lang = LANG_GNPY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_QUPE: local_state->lang = LANG_QUPE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AYBO: local_state->lang = LANG_AYBO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NVUS: local_state->lang = LANG_NVUS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NHMX: local_state->lang = LANG_NHMX; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PSAF: local_state->lang = LANG_PSAF; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_IUCA: local_state->lang = LANG_IUCA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CRCA: local_state->lang = LANG_CRCA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CKUS: local_state->lang = LANG_CKUS; mark_settings_dirty(); layer_off(_LL); break;
-        //[[[end]]]
+        // Direct per-language selectors on the language layer (KCL_ENUS..last).
+        // The KCL_* and LANG_* enums are both generated from the same ordered
+        // language list, so LANG_xx == (KCL_xx - KCL_ENUS) — the two _Static_asserts
+        // above guard that — and the whole per-language block is one range case.
+        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1:
+            local_state->lang = (uint8_t)(keycode - KCL_ENUS);
+            mark_settings_dirty();
+            layer_off(_LL);
+            break;
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
             layer_off(_LL);

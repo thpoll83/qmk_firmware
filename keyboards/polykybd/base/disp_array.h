@@ -99,3 +99,11 @@ void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height
 
 void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r);
 
+// Shared tab chrome for the emoji and language selection layers: the selected-tab
+// frame (3px north/east/west border, open at the bottom, with chamfered top
+// corners) and the non-selected-tab bottom underline. Drawn page-wise straight
+// into the keycap buffer (see disp_array.c). The keycode-range gating stays in
+// each layer (the ranges differ); only the drawing is shared here.
+void kdisp_draw_tab_frame(void);
+void kdisp_draw_tab_underline(void);
+

@@ -251,17 +251,11 @@ uint8_t emj_active_page(void)     { return s_page; }
 void emj_draw_tab_indicator(uint16_t keycode) {
     if (keycode < KC_EMJ_CAT_BASE || keycode >= KC_EMJ_PAGE_PREV) return;
     if ((uint8_t)(keycode - KC_EMJ_CAT_BASE) != s_category) return;
-
-    //kdisp_fill_rect(BUFFER_X, 2, SCREEN_WIDTH, 1);
-    kdisp_fill_rect(BUFFER_X + 1, 1, SCREEN_WIDTH - 2, 1);
-    kdisp_fill_rect(BUFFER_X + 2, 0, SCREEN_WIDTH - 4, 1);
-    kdisp_fill_rect(BUFFER_X, 2, 3, SCREEN_HEIGHT - 2);
-    kdisp_fill_rect(BUFFER_X + SCREEN_WIDTH - 2, 2, 3, SCREEN_HEIGHT - 2);
+    kdisp_draw_tab_frame();
 }
 
 void emj_draw_tab_bottom(uint16_t keycode) {
     if (keycode < KC_EMJ_CAT_BASE || keycode > KC_EMJ_PAGE_NEXT) return;
     if ((uint8_t)(keycode - KC_EMJ_CAT_BASE) == s_category) return;
-
-    kdisp_fill_rect(BUFFER_X, SCREEN_HEIGHT-3, SCREEN_WIDTH, 3);
+    kdisp_draw_tab_underline();
 }

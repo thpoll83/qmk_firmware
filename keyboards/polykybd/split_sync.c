@@ -77,9 +77,12 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
 #ifdef RGB_MATRIX_ENABLE
     uint8_t newly_cleared = (current->overlay_flags  & ~incoming->overlay_flags);
 #endif
-    // Doom control-pad mode flipped on the master -> re-render this half's
-    // legends (strip down to the game controls / restore the full set).
-    bool doom_ctl_changed = incoming->doom_ctl != current->doom_ctl;
+    // Doom control-pad mode flipped on the master (strip legends down to the
+    // game controls / restore the full set), or the weapon-pad state changed
+    // (picked up / switched weapon) -> re-render this half's legends.
+    bool doom_ctl_changed = incoming->doom_ctl != current->doom_ctl ||
+                            incoming->doom_wpn_owned != current->doom_wpn_owned ||
+                            incoming->doom_wpn_ready != current->doom_wpn_ready;
     copy_local_state(incoming);
     if (doom_ctl_changed) {
         request_disp_refresh();

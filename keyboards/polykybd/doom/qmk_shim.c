@@ -630,6 +630,39 @@ bool doom_shim_hud_stats(int *health, int *armor, int *ammo) {
     return true;
 }
 
+// Weapon-slot state for the slave-half weapon pad, as DOOM's number-key
+// slots: owned_mask bit N-1 = slot N owned, ready_slot = the slot of the
+// weapon in hand. Slot 1 covers fist+chainsaw, slot 3 shotgun(+super).
+bool doom_shim_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot) {
+    if (gamestate != GS_LEVEL || !doom_shim_progress) {
+        return false;
+    }
+    // Indexed by weapontype_t; NUMWEAPONS is an enum constant (9 incl.
+    // wp_supershotgun even in the DOOM_ONLY build), so list all explicitly.
+    static const uint8_t weapon_slot[] = {
+        1, // wp_fist
+        2, // wp_pistol
+        3, // wp_shotgun
+        4, // wp_chaingun
+        5, // wp_missile
+        6, // wp_plasma
+        7, // wp_bfg
+        1, // wp_chainsaw
+        3, // wp_supershotgun
+    };
+    _Static_assert(sizeof(weapon_slot) == NUMWEAPONS, "weapon_slot covers weapontype_t");
+    const player_t *p = &players[consoleplayer];
+    uint8_t mask = 0;
+    for (int w = 0; w < NUMWEAPONS; w++) {
+        if (p->weaponowned[w]) {
+            mask |= (uint8_t)(1u << (weapon_slot[w] - 1));
+        }
+    }
+    *owned_mask = mask;
+    *ready_slot = (p->readyweapon < NUMWEAPONS) ? weapon_slot[p->readyweapon] : 0;
+    return true;
+}
+
 unsigned doom_shim_video_type(void) {
     return next_video_type;
 }

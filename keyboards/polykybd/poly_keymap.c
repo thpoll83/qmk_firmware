@@ -654,8 +654,15 @@ void housekeeping_task_user(void) {
         // Doom game mode: synced so the SLAVE strips its legends down to the
         // game controls (the split_sync poly handler refreshes on the diff).
         // No master-side refresh — its keycaps are owned by the game blitter
-        // while active, and doom_exit() restores them itself.
+        // while active, and doom_exit() restores them itself. The weapon-pad
+        // state rides along; a change re-renders the slave's pad keys.
         access_local_state()->doom_ctl = doom_mode_active() ? 1 : 0;
+        uint8_t wpn_owned = 0, wpn_ready = 0;
+        if (access_local_state()->doom_ctl) {
+            doom_weapon_state(&wpn_owned, &wpn_ready);
+        }
+        access_local_state()->doom_wpn_owned = wpn_owned;
+        access_local_state()->doom_wpn_ready = wpn_ready;
     }
 }
 
@@ -1763,12 +1770,47 @@ void update_displays(enum refresh_mode mode) {
                     keycode = display_keycode_at(local_layer, r + offset, c);
                     kdisp_enable(true);
                     kdisp_set_contrast((uint8_t)(local_state->contrast-1));
-                    if (local_state->doom_ctl && !doom_key_is_control(keycode)) {
-                        // Doom control pad (this only ever renders on the SLAVE
-                        // half — the master early-returns above while the game
-                        // runs): everything but the game controls goes dark.
-                        kdisp_set_buffer(0x00);
-                        kdisp_send_buffer();
+                    // Doom control pad (this only ever renders on the SLAVE
+                    // half — the master early-returns above while the game
+                    // runs): the outer two columns become ESC + weapon slots,
+                    // the game-control keys keep their legends, everything
+                    // else goes dark.
+                    bool doom_handled = false;
+                    if (local_state->doom_ctl) {
+                        uint16_t pad = doom_pad_keycode((uint8_t)(r + offset), c);
+                        if (pad >= KC_1 && pad <= KC_7) {
+                            uint8_t slot = (uint8_t)(pad - KC_1); // 0-based
+                            kdisp_set_buffer(0x00);
+                            if (local_state->doom_wpn_owned & (uint8_t)(1u << slot)) {
+                                // "[n]" marks the weapon in hand, "n" an owned slot;
+                                // unowned slots stay dark.
+                                uint32_t txt[4];
+                                uint8_t  n     = 0;
+                                bool     ready = local_state->doom_wpn_ready == slot + 1;
+                                if (ready) txt[n++] = '[';
+                                txt[n++] = (uint32_t)('1' + slot);
+                                if (ready) txt[n++] = ']';
+                                txt[n] = 0;
+                                draw_legend_cx(txt, 23);
+                            }
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        } else if (pad == KC_ESC) {
+                            const uint32_t* esc = to_static_text(KC_ESC, state);
+                            kdisp_set_buffer(0x00);
+                            if (esc) {
+                                draw_legend_cx(esc, 23);
+                            }
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        } else if (!doom_key_is_control(keycode)) {
+                            kdisp_set_buffer(0x00);
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        }
+                    }
+                    if (doom_handled) {
+                        // rendered above
                     } else if(keycode!=KC_TRNS) {
                         int16_t lang_idx = lang_index_for_keycode(keycode);
                         if (lang_idx >= 0) {
@@ -1937,7 +1979,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // Doom easter egg: in game mode every key event is swallowed (fed to the
     // game, never the host); outside game mode this only advances the trigger
     // matcher. Inline no-op false unless built with POLYKYBD_DOOM.
-    if (doom_process_record(keycode, record->event.pressed)) {
+    if (doom_process_record(keycode, record->event.pressed,
+                            record->event.key.row, record->event.key.col)) {
         return false;
     }
 

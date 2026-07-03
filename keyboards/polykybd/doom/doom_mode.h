@@ -19,8 +19,20 @@ bool doom_mode_active(void);
 // Key-event hook, called first thing in process_record_user. Returns true when
 // the event was consumed: in game mode EVERY key event is swallowed (the host
 // must see no keystrokes while fragging); outside game mode it only feeds the
-// trigger sequence matcher.
-bool doom_process_record(uint16_t keycode, bool pressed);
+// trigger sequence matcher. row/col are the GLOBAL matrix coordinates — game
+// mode aliases a few positions independent of their keymap keycode (the top
+// outer corners act as ESC, the slave weapon-pad cells as the slot digits).
+bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t col);
+
+// Position alias for game mode (also drives the slave-side pad rendering):
+// KC_ESC for the top outer corner of either half, KC_1..KC_7 for the weapon
+// pad cells (outer two columns of a half: inner col rows 0-3 = slots 1-4,
+// outer col rows 1-3 = slots 5-7), KC_NO for everything else.
+uint16_t doom_pad_keycode(uint8_t row, uint8_t col);
+
+// Synced weapon state for the slave pad renderer (from poly_sync_t via the
+// master): owned_mask bit N-1 = slot N owned, ready_slot = weapon in hand.
+bool doom_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot);
 
 // Frame/housekeeping tick, called from housekeeping_task_user. Runs the game
 // only on the master (USB) half; a no-op on the slave and while inactive.
@@ -79,11 +91,23 @@ void doom_shim_compose_line(uint8_t *line, unsigned y);
 // and the ready weapon's ammo (-1 for fist/chainsaw). False outside a level.
 bool doom_shim_hud_stats(int *health, int *armor, int *ammo);
 
+// Weapon-slot state (qmk_shim.c): owned_mask bit N-1 = number-key slot N
+// owned, ready_slot = slot of the weapon in hand. False outside a level.
+bool doom_shim_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot);
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }
-static inline bool doom_process_record(uint16_t keycode, bool pressed) {
-    (void)keycode; (void)pressed;
+static inline bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t col) {
+    (void)keycode; (void)pressed; (void)row; (void)col;
+    return false;
+}
+static inline uint16_t doom_pad_keycode(uint8_t row, uint8_t col) {
+    (void)row; (void)col;
+    return 0; // KC_NO — no aliases without the game compiled in
+}
+static inline bool doom_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot) {
+    (void)owned_mask; (void)ready_slot;
     return false;
 }
 static inline void doom_tick(void) {}

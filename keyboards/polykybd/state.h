@@ -105,6 +105,11 @@ typedef struct _poly_sync_t {
     // game blitter directly and never see this flag (update_displays early-returns
     // there while the game runs).
     uint8_t  doom_ctl;
+    // Doom weapon pad state (valid while doom_ctl): bit N-1 = number-key slot N
+    // owned; ready = the slot of the weapon in hand (0 = none/unknown). The slave
+    // renders its outer-column weapon pad from these.
+    uint8_t  doom_wpn_owned;
+    uint8_t  doom_wpn_ready;
 } poly_sync_t;
 
 typedef struct _poly_last_t {

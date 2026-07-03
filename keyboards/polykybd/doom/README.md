@@ -152,6 +152,25 @@ frozen); the slave half keeps its normal legends (master-only milestone).
   suspend core1 doesn't have). Fixed with the `-Wl,--wrap=putchar_` core-aware
   relay in `qmk_shim.c` (core1 → lock-free ring, drained by `doom_tick`), plus
   the `doom_shim_progress` breadcrumb + 2 s no-frame heartbeat.
+- **Round 9 (2026-07-03): control-surface round.** Viewport shift confirmed
+  working; HUD labels clipped at the top (mid-font baseline was y=10 —
+  ascenders clipped; now y=13) and move down one row. New in v10: (1) **ESC
+  corners** — the top key of each half's outer column acts as ESC via a
+  POSITION alias (`doom_pad_keycode`; the right half has no physical ESC),
+  master corner shows "hold Esc", slave corner renders the Esc legend. (2)
+  **Weapon pad on the slave's outer two columns** — inner col rows 0-3 =
+  slots 1-4, outer col rows 1-3 = slots 5-7; owned slots show their digit,
+  the weapon in hand shows "[n]", unowned stay dark; state synced via
+  `poly_sync_t.doom_wpn_owned/ready` (filled from `players[]` in master
+  housekeeping), pressing a pad key selects that weapon (position alias,
+  slave-half only — the master's outer column is the HUD). (3) **DOOM logo
+  on the status OLED** while game mode runs (both halves), generated from
+  the shareware M_DOOM menu logo by `tools/oled_logo.py` (TITLEPIC dithers
+  to speckle at 128x64; M_DOOM is 123x60 with a transparent background —
+  near-1:1, clean). (4) Session state (HUD, frame/stats counters) resets on
+  entry — round 9's log showed `frames=800` at boot from a previous
+  session's statics. Menu ON the slave half needs the lockstep milestone
+  (next); the composed in-viewport menu remains usable meanwhile.
 - **Round 8 (2026-07-03, master on the LEFT half): playable; layout + UI
   polish round.** Confirmed working: viewport remap, demo, menu skull +
   arrows, WASD/arrows/Ctrl in-game. Changes from the feedback: (1) the

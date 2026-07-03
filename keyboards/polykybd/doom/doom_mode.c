@@ -238,6 +238,8 @@ uint8_t *doom_arena_zone(int *size) {
     return doom_arena_at(DOOM_ARENA_ZONE_OFF);
 }
 
+static void doom_session_reset(void); // HUD + counters, defined by the HUD block
+
 static void doom_enter(void) {
     // Never take the pool while the fw/font-pack stager owns the split link and
     // flash — the two "exclusive" modes don't compose.
@@ -271,6 +273,7 @@ static void doom_enter(void) {
     s_esc_down   = false;
     s_last_frame = 0;
     s_evq_w = s_evq_r = 0;
+    doom_session_reset(); // fresh HUD + frame/stats counters per entry
     set_last_update((int32_t)timer_read32());
     doom_blit_blank_all();
     doom_engine_start();
@@ -291,7 +294,39 @@ static void doom_exit(void) {
     request_disp_refresh();
 }
 
-bool doom_process_record(uint16_t keycode, bool pressed) {
+// Position alias map (GLOBAL matrix coords, either half): the top outer
+// corner key is ESC; the outer two columns' cells are the weapon pad —
+// inner column rows 0-3 = slots 1-4, outer column rows 1-3 = slots 5-7
+// (row 0 of the outer column is the ESC corner). Where "outer" respects
+// each half's matrix layout: left cols 0(outer)/1(inner), right cols
+// 7(outer)/6(inner) — the right half's upper rows carry keys in matrix
+// cols 1-7 (see split72.c invert_display).
+uint16_t doom_pad_keycode(uint8_t row, uint8_t col) {
+#if defined(KEYBOARD_polykybd_split72)
+    const bool    right = row >= MATRIX_ROWS_PER_SIDE;
+    const uint8_t r     = right ? (uint8_t)(row - MATRIX_ROWS_PER_SIDE) : row;
+    if (r > 3) {
+        return KC_NO; // thumb row: viewport bottom, no aliases
+    }
+    const uint8_t outer = right ? 7 : 0;
+    const uint8_t inner = right ? 6 : 1;
+    if (col == outer) {
+        return (r == 0) ? KC_ESC : (uint16_t)(KC_1 + 4 + (r - 1)); // slots 5-7
+    }
+    if (col == inner) {
+        return (uint16_t)(KC_1 + r); // slots 1-4
+    }
+#else
+    (void)row; (void)col;
+#endif
+    return KC_NO;
+}
+
+bool doom_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot) {
+    return s_engine_running && doom_shim_weapon_state(owned_mask, ready_slot);
+}
+
+bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t col) {
     if (!s_active) {
         // Trigger matcher — master side only (the game runs where USB is).
         if (!pressed || !is_usb_host_side()) {
@@ -315,9 +350,22 @@ bool doom_process_record(uint16_t keycode, bool pressed) {
         return false;
     }
 
-    // Game mode: swallow EVERYTHING — the host sees no keystrokes. ESC held
-    // long enough exits (checked in doom_tick so a press-and-hold needs no
-    // repeat events); a short ESC tap still reaches the game (its menu).
+    // Game mode: swallow EVERYTHING — the host sees no keystrokes. Position
+    // aliases first: the top outer corners act as ESC on both halves (the
+    // slave has no physical ESC), and the slave-half pad cells select
+    // weapons regardless of their keymap keycode. The MASTER's outer column
+    // carries the vitals HUD, so its pad cells stay un-aliased.
+    uint16_t pad = doom_pad_keycode(row, col);
+    if (pad == KC_ESC) {
+        keycode = KC_ESC;
+    } else if (pad != KC_NO) {
+        const bool from_slave = (row >= MATRIX_ROWS_PER_SIDE) == is_left_side();
+        if (from_slave) {
+            keycode = pad;
+        }
+    }
+    // ESC held long enough exits (checked in doom_tick so a press-and-hold
+    // needs no repeat events); a short ESC tap still reaches the game (menu).
     if (keycode == KC_ESC) {
         s_esc_down    = pressed;
         s_esc_down_at = timer_read32();
@@ -364,43 +412,63 @@ static void doom_hud_format(uint32_t *out, int v) {
     out[n] = 0;
 }
 
+// File-scope so doom_enter() can reset a fresh session (function-statics
+// leaked stale frame counters/HUD state into re-entries — field round 9's
+// "frames=800" at boot).
+static int      s_hud_hp, s_hud_ar, s_hud_am;
+static bool     s_hud_shown;
+static bool     s_hud_esc_drawn;
+static uint32_t s_hud_drawn_at;
+static uint32_t s_frames, s_hb_at, s_stats_at;
+
+static void doom_session_reset(void) {
+    s_hud_hp = s_hud_ar = s_hud_am = -9999;
+    s_hud_shown     = false;
+    s_hud_esc_drawn = false;
+    s_hud_drawn_at  = 0;
+    s_frames = s_hb_at = s_stats_at = 0;
+}
+
 static void doom_hud_tick(void) {
-    static int      s_hp = -9999, s_ar = -9999, s_am = -9999;
-    static bool     s_hud_shown;
-    static uint32_t s_drawn_at;
+    // The exit hint owns the corner key for the whole session (demo, menu
+    // and level alike) — the position alias makes it act as ESC.
+    if (!s_hud_esc_drawn) {
+        s_hud_esc_drawn = true;
+        doom_blit_stat_key(0, doom_hud_disp_col(), U"hold", U"Esc");
+    }
     int hp, ar, am;
     if (!doom_shim_hud_stats(&hp, &ar, &am)) {
         if (s_hud_shown) {
             s_hud_shown = false;
-            s_hp = s_ar = s_am = -9999;
-            for (uint8_t r = 0; r < 3; ++r) {
+            s_hud_hp = s_hud_ar = s_hud_am = -9999;
+            for (uint8_t r = 1; r <= 3; ++r) {
                 doom_blit_blank_key(r, doom_hud_disp_col());
             }
         }
         return;
     }
-    if (hp == s_hp && ar == s_ar && am == s_am && s_hud_shown) {
+    if (hp == s_hud_hp && ar == s_hud_ar && am == s_hud_am && s_hud_shown) {
         return;
     }
-    if (s_hud_shown && timer_elapsed32(s_drawn_at) < DOOM_HUD_MIN_REDRAW_MS) {
+    if (s_hud_shown && timer_elapsed32(s_hud_drawn_at) < DOOM_HUD_MIN_REDRAW_MS) {
         return; // fresh values picked up on a later frame
     }
-    s_drawn_at = timer_read32();
+    s_hud_drawn_at = timer_read32();
     uint32_t value[8];
-    if (hp != s_hp || !s_hud_shown) {
-        s_hp = hp;
+    if (hp != s_hud_hp || !s_hud_shown) {
+        s_hud_hp = hp;
         doom_hud_format(value, hp);
-        doom_blit_stat_key(0, doom_hud_disp_col(), U"Health", value);
+        doom_blit_stat_key(1, doom_hud_disp_col(), U"Health", value);
     }
-    if (ar != s_ar || !s_hud_shown) {
-        s_ar = ar;
+    if (ar != s_hud_ar || !s_hud_shown) {
+        s_hud_ar = ar;
         doom_hud_format(value, ar);
-        doom_blit_stat_key(1, doom_hud_disp_col(), U"Armor", value);
+        doom_blit_stat_key(2, doom_hud_disp_col(), U"Armor", value);
     }
-    if (am != s_am || !s_hud_shown) {
-        s_am = am;
+    if (am != s_hud_am || !s_hud_shown) {
+        s_hud_am = am;
         doom_hud_format(value, am);
-        doom_blit_stat_key(2, doom_hud_disp_col(), U"Ammo", value);
+        doom_blit_stat_key(3, doom_hud_disp_col(), U"Ammo", value);
     }
     s_hud_shown = true;
 }
@@ -425,9 +493,6 @@ void doom_tick(void) {
         // on display_frame_freed once it is a full frame ahead — the blit pace
         // here IS the game's frame pace. (Single view buffer: the next frame
         // renders into the buffer being blitted — tearing accepted for v1.)
-        static uint32_t s_frames;
-        static uint32_t s_hb_at;
-        static uint32_t s_stats_at;
         if (doom_shim_take_frame()) {
             doom_blit_frame_engine(DOOM_PLAYPAL_LUMA);
             doom_shim_release_frame();

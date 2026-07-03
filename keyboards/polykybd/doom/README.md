@@ -58,7 +58,47 @@ Without `POLYKYBD_DOOM=yes` nothing here is compiled and every hook in
   display slots (bounds-guarded); the demo targets split72.
 - RGB matrix / trackpad untouched; damage-flash repurposing comes later.
 
-## Engine integration state
+## Engine integration state — THE FULL ENGINE NOW LINKS
+
+As of slice 5, `D_DoomMain` is rooted from `doom_mode.c` (behind a volatile
+launch gate — not yet called at runtime) and the **complete engine, renderer
+included, links into the flagged image**: 593 KB of the 2 MB partition, all
+symbols resolved. The memory plan that makes it fit:
+
+- **The pool and the engine share one linker block.** RAM is otherwise fully
+  committed, so the doom builds use a keyboard-local linker script
+  ([`../ld/RP2040_FLASH_TIMECRIT_DOOM.ld`](../ld/RP2040_FLASH_TIMECRIT_DOOM.ld))
+  that places every engine `.bss`/`COMMON` symbol (~21 KB — the vintage code
+  is full of COMMON tentative definitions) at the front of a `.doom_shared`
+  block padded to exactly the pool size (226,800 B); `base/overlay.c` aliases
+  that block as the overlay pool under `POLYKYBD_DOOM`. If the engine statics
+  ever outgrow the pool, the link fails loudly. The block is not crt0-zeroed:
+  `doom_enter()` memsets it, giving the engine virgin static state per entry.
+- **Measured pool tiering** (linker symbols, current build): statics 20,824 →
+  arena 205,976 = frame buffer 53,760 + pd_render buffers 58,880 + vpatch
+  3,072 + **zone 90,264** (upstream's working set is ~58 K — comfortable).
+- **Single 320x168 view buffer**: upstream double-buffers for the beam-racing
+  scanout; ours is synchronous and wipes are compiled out, so pd_render's
+  `FRAME_BUFFER(i)` maps both indices to one buffer (previous-frame copies
+  degrade to self-copies — to be assessed on hardware).
+- pd_render's big working buffers (`list_buffer` 47 K, `visplane_bit`,
+  patch-decoder ring, column heads) are pointer-converted and carved from the
+  arena in `pd_init()`; `vpatchlists` moved out of USB DPRAM (ChibiOS owns
+  USB here) into the arena.
+- pico_sync (`sem.c`/`lock_core.c`) + `hardware_sync/sync.c` are compiled for
+  the renderer's core0/core1 semaphores. ⚠️ Runtime audit owed:
+  `next_striped_spin_lock_num()` knows nothing of ChibiOS's spinlock use.
+
+**Known-open before first boot** (in order): launch `pd_core1_loop` on core1
+(take-over from `multicore_exec`, mind the `cpsid i` note), the per-frame
+scanout loop (scanline compose → palette→luma → `doom_blit`), input pump
+(`doom_process_record` → `D_PostEvent`), WHX flashed to `0x600000`
+(`doom1.whx` via the fontpack-style staging flow), ChibiOS heap is down to
+~4 KB in doom builds (watch for allocation failures), and game re-entry
+leaves engine `.data` stale (only `.bss` is re-zeroed) — first boot should
+allow a single entry per power cycle.
+
+## Engine integration state (history)
 
 The rp2040-doom snapshot (`f1f43171`) is vendored under [`engine/`](engine/PROVENANCE.md)
 and **the complete game core compiles and links inside the QMK build** (~85

@@ -9,6 +9,7 @@
 #include QMK_KEYBOARD_H
 
 #include "doom_mode.h"
+#include "doom_arena.h"
 #include "doom_blit.h"
 #include "doom_game.h"
 
@@ -18,6 +19,23 @@
 #include "base/fw_staging.h"
 
 #ifdef POLYKYBD_DOOM
+
+// The engine entry (d_main.c). Declared directly — pulling doom/d_main.h into
+// this QMK-side file would drag the whole engine header graph next to
+// QMK_KEYBOARD_H for one prototype.
+extern void D_DoomMain(void);
+
+// Rooted-but-not-yet-launched: launching needs the core1 handover + the
+// scanout loop (next milestone). The volatile gate keeps the call genuinely
+// reachable, so the linker must resolve the COMPLETE engine — the flagged
+// image carries the real engine cost from here on instead of gc'ing it.
+static volatile bool s_engine_launch_enabled = false;
+
+static void doom_engine_start(void) {
+    if (s_engine_launch_enabled) {
+        D_DoomMain(); // never returns
+    }
+}
 
 // Trigger: type IDDQD (plain, unmodified) on the master half. Dev-harness
 // placeholder — the shipping easter egg gates this behind a held layer so it
@@ -42,21 +60,26 @@ bool doom_mode_active(void) {
     return s_active;
 }
 
-// The pool is NUM_OVERLAYS*NUM_VARIATIONS overlay rows of 360 B = 226,800 B
-// (base/overlay.c). Game-mode layout: framebuffer first, zone memory after.
-#define DOOM_POOL_SIZE (NUM_OVERLAYS * NUM_VARIATIONS * (72 * 40 / 8))
-_Static_assert(DOOM_POOL_SIZE >= DOOM_FB_SIZE + 128 * 1024,
-               "overlay pool too small for framebuffer + a viable zone");
+// The doom linker script's shared block: pool base, end of the engine's
+// zero-init statics (= the arena base), and pool end (base + 226,800). See
+// doom_arena.h for the tiering.
+extern uint8_t __doom_shared_base__[];
+extern uint8_t __doom_shared_statics_end__[];
+extern uint8_t __doom_shared_end__[];
+
+uint8_t *doom_arena_at(unsigned offset) {
+    return s_active || s_fb ? __doom_shared_statics_end__ + offset : NULL;
+}
 
 uint8_t *doom_arena_framebuffer(void) {
-    return s_fb;
+    return doom_arena_at(DOOM_ARENA_FB_OFF);
 }
 
 uint8_t *doom_arena_zone(int *size) {
     if (size) {
-        *size = DOOM_POOL_SIZE - DOOM_FB_SIZE;
+        *size = (int)(__doom_shared_end__ - __doom_shared_statics_end__) - DOOM_ARENA_ZONE_OFF;
     }
-    return s_fb ? s_fb + DOOM_FB_SIZE : NULL;
+    return doom_arena_at(DOOM_ARENA_ZONE_OFF);
 }
 
 static void doom_enter(void) {
@@ -73,13 +96,27 @@ static void doom_enter(void) {
     // is entirely reconstructible — the host re-sends overlays on every app
     // switch, so nothing is lost (see DOOM_FEASIBILITY.md, Challenge 2).
     s_fb = (uint8_t *)get_overlays();
-    doom_fire_init(s_fb);
+    // Zero the whole shared block: the engine's zero-init statics live at its
+    // front (.doom_shared is not crt0-zeroed) — every entry starts the game
+    // from virgin static state.
+    memset(__doom_shared_base__, 0, (size_t)(__doom_shared_end__ - __doom_shared_base__));
+    // The engine statics eat the pool from the front; refuse to start if that
+    // left the zone unviable (the link only guards the 226,800 B total).
+    int zone_size = 0;
+    (void)doom_arena_zone(&zone_size);
+    if (zone_size < 40 * 1024) {
+        printf("doom: zone too small (%d) — engine statics have outgrown the pool\n", zone_size);
+        s_fb = NULL;
+        return;
+    }
+    doom_fire_init(doom_arena_framebuffer());
 
     s_active     = true;
     s_esc_down   = false;
     s_last_frame = 0;
     set_last_update((int32_t)timer_read32());
     doom_blit_blank_all();
+    doom_engine_start();
 }
 
 static void doom_exit(void) {
@@ -148,8 +185,8 @@ void doom_tick(void) {
         return;
     }
     s_last_frame = timer_read32();
-    doom_fire_step(s_fb);
-    doom_blit_frame(s_fb, doom_fire_luma());
+    doom_fire_step(doom_arena_framebuffer());
+    doom_blit_frame(doom_arena_framebuffer(), doom_fire_luma());
 }
 
 bool doom_hid_frozen(uint8_t cmd) {

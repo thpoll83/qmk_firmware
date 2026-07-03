@@ -13,7 +13,19 @@
 #define OVERLAY_BIT_CAPACITY (SCREEN_WIDTH * SCREEN_HEIGHT)
 
 static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
+#ifdef POLYKYBD_DOOM
+// Doom dev builds: the pool is the linker's .doom_shared block, shared with
+// the game engine's zero-init statics (keyboards/polykybd/ld/
+// RP2040_FLASH_TIMECRIT_DOOM.ld) — game mode and overlay use are mutually
+// exclusive, and the block is exactly pool-sized. NOT zeroed by crt0: the
+// usage bits above gate every read, and reset/refill paths memset it.
+extern uint8_t __doom_shared_base__[];
+#define overlays ((uint8_t (*)[72*40/8])__doom_shared_base__)
+#define OVERLAYS_SIZE (NUM_OVERLAYS*NUM_VARIATIONS*(72*40/8))
+#else
 static /*volatile*/ uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
+#define OVERLAYS_SIZE sizeof(overlays)
+#endif
 static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 
 static overlay_fragment_context_t g_fragment_context = {0};
@@ -135,7 +147,7 @@ bool is_overlay_used(uint16_t overlay_idx) {
 }
 
 void reset_overlay_buffers(void) {
-    memset(&overlays, 0, sizeof(overlays));
+    memset(overlays, 0, OVERLAYS_SIZE);
 }
 
 void reset_overlay_usage(void) {

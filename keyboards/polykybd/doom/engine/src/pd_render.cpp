@@ -8,6 +8,9 @@
 // chicanery we'll need from the final version
 
 #include "picodoom.h"
+#if POLYKYBD_QMK
+#include "doom/doom_arena.h"   // PolyKybd port: arena layout for the render buffers
+#endif
 #include "pico/sem.h"
 #include "hardware/gpio.h"
 #include "pico/divider.h"
@@ -106,7 +109,14 @@ static uint8_t flat_decoder_tmp[WHD_FLAT_DECODER_MAX_SIZE];
 static_assert(__builtin_popcount(PATCH_DECODER_HASH_SIZE)==1, "");
 static int16_t patch_hash_offsets[PATCH_DECODER_HASH_SIZE];
 #define PATCH_DECODER_CIRCULAR_BUFFER_SIZE (2048-256)
+#if POLYKYBD_QMK
+// PolyKybd port: the big render working buffers live in the borrowed
+// overlay-pool arena (doom/doom_arena.h) — the keyboard's RAM is otherwise
+// fully committed. All are assigned in pd_init().
+static uint16_t *patch_decoder_circular_buf;
+#else
 static uint16_t patch_decoder_circular_buf[PATCH_DECODER_CIRCULAR_BUFFER_SIZE];
+#endif
 static uint16_t patch_decoder_circular_buf_write_pos;
 static uint16_t patch_decoder_circular_buf_write_limit;
 // this is used when decoding decoders, but also as a cache for up to 4 decoder tables (each of which are 256 bytes big)
@@ -167,8 +177,23 @@ int pd_frame;
 int pd_flag;
 fixed_t pd_scale;
 
+#if POLYKYBD_QMK
+// PolyKybd port: a SINGLE arena-backed view buffer (defined in doom/qmk_shim.c)
+// — the pool cannot hold two 320x168 frames alongside the render buffers and
+// the zone. Scanout is synchronous per frame and wipes are compiled out
+// (NO_USE_WIPE), so both frame indices map to the same buffer; the previous-
+// frame copies (status bar / splash reuse) degrade to self-copies.
+// visplane_bit is arena-backed too (see pd_init()).
+extern uint8_t *frame_buffer_0;
+#define FRAME_BUFFER(i) frame_buffer_0
+#define VISPLANE_BIT_SIZE ((SCREENWIDTH / 8) * MAIN_VIEWHEIGHT)
+static uint8_t *visplane_bit; // this is also used for patch decoding in core1 (since flats are done by then)
+#else
 extern uint8_t __aligned(4) frame_buffer[2][SCREENWIDTH * MAIN_VIEWHEIGHT];
+#define FRAME_BUFFER(i) frame_buffer[i]
 static uint8_t __aligned(4) visplane_bit[(SCREENWIDTH / 8) * MAIN_VIEWHEIGHT]; // this is also used for patch decoding in core1 (since flats are done by then)
+#define VISPLANE_BIT_SIZE sizeof(visplane_bit)
+#endif
 static int8_t flatnum_first[256];
 
 static uint8_t *render_frame_buffer;
@@ -263,7 +288,13 @@ static_assert(sizeof(flat_run) == 6, "");
 static_assert(sizeof(pd_column) == 12, "");
 static_assert(sizeof(pd_column) == sizeof(flat_run) * 2, ""); // we pack two into the space of the other
 
+#if POLYKYBD_QMK
+#define COLUMN_HEADS_SIZE (SCREENWIDTH * 2 * sizeof(int16_t))
+static int16_t *column_heads; // arena-backed, see pd_init()
+#else
 static __aligned(4) int16_t column_heads[SCREENWIDTH * 2];
+#define COLUMN_HEADS_SIZE sizeof(column_heads)
+#endif
 #define fuzzy_column_heads (&column_heads[SCREENWIDTH])
 
 static void SafeUpdateSound() {
@@ -322,10 +353,16 @@ const char *type_name(pd_column column) {
 #else
 #define RENDER_COL_MAX 7200
 #endif
-static uint8_t __aligned(4) list_buffer[RENDER_COL_MAX * sizeof(pd_column) + 64*64]; // extra 64*64 is for one flat
+#define LIST_BUFFER_SIZE (RENDER_COL_MAX * sizeof(pd_column) + 64*64) // extra 64*64 is for one flat
+#if POLYKYBD_QMK
+static uint8_t *list_buffer;            // arena-backed, see pd_init()
+static uint8_t *last_list_buffer_limit; // set in pd_init()
+#else
+static uint8_t __aligned(4) list_buffer[LIST_BUFFER_SIZE];
 static uint8_t *last_list_buffer_limit = list_buffer + sizeof(list_buffer);
+#endif
 //static_assert(text_font_cpy > list_buffer, "");
-#define MAX_CACHED_FLATS (sizeof(list_buffer) / 4096)
+#define MAX_CACHED_FLATS (LIST_BUFFER_SIZE / 4096)
 static uint8_t cached_flat_picnum[MAX_CACHED_FLATS];
 static uint8_t cached_flat_slots;
 static uint8_t *cached_flat0;
@@ -782,8 +819,8 @@ void pd_begin_frame() {
     if (0) printf("BEGIN FRAME\n");
 #endif
     // new
-    memset(column_heads, -1, sizeof(column_heads));
-    memset(visplane_bit, 0, sizeof(visplane_bit)); // todo could do this with dma
+    memset(column_heads, -1, COLUMN_HEADS_SIZE);
+    memset(visplane_bit, 0, VISPLANE_BIT_SIZE); // todo could do this with dma
     for(uint i=0;i<count_of(not_fully_covered_cols);i++) not_fully_covered_cols[i] = 0; // only 3 of these so loop
     not_fully_covered_yl = 0;
     not_fully_covered_yh = MAIN_VIEWHEIGHT - 1;
@@ -819,7 +856,21 @@ void pd_init() {
     sem_init(&core1_wake, 0, 1);
     sem_init(&core0_done, 0, 1);
     sem_init(&core1_done, 0, 1);
-#if PICO_ON_DEVICE
+#if POLYKYBD_QMK
+    // PolyKybd port: carve the working buffers out of the borrowed overlay
+    // pool. Upstream parks vpatchlists in USB DPRAM — ChibiOS owns USB here.
+    static_assert(sizeof(vpatchlists_t) <= DOOM_ARENA_VPATCH_BYTES, "");
+    static_assert(LIST_BUFFER_SIZE % 4 == 0 && VISPLANE_BIT_SIZE % 4 == 0, "");
+    uint8_t *arena = doom_arena_at(DOOM_ARENA_PD_OFF);
+    assert(arena);
+    list_buffer                = arena;              arena += LIST_BUFFER_SIZE;
+    visplane_bit               = arena;              arena += VISPLANE_BIT_SIZE;
+    patch_decoder_circular_buf = (uint16_t *)arena;  arena += PATCH_DECODER_CIRCULAR_BUFFER_SIZE * sizeof(uint16_t);
+    column_heads               = (int16_t *)arena;   arena += COLUMN_HEADS_SIZE;
+    assert(arena <= doom_arena_at(DOOM_ARENA_PD_OFF) + DOOM_ARENA_PD_BYTES);
+    last_list_buffer_limit = list_buffer + LIST_BUFFER_SIZE;
+    vpatchlists = (vpatchlists_t *)doom_arena_at(DOOM_ARENA_VPATCH_OFF);
+#elif PICO_ON_DEVICE
     static_assert(sizeof(vpatchlists_t) < 0xc00, "");
 #if PICO_RP2040
     vpatchlists = (vpatchlists_t *)(USBCTRL_DPRAM_BASE + 0x400);
@@ -2318,7 +2369,7 @@ static void __noinline draw_regular_columns(int core) {
     spin_lock_t *lock = spin_lock_instance(RENDER_SPIN_LOCK);
     uint8_t *buffer;
     if (core) {
-        static_assert(sizeof(visplane_bit) >= WHD_PATCH_MAX_WIDTH, "");
+        static_assert(VISPLANE_BIT_SIZE >= WHD_PATCH_MAX_WIDTH, "");
         // visplane_bit is no longer used on core 1 as we've already drawn
         buffer = visplane_bit;
     } else {
@@ -2459,11 +2510,11 @@ extern "C" int M_Random();
 void maybe_draw_single_screen(int patch_num) {
     if (sub_gamestate == 0) {
         next_video_type = VIDEO_TYPE_SINGLE;
-        draw_splash(patch_num, 0, MAIN_VIEWHEIGHT, frame_buffer[render_frame_index]);
+        draw_splash(patch_num, 0, MAIN_VIEWHEIGHT, FRAME_BUFFER(render_frame_index));
         sub_gamestate = 1;
     } else if (sub_gamestate == 1) {
         draw_splash(patch_num, MAIN_VIEWHEIGHT, SCREENHEIGHT,
-                    frame_buffer[render_frame_index^1] + (MAIN_VIEWHEIGHT - 32) * SCREENWIDTH);
+                    FRAME_BUFFER(render_frame_index^1) + (MAIN_VIEWHEIGHT - 32) * SCREENWIDTH);
         sub_gamestate = 2;
     }
 }
@@ -2474,7 +2525,7 @@ void draw_stbar_on_framebuffer(int frame, boolean refresh) {
 //    ST_Drawer(false, refresh);
     ST_drawWidgets(refresh);
     // draw the status bar onto the bottom (now non visible part of the top buffer)
-    I_VideoBuffer = frame_buffer[frame] - 32 * SCREENWIDTH;
+    I_VideoBuffer = FRAME_BUFFER(frame) - 32 * SCREENWIDTH;
     V_RestoreBuffer();
     V_DrawPatchList(vpatchlists->framebuffer);
     I_VideoBuffer = render_frame_buffer;
@@ -2484,13 +2535,13 @@ static void draw_framebuffer_patches_fullscreen() {
     V_RestoreBuffer();
     vpatch_clip_bottom = MAIN_VIEWHEIGHT;
     V_DrawPatchList(vpatchlists->framebuffer);
-    I_VideoBuffer = frame_buffer[render_frame_index^1] - 32 * SCREENWIDTH;
+    I_VideoBuffer = FRAME_BUFFER(render_frame_index^1) - 32 * SCREENWIDTH;
     V_RestoreBuffer();
     vpatch_clip_top = SCREENHEIGHT-32;
     vpatch_clip_bottom = SCREENHEIGHT;
     V_DrawPatchList(vpatchlists->framebuffer);
     vpatch_clip_top = 0;
-    I_VideoBuffer = frame_buffer[render_frame_index];
+    I_VideoBuffer = FRAME_BUFFER(render_frame_index);
 }
 
 void draw_fullscreen_background(int top, int bottom) {
@@ -2499,7 +2550,7 @@ void draw_fullscreen_background(int top, int bottom) {
            (top >= MAIN_VIEWHEIGHT && bottom > MAIN_VIEWHEIGHT));
     int patch_num = 0;
     byte *top_pixel = top < MAIN_VIEWHEIGHT ? render_frame_buffer + top * SCREENWIDTH :
-                        frame_buffer[render_frame_index^1] + (top - 32) * SCREENWIDTH;
+                        FRAME_BUFFER(render_frame_index^1) + (top - 32) * SCREENWIDTH;
     switch (gamestate) {
         case GS_INTERMISSION:
             patch_num = wi_background_patch_num;
@@ -2557,7 +2608,7 @@ void draw_fullscreen_background(int top, int bottom) {
         V_BeginPatchList(vpatchlists->framebuffer);
         WI_Drawer();
         if (top >= MAIN_VIEWHEIGHT) {
-            I_VideoBuffer = frame_buffer[render_frame_index ^ 1] - 32 * SCREENWIDTH;
+            I_VideoBuffer = FRAME_BUFFER(render_frame_index ^ 1) - 32 * SCREENWIDTH;
         }
         V_RestoreBuffer();
         vpatch_clip_top = top;
@@ -2619,7 +2670,7 @@ void pd_end_frame(int wipe_start) {
         // we expect all the rendering code to be a no-op
         assert(render_col_count == 0);
     }
-    render_frame_buffer = frame_buffer[render_frame_index];
+    render_frame_buffer = FRAME_BUFFER(render_frame_index);
 #if 0 && !PICO_ON_DEVICE
     printf("END FRAME %d %p ws %d cols %d\n", render_frame_index, render_frame_buffer, wipe_start, render_col_count);
 #endif
@@ -2642,7 +2693,7 @@ void pd_end_frame(int wipe_start) {
                 if (wipe_start) {
                     if (gamestate != GS_LEVEL) {
                         render_frame_index ^= 1;
-                        render_frame_buffer = frame_buffer[render_frame_index];
+                        render_frame_buffer = FRAME_BUFFER(render_frame_index);
                         I_VideoBuffer = render_frame_buffer;
                         draw_fullscreen_background(0, MAIN_VIEWHEIGHT - 32);
                     }
@@ -2670,7 +2721,7 @@ void pd_end_frame(int wipe_start) {
                     uint screen_front = render_frame_index ^ 1; // what was currently displayed
                     uint32_t base;
 #if PICO_ON_DEVICE
-                    base = (uintptr_t) &frame_buffer[0][0];
+                    base = (uintptr_t) &FRAME_BUFFER(0)[0];
 #else
                     base = 0;
 #endif
@@ -2754,7 +2805,7 @@ void pd_end_frame(int wipe_start) {
 
     if (showing_help) {
         // bit hacky, but does the job (we don't want to draw anything at all when fully covered
-        memset(column_heads, -1, sizeof(column_heads));
+        memset(column_heads, -1, COLUMN_HEADS_SIZE);
     } else {
         for (uint i = 0; i < count_of(not_fully_covered_cols); i++) {
             if (not_fully_covered_cols[i]) {
@@ -2826,9 +2877,9 @@ void pd_end_frame(int wipe_start) {
                     // todo we don't need to check wi_background_patch_num
                     if (post_wipecount == 1 && wi_background_patch_num) {
                         // at this point the text should be drawn by overlay, so we must erease it from the background
-                        draw_splash(wi_background_patch_num, 0, MAIN_VIEWHEIGHT, frame_buffer[render_frame_index]);
+                        draw_splash(wi_background_patch_num, 0, MAIN_VIEWHEIGHT, FRAME_BUFFER(render_frame_index));
                         draw_splash(wi_background_patch_num, MAIN_VIEWHEIGHT, SCREENHEIGHT,
-                                    frame_buffer[render_frame_index ^ 1] + (MAIN_VIEWHEIGHT - 32) * SCREENWIDTH);
+                                    FRAME_BUFFER(render_frame_index ^ 1) + (MAIN_VIEWHEIGHT - 32) * SCREENWIDTH);
                     }
                     post_wipecount++;
                 }
@@ -3100,7 +3151,7 @@ void draw_cast_sprite(int sprite_lump) {
         }
     }
     // to save having a new overlay mode, we'll render to an off screen buffer and attempt to copy this avoiding the scanline (or not - perhaps we don't really care)
-    render_frame_buffer = frame_buffer[render_frame_index ^ 1];
+    render_frame_buffer = FRAME_BUFFER(render_frame_index ^ 1);
     const int top = 41; // window top -> top + height is the window we care about
     // draw the bit of the background we need
     draw_splash(W_GetNumForName("BOSSBACK"), top, top + height, render_frame_buffer);
@@ -3109,7 +3160,7 @@ void draw_cast_sprite(int sprite_lump) {
 
     // now blit to the screen (could have waited for a vsync here but i don't see any flickering)
     static_assert(top + height > MAIN_VIEWHEIGHT, ""); // just to check we need to split this copy into two bits
-    memcpy(frame_buffer[render_frame_index] + top * SCREENWIDTH, render_frame_buffer, (MAIN_VIEWHEIGHT - top) * SCREENWIDTH);
+    memcpy(FRAME_BUFFER(render_frame_index) + top * SCREENWIDTH, render_frame_buffer, (MAIN_VIEWHEIGHT - top) * SCREENWIDTH);
     // bottom bit goes on the last 32 pixels of the other buffer
     memcpy(render_frame_buffer + (MAIN_VIEWHEIGHT-32) * SCREENWIDTH, render_frame_buffer + (MAIN_VIEWHEIGHT - top) * SCREENWIDTH, (top + height - MAIN_VIEWHEIGHT) * SCREENWIDTH);
 }

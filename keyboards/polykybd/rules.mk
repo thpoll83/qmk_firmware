@@ -41,6 +41,10 @@ endif
 # Normal builds pay zero bytes — doom_mode.h stubs every hook to an inline no-op.
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     OPT_DEFS += -DPOLYKYBD_DOOM
+    # Doom builds use a keyboard-local linker script: the engine's zero-init
+    # statics and the overlay pool share one .doom_shared block (RAM is
+    # otherwise fully committed). See ld/RP2040_FLASH_TIMECRIT_DOOM.ld.
+    MCU_LDSCRIPT = RP2040_FLASH_TIMECRIT_DOOM
     SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c doom/qmk_shim.c
     # First engine slice from the vendored rp2040-doom snapshot (doom/engine/):
     # pure math/data units with no platform backend, compiled as-is to prove the
@@ -51,16 +55,20 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     # includes (src/doom -> src, e.g. "doomtype.h") resolve through these. The
     # engine's own config.h (engine/src/config.h, our generated stand-in for the
     # upstream CMake one) wins inside engine files via same-directory resolution.
-    CFLAGS += -Ikeyboards/polykybd/doom/engine/src \
-              -Ikeyboards/polykybd/doom/engine/src/doom \
-              -Ikeyboards/polykybd/doom/engine/src/pico
-    # DOOM_TINY's i_system.h uses pico-sdk semaphores for the core0/core1 frame
-    # handoff; the QMK RP2040 platform doesn't expose pico_sync headers by
-    # default. Headers only — if/when the sem_* calls survive to link, the
-    # pico_sync sources get added (or the handoff is rewired to our core1 FIFO).
-    CFLAGS += -Ilib/pico-sdk/src/common/pico_sync/include \
-              -Ilib/pico-sdk/src/common/pico_binary_info/include \
-              -Ilib/pico-sdk/src/common/pico_time/include
+    # pico-sdk extras the engine uses beyond QMK's default set: pico_sync
+    # semaphores (frame handoff), binary_info (no-op'd), pico_time, the
+    # hardware interpolators (pd_render) and the pico divider wrappers.
+    DOOM_INC := -Ikeyboards/polykybd/doom/engine/src \
+                -Ikeyboards/polykybd/doom/engine/src/doom \
+                -Ikeyboards/polykybd/doom/engine/src/pico \
+                -Ilib/pico-sdk/src/common/pico_sync/include \
+                -Ilib/pico-sdk/src/common/pico_binary_info/include \
+                -Ilib/pico-sdk/src/common/pico_time/include \
+                -Ilib/pico-sdk/src/rp2_common/hardware_interp/include \
+                -Ilib/pico-sdk/src/common/pico_divider/include
+    CFLAGS   += $(DOOM_INC)
+    # ALL_CXXFLAGS uses CXXFLAGS, not CFLAGS — pd_render.cpp needs the same dirs.
+    CXXFLAGS += $(DOOM_INC)
     # The vintage id headers use K&R `()` prototypes (d_think.h actionf_v,
     # d_loop.h). QMK's common_rules.mk force-enables -Wstrict-prototypes AFTER
     # keyboard CFLAGS, but EXTRAFLAGS lands last on the compile line, so this
@@ -70,12 +78,15 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     # -Wno-error demotions (not full suppressions — the warnings stay visible):
     # the id code returns const objects through non-const wad_file_t* and prints
     # XIP addresses with %p from integer macros; upstream builds without -Werror.
-    EXTRAFLAGS += -Wno-strict-prototypes \
+    # strict-prototypes / discarded-qualifiers are C-only diagnostics that
+    # cc1plus REJECTS under -Werror, so they're expanded per-recipe: EXTRAFLAGS
+    # is referenced from the compile commands where $< is the source file — the
+    # $(filter) drops them for .cpp sources (and the harmless link expansion).
+    EXTRAFLAGS += $(if $(filter %.cpp,$<),,-Wno-strict-prototypes -Wno-error=discarded-qualifiers) \
                   -Wno-unused-function \
                   -Wno-unused-but-set-variable \
                   -Wno-unused-variable \
                   -Wno-error=format \
-                  -Wno-error=discarded-qualifiers \
                   -Wno-error=maybe-uninitialized \
                   -Wno-error=cpp
     # Force-include the doom_tiny define set. The config.h route alone is not
@@ -178,4 +189,14 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
            doom/engine/src/doom/st_lib.c \
            doom/engine/src/doom/st_stuff.c \
            doom/engine/src/doom/wi_stuff.c
+    # Slice 5: the column renderer (C++, PICODOOM_RENDER_NEWHOPE).
+    SRC += doom/engine/src/pd_render.cpp
+    # pico_sync semaphores for the renderer's core0/core1 choreography + their
+    # spinlock underpinnings (QMK compiles neither by default). ⚠️ Runtime
+    # audit still owed: next_striped_spin_lock_num() hands out SIO spinlocks
+    # with no knowledge of ChibiOS's own spinlock use — verify the claimed
+    # range before first boot of the rooted engine.
+    SRC += lib/pico-sdk/src/common/pico_sync/sem.c \
+           lib/pico-sdk/src/common/pico_sync/lock_core.c \
+           lib/pico-sdk/src/rp2_common/hardware_sync/sync.c
 endif

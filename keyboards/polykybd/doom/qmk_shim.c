@@ -26,14 +26,25 @@
 #include "piconet.h"
 #include "picoflash.h"
 
+#include "doomdef.h"          // SCREENWIDTH
+#include "picodoom.h"         // pd_init()
+
 #include "doom_mode.h"
+#include "doom_arena.h"
 
 #include "hardware/timer.h"   // time_us_64 (QMK's vendored pico-sdk, IRQ-free read)
 #include "pico/platform.h"    // panic()
+#include "pico/sem.h"
 
 #include <stdio.h>
 
 #ifdef POLYKYBD_DOOM
+
+// Frame handoff between the renderer and the (upcoming) scanout/blit loop —
+// upstream defines these in its scanvideo i_video.c, which we replace.
+semaphore_t render_frame_ready, display_frame_freed;
+
+// (bitcount8_table comes from p_maputl.c)
 
 // ---------------------------------------------------------------------------
 // system: zone memory + process control
@@ -104,18 +115,45 @@ void I_Sleep(int ms) {
 // to exist and be sane)
 // ---------------------------------------------------------------------------
 
+// (wipestate / pre_wipe_state are defined by pd_render.cpp)
 boolean          screenvisible  = true;
 isb_int8_t       usegamma       = 0;
 pixel_t         *I_VideoBuffer  = NULL;
-wipestate_t      wipestate      = WIPESTATE_NONE;
-pre_wipe_state_t pre_wipe_state = PRE_WIPE_NONE;
+
+// The engine's view buffer — a SINGLE arena-backed 320x168 frame (upstream
+// double-buffers for the beam-racing scanout; see pd_render's FRAME_BUFFER
+// macro for why one suffices here).
+uint8_t *frame_buffer_0;
+
+// Video-backend state shared with pd_render (upstream: pico/i_video.c). The
+// scanout loop will consume these; until then they just need to exist.
+volatile uint8_t interp_in_use;
+uint8_t         *wipe_yoffsets;      // position of start of y in each column
+int16_t         *wipe_yoffsets_raw;
+uint32_t        *wipe_linelookup;    // offset of each line from start of screenbuffer
+uint8_t          next_video_type;
+uint8_t          next_frame_index;
+uint8_t          next_overlay_index;
+volatile uint8_t wipe_min;
+// Music restart handshake (upstream: i_oplmusic.c — the emu8950 stack is not
+// compiled; pd_render pokes this at level transitions).
+uint8_t restart_song_state;
 
 // Palette index selected by the engine (0 = normal; >0 = damage/pickup/rad
 // flashes) — the keycap blitter folds it into the dither luma.
 int doom_shim_palette = 0;
 
 void I_InitGraphics(void) {
-    I_VideoBuffer = (pixel_t *)doom_arena_framebuffer();
+    // Mirrors the essentials of upstream I_InitGraphics (pico/i_video.c):
+    // frame handoff semaphores + pd_init(). Deliberately NOT here yet: the
+    // core1 launch running pd_core1_loop (the renderer will deadlock on its
+    // core1 semaphores if the game is started before that lands) and the
+    // scanout loop feeding doom_blit.
+    frame_buffer_0 = doom_arena_at(DOOM_ARENA_FB_OFF);
+    I_VideoBuffer  = frame_buffer_0;
+    sem_init(&render_frame_ready, 0, 2);
+    sem_init(&display_frame_freed, 1, 2);
+    pd_init();
     screenvisible = true;
 }
 
@@ -174,6 +212,11 @@ int I_StartSound(should_be_const sfxinfo_t *sfxinfo, int channel, int vol, int s
 void I_StopSound(int channel) { (void)channel; }
 boolean I_SoundIsPlaying(int channel) { (void)channel; return false; }
 void I_PrecacheSounds(should_be_const sfxinfo_t *sounds, int num_sounds) { (void)sounds; (void)num_sounds; }
+
+// pd_render drives the music fade-out on level end through these (upstream
+// i_picosound.c); silent backend = nothing fades.
+void I_PicoSoundFade(bool in) { (void)in; }
+bool I_PicoSoundFading(void) { return false; }
 
 void I_InitMusic(void) {}
 void I_ShutdownMusic(void) {}

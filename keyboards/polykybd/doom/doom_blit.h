@@ -32,3 +32,9 @@ void doom_blit_frame_engine(const uint8_t *luma256);
 // Blank every keycap display of this half (entering game mode: the keys
 // outside the viewport keep whatever legend they held otherwise).
 void doom_blit_blank_all(void);
+
+// Outer-column HUD helpers: draw a centred one-line legend (UTF-32, normal
+// legend fonts) on the display at (row, DISPLAY col — no viewport mapping),
+// or blank that key. Used for the H/A/M vitals beside the game viewport.
+void doom_blit_text_key(uint8_t row, uint8_t disp_col, const uint32_t *text);
+void doom_blit_blank_key(uint8_t row, uint8_t disp_col);

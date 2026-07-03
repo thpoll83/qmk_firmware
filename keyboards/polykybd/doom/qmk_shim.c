@@ -30,6 +30,8 @@
 #include "picoflash.h"
 
 #include "doomdef.h"          // SCREENWIDTH
+#include "doom/doomstat.h"    // players/gamestate/consoleplayer (HUD stats)
+#include "doom/d_items.h"     // weaponinfo (ready-weapon ammo type)
 #include "picodoom.h"         // pd_init()
 #include "z_zone.h"           // zone allocator (core1 malloc redirection)
 
@@ -611,6 +613,21 @@ int doom_shim_palette = 0;
 int doom_shim_gametic(void) {
     extern int gametic;   // d_loop.c
     return gametic;
+}
+
+// Player vitals for the outer-column keycap HUD (core0 render): plain reads
+// of core1-written ints — a torn read shows a stale number for one frame.
+// Returns false outside a level (demo screens, menus over the title).
+bool doom_shim_hud_stats(int *health, int *armor, int *ammo) {
+    if (gamestate != GS_LEVEL || !doom_shim_progress) {
+        return false;
+    }
+    const player_t *p = &players[consoleplayer];
+    *health = p->health;
+    *armor  = p->armorpoints;
+    ammotype_t at = weaponinfo[p->readyweapon].ammo;
+    *ammo = (at == am_noammo) ? -1 : p->ammo[at];
+    return true;
 }
 
 unsigned doom_shim_video_type(void) {

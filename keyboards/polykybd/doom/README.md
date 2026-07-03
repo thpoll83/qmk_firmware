@@ -152,6 +152,22 @@ frozen); the slave half keeps its normal legends (master-only milestone).
   suspend core1 doesn't have). Fixed with the `-Wl,--wrap=putchar_` core-aware
   relay in `qmk_shim.c` (core1 → lock-free ring, drained by `doom_tick`), plus
   the `doom_shim_progress` breadcrumb + 2 s no-frame heartbeat.
+- **Round 7 (2026-07-03): vpatch compose works, but red UI dithers to
+  nothing.** The composed status bar populated the bottom row and the menu
+  skull cursor moved with the arrows — but menu TEXT and the status-bar
+  digits were invisible/"unrecognisable". Root cause of the invisibility:
+  DOOM's menu text and big status digits are **saturated red**, and Rec.709
+  luma maps pure red to ~21% — under the Bayer threshold almost everywhere,
+  so red glyphs dithered to a few dots (the skull showed because of its
+  brighter highlights). Fix: the dither table is now `L = max(Rec709,
+  0.6*maxRGB)` — neutral grays/browns (walls/floors) keep their exact
+  Rec.709 value, saturated reds/blues lift to readable. Legibility fix for
+  the 1:1-tiny vitals: a purpose-rendered **outer-column HUD** (round-7
+  user suggestion) — H/A/M health/armor/ammo full-size on display col 6
+  rows 0-2 via the normal legend fonts (`doom_blit_text_key`), values read
+  from `players[]` (`doom_shim_hud_stats`), redrawn on change, blanked on
+  demo/menu. The viewport bottom-row remap was confirmed working on
+  hardware this round.
 - **Round 6 (2026-07-03): 🎉 IT RUNS.** With the `list_buffer_limit` fix the
   wipe completes and the attract demo visibly plays on the keycaps: stats
   showed vt 5→3, `gametic` climbing at ~28 tics/s (near the full 35 Hz), and

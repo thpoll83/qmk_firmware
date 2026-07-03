@@ -307,6 +307,69 @@ bool doom_process_record(uint16_t keycode, bool pressed) {
     return true;
 }
 
+// Outer-column keycap HUD: player vitals full-size on the outermost display
+// column (col 6), rows 0-2, self-labelled H/A/M — the composed status bar in
+// the canvas is 1:1 tiny, this is the readable copy (field round 7 feedback).
+// Redraws only on change; blanks once when leaving a level (demo/menu).
+#define DOOM_HUD_DISP_COL 6
+
+// "H100" / "M-" as UTF-32 for the legend renderer ('-' = weapon with no ammo
+// type, i.e. fist/chainsaw).
+static void doom_hud_format(uint32_t *out, char tag, int v) {
+    unsigned n = 0;
+    out[n++] = (uint32_t)tag;
+    if (v < 0) {
+        out[n++] = '-';
+    } else {
+        if (v > 999) {
+            v = 999;
+        }
+        char d[4];
+        int  len = 0;
+        do {
+            d[len++] = (char)('0' + (v % 10));
+            v /= 10;
+        } while (v);
+        while (len) {
+            out[n++] = (uint32_t)d[--len];
+        }
+    }
+    out[n] = 0;
+}
+
+static void doom_hud_tick(void) {
+    static int  s_hp = -9999, s_ar = -9999, s_am = -9999;
+    static bool s_hud_shown;
+    int hp, ar, am;
+    if (!doom_shim_hud_stats(&hp, &ar, &am)) {
+        if (s_hud_shown) {
+            s_hud_shown = false;
+            s_hp = s_ar = s_am = -9999;
+            for (uint8_t r = 0; r < 3; ++r) {
+                doom_blit_blank_key(r, DOOM_HUD_DISP_COL);
+            }
+        }
+        return;
+    }
+    uint32_t text[8];
+    if (hp != s_hp || !s_hud_shown) {
+        s_hp = hp;
+        doom_hud_format(text, 'H', hp);
+        doom_blit_text_key(0, DOOM_HUD_DISP_COL, text);
+    }
+    if (ar != s_ar || !s_hud_shown) {
+        s_ar = ar;
+        doom_hud_format(text, 'A', ar);
+        doom_blit_text_key(1, DOOM_HUD_DISP_COL, text);
+    }
+    if (am != s_am || !s_hud_shown) {
+        s_am = am;
+        doom_hud_format(text, 'M', am);
+        doom_blit_text_key(2, DOOM_HUD_DISP_COL, text);
+    }
+    s_hud_shown = true;
+}
+
 void doom_tick(void) {
     // Relay the game core's buffered printf output first — also after exit, so
     // late lines still reach the console.
@@ -333,6 +396,7 @@ void doom_tick(void) {
         if (doom_shim_take_frame()) {
             doom_blit_frame_engine(DOOM_PLAYPAL_LUMA);
             doom_shim_release_frame();
+            doom_hud_tick();
             if (s_frames++ == 0) {
                 printf("doom: first frame on the keycaps\n");
             }

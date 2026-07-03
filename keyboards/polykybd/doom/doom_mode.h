@@ -70,6 +70,10 @@ unsigned doom_shim_video_type(void);
 void doom_shim_compose_begin(void);
 void doom_shim_compose_line(uint8_t *line, unsigned y);
 
+// Player vitals for the outer-column keycap HUD (qmk_shim.c): health, armor
+// and the ready weapon's ammo (-1 for fist/chainsaw). False outside a level.
+bool doom_shim_hud_stats(int *health, int *armor, int *ammo);
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }

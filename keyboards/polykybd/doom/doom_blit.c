@@ -18,6 +18,7 @@
 
 #include "side.h"            // is_left_side() (bottom-row viewport mapping)
 #include "base/disp_array.h"
+#include "base/fontpack.h"   // g_all_fonts (HUD text keys)
 #include "base/shift_reg.h"
 
 #include <string.h>
@@ -169,6 +170,41 @@ void doom_blit_frame_engine(const uint8_t *luma256) {
             kdisp_send_buffer();
         }
     }
+}
+
+// Select a display by raw DISPLAY coordinates (no viewport column mapping) —
+// the HUD lives on the outer columns, addressed the same way the normal
+// legend renderer does.
+static bool select_display_raw(uint8_t row, uint8_t disp_col) {
+    const uint8_t disp_idx = (uint8_t)LAYOUT_TO_INDEX(row, disp_col);
+    if (disp_idx >= (uint8_t)(NUM_SHIFT_REGISTERS * 8)) {
+        return false;
+    }
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(disp_idx), get_disp_bitmask_size());
+    return true;
+}
+
+void doom_blit_text_key(uint8_t row, uint8_t disp_col, const uint32_t *text) {
+    if (!select_display_raw(row, disp_col)) {
+        return;
+    }
+    kdisp_set_buffer(0x00);
+    // Centre horizontally like the legend renderer; y=23 is the standard
+    // centred-legend baseline for the g_all_fonts stack.
+    int8_t gmin = 0, gmax = 0;
+    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &gmin, &gmax);
+    int16_t width = gmax - gmin;
+    int8_t  x     = (int8_t)(BUFFER_X + (SCREEN_WIDTH - width) / 2 - gmin);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, x, 23, text);
+    kdisp_send_buffer();
+}
+
+void doom_blit_blank_key(uint8_t row, uint8_t disp_col) {
+    if (!select_display_raw(row, disp_col)) {
+        return;
+    }
+    kdisp_set_buffer(0x00);
+    kdisp_send_buffer();
 }
 
 void doom_blit_blank_all(void) {

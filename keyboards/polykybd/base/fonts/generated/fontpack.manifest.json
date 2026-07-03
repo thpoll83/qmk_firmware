@@ -1,7 +1,7 @@
 {
   "abi_version": 1,
   "font_count": 134,
-  "total_size": 480744,
+  "total_size": 481604,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -791,13 +791,13 @@
     },
     {
       "all_fonts_index": 155,
-      "symbol": "unifont_Apl_20pt7b",
+      "symbol": "DejaVuSans_Apl_20pt7b",
       "first": 59904,
       "last": 59939
     },
     {
       "all_fonts_index": 156,
-      "symbol": "unifont_Braille_20pt7b",
+      "symbol": "DejaVuSans_Braille_20pt7b",
       "first": 59968,
       "last": 60003
     },

@@ -132,5 +132,7 @@ apt_font fonts-unifont /usr/share/fonts/opentype/unifont/unifont.otf       "fant
 apt_font fonts-unifont /usr/share/fonts/opentype/unifont/unifont_csur.otf  "fantasy/unifont_csur.otf"
 apt_font fonts-pc      /usr/share/fonts/pc/Px_IBM_VGA8.ttf                  "fantasy/Px_IBM_VGA8.ttf"
 apt_font fonts-amiga   /usr/share/fonts/truetype/amiga/Amiga-Regular.ttf   "fantasy/Amiga-Regular.ttf"
+# DejaVu Sans (Bitstream Vera + Arev, permissive) — smooth outline Braille + APL.
+apt_font fonts-dejavu-core /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf "fantasy/DejaVuSans.ttf"
 
 echo "Done."

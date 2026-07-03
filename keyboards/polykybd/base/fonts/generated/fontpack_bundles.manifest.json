@@ -815,7 +815,7 @@
       "index": 6,
       "slot_offset": 1347584,
       "slot_size": 749568,
-      "total_size": 24324,
+      "total_size": 25184,
       "font_count": 10,
       "fonts": [
         {
@@ -868,13 +868,13 @@
         },
         {
           "all_fonts_index": 155,
-          "symbol": "unifont_Apl_20pt7b",
+          "symbol": "DejaVuSans_Apl_20pt7b",
           "first": 59904,
           "last": 59939
         },
         {
           "all_fonts_index": 156,
-          "symbol": "unifont_Braille_20pt7b",
+          "symbol": "DejaVuSans_Braille_20pt7b",
           "first": 59968,
           "last": 60003
         }

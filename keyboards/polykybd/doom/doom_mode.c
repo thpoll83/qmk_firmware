@@ -329,6 +329,7 @@ void doom_tick(void) {
         // renders into the buffer being blitted — tearing accepted for v1.)
         static uint32_t s_frames;
         static uint32_t s_hb_at;
+        static uint32_t s_stats_at;
         if (doom_shim_take_frame()) {
             doom_blit_frame(doom_arena_framebuffer(), DOOM_VIEW_BUFFER_ROWS, DOOM_PLAYPAL_LUMA);
             doom_shim_release_frame();
@@ -343,6 +344,17 @@ void doom_tick(void) {
                 s_hb_at = timer_read32();
                 printf("doom: waiting for first frame (core1 progress=%u)\n", doom_shim_progress);
             }
+        }
+        // Periodic vitals: which of the two loops moves? frames = blit/handoff
+        // pace (core0), gametic = game simulation (core1), vt = what the frame
+        // holds (3 DOUBLE in-level / 4 SINGLE full-screen page / 5 WIPE).
+        if (s_stats_at == 0) {
+            s_stats_at = timer_read32();
+        } else if (timer_elapsed32(s_stats_at) > 5000) {
+            s_stats_at = timer_read32();
+            printf("doom: stats frames=%lu gametic=%d vt=%u progress=%u\n",
+                   (unsigned long)s_frames, doom_shim_gametic(),
+                   doom_shim_video_type(), doom_shim_progress);
         }
         return;
     }

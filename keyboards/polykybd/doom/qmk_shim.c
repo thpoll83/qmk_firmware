@@ -296,6 +296,18 @@ uint8_t restart_song_state;
 // flashes) — the keycap blitter folds it into the dither luma.
 int doom_shim_palette = 0;
 
+// Core0-side peeks for doom_tick's periodic stats line (plain word reads of
+// core1-written state — the exact values don't matter, the *movement* does:
+// a frozen gametic vs a frozen frame count point at different subsystems).
+int doom_shim_gametic(void) {
+    extern int gametic;   // d_loop.c
+    return gametic;
+}
+
+unsigned doom_shim_video_type(void) {
+    return next_video_type;
+}
+
 void I_InitGraphics(void) {
     // Mirrors the essentials of upstream I_InitGraphics (pico/i_video.c):
     // frame handoff semaphores + pd_init(). Deliberately NOT here yet: the

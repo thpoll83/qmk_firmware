@@ -57,6 +57,11 @@ void doom_shim_drain_core1_log(void);
 // 1 zone, 2 I_InitGraphics, 3 pd_init done, 4 first input pump.
 extern volatile uint8_t doom_shim_progress;
 
+// Core0-side peeks of core1 game state for the periodic stats line
+// (qmk_shim.c — doom_mode.c cannot include engine headers).
+int doom_shim_gametic(void);
+unsigned doom_shim_video_type(void);
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }

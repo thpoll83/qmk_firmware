@@ -651,6 +651,11 @@ void housekeeping_task_user(void) {
             access_local_state()->glyph_script = get_glyph_script();
             request_disp_refresh();   // script changed -> re-render letter/digit legends
         }
+        // Doom game mode: synced so the SLAVE strips its legends down to the
+        // game controls (the split_sync poly handler refreshes on the diff).
+        // No master-side refresh — its keycaps are owned by the game blitter
+        // while active, and doom_exit() restores them itself.
+        access_local_state()->doom_ctl = doom_mode_active() ? 1 : 0;
     }
 }
 
@@ -1758,7 +1763,13 @@ void update_displays(enum refresh_mode mode) {
                     keycode = display_keycode_at(local_layer, r + offset, c);
                     kdisp_enable(true);
                     kdisp_set_contrast((uint8_t)(local_state->contrast-1));
-                    if(keycode!=KC_TRNS) {
+                    if (local_state->doom_ctl && !doom_key_is_control(keycode)) {
+                        // Doom control pad (this only ever renders on the SLAVE
+                        // half — the master early-returns above while the game
+                        // runs): everything but the game controls goes dark.
+                        kdisp_set_buffer(0x00);
+                        kdisp_send_buffer();
+                    } else if(keycode!=KC_TRNS) {
                         int16_t lang_idx = lang_index_for_keycode(keycode);
                         if (lang_idx >= 0) {
                             // Language layer: country flag + tiny language code

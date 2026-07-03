@@ -152,6 +152,30 @@ frozen); the slave half keeps its normal legends (master-only milestone).
   suspend core1 doesn't have). Fixed with the `-Wl,--wrap=putchar_` core-aware
   relay in `qmk_shim.c` (core1 → lock-free ring, drained by `doom_tick`), plus
   the `doom_shim_progress` breadcrumb + 2 s no-frame heartbeat.
+- **Round 8 (2026-07-03, master on the LEFT half): playable; layout + UI
+  polish round.** Confirmed working: viewport remap, demo, menu skull +
+  arrows, WASD/arrows/Ctrl in-game. Changes from the feedback: (1) the
+  viewport now sits one column IN from the outer edge on BOTH halves — the
+  freed outermost column (left col 0 / right col 6) carries the vitals HUD,
+  now with word labels ("Health"/"Armor"/"Ammo", 10 px mid font) over
+  full-size values; left-half bottom-row remap recomputed for the shifted
+  window ({1,2,3,gap,4}). (2) `oled_render offset command failed` bursts
+  correlated with HUD redraws during demo firefights (the demo player IS
+  in-level, so ammo/health churn every second) — HUD redraws are now
+  throttled to one batch per 300 ms. (3) First-boot title showed "pixel
+  dirt" instead of the logo (second IDDQD entry showed it): upstream's
+  GS_DEMOSCREEN cache-warmup draws the status bar into the frame buffer
+  expecting the beam-raced scanout to never show it — with our single
+  buffer it IS shown; compiled out under POLYKYBD_QMK. (Whether that is the
+  whole story needs a fresh power-cycle test; menu state persisting across
+  IDDQD re-entries — engine `.data` is not re-initialised — is a separate
+  known limitation.) (4) NEW: the SLAVE half becomes a **control pad** while
+  the game runs — `poly_sync_t.doom_ctl` (master-set, synced) makes the
+  slave's `update_displays` blank every key except the game controls
+  (`doom_key_is_control`: WASD, arrows, Esc/Enter/Space/Tab, Ctrl/Shift/Alt,
+  Y/N, weapon slots 1-7), so the slave shows exactly the keys that do
+  something. Menu/automap ON the slave displays remains the lockstep
+  milestone.
 - **Round 7 (2026-07-03): vpatch compose works, but red UI dithers to
   nothing.** The composed status bar populated the bottom row and the menu
   skull cursor moved with the arrows — but menu TEXT and the status-bar

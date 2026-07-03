@@ -99,6 +99,12 @@ typedef struct _poly_sync_t {
     // Active glyph-script override (enum poly_glyph_script). Master-authoritative,
     // synced so the slave renders the same legends. See render_key / to_static_text.
     uint8_t  glyph_script;
+    // Doom game mode active on the master (0/1). Synced so the SLAVE half turns
+    // itself into a control pad: update_displays blanks every key that is not a
+    // game control (doom_key_is_control). The master's keycaps are driven by the
+    // game blitter directly and never see this flag (update_displays early-returns
+    // there while the game runs).
+    uint8_t  doom_ctl;
 } poly_sync_t;
 
 typedef struct _poly_last_t {

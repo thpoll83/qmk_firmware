@@ -77,7 +77,13 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
 #ifdef RGB_MATRIX_ENABLE
     uint8_t newly_cleared = (current->overlay_flags  & ~incoming->overlay_flags);
 #endif
+    // Doom control-pad mode flipped on the master -> re-render this half's
+    // legends (strip down to the game controls / restore the full set).
+    bool doom_ctl_changed = incoming->doom_ctl != current->doom_ctl;
     copy_local_state(incoming);
+    if (doom_ctl_changed) {
+        request_disp_refresh();
+    }
     emj_apply_sync(incoming->emj_category, incoming->emj_page);
     lang_apply_sync(incoming->lang_page);
     if(newly_set & OVERLAY_ACTION_FLAGS) {

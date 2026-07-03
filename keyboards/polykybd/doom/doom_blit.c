@@ -38,24 +38,29 @@ static const uint8_t BAYER4[4][4] = {
 // column BUFFER_X (see disp_array.c).
 #define OLED_PAGES  (SCREEN_HEIGHT / 8)
 
-// Viewport column -> display column. The upper 4 viewport rows map 1:1, but
-// split72's BOTTOM row is offset by the thumb cluster — physical positions
-// from keyboard.json / g_led_config (field round 6: "the last row is shifted
-// by one screen"):
-//  * left half:  bottom keys x=0.5,1.5,2.5,3.5 sit under viewport cols 0-3;
-//    the next key (x=5.25) starts the thumb cluster, so viewport col 4 has NO
-//    key under it (gap).
-//  * right half: upper-row display cols 0-4 sit at x=13.5..17.5 (the matrix
-//    col-1 shift of rows 5-8 — see split72.c invert_display); the bottom row
-//    keeps raw matrix cols, whose keys land at x=13.5 (col 2), 14.5 (col 3),
-//    16.5 (col 4), 17.5 (col 5) — gap under viewport col 2 (x=15.5).
+// Viewport column -> display column, from the physical positions in
+// keyboard.json / g_led_config (field rounds 6+8). The viewport sits one
+// column IN from the outer edge on both halves so the outermost column is
+// free for the vitals HUD:
+//  * left half:  upper viewport = display cols 1-5 (x=1.5..5.5; col 0 at
+//    x=0 is the outer/HUD column, separated by an extra 0.5u anyway). The
+//    bottom row's keys sit at x=0.5,1.5,2.5,3.5,5.25 — under viewport cols
+//    0,1,2 and (nearly) 4, with the thumb-cluster gap at viewport col 3.
+//  * right half: upper viewport = display cols 0-4 (x=13.5..17.5 after the
+//    matrix col-1 shift of rows 5-8 — see split72.c invert_display; col 6 at
+//    x=19.75 is the outer/HUD column). The bottom row keeps raw matrix cols:
+//    keys at x=13.5 (col 2), 14.5 (col 3), 16.5 (col 4), 17.5 (col 5) — gap
+//    under viewport col 2 (x=15.5).
 // A 0xFF entry = physical gap: that canvas tile has no display.
 static inline uint8_t view_to_disp_col(uint8_t view_row, uint8_t view_col) {
 #if defined(KEYBOARD_polykybd_split72)
     if (view_row == DOOM_VIEW_ROWS - 1) {
-        static const uint8_t bottom_left[DOOM_VIEW_COLS]  = {0, 1, 2, 3, 0xFF};
+        static const uint8_t bottom_left[DOOM_VIEW_COLS]  = {1, 2, 3, 0xFF, 4};
         static const uint8_t bottom_right[DOOM_VIEW_COLS] = {2, 3, 0xFF, 4, 5};
         return is_left_side() ? bottom_left[view_col] : bottom_right[view_col];
+    }
+    if (is_left_side()) {
+        return (uint8_t)(view_col + 1);
     }
 #endif
     return view_col;
@@ -184,18 +189,29 @@ static bool select_display_raw(uint8_t row, uint8_t disp_col) {
     return true;
 }
 
-void doom_blit_text_key(uint8_t row, uint8_t disp_col, const uint32_t *text) {
+// 10 px label font for the stat keys — defined by poly_keymap.c's inclusion
+// of base/fonts/util_font.h (external linkage; including the data header a
+// second time would duplicate the arrays).
+extern const GFXfont NotoSans_Regular_Mid_10pt7b;
+static const GFXfont *const hud_label_fonts[] = {&NotoSans_Regular_Mid_10pt7b};
+
+static int8_t center_x(const GFXfont *const *fonts, uint8_t n, const uint32_t *text) {
+    int8_t gmin = 0, gmax = 0;
+    kdisp_gfx_text_bounds(fonts, n, text, &gmin, &gmax);
+    return (int8_t)(BUFFER_X + (SCREEN_WIDTH - (gmax - gmin)) / 2 - gmin);
+}
+
+void doom_blit_stat_key(uint8_t row, uint8_t disp_col, const uint32_t *label, const uint32_t *value) {
     if (!select_display_raw(row, disp_col)) {
         return;
     }
     kdisp_set_buffer(0x00);
-    // Centre horizontally like the legend renderer; y=23 is the standard
-    // centred-legend baseline for the g_all_fonts stack.
-    int8_t gmin = 0, gmax = 0;
-    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &gmin, &gmax);
-    int16_t width = gmax - gmin;
-    int8_t  x     = (int8_t)(BUFFER_X + (SCREEN_WIDTH - width) / 2 - gmin);
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, x, 23, text);
+    // Word label in the 10 px mid font on the top line; the value full-size
+    // below it (y=23 is the centred-legend baseline for g_all_fonts — +9
+    // drops the value into the lower half, clear of the label).
+    kdisp_write_gfx_text(hud_label_fonts, 1, center_x(hud_label_fonts, 1, label), 10, label);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count,
+                         center_x(g_all_fonts, g_all_font_count, value), 32, value);
     kdisp_send_buffer();
 }
 

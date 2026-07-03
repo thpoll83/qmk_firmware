@@ -15,6 +15,7 @@
 #include "doom_playpal_luma.h"
 
 #include "bridge_helper.h"
+#include "side.h"               // is_left_side() (HUD column selection)
 #include "base/overlay.h"
 #include "base/update.h"
 #include "base/fw_staging.h"
@@ -148,6 +149,26 @@ static uint16_t doom_translate_key(uint16_t kc) {
             if (kc >= KC_1 && kc <= KC_9) return (uint16_t)('1' + (kc - KC_1));
             if (kc == KC_0) return '0';
             return 0;
+    }
+}
+
+// The keys the SLAVE half keeps lit as a control pad (poly_sync_t.doom_ctl,
+// update_displays filter). Deliberately narrower than doom_translate_key —
+// that one admits every letter/digit for menu typing, but the pad shows only
+// what you play with: move/strafe, use/fire, run, menu navigation, the
+// automap, weapon slots and the menu confirm keys.
+bool doom_key_is_control(uint16_t keycode) {
+    switch (keycode) {
+        case KC_W: case KC_A: case KC_S: case KC_D:
+        case KC_UP: case KC_DOWN: case KC_LEFT: case KC_RGHT:
+        case KC_ESC: case KC_ENTER: case KC_SPACE: case KC_TAB:
+        case KC_LCTL: case KC_RCTL:
+        case KC_LSFT: case KC_RSFT:
+        case KC_LALT: case KC_RALT:
+        case KC_Y: case KC_N:
+            return true;
+        default:
+            return keycode >= KC_1 && keycode <= KC_7; // weapon slots
     }
 }
 
@@ -307,17 +328,23 @@ bool doom_process_record(uint16_t keycode, bool pressed) {
     return true;
 }
 
-// Outer-column keycap HUD: player vitals full-size on the outermost display
-// column (col 6), rows 0-2, self-labelled H/A/M — the composed status bar in
-// the canvas is 1:1 tiny, this is the readable copy (field round 7 feedback).
-// Redraws only on change; blanks once when leaving a level (demo/menu).
-#define DOOM_HUD_DISP_COL 6
+// Outer-column keycap HUD: player vitals on the OUTERMOST display column —
+// the column freed by shifting the viewport inward (left half: col 0; right
+// half: col 6) — rows 0-2, a word label over a full-size value. The composed
+// status bar in the canvas is 1:1 tiny; this is the readable copy (field
+// rounds 7+8 feedback). Redraws only on change, throttled so a firefight's
+// ammo churn doesn't monopolise the shared display SPI (the status-OLED
+// task logged "offset command failed" bursts in round 8); blanks once when
+// leaving a level (demo/menu).
+#define DOOM_HUD_MIN_REDRAW_MS 300
 
-// "H100" / "M-" as UTF-32 for the legend renderer ('-' = weapon with no ammo
-// type, i.e. fist/chainsaw).
-static void doom_hud_format(uint32_t *out, char tag, int v) {
+static uint8_t doom_hud_disp_col(void) {
+    return is_left_side() ? 0 : 6;
+}
+
+// Value as UTF-32 digits ('-' = weapon with no ammo type, fist/chainsaw).
+static void doom_hud_format(uint32_t *out, int v) {
     unsigned n = 0;
-    out[n++] = (uint32_t)tag;
     if (v < 0) {
         out[n++] = '-';
     } else {
@@ -338,34 +365,42 @@ static void doom_hud_format(uint32_t *out, char tag, int v) {
 }
 
 static void doom_hud_tick(void) {
-    static int  s_hp = -9999, s_ar = -9999, s_am = -9999;
-    static bool s_hud_shown;
+    static int      s_hp = -9999, s_ar = -9999, s_am = -9999;
+    static bool     s_hud_shown;
+    static uint32_t s_drawn_at;
     int hp, ar, am;
     if (!doom_shim_hud_stats(&hp, &ar, &am)) {
         if (s_hud_shown) {
             s_hud_shown = false;
             s_hp = s_ar = s_am = -9999;
             for (uint8_t r = 0; r < 3; ++r) {
-                doom_blit_blank_key(r, DOOM_HUD_DISP_COL);
+                doom_blit_blank_key(r, doom_hud_disp_col());
             }
         }
         return;
     }
-    uint32_t text[8];
+    if (hp == s_hp && ar == s_ar && am == s_am && s_hud_shown) {
+        return;
+    }
+    if (s_hud_shown && timer_elapsed32(s_drawn_at) < DOOM_HUD_MIN_REDRAW_MS) {
+        return; // fresh values picked up on a later frame
+    }
+    s_drawn_at = timer_read32();
+    uint32_t value[8];
     if (hp != s_hp || !s_hud_shown) {
         s_hp = hp;
-        doom_hud_format(text, 'H', hp);
-        doom_blit_text_key(0, DOOM_HUD_DISP_COL, text);
+        doom_hud_format(value, hp);
+        doom_blit_stat_key(0, doom_hud_disp_col(), U"Health", value);
     }
     if (ar != s_ar || !s_hud_shown) {
         s_ar = ar;
-        doom_hud_format(text, 'A', ar);
-        doom_blit_text_key(1, DOOM_HUD_DISP_COL, text);
+        doom_hud_format(value, ar);
+        doom_blit_stat_key(1, doom_hud_disp_col(), U"Armor", value);
     }
     if (am != s_am || !s_hud_shown) {
         s_am = am;
-        doom_hud_format(text, 'M', am);
-        doom_blit_text_key(2, DOOM_HUD_DISP_COL, text);
+        doom_hud_format(value, am);
+        doom_blit_stat_key(2, doom_hud_disp_col(), U"Ammo", value);
     }
     s_hud_shown = true;
 }

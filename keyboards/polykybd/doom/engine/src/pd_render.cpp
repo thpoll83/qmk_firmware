@@ -2940,6 +2940,12 @@ void pd_end_frame(int wipe_start) {
             case GS_DEMOSCREEN: {
                 //assert(num_framedrawables == 0);
                 if (!wipestate) {
+#if !POLYKYBD_QMK
+                    // PolyKybd port: this XIP-cache warmup only matters for the
+                    // beam-raced scanvideo scanout, and with the SINGLE shared
+                    // view buffer the "to be immediately overdrawn" status bar
+                    // lands VISIBLY in the title page's middle band ("pixel
+                    // dirt", field round 8).
                     static bool warmup_done;
                     if (!warmup_done) {
                         // hack alert: we draw the status bar (to be immediately overdrawn) as a first thing so that we don't have a cold cache
@@ -2947,6 +2953,7 @@ void pd_end_frame(int wipe_start) {
                         draw_stbar_on_framebuffer(render_frame_index, false);
                         warmup_done = true;
                     }
+#endif
                     int pnum = W_GetNumForName(pagename);
                     assert(pnum);
                     maybe_draw_single_screen(pnum);

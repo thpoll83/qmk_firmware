@@ -32,6 +32,11 @@ void doom_tick(void);
 // silently (replying would inject stale reports into the host's read stream).
 bool doom_hid_frozen(uint8_t cmd);
 
+// True for keys the slave-half control pad keeps lit while the game runs
+// (poly_sync_t.doom_ctl + the update_displays filter): movement, fire/use,
+// menu navigation, automap, weapon slots.
+bool doom_key_is_control(uint16_t keycode);
+
 // Arena layout inside the borrowed overlay pool (see DOOM_FEASIBILITY.md,
 // "Game-mode RAM budget"). Valid only while game mode is active — the shim's
 // I_ZoneBase hands the zone region to the engine's Z_Init.
@@ -83,5 +88,8 @@ static inline bool doom_process_record(uint16_t keycode, bool pressed) {
 }
 static inline void doom_tick(void) {}
 static inline bool doom_hid_frozen(uint8_t cmd) { (void)cmd; return false; }
+// Never queried when doom is compiled out (doom_ctl is never set), but the
+// update_displays filter references it unconditionally.
+static inline bool doom_key_is_control(uint16_t keycode) { (void)keycode; return true; }
 
 #endif

@@ -1,9 +1,17 @@
-# Doom easter egg — game-mode scaffold
+# Doom easter egg — it runs
 
 Implementation of the plan in [`../DOOM_FEASIBILITY.md`](../DOOM_FEASIBILITY.md).
 This directory is the `#ifdef POLYKYBD_DOOM` **dev harness** (the study's
 "Option 1"); the executable-flash-pack ship path comes later, re-linking the
 same objects at `0x10600000`.
+
+> **STATUS (2026-07-03): the game RUNS on hardware.** With a `doom1.whx`
+> flashed at `0x600000`, typing IDDQD boots the full rp2040-doom engine on
+> core1 and the attract demo plays on the keycaps (~9.5 fps blit, ~28 tics/s
+> sim — verified in field round 6, see the hardware-test log below). Without
+> a WHX the PSX-fire placeholder below still runs as the pipeline proof.
+> Not yet ported: vpatch overlay compose (menus/status bar invisible), the
+> melt visual, sound (by design), slave-half lockstep.
 
 ## Building
 
@@ -140,6 +148,18 @@ frozen); the slave half keeps its normal legends (master-only milestone).
   suspend core1 doesn't have). Fixed with the `-Wl,--wrap=putchar_` core-aware
   relay in `qmk_shim.c` (core1 → lock-free ring, drained by `doom_tick`), plus
   the `doom_shim_progress` breadcrumb + 2 s no-frame heartbeat.
+- **Round 6 (2026-07-03): 🎉 IT RUNS.** With the `list_buffer_limit` fix the
+  wipe completes and the attract demo visibly plays on the keycaps: stats
+  showed vt 5→3, `gametic` climbing at ~28 tics/s (near the full 35 Hz), and
+  ~9.5 fps blitted in-level (the blit paces the game by design — the renderer
+  blocks once it is a full frame ahead). "Can it run DOOM?" — **yes.**
+  Remaining polish tracked in "Next milestones": vpatch overlay compose
+  (menus/status bar are currently invisible), the melt visual, in-game input
+  verification, palette flashes, and the host's overlay enable/disable
+  commands still arriving mid-game (`Overlay flags …` log lines — cmd 11 is
+  not pool-writing so it is not frozen; check whether its
+  `request_disp_refresh` can repaint legends over game pixels between blit
+  frames).
 - **Round 5 (2026-07-03): melt still frozen + "a few pixels flickering" — a
   stale `count_of()` on a pointer-converted buffer.** With the wipe-advance
   in place the freeze persisted (gametic 173, vt=5) but a few pixels now

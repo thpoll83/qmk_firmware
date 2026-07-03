@@ -19,6 +19,9 @@
 #include "i_video.h"
 #include "v_video.h"
 #include "d_event.h"
+#include "v_patch.h"          // vpatch_* accessors, vpatchlist_t
+#include "whddata.h"          // VPATCH_* handle enum (VPATCH_M_THERMM)
+#include "doom/r_data.h"      // resolve_vpatch_handle
 #include "w_wad.h"
 #include "m_misc.h"
 #include "deh_str.h"
@@ -227,12 +230,18 @@ static void advance_wipe_columns(void) {
     wipe_min = (uint8_t)new_wipe_min;
 }
 
+// Latched per consumed frame (the renderer flips next_* while we display).
+static uint8_t shim_disp_video_type;
+static uint8_t shim_disp_overlay_index;
+
 bool doom_shim_take_frame(void) {
     if (!sem_available(&render_frame_ready)) {
         return false;
     }
     sem_acquire_blocking(&render_frame_ready);
-    if (next_video_type == VIDEO_TYPE_WIPE && wipe_min <= 200) {
+    shim_disp_video_type    = next_video_type;
+    shim_disp_overlay_index = next_overlay_index;
+    if (shim_disp_video_type == VIDEO_TYPE_WIPE && wipe_min <= 200) {
         advance_wipe_columns();
     }
     return true;
@@ -240,6 +249,260 @@ bool doom_shim_take_frame(void) {
 
 void doom_shim_release_frame(void) {
     sem_release(&display_frame_freed);
+}
+
+// ---------------------------------------------------------------------------
+// vpatch overlay compose — menus, HUD text, the status bar. Upstream draws
+// these at scanout, per scanline, AFTER palette conversion (pico/i_video.c
+// draw_vpatch + the vpatch_starters/next/doff bookkeeping in
+// new_frame_init_overlays_palette_and_wipe). Our scanout is the keycap blit,
+// so the same machinery runs here at 8bpp: pixels stay PLAYPAL indices (the
+// blit's luma dither converts), the per-patch 4-bit palettes resolve to index
+// bytes instead of RGB565. The blit calls doom_shim_compose_begin() once per
+// consumed frame, then doom_shim_compose_line() for every canvas scanline in
+// ASCENDING order — the running data offsets (vpatch_doff) are sequential,
+// exactly like upstream's beam-ordered scanout.
+// ---------------------------------------------------------------------------
+
+static bool    compose_overlays_active;
+static uint8_t shared_pal8[NUM_SHARED_PALETTES][16];
+
+extern uint8_t *frame_buffer_0;   // defined below (video-backend globals)
+
+// 8bpp port of upstream draw_vpatch (pico/i_video.c): identical decode, every
+// `palette[pal[v]]` (RGB565) becomes `pal[v]` (a PLAYPAL index). The stbar
+// XIP-DMA cache special-case is dropped — the generic vp4_solid path decodes
+// the same bytes. Returns the data offset after this row (the doff advance).
+static unsigned draw_vpatch8(uint8_t *dest, const patch_t *patch, const vpatchlist_t *vp, unsigned off) {
+    int repeat = vp->entry.repeat;
+    dest += vp->entry.x;
+    int w = vpatch_width(patch);
+    const uint8_t *data0 = vpatch_data(patch);
+    const uint8_t *data = data0 + off;
+    if (!vpatch_has_shared_palette(patch)) {
+        const uint8_t *pal = vpatch_palette(patch);
+        switch (vpatch_type(patch)) {
+            case vp4_runs: {
+                uint8_t *p = dest;
+                uint8_t *pend = dest + w;
+                uint8_t gap;
+                while (0xff != (gap = *data++)) {
+                    p += gap;
+                    int len = *data++;
+                    for (int i = 1; i < len; i += 2) {
+                        unsigned v = *data++;
+                        *p++ = pal[v & 0xf];
+                        *p++ = pal[v >> 4];
+                    }
+                    if (len & 1) {
+                        *p++ = pal[(*data++) & 0xf];
+                    }
+                    if (p == pend) break;
+                }
+                break;
+            }
+            case vp4_alpha: {
+                uint8_t *p = dest;
+                for (int i = 0; i < w / 2; i++) {
+                    unsigned v = *data++;
+                    if (v & 0xf) p[0] = pal[v & 0xf];
+                    if (v >> 4) p[1] = pal[v >> 4];
+                    p += 2;
+                }
+                if (w & 1) {
+                    unsigned v = *data++;
+                    if (v & 0xf) p[0] = pal[v & 0xf];
+                }
+                break;
+            }
+            case vp4_solid: {
+                uint8_t *p = dest;
+                for (int i = 0; i < w / 2; i++) {
+                    unsigned v = *data++;
+                    p[0] = pal[v & 0xf];
+                    p[1] = pal[v >> 4];
+                    p += 2;
+                }
+                if (w & 1) {
+                    unsigned v = *data++;
+                    p[0] = pal[v & 0xf];
+                }
+                break;
+            }
+            case vp6_runs: {
+                uint8_t *p = dest;
+                uint8_t *pend = dest + w;
+                uint8_t gap;
+                while (0xff != (gap = *data++)) {
+                    p += gap;
+                    int len = *data++;
+                    for (int i = 3; i < len; i += 4) {
+                        unsigned v = *data++;
+                        v |= (*data++) << 8;
+                        v |= (*data++) << 16;
+                        *p++ = pal[v & 0x3f];
+                        *p++ = pal[(v >> 6) & 0x3f];
+                        *p++ = pal[(v >> 12) & 0x3f];
+                        *p++ = pal[(v >> 18) & 0x3f];
+                    }
+                    len &= 3;
+                    if (len--) {
+                        unsigned v = *data++;
+                        *p++ = pal[v & 0x3f];
+                        if (len--) {
+                            v >>= 6;
+                            v |= (*data++) << 2;
+                            *p++ = pal[v & 0x3f];
+                            if (len--) {
+                                v >>= 6;
+                                v |= (*data++) << 4;
+                                *p++ = pal[v & 0x3f];
+                            }
+                        }
+                    }
+                    if (p == pend) break;
+                }
+                break;
+            }
+            case vp8_runs: {
+                uint8_t *p = dest;
+                uint8_t *pend = dest + w;
+                uint8_t gap;
+                while (0xff != (gap = *data++)) {
+                    p += gap;
+                    int len = *data++;
+                    for (int i = 0; i < len; i++) {
+                        *p++ = pal[*data++];
+                    }
+                    if (p == pend) break;
+                }
+                break;
+            }
+            case vp_border: {
+                dest[0] = *data++;
+                uint8_t col = *data++;
+                for (int i = 1; i < w - 1; i++) dest[i] = col;
+                dest[w - 1] = *data++;
+                break;
+            }
+            default:
+                break;
+        }
+    } else {
+        unsigned sp = vpatch_shared_palette(patch);
+        const uint8_t *pal = shared_pal8[sp];
+        switch (vpatch_type(patch)) {
+            case vp4_solid: {
+                uint8_t *p = dest;
+                for (int i = 0; i < w / 2; i++) {
+                    unsigned v = *data++;
+                    p[0] = pal[v & 0xf];
+                    p[1] = pal[v >> 4];
+                    p += 2;
+                }
+                if (w & 1) {
+                    unsigned v = *data++;
+                    dest[w - 1] = pal[v & 0xf];
+                }
+                break;
+            }
+            case vp4_alpha: {
+                uint8_t *p = dest;
+                for (int i = 0; i < w / 2; i++) {
+                    unsigned v = *data++;
+                    if (v & 0xf) p[0] = pal[v & 0xf];
+                    if (v >> 4) p[1] = pal[v >> 4];
+                    p += 2;
+                }
+                if (w & 1) {
+                    unsigned v = *data++;
+                    if (v & 0xf) p[0] = pal[v & 0xf];
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    if (repeat) {
+        int rw = w;
+        if (vp->entry.patch_handle == VPATCH_HANDLE(VPATCH_M_THERMM)) rw--; // upstream "hackity hack"
+        for (int i = 0; i < repeat * rw; i++) {
+            dest[rw + i] = dest[i];
+        }
+    }
+    return (unsigned)(data - data0);
+}
+
+void doom_shim_compose_begin(void) {
+    compose_overlays_active =
+        vpatchlists && shim_disp_video_type >= FIRST_VIDEO_TYPE_WITH_OVERLAYS;
+    if (!compose_overlays_active) {
+        return;
+    }
+    // Per-frame init, ported from new_frame_init_overlays_palette_and_wipe:
+    // bucket the overlay entries by start row (starters), clear the active
+    // linked list (index 0 is the sentinel/head) and the running offsets.
+    memset(vpatchlists->vpatch_next, 0, sizeof(vpatchlists->vpatch_next));
+    memset(vpatchlists->vpatch_starters, 0, sizeof(vpatchlists->vpatch_starters));
+    memset(vpatchlists->vpatch_doff, 0, sizeof(vpatchlists->vpatch_doff));
+    vpatchlist_t *overlays = vpatchlists->overlays[shim_disp_overlay_index];
+    for (int i = overlays->header.size - 1; i > 0; i--) {
+        vpatchlists->vpatch_next[i] = vpatchlists->vpatch_starters[overlays[i].entry.y];
+        vpatchlists->vpatch_starters[overlays[i].entry.y] = (uint8_t)i;
+    }
+    // Shared palettes as PLAYPAL indices (upstream builds RGB565 here).
+    for (int i = 0; i < NUM_SHARED_PALETTES; i++) {
+        const patch_t *patch = resolve_vpatch_handle(vpatch_for_shared_palette[i]);
+        const uint8_t *pal = vpatch_palette(patch);
+        for (int j = 0; j < 16; j++) {
+            shared_pal8[i][j] = pal[j];
+        }
+    }
+}
+
+void doom_shim_compose_line(uint8_t *line, unsigned y) {
+    // Source select, mirroring the scanline_func_* source math: rows above
+    // MAIN_VIEWHEIGHT live in "the other" frame buffer at (y - 32) — with the
+    // single shared view buffer that alias holds exactly the full-screen
+    // page's bottom rows for SINGLE, and don't matter for DOUBLE (the status
+    // bar overdraws them, so feed black underneath).
+    if (y >= MAIN_VIEWHEIGHT && shim_disp_video_type == VIDEO_TYPE_DOUBLE) {
+        memset(line, 0, SCREENWIDTH);
+    } else {
+        unsigned sy = y < MAIN_VIEWHEIGHT ? y : y - 32;
+        memcpy(line, frame_buffer_0 + sy * SCREENWIDTH, SCREENWIDTH);
+    }
+    if (!compose_overlays_active || y >= 200) {
+        return;
+    }
+    // Activate entries starting on this row (sorted insert into the active
+    // list), then draw every active patch and retire finished ones — a
+    // verbatim port of the scanout loop in pico/i_video.c.
+    int prev = 0;
+    for (int vp = vpatchlists->vpatch_starters[y]; vp;) {
+        int next = vpatchlists->vpatch_next[vp];
+        while (vpatchlists->vpatch_next[prev] && vpatchlists->vpatch_next[prev] < vp) {
+            prev = vpatchlists->vpatch_next[prev];
+        }
+        vpatchlists->vpatch_next[vp] = vpatchlists->vpatch_next[prev];
+        vpatchlists->vpatch_next[prev] = (uint8_t)vp;
+        prev = vp;
+        vp = next;
+    }
+    vpatchlist_t *overlays = vpatchlists->overlays[shim_disp_overlay_index];
+    prev = 0;
+    for (int vp = vpatchlists->vpatch_next[prev]; vp; vp = vpatchlists->vpatch_next[prev]) {
+        const patch_t *patch = resolve_vpatch_handle(overlays[vp].entry.patch_handle);
+        int yoff = (int)y - overlays[vp].entry.y;
+        if (yoff < vpatch_height(patch)) {
+            vpatchlists->vpatch_doff[vp] =
+                (uint16_t)draw_vpatch8(line, patch, &overlays[vp], vpatchlists->vpatch_doff[vp]);
+            prev = vp;
+        } else {
+            vpatchlists->vpatch_next[prev] = vpatchlists->vpatch_next[vp];
+        }
+    }
 }
 
 // (bitcount8_table comes from p_maputl.c)

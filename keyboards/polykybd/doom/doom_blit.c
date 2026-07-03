@@ -13,7 +13,10 @@
 #include QMK_KEYBOARD_H
 
 #include "doom_blit.h"
+#include "doom_mode.h"   // doom_shim_compose_begin/line (engine path)
+#include "doom_arena.h"  // compose scratch carve
 
+#include "side.h"            // is_left_side() (bottom-row viewport mapping)
 #include "base/disp_array.h"
 #include "base/shift_reg.h"
 
@@ -34,11 +37,39 @@ static const uint8_t BAYER4[4][4] = {
 // column BUFFER_X (see disp_array.c).
 #define OLED_PAGES  (SCREEN_HEIGHT / 8)
 
+// Viewport column -> display column. The upper 4 viewport rows map 1:1, but
+// split72's BOTTOM row is offset by the thumb cluster — physical positions
+// from keyboard.json / g_led_config (field round 6: "the last row is shifted
+// by one screen"):
+//  * left half:  bottom keys x=0.5,1.5,2.5,3.5 sit under viewport cols 0-3;
+//    the next key (x=5.25) starts the thumb cluster, so viewport col 4 has NO
+//    key under it (gap).
+//  * right half: upper-row display cols 0-4 sit at x=13.5..17.5 (the matrix
+//    col-1 shift of rows 5-8 — see split72.c invert_display); the bottom row
+//    keeps raw matrix cols, whose keys land at x=13.5 (col 2), 14.5 (col 3),
+//    16.5 (col 4), 17.5 (col 5) — gap under viewport col 2 (x=15.5).
+// A 0xFF entry = physical gap: that canvas tile has no display.
+static inline uint8_t view_to_disp_col(uint8_t view_row, uint8_t view_col) {
+#if defined(KEYBOARD_polykybd_split72)
+    if (view_row == DOOM_VIEW_ROWS - 1) {
+        static const uint8_t bottom_left[DOOM_VIEW_COLS]  = {0, 1, 2, 3, 0xFF};
+        static const uint8_t bottom_right[DOOM_VIEW_COLS] = {2, 3, 0xFF, 4, 5};
+        return is_left_side() ? bottom_left[view_col] : bottom_right[view_col];
+    }
+#endif
+    return view_col;
+}
+
 // Select the keycap display at viewport (row, col); false when that slot does
 // not exist on this variant (split42 has 24 display slots, so the 5x5 viewport
-// only partially maps — the demo targets split72's 40-slot halves).
+// only partially maps — the demo targets split72's 40-slot halves) or the
+// viewport cell sits in the bottom row's thumb-cluster gap.
 static inline bool select_display(uint8_t view_row, uint8_t view_col) {
-    const uint8_t disp_idx = (uint8_t)LAYOUT_TO_INDEX(view_row, view_col);
+    const uint8_t disp_col = view_to_disp_col(view_row, view_col);
+    if (disp_col == 0xFF) {
+        return false;
+    }
+    const uint8_t disp_idx = (uint8_t)LAYOUT_TO_INDEX(view_row, disp_col);
     if (disp_idx >= (uint8_t)(NUM_SHIFT_REGISTERS * 8)) {
         return false;
     }
@@ -80,6 +111,60 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
                     }
                     dst[x] = bits;
                 }
+            }
+            kdisp_send_buffer();
+        }
+    }
+}
+
+// Scanline-major engine path: canvas rows advance strictly 0..199 so the
+// shim's vpatch overlay bookkeeping (sequential per-patch data offsets, like
+// upstream's beam-ordered scanout) holds. Each composed 320 px line is
+// dithered into per-column band buffers (5 x 360 B OLED tiles, carved from
+// the arena next to the 320 B line — no spare .bss in a doom build), and a
+// finished 40-row band is pushed to its 5 keycaps.
+void doom_blit_frame_engine(const uint8_t *luma256) {
+    uint8_t *scratch = doom_arena_at(DOOM_ARENA_COMPOSE_OFF);
+    if (!scratch) {
+        return;
+    }
+    uint8_t *line  = scratch;                     // 320 B, 8bpp PLAYPAL indices
+    uint8_t *bands = scratch + DOOM_FB_WIDTH;     // 5 x (5 pages x 72 B) 1bpp tiles
+    const uint16_t band_bytes = (uint16_t)(SCREEN_HEIGHT / 8) * SCREEN_WIDTH; // 360
+
+    doom_shim_compose_begin();
+    for (uint8_t vr = 0; vr < DOOM_VIEW_ROWS; ++vr) {
+        memset(bands, 0, (size_t)DOOM_VIEW_COLS * band_bytes);
+        for (uint8_t ln = 0; ln < SCREEN_HEIGHT; ++ln) {
+            const uint16_t y = (uint16_t)vr * SCREEN_HEIGHT + ln;
+            doom_shim_compose_line(line, y);
+            const uint16_t page_off = (uint16_t)(ln >> 3) * SCREEN_WIDTH;
+            const uint8_t  bit      = (uint8_t)(1u << (ln & 7));
+            for (uint8_t vc = 0; vc < DOOM_VIEW_COLS; ++vc) {
+                uint8_t      *row = bands + (size_t)vc * band_bytes + page_off;
+                const int16_t fx0 = (int16_t)vc * SCREEN_WIDTH - DOOM_CANVAS_XOFF;
+                for (uint8_t x = 0; x < SCREEN_WIDTH; ++x) {
+                    const int16_t fx = fx0 + x;
+                    if (fx < 0 || fx >= DOOM_FB_WIDTH) {
+                        continue; // canvas margin stays black
+                    }
+                    if (luma256[line[fx]] > BAYER4[y & 3][fx & 3]) {
+                        row[x] |= bit;
+                    }
+                }
+            }
+        }
+        uint8_t      *buf    = get_scratch_buffer();
+        const int16_t stride = get_scratch_buffer_size() / 8;
+        for (uint8_t vc = 0; vc < DOOM_VIEW_COLS; ++vc) {
+            if (!select_display(vr, vc)) {
+                continue;
+            }
+            memset(buf, 0, (size_t)get_scratch_buffer_size());
+            for (uint8_t page = 0; page < OLED_PAGES; ++page) {
+                memcpy(buf + (size_t)page * stride + BUFFER_X,
+                       bands + (size_t)vc * band_bytes + (size_t)page * SCREEN_WIDTH,
+                       SCREEN_WIDTH);
             }
             kdisp_send_buffer();
         }

@@ -331,7 +331,7 @@ void doom_tick(void) {
         static uint32_t s_hb_at;
         static uint32_t s_stats_at;
         if (doom_shim_take_frame()) {
-            doom_blit_frame(doom_arena_framebuffer(), DOOM_VIEW_BUFFER_ROWS, DOOM_PLAYPAL_LUMA);
+            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA);
             doom_shim_release_frame();
             if (s_frames++ == 0) {
                 printf("doom: first frame on the keycaps\n");

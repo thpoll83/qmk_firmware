@@ -10,8 +10,12 @@ same objects at `0x10600000`.
 > core1 and the attract demo plays on the keycaps (~9.5 fps blit, ~28 tics/s
 > sim — verified in field round 6, see the hardware-test log below). Without
 > a WHX the PSX-fire placeholder below still runs as the pipeline proof.
-> Not yet ported: vpatch overlay compose (menus/status bar invisible), the
-> melt visual, sound (by design), slave-half lockstep.
+> Since round 6 (in tree, awaiting hardware): **vpatch overlay compose**
+> (menus / HUD / status bar drawn onto the keycaps by the blit — the
+> `doom_shim_compose_*` seam + the scanline-major `doom_blit_frame_engine`)
+> and the **physical bottom-row viewport mapping** (split72's thumb-cluster
+> offset — see `view_to_disp_col`). Not yet ported: the melt visual, palette
+> flashes, sound (by design), slave-half lockstep, re-entry.
 
 ## Building
 

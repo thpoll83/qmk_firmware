@@ -62,6 +62,14 @@ extern volatile uint8_t doom_shim_progress;
 int doom_shim_gametic(void);
 unsigned doom_shim_video_type(void);
 
+// vpatch overlay compose (qmk_shim.c) — menus/HUD/status bar on top of the
+// view buffer, the keycap-blit equivalent of upstream's scanout compose.
+// begin() once per consumed frame, then line() with a 320-byte 8bpp buffer
+// for every canvas scanline y = 0..199 in ASCENDING order (fills the source
+// row and draws the overlay patches for that line).
+void doom_shim_compose_begin(void);
+void doom_shim_compose_line(uint8_t *line, unsigned y);
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }

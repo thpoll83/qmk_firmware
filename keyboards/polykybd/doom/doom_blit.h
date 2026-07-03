@@ -23,6 +23,12 @@
 // a framebuffer palette index to 0..255 brightness.
 void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256);
 
+// Engine-frame variant: scanline-major over the full 200-row canvas, each
+// line sourced + overlay-composed by doom_shim_compose_line() (menus, HUD,
+// status bar), so the sequential vpatch bookkeeping holds. Uses the arena
+// compose scratch (DOOM_ARENA_COMPOSE_OFF).
+void doom_blit_frame_engine(const uint8_t *luma256);
+
 // Blank every keycap display of this half (entering game mode: the keys
 // outside the viewport keep whatever legend they held otherwise).
 void doom_blit_blank_all(void);

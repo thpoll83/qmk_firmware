@@ -49,6 +49,14 @@ bool doom_pop_key_event(uint8_t *key, bool *pressed);
 bool doom_shim_take_frame(void);
 void doom_shim_release_frame(void);
 
+// core1 console relay (qmk_shim.c): drain the game core's buffered printf
+// output through the real console on core0. Called from doom_tick.
+void doom_shim_drain_core1_log(void);
+
+// Engine boot progress breadcrumb (qmk_shim.c) for the no-frame heartbeat:
+// 1 zone, 2 I_InitGraphics, 3 pd_init done, 4 first input pump.
+extern volatile uint8_t doom_shim_progress;
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }

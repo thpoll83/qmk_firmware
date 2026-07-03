@@ -308,6 +308,9 @@ bool doom_process_record(uint16_t keycode, bool pressed) {
 }
 
 void doom_tick(void) {
+    // Relay the game core's buffered printf output first — also after exit, so
+    // late lines still reach the console.
+    doom_shim_drain_core1_log();
     if (!s_active || !is_usb_host_side()) {
         return;
     }
@@ -324,9 +327,22 @@ void doom_tick(void) {
         // on display_frame_freed once it is a full frame ahead — the blit pace
         // here IS the game's frame pace. (Single view buffer: the next frame
         // renders into the buffer being blitted — tearing accepted for v1.)
+        static uint32_t s_frames;
+        static uint32_t s_hb_at;
         if (doom_shim_take_frame()) {
             doom_blit_frame(doom_arena_framebuffer(), DOOM_VIEW_BUFFER_ROWS, DOOM_PLAYPAL_LUMA);
             doom_shim_release_frame();
+            if (s_frames++ == 0) {
+                printf("doom: first frame on the keycaps\n");
+            }
+        } else if (s_frames == 0) {
+            // Boot heartbeat until the first frame lands: where is core1?
+            if (s_hb_at == 0) {
+                s_hb_at = timer_read32();
+            } else if (timer_elapsed32(s_hb_at) > 2000) {
+                s_hb_at = timer_read32();
+                printf("doom: waiting for first frame (core1 progress=%u)\n", doom_shim_progress);
+            }
         }
         return;
     }

@@ -40,6 +40,53 @@
 
 #ifdef POLYKYBD_DOOM
 
+// ---------------------------------------------------------------------------
+// core1-safe console relay. core1 must NEVER enter QMK's console path:
+// sendchar -> usb_endpoint_in_send does osalSysLock() + a blocking
+// obqWriteTimeout() that suspends the calling ChibiOS *thread* — core1 has no
+// ChibiOS context, so the first write that needs to block wedges the core
+// forever (field 2026-07-03: the engine froze inside its 4th boot printf,
+// after the banner/Z_Init lines slipped through the non-blocking fast path).
+// All printf output is routed here via `-Wl,--wrap=putchar_` (the lib/printf
+// -> sendchar funnel in quantum/logging/print.c): core0 passes through,
+// core1 pushes into a lock-free SPSC ring that doom_tick drains on core0.
+// ---------------------------------------------------------------------------
+
+extern void __real_putchar_(char c);
+
+#define C1LOG_LEN 1024u
+static volatile uint8_t  c1log[C1LOG_LEN];
+static volatile uint16_t c1log_w, c1log_r;
+
+void __wrap_putchar_(char c) {
+    if (get_core_num() == 0) {
+        __real_putchar_(c);
+        return;
+    }
+    uint16_t w = c1log_w;
+    if ((uint16_t)(w - c1log_r) >= C1LOG_LEN) {
+        return; // ring full — drop rather than ever block core1
+    }
+    c1log[w % C1LOG_LEN] = (uint8_t)c;
+    __asm volatile("dmb" ::: "memory");
+    c1log_w = (uint16_t)(w + 1);
+}
+
+void doom_shim_drain_core1_log(void) {
+    uint16_t r = c1log_r;
+    // bounded per pass so a chatty engine can't stall housekeeping
+    for (int n = 0; n < 256 && r != c1log_w; ++n) {
+        __real_putchar_((char)c1log[r % C1LOG_LEN]);
+        ++r;
+    }
+    c1log_r = r;
+}
+
+// Boot progress breadcrumb, readable from core0 (doom_tick's no-frame
+// heartbeat): 1 = zone handed over, 2 = I_InitGraphics entered, 3 = pd_init
+// done, 4 = first tic input pump ran.
+volatile uint8_t doom_shim_progress;
+
 // Frame handoff between the renderer and the core0 blit loop — upstream
 // defines these in its scanvideo i_video.c, which we replace. Zero-initialised
 // (0 permits) until I_InitGraphics runs on core1, so the core0-side probe
@@ -67,6 +114,7 @@ void doom_shim_release_frame(void) {
 byte *I_ZoneBase(int *size) {
     byte *zone = (byte *)doom_arena_zone(size);
     printf("doom: zone memory %p, %x bytes (borrowed overlay pool)\n", zone, *size);
+    doom_shim_progress = 1;
     return zone;
 }
 
@@ -163,11 +211,13 @@ void I_InitGraphics(void) {
     // core1 launch running pd_core1_loop (the renderer will deadlock on its
     // core1 semaphores if the game is started before that lands) and the
     // scanout loop feeding doom_blit.
+    doom_shim_progress = 2;
     frame_buffer_0 = doom_arena_at(DOOM_ARENA_FB_OFF);
     I_VideoBuffer  = frame_buffer_0;
     sem_init(&render_frame_ready, 0, 2);
     sem_init(&display_frame_freed, 1, 2);
     pd_init();
+    doom_shim_progress = 3;
     screenvisible = true;
 }
 
@@ -179,6 +229,7 @@ void I_StartFrame(void) {}
 void I_StartTic(void) {
     // Drain the key events doom_process_record collected on core0 (SPSC ring
     // in doom_mode.c) into the engine — this runs on the game core.
+    doom_shim_progress = 4;
     uint8_t key;
     bool    pressed;
     while (doom_pop_key_event(&key, &pressed)) {

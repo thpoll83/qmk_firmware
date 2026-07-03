@@ -154,6 +154,12 @@
 #define NO_IERROR 1
 #define NO_ZONE_DEBUG 1
 #define NO_FILE_ACCESS 1
+// Upstream device builds are MinSizeRel (NDEBUG); ours must be too — beyond
+// perf, a newlib assert() firing on core1 would re-enter the ChibiOS console
+// path that core1 must never touch (see the putchar_ relay in qmk_shim.c).
+#ifndef NDEBUG
+#define NDEBUG 1
+#endif
 
 // The WHX game-data image (doom1.whx is the WHD_SUPER_TINY format), mapped
 // XIP at the PolyKybd resource-region slot (upstream doom_tiny: 0x10040000).

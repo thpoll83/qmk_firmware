@@ -45,6 +45,12 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     # statics and the overlay pool share one .doom_shared block (RAM is
     # otherwise fully committed). See ld/RP2040_FLASH_TIMECRIT_DOOM.ld.
     MCU_LDSCRIPT = RP2040_FLASH_TIMECRIT_DOOM
+    # Route ALL printf output through the core-aware relay in doom/qmk_shim.c:
+    # core1 (the game) must never enter QMK's console path — sendchar suspends
+    # the calling ChibiOS thread and core1 has none (it wedged the engine boot
+    # on real hardware, 2026-07-03). putchar_ is lib/printf's output funnel
+    # (quantum/logging/print.c).
+    LDFLAGS += -Wl,--wrap=putchar_
     SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c doom/qmk_shim.c
     # First engine slice from the vendored rp2040-doom snapshot (doom/engine/):
     # pure math/data units with no platform backend, compiled as-is to prove the

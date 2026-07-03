@@ -233,9 +233,12 @@ poly_eeconf_t load_user_eeconf(void) {
     if(ee.idle_style >= IDLE_STYLE_COUNT) {
         ee.idle_style = IDLE_STYLE_PULSE;   // unwritten/garbage EEPROM -> safe default
     }
-    if(ee.glyph_script >= GLYPH_SCRIPT_COUNT) {
-        ee.glyph_script = GLYPH_STD;        // uninitialised (pre-v9) EEPROM byte -> normal legends
+    if(ee.glyph_script == 0xFF) {
+        ee.glyph_script = GLYPH_STD;        // erased/uninitialised EEPROM byte -> normal legends
     }
+    // Any other value is kept verbatim (a glyph-script INDEX). An index this
+    // firmware doesn't know renders the normal legend; keeping it means the choice
+    // survives a firmware/font-pack update that later adds that script.
     return ee;
 }
 
@@ -397,20 +400,25 @@ uint8_t get_glyph_script(void) {
     return g_glyph_script;
 }
 
-// Sets the glyph script and marks it dirty (flushed at the next suspend / store).
-// Out-of-range values are ignored. The awake re-render is driven from housekeeping
-// (the master syncs glyph_script + calls request_disp_refresh on change).
+// Sets the glyph script by INDEX and marks it dirty (flushed at next suspend/store).
+// Any index 0..0xFE is accepted; an index this firmware can't render just falls back
+// to the normal legend (see glyph_script_codepoint) — this is what lets the host add
+// scripts without a protocol bump. 0xFF is the query sentinel and is never stored.
+// The awake re-render is driven from housekeeping (the master syncs glyph_script +
+// calls request_disp_refresh on change).
 void set_glyph_script(uint8_t script) {
-    if (script >= GLYPH_SCRIPT_COUNT || script == g_glyph_script) {
-        return;   // out-of-range or no-op: don't mark dirty / churn the split sync
+    if (script == 0xFF || script == g_glyph_script) {
+        return;   // query sentinel or no-op: don't mark dirty / churn the split sync
     }
     g_glyph_script = script;
     g_glyph_dirty  = true;
 }
 
-// Records the glyph script without marking dirty (boot-time EEPROM load).
+// Records the glyph script without marking dirty (boot-time EEPROM load). Keeps any
+// stored index verbatim; only the erased-EEPROM 0xFF maps to normal legends (an index
+// this firmware can't render degrades at draw time, not here).
 void note_glyph_script(uint8_t script) {
-    g_glyph_script = (script < GLYPH_SCRIPT_COUNT) ? script : GLYPH_STD;
+    g_glyph_script = (script == 0xFF) ? GLYPH_STD : script;
 }
 
 // ---- Active host-OS (enum poly_os) ----

@@ -927,13 +927,30 @@ static bool altgr_is_bare_combining(const uint32_t* s) {
 // NOT the source font's native codepoints — the flags font-pack bundle already
 // occupies 0xE000+, so a raw CSUR tengwa would render a language flag instead.
 //
-// Tengwar ("fantasy" bundle): 36 glyphs at 0xE800..0xE823, ordered letters a..z
-// then digits 1..0. The CSUR-tengwa-per-key choice (Dan Smith QWERTY-column
-// convention) lives in the font's generation sequence (fonts.yaml), so the
-// firmware only needs the dense index here.
-#define TENGWAR_BASE 0xE800u
+// Each glyph script's glyphs live in a dense private PUA block (disjoint from the
+// flags bundle at 0xE000+ and from each other): letters a..z at base+0..25, and —
+// for scripts that have their own numerals — digits 1..0 at base+26..35 (KC_1..KC_0
+// are contiguous with 0 last). The per-key glyph choice lives in each font's
+// generation sequence (fonts.yaml `-F<base>` relocation), so the firmware only
+// needs the base + a dense index. Scripts with `digits=false` leave the digit keys
+// as the normal numeral (e.g. Aurebesh/Cirth have no number system of their own).
+// The table is indexed by `enum poly_glyph_script`; keep it in sync with state.h.
+typedef struct { uint32_t base; bool digits; } glyph_script_block_t;
+static const glyph_script_block_t glyph_script_blocks[GLYPH_SCRIPT_COUNT] = {
+    [GLYPH_STD]      = { 0u,      false },
+    [GLYPH_TENGWAR]  = { 0xE800u, true  },
+    [GLYPH_RUNES]    = { 0xE840u, false },
+    [GLYPH_AUREBESH] = { 0xE880u, false },
+    [GLYPH_SGA]      = { 0xE8C0u, true  },
+    [GLYPH_CIRTH]    = { 0xE900u, false },
+    [GLYPH_IBMVGA]   = { 0xE940u, true  },
+    [GLYPH_C64]      = { 0xE980u, true  },
+    [GLYPH_AMIGA]    = { 0xE9C0u, true  },
+    [GLYPH_APL]      = { 0xEA00u, true  },
+    [GLYPH_BRAILLE]  = { 0xEA40u, true  },
+};
 
-// The dense mapping below relies on the USB-HID keycodes being contiguous
+// The dense mapping relies on the USB-HID keycodes being contiguous
 // (KC_A..KC_Z, and KC_1..KC_0 with 0 last); guard that against any future change.
 _Static_assert(KC_Z - KC_A == 25, "KC_A..KC_Z must be contiguous for the glyph-script map");
 _Static_assert(KC_0 - KC_1 == 9,  "KC_1..KC_0 must be contiguous for the glyph-script map");
@@ -942,11 +959,11 @@ _Static_assert(KC_0 - KC_1 == 9,  "KC_1..KC_0 must be contiguous for the glyph-s
 // when the key/script has no override (falls through to the normal legend). Only
 // plain letters/digits are overridden; symbols, function keys, etc. are left alone.
 static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
-    if (script == GLYPH_TENGWAR) {
-        if (keycode >= KC_A && keycode <= KC_Z) return TENGWAR_BASE + (uint32_t)(keycode - KC_A);
-        // KC_1..KC_0 are contiguous (1 first, 0 last) -> dense indices 26..35.
-        if (keycode >= KC_1 && keycode <= KC_0) return TENGWAR_BASE + 26u + (uint32_t)(keycode - KC_1);
-    }
+    if (script == GLYPH_STD || script >= GLYPH_SCRIPT_COUNT) return 0;
+    const glyph_script_block_t blk = glyph_script_blocks[script];
+    if (keycode >= KC_A && keycode <= KC_Z) return blk.base + (uint32_t)(keycode - KC_A);
+    // KC_1..KC_0 are contiguous (1 first, 0 last) -> dense indices 26..35.
+    if (blk.digits && keycode >= KC_1 && keycode <= KC_0) return blk.base + 26u + (uint32_t)(keycode - KC_1);
     return 0;
 }
 

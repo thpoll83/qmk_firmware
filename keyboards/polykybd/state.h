@@ -22,8 +22,21 @@ enum poly_idle_style {
 // append-only: persisted in poly_eeconf_t.glyph_script and carried on the wire
 // (poly_sync_t.glyph_script), so never reorder or reuse — add new scripts at the end.
 enum poly_glyph_script {
-    GLYPH_STD     = 0,   // normal language legends (no override)
-    GLYPH_TENGWAR = 1,   // Tengwar (Alcarin, CSUR mapping) — "fantasy" font-pack bundle
+    GLYPH_STD      = 0,   // normal language legends (no override)
+    GLYPH_TENGWAR  = 1,   // Tengwar (Alcarin, CSUR mapping) — "fantasy" font-pack bundle
+    // 2026-07 expansion — 9 more scripts, all in the "fantasy" bundle. Each maps
+    // the letter (and, where the script has them, digit) keys to a dense private
+    // PUA block; scripts without native numerals leave the digit keys as normal
+    // numerals. See glyph_script_codepoint() in poly_keymap.c for the base blocks.
+    GLYPH_RUNES    = 2,   // Elder Futhark runes (Noto Sans Runic, transliteration)
+    GLYPH_AUREBESH = 3,   // Aurebesh (Unifont CSUR) — letters only
+    GLYPH_SGA      = 4,   // Standard Galactic Alphabet (CC0) — cipher, has digits
+    GLYPH_CIRTH    = 5,   // Cirth / Angerthas (Unifont CSUR) — letters only
+    GLYPH_IBMVGA   = 6,   // IBM VGA / CP437 (VileR PxPlus) — Latin restyle
+    GLYPH_C64      = 7,   // Commodore 64 (Homecomputer Fonts) — Latin restyle
+    GLYPH_AMIGA    = 8,   // Amiga Topaz (Homecomputer Fonts) — Latin restyle
+    GLYPH_APL      = 9,   // APL (Unifont) — Dyalog/IBM keyboard symbol per key
+    GLYPH_BRAILLE  = 10,  // Braille (Unifont) — Grade-1 letters + digits
     GLYPH_SCRIPT_COUNT
 };
 

@@ -111,7 +111,16 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   `poly_eeconf_t.glyph_script`, synced via `poly_sync_t.glyph_script`. The Tengwar
   glyphs ship in a new **`fantasy`** font-pack bundle (the host flashes it on connect);
   with no bundle the override falls back to Latin. See "Glyph-script override" below.
-  **Bump `FW_VERSION` +
+  **v10** makes the glyph script an **open-ended index** and ships 9 more scripts,
+  values `2..10`: Elder Futhark runes, Aurebesh, Standard Galactic Alphabet,
+  Cirth/Angerthas, IBM VGA/CP437, Commodore 64, Amiga Topaz, APL, Braille — all in the
+  (regrown) `fantasy` bundle (`content_version` bumped 1→2). The wire format is unchanged
+  (one script byte); the semantic change is that the firmware now **accepts any index
+  `0..0xFE`** — an index it doesn't know, or whose font isn't flashed, renders the normal
+  legend instead of NACKing. This **decouples "add a font face" from the protocol**: within
+  v10 the script set can grow freely (the host may offer more scripts than a keyboard has;
+  older keyboards degrade gracefully), so **adding scripts never bumps the protocol again** —
+  only a real wire/semantic change would. `0xFF` stays the query sentinel. **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep** — the host connect gate is exact-match.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
@@ -235,14 +244,27 @@ pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
   "glance at the dimmed legend and resume typing" hint the pulse preserves; jitter
   was chosen as the default-preserving, legibility-preserving fix.
 
-### Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+)
+### Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+; expanded v10)
 An OS-independent **override** of the language-layer legends with an alternative
 script (fantasy / retro). State: `poly_eeconf_t.glyph_script` (persisted, appended
 tail byte like `os_state`; `EECONFIG_USER_DATA_SIZE` grew 64→65, still ≤ the 128-byte
 `POLY_EECONFIG_USER_RESERVED` so **no keymap relocation / user reset**) +
 `poly_sync_t.glyph_script` (master-authoritative, synced like `active_os`;
 `housekeeping_task_user()` sets it and `request_disp_refresh()`s on change). `enum
-poly_glyph_script` in `state.h` (`GLYPH_STD=0`, `GLYPH_TENGWAR=1`, append-only).
+poly_glyph_script` in `state.h` — append-only: `GLYPH_STD=0`, `GLYPH_TENGWAR=1`, then
+the v10 expansion `GLYPH_RUNES=2, GLYPH_AUREBESH=3, GLYPH_SGA=4, GLYPH_CIRTH=5,
+GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
+- **Open-ended index (v10+): cmd 30 accepts ANY value `0..0xFE`; unknown → normal.**
+  `set_glyph_script()`/`note_glyph_script()`/`load_user_eeconf()` store the byte
+  verbatim (only the erased-EEPROM `0xFF` maps to `GLYPH_STD`); `hid_com.c` case 30 no
+  longer NACKs an out-of-range index. `glyph_script_codepoint()` returns 0 for any
+  `script >= GLYPH_SCRIPT_COUNT`, so an index this firmware doesn't know falls through
+  to the normal legend (same path as a known script whose font isn't flashed). This is
+  what lets the host offer scripts a given keyboard lacks and lets **new font faces ship
+  without a protocol bump** — DON'T re-add a range NACK. Storing verbatim also means a
+  choice made before the matching font-pack update survives it. Adding a `GLYPH_*` value
+  therefore needs NO `PROTOCOL_VERSION` change — just the enum entry, the
+  `glyph_script_blocks[]` row, the font, and the host `GlyphScript`/label.
 - **Render hook — one choke point in `render_key()`** (`poly_keymap.c`): right after
   `local_state` is fetched, when `glyph_script != GLYPH_STD` and the key is a plain
   letter/digit on the normal layer (not the `_ADDLANG1` latin-variation layer), it
@@ -255,19 +277,32 @@ poly_glyph_script` in `state.h` (`GLYPH_STD=0`, `GLYPH_TENGWAR=1`, append-only).
   character, not a cased letter, so it wins), and when the glyph isn't in `g_all_fonts`
   (the `fantasy` bundle isn't flashed), so a pack-less keyboard shows Latin, never blanks.
 - **Codepoints are relocated, NOT native.** The `flags` bundle already occupies the
-  CSUR PUA `0xE000+`, so raw tengwar codepoints would render a language flag. The
-  `fantasy` bundle's font is emitted (fontconvert sequence `-F` remap, `fonts.yaml`)
-  into a private dense range **`0xE800..0xE823`** (letters `a..z` → `0xE800+`, digits
-  `1..0` → `0xE81A+`); `glyph_script_codepoint()` maps `KC_*` → that range. The
-  CSUR-tengwa-per-key choice (Dan Smith QWERTY-column convention) lives only in the
-  font's generation sequence, so the firmware just needs the dense index.
-- **Font**: Alcarin Tengwar (OFL 1.1) — there is **no Noto Tengwar**. Keep shipped
-  user-facing strings generic ("Fantasy" / "Tengwar"), not "Lord of the Rings"/
-  "Tolkien" (Tolkien-Estate trademark caveat applies to any tengwar in a sold product;
-  the OFL font itself is fine to embed). Host: HID cmd 30 in `PolyKybd.get/set_glyph_script`,
-  tray "Glyph Script" submenu + a "Reset glyph script to Standard" button in the
-  settings dialog; `polyctl glyph-script [standard|tengwar]`. Rig: `test_glyph_script_round_trip`
-  (`min_protocol: 9`).
+  CSUR PUA `0xE000+`, so raw script codepoints would render a language flag. Each
+  script's font is emitted (fontconvert sequence `-F` remap, `fonts.yaml`) into its
+  own **dense private PUA block** matching `glyph_script_blocks[]` (a table indexed by
+  `poly_glyph_script`) in `poly_keymap.c`: Tengwar `0xE800`, Runes `0xE840`, Aurebesh
+  `0xE880`, SGA `0xE8C0`, Cirth `0xE900`, IBM VGA `0xE940`, C64 `0xE980`, Amiga `0xE9C0`,
+  APL `0xEA00`, Braille `0xEA40` (0x40 apart). Letters `a..z` → `base+0..25`; scripts
+  with their own numerals (`digits:true`) put `1..0` at `base+26..35`, others leave the
+  digit keys as the normal numeral (runes/Aurebesh/Cirth have no native numbers). The
+  per-key glyph choice lives only in the font's generation sequence, so the firmware
+  just needs the base + dense index.
+- **Fonts** (all in the `fantasy` bundle; keep user-facing strings generic — trademark
+  caveat on the fictional scripts, though the *fonts* are fine to embed): Tengwar =
+  Alcarin (OFL, no Noto Tengwar exists); Runes = Noto Sans Runic (OFL); Aurebesh /
+  Cirth / APL / Braille = GNU Unifont (GPL + font-embedding exception); SGA = the CC0
+  `standardgalactic/alphabet` font; IBM VGA/CP437 = VileR PxPlus (CC-BY-SA-4.0, Debian
+  `fonts-pc`); C64 = KreativeKorp **PetMe64** (KSRFL, solid ROM font — the OFL
+  Homecomputer "Sixtyfour" was rejected for its baked-in CRT scanlines); Amiga = OFL
+  Homecomputer "Workbench" (Debian `fonts-amiga`; scanline look kept for a clean
+  license — solid Topaz conversions were license-uncertain). ZX Spectrum was dropped
+  (no license-clean font found). Sources fetched by `fonts/dl-fonts.sh` (google/fonts
+  + CC0 raw URLs; the Debian-packaged ones via `apt-get download` + `dpkg-deb -x`, no
+  root). Host: HID cmd 30 in `PolyKybd.get/set_glyph_script`, tray "Glyph Script"
+  submenu (`GLYPH_SCRIPT_LABELS`) + a "Reset glyph script to Standard" button in the
+  settings dialog; `polyctl glyph-script [standard|tengwar|runes|…|braille]`. Rig:
+  `test_glyph_script_round_trip` (`min_protocol: 9`) + `test_glyph_script_expansion`
+  (`min_protocol: 10`, walks values 2/6/10 + out-of-range NACK).
 
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.

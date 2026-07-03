@@ -18,6 +18,7 @@
 #include "generated/canadian_fonts.h"
 #include "generated/cherokee_fonts.h"
 #include "generated/tengwar_fonts.h"
+#include "generated/gscript_fonts.h"
 #include "generated/symbol_fonts.h"
 #include "generated/emoji_fonts.h"
 #include "generated/emoji_fig_fonts.h"

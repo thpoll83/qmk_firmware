@@ -782,23 +782,26 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 30: //get/set glyph-script override (protocol v9+)
                 {
                     // data[HID_DATA_IDX] == 0xFF -> query (reply current script in data[3]).
-                    // Otherwise set the script (0 = standard/off, 1 = Tengwar, ...); the
-                    // override replaces the language-layer letter/digit legends only and
-                    // is persisted at the next EEPROM flush (suspend / store key). The
-                    // awake re-render + slave sync are driven from housekeeping.
+                    // Otherwise set the script by INDEX (0 = standard/off, 1 = Tengwar,
+                    // 2.. = the expanded scripts). Any index 0..0xFE is ACCEPTED even if
+                    // this firmware doesn't know it or its font isn't flashed — the
+                    // renderer just falls back to the normal legend (glyph_script_codepoint
+                    // returns 0 for unknown indices). This is what decouples "add a font
+                    // face" from the protocol version: the host may offer more scripts than
+                    // a given keyboard has, and older keyboards degrade gracefully instead
+                    // of NACKing. The override replaces the language-layer letter/digit
+                    // legends only and is persisted at the next EEPROM flush (suspend /
+                    // store key). The awake re-render + slave sync run from housekeeping.
                     uint8_t arg = data[HID_DATA_IDX];
                     memset(data, 0, length);
                     if (arg == 0xFF) {
                         hid_reply(data, 0x1e, true);
                         data[3] = get_glyph_script();
-                    } else if (arg < GLYPH_SCRIPT_COUNT) {
+                    } else {
                         set_glyph_script(arg);
                         hid_reply(data, 0x1e, true);
                         data[3] = arg;
                         uprintf("Set glyph script to %u.\n", arg);
-                    } else {
-                        hid_reply(data, 0x1e, false);
-                        uprintf("Refused glyph script %u.\n", arg);
                     }
                     raw_hid_send(data, length);
                 }

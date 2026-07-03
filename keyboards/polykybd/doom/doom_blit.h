@@ -17,9 +17,11 @@
 #define DOOM_VIEW_ROWS   5
 #define DOOM_CANVAS_XOFF ((DOOM_VIEW_COLS * 72 - DOOM_FB_WIDTH) / 2)
 
-// Dither + push one full frame to the 5x5 viewport of THIS half's displays.
-// `luma256` maps a framebuffer palette index to 0..255 brightness.
-void doom_blit_frame(const uint8_t *fb, const uint8_t *luma256);
+// Dither + push one frame to the 5x5 viewport of THIS half's displays.
+// `fb_rows` is the source height (200 for the fire demo's full canvas, 168
+// for the engine's view buffer — rows below it render black); `luma256` maps
+// a framebuffer palette index to 0..255 brightness.
+void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256);
 
 // Blank every keycap display of this half (entering game mode: the keys
 // outside the viewport keep whatever legend they held otherwise).

@@ -12,29 +12,170 @@
 #include "doom_arena.h"
 #include "doom_blit.h"
 #include "doom_game.h"
+#include "doom_playpal_luma.h"
 
 #include "bridge_helper.h"
 #include "base/overlay.h"
 #include "base/update.h"
 #include "base/fw_staging.h"
+#include "base/multicore/core1.h"
+
+#include "doomkeys.h"           // engine key codes (doom_translate_key)
+#include "hardware/structs/psm.h"
 
 #ifdef POLYKYBD_DOOM
 
 // The engine entry (d_main.c). Declared directly — pulling doom/d_main.h into
 // this QMK-side file would drag the whole engine header graph next to
-// QMK_KEYBOARD_H for one prototype.
+// QMK_KEYBOARD_H for one prototype. (The pico_sync frame semaphores live in
+// qmk_shim.c behind doom_shim_take/release_frame — pico/sem.h cannot be
+// included here: ChibiOS also defines semaphore_t, and pico/time.h's param
+// asserts break inside QMK translation units.)
 extern void D_DoomMain(void);
 
-// Rooted-but-not-yet-launched: launching needs the core1 handover + the
-// scanout loop (next milestone). The volatile gate keeps the call genuinely
-// reachable, so the linker must resolve the COMPLETE engine — the flagged
-// image carries the real engine cost from here on instead of gc'ing it.
-static volatile bool s_engine_launch_enabled = false;
+// The doom linker script's shared block: pool base, end of the engine's
+// zero-init statics (= the arena base), and pool end (base + 226,800). See
+// doom_arena.h for the tiering.
+extern uint8_t __doom_shared_base__[];
+extern uint8_t __doom_shared_statics_end__[];
+extern uint8_t __doom_shared_end__[];
+
+// The engine's view height (SCREENHEIGHT 200 - the 32 px vpatch status bar).
+#define DOOM_VIEW_BUFFER_ROWS (DOOM_ARENA_FB_BYTES / 320)
+
+// True when the engine is live on core1 (WHX found, core launched); false in
+// game mode without a WHX — then the fire demo runs as the "NO WAD" gag.
+static bool s_engine_running;
+
+static bool doom_whx_present(void) {
+    // The WHX ships XIP-mapped at TINY_WAD_ADDR (flash 0x600000); magic "IWHX"
+    // (WHD_SUPER_TINY format — w_file_memory.c checks the same bytes).
+    const uint8_t *whx = (const uint8_t *)TINY_WAD_ADDR;
+    return whx[0] == 'I' && whx[1] == 'W' && whx[2] == 'H' && whx[3] == 'X';
+}
+
+// Hard-reset core1 via the power-on state machine (pico-sdk
+// multicore_reset_core1 — not compiled here because the SDK's multicore.c
+// collides with the firmware's local base/multicore/core1.c launcher).
+static void doom_core1_reset(void) {
+    io_rw_32 *power_off     = (io_rw_32 *)(PSM_BASE + PSM_FRCE_OFF_OFFSET);
+    io_rw_32 *power_off_set = hw_set_alias(power_off);
+    io_rw_32 *power_off_clr = hw_clear_alias(power_off);
+    *power_off_set = PSM_FRCE_OFF_PROC1_BITS;
+    while (!(*power_off & PSM_FRCE_OFF_PROC1_BITS)) {
+        tight_loop_contents();
+    }
+    *power_off_clr = PSM_FRCE_OFF_PROC1_BITS;
+}
+
+static void doom_core1_entry(void) {
+    // Interrupts masked on core1 for the same reason as multicore_exec.c's
+    // core1_entry (the Vector80/NMI hang — see that file and CLAUDE.md). The
+    // engine polls; the pico_sync semaphores wake via SEV/WFE, which PRIMASK
+    // does not block.
+    __asm volatile("cpsid i" ::: "memory");
+    D_DoomMain(); // never returns
+    while (true) {}
+}
 
 static void doom_engine_start(void) {
-    if (s_engine_launch_enabled) {
-        D_DoomMain(); // never returns
+    if (!doom_whx_present()) {
+        printf("doom: no WHX at %p — running the fire demo instead\n", (void *)TINY_WAD_ADDR);
+        s_engine_running = false;
+        return;
     }
+    // Take core1 from the overlay-RLE service (idle in game mode — the
+    // pool-writing HID commands are frozen) and give it to the game, with its
+    // stack at the tail of the pool.
+    doom_core1_reset();
+    // (uintptr_t detour: negative offsets from a zero-size linker symbol trip
+    // GCC's array-bounds check)
+    uint32_t *stack_bottom = (uint32_t *)((uintptr_t)__doom_shared_end__ - DOOM_ARENA_STACK_BYTES);
+    multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
+    s_engine_running = true;
+}
+
+static void doom_engine_stop(void) {
+    if (s_engine_running) {
+        s_engine_running = false;
+        // Kill the game mid-frame (it only touches pool memory) and hand core1
+        // back to the overlay-RLE service.
+        doom_core1_reset();
+        multicore_launch_core1();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Input: core0 (process_record) -> SPSC ring -> core1 (I_StartTic drains it
+// into D_PostEvent via doom_pop_key_event). Entries: doom key | DOWN bit.
+// ---------------------------------------------------------------------------
+
+#define EVQ_LEN  32u // power of two
+#define EVQ_DOWN 0x100u
+
+static volatile uint16_t s_evq[EVQ_LEN];
+static volatile uint8_t  s_evq_w, s_evq_r;
+
+// QMK keycode -> doom key. WASD plays (W/S forward/back, A/D strafe via the
+// default ','/'.' bindings), arrows turn/move, Ctrl fires, Space uses, Shift
+// runs, Alt strafe-modifies; letters/digits reach the menus (Y/N, episode/
+// skill picks) — except w/a/s/d, which the movement mapping shadows.
+static uint16_t doom_translate_key(uint16_t kc) {
+    switch (kc) {
+        case KC_W:    return KEY_UPARROW;
+        case KC_S:    return KEY_DOWNARROW;
+        case KC_A:    return ',';
+        case KC_D:    return '.';
+        case KC_UP:   return KEY_UPARROW;
+        case KC_DOWN: return KEY_DOWNARROW;
+        case KC_LEFT: return KEY_LEFTARROW;
+        case KC_RGHT: return KEY_RIGHTARROW;
+        case KC_ENTER: return KEY_ENTER;
+        case KC_ESC:  return KEY_ESCAPE;
+        case KC_TAB:  return KEY_TAB;
+        case KC_BSPC: return KEY_BACKSPACE;
+        case KC_SPACE: return ' ';
+        case KC_LCTL: case KC_RCTL: return KEY_RCTRL;
+        case KC_LSFT: case KC_RSFT: return KEY_RSHIFT;
+        case KC_LALT: case KC_RALT: return KEY_RALT;
+        case KC_MINUS: return KEY_MINUS;
+        case KC_EQUAL: return KEY_EQUALS;
+        case KC_COMMA: return ',';
+        case KC_DOT:   return '.';
+        case KC_SLASH: return '/';
+        default:
+            if (kc >= KC_A && kc <= KC_Z) return (uint16_t)('a' + (kc - KC_A));
+            if (kc >= KC_1 && kc <= KC_9) return (uint16_t)('1' + (kc - KC_1));
+            if (kc == KC_0) return '0';
+            return 0;
+    }
+}
+
+static void doom_push_key_event(uint16_t kc, bool pressed) {
+    uint16_t key = doom_translate_key(kc);
+    if (key == 0) {
+        return;
+    }
+    uint8_t w = s_evq_w;
+    if ((uint8_t)(w - s_evq_r) >= EVQ_LEN) {
+        return; // full — drop (the game is stalled anyway)
+    }
+    s_evq[w % EVQ_LEN] = key | (pressed ? EVQ_DOWN : 0);
+    __asm volatile("dmb" ::: "memory");
+    s_evq_w = (uint8_t)(w + 1);
+}
+
+bool doom_pop_key_event(uint8_t *key, bool *pressed) {
+    uint8_t r = s_evq_r;
+    if (r == s_evq_w) {
+        return false;
+    }
+    uint16_t e = s_evq[r % EVQ_LEN];
+    __asm volatile("dmb" ::: "memory");
+    s_evq_r = (uint8_t)(r + 1);
+    *key     = (uint8_t)(e & 0xff);
+    *pressed = (e & EVQ_DOWN) != 0;
+    return true;
 }
 
 // Trigger: type IDDQD (plain, unmodified) on the master half. Dev-harness
@@ -60,13 +201,6 @@ bool doom_mode_active(void) {
     return s_active;
 }
 
-// The doom linker script's shared block: pool base, end of the engine's
-// zero-init statics (= the arena base), and pool end (base + 226,800). See
-// doom_arena.h for the tiering.
-extern uint8_t __doom_shared_base__[];
-extern uint8_t __doom_shared_statics_end__[];
-extern uint8_t __doom_shared_end__[];
-
 uint8_t *doom_arena_at(unsigned offset) {
     return s_active || s_fb ? __doom_shared_statics_end__ + offset : NULL;
 }
@@ -77,7 +211,8 @@ uint8_t *doom_arena_framebuffer(void) {
 
 uint8_t *doom_arena_zone(int *size) {
     if (size) {
-        *size = (int)(__doom_shared_end__ - __doom_shared_statics_end__) - DOOM_ARENA_ZONE_OFF;
+        *size = (int)(__doom_shared_end__ - __doom_shared_statics_end__)
+                - DOOM_ARENA_ZONE_OFF - DOOM_ARENA_STACK_BYTES;
     }
     return doom_arena_at(DOOM_ARENA_ZONE_OFF);
 }
@@ -114,6 +249,7 @@ static void doom_enter(void) {
     s_active     = true;
     s_esc_down   = false;
     s_last_frame = 0;
+    s_evq_w = s_evq_r = 0;
     set_last_update((int32_t)timer_read32());
     doom_blit_blank_all();
     doom_engine_start();
@@ -121,7 +257,8 @@ static void doom_enter(void) {
 
 static void doom_exit(void) {
     s_active = false;
-    s_fb     = NULL;
+    doom_engine_stop();
+    s_fb = NULL;
     // Hand the pool back in the same state a fresh boot / font-pack wipe leaves
     // it: blank buffers, no usage bits, identity mapping. The host's next
     // overlay push (app switch / reconnect) repopulates it.
@@ -159,13 +296,14 @@ bool doom_process_record(uint16_t keycode, bool pressed) {
 
     // Game mode: swallow EVERYTHING — the host sees no keystrokes. ESC held
     // long enough exits (checked in doom_tick so a press-and-hold needs no
-    // repeat events).
+    // repeat events); a short ESC tap still reaches the game (its menu).
     if (keycode == KC_ESC) {
         s_esc_down    = pressed;
         s_esc_down_at = timer_read32();
     }
-    // TODO(engine): translate the event into a doom key + D_PostEvent() once
-    // the rp2040-doom core is in.
+    if (s_engine_running) {
+        doom_push_key_event(keycode, pressed);
+    }
     return true;
 }
 
@@ -181,12 +319,25 @@ void doom_tick(void) {
     // must never repaint the keycaps while the blitter owns them.
     set_last_update((int32_t)timer_read32());
 
+    if (s_engine_running) {
+        // Frame consume: the game (core1) signals a completed frame and blocks
+        // on display_frame_freed once it is a full frame ahead — the blit pace
+        // here IS the game's frame pace. (Single view buffer: the next frame
+        // renders into the buffer being blitted — tearing accepted for v1.)
+        if (doom_shim_take_frame()) {
+            doom_blit_frame(doom_arena_framebuffer(), DOOM_VIEW_BUFFER_ROWS, DOOM_PLAYPAL_LUMA);
+            doom_shim_release_frame();
+        }
+        return;
+    }
+
+    // No WHX: the fire-demo pipeline proof.
     if (timer_elapsed32(s_last_frame) < DOOM_FRAME_MS) {
         return;
     }
     s_last_frame = timer_read32();
     doom_fire_step(doom_arena_framebuffer());
-    doom_blit_frame(doom_arena_framebuffer(), doom_fire_luma());
+    doom_blit_frame(doom_arena_framebuffer(), DOOM_FB_HEIGHT, doom_fire_luma());
 }
 
 bool doom_hid_frozen(uint8_t cmd) {

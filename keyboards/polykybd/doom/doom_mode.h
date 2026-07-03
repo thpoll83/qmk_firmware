@@ -38,6 +38,17 @@ bool doom_hid_frozen(uint8_t cmd);
 uint8_t *doom_arena_framebuffer(void);   // 320x200 8bpp frame, DOOM_FB_SIZE bytes
 uint8_t *doom_arena_zone(int *size);     // the rest of the pool (engine zone memory)
 
+// Consumer side of the core0->core1 input ring: qmk_shim's I_StartTic drains
+// key events into D_PostEvent on the game core. Returns false when empty.
+bool doom_pop_key_event(uint8_t *key, bool *pressed);
+
+// Frame handoff, implemented in qmk_shim.c over the renderer's pico_sync
+// semaphores (which cannot be touched from QMK translation units — ChibiOS
+// also defines semaphore_t): non-blocking take of a completed frame, and the
+// release that unblocks the game for the next one.
+bool doom_shim_take_frame(void);
+void doom_shim_release_frame(void);
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }

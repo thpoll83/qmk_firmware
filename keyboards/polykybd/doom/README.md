@@ -89,14 +89,48 @@ symbols resolved. The memory plan that makes it fit:
   the renderer's core0/core1 semaphores. ⚠️ Runtime audit owed:
   `next_striped_spin_lock_num()` knows nothing of ChibiOS's spinlock use.
 
-**Known-open before first boot** (in order): launch `pd_core1_loop` on core1
-(take-over from `multicore_exec`, mind the `cpsid i` note), the per-frame
-scanout loop (scanline compose → palette→luma → `doom_blit`), input pump
-(`doom_process_record` → `D_PostEvent`), WHX flashed to `0x600000`
-(`doom1.whx` via the fontpack-style staging flow), ChibiOS heap is down to
-~4 KB in doom builds (watch for allocation failures), and game re-entry
-leaves engine `.data` stale (only `.bss` is re-zeroed) — first boot should
-allow a single entry per power cycle.
+## Runtime bring-up (slice 6) — READY FOR HARDWARE TEST
+
+The engine now actually **starts**: `doom_enter()` checks for the WHX at
+`0x10600000` ("IWHX" magic) — if present it hard-resets core1 (PSM), hands it
+to the game (`D_DoomMain` under `cpsid i`, same rationale as
+`multicore_exec.c`) with a 4 KB pool-backed stack; ESC-hold resets core1 and
+relaunches the overlay-RLE service. Without a WHX the fire demo runs instead.
+Rendering is fully **single-core on core1** (tracked edits compile out the
+work-split + core rendezvous — the split was dynamic work-stealing, so the
+inline paths cover everything); core0 consumes completed frames via the
+pico_sync handoff (`doom_shim_take/release_frame`) and blits them through the
+PLAYPAL-luma dither (`doom_playpal_luma.h`, generated from the shareware
+IWAD). Input: `process_record` (core0) → SPSC ring → `I_StartTic` (core1) →
+`D_PostEvent`. W/S forward-back, A/D strafe, arrows turn, Ctrl fire, Space
+use, Shift run, Enter/Esc/letters for the menus.
+
+### How to test on hardware
+
+```bash
+# 1. Build + flash the firmware (master half; HID updater or UF2)
+qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes
+arm-none-eabi-objcopy -O binary .build/polykybd_split72_default.elf doom.bin
+
+# 2. Flash the game data once (survives firmware updates — different region):
+python3 keyboards/polykybd/doom/tools/whx2uf2.py doom1.whx doom1_whx.uf2
+# hold BOOTSEL while plugging the MASTER half, copy doom1_whx.uf2 to RPI-RP2
+# (doom1.whx fetch commands: engine/PROVENANCE.md)
+
+# 3. Type IDDQD. ESC-hold ≥1.5 s exits.
+```
+
+Expected first-light: keycaps blank, then the title/demo loop on the 5×5
+block at the blit pace. What to watch (in rough failure-likelihood order):
+core1 semaphore behaviour under ChibiOS (striped **spinlock claims are
+unaudited** vs ChibiOS's own use — the top suspect if it hangs), engine
+`printf` from core1 racing core0's console output, zone exhaustion in-level
+(zone is ~86 K vs upstream's ~58 K working set, should be fine), single-
+buffer artifacts (status-bar region, tearing), and the ~4 KB residual
+ChibiOS heap. Re-entry after exit is UNTESTED-by-design: engine `.data` is
+not re-initialised — test one game entry per power cycle first. HID GET_ID
+etc. keep answering during play (only the pool-writing overlay commands are
+frozen); the slave half keeps its normal legends (master-only milestone).
 
 ## Engine integration state (history)
 

@@ -40,9 +40,23 @@
 
 #ifdef POLYKYBD_DOOM
 
-// Frame handoff between the renderer and the (upcoming) scanout/blit loop —
-// upstream defines these in its scanvideo i_video.c, which we replace.
+// Frame handoff between the renderer and the core0 blit loop — upstream
+// defines these in its scanvideo i_video.c, which we replace. Zero-initialised
+// (0 permits) until I_InitGraphics runs on core1, so the core0-side probe
+// below is safe from boot.
 semaphore_t render_frame_ready, display_frame_freed;
+
+bool doom_shim_take_frame(void) {
+    if (!sem_available(&render_frame_ready)) {
+        return false;
+    }
+    sem_acquire_blocking(&render_frame_ready);
+    return true;
+}
+
+void doom_shim_release_frame(void) {
+    sem_release(&display_frame_freed);
+}
 
 // (bitcount8_table comes from p_maputl.c)
 
@@ -163,8 +177,16 @@ void I_SetWindowTitle(const char *title) { (void)title; }
 void I_StartFrame(void) {}
 
 void I_StartTic(void) {
-    // TODO(engine): drain the key events doom_process_record collected into
-    // D_PostEvent() here.
+    // Drain the key events doom_process_record collected on core0 (SPSC ring
+    // in doom_mode.c) into the engine — this runs on the game core.
+    uint8_t key;
+    bool    pressed;
+    while (doom_pop_key_event(&key, &pressed)) {
+        event_t ev = {0};
+        ev.type  = pressed ? ev_keydown : ev_keyup;
+        ev.data1 = key;
+        D_PostEvent(&ev);
+    }
 }
 
 void I_UpdateNoBlit(void) {}

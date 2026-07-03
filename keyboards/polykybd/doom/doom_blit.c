@@ -46,7 +46,7 @@ static inline bool select_display(uint8_t view_row, uint8_t view_col) {
     return true;
 }
 
-void doom_blit_frame(const uint8_t *fb, const uint8_t *luma256) {
+void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256) {
     uint8_t      *buf    = get_scratch_buffer();
     const int16_t stride = get_scratch_buffer_size() / 8; // controller bytes per page (128)
 
@@ -70,6 +70,9 @@ void doom_blit_frame(const uint8_t *fb, const uint8_t *luma256) {
                     const uint8_t *src  = fb + (size_t)fy * DOOM_FB_WIDTH + fx;
                     uint8_t        bits = 0;
                     for (uint8_t bit = 0; bit < 8; ++bit) {
+                        if (fy + bit >= fb_rows) {
+                            break; // below the source frame: stays black
+                        }
                         const uint8_t v = luma256[src[(size_t)bit * DOOM_FB_WIDTH]];
                         if (v > BAYER4[(fy + bit) & 3][fx & 3]) {
                             bits |= (uint8_t)(1u << bit);

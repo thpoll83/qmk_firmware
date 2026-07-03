@@ -35,12 +35,16 @@ extern "C" {
 // vpatchlists_t — upstream static_asserts sizeof < 0xc00.
 #define DOOM_ARENA_VPATCH_BYTES 3072
 
+// core1 game stack, carved from the very END of the pool (grows down from
+// __doom_shared_end__). Upstream runs the game thread on a 2-4 K stack.
+#define DOOM_ARENA_STACK_BYTES  4096
+
 #define DOOM_ARENA_FB_OFF     0
 #define DOOM_ARENA_PD_OFF     (DOOM_ARENA_FB_OFF + DOOM_ARENA_FB_BYTES)
 #define DOOM_ARENA_VPATCH_OFF (DOOM_ARENA_PD_OFF + DOOM_ARENA_PD_BYTES)
-// Zone memory (Z_Init) takes everything from here to the pool end: with ~21 K
-// of statics ahead of the arena that is ~90 K — comfortably above upstream's
-// ~58 K (zone + wrapped-malloc heap) working set.
+// Zone memory (Z_Init) takes everything from here to the game stack: with
+// ~21 K of statics ahead of the arena that is ~86 K — comfortably above
+// upstream's ~58 K (zone + wrapped-malloc heap) working set.
 #define DOOM_ARENA_ZONE_OFF   (DOOM_ARENA_VPATCH_OFF + DOOM_ARENA_VPATCH_BYTES)
 
 // Arena base (= first byte after the engine statics) + offset, or NULL while

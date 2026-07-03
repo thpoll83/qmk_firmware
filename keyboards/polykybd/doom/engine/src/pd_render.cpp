@@ -35,10 +35,20 @@ extern "C" {
 }
 // todo compare with and without
 #define USE_XIPCPY 0
+#if POLYKYBD_QMK
+// PolyKybd port: the game owns core1 ALONE (core0 stays QMK: USB, matrix,
+// split link, and the frame blit). Rendering runs fully single-core, so the
+// work-split paths and the core0/core1 frame handshake compile out —
+// draw_visplanes/draw_regular_columns work fine from one core (the split was
+// dynamic work-stealing over the same lists).
+#define USE_CORE1_FOR_FLATS 0
+#define USE_CORE1_FOR_REGULAR 0
+#else
 #if PICO_ON_DEVICE
 #define USE_CORE1_FOR_FLATS 1
 #endif
 #define USE_CORE1_FOR_REGULAR 1
+#endif
 #ifdef PICO_SPINLOCK_ID_OS2
 #define RENDER_SPIN_LOCK PICO_SPINLOCK_ID_OS2
 #else
@@ -2843,8 +2853,11 @@ void pd_end_frame(int wipe_start) {
         draw_cast_sprite(sprite_lump);
     }
 #endif
+#if !POLYKYBD_QMK
+    // PolyKybd port: no separate render-worker core — nothing to rendezvous.
     sem_release(&core0_done);
     sem_acquire_blocking(&core1_done);
+#endif
     draw_fuzz_columns();
     DEBUG_PINS_CLR(full_render, 1);
     NetUpdate();

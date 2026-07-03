@@ -1032,10 +1032,18 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         uint32_t cp = glyph_script_codepoint(local_state->glyph_script, keycode);
         if (cp != 0 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL) {
             const uint32_t s[2] = { cp, 0 };
-            int8_t gmin, gmax;
-            kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, s, &gmin, &gmax);
-            int8_t gx = (int8_t)(BUFFER_X + (SCREEN_WIDTH - (gmax - gmin + 1)) / 2 - gmin);
-            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, gx, 23, s);
+            // Center the glyph in BOTH axes from its full pixel bbox, rather than
+            // drawing at the base font's fixed y=23 baseline. The script fonts are
+            // rendered taller (~30 px) than the 14 px Latin base, so at baseline 23
+            // a tall glyph's top (23 + yOffset) lands above 0 and clips off the top
+            // of the 40 px display (Amiga/C64/APL ran ~10 px off-screen). bbox gives
+            // the y extent too, so we place the baseline to fit — same idea the idle
+            // jitter uses (roll_idle_offset).
+            int8_t xmin, xmax, ymin, ymax;
+            kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, s, &xmin, &xmax, &ymin, &ymax);
+            int8_t gx = (int8_t)(BUFFER_X + (SCREEN_WIDTH  - (xmax - xmin + 1)) / 2 - xmin);
+            int8_t gy = (int8_t)(         (SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin);
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, gx, gy, s);
             return true;
         }
     }

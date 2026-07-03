@@ -2687,7 +2687,13 @@ void pd_end_frame(int wipe_start) {
 
     DEBUG_PINS_SET(full_render, 1);
 
-    uint8_t *list_buffer_limit = list_buffer + count_of(list_buffer);
+    // POLYKYBD_QMK: list_buffer is an arena-backed POINTER here, so upstream's
+    // count_of(list_buffer) silently became sizeof(uint8_t*) == 4 — placing the
+    // wipe structures (limit - 4096) into the tail of the FRAME BUFFER, where
+    // the renderer trashed them every frame (melt never finished, offsets
+    // showed up as flickering pixels — field round 5, 2026-07-03). For the
+    // upstream array count_of() == LIST_BUFFER_SIZE, so this is equivalent.
+    uint8_t *list_buffer_limit = list_buffer + LIST_BUFFER_SIZE;
     if (!inhelpscreens) {
         if (was_in_help) {
 //            // todo graham, wtf this was a complete guess - why should this be necessary, and if so why

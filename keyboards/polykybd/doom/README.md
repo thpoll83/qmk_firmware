@@ -140,6 +140,21 @@ frozen); the slave half keeps its normal legends (master-only milestone).
   suspend core1 doesn't have). Fixed with the `-Wl,--wrap=putchar_` core-aware
   relay in `qmk_shim.c` (core1 → lock-free ring, drained by `doom_tick`), plus
   the `doom_shim_progress` breadcrumb + 2 s no-frame heartbeat.
+- **Round 5 (2026-07-03): melt still frozen + "a few pixels flickering" — a
+  stale `count_of()` on a pointer-converted buffer.** With the wipe-advance
+  in place the freeze persisted (gametic 173, vt=5) but a few pixels now
+  flickered. Cause: `pd_end_frame` still computed `list_buffer_limit =
+  list_buffer + count_of(list_buffer)` — upstream's `list_buffer` is a real
+  array so `count_of` == LIST_BUFFER_SIZE, but the port made it an
+  arena-backed POINTER, so `count_of` silently became `sizeof(uint8_t*)` = 4.
+  The wipe structures (`limit - 4096`) landed in the tail of the FRAME
+  BUFFER: the renderer trashed the melt offsets every frame (min never
+  reached 200) and our column advance painted int16 offsets into the
+  displayed image — the flickering pixels were literally the wipe data. Fixed
+  to `list_buffer + LIST_BUFFER_SIZE` (equivalent upstream). Lesson: **when
+  converting an array to a pointer, grep for EVERY `count_of`/`sizeof` on
+  it — the compiler accepts the pointer silently and the miscompute only
+  shows at runtime, far from the declaration.**
 - **Rounds 3+4 (2026-07-03): engine boots, frames flow, but the game clock
   freezes at the first screen-melt.** Round 3: full boot log, first frame on
   the keycaps, static unidentifiable pixels (the TITLEPIC page across the 5×5

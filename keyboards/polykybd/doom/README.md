@@ -140,6 +140,28 @@ frozen); the slave half keeps its normal legends (master-only milestone).
   suspend core1 doesn't have). Fixed with the `-Wl,--wrap=putchar_` core-aware
   relay in `qmk_shim.c` (core1 → lock-free ring, drained by `doom_tick`), plus
   the `doom_shim_progress` breadcrumb + 2 s no-frame heartbeat.
+- **Rounds 3+4 (2026-07-03): engine boots, frames flow, but the game clock
+  freezes at the first screen-melt.** Round 3: full boot log, first frame on
+  the keycaps, static unidentifiable pixels (the TITLEPIC page across the 5×5
+  block), nothing ever moves. Round 4's vitals line pinpointed it: `frames`
+  climbing at ~18 fps, **`gametic` parked at 172** (= the title page's 170
+  tics + 2), **`vt=5` = VIDEO_TYPE_WIPE**. Root cause: under DOOM_TINY the
+  game loop is `do { D_Display(); } while (wipestate)` (`d_main.c
+  D_RunFrame`) with `TryRunTics` OUTSIDE the loop, and pd_render's wipestate
+  machine exits only when `wipe_min` reaches 200 — advanced **once per
+  displayed frame by the scanout side** (`pico/i_video.c` new-frame init),
+  i.e. by the component we replaced with the keycap blitter. Nobody advanced
+  the melt → the game waited on the display forever. Fix:
+  `doom_shim_take_frame()` now runs upstream's per-frame column advance
+  (`advance_wipe_columns()`, verbatim port incl. the every-other-frame
+  `regular` toggle) whenever the consumed frame is a WIPE frame. The melt
+  *visual* is NOT reproduced (that needs the two-buffer old/new compose of
+  `scanline_func_wipe`, meaningless with our single shared view buffer) — the
+  keycaps just show the new screen for the couple of seconds the melt state
+  machine takes, then the sim resumes. Lesson: **the display side is not a
+  passive consumer — upstream's scanout owns wipe pacing (and palette/vpatch
+  compose); every stateful thing it does needs an equivalent in the blit
+  consumer.**
 - **Round 2 (2026-07-03): core1 halted in `Z_Init` — silent `bkpt`.** Log
   showed the zone line then only `progress=1` heartbeats. `doomtype.h`'s
   `shortptr_t` needs `PICO_RP2040`, which upstream gets from pico-sdk CMake;

@@ -184,11 +184,57 @@ char *__wrap_strdup(const char *s) {
 // below is safe from boot.
 semaphore_t render_frame_ready, display_frame_freed;
 
+// The display side owns the screen-melt pacing: under DOOM_TINY the game
+// loop is `do { D_Display(); } while (wipestate)` (d_main.c D_RunFrame) with
+// TryRunTics OUTSIDE the loop, and pd_render's wipestate machine only exits
+// once `wipe_min` reaches 200 — which upstream's scanvideo i_video.c advances
+// once per DISPLAYED frame. Replace the scanout and nobody melts the columns:
+// gametic freezes at the first title->demo transition while the renderer
+// loops wipe frames forever (field round 4, 2026-07-03: frames climbing,
+// gametic parked at 172, vt=5). This is upstream's per-frame column advance
+// (i_video.c new_frame init, verbatim incl. the every-other-frame `regular`
+// toggle — upstream uses display_overlay_index, which flips per frame).
+// Runs on core0 only; the renderer writes wipe_yoffsets_raw strictly before
+// releasing the first WIPE frame and afterwards only polls wipe_min.
+static void advance_wipe_columns(void) {
+    if (!wipe_yoffsets_raw || !wipe_yoffsets) {
+        return;
+    }
+    static bool regular;
+    regular = !regular;
+    int new_wipe_min = 200;
+    for (int i = 0; i < SCREENWIDTH; i++) {
+        int v;
+        if (wipe_yoffsets_raw[i] < 0) {
+            if (regular) {
+                wipe_yoffsets_raw[i]++;
+            }
+            v = 0;
+        } else {
+            int dy = (wipe_yoffsets_raw[i] < 16) ? (1 + wipe_yoffsets_raw[i] + regular) / 2 : 4;
+            if (wipe_yoffsets_raw[i] + dy > 200) {
+                v = 200;
+            } else {
+                wipe_yoffsets_raw[i] += dy;
+                v = wipe_yoffsets_raw[i];
+            }
+        }
+        wipe_yoffsets[i] = v;
+        if (v < new_wipe_min) {
+            new_wipe_min = v;
+        }
+    }
+    wipe_min = (uint8_t)new_wipe_min;
+}
+
 bool doom_shim_take_frame(void) {
     if (!sem_available(&render_frame_ready)) {
         return false;
     }
     sem_acquire_blocking(&render_frame_ready);
+    if (next_video_type == VIDEO_TYPE_WIPE && wipe_min <= 200) {
+        advance_wipe_columns();
+    }
     return true;
 }
 

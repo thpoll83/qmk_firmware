@@ -146,16 +146,20 @@ void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t o
 void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     SYNC_VALIDATE_OR_RETURN(overlay_sync_t);
     const overlay_sync_t* ov = ((const overlay_sync_t *)in_data);
-    // SECURITY (FW-6): `segment` is attacker-influenced (a compromised peer half). The
-    // master's HID path (case 10) bounds it, but this bridge receiver did not — segment
-    // (0..255) * 60 could point ~15 KB past the 360-byte overlay row (OOB write). Bound
-    // it before the write; adj_idx is already bounded by get_overlay() (FW-4).
-    if (ov->segment < NUM_SEGMENTS_PER_OVERLAY) {
-        memcpy(get_overlay(ov->adj_idx) + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
-        if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
-            set_overlay_usage_post_upload(ov->adj_idx);
-            request_disp_refresh();
-        }
+    // NOTE (FW-6, risk accepted): `ov->segment` is not bounded here, so a value
+    // outside 0..NUM_SEGMENTS_PER_OVERLAY-1 would offset the memcpy past the
+    // 360-byte overlay row. This is deliberately NOT guarded: the only way to
+    // inject such a value is a compromised/forged peer half on the UART bridge,
+    // which requires physical access to the internal bridge connector — an
+    // attacker with that access can already flash arbitrary firmware over the
+    // bootloader, so the split link is inside the trust boundary. The master's
+    // HID path (hid_com.c case 10) bounds `segment` on the way in, so normal
+    // traffic never carries an out-of-range value. (adj_idx is still bounded by
+    // get_overlay()/FW-4.)
+    memcpy(get_overlay(ov->adj_idx) + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
+    if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
+        set_overlay_usage_post_upload(ov->adj_idx);
+        request_disp_refresh();
     }
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
 }

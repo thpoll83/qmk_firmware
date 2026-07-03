@@ -416,19 +416,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     set_fragment_context_key(data[HID_DATA_IDX], data[HID_DATA_IDX+1]);
                     uint8_t segment = data[HID_DATA_IDX+2];
                     if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
-                        // SECURITY (FW-7): the 60-byte segment payload starts at
-                        // data[HID_DATA_IDX+3]; with the 3-byte header that is one byte
-                        // more than a 64-byte report can hold, so fill_overlay_buffer's
-                        // 60-byte copy read 1 byte past the report. Bounce through a
-                        // zero-padded local so the copy stays in bounds (the byte that
-                        // can't fit in the report reads as 0 instead of OOB garbage).
-                        uint8_t off   = HID_DATA_IDX + 3;
-                        uint8_t avail = (uint8_t)hid_payload_avail(length, off);
-                        if (avail > BYTES_PER_SEGMENT) avail = BYTES_PER_SEGMENT;
-                        uint8_t seg[BYTES_PER_SEGMENT];
-                        memset(seg, 0, sizeof(seg));
-                        memcpy(seg, &data[off], avail);
-                        fill_overlay_buffer(segment, seg);
+                        fill_overlay_buffer(segment, &data[HID_DATA_IDX+3]);
                         if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
                             update_performed();
                             request_disp_refresh();

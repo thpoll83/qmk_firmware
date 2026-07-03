@@ -815,7 +815,7 @@
       "index": 6,
       "slot_offset": 1347584,
       "slot_size": 749568,
-      "total_size": 23508,
+      "total_size": 23720,
       "font_count": 10,
       "fonts": [
         {
@@ -844,7 +844,7 @@
         },
         {
           "all_fonts_index": 151,
-          "symbol": "unifont_csur_Cirth_14pt7b",
+          "symbol": "unifont_csur_Cirth_16pt7b",
           "first": 59648,
           "last": 59673
         },

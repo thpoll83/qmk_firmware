@@ -1,7 +1,7 @@
 {
   "abi_version": 1,
   "font_count": 134,
-  "total_size": 479928,
+  "total_size": 480140,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -767,7 +767,7 @@
     },
     {
       "all_fonts_index": 151,
-      "symbol": "unifont_csur_Cirth_14pt7b",
+      "symbol": "unifont_csur_Cirth_16pt7b",
       "first": 59648,
       "last": 59673
     },

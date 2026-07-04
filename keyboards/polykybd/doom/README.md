@@ -150,7 +150,33 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 13 → v14 (2026-07-04, UNTESTED): map legibility + pad bottom row +
+- **Round 14 → v15 (2026-07-04, UNTESTED): DOOM-UI uniformity round.** All
+  four asks lean on one new capability: decoding the game's own status-bar
+  vpatches OUTSIDE the canvas compose (a zeroed `vpatchlist_t` entry turns
+  the shim's `draw_vpatch8` into a plain row-major decoder).
+  1. **Attract fills the slave's whole 5×5 incl. the bottom row** ("looks
+     more uniform") — the bottom-row skip now applies only while the MAP is
+     live (`doom_shim_attract_active()` decides; `s_slave_blit_bottom`
+     tracks it, and the attract→map transition refreshes the thumb legends
+     back in). update_displays hands the thumb row to the blitter only
+     during the attract.
+  2. **Status-OLED hardware scroll only during the attract** — in a level
+     (or intermission) the logo stands still (`doom_status_scroll()`); the
+     no-WHX fire-demo keeps the legacy always-scroll.
+  3. **The MASTER's status OLED shows the doomguy face while in a level** —
+     `ST_FaceIndex()` (new POLYKYBD_QMK getter) picks the live STFST
+     vpatch (`VPATCH_NAME(STFST00) + index` — contiguity is
+     static-asserted upstream), decoded + 2×-scaled + Bayer-dithered into
+     the 128×64 page buffer (`doom_shim_face_oled`). Redrawn ONLY when the
+     face index changes (grin/ouch/rampage/god react to gameplay, ~1/s
+     worst case); the slave keeps the logo.
+  4. **Vitals values in the game's tall red digits** ("extract the font") —
+     `doom_blit_stat_num_key` decodes STTNUM0-9/STTMINUS at native size,
+     thresholds on the saturation-floored luma (solid red, dark outline
+     stays dark), centres the run under the 10 px word label, baseline-
+     aligns the short minus. Font digits remain as the fallback when the
+     engine/patches are unavailable.
+- **Round 13 → v14 (2026-07-04, tested in round 14): map legibility + pad bottom row +
   the "Success" flood found.** Round 13 confirmed **`polyctl doom install`
   works on hardware** (`FONTPACK_COMMIT: DOOMWAD slave=0xca master=1 ->
   installed`, 440 sectors, both halves in one pass). v14:

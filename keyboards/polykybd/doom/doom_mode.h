@@ -113,6 +113,37 @@ bool doom_shim_slave_wants_map_key(void);
 // update_displays then leaves every non-pad key alone (doom_mode.c).
 bool doom_slave_viewport_live(void);
 
+// True while the blitter also owns the slave's bottom (thumb) key row — only
+// during the ATTRACT mirror ("looks more uniform", field round 14); the map
+// leaves that row to the pad so the cursor-key legends stay.
+bool doom_slave_bottom_row_live(void);
+
+// True while this half's engine is in the attract phase (title/demo loop, or
+// the slave with no mirror engaged) — drives the status-OLED hardware scroll
+// and the slave's full-viewport attract blit (qmk_shim.c).
+bool doom_shim_attract_active(void);
+
+// Status-OLED support (doom_mode.c over qmk_shim.c):
+//  doom_status_face_render — the doomguy face on the 128x64 status OLED while
+//  the master is in a level: 0 = no face (show the logo), 1 = face unchanged
+//  (leave the panel alone), 2 = freshly rendered into buf1024 (write it).
+//  doom_status_scroll — whether the logo should hardware-scroll (attract only).
+int  doom_status_face_render(uint8_t *buf1024);
+bool doom_status_scroll(void);
+
+// Tall status-bar number glyphs decoded from the WHX (qmk_shim.c): glyph 0-9
+// or DOOM_TALLNUM_MINUS into out8bpp (row-major w*h PLAYPAL indices; NULL =
+// size probe only). False -> caller falls back to font digits.
+#define DOOM_TALLNUM_MAX_W  16
+#define DOOM_TALLNUM_MAX_H  24
+#define DOOM_TALLNUM_MINUS  10
+bool doom_shim_tallnum_glyph(uint8_t glyph, uint8_t *out8bpp, uint8_t *w, uint8_t *h);
+
+// Doomguy face for the status OLED (qmk_shim.c): current face index (-1 when
+// not in a level) and the 2x-scaled render into a 128x64 page buffer.
+int  doom_shim_face_index(void);
+bool doom_shim_face_oled(uint8_t *oled_buf, const uint8_t *luma256);
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }
@@ -138,5 +169,8 @@ static inline bool doom_hid_frozen(uint8_t cmd) { (void)cmd; return false; }
 // update_displays filter references it unconditionally.
 static inline bool doom_key_is_control(uint16_t keycode) { (void)keycode; return true; }
 static inline bool doom_slave_viewport_live(void) { return false; }
+static inline bool doom_slave_bottom_row_live(void) { return false; }
+static inline int  doom_status_face_render(uint8_t *buf1024) { (void)buf1024; return 0; }
+static inline bool doom_status_scroll(void) { return true; }
 
 #endif

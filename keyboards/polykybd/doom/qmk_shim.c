@@ -518,6 +518,118 @@ void doom_shim_compose_line(uint8_t *line, unsigned y) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// status-bar artwork decode: the doomguy face for the status OLED and the
+// tall red numbers for the vitals keys, straight from the WHX vpatches. A
+// zeroed vpatchlist_t entry (x 0, no repeat) turns draw_vpatch8 into a plain
+// row-major decoder; the compose above stays untouched.
+// ---------------------------------------------------------------------------
+
+extern int ST_FaceIndex(void);   // st_stuff.c POLYKYBD_QMK getter
+
+// Same 4x4 Bayer thresholds as the keycap blit (doom_blit.c BAYER4) — the
+// face dither matches the game view's look.
+static const uint8_t shim_bayer4[4][4] = {
+    {  8, 136,  40, 168},
+    {200,  72, 232, 104},
+    { 56, 184,  24, 152},
+    {248, 120, 216,  88},
+};
+
+#define SHIM_FACE_MAX_W 48u
+
+// Live face index while a level runs on this half's engine, else -1. The
+// index changes with health/damage/rampage — the caller redraws only on a
+// change (a plain word read of core1 state).
+int doom_shim_face_index(void) {
+    if (gamestate != GS_LEVEL || !doom_shim_progress) {
+        return -1;
+    }
+    return ST_FaceIndex();
+}
+
+// Render the current doomguy face, scaled 2x + centered, into a 128x64
+// SSD1306 page buffer (1024 B, byte=(y/8)*128+x). False when no face is
+// available (not in a level / patch unresolvable) — the caller shows the logo.
+bool doom_shim_face_oled(uint8_t *oled_buf, const uint8_t *luma256) {
+    int idx = doom_shim_face_index();
+    if (idx < 0) {
+        return false;
+    }
+    const patch_t *p = resolve_vpatch_handle((vpatch_handle_large_t)(VPATCH_NAME(STFST00) + idx));
+    if (!p) {
+        return false;
+    }
+    const unsigned w = vpatch_width(p);
+    const unsigned h = vpatch_height(p);
+    if (!w || !h || w > SHIM_FACE_MAX_W || 2 * w > 128 || 2 * h > 64) {
+        return false;
+    }
+    memset(oled_buf, 0, 128u * 64u / 8u);
+    uint8_t       row[SHIM_FACE_MAX_W];
+    vpatchlist_t  vp;
+    memset(&vp, 0, sizeof(vp));
+    unsigned       off = 0;
+    const unsigned x0  = (128u - 2 * w) / 2;
+    const unsigned y0  = (64u - 2 * h) / 2;
+    for (unsigned sy = 0; sy < h; sy++) {
+        memset(row, 0, w);
+        off = draw_vpatch8(row, p, &vp, off);
+        for (unsigned sx = 0; sx < w; sx++) {
+            const uint8_t v = luma256[row[sx]];
+            for (unsigned dy = 0; dy < 2; dy++) {
+                const unsigned Y = y0 + 2 * sy + dy;
+                for (unsigned dx = 0; dx < 2; dx++) {
+                    const unsigned X = x0 + 2 * sx + dx;
+                    if (v > shim_bayer4[Y & 3][X & 3]) {
+                        oled_buf[(Y >> 3) * 128u + X] |= (uint8_t)(1u << (Y & 7));
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+// Decode one tall status-bar number glyph (0-9, DOOM_TALLNUM_MINUS) into
+// out8bpp (row-major w*h PLAYPAL indices; pass NULL to only fetch the size —
+// callers measure the whole value before deciding to draw). False when the
+// engine/patch is unavailable — the caller falls back to font digits.
+bool doom_shim_tallnum_glyph(uint8_t glyph, uint8_t *out8bpp, uint8_t *w, uint8_t *h) {
+    if (!doom_shim_progress) {
+        return false;
+    }
+    vpatch_handle_large_t handle;
+    if (glyph <= 9) {
+        handle = (vpatch_handle_large_t)(VPATCH_NAME(STTNUM0) + glyph);
+    } else if (glyph == DOOM_TALLNUM_MINUS) {
+        handle = VPATCH_NAME(STTMINUS);
+    } else {
+        return false;
+    }
+    const patch_t *p = resolve_vpatch_handle(handle);
+    if (!p) {
+        return false;
+    }
+    const unsigned pw = vpatch_width(p);
+    const unsigned ph = vpatch_height(p);
+    if (!pw || !ph || pw > DOOM_TALLNUM_MAX_W || ph > DOOM_TALLNUM_MAX_H) {
+        return false;
+    }
+    *w = (uint8_t)pw;
+    *h = (uint8_t)ph;
+    if (out8bpp) {
+        memset(out8bpp, 0, (size_t)pw * ph);
+        vpatchlist_t vp;
+        memset(&vp, 0, sizeof(vp));
+        unsigned off = 0;
+        for (unsigned y = 0; y < ph; y++) {
+            off = draw_vpatch8(out8bpp + (size_t)y * pw, p, &vp, off);
+        }
+    }
+    return true;
+}
+
 // (bitcount8_table comes from p_maputl.c)
 
 // ---------------------------------------------------------------------------
@@ -1041,6 +1153,17 @@ bool doom_shim_slave_wants_map_key(void) {
 
 static bool doom_mirror_drone_map_active(void) {
     return !s_mirror_master && s_mirror_started && automapactive;
+}
+
+// True while this half's engine is in its attract phase: the master on the
+// title/demo loop (menus over it included — gamestate stays GS_DEMOSCREEN),
+// the slave whenever no mirror is engaged (its own attract runs then). Drives
+// the status-OLED scroll and the slave's full-viewport attract blit.
+bool doom_shim_attract_active(void) {
+    if (!s_mirror_master) {
+        return !s_mirror_started;
+    }
+    return gamestate == GS_DEMOSCREEN;
 }
 
 // ---------------------------------------------------------------------------

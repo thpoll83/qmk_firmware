@@ -486,20 +486,29 @@ static void doom_hud_tick(void) {
     }
     s_hud_drawn_at = timer_read32();
     uint32_t value[8];
+    // Values in the game's own tall red status-bar digits ("extract the
+    // font", field round 14); font digits only as the fallback when the
+    // glyph decode is unavailable.
     if (hp != s_hud_hp || !s_hud_shown) {
         s_hud_hp = hp;
-        doom_hud_format(value, hp);
-        doom_blit_stat_key(1, doom_hud_disp_col(), U"Health", value);
+        if (!doom_blit_stat_num_key(1, doom_hud_disp_col(), U"Health", hp, DOOM_PLAYPAL_LUMA)) {
+            doom_hud_format(value, hp);
+            doom_blit_stat_key(1, doom_hud_disp_col(), U"Health", value);
+        }
     }
     if (ar != s_hud_ar || !s_hud_shown) {
         s_hud_ar = ar;
-        doom_hud_format(value, ar);
-        doom_blit_stat_key(2, doom_hud_disp_col(), U"Armor", value);
+        if (!doom_blit_stat_num_key(2, doom_hud_disp_col(), U"Armor", ar, DOOM_PLAYPAL_LUMA)) {
+            doom_hud_format(value, ar);
+            doom_blit_stat_key(2, doom_hud_disp_col(), U"Armor", value);
+        }
     }
     if (am != s_hud_am || !s_hud_shown) {
         s_hud_am = am;
-        doom_hud_format(value, am);
-        doom_blit_stat_key(3, doom_hud_disp_col(), U"Ammo", value);
+        if (!doom_blit_stat_num_key(3, doom_hud_disp_col(), U"Ammo", am, DOOM_PLAYPAL_LUMA)) {
+            doom_hud_format(value, am);
+            doom_blit_stat_key(3, doom_hud_disp_col(), U"Ammo", value);
+        }
     }
     s_hud_shown = true;
 }
@@ -661,11 +670,13 @@ static void doom_mirror_master_pump(void) {
 // the viewport with the force-revealed automap.
 static bool     s_slave;        // mirror session up (pool + engine)
 static bool     s_slave_blit;   // viewport currently owned by the blitter
+static bool     s_slave_blit_bottom; // ...including the bottom row (attract only)
 static uint32_t s_slave_tab_at; // automap re-toggle throttle
 
 static void doom_slave_stop(void) {
     s_slave      = false;
     s_slave_blit = false;
+    s_slave_blit_bottom = false;
     doom_engine_stop();
     s_fb = NULL;
     // Same pool hand-back contract as doom_exit: blank + reconstructible.
@@ -700,6 +711,17 @@ static void doom_slave_tick(void) {
         return;
     }
     const bool live = doom_shim_slave_view_live();
+    // The ATTRACT blit fills the whole 5x5 incl. the bottom row ("looks more
+    // uniform", field round 14); the MAP leaves the bottom row to the pad so
+    // the thumb/cursor-key legends stay (field round 13).
+    const bool bottom = live && doom_shim_attract_active();
+    if (bottom != s_slave_blit_bottom) {
+        const bool fell = s_slave_blit_bottom && !bottom;
+        s_slave_blit_bottom = bottom;
+        if (fell && live) {
+            request_disp_refresh(); // attract -> map: thumb legends return
+        }
+    }
     if (live != s_slave_blit) {
         s_slave_blit = live;
         if (!live) {
@@ -710,9 +732,7 @@ static void doom_slave_tick(void) {
     // turning (blocked on the frame semaphore otherwise) to see a START.
     if (doom_shim_take_frame()) {
         if (s_slave_blit) {
-            // Bottom key row stays with the control pad — its thumb/cursor-key
-            // legends matter more than the map's bottom band (field round 13).
-            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, true);
+            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, !s_slave_blit_bottom);
         }
         doom_shim_release_frame();
         s_frames++;
@@ -737,6 +757,49 @@ static void doom_slave_tick(void) {
 
 bool doom_slave_viewport_live(void) {
     return s_slave_blit;
+}
+
+bool doom_slave_bottom_row_live(void) {
+    return s_slave_blit_bottom;
+}
+
+// ---------------------------------------------------------------------------
+// Status-OLED support: the doomguy face while the master plays (the keycap-
+// canvas status bar is 1:1 tiny), and the logo's hardware scroll gated to the
+// attract phase.
+// ---------------------------------------------------------------------------
+
+static int s_face_drawn = -1;
+
+int doom_status_face_render(uint8_t *buf1024) {
+    // Master only — its player IS the game; the slave keeps the logo.
+    if (!s_active || !s_engine_running) {
+        s_face_drawn = -1;
+        return 0;
+    }
+    const int idx = doom_shim_face_index();
+    if (idx < 0) {
+        s_face_drawn = -1;
+        return 0;
+    }
+    if (idx == s_face_drawn) {
+        return 1; // the panel already shows this face
+    }
+    if (!doom_shim_face_oled(buf1024, DOOM_PLAYPAL_LUMA)) {
+        s_face_drawn = -1;
+        return 0;
+    }
+    s_face_drawn = idx;
+    return 2;
+}
+
+bool doom_status_scroll(void) {
+    if ((s_active || s_slave) && s_engine_running) {
+        return doom_shim_attract_active();
+    }
+    // Game mode with no engine on this half (no WHX / fire demo): keep the
+    // legacy always-scrolling logo.
+    return true;
 }
 
 void doom_tick(void) {

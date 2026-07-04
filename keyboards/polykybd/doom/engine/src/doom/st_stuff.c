@@ -437,6 +437,15 @@ static int	st_facecount = 0;
 // current face index, used by w_faces
 static isb_int8_t 	st_faceindex = 0;
 
+#if POLYKYBD_QMK
+// PolyKybd: the status OLED shows the doomguy face (the keycap-canvas status
+// bar is 1:1 tiny); the shim reads the live index and resolves the face
+// vpatch itself (faces[] is just VPATCH_NAME(STFST00) + index, see ST_loadData).
+int ST_FaceIndex(void) {
+    return st_faceindex;
+}
+#endif
+
 // holds key-type for each key box on bar
 static isb_int8_t 	keyboxes[3];
 

@@ -42,4 +42,9 @@ void doom_blit_blank_all(void);
 // full-size value — on the display at (row, DISPLAY col — no viewport
 // mapping), or blank that key. Used for the vitals beside the game viewport.
 void doom_blit_stat_key(uint8_t row, uint8_t disp_col, const uint32_t *label, const uint32_t *value);
+// Same key, but the value drawn in the game's tall red status-bar digits
+// (decoded from the WHX). False when the glyphs are unavailable — fall back
+// to doom_blit_stat_key with font digits (nothing has been drawn then).
+bool doom_blit_stat_num_key(uint8_t row, uint8_t disp_col, const uint32_t *label,
+                            int value, const uint8_t *luma256);
 void doom_blit_blank_key(uint8_t row, uint8_t disp_col);

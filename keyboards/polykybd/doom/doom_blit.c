@@ -202,6 +202,75 @@ static int8_t center_x(const GFXfont *const *fonts, uint8_t n, const uint32_t *t
     return (int8_t)(BUFFER_X + (SCREEN_WIDTH - (gmax - gmin)) / 2 - gmin);
 }
 
+// Vitals value in the game's own tall red status-bar digits (STTNUM/STTMINUS
+// decoded from the WHX, field round 14 "extract the font"): word label on top
+// (10 px mid font, same as the string variant), the DOOM digits centred in the
+// band below at native size, thresholded on the saturation-floored luma so the
+// red gradient renders solid with its dark outline. False when the glyphs are
+// unavailable (engine down / patch missing) — the caller falls back to
+// doom_blit_stat_key with font digits; nothing is drawn then.
+bool doom_blit_stat_num_key(uint8_t row, uint8_t disp_col, const uint32_t *label,
+                            int value, const uint8_t *luma256) {
+    // Digits first — bail before touching the display on any decode problem.
+    uint8_t glyphs[3];
+    uint8_t n = 0;
+    if (value < 0) {
+        glyphs[n++] = DOOM_TALLNUM_MINUS;
+    } else {
+        if (value > 999) {
+            value = 999;
+        }
+        if (value >= 100) glyphs[n++] = (uint8_t)(value / 100);
+        if (value >= 10)  glyphs[n++] = (uint8_t)((value / 10) % 10);
+        glyphs[n++] = (uint8_t)(value % 10);
+    }
+    uint8_t  gw[3], gh[3];
+    uint16_t total = 0;
+    uint8_t  hmax  = 0;
+    for (uint8_t i = 0; i < n; ++i) {
+        if (!doom_shim_tallnum_glyph(glyphs[i], NULL, &gw[i], &gh[i])) {
+            return false;
+        }
+        total += gw[i];
+        if (gh[i] > hmax) hmax = gh[i];
+    }
+    if (total > SCREEN_WIDTH || hmax > SCREEN_HEIGHT - 14) {
+        return false;
+    }
+    if (!select_display_raw(row, disp_col)) {
+        return true; // no such display — nothing to fall back to either
+    }
+    kdisp_set_buffer(0x00);
+    kdisp_write_gfx_text(hud_label_fonts, 1, center_x(hud_label_fonts, 1, label), 13, label);
+
+    uint8_t      *buf    = get_scratch_buffer();
+    const int16_t stride = get_scratch_buffer_size() / 8;
+    // Centre the digit run in the band below the label (rows 14..39).
+    uint16_t      x  = (uint16_t)(BUFFER_X + (SCREEN_WIDTH - total) / 2);
+    const uint8_t y0 = (uint8_t)(14 + (SCREEN_HEIGHT - 14 - hmax) / 2);
+    uint8_t dec[DOOM_TALLNUM_MAX_W * DOOM_TALLNUM_MAX_H];
+    for (uint8_t i = 0; i < n; ++i) {
+        uint8_t w = 0, h = 0;
+        if (!doom_shim_tallnum_glyph(glyphs[i], dec, &w, &h)) {
+            break; // half-drawn worst case; the next HUD pass repaints
+        }
+        // Baseline-align digits of differing heights (the minus is short).
+        const uint8_t gy = (uint8_t)(y0 + hmax - h);
+        for (uint8_t sy = 0; sy < h; ++sy) {
+            for (uint8_t sx = 0; sx < w; ++sx) {
+                if (luma256[dec[(size_t)sy * w + sx]] >= 96) {
+                    const uint16_t X = x + sx;
+                    const uint8_t  Y = (uint8_t)(gy + sy);
+                    buf[(size_t)(Y >> 3) * stride + X] |= (uint8_t)(1u << (Y & 7));
+                }
+            }
+        }
+        x += w;
+    }
+    kdisp_send_buffer();
+    return true;
+}
+
 void doom_blit_stat_key(uint8_t row, uint8_t disp_col, const uint32_t *label, const uint32_t *value) {
     if (!select_display_raw(row, disp_col)) {
         return;

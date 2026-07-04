@@ -1778,13 +1778,15 @@ void update_displays(enum refresh_mode mode) {
                     bool doom_handled = false;
                     if (local_state->doom_ctl) {
                         uint16_t pad = doom_pad_keycode((uint8_t)(r + offset), c);
-                        if (pad == KC_NO && r < MATRIX_ROWS_PER_SIDE - 1 &&
-                            doom_slave_viewport_live()) {
-                            // The mirror blitter owns the non-pad keys of the
-                            // UPPER rows while the attract/map view is live —
-                            // leave their frames alone. The bottom (thumb)
-                            // row is exempt: the blitter skips it so its
-                            // cursor-key legends stay (field round 13).
+                        if (pad == KC_NO &&
+                            (r < MATRIX_ROWS_PER_SIDE - 1 ? doom_slave_viewport_live()
+                                                          : doom_slave_bottom_row_live())) {
+                            // The mirror blitter owns the non-pad keys while
+                            // its view is live — leave their frames alone.
+                            // The bottom (thumb) row belongs to the blitter
+                            // only during the full-viewport ATTRACT; on the
+                            // map it renders here so the cursor-key legends
+                            // stay (field rounds 13+14).
                             doom_handled = true;
                         } else if (pad >= KC_1 && pad <= KC_7) {
                             uint8_t slot = (uint8_t)(pad - KC_1); // 0-based

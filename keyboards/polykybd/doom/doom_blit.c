@@ -129,7 +129,7 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
 // dithered into per-column band buffers (5 x 360 B OLED tiles, carved from
 // the arena next to the 320 B line — no spare .bss in a doom build), and a
 // finished 40-row band is pushed to its 5 keycaps.
-void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row) {
+void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool map_frame) {
     uint8_t *scratch = doom_arena_at(DOOM_ARENA_COMPOSE_OFF);
     if (!scratch) {
         return;
@@ -138,6 +138,7 @@ void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row) {
     uint8_t *bands = scratch + DOOM_FB_WIDTH;     // 5 x (5 pages x 72 B) 1bpp tiles
     const uint16_t band_bytes = (uint16_t)(SCREEN_HEIGHT / 8) * SCREEN_WIDTH; // 360
     const uint8_t  view_rows  = skip_bottom_row ? DOOM_VIEW_ROWS - 1 : DOOM_VIEW_ROWS;
+    const uint16_t total_rows = (uint16_t)view_rows * SCREEN_HEIGHT;
 
     doom_shim_compose_begin();
     for (uint8_t vr = 0; vr < view_rows; ++vr) {
@@ -158,6 +159,25 @@ void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row) {
                     if (luma256[line[fx]] > BAYER4[y & 3][fx & 3]) {
                         row[x] |= bit;
                     }
+                }
+            }
+            if (map_frame) {
+                // 2 px frame around the blitted block ("a frame around the
+                // 5x4 keys", field round 17) — display space, so it hugs
+                // the visible key edges incl. the canvas margins.
+                if (y <= 1 || y + 2 > total_rows) {
+                    for (uint8_t vc = 0; vc < DOOM_VIEW_COLS; ++vc) {
+                        uint8_t *row = bands + (size_t)vc * band_bytes + page_off;
+                        for (uint8_t x = 0; x < SCREEN_WIDTH; ++x) {
+                            row[x] |= bit;
+                        }
+                    }
+                } else {
+                    bands[page_off + 0] |= bit;
+                    bands[page_off + 1] |= bit;
+                    uint8_t *last = bands + (size_t)(DOOM_VIEW_COLS - 1) * band_bytes + page_off;
+                    last[SCREEN_WIDTH - 2] |= bit;
+                    last[SCREEN_WIDTH - 1] |= bit;
                 }
             }
         }
@@ -204,10 +224,12 @@ static int8_t center_x(const GFXfont *const *fonts, uint8_t n, const uint32_t *t
 
 // Word label in the game's own small HUD font (STCFN, decoded from the WHX —
 // round 16 "use the font to write Ammo etc"), centred in the top band (rows
-// 0..12, above the digits at 14+). Solid low threshold: the glyphs are only
-// ~7 px tall, thinning them would break strokes. False when any glyph is
-// unavailable or the label doesn't fit — the caller draws the 10 px mid font
-// label instead (nothing has been drawn then: sizes are probed up front).
+// 0..13, above the digits at 14+). Glyphs are upscaled 3:2 VERTICALLY only
+// (7 px -> ~11 px) and thresholded at the digits' 64 — taller text with
+// unchanged stroke width (field round 17: "maybe 2px too small and could be
+// a bit skinnier"). False when any glyph is unavailable or the label doesn't
+// fit — the caller draws the 10 px mid font label instead (nothing has been
+// drawn then: sizes are probed up front).
 static bool draw_hufont_label(const uint32_t *label, const uint8_t *luma256) {
     uint8_t chs[10];
     uint8_t n = 0;
@@ -232,27 +254,30 @@ static bool draw_hufont_label(const uint32_t *label, const uint8_t *luma256) {
             return false;
         }
         total += (uint16_t)(gw[i] + 1); // 1 px letter spacing
-        if (gh[i] > hmax) hmax = gh[i];
+        const uint8_t hout = (uint8_t)((gh[i] * 3 + 1) / 2);
+        if (hout > hmax) hmax = hout;
     }
     total -= 1;
-    if (total > SCREEN_WIDTH || hmax > 12) {
+    if (total > SCREEN_WIDTH || hmax > 13) {
         return false;
     }
     uint8_t      *buf    = get_scratch_buffer();
     const int16_t stride = get_scratch_buffer_size() / 8;
     uint16_t      x      = (uint16_t)(BUFFER_X + (SCREEN_WIDTH - total) / 2);
-    const uint8_t y0     = (uint8_t)((13 - hmax) / 2);
+    const uint8_t y0     = (uint8_t)((14 - hmax) / 2);
     uint8_t dec[DOOM_HUFONT_MAX_W * DOOM_HUFONT_MAX_H];
     for (uint8_t i = 0; i < n; ++i) {
         uint8_t w = 0, h = 0;
         if (!doom_shim_hufont_glyph(chs[i], dec, &w, &h)) {
             return true; // half-drawn worst case; the next HUD pass repaints
         }
-        for (uint8_t sy = 0; sy < h; ++sy) {
+        const uint8_t hout = (uint8_t)((h * 3 + 1) / 2);
+        for (uint8_t oy = 0; oy < hout; ++oy) {
+            const uint8_t sy = (uint8_t)((uint16_t)oy * h / hout); // 3:2 NN
             for (uint8_t sx = 0; sx < w; ++sx) {
-                if (luma256[dec[(size_t)sy * w + sx]] >= 36) {
+                if (luma256[dec[(size_t)sy * w + sx]] >= 64) {
                     const uint16_t X = x + sx;
-                    const uint8_t  Y = (uint8_t)(y0 + sy);
+                    const uint8_t  Y = (uint8_t)(y0 + oy);
                     buf[(size_t)(Y >> 3) * stride + X] |= (uint8_t)(1u << (Y & 7));
                 }
             }
@@ -381,6 +406,73 @@ void doom_render_fire_key(void) {
             if (on) {
                 buf[(size_t)(Y >> 3) * stride + X] |= (uint8_t)(1u << (Y & 7));
             }
+        }
+    }
+}
+
+// Fire hint on the MASTER's own Ctrl key (round 17 "I cannot see a symbol
+// on the CTRL key": the v17 reticle hung off the slave pad's Ctrl keycode,
+// but the right half — the usual slave — has no Ctrl at all; the fire key
+// the player actually presses is the LEFT half's Ctrl, which sits at the
+// bottom of the master's outer HUD column, outside the viewport).
+void doom_blit_fire_key(uint8_t row, uint8_t disp_col) {
+    if (!select_display_raw(row, disp_col)) {
+        return;
+    }
+    kdisp_set_buffer(0x00);
+    doom_render_fire_key();
+    kdisp_send_buffer();
+}
+
+// Use/open symbol for the pad's Space key (DOOM's use binding — round 17
+// "for the space key we could use a door symbol"): a door leaf with a knob
+// and a recessed panel, same currently-selected-display contract as the
+// fire reticle below.
+void doom_render_use_key(void) {
+    uint8_t      *buf    = get_scratch_buffer();
+    const int16_t stride = get_scratch_buffer_size() / 8;
+    const int16_t x0     = BUFFER_X + SCREEN_WIDTH / 2 - 13; // 26 x 34 leaf
+    const int16_t y0     = 3;
+    for (int16_t y = 0; y < 34; ++y) {
+        for (int16_t x = 0; x < 26; ++x) {
+            const bool edge  = x < 2 || x >= 24 || y < 2 || y >= 32;
+            const bool knob  = x >= 19 && x <= 21 && y >= 16 && y <= 18;
+            const bool panel = (x >= 5 && x <= 15 && y >= 5 && y <= 28) &&
+                               (x == 5 || x == 15 || y == 5 || y == 28);
+            if (edge || knob || panel) {
+                const int16_t X = x0 + x;
+                const int16_t Y = y0 + y;
+                buf[(size_t)(Y >> 3) * stride + X] |= (uint8_t)(1u << (Y & 7));
+            }
+        }
+    }
+}
+
+// Readable menu mirror on the slave viewport (field round 17): rows 0-3 of
+// the 5x5 block carry the master's menu — items in the game's big menu font
+// at 2x, the blinking skull on the selected row's first column, everything
+// else dark. `full` repaints all 4x5 keys (snapshot changed); !full only
+// column 0 (the skull blink). The per-key tiles come from the shim (it
+// decodes this half's own WHX vpatches).
+void doom_blit_menu(const uint8_t *luma256, bool skull_alt, bool full) {
+    uint8_t       tile[(SCREEN_HEIGHT / 8) * SCREEN_WIDTH];
+    uint8_t      *buf    = get_scratch_buffer();
+    const int16_t stride = get_scratch_buffer_size() / 8;
+    for (uint8_t vr = 0; vr < DOOM_VIEW_ROWS - 1; ++vr) {
+        const uint8_t vc_end = full ? DOOM_VIEW_COLS : 1;
+        for (uint8_t vc = 0; vc < vc_end; ++vc) {
+            if (!doom_shim_menu_key_tile(vr, vc, tile, luma256, skull_alt)) {
+                return; // menu just closed — the regular view resumes
+            }
+            if (!select_display(vr, vc)) {
+                continue;
+            }
+            memset(buf, 0, (size_t)get_scratch_buffer_size());
+            for (uint8_t page = 0; page < OLED_PAGES; ++page) {
+                memcpy(buf + (size_t)page * stride + BUFFER_X,
+                       tile + (size_t)page * SCREEN_WIDTH, SCREEN_WIDTH);
+            }
+            kdisp_send_buffer();
         }
     }
 }

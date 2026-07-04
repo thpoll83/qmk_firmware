@@ -45,6 +45,11 @@ extern "C" {
 #define DOOM_MIRROR_MSG_TIC   1 // count cmds, tic = absolute tic of cmds[0]
 #define DOOM_MIRROR_MSG_START 2 // skill/epi/map + tic = first level gametic
 #define DOOM_MIRROR_MSG_BREAK 3 // master mirror broke -> slave back to pad
+#define DOOM_MIRROR_MSG_MENU  4 // count = item count (0 = menu closed),
+                                // skill = selected index, cmds = u16 vpatch
+                                // handles (readable slave-side menu mirror)
+
+#define DOOM_MIRROR_MENU_MAX_ITEMS 10
 
 #define DOOM_MIRROR_MSG_MAX_CMDS 7
 
@@ -90,6 +95,13 @@ typedef struct {
     volatile uint32_t start_in_tic;
     volatile uint8_t  start_in_skill, start_in_epi, start_in_map;
     volatile uint8_t  break_in;
+    // Menu mirror snapshot (slave side): the split handler writes it, the
+    // slave's core0 (doom_mode tick + shim tile decode) reads it — same
+    // core, the seq just versions the snapshot for repaint detection.
+    volatile uint32_t menu_in_seq;
+    volatile uint8_t  menu_in_count;    // 0 = no menu up
+    volatile uint8_t  menu_in_item_on;
+    uint16_t          menu_in_items[DOOM_MIRROR_MENU_MAX_ITEMS];
 } doom_mirror_t;
 
 #ifdef __cplusplus

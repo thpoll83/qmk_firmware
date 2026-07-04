@@ -221,6 +221,14 @@ boolean D_Display (void)
     else
 	wipe = false;
 
+#if POLYKYBD_QMK
+    // polykybd: no melt — at 25-keycap resolution the wipe reads as noise,
+    // and its remnant rows lingered on the viewport during level loads
+    // ("UI on the row above the last", field round 17). Cut straight to the
+    // new gamestate's frame instead.
+    wipe = false;
+#endif
+
 #if DOOM_TINY
     // we only redraw briefly during wipe
     if (!wipestate || wipestate == WIPESTATE_REDRAW1) {

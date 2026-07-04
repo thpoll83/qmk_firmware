@@ -166,7 +166,9 @@ static uint16_t doom_translate_key(uint16_t kc) {
 // update_displays filter). Deliberately narrower than doom_translate_key —
 // that one admits every letter/digit for menu typing, but the pad shows only
 // what you play with: move/strafe, use/fire, run, menu navigation, the
-// automap, weapon slots and the menu confirm keys.
+// automap and the menu confirm keys. (The plain number keys dropped out in
+// round 17 with the weapon switch — the pad's outer-column cells select
+// weapons now.)
 bool doom_key_is_control(uint16_t keycode) {
     switch (keycode) {
         case KC_W: case KC_A: case KC_S: case KC_D:
@@ -178,7 +180,7 @@ bool doom_key_is_control(uint16_t keycode) {
         case KC_Y: case KC_N:
             return true;
         default:
-            return keycode >= KC_1 && keycode <= KC_7; // weapon slots
+            return false;
     }
 }
 
@@ -386,13 +388,15 @@ bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t co
     // slave has no physical ESC), and the slave-half pad cells select
     // weapons regardless of their keymap keycode. The MASTER's outer column
     // carries the vitals HUD, so its pad cells stay un-aliased.
-    uint16_t pad = doom_pad_keycode(row, col);
+    uint16_t pad     = doom_pad_keycode(row, col);
+    bool     aliased = false;
     if (pad == KC_ESC) {
         keycode = KC_ESC;
     } else if (pad != KC_NO) {
         const bool from_slave = (row >= MATRIX_ROWS_PER_SIDE) == is_left_side();
         if (from_slave) {
             keycode = pad;
+            aliased = true;
         }
     }
     // ESC held long enough exits (checked in doom_tick so a press-and-hold
@@ -402,6 +406,12 @@ bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t co
         s_esc_down_at = timer_read32();
     }
     if (s_engine_running) {
+        // Plain number keys no longer switch weapons — the slave pad cells
+        // (aliased above) are the weapon selector (field round 17: "remove
+        // the weapon switch from the normal 1 to 7 keys").
+        if (!aliased && keycode >= KC_1 && keycode <= KC_7) {
+            return true;
+        }
         doom_push_key_event(keycode, pressed);
     }
     return true;
@@ -466,6 +476,14 @@ static void doom_hud_tick(void) {
     if (!s_hud_esc_drawn) {
         s_hud_esc_drawn = true;
         doom_blit_stat_key(0, doom_hud_disp_col(), U"hold", U"Esc");
+        // Fire hint (field round 17): the player's fire key is the MASTER
+        // half's Ctrl — on the left half it sits at the bottom of the outer
+        // HUD column (matrix [4,0]), outside the viewport. The right half
+        // has no Ctrl key there (its bottom outer keys are the arrows), so
+        // a right-half master gets no reticle.
+        if (is_left_side()) {
+            doom_blit_fire_key(MATRIX_ROWS_PER_SIDE - 1, 0);
+        }
     }
     int hp, ar, am;
     if (!doom_shim_hud_stats(&hp, &ar, &am)) {
@@ -522,7 +540,7 @@ static void doom_frame_pump(bool with_hud) {
         // here IS the game's frame pace. (Single view buffer: the next frame
         // renders into the buffer being blitted — tearing accepted for v1.)
         if (doom_shim_take_frame()) {
-            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, false);
+            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, false, false);
             doom_shim_release_frame();
             if (with_hud) {
                 doom_hud_tick();
@@ -572,11 +590,17 @@ static void doom_frame_pump(bool with_hud) {
 static uint32_t s_mir_ctl_seq_sent;      // last ctl_out_seq delivered to the slave
 static uint32_t s_mir_backoff_at;        // bridge-failure send backoff
 static bool     s_mir_dead_reported;     // tx_overflow logged + BREAK sent
+static int      s_mir_menu_count;        // last menu snapshot delivered
+static int      s_mir_menu_item_on;
+static uint16_t s_mir_menu_items[DOOM_MIRROR_MENU_MAX_ITEMS];
 
 static void doom_mirror_session_reset(void) {
     s_mir_ctl_seq_sent  = 0;
     s_mir_backoff_at    = 0;
     s_mir_dead_reported = false;
+    s_mir_menu_count    = 0;
+    s_mir_menu_item_on  = 0;
+    memset(s_mir_menu_items, 0, sizeof(s_mir_menu_items));
 }
 
 // The QMK transaction table is full (32-id cap), so mirror messages
@@ -643,6 +667,29 @@ static void doom_mirror_master_pump(void) {
         }
         return;
     }
+    // Readable menu mirror (field round 17): ship the sampled menu snapshot
+    // whenever it differs from the last delivered one — open/close, item
+    // change and selection moves are all rare next to the tic stream, and a
+    // menu sits still while the player reads it, so this never starves TICs.
+    {
+        uint16_t items[DOOM_MIRROR_MENU_MAX_ITEMS] = {0};
+        int      item_on = 0;
+        const int n = doom_shim_menu_snapshot(items, DOOM_MIRROR_MENU_MAX_ITEMS, &item_on);
+        if (n != s_mir_menu_count || item_on != s_mir_menu_item_on ||
+            (n > 0 && memcmp(items, s_mir_menu_items, sizeof(items)) != 0)) {
+            memset(&msg, 0, sizeof(msg));
+            msg.kind  = DOOM_MIRROR_MSG_MENU;
+            msg.count = (uint8_t)n;
+            msg.skill = (uint8_t)item_on;
+            memcpy(msg.cmds, items, sizeof(items));
+            if (doom_mirror_send(&msg, 2)) {
+                s_mir_menu_count   = n;
+                s_mir_menu_item_on = item_on;
+                memcpy(s_mir_menu_items, items, sizeof(items));
+            }
+            return;
+        }
+    }
     const uint32_t r = m->tx_r;
     const uint32_t pending = m->tx_w - r;
     if (!pending) {
@@ -672,11 +719,16 @@ static bool     s_slave;        // mirror session up (pool + engine)
 static bool     s_slave_blit;   // viewport currently owned by the blitter
 static bool     s_slave_blit_bottom; // ...including the bottom row (attract only)
 static uint32_t s_slave_tab_at; // automap re-toggle throttle
+static bool     s_slave_menu;   // readable menu mirror currently shown
+static uint32_t s_slave_menu_seq;   // last rendered snapshot seq
+static uint32_t s_slave_skull_at;   // skull blink timer
+static bool     s_slave_skull_alt;  // which skull frame is up
 
 static void doom_slave_stop(void) {
     s_slave      = false;
     s_slave_blit = false;
     s_slave_blit_bottom = false;
+    s_slave_menu = false;
     doom_engine_stop();
     s_fb = NULL;
     // Same pool hand-back contract as doom_exit: blank + reconstructible.
@@ -697,6 +749,7 @@ static void doom_slave_tick(void) {
         }
         s_slave       = true;
         s_slave_blit  = false;
+        s_slave_menu  = false;
         s_slave_tab_at = 0;
         printf("doom: slave mirror engine up\n");
         return;
@@ -710,16 +763,21 @@ static void doom_slave_tick(void) {
     if (!s_engine_running) {
         return;
     }
-    const bool live = doom_shim_slave_view_live();
+    // The readable menu mirror owns the viewport whenever the master has a
+    // mirrorable menu up (field round 17) — it outranks the attract/map blit
+    // but leaves the bottom row to the pad (Enter/Space legends stay).
+    doom_mirror_t *mbox = (doom_mirror_t *)doom_arena_at(DOOM_ARENA_MIRROR_OFF);
+    const bool menu = mbox && mbox->menu_in_count > 0;
+    const bool live = menu || doom_shim_slave_view_live();
     // The ATTRACT blit fills the whole 5x5 incl. the bottom row ("looks more
     // uniform", field round 14); the MAP leaves the bottom row to the pad so
     // the thumb/cursor-key legends stay (field round 13).
-    const bool bottom = live && doom_shim_attract_active();
+    const bool bottom = live && !menu && doom_shim_attract_active();
     if (bottom != s_slave_blit_bottom) {
         const bool fell = s_slave_blit_bottom && !bottom;
         s_slave_blit_bottom = bottom;
         if (fell && live) {
-            request_disp_refresh(); // attract -> map: thumb legends return
+            request_disp_refresh(); // attract -> map/menu: thumb legends return
         }
     }
     if (live != s_slave_blit) {
@@ -728,11 +786,28 @@ static void doom_slave_tick(void) {
             request_disp_refresh(); // hand the viewport back to the pad legends
         }
     }
+    if (menu) {
+        if (!s_slave_menu || mbox->menu_in_seq != s_slave_menu_seq) {
+            s_slave_menu     = true;
+            s_slave_menu_seq = mbox->menu_in_seq;
+            s_slave_skull_at = timer_read32();
+            doom_blit_menu(DOOM_PLAYPAL_LUMA, s_slave_skull_alt, true);
+        } else if (timer_elapsed32(s_slave_skull_at) > 250) {
+            // Local skull blink — the master's whichSkull is not mirrored
+            // (it would resend the snapshot 4x a second for nothing).
+            s_slave_skull_at  = timer_read32();
+            s_slave_skull_alt = !s_slave_skull_alt;
+            doom_blit_menu(DOOM_PLAYPAL_LUMA, s_slave_skull_alt, false);
+        }
+    } else {
+        s_slave_menu = false;
+    }
     // Consume frames even while not blitting — the engine loop must keep
     // turning (blocked on the frame semaphore otherwise) to see a START.
     if (doom_shim_take_frame()) {
-        if (s_slave_blit) {
-            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, !s_slave_blit_bottom);
+        if (s_slave_blit && !menu) {
+            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, !s_slave_blit_bottom,
+                                   doom_shim_drone_map_live());
         }
         doom_shim_release_frame();
         s_frames++;

@@ -387,6 +387,18 @@ void user_sync_doom_mirror_handler(uint8_t in_len, const void* in_data, uint8_t 
             case DOOM_MIRROR_MSG_BREAK:
                 m->break_in = 1;
                 break;
+            case DOOM_MIRROR_MSG_MENU: {
+                // Readable menu mirror snapshot (count 0 = menu closed);
+                // item vpatch handles travel as raw u16s in the cmds bytes.
+                uint8_t n = msg->count > DOOM_MIRROR_MENU_MAX_ITEMS
+                                ? DOOM_MIRROR_MENU_MAX_ITEMS : msg->count;
+                memcpy(m->menu_in_items, msg->cmds, (size_t)n * sizeof(uint16_t));
+                m->menu_in_item_on = msg->skill;
+                __asm volatile("dmb" ::: "memory");
+                m->menu_in_count = n;
+                m->menu_in_seq++;
+                break;
+            }
             default:
                 break;
         }

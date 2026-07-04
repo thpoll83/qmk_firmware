@@ -199,7 +199,13 @@ short		whichSkull;		// which skull to draw
 vpatchname_t skullName[2] = {VPATCH_NAME(M_SKULL1), VPATCH_NAME(M_SKULL2)};
 
 // current menudef
-menu_t*	currentMenu;                          
+menu_t*	currentMenu;
+
+#if POLYKYBD_QMK
+// polykybd: qmk_shim.c — true while the master mirrors the menu to the
+// slave half's keycaps (M_Drawer then skips the tiny on-canvas item draw).
+extern int doom_shim_menu_mirrored(void);
+#endif
 //
 // PROTOTYPES
 //
@@ -2459,6 +2465,25 @@ void M_Drawer (void)
     if (!menuactive)
 	return;
 
+#if POLYKYBD_QMK
+    // polykybd: vpatch-item menus are mirrored to the slave half's keycaps
+    // in a readable size (M_MenuSnapshot below + the doom_mirror MENU
+    // messages), so skip the 1:1 tiny on-canvas draw — the master viewport
+    // stays clean. Text menus (load/save slots — no item vpatches) and the
+    // help screens keep drawing here; messages (quit confirm) returned above.
+    if (doom_shim_menu_mirrored()) {
+        boolean named = false;
+        for (i = 0; i < (unsigned int)currentMenu->numitems; i++) {
+            if (currentMenu->menuitems[i].name) {
+                named = true;
+                break;
+            }
+        }
+        if (named)
+            return;
+    }
+#endif
+
     if (currentMenu->routine)
 	currentMenu->routine();         // call Draw routine
     
@@ -2498,6 +2523,33 @@ void M_Drawer (void)
                              VPATCH_HANDLE(skullName[whichSkull]));
     #endif
 }
+
+#if POLYKYBD_QMK
+// polykybd: snapshot of the active menu (item vpatch handles + selection)
+// for the slave-side readable menu mirror. Read cross-core from core0 —
+// plain word reads; a torn read self-corrects on the next sample, and every
+// individually read handle is a valid one from SOME menu table. Returns the
+// item count; 0 = nothing mirrorable up (no menu, a message prompt, a help
+// screen, or a text-only menu like load/save — those keep the on-canvas
+// draw, matching the M_Drawer suppression above).
+int M_MenuSnapshot(uint16_t *items, int max_items, int *item_on) {
+    if (!menuactive || messageToPrint || inhelpscreens || !currentMenu)
+        return 0;
+    int n = currentMenu->numitems;
+    if (n > max_items)
+        n = max_items;
+    boolean named = false;
+    for (int i = 0; i < n; i++) {
+        items[i] = (uint16_t)currentMenu->menuitems[i].name;
+        if (items[i])
+            named = true;
+    }
+    if (!named)
+        return 0;
+    *item_on = itemOn;
+    return n;
+}
+#endif
 
 
 //

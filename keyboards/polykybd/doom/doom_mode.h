@@ -151,6 +151,20 @@ bool doom_shim_hufont_glyph(uint8_t ch, uint8_t *out8bpp, uint8_t *w, uint8_t *h
 // display selection, buffer clear and send (doom_blit.c).
 void doom_render_fire_key(void);
 
+// Use/open symbol (a door leaf with a knob) for the pad's Space key — same
+// currently-selected-display contract as doom_render_fire_key (doom_blit.c).
+void doom_render_use_key(void);
+
+// Readable menu mirror (qmk_shim.c, field round 17). Master core0 samples
+// the engine's active menu (item vpatch handles + selection; 0 = nothing
+// mirrorable up); the slave's core0 renders per-keycap tiles from its OWN
+// WHX's vpatches — column 0 the blinking skull on the selected row, columns
+// 1+ the item at 2x. doom_shim_drone_map_live gates the map's viewport frame.
+int  doom_shim_menu_snapshot(uint16_t *items, int max_items, int *item_on);
+bool doom_shim_menu_key_tile(uint8_t vr, uint8_t vc, uint8_t *tile360,
+                             const uint8_t *luma256, bool skull_alt);
+bool doom_shim_drone_map_live(void);
+
 // Doomguy face for the status OLED (qmk_shim.c): current face index (-1 when
 // not in a level) and the 2x-scaled render into a 128x64 page buffer.
 int  doom_shim_face_index(void);
@@ -183,6 +197,7 @@ static inline bool doom_key_is_control(uint16_t keycode) { (void)keycode; return
 static inline bool doom_slave_viewport_live(void) { return false; }
 static inline bool doom_slave_bottom_row_live(void) { return false; }
 static inline void doom_render_fire_key(void) {}
+static inline void doom_render_use_key(void) {}
 static inline int  doom_status_face_render(uint8_t *buf1024) { (void)buf1024; return 0; }
 static inline bool doom_status_scroll(void) { return true; }
 

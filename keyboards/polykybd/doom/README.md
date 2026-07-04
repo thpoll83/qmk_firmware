@@ -142,15 +142,67 @@ unaudited** vs ChibiOS's own use — the top suspect if it hangs), engine
 `printf` from core1 racing core0's console output, zone exhaustion in-level
 (zone is ~86 K vs upstream's ~58 K working set, should be fine), single-
 buffer artifacts (status-bar region, tearing), and the ~4 KB residual
-ChibiOS heap. Re-entry after exit is UNTESTED-by-design: engine `.data` is
-not re-initialised — test one game entry per power cycle first. HID GET_ID
+ChibiOS heap. Re-entry after exit works in the field but engine `.data` is
+not re-initialised on a core1 relaunch — anything left non-default by a
+previous session persists. The known bites (`drone`/`net_client_connected`
+after a drone session froze the slave's 2nd boot; a stale `menuactive`)
+are reset in `doom_shim_set_role()` (v18); treat any new
+"works-once-then-doesn't" symptom as a stale-static suspect first. HID GET_ID
 etc. keep answering during play (only the pool-writing overlay commands are
 frozen); the slave half runs the control pad, and — with its own WHX flashed
 — the v12 lockstep mirror (automap on its viewport once a real game starts).
 
 ### Hardware-test log
 
-- **Round 16 → v17 (2026-07-04, UNTESTED): HUD typography + fire key.** Round
+- **Round 17 → v18 (2026-07-04, UNTESTED): readable menu on the slave +
+  re-entry fix.** Round 17 confirmed v17's digits ("otherwise good") and
+  surfaced the big one — "move the in game text menu with the skull to the
+  slave side so it can actually be read; I most of the time blindly select
+  the start":
+  1. **Readable menu mirror**: the master samples its engine's active menu
+     (`M_MenuSnapshot` — item vpatch handles + selection; messages/help
+     screens/text menus excluded) and ships every change over a new
+     latest-wins `DOOM_MIRROR_MSG_MENU` message. The slave renders it from
+     its OWN WHX's vpatches on the upper 4 key rows — **one item per key
+     row at 2× in the game's big red menu font** (so an item never straddles
+     a key gap — the reason the on-canvas menu was unreadable), the
+     **blinking skull** (local 250 ms blink, M_SKULL1/2) on the selected
+     row's first column, everything else dark; a 4-row window scrolls to
+     keep the selection visible (main menu has 6 entries). `M_Drawer`
+     **suppresses the tiny on-canvas item draw on the master** while
+     mirrored, so the master viewport stays clean. The bottom row stays with
+     the pad (Enter/Space legends) during menus. Works in attract (title
+     menu) and in-level (ESC menu) alike; menu closed → attract/map resumes.
+  2. **Re-entry fix ("no viewport on the slave on the 2nd/3rd start")** —
+     see the resolved round-13 observation below: `doom_shim_set_role()` now
+     clears the stale `drone`/`net_client_connected`/`menuactive` engine
+     globals before every core1 launch.
+  3. **No melt**: the wipe is disabled under `POLYKYBD_QMK` — at 25-keycap
+     resolution it reads as noise, and its remnant rows were the "UI on the
+     row above the last while loading" (the old frame's bottom rows linger
+     mid-melt). Level entry now cuts straight to the new frame.
+  4. **Labels bigger + skinnier** ("maybe 2px too small"): the STCFN vitals
+     labels upscale 3:2 vertically (7 px → ~11 px, width unchanged — taller
+     therefore skinnier-looking) and adopt the digits' 64 threshold.
+  5. **Fire reticle relocated to the MASTER's Ctrl** ("I cannot see a symbol
+     on the CTRL key"): v17 hung it off the slave pad's Ctrl keycode — but
+     the right half (the usual slave) has no Ctrl at all; the fire key the
+     player presses is the LEFT half's Ctrl, which sits at the bottom of the
+     master's outer HUD column (matrix [4,0]), outside the viewport. The HUD
+     tick now draws it there once per session (left-half masters only). The
+     slave-side branch stays for left-as-slave setups.
+  6. **Door symbol on Space** ("we could use a door symbol"): the slave
+     pad's Space key now shows a drawn door leaf (frame + recessed panel +
+     knob) instead of the space legend — Space is DOOM's use/open.
+  7. **Map frame** ("give the map a frame around the 5x4 keys"): the slave's
+     automap blit draws a 2 px border around the 5×4 block (drone-map only —
+     attract and intermission stay frameless).
+  8. **Plain 1–7 no longer switch weapons** ("we have alternatives"): the
+     master's number row is swallowed in game mode; only the slave pad's
+     aliased weapon cells select weapons. The number keys also dropped out
+     of the pad's lit control set.
+- **Round 16 → v17 (2026-07-04, tested ✓ digits/labels render, reticle
+  invisible → relocated in v18): HUD typography + fire key.** Round
   16 confirmed v16's face brightness ("the doomguy brightness is good now");
   three follow-ups:
   1. **Thinner DOOM digits** ("the numbers are a bit too thick"): tall-number
@@ -237,16 +289,21 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
      failed read. A busy/rebooting device (mid .bin flash) produced one
      bare "Success" line per 250 ms console poll. Now logged at debug level,
      never returned as console output.
-  4. **Open observation (not yet reproduced): the FIRST game session right
-     after the WHX install had no slave viewport** (attract/map missing;
-     the master ran fine); a keyboard replug fixed it and the next session
-     worked fully. The slave's own console is unmonitored so the failing
-     check is unknown — candidates: doom_ctl adoption, `doom_session_start`
-     guard, engine boot. If it recurs: capture the slave half's console
-     (`QMK console` on the slave's USB) during the first post-install entry.
-     Also seen: the WHX flash window itself puts a burst into the split-link
-     counter (`crc_err 0→152, giveup 0→156` during the ~7 min transfer,
-     frozen afterwards — zero steady-state errors), worth a look someday.
+  4. **Open observation — RESOLVED in v18: the missing slave viewport is a
+     RE-ENTRY bug, not an install one** (field round 17: "it happens always
+     when starting a second or third time — first run is good"). Root cause:
+     the engine's `.data` is not re-initialised on a core1 relaunch, and a
+     first session that engaged the drone leaves `drone` +
+     `net_client_connected` true — the slave's next boot then waits for net
+     tics forever instead of running its attract (no frames → no viewport;
+     a replug/power cycle resets `.data`, matching the original v13 report).
+     The master never sets those flags, which is why it re-enters fine. Fix:
+     `doom_shim_set_role()` (core0, before every core1 launch) now clears
+     `drone`, `net_client_connected` and `menuactive` (an ESC-hold exit
+     tears the session down with the menu open). Still noted: the WHX flash
+     window puts a burst into the split-link counter (`crc_err 0→152,
+     giveup 0→156` during the ~7 min transfer, frozen afterwards — zero
+     steady-state errors), worth a look someday.
 - **Round 12 → v13 (2026-07-04, tested ✓ install works): mirror polish + WHX install over
   HID.** Round 12 confirmed **the lockstep mirror works on hardware** (map on
   the slave, player arrow tracking the master's game). v13 addresses the

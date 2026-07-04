@@ -995,11 +995,25 @@ static bool     s_mirror_started;    // slave: a START has been applied
 static bool     s_mirror_game_sent;  // master: a START went out (gates BREAK)
 static uint32_t s_start_applied;     // slave: seq of the last applied START
 
+extern boolean menuactive; // m_menu.c (no header decl in DOOM_TINY)
+
 void doom_shim_set_role(bool master) {
     s_mirror_master    = master;
     s_mirror_started   = false;
     s_mirror_game_sent = false;
     s_start_applied    = 0;
+    // Re-entry reset (field round 17: "no viewport on the slave — always on
+    // the second or third start, the first run is good"): the engine's
+    // .data is NOT re-initialised on a core1 relaunch, and a first session
+    // that engaged the drone leaves `drone`/`net_client_connected` true —
+    // the slave's next boot then waits for net tics forever instead of
+    // running its attract (no frames -> no viewport). A normal engine boot
+    // never resets these (they belong to net negotiation), so do it here,
+    // on core0, before core1 launches. menuactive likewise (an ESC-hold
+    // exit tears the session down with the menu open).
+    drone                = false;
+    net_client_connected = false;
+    menuactive           = false;
 }
 
 static doom_mirror_t *doom_mirror_box(void) {
@@ -1234,6 +1248,145 @@ bool doom_shim_attract_active(void) {
         return !s_mirror_started;
     }
     return gamestate == GS_DEMOSCREEN;
+}
+
+// Core0 wrapper of the drone-map gate for the blit's map frame (round 17).
+bool doom_shim_drone_map_live(void) {
+    return doom_mirror_drone_map_active();
+}
+
+// ---------------------------------------------------------------------------
+// Readable menu mirror (field round 17: the 1:1 tiny on-canvas menu was
+// unreadable — "I most of the time blindly select the start"). The master
+// samples its engine's active menu (M_MenuSnapshot), doom_mode.c ships it
+// over a MENU mirror message, and the slave redraws the items in the game's
+// big menu font at 2x — one item per key row, the blinking skull in the
+// first column — on otherwise dark keycaps. M_Drawer suppresses the tiny
+// master-side draw while this path is engaged (doom_shim_menu_mirrored).
+// ---------------------------------------------------------------------------
+
+extern int M_MenuSnapshot(uint16_t *items, int max_items, int *item_on);
+
+// Game core (m_menu.c M_Drawer): suppress the on-canvas item draw whenever
+// the mirror exists — the pump ships every snapshot change to the slave.
+int doom_shim_menu_mirrored(void) {
+    return s_mirror_master && doom_mirror_box() != NULL;
+}
+
+// Master core0: sample the engine's menu for the mirror pump (plain reads
+// of core1 state — a torn read self-corrects on the next sample).
+int doom_shim_menu_snapshot(uint16_t *items, int max_items, int *item_on) {
+    if (!s_mirror_master || !doom_shim_progress) {
+        return 0;
+    }
+    return M_MenuSnapshot(items, max_items, item_on);
+}
+
+// Menu items can be wide ("READ THIS!" ~121 px); anything wider is skipped.
+#define SHIM_MENU_PATCH_MAX_W 160u
+
+// The 4 visible menu rows window: keep the selection on-screen, pinned to
+// the last row once the menu is deeper than the window.
+static uint8_t shim_menu_win_start(uint8_t count, uint8_t item_on) {
+    if (count <= 4 || item_on <= 3) {
+        return 0;
+    }
+    uint8_t start = (uint8_t)(item_on - 3);
+    if (start > (uint8_t)(count - 4)) {
+        start = (uint8_t)(count - 4);
+    }
+    return start;
+}
+
+// Decode `p` row-sequentially and stamp it into the 72x40 keycap tile of
+// viewport column `vc` (page-major 5x72 B), scaled `scale`x, at canvas x0 /
+// tile-local y0. Text is thresholded solid; shaded artwork (the skull) is
+// Bayer-dithered with canvas-continuous coordinates.
+static void shim_menu_stamp(uint8_t *tile360, const patch_t *p, int x0, int y0,
+                            unsigned scale, uint8_t vc, const uint8_t *luma256,
+                            bool dither, unsigned canvas_row0) {
+    const unsigned w = vpatch_width(p);
+    const unsigned h = vpatch_height(p);
+    const int      win0 = (int)vc * 72 - 20; // canvas x of this tile's x=0
+    uint8_t        row[SHIM_MENU_PATCH_MAX_W];
+    vpatchlist_t   vp;
+    memset(&vp, 0, sizeof(vp));
+    unsigned off = 0;
+    for (unsigned sy = 0; sy < h; sy++) {
+        memset(row, 0, w);
+        off = draw_vpatch8(row, p, &vp, off);
+        for (unsigned d = 0; d < scale; d++) {
+            const int Y = y0 + (int)(sy * scale + d);
+            if (Y < 0 || Y >= 40) {
+                continue;
+            }
+            for (unsigned sx = 0; sx < w; sx++) {
+                const uint8_t v = luma256[row[sx]];
+                for (unsigned e = 0; e < scale; e++) {
+                    const int cx = x0 + (int)(sx * scale + e);
+                    const int tx = cx - win0;
+                    if (tx < 0 || tx >= 72) {
+                        continue;
+                    }
+                    const bool on = dither ? (v > shim_bayer4[(canvas_row0 + (unsigned)Y) & 3][cx & 3])
+                                           : (v >= 36);
+                    if (on) {
+                        tile360[(size_t)(Y >> 3) * 72 + tx] |= (uint8_t)(1u << (Y & 7));
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Render the menu view for keycap (view row 0-3, view col 0-4) into tile360
+// (zeroed here). Column 0 carries the skull on the selected row; columns 1+
+// carry the item at 2x from canvas x=52 (the windows don't overlap, so each
+// key decodes at most one patch). False when no menu is up / not decodable —
+// the caller drops back to the regular attract/map view.
+bool doom_shim_menu_key_tile(uint8_t vr, uint8_t vc, uint8_t *tile360,
+                             const uint8_t *luma256, bool skull_alt) {
+    doom_mirror_t *m = doom_mirror_box();
+    if (s_mirror_master || !m || !doom_shim_progress || vr > 3 || vc > 4) {
+        return false;
+    }
+    const uint8_t count = m->menu_in_count;
+    if (!count) {
+        return false;
+    }
+    const uint8_t item_on = m->menu_in_item_on;
+    const uint8_t idx     = (uint8_t)(shim_menu_win_start(count, item_on) + vr);
+    memset(tile360, 0, 5u * 72u);
+    if (vc == 0) {
+        if (idx == item_on) {
+            const patch_t *p = resolve_vpatch_handle(
+                skull_alt ? VPATCH_NAME(M_SKULL2) : VPATCH_NAME(M_SKULL1));
+            if (p && vpatch_width(p) <= 44 && vpatch_height(p) <= 40) {
+                shim_menu_stamp(tile360, p, 8, (int)(40 - vpatch_height(p)) / 2,
+                                1, 0, luma256, true, (unsigned)vr * 40u);
+            }
+        }
+        return true;
+    }
+    if (idx >= count) {
+        return true; // past the menu: stays dark
+    }
+    const uint16_t handle = m->menu_in_items[idx];
+    if (!handle) {
+        return true; // unnamed slot: stays dark
+    }
+    const patch_t *p = resolve_vpatch_handle((vpatch_handle_large_t)handle);
+    if (!p) {
+        return true;
+    }
+    const unsigned w = vpatch_width(p);
+    const unsigned h = vpatch_height(p);
+    if (!w || !h || w > SHIM_MENU_PATCH_MAX_W || 2 * h > 40) {
+        return true;
+    }
+    shim_menu_stamp(tile360, p, 52, (int)(40 - 2 * h) / 2, 2, vc, luma256,
+                    false, (unsigned)vr * 40u);
+    return true;
 }
 
 // ---------------------------------------------------------------------------

@@ -32,7 +32,18 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
 // thumb/cursor-key legends there (the lost canvas band is the map's bottom
 // 20 % and the map follows the player anyway; field round 13). Safe to stop
 // the compose early: its vpatch bookkeeping fully resets per frame.
-void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row);
+// map_frame draws a 2 px border around the blitted block (the slave's
+// automap view, field round 17).
+void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool map_frame);
+
+// Slave readable menu mirror (field round 17): the master's menu items +
+// blinking skull on the viewport's upper 4 key rows. doom_mode.c drives the
+// repaints (snapshot change / skull blink; !full repaints only column 0).
+void doom_blit_menu(const uint8_t *luma256, bool skull_alt, bool full);
+
+// Fire reticle on the keycap display at raw (row, disp_col) — the master's
+// Ctrl key at the bottom of its outer HUD column.
+void doom_blit_fire_key(uint8_t row, uint8_t disp_col);
 
 // Blank every keycap display of this half (entering game mode: the keys
 // outside the viewport keep whatever legend they held otherwise).

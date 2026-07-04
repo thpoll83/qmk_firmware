@@ -1830,6 +1830,13 @@ void update_displays(enum refresh_mode mode) {
                             doom_render_fire_key();
                             kdisp_send_buffer();
                             doom_handled = true;
+                        } else if (keycode == KC_SPACE) {
+                            // Space is DOOM's use/open — a door symbol
+                            // instead of the space legend (field rd 17).
+                            kdisp_set_buffer(0x00);
+                            doom_render_use_key();
+                            kdisp_send_buffer();
+                            doom_handled = true;
                         } else if (!doom_key_is_control(keycode)) {
                             kdisp_set_buffer(0x00);
                             kdisp_send_buffer();

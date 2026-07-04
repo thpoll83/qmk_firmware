@@ -202,9 +202,69 @@ static int8_t center_x(const GFXfont *const *fonts, uint8_t n, const uint32_t *t
     return (int8_t)(BUFFER_X + (SCREEN_WIDTH - (gmax - gmin)) / 2 - gmin);
 }
 
+// Word label in the game's own small HUD font (STCFN, decoded from the WHX —
+// round 16 "use the font to write Ammo etc"), centred in the top band (rows
+// 0..12, above the digits at 14+). Solid low threshold: the glyphs are only
+// ~7 px tall, thinning them would break strokes. False when any glyph is
+// unavailable or the label doesn't fit — the caller draws the 10 px mid font
+// label instead (nothing has been drawn then: sizes are probed up front).
+static bool draw_hufont_label(const uint32_t *label, const uint8_t *luma256) {
+    uint8_t chs[10];
+    uint8_t n = 0;
+    for (const uint32_t *c = label; *c; ++c) {
+        uint32_t ch = *c;
+        if (ch >= 'a' && ch <= 'z') {
+            ch -= 32; // STCFN is uppercase-only
+        }
+        if (ch < 33 || ch > 95 || n >= (uint8_t)sizeof(chs)) {
+            return false;
+        }
+        chs[n++] = (uint8_t)ch;
+    }
+    if (!n) {
+        return false;
+    }
+    uint8_t  gw[10], gh[10];
+    uint16_t total = 0;
+    uint8_t  hmax  = 0;
+    for (uint8_t i = 0; i < n; ++i) {
+        if (!doom_shim_hufont_glyph(chs[i], NULL, &gw[i], &gh[i])) {
+            return false;
+        }
+        total += (uint16_t)(gw[i] + 1); // 1 px letter spacing
+        if (gh[i] > hmax) hmax = gh[i];
+    }
+    total -= 1;
+    if (total > SCREEN_WIDTH || hmax > 12) {
+        return false;
+    }
+    uint8_t      *buf    = get_scratch_buffer();
+    const int16_t stride = get_scratch_buffer_size() / 8;
+    uint16_t      x      = (uint16_t)(BUFFER_X + (SCREEN_WIDTH - total) / 2);
+    const uint8_t y0     = (uint8_t)((13 - hmax) / 2);
+    uint8_t dec[DOOM_HUFONT_MAX_W * DOOM_HUFONT_MAX_H];
+    for (uint8_t i = 0; i < n; ++i) {
+        uint8_t w = 0, h = 0;
+        if (!doom_shim_hufont_glyph(chs[i], dec, &w, &h)) {
+            return true; // half-drawn worst case; the next HUD pass repaints
+        }
+        for (uint8_t sy = 0; sy < h; ++sy) {
+            for (uint8_t sx = 0; sx < w; ++sx) {
+                if (luma256[dec[(size_t)sy * w + sx]] >= 36) {
+                    const uint16_t X = x + sx;
+                    const uint8_t  Y = (uint8_t)(y0 + sy);
+                    buf[(size_t)(Y >> 3) * stride + X] |= (uint8_t)(1u << (Y & 7));
+                }
+            }
+        }
+        x += w + 1;
+    }
+    return true;
+}
+
 // Vitals value in the game's own tall red status-bar digits (STTNUM/STTMINUS
 // decoded from the WHX, field round 14 "extract the font"): word label on top
-// (10 px mid font, same as the string variant), the DOOM digits centred in the
+// (STCFN HUD font, mid-font fallback), the DOOM digits centred in the
 // band below at native size, thresholded on the saturation-floored luma so the
 // red gradient renders solid with its dark outline. False when the glyphs are
 // unavailable (engine down / patch missing) — the caller falls back to
@@ -241,7 +301,9 @@ bool doom_blit_stat_num_key(uint8_t row, uint8_t disp_col, const uint32_t *label
         return true; // no such display — nothing to fall back to either
     }
     kdisp_set_buffer(0x00);
-    kdisp_write_gfx_text(hud_label_fonts, 1, center_x(hud_label_fonts, 1, label), 13, label);
+    if (!draw_hufont_label(label, luma256)) {
+        kdisp_write_gfx_text(hud_label_fonts, 1, center_x(hud_label_fonts, 1, label), 13, label);
+    }
 
     uint8_t      *buf    = get_scratch_buffer();
     const int16_t stride = get_scratch_buffer_size() / 8;
@@ -258,11 +320,12 @@ bool doom_blit_stat_num_key(uint8_t row, uint8_t disp_col, const uint32_t *label
         const uint8_t gy = (uint8_t)(y0 + hmax - h);
         for (uint8_t sy = 0; sy < h; ++sy) {
             for (uint8_t sx = 0; sx < w; ++sx) {
-                // Threshold BELOW the darkest red of the digit gradient
-                // (saturation-floored luma 40..153) but above the near-black
-                // outline (<20) — 96 kept only the brightest half and made
-                // the digits patchy (field round 15, "unreadable").
-                if (luma256[dec[(size_t)sy * w + sx]] >= 36) {
+                // Threshold inside the digit gradient (saturation-floored
+                // luma 40..153): 96 kept only the brightest half — patchy
+                // (round 15 "unreadable"); 36 took the whole body — "a bit
+                // too thick" (round 16). 64 drops just the darkest edge
+                // shades, thinning the strokes while staying contiguous.
+                if (luma256[dec[(size_t)sy * w + sx]] >= 64) {
                     const uint16_t X = x + sx;
                     const uint8_t  Y = (uint8_t)(gy + sy);
                     buf[(size_t)(Y >> 3) * stride + X] |= (uint8_t)(1u << (Y & 7));
@@ -288,6 +351,38 @@ void doom_blit_stat_key(uint8_t row, uint8_t disp_col, const uint32_t *label, co
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count,
                          center_x(g_all_fonts, g_all_font_count, value), 36, value);
     kdisp_send_buffer();
+}
+
+// Fire/attack symbol for the slave pad's Ctrl keys (Ctrl is DOOM's fire
+// binding — round 16 "the CTRL would need a symbol for fire or attack"):
+// a crosshair reticle — 2 px ring, four axis ticks crossing it, centre dot —
+// drawn into the CURRENTLY selected display's buffer. The update_displays
+// doom_ctl branch owns selection, buffer clear and send (like the weapon
+// icons), so this only sets pixels.
+void doom_render_fire_key(void) {
+    uint8_t      *buf    = get_scratch_buffer();
+    const int16_t stride = get_scratch_buffer_size() / 8;
+    const int16_t cx     = BUFFER_X + SCREEN_WIDTH / 2;
+    const int16_t cy     = SCREEN_HEIGHT / 2;
+    for (int8_t dy = -18; dy <= 18; ++dy) {
+        const int16_t Y = (int16_t)(cy + dy);
+        if (Y < 0 || Y >= SCREEN_HEIGHT) {
+            continue;
+        }
+        const int16_t ay = (int16_t)(dy < 0 ? -dy : dy);
+        for (int8_t dx = -18; dx <= 18; ++dx) {
+            const int16_t X  = (int16_t)(cx + dx);
+            const int16_t ax = (int16_t)(dx < 0 ? -dx : dx);
+            const int16_t d2 = (int16_t)(dx * dx + dy * dy);
+            const bool on = (d2 >= 11 * 11 && d2 <= 13 * 13) ||             // ring
+                            (d2 <= 2 * 2) ||                                // centre dot
+                            (ax <= 1 && ay >= 8 && ay <= 17) ||             // N/S ticks
+                            (ay <= 1 && ax >= 8 && ax <= 17);               // E/W ticks
+            if (on) {
+                buf[(size_t)(Y >> 3) * stride + X] |= (uint8_t)(1u << (Y & 7));
+            }
+        }
+    }
 }
 
 void doom_blit_blank_key(uint8_t row, uint8_t disp_col) {

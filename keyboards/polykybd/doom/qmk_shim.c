@@ -668,6 +668,38 @@ bool doom_shim_tallnum_glyph(uint8_t glyph, uint8_t *out8bpp, uint8_t *w, uint8_
     return true;
 }
 
+// Decode one small HUD-font glyph (STCFN — the game's menu/message font)
+// into out8bpp, same contract as the tall numbers above. `ch` is the ASCII
+// code; the font covers HU_FONTSTART 33 ('!') .. 95 ('_'), uppercase-only —
+// the caller folds case. Contiguity of the STCFN vpatch handles mirrors the
+// STFST face run (whddata.h lists them in ASCII order).
+bool doom_shim_hufont_glyph(uint8_t ch, uint8_t *out8bpp, uint8_t *w, uint8_t *h) {
+    if (!doom_shim_progress || ch < 33 || ch > 95) {
+        return false;
+    }
+    const patch_t *p = resolve_vpatch_handle((vpatch_handle_large_t)(VPATCH_NAME(STCFN033) + (ch - 33)));
+    if (!p) {
+        return false;
+    }
+    const unsigned pw = vpatch_width(p);
+    const unsigned ph = vpatch_height(p);
+    if (!pw || !ph || pw > DOOM_HUFONT_MAX_W || ph > DOOM_HUFONT_MAX_H) {
+        return false;
+    }
+    *w = (uint8_t)pw;
+    *h = (uint8_t)ph;
+    if (out8bpp) {
+        memset(out8bpp, 0, (size_t)pw * ph);
+        vpatchlist_t vp;
+        memset(&vp, 0, sizeof(vp));
+        unsigned off = 0;
+        for (unsigned y = 0; y < ph; y++) {
+            off = draw_vpatch8(out8bpp + (size_t)y * pw, p, &vp, off);
+        }
+    }
+    return true;
+}
+
 // (bitcount8_table comes from p_maputl.c)
 
 // ---------------------------------------------------------------------------

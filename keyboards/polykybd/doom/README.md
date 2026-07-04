@@ -150,7 +150,31 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 15 → v16 (2026-07-04, UNTESTED): face + digit legibility.** Round
+- **Round 16 → v17 (2026-07-04, UNTESTED): HUD typography + fire key.** Round
+  16 confirmed v16's face brightness ("the doomguy brightness is good now");
+  three follow-ups:
+  1. **Thinner DOOM digits** ("the numbers are a bit too thick"): tall-number
+     threshold 36 → 64 — drops just the darkest edge shades of the 40..153
+     red gradient, thinning the strokes while keeping them contiguous
+     (the third calibration point: 96 patchy, 36 fat, 64 in between).
+  2. **HU-font labels** ("could we also use the font to write Ammo etc"):
+     the Health/Armor/Ammo word labels now render in the game's own small
+     HUD font — `doom_shim_hufont_glyph()` decodes `STCFN033+` (the
+     menu/message font, ASCII 33..95, uppercase-only — the blitter folds
+     case) through the same zeroed-`vpatchlist_t` row decoder as the tall
+     numbers, and `draw_hufont_label()` centres the word in the top band
+     (rows 0..12) with 1 px letter spacing at a solid ≥ 36 threshold (the
+     ~7 px glyphs would break if thinned). Sizes are probed before any
+     pixel is set, so a missing glyph falls back to the 10 px mid font
+     cleanly. The whole stat key is now game artwork.
+  3. **Fire symbol on Ctrl** ("the CTRL would need a symbol for fire or
+     attack"): the slave pad's `KC_LCTL`/`KC_RCTL` (DOOM's fire binding)
+     now show a crosshair reticle — 26 px ring, four axis ticks crossing
+     it, centre dot — drawn programmatically by `doom_render_fire_key()`
+     (doom_blit.c; inline no-op stub in normal builds) in the
+     update_displays doom_ctl branch, replacing the plain "Ctrl" legend.
+- **Round 15 → v16 (2026-07-04, tested: face ✓ good, digits readable but too
+  thick → v17): face + digit legibility.** Round
   15 confirmed v15 works: the doomguy **animates** on the status OLED, the
   DOOM digits render, the attract behaves as designed. Two legibility fixes:
   1. **Face auto-levels** ("could be brighter / more contrast"): the sprite

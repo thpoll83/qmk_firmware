@@ -139,6 +139,18 @@ bool doom_status_scroll(void);
 #define DOOM_TALLNUM_MINUS  10
 bool doom_shim_tallnum_glyph(uint8_t glyph, uint8_t *out8bpp, uint8_t *w, uint8_t *h);
 
+// Small HUD-font glyph (STCFN, the menu/message font) decoded the same way:
+// ch is the ASCII code 33..95 (uppercase-only — callers fold case). Used for
+// the vitals word labels so the whole stat key is game artwork.
+#define DOOM_HUFONT_MAX_W   12
+#define DOOM_HUFONT_MAX_H   12
+bool doom_shim_hufont_glyph(uint8_t ch, uint8_t *out8bpp, uint8_t *w, uint8_t *h);
+
+// Fire/attack symbol (crosshair reticle) for the slave pad's Ctrl keys —
+// drawn into the CURRENTLY selected keycap display's buffer; the caller owns
+// display selection, buffer clear and send (doom_blit.c).
+void doom_render_fire_key(void);
+
 // Doomguy face for the status OLED (qmk_shim.c): current face index (-1 when
 // not in a level) and the 2x-scaled render into a 128x64 page buffer.
 int  doom_shim_face_index(void);
@@ -170,6 +182,7 @@ static inline bool doom_hid_frozen(uint8_t cmd) { (void)cmd; return false; }
 static inline bool doom_key_is_control(uint16_t keycode) { (void)keycode; return true; }
 static inline bool doom_slave_viewport_live(void) { return false; }
 static inline bool doom_slave_bottom_row_live(void) { return false; }
+static inline void doom_render_fire_key(void) {}
 static inline int  doom_status_face_render(uint8_t *buf1024) { (void)buf1024; return 0; }
 static inline bool doom_status_scroll(void) { return true; }
 

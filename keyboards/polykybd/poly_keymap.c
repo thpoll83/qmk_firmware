@@ -1823,6 +1823,13 @@ void update_displays(enum refresh_mode mode) {
                             draw_legend_cx(U"Esc", 36);
                             kdisp_send_buffer();
                             doom_handled = true;
+                        } else if (keycode == KC_LCTL || keycode == KC_RCTL) {
+                            // Ctrl fires in DOOM — show a crosshair reticle
+                            // instead of the plain Ctrl legend (field rd 16).
+                            kdisp_set_buffer(0x00);
+                            doom_render_fire_key();
+                            kdisp_send_buffer();
+                            doom_handled = true;
                         } else if (!doom_key_is_control(keycode)) {
                             kdisp_set_buffer(0x00);
                             kdisp_send_buffer();

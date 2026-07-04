@@ -20,7 +20,8 @@
 #include <transactions.h>
 #include "base/fw_staging.h"
 #include "base/fontpack.h"
-#include "base/update.h"   // poly_prepare_for_flash()
+#include "base/update.h"        // poly_prepare_for_flash()
+#include "doom/doom_mode.h"     // doom_mode_active() (inline false unless POLYKYBD_DOOM)
 
 #include <print.h>
 #include <string.h>
@@ -41,19 +42,34 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             uint8_t  bundle = data[HID_DATA_IDX + 8];
             s_fontpack_bundle = bundle;
 
-            // Resolve the bundle's fixed slot; an unknown id (or a pack bigger than
-            // the slot) is rejected. The stager writes in place at the slot.
+            // The pseudo bundle FONTPACK_BUNDLE_DOOMWAD selects the DOOMWAD target
+            // (the doom easter egg's WHX slot at the top of the resource region) —
+            // same transport, different fixed slot + finalize.
+            bool    is_doomwad = (bundle == FONTPACK_BUNDLE_DOOMWAD);
+            uint8_t target     = is_doomwad ? FW_TARGET_DOOMWAD : FW_TARGET_FONTPACK;
+
+            // Resolve the fixed slot; an unknown id (or a pack bigger than the
+            // slot) is rejected. The stager writes in place at the slot. Never
+            // while game mode holds core1/the pool — the stager halts core1.
             uint32_t slot_off = 0, slot_size = 0;
-            bool     slot_ok  = fontpack_slot(bundle, &slot_off, &slot_size);
-            bool master_ok = (slot_ok && pack_size >= sizeof(fontpack_header_t) &&
-                              pack_size <= slot_size);
+            bool     slot_ok;
+            if (is_doomwad) {
+                slot_off  = FW_DOOMWAD_SLOT_OFF;
+                slot_size = FW_DOOMWAD_SLOT_SIZE;
+                slot_ok   = true;
+            } else {
+                slot_ok = fontpack_slot(bundle, &slot_off, &slot_size);
+            }
+            uint32_t min_size  = is_doomwad ? 8u : (uint32_t)sizeof(fontpack_header_t);
+            bool     master_ok = (slot_ok && !doom_mode_active() &&
+                                  pack_size >= min_size && pack_size <= slot_size);
             if (slot_ok) fw_staging_set_fontpack_slot(slot_off, slot_size);
 
             fw_up_begin_sync_t begin_msg;
             memset(&begin_msg, 0, sizeof(begin_msg));   // deterministic padding for the CRC
             begin_msg.image_size = pack_size;
             begin_msg.image_crc  = pack_crc;
-            begin_msg.target     = FW_TARGET_FONTPACK;
+            begin_msg.target     = target;
             begin_msg.bundle     = bundle;
             begin_msg.crc32      = 0;
 
@@ -73,8 +89,8 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 // loop, so the user can still type plain characters meanwhile.
                 poly_prepare_for_flash();
                 // Master stages its OWN copy (deferred erase via housekeeping) and
-                // kicks the slave's deferred erase, both targeting this bundle slot.
-                fw_staging_begin_deferred_target(pack_size, pack_crc, FW_TARGET_FONTPACK);
+                // kicks the slave's deferred erase, both targeting this slot.
+                fw_staging_begin_deferred_target(pack_size, pack_crc, target);
                 // Fire-and-forget: kicks the slave's deferred erase. Readiness is
                 // polled by the slave_ack send_to_bridge below (and on re-polls).
                 send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 3);
@@ -147,14 +163,19 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
             memset(data, 0, length);
             memcpy(data, ok ? "P\x52." : "P\x52!", 3);
-            if (ok) {
+            if (ok && s_fontpack_bundle != FONTPACK_BUNDLE_DOOMWAD) {
                 uint16_t cver = fontpack_bundle_version(s_fontpack_bundle);
                 memcpy(&data[3], &cver, 2);
             }
-            uprintf("FONTPACK_COMMIT: bundle=%u slave=0x%02x master=%d -> %s (present=%d fonts=%u cver=%u)\n",
-                    s_fontpack_bundle, slave_ack, master_ok, ok ? "live" : "INVALID",
-                    fontpack_bundle_present(s_fontpack_bundle), fontpack_font_count(),
-                    fontpack_bundle_version(s_fontpack_bundle));
+            if (s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD) {
+                uprintf("FONTPACK_COMMIT: DOOMWAD slave=0x%02x master=%d -> %s\n",
+                        slave_ack, master_ok, ok ? "installed" : "INVALID");
+            } else {
+                uprintf("FONTPACK_COMMIT: bundle=%u slave=0x%02x master=%d -> %s (present=%d fonts=%u cver=%u)\n",
+                        s_fontpack_bundle, slave_ack, master_ok, ok ? "live" : "INVALID",
+                        fontpack_bundle_present(s_fontpack_bundle), fontpack_font_count(),
+                        fontpack_bundle_version(s_fontpack_bundle));
+            }
             raw_hid_send(data, length);
             return true;
         }

@@ -206,6 +206,14 @@ static isb_int8_t grid = 0;
 void AM_SetCheating(int level) {
     cheating = (isb_int8_t)level;
 }
+// Fat map mode for the keycap blit: 1 px Bresenham lines mostly dissolve in
+// the Bayer dither at 72x40/keycap, so dots plot as 2x2 blocks and the
+// player arrow draws at double size (field round 11: "walls really thin,
+// own position hard to make out").
+static isb_int8_t am_fat = 0;
+void AM_SetFatLines(int fat) {
+    am_fat = (isb_int8_t)fat;
+}
 #endif
 
 static int 	leveljuststarted = 1; 	// kluge until AM_LevelInit() is called
@@ -1065,7 +1073,23 @@ AM_drawFline
     }
 #endif
 
+#if POLYKYBD_QMK
+// Fat mode (AM_SetFatLines): plot 2x2 blocks so lines survive the keycap
+// blit's Bayer dither; the extra column/row is clipped at the fb edges.
+#define PUTDOT(xx,yy,cc) do {                                            \
+        int px_ = (xx), py_ = (yy);                                      \
+        fb[py_ * f_w + px_] = (cc);                                      \
+        if (am_fat) {                                                    \
+            if (px_ + 1 < f_w) fb[py_ * f_w + px_ + 1] = (cc);           \
+            if (py_ + 1 < f_h) {                                         \
+                fb[(py_ + 1) * f_w + px_] = (cc);                        \
+                if (px_ + 1 < f_w) fb[(py_ + 1) * f_w + px_ + 1] = (cc); \
+            }                                                            \
+        }                                                                \
+    } while (0)
+#else
 #define PUTDOT(xx,yy,cc) fb[(yy)*f_w+(xx)]=(cc)
+#endif
 
     dx = fl->b.x - fl->a.x;
     ax = 2 * (dx<0 ? -dx : dx);
@@ -1312,6 +1336,20 @@ void AM_drawPlayers(void)
 
     if (!netgame)
     {
+#if POLYKYBD_QMK
+	// Fat mode doubles the arrow (the scale param multiplies the line
+	// character's map-unit coords) — at keycap resolution the normal
+	// arrow is a couple of dither dots.
+	fixed_t arrow_scale = am_fat ? 2 * FRACUNIT : 0;
+	if (cheating)
+	    AM_drawLineCharacter
+		(cheat_player_arrow, arrlen(cheat_player_arrow), arrow_scale,
+		 mobj_angle(plr->mo), WHITE, plr->mo->xy.x, plr->mo->xy.y);
+	else
+	    AM_drawLineCharacter
+		(player_arrow, arrlen(player_arrow), arrow_scale, mobj_angle(plr->mo),
+		 WHITE, plr->mo->xy.x, plr->mo->xy.y);
+#else
 	if (cheating)
 	    AM_drawLineCharacter
 		(cheat_player_arrow, arrlen(cheat_player_arrow), 0,
@@ -1320,6 +1358,7 @@ void AM_drawPlayers(void)
 	    AM_drawLineCharacter
 		(player_arrow, arrlen(player_arrow), 0, mobj_angle(plr->mo),
 		 WHITE, plr->mo->xy.x, plr->mo->xy.y);
+#endif
 	return;
     }
 

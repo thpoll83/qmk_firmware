@@ -41,10 +41,26 @@ void fw_staging_init(void);
 // and how finalize completes. FIRMWARE stages to the 2 MB firmware-update region
 // (header sector + image) and finalize stamps the staging header for a later
 // apply+reboot. FONTPACK writes the "PlyF" font pack in place at the resource
-// region (no header sector) and finalize re-loads the fonts — no reboot. The
-// streaming/paging/deferred-erase machinery is identical; only the base offset,
-// the header sector, and the finalize action differ.
-typedef enum { FW_TARGET_FIRMWARE = 0, FW_TARGET_FONTPACK = 1 } fw_target_t;
+// region (no header sector) and finalize re-loads the fonts — no reboot.
+// DOOMWAD writes the doom easter egg's WHX game data in place at its fixed
+// resource slot (the upper 2 MB of the resource region — the engine's XIP
+// TINY_WAD_ADDR) and finalize just validates the "IWHX" magic; the data is
+// only ever read after game mode boots its engine. The streaming / paging /
+// deferred-erase / slave-bridge machinery is identical for all three — only
+// the base offset, the header sector, and the finalize action differ.
+typedef enum { FW_TARGET_FIRMWARE = 0, FW_TARGET_FONTPACK = 1, FW_TARGET_DOOMWAD = 2 } fw_target_t;
+
+// The DOOMWAD slot, expressed like a fontpack slot (offset relative to
+// FW_RESOURCE_OFFSET): flash 0x600000..0x7FFFFF — above the 2 MB font-pack
+// window, matching the engine's TINY_WAD_ADDR 0x10600000.
+#define FW_DOOMWAD_SLOT_OFF  0x200000UL
+#define FW_DOOMWAD_SLOT_SIZE 0x200000UL
+
+// On-wire pseudo bundle id (CMD_FONTPACK_BEGIN data[10]) selecting the DOOMWAD
+// target — the doom install rides the font-pack HID flow. Mirrored by the host
+// (PolyKybdHost hid_fontpack.py DOOMWAD_BUNDLE_ID); real font bundle indices
+// stay far below it.
+#define FONTPACK_BUNDLE_DOOMWAD 0x7Fu
 
 // Synchronous begin (master / USB side): erases staging flash sector-by-sector
 // with interrupts briefly re-enabled between sectors.  Blocks for ~50 ms per

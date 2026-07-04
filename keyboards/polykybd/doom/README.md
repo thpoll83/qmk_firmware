@@ -124,12 +124,13 @@ use, Shift run, Enter/Esc/letters for the menus.
 qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes
 arm-none-eabi-objcopy -O binary .build/polykybd_split72_default.elf doom.bin
 
-# 2. Flash the game data once (survives firmware updates — different region):
+# 2. Flash the game data once (survives firmware updates — different region).
+#    Preferred (v13+ firmware): over HID to BOTH halves in one pass —
+polyctl doom install doom1.whx
+#    Fallback (pre-v13 firmware / recovery): BOOTSEL per half —
 python3 keyboards/polykybd/doom/tools/whx2uf2.py doom1.whx doom1_whx.uf2
-# hold BOOTSEL while plugging the MASTER half, copy doom1_whx.uf2 to RPI-RP2
-# (doom1.whx fetch commands: engine/PROVENANCE.md)
-# For the v12 slave mirror (automap on the slave half): flash the SAME
-# doom1_whx.uf2 to the SLAVE half too (BOOTSEL on that half, once).
+# hold BOOTSEL while plugging a half, copy doom1_whx.uf2 to RPI-RP2; repeat
+# on the OTHER half for the slave mirror. (doom1.whx fetch: engine/PROVENANCE.md)
 
 # 3. Type IDDQD. ESC-hold ≥1.5 s exits.
 ```
@@ -149,7 +150,40 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 11 → v12 (2026-07-04, UNTESTED): slave lockstep mirror — the first
+- **Round 12 → v13 (2026-07-04, UNTESTED): mirror polish + WHX install over
+  HID.** Round 12 confirmed **the lockstep mirror works on hardware** (map on
+  the slave, player arrow tracking the master's game). v13 addresses the
+  three field notes + the next roadmap chunk:
+  1. **Attract on both viewports** ("a good idea until game start"): pre-START
+     the slave now blits its OWN attract title/demo on its 5×5 block
+     (near-parallel to the master's, unsynced — cosmetic only); the in-level
+     blit is gated on `automapactive`, so the 3D-view flash before the
+     injected TAB landed is gone. A BREAK (or a dead mirror) now unwinds the
+     drone back to its own attract (`D_StartTitle`) instead of freezing, and
+     the master only sends BREAK while a game is engaged (the attract loop's
+     own `G_DoPlayDemo` no longer spams it).
+  2. **Bottom key row now clears on the map**: the automap only covers the
+     168 view rows (`f_h = SCREENHEIGHT - ST_HEIGHT`); the band underneath
+     was the composed 1:1 tiny status bar. The drone's compose now feeds
+     black there (`doom_mirror_drone_map_active()` skip in
+     `doom_shim_compose_line`); the master keeps its status bar.
+  3. **Fat map** (`AM_SetFatLines`, am_map.c): map lines plot 2×2 blocks
+     (1 px Bresenham dissolved in the Bayer dither) and the player arrow
+     draws at 2× (the `AM_drawLineCharacter` scale param).
+  4. **`polyctl doom install <doom1.whx>`** — the WHX game data now flashes
+     over HID to BOTH halves in one pass (no BOOTSEL on either half): a new
+     `FW_TARGET_DOOMWAD` rides the font-pack `BEGIN/CHUNK/COMMIT` transport
+     via the pseudo bundle id `FONTPACK_BUNDLE_DOOMWAD` (0x7F) to the fixed
+     slot at flash `0x600000` (the engine's `TINY_WAD_ADDR`); COMMIT
+     validates the "IWHX" magic (no reload, O(1) on both halves), the status
+     OLED shows a spoiler-free "Game data: E1M1" upload screen, and the
+     existing fw_staging slave bridge writes the slave's copy chunk-locked
+     with the master's. Host: `PolyCore.install_doomwad` + `M_DOOM_INSTALL`
+     (streams the fontpack progress events), `hid_fontpack.flash_doomwad`
+     (transport refactored into a shared `_stream_slot`). Works from normal
+     (non-doom) firmware too — install the data first, then flash the game
+     build. ~1.8 MB ≈ a few minutes over HID.
+- **Round 11 → v12 (2026-07-04, tested ✓ works): slave lockstep mirror — the first
   "bigger chunk" of the roadmap.** The slave half now boots ITS OWN engine
   instance when game mode engages (synced `doom_ctl`), and mirrors the
   master's game in **input lockstep**: every ticcmd the master builds is

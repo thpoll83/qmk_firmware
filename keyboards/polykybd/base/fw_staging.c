@@ -87,19 +87,19 @@ static uint8_t  s_target = FW_TARGET_FIRMWARE;
 static uint32_t s_fontpack_slot_off  = 0;
 static uint32_t s_fontpack_slot_size = FONTPACK_FLASH_MAX_SIZE;
 
-// FONTPACK writes the pack bundle in place at its slot in the resource region;
+// FONTPACK/DOOMWAD write in place at their slot in the resource region;
 // FIRMWARE stages at FW_STAGING_DATA_OFFSET behind a 4 KB header sector.
 static inline uint32_t target_data_offset(void) {
-    return (s_target == FW_TARGET_FONTPACK) ? (FW_RESOURCE_OFFSET + s_fontpack_slot_off)
+    return (s_target != FW_TARGET_FIRMWARE) ? (FW_RESOURCE_OFFSET + s_fontpack_slot_off)
                                             : FW_STAGING_DATA_OFFSET;
 }
-// FIRMWARE prepends a header sector (erased + stamped); FONTPACK has none (the
-// pack carries its own header at byte 0).
+// FIRMWARE prepends a header sector (erased + stamped); the resource targets
+// have none (the pack / WHX carry their own header at byte 0).
 static inline bool target_has_header(void) {
-    return s_target != FW_TARGET_FONTPACK;
+    return s_target == FW_TARGET_FIRMWARE;
 }
 static inline uint32_t target_max_size(void) {
-    return (s_target == FW_TARGET_FONTPACK) ? s_fontpack_slot_size : FW_UP_MAX_SIZE;
+    return (s_target != FW_TARGET_FIRMWARE) ? s_fontpack_slot_size : FW_UP_MAX_SIZE;
 }
 
 void fw_staging_set_fontpack_slot(uint32_t slot_off, uint32_t slot_size) {
@@ -493,7 +493,13 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
     // window and made the master mis-report COMMIT as "CRC mismatch" — run 6.)
     bool ok = (s_staged_crc == s_image_crc);
 
-    if (ok && !target_has_header()) {
+    if (ok && s_target == FW_TARGET_DOOMWAD) {
+        // DOOMWAD: the WHX is fully written in place; validate its magic — O(1),
+        // safe inline on both halves (nothing reloads; the doom engine maps it
+        // at TINY_WAD_ADDR only when game mode boots).
+        const uint8_t *whx = (const uint8_t *)(XIP_BASE + FW_RESOURCE_OFFSET + s_fontpack_slot_off);
+        ok = whx[0] == 'I' && whx[1] == 'W' && whx[2] == 'H' && whx[3] == 'X';
+    } else if (ok && !target_has_header()) {
         // FONTPACK: the pack is now fully written in place. Re-load it from XIP —
         // this independently re-validates the pack's own header CRC32 and rebuilds
         // g_all_fonts. No reboot: fonts render immediately. ok also requires the

@@ -114,18 +114,26 @@ void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
     const GFXfont* small[] = { &NotoSans_Regular_Mid_10pt7b };
-    const bool fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
+    const uint8_t target = fw_staging_active_target();
+    const bool fonts = (target == FW_TARGET_FONTPACK || target == FW_TARGET_DOOMWAD);
     uint8_t pct   = fw_update_percent();
 
     if(fonts) {
         if(is_keyboard_master()) {
-            const char* fontpack_name = fontpack_slot_name(fw_staging_fontpack_slot_off());
-            kdisp_write_gfx_text(small, 1, 0, 14, U"Fontpack:");
-            if (fontpack_name) {
-                ascii_to_u32_string((char*) buffer, sizeof(buffer), fontpack_name);
-                kdisp_write_gfx_text(small, 1, 0, 36, buffer);
+            if (target == FW_TARGET_DOOMWAD) {
+                // Game-data install rides the resource-flash path; keep the label
+                // spoiler-free (the easter egg is discovered, not announced).
+                kdisp_write_gfx_text(small, 1, 0, 14, U"Game data:");
+                kdisp_write_gfx_text(small, 1, 0, 36, U"E1M1");
             } else {
-                kdisp_write_gfx_text(small, 1, 0, 36, U"<EMPTY>");
+                const char* fontpack_name = fontpack_slot_name(fw_staging_fontpack_slot_off());
+                kdisp_write_gfx_text(small, 1, 0, 14, U"Fontpack:");
+                if (fontpack_name) {
+                    ascii_to_u32_string((char*) buffer, sizeof(buffer), fontpack_name);
+                    kdisp_write_gfx_text(small, 1, 0, 36, buffer);
+                } else {
+                    kdisp_write_gfx_text(small, 1, 0, 36, U"<EMPTY>");
+                }
             }
             kdisp_write_gfx_text(small, 1, 0, 58, U"Upload...");
             return;

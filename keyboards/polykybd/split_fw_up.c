@@ -86,6 +86,9 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
                 ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
                 return;
             }
+        } else if (msg->target == FW_TARGET_DOOMWAD) {
+            // The doom WHX slot is fixed (top of the resource region).
+            fw_staging_set_fontpack_slot(FW_DOOMWAD_SLOT_OFF, FW_DOOMWAD_SLOT_SIZE);
         }
         fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx target=%u started erase\n",

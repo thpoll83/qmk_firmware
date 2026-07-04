@@ -269,6 +269,10 @@ void doom_shim_release_frame(void) {
 static bool    compose_overlays_active;
 static uint8_t shared_pal8[NUM_SHARED_PALETTES][16];
 
+// True while this half is a lockstep drone showing the automap (defined with
+// the mirror block below) — the compose blacks out the status-bar band then.
+static bool doom_mirror_drone_map_active(void);
+
 extern uint8_t *frame_buffer_0;   // defined below (video-backend globals)
 
 // 8bpp port of upstream draw_vpatch (pico/i_video.c): identical decode, every
@@ -471,6 +475,13 @@ void doom_shim_compose_line(uint8_t *line, unsigned y) {
     // bar overdraws them, so feed black underneath).
     if (y >= MAIN_VIEWHEIGHT && shim_disp_video_type == VIDEO_TYPE_DOUBLE) {
         memset(line, 0, SCREENWIDTH);
+        // Drone automap: leave the band BLACK — the automap only covers the
+        // 168 view rows (f_h = SCREENHEIGHT - ST_HEIGHT), and composing the
+        // 1:1 tiny status bar under it read as "the bottom key row does not
+        // clear" (field round 11). The master keeps its status bar.
+        if (doom_mirror_drone_map_active()) {
+            return;
+        }
     } else {
         unsigned sy = y < MAIN_VIEWHEIGHT ? y : y - 32;
         memcpy(line, frame_buffer_0 + sy * SCREENWIDTH, SCREENWIDTH);
@@ -779,11 +790,15 @@ void I_SetOPLDriverVer(opl_driver_ver_t ver) { (void)ver; }
 // ---------------------------------------------------------------------------
 
 #include "d_loop.h"           // ticdata/BACKUPTICS/gametic, D_StartDoomMirror
+#include "net_client.h"       // drone (the mirror's spectator mode)
 #include "doom/g_game.h"      // G_DeferedInitNew
+#include "doom/d_main.h"      // D_StartTitle (BREAK -> back to the attract)
+#include "doom/am_map.h"      // AM_Stop
 #include "doom_mirror.h"
 
-extern void G_DoNewGame(boolean net);   // g_game.c (not in g_game.h)
-extern void AM_SetCheating(int level);  // am_map.c POLYKYBD_QMK reveal hook
+extern void G_DoNewGame(boolean net);    // g_game.c (not in g_game.h)
+extern void AM_SetCheating(int level);   // am_map.c POLYKYBD_QMK reveal hook
+extern void AM_SetFatLines(int fat);     // am_map.c POLYKYBD_QMK 2x2 dots + big arrow
 
 _Static_assert(sizeof(ticcmd_t) == DOOM_MIRROR_CMD_BYTES, "mirror carries raw ticcmds");
 
@@ -794,13 +809,15 @@ char    player_name[MAXPLAYERNAME];
 // core1 launches (and the per-session state reset with it), so there is no
 // cross-core ordering to worry about.
 static bool     s_mirror_master;
-static bool     s_mirror_started;   // slave: a START has been applied
-static uint32_t s_start_applied;    // slave: seq of the last applied START
+static bool     s_mirror_started;    // slave: a START has been applied
+static bool     s_mirror_game_sent;  // master: a START went out (gates BREAK)
+static uint32_t s_start_applied;     // slave: seq of the last applied START
 
 void doom_shim_set_role(bool master) {
-    s_mirror_master  = master;
-    s_mirror_started = false;
-    s_start_applied  = 0;
+    s_mirror_master    = master;
+    s_mirror_started   = false;
+    s_mirror_game_sent = false;
+    s_start_applied    = 0;
 }
 
 static doom_mirror_t *doom_mirror_box(void) {
@@ -906,20 +923,24 @@ void doom_shim_mirror_new_game(int skill, int episode, int map) {
     m->ctl_out_map   = (uint8_t)map;
     __asm volatile("dmb" ::: "memory");
     m->ctl_out_seq++;
+    s_mirror_game_sent = true;
 }
 
 // Master, game core, from the G_DoPlayDemo / G_DoLoadGame hooks: the sim is
 // about to leave the mirrorable path (demo tics come from the lump; a loaded
-// save restores state the slave doesn't have). Slave role: no-op — its own
-// attract demo plays through the same code pre-START.
+// save restores state the slave doesn't have). Only meaningful while a
+// mirrored game is engaged — the attract loop restarts its demo every cycle
+// and must NOT keep breaking the slave's own attract view. Slave role: no-op
+// (its attract plays through the same G_DoPlayDemo).
 void doom_shim_mirror_break(void) {
-    if (!s_mirror_master) {
+    if (!s_mirror_master || !s_mirror_game_sent) {
         return;
     }
     doom_mirror_t *m = doom_mirror_box();
     if (!m || m->tx_overflow) {
         return;
     }
+    s_mirror_game_sent = false;
     m->ctl_out_kind = DOOM_MIRROR_MSG_BREAK;
     __asm volatile("dmb" ::: "memory");
     m->ctl_out_seq++;
@@ -927,7 +948,9 @@ void doom_shim_mirror_break(void) {
 
 // Slave, game core, polled from I_StartTic (which runs every built tic, drone
 // or not): apply a freshly received START — replay the master's G_DoNewGame
-// with the mirrored settings and engage drone lockstep at the same gametic.
+// with the mirrored settings and engage drone lockstep at the same gametic —
+// and unwind a BREAK / dead mirror back to this half's OWN attract loop (the
+// viewport then shows the title/demo again instead of a frozen frame).
 static void doom_mirror_poll_start(void) {
     if (s_mirror_master) {
         return;
@@ -935,6 +958,22 @@ static void doom_mirror_poll_start(void) {
     doom_mirror_t *m = doom_mirror_box();
     if (!m) {
         return;
+    }
+    if ((m->break_in || m->rx_broken) && s_mirror_started) {
+        printf("doom: mirror BREAK — back to the attract\n");
+        s_mirror_started = false;
+        drone = false;
+        net_client_connected = false;
+        if (automapactive) {
+            AM_Stop();
+        }
+        m->break_in  = 0;
+        m->rx_broken = 0;
+        D_StartTitle();
+        return;
+    }
+    if (m->break_in) {
+        m->break_in = 0; // not engaged — nothing to unwind
     }
     uint32_t seq = m->start_in_seq;
     if (seq == s_start_applied) {
@@ -952,6 +991,7 @@ static void doom_mirror_poll_start(void) {
     printf("doom: mirror START tic=%u e%um%u skill %u\n",
            (unsigned)tic, m->start_in_epi, m->start_in_map, m->start_in_skill);
     AM_SetCheating(2);   // drone never runs the 3D renderer -> IDDT reveal
+    AM_SetFatLines(1);   // 2x2 dots + doubled arrow for the keycap dither
     G_DeferedInitNew((skill_t)m->start_in_skill, m->start_in_epi, m->start_in_map, false);
     G_DoNewGame(false);
     D_StartDoomMirror((int)tic);
@@ -963,21 +1003,44 @@ static void doom_mirror_poll_start(void) {
 // Core0-side gates for the slave's blit/pad split (racy plain reads of
 // core1 state — worth at most one frame of lag).
 bool doom_shim_slave_view_live(void) {
-    if (s_mirror_master || !s_mirror_started) {
+    if (s_mirror_master) {
         return false;
     }
     doom_mirror_t *m = doom_mirror_box();
-    if (!m || m->break_in || m->rx_broken || !net_client_connected) {
+    if (!m || m->break_in || m->rx_broken) {
         return false;
     }
-    return gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_FINALE;
+    if (!s_mirror_started) {
+        // Attract mirror: the slave's OWN title/demo fills the viewport until
+        // a real game starts (field round 11 — "a good idea until game
+        // start"; both halves' attracts run near-parallel, unsynced).
+        return true;
+    }
+    if (!net_client_connected) {
+        return false;
+    }
+    if (gamestate == GS_LEVEL) {
+        // Only the automap — never the drone's first-person view (it flashed
+        // for the few tics before the injected TAB landed, field round 11).
+        return automapactive;
+    }
+    return gamestate == GS_INTERMISSION || gamestate == GS_FINALE;
 }
 
 // True while the live mirror sits in a level without its automap up — the
 // core0 side answers by injecting the map-toggle key (AM_Stop() runs on
-// every level exit, so each new level needs a fresh toggle).
+// every level exit, so each new level needs a fresh toggle). NOT view_live
+// gated: while the map is down the in-level view is deliberately not blitted,
+// which is exactly when the toggle is needed.
 bool doom_shim_slave_wants_map_key(void) {
-    return doom_shim_slave_view_live() && gamestate == GS_LEVEL && !automapactive;
+    if (s_mirror_master || !s_mirror_started || !net_client_connected) {
+        return false;
+    }
+    return gamestate == GS_LEVEL && !automapactive;
+}
+
+static bool doom_mirror_drone_map_active(void) {
+    return !s_mirror_master && s_mirror_started && automapactive;
 }
 
 // ---------------------------------------------------------------------------

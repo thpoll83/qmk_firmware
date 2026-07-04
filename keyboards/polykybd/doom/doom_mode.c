@@ -513,7 +513,7 @@ static void doom_frame_pump(bool with_hud) {
         // here IS the game's frame pace. (Single view buffer: the next frame
         // renders into the buffer being blitted — tearing accepted for v1.)
         if (doom_shim_take_frame()) {
-            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA);
+            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, false);
             doom_shim_release_frame();
             if (with_hud) {
                 doom_hud_tick();
@@ -710,7 +710,9 @@ static void doom_slave_tick(void) {
     // turning (blocked on the frame semaphore otherwise) to see a START.
     if (doom_shim_take_frame()) {
         if (s_slave_blit) {
-            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA);
+            // Bottom key row stays with the control pad — its thumb/cursor-key
+            // legends matter more than the map's bottom band (field round 13).
+            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, true);
         }
         doom_shim_release_frame();
         s_frames++;

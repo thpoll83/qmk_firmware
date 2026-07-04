@@ -6,6 +6,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define DOOM_FB_WIDTH  320
 #define DOOM_FB_HEIGHT 200
@@ -26,8 +27,12 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
 // Engine-frame variant: scanline-major over the full 200-row canvas, each
 // line sourced + overlay-composed by doom_shim_compose_line() (menus, HUD,
 // status bar), so the sequential vpatch bookkeeping holds. Uses the arena
-// compose scratch (DOOM_ARENA_COMPOSE_OFF).
-void doom_blit_frame_engine(const uint8_t *luma256);
+// compose scratch (DOOM_ARENA_COMPOSE_OFF). With skip_bottom_row the
+// viewport's bottom key row is left untouched — the slave mirror keeps its
+// thumb/cursor-key legends there (the lost canvas band is the map's bottom
+// 20 % and the map follows the player anyway; field round 13). Safe to stop
+// the compose early: its vpatch bookkeeping fully resets per frame.
+void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row);
 
 // Blank every keycap display of this half (entering game mode: the keys
 // outside the viewport keep whatever legend they held otherwise).

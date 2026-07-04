@@ -129,7 +129,7 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
 // dithered into per-column band buffers (5 x 360 B OLED tiles, carved from
 // the arena next to the 320 B line — no spare .bss in a doom build), and a
 // finished 40-row band is pushed to its 5 keycaps.
-void doom_blit_frame_engine(const uint8_t *luma256) {
+void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row) {
     uint8_t *scratch = doom_arena_at(DOOM_ARENA_COMPOSE_OFF);
     if (!scratch) {
         return;
@@ -137,9 +137,10 @@ void doom_blit_frame_engine(const uint8_t *luma256) {
     uint8_t *line  = scratch;                     // 320 B, 8bpp PLAYPAL indices
     uint8_t *bands = scratch + DOOM_FB_WIDTH;     // 5 x (5 pages x 72 B) 1bpp tiles
     const uint16_t band_bytes = (uint16_t)(SCREEN_HEIGHT / 8) * SCREEN_WIDTH; // 360
+    const uint8_t  view_rows  = skip_bottom_row ? DOOM_VIEW_ROWS - 1 : DOOM_VIEW_ROWS;
 
     doom_shim_compose_begin();
-    for (uint8_t vr = 0; vr < DOOM_VIEW_ROWS; ++vr) {
+    for (uint8_t vr = 0; vr < view_rows; ++vr) {
         memset(bands, 0, (size_t)DOOM_VIEW_COLS * band_bytes);
         for (uint8_t ln = 0; ln < SCREEN_HEIGHT; ++ln) {
             const uint16_t y = (uint16_t)vr * SCREEN_HEIGHT + ln;

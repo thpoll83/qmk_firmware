@@ -150,7 +150,37 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 12 → v13 (2026-07-04, UNTESTED): mirror polish + WHX install over
+- **Round 13 → v14 (2026-07-04, UNTESTED): map legibility + pad bottom row +
+  the "Success" flood found.** Round 13 confirmed **`polyctl doom install`
+  works on hardware** (`FONTPACK_COMMIT: DOOMWAD slave=0xca master=1 ->
+  installed`, 440 sectors, both halves in one pass). v14:
+  1. **Player arrow blinks + 3×** (`am_map.c` fat mode): draws the SIMPLE
+     `player_arrow` at `3*FRACUNIT` (the elaborate cheat arrow reads as
+     noise at keycap resolution; 2× was still "hard to make out") and blinks
+     ~1 Hz via `amclock & 16` — the position pops out of the dithered walls.
+  2. **The slave map/attract no longer blits the bottom key row**
+     (`doom_blit_frame_engine(..., skip_bottom_row)`): the thumb/cursor-key
+     legends stay with the control pad (update_displays exempts the thumb
+     row from the viewport skip). The lost band is the map's bottom 20 %,
+     and the map follows the player anyway.
+  3. **The "Success" log flood is FOUND and fixed (host)**: `PolyKybd.
+     get_console_output()` returned `str(e)` when the HID console read
+     raised — publishing the exception text as if the KEYBOARD printed it —
+     and hidapi's `hid_error()` on Windows is famously **"Success"** for a
+     failed read. A busy/rebooting device (mid .bin flash) produced one
+     bare "Success" line per 250 ms console poll. Now logged at debug level,
+     never returned as console output.
+  4. **Open observation (not yet reproduced): the FIRST game session right
+     after the WHX install had no slave viewport** (attract/map missing;
+     the master ran fine); a keyboard replug fixed it and the next session
+     worked fully. The slave's own console is unmonitored so the failing
+     check is unknown — candidates: doom_ctl adoption, `doom_session_start`
+     guard, engine boot. If it recurs: capture the slave half's console
+     (`QMK console` on the slave's USB) during the first post-install entry.
+     Also seen: the WHX flash window itself puts a burst into the split-link
+     counter (`crc_err 0→152, giveup 0→156` during the ~7 min transfer,
+     frozen afterwards — zero steady-state errors), worth a look someday.
+- **Round 12 → v13 (2026-07-04, tested ✓ install works): mirror polish + WHX install over
   HID.** Round 12 confirmed **the lockstep mirror works on hardware** (map on
   the slave, player arrow tracking the master's game). v13 addresses the
   three field notes + the next roadmap chunk:

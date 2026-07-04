@@ -1337,19 +1337,21 @@ void AM_drawPlayers(void)
     if (!netgame)
     {
 #if POLYKYBD_QMK
-	// Fat mode doubles the arrow (the scale param multiplies the line
-	// character's map-unit coords) — at keycap resolution the normal
-	// arrow is a couple of dither dots.
-	fixed_t arrow_scale = am_fat ? 2 * FRACUNIT : 0;
-	if (cheating)
+	if (am_fat)
+	{
+	    // Keycap map: the arrow blinks (~1 Hz, amclock advances at 35 Hz in
+	    // AM_Ticker) so the player position pops out of the dithered walls,
+	    // and draws the SIMPLE arrow at 3x — the elaborate cheat arrow
+	    // (cheating is always 2 on the mirror drone) reads as noise at
+	    // 72x40/keycap, and 2x was still "hard to make out" (field round 13).
+	    if (amclock & 16)
+		return;   // blink off-phase: no arrow this frame
 	    AM_drawLineCharacter
-		(cheat_player_arrow, arrlen(cheat_player_arrow), arrow_scale,
+		(player_arrow, arrlen(player_arrow), 3 * FRACUNIT,
 		 mobj_angle(plr->mo), WHITE, plr->mo->xy.x, plr->mo->xy.y);
-	else
-	    AM_drawLineCharacter
-		(player_arrow, arrlen(player_arrow), arrow_scale, mobj_angle(plr->mo),
-		 WHITE, plr->mo->xy.x, plr->mo->xy.y);
-#else
+	    return;
+	}
+#endif
 	if (cheating)
 	    AM_drawLineCharacter
 		(cheat_player_arrow, arrlen(cheat_player_arrow), 0,
@@ -1358,7 +1360,6 @@ void AM_drawPlayers(void)
 	    AM_drawLineCharacter
 		(player_arrow, arrlen(player_arrow), 0, mobj_angle(plr->mo),
 		 WHITE, plr->mo->xy.x, plr->mo->xy.y);
-#endif
 	return;
     }
 

@@ -569,14 +569,52 @@ bool doom_shim_face_oled(uint8_t *oled_buf, const uint8_t *luma256) {
     uint8_t       row[SHIM_FACE_MAX_W];
     vpatchlist_t  vp;
     memset(&vp, 0, sizeof(vp));
-    unsigned       off = 0;
-    const unsigned x0  = (128u - 2 * w) / 2;
-    const unsigned y0  = (64u - 2 * h) / 2;
+
+    // Pass 1 — per-face auto-levels (fontconvert's -N lesson: the sprite
+    // palette is brownish-dark, luma mostly 40..150, so an ungained dither
+    // reads dim — field round 15 "could be brighter / more contrast"). Take
+    // the ~90th-percentile luma of the drawn pixels as the white point (a
+    // plain max would let one bright highlight cap the gain).
+    unsigned off = 0;
+    uint16_t hist[16] = {0};
+    uint32_t counted  = 0;
     for (unsigned sy = 0; sy < h; sy++) {
         memset(row, 0, w);
         off = draw_vpatch8(row, p, &vp, off);
         for (unsigned sx = 0; sx < w; sx++) {
             const uint8_t v = luma256[row[sx]];
+            if (v > 8) {   // skip background/outline
+                hist[v >> 4]++;
+                counted++;
+            }
+        }
+    }
+    unsigned ref = 255;
+    if (counted) {
+        uint32_t cum = 0;
+        for (int b = 15; b >= 0; b--) {
+            cum += hist[b];
+            if (cum * 10 >= counted) {   // top 10 % reached
+                ref = (unsigned)(b * 16 + 15);
+                break;
+            }
+        }
+    }
+    const unsigned gain = (ref > 32) ? (255u * 256u) / ref : 256u;   // 8.8 fixed
+
+    // Pass 2 — decode again (cheap) and dither the gained luma at 2x.
+    memset(&vp, 0, sizeof(vp));
+    off = 0;
+    const unsigned x0 = (128u - 2 * w) / 2;
+    const unsigned y0 = (64u - 2 * h) / 2;
+    for (unsigned sy = 0; sy < h; sy++) {
+        memset(row, 0, w);
+        off = draw_vpatch8(row, p, &vp, off);
+        for (unsigned sx = 0; sx < w; sx++) {
+            unsigned v = ((unsigned)luma256[row[sx]] * gain) >> 8;
+            if (v > 255) {
+                v = 255;
+            }
             for (unsigned dy = 0; dy < 2; dy++) {
                 const unsigned Y = y0 + 2 * sy + dy;
                 for (unsigned dx = 0; dx < 2; dx++) {

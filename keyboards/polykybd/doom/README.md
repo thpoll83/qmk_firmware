@@ -150,7 +150,24 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 14 → v15 (2026-07-04, UNTESTED): DOOM-UI uniformity round.** All
+- **Round 15 → v16 (2026-07-04, UNTESTED): face + digit legibility.** Round
+  15 confirmed v15 works: the doomguy **animates** on the status OLED, the
+  DOOM digits render, the attract behaves as designed. Two legibility fixes:
+  1. **Face auto-levels** ("could be brighter / more contrast"): the sprite
+     palette is brownish-dark (luma mostly 40..150), so the ungained Bayer
+     dither read dim. `doom_shim_face_oled` now runs two passes — pass 1
+     takes the ~90th-percentile luma of the drawn pixels as the white point
+     (fontconvert's `-N` lesson: a plain max lets one bright highlight cap
+     the gain), pass 2 dithers the gained luma. Per-face adaptive, so the
+     pain/god faces brighten by their own measure.
+  2. **Solid DOOM digits** ("most numbers appear unreadable"): the tall-
+     number threshold sat at luma ≥ 96 while the digit gradient spans
+     40..153 (checked against the generated luma table) — only the brightest
+     half of each stroke survived, i.e. patchy digits. Threshold now 36:
+     the full red body renders solid, the near-black outline (< 20) stays
+     dark. Same lesson as the round-10 weapon silhouettes: at keycap
+     resolution, solid shapes read; partial fills read as noise.
+- **Round 14 → v15 (2026-07-04, tested ✓ works): DOOM-UI uniformity round.** All
   four asks lean on one new capability: decoding the game's own status-bar
   vpatches OUTSIDE the canvas compose (a zeroed `vpatchlist_t` entry turns
   the shim's `draw_vpatch8` into a plain row-major decoder).

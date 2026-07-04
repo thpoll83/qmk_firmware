@@ -258,7 +258,11 @@ bool doom_blit_stat_num_key(uint8_t row, uint8_t disp_col, const uint32_t *label
         const uint8_t gy = (uint8_t)(y0 + hmax - h);
         for (uint8_t sy = 0; sy < h; ++sy) {
             for (uint8_t sx = 0; sx < w; ++sx) {
-                if (luma256[dec[(size_t)sy * w + sx]] >= 96) {
+                // Threshold BELOW the darkest red of the digit gradient
+                // (saturation-floored luma 40..153) but above the near-black
+                // outline (<20) — 96 kept only the brightest half and made
+                // the digits patchy (field round 15, "unreadable").
+                if (luma256[dec[(size_t)sy * w + sx]] >= 36) {
                     const uint16_t X = x + sx;
                     const uint8_t  Y = (uint8_t)(gy + sy);
                     buf[(size_t)(Y >> 3) * stride + X] |= (uint8_t)(1u << (Y & 7));

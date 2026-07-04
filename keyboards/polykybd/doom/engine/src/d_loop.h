@@ -99,5 +99,10 @@ typedef struct {
 void D_StartPicoNetGame();
 extern ticcmd_set_t ticdata[BACKUPTICS]; // we share the ticdata with piconet
 #endif
+#if POLYKYBD_QMK
+// PolyKybd slave mirror: engage lockstep-drone mode at the master's
+// G_DoNewGame gametic (doom_mirror.h).
+void D_StartDoomMirror(int tic);
+#endif
 #endif
 

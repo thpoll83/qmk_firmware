@@ -688,10 +688,13 @@ void I_CheckIsScreensaver(void) {}
 void I_SetWindowTitle(const char *title) { (void)title; }
 void I_StartFrame(void) {}
 
+static void doom_mirror_poll_start(void); // slave START apply (mirror block below)
+
 void I_StartTic(void) {
     // Drain the key events doom_process_record collected on core0 (SPSC ring
     // in doom_mode.c) into the engine — this runs on the game core.
     doom_shim_progress = 4;
+    doom_mirror_poll_start();
     uint8_t key;
     bool    pressed;
     while (doom_pop_key_event(&key, &pressed)) {
@@ -766,13 +769,44 @@ boolean I_MusicIsPlaying(void) { return false; }
 void I_SetOPLDriverVer(opl_driver_ver_t ver) { (void)ver; }
 
 // ---------------------------------------------------------------------------
-// piconet: single-player stub — never connects, never receives tics. The real
-// implementation rides USER_SYNC_DOOM_TIC over the split UART (both halves
-// simulate in input-lockstep; see DOOM_FEASIBILITY.md).
+// piconet: the slave lockstep mirror (doom_mirror.h). Upstream's I2C piconet
+// is a 2-player lobby; here the seam carries a ONE-WAY mirror instead — the
+// master half stays a plain single-player game (net_client_connected false,
+// so d_loop's netgame gating never touches its timing) whose ticcmds stream
+// to the slave, and the slave becomes a chocolate-doom drone at the master's
+// G_DoNewGame (D_StartDoomMirror). The lobby entry points stay stubs — the
+// menus never offer multiplayer on a keyboard.
 // ---------------------------------------------------------------------------
+
+#include "d_loop.h"           // ticdata/BACKUPTICS/gametic, D_StartDoomMirror
+#include "doom/g_game.h"      // G_DeferedInitNew
+#include "doom_mirror.h"
+
+extern void G_DoNewGame(boolean net);   // g_game.c (not in g_game.h)
+extern void AM_SetCheating(int level);  // am_map.c POLYKYBD_QMK reveal hook
+
+_Static_assert(sizeof(ticcmd_t) == DOOM_MIRROR_CMD_BYTES, "mirror carries raw ticcmds");
 
 boolean net_client_connected = false;
 char    player_name[MAXPLAYERNAME];
+
+// Which side of the mirror this engine instance is. Set by doom_mode.c before
+// core1 launches (and the per-session state reset with it), so there is no
+// cross-core ordering to worry about.
+static bool     s_mirror_master;
+static bool     s_mirror_started;   // slave: a START has been applied
+static uint32_t s_start_applied;    // slave: seq of the last applied START
+
+void doom_shim_set_role(bool master) {
+    s_mirror_master  = master;
+    s_mirror_started = false;
+    s_start_applied  = 0;
+}
+
+static doom_mirror_t *doom_mirror_box(void) {
+    _Static_assert(sizeof(doom_mirror_t) <= DOOM_ARENA_MIRROR_BYTES, "mirror fits its arena carve");
+    return (doom_mirror_t *)doom_arena_at(DOOM_ARENA_MIRROR_OFF);
+}
 
 void piconet_init(void) {}
 void piconet_start_host(int8_t deathmatch, int8_t epi, int8_t skill) { (void)deathmatch; (void)epi; (void)skill; }
@@ -789,8 +823,162 @@ int piconet_get_lobby_state(lobby_state_t *state) {
     return 0;
 }
 
-void piconet_new_local_tic(int tic) { (void)tic; }
-int piconet_maybe_recv_tic(int fromtic) { (void)fromtic; return -1; }
+// Master, game core, once per locally built tic (d_loop.c BuildNewTic calls
+// this unconditionally in the PolyKybd build): publish the cmd to the TX
+// ring. maketic counts from 0 each session and only ever advances by one, so
+// the ring is indexed by absolute tic; any mismatch means the ring overflowed
+// (core0 / the bridge stalled for ~2 s) and the mirror is dead for the
+// session — cheaper and safer than resync machinery for a failure that only
+// a dead split link produces.
+void piconet_new_local_tic(int tic) {
+    if (!s_mirror_master) {
+        return;
+    }
+    doom_mirror_t *m = doom_mirror_box();
+    if (!m || m->tx_overflow) {
+        return;
+    }
+    if ((uint32_t)tic != m->tx_w || m->tx_w - m->tx_r >= DOOM_MIRROR_TX_LEN) {
+        m->tx_overflow = 1;
+        return;
+    }
+    memcpy(m->tx_cmds[m->tx_w % DOOM_MIRROR_TX_LEN],
+           &ticdata[tic % BACKUPTICS].cmds[consoleplayer], DOOM_MIRROR_CMD_BYTES);
+    __asm volatile("dmb" ::: "memory");
+    m->tx_w = (uint32_t)tic + 1;
+}
+
+// Slave, game core, from GetLowTic while connected: move cmds from the
+// rolling window into ticdata and advance recvtic. Bounded by the ticdata
+// ring (BACKUPTICS=5): only slots for tics < gametic + BACKUPTICS are free —
+// the rest stays queued in the window. If the producer's roll head has moved
+// past a tic we still need, the slave stalled beyond the window — freeze
+// (the drone shows its frozen frame; the next START re-arms).
+int piconet_maybe_recv_tic(int fromtic) {
+    if (s_mirror_master) {
+        return fromtic;
+    }
+    doom_mirror_t *m = doom_mirror_box();
+    if (!m) {
+        return fromtic;
+    }
+    if (m->break_in || m->rx_broken) {
+        net_client_connected = false;
+        return fromtic;
+    }
+    uint32_t t = (uint32_t)fromtic;
+    while (t < m->rx_w && t < (uint32_t)gametic + BACKUPTICS) {
+        if (t < m->rx_r) {
+            m->rx_broken = 1;
+            net_client_connected = false;
+            break;
+        }
+        ticcmd_set_t *set = &ticdata[t % BACKUPTICS];
+        memset(set, 0, sizeof(*set));   // players 1-3 not ingame
+        memcpy(&set->cmds[0], m->rx_cmds[t % DOOM_MIRROR_RX_LEN], DOOM_MIRROR_CMD_BYTES);
+        __asm volatile("dmb" ::: "memory");
+        if (t < m->rx_r) {              // producer rolled over the slot mid-copy
+            m->rx_broken = 1;
+            net_client_connected = false;
+            break;
+        }
+        t++;
+    }
+    return (int)t;
+}
+
+// Master, game core, from the G_DoNewGame hook: publish START(settings, tic)
+// on the latest-wins control channel. gametic is the tic G_Ticker is
+// currently running — the first tic the fresh level consumes, and its cmd is
+// already in the slave's rolling window (built, and mirrored, before it ran).
+void doom_shim_mirror_new_game(int skill, int episode, int map) {
+    if (!s_mirror_master) {
+        return;
+    }
+    doom_mirror_t *m = doom_mirror_box();
+    if (!m || m->tx_overflow) {
+        return;
+    }
+    m->ctl_out_kind  = DOOM_MIRROR_MSG_START;
+    m->ctl_out_tic   = (uint32_t)gametic;
+    m->ctl_out_skill = (uint8_t)skill;
+    m->ctl_out_epi   = (uint8_t)episode;
+    m->ctl_out_map   = (uint8_t)map;
+    __asm volatile("dmb" ::: "memory");
+    m->ctl_out_seq++;
+}
+
+// Master, game core, from the G_DoPlayDemo / G_DoLoadGame hooks: the sim is
+// about to leave the mirrorable path (demo tics come from the lump; a loaded
+// save restores state the slave doesn't have). Slave role: no-op — its own
+// attract demo plays through the same code pre-START.
+void doom_shim_mirror_break(void) {
+    if (!s_mirror_master) {
+        return;
+    }
+    doom_mirror_t *m = doom_mirror_box();
+    if (!m || m->tx_overflow) {
+        return;
+    }
+    m->ctl_out_kind = DOOM_MIRROR_MSG_BREAK;
+    __asm volatile("dmb" ::: "memory");
+    m->ctl_out_seq++;
+}
+
+// Slave, game core, polled from I_StartTic (which runs every built tic, drone
+// or not): apply a freshly received START — replay the master's G_DoNewGame
+// with the mirrored settings and engage drone lockstep at the same gametic.
+static void doom_mirror_poll_start(void) {
+    if (s_mirror_master) {
+        return;
+    }
+    doom_mirror_t *m = doom_mirror_box();
+    if (!m) {
+        return;
+    }
+    uint32_t seq = m->start_in_seq;
+    if (seq == s_start_applied) {
+        return;
+    }
+    __asm volatile("dmb" ::: "memory");
+    uint32_t tic = m->start_in_tic;
+    s_start_applied = seq;
+    if (m->rx_r > tic) {
+        // The window no longer holds the start tic's cmd — lockstep from that
+        // tic is impossible. Stay down until the next START.
+        m->rx_broken = 1;
+        return;
+    }
+    printf("doom: mirror START tic=%u e%um%u skill %u\n",
+           (unsigned)tic, m->start_in_epi, m->start_in_map, m->start_in_skill);
+    AM_SetCheating(2);   // drone never runs the 3D renderer -> IDDT reveal
+    G_DeferedInitNew((skill_t)m->start_in_skill, m->start_in_epi, m->start_in_map, false);
+    G_DoNewGame(false);
+    D_StartDoomMirror((int)tic);
+    m->rx_broken = 0;
+    m->break_in  = 0;
+    s_mirror_started = true;
+}
+
+// Core0-side gates for the slave's blit/pad split (racy plain reads of
+// core1 state — worth at most one frame of lag).
+bool doom_shim_slave_view_live(void) {
+    if (s_mirror_master || !s_mirror_started) {
+        return false;
+    }
+    doom_mirror_t *m = doom_mirror_box();
+    if (!m || m->break_in || m->rx_broken || !net_client_connected) {
+        return false;
+    }
+    return gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_FINALE;
+}
+
+// True while the live mirror sits in a level without its automap up — the
+// core0 side answers by injecting the map-toggle key (AM_Stop() runs on
+// every level exit, so each new level needs a fresh toggle).
+bool doom_shim_slave_wants_map_key(void) {
+    return doom_shim_slave_view_live() && gamestate == GS_LEVEL && !automapactive;
+}
 
 // ---------------------------------------------------------------------------
 // picoflash: savegame sector writes — disabled in v1 (savegames skipped per

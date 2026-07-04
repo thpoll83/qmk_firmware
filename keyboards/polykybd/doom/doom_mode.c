@@ -1,18 +1,27 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Game-mode state machine for the Doom easter egg (dev harness, master half
-// only). Owns the runtime handoff of the overlay RAM pool (DOOM_FEASIBILITY.md
-// "Challenge 2"): entering game mode borrows the 226,800 B `overlays[]` arena
-// as game memory; leaving hands it back blank exactly as a fresh boot / pack
-// wipe would, and the host repopulates it on its next overlay push.
+// Game-mode state machine for the Doom easter egg. Owns the runtime handoff
+// of the overlay RAM pool (DOOM_FEASIBILITY.md "Challenge 2"): entering game
+// mode borrows the 226,800 B `overlays[]` arena as game memory; leaving hands
+// it back blank exactly as a fresh boot / pack wipe would, and the host
+// repopulates it on its next overlay push. The MASTER half runs the real
+// game; the SLAVE half runs its own engine instance as a lockstep-drone
+// mirror of it (a ticcmd stream over the split bridge — doom_mirror.h)
+// and shows the automap on its viewport while the outer columns stay the
+// ESC/weapon control pad.
 #include QMK_KEYBOARD_H
 
 #include "doom_mode.h"
 #include "doom_arena.h"
 #include "doom_blit.h"
 #include "doom_game.h"
+#include "doom_mirror.h"
 #include "doom_playpal_luma.h"
+
+#include "split_sync.h"        // sync_succeeded (mirror bridge sends)
+#include "polymod_crc32.h"     // crc32_1byte (mirror message framing)
+#include "transactions.h"      // USER_SYNC_OVERLAY_MAP_DATA (mirror rides it)
 
 #include "bridge_helper.h"
 #include "side.h"               // is_left_side() (HUD column selection)
@@ -240,24 +249,24 @@ uint8_t *doom_arena_zone(int *size) {
 }
 
 static void doom_session_reset(void); // HUD + counters, defined by the HUD block
+static void doom_mirror_session_reset(void); // master pump statics, mirror block
 
-static void doom_enter(void) {
+// Pool take + engine boot, shared by the master's doom_enter and the slave's
+// mirror session. False when blocked (fw flash in flight) or unviable — the
+// caller retries / stays out.
+static bool doom_session_start(void) {
     // Never take the pool while the fw/font-pack stager owns the split link and
     // flash — the two "exclusive" modes don't compose.
     if (fw_staging_fw_up_active() || fw_staging_commit_pending()) {
-        return;
+        return false;
     }
-    // Release anything still registered host-side (the trigger letters have
-    // already been sent; nothing may stay held while we swallow events).
-    clear_keyboard();
-
     // The runtime handoff: the overlay pool becomes the game arena. The pool
     // is entirely reconstructible — the host re-sends overlays on every app
     // switch, so nothing is lost (see DOOM_FEASIBILITY.md, Challenge 2).
     s_fb = (uint8_t *)get_overlays();
     // Zero the whole shared block: the engine's zero-init statics live at its
     // front (.doom_shared is not crt0-zeroed) — every entry starts the game
-    // from virgin static state.
+    // from virgin static state (including the mirror mailbox).
     memset(__doom_shared_base__, 0, (size_t)(__doom_shared_end__ - __doom_shared_base__));
     // The engine statics eat the pool from the front; refuse to start if that
     // left the zone unviable (the link only guards the 226,800 B total).
@@ -266,18 +275,30 @@ static void doom_enter(void) {
     if (zone_size < 40 * 1024) {
         printf("doom: zone too small (%d) — engine statics have outgrown the pool\n", zone_size);
         s_fb = NULL;
-        return;
+        return false;
     }
     doom_fire_init(doom_arena_framebuffer());
+    s_evq_w = s_evq_r = 0;
+    doom_session_reset();        // fresh HUD + frame/stats counters per entry
+    doom_mirror_session_reset(); // fresh mirror-pump handshakes per entry
+    doom_shim_set_role(is_usb_host_side());
+    doom_engine_start();
+    return true;
+}
+
+static void doom_enter(void) {
+    if (!doom_session_start()) {
+        return;
+    }
+    // Release anything still registered host-side (the trigger letters have
+    // already been sent; nothing may stay held while we swallow events).
+    clear_keyboard();
 
     s_active     = true;
     s_esc_down   = false;
     s_last_frame = 0;
-    s_evq_w = s_evq_r = 0;
-    doom_session_reset(); // fresh HUD + frame/stats counters per entry
     set_last_update((int32_t)timer_read32());
     doom_blit_blank_all();
-    doom_engine_start();
 }
 
 static void doom_exit(void) {
@@ -483,21 +504,9 @@ static void doom_hud_tick(void) {
     s_hud_shown = true;
 }
 
-void doom_tick(void) {
-    // Relay the game core's buffered printf output first — also after exit, so
-    // late lines still reach the console.
-    doom_shim_drain_core1_log();
-    if (!s_active || !is_usb_host_side()) {
-        return;
-    }
-    if (s_esc_down && timer_elapsed32(s_esc_down_at) > DOOM_EXIT_HOLD_MS) {
-        doom_exit();
-        return;
-    }
-    // Hold off the idle/fade/turn-off pipeline — the pulse/jitter machinery
-    // must never repaint the keycaps while the blitter owns them.
-    set_last_update((int32_t)timer_read32());
-
+// Frame consume + diagnostics, shared by the master and the slave halves
+// (each pumps ITS OWN engine instance's frames onto ITS OWN keycaps).
+static void doom_frame_pump(bool with_hud) {
     if (s_engine_running) {
         // Frame consume: the game (core1) signals a completed frame and blocks
         // on display_frame_freed once it is a full frame ahead — the blit pace
@@ -506,7 +515,9 @@ void doom_tick(void) {
         if (doom_shim_take_frame()) {
             doom_blit_frame_engine(DOOM_PLAYPAL_LUMA);
             doom_shim_release_frame();
-            doom_hud_tick();
+            if (with_hud) {
+                doom_hud_tick();
+            }
             if (s_frames++ == 0) {
                 printf("doom: first frame on the keycaps\n");
             }
@@ -540,6 +551,212 @@ void doom_tick(void) {
     s_last_frame = timer_read32();
     doom_fire_step(doom_arena_framebuffer());
     doom_blit_frame(doom_arena_framebuffer(), DOOM_FB_HEIGHT, doom_fire_luma());
+}
+
+// ---------------------------------------------------------------------------
+// Slave lockstep mirror (doom_mirror.h): master core0 drains the shim's TX
+// ring / control outbox over the split bridge; the slave boots its own
+// engine on the synced doom_ctl flag and blits the drone's automap view on
+// its 5x5 viewport while a mirrored game is live.
+// ---------------------------------------------------------------------------
+
+static uint32_t s_mir_ctl_seq_sent;      // last ctl_out_seq delivered to the slave
+static uint32_t s_mir_backoff_at;        // bridge-failure send backoff
+static bool     s_mir_dead_reported;     // tx_overflow logged + BREAK sent
+
+static void doom_mirror_session_reset(void) {
+    s_mir_ctl_seq_sent  = 0;
+    s_mir_backoff_at    = 0;
+    s_mir_dead_reported = false;
+}
+
+// The QMK transaction table is full (32-id cap), so mirror messages
+// multiplex onto USER_SYNC_OVERLAY_MAP_DATA by their distinct payload size
+// (72 B vs the 68 B map chunks / 37 B MRU snapshots), exactly like the MRU
+// snapshots already do. No cross-talk: the host's overlay-map commands are
+// frozen while game mode holds the pool, so the id is otherwise silent.
+static bool doom_mirror_send(doom_mirror_msg_t *msg, uint8_t retries) {
+    msg->crc32 = crc32_1byte(((uint8_t *)msg) + 4, sizeof(*msg) - 4, 0);
+    if (sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, msg, sizeof(*msg), retries))) {
+        s_mir_backoff_at = 0;
+        return true;
+    }
+    s_mir_backoff_at = timer_read32();
+    return false;
+}
+
+// Master core0, once per housekeeping pass: at most ONE bridge transaction —
+// the control channel (START/BREAK, latest-wins) first, then a batch of up
+// to 7 queued ticcmds. Loss is retried inherently (tx_r only advances on a
+// confirmed send), so TIC messages use few retries and a short backoff keeps
+// a dead bridge from stalling the main loop every pass.
+static void doom_mirror_master_pump(void) {
+    if (!s_engine_running) {
+        return;
+    }
+    doom_mirror_t *m = (doom_mirror_t *)doom_arena_at(DOOM_ARENA_MIRROR_OFF);
+    if (!m) {
+        return;
+    }
+    if (s_mir_backoff_at && timer_elapsed32(s_mir_backoff_at) < 250) {
+        return;
+    }
+    doom_mirror_msg_t msg;
+    const uint32_t seq = m->ctl_out_seq;
+    if (seq != s_mir_ctl_seq_sent) {
+        memset(&msg, 0, sizeof(msg));
+        __asm volatile("dmb" ::: "memory");
+        msg.kind  = m->ctl_out_kind;
+        msg.tic   = m->ctl_out_tic;
+        msg.skill = m->ctl_out_skill;
+        msg.epi   = m->ctl_out_epi;
+        msg.map   = m->ctl_out_map;
+        __asm volatile("dmb" ::: "memory");
+        if (m->ctl_out_seq != seq) {
+            return; // core1 superseded it mid-read; send the newer one next pass
+        }
+        if (doom_mirror_send(&msg, 3)) {
+            s_mir_ctl_seq_sent = seq;
+        }
+        return;
+    }
+    if (m->tx_overflow) {
+        // The ring outlived the bridge (~2 s of undeliverable cmds) — the
+        // lockstep is unrecoverable this session (exit + re-enter resets).
+        // One best-effort BREAK drops the slave to its pad; if even that is
+        // undeliverable the slave keeps its last frame until session exit.
+        if (!s_mir_dead_reported) {
+            s_mir_dead_reported = true;
+            printf("doom: mirror tx overflow — mirror off for this session\n");
+            memset(&msg, 0, sizeof(msg));
+            msg.kind = DOOM_MIRROR_MSG_BREAK;
+            (void)doom_mirror_send(&msg, 3);
+        }
+        return;
+    }
+    const uint32_t r = m->tx_r;
+    const uint32_t pending = m->tx_w - r;
+    if (!pending) {
+        return;
+    }
+    uint8_t k = pending > DOOM_MIRROR_MSG_MAX_CMDS ? DOOM_MIRROR_MSG_MAX_CMDS : (uint8_t)pending;
+    memset(&msg, 0, sizeof(msg));
+    msg.kind  = DOOM_MIRROR_MSG_TIC;
+    msg.count = k;
+    msg.tic   = r;
+    for (uint8_t i = 0; i < k; ++i) {
+        memcpy(msg.cmds[i], m->tx_cmds[(r + i) % DOOM_MIRROR_TX_LEN], DOOM_MIRROR_CMD_BYTES);
+    }
+    if (doom_mirror_send(&msg, 2)) {
+        m->tx_r = r + k;
+    }
+}
+
+// Slave-half game mode: driven purely by the synced doom_ctl flag — a rising
+// edge boots THIS half's own engine instance on its own core1 from its own
+// pool + WHX slot; a falling edge (the master exited) tears it down. The
+// engine idles unseen through the attract/menu phase (frames consumed and
+// dropped — the pad keeps the keycaps); when the master starts a real game
+// the mirrored START turns it into a lockstep drone and the blitter takes
+// the viewport with the force-revealed automap.
+static bool     s_slave;        // mirror session up (pool + engine)
+static bool     s_slave_blit;   // viewport currently owned by the blitter
+static uint32_t s_slave_tab_at; // automap re-toggle throttle
+
+static void doom_slave_stop(void) {
+    s_slave      = false;
+    s_slave_blit = false;
+    doom_engine_stop();
+    s_fb = NULL;
+    // Same pool hand-back contract as doom_exit: blank + reconstructible.
+    reset_overlay_buffers();
+    reset_overlay_usage();
+    reset_overlay_mapping();
+    reset_fragment_context();
+    request_disp_refresh();
+}
+
+static void doom_slave_tick(void) {
+    const bool want = get_local_state()->doom_ctl != 0;
+    if (want && !s_slave) {
+        // Without game data this half stays a plain control pad (flash the
+        // WHX to the slave over BOOTSEL like the master, see README.md).
+        if (!doom_whx_present() || !doom_session_start()) {
+            return; // blocked (fw flash) -> retried while doom_ctl stays set
+        }
+        s_slave       = true;
+        s_slave_blit  = false;
+        s_slave_tab_at = 0;
+        printf("doom: slave mirror engine up\n");
+        return;
+    }
+    if (!want) {
+        if (s_slave) {
+            doom_slave_stop();
+        }
+        return;
+    }
+    if (!s_engine_running) {
+        return;
+    }
+    const bool live = doom_shim_slave_view_live();
+    if (live != s_slave_blit) {
+        s_slave_blit = live;
+        if (!live) {
+            request_disp_refresh(); // hand the viewport back to the pad legends
+        }
+    }
+    // Consume frames even while not blitting — the engine loop must keep
+    // turning (blocked on the frame semaphore otherwise) to see a START.
+    if (doom_shim_take_frame()) {
+        if (s_slave_blit) {
+            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA);
+        }
+        doom_shim_release_frame();
+        s_frames++;
+    }
+    // AM_Stop() runs on every level exit — re-toggle the automap whenever a
+    // live in-level mirror is showing the first-person view instead.
+    if (doom_shim_slave_wants_map_key() && timer_elapsed32(s_slave_tab_at) > 500) {
+        s_slave_tab_at = timer_read32();
+        doom_push_key_event(KC_TAB, true);
+        doom_push_key_event(KC_TAB, false);
+    }
+    // Periodic vitals, mirroring the master's stats line.
+    if (s_stats_at == 0) {
+        s_stats_at = timer_read32();
+    } else if (timer_elapsed32(s_stats_at) > 5000) {
+        s_stats_at = timer_read32();
+        printf("doom: slave stats frames=%lu gametic=%d live=%u vt=%u\n",
+               (unsigned long)s_frames, doom_shim_gametic(),
+               (unsigned)s_slave_blit, doom_shim_video_type());
+    }
+}
+
+bool doom_slave_viewport_live(void) {
+    return s_slave_blit;
+}
+
+void doom_tick(void) {
+    // Relay the game core's buffered printf output first — also after exit, so
+    // late lines still reach the console.
+    doom_shim_drain_core1_log();
+    if (!is_usb_host_side()) {
+        doom_slave_tick();
+        return;
+    }
+    if (!s_active) {
+        return;
+    }
+    if (s_esc_down && timer_elapsed32(s_esc_down_at) > DOOM_EXIT_HOLD_MS) {
+        doom_exit();
+        return;
+    }
+    // Hold off the idle/fade/turn-off pipeline — the pulse/jitter machinery
+    // must never repaint the keycaps while the blitter owns them.
+    set_last_update((int32_t)timer_read32());
+    doom_mirror_master_pump(); // before the (slow) blit: keeps the tic stream fresh
+    doom_frame_pump(true);
 }
 
 bool doom_hid_frozen(uint8_t cmd) {

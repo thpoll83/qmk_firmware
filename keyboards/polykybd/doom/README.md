@@ -128,6 +128,8 @@ arm-none-eabi-objcopy -O binary .build/polykybd_split72_default.elf doom.bin
 python3 keyboards/polykybd/doom/tools/whx2uf2.py doom1.whx doom1_whx.uf2
 # hold BOOTSEL while plugging the MASTER half, copy doom1_whx.uf2 to RPI-RP2
 # (doom1.whx fetch commands: engine/PROVENANCE.md)
+# For the v12 slave mirror (automap on the slave half): flash the SAME
+# doom1_whx.uf2 to the SLAVE half too (BOOTSEL on that half, once).
 
 # 3. Type IDDQD. ESC-hold ≥1.5 s exits.
 ```
@@ -142,10 +144,44 @@ buffer artifacts (status-bar region, tearing), and the ~4 KB residual
 ChibiOS heap. Re-entry after exit is UNTESTED-by-design: engine `.data` is
 not re-initialised — test one game entry per power cycle first. HID GET_ID
 etc. keep answering during play (only the pool-writing overlay commands are
-frozen); the slave half keeps its normal legends (master-only milestone).
+frozen); the slave half runs the control pad, and — with its own WHX flashed
+— the v12 lockstep mirror (automap on its viewport once a real game starts).
 
 ### Hardware-test log
 
+- **Round 11 → v12 (2026-07-04, UNTESTED): slave lockstep mirror — the first
+  "bigger chunk" of the roadmap.** The slave half now boots ITS OWN engine
+  instance when game mode engages (synced `doom_ctl`), and mirrors the
+  master's game in **input lockstep**: every ticcmd the master builds is
+  published through the engine's piconet seam (`d_loop.c` — upstream's I2C
+  2-player layer, repurposed one-way) into a TX ring that `doom_tick` drains
+  over the split bridge; when the master's `G_DoNewGame` fires, a START
+  (skill/episode/map + gametic) turns the slave into a chocolate-doom
+  **drone** (`D_StartDoomMirror`: builds no local tics, runs exactly the
+  received ones). Both sims start from `G_InitNew`'s `M_ClearRandom` on
+  identical WHX data, so they stay bit-identical from the shared start tic.
+  The slave then **force-reveals the automap** (`AM_SetCheating(2)` — the
+  drone never runs the 3D renderer, so `ML_MAPPED` never accumulates; IDDT
+  reveal shows all walls + things) and blits it on its 5×5 viewport (player
+  arrow = the master's live position) while the outer columns keep the
+  ESC/weapon pad; intermission/finale frames blit too. Off-mirror (attract
+  demo, menus) the slave engine idles unseen and the pad owns the keycaps.
+  Transport: mirror messages multiplex onto `USER_SYNC_OVERLAY_MAP_DATA` by
+  distinct payload size (the QMK transaction table is at its 32-id cap; the
+  id is otherwise silent in game mode — the host's overlay pushes are
+  frozen), 7 cmds per 72 B message, a 128-tic rolling RX window on the
+  slave, at most one bridge transaction per housekeeping pass with a 250 ms
+  backoff on failure. **To test, the SLAVE half needs the WHX flashed once
+  too** (same `doom1_whx.uf2` via BOOTSEL on that half); without it the
+  slave stays a plain control pad. Known limitations (by design): in-level
+  cheats typed on the master (IDDQD/IDKFA…) are key events, not ticcmds —
+  they diverge the slave sim harmlessly (IDCLEV re-syncs everything via its
+  fresh START; a savegame load sends BREAK → slave drops to pad until the
+  next new game); the attract demo is not mirrored (demo tics come from the
+  lump, hence the demo-phase pad). Watch for on hardware: whether the
+  automap renders through the same frame path on the drone (the main render
+  risk), and the slave console's `doom: mirror START tic=…` + periodic
+  `doom: slave stats … live=1` lines.
 - **Round 1 (2026-07-03): core1 wedged mid-printf.** The engine froze inside
   its 4th boot `printf` — core1 must never enter QMK's console path (sendchar
   → `usb_endpoint_in_send` does `osalSysLock()` + a blocking ChibiOS-thread

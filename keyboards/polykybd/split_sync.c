@@ -23,6 +23,10 @@
 #include "fill_overlay.h"
 #include "state.h"
 #include "side.h"
+#ifdef POLYKYBD_DOOM
+#include "doom/doom_arena.h"
+#include "doom/doom_mirror.h"
+#endif
 #include "matrix_helper.h"
 #include "poly_util.h"
 
@@ -292,14 +296,28 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
 // distinct sizes for the size-based dispatch in the handler below to work.
 _Static_assert(MRU_SYNC_BYTES != sizeof(overlay_map_sync_t),
                "MRU and overlay-map payloads must differ in size (shared transaction id)");
+#ifdef POLYKYBD_DOOM
+// The doom mirror messages are the third tenant of this id (also size-keyed;
+// no cross-talk — the host's overlay-map commands are frozen in game mode).
+_Static_assert(sizeof(doom_mirror_msg_t) != sizeof(overlay_map_sync_t) &&
+               sizeof(doom_mirror_msg_t) != MRU_SYNC_BYTES,
+               "doom mirror payload must differ in size (shared transaction id)");
+#endif
 
 // Handles incoming overlay mapping data on bridge with CRC32 validation.
-// Also dispatches MRU snapshots, which share this transaction id (distinct size).
+// Also dispatches MRU snapshots (and, in POLYKYBD_DOOM builds, the doom
+// mirror messages), which share this transaction id by distinct size.
 void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == MRU_SYNC_BYTES) {
         user_sync_mru_data_handler(in_len, in_data, out_len, out_data);
         return;
     }
+#ifdef POLYKYBD_DOOM
+    if (in_len == sizeof(doom_mirror_msg_t)) {
+        user_sync_doom_mirror_handler(in_len, in_data, out_len, out_data);
+        return;
+    }
+#endif
     SYNC_VALIDATE_OR_RETURN(overlay_map_sync_t);
     const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
     set_10bit_overlay_mapping((uint8_t *)data->mapping);
@@ -322,3 +340,57 @@ void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out
     }
 }
 
+
+#ifdef POLYKYBD_DOOM
+// Doom slave lockstep mirror (doom/doom_mirror.h): feed received ticcmds into
+// the arena's rolling window / hand control messages to the game core. While
+// game mode is not (yet) active on this half the arena does not exist — the
+// message is ACKed and dropped (pre-session attract cmds are disposable; the
+// window realigns on the first message that lands after the session is up).
+void user_sync_doom_mirror_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    SYNC_VALIDATE_OR_RETURN(doom_mirror_msg_t);
+    const doom_mirror_msg_t* msg = (const doom_mirror_msg_t *)in_data;
+    doom_mirror_t* m = (doom_mirror_t *)doom_arena_at(DOOM_ARENA_MIRROR_OFF);
+    if (m != NULL) {
+        switch (msg->kind) {
+            case DOOM_MIRROR_MSG_TIC: {
+                uint32_t t = msg->tic;
+                uint8_t  n = msg->count > DOOM_MIRROR_MSG_MAX_CMDS ? DOOM_MIRROR_MSG_MAX_CMDS
+                                                                   : msg->count;
+                if (t > m->rx_w) {
+                    // Gap: cmds streamed while this half had no session (or the
+                    // master's ring reset). Realign the window here — a consumer
+                    // engaged across the gap detects it via rx_r and freezes.
+                    m->rx_r = m->rx_w = t;
+                }
+                for (uint8_t i = 0; i < n; ++i, ++t) {
+                    if (t < m->rx_w) {
+                        continue; // duplicate from a bridge retry
+                    }
+                    memcpy(m->rx_cmds[t % DOOM_MIRROR_RX_LEN], msg->cmds[i], DOOM_MIRROR_CMD_BYTES);
+                    __asm volatile("dmb" ::: "memory");
+                    m->rx_w = t + 1;
+                    if (m->rx_w - m->rx_r > DOOM_MIRROR_RX_LEN) {
+                        m->rx_r = m->rx_w - DOOM_MIRROR_RX_LEN; // roll the window
+                    }
+                }
+                break;
+            }
+            case DOOM_MIRROR_MSG_START:
+                m->start_in_tic   = msg->tic;
+                m->start_in_skill = msg->skill;
+                m->start_in_epi   = msg->epi;
+                m->start_in_map   = msg->map;
+                __asm volatile("dmb" ::: "memory");
+                m->start_in_seq++;
+                break;
+            case DOOM_MIRROR_MSG_BREAK:
+                m->break_in = 1;
+                break;
+            default:
+                break;
+        }
+    }
+    ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+}
+#endif // POLYKYBD_DOOM

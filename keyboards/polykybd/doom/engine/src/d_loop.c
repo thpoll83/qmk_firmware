@@ -215,10 +215,18 @@ static boolean BuildNewTic(void) {
     ticdata[maketic % BACKUPTICS].cmds[localplayer].ingame = true;
 #endif
 #if USE_PICO_NET
+#if POLYKYBD_QMK
+    // PolyKybd mirror: publish EVERY locally built tic, connected or not — the
+    // master half stays a plain single-player game (net_client_connected
+    // false) while its cmds stream to the slave's rolling window; the shim
+    // no-ops on the slave / with the mirror off. See doom_mirror.h.
+    piconet_new_local_tic(maketic);
+#else
     if (net_client_connected) {
         // piconet uses ticdata directly, so we need it to be initialized above
         piconet_new_local_tic(maketic);
     }
+#endif
 #endif
 
     ++maketic;
@@ -702,7 +710,13 @@ void TryRunTics(void) {
                 local_playeringame[j] = set->cmds[j].ingame;
                 lplayer_count += local_playeringame[j];
             }
-            if (net_client_connected && lplayer_count < 2) {
+            if (net_client_connected && lplayer_count < 2
+#if POLYKYBD_QMK
+                // A mirror drone follows a SINGLE-player game — one ingame
+                // player is its normal steady state, not a peer loss.
+                && !drone
+#endif
+            ) {
                 net_client_connected = false;
                 piconet_stop();
             }
@@ -933,5 +947,27 @@ void D_StartNetGame(net_gamesettings_t *settings,
 void D_StartPicoNetGame() {
     gametic = maketic = recvtic = 0;
     net_client_connected = true;
+}
+#endif
+
+#if POLYKYBD_QMK
+// PolyKybd mirror: turn this (slave) instance into a lockstep drone of the
+// master's single-player game, aligned to the master's gametic at its
+// G_DoNewGame. Called on the game core right after the shim replayed
+// G_DeferedInitNew + G_DoNewGame with the mirrored settings, so the level is
+// loaded and gamestate is GS_LEVEL; from here on BuildNewTic builds nothing
+// (drone) and the only tics that run are the ones received from the master
+// (GetLowTic -> piconet_maybe_recv_tic). See doom_mirror.h.
+void D_StartDoomMirror(int tic) {
+    ticdup   = 1;
+    gametic  = tic;
+    maketic  = tic;
+    recvtic  = tic;
+    drone    = true;
+    net_client_connected = true;
+    local_playeringame[0] = true;
+    for (int i = 1; i < NET_MAXPLAYERS; ++i) {
+        local_playeringame[i] = false;
+    }
 }
 #endif

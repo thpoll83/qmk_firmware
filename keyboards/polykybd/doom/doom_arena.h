@@ -45,14 +45,20 @@ extern "C" {
 // the vpatch data offsets advance strictly by row, like upstream's scanout).
 #define DOOM_ARENA_COMPOSE_BYTES (320 + 5 * 360)
 
+// Slave lockstep mirror mailbox (doom_mirror.h doom_mirror_t): the master TX
+// ring + START outbox and the slave RX rolling window + START inbox. Sized
+// with headroom over sizeof(doom_mirror_t) (static-asserted in doom_mode.c).
+#define DOOM_ARENA_MIRROR_BYTES 1664
+
 #define DOOM_ARENA_FB_OFF      0
 #define DOOM_ARENA_PD_OFF      (DOOM_ARENA_FB_OFF + DOOM_ARENA_FB_BYTES)
 #define DOOM_ARENA_VPATCH_OFF  (DOOM_ARENA_PD_OFF + DOOM_ARENA_PD_BYTES)
 #define DOOM_ARENA_COMPOSE_OFF (DOOM_ARENA_VPATCH_OFF + DOOM_ARENA_VPATCH_BYTES)
+#define DOOM_ARENA_MIRROR_OFF  (DOOM_ARENA_COMPOSE_OFF + DOOM_ARENA_COMPOSE_BYTES)
 // Zone memory (Z_Init) takes everything from here to the game stack: with
 // ~21 K of statics ahead of the arena that is ~84 K — comfortably above
 // upstream's ~58 K (zone + wrapped-malloc heap) working set.
-#define DOOM_ARENA_ZONE_OFF   (DOOM_ARENA_COMPOSE_OFF + DOOM_ARENA_COMPOSE_BYTES)
+#define DOOM_ARENA_ZONE_OFF   (DOOM_ARENA_MIRROR_OFF + DOOM_ARENA_MIRROR_BYTES)
 
 // Arena base (= first byte after the engine statics) + offset, or NULL while
 // game mode is inactive (doom_mode.c).

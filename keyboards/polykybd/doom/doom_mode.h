@@ -100,6 +100,19 @@ bool doom_shim_hud_stats(int *health, int *armor, int *ammo);
 // owned, ready_slot = slot of the weapon in hand. False outside a level.
 bool doom_shim_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot);
 
+// Slave lockstep mirror (doom_mirror.h). Role is set by doom_mode.c before
+// core1 launches; the view-live gate tells core0 whether the drone's frame
+// (automap / intermission / finale) owns the slave viewport, and the map-key
+// gate asks for a TAB injection (AM_Stop clears the automap on every level
+// exit, so each new level re-toggles it).
+void doom_shim_set_role(bool master);
+bool doom_shim_slave_view_live(void);
+bool doom_shim_slave_wants_map_key(void);
+
+// True while the slave half's 5x5 viewport is owned by the mirror blitter —
+// update_displays then leaves every non-pad key alone (doom_mode.c).
+bool doom_slave_viewport_live(void);
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }
@@ -124,5 +137,6 @@ static inline bool doom_hid_frozen(uint8_t cmd) { (void)cmd; return false; }
 // Never queried when doom is compiled out (doom_ctl is never set), but the
 // update_displays filter references it unconditionally.
 static inline bool doom_key_is_control(uint16_t keycode) { (void)keycode; return true; }
+static inline bool doom_slave_viewport_live(void) { return false; }
 
 #endif

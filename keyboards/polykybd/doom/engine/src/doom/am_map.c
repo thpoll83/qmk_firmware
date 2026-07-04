@@ -198,6 +198,16 @@ static const mline_t thintriangle_guy[] = {
 static isb_int8_t cheating = 0;
 static isb_int8_t grid = 0;
 
+#if POLYKYBD_QMK
+// PolyKybd mirror: the slave drone never runs the 3D renderer, so ML_MAPPED
+// (set in R_StoreWallRange as walls come into view) never accumulates and a
+// vanilla automap would stay empty there. The mirror sets the IDDT reveal
+// level directly (2 = all walls + things) when it engages.
+void AM_SetCheating(int level) {
+    cheating = (isb_int8_t)level;
+}
+#endif
+
 static int 	leveljuststarted = 1; 	// kluge until AM_LevelInit() is called
 
 boolean    	automapactive = false;

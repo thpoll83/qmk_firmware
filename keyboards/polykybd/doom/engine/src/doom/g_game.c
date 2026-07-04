@@ -1731,6 +1731,14 @@ void G_LoadGame (char* name)
 }
 
 void G_DoLoadGame (void) {
+#if POLYKYBD_QMK
+    // PolyKybd mirror: a loaded save restores mid-level state the slave has
+    // no data for — break the mirror rather than diverge silently.
+    {
+        extern void doom_shim_mirror_break(void);
+        doom_shim_mirror_break();
+    }
+#endif
 #if !NO_USE_LOAD
     int savedleveltime;
 
@@ -2005,8 +2013,17 @@ void G_DoNewGame(boolean net)
     fastparm = false;
     nomonsters = false;
     G_InitNew (d_skill, d_episode, d_map);
-    gameaction = ga_nothing; 
-} 
+    gameaction = ga_nothing;
+#if POLYKYBD_QMK
+    // PolyKybd mirror: a real game (re)started — the master shim publishes a
+    // START(settings, gametic) so the slave drone replays G_InitNew at the
+    // same tic; no-op on the slave / with the mirror off (doom_mirror.h).
+    {
+        extern void doom_shim_mirror_new_game(int skill, int episode, int map);
+        doom_shim_mirror_new_game((int)d_skill, d_episode, d_map);
+    }
+#endif
+}
 
 
 void
@@ -2477,6 +2494,15 @@ void G_DoPlayDemo (void)
     int i, lumpnum, episode, map;
     int demoversion;
 
+#if POLYKYBD_QMK
+    // PolyKybd mirror: demo tics come from the lump, not from BuildTiccmd, so
+    // they never reach the tic stream — the mirror can't follow (master shim
+    // sends BREAK, slave falls back to its control pad until the next START).
+    {
+        extern void doom_shim_mirror_break(void);
+        doom_shim_mirror_break();
+    }
+#endif
     lumpnum = W_GetNumForName(defdemoname);
     gameaction = ga_nothing;
     should_be_const byte *demobuffer = W_CacheLumpNum(lumpnum, PU_STATIC);

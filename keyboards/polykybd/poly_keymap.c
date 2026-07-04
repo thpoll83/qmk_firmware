@@ -1778,7 +1778,12 @@ void update_displays(enum refresh_mode mode) {
                     bool doom_handled = false;
                     if (local_state->doom_ctl) {
                         uint16_t pad = doom_pad_keycode((uint8_t)(r + offset), c);
-                        if (pad >= KC_1 && pad <= KC_7) {
+                        if (pad == KC_NO && doom_slave_viewport_live()) {
+                            // The mirror blitter owns every non-pad key while
+                            // the automap/intermission view is live — leave
+                            // its frame alone (the pad columns still render).
+                            doom_handled = true;
+                        } else if (pad >= KC_1 && pad <= KC_7) {
                             uint8_t slot = (uint8_t)(pad - KC_1); // 0-based
                             kdisp_set_buffer(0x00);
                             if (local_state->doom_wpn_owned & (uint8_t)(1u << slot)) {

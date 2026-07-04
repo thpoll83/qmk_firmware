@@ -128,9 +128,12 @@ bool oled_task_user(void) {
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {
         // Game mode: the DOOM logo on the status OLED — master directly,
-        // slave via the synced control-pad flag.
-        oled_scroll_off();
+        // slave via the synced control-pad flag. Once the frame has been
+        // rendered the panel's HARDWARE scroll takes over (the driver only
+        // activates it when the buffer is clean, and repeated identical
+        // writes stay non-dirty — zero traffic while scrolling).
         oled_write_raw((const char *)DOOM_LOGO_OLED, sizeof(DOOM_LOGO_OLED));
+        oled_scroll_left();
 #endif
     } else if ((get_local_state()->flags & DISP_IDLE) != 0) {
         oled_render_logos();

@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #ifdef POLYKYBD_DOOM
 
@@ -33,6 +34,10 @@ uint16_t doom_pad_keycode(uint8_t row, uint8_t col);
 // Synced weapon state for the slave pad renderer (from poly_sync_t via the
 // master): owned_mask bit N-1 = slot N owned, ready_slot = weapon in hand.
 bool doom_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot);
+
+// Weapon-pad icon for a number-key slot (kdisp_draw_bitmap layout, from the
+// shareware pickup sprites) or NULL — the pad then renders the digit.
+const uint8_t *doom_weapon_icon(uint8_t slot, uint8_t *w, uint8_t *h);
 
 // Frame/housekeeping tick, called from housekeeping_task_user. Runs the game
 // only on the master (USB) half; a no-op on the slave and while inactive.
@@ -109,6 +114,10 @@ static inline uint16_t doom_pad_keycode(uint8_t row, uint8_t col) {
 static inline bool doom_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot) {
     (void)owned_mask; (void)ready_slot;
     return false;
+}
+static inline const uint8_t *doom_weapon_icon(uint8_t slot, uint8_t *w, uint8_t *h) {
+    (void)slot; (void)w; (void)h;
+    return NULL;
 }
 static inline void doom_tick(void) {}
 static inline bool doom_hid_frozen(uint8_t cmd) { (void)cmd; return false; }

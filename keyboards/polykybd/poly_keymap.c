@@ -1782,25 +1782,35 @@ void update_displays(enum refresh_mode mode) {
                             uint8_t slot = (uint8_t)(pad - KC_1); // 0-based
                             kdisp_set_buffer(0x00);
                             if (local_state->doom_wpn_owned & (uint8_t)(1u << slot)) {
-                                // "[n]" marks the weapon in hand, "n" an owned slot;
-                                // unowned slots stay dark.
-                                uint32_t txt[4];
-                                uint8_t  n     = 0;
-                                bool     ready = local_state->doom_wpn_ready == slot + 1;
-                                if (ready) txt[n++] = '[';
-                                txt[n++] = (uint32_t)('1' + slot);
-                                if (ready) txt[n++] = ']';
-                                txt[n] = 0;
-                                draw_legend_cx(txt, 23);
+                                // Sprite silhouette + slot digit in the corner;
+                                // a bottom bar marks the weapon in hand.
+                                // Unowned slots stay dark.
+                                uint8_t  iw = 0, ih = 0;
+                                const uint8_t *icon = doom_weapon_icon((uint8_t)(slot + 1), &iw, &ih);
+                                uint32_t digit[2] = {(uint32_t)('1' + slot), 0};
+                                if (icon) {
+                                    kdisp_write_gfx_text(mid_fonts, 1, BUFFER_X + 1, 12, digit);
+                                    kdisp_draw_bitmap((int8_t)(BUFFER_X + (SCREEN_WIDTH - iw) / 2),
+                                                      (int8_t)((SCREEN_HEIGHT - ih) / 2 + 3),
+                                                      icon, (int8_t)iw, (int8_t)ih);
+                                } else {
+                                    draw_legend_cx(digit, 23);
+                                }
+                                if (local_state->doom_wpn_ready == slot + 1) {
+                                    static const uint8_t ready_bar[18] = {
+                                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                    }; // 72x2 solid underline
+                                    kdisp_draw_bitmap(BUFFER_X, SCREEN_HEIGHT - 2, ready_bar, 72, 2);
+                                }
                             }
                             kdisp_send_buffer();
                             doom_handled = true;
                         } else if (pad == KC_ESC) {
-                            const uint32_t* esc = to_static_text(KC_ESC, state);
+                            // Same look as the master's exit-hint corner key.
                             kdisp_set_buffer(0x00);
-                            if (esc) {
-                                draw_legend_cx(esc, 23);
-                            }
+                            kdisp_write_gfx_text(mid_fonts, 1, BUFFER_X + 24, 13, U"hold");
+                            draw_legend_cx(U"Esc", 36);
                             kdisp_send_buffer();
                             doom_handled = true;
                         } else if (!doom_key_is_control(keycode)) {

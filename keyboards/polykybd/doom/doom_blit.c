@@ -208,12 +208,11 @@ void doom_blit_stat_key(uint8_t row, uint8_t disp_col, const uint32_t *label, co
     kdisp_set_buffer(0x00);
     // Word label in the 10 px mid font on the top line (y=13 — a 10 px glyph
     // occupies roughly [y-10, y], so this clears the top edge; y=10 clipped
-    // ascenders, field round 9); the value full-size below it (y=23 is the
-    // centred-legend baseline for g_all_fonts — +10 drops it into the lower
-    // half, clear of the label).
+    // ascenders, field round 9); the value full-size below it (y=36 — 33
+    // still overlapped the label on hardware, field round 10).
     kdisp_write_gfx_text(hud_label_fonts, 1, center_x(hud_label_fonts, 1, label), 13, label);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count,
-                         center_x(g_all_fonts, g_all_font_count, value), 33, value);
+                         center_x(g_all_fonts, g_all_font_count, value), 36, value);
     kdisp_send_buffer();
 }
 

@@ -152,6 +152,23 @@ frozen); the slave half keeps its normal legends (master-only milestone).
   suspend core1 doesn't have). Fixed with the `-Wl,--wrap=putchar_` core-aware
   relay in `qmk_shim.c` (core1 → lock-free ring, drained by `doom_tick`), plus
   the `doom_shim_progress` breadcrumb + 2 s no-frame heartbeat.
+- **Round 10 (2026-07-04): pad works; icon/scroll/spacing polish (v11).**
+  Confirmed: ESC corners, status-OLED logos on both halves, clean fresh-boot
+  title (the warmup fix — the residual "dirt" was likely the demo floor).
+  Changes: (1) HUD values y 33→36 (still overlapped the labels on hardware).
+  (2) The slave ESC corner now matches the master's "hold/Esc" two-line look
+  (it had rendered the firmware's standard Esc legend). (3) Weapon pad
+  renders sprite SILHOUETTES from the shareware pickup lumps (chainsaw /
+  pistol / shotgun / chaingun / launcher — `tools/weapon_icons.py`; the
+  dithered sprites were unreadable dust, solid silhouettes read instantly)
+  with the slot digit in the corner and a bottom bar marking the weapon in
+  hand; plasma/BFG stay digits (sprites absent from the shareware IWAD, and
+  unobtainable in it anyway). (4) Status-OLED logo uses the panel's HARDWARE
+  horizontal scroll (the driver activates it once the buffer is clean; no
+  SPI traffic while scrolling). Open: the log-flooding "Success" lines
+  during a .bin flash could not be located by source grep in either repo —
+  need one verbatim line from the field log to pin the emitter. Menu + map
+  on the slave half = the lockstep milestone, next.
 - **Round 9 (2026-07-03): control-surface round.** Viewport shift confirmed
   working; HUD labels clipped at the top (mid-font baseline was y=10 —
   ascenders clipped; now y=13) and move down one row. New in v10: (1) **ESC

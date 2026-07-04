@@ -22,6 +22,7 @@
 #include "base/multicore/core1.h"
 
 #include "doomkeys.h"           // engine key codes (doom_translate_key)
+#include "doom_weapon_icons.h"  // slave weapon-pad bitmaps (shareware sprites)
 #include "hardware/structs/psm.h"
 
 #ifdef POLYKYBD_DOOM
@@ -324,6 +325,15 @@ uint16_t doom_pad_keycode(uint8_t row, uint8_t col) {
 
 bool doom_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot) {
     return s_engine_running && doom_shim_weapon_state(owned_mask, ready_slot);
+}
+
+const uint8_t *doom_weapon_icon(uint8_t slot, uint8_t *w, uint8_t *h) {
+    if (slot >= 8 || !DOOM_WPN_ICONS[slot].bmp) {
+        return NULL;
+    }
+    *w = DOOM_WPN_ICONS[slot].w;
+    *h = DOOM_WPN_ICONS[slot].h;
+    return DOOM_WPN_ICONS[slot].bmp;
 }
 
 bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t col) {

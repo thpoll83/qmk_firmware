@@ -120,10 +120,20 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   legend instead of NACKing. This **decouples "add a font face" from the protocol**: within
   v10 the script set can grow freely (the host may offer more scripts than a keyboard has;
   older keyboards degrade gracefully), so **adding scripts never bumps the protocol again** —
-  only a real wire/semantic change would. `0xFF` stays the query sentinel. **Bump `FW_VERSION` +
+  only a real wire/semantic change would. `0xFF` stays the query sentinel.
+  **v11** reframes the **plain (uncompressed) overlay upload** (cmd `10` / `0x0A`): `modifier`
+  and `segment` now share **one** header byte — `(segment << 4) | (modifier & 0x0F)` — so the
+  header is 4 bytes (`id, cmd, keycode, packed`) and a full 60-byte segment fits the 64-byte
+  report **exactly**. The pre-v11 layout carried modifier and segment in *separate* bytes (5-byte
+  header), leaving only 59 bytes for a 60-byte segment, so the firmware `memcpy`'d 60 bytes and
+  read **1 byte past the report** — harmless on the no-MMU RP2040 but the last byte of each
+  segment was undefined (the old FW-7 finding; fixed in the wire format instead of a bounce
+  buffer). The firmware unpacks the byte in `hid_com.c` case 10 *before* `set_fragment_context_key`,
+  so `adjust_overlay_idx_to_mod` is unchanged; **compressed (`0x10`/`0x11`) and ROI (`0x12`/`0x13`)
+  paths are untouched** (their headers already fit). **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep** — the host connect gate is exact-match.
-- Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
+- Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`, protocol 11+: modifier+segment packed into one header byte), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)
 

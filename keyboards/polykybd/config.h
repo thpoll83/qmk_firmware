@@ -146,7 +146,15 @@
 //     0xFF stays the query sentinel. (v10 is the one-time bump that establishes this
 //     open-ended contract, distinguishing it from the pre-v10 Tengwar-only firmware
 //     that NACKed unknown indices.)
-#define PROTOCOL_VERSION 10
+// v11: plain (uncompressed) overlay upload (cmd 10 / 0x0A) reframed. modifier and
+//      segment now share ONE header byte — (segment << 4) | (modifier & 0x0F) — so
+//      the header shrinks from 5 to 4 bytes and a full 60-byte segment fits the
+//      64-byte report exactly. The old layout carried modifier and segment in
+//      separate bytes, leaving only 59 bytes for the 60-byte segment, so the
+//      firmware read 1 byte past the report (harmless on a no-MMU MCU, but the
+//      last data byte of each segment was undefined). Compressed/ROI paths are
+//      unchanged. Host must match v11 to connect (exact-match gate).
+#define PROTOCOL_VERSION 11
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

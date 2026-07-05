@@ -156,6 +156,50 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 24 → v26 (2026-07-05, UNTESTED): 2nd-run minimap ROOT CAUSE (automap
+  same-level memo), RGB 1/3 + slave-local, right-master reticle col, slave-left
+  viewport shift.** Round 24 (on v25, master-right tried too) reported: 2nd
+  run STILL shows the viewport instead of the minimap (and — new datum — the
+  master log has **no** `tx overflow` line, so the v23 tic theory didn't
+  cover it); RGB too bright + visibly delayed on the slave; the right
+  master's fire reticle rendered one key inward of the key that reacts; the
+  (left) slave's viewport overlapped its weapon pad.
+  1. **2nd-run minimap — found via a `.data` sweep of the map file** (the
+     engine's *initialized* data is the exact set a relaunch does NOT reset;
+     `.bss` lives in `.doom_shared` and is wiped per session):
+     `am_map.c AM_Start`'s `static lastlevel/lastepisode = -1` **and**
+     `stopped = true` are `.data`. Session 2 on the SAME map (always E1M1)
+     skipped `AM_LevelInit()` over the **zeroed** window/scale state → `f_w
+     = 0` → `AM_Drawer` drew nothing → the framebuffer kept the slave's
+     last attract **3D frame**. This is the layer *below* round 18's
+     `automapactive` reset (same family, one more `.data` straggler). Fix:
+     the memo is hoisted (`am_lastlevel/am_lastepisode`) +
+     `AM_ResetSessionMemo()` (also re-arms `stopped`), called from
+     `doom_shim_set_role`'s canonical re-entry reset.
+  2. **Mirror made observable + self-healing** (the slave console is
+     unreachable — round 24 had zero breadcrumbs): the slave's mirror-msg
+     ack byte now carries its drone state (`SYNC_ACK_SIG` = engaged, via
+     `doom_shim_mirror_engaged`); the master logs `slave mirror engaged /
+     not engaged` transitions, `mirror new-game -> START` (core1, via the
+     log relay), `mirror ctl N sent`, and **re-offers the stored START
+     every 1.5 s** while the slave keeps acking un-engaged (each receipt
+     bumps `start_in_seq`, so the slave re-applies; useful within the
+     ~3.7 s RX window of 128 tics).
+  3. **RGB "not too bright"**: all peaks to 1/3 — yellow (33,23,0), blue
+     (0,0,37), red base `level*5/3` (caps 25/255).
+  4. **Slave RGB delay**: a slave with a live drone derives the byte from
+     its OWN engine (`doom_rgb_compute()` on its lockstep sounds/health —
+     zero bridge latency); the synced byte remains the fallback (pad-only
+     slave / broken mirror).
+  5. **Right-master reticle**: the right half's BOTTOM row keeps raw matrix
+     columns (`invert_display`'s col-1 shift covers rows 5-8 only), so the
+     bottom outer display is col **7** — the reticle was drawn at HUD col 6
+     (one key inward of the reacting key). Now `is_left_side() ? 0 : 7`.
+  6. **Slave-left viewport**: as SLAVE the left half's outer TWO display
+     columns are the pad, so `view_to_disp_col` shifts its viewport to cols
+     **2-6** (master-left keeps 1-5; the right half needs no role split —
+     its 0-4 clears both HUD col 6 and pad cols 5+6). Bottom-row attract
+     map adjusted to `{2,3,—,4,—}`.
 - **Round 23b → v25 (2026-07-05, UNTESTED): fixed positional control pad.**
   Field: long play sessions were done on the *second* default layer (`_L1`,
   QWERTY!) because only it has the cursor cluster as the four bottom-right

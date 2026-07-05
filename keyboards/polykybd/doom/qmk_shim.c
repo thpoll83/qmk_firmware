@@ -1044,6 +1044,7 @@ void I_SetOPLDriverVer(opl_driver_ver_t ver) { (void)ver; }
 extern void G_DoNewGame(boolean net);    // g_game.c (not in g_game.h)
 extern void AM_SetCheating(int level);   // am_map.c POLYKYBD_QMK reveal hook
 extern void AM_SetFatLines(int fat);     // am_map.c POLYKYBD_QMK 2x2 dots + big arrow
+extern void AM_ResetSessionMemo(void);   // am_map.c POLYKYBD_QMK same-level .data memo
 
 _Static_assert(sizeof(ticcmd_t) == DOOM_MIRROR_CMD_BYTES, "mirror carries raw ticcmds");
 
@@ -1082,6 +1083,13 @@ void doom_shim_set_role(bool master) {
     net_client_connected = false;
     menuactive           = false;
     automapactive        = false;
+    // The automap's same-level memo + stopped latch are initialized .data
+    // (survive the relaunch) while its window/scale state is zero-init
+    // (wiped): a 2nd session on the same map skipped AM_LevelInit over an
+    // all-zero window — the map drew nothing and the last attract 3D frame
+    // stayed on the slave's viewport (field round 24, "viewport instead of
+    // minimap on the second run" — the layer below round 18's automapactive).
+    AM_ResetSessionMemo();
     s_quit_req           = 0;
     // Sound->RGB counters restart too, so a new session's edge detector
     // (doom_rgb_task) doesn't fire on the previous session's totals.
@@ -1188,8 +1196,15 @@ void doom_shim_mirror_new_game(int skill, int episode, int map) {
     }
     doom_mirror_t *m = doom_mirror_box();
     if (!m || m->tx_overflow) {
+        printf("doom: new-game but mirror ctl unavailable (m=%d ovf=%d)\n",
+               m != NULL, m ? (int)m->tx_overflow : -1);
         return;
     }
+    // Master core1 — this line reaches the console via the core1 log relay,
+    // unlike the slave's START prints (round 24: the second-session mirror
+    // failure had zero visible breadcrumbs).
+    printf("doom: mirror new-game -> START tic=%d e%dm%d skill %d\n",
+           gametic, episode, map, skill);
     m->ctl_out_kind  = DOOM_MIRROR_MSG_START;
     m->ctl_out_tic   = (uint32_t)gametic;
     m->ctl_out_skill = (uint8_t)skill;
@@ -1272,6 +1287,14 @@ static void doom_mirror_poll_start(void) {
     m->rx_broken = 0;
     m->break_in  = 0;
     s_mirror_started = true;
+}
+
+// Core0-side read of the drone engagement for the slave's mirror-message ACK
+// (split_sync.c): the master pump watches this to re-offer a missed START and
+// to log engagement transitions (round 24: the second-session mirror failure
+// had no visible breadcrumb — the slave's console is unreachable).
+bool doom_shim_mirror_engaged(void) {
+    return !s_mirror_master && s_mirror_started;
 }
 
 // Core0-side gates for the slave's blit/pad split (racy plain reads of

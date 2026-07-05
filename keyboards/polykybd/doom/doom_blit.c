@@ -18,6 +18,7 @@
 #include "doom_playpal_luma.h" // ESC-hint STCFN threshold (256 B, per-TU const)
 
 #include "side.h"            // is_left_side() (bottom-row viewport mapping)
+#include "bridge_helper.h"   // is_usb_host_side() (slave-left viewport shift)
 #include "base/disp_array.h"
 #include "base/fontpack.h"   // g_all_fonts (HUD text keys)
 #include "base/shift_reg.h"
@@ -55,13 +56,24 @@ static const uint8_t BAYER4[4][4] = {
 // A 0xFF entry = physical gap: that canvas tile has no display.
 static inline uint8_t view_to_disp_col(uint8_t view_row, uint8_t view_col) {
 #if defined(KEYBOARD_polykybd_split72)
+    // The LEFT half's inward shift depends on its ROLE (field round 24): as
+    // MASTER the outer col 0 is the vitals HUD (viewport cols 1-5), but as
+    // SLAVE the outer TWO display columns (0+1) are the ESC/weapon pad —
+    // cols 1-5 overlapped the inner weapon column, so the slave-left
+    // viewport sits one further in (cols 2-6). The right half needs no
+    // role split: its viewport (0-4) clears both its HUD col (6, master)
+    // and its pad cols (5+6, slave).
+    const bool left_slave = is_left_side() && !is_usb_host_side();
     if (view_row == DOOM_VIEW_ROWS - 1) {
-        static const uint8_t bottom_left[DOOM_VIEW_COLS]  = {1, 2, 3, 0xFF, 4};
-        static const uint8_t bottom_right[DOOM_VIEW_COLS] = {2, 3, 0xFF, 4, 5};
-        return is_left_side() ? bottom_left[view_col] : bottom_right[view_col];
+        static const uint8_t bottom_left_m[DOOM_VIEW_COLS] = {1, 2, 3, 0xFF, 4};
+        static const uint8_t bottom_left_s[DOOM_VIEW_COLS] = {2, 3, 0xFF, 4, 0xFF};
+        static const uint8_t bottom_right[DOOM_VIEW_COLS]  = {2, 3, 0xFF, 4, 5};
+        return is_left_side() ? (left_slave ? bottom_left_s[view_col]
+                                            : bottom_left_m[view_col])
+                              : bottom_right[view_col];
     }
     if (is_left_side()) {
-        return (uint8_t)(view_col + 1);
+        return (uint8_t)(view_col + (left_slave ? 2 : 1));
     }
 #endif
     return view_col;

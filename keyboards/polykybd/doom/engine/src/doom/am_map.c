@@ -588,9 +588,33 @@ void AM_Stop (void)
 //
 //
 //
+#if POLYKYBD_QMK
+// PolyKybd: the same-level memo is initialized .data — NOT re-initialised on
+// a core1 relaunch — while every AM window/scale variable is zero-init
+// (.doom_shared, wiped each session). A second session on the SAME map
+// therefore skipped AM_LevelInit over an all-zero window: AM_Drawer drew
+// nothing (f_w=0) and the framebuffer kept the last attract 3D frame — "the
+// viewport instead of the minimap on the second run" (field rounds 18+24;
+// round 18's automapactive reset fixed the toggle, this fixes the init).
+// Hoisted from AM_Start's function statics so the pre-launch session reset
+// (doom_shim_set_role) can invalidate them.
+static isb_int8_t am_lastlevel = -1, am_lastepisode = -1;
+
+void AM_ResetSessionMemo(void)
+{
+    am_lastlevel = am_lastepisode = -1;
+    stopped = true; // ditto .data (init true); a session torn down mid-map left false
+}
+#endif
+
 void AM_Start (void)
 {
+#if POLYKYBD_QMK
+#define lastlevel   am_lastlevel
+#define lastepisode am_lastepisode
+#else
     static isb_int8_t lastlevel = -1, lastepisode = -1;
+#endif
 
     if (!stopped) AM_Stop();
     stopped = false;
@@ -602,6 +626,10 @@ void AM_Start (void)
     }
     AM_initVariables();
     AM_loadPics();
+#if POLYKYBD_QMK
+#undef lastlevel
+#undef lastepisode
+#endif
 }
 
 //

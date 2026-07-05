@@ -602,11 +602,14 @@ static void doom_hud_tick(void) {
     if (!s_hud_esc_drawn) {
         s_hud_esc_drawn = true;
         doom_blit_esc_key(0, doom_hud_disp_col());
-        // Fire hint (field rounds 17+23): fire is the bottom key of the HUD
-        // column on either master — the physical Ctrl on a left master, the
-        // doom_ctl_keycode position alias on a right one — so the reticle
-        // renders at the HUD column's bottom on both.
-        doom_blit_fire_key(MATRIX_ROWS_PER_SIDE - 1, doom_hud_disp_col());
+        // Fire hint (field rounds 17+23+24): fire is the bottom outer key on
+        // either master — the physical Ctrl on a left master, the
+        // doom_ctl_keycode alias on a right one. ⚠️ The right half's BOTTOM
+        // row keeps raw matrix columns (invert_display's col-1 shift covers
+        // rows 5-8 only), so its outermost bottom display is col 7, not the
+        // upper rows' HUD col 6 — col 6 drew the reticle one key inward
+        // (field round 24).
+        doom_blit_fire_key(MATRIX_ROWS_PER_SIDE - 1, is_left_side() ? 0 : 7);
     }
     int hp, ar, am;
     if (!doom_shim_hud_stats(&hp, &ar, &am)) {
@@ -716,6 +719,17 @@ static bool     s_mir_dead_reported;     // tx_overflow logged + BREAK sent
 static int      s_mir_menu_count;        // last menu snapshot delivered
 static int      s_mir_menu_item_on;
 static uint16_t s_mir_menu_items[DOOM_MIRROR_MENU_MAX_ITEMS];
+// Self-healing START (round 24: the second-session slave stayed in its own
+// attract with zero breadcrumbs): every mirror ack carries the slave's
+// engagement (SYNC_ACK_SIG = drone up); while a START is outstanding and the
+// slave still reports un-engaged, the master re-offers the stored START —
+// the slave's handler bumps start_in_seq on every receipt, so a re-offer
+// re-applies it (G_DeferedInitNew is idempotent for an un-engaged drone).
+static doom_mirror_msg_t s_mir_start_msg;      // last START sent, for re-offers
+static bool     s_mir_start_outstanding;
+static uint32_t s_mir_start_sent_at;
+static bool     s_mir_slave_engaged;           // last acked engagement state
+#define DOOM_MIRROR_START_REOFFER_MS 1500u
 
 static void doom_mirror_session_reset(void) {
     s_mir_ctl_seq_sent  = 0;
@@ -724,6 +738,10 @@ static void doom_mirror_session_reset(void) {
     s_mir_menu_count    = 0;
     s_mir_menu_item_on  = 0;
     memset(s_mir_menu_items, 0, sizeof(s_mir_menu_items));
+    memset(&s_mir_start_msg, 0, sizeof(s_mir_start_msg));
+    s_mir_start_outstanding = false;
+    s_mir_start_sent_at     = 0;
+    s_mir_slave_engaged     = false;
 }
 
 // The QMK transaction table is full (32-id cap), so mirror messages
@@ -733,7 +751,19 @@ static void doom_mirror_session_reset(void) {
 // frozen while game mode holds the pool, so the id is otherwise silent.
 static bool doom_mirror_send(doom_mirror_msg_t *msg, uint8_t retries) {
     msg->crc32 = crc32_1byte(((uint8_t *)msg) + 4, sizeof(*msg) - 4, 0);
-    if (sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, msg, sizeof(*msg), retries))) {
+    const uint8_t ack = send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, msg, sizeof(*msg), retries);
+    if (sync_succeeded(ack)) {
+        // The ack byte carries the slave's mirror status (split_sync.c):
+        // SYNC_ACK_SIG = drone engaged. Log the transitions — the slave's own
+        // console prints are unreachable from the host.
+        const bool engaged = ack == SYNC_ACK_SIG;
+        if (engaged != s_mir_slave_engaged) {
+            s_mir_slave_engaged = engaged;
+            printf("doom: slave mirror %s\n", engaged ? "engaged" : "not engaged");
+            if (engaged) {
+                s_mir_start_outstanding = false; // delivered — stop re-offering
+            }
+        }
         s_mir_backoff_at = 0;
         return true;
     }
@@ -773,6 +803,14 @@ static void doom_mirror_master_pump(void) {
         }
         if (doom_mirror_send(&msg, 3)) {
             s_mir_ctl_seq_sent = seq;
+            printf("doom: mirror ctl %u sent (tic=%lu)\n", msg.kind, (unsigned long)msg.tic);
+            if (msg.kind == DOOM_MIRROR_MSG_START) {
+                s_mir_start_msg         = msg;
+                s_mir_start_outstanding = true;
+                s_mir_start_sent_at     = timer_read32();
+            } else {
+                s_mir_start_outstanding = false; // BREAK supersedes any START
+            }
         }
         return;
     }
@@ -788,6 +826,18 @@ static void doom_mirror_master_pump(void) {
             msg.kind = DOOM_MIRROR_MSG_BREAK;
             (void)doom_mirror_send(&msg, 3);
         }
+        return;
+    }
+    // Self-healing START: while the slave keeps acking "not engaged" after a
+    // START went out, re-offer it — the receipt bumps start_in_seq, so the
+    // slave re-applies (round 24: second-session drone never engaged, cause
+    // invisible; this makes the mirror converge regardless).
+    if (s_mir_start_outstanding && !s_mir_slave_engaged &&
+        timer_elapsed32(s_mir_start_sent_at) > DOOM_MIRROR_START_REOFFER_MS) {
+        s_mir_start_sent_at = timer_read32();
+        printf("doom: re-offering mirror START (tic=%lu)\n",
+               (unsigned long)s_mir_start_msg.tic);
+        (void)doom_mirror_send(&s_mir_start_msg, 2);
         return;
     }
     // Readable menu mirror (field round 17): ship the sampled menu snapshot
@@ -1014,12 +1064,15 @@ bool doom_status_scroll(void) {
 #ifdef RGB_MATRIX_ENABLE
 
 #define DOOM_RGB_FLASH_MS 180u
+// Sentinel for "no locally derived byte — use the synced one".
+#define DOOM_RGB_NO_LOCAL 0xFFu
 
-// Master publisher state (consumed counter totals + the published pulses).
+// Edge-detector state (only one half's compute runs per device).
 static uint32_t s_rgb_fire_seen, s_rgb_world_seen;
 static uint8_t  s_rgb_fire_pulse, s_rgb_world_pulse; // 1..3 while flashing, 0 idle
 static uint32_t s_rgb_fire_at, s_rgb_world_at;
-static bool     s_rgb_forced_on; // we woke a user-disabled matrix for the cue
+static uint8_t  s_rgb_slave_local; // slave: byte derived from its OWN drone
+static bool     s_rgb_forced_on;   // we woke a user-disabled matrix for the cue
 
 static void doom_rgb_session_reset(void) {
     // The shim counters restart at 0 with every engine launch
@@ -1027,46 +1080,59 @@ static void doom_rgb_session_reset(void) {
     s_rgb_fire_seen  = s_rgb_world_seen  = 0;
     s_rgb_fire_pulse = s_rgb_world_pulse = 0;
     s_rgb_fire_at    = s_rgb_world_at    = 0;
+    s_rgb_slave_local = DOOM_RGB_NO_LOCAL;
+}
+
+// Sound counters + health -> the doom_rgb byte (state.h layout). Runs on
+// whichever half has a live engine: the master publishes it into the synced
+// state; the slave keeps it local — its drone plays the same sounds in
+// lockstep, so deriving locally beats waiting a bridge round-trip (round 24:
+// "on the slave side it is delayed").
+static uint8_t doom_rgb_compute(void) {
+    const uint32_t now  = timer_read32();
+    const uint32_t fire = doom_shim_snd_fire;
+    if (fire != s_rgb_fire_seen) {
+        s_rgb_fire_seen  = fire;
+        s_rgb_fire_pulse = (uint8_t)(s_rgb_fire_pulse % 3u) + 1u;
+        s_rgb_fire_at    = now;
+    } else if (s_rgb_fire_pulse && now - s_rgb_fire_at > DOOM_RGB_FLASH_MS) {
+        s_rgb_fire_pulse = 0;
+    }
+    const uint32_t world = doom_shim_snd_world;
+    if (world != s_rgb_world_seen) {
+        s_rgb_world_seen = world;
+        // Fire outranks the world: a blue pulse neither starts nor re-arms
+        // while the yellow flash runs (the renderer also suppresses it), so
+        // the mix can't read green.
+        if (!s_rgb_fire_pulse) {
+            s_rgb_world_pulse = (uint8_t)(s_rgb_world_pulse % 3u) + 1u;
+            s_rgb_world_at    = now;
+        }
+    } else if (s_rgb_world_pulse && now - s_rgb_world_at > DOOM_RGB_FLASH_MS) {
+        s_rgb_world_pulse = 0;
+    }
+    uint8_t rgb = 0;
+    int hp, ar, am;
+    if (doom_shim_hud_stats(&hp, &ar, &am)) {
+        // Full health = dark; each ~7 hp lost lights the red base one
+        // step (0..15, saturating at death).
+        const int lvl = hp >= 100 ? 0 : hp <= 0 ? 15 : ((100 - hp) * 15 + 50) / 100;
+        rgb = (uint8_t)lvl;
+    }
+    return rgb | (uint8_t)(s_rgb_fire_pulse << 4) | (uint8_t)(s_rgb_world_pulse << 6);
 }
 
 static void doom_rgb_task(void) {
+    // Attract demos fire weapons too — only real gameplay drives the
+    // lights (the demo loop staying dark also reads as "idle").
+    const bool live = s_engine_running && !doom_shim_attract_active();
     if (is_usb_host_side()) {
-        uint8_t rgb = 0;
-        // Attract demos fire weapons too — only real gameplay drives the
-        // lights (the demo loop staying dark also reads as "idle").
-        if (s_active && s_engine_running && !doom_shim_attract_active()) {
-            const uint32_t now  = timer_read32();
-            const uint32_t fire = doom_shim_snd_fire;
-            if (fire != s_rgb_fire_seen) {
-                s_rgb_fire_seen  = fire;
-                s_rgb_fire_pulse = (uint8_t)(s_rgb_fire_pulse % 3u) + 1u;
-                s_rgb_fire_at    = now;
-            } else if (s_rgb_fire_pulse && now - s_rgb_fire_at > DOOM_RGB_FLASH_MS) {
-                s_rgb_fire_pulse = 0;
-            }
-            const uint32_t world = doom_shim_snd_world;
-            if (world != s_rgb_world_seen) {
-                s_rgb_world_seen = world;
-                // Fire outranks the world: a blue pulse neither starts nor
-                // re-arms while the yellow flash runs (the renderer also
-                // suppresses it), so the mix can't read green.
-                if (!s_rgb_fire_pulse) {
-                    s_rgb_world_pulse = (uint8_t)(s_rgb_world_pulse % 3u) + 1u;
-                    s_rgb_world_at    = now;
-                }
-            } else if (s_rgb_world_pulse && now - s_rgb_world_at > DOOM_RGB_FLASH_MS) {
-                s_rgb_world_pulse = 0;
-            }
-            int hp, ar, am;
-            if (doom_shim_hud_stats(&hp, &ar, &am)) {
-                // Full health = dark; each ~7 hp lost lights the red base one
-                // step (0..15, saturating at death).
-                const int lvl = hp >= 100 ? 0 : hp <= 0 ? 15 : ((100 - hp) * 15 + 50) / 100;
-                rgb = (uint8_t)lvl;
-            }
-            rgb |= (uint8_t)(s_rgb_fire_pulse << 4) | (uint8_t)(s_rgb_world_pulse << 6);
-        }
-        access_local_state()->doom_rgb = rgb;
+        access_local_state()->doom_rgb = (s_active && live) ? doom_rgb_compute() : 0;
+    } else {
+        // A slave with a live drone derives the cue from its own engine —
+        // zero bridge latency; the synced byte stays the fallback (pad-only
+        // slave, mirror broken).
+        s_rgb_slave_local = (s_slave && live) ? doom_rgb_compute() : DOOM_RGB_NO_LOCAL;
     }
     // Both halves: keep the matrix awake for the cue even when the user has
     // RGB off, exactly like the fw-flash breathing — enable_noeeprom touches
@@ -1088,7 +1154,11 @@ bool doom_rgb_indicators(void) {
     static uint32_t s_fire_at, s_world_at;
     static bool     s_fire_live, s_world_live;
 
-    const uint8_t rgb   = get_local_state()->doom_rgb;
+    // Slave with a live drone: its own locally derived byte (lockstep sounds,
+    // no bridge lag); otherwise the master's synced byte.
+    const uint8_t rgb   = (!is_usb_host_side() && s_rgb_slave_local != DOOM_RGB_NO_LOCAL)
+                              ? s_rgb_slave_local
+                              : get_local_state()->doom_rgb;
     const bool    ctl   = get_local_state()->doom_ctl != 0;
     const uint8_t fire  = (uint8_t)((rgb >> 4) & 3u);
     const uint8_t world = (uint8_t)((rgb >> 6) & 3u);
@@ -1115,19 +1185,20 @@ bool doom_rgb_indicators(void) {
     if (!ctl && !s_fire_live && !s_world_live) {
         return true; // not ours — fall through to the normal indicators
     }
-    // Steady red base from lost health (caps at 75/255).
-    uint8_t r = (uint8_t)((rgb & 0x0Fu) * 5u);
+    // Steady red base from lost health. All peaks sit at 1/3 of the v24
+    // values — "too bright" in the field (round 24); red caps at 25/255.
+    uint8_t r = (uint8_t)(((rgb & 0x0Fu) * 5u) / 3u);
     uint8_t g = 0, b = 0;
     if (s_fire_live) {
         const uint32_t k = 255u - (timer_elapsed32(s_fire_at) * 255u) / DOOM_RGB_FLASH_MS;
-        const uint8_t  fr = (uint8_t)((100u * k) / 255u); // muzzle-flash yellow,
-        const uint8_t  fg = (uint8_t)((70u * k) / 255u);  // fading out linearly
+        const uint8_t  fr = (uint8_t)((33u * k) / 255u); // muzzle-flash yellow,
+        const uint8_t  fg = (uint8_t)((23u * k) / 255u); // fading out linearly
         if (fr > r) {
             r = fr;
         }
         g = fg;
     } else if (s_world_live) { // fire wins the frame: yellow never mixes to green
-        b = (uint8_t)((110u * (255u - (timer_elapsed32(s_world_at) * 255u) / DOOM_RGB_FLASH_MS)) / 255u);
+        b = (uint8_t)((37u * (255u - (timer_elapsed32(s_world_at) * 255u) / DOOM_RGB_FLASH_MS)) / 255u);
     }
     rgb_matrix_set_color_all(r, g, b);
     return false;

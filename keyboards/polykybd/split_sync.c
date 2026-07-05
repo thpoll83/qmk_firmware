@@ -26,6 +26,7 @@
 #ifdef POLYKYBD_DOOM
 #include "doom/doom_arena.h"
 #include "doom/doom_mirror.h"
+#include "doom/doom_mode.h"   // doom_shim_mirror_engaged (mirror ack status)
 #endif
 #include "matrix_helper.h"
 #include "poly_util.h"
@@ -403,6 +404,10 @@ void user_sync_doom_mirror_handler(uint8_t in_len, const void* in_data, uint8_t 
                 break;
         }
     }
-    ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+    // The ack byte doubles as the slave's mirror status: SYNC_ACK_SIG = the
+    // drone is engaged, plain SYNC_ACK = not (yet). Both count as success
+    // (sync_succeeded); the master pump reads it to re-offer a missed START
+    // and to log engagement transitions (round 24).
+    ((poly_sync_reply_t*)out_data)->ack = doom_shim_mirror_engaged() ? SYNC_ACK_SIG : SYNC_ACK;
 }
 #endif // POLYKYBD_DOOM

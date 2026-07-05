@@ -117,6 +117,11 @@ void doom_shim_set_role(bool master);
 bool doom_shim_slave_view_live(void);
 bool doom_shim_slave_wants_map_key(void);
 
+// Slave core0: true while the lockstep drone is engaged — reflected in the
+// mirror-message ack byte (split_sync.c) so the master can re-offer a missed
+// START and log engagement transitions.
+bool doom_shim_mirror_engaged(void);
+
 // True while the slave half's 5x5 viewport is owned by the mirror blitter —
 // update_displays then leaves every non-pad key alone (doom_mode.c).
 bool doom_slave_viewport_live(void);
@@ -232,6 +237,7 @@ static inline bool doom_hid_frozen(uint8_t cmd) { (void)cmd; return false; }
 static inline bool doom_key_is_control(uint16_t keycode) { (void)keycode; return true; }
 static inline bool doom_slave_viewport_live(void) { return false; }
 static inline bool doom_slave_bottom_row_live(void) { return false; }
+static inline bool doom_shim_mirror_engaged(void) { return false; }
 static inline void doom_render_fire_key(void) {}
 static inline void doom_render_use_key(void) {}
 static inline void doom_render_esc_key(void) {}

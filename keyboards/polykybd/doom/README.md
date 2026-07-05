@@ -160,6 +160,13 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 30 → v32 (2026-07-05, UNTESTED): flash hold 70 → 100 ms.** Round
+  30 ("a bit better, but slave still comes first"): the bracketing
+  continues — raw receipt clearly early → 40 still early → 70 a-bit early
+  → **100**. Overshoot is self-capping: the drone's own sound counter
+  (which trails the master only slightly) feeds the same edge detector,
+  so the flash fires at min(receipt + hold, drone sound) — a too-large
+  hold converges on the drone-sound timing instead of drifting later.
 - **Round 29 → v31 (2026-07-05, UNTESTED): menu curation — every entry that
   can't do anything on a keyboard is gone.** Field request: "skip save/load
   game … are there any other things in the options that we can skip?" The

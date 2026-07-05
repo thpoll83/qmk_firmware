@@ -745,9 +745,12 @@ static bool     s_mir_slave_engaged;           // last acked engagement state
 // ~2 tics (57 ms) before running it, and delivery only eats ~15-30 ms of
 // that — flashing at raw receipt showed BEFORE the master's muzzle flash
 // (field round 27). Hold the pulse for the difference so it lands ON it.
-// 40 ms was still visibly early (round 28) -> 70; tune in ~10 ms steps
-// (a third of a game tic) if the field still reads early/late.
-#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 70u
+// 40 ms was still visibly early (round 28) -> 70 -> still "a bit" early
+// (round 30) -> 100. Overshoot is self-capping: the drone's own sound
+// counter (which trails the master only slightly) feeds the same edge
+// detector, so the flash fires at min(receipt + delay, drone sound) —
+// too large a hold just converges on the drone-sound timing.
+#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 100u
 static volatile uint32_t s_mir_attack_edges;   // released — visible to doom_rgb_compute
 static uint8_t           s_mir_attack_prev;
 static uint8_t           s_mir_attack_pending; // edges still holding for their due time

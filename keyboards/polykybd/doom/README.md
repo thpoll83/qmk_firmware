@@ -160,6 +160,11 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 35 → v37 (2026-07-05, UNTESTED): hold 50 → 25 ms.** Round 35 on
+  v36: **"now the master is ahead of the slave"** — the first crossing in
+  the whole saga, confirming the drone-sound reference is correct (the
+  offset is finally a constant the hold can dial). Bracket: 0 early /
+  50 late → bisect **25 ms**.
 - **Round 34 → v36 (2026-07-05, UNTESTED): fire flash re-referenced to the
   DRONE SOUND (the press edge was the wrong event).** Round 34: still
   slave-first at a 90 ms hold — which the receipt-edge math can't produce,

@@ -743,7 +743,9 @@ static bool     s_mir_slave_engaged;           // last acked engagement state
 // master builds cmds ~2-3 tics before running them, delivery returns
 // ~15-30 ms — so its sound leads the master's by ~(build-ahead − delivery),
 // which the hold below compensates exactly, windup included, every weapon.
-#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 50u
+// Bracket on the sound-referenced hold: 0 early (rounds pre-v36), 50 LATE
+// ("now the master is ahead", round 35 — first crossing!) -> bisect 25.
+#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 25u
 static volatile uint32_t s_mir_attack_edges;   // released — visible to doom_rgb_compute
 static uint8_t           s_mir_attack_pending; // sound edges holding for their due time
 static uint32_t          s_mir_attack_armed_at;

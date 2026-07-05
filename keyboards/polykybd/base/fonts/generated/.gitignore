@@ -1,0 +1,5 @@
+# Font-pack binaries (PlyF) are build artifacts produced by
+# `generate_fonts.py --emit-bundles` and shipped to PolyKybdHost
+# (polyhost/res/fontpack/); they are regenerated on demand and are not tracked
+# in the firmware repo. The committed headers + manifests are the source of truth.
+*.plyf

@@ -43,8 +43,6 @@
 #define ICON_LMB                    	U"\x86"
 #define ICON_MMB                    	U"\x87"
 #define ICON_RMB                    	U"\x88"
-#define ICON_VOL_UP                 	U"\x89"
-#define ICON_VOL_DOWN               	U"\x008A"
 #define ICON_BACKSPACE              	U"\x008B"
 #define ICON_NUMLOCK_OFF            	U"\x008C"
 #define ICON_NUMLOCK_ON             	U"\x008D"
@@ -53,7 +51,6 @@
 #define ICON_SHIFT                  	U"\x90"
 #define ICON_SWITCH_ON              	U"\x91"
 #define ICON_SWITCH_OFF             	U"\x92"
-#define ICON_BONGO_CAT              	U"\x93"
 #define ICON_OS_WINDOWS             	U"\x94"
 #define ICON_OS_LINUX               	U"\x95"
 #define ICON_OS_ANDROID             	U"\x96"
@@ -1941,7 +1938,7 @@
 #define ICON_WORD_RIGHT             	U"\x21E2"
 #define ICON_LAUNCHER               	U"\x2630"
 #define ICON_APP_SWITCH             	U"\x1F5D4"
-#define ICON_WINDOW_SWITCH          	U"\x1F5BD"
+#define ICON_WINDOW_SWITCH          	U"\x1F5BD"  // 🖽 dedicated WinSwitch font (Util range shadows it as a gap; firmware skips the gap)
 #define ICON_CLOSE                  	U"\x22A0"
 // Windows-only Super-chord hint glyphs (wave C). 🗣 dictation is the only NEW
 // glyph here (added to the symbol bundle as a NotoEmoji-Medium singleton —
@@ -1958,13 +1955,65 @@
 #define ICON_CLIP_HISTORY           	U"\x1F4DC"
 #define ICON_QUICK_MENU             	U"\x1F4D1"
 #define ICON_PEEK                   	U"\x1F441"
-// Win+R "run" prompt — a 16 pt '>' and '_' (2 pt larger than the 14 pt base font)
-// drawn from the resident IconsFont (gfx_icons.h 0x9A/0x9B), so the legend reads at
-// a size closer to the emoji hints with no font-pack dependency. Distinct PUA slots,
-// NOT the ASCII '>'/'_', so normal keycaps keep the base-size glyphs.
-#define ICON_PROMPT_GT              	U"\x9A"
-#define ICON_PROMPT_US              	U"\x9B"
+// Win+R "run" prompt renders the plain ASCII ">_" from the base font (no custom
+// glyph) with the run-dialog frame drawn by keycode_hint_wants_frame().
 // Resident IconsFont OS logos (gfx_icons.h, 0x98/0x99) — the GUI/Super-key legend
 // for the host-detected Linux desktops (POLY_OS_LINUX_GNOME/KDE).
 #define ICON_OS_GNOME               	U"\x98"
 #define ICON_OS_KDE                 	U"\x99"
+// ---- Hint display-list building blocks --------------------------------------
+// A shortcut-hint string is a mini display list interpreted by
+// kdisp_write_gfx_text_cy() (base/disp_array.c). These macros name the control
+// ops and the fixed buffer positions so the hint cases read without raw hex.
+// HINT_MOVE/HINT_FRAME take a packed position macro (two bytes = x,y or w,h).
+// Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().
+#define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
+#define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
+#define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
+#define HINT_RESET       U"\x18"       // reset cursor to the text origin
+// Fixed buffer positions / sizes (two bytes each; decimal in the comment):
+#define HINT_POS_SCREEN  U"\x46\x07"   // (70, 7)  reload glyph in the monitor's screen cavity
+#define HINT_POS_ZOOMIN  U"\x3B\x19"   // (59,25)  cursor so a base-font '+' centres in the lens
+#define HINT_POS_ZOOMOUT U"\x3E\x16"   // (62,22)  cursor so a base-font '-' centres in the lens
+#define HINT_POS_RUNBOX  U"\x36\x01"   // (54, 1)  Win+R run-dialog frame top-left
+#define HINT_SZ_RUNBOX   U"\x21\x1B"   // 33 x 27  Win+R run-dialog frame size
+// Windows Super-chord hint glyphs (wave D), as drawn by keycode_to_disp_overlay()'s
+// win_or_unknown branch. All are display-only previews of the Win+<key> shortcut.
+// Only the Explorer folder pixmap (ICON_EXPLORER, \x9C) is a resident IconsFont
+// glyph (gfx_icons.h) that ships with the firmware. Everything else here — the
+// magnifier 🔍, gear/cast/knobs, restart-graphics monitor+reload, the snap arrows
+// ⍇/⍈ (Win+←/→) and the 🖧 network glyph (Win+Ctrl+F) — renders from the symbol/
+// emoji FONT PACK, so it needs the PolyKybdHost pack shipped to appear.
+//   ⚡ Action Center (Win+A)            🗁 File Explorer (Win+E, resident pixmap)
+//   ♿ Accessibility (Win+U)            ❐ minimize-others (Win+Home)
+//   🖵+ new desktop (Win+Ctrl+D)        ←🖵 / 🖵→ switch desktop (Win+Ctrl+←/→)
+//   🖵x close desktop (Win+Ctrl+F4)     📽 GIF panel (Win+;)
+//   📸 Snipping Tool (Win+Shift+S)      📹 screen recording (Win+Alt+R)
+//   ⌃ system tray (Win+B, mac-control caret)
+//   🖵🗘 restart graphics (Win+Ctrl+Shift+B)  🎛 System Properties (Win+Pause)
+//   🔍+ / 🔍− Magnifier (Win + +/−)     📷 screenshot (Win+PrtScn)
+//   🖧 search network computers (Win+Ctrl+F)  🔊 volume mixer (Win+Ctrl+V)
+#define ICON_LIGHTNING              	U"\x26A1"   // Win+A action center / quick settings
+// (ICON_SYS_TRAY retired — Win+B now uses ICON_MAC_CONTROL; the 🔊 speaker moved to Win+Ctrl+V's ICON_VOLUME_MIXER)
+#define ICON_EXPLORER               	U"\x9C"     // Win+E (resident folder pixmap, gfx_icons.h)
+#define ICON_ACCESSIBILITY          	U"\x267F"
+#define ICON_FOCUS_WINDOW           	U"\x2752"   // Win+Home minimize all but active (shadowed window)
+#define ICON_SNAP_LEFT              	U"\x2347"   // Win+Left  snap window to left edge (⍇ APL quad-left, symbol font pack)
+#define ICON_SNAP_RIGHT             	U"\x2348"   // Win+Right snap window to right edge (⍈ APL quad-right, symbol font pack)
+#define ICON_GIF                    	U"\x1F3AC"  // Win+; GIF panel (clapperboard)
+#define ICON_SNIP                   	U"\x1F4F8"  // Win+Shift+S Snipping Tool (camera + flash)
+#define ICON_SCREEN_RECORD          	U"\x1F4F9"
+#define ICON_SLIDERS                	U"\x1F39B"  // Win+Pause system properties (🎛 knobs, symbol font pack)
+#define ICON_GFX_RESTART            	U"\x1F5B5"  // Win+Ctrl+Shift+B restart graphics: monitor 🖵 (symbol font pack); the 🗘 reload glyph is half-composited into its screen by the HINT_HALF op in the hint string
+#define ICON_GFX_RELOAD             	U"\x1F5D8"  // 🗘 clockwise reload — half-scaled into ICON_GFX_RESTART's screen (see HINT_HALF)
+#define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); a base-font +/- is MOVE-positioned into the lens by the hint string
+#define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
+#define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)
+#define ICON_VOLUME_MIXER           	U"\x1F50A"  // Win+Ctrl+V volume mixer 🔊 (loudspeaker, emoji font pack; opens the mixer flyout on Win 11 24H2+)
+#define ICON_GAME_BAR               	U"\x1F3AE"  // Win+G Xbox Game Bar (🎮 controller, emoji font pack)
+#define ICON_FEEDBACK               	U"\x1F4E3"  // Win+F Feedback Hub (📣 megaphone, emoji font pack)
+#define ICON_COPILOT                	U"\x1F916"  // Win+C Copilot (🤖 robot, emoji font pack)
+#define ICON_NARRATOR               	U"\x1F442"  // Win+Ctrl+N Narrator settings (👂 ear = reads aloud, emoji font pack)
+#define ICON_QUICK_ASSIST           	U"\x1F91D"  // Win+Ctrl+Q Quick Assist (🤝 handshake, emoji font pack)
+#define ICON_SPEECH_REC             	U"\x1F3A4"  // Win+Ctrl+S Speech Recognition (🎤 microphone, emoji font pack)
+#define ICON_TEXT_RECOG             	U"\x1F524"  // Win+Q Click to Do — recognise/select text incl. from images (🔤 letters, emoji font pack)

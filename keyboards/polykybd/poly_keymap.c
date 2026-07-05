@@ -116,6 +116,15 @@ while lang_key:
 
 static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 
+// The KCL_* (keycode_helper.h) and LANG_* (lang_lut.h) enums are both generated
+// from the SAME ordered language list, so LANG_xx == (KCL_xx - KCL_ENUS). The
+// language-keycode handling in to_static_text()/process_record_user() relies on
+// that identity to index a table / compute local_state->lang from the keycode
+// offset instead of a 160-case switch. Assert it at both ends so a future
+// divergence between the two generators is a build error, not a silent mis-map.
+static_assert((int)LANG_DEDE == (int)(KCL_DEDE - KCL_ENUS), "KCL_/LANG_ enum order drift");
+static_assert((int)LANG_CKUS == (int)(KCL_CKUS - KCL_ENUS), "KCL_/LANG_ enum order drift");
+
 static enum lang_layer g_lang_init = INIT_LANG;
 
 // keymaps[] / encoder_map[] / g_led_config are variant data, defined in each
@@ -533,7 +542,15 @@ void poly_prepare_for_flash(void) {
         reset_idle_jitter();       // fresh centred legends, not jittered offsets
         update_performed();
     }
-    layer_clear();                 // momentary/toggle layers off -> default layer active
+    // Momentary/toggle layers off, then back onto the PolyKybd default layout.
+    // A bare layer_clear() falls through to QMK's *saved* default layer
+    // (default_layer_state), NOT the Poly def_layer — which is a layer INDEX
+    // driven through layer_on(), same as the KC_L*/KC_BASE selectors and the
+    // boot path — so a Colemak/Neo base dropped to QWERTY here, and that
+    // cleared layer state was bridged to the slave, leaving the slave on the
+    // QMK default layer after the flash.
+    layer_clear();
+    layer_on(access_local_layer()->def_layer);
     request_disp_refresh();
     // Push the base layer + refresh to the SLAVE and render the master, before
     // fw_up freezes display sync — so BOTH halves show legible base legends and
@@ -640,6 +657,12 @@ void housekeeping_task_user(void) {
             access_local_state()->active_os = os;
             request_disp_refresh();   // OS or auto/pin mode changed -> re-render legends + icon
         }
+        // Master-authoritative glyph-script override; the slave adopts it via
+        // copy_local_state and re-renders its own legends on the synced diff.
+        if (access_local_state()->glyph_script != get_glyph_script()) {
+            access_local_state()->glyph_script = get_glyph_script();
+            request_disp_refresh();   // script changed -> re-render letter/digit legends
+        }
     }
 }
 
@@ -721,174 +744,179 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KC_L3:                         return local_layer->def_layer == _L3 ? U"Neo\r\v" ICON_SWITCH_ON : U"Neo\r\v" ICON_SWITCH_OFF;
         case KC_L4:                         return local_layer->def_layer == _L4 ? U"Wkm\r\v" ICON_SWITCH_ON : U"Wkm\r\v" ICON_SWITCH_OFF;
 
-        //Language selection keycodes
-        // The flag + selection frame are drawn by render_lang_flag_key(); here we
-        // only return the tiny language code shown under the flag.
-        /*[[[cog
-        for lang in languages:
-            cog.outl(f'case KCL_{lang.upper()}: return U"{lang[0:2]}-{lang[2:]}";')
-        ]]]*/
-        case KCL_ENUS: return U"en-US";
-        case KCL_DEDE: return U"de-DE";
-        case KCL_FRFR: return U"fr-FR";
-        case KCL_ESES: return U"es-ES";
-        case KCL_PTPT: return U"pt-PT";
-        case KCL_ITIT: return U"it-IT";
-        case KCL_TRTR: return U"tr-TR";
-        case KCL_KOKR: return U"ko-KR";
-        case KCL_JAJP: return U"ja-JP";
-        case KCL_ARSA: return U"ar-SA";
-        case KCL_ELGR: return U"el-GR";
-        case KCL_UKUA: return U"uk-UA";
-        case KCL_RURU: return U"ru-RU";
-        case KCL_BEBY: return U"be-BY";
-        case KCL_KKKZ: return U"kk-KZ";
-        case KCL_BGBG: return U"bg-BG";
-        case KCL_PLPL: return U"pl-PL";
-        case KCL_RORO: return U"ro-RO";
-        case KCL_ZHCN: return U"zh-CN";
-        case KCL_NLNL: return U"nl-NL";
-        case KCL_HEIL: return U"he-IL";
-        case KCL_SVSE: return U"sv-SE";
-        case KCL_FIFI: return U"fi-FI";
-        case KCL_NNNO: return U"nn-NO";
-        case KCL_DADK: return U"da-DK";
-        case KCL_HUHU: return U"hu-HU";
-        case KCL_CSCZ: return U"cs-CZ";
-        case KCL_HRHR: return U"hr-HR";
-        case KCL_SKSK: return U"sk-SK";
-        case KCL_LTLT: return U"lt-LT";
-        case KCL_LVLV: return U"lv-LV";
-        case KCL_ETEE: return U"et-EE";
-        case KCL_PTBR: return U"pt-BR";
-        case KCL_SRRS: return U"sr-RS";
-        case KCL_MKMK: return U"mk-MK";
-        case KCL_FAIR: return U"fa-IR";
-        case KCL_HIIN: return U"hi-IN";
-        case KCL_MRIN: return U"mr-IN";
-        case KCL_NENP: return U"ne-NP";
-        case KCL_MNMN: return U"mn-MN";
-        case KCL_URPK: return U"ur-PK";
-        case KCL_ENGB: return U"en-GB";
-        case KCL_ESMX: return U"es-MX";
-        case KCL_DECH: return U"de-CH";
-        case KCL_FRBE: return U"fr-BE";
-        case KCL_FRCA: return U"fr-CA";
-        case KCL_THTH: return U"th-TH";
-        case KCL_BNIN: return U"bn-IN";
-        case KCL_TEIN: return U"te-IN";
-        case KCL_TAIN: return U"ta-IN";
-        case KCL_ZHTW: return U"zh-TW";
-        case KCL_KAGE: return U"ka-GE";
-        case KCL_HYAM: return U"hy-AM";
-        case KCL_IDID: return U"id-ID";
-        case KCL_AZAZ: return U"az-AZ";
-        case KCL_ISIS: return U"is-IS";
-        case KCL_VIVN: return U"vi-VN";
-        case KCL_ZHHK: return U"zh-HK";
-        case KCL_ENAU: return U"en-AU";
-        case KCL_ENNZ: return U"en-NZ";
-        case KCL_MINZ: return U"mi-NZ";
-        case KCL_SMWS: return U"sm-WS";
-        case KCL_FJFJ: return U"fj-FJ";
-        case KCL_TLPH: return U"tl-PH";
-        case KCL_HWUS: return U"hw-US";
-        case KCL_ENZA: return U"en-ZA";
-        case KCL_AFZA: return U"af-ZA";
-        case KCL_AREG: return U"ar-EG";
-        case KCL_SWKE: return U"sw-KE";
-        case KCL_AMET: return U"am-ET";
-        case KCL_YONG: return U"yo-NG";
-        case KCL_ENNG: return U"en-NG";
-        case KCL_ARMA: return U"ar-MA";
-        case KCL_ARIQ: return U"ar-IQ";
-        case KCL_KUIQ: return U"ku-IQ";
-        case KCL_MSMY: return U"ms-MY";
-        case KCL_UZUZ: return U"uz-UZ";
-        case KCL_ENCA: return U"en-CA";
-        case KCL_ESAR: return U"es-AR";
-        case KCL_ENPG: return U"en-PG";
-        case KCL_TYPF: return U"ty-PF";
-        case KCL_ESCO: return U"es-CO";
-        case KCL_ESPE: return U"es-PE";
-        case KCL_ESVE: return U"es-VE";
-        case KCL_ESCL: return U"es-CL";
-        case KCL_ESEC: return U"es-EC";
-        case KCL_ESGT: return U"es-GT";
-        case KCL_ESDO: return U"es-DO";
-        case KCL_ESBO: return U"es-BO";
-        case KCL_ESPY: return U"es-PY";
-        case KCL_ESCR: return U"es-CR";
-        case KCL_ESSV: return U"es-SV";
-        case KCL_ESHN: return U"es-HN";
-        case KCL_ESPA: return U"es-PA";
-        case KCL_ESUY: return U"es-UY";
-        case KCL_ESNI: return U"es-NI";
-        case KCL_DEAT: return U"de-AT";
-        case KCL_NLBE: return U"nl-BE";
-        case KCL_CAES: return U"ca-ES";
-        case KCL_ENIE: return U"en-IE";
-        case KCL_BSBA: return U"bs-BA";
-        case KCL_FRCH: return U"fr-CH";
-        case KCL_SLSI: return U"sl-SI";
-        case KCL_FOFO: return U"fo-FO";
-        case KCL_ARAE: return U"ar-AE";
-        case KCL_ARSY: return U"ar-SY";
-        case KCL_ARJO: return U"ar-JO";
-        case KCL_ARLB: return U"ar-LB";
-        case KCL_ARYE: return U"ar-YE";
-        case KCL_ARKW: return U"ar-KW";
-        case KCL_AROM: return U"ar-OM";
-        case KCL_ARPS: return U"ar-PS";
-        case KCL_ARQA: return U"ar-QA";
-        case KCL_ARBH: return U"ar-BH";
-        case KCL_ARDZ: return U"ar-DZ";
-        case KCL_ARSD: return U"ar-SD";
-        case KCL_ARTN: return U"ar-TN";
-        case KCL_ARLY: return U"ar-LY";
-        case KCL_FRCD: return U"fr-CD";
-        case KCL_FRCI: return U"fr-CI";
-        case KCL_FRCM: return U"fr-CM";
-        case KCL_FRSN: return U"fr-SN";
-        case KCL_FRMG: return U"fr-MG";
-        case KCL_ENGH: return U"en-GH";
-        case KCL_ENUG: return U"en-UG";
-        case KCL_ENZM: return U"en-ZM";
-        case KCL_SWTZ: return U"sw-TZ";
-        case KCL_PTAO: return U"pt-AO";
-        case KCL_PTMZ: return U"pt-MZ";
-        case KCL_BNBD: return U"bn-BD";
-        case KCL_ENIN: return U"en-IN";
-        case KCL_ENPK: return U"en-PK";
-        case KCL_ENPH: return U"en-PH";
-        case KCL_ENSG: return U"en-SG";
-        case KCL_ENLK: return U"en-LK";
-        case KCL_KYKG: return U"ky-KG";
-        case KCL_TGTJ: return U"tg-TJ";
-        case KCL_ENGU: return U"en-GU";
-        case KCL_ENSB: return U"en-SB";
-        case KCL_ENVU: return U"en-VU";
-        case KCL_ENFM: return U"en-FM";
-        case KCL_FRNC: return U"fr-NC";
-        case KCL_TOTO: return U"to-TO";
-        case KCL_EUES: return U"eu-ES";
-        case KCL_GLES: return U"gl-ES";
-        case KCL_RMCH: return U"rm-CH";
-        case KCL_CYGB: return U"cy-GB";
-        case KCL_GAIE: return U"ga-IE";
-        case KCL_MTMT: return U"mt-MT";
-        case KCL_LBLU: return U"lb-LU";
-        case KCL_SENO: return U"se-NO";
-        case KCL_GNPY: return U"gn-PY";
-        case KCL_QUPE: return U"qu-PE";
-        case KCL_AYBO: return U"ay-BO";
-        case KCL_NVUS: return U"nv-US";
-        case KCL_NHMX: return U"nh-MX";
-        case KCL_PSAF: return U"ps-AF";
-        case KCL_IUCA: return U"iu-CA";
-        case KCL_CRCA: return U"cr-CA";
-        case KCL_CKUS: return U"ck-US";
-        //[[[end]]]
+        // Language selection keycodes: the tiny "xx-YY" code shown under the flag
+        // (the flag + selection frame are drawn by render_lang_flag_key()). KCL_ENUS..
+        // are contiguous (QK_USER_0-based), so index a cog-generated table by offset.
+        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1: {
+            static const uint32_t* const lang_code[NUM_LANG] = {
+                /*[[[cog
+                for lang in languages:
+                    cog.outl(f'U"{lang[0:2]}-{lang[2:]}",')
+                ]]]*/
+                U"en-US",
+                U"de-DE",
+                U"fr-FR",
+                U"es-ES",
+                U"pt-PT",
+                U"it-IT",
+                U"tr-TR",
+                U"ko-KR",
+                U"ja-JP",
+                U"ar-SA",
+                U"el-GR",
+                U"uk-UA",
+                U"ru-RU",
+                U"be-BY",
+                U"kk-KZ",
+                U"bg-BG",
+                U"pl-PL",
+                U"ro-RO",
+                U"zh-CN",
+                U"nl-NL",
+                U"he-IL",
+                U"sv-SE",
+                U"fi-FI",
+                U"nn-NO",
+                U"da-DK",
+                U"hu-HU",
+                U"cs-CZ",
+                U"hr-HR",
+                U"sk-SK",
+                U"lt-LT",
+                U"lv-LV",
+                U"et-EE",
+                U"pt-BR",
+                U"sr-RS",
+                U"mk-MK",
+                U"fa-IR",
+                U"hi-IN",
+                U"mr-IN",
+                U"ne-NP",
+                U"mn-MN",
+                U"ur-PK",
+                U"en-GB",
+                U"es-MX",
+                U"de-CH",
+                U"fr-BE",
+                U"fr-CA",
+                U"th-TH",
+                U"bn-IN",
+                U"te-IN",
+                U"ta-IN",
+                U"zh-TW",
+                U"ka-GE",
+                U"hy-AM",
+                U"id-ID",
+                U"az-AZ",
+                U"is-IS",
+                U"vi-VN",
+                U"zh-HK",
+                U"en-AU",
+                U"en-NZ",
+                U"mi-NZ",
+                U"sm-WS",
+                U"fj-FJ",
+                U"tl-PH",
+                U"hw-US",
+                U"en-ZA",
+                U"af-ZA",
+                U"ar-EG",
+                U"sw-KE",
+                U"am-ET",
+                U"yo-NG",
+                U"en-NG",
+                U"ar-MA",
+                U"ar-IQ",
+                U"ku-IQ",
+                U"ms-MY",
+                U"uz-UZ",
+                U"en-CA",
+                U"es-AR",
+                U"en-PG",
+                U"ty-PF",
+                U"es-CO",
+                U"es-PE",
+                U"es-VE",
+                U"es-CL",
+                U"es-EC",
+                U"es-GT",
+                U"es-DO",
+                U"es-BO",
+                U"es-PY",
+                U"es-CR",
+                U"es-SV",
+                U"es-HN",
+                U"es-PA",
+                U"es-UY",
+                U"es-NI",
+                U"de-AT",
+                U"nl-BE",
+                U"ca-ES",
+                U"en-IE",
+                U"bs-BA",
+                U"fr-CH",
+                U"sl-SI",
+                U"fo-FO",
+                U"ar-AE",
+                U"ar-SY",
+                U"ar-JO",
+                U"ar-LB",
+                U"ar-YE",
+                U"ar-KW",
+                U"ar-OM",
+                U"ar-PS",
+                U"ar-QA",
+                U"ar-BH",
+                U"ar-DZ",
+                U"ar-SD",
+                U"ar-TN",
+                U"ar-LY",
+                U"fr-CD",
+                U"fr-CI",
+                U"fr-CM",
+                U"fr-SN",
+                U"fr-MG",
+                U"en-GH",
+                U"en-UG",
+                U"en-ZM",
+                U"sw-TZ",
+                U"pt-AO",
+                U"pt-MZ",
+                U"bn-BD",
+                U"en-IN",
+                U"en-PK",
+                U"en-PH",
+                U"en-SG",
+                U"en-LK",
+                U"ky-KG",
+                U"tg-TJ",
+                U"en-GU",
+                U"en-SB",
+                U"en-VU",
+                U"en-FM",
+                U"fr-NC",
+                U"to-TO",
+                U"eu-ES",
+                U"gl-ES",
+                U"rm-CH",
+                U"cy-GB",
+                U"ga-IE",
+                U"mt-MT",
+                U"lb-LU",
+                U"se-NO",
+                U"gn-PY",
+                U"qu-PE",
+                U"ay-BO",
+                U"nv-US",
+                U"nh-MX",
+                U"ps-AF",
+                U"iu-CA",
+                U"cr-CA",
+                U"ck-US",
+                //[[[end]]]
+            };
+            return lang_code[keycode - KCL_ENUS];
+        }
         default:
             return NULL;
     }
@@ -908,6 +936,51 @@ static bool altgr_is_bare_combining(const uint32_t* s) {
 }
 
 // Renders key character to display using language translation, including modifiers etc.
+// Glyph-script override codepoints. Each alternative script's glyphs are emitted
+// into a private, dense, collision-free PUA range (fontconvert sequence -F remap),
+// NOT the source font's native codepoints — the flags font-pack bundle already
+// occupies 0xE000+, so a raw CSUR tengwa would render a language flag instead.
+//
+// Each glyph script's glyphs live in a dense private PUA block (disjoint from the
+// flags bundle at 0xE000+ and from each other): letters a..z at base+0..25, and —
+// for scripts that have their own numerals — digits 1..0 at base+26..35 (KC_1..KC_0
+// are contiguous with 0 last). The per-key glyph choice lives in each font's
+// generation sequence (fonts.yaml `-F<base>` relocation), so the firmware only
+// needs the base + a dense index. Scripts with `digits=false` leave the digit keys
+// as the normal numeral (e.g. Aurebesh/Cirth have no number system of their own).
+// The table is indexed by `enum poly_glyph_script`; keep it in sync with state.h.
+typedef struct { uint32_t base; bool digits; } glyph_script_block_t;
+static const glyph_script_block_t glyph_script_blocks[GLYPH_SCRIPT_COUNT] = {
+    [GLYPH_STD]      = { 0u,      false },
+    [GLYPH_TENGWAR]  = { 0xE800u, true  },
+    [GLYPH_RUNES]    = { 0xE840u, false },
+    [GLYPH_AUREBESH] = { 0xE880u, false },
+    [GLYPH_SGA]      = { 0xE8C0u, true  },
+    [GLYPH_CIRTH]    = { 0xE900u, false },
+    [GLYPH_IBMVGA]   = { 0xE940u, true  },
+    [GLYPH_C64]      = { 0xE980u, true  },
+    [GLYPH_AMIGA]    = { 0xE9C0u, true  },
+    [GLYPH_APL]      = { 0xEA00u, true  },
+    [GLYPH_BRAILLE]  = { 0xEA40u, true  },
+};
+
+// The dense mapping relies on the USB-HID keycodes being contiguous
+// (KC_A..KC_Z, and KC_1..KC_0 with 0 last); guard that against any future change.
+_Static_assert(KC_Z - KC_A == 25, "KC_A..KC_Z must be contiguous for the glyph-script map");
+_Static_assert(KC_0 - KC_1 == 9,  "KC_1..KC_0 must be contiguous for the glyph-script map");
+
+// Resolves the override codepoint for a key under the active glyph script, or 0
+// when the key/script has no override (falls through to the normal legend). Only
+// plain letters/digits are overridden; symbols, function keys, etc. are left alone.
+static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
+    if (script == GLYPH_STD || script >= GLYPH_SCRIPT_COUNT) return 0;
+    const glyph_script_block_t blk = glyph_script_blocks[script];
+    if (keycode >= KC_A && keycode <= KC_Z) return blk.base + (uint32_t)(keycode - KC_A);
+    // KC_1..KC_0 are contiguous (1 first, 0 last) -> dense indices 26..35.
+    if (blk.digits && keycode >= KC_1 && keycode <= KC_0) return blk.base + 26u + (uint32_t)(keycode - KC_1);
+    return 0;
+}
+
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const poly_layer_t* local_layer = get_local_layer();
 
@@ -945,6 +1018,36 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     }
 
     const poly_sync_t* local_state = get_local_state();
+
+    // Glyph-script override: on the normal language layer, replace a letter/digit's
+    // legend with the selected alternative script (e.g. Tengwar), centered in the
+    // keycap. Overlays and OS-hints are drawn elsewhere and are untouched. Falls
+    // through to the normal legend when the script has no glyph for this key OR the
+    // font-pack bundle providing it is not present (so a keyboard without the
+    // "fantasy" bundle still shows Latin rather than blanks). While AltGr is held we
+    // fall through to the real AltGr symbol (translate_keycode_only_altgr below) —
+    // the override is only for the resting/base letter legend, and the AltGr output
+    // is a genuinely different character, not a cased form of the same letter.
+    if (local_state->glyph_script != GLYPH_STD && !add_lang && !(mods & MOD_RALT)) {
+        uint32_t cp = glyph_script_codepoint(local_state->glyph_script, keycode);
+        if (cp != 0 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL) {
+            const uint32_t s[2] = { cp, 0 };
+            // Center the glyph in BOTH axes from its full pixel bbox, rather than
+            // drawing at the base font's fixed y=23 baseline. The script fonts are
+            // rendered taller (~30 px) than the 14 px Latin base, so at baseline 23
+            // a tall glyph's top (23 + yOffset) lands above 0 and clips off the top
+            // of the 40 px display (Amiga/C64/APL ran ~10 px off-screen). bbox gives
+            // the y extent too, so we place the baseline to fit — same idea the idle
+            // jitter uses (roll_idle_offset).
+            int8_t xmin, xmax, ymin, ymax;
+            kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, s, &xmin, &xmax, &ymin, &ymax);
+            int8_t gx = (int8_t)(BUFFER_X + (SCREEN_WIDTH  - (xmax - xmin + 1)) / 2 - xmin);
+            int8_t gy = (int8_t)(         (SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin);
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, gx, gy, s);
+            return true;
+        }
+    }
+
     if (mods & MOD_RALT) {
         const uint32_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
@@ -1085,29 +1188,34 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     // nothing here), and on Android the Search key is not a window manager.
     const uint8_t active_os = get_local_state()->active_os & POLY_OS_VALUE_MASK;
     const bool apple = (active_os == POLY_OS_MACOS);
-    const bool shift = (local_mods & MOD_MASK_SHIFT) != 0;
+    // Collapse left/right modifier sides into one logical set (bit0 Ctrl, bit1 Shift,
+    // bit2 Alt, bit3 GUI — the MOD_L* bit values) so every hint below matches the EXACT
+    // set of modifiers held. Extra modifiers now disqualify a chord instead of leaking a
+    // subset match (Win+Ctrl+Shift+X no longer shows the Win+Ctrl+X hint, Win+Ctrl+C no
+    // longer falls through to plain Ctrl+C, etc.). Side (L/R) is intentionally ignored.
+    const uint8_t mods_now = (uint8_t)((local_mods | (local_mods >> 4)) & 0x0F);
     if (apple) {
-        // macOS: editing lives on Cmd (GUI). Multi-modifier mac chords first.
-        const bool cmd  = (local_mods & MOD_MASK_GUI) != 0;
-        const bool ctrl = (local_mods & MOD_MASK_CTRL) != 0;
-        // Word nav on macOS is Option(Alt)+arrows (line nav is Cmd+arrows, below),
-        // so they live on different modifiers and never collide. Guard on !cmd so a
-        // Cmd+Option chord falls through to the Cmd (line-nav) switch instead.
-        if ((local_mods & MOD_MASK_ALT) != 0 && !cmd) {
-            switch(keycode) {
-                case KC_LEFT:  return U"    " ICON_WORD_LEFT;
-                case KC_RIGHT: return U"    " ICON_WORD_RIGHT;
-                default: break;
-            }
-        }
-        if (cmd && ctrl) {
+        // macOS: editing lives on Cmd (GUI). Each block is an exact modifier set.
+        if (mods_now == (MOD_LGUI | MOD_LCTL)) {
             switch(keycode) {
                 case KC_Q: return U"    " PRIVATE_LOCK;       // Ctrl+Cmd+Q = lock screen
                 case KC_F: return U"     " PRIVATE_MAXIMIZE;  // Ctrl+Cmd+F = fullscreen
                 default: break;
             }
-        }
-        if (cmd) {
+        } else if (mods_now == MOD_LALT) {
+            // Word nav on macOS is Option(Alt)+arrows (line nav is Cmd+arrows, below).
+            switch(keycode) {
+                case KC_LEFT:  return U"    " ICON_WORD_LEFT;
+                case KC_RIGHT: return U"    " ICON_WORD_RIGHT;
+                default: break;
+            }
+        } else if (mods_now == (MOD_LGUI | MOD_LSFT)) {
+            // Cmd+Shift+Z = redo (mac has no Cmd+Y redo).
+            switch(keycode) {
+                case KC_Z: return U"      " ARROWS_REDO;
+                default: break;
+            }
+        } else if (mods_now == MOD_LGUI) {
             switch(keycode) {
                 case KC_A: return U"      " BOX_WITH_CHECK_MARK;
                 case KC_C: return U"     " CLIPBOARD_COPY;
@@ -1118,9 +1226,7 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 case KC_O: return U"\t" FILE_OPEN;
                 case KC_P: return U"\t" PRIVATE_PRINTER;
                 case KC_M: return U"     " PRIVATE_WINDOW;    // Cmd+M = minimize
-                // Cmd+Z = undo, Cmd+Shift+Z = redo (mac has no Cmd+Y redo, and
-                // Cmd+D is "duplicate" not delete — neither is shown).
-                case KC_Z: return shift ? U"      " ARROWS_REDO : U"      " ARROWS_UNDO;
+                case KC_Z: return U"      " ARROWS_UNDO;      // Cmd+Z = undo (Cmd+Shift+Z redo above)
                 // OS-aware shortcut hints (wave B). Tab uses the narrow ARROWS_TAB
                 // base legend, so 4 spaces clear it; Space gets 3.
                 case KC_TAB:   return U"    " ICON_APP_SWITCH;    // Cmd+Tab app switcher
@@ -1136,15 +1242,50 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     } else {
     // Windows / Linux / Android / undetected: editing on Ctrl, window-mgmt on GUI.
     // The two host-detected Linux desktops (GNOME/KDE) behave as Linux here, but a
-    // few Super-key hints differ between them — see the wm_held switch below.
+    // few Super-key hints differ between them — see the Super (GUI) switch below.
     const bool gnome = (active_os == POLY_OS_LINUX_GNOME);
     const bool win_or_unknown = (active_os == POLY_OS_WINDOWS || active_os == POLY_OS_UNKNOWN);
     const bool linux_any = (active_os == POLY_OS_LINUX
                             || active_os == POLY_OS_LINUX_GNOME
                             || active_os == POLY_OS_LINUX_KDE);
-    const bool wm_held = (win_or_unknown || linux_any)
-                      && (local_mods & MOD_MASK_GUI) != 0;
-    if ((local_mods & MOD_MASK_CTRL) != 0) {
+    const bool wm = (win_or_unknown || linux_any);   // OSes whose window-mgmt hangs off GUI/Super
+    // Windows multi-modifier Super chords (wave D), each on its EXACT modifier set. An
+    // unmatched key returns nothing (no fall-through to the Ctrl/Alt editing hints) —
+    // Win+Ctrl+C is a different chord from Ctrl+C, so it no longer previews "copy".
+    if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LCTL | MOD_LSFT)) {
+        switch(keycode) {
+            // Win+Ctrl+Shift+B restart graphics: monitor 🖵, then MOVE to the screen
+            // cavity and HALF-draw the reload 🗘 into it.
+            case KC_B: return U"    " ICON_GFX_RESTART HINT_MOVE(HINT_POS_SCREEN) HINT_HALF ICON_GFX_RELOAD;
+            default: break;
+        }
+    } else if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LCTL)) {
+        switch(keycode) {
+            // Virtual-desktop chords: a compact monitor glyph (ICON_DESKTOP_SMALL)
+            // composed with +/←/→/x so the action reads next to the screen.
+            case KC_D:     return U"  " PRIVATE_SCREEN U"+";             // Win+Ctrl+D new virtual desktop
+            case KC_LEFT:  return U"  " ICON_LEFT PRIVATE_SCREEN;        // Win+Ctrl+Left  previous desktop
+            case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
+            case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
+            case KC_F:     return U"    " ICON_NET;                       // Win+Ctrl+F search network computers (🖧 pack glyph)
+            case KC_V:     return U"   "  ICON_VOLUME_MIXER;              // Win+Ctrl+V volume mixer (🔊 pack glyph; mixer flyout on Win 11 24H2+)
+            case KC_N:     return U"    "  ICON_NARRATOR;                 // Win+Ctrl+N Narrator settings (👂 pack glyph)
+            case KC_Q:     return U"   "   ICON_QUICK_ASSIST;             // Win+Ctrl+Q Quick Assist (🤝 pack glyph)
+            case KC_S:     return U"   "   ICON_SPEECH_REC;               // Win+Ctrl+S Speech Recognition (🎤 pack glyph)
+            default: break;
+        }
+    } else if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LALT)) {
+        switch(keycode) {
+            case KC_R: return U"   " ICON_SCREEN_RECORD;       // Win+Alt+R start/stop screen recording
+            default: break;
+        }
+    }
+    if (mods_now == (MOD_LCTL | MOD_LSFT)) {
+        switch(keycode) {
+            case KC_Z: return U"      " ARROWS_REDO;        // Ctrl+Shift+Z redo (Linux/cross-app)
+            default: break;
+        }
+    } else if (mods_now == MOD_LCTL) {
         switch(keycode) {
             case KC_A: return U"      " BOX_WITH_CHECK_MARK;
             case KC_C: return U"     " CLIPBOARD_COPY;
@@ -1155,23 +1296,26 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_S: return U"\t" PRIVATE_FLOPPY;
             case KC_O: return U"\t" FILE_OPEN;
             case KC_P: return U"\t" PRIVATE_PRINTER;
-            // Ctrl+Y = redo (Windows), Ctrl+Shift+Z = redo (Linux/cross-app);
-            // Ctrl+Z = undo.
-            case KC_Y: return U"      " ARROWS_REDO;
-            case KC_Z: return shift ? U"      " ARROWS_REDO : U"      " ARROWS_UNDO;
+            case KC_Y: return U"      " ARROWS_REDO;         // Ctrl+Y redo (Windows)
+            case KC_Z: return U"      " ARROWS_UNDO;         // Ctrl+Z undo (Ctrl+Shift+Z redo above)
             // OS-aware shortcut hints (wave B): word nav + close on Ctrl.
             case KC_LEFT:  return U"    " ICON_WORD_LEFT;   // Ctrl+Left  word left
             case KC_RIGHT: return U"    " ICON_WORD_RIGHT;  // Ctrl+Right word right
             case KC_W:     return U"    " ICON_CLOSE;       // Ctrl+W close
             default: break;
         }
-    } else if ((local_mods & MOD_MASK_ALT) != 0) {
+    } else if (mods_now == MOD_LALT) {
         switch(keycode) {
             case KC_TAB: return U"    " ICON_APP_SWITCH;    // Alt+Tab app switcher
             case KC_F4:  return U"    " ICON_CLOSE;         // Alt+F4 close
             default: break;
         }
-    } else if (wm_held) {
+    } else if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LSFT)) {
+        switch(keycode) {
+            case KC_S: return U"   " ICON_SNIP;             // Win+Shift+S Snipping Tool (region capture)
+            default: break;
+        }
+    } else if (wm && mods_now == MOD_LGUI) {
         switch(keycode) {
             case KC_D:
                 // Show desktop: Win+D and KDE Super+D. GNOME has no default
@@ -1188,11 +1332,12 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
             case KC_TAB:
                 if (win_or_unknown || gnome) return U"    " ICON_WINDOW_SWITCH;
                 break;
-            // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses
-            // the Super overview and KDE a Super-tap / Alt+Space — neither binds
-            // Super+S — so show it only on Windows (and the unknown default).
+            // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses the
+            // Super overview and KDE a Super-tap / Alt+Space — neither binds Super+S — so
+            // show it only on Windows (and the unknown default). Win+Shift+S (Snipping
+            // Tool) is handled in its own block above.
             case KC_S:
-                if (win_or_unknown) return U"   "  ICON_LAUNCHER;
+                if (win_or_unknown) return U"   " ICON_LAUNCHER;
                 break;
             // Windows-only Super-chords (wave C). These have no standard GNOME/KDE
             // equivalent, so they are gated on win_or_unknown only. Dictation (Win+H)
@@ -1207,19 +1352,22 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 if (win_or_unknown) return U"   "   ICON_DICTATION;     // Win+H dictation
                 break;
             case KC_I:
-                if (win_or_unknown) return U"   "   ICON_SETTINGS;      // Win+I settings
+                if (win_or_unknown) return U"   "   ICON_SETTINGS;      // Win+I settings (⚙ pack glyph)
                 break;
             case KC_M:
-                if (win_or_unknown) return U"     " PRIVATE_WINDOW;     // Win+M minimize all
+                if (win_or_unknown) return U"      " PRIVATE_MINIMIZE;  // Win+M minimize all (🗕)
                 break;
             case KC_R:
-                if (win_or_unknown) return U"   "   ICON_PROMPT_GT ICON_PROMPT_US; // Win+R run dialog
+                // Win+R run dialog: draw the run-dialog FRAME at its top-left, reset the
+                // cursor to the origin, then draw the base-font ">_" (4 spaces,
+                // right-of-centre) inside it.
+                if (win_or_unknown) return HINT_MOVE(HINT_POS_RUNBOX) HINT_FRAME(HINT_SZ_RUNBOX) HINT_RESET U"    >_";
                 break;
             case KC_T:
                 if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
                 break;
             case KC_K:
-                if (win_or_unknown) return U"   "   ICON_CAST;          // Win+K cast
+                if (win_or_unknown) return U"   "   ICON_CAST;          // Win+K cast (📶 pack glyph)
                 break;
             case KC_V:
                 if (win_or_unknown) return U"   "   ICON_CLIP_HISTORY;  // Win+V clipboard history
@@ -1232,6 +1380,63 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
                 break;
             case KC_DOT:
                 if (win_or_unknown) return U"   "   PRIVATE_EMOJI_1F600; // Win+. emoji panel
+                break;
+            // More Windows-only Super-chords (wave D). Leading-space counts tuned per
+            // glyph (hint_preview) so each sits as far right as it fits without
+            // clipping the 72 px window, matching the existing hints' placement.
+            case KC_A:
+                if (win_or_unknown) return U"      " ICON_LIGHTNING;    // Win+A Action Center/Quick Settings
+                break;
+            case KC_E:
+                if (win_or_unknown) return U"    "  ICON_EXPLORER;      // Win+E File Explorer (folder pixmap)
+                break;
+            case KC_U:
+                if (win_or_unknown) return U"      " ICON_ACCESSIBILITY;// Win+U Accessibility settings
+                break;
+            case KC_B:
+                if (win_or_unknown) return U"   "   ICON_MAC_CONTROL;   // Win+B focus system tray (⌃ mac-control caret / show-hidden-icons chevron)
+                break;
+            case KC_HOME:
+                if (win_or_unknown) return U"     " ICON_FOCUS_WINDOW;  // Win+Home minimize all but active
+                break;
+            case KC_LEFT:
+                if (win_or_unknown) return U"     " ICON_SNAP_LEFT;     // Win+Left snap window left (⍇ pack glyph)
+                break;
+            case KC_RIGHT:
+                if (win_or_unknown) return U"     " ICON_SNAP_RIGHT;    // Win+Right snap window right (⍈ pack glyph)
+                break;
+            case KC_SCLN:
+                if (win_or_unknown) return U"   "   ICON_GIF;           // Win+; GIF / emoji panel
+                break;
+            case KC_PAUSE:
+                if (win_or_unknown) return U"    " ICON_SLIDERS;        // Win+Pause System Properties (🎛 knobs, pack)
+                break;
+            case KC_PSCR:
+                if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
+                break;
+            // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out. Both
+            // draw the pack magnifier 🔍, then MOVE the cursor so a plain base-font '+'/'-'
+            // lands centred in the lens.
+            case KC_EQL:
+            case KC_KP_PLUS:
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMIN) U"+";  // Win + '+' zoom in
+                break;
+            case KC_MINS:
+            case KC_KP_MINUS:
+                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMOUT) U"-"; // Win + '-' zoom out
+                break;
+            // Wave E — more Windows-only Super chords.
+            case KC_Q:
+                if (win_or_unknown) return U"   "   ICON_TEXT_RECOG;   // Win+Q Click to Do — text recognition (🔤 pack glyph)
+                break;
+            case KC_G:
+                if (win_or_unknown) return U"   "   ICON_GAME_BAR;     // Win+G Xbox Game Bar (🎮 pack glyph)
+                break;
+            case KC_F:
+                if (win_or_unknown) return U"   "   ICON_FEEDBACK;     // Win+F Feedback Hub (📣 pack glyph)
+                break;
+            case KC_C:
+                if (win_or_unknown) return U"   "   ICON_COPILOT;      // Win+C Copilot (🤖 pack glyph)
                 break;
             default: break;
         }
@@ -1640,6 +1845,10 @@ void update_displays(enum refresh_mode mode) {
                             text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
+                            // The hint string is a self-contained display list: any
+                            // frame / half-scale composite / +/- sign is encoded inline
+                            // (see the \x0E-\x12 ops in kdisp_write_gfx_text_cy), so no
+                            // per-keycode special-case is needed here.
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         kdisp_send_buffer();
@@ -2113,171 +2322,15 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             }
             break;
         }
-        /*[[[cog
-            for lang in languages:
-                cog.outl(f'case KCL_{lang.upper()}: local_state->lang = LANG_{lang.upper()}; mark_settings_dirty(); layer_off(_LL); break;')
-            ]]]*/
-        case KCL_ENUS: local_state->lang = LANG_ENUS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_DEDE: local_state->lang = LANG_DEDE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRFR: local_state->lang = LANG_FRFR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESES: local_state->lang = LANG_ESES; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PTPT: local_state->lang = LANG_PTPT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ITIT: local_state->lang = LANG_ITIT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TRTR: local_state->lang = LANG_TRTR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KOKR: local_state->lang = LANG_KOKR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_JAJP: local_state->lang = LANG_JAJP; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARSA: local_state->lang = LANG_ARSA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ELGR: local_state->lang = LANG_ELGR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_UKUA: local_state->lang = LANG_UKUA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_RURU: local_state->lang = LANG_RURU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BEBY: local_state->lang = LANG_BEBY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KKKZ: local_state->lang = LANG_KKKZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BGBG: local_state->lang = LANG_BGBG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PLPL: local_state->lang = LANG_PLPL; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_RORO: local_state->lang = LANG_RORO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ZHCN: local_state->lang = LANG_ZHCN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NLNL: local_state->lang = LANG_NLNL; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HEIL: local_state->lang = LANG_HEIL; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SVSE: local_state->lang = LANG_SVSE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FIFI: local_state->lang = LANG_FIFI; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NNNO: local_state->lang = LANG_NNNO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_DADK: local_state->lang = LANG_DADK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HUHU: local_state->lang = LANG_HUHU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CSCZ: local_state->lang = LANG_CSCZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HRHR: local_state->lang = LANG_HRHR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SKSK: local_state->lang = LANG_SKSK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_LTLT: local_state->lang = LANG_LTLT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_LVLV: local_state->lang = LANG_LVLV; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ETEE: local_state->lang = LANG_ETEE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PTBR: local_state->lang = LANG_PTBR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SRRS: local_state->lang = LANG_SRRS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MKMK: local_state->lang = LANG_MKMK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FAIR: local_state->lang = LANG_FAIR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HIIN: local_state->lang = LANG_HIIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MRIN: local_state->lang = LANG_MRIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NENP: local_state->lang = LANG_NENP; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MNMN: local_state->lang = LANG_MNMN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_URPK: local_state->lang = LANG_URPK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENGB: local_state->lang = LANG_ENGB; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESMX: local_state->lang = LANG_ESMX; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_DECH: local_state->lang = LANG_DECH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRBE: local_state->lang = LANG_FRBE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCA: local_state->lang = LANG_FRCA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_THTH: local_state->lang = LANG_THTH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BNIN: local_state->lang = LANG_BNIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TEIN: local_state->lang = LANG_TEIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TAIN: local_state->lang = LANG_TAIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ZHTW: local_state->lang = LANG_ZHTW; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KAGE: local_state->lang = LANG_KAGE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HYAM: local_state->lang = LANG_HYAM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_IDID: local_state->lang = LANG_IDID; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AZAZ: local_state->lang = LANG_AZAZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ISIS: local_state->lang = LANG_ISIS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_VIVN: local_state->lang = LANG_VIVN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ZHHK: local_state->lang = LANG_ZHHK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENAU: local_state->lang = LANG_ENAU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENNZ: local_state->lang = LANG_ENNZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MINZ: local_state->lang = LANG_MINZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SMWS: local_state->lang = LANG_SMWS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FJFJ: local_state->lang = LANG_FJFJ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TLPH: local_state->lang = LANG_TLPH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_HWUS: local_state->lang = LANG_HWUS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENZA: local_state->lang = LANG_ENZA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AFZA: local_state->lang = LANG_AFZA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AREG: local_state->lang = LANG_AREG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SWKE: local_state->lang = LANG_SWKE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AMET: local_state->lang = LANG_AMET; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_YONG: local_state->lang = LANG_YONG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENNG: local_state->lang = LANG_ENNG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARMA: local_state->lang = LANG_ARMA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARIQ: local_state->lang = LANG_ARIQ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KUIQ: local_state->lang = LANG_KUIQ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MSMY: local_state->lang = LANG_MSMY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_UZUZ: local_state->lang = LANG_UZUZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENCA: local_state->lang = LANG_ENCA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESAR: local_state->lang = LANG_ESAR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENPG: local_state->lang = LANG_ENPG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TYPF: local_state->lang = LANG_TYPF; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESCO: local_state->lang = LANG_ESCO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESPE: local_state->lang = LANG_ESPE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESVE: local_state->lang = LANG_ESVE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESCL: local_state->lang = LANG_ESCL; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESEC: local_state->lang = LANG_ESEC; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESGT: local_state->lang = LANG_ESGT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESDO: local_state->lang = LANG_ESDO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESBO: local_state->lang = LANG_ESBO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESPY: local_state->lang = LANG_ESPY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESCR: local_state->lang = LANG_ESCR; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESSV: local_state->lang = LANG_ESSV; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESHN: local_state->lang = LANG_ESHN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESPA: local_state->lang = LANG_ESPA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESUY: local_state->lang = LANG_ESUY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ESNI: local_state->lang = LANG_ESNI; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_DEAT: local_state->lang = LANG_DEAT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NLBE: local_state->lang = LANG_NLBE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CAES: local_state->lang = LANG_CAES; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENIE: local_state->lang = LANG_ENIE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BSBA: local_state->lang = LANG_BSBA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCH: local_state->lang = LANG_FRCH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SLSI: local_state->lang = LANG_SLSI; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FOFO: local_state->lang = LANG_FOFO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARAE: local_state->lang = LANG_ARAE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARSY: local_state->lang = LANG_ARSY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARJO: local_state->lang = LANG_ARJO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARLB: local_state->lang = LANG_ARLB; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARYE: local_state->lang = LANG_ARYE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARKW: local_state->lang = LANG_ARKW; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AROM: local_state->lang = LANG_AROM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARPS: local_state->lang = LANG_ARPS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARQA: local_state->lang = LANG_ARQA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARBH: local_state->lang = LANG_ARBH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARDZ: local_state->lang = LANG_ARDZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARSD: local_state->lang = LANG_ARSD; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARTN: local_state->lang = LANG_ARTN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ARLY: local_state->lang = LANG_ARLY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCD: local_state->lang = LANG_FRCD; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCI: local_state->lang = LANG_FRCI; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRCM: local_state->lang = LANG_FRCM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRSN: local_state->lang = LANG_FRSN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRMG: local_state->lang = LANG_FRMG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENGH: local_state->lang = LANG_ENGH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENUG: local_state->lang = LANG_ENUG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENZM: local_state->lang = LANG_ENZM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SWTZ: local_state->lang = LANG_SWTZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PTAO: local_state->lang = LANG_PTAO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PTMZ: local_state->lang = LANG_PTMZ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_BNBD: local_state->lang = LANG_BNBD; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENIN: local_state->lang = LANG_ENIN; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENPK: local_state->lang = LANG_ENPK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENPH: local_state->lang = LANG_ENPH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENSG: local_state->lang = LANG_ENSG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENLK: local_state->lang = LANG_ENLK; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_KYKG: local_state->lang = LANG_KYKG; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TGTJ: local_state->lang = LANG_TGTJ; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENGU: local_state->lang = LANG_ENGU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENSB: local_state->lang = LANG_ENSB; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENVU: local_state->lang = LANG_ENVU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_ENFM: local_state->lang = LANG_ENFM; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_FRNC: local_state->lang = LANG_FRNC; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_TOTO: local_state->lang = LANG_TOTO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_EUES: local_state->lang = LANG_EUES; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_GLES: local_state->lang = LANG_GLES; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_RMCH: local_state->lang = LANG_RMCH; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CYGB: local_state->lang = LANG_CYGB; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_GAIE: local_state->lang = LANG_GAIE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_MTMT: local_state->lang = LANG_MTMT; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_LBLU: local_state->lang = LANG_LBLU; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_SENO: local_state->lang = LANG_SENO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_GNPY: local_state->lang = LANG_GNPY; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_QUPE: local_state->lang = LANG_QUPE; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_AYBO: local_state->lang = LANG_AYBO; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NVUS: local_state->lang = LANG_NVUS; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_NHMX: local_state->lang = LANG_NHMX; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_PSAF: local_state->lang = LANG_PSAF; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_IUCA: local_state->lang = LANG_IUCA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CRCA: local_state->lang = LANG_CRCA; mark_settings_dirty(); layer_off(_LL); break;
-        case KCL_CKUS: local_state->lang = LANG_CKUS; mark_settings_dirty(); layer_off(_LL); break;
-        //[[[end]]]
+        // Direct per-language selectors on the language layer (KCL_ENUS..last).
+        // The KCL_* and LANG_* enums are both generated from the same ordered
+        // language list, so LANG_xx == (KCL_xx - KCL_ENUS) — the two _Static_asserts
+        // above guard that — and the whole per-language block is one range case.
+        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1:
+            local_state->lang = (uint8_t)(keycode - KCL_ENUS);
+            mark_settings_dirty();
+            layer_off(_LL);
+            break;
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
             layer_off(_LL);
@@ -2494,6 +2547,7 @@ void keyboard_post_init_user(void) {
     // the host re-engages). Overrides local_state->contrast when auto was on.
     load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
+    note_glyph_script(ee.glyph_script);
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before
@@ -2502,6 +2556,8 @@ void keyboard_post_init_user(void) {
     // Seed with the same OS|auto-flag encoding housekeeping uses, so the first
     // render/sync before housekeeping runs shows the correct auto/pin badge.
     local_state->active_os = (uint8_t)(get_active_os() | (get_os_auto_mode() ? POLY_OS_AUTO_FLAG : 0));
+    // Seed the glyph-script override so the first render reflects the persisted script.
+    local_state->glyph_script = get_glyph_script();
 #ifdef RGB_MATRIX_ENABLE
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 #else

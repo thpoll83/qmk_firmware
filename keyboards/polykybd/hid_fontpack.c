@@ -16,7 +16,6 @@
 #include "config.h"
 #include "split_fw_up.h"
 #include "bridge_helper.h"
-#include "polymod_crc32.h"
 #include <transactions.h>
 #include "base/fw_staging.h"
 #include "base/fontpack.h"
@@ -108,23 +107,10 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // Relay to the slave FIRST (identity-bound reply: a chunk only counts
             // once the slave's write cursor moved PAST this offset), then write the
             // master's own copy — so a failed relay leaves both cursors in lock-step.
-            fw_up_chunk_sync_t chunk_msg;
-            chunk_msg.offset = offset;
-            memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
-            chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
-            uint8_t slave_ack = SYNC_CRC32_ERR;
-            for (uint8_t retry = 0; retry < 10; ++retry) {
-                fw_up_chunk_reply_t reply;
-                memset(&reply, 0, sizeof(reply));
-                reply.ack = SYNC_CRC32_ERR;
-                bool ok_rpc = transaction_rpc_exec(USER_SYNC_FW_UP_CHUNK, sizeof(chunk_msg), &chunk_msg,
-                                                   sizeof(reply), &reply);
-                if (ok_rpc && reply.ack == SYNC_ACK && reply.next_offset > offset) {
-                    slave_ack = SYNC_ACK;
-                    break;
-                }
-            }
-            bool ok = (slave_ack == SYNC_ACK);
+            // "FONTPACK_CHUNK" tag = the same per-retry / retry-success debug
+            // logging the standalone fontpack loop had (added for link diagnostics),
+            // now produced by the shared helper.
+            bool ok = fw_up_relay_chunk_to_slave(offset, chunk_data, "FONTPACK_CHUNK");
             if (ok) ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
 
             memset(data, 0, length);

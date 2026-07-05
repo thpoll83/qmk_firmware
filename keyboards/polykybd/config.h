@@ -94,7 +94,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.9.20"
+#define FW_VERSION "0.9.36"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -126,7 +126,27 @@
 //     Adds display-only shortcut-hint glyphs (word-nav, launcher, app/window switch,
 //     close) to the symbol font-pack bundle (content_version bumped). No new command;
 //     the host must match v8 to connect (exact-match gate) and reflash the bundle.
-#define PROTOCOL_VERSION 8
+// v9: adds GET/SET_GLYPH_SCRIPT (cmd 30 / 0x1e) — a glyph-script OVERRIDE that
+//     replaces the language-layer letter/digit legends with an alternative script
+//     (0 = standard/off, 1 = Tengwar), leaving overlays and OS-hints untouched.
+//     0xFF queries (reply byte = current script), else sets it; out-of-range NACKs.
+//     Persisted in poly_eeconf_t.glyph_script; synced to the slave via poly_sync_t.
+//     The Tengwar glyphs ship in a new "fantasy" font-pack bundle, which the host
+//     flashes on connect. Host must match v9 to connect (exact-match gate).
+// v10: glyph-script (cmd 30) becomes an OPEN-ENDED INDEX and ships 9 more scripts —
+//     Elder Futhark runes, Aurebesh, Standard Galactic Alphabet, Cirth/Angerthas,
+//     IBM VGA/CP437, Commodore 64, Amiga Topaz, APL, Braille (all in the regrown
+//     "fantasy" bundle, content_version bumped). The wire format is unchanged (one
+//     script byte); the semantic change is that the firmware now ACCEPTS ANY index
+//     0..0xFE — an index it doesn't know, or whose font isn't flashed, just renders
+//     the normal legend instead of NACKing. This DECOUPLES "add a font face" from the
+//     protocol: within v10 the script set can grow freely (host offers more scripts
+//     than a keyboard has; older keyboards degrade gracefully), so **adding scripts
+//     never bumps the protocol again** — only a real wire/semantic change would.
+//     0xFF stays the query sentinel. (v10 is the one-time bump that establishes this
+//     open-ended contract, distinguishing it from the pre-v10 Tengwar-only firmware
+//     that NACKed unknown indices.)
+#define PROTOCOL_VERSION 10
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

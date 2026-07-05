@@ -103,7 +103,24 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   (cmd 6) reply — AFTER the NUL-terminated id string: `['V'][count][u16 little-endian
   content_version × count]` in bundle-slot order. The host reads it to flash only the
   font-pack bundles the keyboard is missing/behind on (no extra query); older hosts
-  stop at the NUL and ignore it. See "Font pack" below. **Bump `FW_VERSION` +
+  stop at the NUL and ignore it. See "Font pack" below. **v9** added
+  `GET/SET_GLYPH_SCRIPT` (cmd `30` / `0x1e`): a glyph-script **override** that swaps
+  the language-layer letter/digit legends for an alternative script (`0` = standard/off,
+  `1` = Tengwar), leaving overlays and OS-hints untouched. `0xFF` queries (reply byte =
+  current script), else sets it; out-of-range NACKs. Persisted in
+  `poly_eeconf_t.glyph_script`, synced via `poly_sync_t.glyph_script`. The Tengwar
+  glyphs ship in a new **`fantasy`** font-pack bundle (the host flashes it on connect);
+  with no bundle the override falls back to Latin. See "Glyph-script override" below.
+  **v10** makes the glyph script an **open-ended index** and ships 9 more scripts,
+  values `2..10`: Elder Futhark runes, Aurebesh, Standard Galactic Alphabet,
+  Cirth/Angerthas, IBM VGA/CP437, Commodore 64, Amiga Topaz, APL, Braille — all in the
+  (regrown) `fantasy` bundle (`content_version` bumped 1→2). The wire format is unchanged
+  (one script byte); the semantic change is that the firmware now **accepts any index
+  `0..0xFE`** — an index it doesn't know, or whose font isn't flashed, renders the normal
+  legend instead of NACKing. This **decouples "add a font face" from the protocol**: within
+  v10 the script set can grow freely (the host may offer more scripts than a keyboard has;
+  older keyboards degrade gracefully), so **adding scripts never bumps the protocol again** —
+  only a real wire/semantic change would. `0xFF` stays the query sentinel. **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep** — the host connect gate is exact-match.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
@@ -227,6 +244,70 @@ pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
   "glance at the dimmed legend and resume typing" hint the pulse preserves; jitter
   was chosen as the default-preserving, legibility-preserving fix.
 
+### Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+; expanded v10)
+An OS-independent **override** of the language-layer legends with an alternative
+script (fantasy / retro). State: `poly_eeconf_t.glyph_script` (persisted, appended
+tail byte like `os_state`; `EECONFIG_USER_DATA_SIZE` grew 64→65, still ≤ the 128-byte
+`POLY_EECONFIG_USER_RESERVED` so **no keymap relocation / user reset**) +
+`poly_sync_t.glyph_script` (master-authoritative, synced like `active_os`;
+`housekeeping_task_user()` sets it and `request_disp_refresh()`s on change). `enum
+poly_glyph_script` in `state.h` — append-only: `GLYPH_STD=0`, `GLYPH_TENGWAR=1`, then
+the v10 expansion `GLYPH_RUNES=2, GLYPH_AUREBESH=3, GLYPH_SGA=4, GLYPH_CIRTH=5,
+GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
+- **Open-ended index (v10+): cmd 30 accepts ANY value `0..0xFE`; unknown → normal.**
+  `set_glyph_script()`/`note_glyph_script()`/`load_user_eeconf()` store the byte
+  verbatim (only the erased-EEPROM `0xFF` maps to `GLYPH_STD`); `hid_com.c` case 30 no
+  longer NACKs an out-of-range index. `glyph_script_codepoint()` returns 0 for any
+  `script >= GLYPH_SCRIPT_COUNT`, so an index this firmware doesn't know falls through
+  to the normal legend (same path as a known script whose font isn't flashed). This is
+  what lets the host offer scripts a given keyboard lacks and lets **new font faces ship
+  without a protocol bump** — DON'T re-add a range NACK. Storing verbatim also means a
+  choice made before the matching font-pack update survives it. Adding a `GLYPH_*` value
+  therefore needs NO `PROTOCOL_VERSION` change — just the enum entry, the
+  `glyph_script_blocks[]` row, the font, and the host `GlyphScript`/label.
+- **Render hook — one choke point in `render_key()`** (`poly_keymap.c`): right after
+  `local_state` is fetched, when `glyph_script != GLYPH_STD` and the key is a plain
+  letter/digit on the normal layer (not the `_ADDLANG1` latin-variation layer), it
+  draws the override glyph centered and **returns**, so it replaces the *whole* base
+  legend — including the unshifted view's shift-preview (Tengwar is caseless, so the
+  shift preview is deliberately dropped). Overlays and OS-hints
+  (`keycode_to_disp_overlay`) are drawn on **separate paths** (`update_displays` /
+  overlay memory) and are genuinely untouched. Two fall-throughs to the real legend:
+  when an **AltGr** key is held (`mods & MOD_RALT` — the AltGr symbol is a different
+  character, not a cased letter, so it wins), and when the glyph isn't in `g_all_fonts`
+  (the `fantasy` bundle isn't flashed), so a pack-less keyboard shows Latin, never blanks.
+- **Codepoints are relocated, NOT native.** The `flags` bundle already occupies the
+  CSUR PUA `0xE000+`, so raw script codepoints would render a language flag. Each
+  script's font is emitted (fontconvert sequence `-F` remap, `fonts.yaml`) into its
+  own **dense private PUA block** matching `glyph_script_blocks[]` (a table indexed by
+  `poly_glyph_script`) in `poly_keymap.c`: Tengwar `0xE800`, Runes `0xE840`, Aurebesh
+  `0xE880`, SGA `0xE8C0`, Cirth `0xE900`, IBM VGA `0xE940`, C64 `0xE980`, Amiga `0xE9C0`,
+  APL `0xEA00`, Braille `0xEA40` (0x40 apart). Letters `a..z` → `base+0..25`; scripts
+  with their own numerals (`digits:true`) put `1..0` at `base+26..35`, others leave the
+  digit keys as the normal numeral (runes/Aurebesh/Cirth have no native numbers). The
+  per-key glyph choice lives only in the font's generation sequence, so the firmware
+  just needs the base + dense index.
+- **Fonts** (all in the `fantasy` bundle; keep user-facing strings generic — trademark
+  caveat on the fictional scripts, though the *fonts* are fine to embed): Tengwar =
+  Alcarin (OFL, no Noto Tengwar exists); Runes = Noto Sans Runic (OFL); Aurebesh /
+  Cirth = GNU Unifont CSUR (GPL + font-embedding exception; kept on the blocky 16 px
+  bitmap because no license-clean smooth outline font exists for those CSUR blocks —
+  the free Aurebesh/Cirth outline fonts are personal-use-only); APL / Braille = DejaVu
+  Sans (Bitstream Vera + Arev, permissive — smooth outline, replacing Unifont's 16 px
+  bitmap; the APL quad U+2395, absent from DejaVu, maps to U+25A1 □); SGA = the CC0
+  `standardgalactic/alphabet` font; IBM VGA/CP437 = VileR PxPlus (CC-BY-SA-4.0, Debian
+  `fonts-pc`); C64 = KreativeKorp **PetMe64** (KSRFL, solid ROM font — the OFL
+  Homecomputer "Sixtyfour" was rejected for its baked-in CRT scanlines); Amiga = OFL
+  Homecomputer "Workbench" (Debian `fonts-amiga`; scanline look kept for a clean
+  license — solid Topaz conversions were license-uncertain). ZX Spectrum was dropped
+  (no license-clean font found). Sources fetched by `fonts/dl-fonts.sh` (google/fonts
+  + CC0 raw URLs; the Debian-packaged ones via `apt-get download` + `dpkg-deb -x`, no
+  root). Host: HID cmd 30 in `PolyKybd.get/set_glyph_script`, tray "Glyph Script"
+  submenu (`GLYPH_SCRIPT_LABELS`) + a "Reset glyph script to Standard" button in the
+  settings dialog; `polyctl glyph-script [standard|tengwar|runes|…|braille]`. Rig:
+  `test_glyph_script_round_trip` (`min_protocol: 9`) + `test_glyph_script_expansion`
+  (`min_protocol: 10`, walks values 2/6/10 + out-of-range NACK).
+
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
 
@@ -317,6 +398,15 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     the others. `cmp` each regenerated `.plyf` against the shipped one to see which
     actually changed, and bump+reship only those (see the gidx note above re: why
     appending a glyph now changes only the edited bundle).
+    - **Bump `content_version` MINIMALLY (+1 over the shipped value), don't jump.**
+      No font-pack bundle has ever been deployed to a device, so the version only
+      needs to exceed what a device already has (0 / nothing) — any increment works,
+      and a small, monotonic step keeps the diff-vs-base readable and the host's
+      `decide_stale_bundles` comparison obvious. Don't ratchet a version up across
+      iterations (e.g. 4→7→8 while tuning); land the reship at base+1 (symbol 4→5,
+      2026-07). ⚠️ The value lives in the `.plyf` header *and* `bundles.json` — they
+      must match, so changing it means regenerating the `.plyf` with the new
+      `--bundle-version`, not just editing the JSON.
   - **Flash UX (split72):** while any flash runs the status OLED shows an "Updating
     fonts/firmware — do not unplug" screen with a full-width progress bar, and the RGB
     matrix breathes (cyan = font pack, orange = firmware/bootloader = "can't type");
@@ -339,12 +429,65 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   (`base/fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
   (prepended), so *extending it with another glyph* (append bitmap bytes + a `GFXglyph`
   record, bump the font's `last`) shifts **no pack index** and needs no reship — it
-  ships with the firmware. The Win+R `>_` hint does this: a 16 pt `>`/`_` (2 pt over the
-  14 pt base) generated via `fontconvert` and injected at PUA `0x9A`/`0x9B`
-  (`ICON_PROMPT_GT`/`_US`), referenced only by that hint so normal `>`/`_` keycaps keep
-  the base size. ⚠️ Adding a whole **new resident *font*** instead (an extra entry in
-  `index.resident_fonts`) prepends ahead of the pack → **every pack font's gidx shifts**
-  → a full-pack reship; avoid that for one or two glyphs.
+  ships with the firmware — the OS logos, mouse buttons and lock-key glyphs at
+  `0x94`–`0x99` etc. are exactly this. ⚠️ Adding a whole **new resident *font***
+  instead (an extra entry in `index.resident_fonts`) prepends ahead of the pack →
+  **every pack font's gidx shifts** → a full-pack reship; avoid that for one or two
+  glyphs. (Conversely, when a hint can use a *pack* glyph or a base-font character,
+  prefer that over a resident icon — the Win+R `>_` was reverted from a bespoke
+  16 pt `0x9A`/`0x9B` pair to the plain base-font `">_"` + a drawn frame, and the
+  Win+`+`/`-` magnifier from resident `0x9E`/`0x9F` to the pack 🔍 with a
+  programmatically-drawn `+`/`-`, reclaiming those C1 slots — 2026-07.)
+  - ⚠️ **IconsFont is a range font `0x80..last`; slots `0xA0`+ COLLIDE with printable
+    Latin-1** (`0xA0` nbsp, `0xA2..0xA5` = ¢£¤¥, …). Because `IconsFont` is
+    `g_all_fonts[0]` it **wins** the lookup, so a custom icon parked at e.g. `0xA4`
+    *shadows* the real ¤ — and `CURRENCY_SIGN` (U+00A4) is used in real legends, so
+    those keys render the icon instead of the currency glyph (field/CodeRabbit,
+    2026-07). **Put custom resident icons in the non-printable C1 range `0x80–0x9F`
+    (or a real PUA), never `0xA0+`.** The Win-hint wave-D glyphs violated this
+    (`0xA2–0xA5` = settings/cast/sliders/restart) — **RESOLVED 2026-07**: all four
+    migrated to the pack (settings→⚙ U+2699, cast→📶 U+1F4F6, sliders→🎛 U+1F39B,
+    gfx-restart→🖵 U+1F5B5 + a half-scaled 🗘 overlay), so `IconsFont`'s `last` was
+    dropped from `0xA5` to `0x9F` — the whole `0xA0+` tail is gone and **no printable
+    Latin-1 is shadowed anymore** (¢£¤¥ render from NotoSans again). The only mid-range
+    gap left is `0x9D` (C1 control, harmless).
+  - **Removing a glyph from the MIDDLE of the range** (e.g. after migrating a hint
+    to the pack): you can't delete it (the array must stay contiguous `first..last`).
+    Turn its record into a **gap** `{off,0,0,0,0,0}` and drop its bitmap bytes, then
+    **shift every later glyph's `bitmapOffset` down by the removed byte count**. Gap
+    glyphs (w==h==xAdvance==0) are skipped by the renderer and fall through to the
+    next font — so gapping `0xA0/0xA1` (the old snap arrows) actually *un-shadowed*
+    the real nbsp/¡. (The host preview `tools/gfx_font.py` skips gaps too.) **If the
+    removed glyphs are the TAIL of the range** (as `0xA2/0xA3/0xA5` were, with the
+    intervening `0xA0/0xA1/0xA4` already gaps), just lower the `GFXfont` `last` past
+    them instead of leaving trailing gaps — that un-shadows every codepoint above the
+    new `last` at once.
+  - **A shortcut-hint string is a mini DISPLAY LIST, not just text** (2026-07). The
+    hint returned by `keycode_to_disp_overlay()` is interpreted by
+    `kdisp_write_gfx_text_cy()` (`disp_array.c`), which understands control-code ops
+    on top of the plain glyphs — so extra art (frames, composited icons, drawn signs)
+    lives **in the hint string**, and `update_displays()` has **no per-keycode
+    special-case** (the old `keycode_hint_wants_frame/_gfx_restart/_mag` gates were
+    removed). The ops, built via the `HINT_*` macros in `lang/named_glyphs.h`:
+    - `HINT_MOVE(pos)` = `\x0E` + 2 codepoints (x,y) — move the cursor to buffer coords.
+    - `HINT_HALF` = `\x0F` — draw the NEXT glyph at half size (2×2-OR downsample via
+      `kdisp_draw_glyph_half_at()`; keeps thin strokes plain decimation drops; **round
+      the halved dims up** `(w+1)/2` + bounds-check, or an odd-width glyph loses its
+      last column — the 🗘 reload is 27×35). Used for the Win+Ctrl+Shift+B monitor+🗘.
+    - `HINT_FRAME(sz)` = `\x12` + 2 codepoints (w,h) — 2px nested rounded rect at the
+      cursor (the Win+R run-dialog box). `HINT_RESET` = `\x18` resets to the origin.
+    - Magnifier `+`/`-` are just base-font `"+"`/`"-"` MOVE-positioned into the lens —
+      no bespoke primitive (dropped the `\x10`/`\x11` draw ops as too special-purpose).
+    - Fixed positions/sizes are named `HINT_POS_*` / `HINT_SZ_*`. ⚠️ **You cannot write
+      decimal coords in a `U"…"` literal** (no way to turn a number into a byte), hence
+      named position macros holding `\xHH\xHH`; and **each `\xHH` escape must be
+      followed by `\x`/`\u` or a split literal** or the compiler greedily merges the
+      hex into one huge codepoint. Derive buffer coords from `tools/gfx_font.py` (it
+      replicates the baseline-align math + the ops, so its render matches hardware).
+  - **Pack-category headers (`symbol_fonts.h`, etc.) are NOT compiled into the
+    firmware** — only `RESIDENT_FONTS[]` + `IconsFont` are `#include`d. So adding pack
+    glyphs (⍇/⍈, 🖧) does **not** grow the image; *removing* a resident glyph shrinks
+    it. Confirmed by grep: no firmware `.c` includes `symbol_fonts.h`.
 - **Regenerate** with `FONTCONVERT=<pinned> python3 generate_fonts.py`. **Byte-repro
   gotcha:** the per-category headers embed the fontconvert *binary path* in a
   provenance comment, so run from the **same path** the committed headers used

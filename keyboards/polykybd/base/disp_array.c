@@ -148,6 +148,41 @@ const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, 
     return kdisp_gfx_glyph_font(fonts, num_fonts, ch, NULL);
 }
 
+// Blit a glyph at half resolution (2x2-OR downsample) with its top-left at buffer
+// coords (x,y). Each destination pixel is lit if ANY of the four source pixels in
+// its 2x2 block is set — this keeps thin strokes (e.g. the reload arrows) visible
+// where plain decimation would drop them. No baseline align: (x,y) is the literal
+// top-left, so the caller places it precisely (used for the Win+Ctrl+Shift+B
+// reload glyph composited into the monitor's screen).
+void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
+    const GFXfont *font = NULL;
+    const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
+    if (glyph == NULL || font == NULL) return;
+    const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
+    uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
+    int16_t w = pgm_read_byte(&glyph->width);
+    int16_t h = pgm_read_byte(&glyph->height);
+    // Round up so an odd source width/height keeps its trailing column/row (the
+    // 2x2 block at the edge is just partially populated); the sx/sy bounds check
+    // below guards the out-of-range half of that block.
+    int16_t hw = (w + 1) / 2, hh = (h + 1) / 2;
+    for (int16_t dy = 0; dy < hh; ++dy) {
+        for (int16_t dx = 0; dx < hw; ++dx) {
+            bool lit = false;
+            for (int16_t oy = 0; oy < 2 && !lit; ++oy) {
+                for (int16_t ox = 0; ox < 2; ++ox) {
+                    int16_t sx = dx * 2 + ox, sy = dy * 2 + oy;
+                    if (sx >= w || sy >= h) continue;
+                    uint32_t bit = (uint32_t)sy * w + sx;
+                    uint8_t byte = pgm_read_byte(&bitmap[bo + (bit >> 3)]);
+                    if (byte & (0x80 >> (bit & 7))) { lit = true; break; }
+                }
+            }
+            if (lit) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+        }
+    }
+}
+
 
 void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
     for (int x = x_start; x < (x_start + width); ++x) {
@@ -157,11 +192,69 @@ void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height
     }
 }
 
+// Selected-tab chrome: a 3px border on north/east/west (open at the bottom) with
+// the two top corners chamfered 45°. The SSD1306 page layout (1 byte = 8 vertical
+// px) makes this cheap — every stroke is a plain memset, no per-pixel writes:
+//   * north band  = one memset of page 0 across the width (rows 0..2 → 0x07),
+//   * east/west rails = one memset per 8-row page over the 3 rail columns (0xFF).
+// The north memset runs FIRST so the rails' 0xFF overwrites page 0 at the rail
+// columns (full-height corners). Callers draw this frame onto a freshly-cleared
+// buffer and then draw the tab glyph on top (which ORs in), so the assign is safe
+// — it can't clobber a glyph, and the glyph fills the interior rows the north band
+// cleared.
+void kdisp_draw_tab_frame(void) {
+    const uint8_t xw = BUFFER_X;                     // west rail columns: xw .. xw+2
+    const uint8_t xe = BUFFER_X + SCREEN_WIDTH - 3;  // east rail columns: xe .. xe+2
+    memset(&scratch_buffer[BUFFER_X], 0x07, SCREEN_WIDTH);   // north band, page 0 rows 0..2
+    for (uint8_t p = 0; p < BUFFER_BYTE_VIS_HEIGHT; ++p) {
+        memset(&scratch_buffer[p * BUFFER_BYTE_WIDTH + xw], 0xFF, 3);
+        memset(&scratch_buffer[p * BUFFER_BYTE_WIDTH + xe], 0xFF, 3);
+    }
+    CLEAR_PIXEL(BUFFER_X,     0); CLEAR_PIXEL(BUFFER_X + 1, 0); CLEAR_PIXEL(BUFFER_X,     1);
+    CLEAR_PIXEL(BUFFER_X + SCREEN_WIDTH - 1, 0); CLEAR_PIXEL(BUFFER_X + SCREEN_WIDTH - 2, 0);
+    CLEAR_PIXEL(BUFFER_X + SCREEN_WIDTH - 1, 1);
+}
+
+// Non-selected-tab marker: a 3px underline along the bottom of the visible window
+// — an OR of the bottom-three-rows mask across the width (all in one page).
+void kdisp_draw_tab_underline(void) {
+    const uint8_t p = (SCREEN_HEIGHT - 3) >> 3;   // page holding rows 37..39
+    for (uint8_t x = BUFFER_X; x < BUFFER_X + SCREEN_WIDTH; ++x) {
+        scratch_buffer[p * BUFFER_BYTE_WIDTH + x] |= 0xE0;   // rows 37..39
+    }
+}
+
 void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
     for (int x = x_start; x < (x_start + width); ++x) {
         for (int y = y_start; y < (y_start + height); ++y) {
             CLEAR_PIXEL_CLIPPED(x, y);
         }
+    }
+}
+
+// Draw a 1px rounded-rectangle outline: four straight edges + four quarter-circle
+// corners (the Adafruit-GFX midpoint-circle helper). Coordinates are buffer
+// coordinates; pixels are clipped. Used for the Win+R run-dialog hint frame
+// (drawn twice, nested, for a 2px border — see keycode_to_disp_overlay()).
+void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r) {
+    if (width < 2 || height < 2) return;
+    int x0 = x, y0 = y, x1 = x + width - 1, y1 = y + height - 1;
+    if (r < 0) r = 0;
+    if (r > (width - 1) / 2)  r = (width - 1) / 2;
+    if (r > (height - 1) / 2) r = (height - 1) / 2;
+    // straight edges
+    for (int i = x0 + r; i <= x1 - r; ++i) { SET_PIXEL_CLIPPED(i, y0); SET_PIXEL_CLIPPED(i, y1); }
+    for (int j = y0 + r; j <= y1 - r; ++j) { SET_PIXEL_CLIPPED(x0, j); SET_PIXEL_CLIPPED(x1, j); }
+    // corner arcs (centres at the four inset corner points)
+    int cxl = x0 + r, cxr = x1 - r, cyt = y0 + r, cyb = y1 - r;
+    int f = 1 - r, ddF_x = 1, ddF_y = -2 * r, px = 0, py = r;
+    while (px < py) {
+        if (f >= 0) { py--; ddF_y += 2; f += ddF_y; }
+        px++; ddF_x += 2; f += ddF_x;
+        SET_PIXEL_CLIPPED(cxr + px, cyt - py); SET_PIXEL_CLIPPED(cxr + py, cyt - px); // top-right
+        SET_PIXEL_CLIPPED(cxl - px, cyt - py); SET_PIXEL_CLIPPED(cxl - py, cyt - px); // top-left
+        SET_PIXEL_CLIPPED(cxr + px, cyb + py); SET_PIXEL_CLIPPED(cxr + py, cyb + px); // bottom-right
+        SET_PIXEL_CLIPPED(cxl - px, cyb + py); SET_PIXEL_CLIPPED(cxl - py, cyb + px); // bottom-left
     }
 }
 
@@ -323,6 +416,23 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
                 break;
             case U'\r':
                 x_cursor = x;
+                break;
+            // ---- hint display-list ops: let a hint string composite extra art at a
+            //      chosen buffer position, so update_displays() needs no per-keycode
+            //      special-case. \x0E/\x12 take the next two codepoints as arguments. ----
+            case U'\x0E':   // MOVE cursor to buffer coords (next two codepoints = x, y)
+                if (text[1] && text[2]) { x_cursor = (int8_t)text[1]; y_cursor = (int8_t)text[2]; text += 2; }
+                break;
+            case U'\x0F':   // HALF: draw the next codepoint half-scale (2x2-OR) at the cursor, no advance
+                if (text[1]) { kdisp_draw_glyph_half_at(fonts, num_fonts, x_cursor, y_cursor, text[1]); text++; }
+                break;
+            case U'\x12':   // FRAME: 2px nested rounded rect at the cursor (next two codepoints = w, h)
+                if (text[1] && text[2]) {
+                    int8_t fw = (int8_t)text[1], fh = (int8_t)text[2];
+                    kdisp_draw_round_rect(x_cursor, y_cursor, fw, fh, 4);
+                    kdisp_draw_round_rect(x_cursor + 1, y_cursor + 1, (int8_t)(fw - 2), (int8_t)(fh - 2), 3);
+                    text += 2;
+                }
                 break;
             default:
                 x_cursor += kdisp_write_gfx_char(fonts, num_fonts, x_cursor, y_cursor, *text, cy_radius);

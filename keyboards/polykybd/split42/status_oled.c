@@ -57,14 +57,7 @@ void oled_update_buffer(void) {
         global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
 
     /* Row 2: default layout name (both sides — no RGB on split42) */
-    switch (get_local_layer()->def_layer) {
-        case 0: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Qwerty");      break;
-        case 1: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Qwerty Stag!"); break;
-        case 2: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Colemak DH");  break;
-        case 3: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Neo");          break;
-        case 4: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Workman");      break;
-        default: kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Unknown");     break;
-    }
+    oled_draw_layout_name(smallFont, 0, 22, get_local_layer()->def_layer);
 
     /* Row 2 right: USB/Batt indicator */
     kdisp_write_gfx_text(smallFont, 1, 112, 22, is_usb_host_side() ? U"H" : U"B");

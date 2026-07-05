@@ -16,6 +16,30 @@ enum poly_idle_style {
     IDLE_STYLE_COUNT
 };
 
+// Glyph-script override (HID cmd 30, protocol v9+). Replaces the language-layer
+// letter/digit legends with an alternative script's glyphs while leaving overlays
+// and OS-hints untouched. GLYPH_STD is the normal (language) legends. Values are
+// append-only: persisted in poly_eeconf_t.glyph_script and carried on the wire
+// (poly_sync_t.glyph_script), so never reorder or reuse — add new scripts at the end.
+enum poly_glyph_script {
+    GLYPH_STD      = 0,   // normal language legends (no override)
+    GLYPH_TENGWAR  = 1,   // Tengwar (Alcarin, CSUR mapping) — "fantasy" font-pack bundle
+    // 2026-07 expansion — 9 more scripts, all in the "fantasy" bundle. Each maps
+    // the letter (and, where the script has them, digit) keys to a dense private
+    // PUA block; scripts without native numerals leave the digit keys as normal
+    // numerals. See glyph_script_codepoint() in poly_keymap.c for the base blocks.
+    GLYPH_RUNES    = 2,   // Elder Futhark runes (Noto Sans Runic, transliteration)
+    GLYPH_AUREBESH = 3,   // Aurebesh (Unifont CSUR) — letters only
+    GLYPH_SGA      = 4,   // Standard Galactic Alphabet (CC0) — cipher, has digits
+    GLYPH_CIRTH    = 5,   // Cirth / Angerthas (Unifont CSUR) — letters only
+    GLYPH_IBMVGA   = 6,   // IBM VGA / CP437 (VileR PxPlus) — Latin restyle
+    GLYPH_C64      = 7,   // Commodore 64 (Homecomputer Fonts) — Latin restyle
+    GLYPH_AMIGA    = 8,   // Amiga Topaz (Homecomputer Fonts) — Latin restyle
+    GLYPH_APL      = 9,   // APL (Unifont) — Dyalog/IBM keyboard symbol per key
+    GLYPH_BRAILLE  = 10,  // Braille (Unifont) — Grade-1 letters + digits
+    GLYPH_SCRIPT_COUNT
+};
+
 // Active host-OS identity — a FIRST-CLASS state, deliberately DECOUPLED from
 // unicode_mode (which stays a "how do I type codepoints" concern, host cmd 20).
 // active_os drives the modifier-legend swap (Cmd/Opt vs Ctrl/Alt), the OS icon,
@@ -85,6 +109,9 @@ typedef struct _poly_sync_t {
     // slave's keycaps render the same legends and its semantic action keys emit the
     // same per-OS sequences. The master refreshes it every housekeeping pass.
     uint8_t  active_os;
+    // Active glyph-script override (enum poly_glyph_script). Master-authoritative,
+    // synced so the slave renders the same legends. See render_key / to_static_text.
+    uint8_t  glyph_script;
 } poly_sync_t;
 
 typedef struct _poly_last_t {
@@ -116,6 +143,12 @@ typedef struct _poly_eeconf_t {
     // EECONFIG_USER_DATA_SIZE and leaves latin_ex/mru at their original offsets
     // (old EEPROMs read it as 0 = auto/unknown — a clean default migration).
     uint8_t  os_state;
+    // Persisted glyph-script override (enum poly_glyph_script). Appended at the end
+    // (like os_state) so latin_ex/mru offsets are unchanged; an old EEPROM reads an
+    // uninitialised byte here, so load_user_eeconf() bounds-guards it to GLYPH_STD.
+    // Growing EECONFIG_USER_DATA_SIZE 64->65 stays within POLY_EECONFIG_USER_RESERVED
+    // (128), so the dynamic keymap does NOT relocate — no user EEPROM reset needed.
+    uint8_t  glyph_script;
 } poly_eeconf_t;
 
 
@@ -232,6 +265,19 @@ void set_idle_style(uint8_t style);
 
 // Records the idle style without marking settings dirty (boot-time EEPROM load).
 void note_idle_style(uint8_t style);
+
+// ---- Glyph-script override (enum poly_glyph_script) — see enum comment above. ----
+
+// The active glyph-script override (GLYPH_STD = normal language legends).
+uint8_t get_glyph_script(void);
+
+// Sets the glyph script and marks it dirty (deferred EEPROM write). Out-of-range
+// values are ignored. Used by the HID command (cmd 30).
+void set_glyph_script(uint8_t script);
+
+// Records the glyph script without marking dirty (boot-time EEPROM load); an
+// out-of-range (uninitialised-EEPROM) value falls back to GLYPH_STD.
+void note_glyph_script(uint8_t script);
 
 // ---- Active host-OS (enum poly_os) — see the poly_os comment in this header. ----
 

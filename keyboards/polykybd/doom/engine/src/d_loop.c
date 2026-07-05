@@ -951,6 +951,18 @@ void D_StartPicoNetGame() {
 #endif
 
 #if POLYKYBD_QMK
+// polykybd: fresh-session tic reset, called from doom_shim_set_role on
+// core0 BEFORE core1 launches. The engine's .data is not re-initialised on
+// a relaunch, and the mirror's ring model indexes by ABSOLUTE tic assuming
+// every session counts from 0 (doom_mirror.h) — a stale maketic made the
+// second session's first piconet_new_local_tic mismatch the zeroed ring
+// head -> tx_overflow -> mirror dead for the session -> the slave stayed
+// in its own attract ("another viewport instead of the minimap", field
+// round 21; only reachable once v22 made clean exit + re-enter possible).
+void D_ResetTics(void) {
+    gametic = maketic = recvtic = 0;
+}
+
 // PolyKybd mirror: turn this (slave) instance into a lockstep drone of the
 // master's single-player game, aligned to the master's gametic at its
 // G_DoNewGame. Called on the game core right after the shim replayed

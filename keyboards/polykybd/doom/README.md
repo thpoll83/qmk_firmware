@@ -154,7 +154,26 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 21 → v22 (2026-07-05, UNTESTED): the exit HardFault, actually
+- **Round 22 → v23 (2026-07-05, UNTESTED): re-entry mirror fix (stale tic
+  counters) + letter fill nudge.** Round 22 confirmed the exit fix — three
+  clean exits (ESC + quit ×2) with full breadcrumbs in one log — and
+  immediately exposed the next layer: **on the second session the slave
+  showed a 3D viewport instead of the minimap.** Cause: clean exit + re-
+  enter is NEW (every earlier "second run" followed a crash or replug =
+  fresh `.data`), and the engine's tic counters are `.data` that nothing
+  resets on relaunch — the mirror rings index by ABSOLUTE tic assuming
+  each session counts from 0 (`doom_mirror.h`), so session 2's first
+  `piconet_new_local_tic` (stale maketic ≈ 750) mismatched the zeroed TX
+  ring head → `tx_overflow` → mirror dead for the session → the slave kept
+  its OWN attract (which plays 3D demo footage — "another viewport").
+  Fix: `D_ResetTics()` (d_loop.c) zeroes gametic/maketic/recvtic, called
+  from `doom_shim_set_role` with the other re-entry `.data` resets. Also:
+  menu letters ("improved, still a bit more would be nice") — the always-
+  on threshold dropped 76 → 56 (stroke body fully solid); only the faint
+  40..55 tier still gets the one-sided-fringe drop (bright ref 76).
+- **Round 21 → v22 (2026-07-05, tested ✓ exits clean (ESC + quit ×2, full
+  breadcrumbs); NEW: 2nd-session slave shows 3D view not map → v23;
+  letters better but want a bit more): the exit HardFault, actually
   found.** The v21 breadcrumbs paid off: `doom: menu quit → exit begin →
   engine stopped, RLE core relaunch ok (0 ms) → exit do[cut]` — the
   relaunch is FINE; the halt is a **HardFault a few ms after doom_exit

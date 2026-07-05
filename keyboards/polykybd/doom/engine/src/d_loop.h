@@ -103,6 +103,7 @@ extern ticcmd_set_t ticdata[BACKUPTICS]; // we share the ticdata with piconet
 // PolyKybd slave mirror: engage lockstep-drone mode at the master's
 // G_DoNewGame gametic (doom_mirror.h).
 void D_StartDoomMirror(int tic);
+void D_ResetTics(void);
 #endif
 #endif
 

@@ -1048,6 +1048,11 @@ void doom_shim_set_role(bool master) {
     menuactive           = false;
     automapactive        = false;
     s_quit_req           = 0;
+    // Tic counters restart at 0 every session — the mirror rings index by
+    // absolute tic (doom_mirror.h); a stale maketic instantly overflowed
+    // the zeroed TX ring on re-entry, killing the mirror for the session
+    // (the slave then kept its own attract instead of the map, round 21).
+    D_ResetTics();
 }
 
 static doom_mirror_t *doom_mirror_box(void) {
@@ -1357,21 +1362,23 @@ static void shim_menu_emit_row(uint8_t *tile360, const uint8_t *up, const uint8_
         for (unsigned sx = 0; sx < w; sx++) {
             const uint8_t v = cur[sx];
             if (!dither) {
-                // One-sided-fringe rule (rounds 19-21: neighbour-COUNT hole
+                // One-sided-fringe rule (rounds 19-22: neighbour-COUNT hole
                 // fills kept failing on O/G/K — their curved/diagonal stroke
                 // segments are ENTIRELY mid-shade, with no bright core to
                 // fill from). Keep the brightest local layer instead:
-                //  * bright (>= 76) always lights;
-                //  * a mid pixel (44..75) lights UNLESS it has exactly one
-                //    bright 4-neighbour — that is the dark fringe on one
-                //    side of a bright stroke (dropping it is the thinning);
-                //    zero bright neighbours = the stroke itself where the
-                //    gradient never gets bright (curve segments — keep!),
+                //  * solid-ish (>= 56) always lights — the stroke body,
+                //    lowered from 76 in round 22 ("still a bit more would
+                //    be nice");
+                //  * a faint pixel (40..55) lights UNLESS it has exactly
+                //    one bright (>= 76) 4-neighbour — that is the dark
+                //    fringe on one side of a bright stroke (dropping it is
+                //    the thinning); zero bright neighbours = the stroke
+                //    itself where the gradient never gets bright (keep!),
                 //    two+ = a shade dip inside/between bright runs (keep,
                 //    the round-19 pinhole case);
-                //  * the darkest shades (< 44, outline fringe) stay dark.
-                bool on = v >= 76;
-                if (!on && v >= 44) {
+                //  * the darkest shades (< 40, outline fringe) stay dark.
+                bool on = v >= 56;
+                if (!on && v >= 40) {
                     unsigned n = 0;
                     if (sx > 0 && cur[sx - 1] >= 76) n++;
                     if (sx + 1 < w && cur[sx + 1] >= 76) n++;

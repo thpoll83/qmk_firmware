@@ -203,8 +203,10 @@ menu_t*	currentMenu;
 
 #if POLYKYBD_QMK
 // polykybd: qmk_shim.c — true while the master mirrors the menu to the
-// slave half's keycaps (M_Drawer then skips the tiny on-canvas item draw).
-extern int doom_shim_menu_mirrored(void);
+// slave half's keycaps (M_Drawer then skips the tiny on-canvas item draw),
+// and the core0 quit signal for M_QuitDOOM (see there).
+extern int  doom_shim_menu_mirrored(void);
+extern void doom_shim_request_quit(void);
 #endif
 //
 // PROTOTYPES
@@ -1555,13 +1557,17 @@ static const char *M_SelectEndMessage(void)
 void M_QuitDOOM(int choice)
 {
 #if POLYKYBD_QMK
-    // polykybd: quit immediately — the confirm prompt is a text message the
-    // keycap canvas can't show readably (messages aren't mirrored to the
-    // slave), and "Quit Game" on a keyboard easter egg should behave like
-    // the ESC-hold exit (field round 18). ga_deferredquit -> I_Quit from
-    // the main loop, which signals core0 to tear the session down.
+    // polykybd: quit immediately, and WITHOUT running the engine's own quit
+    // path — signal core0, which tears the session down mid-frame exactly
+    // like the ESC hold. The engine keeps running normally until core0
+    // resets core1, so the teardown state is identical to the field-proven
+    // ESC exit. (v19 routed this through ga_deferredquit -> I_Quit, which
+    // PARKED core1 in a WFE loop first — the subsequent core0-side PSM
+    // reset + RLE-service relaunch wedged the whole keyboard, field round
+    // 19. No confirm prompt either: messages aren't mirrored to the slave,
+    // and a prompt the player can't read is a trap.)
     (void)choice;
-    gameaction = ga_deferredquit;
+    doom_shim_request_quit();
 #elif !DOOM_TINY
     DEH_snprintf(endstring, sizeof(endstring), "%s\n\n" DOSY,
                  DEH_String(M_SelectEndMessage()));

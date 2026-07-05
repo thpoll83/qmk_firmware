@@ -154,7 +154,41 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 18 → v19 (2026-07-05, UNTESTED): menu typography round 2 + quit +
+- **Round 19 → v20 (2026-07-05, UNTESTED): quit wedge fix + menu typography
+  round 3.** Round 19 confirmed the v19 menu direction ("much better") but
+  quit WEDGED the whole keyboard:
+  1. **Quit no longer parks core1** ("the keyboard is then stuck ... hold
+     ESC doesn't work any more"): v19's quit ran the engine's
+     `ga_deferredquit → I_Quit`, which parked core1 in a WFE loop before
+     core0's teardown — the subsequent PSM reset + RLE-service relaunch
+     wedged core0 (the ESC-hold path never parks; core1 is reset while
+     running normally, and that path has been field-proven for weeks).
+     `M_QuitDOOM` now signals core0 directly (`doom_shim_request_quit`) and
+     the engine keeps running until core0 resets it — the teardown state is
+     byte-identical to the ESC hold. `I_Quit` stays as a busy-spin (no WFE)
+     fallback that no normal path reaches.
+  2. **Menu text hole fill + skinnier** ("some letters still miss some
+     isolated pixel, could be slightly skinnier"): items render solid at
+     luma ≥ 72 (was 64), and a 36..71 pixel with ≥ 3 of its 4 neighbours
+     ≥ 72 lights too — dark shade bands crossing a stroke can't punch
+     isolated holes. Rows stream through a 3-row luma window borrowed from
+     the (idle-during-menus) compose scratch.
+  3. **Widest items render** ("the first line is still empty ... the next
+     misses the first 2 entries"): the episode/skill sentences exceeded the
+     240 px cap too. Cap is now the full 320 canvas and the scale chain
+     gained a final 3:4 step, so every item that can physically fit shows.
+  4. **Skull shading back** ("too simple and cut off at the bottom"): the
+     solid threshold flattened it and dropped the darker jaw — now a
+     2×-gained Bayer dither at 5:4: bright, but teeth/jaw/sockets read.
+  Host-side (PolyKybdHost, same round): **console log dead after a firmware
+  flash/apply until replug** — the reconnect rebuild can race the device's
+  re-enumeration and come up with raw HID working but the console interface
+  missing; `remote_console` then silently stayed None. The console now
+  self-heals (reopen on missing handle or after ~5 s of failed reads,
+  throttled) — independent of doom, as suspected in the field report.
+- **Round 18 → v19 (2026-07-05, tested: menu ✓ much better but holes/too
+  thick remnants, wide items still missing, skull flat+clipped, QUIT WEDGED
+  THE KEYBOARD → v20): menu typography round 2 + quit +
   ESC unification.** Round 18 confirmed most of v18 (no loading artifact,
   labels good, fire/door/frame/no-weapon-numbers all good, menu on the slave
   "great — almost readable", re-entry brings the viewport back). Fixes:

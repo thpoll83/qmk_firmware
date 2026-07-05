@@ -723,22 +723,28 @@ byte *I_ZoneBase(int *size) {
     return zone;
 }
 
-// Menu "Quit Game" -> I_Quit (game core) -> this flag; core0's doom_tick
-// tears the session down like the ESC hold (field round 18). Reset in
-// doom_shim_set_role before every launch.
+// Menu "Quit Game" -> doom_shim_request_quit (game core, M_QuitDOOM) -> this
+// flag; core0's doom_tick tears the session down like the ESC hold. The game
+// core keeps RUNNING normally until core0 resets it — v19 parked it in
+// I_Quit's WFE loop first and the subsequent PSM reset + RLE relaunch wedged
+// the whole keyboard (field round 19). Reset in doom_shim_set_role.
 static volatile uint8_t s_quit_req;
+
+void doom_shim_request_quit(void) {
+    s_quit_req = 1;
+}
 
 bool doom_shim_quit_requested(void) {
     return s_quit_req != 0;
 }
 
 void I_Quit(void) {
-    // Menu quit on a keyboard means "leave the easter egg": signal core0
-    // (doom_tick tears the session down exactly like the ESC hold) and park
-    // this core — doom_engine_stop resets it. NORETURN honoured by the loop.
+    // No engine path reaches this anymore (M_QuitDOOM signals core0
+    // directly), but keep it total: flag the quit and spin — busy, NOT WFE
+    // (see the wedge note above) — until core0's teardown resets this core.
     s_quit_req = 1;
     for (;;) {
-        __asm volatile("wfe");
+        __asm volatile("nop");
     }
 }
 
@@ -1310,10 +1316,12 @@ int doom_shim_menu_snapshot(uint16_t *items, int max_items, int *item_on) {
     return M_MenuSnapshot(items, max_items, item_on);
 }
 
-// Menu items can be wide — the skill-menu sentences ("I'm too young to
-// die.") run past 190 px; the old 160 cap skipped them entirely ("I can
-// only see the skull without any text", field round 18).
-#define SHIM_MENU_PATCH_MAX_W 240u
+// Menu items can be wide — the episode/skill sentences exceeded both the
+// 160 cap (round 18: "only the skull, no text") AND the 240 cap (round 19:
+// "the first line is still empty ... the next misses the first 2 entries").
+// 320 = the whole canvas width; anything wider than the canvas at the 3:4
+// minimum scale genuinely can't be shown.
+#define SHIM_MENU_PATCH_MAX_W 320u
 
 // The 4 visible menu rows window: keep the selection on-screen, pinned to
 // the last row once the menu is deeper than the window.
@@ -1328,45 +1336,105 @@ static uint8_t shim_menu_win_start(uint8_t count, uint8_t item_on) {
     return start;
 }
 
-// Decode `p` row-sequentially and stamp it into the 72x40 keycap tile of
-// viewport column `vc` (page-major 5x72 B), nearest-neighbour scaled by
-// num/den, at canvas x0 / tile-local y0. Pixels at/above solid_min light
-// solid (crisp text and the bright skull; the near-black outlines stay dark).
-static void shim_menu_stamp(uint8_t *tile360, const patch_t *p, int x0, int y0,
-                            unsigned num, unsigned den, uint8_t vc,
-                            const uint8_t *luma256, uint8_t solid_min) {
-    const unsigned w = vpatch_width(p);
-    const unsigned h = vpatch_height(p);
-    const int      win0 = (int)vc * 72 - 20; // canvas x of this tile's x=0
-    uint8_t        row[SHIM_MENU_PATCH_MAX_W];
-    vpatchlist_t   vp;
-    memset(&vp, 0, sizeof(vp));
-    unsigned off = 0;
-    for (unsigned sy = 0; sy < h; sy++) {
-        memset(row, 0, w);
-        off = draw_vpatch8(row, p, &vp, off);
-        const unsigned oy0 = sy * num / den;
-        const unsigned oy1 = (sy + 1) * num / den;
-        for (unsigned oy = oy0; oy < oy1; oy++) {
-            const int Y = y0 + (int)oy;
-            if (Y < 0 || Y >= 40) {
-                continue;
-            }
-            for (unsigned sx = 0; sx < w; sx++) {
-                if (luma256[row[sx]] < solid_min) {
+// Emit ONE source row (index k) of a menu patch into the tile, scaled
+// num/den. up/dn are the neighbouring rows' luma (NULL past the edges).
+// Text look (dither=false): solid at luma >= 72 — skinnier than the digits'
+// 64 — plus a HOLE FILL: a 36..71 pixel with >= 3 of its 4 neighbours at
+// >= 72 lights too, so a dark shade band crossing a stroke can't punch
+// isolated holes ("some letters miss some isolated pixel", round 19).
+// Skull look (dither=true): 2x-gained Bayer in canvas coordinates — bright
+// but with the shading kept (the solid threshold flattened it and dropped
+// the darker jaw: "too simple and cut off at the bottom", round 19).
+static void shim_menu_emit_row(uint8_t *tile360, const uint8_t *up, const uint8_t *cur,
+                               const uint8_t *dn, unsigned w, unsigned k,
+                               int x0, int y0, unsigned num, unsigned den,
+                               int win0, bool dither, unsigned canvas_row0) {
+    const unsigned oy0 = k * num / den;
+    const unsigned oy1 = (k + 1) * num / den;
+    for (unsigned oy = oy0; oy < oy1; oy++) {
+        const int Y = y0 + (int)oy;
+        if (Y < 0 || Y >= 40) {
+            continue;
+        }
+        for (unsigned sx = 0; sx < w; sx++) {
+            const uint8_t v = cur[sx];
+            if (!dither) {
+                bool on = v >= 72;
+                if (!on && v >= 36) {
+                    unsigned n = 0;
+                    if (sx > 0 && cur[sx - 1] >= 72) n++;
+                    if (sx + 1 < w && cur[sx + 1] >= 72) n++;
+                    if (up && up[sx] >= 72) n++;
+                    if (dn && dn[sx] >= 72) n++;
+                    on = n >= 3;
+                }
+                if (!on) {
                     continue;
                 }
-                const unsigned ox0 = sx * num / den;
-                const unsigned ox1 = (sx + 1) * num / den;
-                for (unsigned ox = ox0; ox < ox1; ox++) {
-                    const int tx = x0 + (int)ox - win0;
-                    if (tx >= 0 && tx < 72) {
-                        tile360[(size_t)(Y >> 3) * 72 + tx] |= (uint8_t)(1u << (Y & 7));
-                    }
+            } else if (!v) {
+                continue;
+            }
+            unsigned g = (unsigned)v * 2;
+            if (g > 255) g = 255;
+            const unsigned ox0 = sx * num / den;
+            const unsigned ox1 = (sx + 1) * num / den;
+            for (unsigned ox = ox0; ox < ox1; ox++) {
+                const int cx = x0 + (int)ox;
+                const int tx = cx - win0;
+                if (tx < 0 || tx >= 72) {
+                    continue;
                 }
+                if (dither &&
+                    g <= shim_bayer4[(canvas_row0 + (unsigned)Y) & 3][cx & 3]) {
+                    continue;
+                }
+                tile360[(size_t)(Y >> 3) * 72 + tx] |= (uint8_t)(1u << (Y & 7));
             }
         }
     }
+}
+
+// Decode `p` row-sequentially and stamp it into the 72x40 keycap tile of
+// viewport column `vc` (page-major 5x72 B), nearest-neighbour scaled by
+// num/den at canvas x0 / tile-local y0. Rows stream through a 3-row LUMA
+// window (for the hole fill's vertical neighbours) borrowed from the
+// compose scratch — idle whenever a menu is shown, since the frame blit is
+// paused then.
+static void shim_menu_stamp(uint8_t *tile360, const patch_t *p, int x0, int y0,
+                            unsigned num, unsigned den, uint8_t vc,
+                            const uint8_t *luma256, bool dither,
+                            unsigned canvas_row0) {
+    const unsigned w = vpatch_width(p);
+    const unsigned h = vpatch_height(p);
+    const int      win0 = (int)vc * 72 - 20; // canvas x of this tile's x=0
+    uint8_t       *ring = doom_arena_at(DOOM_ARENA_COMPOSE_OFF);
+    if (!ring || !h) {
+        return;
+    }
+    vpatchlist_t vp;
+    memset(&vp, 0, sizeof(vp));
+    unsigned off = 0;
+    for (unsigned sy = 0; sy < h; sy++) {
+        uint8_t *r = ring + (size_t)(sy % 3) * SHIM_MENU_PATCH_MAX_W;
+        memset(r, 0, w);
+        off = draw_vpatch8(r, p, &vp, off);
+        for (unsigned i = 0; i < w; i++) {
+            r[i] = luma256[r[i]]; // store luma, not palette indices
+        }
+        if (sy >= 1) {
+            const unsigned k = sy - 1;
+            shim_menu_emit_row(tile360,
+                               k > 0 ? ring + (size_t)((k - 1) % 3) * SHIM_MENU_PATCH_MAX_W : NULL,
+                               ring + (size_t)(k % 3) * SHIM_MENU_PATCH_MAX_W,
+                               ring + (size_t)((k + 1) % 3) * SHIM_MENU_PATCH_MAX_W,
+                               w, k, x0, y0, num, den, win0, dither, canvas_row0);
+        }
+    }
+    const unsigned k = h - 1;
+    shim_menu_emit_row(tile360,
+                       k > 0 ? ring + (size_t)((k - 1) % 3) * SHIM_MENU_PATCH_MAX_W : NULL,
+                       ring + (size_t)(k % 3) * SHIM_MENU_PATCH_MAX_W, NULL,
+                       w, k, x0, y0, num, den, win0, dither, canvas_row0);
 }
 
 // Render the menu view for keycap (view row 0-3, view col 0-4) into tile360
@@ -1390,16 +1458,16 @@ bool doom_shim_menu_key_tile(uint8_t vr, uint8_t vc, uint8_t *tile360,
     memset(tile360, 0, 5u * 72u);
     if (vc == 0) {
         if (idx == item_on) {
-            // Skull at 5:4 (~38 px — "brighter and could be bigger", round
-            // 18) and solid-thresholded: the bone reads bright, only the
-            // near-black outline/sockets stay dark. Fits column 0's canvas
-            // window (0..51) ahead of the items at x=52.
+            // Skull at 5:4 (~38 px), 2x-gained dither — bright with the
+            // shading (teeth/jaw/sockets) kept; the round-19 solid look
+            // flattened it and dropped the darker jaw. Fits column 0's
+            // canvas window (0..51) ahead of the items at x=52.
             const patch_t *p = resolve_vpatch_handle(
                 skull_alt ? VPATCH_NAME(M_SKULL2) : VPATCH_NAME(M_SKULL1));
             if (p && vpatch_width(p) * 5u / 4u <= 49 && vpatch_height(p) * 5u / 4u <= 40) {
                 shim_menu_stamp(tile360, p, 2,
                                 (int)(40 - vpatch_height(p) * 5u / 4u) / 2,
-                                5, 4, 0, luma256, 36);
+                                5, 4, 0, luma256, true, (unsigned)vr * 40u);
             }
         }
         return true;
@@ -1421,20 +1489,24 @@ bool doom_shim_menu_key_tile(uint8_t vr, uint8_t vc, uint8_t *tile360,
         return true;
     }
     // Per-item scale: 3:2 preferred ("2x is too thick and a bit smaller
-    // would be good", round 18), stepping down so wide items — the skill
-    // sentences — still fit the canvas right edge instead of vanishing.
-    unsigned num = 3, den = 2;
-    if (52 + w * num / den > 320 || h * num / den > 40) {
-        num = 5; den = 4;
+    // would be good", round 18), stepping down — 5:4, 1:1, finally 3:4 —
+    // so even the widest episode/skill sentences fit the canvas right edge
+    // instead of vanishing (rounds 18+19).
+    static const uint8_t scales[][2] = {{3, 2}, {5, 4}, {1, 1}, {3, 4}};
+    unsigned num = 0, den = 0;
+    for (unsigned i = 0; i < 4; i++) {
+        num = scales[i][0];
+        den = scales[i][1];
+        if (52 + w * num / den <= 320 && h * num / den <= 40) {
+            break;
+        }
+        num = 0;
     }
-    if (52 + w * num / den > 320 || h * num / den > 40) {
-        num = 1; den = 1;
-    }
-    if (52 + w * num / den > 320 || h * num / den > 40) {
-        return true; // wider than the canvas even at 1:1
+    if (!num) {
+        return true; // wider than the canvas even at 3:4
     }
     shim_menu_stamp(tile360, p, 52, (int)(40 - h * num / den) / 2, num, den,
-                    vc, luma256, 64);
+                    vc, luma256, false, (unsigned)vr * 40u);
     return true;
 }
 

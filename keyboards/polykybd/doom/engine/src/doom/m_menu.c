@@ -1126,6 +1126,18 @@ void M_NewGame(int choice)
     EpiDef.prevMenu = &MainDef;
     netgame_choice = -1;
 #endif
+#if POLYKYBD_QMK
+    // PolyKybd (field round 28): shareware has ONLY episode 1 — picking 2/3
+    // pops the SWSTRING message + Read-This pages, neither of which is
+    // mirrorable/readable on the keycaps, so it read as "nothing starts,
+    // the attract keeps going". Skip the episode menu entirely (like Doom
+    // II / Chex): New Game goes straight to the skill list.
+    if (gamemode == shareware)
+    {
+	M_Episode(0); // the only episode; sets epi=0 + NewDef
+	return;
+    }
+#endif
     if (gamemode == commercial || gameversion_is_chex(gameversion))
 	M_SetupNextMenu(&NewDef);
     else

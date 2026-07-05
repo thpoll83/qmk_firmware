@@ -745,7 +745,9 @@ static bool     s_mir_slave_engaged;           // last acked engagement state
 // ~2 tics (57 ms) before running it, and delivery only eats ~15-30 ms of
 // that — flashing at raw receipt showed BEFORE the master's muzzle flash
 // (field round 27). Hold the pulse for the difference so it lands ON it.
-#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 40u
+// 40 ms was still visibly early (round 28) -> 70; tune in ~10 ms steps
+// (a third of a game tic) if the field still reads early/late.
+#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 70u
 static volatile uint32_t s_mir_attack_edges;   // released — visible to doom_rgb_compute
 static uint8_t           s_mir_attack_prev;
 static uint8_t           s_mir_attack_pending; // edges still holding for their due time

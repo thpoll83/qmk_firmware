@@ -156,6 +156,19 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 28 → v30 (2026-07-05, UNTESTED): skip the shareware episode menu;
+  flash delay 40 → 70 ms.** Round 28: the v29 40 ms hold still left the
+  slave's flash ahead of the master → **70 ms** (`DOOM_MIRROR_ATTACK_
+  FLASH_DELAY_MS`; keep tuning in ~10 ms ≈ ⅓-tic steps). And the "3 modes
+  where nr 2 and 3 only work after starting nr 1" mystery: that menu is
+  the **episode select** — shareware has ONLY episode 1, and vanilla
+  M_Episode answers a 2/3 pick with the SWSTRING message + Read-This
+  pages, neither of which is mirrorable/readable on the keycaps, so it
+  read as "attract keeps going, nothing starts" (whatever eventually
+  'worked' was always episode 1 — the episode can't change in shareware).
+  Fix: `M_NewGame` now skips the episode menu entirely in shareware (like
+  Doom II/Chex — `M_Episode(0)` straight to the skill list), so every
+  selectable New Game entry actually starts a game.
 - **Round 27 → v29 (2026-07-05, UNTESTED): fire-flash timing — hold the
   receipt edge for the build-ahead.** Round 27: **menu letters confirmed
   fixed** (the plain >= 56 rule / offline-preview round) — and the v28

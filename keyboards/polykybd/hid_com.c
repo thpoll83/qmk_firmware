@@ -393,7 +393,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 10: //receive overlay
                 {
                     reset_fragment_context();
-                    // Protocol 10: modifier (low nibble, 0..8) and segment index
+                    // Protocol 11: modifier (low nibble, 0..8) and segment index
                     // (high nibble, 0..5) share one header byte, so the 60-byte
                     // segment payload starts at HID_DATA_IDX+2 and fits the report
                     // exactly (2 fixed + keycode + packed + 60 = 64). The old

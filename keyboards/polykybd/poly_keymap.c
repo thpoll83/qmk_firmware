@@ -1791,6 +1791,17 @@ void update_displays(enum refresh_mode mode) {
                     bool doom_handled = false;
                     if (local_state->doom_ctl) {
                         uint16_t pad = doom_pad_keycode((uint8_t)(r + offset), c);
+                        // Fixed positional control layout (field round 23):
+                        // the cursor cluster / use / enter legends render at
+                        // their pad POSITIONS, whatever the active base
+                        // layer holds there — matching what
+                        // doom_process_record feeds the game.
+                        {
+                            uint16_t ctl = doom_ctl_keycode((uint8_t)(r + offset), c);
+                            if (ctl != KC_NO) {
+                                keycode = ctl;
+                            }
+                        }
                         if (pad == KC_NO &&
                             (r < MATRIX_ROWS_PER_SIDE - 1 ? doom_slave_viewport_live()
                                                           : doom_slave_bottom_row_live())) {

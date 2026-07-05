@@ -31,6 +31,14 @@ bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t co
 // outer col rows 1-3 = slots 5-7), KC_NO for everything else.
 uint16_t doom_pad_keycode(uint8_t row, uint8_t col);
 
+// Fixed positional control layout (field round 23): the game controls are
+// positions, independent of the active base/default layer — the cursor
+// cluster on the slave's bottom outer four keys, use/enter beside it,
+// fire/run/strafe/use/map pinned on the master; mirrored when the master is
+// the right half. KC_NO = no fixed role (keymap keycode passes through).
+// Input (doom_process_record) and the slave pad renderer both apply it.
+uint16_t doom_ctl_keycode(uint8_t row, uint8_t col);
+
 // Synced weapon state for the slave pad renderer (from poly_sync_t via the
 // master): owned_mask bit N-1 = slot N owned, ready_slot = weapon in hand.
 bool doom_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot);
@@ -204,6 +212,10 @@ static inline bool doom_process_record(uint16_t keycode, bool pressed, uint8_t r
 static inline uint16_t doom_pad_keycode(uint8_t row, uint8_t col) {
     (void)row; (void)col;
     return 0; // KC_NO — no aliases without the game compiled in
+}
+static inline uint16_t doom_ctl_keycode(uint8_t row, uint8_t col) {
+    (void)row; (void)col;
+    return 0; // KC_NO
 }
 static inline bool doom_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot) {
     (void)owned_mask; (void)ready_slot;

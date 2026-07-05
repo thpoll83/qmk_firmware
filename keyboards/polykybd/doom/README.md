@@ -156,6 +156,34 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 23b → v25 (2026-07-05, UNTESTED): fixed positional control pad.**
+  Field: long play sessions were done on the *second* default layer (`_L1`,
+  QWERTY!) because only it has the cursor cluster as the four bottom-right
+  keys — "we should stick to this layout, independent of the current base
+  layout … and mirror when the master is on the right + restoring the
+  layout after exit." Implemented as **`doom_ctl_keycode(row, col)`** — a
+  positional override map in the spirit of the existing ESC/weapon-pad
+  aliases, applied by BOTH the input path (`doom_process_record`) and the
+  slave pad renderer (`update_displays`), so the keys *act* and *show* the
+  fixed layout whatever the active base/default layer holds there. Because
+  it's an alias (the layers are never switched), "restoring after exit" is
+  automatic — there is nothing to restore. The layout (the `_L1`
+  arrangement the game was tuned on):
+  - **Slave bottom row**: outer four keys = LEFT/UP/DOWN/RIGHT (reading
+    left→right), big thumb key = use/open (door symbol), inner bottom key =
+    Enter. On `_L0` the old pad had `.` where LEFT belongs and no UP on the
+    bottom row — now every base layer plays like `_L1`.
+  - **Master**: fire/run/strafe/use/map pinned to the physical
+    Ctrl/Shift/Alt/Space/Tab positions (all shipped base layers already
+    agree on those, the alias just makes it custom-layer-proof).
+  - **Mirror (master on the RIGHT)**: the cursor cluster moves to the left
+    half's bottom outer corner (same reading order) + use/Enter on its
+    thumb keys; the right master gets fire on its bottom outer key — the
+    bottom of its HUD column, where the fire reticle now renders on either
+    side (`doom_blit_fire_key(…, doom_hud_disp_col())`; previously a
+    right master got no reticle at all).
+  Letters/digits everywhere else still pass through the keymap (menu
+  typing, cheat codes). split42 compiles the seam to KC_NO.
 - **Round 23 → v24 (2026-07-05, UNTESTED): sound → RGB matrix.** Round 23's
   request (v23 itself still awaiting test — v24 includes it): "when firing,
   flash all keys yellow (not too bright); with degrading health step-by-step

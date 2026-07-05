@@ -379,6 +379,89 @@ uint16_t doom_pad_keycode(uint8_t row, uint8_t col) {
     return KC_NO;
 }
 
+// Fixed positional CONTROL layout (field round 23: "we should stick to this
+// layout, independent of the current base layout"): the game controls are
+// POSITIONS, not keymap keycodes, so the pad plays identically on every
+// base/default layer — and because the layers are never touched, there is
+// nothing to restore on exit. The arrangement is the QWERTY! (_L1) one the
+// game was tuned on: the SLAVE half's bottom row carries the cursor cluster
+// on its outer four keys (reading left-to-right LEFT/UP/DOWN/RIGHT), the big
+// thumb key is USE and the inner bottom key ENTER; the MASTER pins
+// fire/run/strafe/use/map to the physical Ctrl/Shift/Alt/Space/Tab positions
+// every shipped base layer already agrees on (aliased anyway, so a custom
+// layer can't strand the game). MIRRORED when the master is the RIGHT half:
+// the cursor cluster moves to the left half's bottom outer corner (same
+// reading order) and the right master gets fire on its bottom outer key —
+// the bottom of its HUD column, where the reticle renders. KC_NO = no fixed
+// role, the keymap keycode passes through (menu typing, cheats).
+uint16_t doom_ctl_keycode(uint8_t row, uint8_t col) {
+#if defined(KEYBOARD_polykybd_split72)
+    const bool    row_right   = row >= MATRIX_ROWS_PER_SIDE;
+    const uint8_t r           = row_right ? (uint8_t)(row - MATRIX_ROWS_PER_SIDE) : row;
+    // Valid on either controller: the master is the USB side, the slave the
+    // other half (matches doom_process_record's from_slave test).
+    const bool    master_left = is_usb_host_side() == is_left_side();
+    const bool    on_slave    = row_right == master_left;
+    const bool    bottom      = r == MATRIX_ROWS_PER_SIDE - 1;
+    if (on_slave) {
+        if (!bottom) {
+            return KC_NO; // rows 0-3: ESC corner + weapon pad (doom_pad_keycode)
+        }
+        if (row_right) { // right-half slave (the tested master-left setup)
+            switch (col) {
+                case 1: return KC_ENTER;
+                case 3: return KC_SPACE; // big thumb key: use/open
+                case 4: return KC_LEFT;
+                case 5: return KC_UP;
+                case 6: return KC_DOWN;
+                case 7: return KC_RIGHT;
+            }
+        } else {         // left-half slave (mirror), same reading order
+            switch (col) {
+                case 0: return KC_LEFT;
+                case 1: return KC_UP;
+                case 2: return KC_DOWN;
+                case 3: return KC_RIGHT;
+                case 4: return KC_SPACE; // big thumb key: use/open
+                case 6: return KC_ENTER;
+            }
+        }
+        return KC_NO;
+    }
+    if (!row_right) { // left-half master
+        if (col == 0) {
+            switch (r) {
+                case 1: return KC_TAB;  // automap
+                case 3: return KC_LSFT; // run
+                case 4: return KC_LCTL; // fire (the reticle key)
+            }
+        } else if (bottom) {
+            switch (col) {
+                case 2: return KC_LALT;  // strafe
+                case 4: return KC_SPACE; // use/open
+                case 6: return KC_ENTER;
+            }
+        }
+    } else {          // right-half master (mirror)
+        if (bottom) {
+            switch (col) {
+                case 1: return KC_ENTER;
+                case 3: return KC_SPACE; // use/open
+                case 7: return KC_LCTL;  // fire (HUD-column bottom = reticle)
+            }
+        } else if (col == 7) {
+            switch (r) {
+                case 1: return KC_TAB;  // automap
+                case 3: return KC_RSFT; // run
+            }
+        }
+    }
+#else
+    (void)row; (void)col;
+#endif
+    return KC_NO;
+}
+
 bool doom_weapon_state(uint8_t *owned_mask, uint8_t *ready_slot) {
     return s_engine_running && doom_shim_weapon_state(owned_mask, ready_slot);
 }
@@ -430,6 +513,15 @@ bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t co
         if (from_slave) {
             keycode = pad;
             aliased = true;
+        }
+    }
+    // Fixed positional control layout (field round 23) — the cursor cluster
+    // on the slave's bottom corner, fire/use/run/strafe/map pinned on the
+    // master. Applied after (and never overlapping) the pad aliases above.
+    if (!aliased && pad != KC_ESC) {
+        const uint16_t ctl = doom_ctl_keycode(row, col);
+        if (ctl != KC_NO) {
+            keycode = ctl;
         }
     }
     // ESC held long enough exits (checked in doom_tick so a press-and-hold
@@ -510,14 +602,11 @@ static void doom_hud_tick(void) {
     if (!s_hud_esc_drawn) {
         s_hud_esc_drawn = true;
         doom_blit_esc_key(0, doom_hud_disp_col());
-        // Fire hint (field round 17): the player's fire key is the MASTER
-        // half's Ctrl — on the left half it sits at the bottom of the outer
-        // HUD column (matrix [4,0]), outside the viewport. The right half
-        // has no Ctrl key there (its bottom outer keys are the arrows), so
-        // a right-half master gets no reticle.
-        if (is_left_side()) {
-            doom_blit_fire_key(MATRIX_ROWS_PER_SIDE - 1, 0);
-        }
+        // Fire hint (field rounds 17+23): fire is the bottom key of the HUD
+        // column on either master — the physical Ctrl on a left master, the
+        // doom_ctl_keycode position alias on a right one — so the reticle
+        // renders at the HUD column's bottom on both.
+        doom_blit_fire_key(MATRIX_ROWS_PER_SIDE - 1, doom_hud_disp_col());
     }
     int hp, ar, am;
     if (!doom_shim_hud_stats(&hp, &ar, &am)) {

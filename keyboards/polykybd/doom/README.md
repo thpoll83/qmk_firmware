@@ -156,6 +156,39 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 25 → v27 (2026-07-05, UNTESTED): right-master viewport +1, menu
+  speckle rule, render-rate lockstep RGB.** Round 25 confirmed v26's big one —
+  **the 2nd-run minimap works** (log: `mirror new-game -> START tic=316 →
+  ctl 2 sent → slave mirror engaged`, clean on both sessions), brightness
+  good, right-master reticle+left-slave viewport fixed ("most things
+  resolved"). Three leftovers:
+  1. **Right-master viewport** ("still has to move one column further out
+     (right)"): its cols 0-4 were the right-as-SLAVE placement — as MASTER
+     the HUD is col 6 and the viewport now hugs it at cols **1-5** (bottom
+     `{3,4,—,5,6}`), mirroring the left master's layout (dark column at the
+     inner edge, not between viewport and HUD). `view_to_disp_col` is now
+     role-aware on both halves.
+  2. **Menu letters — "extra pixel outside their actual outline" (since
+     v25 = the first build carrying v23's fill nudge)**: v23's faint-tier
+     rule (`40..55` lit unless exactly one bright neighbour) deliberately
+     lit zero-bright-neighbour pixels for the O/G/K mid-shade curves — but
+     that also lit ISOLATED anti-alias speckles outside the glyph. The
+     faint tier now additionally needs **>= 2 lit-ish (>= 40) 4-neighbours**
+     (a stroke continuing through the pixel): curve runs and pinhole dips
+     keep filling, isolated speckles stay dark, the one-bright-neighbour
+     thinning is unchanged.
+  3. **Slave RGB delay on firing** ("can't we just use the lock-step?" —
+     yes, v26 already did; two quantizations remained): the edge detection
+     moved from the housekeeping task into `doom_rgb_indicators()` — each
+     half with a live engine now samples ITS OWN lockstep engine's sound
+     counters at **render rate**, so the flash starts the same RGB frame
+     the drone plays the sound. The remaining offset is the lockstep
+     pipeline itself (the drone runs each tic roughly a bridge-delay after
+     the master; if still noticeable, the next lever is re-anchoring the
+     drone's tic clock at START to compensate the ctl latency).
+  Also seen in the log: a 73 % `transport_fail` burst in the first 200 tx
+  right after the fw flash — the counters froze at 147/49 immediately after
+  (boot burst while the slave rebooted; known-harmless, diluting err%).
 - **Round 24 → v26 (2026-07-05, UNTESTED): 2nd-run minimap ROOT CAUSE (automap
   same-level memo), RGB 1/3 + slave-local, right-master reticle col, slave-left
   viewport shift.** Round 24 (on v25, master-right tried too) reported: 2nd

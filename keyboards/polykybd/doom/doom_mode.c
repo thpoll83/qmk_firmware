@@ -1064,15 +1064,14 @@ bool doom_status_scroll(void) {
 #ifdef RGB_MATRIX_ENABLE
 
 #define DOOM_RGB_FLASH_MS 180u
-// Sentinel for "no locally derived byte — use the synced one".
-#define DOOM_RGB_NO_LOCAL 0xFFu
 
 // Edge-detector state (only one half's compute runs per device).
 static uint32_t s_rgb_fire_seen, s_rgb_world_seen;
 static uint8_t  s_rgb_fire_pulse, s_rgb_world_pulse; // 1..3 while flashing, 0 idle
 static uint32_t s_rgb_fire_at, s_rgb_world_at;
-static uint8_t  s_rgb_slave_local; // slave: byte derived from its OWN drone
-static bool     s_rgb_forced_on;   // we woke a user-disabled matrix for the cue
+static uint8_t  s_rgb_last;       // last locally computed byte (this half's engine)
+static bool     s_rgb_local_live; // this half's engine is a valid local source
+static bool     s_rgb_forced_on;  // we woke a user-disabled matrix for the cue
 
 static void doom_rgb_session_reset(void) {
     // The shim counters restart at 0 with every engine launch
@@ -1080,7 +1079,8 @@ static void doom_rgb_session_reset(void) {
     s_rgb_fire_seen  = s_rgb_world_seen  = 0;
     s_rgb_fire_pulse = s_rgb_world_pulse = 0;
     s_rgb_fire_at    = s_rgb_world_at    = 0;
-    s_rgb_slave_local = DOOM_RGB_NO_LOCAL;
+    s_rgb_last       = 0;
+    s_rgb_local_live = false;
 }
 
 // Sound counters + health -> the doom_rgb byte (state.h layout). Runs on
@@ -1124,15 +1124,18 @@ static uint8_t doom_rgb_compute(void) {
 
 static void doom_rgb_task(void) {
     // Attract demos fire weapons too — only real gameplay drives the
-    // lights (the demo loop staying dark also reads as "idle").
-    const bool live = s_engine_running && !doom_shim_attract_active();
+    // lights (the demo loop staying dark also reads as "idle"). Both halves
+    // derive the cue from THEIR OWN engine when it is live — the slave's
+    // lockstep drone plays the same sounds, so no bridge round-trip
+    // (rounds 24+25, "use the lock-step for the RGB fire as well"). The
+    // actual sampling runs at render rate in doom_rgb_indicators; here we
+    // only gate the source and publish the master's byte for the fallback
+    // consumers (a pad-only slave with no engine).
+    const bool live = s_engine_running && !doom_shim_attract_active() &&
+                      (is_usb_host_side() ? s_active : s_slave);
+    s_rgb_local_live = live;
     if (is_usb_host_side()) {
-        access_local_state()->doom_rgb = (s_active && live) ? doom_rgb_compute() : 0;
-    } else {
-        // A slave with a live drone derives the cue from its own engine —
-        // zero bridge latency; the synced byte stays the fallback (pad-only
-        // slave, mirror broken).
-        s_rgb_slave_local = (s_slave && live) ? doom_rgb_compute() : DOOM_RGB_NO_LOCAL;
+        access_local_state()->doom_rgb = live ? s_rgb_last : 0;
     }
     // Both halves: keep the matrix awake for the cue even when the user has
     // RGB off, exactly like the fw-flash breathing — enable_noeeprom touches
@@ -1154,11 +1157,15 @@ bool doom_rgb_indicators(void) {
     static uint32_t s_fire_at, s_world_at;
     static bool     s_fire_live, s_world_live;
 
-    // Slave with a live drone: its own locally derived byte (lockstep sounds,
-    // no bridge lag); otherwise the master's synced byte.
-    const uint8_t rgb   = (!is_usb_host_side() && s_rgb_slave_local != DOOM_RGB_NO_LOCAL)
-                              ? s_rgb_slave_local
-                              : get_local_state()->doom_rgb;
+    // A half with a live engine samples its own sound counters HERE, at
+    // render rate — the flash starts the same RGB frame the (lockstep)
+    // engine plays the sound, instead of waiting for the next housekeeping
+    // pass (round 25: "still a delay on the slave"). Everything else (a
+    // pad-only slave) renders the master's synced byte.
+    if (s_rgb_local_live) {
+        s_rgb_last = doom_rgb_compute();
+    }
+    const uint8_t rgb   = s_rgb_local_live ? s_rgb_last : get_local_state()->doom_rgb;
     const bool    ctl   = get_local_state()->doom_ctl != 0;
     const uint8_t fire  = (uint8_t)((rgb >> 4) & 3u);
     const uint8_t world = (uint8_t)((rgb >> 6) & 3u);

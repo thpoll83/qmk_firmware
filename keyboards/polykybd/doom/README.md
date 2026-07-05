@@ -160,6 +160,18 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 37 → v39 (2026-07-05, UNTESTED): hold removed — flash directly on
+  the sound edges (both halves).** Round 37: slave STILL late at 12 ms
+  ("go to the max of your idea, progress is slow"). The whole hold premise
+  is dead: the field bisect (50/25/12 — all "slave late", gap shrinking
+  with the hold) shows the drone's frame-gated tic drain + render pipeline
+  already consumes its theoretical build-ahead lead entirely. v39 deletes
+  the hold machinery — the slave flashes on its drone's sound edges
+  immediately, exactly like the master on its own; **zero hold is the
+  fastest this design goes**. Any residual slave lag is structural (the
+  drone's tics only run when a display frame turns); shrinking it further
+  would mean decoupling the drone's TryRunTics from the frame handoff —
+  noted as a possible future tweak, not attempted.
 - **Round 36 → v38 (2026-07-05, UNTESTED): hold 25 → 12 ms.** Round 36:
   "slave still behind — but time got shorter" (still slightly late at
   25 ms). Bracket 0 early / 25 late → **12 ms**. The pipeline offset is

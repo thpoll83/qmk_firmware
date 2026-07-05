@@ -29,11 +29,21 @@ same objects at `0x10600000`.
 ## Building
 
 ```bash
+# Dev harness (monolith: engine linked into the image — full symbols, one flash)
 qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes
+
+# Shipping shape (DoomPack): small firmware + separately flashed engine pack
+keyboards/polykybd/doom/pack/build_pack.sh --version N
+#   -> .build/…elf is the pack-flavour firmware (flash its .bin over HID)
+#   -> doom/pack/doom_pack_vN.plyd (install: polyctl doom install-pack <plyd>)
 ```
 
-Without `POLYKYBD_DOOM=yes` nothing here is compiled and every hook in
+Without either flag nothing here is compiled and every hook in
 `poly_keymap.c` / `hid_com.c` collapses to an inline no-op (zero bytes).
+The two flavours and the pack build are documented in
+[`PACK_DESIGN.md`](PACK_DESIGN.md); ⚠️ the pack is RAM-paired with the exact
+firmware build `build_pack.sh` produced alongside it — rebuild + reinstall
+both together.
 
 ## What works today (milestone 0: pipeline proof — HISTORICAL)
 
@@ -184,7 +194,22 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 42 → v43 (2026-07-05, UNTESTED): viewport contrast +25%.**
+- **Round 43 → v44 + doom_pack_v1.plyd (2026-07-05, UNTESTED): the DoomPack.**
+  First hardware round of the executable-pack split (PACK_DESIGN.md, P1–P4
+  all compile-verified): v44 is the `POLYKYBD_DOOM_PACK=yes` firmware
+  (**398,612 B** — 205 KB smaller than the monolith; loader + mode machinery
+  only, engine expected in flash) and `doom_pack_v1.plyd` is the engine pack
+  (211,384 B), RAM-paired to exactly this build (verified: hdr.ram_base ==
+  the v44 pool address). Includes v43's viewport contrast. Test flow:
+  flash `polykybd_doom_v44.bin` over HID as usual, then
+  `polyctl doom install-pack doom_pack_v1.plyd` (needs the updated host from
+  this branch; WHX stays installed — different slot), then IDDQD. Expected
+  console line on entry: `doom: pack v1 loaded (211320 B, arena_off 24396)`.
+  Without the pack (or with a stale one) the egg logs why and runs the fire
+  demo. ⚠️ Any future firmware change requires re-running
+  `doom/pack/build_pack.sh` and re-installing the fresh pair — the pack is
+  coupled to the build it was made with.
+- **Round 42 → v43 (2026-07-05, tested round 43): viewport contrast +25%.**
   "if you could increase the contrast on the viewport just a bit" — the
   master's 3D-view blit now dithers through `doom_view_luma()`, a derived
   LUT with a 1.25× gain around mid-grey (saturating) over the PLAYPAL luma.

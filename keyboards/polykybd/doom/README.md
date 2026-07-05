@@ -160,7 +160,14 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 38 → v40 (2026-07-05, UNTESTED): compensate on the MASTER — 100 ms
+- **Round 39 → v41 (2026-07-05, UNTESTED): master fire lag 100 → 60 ms.**
+  Round 39 on v40: "ok, that was too much, my guess is 60ms would have been
+  enough (the camera software on the phone doesn't let me scroll inbetween
+  100ms frames)". The knob works and overshoots — the true offset sits
+  somewhere under 100 (the video's frame granularity capped the read).
+  Field guess 60; the working bracket is now 0 (slave first) / 100 (master
+  first), so if 60 is still off the next step is a small bisect inside it.
+- **Round 38 → v40 (2026-07-05, tested round 39): compensate on the MASTER — 100 ms
   fire-flash lag.** Round 38 on v39 (zero hold anywhere): "no it is not
   close at all — can't we just delay the master? My video recording tells
   me it is about a 10th of a second". Exactly — with both halves at zero

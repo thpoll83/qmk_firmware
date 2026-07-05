@@ -1081,9 +1081,10 @@ bool doom_status_scroll(void) {
 
 #define DOOM_RGB_FLASH_MS 180u
 // Master-only fire-edge delay to line up with the slave's structural render
-// lag (see the timing-saga note above doom_mirror_session_reset; measured
-// ~0.1 s on video, round 38). The slave flashes immediately.
-#define DOOM_RGB_MASTER_FIRE_LAG_MS 100u
+// lag (see the timing-saga note above doom_mirror_session_reset). Round 38's
+// video read ~0.1 s, but 100 was too much in play (round 39: master late) —
+// the camera can't resolve between 100 ms frames, so 60 is the field guess.
+#define DOOM_RGB_MASTER_FIRE_LAG_MS 60u
 
 // Edge-detector state (only one half's compute runs per device).
 static uint32_t s_rgb_fire_seen, s_rgb_world_seen;

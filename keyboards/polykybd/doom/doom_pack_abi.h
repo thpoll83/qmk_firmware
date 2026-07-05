@@ -51,7 +51,13 @@ typedef struct {
                          // __doom_shared_base__; the firmware's doom_arena_at
                          // carves from ram_base + arena_off)
     uint32_t version;    // content version (host staleness checks, GET_ID-style)
+    uint32_t reserved[7]; // zero; future fields without an image-layout change
 } doom_pack_hdr_t;
+
+// The image begins at exactly this offset into the slot — pack.ld.in's flash
+// origin and mkpack.py agree on it; keep all three in sync.
+#define DOOM_PACK_HDR_SIZE 64u
+_Static_assert(sizeof(doom_pack_hdr_t) == DOOM_PACK_HDR_SIZE, "PlyX header layout");
 
 // Firmware services the pack imports (PACK_DESIGN.md §3). Kept deliberately
 // tiny: libc/libgcc are linked INTO the pack, pico_sync/time_us_64 are

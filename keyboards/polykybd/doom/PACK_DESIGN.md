@@ -8,10 +8,17 @@ trigger. Measured stakes (v42/v43): the monolithic doom build is
 **603,972 B** vs **384,460 B** normal — a **~219 KB engine delta** this
 design removes from the firmware partition (and from every HID test flash).
 
-Status: **design settled, implementation in progress.** The monolithic
-`POLYKYBD_DOOM=yes` build stays in-tree permanently as the dev/debug
-harness — the pack is the same engine objects re-linked at the pack
-address.
+Status: **P1–P3 implemented and compile-verified (2026-07-05); P4 (host
+install + hardware bring-up) open.** The monolithic `POLYKYBD_DOOM=yes`
+build stays in-tree permanently as the dev/debug harness — the pack is the
+same engine objects re-linked at the pack address. Measured results:
+
+| build | image | delta vs monolith |
+|---|---|---|
+| monolithic doom (`POLYKYBD_DOOM=yes`) | 603,972 B | — |
+| **pack-flavour firmware** (`POLYKYBD_DOOM_PACK=yes`) | **398,580 B** | **−205 KB** |
+| normal (no doom) | 384,460 B | −219 KB |
+| `doom_pack_v1.plyd` (engine pack, flashed once) | 211,384 B | fits the 256 KB slot with ~50 KB headroom; engine statics 24,396 B at the pool front |
 
 ## 1. Flash map carve-out
 

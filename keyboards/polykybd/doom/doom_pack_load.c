@@ -154,7 +154,18 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size) {
                (void *)pool, (unsigned long)pool_size);
         return false;
     }
-    const uint32_t crc = crc32_1byte(slot + sizeof(*hdr), hdr->image_size, 0);
+    // crc32_1byte takes a uint16_t length — chain it over the ~230 KB image
+    // (chunked continuation is exact: the seed round-trips through the
+    // final/initial complement).
+    uint32_t       crc       = 0;
+    const uint8_t *body      = slot + sizeof(*hdr);
+    uint32_t       remaining = hdr->image_size;
+    while (remaining) {
+        const uint16_t n = remaining > 0xFFFFu ? 0xFFFFu : (uint16_t)remaining;
+        crc = crc32_1byte(body, n, crc);
+        body += n;
+        remaining -= n;
+    }
     if (crc != hdr->image_crc) {
         printf("doom: pack CRC %08lx != %08lx — refuse\n",
                (unsigned long)crc, (unsigned long)hdr->image_crc);

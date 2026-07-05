@@ -509,7 +509,7 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
         const uint8_t  *p   = (const uint8_t *)(XIP_BASE + FW_RESOURCE_OFFSET + s_fontpack_slot_off);
         const uint32_t *hdr = (const uint32_t *)(const void *)p;
         ok = p[0] == 'P' && p[1] == 'l' && p[2] == 'y' && p[3] == 'X' &&
-             hdr[2] <= s_fontpack_slot_size - 32u; // image_size fits the slot
+             hdr[2] <= s_fontpack_slot_size - 64u; // image_size fits the slot (64 = DOOM_PACK_HDR_SIZE)
     } else if (ok && !target_has_header()) {
         // FONTPACK: the pack is now fully written in place. Re-load it from XIP —
         // this independently re-validates the pack's own header CRC32 and rebuilds

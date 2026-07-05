@@ -156,6 +156,18 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 27 → v29 (2026-07-05, UNTESTED): fire-flash timing — hold the
+  receipt edge for the build-ahead.** Round 27: **menu letters confirmed
+  fixed** (the plain >= 56 rule / offline-preview round) — and the v28
+  receipt-time fire flash now lands **EARLY** ("the yellow background on
+  the slave now shows before the master"), exactly the build-ahead math:
+  the master builds each cmd ~2 tics (57 ms) before running it and
+  delivery eats only ~15-30 ms, so raw receipt precedes the master's
+  muzzle sound by ~25-40 ms. v29 holds the receipt-armed pulse for
+  **`DOOM_MIRROR_ATTACK_FLASH_DELAY_MS` (40 ms)** before releasing it into
+  the edge detector (`doom_mirror_release_attack_edges`, drained at render
+  rate) — the tunable single constant if the field still reads
+  early/late. Autofire repeats still ride the drone's sound counters.
 - **Round 26 → v28 (2026-07-05, UNTESTED): menu letters SETTLED by an offline
   preview tool; fire-flash fast path.** Round 26 confirmed v27's viewport
   placement and the RGB improvement ("looks good"), but the menu letters

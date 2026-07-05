@@ -741,15 +741,36 @@ static bool     s_mir_slave_engaged;           // last acked engagement state
 // sound counters; both feed the same edge detector as a sum.
 #define DOOM_TICCMD_BUTTONS_OFF 5u // d_ticcmd.h DOOM_TINY layout (sizeof==8 asserted in qmk_shim.c)
 #define DOOM_TICCMD_BT_ATTACK   1u
-static volatile uint32_t s_mir_attack_edges;
+// Receipt runs AHEAD of the master's execution: the master builds each cmd
+// ~2 tics (57 ms) before running it, and delivery only eats ~15-30 ms of
+// that — flashing at raw receipt showed BEFORE the master's muzzle flash
+// (field round 27). Hold the pulse for the difference so it lands ON it.
+#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 40u
+static volatile uint32_t s_mir_attack_edges;   // released — visible to doom_rgb_compute
 static uint8_t           s_mir_attack_prev;
+static uint8_t           s_mir_attack_pending; // edges still holding for their due time
+static uint32_t          s_mir_attack_armed_at;
 
 void doom_mirror_note_cmd(const uint8_t *cmd) {
     const uint8_t atk = cmd[DOOM_TICCMD_BUTTONS_OFF] & DOOM_TICCMD_BT_ATTACK;
     if (atk && !s_mir_attack_prev) {
-        s_mir_attack_edges++;
+        if (!s_mir_attack_pending) {
+            s_mir_attack_armed_at = timer_read32();
+        }
+        s_mir_attack_pending++;
     }
     s_mir_attack_prev = atk;
+}
+
+// Called at render rate (doom_rgb_compute): release held press edges once
+// their delay elapsed. Taps can't physically stack inside one 40 ms window,
+// so releasing all pending on the oldest edge's due time is exact enough.
+static inline void doom_mirror_release_attack_edges(void) { // inline: unused sans RGB matrix
+    if (s_mir_attack_pending &&
+        timer_elapsed32(s_mir_attack_armed_at) >= DOOM_MIRROR_ATTACK_FLASH_DELAY_MS) {
+        s_mir_attack_edges += s_mir_attack_pending;
+        s_mir_attack_pending = 0;
+    }
 }
 
 static void doom_mirror_session_reset(void) {
@@ -765,6 +786,8 @@ static void doom_mirror_session_reset(void) {
     s_mir_slave_engaged     = false;
     s_mir_attack_edges      = 0;
     s_mir_attack_prev       = 0;
+    s_mir_attack_pending    = 0;
+    s_mir_attack_armed_at   = 0;
 }
 
 // The QMK transaction table is full (32-id cap), so mirror messages
@@ -1114,8 +1137,10 @@ static void doom_rgb_session_reset(void) {
 static uint8_t doom_rgb_compute(void) {
     const uint32_t now  = timer_read32();
     // Sum of the engine's weapon-discharge sounds and (slave only) the
-    // received BT_ATTACK press edges — the fast path that flashes at cmd
-    // RECEIPT instead of drone execution (doom_mirror_note_cmd above).
+    // received BT_ATTACK press edges — the fast path armed at cmd receipt
+    // and released after the build-ahead delay (doom_mirror_note_cmd /
+    // doom_mirror_release_attack_edges above).
+    doom_mirror_release_attack_edges();
     const uint32_t fire = doom_shim_snd_fire + s_mir_attack_edges;
     if (fire != s_rgb_fire_seen) {
         s_rgb_fire_seen  = fire;

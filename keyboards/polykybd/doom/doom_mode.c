@@ -731,59 +731,28 @@ static uint32_t s_mir_start_sent_at;
 static bool     s_mir_slave_engaged;           // last acked engagement state
 #define DOOM_MIRROR_START_REOFFER_MS 1500u
 
-// Fire-button fast path (round 26: the flash on the slave still trailed the
-// master perceptibly even lockstep-derived): the slave RECEIVES each ticcmd
-// a batch before its drone runs it — and the master builds cmds ~2 tics
-// ahead of running them — so a fire flash armed at receipt of the
-// BT_ATTACK press edge lands near-simultaneous with the master's muzzle
-// sound. Only the press EDGE is knowable here (autofire repeats come from
-// the weapon state machine), so held-trigger repeats still ride the drone's
-// sound counters; both feed the same edge detector as a sum.
-#define DOOM_TICCMD_BUTTONS_OFF 5u // d_ticcmd.h DOOM_TINY layout (sizeof==8 asserted in qmk_shim.c)
-#define DOOM_TICCMD_BT_ATTACK   1u
-// Receipt runs AHEAD of the master's execution: the master builds each cmd
-// ~2 tics (57 ms) before running it, and delivery only eats ~15-30 ms of
-// that — flashing at raw receipt showed BEFORE the master's muzzle flash
-// (field round 27). Hold the pulse for the difference so it lands ON it.
-// Since round 31 the hold applies to BOTH slave fire sources (receipt edges
-// AND the drone's own sound edges — the drone executes shots at receipt+ε,
-// also ahead of the master; the un-delayed sound path was capping every
-// earlier hold increase, which is why 40/70/100 all read "slave first").
-// With the cap gone the flash lands at receipt + hold. Clean bracket since
-// v33/v34 (single flash, knob live end-to-end): 60 early (round 33) -> 90.
-#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 90u
+// Slave fire-flash timing (the rounds 26-34 saga, final shape): the flash
+// follows the DRONE'S OWN SOUND edges, held for a fixed delay. The sound is
+// the only correct reference — DOOM weapons have a WINDUP (A_FirePistol runs
+// several tics after the attack press enters the weapon state machine), so
+// the earlier BT_ATTACK-receipt fast path was pinned to the WRONG EVENT: it
+// preceded the actual bang by a weapon-dependent 100-200 ms that no constant
+// could bridge (rounds 28-34 kept reading "slave first" at any hold, and the
+// press/sound debt dedupe was eating the correctly-timed sound edge). The
+// drone executes each tic early by only the CONSTANT pipeline offset — the
+// master builds cmds ~2-3 tics before running them, delivery returns
+// ~15-30 ms — so its sound leads the master's by ~(build-ahead − delivery),
+// which the hold below compensates exactly, windup included, every weapon.
+#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 50u
 static volatile uint32_t s_mir_attack_edges;   // released — visible to doom_rgb_compute
-static uint8_t           s_mir_attack_prev;
-static uint8_t           s_mir_attack_pending; // edges still holding for their due time
+static uint8_t           s_mir_attack_pending; // sound edges holding for their due time
 static uint32_t          s_mir_attack_armed_at;
-static uint32_t          s_rgb_sndfire_seen;   // slave: drone sound edges routed into the hold
-// A press edge and its first shot's SOUND edge are the same event — but the
-// drone runs tics at display-frame granularity, so the sound edge can land
-// just after the press edge's release and re-arm a SECOND flash ("slave,
-// master, slave again on a single fire", round 32). Each press edge takes a
-// short-lived debt that swallows the first matching sound edge; repeats of a
-// held trigger (which have no press edge) still flash per shot. The debt
-// expires in case the press fires nothing (fist swing missing, menus).
-#define DOOM_MIRROR_SND_DEBT_TTL_MS 500u
-static uint8_t           s_mir_snd_debt;
-static uint32_t          s_mir_snd_debt_at;
+static uint32_t          s_rgb_sndfire_seen;   // drone sound edges routed into the hold
 
-void doom_mirror_note_cmd(const uint8_t *cmd) {
-    const uint8_t atk = cmd[DOOM_TICCMD_BUTTONS_OFF] & DOOM_TICCMD_BT_ATTACK;
-    if (atk && !s_mir_attack_prev) {
-        if (!s_mir_attack_pending) {
-            s_mir_attack_armed_at = timer_read32();
-        }
-        s_mir_attack_pending++;
-        s_mir_snd_debt++;                    // swallow this press's first sound edge
-        s_mir_snd_debt_at = timer_read32();
-    }
-    s_mir_attack_prev = atk;
-}
-
-// Called at render rate (doom_rgb_compute): release held press edges once
-// their delay elapsed. Taps can't physically stack inside one 40 ms window,
-// so releasing all pending on the oldest edge's due time is exact enough.
+// Called at render rate (doom_rgb_compute): release held sound edges once
+// their delay elapsed. Shots can't stack inside one hold window (the fastest
+// refire is the chaingun's 4 tics = 114 ms), so releasing all pending on the
+// oldest edge's due time is exact enough.
 static inline void doom_mirror_release_attack_edges(void) { // inline: unused sans RGB matrix
     if (s_mir_attack_pending &&
         timer_elapsed32(s_mir_attack_armed_at) >= DOOM_MIRROR_ATTACK_FLASH_DELAY_MS) {
@@ -804,12 +773,9 @@ static void doom_mirror_session_reset(void) {
     s_mir_start_sent_at     = 0;
     s_mir_slave_engaged     = false;
     s_mir_attack_edges      = 0;
-    s_mir_attack_prev       = 0;
     s_mir_attack_pending    = 0;
     s_mir_attack_armed_at   = 0;
     s_rgb_sndfire_seen      = 0;
-    s_mir_snd_debt          = 0;
-    s_mir_snd_debt_at       = 0;
 }
 
 // The QMK transaction table is full (32-id cap), so mirror messages
@@ -1164,35 +1130,18 @@ static uint8_t doom_rgb_compute(void) {
         // Master: its own weapon sounds ARE the timing reference — immediate.
         fire = doom_shim_snd_fire;
     } else {
-        // Slave: BOTH fire sources run EARLY relative to the master. The
-        // receipt edges obviously (built ~2-3 tics before the master runs
-        // them), but the drone's own sounds too — it drains every arrived
-        // tic immediately (new_sync counts=availabletics), so it executes
-        // each shot at receipt+ε. Rounds 28-31: raising the hold never fixed
-        // "slave first" because the un-delayed sound path fed the same edge
-        // detector and capped the flash at drone-execution time. Route the
-        // sound edges through the SAME hold, so the single constant actually
-        // delays the flash end-to-end.
+        // Slave: the drone drains every arrived tic immediately (new_sync
+        // counts=availabletics), so it executes each shot — and plays its
+        // sound — EARLY by the constant pipeline offset. Route the sound
+        // edges through the hold; the release above turns them into the
+        // visible edges at exactly sound-time + hold, windup included.
         const uint32_t snd = doom_shim_snd_fire;
         if (snd != s_rgb_sndfire_seen) {
-            uint32_t delta = snd - s_rgb_sndfire_seen;
+            if (!s_mir_attack_pending) {
+                s_mir_attack_armed_at = now;
+            }
+            s_mir_attack_pending += (uint8_t)(snd - s_rgb_sndfire_seen);
             s_rgb_sndfire_seen = snd;
-            // The first sound of a press is the same shot as its receipt
-            // edge — consume the debt instead of arming a second flash.
-            while (delta && s_mir_snd_debt) {
-                delta--;
-                s_mir_snd_debt--;
-            }
-            if (delta) {
-                if (!s_mir_attack_pending) {
-                    s_mir_attack_armed_at = now;
-                }
-                s_mir_attack_pending += (uint8_t)delta;
-            }
-        }
-        if (s_mir_snd_debt &&
-            timer_elapsed32(s_mir_snd_debt_at) > DOOM_MIRROR_SND_DEBT_TTL_MS) {
-            s_mir_snd_debt = 0; // the press fired nothing — don't eat a later shot
         }
         fire = s_mir_attack_edges;
     }

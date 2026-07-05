@@ -368,9 +368,6 @@ void user_sync_doom_mirror_handler(uint8_t in_len, const void* in_data, uint8_t 
                     if (t < m->rx_w) {
                         continue; // duplicate from a bridge retry
                     }
-                    // Fire-button fast path: flash the RGB cue at receipt,
-                    // a batch before the drone runs this cmd (doom_mode.c).
-                    doom_mirror_note_cmd(msg->cmds[i]);
                     memcpy(m->rx_cmds[t % DOOM_MIRROR_RX_LEN], msg->cmds[i], DOOM_MIRROR_CMD_BYTES);
                     __asm volatile("dmb" ::: "memory");
                     m->rx_w = t + 1;

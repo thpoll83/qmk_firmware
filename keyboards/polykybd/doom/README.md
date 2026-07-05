@@ -160,6 +160,20 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 34 → v36 (2026-07-05, UNTESTED): fire flash re-referenced to the
+  DRONE SOUND (the press edge was the wrong event).** Round 34: still
+  slave-first at a 90 ms hold — which the receipt-edge math can't produce,
+  and that contradiction exposed the design error: **DOOM weapons have a
+  windup** (A_FirePistol runs several tics after the attack press enters
+  the weapon state machine), so the BT_ATTACK receipt edge precedes the
+  actual bang by a weapon-dependent 100-200 ms no constant can bridge —
+  and v34's press/sound debt dedupe was *eating the correctly-timed sound
+  edge*. v36 drops the press-edge path entirely
+  (`doom_mirror_note_cmd` removed): the slave's flash now follows its
+  **drone's own sound edges + hold** — the drone leads the master by only
+  the constant pipeline offset (build-ahead − delivery), which the hold
+  compensates exactly, windup included, for every weapon. Hold
+  re-bracketed at **50 ms**.
 - **Round 33 → v35 (2026-07-05, UNTESTED): hold 60 → 90 ms.** Round 33
   confirmed v34's dedupe ("single flash indeed") — the knob is finally
   clean end-to-end — and 60 ms still reads slave-first. First honest

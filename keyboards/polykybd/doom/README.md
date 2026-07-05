@@ -160,6 +160,10 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 33 → v35 (2026-07-05, UNTESTED): hold 60 → 90 ms.** Round 33
+  confirmed v34's dedupe ("single flash indeed") — the knob is finally
+  clean end-to-end — and 60 ms still reads slave-first. First honest
+  bracket step: 90 ms.
 - **Round 32 → v34 (2026-07-05, UNTESTED): dedupe the press/sound pair
   (double flash) + brightness step 3.** Round 32 on v33: "slave lights,
   then master, then slave AGAIN on a single fire" — the press's receipt

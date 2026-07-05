@@ -749,8 +749,9 @@ static bool     s_mir_slave_engaged;           // last acked engagement state
 // AND the drone's own sound edges — the drone executes shots at receipt+ε,
 // also ahead of the master; the un-delayed sound path was capping every
 // earlier hold increase, which is why 40/70/100 all read "slave first").
-// With the cap gone the flash lands at receipt + hold; bracket from 60.
-#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 60u
+// With the cap gone the flash lands at receipt + hold. Clean bracket since
+// v33/v34 (single flash, knob live end-to-end): 60 early (round 33) -> 90.
+#define DOOM_MIRROR_ATTACK_FLASH_DELAY_MS 90u
 static volatile uint32_t s_mir_attack_edges;   // released — visible to doom_rgb_compute
 static uint8_t           s_mir_attack_prev;
 static uint8_t           s_mir_attack_pending; // edges still holding for their due time

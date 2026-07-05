@@ -1554,7 +1554,15 @@ static const char *M_SelectEndMessage(void)
 
 void M_QuitDOOM(int choice)
 {
-#if !DOOM_TINY
+#if POLYKYBD_QMK
+    // polykybd: quit immediately — the confirm prompt is a text message the
+    // keycap canvas can't show readably (messages aren't mirrored to the
+    // slave), and "Quit Game" on a keyboard easter egg should behave like
+    // the ESC-hold exit (field round 18). ga_deferredquit -> I_Quit from
+    // the main loop, which signals core0 to tear the session down.
+    (void)choice;
+    gameaction = ga_deferredquit;
+#elif !DOOM_TINY
     DEH_snprintf(endstring, sizeof(endstring), "%s\n\n" DOSY,
                  DEH_String(M_SelectEndMessage()));
 

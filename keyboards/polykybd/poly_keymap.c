@@ -1817,10 +1817,9 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_send_buffer();
                             doom_handled = true;
                         } else if (pad == KC_ESC) {
-                            // Same look as the master's exit-hint corner key.
-                            kdisp_set_buffer(0x00);
-                            kdisp_write_gfx_text(mid_fonts, 1, BUFFER_X + 24, 13, U"hold");
-                            draw_legend_cx(U"Esc", 36);
+                            // The shared exit-hint face — byte-identical to
+                            // the master's HUD corner key (field rd 18).
+                            doom_render_esc_key();
                             kdisp_send_buffer();
                             doom_handled = true;
                         } else if (keycode == KC_LCTL || keycode == KC_RCTL) {

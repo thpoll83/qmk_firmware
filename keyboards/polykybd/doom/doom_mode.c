@@ -475,7 +475,7 @@ static void doom_hud_tick(void) {
     // and level alike) — the position alias makes it act as ESC.
     if (!s_hud_esc_drawn) {
         s_hud_esc_drawn = true;
-        doom_blit_stat_key(0, doom_hud_disp_col(), U"hold", U"Esc");
+        doom_blit_esc_key(0, doom_hud_disp_col());
         // Fire hint (field round 17): the player's fire key is the MASTER
         // half's Ctrl — on the left half it sits at the bottom of the outer
         // HUD column (matrix [4,0]), outside the viewport. The right half
@@ -889,6 +889,13 @@ void doom_tick(void) {
         return;
     }
     if (s_esc_down && timer_elapsed32(s_esc_down_at) > DOOM_EXIT_HOLD_MS) {
+        doom_exit();
+        return;
+    }
+    if (doom_shim_quit_requested()) {
+        // Menu "Quit Game" (I_Quit parked the game core) — same exit as the
+        // ESC hold (field round 18).
+        printf("doom: menu quit\n");
         doom_exit();
         return;
     }

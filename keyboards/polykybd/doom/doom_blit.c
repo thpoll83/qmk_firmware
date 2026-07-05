@@ -13,8 +13,9 @@
 #include QMK_KEYBOARD_H
 
 #include "doom_blit.h"
-#include "doom_mode.h"   // doom_shim_compose_begin/line (engine path)
-#include "doom_arena.h"  // compose scratch carve
+#include "doom_mode.h"        // doom_shim_compose_begin/line (engine path)
+#include "doom_arena.h"       // compose scratch carve
+#include "doom_playpal_luma.h" // ESC-hint STCFN threshold (256 B, per-TU const)
 
 #include "side.h"            // is_left_side() (bottom-row viewport mapping)
 #include "base/disp_array.h"
@@ -285,6 +286,93 @@ static bool draw_hufont_label(const uint32_t *label, const uint8_t *luma256) {
         x += w + 1;
     }
     return true;
+}
+
+// One HU-font word at 2x, top-aligned-centred in the value band (rows
+// 14..39), solid at the digits' 64 threshold — the ESC hint's "ESC". False
+// when a glyph is unavailable — the caller draws the legacy font pair.
+static bool draw_hufont_word2x(const uint32_t *word, const uint8_t *luma256) {
+    uint8_t chs[6];
+    uint8_t n = 0;
+    for (const uint32_t *c = word; *c; ++c) {
+        uint32_t ch = *c;
+        if (ch >= 'a' && ch <= 'z') {
+            ch -= 32;
+        }
+        if (ch < 33 || ch > 95 || n >= (uint8_t)sizeof(chs)) {
+            return false;
+        }
+        chs[n++] = (uint8_t)ch;
+    }
+    if (!n) {
+        return false;
+    }
+    uint8_t  gw[6], gh[6];
+    uint16_t total = 0;
+    uint8_t  hmax  = 0;
+    for (uint8_t i = 0; i < n; ++i) {
+        if (!doom_shim_hufont_glyph(chs[i], NULL, &gw[i], &gh[i])) {
+            return false;
+        }
+        total += (uint16_t)(2 * gw[i] + 2); // 2 px letter spacing at 2x
+        if (2 * gh[i] > hmax) hmax = (uint8_t)(2 * gh[i]);
+    }
+    total -= 2;
+    if (total > SCREEN_WIDTH || hmax > SCREEN_HEIGHT - 14) {
+        return false;
+    }
+    uint8_t      *buf    = get_scratch_buffer();
+    const int16_t stride = get_scratch_buffer_size() / 8;
+    uint16_t      x      = (uint16_t)(BUFFER_X + (SCREEN_WIDTH - total) / 2);
+    const uint8_t y0     = (uint8_t)(14 + (SCREEN_HEIGHT - 14 - hmax) / 2);
+    uint8_t dec[DOOM_HUFONT_MAX_W * DOOM_HUFONT_MAX_H];
+    for (uint8_t i = 0; i < n; ++i) {
+        uint8_t w = 0, h = 0;
+        if (!doom_shim_hufont_glyph(chs[i], dec, &w, &h)) {
+            return true; // half-drawn worst case; the caller restarts clean
+        }
+        for (uint8_t sy = 0; sy < h; ++sy) {
+            for (uint8_t sx = 0; sx < w; ++sx) {
+                if (luma256[dec[(size_t)sy * w + sx]] < 64) {
+                    continue;
+                }
+                for (uint8_t d = 0; d < 2; ++d) {
+                    const uint8_t Y = (uint8_t)(y0 + 2 * sy + d);
+                    for (uint8_t e = 0; e < 2; ++e) {
+                        const uint16_t X = (uint16_t)(x + 2 * sx + e);
+                        buf[(size_t)(Y >> 3) * stride + X] |= (uint8_t)(1u << (Y & 7));
+                    }
+                }
+            }
+        }
+        x += (uint16_t)(2 * w + 2);
+    }
+    return true;
+}
+
+// Shared ESC exit-hint face — IDENTICAL on the master's HUD corner and the
+// slave pad's aliased corner (field round 18: "make sure the layout on both
+// ESC keys is the same"): "hold" in the game's small HUD font on the top
+// band, "ESC" in the same font at 2x below. Legacy font pair when the STCFN
+// glyphs are unavailable (no WHX / engine down).
+void doom_render_esc_key(void) {
+    kdisp_set_buffer(0x00);
+    if (draw_hufont_label(U"hold", DOOM_PLAYPAL_LUMA) &&
+        draw_hufont_word2x(U"ESC", DOOM_PLAYPAL_LUMA)) {
+        return;
+    }
+    kdisp_set_buffer(0x00); // half-drawn worst case: restart clean
+    kdisp_write_gfx_text(hud_label_fonts, 1, center_x(hud_label_fonts, 1, U"hold"), 13, U"hold");
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count,
+                         center_x(g_all_fonts, g_all_font_count, U"Esc"), 36, U"Esc");
+}
+
+void doom_blit_esc_key(uint8_t row, uint8_t disp_col) {
+    if (!select_display_raw(row, disp_col)) {
+        return;
+    }
+    doom_render_esc_key();
+    kdisp_send_buffer();
 }
 
 // Vitals value in the game's own tall red status-bar digits (STTNUM/STTMINUS

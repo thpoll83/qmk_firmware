@@ -154,7 +154,42 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 17 → v18 (2026-07-04, UNTESTED): readable menu on the slave +
+- **Round 18 → v19 (2026-07-05, UNTESTED): menu typography round 2 + quit +
+  ESC unification.** Round 18 confirmed most of v18 (no loading artifact,
+  labels good, fire/door/frame/no-weapon-numbers all good, menu on the slave
+  "great — almost readable", re-entry brings the viewport back). Fixes:
+  1. **Missing menu items** ("some menu options are not rendered at all —
+     only the skull"): the per-item width cap was 160 px, but the skill-menu
+     sentences ("I'm too young to die.") run past 190 px — those decoded to
+     a blank tile. Cap now 240 px, and the item scale STEPS DOWN per item
+     (3:2 → 5:4 → 1:1) until it fits the canvas right edge, so every menu
+     renders.
+  2. **Menu font thinner + smaller** ("too thick and a bit smaller"): items
+     now 3:2 (24 px for the main menu) instead of 2× (32 px), thresholded at
+     the digits' 64 (drops the dark edge shades) instead of 36.
+  3. **Skull brighter + bigger**: 5:4 scale (~38 px) and solid-thresholded
+     (bone lights solid, only the near-black sockets/outline stay dark)
+     instead of the Bayer dither that rendered it mid-grey.
+  4. **Menu "Quit Game" now exits the easter egg**: `I_Quit` was still the
+     bring-up `panic()`; it now parks the game core and signals core0, and
+     `doom_tick` tears the session down exactly like the ESC hold.
+     `M_QuitDOOM` skips the confirm prompt under `POLYKYBD_QMK` (messages
+     aren't mirrored — a prompt the player can't read is a trap).
+  5. **Both ESC keys share one face** ("use the same for ESC/hold, make sure
+     the layout on both ESC keys is the same"): `doom_render_esc_key()` —
+     "hold" in the small STCFN band + "ESC" in STCFN at 2× below — drawn
+     identically on the master's HUD corner and the slave pad's aliased
+     corner (legacy font pair only when the WHX/engine is down). The
+     standalone decoders also fill the shared palettes lazily now, so an
+     STCFN face rendered before the first compose can't come out blank.
+  6. **Second-run automap artifact** ("I can see a viewport in the
+     minimap"): stale `automapactive` from the torn-down first session made
+     the next drone START skip the map re-toggle (no `AM_Start`/level init),
+     drawing with stale window state over the old buffer. Reset in
+     `doom_shim_set_role` with the other re-entry globals.
+- **Round 17 → v18 (2026-07-04, tested ✓ mostly works — menu readable but
+  too thick, some items missing; quit dead; 2nd-run map artifact → v19):
+  readable menu on the slave +
   re-entry fix.** Round 17 confirmed v17's digits ("otherwise good") and
   surfaced the big one — "move the in game text menu with the skull to the
   slave side so it can actually be read; I most of the time blindly select

@@ -45,6 +45,11 @@ void doom_blit_menu(const uint8_t *luma256, bool skull_alt, bool full);
 // Ctrl key at the bottom of its outer HUD column.
 void doom_blit_fire_key(uint8_t row, uint8_t disp_col);
 
+// The shared ESC exit-hint face on the display at raw (row, disp_col) —
+// the master's HUD corner (the slave pad renders the same face through
+// doom_render_esc_key on its aliased corner).
+void doom_blit_esc_key(uint8_t row, uint8_t disp_col);
+
 // Blank every keycap display of this half (entering game mode: the keys
 // outside the viewport keep whatever legend they held otherwise).
 void doom_blit_blank_all(void);

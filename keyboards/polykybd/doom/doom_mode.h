@@ -155,6 +155,15 @@ void doom_render_fire_key(void);
 // currently-selected-display contract as doom_render_fire_key (doom_blit.c).
 void doom_render_use_key(void);
 
+// Shared ESC exit-hint face ("hold" + "ESC" in the game's HUD font, legacy
+// font pair without a WHX) — same contract; both halves' ESC corners use it
+// so the layout is identical (doom_blit.c).
+void doom_render_esc_key(void);
+
+// Menu "Quit Game" pressed (I_Quit on the game core) — doom_tick exits the
+// session like the ESC hold (qmk_shim.c).
+bool doom_shim_quit_requested(void);
+
 // Readable menu mirror (qmk_shim.c, field round 17). Master core0 samples
 // the engine's active menu (item vpatch handles + selection; 0 = nothing
 // mirrorable up); the slave's core0 renders per-keycap tiles from its OWN
@@ -198,6 +207,7 @@ static inline bool doom_slave_viewport_live(void) { return false; }
 static inline bool doom_slave_bottom_row_live(void) { return false; }
 static inline void doom_render_fire_key(void) {}
 static inline void doom_render_use_key(void) {}
+static inline void doom_render_esc_key(void) {}
 static inline int  doom_status_face_render(uint8_t *buf1024) { (void)buf1024; return 0; }
 static inline bool doom_status_scroll(void) { return true; }
 

@@ -440,6 +440,20 @@ static unsigned draw_vpatch8(uint8_t *dest, const patch_t *patch, const vpatchli
     return (unsigned)(data - data0);
 }
 
+// Shared palettes as PLAYPAL indices. Also called lazily by the standalone
+// vpatch decoders (STCFN / tall numbers / menu items) — they can run before
+// the first compose (e.g. the slave's ESC key at session start), and a
+// shared-palette glyph decoded against a zeroed table renders blank.
+static void shim_fill_shared_pal8(void) {
+    for (int i = 0; i < NUM_SHARED_PALETTES; i++) {
+        const patch_t *patch = resolve_vpatch_handle(vpatch_for_shared_palette[i]);
+        const uint8_t *pal   = vpatch_palette(patch);
+        for (int j = 0; j < 16; j++) {
+            shared_pal8[i][j] = pal[j];
+        }
+    }
+}
+
 void doom_shim_compose_begin(void) {
     compose_overlays_active =
         vpatchlists && shim_disp_video_type >= FIRST_VIDEO_TYPE_WITH_OVERLAYS;
@@ -458,13 +472,7 @@ void doom_shim_compose_begin(void) {
         vpatchlists->vpatch_starters[overlays[i].entry.y] = (uint8_t)i;
     }
     // Shared palettes as PLAYPAL indices (upstream builds RGB565 here).
-    for (int i = 0; i < NUM_SHARED_PALETTES; i++) {
-        const patch_t *patch = resolve_vpatch_handle(vpatch_for_shared_palette[i]);
-        const uint8_t *pal = vpatch_palette(patch);
-        for (int j = 0; j < 16; j++) {
-            shared_pal8[i][j] = pal[j];
-        }
-    }
+    shim_fill_shared_pal8();
 }
 
 void doom_shim_compose_line(uint8_t *line, unsigned y) {
@@ -657,6 +665,7 @@ bool doom_shim_tallnum_glyph(uint8_t glyph, uint8_t *out8bpp, uint8_t *w, uint8_
     *w = (uint8_t)pw;
     *h = (uint8_t)ph;
     if (out8bpp) {
+        shim_fill_shared_pal8(); // decodable before the first compose
         memset(out8bpp, 0, (size_t)pw * ph);
         vpatchlist_t vp;
         memset(&vp, 0, sizeof(vp));
@@ -689,6 +698,7 @@ bool doom_shim_hufont_glyph(uint8_t ch, uint8_t *out8bpp, uint8_t *w, uint8_t *h
     *w = (uint8_t)pw;
     *h = (uint8_t)ph;
     if (out8bpp) {
+        shim_fill_shared_pal8(); // STCFN uses a shared palette; see the helper
         memset(out8bpp, 0, (size_t)pw * ph);
         vpatchlist_t vp;
         memset(&vp, 0, sizeof(vp));
@@ -713,11 +723,23 @@ byte *I_ZoneBase(int *size) {
     return zone;
 }
 
+// Menu "Quit Game" -> I_Quit (game core) -> this flag; core0's doom_tick
+// tears the session down like the ESC hold (field round 18). Reset in
+// doom_shim_set_role before every launch.
+static volatile uint8_t s_quit_req;
+
+bool doom_shim_quit_requested(void) {
+    return s_quit_req != 0;
+}
+
 void I_Quit(void) {
-    // Menu quit on a keyboard means "leave the easter egg" — that path exits
-    // game mode from doom_tick. Reaching the engine's own quit is a bug until
-    // that is wired, so fail loudly rather than return from a NORETURN.
-    panic("doom: I_Quit");
+    // Menu quit on a keyboard means "leave the easter egg": signal core0
+    // (doom_tick tears the session down exactly like the ESC hold) and park
+    // this core — doom_engine_stop resets it. NORETURN honoured by the loop.
+    s_quit_req = 1;
+    for (;;) {
+        __asm volatile("wfe");
+    }
 }
 
 void I_Tactile(int on, int off, int total) {
@@ -1010,10 +1032,16 @@ void doom_shim_set_role(bool master) {
     // running its attract (no frames -> no viewport). A normal engine boot
     // never resets these (they belong to net negotiation), so do it here,
     // on core0, before core1 launches. menuactive likewise (an ESC-hold
-    // exit tears the session down with the menu open).
+    // exit tears the session down with the menu open), and automapactive
+    // (a session torn down on the automap left it "already up" — the next
+    // drone START then never re-toggled/AM_Start'ed the map, drawing with
+    // stale window state over the old buffer: "a viewport in the minimap
+    // on the second run", field round 18).
     drone                = false;
     net_client_connected = false;
     menuactive           = false;
+    automapactive        = false;
+    s_quit_req           = 0;
 }
 
 static doom_mirror_t *doom_mirror_box(void) {
@@ -1282,8 +1310,10 @@ int doom_shim_menu_snapshot(uint16_t *items, int max_items, int *item_on) {
     return M_MenuSnapshot(items, max_items, item_on);
 }
 
-// Menu items can be wide ("READ THIS!" ~121 px); anything wider is skipped.
-#define SHIM_MENU_PATCH_MAX_W 160u
+// Menu items can be wide — the skill-menu sentences ("I'm too young to
+// die.") run past 190 px; the old 160 cap skipped them entirely ("I can
+// only see the skull without any text", field round 18).
+#define SHIM_MENU_PATCH_MAX_W 240u
 
 // The 4 visible menu rows window: keep the selection on-screen, pinned to
 // the last row once the menu is deeper than the window.
@@ -1299,12 +1329,12 @@ static uint8_t shim_menu_win_start(uint8_t count, uint8_t item_on) {
 }
 
 // Decode `p` row-sequentially and stamp it into the 72x40 keycap tile of
-// viewport column `vc` (page-major 5x72 B), scaled `scale`x, at canvas x0 /
-// tile-local y0. Text is thresholded solid; shaded artwork (the skull) is
-// Bayer-dithered with canvas-continuous coordinates.
+// viewport column `vc` (page-major 5x72 B), nearest-neighbour scaled by
+// num/den, at canvas x0 / tile-local y0. Pixels at/above solid_min light
+// solid (crisp text and the bright skull; the near-black outlines stay dark).
 static void shim_menu_stamp(uint8_t *tile360, const patch_t *p, int x0, int y0,
-                            unsigned scale, uint8_t vc, const uint8_t *luma256,
-                            bool dither, unsigned canvas_row0) {
+                            unsigned num, unsigned den, uint8_t vc,
+                            const uint8_t *luma256, uint8_t solid_min) {
     const unsigned w = vpatch_width(p);
     const unsigned h = vpatch_height(p);
     const int      win0 = (int)vc * 72 - 20; // canvas x of this tile's x=0
@@ -1315,22 +1345,22 @@ static void shim_menu_stamp(uint8_t *tile360, const patch_t *p, int x0, int y0,
     for (unsigned sy = 0; sy < h; sy++) {
         memset(row, 0, w);
         off = draw_vpatch8(row, p, &vp, off);
-        for (unsigned d = 0; d < scale; d++) {
-            const int Y = y0 + (int)(sy * scale + d);
+        const unsigned oy0 = sy * num / den;
+        const unsigned oy1 = (sy + 1) * num / den;
+        for (unsigned oy = oy0; oy < oy1; oy++) {
+            const int Y = y0 + (int)oy;
             if (Y < 0 || Y >= 40) {
                 continue;
             }
             for (unsigned sx = 0; sx < w; sx++) {
-                const uint8_t v = luma256[row[sx]];
-                for (unsigned e = 0; e < scale; e++) {
-                    const int cx = x0 + (int)(sx * scale + e);
-                    const int tx = cx - win0;
-                    if (tx < 0 || tx >= 72) {
-                        continue;
-                    }
-                    const bool on = dither ? (v > shim_bayer4[(canvas_row0 + (unsigned)Y) & 3][cx & 3])
-                                           : (v >= 36);
-                    if (on) {
+                if (luma256[row[sx]] < solid_min) {
+                    continue;
+                }
+                const unsigned ox0 = sx * num / den;
+                const unsigned ox1 = (sx + 1) * num / den;
+                for (unsigned ox = ox0; ox < ox1; ox++) {
+                    const int tx = x0 + (int)ox - win0;
+                    if (tx >= 0 && tx < 72) {
                         tile360[(size_t)(Y >> 3) * 72 + tx] |= (uint8_t)(1u << (Y & 7));
                     }
                 }
@@ -1356,14 +1386,20 @@ bool doom_shim_menu_key_tile(uint8_t vr, uint8_t vc, uint8_t *tile360,
     }
     const uint8_t item_on = m->menu_in_item_on;
     const uint8_t idx     = (uint8_t)(shim_menu_win_start(count, item_on) + vr);
+    shim_fill_shared_pal8(); // menu patches can decode before any compose
     memset(tile360, 0, 5u * 72u);
     if (vc == 0) {
         if (idx == item_on) {
+            // Skull at 5:4 (~38 px — "brighter and could be bigger", round
+            // 18) and solid-thresholded: the bone reads bright, only the
+            // near-black outline/sockets stay dark. Fits column 0's canvas
+            // window (0..51) ahead of the items at x=52.
             const patch_t *p = resolve_vpatch_handle(
                 skull_alt ? VPATCH_NAME(M_SKULL2) : VPATCH_NAME(M_SKULL1));
-            if (p && vpatch_width(p) <= 44 && vpatch_height(p) <= 40) {
-                shim_menu_stamp(tile360, p, 8, (int)(40 - vpatch_height(p)) / 2,
-                                1, 0, luma256, true, (unsigned)vr * 40u);
+            if (p && vpatch_width(p) * 5u / 4u <= 49 && vpatch_height(p) * 5u / 4u <= 40) {
+                shim_menu_stamp(tile360, p, 2,
+                                (int)(40 - vpatch_height(p) * 5u / 4u) / 2,
+                                5, 4, 0, luma256, 36);
             }
         }
         return true;
@@ -1381,11 +1417,24 @@ bool doom_shim_menu_key_tile(uint8_t vr, uint8_t vc, uint8_t *tile360,
     }
     const unsigned w = vpatch_width(p);
     const unsigned h = vpatch_height(p);
-    if (!w || !h || w > SHIM_MENU_PATCH_MAX_W || 2 * h > 40) {
+    if (!w || !h || w > SHIM_MENU_PATCH_MAX_W) {
         return true;
     }
-    shim_menu_stamp(tile360, p, 52, (int)(40 - 2 * h) / 2, 2, vc, luma256,
-                    false, (unsigned)vr * 40u);
+    // Per-item scale: 3:2 preferred ("2x is too thick and a bit smaller
+    // would be good", round 18), stepping down so wide items — the skill
+    // sentences — still fit the canvas right edge instead of vanishing.
+    unsigned num = 3, den = 2;
+    if (52 + w * num / den > 320 || h * num / den > 40) {
+        num = 5; den = 4;
+    }
+    if (52 + w * num / den > 320 || h * num / den > 40) {
+        num = 1; den = 1;
+    }
+    if (52 + w * num / den > 320 || h * num / den > 40) {
+        return true; // wider than the canvas even at 1:1
+    }
+    shim_menu_stamp(tile360, p, 52, (int)(40 - h * num / den) / 2, num, den,
+                    vc, luma256, 64);
     return true;
 }
 

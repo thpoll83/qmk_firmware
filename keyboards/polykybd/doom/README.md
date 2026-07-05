@@ -5,17 +5,26 @@ This directory is the `#ifdef POLYKYBD_DOOM` **dev harness** (the study's
 "Option 1"); the executable-flash-pack ship path comes later, re-linking the
 same objects at `0x10600000`.
 
-> **STATUS (2026-07-03): the game RUNS on hardware.** With a `doom1.whx`
-> flashed at `0x600000`, typing IDDQD boots the full rp2040-doom engine on
-> core1 and the attract demo plays on the keycaps (~9.5 fps blit, ~28 tics/s
-> sim — verified in field round 6, see the hardware-test log below). Without
-> a WHX the PSX-fire placeholder below still runs as the pipeline proof.
-> Since round 6 (in tree, awaiting hardware): **vpatch overlay compose**
-> (menus / HUD / status bar drawn onto the keycaps by the blit — the
-> `doom_shim_compose_*` seam + the scanline-major `doom_blit_frame_engine`)
-> and the **physical bottom-row viewport mapping** (split72's thumb-cluster
-> offset — see `view_to_disp_col`). Not yet ported: the melt visual, palette
-> flashes, sound (by design), slave-half lockstep, re-entry.
+> **STATUS (2026-07-05, v42 — FEATURE-COMPLETE for the dev harness, 41 field
+> rounds).** The full game is playable on the split72: engine on the master's
+> core1, **lockstep twin-engine mirror on the slave** (drone fed by the
+> master's ticcmd stream over the split link — 3D view on the master's 5×5
+> viewport, live automap on the slave's), menus/HUD/status bar composed onto
+> the keycaps, doomguy face on the status OLED, DOOM tallnum HUD digits,
+> **positional control pad** (arrows/Enter/Space pinned to fixed slave
+> bottom-row positions regardless of base layout, mirrored when the master
+> is on the right), and the **RGB matrix as the game's "speaker"** — yellow
+> flash on the player's weapon sounds (slave immediate, master delayed
+> `DOOM_RGB_MASTER_FIRE_LAG_MS` = 20 ms to meet the slave's structural
+> render lag — field-confirmed round 41), blue for world/monster sounds,
+> red base rising as health drops. Menus are curated to what works: New
+> Game (straight to skill select) / Options (End Game, Messages) / Quit.
+> Re-entry, quit, and exit are clean (core1 relaunch + session resets).
+> **Image cost: 603,884 B doom build vs 384,460 B normal build (~219 KB
+> engine+tables)** — the executable-flash-pack ship path ("DoomPack",
+> feasibility Option 2) is the next milestone and removes that delta from
+> the firmware partition entirely. Without a WHX the PSX-fire placeholder
+> still runs as the pipeline proof.
 
 ## Building
 
@@ -26,7 +35,12 @@ qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes
 Without `POLYKYBD_DOOM=yes` nothing here is compiled and every hook in
 `poly_keymap.c` / `hid_com.c` collapses to an inline no-op (zero bytes).
 
-## What works today (milestone 0: pipeline proof)
+## What works today (milestone 0: pipeline proof — HISTORICAL)
+
+> This section describes the pre-engine pipeline proof and is kept as the
+> record of the mode-machinery design (trigger / pool borrow / HID freeze /
+> exit), all of which still holds. For the current feature set see the
+> STATUS block above and the hardware-test log below.
 
 - **Trigger**: type `IDDQD` (plain letters, ≤3 s between keys, master half).
   Dev-harness placeholder — the shipping egg gates this behind a held layer.
@@ -57,24 +71,34 @@ Without `POLYKYBD_DOOM=yes` nothing here is compiled and every hook in
 | `doom_blit.c/.h` | 8 bpp framebuffer → 4×4 Bayer dither → per-keycap 72×40 tile → shift-register select + SPI |
 | `doom_fire.c` / `doom_game.h` | Placeholder scene proving the pipeline; the engine port replaces this behind the same interface |
 
-## Known v1 limits (deliberate)
+## Known limits (current, v42)
 
-- **Master half only** — the slave keeps its normal legends. The lockstep
-  twin-engine model (tic sync over `USER_SYNC_DOOM_TIC`) comes with the engine.
-- Blit uses the full-RAM `kdisp_send_buffer()` (~21 ms / 25-key frame). The
-  window-addressed 360 B path (~8 ms) is a contained optimisation in
-  `doom_blit.c`.
-- Everything runs on core0 in housekeeping (fine for the fire demo; the engine
-  moves the game to core1 — mind the `cpsid i` note in `multicore_exec.c`).
-- `split42` compiles but the 5×5 viewport only partially maps to its 24
-  display slots (bounds-guarded); the demo targets split72.
-- Trackpad untouched. ~~RGB matrix untouched~~ — since v24 the RGB matrix is
-  the game's "speaker": yellow fire flash, blue world sounds, red base as
-  health degrades (see the round-23 log entry).
+- **`#ifdef POLYKYBD_DOOM` build only** — the egg is not in the shipping
+  image yet; the DoomPack (executable flash pack, feasibility Option 2) is
+  the designed ship path and the next milestone.
 - **No savegames** (menu entries removed + machinery compiled out via
   `NO_USE_LOAD/NO_USE_SAVE`, v31). Future extension: a save-slot region in
   the 4-8 MB resource map + `P_SaveGameWriteFlashSlot` routed through the
   firmware's staged flash writes (see the round-29 log entry).
+- **No sound hardware** (by design) — the RGB matrix substitutes: yellow
+  player-fire flash, blue world sounds, red health base (v24+). Master fire
+  flash is delayed `DOOM_RGB_MASTER_FIRE_LAG_MS` (20 ms, field-confirmed) —
+  do not retune without a new field report; see the timing-saga comment in
+  `doom_mode.c`.
+- **Residual slave view lag is structural**: the drone's tics only run when
+  a display frame turns (frame-gated drain in the mirror seam). Shrinking it
+  would mean decoupling the drone's `TryRunTics` from the frame handoff —
+  documented, not attempted.
+- **`split42` compiles but is untargeted** — the 5×5 viewport only partially
+  maps to its 24 display slots (bounds-guarded); the game targets split72.
+- **Trackpad untouched** (not a game input).
+- **Melt/wipe visual and palette flashes not ported** (wipes compiled out;
+  the single view buffer removes the double-buffer they assumed).
+- **Intermission/level-end tally unverified** on the keycap viewport (no
+  field round has finished a level yet).
+- Blit uses the full-RAM `kdisp_send_buffer()` (~21 ms / 25-key frame). The
+  window-addressed 360 B path (~8 ms) is a contained optimisation in
+  `doom_blit.c`.
 
 ## Engine integration state — THE FULL ENGINE NOW LINKS
 
@@ -1032,37 +1056,26 @@ Port conventions:
   classes (format/discarded-qualifiers/maybe-uninitialized/cpp) that QMK's
   `-Werror` would fatalize; they stay visible as warnings.
 
-## Next milestones (from the study's effort table)
+## Next milestones
 
-1. **Port `pd_render.cpp` + the scanout** (the last unresolved engine piece),
-   then root `D_DoomMain`. Architecture findings for whoever picks this up:
-   - `pd_render.cpp` (3,115 lines, C++, needs `CXXFLAGS` for the engine
-     include dirs) does NOT write a framebuffer — it builds per-frame column
-     lists, split across core0/core1 via pico_sync semaphores
-     (`core1_do_flats`/`core1_do_regular`/…) and using both RP2040
-     **interpolators** (QMK never touches interp0/1, so they're free; upstream
-     i_video.c already has `interp_save/restore_static` helpers).
-   - The pixels materialize in upstream `src/pico/i_video.c`: a
-     `scanline_func(uint32_t *dest, int scanline)` table
-     (none/double/single/wipe) renders one line at a time from the pd lists +
-     the `vpatch` overlay lists (HUD/menu/status), palette-mapped via a 256-
-     entry table. Upstream calls it from the scanvideo IRQ (beam racing) —
-     **our replacement is a plain per-frame loop over the 200 scanlines**
-     writing into the borrowed-pool canvas, palette→**luma** LUT instead of
-     palette→RGB565, then `doom_blit` dithers to the keycaps.
-   - The pico_sync semaphores need either compiled `pico_sync` sources
-     (hardware spinlock based — check interaction with the `cpsid i` core1
-     mask, see `multicore_exec.c`) or a rewrite of the handoff onto the
-     firmware's core1 FIFO; in game mode core1 is idle (no RLE jobs) and the
-     study assigns it to the game anyway.
-   - `i_system.h`'s `render_frame_ready`/`display_frame_freed` semaphores are
-     currently compiled out under `POLYKYBD_QMK` — pd_render references them,
-     so that guard is where the new handoff plugs in.
-2. Wire input (`doom_process_record` → `D_PostEvent`) and video
-   (`I_VideoBuffer`/scanout → `doom_blit`); `doom1.whx` (1,800,344 B) is
-   refetchable — see `engine/PROVENANCE.md`.
-2. Keycap blitter as the engine's video backend + status-OLED HUD.
-3. `doomwad` staging slot at flash `0x600000` (reuse the FONTPACK
-   `BEGIN/CHUNK/COMMIT` flow) + `polyctl doom install`.
-4. Lockstep tic sync; then the executable-pack ship path (`PlyX` header,
-   `doom_api_t` call table).
+Milestones 1–4 of the study's effort table are **done** (engine port + scanout,
+input/video wiring, WHX-over-HID install, lockstep tic sync — see the
+hardware-test log). What remains, in order:
+
+1. **DoomPack — the executable-flash-pack ship path** (feasibility study
+   "Option 2", IN PROGRESS): re-link the same engine objects at a fixed
+   resource-region address as a `PlyX` pack (header: magic / ABI version /
+   entry offset / expected RAM base / CRC32), flashed to both halves through
+   the bridged `fw_staging` flow like a font bundle. The shipping firmware
+   then carries only the **loader + `doom_api_t` call table + trigger**
+   (~2–4 KB) instead of the current ~219 KB engine delta (603,884 B doom
+   build vs 384,460 B normal build, v42). The `#ifdef POLYKYBD_DOOM`
+   monolithic build stays in-tree permanently as the debug harness.
+2. **Savegames** (deliberately cut in v31): a save-slot region in the 4–8 MB
+   resource map + `P_SaveGameWriteFlashSlot` through the firmware's staged
+   flash writes.
+3. Optional polish, unranked: intermission-screen verification on the keycap
+   viewport, a real split42 viewport design, decoupling the drone's
+   `TryRunTics` from the display-frame handoff (shrinks the structural slave
+   view lag; the RGB fire cue already compensates via
+   `DOOM_RGB_MASTER_FIRE_LAG_MS`).

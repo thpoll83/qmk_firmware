@@ -1,11 +1,17 @@
 # Can It Run Doom? — Feasibility Study
 
-> **STATUS (2026-07-02): implementation started** — the `POLYKYBD_DOOM` dev-harness
-> scaffold (game-mode flag, overlay-pool borrow/restore, input swallow, HID freeze,
-> IDDQD trigger, 5×5-keycap Bayer-dither blitter + fire-demo pipeline proof) is in
-> [`doom/`](doom/README.md), and the rp2040-doom engine source snapshot
-> (`f1f43171`) is vendored under `doom/engine/`. Build with
-> `qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes`.
+> **STATUS (2026-07-05): IMPLEMENTED — the game is playable on hardware** (41
+> field-test rounds, v42). The study's verdict held on every axis: engine on
+> the master's core1, twin-engine input-lockstep mirror on the slave (automap
+> view), overlay pool borrowed at runtime, WHX in the resource flash, RGB
+> matrix as the "speaker". The whole implementation, its hardware-test log,
+> and the remaining milestones (DoomPack ship path, savegames) live in
+> [`doom/README.md`](doom/README.md). The dev harness builds with
+> `qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes`; the
+> engine snapshot (`f1f43171`) is vendored under `doom/engine/`. The
+> "Option 2" executable-flash-pack ship path below is the active milestone —
+> measured engine cost to remove from the firmware image: ~219 KB (603,884 B
+> doom build vs 384,460 B normal build).
 
 
 People keep asking. This page answers the question properly: **yes, the PolyKybd split72 can run Doom** — actually run it on the keyboard's own RP2040, rendered across the per-keycap OLEDs — and it can be done as a **hidden easter egg inside the normal firmware**, without shipping a separate "Doom edition" and without permanently sacrificing any feature. The trick is that the two scarce resources are already lying around: the **226 KB overlay RAM pool** can be borrowed while the game runs, and the flash map has **~2 MB of unused resource flash** for a compressed shareware WAD.

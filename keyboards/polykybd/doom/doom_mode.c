@@ -657,6 +657,26 @@ static void doom_hud_tick(void) {
     s_hud_shown = true;
 }
 
+// Viewport luma with a mild contrast gain (round 42: "increase the contrast
+// on the viewport just a bit") — 1.25x around mid-grey, saturating, applied
+// only to the master's 3D-view blit. Menus (own threshold rule), the slave's
+// automap (already line-art on black) and the HUD/face draws keep the
+// straight PLAYPAL table. Built lazily; 256 B of plain .bss.
+#define DOOM_VIEW_CONTRAST_NUM 5
+#define DOOM_VIEW_CONTRAST_DEN 4
+static const uint8_t *doom_view_luma(void) {
+    static uint8_t lut[256];
+    static bool    built;
+    if (!built) {
+        for (int i = 0; i < 256; ++i) {
+            const int v = 128 + (((int)DOOM_PLAYPAL_LUMA[i] - 128) * DOOM_VIEW_CONTRAST_NUM) / DOOM_VIEW_CONTRAST_DEN;
+            lut[i] = (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v);
+        }
+        built = true;
+    }
+    return lut;
+}
+
 // Frame consume + diagnostics, shared by the master and the slave halves
 // (each pumps ITS OWN engine instance's frames onto ITS OWN keycaps).
 static void doom_frame_pump(bool with_hud) {
@@ -666,7 +686,7 @@ static void doom_frame_pump(bool with_hud) {
         // here IS the game's frame pace. (Single view buffer: the next frame
         // renders into the buffer being blitted — tearing accepted for v1.)
         if (doom_shim_take_frame()) {
-            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, false, false);
+            doom_blit_frame_engine(doom_view_luma(), false, false);
             doom_shim_release_frame();
             if (with_hud) {
                 doom_hud_tick();

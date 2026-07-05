@@ -184,6 +184,13 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 42 → v43 (2026-07-05, UNTESTED): viewport contrast +25%.**
+  "if you could increase the contrast on the viewport just a bit" — the
+  master's 3D-view blit now dithers through `doom_view_luma()`, a derived
+  LUT with a 1.25× gain around mid-grey (saturating) over the PLAYPAL luma.
+  Menus, the slave automap, HUD digits and the face OLED keep the straight
+  table (each has its own tuned threshold). The knob is
+  `DOOM_VIEW_CONTRAST_NUM/DEN` in `doom_mode.c`.
 - **Round 41 (2026-07-05): v42 CONFIRMED — "wow.. now it fits!"** The
   fire-flash saga is closed for real: slave immediate on its drone's sound
   edges, master delayed by `DOOM_RGB_MASTER_FIRE_LAG_MS` = **20 ms**. Do

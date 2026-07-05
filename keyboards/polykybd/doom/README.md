@@ -160,7 +160,19 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 37 → v39 (2026-07-05, UNTESTED): hold removed — flash directly on
+- **Round 38 → v40 (2026-07-05, UNTESTED): compensate on the MASTER — 100 ms
+  fire-flash lag.** Round 38 on v39 (zero hold anywhere): "no it is not
+  close at all — can't we just delay the master? My video recording tells
+  me it is about a 10th of a second". Exactly — with both halves at zero
+  the residual is pure structural slave lag (its drone's tics only run when
+  a display frame turns), so the delay belongs on the *master*, which has
+  slack to burn. v40 adds `DOOM_RGB_MASTER_FIRE_LAG_MS` (100, per the video
+  measurement): the master queues its own fire edges in a small ring
+  (chaingun shots can overlap the window) and starts the yellow pulse when
+  each edge is 100 ms old; the slave still flashes immediately. If it's
+  still off, this knob is now measuring the *right* quantity — report early
+  (master shows first → raise) or late (slave first → lower) and we dial it.
+- **Round 37 → v39 (2026-07-05, tested round 38): hold removed — flash directly on
   the sound edges (both halves).** Round 37: slave STILL late at 12 ms
   ("go to the max of your idea, progress is slow"). The whole hold premise
   is dead: the field bisect (50/25/12 — all "slave late", gap shrinking

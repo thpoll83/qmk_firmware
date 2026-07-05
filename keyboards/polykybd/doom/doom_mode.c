@@ -731,18 +731,21 @@ static uint32_t s_mir_start_sent_at;
 static bool     s_mir_slave_engaged;           // last acked engagement state
 #define DOOM_MIRROR_START_REOFFER_MS 1500u
 
-// Slave fire-flash timing — the rounds 26-37 saga, closed: BOTH halves flash
-// directly on their own engine's sound edges, no compensation. Two dead ends
-// documented so they aren't retried: (1) the BT_ATTACK-receipt fast path was
-// pinned to the WRONG EVENT — DOOM weapons have a windup (A_FirePistol runs
-// several tics after the press enters the weapon state machine), so it led
-// the bang by a weapon-dependent 100-200 ms no constant could bridge; (2) a
-// fixed HOLD on the drone's sound edges assumed the drone leads the master
-// by (build-ahead − delivery) — but the field bisect (50/25/12 ms all read
-// "slave late", shrinking with the hold) showed the drone's frame-gated tic
-// drain + render pipeline already eats that lead entirely. The residual
-// slave lag is structural (its tics only run when a display frame turns);
-// zero hold is the fastest this design goes.
+// Slave fire-flash timing — the rounds 26-38 saga, closed: the SLAVE flashes
+// directly on its own drone's sound edges (zero hold — the fastest that half
+// goes), and the MASTER delays its edges by DOOM_RGB_MASTER_FIRE_LAG_MS to
+// meet it (round 38: with both halves at zero hold, video showed the slave
+// ~0.1 s behind — structural, its tics only run when a display frame turns —
+// so the compensation belongs on the master, which has slack to burn). Two
+// dead ends documented so they aren't retried: (1) the BT_ATTACK-receipt
+// fast path was pinned to the WRONG EVENT — DOOM weapons have a windup
+// (A_FirePistol runs several tics after the press enters the weapon state
+// machine), so it led the bang by a weapon-dependent 100-200 ms no constant
+// could bridge; (2) a fixed HOLD on the drone's sound edges assumed the
+// drone leads the master by (build-ahead − delivery) — but the field bisect
+// (50/25/12 ms all read "slave late", shrinking with the hold) showed the
+// drone's frame-gated tic drain + render pipeline already eats that lead
+// entirely — the drone never leads, so holding it only widened the gap.
 
 static void doom_mirror_session_reset(void) {
     s_mir_ctl_seq_sent  = 0;
@@ -1077,11 +1080,20 @@ bool doom_status_scroll(void) {
 #ifdef RGB_MATRIX_ENABLE
 
 #define DOOM_RGB_FLASH_MS 180u
+// Master-only fire-edge delay to line up with the slave's structural render
+// lag (see the timing-saga note above doom_mirror_session_reset; measured
+// ~0.1 s on video, round 38). The slave flashes immediately.
+#define DOOM_RGB_MASTER_FIRE_LAG_MS 100u
 
 // Edge-detector state (only one half's compute runs per device).
 static uint32_t s_rgb_fire_seen, s_rgb_world_seen;
 static uint8_t  s_rgb_fire_pulse, s_rgb_world_pulse; // 1..3 while flashing, 0 idle
 static uint32_t s_rgb_fire_at, s_rgb_world_at;
+// Master fire edges in flight during the lag window — a chaingun fires every
+// ~2 tics (~57 ms), so a couple can overlap one 100 ms hold.
+#define DOOM_RGB_FIRE_Q 4u
+static uint32_t s_rgb_fire_q[DOOM_RGB_FIRE_Q];
+static uint8_t  s_rgb_fire_q_head, s_rgb_fire_q_len;
 static uint8_t  s_rgb_last;       // last locally computed byte (this half's engine)
 static bool     s_rgb_local_live; // this half's engine is a valid local source
 static bool     s_rgb_forced_on;  // we woke a user-disabled matrix for the cue
@@ -1094,6 +1106,7 @@ static void doom_rgb_session_reset(void) {
     s_rgb_fire_at    = s_rgb_world_at    = 0;
     s_rgb_last       = 0;
     s_rgb_local_live = false;
+    s_rgb_fire_q_head = s_rgb_fire_q_len = 0;
 }
 
 // Sound counters + health -> the doom_rgb byte (state.h layout). Runs on
@@ -1103,11 +1116,30 @@ static void doom_rgb_session_reset(void) {
 // "on the slave side it is delayed").
 static uint8_t doom_rgb_compute(void) {
     const uint32_t now  = timer_read32();
-    // Both halves: their own engine's weapon sounds, immediate (see the
-    // timing-saga note above the mirror session reset).
+    // Fire: the slave flashes the instant its drone plays the weapon sound;
+    // the master queues its edges for DOOM_RGB_MASTER_FIRE_LAG_MS to meet the
+    // slave's structural lag (see the timing-saga note above the mirror
+    // session reset).
     const uint32_t fire = doom_shim_snd_fire;
+    bool fire_edge = false;
     if (fire != s_rgb_fire_seen) {
-        s_rgb_fire_seen  = fire;
+        uint32_t delta = fire - s_rgb_fire_seen;
+        s_rgb_fire_seen = fire;
+        if (is_usb_host_side()) {
+            for (; delta && s_rgb_fire_q_len < DOOM_RGB_FIRE_Q; delta--) {
+                s_rgb_fire_q[(uint8_t)((s_rgb_fire_q_head + s_rgb_fire_q_len) % DOOM_RGB_FIRE_Q)] = now;
+                s_rgb_fire_q_len++;
+            }
+        } else {
+            fire_edge = true;
+        }
+    }
+    if (s_rgb_fire_q_len && now - s_rgb_fire_q[s_rgb_fire_q_head] >= DOOM_RGB_MASTER_FIRE_LAG_MS) {
+        s_rgb_fire_q_head = (uint8_t)((s_rgb_fire_q_head + 1u) % DOOM_RGB_FIRE_Q);
+        s_rgb_fire_q_len--;
+        fire_edge = true;
+    }
+    if (fire_edge) {
         s_rgb_fire_pulse = (uint8_t)(s_rgb_fire_pulse % 3u) + 1u;
         s_rgb_fire_at    = now;
     } else if (s_rgb_fire_pulse && now - s_rgb_fire_at > DOOM_RGB_FLASH_MS) {

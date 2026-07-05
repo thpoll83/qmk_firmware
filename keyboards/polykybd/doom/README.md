@@ -160,6 +160,19 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 32 → v34 (2026-07-05, UNTESTED): dedupe the press/sound pair
+  (double flash) + brightness step 3.** Round 32 on v33: "slave lights,
+  then master, then slave AGAIN on a single fire" — the press's receipt
+  edge and its first shot's SOUND edge are the same event, but the drone
+  runs tics at display-frame granularity, so the sound edge sometimes
+  lands just after the receipt edge's release and re-arms a second
+  flash. Each press edge now takes a **sound debt** that swallows the
+  first matching sound edge (`s_mir_snd_debt`, 500 ms TTL so a press
+  that fires nothing — fist swing, menu — can't eat a later shot's
+  sound); held-trigger repeats (no press edge) still flash per shot.
+  And brightness stepped down again ("could be still a bit more
+  reduced"): yellow (22,15,0), blue (0,0,25), red base `level*5/4`
+  (caps 18/255) — ~2/9 of the original v24 levels.
 - **Round 31 → v33 (2026-07-05, UNTESTED): the hold now delays BOTH slave
   fire sources.** Round 31 ("but again the slave has the light first" at
   100 ms) falsified the self-cap comfort story and exposed the real

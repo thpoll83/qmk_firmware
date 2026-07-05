@@ -756,6 +756,16 @@ static uint8_t           s_mir_attack_prev;
 static uint8_t           s_mir_attack_pending; // edges still holding for their due time
 static uint32_t          s_mir_attack_armed_at;
 static uint32_t          s_rgb_sndfire_seen;   // slave: drone sound edges routed into the hold
+// A press edge and its first shot's SOUND edge are the same event — but the
+// drone runs tics at display-frame granularity, so the sound edge can land
+// just after the press edge's release and re-arm a SECOND flash ("slave,
+// master, slave again on a single fire", round 32). Each press edge takes a
+// short-lived debt that swallows the first matching sound edge; repeats of a
+// held trigger (which have no press edge) still flash per shot. The debt
+// expires in case the press fires nothing (fist swing missing, menus).
+#define DOOM_MIRROR_SND_DEBT_TTL_MS 500u
+static uint8_t           s_mir_snd_debt;
+static uint32_t          s_mir_snd_debt_at;
 
 void doom_mirror_note_cmd(const uint8_t *cmd) {
     const uint8_t atk = cmd[DOOM_TICCMD_BUTTONS_OFF] & DOOM_TICCMD_BT_ATTACK;
@@ -764,6 +774,8 @@ void doom_mirror_note_cmd(const uint8_t *cmd) {
             s_mir_attack_armed_at = timer_read32();
         }
         s_mir_attack_pending++;
+        s_mir_snd_debt++;                    // swallow this press's first sound edge
+        s_mir_snd_debt_at = timer_read32();
     }
     s_mir_attack_prev = atk;
 }
@@ -795,6 +807,8 @@ static void doom_mirror_session_reset(void) {
     s_mir_attack_pending    = 0;
     s_mir_attack_armed_at   = 0;
     s_rgb_sndfire_seen      = 0;
+    s_mir_snd_debt          = 0;
+    s_mir_snd_debt_at       = 0;
 }
 
 // The QMK transaction table is full (32-id cap), so mirror messages
@@ -1160,11 +1174,24 @@ static uint8_t doom_rgb_compute(void) {
         // delays the flash end-to-end.
         const uint32_t snd = doom_shim_snd_fire;
         if (snd != s_rgb_sndfire_seen) {
-            if (!s_mir_attack_pending) {
-                s_mir_attack_armed_at = now;
-            }
-            s_mir_attack_pending += (uint8_t)(snd - s_rgb_sndfire_seen);
+            uint32_t delta = snd - s_rgb_sndfire_seen;
             s_rgb_sndfire_seen = snd;
+            // The first sound of a press is the same shot as its receipt
+            // edge — consume the debt instead of arming a second flash.
+            while (delta && s_mir_snd_debt) {
+                delta--;
+                s_mir_snd_debt--;
+            }
+            if (delta) {
+                if (!s_mir_attack_pending) {
+                    s_mir_attack_armed_at = now;
+                }
+                s_mir_attack_pending += (uint8_t)delta;
+            }
+        }
+        if (s_mir_snd_debt &&
+            timer_elapsed32(s_mir_snd_debt_at) > DOOM_MIRROR_SND_DEBT_TTL_MS) {
+            s_mir_snd_debt = 0; // the press fired nothing — don't eat a later shot
         }
         fire = s_mir_attack_edges;
     }
@@ -1269,20 +1296,21 @@ bool doom_rgb_indicators(void) {
     if (!ctl && !s_fire_live && !s_world_live) {
         return true; // not ours — fall through to the normal indicators
     }
-    // Steady red base from lost health. All peaks sit at 1/3 of the v24
-    // values — "too bright" in the field (round 24); red caps at 25/255.
-    uint8_t r = (uint8_t)(((rgb & 0x0Fu) * 5u) / 3u);
+    // Steady red base from lost health. Stepped down twice in the field
+    // (round 24 "too bright" -> 1/3; round 32 "still a bit more") — now
+    // ~2/9 of the v24 values; red caps at 18/255.
+    uint8_t r = (uint8_t)(((rgb & 0x0Fu) * 5u) / 4u);
     uint8_t g = 0, b = 0;
     if (s_fire_live) {
         const uint32_t k = 255u - (timer_elapsed32(s_fire_at) * 255u) / DOOM_RGB_FLASH_MS;
-        const uint8_t  fr = (uint8_t)((33u * k) / 255u); // muzzle-flash yellow,
-        const uint8_t  fg = (uint8_t)((23u * k) / 255u); // fading out linearly
+        const uint8_t  fr = (uint8_t)((22u * k) / 255u); // muzzle-flash yellow,
+        const uint8_t  fg = (uint8_t)((15u * k) / 255u); // fading out linearly
         if (fr > r) {
             r = fr;
         }
         g = fg;
     } else if (s_world_live) { // fire wins the frame: yellow never mixes to green
-        b = (uint8_t)((37u * (255u - (timer_elapsed32(s_world_at) * 255u) / DOOM_RGB_FLASH_MS)) / 255u);
+        b = (uint8_t)((25u * (255u - (timer_elapsed32(s_world_at) * 255u) / DOOM_RGB_FLASH_MS)) / 255u);
     }
     rgb_matrix_set_color_all(r, g, b);
     return false;

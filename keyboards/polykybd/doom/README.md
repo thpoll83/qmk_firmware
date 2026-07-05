@@ -154,7 +154,36 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 20 → v21 (2026-07-05, UNTESTED): bounded RLE-core relaunch on exit
+- **Round 21 → v22 (2026-07-05, UNTESTED): the exit HardFault, actually
+  found.** The v21 breadcrumbs paid off: `doom: menu quit → exit begin →
+  engine stopped, RLE core relaunch ok (0 ms) → exit do[cut]` — the
+  relaunch is FINE; the halt is a **HardFault a few ms after doom_exit
+  returns**. Mechanism: doom_exit requests a display refresh, but
+  housekeeping only updates the synced `doom_ctl` at the END of its pass —
+  so the post-exit repaint still runs update_displays' doom_ctl branch,
+  whose ESC-corner face (STCFN, added in v19 — exactly when exits started
+  dying) decodes vpatches through engine zone tables living in the overlay
+  pool that `reset_overlay_buffers()` just zeroed, with the
+  `doom_shim_progress` gate stale at 4. Wild pointer → HardFault → master
+  dead before it ever syncs `doom_ctl=0` (which is also why the slave
+  "keeps operating"). Fixes:
+  1. `doom_engine_stop()` clears `doom_shim_progress` — every standalone
+     vpatch decoder (ESC/labels/tall digits/menu tiles/face) now bails to
+     its font fallback the instant the engine is gone.
+  2. `doom_exit()` zeroes the local `doom_ctl` immediately — the repaint
+     takes the normal-legend path, and the very next POLY sync carries the
+     0 to the slave.
+  (The v20 no-park quit and v21 bounded relaunch stay — correct layers,
+  just not this bug.) Also: **menu letters O/G/K** — neighbour-count hole
+  fills kept failing because those letters' curved/diagonal stroke segments
+  are *entirely* mid-shade (no bright core to fill from). Replaced with a
+  keep-the-brightest-local-layer rule: bright (≥76) always lights; a mid
+  (44..75) pixel lights unless it is the one-sided fringe of a bright
+  stroke (exactly one bright 4-neighbour) — fringe dropping is the
+  thinning, zero-bright segments stay whole, shade dips inside bright runs
+  stay filled.
+- **Round 20 → v21 (2026-07-05, tested: relaunch ok (0 ms) but HALT ON EXIT
+  PERSISTS → root-caused in v22; O/G/K still gappy): bounded RLE-core relaunch on exit
   + exit breadcrumbs + menu/skull tune.** Round 20's log finally located the
   exit problem: after the session ended, the master went silent for ~15 s —
   long enough that the HOST declared a disconnect and re-pushed overlays

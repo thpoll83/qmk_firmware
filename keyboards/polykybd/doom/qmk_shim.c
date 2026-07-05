@@ -1338,9 +1338,9 @@ static uint8_t shim_menu_win_start(uint8_t count, uint8_t item_on) {
 
 // Emit ONE source row (index k) of a menu patch into the tile, scaled
 // num/den. up/dn are the neighbouring rows' luma (NULL past the edges).
-// Text look (dither=false): solid at luma >= 76 — skinnier than the digits'
-// 64 — plus a two-tier HOLE FILL (see inline) so shade bands crossing a
-// stroke, straight or CURVED, can't punch holes (rounds 19+20).
+// Text look (dither=false): keep the brightest local layer — bright pixels
+// always, mid pixels unless they are a one-sided fringe of a bright stroke
+// (see inline; rounds 19-21 hole-fill history).
 // Skull look (dither=true): quadratic-contrast Bayer in canvas coordinates —
 // bright bone, but the dark shading stays distinctly dark (round 20).
 static void shim_menu_emit_row(uint8_t *tile360, const uint8_t *up, const uint8_t *cur,
@@ -1357,20 +1357,27 @@ static void shim_menu_emit_row(uint8_t *tile360, const uint8_t *up, const uint8_
         for (unsigned sx = 0; sx < w; sx++) {
             const uint8_t v = cur[sx];
             if (!dither) {
-                // Two-tier hole fill (round 20: capital O still lost more
-                // than isolated pixels — its CURVED stroke segments are
-                // mid-shade with only TWO bright 4-neighbours, along the
-                // curve, so the >=3 rule left gaps): a solid-ish 44..75
-                // pixel fills with 2 bright neighbours, a faint 36..43 one
-                // still needs 3 (true interior). Edges keep <=1.
+                // One-sided-fringe rule (rounds 19-21: neighbour-COUNT hole
+                // fills kept failing on O/G/K — their curved/diagonal stroke
+                // segments are ENTIRELY mid-shade, with no bright core to
+                // fill from). Keep the brightest local layer instead:
+                //  * bright (>= 76) always lights;
+                //  * a mid pixel (44..75) lights UNLESS it has exactly one
+                //    bright 4-neighbour — that is the dark fringe on one
+                //    side of a bright stroke (dropping it is the thinning);
+                //    zero bright neighbours = the stroke itself where the
+                //    gradient never gets bright (curve segments — keep!),
+                //    two+ = a shade dip inside/between bright runs (keep,
+                //    the round-19 pinhole case);
+                //  * the darkest shades (< 44, outline fringe) stay dark.
                 bool on = v >= 76;
-                if (!on && v >= 36) {
+                if (!on && v >= 44) {
                     unsigned n = 0;
                     if (sx > 0 && cur[sx - 1] >= 76) n++;
                     if (sx + 1 < w && cur[sx + 1] >= 76) n++;
                     if (up && up[sx] >= 76) n++;
                     if (dn && dn[sx] >= 76) n++;
-                    on = (v >= 44) ? (n >= 2) : (n >= 3);
+                    on = n != 1;
                 }
                 if (!on) {
                     continue;

@@ -123,6 +123,14 @@ static void doom_engine_stop(void) {
             doom_core1_reset();
             ok = multicore_launch_core1_bounded(100u * 1000u);
         }
+        // The engine is GONE: every standalone vpatch decoder (ESC/label
+        // STCFN, tall digits, menu tiles, the face) gates on this — with it
+        // stale at 4, a post-exit render resolved vpatches through zone
+        // tables living in the just-zeroed overlay pool -> HardFault, the
+        // "keyboard halts on exit, reset required" of rounds 19+20 (v19
+        // introduced the STCFN ESC corner, which is exactly when exits
+        // started dying). Clear it BEFORE the pool is handed back.
+        doom_shim_progress = 0;
         printf("doom: engine stopped, RLE core relaunch %s (%lu ms)\n",
                ok ? "ok" : "FAILED", (unsigned long)timer_elapsed32(t0));
     }
@@ -320,6 +328,12 @@ static void doom_exit(void) {
     // ~15 s post-exit silence with no way to tell which stage stalled.
     printf("doom: exit begin\n");
     s_active = false;
+    // Drop the synced pad flag IMMEDIATELY — housekeeping only refreshes it
+    // at the END of its pass, so the repaint doom_exit requests below would
+    // otherwise still run update_displays' doom_ctl branch on this half
+    // (pad chrome incl. the STCFN ESC corner) against the torn-down engine.
+    // This also gets the 0 onto the very next POLY sync to the slave.
+    access_local_state()->doom_ctl = 0;
     doom_engine_stop();
     s_fb = NULL;
     // Hand the pool back in the same state a fresh boot / font-pack wipe leaves

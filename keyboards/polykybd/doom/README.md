@@ -160,7 +160,14 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 39 → v41 (2026-07-05, UNTESTED): master fire lag 100 → 60 ms.**
+- **Round 40 → v42 (2026-07-05, UNTESTED): master fire lag 60 → 20 ms.**
+  Round 40 on v41: "strange - i cannot see any difference - lets go for
+  20ms" (60 looked identical to 100). Plausible mechanism: the pulse is
+  only *sampled* at RGB render rate, so any lag inside one frame interval
+  lands the visible flash on the same frame boundary — the 60–100 band may
+  be indistinguishable on this hardware. 20 should cross into the previous
+  frame if so.
+- **Round 39 → v41 (2026-07-05, tested round 40): master fire lag 100 → 60 ms.**
   Round 39 on v40: "ok, that was too much, my guess is 60ms would have been
   enough (the camera software on the phone doesn't let me scroll inbetween
   100ms frames)". The knob works and overshoots — the true offset sits

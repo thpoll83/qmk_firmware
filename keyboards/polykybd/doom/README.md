@@ -156,6 +156,40 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 26 → v28 (2026-07-05, UNTESTED): menu letters SETTLED by an offline
+  preview tool; fire-flash fast path.** Round 26 confirmed v27's viewport
+  placement and the RGB improvement ("looks good"), but the menu letters
+  were unchanged and the slave's yellow flash still trailed visibly.
+  1. **Menu letters — settled by LOOKING instead of another blind threshold
+     round.** New **`tools/menu_preview.py`**: a Python port of
+     `draw_vpatch8` + `shim_menu_stamp/emit_row` against the real
+     `doom1.whx` (WHX header/lump parsing incl. the 24-bit offset field and
+     lowercase lump names), rendering every menu item as its 4-keycap strip
+     under any rule variant, side by side with the raw source luma. Two
+     facts fell out immediately: (a) the menu font's luma histogram splits
+     cleanly — stroke bodies (including the O/G/K curves the rounds-19-25
+     neighbour rules kept chasing) are **>= 56**, while a huge population
+     at **exactly 40** is the dark-red outline shading AROUND every glyph;
+     (b) every neighbour-count rule ever tried (v22/v23/v27 + new
+     candidates) lights part of that outline tier — THAT was the "extra
+     pixels outside the actual outline", untouchable by neighbour logic
+     because outline runs continue like stroke runs do. A **plain `v >=
+     56` with no neighbour logic at all** renders every item clean at all
+     four scales (verified: NGAME/OPTIONS/LOADG/QUITG/skill sentences/
+     NIGHTMARE!). Implemented exactly that; the rounds of neighbour
+     machinery are gone. Don't re-add a 40..55 clause — that tier IS the
+     outline.
+  2. **Fire-flash fast path**: the drone already drains every received tic
+     (`new_sync` `counts = availabletics`), so the residual lag was the
+     delivery pipeline itself (~30-60 ms — right at flash-simultaneity
+     perception). But the slave RECEIVES each ticcmd a batch before its
+     drone runs it, and the master builds cmds ~2 tics ahead of running
+     them — so the split handler now arms the fire flash on the
+     **BT_ATTACK press edge at cmd receipt** (`doom_mirror_note_cmd`,
+     buttons byte 5 bit 0 of the 8-byte DOOM_TINY ticcmd), summed into the
+     same edge detector as the drone's sound counters (which still cover
+     held-trigger autofire repeats). The press flash should now land
+     near-simultaneous with the master's.
 - **Round 25 → v27 (2026-07-05, UNTESTED): right-master viewport +1, menu
   speckle rule, render-rate lockstep RGB.** Round 25 confirmed v26's big one —
   **the 2nd-run minimap works** (log: `mirror new-game -> START tic=316 →

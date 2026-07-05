@@ -1424,46 +1424,18 @@ static void shim_menu_emit_row(uint8_t *tile360, const uint8_t *up, const uint8_
         for (unsigned sx = 0; sx < w; sx++) {
             const uint8_t v = cur[sx];
             if (!dither) {
-                // One-sided-fringe rule (rounds 19-22: neighbour-COUNT hole
-                // fills kept failing on O/G/K — their curved/diagonal stroke
-                // segments are ENTIRELY mid-shade, with no bright core to
-                // fill from). Keep the brightest local layer instead:
-                //  * solid-ish (>= 56) always lights — the stroke body,
-                //    lowered from 76 in round 22 ("still a bit more would
-                //    be nice");
-                //  * a faint pixel (40..55) lights only as part of a lit
-                //    STROKE — >= 2 lit-ish (>= 40) 4-neighbours, i.e. the
-                //    run continues through it (the O/G/K mid-shade curves,
-                //    the round-19 pinhole dips) — and not as the one-sided
-                //    dark fringe of a bright stroke (exactly one >= 76
-                //    neighbour = the thinning, rounds 19-22). The >= 2
-                //    continuation test is new in round 25: the old rule lit
-                //    ISOLATED faint pixels too ("some extra pixel outside
-                //    of their actual outline") — an isolated speckle has 0-1
-                //    lit-ish neighbours and now stays dark;
-                //  * the darkest shades (< 40, outline fringe) stay dark.
-                bool on = v >= 56;
-                if (!on && v >= 40) {
-                    unsigned nlit = 0, nbright = 0;
-                    if (sx > 0) {
-                        if (cur[sx - 1] >= 40) nlit++;
-                        if (cur[sx - 1] >= 76) nbright++;
-                    }
-                    if (sx + 1 < w) {
-                        if (cur[sx + 1] >= 40) nlit++;
-                        if (cur[sx + 1] >= 76) nbright++;
-                    }
-                    if (up) {
-                        if (up[sx] >= 40) nlit++;
-                        if (up[sx] >= 76) nbright++;
-                    }
-                    if (dn) {
-                        if (dn[sx] >= 40) nlit++;
-                        if (dn[sx] >= 76) nbright++;
-                    }
-                    on = nlit >= 2 && nbright != 1;
-                }
-                if (!on) {
+                // Plain threshold, NO neighbour logic (round 26, settled by
+                // the offline preview tools/menu_preview.py against the real
+                // WHX art): the menu font's luma histogram splits cleanly —
+                // stroke bodies (incl. the O/G/K curve segments the rounds
+                // 19-25 neighbour rules kept chasing) sit at >= 56, while a
+                // large population at EXACTLY 40 is the dark-red outline
+                // shading AROUND every glyph. Every neighbour-count clause
+                // ever tried lit part of that outline tier ("extra pixels
+                // outside the actual outline"); >= 56 alone renders every
+                // menu item clean at all four scales. Don't re-add a 40..55
+                // clause — that tier is the outline, not the stroke.
+                if (v < 56) {
                     continue;
                 }
             } else if (!v) {

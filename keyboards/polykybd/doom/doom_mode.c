@@ -731,6 +731,27 @@ static uint32_t s_mir_start_sent_at;
 static bool     s_mir_slave_engaged;           // last acked engagement state
 #define DOOM_MIRROR_START_REOFFER_MS 1500u
 
+// Fire-button fast path (round 26: the flash on the slave still trailed the
+// master perceptibly even lockstep-derived): the slave RECEIVES each ticcmd
+// a batch before its drone runs it — and the master builds cmds ~2 tics
+// ahead of running them — so a fire flash armed at receipt of the
+// BT_ATTACK press edge lands near-simultaneous with the master's muzzle
+// sound. Only the press EDGE is knowable here (autofire repeats come from
+// the weapon state machine), so held-trigger repeats still ride the drone's
+// sound counters; both feed the same edge detector as a sum.
+#define DOOM_TICCMD_BUTTONS_OFF 5u // d_ticcmd.h DOOM_TINY layout (sizeof==8 asserted in qmk_shim.c)
+#define DOOM_TICCMD_BT_ATTACK   1u
+static volatile uint32_t s_mir_attack_edges;
+static uint8_t           s_mir_attack_prev;
+
+void doom_mirror_note_cmd(const uint8_t *cmd) {
+    const uint8_t atk = cmd[DOOM_TICCMD_BUTTONS_OFF] & DOOM_TICCMD_BT_ATTACK;
+    if (atk && !s_mir_attack_prev) {
+        s_mir_attack_edges++;
+    }
+    s_mir_attack_prev = atk;
+}
+
 static void doom_mirror_session_reset(void) {
     s_mir_ctl_seq_sent  = 0;
     s_mir_backoff_at    = 0;
@@ -742,6 +763,8 @@ static void doom_mirror_session_reset(void) {
     s_mir_start_outstanding = false;
     s_mir_start_sent_at     = 0;
     s_mir_slave_engaged     = false;
+    s_mir_attack_edges      = 0;
+    s_mir_attack_prev       = 0;
 }
 
 // The QMK transaction table is full (32-id cap), so mirror messages
@@ -1090,7 +1113,10 @@ static void doom_rgb_session_reset(void) {
 // "on the slave side it is delayed").
 static uint8_t doom_rgb_compute(void) {
     const uint32_t now  = timer_read32();
-    const uint32_t fire = doom_shim_snd_fire;
+    // Sum of the engine's weapon-discharge sounds and (slave only) the
+    // received BT_ATTACK press edges — the fast path that flashes at cmd
+    // RECEIPT instead of drone execution (doom_mirror_note_cmd above).
+    const uint32_t fire = doom_shim_snd_fire + s_mir_attack_edges;
     if (fire != s_rgb_fire_seen) {
         s_rgb_fire_seen  = fire;
         s_rgb_fire_pulse = (uint8_t)(s_rgb_fire_pulse % 3u) + 1u;

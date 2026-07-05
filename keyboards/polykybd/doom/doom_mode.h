@@ -122,6 +122,11 @@ bool doom_shim_slave_wants_map_key(void);
 // START and log engagement transitions.
 bool doom_shim_mirror_engaged(void);
 
+// Slave core0, per freshly accepted mirror ticcmd (split_sync.c): fire-button
+// fast path — a BT_ATTACK press edge arms the RGB fire flash at cmd RECEIPT,
+// a batch before the drone executes it (doom_mode.c).
+void doom_mirror_note_cmd(const uint8_t *cmd);
+
 // True while the slave half's 5x5 viewport is owned by the mirror blitter —
 // update_displays then leaves every non-pad key alone (doom_mode.c).
 bool doom_slave_viewport_live(void);
@@ -238,6 +243,7 @@ static inline bool doom_key_is_control(uint16_t keycode) { (void)keycode; return
 static inline bool doom_slave_viewport_live(void) { return false; }
 static inline bool doom_slave_bottom_row_live(void) { return false; }
 static inline bool doom_shim_mirror_engaged(void) { return false; }
+static inline void doom_mirror_note_cmd(const uint8_t *cmd) { (void)cmd; }
 static inline void doom_render_fire_key(void) {}
 static inline void doom_render_use_key(void) {}
 static inline void doom_render_esc_key(void) {}

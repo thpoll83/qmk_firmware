@@ -71,6 +71,10 @@ Without `POLYKYBD_DOOM=yes` nothing here is compiled and every hook in
 - Trackpad untouched. ~~RGB matrix untouched~~ — since v24 the RGB matrix is
   the game's "speaker": yellow fire flash, blue world sounds, red base as
   health degrades (see the round-23 log entry).
+- **No savegames** (menu entries removed + machinery compiled out via
+  `NO_USE_LOAD/NO_USE_SAVE`, v31). Future extension: a save-slot region in
+  the 4-8 MB resource map + `P_SaveGameWriteFlashSlot` routed through the
+  firmware's staged flash writes (see the round-29 log entry).
 
 ## Engine integration state — THE FULL ENGINE NOW LINKS
 
@@ -156,6 +160,32 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 29 → v31 (2026-07-05, UNTESTED): menu curation — every entry that
+  can't do anything on a keyboard is gone.** Field request: "skip save/load
+  game … are there any other things in the options that we can skip?" The
+  trimmed set (image −11 KB):
+  1. **Load/Save Game**: `NO_USE_LOAD=1 NO_USE_SAVE=1` (upstream flags, now
+     set in the doom `rules.mk` block) — menu entries gone AND the whole
+     save/load machinery compiled out. Savegames are a **future extension**:
+     restore the flags and route `P_SaveGameWriteFlashSlot` through the
+     firmware's staged flash writes (the `picoflash.c` seam in qmk_shim.c is
+     stubbed; needs a save-slot region in the 4-8 MB resource map + the
+     same defer-out-of-transaction care as the font pack). Two new
+     `PICO_ON_DEVICE && !NO_USE_SAVE` guards in g_game.c (upstream never
+     built this combination).
+  2. **Read This!**: full-screen help vpatches, unreadable/unmirrorable on
+     the keycaps — trimmed from the shareware main menu at M_Init exactly
+     the way commercial trims it. Main menu is now **New Game / Options /
+     Quit Game**. The same block sets `NewDef.prevMenu = &MainDef` so
+     ESC-back from the skill list lands on the main menu, not the
+     round-28-skipped episode trap.
+  3. **Options → Sound Volume**: no speakers, and the RGB "sound"
+     substitute ignores the volumes (`POLYKYBD_QMK`-guarded out).
+  4. **Options → Network Game**: `NET_MENU` now 0 for PolyKybd — the
+     piconet 2-player lobby is stubbed (that seam carries the slave mirror
+     instead), so the entry led to a dead lobby. Options are now
+     **End Game / Messages** (Screen Size / Detail / Mouse Sensitivity were
+     already compiled out by DOOM_TINY / NO_USE_MOUSE).
 - **Round 28 → v30 (2026-07-05, UNTESTED): skip the shareware episode menu;
   flash delay 40 → 70 ms.** Round 28: the v29 40 ms hold still left the
   slave's flash ahead of the master → **70 ms** (`DOOM_MIRROR_ATTACK_

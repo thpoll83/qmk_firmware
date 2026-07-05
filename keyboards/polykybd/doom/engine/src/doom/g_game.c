@@ -1821,7 +1821,7 @@ void G_DoLoadGame (void) {
 }
  
 
-#if PICO_ON_DEVICE
+#if PICO_ON_DEVICE && !NO_USE_SAVE // polykybd: no save UI without M_SaveGame
 static boolean save_game_clear(int key) {
     if (key == key_menu_confirm) {
         uint32_t size;
@@ -1910,7 +1910,7 @@ void G_DoSaveGame (void)
     fwrite(save_buffer, 1, bo.cur - save_buffer, save_stream);
 #endif
     printf("SAVE GAME SIZE %d\n", (int)(bo.cur - save_buffer));
-#if PICO_ON_DEVICE
+#if PICO_ON_DEVICE && !NO_USE_SAVE // polykybd: no save UI without M_SaveGame
     if (!P_SaveGameWriteFlashSlot(savegameslot, save_buffer, (int)(bo.cur - save_buffer), save_buffer - 4096)) {
         M_StartMessage("There was not enough space to save the game.\nWould you like to clear this slot and\n try saving again in a different slot?\n\npress y or n.",save_game_clear,true);
         resume = false;

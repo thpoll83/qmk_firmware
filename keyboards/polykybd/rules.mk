@@ -41,6 +41,12 @@ endif
 # Normal builds pay zero bytes — doom_mode.h stubs every hook to an inline no-op.
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     OPT_DEFS += -DPOLYKYBD_DOOM
+    # No savegames in v1 (field round 29): the upstream flags drop Load/Save
+    # Game from the menus and compile the save/load machinery out. A future
+    # extension can restore them by routing the save-slot flash writes
+    # through the firmware's staged-write machinery (picoflash.c is stubbed
+    # in qmk_shim.c — see doom/README.md "Known v1 limits").
+    OPT_DEFS += -DNO_USE_LOAD=1 -DNO_USE_SAVE=1
     # Doom builds use a keyboard-local linker script: the engine's zero-init
     # statics and the overlay pool share one .doom_shared block (RAM is
     # otherwise fully committed). See ld/RP2040_FLASH_TIMECRIT_DOOM.ld.

@@ -65,7 +65,14 @@
 #include "piconet.h"
 #include "net_client.h"
 
+#if !POLYKYBD_QMK
 #define NET_MENU 1
+#else
+// PolyKybd (field round 29): the piconet 2-player lobby is stubbed — the
+// piconet seam carries the slave lockstep mirror instead (doom_mirror.h) —
+// so the options-menu "Network Game" entry is dead UI on the keyboard.
+#define NET_MENU 0
+#endif
 #endif
 
 #define DEFAULTPLAYERNAME "DOOMGUY"
@@ -408,7 +415,12 @@ enum
     mousesens,
     option_empty2,
 #endif
+#if !POLYKYBD_QMK
+    // PolyKybd: no speakers — the sound-volume submenu adjusts nothing
+    // (the RGB "sound" substitute ignores the volumes), so it is dropped
+    // from the keycap-mirrored options (field round 29).
     soundvol,
+#endif
     opt_end
 } options_e;
 
@@ -428,7 +440,9 @@ static const menuitem_t OptionsMenu[]=
     {2,VPATCH_NAME(M_MSENS),'m',	M_ChangeSensitivity},
     {-1,VPATCH_NAME_INVALID,'\0',0},
 #endif
+#if !POLYKYBD_QMK
     {1,VPATCH_NAME(M_SVOL),'s',	M_Sound}
+#endif
 };
 
 menu_t  OptionsDef =
@@ -1223,7 +1237,7 @@ void M_DrawOptions(void)
     V_DrawPatchDirect(OptionsDef.x + 175, OptionsDef.y + LINEHEIGHT * detail,
 		      W_CacheLumpName(DEH_String(detailNames[detailLevel]),
 			              PU_CACHE));
-#else
+#elif NET_MENU
     // "Game" for Network
     V_DrawPatchDirect(OptionsDef.x + 105, OptionsDef.y + LINEHEIGHT * networkgame,
                       VPATCH_HANDLE(VPATCH_NAME(M_GAME)));
@@ -2689,6 +2703,21 @@ void M_Init (void)
         ReadDef1.y = 165;
         ReadMenu1[rdthsempty1].routine = M_FinishReadThis;
     }
+
+#if POLYKYBD_QMK
+    // PolyKybd (field round 29): trim the shareware main menu the same way
+    // commercial trims Read This — the help pages are full-screen vpatches,
+    // unreadable on the 72x40 keycaps and not mirrorable. And since
+    // M_NewGame skips the episode menu (round 28), backing out of the skill
+    // list must land on the main menu, not the skipped episode trap.
+    if (gamemode == shareware)
+    {
+        MainMenu[readthis] = MainMenu[quitdoom];
+        MainDef.numitems--;
+        MainDef.y += 8;
+        NewDef.prevMenu = &MainDef;
+    }
+#endif
 
     // Versions of doom.exe before the Ultimate Doom release only had
     // three episodes; if we're emulating one of those then don't try

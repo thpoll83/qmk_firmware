@@ -160,6 +160,11 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 36 → v38 (2026-07-05, UNTESTED): hold 25 → 12 ms.** Round 36:
+  "slave still behind — but time got shorter" (still slightly late at
+  25 ms). Bracket 0 early / 25 late → **12 ms**. The pipeline offset is
+  evidently small — the drone's frame-gated tic drain eats most of the
+  build-ahead lead on its own.
 - **Round 35 → v37 (2026-07-05, UNTESTED): hold 50 → 25 ms.** Round 35 on
   v36: **"now the master is ahead of the slave"** — the first crossing in
   the whole saga, confirming the drone-sound reference is correct (the

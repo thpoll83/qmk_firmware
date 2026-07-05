@@ -160,6 +160,20 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 31 → v33 (2026-07-05, UNTESTED): the hold now delays BOTH slave
+  fire sources.** Round 31 ("but again the slave has the light first" at
+  100 ms) falsified the self-cap comfort story and exposed the real
+  mechanism: the drone drains every arrived tic immediately (`new_sync`
+  `counts = availabletics`), so it EXECUTES each shot at receipt+ε — the
+  drone's own fire *sound* is early by nearly the same margin as the
+  receipt edge. Since v29 the un-delayed sound path fed the same edge
+  detector and **capped the flash at drone-execution time**, which is why
+  raising the hold 40 → 70 → 100 never crossed the line. v33 routes the
+  slave's drone sound edges through the SAME hold as the receipt edges
+  (master stays immediate — its sounds are the reference), so
+  `DOOM_MIRROR_ATTACK_FLASH_DELAY_MS` finally controls the flash
+  end-to-end; re-bracketed at **60 ms**. Autofire repeats now arrive as
+  held sound edges (one pulse per shot, ~40 ms accuracy).
 - **Round 30 → v32 (2026-07-05, UNTESTED): flash hold 70 → 100 ms.** Round
   30 ("a bit better, but slave still comes first"): the bracketing
   continues — raw receipt clearly early → 40 still early → 70 a-bit early

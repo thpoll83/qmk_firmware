@@ -19,9 +19,17 @@
 // returns the number of bits produced by this call.
 //
 // `dest` is the byte that contains the current bit position (callers
-// typically pass `buffer + bit_index/8`). `compressed` is the input run
-// stream of `len` bytes. `compressed` is `volatile`-qualified because the
-// PolyKybd core1 worker reads from a buffer shared with core0.
+// typically pass `buffer + bit_index/8`). `max` is measured FROM `dest`: it
+// is the number of writable bytes available at `dest`, so the write is bounded
+// to `dest[0 .. max-1]` — NOT the size of the whole buffer. Because the first
+// bit is written at sub-byte offset `bit_index % 8` within `dest[0]`, this call
+// can emit at most `max*8 - (bit_index % 8)` bits; the guard folds that start
+// offset in so a non-byte-aligned resume can't spill one byte into `dest[max]`.
+// Callers keep `dest`, `bit_index` and `max` on the same origin (all offset by
+// `bit_index/8` together), which is the precondition this bound relies on.
+// `compressed` is the input run stream of `len` bytes. `compressed` is
+// `volatile`-qualified because the PolyKybd core1 worker reads from a buffer
+// shared with core0.
 uint16_t rle_decompress(uint8_t* dest, uint16_t max, volatile const uint8_t* compressed, uint8_t len, uint16_t bit_index);
 
 // Count how many output bits `len` bytes of the RLE stream would expand to,

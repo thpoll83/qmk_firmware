@@ -233,6 +233,9 @@ def main() -> None:
     ap.add_argument("--bundle-version", metavar="ID=N", action="append", default=[],
                     help="content_version for one bundle, e.g. --bundle-version emoji=3 "
                          "(repeatable; bundles default to 0)")
+    ap.add_argument("--no-dedupe", action="store_true",
+                    help="keep byte-identical shadowed glyphs in the bundles (skip the "
+                         "dead-weight prune of glyphs a higher-priority font overdraws)")
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args()
 
@@ -291,6 +294,14 @@ def main() -> None:
                 parsed_all.update(fontpack.parse_gfx_header(txt))
             parsed_all.update(fontpack.extra_pack_fonts(cfg, root / "base" / "fonts"))
             sym2cat = fontpack.symbol_categories_from_texts(cat_texts)
+            # Empty glyphs a higher-priority font already draws identically — dead
+            # weight in flash (they never render). Zero visual change; asserted.
+            if not args.no_dedupe:
+                saved = fontpack.prune_shadowed_glyphs(order, resident, parsed_all)
+                if saved:
+                    log(f"dedupe: emptied {sum(c for _, c, _ in saved)} shadowed glyphs, "
+                        f"{sum(b for _, _, b in saved):,} B reclaimed across "
+                        f"{len(saved)} pack fonts", args.quiet)
             bundle_vers = {}
             for spec in args.bundle_version:
                 bid, _, num = spec.partition("=")

@@ -499,6 +499,17 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
         // at TINY_WAD_ADDR only when game mode boots).
         const uint8_t *whx = (const uint8_t *)(XIP_BASE + FW_RESOURCE_OFFSET + s_fontpack_slot_off);
         ok = whx[0] == 'I' && whx[1] == 'W' && whx[2] == 'H' && whx[3] == 'X';
+    } else if (ok && s_target == FW_TARGET_DOOMPACK) {
+        // DOOMPACK: the executable engine pack is fully written in place.
+        // O(1) header sanity only — magic + size (the transport CRC above
+        // already proves byte-identity with the host's image; the full
+        // image-CRC + ram_base pairing checks are the loader's job at game
+        // entry, doom/PACK_DESIGN.md §2). Keeping this O(1) matters on the
+        // slave: finalize runs inside the split-transaction window.
+        const uint8_t  *p   = (const uint8_t *)(XIP_BASE + FW_RESOURCE_OFFSET + s_fontpack_slot_off);
+        const uint32_t *hdr = (const uint32_t *)(const void *)p;
+        ok = p[0] == 'P' && p[1] == 'l' && p[2] == 'y' && p[3] == 'X' &&
+             hdr[2] <= s_fontpack_slot_size - 32u; // image_size fits the slot
     } else if (ok && !target_has_header()) {
         // FONTPACK: the pack is now fully written in place. Re-load it from XIP —
         // this independently re-validates the pack's own header CRC32 and rebuilds

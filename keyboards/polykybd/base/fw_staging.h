@@ -43,24 +43,41 @@ void fw_staging_init(void);
 // apply+reboot. FONTPACK writes the "PlyF" font pack in place at the resource
 // region (no header sector) and finalize re-loads the fonts — no reboot.
 // DOOMWAD writes the doom easter egg's WHX game data in place at its fixed
-// resource slot (the upper 2 MB of the resource region — the engine's XIP
-// TINY_WAD_ADDR) and finalize just validates the "IWHX" magic; the data is
-// only ever read after game mode boots its engine. The streaming / paging /
-// deferred-erase / slave-bridge machinery is identical for all three — only
-// the base offset, the header sector, and the finalize action differ.
-typedef enum { FW_TARGET_FIRMWARE = 0, FW_TARGET_FONTPACK = 1, FW_TARGET_DOOMWAD = 2 } fw_target_t;
+// resource slot (the engine's XIP TINY_WAD_ADDR) and finalize just validates
+// the "IWHX" magic; the data is only ever read after game mode boots its
+// engine. DOOMPACK writes the executable engine pack ("PlyX", see
+// doom/PACK_DESIGN.md) in place at the top of the resource region; finalize
+// does the O(1) header sanity checks (magic/ABI/size) — the full image CRC is
+// the loader's job at game entry, where a bad pack safely degrades to the
+// fire demo. The streaming / paging / deferred-erase / slave-bridge machinery
+// is identical for all targets — only the base offset, the header sector, and
+// the finalize action differ.
+typedef enum {
+    FW_TARGET_FIRMWARE = 0,
+    FW_TARGET_FONTPACK = 1,
+    FW_TARGET_DOOMWAD  = 2,
+    FW_TARGET_DOOMPACK = 3,
+} fw_target_t;
 
-// The DOOMWAD slot, expressed like a fontpack slot (offset relative to
-// FW_RESOURCE_OFFSET): flash 0x600000..0x7FFFFF — above the 2 MB font-pack
-// window, matching the engine's TINY_WAD_ADDR 0x10600000.
-#define FW_DOOMWAD_SLOT_OFF  0x200000UL
-#define FW_DOOMWAD_SLOT_SIZE 0x200000UL
+// The doom slots, expressed like fontpack slots (offsets relative to
+// FW_RESOURCE_OFFSET). The upper 2 MB of the resource region is split:
+//   flash 0x600000..0x7BFFFF (1.75 MB)  WHX game data — matches the engine's
+//                                       XIP TINY_WAD_ADDR 0x10600000; the
+//                                       current doom1.whx (1,800,344 B) fits
+//                                       with ~35 KB headroom.
+//   flash 0x7C0000..0x7FFFFF (256 KB)   DoomPack (PlyX header + engine image,
+//                                       ~230 KB measured) — XIP 0x107C0000.
+#define FW_DOOMWAD_SLOT_OFF   0x200000UL
+#define FW_DOOMWAD_SLOT_SIZE  0x1C0000UL
+#define FW_DOOMPACK_SLOT_OFF  0x3C0000UL
+#define FW_DOOMPACK_SLOT_SIZE 0x040000UL
 
-// On-wire pseudo bundle id (CMD_FONTPACK_BEGIN data[10]) selecting the DOOMWAD
-// target — the doom install rides the font-pack HID flow. Mirrored by the host
-// (PolyKybdHost hid_fontpack.py DOOMWAD_BUNDLE_ID); real font bundle indices
-// stay far below it.
-#define FONTPACK_BUNDLE_DOOMWAD 0x7Fu
+// On-wire pseudo bundle ids (CMD_FONTPACK_BEGIN data[10]) selecting the
+// DOOMWAD / DOOMPACK targets — the doom installs ride the font-pack HID flow.
+// Mirrored by the host (PolyKybdHost hid_fontpack.py DOOMWAD_BUNDLE_ID /
+// DOOMPACK_BUNDLE_ID); real font bundle indices stay far below them.
+#define FONTPACK_BUNDLE_DOOMWAD  0x7Fu
+#define FONTPACK_BUNDLE_DOOMPACK 0x7Eu
 
 // Synchronous begin (master / USB side): erases staging flash sector-by-sector
 // with interrupts briefly re-enabled between sectors.  Blocks for ~50 ms per

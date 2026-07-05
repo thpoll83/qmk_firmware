@@ -87,8 +87,12 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
                 return;
             }
         } else if (msg->target == FW_TARGET_DOOMWAD) {
-            // The doom WHX slot is fixed (top of the resource region).
+            // The doom WHX slot is fixed (upper resource region).
             fw_staging_set_fontpack_slot(FW_DOOMWAD_SLOT_OFF, FW_DOOMWAD_SLOT_SIZE);
+        } else if (msg->target == FW_TARGET_DOOMPACK) {
+            // The executable engine pack slot is fixed (top 256 KB —
+            // doom/PACK_DESIGN.md; the slave's drone runs the same pack).
+            fw_staging_set_fontpack_slot(FW_DOOMPACK_SLOT_OFF, FW_DOOMPACK_SLOT_SIZE);
         }
         fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx target=%u started erase\n",

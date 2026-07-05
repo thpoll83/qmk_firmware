@@ -13,12 +13,14 @@
 #define OVERLAY_BIT_CAPACITY (SCREEN_WIDTH * SCREEN_HEIGHT)
 
 static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
-#ifdef POLYKYBD_DOOM
+#if defined(POLYKYBD_DOOM) && !defined(POLYKYBD_DOOM_PACK)
 // Doom dev builds: the pool is the linker's .doom_shared block, shared with
 // the game engine's zero-init statics (keyboards/polykybd/ld/
 // RP2040_FLASH_TIMECRIT_DOOM.ld) — game mode and overlay use are mutually
 // exclusive, and the block is exactly pool-sized. NOT zeroed by crt0: the
 // usage bits above gate every read, and reset/refill paths memset it.
+// (The DoomPack flavour keeps the plain array below: the flashed pack links
+// its statics AT the array's measured address instead — doom/PACK_DESIGN.md.)
 extern uint8_t __doom_shared_base__[];
 #define overlays ((uint8_t (*)[72*40/8])__doom_shared_base__)
 #define OVERLAYS_SIZE (NUM_OVERLAYS*NUM_VARIATIONS*(72*40/8))

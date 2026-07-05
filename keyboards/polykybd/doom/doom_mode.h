@@ -207,6 +207,50 @@ bool doom_rgb_indicators(void);
 static inline bool doom_rgb_indicators(void) { return true; }
 #endif
 
+#ifdef POLYKYBD_DOOM_PACK
+// ── DoomPack dispatch (doom/PACK_DESIGN.md §3) ──────────────────────────────
+// In the shipping-shape flavour the engine lives in the flashed PlyX pack;
+// every doom_shim_* call above becomes a call through the pack's export
+// table. doom_pack() NEVER returns NULL — before a pack is loaded (or after
+// a refused one) it returns a static stub table whose functions are safe
+// no-ops, so ungated call sites cannot fault. All in doom/doom_pack_load.c.
+#include "doom_pack_abi.h"
+
+const doom_pack_api_t *doom_pack(void);       // live table, or the stub
+bool     doom_pack_load(uint8_t *pool, uint32_t pool_size); // validate+init the flashed pack
+void     doom_pack_unload(void);              // back to the stub (session exit)
+bool     doom_pack_loaded(void);
+uint32_t doom_pack_arena_off(void);           // hdr.arena_off, 0 while unloaded
+
+// The declarations above stay for signature documentation; the call sites
+// (doom_mode.c / doom_blit.c / split_sync.c) expand to table calls.
+#define doom_shim_take_frame()          (doom_pack()->take_frame())
+#define doom_shim_release_frame()       (doom_pack()->release_frame())
+#define doom_shim_drain_core1_log()     (doom_pack()->drain_core1_log())
+#define doom_shim_gametic()             (doom_pack()->gametic())
+#define doom_shim_video_type()          (doom_pack()->video_type())
+#define doom_shim_compose_begin()       (doom_pack()->compose_begin())
+#define doom_shim_compose_line(l, y)    (doom_pack()->compose_line((l), (y)))
+#define doom_shim_hud_stats(h, a, m)    (doom_pack()->hud_stats((h), (a), (m)))
+#define doom_shim_weapon_state(o, r)    (doom_pack()->weapon_state((o), (r)))
+#define doom_shim_set_role(m)           (doom_pack()->set_role(m))
+#define doom_shim_slave_view_live()     (doom_pack()->slave_view_live())
+#define doom_shim_slave_wants_map_key() (doom_pack()->slave_wants_map_key())
+#define doom_shim_mirror_engaged()      (doom_pack()->mirror_engaged())
+#define doom_shim_attract_active()      (doom_pack()->attract_active())
+#define doom_shim_quit_requested()      (doom_pack()->quit_requested())
+#define doom_shim_drone_map_live()      (doom_pack()->drone_map_live())
+#define doom_shim_tallnum_glyph(g, o, w, h) (doom_pack()->tallnum_glyph((g), (o), (w), (h)))
+#define doom_shim_hufont_glyph(c, o, w, h)  (doom_pack()->hufont_glyph((c), (o), (w), (h)))
+#define doom_shim_menu_snapshot(i, n, s)    (doom_pack()->menu_snapshot((i), (n), (s)))
+#define doom_shim_menu_key_tile(r, c, t, l, a) (doom_pack()->menu_key_tile((r), (c), (t), (l), (a)))
+#define doom_shim_face_index()          (doom_pack()->face_index())
+#define doom_shim_face_oled(b, l)       (doom_pack()->face_oled((b), (l)))
+#define doom_shim_progress              (*doom_pack()->progress)
+#define doom_shim_snd_fire              (*doom_pack()->snd_fire)
+#define doom_shim_snd_world             (*doom_pack()->snd_world)
+#endif // POLYKYBD_DOOM_PACK
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }

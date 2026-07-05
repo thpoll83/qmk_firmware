@@ -42,6 +42,7 @@
 // qmk_shim.c behind doom_shim_take/release_frame — pico/sem.h cannot be
 // included here: ChibiOS also defines semaphore_t, and pico/time.h's param
 // asserts break inside QMK translation units.)
+#ifndef POLYKYBD_DOOM_PACK
 extern void D_DoomMain(void);
 
 // The doom linker script's shared block: pool base, end of the engine's
@@ -50,6 +51,13 @@ extern void D_DoomMain(void);
 extern uint8_t __doom_shared_base__[];
 extern uint8_t __doom_shared_statics_end__[];
 extern uint8_t __doom_shared_end__[];
+#else
+// DoomPack flavour (PACK_DESIGN.md): no engine in the image, no custom
+// linker script. The pool is base/overlay.c's plain array (borrowed via
+// get_overlays() as always) and the engine-statics/arena split inside it
+// comes from the loaded pack's header (doom_pack_arena_off()).
+#define DOOM_POOL_BYTES ((uint32_t)NUM_OVERLAYS * NUM_VARIATIONS * (72 * 40 / 8))
+#endif
 
 // The engine's view height (SCREENHEIGHT 200 - the 32 px vpatch status bar).
 #define DOOM_VIEW_BUFFER_ROWS (DOOM_ARENA_FB_BYTES / 320)
@@ -57,6 +65,10 @@ extern uint8_t __doom_shared_end__[];
 // True when the engine is live on core1 (WHX found, core launched); false in
 // game mode without a WHX — then the fire demo runs as the "NO WAD" gag.
 static bool s_engine_running;
+
+// Borrowed overlay pool (defined with the mode statics below; forward
+// declaration for doom_engine_start's pack-flavour stack carve).
+static uint8_t *s_fb;
 
 static bool doom_whx_present(void) {
     // The WHX ships XIP-mapped at TINY_WAD_ADDR (flash 0x600000); magic "IWHX"
@@ -85,7 +97,11 @@ static void doom_core1_entry(void) {
     // engine polls; the pico_sync semaphores wake via SEV/WFE, which PRIMASK
     // does not block.
     __asm volatile("cpsid i" ::: "memory");
+#ifdef POLYKYBD_DOOM_PACK
+    doom_pack()->engine_main(); // never returns
+#else
     D_DoomMain(); // never returns
+#endif
     while (true) {}
 }
 
@@ -95,13 +111,26 @@ static void doom_engine_start(void) {
         s_engine_running = false;
         return;
     }
+#ifdef POLYKYBD_DOOM_PACK
+    if (!doom_pack_loaded()) {
+        // doom_session_start already tried (and logged why it refused) —
+        // same degradation as a missing WHX.
+        printf("doom: no usable engine pack — running the fire demo instead\n");
+        s_engine_running = false;
+        return;
+    }
+#endif
     // Take core1 from the overlay-RLE service (idle in game mode — the
     // pool-writing HID commands are frozen) and give it to the game, with its
     // stack at the tail of the pool.
     doom_core1_reset();
+#ifdef POLYKYBD_DOOM_PACK
+    uint32_t *stack_bottom = (uint32_t *)(s_fb + DOOM_POOL_BYTES - DOOM_ARENA_STACK_BYTES);
+#else
     // (uintptr_t detour: negative offsets from a zero-size linker symbol trip
     // GCC's array-bounds check)
     uint32_t *stack_bottom = (uint32_t *)((uintptr_t)__doom_shared_end__ - DOOM_ARENA_STACK_BYTES);
+#endif
     multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
     s_engine_running = true;
 }
@@ -131,6 +160,12 @@ static void doom_engine_stop(void) {
         // introduced the STCFN ESC corner, which is exactly when exits
         // started dying). Clear it BEFORE the pool is handed back.
         doom_shim_progress = 0;
+#ifdef POLYKYBD_DOOM_PACK
+        // Back to the stub table — the pool is about to be handed back to
+        // the overlays, so nothing may dispatch into the dead pack (its
+        // statics lived in that pool). The next session re-loads it.
+        doom_pack_unload();
+#endif
         printf("doom: engine stopped, RLE core relaunch %s (%lu ms)\n",
                ok ? "ok" : "FAILED", (unsigned long)timer_elapsed32(t0));
     }
@@ -254,12 +289,24 @@ bool doom_mode_active(void) {
     return s_active;
 }
 
+#ifdef POLYKYBD_DOOM_PACK
+// Pack flavour: the statics/arena split comes from the loaded pack's header
+// (0 while unloaded — the fire demo then owns the pool from its base, which
+// is exactly the monolith's no-WHX behaviour with zero engine statics).
 uint8_t *doom_arena_at(unsigned offset) {
-    return s_active || s_fb ? __doom_shared_statics_end__ + offset : NULL;
+    return s_active || s_fb ? s_fb + doom_pack_arena_off() + offset : NULL;
 }
 
-uint8_t *doom_arena_framebuffer(void) {
-    return doom_arena_at(DOOM_ARENA_FB_OFF);
+uint8_t *doom_arena_zone(int *size) {
+    if (size) {
+        *size = (int)(DOOM_POOL_BYTES - doom_pack_arena_off())
+                - DOOM_ARENA_ZONE_OFF - DOOM_ARENA_STACK_BYTES;
+    }
+    return doom_arena_at(DOOM_ARENA_ZONE_OFF);
+}
+#else
+uint8_t *doom_arena_at(unsigned offset) {
+    return s_active || s_fb ? __doom_shared_statics_end__ + offset : NULL;
 }
 
 uint8_t *doom_arena_zone(int *size) {
@@ -268,6 +315,11 @@ uint8_t *doom_arena_zone(int *size) {
                 - DOOM_ARENA_ZONE_OFF - DOOM_ARENA_STACK_BYTES;
     }
     return doom_arena_at(DOOM_ARENA_ZONE_OFF);
+}
+#endif
+
+uint8_t *doom_arena_framebuffer(void) {
+    return doom_arena_at(DOOM_ARENA_FB_OFF);
 }
 
 static void doom_session_reset(void); // HUD + counters, defined by the HUD block
@@ -288,10 +340,21 @@ static bool doom_session_start(void) {
     // is entirely reconstructible — the host re-sends overlays on every app
     // switch, so nothing is lost (see DOOM_FEASIBILITY.md, Challenge 2).
     s_fb = (uint8_t *)get_overlays();
+#ifdef POLYKYBD_DOOM_PACK
+    // Zero the whole pool, then bring up the flashed engine pack: its init
+    // re-runs the pack crt0 (.data copy + .bss zero inside the pool), so
+    // every session starts from virgin engine statics INCLUDING initialized
+    // .data — the class the monolith's doom_shim_set_role reset list only
+    // approximates. A refused pack (missing/stale/corrupt — already logged)
+    // leaves the stub table: doom_engine_start then runs the fire demo.
+    memset(s_fb, 0, DOOM_POOL_BYTES);
+    (void)doom_pack_load(s_fb, DOOM_POOL_BYTES);
+#else
     // Zero the whole shared block: the engine's zero-init statics live at its
     // front (.doom_shared is not crt0-zeroed) — every entry starts the game
     // from virgin static state (including the mirror mailbox).
     memset(__doom_shared_base__, 0, (size_t)(__doom_shared_end__ - __doom_shared_base__));
+#endif
     // The engine statics eat the pool from the front; refuse to start if that
     // left the zone unviable (the link only guards the 226,800 B total).
     int zone_size = 0;
@@ -338,6 +401,11 @@ static void doom_exit(void) {
     access_local_state()->doom_ctl = 0;
     access_local_state()->doom_rgb = 0; // lights out with the same sync
     doom_engine_stop();
+#ifdef POLYKYBD_DOOM_PACK
+    // Covers the fire-demo case too (pack loaded but engine never launched —
+    // doom_engine_stop only unloads when it actually stopped an engine).
+    doom_pack_unload();
+#endif
     s_fb = NULL;
     // Hand the pool back in the same state a fresh boot / font-pack wipe leaves
     // it: blank buffers, no usage bits, identity mapping. The host's next
@@ -939,6 +1007,9 @@ static void doom_slave_stop(void) {
     s_slave_blit_bottom = false;
     s_slave_menu = false;
     doom_engine_stop();
+#ifdef POLYKYBD_DOOM_PACK
+    doom_pack_unload(); // as in doom_exit — nothing may dispatch into the dead pack
+#endif
     s_fb = NULL;
     // Same pool hand-back contract as doom_exit: blank + reconstructible.
     reset_overlay_buffers();

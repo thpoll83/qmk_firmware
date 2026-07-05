@@ -46,6 +46,10 @@ typedef struct {
     uint32_t entry_off;  // image offset of doom_pack_init (loader ORs the Thumb bit)
     uint32_t ram_base;   // pool address the pack was linked against
     uint32_t ram_size;   // pool bytes the pack claims (<= the real pool size)
+    uint32_t arena_off;  // engine-statics size = arena base offset from ram_base
+                         // (the monolith's __doom_shared_statics_end__ -
+                         // __doom_shared_base__; the firmware's doom_arena_at
+                         // carves from ram_base + arena_off)
     uint32_t version;    // content version (host staleness checks, GET_ID-style)
 } doom_pack_hdr_t;
 

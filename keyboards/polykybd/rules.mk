@@ -39,8 +39,23 @@ endif
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).
 # Normal builds pay zero bytes — doom_mode.h stubs every hook to an inline no-op.
+#
+# `-e POLYKYBD_DOOM_PACK=yes` builds the SHIPPING-SHAPE flavour instead
+# (doom/PACK_DESIGN.md): the firmware side of the executable-pack split —
+# mode machinery + blitter + fire demo + the PlyX pack loader, with the
+# engine expected in the DOOMPACK flash slot and every doom_shim_* call
+# dispatched through the pack's export table. No engine sources, no custom
+# linker script, no printf/alloc wraps (those exist for the in-image engine).
+ifeq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
+    POLYKYBD_DOOM = yes
+    OPT_DEFS += -DPOLYKYBD_DOOM_PACK
+endif
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     OPT_DEFS += -DPOLYKYBD_DOOM
+    SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c
+ifeq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
+    SRC += doom/doom_pack_load.c
+else
     # No savegames in v1 (field round 29): the upstream flags drop Load/Save
     # Game from the menus and compile the save/load machinery out. A future
     # extension can restore them by routing the save-slot flash writes
@@ -65,7 +80,8 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     # the console, so keep it covered. Implementations in doom/qmk_shim.c.
     LDFLAGS += -Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=free \
                -Wl,--wrap=realloc -Wl,--wrap=strdup
-    SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c doom/qmk_shim.c
+    SRC += doom/qmk_shim.c
+endif
     # First engine slice from the vendored rp2040-doom snapshot (doom/engine/):
     # pure math/data units with no platform backend, compiled as-is to prove the
     # engine sources build inside QMK's flag/include environment.
@@ -117,6 +133,7 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     # pico-sdk-compiled source reads any of these macros (PICO_ON_DEVICE=1 is
     # simply true for this target).
     EXTRAFLAGS += -include keyboards/polykybd/doom/engine/src/doom_tiny_defs.h
+ifneq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
     SRC += doom/engine/src/tables.c \
            doom/engine/src/m_bbox.c \
            doom/engine/src/m_fixed.c \
@@ -219,4 +236,5 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     SRC += lib/pico-sdk/src/common/pico_sync/sem.c \
            lib/pico-sdk/src/common/pico_sync/lock_core.c \
            lib/pico-sdk/src/rp2_common/hardware_sync/sync.c
+endif
 endif

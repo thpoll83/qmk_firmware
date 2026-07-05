@@ -160,7 +160,12 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 40 → v42 (2026-07-05, UNTESTED): master fire lag 60 → 20 ms.**
+- **Round 41 (2026-07-05): v42 CONFIRMED — "wow.. now it fits!"** The
+  fire-flash saga is closed for real: slave immediate on its drone's sound
+  edges, master delayed by `DOOM_RGB_MASTER_FIRE_LAG_MS` = **20 ms**. Do
+  not retune without a new field report; the 60–100 band reads identical
+  (render-rate sampling quantizes the visible flash to frame boundaries).
+- **Round 40 → v42 (2026-07-05, tested round 41): master fire lag 60 → 20 ms.**
   Round 40 on v41: "strange - i cannot see any difference - lets go for
   20ms" (60 looked identical to 100). Plausible mechanism: the pulse is
   only *sampled* at RGB render rate, so any lag inside one frame interval

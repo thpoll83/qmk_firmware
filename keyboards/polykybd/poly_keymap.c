@@ -656,7 +656,13 @@ void housekeeping_task_user(void) {
         // No master-side refresh — its keycaps are owned by the game blitter
         // while active, and doom_exit() restores them itself. The weapon-pad
         // state rides along; a change re-renders the slave's pad keys.
-        access_local_state()->doom_ctl = doom_mode_active() ? 1 : 0;
+        uint8_t doom_want = doom_mode_active() ? 1 : 0;
+        if (access_local_state()->doom_ctl != doom_want) {
+            // Breadcrumb: this is the value the next POLY sync carries to the
+            // slave — "slave stayed in game mode" reports hinge on it.
+            uprintf("doom ctl -> %u\n", doom_want);
+        }
+        access_local_state()->doom_ctl = doom_want;
         uint8_t wpn_owned = 0, wpn_ready = 0;
         if (access_local_state()->doom_ctl) {
             doom_weapon_state(&wpn_owned, &wpn_ready);

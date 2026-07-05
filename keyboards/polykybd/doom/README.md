@@ -154,7 +154,38 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 19 → v20 (2026-07-05, UNTESTED): quit wedge fix + menu typography
+- **Round 20 → v21 (2026-07-05, UNTESTED): bounded RLE-core relaunch on exit
+  + exit breadcrumbs + menu/skull tune.** Round 20's log finally located the
+  exit problem: after the session ended, the master went silent for ~15 s —
+  long enough that the HOST declared a disconnect and re-pushed overlays
+  (the `Overlay flags 0x60`/`Set OS` bursts) — and the slave stayed in game
+  mode. The remaining suspect is `doom_engine_stop()`'s RLE-core relaunch:
+  `multicore_launch_core1()`'s FIFO handshake **blocks forever when core1
+  is not (yet) back in the bootrom wait loop** after the PSM reset
+  (fw_staging.c documents the same failure for the post-apply reboot), and
+  it runs on BOTH halves' teardowns — a stalled slave stop also explains
+  "it keeps operating on the slave side".
+  1. **Bounded relaunch**: new `multicore_launch_core1_bounded()` (core1.c)
+     runs the same handshake under an overall deadline; `doom_engine_stop`
+     PSM-resets + retries up to 3× (100 ms each). Worst case the RLE
+     service stays down (overlays degrade until reboot) but the keyboard —
+     either half — can no longer wedge on session exit. The unbounded
+     launcher remains for the boot path.
+  2. **Breadcrumbs**: `doom: exit begin` / `doom: engine stopped, RLE core
+     relaunch ok|FAILED (N ms)` / `doom: exit done`, plus a `doom ctl -> 0/1`
+     line when the synced flag flips — the next field log pinpoints any
+     residual stall and shows whether the slave was ever told to stop.
+  3. **Menu capital O** ("more than just a few px missing"): its curved
+     stroke segments are mid-shade with only TWO bright 4-neighbours (along
+     the curve), so the ≥3 fill rule left gaps. Two-tier fill now: 44..75
+     fills with ≥2 bright neighbours, 36..43 still needs ≥3; core solid
+     raised 72→76 (the "slightly skinnier" nudge).
+  4. **Skull contrast** ("a bit more contrast to make out the darker
+     areas"): quadratic curve (v²/72) instead of the flat 2× gain — bone
+     saturates white, shading stays distinctly dark.
+- **Round 19 → v20 (2026-07-05, tested: menu ✓ better (O gaps remain),
+  sentences ✓, skull bright ✓ flat-ish, EXIT still stalls master ~15 s +
+  slave never leaves game mode → v21): quit wedge fix + menu typography
   round 3.** Round 19 confirmed the v19 menu direction ("much better") but
   quit WEDGED the whole keyboard:
   1. **Quit no longer parks core1** ("the keyboard is then stuck ... hold

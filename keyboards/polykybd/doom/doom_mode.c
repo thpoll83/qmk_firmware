@@ -110,9 +110,21 @@ static void doom_engine_stop(void) {
     if (s_engine_running) {
         s_engine_running = false;
         // Kill the game mid-frame (it only touches pool memory) and hand core1
-        // back to the overlay-RLE service.
-        doom_core1_reset();
-        multicore_launch_core1();
+        // back to the overlay-RLE service. The relaunch handshake is BOUNDED:
+        // if core1 is not back in the bootrom wait loop, the plain
+        // multicore_launch_core1() blocks forever — a deaf/wedged keyboard on
+        // session exit (field rounds 19+20; the host even declared a
+        // disconnect during the ~15 s post-exit silence). On a miss, PSM-reset
+        // core1 and retry; worst case the RLE service stays down (overlay
+        // decompression degrades until reboot) but the keyboard stays alive.
+        const uint32_t t0 = timer_read32();
+        bool ok = false;
+        for (uint8_t attempt = 0; attempt < 3 && !ok; ++attempt) {
+            doom_core1_reset();
+            ok = multicore_launch_core1_bounded(100u * 1000u);
+        }
+        printf("doom: engine stopped, RLE core relaunch %s (%lu ms)\n",
+               ok ? "ok" : "FAILED", (unsigned long)timer_elapsed32(t0));
     }
 }
 
@@ -304,6 +316,9 @@ static void doom_enter(void) {
 }
 
 static void doom_exit(void) {
+    // Breadcrumbs around every teardown stage — the round-20 log showed a
+    // ~15 s post-exit silence with no way to tell which stage stalled.
+    printf("doom: exit begin\n");
     s_active = false;
     doom_engine_stop();
     s_fb = NULL;
@@ -316,6 +331,7 @@ static void doom_exit(void) {
     reset_fragment_context();
     set_last_update((int32_t)timer_read32());
     request_disp_refresh();
+    printf("doom: exit done\n");
 }
 
 // Position alias map (GLOBAL matrix coords, either half): the top outer

@@ -1338,13 +1338,11 @@ static uint8_t shim_menu_win_start(uint8_t count, uint8_t item_on) {
 
 // Emit ONE source row (index k) of a menu patch into the tile, scaled
 // num/den. up/dn are the neighbouring rows' luma (NULL past the edges).
-// Text look (dither=false): solid at luma >= 72 — skinnier than the digits'
-// 64 — plus a HOLE FILL: a 36..71 pixel with >= 3 of its 4 neighbours at
-// >= 72 lights too, so a dark shade band crossing a stroke can't punch
-// isolated holes ("some letters miss some isolated pixel", round 19).
-// Skull look (dither=true): 2x-gained Bayer in canvas coordinates — bright
-// but with the shading kept (the solid threshold flattened it and dropped
-// the darker jaw: "too simple and cut off at the bottom", round 19).
+// Text look (dither=false): solid at luma >= 76 — skinnier than the digits'
+// 64 — plus a two-tier HOLE FILL (see inline) so shade bands crossing a
+// stroke, straight or CURVED, can't punch holes (rounds 19+20).
+// Skull look (dither=true): quadratic-contrast Bayer in canvas coordinates —
+// bright bone, but the dark shading stays distinctly dark (round 20).
 static void shim_menu_emit_row(uint8_t *tile360, const uint8_t *up, const uint8_t *cur,
                                const uint8_t *dn, unsigned w, unsigned k,
                                int x0, int y0, unsigned num, unsigned den,
@@ -1359,14 +1357,20 @@ static void shim_menu_emit_row(uint8_t *tile360, const uint8_t *up, const uint8_
         for (unsigned sx = 0; sx < w; sx++) {
             const uint8_t v = cur[sx];
             if (!dither) {
-                bool on = v >= 72;
+                // Two-tier hole fill (round 20: capital O still lost more
+                // than isolated pixels — its CURVED stroke segments are
+                // mid-shade with only TWO bright 4-neighbours, along the
+                // curve, so the >=3 rule left gaps): a solid-ish 44..75
+                // pixel fills with 2 bright neighbours, a faint 36..43 one
+                // still needs 3 (true interior). Edges keep <=1.
+                bool on = v >= 76;
                 if (!on && v >= 36) {
                     unsigned n = 0;
-                    if (sx > 0 && cur[sx - 1] >= 72) n++;
-                    if (sx + 1 < w && cur[sx + 1] >= 72) n++;
-                    if (up && up[sx] >= 72) n++;
-                    if (dn && dn[sx] >= 72) n++;
-                    on = n >= 3;
+                    if (sx > 0 && cur[sx - 1] >= 76) n++;
+                    if (sx + 1 < w && cur[sx + 1] >= 76) n++;
+                    if (up && up[sx] >= 76) n++;
+                    if (dn && dn[sx] >= 76) n++;
+                    on = (v >= 44) ? (n >= 2) : (n >= 3);
                 }
                 if (!on) {
                     continue;
@@ -1374,7 +1378,10 @@ static void shim_menu_emit_row(uint8_t *tile360, const uint8_t *up, const uint8_
             } else if (!v) {
                 continue;
             }
-            unsigned g = (unsigned)v * 2;
+            // Skull: quadratic contrast curve (round 20 "a bit more contrast
+            // to make out the darker areas") — dark shades stay visibly
+            // darker than the 2x gain left them, bone saturates to white.
+            unsigned g = ((unsigned)v * (unsigned)v) / 72u;
             if (g > 255) g = 255;
             const unsigned ox0 = sx * num / den;
             const unsigned ox1 = (sx + 1) * num / den;

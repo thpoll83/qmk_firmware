@@ -43,6 +43,13 @@
 #include "sounds.c"
 #endif
 
+#if POLYKYBD_QMK
+// PolyKybd sound->RGB substitute (qmk_shim.c): every audible sound start is
+// classified there — player weapon fire flashes the RGB matrix yellow, the
+// rest of the world (mainly monsters) flashes blue.
+extern void doom_shim_sound_event(int sfx_id, boolean player_origin);
+#endif
+
 // when to clip out sounds
 // Does not fit the large outdoor areas.
 
@@ -516,6 +523,14 @@ void S_StartSound(xy_positioned_t *origin, int sfx_id)
     {
         sep = NORM_SEP;
     }
+
+#if POLYKYBD_QMK
+    // Past the audibility gate — only sounds the player would actually hear
+    // drive the RGB cue (a monster shrieking across the map stays dark).
+    doom_shim_sound_event(sfx_id,
+                          origin != NULL && players[consoleplayer].mo != NULL
+                              && origin == &players[consoleplayer].mo->xy);
+#endif
 
     // hacks to vary the sfx pitches
     if (sfx_id >= sfx_sawup && sfx_id <= sfx_sawhit)

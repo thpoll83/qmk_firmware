@@ -110,6 +110,13 @@ typedef struct _poly_sync_t {
     // renders its outer-column weapon pad from these.
     uint8_t  doom_wpn_owned;
     uint8_t  doom_wpn_ready;
+    // Doom sound->RGB cue (valid while doom_ctl; doom_mode.c doom_rgb_task):
+    // bits 0-3 = red base level 0..15 (degrading health), bits 4-5 = fire
+    // pulse counter (player weapon fired -> yellow flash; wraps 1..3, 0 =
+    // idle), bits 6-7 = world-sound pulse counter (monsters etc -> blue
+    // flash, suppressed while firing). Both halves render it locally in
+    // rgb_matrix_indicators_kb via doom_rgb_indicators().
+    uint8_t  doom_rgb;
 } poly_sync_t;
 
 typedef struct _poly_last_t {

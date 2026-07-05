@@ -960,6 +960,41 @@ int I_GetSfxLumpNum(should_be_const sfxinfo_t *sfxinfo) {
     return W_GetNumForName(namebuf);
 }
 
+// The promised RGB-matrix "sound" substitute (field round 23): S_StartSound
+// calls this for every AUDIBLE sound start (either core's engine instance —
+// only the master's counters are consumed). Two event classes, counted into
+// volatile counters that core0's doom_rgb_task edge-detects into the synced
+// poly_sync_t.doom_rgb byte (doom_mode.c):
+//  - the player's own weapon discharge -> yellow flash
+//  - everything not player-originated (monsters, doors, barrels) -> blue flash
+// Player-origin NON-weapon sounds (pickups, pain, oof) are deliberately
+// neither — a health-bonus run must not strobe the matrix.
+#include "sounds.h"           // sfx_* ids
+volatile uint32_t doom_shim_snd_fire;
+volatile uint32_t doom_shim_snd_world;
+
+void doom_shim_sound_event(int sfx_id, boolean player_origin) {
+    if (player_origin) {
+        switch (sfx_id) {
+            case sfx_pistol:  // also the chaingun's per-bullet sound
+            case sfx_shotgn:
+            case sfx_dshtgn:
+            case sfx_plasma:
+            case sfx_rlaunc:
+            case sfx_bfg:
+            case sfx_sawful:  // chainsaw swing/hit — not the idle drone
+            case sfx_sawhit:
+            case sfx_punch:
+                doom_shim_snd_fire++;
+                break;
+            default:
+                break;
+        }
+    } else {
+        doom_shim_snd_world++;
+    }
+}
+
 void I_UpdateSound(void) {}
 void I_UpdateSoundParams(int channel, int vol, int sep) { (void)channel; (void)vol; (void)sep; }
 
@@ -1048,6 +1083,10 @@ void doom_shim_set_role(bool master) {
     menuactive           = false;
     automapactive        = false;
     s_quit_req           = 0;
+    // Sound->RGB counters restart too, so a new session's edge detector
+    // (doom_rgb_task) doesn't fire on the previous session's totals.
+    doom_shim_snd_fire  = 0;
+    doom_shim_snd_world = 0;
     // Tic counters restart at 0 every session — the mirror rings index by
     // absolute tic (doom_mirror.h); a stale maketic instantly overflowed
     // the zeroed TX ring on re-entry, killing the mirror for the session

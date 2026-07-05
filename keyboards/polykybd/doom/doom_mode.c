@@ -272,6 +272,8 @@ uint8_t *doom_arena_zone(int *size) {
 
 static void doom_session_reset(void); // HUD + counters, defined by the HUD block
 static void doom_mirror_session_reset(void); // master pump statics, mirror block
+static void doom_rgb_session_reset(void);    // sound->RGB pulses (no-op sans RGB matrix)
+static void doom_rgb_task(void);             // ditto, called every doom_tick on both halves
 
 // Pool take + engine boot, shared by the master's doom_enter and the slave's
 // mirror session. False when blocked (fw flash in flight) or unviable — the
@@ -334,6 +336,7 @@ static void doom_exit(void) {
     // (pad chrome incl. the STCFN ESC corner) against the torn-down engine.
     // This also gets the 0 onto the very next POLY sync to the slave.
     access_local_state()->doom_ctl = 0;
+    access_local_state()->doom_rgb = 0; // lights out with the same sync
     doom_engine_stop();
     s_fb = NULL;
     // Hand the pool back in the same state a fresh boot / font-pack wipe leaves
@@ -498,6 +501,7 @@ static void doom_session_reset(void) {
     s_hud_esc_drawn = false;
     s_hud_drawn_at  = 0;
     s_frames = s_hb_at = s_stats_at = 0;
+    doom_rgb_session_reset();
 }
 
 static void doom_hud_tick(void) {
@@ -907,10 +911,153 @@ bool doom_status_scroll(void) {
     return true;
 }
 
+// ---------------------------------------------------------------------------
+// Sound -> RGB matrix (field round 23): the game's audio, substituted onto
+// the per-key RGB LEDs. The master edge-detects the shim's sound counters
+// (S_StartSound classifies every audible sound, qmk_shim.c) into the synced
+// doom_rgb byte — see state.h for the bit layout — and BOTH halves render
+// that byte locally in rgb_matrix_indicators_kb: a yellow flash when the
+// player fires, a blue flash for world/monster sounds (suppressed while the
+// fire flash runs so the two never blend green), over a steady red base that
+// grows as health degrades. All "not too bright" — peaks stay well under
+// half drive, in the same range the fw-flash breathing uses.
+// ---------------------------------------------------------------------------
+#ifdef RGB_MATRIX_ENABLE
+
+#define DOOM_RGB_FLASH_MS 180u
+
+// Master publisher state (consumed counter totals + the published pulses).
+static uint32_t s_rgb_fire_seen, s_rgb_world_seen;
+static uint8_t  s_rgb_fire_pulse, s_rgb_world_pulse; // 1..3 while flashing, 0 idle
+static uint32_t s_rgb_fire_at, s_rgb_world_at;
+static bool     s_rgb_forced_on; // we woke a user-disabled matrix for the cue
+
+static void doom_rgb_session_reset(void) {
+    // The shim counters restart at 0 with every engine launch
+    // (doom_shim_set_role) — restart the edge detector with them.
+    s_rgb_fire_seen  = s_rgb_world_seen  = 0;
+    s_rgb_fire_pulse = s_rgb_world_pulse = 0;
+    s_rgb_fire_at    = s_rgb_world_at    = 0;
+}
+
+static void doom_rgb_task(void) {
+    if (is_usb_host_side()) {
+        uint8_t rgb = 0;
+        // Attract demos fire weapons too — only real gameplay drives the
+        // lights (the demo loop staying dark also reads as "idle").
+        if (s_active && s_engine_running && !doom_shim_attract_active()) {
+            const uint32_t now  = timer_read32();
+            const uint32_t fire = doom_shim_snd_fire;
+            if (fire != s_rgb_fire_seen) {
+                s_rgb_fire_seen  = fire;
+                s_rgb_fire_pulse = (uint8_t)(s_rgb_fire_pulse % 3u) + 1u;
+                s_rgb_fire_at    = now;
+            } else if (s_rgb_fire_pulse && now - s_rgb_fire_at > DOOM_RGB_FLASH_MS) {
+                s_rgb_fire_pulse = 0;
+            }
+            const uint32_t world = doom_shim_snd_world;
+            if (world != s_rgb_world_seen) {
+                s_rgb_world_seen = world;
+                // Fire outranks the world: a blue pulse neither starts nor
+                // re-arms while the yellow flash runs (the renderer also
+                // suppresses it), so the mix can't read green.
+                if (!s_rgb_fire_pulse) {
+                    s_rgb_world_pulse = (uint8_t)(s_rgb_world_pulse % 3u) + 1u;
+                    s_rgb_world_at    = now;
+                }
+            } else if (s_rgb_world_pulse && now - s_rgb_world_at > DOOM_RGB_FLASH_MS) {
+                s_rgb_world_pulse = 0;
+            }
+            int hp, ar, am;
+            if (doom_shim_hud_stats(&hp, &ar, &am)) {
+                // Full health = dark; each ~7 hp lost lights the red base one
+                // step (0..15, saturating at death).
+                const int lvl = hp >= 100 ? 0 : hp <= 0 ? 15 : ((100 - hp) * 15 + 50) / 100;
+                rgb = (uint8_t)lvl;
+            }
+            rgb |= (uint8_t)(s_rgb_fire_pulse << 4) | (uint8_t)(s_rgb_world_pulse << 6);
+        }
+        access_local_state()->doom_rgb = rgb;
+    }
+    // Both halves: keep the matrix awake for the cue even when the user has
+    // RGB off, exactly like the fw-flash breathing — enable_noeeprom touches
+    // no persisted mode/colour, so the previous state returns afterwards.
+    const bool want = get_local_state()->doom_ctl != 0;
+    if (want && !s_rgb_forced_on && !rgb_matrix_is_enabled()) {
+        s_rgb_forced_on = true;
+        rgb_matrix_enable_noeeprom();
+    } else if (!want && s_rgb_forced_on) {
+        s_rgb_forced_on = false;
+        rgb_matrix_disable_noeeprom();
+    }
+}
+
+bool doom_rgb_indicators(void) {
+    // Local fade clocks, restarted whenever the synced pulse counter moves —
+    // rapid re-fires re-arm the flash even when the bit never dropped.
+    static uint8_t  s_last_fire, s_last_world;
+    static uint32_t s_fire_at, s_world_at;
+    static bool     s_fire_live, s_world_live;
+
+    const uint8_t rgb   = get_local_state()->doom_rgb;
+    const bool    ctl   = get_local_state()->doom_ctl != 0;
+    const uint8_t fire  = (uint8_t)((rgb >> 4) & 3u);
+    const uint8_t world = (uint8_t)((rgb >> 6) & 3u);
+    if (fire != s_last_fire) {
+        s_last_fire = fire;
+        if (fire) {
+            s_fire_live = true;
+            s_fire_at   = timer_read32();
+        }
+    }
+    if (world != s_last_world) {
+        s_last_world = world;
+        if (world) {
+            s_world_live = true;
+            s_world_at   = timer_read32();
+        }
+    }
+    if (s_fire_live && timer_elapsed32(s_fire_at) >= DOOM_RGB_FLASH_MS) {
+        s_fire_live = false;
+    }
+    if (s_world_live && timer_elapsed32(s_world_at) >= DOOM_RGB_FLASH_MS) {
+        s_world_live = false;
+    }
+    if (!ctl && !s_fire_live && !s_world_live) {
+        return true; // not ours — fall through to the normal indicators
+    }
+    // Steady red base from lost health (caps at 75/255).
+    uint8_t r = (uint8_t)((rgb & 0x0Fu) * 5u);
+    uint8_t g = 0, b = 0;
+    if (s_fire_live) {
+        const uint32_t k = 255u - (timer_elapsed32(s_fire_at) * 255u) / DOOM_RGB_FLASH_MS;
+        const uint8_t  fr = (uint8_t)((100u * k) / 255u); // muzzle-flash yellow,
+        const uint8_t  fg = (uint8_t)((70u * k) / 255u);  // fading out linearly
+        if (fr > r) {
+            r = fr;
+        }
+        g = fg;
+    } else if (s_world_live) { // fire wins the frame: yellow never mixes to green
+        b = (uint8_t)((110u * (255u - (timer_elapsed32(s_world_at) * 255u) / DOOM_RGB_FLASH_MS)) / 255u);
+    }
+    rgb_matrix_set_color_all(r, g, b);
+    return false;
+}
+
+#else // !RGB_MATRIX_ENABLE (split42): the cue has no hardware; keep the seams
+
+static void doom_rgb_session_reset(void) {}
+static void doom_rgb_task(void) {}
+
+#endif // RGB_MATRIX_ENABLE
+
 void doom_tick(void) {
     // Relay the game core's buffered printf output first — also after exit, so
     // late lines still reach the console.
     doom_shim_drain_core1_log();
+    // Sound->RGB cue, both halves, active or not (the fade-out + the matrix
+    // enable/restore run past the session end).
+    doom_rgb_task();
     if (!is_usb_host_side()) {
         doom_slave_tick();
         return;

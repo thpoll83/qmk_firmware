@@ -199,6 +199,13 @@ bool rgb_matrix_indicators_kb(void) {
         }
         return false;
     }
+    // Doom sound->RGB cue (doom_mode.c): while game mode runs, the matrix is
+    // the game's "speaker" — yellow fire flash, blue world sounds, red base
+    // as health degrades. False = it painted this frame. Inline pass-through
+    // when the game isn't compiled in.
+    if (!doom_rgb_indicators()) {
+        return false;
+    }
     if (!is_keyboard_master()) {
         if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
             // Bootloader: no typing possible — force orange (matches the firmware-flash cue).

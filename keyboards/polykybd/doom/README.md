@@ -68,7 +68,9 @@ Without `POLYKYBD_DOOM=yes` nothing here is compiled and every hook in
   moves the game to core1 — mind the `cpsid i` note in `multicore_exec.c`).
 - `split42` compiles but the 5×5 viewport only partially maps to its 24
   display slots (bounds-guarded); the demo targets split72.
-- RGB matrix / trackpad untouched; damage-flash repurposing comes later.
+- Trackpad untouched. ~~RGB matrix untouched~~ — since v24 the RGB matrix is
+  the game's "speaker": yellow fire flash, blue world sounds, red base as
+  health degrades (see the round-23 log entry).
 
 ## Engine integration state — THE FULL ENGINE NOW LINKS
 
@@ -154,6 +156,35 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 23 → v24 (2026-07-05, UNTESTED): sound → RGB matrix.** Round 23's
+  request (v23 itself still awaiting test — v24 includes it): "when firing,
+  flash all keys yellow (not too bright); with degrading health step-by-step
+  turn on the red lights (also not too bright); map sound — mainly monsters
+  attacking — to blue, suppressed while firing so it doesn't become green."
+  Implemented as the RGB "sound" substitute the silent audio backend always
+  promised (`qmk_shim.c` comment): a `POLYKYBD_QMK` hook in `S_StartSound`
+  (`s_sound.c`, **after the audibility gate** so a monster across the map
+  stays dark) calls `doom_shim_sound_event(sfx_id, player_origin)`;
+  the shim classifies player-origin weapon discharges (pistol/shotgun/SSG/
+  plasma/rocket/BFG/saw-swing/punch — chaingun rides `sfx_pistol`; pickups,
+  pain and the saw idle deliberately count as neither) into a `fire`
+  counter, everything not player-originated into a `world` counter.
+  `doom_rgb_task()` (doom_mode.c, master, gated `!attract` so demo footage
+  stays dark) edge-detects the counters into a new synced
+  `poly_sync_t.doom_rgb` byte — bits 0-3 red level `(100-hp)` quantized
+  0..15 from `doom_shim_hud_stats`, bits 4-5 / 6-7 wrap-around fire/world
+  pulse counters (1..3; a rapid re-fire re-arms the flash without the bits
+  ever dropping) — and BOTH halves render the byte locally in
+  `rgb_matrix_indicators_kb` via `doom_rgb_indicators()`: 180 ms linear
+  fade, yellow peak (100,70,0), blue peak (0,0,110), steady red base
+  `level*5` (caps 75/255 — all in the fw-flash-breathing brightness range),
+  fire suppressing blue at both the publisher (no blue pulse starts while
+  the yellow runs) and the renderer (fire owns the frame). While `doom_ctl`
+  is set the matrix is otherwise BLACK (the cue needs a dark stage; the
+  user's mode/colour config is untouched and returns on exit —
+  `enable/disable_noeeprom`, same pattern as `flash_rgb_tick`). The shim
+  counters reset in `doom_shim_set_role` with the other re-entry statics.
+  split42 (no RGB) compiles the seams to no-ops.
 - **Round 22 → v23 (2026-07-05, UNTESTED): re-entry mirror fix (stale tic
   counters) + letter fill nudge.** Round 22 confirmed the exit fix — three
   clean exits (ESC + quit ×2) with full breadcrumbs in one log — and

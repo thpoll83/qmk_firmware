@@ -179,6 +179,21 @@ bool doom_shim_drone_map_live(void);
 int  doom_shim_face_index(void);
 bool doom_shim_face_oled(uint8_t *oled_buf, const uint8_t *luma256);
 
+// Sound->RGB counters (qmk_shim.c): the engine's S_StartSound classifies
+// every audible sound start — player weapon fire vs the rest of the world.
+// core0's doom_rgb_task (doom_mode.c) edge-detects them into the synced
+// poly_sync_t.doom_rgb byte.
+extern volatile uint32_t doom_shim_snd_fire, doom_shim_snd_world;
+
+// Sound->RGB render hook (doom_mode.c), called from rgb_matrix_indicators_kb:
+// false = the doom cue owns this frame's LEDs, true = pass through to the
+// normal indicators. Pass-through inline on variants without an RGB matrix.
+#ifdef RGB_MATRIX_ENABLE
+bool doom_rgb_indicators(void);
+#else
+static inline bool doom_rgb_indicators(void) { return true; }
+#endif
+
 #else
 
 static inline bool doom_mode_active(void) { return false; }
@@ -210,5 +225,6 @@ static inline void doom_render_use_key(void) {}
 static inline void doom_render_esc_key(void) {}
 static inline int  doom_status_face_render(uint8_t *buf1024) { (void)buf1024; return 0; }
 static inline bool doom_status_scroll(void) { return true; }
+static inline bool doom_rgb_indicators(void) { return true; }
 
 #endif

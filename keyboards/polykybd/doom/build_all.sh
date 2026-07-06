@@ -14,7 +14,7 @@
 #   1. flash polykybd_doom_<tag>.bin over HID (PolyKybdHost firmware updater)
 #   2. polyctl doom install <out>/doom1.whx          (once; survives fw updates)
 #   3. polyctl doom install-pack <out>/doom_pack_vN.plyx
-#   4. type IDDQD
+#   4. type IDDQD, then press the IDDQD key on the utilities layer
 # The pack's RAM base is pinned (ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld), so an
 # installed .plyx keeps working across firmware rebuilds — re-do step 3 only
 # when the engine/ABI itself changed (the loader logs a refusal if a pack is
@@ -77,4 +77,4 @@ echo
 echo "install: 1) flash polykybd_doom_$TAG.bin over HID"
 echo "         2) polyctl doom install $OUT/doom1.whx            (once)"
 echo "         3) polyctl doom install-pack $OUT/doom_pack_v$VERSION.plyx"
-echo "         4) IDDQD"
+echo "         4) type IDDQD, then press the IDDQD key on the utilities layer"

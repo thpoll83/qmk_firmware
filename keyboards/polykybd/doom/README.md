@@ -212,6 +212,20 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 45 → v45 (2026-07-06, UNTESTED): pinned pool + halved contrast +
+  the IDDQD menu gate.** Round 44 on v44: **"I just tested and it works"**
+  — the DoomPack chain (pack-flavour firmware + .plyx + WHX) confirmed on
+  hardware. Three follow-ups in v45: (1) the pack flavour pins the overlay
+  pool at the RAM origin (ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld → packs now
+  survive firmware rebuilds; PACK_DESIGN.md §4a); (2) viewport contrast
+  1.25× → 1.125× ("not bad, but now a bit too dark — half way"); (3) the
+  egg is gated further: typing IDDQD now only ARMS it (nothing visible
+  happens, no keystrokes swallowed) — a previously-blank key on the
+  utilities layer (next to Break on the left half / next to the media keys
+  on the right) then shows **IDDQD**, and pressing that starts the game.
+  Armed state survives game exits (relaunch from the menu), clears on
+  power-off; the legend shows on the master half (the slave's mirrored key
+  works but stays blank).
 - **Round 43 → v44 + doom_pack_v1.plyx (2026-07-05, UNTESTED): the DoomPack.**
   First hardware round of the executable-pack split (PACK_DESIGN.md, P1–P4
   all compile-verified): v44 is the `POLYKYBD_DOOM_PACK=yes` firmware

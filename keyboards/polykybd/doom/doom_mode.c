@@ -19,6 +19,7 @@
 #include "doom_mirror.h"
 #include "doom_playpal_luma.h"
 
+#include "keycode_helper.h"    // KC_IDDQD (the armed utilities-layer menu item)
 #include "split_sync.h"        // sync_succeeded (mirror bridge sends)
 #include "polymod_crc32.h"     // crc32_1byte (mirror message framing)
 #include "transactions.h"      // USER_SYNC_OVERLAY_MAP_DATA (mirror rides it)
@@ -266,9 +267,12 @@ bool doom_pop_key_event(uint8_t *key, bool *pressed) {
     return true;
 }
 
-// Trigger: type IDDQD (plain, unmodified) on the master half. Dev-harness
-// placeholder — the shipping easter egg gates this behind a held layer so it
-// can't fire while actually typing the cheat into a game/editor.
+// Trigger (two-stage since field round 44): typing IDDQD (plain, unmodified,
+// master half) no longer starts the game — it silently ARMS the egg, which
+// makes the KC_IDDQD key on the utilities layer show "IDDQD"; pressing THAT
+// starts the game. Typing the cheat into an editor/game therefore changes
+// nothing visible and swallows no keystrokes; the armed state survives game
+// exits (relaunch from the menu without retyping) and clears on power-off.
 static const uint16_t TRIGGER_SEQ[]   = {KC_I, KC_D, KC_D, KC_Q, KC_D};
 #define TRIGGER_LEN (sizeof(TRIGGER_SEQ) / sizeof(TRIGGER_SEQ[0]))
 #define TRIGGER_TIMEOUT_MS 3000
@@ -278,6 +282,7 @@ static const uint16_t TRIGGER_SEQ[]   = {KC_I, KC_D, KC_D, KC_Q, KC_D};
 #define DOOM_FRAME_MS 80
 
 static bool     s_active;
+static bool     s_egg_armed; // master-local; see the trigger comment above
 static uint8_t  s_trigger_pos;
 static uint32_t s_trigger_last;
 static bool     s_esc_down;
@@ -287,6 +292,10 @@ static uint8_t *s_fb; // borrowed overlay pool; framebuffer = first 64,000 B
 
 bool doom_mode_active(void) {
     return s_active;
+}
+
+bool doom_egg_armed(void) {
+    return s_egg_armed;
 }
 
 #ifdef POLYKYBD_DOOM_PACK
@@ -545,6 +554,17 @@ const uint8_t *doom_weapon_icon(uint8_t slot, uint8_t *w, uint8_t *h) {
 
 bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t col) {
     if (!s_active) {
+        // The armed menu item (KC_IDDQD on the utilities layer): starts the
+        // game once IDDQD has been typed; inert (and rendered blank) before
+        // that. Swallow both edges always — it is never a real HID key. The
+        // slave half's copy of the key works too (the master processes the
+        // whole matrix) but stays blank (armed state is master-local).
+        if (keycode == KC_IDDQD) {
+            if (pressed && s_egg_armed && is_usb_host_side()) {
+                doom_enter();
+            }
+            return true;
+        }
         // Trigger matcher — master side only (the game runs where USB is).
         if (!pressed || !is_usb_host_side()) {
             return false;
@@ -556,8 +576,13 @@ bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t co
             s_trigger_last = timer_read32();
             if (++s_trigger_pos == TRIGGER_LEN) {
                 s_trigger_pos = 0;
-                doom_enter();
-                return s_active; // swallow the completing keypress
+                if (!s_egg_armed) {
+                    s_egg_armed = true;
+                    printf("doom: armed — IDDQD is now on the utilities layer\n");
+                    request_disp_refresh(); // in case that layer is showing
+                }
+                // Deliberately NOT swallowed: typing the cheat stays invisible
+                // (the host receives the full word; nothing on-screen changes).
             }
         } else {
             // restart, allowing the mismatch to begin a new sequence (I-I-D…)
@@ -726,12 +751,16 @@ static void doom_hud_tick(void) {
 }
 
 // Viewport luma with a mild contrast gain (round 42: "increase the contrast
-// on the viewport just a bit") — 1.25x around mid-grey, saturating, applied
+// on the viewport just a bit") — saturating gain around mid-grey, applied
 // only to the master's 3D-view blit. Menus (own threshold rule), the slave's
 // automap (already line-art on black) and the HUD/face draws keep the
 // straight PLAYPAL table. Built lazily; 256 B of plain .bss.
-#define DOOM_VIEW_CONTRAST_NUM 5
-#define DOOM_VIEW_CONTRAST_DEN 4
+// Round 44 dialed 1.25x back to 1.125x ("not bad, but now a bit too dark —
+// half way of what we had and now"): the gain darkens below-mid pixels, and
+// DOOM's palette is mostly below mid-grey, so 1.25 cost more shadow detail
+// than the highlight pop was worth.
+#define DOOM_VIEW_CONTRAST_NUM 9
+#define DOOM_VIEW_CONTRAST_DEN 8
 static const uint8_t *doom_view_luma(void) {
     static uint8_t lut[256];
     static bool    built;

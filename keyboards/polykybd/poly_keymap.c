@@ -756,6 +756,9 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KC_L2:                         return local_layer->def_layer == _L2 ? U"Clmk\r\v" ICON_SWITCH_ON : U"Clmk\r\v" ICON_SWITCH_OFF;
         case KC_L3:                         return local_layer->def_layer == _L3 ? U"Neo\r\v" ICON_SWITCH_ON : U"Neo\r\v" ICON_SWITCH_OFF;
         case KC_L4:                         return local_layer->def_layer == _L4 ? U"Wkm\r\v" ICON_SWITCH_ON : U"Wkm\r\v" ICON_SWITCH_OFF;
+        // Doom easter-egg menu item: blank until typing IDDQD arms it
+        // (doom_mode.c; always blank in non-doom builds via the stub).
+        case KC_IDDQD:                      return doom_egg_armed() ? U"IDDQD" : U"";
 
         //Language selection keycodes
         // The flag + selection frame are drawn by render_lang_flag_key(); here we

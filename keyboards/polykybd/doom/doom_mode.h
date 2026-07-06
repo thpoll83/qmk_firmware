@@ -17,6 +17,13 @@
 // True while game mode owns the keycap displays and the borrowed overlay pool.
 bool doom_mode_active(void);
 
+// Easter-egg arming state (field round 44 gate): typing IDDQD no longer
+// starts the game — it ARMS the KC_IDDQD utilities-layer key, which then
+// shows "IDDQD" (to_static_text) and starts the game when pressed. Master-
+// local (the matcher runs there); stays armed until power-off, so the game
+// can be relaunched from the menu without retyping.
+bool doom_egg_armed(void);
+
 // Key-event hook, called first thing in process_record_user. Returns true when
 // the event was consumed: in game mode EVERY key event is swallowed (the host
 // must see no keystrokes while fragging); outside game mode it only feeds the
@@ -254,6 +261,9 @@ uint32_t doom_pack_arena_off(void);           // hdr.arena_off, 0 while unloaded
 #else
 
 static inline bool doom_mode_active(void) { return false; }
+// Never armed without the game compiled in — the KC_IDDQD utilities-layer
+// key then renders blank and stays inert.
+static inline bool doom_egg_armed(void) { return false; }
 static inline bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t col) {
     (void)keycode; (void)pressed; (void)row; (void)col;
     return false;

@@ -46,12 +46,12 @@ mkdir -p "$OUT"
 WHX="$OUT/doom1.whx"
 WHX_URL="https://raw.githubusercontent.com/kilograham/rp2040-doom/rp2040/doom1.whx"
 WHX_SIZE=1800344
-if [[ -f "$WHX" && $(stat -c%s "$WHX") -eq $WHX_SIZE ]]; then
+if [[ -f "$WHX" && $(wc -c < "$WHX") -eq $WHX_SIZE ]]; then
     echo "== 1/3 game data: cached $WHX =="
 else
     echo "== 1/3 game data: downloading doom1.whx =="
     curl -sSL -o "$WHX" "$WHX_URL"
-    [[ $(stat -c%s "$WHX") -eq $WHX_SIZE ]] || { echo "build_all: doom1.whx size $(stat -c%s "$WHX") != $WHX_SIZE" >&2; exit 1; }
+    [[ $(wc -c < "$WHX") -eq $WHX_SIZE ]] || { echo "build_all: doom1.whx size $(wc -c < "$WHX") != $WHX_SIZE" >&2; exit 1; }
 fi
 head -c4 "$WHX" | grep -q IWHX || { echo "build_all: $WHX has no IWHX magic" >&2; exit 1; }
 python3 "$DOOM_DIR/tools/whx2uf2.py" "$WHX" "$OUT/doom1_whx.uf2"

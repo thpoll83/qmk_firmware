@@ -101,7 +101,7 @@ python3 "$PACK_DIR/mkpack.py" \
     --version "$VERSION" --out "$OUT"
 
 echo "== 5/5 budget check =="
-IMG=$(stat -c%s "$STASH/doom_pack_image.bin")
+IMG=$(wc -c < "$STASH/doom_pack_image.bin")
 SLOT=$((0x40000 - 64))
 [[ "$IMG" -le "$SLOT" ]] || { echo "build_pack: image $IMG B overflows the ${SLOT} B slot" >&2; exit 1; }
 STATICS=$(( 0x$("$NM" "$STASH/doom_pack.elf" | awk '$3=="__pack_statics_end__"{print $1}') - RAM_BASE ))

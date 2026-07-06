@@ -13,6 +13,20 @@
 
 #define FW_UP_VERSION_LEN 16
 
+// The flash-staging stream (firmware AND font-pack alike) is carried by ONE split
+// transaction, USER_SYNC_FLASH_STAGE, whose sub-operation is selected by an `op`
+// word right after the CRC32 in every request.  Keeping the four begin/chunk/
+// commit/status transactions folded into one reclaims scarce transaction slots
+// (QMK caps the table at 32).  `op` is a uint32_t, not a byte, so the u32 fields
+// that follow stay 4-byte aligned — the RP2040 (Cortex-M0+) cannot do unaligned
+// word access.  The single slave-side dispatcher is user_sync_flash_stage_handler.
+enum flash_stage_op {
+    FLASH_STAGE_BEGIN  = 0,  // announce size/crc + kick the deferred erase
+    FLASH_STAGE_CHUNK  = 1,  // one FW_UP_CHUNK_SIZE-byte fragment
+    FLASH_STAGE_COMMIT = 2,  // verify staged CRC + finalize (no reboot)
+    FLASH_STAGE_STATUS = 3,  // diagnostic: return fw_staging internal counters
+};
+
 // Announce incoming firmware/font-pack size + expected CRC32 to slave.
 // `target` (fw_target_t) selects which flash region the slave stages into and how
 // it finalizes — 0 = FIRMWARE (also what older senders leave it), 1 = FONTPACK.
@@ -20,6 +34,7 @@
 // from this begin.
 typedef struct _fw_up_begin_sync_t {
     uint32_t crc32;
+    uint32_t op;         // = FLASH_STAGE_BEGIN
     uint32_t image_size;
     uint32_t image_crc;
     uint8_t  target;
@@ -27,12 +42,20 @@ typedef struct _fw_up_begin_sync_t {
 } fw_up_begin_sync_t;
 
 // One chunk of firmware data (FW_UP_CHUNK_SIZE bytes).
-// Total struct = 4+4+56 = 64 bytes < RPC_M2S_BUFFER_SIZE (72).
+// Total struct = 4+4+4+56 = 68 bytes < RPC_M2S_BUFFER_SIZE (72).
 typedef struct _fw_up_chunk_sync_t {
     uint32_t crc32;
+    uint32_t op;         // = FLASH_STAGE_CHUNK
     uint32_t offset;
     uint8_t  data[FW_UP_CHUNK_SIZE];
 } fw_up_chunk_sync_t;
+
+// COMMIT carries no payload beyond the op selector (the slave finalizes whatever
+// it has staged for the target it remembered from BEGIN).
+typedef struct _fw_up_commit_sync_t {
+    uint32_t crc32;
+    uint32_t op;         // = FLASH_STAGE_COMMIT
+} fw_up_commit_sync_t;
 
 // Chunk reply — identity-bound ACK.  Every chunk used to be answered with the
 // same bare 1-byte ACK (poly_sync_reply_t), so a stale reply left over from
@@ -58,7 +81,8 @@ typedef struct _fw_up_chunk_reply_t {
 // observed — distinguishes "slave never received the chunk" from "slave
 // received it and rejected".  See FW_UP_DEBUG_NOTES.md.
 typedef struct _fw_up_status_request_t {
-    uint32_t crc32;       // CRC over the dummy field below
+    uint32_t crc32;       // CRC over the fields below
+    uint32_t op;          // = FLASH_STAGE_STATUS
     uint32_t dummy;       // present so the struct has bytes to checksum
 } fw_up_status_request_t;
 
@@ -102,10 +126,9 @@ typedef struct _poly_reset_sync_t {
 // NULL for a quiet relay). Returns true on slave ACK. See split_fw_up.c.
 bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, const char *log_tag);
 
-void user_sync_fw_up_begin_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
-void user_sync_fw_up_chunk_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
-void user_sync_fw_up_commit_handler (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
-void user_sync_fw_up_status_handler (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+// One slave-side dispatcher for the whole flash-staging stream (BEGIN / CHUNK /
+// COMMIT / STATUS); it reads the `op` word and routes to the per-op logic.
+void user_sync_flash_stage_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 // One transaction (USER_SYNC_RESET) for apply-and-reboot, plain reboot, and the
 // handedness-change reboot; the poly_reset_sync_t `action` byte selects which.
 void user_sync_reset_handler        (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

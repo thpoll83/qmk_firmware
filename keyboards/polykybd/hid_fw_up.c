@@ -289,7 +289,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 if (slave_ack != SYNC_ACK) {
                     slave_ack = send_to_bridge(USER_SYNC_RESET, &apply_msg, sizeof(apply_msg), 20);
                 }
-                uprintf("FW_UP_APPLY: slave apply+reboot ack=0x%02x\n", slave_ack);
+                uprintf("FW_UP_APPLY: slave apply+reboot (USER_SYNC_RESET) ack=0x%02x\n", slave_ack);
                 fw_staging_arm_apply();   // housekeeping → fw_staging_apply_and_reboot()
             }
             return true;

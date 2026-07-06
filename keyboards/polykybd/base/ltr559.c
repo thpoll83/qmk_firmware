@@ -57,10 +57,18 @@
 #    define LTR559_AVG_WINDOW_MS 5000
 #    define LTR559_AVG_SAMPLES (LTR559_AVG_WINDOW_MS / LTR559_POLL_MS)  // 50
 
+// Retry the probe this often while the sensor is absent, so a sensor that is
+// slow to wake at boot, or plugged in later, still gets picked up.
+#    define LTR559_RETRY_MS 1000
+
 static bool             s_present    = false;
 static ltr559_reading_t s_reading;
 static uint16_t         s_avg_lux    = 0;
 static uint32_t         s_last_poll  = 0;
+static uint32_t         s_last_retry = 0;
+
+// Diagnostic snapshot (see ltr559.h). Captured on every probe attempt.
+static ltr559_diag_t    s_diag;
 
 // Simple rolling sum: keep a ring of the last N lux samples so the average
 // tracks a true 5 s window without storing floats.
@@ -106,20 +114,45 @@ static uint16_t ltr559_compute_lux(uint16_t ch0, uint16_t ch1) {
     return (uint16_t)lux;
 }
 
-bool ltr559_init(void) {
-    // i2c_init() is idempotent (guarded in the ChibiOS backend); call it so the
-    // sensor works even if the pointing device isn't the thing that brought the
-    // bus up on this half.
-    i2c_init();
+// Probe the I2C bus for ACKing devices, recording the result for troubleshooting.
+// A 1-byte read is enough — the address-phase ACK is what we care about; the read
+// byte itself is ignored. Short timeout so a floating bus doesn't stall boot.
+static void ltr559_scan_bus(void) {
+    s_diag.scan_count = 0;
+    s_diag.addr_23    = false;
+    s_diag.addr_2a    = false;
+    for (uint8_t addr = 0x08; addr <= 0x77; addr++) {
+        uint8_t dummy;
+        if (i2c_receive((uint8_t)(addr << 1), &dummy, 1, 4) == I2C_STATUS_SUCCESS) {
+            if (addr == LTR559_I2C_ADDR) s_diag.addr_23 = true;
+            if (addr == 0x2A) s_diag.addr_2a = true;   // Cirque Pinnacle trackpad
+            if (s_diag.scan_count < sizeof(s_diag.scan_found)) {
+                s_diag.scan_found[s_diag.scan_count++] = addr;
+            }
+        }
+    }
+}
 
+// Read + verify the ID registers, capturing raw bytes + status into the diag
+// snapshot. Returns true when both IDs match. Cheap (2 register reads) so it is
+// safe to re-run every retry; the heavier bus scan is done once in ltr559_init().
+static bool ltr559_probe(void) {
+    i2c_init();   // idempotent; ensure the bus is up even without the pointing device
     s_present = false;
     memset(&s_reading, 0, sizeof(s_reading));
 
     uint8_t part = 0, manu = 0;
-    if (!ltr559_read(LTR559_REG_PART_ID, &part, 1) || !ltr559_read(LTR559_REG_MANUFAC_ID, &manu, 1)) {
-        return false;
+    i2c_status_t st = i2c_read_register(LTR559_I2C_ADDR_8, LTR559_REG_PART_ID, &part, 1, LTR559_I2C_TIMEOUT);
+    if (st == I2C_STATUS_SUCCESS) {
+        st = i2c_read_register(LTR559_I2C_ADDR_8, LTR559_REG_MANUFAC_ID, &manu, 1, LTR559_I2C_TIMEOUT);
     }
-    if (part != LTR559_PART_ID || manu != LTR559_MANUFAC_ID) {
+    s_diag.init_done = true;
+    s_diag.part_id   = part;
+    s_diag.manuf_id  = manu;
+    s_diag.id_status = st;
+
+    if (st != I2C_STATUS_SUCCESS || part != LTR559_PART_ID || manu != LTR559_MANUFAC_ID) {
+        s_diag.present = false;
         return false;
     }
 
@@ -131,9 +164,22 @@ bool ltr559_init(void) {
     ltr559_write(LTR559_REG_ALS_CONTR, LTR559_ALS_CONTR_CFG);
 
     s_present         = true;
+    s_diag.present    = true;
     s_reading.present = true;
     s_last_poll       = timer_read32();
     return true;
+}
+
+bool ltr559_init(void) {
+    memset(&s_diag, 0, sizeof(s_diag));
+    if (ltr559_probe()) {
+        return true;
+    }
+    // Not found on the first try — take a one-time bus scan so the OLED can show
+    // what is actually on the I2C bus (Cirque at 0x2A? nothing at all?). The
+    // per-second retry in ltr559_task() only re-probes 0x23 (cheap), not this.
+    ltr559_scan_bus();
+    return false;
 }
 
 bool ltr559_available(void) {
@@ -154,6 +200,12 @@ static void ltr559_push_avg(uint16_t lux) {
 
 void ltr559_task(void) {
     if (!s_present) {
+        // Keep retrying: a sensor slow to wake at boot, or plugged in later, is
+        // picked up without a reflash. Also refreshes the scan diag periodically.
+        if (timer_elapsed32(s_last_retry) >= LTR559_RETRY_MS) {
+            s_last_retry = timer_read32();
+            ltr559_probe();
+        }
         return;
     }
     if (timer_elapsed32(s_last_poll) < LTR559_POLL_MS) {
@@ -199,6 +251,12 @@ uint16_t ltr559_avg_lux(void) {
 
 uint16_t ltr559_prox(void) {
     return s_reading.prox;
+}
+
+void ltr559_get_diag(ltr559_diag_t *out) {
+    if (out) {
+        *out = s_diag;
+    }
 }
 
 #endif  // POLYKYBD_LTR559

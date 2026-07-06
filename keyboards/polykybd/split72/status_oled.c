@@ -92,6 +92,40 @@ void oled_update_buffer(void) {
             num16_to_u32_string((char*) buffer, sizeof(buffer), r.ch1);
             kdisp_write_gfx_text(smallFont, 1, 80, 58, buffer);
             return;
+        } else {
+            // Sensor expected on this half but not detected — show I2C bring-up
+            // diagnostics instead of the (useless) sensor panel:
+            //  row1: which 7-bit addresses ACKed on the bus (or "none")
+            //  row2: raw PART_ID / MANUFAC_ID bytes + the I2C read status
+            //  row3: verdict on 0x23 (LTR-559) and 0x2A (Cirque) presence
+            ltr559_diag_t d;
+            ltr559_get_diag(&d);
+
+            kdisp_write_gfx_text(smallFont, 1, 0, 30, U"I2C");
+            if(d.scan_count == 0) {
+                kdisp_write_gfx_text(smallFont, 1, 26, 30, U"none!");
+            } else {
+                int8_t sx = 26;
+                for(uint8_t i = 0; i < d.scan_count && sx <= 108; ++i) {
+                    hex_to_u32_string((char*) buffer, sizeof(buffer), d.scan_found[i]);
+                    kdisp_write_gfx_text(smallFont, 1, sx, 30, buffer);
+                    sx += 20;
+                }
+            }
+
+            kdisp_write_gfx_text(smallFont, 1, 0, 44, U"ID");
+            hex_to_u32_string((char*) buffer, sizeof(buffer), d.part_id);
+            kdisp_write_gfx_text(smallFont, 1, 18, 44, buffer);     // expect 92
+            hex_to_u32_string((char*) buffer, sizeof(buffer), d.manuf_id);
+            kdisp_write_gfx_text(smallFont, 1, 40, 44, buffer);     // expect 05
+            // I2C status of the ID read: O=ok, E=error(NAK), T=timeout
+            kdisp_write_gfx_text(smallFont, 1, 64, 44, U"S");
+            kdisp_write_gfx_text(smallFont, 1, 74, 44,
+                d.id_status == 0 ? U"O" : (d.id_status == -2 ? U"T" : U"E"));
+
+            kdisp_write_gfx_text(smallFont, 1, 0, 58, d.addr_23 ? U"23:ack" : U"23:--");
+            kdisp_write_gfx_text(smallFont, 1, 66, 58, d.addr_2a ? U"2A:ack" : U"2A:--");
+            return;
         }
 #endif
         kdisp_write_gfx_text(smallFont, 1, 0, 30, U"RGB");

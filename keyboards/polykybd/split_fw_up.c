@@ -206,9 +206,16 @@ static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_l
 // The actual flash apply is deferred to housekeeping_task_user() so the ACK
 // can be returned before the split link goes dark during the reboot.
 static void flash_stage_commit(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (out_len != sizeof(poly_sync_reply_t) || !out_data) return;
-    (void)in_len;
-    (void)in_data;
+    if (in_len != sizeof(fw_up_commit_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    // Verify the request CRC (covers the `op` selector) so COMMIT carries the same
+    // size + integrity guard as BEGIN/CHUNK — send_to_bridge always fills a valid
+    // CRC, so this only rejects a corrupted/misrouted frame, which the master retries.
+    const fw_up_commit_sync_t *msg = (const fw_up_commit_sync_t *)in_data;
+    uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
+    if (crc32 != msg->crc32) {
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        return;
+    }
     // Defer the heavy FONTPACK reload out of this transaction callback: the
     // ~50 ms full-body verify+reassemble overran the ~20 ms split-transaction
     // window, so the master timed out and mis-reported COMMIT as a CRC failure
@@ -219,12 +226,12 @@ static void flash_stage_commit(uint8_t in_len, const void* in_data, uint8_t out_
 
 // Single slave-side dispatcher for the flash-staging stream.  Reads the `op`
 // word (immediately after the CRC32) and routes to the per-op handler above.
-// The op is covered by each request's CRC32 (verified inside BEGIN/CHUNK), and
-// every per-op handler guards on its exact in_len/out_len — so a corrupted op
-// that misroutes lands on a size-guard mismatch and the handler returns without
-// a valid ACK, which the master reads as a failure and retries.  (STATUS stays
-// best-effort and un-CRC'd by design; a misroute to it just fails the out_len
-// guard unless the caller genuinely asked for a status-sized reply.)
+// BEGIN / CHUNK / COMMIT each verify the request CRC32 (which covers `op`) and
+// guard their exact in_len/out_len — so a corrupted or misrouted op lands on a
+// size/CRC mismatch and the handler returns without a valid ACK, which the master
+// reads as a failure and retries.  STATUS is intentionally best-effort: un-CRC'd
+// and guarding only on out_len (so it can still answer the deliberately-oversized
+// diagnostic probe) — it is read-only, so a misroute to it is harmless.
 void user_sync_flash_stage_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (!in_data || in_len < 8) return;   // need at least crc32 + op
     uint32_t op;

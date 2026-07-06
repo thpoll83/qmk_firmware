@@ -112,13 +112,36 @@ Beyond the game (typed `IDDQD` → armed menu item → play), the egg doubles as
   `doom_saver_reroll()` rolls a keycap-row offset (0 or 1, so the block starts on
   the first or second row) and an outer-edge column inset (0..3 empty columns on
   this half's outside), then blanks the viewport so keys the block vacated don't
-  retain a burning-in frame. `doom_blit_frame_engine(luma, skip_bottom, map_frame,
-  place_row_off, place_col_inset)` (0/0 = the unchanged game placement). Each half
-  rolls **independently** — burn-in is per-panel, so nothing is synced. Inset 3
-  exists so that, combined with row_off 1, the bottom row occasionally reaches the
-  two **inner thumb keys** (physical "col 8" — matrix cols 6/7 of the bottom row,
-  per `g_led_config`), which the 0..2 range never lights; the upper rows clip
-  against the inner edge at inset 3.
+  retain a burning-in frame. Each half rolls **independently** — burn-in is
+  per-panel, so nothing is synced.
+  - `doom_blit_frame_engine(luma, skip_bottom, map_frame, place_row_off,
+    place_col_inset)`: `place_col_inset` **< 0 = the unchanged game placement**
+    (byte-identical to the old call); **0..3** is the screensaver inset. The count
+    is **edge-relative**: the game reserves a per-role outer MARGIN (1 column as
+    master = HUD, 2 as slave = ESC/weapon pad), so `select_display_placed()`
+    reclaims it with a signed shift `s = inset − margin`, mirrored per half (left
+    outer edge = LOW display cols → `base + s`; right outer edge = HIGH cols →
+    `base − s`). So inset 0 sits flush to the true outer edge and inset 3 leaves 3
+    empty outer columns on **every** half/role — get the margin wrong and the slave
+    ends up a column short (v50/v51 field bug).
+  - ⚠️ **The split72 keycap DISPLAY grid is NOT a rectangle** (learned the hard way,
+    v49–v52; model it offline from `g_led_config` + `split72.c` `key_display[]`
+    before flashing — three revisions shipped blind first). Only the **bottom row
+    (disp_row 4) is a full 8-wide row**; the upper rows (disp_row 0–3) have real
+    OLEDs at **cols 0–6 only** — display **col 7 is a routing PHANTOM** (a `BITMASK`
+    entry exists in `key_display[]` but there is no panel behind it, so writing it
+    shows nothing). The two **inner thumb keys** live only on the bottom matrix row
+    (physical "col 8"): left = disp cols 6/7, right = disp cols 0/1, **stacked
+    vertically** (same x, different y) yet on the *same* matrix row. So a rectangular
+    block can never include a thumb on the upper rows — at max inset the block just
+    reaches the bottom-row thumb while `select_display_placed()` **skips the phantom**
+    (`disp_row < 4 && disp_col == 7`), leaving a couple of missing cells rather than
+    writing a nonexistent display. Two more traps baked into the same function:
+    `LAYOUT_TO_INDEX(row,col)=row*8+col` **wraps** — `disp_col == MATRIX_COLS` folds
+    into the next row's col 0, so the result column is bounded to `[0, MATRIX_COLS−1]`;
+    and the right half carries a `c--` display-index shift on its upper rows (5–8)
+    but **not** its bottom row (9), which `view_to_disp_col()` already bakes into its
+    per-role/per-row tables.
 - **Dismissal**: the FIRST key press exits (`doom_process_record` swallows both
   edges, calls `doom_exit()`), exactly like a desktop screensaver — the host
   sees no keystroke. `doom_exit()` re-arms the idle timer, so the fade→idle

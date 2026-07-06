@@ -297,28 +297,33 @@ static bool     s_egg_armed; // master-local; see the trigger comment above
 
 // IDDQD screensaver anti-burn-in placement: the 5x4 attract block (bottom UI
 // row dropped) is repositioned every DOOM_SAVER_MOVE_MS so the lit keycaps
-// migrate — down 0/1 keycap rows, and 0..3 empty keycap columns on the outer
-// edge. The inset reaches 3 so that, at inset 3 + row_off 1, the block's bottom
-// row lands on the two INNER thumb keys (physical "col 8" — matrix cols 6/7 of
-// the bottom row per g_led_config), which the 0..2 range never touches; the
-// upper rows just clip against the inner edge there. Each half rolls
-// independently (no sync — burn-in is per-panel). Shared statics: whichever
-// half this firmware runs on uses them for its own blit.
+// migrate — down 0/1 keycap rows, and 0..3 empty keycap columns counted from
+// this half's outer edge (select_display_placed() reclaims the game's per-role
+// margin so the count is edge-relative). At inset 3 + row_off 1 the block's
+// bottom row reaches the INNER thumb key (bottom-row-only display; the upper
+// rows have no panel at the inner phantom column, so those cells just drop out —
+// see doom_blit's select_display_placed). Placement CYCLES deterministically
+// (doom_saver_reroll) so the thumb-reaching corner is guaranteed to come around;
+// the two halves run the same cycle a half-step apart (whichever half this
+// firmware is uses these statics for its own blit).
 #define DOOM_SAVER_MOVE_MS 15000
+#define DOOM_SAVER_STEPS   8            // 2 row offsets x 4 insets
 static uint8_t  s_saver_row_off;    // 0 or 1
 static uint8_t  s_saver_col_inset;  // 0, 1, 2, or 3
 static uint32_t s_saver_move_at;
-static uint32_t s_saver_rng;
+static uint8_t  s_saver_step;       // deterministic placement cursor
 
-// Roll a fresh placement and blank the viewport so keys vacated by the move
-// don't keep their last (burning-in) frame. Blit redraws the block at the new
-// spot on the next frame.
+// Advance to the next placement and blank the viewport so keys vacated by the
+// move don't keep their last (burning-in) frame. The placement CYCLES
+// deterministically through all 8 combinations (2 row offsets x 4 insets) rather
+// than a random walk — so every keycap the block can reach, INCLUDING the inner
+// thumb at inset 3 + row_off 1, is covered in turn (even anti-burn-in, and
+// actually verifiable: a random 1/8 chance was easy to keep missing on hardware).
+// The two halves start a half-cycle apart so they don't sit in visual lockstep.
 static void doom_saver_reroll(void) {
-    uint32_t x = s_saver_rng ? s_saver_rng : (timer_read32() | 1u);
-    x ^= x << 13; x ^= x >> 17; x ^= x << 5;   // xorshift32
-    s_saver_rng       = x;
-    s_saver_row_off   = (uint8_t)(x & 1u);         // 0 or 1
-    s_saver_col_inset = (uint8_t)((x >> 1) % 4u);  // 0, 1, 2, or 3
+    s_saver_row_off   = (uint8_t)(s_saver_step & 1u);         // 0 or 1
+    s_saver_col_inset = (uint8_t)((s_saver_step >> 1) & 3u);  // 0, 1, 2, or 3
+    s_saver_step      = (uint8_t)((s_saver_step + 1u) % DOOM_SAVER_STEPS);
     s_saver_move_at   = timer_read32();
     doom_blit_blank_all();
 }
@@ -463,7 +468,10 @@ static bool doom_begin(bool screensaver) {
     set_last_update((int32_t)timer_read32());
     doom_blit_blank_all();
     if (screensaver) {
-        doom_saver_reroll();  // pick the first anti-burn-in placement
+        // Phase the two halves a half-cycle apart so their blocks aren't in
+        // visual lockstep, then pick the first anti-burn-in placement.
+        s_saver_step = is_left_side() ? 0 : (DOOM_SAVER_STEPS / 2);
+        doom_saver_reroll();
     }
     return true;
 }
@@ -689,16 +697,18 @@ bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t co
         return false;
     }
 
-    // Screensaver: the FIRST key press dismisses it — nothing reaches the
-    // game, nothing reaches the host (both edges swallowed; a stray release
-    // after the exit passes through as an unmatched keyup, which hosts
-    // ignore). doom_exit() restores the legends and re-arms the idle timer.
+    // Screensaver: the FIRST key press dismisses it and then PASSES THROUGH —
+    // like the normal idle pulse, whose wake key both lights the displays and
+    // registers the keystroke (display_wakeup() returns accept_keypress; the
+    // DEAD_KEY_ON_WAKEUP swallow flag is off). doom_exit() restores the legends
+    // and re-arms the idle timer, then we return false so the key continues into
+    // normal processing (the later display_wakeup() handles the wake).
     if (s_screensaver) {
         if (pressed) {
             printf("doom: screensaver dismissed\n");
             doom_exit();
         }
-        return true;
+        return false;
     }
 
     // Game mode: swallow EVERYTHING — the host sees no keystrokes. Position

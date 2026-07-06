@@ -163,6 +163,20 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   render pack/flag glyphs too. **Caveat:** the preview models glyph `xOffset/yOffset`
   but NOT the `kdisp` baseline-align shift, so it won't reproduce that bug — reason
   about `fonts[0]` separately.
+- **The per-keycap DISPLAY grid is NOT a rectangle** (split72). Only the **bottom
+  row (display row 4) is a full 8-wide row**; the upper rows (0–3) have panels at
+  **cols 0–6 only** — display **col 7 is a routing phantom** (a `BITMASK` entry
+  exists in `split72.c` `key_display[]` but there is no OLED behind it, so writing
+  it shows nothing). The two inner **thumb keys** per half live *only* on the bottom
+  matrix row (left disp cols 6/7, right 0/1), stacked vertically (same x, different
+  y) yet on the same matrix row — so they can't be part of a rectangular block on
+  the rows above. Also: `LAYOUT_TO_INDEX(row,col)=row*8+col` **wraps** — `col ==
+  MATRIX_COLS` folds into the next row's col 0 (bound `disp_col` to
+  `[0, MATRIX_COLS-1]`); and the right half applies a `c--` display-index shift on
+  its upper rows (5–8) but not its bottom row (9). Model placement offline from
+  `g_led_config` + `key_display[]` before flashing — dug out over the IDDQD
+  screensaver work (three revisions shipped blind first); full write-up in
+  `doom/README.md` § anti-burn-in placement.
 
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.

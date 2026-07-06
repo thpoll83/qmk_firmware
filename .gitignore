@@ -39,6 +39,7 @@ quantum/version.h
 # PolyKybd doom engine pack (build artifact of doom/pack/build_pack.sh,
 # delivered like the .bin/.uf2 — never committed)
 *.plyd
+*.plyx
 
 # DD config at wrong location
 /keyboards/**/keymaps/*/info.json

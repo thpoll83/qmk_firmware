@@ -38,7 +38,7 @@ Downloads `doom1.whx` if missing (cached; + the `doom1_whx.uf2` BOOTSEL
 fallback), builds **both** firmware flavours and the RAM-paired engine pack,
 collects every artifact in `--out` (default: repo root) and prints the
 install steps: flash the pack-flavour `.bin` over HID → `polyctl doom
-install <whx>` (once) → `polyctl doom install-pack <plyd>` → IDDQD.
+install <whx>` (once) → `polyctl doom install-pack <plyx>` → IDDQD.
 
 **Individual pieces:**
 
@@ -49,15 +49,20 @@ qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes
 # Shipping shape (DoomPack): small firmware + separately flashed engine pack
 keyboards/polykybd/doom/pack/build_pack.sh --version N
 #   -> .build/…elf is the pack-flavour firmware (flash its .bin over HID)
-#   -> doom/pack/doom_pack_vN.plyd (install: polyctl doom install-pack <plyd>)
+#   -> doom/pack/doom_pack_vN.plyx (install: polyctl doom install-pack <plyx>)
 ```
 
 Without either flag nothing here is compiled and every hook in
 `poly_keymap.c` / `hid_com.c` collapses to an inline no-op (zero bytes).
 The two flavours and the pack build are documented in
-[`PACK_DESIGN.md`](PACK_DESIGN.md); ⚠️ the pack is RAM-paired with the exact
-firmware build `build_pack.sh` produced alongside it — rebuild + reinstall
-both together (`build_all.sh` guarantees the pairing by construction).
+[`PACK_DESIGN.md`](PACK_DESIGN.md). ⚠️ **RAM pairing**: the pack's engine
+statics are linked at the firmware's overlay-pool address, so a firmware
+change that *moves the pool* (any RAM-layout shift) orphans the old pack —
+the loader detects it (`stale pack, refuse` on the console, egg falls back
+to the fire demo) and a `build_pack.sh` re-run + `install-pack` re-pairs.
+Firmware changes that leave RAM untouched keep the old pack working; since
+that's hard to predict, the safe habit is one `build_all.sh` run per
+firmware change (the pairing is then guaranteed by construction).
 
 ## What works today (milestone 0: pipeline proof — HISTORICAL)
 
@@ -208,15 +213,15 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
-- **Round 43 → v44 + doom_pack_v1.plyd (2026-07-05, UNTESTED): the DoomPack.**
+- **Round 43 → v44 + doom_pack_v1.plyx (2026-07-05, UNTESTED): the DoomPack.**
   First hardware round of the executable-pack split (PACK_DESIGN.md, P1–P4
   all compile-verified): v44 is the `POLYKYBD_DOOM_PACK=yes` firmware
   (**398,612 B** — 205 KB smaller than the monolith; loader + mode machinery
-  only, engine expected in flash) and `doom_pack_v1.plyd` is the engine pack
+  only, engine expected in flash) and `doom_pack_v1.plyx` is the engine pack
   (211,384 B), RAM-paired to exactly this build (verified: hdr.ram_base ==
   the v44 pool address). Includes v43's viewport contrast. Test flow:
   flash `polykybd_doom_v44.bin` over HID as usual, then
-  `polyctl doom install-pack doom_pack_v1.plyd` (needs the updated host from
+  `polyctl doom install-pack doom_pack_v1.plyx` (needs the updated host from
   this branch; WHX stays installed — different slot), then IDDQD. Expected
   console line on entry: `doom: pack v1 loaded (211320 B, arena_off 24396)`.
   Without the pack (or with a stale one) the egg logs why and runs the fire

@@ -4,7 +4,7 @@
 Usage:
     mkpack.py --elf doom_pack.elf --bin doom_pack_image.bin \
               --ram-base 0x20002604 --ram-size 226800 --version 1 \
-              --out doom_pack_v1.plyd
+              --out doom_pack_v1.plyx
 
 The .bin is the objcopy'd image (text + rodata + data initializers at their
 flash LMAs); entry/arena offsets come from the .elf symbol table. The CRC is

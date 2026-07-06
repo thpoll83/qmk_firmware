@@ -4,9 +4,9 @@
 # Re-links the UNMODIFIED engine objects of a monolithic POLYKYBD_DOOM build
 # at the DOOMPACK slot address, pairs the pack's RAM with the exact
 # POLYKYBD_DOOM_PACK firmware build it will ship with, and emits the flashable
-# .plyd (PlyX header + image).
+# .plyx (PlyX header + image).
 #
-#   ./build_pack.sh [--version N] [--out doom_pack_vN.plyd]
+#   ./build_pack.sh [--version N] [--out doom_pack_vN.plyx]
 #
 # Runs both firmware builds itself (they share .build/, so ordering matters:
 # the monolith's objects are stashed before the pack-flavour build wipes
@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
         *) echo "usage: $0 [--version N] [--out FILE]" >&2; exit 2 ;;
     esac
 done
-[[ -n "$OUT" ]] || OUT="$PACK_DIR/doom_pack_v$VERSION.plyd"
+[[ -n "$OUT" ]] || OUT="$PACK_DIR/doom_pack_v$VERSION.plyx"
 
 QMK=${QMK:-qmk}
 CC=arm-none-eabi-gcc

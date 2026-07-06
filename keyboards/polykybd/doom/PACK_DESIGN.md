@@ -18,7 +18,7 @@ same engine objects re-linked at the pack address. Measured results:
 | monolithic doom (`POLYKYBD_DOOM=yes`) | 603,972 B | — |
 | **pack-flavour firmware** (`POLYKYBD_DOOM_PACK=yes`) | **398,580 B** | **−205 KB** |
 | normal (no doom) | 384,460 B | −219 KB |
-| `doom_pack_v1.plyd` (engine pack, flashed once) | 211,384 B | fits the 256 KB slot with ~50 KB headroom; engine statics 24,396 B at the pool front |
+| `doom_pack_v1.plyx` (engine pack, flashed once) | 211,384 B | fits the 256 KB slot with ~50 KB headroom; engine statics 24,396 B at the pool front |
 
 ## 1. Flash map carve-out
 
@@ -150,7 +150,7 @@ learns `--pack`.
 ```
 qmk compile ... -e POLYKYBD_DOOM=yes          # dev harness (unchanged), also produces the engine .o pool
 doom/pack/build_pack.sh <firmware.elf>        # re-links engine .o + qmk_shim(+pack crt0) at 0x107C0000+hdr,
-                                              #   RAM base extracted from <firmware.elf>; emits doom_pack_vN.plyd
+                                              #   RAM base extracted from <firmware.elf>; emits doom_pack_vN.plyx
 qmk compile ... -e POLYKYBD_DOOM_PACK=yes     # shipping-shape firmware: mode machinery + blitter + loader,
                                               #   no engine objects; doom_shim_* dispatch through the table
 ```
@@ -166,7 +166,7 @@ qmk compile ... -e POLYKYBD_DOOM_PACK=yes     # shipping-shape firmware: mode ma
   table dispatch), engine compiled out. Image size drops to ~normal+mode
   machinery.
 - **P3** — pack side: pack linker script + crt0 + `build_pack.sh` +
-  `mkpack.py`; the `.plyd` artifact links with zero undefined symbols
+  `mkpack.py`; the `.plyx` artifact links with zero undefined symbols
   outside `doom_fw_api_t`.
 - **P4** — host: `DOOMPACK_BUNDLE_ID` in `hid_fontpack.py`, `polyctl doom
   install --pack`; hardware bring-up (trigger → loader → attract on both

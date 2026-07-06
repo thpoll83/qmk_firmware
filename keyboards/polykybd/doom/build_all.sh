@@ -7,15 +7,15 @@
 #   doom1.whx                    game data (downloaded once, cached; PROVENANCE.md)
 #   doom1_whx.uf2                BOOTSEL-drive fallback install of the same data
 #   polykybd_doom_<tag>.bin/.uf2 the PACK-FLAVOUR firmware (POLYKYBD_DOOM_PACK)
-#   doom_pack_vN.plyd            the engine pack, RAM-PAIRED to that firmware
+#   doom_pack_vN.plyx            the engine pack, RAM-PAIRED to that firmware
 #   polykybd_doom_<tag>_monolith.bin/.uf2  the dev-harness monolith (engine in-image)
 #
 # Install order (fresh keyboard):
 #   1. flash polykybd_doom_<tag>.bin over HID (PolyKybdHost firmware updater)
 #   2. polyctl doom install <out>/doom1.whx          (once; survives fw updates)
-#   3. polyctl doom install-pack <out>/doom_pack_vN.plyd
+#   3. polyctl doom install-pack <out>/doom_pack_vN.plyx
 #   4. type IDDQD
-# ⚠️ The .plyd only works with the firmware built in the SAME run (the loader
+# ⚠️ The .plyx only works with the firmware built in the SAME run (the loader
 # verifies the RAM pairing and refuses otherwise) — after any firmware change,
 # re-run this script and re-do steps 1 + 3. Step 2 never needs repeating.
 #
@@ -57,7 +57,7 @@ python3 "$DOOM_DIR/tools/whx2uf2.py" "$WHX" "$OUT/doom1_whx.uf2"
 
 # ── 2. firmware (both flavours) + the RAM-paired engine pack ─────────────────
 echo "== 2/3 firmware + engine pack (pack/build_pack.sh) =="
-"$DOOM_DIR/pack/build_pack.sh" --version "$VERSION" --out "$OUT/doom_pack_v$VERSION.plyd"
+"$DOOM_DIR/pack/build_pack.sh" --version "$VERSION" --out "$OUT/doom_pack_v$VERSION.plyx"
 
 # ── 3. collect ───────────────────────────────────────────────────────────────
 echo "== 3/3 collecting artifacts =="
@@ -69,11 +69,11 @@ cp "$STASH/monolith.uf2"                              "$OUT/polykybd_doom_${TAG}
 
 echo
 echo "build_all: OK — artifacts in $OUT:"
-(cd "$OUT" && ls -la "doom1.whx" "doom1_whx.uf2" "doom_pack_v$VERSION.plyd" \
+(cd "$OUT" && ls -la "doom1.whx" "doom1_whx.uf2" "doom_pack_v$VERSION.plyx" \
     "polykybd_doom_$TAG.bin" "polykybd_doom_$TAG.uf2" \
     "polykybd_doom_${TAG}_monolith.bin" "polykybd_doom_${TAG}_monolith.uf2")
 echo
 echo "install: 1) flash polykybd_doom_$TAG.bin over HID"
 echo "         2) polyctl doom install $OUT/doom1.whx            (once)"
-echo "         3) polyctl doom install-pack $OUT/doom_pack_v$VERSION.plyd"
+echo "         3) polyctl doom install-pack $OUT/doom_pack_v$VERSION.plyx"
 echo "         4) IDDQD"

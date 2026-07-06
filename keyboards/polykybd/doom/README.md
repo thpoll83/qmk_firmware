@@ -28,6 +28,20 @@ same objects at `0x10600000`.
 
 ## Building
 
+**One-shot (everything):**
+
+```bash
+keyboards/polykybd/doom/build_all.sh [--version N] [--tag NAME] [--out DIR]
+```
+
+Downloads `doom1.whx` if missing (cached; + the `doom1_whx.uf2` BOOTSEL
+fallback), builds **both** firmware flavours and the RAM-paired engine pack,
+collects every artifact in `--out` (default: repo root) and prints the
+install steps: flash the pack-flavour `.bin` over HID → `polyctl doom
+install <whx>` (once) → `polyctl doom install-pack <plyd>` → IDDQD.
+
+**Individual pieces:**
+
 ```bash
 # Dev harness (monolith: engine linked into the image — full symbols, one flash)
 qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes
@@ -43,7 +57,7 @@ Without either flag nothing here is compiled and every hook in
 The two flavours and the pack build are documented in
 [`PACK_DESIGN.md`](PACK_DESIGN.md); ⚠️ the pack is RAM-paired with the exact
 firmware build `build_pack.sh` produced alongside it — rebuild + reinstall
-both together.
+both together (`build_all.sh` guarantees the pairing by construction).
 
 ## What works today (milestone 0: pipeline proof — HISTORICAL)
 

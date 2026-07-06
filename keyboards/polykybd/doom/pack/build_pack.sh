@@ -43,6 +43,9 @@ mkdir -p "$STASH/obj"
 
 echo "== 1/5 monolithic build (engine objects) =="
 (cd "$REPO" && "$QMK" compile -kb "$KB" -km "$KM" -e POLYKYBD_DOOM=yes >/dev/null)
+# Keep the monolith (dev-harness) artifacts — step 2's build overwrites them.
+cp "$BUILD/polykybd_split72_default.elf" "$STASH/monolith.elf"
+cp "$BUILD/polykybd_split72_default.uf2" "$STASH/monolith.uf2"
 
 # The pack payload: every engine object + the platform shim + the printf and
 # pico_sync objects the monolith links them against (providers verified from

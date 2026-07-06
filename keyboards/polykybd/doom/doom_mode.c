@@ -20,6 +20,7 @@
 #include "doom_playpal_luma.h"
 
 #include "keycode_helper.h"    // KC_IDDQD (the armed utilities-layer menu item)
+#include "layers.h"            // _UL (the egg menu position is utilities-layer-gated)
 #include "split_sync.h"        // sync_succeeded (mirror bridge sends)
 #include "polymod_crc32.h"     // crc32_1byte (mirror message framing)
 #include "transactions.h"      // USER_SYNC_OVERLAY_MAP_DATA (mirror rides it)
@@ -298,6 +299,26 @@ bool doom_egg_armed(void) {
     return s_egg_armed;
 }
 
+// The armed menu item is a matrix-POSITION alias, not (only) a keymap entry:
+// DYNAMIC_KEYMAP means the runtime keymap lives in EEPROM, so the compiled
+// keymaps[] KC_IDDQD never reaches an already-provisioned keyboard (field
+// round 46 — key stayed blank and inert; same class the control pad solved
+// in round 23). While armed and the utilities layer is active, the KC_NO
+// that EEPROM delivers at the menu position — [1,5] left (next to Break) /
+// [6,6] right (next to the media keys) — is rewritten to KC_IDDQD for both
+// input (doom_process_record) and rendering (update_displays). A fresh
+// EEPROM seeds KC_IDDQD from keymaps[] directly and passes through here
+// unchanged. Master-side only: the matcher/armed state live there, and the
+// legend renders on whichever half is the master.
+uint16_t doom_egg_menu_keycode(uint16_t keycode, uint8_t row, uint8_t col) {
+    if (keycode == KC_NO && s_egg_armed && is_usb_host_side() &&
+        get_highest_layer(layer_state) == _UL &&
+        ((row == 1 && col == 5) || (row == 6 && col == 6))) {
+        return KC_IDDQD;
+    }
+    return keycode;
+}
+
 #ifdef POLYKYBD_DOOM_PACK
 // Pack flavour: the statics/arena split comes from the loaded pack's header
 // (0 while unloaded — the fire demo then owns the pool from its base, which
@@ -554,11 +575,14 @@ const uint8_t *doom_weapon_icon(uint8_t slot, uint8_t *w, uint8_t *h) {
 
 bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t col) {
     if (!s_active) {
-        // The armed menu item (KC_IDDQD on the utilities layer): starts the
-        // game once IDDQD has been typed; inert (and rendered blank) before
-        // that. Swallow both edges always — it is never a real HID key. The
-        // slave half's copy of the key works too (the master processes the
-        // whole matrix) but stays blank (armed state is master-local).
+        // The armed menu item (utilities layer): starts the game once IDDQD
+        // has been typed; inert (and rendered blank) before that. Position
+        // alias first — an EEPROM dynamic keymap delivers KC_NO here (see
+        // doom_egg_menu_keycode). Swallow both edges always — it is never a
+        // real HID key. The slave half's copy of the position works too
+        // (the master processes the whole matrix) but stays blank (armed
+        // state is master-local).
+        keycode = doom_egg_menu_keycode(keycode, row, col);
         if (keycode == KC_IDDQD) {
             if (pressed && s_egg_armed && is_usb_host_side()) {
                 doom_enter();

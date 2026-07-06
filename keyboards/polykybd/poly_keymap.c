@@ -1784,6 +1784,10 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     keycode = display_keycode_at(local_layer, r + offset, c);
+                    // Doom egg menu item: rewrites the EEPROM keymap's KC_NO at
+                    // the armed utilities-layer position (see doom_mode.h;
+                    // pass-through no-op in non-doom builds and while unarmed).
+                    keycode = doom_egg_menu_keycode(keycode, (uint8_t)(r + offset), c);
                     kdisp_enable(true);
                     kdisp_set_contrast((uint8_t)(local_state->contrast-1));
                     // Doom control pad (this only ever renders on the SLAVE

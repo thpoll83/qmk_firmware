@@ -212,6 +212,16 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
 
 ### Hardware-test log
 
+- **Round 46 → v46 (2026-07-06): IDDQD menu key — position alias (dynamic-keymap
+  fix).** Rounds 45+46 on v45: the utilities-layer IDDQD key stayed blank AND
+  inert even force-armed (v46 probe) — root cause field-confirmed by the user
+  (an EEPROM erase fixed it): **DYNAMIC_KEYMAP** — the runtime keymap lives in
+  EEPROM, so the compiled keymaps[] KC_IDDQD never reaches an
+  already-provisioned keyboard (same class the control pad solved in round 23).
+  Durable fix: `doom_egg_menu_keycode()` rewrites the EEPROM's KC_NO at the
+  menu position ([1,5] left / [6,6] right, utilities layer, armed only) to
+  KC_IDDQD for both input and rendering — no EEPROM wipe needed on any board.
+  The keymaps[] entry stays for fresh EEPROMs + VIA visibility.
 - **Round 45 → v45 (2026-07-06, UNTESTED): pinned pool + halved contrast +
   the IDDQD menu gate.** Round 44 on v44: **"I just tested and it works"**
   — the DoomPack chain (pack-flavour firmware + .plyx + WHX) confirmed on

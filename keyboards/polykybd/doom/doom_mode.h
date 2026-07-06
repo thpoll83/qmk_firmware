@@ -24,6 +24,13 @@ bool doom_mode_active(void);
 // can be relaunched from the menu without retyping.
 bool doom_egg_armed(void);
 
+// Position alias for the armed menu item (field round 46): the EEPROM
+// dynamic keymap delivers KC_NO at the menu position on already-provisioned
+// keyboards (the compiled keymaps[] KC_IDDQD only seeds a fresh EEPROM), so
+// while armed + utilities layer active, KC_NO at [1,5] / [6,6] is rewritten
+// to KC_IDDQD. Applied by both doom_process_record and update_displays.
+uint16_t doom_egg_menu_keycode(uint16_t keycode, uint8_t row, uint8_t col);
+
 // Key-event hook, called first thing in process_record_user. Returns true when
 // the event was consumed: in game mode EVERY key event is swallowed (the host
 // must see no keystrokes while fragging); outside game mode it only feeds the
@@ -262,8 +269,13 @@ uint32_t doom_pack_arena_off(void);           // hdr.arena_off, 0 while unloaded
 
 static inline bool doom_mode_active(void) { return false; }
 // Never armed without the game compiled in — the KC_IDDQD utilities-layer
-// key then renders blank and stays inert.
+// key then renders blank and stays inert, and the position alias passes
+// every keycode through unchanged.
 static inline bool doom_egg_armed(void) { return false; }
+static inline uint16_t doom_egg_menu_keycode(uint16_t keycode, uint8_t row, uint8_t col) {
+    (void)row; (void)col;
+    return keycode;
+}
 static inline bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t col) {
     (void)keycode; (void)pressed; (void)row; (void)col;
     return false;

@@ -58,6 +58,7 @@
 #include "base/fonts/lang_label_font.h"   // tiny (6px) label font under the flags
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "base/multicore/core1.h"
+#include "base/ltr559.h"
 #include "polymod_crc32.h"
 
 #include "state.h"
@@ -567,6 +568,87 @@ void poly_prepare_for_flash(void) {
     sync_and_refresh_displays();
 }
 
+#ifdef POLYKYBD_LTR559_DRIVE
+// --- LTR-559 auto-brightness + idle-inhibit (opt-in; needs hardware tuning) -----
+//
+// The sensor is just another SOURCE feeding the existing auto-brightness path:
+// the 5 s-average lux is mapped to a contrast and pushed through
+// set_auto_brightness_value() — exactly the volatile/host-auto channel the PC
+// host uses — so the resulting contrast reaches the slave over the SAME
+// poly_sync_t brightness transport that's already there. No new split
+// transaction (the table is full anyway; see config.h).
+//
+// Because brightness and idle are master-authoritative, the sensor can only
+// DRIVE from the master. The expansion port (sensor) is on the RIGHT half, so
+// driving is active when the USB/master half is the right half (master reads
+// locally, syncs contrast to the slave). With USB on the left, the sensor is on
+// the slave: its readings still show on the slave's status OLED, but there is no
+// existing master-bound channel to push them, so driving stays idle there.
+// All tunables below are first-cut guesses to be dialled in against the OLED.
+#    define LTR559_NEAR_THRESHOLD 120   // proximity (0..2047) that counts as "close"
+#    define LTR559_DRIVE_MS 500         // how often the master samples + applies
+#    define LTR559_LUX_FULL_REF 800     // avg lux mapped to FULL_BRIGHT (ceiling)
+
+// Master-side: mirror the HID cmd-15 stop-idle path to force the displays awake.
+static void poly_force_wake(void) {
+    poly_sync_t* local_state = access_local_state();
+    if ((local_state->flags & (STATUS_DISP_ON | DISP_IDLE)) == 0) {
+        suspend_wakeup_init_kb();   // fully suspended -> full wake
+    } else if (local_state->flags & DISP_IDLE) {
+        local_state->contrast = get_active_brightness();
+        local_state->flags &= ~((uint8_t)DISP_IDLE);
+        local_state->flags |= STATUS_DISP_ON;
+        reset_idle_jitter();
+        request_disp_refresh();
+        update_performed();
+    }
+}
+
+static uint8_t lux_to_contrast(uint16_t lux) {
+    if (lux >= LTR559_LUX_FULL_REF) {
+        return FULL_BRIGHT;
+    }
+    uint32_t c = MIN_BRIGHT + ((uint32_t)lux * (FULL_BRIGHT - MIN_BRIGHT)) / LTR559_LUX_FULL_REF;
+    if (c < MIN_BRIGHT) c = MIN_BRIGHT;
+    if (c > FULL_BRIGHT) c = FULL_BRIGHT;
+    return (uint8_t)c;
+}
+
+static void poly_ltr559_drive(void) {
+    static uint32_t last    = 0;
+    static bool     engaged = false;
+    if (!is_usb_host_side()) {
+        return;   // decisions are master-only (the slave just serves reads)
+    }
+    if (timer_elapsed32(last) < LTR559_DRIVE_MS) {
+        return;
+    }
+    last = timer_read32();
+
+    // Drive only from the master half that physically holds the sensor (right).
+    // The resulting contrast then syncs to the slave via the existing transport.
+    if (!is_right_side() || !ltr559_available()) {
+        return;
+    }
+    uint16_t lux  = ltr559_avg_lux();
+    uint16_t prox = ltr559_prox();
+
+    // Auto-brightness from the 5 s average lux, via the same volatile/host-auto
+    // path the host uses (keeps the manual brightness untouched).
+    if (!engaged) {
+        set_brightness_auto_mode(true);
+        engaged = true;
+    }
+    set_auto_brightness_value(lux_to_contrast(lux));
+
+    // Proximity: something is close -> defer idle (and wake if already idle).
+    if (prox > LTR559_NEAR_THRESHOLD) {
+        poly_force_wake();
+        update_performed();
+    }
+}
+#endif  // POLYKYBD_LTR559_DRIVE
+
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
@@ -606,6 +688,16 @@ void housekeeping_task_user(void) {
         // idle/fade pipeline below never fights the game blitter.
         doom_tick();
         sync_and_refresh_displays();
+#ifdef POLYKYBD_LTR559
+        // Poll the expansion-port light/proximity sensor on the half it lives on
+        // (right). Internally throttled + non-blocking; a NAK just no-ops.
+        if (is_right_side()) {
+            ltr559_task();
+        }
+#    ifdef POLYKYBD_LTR559_DRIVE
+        poly_ltr559_drive();   // master-side auto-brightness + idle-inhibit
+#    endif
+#endif
     }
     if(is_idle_tracking()) {
         //turn off displays
@@ -2673,6 +2765,17 @@ void keyboard_post_init_user(void) {
     //set these values, they will never change
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
+
+#ifdef POLYKYBD_LTR559
+    // The LTR-559 sits on the expansion port, which is on the RIGHT half (same
+    // connector as the Cirque trackpad). Probe it there only; a missing sensor
+    // just fails the probe and stays disabled.
+    if (is_right_side()) {
+        if (ltr559_init()) {
+            uprint("LTR-559 sensor detected.\n");
+        }
+    }
+#endif
 
 
     //encoder pins

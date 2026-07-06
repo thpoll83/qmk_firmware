@@ -8,6 +8,7 @@
 #include "../side.h"
 #include "../base/com.h"
 #include "../base/disp_array.h"
+#include "../base/ltr559.h"
 #include "../base/text_helper.h"
 #include "../base/fonts/NotoSans_Regular_Base_11pt.h"
 #include "../base/fonts/NotoSans_Medium_Base_8pt.h"
@@ -56,6 +57,43 @@ void oled_update_buffer(void) {
     }
 
     if(is_right_side()) {
+#ifdef POLYKYBD_LTR559
+        // LTR-559 test readout (the sensor lives on this half's expansion port).
+        // Replaces the RGB panel while a sensor is present so all of its values
+        // are visible at a glance: raw ALS channels, computed + 5 s-avg lux, and
+        // the relative proximity (with a SAT flag when the PS return saturates).
+        if(ltr559_available()) {
+            ltr559_reading_t r;
+            ltr559_get_reading(&r);
+
+            kdisp_write_gfx_text(smallFont, 1, 0, 30, U"LUX");
+            num16_to_u32_string((char*) buffer, sizeof(buffer), r.lux);
+            kdisp_write_gfx_text(smallFont, 1, 26, 30, buffer);
+            kdisp_write_gfx_text(smallFont, 1, 68, 30, U"~");
+            num16_to_u32_string((char*) buffer, sizeof(buffer), ltr559_avg_lux());
+            kdisp_write_gfx_text(smallFont, 1, 78, 30, buffer);
+
+            kdisp_write_gfx_text(smallFont, 1, 0, 44, U"PRX");
+            num16_to_u32_string((char*) buffer, sizeof(buffer), r.prox);
+            kdisp_write_gfx_text(smallFont, 1, 26, 44, buffer);
+            // Active per-keycap brightness (what the sensor maps lux to) — the
+            // live feedback for tuning the lux->contrast curve. "!" = PS saturated.
+            kdisp_write_gfx_text(smallFont, 1, 66, 44, U"B");
+            num_to_u32_string((char*) buffer, sizeof(buffer), get_local_state()->contrast);
+            kdisp_write_gfx_text(smallFont, 1, 76, 44, buffer);
+            if(r.prox_sat) {
+                kdisp_write_gfx_text(smallFont, 1, 104, 44, U"!");
+            }
+
+            kdisp_write_gfx_text(smallFont, 1, 0, 58, U"C0");
+            num16_to_u32_string((char*) buffer, sizeof(buffer), r.ch0);
+            kdisp_write_gfx_text(smallFont, 1, 18, 58, buffer);
+            kdisp_write_gfx_text(smallFont, 1, 62, 58, U"C1");
+            num16_to_u32_string((char*) buffer, sizeof(buffer), r.ch1);
+            kdisp_write_gfx_text(smallFont, 1, 80, 58, buffer);
+            return;
+        }
+#endif
         kdisp_write_gfx_text(smallFont, 1, 0, 30, U"RGB");
 
         if(!rgb_matrix_is_enabled()) {

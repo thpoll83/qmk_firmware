@@ -23,6 +23,23 @@ WS2812_DRIVER = vendor
 POINTING_DEVICE_ENABLE = yes
 POINTING_DEVICE_DRIVER = cirque_pinnacle_i2c #POINTING_DEVICE_DRIVER = pimoroni_trackball
 
+# Optional LTR-559 light+proximity sensor on the expansion port (shares the
+# Cirque I2C0 bus, addr 0x23). POLYKYBD_LTR559 builds the driver + status-OLED
+# readout (harmless if no sensor is fitted — the probe just fails and disables
+# itself). POLYKYBD_LTR559_DRIVE additionally lets the sensor drive per-keycap
+# brightness (5 s avg lux) and inhibit idle on proximity — needs hardware
+# bring-up, off by default.
+POLYKYBD_LTR559 = yes
+POLYKYBD_LTR559_DRIVE = yes
+
+ifeq ($(strip $(POLYKYBD_LTR559)), yes)
+    SRC += base/ltr559.c
+    OPT_DEFS += -DPOLYKYBD_LTR559
+    ifeq ($(strip $(POLYKYBD_LTR559_DRIVE)), yes)
+        OPT_DEFS += -DPOLYKYBD_LTR559_DRIVE
+    endif
+endif
+
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes
 

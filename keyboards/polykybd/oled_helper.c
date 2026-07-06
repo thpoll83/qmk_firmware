@@ -34,6 +34,24 @@ void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
     digits_to_u32_string(buffer, buffer_len, value, 10);
 }
 
+// 16-bit decimal (0..65535). digits_to_u32_string only reaches 3 digits, so the
+// wider sensor values (raw ALS channels, lux) need their own formatter.
+void num16_to_u32_string(char* buffer, uint8_t buffer_len, uint16_t value) {
+    uint32_t* out = (uint32_t*)buffer;
+    uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
+    uint32_t  digits[5];
+    uint8_t   n = 0;
+    do {
+        digits[n++] = U'0' + (value % 10);
+        value /= 10;
+    } while (value && n < 5);
+    uint8_t i = 0;
+    while (n && i < cap) {
+        out[i++] = digits[--n];
+    }
+    if (i < cap) out[i] = 0;
+}
+
 // Widen an ASCII C string into the 32-bit codepoint string the kdisp text pipeline
 // expects (kdisp_write_gfx_text takes const uint32_t*). NUL-terminated, never
 // overruns `buffer_len`. Used for the font-pack bundle name on the flash screen.

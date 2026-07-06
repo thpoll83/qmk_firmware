@@ -8,6 +8,8 @@
 
 /* Utility: encode an 8-bit value as digit glyphs into a char32 (UTF-32) buffer */
 void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);
+/* Same, for a 16-bit value (0..65535) — used by the LTR-559 sensor readout */
+void num16_to_u32_string(char* buffer, uint8_t buffer_len, uint16_t value);
 void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);
 /* Widen an ASCII string into a UTF-32 buffer for the kdisp text pipeline */
 void ascii_to_u32_string(char* buffer, uint8_t buffer_len, const char* s);

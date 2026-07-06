@@ -34,16 +34,16 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
 // the compose early: its vpatch bookkeeping fully resets per frame.
 // map_frame draws a 2 px border around the blitted block (the slave's
 // automap view, field round 17).
-// `place_row_off` (0/1) shifts the whole block DOWN by that many keycap rows and
-// `place_col_inset` (SIGNED) shifts it along the display columns: 0 = game
-// placement (byte-identical to the old call), NEGATIVE reclaims the HUD's outer
-// column so the block sits flush to this half's true outer edge, POSITIVE insets
-// it. The IDDQD attract screensaver rolls row_off 0/1 and inset -1..+2 (i.e. 0..3
-// empty columns counted from the outer edge) so its lit keycaps migrate
-// (anti-burn-in); at the max inset + row_off 1 the bottom row reaches the two
-// inner thumb keys (matrix cols 6/7). The blitter BOUNDS the result column to
-// [0, MATRIX_COLS-1] so an edge cell can never wrap into the next keycap row.
-// Vacated cells are NOT cleared here (blank the viewport when the placement changes).
+// `place_col_inset` < 0 = game placement (byte-identical to the old call). 0..3
+// is the IDDQD attract screensaver's anti-burn-in placement: `place_row_off` (0/1)
+// shifts the block DOWN that many keycap rows, and the inset counts empty keycap
+// columns from this half's TRUE outer edge (0 = flush, 3 = three empty outer
+// columns) — the blitter reclaims the game's per-role HUD/pad margin so the count
+// is edge-relative on every half/role. At inset 3 + row_off 1 the bottom row
+// reaches the inner thumb key (left matrix col 6, right matrix col 1). The result
+// column is BOUNDED to [0, MATRIX_COLS-1] so an edge cell can never wrap into the
+// next keycap row. Vacated cells are NOT cleared here (blank the viewport when the
+// placement changes).
 void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool map_frame,
                             uint8_t place_row_off, int8_t place_col_inset);
 

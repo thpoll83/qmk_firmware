@@ -17,7 +17,7 @@
 // True while game mode owns the keycap displays and the borrowed overlay pool.
 bool doom_mode_active(void);
 
-// Attract screensaver (IDLE_STYLE_DOOM): the idle pipeline calls
+// Attract screensaver (IDLE_STYLE_IDDQD): the idle pipeline calls
 // doom_screensaver_start() instead of entering the pulse — the game comes up
 // in its attract demo, chrome-free (no pad/ESC/HUD legends; poly_sync_t
 // doom_ctl carries 2 so the slave strips its chrome too), and the FIRST key
@@ -284,7 +284,7 @@ uint32_t doom_pack_arena_off(void);           // hdr.arena_off, 0 while unloaded
 #else
 
 static inline bool doom_mode_active(void) { return false; }
-// No screensaver without the game compiled in — IDLE_STYLE_DOOM then falls
+// No screensaver without the game compiled in — IDLE_STYLE_IDDQD then falls
 // back to the pulse (the idle pipeline checks the start's return value).
 static inline bool doom_screensaver_start(void) { return false; }
 static inline bool doom_mode_screensaver(void) { return false; }

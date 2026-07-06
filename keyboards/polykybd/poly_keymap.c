@@ -608,7 +608,7 @@ void housekeeping_task_user(void) {
 
                 //transition to pulsing mode
                 if(brightness<=MIN_BRIGHT) {
-                    if (get_idle_style() == IDLE_STYLE_DOOM && doom_screensaver_start()) {
+                    if (get_idle_style() == IDLE_STYLE_IDDQD && doom_screensaver_start()) {
                         // Doom attract screensaver instead of the pulse: the demo
                         // owns the keycaps at the user brightness — no DISP_IDLE,
                         // and IDLE_TRANSITION stays dropped (cleared above), which

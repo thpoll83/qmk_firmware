@@ -91,7 +91,7 @@ console, egg falls back to the fire demo).
   as a fresh boot), `request_disp_refresh()` redraws the normal legends; the
   host repopulates overlays on its next push (app switch / reconnect).
 
-## Attract screensaver (3rd idle style, `IDLE_STYLE_DOOM = 2`)
+## Attract screensaver (3rd idle style, `IDLE_STYLE_IDDQD = 2`)
 
 Beyond the game (typed `IDDQD` → armed menu item → play), the egg doubles as a
 **screensaver**: a third anti-burn-in idle style alongside `PULSE`/`JITTER`

@@ -18,7 +18,7 @@
 enum poly_idle_style {
     IDLE_STYLE_PULSE  = 0,
     IDLE_STYLE_JITTER = 1,
-    IDLE_STYLE_DOOM   = 2,
+    IDLE_STYLE_IDDQD  = 2,   // doom attract-demo screensaver (host: IdleStyle.IDDQD)
     IDLE_STYLE_COUNT
 };
 

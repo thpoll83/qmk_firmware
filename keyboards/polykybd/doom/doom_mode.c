@@ -897,7 +897,7 @@ static void doom_frame_pump(bool with_hud) {
             // no offset (0/0 is byte-identical to the old call).
             doom_blit_frame_engine(doom_view_luma(), s_screensaver, false,
                                    s_screensaver ? s_saver_row_off : 0,
-                                   s_screensaver ? s_saver_col_inset : 0);
+                                   s_screensaver ? (int8_t)s_saver_col_inset - 1 : 0);
             doom_shim_release_frame();
             if (with_hud) {
                 doom_hud_tick();
@@ -1239,7 +1239,7 @@ static void doom_slave_tick(void) {
                                    saver ? true : !s_slave_blit_bottom,
                                    doom_shim_drone_map_live(),
                                    saver ? s_saver_row_off : 0,
-                                   saver ? s_saver_col_inset : 0);
+                                   saver ? (int8_t)s_saver_col_inset - 1 : 0);
         }
         doom_shim_release_frame();
         s_frames++;

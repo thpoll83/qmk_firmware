@@ -101,26 +101,32 @@ static inline bool select_display(uint8_t view_row, uint8_t view_col) {
 }
 
 // Placement-aware select for the IDDQD attract screensaver: the content cell
-// (view_row, view_col) is drawn `row_off` keycap rows lower, with `col_inset`
-// empty keycap columns left on this half's OUTER edge (content shifted inward).
-// With row_off==col_inset==0 this is byte-identical to select_display(), so the
-// game/mirror paths are unchanged. A cell that lands off the half's grid (or in
-// a thumb-row gap) simply doesn't render — the vacated keys stay as last blanked.
+// (view_row, view_col) is drawn `row_off` keycap rows lower, and shifted along
+// this half's display columns by `col_inset` (SIGNED). The game reserves one
+// outer display column for the HUD (view_to_disp_col()'s +1 base); the
+// screensaver has no HUD, so a NEGATIVE inset reclaims that column (content
+// flush to the true outer edge) and a positive inset insets it. On the LEFT the
+// outer edge is the LOW cols, so content moves `+inset`; on the RIGHT it is the
+// HIGH cols, so content mirrors (`-inset`). col_inset==row_off==0 is
+// byte-identical to select_display() (game/mirror paths unchanged). The result
+// column is BOUNDED to [0, MATRIX_COLS-1]: without it a right-edge cell at a
+// high inset landed on display column MATRIX_COLS, which LAYOUT_TO_INDEX folds
+// into the NEXT keycap row (row*8 + 8 == (row+1)*8) — the "viewport wraps
+// around" artefact (field, IDDQD v49). A cell that lands off the half's grid
+// (or in a thumb-row gap) simply doesn't render — vacated keys stay last-blanked.
 static inline bool select_display_placed(uint8_t view_row, uint8_t view_col,
-                                         uint8_t row_off, uint8_t col_inset) {
+                                         uint8_t row_off, int8_t col_inset) {
     const uint8_t disp_row = (uint8_t)(view_row + row_off);
-    uint8_t       disp_col = view_to_disp_col(disp_row, view_col);
-    if (disp_col == 0xFF) {
+    const uint8_t base     = view_to_disp_col(disp_row, view_col);
+    if (base == 0xFF) {
         return false;
     }
-    if (is_left_side()) {
-        disp_col = (uint8_t)(disp_col + col_inset);        // outer edge = low cols
-    } else if (disp_col >= col_inset) {
-        disp_col = (uint8_t)(disp_col - col_inset);        // outer edge = high cols
-    } else {
-        return false;
+    const int16_t disp_col = is_left_side() ? (int16_t)base + col_inset   // outer edge = low cols
+                                            : (int16_t)base - col_inset;  // outer edge = high cols
+    if (disp_col < 0 || disp_col >= MATRIX_COLS) {
+        return false;   // off this half's grid — never let LAYOUT_TO_INDEX wrap into the next row
     }
-    const uint8_t disp_idx = (uint8_t)LAYOUT_TO_INDEX(disp_row, disp_col);
+    const uint8_t disp_idx = (uint8_t)LAYOUT_TO_INDEX(disp_row, (uint8_t)disp_col);
     if (disp_idx >= (uint8_t)(NUM_SHIFT_REGISTERS * 8)) {
         return false;
     }
@@ -175,7 +181,7 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
 // the arena next to the 320 B line — no spare .bss in a doom build), and a
 // finished 40-row band is pushed to its 5 keycaps.
 void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool map_frame,
-                            uint8_t place_row_off, uint8_t place_col_inset) {
+                            uint8_t place_row_off, int8_t place_col_inset) {
     uint8_t *scratch = doom_arena_at(DOOM_ARENA_COMPOSE_OFF);
     if (!scratch) {
         return;

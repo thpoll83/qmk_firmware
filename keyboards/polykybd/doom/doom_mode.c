@@ -307,22 +307,24 @@ static bool     s_egg_armed; // master-local; see the trigger comment above
 // the two halves run the same cycle a half-step apart (whichever half this
 // firmware is uses these statics for its own blit).
 #define DOOM_SAVER_MOVE_MS 15000
-#define DOOM_SAVER_STEPS   8            // 2 row offsets x 4 insets
+#define DOOM_SAVER_INSETS  5            // grid insets 0..4 (0 sweeps outer, 4 the thumbs)
+#define DOOM_SAVER_STEPS   (2 * DOOM_SAVER_INSETS)  // 2 row offsets x 5 insets
 static uint8_t  s_saver_row_off;    // 0 or 1
-static uint8_t  s_saver_col_inset;  // 0, 1, 2, or 3
+static uint8_t  s_saver_col_inset;  // 0..4 (grid columns slid inward)
 static uint32_t s_saver_move_at;
 static uint8_t  s_saver_step;       // deterministic placement cursor
 
 // Advance to the next placement and blank the viewport so keys vacated by the
 // move don't keep their last (burning-in) frame. The placement CYCLES
-// deterministically through all 8 combinations (2 row offsets x 4 insets) rather
-// than a random walk — so every keycap the block can reach, INCLUDING the inner
-// thumb at inset 3 + row_off 1, is covered in turn (even anti-burn-in, and
-// actually verifiable: a random 1/8 chance was easy to keep missing on hardware).
-// The two halves start a half-cycle apart so they don't sit in visual lockstep.
+// deterministically through all 10 combinations (2 row offsets x 5 insets) rather
+// than a random walk — so every keycap the block can reach, INCLUDING both inner
+// thumb keys and the staggered in-between key (only reached at the high insets on
+// the bottom row), is covered in turn (even anti-burn-in, and actually verifiable:
+// a random draw was easy to keep missing on hardware). The two halves start a
+// half-cycle apart so they don't sit in visual lockstep.
 static void doom_saver_reroll(void) {
-    s_saver_row_off   = (uint8_t)(s_saver_step & 1u);         // 0 or 1
-    s_saver_col_inset = (uint8_t)((s_saver_step >> 1) & 3u);  // 0, 1, 2, or 3
+    s_saver_row_off   = (uint8_t)(s_saver_step % 2u);            // 0 or 1
+    s_saver_col_inset = (uint8_t)(s_saver_step / 2u);            // 0..4
     s_saver_step      = (uint8_t)((s_saver_step + 1u) % DOOM_SAVER_STEPS);
     s_saver_move_at   = timer_read32();
     doom_blit_blank_all();

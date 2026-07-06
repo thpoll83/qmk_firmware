@@ -102,43 +102,56 @@ static inline bool select_display(uint8_t view_row, uint8_t view_col) {
 
 // Placement-aware select for the IDDQD attract screensaver. `inset` < 0 means
 // "no placement" — behaves EXACTLY like select_display() (the game/mirror path,
-// byte-identical). `inset` 0..3 is the anti-burn-in placement: the 5x4 block is
-// drawn `row_off` keycap rows lower and `inset` display columns further IN.
+// byte-identical). `inset` 0..4 is the anti-burn-in placement: the 5x4 block is
+// drawn `row_off` keycap rows lower and slid `inset` GRID columns inward.
 //
-// Key fact (from split72.c invert_display + the BITMASK chip-select): a keycap's
-// DISPLAY is selected by disp_idx = disp_row*8 + disp_col, and that index space is
-// per-half and UNIFORM — column 0 is the OUTER edge on BOTH halves (the right
-// half's upper rows fold matrix cols 1..7 down to display cols 0..6 via the `c--`
-// in invert_display; the bottom row uses cols 0..7 with no shift). It does NOT
-// track the RGB g_led_config x-order. So the anti-burn-in sweep is just a plain
-// contiguous window `disp_col = view_col + inset` (view_col 0..4, inset 0..3 ->
-// 0..7): over the placement cycle it covers every real display on this half,
-// including BOTH inner thumb keys (bottom-row display cols 6/7 on the left, 0/1 on
-// the right) and the staggered in-between key — the game's gappy per-role
-// view_to_disp_col() tables never reach those (and on the slave half stop well
-// short). No per-role margin math and no left/right mirror is needed. The only
-// non-rendering cells are the upper-row column-7 PHANTOMS (no OLED behind them —
-// only the bottom row is a full 8-wide row); those just drop out. disp_col stays
-// in [0, MATRIX_COLS-1] so LAYOUT_TO_INDEX can never wrap into the next row.
+// GRID columns run OUTER(0) -> INNER on both halves — but the display-column
+// numbering does NOT: composing split72.c invert_display + the BITMASK chip-select
+// with g_led_config's physical x shows disp_col 0 is the OUTER edge on the LEFT yet
+// the INNER edge on the RIGHT (the `c--` fold reverses the right's upper rows), and
+// the bottom matrix row is physically STAGGERED vs the rows above — it has a gap
+// where an upper key has no key below it, and the two inner thumb keys are stacked
+// (same x, two rows) inboard of everything. So a naive contiguous disp_col sweep is
+// backwards on the right and misaligns the bottom row (field: "right bottom shifted
+// left by one"; "left bottom col-5 is a missing display"). Instead we work in grid
+// space and translate per half + per row from the physical alignment (offline model
+// in tools, validated against hardware): the upper rows are 7 real columns
+// (grid 0..6; grid 7/8 = inner phantoms with no OLED), the bottom row maps grid ->
+// display col with an explicit GAP and the two thumbs at grid 7/8. Over the inset
+// 0..4 cycle this covers every real display on the half — both thumbs and the
+// in-between key included — as a physically coherent block.
 static inline bool select_display_placed(uint8_t view_row, uint8_t view_col,
                                          uint8_t row_off, int8_t inset) {
     if (inset < 0) {
         return select_display(view_row, view_col);   // game/mirror: no placement
     }
     const uint8_t disp_row = (uint8_t)(view_row + row_off);
-    const int16_t disp_col = (int16_t)view_col + inset;   // contiguous sweep, outer(0)->inner
-    if (disp_col < 0 || disp_col >= MATRIX_COLS) {
-        return false;   // off this half's grid — never let LAYOUT_TO_INDEX wrap into the next row
+    const uint8_t grid     = (uint8_t)(view_col + inset);   // 0..8, outer -> inner
+    const bool    left     = is_left_side();
+    int16_t       disp_col;
+    if (disp_row < 4) {
+        // Upper rows: 7 real display columns (grid 0..6); grid 7/8 are the inner
+        // phantom slots with no OLED — drop out. Left counts up, right counts down.
+        if (grid > 6) {
+            return false;
+        }
+        disp_col = left ? (int16_t)grid : (int16_t)(6 - grid);
+    } else {
+        // Bottom row: staggered. grid -> display col, GAP(0xFF) where no key sits
+        // under that upper slot, thumbs at grid 7/8. (Derived from physical x.)
+        static const uint8_t bottom_left[9]  = {0, 1, 2, 3, 0xFF, 4, 5, 6, 7};
+        static const uint8_t bottom_right[9] = {7, 6, 5, 4, 0xFF, 3, 2, 0, 1};
+        if (grid > 8) {
+            return false;
+        }
+        const uint8_t c = left ? bottom_left[grid] : bottom_right[grid];
+        if (c == 0xFF) {
+            return false;   // physical gap — no keycap under this grid slot
+        }
+        disp_col = (int16_t)c;
     }
-    // Skip routing PHANTOMS — keycap positions with no OLED behind them. Only
-    // the bottom row (disp_row 4) is a full 8-wide row; the upper rows (0-3)
-    // have no display at column 7 (the thumb keys are wired onto the bottom
-    // matrix row only). At high inset the block reaches toward that inner column,
-    // so those upper cells simply don't render — the viewport just shows a couple
-    // of missing cells there rather than writing to a nonexistent display, while
-    // the real inner-thumb display on the bottom row still lights.
-    if (disp_row < 4 && disp_col == 7) {
-        return false;
+    if (disp_col < 0 || disp_col >= MATRIX_COLS) {
+        return false;   // never let LAYOUT_TO_INDEX wrap into the next keycap row
     }
     const uint8_t disp_idx = (uint8_t)LAYOUT_TO_INDEX(disp_row, (uint8_t)disp_col);
     if (disp_idx >= (uint8_t)(NUM_SHIFT_REGISTERS * 8)) {

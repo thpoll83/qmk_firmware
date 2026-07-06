@@ -102,38 +102,31 @@ static inline bool select_display(uint8_t view_row, uint8_t view_col) {
 
 // Placement-aware select for the IDDQD attract screensaver. `inset` < 0 means
 // "no placement" — behaves EXACTLY like select_display() (the game/mirror path,
-// byte-identical). `inset` 0..3 is the anti-burn-in placement: the content cell
-// (view_row, view_col) is drawn `row_off` keycap rows lower and shifted so that
-// `inset` counts empty keycap columns from this half's TRUE outer edge (inset 0
-// = flush to the edge, up to inset 3 = three empty outer columns).
+// byte-identical). `inset` 0..3 is the anti-burn-in placement: the 5x4 block is
+// drawn `row_off` keycap rows lower and `inset` display columns further IN.
 //
-// The game's view_to_disp_col() already reserves an outer MARGIN for its HUD/pad:
-// 1 column as master, 2 as slave (the `+1`/`+2` upper bases and the bottom_*
-// tables). To make `inset` count from the true edge we reclaim that margin with a
-// signed shift s = inset - margin: negative pulls content out past the HUD to the
-// edge, positive insets it. On the LEFT the outer edge is the LOW cols (shift
-// `+s`); on the RIGHT it is the HIGH cols (mirror, `-s`). With margin handled per
-// role, inset 3 lands the bottom row on the inner thumb key (left matrix col 6,
-// right matrix col 1) and never leaves more than 3 empty outer columns on either
-// half/role. The result column is BOUNDED to [0, MATRIX_COLS-1] so an edge cell
-// can never land on display column MATRIX_COLS, which LAYOUT_TO_INDEX would fold
-// into the NEXT keycap row (row*8 + 8 == (row+1)*8) — the "viewport wraps around"
-// artefact (field, IDDQD v49). Cells that fall off the grid (or in a thumb-row
-// gap) simply don't render — vacated keys stay last-blanked.
+// Key fact (from split72.c invert_display + the BITMASK chip-select): a keycap's
+// DISPLAY is selected by disp_idx = disp_row*8 + disp_col, and that index space is
+// per-half and UNIFORM — column 0 is the OUTER edge on BOTH halves (the right
+// half's upper rows fold matrix cols 1..7 down to display cols 0..6 via the `c--`
+// in invert_display; the bottom row uses cols 0..7 with no shift). It does NOT
+// track the RGB g_led_config x-order. So the anti-burn-in sweep is just a plain
+// contiguous window `disp_col = view_col + inset` (view_col 0..4, inset 0..3 ->
+// 0..7): over the placement cycle it covers every real display on this half,
+// including BOTH inner thumb keys (bottom-row display cols 6/7 on the left, 0/1 on
+// the right) and the staggered in-between key — the game's gappy per-role
+// view_to_disp_col() tables never reach those (and on the slave half stop well
+// short). No per-role margin math and no left/right mirror is needed. The only
+// non-rendering cells are the upper-row column-7 PHANTOMS (no OLED behind them —
+// only the bottom row is a full 8-wide row); those just drop out. disp_col stays
+// in [0, MATRIX_COLS-1] so LAYOUT_TO_INDEX can never wrap into the next row.
 static inline bool select_display_placed(uint8_t view_row, uint8_t view_col,
                                          uint8_t row_off, int8_t inset) {
     if (inset < 0) {
         return select_display(view_row, view_col);   // game/mirror: no placement
     }
     const uint8_t disp_row = (uint8_t)(view_row + row_off);
-    const uint8_t base     = view_to_disp_col(disp_row, view_col);
-    if (base == 0xFF) {
-        return false;
-    }
-    const int8_t  margin   = is_usb_host_side() ? 1 : 2;   // game's outer-edge reserve
-    const int8_t  s        = (int8_t)(inset - margin);     // signed shift from game placement
-    const int16_t disp_col = is_left_side() ? (int16_t)base + s    // outer edge = low cols
-                                            : (int16_t)base - s;   // outer edge = high cols
+    const int16_t disp_col = (int16_t)view_col + inset;   // contiguous sweep, outer(0)->inner
     if (disp_col < 0 || disp_col >= MATRIX_COLS) {
         return false;   // off this half's grid — never let LAYOUT_TO_INDEX wrap into the next row
     }

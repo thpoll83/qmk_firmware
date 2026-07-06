@@ -55,6 +55,10 @@ ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c
 ifeq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
     SRC += doom/doom_pack_load.c
+    # Pack flavour pins the overlay pool at the RAM origin so the engine
+    # pack's RAM base is a build-independent constant — a flashed .plyx then
+    # survives firmware rebuilds. See ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld.
+    MCU_LDSCRIPT = RP2040_FLASH_TIMECRIT_DOOMPACK
 else
     # No savegames in v1 (field round 29): the upstream flags drop Load/Save
     # Game from the menus and compile the save/load machinery out. A future

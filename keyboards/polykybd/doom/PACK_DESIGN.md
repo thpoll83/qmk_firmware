@@ -125,6 +125,25 @@ can detect staleness via the pack `version`/`ram_base` and re-flash, the
 same model as font-pack bundles. This is the honest trade: coupled but
 verified, instead of pinned but impossible.
 
+### §4a — pool PINNED at the RAM origin (2026-07-06, supersedes the above for the pack flavour)
+
+The "pinning is impossible" analysis above assumed pinning at a *high*
+address (rounding the pool up costs heap that doesn't exist). Pinning at
+the **RAM origin** costs nothing: the pack flavour's linker script
+(`ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld`) places a dedicated NOLOAD
+`.overlay_pool` section at 0x20000000 — first ram0 section, before
+`.data` — and `base/overlay.c` puts `overlays[]` in it under
+`POLYKYBD_DOOM_PACK`. Verified layout: pool 0x20000000..0x200375F0, then
+`.data`/`.bss`/heap exactly as before, nothing displaced.
+
+So **`ram_base` is now a build-independent constant** and a flashed
+`.plyx` keeps working across firmware rebuilds; only an ABI bump, an
+arena-layout change, or an engine change requires re-shipping the pack.
+`build_pack.sh` still extracts the address from the firmware `.elf`
+(self-verifying — it hard-fails if the pool is ever not at 0x20000000),
+and the loader's `hdr.ram_base` check stays as belt-and-braces. The
+monolith dev build keeps its floating `.doom_shared` model unchanged.
+
 ## 5. Execution model (unchanged from the dev harness)
 
 XIP execution at 0x107C0000 goes through the same 16 KB XIP cache as the

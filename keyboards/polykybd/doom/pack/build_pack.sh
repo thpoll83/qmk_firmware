@@ -65,6 +65,9 @@ cp "$FW_ELF" "$STASH/firmware.elf"
 
 RAM_BASE=0x$("$NM" "$STASH/firmware.elf" | awk '$3 == "overlays" {print $1}')
 [[ "$RAM_BASE" != "0x" ]] || { echo "build_pack: overlays symbol not found in $FW_ELF" >&2; exit 1; }
+# The pack flavour PINS the pool at the RAM origin (RP2040_FLASH_TIMECRIT_DOOMPACK.ld)
+# so packs survive firmware rebuilds — hard-fail if that invariant ever regresses.
+[[ "$RAM_BASE" == "0x20000000" ]] || { echo "build_pack: pool at $RAM_BASE, expected pinned 0x20000000 (ldscript regression?)" >&2; exit 1; }
 # Pool bytes: NUM_OVERLAYS(90) * NUM_VARIATIONS(9) * 360 — assert against the
 # firmware if these ever change (kept in lockstep with base/overlay.c).
 RAM_SIZE=226800

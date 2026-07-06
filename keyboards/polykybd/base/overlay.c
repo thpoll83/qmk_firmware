@@ -24,6 +24,15 @@ static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 extern uint8_t __doom_shared_base__[];
 #define overlays ((uint8_t (*)[72*40/8])__doom_shared_base__)
 #define OVERLAYS_SIZE (NUM_OVERLAYS*NUM_VARIATIONS*(72*40/8))
+#elif defined(POLYKYBD_DOOM_PACK)
+// DoomPack flavour: the pool is PINNED at the RAM origin (0x20000000) via
+// the dedicated .overlay_pool section (ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld)
+// so the flashed engine pack's RAM base is a build-independent constant.
+// Like the monolith's .doom_shared the section is NOLOAD (crt0 does not
+// zero it) — the usage bits above gate every read and the reset/refill
+// paths memset it, so boot behaviour is unchanged.
+static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8] __attribute__((section(".overlay_pool")));
+#define OVERLAYS_SIZE sizeof(overlays)
 #else
 static /*volatile*/ uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
 #define OVERLAYS_SIZE sizeof(overlays)

@@ -15,9 +15,10 @@
 #   2. polyctl doom install <out>/doom1.whx          (once; survives fw updates)
 #   3. polyctl doom install-pack <out>/doom_pack_vN.plyx
 #   4. type IDDQD
-# ⚠️ The .plyx only works with the firmware built in the SAME run (the loader
-# verifies the RAM pairing and refuses otherwise) — after any firmware change,
-# re-run this script and re-do steps 1 + 3. Step 2 never needs repeating.
+# The pack's RAM base is pinned (ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld), so an
+# installed .plyx keeps working across firmware rebuilds — re-do step 3 only
+# when the engine/ABI itself changed (the loader logs a refusal if a pack is
+# ever genuinely stale). Step 2 never needs repeating.
 #
 # Requires: qmk on PATH (or $QMK), arm-none-eabi-gcc, python3, curl.
 set -euo pipefail

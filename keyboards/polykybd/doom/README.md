@@ -55,14 +55,13 @@ keyboards/polykybd/doom/pack/build_pack.sh --version N
 Without either flag nothing here is compiled and every hook in
 `poly_keymap.c` / `hid_com.c` collapses to an inline no-op (zero bytes).
 The two flavours and the pack build are documented in
-[`PACK_DESIGN.md`](PACK_DESIGN.md). ⚠️ **RAM pairing**: the pack's engine
-statics are linked at the firmware's overlay-pool address, so a firmware
-change that *moves the pool* (any RAM-layout shift) orphans the old pack —
-the loader detects it (`stale pack, refuse` on the console, egg falls back
-to the fire demo) and a `build_pack.sh` re-run + `install-pack` re-pairs.
-Firmware changes that leave RAM untouched keep the old pack working; since
-that's hard to predict, the safe habit is one `build_all.sh` run per
-firmware change (the pairing is then guaranteed by construction).
+[`PACK_DESIGN.md`](PACK_DESIGN.md). **RAM pairing**: the pack's engine
+statics are linked at the firmware's overlay-pool address, which the pack
+flavour **pins at the RAM origin** (`ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld`,
+PACK_DESIGN.md §4a) — so an installed `.plyx` keeps working across firmware
+rebuilds. Re-ship the pack only when the engine/ABI/arena layout changes;
+a genuinely stale pack is refused safely (`stale pack, refuse` on the
+console, egg falls back to the fire demo).
 
 ## What works today (milestone 0: pipeline proof — HISTORICAL)
 

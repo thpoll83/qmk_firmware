@@ -33,10 +33,13 @@
 #    define LTR559_PART_ID 0x92
 #    define LTR559_MANUFAC_ID 0x05
 
-// ALS_CONTR: bit0 = active, bits[4:2] = gain (000 = 1x). Gain 1x keeps the wide
-// dynamic range (no early saturation in bright light) and matches the lux
-// coefficients below.
-#    define LTR559_ALS_CONTR_CFG 0x01  // active, gain 1x
+// ALS_CONTR: bit0 = active, bits[4:2] = gain (000=1x, 010=4x, 011=8x, 111=96x).
+// 4x gain: indoor light gave only ~12 raw counts at 1x (coarse, noisy lux); 4x
+// lifts that into a usable range while keeping headroom before the 16-bit
+// channels saturate. LTR559_ALS_GAIN must track the gain bits — the lux formula
+// divides the result by it so the reported lux stays gain-independent.
+#    define LTR559_ALS_CONTR_CFG 0x09  // active, gain 4x
+#    define LTR559_ALS_GAIN 4
 // PS_CONTR: bits[1:0] = 11 -> PS active.
 #    define LTR559_PS_CONTR_CFG 0x03  // PS active
 // ALS_MEAS_RATE: int time 100 ms (bits[5:3]=000), repeat 100 ms (bits[2:0]=001).
@@ -105,6 +108,7 @@ static uint16_t ltr559_compute_lux(uint16_t ch0, uint16_t ch1) {
     } else {
         lux = 0;
     }
+    lux /= LTR559_ALS_GAIN;   // formula assumes 1x; keep lux gain-independent
     if (lux < 0) {
         lux = 0;
     }

@@ -585,9 +585,13 @@ void poly_prepare_for_flash(void) {
 // the slave: its readings still show on the slave's status OLED, but there is no
 // existing master-bound channel to push them, so driving stays idle there.
 // All tunables below are first-cut guesses to be dialled in against the OLED.
-#    define LTR559_NEAR_THRESHOLD 120   // proximity (0..2047) that counts as "close"
+// Proximity (0..2047) that counts as "close". Must sit above the resting
+// baseline — housing/crosstalk reflection reads ~129 with nothing near, so 120
+// was always-triggered. 350 clears that; raise/lower once the hand-near value is
+// known (watch PRX on the OLED).
+#    define LTR559_NEAR_THRESHOLD 350
 #    define LTR559_DRIVE_MS 500         // how often the master samples + applies
-#    define LTR559_LUX_FULL_REF 800     // avg lux mapped to FULL_BRIGHT (ceiling)
+#    define LTR559_LUX_FULL_REF 200     // avg lux mapped to FULL_BRIGHT (ceiling)
 
 // Master-side: mirror the HID cmd-15 stop-idle path to force the displays awake.
 static void poly_force_wake(void) {
@@ -604,11 +608,28 @@ static void poly_force_wake(void) {
     }
 }
 
+static uint32_t isqrt32(uint32_t x) {
+    uint32_t r = 0, b = 1UL << 30;
+    while (b > x) b >>= 2;
+    while (b) {
+        if (x >= r + b) { x -= r + b; r = (r >> 1) + b; }
+        else            { r >>= 1; }
+        b >>= 2;
+    }
+    return r;
+}
+
 static uint8_t lux_to_contrast(uint16_t lux) {
-    if (lux >= LTR559_LUX_FULL_REF) {
+    // Perceptual (sqrt) curve: brightness rises quickly out of the dark and eases
+    // toward the ceiling, so ordinary indoor light already gives a usable level
+    // instead of the near-off B=2 a linear map produced. LTR559_LUX_FULL_REF is
+    // the lux that reaches FULL_BRIGHT. (×100 before the sqrt for resolution.)
+    uint32_t sref = isqrt32((uint32_t)LTR559_LUX_FULL_REF * 100u);
+    uint32_t slux = isqrt32((uint32_t)lux * 100u);
+    if (slux >= sref) {
         return FULL_BRIGHT;
     }
-    uint32_t c = MIN_BRIGHT + ((uint32_t)lux * (FULL_BRIGHT - MIN_BRIGHT)) / LTR559_LUX_FULL_REF;
+    uint32_t c = MIN_BRIGHT + ((uint32_t)(FULL_BRIGHT - MIN_BRIGHT) * slux) / sref;
     if (c < MIN_BRIGHT) c = MIN_BRIGHT;
     if (c > FULL_BRIGHT) c = FULL_BRIGHT;
     return (uint8_t)c;

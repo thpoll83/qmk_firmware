@@ -137,6 +137,16 @@ static inline bool select_display_placed(uint8_t view_row, uint8_t view_col,
     if (disp_col < 0 || disp_col >= MATRIX_COLS) {
         return false;   // off this half's grid — never let LAYOUT_TO_INDEX wrap into the next row
     }
+    // Skip routing PHANTOMS — keycap positions with no OLED behind them. Only
+    // the bottom row (disp_row 4) is a full 8-wide row; the upper rows (0-3)
+    // have no display at column 7 (the thumb keys are wired onto the bottom
+    // matrix row only). At high inset the block reaches toward that inner column,
+    // so those upper cells simply don't render — the viewport just shows a couple
+    // of missing cells there rather than writing to a nonexistent display, while
+    // the real inner-thumb display on the bottom row still lights.
+    if (disp_row < 4 && disp_col == 7) {
+        return false;
+    }
     const uint8_t disp_idx = (uint8_t)LAYOUT_TO_INDEX(disp_row, (uint8_t)disp_col);
     if (disp_idx >= (uint8_t)(NUM_SHIFT_REGISTERS * 8)) {
         return false;

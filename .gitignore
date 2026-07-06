@@ -133,3 +133,5 @@ via*.json
 /keyboards/**/keymaps/via/*
 /keyboards/**/keymaps/vial/*
 keyboards/polykybd/split72/keymaps/default/lang/.~lock.lang_lut.xlsx#
+# PolyKybd doom game data (downloaded by doom/build_all.sh, never committed)
+doom1.whx

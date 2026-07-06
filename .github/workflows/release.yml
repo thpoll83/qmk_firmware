@@ -31,10 +31,18 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build split72
+      # Shipping shape is the POLYKYBD_DOOM_PACK flavour (doom/PACK_DESIGN.md):
+      # the doom easter egg's loader + trigger compile in, the engine ships as a
+      # separately-flashed pack, and the overlay pool is pinned at the RAM origin.
+      # build_pack.sh drives everything: the monolith build (engine objects), the
+      # pack-flavour firmware build (what we release — it is the LAST build, so
+      # .build/ holds its artifacts), the pinned-pool invariant check, and the
+      # .plyx emit. HIL builds (qmk-test.yml) carry the same flag, so the rig
+      # tests exactly this shape.
+      - name: Build split72 (pack flavour) + doom engine pack
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb ${{ env.KB }} -km ${{ env.KM }}
+          args: bash keyboards/polykybd/doom/pack/build_pack.sh --version 1
 
       - name: Install ARM binutils
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends binutils-arm-none-eabi
@@ -45,6 +53,7 @@ jobs:
           arm-none-eabi-objcopy -O binary \
             .build/${TARGET}.elf \
             ${TARGET}.bin
+          cp keyboards/polykybd/doom/pack/doom_pack_v1.plyx .
 
       # Runs on a tag push, on publishing a release, or on a manual dispatch.
       # Idempotent: creates the release if missing, otherwise (re-)uploads the
@@ -61,7 +70,7 @@ jobs:
           TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists — uploading assets (clobbering duplicates)."
-            gh release upload "$TAG" "${TARGET}.uf2" "${TARGET}.bin" --clobber
+            gh release upload "$TAG" "${TARGET}.uf2" "${TARGET}.bin" doom_pack_v1.plyx --clobber
           else
             echo "Creating release $TAG (falls back to upload if a concurrent run won the create)."
             gh release create "$TAG" \
@@ -69,5 +78,6 @@ jobs:
               --title "PolyKybd Firmware $TAG" \
               "${TARGET}.uf2" \
               "${TARGET}.bin" \
-            || gh release upload "$TAG" "${TARGET}.uf2" "${TARGET}.bin" --clobber
+              doom_pack_v1.plyx \
+            || gh release upload "$TAG" "${TARGET}.uf2" "${TARGET}.bin" doom_pack_v1.plyx --clobber
           fi

@@ -725,8 +725,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 28: //get/set idle (anti-burn-in) display style (protocol v4+)
                 {
                     // data[HID_DATA_IDX] == 0xFF -> query (reply current style in data[3]).
-                    // Otherwise set the style (0 = pulse, 1 = jitter); persisted at the
-                    // next EEPROM flush (suspend / store key).
+                    // Otherwise set the style (0 = pulse, 1 = jitter, 2 = doom attract
+                    // screensaver — falls back to pulse at runtime when the demo can't
+                    // start); persisted at the next EEPROM flush (suspend / store key).
                     uint8_t arg = data[HID_DATA_IDX];
                     memset(data, 0, length);
                     if (arg == 0xFF) {

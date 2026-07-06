@@ -91,11 +91,41 @@ console, egg falls back to the fire demo).
   as a fresh boot), `request_disp_refresh()` redraws the normal legends; the
   host repopulates overlays on its next push (app switch / reconnect).
 
+## Attract screensaver (3rd idle style, `IDLE_STYLE_DOOM = 2`)
+
+Beyond the game (typed `IDDQD` → armed menu item → play), the egg doubles as a
+**screensaver**: a third anti-burn-in idle style alongside `PULSE`/`JITTER`
+(HID cmd 28, host `polyctl idle-style doom` / tray "Doom (attract demo)").
+
+- **Entry** rides the existing idle pipeline (`poly_keymap.c`
+  `sync_and_refresh_displays()`): where the pulse would begin (`brightness <=
+  MIN_BRIGHT`), if the style is `DOOM` and `doom_screensaver_start()` succeeds,
+  the demo comes up instead — at the user brightness, no `DISP_IDLE` flag. The
+  session is a normal game session with `s_screensaver = true`.
+- **Chrome-free**: `doom_tick()` pumps frames with `with_hud = false` (no ESC
+  corner, no fire hint, no vitals HUD), and the synced `poly_sync_t.doom_ctl`
+  carries **2** so the slave strips its pad/ESC legends too — every keycap is
+  the mirror blitter's (attract demo is full-viewport, bottom row included).
+- **Dismissal**: the FIRST key press exits (`doom_process_record` swallows both
+  edges, calls `doom_exit()`), exactly like a desktop screensaver — the host
+  sees no keystroke. `doom_exit()` re-arms the idle timer, so the fade→idle
+  cycle restarts.
+- **Deadline**: the demo runs the same wall-clock window the pulse would have
+  (`DOOM_SAVER_MAX_MS = TURN_OFF_TIME − FADE_OUT_TIME − FADE_TRANSITION_TIME`),
+  then `doom_tick()` tears down and `poly_suspend()`s — landing in the same
+  displays-off state the pulse's `TURN_OFF_TIME` branch produces.
+- **Safe fallback**: `doom_screensaver_start()` returns false on a non-doom
+  build (inline stub), while fw/font-pack staging owns the pool, or if the zone
+  comes up too small — the idle pipeline then falls through to the **pulse**, so
+  the style is always safe to select/persist. A host-initiated sleep calls
+  `doom_screensaver_stop()` from `poly_suspend()` so the demo never blits into
+  panels that are about to switch off.
+
 ## Layering
 
 | File | Role |
 |---|---|
-| `doom_mode.c/.h` | Mode state machine: trigger, enter/exit, pool handoff, input swallow, HID freeze, frame pacing |
+| `doom_mode.c/.h` | Mode state machine: trigger, enter/exit, pool handoff, input swallow, HID freeze, frame pacing, attract screensaver |
 | `doom_blit.c/.h` | 8 bpp framebuffer → 4×4 Bayer dither → per-keycap 72×40 tile → shift-register select + SPI |
 | `doom_fire.c` / `doom_game.h` | Placeholder scene proving the pipeline; the engine port replaces this behind the same interface |
 

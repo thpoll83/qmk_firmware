@@ -10,9 +10,15 @@
 // Idle (anti-burn-in) display style, persisted in poly_eeconf_t.idle_style and
 // toggled over HID (cmd 28). PULSE is the legacy contrast-only breathing; JITTER
 // adds a per-cycle relocation of the legend so the lit pixels migrate over time.
+// DOOM runs the doom easter egg's attract demo as a screensaver instead of the
+// pulse (doom/README.md) — chrome-free, dismissed by the first key press; on a
+// build/board where the demo can't start (no POLYKYBD_DOOM, staging active) it
+// falls back to PULSE at runtime, so the value is always safe to accept/persist.
+// Values are append-only (persisted + on the wire in poly_sync_t.idle_style).
 enum poly_idle_style {
     IDLE_STYLE_PULSE  = 0,
     IDLE_STYLE_JITTER = 1,
+    IDLE_STYLE_DOOM   = 2,
     IDLE_STYLE_COUNT
 };
 

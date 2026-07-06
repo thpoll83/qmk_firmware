@@ -281,8 +281,18 @@ static const uint16_t TRIGGER_SEQ[]   = {KC_I, KC_D, KC_D, KC_Q, KC_D};
 #define DOOM_EXIT_HOLD_MS 1500
 // Frame pacing for the placeholder scene (~12 fps).
 #define DOOM_FRAME_MS 80
+// Attract-screensaver runtime: the demo plays for the same wall-clock window
+// the idle pulse would have covered (fade end -> TURN_OFF suspend), then
+// doom_tick tears down and suspends exactly like the pulse path would.
+#define DOOM_SAVER_MAX_MS (TURN_OFF_TIME - FADE_OUT_TIME - FADE_TRANSITION_TIME)
+
+// poly_keymap.c — the shared suspend path (displays off, state flushed); the
+// screensaver deadline hands over to it so its end state matches the pulse's.
+void poly_suspend(void);
 
 static bool     s_active;
+static bool     s_screensaver;  // this session is the attract screensaver
+static uint32_t s_saver_start;  // for the DOOM_SAVER_MAX_MS deadline
 static bool     s_egg_armed; // master-local; see the trigger comment above
 static uint8_t  s_trigger_pos;
 static uint32_t s_trigger_last;
@@ -293,6 +303,10 @@ static uint8_t *s_fb; // borrowed overlay pool; framebuffer = first 64,000 B
 
 bool doom_mode_active(void) {
     return s_active;
+}
+
+bool doom_mode_screensaver(void) {
+    return s_active && s_screensaver;
 }
 
 bool doom_egg_armed(void) {
@@ -403,26 +417,54 @@ static bool doom_session_start(void) {
     return true;
 }
 
-static void doom_enter(void) {
-    if (!doom_session_start()) {
-        return;
+static void doom_exit(void); // defined below; doom_screensaver_stop tears down early
+
+static bool doom_begin(bool screensaver) {
+    if (s_active || !doom_session_start()) {
+        return false;
     }
     // Release anything still registered host-side (the trigger letters have
     // already been sent; nothing may stay held while we swallow events).
     clear_keyboard();
 
-    s_active     = true;
-    s_esc_down   = false;
-    s_last_frame = 0;
+    s_active      = true;
+    s_screensaver = screensaver;
+    s_saver_start = timer_read32();
+    s_esc_down    = false;
+    s_last_frame  = 0;
     set_last_update((int32_t)timer_read32());
     doom_blit_blank_all();
+    return true;
+}
+
+static void doom_enter(void) {
+    (void)doom_begin(false);
+}
+
+bool doom_screensaver_start(void) {
+    if (!is_usb_host_side()) {
+        return false; // the idle pipeline is master-only; so is the session
+    }
+    if (!doom_begin(true)) {
+        return false;
+    }
+    printf("doom: attract screensaver up\n");
+    return true;
+}
+
+void doom_screensaver_stop(void) {
+    if (s_active && s_screensaver) {
+        printf("doom: screensaver stopped (suspend)\n");
+        doom_exit();
+    }
 }
 
 static void doom_exit(void) {
     // Breadcrumbs around every teardown stage — the round-20 log showed a
     // ~15 s post-exit silence with no way to tell which stage stalled.
     printf("doom: exit begin\n");
-    s_active = false;
+    s_active      = false;
+    s_screensaver = false;
     // Drop the synced pad flag IMMEDIATELY — housekeeping only refreshes it
     // at the END of its pass, so the repaint doom_exit requests below would
     // otherwise still run update_displays' doom_ctl branch on this half
@@ -614,6 +656,18 @@ bool doom_process_record(uint16_t keycode, bool pressed, uint8_t row, uint8_t co
             s_trigger_last = timer_read32();
         }
         return false;
+    }
+
+    // Screensaver: the FIRST key press dismisses it — nothing reaches the
+    // game, nothing reaches the host (both edges swallowed; a stray release
+    // after the exit passes through as an unmatched keyup, which hosts
+    // ignore). doom_exit() restores the legends and re-arms the idle timer.
+    if (s_screensaver) {
+        if (pressed) {
+            printf("doom: screensaver dismissed\n");
+            doom_exit();
+        }
+        return true;
     }
 
     // Game mode: swallow EVERYTHING — the host sees no keystrokes. Position
@@ -1437,11 +1491,23 @@ void doom_tick(void) {
         doom_exit();
         return;
     }
+    if (s_screensaver && timer_elapsed32(s_saver_start) > DOOM_SAVER_MAX_MS) {
+        // The screensaver has run the window the idle pulse would have covered
+        // — tear down and suspend, landing in the same end state the pulse's
+        // TURN_OFF_TIME branch produces (doom_exit's fresh last_update is
+        // deliberately overridden back to "idle timer expired").
+        printf("doom: screensaver deadline — suspending\n");
+        doom_exit();
+        poly_suspend();
+        set_last_update(-1);
+        return;
+    }
     // Hold off the idle/fade/turn-off pipeline — the pulse/jitter machinery
     // must never repaint the keycaps while the blitter owns them.
     set_last_update((int32_t)timer_read32());
     doom_mirror_master_pump(); // before the (slow) blit: keeps the tic stream fresh
-    doom_frame_pump(true);
+    // Screensaver runs chrome-free: no ESC corner, no fire hint, no vitals HUD.
+    doom_frame_pump(!s_screensaver);
 }
 
 bool doom_hid_frozen(uint8_t cmd) {

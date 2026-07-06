@@ -608,16 +608,31 @@ void housekeeping_task_user(void) {
 
                 //transition to pulsing mode
                 if(brightness<=MIN_BRIGHT) {
-                    contrast = DISP_OFF;
-                    flags |= DISP_IDLE;
-                    uprint("Transition to pulsing\n");
+                    if (get_idle_style() == IDLE_STYLE_DOOM && doom_screensaver_start()) {
+                        // Doom attract screensaver instead of the pulse: the demo
+                        // owns the keycaps at the user brightness — no DISP_IDLE,
+                        // and IDLE_TRANSITION stays dropped (cleared above), which
+                        // fires the back_from_idle_transition brightness restore.
+                        // doom_tick() holds last_update while the demo runs and
+                        // hands over to the normal TURN_OFF suspend at its own
+                        // deadline. Falls through to the pulse whenever the demo
+                        // can't start (non-doom build, fw staging active).
+                        contrast = get_active_brightness();
+                        uprint("Transition to doom screensaver\n");
+                    } else {
+                        contrast = DISP_OFF;
+                        flags |= DISP_IDLE;
+                        flags |= IDLE_TRANSITION;
+                        uprint("Transition to pulsing\n");
+                    }
                 } else if(brightness>FULL_BRIGHT) {
                     contrast = FULL_BRIGHT;
+                    flags |= IDLE_TRANSITION;
                     uprint("Limiting brightness\n");
                 } else{
                     contrast = brightness;
+                    flags |= IDLE_TRANSITION;
                 }
-                flags |= IDLE_TRANSITION;
             } else if(elapsed_time_since_update > TURN_OFF_TIME) {
                 uprint("Turning off\n");
                 poly_suspend();
@@ -663,7 +678,9 @@ void housekeeping_task_user(void) {
         // No master-side refresh — its keycaps are owned by the game blitter
         // while active, and doom_exit() restores them itself. The weapon-pad
         // state rides along; a change re-renders the slave's pad keys.
-        uint8_t doom_want = doom_mode_active() ? 1 : 0;
+        // 2 = attract screensaver: chrome-free — the slave renders NO pad/ESC
+        // legends, every keycap belongs to the mirror blitter (full-bleed demo).
+        uint8_t doom_want = doom_mode_active() ? (doom_mode_screensaver() ? 2 : 1) : 0;
         if (access_local_state()->doom_ctl != doom_want) {
             // Breadcrumb: this is the value the next POLY sync carries to the
             // slave — "slave stayed in game mode" reports hinge on it.
@@ -1796,7 +1813,21 @@ void update_displays(enum refresh_mode mode) {
                     // the game-control keys keep their legends, everything
                     // else goes dark.
                     bool doom_handled = false;
-                    if (local_state->doom_ctl) {
+                    if (local_state->doom_ctl == 2) {
+                        // Attract screensaver: chrome-free — no pad, no ESC face,
+                        // no control legends. Every key belongs to the mirror
+                        // blitter while its view is live (the full-viewport
+                        // attract includes the bottom row); until the mirror is
+                        // up, keys go dark so no legend flashes into the demo.
+                        if (r < MATRIX_ROWS_PER_SIDE - 1 ? doom_slave_viewport_live()
+                                                         : doom_slave_bottom_row_live()) {
+                            doom_handled = true;
+                        } else {
+                            kdisp_set_buffer(0x00);
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        }
+                    } else if (local_state->doom_ctl) {
                         uint16_t pad = doom_pad_keycode((uint8_t)(r + offset), c);
                         // Fixed positional control layout (field round 23):
                         // the cursor cluster / use / enter legends render at
@@ -2893,6 +2924,11 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
 
 // Clears overlay display flags, disables overlays and status display, sets contrast to OFF.
 void poly_suspend(void) {
+    // A host-initiated sleep can land while the doom attract screensaver runs —
+    // tear it down first (engine stopped, pool handed back) so the demo doesn't
+    // keep blitting into panels this function is about to switch off. No-op for
+    // a real game session and on the slave.
+    doom_screensaver_stop();
     poly_sync_t* local_state = access_local_state();
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
     local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);// & ~((uint8_t)RGB_ON);

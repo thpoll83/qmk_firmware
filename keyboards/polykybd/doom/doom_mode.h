@@ -17,6 +17,22 @@
 // True while game mode owns the keycap displays and the borrowed overlay pool.
 bool doom_mode_active(void);
 
+// Attract screensaver (IDLE_STYLE_DOOM): the idle pipeline calls
+// doom_screensaver_start() instead of entering the pulse — the game comes up
+// in its attract demo, chrome-free (no pad/ESC/HUD legends; poly_sync_t
+// doom_ctl carries 2 so the slave strips its chrome too), and the FIRST key
+// press dismisses it (both edges swallowed — a screensaver key is never
+// typed). Returns false when a session can't start (fw staging active, zone
+// too small, or a game already running) — the caller then falls back to the
+// pulse. doom_tick() ends the screensaver at DOOM_SAVER_MAX_MS and suspends,
+// mirroring where the pulse's TURN_OFF_TIME would have landed.
+bool doom_screensaver_start(void);
+// True while the active session is the screensaver (master side).
+bool doom_mode_screensaver(void);
+// Tear the screensaver down (no-op otherwise) — poly_suspend() calls this so
+// a host-initiated sleep doesn't leave the demo blitting into dark panels.
+void doom_screensaver_stop(void);
+
 // Easter-egg arming state (field round 44 gate): typing IDDQD no longer
 // starts the game — it ARMS the KC_IDDQD utilities-layer key, which then
 // shows "IDDQD" (to_static_text) and starts the game when pressed. Master-
@@ -268,6 +284,11 @@ uint32_t doom_pack_arena_off(void);           // hdr.arena_off, 0 while unloaded
 #else
 
 static inline bool doom_mode_active(void) { return false; }
+// No screensaver without the game compiled in — IDLE_STYLE_DOOM then falls
+// back to the pulse (the idle pipeline checks the start's return value).
+static inline bool doom_screensaver_start(void) { return false; }
+static inline bool doom_mode_screensaver(void) { return false; }
+static inline void doom_screensaver_stop(void) {}
 // Never armed without the game compiled in — the KC_IDDQD utilities-layer
 // key then renders blank and stays inert, and the position alias passes
 // every keycode through unchanged.

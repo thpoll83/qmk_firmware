@@ -692,9 +692,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 {
                     bool master_is_left = (data[HID_DATA_IDX] == 0);
                     eeconfig_update_handedness(master_is_left);
-                    fw_up_apply_sync_t msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC,
-                                               .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };
-                    uint8_t ack = send_to_bridge(USER_SYNC_REBOOT, &msg, sizeof(msg), 5);
+                    poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
+                                              .action = RESET_ACTION_REBOOT,
+                                              .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };
+                    uint8_t ack = send_to_bridge(USER_SYNC_RESET, &msg, sizeof(msg), 5);
                     uprintf("Set handedness: master=%s, slave ack=%d.\n", master_is_left ? "LEFT" : "RIGHT", ack);
                     memset(data, 0, length);
                     hid_reply(data, 0x19, true);

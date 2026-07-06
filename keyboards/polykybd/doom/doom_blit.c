@@ -100,6 +100,34 @@ static inline bool select_display(uint8_t view_row, uint8_t view_col) {
     return true;
 }
 
+// Placement-aware select for the IDDQD attract screensaver: the content cell
+// (view_row, view_col) is drawn `row_off` keycap rows lower, with `col_inset`
+// empty keycap columns left on this half's OUTER edge (content shifted inward).
+// With row_off==col_inset==0 this is byte-identical to select_display(), so the
+// game/mirror paths are unchanged. A cell that lands off the half's grid (or in
+// a thumb-row gap) simply doesn't render — the vacated keys stay as last blanked.
+static inline bool select_display_placed(uint8_t view_row, uint8_t view_col,
+                                         uint8_t row_off, uint8_t col_inset) {
+    const uint8_t disp_row = (uint8_t)(view_row + row_off);
+    uint8_t       disp_col = view_to_disp_col(disp_row, view_col);
+    if (disp_col == 0xFF) {
+        return false;
+    }
+    if (is_left_side()) {
+        disp_col = (uint8_t)(disp_col + col_inset);        // outer edge = low cols
+    } else if (disp_col >= col_inset) {
+        disp_col = (uint8_t)(disp_col - col_inset);        // outer edge = high cols
+    } else {
+        return false;
+    }
+    const uint8_t disp_idx = (uint8_t)LAYOUT_TO_INDEX(disp_row, disp_col);
+    if (disp_idx >= (uint8_t)(NUM_SHIFT_REGISTERS * 8)) {
+        return false;
+    }
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(disp_idx), get_disp_bitmask_size());
+    return true;
+}
+
 void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256) {
     uint8_t      *buf    = get_scratch_buffer();
     const int16_t stride = get_scratch_buffer_size() / 8; // controller bytes per page (128)
@@ -146,7 +174,8 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
 // dithered into per-column band buffers (5 x 360 B OLED tiles, carved from
 // the arena next to the 320 B line — no spare .bss in a doom build), and a
 // finished 40-row band is pushed to its 5 keycaps.
-void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool map_frame) {
+void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool map_frame,
+                            uint8_t place_row_off, uint8_t place_col_inset) {
     uint8_t *scratch = doom_arena_at(DOOM_ARENA_COMPOSE_OFF);
     if (!scratch) {
         return;
@@ -201,7 +230,7 @@ void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool m
         uint8_t      *buf    = get_scratch_buffer();
         const int16_t stride = get_scratch_buffer_size() / 8;
         for (uint8_t vc = 0; vc < DOOM_VIEW_COLS; ++vc) {
-            if (!select_display(vr, vc)) {
+            if (!select_display_placed(vr, vc, place_row_off, place_col_inset)) {
                 continue;
             }
             memset(buf, 0, (size_t)get_scratch_buffer_size());

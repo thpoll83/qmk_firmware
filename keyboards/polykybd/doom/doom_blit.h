@@ -34,7 +34,13 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
 // the compose early: its vpatch bookkeeping fully resets per frame.
 // map_frame draws a 2 px border around the blitted block (the slave's
 // automap view, field round 17).
-void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool map_frame);
+// `place_row_off` (0/1) shifts the whole block DOWN by that many keycap rows and
+// `place_col_inset` (0..2) leaves that many empty keycap columns on the OUTER edge
+// of this half (content shifted inward) — both 0 for game mode; the IDDQD attract
+// screensaver rolls them so its lit keycaps migrate (anti-burn-in). Vacated cells
+// are NOT cleared here (blank the viewport when the placement changes).
+void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool map_frame,
+                            uint8_t place_row_off, uint8_t place_col_inset);
 
 // Slave readable menu mirror (field round 17): the master's menu items +
 // blinking skull on the viewport's upper 4 key rows. doom_mode.c drives the

@@ -105,7 +105,16 @@ Beyond the game (typed `IDDQD` → armed menu item → play), the egg doubles as
 - **Chrome-free**: `doom_tick()` pumps frames with `with_hud = false` (no ESC
   corner, no fire hint, no vitals HUD), and the synced `poly_sync_t.doom_ctl`
   carries **2** so the slave strips its pad/ESC legends too — every keycap is
-  the mirror blitter's (attract demo is full-viewport, bottom row included).
+  the mirror blitter's.
+- **Anti-burn-in placement**: the screensaver renders a **5×4** block (the bottom
+  keycap row is mostly UI, so it is dropped — `doom_blit_frame_engine`'s
+  `skip_bottom_row`) and **migrates that block** every `DOOM_SAVER_MOVE_MS` (15 s):
+  `doom_saver_reroll()` rolls a keycap-row offset (0 or 1, so the block starts on
+  the first or second row) and an outer-edge column inset (0/1/2 empty columns on
+  this half's outside), then blanks the viewport so keys the block vacated don't
+  retain a burning-in frame. `doom_blit_frame_engine(luma, skip_bottom, map_frame,
+  place_row_off, place_col_inset)` (0/0 = the unchanged game placement). Each half
+  rolls **independently** — burn-in is per-panel, so nothing is synced.
 - **Dismissal**: the FIRST key press exits (`doom_process_record` swallows both
   edges, calls `doom_exit()`), exactly like a desktop screensaver — the host
   sees no keystroke. `doom_exit()` re-arms the idle timer, so the fade→idle

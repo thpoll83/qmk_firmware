@@ -294,6 +294,30 @@ static bool     s_active;
 static bool     s_screensaver;  // this session is the attract screensaver
 static uint32_t s_saver_start;  // for the DOOM_SAVER_MAX_MS deadline
 static bool     s_egg_armed; // master-local; see the trigger comment above
+
+// IDDQD screensaver anti-burn-in placement: the 5x4 attract block (bottom UI
+// row dropped) is repositioned every DOOM_SAVER_MOVE_MS so the lit keycaps
+// migrate — down 0/1 keycap rows, and 0/1/2 empty keycap columns on the outer
+// edge. Each half rolls independently (no sync — burn-in is per-panel). Shared
+// statics: whichever half this firmware runs on uses them for its own blit.
+#define DOOM_SAVER_MOVE_MS 15000
+static uint8_t  s_saver_row_off;    // 0 or 1
+static uint8_t  s_saver_col_inset;  // 0, 1, or 2
+static uint32_t s_saver_move_at;
+static uint32_t s_saver_rng;
+
+// Roll a fresh placement and blank the viewport so keys vacated by the move
+// don't keep their last (burning-in) frame. Blit redraws the block at the new
+// spot on the next frame.
+static void doom_saver_reroll(void) {
+    uint32_t x = s_saver_rng ? s_saver_rng : (timer_read32() | 1u);
+    x ^= x << 13; x ^= x >> 17; x ^= x << 5;   // xorshift32
+    s_saver_rng       = x;
+    s_saver_row_off   = (uint8_t)(x & 1u);         // 0 or 1
+    s_saver_col_inset = (uint8_t)((x >> 1) % 3u);  // 0, 1, or 2
+    s_saver_move_at   = timer_read32();
+    doom_blit_blank_all();
+}
 static uint8_t  s_trigger_pos;
 static uint32_t s_trigger_last;
 static bool     s_esc_down;
@@ -434,6 +458,9 @@ static bool doom_begin(bool screensaver) {
     s_last_frame  = 0;
     set_last_update((int32_t)timer_read32());
     doom_blit_blank_all();
+    if (screensaver) {
+        doom_saver_reroll();  // pick the first anti-burn-in placement
+    }
     return true;
 }
 
@@ -861,7 +888,12 @@ static void doom_frame_pump(bool with_hud) {
         // here IS the game's frame pace. (Single view buffer: the next frame
         // renders into the buffer being blitted — tearing accepted for v1.)
         if (doom_shim_take_frame()) {
-            doom_blit_frame_engine(doom_view_luma(), false, false);
+            // Screensaver: drop the bottom (mostly-UI) canvas row and place the
+            // 5x4 block at the rolled anti-burn-in offset. Game mode: full 5x5,
+            // no offset (0/0 is byte-identical to the old call).
+            doom_blit_frame_engine(doom_view_luma(), s_screensaver, false,
+                                   s_screensaver ? s_saver_row_off : 0,
+                                   s_screensaver ? s_saver_col_inset : 0);
             doom_shim_release_frame();
             if (with_hud) {
                 doom_hud_tick();
@@ -1189,12 +1221,21 @@ static void doom_slave_tick(void) {
     } else {
         s_slave_menu = false;
     }
+    // IDDQD screensaver on the slave (doom_ctl == 2): drop the bottom UI row and
+    // migrate the block like the master, rolling this half's own placement.
+    const bool saver = get_local_state()->doom_ctl == 2;
+    if (saver && (s_saver_move_at == 0 || timer_elapsed32(s_saver_move_at) > DOOM_SAVER_MOVE_MS)) {
+        doom_saver_reroll();
+    }
     // Consume frames even while not blitting — the engine loop must keep
     // turning (blocked on the frame semaphore otherwise) to see a START.
     if (doom_shim_take_frame()) {
         if (s_slave_blit && !menu) {
-            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA, !s_slave_blit_bottom,
-                                   doom_shim_drone_map_live());
+            doom_blit_frame_engine(DOOM_PLAYPAL_LUMA,
+                                   saver ? true : !s_slave_blit_bottom,
+                                   doom_shim_drone_map_live(),
+                                   saver ? s_saver_row_off : 0,
+                                   saver ? s_saver_col_inset : 0);
         }
         doom_shim_release_frame();
         s_frames++;
@@ -1501,6 +1542,9 @@ void doom_tick(void) {
         poly_suspend();
         set_last_update(-1);
         return;
+    }
+    if (s_screensaver && timer_elapsed32(s_saver_move_at) > DOOM_SAVER_MOVE_MS) {
+        doom_saver_reroll();  // migrate the block (anti-burn-in), blanks vacated keys
     }
     // Hold off the idle/fade/turn-off pipeline — the pulse/jitter machinery
     // must never repaint the keycaps while the blitter owns them.

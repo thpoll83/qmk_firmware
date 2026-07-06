@@ -297,12 +297,16 @@ static bool     s_egg_armed; // master-local; see the trigger comment above
 
 // IDDQD screensaver anti-burn-in placement: the 5x4 attract block (bottom UI
 // row dropped) is repositioned every DOOM_SAVER_MOVE_MS so the lit keycaps
-// migrate — down 0/1 keycap rows, and 0/1/2 empty keycap columns on the outer
-// edge. Each half rolls independently (no sync — burn-in is per-panel). Shared
-// statics: whichever half this firmware runs on uses them for its own blit.
+// migrate — down 0/1 keycap rows, and 0..3 empty keycap columns on the outer
+// edge. The inset reaches 3 so that, at inset 3 + row_off 1, the block's bottom
+// row lands on the two INNER thumb keys (physical "col 8" — matrix cols 6/7 of
+// the bottom row per g_led_config), which the 0..2 range never touches; the
+// upper rows just clip against the inner edge there. Each half rolls
+// independently (no sync — burn-in is per-panel). Shared statics: whichever
+// half this firmware runs on uses them for its own blit.
 #define DOOM_SAVER_MOVE_MS 15000
 static uint8_t  s_saver_row_off;    // 0 or 1
-static uint8_t  s_saver_col_inset;  // 0, 1, or 2
+static uint8_t  s_saver_col_inset;  // 0, 1, 2, or 3
 static uint32_t s_saver_move_at;
 static uint32_t s_saver_rng;
 
@@ -314,7 +318,7 @@ static void doom_saver_reroll(void) {
     x ^= x << 13; x ^= x >> 17; x ^= x << 5;   // xorshift32
     s_saver_rng       = x;
     s_saver_row_off   = (uint8_t)(x & 1u);         // 0 or 1
-    s_saver_col_inset = (uint8_t)((x >> 1) % 3u);  // 0, 1, or 2
+    s_saver_col_inset = (uint8_t)((x >> 1) % 4u);  // 0, 1, 2, or 3
     s_saver_move_at   = timer_read32();
     doom_blit_blank_all();
 }

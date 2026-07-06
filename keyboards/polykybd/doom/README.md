@@ -110,11 +110,15 @@ Beyond the game (typed `IDDQD` → armed menu item → play), the egg doubles as
   keycap row is mostly UI, so it is dropped — `doom_blit_frame_engine`'s
   `skip_bottom_row`) and **migrates that block** every `DOOM_SAVER_MOVE_MS` (15 s):
   `doom_saver_reroll()` rolls a keycap-row offset (0 or 1, so the block starts on
-  the first or second row) and an outer-edge column inset (0/1/2 empty columns on
+  the first or second row) and an outer-edge column inset (0..3 empty columns on
   this half's outside), then blanks the viewport so keys the block vacated don't
   retain a burning-in frame. `doom_blit_frame_engine(luma, skip_bottom, map_frame,
   place_row_off, place_col_inset)` (0/0 = the unchanged game placement). Each half
-  rolls **independently** — burn-in is per-panel, so nothing is synced.
+  rolls **independently** — burn-in is per-panel, so nothing is synced. Inset 3
+  exists so that, combined with row_off 1, the bottom row occasionally reaches the
+  two **inner thumb keys** (physical "col 8" — matrix cols 6/7 of the bottom row,
+  per `g_led_config`), which the 0..2 range never lights; the upper rows clip
+  against the inner edge at inset 3.
 - **Dismissal**: the FIRST key press exits (`doom_process_record` swallows both
   edges, calls `doom_exit()`), exactly like a desktop screensaver — the host
   sees no keystroke. `doom_exit()` re-arms the idle timer, so the fade→idle

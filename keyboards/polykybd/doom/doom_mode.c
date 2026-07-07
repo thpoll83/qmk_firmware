@@ -427,7 +427,17 @@ static bool doom_session_start(void) {
     // approximates. A refused pack (missing/stale/corrupt — already logged)
     // leaves the stub table: doom_engine_start then runs the fire demo.
     memset(s_fb, 0, DOOM_POOL_BYTES);
-    (void)doom_pack_load(s_fb, DOOM_POOL_BYTES);
+    if (!doom_pack_load(s_fb, DOOM_POOL_BYTES)) {
+        // No valid engine pack flashed (missing/stale/corrupt — already logged).
+        // On the pack flavour there is nothing to run without it, so REFUSE the
+        // whole session: doom_screensaver_start() then returns false and the idle
+        // pipeline falls back to the next style (jitter/pulse), and the armed
+        // utils-menu item is a no-op (doom_enter ignores the false). We do NOT
+        // fall through to the compiled-in fire demo here — the attract/game is
+        // meant to show the real engine, not a stand-in.
+        s_fb = NULL;
+        return false;
+    }
 #else
     // Zero the whole shared block: the engine's zero-init statics live at its
     // front (.doom_shared is not crt0-zeroed) — every entry starts the game

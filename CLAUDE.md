@@ -826,6 +826,57 @@ is non-zero; classify it with `sync_succeeded()`.
 
 ---
 
+### Bug: idle mode sometimes never starts; host "start idle" (cmd 15) is a no-op right after boot
+
+**Symptom**: (1) Once in a while the keycaps never enter the idle
+fade/pulse/turn-off animation at all — the displays just stay at full brightness
+until suspend. (2) The host-side "start idle" HID command (cmd 15, payload ≠ 0)
+does nothing when sent within the first ~2 minutes after the keyboard powers on —
+the keyboard keeps waiting the full idle timeout instead of idling immediately.
+
+**Root cause (2026-07-07 — FIXED)**: both trace to `base/update.c`'s activity
+timestamp `last_update` being a **signed `int32_t` that overloaded a `uint32_t`
+timestamp with sentinels** (`-1` = "idle tracking off"), and the housekeeping loop
+gating idle on `if(get_last_update() >= 0)`.
+- **(1) The 24.86-day sign-bit window.** `update_performed()` stores
+  `timer_read32()` (a `uint32_t` ms counter) into the signed `last_update`. Once
+  uptime passes ~24.86 days (`timer_read32() ≥ 2³¹`), that value reads back
+  **negative**, so `if(update >= 0)` is false and the **entire idle/turn-off block
+  in `housekeeping_task_user()` is skipped** — idle silently stops working for the
+  ~25-day window until the 49.7-day `uint32` wrap. Intermittent, uptime-dependent →
+  "sometimes it doesn't idle".
+- **(2) Backdating underflow near boot.** `hid_com.c` case 15's "start idle" set
+  `last_update = timer_read32() - FADE_OUT_TIME` to make idle begin one fade-out
+  interval "ago". In the first `FADE_OUT_TIME` (120 s) of uptime `timer_read32() <
+  120000`, so the signed subtraction went **negative and was clamped to 0** — which
+  reads as "just became active", not "idle now", so the fade never triggered. (The
+  code even logged `Starting idle in N msec` and then didn't.)
+
+**Fix**: separate the "idle tracking enabled" state from the timestamp.
+`base/update.c` now stores `last_update` as a real **`uint32_t`** plus a distinct
+`bool idle_tracking` flag; `get_time_since_last_update()` uses `timer_elapsed32()`
+(correct modular `uint32` arithmetic at any uptime, including across the wrap).
+Housekeeping gates on **`is_idle_tracking()`** instead of the sign of the
+timestamp, so idle works for the full 49.7-day timer range. The host "start idle"
+path calls the new **`backdate_last_update(FADE_OUT_TIME)`** — modular
+`timer_read32() - ms`, correct even when `now < ms`, so idle begins on the next
+pass regardless of uptime. The old `set_last_update(-1)` "idle off" calls are now
+the clearer **`disable_idle_tracking()`** (suspend / host display-off cmd 24 /
+turn-off-reached); `set_last_update(int32_t)` is kept as a thin compat shim (`<0`
+disables, `≥0` sets+enables). No wire-protocol change (cmd 15 payload identical),
+so no `PROTOCOL_VERSION`/`__protocol__` bump.
+
+**Relevant files**:
+- `keyboards/polykybd/base/update.c` / `update.h` — `uint32_t last_update` +
+  `idle_tracking`; `is_idle_tracking()`, `disable_idle_tracking()`,
+  `backdate_last_update()`
+- `keyboards/polykybd/poly_keymap.c` — `housekeeping_task_user()` idle gate
+  (`is_idle_tracking()`), the turn-off + `suspend_power_down_kb()` disable calls
+- `keyboards/polykybd/hid_com.c` — cmd 15 start branch (`backdate_last_update`),
+  cmd 24 display-off (`disable_idle_tracking`)
+
+---
+
 ### Bug: keyboard hangs on the boot splash after a firmware apply (slave not rebooted)
 
 **Symptom (field, 2026-06-22)**: After a successful HID firmware flash + apply, the

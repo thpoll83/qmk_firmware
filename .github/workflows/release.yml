@@ -105,7 +105,18 @@ jobs:
             NOTES_ARGS=( --title "PolyKybd Firmware $TAG" --generate-notes )
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists — uploading assets (clobbering duplicates)."
+            # Release already exists — the normal path here, because release tags
+            # land on the auto-bump "[skip ci]" commit, so the tag-push trigger is
+            # suppressed and this workflow runs on `release: published` (the user
+            # published it in the UI). Apply the crafted notes from the branch if
+            # present (so the user can publish an empty release and let CI fill it),
+            # then upload assets.
+            if [ "$HAVE_NOTES" = "1" ]; then
+              echo "Release $TAG exists — applying crafted notes + uploading assets."
+              gh release edit "$TAG" --title "$TITLE" --notes-file _release_body.md
+            else
+              echo "Release $TAG exists — uploading assets (keeping existing notes)."
+            fi
             gh release upload "$TAG" "${ASSETS[@]}" --clobber
           else
             echo "Creating release $TAG (falls back to upload if a concurrent run won the create)."

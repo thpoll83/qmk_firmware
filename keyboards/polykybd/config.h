@@ -36,6 +36,10 @@
 // #define SPLIT_LED_STATE_ENABLE
 // #define SPLIT_MODS_ENABLE
 #define SPLIT_WPM_ENABLE
+// NOTE: the QMK transaction table is FULL (NUM_TOTAL_TRANSACTIONS == 32, the
+// hard cap) — a new sync must MULTIPLEX onto an existing id by a distinct
+// payload size, like the MRU snapshots and the doom mirror messages both do
+// on USER_SYNC_OVERLAY_MAP_DATA (dispatch in user_sync_overlay_map_data_handler).
 #define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FW_UP_QUERY, USER_SYNC_FW_UP_BEGIN, USER_SYNC_FW_UP_CHUNK, USER_SYNC_FW_UP_COMMIT, USER_SYNC_FW_UP_STATUS, USER_SYNC_FW_UP_APPLY, USER_SYNC_REBOOT
 
 #define EE_HANDS
@@ -94,7 +98,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.9.36"
+#define FW_VERSION "0.9.40"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -146,7 +150,15 @@
 //     0xFF stays the query sentinel. (v10 is the one-time bump that establishes this
 //     open-ended contract, distinguishing it from the pre-v10 Tengwar-only firmware
 //     that NACKed unknown indices.)
-#define PROTOCOL_VERSION 10
+// v11: plain (uncompressed) overlay upload (cmd 10 / 0x0A) reframed. modifier and
+//      segment now share ONE header byte — (segment << 4) | (modifier & 0x0F) — so
+//      the header shrinks from 5 to 4 bytes and a full 60-byte segment fits the
+//      64-byte report exactly. The old layout carried modifier and segment in
+//      separate bytes, leaving only 59 bytes for the 60-byte segment, so the
+//      firmware read 1 byte past the report (harmless on a no-MMU MCU, but the
+//      last data byte of each segment was undefined). Compressed/ROI paths are
+//      unchanged. Host must match v11 to connect (exact-match gate).
+#define PROTOCOL_VERSION 11
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

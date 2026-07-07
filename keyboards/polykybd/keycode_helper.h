@@ -65,6 +65,12 @@ enum my_keycodes {
     // Appended at the end of the QK_KB_0 range so existing keycode values (incl.
     // KC_LAT*) and the QK_USER_0-based KCL_* range below are NOT renumbered.
     KC_DAUTO,
+    // Doom easter-egg menu item (utilities layer, doom builds only): renders
+    // blank and is inert until typing IDDQD arms it (doom_mode.c) — then it
+    // shows "IDDQD" on the master half and pressing it starts the game.
+    // Never emits HID output; a dead blank key in normal builds. Appended
+    // for the same no-renumbering reason as KC_DAUTO.
+    KC_IDDQD,
     /*[[[cog
         for lang in languages:
             if lang == "ENUS":

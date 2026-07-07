@@ -23,6 +23,11 @@
 #include "fill_overlay.h"
 #include "state.h"
 #include "side.h"
+#ifdef POLYKYBD_DOOM
+#include "doom/doom_arena.h"
+#include "doom/doom_mirror.h"
+#include "doom/doom_mode.h"   // doom_shim_mirror_engaged (mirror ack status)
+#endif
 #include "matrix_helper.h"
 #include "poly_util.h"
 
@@ -77,7 +82,16 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
 #ifdef RGB_MATRIX_ENABLE
     uint8_t newly_cleared = (current->overlay_flags  & ~incoming->overlay_flags);
 #endif
+    // Doom control-pad mode flipped on the master (strip legends down to the
+    // game controls / restore the full set), or the weapon-pad state changed
+    // (picked up / switched weapon) -> re-render this half's legends.
+    bool doom_ctl_changed = incoming->doom_ctl != current->doom_ctl ||
+                            incoming->doom_wpn_owned != current->doom_wpn_owned ||
+                            incoming->doom_wpn_ready != current->doom_wpn_ready;
     copy_local_state(incoming);
+    if (doom_ctl_changed) {
+        request_disp_refresh();
+    }
     emj_apply_sync(incoming->emj_category, incoming->emj_page);
     lang_apply_sync(incoming->lang_page);
     if(newly_set & OVERLAY_ACTION_FLAGS) {
@@ -146,6 +160,16 @@ void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t o
 void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     SYNC_VALIDATE_OR_RETURN(overlay_sync_t);
     const overlay_sync_t* ov = ((const overlay_sync_t *)in_data);
+    // NOTE (FW-6, risk accepted): `ov->segment` is not bounded here, so a value
+    // outside 0..NUM_SEGMENTS_PER_OVERLAY-1 would offset the memcpy past the
+    // 360-byte overlay row. This is deliberately NOT guarded: the only way to
+    // inject such a value is a compromised/forged peer half on the UART bridge,
+    // which requires physical access to the internal bridge connector — an
+    // attacker with that access can already flash arbitrary firmware over the
+    // bootloader, so the split link is inside the trust boundary. The master's
+    // HID path (hid_com.c case 10) bounds `segment` on the way in, so normal
+    // traffic never carries an out-of-range value. (adj_idx is still bounded by
+    // get_overlay()/FW-4.)
     memcpy(get_overlay(ov->adj_idx) + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
     if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
         set_overlay_usage_post_upload(ov->adj_idx);
@@ -283,14 +307,28 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
 // distinct sizes for the size-based dispatch in the handler below to work.
 _Static_assert(MRU_SYNC_BYTES != sizeof(overlay_map_sync_t),
                "MRU and overlay-map payloads must differ in size (shared transaction id)");
+#ifdef POLYKYBD_DOOM
+// The doom mirror messages are the third tenant of this id (also size-keyed;
+// no cross-talk — the host's overlay-map commands are frozen in game mode).
+_Static_assert(sizeof(doom_mirror_msg_t) != sizeof(overlay_map_sync_t) &&
+               sizeof(doom_mirror_msg_t) != MRU_SYNC_BYTES,
+               "doom mirror payload must differ in size (shared transaction id)");
+#endif
 
 // Handles incoming overlay mapping data on bridge with CRC32 validation.
-// Also dispatches MRU snapshots, which share this transaction id (distinct size).
+// Also dispatches MRU snapshots (and, in POLYKYBD_DOOM builds, the doom
+// mirror messages), which share this transaction id by distinct size.
 void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len == MRU_SYNC_BYTES) {
         user_sync_mru_data_handler(in_len, in_data, out_len, out_data);
         return;
     }
+#ifdef POLYKYBD_DOOM
+    if (in_len == sizeof(doom_mirror_msg_t)) {
+        user_sync_doom_mirror_handler(in_len, in_data, out_len, out_data);
+        return;
+    }
+#endif
     SYNC_VALIDATE_OR_RETURN(overlay_map_sync_t);
     const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
     set_10bit_overlay_mapping((uint8_t *)data->mapping);
@@ -313,3 +351,73 @@ void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out
     }
 }
 
+
+#ifdef POLYKYBD_DOOM
+// Doom slave lockstep mirror (doom/doom_mirror.h): feed received ticcmds into
+// the arena's rolling window / hand control messages to the game core. While
+// game mode is not (yet) active on this half the arena does not exist — the
+// message is ACKed and dropped (pre-session attract cmds are disposable; the
+// window realigns on the first message that lands after the session is up).
+void user_sync_doom_mirror_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    SYNC_VALIDATE_OR_RETURN(doom_mirror_msg_t);
+    const doom_mirror_msg_t* msg = (const doom_mirror_msg_t *)in_data;
+    doom_mirror_t* m = (doom_mirror_t *)doom_arena_at(DOOM_ARENA_MIRROR_OFF);
+    if (m != NULL) {
+        switch (msg->kind) {
+            case DOOM_MIRROR_MSG_TIC: {
+                uint32_t t = msg->tic;
+                uint8_t  n = msg->count > DOOM_MIRROR_MSG_MAX_CMDS ? DOOM_MIRROR_MSG_MAX_CMDS
+                                                                   : msg->count;
+                if (t > m->rx_w) {
+                    // Gap: cmds streamed while this half had no session (or the
+                    // master's ring reset). Realign the window here — a consumer
+                    // engaged across the gap detects it via rx_r and freezes.
+                    m->rx_r = m->rx_w = t;
+                }
+                for (uint8_t i = 0; i < n; ++i, ++t) {
+                    if (t < m->rx_w) {
+                        continue; // duplicate from a bridge retry
+                    }
+                    memcpy(m->rx_cmds[t % DOOM_MIRROR_RX_LEN], msg->cmds[i], DOOM_MIRROR_CMD_BYTES);
+                    __asm volatile("dmb" ::: "memory");
+                    m->rx_w = t + 1;
+                    if (m->rx_w - m->rx_r > DOOM_MIRROR_RX_LEN) {
+                        m->rx_r = m->rx_w - DOOM_MIRROR_RX_LEN; // roll the window
+                    }
+                }
+                break;
+            }
+            case DOOM_MIRROR_MSG_START:
+                m->start_in_tic   = msg->tic;
+                m->start_in_skill = msg->skill;
+                m->start_in_epi   = msg->epi;
+                m->start_in_map   = msg->map;
+                __asm volatile("dmb" ::: "memory");
+                m->start_in_seq++;
+                break;
+            case DOOM_MIRROR_MSG_BREAK:
+                m->break_in = 1;
+                break;
+            case DOOM_MIRROR_MSG_MENU: {
+                // Readable menu mirror snapshot (count 0 = menu closed);
+                // item vpatch handles travel as raw u16s in the cmds bytes.
+                uint8_t n = msg->count > DOOM_MIRROR_MENU_MAX_ITEMS
+                                ? DOOM_MIRROR_MENU_MAX_ITEMS : msg->count;
+                memcpy(m->menu_in_items, msg->cmds, (size_t)n * sizeof(uint16_t));
+                m->menu_in_item_on = msg->skill;
+                __asm volatile("dmb" ::: "memory");
+                m->menu_in_count = n;
+                m->menu_in_seq++;
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    // The ack byte doubles as the slave's mirror status: SYNC_ACK_SIG = the
+    // drone is engaged, plain SYNC_ACK = not (yet). Both count as success
+    // (sync_succeeded); the master pump reads it to re-offer a missed START
+    // and to log engagement transitions (round 24).
+    ((poly_sync_reply_t*)out_data)->ack = doom_shim_mirror_engaged() ? SYNC_ACK_SIG : SYNC_ACK;
+}
+#endif // POLYKYBD_DOOM

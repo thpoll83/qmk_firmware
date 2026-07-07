@@ -19,6 +19,11 @@ static volatile uint32_t core1_decomp_count = 0;
 static volatile uint32_t core0_decomp_count = 0;
 
 static volatile uint8_t core1_buffer[HID_DATA_MAX];
+// Despite the "bitlen" name this holds a BYTE count, not a bit count: the number
+// of writable bytes from the current dest (get_overlay(idx)+core1_bit_index/8) to
+// the end of the 360-byte overlay, i.e. 360 - core1_bit_index/8 (set below). It is
+// passed straight as rle_decompress's `max` (bytes). Reused across the DECOMPRESS
+// continuation chunks rather than declaring a fresh local each time.
 static volatile int16_t core1_max_bitlen;
 static volatile uint16_t core1_idx;
 static volatile roi_update_data_t core1_roi;

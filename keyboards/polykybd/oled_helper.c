@@ -7,6 +7,10 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
+#ifdef POLYKYBD_DOOM
+#include "doom/doom_mode.h"
+#include "doom/doom_logo_oled.h"
+#endif
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
@@ -132,6 +136,28 @@ bool oled_task_user(void) {
     if (fw_staging_fw_up_active()) {
         oled_scroll_off();
         oled_fw_update_screen();
+#ifdef POLYKYBD_DOOM
+    } else if (doom_mode_active() || get_local_state()->doom_ctl) {
+        // Game mode status OLED — master directly, slave via the synced
+        // control-pad flag. In a level the MASTER shows the doomguy face
+        // (redrawn only when the face index changes); otherwise the DOOM
+        // logo, whose HARDWARE scroll runs only during the attract (the
+        // driver activates scroll once the buffer is clean, and repeated
+        // identical writes stay non-dirty — zero traffic while scrolling).
+        int face = doom_status_face_render((uint8_t *)get_scratch_buffer());
+        if (face == 2) {
+            oled_scroll_off();
+            oled_write_raw((char *)get_scratch_buffer(), get_scratch_buffer_size());
+        } else if (face == 0) {
+            oled_write_raw((const char *)DOOM_LOGO_OLED, sizeof(DOOM_LOGO_OLED));
+            if (doom_status_scroll()) {
+                oled_scroll_left();
+            } else {
+                oled_scroll_off();
+            }
+        }
+        // face == 1: the panel already shows the current face — leave it be.
+#endif
     } else if ((get_local_state()->flags & DISP_IDLE) != 0) {
         oled_render_logos();
     } else {

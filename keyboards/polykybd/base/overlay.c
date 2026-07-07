@@ -13,7 +13,38 @@
 #define OVERLAY_BIT_CAPACITY (SCREEN_WIDTH * SCREEN_HEIGHT)
 
 static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
+// ⚠️ overlays[] IS the doom easter-egg's entire game arena (borrowed as RAM). Its
+// size = NUM_OVERLAYS*NUM_VARIATIONS*360 = 226,800 B today. If you SHRINK the pool
+// to reclaim RAM, keep it >= ~205 KB or the doom build won't fit: the engine floor
+// is ~144 KB of fixed structure (frame buffer 53,760 + pd_render 58,880 + statics
+// 20,824 + vpatch/compose/mirror/stack) plus a >=~58 KB zone heap. The monolith
+// link fails loudly if it overflows (.doom_shared is pool-sized), but the DoomPack
+// pins its statics at this array's address, so verify both flavours. See
+// doom/doom_arena.h + doom/README.md "Engine integration state" for the breakdown.
+#if defined(POLYKYBD_DOOM) && !defined(POLYKYBD_DOOM_PACK)
+// Doom dev builds: the pool is the linker's .doom_shared block, shared with
+// the game engine's zero-init statics (keyboards/polykybd/ld/
+// RP2040_FLASH_TIMECRIT_DOOM.ld) — game mode and overlay use are mutually
+// exclusive, and the block is exactly pool-sized. NOT zeroed by crt0: the
+// usage bits above gate every read, and reset/refill paths memset it.
+// (The DoomPack flavour keeps the plain array below: the flashed pack links
+// its statics AT the array's measured address instead — doom/PACK_DESIGN.md.)
+extern uint8_t __doom_shared_base__[];
+#define overlays ((uint8_t (*)[72*40/8])__doom_shared_base__)
+#define OVERLAYS_SIZE (NUM_OVERLAYS*NUM_VARIATIONS*(72*40/8))
+#elif defined(POLYKYBD_DOOM_PACK)
+// DoomPack flavour: the pool is PINNED at the RAM origin (0x20000000) via
+// the dedicated .overlay_pool section (ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld)
+// so the flashed engine pack's RAM base is a build-independent constant.
+// Like the monolith's .doom_shared the section is NOLOAD (crt0 does not
+// zero it) — the usage bits above gate every read and the reset/refill
+// paths memset it, so boot behaviour is unchanged.
+static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8] __attribute__((section(".overlay_pool")));
+#define OVERLAYS_SIZE sizeof(overlays)
+#else
 static /*volatile*/ uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
+#define OVERLAYS_SIZE sizeof(overlays)
+#endif
 static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 
 static overlay_fragment_context_t g_fragment_context = {0};
@@ -135,7 +166,7 @@ bool is_overlay_used(uint16_t overlay_idx) {
 }
 
 void reset_overlay_buffers(void) {
-    memset(&overlays, 0, sizeof(overlays));
+    memset(overlays, 0, OVERLAYS_SIZE);
 }
 
 void reset_overlay_usage(void) {

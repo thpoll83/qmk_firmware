@@ -120,10 +120,20 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   legend instead of NACKing. This **decouples "add a font face" from the protocol**: within
   v10 the script set can grow freely (the host may offer more scripts than a keyboard has;
   older keyboards degrade gracefully), so **adding scripts never bumps the protocol again** —
-  only a real wire/semantic change would. `0xFF` stays the query sentinel. **Bump `FW_VERSION` +
+  only a real wire/semantic change would. `0xFF` stays the query sentinel.
+  **v11** reframes the **plain (uncompressed) overlay upload** (cmd `10` / `0x0A`): `modifier`
+  and `segment` now share **one** header byte — `(segment << 4) | (modifier & 0x0F)` — so the
+  header is 4 bytes (`id, cmd, keycode, packed`) and a full 60-byte segment fits the 64-byte
+  report **exactly**. The pre-v11 layout carried modifier and segment in *separate* bytes (5-byte
+  header), leaving only 59 bytes for a 60-byte segment, so the firmware `memcpy`'d 60 bytes and
+  read **1 byte past the report** — harmless on the no-MMU RP2040 but the last byte of each
+  segment was undefined (the old FW-7 finding; fixed in the wire format instead of a bounce
+  buffer). The firmware unpacks the byte in `hid_com.c` case 10 *before* `set_fragment_context_key`,
+  so `adjust_overlay_idx_to_mod` is unchanged; **compressed (`0x10`/`0x11`) and ROI (`0x12`/`0x13`)
+  paths are untouched** (their headers already fit). **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep** — the host connect gate is exact-match.
-- Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
+- Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`, protocol 11+: modifier+segment packed into one header byte), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)
 
@@ -172,6 +182,24 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   render pack/flag glyphs too. **Caveat:** the preview models glyph `xOffset/yOffset`
   but NOT the `kdisp` baseline-align shift, so it won't reproduce that bug — reason
   about `fonts[0]` separately.
+- **The per-keycap DISPLAY grid is NOT a rectangle** (split72). Only the **bottom
+  row (display row 4) is a full 8-wide row**; the upper rows (0–3) have panels at
+  **cols 0–6 only** — display **col 7 is a routing phantom** (a `BITMASK` entry
+  exists in `split72.c` `key_display[]` but there is no OLED behind it, so writing
+  it shows nothing). The two inner **thumb keys** per half live *only* on the bottom
+  matrix row (left disp cols 6/7, right 0/1), stacked vertically (same x, different
+  y) yet on the same matrix row — so they can't be part of a rectangular block on
+  the rows above. Also: `LAYOUT_TO_INDEX(row,col)=row*8+col` **wraps** — `col ==
+  MATRIX_COLS` folds into the next row's col 0 (bound `disp_col` to
+  `[0, MATRIX_COLS-1]`); and the right half applies a `c--` display-index shift on
+  its upper rows (5–8) but not its bottom row (9). ⚠️ **Model placement from the
+  OLED chip-select, NOT the RGB `g_led_config` x-order** — they do **not** match:
+  because of the `c--` fold, **disp_col 0 is the OUTER edge on the LEFT half but the
+  INNER edge on the RIGHT**, so a sweep that looks left→right in RGB space runs
+  backwards on the right half's OLEDs. Reasoning from RGB position produced several
+  wrong IDDQD-screensaver revisions before this was caught. The composed model +
+  verifier is committed as `doom/tools/keycap_dispmap.py` (run it after any
+  placement change); full write-up in `doom/README.md` § anti-burn-in placement.
 
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.
@@ -818,6 +846,57 @@ is non-zero; classify it with `sync_succeeded()`.
 - `keyboards/polykybd/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
 - `keyboards/polykybd/split_sync.h` — `sync_succeeded()` helper + `SYNC_*` values
 - `keyboards/polykybd/bridge_helper.c` — `send_to_bridge()` (returns the ack byte / `SYNC_CRC32_ERR`)
+
+---
+
+### Bug: idle mode sometimes never starts; host "start idle" (cmd 15) is a no-op right after boot
+
+**Symptom**: (1) Once in a while the keycaps never enter the idle
+fade/pulse/turn-off animation at all — the displays just stay at full brightness
+until suspend. (2) The host-side "start idle" HID command (cmd 15, payload ≠ 0)
+does nothing when sent within the first ~2 minutes after the keyboard powers on —
+the keyboard keeps waiting the full idle timeout instead of idling immediately.
+
+**Root cause (2026-07-07 — FIXED)**: both trace to `base/update.c`'s activity
+timestamp `last_update` being a **signed `int32_t` that overloaded a `uint32_t`
+timestamp with sentinels** (`-1` = "idle tracking off"), and the housekeeping loop
+gating idle on `if(get_last_update() >= 0)`.
+- **(1) The 24.86-day sign-bit window.** `update_performed()` stores
+  `timer_read32()` (a `uint32_t` ms counter) into the signed `last_update`. Once
+  uptime passes ~24.86 days (`timer_read32() ≥ 2³¹`), that value reads back
+  **negative**, so `if(update >= 0)` is false and the **entire idle/turn-off block
+  in `housekeeping_task_user()` is skipped** — idle silently stops working for the
+  ~25-day window until the 49.7-day `uint32` wrap. Intermittent, uptime-dependent →
+  "sometimes it doesn't idle".
+- **(2) Backdating underflow near boot.** `hid_com.c` case 15's "start idle" set
+  `last_update = timer_read32() - FADE_OUT_TIME` to make idle begin one fade-out
+  interval "ago". In the first `FADE_OUT_TIME` (120 s) of uptime `timer_read32() <
+  120000`, so the signed subtraction went **negative and was clamped to 0** — which
+  reads as "just became active", not "idle now", so the fade never triggered. (The
+  code even logged `Starting idle in N msec` and then didn't.)
+
+**Fix**: separate the "idle tracking enabled" state from the timestamp.
+`base/update.c` now stores `last_update` as a real **`uint32_t`** plus a distinct
+`bool idle_tracking` flag; `get_time_since_last_update()` uses `timer_elapsed32()`
+(correct modular `uint32` arithmetic at any uptime, including across the wrap).
+Housekeeping gates on **`is_idle_tracking()`** instead of the sign of the
+timestamp, so idle works for the full 49.7-day timer range. The host "start idle"
+path calls the new **`backdate_last_update(FADE_OUT_TIME)`** — modular
+`timer_read32() - ms`, correct even when `now < ms`, so idle begins on the next
+pass regardless of uptime. The old `set_last_update(-1)` "idle off" calls are now
+the clearer **`disable_idle_tracking()`** (suspend / host display-off cmd 24 /
+turn-off-reached); `set_last_update(int32_t)` is kept as a thin compat shim (`<0`
+disables, `≥0` sets+enables). No wire-protocol change (cmd 15 payload identical),
+so no `PROTOCOL_VERSION`/`__protocol__` bump.
+
+**Relevant files**:
+- `keyboards/polykybd/base/update.c` / `update.h` — `uint32_t last_update` +
+  `idle_tracking`; `is_idle_tracking()`, `disable_idle_tracking()`,
+  `backdate_last_update()`
+- `keyboards/polykybd/poly_keymap.c` — `housekeeping_task_user()` idle gate
+  (`is_idle_tracking()`), the turn-off + `suspend_power_down_kb()` disable calls
+- `keyboards/polykybd/hid_com.c` — cmd 15 start branch (`backdate_last_update`),
+  cmd 24 display-off (`disable_idle_tracking`)
 
 ---
 

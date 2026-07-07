@@ -84,7 +84,8 @@ void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    bool    fonts = (fw_staging_active_target() == FW_TARGET_FONTPACK);
+    uint8_t target = fw_staging_active_target();
+    bool    fonts = (target == FW_TARGET_FONTPACK || target == FW_TARGET_DOOMWAD);
     uint8_t pct   = fw_update_percent();
 
     if (!fonts && is_keyboard_master()) {

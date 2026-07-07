@@ -10,9 +10,15 @@
 // Idle (anti-burn-in) display style, persisted in poly_eeconf_t.idle_style and
 // toggled over HID (cmd 28). PULSE is the legacy contrast-only breathing; JITTER
 // adds a per-cycle relocation of the legend so the lit pixels migrate over time.
+// DOOM runs the doom easter egg's attract demo as a screensaver instead of the
+// pulse (doom/README.md) — chrome-free, dismissed by the first key press; on a
+// build/board where the demo can't start (no POLYKYBD_DOOM, staging active) it
+// falls back to PULSE at runtime, so the value is always safe to accept/persist.
+// Values are append-only (persisted + on the wire in poly_sync_t.idle_style).
 enum poly_idle_style {
     IDLE_STYLE_PULSE  = 0,
     IDLE_STYLE_JITTER = 1,
+    IDLE_STYLE_IDDQD  = 2,   // doom attract-demo screensaver (host: IdleStyle.IDDQD)
     IDLE_STYLE_COUNT
 };
 
@@ -112,6 +118,24 @@ typedef struct _poly_sync_t {
     // Active glyph-script override (enum poly_glyph_script). Master-authoritative,
     // synced so the slave renders the same legends. See render_key / to_static_text.
     uint8_t  glyph_script;
+    // Doom game mode active on the master (0/1). Synced so the SLAVE half turns
+    // itself into a control pad: update_displays blanks every key that is not a
+    // game control (doom_key_is_control). The master's keycaps are driven by the
+    // game blitter directly and never see this flag (update_displays early-returns
+    // there while the game runs).
+    uint8_t  doom_ctl;
+    // Doom weapon pad state (valid while doom_ctl): bit N-1 = number-key slot N
+    // owned; ready = the slot of the weapon in hand (0 = none/unknown). The slave
+    // renders its outer-column weapon pad from these.
+    uint8_t  doom_wpn_owned;
+    uint8_t  doom_wpn_ready;
+    // Doom sound->RGB cue (valid while doom_ctl; doom_mode.c doom_rgb_task):
+    // bits 0-3 = red base level 0..15 (degrading health), bits 4-5 = fire
+    // pulse counter (player weapon fired -> yellow flash; wraps 1..3, 0 =
+    // idle), bits 6-7 = world-sound pulse counter (monsters etc -> blue
+    // flash, suppressed while firing). Both halves render it locally in
+    // rgb_matrix_indicators_kb via doom_rgb_indicators().
+    uint8_t  doom_rgb;
 } poly_sync_t;
 
 typedef struct _poly_last_t {

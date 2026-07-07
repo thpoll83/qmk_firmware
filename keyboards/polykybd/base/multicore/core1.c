@@ -2,6 +2,9 @@
 #include "irq.h"
 
 #include "hardware/structs/scb.h"
+#include "hardware/timer.h"   // time_us_64 (bounded launch deadline)
+
+#include <stdbool.h>
 
 #define CORE1_STACK_SIZE 384
 
@@ -100,4 +103,53 @@ void multicore_launch_core1_with_stack(void (*entry)(void), uint32_t *stack_bott
 
 void multicore_launch_core1(void) {
     multicore_launch_core1_with_stack(core1_entry, core1_stack, CORE1_STACK_SIZE);
+}
+
+// Bounded variant of the launch handshake (see core1.h). Identical protocol
+// to multicore_launch_core1_raw, but every FIFO wait checks an overall
+// deadline — if core1 is not in the bootrom wait loop (held in reset, or
+// mid power-up after a PSM force-off), the unbounded handshake blocks
+// forever (fw_staging.c carries the same lore for the post-apply reboot).
+bool multicore_launch_core1_bounded(uint32_t total_timeout_us) {
+    uint32_t *stack_bottom = core1_stack;
+    uint32_t *stack_ptr    = stack_bottom + CORE1_STACK_SIZE / sizeof(uint32_t);
+    stack_ptr -= 3;
+    stack_ptr[0] = (uintptr_t) core1_entry;
+    stack_ptr[1] = (uintptr_t) stack_bottom;
+    stack_ptr[2] = (uintptr_t) core1_wrapper;
+
+    uint irq_num = SIO_FIFO_IRQ_NUM(0);
+    bool enabled = irq_is_enabled(irq_num);
+    irq_set_enabled(irq_num, false);
+
+    const uint32_t cmd_sequence[] =
+            {0, 0, 1, (uintptr_t) scb_hw->vtor, (uintptr_t) stack_ptr, (uintptr_t) core1_trampoline};
+
+    const uint64_t deadline = time_us_64() + total_timeout_us;
+    bool ok  = true;
+    uint seq = 0;
+    do {
+        uint cmd = cmd_sequence[seq];
+        if (!cmd) {
+            multicore_fifo_drain();
+            SEV();
+        }
+        while (!multicore_fifo_wready()) {
+            if (time_us_64() > deadline) { ok = false; break; }
+            tight_loop_contents();
+        }
+        if (!ok) break;
+        sio_hw->fifo_wr = cmd;
+        SEV();
+        while (!multicore_fifo_rvalid()) {
+            if (time_us_64() > deadline) { ok = false; break; }
+            tight_loop_contents();
+        }
+        if (!ok) break;
+        uint32_t response = sio_hw->fifo_rd;
+        seq = cmd == response ? seq + 1 : 0;
+    } while (seq < count_of(cmd_sequence));
+
+    irq_set_enabled(irq_num, enabled);
+    return ok;
 }

@@ -569,14 +569,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     }
                     uprint("Stop idle.\n");
                 } else {
-                    int32_t update = timer_read32() - FADE_OUT_TIME;
-                    if(update<0) {
-                        uprintf("Starting idle in %ld msec .\n", -update);
-                        update=0;
-                    } else {
-                        uprint("Start idle.\n");
-                    }
-                    set_last_update(update);
+                    // Backdate the activity timestamp by a full fade-out interval so
+                    // the idle fade begins on the next housekeeping pass. Modular
+                    // uint32 arithmetic makes this correct even in the first
+                    // FADE_OUT_TIME ms after boot — the old signed subtraction
+                    // underflowed there, was clamped to 0, and idle never started.
+                    backdate_last_update(FADE_OUT_TIME);
+                    uprint("Start idle.\n");
                 }
                 memset(data, 0, length);
                 hid_reply(data, 0x0f, true);
@@ -684,7 +683,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 // Treat host display-off (e.g. system going to sleep) as a cue to
                 // flush all dirty user state to EEPROM (dirty-gated, so cheap).
                 save_all_dirty();
-                set_last_update(-1);
+                disable_idle_tracking();
                 memset(data, 0, length);
                 hid_reply(data, 0x18, true);
                 raw_hid_send(data, length);

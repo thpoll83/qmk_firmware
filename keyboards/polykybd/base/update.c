@@ -2,22 +2,44 @@
 
 #include "timer.h"
 
-static volatile int32_t last_update = 0;
+static volatile uint32_t last_update = 0;
+// Idle-timeout tracking active by default so a fresh boot idles like before. Kept
+// SEPARATE from last_update (was the sign bit of a signed int32) — see update.h.
+static volatile bool     idle_tracking = true;
 static volatile enum refresh_mode g_refresh = DONE_ALL;
 
 void update_performed(void) {
-    last_update = timer_read32();
+    last_update   = timer_read32();
+    idle_tracking = true;
 }
 
-int32_t get_last_update(void) {
+uint32_t get_last_update(void) {
     return last_update;
 }
 
 void set_last_update(int32_t update) {
-    last_update = update;
+    if (update < 0) {
+        idle_tracking = false;
+    } else {
+        last_update   = (uint32_t)update;
+        idle_tracking = true;
+    }
 }
 
-int32_t get_time_since_last_update(void) {
+void disable_idle_tracking(void) {
+    idle_tracking = false;
+}
+
+bool is_idle_tracking(void) {
+    return idle_tracking;
+}
+
+void backdate_last_update(uint32_t ms) {
+    last_update   = timer_read32() - ms;   // modular; correct even when now < ms
+    idle_tracking = true;
+}
+
+uint32_t get_time_since_last_update(void) {
     return timer_elapsed32(last_update);
 }
 

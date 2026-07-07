@@ -607,10 +607,11 @@ void housekeeping_task_user(void) {
         doom_tick();
         sync_and_refresh_displays();
     }
-    int32_t update = get_last_update();
-    if(update>=0) {
+    if(is_idle_tracking()) {
         //turn off displays
-        uint32_t elapsed_time_since_update = timer_elapsed32(update);
+        // Full uint32 elapsed via timer_elapsed32 — no sign gate, so idle keeps
+        // working past ~24.86 days of uptime (when timer_read32() sets bit 31).
+        uint32_t elapsed_time_since_update = get_time_since_last_update();
         if (is_usb_host_side()) {
             poly_sync_t* local_state = access_local_state();
             uint8_t  contrast = local_state->contrast;
@@ -653,7 +654,7 @@ void housekeeping_task_user(void) {
             } else if(elapsed_time_since_update > TURN_OFF_TIME) {
                 uprint("Turning off\n");
                 poly_suspend();
-                set_last_update(-1);
+                disable_idle_tracking();
                 contrast = local_state->contrast;
                 flags = local_state->flags;
             } else if((flags & DISP_IDLE)!=0) {
@@ -2846,7 +2847,7 @@ void suspend_power_down_kb(void) {
     // corrupt a live split transaction.
     save_all_dirty();
     suspend_power_down_user();
-    set_last_update(-1);
+    disable_idle_tracking();
 }
 
 // Called by QMK before every reset (QK_REBOOT, QK_BOOTLOADER, and the host-triggered

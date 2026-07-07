@@ -26,12 +26,46 @@ same objects at `0x10600000`.
 > the firmware partition entirely. Without a WHX the PSX-fire placeholder
 > still runs as the pipeline proof.
 
+## How to install & play (for humans)
+
+You need **three** files — grab them from a GitHub release (or build them with
+`build_all_doom.sh`, below):
+
+| File | What it is |
+|---|---|
+| `polykybd_doom_pack.bin` | the firmware (pack flavour) |
+| `doom_pack_v1.plyx` | the DOOM engine ("cartridge") |
+| `doom1.whx` | the game data (shareware) |
+
+Then, once:
+
+1. **Get the game data** — `keyboards/polykybd/doom/tools/dl-doom-data.sh`
+   downloads `doom1.whx` for you (or use the copy from the release).
+2. **Flash the firmware** — open **PolyKybdHost**, use the firmware updater to
+   flash `polykybd_doom_pack.bin` over USB, and **Apply**. (No PolyKybdHost?
+   Flash the matching `.uf2` by holding BOOTSEL while plugging each half.)
+3. **Install the game data** — `polyctl doom install doom1.whx`
+   (writes to both halves; survives future firmware updates — do this only once).
+4. **Install the engine** — `polyctl doom install-pack doom_pack_v1.plyx`
+   (redo only when a new release changes the engine; the loader warns if a pack
+   is stale).
+5. **Play** — trigger the egg (the incantation is left as an exercise for the
+   reader 😉). Move **W/A/S/D**, turn with the **arrows**, **Ctrl** fires,
+   **Space** opens doors, **Shift** runs, **Enter/Esc** work the menus. On the
+   split, one half is your 3D view and the other shows the live automap.
+6. **Quit** — hold **Esc** for ~1.5 s to leave the game; your keycaps snap
+   back to normal instantly. (As a *screensaver*, any key dismisses it.)
+
+> Everything lives in the keyboard's spare flash, so once installed it just
+> waits there — a firmware update won't wipe your game, and nobody looking at
+> the keyboard would ever know it's in there.
+
 ## Building
 
 **One-shot (everything):**
 
 ```bash
-keyboards/polykybd/doom/build_all.sh [--version N] [--tag NAME] [--out DIR]
+keyboards/polykybd/doom/build_all_doom.sh [--version N] [--tag NAME] [--out DIR]
 ```
 
 Downloads `doom1.whx` if missing (cached; + the `doom1_whx.uf2` BOOTSEL
@@ -39,6 +73,26 @@ fallback), builds **both** firmware flavours and the RAM-paired engine pack,
 collects every artifact in `--out` (default: repo root) and prints the
 install steps: flash the pack-flavour `.bin` over HID → `polyctl doom
 install <whx>` (once) → `polyctl doom install-pack <plyx>` → IDDQD.
+
+**Just the game data (no build):**
+
+```bash
+keyboards/polykybd/doom/tools/dl-doom-data.sh [--out DIR] [--wad] [--force]
+```
+
+Fetches the installable `doom1.whx` (size + `IWHX` magic verified); `--wad`
+also pulls the raw shareware `doom1.wad` (SHA-256 verified) for re-running
+`whd_gen`. Use this when you grabbed a release `.bin` + `.plyx` and only need
+the data to `polyctl doom install`. `build_all_doom.sh` calls it internally, so the
+URLs/checksums live here alone (provenance: `engine/PROVENANCE.md`). The
+shareware data is **not** committed to the repo — it is downloaded on demand.
+
+**Who builds what:** the `.plyx` engine pack is produced by
+`pack/build_pack.sh` (monolith build → stash engine objects → pack-flavour
+build → relink at the DoomPack slot → `pack/mkpack.py` wraps the `PlyX`
+header). CI (`.github/workflows/release.yml`) runs it per tag and uploads
+`doom_pack_v1.plyx` as a release asset. The `.plyx` is a build/release
+artifact — never committed (gitignored).
 
 **Individual pieces:**
 

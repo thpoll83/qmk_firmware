@@ -34,7 +34,11 @@ import urllib.request
 
 
 def run(cmd):
-    return subprocess.run(cmd, capture_output=True, text=True)
+    # Force UTF-8: git output (release notes) is UTF-8, but on Windows the
+    # default is the locale codec (cp1252), which raises UnicodeDecodeError on
+    # emoji/em-dashes and silently drops the output.
+    return subprocess.run(cmd, capture_output=True, text=True,
+                          encoding="utf-8", errors="replace")
 
 
 def die(msg):
@@ -135,6 +139,13 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="show what would happen, change nothing")
     ap.add_argument("--tag", help="publish a specific prepared tag instead of the newest one")
     args = ap.parse_args()
+
+    # Print UTF-8 (emoji in the notes) even on a cp1252 Windows console.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
 
     root = repo_root()
     kind, vpath, default_branch, tag_prefix = detect(root)

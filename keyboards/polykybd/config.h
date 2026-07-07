@@ -36,11 +36,13 @@
 // #define SPLIT_LED_STATE_ENABLE
 // #define SPLIT_MODS_ENABLE
 #define SPLIT_WPM_ENABLE
-// NOTE: the QMK transaction table is FULL (NUM_TOTAL_TRANSACTIONS == 32, the
-// hard cap) — a new sync must MULTIPLEX onto an existing id by a distinct
-// payload size, like the MRU snapshots and the doom mirror messages both do
-// on USER_SYNC_OVERLAY_MAP_DATA (dispatch in user_sync_overlay_map_data_handler).
-#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FW_UP_QUERY, USER_SYNC_FW_UP_BEGIN, USER_SYNC_FW_UP_CHUNK, USER_SYNC_FW_UP_COMMIT, USER_SYNC_FW_UP_STATUS, USER_SYNC_FW_UP_APPLY, USER_SYNC_REBOOT
+// NOTE: the QMK transaction table is near-full (NUM_TOTAL_TRANSACTIONS <= 32, the
+// hard cap). This list dropped the dead USER_SYNC_FW_UP_QUERY and merged the apply
+// + reboot transactions into one USER_SYNC_RESET (action byte selects apply vs
+// reboot), freeing 2 slots. A new sync can still MULTIPLEX onto an existing id by a
+// distinct payload size, like the MRU snapshots and the doom mirror messages both
+// do on USER_SYNC_OVERLAY_MAP_DATA (dispatch in user_sync_overlay_map_data_handler).
+#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FW_UP_BEGIN, USER_SYNC_FW_UP_CHUNK, USER_SYNC_FW_UP_COMMIT, USER_SYNC_FW_UP_STATUS, USER_SYNC_RESET
 
 #define EE_HANDS
 

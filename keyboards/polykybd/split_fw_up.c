@@ -56,16 +56,6 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
 // HID firmware update — slave-side split transaction handlers
 // ---------------------------------------------------------------------------
 
-// Boot-time version query.  Slave fills out_data with its own version+size.
-void user_sync_fw_up_query_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len != sizeof(fw_up_query_sync_t) || !in_data || out_len != sizeof(fw_up_query_sync_t) || !out_data) return;
-    fw_up_query_sync_t *reply = (fw_up_query_sync_t *)out_data;
-    memset(reply, 0, sizeof(*reply));
-    strncpy(reply->version, FW_VERSION, FW_UP_VERSION_LEN - 1);
-    reply->fw_size = fw_staging_get_own_fw_size();
-    reply->crc32   = crc32_1byte(reply->version, sizeof(*reply) - 4, 0);
-}
-
 // Diagnostic status query: slave returns its fw_staging internal counters
 // + state so the master can uprintf them after a failed chunk to distinguish
 // "slave hung before handler" vs "slave handler ran and rejected".  See
@@ -224,43 +214,44 @@ void user_sync_fw_up_commit_handler(uint8_t in_len, const void* in_data, uint8_t
     ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
 }
 
-// Master commands the slave to install its staged image and reboot, so BOTH
-// halves restart together (like a replug).  Without this the slave keeps running
-// its old firmware in a stale state, and the rebooted master cannot re-establish
-// the split link — it hangs on the boot splash (the right half's "SPLIT 72").
-// Guarded by a magic + CRC and a valid-staged-image check so a stray transaction
-// can never trigger an apply.  The apply is deferred to the slave's housekeeping
-// so we ACK the master before our split link goes dark.
-void user_sync_fw_up_apply_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len != sizeof(fw_up_apply_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
-    const fw_up_apply_sync_t *msg = (const fw_up_apply_sync_t *)in_data;
+// Master commands the slave to restart, so BOTH halves come back together (like a
+// replug).  Without this the slave keeps running its old firmware / stale state,
+// and the rebooted master cannot re-establish the split link — it hangs on the
+// boot splash (the right half's "SPLIT 72").  ONE transaction (USER_SYNC_RESET)
+// serves every restart path; the `action` byte selects apply-and-reboot vs plain
+// reboot.  Guarded by a magic + CRC (and, for apply, a valid-staged-image check)
+// so a stray transaction can never trigger an unexpected reset.  The restart is
+// deferred to the slave's housekeeping so we ACK the master before our split link
+// goes dark.
+void user_sync_reset_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len != sizeof(poly_reset_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    const poly_reset_sync_t *msg = (const poly_reset_sync_t *)in_data;
     uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
-    if (crc32 != msg->crc32 || msg->magic != FW_UP_SYNC_MAGIC || !fw_staging_has_valid_staged_image()) {
+    if (crc32 != msg->crc32 || msg->magic != POLY_RESET_MAGIC) {
         ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
         return;
     }
-    fw_staging_arm_apply();   // housekeeping_task_user() → fw_staging_apply_and_reboot()
-    ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
-}
-
-// Master commands the slave to reboot (QK_REBOOT path — no firmware apply).
-// Same rationale as the apply handler: a master-only reset leaves the slave
-// stale and the master stuck on the splash; rebooting both mirrors a replug.
-// Deferred to the slave's housekeeping so we ACK first, then reset cleanly.
-void user_sync_reboot_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len != sizeof(fw_up_apply_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
-    const fw_up_apply_sync_t *msg = (const fw_up_apply_sync_t *)in_data;
-    uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
-    if (crc32 != msg->crc32 || msg->magic != FW_UP_SYNC_MAGIC) {
+    if (msg->action == RESET_ACTION_APPLY) {
+        // Install the staged image, then reboot — reject unless a valid image is staged.
+        if (!fw_staging_has_valid_staged_image()) {
+            ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+            return;
+        }
+        fw_staging_arm_apply();    // housekeeping_task_user() → fw_staging_apply_and_reboot()
+    } else if (msg->action == RESET_ACTION_REBOOT) {
+        // Reboot only (QK_REBOOT path). Handedness-change carrier (see
+        // poly_reset_sync_t): when requested, persist this (slave) half's new
+        // EE_HANDS marker before the reboot so it comes up on the corrected
+        // left/right assignment.  Plain QK_REBOOT leaves this zero.
+        if (msg->set_handedness) {
+            eeconfig_update_handedness(msg->is_left != 0);
+        }
+        fw_staging_arm_reboot();   // housekeeping_task_user() → mcu_reset()
+    } else {
+        // Unknown action — refuse rather than guess (magic+CRC already passed, so
+        // this only happens on a genuinely malformed request).
         ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
         return;
     }
-    // Handedness-change carrier (see fw_up_apply_sync_t): when requested, persist
-    // this (slave) half's new EE_HANDS marker before the reboot so it comes up on
-    // the corrected left/right assignment.  Plain QK_REBOOT leaves this zero.
-    if (msg->set_handedness) {
-        eeconfig_update_handedness(msg->is_left != 0);
-    }
-    fw_staging_arm_reboot();   // housekeeping_task_user() → mcu_reset()
     ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
 }

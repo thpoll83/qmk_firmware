@@ -13,13 +13,6 @@
 
 #define FW_UP_VERSION_LEN 16
 
-// Boot-time version query: master sends its FW_VERSION + fw_size; slave replies with its own.
-typedef struct _fw_up_query_sync_t {
-    uint32_t crc32;
-    char     version[FW_UP_VERSION_LEN];
-    uint32_t fw_size;
-} fw_up_query_sync_t;
-
 // Announce incoming firmware/font-pack size + expected CRC32 to slave.
 // `target` (fw_target_t) selects which flash region the slave stages into and how
 // it finalizes — 0 = FIRMWARE (also what older senders leave it), 1 = FONTPACK.
@@ -74,37 +67,45 @@ typedef struct _fw_up_status_reply_t {
     fw_staging_status_t status;
 } fw_up_status_reply_t;
 
-// Apply/reboot coordination (master → slave).  A magic guard — on top of the
-// CRC32 and QMK's own transport checksum — makes it extremely unlikely that a
-// stray transaction triggers an unexpected reboot.  Shared by the FW_UP
-// apply-and-reboot and the plain QK_REBOOT paths; the transaction ID
-// (USER_SYNC_FW_UP_APPLY vs USER_SYNC_REBOOT) selects the slave's action.
-//
-// The USER_SYNC_REBOOT path also doubles as the handedness-change carrier: QMK
-// caps split transactions at 32 and the table is already full, so rather than
-// add a dedicated transaction the reboot message gains two optional fields.
-// When set_handedness != 0 the slave persists `is_left` to its EE_HANDS marker
-// before rebooting, so both halves come up on the corrected left/right
-// assignment (see hid_com.c case 25).  The plain reboot/apply senders leave
-// these zero via designated initialisers, so their behaviour is unchanged.
-#define FW_UP_SYNC_MAGIC 0xB007B007u
+// Reset/apply coordination (master → slave).  ONE transaction (USER_SYNC_RESET)
+// carries every "make the other half restart" action; the `action` byte selects
+// which.  A magic guard — on top of the CRC32 and QMK's own transport checksum —
+// makes it extremely unlikely that a stray transaction triggers an unexpected
+// reset.  Actions:
+//   RESET_ACTION_APPLY  — install the staged firmware image, then reboot (the
+//                         second phase of a firmware update; the slave NACKs
+//                         unless it holds a valid staged image).
+//   RESET_ACTION_REBOOT — reboot only, no apply (the QK_REBOOT path).  Doubles as
+//                         the handedness-change carrier: when set_handedness != 0
+//                         the slave persists `is_left` to its EE_HANDS marker
+//                         before rebooting, so both halves come up on the
+//                         corrected left/right assignment (see hid_com.c case 25).
+// The plain reboot/apply senders leave set_handedness zero via designated
+// initialisers, so their behaviour is unchanged.
+#define POLY_RESET_MAGIC 0xB007B007u
 
-typedef struct _fw_up_apply_sync_t {
+enum reset_action {
+    RESET_ACTION_APPLY  = 0,  // install the staged image, then reboot
+    RESET_ACTION_REBOOT = 1,  // reboot only (optionally persisting handedness first)
+};
+
+typedef struct _poly_reset_sync_t {
     uint32_t crc32;          // [0..3] CRC over the bytes below, filled in by send_to_bridge()
-    uint32_t magic;          // [4..7] must equal FW_UP_SYNC_MAGIC
-    uint8_t  set_handedness; // [8]    reboot path only: 1 = persist `is_left` before reboot
-    uint8_t  is_left;        // [9]    slave's new handedness when set_handedness != 0 (1 = left)
-} fw_up_apply_sync_t;
+    uint32_t magic;          // [4..7] must equal POLY_RESET_MAGIC
+    uint8_t  action;         // [8]    enum reset_action
+    uint8_t  set_handedness; // [9]    reboot action only: 1 = persist `is_left` before reboot
+    uint8_t  is_left;        // [10]   slave's new handedness when set_handedness != 0 (1 = left)
+} poly_reset_sync_t;
 
 // Master-side: relay one upload chunk (offset + FW_UP_CHUNK_SIZE bytes) to the
 // slave with retries. `log_tag` non-NULL enables per-retry debug logging (pass
 // NULL for a quiet relay). Returns true on slave ACK. See split_fw_up.c.
 bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, const char *log_tag);
 
-void user_sync_fw_up_query_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 void user_sync_fw_up_begin_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 void user_sync_fw_up_chunk_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 void user_sync_fw_up_commit_handler (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 void user_sync_fw_up_status_handler (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
-void user_sync_fw_up_apply_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
-void user_sync_reboot_handler       (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+// One transaction (USER_SYNC_RESET) for apply-and-reboot, plain reboot, and the
+// handedness-change reboot; the poly_reset_sync_t `action` byte selects which.
+void user_sync_reset_handler        (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

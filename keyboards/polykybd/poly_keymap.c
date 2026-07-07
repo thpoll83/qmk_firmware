@@ -2256,19 +2256,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 //
                 // Hardened handoff — same rationale as CMD_FW_UP_APPLY (hid_fw_up.c,
                 // field 2026-06-22).  This is the reset-key twin of that path and had
-                // the identical flaw: a single dropped USER_SYNC_REBOOT frame at only
-                // 5 retries left the slave alive on stale state, the master rebooted
-                // alone and hung on the boot splash until the slave was replugged
-                // (field 2026-07 — plain reset key, no firmware apply).  Use 20
-                // retries and re-fire the whole round once if the slave still hasn't
-                // acked.  Safe: the slave reboot handler is idempotent (it only arms a
-                // deferred mcu_reset), send_to_bridge is synchronous (returns only
-                // after the slave has handled it), and we're about to reset anyway —
-                // the extra worst-case ~1 s is free insurance on this critical step.
-                fw_up_apply_sync_t reboot_msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC };
-                uint8_t ack = send_to_bridge(USER_SYNC_REBOOT, &reboot_msg, sizeof(reboot_msg), 20);
+                // the identical flaw: a single dropped reboot frame at only 5 retries
+                // left the slave alive on stale state, the master rebooted alone and
+                // hung on the boot splash until the slave was replugged (field 2026-07
+                // — plain reset key, no firmware apply).  Use 20 retries and re-fire the
+                // whole round once if the slave still hasn't acked.  Safe: the slave
+                // reset handler is idempotent (it only arms a deferred mcu_reset),
+                // send_to_bridge is synchronous (returns only after the slave has
+                // handled it), and we're about to reset anyway — the extra worst-case
+                // ~1 s is free insurance on this critical step.
+                poly_reset_sync_t reboot_msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
+                                                 .action = RESET_ACTION_REBOOT };
+                uint8_t ack = send_to_bridge(USER_SYNC_RESET, &reboot_msg, sizeof(reboot_msg), 20);
                 if (!sync_succeeded(ack)) {
-                    ack = send_to_bridge(USER_SYNC_REBOOT, &reboot_msg, sizeof(reboot_msg), 20);
+                    ack = send_to_bridge(USER_SYNC_RESET, &reboot_msg, sizeof(reboot_msg), 20);
                 }
                 uprintf("Master: slave reboot ack=0x%02x\n", ack);
                 return true;   // let QMK's QK_REBOOT handler reset the master
@@ -2708,13 +2709,11 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_ROI_DATA,            user_sync_roi_data_handler);
     transaction_register_rpc(USER_SYNC_DYNAMIC_KEYMAP_DATA, user_sync_dynamic_keymap_data_handler);
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
-    transaction_register_rpc(USER_SYNC_FW_UP_QUERY,         user_sync_fw_up_query_handler);
     transaction_register_rpc(USER_SYNC_FW_UP_BEGIN,         user_sync_fw_up_begin_handler);
     transaction_register_rpc(USER_SYNC_FW_UP_CHUNK,         user_sync_fw_up_chunk_handler);
     transaction_register_rpc(USER_SYNC_FW_UP_COMMIT,        user_sync_fw_up_commit_handler);
     transaction_register_rpc(USER_SYNC_FW_UP_STATUS,        user_sync_fw_up_status_handler);
-    transaction_register_rpc(USER_SYNC_FW_UP_APPLY,         user_sync_fw_up_apply_handler);
-    transaction_register_rpc(USER_SYNC_REBOOT,              user_sync_reboot_handler);
+    transaction_register_rpc(USER_SYNC_RESET,               user_sync_reset_handler);
 
     fw_staging_init();
 

@@ -69,6 +69,10 @@ void sync_and_refresh_displays(void);
 // a firmware restart even when it never lost the USB connection.
 static bool s_fresh_boot = true;
 
+void poly_mark_fresh_boot(void) {
+    s_fresh_boot = true;
+}
+
 
 // Notifies RGB/LED matrix of key event for animation effects based on key press state.
 void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {

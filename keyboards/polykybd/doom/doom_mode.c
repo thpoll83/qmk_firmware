@@ -19,6 +19,7 @@
 #include "doom_mirror.h"
 #include "doom_playpal_luma.h"
 
+#include "hid_com.h"           // poly_mark_fresh_boot (host overlay-cache reset on exit)
 #include "keycode_helper.h"    // KC_IDDQD (the armed utilities-layer menu item)
 #include "layers.h"            // _UL (the egg menu position is utilities-layer-gated)
 #include "split_sync.h"        // sync_succeeded (mirror bridge sends)
@@ -531,12 +532,17 @@ static void doom_exit(void) {
 #endif
     s_fb = NULL;
     // Hand the pool back in the same state a fresh boot / font-pack wipe leaves
-    // it: blank buffers, no usage bits, identity mapping. The host's next
-    // overlay push (app switch / reconnect) repopulates it.
+    // it: blank buffers, no usage bits, identity mapping.
     reset_overlay_buffers();
     reset_overlay_usage();
     reset_overlay_mapping();
     reset_fragment_context();
+    // Actively tell the host its overlays are gone: re-raise the GET_ID fresh-boot
+    // marker so the next reconnect probe (~1 s) resets the host MRU cache and
+    // re-pushes the current app's overlays. Without this the host only re-pushes on
+    // an app switch / reconnect, so staying on the same app after the egg left the
+    // keycaps blank (field). Harmless on the slave (its GET_ID is never read).
+    poly_mark_fresh_boot();
     set_last_update((int32_t)timer_read32());
     request_disp_refresh();
     printf("doom: exit done\n");

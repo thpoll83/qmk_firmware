@@ -126,8 +126,17 @@ static inline bool select_display_placed(uint8_t view_row, uint8_t view_col,
         return select_display(view_row, view_col);   // game/mirror: no placement
     }
     const uint8_t disp_row = (uint8_t)(view_row + row_off);
-    const uint8_t grid     = (uint8_t)(view_col + inset);   // 0..7, outer -> inner
     const bool    left     = is_left_side();
+    // Content column order must read LEFT->RIGHT on both halves (view_col 0 = the
+    // left edge of the doom frame -> the physically-leftmost lit keycap). The halves
+    // are physical mirror-images (grid runs outer->inner, and the right half's outer
+    // edge is its HIGH display columns), so on the RIGHT the view column is mirrored
+    // within the block before mapping to a grid slot — otherwise the frame renders
+    // column-reversed (field: slave showed "5 4 3 2 1"). This only reverses the
+    // per-frame content assignment; the SET of grid slots swept is unchanged, so
+    // thumb/in-between coverage is preserved.
+    const uint8_t vc       = left ? view_col : (uint8_t)(DOOM_VIEW_COLS - 1 - view_col);
+    const uint8_t grid     = (uint8_t)(vc + inset);         // 0..7, outer -> inner
     int16_t       disp_col;
     if (grid == 7) {
         // Innermost grid slot = the two STACKED thumb keys (same physical x, two

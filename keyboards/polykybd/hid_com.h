@@ -32,3 +32,11 @@ enum legacy_command_id {
     id_dynamic_keymap_set_encoder           = 0x15,
     id_unhandled                            = 0xFF,
 };
+
+// Re-raise the GET_ID "fresh boot" marker (the '*' the host reads as "firmware
+// just restarted"). The host's next reconnect probe pops it, resets its overlay
+// MRU cache and re-pushes the current app's overlays. Used when the firmware has
+// silently wiped its overlay memory mid-session (the doom easter egg borrows the
+// overlay arena as game RAM and hands it back blank on exit), so the host — which
+// otherwise only re-pushes on an app switch / reconnect — learns to resend.
+void poly_mark_fresh_boot(void);

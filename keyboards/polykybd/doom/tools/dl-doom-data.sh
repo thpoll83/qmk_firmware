@@ -26,7 +26,8 @@ WANT_WAD=0
 FORCE=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --out)   OUT="$2"; shift 2 ;;
+        --out)   [[ $# -ge 2 ]] || { echo "--out requires a DIR" >&2; exit 2; }
+                 OUT="$2"; shift 2 ;;
         --wad)   WANT_WAD=1; shift ;;
         --force) FORCE=1; shift ;;
         -h|--help) sed -n '2,20p' "$0"; exit 0 ;;

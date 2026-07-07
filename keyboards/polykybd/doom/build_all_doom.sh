@@ -27,7 +27,7 @@ cd "$(dirname "$0")"
 DOOM_DIR=$(pwd)
 REPO=$(cd ../../.. && pwd)
 
-VERSION=1
+VERSION=2
 TAG=pack
 OUT="$REPO"
 while [[ $# -gt 0 ]]; do

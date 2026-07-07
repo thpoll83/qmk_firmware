@@ -21,7 +21,7 @@ KM=default
 BUILD="$REPO/.build"
 OBJ="$BUILD/obj_polykybd_split72_default"
 STASH="$PACK_DIR/build"
-VERSION=1
+VERSION=2
 OUT=""
 
 while [[ $# -gt 0 ]]; do

@@ -18,7 +18,7 @@ same engine objects re-linked at the pack address. Measured results:
 | monolithic doom (`POLYKYBD_DOOM=yes`) | 603,972 B | — |
 | **pack-flavour firmware** (`POLYKYBD_DOOM_PACK=yes`) | **398,580 B** | **−205 KB** |
 | normal (no doom) | 384,460 B | −219 KB |
-| `doom_pack_v1.plyx` (engine pack, flashed once) | 211,384 B | fits the 256 KB slot with ~50 KB headroom; engine statics 24,396 B at the pool front |
+| `doom_pack_v2.plyx` (engine pack, flashed once) | 211,384 B | fits the 256 KB slot with ~50 KB headroom; engine statics 24,396 B at the pool front |
 
 ## 1. Flash map carve-out
 

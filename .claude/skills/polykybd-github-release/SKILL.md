@@ -173,25 +173,23 @@ branch is an accumulating changelog archive — don't reuse or clear old files.
    git -C "$wt" push -u origin release-notes
    git worktree remove --force "$wt"
    ```
-3. **Hand the user the publish step** (you can't do it yourself). Give BOTH options:
-   - **`gh` one-liner (fastest)** — creates & publishes the release for the existing tag;
-     for firmware it fires `release: published` → CI builds + attaches `.bin`/`.uf2`
-     (the doom engine pack `.plyx` is built but deliberately NOT attached — it would
-     reveal the easter egg).
-     It reads the crafted body straight from the branch file, so no copy-paste:
-     ```bash
-     # firmware
-     f=$(git show origin/release-notes:PolyKybd-fw-v0.9.44.md)
-     gh release create PolyKybd-fw-v0.9.44 --latest \
-       --title "$(printf '%s' "$f" | head -1 | sed 's/^# //')" \
-       --notes "$(printf '%s' "$f" | tail -n +2)"
-     # host: same with tag v0.9.26 and its file
-     ```
-   - **GitHub UI** — Draft a new release → pick the existing tag → they can leave the body
-     **empty** and Publish; CI's `release: published` run then fills in the crafted
-     title+notes from the branch (`gh release edit`) and, for firmware, attaches assets.
-     (If they type a body, CI's branch notes overwrite it — the branch file is the source
-     of truth.)
+3. **Hand the user the single publish command** (you can't publish yourself). Each repo
+   ships **`scripts/publish_release.py`** — one OS-independent command (stdlib-only, works
+   on Windows/macOS/Linux):
+   ```
+   python scripts/publish_release.py            # publish
+   python scripts/publish_release.py --dry-run  # preview title+body, change nothing
+   ```
+   It auto-detects the repo, reads the current version (→ tag) from the default branch,
+   pulls the staged `<TAG>.md` from the `release-notes` branch, and creates+publishes the
+   release via the GitHub API. Firmware: publishing fires `release: published` → CI builds
+   and attaches `.bin`/`.uf2` (the doom engine pack `.plyx` is built but deliberately NOT
+   attached — it would reveal the easter egg). Auth: `GH_TOKEN`/`GITHUB_TOKEN` or
+   `gh auth token`. Tell the user to run it in each repo after you've staged the notes.
+   - **Alternatives** (if they prefer): the GitHub UI — Draft a new release → pick the tag →
+     leave the body **empty** → Publish; CI's `release: published` run then fills the
+     crafted title+notes from the branch (`gh release edit`) and, for firmware, attaches
+     assets. (A typed body is overwritten by the branch file — it's the source of truth.)
 
 **Always also deliver** the approved notes in chat as a ready-to-paste Markdown block + a
 one-line metadata summary (`tag / title / target branch / latest`), so the user can

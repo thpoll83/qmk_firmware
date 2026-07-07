@@ -15,6 +15,15 @@
 //
 // Shared between the QMK-side game code (doom_mode.c, qmk_shim.c) and the
 // POLYKYBD_QMK blocks inside the vendored engine (pd_render.cpp).
+//
+// MINIMUM POOL SIZE (if base/overlay.c overlays[] is ever shrunk to reclaim RAM):
+// the fixed, non-shrinkable structure below is ~144 KB — statics ~20,824 + frame
+// buffer 53,760 + pd_render 58,880 + vpatch 3,072 + compose 2,120 + mirror 1,664 +
+// stack 4,096 — and the zone heap must stay >= upstream's ~58 KB working set. So
+// the floor is ~205 KB; the pool is 226,800 B today, i.e. only ~22 KB of zone
+// slack to give back. Shrinking the frame buffer / pd_render needs an engine-config
+// change. The monolith link fails loudly on overflow; the DoomPack does not (it
+// pins statics at the array address) — verify both flavours after any pool change.
 #pragma once
 
 #include <stdint.h>

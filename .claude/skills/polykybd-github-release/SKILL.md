@@ -180,12 +180,16 @@ branch is an accumulating changelog archive — don't reuse or clear old files.
    python scripts/publish_release.py            # publish
    python scripts/publish_release.py --dry-run  # preview title+body, change nothing
    ```
-   It auto-detects the repo, reads the current version (→ tag) from the default branch,
-   pulls the staged `<TAG>.md` from the `release-notes` branch, and creates+publishes the
-   release via the GitHub API. Firmware: publishing fires `release: published` → CI builds
-   and attaches `.bin`/`.uf2` (the doom engine pack `.plyx` is built but deliberately NOT
-   attached — it would reveal the easter egg). Auth: `GH_TOKEN`/`GITHUB_TOKEN` or
-   `gh auth token`. Tell the user to run it in each repo after you've staged the notes.
+   It auto-detects the repo and publishes the **newest prepared `<TAG>.md` on the
+   `release-notes` branch** — the branch is the source of truth for what's ready, so it's
+   robust to the version auto-bump every PR merge causes (the tree drifts ahead of the
+   prepared release; the branch does not). `--tag <TAG>` targets a specific prepared tag.
+   It creates+publishes via the GitHub API; firmware publishing fires `release: published`
+   → CI builds and attaches `.bin`/`.uf2` (the doom engine pack `.plyx` is built but
+   deliberately NOT attached — it would reveal the easter egg). Auth: `GH_TOKEN`/
+   `GITHUB_TOKEN` or `gh auth token`. Tell the user to run it in each repo after you've
+   staged the notes. ⚠️ **Merging the notes/tooling PR bumps the version past the prepared
+   one** — that's expected; the script still publishes the prepared tag from the branch.
    - **Alternatives** (if they prefer): the GitHub UI — Draft a new release → pick the tag →
      leave the body **empty** → Publish; CI's `release: published` run then fills the
      crafted title+notes from the branch (`gh release edit`) and, for firmware, attaches

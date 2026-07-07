@@ -3,7 +3,7 @@
  *   @RAM_BASE@ - the borrowed overlay pool's address, extracted from the
  *                exact POLYKYBD_DOOM_PACK firmware .elf this pack ships with
  *   @RAM_SIZE@ - the pool size in bytes
- * Flash origin = the DOOMPACK slot's XIP address + the 32 B PlyX header
+ * Flash origin = the DOOMPACK slot's XIP address + the 64 B PlyX header
  * (fw_staging.h FW_DOOMPACK_SLOT_OFF; doom_pack_abi.h doom_pack_hdr_t).
  *
  * Layout mirrors the monolith's .doom_shared model: engine .data + .bss +

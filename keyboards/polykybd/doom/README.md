@@ -29,7 +29,7 @@ same objects at `0x10600000`.
 ## How to install & play (for humans)
 
 You need **three** files — grab them from a GitHub release (or build them with
-`build_all.sh`, below):
+`build_all_doom.sh`, below):
 
 | File | What it is |
 |---|---|
@@ -65,7 +65,7 @@ Then, once:
 **One-shot (everything):**
 
 ```bash
-keyboards/polykybd/doom/build_all.sh [--version N] [--tag NAME] [--out DIR]
+keyboards/polykybd/doom/build_all_doom.sh [--version N] [--tag NAME] [--out DIR]
 ```
 
 Downloads `doom1.whx` if missing (cached; + the `doom1_whx.uf2` BOOTSEL
@@ -83,7 +83,7 @@ keyboards/polykybd/doom/tools/dl-doom-data.sh [--out DIR] [--wad] [--force]
 Fetches the installable `doom1.whx` (size + `IWHX` magic verified); `--wad`
 also pulls the raw shareware `doom1.wad` (SHA-256 verified) for re-running
 `whd_gen`. Use this when you grabbed a release `.bin` + `.plyx` and only need
-the data to `polyctl doom install`. `build_all.sh` calls it internally, so the
+the data to `polyctl doom install`. `build_all_doom.sh` calls it internally, so the
 URLs/checksums live here alone (provenance: `engine/PROVENANCE.md`). The
 shareware data is **not** committed to the repo — it is downloaded on demand.
 

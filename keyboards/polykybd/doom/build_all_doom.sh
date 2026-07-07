@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-shot doom build: game data + engine pack + both firmware flavours.
 #
-#   keyboards/polykybd/doom/build_all.sh [--version N] [--tag NAME] [--out DIR]
+#   keyboards/polykybd/doom/build_all_doom.sh [--version N] [--tag NAME] [--out DIR]
 #
 # Produces (in --out, default: the repo root — the usual delivery spot):
 #   doom1.whx                    game data (downloaded once, cached; PROVENANCE.md)

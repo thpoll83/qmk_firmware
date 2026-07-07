@@ -53,7 +53,10 @@ jobs:
           arm-none-eabi-objcopy -O binary \
             .build/${TARGET}.elf \
             ${TARGET}.bin
-          cp keyboards/polykybd/doom/pack/doom_pack_v1.plyx .
+          # NOTE: the doom engine pack (doom_pack_v1.plyx) is built by
+          # build_pack.sh but deliberately NOT published as a release asset —
+          # the easter egg stays a surprise (a "doom_pack" asset would reveal it,
+          # and the shipping .bin refuses the trigger with no pack flashed).
 
       # Crafted release notes (optional): one file per tag on the unprotected
       # `release-notes` branch — release-notes/<TAG>.md, first line "# <title>",
@@ -98,7 +101,7 @@ jobs:
           TITLE: ${{ steps.notes.outputs.title }}
         run: |
           TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
-          ASSETS=( "${TARGET}.uf2" "${TARGET}.bin" doom_pack_v1.plyx )
+          ASSETS=( "${TARGET}.uf2" "${TARGET}.bin" )
           if [ "$HAVE_NOTES" = "1" ]; then
             NOTES_ARGS=( --title "$TITLE" --notes-file _release_body.md )
           else

@@ -175,7 +175,9 @@ branch is an accumulating changelog archive — don't reuse or clear old files.
    ```
 3. **Hand the user the publish step** (you can't do it yourself). Give BOTH options:
    - **`gh` one-liner (fastest)** — creates & publishes the release for the existing tag;
-     for firmware it fires `release: published` → CI builds + attaches `.bin`/`.uf2`/`.plyx`.
+     for firmware it fires `release: published` → CI builds + attaches `.bin`/`.uf2`
+     (the doom engine pack `.plyx` is built but deliberately NOT attached — it would
+     reveal the easter egg).
      It reads the crafted body straight from the branch file, so no copy-paste:
      ```bash
      # firmware

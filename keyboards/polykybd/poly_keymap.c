@@ -2253,9 +2253,24 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 // the rebooted master can't re-sync to it and hangs on the boot
                 // splash.  QMK resets the master right after we return true (before
                 // housekeeping runs again), so the slave must be told here.
+                //
+                // Hardened handoff — same rationale as CMD_FW_UP_APPLY (hid_fw_up.c,
+                // field 2026-06-22).  This is the reset-key twin of that path and had
+                // the identical flaw: a single dropped USER_SYNC_REBOOT frame at only
+                // 5 retries left the slave alive on stale state, the master rebooted
+                // alone and hung on the boot splash until the slave was replugged
+                // (field 2026-07 — plain reset key, no firmware apply).  Use 20
+                // retries and re-fire the whole round once if the slave still hasn't
+                // acked.  Safe: the slave reboot handler is idempotent (it only arms a
+                // deferred mcu_reset), send_to_bridge is synchronous (returns only
+                // after the slave has handled it), and we're about to reset anyway —
+                // the extra worst-case ~1 s is free insurance on this critical step.
                 fw_up_apply_sync_t reboot_msg = { .crc32 = 0, .magic = FW_UP_SYNC_MAGIC };
-                uint8_t ack = send_to_bridge(USER_SYNC_REBOOT, &reboot_msg, sizeof(reboot_msg), 5);
-                uprintf("Master: slave reboot ack=%d\n", ack);
+                uint8_t ack = send_to_bridge(USER_SYNC_REBOOT, &reboot_msg, sizeof(reboot_msg), 20);
+                if (!sync_succeeded(ack)) {
+                    ack = send_to_bridge(USER_SYNC_REBOOT, &reboot_msg, sizeof(reboot_msg), 20);
+                }
+                uprintf("Master: slave reboot ack=0x%02x\n", ack);
                 return true;   // let QMK's QK_REBOOT handler reset the master
             }
             case KC_A ... KC_Z:

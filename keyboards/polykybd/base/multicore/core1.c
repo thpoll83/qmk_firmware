@@ -32,7 +32,21 @@ uint32_t core1_stack_high_water_mark(void) {
 #endif
 
 static void __attribute__ ((naked)) core1_trampoline(void) {
-    __asm volatile ("pop {r0, r1, pc}");
+    // Mask IRQs on core1 as its VERY FIRST instruction, before core1_wrapper or
+    // core1_entry run. core1_entry() also does `cpsid i`, but several instructions
+    // (this trampoline + core1_wrapper's stack-guard install) execute on core1 with
+    // IRQs still enabled before it gets there. In that window the strongly-overridden
+    // ChibiOS Vector80 (SIO_IRQ_PROC1) can fire — its CH_IRQ_EPILOGUE triggers an NMI
+    // via ICSR.NMIPENDSET, which runs the context-switch NMI handler on a core with no
+    // thread state and hangs it (see keyboards/polykybd/base/fw_staging.c and CLAUDE.md).
+    // On a cold power-on that window is usually harmless, but a watchdog-reset boot (the
+    // firmware-apply / QK_REBOOT reset path) can inherit SIO-FIFO/IRQ state a power-on
+    // doesn't, so a stale/pending FIFO IRQ fires here and hangs the MASTER on the boot
+    // splash — core0's launch handshake (multicore_fifo_pop_blocking) then waits forever
+    // for a core1 that is stuck in the NMI (field: "stuck on the PolyKybd splash after
+    // flashing / reset"). Masking here closes the window: core1 has no IRQ-driven work
+    // (it polls FIFO_ST), so keeping IRQs masked for its whole lifetime is safe.
+    __asm volatile ("cpsid i\n\tpop {r0, r1, pc}");
 }
 
 void multicore_launch_core1_raw(void (*entry)(void), uint32_t *sp, uint32_t vector_table) {

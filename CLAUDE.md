@@ -26,6 +26,38 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 
+## Releases
+
+Firmware releases are **GitHub Releases** (tag `PolyKybd-fw-vX.Y.Z`; `FW_VERSION` in
+`config.h`), created by **publishing** — *not* by pushing a tag. Use the
+`polykybd-github-release` skill to draft the notes and drive the flow. The mechanics
+that cost real debugging to learn (2026-07):
+
+- **A pushed tag does NOT create a release.** Release tags land on the auto-bump
+  `chore: … [skip ci]` commit (`bump-version.yml`), and `[skip ci]` **suppresses the
+  tag-push workflow trigger** — so `release.yml` runs on **`release: published`** (every
+  historical run is a `release` event; a bare tag push builds nothing). Publishing
+  (UI / `gh release create` / the script below) is what starts the build + asset upload.
+- **`scripts/publish_release.py`** — one OS-independent command (stdlib only). It
+  publishes the **newest prepared `<TAG>.md` on the `release-notes` branch**, which is
+  the **source of truth for what's ready**: the tree version drifts *ahead* of the
+  prepared release because every PR merge auto-bumps it, so don't derive the tag from
+  the tree. `--dry-run` previews; `--tag` targets a specific prepared tag. It forces
+  `encoding="utf-8"` on git output — on Windows the default cp1252 codec crashes on the
+  emoji/em-dashes in the notes (`UnicodeDecodeError` → notes read as `None`).
+- **Crafted notes** live one-file-per-tag on the unprotected `release-notes` branch
+  (`<TAG>.md`, first line `# <title>`, rest = body; never overwritten/deleted — a
+  changelog archive). `release.yml` applies them on `release: published` via
+  `gh release edit`, then attaches the built `.bin`/`.uf2`/`.plyx` (the `.plyx` is the
+  DOOM engine pack — license-OK to ship; the shareware WAD is *not* a release asset, it's
+  downloaded on demand by `doom/tools/dl-doom-data.sh`).
+- **Version bump is label-driven**: the merged PR's `bump:major`/`bump:minor`/
+  `bump:protocol` label (else patch) drives `bump-version.yml`. Protocol PRs often bump
+  `PROTOCOL_VERSION` in-source and *omit* `bump:protocol` (the label would double-bump).
+- ⚠️ **From Claude Code on the web you can neither push tags (git proxy returns 403 on
+  `refs/tags/*`) nor create a release (no `gh` CLI, no create-release MCP tool)** — stage
+  the notes on the branch and hand the user `python scripts/publish_release.py`.
+
 ## Firmware overview (`keyboards/polykybd/`)
 
 The firmware runs on a **Raspberry Pi RP2040** (133 MHz dual-core ARM M0+) and is a heavily customised QMK build. This is **custom hardware with 8 MB of external QSPI flash** (NOT the stock 2 MB). The 8 MB is **partitioned** (see `base/fw_staging.h` for the authoritative map): **0–2 MB running firmware** (the linker `flash1` XIP window), **2–4 MB firmware-update staging**, **4–8 MB resource/overlay data** (`FLASH_TARGET_OFFSET`). So the budget that matters for adding languages/fonts is the **2 MB firmware partition**, of which `split72:default` currently uses ~0.76 MB (~38 %). `FW_STAGING_OFFSET` is kept equal to the linker `flash1` length so a build that exceeds 2 MB fails to *link* rather than silently growing into the staging area (this firmware/staging split was raised from 1 MB → 2 MB in 2026-06 as the image neared the old boundary). The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.

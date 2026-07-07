@@ -3,7 +3,7 @@
 
 Usage:
     mkpack.py --elf doom_pack.elf --bin doom_pack_image.bin \
-              --ram-base 0x20002604 --ram-size 226800 --version 2 \
+              --ram-base 0x20000000 --ram-size 226800 --version 2 \
               --out doom_pack_v2.plyx
 
 The .bin is the objcopy'd image (text + rodata + data initializers at their

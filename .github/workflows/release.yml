@@ -42,7 +42,7 @@ jobs:
       - name: Build split72 (pack flavour) + doom engine pack
         uses: docker://qmkfm/qmk_cli
         with:
-          args: bash keyboards/polykybd/doom/pack/build_pack.sh --version 2
+          args: bash keyboards/polykybd/doom/pack/build_pack.sh
 
       - name: Install ARM binutils
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends binutils-arm-none-eabi
@@ -53,7 +53,8 @@ jobs:
           arm-none-eabi-objcopy -O binary \
             .build/${TARGET}.elf \
             ${TARGET}.bin
-          cp keyboards/polykybd/doom/pack/doom_pack_v2.plyx .
+          PACK_VER=$(cat keyboards/polykybd/doom/pack/PACK_VERSION)
+          cp "keyboards/polykybd/doom/pack/doom_pack_v${PACK_VER}.plyx" .
 
       # Crafted release notes (optional): one file per tag on the unprotected
       # `release-notes` branch — release-notes/<TAG>.md, first line "# <title>",
@@ -98,7 +99,8 @@ jobs:
           TITLE: ${{ steps.notes.outputs.title }}
         run: |
           TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
-          ASSETS=( "${TARGET}.uf2" "${TARGET}.bin" doom_pack_v2.plyx )
+          PACK_VER=$(cat keyboards/polykybd/doom/pack/PACK_VERSION)
+          ASSETS=( "${TARGET}.uf2" "${TARGET}.bin" "doom_pack_v${PACK_VER}.plyx" )
           if [ "$HAVE_NOTES" = "1" ]; then
             NOTES_ARGS=( --title "$TITLE" --notes-file _release_body.md )
           else

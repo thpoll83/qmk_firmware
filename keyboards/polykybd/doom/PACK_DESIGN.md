@@ -139,6 +139,11 @@ the **RAM origin** costs nothing: the pack flavour's linker script
 So **`ram_base` is now a build-independent constant** and a flashed
 `.plyx` keeps working across firmware rebuilds; only an ABI bump, an
 arena-layout change, or an engine change requires re-shipping the pack.
+When you do re-ship, **bump the content version in the single file
+`pack/PACK_VERSION`** — `build_pack.sh`, `build_all_doom.sh` and the
+release workflow all read it, so the emitted `doom_pack_vN.plyx` and the
+released asset name track it automatically (it drifted 2→1 once when the
+version was hardcoded in three places; this file is now the only knob).
 `build_pack.sh` still extracts the address from the firmware `.elf`
 (self-verifying — it hard-fails if the pool is ever not at 0x20000000),
 and the loader's `hdr.ram_base` check stays as belt-and-braces. The

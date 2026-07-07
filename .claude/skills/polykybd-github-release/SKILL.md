@@ -1,6 +1,6 @@
 ---
 name: polykybd-github-release
-description: Cut a GitHub Release for the PolyKybd firmware (qmk_firmware) or the host app (PolyKybdHost) — draft customer-facing release notes (newest version first, maintenance-only bumps skipped, concise, informative-over-funny), get the user's review, then publish with the correct tag, title, "latest" flag and (firmware) CI-built .bin/.uf2 assets. Use when asked to "cut/create/make/publish a release", "release the firmware/host", "release vX.Y.Z", "draft the release for …".
+description: Cut a GitHub Release for the PolyKybd firmware (qmk_firmware) or the host app (PolyKybdHost) — draft customer-facing release notes (newest version first, maintenance-only bumps skipped, concise, informative-over-funny), get the user's review, then publish with the correct tag, title, "latest" flag and (firmware) CI-built .bin/.uf2/.plyx assets. Use when asked to "cut/create/make/publish a release", "release the firmware/host", "release vX.Y.Z", "draft the release for …".
 ---
 
 # PolyKybd GitHub release
@@ -185,8 +185,8 @@ branch is an accumulating changelog archive — don't reuse or clear old files.
    robust to the version auto-bump every PR merge causes (the tree drifts ahead of the
    prepared release; the branch does not). `--tag <TAG>` targets a specific prepared tag.
    It creates+publishes via the GitHub API; firmware publishing fires `release: published`
-   → CI builds and attaches `.bin`/`.uf2` (the doom engine pack `.plyx` is built but
-   deliberately NOT attached — it would reveal the easter egg). Auth: `GH_TOKEN`/
+   → CI builds and attaches `.bin`/`.uf2`/`.plyx` (the last is the DOOM engine pack).
+   Auth: `GH_TOKEN`/
    `GITHUB_TOKEN` or `gh auth token`. Tell the user to run it in each repo after you've
    staged the notes. ⚠️ **Merging the notes/tooling PR bumps the version past the prepared
    one** — that's expected; the script still publishes the prepared tag from the branch.

@@ -75,6 +75,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
 
             fw_up_begin_sync_t begin_msg;
             memset(&begin_msg, 0, sizeof(begin_msg));   // deterministic padding for the CRC
+            begin_msg.op         = FLASH_STAGE_BEGIN;
             begin_msg.image_size = pack_size;
             begin_msg.image_crc  = pack_crc;
             begin_msg.target     = target;
@@ -101,13 +102,13 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 fw_staging_begin_deferred_target(pack_size, pack_crc, target);
                 // Fire-and-forget: kicks the slave's deferred erase. Readiness is
                 // polled by the slave_ack send_to_bridge below (and on re-polls).
-                send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 3);
+                send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
                 uprintf("FONTPACK_BEGIN: bundle=%u size=%lu crc=0x%08lx (master+slave staging)\n",
                         bundle, (unsigned long)pack_size, (unsigned long)pack_crc);
             }
 
             uint8_t slave_ack = master_ok
-                ? send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 1)
+                ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
                 : SYNC_CRC32_ERR;
             bool slave_ok    = (slave_ack == SYNC_ACK);
             bool master_done = !fw_staging_erase_pending();
@@ -152,8 +153,8 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
         }
 
         case CMD_FONTPACK_COMMIT: {   // slave finalize+reload, then master finalize+reload (no reboot)
-            uint32_t dummy = 0;
-            uint8_t slave_ack = send_to_bridge(USER_SYNC_FW_UP_COMMIT, &dummy, sizeof(dummy), 10);
+            fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
+            uint8_t slave_ack = send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10);
             bool master_ok = fw_staging_finalize();   // FONTPACK target: verifies CRC + fontpack_reload()
             bool is_doom = s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ||
                            s_fontpack_bundle == FONTPACK_BUNDLE_DOOMPACK;

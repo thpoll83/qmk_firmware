@@ -16,16 +16,17 @@
 // ---------------------------------------------------------------------------
 
 // Relay one upload chunk to the slave with up to 10 retries. Builds the CRC'd
-// fw_up_chunk_sync_t and sends USER_SYNC_FW_UP_CHUNK, accepting only an
-// identity-bound reply whose write cursor advanced PAST `offset` (so a stale
-// previous-chunk ACK can't silently desynchronise the two halves' cursors).
-// Returns true on a slave ACK. Shared by the firmware-update and font-pack
-// chunk paths, which used to carry a byte-identical copy of this loop. When
-// `log_tag` is non-NULL and debug is enabled it logs each retry (the
+// fw_up_chunk_sync_t (op = FLASH_STAGE_CHUNK) and sends USER_SYNC_FLASH_STAGE,
+// accepting only an identity-bound reply whose write cursor advanced PAST `offset`
+// (so a stale previous-chunk ACK can't silently desynchronise the two halves'
+// cursors). Returns true on a slave ACK. Shared by the firmware-update and
+// font-pack chunk paths, which used to carry a byte-identical copy of this loop.
+// When `log_tag` is non-NULL and debug is enabled it logs each retry (the
 // firmware-update path passes "FW_UP_CHUNK"); the font-pack path passes NULL
 // for a quiet relay, matching its prior behaviour.
 bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, const char *log_tag) {
     fw_up_chunk_sync_t chunk_msg;
+    chunk_msg.op     = FLASH_STAGE_CHUNK;
     chunk_msg.offset = offset;
     memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
     chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
@@ -34,7 +35,7 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
         fw_up_chunk_reply_t reply;
         memset(&reply, 0, sizeof(reply));
         reply.ack = SYNC_CRC32_ERR;
-        bool ok_rpc = transaction_rpc_exec(USER_SYNC_FW_UP_CHUNK, sizeof(chunk_msg), &chunk_msg,
+        bool ok_rpc = transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(chunk_msg), &chunk_msg,
                                            sizeof(reply), &reply);
         if (ok_rpc && reply.ack == SYNC_ACK && reply.next_offset > offset) {
             slave_ack = SYNC_ACK;
@@ -60,7 +61,7 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
 // + state so the master can uprintf them after a failed chunk to distinguish
 // "slave hung before handler" vs "slave handler ran and rejected".  See
 // FW_UP_DEBUG_NOTES.md.
-void user_sync_fw_up_status_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+static void flash_stage_status(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (out_len != sizeof(fw_up_status_reply_t) || !out_data) return;
     // The request payload only exists to give the framework something to send;
     // CRC verification is best-effort — we still want to return a status snapshot
@@ -86,7 +87,7 @@ void user_sync_fw_up_status_handler(uint8_t in_len, const void* in_data, uint8_t
 //
 // The deferred erase is rate-limited to one sector per 70 ms in housekeeping so
 // the split UART stays responsive between 50 ms erase blackouts.
-void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len != sizeof(fw_up_begin_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
     fw_staging_note_begin_call();
     const fw_up_begin_sync_t *msg = (const fw_up_begin_sync_t *)in_data;
@@ -160,7 +161,7 @@ void user_sync_fw_up_begin_handler(uint8_t in_len, const void* in_data, uint8_t 
 // Replies with the identity-bound fw_up_chunk_reply_t (ack + post-RPC write
 // cursor) so the master can tell a genuine ACK from a stale previous reply —
 // see the struct comment in split_fw_up.h.
-void user_sync_fw_up_chunk_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len != sizeof(fw_up_chunk_sync_t) || !in_data || out_len != sizeof(fw_up_chunk_reply_t) || !out_data) return;
     const fw_up_chunk_sync_t *msg = (const fw_up_chunk_sync_t *)in_data;
     fw_up_chunk_reply_t *reply = (fw_up_chunk_reply_t *)out_data;
@@ -204,14 +205,44 @@ void user_sync_fw_up_chunk_handler(uint8_t in_len, const void* in_data, uint8_t 
 // Slave verifies staged CRC and arms the commit flag.
 // The actual flash apply is deferred to housekeeping_task_user() so the ACK
 // can be returned before the split link goes dark during the reboot.
-void user_sync_fw_up_commit_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+static void flash_stage_commit(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (in_len != sizeof(fw_up_commit_sync_t) || !in_data || out_len != sizeof(poly_sync_reply_t) || !out_data) return;
+    // Verify the request CRC (covers the `op` selector) so COMMIT carries the same
+    // size + integrity guard as BEGIN/CHUNK — send_to_bridge always fills a valid
+    // CRC, so this only rejects a corrupted/misrouted frame, which the master retries.
+    const fw_up_commit_sync_t *msg = (const fw_up_commit_sync_t *)in_data;
+    uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
+    if (crc32 != msg->crc32) {
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        return;
+    }
     // Defer the heavy FONTPACK reload out of this transaction callback: the
     // ~50 ms full-body verify+reassemble overran the ~20 ms split-transaction
     // window, so the master timed out and mis-reported COMMIT as a CRC failure
     // even though the pack loaded. Firmware-target finalize is O(1) (unaffected).
     bool ok = fw_staging_finalize_defer_reload();
     ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
+}
+
+// Single slave-side dispatcher for the flash-staging stream.  Reads the `op`
+// word (immediately after the CRC32) and routes to the per-op handler above.
+// BEGIN / CHUNK / COMMIT each verify the request CRC32 (which covers `op`) and
+// guard their exact in_len/out_len — so a corrupted or misrouted op lands on a
+// size/CRC mismatch and the handler returns without a valid ACK, which the master
+// reads as a failure and retries.  STATUS is intentionally best-effort: un-CRC'd
+// and guarding only on out_len (so it can still answer the deliberately-oversized
+// diagnostic probe) — it is read-only, so a misroute to it is harmless.
+void user_sync_flash_stage_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (!in_data || in_len < 8) return;   // need at least crc32 + op
+    uint32_t op;
+    memcpy(&op, &((const uint8_t *)in_data)[4], sizeof(op));
+    switch (op) {
+        case FLASH_STAGE_BEGIN:  flash_stage_begin (in_len, in_data, out_len, out_data); break;
+        case FLASH_STAGE_CHUNK:  flash_stage_chunk (in_len, in_data, out_len, out_data); break;
+        case FLASH_STAGE_COMMIT: flash_stage_commit(in_len, in_data, out_len, out_data); break;
+        case FLASH_STAGE_STATUS: flash_stage_status(in_len, in_data, out_len, out_data); break;
+        default: break;   // unknown op — leave out_data untouched → master retries
+    }
 }
 
 // Master commands the slave to restart, so BOTH halves come back together (like a

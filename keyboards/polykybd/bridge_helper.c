@@ -57,10 +57,7 @@ const char* tid_to_str(int8_t tid) {
     case USER_SYNC_ROI_DATA: return "UserRoi";
     case USER_SYNC_DYNAMIC_KEYMAP_DATA: return "UserDynMap";
     case USER_SYNC_OVERLAY_MAP_DATA: return "UserOverlayMap";
-    case USER_SYNC_FW_UP_BEGIN:  return "FwUpBegin";
-    case USER_SYNC_FW_UP_CHUNK:  return "FwUpChunk";
-    case USER_SYNC_FW_UP_COMMIT: return "FwUpCommit";
-    case USER_SYNC_FW_UP_STATUS: return "FwUpStatus";
+    case USER_SYNC_FLASH_STAGE:  return "FlashStage";
     case USER_SYNC_RESET:        return "Reset";
     default: return "Not registered";
     }

@@ -460,7 +460,7 @@ bool fw_staging_finalize(void) {
 // Slave-side finalize. Identical to fw_staging_finalize() EXCEPT the heavy
 // FONTPACK reload (a full-body CRC32 + reassemble over the whole ~459 KB pack,
 // ~50 ms) is DEFERRED to housekeeping instead of run inline. The slave runs
-// finalize inside the USER_SYNC_FW_UP_COMMIT split-transaction callback, whose
+// finalize inside the USER_SYNC_FLASH_STAGE (COMMIT op) split-transaction callback, whose
 // receive window is ~20 ms — the inline reload overran it, so the master timed
 // out and mis-reported COMMIT as a CRC failure even though the pack loaded fine
 // (same class of bug as the master-side re-scan, run 6). The O(1) transport CRC

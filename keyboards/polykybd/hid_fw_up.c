@@ -25,12 +25,12 @@
 // the slave is alive at all, whether the chunk handler ran, and what its
 // next_offset / counters look like.  See FW_UP_DEBUG_NOTES.md.
 static void fw_up_log_slave_status(const char *tag) {
-    fw_up_status_request_t req = { .crc32 = 0, .dummy = 0 };
+    fw_up_status_request_t req = { .crc32 = 0, .op = FLASH_STAGE_STATUS, .dummy = 0 };
     fw_up_status_reply_t   reply;
     memset(&reply, 0, sizeof(reply));
     // Use transaction_rpc_exec directly — send_to_bridge hardcodes the
     // 1-byte poly_sync_reply_t and can't carry our bigger status struct.
-    bool ok = transaction_rpc_exec(USER_SYNC_FW_UP_STATUS,
+    bool ok = transaction_rpc_exec(USER_SYNC_FLASH_STAGE,
                                    sizeof(req), &req,
                                    sizeof(reply), &reply);
     if (!ok) {
@@ -63,6 +63,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
 
             fw_up_begin_sync_t begin_msg;
             memset(&begin_msg, 0, sizeof(begin_msg));   // deterministic padding for the CRC
+            begin_msg.op         = FLASH_STAGE_BEGIN;
             begin_msg.image_size = image_size;
             begin_msg.image_crc  = image_crc;
             begin_msg.target     = FW_TARGET_FIRMWARE;
@@ -86,7 +87,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 // begin_deferred also halts the master's core1 and sets fw_up_active.
                 fw_staging_begin_deferred(image_size, image_crc);
                 // Kick the slave's deferred erase so both halves erase in parallel.
-                send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 3);
+                send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
                 uprintf("FW_UP_BEGIN: new image size=%lu crc=0x%08lx (master+slave staging)\n",
                         image_size, image_crc);
             }
@@ -95,7 +96,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // ready we return '~' and the host re-polls after a short delay, letting
             // the QMK main loop advance both deferred erases between polls.
             uint8_t slave_ack = master_ok
-                ? send_to_bridge(USER_SYNC_FW_UP_BEGIN, &begin_msg, sizeof(begin_msg), 1)
+                ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
                 : SYNC_CRC32_ERR;
             bool slave_ok    = (slave_ack == SYNC_ACK);
             bool master_done = !fw_staging_erase_pending();   // master's own staging erased?
@@ -163,8 +164,10 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 uint8_t              big_req[64];
                 fw_up_status_reply_t big_reply;
                 memset(big_req, 0xA5, sizeof(big_req));
+                uint32_t st_op = FLASH_STAGE_STATUS;   // op selector routes to the STATUS handler
+                memcpy(&big_req[4], &st_op, sizeof(st_op));
                 memset(&big_reply, 0, sizeof(big_reply));
-                bool big_ok = transaction_rpc_exec(USER_SYNC_FW_UP_STATUS,
+                bool big_ok = transaction_rpc_exec(USER_SYNC_FLASH_STAGE,
                                                    sizeof(big_req), big_req,
                                                    sizeof(big_reply), &big_reply);
                 uprintf("FW_UP probe: pre-chunk 64B-M2S status xfer -> %s\n",
@@ -219,10 +222,10 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 // is unreachable its cursor is unknown — report the master's own
                 // (the host will retry the current chunk with backoff).
                 uint32_t resume = fw_staging_next_offset();
-                fw_up_status_request_t sreq = { .crc32 = 0, .dummy = 0 };
+                fw_up_status_request_t sreq = { .crc32 = 0, .op = FLASH_STAGE_STATUS, .dummy = 0 };
                 fw_up_status_reply_t   srep;
                 memset(&srep, 0, sizeof(srep));
-                if (transaction_rpc_exec(USER_SYNC_FW_UP_STATUS, sizeof(sreq), &sreq, sizeof(srep), &srep) &&
+                if (transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(sreq), &sreq, sizeof(srep), &srep) &&
                     srep.crc32 == crc32_1byte((const uint8_t *)&srep.status, sizeof(srep.status), 0) &&
                     srep.status.next_offset < resume) {
                     resume = srep.status.next_offset;
@@ -240,8 +243,8 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // milestone: fw_staging_finalize() verifies the O(1) running CRC, clears
             // fw_up_active and restarts core1 — it does NOT apply or reboot.  Actually
             // installing the staged image is the explicit FW_UP_APPLY step (phase 2).
-            uint32_t dummy_crc = 0;
-            uint8_t slave_ack  = send_to_bridge(USER_SYNC_FW_UP_COMMIT, &dummy_crc, sizeof(dummy_crc), 10);
+            fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
+            uint8_t slave_ack  = send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10);
             bool master_ok = fw_staging_finalize();   // also clears fw_up_active + restarts master core1
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
             memset(data, 0, length);

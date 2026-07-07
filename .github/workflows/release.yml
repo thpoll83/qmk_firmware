@@ -55,6 +55,34 @@ jobs:
             ${TARGET}.bin
           cp keyboards/polykybd/doom/pack/doom_pack_v1.plyx .
 
+      # Crafted release notes (optional): one file per tag on the unprotected
+      # `release-notes` branch — release-notes/<TAG>.md, first line "# <title>",
+      # the rest the body. Files are keyed by tag, so they are never overwritten
+      # or deleted — the branch is an accumulating changelog archive. A missing
+      # file just falls back to --generate-notes, so this step is safe if unused.
+      # (Prepared by the `polykybd-github-release` skill: it writes the file to
+      # the release-notes branch, then this build attaches it when the tag lands.)
+      - name: Fetch crafted release notes (if any)
+        id: notes
+        if: github.event_name == 'release' || github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          if gh api "repos/${{ github.repository }}/contents/${TAG}.md?ref=release-notes" \
+               --jq '.content' 2>/dev/null | base64 -d > _release_notes.md && [ -s _release_notes.md ]; then
+            TITLE=$(head -n1 _release_notes.md | sed 's/^#\s*//')
+            tail -n +2 _release_notes.md | sed '/./,$!d' > _release_body.md
+            {
+              echo "have_notes=1"
+              echo "title=$TITLE"
+            } >> "$GITHUB_OUTPUT"
+            echo "Using crafted notes for $TAG (title: $TITLE)."
+          else
+            echo "have_notes=0" >> "$GITHUB_OUTPUT"
+            echo "No crafted notes on the release-notes branch for $TAG — auto-generating."
+          fi
+
       # Runs on a tag push, on publishing a release, or on a manual dispatch.
       # Idempotent: creates the release if missing, otherwise (re-)uploads the
       # assets with --clobber; a create that loses a race falls back to upload.
@@ -66,18 +94,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.release.tag_name || github.ref_name }}
+          HAVE_NOTES: ${{ steps.notes.outputs.have_notes }}
+          TITLE: ${{ steps.notes.outputs.title }}
         run: |
           TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
+          ASSETS=( "${TARGET}.uf2" "${TARGET}.bin" doom_pack_v1.plyx )
+          if [ "$HAVE_NOTES" = "1" ]; then
+            NOTES_ARGS=( --title "$TITLE" --notes-file _release_body.md )
+          else
+            NOTES_ARGS=( --title "PolyKybd Firmware $TAG" --generate-notes )
+          fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists — uploading assets (clobbering duplicates)."
-            gh release upload "$TAG" "${TARGET}.uf2" "${TARGET}.bin" doom_pack_v1.plyx --clobber
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
           else
             echo "Creating release $TAG (falls back to upload if a concurrent run won the create)."
-            gh release create "$TAG" \
-              --generate-notes \
-              --title "PolyKybd Firmware $TAG" \
-              "${TARGET}.uf2" \
-              "${TARGET}.bin" \
-              doom_pack_v1.plyx \
-            || gh release upload "$TAG" "${TARGET}.uf2" "${TARGET}.bin" doom_pack_v1.plyx --clobber
+            gh release create "$TAG" "${NOTES_ARGS[@]}" "${ASSETS[@]}" \
+            || gh release upload "$TAG" "${ASSETS[@]}" --clobber
           fi

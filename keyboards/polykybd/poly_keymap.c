@@ -574,16 +574,16 @@ void poly_prepare_for_flash(void) {
 // The sensor is just another SOURCE feeding the existing auto-brightness path:
 // the 5 s-average lux is mapped to a contrast and pushed through
 // set_auto_brightness_value() — exactly the volatile/host-auto channel the PC
-// host uses — so the resulting contrast reaches the slave over the SAME
-// poly_sync_t brightness transport that's already there. No new split
-// transaction (the table is full anyway; see config.h).
+// host uses — so the resulting contrast reaches the slave over the existing
+// poly_sync_t brightness transport.
 //
-// Because brightness and idle are master-authoritative, the sensor can only
-// DRIVE from the master. The expansion port (sensor) is on the RIGHT half, so
-// driving is active when the USB/master half is the right half (master reads
-// locally, syncs contrast to the slave). With USB on the left, the sensor is on
-// the slave: its readings still show on the slave's status OLED, but there is no
-// existing master-bound channel to push them, so driving stays idle there.
+// Brightness and idle are master-authoritative, so the decision runs on the
+// master. The sensor lives on the RIGHT half, so:
+//   * master IS the right half  -> read the sensor locally
+//   * master is the LEFT half   -> pull {avg lux, proximity} from the slave over
+//     USER_SYNC_SENSOR_DATA (transaction_rpc_recv) — the split slot freed by the
+//     FW_UP transaction consolidation.
+// Either way driving works regardless of which half USB is plugged into.
 // All tunables below are first-cut guesses to be dialled in against the OLED.
 // Proximity (0..2047) that counts as "close". Must sit above the resting
 // baseline — housing/crosstalk reflection reads ~129 with nothing near, so 120
@@ -592,6 +592,22 @@ void poly_prepare_for_flash(void) {
 #    define LTR559_NEAR_THRESHOLD 350
 #    define LTR559_DRIVE_MS 500         // how often the master samples + applies
 #    define LTR559_LUX_FULL_REF 200     // avg lux mapped to FULL_BRIGHT (ceiling)
+
+typedef struct {
+    uint16_t lux;   // 5 s-average lux
+    uint16_t prox;  // latest raw proximity (0..2047)
+} ltr559_sync_t;
+
+// Slave side: answer the master's pull with this half's latest sensor values.
+// Registered on both halves; only ever runs on the slave that holds the sensor.
+static void user_sync_sensor_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    (void)in_len;
+    (void)in_data;
+    ltr559_sync_t s = { ltr559_avg_lux(), ltr559_prox() };
+    if (out_len >= sizeof(s)) {
+        memcpy(out_data, &s, sizeof(s));
+    }
+}
 
 // Master-side: mirror the HID cmd-15 stop-idle path to force the displays awake.
 static void poly_force_wake(void) {
@@ -646,13 +662,26 @@ static void poly_ltr559_drive(void) {
     }
     last = timer_read32();
 
-    // Drive only from the master half that physically holds the sensor (right).
-    // The resulting contrast then syncs to the slave via the existing transport.
-    if (!is_right_side() || !ltr559_available()) {
-        return;
+    // The sensor lives on the RIGHT half; brightness/idle decisions are master-only.
+    uint16_t lux, prox;
+    if (is_right_side()) {
+        // Master IS the sensor half — read locally.
+        if (!ltr559_available()) {
+            return;
+        }
+        lux  = ltr559_avg_lux();
+        prox = ltr559_prox();
+    } else {
+        // Sensor is on the slave (right) half — pull its latest values up over the
+        // freed split slot (USER_SYNC_SENSOR_DATA), so driving works in either
+        // USB orientation.
+        ltr559_sync_t s;
+        if (!transaction_rpc_recv(USER_SYNC_SENSOR_DATA, sizeof(s), &s)) {
+            return;   // slave busy this round; try again next tick
+        }
+        lux  = s.lux;
+        prox = s.prox;
     }
-    uint16_t lux  = ltr559_avg_lux();
-    uint16_t prox = ltr559_prox();
 
     // Auto-brightness from the 5 s average lux, via the same volatile/host-auto
     // path the host uses (keeps the manual brightness untouched).
@@ -2835,6 +2864,9 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
     transaction_register_rpc(USER_SYNC_FLASH_STAGE,         user_sync_flash_stage_handler);
     transaction_register_rpc(USER_SYNC_RESET,               user_sync_reset_handler);
+#ifdef POLYKYBD_LTR559_DRIVE
+    transaction_register_rpc(USER_SYNC_SENSOR_DATA,         user_sync_sensor_data_handler);
+#endif
 
     fw_staging_init();
 

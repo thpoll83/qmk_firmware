@@ -70,6 +70,7 @@
 
 #include "layers.h"
 #include "keycode_helper.h"
+#include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "os_actions.h"
 #include "uni.h"
 #include "emoji/emoji_layer.h"
@@ -205,6 +206,13 @@ bool rgb_matrix_indicators_kb(void) {
             // apply + bootloader = "can't type" states).
             rgb_matrix_set_color_all(0, v, v);                 // breathing cyan
         }
+        return false;
+    }
+    // Doom sound->RGB cue (doom_mode.c): while game mode runs, the matrix is
+    // the game's "speaker" — yellow fire flash, blue world sounds, red base
+    // as health degrades. False = it painted this frame. Inline pass-through
+    // when the game isn't compiled in.
+    if (!doom_rgb_indicators()) {
         return false;
     }
     if (!is_keyboard_master()) {
@@ -593,6 +601,10 @@ void housekeeping_task_user(void) {
         // (KC_STORE_EE); the only housekeeping write is draining that one-shot
         // store request (on the master locally, on the slave via SAVE_EEPROM).
         save_all_if_requested();
+        // Doom easter egg frame tick (no-op unless POLYKYBD_DOOM + game mode).
+        // Runs before the display sync: it keeps last_update fresh so the
+        // idle/fade pipeline below never fights the game blitter.
+        doom_tick();
         sync_and_refresh_displays();
     }
     int32_t update = get_last_update();
@@ -613,16 +625,31 @@ void housekeeping_task_user(void) {
 
                 //transition to pulsing mode
                 if(brightness<=MIN_BRIGHT) {
-                    contrast = DISP_OFF;
-                    flags |= DISP_IDLE;
-                    uprint("Transition to pulsing\n");
+                    if (get_idle_style() == IDLE_STYLE_IDDQD && doom_screensaver_start()) {
+                        // Doom attract screensaver instead of the pulse: the demo
+                        // owns the keycaps at the user brightness — no DISP_IDLE,
+                        // and IDLE_TRANSITION stays dropped (cleared above), which
+                        // fires the back_from_idle_transition brightness restore.
+                        // doom_tick() holds last_update while the demo runs and
+                        // hands over to the normal TURN_OFF suspend at its own
+                        // deadline. Falls through to the pulse whenever the demo
+                        // can't start (non-doom build, fw staging active).
+                        contrast = get_active_brightness();
+                        uprint("Transition to doom screensaver\n");
+                    } else {
+                        contrast = DISP_OFF;
+                        flags |= DISP_IDLE;
+                        flags |= IDLE_TRANSITION;
+                        uprint("Transition to pulsing\n");
+                    }
                 } else if(brightness>FULL_BRIGHT) {
                     contrast = FULL_BRIGHT;
+                    flags |= IDLE_TRANSITION;
                     uprint("Limiting brightness\n");
                 } else{
                     contrast = brightness;
+                    flags |= IDLE_TRANSITION;
                 }
-                flags |= IDLE_TRANSITION;
             } else if(elapsed_time_since_update > TURN_OFF_TIME) {
                 uprint("Turning off\n");
                 poly_suspend();
@@ -663,6 +690,26 @@ void housekeeping_task_user(void) {
             access_local_state()->glyph_script = get_glyph_script();
             request_disp_refresh();   // script changed -> re-render letter/digit legends
         }
+        // Doom game mode: synced so the SLAVE strips its legends down to the
+        // game controls (the split_sync poly handler refreshes on the diff).
+        // No master-side refresh — its keycaps are owned by the game blitter
+        // while active, and doom_exit() restores them itself. The weapon-pad
+        // state rides along; a change re-renders the slave's pad keys.
+        // 2 = attract screensaver: chrome-free — the slave renders NO pad/ESC
+        // legends, every keycap belongs to the mirror blitter (full-bleed demo).
+        uint8_t doom_want = doom_mode_active() ? (doom_mode_screensaver() ? 2 : 1) : 0;
+        if (access_local_state()->doom_ctl != doom_want) {
+            // Breadcrumb: this is the value the next POLY sync carries to the
+            // slave — "slave stayed in game mode" reports hinge on it.
+            uprintf("doom ctl -> %u\n", doom_want);
+        }
+        access_local_state()->doom_ctl = doom_want;
+        uint8_t wpn_owned = 0, wpn_ready = 0;
+        if (access_local_state()->doom_ctl) {
+            doom_weapon_state(&wpn_owned, &wpn_ready);
+        }
+        access_local_state()->doom_wpn_owned = wpn_owned;
+        access_local_state()->doom_wpn_ready = wpn_ready;
     }
 }
 
@@ -743,6 +790,9 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KC_L2:                         return local_layer->def_layer == _L2 ? U"Clmk\r\v" ICON_SWITCH_ON : U"Clmk\r\v" ICON_SWITCH_OFF;
         case KC_L3:                         return local_layer->def_layer == _L3 ? U"Neo\r\v" ICON_SWITCH_ON : U"Neo\r\v" ICON_SWITCH_OFF;
         case KC_L4:                         return local_layer->def_layer == _L4 ? U"Wkm\r\v" ICON_SWITCH_ON : U"Wkm\r\v" ICON_SWITCH_OFF;
+        // Doom easter-egg menu item: blank until typing IDDQD arms it
+        // (doom_mode.c; always blank in non-doom builds via the stub).
+        case KC_IDDQD:                      return doom_egg_armed() ? U"IDDQD" : U"";
 
         // Language selection keycodes: the tiny "xx-YY" code shown under the flag
         // (the flag + selection frame are drawn by render_lang_flag_key()). KCL_ENUS..
@@ -1746,6 +1796,11 @@ static void draw_legend_cx(const uint32_t* text, int8_t y) {
 }
 
 void update_displays(enum refresh_mode mode) {
+    // Doom easter egg: while game mode owns the keycaps, the blitter is the
+    // only writer — a legend re-render here would tear the game frame.
+    if (doom_mode_active()) {
+        return;
+    }
     const poly_sync_t* local_state = get_local_state();
     const bool idle = (local_state->flags & DISP_IDLE) != 0;
     // While idle we never full-re-render here: kdisp_idle() pulses the existing
@@ -1793,9 +1848,112 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     keycode = display_keycode_at(local_layer, r + offset, c);
+                    // Doom egg menu item: rewrites the EEPROM keymap's KC_NO at
+                    // the armed utilities-layer position (see doom_mode.h;
+                    // pass-through no-op in non-doom builds and while unarmed).
+                    keycode = doom_egg_menu_keycode(keycode, (uint8_t)(r + offset), c);
                     kdisp_enable(true);
                     kdisp_set_contrast((uint8_t)(local_state->contrast-1));
-                    if(keycode!=KC_TRNS) {
+                    // Doom control pad (this only ever renders on the SLAVE
+                    // half — the master early-returns above while the game
+                    // runs): the outer two columns become ESC + weapon slots,
+                    // the game-control keys keep their legends, everything
+                    // else goes dark.
+                    bool doom_handled = false;
+                    if (local_state->doom_ctl == 2) {
+                        // Attract screensaver: chrome-free — no pad, no ESC face,
+                        // no control legends. Every key belongs to the mirror
+                        // blitter while its view is live (the full-viewport
+                        // attract includes the bottom row); until the mirror is
+                        // up, keys go dark so no legend flashes into the demo.
+                        if (r < MATRIX_ROWS_PER_SIDE - 1 ? doom_slave_viewport_live()
+                                                         : doom_slave_bottom_row_live()) {
+                            doom_handled = true;
+                        } else {
+                            kdisp_set_buffer(0x00);
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        }
+                    } else if (local_state->doom_ctl) {
+                        uint16_t pad = doom_pad_keycode((uint8_t)(r + offset), c);
+                        // Fixed positional control layout (field round 23):
+                        // the cursor cluster / use / enter legends render at
+                        // their pad POSITIONS, whatever the active base
+                        // layer holds there — matching what
+                        // doom_process_record feeds the game.
+                        {
+                            uint16_t ctl = doom_ctl_keycode((uint8_t)(r + offset), c);
+                            if (ctl != KC_NO) {
+                                keycode = ctl;
+                            }
+                        }
+                        if (pad == KC_NO &&
+                            (r < MATRIX_ROWS_PER_SIDE - 1 ? doom_slave_viewport_live()
+                                                          : doom_slave_bottom_row_live())) {
+                            // The mirror blitter owns the non-pad keys while
+                            // its view is live — leave their frames alone.
+                            // The bottom (thumb) row belongs to the blitter
+                            // only during the full-viewport ATTRACT; on the
+                            // map it renders here so the cursor-key legends
+                            // stay (field rounds 13+14).
+                            doom_handled = true;
+                        } else if (pad >= KC_1 && pad <= KC_7) {
+                            uint8_t slot = (uint8_t)(pad - KC_1); // 0-based
+                            kdisp_set_buffer(0x00);
+                            if (local_state->doom_wpn_owned & (uint8_t)(1u << slot)) {
+                                // Sprite silhouette + slot digit in the corner;
+                                // a bottom bar marks the weapon in hand.
+                                // Unowned slots stay dark.
+                                uint8_t  iw = 0, ih = 0;
+                                const uint8_t *icon = doom_weapon_icon((uint8_t)(slot + 1), &iw, &ih);
+                                uint32_t digit[2] = {(uint32_t)('1' + slot), 0};
+                                if (icon) {
+                                    kdisp_write_gfx_text(mid_fonts, 1, BUFFER_X + 1, 12, digit);
+                                    kdisp_draw_bitmap((int8_t)(BUFFER_X + (SCREEN_WIDTH - iw) / 2),
+                                                      (int8_t)((SCREEN_HEIGHT - ih) / 2 + 3),
+                                                      icon, (int8_t)iw, (int8_t)ih);
+                                } else {
+                                    draw_legend_cx(digit, 23);
+                                }
+                                if (local_state->doom_wpn_ready == slot + 1) {
+                                    static const uint8_t ready_bar[18] = {
+                                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                    }; // 72x2 solid underline
+                                    kdisp_draw_bitmap(BUFFER_X, SCREEN_HEIGHT - 2, ready_bar, 72, 2);
+                                }
+                            }
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        } else if (pad == KC_ESC) {
+                            // The shared exit-hint face — byte-identical to
+                            // the master's HUD corner key (field rd 18).
+                            doom_render_esc_key();
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        } else if (keycode == KC_LCTL || keycode == KC_RCTL) {
+                            // Ctrl fires in DOOM — show a crosshair reticle
+                            // instead of the plain Ctrl legend (field rd 16).
+                            kdisp_set_buffer(0x00);
+                            doom_render_fire_key();
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        } else if (keycode == KC_SPACE) {
+                            // Space is DOOM's use/open — a door symbol
+                            // instead of the space legend (field rd 17).
+                            kdisp_set_buffer(0x00);
+                            doom_render_use_key();
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        } else if (!doom_key_is_control(keycode)) {
+                            kdisp_set_buffer(0x00);
+                            kdisp_send_buffer();
+                            doom_handled = true;
+                        }
+                    }
+                    if (doom_handled) {
+                        // rendered above
+                    } else if(keycode!=KC_TRNS) {
                         int16_t lang_idx = lang_index_for_keycode(keycode);
                         if (lang_idx >= 0) {
                             // Language layer: country flag + tiny language code
@@ -1959,6 +2117,14 @@ void kdisp_idle(uint8_t contrast) {
 static uint8_t s_apple_swap_latch = 0;
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+
+    // Doom easter egg: in game mode every key event is swallowed (fed to the
+    // game, never the host); outside game mode this only advances the trigger
+    // matcher. Inline no-op false unless built with POLYKYBD_DOOM.
+    if (doom_process_record(keycode, record->event.pressed,
+                            record->event.key.row, record->event.key.col)) {
+        return false;
+    }
 
     // SECURITY: the keycode of every keystroke (passwords included) must NOT be
     // streamed to the HID console in normal operation — any local process can open
@@ -2649,6 +2815,11 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
 
 // Clears overlay display flags, disables overlays and status display, sets contrast to OFF.
 void poly_suspend(void) {
+    // A host-initiated sleep can land while the doom attract screensaver runs —
+    // tear it down first (engine stopped, pool handed back) so the demo doesn't
+    // keep blitting into panels this function is about to switch off. No-op for
+    // a real game session and on the slave.
+    doom_screensaver_stop();
     poly_sync_t* local_state = access_local_state();
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
     local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);// & ~((uint8_t)RGB_ON);

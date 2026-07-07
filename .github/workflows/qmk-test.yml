@@ -20,10 +20,15 @@ jobs:
         with:
           submodules: recursive
 
+      # Shipping shape: POLYKYBD_DOOM_PACK compiles the doom easter egg's loader,
+      # call tables and trigger (the engine ships separately as the flash pack —
+      # doom/PACK_DESIGN.md) and pins the overlay pool at the RAM origin. The
+      # release build carries the same flag, so HIL tests exactly what ships.
+      # split42 stays plain (no doom port).
       - name: Build split72 (primary)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes
 
       # The HID firmware-update path takes the raw RP2040 .bin (not the .uf2),
       # which the host streams over HID. objcopy the just-built .elf so the rig
@@ -42,12 +47,12 @@ jobs:
       - name: Build split72 (HIL left/master)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_hil_left
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_hil_left
 
       - name: Build split72 (HIL right/slave)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_hil_right
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_hil_right
 
       - name: Build split42
         uses: docker://qmkfm/qmk_cli

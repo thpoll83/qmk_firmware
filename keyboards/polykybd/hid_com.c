@@ -21,6 +21,7 @@
 #include "lang/lang_lut.h"
 #include "base/com.h"
 #include "base/overlay.h"
+#include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "base/fontpack.h"
 #include "base/update.h"
 #include "poly_util.h"
@@ -67,6 +68,10 @@ void sync_and_refresh_displays(void);
 // Set on boot; cleared after the first GET_ID exchange so the host can detect
 // a firmware restart even when it never lost the USB connection.
 static bool s_fresh_boot = true;
+
+void poly_mark_fresh_boot(void) {
+    s_fresh_boot = true;
+}
 
 
 // Notifies RGB/LED matrix of key event for animation effects based on key press state.
@@ -165,6 +170,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     }
 
     if(data[0] == id_custom_save || data[0] == 'P') {
+        // Doom easter egg: while game mode has borrowed the overlay pool as
+        // game memory, drop the pool-writing bulk commands (all ACKless — a
+        // reply here would inject a stale report into the host's read stream).
+        // Every other command keeps answering, GET_ID included.
+        if (doom_hid_frozen(data[1])) {
+            return;
+        }
         const poly_layer_t* local_layer = get_local_layer();
         poly_sync_t* local_state = access_local_state();
         switch(data[1]) {
@@ -744,8 +756,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 28: //get/set idle (anti-burn-in) display style (protocol v4+)
                 {
                     // data[HID_DATA_IDX] == 0xFF -> query (reply current style in data[3]).
-                    // Otherwise set the style (0 = pulse, 1 = jitter); persisted at the
-                    // next EEPROM flush (suspend / store key).
+                    // Otherwise set the style (0 = pulse, 1 = jitter, 2 = doom attract
+                    // screensaver — falls back to pulse at runtime when the demo can't
+                    // start); persisted at the next EEPROM flush (suspend / store key).
                     uint8_t arg = data[HID_DATA_IDX];
                     memset(data, 0, length);
                     if (arg == 0xFF) {

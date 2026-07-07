@@ -106,6 +106,12 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
 // Handles incoming MRU (emoji + language recents) data on bridge with CRC32 validation.
 void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
+#ifdef POLYKYBD_DOOM
+// Doom slave lockstep mirror: ticcmd stream + START/BREAK control messages
+// into the game arena's mailbox (doom/doom_mirror.h).
+void user_sync_doom_mirror_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+#endif
+
 // Keyboard level code can change where VIA stores the magic.
 // The magic is the build date YYMMDD encoded as BCD in 3 bytes,
 // thus installing firmware built on a different date to the one

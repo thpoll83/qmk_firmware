@@ -88,8 +88,9 @@ console, egg falls back to the fire demo).
     Bayer-dithers it onto the **5×5 keycap viewport** (360×200 canvas, frame
     centred with 20 px margins — the study's geometry).
 - **Exit**: hold `ESC` ≥1.5 s → pool memset + usage/mapping reset (same state
-  as a fresh boot), `request_disp_refresh()` redraws the normal legends; the
-  host repopulates overlays on its next push (app switch / reconnect).
+  as a fresh boot), `request_disp_refresh()` redraws the normal legends, and
+  `doom_exit()` calls **`poly_mark_fresh_boot()`** (`hid_com.c`) so the host
+  re-pushes the current app's overlays (see "Handing the overlay arena back" below).
 
 ## Attract screensaver (3rd idle style, `IDLE_STYLE_IDDQD = 2`)
 
@@ -109,39 +110,54 @@ Beyond the game (typed `IDDQD` → armed menu item → play), the egg doubles as
 - **Anti-burn-in placement**: the screensaver renders a **5×4** block (the bottom
   keycap row is mostly UI, so it is dropped — `doom_blit_frame_engine`'s
   `skip_bottom_row`) and **migrates that block** every `DOOM_SAVER_MOVE_MS` (15 s):
-  `doom_saver_reroll()` rolls a keycap-row offset (0 or 1, so the block starts on
+  `doom_saver_reroll()` advances a keycap-row offset (0 or 1, so the block starts on
   the first or second row) and an outer-edge column inset (0..3 empty columns on
   this half's outside), then blanks the viewport so keys the block vacated don't
-  retain a burning-in frame. Each half rolls **independently** — burn-in is
+  retain a burning-in frame. The move is a **deterministic cycle**, not a random
+  walk: `s_saver_step` counts `0..DOOM_SAVER_STEPS-1` (`= 2*DOOM_SAVER_INSETS = 8`),
+  `row_off = step%2`, `inset = step/2`, so every reachable keycap — INCLUDING both
+  stacked inner thumbs (inset 3) and the staggered in-between key — is guaranteed to
+  come around (a random draw kept visibly missing the thumb on hardware). Each half
+  runs the **same** cycle a half-step apart (`s_saver_step` seeded `0` on the left,
+  `DOOM_SAVER_STEPS/2` on the right) so they don't sit in visual lockstep; burn-in is
   per-panel, so nothing is synced.
   - `doom_blit_frame_engine(luma, skip_bottom, map_frame, place_row_off,
     place_col_inset)`: `place_col_inset` **< 0 = the unchanged game placement**
-    (byte-identical to the old call); **0..3** is the screensaver inset. The count
-    is **edge-relative**: the game reserves a per-role outer MARGIN (1 column as
-    master = HUD, 2 as slave = ESC/weapon pad), so `select_display_placed()`
-    reclaims it with a signed shift `s = inset − margin`, mirrored per half (left
-    outer edge = LOW display cols → `base + s`; right outer edge = HIGH cols →
-    `base − s`). So inset 0 sits flush to the true outer edge and inset 3 leaves 3
-    empty outer columns on **every** half/role — get the margin wrong and the slave
-    ends up a column short (v50/v51 field bug).
+    (byte-identical to the old call); **0..3** is the screensaver inset.
+  - **Placement is done in GRID space, then mapped to displays per half** — the
+    reasoning-from-RGB-position approach that produced v49–v55 was wrong (the OLED
+    chip-select does **not** track `g_led_config` x-order). `select_display_placed()`
+    (`doom_blit.c`) works in an **outer→inner grid** (`grid = vc + inset`, 0 = this
+    half's outer edge, 7 = the inner thumb column) and translates:
+    - **Content column mirror on the RIGHT half only** — `vc = view_col` on the left,
+      `DOOM_VIEW_COLS-1-view_col` on the right. Without it the frame reads **backwards
+      on the slave** (`5 4 3 2 1`): the right half's `disp_col` *decreases* as the grid
+      index rises, so the doom frame must be pre-mirrored to land left→right. (This is
+      "mirror the CONTENT", not "mirror the columns" — an earlier literal column mirror
+      is what caused the reversal.)
+    - **Upper rows** (`disp_row < 4`): 7 real cols — `disp_col = grid` (left) /
+      `6 - grid` (right).
+    - **Bottom row** (`disp_row == 4`): physically **staggered** with a GAP where an
+      upper key has no key below it — `bottom_left = {0,1,2,3,-,4,5}`,
+      `bottom_right = {7,6,5,4,-,3,2}` (`0xFF` = the gap, dropped).
+    - **`grid == 7` = the two STACKED inner thumbs** (same physical x, two heights,
+      both electrically on the bottom matrix row): `disp_row 3` → upper thumb
+      (left disp col 7 / right col 0), `disp_row 4` → lower thumb (left col 6 /
+      right col 1); other rows drop out.
   - ⚠️ **The split72 keycap DISPLAY grid is NOT a rectangle** (learned the hard way,
-    v49–v52; model it offline from `g_led_config` + `split72.c` `key_display[]`
-    before flashing — three revisions shipped blind first). Only the **bottom row
-    (disp_row 4) is a full 8-wide row**; the upper rows (disp_row 0–3) have real
-    OLEDs at **cols 0–6 only** — display **col 7 is a routing PHANTOM** (a `BITMASK`
-    entry exists in `key_display[]` but there is no panel behind it, so writing it
-    shows nothing). The two **inner thumb keys** live only on the bottom matrix row
-    (physical "col 8"): left = disp cols 6/7, right = disp cols 0/1, **stacked
-    vertically** (same x, different y) yet on the *same* matrix row. So a rectangular
-    block can never include a thumb on the upper rows — at max inset the block just
-    reaches the bottom-row thumb while `select_display_placed()` **skips the phantom**
-    (`disp_row < 4 && disp_col == 7`), leaving a couple of missing cells rather than
-    writing a nonexistent display. Two more traps baked into the same function:
-    `LAYOUT_TO_INDEX(row,col)=row*8+col` **wraps** — `disp_col == MATRIX_COLS` folds
-    into the next row's col 0, so the result column is bounded to `[0, MATRIX_COLS−1]`;
-    and the right half carries a `c--` display-index shift on its upper rows (5–8)
-    but **not** its bottom row (9), which `view_to_disp_col()` already bakes into its
-    per-role/per-row tables.
+    v49–v58; model it offline with **`tools/keycap_dispmap.py`** before flashing —
+    several revisions shipped blind first). That tool composes the three real mappings
+    (chip-select `disp_idx = disp_row*8 + disp_col`, `invert_display`'s right-upper
+    `c--` fold, and `g_led_config` physical position) and **verifies** the screensaver
+    covers all 36 real displays per half, lights both thumbs, and reads left→right on
+    both halves — run it after any change to `select_display_placed()`. Facts it
+    encodes: only the **bottom row (disp_row 4) is a full 8-wide row**; upper rows have
+    real OLEDs at **cols 0–6 only** (display **col 7 is a routing PHANTOM** — a
+    `BITMASK` entry with no panel). **disp_col 0 is the OUTER edge on the LEFT half but
+    the INNER edge on the RIGHT** (the `c--` fold reverses the right's upper rows) — the
+    single fact that makes the grid mapping asymmetric and forces the content mirror.
+    `LAYOUT_TO_INDEX(row,col)=row*8+col` **wraps** — `disp_col == MATRIX_COLS` folds into
+    the next row's col 0, so the result column is bounded to `[0, MATRIX_COLS−1]`.
 - **Dismissal**: the FIRST key press exits (`doom_process_record` swallows both
   edges, calls `doom_exit()`), exactly like a desktop screensaver — the host
   sees no keystroke. `doom_exit()` re-arms the idle timer, so the fade→idle
@@ -156,6 +172,27 @@ Beyond the game (typed `IDDQD` → armed menu item → play), the egg doubles as
   the style is always safe to select/persist. A host-initiated sleep calls
   `doom_screensaver_stop()` from `poly_suspend()` so the demo never blits into
   panels that are about to switch off.
+
+### Handing the overlay arena back (overlays must survive an egg session)
+
+The egg **borrows the overlay pool as game RAM** and hands it back **blank** on
+exit. Resetting the firmware-side overlay state (`request_disp_refresh()` + usage
+/mapping reset) redraws the *normal legends*, but the app **overlay images are
+gone** — and the host only re-pushes overlays on an app switch or a reconnect. If
+the user was on the same app the whole time (very likely — they idled there), that
+push never comes and every overlay stays blank until they alt-tab. This was a field
+bug: overlays dead after every idle/easter-egg cycle.
+
+The fix is to make the firmware **look like it just rebooted** so the host's
+existing recovery path fires: `doom_exit()` calls **`poly_mark_fresh_boot()`**
+(`hid_com.c`), which re-raises the GET_ID "fresh boot" marker (byte 2 = `*`). The
+host's next reconnect probe pops it (`pop_fresh_boot()` → `snapshot["fresh_boot"]`)
+and runs `device_mgr.reset_all_caches()` (`PolyKybdHost` `poly_core.py`), which
+re-pushes the current app's overlays with no app switch needed. The host machinery
+already existed for real firmware restarts; the egg just had to re-raise the marker.
+⚠️ Any code path that silently wipes the overlay pool mid-session (not just doom)
+must call `poly_mark_fresh_boot()` on the way out, or the host will not know to
+resend.
 
 ## Layering
 

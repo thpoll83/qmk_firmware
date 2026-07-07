@@ -173,10 +173,14 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   the rows above. Also: `LAYOUT_TO_INDEX(row,col)=row*8+col` **wraps** — `col ==
   MATRIX_COLS` folds into the next row's col 0 (bound `disp_col` to
   `[0, MATRIX_COLS-1]`); and the right half applies a `c--` display-index shift on
-  its upper rows (5–8) but not its bottom row (9). Model placement offline from
-  `g_led_config` + `key_display[]` before flashing — dug out over the IDDQD
-  screensaver work (three revisions shipped blind first); full write-up in
-  `doom/README.md` § anti-burn-in placement.
+  its upper rows (5–8) but not its bottom row (9). ⚠️ **Model placement from the
+  OLED chip-select, NOT the RGB `g_led_config` x-order** — they do **not** match:
+  because of the `c--` fold, **disp_col 0 is the OUTER edge on the LEFT half but the
+  INNER edge on the RIGHT**, so a sweep that looks left→right in RGB space runs
+  backwards on the right half's OLEDs. Reasoning from RGB position produced several
+  wrong IDDQD-screensaver revisions before this was caught. The composed model +
+  verifier is committed as `doom/tools/keycap_dispmap.py` (run it after any
+  placement change); full write-up in `doom/README.md` § anti-burn-in placement.
 
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.

@@ -126,24 +126,46 @@ static inline bool select_display_placed(uint8_t view_row, uint8_t view_col,
         return select_display(view_row, view_col);   // game/mirror: no placement
     }
     const uint8_t disp_row = (uint8_t)(view_row + row_off);
-    const uint8_t grid     = (uint8_t)(view_col + inset);   // 0..8, outer -> inner
+    const uint8_t grid     = (uint8_t)(view_col + inset);   // 0..7, outer -> inner
     const bool    left     = is_left_side();
     int16_t       disp_col;
+    if (grid == 7) {
+        // Innermost grid slot = the two STACKED thumb keys (same physical x, two
+        // heights), BOTH electrically on the bottom matrix row. The UPPER thumb
+        // sits at the row-ABOVE height, the LOWER at the bottom height — so render
+        // the upper from the row-above band (disp_row 3) and the lower from the
+        // bottom band (disp_row 4). A single inner placement (inset 3, no
+        // over-slide) lights both; the block never needs a 4th empty outer column
+        // to reach them. (LEFT upper=col7/lower=col6; RIGHT upper=col0/lower=col1.)
+        uint8_t tcol;
+        if (disp_row == 3) {
+            tcol = left ? 7 : 0;      // upper thumb
+        } else if (disp_row == 4) {
+            tcol = left ? 6 : 1;      // lower thumb
+        } else {
+            return false;             // nothing inboard of the upper rows on rows 0..2
+        }
+        const uint8_t ti = (uint8_t)LAYOUT_TO_INDEX(4, tcol);   // both live on disp_row 4
+        if (ti >= (uint8_t)(NUM_SHIFT_REGISTERS * 8)) {
+            return false;
+        }
+        sr_shift_out_buffer_latch(get_key_disp_bitmask(ti), get_disp_bitmask_size());
+        return true;
+    }
+    if (grid > 7) {
+        return false;
+    }
     if (disp_row < 4) {
-        // Upper rows: 7 real display columns (grid 0..6); grid 7/8 are the inner
-        // phantom slots with no OLED — drop out. Left counts up, right counts down.
+        // Upper rows: 7 real display columns (grid 0..6). Left counts up, right down.
         if (grid > 6) {
             return false;
         }
         disp_col = left ? (int16_t)grid : (int16_t)(6 - grid);
     } else {
-        // Bottom row: staggered. grid -> display col, GAP(0xFF) where no key sits
-        // under that upper slot, thumbs at grid 7/8. (Derived from physical x.)
-        static const uint8_t bottom_left[9]  = {0, 1, 2, 3, 0xFF, 4, 5, 6, 7};
-        static const uint8_t bottom_right[9] = {7, 6, 5, 4, 0xFF, 3, 2, 0, 1};
-        if (grid > 8) {
-            return false;
-        }
+        // Bottom row grid 0..6: staggered. grid -> display col, GAP(0xFF) where no
+        // key sits under that upper slot. (Derived from the physical keycap map.)
+        static const uint8_t bottom_left[7]  = {0, 1, 2, 3, 0xFF, 4, 5};
+        static const uint8_t bottom_right[7] = {7, 6, 5, 4, 0xFF, 3, 2};
         const uint8_t c = left ? bottom_left[grid] : bottom_right[grid];
         if (c == 0xFF) {
             return false;   // physical gap — no keycap under this grid slot

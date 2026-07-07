@@ -34,15 +34,16 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
 // the compose early: its vpatch bookkeeping fully resets per frame.
 // map_frame draws a 2 px border around the blitted block (the slave's
 // automap view, field round 17).
-// `place_col_inset` < 0 = game placement (byte-identical to the old call). 0..4
+// `place_col_inset` < 0 = game placement (byte-identical to the old call). 0..3
 // is the IDDQD attract screensaver's anti-burn-in placement: `place_row_off` (0/1)
 // shifts the block DOWN that many keycap rows, and the inset slides it inward by
-// that many GRID columns (grid = outer->inner). select_display_placed() translates
-// grid -> display column per half + per row from the physical keycap map (the
-// bottom matrix row is staggered vs the rows above, with a gap and the two stacked
-// inner thumbs), so over the inset 0..4 cycle every real display is covered —
-// both thumbs and the in-between key included — as a physically coherent block.
-// Vacated cells are NOT cleared here (blank the viewport when the placement changes).
+// that many GRID columns (grid = outer->inner, so ≤ 3 empty outer columns).
+// select_display_placed() translates grid -> display column per half + per row from
+// the physical keycap map (the bottom matrix row is staggered vs the rows above,
+// with a gap and — at the inner grid column — the two vertically-stacked thumb keys
+// rendered from the row-above + bottom bands). Over the inset 0..3 cycle every real
+// display is covered, both thumbs and the in-between key included, as a coherent
+// block. Vacated cells are NOT cleared here (blank the viewport when it changes).
 void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool map_frame,
                             uint8_t place_row_off, int8_t place_col_inset);
 

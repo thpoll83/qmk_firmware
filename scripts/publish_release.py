@@ -115,9 +115,25 @@ def api(token, method, path, payload=None):
             return e.code, {"message": e.read().decode(errors="replace")}
 
 
+def prepared_tags(prefix):
+    """All prepared <prefix><X.Y.Z>.md files on the release-notes branch,
+    as (version_tuple, tag) sorted ascending."""
+    r = run(["git", "ls-tree", "--name-only", "origin/release-notes"])
+    out = []
+    for name in r.stdout.splitlines():
+        if not (name.startswith(prefix) and name.endswith(".md")):
+            continue
+        m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", name[len(prefix):-3])
+        if m:
+            out.append(((int(m[1]), int(m[2]), int(m[3])), name[:-3]))
+    out.sort()
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description="Publish the prepared PolyKybd release.")
     ap.add_argument("--dry-run", action="store_true", help="show what would happen, change nothing")
+    ap.add_argument("--tag", help="publish a specific prepared tag instead of the newest one")
     args = ap.parse_args()
 
     root = repo_root()
@@ -126,20 +142,39 @@ def main():
     # Fetch the refs we read from (best-effort; fall back to whatever is local).
     run(["git", "fetch", "origin", default_branch, "release-notes"])
 
-    vtext = show(f"origin/{default_branch}:{vpath}")
-    if vtext is None:
-        with open(os.path.join(root, vpath), encoding="utf-8") as fh:
-            vtext = fh.read()
-    version = parse_version(kind, vtext)
-    tag = tag_prefix + version
+    # The release-notes branch is the source of truth for *what is ready to
+    # publish* — NOT the tree version, which drifts forward on every PR merge
+    # (each merge auto-bumps the version, so the tree is usually ahead of the
+    # prepared release by the time you publish). Pick the newest prepared tag.
+    if args.tag:
+        tag = args.tag
+        notes = show(f"origin/release-notes:{tag}.md")
+        if not notes or not notes.strip():
+            die(f"no prepared notes for {tag} on the release-notes branch "
+                f"(expected release-notes:{tag}.md).")
+    else:
+        prepared = prepared_tags(tag_prefix)
+        if not prepared:
+            die("no prepared release notes on the release-notes branch "
+                f"(no {tag_prefix}<X.Y.Z>.md files).\n"
+                "  Draft + stage them first with the polykybd-github-release skill.")
+        tag = prepared[-1][1]
+        notes = show(f"origin/release-notes:{tag}.md")
+        if len(prepared) > 1:
+            others = ", ".join(t for _, t in prepared[:-1])
+            print(f"note: newest prepared tag is {tag}. Others on the branch: {others}")
+            print(f"      (use --tag to publish a specific one.)")
 
-    notes = show(f"origin/release-notes:{tag}.md")
-    if not notes or not notes.strip():
-        die(
-            f"no prepared notes for {tag} on the release-notes branch "
-            f"(expected release-notes:{tag}.md).\n"
-            f"  Draft + stage them first with the polykybd-github-release skill."
-        )
+    # Informational: warn if the tree has already bumped past this tag.
+    vtext = show(f"origin/{default_branch}:{vpath}")
+    if vtext:
+        try:
+            tree_tag = tag_prefix + parse_version(kind, vtext)
+            if tree_tag != tag:
+                print(f"note: default branch is at {tree_tag}; publishing prepared {tag} "
+                      f"(the difference is post-prep merges, typically release tooling).")
+        except SystemExit:
+            pass
     lines = notes.splitlines()
     title = re.sub(r"^#\s*", "", lines[0]).strip()
     body = "\n".join(lines[1:]).strip("\n")

@@ -125,39 +125,71 @@ label" is a PR-time action that decides which version the release carries.
 ## 5. Create / publish the release (hand-off)
 
 ⚠️ **This environment has no `gh` CLI and the GitHub MCP exposes no create-/edit-release
-tool.** You cannot publish the release yourself. Prepare it fully and hand off.
+tool** — you can't call an API to publish. But both repos' `release.yml` are wired to
+pull the **crafted notes from a `release-notes` branch**, so publishing is a two-push
+job you *can* drive from here.
 
-**Firmware (`qmk_firmware`)** — the release is what triggers the build:
-- `release.yml` runs on `release: published` **and** on a `PolyKybd-fw-v*` tag push. It
-  builds `polykybd/split72:default` (the doom-pack shipping flavour) and uploads
-  `polykybd_split72_default.bin`, `.uf2`, and `doom_pack_v1.plyx` as assets
-  (idempotent, `--clobber`). **You do NOT attach binaries by hand — CI does.**
-- **Recommended path:** the user creates the release in the GitHub UI — tag
-  `PolyKybd-fw-vX.Y.Z` (target: `PolyKybd`), title = crafted title, body = approved
-  notes, "Set as latest", **Publish**. Publishing kicks CI, which attaches the assets
-  ~a minute later.
-- **Alternative (tag push):** push an annotated tag `PolyKybd-fw-vX.Y.Z` on the bumped
-  commit → CI *creates* the release with a **generic** title + `--generate-notes` +
-  assets; the user then edits the title/body to the approved copy. Only if the user
-  prefers it — it publishes generic notes first. (The `release: published` trigger
-  exists precisely because release tags land on the `[skip ci]` bump commit, which
-  suppresses the tag-push CI trigger — so *publishing* is the reliable build start.)
+### The `release-notes` branch (how the crafted notes reach CI)
+Both `release.yml` workflows, when a tag is created, look for
+**`<TAG>.md` at the root of the unprotected `release-notes` branch** (via `gh api …
+/contents/<TAG>.md?ref=release-notes`). If present, CI publishes with that file's
+**first line `# <title>`** as the release title and the rest as the body; if absent it
+falls back to `--generate-notes` + a generic title. So the file is optional and safe.
 
-**Host (`PolyKybdHost`)**:
-- `release.yml` runs **only** on a `v*` tag push and creates the release with
-  `--generate-notes` + generic title `PolyKybdHost <tag>`. No build assets (pure Python).
-- **Recommended:** the user creates the release in the UI — tag `vX.Y.Z` (target:
-  `main`), crafted title + approved notes, latest, **Publish**. If instead the tag is
-  pushed, CI makes a generic release and the user must replace the title + body with the
-  approved copy.
+**Lifecycle: one file per tag, never overwritten or deleted.** `PolyKybd-fw-v0.9.42.md`
+(firmware) / `v0.9.42.md` (host) is written once for that release; the next release adds
+a *new* file. The branch accumulates them as a changelog archive — don't reuse or clear
+old files.
 
-**Deliver** the approved notes as a ready-to-paste Markdown block plus a one-line
-metadata summary (`tag / title / target branch / latest`). Offer to also write them to
-a file (e.g. `release-notes-<version>.md`).
+### Automated path (recommended — fully hands-off)
+1. Write the approved notes to a file whose first line is `# <crafted title>` and the
+   rest is the approved body.
+2. Put it on the `release-notes` branch as `<TAG>.md` and push (this branch is
+   unprotected — a direct push works; create the branch if it doesn't exist yet, keeping
+   any existing files):
+   ```bash
+   cd <repo>
+   git fetch origin release-notes 2>/dev/null && git checkout release-notes \
+     || git checkout --orphan release-notes && git rm -rf --cached . 2>/dev/null; true
+   cp <approved-notes> PolyKybd-fw-v0.9.42.md      # or v0.9.42.md for the host
+   git add PolyKybd-fw-v0.9.42.md && git commit -m "release notes: 0.9.42"
+   git push -u origin release-notes
+   git checkout -    # back to your working branch
+   ```
+3. Create + push the tag on the bumped commit so CI builds and publishes with the
+   crafted notes + title:
+   ```bash
+   git tag PolyKybd-fw-v0.9.42 <bump-commit>   # host: v0.9.42
+   git push origin PolyKybd-fw-v0.9.42
+   ```
+   - **Firmware:** the tag-push (or a later `release: published`) triggers `release.yml`
+     → builds `polykybd/split72:default` (doom-pack flavour) → uploads
+     `polykybd_split72_default.bin`, `.uf2`, `doom_pack_v1.plyx` → creates the release
+     with the crafted notes. **Never attach binaries by hand — CI does.**
+   - **Host:** the `v*` tag-push triggers `release.yml` → creates the release with the
+     crafted notes (no build assets — pure Python).
+   - If pushing the **tag** is blocked by a tag ruleset, fall back to the UI path below;
+     the notes file on `release-notes` is still picked up whenever the release is created.
+
+### Manual fallback (if you'd rather use the UI, or tag push is blocked)
+The user creates the release in the GitHub UI — tag `PolyKybd-fw-vX.Y.Z` (target
+`PolyKybd`) / `vX.Y.Z` (target `main`), title = crafted title, body = approved notes,
+"Set as latest", **Publish**. For firmware, publishing still kicks CI to attach the
+assets. (The `release: published` trigger exists precisely because release tags land on
+the `[skip ci]` bump commit, which suppresses the tag-push CI trigger.)
+
+**Always also deliver** the approved notes in chat as a ready-to-paste Markdown block +
+a one-line metadata summary (`tag / title / target branch / latest`), so the user can
+review/paste regardless of path.
 
 ## Pitfalls
-- **You don't publish it.** No create-release tooling here — never claim the release is
-  live; you prepare it, the user (or CI on tag) creates it.
+- **Publishing goes through CI, not a release API.** There's no create-release tool
+  here; the release is created by CI when the tag lands (with the crafted notes pulled
+  from the `release-notes` branch). Don't claim it's live until the workflow has run —
+  verify with `mcp__github__get_release_by_tag` / `list_releases`. If a tag ruleset
+  blocks the push, hand off to the UI path.
+- **Keep the notes file and the tag in sync** — the `release-notes/<TAG>.md` filename
+  must exactly match the tag CI sees, or CI silently falls back to auto-generated notes.
 - **In-tree version ≠ released version** — anchor "since the last release" on the GitHub
   release, not the newest bump commit.
 - **Don't hand-attach firmware binaries** — CI builds and uploads them; a manually

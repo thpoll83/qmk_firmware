@@ -30,7 +30,14 @@ crawling the CMake source lists + transitive `#include` closure:
 `../tools/mirror_rp2040_doom.py` (verify any file with
 `https://raw.githubusercontent.com/kilograham/rp2040-doom/<sha>/<path>`).
 
-Game data (NOT committed here — fetch into the working container when needed):
+Game data (NOT committed here — fetch when needed). The convenience script
+`../tools/dl-doom-data.sh` fetches + verifies both (`--wad` for the raw IWAD):
+
+```bash
+keyboards/polykybd/doom/tools/dl-doom-data.sh --out . --wad
+```
+
+Equivalent raw fetches (what the script does), if you prefer curl:
 
 ```bash
 # pre-converted shareware WAD in rp2040-doom's WHX format, 1,800,344 bytes

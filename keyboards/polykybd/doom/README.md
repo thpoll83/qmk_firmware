@@ -40,6 +40,26 @@ collects every artifact in `--out` (default: repo root) and prints the
 install steps: flash the pack-flavour `.bin` over HID → `polyctl doom
 install <whx>` (once) → `polyctl doom install-pack <plyx>` → IDDQD.
 
+**Just the game data (no build):**
+
+```bash
+keyboards/polykybd/doom/tools/dl-doom-data.sh [--out DIR] [--wad] [--force]
+```
+
+Fetches the installable `doom1.whx` (size + `IWHX` magic verified); `--wad`
+also pulls the raw shareware `doom1.wad` (SHA-256 verified) for re-running
+`whd_gen`. Use this when you grabbed a release `.bin` + `.plyx` and only need
+the data to `polyctl doom install`. `build_all.sh` calls it internally, so the
+URLs/checksums live here alone (provenance: `engine/PROVENANCE.md`). The
+shareware data is **not** committed to the repo — it is downloaded on demand.
+
+**Who builds what:** the `.plyx` engine pack is produced by
+`pack/build_pack.sh` (monolith build → stash engine objects → pack-flavour
+build → relink at the DoomPack slot → `pack/mkpack.py` wraps the `PlyX`
+header). CI (`.github/workflows/release.yml`) runs it per tag and uploads
+`doom_pack_v1.plyx` as a release asset. The `.plyx` is a build/release
+artifact — never committed (gitignored).
+
 **Individual pieces:**
 
 ```bash

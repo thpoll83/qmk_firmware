@@ -31,6 +31,15 @@
 // so COMMIT can report the just-flashed bundle's content_version.
 static uint8_t s_fontpack_bundle = 0;
 
+// Latched at BEGIN for the whole BEGIN/CHUNK/COMMIT sequence: is this a solo-half
+// flash (no slave to bridge to)? Latching once — rather than re-checking
+// is_transport_connected() per chunk — keeps every chunk of one stream on the same
+// path. Otherwise the link state flipping mid-stream (it settles to "disconnected"
+// a few seconds into a lone-half flash) would relay-and-NACK the early chunks (never
+// writing the master's own copy) and master-only-write the rest, leaving gaps that
+// fail the final CRC (field, 2026-07: FONTPACK_COMMIT master=0 INVALID on a lone half).
+static bool s_flash_solo = false;
+
 bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
     switch (data[1]) {
 
@@ -111,8 +120,12 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             }
 
             // On a solo half there is no slave to wait on: treat it as ACKed so the
-            // BEGIN can report ready once the master's own erase completes.
+            // BEGIN can report ready once the master's own erase completes. Latch the
+            // solo decision here (sticky across the re-polled BEGIN) so CHUNK/COMMIT
+            // stay on one consistent path for the whole stream.
+            if (new_image) s_flash_solo = false;   // fresh flash starts optimistic
             bool    slave_present = fw_up_slave_present();
+            if (!slave_present) s_flash_solo = true;
             uint8_t slave_ack = (master_ok && slave_present)
                 ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
                 : SYNC_CRC32_ERR;
@@ -143,7 +156,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // logging the standalone fontpack loop had (added for link diagnostics),
             // now produced by the shared helper.
             bool ok;
-            if (fw_up_slave_present()) {
+            if (!s_flash_solo) {
                 ok = fw_up_relay_chunk_to_slave(offset, chunk_data, "FONTPACK_CHUNK");
                 if (ok) ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
             } else {
@@ -167,9 +180,9 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
         case CMD_FONTPACK_COMMIT: {   // slave finalize+reload, then master finalize+reload (no reboot)
             fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
             // Solo half: no slave to finalize — force ACK so success rides on the master.
-            uint8_t slave_ack = fw_up_slave_present()
-                ? send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10)
-                : SYNC_ACK;
+            uint8_t slave_ack = s_flash_solo
+                ? SYNC_ACK
+                : send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10);
             bool master_ok = fw_staging_finalize();   // FONTPACK target: verifies CRC + fontpack_reload()
             bool is_doom = s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ||
                            s_fontpack_bundle == FONTPACK_BUNDLE_DOOMPACK;

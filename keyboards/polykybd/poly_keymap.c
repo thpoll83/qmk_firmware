@@ -346,6 +346,16 @@ void sync_and_refresh_displays(void) {
         access_local_state()->emj_category = emj_active_category();
         access_local_state()->emj_page     = emj_active_page();
         access_local_state()->lang_page    = lang_pack_state();
+
+        // Only sync to the slave when the split transport is actually up.
+        // is_transport_connected() goes false only after SPLIT_MAX_CONNECTION_ERRORS
+        // consecutive failures (i.e. the slave is genuinely gone / single-half
+        // bring-up), NOT on a transient glitch — so a healthy link is unaffected.
+        // With no slave we skip the sends (no ~3x-bridge-timeout stall, no
+        // "USER_SYNC_* failed to send" log flood) but still advance `global` and
+        // refresh locally below, so the lone half shows its own state normally.
+        const bool link_up = is_transport_connected();
+
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
             // Periodic syncs use a SMALL retry count (PERIODIC_SYNC_RETRIES, was
@@ -364,7 +374,7 @@ void sync_and_refresh_displays(void) {
             // stall is bounded to ~PERIODIC_SYNC_RETRIES × 40 ms (and the active
             // fw-update path skips this code entirely). No effect on the normal
             // path, where the slave ACKs on the first attempt.
-            if(!sync_succeeded(send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), PERIODIC_SYNC_RETRIES))) {
+            if(link_up && !sync_succeeded(send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), PERIODIC_SYNC_RETRIES))) {
                 // Failed: clear state_diff so the copy_global_state() below is
                 // SKIPPED — global stays != local, so next pass differ() is still
                 // true and re-fires the send. The diff IS the retry queue; global
@@ -372,11 +382,13 @@ void sync_and_refresh_displays(void) {
                 state_diff = false;
                 uprint("USER_SYNC_POLY_DATA failed to send\n");
             }
+            // link down: leave state_diff true so the display block below applies
+            // the change locally and global advances (no send, no retry, no log).
         }
 
         // Push the MRU recents to the slave only when they changed, so both
         // halves render the top row identically.
-        if (mru_sync_pending()) {
+        if (link_up && mru_sync_pending()) {
             mru_sync_t mru_msg;
             mru_emoji_pack(mru_msg.emoji);
             mru_lang_pack(mru_msg.lang);
@@ -390,6 +402,8 @@ void sync_and_refresh_displays(void) {
                 uprint("USER_SYNC_MRU_DATA failed to send\n");
             }
         }
+        // link down: the pending flag stays set (nothing to sync to); it is
+        // delivered if/when a slave connects. No send attempted, no log.
 
         access_local_layer()->led_state = host_keyboard_led_state();
         access_local_layer()->mods = get_mods();
@@ -408,8 +422,8 @@ void sync_and_refresh_displays(void) {
         // first HID queries (the HIL boot-window flake). Gating on
         // is_transport_connected() gives the single try a real chance; if it still
         // drops, a genuinely-stale slave is corrected by the next real layer diff.
-        bool force_resync = g_force_layer_resync && is_transport_connected();
-        if ( layer_diff || force_resync ) {
+        bool force_resync = g_force_layer_resync && link_up;
+        if ( link_up && (layer_diff || force_resync) ) {
             bool sent = sync_succeeded(send_to_bridge(USER_SYNC_LAYER_DATA, (void *)access_local_layer(), sizeof(poly_layer_t), PERIODIC_SYNC_RETRIES));
             if (force_resync) {
                 // Clear on success, else burn one try; give up once the budget is
@@ -429,8 +443,14 @@ void sync_and_refresh_displays(void) {
                 uprint("USER_SYNC_LAYER_DATA failed to send\n");
             }
         }
+        // link down: leave layer_diff as-is so copy_global_layer() below advances
+        // global locally (no send, no retry, no log).
         if ( differ(get_local_last_latin(), get_global_last_latin(), sizeof(poly_last_t)) ) {
-            if(sync_succeeded(send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), PERIODIC_SYNC_RETRIES))) {
+            if (!link_up) {
+                // No slave: advance global locally so this doesn't re-differ every
+                // pass (no send, no log).
+                copy_global_last_latin(get_local_last_latin());
+            } else if(sync_succeeded(send_to_bridge(USER_SYNC_LASTKEY_DATA, access_local_last_latin(), sizeof(poly_last_t), PERIODIC_SYNC_RETRIES))) {
                 copy_global_last_latin(get_local_last_latin());
             } else {
                 // if failed to sync, do not consider it a diff and try again later

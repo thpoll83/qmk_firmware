@@ -2771,6 +2771,18 @@ void keyboard_post_init_user(void) {
     mru_load(ee.mru_emoji, ee.mru_lang);
 
     set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
+
+    // Boot identification banner to the HID console (visible in `qmk console`),
+    // so it's obvious which firmware/variant/role is actually running — handy for
+    // bring-up and for confirming a flash actually took. Uses plain uprintf, so it
+    // prints regardless of debug_enable.
+#ifndef POLY_KB_NAME
+#    define POLY_KB_NAME "PolyKybd"
+#endif
+    uprintf("== PolyKybd %s v%s P%d HW%d | %s %s ==\n",
+            POLY_KB_NAME, FW_VERSION, PROTOCOL_VERSION, DEVICE_VER,
+            is_keyboard_left() ? "left" : "right",
+            is_keyboard_master() ? "master" : "slave");
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif

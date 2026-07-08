@@ -74,19 +74,24 @@ VCC and GND. The display is a **generic 0.91" 128×32 SSD1306** (not the PolyKyb
 
 ---
 
-## 3. Why the build can't be done in the "web" session (and how to do it elsewhere)
+## 3. Building (session-dependent — a broader-rights session CAN build)
 
 QMK pulls 5 deps as **git submodules** (`lib/chibios`, `lib/chibios-contrib`,
-`lib/pico-sdk`, `lib/printf`, `lib/lufa`) — empty in a fresh clone. In the Claude-Code
-**web/cloud** session the git proxy only serves the session's authorized repos
-(`thpoll83/*`), so **every** route to the `qmk/*` submodules fails:
-`make git-submodule` → 403, the `codeload.github.com` tarball fallback → 403
-(*"GitHub access to this repository is not enabled … Use add_repo"*), and `add_repo qmk/*`
-→ refused (*"cross-tier adds not supported … session already has repos from thpoll83"*).
-Earlier project notes say codeload returned 200 — that was a looser session policy; this
-one is locked to the user's own repos. **So the firmware cannot be compiled in that
-session.** A session with broader network rights (or a local checkout — the user already
-builds locally) can build normally:
+`lib/pico-sdk`, `lib/printf`, `lib/lufa`) — empty in a fresh clone.
+
+- **Broader-rights session (verified 2026-07-08):** direct `git` access to
+  `github.com/qmk/*` is permitted (the submodule dirs were also pre-populated by the
+  setup script), the ARM toolchain (`arm-none-eabi-gcc` 13.2.1) and the `qmk` CLI
+  (`/root/.qmk_venv/bin/qmk`) are installed, and **`qmk compile -kb polykybd/split42
+  -km default` builds end-to-end** (`.uf2` + `.elf`, exit 0) — including with
+  `-DOLED_I2C_SCAN`. So in such a session I build and produce the flashable `.bin`
+  directly.
+- **Locked-down web/cloud session:** the git proxy only serves the session's
+  authorized repos (`thpoll83/*`), so every route to the `qmk/*` submodules can fail
+  (`make git-submodule` → 403, `codeload.github.com` tarball → 403, `add_repo qmk/*`
+  → refused). In that case the firmware can't be compiled there; build locally.
+
+Build steps (either way):
 
 ```bash
 sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi   # arm-none-eabi-gcc 13.2.x

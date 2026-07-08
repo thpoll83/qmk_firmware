@@ -611,6 +611,24 @@ static void emit_boot_banner(void) {
             is_keyboard_master() ? "master" : "slave");
 }
 
+#ifdef OLED_I2C_SCAN
+// Opt-in status-OLED bus scan (split42 bring-up, §4 of split42/BRINGUP.md). Runs
+// after oled_init()->i2c_init(), so the bus is muxed and clocked. Read the ACKing
+// addresses over `qmk console`:
+//   ACK at 0x3C -> bus/pins good (QMK default OLED_DISPLAY_ADDRESS)
+//   ACK at 0x3D -> add `#define OLED_DISPLAY_ADDRESS 0x3D`
+//   nothing     -> bus-level (flashed-image pins, pull-ups, solder)
+static void oled_i2c_scan(void) {
+    printf("I2C scan (status OLED bus):\n");
+    for (uint8_t a = 0x08; a <= 0x77; a++) {
+        if (i2c_ping_address((uint8_t)(a << 1), 50) == I2C_STATUS_SUCCESS) {
+            printf("  ACK at 0x%02X\n", a);
+        }
+    }
+    printf("I2C scan done.\n");
+}
+#endif
+
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
@@ -631,6 +649,23 @@ void housekeeping_task_user(void) {
             banner_repeats++;
         }
     }
+
+#ifdef OLED_I2C_SCAN
+    // Diagnostic build only: re-run the status-OLED bus scan a few times after boot
+    // so a `qmk console` attached after enumeration still catches it (the oled_init
+    // scan prints before USB is up and is otherwise lost). Bounded, then silent.
+    static uint8_t  scan_repeats = 0;
+    static uint32_t scan_timer   = 0;
+    if (scan_repeats < BOOT_BANNER_REPEATS) {
+        if (scan_timer == 0) {
+            scan_timer = timer_read32();
+        } else if (timer_elapsed32(scan_timer) >= BOOT_BANNER_INTERVAL_MS) {
+            oled_i2c_scan();
+            scan_timer = timer_read32();
+            scan_repeats++;
+        }
+    }
+#endif
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful
@@ -2881,19 +2916,7 @@ void eeconfig_init_user(void) {
 // Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.
 oled_rotation_t oled_init_user(oled_rotation_t rotation){
 #ifdef OLED_I2C_SCAN
-    // Opt-in status-OLED bus scan (split42 bring-up, §4 of split42/BRINGUP.md).
-    // Runs after oled_init()->i2c_init(), so the bus is muxed and clocked.
-    // Read the ACKing addresses over `qmk console`:
-    //   ACK at 0x3C -> bus/pins good (QMK default OLED_DISPLAY_ADDRESS)
-    //   ACK at 0x3D -> add `#define OLED_DISPLAY_ADDRESS 0x3D`
-    //   nothing     -> bus-level (flashed-image pins, pull-ups, solder)
-    printf("I2C scan (status OLED bus):\n");
-    for (uint8_t a = 0x08; a <= 0x77; a++) {
-        if (i2c_ping_address((uint8_t)(a << 1), 50) == I2C_STATUS_SUCCESS) {
-            printf("  ACK at 0x%02X\n", a);
-        }
-    }
-    printf("I2C scan done.\n");
+    oled_i2c_scan();   // also re-emitted from housekeeping so a late console catches it
 #endif
     oled_off();
     oled_clear();

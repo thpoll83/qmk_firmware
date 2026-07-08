@@ -1,12 +1,24 @@
 # split42 hardware bring-up — handoff notes
 
 **Status: in progress.** First physical split42 board (LEFT half only) being brought
-up. Firmware config is being corrected against the actual KiCad schematic. The
-**status OLED is still dark**; keystrokes work but only after a boot delay.
+up. Firmware config is being corrected against the actual KiCad schematic.
 
-**Branch (qmk_firmware):** `claude/split42-oled-status-display-ndjc6q`
-(the other three repos — PolyKybdHost / Adafruit-GFX-Library / polykybd-ctnd — are
-**untouched** so far). Continue on this same branch.
+**Hardware-verified so far (user, on the branch below):**
+- ✅ **Key matrix** scans correctly.
+- ✅ **Shift-register chain** (GP26 data / GP27 clock / GP28 latch) drives the keycap
+  OLEDs.
+- ✅ **Keycap-display FIRST row** inverts on the correct key press — i.e. matrix
+  row 0 → `BITMASK1(0..5)` in `split42.c key_display[]` is correct. Rows 1–2 and the
+  thumb row are **not yet verified** (only the first row was wired/tested).
+
+Still open: the **status OLED** (128×32 I2C1) — see §4. ("Keystrokes only after a
+boot delay" is expected single-half behaviour, §5.)
+
+**Branch (qmk_firmware):** `claude/split42-oled-status-display-8uok79`.
+⚠️ The branch `claude/split42-oled-status-display-ndjc6q` points at the **same
+commit** (identical content) — either name is fine; `8uok79` is canonical here.
+(The other three repos — PolyKybdHost / Adafruit-GFX-Library / polykybd-ctnd — are
+**untouched** so far.) Continue on this same branch.
 
 **Hardware source of truth:** `thpoll83/PolyKybd` (the KiCad repo), schematic
 `poly_kybd/variations/poly_corne/poly_corne_split42_left.kicad_sch`. The MCU pins are
@@ -189,6 +201,12 @@ and do a quick split-link sanity check, or move that hunk to a dedicated branch/
       (`split42/status_oled.c` `oled_update_buffer`). Note the boot-splash logo bitmaps in
       that file are still placeholder zeros — cosmetic, separate task.
 - [ ] (optional) single-half resync hardening (§5).
-- [ ] Then move on to the keycap-display shift-register mapping
-      (`split42/split42.c` `key_display[]` — still the plan's placeholder bitmasks, not yet
-      verified against hardware).
+- [x] Keycap-display shift-register mapping, **row 0 verified** (`split42/split42.c`
+      `key_display[]`): matrix row 0 → `BITMASK1(0..5)` inverts the right displays.
+      Remaining: verify rows 1–2 and the thumb row (only 3 of 6 col slots wired), and
+      the right-half `c--` question in `invert_display()`. Fast bench procedure: press
+      each key in turn and note which display inverts; fill the row/col → BITMASK table.
+      (The KiCad `poly_corne/shift_registers.kicad_sch` exposes 24 select nets
+      `Out{1,2,3}_{1..8}`; `BITMASK{n}(x)` drives `Out{n}_{x+1}` — data byte order:
+      `bitmask[2]`=first chip=`BITMASK1`, `bitmask[0]`=last chip=`BITMASK3`; bit `x` →
+      output `x`, MSB-first. Row 0 matching `BITMASK1(0..5)` is consistent with that.)

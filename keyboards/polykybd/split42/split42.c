@@ -23,10 +23,13 @@
  *   Row 3:    thumb cluster — only 3 of 6 col positions are physically wired.
  *             The remaining 3 slots are dummies (no display attached).
  *
- * TODO: Verify bitmask assignments against the actual PCB wiring:
- *   - Which shift register drives which row group
+ * Hardware-verified (bring-up): matrix row 0 -> BITMASK1(0..5) inverts the correct
+ * displays (first display row confirmed). See split42/BRINGUP.md.
+ *
+ * TODO: Verify the remaining bitmask assignments against the actual PCB wiring:
+ *   - Rows 1-2 and the thumb row (only 3 of 6 col positions in row 3 are wired)
  *   - Which col positions in row 3 are the thumb keys
- *   - Whether the SR chain order matches BITMASK1/2/3 ordering in split42.h
+ *   - Whether invert_display() needs the split72-style right-half c-- shift
  */
 static const struct display_info key_display[] = {
         {BITMASK1(0)}, {BITMASK1(1)}, {BITMASK1(2)}, {BITMASK1(3)}, {BITMASK1(4)}, {BITMASK1(5)}, {BITMASK1(6)}, {BITMASK1(7)},

@@ -102,15 +102,21 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 fw_staging_begin_deferred_target(pack_size, pack_crc, target);
                 // Fire-and-forget: kicks the slave's deferred erase. Readiness is
                 // polled by the slave_ack send_to_bridge below (and on re-polls).
-                send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
+                // Skipped on a solo half (no slave to erase).
+                if (fw_up_slave_present()) {
+                    send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
+                }
                 uprintf("FONTPACK_BEGIN: bundle=%u size=%lu crc=0x%08lx (master+slave staging)\n",
                         bundle, (unsigned long)pack_size, (unsigned long)pack_crc);
             }
 
-            uint8_t slave_ack = master_ok
+            // On a solo half there is no slave to wait on: treat it as ACKed so the
+            // BEGIN can report ready once the master's own erase completes.
+            bool    slave_present = fw_up_slave_present();
+            uint8_t slave_ack = (master_ok && slave_present)
                 ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
                 : SYNC_CRC32_ERR;
-            bool slave_ok    = (slave_ack == SYNC_ACK);
+            bool slave_ok    = slave_present ? (slave_ack == SYNC_ACK) : true;
             bool master_done = !fw_staging_erase_pending();
 
             memset(data, 0, length);
@@ -136,8 +142,14 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // "FONTPACK_CHUNK" tag = the same per-retry / retry-success debug
             // logging the standalone fontpack loop had (added for link diagnostics),
             // now produced by the shared helper.
-            bool ok = fw_up_relay_chunk_to_slave(offset, chunk_data, "FONTPACK_CHUNK");
-            if (ok) ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
+            bool ok;
+            if (fw_up_slave_present()) {
+                ok = fw_up_relay_chunk_to_slave(offset, chunk_data, "FONTPACK_CHUNK");
+                if (ok) ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
+            } else {
+                // Solo half: no slave to relay to — write only the master's own copy.
+                ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
+            }
 
             memset(data, 0, length);
             memcpy(data, ok ? "P\x51." : "P\x51!", 3);
@@ -154,7 +166,10 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
 
         case CMD_FONTPACK_COMMIT: {   // slave finalize+reload, then master finalize+reload (no reboot)
             fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
-            uint8_t slave_ack = send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10);
+            // Solo half: no slave to finalize — force ACK so success rides on the master.
+            uint8_t slave_ack = fw_up_slave_present()
+                ? send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10)
+                : SYNC_ACK;
             bool master_ok = fw_staging_finalize();   // FONTPACK target: verifies CRC + fontpack_reload()
             bool is_doom = s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ||
                            s_fontpack_bundle == FONTPACK_BUNDLE_DOOMPACK;

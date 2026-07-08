@@ -87,18 +87,24 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 // begin_deferred also halts the master's core1 and sets fw_up_active.
                 fw_staging_begin_deferred(image_size, image_crc);
                 // Kick the slave's deferred erase so both halves erase in parallel.
-                send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
+                // Skipped on a solo half (no slave to erase).
+                if (fw_up_slave_present()) {
+                    send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
+                }
                 uprintf("FW_UP_BEGIN: new image size=%lu crc=0x%08lx (master+slave staging)\n",
                         image_size, image_crc);
             }
 
             // Single slave readiness poll (no retry loop).  If either half is not
             // ready we return '~' and the host re-polls after a short delay, letting
-            // the QMK main loop advance both deferred erases between polls.
-            uint8_t slave_ack = master_ok
+            // the QMK main loop advance both deferred erases between polls. On a solo
+            // half there is no slave: treat it as ACKed so the master's own erase
+            // completing is enough to report ready.
+            bool    slave_present = fw_up_slave_present();
+            uint8_t slave_ack = (master_ok && slave_present)
                 ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
                 : SYNC_CRC32_ERR;
-            bool slave_ok    = (slave_ack == SYNC_ACK);
+            bool slave_ok    = slave_present ? (slave_ack == SYNC_ACK) : true;
             bool master_done = !fw_staging_erase_pending();   // master's own staging erased?
 
             memset(data, 0, length);
@@ -186,26 +192,35 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // ended up one chunk behind and rejected the whole rest of the stream
             // (2026-06-10, updates dying at 6% / 83%).  A duplicate re-send of an
             // already-staged chunk has next_offset > offset and passes (idempotent).
-            uint8_t slave_ack = fw_up_relay_chunk_to_slave(offset, chunk_data, "FW_UP_CHUNK") ? SYNC_ACK : SYNC_CRC32_ERR;
-            // First-failure diagnostic: when a chunk doesn't reach the slave,
-            // immediately query the slave's internal state so we can tell from
-            // the master serial log whether the slave is fully hung (status RPC
-            // also fails) or just rejecting the chunk (status RPC works and
-            // shows the counters).  Gated to once per failure burst so we don't
-            // spam if every chunk is failing.
-            static bool s_logged_failure_status = false;
-            if (slave_ack != SYNC_ACK && !s_logged_failure_status) {
-                s_logged_failure_status = true;
-                fw_up_log_slave_status("chunk-fail");
-            } else if (slave_ack == SYNC_ACK) {
-                s_logged_failure_status = false;  // re-arm after recovery
-            }
-            // PHASE 1: the master writes the same chunk to its OWN staging, but
-            // only after the slave accepted it.  Relaying first keeps both write
-            // cursors in lock-step — a failed relay leaves the master's s_next_offset
-            // untouched, so the host can safely retry the same offset on both halves.
-            bool ok = (slave_ack == SYNC_ACK);
-            if (ok) {
+            uint8_t slave_ack = SYNC_ACK;
+            bool    ok;
+            if (fw_up_slave_present()) {
+                slave_ack = fw_up_relay_chunk_to_slave(offset, chunk_data, "FW_UP_CHUNK") ? SYNC_ACK : SYNC_CRC32_ERR;
+                // First-failure diagnostic: when a chunk doesn't reach the slave,
+                // immediately query the slave's internal state so we can tell from
+                // the master serial log whether the slave is fully hung (status RPC
+                // also fails) or just rejecting the chunk (status RPC works and
+                // shows the counters).  Gated to once per failure burst so we don't
+                // spam if every chunk is failing.
+                static bool s_logged_failure_status = false;
+                if (slave_ack != SYNC_ACK && !s_logged_failure_status) {
+                    s_logged_failure_status = true;
+                    fw_up_log_slave_status("chunk-fail");
+                } else if (slave_ack == SYNC_ACK) {
+                    s_logged_failure_status = false;  // re-arm after recovery
+                }
+                // PHASE 1: the master writes the same chunk to its OWN staging, but
+                // only after the slave accepted it.  Relaying first keeps both write
+                // cursors in lock-step — a failed relay leaves the master's
+                // s_next_offset untouched, so the host can safely retry the same
+                // offset on both halves.
+                ok = (slave_ack == SYNC_ACK);
+                if (ok) {
+                    ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
+                    if (!ok) uprintf("FW_UP_CHUNK: master staging write FAILED offset=%lu\n", offset);
+                }
+            } else {
+                // Solo half: no slave to relay to — write only the master's own copy.
                 ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
                 if (!ok) uprintf("FW_UP_CHUNK: master staging write FAILED offset=%lu\n", offset);
             }
@@ -244,7 +259,10 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // fw_up_active and restarts core1 — it does NOT apply or reboot.  Actually
             // installing the staged image is the explicit FW_UP_APPLY step (phase 2).
             fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
-            uint8_t slave_ack  = send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10);
+            // Solo half: no slave to finalize — force ACK so success rides on the master.
+            uint8_t slave_ack  = fw_up_slave_present()
+                ? send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10)
+                : SYNC_ACK;
             bool master_ok = fw_staging_finalize();   // also clears fw_up_active + restarts master core1
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
             memset(data, 0, length);
@@ -276,23 +294,29 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 // image but, before this, was never told to apply it.  (The slave
                 // obeys this only once it already runs firmware that has the apply
                 // handler — see FW_UP_BASELINE.md for the OLD→NEW bootstrap note.)
-                poly_reset_sync_t apply_msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
-                                                .action = RESET_ACTION_APPLY };
-                // Hardened handoff (field 2026-06-22): an under-retried bridge here
-                // let the slave miss the apply once — the master then rebooted alone
-                // and hung on the boot splash waiting for a slave that never
-                // restarted (manual replug required). Use 20 retries and re-fire the
-                // whole round once if the slave still hasn't acked. The slave apply
-                // is idempotent (it only validates the staged image + arms a deferred
-                // reboot), send_to_bridge is synchronous (returns only after the slave
-                // has handled it, so it's safe to reboot the master once we see the
-                // ack), and we're about to reboot anyway — the extra worst-case ~1 s
-                // is free insurance against a one-shot drop on this critical step.
-                uint8_t slave_ack = send_to_bridge(USER_SYNC_RESET, &apply_msg, sizeof(apply_msg), 20);
-                if (slave_ack != SYNC_ACK) {
-                    slave_ack = send_to_bridge(USER_SYNC_RESET, &apply_msg, sizeof(apply_msg), 20);
+                // Bridge the apply+reboot to the slave only when one is present. On a
+                // solo half there is no slave to co-reboot, so the master applies and
+                // reboots alone (no boot-splash hang — the hang only happens when a
+                // slave IS present but stays on old firmware).
+                if (fw_up_slave_present()) {
+                    poly_reset_sync_t apply_msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
+                                                    .action = RESET_ACTION_APPLY };
+                    // Hardened handoff (field 2026-06-22): an under-retried bridge here
+                    // let the slave miss the apply once — the master then rebooted alone
+                    // and hung on the boot splash waiting for a slave that never
+                    // restarted (manual replug required). Use 20 retries and re-fire the
+                    // whole round once if the slave still hasn't acked. The slave apply
+                    // is idempotent (it only validates the staged image + arms a deferred
+                    // reboot), send_to_bridge is synchronous (returns only after the slave
+                    // has handled it, so it's safe to reboot the master once we see the
+                    // ack), and we're about to reboot anyway — the extra worst-case ~1 s
+                    // is free insurance against a one-shot drop on this critical step.
+                    uint8_t slave_ack = send_to_bridge(USER_SYNC_RESET, &apply_msg, sizeof(apply_msg), 20);
+                    if (slave_ack != SYNC_ACK) {
+                        slave_ack = send_to_bridge(USER_SYNC_RESET, &apply_msg, sizeof(apply_msg), 20);
+                    }
+                    uprintf("FW_UP_APPLY: slave apply+reboot (USER_SYNC_RESET) ack=0x%02x\n", slave_ack);
                 }
-                uprintf("FW_UP_APPLY: slave apply+reboot (USER_SYNC_RESET) ack=0x%02x\n", slave_ack);
                 fw_staging_arm_apply();   // housekeeping → fw_staging_apply_and_reboot()
             }
             return true;

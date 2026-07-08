@@ -126,6 +126,17 @@ typedef struct _poly_reset_sync_t {
 // NULL for a quiet relay). Returns true on slave ACK. See split_fw_up.c.
 bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, const char *log_tag);
 
+// Is a slave half participating in the flash? A single-half board (bring-up, or a
+// user running one half) has no slave to bridge the flash to. Reports the split
+// link state (is_transport_connected()): false once the slave is genuinely gone.
+// When false the flash paths write ONLY the master's own copy and treat the absent
+// slave as ACKed — so a solo half is flashable and the host's font-pack auto-flash
+// succeeds instead of NACKing every chunk forever (field, 2026-07: a lone left
+// half NACK-flooded FONTPACK_CHUNK/COMMIT because the relay-first protocol never
+// reached the master's own write). With a healthy two-half link it is true, so the
+// normal relay-first behavior is unchanged. See split_fw_up.c.
+bool fw_up_slave_present(void);
+
 // One slave-side dispatcher for the whole flash-staging stream (BEGIN / CHUNK /
 // COMMIT / STATUS); it reads the `op` word and routes to the per-op logic.
 void user_sync_flash_stage_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

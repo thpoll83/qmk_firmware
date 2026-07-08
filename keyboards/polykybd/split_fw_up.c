@@ -8,6 +8,7 @@
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 
 #include <transactions.h>
+#include "split_common/split_util.h"   // is_transport_connected()
 #include <print.h>
 #include <string.h>
 
@@ -51,6 +52,12 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
         }
     }
     return slave_ack == SYNC_ACK;
+}
+
+// See the header: false on a solo half (no slave), so the flash paths flash the
+// master's own copy without waiting on a slave that isn't there.
+bool fw_up_slave_present(void) {
+    return is_transport_connected();
 }
 
 // ---------------------------------------------------------------------------

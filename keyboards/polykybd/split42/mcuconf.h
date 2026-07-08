@@ -95,9 +95,12 @@
 
 /*
  * I2C driver system settings.
+ * split42 has no Cirque trackpad, so nothing uses I2C0. The status OLED is on
+ * I2C1 (GP22 SDA / GP23 SCL) — see split42/post_config.h. Enable I2C1, disable
+ * the unused I2C0. (split72 keeps I2C0 for the trackpad + its GP0/GP1 OLED.)
  */
-#define RP_I2C_USE_I2C0                     TRUE
-#define RP_I2C_USE_I2C1                     FALSE
+#define RP_I2C_USE_I2C0                     FALSE
+#define RP_I2C_USE_I2C1                     TRUE
 #define RP_I2C_BUSY_TIMEOUT                 50
 #define RP_I2C_ADDRESS_MODE_10BIT           FALSE
 

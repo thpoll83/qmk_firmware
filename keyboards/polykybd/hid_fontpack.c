@@ -109,26 +109,27 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 // Master stages its OWN copy (deferred erase via housekeeping) and
                 // kicks the slave's deferred erase, both targeting this slot.
                 fw_staging_begin_deferred_target(pack_size, pack_crc, target);
-                // Latch the solo-half decision ONCE per flash via an active slave probe
-                // (counter-independent, so it's correct even though the flash freezes
-                // is_transport_connected()'s counter). No slave → master-only for the
-                // whole BEGIN/CHUNK/COMMIT stream.
-                s_flash_solo = !fw_up_slave_responds();
-                // Kick the slave's deferred erase (skipped on a solo half). Readiness is
+                // Fire-and-forget: kicks the slave's deferred erase. Readiness is
                 // polled by the slave_ack send_to_bridge below (and on re-polls).
-                if (!s_flash_solo) {
+                // Skipped on a solo half (no slave to erase).
+                if (fw_up_slave_present()) {
                     send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
                 }
-                uprintf("FONTPACK_BEGIN: bundle=%u size=%lu crc=0x%08lx solo=%d\n",
-                        bundle, (unsigned long)pack_size, (unsigned long)pack_crc, (int)s_flash_solo);
+                uprintf("FONTPACK_BEGIN: bundle=%u size=%lu crc=0x%08lx (master+slave staging)\n",
+                        bundle, (unsigned long)pack_size, (unsigned long)pack_crc);
             }
 
-            // On a solo half there is no slave to wait on: treat it as ACKed so BEGIN
-            // reports ready once the master's own erase completes.
-            uint8_t slave_ack = (master_ok && !s_flash_solo)
+            // On a solo half there is no slave to wait on: treat it as ACKed so the
+            // BEGIN can report ready once the master's own erase completes. Latch the
+            // solo decision here (sticky across the re-polled BEGIN) so CHUNK/COMMIT
+            // stay on one consistent path for the whole stream.
+            if (new_image) s_flash_solo = false;   // fresh flash starts optimistic
+            bool    slave_present = fw_up_slave_present();
+            if (!slave_present) s_flash_solo = true;
+            uint8_t slave_ack = (master_ok && slave_present)
                 ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
                 : SYNC_CRC32_ERR;
-            bool slave_ok    = s_flash_solo ? true : (slave_ack == SYNC_ACK);
+            bool slave_ok    = slave_present ? (slave_ack == SYNC_ACK) : true;
             bool master_done = !fw_staging_erase_pending();
 
             memset(data, 0, length);

@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+/* Reported in the GET_ID string (cmd 6) so the host shows the right variant. */
+#define POLY_KB_NAME "Split72"
 
 /* key matrix size */
 #define MATRIX_ROWS_PER_SIDE 5

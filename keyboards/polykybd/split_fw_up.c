@@ -60,6 +60,29 @@ bool fw_up_slave_present(void) {
     return is_transport_connected();
 }
 
+// Actively probe whether a slave is on the link — counter-INDEPENDENT, so it works
+// mid-flash. is_transport_connected() is derived from the split connection_errors
+// counter, which only climbs while the QMK matrix scan runs; a flash monopolizes the
+// main loop and stalls that scan, so on a lone half the counter FREEZES below its
+// threshold for the whole flash and is_transport_connected() wrongly reads "connected"
+// (field, 2026-07: FONTPACK_CHUNK NACK-looped forever on a lone half). This sends the
+// read-only STATUS transaction instead: transaction_rpc_exec returns true when ANY
+// reply comes back — a present slave always answers, even mid-erase (a NACK payload is
+// still a reply) — and false (timeout) when there is no slave at all. A few tries ride
+// through a one-off transient on a real link. Safe to call before the slave is told to
+// stage: STATUS just reads its fw_staging counters.
+bool fw_up_slave_responds(void) {
+    fw_up_status_request_t req = { .crc32 = 0, .op = FLASH_STAGE_STATUS, .dummy = 0 };
+    fw_up_status_reply_t   reply;
+    for (uint8_t i = 0; i < 3; ++i) {
+        memset(&reply, 0, sizeof(reply));
+        if (transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(req), &req, sizeof(reply), &reply)) {
+            return true;   // got a reply → a slave is there
+        }
+    }
+    return false;          // three timeouts → no slave on the link
+}
+
 // ---------------------------------------------------------------------------
 // HID firmware update — slave-side split transaction handlers
 // ---------------------------------------------------------------------------

@@ -137,6 +137,12 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
 // normal relay-first behavior is unchanged. See split_fw_up.c.
 bool fw_up_slave_present(void);
 
+// Actively probe for a slave via a read-only STATUS transaction — works mid-flash,
+// unlike fw_up_slave_present() whose counter freezes while a flash holds the main
+// loop. Returns true if the slave replies, false if it times out (no slave). Use this
+// to latch the solo-half decision at BEGIN. See split_fw_up.c.
+bool fw_up_slave_responds(void);
+
 // One slave-side dispatcher for the whole flash-staging stream (BEGIN / CHUNK /
 // COMMIT / STATUS); it reads the `op` word and routes to the per-op logic.
 void user_sync_flash_stage_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

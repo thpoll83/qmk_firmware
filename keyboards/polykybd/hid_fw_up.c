@@ -92,28 +92,27 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 // master's fw_staging_process_deferred() one sector per 70 ms.
                 // begin_deferred also halts the master's core1 and sets fw_up_active.
                 fw_staging_begin_deferred(image_size, image_crc);
-                // Kick the slave's deferred erase so both halves erase in parallel.
-                // Skipped on a solo half (no slave to erase).
-                if (fw_up_slave_present()) {
+                // Latch the solo-half decision ONCE per flash via an active slave probe
+                // (counter-independent, correct mid-flash — see hid_fontpack.c).
+                s_flash_solo = !fw_up_slave_responds();
+                // Kick the slave's deferred erase so both halves erase in parallel
+                // (skipped on a solo half).
+                if (!s_flash_solo) {
                     send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
                 }
-                uprintf("FW_UP_BEGIN: new image size=%lu crc=0x%08lx (master+slave staging)\n",
-                        image_size, image_crc);
+                uprintf("FW_UP_BEGIN: new image size=%lu crc=0x%08lx solo=%d\n",
+                        image_size, image_crc, (int)s_flash_solo);
             }
 
             // Single slave readiness poll (no retry loop).  If either half is not
             // ready we return '~' and the host re-polls after a short delay, letting
             // the QMK main loop advance both deferred erases between polls. On a solo
             // half there is no slave: treat it as ACKed so the master's own erase
-            // completing is enough to report ready. Latch the solo decision (sticky
-            // across the re-polled BEGIN) so CHUNK/COMMIT/APPLY stay consistent.
-            if (new_image) s_flash_solo = false;   // fresh flash starts optimistic
-            bool    slave_present = fw_up_slave_present();
-            if (!slave_present) s_flash_solo = true;
-            uint8_t slave_ack = (master_ok && slave_present)
+            // completing is enough to report ready.
+            uint8_t slave_ack = (master_ok && !s_flash_solo)
                 ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
                 : SYNC_CRC32_ERR;
-            bool slave_ok    = slave_present ? (slave_ack == SYNC_ACK) : true;
+            bool slave_ok    = s_flash_solo ? true : (slave_ack == SYNC_ACK);
             bool master_done = !fw_staging_erase_pending();   // master's own staging erased?
 
             memset(data, 0, length);

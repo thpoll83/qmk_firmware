@@ -581,8 +581,8 @@ void poly_prepare_for_flash(void) {
 // master. The sensor lives on the RIGHT half, so:
 //   * master IS the right half  -> read the sensor locally
 //   * master is the LEFT half   -> pull {avg lux, proximity} from the slave over
-//     USER_SYNC_SENSOR_DATA (transaction_rpc_recv) — the split slot freed by the
-//     FW_UP transaction consolidation.
+//     the generic USER_SYNC_SLAVE_DATA channel (kind = SLAVE_DATA_SENSOR) — the
+//     split slot freed by the FW_UP transaction consolidation.
 // Either way driving works regardless of which half USB is plugged into.
 // All tunables below are first-cut guesses to be dialled in against the OLED.
 // Proximity (0..2047) that counts as "close". Must sit above the resting
@@ -593,19 +593,36 @@ void poly_prepare_for_flash(void) {
 #    define LTR559_DRIVE_MS 500         // how often the master samples + applies
 #    define LTR559_LUX_FULL_REF 200     // avg lux mapped to FULL_BRIGHT (ceiling)
 
+// USER_SYNC_SLAVE_DATA is a GENERIC op-dispatched slave->master pull channel (see
+// config.h): the master's request is a 1-byte `kind` selecting which slave-side
+// payload to return. Append a new kind + a case below to carry other data over
+// the same one split slot — no new transaction needed. Both halves run the same
+// firmware image, so the per-kind payload structs can change freely (no split
+// versioning); the handler just bounds every copy by out_len.
+enum slave_data_kind {
+    SLAVE_DATA_SENSOR = 0,  // ltr559_sync_t: {avg lux, proximity}
+    // SLAVE_DATA_xxx = 1, ...  // future slave-side data reuses this slot
+};
+
 typedef struct {
     uint16_t lux;   // 5 s-average lux
     uint16_t prox;  // latest raw proximity (0..2047)
 } ltr559_sync_t;
 
-// Slave side: answer the master's pull with this half's latest sensor values.
-// Registered on both halves; only ever runs on the slave that holds the sensor.
-static void user_sync_sensor_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    (void)in_len;
-    (void)in_data;
-    ltr559_sync_t s = { ltr559_avg_lux(), ltr559_prox() };
-    if (out_len >= sizeof(s)) {
-        memcpy(out_data, &s, sizeof(s));
+// Slave side: answer the master's pull for the requested `kind`. Registered on
+// both halves; only ever runs on the slave (the master initiates the exec).
+static void user_sync_slave_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    uint8_t kind = (in_len >= 1) ? ((const uint8_t*)in_data)[0] : SLAVE_DATA_SENSOR;
+    switch (kind) {
+        case SLAVE_DATA_SENSOR: {
+            ltr559_sync_t s = { ltr559_avg_lux(), ltr559_prox() };
+            if (out_len >= sizeof(s)) {
+                memcpy(out_data, &s, sizeof(s));
+            }
+            break;
+        }
+        default:
+            break;  // unknown kind: leave the reply buffer as-is
     }
 }
 
@@ -673,10 +690,11 @@ static void poly_ltr559_drive(void) {
         prox = ltr559_prox();
     } else {
         // Sensor is on the slave (right) half — pull its latest values up over the
-        // freed split slot (USER_SYNC_SENSOR_DATA), so driving works in either
-        // USB orientation.
+        // generic slave->master channel (kind = SLAVE_DATA_SENSOR), so driving
+        // works in either USB orientation.
+        uint8_t       kind = SLAVE_DATA_SENSOR;
         ltr559_sync_t s;
-        if (!transaction_rpc_recv(USER_SYNC_SENSOR_DATA, sizeof(s), &s)) {
+        if (!transaction_rpc_exec(USER_SYNC_SLAVE_DATA, sizeof(kind), &kind, sizeof(s), &s)) {
             return;   // slave busy this round; try again next tick
         }
         lux  = s.lux;
@@ -2865,7 +2883,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_FLASH_STAGE,         user_sync_flash_stage_handler);
     transaction_register_rpc(USER_SYNC_RESET,               user_sync_reset_handler);
 #ifdef POLYKYBD_LTR559_DRIVE
-    transaction_register_rpc(USER_SYNC_SENSOR_DATA,         user_sync_sensor_data_handler);
+    transaction_register_rpc(USER_SYNC_SLAVE_DATA,          user_sync_slave_data_handler);
 #endif
 
     fw_staging_init();

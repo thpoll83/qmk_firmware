@@ -119,36 +119,21 @@ Harmless (same code ships on split72).
 
 ### Decisive diagnostic — boot-time I2C scan (build locally, read over `qmk console`)
 
-Add this opt-in probe, then build with the flag and watch `qmk console`. It runs after
-`i2c_init` and prints every address that ACKs on the OLED bus.
+**The probe is already committed** (gated, off by default): the scan loop is at the top
+of `oled_init_user()` in `poly_keymap.c` (runs during `oled_init`, i.e. after
+`i2c_init`), behind `#ifdef OLED_I2C_SCAN`. To use it:
 
-In **`poly_keymap.c`**, at the **top of `oled_init_user()`** (which runs during
-`oled_init`, i.e. after `i2c_init`):
+1. In `split42/keymaps/default/rules.mk`, **uncomment** the line
+   `# OPT_DEFS += -DOLED_I2C_SCAN`.
+2. Build + flash split42, open `qmk console` (`console: true` is already set, so
+   `printf` reaches it without `debug_enable`).
+3. Read the ACKing addresses printed at boot.
+4. **Re-comment** the flag once diagnosed.
 
-```c
-#ifdef OLED_I2C_SCAN
-    #include "i2c_master.h"   // (put with the other includes at the top of the file)
-    // ...
-oled_rotation_t oled_init_user(oled_rotation_t rotation){
-    printf("I2C scan (I2CD1 GP22/GP23):\n");
-    for (uint8_t a = 0x08; a <= 0x77; a++) {
-        if (i2c_ping_address(a << 1, 50) == I2C_STATUS_SUCCESS) {
-            printf("  ACK at 0x%02X\n", a);   // expect 0x3C (or 0x3D)
-        }
-    }
-    printf("I2C scan done.\n");
-#endif
-    oled_off();
-    // ...unchanged...
-```
-
-Enable it for one build only, e.g. in `split42/keymaps/default/rules.mk`:
-`OPT_DEFS += -DOLED_I2C_SCAN`. (`console: true` is already set, so `printf` reaches
-`qmk console` without touching `debug_enable`.)
-
-**Interpretation:** ACK at 0x3C → bus/pins good, look at suspect #1. ACK at 0x3D →
-one-line address fix. Nothing ACKs → bus-level (re-check pins in the *flashed* image,
-pull-ups, solder). Remove the flag once diagnosed.
+**Interpretation:** ACK at 0x3C → bus/pins good, look at suspect #1 (stale flashed
+image). ACK at 0x3D → one-line address fix: add `#define OLED_DISPLAY_ADDRESS 0x3D`
+to `split42/post_config.h` (or the keymap `config.h`). Nothing ACKs → bus-level
+(re-check the pins in the *flashed* image, pull-ups, solder).
 
 ---
 

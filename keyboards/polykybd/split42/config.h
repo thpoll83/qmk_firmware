@@ -43,7 +43,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define HW_RST_PIN   GP9
 #define SPI_SCK_PIN  GP6
 #define SPI_MOSI_PIN GP7
-#define SPI_MISO_PIN GP4
+// The keycap SSD1306s are write-only, so SPI never needs MISO. GP4 is the
+// split-serial RX (SERIAL_USART_RX_PIN, shared config.h) — NO_PIN keeps
+// spi_master from muxing GP4 away from the PIO serial. (Was GP4, a leftover
+// from the pre-full-duplex era when GP4 was unused.)
+#define SPI_MISO_PIN NO_PIN
 #define SPI_DIVISOR  (CPU_CLOCK / 10000000)
 
 /* Shift register select pins */

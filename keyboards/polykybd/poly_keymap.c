@@ -590,10 +590,47 @@ void poly_prepare_for_flash(void) {
     sync_and_refresh_displays();
 }
 
+// Boot identification banner to the HID console (visible in `qmk console`), so it's
+// obvious which firmware/variant/role is actually running — handy for bring-up and
+// for confirming a flash actually took. Uses plain uprintf, so it prints regardless
+// of debug_enable. POLY_KB_NAME comes from the active variant's config.h; fall back
+// generically if a variant forgot to define it.
+#ifndef POLY_KB_NAME
+#    define POLY_KB_NAME "PolyKybd"
+#endif
+// The console usually attaches AFTER boot, so a lone print in keyboard_post_init_user
+// is easily missed; housekeeping re-emits it a few times over the first ~half minute
+// (bounded, then silent — not a flood).
+#define BOOT_BANNER_REPEATS     6
+#define BOOT_BANNER_INTERVAL_MS 5000
+
+static void emit_boot_banner(void) {
+    uprintf("== PolyKybd %s v%s P%d HW%d | %s %s ==\n",
+            POLY_KB_NAME, FW_VERSION, PROTOCOL_VERSION, DEVICE_VER,
+            is_keyboard_left() ? "left" : "right",
+            is_keyboard_master() ? "master" : "slave");
+}
+
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
+
+    // Re-emit the boot identification banner a few times after power-on so a
+    // `qmk console` attached shortly after boot still catches it (the one-shot
+    // print in keyboard_post_init_user fires before the console is usually up).
+    // Bounded to BOOT_BANNER_REPEATS emits over the first ~half minute, then silent.
+    static uint8_t  banner_repeats = 0;
+    static uint32_t banner_timer   = 0;
+    if (banner_repeats < BOOT_BANNER_REPEATS) {
+        if (banner_timer == 0) {
+            banner_timer = timer_read32();   // arm on the first housekeeping pass
+        } else if (timer_elapsed32(banner_timer) >= BOOT_BANNER_INTERVAL_MS) {
+            emit_boot_banner();
+            banner_timer = timer_read32();
+            banner_repeats++;
+        }
+    }
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful
@@ -2772,17 +2809,9 @@ void keyboard_post_init_user(void) {
 
     set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
 
-    // Boot identification banner to the HID console (visible in `qmk console`),
-    // so it's obvious which firmware/variant/role is actually running — handy for
-    // bring-up and for confirming a flash actually took. Uses plain uprintf, so it
-    // prints regardless of debug_enable.
-#ifndef POLY_KB_NAME
-#    define POLY_KB_NAME "PolyKybd"
-#endif
-    uprintf("== PolyKybd %s v%s P%d HW%d | %s %s ==\n",
-            POLY_KB_NAME, FW_VERSION, PROTOCOL_VERSION, DEVICE_VER,
-            is_keyboard_left() ? "left" : "right",
-            is_keyboard_master() ? "master" : "slave");
+    // Print the boot identification banner (also re-emitted from housekeeping so a
+    // late-attaching console catches it).
+    emit_boot_banner();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif

@@ -19,12 +19,6 @@
 // HID report byte offsets
 #define HID_DATA_IDX 2
 
-// Latched at BEGIN for the whole BEGIN/CHUNK/COMMIT/APPLY sequence: solo-half flash
-// (no slave to bridge to)? See the matching note in hid_fontpack.c — latching once
-// keeps every chunk of one stream on the same path instead of re-checking the link
-// state (which settles to "disconnected" a few seconds into a lone-half flash).
-static bool s_flash_solo = false;
-
 // Query the slave's fw_staging internal state and uprintf the result.
 // Used on the master after a failed FW_UP_CHUNK (and once when the slave
 // first reports ready) so we can tell from the master serial log whether
@@ -105,11 +99,8 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // ready we return '~' and the host re-polls after a short delay, letting
             // the QMK main loop advance both deferred erases between polls. On a solo
             // half there is no slave: treat it as ACKed so the master's own erase
-            // completing is enough to report ready. Latch the solo decision (sticky
-            // across the re-polled BEGIN) so CHUNK/COMMIT/APPLY stay consistent.
-            if (new_image) s_flash_solo = false;   // fresh flash starts optimistic
+            // completing is enough to report ready.
             bool    slave_present = fw_up_slave_present();
-            if (!slave_present) s_flash_solo = true;
             uint8_t slave_ack = (master_ok && slave_present)
                 ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
                 : SYNC_CRC32_ERR;
@@ -203,7 +194,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // already-staged chunk has next_offset > offset and passes (idempotent).
             uint8_t slave_ack = SYNC_ACK;
             bool    ok;
-            if (!s_flash_solo) {
+            if (fw_up_slave_present()) {
                 slave_ack = fw_up_relay_chunk_to_slave(offset, chunk_data, "FW_UP_CHUNK") ? SYNC_ACK : SYNC_CRC32_ERR;
                 // First-failure diagnostic: when a chunk doesn't reach the slave,
                 // immediately query the slave's internal state so we can tell from
@@ -269,9 +260,9 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // installing the staged image is the explicit FW_UP_APPLY step (phase 2).
             fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
             // Solo half: no slave to finalize — force ACK so success rides on the master.
-            uint8_t slave_ack  = s_flash_solo
-                ? SYNC_ACK
-                : send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10);
+            uint8_t slave_ack  = fw_up_slave_present()
+                ? send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10)
+                : SYNC_ACK;
             bool master_ok = fw_staging_finalize();   // also clears fw_up_active + restarts master core1
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
             memset(data, 0, length);
@@ -307,7 +298,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 // solo half there is no slave to co-reboot, so the master applies and
                 // reboots alone (no boot-splash hang — the hang only happens when a
                 // slave IS present but stays on old firmware).
-                if (!s_flash_solo) {
+                if (fw_up_slave_present()) {
                     poly_reset_sync_t apply_msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
                                                     .action = RESET_ACTION_APPLY };
                     // Hardened handoff (field 2026-06-22): an under-retried bridge here

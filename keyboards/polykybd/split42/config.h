@@ -20,6 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+/* Reported in the GET_ID string (cmd 6) so the host shows the right variant. */
+#define POLY_KB_NAME "Split42"
+
 /* Key matrix — 4 rows per side, 6 columns (standard CRKBD layout) */
 #define MATRIX_ROWS_PER_SIDE 4
 #define MATRIX_ROWS          8

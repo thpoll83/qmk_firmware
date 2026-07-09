@@ -58,8 +58,11 @@ void ltr559_task(void);
 // Latest full snapshot (for the status-OLED test rendering).
 void ltr559_get_reading(ltr559_reading_t *out);
 
-// 5-second average lux (intended input for auto-brightness). 0 until enough
-// samples have accumulated.
+// Rolling average lux (intended input for auto-brightness). The window grows to
+// 5 seconds: it averages whatever samples have been collected so far, so it
+// returns a real value as soon as the first VALID ALS sample lands and is a full
+// 5 s average once the ring is full. Stays 0 only until that first sample (which
+// the drive path uses as its "sensor warmed up" signal).
 uint16_t ltr559_avg_lux(void);
 
 // Latest raw proximity value (0..2047). Intended input for idle-inhibit.

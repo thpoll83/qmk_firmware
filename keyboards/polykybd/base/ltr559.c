@@ -165,11 +165,16 @@ static bool ltr559_probe(void) {
     }
 
     // Configure. Order isn't critical; leave PS_LED/PS_MEAS_RATE at reset
-    // defaults (functional out of the box).
-    ltr559_write(LTR559_REG_ALS_MEAS_RATE, LTR559_ALS_MEAS_RATE_CFG);
-    ltr559_write(LTR559_REG_PS_N_PULSES, LTR559_PS_N_PULSES_CFG);
-    ltr559_write(LTR559_REG_PS_CONTR, LTR559_PS_CONTR_CFG);
-    ltr559_write(LTR559_REG_ALS_CONTR, LTR559_ALS_CONTR_CFG);
+    // defaults (functional out of the box). Abort if any config write fails —
+    // the IDs matched but a bus timeout here would leave the part unconfigured,
+    // and marking it present anyway would feed garbage into the poll path.
+    if (!ltr559_write(LTR559_REG_ALS_MEAS_RATE, LTR559_ALS_MEAS_RATE_CFG) ||
+        !ltr559_write(LTR559_REG_PS_N_PULSES, LTR559_PS_N_PULSES_CFG) ||
+        !ltr559_write(LTR559_REG_PS_CONTR, LTR559_PS_CONTR_CFG) ||
+        !ltr559_write(LTR559_REG_ALS_CONTR, LTR559_ALS_CONTR_CFG)) {
+        s_diag.present = false;
+        return false;
+    }
 
     s_present         = true;
     s_diag.present    = true;
@@ -236,8 +241,14 @@ void ltr559_task(void) {
             s_reading.ch1       = (uint16_t)(d[0] | (d[1] << 8));
             s_reading.ch0       = (uint16_t)(d[2] | (d[3] << 8));
             s_reading.als_valid = (status & LTR559_STATUS_ALS_DATA_VALID) == 0;
-            s_reading.lux       = ltr559_compute_lux(s_reading.ch0, s_reading.ch1);
-            ltr559_push_avg(s_reading.lux);
+            // Only fold VALID samples into the snapshot + rolling average — an
+            // invalid/out-of-range ALS reading would otherwise skew the 5 s avg
+            // that drives auto-brightness. On an invalid sample keep the last
+            // good lux and don't push it.
+            if (s_reading.als_valid) {
+                s_reading.lux = ltr559_compute_lux(s_reading.ch0, s_reading.ch1);
+                ltr559_push_avg(s_reading.lux);
+            }
         }
     }
 

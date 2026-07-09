@@ -8,7 +8,6 @@
 #include "../side.h"
 #include "../base/com.h"
 #include "../base/disp_array.h"
-#include "../base/ltr559.h"
 #include "../base/text_helper.h"
 #include "../base/fonts/NotoSans_Regular_Base_11pt.h"
 #include "../base/fonts/NotoSans_Medium_Base_8pt.h"
@@ -56,78 +55,9 @@ void oled_update_buffer(void) {
         kdisp_write_gfx_text(smallFont, 1, 112, 56, is_usb_host_side() ? U"H" : U"B");
     }
 
-#ifdef POLYKYBD_LTR559
-    // LTR-559 readout — rendered on whichever half the sensor is soldered to
-    // (auto-detected via ltr559_available()), regardless of left/right. If a
-    // half has the sensor it shows the live values; if the MASTER has no sensor
-    // it shows I2C bring-up diagnostics so a wiring fault is visible. A slave
-    // without a sensor falls through to its normal panel below.
-    if(ltr559_available()) {
-        ltr559_reading_t r;
-        ltr559_get_reading(&r);
-
-        kdisp_write_gfx_text(smallFont, 1, 0, 30, U"LUX");
-        num16_to_u32_string((char*) buffer, sizeof(buffer), r.lux);
-        kdisp_write_gfx_text(smallFont, 1, 26, 30, buffer);
-        kdisp_write_gfx_text(smallFont, 1, 68, 30, U"~");
-        num16_to_u32_string((char*) buffer, sizeof(buffer), ltr559_avg_lux());
-        kdisp_write_gfx_text(smallFont, 1, 78, 30, buffer);
-
-        kdisp_write_gfx_text(smallFont, 1, 0, 44, U"PRX");
-        num16_to_u32_string((char*) buffer, sizeof(buffer), r.prox);
-        kdisp_write_gfx_text(smallFont, 1, 26, 44, buffer);
-        // Active per-keycap brightness (what the sensor maps lux to) — the
-        // live feedback for tuning the lux->contrast curve. "!" = PS saturated.
-        kdisp_write_gfx_text(smallFont, 1, 66, 44, U"B");
-        num_to_u32_string((char*) buffer, sizeof(buffer), get_local_state()->contrast);
-        kdisp_write_gfx_text(smallFont, 1, 76, 44, buffer);
-        if(r.prox_sat) {
-            kdisp_write_gfx_text(smallFont, 1, 104, 44, U"!");
-        }
-
-        kdisp_write_gfx_text(smallFont, 1, 0, 58, U"C0");
-        num16_to_u32_string((char*) buffer, sizeof(buffer), r.ch0);
-        kdisp_write_gfx_text(smallFont, 1, 18, 58, buffer);
-        kdisp_write_gfx_text(smallFont, 1, 62, 58, U"C1");
-        num16_to_u32_string((char*) buffer, sizeof(buffer), r.ch1);
-        kdisp_write_gfx_text(smallFont, 1, 80, 58, buffer);
-        return;
-    } else if(is_usb_host_side()) {
-        // Sensor expected (this is the master) but not detected — show I2C
-        // bring-up diagnostics instead of the (useless) sensor panel:
-        //  row1: which 7-bit addresses ACKed on the bus (or "none")
-        //  row2: raw PART_ID / MANUFAC_ID bytes + the I2C read status
-        //  row3: verdict on 0x23 (LTR-559) and 0x2A (Cirque) presence
-        ltr559_diag_t d;
-        ltr559_get_diag(&d);
-
-        kdisp_write_gfx_text(smallFont, 1, 0, 30, U"I2C");
-        if(d.scan_count == 0) {
-            kdisp_write_gfx_text(smallFont, 1, 26, 30, U"none!");
-        } else {
-            int8_t sx = 26;
-            for(uint8_t i = 0; i < d.scan_count && sx <= 108; ++i) {
-                hex_to_u32_string((char*) buffer, sizeof(buffer), d.scan_found[i]);
-                kdisp_write_gfx_text(smallFont, 1, sx, 30, buffer);
-                sx += 20;
-            }
-        }
-
-        kdisp_write_gfx_text(smallFont, 1, 0, 44, U"ID");
-        hex_to_u32_string((char*) buffer, sizeof(buffer), d.part_id);
-        kdisp_write_gfx_text(smallFont, 1, 18, 44, buffer);     // expect 92
-        hex_to_u32_string((char*) buffer, sizeof(buffer), d.manuf_id);
-        kdisp_write_gfx_text(smallFont, 1, 40, 44, buffer);     // expect 05
-        // I2C status of the ID read: O=ok, E=error(NAK), T=timeout
-        kdisp_write_gfx_text(smallFont, 1, 64, 44, U"S");
-        kdisp_write_gfx_text(smallFont, 1, 74, 44,
-            d.id_status == 0 ? U"O" : (d.id_status == -2 ? U"T" : U"E"));
-
-        kdisp_write_gfx_text(smallFont, 1, 0, 58, d.addr_23 ? U"23:ack" : U"23:--");
-        kdisp_write_gfx_text(smallFont, 1, 66, 58, d.addr_2a ? U"2A:ack" : U"2A:--");
-        return;
-    }
-#endif
+    // (The LTR-559 sensor values used to be rendered here during bring-up; they
+    // now go to a periodic log — see the sensor telemetry heartbeat in
+    // housekeeping_task_user() — so the status OLED shows the normal panel.)
     if(is_right_side()) {
         kdisp_write_gfx_text(smallFont, 1, 0, 30, U"RGB");
 

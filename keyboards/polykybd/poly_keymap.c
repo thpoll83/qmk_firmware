@@ -61,6 +61,10 @@
 #include "base/ltr559.h"
 #include "polymod_crc32.h"
 
+#ifdef POLYKYBD_LTR559
+#    define LTR559_LOG_MS 600000   // sensor telemetry log cadence: 10 min
+#endif
+
 #include "state.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
@@ -783,6 +787,22 @@ void housekeeping_task_user(void) {
         // right). Internally throttled + non-blocking; on the half without it the
         // probe gives up after a bounded number of retries so it can't stall.
         ltr559_task();
+        // Sensor telemetry heartbeat: only the half that actually has the sensor
+        // logs (gated on ltr559_available()), and only every LTR559_LOG_MS (10 min)
+        // so it's a periodic reading, not spam. This replaces the live status-OLED
+        // readout used during bring-up. A single shared timer would be nice if more
+        // timed logs appear; for now this one is self-contained.
+        if (ltr559_available()) {
+            static uint32_t s_ltr_log = 0;
+            if (timer_elapsed32(s_ltr_log) >= LTR559_LOG_MS) {
+                s_ltr_log = timer_read32();
+                ltr559_reading_t r;
+                ltr559_get_reading(&r);
+                uprintf("LTR-559: lux=%u avg=%u prox=%u%s ch0=%u ch1=%u B=%u\n",
+                        r.lux, ltr559_avg_lux(), r.prox, r.prox_sat ? " SAT" : "",
+                        r.ch0, r.ch1, get_local_state()->contrast);
+            }
+        }
 #    ifdef POLYKYBD_LTR559_DRIVE
         poly_ltr559_drive();   // master-side auto-brightness + idle-inhibit
 #    endif

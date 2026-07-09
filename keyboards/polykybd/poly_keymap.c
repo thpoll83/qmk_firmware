@@ -591,7 +591,11 @@ void poly_prepare_for_flash(void) {
 // known (watch PRX on the OLED).
 #    define LTR559_NEAR_THRESHOLD 350
 #    define LTR559_DRIVE_MS 500         // how often the master samples + applies
-#    define LTR559_LUX_FULL_REF 200     // avg lux mapped to FULL_BRIGHT (ceiling)
+#    define LTR559_LUX_FULL_REF 100     // avg lux mapped to FULL_BRIGHT (ceiling)
+                                        // Tuned on hardware: a ~28 lux office reads
+                                        // B≈26 (was B≈19 at 200), matching the level
+                                        // the user set by hand. Curve (sqrt): ~5 in a
+                                        // dark room, 26 @ 28 lux, 35 @ 50 lux, full @ 100+.
 
 // USER_SYNC_SLAVE_DATA is a GENERIC op-dispatched slave->master pull channel (see
 // config.h): the master's request is a 1-byte `kind` selecting which slave-side

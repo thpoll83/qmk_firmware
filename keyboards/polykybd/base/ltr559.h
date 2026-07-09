@@ -67,28 +67,3 @@ uint16_t ltr559_avg_lux(void);
 
 // Latest raw proximity value (0..2047). Intended input for idle-inhibit.
 uint16_t ltr559_prox(void);
-
-// --- Troubleshooting -------------------------------------------------------
-// Diagnostic snapshot, surfaced on the status OLED when the sensor is NOT
-// detected so a bring-up problem can be told apart without a debugger:
-//   * scan_found / addr_23 / addr_2a — an I2C bus scan. If the Cirque (0x2A)
-//     ACKs but the LTR-559 (0x23) does not, the bus/pins are fine and the sensor
-//     itself isn't answering (power, wiring, or address). If NOTHING ACKs, the
-//     bus never came up (init/pins/SDA-SCL). If 0x23 ACKs but part/manuf don't
-//     match, the device is there but returned unexpected IDs.
-//   * part_id / manuf_id / id_status — the raw PART_ID (expect 0x92) and
-//     MANUFAC_ID (expect 0x05) bytes and the i2c_status_t of that read.
-typedef struct {
-    bool     init_done;      // ltr559_init() has run at least once
-    bool     present;        // part+manuf IDs matched
-    uint8_t  part_id;        // raw PART_ID read (0 if the read failed)
-    uint8_t  manuf_id;       // raw MANUFAC_ID read
-    int16_t  id_status;      // i2c_status_t of the ID read (0 = SUCCESS)
-    bool     addr_23;        // LTR-559 (0x23) ACKed during the scan
-    bool     addr_2a;        // Cirque trackpad (0x2A) ACKed during the scan
-    uint8_t  scan_found[8];  // up to 8 ACKing 7-bit addresses
-    uint8_t  scan_count;     // number of entries in scan_found
-} ltr559_diag_t;
-
-// Copy out the latest diagnostic snapshot (valid on the sensor half).
-void ltr559_get_diag(ltr559_diag_t *out);

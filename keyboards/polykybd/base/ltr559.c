@@ -74,9 +74,6 @@ static uint32_t         s_last_poll   = 0;
 static uint32_t         s_last_retry  = 0;
 static uint8_t          s_retry_count = 0;
 
-// Diagnostic snapshot (see ltr559.h). Captured on every probe attempt.
-static ltr559_diag_t    s_diag;
-
 // Simple rolling sum: keep a ring of the last N lux samples so the average
 // tracks a true 5 s window without storing floats.
 static uint16_t s_lux_ring[LTR559_AVG_SAMPLES];
@@ -122,28 +119,8 @@ static uint16_t ltr559_compute_lux(uint16_t ch0, uint16_t ch1) {
     return (uint16_t)lux;
 }
 
-// Probe the I2C bus for ACKing devices, recording the result for troubleshooting.
-// A 1-byte read is enough — the address-phase ACK is what we care about; the read
-// byte itself is ignored. Short timeout so a floating bus doesn't stall boot.
-static void ltr559_scan_bus(void) {
-    s_diag.scan_count = 0;
-    s_diag.addr_23    = false;
-    s_diag.addr_2a    = false;
-    for (uint8_t addr = 0x08; addr <= 0x77; addr++) {
-        uint8_t dummy;
-        if (i2c_receive((uint8_t)(addr << 1), &dummy, 1, 4) == I2C_STATUS_SUCCESS) {
-            if (addr == LTR559_I2C_ADDR) s_diag.addr_23 = true;
-            if (addr == 0x2A) s_diag.addr_2a = true;   // Cirque Pinnacle trackpad
-            if (s_diag.scan_count < sizeof(s_diag.scan_found)) {
-                s_diag.scan_found[s_diag.scan_count++] = addr;
-            }
-        }
-    }
-}
-
-// Read + verify the ID registers, capturing raw bytes + status into the diag
-// snapshot. Returns true when both IDs match. Cheap (2 register reads) so it is
-// safe to re-run every retry; the heavier bus scan is done once in ltr559_init().
+// Read + verify the ID registers. Returns true when both IDs match. Cheap (2
+// register reads) so it is safe to re-run every retry.
 static bool ltr559_probe(void) {
     i2c_init();   // idempotent; ensure the bus is up even without the pointing device
     s_present = false;
@@ -154,13 +131,8 @@ static bool ltr559_probe(void) {
     if (st == I2C_STATUS_SUCCESS) {
         st = i2c_read_register(LTR559_I2C_ADDR_8, LTR559_REG_MANUFAC_ID, &manu, 1, LTR559_I2C_TIMEOUT);
     }
-    s_diag.init_done = true;
-    s_diag.part_id   = part;
-    s_diag.manuf_id  = manu;
-    s_diag.id_status = st;
 
     if (st != I2C_STATUS_SUCCESS || part != LTR559_PART_ID || manu != LTR559_MANUFAC_ID) {
-        s_diag.present = false;
         return false;
     }
 
@@ -172,27 +144,17 @@ static bool ltr559_probe(void) {
         !ltr559_write(LTR559_REG_PS_N_PULSES, LTR559_PS_N_PULSES_CFG) ||
         !ltr559_write(LTR559_REG_PS_CONTR, LTR559_PS_CONTR_CFG) ||
         !ltr559_write(LTR559_REG_ALS_CONTR, LTR559_ALS_CONTR_CFG)) {
-        s_diag.present = false;
         return false;
     }
 
     s_present         = true;
-    s_diag.present    = true;
     s_reading.present = true;
     s_last_poll       = timer_read32();
     return true;
 }
 
 bool ltr559_init(void) {
-    memset(&s_diag, 0, sizeof(s_diag));
-    if (ltr559_probe()) {
-        return true;
-    }
-    // Not found on the first try — take a one-time bus scan so the OLED can show
-    // what is actually on the I2C bus (Cirque at 0x2A? nothing at all?). The
-    // per-second retry in ltr559_task() only re-probes 0x23 (cheap), not this.
-    ltr559_scan_bus();
-    return false;
+    return ltr559_probe();
 }
 
 bool ltr559_available(void) {
@@ -273,12 +235,6 @@ uint16_t ltr559_avg_lux(void) {
 
 uint16_t ltr559_prox(void) {
     return s_reading.prox;
-}
-
-void ltr559_get_diag(ltr559_diag_t *out) {
-    if (out) {
-        *out = s_diag;
-    }
 }
 
 #endif  // POLYKYBD_LTR559

@@ -597,12 +597,14 @@ void poly_prepare_for_flash(void) {
 #    define LTR559_LUX_FULL_REF 100     // avg lux mapped to FULL_BRIGHT (ceiling)
                                         // Tuned on hardware: a ~28 lux office reads
                                         // B≈26 (was B≈19 at 200), matching the level
-                                        // the user set by hand. Curve (sqrt): ~8 in a
+                                        // the user set by hand. Curve (sqrt): ~4 in a
                                         // dark room, 26 @ 28 lux, 35 @ 50 lux, full @ 100+.
-#    define LTR559_MIN_CONTRAST 8       // auto-brightness floor — the sensor never
-                                        // drives the displays below this (clearly
-                                        // visible, never the near-off B=1/DISP_OFF that
-                                        // looked like a dark screen at power-on).
+#    define LTR559_MIN_CONTRAST 4       // auto-brightness floor — the sensor never
+                                        // drives below this. 4 = a dim but visible
+                                        // night level; still clear of the near-off
+                                        // B=1/DISP_OFF. (The power-on dark-screen was a
+                                        // separate boot transient, fixed by the
+                                        // don't-engage-until-first-reading guard below.)
 
 // USER_SYNC_SLAVE_DATA is a GENERIC op-dispatched slave->master pull channel (see
 // config.h): the master's request is a 1-byte `kind` selecting which slave-side

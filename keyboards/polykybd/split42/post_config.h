@@ -34,3 +34,12 @@
 
 #undef  I2C1_SCL_PIN
 #define I2C1_SCL_PIN GP23
+
+// Bring-up experiment (opt-in, off by default): with -DOLED_I2C_PULLUP the scan in
+// poly_keymap.c enables the RP2040 internal pad pull-ups on SDA/SCL. Those are weak
+// (~50 kΩ), so also drop the bus to 100 kHz here — 400 kHz has too little rise-time
+// margin against a weak pull-up + module capacitance. See split42/BRINGUP.md §4.
+#ifdef OLED_I2C_PULLUP
+#    undef  I2C1_CLOCK_SPEED
+#    define I2C1_CLOCK_SPEED 100000
+#endif

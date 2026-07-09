@@ -9,3 +9,9 @@ OPT_DEFS += -DLANG_SLOTS_PER_PAGE=18
 # print ACKing addresses over `qmk console` (see split42/BRINGUP.md §4).
 # Re-comment once the OLED address is confirmed.
 # OPT_DEFS += -DOLED_I2C_SCAN
+
+# Bring-up experiment (needs OLED_I2C_SCAN too): also enable the RP2040 internal
+# pull-ups on SDA/SCL + drop the bus to 100 kHz, to test whether a bare module
+# with NO external pull-ups will ACK. If it then ACKs at 0x3C/0x3D, the fault is
+# missing external pull-ups. Re-comment once diagnosed.
+# OPT_DEFS += -DOLED_I2C_PULLUP

@@ -612,13 +612,39 @@ static void emit_boot_banner(void) {
 }
 
 #ifdef OLED_I2C_SCAN
-// Opt-in status-OLED bus scan (split42 bring-up, §4 of split42/BRINGUP.md). Runs
-// after oled_init()->i2c_init(), so the bus is muxed and clocked. Read the ACKing
-// addresses over `qmk console`:
+// Opt-in status-OLED bus scan (split42 bring-up, §4 of split42/BRINGUP.md). Read the
+// ACKing addresses over `qmk console`:
 //   ACK at 0x3C -> bus/pins good (QMK default OLED_DISPLAY_ADDRESS)
 //   ACK at 0x3D -> add `#define OLED_DISPLAY_ADDRESS 0x3D`
 //   nothing     -> bus-level (flashed-image pins, pull-ups, solder)
+//
+// ⚠️ oled_init() calls oled_init_user() (our first caller) BEFORE
+// oled_driver_init()->i2c_init() (drivers/oled/oled_driver.c). So on that first call
+// the SDA/SCL pins are NOT yet muxed to I2C alternate mode — they're still the
+// input_high left by keyboard_post_init_user — and every ping would fail regardless
+// of the hardware. We therefore call i2c_init() ourselves first; it is idempotent
+// (guarded by a static `is_initialised`), so oled_driver_init()'s later call is a
+// no-op and the housekeeping re-emits are unaffected. Without this, a "nothing ACKs"
+// on the first scan is a false negative, not a bus fault.
+//
+// With OLED_I2C_PULLUP also defined, we additionally enable the RP2040 internal pad
+// pull-ups on SDA/SCL (QMK's RP2040 i2c_init does NOT — it relies on external
+// pull-ups). Combined with the OLED_I2C_PULLUP clock drop to 100 kHz (post_config.h),
+// this lets a bare module with NO external pull-ups ACK at the weak (~50 kΩ) internal
+// pull-up. If the scan then finds 0x3C/0x3D, the real fault is missing external
+// pull-ups (add ~4.7 kΩ SDA->3V3 and SCL->3V3); if it still finds nothing, pull-ups
+// are not the cause (SDA/SCL swap, no VCC, or a cold joint).
 static void oled_i2c_scan(void) {
+    i2c_init();   // ensure I2CD1 is started + pins muxed (see note above)
+#    ifdef OLED_I2C_PULLUP
+    // RP2040: I2C alt fn = PAL_MODE_ALTERNATE_I2C (AF3). Re-mux with the internal pad
+    // pull-up (PAL_RP_PAD_PUE) OR'd in — QMK's i2c_init leaves it off. (RP2040 has no
+    // open-drain PAL flag; PAL_OUTPUT_TYPE_OPENDRAIN is a STATIC_ASSERT here, so it is
+    // deliberately NOT used.)
+    palSetLineMode(I2C1_SCL_PIN, PAL_MODE_ALTERNATE_I2C | PAL_RP_PAD_PUE);
+    palSetLineMode(I2C1_SDA_PIN, PAL_MODE_ALTERNATE_I2C | PAL_RP_PAD_PUE);
+    printf("I2C scan: RP2040 internal pull-ups ENABLED on SDA/SCL (experiment)\n");
+#    endif
     printf("I2C scan (status OLED bus):\n");
     for (uint8_t a = 0x08; a <= 0x77; a++) {
         if (i2c_ping_address((uint8_t)(a << 1), 50) == I2C_STATUS_SUCCESS) {

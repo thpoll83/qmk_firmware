@@ -140,6 +140,49 @@ image). ACK at 0x3D → one-line address fix: add `#define OLED_DISPLAY_ADDRESS 
 to `split42/post_config.h` (or the keymap `config.h`). Nothing ACKs → bus-level
 (re-check the pins in the *flashed* image, pull-ups, solder).
 
+> **Scan-ordering fix (important).** `oled_init()` calls `oled_init_user()` (where the
+> scan lives) **before** `oled_driver_init()→i2c_init()` — so the very first scan used
+> to ping with SDA/SCL still muxed as the `input_high` left by `keyboard_post_init_user`,
+> i.e. **not in I2C mode**, and always printed "nothing ACKs" regardless of the
+> hardware. `oled_i2c_scan()` now calls `i2c_init()` itself first (it is idempotent),
+> so every emitted scan — the first one and the housekeeping re-emits — is valid. If you
+> ran the scan before this fix, re-run it after rebuilding before trusting a "nothing
+> ACKs".
+
+### Result so far (2026-07-09): NOTHING ACKs + `oled_init cmd set 1 failed`
+
+The committed scan reported `I2C scan (status OLED bus):` directly followed by
+`I2C scan done.` with **no `ACK at 0x??`** line, plus the driver's own
+`oled_init cmd set 1 failed`. Config is verified correct (I2CD1, SDA=GP22, SCL=GP23),
+so this is a **bus-level fault**. Narrow it in this order:
+
+1. **Measure SDA (E4/GP22) and SCL (E3/GP23) idle voltage under power.** Both must sit
+   at **~3.3 V** (I2C idles high via pull-ups). If either floats / reads ~0 V, the bus
+   never reaches a valid high → nothing can ACK. QMK's RP2040 I2C driver does **NOT**
+   enable internal pull-ups, so a bare module with no on-board pull-ups floats.
+   Generic 0.91" SSD1306 breakout modules usually *do* carry pull-ups — if this one
+   reads ~0 V, suspect a **cold joint** on VCC/GND/SDA/SCL or a missing pull-up.
+2. **Rule out an SDA/SCL swap** — quickest test: physically swap the two wires at the
+   header (E3↔E4) and re-scan. If it now ACKs, they were reversed.
+3. **Confirm VCC** — the module's VCC pin should read ~3.3 V to GND.
+
+### Firmware experiment — internal pull-ups (confirms suspect #1 above)
+
+To decide the "missing external pull-ups" case *in firmware* (before touching a
+soldering iron): build with **both** `-DOLED_I2C_SCAN` **and** `-DOLED_I2C_PULLUP`
+(uncomment both in `split42/keymaps/default/rules.mk`). That enables the RP2040's weak
+(~50 kΩ) internal pad pull-ups on GP22/GP23 and drops the bus to 100 kHz (a weak
+pull-up can't drive a clean 400 kHz edge). Read the scan:
+
+- **Now ACKs at 0x3C/0x3D** → the module has **no (working) external pull-ups**. Real
+  fix: add ~4.7 kΩ from SDA→3V3 and SCL→3V3 (external is the proper strength; the weak
+  internal ones are only a diagnostic crutch). Then re-comment both flags.
+- **Still nothing** → pull-ups are **not** the cause — it's an SDA/SCL swap, no VCC, or
+  a cold joint (checks 2–3 above). Re-comment both flags.
+
+Re-comment `-DOLED_I2C_SCAN` and `-DOLED_I2C_PULLUP` once diagnosed — neither belongs
+in a shipping build.
+
 ---
 
 ## 5. OPEN ISSUE #2 — "keystrokes only after a while" (single half, expected)

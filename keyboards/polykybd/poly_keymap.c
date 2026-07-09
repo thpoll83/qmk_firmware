@@ -586,11 +586,12 @@ void poly_prepare_for_flash(void) {
 // Either way driving works regardless of which half USB is plugged into.
 // All tunables below are first-cut guesses to be dialled in against the OLED.
 // Proximity (0..2047) that counts as "close" -> wake / inhibit idle. Measured on
-// hardware: resting (nothing near) ~129, hand at ~5 cm 400, ~1 cm 1000, hole
-// fully covered ~2000 (saturated). 350 sits just under the 5 cm reading with a
-// ~2.7x margin over the resting baseline, so the displays wake as a hand comes
-// within ~5-6 cm without false-triggering on baseline noise. Lower it (toward
-// ~250) for an earlier/farther wake, raise it for a more deliberate close-in one.
+// hardware: hand at ~5 cm 400, ~1 cm 1000, hole fully covered ~2000 (saturated).
+// The resting (nothing near) baseline depends on the housing: ~129 on the open
+// bench, ~325 once mounted in the enclosure (its walls reflect IR back). 350 was
+// kept as the wake point (wakes as a hand comes within ~5-6 cm). NOTE: with the
+// housed ~325 baseline the margin is only ~25 counts — raise toward 400 if the
+// mounted sensor ever self-triggers; lower toward the baseline for an earlier wake.
 #    define LTR559_NEAR_THRESHOLD 350
 #    define LTR559_DRIVE_MS 500         // how often the master samples + applies
 #    define LTR559_LUX_FULL_REF 100     // avg lux mapped to FULL_BRIGHT (ceiling)

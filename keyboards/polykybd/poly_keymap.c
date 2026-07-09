@@ -594,8 +594,12 @@ void poly_prepare_for_flash(void) {
 #    define LTR559_LUX_FULL_REF 100     // avg lux mapped to FULL_BRIGHT (ceiling)
                                         // Tuned on hardware: a ~28 lux office reads
                                         // B≈26 (was B≈19 at 200), matching the level
-                                        // the user set by hand. Curve (sqrt): ~5 in a
+                                        // the user set by hand. Curve (sqrt): ~8 in a
                                         // dark room, 26 @ 28 lux, 35 @ 50 lux, full @ 100+.
+#    define LTR559_MIN_CONTRAST 8       // auto-brightness floor — the sensor never
+                                        // drives the displays below this (clearly
+                                        // visible, never the near-off B=1/DISP_OFF that
+                                        // looked like a dark screen at power-on).
 
 // USER_SYNC_SLAVE_DATA is a GENERIC op-dispatched slave->master pull channel (see
 // config.h): the master's request is a 1-byte `kind` selecting which slave-side
@@ -667,7 +671,7 @@ static uint8_t lux_to_contrast(uint16_t lux) {
         return FULL_BRIGHT;
     }
     uint32_t c = MIN_BRIGHT + ((uint32_t)(FULL_BRIGHT - MIN_BRIGHT) * slux) / sref;
-    if (c < MIN_BRIGHT) c = MIN_BRIGHT;
+    if (c < LTR559_MIN_CONTRAST) c = LTR559_MIN_CONTRAST;  // never near-off
     if (c > FULL_BRIGHT) c = FULL_BRIGHT;
     return (uint8_t)c;
 }
@@ -705,7 +709,17 @@ static void poly_ltr559_drive(void) {
 
     // Auto-brightness from the 5 s average lux, via the same volatile/host-auto
     // path the host uses (keeps the manual brightness untouched).
+    //
+    // Don't engage until the sensor has produced a real reading: for the first
+    // ~1 s after boot the 5 s average is still 0 (no samples), and engaging then
+    // would yank the displays down to the floor. Hold at the manual/restored
+    // brightness until the first non-zero average, then engage. Once engaged we
+    // keep applying — a genuine dark-room 0 is floored by lux_to_contrast (never
+    // off), so a momentary 0 can't blank the keys.
     if (!engaged) {
+        if (lux == 0) {
+            return;
+        }
         set_brightness_auto_mode(true);
         engaged = true;
     }

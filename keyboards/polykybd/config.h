@@ -48,9 +48,20 @@
 
 #define EE_HANDS
 
-#define I2C_DRIVER I2CD0
-#define I2C1_SCL_PIN GP0
-#define I2C1_SDA_PIN GP1
+// Status-OLED I2C bus. split72 uses I2C0 on GP0/GP1; split42 wires the OLED to the
+// Exp0 header (GP22/GP23 = RP2040 I2C1) because GP0/GP1 aren't broken out on that rev.
+// (Temporarily relocated here from split42/post_config.h — variant-guarded so it
+// takes effect from a config.h without being clobbered by this shared parent, which
+// QMK -includes AFTER split42/config.h. mcuconf.h still selects RP_I2C_USE_I2C1.)
+#if defined(KEYBOARD_polykybd_split42)
+#    define I2C_DRIVER   I2CD1
+#    define I2C1_SCL_PIN GP23
+#    define I2C1_SDA_PIN GP22
+#else
+#    define I2C_DRIVER   I2CD0
+#    define I2C1_SCL_PIN GP0
+#    define I2C1_SDA_PIN GP1
+#endif
 #define I2C1_OPMODE OPMODE_I2C
 #define I2C1_CLOCK_SPEED 400000
 

@@ -34,7 +34,7 @@ You need **three** files — grab them from a GitHub release (or build them with
 | File | What it is |
 |---|---|
 | `polykybd_doom_pack.bin` | the firmware (pack flavour) |
-| `doom_pack_v1.plyx` | the DOOM engine ("cartridge") |
+| `doom_pack_v2.plyx` | the DOOM engine ("cartridge") |
 | `doom1.whx` | the game data (shareware) |
 
 Then, once:
@@ -46,7 +46,7 @@ Then, once:
    Flash the matching `.uf2` by holding BOOTSEL while plugging each half.)
 3. **Install the game data** — `polyctl doom install doom1.whx`
    (writes to both halves; survives future firmware updates — do this only once).
-4. **Install the engine** — `polyctl doom install-pack doom_pack_v1.plyx`
+4. **Install the engine** — `polyctl doom install-pack doom_pack_v2.plyx`
    (redo only when a new release changes the engine; the loader warns if a pack
    is stale).
 5. **Play** — trigger the egg (the incantation is left as an exercise for the
@@ -91,7 +91,7 @@ shareware data is **not** committed to the repo — it is downloaded on demand.
 `pack/build_pack.sh` (monolith build → stash engine objects → pack-flavour
 build → relink at the DoomPack slot → `pack/mkpack.py` wraps the `PlyX`
 header). CI (`.github/workflows/release.yml`) runs it per tag and uploads
-`doom_pack_v1.plyx` as a release asset. The `.plyx` is a build/release
+`doom_pack_v2.plyx` as a release asset. The `.plyx` is a build/release
 artifact — never committed (gitignored).
 
 **Individual pieces:**

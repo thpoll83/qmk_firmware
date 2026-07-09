@@ -27,7 +27,9 @@ cd "$(dirname "$0")"
 DOOM_DIR=$(pwd)
 REPO=$(cd ../../.. && pwd)
 
-VERSION=1
+# Pack content version — single source of truth is pack/PACK_VERSION (shared
+# with build_pack.sh and the release workflow). --version overrides.
+VERSION=$(cat "$DOOM_DIR/pack/PACK_VERSION")
 TAG=pack
 OUT="$REPO"
 while [[ $# -gt 0 ]]; do

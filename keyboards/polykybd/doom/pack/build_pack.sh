@@ -21,7 +21,10 @@ KM=default
 BUILD="$REPO/.build"
 OBJ="$BUILD/obj_polykybd_split72_default"
 STASH="$PACK_DIR/build"
-VERSION=1
+# Single source of truth for the pack content version (pack/PACK_VERSION);
+# --version overrides. Bump the pack by editing that ONE file — the release
+# workflow and build_all_doom.sh read the same file, so they can't drift.
+VERSION=$(cat "$PACK_DIR/PACK_VERSION")
 OUT=""
 
 while [[ $# -gt 0 ]]; do

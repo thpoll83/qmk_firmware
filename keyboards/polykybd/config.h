@@ -44,7 +44,20 @@
 // reboot) — freeing 5 slots total. A new sync can still MULTIPLEX onto an existing
 // id by a distinct payload size, like the MRU snapshots and the doom mirror
 // messages both do on USER_SYNC_OVERLAY_MAP_DATA (user_sync_overlay_map_data_handler).
-#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FLASH_STAGE, USER_SYNC_RESET
+// One freed slot is the GENERIC slave->master pull channel USER_SYNC_SLAVE_DATA.
+// Like USER_SYNC_FLASH_STAGE it is op-dispatched: the master's request carries a
+// `kind` byte (enum slave_data_kind) selecting which slave-side payload to return,
+// so future slave->master data (more sensors, telemetry, diagnostics) reuses this
+// ONE slot instead of spending another of the scarce 32. Its first user is the
+// LTR-559: when DRIVEing brightness/idle the master pulls {avg lux, proximity}
+// from the sensor (right) half via transaction_rpc_exec, so it works in either
+// USB orientation. Only compiled in when the sensor can drive (needs the slot).
+#ifdef POLYKYBD_LTR559_DRIVE
+#    define POLY_LTR559_TXN , USER_SYNC_SLAVE_DATA
+#else
+#    define POLY_LTR559_TXN
+#endif
+#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FLASH_STAGE, USER_SYNC_RESET POLY_LTR559_TXN
 
 #define EE_HANDS
 

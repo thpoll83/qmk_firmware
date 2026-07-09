@@ -55,6 +55,9 @@ void oled_update_buffer(void) {
         kdisp_write_gfx_text(smallFont, 1, 112, 56, is_usb_host_side() ? U"H" : U"B");
     }
 
+    // (The LTR-559 sensor values used to be rendered here during bring-up; they
+    // now go to a periodic log — see the sensor telemetry heartbeat in
+    // housekeeping_task_user() — so the status OLED shows the normal panel.)
     if(is_right_side()) {
         kdisp_write_gfx_text(smallFont, 1, 0, 30, U"RGB");
 

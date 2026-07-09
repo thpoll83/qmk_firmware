@@ -119,6 +119,57 @@ static uint16_t ltr559_compute_lux(uint16_t ch0, uint16_t ch1) {
     return (uint16_t)lux;
 }
 
+#if 0
+// --- LTR-559 I2C bring-up diagnostics (disabled, kept for reference) --------
+// Used during hardware bring-up to tell a wiring/power fault apart from a dead
+// bus when a fitted sensor is NOT detected: if the Cirque (0x2A) ACKs but the
+// LTR-559 (0x23) doesn't, the bus/pins are fine and the sensor isn't answering;
+// if NOTHING ACKs the bus never came up; if 0x23 ACKs but the IDs don't match
+// the part is there but returned unexpected IDs. It fed a status-OLED readout
+// (removed when the sensor moved to a periodic log). To bring it back: flip this
+// #if to 1, re-declare the struct + ltr559_get_diag() in ltr559.h, capture the
+// IDs into s_diag inside ltr559_probe(), call ltr559_scan_bus() from
+// ltr559_init() on probe failure, and wire ltr559_get_diag() to a consumer.
+typedef struct {
+    bool     init_done;      // ltr559_init() has run at least once
+    bool     present;        // part+manuf IDs matched
+    uint8_t  part_id;        // raw PART_ID read (expect 0x92)
+    uint8_t  manuf_id;       // raw MANUFAC_ID read (expect 0x05)
+    int16_t  id_status;      // i2c_status_t of the ID read (0 = SUCCESS)
+    bool     addr_23;        // LTR-559 (0x23) ACKed during the scan
+    bool     addr_2a;        // Cirque trackpad (0x2A) ACKed during the scan
+    uint8_t  scan_found[8];  // up to 8 ACKing 7-bit addresses
+    uint8_t  scan_count;     // number of entries in scan_found
+} ltr559_diag_t;
+static ltr559_diag_t s_diag;
+
+// A 1-byte read is enough — the address-phase ACK is what we care about; the
+// read byte itself is ignored. Short timeout so a floating bus doesn't stall
+// boot. ⚠️ Sweeping the whole 0x08..0x77 range costs ~448 ms, so only run it
+// once on probe failure, never on the per-second retry.
+static void ltr559_scan_bus(void) {
+    s_diag.scan_count = 0;
+    s_diag.addr_23    = false;
+    s_diag.addr_2a    = false;
+    for (uint8_t addr = 0x08; addr <= 0x77; addr++) {
+        uint8_t dummy;
+        if (i2c_receive((uint8_t)(addr << 1), &dummy, 1, 4) == I2C_STATUS_SUCCESS) {
+            if (addr == LTR559_I2C_ADDR) s_diag.addr_23 = true;
+            if (addr == 0x2A) s_diag.addr_2a = true;   // Cirque Pinnacle trackpad
+            if (s_diag.scan_count < sizeof(s_diag.scan_found)) {
+                s_diag.scan_found[s_diag.scan_count++] = addr;
+            }
+        }
+    }
+}
+
+void ltr559_get_diag(ltr559_diag_t *out) {
+    if (out) {
+        *out = s_diag;
+    }
+}
+#endif  // disabled bring-up diagnostics
+
 // Read + verify the ID registers. Returns true when both IDs match. Cheap (2
 // register reads) so it is safe to re-run every retry.
 static bool ltr559_probe(void) {

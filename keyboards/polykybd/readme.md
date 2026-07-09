@@ -135,6 +135,24 @@ Stack usage on core 1 is monotonic (once a low word is overwritten by a deep cal
 
 Current `CORE1_STACK_SIZE` is 384 bytes. Observed peak with normal overlay + ROI traffic is ~164 bytes, leaving ~220 bytes of headroom. If you change call chains on core 1 (e.g. add new FIFO commands), re-run the probe and adjust `CORE1_STACK_SIZE` if the peak climbs.
 
+### Timed console logs — TODO: shared timer
+
+There is currently **no generic timed-logging mechanism**. The existing periodic
+logs each roll their own trigger:
+
+- The **split-link health counter** (`bridge_helper.c`) logs every
+  `LINK_STATS_LOG_EVERY` (200) frames — *count*-based, not time-based.
+- The **LTR-559 sensor telemetry** (`poly_keymap.c` `housekeeping_task_user()`,
+  gated on `ltr559_available()`) logs every `LTR559_LOG_MS` (10 min) via a
+  self-contained `static uint32_t` + `timer_elapsed32()` guard.
+
+⚠️ **When a third timed log appears, factor these into one shared timer** — e.g. a
+small `{ interval_ms, last, callback }` table ticked once from
+`housekeeping_task_user()`, so each consumer just registers `{interval, fn}`
+instead of duplicating the `static last + timer_elapsed32()` boilerplate (and the
+cadences don't drift apart). Two consumers didn't justify the abstraction; three
+do. The LTR-559 log site carries a comment pointing here.
+
 ## Emoji Layer
 
 The `_EMJ` layer organises emojis into 12 categories. The top row holds category tab keys; the active tab is highlighted with a ∩-shaped border. Use the leftmost and rightmost top-row keys (◀ / ▶) to page through categories that hold more than 49 emojis.

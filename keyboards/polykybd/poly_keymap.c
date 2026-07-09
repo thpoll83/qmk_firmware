@@ -790,8 +790,9 @@ void housekeeping_task_user(void) {
         // Sensor telemetry heartbeat: only the half that actually has the sensor
         // logs (gated on ltr559_available()), and only every LTR559_LOG_MS (10 min)
         // so it's a periodic reading, not spam. This replaces the live status-OLED
-        // readout used during bring-up. A single shared timer would be nice if more
-        // timed logs appear; for now this one is self-contained.
+        // readout used during bring-up. NOTE: this rolls its own timer; if a third
+        // timed log ever appears, factor them into one shared timer — see
+        // readme.md "Diagnostics" -> "Timed console logs".
         if (ltr559_available()) {
             static uint32_t s_ltr_log = 0;
             if (timer_elapsed32(s_ltr_log) >= LTR559_LOG_MS) {

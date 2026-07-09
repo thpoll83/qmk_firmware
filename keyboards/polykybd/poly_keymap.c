@@ -679,13 +679,11 @@ static void poly_ltr559_drive(void) {
     }
     last = timer_read32();
 
-    // The sensor lives on the RIGHT half; brightness/idle decisions are master-only.
+    // Brightness/idle decisions are master-only; the sensor is auto-detected on
+    // whichever half it's soldered to.
     uint16_t lux, prox;
-    if (is_right_side()) {
-        // Master IS the sensor half — read locally.
-        if (!ltr559_available()) {
-            return;
-        }
+    if (ltr559_available()) {
+        // The master itself has the sensor — read locally.
         lux  = ltr559_avg_lux();
         prox = ltr559_prox();
     } else {
@@ -757,11 +755,11 @@ void housekeeping_task_user(void) {
         doom_tick();
         sync_and_refresh_displays();
 #ifdef POLYKYBD_LTR559
-        // Poll the expansion-port light/proximity sensor on the half it lives on
-        // (right). Internally throttled + non-blocking; a NAK just no-ops.
-        if (is_right_side()) {
-            ltr559_task();
-        }
+        // Poll the expansion-port light/proximity sensor. Run on BOTH halves —
+        // the sensor is auto-detected on whichever half it's soldered to (left or
+        // right). Internally throttled + non-blocking; on the half without it the
+        // probe gives up after a bounded number of retries so it can't stall.
+        ltr559_task();
 #    ifdef POLYKYBD_LTR559_DRIVE
         poly_ltr559_drive();   // master-side auto-brightness + idle-inhibit
 #    endif
@@ -2835,13 +2833,13 @@ void keyboard_post_init_user(void) {
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
 
 #ifdef POLYKYBD_LTR559
-    // The LTR-559 sits on the expansion port, which is on the RIGHT half (same
-    // connector as the Cirque trackpad). Probe it there only; a missing sensor
-    // just fails the probe and stays disabled.
-    if (is_right_side()) {
-        if (ltr559_init()) {
-            uprint("LTR-559 sensor detected.\n");
-        }
+    // Probe for the LTR-559 on BOTH halves — it can be soldered to either half's
+    // expansion port (GP0/GP1 I2C exists on both). The half that finds it uses it;
+    // the other half's probe fails and stays disabled (bounded retries in the
+    // task, so no stall). ltr559_init() brings up I2C itself, so this works even
+    // on a half with no pointing device.
+    if (ltr559_init()) {
+        uprint("LTR-559 sensor detected.\n");
     }
 #endif
 

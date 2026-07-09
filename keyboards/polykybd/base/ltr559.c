@@ -63,12 +63,16 @@
 // Retry the probe this often while the sensor is absent, so a sensor that is
 // slow to wake at boot, or plugged in later, still gets picked up.
 #    define LTR559_RETRY_MS 1000
+// Give up probing after this many retries on a half that clearly hasn't got the
+// sensor (~30 s of boot-window retries), so it stops touching the bus.
+#    define LTR559_MAX_RETRIES 30
 
 static bool             s_present    = false;
 static ltr559_reading_t s_reading;
 static uint16_t         s_avg_lux    = 0;
-static uint32_t         s_last_poll  = 0;
-static uint32_t         s_last_retry = 0;
+static uint32_t         s_last_poll   = 0;
+static uint32_t         s_last_retry  = 0;
+static uint8_t          s_retry_count = 0;
 
 // Diagnostic snapshot (see ltr559.h). Captured on every probe attempt.
 static ltr559_diag_t    s_diag;
@@ -204,10 +208,13 @@ static void ltr559_push_avg(uint16_t lux) {
 
 void ltr559_task(void) {
     if (!s_present) {
-        // Keep retrying: a sensor slow to wake at boot, or plugged in later, is
-        // picked up without a reflash. Also refreshes the scan diag periodically.
-        if (timer_elapsed32(s_last_retry) >= LTR559_RETRY_MS) {
+        // Retry the probe for a bounded window: a sensor slow to wake at boot is
+        // still picked up, but the half WITHOUT the sensor (both halves poll now,
+        // since it can be soldered to either) stops probing after
+        // LTR559_MAX_RETRIES so its I2C reads can't keep stalling the loop.
+        if (s_retry_count < LTR559_MAX_RETRIES && timer_elapsed32(s_last_retry) >= LTR559_RETRY_MS) {
             s_last_retry = timer_read32();
+            s_retry_count++;
             ltr559_probe();
         }
         return;

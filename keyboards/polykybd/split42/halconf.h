@@ -39,7 +39,10 @@
 //3	57600 baud
 //4	38400 baud
 //5	19200 baud
-#define SELECT_SOFT_SERIAL_SPEED 1
+// split42 bring-up: lowered from 1 (230400) to 2 (115200) as a signal-integrity
+// test while diagnosing transport_fail on the split link. Both halves must be
+// flashed with the same value. Revert to 1 once the link is understood.
+#define SELECT_SOFT_SERIAL_SPEED 2
 
 #define PICO_FLASH_SIZE_BYTES (8 * 1024 * 1024)
 //for split keyboard setup

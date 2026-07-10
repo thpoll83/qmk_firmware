@@ -35,6 +35,21 @@ ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
     endif
 endif
 
+# split42 bring-up diagnostic: pick the split master by HANDEDNESS (left = master)
+# instead of by USB_VBUS_PIN (GP24). Opt-in only — pass `-e POLYKYBD_MASTER_LEFT=yes`.
+# The full-duplex split link only forms when exactly one half is master (the master
+# swaps TX/RX, the slave doesn't); on the current split42 boards GP24 can read high
+# on the non-USB half (VSYS bleeds across the bridge), so stock VBUS detection makes
+# BOTH halves master and the link dies (transport_fail=100%, crc_err=0). Deciding the
+# role from the EE_HANDS handedness marker (already set by uf2-split-left/right) makes
+# it deterministic: flash split-left to the left board, split-right to the right,
+# USB into the left. Mutually exclusive with POLYKYBD_HIL (which forces roles per
+# image); if both are set, POLYKYBD_HIL wins (the #if ordering in polykybd.c).
+# Normal builds leave it unset and keep VBUS-either-side detection.
+ifeq ($(strip $(POLYKYBD_MASTER_LEFT)), yes)
+    OPT_DEFS += -DPOLYKYBD_MASTER_LEFT
+endif
+
 # "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).

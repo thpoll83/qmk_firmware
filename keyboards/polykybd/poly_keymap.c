@@ -606,6 +606,17 @@ static void emit_boot_banner(void) {
             POLY_KB_NAME, FW_VERSION, PROTOCOL_VERSION, DEVICE_VER,
             is_keyboard_left() ? "left" : "right",
             is_keyboard_master() ? "master" : "slave");
+    // Split-link role inputs — helps diagnose a dead bridge (transport_fail=100%
+    // means both halves picked the SAME role, so the full-duplex crossover never
+    // forms). USB_VBUS_PIN (GP24) is what stock master detection keys on; a non-USB
+    // half reading it high is the "both master" failure. transport_connected shows
+    // whether this master currently sees the slave.
+#ifdef USB_VBUS_PIN
+    uprintf("   link: vbus_pin=%d transport_connected=%d\n",
+            (int)gpio_read_pin(USB_VBUS_PIN), (int)is_transport_connected());
+#else
+    uprintf("   link: transport_connected=%d\n", (int)is_transport_connected());
+#endif
 }
 
 void housekeeping_task_user(void) {

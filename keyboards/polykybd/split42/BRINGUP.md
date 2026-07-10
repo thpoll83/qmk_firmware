@@ -183,6 +183,35 @@ pull-up can't drive a clean 400 kHz edge). Read the scan:
 Re-comment `-DOLED_I2C_SCAN` and `-DOLED_I2C_PULLUP` once diagnosed — neither belongs
 in a shipping build.
 
+### Firmware experiment — GPIO toggle (no I2C, no display): pad identity + pin-alive
+
+If two displays + reflow + internal pull-ups still give **no ACK**, stop testing I2C and
+test the **pins themselves**. Build with `-DOLED_I2C_GPIO_TEST` (uncomment in
+`split42/keymaps/default/rules.mk`). At boot, `keyboard_post_init_user()` drives
+**SDA(GP22) at ~2 Hz** and **SCL(GP23) at ~0.5 Hz** as push-pull GPIO outputs for **20 s**
+(before `i2c_init`, so nothing else touches the pins). Probe **E4** and **E3** to GND with
+a multimeter — the two different blink rates identify the pads with no console needed:
+
+| What you see on E4 / E3 | Meaning | Action |
+|---|---|---|
+| **E4 blinks fast, E3 slow** (as labelled) | MCU pins + traces + solder are **good** | Fault is on the **display side** — reflow the module pins, check display GND |
+| **E3 blinks fast, E4 slow** (swapped) | header pad **identity is reversed** vs. the schematic | **crossing SDA/SCL is the fix** — swap the two wires |
+| **a pad never changes** | open / cold joint between the RP2040 and that pad | reflow that GPIO at the MCU + along to the header |
+| **both dead** | shared open (or wrong build flashed) | check the flash + the common path |
+
+⚠️ **You cannot swap SDA/SCL in firmware on RP2040** — GP22 is hardwired to the I2C1-SDA
+function and GP23 to I2C1-SCL; the pin mux offers no way to put SDA on GP23. So if the
+pad identity is reversed, the fix is a **physical** wire swap, not a config change.
+
+Re-comment `-DOLED_I2C_GPIO_TEST` once done.
+
+### External pull-ups
+Adding **~4.7 kΩ from SDA→3V3 and SCL→3V3** is the proper fix if the module lacks working
+pull-ups (the RP2040 driver enables none; the internal-pull-up experiment above only proves
+the diagnosis at a weak ~50 kΩ). Harmless to add even if the module already has them (the
+two in parallel just make a slightly stronger pull-up). Worth trying alongside the checks
+above if you have the resistors on hand.
+
 ---
 
 ## 5. OPEN ISSUE #2 — "keystrokes only after a while" (single half, expected)

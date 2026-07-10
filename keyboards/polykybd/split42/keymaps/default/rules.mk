@@ -17,8 +17,8 @@ OPT_DEFS += -DLANG_SLOTS_PER_PAGE=18
 # OPT_DEFS += -DOLED_I2C_PULLUP
 
 # Bring-up experiment (standalone — no I2C, no display needed): at boot, drive
-# SDA(GP22) and SCL(GP23) as plain GPIO outputs at different blink rates for 20 s
-# so you can confirm on a multimeter WHICH header pad is which GPIO and that the
-# MCU pins are alive. Fast pad = GP22/SDA(E4), slow = GP23/SCL(E3). A dead pad =
-# open joint MCU-side; swapped rates = reversed pad identity. Re-comment after.
+# SDA(GP22)@~1Hz and SCL(GP23)@~0.25Hz as plain GPIO outputs for 30 s so you can
+# confirm on a multimeter WHICH header pad is which GPIO and that the MCU pins are
+# alive. Fast pad = GP22/SDA(E4), slow = GP23/SCL(E3). A dead pad = open joint
+# MCU-side; swapped rates = reversed pad identity. Re-comment after.
 # OPT_DEFS += -DOLED_I2C_GPIO_TEST

@@ -188,9 +188,10 @@ in a shipping build.
 If two displays + reflow + internal pull-ups still give **no ACK**, stop testing I2C and
 test the **pins themselves**. Build with `-DOLED_I2C_GPIO_TEST` (uncomment in
 `split42/keymaps/default/rules.mk`). At boot, `keyboard_post_init_user()` drives
-**SDA(GP22) at ~2 Hz** and **SCL(GP23) at ~0.5 Hz** as push-pull GPIO outputs for **20 s**
+**SDA(GP22) at ~1 Hz** and **SCL(GP23) at ~0.25 Hz** as push-pull GPIO outputs for **30 s**
 (before `i2c_init`, so nothing else touches the pins). Probe **E4** and **E3** to GND with
-a multimeter — the two different blink rates identify the pads with no console needed:
+a multimeter — the two different blink rates (slow enough to read on a DVM) identify the
+pads with no console needed:
 
 | What you see on E4 / E3 | Meaning | Action |
 |---|---|---|

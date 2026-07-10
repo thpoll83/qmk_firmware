@@ -2924,22 +2924,23 @@ void keyboard_pre_init_user(void) {
     // Bring-up (opt-in, off by default): prove the status-OLED I2C pins are alive and
     // identify which physical header pad is which GPIO, WITHOUT any I2C or a display.
     // Runs here in keyboard_post_init_user, i.e. BEFORE oled_driver_init()->i2c_init(),
-    // so nothing else is driving these pins during the test. Drives SDA(GP22) at ~2 Hz
-    // and SCL(GP23) at ~0.5 Hz as push-pull outputs for ~20 s — the two DIFFERENT blink
-    // rates let you tell the pads apart on a multimeter with NO console: the pad that
-    // toggles fast is GP22/SDA (should be E4); the slow one is GP23/SCL (should be E3).
+    // so nothing else is driving these pins during the test. Drives SDA(GP22) at ~1 Hz
+    // and SCL(GP23) at ~0.25 Hz as push-pull outputs for ~30 s — slow enough to read on
+    // a multimeter — the two DIFFERENT blink rates let you tell the pads apart with NO
+    // console: the pad that toggles fast is GP22/SDA (should be E4); the slow one is
+    // GP23/SCL (should be E3).
     //   - a pad that never moves  -> open/cold joint between the RP2040 and that pad
     //   - E3 blinks fast / E4 slow -> your header pad identity is reversed (crossing helps)
     //   - both move as labelled    -> MCU side is fine; the fault is on the display side
     // Afterwards the pins are restored to input so oled_init can re-mux them to I2C.
-    printf("GPIO test: driving SDA(GP22)@~2Hz + SCL(GP23)@~0.5Hz for 20s (measure E4/E3)\n");
+    printf("GPIO test: driving SDA(GP22)@~1Hz + SCL(GP23)@~0.25Hz for 30s (measure E4/E3)\n");
     gpio_set_pin_output(I2C1_SDA_PIN);
     gpio_set_pin_output(I2C1_SCL_PIN);
     uint32_t gt0 = timer_read32();
-    while (timer_elapsed32(gt0) < 20000) {
+    while (timer_elapsed32(gt0) < 30000) {
         uint32_t e = timer_elapsed32(gt0);
-        bool sda = (e / 250)  & 1;   // ~2 Hz
-        bool scl = (e / 1000) & 1;   // ~0.5 Hz
+        bool sda = (e / 500)  & 1;   // ~1 Hz
+        bool scl = (e / 2000) & 1;   // ~0.25 Hz
         gpio_write_pin(I2C1_SDA_PIN, sda);
         gpio_write_pin(I2C1_SCL_PIN, scl);
         if ((e % 2000) < 10) printf("GPIO test: SDA(GP22/E4)=%d SCL(GP23/E3)=%d\n", (int)sda, (int)scl);

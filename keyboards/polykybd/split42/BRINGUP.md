@@ -105,113 +105,38 @@ arm-none-eabi-objcopy -O binary .build/polykybd_split42_default.elf .build/polyk
 
 ---
 
-## 4. OPEN ISSUE #1 — status OLED still dark (top priority)
+## 4. RESOLVED — status OLED dark on this rev: open SCL joint (deferred to next hardware rev)
 
-Config is correct and two scary-looking boot lines were **ruled out**: `keyboard_post_init_user`
-ends with `gpio_set_pin_input_high(I2C1_SDA_PIN)` (GP22 on split42), but QMK calls
-`oled_init()` **after** `keyboard_post_init_user` (`quantum/keyboard.c`: post_init at
-~L344, `oled_init` at ~L496) and `oled_init→i2c_init` re-muxes SDA/SCL back to I2C mode.
-Harmless (same code ships on split72).
+**Root cause (2026-07-10): an open solder joint on the SCL line — the RP2040 GP23 pad
+(U10.35) to the Exp0 E3 pad — so the status OLED never gets a clock and never ACKs.**
+Not a firmware, config, module, or design problem. Chased end-to-end:
 
-**Ranked suspects:**
-1. **Flashed image predates the GP22/GP23 commits** → still driving GP0/GP1 → dark despite
-   correct wiring. Cheapest check: on the machine that built it, `git log --oneline -5`
-   should show `944ff49 split42: put status OLED on I2C1`.
-2. **I2C address.** Generic 0.91" modules are usually **0x3C** (QMK default
-   `OLED_DISPLAY_ADDRESS`), a minority are **0x3D**. If 0x3D, the bus is silent → add
-   `#define OLED_DISPLAY_ADDRESS 0x3D` (split42 `post_config.h` or keymap `config.h`).
-3. **Bus-level** (pull-ups / cold joint / the flashed image using wrong pins) → nothing ACKs.
+- **SDA (GP22 → E4) is fine.** A boot-time GPIO toggle test (drive the pins as plain
+  push-pull outputs) showed E4 swinging cleanly, but **E3 (SCL) stayed stuck at 3.3 V**
+  even while GP23 was driving low at 1 Hz — a push-pull output beats any pull-up, so the
+  drive was **not reaching E3**.
+- **The 3.3 V came from the display, not the board:** unsoldering the display made it
+  disappear → it was the module's own SCL pull-up holding an otherwise-floating pad high.
+  Two different displays behaved identically; internal pull-ups + 100 kHz didn't help.
+- **Not a short:** the PCB netlist has E3 on exactly two pads — `U10` pad 35 (GP23) and
+  `Exp0` pin 3 — with no connection to VDD/VBUS; and removing the display killed the 3.3 V
+  (a real short would persist). On the QFN, GP23 (pad 35) sits 0.40 mm from GP24/VBUS and
+  0.80 mm from VDD, so a bridge *would* live there — but the evidence points to an **open**,
+  not a bridge.
 
-### Decisive diagnostic — boot-time I2C scan (build locally, read over `qmk console`)
+**Decision: not fixing this hardware rev.** The next hardware revision will break out the
+board's *intended* status-OLED bus — **I2C0 on GP0/GP1** — so the GP22/GP23 (I2C1) Exp0
+workaround goes away entirely. Per the TODO in `split42/post_config.h`: on the v2 board,
+**delete `post_config.h`** (split42 then inherits the shared `config.h` I2C0/GP0/GP1
+defaults) and **revert `split42/mcuconf.h`** to `RP_I2C_USE_I2C0`. Until then the status
+OLED is non-functional on this board; the **key displays and `qmk console` logs** cover
+bring-up needs.
 
-**The probe is already committed** (gated, off by default): the scan loop is at the top
-of `oled_init_user()` in `poly_keymap.c` (runs during `oled_init`, i.e. after
-`i2c_init`), behind `#ifdef OLED_I2C_SCAN`. To use it:
-
-1. In `split42/keymaps/default/rules.mk`, **uncomment** the line
-   `# OPT_DEFS += -DOLED_I2C_SCAN`.
-2. Build + flash split42, open `qmk console` (`console: true` is already set, so
-   `printf` reaches it without `debug_enable`).
-3. Read the ACKing addresses printed at boot.
-4. **Re-comment** the flag once diagnosed.
-
-**Interpretation:** ACK at 0x3C → bus/pins good, look at suspect #1 (stale flashed
-image). ACK at 0x3D → one-line address fix: add `#define OLED_DISPLAY_ADDRESS 0x3D`
-to `split42/post_config.h` (or the keymap `config.h`). Nothing ACKs → bus-level
-(re-check the pins in the *flashed* image, pull-ups, solder).
-
-> **Scan-ordering fix (important).** `oled_init()` calls `oled_init_user()` (where the
-> scan lives) **before** `oled_driver_init()→i2c_init()` — so the very first scan used
-> to ping with SDA/SCL still muxed as the `input_high` left by `keyboard_post_init_user`,
-> i.e. **not in I2C mode**, and always printed "nothing ACKs" regardless of the
-> hardware. `oled_i2c_scan()` now calls `i2c_init()` itself first (it is idempotent),
-> so every emitted scan — the first one and the housekeeping re-emits — is valid. If you
-> ran the scan before this fix, re-run it after rebuilding before trusting a "nothing
-> ACKs".
-
-### Result so far (2026-07-09): NOTHING ACKs + `oled_init cmd set 1 failed`
-
-The committed scan reported `I2C scan (status OLED bus):` directly followed by
-`I2C scan done.` with **no `ACK at 0x??`** line, plus the driver's own
-`oled_init cmd set 1 failed`. Config is verified correct (I2CD1, SDA=GP22, SCL=GP23),
-so this is a **bus-level fault**. Narrow it in this order:
-
-1. **Measure SDA (E4/GP22) and SCL (E3/GP23) idle voltage under power.** Both must sit
-   at **~3.3 V** (I2C idles high via pull-ups). If either floats / reads ~0 V, the bus
-   never reaches a valid high → nothing can ACK. QMK's RP2040 I2C driver does **NOT**
-   enable internal pull-ups, so a bare module with no on-board pull-ups floats.
-   Generic 0.91" SSD1306 breakout modules usually *do* carry pull-ups — if this one
-   reads ~0 V, suspect a **cold joint** on VCC/GND/SDA/SCL or a missing pull-up.
-2. **Rule out an SDA/SCL swap** — quickest test: physically swap the two wires at the
-   header (E3↔E4) and re-scan. If it now ACKs, they were reversed.
-3. **Confirm VCC** — the module's VCC pin should read ~3.3 V to GND.
-
-### Firmware experiment — internal pull-ups (confirms suspect #1 above)
-
-To decide the "missing external pull-ups" case *in firmware* (before touching a
-soldering iron): build with **both** `-DOLED_I2C_SCAN` **and** `-DOLED_I2C_PULLUP`
-(uncomment both in `split42/keymaps/default/rules.mk`). That enables the RP2040's weak
-(~50 kΩ) internal pad pull-ups on GP22/GP23 and drops the bus to 100 kHz (a weak
-pull-up can't drive a clean 400 kHz edge). Read the scan:
-
-- **Now ACKs at 0x3C/0x3D** → the module has **no (working) external pull-ups**. Real
-  fix: add ~4.7 kΩ from SDA→3V3 and SCL→3V3 (external is the proper strength; the weak
-  internal ones are only a diagnostic crutch). Then re-comment both flags.
-- **Still nothing** → pull-ups are **not** the cause — it's an SDA/SCL swap, no VCC, or
-  a cold joint (checks 2–3 above). Re-comment both flags.
-
-Re-comment `-DOLED_I2C_SCAN` and `-DOLED_I2C_PULLUP` once diagnosed — neither belongs
-in a shipping build.
-
-### Firmware experiment — GPIO toggle (no I2C, no display): pad identity + pin-alive
-
-If two displays + reflow + internal pull-ups still give **no ACK**, stop testing I2C and
-test the **pins themselves**. Build with `-DOLED_I2C_GPIO_TEST` (uncomment in
-`split42/keymaps/default/rules.mk`). At boot, `keyboard_post_init_user()` drives
-**SDA(GP22) at ~1 Hz** and **SCL(GP23) at ~0.25 Hz** as push-pull GPIO outputs for **30 s**
-(before `i2c_init`, so nothing else touches the pins). Probe **E4** and **E3** to GND with
-a multimeter — the two different blink rates (slow enough to read on a DVM) identify the
-pads with no console needed:
-
-| What you see on E4 / E3 | Meaning | Action |
-|---|---|---|
-| **E4 blinks fast, E3 slow** (as labelled) | MCU pins + traces + solder are **good** | Fault is on the **display side** — reflow the module pins, check display GND |
-| **E3 blinks fast, E4 slow** (swapped) | header pad **identity is reversed** vs. the schematic | **crossing SDA/SCL is the fix** — swap the two wires |
-| **a pad never changes** | open / cold joint between the RP2040 and that pad | reflow that GPIO at the MCU + along to the header |
-| **both dead** | shared open (or wrong build flashed) | check the flash + the common path |
-
-⚠️ **You cannot swap SDA/SCL in firmware on RP2040** — GP22 is hardwired to the I2C1-SDA
-function and GP23 to I2C1-SCL; the pin mux offers no way to put SDA on GP23. So if the
-pad identity is reversed, the fix is a **physical** wire swap, not a config change.
-
-Re-comment `-DOLED_I2C_GPIO_TEST` once done.
-
-### External pull-ups
-Adding **~4.7 kΩ from SDA→3V3 and SCL→3V3** is the proper fix if the module lacks working
-pull-ups (the RP2040 driver enables none; the internal-pull-up experiment above only proves
-the diagnosis at a weak ~50 kΩ). Harmless to add even if the module already has them (the
-two in parallel just make a slightly stronger pull-up). Worth trying alongside the checks
-above if you have the resistors on hand.
+> The opt-in I2C bring-up diagnostics (`-DOLED_I2C_SCAN`, `-DOLED_I2C_PULLUP`,
+> `-DOLED_I2C_GPIO_TEST`, `-DOLED_I2C_GPIO_TEST_SCL`) that were used to isolate this have
+> been **removed** from the tree now that the cause is known. If needed again, the GPIO
+> toggle (drive GP22/GP23 as push-pull outputs in `keyboard_post_init_user` and watch
+> E4/E3 on a multimeter) is the quickest way to prove an open on either line.
 
 ---
 

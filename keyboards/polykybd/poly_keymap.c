@@ -22,9 +22,6 @@
 
 #include "raw_hid.h"
 #include "oled_driver.h"
-#ifdef OLED_I2C_SCAN
-#    include "i2c_master.h"   // boot-time status-OLED bus scan (split42 bring-up, opt-in)
-#endif
 #include "version.h"
 #include "print.h"
 #include "debug.h"
@@ -611,50 +608,6 @@ static void emit_boot_banner(void) {
             is_keyboard_master() ? "master" : "slave");
 }
 
-#ifdef OLED_I2C_SCAN
-// Opt-in status-OLED bus scan (split42 bring-up, §4 of split42/BRINGUP.md). Read the
-// ACKing addresses over `qmk console`:
-//   ACK at 0x3C -> bus/pins good (QMK default OLED_DISPLAY_ADDRESS)
-//   ACK at 0x3D -> add `#define OLED_DISPLAY_ADDRESS 0x3D`
-//   nothing     -> bus-level (flashed-image pins, pull-ups, solder)
-//
-// ⚠️ oled_init() calls oled_init_user() (our first caller) BEFORE
-// oled_driver_init()->i2c_init() (drivers/oled/oled_driver.c). So on that first call
-// the SDA/SCL pins are NOT yet muxed to I2C alternate mode — they're still the
-// input_high left by keyboard_post_init_user — and every ping would fail regardless
-// of the hardware. We therefore call i2c_init() ourselves first; it is idempotent
-// (guarded by a static `is_initialised`), so oled_driver_init()'s later call is a
-// no-op and the housekeeping re-emits are unaffected. Without this, a "nothing ACKs"
-// on the first scan is a false negative, not a bus fault.
-//
-// With OLED_I2C_PULLUP also defined, we additionally enable the RP2040 internal pad
-// pull-ups on SDA/SCL (QMK's RP2040 i2c_init does NOT — it relies on external
-// pull-ups). Combined with the OLED_I2C_PULLUP clock drop to 100 kHz (post_config.h),
-// this lets a bare module with NO external pull-ups ACK at the weak (~50 kΩ) internal
-// pull-up. If the scan then finds 0x3C/0x3D, the real fault is missing external
-// pull-ups (add ~4.7 kΩ SDA->3V3 and SCL->3V3); if it still finds nothing, pull-ups
-// are not the cause (SDA/SCL swap, no VCC, or a cold joint).
-static void oled_i2c_scan(void) {
-    i2c_init();   // ensure I2CD1 is started + pins muxed (see note above)
-#    ifdef OLED_I2C_PULLUP
-    // RP2040: I2C alt fn = PAL_MODE_ALTERNATE_I2C (AF3). Re-mux with the internal pad
-    // pull-up (PAL_RP_PAD_PUE) OR'd in — QMK's i2c_init leaves it off. (RP2040 has no
-    // open-drain PAL flag; PAL_OUTPUT_TYPE_OPENDRAIN is a STATIC_ASSERT here, so it is
-    // deliberately NOT used.)
-    palSetLineMode(I2C1_SCL_PIN, PAL_MODE_ALTERNATE_I2C | PAL_RP_PAD_PUE);
-    palSetLineMode(I2C1_SDA_PIN, PAL_MODE_ALTERNATE_I2C | PAL_RP_PAD_PUE);
-    printf("I2C scan: RP2040 internal pull-ups ENABLED on SDA/SCL (experiment)\n");
-#    endif
-    printf("I2C scan (status OLED bus):\n");
-    for (uint8_t a = 0x08; a <= 0x77; a++) {
-        if (i2c_ping_address((uint8_t)(a << 1), 50) == I2C_STATUS_SUCCESS) {
-            printf("  ACK at 0x%02X\n", a);
-        }
-    }
-    printf("I2C scan done.\n");
-}
-#endif
-
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
@@ -676,22 +629,6 @@ void housekeeping_task_user(void) {
         }
     }
 
-#ifdef OLED_I2C_SCAN
-    // Diagnostic build only: re-run the status-OLED bus scan a few times after boot
-    // so a `qmk console` attached after enumeration still catches it (the oled_init
-    // scan prints before USB is up and is otherwise lost). Bounded, then silent.
-    static uint8_t  scan_repeats = 0;
-    static uint32_t scan_timer   = 0;
-    if (scan_repeats < BOOT_BANNER_REPEATS) {
-        if (scan_timer == 0) {
-            scan_timer = timer_read32();
-        } else if (timer_elapsed32(scan_timer) >= BOOT_BANNER_INTERVAL_MS) {
-            oled_i2c_scan();
-            scan_timer = timer_read32();
-            scan_repeats++;
-        }
-    }
-#endif
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful
@@ -2920,54 +2857,6 @@ void keyboard_pre_init_user(void) {
     boot_trace(U"0");
 #endif
 
-#ifdef OLED_I2C_GPIO_TEST
-    // Bring-up (opt-in, off by default): prove the status-OLED I2C pins are alive and
-    // identify which physical header pad is which GPIO, WITHOUT any I2C or a display.
-    // Runs here in keyboard_post_init_user, i.e. BEFORE oled_driver_init()->i2c_init(),
-    // so nothing else is driving these pins during the test. Drives SDA(GP22) at ~1 Hz
-    // and SCL(GP23) at ~0.25 Hz as push-pull outputs for ~30 s — slow enough to read on
-    // a multimeter — the two DIFFERENT blink rates let you tell the pads apart with NO
-    // console: the pad that toggles fast is GP22/SDA (should be E4); the slow one is
-    // GP23/SCL (should be E3).
-    //   - a pad that never moves  -> open/cold joint between the RP2040 and that pad
-    //   - E3 blinks fast / E4 slow -> your header pad identity is reversed (crossing helps)
-    //   - both move as labelled    -> MCU side is fine; the fault is on the display side
-    // Afterwards the pins are restored to input so oled_init can re-mux them to I2C.
-    printf("GPIO test: driving SDA(GP22)@~1Hz + SCL(GP23)@~0.25Hz for 30s (measure E4/E3)\n");
-    gpio_set_pin_output(I2C1_SDA_PIN);
-    gpio_set_pin_output(I2C1_SCL_PIN);
-    uint32_t gt0 = timer_read32();
-    while (timer_elapsed32(gt0) < 30000) {
-        uint32_t e = timer_elapsed32(gt0);
-        bool sda = (e / 500)  & 1;   // ~1 Hz
-        bool scl = (e / 2000) & 1;   // ~0.25 Hz
-        gpio_write_pin(I2C1_SDA_PIN, sda);
-        gpio_write_pin(I2C1_SCL_PIN, scl);
-        if ((e % 2000) < 10) printf("GPIO test: SDA(GP22/E4)=%d SCL(GP23/E3)=%d\n", (int)sda, (int)scl);
-        wait_ms(10);
-    }
-    printf("GPIO test done.\n");
-#endif
-
-#ifdef OLED_I2C_GPIO_TEST_SCL
-    // Bring-up (opt-in): blink ONLY SCL(GP23/E3) at ~1 Hz for 30 s, leaving SDA
-    // untouched — one moving pin is easiest to catch on a multimeter. If E3 swings
-    // 0<->3.3 V here, GP23 reaches the pad (the earlier "stuck at 3.3 V" was probe
-    // contact); if it still sits at ~3.3 V, the GP23->E3 joint is genuinely open.
-    printf("GPIO test: driving ONLY SCL(GP23/E3)@~1Hz for 30s (measure E3)\n");
-    gpio_set_pin_output(I2C1_SCL_PIN);
-    uint32_t st0 = timer_read32();
-    while (timer_elapsed32(st0) < 30000) {
-        uint32_t e = timer_elapsed32(st0);
-        bool scl = (e / 500) & 1;   // ~1 Hz
-        gpio_write_pin(I2C1_SCL_PIN, scl);
-        if ((e % 1000) < 10) printf("GPIO test: SCL(GP23/E3)=%d\n", (int)scl);
-        wait_ms(10);
-    }
-    gpio_set_pin_input_high(I2C1_SCL_PIN);
-    printf("GPIO test (SCL) done.\n");
-#endif
-
     gpio_set_pin_input_high(I2C1_SDA_PIN);
 }
 
@@ -2989,9 +2878,6 @@ void eeconfig_init_user(void) {
 
 // Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.
 oled_rotation_t oled_init_user(oled_rotation_t rotation){
-#ifdef OLED_I2C_SCAN
-    oled_i2c_scan();   // also re-emitted from housekeeping so a late console catches it
-#endif
     oled_off();
     oled_clear();
     oled_render();

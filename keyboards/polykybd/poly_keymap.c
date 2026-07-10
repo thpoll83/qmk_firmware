@@ -2949,6 +2949,25 @@ void keyboard_pre_init_user(void) {
     printf("GPIO test done.\n");
 #endif
 
+#ifdef OLED_I2C_GPIO_TEST_SCL
+    // Bring-up (opt-in): blink ONLY SCL(GP23/E3) at ~1 Hz for 30 s, leaving SDA
+    // untouched — one moving pin is easiest to catch on a multimeter. If E3 swings
+    // 0<->3.3 V here, GP23 reaches the pad (the earlier "stuck at 3.3 V" was probe
+    // contact); if it still sits at ~3.3 V, the GP23->E3 joint is genuinely open.
+    printf("GPIO test: driving ONLY SCL(GP23/E3)@~1Hz for 30s (measure E3)\n");
+    gpio_set_pin_output(I2C1_SCL_PIN);
+    uint32_t st0 = timer_read32();
+    while (timer_elapsed32(st0) < 30000) {
+        uint32_t e = timer_elapsed32(st0);
+        bool scl = (e / 500) & 1;   // ~1 Hz
+        gpio_write_pin(I2C1_SCL_PIN, scl);
+        if ((e % 1000) < 10) printf("GPIO test: SCL(GP23/E3)=%d\n", (int)scl);
+        wait_ms(10);
+    }
+    gpio_set_pin_input_high(I2C1_SCL_PIN);
+    printf("GPIO test (SCL) done.\n");
+#endif
+
     gpio_set_pin_input_high(I2C1_SDA_PIN);
 }
 

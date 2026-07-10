@@ -22,3 +22,7 @@ OPT_DEFS += -DLANG_SLOTS_PER_PAGE=18
 # alive. Fast pad = GP22/SDA(E4), slow = GP23/SCL(E3). A dead pad = open joint
 # MCU-side; swapped rates = reversed pad identity. Re-comment after.
 # OPT_DEFS += -DOLED_I2C_GPIO_TEST
+
+# Same idea but blink ONLY SCL(GP23/E3) at ~1 Hz for 30 s (SDA untouched) — one
+# moving pin is easiest to catch on a multimeter with iffy probe contact.
+# OPT_DEFS += -DOLED_I2C_GPIO_TEST_SCL

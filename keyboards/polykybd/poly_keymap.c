@@ -611,13 +611,22 @@ static void emit_boot_banner(void) {
     // forms). USB_VBUS_PIN (GP24) is what stock master detection keys on; a non-USB
     // half reading it high is the "both master" failure. transport_connected shows
     // whether this master currently sees the slave.
+    // rx_frames = split transactions THIS half has received from the other half.
+    // On the slave: >0 proves master->slave carries data (so a stuck link is the
+    // slave->master reply path); ==0 means master->slave itself is dead.
 #ifdef USB_VBUS_PIN
-    uprintf("   link: vbus_pin=%d transport_connected=%d\n",
-            (int)gpio_read_pin(USB_VBUS_PIN), (int)is_transport_connected());
+    uprintf("   link: vbus_pin=%d transport_connected=%d rx_frames=%lu\n",
+            (int)gpio_read_pin(USB_VBUS_PIN), (int)is_transport_connected(),
+            (unsigned long)get_split_rx_frames());
 #else
-    uprintf("   link: transport_connected=%d\n", (int)is_transport_connected());
+    uprintf("   link: transport_connected=%d rx_frames=%lu\n",
+            (int)is_transport_connected(), (unsigned long)get_split_rx_frames());
 #endif
 }
+
+#ifdef POLYKYBD_LINK_DIAG
+static void render_link_diag(void);   // defined near show_splash_screen()
+#endif
 
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
@@ -639,6 +648,17 @@ void housekeeping_task_user(void) {
             banner_repeats++;
         }
     }
+
+#ifdef POLYKYBD_LINK_DIAG
+    // Bring-up: repaint the split-link status on the top keycap row ~1×/s so the
+    // slave (no console) shows live whether it is receiving. Overwrites row-0
+    // legends by design — this is a diagnostic build only.
+    static uint32_t link_diag_timer = 0;
+    if (link_diag_timer == 0 || timer_elapsed32(link_diag_timer) >= 750) {
+        render_link_diag();
+        link_diag_timer = timer_read32();
+    }
+#endif
 
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
@@ -2623,6 +2643,41 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     update_performed();
 };
+
+#ifdef POLYKYBD_LINK_DIAG
+// Bring-up: paint the split-link state on THIS half's top keycap row, so the
+// slave (which has no USB console) reveals whether it is receiving. Layout, one
+// glyph per keycap on matrix row 0:
+//   [role] [number...]
+//   role   = 'M' master / 'S' slave
+//   number = slave: frames RECEIVED from the master (get_split_rx_frames) — climbs
+//            iff master->slave carries data; stays 0 if that direction is dead.
+//            master: transport-fail count (get_link_transport_fail) — climbs while
+//            the slave's reply never gets back.
+// Read together across both halves: slave number climbing + master fails climbing
+// => master->slave OK, slave->master (reply) dead; slave number stuck at 0
+// => master->slave itself is dead. Enabled only with `-e POLYKYBD_LINK_DIAG=yes`.
+static void render_link_diag(void) {
+    const bool master = is_keyboard_master();
+    uint32_t   val    = master ? get_link_transport_fail() : get_split_rx_frames();
+
+    uint32_t buf[8];
+    uint8_t  n = 0;
+    buf[n++] = master ? U'M' : U'S';
+
+    // Decimal-format val (max 5 digits) into the keycaps after the role glyph.
+    char digits[5];
+    int  d = 0;
+    if (val == 0) {
+        buf[n++] = U'0';
+    } else {
+        while (val && d < 5) { digits[d++] = (char)('0' + (val % 10)); val /= 10; }
+        while (d) { buf[n++] = (uint32_t)digits[--d]; }
+    }
+    buf[n] = 0;
+    display_message(0, 0, buf, &FreeSansBold24pt7b);
+}
+#endif
 
 // Displays splash screen with polykybd/split72 logo and initializes displays with refresh.
 void show_splash_screen(void) {

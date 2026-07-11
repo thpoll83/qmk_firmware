@@ -50,6 +50,16 @@ ifeq ($(strip $(POLYKYBD_MASTER_LEFT)), yes)
     OPT_DEFS += -DPOLYKYBD_MASTER_LEFT
 endif
 
+# split42 bring-up diagnostic: paint the split-link state on the TOP KEYCAP ROW of
+# each half (role + received/failed frame count), so the slave — which has no USB
+# console — visibly reveals whether it is receiving from the master. Opt-in only:
+# `-e POLYKYBD_LINK_DIAG=yes`. Overwrites the row-0 legends while running; use it
+# only for link bring-up, never in a shipping image. See render_link_diag() in
+# poly_keymap.c.
+ifeq ($(strip $(POLYKYBD_LINK_DIAG)), yes)
+    OPT_DEFS += -DPOLYKYBD_LINK_DIAG
+endif
+
 # "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).

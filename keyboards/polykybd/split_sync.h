@@ -71,6 +71,11 @@ typedef struct _mru_sync_t {
 // bytes are transmitted, so the uint32 crc's tail padding never goes on the wire.
 #define MRU_SYNC_BYTES (4u + MRU_EMOJI_PACKED + MRU_CAP)
 
+// Split-link RX diagnostic (bring-up): count of transactions this half has
+// received from the other half. Non-zero on the slave proves master->slave carries
+// data; see split_sync.c for details.
+uint32_t get_split_rx_frames(void);
+
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 

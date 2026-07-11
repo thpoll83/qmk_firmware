@@ -33,16 +33,25 @@ fetch() {
 # Parse noto-fonts.yaml into "<url>\t<dest>" lines (PyYAML; already required by
 # generate_fonts.py in this same dir).  All the Noto sources — including Math,
 # Canadian Aboriginal, Cherokee and NotoColorEmoji — live in that catalog.
-while IFS=$'\t' read -r url dest; do
-    [ -n "$url" ] && fetch "$url" "$dest"
-done < <(python3 - "$YAML" <<'PY'
+# Capture into a variable FIRST (not a process substitution), checking the
+# parser's exit status explicitly — `set -e` does NOT abort on a failed
+# command-substitution in an assignment, so a parser failure (missing PyYAML,
+# unreadable/invalid YAML) would otherwise feed the loop an empty list and
+# "succeed" having downloaded nothing.
+if ! entries="$(python3 - "$YAML" <<'PY'
 import sys, yaml
 with open(sys.argv[1], encoding="utf-8") as f:
     doc = yaml.safe_load(f)
 for e in doc.get("fonts", []):
     print(f"{e['url']}\t{e['dest']}")
 PY
-)
+)"; then
+    echo "error: failed to parse $YAML (is PyYAML installed?)" >&2
+    exit 1
+fi
+while IFS=$'\t' read -r url dest; do
+    [ -n "$url" ] && fetch "$url" "$dest"
+done <<< "$entries"
 
 # Alcarin Tengwar (OFL 1.1) — the "fantasy" font-pack bundle's alternative script
 # (Lord-of-the-Rings tengwar). Glyphs are on the CSUR Private-Use block; the

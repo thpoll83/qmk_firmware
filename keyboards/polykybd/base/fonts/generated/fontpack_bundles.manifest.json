@@ -11,7 +11,7 @@
       "index": 0,
       "slot_offset": 4096,
       "slot_size": 98304,
-      "total_size": 33980,
+      "total_size": 33788,
       "font_count": 12,
       "fonts": [
         {
@@ -343,7 +343,7 @@
       "index": 5,
       "slot_offset": 561152,
       "slot_size": 786432,
-      "total_size": 215272,
+      "total_size": 214344,
       "font_count": 77,
       "fonts": [
         {

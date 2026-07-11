@@ -328,6 +328,101 @@ def build_pack(order: list[str], resident: set[str], parsed: dict[str, ParsedFon
     return data, manifest
 
 
+# ─────────────────────── shadowed-glyph dedupe (dead weight) ─────────────────
+#
+# Front-to-back precedence means the firmware only ever draws a codepoint from the
+# lowest-gidx font that has a glyph for it (fontpack_assemble: resident set first,
+# then the pack fonts by their stored gidx). Any glyph in a *later* font that is
+# byte-identical to that winner never renders — it is pure dead weight in flash.
+# `prune_shadowed_glyphs()` empties those copies before the bundles are serialized;
+# because only never-drawn duplicates are removed, the assembled render is provably
+# unchanged (asserted below). Only PACK (non-resident) fonts are touched — resident
+# fonts are compiled in, not part of a bundle.
+
+def _glyph_key(pf: ParsedFont, i: int):
+    """A byte-identity key for glyph `i` (metrics + exact bitmap), or None if empty."""
+    o, w, h, xa, xo, yo = pf.glyphs[i]
+    if w == 0 or h == 0:
+        return None
+    n = (w * h + 7) // 8
+    return (w, h, xa, xo, yo, bytes(pf.bitmaps[o:o + n]))
+
+
+def _repack_font_without(pf: ParsedFont, empty_idxs: set[int]) -> ParsedFont:
+    """Copy of `pf` with the glyphs in `empty_idxs` emptied (width/height 0) and the
+    bitmap blob repacked so the removed bytes are reclaimed and every surviving
+    glyph's bitmapOffset is recomputed. Font count and [first,last] are unchanged
+    (empty glyphs keep their slot), so no gidx / index shifts."""
+    new_glyphs: list[tuple[int, int, int, int, int, int]] = []
+    blob = bytearray()
+    for i, (o, w, h, xa, xo, yo) in enumerate(pf.glyphs):
+        if i in empty_idxs:
+            new_glyphs.append((len(blob), 0, 0, 0, 0, 0))       # drop the bitmap
+        elif w == 0 or h == 0:
+            new_glyphs.append((len(blob), w, h, xa, xo, yo))    # already empty
+        else:
+            new_glyphs.append((len(blob), w, h, xa, xo, yo))
+            blob += pf.bitmaps[o:o + (w * h + 7) // 8]
+    return ParsedFont(pf.symbol, pf.first, pf.last, pf.yadvance, new_glyphs, bytes(blob))
+
+
+def _assembly_seq(order: list[str], resident: set[str]) -> list[str]:
+    """Symbol order the firmware assembles in: the resident set first, then the pack
+    fonts in ALL_FONTS priority (mirrors fontpack_assemble)."""
+    return [s for s in order if s in resident] + [s for s in order if s not in resident]
+
+
+def _assembled(order: list[str], resident: set[str],
+               parsed: dict[str, ParsedFont]) -> dict[int, tuple[str, tuple]]:
+    """{codepoint: (winning_symbol, glyph_key)} — what the keyboard actually draws."""
+    out: dict[int, tuple[str, tuple]] = {}
+    for sym in _assembly_seq(order, resident):
+        pf = parsed.get(sym)
+        if pf is None:
+            continue
+        for i in range(len(pf.glyphs)):
+            k = _glyph_key(pf, i)
+            if k is not None:
+                out.setdefault(pf.first + i, (sym, k))
+    return out
+
+
+def prune_shadowed_glyphs(order: list[str], resident: set[str],
+                          parsed: dict[str, ParsedFont]) -> list[tuple[str, int, int]]:
+    """Empty every pack glyph that is byte-identical to, and shadowed by, the font
+    that actually renders that codepoint. Mutates `parsed` in place; returns
+    ``[(symbol, glyphs_emptied, bytes_reclaimed)]`` sorted by bytes desc.
+
+    A zero-visual-change flash optimisation: only never-drawn duplicates are removed,
+    and the assembled render is asserted unchanged."""
+    before = _assembled(order, resident, parsed)
+    to_empty: dict[str, set[int]] = {}
+    for sym in order:
+        if sym in resident or sym not in parsed:
+            continue
+        pf = parsed[sym]
+        for i in range(len(pf.glyphs)):
+            k = _glyph_key(pf, i)
+            if k is None:
+                continue
+            win = before.get(pf.first + i)
+            if win is not None and win[0] != sym and win[1] == k:   # shadow == winner
+                to_empty.setdefault(sym, set()).add(i)
+
+    saved: list[tuple[str, int, int]] = []
+    for sym, idxs in to_empty.items():
+        pf = parsed[sym]
+        b = sum((pf.glyphs[i][1] * pf.glyphs[i][2] + 7) // 8 for i in idxs)
+        parsed[sym] = _repack_font_without(pf, idxs)
+        saved.append((sym, len(idxs), b))
+
+    if _assembled(order, resident, parsed) != before:
+        raise AssertionError("prune_shadowed_glyphs changed the assembled render — "
+                             "refusing to emit a pack that draws differently")
+    saved.sort(key=lambda t: -t[2])
+    return saved
+
+
 def extra_pack_fonts(cfg: dict, fonts_dir: Path) -> dict[str, ParsedFont]:
     """Fonts appended to the pack from standalone headers (index.pack_extra_fonts)
     — e.g. the language-layer flags, which are generated outside fonts.yaml."""
@@ -651,6 +746,22 @@ def _cmd_selftest(args) -> int:
     # bit-flip → crc must fail
     bad = bytearray(data); bad[-1] ^= 0xFF
     assert not parse_pack(bytes(bad)).crc_ok
+
+    # dedupe: a lower-priority font that draws 0x41 byte-identically to the winner
+    # gets that glyph emptied (its bytes reclaimed); its unique 0x42 stays; the
+    # winner and the assembled render are untouched.
+    A = ParsedFont("A", 0x41, 0x41, 12, [(0, 3, 4, 5, 0, 0)], b"\xAB\xC0")
+    B = ParsedFont("B", 0x41, 0x42, 12,
+                   [(0, 3, 4, 5, 0, 0), (2, 2, 2, 3, 0, 0)], b"\xAB\xC0\xF0")
+    parsed = {"A": A, "B": B}
+    before = _assembled(["A", "B"], set(), parsed)
+    saved = prune_shadowed_glyphs(["A", "B"], set(), parsed)
+    assert saved == [("B", 1, 2)], saved
+    assert parsed["A"].bitmaps == b"\xAB\xC0"                 # winner untouched
+    assert parsed["B"].glyphs[0][1:3] == (0, 0)              # 0x41 emptied
+    assert parsed["B"].glyphs[1][1:3] == (2, 2)              # 0x42 kept
+    assert parsed["B"].bitmaps == b"\xF0"                    # only 0x42's bytes remain
+    assert _assembled(["A", "B"], set(), parsed) == before   # render unchanged
     print("selftest OK")
     return 0
 

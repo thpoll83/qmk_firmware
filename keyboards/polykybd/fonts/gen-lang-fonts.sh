@@ -93,6 +93,30 @@ done
 } > "$FLAG_OUT"
 echo "wrote $FLAG_OUT ($(grep -c '// seq\[' "$FLAG_OUT") flags)"
 
+# Flag render-settings sidecar for the host font-pack editor: the flag font is
+# NOT in fonts.yaml, so generate_fonts.py emits no render record for it.  Without
+# this the host can't rebuild a flag (sequence mode + the per-flag regional-
+# indicator pair).  Mirrors the fontconvert flags above + the seq.  ⚠ Mirrored
+# byte-identically in PolyKybdHost/polyhost/res/fontpack/lang_flags.json (cmp).
+FLAGS_JSON="base/fonts/generated/lang_flags.json"
+SEQ="$seq" FLAG_BASE="$FLAG_BASE" "${PYTHON:-python3}" - "$FLAGS_JSON" <<'PY'
+import json, os, sys
+seq = os.environ["SEQ"]
+rec = {
+  "_comment": "Render settings for the language-layer country flag font (base/fonts/flag_fonts.h, gen-lang-fonts.sh). Mirrored byte-identically in PolyKybdHost/polyhost/res/fontpack/lang_flags.json — keep both in sync (cmp). Lets the host font-pack editor rebuild a single flag: sequence-mode, source NotoColorEmoji, group = cp - seq_first.",
+  "seq_first": int(os.environ["FLAG_BASE"], 16),
+  "count": len([g for g in seq.split(",") if g.strip()]),
+  "source": "Noto_CEmoji/NotoColorEmoji-Regular.ttf",
+  "source_file": "NotoColorEmoji-Regular.ttf",
+  "size": 20, "grayscale": True, "render_height": 54, "max_width": 72,
+  "outline": 1, "dither": "fs", "exposure": -0.1, "composite": False,
+  "sequence": seq,
+}
+with open(sys.argv[1], "w") as f:
+    f.write(json.dumps(rec, indent=2, ensure_ascii=False) + "\n")
+PY
+echo "wrote $FLAGS_JSON"
+
 # ── tiny label font (printable ASCII) ────────────────────────────────────────
 {
     echo "// Copyright 2025 thpoll83"

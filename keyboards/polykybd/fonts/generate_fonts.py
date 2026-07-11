@@ -41,6 +41,11 @@ PACK_MANIFEST = "fontpack.manifest.json"
 # Split-pack: per-bundle ABI contract + the C flash-layout header (firmware/host).
 BUNDLES_MANIFEST = "fontpack_bundles.manifest.json"
 BUNDLE_LAYOUT_H = "fontpack_layout.h"
+# Per-font render settings (global ALL_FONTS index -> the fonts.yaml options it was
+# generated with), shipped to the host so its font-pack *edit* dialog can prefill
+# the exact settings a glyph was built with.  Mirrored in PolyKybdHost
+# (polyhost/res/fontpack/fontpack_render_settings.json) — keep in sync.
+RENDER_SETTINGS = "fontpack_render_settings.json"
 
 # Order in which a font entry's fields map onto fontconvert flags.  Flag order
 # does not affect the rendered bytes (fontconvert parses options order-free); it
@@ -126,6 +131,48 @@ def compose_category(blocks: list[str]) -> str:
     return "#pragma once\n\n" + "\n".join(blocks)
 
 
+# Render-option fields a host can re-apply when rebuilding a glyph (the fontconvert
+# flags), plus a little provenance.  Booleans/numbers as fonts.yaml carries them.
+_SETTINGS_FIELDS = [f for f, _ in FIELD_FLAGS] + ["source", "variant", "category",
+                                                 "sequence", "seq_first"]
+
+
+def render_settings(entries, symbols, order, categories, sources) -> dict:
+    """Map each generated font's GLOBAL ALL_FONTS index -> the fonts.yaml render
+    settings it was generated with.  `symbols[i]` is the GFXfont symbol for
+    `entries[i]`; the global index is its position in `order` (the full ALL_FONTS
+    priority list).  Consumed by the host edit dialog to prefill the controls.
+
+    Also records `source_file` (the basename of the source font), so the host can
+    auto-resolve the .ttf from its download cache (basename matches noto-fonts.yaml)
+    instead of making the user re-pick it."""
+    pos = {sym: i for i, sym in enumerate(order)}
+    by_idx = {}
+    for entry, sym in zip(entries, symbols):
+        gi = pos.get(sym)
+        if gi is None:
+            continue
+        e = resolve(entry, categories)
+        rec = {k: e[k] for k in _SETTINGS_FIELDS if k in e}
+        # Sequence-mode glyphs carry their composite (-C) flag and base codepoint
+        # (-F) in extra_args; surface them explicitly so the host editor doesn't have
+        # to infer them (the matra/combining-mark fonts use `-F0xE1xx -C`).
+        xa = [str(a) for a in e.get("extra_args", [])]
+        if "-C" in xa:
+            rec["composite"] = True
+        for a in xa:
+            if a.startswith("-F") and len(a) > 2:
+                try:
+                    rec["seq_first"] = int(a[2:], 0)
+                except ValueError:
+                    pass
+        src = e.get("source")
+        if src in sources:
+            rec["source_file"] = os.path.basename(sources[src])
+        by_idx[str(gi)] = rec
+    return {"by_global_index": by_idx}
+
+
 def full_order(index: dict, symbols: list[str]) -> list[str]:
     """The full font priority order: prepended fonts, then the generated ones,
     then any pack-only extras (e.g. flags) appended at the end of the pack."""
@@ -186,6 +233,9 @@ def main() -> None:
     ap.add_argument("--bundle-version", metavar="ID=N", action="append", default=[],
                     help="content_version for one bundle, e.g. --bundle-version emoji=3 "
                          "(repeatable; bundles default to 0)")
+    ap.add_argument("--no-dedupe", action="store_true",
+                    help="keep byte-identical shadowed glyphs in the bundles (skip the "
+                         "dead-weight prune of glyphs a higher-priority font overdraws)")
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args()
 
@@ -223,6 +273,10 @@ def main() -> None:
         # Full priority order for the build tooling (firmware index has resident only).
         outputs[gen_dir / "all_fonts_order.json"] = \
             json.dumps({"order": order}, indent=2) + "\n"
+        # Per-font render settings keyed by global index, for the host edit dialog.
+        outputs[gen_dir / RENDER_SETTINGS] = \
+            json.dumps(render_settings(entries, symbols, order, categories, sources),
+                       indent=2) + "\n"
         # Derive the font-pack manifest from the freshly composed (in-memory)
         # headers so it stays consistent with them under --check.
         cat_texts = {c: compose_category(b) for c, b in cat_blocks.items() if b}
@@ -240,6 +294,14 @@ def main() -> None:
                 parsed_all.update(fontpack.parse_gfx_header(txt))
             parsed_all.update(fontpack.extra_pack_fonts(cfg, root / "base" / "fonts"))
             sym2cat = fontpack.symbol_categories_from_texts(cat_texts)
+            # Empty glyphs a higher-priority font already draws identically — dead
+            # weight in flash (they never render). Zero visual change; asserted.
+            if not args.no_dedupe:
+                saved = fontpack.prune_shadowed_glyphs(order, resident, parsed_all)
+                if saved:
+                    log(f"dedupe: emptied {sum(c for _, c, _ in saved)} shadowed glyphs, "
+                        f"{sum(b for _, _, b in saved):,} B reclaimed across "
+                        f"{len(saved)} pack fonts", args.quiet)
             bundle_vers = {}
             for spec in args.bundle_version:
                 bid, _, num = spec.partition("=")

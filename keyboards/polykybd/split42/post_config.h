@@ -34,3 +34,32 @@
 
 #undef  I2C1_SCL_PIN
 #define I2C1_SCL_PIN GP23
+
+// ---------------------------------------------------------------------------
+// split42 split-link bring-up overrides (bring-up diagnostics only).
+//
+// The shared config.h runs the split UART full-duplex two-wire with a firmware
+// TX/RX crossover (SERIAL_USART_PIN_SWAP). On the first split42 boards the
+// master->slave direction carries no data (the slave receives 0 frames — see the
+// LINK_DIAG keycap readout), while split72 works with the identical firmware. The
+// two remaining suspects are a swapped bridge conductor pair or a dead GP4 (RX)
+// path. These opt-in overrides A/B-test each without touching split72. post_config.h
+// wins because it is processed AFTER the shared config.h.
+//
+//   -e POLYKYBD_NO_PIN_SWAP=yes : keep full-duplex two-wire but DROP the firmware
+//       crossover. If the split42 bridge already crosses GP4/GP5 physically, the
+//       swap was double-crossing it; removing it restores the link.
+//   -e POLYKYBD_HALF_DUPLEX=yes : revert to single-wire half-duplex on GP5 only
+//       (the original PolyKybd link). Uses NO GP4 at all, so it works even if the
+//       GP4 conductor/buffer is dead — proving GP5 is the good wire.
+// ---------------------------------------------------------------------------
+
+#ifdef POLYKYBD_NO_PIN_SWAP
+#    undef SERIAL_USART_PIN_SWAP
+#endif
+
+#ifdef POLYKYBD_HALF_DUPLEX
+#    undef SERIAL_USART_FULL_DUPLEX
+#    undef SERIAL_USART_PIN_SWAP
+#    undef SERIAL_USART_RX_PIN
+#endif

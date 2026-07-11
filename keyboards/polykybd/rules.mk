@@ -60,6 +60,19 @@ ifeq ($(strip $(POLYKYBD_LINK_DIAG)), yes)
     OPT_DEFS += -DPOLYKYBD_LINK_DIAG
 endif
 
+# split42 split-link bring-up overrides (see split42/post_config.h). The keycap
+# LINK_DIAG readout showed master->slave carries no data on the first split42
+# boards; these A/B-test the two hardware suspects without touching split72.
+#   POLYKYBD_NO_PIN_SWAP=yes : full-duplex two-wire, drop the firmware TX/RX cross
+#                              (fixes it if the bridge conductors are physically swapped)
+#   POLYKYBD_HALF_DUPLEX=yes : single-wire half-duplex on GP5 only (no GP4 at all)
+ifeq ($(strip $(POLYKYBD_NO_PIN_SWAP)), yes)
+    OPT_DEFS += -DPOLYKYBD_NO_PIN_SWAP
+endif
+ifeq ($(strip $(POLYKYBD_HALF_DUPLEX)), yes)
+    OPT_DEFS += -DPOLYKYBD_HALF_DUPLEX
+endif
+
 # "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).

@@ -1886,6 +1886,13 @@ static void draw_legend_cx(const uint32_t* text, int8_t y) {
 }
 
 void update_displays(enum refresh_mode mode) {
+#ifdef POLYKYBD_LINK_DIAG
+    // Diagnostic build: render_link_diag() owns the keycaps so the link status
+    // stays readable. Suppress the normal legend re-render, which would otherwise
+    // repaint over it (e.g. the slave redrawing legends when a sync lands).
+    (void)mode;
+    return;
+#endif
     // Doom easter egg: while game mode owns the keycaps, the blitter is the
     // only writer — a legend re-render here would tear the game frame.
     if (doom_mode_active()) {

@@ -26,6 +26,28 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 
+## Continuous integration (PR checks)
+
+A PolyKybd PR runs a handful of checks — know which ones **gate** and which are
+inherited-upstream noise:
+
+- **`Build firmware`** and **`HIL test (split72)`** (the polykybd-ctnd rig) are the
+  **real** checks; these are what must go green. Use the `diagnose-hil-failure` skill
+  for the HIL side.
+- **`PR Lint keyboards`** (job `lint`, `.github/workflows/lint.yml`) and **`Pull
+  Request Labeler`** (job `triage`, `labeler.yml`, `pull_request_target`) are **stock
+  upstream QMK** workflows the fork inherited. `lint` runs `qmk lint --strict` on the
+  changed keyboards; the labeler auto-labels by path. They **pass green on every normal
+  commit** and are **non-blocking**.
+- ⚠️ **A red `lint`/`triage` where BOTH cancelled at the same second (~16 min in) is an
+  infra/runner cancellation, NOT a code error** — GitHub surfaces a cancelled run as a
+  red "failure". Confirm via the workflow **run history** (they'll be green on the
+  prior commits) and reproduce locally: `qmk lint --strict --keyboard polykybd/split72`
+  (+ `split42`), `qmk ci-validate-keyboard-targets`, `qmk ci-validate-aliases`. If
+  those are clean, just **re-run the two jobs** — there is nothing to fix.
+- The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
+  above.
+
 ## Releases
 
 Firmware releases are **GitHub Releases** (tag `PolyKybd-fw-vX.Y.Z`; `FW_VERSION` in
@@ -367,6 +389,60 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
   settings dialog; `polyctl glyph-script [standard|tengwar|runes|…|braille]`. Rig:
   `test_glyph_script_round_trip` (`min_protocol: 9`) + `test_glyph_script_expansion`
   (`min_protocol: 10`, walks values 2/6/10 + out-of-range NACK).
+
+### LTR-559 light+proximity sensor (`base/ltr559.c/.h`, split72) — ENTIRELY OPTIONAL
+
+An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C
+addr `0x23`) on the split72 expansion port. It **shares the Cirque I2C0 bus**
+(GP0/GP1) — no new pins. It is **compiled in unconditionally** (`split72/rules.mk`
+always adds `base/ltr559.c` + `-DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE`) but is a
+**clean no-op when no sensor is fitted**: the probe fails and the driver disables
+itself after a few bounded retries (`LTR559_MAX_RETRIES`). So anyone who solders the
+part gets it and nobody else pays more than a one-time probe. The shared code stays
+`#ifdef POLYKYBD_LTR559`-guarded, so **split42** (no expansion port) is unaffected —
+only split72 defines the macros.
+
+- **Side-agnostic** — auto-detected on **whichever half it's soldered to**.
+  `ltr559_init()`/`ltr559_task()` run on **both** halves; the one that answers uses
+  it, the other gives up after the bounded retries. ⚠️ Do **not** re-gate on
+  `is_right_side()` — it was, and a left/master-soldered sensor was never read (field).
+- **Slave→master backchannel** — brightness/idle decisions are master-only, but the
+  sensor may be on the slave, so the master **pulls** its values over a **generic
+  op-dispatched RPC** `USER_SYNC_SLAVE_DATA` (a `kind` byte selects the payload;
+  `SLAVE_DATA_SENSOR` → `{avg lux, prox}`). Works in either USB orientation and is
+  reusable for other slave-side data; consumes one split-transaction slot, guarded by
+  `POLYKYBD_LTR559_DRIVE`. If the master holds the sensor it reads locally instead.
+- **Auto-brightness** (`poly_ltr559_drive()`, master-only, every `LTR559_DRIVE_MS`)
+  feeds the 5 s average lux through the **same volatile/host-auto path the host
+  daylight feature uses** (`set_brightness_auto_mode`/`set_auto_brightness_value`). So
+  the sensor drives **only while auto mode is on**; it engages auto **once** (first
+  real reading); a **manual** change (preset keys / host explicit set) turns auto OFF
+  and the sensor **backs off** (its per-tick push no-ops while auto is off and the
+  `engaged` static never re-engages) — **manual always wins** until auto is re-enabled
+  or reboot. Refreshing ~0.5 s vs the host's ~10-min daylight, it overrides host
+  daylight values while auto is on.
+- **Boot dark-screen guards** (learned the hard way) — `ltr559_avg_lux()` is a
+  **growing-window** average (0 only until the first VALID sample). Two guards keep it
+  off the near-off floor: (1) `poly_ltr559_drive()` doesn't engage while `avg == 0`
+  (first ~1 s), so boot holds the manual/restored brightness instead of dipping; (2)
+  `lux_to_contrast()` floors at `LTR559_MIN_CONTRAST` so it never drives below a
+  visible dim level (never `B=1`/`DISP_OFF`).
+- **Proximity → idle-inhibit** — 11-bit **relative reflectance** (not calibrated
+  distance; ~5–6 cm max). `prox > LTR559_NEAR_THRESHOLD` wakes the displays +
+  `update_performed()`. Uses the PS channel (works in the dark), NOT the ambient-shadow
+  drop on the ALS channels. ⚠️ The resting baseline is **housing-dependent** — ~129 on
+  the open bench but ~325 once mounted (enclosure walls reflect IR back); re-check
+  `PRX` and the threshold after any housing/hole change.
+- **Measured tuning** (hardware): proximity resting ~129 bench / ~325 housed, ~5 cm
+  400, ~1 cm 1000, hole covered ~2000 (saturated) → `NEAR_THRESHOLD` 350. Lux (sqrt
+  curve) `LUX_FULL_REF` 100 → B≈4 dark room, 26 @ 28 lux, 35 @ 50 lux, full @ 100+ lux;
+  night floor `MIN_CONTRAST` 4; `LTR559_ALS_GAIN` 4×.
+- **Telemetry** — a 10-min `uprintf` heartbeat in housekeeping, gated on
+  `ltr559_available()` so only the sensor half logs (`LTR-559: lux=.. avg=.. prox=..
+  ch0=.. ch1=.. B=..`). The status-OLED test readout + I2C bring-up diagnostics were
+  removed once it worked; the bus scan is kept as a disabled `#if 0` reference block in
+  `ltr559.c`. No shared timed-log framework yet — see `readme.md` "Diagnostics" →
+  "Timed console logs".
 
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.

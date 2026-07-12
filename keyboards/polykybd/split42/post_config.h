@@ -63,3 +63,25 @@
 #    undef SERIAL_USART_PIN_SWAP
 #    undef SERIAL_USART_RX_PIN
 #endif
+
+// ---------------------------------------------------------------------------
+// Bitbang split-transport override (bring-up diagnostics only).
+//
+//   -e POLYKYBD_SERIAL_BITBANG=yes : SERIAL_DRIVER = bitbang (set in rules.mk).
+//
+// The bitbang driver is a pure-software, single-wire half-duplex UART on one pin
+// (SOFT_SERIAL_PIN). It does NOT use the RP2040 PIO block or any of the
+// SERIAL_USART_* config, so drop those defines and point it at GP5 (the wire that
+// is straight-through on the split cable, GP5<->GP5). If the master->slave link
+// comes alive on bitbang while it is dead on the PIO vendor driver, the PIO
+// peripheral — not the board wiring — is the fault. Requires PAL_USE_WAIT +
+// PAL_USE_CALLBACKS (already enabled in split42/halconf.h).
+// ---------------------------------------------------------------------------
+#ifdef POLYKYBD_SERIAL_BITBANG
+#    undef SERIAL_USART_FULL_DUPLEX
+#    undef SERIAL_USART_PIN_SWAP
+#    undef SERIAL_USART_TX_PIN
+#    undef SERIAL_USART_RX_PIN
+#    undef SOFT_SERIAL_PIN
+#    define SOFT_SERIAL_PIN GP5
+#endif

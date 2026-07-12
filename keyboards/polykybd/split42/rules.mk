@@ -1,7 +1,18 @@
 # Build Options
 
 # Split keyboard setup
-SERIAL_DRIVER = vendor
+# Bring-up test: -e POLYKYBD_SERIAL_BITBANG=yes swaps the split transport off the
+# RP2040 PIO (vendor driver) onto QMK's software bit-banged serial driver, which
+# drives SOFT_SERIAL_PIN (GP5) directly with GPIO + delay-loop bit timing. This
+# bypasses the PIO peripheral entirely, so if the master->slave link starts working
+# on bitbang it proves the fault is the PIO block, not the wiring (the two-board
+# GPIO loopback already showed GP4/GP5 conduct end-to-end). See split42/post_config.h.
+ifeq ($(strip $(POLYKYBD_SERIAL_BITBANG)), yes)
+    SERIAL_DRIVER = bitbang
+    OPT_DEFS += -DPOLYKYBD_SERIAL_BITBANG
+else
+    SERIAL_DRIVER = vendor
+endif
 SPLIT_KEYBOARD = yes
 
 # OLED — 128×32 SSD1306

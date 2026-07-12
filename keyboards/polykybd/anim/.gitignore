@@ -1,0 +1,4 @@
+# Generated preview artifacts (regenerate with preview_boot_anim.py)
+*.gif
+*.png
+__pycache__/

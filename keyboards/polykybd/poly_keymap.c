@@ -2706,6 +2706,13 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
             local_state->overlay_flags &= ~SAVE_EEPROM;
             break;
+        case KC_EDEN:
+            // Replay the one-time startup ("Eden") animation. Start it on this
+            // (master) half and bump the synced nonce so the slave replays too
+            // (mirrors HID cmd 31). Input is swallowed while it plays.
+            startup_anim_start();
+            local_state->anim_nonce++;
+            break;
         // ── Language layer: region tabs, paging, MRU controls, slot/MRU select ──
         case KC_LANG_CAT_BASE ... KC_LANG_PAGE_PREV - 1:
             lang_select_region((uint8_t)(keycode - KC_LANG_CAT_BASE));

@@ -165,6 +165,10 @@ enum my_keycodes {
     // a reserved tombstone — it is not a detection target (QMK OS_IOS maps to
     // POLY_OS_MACOS) and a persisted legacy 5 is migrated to macOS on load.
     KC_OS_SET_END,
+
+    // Settings-layer key: replay the one-time startup ("Eden") animation on demand.
+    // Appended at the very end (QK_USER range) so no existing keycode is renumbered.
+    KC_EDEN,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_DAUTO < (int)KCL_ENUS, "Overlap detected");

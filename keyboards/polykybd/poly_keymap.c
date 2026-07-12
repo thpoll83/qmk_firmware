@@ -649,19 +649,27 @@ void housekeeping_task_user(void) {
 #ifdef POLYKYBD_PIN_LOOPBACK
     // split42 bring-up: two-board GP4/GP5 loopback over the bridge cable.
 #  ifdef POLYKYBD_PIN_LOOPBACK_DRIVE
-    // DRIVER: toggle GP4/GP5 push-pull ~1 Hz so the reader can see the line follow.
+    // DRIVER: drive GP4 and GP5 push-pull at DIFFERENT rates (GP4 ~1.4 s period,
+    // GP5 ~2.2 s period — deliberately non-harmonic so all four (GP4,GP5) level
+    // combinations 00/01/10/11 occur over ~7 s). Driving them independently is
+    // what lets the reader prove the two conductors are SEPARATE: if GP4 and GP5
+    // are shorted to each other anywhere (bridge/solder blob), the reader can NEVER
+    // show 01 or 10 — it will only ever see 00 and 11 (or contention mush). A
+    // GP4<->GP5 bridge ties the split UART's TX to its RX and would kill the link
+    // while passing the old same-level loopback silently.
     gpio_set_pin_output(GP4);
     gpio_set_pin_output(GP5);
-    static uint32_t drv_t = 0; static bool drv_lvl = false;
-    if (drv_t == 0 || timer_elapsed32(drv_t) >= 500) {
-        drv_t = timer_read32();
-        drv_lvl = !drv_lvl;
-        gpio_write_pin(GP4, drv_lvl);
-        gpio_write_pin(GP5, drv_lvl);
-    }
+    uint32_t drv_now = timer_read32();
+    gpio_write_pin(GP4, (drv_now / 700)  & 1);   // toggles every 700 ms
+    gpio_write_pin(GP5, (drv_now / 1100) & 1);   // toggles every 1100 ms
 #  else
     // READER: GP4/GP5 as inputs with pull-up; show the two levels on the top keycap
-    // row as digits (blink = conductor good, stuck 0 = short to GND, stuck 1 = open).
+    // row as digits. With the phased driver above, WATCH FOR INDEPENDENCE:
+    //   - GP4 blinks faster, GP5 slower, and you see all of 00/01/10/11 over ~7 s
+    //     -> the two conductors are separate and both carry a signal. GOOD.
+    //   - the two digits are ALWAYS equal (only 00 and 11, never 01/10)
+    //     -> GP4 and GP5 are shorted TO EACH OTHER. This kills the full-duplex link.
+    //   - a digit stuck at 0 -> that line shorted to GND; stuck at 1 -> that line open.
     gpio_set_pin_input_high(GP4);
     gpio_set_pin_input_high(GP5);
     static uint32_t rd_t = 0;
@@ -671,7 +679,7 @@ void housekeeping_task_user(void) {
         int g5 = (int)gpio_read_pin(GP5);
         uint32_t buf[3] = { (uint32_t)('0' + g4), (uint32_t)('0' + g5), 0 };
         display_message(0, 0, buf, &FreeSansBold24pt7b);
-        uprintf("LOOPBACK read GP4(COM1)=%d GP5(COM2)=%d\n", g4, g5);
+        uprintf("LOOPBACK read GP4(COM1)=%d GP5(COM2)=%d  [independent=good, always-equal=GP4/GP5 shorted]\n", g4, g5);
     }
 #  endif
     return;   // own the pins, skip the split transport

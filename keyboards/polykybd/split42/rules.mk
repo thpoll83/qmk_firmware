@@ -19,6 +19,14 @@ ifneq ($(filter yes slow,$(strip $(POLYKYBD_SERIAL_BITBANG))),)
 else
     SERIAL_DRIVER = vendor
 endif
+
+# POLYKYBD_SERIAL_SPEED=N overrides SELECT_SOFT_SERIAL_SPEED for ANY driver (see
+# split42/halconf.h). Main use: -e POLYKYBD_SERIAL_SPEED=5 runs the proven
+# vendor/PIO transport at 19200 baud (lowest) with no bitbang confound.
+ifneq ($(strip $(POLYKYBD_SERIAL_SPEED)),)
+    OPT_DEFS += -DPOLYKYBD_SERIAL_SPEED_OVERRIDE=$(strip $(POLYKYBD_SERIAL_SPEED))
+endif
+
 SPLIT_KEYBOARD = yes
 
 # OLED — 128×32 SSD1306

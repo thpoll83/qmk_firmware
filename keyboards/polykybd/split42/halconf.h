@@ -49,7 +49,14 @@
 // 1 Hz GPIO loopback) may carry frames at this bit rate where it can't at 115 k;
 // if it is still dead here while the loopback blinks, the path can't carry a
 // UART edge at all. Test only — revert once the link is understood.
-#ifdef POLYKYBD_SERIAL_BITBANG_SLOW
+//
+// POLYKYBD_SERIAL_SPEED=N (rules.mk) overrides the speed directly for ANY driver
+// — use it to run the PROVEN vendor/PIO driver at a low baud with no bitbang
+// confound, e.g. -e POLYKYBD_SERIAL_SPEED=5 → 19200 baud on the normal transport.
+// The vendor USART table: 0=460800 1=230400 2=115200 3=57600 4=38400 5=19200.
+#if defined(POLYKYBD_SERIAL_SPEED_OVERRIDE)
+#    define SELECT_SOFT_SERIAL_SPEED POLYKYBD_SERIAL_SPEED_OVERRIDE
+#elif defined(POLYKYBD_SERIAL_BITBANG_SLOW)
 #    define SELECT_SOFT_SERIAL_SPEED 5
 #else
 #    define SELECT_SOFT_SERIAL_SPEED 2

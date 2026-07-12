@@ -14,9 +14,9 @@
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
 
 // ---- timeline (ms) ----
-#define SA_INTRO_MS 2000    // sparks stream + converge, letters form
-#define SA_HOLD_MS   700    // hold the logo
-#define SA_FADE_MS   900    // dither-dissolve everything to black
+#define SA_INTRO_MS 2800    // sparks stream + converge, letters form
+#define SA_HOLD_MS  1500    // hold the logo
+#define SA_FADE_MS  1400    // dither-dissolve everything to black
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS)
 
 // ---- effect tuning ----
@@ -40,11 +40,23 @@ static inline uint8_t sa_hash8(uint32_t v) {
 static inline uint8_t sa_noise(int16_t x, int16_t y) {
     return SA_NOISE[(((uint8_t)y & SA_NOISE_MASK) << 5) | ((uint8_t)x & SA_NOISE_MASK)];
 }
-// cheap hypot approximation (~0.96*max + 0.40*min), avoids sqrt on the M0+
+// integer sqrt (binary, ~restoring) — a handful of adds/shifts, no FPU
+static inline uint16_t sa_isqrt(uint32_t v) {
+    uint32_t r = 0, b = 1UL << 14;   // highest bit ≤ sqrt(max board coord²)
+    while (b > v) b >>= 2;
+    while (b) {
+        uint32_t t = r + b;
+        r >>= 1;
+        if (v >= t) { v -= t; r += b; }
+        b >>= 2;
+    }
+    return (uint16_t)r;
+}
+// true Euclidean distance — the octagonal approximation gave the ripple crests a
+// diamond/"< >" bracket silhouette once the oval scaling stretched them; isqrt keeps
+// the rings smooth ellipses. Only called on the ring branch (background misses).
 static inline uint16_t sa_dist(int16_t a, int16_t b) {
-    a = (int16_t)abs(a); b = (int16_t)abs(b);
-    uint16_t mx = a > b ? a : b, mn = a > b ? b : a;
-    return (uint16_t)(((uint32_t)mx * 123 + (uint32_t)mn * 51) >> 7);
+    return sa_isqrt((uint32_t)((int32_t)a * a + (int32_t)b * b));
 }
 static inline uint8_t sa_sin(uint8_t t) { return SA_SIN[t]; }   // local table, no lib8tion dep
 static inline uint8_t sa_plasma(int16_t gx, int16_t gy, uint8_t tp) {
@@ -147,9 +159,9 @@ static void sa_render_frame(uint32_t el) {
                 uint8_t pv = sa_plasma(gx, gy, tp);
                 if ((uint8_t)(((uint16_t)pv * SA_PGAIN) >> 8) > sa_noise(gx, gy)) {
                     bit = 1;
-                } else if (ring) {   // thin, dim, oval ripple crest
-                    int16_t ax = (int16_t)(((int32_t)(gx - cxr) * 10) / 16);   // /1.6
-                    int16_t ay = (int16_t)(((int32_t)(gy - cyr) * 11) / 10);   // *1.1
+                } else if (ring) {   // thin, dim, gently-oval ripple crest
+                    int16_t ax = (int16_t)(((int32_t)(gx - cxr) * 4) / 5);   // /1.25 rounder oval
+                    int16_t ay = (int16_t)(gy - cyr);
                     uint16_t rr = sa_dist(ax, ay);
                     uint8_t rv = sa_sin((uint8_t)(((uint32_t)rr * 91) >> 8) - tprg);
                     if (rv > 240 && sa_noise((int16_t)(gx + 50), (int16_t)(gy + 30)) < (uint8_t)(ring >> 2))
@@ -174,7 +186,7 @@ static void sa_render_frame(uint32_t el) {
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
 
-        kdisp_send_buffer();
+        kdisp_send_window();   // 360 B (visible cols/pages) not the full 1024 B — faster SPI
     }
 }
 

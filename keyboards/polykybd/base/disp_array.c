@@ -666,6 +666,28 @@ void kdisp_send_buffer(void) {
     //spi_stop();
 }
 
+// Push ONLY the visible 72x40 window (BUFFER_X..+71, pages 0..4) = 360 bytes,
+// instead of the whole 1024-byte controller RAM. ~2.9x less SPI per keycap — used
+// by the procedural startup animation for a higher framerate. The caller must
+// still have written the visible pixels into scratch_buffer at column BUFFER_X.
+void kdisp_send_window(void) {
+    spi_prepare_commands();
+    static const uint8_t PROGMEM dlist[] = {SSD1306_PAGEADDR,
+                                            0,                            // page start
+                                            BUFFER_BYTE_VIS_HEIGHT - 1,   // page end (4)
+                                            SSD1306_COLUMNADDR,
+                                            BUFFER_X};                    // column start (28)
+    spi_transmit(dlist, sizeof(dlist));
+    spi_write(BUFFER_X + BUFFER_BYTE_VIS_WIDTH - 1);   // column end (28+72-1 = 99)
+    spi_prepare_data();
+    // Horizontal addressing (as kdisp_send_buffer uses): page-major, so send each
+    // visible page's 72 columns from BUFFER_X; the controller wraps col 99->28.
+    for (uint8_t page = 0; page < BUFFER_BYTE_VIS_HEIGHT; ++page) {
+        spi_transmit(&scratch_buffer[(size_t)page * BUFFER_BYTE_WIDTH + BUFFER_X],
+                     BUFFER_BYTE_VIS_WIDTH);
+    }
+}
+
 void kdisp_invert(bool invert) {
     //spi_start(SPI_SS_PIN, false, SPI_MODE, SPI_DIVISOR);
     spi_prepare_commands();

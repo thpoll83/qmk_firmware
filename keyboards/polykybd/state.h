@@ -136,6 +136,11 @@ typedef struct _poly_sync_t {
     // flash, suppressed while firing). Both halves render it locally in
     // rgb_matrix_indicators_kb via doom_rgb_indicators().
     uint8_t  doom_rgb;
+    // One-shot replay trigger for the startup ("Eden") animation. The master
+    // bumps this on the HID replay command; the slave starts its own animation
+    // when it sees the value change (see user_sync_poly_data_handler). It is a
+    // nonce, not a state — any change triggers exactly one replay.
+    uint8_t  anim_nonce;
 } poly_sync_t;
 
 typedef struct _poly_last_t {

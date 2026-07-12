@@ -22,6 +22,7 @@
 #include "polymod_crc32.h"
 #include "fill_overlay.h"
 #include "state.h"
+#include "anim/startup_anim.h"
 #include "side.h"
 #ifdef POLYKYBD_DOOM
 #include "doom/doom_arena.h"
@@ -88,9 +89,14 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     bool doom_ctl_changed = incoming->doom_ctl != current->doom_ctl ||
                             incoming->doom_wpn_owned != current->doom_wpn_owned ||
                             incoming->doom_wpn_ready != current->doom_wpn_ready;
+    // Master bumped the startup-animation replay nonce -> replay on this half too.
+    bool anim_replay = incoming->anim_nonce != current->anim_nonce;
     copy_local_state(incoming);
     if (doom_ctl_changed) {
         request_disp_refresh();
+    }
+    if (anim_replay) {
+        startup_anim_start();
     }
     emj_apply_sync(incoming->emj_category, incoming->emj_page);
     lang_apply_sync(incoming->lang_page);

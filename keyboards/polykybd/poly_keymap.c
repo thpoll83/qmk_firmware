@@ -788,6 +788,10 @@ void housekeeping_task_user(void) {
             startup_anim_tick();
             if (!startup_anim_active()) {   // just finished this pass
                 mark_boot_intro_done();
+                // Eden ran at full brightness; restore the user's normal
+                // brightness behaviour now that it has faded to black, then
+                // redraw the real legends.
+                set_displays(get_local_state()->contrast, false);
                 request_disp_refresh();
             }
         }

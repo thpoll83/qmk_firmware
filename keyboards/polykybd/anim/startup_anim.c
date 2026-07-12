@@ -35,8 +35,10 @@ static inline uint8_t sa_hash8(uint32_t v) {
     v ^= v >> 12; v *= 0x297a2d39U;
     v ^= v >> 15; return (uint8_t)v;
 }
+// White-noise dither threshold via a 32x32 table lookup (was a per-pixel hash —
+// this is the hot-loop speedup). Tiling every 32 px is imperceptible for noise.
 static inline uint8_t sa_noise(int16_t x, int16_t y) {
-    return sa_hash8(((uint32_t)(uint16_t)x * 73856093U) ^ ((uint32_t)(uint16_t)y * 19349663U));
+    return SA_NOISE[(((uint8_t)y & SA_NOISE_MASK) << 5) | ((uint8_t)x & SA_NOISE_MASK)];
 }
 // cheap hypot approximation (~0.96*max + 0.40*min), avoids sqrt on the M0+
 static inline uint16_t sa_dist(int16_t a, int16_t b) {
@@ -58,7 +60,7 @@ static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
 }
 
 // Draw the spark/trail points that fall on this keycap (inverse-rotate into local px).
-static void sa_sparks(uint8_t *buf, const sa_key_geom_t *g, int16_t cosv, int16_t sinv,
+static void sa_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t cosv, int16_t sinv,
                       uint32_t el, uint8_t cv) {
     const int16_t margin = SA_BOARD_W / 8;
     for (uint8_t s = 0; s < SA_NSPARK; ++s) {
@@ -81,8 +83,14 @@ static void sa_sparks(uint8_t *buf, const sa_key_geom_t *g, int16_t cosv, int16_
             }
             int16_t ddx = (int16_t)(sx - g->cx), ddy = (int16_t)(sy - g->cy);
             if (ddx <= -40 || ddx >= 40 || ddy <= -40 || ddy >= 40) continue;
-            int16_t lx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));
-            int16_t ly = (int16_t)(20 + ((-ddx * sinv + ddy * cosv) >> 7));
+            int16_t lx, ly;
+            if (rot) {   // inverse-rotate into this thumb key's local pixels
+                lx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));
+                ly = (int16_t)(20 + ((-ddx * sinv + ddy * cosv) >> 7));
+            } else {
+                lx = (int16_t)(36 + ddx);
+                ly = (int16_t)(20 + ddy);
+            }
             sa_set(buf, lx, ly);
             if (j == 0) sa_set(buf, lx + 1, ly);   // brighter head
         }
@@ -114,6 +122,7 @@ static void sa_render_frame(uint32_t el) {
     for (uint8_t idx = 0; idx < 40; ++idx) {
         const sa_key_geom_t *g = &T[idx];
         if (!g->valid) continue;
+        const bool rot = (g->ang != 0);                                // only the 4 thumbs
         int16_t cosv = (int16_t)sa_sin((uint8_t)(g->ang + 64)) - 128;   // cos * ~127
         int16_t sinv = (int16_t)sa_sin(g->ang) - 128;                   // sin * ~127
 
@@ -123,10 +132,17 @@ static void sa_render_frame(uint32_t el) {
 
         for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
             int16_t dy = (int16_t)(ly - 20);
+            int16_t gy_flat = (int16_t)(g->cy + dy);   // fast path: no rotation
             for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx) {
                 int16_t dx = (int16_t)(lx - 36);
-                int16_t gx = (int16_t)(g->cx + ((dx * cosv - dy * sinv) >> 7));
-                int16_t gy = (int16_t)(g->cy + ((dx * sinv + dy * cosv) >> 7));
+                int16_t gx, gy;
+                if (rot) {
+                    gx = (int16_t)(g->cx + ((dx * cosv - dy * sinv) >> 7));
+                    gy = (int16_t)(g->cy + ((dx * sinv + dy * cosv) >> 7));
+                } else {
+                    gx = (int16_t)(g->cx + dx);
+                    gy = gy_flat;
+                }
                 uint8_t bit = 0;
                 uint8_t pv = sa_plasma(gx, gy, tp);
                 if ((uint8_t)(((uint16_t)pv * SA_PGAIN) >> 8) > sa_noise(gx, gy)) {
@@ -143,7 +159,7 @@ static void sa_render_frame(uint32_t el) {
             }
         }
 
-        if (sparks) sa_sparks(buf, g, cosv, sinv, el, cv);
+        if (sparks) sa_sparks(buf, g, rot, cosv, sinv, el, cv);
 
         if (letters && L[idx]) {
             const GFXfont *const lf[1] = { &FreeSansBold24pt7b };
@@ -151,10 +167,10 @@ static void sa_render_frame(uint32_t el) {
             kdisp_write_gfx_text(lf, 1, 49, 38, txt);
         }
 
-        if (fade) {   // dither-dissolve this panel toward black
+        if (fade) {   // dither-dissolve this panel toward black (noise-tile lookup)
             for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly)
                 for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx)
-                    if (sa_hash8((uint32_t)idx * 4013u + (uint32_t)ly * SCREEN_WIDTH + lx) < fade)
+                    if (sa_noise((int16_t)(lx + idx * 13), (int16_t)(ly + idx * 7)) < fade)
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
 
@@ -165,6 +181,13 @@ static void sa_render_frame(uint32_t el) {
 void startup_anim_start(void) {
     s_start  = timer_read32();
     s_active = true;
+    // Eden runs at FULL brightness regardless of the stored brightness. This only
+    // touches the OLED contrast register (not local_state->contrast), so the normal
+    // brightness is restored after the fade-to-black (see the housekeeping finish
+    // edge in poly_keymap.c).
+    sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);   // select all panels on this half
+    kdisp_enable(true);
+    kdisp_set_contrast(255);
 }
 
 bool startup_anim_active(void) { return s_active; }

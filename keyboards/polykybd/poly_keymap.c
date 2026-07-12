@@ -76,6 +76,7 @@
 #include "layers.h"
 #include "keycode_helper.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
+#include "anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
 #include "os_actions.h"
 #include "uni.h"
 #include "emoji/emoji_layer.h"
@@ -780,6 +781,16 @@ void housekeeping_task_user(void) {
         // Runs before the display sync: it keeps last_update fresh so the
         // idle/fade pipeline below never fights the game blitter.
         doom_tick();
+        // One-time startup animation: render a frame while active (both halves
+        // render their own keycaps). On the finishing edge, persist the "played"
+        // marker and request a normal refresh so the base legends come back.
+        if (startup_anim_active()) {
+            startup_anim_tick();
+            if (!startup_anim_active()) {   // just finished this pass
+                mark_boot_intro_done();
+                request_disp_refresh();
+            }
+        }
         sync_and_refresh_displays();
 #ifdef POLYKYBD_LTR559
         // Poll the expansion-port light/proximity sensor. Run on BOTH halves —
@@ -2004,6 +2015,11 @@ void update_displays(enum refresh_mode mode) {
     if (doom_mode_active()) {
         return;
     }
+    // Same for the one-time startup animation: while it owns the keycaps, its
+    // procedural blitter is the only writer.
+    if (startup_anim_active()) {
+        return;
+    }
     const poly_sync_t* local_state = get_local_state();
     const bool idle = (local_state->flags & DISP_IDLE) != 0;
     // While idle we never full-re-render here: kdisp_idle() pulses the existing
@@ -2964,6 +2980,14 @@ void keyboard_post_init_user(void) {
     mru_load(ee.mru_emoji, ee.mru_lang);
 
     set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
+
+    // One-time startup animation: on the very first boot (fresh EEPROM), play the
+    // procedural intro once, then persist BOOT_INTRO_DONE (in the housekeeping
+    // finish edge). Each half reads its own flag and animates its own keycaps.
+    note_boot_flags(ee.boot_flags);
+    if (boot_intro_pending()) {
+        startup_anim_start();
+    }
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif

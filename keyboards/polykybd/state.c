@@ -28,6 +28,9 @@ static uint8_t g_idle_style = IDLE_STYLE_PULSE;
 // poly_eeconf_t (its own byte, like os_state) and flushed via g_glyph_dirty.
 static uint8_t g_glyph_script = GLYPH_STD;
 static bool    g_glyph_dirty  = false;
+// First-boot startup-animation marker (poly_eeconf_t.boot_flags). 0xFF/0 (fresh
+// EEPROM) => intro pending; BOOT_INTRO_DONE => already played.
+static uint8_t g_boot_flags = 0xFF;
 
 // Host-driven (daylight/auto) brightness mode. While engaged, the keyboard
 // applies the host's VOLATILE brightness updates and restores to the last auto
@@ -419,6 +422,23 @@ void set_glyph_script(uint8_t script) {
 // this firmware can't render degrades at draw time, not here).
 void note_glyph_script(uint8_t script) {
     g_glyph_script = (script == 0xFF) ? GLYPH_STD : script;
+}
+
+// ---- First-boot startup animation marker (poly_eeconf_t.boot_flags) ----
+void note_boot_flags(uint8_t flags) {
+    g_boot_flags = flags;
+}
+bool boot_intro_pending(void) {
+    return g_boot_flags != BOOT_INTRO_DONE;
+}
+// One-time tail-byte write once the intro has played, so it never replays. This is
+// a deliberate single write at the end of the boot animation (not the typing hot
+// path) — like the manual store key — so a direct write here is safe.
+void mark_boot_intro_done(void) {
+    if (g_boot_flags == BOOT_INTRO_DONE) return;
+    g_boot_flags = BOOT_INTRO_DONE;
+    eeconfig_update_user_datablock(&g_boot_flags, offsetof(poly_eeconf_t, boot_flags),
+                                   sizeof(g_boot_flags));
 }
 
 // ---- Active host-OS (enum poly_os) ----

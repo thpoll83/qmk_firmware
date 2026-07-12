@@ -1,0 +1,183 @@
+// Procedural boot animation — see startup_anim.h. split72 only; stubs elsewhere.
+#include "startup_anim.h"
+
+#if defined(KEYBOARD_polykybd_split72)
+
+#include <stdint.h>
+#include <stdlib.h>
+#include "quantum.h"                       // timer_read32/elapsed32, keymaps
+#include "base/disp_array.h"               // scratch buffer, BUFFER_X, kdisp_*
+#include "base/shift_reg.h"                // sr_shift_out_buffer_latch
+#include "side.h"                           // is_left_side()
+#include QMK_KEYBOARD_H                     // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
+#include "base/fonts/FreeSansBold24pt7b.h"  // splash glyph font
+#include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
+
+// ---- timeline (ms) ----
+#define SA_INTRO_MS 2000    // sparks stream + converge, letters form
+#define SA_HOLD_MS   700    // hold the logo
+#define SA_FADE_MS   900    // dither-dissolve everything to black
+#define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS)
+
+// ---- effect tuning ----
+#define SA_NSPARK       64
+#define SA_TRAIL         6
+#define SA_TRAILSTEP     6      // per-trail phase step (8-bit units)
+#define SA_PGAIN        16      // background plasma density (out of 255)
+#define SA_STRIDE      128      // scratch bytes per page
+
+static bool     s_active;
+static uint32_t s_start;
+
+// --- small integer helpers -------------------------------------------------
+static inline uint8_t sa_hash8(uint32_t v) {
+    v ^= v >> 15; v *= 0x2c1b3c6dU;
+    v ^= v >> 12; v *= 0x297a2d39U;
+    v ^= v >> 15; return (uint8_t)v;
+}
+static inline uint8_t sa_noise(int16_t x, int16_t y) {
+    return sa_hash8(((uint32_t)(uint16_t)x * 73856093U) ^ ((uint32_t)(uint16_t)y * 19349663U));
+}
+// cheap hypot approximation (~0.96*max + 0.40*min), avoids sqrt on the M0+
+static inline uint16_t sa_dist(int16_t a, int16_t b) {
+    a = (int16_t)abs(a); b = (int16_t)abs(b);
+    uint16_t mx = a > b ? a : b, mn = a > b ? b : a;
+    return (uint16_t)(((uint32_t)mx * 123 + (uint32_t)mn * 51) >> 7);
+}
+static inline uint8_t sa_sin(uint8_t t) { return SA_SIN[t]; }   // local table, no lib8tion dep
+static inline uint8_t sa_plasma(int16_t gx, int16_t gy, uint8_t tp) {
+    uint8_t a = sa_sin((uint8_t)(((int32_t)gx * 3) >> 2) + tp);   // gx * 0.75
+    uint8_t b = sa_sin((uint8_t)gy - tp);                         // gy * 1.0
+    uint8_t c = sa_sin((uint8_t)((gx + gy) >> 1) + tp);           // (gx+gy) * 0.5
+    return (uint8_t)(((uint16_t)a + b + c) / 3);
+}
+
+static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
+    if (lx >= 0 && lx < SCREEN_WIDTH && ly >= 0 && ly < SCREEN_HEIGHT)
+        buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
+}
+
+// Draw the spark/trail points that fall on this keycap (inverse-rotate into local px).
+static void sa_sparks(uint8_t *buf, const sa_key_geom_t *g, int16_t cosv, int16_t sinv,
+                      uint32_t el, uint8_t cv) {
+    const int16_t margin = SA_BOARD_W / 8;
+    for (uint8_t s = 0; s < SA_NSPARK; ++s) {
+        uint8_t  p0   = sa_hash8(s * 2u + 1u);
+        uint8_t  spd  = 1u + (sa_hash8(s * 7u + 3u) & 3u);
+        int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
+        uint8_t  bw   = 1u + (sa_hash8(s * 11u + 2u) & 3u);
+        uint8_t  ph   = sa_hash8(s * 13u + 5u);
+        int16_t  bob  = 6 + (int16_t)(sa_hash8(s * 17u) & 31u);
+        const sa_target_t *tgt = &SA_TARGETS[s % SA_NUM_TARGETS];
+        for (uint8_t j = 0; j < SA_TRAIL; ++j) {
+            // stochastic, stable trail fade (head bright, tail thins out)
+            if (sa_hash8(s * 31u + j) > (uint8_t)(255u - j * (200u / SA_TRAIL))) continue;
+            uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> 4) * spd) - j * SA_TRAILSTEP);
+            int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
+            int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> 5) * bw + ph)) - 128) * bob) >> 7));
+            if (cv) {   // converge toward the letter target
+                sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
+                sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
+            }
+            int16_t ddx = (int16_t)(sx - g->cx), ddy = (int16_t)(sy - g->cy);
+            if (ddx <= -40 || ddx >= 40 || ddy <= -40 || ddy >= 40) continue;
+            int16_t lx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));
+            int16_t ly = (int16_t)(20 + ((-ddx * sinv + ddy * cosv) >> 7));
+            sa_set(buf, lx, ly);
+            if (j == 0) sa_set(buf, lx + 1, ly);   // brighter head
+        }
+    }
+}
+
+static void sa_render_frame(uint32_t el) {
+    const bool left = is_left_side();
+    const sa_key_geom_t *T = left ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
+    const uint16_t      *L = left ? SA_LETTER_LEFT : SA_LETTER_RIGHT;
+
+    // phases / envelopes
+    uint8_t tt   = el < SA_INTRO_MS ? (uint8_t)(((uint32_t)el * 256) / SA_INTRO_MS) : 255;
+    uint8_t tp   = (uint8_t)(el >> 4);
+    uint8_t tprg = (uint8_t)(el >> 5);
+    int16_t cvi  = (int16_t)(((int32_t)tt - 110) * 255 / 75);       // converge over tt 110..185
+    uint8_t cv   = (uint8_t)(cvi < 0 ? 0 : (cvi > 255 ? 255 : cvi));
+    uint8_t ring = (uint8_t)(255 - cv);                            // ripples fade as things converge
+    bool letters = tt >= 150;
+    bool sparks  = (el < SA_INTRO_MS) && (tt < 220);
+    uint8_t fade = 0;
+    if (el >= SA_INTRO_MS + SA_HOLD_MS) {
+        uint32_t f = ((el - SA_INTRO_MS - SA_HOLD_MS) * 256) / SA_FADE_MS;
+        fade = (uint8_t)(f > 255 ? 255 : f);
+    }
+    const int16_t cxr = SA_BOARD_W / 2;
+    const int16_t cyr = (int16_t)((int32_t)SA_BOARD_H * 42 / 100);
+
+    for (uint8_t idx = 0; idx < 40; ++idx) {
+        const sa_key_geom_t *g = &T[idx];
+        if (!g->valid) continue;
+        int16_t cosv = (int16_t)sa_sin((uint8_t)(g->ang + 64)) - 128;   // cos * ~127
+        int16_t sinv = (int16_t)sa_sin(g->ang) - 128;                   // sin * ~127
+
+        sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+        kdisp_set_buffer(0x00);
+        uint8_t *buf = get_scratch_buffer();
+
+        for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
+            int16_t dy = (int16_t)(ly - 20);
+            for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx) {
+                int16_t dx = (int16_t)(lx - 36);
+                int16_t gx = (int16_t)(g->cx + ((dx * cosv - dy * sinv) >> 7));
+                int16_t gy = (int16_t)(g->cy + ((dx * sinv + dy * cosv) >> 7));
+                uint8_t bit = 0;
+                uint8_t pv = sa_plasma(gx, gy, tp);
+                if ((uint8_t)(((uint16_t)pv * SA_PGAIN) >> 8) > sa_noise(gx, gy)) {
+                    bit = 1;
+                } else if (ring) {   // thin, dim, oval ripple crest
+                    int16_t ax = (int16_t)(((int32_t)(gx - cxr) * 10) / 16);   // /1.6
+                    int16_t ay = (int16_t)(((int32_t)(gy - cyr) * 11) / 10);   // *1.1
+                    uint16_t rr = sa_dist(ax, ay);
+                    uint8_t rv = sa_sin((uint8_t)(((uint32_t)rr * 91) >> 8) - tprg);
+                    if (rv > 240 && sa_noise((int16_t)(gx + 50), (int16_t)(gy + 30)) < (uint8_t)(ring >> 2))
+                        bit = 1;
+                }
+                if (bit) buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
+            }
+        }
+
+        if (sparks) sa_sparks(buf, g, cosv, sinv, el, cv);
+
+        if (letters && L[idx]) {
+            const GFXfont *const lf[1] = { &FreeSansBold24pt7b };
+            uint32_t txt[2] = { L[idx], 0 };
+            kdisp_write_gfx_text(lf, 1, 49, 38, txt);
+        }
+
+        if (fade) {   // dither-dissolve this panel toward black
+            for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly)
+                for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx)
+                    if (sa_hash8((uint32_t)idx * 4013u + (uint32_t)ly * SCREEN_WIDTH + lx) < fade)
+                        buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
+        }
+
+        kdisp_send_buffer();
+    }
+}
+
+void startup_anim_start(void) {
+    s_start  = timer_read32();
+    s_active = true;
+}
+
+bool startup_anim_active(void) { return s_active; }
+
+void startup_anim_tick(void) {
+    if (!s_active) return;
+    uint32_t el = timer_elapsed32(s_start);
+    if (el >= SA_TOTAL_MS) { s_active = false; return; }
+    sa_render_frame(el);
+}
+
+#else  // ---- non-split72: no-op stubs ----
+void startup_anim_start(void) {}
+void startup_anim_tick(void) {}
+bool startup_anim_active(void) { return false; }
+#endif

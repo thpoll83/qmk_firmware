@@ -112,27 +112,43 @@ keyboards/polykybd/create_fonts.sh     # invoke fontconvert per range; writes ba
 ### Boot splash progress (always on)
 
 The boot splash (`POLY KYBD` on the left half, `SPLIT 72` / `SPLIT 42` on the
-right) is drawn **progressively** as boot advances — one keycap-letter group per
-milestone — instead of appearing complete at once. Because each keycap OLED holds
-the last frame it was sent, a boot that **hangs** simply freezes the reveal at the
-stage that stalled, so the partial splash on screen tells you where boot stopped.
-No compile flag: this is always on (`splash_progress()` in `poly_keymap.c`, driven
-from `keyboard_pre_init_user()` + several points in `keyboard_post_init_user()`).
+right) fills in **one glyph at a time** as boot advances, instead of appearing
+complete at once. Because each keycap OLED holds the last frame it was sent, a
+boot that **hangs** freezes the reveal at the exact glyph it reached — so you read
+how far boot got by **counting the lit letters**. No compile flag: this is always
+on (`splash_progress()` in `poly_keymap.c`, driven from `keyboard_pre_init_user()`
++ several points in `keyboard_post_init_user()`).
 
-| Frozen splash on screen | Where boot stalled |
-|---|---|
-| **Half word** — `PO` / `SP` | QMK's split-transport / USB init, *before* `keyboard_post_init_user()`. This is the **"hangs on the boot splash after a firmware apply"** case (`hid_fw_up.c` `CMD_FW_UP_APPLY` — the slave never rebooted, so the master waits for a split handshake that never comes). Recovery: replug / reset, or re-run Apply. |
-| **Full first row, second row blank** — `POLY` / `SPLIT` | Early `post_init`, at/around the core 1 launch (`multicore_launch_core1()`). |
-| **Full splash, never replaced by legends** | Late `post_init` or the first legend render. |
-| **Full splash for a moment, then the real key legends** | Healthy boot. |
+Each lit letter maps to a boot milestone (read the **hung half** — in the
+firmware-apply hang that's the master/USB half):
+
+| Letters lit | Milestone reached | |
+|---|---|---|
+| | **Left (`POLY KYBD`)** | **Right (`SPLIT 72`)** |
+| 1 | `P` — `pre_init` (before split/USB init) | `S` |
+| 2 | `PO` — after `set_side()` (**split/USB init passed**) | `SP` |
+| 3 | `POL` — language/emoji/MRU init done | `SPL` |
+| 4 | `POLY` — before core 1 launch | `SPLI` |
+| 5 | `POLY K` — after core 1 launch | `SPLIT` |
+| 6 | `POLY KY` — split RPCs + fw-staging up | `SPLIT` \* |
+| 7 | `POLY KYB` — EEPROM config loaded | `SPLIT 7` |
+| all | `POLY KYBD` → then real key legends | `SPLIT 72` → legends |
+
+\* On the right half the leading space in `" 7 2"` makes step 6 look identical to
+step 5 (`SPLIT`); the first *visible* second-row glyph (`7`) appears at step 7.
+
+So a frozen **single letter** (`P` / `S`) is the split/USB-init hang — the
+**"hangs on the boot splash after a firmware apply"** case (`hid_fw_up.c`
+`CMD_FW_UP_APPLY`: the slave never rebooted, so the master waits for a split
+handshake that never comes; recovery = replug/reset or re-run Apply). The more
+letters are lit, the later boot stalled; a keyboard that reaches the real key
+legends booted cleanly.
 
 The reveal completes in well under a second on a healthy boot, so it reads as a
-brief splash animation; only a genuine hang leaves it parked on a partial frame.
-The letter-count schedule and stage placement are in `splash_progress()` /
-`keyboard_post_init_user()`. (A more granular, keycap-digit boot tracer also
-exists behind the `FW_UP_BOOT_TRACE` compile flag — see `boot_trace()` — for
-pinning a hang down to a numbered milestone when the splash resolution isn't
-enough.)
+brief splash animation; only a genuine hang parks it on a partial frame. The
+milestone placement is in `keyboard_post_init_user()`. (A keycap-**digit** boot
+tracer also exists behind the `FW_UP_BOOT_TRACE` compile flag — see `boot_trace()`
+— for numbered milestones if the letter resolution isn't enough.)
 
 ### Core 1 stack high-water mark (`CORE1_STACK_HWM`)
 

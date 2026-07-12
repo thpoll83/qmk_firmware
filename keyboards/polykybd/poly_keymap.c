@@ -629,6 +629,23 @@ static void render_link_diag(void);   // defined near show_splash_screen()
 #endif
 
 void housekeeping_task_user(void) {
+#ifdef POLYKYBD_GPIO_SHORT_TEST
+    // split42 bring-up: own GP4/GP5, drive them HIGH as plain GPIO, read the pad
+    // back. A pin driven high that reads LOW is shorted to GND (a GND-pour bridge
+    // or a shorted U26). We return early so the split transport never reclaims the
+    // pins. Meter the pads too: 3.3 V = OK, ~0 V = short.
+    gpio_set_pin_output(GP4); gpio_write_pin_high(GP4);
+    gpio_set_pin_output(GP5); gpio_write_pin_high(GP5);
+    static uint32_t pintest_timer = 0;
+    if (pintest_timer == 0 || timer_elapsed32(pintest_timer) >= 750) {
+        pintest_timer = timer_read32();
+        int gp4 = (int)gpio_read_pin(GP4);
+        int gp5 = (int)gpio_read_pin(GP5);
+        uprintf("PINTEST driving HIGH -> GP4(COM1)=%d GP5(COM2)=%d  [1=ok, 0=SHORT to GND]  %s\n",
+                gp4, gp5, (gp4 && gp5) ? "both OK" : "*** SHORT DETECTED ***");
+    }
+    return;   // dedicated diagnostic build: own the pins, skip everything else
+#endif
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif

@@ -73,6 +73,16 @@ ifeq ($(strip $(POLYKYBD_HALF_DUPLEX)), yes)
     OPT_DEFS += -DPOLYKYBD_HALF_DUPLEX
 endif
 
+# split42 bring-up: GP4/GP5 short test. Drives the split pins (GP4=SERIAL_COM1,
+# GP5=SERIAL_COM2) as plain GPIO outputs HIGH and reads the pad back, so a pin
+# that is shorted to GND (a GND-pour bridge or a shorted U26 ESD array) reports
+# itself over the console AND can be metered directly (3.3V = OK, ~0V = short).
+# Single board, USB plugged into the board under test (no cable/other half).
+# Opt-in only: `-e POLYKYBD_GPIO_SHORT_TEST=yes`.
+ifeq ($(strip $(POLYKYBD_GPIO_SHORT_TEST)), yes)
+    OPT_DEFS += -DPOLYKYBD_GPIO_SHORT_TEST
+endif
+
 # "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).

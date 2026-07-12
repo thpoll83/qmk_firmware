@@ -83,6 +83,23 @@ ifeq ($(strip $(POLYKYBD_GPIO_SHORT_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_GPIO_SHORT_TEST
 endif
 
+# split42 bring-up: two-board GP4/GP5 loopback over the bridge cable. One board is
+# the DRIVER (toggles GP4/GP5 push-pull ~1 Hz), the other is the READER (GP4/GP5 as
+# inputs with pull-up; shows the two read levels as digits on its top keycap row).
+# Connect the two halves with the bridge cable, USB into the READER (so we watch it;
+# the driver is powered over the bridge VSYS). Both bypass the split transport and
+# own the pins. Reader keycaps:
+#   both digits BLINK 1<->0 in step with the driver  -> conductor good, no short
+#   a digit STUCK at 0                                -> that COM line SHORTED to GND
+#   a digit STUCK at 1                                -> that COM line OPEN (pull-up)
+# Opt-in: `-e POLYKYBD_PIN_LOOPBACK=drive` / `-e POLYKYBD_PIN_LOOPBACK=read`.
+ifeq ($(strip $(POLYKYBD_PIN_LOOPBACK)), drive)
+    OPT_DEFS += -DPOLYKYBD_PIN_LOOPBACK -DPOLYKYBD_PIN_LOOPBACK_DRIVE
+endif
+ifeq ($(strip $(POLYKYBD_PIN_LOOPBACK)), read)
+    OPT_DEFS += -DPOLYKYBD_PIN_LOOPBACK
+endif
+
 # "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).

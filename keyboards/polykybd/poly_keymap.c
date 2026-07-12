@@ -646,6 +646,36 @@ void housekeeping_task_user(void) {
     }
     return;   // dedicated diagnostic build: own the pins, skip everything else
 #endif
+#ifdef POLYKYBD_PIN_LOOPBACK
+    // split42 bring-up: two-board GP4/GP5 loopback over the bridge cable.
+#  ifdef POLYKYBD_PIN_LOOPBACK_DRIVE
+    // DRIVER: toggle GP4/GP5 push-pull ~1 Hz so the reader can see the line follow.
+    gpio_set_pin_output(GP4);
+    gpio_set_pin_output(GP5);
+    static uint32_t drv_t = 0; static bool drv_lvl = false;
+    if (drv_t == 0 || timer_elapsed32(drv_t) >= 500) {
+        drv_t = timer_read32();
+        drv_lvl = !drv_lvl;
+        gpio_write_pin(GP4, drv_lvl);
+        gpio_write_pin(GP5, drv_lvl);
+    }
+#  else
+    // READER: GP4/GP5 as inputs with pull-up; show the two levels on the top keycap
+    // row as digits (blink = conductor good, stuck 0 = short to GND, stuck 1 = open).
+    gpio_set_pin_input_high(GP4);
+    gpio_set_pin_input_high(GP5);
+    static uint32_t rd_t = 0;
+    if (rd_t == 0 || timer_elapsed32(rd_t) >= 150) {
+        rd_t = timer_read32();
+        int g4 = (int)gpio_read_pin(GP4);
+        int g5 = (int)gpio_read_pin(GP5);
+        uint32_t buf[3] = { (uint32_t)('0' + g4), (uint32_t)('0' + g5), 0 };
+        display_message(0, 0, buf, &FreeSansBold24pt7b);
+        uprintf("LOOPBACK read GP4(COM1)=%d GP5(COM2)=%d\n", g4, g5);
+    }
+#  endif
+    return;   // own the pins, skip the split transport
+#endif
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif

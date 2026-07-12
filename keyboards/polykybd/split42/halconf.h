@@ -42,7 +42,18 @@
 // split42 bring-up: lowered from 1 (230400) to 2 (115200) as a signal-integrity
 // test while diagnosing transport_fail on the split link. Both halves must be
 // flashed with the same value. Revert to 1 once the link is understood.
-#define SELECT_SOFT_SERIAL_SPEED 2
+//
+// POLYKYBD_SERIAL_BITBANG=slow forces speed 5. On the BITBANG driver that is
+// SERIAL_DELAY 64 us/bit (~15.6 kbaud, serial.c) — the slowest available. A
+// slew/RC-limited path (a marginal-conduction wire/joint that still passes the
+// 1 Hz GPIO loopback) may carry frames at this bit rate where it can't at 115 k;
+// if it is still dead here while the loopback blinks, the path can't carry a
+// UART edge at all. Test only — revert once the link is understood.
+#ifdef POLYKYBD_SERIAL_BITBANG_SLOW
+#    define SELECT_SOFT_SERIAL_SPEED 5
+#else
+#    define SELECT_SOFT_SERIAL_SPEED 2
+#endif
 
 #define PICO_FLASH_SIZE_BYTES (8 * 1024 * 1024)
 //for split keyboard setup

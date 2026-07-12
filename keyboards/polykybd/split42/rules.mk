@@ -7,9 +7,15 @@
 # bypasses the PIO peripheral entirely, so if the master->slave link starts working
 # on bitbang it proves the fault is the PIO block, not the wiring (the two-board
 # GPIO loopback already showed GP4/GP5 conduct end-to-end). See split42/post_config.h.
-ifeq ($(strip $(POLYKYBD_SERIAL_BITBANG)), yes)
+# =yes  : bitbang at the halconf SELECT_SOFT_SERIAL_SPEED (currently 2 / 115200-ish).
+# =slow : bitbang forced to speed 5 (SERIAL_DELAY 64us/bit, ~15.6 kbaud) — a
+#         slew/RC discriminator (see split42/halconf.h).
+ifneq ($(filter yes slow,$(strip $(POLYKYBD_SERIAL_BITBANG))),)
     SERIAL_DRIVER = bitbang
     OPT_DEFS += -DPOLYKYBD_SERIAL_BITBANG
+    ifeq ($(strip $(POLYKYBD_SERIAL_BITBANG)), slow)
+        OPT_DEFS += -DPOLYKYBD_SERIAL_BITBANG_SLOW
+    endif
 else
     SERIAL_DRIVER = vendor
 endif

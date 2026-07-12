@@ -2757,18 +2757,70 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     update_performed();
 };
 
-// Displays splash screen with polykybd/split72 logo and initializes displays with refresh.
-void show_splash_screen(void) {
-    clear_all_displays();
-    if(is_left_side()) {
-        display_message(1, 1, U"POLY", &FreeSansBold24pt7b);
-        display_message(2, 1, U"KYBD", &FreeSansBold24pt7b);
-    } else {
-        display_message(1, 1, POLY_SPLASH_R1, &FreeSansBold24pt7b);
-        display_message(POLY_SPLASH_R2_ROW, 1, POLY_SPLASH_R2, &FreeSansBold24pt7b);
+// Progressive boot splash — an always-on boot-progress indicator (no compile
+// flag). The splash is revealed a little more at each boot milestone: stage 0
+// from keyboard_pre_init_user(), stages 1..4 from points in
+// keyboard_post_init_user(). A boot that HANGS therefore freezes the reveal
+// exactly where it stalled, instead of showing a complete, uninformative splash.
+// A healthy boot fills in to the full "POLY KYBD" / "SPLIT 72" in well under a
+// second and then hands the keycaps over to the real key legends.
+//
+//   Frozen state (see readme.md "Boot splash progress")   ->  where it stalled
+//   ---------------------------------------------------       ----------------
+//   row 1 half word ("PO" / "SP")                             QMK split/USB init
+//                                                             (fw-apply: the
+//                                                              slave never
+//                                                              rebooted)
+//   row 1 full, row 2 blank ("POLY" / "SPLIT")                early post_init /
+//                                                             core1 launch
+//   full splash, never replaced by legends                   late post_init /
+//                                                             first render
+//   full splash briefly, then real key legends               healthy boot
+//
+// Only the last stage renders the real legends, so on a healthy boot the splash
+// visibly completes before the keyboard "comes alive". is_left_side() must be
+// resolved (set_side()) before any call — it is, at every call site.
+enum { SPLASH_STAGES = 5 };
+static void splash_progress(uint8_t stage) {
+    if (stage >= SPLASH_STAGES) {
+        stage = SPLASH_STAGES - 1;
     }
-    wait_ms(400);
-    update_displays(ALL_AT_ONCE);
+    const uint32_t* r1_word = is_left_side() ? U"POLY" : POLY_SPLASH_R1;
+    const uint32_t* r2_word = is_left_side() ? U"KYBD" : POLY_SPLASH_R2;
+    const uint8_t   r2_row  = is_left_side() ? 2       : POLY_SPLASH_R2_ROW;
+    // Number of row-1 glyphs revealed at each stage (255 = the whole word). The
+    // half-word stage 0 is the pre-split-init state, so a split/USB-init hang
+    // (the fw-apply "slave not rebooted" case) freezes on a visibly partial word.
+    static const uint8_t r1_reveal[SPLASH_STAGES] = { 2, 4, 255, 255, 255 };
+
+    // NUL-terminated truncated copy of the row-1 word (words are <= 5 glyphs).
+    uint32_t r1buf[9];
+    uint8_t n = r1_reveal[stage];
+    uint8_t i = 0;
+    for (; i < n && i < 8 && r1_word[i] != 0; ++i) {
+        r1buf[i] = r1_word[i];
+    }
+    r1buf[i] = 0;
+
+    clear_all_displays();
+    display_message(1, 1, r1buf, &FreeSansBold24pt7b);
+    if (stage >= 3) {                       // row 2 only once we're nearly booted
+        display_message(r2_row, 1, r2_word, &FreeSansBold24pt7b);
+    }
+    if (stage >= SPLASH_STAGES - 1) {
+        // Boot complete: dwell on the finished splash, then hand the keycaps
+        // over to the real legends — the same tail show_splash_screen() always
+        // ran, now deferred to the end of boot so the reveal is meaningful.
+        wait_ms(400);
+        update_displays(ALL_AT_ONCE);
+    }
+}
+
+// Displays the FIRST boot-splash stage (partial). Kept as the external symbol /
+// pre-init call site; the later stages are driven directly from
+// keyboard_post_init_user() via splash_progress().
+void show_splash_screen(void) {
+    splash_progress(0);
 }
 
 // Configures all displays with contrast level; shows idle pulsating animation if enabled.
@@ -2876,6 +2928,11 @@ void keyboard_post_init_user(void) {
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
 
+    // Boot-splash progress: reaching post_init proves QMK's split/USB init got
+    // past the point where the fw-apply "slave not rebooted" hang stalls. Reveal
+    // more of the splash here (right after set_side, so is_left_side() is valid).
+    splash_progress(1);
+
 #ifdef POLYKYBD_LTR559
     // Probe for the LTR-559 on BOTH halves — it can be soldered to either half's
     // expansion port (GP0/GP1 I2C exists on both). The half that finds it uses it;
@@ -2906,12 +2963,14 @@ void keyboard_post_init_user(void) {
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"2");
 #endif
+    splash_progress(2);                 // before core1 launch: row 1 completes
 #ifdef USE_CORE1
     multicore_launch_core1();
 #endif
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"3");
 #endif
+    splash_progress(3);                 // core1 up: row 2 appears
 
     transaction_register_rpc(USER_SYNC_POLY_DATA,           user_sync_poly_data_handler);
     transaction_register_rpc(USER_SYNC_LAYER_DATA,          user_sync_layer_data_handler);
@@ -2967,6 +3026,7 @@ void keyboard_post_init_user(void) {
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif
+    splash_progress(4);                 // boot complete: full splash, then legends
 }
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.

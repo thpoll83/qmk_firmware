@@ -122,20 +122,21 @@ on (`splash_progress()` in `poly_keymap.c`, driven from `keyboard_pre_init_user(
 Each lit letter maps to a boot milestone (read the **hung half** — in the
 firmware-apply hang that's the master/USB half):
 
-| Letters lit | Milestone reached | |
-|---|---|---|
-| | **Left (`POLY KYBD`)** | **Right (`SPLIT 72`)** |
-| 1 | `P` — `pre_init` (before split/USB init) | `S` |
-| 2 | `PO` — after `set_side()` (**split/USB init passed**) | `SP` |
-| 3 | `POL` — language/emoji/MRU init done | `SPL` |
-| 4 | `POLY` — before core 1 launch | `SPLI` |
-| 5 | `POLY K` — after core 1 launch | `SPLIT` |
-| 6 | `POLY KY` — split RPCs + fw-staging up | `SPLIT` \* |
-| 7 | `POLY KYB` — EEPROM config loaded | `SPLIT 7` |
-| all | `POLY KYBD` → then real key legends | `SPLIT 72` → legends |
+| Step | Milestone reached | Left (`POLY KYBD`) | Right (`SPLIT 72`) |
+|---|---|---|---|
+| 1 | `pre_init` (before split/USB init) | `P` | `S` |
+| 2 | after `set_side()` (**split/USB init passed**) | `PO` | `SP` |
+| 3 | language/emoji/MRU init done | `POL` | `SPL` |
+| 4 | before core 1 launch | `POLY` | `SPLI` |
+| 5 | after core 1 launch | `POLY K` | `SPLII` \* |
+| 6 | split RPCs + fw-staging up | `POLY KY` | `SPLIT` |
+| 7 | EEPROM config loaded | `POLY KYB` | `SPLIT 7` |
+| all | boot complete → real key legends | `POLY KYBD` | `SPLIT 72` |
 
-\* On the right half the leading space in `" 7 2"` makes step 6 look identical to
-step 5 (`SPLIT`); the first *visible* second-row glyph (`7`) appears at step 7.
+\* The right half "types in" its last letter over two steps — step 5 shows a
+placeholder `SPLII` (last glyph repeated), step 6 corrects it to `SPLIT` — so the
+leading space in `" 7 2"` doesn't cost the right half a distinguishable frame.
+Both halves therefore give 8 distinct steps.
 
 So a frozen **single letter** (`P` / `S`) is the split/USB-init hang — the
 **"hangs on the boot splash after a firmware apply"** case (`hid_fw_up.c`

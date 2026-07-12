@@ -2764,25 +2764,36 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
 // "SPLIT 72" in well under a second and then hands the keycaps to the real key
 // legends.
 //
-// splash_progress(reveal) shows the first `reveal` glyphs of the splash (row 1,
-// then spilling into row 2). SPLASH_DONE reveals everything AND performs the final
-// dwell + legend handoff. Call sites, in boot order (see readme.md "Boot splash
-// progress" for the per-half letter -> milestone table):
-//   reveal 1     keyboard_pre_init_user()          before QMK split/USB init
-//   reveal 2     post_init, after set_side()        split/USB init PASSED
-//   reveal 3     post_init, after emj/lang/mru init
-//   reveal 4     post_init, before core1 launch
-//   reveal 5     post_init, after core1 launch
-//   reveal 6     post_init, after RPC registration
-//   reveal 7     post_init, after EEPROM config load
+// splash_progress(step) draws the splash frame for boot milestone `step`
+// (1..7); SPLASH_DONE draws the whole splash AND performs the final dwell +
+// legend handoff. Call sites, in boot order:
+//   step 1       keyboard_pre_init_user()          before QMK split/USB init
+//   step 2       post_init, after set_side()        split/USB init PASSED
+//   step 3       post_init, after emj/lang/mru init
+//   step 4       post_init, before core1 launch
+//   step 5       post_init, after core1 launch
+//   step 6       post_init, after RPC registration
+//   step 7       post_init, after EEPROM config load
 //   SPLASH_DONE  post_init end                      boot complete -> legends
 //
-// So a frozen SINGLE letter ("P" / "S") is the split/USB-init hang (the fw-apply
-// "slave not rebooted" case); the more letters are lit, the later boot stalled;
-// only a fully booted keyboard replaces the splash with real legends. Left
-// "POLY KYBD" gives 8 clean steps; right "SPLIT 72" gives ~7 (the leading space
-// in " 7 2" makes one step invisible). is_left_side() must be resolved
-// (set_side()) before any call — it is, at every call site.
+// Each step advances the splash by one distinguishable frame, so a hang freezes
+// it at the exact milestone it reached (see readme.md "Boot splash progress"):
+//
+//   step  left "POLY KYBD"   right "SPLIT 72"
+//   ----  ----------------   ----------------
+//    1    P                  S           <- pre_init: split/USB-init hang here =
+//    2    PO                 SP             the fw-apply "slave not rebooted" case
+//    3    POL                SPL
+//    4    POLY               SPLI
+//    5    POLY K             SPLII       <- right "types in" its last letter over
+//    6    POLY KY            SPLIT          two steps (SPLII -> SPLIT) so the
+//    7    POLY KYB           SPLIT 7        leading space in " 7 2" doesn't cost
+//   DONE  POLY KYBD          SPLIT 72       it a frame — both halves get 8 steps
+//
+// A frozen SINGLE letter ("P" / "S") is the split/USB-init hang; the more letters
+// are lit, the later boot stalled; only a fully booted keyboard replaces the
+// splash with real legends. is_left_side() must be resolved (set_side()) before
+// any call — it is, at every call site.
 #define SPLASH_DONE 0xFF
 
 static uint8_t utext_len(const uint32_t* s) {
@@ -2802,23 +2813,57 @@ static void utext_prefix(uint32_t* dst, const uint32_t* src, uint8_t n) {
     dst[i] = 0;
 }
 
-static void splash_progress(uint8_t reveal) {
-    const uint32_t* r1_word = is_left_side() ? U"POLY" : POLY_SPLASH_R1;
-    const uint32_t* r2_word = is_left_side() ? U"KYBD" : POLY_SPLASH_R2;
-    const uint8_t   r2_row  = is_left_side() ? 2       : POLY_SPLASH_R2_ROW;
+static void splash_progress(uint8_t step) {
+    const bool      final   = (step == SPLASH_DONE);
+    const bool      left    = is_left_side();
+    const uint32_t* r1_word = left ? U"POLY" : POLY_SPLASH_R1;
+    const uint32_t* r2_word = left ? U"KYBD" : POLY_SPLASH_R2;
+    const uint8_t   r2_row  = left ? 2 : POLY_SPLASH_R2_ROW;
     const uint8_t   r1_len  = utext_len(r1_word);
-    const bool      final   = (reveal == SPLASH_DONE);
-    if (final) {
-        reveal = r1_len + utext_len(r2_word);   // reveal the whole splash
+    const uint8_t   r2_len  = utext_len(r2_word);
+
+    uint32_t r1buf[16];
+    uint32_t r2buf[16];
+    r1buf[0] = 0;
+    r2buf[0] = 0;
+
+    if (final) {                                  // whole splash
+        utext_prefix(r1buf, r1_word, r1_len);
+        utext_prefix(r2buf, r2_word, r2_len);
+    } else if (left) {
+        // Left "POLY KYBD" = 8 glyphs, one revealed per step -> 8 clean frames.
+        utext_prefix(r1buf, r1_word, step < r1_len ? step : r1_len);
+        if (step > r1_len) {
+            utext_prefix(r2buf, r2_word, step - r1_len);
+        }
+    } else {
+        // Right "SPLIT 72": the leading space in " 7 2" would otherwise hide the
+        // first row-2 reveal (two consecutive steps both showing "SPLIT"). So the
+        // LAST row-1 letter is "typed in" over two steps — step r1_len shows a
+        // placeholder ("SPLII", last glyph = the penultimate one), step r1_len+1
+        // corrects it ("SPLIT") — reclaiming the lost frame so the right half also
+        // gets 8 distinct steps.
+        if (step < r1_len) {                      // S, SP, SPL, SPLI
+            utext_prefix(r1buf, r1_word, step);
+        } else if (step == r1_len) {              // SPLII (placeholder last glyph)
+            utext_prefix(r1buf, r1_word, r1_len);
+            if (r1_len >= 2) {
+                r1buf[r1_len - 1] = r1_word[r1_len - 2];
+            }
+        } else {                                  // full row 1, then row 2
+            utext_prefix(r1buf, r1_word, r1_len);
+            uint8_t r2_show = step - r1_len - 1;  // 0 at the "SPLIT" correction step
+            if (r2_show > 0) {
+                // +1 so the leading space is included (the visible digit is next).
+                utext_prefix(r2buf, r2_word, r2_show + 1);
+            }
+        }
     }
 
-    uint32_t buf[16];
     clear_all_displays();
-    utext_prefix(buf, r1_word, reveal < r1_len ? reveal : r1_len);
-    display_message(1, 1, buf, &FreeSansBold24pt7b);
-    if (reveal > r1_len) {                       // remaining glyphs spill to row 2
-        utext_prefix(buf, r2_word, reveal - r1_len);
-        display_message(r2_row, 1, buf, &FreeSansBold24pt7b);
+    display_message(1, 1, r1buf, &FreeSansBold24pt7b);
+    if (r2buf[0] != 0) {
+        display_message(r2_row, 1, r2buf, &FreeSansBold24pt7b);
     }
     if (final) {
         // Boot complete: dwell on the finished splash, then hand the keycaps

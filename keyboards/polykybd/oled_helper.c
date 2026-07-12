@@ -1,5 +1,8 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
+// POLYKYBD_NO_STATUS_OLED bring-up build: no OLED driver linked, compile this
+// whole status-OLED helper away (oled_task_user falls back to QMK's weak no-op).
+#ifdef OLED_ENABLE
 #include "oled_helper.h"
 
 #include "state.h"
@@ -166,3 +169,5 @@ bool oled_task_user(void) {
     }
     return false;
 }
+
+#endif // OLED_ENABLE

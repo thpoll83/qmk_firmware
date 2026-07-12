@@ -21,7 +21,22 @@
 #include "quantum/via.h"
 
 #include "raw_hid.h"
+#ifdef OLED_ENABLE
 #include "oled_driver.h"
+#else
+// POLYKYBD_NO_STATUS_OLED bring-up build: no OLED driver linked. Stub the handful
+// of status-OLED calls in the shared display logic so it still compiles.
+typedef uint8_t oled_rotation_t;
+#ifndef OLED_BRIGHTNESS
+#define OLED_BRIGHTNESS 255
+#endif
+static inline void oled_off(void) {}
+static inline void oled_on(void) {}
+static inline void oled_clear(void) {}
+static inline void oled_render(void) {}
+static inline void oled_set_brightness(uint8_t b) { (void)b; }
+static inline void oled_scroll_set_speed(uint8_t s) { (void)s; }
+#endif
 #include "version.h"
 #include "print.h"
 #include "debug.h"
@@ -3005,6 +3020,7 @@ void eeconfig_init_user(void) {
 
 
 // Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.
+#ifdef OLED_ENABLE
 oled_rotation_t oled_init_user(oled_rotation_t rotation){
     oled_off();
     oled_clear();
@@ -3014,6 +3030,7 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
     oled_on();
     return rotation;
 }
+#endif
 
 // Clears overlay display flags, disables overlays and status display, sets contrast to OFF.
 void poly_suspend(void) {

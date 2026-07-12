@@ -26,6 +26,9 @@
 // I2C0 GP0/GP1 defaults) and revert split42/mcuconf.h to RP_I2C_USE_I2C0.
 // ---------------------------------------------------------------------------
 
+// POLYKYBD_NO_STATUS_OLED (rules.mk) skips the whole status-OLED I2C1 bring-up so
+// GP22/GP23 are not claimed and no I2C init/probe runs at boot.
+#ifndef POLYKYBD_NO_STATUS_OLED
 #undef  I2C_DRIVER
 #define I2C_DRIVER   I2CD1
 
@@ -34,6 +37,7 @@
 
 #undef  I2C1_SCL_PIN
 #define I2C1_SCL_PIN GP23
+#endif
 
 // ---------------------------------------------------------------------------
 // split42 split-link bring-up overrides (bring-up diagnostics only).

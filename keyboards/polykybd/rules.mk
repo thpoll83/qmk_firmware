@@ -35,6 +35,21 @@ ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
     endif
 endif
 
+# Boot-progress tracer — dev diagnostic for the "hangs on the boot splash"
+# failure mode (mostly seen right after a firmware apply, cleared by a reset —
+# the documented "slave not rebooted after fw-apply" hang). Opt-in only:
+#   qmk compile -kb polykybd/split72 -km default -e FW_UP_BOOT_TRACE=yes
+# When set, keyboard_pre_init/post_init paint a single digit on the keycaps at
+# each boot milestone (0=pre-init done/splash drawn, 1=post-init entry,
+# 2=before core1, 3=after core1, 4=post-init complete). The digit that STAYS on
+# a hung half tells you exactly where it stopped; a bare splash with NO digit
+# means the hang is in QMK's split-transport init between milestones 0 and 1
+# (master waiting on a slave that hasn't come back up). Normal builds leave it
+# unset and pay zero bytes (the boot_trace() calls are #ifdef'd out).
+ifeq ($(strip $(FW_UP_BOOT_TRACE)), yes)
+    OPT_DEFS += -DFW_UP_BOOT_TRACE
+endif
+
 # "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).

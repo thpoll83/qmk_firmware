@@ -2337,6 +2337,14 @@ static uint8_t s_apple_swap_latch = 0;
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
+    // While the one-time startup ("Eden") animation is playing, swallow every key
+    // event — no typing is wanted (or needed) during the intro. Keys from both
+    // halves funnel through the master's process_record before USB reporting, so
+    // gating here stops all input from reaching the host until the intro ends.
+    if (startup_anim_active()) {
+        return false;
+    }
+
     // Doom easter egg: in game mode every key event is swallowed (fed to the
     // game, never the host); outside game mode this only advances the trigger
     // matcher. Inline no-op false unless built with POLYKYBD_DOOM.

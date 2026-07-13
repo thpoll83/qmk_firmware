@@ -5,11 +5,11 @@
 // keyboards/polykybd/poly_keymap.c (compiled for every variant), so this 42-key
 // variant stays in lockstep with split72. This file defines only the data the
 // linker pulls from the keymap TU:
-//   * keymaps[]      — the layer definitions (LAYOUT_split72)
+//   * keymaps[]      — the layer definitions (LAYOUT_split42)
 //   * encoder_map[]  — the rotary-encoder action map
 // (split42 has no RGB matrix, so there is no g_led_config here.)
 //
-// The 42-key layout macro is called LAYOUT_split72 (see keyboard.json). Key order
+// The 42-key layout macro is called LAYOUT_split42 (see keyboard.json). Key order
 // per layer: LEFT rows 0-2 (6 each) + LEFT thumbs (3), then RIGHT rows 0-2 (6 each)
 // + RIGHT thumbs (3) = 42.
 #include QMK_KEYBOARD_H
@@ -21,7 +21,7 @@
 
 const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /* Base layer 0 — Qwerty */
-    [_L0] = LAYOUT_split72(
+    [_L0] = LAYOUT_split42(
         KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
         MO(_FL0),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
@@ -32,7 +32,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG, KC_SLSH, KC_LEFT
     ),
     /* Base layer 1 — Qwerty Staggered */
-    [_L1] = LAYOUT_split72(
+    [_L1] = LAYOUT_split42(
         KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
         MO(_FL1),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
@@ -43,7 +43,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_ENTER,KC_BSPC, KC_LEFT
     ),
     /* Base layer 2 — Colemak DH */
-    [_L2] = LAYOUT_split72(
+    [_L2] = LAYOUT_split42(
         KC_ESC,  KC_Q,    KC_W,    KC_F,    KC_P,    KC_B,
         MO(_FL1),KC_A,    KC_R,    KC_S,    KC_T,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_D,    KC_V,
@@ -54,7 +54,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG, KC_BSPC, KC_LEFT
     ),
     /* Base layer 3 — Neo */
-    [_L3] = LAYOUT_split72(
+    [_L3] = LAYOUT_split42(
         KC_ESC,  KC_X,    KC_V,    KC_L,    KC_C,    KC_W,
         MO(_FL0),KC_U,    KC_I,    KC_A,    KC_E,    KC_O,
         KC_LSFT, DE_HASH, DE_UDIA, DE_ODIA, DE_ADIA, KC_P,
@@ -65,7 +65,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG, KC_BSPC, KC_LEFT
     ),
     /* Base layer 4 — Workman */
-    [_L4] = LAYOUT_split72(
+    [_L4] = LAYOUT_split42(
         KC_ESC,  KC_Q,    KC_D,    KC_R,    KC_W,    KC_B,
         MO(_FL1),KC_A,    KC_S,    KC_H,    KC_T,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_M,    KC_C,    KC_V,
@@ -76,7 +76,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG, KC_BSPC, KC_LEFT
     ),
     /* Function layer 0 */
-    [_FL0] = LAYOUT_split72(
+    [_FL0] = LAYOUT_split42(
         OSL(_UL),KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
         _______, _______, _______, _______, _______, _______,
         KC_CAPS, _______, _______, _______, _______, _______,
@@ -87,7 +87,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_HOME, KC_PGUP, KC_END
     ),
     /* Function layer 1 */
-    [_FL1] = LAYOUT_split72(
+    [_FL1] = LAYOUT_split42(
         OSL(_UL),KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
         _______, _______, _______, _______, _______, _______,
         _______, _______, _______, _______, _______, _______,
@@ -98,7 +98,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_HOME, KC_PGUP, KC_END
     ),
     /* Numpad layer */
-    [_NL] = LAYOUT_split72(
+    [_NL] = LAYOUT_split42(
         KC_NO,   KC_NUM,  KC_PSLS, KC_PAST, KC_PMNS, KC_NO,
         MS_BTN1, KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS, KC_INS,
         KC_NO,   KC_KP_4, KC_KP_5, KC_KP_6, KC_PPLS, KC_DEL,
@@ -109,7 +109,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_PENT, KC_KP_0, KC_BASE
     ),
     /* Utility layer */
-    [_UL] = LAYOUT_split72(
+    [_UL] = LAYOUT_split42(
         KC_NO,   KC_F13,  KC_F14,  KC_F15,  KC_F16,  KC_F17,
         KC_MYCM, KC_CALC, KC_PSCR, KC_SCRL, KC_BRK,  KC_NO,
         KC_LSFT, KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
@@ -120,7 +120,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,   KC_NO,   KC_BASE
     ),
     /* Settings layer */
-    [_SL] = LAYOUT_split72(
+    [_SL] = LAYOUT_split42(
         KC_DDIM, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
         KC_DAUTO,KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_DBRI,
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
@@ -134,7 +134,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // six continent region tabs (LCAT), row 1 = the six unicode-input mode keys,
     // row 2 = the MRU recents (LMRU, top-bar marked). RIGHT half: the active
     // region's language slots (LSLOT, 18 per page), paged via the thumb arrows.
-    [_LL] = LAYOUT_split72(
+    [_LL] = LAYOUT_split42(
         LCAT(0),   LCAT(1),   LCAT(2),   LCAT(3),   LCAT(4),   LCAT(5),
         QK_UNICODE_MODE_WINCOMPOSE, QK_UNICODE_MODE_MACOS, QK_UNICODE_MODE_EMACS, QK_UNICODE_MODE_WINDOWS, QK_UNICODE_MODE_LINUX, QK_UNICODE_MODE_BSD,
         LMRU(0),   LMRU(1),   LMRU(2),   LMRU(3),   LMRU(4),   LMRU(5),
@@ -145,7 +145,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG_PAGE_PREV, KC_LANG_PAGE_NEXT, KC_LANG_CLEAR
     ),
     /* Additional latin variant layer */
-    [_ADDLANG1] = LAYOUT_split72(
+    [_ADDLANG1] = LAYOUT_split42(
         KC_NO,   KC_NO,   KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3,
         KC_NO,   _______, _______, _______, _______, _______,
         KC_NO,   _______, _______, _______, _______, _______,
@@ -158,7 +158,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // Emoji layer — left half: 12 category tabs (rows 0-1) + 6 MRU recents on the
     // bottom-left row (top-bar marked); right half: the current tab's 18 slots
     // (3 rows). Paging on the right thumbs; Clear on the right thumb; left thumb exits.
-    [_EMJ] = LAYOUT_split72(
+    [_EMJ] = LAYOUT_split42(
         KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
         KC_EMJ_CAT(6),  KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(11),
         EMRU(0),        EMRU(1),        EMRU(2),        EMRU(3),        EMRU(4),        EMRU(5),

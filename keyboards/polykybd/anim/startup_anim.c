@@ -16,13 +16,13 @@
 // ---- timeline (ms) ----
 #define SA_INTRO_MS 5000    // sparks stream + converge, letters form, sparks wink out
 #define SA_HOLD_MS  5000    // hold the PolyKybd logo
-#define SA_FADE_MS  3200    // two-stage: background dots dissolve, then (after a hold) letters
+#define SA_FADE_MS  2400    // two-stage: background dots dissolve, then (after a hold) letters
 #define SA_BLACK_MS 1000    // hold on black at the end before the normal display returns
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS + SA_BLACK_MS)
 // Fade phase is two-stage: the background dots dissolve over the first SA_BG_FADE_MS while
 // the letters stay solid; the letters only start dissolving SA_LETTER_HOLD_MS into the fade.
 #define SA_BG_FADE_MS     900   // background dots dissolve first (start of fade)
-#define SA_LETTER_HOLD_MS 2000  // letters stay this long into the fade, THEN dissolve
+#define SA_LETTER_HOLD_MS 1500  // letters stay this long into the fade, THEN dissolve (fast)
 
 // ---- effect tuning ----
 #define SA_NSPARK      250      // one L→R comet per spark; more of them → denser streaks
@@ -184,6 +184,11 @@ static void sa_render_frame(uint32_t el) {
     uint8_t ring = (uint8_t)(255 - cv);                            // ripples fade as things converge
     bool letters = tt >= 150;
     bool sparks  = (el < SA_INTRO_MS);
+    // Letters dither IN quickly right as they appear (the reverse of the end dissolve) so
+    // they materialise out of the converging sparks instead of popping into existence.
+    // Ramps over tt 150..185 (~0.7 s); 255 = fully formed (so it's a no-op during hold/fade).
+    int16_t lii = (int16_t)(((int32_t)tt - 150) * 255 / 35);
+    uint8_t letter_in = (uint8_t)(lii < 0 ? 0 : (lii > 255 ? 255 : lii));
     // Sparks wink out one by one over tt 150..255 (staggered per-spark in sa_build_sparks).
     int16_t sfi  = (int16_t)(((int32_t)tt - 150) * 255 / 105);
     uint8_t spark_fade = (uint8_t)(sfi < 0 ? 0 : (sfi > 255 ? 255 : sfi));
@@ -260,6 +265,13 @@ static void sa_render_frame(uint32_t el) {
             const GFXfont *const lf[1] = { &FreeSansBold24pt7b };
             uint32_t txt[2] = { L[idx], 0 };
             kdisp_write_gfx_text(lf, 1, 49, 38, txt);
+        }
+
+        if (letters && L[idx] && letter_in < 255) {   // dither the letters IN (reverse dissolve)
+            for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly)
+                for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx)
+                    if (sa_noise((int16_t)(lx + idx * 13), (int16_t)(ly + idx * 7)) >= letter_in)
+                        buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
 
         if (letter_fade) {   // dither-dissolve the letters (the only lit pixels left by now)

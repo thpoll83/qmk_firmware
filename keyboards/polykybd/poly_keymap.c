@@ -785,8 +785,22 @@ void housekeeping_task_user(void) {
         // render their own keycaps). On the finishing edge, persist the "played"
         // marker and request a normal refresh so the base legends come back.
         if (startup_anim_active()) {
+            // Deliver the animation start to the slave ONCE so both halves play in
+            // lockstep. We skip the normal per-pass sync_and_refresh_displays() below
+            // while Eden owns the displays, so without this one-shot the slave would
+            // only learn the bumped anim_nonce after the master's animation finished
+            // (the "master first, then slave" bug). The slave's poly-data handler
+            // starts its own animation on the nonce diff (split_sync.c). Harmless on a
+            // fresh boot — both halves already started from keyboard_post_init_user, so
+            // the nonces match and the slave treats this as a no-op (no replay).
+            static bool s_anim_synced = false;
+            if (!s_anim_synced && is_usb_host_side()) {
+                send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 10);
+                s_anim_synced = true;
+            }
             startup_anim_tick();
             if (!startup_anim_active()) {   // just finished this pass
+                s_anim_synced = false;      // re-arm for the next replay (KC_EDEN / HID)
                 mark_boot_intro_done();
                 // Eden ran at full brightness; restore the user's normal
                 // brightness behaviour now that it has faded to black, then

@@ -960,6 +960,34 @@ BOOTSEL/UF2. The high `err%` clears once both halves run matching firmware.
 
 ---
 
+### Debugging methodology: cheap firmware↔hardware cross-checks BEFORE hardware theories
+
+**When a split half stops receiving (`transport_fail=100%`, slave `S 0`, `crc_err=0`),
+run the O(1) firmware-vs-hardware isolation cross-checks FIRST — before any
+scope/multimeter/PCB analysis.** Learned the hard way (split42 bring-up, 2026-07): most
+of a session was spent on hardware theories — a "copper-plane short", then a "cracked
+QFN joint" — backed by PCB DRC + `kicad-tools` layout diffs, all **wrong**. The thing
+that actually isolated it in ONE test was a cross-flash the user proposed:
+
+- **Flash the OTHER variant's firmware onto the suspect hardware** (split42 fw → known-good
+  split72 hw). Still dead on hardware that works with its own firmware ⇒ it's the
+  **firmware/build**, not the board. This single test invalidated every hardware theory.
+- **Swap which half is USB/master**, and **rotate boards**, to separate per-board from
+  systematic.
+- ⚠️ **Wipe `.build` before trusting any A/B** — a stale `serial.o`/`serial_vendor.o`
+  from a prior `-e SERIAL_DRIVER`/`POLYKYBD_SERIAL_BITBANG` toggle can linger in the obj
+  dir and (worst case) contaminate the linked image; a full `rm -rf .build` rebuild is
+  the only way to be sure which serial driver is actually linked.
+- The config that matters is almost all in the **shared** `config.h` (identical for both
+  variants) — so `diff`ing `<variant>/{config,halconf,mcuconf}.h` split42-vs-split72 at
+  the `PolyKybd` base is a 2-minute check that tells you the transport config is the same
+  and the difference must be elsewhere (feature set / shared-code path / build).
+
+Only reach for the multimeter / scope / kicad-tools once a cheap cross-check has *justified*
+a hardware hypothesis. Reasoning from "it must be a short/joint/layout" without that
+justification is how the session went sideways. (The PCB tooling itself is fine — see the
+`investigate-kicad-pcb` skill — it's the *ordering* that was wrong.)
+
 ### Split-link integrity: wire noise, the app-level CRC32, retries, and the health counter
 
 > **RESOLVED (2026-06-16): migrated the split UART to full-duplex two-wire — the

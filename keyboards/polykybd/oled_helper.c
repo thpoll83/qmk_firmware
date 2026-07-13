@@ -135,8 +135,18 @@ uint8_t fw_update_percent(void) {
 void oled_fw_update_screen(void) {
     oled_on();
     oled_update_buffer_fw_update();
-    oled_clear();
+    // Same diff-only compose as the status screen (no oled_clear() — the scratch
+    // is a full 1024-byte frame with a black background from kdisp_set_buffer(0)).
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    // Then push the changed blocks synchronously in ONE pass. During a flash the
+    // main loop is saturated feeding HID chunks / driving the deferred sector
+    // erase, so the normal per-iteration oled_render() (1 block per call) can't
+    // keep up — the status->update transition dribbled out top-first and left the
+    // bottom rows still showing the old status screen for a visible moment. A full
+    // flush here lands the whole frame on the first tick it is drawn; afterwards
+    // the master's screen is static (slave's progress bar is the only churn), so
+    // diffing keeps this to just the bar's blocks.
+    oled_render_dirty(true);
 }
 
 bool oled_task_user(void) {

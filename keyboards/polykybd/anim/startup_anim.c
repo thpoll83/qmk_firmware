@@ -110,7 +110,11 @@ static uint8_t       s_brow[SCREEN_WIDTH];   // one 2x2-block row of background 
 static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
     const int16_t margin = SA_BOARD_W / 8;
     s_spark_n = 0;
-    for (uint8_t s = 0; s < SA_NSPARK; ++s) {
+    // NOTE: s MUST be wider than uint8_t — SA_NSPARK (340) > 255, so a uint8_t
+    // counter wraps 255->0 and `s < SA_NSPARK` is always true => infinite loop
+    // (hung both halves on the first frame; the Python sim uses big ints so it
+    // never showed the bug). Keep this uint16_t if SA_NSPARK ever exceeds 255.
+    for (uint16_t s = 0; s < SA_NSPARK; ++s) {
         // Staggered death: each spark winks out once the rising `spark_fade` passes its
         // own hash threshold — so the sparks disappear a few at a time, not all at once.
         if (sa_hash8(s * 3u + 7u) < spark_fade) continue;

@@ -790,12 +790,19 @@ void housekeeping_task_user(void) {
                 mark_boot_intro_done();
                 // Eden ran at full brightness; restore the user's normal
                 // brightness behaviour now that it has faded to black, then
-                // redraw the real legends.
+                // redraw the real legends and resume normal split sync.
                 set_displays(get_local_state()->contrast, false);
                 request_disp_refresh();
+                sync_and_refresh_displays();
             }
+            // While Eden plays we OWN the displays: skip sync_and_refresh_displays
+            // (its set_displays() would overwrite our full-bright contrast with the
+            // user brightness — the "brightness changes mid-animation" bug) and skip
+            // the boot forced-layer-resync's per-pass blocking UART, which also
+            // stole frame time. Each half renders its own keycaps independently.
+        } else {
+            sync_and_refresh_displays();
         }
-        sync_and_refresh_displays();
 #ifdef POLYKYBD_LTR559
         // Poll the expansion-port light/proximity sensor. Run on BOTH halves —
         // the sensor is auto-detected on whichever half it's soldered to (left or
@@ -824,7 +831,7 @@ void housekeeping_task_user(void) {
 #    endif
 #endif
     }
-    if(is_idle_tracking()) {
+    if(is_idle_tracking() && !startup_anim_active()) {   // Eden owns the displays while it plays
         //turn off displays
         // Full uint32 elapsed via timer_elapsed32 — no sign gate, so idle keeps
         // working past ~24.86 days of uptime (when timer_read32() sets bit 31).

@@ -17,7 +17,8 @@
 #define SA_INTRO_MS 5000    // sparks stream + converge, letters form, sparks wink out
 #define SA_HOLD_MS  5000    // hold the PolyKybd logo
 #define SA_FADE_MS  3200    // two-stage: background dots dissolve, then (after a hold) letters
-#define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS)
+#define SA_BLACK_MS 1000    // hold on black at the end before the normal display returns
+#define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS + SA_BLACK_MS)
 // Fade phase is two-stage: the background dots dissolve over the first SA_BG_FADE_MS while
 // the letters stay solid; the letters only start dissolving SA_LETTER_HOLD_MS into the fade.
 #define SA_BG_FADE_MS     900   // background dots dissolve first (start of fade)
@@ -74,6 +75,26 @@ static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
 }
 
+// Combined background DENSITY (0..255) at a board point: the faint plasma haze OR'd
+// (max) with the dissolved ring ripple. The per-pixel noise compare happens in the
+// caller, so this smooth value is what gets 2x2-coarsened for speed (sa_render_frame).
+static inline uint8_t sa_bg(int16_t gx, int16_t gy, uint8_t tp, uint8_t tprg,
+                            uint8_t ring, uint16_t pgain, int16_t cxr, int16_t cyr) {
+    uint8_t pv   = sa_plasma(gx, gy, tp);
+    uint8_t dens = (uint8_t)(((uint16_t)pv * pgain) >> 8);      // faint plasma haze
+    if (ring) {                                                 // + dissolved ripple
+        int16_t  ax = (int16_t)(((int32_t)(gx - cxr) * SA_RING_ASPECT) >> 8);
+        int16_t  ay = (int16_t)(gy - cyr);
+        uint16_t rr = sa_dist(ax, ay);
+        rr = (uint16_t)((int16_t)rr + ((sa_sin((uint8_t)(gx + 2 * gy)) - 128) >> 3));  // wobble
+        uint8_t  rv    = sa_sin((uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg));
+        uint8_t  crest = rv > 215 ? (uint8_t)(rv - 215) : 0;
+        uint8_t  rdens = (uint8_t)(((uint16_t)crest * ring) >> 9);
+        if (rdens > dens) dens = rdens;
+    }
+    return dens;
+}
+
 // Each spark is ONE L→R comet: a bright head + a continuous horizontal trail drawn behind
 // it. (The old discrete phase-offset "trail" spaced its dots ~49 board-px apart, so it read
 // as scattered dots, not a streak.) The heads are the same for every keycap (board-space),
@@ -82,6 +103,7 @@ static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
 typedef struct { int16_t sx, sy; uint8_t thick, tlen; } sa_spark_pt_t;
 static sa_spark_pt_t s_spark_pts[SA_NSPARK];
 static uint16_t      s_spark_n;
+static uint8_t       s_brow[SCREEN_WIDTH];   // one 2x2-block row of background density (sa_bg)
 
 static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
     const int16_t margin = SA_BOARD_W / 8;
@@ -183,6 +205,8 @@ static void sa_render_frame(uint32_t el) {
     uint16_t pgain = (uint16_t)((uint16_t)SA_PGAIN * (255 - bg_fade)) / 255;
     const int16_t cxr = SA_BOARD_W / 2;
     const int16_t cyr = (int16_t)((int32_t)SA_BOARD_H * 42 / 100);
+    // Black tail: the fade is done; hold every keycap on black for SA_BLACK_MS.
+    const bool black = el >= SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS;
 
     if (sparks) sa_build_sparks(el, cv, spark_fade);   // once per frame (key-independent)
 
@@ -197,9 +221,15 @@ static void sa_render_frame(uint32_t el) {
         kdisp_set_buffer(0x00);
         uint8_t *buf = get_scratch_buffer();
 
+        if (black) { kdisp_send_window(); continue; }   // just push the cleared (black) buffer
+
+        // Background = plasma haze + dissolved ring, computed on a 2x2 grid (sa_bg is
+        // the expensive part: 3 sines + the ring); the per-pixel noise compare keeps the
+        // fine dither. s_brow caches one 2x2-block row so odd cols/rows reuse it.
         for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
             int16_t dy = (int16_t)(ly - 20);
             int16_t gy_flat = (int16_t)(g->cy + dy);   // fast path: no rotation
+            const bool erow = !rot && ((ly & 1) == 0);  // even row of a 2x2 block → recompute
             for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx) {
                 int16_t dx = (int16_t)(lx - 36);
                 int16_t gx, gy;
@@ -210,27 +240,17 @@ static void sa_render_frame(uint32_t el) {
                     gx = (int16_t)(g->cx + dx);
                     gy = gy_flat;
                 }
-                uint8_t bit = 0;
-                uint8_t pv = sa_plasma(gx, gy, tp);
-                if ((uint8_t)(((uint16_t)pv * pgain) >> 8) > sa_noise(gx, gy)) {
-                    bit = 1;
-                } else if (ring) {   // faint, diffuse, irregular expanding ripple — a soft
-                                     // circular shimmer BEHIND the L→R sparks, dissolving as
-                                     // `ring` fades. Kept subtle so the spark motion reads.
-                    int16_t ax = (int16_t)(((int32_t)(gx - cxr) * SA_RING_ASPECT) >> 8);  // *0.9, no divide
-                    int16_t ay = (int16_t)(gy - cyr);
-                    uint16_t rr = sa_dist(ax, ay);
-                    // irregular: wobble the radius by a slow spatial sine so the rings are
-                    // not perfectly concentric and vary across the field (±~16 px).
-                    rr = (uint16_t)((int16_t)rr + ((sa_sin((uint8_t)(gx + 2 * gy)) - 128) >> 3));
-                    uint8_t rv = sa_sin((uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg));
-                    uint8_t crest = rv > 215 ? (uint8_t)(rv - 215) : 0;  // only the very peak → very
-                                                                        // dissolved, thin rings
-                    uint8_t dens  = (uint8_t)(((uint16_t)crest * ring) >> 9);   // ~8% — barely there
-                    if (sa_noise((int16_t)(gx + 50), (int16_t)(gy + 30)) < dens)
-                        bit = 1;
+                uint8_t bgv;
+                if (rot) {
+                    bgv = sa_bg(gx, gy, tp, tprg, ring, pgain, cxr, cyr);   // full-res thumbs
+                } else if (erow) {
+                    bgv = (lx & 1) ? s_brow[lx - 1] : sa_bg(gx, gy, tp, tprg, ring, pgain, cxr, cyr);
+                    s_brow[lx] = bgv;
+                } else {
+                    bgv = s_brow[lx];                                       // reuse the even row
                 }
-                if (bit) buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
+                if (bgv > sa_noise(gx, gy))
+                    buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
             }
         }
 

@@ -2741,11 +2741,14 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             local_state->overlay_flags &= ~SAVE_EEPROM;
             break;
         case KC_EDEN:
-            // Replay the one-time startup ("Eden") animation. Start it on this
-            // (master) half and bump the synced nonce so the slave replays too
-            // (mirrors HID cmd 31). Input is swallowed while it plays.
-            startup_anim_start();
-            local_state->anim_nonce++;
+            // "Reset Eden": arm the one-time startup ("Eden") animation for the NEXT
+            // boot rather than replaying it now — clear this half's persisted "already
+            // played" marker so keyboard_post_init_user() runs it on the next power-up.
+            // Each half persists its own boot_flags, so bump the synced re-arm nonce and
+            // force it to the slave now; the slave clears its own marker on the change.
+            reset_boot_intro();
+            local_state->boot_reset_nonce++;
+            send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
             break;
         // ── Language layer: region tabs, paging, MRU controls, slot/MRU select ──
         case KC_LANG_CAT_BASE ... KC_LANG_PAGE_PREV - 1:

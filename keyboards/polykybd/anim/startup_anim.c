@@ -25,7 +25,7 @@
 #define SA_LETTER_HOLD_MS 1500  // letters stay this long into the fade, THEN dissolve (fast)
 
 // ---- effect tuning ----
-#define SA_NSPARK      250      // one L→R comet per spark; more of them → denser streaks
+#define SA_NSPARK      340      // one L→R comet per spark; more of them → denser streaks
 #define SA_TRAIL_MAX    24      // longest comet trail (px); each spark rolls its own length
 #define SA_PGAIN         6      // background plasma density (out of 255) — a very faint haze
 #define SA_STRIDE      128      // scratch bytes per page
@@ -179,18 +179,18 @@ static void sa_render_frame(uint32_t el) {
     uint8_t tt   = el < SA_INTRO_MS ? (uint8_t)(((uint32_t)el * 256) / SA_INTRO_MS) : 255;
     uint8_t tp   = (uint8_t)(el >> 4);
     uint8_t tprg = (uint8_t)(el >> 5);
-    int16_t cvi  = (int16_t)(((int32_t)tt - 110) * 255 / 75);       // converge over tt 110..185
+    int16_t cvi  = (int16_t)(((int32_t)tt - 90) * 255 / 75);        // converge over tt 90..165
     uint8_t cv   = (uint8_t)(cvi < 0 ? 0 : (cvi > 255 ? 255 : cvi));
     uint8_t ring = (uint8_t)(255 - cv);                            // ripples fade as things converge
-    bool letters = tt >= 150;
+    bool letters = tt >= 130;                                     // letters form a bit earlier
     bool sparks  = (el < SA_INTRO_MS);
     // Letters dither IN quickly right as they appear (the reverse of the end dissolve) so
     // they materialise out of the converging sparks instead of popping into existence.
-    // Ramps over tt 150..185 (~0.7 s); 255 = fully formed (so it's a no-op during hold/fade).
-    int16_t lii = (int16_t)(((int32_t)tt - 150) * 255 / 35);
+    // Ramps over tt 130..165 (~0.7 s); 255 = fully formed (so it's a no-op during hold/fade).
+    int16_t lii = (int16_t)(((int32_t)tt - 130) * 255 / 35);
     uint8_t letter_in = (uint8_t)(lii < 0 ? 0 : (lii > 255 ? 255 : lii));
-    // Sparks wink out one by one over tt 150..255 (staggered per-spark in sa_build_sparks).
-    int16_t sfi  = (int16_t)(((int32_t)tt - 150) * 255 / 105);
+    // Sparks wink out one by one over tt 130..255 (staggered per-spark in sa_build_sparks).
+    int16_t sfi  = (int16_t)(((int32_t)tt - 130) * 255 / 125);
     uint8_t spark_fade = (uint8_t)(sfi < 0 ? 0 : (sfi > 255 ? 255 : sfi));
     // Two-stage dissolve: the background DOTS go first (bg_fade), the LETTERS wait
     // SA_LETTER_HOLD_MS into the fade, then dissolve (letter_fade). By the time

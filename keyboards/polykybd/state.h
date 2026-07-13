@@ -141,6 +141,12 @@ typedef struct _poly_sync_t {
     // when it sees the value change (see user_sync_poly_data_handler). It is a
     // nonce, not a state — any change triggers exactly one replay.
     uint8_t  anim_nonce;
+    // One-shot "re-arm Eden for the next boot" trigger (KC_EDEN "Reset Eden").
+    // The master bumps this after clearing its own boot-intro marker; the slave
+    // clears its OWN marker when it sees the value change (each half persists its
+    // own boot_flags, so both must be reset for both to replay next power-up). A
+    // nonce, not a state.
+    uint8_t  boot_reset_nonce;
 } poly_sync_t;
 
 typedef struct _poly_last_t {
@@ -324,6 +330,8 @@ void note_boot_flags(uint8_t flags);
 bool boot_intro_pending(void);
 // Persist BOOT_INTRO_DONE (one-time tail-byte write) so the intro won't replay.
 void mark_boot_intro_done(void);
+// Clear the played marker so the intro plays again on the next boot (KC_EDEN).
+void reset_boot_intro(void);
 
 // ---- Active host-OS (enum poly_os) — see the poly_os comment in this header. ----
 

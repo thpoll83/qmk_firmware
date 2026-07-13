@@ -28,9 +28,17 @@ SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c b
 # is populated on split42 and its I2C0 bus isn't broken out, so the driver just
 # fails its probe and idles. Kept compiled in (and it registers an extra split
 # transaction) to test whether a disabled subsystem was implicated. Mirrors
-# split72. (LTR-559 light sensor stays omitted — no expansion port on split42.)
+# split72.
 POINTING_DEVICE_ENABLE = yes
 POINTING_DEVICE_DRIVER = cirque_pinnacle_i2c
+
+# LTR-559 light+proximity sensor — RE-ENABLED as an experiment. Shares the same
+# Cirque I2C0 bus (addr 0x23), which isn't broken out on split42, so its probe
+# also fails and the driver disables itself after a few bounded retries — the
+# same "harmless when absent" behaviour split72 relies on. Kept compiled in to
+# test whether a disabled subsystem was implicated. Mirrors split72.
+SRC += base/ltr559.c
+OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes

@@ -105,16 +105,17 @@ static inline uint8_t sa_bg(int16_t gx, int16_t gy, uint8_t tp, uint8_t tprg,
 typedef struct { int16_t sx, sy; uint8_t thick, tlen; } sa_spark_pt_t;
 static sa_spark_pt_t s_spark_pts[SA_NSPARK];
 static uint16_t      s_spark_n;
+// The spark loop counter and s_spark_n are uint16_t. A uint8_t counter silently
+// wraps 255->0 when SA_NSPARK > 255, so `s < SA_NSPARK` never ends -> infinite loop
+// (QMK builds don't enable -Wtype-limits, so the compiler won't warn). This makes
+// the build FAIL instead if SA_NSPARK is ever raised past what the counter holds.
+_Static_assert(SA_NSPARK <= UINT16_MAX, "SA_NSPARK exceeds the uint16_t spark loop counter range");
 static uint8_t       s_brow[SCREEN_WIDTH];   // one 2x2-block row of background density (sa_bg)
 
 static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
     const int16_t margin = SA_BOARD_W / 8;
     s_spark_n = 0;
-    // NOTE: s MUST be wider than uint8_t — SA_NSPARK (340) > 255, so a uint8_t
-    // counter wraps 255->0 and `s < SA_NSPARK` is always true => infinite loop
-    // (hung both halves on the first frame; the Python sim uses big ints so it
-    // never showed the bug). Keep this uint16_t if SA_NSPARK ever exceeds 255.
-    for (uint16_t s = 0; s < SA_NSPARK; ++s) {
+    for (uint16_t s = 0; s < SA_NSPARK; ++s) {   // uint16_t: SA_NSPARK may exceed 255 (see _Static_assert)
         // Staggered death: each spark winks out once the rising `spark_fade` passes its
         // own hash threshold — so the sparks disappear a few at a time, not all at once.
         if (sa_hash8(s * 3u + 7u) < spark_fade) continue;

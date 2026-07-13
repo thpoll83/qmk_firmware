@@ -14,16 +14,16 @@
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
 
 // ---- timeline (ms) ----
-#define SA_INTRO_MS 1800    // sparks stream + converge, letters form
-#define SA_HOLD_MS   800    // hold the logo
-#define SA_FADE_MS   900    // dither-dissolve everything to black
+#define SA_INTRO_MS 2400    // sparks stream + converge, letters form, sparks wink out
+#define SA_HOLD_MS  3000    // hold the PolyKybd logo (long)
+#define SA_FADE_MS  1300    // dither-dissolve everything to black
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS)
 
 // ---- effect tuning ----
 #define SA_NSPARK       64
 #define SA_TRAIL         6
 #define SA_TRAILSTEP     6      // per-trail phase step (8-bit units)
-#define SA_PGAIN        11      // background plasma density (out of 255) — a faint haze
+#define SA_PGAIN         6      // background plasma density (out of 255) — a very faint haze
 #define SA_STRIDE      128      // scratch bytes per page
 // ---- ring (expanding ripple) tuning — parsed by the host firmware-port sim ----
 // Circular ripple: the sparkle DENSITY peaks at each ring crest and falls off between
@@ -48,20 +48,15 @@ static inline uint8_t sa_hash8(uint32_t v) {
 static inline uint8_t sa_noise(int16_t x, int16_t y) {
     return SA_NOISE[(((uint8_t)y & SA_NOISE_MASK) << 5) | ((uint8_t)x & SA_NOISE_MASK)];
 }
-// Integer sqrt (binary restoring) — no FPU/divide. `b` MUST start ≥ the largest power
-// of four ≤ v; the board's rr² reaches ~7.3e5, so 1<<20 (=4^10) is the correct seed
-// (1<<14 silently truncated large radii — caught by the host firmware-port cross-check).
-// Only runs on the ring branch (background misses), a bounded cost for round ripples.
-static inline uint16_t sa_isqrt(uint32_t v) {
-    uint32_t r = 0, b = 1UL << 20;
-    while (b > v) b >>= 2;
-    while (b) { uint32_t t = r + b; r >>= 1; if (v >= t) { v -= t; r += b; } b >>= 2; }
-    return (uint16_t)r;
-}
-// True Euclidean distance — needed so the near-centre ripples read as round rings; the
-// octagonal approximation put a visible 45° corner there ("< >" chevrons).
+// Cheap octagonal distance (minimax α·max + β·min) — no FPU/divide/sqrt. This runs for
+// ~every background pixel during the ring phase, so keeping it off the sqrt path is the
+// main framerate lever. The old "< >" chevron from its 45° corner is a non-issue now the
+// rings are faint/diffuse + radius-wobbled (see the ring branch), where a few px of
+// irregularity is desirable.
 static inline uint16_t sa_dist(int16_t a, int16_t b) {
-    return sa_isqrt((uint32_t)((int32_t)a * a + (int32_t)b * b));
+    a = (int16_t)abs(a); b = (int16_t)abs(b);
+    uint16_t mx = a > b ? a : b, mn = a > b ? b : a;
+    return (uint16_t)(((uint32_t)mx * 123 + (uint32_t)mn * 51) >> 7);
 }
 static inline uint8_t sa_sin(uint8_t t) { return SA_SIN[t]; }   // local table, no lib8tion dep
 static inline uint8_t sa_plasma(int16_t gx, int16_t gy, uint8_t tp) {
@@ -76,11 +71,21 @@ static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
 }
 
-// Draw the spark/trail points that fall on this keycap (inverse-rotate into local px).
-static void sa_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t cosv, int16_t sinv,
-                      uint32_t el, uint8_t cv) {
+// Spark/trail points are the SAME for every keycap (board-space), so build them ONCE per
+// frame here, then each key just filters+rotates the list (sa_plot_sparks). This moves the
+// hash/sin/converge work out of the 40× per-key loop — the main spark-phase framerate win.
+typedef struct { int16_t sx, sy; uint8_t head; } sa_spark_pt_t;
+static sa_spark_pt_t s_spark_pts[SA_NSPARK * SA_TRAIL];
+static uint16_t      s_spark_n;
+
+static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
     const int16_t margin = SA_BOARD_W / 8;
+    s_spark_n = 0;
     for (uint8_t s = 0; s < SA_NSPARK; ++s) {
+        // Staggered death: each spark winks out once the rising `spark_fade` passes its
+        // own hash threshold — so the tiny sparks disappear a few at a time, not all at
+        // once.
+        if (sa_hash8(s * 3u + 7u) < spark_fade) continue;
         uint8_t  p0   = sa_hash8(s * 2u + 1u);
         uint8_t  spd  = 1u + (sa_hash8(s * 7u + 3u) & 3u);
         int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
@@ -98,18 +103,33 @@ static void sa_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t co
                 sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
                 sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
             }
-            int16_t ddx = (int16_t)(sx - g->cx), ddy = (int16_t)(sy - g->cy);
-            if (ddx <= -40 || ddx >= 40 || ddy <= -40 || ddy >= 40) continue;
-            int16_t lx, ly;
-            if (rot) {   // inverse-rotate into this thumb key's local pixels
-                lx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));
-                ly = (int16_t)(20 + ((-ddx * sinv + ddy * cosv) >> 7));
-            } else {
-                lx = (int16_t)(36 + ddx);
-                ly = (int16_t)(20 + ddy);
-            }
-            sa_set(buf, lx, ly);
-            if (j == 0) sa_set(buf, lx + 1, ly);   // brighter head
+            s_spark_pts[s_spark_n].sx   = sx;
+            s_spark_pts[s_spark_n].sy   = sy;
+            s_spark_pts[s_spark_n].head = (j == 0);
+            s_spark_n++;
+        }
+    }
+}
+
+// Plot the prebuilt spark points that land on this keycap (inverse-rotate into local px).
+static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t cosv, int16_t sinv) {
+    for (uint16_t i = 0; i < s_spark_n; ++i) {
+        int16_t ddx = (int16_t)(s_spark_pts[i].sx - g->cx);
+        int16_t ddy = (int16_t)(s_spark_pts[i].sy - g->cy);
+        if (ddx <= -40 || ddx >= 40 || ddy <= -40 || ddy >= 40) continue;
+        int16_t lx, ly;
+        if (rot) {
+            lx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));
+            ly = (int16_t)(20 + ((-ddx * sinv + ddy * cosv) >> 7));
+        } else {
+            lx = (int16_t)(36 + ddx);
+            ly = (int16_t)(20 + ddy);
+        }
+        sa_set(buf, lx, ly);
+        if (s_spark_pts[i].head) {   // bold 2×2 comet head so the L→R streak reads over the haze
+            sa_set(buf, lx + 1, ly);
+            sa_set(buf, lx, ly + 1);
+            sa_set(buf, lx + 1, ly + 1);
         }
     }
 }
@@ -127,7 +147,10 @@ static void sa_render_frame(uint32_t el) {
     uint8_t cv   = (uint8_t)(cvi < 0 ? 0 : (cvi > 255 ? 255 : cvi));
     uint8_t ring = (uint8_t)(255 - cv);                            // ripples fade as things converge
     bool letters = tt >= 150;
-    bool sparks  = (el < SA_INTRO_MS) && (tt < 220);
+    bool sparks  = (el < SA_INTRO_MS);
+    // Sparks wink out one by one over tt 150..255 (staggered per-spark in sa_build_sparks).
+    int16_t sfi  = (int16_t)(((int32_t)tt - 150) * 255 / 105);
+    uint8_t spark_fade = (uint8_t)(sfi < 0 ? 0 : (sfi > 255 ? 255 : sfi));
     uint8_t fade = 0;
     if (el >= SA_INTRO_MS + SA_HOLD_MS) {
         uint32_t f = ((el - SA_INTRO_MS - SA_HOLD_MS) * 256) / SA_FADE_MS;
@@ -135,6 +158,8 @@ static void sa_render_frame(uint32_t el) {
     }
     const int16_t cxr = SA_BOARD_W / 2;
     const int16_t cyr = (int16_t)((int32_t)SA_BOARD_H * 42 / 100);
+
+    if (sparks) sa_build_sparks(el, cv, spark_fade);   // once per frame (key-independent)
 
     for (uint8_t idx = 0; idx < 40; ++idx) {
         const sa_key_geom_t *g = &T[idx];
@@ -164,14 +189,19 @@ static void sa_render_frame(uint32_t el) {
                 uint8_t pv = sa_plasma(gx, gy, tp);
                 if ((uint8_t)(((uint16_t)pv * SA_PGAIN) >> 8) > sa_noise(gx, gy)) {
                     bit = 1;
-                } else if (ring) {   // circular ripple: sparkle density peaks at each crest,
-                                     // fades between rings and dissolves as `ring` fades
+                } else if (ring) {   // faint, diffuse, irregular expanding ripple — a soft
+                                     // circular shimmer BEHIND the L→R sparks, dissolving as
+                                     // `ring` fades. Kept subtle so the spark motion reads.
                     int16_t ax = (int16_t)(((int32_t)(gx - cxr) * SA_RING_ANUM) / SA_RING_ADEN);
                     int16_t ay = (int16_t)(gy - cyr);
                     uint16_t rr = sa_dist(ax, ay);
+                    // irregular: wobble the radius by a slow spatial sine so the rings are
+                    // not perfectly concentric and vary across the field (±~16 px).
+                    rr = (uint16_t)((int16_t)rr + ((sa_sin((uint8_t)(gx + 2 * gy)) - 128) >> 3));
                     uint8_t rv = sa_sin((uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg));
-                    uint8_t crest = rv > 128 ? (uint8_t)(rv - 128) : 0;  // upper half → concentric rings
-                    uint8_t dens  = (uint8_t)(((uint16_t)crest * ring) >> 8);   // ≤~50% → grainy, fades
+                    uint8_t crest = rv > 210 ? (uint8_t)(rv - 210) : 0;  // only the peak → THIN rings,
+                                                                        // lots of dark space between
+                    uint8_t dens  = (uint8_t)(((uint16_t)crest * ring) >> 8);   // ~18% in the thin band
                     if (sa_noise((int16_t)(gx + 50), (int16_t)(gy + 30)) < dens)
                         bit = 1;
                 }
@@ -179,7 +209,7 @@ static void sa_render_frame(uint32_t el) {
             }
         }
 
-        if (sparks) sa_sparks(buf, g, rot, cosv, sinv, el, cv);
+        if (sparks) sa_plot_sparks(buf, g, rot, cosv, sinv);
 
         if (letters && L[idx]) {
             const GFXfont *const lf[1] = { &FreeSansBold24pt7b };

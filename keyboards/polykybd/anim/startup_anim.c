@@ -16,14 +16,15 @@
 
 // ---- timeline (ms) ----
 #define SA_INTRO_MS 5000    // sparks stream + converge, letters form, sparks wink out
-#define SA_HOLD_MS  5000    // hold the PolyKybd logo
-#define SA_FADE_MS  2400    // two-stage: background dots dissolve, then (after a hold) letters
+#define SA_HOLD_MS  5000    // hold the PolyKybd logo (letters up)
+#define SA_FADE_MS  3200    // final fade: the letters dissolve to black (slow, gradual)
 #define SA_BLACK_MS 1000    // hold on black at the end before the normal display returns
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS + SA_BLACK_MS)
-// Fade phase is two-stage: the background dots dissolve over the first SA_BG_FADE_MS while
-// the letters stay solid; the letters only start dissolving SA_LETTER_HOLD_MS into the fade.
-#define SA_BG_FADE_MS     900   // background dots dissolve first (start of fade)
-#define SA_LETTER_HOLD_MS 1500  // letters stay this long into the fade, THEN dissolve (fast)
+// The background sparkle haze dissolves EARLY and SLOWLY: it begins the moment the hold
+// starts (letters just formed) and clears over SA_BG_FADE_MS, so the dots fade away while
+// the clean letters stay up — rather than lingering behind them until the final fade.
+#define SA_BG_FADE_START_MS SA_INTRO_MS   // start of the hold (letters are formed)
+#define SA_BG_FADE_MS       3000          // slow background dissolve
 
 // ---- effect tuning ----
 #define SA_NSPARK      340      // one L→R comet per spark; more of them → denser streaks
@@ -49,10 +50,20 @@ static inline uint8_t sa_hash8(uint32_t v) {
     v ^= v >> 12; v *= 0x297a2d39U;
     v ^= v >> 15; return (uint8_t)v;
 }
-// White-noise dither threshold via a 64x64 table lookup (a per-pixel hash would be
-// slower). The 64 px tile (was 32) makes the repetition much less visible.
+// White-noise dither tile: a 64x64 lookup (a per-pixel hash in the hot loop would be
+// slower). The table lives in RAM and is filled ONCE at boot from sa_hash8 (verified
+// uniform, ~0 adjacent correlation) instead of being a 4 KB const in flash — same
+// speed, zero .bin cost. fw_anim_sim.py mirrors the same hash so the preview matches.
+#define SA_NOISE_LEN ((SA_NOISE_MASK + 1) * (SA_NOISE_MASK + 1))
+static uint8_t s_noise[SA_NOISE_LEN];
+static bool    s_noise_ready;
+static void sa_noise_init(void) {
+    if (s_noise_ready) return;
+    for (uint16_t i = 0; i < SA_NOISE_LEN; ++i) s_noise[i] = sa_hash8(i);
+    s_noise_ready = true;
+}
 static inline uint8_t sa_noise(int16_t x, int16_t y) {
-    return SA_NOISE[(((uint8_t)y & SA_NOISE_MASK) << 6) | ((uint8_t)x & SA_NOISE_MASK)];
+    return s_noise[(((uint8_t)y & SA_NOISE_MASK) << 6) | ((uint8_t)x & SA_NOISE_MASK)];
 }
 // Cheap octagonal distance (minimax α·max + β·min) — no FPU/divide/sqrt. This runs for
 // ~every background pixel during the ring phase, so keeping it off the sqrt path is the
@@ -199,19 +210,18 @@ static void sa_render_frame(uint32_t el) {
     // Sparks wink out one by one over tt 130..255 (staggered per-spark in sa_build_sparks).
     int16_t sfi  = (int16_t)(((int32_t)tt - 130) * 255 / 125);
     uint8_t spark_fade = (uint8_t)(sfi < 0 ? 0 : (sfi > 255 ? 255 : sfi));
-    // Two-stage dissolve: the background DOTS go first (bg_fade), the LETTERS wait
-    // SA_LETTER_HOLD_MS into the fade, then dissolve (letter_fade). By the time
-    // letter_fade > 0 the background is already gone, so the letter dither only hits
-    // the letters.
+    // Background dots dissolve EARLY + SLOWLY (over SA_BG_FADE_MS from the top of the
+    // hold) so the sparkle haze clears while the letters stay up. The letters only
+    // dissolve later, in the final fade phase, over the full (slow) SA_FADE_MS. By then
+    // the background is long gone, so the letter dither only hits the letters.
     uint8_t bg_fade = 0, letter_fade = 0;
-    if (el >= SA_INTRO_MS + SA_HOLD_MS) {
-        uint32_t fel = el - SA_INTRO_MS - SA_HOLD_MS;   // ms into the fade phase
-        uint32_t b   = (fel * 256) / SA_BG_FADE_MS;
+    if (el >= SA_BG_FADE_START_MS) {
+        uint32_t b = ((el - SA_BG_FADE_START_MS) * 256) / SA_BG_FADE_MS;
         bg_fade = (uint8_t)(b > 255 ? 255 : b);
-        if (fel >= SA_LETTER_HOLD_MS) {
-            uint32_t lf = ((fel - SA_LETTER_HOLD_MS) * 256) / (SA_FADE_MS - SA_LETTER_HOLD_MS);
-            letter_fade = (uint8_t)(lf > 255 ? 255 : lf);
-        }
+    }
+    if (el >= SA_INTRO_MS + SA_HOLD_MS) {
+        uint32_t lf = ((el - SA_INTRO_MS - SA_HOLD_MS) * 256) / SA_FADE_MS;
+        letter_fade = (uint8_t)(lf > 255 ? 255 : lf);
     }
     // background plasma density scales down as bg_fade rises → the dots dissolve first
     uint16_t pgain = (uint16_t)((uint16_t)SA_PGAIN * (255 - bg_fade)) / 255;
@@ -293,6 +303,7 @@ static void sa_render_frame(uint32_t el) {
 }
 
 void startup_anim_start(void) {
+    sa_noise_init();               // build the RAM noise tile on first use (once)
     s_start    = timer_read32();
     s_active   = true;
     s_next_log = 0;

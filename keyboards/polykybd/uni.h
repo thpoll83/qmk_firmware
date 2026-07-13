@@ -591,14 +591,11 @@ void register_unicodemap_poly(uint16_t index) {
 }
 
 bool process_unicodemap_poly(uint16_t keycode, keyrecord_t *record) {
-    // QK_UNICODEMAP_PAIR_MAX == 0xFFFF == UINT16_MAX, so the upper bound is always
-    // true for a uint16_t keycode. Harmless (the range check is still correct); the
-    // clause is kept for clarity/symmetry. Silence just this one -Wtype-limits so the
-    // warning stays a hard build error everywhere else (it caught a real infinite loop).
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
-    if (keycode >= QK_UNICODEMAP && keycode <= QK_UNICODEMAP_PAIR_MAX && record->event.pressed) {
-#pragma GCC diagnostic pop
+    // Match the whole UnicodeMap keycode space (QK_UNICODEMAP .. QK_UNICODEMAP_PAIR_MAX).
+    // QK_UNICODEMAP_PAIR_MAX is 0xFFFF (== UINT16_MAX), the top of the keycode type, so
+    // ">= QK_UNICODEMAP" already captures the full range — an explicit upper bound would
+    // be an always-true compare (-Wtype-limits). No pragma needed.
+    if (keycode >= QK_UNICODEMAP && record->event.pressed) {
         register_unicodemap_poly(unicodemap_index_poly(keycode));
         return true;
     }

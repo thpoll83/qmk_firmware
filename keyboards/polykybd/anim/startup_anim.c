@@ -50,6 +50,15 @@ static bool     s_active;
 static bool     s_loop;       // true: idle screensaver — restart at the end instead of ending
 static uint32_t s_start;
 static uint32_t s_next_log;   // next elapsed-ms threshold at which to emit a progress log
+static uint32_t s_last_frame; // last idle-loop frame time (frame-rate throttle, loop only)
+
+// Idle-loop frame interval. A full procedural frame (per-pixel background across all
+// keycaps) is ~15-25 ms; rendering it EVERY housekeeping pass (as the 5 s boot intro
+// does) starves the matrix scan + USB, so as a perpetual screensaver it made key
+// presses register late. Throttling to ~15 fps leaves most passes free for the main
+// loop (responsive keys) while the time-based motion stays smooth enough. Boot intro
+// is unthrottled (renders every pass) — it's brief and owns the CPU deliberately.
+#define EDEN_IDLE_FRAME_MS 66
 
 // --- small integer helpers -------------------------------------------------
 static inline uint8_t sa_hash8(uint32_t v) {
@@ -147,7 +156,13 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
         s_spark_pts[s_spark_n].sx    = sx;
         s_spark_pts[s_spark_n].sy    = sy;
         s_spark_pts[s_spark_n].thick = (hv & 1u) ? 2u : 1u;       // ~half are 2 px (brighter)
-        s_spark_pts[s_spark_n].tlen  = (uint8_t)(8u + (hv >> 4)); // trail 8..23 px (varied length)
+        // Trail length: the boot intro uses short 8..23 px comets; the idle screensaver
+        // (s_loop) uses MUCH longer 36..51 px trails so each comet drags a long, sparse,
+        // dither-faded ghost tail across the keys — the "ghosting" persistence look (a
+        // true keep-lit-pixels framebuffer won't fit in RAM). The fade formula below
+        // (255 - k*230/tlen) stretches with tlen, so the longer tail fades gradually.
+        uint8_t base_tlen = (uint8_t)(8u + (hv >> 4));
+        s_spark_pts[s_spark_n].tlen  = s_loop ? (uint8_t)(base_tlen + 28u) : base_tlen;
         s_spark_n++;
     }
 }
@@ -158,10 +173,14 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
 // on their own panel, which still reads as a comet). sa_set clips, so an over-inclusive cull
 // is fine.
 static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t cosv, int16_t sinv) {
+    // Idle screensaver uses long ghost trails (see sa_build_sparks); widen the cull
+    // margin so a comet whose head has streamed off the right of this key still draws
+    // its long tail here instead of being skipped.
+    const int16_t cull = s_loop ? (int16_t)(40 + 56) : (int16_t)(40 + SA_TRAIL_MAX);
     for (uint16_t i = 0; i < s_spark_n; ++i) {
         int16_t ddx = (int16_t)(s_spark_pts[i].sx - g->cx);
         int16_t ddy = (int16_t)(s_spark_pts[i].sy - g->cy);
-        if (ddx <= -(40 + SA_TRAIL_MAX) || ddx >= 40 + SA_TRAIL_MAX || ddy <= -40 || ddy >= 40) continue;
+        if (ddx <= -cull || ddx >= cull || ddy <= -40 || ddy >= 40) continue;
         const bool    thick = (s_spark_pts[i].thick == 2u);
         const uint8_t tlen  = s_spark_pts[i].tlen;
         int16_t hx, hy;
@@ -378,10 +397,11 @@ static void sa_render_idle_frame(uint32_t el) {
 // `contrast` is the OLED contrast register value (not local_state->contrast); the
 // one-shot runs at full brightness, the loop at the active idle brightness.
 static void sa_begin(bool loop, uint8_t contrast) {
-    s_start    = timer_read32();
-    s_active   = true;
-    s_loop     = loop;
-    s_next_log = 0;
+    s_start      = timer_read32();
+    s_active     = true;
+    s_loop       = loop;
+    s_next_log   = 0;
+    s_last_frame = s_start - EDEN_IDLE_FRAME_MS;   // render the first idle frame at once
     // Non-blocking progress trace (HID console; dropped when nothing is attached).
     // If a half wedges during the animation, the last line printed shows how far it
     // got. Only the USB (master) half's console is readable — to diagnose the left
@@ -418,6 +438,11 @@ void startup_anim_tick(void) {
     uint32_t el = timer_elapsed32(s_start);
     if (s_loop) {
         // Idle screensaver: the perpetual comet field (no letters/converge/fade).
+        // Throttle to EDEN_IDLE_FRAME_MS so the heavy render doesn't run every pass
+        // and starve the matrix scan/USB (that made keys sluggish to register in
+        // idle). Between frames we return immediately, leaving the pass free.
+        if (timer_elapsed32(s_last_frame) < EDEN_IDLE_FRAME_MS) return;
+        s_last_frame = timer_read32();
         // `el` just keeps growing so the comets keep streaming; a quiet ~5 s log
         // cadence (vs 1 s for the boot intro) keeps the console from filling up.
         if (el >= s_next_log) {

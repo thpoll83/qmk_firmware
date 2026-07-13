@@ -743,6 +743,11 @@ static void poly_ltr559_drive(void) {
 }
 #endif  // POLYKYBD_LTR559_DRIVE
 
+// Eden idle screensaver runs DIM (anti-burn-in + it's a sleeping-keyboard ambience,
+// not a legend you need to read). This is the OLED contrast register value, not a
+// brightness level — a small number is a faint glow.
+#define EDEN_IDLE_BRIGHTNESS 4
+
 // Idle "Eden" screensaver driver (IDLE_STYLE_EDEN), run every housekeeping pass on
 // BOTH halves (like doom_tick). It renders the looping boot animation while the
 // synced idle state says we are idling in EDEN style — the signal is DISP_IDLE +
@@ -759,11 +764,17 @@ static void eden_idle_tick(void) {
                       ((ls->flags & DISP_IDLE) != 0) && !one_shot;
     if (want) {
         if (!startup_anim_is_loop()) {
-            startup_anim_start_loop(ls->contrast);   // active idle brightness, both halves
+            startup_anim_start_loop(EDEN_IDLE_BRIGHTNESS);   // dim glow, both halves
         }
         startup_anim_tick();
     } else if (startup_anim_is_loop()) {
+        // Loop just ended (woke / turned off). Request a refresh so THIS half repaints
+        // its real legends now that Eden released the keycaps — the slave has no
+        // display_wakeup of its own (keys are processed on the master), so without
+        // this it could keep the last Eden frame until the next unrelated diff
+        // (the "slave didn't repaint on a plain key, only on Shift" symptom).
         startup_anim_stop();
+        request_disp_refresh();
     }
 }
 
@@ -916,10 +927,10 @@ void housekeeping_task_user(void) {
                         // Eden screensaver: enter DISP_IDLE like the pulse (so the
                         // wake-on-key and TURN_OFF suspend paths work unchanged and
                         // the flag+idle_style tell the slave to loop too), but hold
-                        // contrast at the active brightness — eden_idle_tick() owns
-                        // the pixels every pass and the loop migrates them itself, so
-                        // there is no burn-in and no per-pass pulse contrast to fight.
-                        contrast = get_active_brightness();
+                        // contrast DIM and steady — eden_idle_tick() owns the pixels
+                        // every pass and the loop migrates them itself, so there is no
+                        // burn-in and no per-pass pulse contrast to fight.
+                        contrast = EDEN_IDLE_BRIGHTNESS;
                         flags |= DISP_IDLE;
                         uprint("Transition to eden screensaver\n");
                     } else {
@@ -944,10 +955,10 @@ void housekeeping_task_user(void) {
                 flags = local_state->flags;
             } else if((flags & DISP_IDLE)!=0) {
                 if (get_idle_style() == IDLE_STYLE_EDEN) {
-                    // Eden owns the visuals via eden_idle_tick(); keep the panel at the
-                    // active brightness and DON'T compute a pulse contrast (a per-pass
-                    // contrast diff would call kdisp_idle() and fight the animation).
-                    contrast = get_active_brightness();
+                    // Eden owns the visuals via eden_idle_tick(); keep the panel DIM and
+                    // steady and DON'T compute a pulse contrast (a per-pass contrast diff
+                    // would call kdisp_idle() and fight the animation).
+                    contrast = EDEN_IDLE_BRIGHTNESS;
                 } else {
                     int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
                     contrast = time_after%50;

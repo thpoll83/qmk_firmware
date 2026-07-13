@@ -20,6 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+/* Reported in the GET_ID string (cmd 6) so the host shows the right variant. */
+#define POLY_KB_NAME "Split42"
+
 /* Key matrix — 4 rows per side, 6 columns (standard CRKBD layout) */
 #define MATRIX_ROWS_PER_SIDE 4
 #define MATRIX_ROWS          8
@@ -30,19 +33,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* Shift registers — 3×8=24 bits, covers 21 keycap displays per side */
 #define NUM_SHIFT_REGISTERS 3
 
-/* Matrix pin assignments — update to match actual PCB schematic */
+/* Matrix pin assignments (per the LEFT-half KiCad schematic) */
 #define MATRIX_COL_PINS \
     { GP10, GP11, GP12, GP13, GP14, GP15 }
 #define MATRIX_ROW_PINS \
     { GP18, GP19, GP20, GP21 }
 
-/* SPI interface for keycap displays — adjust if wired differently from split72 */
+/* SPI interface for keycap displays (same wiring as split72) */
 #define SPI_DRIVER   SPID0
 #define SPI_SS_PIN   GP17
 #define SPI_DC_PIN   GP8
 #define HW_RST_PIN   GP9
 #define SPI_SCK_PIN  GP6
 #define SPI_MOSI_PIN GP7
+// Mirror the working split72 exactly (GP4). NOTE: since the full-duplex split
+// UART switch GP4 doubles as SERIAL_USART_RX_PIN; whether spi_master claiming it
+// as MISO matters is being evaluated against the split72 baseline, so it is left
+// as-is here rather than pre-emptively changed.
 #define SPI_MISO_PIN GP4
 #define SPI_DIVISOR  (CPU_CLOCK / 10000000)
 
@@ -51,7 +58,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SR_DATA_PIN  GP26
 #define SR_LATCH_PIN GP28
 
-/* Rotary encoder */
+/* Rotary encoder (ENC_A/ENC_B per schematic; pins declared in keyboard.json) */
 #define ENCODER_RESOLUTION 2
 
 /* Status OLED — 128×32 SSD1306 (half-height vs split72's 128×64) */

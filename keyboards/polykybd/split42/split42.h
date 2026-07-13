@@ -31,8 +31,8 @@ struct display_info {
 /*
  * BITMASK macros select one keycap display via the shift-register chain.
  * Each macro pulls one bit low; all others stay high (displays deselected).
- * Ordering: bitmask[0] is the byte shifted in LAST (farthest from MCU in chain).
- * Verify this matches the actual PCB shift-register chain direction.
+ * Ordering matches split72's convention: bitmask[0] is the byte shifted in
+ * LAST (farthest from the MCU in the chain).
  */
 #define BITMASK1(x) .bitmask = {~0, ~0, (uint8_t)(~(1 << (x)))}
 #define BITMASK2(x) .bitmask = {~0, (uint8_t)(~(1 << (x))), ~0}

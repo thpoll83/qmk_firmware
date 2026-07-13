@@ -35,6 +35,16 @@ void rgb_matrix_update_pwm_buffers(void);
 
 void invert_display(uint8_t r, uint8_t c, bool state);
 
+// Split-link RX diagnostic (bring-up). Counts split transactions this half has
+// RECEIVED from the other half. On the slave a non-zero value proves the master->
+// slave UART direction carries data (regardless of whether the slave's reply gets
+// back); staying 0 means the master->slave direction is dead. Read it from the
+// slave's boot banner (see POLYKYBD_HIL_KEEP_USB, which keeps the slave's USB up
+// so it can be reached over `qmk console`). Bumped at the very top of the busiest
+// handlers, before CRC validation, so it counts bytes-arrived even on a bad frame.
+volatile uint32_t g_split_rx_frames = 0;
+uint32_t get_split_rx_frames(void) { return g_split_rx_frames; }
+
 #include <stddef.h>
 #include <string.h>
 
@@ -44,6 +54,7 @@ void invert_display(uint8_t r, uint8_t c, bool state);
 // size mismatch it bails out leaving the reply untouched (a no-op, as before). The
 // handler body runs only for a verified frame and sets the success ack itself.
 #define SYNC_VALIDATE_OR_RETURN(TYPE)                                            \
+    g_split_rx_frames++;  /* bring-up: count every received frame, pre-CRC */    \
     if (!(in_len == sizeof(TYPE) && in_data != NULL &&                           \
           out_len == sizeof(poly_sync_reply_t) && out_data != NULL)) {           \
         return;                                                                  \
@@ -338,6 +349,7 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
 
 // Handles incoming MRU recents (emoji + language) on the bridge with CRC32 validation.
 void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    g_split_rx_frames++;  // bring-up: count received MRU frames (own validation, not the macro)
     if (in_len == MRU_SYNC_BYTES && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data != NULL) {
         uint32_t crc32 = crc32_1byte(&((uint8_t *)in_data)[4], in_len-4, 0);
         const mru_sync_t* data = (const mru_sync_t *)in_data;

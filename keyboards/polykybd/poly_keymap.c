@@ -742,10 +742,25 @@ static void poly_ltr559_drive(void) {
 }
 #endif  // POLYKYBD_LTR559_DRIVE
 
+#ifdef POLYKYBD_LINK_DIAG
+static void render_link_diag(void);   // defined near show_splash_screen()
+#endif
+
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
+#ifdef POLYKYBD_LINK_DIAG
+    // Bring-up: repaint the split-link status on the top keycap row ~1×/s so the
+    // slave (no console) shows live whether it is receiving. Overwrites row-0
+    // legends by design — this is a diagnostic build only.
+    static uint32_t link_diag_timer = 0;
+    if (link_diag_timer == 0 || timer_elapsed32(link_diag_timer) >= 750) {
+        render_link_diag();
+        link_diag_timer = timer_read32();
+    }
+#endif
+
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful
@@ -1999,6 +2014,13 @@ static void draw_legend_cx(const uint32_t* text, int8_t y) {
 }
 
 void update_displays(enum refresh_mode mode) {
+#ifdef POLYKYBD_LINK_DIAG
+    // Diagnostic build: render_link_diag() owns the keycaps so the link status
+    // stays readable. Suppress the normal legend re-render, which would otherwise
+    // repaint over it (e.g. the slave redrawing legends when a sync lands).
+    (void)mode;
+    return;
+#endif
     // Doom easter egg: while game mode owns the keycaps, the blitter is the
     // only writer — a legend re-render here would tear the game frame.
     if (doom_mode_active()) {
@@ -2756,6 +2778,41 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     update_performed();
 };
+
+#ifdef POLYKYBD_LINK_DIAG
+// Bring-up: paint the split-link state on THIS half's top keycap row, so the
+// slave (which has no USB console) reveals whether it is receiving. Layout, one
+// glyph per keycap on matrix row 0:
+//   [role] [number...]
+//   role   = 'M' master / 'S' slave
+//   number = slave: frames RECEIVED from the master (get_split_rx_frames) — climbs
+//            iff master->slave carries data; stays 0 if that direction is dead.
+//            master: transport-fail count (get_link_transport_fail) — climbs while
+//            the slave's reply never gets back.
+// Read together across both halves: slave number climbing + master fails climbing
+// => master->slave OK, slave->master (reply) dead; slave number stuck at 0
+// => master->slave itself is dead. Enabled only with `-e POLYKYBD_LINK_DIAG=yes`.
+static void render_link_diag(void) {
+    const bool master = is_keyboard_master();
+    uint32_t   val    = master ? get_link_transport_fail() : get_split_rx_frames();
+
+    uint32_t buf[8];
+    uint8_t  n = 0;
+    buf[n++] = master ? U'M' : U'S';
+
+    // Decimal-format val (max 5 digits) into the keycaps after the role glyph.
+    char digits[5];
+    int  d = 0;
+    if (val == 0) {
+        buf[n++] = U'0';
+    } else {
+        while (val && d < 5) { digits[d++] = (char)('0' + (val % 10)); val /= 10; }
+        while (d) { buf[n++] = (uint32_t)digits[--d]; }
+    }
+    buf[n] = 0;
+    display_message(0, 0, buf, &FreeSansBold24pt7b);
+}
+#endif
 
 // Displays splash screen with polykybd/split72 logo and initializes displays with refresh.
 void show_splash_screen(void) {

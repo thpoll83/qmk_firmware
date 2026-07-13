@@ -37,6 +37,9 @@ static uint32_t ls_transport_fail = 0;  // transport returned false (timeout / h
 static uint32_t ls_call_giveup    = 0;  // send_to_bridge() calls that exhausted every retry
 static uint32_t ls_last_log       = 0;  // ls_attempts at the last emitted summary
 
+uint32_t get_link_tx_attempts(void)    { return ls_attempts; }
+uint32_t get_link_transport_fail(void) { return ls_transport_fail; }
+
 void set_com_state(enum com_state state) {
     com = state;
 }

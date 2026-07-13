@@ -29,8 +29,8 @@
     "encoder": {
         "rotary": [
             {
-                "pin_a": "GP2",
-                "pin_b": "GP3"
+                "pin_a": "GP25",
+                "pin_b": "GP29"
             }
         ]
     },

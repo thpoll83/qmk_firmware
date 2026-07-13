@@ -44,3 +44,42 @@ The strong override of `raw_hid_pre_receive_kb` lives in
 
 If a future QMK upstream changes the signature or semantics of `raw_hid_task`,
 re-apply by hand: keep the weak hook, keep the `if`-not-`while`.
+
+## drivers/oled/oled_driver.c
+
+Defer the status-OLED `DISPLAY_ON` until the framebuffer has been pushed, so
+the boot no longer flashes the panel's random power-on GDDRAM before the splash
+appears (the SSD1306 status OLED is on I2C @ 400 kHz).
+
+Two hunks in `oled_init()`:
+
+1. Drop `DISPLAY_ON` from the `display_setup2[]` init command list so the panel
+   stays physically OFF after the init commands:
+
+   ```diff
+   -    static const uint8_t PROGMEM display_setup2[] = {…, DEACTIVATE_SCROLL, DISPLAY_ON};
+   +    static const uint8_t PROGMEM display_setup2[] = {…, DEACTIVATE_SCROLL};
+   ```
+
+2. At the tail of `oled_init()`, after `oled_clear()`, flush the cleared
+   (all-black) buffer to GDDRAM with the panel still off, then enable it:
+
+   ```diff
+        oled_clear();
+        oled_initialized = true;
+   -    oled_active      = true;
+        oled_scrolling   = false;
+   +    oled_active = true;          // suppress oled_render_dirty()'s internal oled_on()
+   +    oled_render_dirty(true);     // flush all-black GDDRAM while the panel is off
+   +    oled_active = false;         // make the next oled_on() actually emit DISPLAY_ON
+   +    oled_on();                   // light the panel — GDDRAM already black
+        return true;
+   ```
+
+`oled_render_dirty()` calls `oled_on()` at its top when there is dirty data;
+holding `oled_active = true` across the flush makes that a no-op, so exactly one
+`DISPLAY_ON` is emitted (by the final `oled_on()`) after GDDRAM is clean.
+
+If upstream restructures `oled_init()` / the init command list, re-apply by
+hand: no `DISPLAY_ON` in the command list; flush-then-enable at the tail. End
+state is unchanged (`oled_active == true`, panel on).

@@ -76,7 +76,14 @@ void oled_status_screen(void) {
         oled_on();
     }
     oled_update_buffer();
-    oled_clear();
+    // No oled_clear() here: oled_update_buffer() already composes a full 1024-byte
+    // frame into the scratch buffer (it starts with kdisp_set_buffer(0), so the
+    // background is black), and oled_write_raw() diffs byte-for-byte and marks only
+    // the blocks that actually changed dirty. Calling oled_clear() first forced ALL
+    // 16 framebuffer blocks dirty every 66 ms tick, so the whole panel was re-pushed
+    // over I2C band-by-band even when only the WPM digit / brightness bar moved —
+    // that is the "updates in multiple passes" flicker. Diffing keeps a static screen
+    // silent and shrinks an incremental change to the one or two blocks it touches.
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
 }
 

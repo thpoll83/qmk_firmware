@@ -90,18 +90,18 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
                             incoming->doom_wpn_owned != current->doom_wpn_owned ||
                             incoming->doom_wpn_ready != current->doom_wpn_ready;
     // Master bumped the startup-animation replay nonce -> replay on this half too.
-    bool anim_replay = incoming->anim_nonce != current->anim_nonce;
-    // Master bumped the "re-arm Eden for next boot" nonce -> clear this half's marker.
-    bool boot_rearm = incoming->boot_reset_nonce != current->boot_reset_nonce;
+    // Guard on !active: on a fresh boot the slave is already animating from its own
+    // boot-intro marker when the master's post_init nonce arrives, so this must NOT
+    // restart it (that flashed a visible frame-0 stutter). It only starts the
+    // animation when the slave is idle — a genuine HID replay (cmd 31) or a
+    // KC_EDEN-rearmed boot where the slave's own marker was already consumed.
+    bool anim_replay = (incoming->anim_nonce != current->anim_nonce) && !startup_anim_active();
     copy_local_state(incoming);
     if (doom_ctl_changed) {
         request_disp_refresh();
     }
     if (anim_replay) {
         startup_anim_start();
-    }
-    if (boot_rearm) {
-        reset_boot_intro();
     }
     emj_apply_sync(incoming->emj_category, incoming->emj_page);
     lang_apply_sync(incoming->lang_page);

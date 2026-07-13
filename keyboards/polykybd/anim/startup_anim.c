@@ -23,8 +23,16 @@
 #define SA_NSPARK       64
 #define SA_TRAIL         6
 #define SA_TRAILSTEP     6      // per-trail phase step (8-bit units)
-#define SA_PGAIN        16      // background plasma density (out of 255)
+#define SA_PGAIN        11      // background plasma density (out of 255) — a faint haze
 #define SA_STRIDE      128      // scratch bytes per page
+// ---- ring (expanding ripple) tuning — parsed by the host firmware-port sim ----
+// Each ring is a THIN band (phase < SA_RING_BAND) that is *solid* while the ripple is
+// strong and dissolves to nothing as `ring` fades (noise-gated by `ring`), so it reads
+// as clean expanding ripples rather than a wide 50%-dither sparkle cloud.
+#define SA_RING_FREQ   300      // spatial frequency: higher = MORE concentric rings on the board
+#define SA_RING_BAND     3      // ring thickness in phase units (~0.85 px each) → ~2–3 px ring
+#define SA_RING_ANUM     9      // oval aspect numerator   (ax = (gx-cxr)*ANUM/ADEN)
+#define SA_RING_ADEN    10      // oval aspect denominator (near-round: 9/10)
 
 static bool     s_active;
 static uint32_t s_start;
@@ -40,21 +48,18 @@ static inline uint8_t sa_hash8(uint32_t v) {
 static inline uint8_t sa_noise(int16_t x, int16_t y) {
     return SA_NOISE[(((uint8_t)y & SA_NOISE_MASK) << 5) | ((uint8_t)x & SA_NOISE_MASK)];
 }
-// integer sqrt (binary, ~restoring) — a handful of adds/shifts, no FPU
+// Integer sqrt (binary restoring) — no FPU/divide. `b` MUST start ≥ the largest power
+// of four ≤ v; the board's rr² reaches ~7.3e5, so 1<<20 (=4^10) is the correct seed
+// (1<<14 silently truncated large radii — caught by the host firmware-port cross-check).
+// Only runs on the ring branch (background misses), a bounded cost for round ripples.
 static inline uint16_t sa_isqrt(uint32_t v) {
-    uint32_t r = 0, b = 1UL << 14;   // highest bit ≤ sqrt(max board coord²)
+    uint32_t r = 0, b = 1UL << 20;
     while (b > v) b >>= 2;
-    while (b) {
-        uint32_t t = r + b;
-        r >>= 1;
-        if (v >= t) { v -= t; r += b; }
-        b >>= 2;
-    }
+    while (b) { uint32_t t = r + b; r >>= 1; if (v >= t) { v -= t; r += b; } b >>= 2; }
     return (uint16_t)r;
 }
-// true Euclidean distance — the octagonal approximation gave the ripple crests a
-// diamond/"< >" bracket silhouette once the oval scaling stretched them; isqrt keeps
-// the rings smooth ellipses. Only called on the ring branch (background misses).
+// True Euclidean distance — needed so the near-centre ripples read as round rings; the
+// octagonal approximation put a visible 45° corner there ("< >" chevrons).
 static inline uint16_t sa_dist(int16_t a, int16_t b) {
     return sa_isqrt((uint32_t)((int32_t)a * a + (int32_t)b * b));
 }
@@ -159,12 +164,13 @@ static void sa_render_frame(uint32_t el) {
                 uint8_t pv = sa_plasma(gx, gy, tp);
                 if ((uint8_t)(((uint16_t)pv * SA_PGAIN) >> 8) > sa_noise(gx, gy)) {
                     bit = 1;
-                } else if (ring) {   // thin, dim, gently-oval ripple crest
-                    int16_t ax = (int16_t)(((int32_t)(gx - cxr) * 4) / 5);   // /1.25 rounder oval
+                } else if (ring) {   // thin, gently-oval, expanding ripple ring
+                    int16_t ax = (int16_t)(((int32_t)(gx - cxr) * SA_RING_ANUM) / SA_RING_ADEN);
                     int16_t ay = (int16_t)(gy - cyr);
                     uint16_t rr = sa_dist(ax, ay);
-                    uint8_t rv = sa_sin((uint8_t)(((uint32_t)rr * 91) >> 8) - tprg);
-                    if (rv > 240 && sa_noise((int16_t)(gx + 50), (int16_t)(gy + 30)) < (uint8_t)(ring >> 2))
+                    uint8_t phase = (uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg);
+                    if (phase < SA_RING_BAND &&
+                        sa_noise((int16_t)(gx + 50), (int16_t)(gy + 30)) < ring)
                         bit = 1;
                 }
                 if (bit) buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));

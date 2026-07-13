@@ -50,20 +50,12 @@ static inline uint8_t sa_hash8(uint32_t v) {
     v ^= v >> 12; v *= 0x297a2d39U;
     v ^= v >> 15; return (uint8_t)v;
 }
-// White-noise dither tile: a 64x64 lookup (a per-pixel hash in the hot loop would be
-// slower). The table lives in RAM and is filled ONCE at boot from sa_hash8 (verified
-// uniform, ~0 adjacent correlation) instead of being a 4 KB const in flash — same
-// speed, zero .bin cost. fw_anim_sim.py mirrors the same hash so the preview matches.
-#define SA_NOISE_LEN ((SA_NOISE_MASK + 1) * (SA_NOISE_MASK + 1))
-static uint8_t s_noise[SA_NOISE_LEN];
-static bool    s_noise_ready;
-static void sa_noise_init(void) {
-    if (s_noise_ready) return;
-    for (uint16_t i = 0; i < SA_NOISE_LEN; ++i) s_noise[i] = sa_hash8(i);
-    s_noise_ready = true;
-}
+// White-noise dither threshold via a 64x64 table lookup (a per-pixel hash in the hot
+// loop would be slower). The table is a const in FLASH, not RAM: flash is abundant here
+// (~19% of the 2 MB partition used) while SRAM is nearly full (~1.7 KB free), so the 4 KB
+// tile belongs in flash. The 64 px tile keeps the dither repetition invisible.
 static inline uint8_t sa_noise(int16_t x, int16_t y) {
-    return s_noise[(((uint8_t)y & SA_NOISE_MASK) << 6) | ((uint8_t)x & SA_NOISE_MASK)];
+    return SA_NOISE[(((uint8_t)y & SA_NOISE_MASK) << 6) | ((uint8_t)x & SA_NOISE_MASK)];
 }
 // Cheap octagonal distance (minimax α·max + β·min) — no FPU/divide/sqrt. This runs for
 // ~every background pixel during the ring phase, so keeping it off the sqrt path is the
@@ -303,7 +295,6 @@ static void sa_render_frame(uint32_t el) {
 }
 
 void startup_anim_start(void) {
-    sa_noise_init();               // build the RAM noise tile on first use (once)
     s_start    = timer_read32();
     s_active   = true;
     s_next_log = 0;

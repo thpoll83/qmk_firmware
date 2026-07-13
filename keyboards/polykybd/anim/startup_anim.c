@@ -25,6 +25,10 @@
 // the clean letters stay up — rather than lingering behind them until the final fade.
 #define SA_BG_FADE_START_MS SA_INTRO_MS   // start of the hold (letters are formed)
 #define SA_BG_FADE_MS       3000          // slow background dissolve
+// After the letters have been clearly readable for SA_LINE_CLEAR_MS into the hold, wipe
+// out every second horizontal line of the text ALL AT ONCE (a one-frame scanline glitch),
+// then keep that look for the rest of the show.
+#define SA_LINE_CLEAR_MS    1500
 
 // ---- effect tuning ----
 #define SA_NSPARK      340      // one L→R comet per spark; more of them → denser streaks
@@ -189,7 +193,7 @@ static void sa_render_frame(uint32_t el) {
     uint8_t tt   = el < SA_INTRO_MS ? (uint8_t)(((uint32_t)el * 256) / SA_INTRO_MS) : 255;
     uint8_t tp   = (uint8_t)(el >> 4);
     uint8_t tprg = (uint8_t)(el >> 5);
-    int16_t cvi  = (int16_t)(((int32_t)tt - 90) * 255 / 75);        // converge over tt 90..165
+    int16_t cvi  = (int16_t)(((int32_t)tt - 55) * 255 / 75);        // converge over tt 55..130 (gather into the letter zones before they appear)
     uint8_t cv   = (uint8_t)(cvi < 0 ? 0 : (cvi > 255 ? 255 : cvi));
     uint8_t ring = (uint8_t)(255 - cv);                            // ripples fade as things converge
     bool letters = tt >= 130;                                     // letters form a bit earlier
@@ -281,6 +285,15 @@ static void sa_render_frame(uint32_t el) {
                 for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx)
                     if (sa_noise((int16_t)(lx + idx * 13), (int16_t)(ly + idx * 7)) >= letter_in)
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
+        }
+
+        // Scanline glitch: once the letters have held for SA_LINE_CLEAR_MS, wipe out every
+        // SECOND horizontal line of the buffer. Re-applied each frame so the look persists
+        // (the letters are redrawn every frame); the transition is instant (one frame).
+        if (el >= SA_INTRO_MS + SA_LINE_CLEAR_MS) {
+            for (int16_t ly = 1; ly < SCREEN_HEIGHT; ly += 2)
+                for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx)
+                    buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
 
         if (letter_fade) {   // dither-dissolve the letters (the only lit pixels left by now)

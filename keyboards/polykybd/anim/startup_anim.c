@@ -24,7 +24,7 @@
 #define SA_LETTER_HOLD_MS 2000  // letters stay this long into the fade, THEN dissolve
 
 // ---- effect tuning ----
-#define SA_NSPARK      160      // one L→R comet per spark; more of them → denser streaks
+#define SA_NSPARK      250      // one L→R comet per spark; more of them → denser streaks
 #define SA_TRAIL_MAX    24      // longest comet trail (px); each spark rolls its own length
 #define SA_PGAIN         6      // background plasma density (out of 255) — a very faint haze
 #define SA_STRIDE      128      // scratch bytes per page
@@ -34,8 +34,8 @@
 // with a fading sparkle halo (the "circular effect"), not a thin bare line nor a flat
 // 50%-dither cloud. Density = crest(rv) * ring, dithered against the noise tile.
 #define SA_RING_FREQ   300      // spatial frequency: higher = MORE concentric rings on the board
-#define SA_RING_ANUM     9      // oval aspect numerator   (ax = (gx-cxr)*ANUM/ADEN)
-#define SA_RING_ADEN    10      // oval aspect denominator (near-round: 9/10)
+#define SA_RING_ASPECT 230      // oval aspect: ax = (gx-cxr)*SA_RING_ASPECT>>8 (230/256≈0.9, near
+                                // round). A shift, NOT a divide — no per-pixel software divide.
 
 static bool     s_active;
 static uint32_t s_start;
@@ -46,10 +46,10 @@ static inline uint8_t sa_hash8(uint32_t v) {
     v ^= v >> 12; v *= 0x297a2d39U;
     v ^= v >> 15; return (uint8_t)v;
 }
-// White-noise dither threshold via a 32x32 table lookup (was a per-pixel hash —
-// this is the hot-loop speedup). Tiling every 32 px is imperceptible for noise.
+// White-noise dither threshold via a 64x64 table lookup (a per-pixel hash would be
+// slower). The 64 px tile (was 32) makes the repetition much less visible.
 static inline uint8_t sa_noise(int16_t x, int16_t y) {
-    return SA_NOISE[(((uint8_t)y & SA_NOISE_MASK) << 5) | ((uint8_t)x & SA_NOISE_MASK)];
+    return SA_NOISE[(((uint8_t)y & SA_NOISE_MASK) << 6) | ((uint8_t)x & SA_NOISE_MASK)];
 }
 // Cheap octagonal distance (minimax α·max + β·min) — no FPU/divide/sqrt. This runs for
 // ~every background pixel during the ring phase, so keeping it off the sqrt path is the
@@ -66,7 +66,7 @@ static inline uint8_t sa_plasma(int16_t gx, int16_t gy, uint8_t tp) {
     uint8_t a = sa_sin((uint8_t)(((int32_t)gx * 3) >> 2) + tp);   // gx * 0.75
     uint8_t b = sa_sin((uint8_t)gy - tp);                         // gy * 1.0
     uint8_t c = sa_sin((uint8_t)((gx + gy) >> 1) + tp);           // (gx+gy) * 0.5
-    return (uint8_t)(((uint16_t)a + b + c) / 3);
+    return (uint8_t)((((uint16_t)a + b + c) * 85u) >> 8);         // /3 as *85>>8 (no divide)
 }
 
 static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
@@ -217,16 +217,16 @@ static void sa_render_frame(uint32_t el) {
                 } else if (ring) {   // faint, diffuse, irregular expanding ripple — a soft
                                      // circular shimmer BEHIND the L→R sparks, dissolving as
                                      // `ring` fades. Kept subtle so the spark motion reads.
-                    int16_t ax = (int16_t)(((int32_t)(gx - cxr) * SA_RING_ANUM) / SA_RING_ADEN);
+                    int16_t ax = (int16_t)(((int32_t)(gx - cxr) * SA_RING_ASPECT) >> 8);  // *0.9, no divide
                     int16_t ay = (int16_t)(gy - cyr);
                     uint16_t rr = sa_dist(ax, ay);
                     // irregular: wobble the radius by a slow spatial sine so the rings are
                     // not perfectly concentric and vary across the field (±~16 px).
                     rr = (uint16_t)((int16_t)rr + ((sa_sin((uint8_t)(gx + 2 * gy)) - 128) >> 3));
                     uint8_t rv = sa_sin((uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg));
-                    uint8_t crest = rv > 210 ? (uint8_t)(rv - 210) : 0;  // only the peak → THIN rings,
-                                                                        // lots of dark space between
-                    uint8_t dens  = (uint8_t)(((uint16_t)crest * ring) >> 8);   // ~18% in the thin band
+                    uint8_t crest = rv > 215 ? (uint8_t)(rv - 215) : 0;  // only the very peak → very
+                                                                        // dissolved, thin rings
+                    uint8_t dens  = (uint8_t)(((uint16_t)crest * ring) >> 9);   // ~8% — barely there
                     if (sa_noise((int16_t)(gx + 50), (int16_t)(gy + 30)) < dens)
                         bit = 1;
                 }

@@ -85,6 +85,12 @@ void oled_status_screen(void) {
     // that is the "updates in multiple passes" flicker. Diffing keeps a static screen
     // silent and shrinks an incremental change to the one or two blocks it touches.
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    // Push the changed blocks in ONE pass (see oled_fw_update_screen for the full
+    // rationale): the stock per-iteration oled_render() flushes only one block per
+    // main-loop pass, so a status change landing during a busy window (e.g. an
+    // overlay burst on an app switch) could tear top-first. This is a no-op when
+    // nothing changed, so a static screen still costs nothing on the bus.
+    oled_render_dirty(true);
 }
 
 void oled_render_logos(void) {

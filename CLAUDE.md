@@ -233,6 +233,56 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   verifier is committed as `doom/tools/keycap_dispmap.py` (run it after any
   placement change); full write-up in `doom/README.md` § anti-burn-in placement.
 
+### Status OLED (128×64 split72 / 128×32 split42, SSD1306 over **I2C**)
+The status OLED is the QMK `ssd1306` driver (`OLED_DRIVER = ssd1306`, no
+`OLED_TRANSPORT` → QMK defaults to **I2C**) on `I2CD0` (GP0/GP1) at **400 kHz**
+(`config.h`). ⚠️ It is a **different bus** from the per-keycap displays (those are
+the SPI SSD1306s driven by `disp_array.c`) — don't conflate them. Each half drives
+its **own** status OLED locally. Rendering lives in `oled_helper.c` (`oled_task_user`
+dispatch) + `<variant>/status_oled.c` (`oled_update_buffer*` composers): everything
+is composed into the 1024-byte kdisp scratch buffer (`get_scratch_buffer()`,
+`128×8`, cleared by `kdisp_set_buffer(0)`) then blitted to the QMK framebuffer with
+`oled_write_raw`.
+
+**The "updates in multiple passes" flicker (2026-07):** QMK's driver splits the
+frame into **16 blocks** and `oled_render()` flushes only `OLED_UPDATE_PROCESS_LIMIT`
+(default **1**) block per call. `oled_render()` runs every main-loop iteration, so a
+static screen normally paints fast — but two things made a full repaint dribble out
+band-by-band:
+- Each screen composer used to call **`oled_clear()`** before `oled_write_raw`, which
+  marks **all 16 blocks dirty every 66 ms tick** even when only a digit moved.
+  `oled_write_raw` already diffs byte-for-byte and dirties only changed blocks, so the
+  `oled_clear()` was **dropped** from `oled_status_screen()` and `oled_fw_update_screen()`
+  — a static screen now costs nothing on the bus and an incremental change touches 1–2
+  blocks. (The scratch is a full-frame black background, so no stale pixels result.)
+- When the main loop is **saturated** (a firmware/font-pack flash streaming HID chunks
+  + driving the deferred sector erase, or a boot-time busy window), the 1-block-per-call
+  flush can't finish a full-screen transition before the loop starves it — the classic
+  symptom was the **status→"Firmware Update" screen transition tearing**, bottom rows
+  still showing the old status. Fix: both `oled_status_screen()` and
+  `oled_fw_update_screen()` end with **`oled_render_dirty(true)`** to push all changed
+  blocks in **one** synchronous pass. It is a **no-op when nothing changed** (early-returns
+  on `!oled_dirty`), so it only pays the ~26 ms full-frame I2C cost on an actual full
+  swap, never per idle tick. ⚠️ Don't reintroduce a per-frame `oled_clear()` — it defeats
+  the diffing and makes `oled_render_dirty(true)` re-push the whole frame every tick.
+- The other `oled_clear()` (`poly_keymap.c` `oled_init_user`) is harmless: QMK calls
+  `oled_init_user` at the **top** of `oled_init`, before `oled_initialized = true`, so
+  the `oled_off/render/on` around it are early-return no-ops (it only touches RAM).
+- The logos + DOOM status paths use diff-based `oled_write_raw` (no `oled_clear`) and
+  hardware scroll; they can still dribble on a busy transition but are non-critical, so
+  they were left as-is.
+
+**Boot noise (deferred `DISPLAY_ON`)** — the SSD1306 powers up with random GDDRAM, and
+stock `oled_init()` sent `DISPLAY_ON` before any content was flushed, so boot flashed
+RAM noise before the splash. Patched in QMK core (`drivers/oled/oled_driver.c`, tracked
+in `UPSTREAM_PATCHES.md`): the panel stays off through init, an all-black GDDRAM is
+flushed, **then** `DISPLAY_ON` — boot shows black → splash.
+
+**Speed levers not yet pulled** (were unnecessary once the diffing + one-shot flush
+landed; revisit only if a full swap still looks slow on hardware): raise
+`OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
+above SSD1306 spec — A/B on real hardware).
+
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.
 

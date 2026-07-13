@@ -440,15 +440,6 @@ void mark_boot_intro_done(void) {
     eeconfig_update_user_datablock(&g_boot_flags, offsetof(poly_eeconf_t, boot_flags),
                                    sizeof(g_boot_flags));
 }
-// Clear the "already played" marker so the intro plays again on the NEXT boot. The
-// KC_EDEN ("Reset Eden") key uses this — it arms the animation rather than replaying
-// it now. A deliberate single write (not the typing hot path), like mark_boot_intro_done.
-void reset_boot_intro(void) {
-    if (g_boot_flags != BOOT_INTRO_DONE) return;   // already pending, nothing to persist
-    g_boot_flags = 0;                              // any non-sentinel value => pending
-    eeconfig_update_user_datablock(&g_boot_flags, offsetof(poly_eeconf_t, boot_flags),
-                                   sizeof(g_boot_flags));
-}
 
 // ---- Active host-OS (enum poly_os) ----
 

@@ -2745,14 +2745,12 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             local_state->overlay_flags &= ~SAVE_EEPROM;
             break;
         case KC_EDEN:
-            // "Reset Eden": arm the one-time startup ("Eden") animation for the NEXT
-            // boot rather than replaying it now — clear this (master) half's persisted
-            // "already played" marker so keyboard_post_init_user() runs it on the next
-            // power-up. The slave is brought along on that boot by the anim_nonce the
-            // master bumps in post_init (see below); we deliberately do NOT touch the
-            // slave's own marker or grow poly_sync_t (a size change breaks split sync
-            // with a half still on older firmware).
-            reset_boot_intro();
+            // Trigger the startup ("Eden") animation NOW on this (master) half and bump
+            // the synced nonce so the slave plays in lockstep (the nonce is delivered by
+            // the one-shot bridge send in housekeeping, once the transport is up — see
+            // sync_and_refresh_displays gating). Input is swallowed while it plays.
+            startup_anim_start();
+            local_state->anim_nonce++;
             break;
         // ── Language layer: region tabs, paging, MRU controls, slot/MRU select ──
         case KC_LANG_CAT_BASE ... KC_LANG_PAGE_PREV - 1:
@@ -3045,19 +3043,11 @@ void keyboard_post_init_user(void) {
     // procedural intro once, then persist BOOT_INTRO_DONE (in the housekeeping
     // finish edge). Each half reads its own flag and animates its own keycaps.
     note_boot_flags(ee.boot_flags);
-    if (boot_intro_pending()) {
-        startup_anim_start();
-        // Bring the slave along in lockstep. On a fresh boot both halves already
-        // start from their own marker (so no sync is needed — robust against the
-        // flaky boot-time link); on a KC_EDEN-rearmed boot only the master's marker
-        // was cleared, so bumping the synced replay nonce makes the slave replay too
-        // (delivered by the one-shot bridge send in housekeeping, once the transport
-        // is up). The slave guards on !startup_anim_active(), so where it is already
-        // animating from its own marker this nonce is a no-op (no frame-0 restart).
-        if (is_usb_host_side()) {
-            access_local_state()->anim_nonce++;
-        }
-    }
+    // Boot-time auto-play of the Eden animation is intentionally NOT started here:
+    // running it during boot was wedging a half (see the startup logs in
+    // startup_anim.c). The animation is triggered on demand by the KC_EDEN key
+    // instead (process_record_user), when the board is fully up and the split link
+    // is live. Re-enable a guarded boot auto-play once the startup hang is understood.
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif

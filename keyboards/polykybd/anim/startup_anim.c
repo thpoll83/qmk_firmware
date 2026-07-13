@@ -9,6 +9,7 @@
 #include "base/disp_array.h"               // scratch buffer, BUFFER_X, kdisp_*
 #include "base/shift_reg.h"                // sr_shift_out_buffer_latch
 #include "side.h"                           // is_left_side()
+#include "bridge_helper.h"                  // is_usb_host_side() — for the startup trace
 #include QMK_KEYBOARD_H                     // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
 #include "base/fonts/FreeSansBold24pt7b.h"  // splash glyph font
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
@@ -40,6 +41,7 @@
 
 static bool     s_active;
 static uint32_t s_start;
+static uint32_t s_next_log;   // next elapsed-ms threshold at which to emit a progress log
 
 // --- small integer helpers -------------------------------------------------
 static inline uint8_t sa_hash8(uint32_t v) {
@@ -286,8 +288,14 @@ static void sa_render_frame(uint32_t el) {
 }
 
 void startup_anim_start(void) {
-    s_start  = timer_read32();
-    s_active = true;
+    s_start    = timer_read32();
+    s_active   = true;
+    s_next_log = 0;
+    // Non-blocking progress trace (HID console; dropped when nothing is attached).
+    // If a half wedges during the animation, the last line printed shows how far it
+    // got. Only the USB (master) half's console is readable — to diagnose the left
+    // half, plug USB into it so it is master, then press KC_EDEN and watch the log.
+    uprintf("Eden start (left=%d, master=%d)\n", (int)is_left_side(), (int)is_usb_host_side());
     // Eden runs at FULL brightness regardless of the stored brightness. This only
     // touches the OLED contrast register (not local_state->contrast), so the normal
     // brightness is restored after the fade-to-black (see the housekeeping finish
@@ -302,7 +310,17 @@ bool startup_anim_active(void) { return s_active; }
 void startup_anim_tick(void) {
     if (!s_active) return;
     uint32_t el = timer_elapsed32(s_start);
-    if (el >= SA_TOTAL_MS) { s_active = false; return; }
+    if (el >= SA_TOTAL_MS) {
+        s_active = false;
+        uprintf("Eden done (%lums)\n", (unsigned long)el);
+        return;
+    }
+    // Emit a progress line ~once/second BEFORE rendering the frame, so if the render
+    // hangs the last line shows the elapsed ms it reached. Non-blocking (console).
+    if (el >= s_next_log) {
+        uprintf("Eden tick %lums\n", (unsigned long)el);
+        s_next_log = el + 1000;
+    }
     sa_render_frame(el);
 }
 

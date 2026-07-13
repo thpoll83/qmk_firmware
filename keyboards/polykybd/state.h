@@ -324,8 +324,6 @@ void note_boot_flags(uint8_t flags);
 bool boot_intro_pending(void);
 // Persist BOOT_INTRO_DONE (one-time tail-byte write) so the intro won't replay.
 void mark_boot_intro_done(void);
-// Clear the played marker so the intro plays again on the next boot (KC_EDEN).
-void reset_boot_intro(void);
 
 // ---- Active host-OS (enum poly_os) — see the poly_os comment in this header. ----
 

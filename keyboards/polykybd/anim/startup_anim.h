@@ -13,9 +13,10 @@
 
 // Begin the one-shot animation (KC_EDEN / boot replay). Runs to black then ends.
 void startup_anim_start(void);
-// Begin the LOOPING animation as an idle screensaver (IDLE_STYLE_EDEN): it never
-// self-terminates — tick restarts it at the end — and draws at `contrast` (the
-// active idle brightness) instead of the boot's full brightness. Stopped via
+// Begin the LOOPING idle screensaver (IDLE_STYLE_EDEN): a perpetual comet field —
+// the boot intro's opening look (streaming L→R comets over the plasma/ripple haze)
+// with NO letters, converge, or fade — held open forever. Draws at `contrast` (the
+// active idle brightness) rather than the boot's full brightness. Stopped via
 // startup_anim_stop() on wake/suspend. No-op if already running.
 void startup_anim_start_loop(uint8_t contrast);
 // Stop immediately (idle wake / suspend). Safe to call when not running.

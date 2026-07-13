@@ -310,6 +310,70 @@ static void sa_render_frame(uint32_t el) {
     }
 }
 
+// Idle screensaver frame: the intro's OPENING look — streaming comets over the
+// plasma+ripple haze — held open forever. It is the boot animation with the
+// letter/converge/fade machinery removed: cv is forced 0 (comets stream straight
+// across instead of gathering into the letter zones), letters are never drawn, and
+// there is no bg fade / letter fade / scanline / black tail. Time (`el`) still
+// advances, so the comets keep coming and going and the ripples keep expanding —
+// the lit pixels are always moving, which is the whole point (anti-burn-in).
+static void sa_render_idle_frame(uint32_t el) {
+    const bool left = is_left_side();
+    const sa_key_geom_t *T = left ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
+
+    const uint8_t  tp    = (uint8_t)(el >> 4);
+    const uint8_t  tprg  = (uint8_t)(el >> 5);
+    const uint8_t  ring  = 255;          // ripples always present (they expand via tprg)
+    const uint16_t pgain = SA_PGAIN;     // constant faint haze — no background fade
+    const int16_t  cxr   = SA_BOARD_W / 2;
+    const int16_t  cyr   = (int16_t)((int32_t)SA_BOARD_H * 42 / 100);
+
+    sa_build_sparks(el, 0, 0);           // cv=0: no converge; spark_fade=0: none wink out
+
+    for (uint8_t idx = 0; idx < 40; ++idx) {
+        const sa_key_geom_t *g = &T[idx];
+        if (!g->valid) continue;
+        const bool rot = (g->ang != 0);
+        int16_t cosv = (int16_t)sa_sin((uint8_t)(g->ang + 64)) - 128;
+        int16_t sinv = (int16_t)sa_sin(g->ang) - 128;
+
+        sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+        kdisp_set_buffer(0x00);
+        uint8_t *buf = get_scratch_buffer();
+
+        for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
+            int16_t dy = (int16_t)(ly - 20);
+            int16_t gy_flat = (int16_t)(g->cy + dy);
+            const bool erow = !rot && ((ly & 1) == 0);
+            for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx) {
+                int16_t dx = (int16_t)(lx - 36);
+                int16_t gx, gy;
+                if (rot) {
+                    gx = (int16_t)(g->cx + ((dx * cosv - dy * sinv) >> 7));
+                    gy = (int16_t)(g->cy + ((dx * sinv + dy * cosv) >> 7));
+                } else {
+                    gx = (int16_t)(g->cx + dx);
+                    gy = gy_flat;
+                }
+                uint8_t bgv;
+                if (rot) {
+                    bgv = sa_bg(gx, gy, tp, tprg, ring, pgain, cxr, cyr);
+                } else if (erow) {
+                    bgv = (lx & 1) ? s_brow[lx - 1] : sa_bg(gx, gy, tp, tprg, ring, pgain, cxr, cyr);
+                    s_brow[lx] = bgv;
+                } else {
+                    bgv = s_brow[lx];
+                }
+                if (bgv > sa_noise(gx, gy))
+                    buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
+            }
+        }
+
+        sa_plot_sparks(buf, g, rot, cosv, sinv);
+        kdisp_send_window();
+    }
+}
+
 // Shared start path for the one-shot (boot/KC_EDEN) and the looping idle screensaver.
 // `contrast` is the OLED contrast register value (not local_state->contrast); the
 // one-shot runs at full brightness, the loop at the active idle brightness.
@@ -352,22 +416,26 @@ bool startup_anim_active(void) { return s_active; }
 void startup_anim_tick(void) {
     if (!s_active) return;
     uint32_t el = timer_elapsed32(s_start);
-    if (el >= SA_TOTAL_MS) {
-        if (s_loop) {
-            // Idle screensaver: seamlessly restart instead of ending.
-            s_start    = timer_read32();
-            s_next_log = 0;
-            el         = 0;
-        } else {
-            s_active = false;
-            uprintf("Eden done (%lums)\n", (unsigned long)el);
-            return;
+    if (s_loop) {
+        // Idle screensaver: the perpetual comet field (no letters/converge/fade).
+        // `el` just keeps growing so the comets keep streaming; a quiet ~5 s log
+        // cadence (vs 1 s for the boot intro) keeps the console from filling up.
+        if (el >= s_next_log) {
+            uprintf("Eden idle %lums\n", (unsigned long)el);
+            s_next_log = el + 5000;
         }
+        sa_render_idle_frame(el);
+        return;
+    }
+    if (el >= SA_TOTAL_MS) {
+        s_active = false;
+        uprintf("Eden done (%lums)\n", (unsigned long)el);
+        return;
     }
     // Emit a progress line ~once/second BEFORE rendering the frame, so if the render
     // hangs the last line shows the elapsed ms it reached. Non-blocking (console).
     if (el >= s_next_log) {
-        uprintf("Eden tick %lums%s\n", (unsigned long)el, s_loop ? " (loop)" : "");
+        uprintf("Eden tick %lums\n", (unsigned long)el);
         s_next_log = el + 1000;
     }
     sa_render_frame(el);

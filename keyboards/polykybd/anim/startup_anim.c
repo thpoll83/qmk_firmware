@@ -24,11 +24,13 @@
 // starts (letters just formed) and clears over SA_BG_FADE_MS, so the dots fade away while
 // the clean letters stay up — rather than lingering behind them until the final fade.
 #define SA_BG_FADE_START_MS SA_INTRO_MS   // start of the hold (letters are formed)
-#define SA_BG_FADE_MS       3000          // slow background dissolve
-// After the letters have been clearly readable for SA_LINE_CLEAR_MS into the hold, wipe
-// out every second horizontal line of the text ALL AT ONCE (a one-frame scanline glitch),
-// then keep that look for the rest of the show.
-#define SA_LINE_CLEAR_MS    1500
+#define SA_BG_FADE_MS       1800          // quick background dissolve
+// Scanline glitch: once the background has FULLY faded (SA_BG_FADE_START_MS + SA_BG_FADE_MS)
+// plus a 1 s beat of clean letters, wipe out every second horizontal line of the text ALL
+// AT ONCE (a one-frame glitch), then keep that look for the rest of the show. Waiting for a
+// clean, noise-free frame first makes the scanline effect read clearly.
+#define SA_LINE_CLEAR_DELAY_MS 1000
+#define SA_LINE_CLEAR_AT_MS    (SA_BG_FADE_START_MS + SA_BG_FADE_MS + SA_LINE_CLEAR_DELAY_MS)
 
 // ---- effect tuning ----
 #define SA_NSPARK      340      // one L→R comet per spark; more of them → denser streaks
@@ -287,10 +289,10 @@ static void sa_render_frame(uint32_t el) {
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
 
-        // Scanline glitch: once the letters have held for SA_LINE_CLEAR_MS, wipe out every
+        // Scanline glitch: after the background has fully faded + a 1 s beat, wipe out every
         // SECOND horizontal line of the buffer. Re-applied each frame so the look persists
         // (the letters are redrawn every frame); the transition is instant (one frame).
-        if (el >= SA_INTRO_MS + SA_LINE_CLEAR_MS) {
+        if (el >= SA_LINE_CLEAR_AT_MS) {
             for (int16_t ly = 1; ly < SCREEN_HEIGHT; ly += 2)
                 for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx)
                     buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));

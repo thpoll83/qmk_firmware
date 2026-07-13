@@ -21,38 +21,39 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 
-/* key matrix size */
-#define MATRIX_ROWS_PER_SIDE 5
-#define MATRIX_ROWS 10
-#define MATRIX_COLS 8
+/* key matrix size — split42 is a CRKBD footprint: 4 rows per side, 6 columns.
+   All pin assignments below are taken from the KiCad schematic
+   (poly_corne/poly_corne_split42_left.kicad_sch): Col1..Col6 = GP10..GP15,
+   Row1..Row4 = GP18..GP21. */
+#define MATRIX_ROWS_PER_SIDE 4
+#define MATRIX_ROWS 8
+#define MATRIX_COLS 6
 
 #define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_COLS+(col))
 
-#define RGBLED_NUM       72
-#define DRIVER_LED_TOTAL RGBLED_NUM
-#define RGB_MATRIX_LED_COUNT RGBLED_NUM
-#define RGB_MATRIX_SPLIT { 36, 36 }
 
-
-#define NUM_SHIFT_REGISTERS 5
+/* Shift registers select the active keycap display. split42 has 3 (24 outputs,
+   21 keycap displays per side) vs split72's 5. Nets SR_DATA/SR_CLOCK/SR_LATCH. */
+#define NUM_SHIFT_REGISTERS 3
 
 
 #define MATRIX_COL_PINS \
-    { GP10, GP11, GP12, GP13, GP14, GP15, GP16, GP3 }
+    { GP10, GP11, GP12, GP13, GP14, GP15 }
 #define MATRIX_ROW_PINS \
-    { GP18, GP19, GP20, GP21, GP22 }
+    { GP18, GP19, GP20, GP21 }
 
 
-#define WS2812_DI_PIN GP2
-
-
-// SPI interface to write to the selected display
+/* SPI interface to write to the selected keycap display — same wiring as split72
+   (schematic nets: CS=GP17, D-C=GP8, RESET=GP9, SCK=GP6, MOSI=GP7). */
 #define SPI_DRIVER SPID0
 #define SPI_SS_PIN GP17
 #define SPI_DC_PIN GP8
 #define HW_RST_PIN GP9
 #define SPI_SCK_PIN GP6
 #define SPI_MOSI_PIN GP7
+// Mirror split72 (GP4). NOTE from the schematic: GP4 carries SERIAL_COM1 (the
+// split-serial RX) and there is no dedicated MISO net — the keycap SSD1306s are
+// write-only. Left exactly as split72 has it; not changed here (baseline first).
 #define SPI_MISO_PIN GP4
 
 //This number can be calculated by dividing the MCU’s clock speed
@@ -60,46 +61,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //wanting to talk to an SPI device at 4 MHz would set the divisor to 2
 #define SPI_DIVISOR (CPU_CLOCK / 10000000) //rp1040 runs at 133Mhz, SPI at 10Mhz
 
-// Shift register to select the display
-//#define SR_NMR_PIN //NO_PIN if possible
+// Shift register to select the display (schematic nets SR_DATA/SR_CLOCK/SR_LATCH)
 #define SR_CLK_PIN GP27
 #define SR_DATA_PIN GP26
 #define SR_LATCH_PIN GP28
 
 
+/* Rotary encoder — schematic nets ENC_A=GP2, ENC_B=GP3 (declared in keyboard.json) */
 #define ENCODER_RESOLUTION 2
 
-//see also https://docs.qmk.fm/#/feature_pointing_device?id=split-keyboard-configuration
-
-
-// Setup Cirque
-#define CIRQUE_PINNACLE_DIAMETER_MM 35
-#define CIRQUE_PINNACLE_TAP_ENABLE
-#define CIRQUE_PINNACLE_TAPPING_TERM 100
-#define CIRQUE_PINNACLE_TOUCH_DEBOUNCE 300
-#define CIRQUE_PINNACLE_POSITION_MODE  CIRQUE_PINNACLE_RELATIVE_MODE
-#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
-#define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
-//#define CIRQUE_PINNACLE_SECONDARY_TAP_ENABLE
-//#define POINTING_DEVICE_GESTURES_SCROLL_ENABLE
-
-// Enable use of pointing device on slave split.
-#define SPLIT_POINTING_ENABLE
-
-// Pointing device is on the right split.
-// Use POINTING_DEVICE_COMBINED instead if a left trackpad is also added.
-#define POINTING_DEVICE_RIGHT
-
-// Limits the frequency that the sensor is polled for motion.
-#define POINTING_DEVICE_TASK_THROTTLE_MS 1
-
-// POINTING_DEVICE_ROTATION_90_RIGHT only applies in POINTING_DEVICE_COMBINED mode.
-#define POINTING_DEVICE_ROTATION_90
-//#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
-
-//#define POINTING_DEVICE_DEBUG
-//#define PIMORONI_TRACKBALL_SCALE 5
-//#define TRACKBALL_LED_TIMEOUT 5000
+/* split42 has NO Cirque trackpad and NO RGB matrix — the split72 pointing-device
+   and RGB blocks are intentionally omitted. */
 
 #define RAW_USAGE_PAGE 0xFF61
 #define RAW_USAGE_ID 0x62
@@ -124,57 +96,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DYNAMIC_KEYMAP_EEPROM_ADDR  (EECONFIG_BASE_SIZE + EECONFIG_KB_DATA_SIZE + POLY_EECONFIG_USER_RESERVED)
 #define POLY_EEPROM_MAGIC_ADDR      DYNAMIC_KEYMAP_EEPROM_ADDR
 
-/* Status OLED — 128×64 */
-#define OLED_DISPLAY_128X64
-
-/* RGB matrix effects enabled for split72 */
-#define RGB_MATRIX_FRAMEBUFFER_EFFECTS
-#define RGB_MATRIX_KEYPRESSES
-#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100
-
-#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_SIMPLE
-#define ENABLE_RGB_MATRIX_SOLID_REACTIVE
-#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_WIDE
-#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE
-#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_CROSS
-#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_MULTICROSS
-#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_NEXUS
-#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_MULTINEXUS
-#define ENABLE_RGB_MATRIX_SPLASH
-#define ENABLE_RGB_MATRIX_MULTISPLASH
-#define ENABLE_RGB_MATRIX_SOLID_SPLASH
-#define ENABLE_RGB_MATRIX_SOLID_MULTISPLASH
-#define ENABLE_RGB_MATRIX_ALPHAS_MODS
-#define ENABLE_RGB_MATRIX_GRADIENT_UP_DOWN
-#define ENABLE_RGB_MATRIX_GRADIENT_LEFT_RIGHT
-#define ENABLE_RGB_MATRIX_BREATHING
-#define ENABLE_RGB_MATRIX_BAND_SAT
-#define ENABLE_RGB_MATRIX_BAND_VAL
-#define ENABLE_RGB_MATRIX_BAND_PINWHEEL_SAT
-#define ENABLE_RGB_MATRIX_BAND_PINWHEEL_VAL
-#define ENABLE_RGB_MATRIX_BAND_SPIRAL_SAT
-#define ENABLE_RGB_MATRIX_BAND_SPIRAL_VAL
-#define ENABLE_RGB_MATRIX_CYCLE_ALL
-#define ENABLE_RGB_MATRIX_CYCLE_LEFT_RIGHT
-#define ENABLE_RGB_MATRIX_CYCLE_UP_DOWN
-#define ENABLE_RGB_MATRIX_RAINBOW_MOVING_CHEVRON
-#define ENABLE_RGB_MATRIX_CYCLE_OUT_IN
-#define ENABLE_RGB_MATRIX_CYCLE_OUT_IN_DUAL
-#define ENABLE_RGB_MATRIX_CYCLE_PINWHEEL
-#define ENABLE_RGB_MATRIX_CYCLE_SPIRAL
-#define ENABLE_RGB_MATRIX_DUAL_BEACON
-#define ENABLE_RGB_MATRIX_RAINBOW_BEACON
-#define ENABLE_RGB_MATRIX_RAINBOW_PINWHEELS
-#define ENABLE_RGB_MATRIX_RAINDROPS
-#define ENABLE_RGB_MATRIX_JELLYBEAN_RAINDROPS
-#define ENABLE_RGB_MATRIX_HUE_BREATHING
-#define ENABLE_RGB_MATRIX_HUE_PENDULUM
-#define ENABLE_RGB_MATRIX_HUE_WAVE
-#define ENABLE_RGB_MATRIX_PIXEL_FRACTAL
-#define ENABLE_RGB_MATRIX_PIXEL_FLOW
-#define ENABLE_RGB_MATRIX_PIXEL_RAIN
-
-#define RGB_MATRIX_HUE_STEP 2
-#define RGB_MATRIX_SAT_STEP 2
-#define RGB_MATRIX_VAL_STEP 1
-#define RGB_MATRIX_SPD_STEP 1
+/* Status OLED — 128×32 (split72 is 128×64). NOTE: on this hardware rev the
+   intended I2C0 status-OLED bus (GP0/GP1) is not broken out, so the status OLED
+   is currently unconnected; the shared config.h I2C defaults apply. */
+#define OLED_DISPLAY_128X32

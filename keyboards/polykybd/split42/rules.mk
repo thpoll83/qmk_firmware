@@ -24,9 +24,13 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# No pointing device (no Cirque trackpad on split42) and no LTR-559 light sensor
-# (no expansion port on split42) — the split72 POINTING_DEVICE_* / ltr559 lines
-# are intentionally omitted.
+# Pointing device (Cirque trackpad) — RE-ENABLED as an experiment. No trackpad
+# is populated on split42 and its I2C0 bus isn't broken out, so the driver just
+# fails its probe and idles. Kept compiled in (and it registers an extra split
+# transaction) to test whether a disabled subsystem was implicated. Mirrors
+# split72. (LTR-559 light sensor stays omitted — no expansion port on split42.)
+POINTING_DEVICE_ENABLE = yes
+POINTING_DEVICE_DRIVER = cirque_pinnacle_i2c
 
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes

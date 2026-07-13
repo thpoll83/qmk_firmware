@@ -47,6 +47,7 @@
                                 // round). A shift, NOT a divide — no per-pixel software divide.
 
 static bool     s_active;
+static bool     s_loop;       // true: idle screensaver — restart at the end instead of ending
 static uint32_t s_start;
 static uint32_t s_next_log;   // next elapsed-ms threshold at which to emit a progress log
 
@@ -309,23 +310,42 @@ static void sa_render_frame(uint32_t el) {
     }
 }
 
-void startup_anim_start(void) {
+// Shared start path for the one-shot (boot/KC_EDEN) and the looping idle screensaver.
+// `contrast` is the OLED contrast register value (not local_state->contrast); the
+// one-shot runs at full brightness, the loop at the active idle brightness.
+static void sa_begin(bool loop, uint8_t contrast) {
     s_start    = timer_read32();
     s_active   = true;
+    s_loop     = loop;
     s_next_log = 0;
     // Non-blocking progress trace (HID console; dropped when nothing is attached).
     // If a half wedges during the animation, the last line printed shows how far it
     // got. Only the USB (master) half's console is readable — to diagnose the left
     // half, plug USB into it so it is master, then press KC_EDEN and watch the log.
-    uprintf("Eden start (left=%d, master=%d)\n", (int)is_left_side(), (int)is_usb_host_side());
-    // Eden runs at FULL brightness regardless of the stored brightness. This only
-    // touches the OLED contrast register (not local_state->contrast), so the normal
-    // brightness is restored after the fade-to-black (see the housekeeping finish
-    // edge in poly_keymap.c).
+    uprintf("Eden %s (left=%d, master=%d)\n", loop ? "loop start" : "start",
+            (int)is_left_side(), (int)is_usb_host_side());
+    // This only touches the OLED contrast register (not local_state->contrast), so
+    // the one-shot's full brightness is restored to the user value after the fade
+    // (see the housekeeping finish edge in poly_keymap.c); the loop is stopped on
+    // wake and the normal brightness re-applied there.
     sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);   // select all panels on this half
     kdisp_enable(true);
-    kdisp_set_contrast(255);
+    kdisp_set_contrast(contrast);
 }
+
+void startup_anim_start(void) { sa_begin(false, 255); }
+
+void startup_anim_start_loop(uint8_t contrast) {
+    if (s_active && s_loop) return;              // already looping — don't restart mid-cycle
+    sa_begin(true, contrast ? contrast : 1);
+}
+
+void startup_anim_stop(void) {
+    s_active = false;
+    s_loop   = false;
+}
+
+bool startup_anim_is_loop(void) { return s_active && s_loop; }
 
 bool startup_anim_active(void) { return s_active; }
 
@@ -333,14 +353,21 @@ void startup_anim_tick(void) {
     if (!s_active) return;
     uint32_t el = timer_elapsed32(s_start);
     if (el >= SA_TOTAL_MS) {
-        s_active = false;
-        uprintf("Eden done (%lums)\n", (unsigned long)el);
-        return;
+        if (s_loop) {
+            // Idle screensaver: seamlessly restart instead of ending.
+            s_start    = timer_read32();
+            s_next_log = 0;
+            el         = 0;
+        } else {
+            s_active = false;
+            uprintf("Eden done (%lums)\n", (unsigned long)el);
+            return;
+        }
     }
     // Emit a progress line ~once/second BEFORE rendering the frame, so if the render
     // hangs the last line shows the elapsed ms it reached. Non-blocking (console).
     if (el >= s_next_log) {
-        uprintf("Eden tick %lums\n", (unsigned long)el);
+        uprintf("Eden tick %lums%s\n", (unsigned long)el, s_loop ? " (loop)" : "");
         s_next_log = el + 1000;
     }
     sa_render_frame(el);
@@ -348,6 +375,9 @@ void startup_anim_tick(void) {
 
 #else  // ---- non-split72: no-op stubs ----
 void startup_anim_start(void) {}
+void startup_anim_start_loop(uint8_t contrast) { (void)contrast; }
+void startup_anim_stop(void) {}
+bool startup_anim_is_loop(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }
 #endif

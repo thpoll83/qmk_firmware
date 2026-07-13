@@ -14,11 +14,16 @@
 // pulse (doom/README.md) — chrome-free, dismissed by the first key press; on a
 // build/board where the demo can't start (no POLYKYBD_DOOM, staging active) it
 // falls back to PULSE at runtime, so the value is always safe to accept/persist.
+// EDEN loops the "Eden" boot animation as a screensaver (split72 only): it reuses
+// the normal idle machinery (DISP_IDLE flag → wake on key + TURN_OFF suspend) but
+// renders looping Eden frames on both halves instead of the pulse; on split42 the
+// no-op anim stubs leave it behaving like PULSE.
 // Values are append-only (persisted + on the wire in poly_sync_t.idle_style).
 enum poly_idle_style {
     IDLE_STYLE_PULSE  = 0,
     IDLE_STYLE_JITTER = 1,
     IDLE_STYLE_IDDQD  = 2,   // doom attract-demo screensaver (host: IdleStyle.IDDQD)
+    IDLE_STYLE_EDEN   = 3,   // looping "Eden" boot animation screensaver (host: IdleStyle.EDEN)
     IDLE_STYLE_COUNT
 };
 

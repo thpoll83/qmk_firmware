@@ -743,6 +743,30 @@ static void poly_ltr559_drive(void) {
 }
 #endif  // POLYKYBD_LTR559_DRIVE
 
+// Idle "Eden" screensaver driver (IDLE_STYLE_EDEN), run every housekeeping pass on
+// BOTH halves (like doom_tick). It renders the looping boot animation while the
+// synced idle state says we are idling in EDEN style — the signal is DISP_IDLE +
+// idle_style, both already carried on the poly sync, so no extra UART field. Each
+// half draws its own keycaps off its own local timer (a few ms of skew, invisible,
+// exactly like the boot animation). The one-shot boot/KC_EDEN animation is never
+// disturbed: `want` requires DISP_IDLE (never set during boot) and we skip while a
+// one-shot is active. On wake/turn-off the flag clears (display_wakeup / poly_suspend)
+// and the loop stops, handing the keycaps back to update_displays.
+static void eden_idle_tick(void) {
+    const poly_sync_t* ls = get_local_state();
+    const bool one_shot = startup_anim_active() && !startup_anim_is_loop();
+    const bool want = (ls->idle_style == IDLE_STYLE_EDEN) &&
+                      ((ls->flags & DISP_IDLE) != 0) && !one_shot;
+    if (want) {
+        if (!startup_anim_is_loop()) {
+            startup_anim_start_loop(ls->contrast);   // active idle brightness, both halves
+        }
+        startup_anim_tick();
+    } else if (startup_anim_is_loop()) {
+        startup_anim_stop();
+    }
+}
+
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
@@ -781,10 +805,16 @@ void housekeeping_task_user(void) {
         // Runs before the display sync: it keeps last_update fresh so the
         // idle/fade pipeline below never fights the game blitter.
         doom_tick();
+        // Idle "Eden" screensaver frame tick (IDLE_STYLE_EDEN, both halves). Runs
+        // before the boot-animation block below and owns the LOOPING variant; the
+        // block below is for the ONE-SHOT boot/KC_EDEN animation only.
+        eden_idle_tick();
         // One-time startup animation: render a frame while active (both halves
         // render their own keycaps). On the finishing edge, persist the "played"
-        // marker and request a normal refresh so the base legends come back.
-        if (startup_anim_active()) {
+        // marker and request a normal refresh so the base legends come back. Gated
+        // to the ONE-SHOT animation — the looping idle screensaver is driven by
+        // eden_idle_tick() above and must not run the finish edge / nonce sync here.
+        if (startup_anim_active() && !startup_anim_is_loop()) {
             // Render THIS half's frame first — the keycap animation must never wait on
             // the split link (the boot-time link is flaky; blocking here left the master
             // stuck on the splash with dark keycaps).
@@ -849,7 +879,10 @@ void housekeeping_task_user(void) {
 #    endif
 #endif
     }
-    if(is_idle_tracking() && !startup_anim_active()) {   // Eden owns the displays while it plays
+    // The ONE-SHOT boot/KC_EDEN animation owns the whole idle pipeline; skip it.
+    // The LOOPING Eden screensaver, however, still needs this block to run — it sets
+    // DISP_IDLE, keeps contrast steady, and reaches the TURN_OFF suspend deadline.
+    if(is_idle_tracking() && !(startup_anim_active() && !startup_anim_is_loop())) {
         //turn off displays
         // Full uint32 elapsed via timer_elapsed32 — no sign gate, so idle keeps
         // working past ~24.86 days of uptime (when timer_read32() sets bit 31).
@@ -879,6 +912,16 @@ void housekeeping_task_user(void) {
                         // can't start (non-doom build, fw staging active).
                         contrast = get_active_brightness();
                         uprint("Transition to doom screensaver\n");
+                    } else if (get_idle_style() == IDLE_STYLE_EDEN) {
+                        // Eden screensaver: enter DISP_IDLE like the pulse (so the
+                        // wake-on-key and TURN_OFF suspend paths work unchanged and
+                        // the flag+idle_style tell the slave to loop too), but hold
+                        // contrast at the active brightness — eden_idle_tick() owns
+                        // the pixels every pass and the loop migrates them itself, so
+                        // there is no burn-in and no per-pass pulse contrast to fight.
+                        contrast = get_active_brightness();
+                        flags |= DISP_IDLE;
+                        uprint("Transition to eden screensaver\n");
                     } else {
                         contrast = DISP_OFF;
                         flags |= DISP_IDLE;
@@ -900,11 +943,18 @@ void housekeeping_task_user(void) {
                 contrast = local_state->contrast;
                 flags = local_state->flags;
             } else if((flags & DISP_IDLE)!=0) {
-                int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
-                contrast = time_after%50;
-                // In JITTER style each key relocates its own legend independently as
-                // it pulses dark (kdisp_idle) — there is no shared per-cycle offset
-                // to compute here; only the pulse `contrast` drives both halves.
+                if (get_idle_style() == IDLE_STYLE_EDEN) {
+                    // Eden owns the visuals via eden_idle_tick(); keep the panel at the
+                    // active brightness and DON'T compute a pulse contrast (a per-pass
+                    // contrast diff would call kdisp_idle() and fight the animation).
+                    contrast = get_active_brightness();
+                } else {
+                    int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
+                    contrast = time_after%50;
+                    // In JITTER style each key relocates its own legend independently as
+                    // it pulses dark (kdisp_idle) — there is no shared per-cycle offset
+                    // to compute here; only the pulse `contrast` drives both halves.
+                }
             } else {
                 flags &= ~((uint8_t)DISP_IDLE);
             }
@@ -2312,6 +2362,13 @@ uint8_t to_brightness(uint8_t b) {
 // OLED's own memory; only a 1-bit-per-key "was dark" latch (s_idle_was_dark) gates
 // the once-per-episode redraw.
 void kdisp_idle(uint8_t contrast) {
+    // Eden idle style: the looping screensaver (eden_idle_tick) owns the keycaps —
+    // do NOT pulse/blank them here. Returning also leaves the panels enabled at the
+    // brightness Eden's own start set, so the transition-pass set_displays(idle=true)
+    // can't flash a black/pulse frame over the animation.
+    if (get_local_state()->idle_style == IDLE_STYLE_EDEN) {
+        return;
+    }
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t skip = 0;
     const bool jitter = get_local_state()->idle_style == IDLE_STYLE_JITTER;
@@ -2379,11 +2436,14 @@ static uint8_t s_apple_swap_latch = 0;
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
-    // While the one-time startup ("Eden") animation is playing, swallow every key
+    // While the ONE-SHOT startup ("Eden") animation is playing, swallow every key
     // event — no typing is wanted (or needed) during the intro. Keys from both
     // halves funnel through the master's process_record before USB reporting, so
     // gating here stops all input from reaching the host until the intro ends.
-    if (startup_anim_active()) {
+    // The LOOPING idle Eden screensaver is deliberately NOT swallowed: like the
+    // pulse, the first key press should dismiss it and pass through to the wake
+    // (display_wakeup clears DISP_IDLE → eden_idle_tick stops the loop next pass).
+    if (startup_anim_active() && !startup_anim_is_loop()) {
         return false;
     }
 
@@ -2868,6 +2928,9 @@ bool display_wakeup(keyrecord_t* record) {
         if(local_state->contrast==DISP_OFF && (local_state->flags&DEAD_KEY_ON_WAKEUP)!=0) {
             accept_keypress = get_time_since_last_update()<= TURN_OFF_TIME;
         }
+        // Stop the looping Eden idle screensaver immediately so update_displays() (no
+        // longer blocked by startup_anim_active()) can repaint the woken legends.
+        startup_anim_stop();
         local_state->contrast = get_active_brightness();
         local_state->flags &= ~((uint8_t)DISP_IDLE);
         local_state->flags |= STATUS_DISP_ON;
@@ -3132,6 +3195,7 @@ void poly_suspend(void) {
     // keep blitting into panels this function is about to switch off. No-op for
     // a real game session and on the slave.
     doom_screensaver_stop();
+    startup_anim_stop();   // tear down the looping Eden idle screensaver on suspend
     poly_sync_t* local_state = access_local_state();
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
     local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);// & ~((uint8_t)RGB_ON);

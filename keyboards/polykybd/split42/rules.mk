@@ -5,33 +5,23 @@
 SERIAL_DRIVER = vendor
 SPLIT_KEYBOARD = yes
 
-#OLED setup
+#OLED setup (128x32 status display)
 OLED_ENABLE = yes
 OLED_DRIVER = ssd1306
 
-#RGB matrix lighting
-RGB_MATRIX_ENABLE = yes
-RGB_MATRIX_DRIVER = ws2812
+# No RGB matrix on split42 (no WS2812 LEDs) — the split72 RGB_MATRIX/WS2812
+# lines are intentionally omitted.
 
 #source files
+# Same shared base sources as split72, EXCEPT base/text_helper.c: it switches over
+# the RGB_MATRIX_* effect enums to name effects, and those don't exist without RGB,
+# so it cannot compile here. split42.c/status_oled.c only need its header.
 QUANTUM_LIB_SRC += spi_master.c
-SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
+SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Build Options
-WS2812_DRIVER = vendor
-
-POINTING_DEVICE_ENABLE = yes
-POINTING_DEVICE_DRIVER = cirque_pinnacle_i2c #POINTING_DEVICE_DRIVER = pimoroni_trackball
-
-# LTR-559 light+proximity sensor on the expansion port (shares the Cirque I2C0
-# bus, addr 0x23). Built in UNCONDITIONALLY: anyone who fits the sensor gets it,
-# and it's harmless when absent — the probe just fails and the driver disables
-# itself after a few bounded retries. It drives per-keycap brightness from the
-# 5 s average lux and inhibits idle on proximity. The shared code stays guarded
-# by POLYKYBD_LTR559 / _DRIVE so split42 (no expansion port) is unaffected;
-# only split72 defines them, here.
-SRC += base/ltr559.c
-OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
+# No pointing device (no Cirque trackpad on split42) and no LTR-559 light sensor
+# (no expansion port on split42) — the split72 POINTING_DEVICE_* / ltr559 lines
+# are intentionally omitted.
 
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes

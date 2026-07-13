@@ -1,0 +1,354 @@
+{
+    "name": "PolyKybd Split72",
+    "vendorId": "0x2021",
+    "productId": "0x2007",
+    "menus": [
+        {
+            "label": "Lighting",
+            "content": [
+                {
+                    "label": "Backlight",
+                    "content": [
+                        {
+                            "label": "Brightness",
+                            "type": "range",
+                            "options": [
+                                0,
+                                255
+                            ],
+                            "content": [
+                                "id_qmk_rgb_matrix_brightness",
+                                3,
+                                1
+                            ]
+                        },
+                        {
+                            "label": "Effect",
+                            "type": "dropdown",
+                            "content": [
+                                "id_qmk_rgb_matrix_effect",
+                                3,
+                                2
+                            ],
+                            "options": [
+                                [
+                                    "00. None",
+                                    0
+                                ],
+                                [
+                                    "01. SOLID_COLOR",
+                                    1
+                                ],
+                                [
+                                    "02. BREATHING",
+                                    2
+                                ],
+                                [
+                                    "03. BAND_SPIRAL_VAL",
+                                    3
+                                ],
+                                [
+                                    "04. CYCLE_ALL",
+                                    4
+                                ],
+                                [
+                                    "05. CYCLE_LEFT_RIGHT",
+                                    5
+                                ],
+                                [
+                                    "06. CYCLE_UP_DOWN",
+                                    6
+                                ],
+                                [
+                                    "07. RAINBOW_MOVING_CHEVRON",
+                                    7
+                                ],
+                                [
+                                    "08. CYCLE_OUT_IN",
+                                    8
+                                ],
+                                [
+                                    "09. CYCLE_OUT_IN_DUAL",
+                                    9
+                                ],
+                                [
+                                    "10. CYCLE_PINWHEEL",
+                                    10
+                                ],
+                                [
+                                    "11. CYCKE_SPIRAL",
+                                    11
+                                ],
+                                [
+                                    "12. DUAL_BEACON",
+                                    12
+                                ],
+                                [
+                                    "13. RAINBOW_BEACON",
+                                    13
+                                ],
+                                [
+                                    "14. JELLYBEAN_RAINDROPS",
+                                    14
+                                ],
+                                [
+                                    "15. PIXEL_RAIN",
+                                    15
+                                ],
+                                [
+                                    "16. TYPING_HEATMAP",
+                                    16
+                                ],
+                                [
+                                    "17. DIGITAL_RAIN",
+                                    17
+                                ],
+                                [
+                                    "18. REACTIVE_SIMPLE",
+                                    18
+                                ],
+                                [
+                                    "19. REACTIVE_MULTIWIDE",
+                                    19
+                                ],
+                                [
+                                    "20. REACTIVE_MULTINEXUS",
+                                    20
+                                ],
+                                [
+                                    "21. SPLASH",
+                                    21
+                                ],
+                                [
+                                    "22. SOLID_SPLASH",
+                                    22
+                                ]
+                            ]
+                        },
+                        {
+                            "showIf": "{id_qmk_rgb_matrix_effect} > 1",
+                            "label": "Effect Speed",
+                            "type": "range",
+                            "options": [
+                                0,
+                                255
+                            ],
+                            "content": [
+                                "id_qmk_rgb_matrix_effect_speed",
+                                3,
+                                3
+                            ]
+                        },
+                        {
+                            "showIf": "{id_qmk_rgb_matrix_effect} != 0",
+                            "label": "Color",
+                            "type": "color",
+                            "content": [
+                                "id_qmk_rgb_matrix_color",
+                                3,
+                                4
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "customKeycodes": [
+        {"name": "Language Select",             "title": "Select another language",                 "shortName": "KC_LANG"},
+        {"name": "Set min display brightness",  "title": "Set min display brightness",              "shortName": "KC_DMIN"},
+        {"name": "Set max display brightness",  "title": "Set max display brightness",              "shortName": "KC_DMAX"},
+        {"name": "Decrease display brightness", "title": "Decrease display brightness",             "shortName": "KC_DDIM"},
+        {"name": "Increase display brightness", "title": "Increase display brightness",             "shortName": "KC_DBRI"},
+        {"name": "Set 1/2 display brightness",  "title": "Set 1/2 display brightness",              "shortName": "KC_DHLF"},
+        {"name": "Set 1/4 display brightness",  "title": "Set 1/4 display brightness",              "shortName": "KC_D1Q"},
+        {"name": "Set 3/4 display brightness",  "title": "Set 3/4 display brightness",              "shortName": "KC_D3Q"},
+        {"name": "To Selected Base Layer",      "title": "Move to selected base layer",             "shortName": "KC_BASE"},
+        {"name": "QWERTY",                      "title": "Select QWERTY as base layer",             "shortName": "KC_L0"},
+        {"name": "QWERTY!",                     "title": "Select QWERTY! as base layer",            "shortName": "KC_L1"},
+        {"name": "ColemakDH",                   "title": "Select ColemakDH as base layer",          "shortName": "KC_L2"},
+        {"name": "Neo",                         "title": "Select Neo as base layer",                "shortName": "KC_L3"},
+        {"name": "Workman",                     "title": "Select Workman as base layer",            "shortName": "KC_L4"},
+        {"name": "Select Word",                 "title": "Select current word (text editors)",      "shortName": "KC_SEL_WORD"},
+        {"name": "Select Line",                 "title": "Select current line (text editors)",      "shortName": "KC_SEL_LINE"},
+        {"name": "Join Lines",                  "title": "Join this line with the following (text editors)", "shortName": "KC_JOIN_LN"},
+        {"name": "Toggle Dead Key",             "title": "Disable first keypress after wakeup",     "shortName": "KC_DEADKEY"},
+        {"name": "Toggle Modifiers as Text",    "title": "Display modifiers as text",               "shortName": "KC_TOGMODS"},
+        {"name": "Toggle More Text",            "title": "Display even more keys as text",          "shortName": "KC_TOGTEXT"},
+        {"name": "Toggle RGB On/OFF",            "title": "Display even more keys as text",         "shortName": "KC_RGB_TOG"}
+    ],
+    "matrix": {
+        "rows": 10,
+        "cols": 8
+    },
+    "layouts": {
+        "keymap": [
+            [
+                {
+                    "w": 1.25
+                },
+                "0,0\nESC",
+                {
+                    "x": 0.25
+                },
+                "0,1",
+                "0,2",
+                "0,3",
+                "0,4",
+                "0,5",
+                "0,6",
+                {
+                    "x": 6
+                },
+                "5,1",
+                "5,2",
+                "5,3",
+                "5,4",
+                "5,5",
+                "5,6",
+                {
+                    "x": 0.25,
+                    "w": 1.25
+                },
+                "5,7"
+            ],
+            [
+                {
+                    "w": 1.25
+                },
+                "1,0",
+                {
+                    "x": 0.25
+                },
+                "1,1",
+                "1,2",
+                "1,3",
+                "1,4",
+                "1,5",
+                "1,6",
+                {
+                    "x": 6
+                },
+                "6,1",
+                "6,2",
+                "6,3",
+                "6,4",
+                "6,5",
+                "6,6",
+                {
+                    "x": 0.25,
+                    "w": 1.25
+                },
+                "6,7"
+            ],
+            [
+                {
+                    "w": 1.25
+                },
+                "2,0",
+                {
+                    "x": 0.25
+                },
+                "2,1",
+                "2,2",
+                "2,3",
+                "2,4",
+                "2,5",
+                "2,6",
+                "3,7\n\n\n\n\n\n\n\n\ne0",
+                {
+                    "x": 4
+                },
+                "8,0\n\n\n\n\n\n\n\n\ne1",
+                "7,1",
+                "7,2",
+                "7,3",
+                "7,4",
+                "7,5",
+                "7,6",
+                {
+                    "x": 0.25,
+                    "w": 1.25
+                },
+                "7,7"
+            ],
+            [
+                {
+                    "w": 1.25
+                },
+                "3,0",
+                {
+                    "x": 0.25
+                },
+                "3,1",
+                "3,2",
+                "3,3",
+                "3,4",
+                "3,5",
+                "3,6",
+                {
+                    "w": 1.25
+                },
+                "4,7",
+                {
+                    "x": 3.5,
+                    "w": 1.25
+                },
+                "9,0",
+                "8,1",
+                "8,2",
+                "8,3",
+                "8,4",
+                "8,5",
+                "8,6",
+                {
+                    "x": 0.25,
+                    "w": 1.25
+                },
+                "8,7"
+            ],
+            [
+                {
+                    "x": 0.5
+                },
+                "4,0",
+                "4,1",
+                "4,2",
+                "4,3",
+                {
+                    "x": 0.75,
+                    "t": "#8e8e8e",
+                    "w": 1.25
+                },
+                "4,4",
+                {
+                    "t": "#000000"
+                },
+                "4,5",
+                {
+                    "w": 1.25
+                },
+                "4,6",
+                {
+                    "x": 3.5,
+                    "w": 1.25
+                },
+                "9,1",
+                "9,2",
+                {
+                    "t": "#8e8e8e",
+                    "w": 1.25
+                },
+                "9,3",
+                {
+                    "x": 0.75,
+                    "t": "#000000"
+                },
+                "9,4",
+                "9,5",
+                "9,6",
+                "9,7"
+            ]
+        ]
+    }
+}

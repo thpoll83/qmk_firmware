@@ -14,9 +14,9 @@
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
 
 // ---- timeline (ms) ----
-#define SA_INTRO_MS 2800    // sparks stream + converge, letters form
-#define SA_HOLD_MS  1500    // hold the logo
-#define SA_FADE_MS  1400    // dither-dissolve everything to black
+#define SA_INTRO_MS 1800    // sparks stream + converge, letters form
+#define SA_HOLD_MS   800    // hold the logo
+#define SA_FADE_MS   900    // dither-dissolve everything to black
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS)
 
 // ---- effect tuning ----
@@ -26,11 +26,11 @@
 #define SA_PGAIN        11      // background plasma density (out of 255) — a faint haze
 #define SA_STRIDE      128      // scratch bytes per page
 // ---- ring (expanding ripple) tuning — parsed by the host firmware-port sim ----
-// Each ring is a THIN band (phase < SA_RING_BAND) that is *solid* while the ripple is
-// strong and dissolves to nothing as `ring` fades (noise-gated by `ring`), so it reads
-// as clean expanding ripples rather than a wide 50%-dither sparkle cloud.
+// Circular ripple: the sparkle DENSITY peaks at each ring crest and falls off between
+// rings, and the whole field dissolves as `ring` fades — so it reads as expanding rings
+// with a fading sparkle halo (the "circular effect"), not a thin bare line nor a flat
+// 50%-dither cloud. Density = crest(rv) * ring, dithered against the noise tile.
 #define SA_RING_FREQ   300      // spatial frequency: higher = MORE concentric rings on the board
-#define SA_RING_BAND     3      // ring thickness in phase units (~0.85 px each) → ~2–3 px ring
 #define SA_RING_ANUM     9      // oval aspect numerator   (ax = (gx-cxr)*ANUM/ADEN)
 #define SA_RING_ADEN    10      // oval aspect denominator (near-round: 9/10)
 
@@ -164,13 +164,15 @@ static void sa_render_frame(uint32_t el) {
                 uint8_t pv = sa_plasma(gx, gy, tp);
                 if ((uint8_t)(((uint16_t)pv * SA_PGAIN) >> 8) > sa_noise(gx, gy)) {
                     bit = 1;
-                } else if (ring) {   // thin, gently-oval, expanding ripple ring
+                } else if (ring) {   // circular ripple: sparkle density peaks at each crest,
+                                     // fades between rings and dissolves as `ring` fades
                     int16_t ax = (int16_t)(((int32_t)(gx - cxr) * SA_RING_ANUM) / SA_RING_ADEN);
                     int16_t ay = (int16_t)(gy - cyr);
                     uint16_t rr = sa_dist(ax, ay);
-                    uint8_t phase = (uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg);
-                    if (phase < SA_RING_BAND &&
-                        sa_noise((int16_t)(gx + 50), (int16_t)(gy + 30)) < ring)
+                    uint8_t rv = sa_sin((uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg));
+                    uint8_t crest = rv > 128 ? (uint8_t)(rv - 128) : 0;  // upper half → concentric rings
+                    uint8_t dens  = (uint8_t)(((uint16_t)crest * ring) >> 8);   // ≤~50% → grainy, fades
+                    if (sa_noise((int16_t)(gx + 50), (int16_t)(gy + 30)) < dens)
                         bit = 1;
                 }
                 if (bit) buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));

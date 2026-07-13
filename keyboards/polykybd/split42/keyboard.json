@@ -35,10 +35,10 @@
         ]
     },
     "layout_aliases": {
-        "LAYOUT": "LAYOUT_split42"
+        "LAYOUT": "LAYOUT_lr_stacked42"
     },
     "layouts": {
-        "LAYOUT_split42": {
+        "LAYOUT_lr_stacked42": {
             "layout": [
                 {"matrix":[0,0], "x":0,    "y":0.25},
                 {"matrix":[0,1], "x":1,    "y":0.25},

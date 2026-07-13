@@ -15,14 +15,17 @@
 
 // ---- timeline (ms) ----
 #define SA_INTRO_MS 2400    // sparks stream + converge, letters form, sparks wink out
-#define SA_HOLD_MS  3000    // hold the PolyKybd logo (long)
-#define SA_FADE_MS  1300    // dither-dissolve everything to black
+#define SA_HOLD_MS  2000    // hold the PolyKybd logo
+#define SA_FADE_MS  3200    // two-stage: background dots dissolve, then (after a hold) letters
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS)
+// Fade phase is two-stage: the background dots dissolve over the first SA_BG_FADE_MS while
+// the letters stay solid; the letters only start dissolving SA_LETTER_HOLD_MS into the fade.
+#define SA_BG_FADE_MS     900   // background dots dissolve first (start of fade)
+#define SA_LETTER_HOLD_MS 2000  // letters stay this long into the fade, THEN dissolve
 
 // ---- effect tuning ----
-#define SA_NSPARK       64
-#define SA_TRAIL         6
-#define SA_TRAILSTEP     6      // per-trail phase step (8-bit units)
+#define SA_NSPARK       72      // one L→R comet per spark
+#define SA_TRAIL_LEN    18      // comet trail length (px) drawn behind each head
 #define SA_PGAIN         6      // background plasma density (out of 255) — a very faint haze
 #define SA_STRIDE      128      // scratch bytes per page
 // ---- ring (expanding ripple) tuning — parsed by the host firmware-port sim ----
@@ -71,11 +74,12 @@ static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
 }
 
-// Spark/trail points are the SAME for every keycap (board-space), so build them ONCE per
-// frame here, then each key just filters+rotates the list (sa_plot_sparks). This moves the
-// hash/sin/converge work out of the 40× per-key loop — the main spark-phase framerate win.
-typedef struct { int16_t sx, sy; uint8_t head; } sa_spark_pt_t;
-static sa_spark_pt_t s_spark_pts[SA_NSPARK * SA_TRAIL];
+// Each spark is ONE L→R comet: a bright head + a continuous horizontal trail drawn behind
+// it. (The old discrete phase-offset "trail" spaced its dots ~49 board-px apart, so it read
+// as scattered dots, not a streak.) The heads are the same for every keycap (board-space),
+// so build them ONCE per frame here, then each key just filters+rotates+draws its comet.
+typedef struct { int16_t sx, sy; } sa_spark_pt_t;
+static sa_spark_pt_t s_spark_pts[SA_NSPARK];
 static uint16_t      s_spark_n;
 
 static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
@@ -83,8 +87,7 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
     s_spark_n = 0;
     for (uint8_t s = 0; s < SA_NSPARK; ++s) {
         // Staggered death: each spark winks out once the rising `spark_fade` passes its
-        // own hash threshold — so the tiny sparks disappear a few at a time, not all at
-        // once.
+        // own hash threshold — so the sparks disappear a few at a time, not all at once.
         if (sa_hash8(s * 3u + 7u) < spark_fade) continue;
         uint8_t  p0   = sa_hash8(s * 2u + 1u);
         uint8_t  spd  = 1u + (sa_hash8(s * 7u + 3u) & 3u);
@@ -93,43 +96,44 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
         uint8_t  ph   = sa_hash8(s * 13u + 5u);
         int16_t  bob  = 6 + (int16_t)(sa_hash8(s * 17u) & 31u);
         const sa_target_t *tgt = &SA_TARGETS[s % SA_NUM_TARGETS];
-        for (uint8_t j = 0; j < SA_TRAIL; ++j) {
-            // stochastic, stable trail fade (head bright, tail thins out)
-            if (sa_hash8(s * 31u + j) > (uint8_t)(255u - j * (200u / SA_TRAIL))) continue;
-            uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> 4) * spd) - j * SA_TRAILSTEP);
-            int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
-            int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> 5) * bw + ph)) - 128) * bob) >> 7));
-            if (cv) {   // converge toward the letter target
-                sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
-                sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
-            }
-            s_spark_pts[s_spark_n].sx   = sx;
-            s_spark_pts[s_spark_n].sy   = sy;
-            s_spark_pts[s_spark_n].head = (j == 0);
-            s_spark_n++;
+        uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> 4) * spd));   // head phase (streams L→R)
+        int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
+        int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> 5) * bw + ph)) - 128) * bob) >> 7));
+        if (cv) {   // converge toward the letter target
+            sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
+            sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
         }
+        s_spark_pts[s_spark_n].sx = sx;
+        s_spark_pts[s_spark_n].sy = sy;
+        s_spark_n++;
     }
 }
 
-// Plot the prebuilt spark points that land on this keycap (inverse-rotate into local px).
+// Draw each comet that touches this keycap: a bold 2×2 head + a horizontal trail extending
+// LEFT (behind the L→R motion), fading toward the tail. Drawn in local px (correct for the
+// un-rotated keys; the 4 thumbs get a horizontal streak on their own panel, which still
+// reads as a comet). sa_set clips, so an over-inclusive cull is fine.
 static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t cosv, int16_t sinv) {
     for (uint16_t i = 0; i < s_spark_n; ++i) {
         int16_t ddx = (int16_t)(s_spark_pts[i].sx - g->cx);
         int16_t ddy = (int16_t)(s_spark_pts[i].sy - g->cy);
-        if (ddx <= -40 || ddx >= 40 || ddy <= -40 || ddy >= 40) continue;
-        int16_t lx, ly;
+        if (ddx <= -(40 + SA_TRAIL_LEN) || ddx >= 40 + SA_TRAIL_LEN || ddy <= -40 || ddy >= 40) continue;
+        int16_t hx, hy;
         if (rot) {
-            lx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));
-            ly = (int16_t)(20 + ((-ddx * sinv + ddy * cosv) >> 7));
+            hx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));
+            hy = (int16_t)(20 + ((-ddx * sinv + ddy * cosv) >> 7));
         } else {
-            lx = (int16_t)(36 + ddx);
-            ly = (int16_t)(20 + ddy);
+            hx = (int16_t)(36 + ddx);
+            hy = (int16_t)(20 + ddy);
         }
-        sa_set(buf, lx, ly);
-        if (s_spark_pts[i].head) {   // bold 2×2 comet head so the L→R streak reads over the haze
-            sa_set(buf, lx + 1, ly);
-            sa_set(buf, lx, ly + 1);
-            sa_set(buf, lx + 1, ly + 1);
+        sa_set(buf, hx, hy);         // bold 2×2 head
+        sa_set(buf, hx + 1, hy);
+        sa_set(buf, hx, hy + 1);
+        sa_set(buf, hx + 1, hy + 1);
+        for (uint8_t k = 1; k < SA_TRAIL_LEN; ++k) {   // solid neck, then a fading tail
+            if (k <= 5 || sa_noise((int16_t)(hx - k + 30), (int16_t)(hy + 12)) <
+                          (uint8_t)(255u - k * (230u / SA_TRAIL_LEN)))
+                sa_set(buf, (int16_t)(hx - k), hy);
         }
     }
 }
@@ -151,11 +155,22 @@ static void sa_render_frame(uint32_t el) {
     // Sparks wink out one by one over tt 150..255 (staggered per-spark in sa_build_sparks).
     int16_t sfi  = (int16_t)(((int32_t)tt - 150) * 255 / 105);
     uint8_t spark_fade = (uint8_t)(sfi < 0 ? 0 : (sfi > 255 ? 255 : sfi));
-    uint8_t fade = 0;
+    // Two-stage dissolve: the background DOTS go first (bg_fade), the LETTERS wait
+    // SA_LETTER_HOLD_MS into the fade, then dissolve (letter_fade). By the time
+    // letter_fade > 0 the background is already gone, so the letter dither only hits
+    // the letters.
+    uint8_t bg_fade = 0, letter_fade = 0;
     if (el >= SA_INTRO_MS + SA_HOLD_MS) {
-        uint32_t f = ((el - SA_INTRO_MS - SA_HOLD_MS) * 256) / SA_FADE_MS;
-        fade = (uint8_t)(f > 255 ? 255 : f);
+        uint32_t fel = el - SA_INTRO_MS - SA_HOLD_MS;   // ms into the fade phase
+        uint32_t b   = (fel * 256) / SA_BG_FADE_MS;
+        bg_fade = (uint8_t)(b > 255 ? 255 : b);
+        if (fel >= SA_LETTER_HOLD_MS) {
+            uint32_t lf = ((fel - SA_LETTER_HOLD_MS) * 256) / (SA_FADE_MS - SA_LETTER_HOLD_MS);
+            letter_fade = (uint8_t)(lf > 255 ? 255 : lf);
+        }
     }
+    // background plasma density scales down as bg_fade rises → the dots dissolve first
+    uint16_t pgain = (uint16_t)((uint16_t)SA_PGAIN * (255 - bg_fade)) / 255;
     const int16_t cxr = SA_BOARD_W / 2;
     const int16_t cyr = (int16_t)((int32_t)SA_BOARD_H * 42 / 100);
 
@@ -187,7 +202,7 @@ static void sa_render_frame(uint32_t el) {
                 }
                 uint8_t bit = 0;
                 uint8_t pv = sa_plasma(gx, gy, tp);
-                if ((uint8_t)(((uint16_t)pv * SA_PGAIN) >> 8) > sa_noise(gx, gy)) {
+                if ((uint8_t)(((uint16_t)pv * pgain) >> 8) > sa_noise(gx, gy)) {
                     bit = 1;
                 } else if (ring) {   // faint, diffuse, irregular expanding ripple — a soft
                                      // circular shimmer BEHIND the L→R sparks, dissolving as
@@ -217,10 +232,10 @@ static void sa_render_frame(uint32_t el) {
             kdisp_write_gfx_text(lf, 1, 49, 38, txt);
         }
 
-        if (fade) {   // dither-dissolve this panel toward black (noise-tile lookup)
+        if (letter_fade) {   // dither-dissolve the letters (the only lit pixels left by now)
             for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly)
                 for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx)
-                    if (sa_noise((int16_t)(lx + idx * 13), (int16_t)(ly + idx * 7)) < fade)
+                    if (sa_noise((int16_t)(lx + idx * 13), (int16_t)(ly + idx * 7)) < letter_fade)
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
 

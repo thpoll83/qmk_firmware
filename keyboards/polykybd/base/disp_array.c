@@ -81,6 +81,15 @@ void kdisp_set_draw_offset(int8_t ox, int8_t oy) {
     s_draw_oy = oy;
 }
 
+// Erase mode for gfx-char/text draws: when set, glyph pixels CLEAR the buffer
+// instead of setting it — used by the Eden idle screensaver to cut a key's legend
+// out of the comet field as a dark silhouette. Restore to false after the draw.
+static bool s_gfx_erase = false;
+
+void kdisp_set_gfx_erase(bool erase) {
+    s_gfx_erase = erase;
+}
+
 uint8_t* get_scratch_buffer(void) {
     return scratch_buffer;
 }
@@ -370,7 +379,11 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
                 bits = pgm_read_byte(&bitmap[bo++]);
             }
             if (bits & 0x80) {
-                SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                if (s_gfx_erase) {
+                    CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                } else {
+                    SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                }
             }
             bits <<= 1;
         }

@@ -14,6 +14,10 @@
 #include "base/fonts/FreeSansBold24pt7b.h"  // splash glyph font
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
 
+// Cut a key's resting legend out of the idle comet field (dark silhouette). Defined
+// in poly_keymap.c (it needs the keycode/legend tables); no-op for image legends.
+extern bool eden_idle_erase_legend(uint8_t disp_idx);
+
 // ---- timeline (ms) ----
 #define SA_INTRO_MS 5000    // sparks stream + converge, letters form, sparks wink out
 #define SA_HOLD_MS  5000    // hold the PolyKybd logo (letters up)
@@ -389,6 +393,10 @@ static void sa_render_idle_frame(uint32_t el) {
         }
 
         sa_plot_sparks(buf, g, rot, cosv, sinv);
+        // Cut this key's resting legend out of the comet field (dark silhouette the
+        // comets ghost around). Implemented in poly_keymap.c where the keycode/legend
+        // live; idx here is the display index it maps from. No-op for image legends.
+        eden_idle_erase_legend(idx);
         kdisp_send_window();
     }
 }

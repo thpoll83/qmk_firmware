@@ -2060,6 +2060,68 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     return true;
 }
 
+// Eden idle screensaver: cut a key's resting legend OUT of the comet field that the
+// animation just drew into the currently-selected panel's buffer, so the legend
+// reads as a dark silhouette the comets flow (and ghost) around — and, because the
+// silhouette pixels are OFF, it's burn-in-safe. Called per panel from
+// sa_render_idle_frame() (startup_anim.c) AFTER the comet field is drawn and BEFORE
+// the send, so it does NOT clear the buffer and does NOT send. `disp_idx` is the
+// display index (0..MATRIX_ROWS_PER_SIDE*MATRIX_COLS-1) == the anim's geom index ==
+// LAYOUT_TO_INDEX(r,c); invert it to (r,c) to resolve the keycode. Returns false
+// without touching the buffer for keys with no plain-text legend (flags/emoji/tabs/
+// overlays) — those faces just show the plain comet field. Mirrors render_idle_key's
+// legend derivation, but draws CENTERED (no jitter) in erase mode.
+bool eden_idle_erase_legend(uint8_t disp_idx) {
+    if (disp_idx >= MATRIX_ROWS_PER_SIDE * MATRIX_COLS) return false;
+    // disp_idx == the anim geom index == display row*8 + col. Invert to the matrix
+    // (row,col), undoing the right-half `c--` display fold that invert_display()
+    // applies to the upper display rows (mirrors the host sim's disp_mp): LEFT is a
+    // straight (dr, dc); RIGHT is (dr+MATRIX_ROWS_PER_SIDE, dc+1) on rows 0..3 and
+    // (dr+MATRIX_ROWS_PER_SIDE, dc) on the bottom row 4.
+    uint8_t dr = disp_idx / MATRIX_COLS, dc = disp_idx % MATRIX_COLS;
+    uint8_t mr, mc;
+    if (is_left_side()) {
+        mr = dr;
+        mc = dc;
+    } else {
+        mr = dr + MATRIX_ROWS_PER_SIDE;
+        mc = (dr < 4) ? (uint8_t)(dc + 1) : dc;
+    }
+    if (mc >= MATRIX_COLS) return false;   // phantom col — no OLED behind it
+    const poly_layer_t* local_layer = get_local_layer();
+    uint16_t keycode = display_keycode_at(local_layer, mr, mc);
+    if (keycode == KC_NO || keycode == KC_TRNS) return false;
+
+    const poly_sync_t* local_state = get_local_state();
+    led_t state = local_layer->led_state;
+    uint32_t unimap[2] = {0, 0};
+    const uint32_t* text = to_static_text(keycode, state);
+    if (text == NULL) {
+        text = translate_keycode(local_state->lang, keycode, false, state.caps_lock);
+    }
+    if (text == NULL && (keycode & QK_UNICODEMAP_PAIR) == QK_UNICODEMAP_PAIR) {
+        uint16_t chr = state.caps_lock ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode)
+                                       : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
+        unimap[0] = unicode_map[chr];
+        text = unimap;
+    }
+    if (text == NULL || text[0] == 0) {
+        return false;   // no text legend — leave the plain comet field on this key
+    }
+    // Centre the glyph horizontally in the visible window (its vertical baseline at 23
+    // matches the idle-jitter draw); erase mode clears the glyph pixels from the field.
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, text, &xmin, &xmax, &ymin, &ymax);
+    int16_t gw = (int16_t)(xmax - xmin + 1);
+    int8_t  cdx = (int8_t)((SCREEN_WIDTH - gw) / 2 - xmin);
+    kdisp_set_gfx_erase(true);
+    kdisp_set_draw_offset(cdx, 0);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
+    kdisp_set_draw_offset(0, 0);
+    kdisp_set_gfx_erase(false);
+    return true;
+}
+
 // Per-key "was dark on the previous kdisp_idle() pass" latch (this half only), so a
 // key relocates at most once per pulse-dark episode rather than every pass while it
 // is dark. Reset on every wake/suspend/stop-idle path (reset_idle_jitter) so a fresh

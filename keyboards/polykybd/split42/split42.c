@@ -1,6 +1,6 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "split72.h"
+#include "split42.h"
 
 #include "quantum.h"
 //#include "usb_device_state.h"

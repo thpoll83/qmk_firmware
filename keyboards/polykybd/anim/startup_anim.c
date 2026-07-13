@@ -14,8 +14,8 @@
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
 
 // ---- timeline (ms) ----
-#define SA_INTRO_MS 2400    // sparks stream + converge, letters form, sparks wink out
-#define SA_HOLD_MS  2000    // hold the PolyKybd logo
+#define SA_INTRO_MS 5000    // sparks stream + converge, letters form, sparks wink out
+#define SA_HOLD_MS  5000    // hold the PolyKybd logo
 #define SA_FADE_MS  3200    // two-stage: background dots dissolve, then (after a hold) letters
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS)
 // Fade phase is two-stage: the background dots dissolve over the first SA_BG_FADE_MS while
@@ -24,8 +24,8 @@
 #define SA_LETTER_HOLD_MS 2000  // letters stay this long into the fade, THEN dissolve
 
 // ---- effect tuning ----
-#define SA_NSPARK       72      // one L→R comet per spark
-#define SA_TRAIL_LEN    18      // comet trail length (px) drawn behind each head
+#define SA_NSPARK      160      // one L→R comet per spark; more of them → denser streaks
+#define SA_TRAIL_MAX    24      // longest comet trail (px); each spark rolls its own length
 #define SA_PGAIN         6      // background plasma density (out of 255) — a very faint haze
 #define SA_STRIDE      128      // scratch bytes per page
 // ---- ring (expanding ripple) tuning — parsed by the host firmware-port sim ----
@@ -78,7 +78,8 @@ static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
 // it. (The old discrete phase-offset "trail" spaced its dots ~49 board-px apart, so it read
 // as scattered dots, not a streak.) The heads are the same for every keycap (board-space),
 // so build them ONCE per frame here, then each key just filters+rotates+draws its comet.
-typedef struct { int16_t sx, sy; } sa_spark_pt_t;
+// `thick` = trail is 2 px tall (brighter/bolder) vs 1 px; `tlen` = this comet's trail length.
+typedef struct { int16_t sx, sy; uint8_t thick, tlen; } sa_spark_pt_t;
 static sa_spark_pt_t s_spark_pts[SA_NSPARK];
 static uint16_t      s_spark_n;
 
@@ -90,34 +91,40 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
         // own hash threshold — so the sparks disappear a few at a time, not all at once.
         if (sa_hash8(s * 3u + 7u) < spark_fade) continue;
         uint8_t  p0   = sa_hash8(s * 2u + 1u);
-        uint8_t  spd  = 1u + (sa_hash8(s * 7u + 3u) & 3u);
+        uint8_t  spd  = 1u + (sa_hash8(s * 7u + 3u) & 7u);        // speed 1..8 (wide variety)
         int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
         uint8_t  bw   = 1u + (sa_hash8(s * 11u + 2u) & 3u);
         uint8_t  ph   = sa_hash8(s * 13u + 5u);
         int16_t  bob  = 6 + (int16_t)(sa_hash8(s * 17u) & 31u);
+        uint8_t  hv   = sa_hash8(s * 23u + 4u);                   // per-spark look variety
         const sa_target_t *tgt = &SA_TARGETS[s % SA_NUM_TARGETS];
-        uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> 4) * spd));   // head phase (streams L→R)
+        uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> 4) * spd));  // head phase (streams L→R)
         int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
         int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> 5) * bw + ph)) - 128) * bob) >> 7));
         if (cv) {   // converge toward the letter target
             sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
             sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
         }
-        s_spark_pts[s_spark_n].sx = sx;
-        s_spark_pts[s_spark_n].sy = sy;
+        s_spark_pts[s_spark_n].sx    = sx;
+        s_spark_pts[s_spark_n].sy    = sy;
+        s_spark_pts[s_spark_n].thick = (hv & 1u) ? 2u : 1u;       // ~half are 2 px (brighter)
+        s_spark_pts[s_spark_n].tlen  = (uint8_t)(8u + (hv >> 4)); // trail 8..23 px (varied length)
         s_spark_n++;
     }
 }
 
-// Draw each comet that touches this keycap: a bold 2×2 head + a horizontal trail extending
-// LEFT (behind the L→R motion), fading toward the tail. Drawn in local px (correct for the
-// un-rotated keys; the 4 thumbs get a horizontal streak on their own panel, which still
-// reads as a comet). sa_set clips, so an over-inclusive cull is fine.
+// Draw each comet that touches this keycap: a bright head + a horizontal trail extending
+// LEFT (behind the L→R motion), fading toward the tail, with per-spark thickness/length.
+// Drawn in local px (correct for the un-rotated keys; the 4 thumbs get a horizontal streak
+// on their own panel, which still reads as a comet). sa_set clips, so an over-inclusive cull
+// is fine.
 static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t cosv, int16_t sinv) {
     for (uint16_t i = 0; i < s_spark_n; ++i) {
         int16_t ddx = (int16_t)(s_spark_pts[i].sx - g->cx);
         int16_t ddy = (int16_t)(s_spark_pts[i].sy - g->cy);
-        if (ddx <= -(40 + SA_TRAIL_LEN) || ddx >= 40 + SA_TRAIL_LEN || ddy <= -40 || ddy >= 40) continue;
+        if (ddx <= -(40 + SA_TRAIL_MAX) || ddx >= 40 + SA_TRAIL_MAX || ddy <= -40 || ddy >= 40) continue;
+        const bool    thick = (s_spark_pts[i].thick == 2u);
+        const uint8_t tlen  = s_spark_pts[i].tlen;
         int16_t hx, hy;
         if (rot) {
             hx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));
@@ -130,10 +137,13 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
         sa_set(buf, hx + 1, hy);
         sa_set(buf, hx, hy + 1);
         sa_set(buf, hx + 1, hy + 1);
-        for (uint8_t k = 1; k < SA_TRAIL_LEN; ++k) {   // solid neck, then a fading tail
+        if (thick) { sa_set(buf, hx, hy - 1); sa_set(buf, hx + 1, hy - 1); }   // taller, brighter head
+        for (uint8_t k = 1; k < tlen; ++k) {   // solid neck, then a fading tail
             if (k <= 5 || sa_noise((int16_t)(hx - k + 30), (int16_t)(hy + 12)) <
-                          (uint8_t)(255u - k * (230u / SA_TRAIL_LEN)))
+                          (uint8_t)(255u - (uint16_t)k * (230u / tlen))) {
                 sa_set(buf, (int16_t)(hx - k), hy);
+                if (thick) sa_set(buf, (int16_t)(hx - k), hy + 1);   // 2 px tall trail
+            }
         }
     }
 }

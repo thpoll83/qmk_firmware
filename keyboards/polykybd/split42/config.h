@@ -70,8 +70,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* Rotary encoder — schematic nets ENC_A=GP2, ENC_B=GP3 (declared in keyboard.json) */
 #define ENCODER_RESOLUTION 2
 
-/* split42 has NO Cirque trackpad and NO RGB matrix — the split72 pointing-device
-   and RGB blocks are intentionally omitted. */
+/* split42 has NO Cirque trackpad — the split72 pointing-device block stays omitted.
+
+   RGB matrix: RE-ENABLED as an experiment. split42 has no WS2812 LEDs populated, but
+   we keep the RGB subsystem in the build (WS2812 PIO driver + the shared RGB code
+   paths) to see whether a *disabled* subsystem was implicated. The data line is
+   parked on an UNUSED GPIO — GP16 (schematic net E2, the Exp0 header pad) — since
+   split72's WS2812 pin GP2 is the encoder on split42. Nothing is driven if no LEDs
+   are attached. See the RGB block at the end of this header. */
 
 #define RAW_USAGE_PAGE 0xFF61
 #define RAW_USAGE_ID 0x62
@@ -100,3 +106,75 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
    intended I2C0 status-OLED bus (GP0/GP1) is not broken out, so the status OLED
    is currently unconnected; the shared config.h I2C defaults apply. */
 #define OLED_DISPLAY_128X32
+
+
+/* -------------------------------------------------------------------------
+   RGB matrix — RE-ENABLED as an experiment (split42 has no LEDs populated).
+
+   split42 has 42 keys (21 per side). The WS2812 data line is parked on GP16,
+   an unused GPIO on split42 (net E2, the Exp0 header pad). split72 uses GP2
+   for WS2812, but on split42 GP2 is the rotary encoder, so GP16 is used
+   instead. With no LEDs attached nothing is driven; the point of the
+   experiment is to keep the RGB subsystem (WS2812 PIO driver + shared RGB
+   code paths) compiled in and active, to see whether a *disabled* subsystem
+   was causing implicit problems. Mirrors split72's effect list verbatim so
+   the shared code (text_helper.c's RGB effect enum switch) has all the
+   members it references.
+   ------------------------------------------------------------------------- */
+#define WS2812_DI_PIN GP16
+
+#define RGBLED_NUM       42
+#define DRIVER_LED_TOTAL RGBLED_NUM
+#define RGB_MATRIX_LED_COUNT RGBLED_NUM
+#define RGB_MATRIX_SPLIT { 21, 21 }
+
+#define RGB_MATRIX_FRAMEBUFFER_EFFECTS
+#define RGB_MATRIX_KEYPRESSES
+#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100
+
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_SIMPLE
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_WIDE
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_CROSS
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_MULTICROSS
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_NEXUS
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_MULTINEXUS
+#define ENABLE_RGB_MATRIX_SPLASH
+#define ENABLE_RGB_MATRIX_MULTISPLASH
+#define ENABLE_RGB_MATRIX_SOLID_SPLASH
+#define ENABLE_RGB_MATRIX_SOLID_MULTISPLASH
+#define ENABLE_RGB_MATRIX_ALPHAS_MODS
+#define ENABLE_RGB_MATRIX_GRADIENT_UP_DOWN
+#define ENABLE_RGB_MATRIX_GRADIENT_LEFT_RIGHT
+#define ENABLE_RGB_MATRIX_BREATHING
+#define ENABLE_RGB_MATRIX_BAND_SAT
+#define ENABLE_RGB_MATRIX_BAND_VAL
+#define ENABLE_RGB_MATRIX_BAND_PINWHEEL_SAT
+#define ENABLE_RGB_MATRIX_BAND_PINWHEEL_VAL
+#define ENABLE_RGB_MATRIX_BAND_SPIRAL_SAT
+#define ENABLE_RGB_MATRIX_BAND_SPIRAL_VAL
+#define ENABLE_RGB_MATRIX_CYCLE_ALL
+#define ENABLE_RGB_MATRIX_CYCLE_LEFT_RIGHT
+#define ENABLE_RGB_MATRIX_CYCLE_UP_DOWN
+#define ENABLE_RGB_MATRIX_RAINBOW_MOVING_CHEVRON
+#define ENABLE_RGB_MATRIX_CYCLE_OUT_IN
+#define ENABLE_RGB_MATRIX_CYCLE_OUT_IN_DUAL
+#define ENABLE_RGB_MATRIX_CYCLE_PINWHEEL
+#define ENABLE_RGB_MATRIX_CYCLE_SPIRAL
+#define ENABLE_RGB_MATRIX_DUAL_BEACON
+#define ENABLE_RGB_MATRIX_RAINBOW_BEACON
+#define ENABLE_RGB_MATRIX_RAINBOW_PINWHEELS
+#define ENABLE_RGB_MATRIX_RAINDROPS
+#define ENABLE_RGB_MATRIX_JELLYBEAN_RAINDROPS
+#define ENABLE_RGB_MATRIX_HUE_BREATHING
+#define ENABLE_RGB_MATRIX_HUE_PENDULUM
+#define ENABLE_RGB_MATRIX_HUE_WAVE
+#define ENABLE_RGB_MATRIX_PIXEL_FRACTAL
+#define ENABLE_RGB_MATRIX_PIXEL_FLOW
+#define ENABLE_RGB_MATRIX_PIXEL_RAIN
+
+#define RGB_MATRIX_HUE_STEP 2
+#define RGB_MATRIX_SAT_STEP 2
+#define RGB_MATRIX_VAL_STEP 1
+#define RGB_MATRIX_SPD_STEP 1

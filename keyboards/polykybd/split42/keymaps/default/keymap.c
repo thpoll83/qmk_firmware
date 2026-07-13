@@ -7,7 +7,9 @@
 // linker pulls from the keymap TU:
 //   * keymaps[]      — the layer definitions (LAYOUT_lr_stacked42)
 //   * encoder_map[]  — the rotary-encoder action map
-// (split42 has no RGB matrix, so there is no g_led_config here.)
+//   * g_led_config   — the RGB matrix LED layout (42 LEDs; see the RGB-experiment
+//                      note in config.h — the subsystem is compiled in even though
+//                      no WS2812 LEDs are populated on split42)
 //
 // The 42-key layout macro is called LAYOUT_lr_stacked42 (see keyboard.json). Key order
 // per layer: LEFT rows 0-2 (6 each) + LEFT thumbs (3), then RIGHT rows 0-2 (6 each)
@@ -186,3 +188,49 @@ const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [11] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
     [12] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
 };
+
+
+// RGB matrix LED layout (42 LEDs, 21 per side) — RE-ENABLED as an experiment.
+// No WS2812 LEDs are physically populated on split42, so the physical positions
+// here are derived from the keyboard.json key coordinates and are cosmetic only;
+// what matters for the experiment is that the RGB subsystem is compiled in and
+// running. LED order follows matrix order: LEFT rows 0-2 (6 each) + LEFT thumbs
+// (3) = 0-20, then RIGHT rows 0-2 (6 each) + RIGHT thumbs (3) = 21-41.
+//
+// Placed in .rodata so the table sits in flash rather than RAM; QMK only reads
+// g_led_config, so this is a placement override only (matching split72).
+__attribute__((section(".rodata"))) led_config_t g_led_config = { {// Key Matrix to LED Index
+                              {0,  1,  2,  3,  4,  5},
+                              {6,  7,  8,  9,  10, 11},
+                              {12, 13, 14, 15, 16, 17},
+                              {NO_LED, NO_LED, NO_LED, 18, 19, 20},
+
+                              {21, 22, 23, 24, 25, 26},
+                              {27, 28, 29, 30, 31, 32},
+                              {33, 34, 35, 36, 37, 38},
+                              {39, 40, 41, NO_LED, NO_LED, NO_LED}
+                             },
+                             {
+                                // LED Index to Physical Position
+                                {0, 4},    {15, 4},   {30, 0},   {45, 0},   {60, 0},   {75, 0},
+                                {0, 20},   {15, 20},  {30, 16},  {45, 16},  {60, 16},  {75, 16},
+                                {0, 36},   {15, 36},  {30, 32},  {45, 32},  {60, 32},  {75, 32},
+                                {52, 52},  {68, 56},  {82, 60},
+
+                                {120, 0},  {135, 0},  {150, 0},  {165, 0},  {180, 4},  {195, 4},
+                                {120, 16}, {135, 16}, {150, 16}, {165, 16}, {180, 20}, {195, 20},
+                                {120, 32}, {135, 32}, {150, 32}, {165, 32}, {180, 36}, {195, 36},
+                                {112, 60}, {128, 56}, {142, 52}
+                             },
+                             {
+                                // LED Index to Flag
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4,
+
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4
+                             } };

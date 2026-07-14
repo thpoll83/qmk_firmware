@@ -71,36 +71,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ENCODER_RESOLUTION 2
 
 /* -------------------------------------------------------------------------
-   SPLIT_POINTING_ENABLE — REQUIRED by split42. This registers a periodic
-   master->slave split transaction (the master pulls a pointing report from the
-   slave every cycle). Bisect (2026-07-14) proved this transaction — NOT the
-   trackpad and NOT its I2C — is what split42 needs: it still works with the
-   pointing driver swapped to a no-op `custom` driver that does zero I2C (see
-   rules.mk). No Cirque trackpad is populated and the I2C0 bus (GP0/GP1) isn't
-   broken out on this rev, so the real Cirque driver is NOT used — only this
-   feature flag (+ POINTING_DEVICE_RIGHT so the transaction is registered as a
-   slave->master pull). ROOT CAUSE STILL OPEN: why the shared firmware depends
-   on this periodic transaction (split72 always had it via its real trackpad,
-   which hid the dependency). Do NOT remove until that is understood.
-
-   The CIRQUE_PINNACLE_* tuning defines below are inert with the custom no-op
-   driver (the Cirque driver isn't compiled); kept so a real trackpad build is a
-   one-line driver swap. */
-#define CIRQUE_PINNACLE_DIAMETER_MM 35
-#define CIRQUE_PINNACLE_TAP_ENABLE
-#define CIRQUE_PINNACLE_TAPPING_TERM 100
-#define CIRQUE_PINNACLE_TOUCH_DEBOUNCE 300
-#define CIRQUE_PINNACLE_POSITION_MODE  CIRQUE_PINNACLE_RELATIVE_MODE
-#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
-#define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
-
-// Register the pointing split transaction (master pulls the report from slave).
-#define SPLIT_POINTING_ENABLE
-// Report source is the right split (matches split72; sets the pull direction).
-#define POINTING_DEVICE_RIGHT
-// Limit the frequency the (no-op) report is generated.
-#define POINTING_DEVICE_TASK_THROTTLE_MS 1
-#define POINTING_DEVICE_ROTATION_90
+   ROOT-CAUSE EXPERIMENT (2026-07-14): pointing device DISABLED again, replaced
+   by a custom every-cycle master->slave heartbeat pull (see the
+   POLY_SPLIT_HEARTBEAT_EXPERIMENT block in poly_keymap.c housekeeping, enabled
+   from rules.mk). This tests whether split42's dependency is simply "a frequent
+   every-cycle slave pull" (which SPLIT_POINTING_ENABLE happened to provide) or
+   something structural to the pointing feature. The whole Cirque/pointing block
+   is omitted here for the test; if the heartbeat fixes split42 the proper fix is
+   in the poly transport and this block never comes back. */
 
 /* RGB matrix: RE-ENABLED. split42 has no WS2812 LEDs populated, but
    we keep the RGB subsystem in the build (WS2812 PIO driver + the shared RGB code

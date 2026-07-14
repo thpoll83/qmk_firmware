@@ -781,6 +781,26 @@ void housekeeping_task_user(void) {
         // idle/fade pipeline below never fights the game blitter.
         doom_tick();
         sync_and_refresh_displays();
+#ifdef POLY_SPLIT_HEARTBEAT_EXPERIMENT
+        // ROOT-CAUSE EXPERIMENT (split42, 2026-07-14). Reproduce the every-cycle
+        // master->slave pull that SPLIT_POINTING_ENABLE provided, but with the
+        // pointing device fully DISABLED, by pulling the slave every housekeeping
+        // cycle over the existing generic USER_SYNC_SLAVE_DATA channel. (The LTR559
+        // drive pull is only every LTR559_DRIVE_MS=500ms — present in the broken
+        // build b25f2045 — so frequency is the suspected variable.) Self-contained:
+        // references only the transaction id + a raw reply buffer (>= the 4-byte
+        // ltr559_sync_t the handler writes), no pointing/LTR types. Requires
+        // USER_SYNC_SLAVE_DATA registered (POLYKYBD_LTR559_DRIVE, which split42 has).
+        //   split42 works -> the dependency is a frequent every-cycle slave pull;
+        //     the proper fix is a heartbeat in the poly transport, not a borrowed feature.
+        //   split42 breaks -> an every-cycle pull is NOT sufficient; the dependency is
+        //     structural (transaction count / split_shmem layout / a pointing init path).
+        if (is_usb_host_side()) {
+            uint8_t kind     = 0;          // SLAVE_DATA_SENSOR
+            uint8_t reply[4] = {0};        // >= sizeof(ltr559_sync_t)
+            (void)transaction_rpc_exec(USER_SYNC_SLAVE_DATA, sizeof(kind), &kind, sizeof(reply), reply);
+        }
+#endif
 #ifdef POLYKYBD_LTR559
         // Poll the expansion-port light/proximity sensor. Run on BOTH halves —
         // the sensor is auto-detected on whichever half it's soldered to (left or

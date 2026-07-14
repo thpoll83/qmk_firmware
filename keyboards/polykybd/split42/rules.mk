@@ -24,20 +24,17 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Pointing device — SPLIT_POINTING_ENABLE is what split42 actually needs, NOT a
-# trackpad. Bisect (2026-07-14): enabling the Cirque pointing device fixed split42;
-# a follow-up swapped the Cirque I2C driver for the no-op `custom` driver (QMK's weak
-# custom hooks do ZERO I2C) while keeping SPLIT_POINTING_ENABLE — and it STILL WORKS.
-# That isolates the fix to the extra periodic master->slave split transaction the
-# pointing feature registers (config.h), NOT the per-cycle I2C stall and NOT the
-# trackpad hardware (none is populated; the I2C0 bus GP0/GP1 isn't even broken out).
-# We deliberately keep the `custom` no-op driver rather than the real Cirque driver:
-# same fix, but no dead I2C hammering the un-broken-out bus every cycle.
-# ROOT CAUSE STILL OPEN: why the shared firmware depends on this periodic slave-pull
-# transaction (split72 always had it via its real trackpad, hiding the dependency).
-# Do NOT remove SPLIT_POINTING_ENABLE / this driver until that is understood.
-POINTING_DEVICE_ENABLE = yes
-POINTING_DEVICE_DRIVER = custom
+# Pointing device — DISABLED for the root-cause experiment. Instead of borrowing the
+# pointing feature's every-cycle split transaction, we drive our OWN every-cycle
+# master->slave heartbeat pull over the existing USER_SYNC_SLAVE_DATA channel (see
+# the POLY_SPLIT_HEARTBEAT_EXPERIMENT block in poly_keymap.c). This tests whether
+# split42 just needs a frequent slave pull (heartbeat) or something structural to the
+# pointing feature. Requires POLYKYBD_LTR559_DRIVE (below) so USER_SYNC_SLAVE_DATA is
+# registered — split42 has it.
+#   works  -> dependency is a frequent every-cycle slave pull; proper fix goes in the
+#             poly transport, and the pointing borrow is dropped for good.
+#   breaks -> an every-cycle pull is not enough; the dependency is structural.
+OPT_DEFS += -DPOLY_SPLIT_HEARTBEAT_EXPERIMENT
 
 # LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
 # bus (addr 0x23), which isn't broken out on split42, so its probe fails and the

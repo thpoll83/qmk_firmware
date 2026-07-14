@@ -59,14 +59,14 @@ void oled_update_buffer(void) {
     // now go to a periodic log — see the sensor telemetry heartbeat in
     // housekeeping_task_user() — so the status OLED shows the normal panel.)
     if(is_right_side()) {
-        kdisp_write_gfx_text(smallFont, 1, 0, 30, U"RGB");
+        kdisp_write_gfx_text(smallFont, 1, 0, 29, U"RGB");
 
         if(!rgb_matrix_is_enabled()) {
-            kdisp_write_gfx_text(smallFont, 1, 34, 30, U"Off");
+            kdisp_write_gfx_text(smallFont, 1, 34, 29, U"Off");
         } else {
             num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
-            kdisp_write_gfx_text(smallFont, 1, 34, 30, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 58, 30, get_led_matrix_text(rgb_matrix_get_mode()));
+            kdisp_write_gfx_text(smallFont, 1, 34, 29, buffer);
+            kdisp_write_gfx_text(smallFont, 1, 58, 29, get_led_matrix_text(rgb_matrix_get_mode()));
             kdisp_write_gfx_text(smallFont, 1, 0, 44, U"HSV");
             hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_hue());
             kdisp_write_gfx_text(smallFont, 1, 38, 44, buffer);
@@ -74,12 +74,12 @@ void oled_update_buffer(void) {
             kdisp_write_gfx_text(smallFont, 1, 60, 44, buffer);
             hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_val());
             kdisp_write_gfx_text(smallFont, 1, 82, 44, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 0, 58, U"Speed");
+            kdisp_write_gfx_text(smallFont, 1, 0, 59, U"Speed");
             num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_speed());
-            kdisp_write_gfx_text(smallFont, 1, 58, 58, buffer);
+            kdisp_write_gfx_text(smallFont, 1, 58, 59, buffer);
         }
     } else {
-        oled_draw_layout_name(smallFont, 0, 30, get_local_layer()->def_layer);
+        oled_draw_layout_name(smallFont, 0, 29, get_local_layer()->def_layer);
         const poly_sync_t* local_state = get_local_state();
         kdisp_write_gfx_text(smallFont, 1, 0, 44, U"Dsp*");
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->contrast);
@@ -92,13 +92,13 @@ void oled_update_buffer(void) {
         buffer[i+1] = 0;
         kdisp_write_gfx_text(smallFont, 1, 64, 44, buffer);
 
-        kdisp_write_gfx_text(smallFont, 1, 0, 58, U"WPM");
+        kdisp_write_gfx_text(smallFont, 1, 0, 59, U"WPM");
         num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
-        kdisp_write_gfx_text(smallFont, 1, 44, 58, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 44, 59, buffer);
 
-        kdisp_write_gfx_text(smallFont, 1, 68, 58, U"L");
+        kdisp_write_gfx_text(smallFont, 1, 68, 59, U"L");
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
-        kdisp_write_gfx_text(smallFont, 1, 84, 58, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 84, 59, buffer);
     }
 }
 

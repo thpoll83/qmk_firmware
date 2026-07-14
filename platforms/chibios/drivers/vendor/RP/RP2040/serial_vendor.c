@@ -110,6 +110,10 @@ static int         rx_state_machine = -1;
 thread_reference_t tx_thread        = NULL;
 static int         tx_state_machine = -1;
 
+#ifdef POLY_HANDSHAKE_DIAG
+volatile uint32_t g_rx_framing_errors = 0;   // RX-SM framing/break errors (bad stop bit)
+#endif
+
 void pio_serve_interrupt(void) {
     uint32_t irqs = pio->ints0;
 
@@ -135,7 +139,10 @@ void pio_serve_interrupt(void) {
     // IRQ 0 is set on framing or break errors by the rx state machine
     if (pio_interrupt_get(pio, 0UL)) {
         pio_interrupt_clear(pio, 0UL);
-
+#ifdef POLY_HANDSHAKE_DIAG
+        extern volatile uint32_t g_rx_framing_errors;
+        g_rx_framing_errors++;   // count RX-SM framing/break errors (bad stop bit)
+#endif
         osalSysLockFromISR();
         osalThreadResumeI(&rx_thread, MSG_PIO_ERROR);
         osalSysUnlockFromISR();
@@ -283,6 +290,7 @@ uint32_t serial_debug_rx_pc_span(void)    { return (s_rx_pc_moved ? ((s_rx_pc_mi
 uint32_t serial_debug_rx_min_low_us(void) { return (s_rx_min_low_us  == 0xFFFFFFFF) ? 0 : s_rx_min_low_us; }
 uint32_t serial_debug_rx_min_high_us(void){ return (s_rx_min_high_us == 0xFFFFFFFF) ? 0 : s_rx_min_high_us; }
 uint32_t serial_debug_rx_fifo_seen(void)  { return s_rx_fifo_seen; }
+uint32_t serial_debug_rx_framing_errors(void){ return g_rx_framing_errors; }
 
 // FIX EXPERIMENT: fully re-initialise the master's RX state machine. Theory (from the
 // register dump + RP2040 forums): the RX SM comes up metastably-wedged at init on some

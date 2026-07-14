@@ -23,6 +23,7 @@ extern uint32_t serial_debug_rx_pc_span(void);  // (min<<8)|max PC seen off the 
 extern uint32_t serial_debug_rx_min_low_us(void);  // shortest GP5 low pulse (us) = true bit time
 extern uint32_t serial_debug_rx_min_high_us(void); // shortest GP5 high pulse (us)
 extern uint32_t serial_debug_rx_fifo_seen(void);   // # window samples the RX FIFO was non-empty
+extern uint32_t serial_debug_rx_framing_errors(void); // RX-SM framing/break errors (bad stop bit)
 extern void     serial_debug_dump_rx_sm(void);
 extern void     serial_debug_reinit_rx(void);   // FIX EXPERIMENT: re-init a wedged RX SM
 #endif
@@ -205,6 +206,8 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
                         (unsigned long)serial_debug_rx_min_low_us(),
                         (unsigned long)serial_debug_rx_min_high_us(),
                         (unsigned long)serial_debug_rx_fifo_seen());
+                uprintf("         framing_errors=%lu  (if this ~= the fail count, the 'timeouts' are actually bad-stop-bit framing errors, not silence)\n",
+                        (unsigned long)serial_debug_rx_framing_errors());
                 // One-shot PIO register dump: compare the working TX SM against the
                 // dead RX SM on the same PIO block to see what's mis-set-up.
                 static bool dumped = false;

@@ -71,33 +71,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ENCODER_RESOLUTION 2
 
 /* -------------------------------------------------------------------------
-   Pointing device (Cirque trackpad) — RE-ENABLED as an experiment.
+   ROOT-CAUSE EXPERIMENT (2026-07-14): pointing device DISABLED again, replaced
+   by a custom every-cycle master->slave heartbeat pull (see the
+   POLY_SPLIT_HEARTBEAT_EXPERIMENT block in poly_keymap.c housekeeping, enabled
+   from rules.mk). This tests whether split42's dependency is simply "a frequent
+   every-cycle slave pull" (which SPLIT_POINTING_ENABLE happened to provide) or
+   something structural to the pointing feature. The whole Cirque/pointing block
+   is omitted here for the test; if the heartbeat fixes split42 the proper fix is
+   in the poly transport and this block never comes back. */
 
-   split42 has no trackpad populated, and its I2C0 bus (GP0/GP1) is not broken
-   out on this hardware rev (see the status-OLED note below), so the Cirque
-   probe just fails and the driver disables itself — the same "harmless when
-   absent" behaviour split72 relies on. We keep the subsystem compiled in to
-   test whether a *disabled* subsystem was implicated. Unlike RGB, this one
-   also touches the split link: SPLIT_POINTING_ENABLE registers an extra split
-   transaction over the UART bridge, and the pointing task polls I2C each
-   housekeeping cycle. Mirrors split72's Cirque/pointing block verbatim. */
-#define CIRQUE_PINNACLE_DIAMETER_MM 35
-#define CIRQUE_PINNACLE_TAP_ENABLE
-#define CIRQUE_PINNACLE_TAPPING_TERM 100
-#define CIRQUE_PINNACLE_TOUCH_DEBOUNCE 300
-#define CIRQUE_PINNACLE_POSITION_MODE  CIRQUE_PINNACLE_RELATIVE_MODE
-#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
-#define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
-
-// Enable use of pointing device on slave split (adds a split transaction).
-#define SPLIT_POINTING_ENABLE
-// Pointing device is on the right split (split72 puts the trackpad there too).
-#define POINTING_DEVICE_RIGHT
-// Limit the frequency the sensor is polled for motion.
-#define POINTING_DEVICE_TASK_THROTTLE_MS 1
-#define POINTING_DEVICE_ROTATION_90
-
-/* RGB matrix: RE-ENABLED as an experiment. split42 has no WS2812 LEDs populated, but
+/* RGB matrix: RE-ENABLED. split42 has no WS2812 LEDs populated, but
    we keep the RGB subsystem in the build (WS2812 PIO driver + the shared RGB code
    paths) to see whether a *disabled* subsystem was implicated. The data line is
    parked on an UNUSED GPIO — GP16 (schematic net E2, the Exp0 header pad) — since

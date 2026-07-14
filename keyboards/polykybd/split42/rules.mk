@@ -24,19 +24,23 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Pointing device (Cirque trackpad) — RE-ENABLED as an experiment. No trackpad
-# is populated on split42 and its I2C0 bus isn't broken out, so the driver just
-# fails its probe and idles. Kept compiled in (and it registers an extra split
-# transaction) to test whether a disabled subsystem was implicated. Mirrors
-# split72.
+# Root-cause experiment: POINTING_DEVICE_ENABLE with a no-op driver but WITHOUT
+# SPLIT_POINTING_ENABLE. This LINKS pointing_device.c + runs its init/task, but adds
+# NO split transaction and NO `pointing` member to split_shared_memory_t (SPLIT_POINTING
+# is what adds those, and it's not defined here). The dummy-transaction test already
+# ruled out NUM_TOTAL_TRANSACTIONS. So this separates the last two candidates:
+#   link revives -> merely linking/running the pointing code fixes it (a layout/init
+#                   side effect — the "fix" is coincidental, real bug is elsewhere).
+#   still dead   -> it's SPLIT_POINTING's split_shmem `pointing` member specifically
+#                   (which shifts the RPC buffers' offset), a real transport dependency.
 POINTING_DEVICE_ENABLE = yes
-POINTING_DEVICE_DRIVER = cirque_pinnacle_i2c
+POINTING_DEVICE_DRIVER = custom
 
-# LTR-559 light+proximity sensor — RE-ENABLED as an experiment. Shares the same
-# Cirque I2C0 bus (addr 0x23), which isn't broken out on split42, so its probe
-# also fails and the driver disables itself after a few bounded retries — the
-# same "harmless when absent" behaviour split72 relies on. Kept compiled in to
-# test whether a disabled subsystem was implicated. Mirrors split72.
+# LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
+# bus (addr 0x23), which isn't broken out on split42, so its probe fails and the
+# driver disables itself after a few bounded retries — the same "harmless when
+# absent" behaviour split72 relies on. Kept compiled in to test whether a
+# disabled subsystem was implicated. Mirrors split72.
 SRC += base/ltr559.c
 OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 

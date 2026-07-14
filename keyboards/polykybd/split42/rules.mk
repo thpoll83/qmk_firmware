@@ -45,7 +45,17 @@ SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c b
 #                                     bytes out (the PIO TX state machine itself).
 # This decides which flavour of slave-TX failure it is (block vs drain-but-lost vs SM-stall).
 OPT_DEFS += -DPOLY_HANDSHAKE_DIAG
-OPT_DEFS += -DPOLY_SLAVE_STAGE_PROBE
+# SLAVE STAGE PROBE intentionally DISABLED now: it rendered from the HIGHPRIO
+# SlaveThread and raced the slave main thread's own SPI/OLED rendering — the
+# "variable 1..6, partially-filled" keycaps were that race, not a clean signal. We
+# keep the master-side diag only, and the master console now also reports its RX-FIFO
+# state at each failed handshake (rx_fifo=N peek=0xNN):
+#   rx_fifo=0            -> slave never drove GP5: the echo never physically arrives.
+#   rx_fifo>0, peek=exp  -> the echo DID reach the master RX FIFO but was not consumed
+#                           (PIO1-IRQ / receive-wake miss, or it arrived after the 20 ms
+#                           window) -> a master-side receive problem, not a dead line.
+# (Race-free: printed on the master's USB console, no slave rendering involved.)
+# OPT_DEFS += -DPOLY_SLAVE_STAGE_PROBE
 
 # LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
 # bus (addr 0x23), which isn't broken out on split42, so its probe fails and the

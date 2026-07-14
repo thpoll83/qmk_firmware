@@ -187,6 +187,27 @@ static inline void enter_rx_state(void) {}
 static inline void leave_rx_state(void) {}
 #endif
 
+#ifdef POLY_HANDSHAKE_DIAG
+// Diagnostic (split42 root-cause): report the master's RX side at the moment its
+// echo-receive fails, to split "slave never drove GP5" from "echo reached the master
+// RX FIFO but was never consumed (IRQ/wake failed)". Returns the RX FIFO level in the
+// low bits; bit31 set = RX state machine was never even claimed (rx_state_machine<0).
+uint32_t serial_debug_rx_fifo_level(void) {
+    if (rx_state_machine < 0) {
+        return 0x80000000u;
+    }
+    return pio_sm_get_rx_fifo_level(pio, rx_state_machine);
+}
+// Peek the oldest byte in the RX FIFO without removing it (0xFFFFFFFF if empty).
+uint32_t serial_debug_rx_fifo_peek(void) {
+    if (rx_state_machine < 0 || pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
+        return 0xFFFFFFFFu;
+    }
+    // Same alignment the driver uses: the byte sits in the top octet of the word.
+    return (uint32_t)(*((uint8_t*)&pio->rxf[rx_state_machine] + 3U));
+}
+#endif
+
 /**
  * @brief Clear the FIFO of the RX state machine.
  */

@@ -8,6 +8,11 @@
 #include "synchronization_util.h"
 #ifdef POLY_HANDSHAKE_DIAG
 #    include "print.h"
+// Implemented in serial_vendor.c: master RX-side state at the moment the echo receive
+// fails, to split "slave never drove GP5" (FIFO empty) from "echo reached the master RX
+// FIFO but was never consumed / arrived after the 20 ms window" (byte present).
+extern uint32_t serial_debug_rx_fifo_level(void);
+extern uint32_t serial_debug_rx_fifo_peek(void);
 #endif
 #ifdef POLY_SLAVE_STAGE_PROBE
 // Implemented in keyboards/polykybd/poly_util.c (guarded by the same define). Draws
@@ -166,9 +171,15 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
             static uint32_t hs_timeout = 0, hs_garbage = 0, hs_total = 0;
             if (!hs_rx_ok) { hs_timeout++; } else { hs_garbage++; }
             if ((++hs_total % 500) == 0) {
-                uprintf("HS-DIAG: total=%lu timeout(no-rx)=%lu garbage(wrong-byte)=%lu last=0x%02X exp=0x%02X\n",
+                // Sample the master RX FIFO right now (post-failed-receive): does the
+                // slave's echo actually reach us on GP5 but go unconsumed, or never
+                // arrive at all? bit31 in level = RX state machine was never claimed.
+                uint32_t rxlvl  = serial_debug_rx_fifo_level();
+                uint32_t rxpeek = serial_debug_rx_fifo_peek();
+                uprintf("HS-DIAG: total=%lu timeout(no-rx)=%lu garbage(wrong-byte)=%lu last=0x%02X exp=0x%02X rx_fifo=%lu peek=0x%02lX\n",
                         (unsigned long)hs_total, (unsigned long)hs_timeout, (unsigned long)hs_garbage,
-                        (unsigned)transaction_id_shake, (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS));
+                        (unsigned)transaction_id_shake, (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS),
+                        (unsigned long)rxlvl, (unsigned long)rxpeek);
             }
         }
 #endif

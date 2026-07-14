@@ -9,6 +9,7 @@
 #include "debug.h"
 #ifdef POLY_HANDSHAKE_DIAG
 #    include "hardware/gpio.h"
+#    include "hardware/structs/timer.h"
 #    include "hardware/structs/iobank0.h"
 #    include "hardware/structs/padsbank0.h"
 #endif
@@ -225,6 +226,9 @@ static uint32_t s_rx_max_low_run = 0;   // longest consecutive-low sample run se
 static uint32_t s_rx_pc_moved = 0;      // # samples the RX PC was OFF the wait (offset 19)
 static uint32_t s_rx_pc_max = 0;        // highest RX PC seen off the wait
 static uint32_t s_rx_pc_min = 0xFFFFFFFF;// lowest RX PC seen off the wait
+static uint32_t s_rx_min_low_us = 0xFFFFFFFF;  // shortest LOW pulse on GP5 (us) — true bit time
+static uint32_t s_rx_min_high_us = 0xFFFFFFFF; // shortest HIGH pulse on GP5 (us)
+static uint32_t s_rx_fifo_seen = 0;     // # burst samples the RX FIFO was non-empty (SM pushed)
 void serial_debug_rx_sample_burst(void) {
     // Sample the raw RX pad in a tight loop (~40-60 ns/sample). Track the LONGEST run
     // of consecutive lows across all bursts: a valid UART start bit at this baud is
@@ -232,12 +236,31 @@ void serial_debug_rx_sample_burst(void) {
     // samples. So max_low_run tells "the slave sends a real frame" from "GP5 only
     // glitches" — which decides slave-TX-broken vs a master-RX silicon oddity.
     uint32_t run = 0;
+    bool     last  = gpio_get(s_dbg_rx_pin);
+    uint32_t lastt = timer_hw->timerawl;
     for (int i = 0; i < 16000; ++i) {
-        if (!gpio_get(s_dbg_rx_pin)) {
+        bool lvl = gpio_get(s_dbg_rx_pin);
+        // Reliable bit time: timestamp each GP5 edge and keep the SHORTEST low/high pulse
+        // seen (in us). IRQs only ever stretch a pulse, so the min across many pulses is
+        // the true bit period. Expected ~4 us at 230400 baud; ~2 us would be 2x baud.
+        if (lvl != last) {
+            uint32_t now = timer_hw->timerawl, w = now - lastt;
+            if (w >= 1) {
+                if (!last) { if (w < s_rx_min_low_us)  s_rx_min_low_us  = w; }
+                else       { if (w < s_rx_min_high_us) s_rx_min_high_us = w; }
+            }
+            last = lvl; lastt = now;
+        }
+        if (!lvl) {
             s_rx_ever_low = true;
             if (++run > s_rx_max_low_run) s_rx_max_low_run = run;
         } else {
             run = 0;
+        }
+        // Did the RX SM actually PUSH a byte? Watch the RX FIFO level during the window
+        // (nothing drains it here — the receive runs later). >0 ever = the SM pushed.
+        if (rx_state_machine >= 0 && !pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
+            s_rx_fifo_seen++;
         }
         // Also watch the RX SM's PC. If it ever leaves the start-bit wait (offset 19),
         // it DID detect a start and ran into the receive body (20..27) -> it sees the
@@ -257,6 +280,9 @@ bool     serial_debug_rx_ever_low(void)   { return s_rx_ever_low; }
 uint32_t serial_debug_rx_max_low_run(void){ return s_rx_max_low_run; }
 uint32_t serial_debug_rx_pc_moved(void)   { return s_rx_pc_moved; }
 uint32_t serial_debug_rx_pc_span(void)    { return (s_rx_pc_moved ? ((s_rx_pc_min << 8) | (s_rx_pc_max & 0xFF)) : 0); }
+uint32_t serial_debug_rx_min_low_us(void) { return (s_rx_min_low_us  == 0xFFFFFFFF) ? 0 : s_rx_min_low_us; }
+uint32_t serial_debug_rx_min_high_us(void){ return (s_rx_min_high_us == 0xFFFFFFFF) ? 0 : s_rx_min_high_us; }
+uint32_t serial_debug_rx_fifo_seen(void)  { return s_rx_fifo_seen; }
 
 // FIX EXPERIMENT: fully re-initialise the master's RX state machine. Theory (from the
 // register dump + RP2040 forums): the RX SM comes up metastably-wedged at init on some

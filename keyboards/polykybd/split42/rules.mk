@@ -52,7 +52,9 @@ OPT_DEFS += -DPOLY_HANDSHAKE_DIAG
 # not-yet-final clock at init on one half some boots). A fixed divisor makes both halves
 # use the exact same baud regardless of the clock state at init. If the link comes up
 # (slave alive, HS-DIAG failures stop), this is the fix and it moves into config proper.
-OPT_DEFS += -DPOLY_FIXED_SERIAL_CLKDIV
+# (POLY_FIXED_SERIAL_CLKDIV disabled: it was a no-op — the master already computes the
+#  divisor at 125 MHz, and forcing 125 MHz changed nothing, so a wrong div isn't the cause.)
+# OPT_DEFS += -DPOLY_FIXED_SERIAL_CLKDIV
 # SLAVE STAGE PROBE intentionally DISABLED now: it rendered from the HIGHPRIO
 # SlaveThread and raced the slave main thread's own SPI/OLED rendering — the
 # "variable 1..6, partially-filled" keycaps were that race, not a clean signal. We

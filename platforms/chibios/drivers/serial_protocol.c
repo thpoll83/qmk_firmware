@@ -20,6 +20,9 @@ extern bool     serial_debug_rx_ever_low(void);
 extern uint32_t serial_debug_rx_max_low_run(void);
 extern uint32_t serial_debug_rx_pc_moved(void); // # samples the RX PC left the wait (offset 19)
 extern uint32_t serial_debug_rx_pc_span(void);  // (min<<8)|max PC seen off the wait, or 0
+extern uint32_t serial_debug_rx_min_low_us(void);  // shortest GP5 low pulse (us) = true bit time
+extern uint32_t serial_debug_rx_min_high_us(void); // shortest GP5 high pulse (us)
+extern uint32_t serial_debug_rx_fifo_seen(void);   // # window samples the RX FIFO was non-empty
 extern void     serial_debug_dump_rx_sm(void);
 extern void     serial_debug_reinit_rx(void);   // FIX EXPERIMENT: re-init a wedged RX SM
 #endif
@@ -193,12 +196,15 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
                 uint32_t rxlvl  = serial_debug_rx_fifo_level();
                 (void)serial_debug_rx_fifo_peek;
                 uint32_t span = serial_debug_rx_pc_span();
-                uprintf("HS-DIAG: total=%lu timeout=%lu last=0x%02X exp=0x%02X rx_fifo=%lu gp5_low_run=%lu rx_pc_moved=%lu rx_pc_min=%lu rx_pc_max=%lu\n",
+                uprintf("HS-DIAG: total=%lu timeout=%lu exp=0x%02X rx_fifo=%lu pc_moved=%lu pc=%lu..%lu min_low_us=%lu min_high_us=%lu fifo_seen=%lu\n",
                         (unsigned long)hs_total, (unsigned long)hs_timeout,
-                        (unsigned)transaction_id_shake, (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS),
-                        (unsigned long)rxlvl, (unsigned long)serial_debug_rx_max_low_run(),
+                        (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS),
+                        (unsigned long)rxlvl,
                         (unsigned long)serial_debug_rx_pc_moved(),
-                        (unsigned long)(span >> 8), (unsigned long)(span & 0xFF));
+                        (unsigned long)(span >> 8), (unsigned long)(span & 0xFF),
+                        (unsigned long)serial_debug_rx_min_low_us(),
+                        (unsigned long)serial_debug_rx_min_high_us(),
+                        (unsigned long)serial_debug_rx_fifo_seen());
                 // One-shot PIO register dump: compare the working TX SM against the
                 // dead RX SM on the same PIO block to see what's mis-set-up.
                 static bool dumped = false;

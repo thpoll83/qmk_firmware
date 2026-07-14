@@ -17,6 +17,7 @@ extern uint32_t serial_debug_rx_fifo_peek(void);
 // whether GP5 has EVER been pulled low by the slave (across all transactions so far).
 extern void serial_debug_rx_sample_burst(void);
 extern bool serial_debug_rx_ever_low(void);
+extern void serial_debug_dump_rx_sm(void);
 #endif
 #ifdef POLY_SLAVE_STAGE_PROBE
 // Implemented in keyboards/polykybd/poly_util.c (guarded by the same define). Draws
@@ -191,6 +192,10 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
                         (unsigned long)hs_total, (unsigned long)hs_timeout, (unsigned long)hs_garbage,
                         (unsigned)transaction_id_shake, (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS),
                         (unsigned long)rxlvl, (unsigned long)rxpeek, (unsigned)serial_debug_rx_ever_low());
+                // One-shot PIO register dump: compare the working TX SM against the
+                // dead RX SM on the same PIO block to see what's mis-set-up.
+                static bool dumped = false;
+                if (!dumped) { dumped = true; serial_debug_dump_rx_sm(); }
             }
         }
 #endif

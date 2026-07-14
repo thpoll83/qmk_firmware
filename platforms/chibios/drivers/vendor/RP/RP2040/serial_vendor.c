@@ -224,6 +224,31 @@ void serial_debug_rx_sample_burst(void) {
     }
 }
 bool serial_debug_rx_ever_low(void) { return s_rx_ever_low; }
+
+// Dump the live PIO1 registers for BOTH serial state machines on the master. The TX SM
+// (GP4) works and the RX SM (GP5) does not, on the same PIO block — so comparing them
+// pinpoints what's wrong with the RX SM: enabled? on the right pin? PC advancing (i.e.
+// is the program actually running, or stalled)? Reads pc twice so a running SM shows two
+// different values. Decode after: ctrl bits0-3 = per-SM enable; pinctrl IN_BASE = bits0-4;
+// execctrl JMP_PIN = bits24-28; fstat RXEMPTY = bits8-11 (per SM).
+void serial_debug_dump_rx_sm(void) {
+    uprintf("PIO1 ctrl=0x%08lX fstat=0x%08lX flevel=0x%08lX fdebug=0x%08lX tx_sm=%d rx_sm=%d\n",
+            (unsigned long)pio->ctrl, (unsigned long)pio->fstat, (unsigned long)pio->flevel,
+            (unsigned long)pio->fdebug, tx_state_machine, rx_state_machine);
+    if (tx_state_machine >= 0) {
+        int s = tx_state_machine;
+        uprintf("  TX sm=%d pinctrl=0x%08lX execctrl=0x%08lX clkdiv=0x%08lX pc=%lu\n",
+                s, (unsigned long)pio->sm[s].pinctrl, (unsigned long)pio->sm[s].execctrl,
+                (unsigned long)pio->sm[s].clkdiv, (unsigned long)pio->sm[s].addr);
+    }
+    if (rx_state_machine >= 0) {
+        int s = rx_state_machine;
+        uint32_t pc0 = pio->sm[s].addr, pc1 = pio->sm[s].addr;
+        uprintf("  RX sm=%d pinctrl=0x%08lX execctrl=0x%08lX clkdiv=0x%08lX pc=%lu,%lu\n",
+                s, (unsigned long)pio->sm[s].pinctrl, (unsigned long)pio->sm[s].execctrl,
+                (unsigned long)pio->sm[s].clkdiv, (unsigned long)pc0, (unsigned long)pc1);
+    }
+}
 #endif
 
 /**

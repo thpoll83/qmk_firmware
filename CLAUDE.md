@@ -717,12 +717,31 @@ dependency. Leading theory: split42's only other regular master→slave traffic 
 built-in matrix pull + the poly custom syncs (which fire on *diffs*), so on an idle
 freshly-booted split42 the slave may go too long without being serviced by the transport
 in the way the poly split state machine expects; the pointing transaction restores a
-guaranteed every-cycle pull. Not yet proven — the clean next test is a **minimal custom
-"heartbeat" `target2initiator` transaction with pointing disabled**: if that also fixes
-split42, the dependency is "any every-cycle slave pull" (and the real fix belongs in the
-poly transport, not a borrowed feature); if it doesn't, the dependency is structural
-(transaction-count / `split_shmem` layout). Do NOT remove `SPLIT_POINTING_ENABLE` until
-this is settled. In-tree pointers live in the split42 `config.h`/`rules.mk` comments.
+guaranteed every-cycle pull. **Heartbeat test (2026-07-14, `01cb83d0`) — REFUTES the frequent-pull theory.** Disabled
+the pointing device entirely and instead drove an **every-cycle** master→slave pull over
+the existing `USER_SYNC_SLAVE_DATA` channel (reused, so no new transaction / no shmem
+change — pure traffic) from `housekeeping_task_user()`. Result: split42 **still breaks**.
+So an every-cycle slave pull is **not** what split42 needs — the dependency is **not the
+traffic/frequency**.
+
+⇒ **The dependency is structural to *enabling the pointing feature itself*, or a
+memory-layout coincidence.** Enabling `POINTING_DEVICE_ENABLE`+`SPLIT_POINTING_ENABLE`
+does several things a reused-transaction heartbeat does NOT: (a) adds 3 transaction IDs
+(`GET_POINTING_CHECKSUM`/`GET_POINTING_DATA`/`PUT_POINTING_CPI`) → shifts the USER
+transaction-id numbering and bumps `NUM_TOTAL_TRANSACTIONS` (the poly table is near the
+32 cap); (b) adds a `pointing` member to `split_shared_memory_t` → changes shmem
+size/offsets; (c) links `pointing_device.c` + runs `pointing_device_init/_task` → shifts
+image/RAM layout. Any of (a)–(c) could be the real cause, **including the possibility
+that "enable pointing" merely perturbs memory layout and masks a latent bug** (a
+stack/buffer/uninitialised-use error) — the same *class* of coincidence the I2C-timing
+red herring was. **Resting fix stays `SPLIT_POINTING_ENABLE` + no-op `custom` driver
+(`5de77192`)** — that is the last confirmed-working config; the heartbeat commit
+`01cb83d0` is an experiment, to be reverted to `5de77192` if the investigation doesn't
+supersede it. NEXT: get the exact failure symptom (slave-dead vs no-USB vs display vs
+boot-hang), then discriminate (a)/(b) from (c) by adding a **dummy split transaction +
+shmem member with no task** (tests transaction-count/shmem-layout alone) and by an
+**`-Wl,-Map` layout/`.bss` diff** of the working vs broken image (tests the
+layout-coincidence hypothesis). Do NOT ship split42 off `01cb83d0`.
 
 ### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
 

@@ -32,16 +32,21 @@ SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c b
 #    byte) or a slave echoing GARBAGE (a wrong byte arrived). Confirmed: silent.
 #
 #  * POLY_SLAVE_STAGE_PROBE (slave side): the slave's react_to_transaction (the
-#    HIGHPRIO SlaveThread) paints the furthest stage it reaches as a big digit on the
-#    slave's own keycaps — the only surface that still works on the frozen half. Read
-#    the digit on the SLAVE after boot (see poly_util.c for the legend):
-#      (no digit, frozen splash/half-render) -> SlaveThread never ran: global wedge
-#                                               (main thread hung with IRQs off).
-#      1 -> ran but RX never delivered a byte (slave PIO RX dead).
-#      2 -> received the id byte (slave RX works; master RX/slave TX is the dead leg).
-#      3 -> acquired split_shared_memory_lock (NOT a mutex deadlock).
-#      4/5 -> reached / completed the echo (a healthy round).
-# This decides: thread-never-ran vs RX-dead vs TX-dead vs lock-deadlock.
+#    HIGHPRIO SlaveThread) lights one SOLID-WHITE keycap per stage (top row, display
+#    idx 6..10 for stages 1..5) — a plain buffer blast, NO glyph rendering, NO
+#    clear-all, so the probe itself can't wedge on the glyph path and stays distinct
+#    from the main thread's own frozen output. COUNT the solid-white keycaps on the
+#    SLAVE after boot = furthest transport stage reached:
+#      (no white keycaps) -> SlaveThread never ran: global wedge / not scheduled.
+#      1 white -> ran but RX never returned a byte (slave PIO RX dead).
+#      2 white -> received the id byte (slave RX works -> master-RX / slave-TX is dead).
+#      3 white -> acquired split_shared_memory_lock (NOT a mutex deadlock).
+#      4/5 white -> reached / completed the echo (a healthy round).
+#    PLUS a one-shot glyph self-test at stage 3: renders '3' to keycap idx 0 via the
+#    same kdisp_write_gfx_text path update_displays() uses. Keycap 0 shows '3' ->
+#    glyph rendering works; keycap 0 stays dark WITH the white markers present ->
+#    kdisp_write_gfx_text is the wedge (the update_displays freeze itself).
+# This decides: thread-never-ran vs RX-dead vs TX-dead vs lock-deadlock vs glyph-wedge.
 OPT_DEFS += -DPOLY_HANDSHAKE_DIAG
 OPT_DEFS += -DPOLY_SLAVE_STAGE_PROBE
 

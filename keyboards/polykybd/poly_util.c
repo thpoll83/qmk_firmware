@@ -101,13 +101,43 @@ void poly_announce_bootloader(void) {
 // SPI in the healthy case (reaches 5 once, then silent) and in the wedged case it
 // paints the wedge stage once and stays. Per the hardware owner, the keycap SPI has
 // no locking — we just write display memory from this HIGHPRIO thread.
+// Blast a solid buffer to exactly one keycap (by display index). Plain SPI only —
+// no glyph rendering, no shared-buffer glyph machinery — so this cannot wedge on the
+// very path we are trying to test, and it does NOT clear the whole half (so it stays
+// visually distinct from the main thread's own frozen output).
+static void probe_fill_keycap(uint8_t disp_index, uint8_t fill) {
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(disp_index), get_disp_bitmask_size());
+    kdisp_set_buffer(fill);
+    kdisp_send_buffer();
+}
+
 void poly_slave_stage_probe(uint8_t stage) {
     static uint8_t s_max_stage = 0;
     if (stage <= s_max_stage) return;
     s_max_stage = stage;
-    const uint32_t digit[2] = { (uint32_t)('0' + stage), 0 };
-    clear_all_displays();
-    display_message(1, 2, digit, &FreeSansBold24pt7b);
+
+    // (1) Light one WHITE keycap per stage on the top row (display idx 6..10 for
+    //     stages 1..5). Count the solid-white keycaps: that count == the furthest
+    //     react_to_transaction stage the SlaveThread reached. Pure buffer blast, so
+    //     it can't hang on the glyph path — this alone proves whether the thread runs
+    //     and how far it gets through the transport handshake.
+    probe_fill_keycap((uint8_t)(6 + stage - 1), 0xFF);
+
+    // (2) ONE-SHOT glyph-render self-test, deferred to stage 3 (past RX + mutex, so
+    //     it can't block the earlier white markers). Renders a big '3' to display idx
+    //     0 through the SAME kdisp_write_gfx_text path update_displays() uses. If
+    //     keycap 0 shows the '3', glyph rendering works on the slave. If keycap 0
+    //     stays dark while the white stage markers ARE present, kdisp_write_gfx_text
+    //     is the wedge — i.e. the exact freeze that stalls update_displays. (The
+    //     current all-black build already hinted this: clear succeeded, glyph didn't.)
+    if (stage == 3) {
+        const GFXfont* displayFont[] = { &FreeSansBold24pt7b };
+        const uint32_t digit[2] = { U'3', 0 };
+        sr_shift_out_buffer_latch(get_key_disp_bitmask(0), get_disp_bitmask_size());
+        kdisp_set_buffer(0x00);
+        kdisp_write_gfx_text(displayFont, 1, 49, 38, digit);
+        kdisp_send_buffer();
+    }
 }
 #endif
 

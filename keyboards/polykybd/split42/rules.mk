@@ -24,14 +24,26 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Root-cause experiment: NO pointing + HANDSHAKE DIAG. The master already reports
-# "receiving handshake failed". POLY_HANDSHAKE_DIAG makes the master tally, on its
-# console (uprintf, shows without debug), whether that's a SILENT slave (rx timed out,
-# no byte) or a slave echoing GARBAGE (a wrong byte arrived):
-#   timeout(no-rx) dominates -> slave truly silent (frozen/starved/TX-dead) — supports
-#                               the lock-starvation story; next: slave-side probe.
-#   garbage(wrong-byte) dominates -> slave alive but echoes corrupted — line/timing fault.
+# Root-cause experiment: NO pointing + HANDSHAKE DIAG (master) + SLAVE STAGE PROBE
+# (slave). Together, one flash gives both ends of the failing handshake:
+#
+#  * POLY_HANDSHAKE_DIAG (master side): tallies on the master console (uprintf, no
+#    debug needed) whether the failed handshake is a SILENT slave (rx timed out, no
+#    byte) or a slave echoing GARBAGE (a wrong byte arrived). Confirmed: silent.
+#
+#  * POLY_SLAVE_STAGE_PROBE (slave side): the slave's react_to_transaction (the
+#    HIGHPRIO SlaveThread) paints the furthest stage it reaches as a big digit on the
+#    slave's own keycaps — the only surface that still works on the frozen half. Read
+#    the digit on the SLAVE after boot (see poly_util.c for the legend):
+#      (no digit, frozen splash/half-render) -> SlaveThread never ran: global wedge
+#                                               (main thread hung with IRQs off).
+#      1 -> ran but RX never delivered a byte (slave PIO RX dead).
+#      2 -> received the id byte (slave RX works; master RX/slave TX is the dead leg).
+#      3 -> acquired split_shared_memory_lock (NOT a mutex deadlock).
+#      4/5 -> reached / completed the echo (a healthy round).
+# This decides: thread-never-ran vs RX-dead vs TX-dead vs lock-deadlock.
 OPT_DEFS += -DPOLY_HANDSHAKE_DIAG
+OPT_DEFS += -DPOLY_SLAVE_STAGE_PROBE
 
 # LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
 # bus (addr 0x23), which isn't broken out on split42, so its probe fails and the

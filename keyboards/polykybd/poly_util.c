@@ -80,6 +80,37 @@ void poly_announce_bootloader(void) {
     display_bootloader_message();
 }
 
+#ifdef POLY_SLAVE_STAGE_PROBE
+// Diagnostic only (build with -DPOLY_SLAVE_STAGE_PROBE, split42 root-cause):
+// the split SlaveThread (react_to_transaction in serial_protocol.c) calls this at
+// each stage of handling one transaction. We render the HIGHEST stage reached as a
+// big digit across this half's keycaps, so a frozen slave shows — on its own screen,
+// the only thing that still works on it — exactly how far its transaction handler got
+// before it wedged:
+//   (frozen splash / no digit) -> the SlaveThread never ran at all: global scheduler
+//                                 wedge (main thread hung with IRQs off) or the thread
+//                                 was never scheduled. NOT a per-stage block.
+//   1 -> ran, but serial_transport_receive_blocking() never returned: the master's
+//        bytes are not being delivered to the slave PIO RX (transport/RX dead).
+//   2 -> received the transaction id byte (so slave RX *does* work).
+//   3 -> acquired split_shared_memory_lock (so it is NOT a mutex deadlock with the
+//        main thread; if it stalls at 2 vs 3 that discriminates the lock).
+//   4 -> about to echo the handshake back to the master.
+//   5 -> echoed the handshake OK (a healthy round; the link would then work).
+// Monotonic-max: renders at most once per new highest stage, so it can never flood
+// SPI in the healthy case (reaches 5 once, then silent) and in the wedged case it
+// paints the wedge stage once and stays. Per the hardware owner, the keycap SPI has
+// no locking — we just write display memory from this HIGHPRIO thread.
+void poly_slave_stage_probe(uint8_t stage) {
+    static uint8_t s_max_stage = 0;
+    if (stage <= s_max_stage) return;
+    s_max_stage = stage;
+    const uint32_t digit[2] = { (uint32_t)('0' + stage), 0 };
+    clear_all_displays();
+    display_message(1, 2, digit, &FreeSansBold24pt7b);
+}
+#endif
+
 void display_message(uint8_t row, uint8_t col, const uint32_t* message, const GFXfont* font) {
 
     const GFXfont* displayFont[] = { font };

@@ -9,6 +9,12 @@
 #ifdef POLY_HANDSHAKE_DIAG
 #    include "print.h"
 #endif
+#ifdef POLY_SLAVE_STAGE_PROBE
+// Implemented in keyboards/polykybd/poly_util.c (guarded by the same define). Draws
+// the furthest react_to_transaction stage reached to this half's keycaps so a frozen
+// slave localises its own wedge. See that function for the stage legend.
+extern void poly_slave_stage_probe(uint8_t stage);
+#endif
 
 static inline bool initiate_transaction(uint8_t transaction_id);
 static inline bool react_to_transaction(void);
@@ -53,10 +59,16 @@ void soft_serial_initiator_init(void) {
  */
 static inline bool react_to_transaction(void) {
     uint8_t transaction_id = 0;
+#ifdef POLY_SLAVE_STAGE_PROBE
+    poly_slave_stage_probe(1);   // entered handler, about to block on RX
+#endif
     /* Wait until there is a transaction for us. */
     if (unlikely(!serial_transport_receive_blocking(&transaction_id, sizeof(transaction_id)))) {
         return false;
     }
+#ifdef POLY_SLAVE_STAGE_PROBE
+    poly_slave_stage_probe(2);   // received the transaction id byte (RX works)
+#endif
 
     /* Sanity check that we are actually responding to a valid transaction. */
     if (unlikely(transaction_id >= NUM_TOTAL_TRANSACTIONS)) {
@@ -64,15 +76,24 @@ static inline bool react_to_transaction(void) {
     }
 
     split_shared_memory_lock_autounlock();
+#ifdef POLY_SLAVE_STAGE_PROBE
+    poly_slave_stage_probe(3);   // acquired split_shared_memory_lock (no mutex deadlock)
+#endif
 
     split_transaction_desc_t* transaction = &split_transaction_table[transaction_id];
 
     /* Send back the handshake which is XORed as a simple checksum,
      to signal that the slave is ready to receive possible transaction buffers  */
     transaction_id ^= NUM_TOTAL_TRANSACTIONS;
+#ifdef POLY_SLAVE_STAGE_PROBE
+    poly_slave_stage_probe(4);   // about to echo the handshake
+#endif
     if (unlikely(!serial_transport_send(&transaction_id, sizeof(transaction_id)))) {
         return false;
     }
+#ifdef POLY_SLAVE_STAGE_PROBE
+    poly_slave_stage_probe(5);   // echoed the handshake OK
+#endif
 
     /* Receive transaction buffer from the master. If this transaction requires it.*/
     if (transaction->initiator2target_buffer_size) {

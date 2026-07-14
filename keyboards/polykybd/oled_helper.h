@@ -25,8 +25,9 @@ void oled_draw_poly(void);
 /* Shared OLED task functions — implemented in oled_helper.c */
 void oled_status_screen(void);
 void oled_fw_update_screen(void);
-/* "⟳Applying / Firmware⟳" notice drawn + fully flushed on both halves the moment a
-   staged firmware image is applied, right before the blocking self-flash + reboot. */
+/* "⭯Applying / Firmware⭯" notice (resident circular refresh arrow U+2B6F) drawn +
+   fully flushed on both halves the moment a staged firmware image is applied, right
+   before the blocking self-flash + reboot. */
 void oled_fw_apply_screen(void);
 /* Flash progress bar with its top row at `top_y`: a 6 px bar over a 1 px track,
    `pct` (0..100) filling the full width of EACH status OLED (both halves move). */

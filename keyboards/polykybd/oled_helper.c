@@ -17,10 +17,14 @@
 
 #include <stdio.h>
 
-// _Mid_ (10px) utility font: defined in util_font.h, owned by poly_keymap.c's
-// translation unit. Reference it via extern rather than re-including the header
-// (which would duplicate its PROGMEM tables at link time), matching status_oled.c.
+// Status-OLED fonts owned by poly_keymap.c's translation unit (via
+// util_font.h / gfx_used_fonts.h). Reference them via extern rather than
+// re-including the headers (which would duplicate their PROGMEM tables at link
+// time), matching status_oled.c. The Arrows font is a resident symbol font
+// (RESIDENT_FONTS) — it carries the circular "refresh" arrow U+2B6F used on the
+// firmware-apply screen, so no pack and no custom bitmap are needed.
 extern const GFXfont NotoSans_Regular_Mid_10pt7b;
+extern const GFXfont NotoSansSymbols2_Regular_Arrows_20pt16b;
 
 // Render `value` as a char32 (U"...") display string into `buffer`. The display
 // pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
@@ -160,54 +164,48 @@ void oled_fw_update_screen(void) {
     oled_render_dirty(true);
 }
 
-// Clockwise "refresh" arrow (⟳), 24x24, row-major MSB-first (3 bytes/row). The mid
-// status font is ASCII-only (0x20..0x7E), and the keycap 🗘 reload glyph lives in the
-// non-resident symbol font PACK (27x35, pack-dependent, too tall for split42's 32px
-// panel), so the apply screen carries its own resident icon drawn as a bitmap.
-static const uint8_t s_apply_spinner[] = {
-    0x00, 0x38, 0x00,  0x00, 0x3E, 0x00,  0x00, 0x3F, 0x80,  0x00, 0x3F, 0xE0,
-    0x01, 0xFF, 0x80,  0x07, 0xFE, 0xC0,  0x0F, 0xFD, 0xE0,  0x1F, 0x31, 0xF0,
-    0x1E, 0x20, 0xF0,  0x3C, 0x00, 0x78,  0x38, 0x00, 0x38,  0x38, 0x00, 0x38,
-    0x38, 0x00, 0x38,  0x38, 0x00, 0x38,  0x38, 0x00, 0x38,  0x38, 0x00, 0x38,
-    0x3C, 0x00, 0x78,  0x1E, 0x00, 0xF0,  0x1F, 0x01, 0xF0,  0x0F, 0xC7, 0xE0,
-    0x07, 0xFF, 0xC0,  0x03, 0xFF, 0x80,  0x00, 0x7C, 0x00,  0x00, 0x00, 0x00,
-};
-#define APPLY_SPINNER_W 24
-#define APPLY_SPINNER_H 24
-
 // Shown on BOTH halves the instant a staged firmware image is applied (reboot
 // imminent). Reads across the two status OLEDs as "⟳Applying  Firmware⟳": the
-// LEFT half shows "⟳Applying", the RIGHT half "Firmware⟳", each centered. It is
-// fully flushed synchronously (oled_render_dirty(true)) so the screen is complete
-// before fw_staging_apply_and_reboot()'s blocking self-flash + hard reset (which
-// never returns) — the last thing the user sees is a finished, un-torn notice.
+// LEFT half shows the resident circular refresh arrow U+2B6F + "Applying", the
+// RIGHT half "Firmware" + the arrow, each horizontally and vertically centered.
+// It is fully flushed synchronously (oled_render_dirty(true)) so the screen is
+// complete before fw_staging_apply_and_reboot()'s blocking self-flash + hard reset
+// (which never returns) — the last thing the user sees is a finished, un-torn notice.
 void oled_fw_apply_screen(void) {
-    const GFXfont*  small[]   = { &NotoSans_Regular_Mid_10pt7b };
+    const GFXfont*  mid[]     = { &NotoSans_Regular_Mid_10pt7b };
+    const GFXfont*  arrow[]   = { &NotoSansSymbols2_Regular_Arrows_20pt16b };
+    const uint32_t* icon      = U"\U00002B6F";   // resident circular "refresh" arrow ⭯
     const uint32_t* word      = is_left_side() ? U"Applying" : U"Firmware";
-    const bool      icon_left = is_left_side();   // "⟳Applying" vs "Firmware⟳"
-    const int8_t    gap       = 3;                // px between icon and word
+    const bool      icon_left = is_left_side();
+    const int8_t    gap       = 3;               // px between icon and word
 
     oled_on();
     kdisp_set_buffer(0);   // clear the scratch to black
 
-    // Measure the word so the icon+word group is centered as one unit.
-    int8_t tmin = 0, tmax = 0;
-    kdisp_gfx_text_bounds(small, 1, word, &tmin, &tmax);
-    const int8_t  text_w  = (int8_t)(tmax - tmin + 1);
-    const int16_t group_w = (int16_t)APPLY_SPINNER_W + gap + text_w;
-    int16_t       gx      = (int16_t)((OLED_DISPLAY_WIDTH - group_w) / 2);
+    // Measure both through SINGLE-font arrays (so fonts[0] is each glyph's own font
+    // → no baseline-align shift, matching the draws below). The full bbox lets each
+    // element be centered independently on the panel despite different heights.
+    int8_t ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
+    int8_t tx0 = 0, tx1 = 0, ty0 = 0, ty1 = 0;
+    kdisp_gfx_text_bbox(arrow, 1, icon, &ix0, &ix1, &iy0, &iy1);
+    kdisp_gfx_text_bbox(mid,   1, word, &tx0, &tx1, &ty0, &ty1);
+    const int8_t iw = (int8_t)(ix1 - ix0 + 1);
+    const int8_t tw = (int8_t)(tx1 - tx0 + 1);
+    int16_t gx = (int16_t)((OLED_DISPLAY_WIDTH - (iw + gap + tw)) / 2);
     if (gx < 0) gx = 0;
 
-    // Vertically centre: a baseline for the word, a top-left y for the icon.
-    const int8_t baseline = (int8_t)(OLED_DISPLAY_HEIGHT / 2 + 7);
-    const int8_t icon_y   = (int8_t)((OLED_DISPLAY_HEIGHT - APPLY_SPINNER_H) / 2);
+    // Per-element vertical centre: a baseline B lands lit pixels at [B+min, B+max],
+    // so B = H/2 - (min+max)/2. The x origin is offset by -bbox_min so the leftmost
+    // lit pixel lands exactly at the group position (side bearings don't shift it).
+    const int8_t iBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (iy0 + iy1) / 2);
+    const int8_t tBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (ty0 + ty1) / 2);
 
     if (icon_left) {
-        kdisp_draw_bitmap((int8_t)gx, icon_y, s_apply_spinner, APPLY_SPINNER_W, APPLY_SPINNER_H);
-        kdisp_write_gfx_text(small, 1, (int8_t)(gx + APPLY_SPINNER_W + gap - tmin), baseline, word);
+        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx - ix0),            iBase, icon);
+        kdisp_write_gfx_text(mid,   1, (int8_t)(gx + iw + gap - tx0), tBase, word);
     } else {
-        kdisp_write_gfx_text(small, 1, (int8_t)(gx - tmin), baseline, word);
-        kdisp_draw_bitmap((int8_t)(gx + text_w + gap), icon_y, s_apply_spinner, APPLY_SPINNER_W, APPLY_SPINNER_H);
+        kdisp_write_gfx_text(mid,   1, (int8_t)(gx - tx0),            tBase, word);
+        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx + tw + gap - ix0), iBase, icon);
     }
 
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());

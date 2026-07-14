@@ -13,6 +13,10 @@
 // FIFO but was never consumed / arrived after the 20 ms window" (byte present).
 extern uint32_t serial_debug_rx_fifo_level(void);
 extern uint32_t serial_debug_rx_fifo_peek(void);
+// Sample the RX line right after the master sends its id (slave echo window) + report
+// whether GP5 has EVER been pulled low by the slave (across all transactions so far).
+extern void serial_debug_rx_sample_burst(void);
+extern bool serial_debug_rx_ever_low(void);
 #endif
 #ifdef POLY_SLAVE_STAGE_PROBE
 // Implemented in keyboards/polykybd/poly_util.c (guarded by the same define). Draws
@@ -154,6 +158,13 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
         return false;
     }
 
+#ifdef POLY_HANDSHAKE_DIAG
+    // We've just sent the id; the slave should be echoing on GP5 right about now.
+    // Burst-sample the raw line so we can tell "slave physically drives GP5" (ever
+    // low) from "slave TX pin dead" (line stays high on our pull-up alone).
+    serial_debug_rx_sample_burst();
+#endif
+
     uint8_t transaction_id_shake = 0xFF;
 
     /* Which we always read back first so that we can error out correctly.
@@ -176,10 +187,10 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
                 // arrive at all? bit31 in level = RX state machine was never claimed.
                 uint32_t rxlvl  = serial_debug_rx_fifo_level();
                 uint32_t rxpeek = serial_debug_rx_fifo_peek();
-                uprintf("HS-DIAG: total=%lu timeout(no-rx)=%lu garbage(wrong-byte)=%lu last=0x%02X exp=0x%02X rx_fifo=%lu peek=0x%02lX\n",
+                uprintf("HS-DIAG: total=%lu timeout(no-rx)=%lu garbage(wrong-byte)=%lu last=0x%02X exp=0x%02X rx_fifo=%lu peek=0x%02lX gp5_ever_low=%u\n",
                         (unsigned long)hs_total, (unsigned long)hs_timeout, (unsigned long)hs_garbage,
                         (unsigned)transaction_id_shake, (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS),
-                        (unsigned long)rxlvl, (unsigned long)rxpeek);
+                        (unsigned long)rxlvl, (unsigned long)rxpeek, (unsigned)serial_debug_rx_ever_low());
             }
         }
 #endif

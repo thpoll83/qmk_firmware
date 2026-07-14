@@ -7,6 +7,9 @@
 #include "hardware/clocks.h"
 #include "wait.h"
 #include "debug.h"
+#ifdef POLY_HANDSHAKE_DIAG
+#    include "hardware/gpio.h"
+#endif
 #ifdef POLY_SLAVE_STAGE_PROBE
 // Implemented in keyboards/polykybd/poly_util.c. Lights a keycap per stage on the
 // slave so a frozen slave can report where its echo transmit wedges. All call sites
@@ -206,6 +209,21 @@ uint32_t serial_debug_rx_fifo_peek(void) {
     // Same alignment the driver uses: the byte sits in the top octet of the word.
     return (uint32_t)(*((uint8_t*)&pio->rxf[rx_state_machine] + 3U));
 }
+
+// Is the slave PHYSICALLY driving the RX line? On the master, GP5 (the RX pin) idles
+// HIGH — held up by this pin's own pull-up (PAL_RP_PAD_PUE). The only thing that pulls
+// it LOW is the slave's TX actively sending (UART start bits). gpio_get() reads the raw
+// pad input regardless of the PIO function mux, so a tight sampling burst right after
+// the master sends the id (when the slave should be echoing) tells us TX-pin-alive vs
+// dead — independent of whether the RX SM captures the byte.
+static pin_t s_dbg_rx_pin = 0;   // set in pio_rx_init
+static bool  s_rx_ever_low = false;
+void serial_debug_rx_sample_burst(void) {
+    for (int i = 0; i < 12000; ++i) {
+        if (!gpio_get(s_dbg_rx_pin)) { s_rx_ever_low = true; return; }
+    }
+}
+bool serial_debug_rx_ever_low(void) { return s_rx_ever_low; }
 #endif
 
 /**
@@ -404,6 +422,9 @@ static inline void pio_tx_init(pin_t tx_pin) {
 }
 
 static inline void pio_rx_init(pin_t rx_pin) {
+#ifdef POLY_HANDSHAKE_DIAG
+    s_dbg_rx_pin = rx_pin;   // remember which pin to sample (master: GP5)
+#endif
     uint offset = pio_add_program(pio, &uart_rx_program);
 
 #if defined(SERIAL_USART_FULL_DUPLEX)

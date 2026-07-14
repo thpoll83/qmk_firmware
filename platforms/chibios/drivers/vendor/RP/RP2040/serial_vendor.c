@@ -259,6 +259,14 @@ void serial_debug_dump_rx_sm(void) {
     uprintf("  GP4 func=%d ioctrl=0x%08lX pad=0x%08lX | GP5 func=%d ioctrl=0x%08lX pad=0x%08lX\n",
             (int)gpio_get_function(4), (unsigned long)iobank0_hw->io[4].ctrl, (unsigned long)padsbank0_hw->io[4],
             (int)gpio_get_function(5), (unsigned long)iobank0_hw->io[5].ctrl, (unsigned long)padsbank0_hw->io[5]);
+    // The decisive one: is PIO1 DRIVING its own RX pin? dbg_padoe = per-GPIO output-enable
+    // the PIO asserts, dbg_padout = the value it drives. If padoe bit5 (GP5) is 1, the
+    // master is driving its RX line (should be input) -> it fights the slave's start-bit
+    // lows, so the RX `wait 0 pin` mostly sees high and never triggers. bit4 (GP4/TX)
+    // is expected 1. input_sync_bypass should be 0 (synchroniser active).
+    uprintf("  PIO1 padoe=0x%08lX padout=0x%08lX in_sync_bypass=0x%08lX  (GP4=bit4 GP5=bit5)\n",
+            (unsigned long)pio->dbg_padoe, (unsigned long)pio->dbg_padout,
+            (unsigned long)pio->input_sync_bypass);
 }
 #endif
 

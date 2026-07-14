@@ -73,9 +73,9 @@ void oled_update_buffer(void) {
     } else if(is_left_side()) {
         kdisp_write_gfx_text(smallFont, 1, 114, 56, U"L");
     } else {
-        // Physical side in the corner (was the H/B role marker); R sits 1px left of L
+        // Physical side in the corner (was the H/B role marker); R sits 2px left of L
         // so the wider glyph doesn't crowd the right edge.
-        kdisp_write_gfx_text(smallFont, 1, 113, 56, U"R");
+        kdisp_write_gfx_text(smallFont, 1, 112, 56, U"R");
     }
 
     // (The LTR-559 sensor values used to be rendered here during bring-up; they

@@ -141,7 +141,7 @@ def build_panel(side, disp, small, icons):
     if side == 'L':
         draw(setp, small, 114, 56, s('L'))
     else:
-        draw(setp, small, 113, 56, s('R'))   # R nudged 1px left (see status_oled.c)
+        draw(setp, small, 112, 56, s('R'))   # R nudged 2px left of L (see status_oled.c)
     if side == 'L':
         draw(setp, small, 0, ROW2, s('Qwerty'))
         draw(setp, small, 0, ROW3, s('Dsp*')); draw(setp, small, 42, ROW3, s('50')); draw(setp, small, 64, ROW3, s('l' * 10))

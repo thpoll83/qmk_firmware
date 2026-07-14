@@ -38,13 +38,13 @@ void oled_update_buffer(void) {
     const poly_layer_t* global_layer = get_global_layer();
     const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 14, ICON_LAYER);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 15, ICON_LAYER);
     hex_to_u32_string((char*) buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
-    kdisp_write_gfx_text(displayFont, 1, 20, 14, buffer);
+    kdisp_write_gfx_text(displayFont, 1, 20, 15, buffer);
     if(side_is_undecided()) {
-        kdisp_write_gfx_text(displayFont, 1, 50, 14, U"Uknw");
+        kdisp_write_gfx_text(displayFont, 1, 50, 15, U"Uknw");
     } else {
-        kdisp_write_gfx_text(displayFont, 1, 38, 14, is_left_side() ? U"LEFT" : U"RIGHT");
+        kdisp_write_gfx_text(displayFont, 1, 38, 15, is_left_side() ? U"LEFT" : U"RIGHT");
     }
 
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);

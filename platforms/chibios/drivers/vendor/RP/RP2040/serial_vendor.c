@@ -112,10 +112,18 @@ static int         tx_state_machine = -1;
 
 #ifdef POLY_HANDSHAKE_DIAG
 volatile uint32_t g_rx_framing_errors = 0;   // RX-SM framing/break errors (bad stop bit)
+volatile uint32_t g_pio_irq_entries   = 0;   // # times the PIO1 IRQ handler actually ran
+volatile uint32_t g_pio_irq_rxne      = 0;   // # times it took the rx-not-empty branch
 #endif
 
 void pio_serve_interrupt(void) {
+#ifdef POLY_HANDSHAKE_DIAG
+    g_pio_irq_entries++;   // did the PIO1 IRQ fire on this (master) core AT ALL?
+#endif
     uint32_t irqs = pio->ints0;
+#ifdef POLY_HANDSHAKE_DIAG
+    if (irqs & (PIO_IRQ0_INTF_SM0_RXNEMPTY_BITS << rx_state_machine)) g_pio_irq_rxne++;
+#endif
 
     // The RX FIFO is not empty any more, therefore wake any sleeping rx thread
     if (irqs & (PIO_IRQ0_INTF_SM0_RXNEMPTY_BITS << rx_state_machine)) {
@@ -366,6 +374,14 @@ void serial_debug_dump_rx_sm(void) {
     uprintf("  PIO1 padoe=0x%08lX padout=0x%08lX in_sync_bypass=0x%08lX clk_sys=%luHz  (GP4=bit4 GP5=bit5)\n",
             (unsigned long)pio->dbg_padoe, (unsigned long)pio->dbg_padout,
             (unsigned long)pio->input_sync_bypass, (unsigned long)clock_get_hz(clk_sys));
+    // The IRQ path: inte0 = which sources are enabled to raise PIO1 IRQ0; ints0 = which are
+    // asserting right now. NVIC ISER[0]/ISPR[0] = is the PIO1 IRQ vector enabled / pending on
+    // THIS (master) core. If ints0 shows rx-not-empty asserting but the handler never runs
+    // (irq_entries=0), the NVIC line is masked/disabled on core0 -> that's the broken wake.
+    uprintf("  PIO1 inte0=0x%08lX ints0=0x%08lX  NVIC ISER0=0x%08lX ISPR0=0x%08lX  irq_entries=%lu irq_rxne=%lu\n",
+            (unsigned long)pio->inte0, (unsigned long)pio->ints0,
+            (unsigned long)NVIC->ISER[0], (unsigned long)NVIC->ISPR[0],
+            (unsigned long)g_pio_irq_entries, (unsigned long)g_pio_irq_rxne);
 }
 #endif
 

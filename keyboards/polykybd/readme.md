@@ -109,6 +109,48 @@ keyboards/polykybd/create_fonts.sh     # invoke fontconvert per range; writes ba
 
 ## Diagnostics
 
+### Boot splash progress (always on)
+
+The boot splash (`POLY KYBD` on the left half, `SPLIT 72` / `SPLIT 42` on the
+right) fills in **one glyph at a time** as boot advances, instead of appearing
+complete at once. Because each keycap OLED holds the last frame it was sent, a
+boot that **hangs** freezes the reveal at the exact glyph it reached — so you read
+how far boot got by **counting the lit letters**. No compile flag: this is always
+on (`splash_progress()` in `poly_keymap.c`, driven from `keyboard_pre_init_user()`
++ several points in `keyboard_post_init_user()`).
+
+Each lit letter maps to a boot milestone (read the **hung half** — in the
+firmware-apply hang that's the master/USB half):
+
+| Step | Milestone reached | Left (`POLY KYBD`) | Right (`SPLIT 72`) |
+|---|---|---|---|
+| 1 | `pre_init` (before split/USB init) | `P` | `S` |
+| 2 | after `set_side()` (**split/USB init passed**) | `PO` | `SP` |
+| 3 | language/emoji/MRU init done | `POL` | `SPL` |
+| 4 | before core 1 launch | `POLY` | `SPLI` |
+| 5 | after core 1 launch | `POLY K` | `SPLII` \* |
+| 6 | split RPCs + fw-staging up | `POLY KY` | `SPLIT` |
+| 7 | EEPROM config loaded | `POLY KYB` | `SPLIT 7` |
+| all | boot complete → real key legends | `POLY KYBD` | `SPLIT 72` |
+
+\* The right half "types in" its last letter over two steps — step 5 shows a
+placeholder `SPLII` (last glyph repeated), step 6 corrects it to `SPLIT` — so the
+leading space in `" 7 2"` doesn't cost the right half a distinguishable frame.
+Both halves therefore give 8 distinct steps.
+
+So a frozen **single letter** (`P` / `S`) is the split/USB-init hang — the
+**"hangs on the boot splash after a firmware apply"** case (`hid_fw_up.c`
+`CMD_FW_UP_APPLY`: the slave never rebooted, so the master waits for a split
+handshake that never comes; recovery = replug/reset or re-run Apply). The more
+letters are lit, the later boot stalled; a keyboard that reaches the real key
+legends booted cleanly.
+
+The reveal completes in well under a second on a healthy boot, so it reads as a
+brief splash animation; only a genuine hang parks it on a partial frame. The
+milestone placement is in `keyboard_post_init_user()`. (A keycap-**digit** boot
+tracer also exists behind the `FW_UP_BOOT_TRACE` compile flag — see `boot_trace()`
+— for numbered milestones if the letter resolution isn't enough.)
+
 ### Core 1 stack high-water mark (`CORE1_STACK_HWM`)
 
 `base/multicore/core1.c` ships a small stack-painting probe that measures how deep core 1 actually drives its stack. It is **off by default** (the painting loop and walk add cycles to `multicore_launch_core1` and to every overlay/ROI dispatch) and gated by `CORE1_STACK_HWM`.

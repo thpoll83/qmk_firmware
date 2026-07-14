@@ -163,7 +163,13 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
 // Handles HID commands: device ID, language change, overlay reception, mapping, and display control.
 // Global variables: hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
 void raw_hid_receive(uint8_t *data, uint8_t length) {
-    const char * name = "P\x06.Split72 " FW_VERSION " P" STR(PROTOCOL_VERSION) " HW" STR(DEVICE_VER) " ";
+    // Board name in the GET_ID reply — each variant header (QMK_KEYBOARD_H) may
+    // define POLY_KB_NAME; default to "Split72" so split72 (which doesn't define
+    // it) emits the exact same string as before.
+#ifndef POLY_KB_NAME
+#    define POLY_KB_NAME "Split72"
+#endif
+    const char * name = "P\x06." POLY_KB_NAME " " FW_VERSION " P" STR(PROTOCOL_VERSION) " HW" STR(DEVICE_VER) " ";
 
     if (length<1) {
         return;

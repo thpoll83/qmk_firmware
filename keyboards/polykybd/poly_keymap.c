@@ -59,6 +59,7 @@
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "base/multicore/core1.h"
 #include "base/ltr559.h"
+#include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "polymod_crc32.h"
 
 #ifdef POLYKYBD_LTR559
@@ -752,57 +753,12 @@ static void poly_ltr559_drive(void) {
 }
 #endif  // POLYKYBD_LTR559_DRIVE
 
-// Boot identification banner — printed to the HID console so `qmk console`
-// shows which board, firmware and role a half is, plus its split-link state. The
-// one-shot print in keyboard_post_init_user fires before a console is usually
-// attached, so housekeeping re-emits it a few times over the first ~half minute
-// (bounded by BOOT_BANNER_REPEATS) to catch a console attached shortly after boot.
-#ifndef BOOT_BANNER_REPEATS
-#    define BOOT_BANNER_REPEATS 3
-#endif
-#ifndef BOOT_BANNER_INTERVAL_MS
-#    define BOOT_BANNER_INTERVAL_MS 3000
-#endif
-
-static void emit_boot_banner(void) {
-    // PRODUCT is the QMK-generated keyboard_name from keyboard.json
-    // ("PolyKybd Split72" / "PolyKybd Split42"), so the banner names the variant
-    // with no extra per-variant define.
-    uprintf("== " PRODUCT " " FW_VERSION " P%d HW0x%04X | %s %s ==\n",
-            (int)PROTOCOL_VERSION, (unsigned int)DEVICE_VER,
-            is_keyboard_left() ? "left" : "right",
-            is_keyboard_master() ? "master" : "slave");
-    // Split-link role inputs — a dead bridge (both halves picking the same role,
-    // so the full-duplex crossover never forms) shows up here: USB_VBUS_PIN (GP24)
-    // is what stock master detection keys on, and transport_connected reports
-    // whether this half currently sees the other over the split UART.
-#ifdef USB_VBUS_PIN
-    uprintf("   link: vbus_pin=%d transport_connected=%d\n",
-            (int)gpio_read_pin(USB_VBUS_PIN), (int)is_transport_connected());
-#else
-    uprintf("   link: transport_connected=%d\n", (int)is_transport_connected());
-#endif
-}
-
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
 
-    // Re-emit the boot identification banner a few times after power-on so a
-    // `qmk console` attached shortly after boot still catches it (the one-shot
-    // print in keyboard_post_init_user fires before the console is usually up).
-    static uint8_t  banner_repeats = 0;
-    static uint32_t banner_timer   = 0;
-    if (banner_repeats < BOOT_BANNER_REPEATS) {
-        if (banner_timer == 0) {
-            banner_timer = timer_read32();   // arm on the first housekeeping pass
-        } else if (timer_elapsed32(banner_timer) >= BOOT_BANNER_INTERVAL_MS) {
-            emit_boot_banner();
-            banner_timer = timer_read32();
-            banner_repeats++;
-        }
-    }
+    boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
 
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
@@ -2835,18 +2791,18 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     update_performed();
 };
 
-// Displays splash screen with polykybd/split72 logo and initializes displays with refresh.
+// Progressive boot splash — an always-on boot-progress indicator (no compile
+// flag). The splash fills in ONE glyph at a time as boot advances, so a boot that
+// HANGS freezes the reveal at the exact glyph where it stalled — count the lit
+// letters to read how far boot got. A healthy boot fills to the full "POLY KYBD" /
+// "SPLIT 72" in well under a second and then hands the keycaps to the real key
+// legends.
+//
+// splash_progress() and its SPLASH_DONE constant moved to boot_diag.c/.h.
+// Displays the FIRST boot-splash glyph. Kept as the external symbol / pre-init
+// call site; later reveal steps are driven from keyboard_post_init_user().
 void show_splash_screen(void) {
-    clear_all_displays();
-    if(is_left_side()) {
-        display_message(1, 1, U"POLY", &FreeSansBold24pt7b);
-        display_message(2, 1, U"KYBD", &FreeSansBold24pt7b);
-    } else {
-        display_message(1, 1, POLY_SPLASH_R1, &FreeSansBold24pt7b);
-        display_message(POLY_SPLASH_R2_ROW, 1, POLY_SPLASH_R2, &FreeSansBold24pt7b);
-    }
-    wait_ms(400);
-    update_displays(ALL_AT_ONCE);
+    splash_progress(1);
 }
 
 // Configures all displays with contrast level; shows idle pulsating animation if enabled.
@@ -2956,6 +2912,11 @@ void keyboard_post_init_user(void) {
 
     emit_boot_banner();   // one-shot at boot; housekeeping re-emits for a late console
 
+    // Boot-splash progress: reaching post_init proves QMK's split/USB init got
+    // past the point where the fw-apply "slave not rebooted" hang stalls. Reveal
+    // the next glyph here (right after set_side, so is_left_side() is valid).
+    splash_progress(2);
+
 #ifdef POLYKYBD_LTR559
     // Probe for the LTR-559 on BOTH halves — it can be soldered to either half's
     // expansion port (GP0/GP1 I2C exists on both). The half that finds it uses it;
@@ -2977,6 +2938,7 @@ void keyboard_post_init_user(void) {
     emj_init();
     lang_init();
     mru_init();
+    splash_progress(3);                 // language/emoji/MRU init done
 
     reset_overlay_buffers();
     reset_overlay_usage();
@@ -2986,12 +2948,14 @@ void keyboard_post_init_user(void) {
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"2");
 #endif
+    splash_progress(4);                 // before core1 launch
 #ifdef USE_CORE1
     multicore_launch_core1();
 #endif
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"3");
 #endif
+    splash_progress(5);                 // core1 up
 
     transaction_register_rpc(USER_SYNC_POLY_DATA,           user_sync_poly_data_handler);
     transaction_register_rpc(USER_SYNC_LAYER_DATA,          user_sync_layer_data_handler);
@@ -3017,6 +2981,7 @@ void keyboard_post_init_user(void) {
 #endif
 
     fw_staging_init();
+    splash_progress(6);                 // split RPCs registered, fw-staging up
 
     poly_eeconf_t ee = load_user_eeconf();
     poly_sync_t* local_state = access_local_state();
@@ -3050,11 +3015,13 @@ void keyboard_post_init_user(void) {
 
     // Restore the MRU recents and schedule a one-time push to the slave half.
     mru_load(ee.mru_emoji, ee.mru_lang);
+    splash_progress(7);                 // EEPROM config (brightness/lang/OS/MRU) loaded
 
     set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif
+    splash_progress(SPLASH_DONE);       // boot complete: full splash, dwell, then legends
 }
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.

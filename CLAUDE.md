@@ -305,6 +305,49 @@ landed; revisit only if a full swap still looks slow on hardware): raise
 `OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
 above SSD1306 spec — A/B on real hardware).
 
+**split42: PORTRAIT status OLED (2026-07).** The split42 panel is 128×32 physical
+but **mounted rotated 90°**, so the user reads it as **32 wide × 128 tall**. The poly
+pipeline blits a **raw page-format buffer** via `oled_write_raw`, which **bypasses
+QMK's `OLED_ROTATION`** — setting `OLED_ROTATION_90` does nothing here. So
+`split42/status_oled.c` `oled_update_buffer()` composes the whole screen in a
+**logical 32×128 portrait space** and **software-rotates** each lit pixel into the
+128×32 scratch page buffer via a `pset()` mapping `(lx,ly) → (px=ly, py=31−lx)`
+(page offset `(py>>3)*128 + px`; `kdisp_set_buffer(0)` clears the full 1024 B first).
+It carries **self-contained portrait primitives** (`pdraw_glyph/_text/_text_center/
+_glyph_half/_text_center_half/_bitmap`) that reuse `kdisp_gfx_glyph_font()` for the
+lookup but plot through `pset` (the shared `kdisp_write_gfx_*` draw landscape into the
+128-wide buffer, unusable for portrait). Orientation is the **single compile switch
+`POLY42_STATUS_ROT_CW`** — flip it if the panel reads mirrored/upside-down (nothing
+else changes; everything composes in logical space). The flash/update + boot-logo
+screens are still landscape (deferred). Preview + clip check:
+`tools/status_oled42_preview.py` (`--diag`) mirrors the C coordinate-for-coordinate.
+
+- ⚠️ **Read glyph `xOffset`/`yOffset` through `int8_t`** in the portrait draw
+  helpers: `pgm_read_byte()` returns `uint8_t` and **zero-extends** the Adafruit-GFX
+  signed offsets, so `int yo = pgm_read_byte(&g->yOffset)` turns a text glyph's
+  `yOffset −8` into `248` and the glyph plots off-screen (silently clipped by
+  `pset`). Every text glyph has a negative `yOffset` (above baseline) and the icons
+  −15/−16, so this blanks **all** text + icons while bitmaps/globe/bars still draw.
+  Cast: `int xo = (int8_t)pgm_read_byte(&g->xOffset)` — the pattern `disp_array.c`
+  uses. ⚠️ The Python preview parses signed decimals directly, so it does **not**
+  reproduce this bug — it validates the *layout*, not the compiled C sign-handling
+  (this shipped once, PR #149, caught in review).
+- ⚠️ **Font-header DOUBLE-DEFINITION trap** (cost a full link cycle): `util_font.h`
+  (`NotoSans_Regular_Mid_10pt7b`) and `lang_label_font.h`
+  (`NotoSans_Regular_Tiny_6pt7b`) **define** the font *data* (non-`static`) and are
+  **already compiled into `poly_keymap.c`**. `#include`ing them in `status_oled.c` too
+  gives a `multiple definition of …` **link** error (compiles fine). **Declare them
+  `extern const GFXfont X;`** instead — the pattern `oled_helper.c` already uses.
+  (`NotoSans_Regular_Base_11pt.h`/`Medium_Base_8pt.h` are only included here, so those
+  `#include`s are safe.)
+- **32 px width budget:** at 32 px only ~5 chars fit even in the **Tiny 6 px** font
+  (the smallest compiled in); half-scaling (2×2-OR) any font reads **bold**, and the
+  decimation ("thin") downsample breaks strokes — **Mid 10 pt at half scale (~5 px)**
+  is the crispest small option (used for the layout name). split42 uses **short**
+  layout names via `layout_name_short()` in `status_oled.c` (`Qwrty/Stag!/ColDH/Neo/
+  Wkmn/Unkn`); split72 keeps the full names in the shared `oled_helper.c` array — keep
+  the two in sync when layouts change.
+
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.
 

@@ -765,7 +765,10 @@ static void poly_ltr559_drive(void) {
 #endif
 
 static void emit_boot_banner(void) {
-    uprintf("== PolyKybd " FW_VERSION " P%d HW0x%04X | %s %s ==\n",
+    // PRODUCT is the QMK-generated keyboard_name from keyboard.json
+    // ("PolyKybd Split72" / "PolyKybd Split42"), so the banner names the variant
+    // with no extra per-variant define.
+    uprintf("== " PRODUCT " " FW_VERSION " P%d HW0x%04X | %s %s ==\n",
             (int)PROTOCOL_VERSION, (unsigned int)DEVICE_VER,
             is_keyboard_left() ? "left" : "right",
             is_keyboard_master() ? "master" : "slave");

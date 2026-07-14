@@ -17,6 +17,15 @@
 
 #include <stdio.h>
 
+// Status-OLED fonts owned by poly_keymap.c's translation unit (via
+// util_font.h / gfx_used_fonts.h). Reference them via extern rather than
+// re-including the headers (which would duplicate their PROGMEM tables at link
+// time), matching status_oled.c. The Arrows font is a resident symbol font
+// (RESIDENT_FONTS) — it carries the circular "refresh" arrow U+2B6F used on the
+// firmware-apply screen, so no pack and no custom bitmap are needed.
+extern const GFXfont NotoSans_Regular_Mid_10pt7b;
+extern const GFXfont NotoSansSymbols2_Regular_Arrows_20pt16b;
+
 // Render `value` as a char32 (U"...") display string into `buffer`. The display
 // pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
 // glyph is one uint32_t codepoint. `buffer_len` is the byte size of the buffer.
@@ -153,6 +162,54 @@ void oled_fw_update_screen(void) {
     // the master's screen is static (slave's progress bar is the only churn), so
     // diffing keeps this to just the bar's blocks.
     oled_render_dirty(true);
+}
+
+// Shown on BOTH halves the instant a staged firmware image is applied (reboot
+// imminent). Reads across the two status OLEDs as "⟳Applying  Firmware⟳": the
+// LEFT half shows the resident circular refresh arrow U+2B6F + "Applying", the
+// RIGHT half "Firmware" + the arrow, each horizontally and vertically centered.
+// It is fully flushed synchronously (oled_render_dirty(true)) so the screen is
+// complete before fw_staging_apply_and_reboot()'s blocking self-flash + hard reset
+// (which never returns) — the last thing the user sees is a finished, un-torn notice.
+void oled_fw_apply_screen(void) {
+    const GFXfont*  mid[]     = { &NotoSans_Regular_Mid_10pt7b };
+    const GFXfont*  arrow[]   = { &NotoSansSymbols2_Regular_Arrows_20pt16b };
+    const uint32_t* icon      = U"\U00002B6F";   // resident circular "refresh" arrow ⭯
+    const uint32_t* word      = is_left_side() ? U"Applying" : U"Firmware";
+    const bool      icon_left = is_left_side();
+    const int8_t    gap       = 3;               // px between icon and word
+
+    oled_on();
+    kdisp_set_buffer(0);   // clear the scratch to black
+
+    // Measure both through SINGLE-font arrays (so fonts[0] is each glyph's own font
+    // → no baseline-align shift, matching the draws below). The full bbox lets each
+    // element be centered independently on the panel despite different heights.
+    int8_t ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
+    int8_t tx0 = 0, tx1 = 0, ty0 = 0, ty1 = 0;
+    kdisp_gfx_text_bbox(arrow, 1, icon, &ix0, &ix1, &iy0, &iy1);
+    kdisp_gfx_text_bbox(mid,   1, word, &tx0, &tx1, &ty0, &ty1);
+    const int8_t iw = (int8_t)(ix1 - ix0 + 1);
+    const int8_t tw = (int8_t)(tx1 - tx0 + 1);
+    int16_t gx = (int16_t)((OLED_DISPLAY_WIDTH - (iw + gap + tw)) / 2);
+    if (gx < 0) gx = 0;
+
+    // Per-element vertical centre: a baseline B lands lit pixels at [B+min, B+max],
+    // so B = H/2 - (min+max)/2. The x origin is offset by -bbox_min so the leftmost
+    // lit pixel lands exactly at the group position (side bearings don't shift it).
+    const int8_t iBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (iy0 + iy1) / 2);
+    const int8_t tBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (ty0 + ty1) / 2);
+
+    if (icon_left) {
+        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx - ix0),            iBase, icon);
+        kdisp_write_gfx_text(mid,   1, (int8_t)(gx + iw + gap - tx0), tBase, word);
+    } else {
+        kdisp_write_gfx_text(mid,   1, (int8_t)(gx - tx0),            tBase, word);
+        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx + tw + gap - ix0), iBase, icon);
+    }
+
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    oled_render_dirty(true);   // one synchronous full flush before the reboot
 }
 
 bool oled_task_user(void) {

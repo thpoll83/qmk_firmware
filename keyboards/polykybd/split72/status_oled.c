@@ -29,6 +29,19 @@ extern const GFXfont NotoSans_Regular_Mid_10pt7b;
 #include "base/fontpack.h"
 #include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
 
+// Top-row role icons (16x16, row-major MSB-first, drawn via kdisp_draw_bitmap):
+// which half currently talks to the PC over USB ("USB") vs. the half bridged to it
+// over the split UART ("Link"). The role follows is_usb_host_side(), so it swaps
+// with whichever half holds the USB cable.
+static const uint8_t usb_status_bitmap[] PROGMEM = {
+    0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8,
+    0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0,
+};
+static const uint8_t link_status_bitmap[] PROGMEM = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00,
+    0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
 void oled_update_buffer(void) {
     uint32_t buffer[32];
@@ -38,35 +51,45 @@ void oled_update_buffer(void) {
     const poly_layer_t* global_layer = get_global_layer();
     const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 14, ICON_LAYER);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 15, ICON_LAYER);
     hex_to_u32_string((char*) buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
-    kdisp_write_gfx_text(displayFont, 1, 20, 14, buffer);
-    if(side_is_undecided()) {
-        kdisp_write_gfx_text(displayFont, 1, 50, 14, U"Uknw");
+    kdisp_write_gfx_text(displayFont, 1, 20, 15, buffer);
+    // Top-row role: the USB-host half shows the USB glyph + "USB", the bridged half
+    // the link glyph + "Link" (follows is_usb_host_side(), so it tracks the cable).
+    if(is_usb_host_side()) {
+        kdisp_draw_bitmap(38, 0, usb_status_bitmap, 16, 16);
+        kdisp_write_gfx_text(displayFont, 1, 57, 15, U"USB");
     } else {
-        kdisp_write_gfx_text(displayFont, 1, 38, 14, is_left_side() ? U"LEFT" : U"RIGHT");
+        kdisp_draw_bitmap(38, 0, link_status_bitmap, 16, 16);
+        kdisp_write_gfx_text(displayFont, 1, 57, 15, U"Link");
     }
 
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
     if(global_layer->led_state.scroll_lock) {
         kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 112, 54, ARROWS_DOWNSTOP);
+    } else if(side_is_undecided()) {
+        kdisp_write_gfx_text(smallFont, 1, 114, 56, U"?");
+    } else if(is_left_side()) {
+        kdisp_write_gfx_text(smallFont, 1, 114, 56, U"L");
     } else {
-        kdisp_write_gfx_text(smallFont, 1, 112, 56, is_usb_host_side() ? U"H" : U"B");
+        // Physical side in the corner (was the H/B role marker); R sits 2px left of L
+        // so the wider glyph doesn't crowd the right edge.
+        kdisp_write_gfx_text(smallFont, 1, 112, 56, U"R");
     }
 
     // (The LTR-559 sensor values used to be rendered here during bring-up; they
     // now go to a periodic log — see the sensor telemetry heartbeat in
     // housekeeping_task_user() — so the status OLED shows the normal panel.)
     if(is_right_side()) {
-        kdisp_write_gfx_text(smallFont, 1, 0, 30, U"RGB");
+        kdisp_write_gfx_text(smallFont, 1, 0, 29, U"RGB");
 
         if(!rgb_matrix_is_enabled()) {
-            kdisp_write_gfx_text(smallFont, 1, 34, 30, U"Off");
+            kdisp_write_gfx_text(smallFont, 1, 34, 29, U"Off");
         } else {
             num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
-            kdisp_write_gfx_text(smallFont, 1, 34, 30, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 58, 30, get_led_matrix_text(rgb_matrix_get_mode()));
+            kdisp_write_gfx_text(smallFont, 1, 34, 29, buffer);
+            kdisp_write_gfx_text(smallFont, 1, 58, 29, get_led_matrix_text(rgb_matrix_get_mode()));
             kdisp_write_gfx_text(smallFont, 1, 0, 44, U"HSV");
             hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_hue());
             kdisp_write_gfx_text(smallFont, 1, 38, 44, buffer);
@@ -74,12 +97,12 @@ void oled_update_buffer(void) {
             kdisp_write_gfx_text(smallFont, 1, 60, 44, buffer);
             hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_val());
             kdisp_write_gfx_text(smallFont, 1, 82, 44, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 0, 58, U"Speed");
+            kdisp_write_gfx_text(smallFont, 1, 0, 59, U"Speed");
             num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_speed());
-            kdisp_write_gfx_text(smallFont, 1, 58, 58, buffer);
+            kdisp_write_gfx_text(smallFont, 1, 58, 59, buffer);
         }
     } else {
-        oled_draw_layout_name(smallFont, 0, 30, get_local_layer()->def_layer);
+        oled_draw_layout_name(smallFont, 0, 29, get_local_layer()->def_layer);
         const poly_sync_t* local_state = get_local_state();
         kdisp_write_gfx_text(smallFont, 1, 0, 44, U"Dsp*");
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->contrast);
@@ -92,13 +115,13 @@ void oled_update_buffer(void) {
         buffer[i+1] = 0;
         kdisp_write_gfx_text(smallFont, 1, 64, 44, buffer);
 
-        kdisp_write_gfx_text(smallFont, 1, 0, 58, U"WPM");
+        kdisp_write_gfx_text(smallFont, 1, 0, 59, U"WPM");
         num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
-        kdisp_write_gfx_text(smallFont, 1, 44, 58, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 44, 59, buffer);
 
-        kdisp_write_gfx_text(smallFont, 1, 68, 58, U"L");
+        kdisp_write_gfx_text(smallFont, 1, 68, 59, U"L");
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
-        kdisp_write_gfx_text(smallFont, 1, 84, 58, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 84, 59, buffer);
     }
 }
 

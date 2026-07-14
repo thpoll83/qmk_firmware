@@ -694,19 +694,35 @@ The split42 rebuild + subsystem bisect itself lives on branch
 LTR-559 `d74e7e11`, trackpad-removed bisect step `b25f2045`, trackpad restored after
 the bisect confirmed it).
 
-**Bisect result (2026-07-14): the Cirque pointing device is the required subsystem.**
-- RGB + pointing device + LTR-559 (`d74e7e11`) → split42 **works**.
-- RGB + LTR-559, pointing device removed (`b25f2045`) → split42 **breaks**.
-Single-variable difference ⇒ the **pointing device** is what split42 was missing. It
-is the only one of the three that touches the split link: `SPLIT_POINTING_ENABLE`
-registers an extra split transaction over the UART bridge (and the pointing task polls
-I2C each housekeeping cycle). RGB and LTR-559 were both enabled in the broken build, so
-they are NOT the cause — but they are kept enabled too (harmless when unpopulated; not
-yet re-tested in isolation). **The mechanism — *why* the missing split transaction
-breaks the slave half — is still open** (leading theory: `SPLIT_POINTING_ENABLE`
-changes the split transport's registered-transaction set / handshake, and split72 has
-always had it). Until that's understood, do NOT drop the pointing-device block from
-split42. See the split42 `config.h`/`rules.mk` comments for the in-tree pointers.
+**Bisect result (2026-07-14): split42 needs `SPLIT_POINTING_ENABLE`'s periodic split
+transaction — NOT the trackpad, NOT its I2C.** Two-stage bisect:
+- RGB + pointing device + LTR-559 (`d74e7e11`) → **works**; drop only the pointing
+  device (`b25f2045`) → **breaks**. ⇒ the pointing device is the required piece (RGB +
+  LTR-559 were both on in the broken build, so they're cleared; kept on anyway,
+  harmless when unpopulated).
+- Enabling the pointing device had **two** effects: (1) an extra periodic master→slave
+  split transaction (`SPLIT_POINTING_ENABLE` → the master pulls `GET_POINTING_CHECKSUM`/
+  `GET_POINTING_DATA` from the slave every cycle, `quantum/split_common/transactions.c`
+  `pointing_handlers_master/_slave`), and (2) a per-cycle slave I2C read that could stall
+  up to `CIRQUE_PINNACLE_TIMEOUT` (20 ms) since GP0/GP1 aren't broken out. Swapping the
+  Cirque driver for QMK's **no-op `custom` driver** (weak hooks do zero I2C) while keeping
+  `SPLIT_POINTING_ENABLE` (`5de77192`) → **still works**. ⇒ the fix is **effect (1), the
+  split transaction**, not the I2C stall and not the trackpad hardware.
+
+**Resting config:** split42 keeps `SPLIT_POINTING_ENABLE` + `POINTING_DEVICE_DRIVER =
+custom` (no-op) — same fix as the real trackpad but with no dead I2C on the un-broken-out
+bus. **ROOT CAUSE STILL OPEN:** *why* the shared PolyKybd firmware depends on that
+periodic slave-pull transaction. split72 always had it (real trackpad), which hid the
+dependency. Leading theory: split42's only other regular master→slave traffic is QMK's
+built-in matrix pull + the poly custom syncs (which fire on *diffs*), so on an idle
+freshly-booted split42 the slave may go too long without being serviced by the transport
+in the way the poly split state machine expects; the pointing transaction restores a
+guaranteed every-cycle pull. Not yet proven — the clean next test is a **minimal custom
+"heartbeat" `target2initiator` transaction with pointing disabled**: if that also fixes
+split42, the dependency is "any every-cycle slave pull" (and the real fix belongs in the
+poly transport, not a borrowed feature); if it doesn't, the dependency is structural
+(transaction-count / `split_shmem` layout). Do NOT remove `SPLIT_POINTING_ENABLE` until
+this is settled. In-tree pointers live in the split42 `config.h`/`rules.mk` comments.
 
 ### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
 

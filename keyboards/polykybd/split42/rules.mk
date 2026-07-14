@@ -24,17 +24,18 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Pointing device — DISCRIMINATING EXPERIMENT (2026-07-14). Enabling the Cirque
-# pointing device fixed split42, but that change had TWO effects: (1) an extra
-# periodic master->slave split transaction (SPLIT_POINTING_ENABLE, config.h), and
-# (2) a per-cycle I2C read on the slave (the trackpad bus GP0/GP1 isn't broken
-# out, so it can stall up to CIRQUE_PINNACLE_TIMEOUT=20ms/cycle). To tell which one
-# is the real fix, swap the Cirque I2C driver for the no-op `custom` driver: QMK's
-# weak custom hooks do ZERO I2C (init->false, get_report->unchanged). This KEEPS
-# effect (1) and REMOVES effect (2).
-#   still works -> it's the split transaction (a real transport dependency)
-#   breaks      -> it was the I2C timing stall (real bug is elsewhere; trackpad
-#                  was never the fix)
+# Pointing device — SPLIT_POINTING_ENABLE is what split42 actually needs, NOT a
+# trackpad. Bisect (2026-07-14): enabling the Cirque pointing device fixed split42;
+# a follow-up swapped the Cirque I2C driver for the no-op `custom` driver (QMK's weak
+# custom hooks do ZERO I2C) while keeping SPLIT_POINTING_ENABLE — and it STILL WORKS.
+# That isolates the fix to the extra periodic master->slave split transaction the
+# pointing feature registers (config.h), NOT the per-cycle I2C stall and NOT the
+# trackpad hardware (none is populated; the I2C0 bus GP0/GP1 isn't even broken out).
+# We deliberately keep the `custom` no-op driver rather than the real Cirque driver:
+# same fix, but no dead I2C hammering the un-broken-out bus every cycle.
+# ROOT CAUSE STILL OPEN: why the shared firmware depends on this periodic slave-pull
+# transaction (split72 always had it via its real trackpad, hiding the dependency).
+# Do NOT remove SPLIT_POINTING_ENABLE / this driver until that is understood.
 POINTING_DEVICE_ENABLE = yes
 POINTING_DEVICE_DRIVER = custom
 

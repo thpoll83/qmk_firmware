@@ -71,16 +71,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ENCODER_RESOLUTION 2
 
 /* -------------------------------------------------------------------------
-   Pointing device (Cirque trackpad) — REQUIRED. Confirmed by bisect
-   (2026-07-14): with RGB + LTR-559 on but this block removed, split42 breaks;
-   restoring it makes split42 work. It is the ONE of the three re-enabled
-   subsystems that touches the split link — SPLIT_POINTING_ENABLE registers an
-   extra split transaction over the UART bridge, and the pointing task polls
-   I2C each housekeeping cycle. The exact mechanism (why the missing split
-   transaction breaks the other half) is still to be pinned down; do NOT drop
-   this block until it is understood. No trackpad is populated and the I2C0 bus
-   (GP0/GP1) isn't broken out on this rev, so the Cirque probe just fails and
-   the driver idles. Mirrors split72's Cirque/pointing block verbatim. */
+   SPLIT_POINTING_ENABLE — REQUIRED by split42. This registers a periodic
+   master->slave split transaction (the master pulls a pointing report from the
+   slave every cycle). Bisect (2026-07-14) proved this transaction — NOT the
+   trackpad and NOT its I2C — is what split42 needs: it still works with the
+   pointing driver swapped to a no-op `custom` driver that does zero I2C (see
+   rules.mk). No Cirque trackpad is populated and the I2C0 bus (GP0/GP1) isn't
+   broken out on this rev, so the real Cirque driver is NOT used — only this
+   feature flag (+ POINTING_DEVICE_RIGHT so the transaction is registered as a
+   slave->master pull). ROOT CAUSE STILL OPEN: why the shared firmware depends
+   on this periodic transaction (split72 always had it via its real trackpad,
+   which hid the dependency). Do NOT remove until that is understood.
+
+   The CIRQUE_PINNACLE_* tuning defines below are inert with the custom no-op
+   driver (the Cirque driver isn't compiled); kept so a real trackpad build is a
+   one-line driver swap. */
 #define CIRQUE_PINNACLE_DIAMETER_MM 35
 #define CIRQUE_PINNACLE_TAP_ENABLE
 #define CIRQUE_PINNACLE_TAPPING_TERM 100
@@ -89,11 +94,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
 #define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
 
-// Enable use of pointing device on slave split (registers the split transaction).
+// Register the pointing split transaction (master pulls the report from slave).
 #define SPLIT_POINTING_ENABLE
-// Pointing device is on the right split (split72 puts the trackpad there too).
+// Report source is the right split (matches split72; sets the pull direction).
 #define POINTING_DEVICE_RIGHT
-// Limit the frequency the sensor is polled for motion.
+// Limit the frequency the (no-op) report is generated.
 #define POINTING_DEVICE_TASK_THROTTLE_MS 1
 #define POINTING_DEVICE_ROTATION_90
 

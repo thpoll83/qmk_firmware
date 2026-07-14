@@ -752,10 +752,55 @@ static void poly_ltr559_drive(void) {
 }
 #endif  // POLYKYBD_LTR559_DRIVE
 
+// Boot identification banner — printed to the HID console so `qmk console`
+// shows which board, firmware and role a half is, plus its split-link state. The
+// one-shot print in keyboard_post_init_user fires before a console is usually
+// attached, so housekeeping re-emits it a few times over the first ~half minute
+// (bounded by BOOT_BANNER_REPEATS) to catch a console attached shortly after boot.
+#ifndef BOOT_BANNER_REPEATS
+#    define BOOT_BANNER_REPEATS 6
+#endif
+#ifndef BOOT_BANNER_INTERVAL_MS
+#    define BOOT_BANNER_INTERVAL_MS 5000
+#endif
+
+static void emit_boot_banner(void) {
+    uprintf("== PolyKybd " FW_VERSION " P%d HW0x%04X | %s %s ==\n",
+            (int)PROTOCOL_VERSION, (unsigned int)DEVICE_VER,
+            is_keyboard_left() ? "left" : "right",
+            is_keyboard_master() ? "master" : "slave");
+    // Split-link role inputs — a dead bridge (both halves picking the same role,
+    // so the full-duplex crossover never forms) shows up here: USB_VBUS_PIN (GP24)
+    // is what stock master detection keys on, and transport_connected reports
+    // whether this half currently sees the other over the split UART.
+#ifdef USB_VBUS_PIN
+    uprintf("   link: vbus_pin=%d transport_connected=%d\n",
+            (int)gpio_read_pin(USB_VBUS_PIN), (int)is_transport_connected());
+#else
+    uprintf("   link: transport_connected=%d\n", (int)is_transport_connected());
+#endif
+}
+
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
+
+    // Re-emit the boot identification banner a few times after power-on so a
+    // `qmk console` attached shortly after boot still catches it (the one-shot
+    // print in keyboard_post_init_user fires before the console is usually up).
+    static uint8_t  banner_repeats = 0;
+    static uint32_t banner_timer   = 0;
+    if (banner_repeats < BOOT_BANNER_REPEATS) {
+        if (banner_timer == 0) {
+            banner_timer = timer_read32();   // arm on the first housekeeping pass
+        } else if (timer_elapsed32(banner_timer) >= BOOT_BANNER_INTERVAL_MS) {
+            emit_boot_banner();
+            banner_timer = timer_read32();
+            banner_repeats++;
+        }
+    }
+
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful
@@ -2905,6 +2950,8 @@ void keyboard_post_init_user(void) {
     //set these values, they will never change
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
+
+    emit_boot_banner();   // one-shot at boot; housekeeping re-emits for a late console
 
 #ifdef POLYKYBD_LTR559
     // Probe for the LTR-559 on BOTH halves — it can be soldered to either half's

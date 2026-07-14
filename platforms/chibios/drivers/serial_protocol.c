@@ -6,6 +6,9 @@
 #include "serial.h"
 #include "serial_protocol.h"
 #include "synchronization_util.h"
+#ifdef POLY_HANDSHAKE_DIAG
+#    include "print.h"
+#endif
 
 static inline bool initiate_transaction(uint8_t transaction_id);
 static inline bool react_to_transaction(void);
@@ -133,8 +136,23 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
      *   - due to the half duplex limitations on return codes, we always have to read *something*.
      *   - without the read, write only transactions *always* succeed, even during the boot process where the slave is not ready.
      */
-    if (unlikely(!serial_transport_receive(&transaction_id_shake, sizeof(transaction_id_shake)) || (transaction_id_shake != (transaction_id ^ NUM_TOTAL_TRANSACTIONS)))) {
+    bool hs_rx_ok = serial_transport_receive(&transaction_id_shake, sizeof(transaction_id_shake));
+    if (unlikely(!hs_rx_ok || (transaction_id_shake != (transaction_id ^ NUM_TOTAL_TRANSACTIONS)))) {
         serial_dprintf("SPLIT: receiving handshake failed\n");
+#ifdef POLY_HANDSHAKE_DIAG
+        // Diagnostic (split42 root-cause): distinguish a SILENT slave (rx timed out, no
+        // byte) from a slave that echoes GARBAGE (a byte arrived but mismatched). Master-
+        // side, throttled uprintf so it surfaces without debug_enable.
+        {
+            static uint32_t hs_timeout = 0, hs_garbage = 0, hs_total = 0;
+            if (!hs_rx_ok) { hs_timeout++; } else { hs_garbage++; }
+            if ((++hs_total % 500) == 0) {
+                uprintf("HS-DIAG: total=%lu timeout(no-rx)=%lu garbage(wrong-byte)=%lu last=0x%02X exp=0x%02X\n",
+                        (unsigned long)hs_total, (unsigned long)hs_timeout, (unsigned long)hs_garbage,
+                        (unsigned)transaction_id_shake, (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS));
+            }
+        }
+#endif
         return false;
     }
 

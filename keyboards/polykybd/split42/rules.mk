@@ -24,14 +24,14 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Root-cause experiment: NO pointing. Layout shift ruled out (8-byte pad didn't help),
-# so the failure is functional. Get the split-transport failure TYPE: SERIAL_DEBUG turns
-# on QMK's initiate_transaction dprintf, and POLY_FORCE_DEBUG forces debug_enable=true at
-# boot (it defaults OFF for security, which is why the SPLIT: lines never printed before).
-# Now the master console will say WHICH step of the handshake fails:
-#   "SPLIT: sending handshake failed"   -> master can't transmit the id byte (TX path)
-#   "SPLIT: receiving handshake failed" -> master TXes, slave never echoes (slave silent)
-OPT_DEFS += -DSERIAL_DEBUG -DPOLY_FORCE_DEBUG
+# Root-cause experiment: NO pointing + HANDSHAKE DIAG. The master already reports
+# "receiving handshake failed". POLY_HANDSHAKE_DIAG makes the master tally, on its
+# console (uprintf, shows without debug), whether that's a SILENT slave (rx timed out,
+# no byte) or a slave echoing GARBAGE (a wrong byte arrived):
+#   timeout(no-rx) dominates -> slave truly silent (frozen/starved/TX-dead) — supports
+#                               the lock-starvation story; next: slave-side probe.
+#   garbage(wrong-byte) dominates -> slave alive but echoes corrupted — line/timing fault.
+OPT_DEFS += -DPOLY_HANDSHAKE_DIAG
 
 # LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
 # bus (addr 0x23), which isn't broken out on split42, so its probe fails and the

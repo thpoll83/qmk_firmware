@@ -2888,6 +2888,12 @@ void keyboard_post_init_user(void) {
     debug_matrix = false;
     debug_keyboard = false;
     debug_mouse = false;
+#ifdef POLY_FORCE_DEBUG
+    // Diagnostic build only: force debug on so SERIAL_DEBUG's dprintf SPLIT: lines
+    // (sending/receiving handshake failed) surface on the console. Guarded — never on
+    // in a normal build (keeps the SECURITY default-OFF above intact).
+    debug_enable = true;
+#endif
 
     //pointing_device_set_cpi(20000);
 #if defined(POINTING_DEVICE_ENABLE)

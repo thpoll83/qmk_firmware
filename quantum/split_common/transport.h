@@ -223,17 +223,6 @@ typedef struct _split_shared_memory_t {
     split_slave_activity_sync_t activity_sync;
 #endif // defined(SPLIT_ACTIVITY_ENABLE)
 
-#if defined(POLY_SHMEM_PAD_TEST)
-    // ROOT-CAUSE EXPERIMENT (split42, 2026-07-14): plain padding right where the
-    // SPLIT_POINTING `pointing` member sits (directly before the RPC buffers when
-    // watchdog/haptic/activity are all disabled, as on split42). Replicates
-    // pointing's exact shift of the RPC-buffer offset with NO transaction and NO
-    // code — pure split_shmem layout change. If defining POLY_SHMEM_PAD_TEST=8
-    // (= sizeof(split_slave_pointing_sync_t)) revives the dead split link without
-    // pointing, the "fix" is a layout coincidence masking a latent memory bug.
-    uint8_t __poly_shmem_pad[POLY_SHMEM_PAD_TEST];
-#endif
-
 #if defined(SPLIT_TRANSACTION_RPC)
     rpc_sync_info_t rpc_info;
     uint8_t         rpc_m2s_buffer[RPC_M2S_BUFFER_SIZE];

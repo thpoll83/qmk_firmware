@@ -648,6 +648,52 @@ Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-
 
 ## Investigations in progress
 
+### Troubleshooting principle: don't take shortcuts — mechanical, auditable steps beat clever guesses
+
+**Lesson (2026-07-14, from the split42 rebuild):** when a bug resists the "smart"
+theories, do the **dumb, exhaustive, fully-auditable exercise** instead — even when
+it feels like busywork. The methodical path repeatedly turned out to be the *right*
+path here, and the clever shortcuts actively cost time.
+
+What happened: split42 (the 42-key variant) was broken and had never worked on real
+hardware; the same firmware also misbehaved on split72, so it was a shared-firmware
+problem, not split42-specific hardware. The productive move — which the **user** pushed
+for against the instinct to "just fix it" — was to **rebuild split42 from the working
+split72 in tiny, separately-committed steps** (delete → copy split72 → re-derive every
+pin from the authoritative KiCad schematic → build), then **bisect the remaining
+differences one subsystem at a time**. Two concrete ways shortcuts bit:
+- An earlier "rebuild" had silently **reused old split42 files** instead of genuinely
+  copying split72 — a shortcut that hid the real diff and produced "same problem as
+  before". Only the transparent delete/copy/apply-with-a-commit-per-step exercise
+  exposed it. **If you claim you copied/reset something, actually do it from the
+  source — a reviewer (or the next session) must be able to verify each step from the
+  git history.**
+- The bug turned out to be a **disabled subsystem** causing implicit problems — the
+  exact class of cause that no amount of reading the *enabled* code paths would find.
+  Re-enabling the subsystems split42 had dropped vs split72 (RGB matrix, Cirque
+  pointing device, LTR-559) as **separate commits** made split42 work, and dropping
+  them back one at a time is what isolates *which* one. You only get that bisect for
+  free if each change was its own commit.
+
+**Practical rules this encodes** (apply to any hard PolyKybd bug, not just split42):
+1. **One change per commit** so any subset can be flashed/reverted to bisect. The
+   deliverable of an investigation is often the *commit sequence*, not just the fix.
+2. **Derive facts from the authoritative source, not memory or an old file** — pins
+   from the KiCad schematic (in the `PolyKybd` hardware repo), not a stale header.
+3. **Suspect what's *absent/disabled*, not only what's present.** A missing/disabled
+   subsystem (RGB/pointing/sensor, a `#define` not set, a build flag dropped) can
+   change timing, linker layout, split transactions, or init order in ways that break
+   an unrelated-looking feature. Diff a broken variant against a working one for
+   *removed* config, and re-add it to test.
+4. **Don't over-narrate conclusions before the test.** State what a build contains and
+   what each outcome would imply; let the hardware result decide. ("no early
+   conclusions about the result" — the user's standing instruction during this work.)
+
+The split42 rebuild + subsystem bisect itself lives on branch
+`claude/split42-literal-split72-copy` (RGB `6694d7f6`, pointing device `4c10b0d2`,
+LTR-559 `d74e7e11`, trackpad-removed bisect step `b25f2045`); the root-cause subsystem
+was still being narrowed by flashing each step at time of writing.
+
 ### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
 
 **Symptom**: Intermittently, the right/slave half stops recognising keystrokes. Only keys on the master (USB) side still work. Reconnecting (replugging) or reflashing restores it. Happens "once in a while", not on every boot.

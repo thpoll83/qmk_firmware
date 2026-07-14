@@ -143,8 +143,9 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
         // Staggered death: each spark winks out once the rising `spark_fade` passes its
         // own hash threshold — so the sparks disappear a few at a time, not all at once.
         if (sa_hash8(s * 3u + 7u) < spark_fade) continue;
-        // Idle screensaver thins the field out (~30% fewer comets) for a calmer look.
-        if (s_loop && sa_hash8(s * 19u + 11u) < 77u) continue;
+        // Idle screensaver thins the field out for a calmer look + lighter render
+        // (fewer comet trails to plot → snappier). ~160/256 skipped ≈ 37% kept.
+        if (s_loop && sa_hash8(s * 19u + 11u) < 160u) continue;
         uint8_t  p0   = sa_hash8(s * 2u + 1u);
         // Speed 1..8 in the boot intro; idle uses a WIDER 1..16 spread so the comets
         // clearly move at different speeds (some crawl, some drift), and the extra

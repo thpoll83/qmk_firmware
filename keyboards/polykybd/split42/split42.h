@@ -56,6 +56,11 @@ struct display_info {
 #define POLY_SPLASH_R2     U" 4 2"
 #define POLY_SPLASH_R2_ROW 2
 
+// Board name reported in the GET_ID (cmd 6) string, so the host shows the right
+// variant. hid_com.c falls back to "Split72" when a variant doesn't define this,
+// so split72's GET_ID stays byte-identical (it relies on that fallback).
+#define POLY_KB_NAME "Split42"
+
 void invert_display(uint8_t r, uint8_t c, bool state);
 
 const uint8_t* get_key_disp_bitmask(uint8_t index);

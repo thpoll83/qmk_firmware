@@ -45,6 +45,14 @@ SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c b
 #                                     bytes out (the PIO TX state machine itself).
 # This decides which flavour of slave-TX failure it is (block vs drain-but-lost vs SM-stall).
 OPT_DEFS += -DPOLY_HANDSHAKE_DIAG
+# FIX TEST: pin the PIO serial clock divisor to a fixed clock constant on BOTH halves
+# (instead of the live clock_get_hz(clk_sys)). Root cause traced: the master RX detects
+# every start bit but never frames a byte, and the slave's measured bit width varies
+# boot-to-boot -> the two halves' baud drift apart (suspected: clock_get_hz reads a
+# not-yet-final clock at init on one half some boots). A fixed divisor makes both halves
+# use the exact same baud regardless of the clock state at init. If the link comes up
+# (slave alive, HS-DIAG failures stop), this is the fix and it moves into config proper.
+OPT_DEFS += -DPOLY_FIXED_SERIAL_CLKDIV
 # SLAVE STAGE PROBE intentionally DISABLED now: it rendered from the HIGHPRIO
 # SlaveThread and raced the slave main thread's own SPI/OLED rendering — the
 # "variable 1..6, partially-filled" keycaps were that race, not a clean signal. We

@@ -313,9 +313,9 @@ void serial_debug_dump_rx_sm(void) {
     // master is driving its RX line (should be input) -> it fights the slave's start-bit
     // lows, so the RX `wait 0 pin` mostly sees high and never triggers. bit4 (GP4/TX)
     // is expected 1. input_sync_bypass should be 0 (synchroniser active).
-    uprintf("  PIO1 padoe=0x%08lX padout=0x%08lX in_sync_bypass=0x%08lX  (GP4=bit4 GP5=bit5)\n",
+    uprintf("  PIO1 padoe=0x%08lX padout=0x%08lX in_sync_bypass=0x%08lX clk_sys=%luHz  (GP4=bit4 GP5=bit5)\n",
             (unsigned long)pio->dbg_padoe, (unsigned long)pio->dbg_padout,
-            (unsigned long)pio->input_sync_bypass);
+            (unsigned long)pio->input_sync_bypass, (unsigned long)clock_get_hz(clk_sys));
 }
 #endif
 
@@ -508,7 +508,20 @@ static inline void pio_tx_init(pin_t tx_pin) {
     // We only need TX, so get an 8-deep FIFO!
     sm_config_set_fifo_join(&config, PIO_FIFO_JOIN_TX);
     // SM transmits 1 bit per 8 execution cycles.
+#ifdef POLY_FIXED_SERIAL_CLKDIV
+    // FIX TEST (split42 root cause): compute the PIO clock divisor from a FIXED clock
+    // constant instead of the live clock_get_hz(clk_sys). Symptom traced: the master RX
+    // detects every start bit but never frames a byte, and the measured slave bit width
+    // varies boot-to-boot (gp5_low_run 36..102) -> the two halves' baud drift apart. The
+    // suspected cause is clock_get_hz(clk_sys) returning a not-yet-final frequency at init
+    // on one half some boots, so its baud differs from the other half. Pinning the divisor
+    // to a constant makes BOTH halves transmit/receive at the exact same rate regardless of
+    // the clock state at init, so they can't drift. 125 MHz matches what the master computes
+    // in the field (clkdiv 0x0043D100). Guarded; split72/normal keep the live computation.
+    float div = 125000000.0f / (8.0f * (float)SERIAL_USART_SPEED);
+#else
     float div = (float)clock_get_hz(clk_sys) / (8 * SERIAL_USART_SPEED);
+#endif
     sm_config_set_clkdiv(&config, div);
     pio_sm_init(pio, tx_state_machine, offset, &config);
     pio_sm_set_enabled(pio, tx_state_machine, true);
@@ -544,7 +557,20 @@ static inline void pio_rx_init(pin_t rx_pin) {
     // Deeper FIFO as we're not doing any TX
     sm_config_set_fifo_join(&config, PIO_FIFO_JOIN_RX);
     // SM transmits 1 bit per 8 execution cycles.
+#ifdef POLY_FIXED_SERIAL_CLKDIV
+    // FIX TEST (split42 root cause): compute the PIO clock divisor from a FIXED clock
+    // constant instead of the live clock_get_hz(clk_sys). Symptom traced: the master RX
+    // detects every start bit but never frames a byte, and the measured slave bit width
+    // varies boot-to-boot (gp5_low_run 36..102) -> the two halves' baud drift apart. The
+    // suspected cause is clock_get_hz(clk_sys) returning a not-yet-final frequency at init
+    // on one half some boots, so its baud differs from the other half. Pinning the divisor
+    // to a constant makes BOTH halves transmit/receive at the exact same rate regardless of
+    // the clock state at init, so they can't drift. 125 MHz matches what the master computes
+    // in the field (clkdiv 0x0043D100). Guarded; split72/normal keep the live computation.
+    float div = 125000000.0f / (8.0f * (float)SERIAL_USART_SPEED);
+#else
     float div = (float)clock_get_hz(clk_sys) / (8 * SERIAL_USART_SPEED);
+#endif
     sm_config_set_clkdiv(&config, div);
     pio_sm_init(pio, rx_state_machine, offset, &config);
     pio_sm_set_enabled(pio, rx_state_machine, true);

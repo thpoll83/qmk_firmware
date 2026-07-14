@@ -2063,17 +2063,18 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
 // How often the Eden idle legend relocates to a fresh spot (anti-burn-in "ghosting").
 #define EDEN_LEGEND_DRIFT_MS 7000u
 
-// Eden idle screensaver: cut a key's resting legend OUT (erase → dark) of the
-// glowing field the animation just built, so the letter reads as a dark silhouette
-// the comets ghost around — and, because those pixels are OFF, it's burn-in-safe.
-// The idle field is drawn MOSTLY LIT (see sa_render_idle_frame), which is what makes
-// the dark cutout visible (a cutout in a sparse/dark field shows nothing). The letter
-// relocates within its own glyph slack every EDEN_LEGEND_DRIFT_MS so the dark shape
-// slowly wanders the glow (extra anti-burn-in, per-key phased). Called per panel from
-// sa_render_idle_frame() AFTER the field+comets and BEFORE the send, so it does NOT
-// clear the buffer and does NOT send. `disp_idx` == the anim's geom index ==
-// LAYOUT_TO_INDEX(r,c); invert it to (r,c) to resolve the keycode. Returns false
-// (buffer untouched) for keys with no plain-text legend (flags/emoji/tabs/overlays).
+// Eden idle screensaver: draw a key's resting legend LIT into the comet field the
+// animation just built, so the letter is clearly visible as a faint "ghost" the
+// comets drift around — and relocate it to a fresh in-glyph-slack spot every
+// EDEN_LEGEND_DRIFT_MS so it slowly wanders (anti-burn-in), like the jitter style.
+// (An earlier version ERASED the legend as a dark cutout, but at the dim idle
+// brightness the sparse comet field had too few lit pixels for a cutout to read.)
+// Called per panel from sa_render_idle_frame() (startup_anim.c) AFTER the comet
+// field is drawn and BEFORE the send, so it does NOT clear the buffer and does NOT
+// send. `disp_idx` is the display index == the anim's geom index == LAYOUT_TO_INDEX(r,c);
+// invert it to (r,c) to resolve the keycode. Returns false without touching the
+// buffer for keys with no plain-text legend (flags/emoji/tabs/overlays) — those faces
+// just show the plain comet field. Mirrors render_idle_key's legend derivation.
 bool eden_idle_erase_legend(uint8_t disp_idx) {
     if (disp_idx >= MATRIX_ROWS_PER_SIDE * MATRIX_COLS) return false;
     // disp_idx == the anim geom index == display row*8 + col. Invert to the matrix
@@ -2111,19 +2112,17 @@ bool eden_idle_erase_legend(uint8_t disp_idx) {
     if (text == NULL || text[0] == 0) {
         return false;   // no text legend — leave the plain comet field on this key
     }
-    // Erase (dark) the legend at a slowly-drifting position within its own on-screen
-    // slack. roll_idle_offset() picks a uniform random offset inside the glyph's free
-    // space (fully on-screen, per-glyph — the same helper the jitter idle style uses);
-    // the seed changes once per EDEN_LEGEND_DRIFT_MS so every ~7 s the dark letter
-    // jumps to a fresh spot. Per-key phase (disp_idx) so they don't all move together.
+    // Draw the legend LIT at a slowly-drifting position within its own on-screen slack.
+    // roll_idle_offset() picks a uniform random offset inside the glyph's free space
+    // (fully on-screen, per-glyph — the same helper the jitter idle style uses); the
+    // seed changes once per EDEN_LEGEND_DRIFT_MS so every ~7 s the letter jumps to a
+    // fresh spot. Per-key phase (disp_idx) so they don't all move in lockstep.
     uint32_t epoch = timer_read32() / EDEN_LEGEND_DRIFT_MS;
     int8_t dx, dy;
     roll_idle_offset(text, BUFFER_X, 23, epoch * 2654435761u + disp_idx, &dx, &dy);
-    kdisp_set_gfx_erase(true);
     kdisp_set_draw_offset(dx, dy);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
     kdisp_set_draw_offset(0, 0);
-    kdisp_set_gfx_erase(false);
     return true;
 }
 

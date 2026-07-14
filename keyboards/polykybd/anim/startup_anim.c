@@ -40,11 +40,6 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 #define SA_NSPARK      340      // one L→R comet per spark; more of them → denser streaks
 #define SA_TRAIL_MAX    24      // longest comet trail (px); each spark rolls its own length
 #define SA_PGAIN         6      // background plasma density (out of 255) — a very faint haze
-// Idle screensaver field (INVERTED look): a mostly-lit glowing haze the comets +
-// legend erase. SA_IDLE_PGAIN = strong, shimmering plasma; SA_IDLE_FIELD_BIAS added
-// to the per-pixel lit test pushes it toward "mostly lit". Tune to taste.
-#define SA_IDLE_PGAIN  120
-#define SA_IDLE_FIELD_BIAS 150
 #define SA_STRIDE      128      // scratch bytes per page
 // ---- ring (expanding ripple) tuning — parsed by the host firmware-port sim ----
 // Circular ripple: the sparkle DENSITY peaks at each ring crest and falls off between
@@ -102,15 +97,8 @@ static inline uint8_t sa_plasma(int16_t gx, int16_t gy, uint8_t tp) {
 }
 
 static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
-    if (lx >= 0 && lx < SCREEN_WIDTH && ly >= 0 && ly < SCREEN_HEIGHT) {
-        size_t  o = (size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx);
-        uint8_t m = (uint8_t)(1u << (ly & 7));
-        // Boot intro: comets are LIT (OR). Idle screensaver: the field is a glowing
-        // haze and the comets ERASE (dark streaks sweeping the lit field) — so the
-        // motion reads as dark "ghosts" moving through the glow, not bright dots.
-        if (s_loop) buf[o] &= (uint8_t)~m;
-        else        buf[o] |= m;
-    }
+    if (lx >= 0 && lx < SCREEN_WIDTH && ly >= 0 && ly < SCREEN_HEIGHT)
+        buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
 }
 
 // Combined background DENSITY (0..255) at a board point: the faint plasma haze OR'd
@@ -371,13 +359,7 @@ static void sa_render_idle_frame(uint32_t el) {
     const uint8_t  tp    = (uint8_t)(el >> 4);
     const uint8_t  tprg  = (uint8_t)(el >> 5);
     const uint8_t  ring  = 255;          // ripples always present (they expand via tprg)
-    // Idle is INVERTED vs the boot intro: instead of sparse lit sparks on black, the
-    // field is a mostly-LIT glowing haze (dense plasma) that the comets + legend then
-    // ERASE (dark). SA_IDLE_PGAIN drives a strong, time-varying plasma so the glow
-    // shimmers (each pixel's lit-ness migrates → anti-burn-in); SA_IDLE_FIELD_BIAS
-    // (added to the lit test below) pushes it to "mostly lit" so the erased dark
-    // comets/letter read against it.
-    const uint16_t pgain = SA_IDLE_PGAIN;
+    const uint16_t pgain = SA_PGAIN;     // constant faint haze — no background fade
     const int16_t  cxr   = SA_BOARD_W / 2;
     const int16_t  cyr   = (int16_t)((int32_t)SA_BOARD_H * 42 / 100);
 
@@ -417,12 +399,12 @@ static void sa_render_idle_frame(uint32_t el) {
                 } else {
                     bgv = s_brow[lx];
                 }
-                if ((uint16_t)bgv + SA_IDLE_FIELD_BIAS > sa_noise(gx, gy))   // mostly-lit glowing field
+                if (bgv > sa_noise(gx, gy))
                     buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
             }
         }
 
-        sa_plot_sparks(buf, g, rot, cosv, sinv);   // comets ERASE (dark) in idle — see sa_set
+        sa_plot_sparks(buf, g, rot, cosv, sinv);
         // Cut this key's resting legend out of the comet field (dark silhouette the
         // comets ghost around). Implemented in poly_keymap.c where the keycode/legend
         // live; idx here is the display index it maps from. No-op for image legends.

@@ -19,6 +19,11 @@
 //   it needs care to not delay enumeration or stall the master main loop. Pick up
 //   from where startup_anim_start() is invoked and wire a boot trigger in
 //   keyboard_post_init_user() / the splash path in poly_keymap.c.
+//   Plan: start the intro AFTER the boot splash (splash → Eden), and add a short
+//   "fade in" at the head of the one-shot animation so the comet field ramps up from
+//   black instead of popping in — smooths the splash→Eden hand-off. The fade-in would
+//   be a brightness/coverage ramp over the first N frames, gated on s_loop == false so
+//   the looping idle screensaver (which is meant to already be running) is unaffected.
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>

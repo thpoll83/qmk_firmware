@@ -1,3 +1,5 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
 // Procedural boot animation — see startup_anim.h. split72 only; stubs elsewhere.
 #include "startup_anim.h"
 
@@ -216,9 +218,10 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
         sa_set(buf, hx, hy + 1);
         sa_set(buf, hx + 1, hy + 1);
         if (thick) { sa_set(buf, hx, hy - 1); sa_set(buf, hx + 1, hy - 1); }   // taller, brighter head
+        const uint16_t fade_step = 230u / tlen;   // invariant across the trail; hoist out of the loop
         for (uint8_t k = 1; k < tlen; ++k) {   // solid neck, then a fading tail
             if (k <= 5 || sa_noise((int16_t)(hx - k + 30), (int16_t)(hy + 12)) <
-                          (uint8_t)(255u - (uint16_t)k * (230u / tlen))) {
+                          (uint8_t)(255u - (uint16_t)k * fade_step)) {
                 sa_set(buf, (int16_t)(hx - k), hy);
                 if (thick) sa_set(buf, (int16_t)(hx - k), hy + 1);   // 2 px tall trail
             }

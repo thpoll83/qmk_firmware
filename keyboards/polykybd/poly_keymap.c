@@ -855,8 +855,13 @@ void housekeeping_task_user(void) {
             // no-op there. Retried each pass until it lands (or the animation ends).
             static bool s_anim_synced = false;
             if (!s_anim_synced && is_usb_host_side() && is_transport_connected()) {
-                send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 3);
-                s_anim_synced = true;
+                // Classify the ack via sync_succeeded() — never bool-test send_to_bridge()
+                // directly (every return is non-zero). Only latch on a genuine success so a
+                // failed send stays eligible for retry on a later pass.
+                uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 3);
+                if (sync_succeeded(ack)) {
+                    s_anim_synced = true;
+                }
             }
             if (!startup_anim_active()) {   // just finished this pass
                 s_anim_synced = false;      // re-arm for the next replay (KC_EDEN / HID)

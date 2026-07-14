@@ -476,6 +476,19 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     renders ASCII text with no pack. The build-time guard fails if a bundle overflows
     its slot. Order in `bundles.list` is **append-only** (the index is the on-wire id
     and the slot order; growth-prone `emoji` is last with `slot_kb: rest`).
+  - **Shadowed-glyph dedupe is DEFAULT-ON in the build** (`generate_fonts.py`,
+    `--no-dedupe` opts out; `fonts/fontpack.py` `prune_shadowed_glyphs`). Before
+    emitting bundles it **empties** (turns into a `{off,0,0,0,0,0}` gap) any pack
+    glyph a **higher-priority font already draws byte-identically** — front-to-back
+    precedence means it can never render, so it's dead weight in flash. Runs
+    build-side (not host-side) because only the build sees the **resident** set,
+    which can shadow a pack glyph a host-only view would miss. It asserts the
+    assembled front-to-back render is unchanged afterwards. ⚠️ **The shipped bundle
+    bytes + `fontpack_bundles.manifest.json` already reflect the prune**, so any
+    regeneration must run it too (a stale `fontpack.py` without `prune_shadowed_glyphs`
+    re-inflates the bundle and diverges from what's shipped). First landed 2026-07:
+    73 glyphs / 13,313 B reclaimed — only `symbol` (33,980→33,788) and `emoji`
+    (227,460→214,344) shrank; all other bundles were byte-identical.
   - **The per-font `reserved` gidx is a SORT KEY, not a dense array position.**
     `fontpack_assemble()` (`base/fontpack.c`) places the resident set first, then
     **insertion-sorts the pack fonts by their stored gidx** — nothing indexes an
@@ -508,6 +521,34 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     the others. `cmp` each regenerated `.plyf` against the shipped one to see which
     actually changed, and bump+reship only those (see the gidx note above re: why
     appending a glyph now changes only the edited bundle).
+    - **You do NOT need `fontconvert` to reship** — bundles derive deterministically
+      from the **committed** category headers. `--emit-bundles` re-runs fontconvert
+      only to *regenerate* those headers; if the headers are already committed (no
+      `fonts.yaml`/TTF change, just a reship / a dedupe bump), build the `.plyf`
+      straight from them in a throwaway script: `order =
+      fontpack.all_fonts_order(fonts_dir)`, `resident =
+      fontpack.resident_symbols(cfg, fonts_dir)`, `parsed = {}` then
+      `parsed.update(fontpack.parse_gfx_header(h.read_text()))` for every
+      `base/fonts/generated/*.h` + `parsed.update(fontpack.extra_pack_fonts(cfg,
+      fonts_dir))`, `sym2cat = fontpack.symbol_categories_from_tree(fonts_dir, cfg)`,
+      `fontpack.prune_shadowed_glyphs(order, resident, parsed)` (mirror the build!),
+      `fontpack.build_bundles(order, resident, parsed, sym2cat, cfg,
+      content_versions={all ids})`. This reproduces the shipped `.plyf` byte-for-byte
+      and also re-emits `fontpack_bundles.manifest.json` (`bundles_manifest_json`) +
+      layout header — the only way to reship inside a container without the pinned
+      FreeType/HarfBuzz build. The **`reship-fontpack-bundle` skill** wraps exactly
+      this (`--check` to report drift, `--apply ID=N` to reship). (Used 2026-07 for
+      the dedupe + fantasy reship.)
+    - **A host `.plyf` can silently LAG a firmware `fonts.yaml` render-size tweak.**
+      Because the reship is manual, a firmware-side render change (e.g. "render
+      Aurebesh smaller") changes a bundle's bitmap bytes but leaves the host copy
+      **stale at the same `content_version`** until someone reships it — so no
+      keyboard ever re-flashes the corrected glyphs. `cmp` alone flags it; to confirm
+      it's a *render* drift (not a version-byte diff), decode both packs and diff
+      **per-glyph WxH** — the font metadata (`first`/`last`/`yAdvance`) matches while
+      only the bitmap dims differ. Seen 2026-07: `fantasy` was 604 B / 124 glyphs
+      stale across Aurebesh/Cirth/APL/Braille vs 3 firmware "render smaller" commits;
+      fixed by reshipping from the committed headers and bumping v2→v3.
     - **Bump `content_version` MINIMALLY (+1 over the shipped value), don't jump.**
       No font-pack bundle has ever been deployed to a device, so the version only
       needs to exceed what a device already has (0 / nothing) — any increment works,

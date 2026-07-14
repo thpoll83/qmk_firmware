@@ -89,7 +89,7 @@ static int pdraw_glyph(const GFXfont* const* fonts, uint8_t n, int x, int baseli
     if (!g) return 0;
     uint16_t bo = pgm_read_word(&g->bitmapOffset);
     int w = pgm_read_byte(&g->width),  h  = pgm_read_byte(&g->height);
-    int xo = pgm_read_byte(&g->xOffset), yo = pgm_read_byte(&g->yOffset);
+    int xo = (int8_t)pgm_read_byte(&g->xOffset), yo = (int8_t)pgm_read_byte(&g->yOffset);
     const uint8_t* bmp = (const uint8_t*)pgm_read_ptr(&f->bitmap);
     int bit = 0; uint8_t bits = 0;
     for (int gy = 0; gy < h; gy++)
@@ -155,7 +155,7 @@ static void pdraw_text_center_half(const GFXfont* const* fonts, uint8_t n, int t
         if (!g) { cx += 4; continue; }   // fallback advance (e.g. a space with no glyph)
         uint16_t bo = pgm_read_word(&g->bitmapOffset);
         int w = pgm_read_byte(&g->width),  h  = pgm_read_byte(&g->height);
-        int xo = pgm_read_byte(&g->xOffset), yo = pgm_read_byte(&g->yOffset);
+        int xo = (int8_t)pgm_read_byte(&g->xOffset), yo = (int8_t)pgm_read_byte(&g->yOffset);
         const uint8_t* bmp = (const uint8_t*)pgm_read_ptr(&f->bitmap);
         int bit = 0; uint8_t bits = 0;
         for (int gy = 0; gy < h; gy++)

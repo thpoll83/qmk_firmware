@@ -192,7 +192,7 @@ def draw_brightness(setpix, contrast, top_y):
 
 
 # ------------------------------- compose -----------------------------------
-def build(side, mid, tiny, icons, world, contrast=35):
+def build(side, mid, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0]):
     """side 'L' (USB host, brightness+WPM) or 'R' (Link bridge, locks)."""
     pts = set()
     setp = lambda px, py: pts.add((px, py))
@@ -268,6 +268,16 @@ def main():
     R = build('R', mid, tiny, icons, world)
 
     if args.diag:
+        # Exercise EVERY short layout name — glyph widths differ, so a clip specific
+        # to e.g. "ColDH" would never surface if we only rendered "Qwrty". The R side
+        # carries a constant ~33 from the intentional half-off Link icon; a name that
+        # clips adds beyond the L=0 / R=33 baseline.
+        def clip_count(pts):
+            return sum(1 for (x, y) in pts if not (0 <= x < P_W and 0 <= y < P_H))
+        for nm in SHORT_NAMES + ["Unkn"]:
+            lc = clip_count(build('L', mid, tiny, icons, world, layout_name=nm))
+            rc = clip_count(build('R', mid, tiny, icons, world, layout_name=nm))
+            print(f"  {nm:6} clipped L={lc} R={rc}")
         Li, lc = render_diag(L, 'LEFT (brightness/WPM)  RED=clipped')
         Ri, rc = render_diag(R, 'RIGHT (Num/Caps lock)  RED=clipped')
         gap = 24
@@ -275,7 +285,7 @@ def main():
         c.paste(Li, (0, 0)); c.paste(Ri, (Li.width + gap, 0))
         out = args.out or '/tmp/status_oled42_diag.png'
         c.save(out)
-        print(f"{out}  clipped L={lc} R={rc}")
+        print(f"{out}  representative (Qwrty): L={lc} R={rc}")
     else:
         Li, Ri = render_plain(L), render_plain(R)
         pad, gap = 16, 40

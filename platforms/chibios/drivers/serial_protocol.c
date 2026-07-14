@@ -15,9 +15,10 @@ extern uint32_t serial_debug_rx_fifo_level(void);
 extern uint32_t serial_debug_rx_fifo_peek(void);
 // Sample the RX line right after the master sends its id (slave echo window) + report
 // whether GP5 has EVER been pulled low by the slave (across all transactions so far).
-extern void serial_debug_rx_sample_burst(void);
-extern bool serial_debug_rx_ever_low(void);
-extern void serial_debug_dump_rx_sm(void);
+extern void     serial_debug_rx_sample_burst(void);
+extern bool     serial_debug_rx_ever_low(void);
+extern uint32_t serial_debug_rx_max_low_run(void);
+extern void     serial_debug_dump_rx_sm(void);
 #endif
 #ifdef POLY_SLAVE_STAGE_PROBE
 // Implemented in keyboards/polykybd/poly_util.c (guarded by the same define). Draws
@@ -188,10 +189,11 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
                 // arrive at all? bit31 in level = RX state machine was never claimed.
                 uint32_t rxlvl  = serial_debug_rx_fifo_level();
                 uint32_t rxpeek = serial_debug_rx_fifo_peek();
-                uprintf("HS-DIAG: total=%lu timeout(no-rx)=%lu garbage(wrong-byte)=%lu last=0x%02X exp=0x%02X rx_fifo=%lu peek=0x%02lX gp5_ever_low=%u\n",
+                uprintf("HS-DIAG: total=%lu timeout(no-rx)=%lu garbage(wrong-byte)=%lu last=0x%02X exp=0x%02X rx_fifo=%lu peek=0x%02lX gp5_ever_low=%u gp5_max_low_run=%lu\n",
                         (unsigned long)hs_total, (unsigned long)hs_timeout, (unsigned long)hs_garbage,
                         (unsigned)transaction_id_shake, (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS),
-                        (unsigned long)rxlvl, (unsigned long)rxpeek, (unsigned)serial_debug_rx_ever_low());
+                        (unsigned long)rxlvl, (unsigned long)rxpeek, (unsigned)serial_debug_rx_ever_low(),
+                        (unsigned long)serial_debug_rx_max_low_run());
                 // One-shot PIO register dump: compare the working TX SM against the
                 // dead RX SM on the same PIO block to see what's mis-set-up.
                 static bool dumped = false;

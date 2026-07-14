@@ -218,14 +218,27 @@ uint32_t serial_debug_rx_fifo_peek(void) {
 // pad input regardless of the PIO function mux, so a tight sampling burst right after
 // the master sends the id (when the slave should be echoing) tells us TX-pin-alive vs
 // dead — independent of whether the RX SM captures the byte.
-static pin_t s_dbg_rx_pin = 0;   // set in pio_rx_init
-static bool  s_rx_ever_low = false;
+static pin_t    s_dbg_rx_pin = 0;   // set in pio_rx_init
+static bool     s_rx_ever_low = false;
+static uint32_t s_rx_max_low_run = 0;   // longest consecutive-low sample run seen
 void serial_debug_rx_sample_burst(void) {
-    for (int i = 0; i < 12000; ++i) {
-        if (!gpio_get(s_dbg_rx_pin)) { s_rx_ever_low = true; return; }
+    // Sample the raw RX pad in a tight loop (~40-60 ns/sample). Track the LONGEST run
+    // of consecutive lows across all bursts: a valid UART start bit at this baud is
+    // ~4.3 us -> ~80-100 consecutive lows; electrical glitches / crosstalk are 1-3
+    // samples. So max_low_run tells "the slave sends a real frame" from "GP5 only
+    // glitches" — which decides slave-TX-broken vs a master-RX silicon oddity.
+    uint32_t run = 0;
+    for (int i = 0; i < 16000; ++i) {
+        if (!gpio_get(s_dbg_rx_pin)) {
+            s_rx_ever_low = true;
+            if (++run > s_rx_max_low_run) s_rx_max_low_run = run;
+        } else {
+            run = 0;
+        }
     }
 }
-bool serial_debug_rx_ever_low(void) { return s_rx_ever_low; }
+bool     serial_debug_rx_ever_low(void)   { return s_rx_ever_low; }
+uint32_t serial_debug_rx_max_low_run(void){ return s_rx_max_low_run; }
 
 // Dump the live PIO1 registers for BOTH serial state machines on the master. The TX SM
 // (GP4) works and the RX SM (GP5) does not, on the same PIO block — so comparing them

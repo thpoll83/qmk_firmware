@@ -29,6 +29,8 @@ extern uint32_t serial_debug_rx_direct_last(void);     // last byte found waitin
 extern uint32_t serial_debug_rx_direct_hits(void);     // # txns a byte was waiting before receive
 extern void     serial_debug_dump_rx_sm(void);
 extern void     serial_debug_reinit_rx(void);   // FIX EXPERIMENT: re-init a wedged RX SM
+extern uint32_t serial_debug_irq_entries(void); // # times the master PIO1 IRQ handler ran
+extern uint32_t serial_debug_irq_rxne(void);    // # times it took the rx-not-empty branch
 #endif
 #ifdef POLY_SLAVE_STAGE_PROBE
 // Implemented in keyboards/polykybd/poly_util.c (guarded by the same define). Draws
@@ -170,19 +172,6 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
         return false;
     }
 
-#ifdef POLY_HANDSHAKE_DIAG
-    // We've just sent the id; the slave should be echoing on GP5 right about now.
-    // Burst-sample the raw line so we can tell "slave physically drives GP5" (ever
-    // low) from "slave TX pin dead" (line stays high on our pull-up alone).
-    serial_debug_rx_sample_burst();
-#endif
-
-#ifdef POLY_HANDSHAKE_DIAG
-    // Right before the normal receive: is a valid byte already waiting in the RX FIFO?
-    // (Pops it directly, bypassing sync_rx. The link already fails, so stealing it is fine.)
-    serial_debug_rx_pop_before_recv();
-#endif
-
     uint8_t transaction_id_shake = 0xFF;
 
     /* Which we always read back first so that we can error out correctly.
@@ -231,6 +220,23 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
 #endif
         return false;
     }
+
+#ifdef POLY_HANDSHAKE_DIAG
+    // SUCCESS path (link is up). Periodically report the master PIO1 IRQ counters so we can
+    // tell whether the receive path now works because the IRQ is actually firing, or only
+    // because the byte is pre-loaded (poll-fix / pointing-timing) while the IRQ stays dead.
+    // irq_entries staying ~0 here while the link works confirms the IRQ is genuinely broken
+    // and merely bypassed — not repaired.
+    {
+        static uint32_t hs_ok = 0;
+        if ((++hs_ok % 2000) == 0) {
+            uprintf("HS-OK: ok=%lu irq_entries=%lu irq_rxne=%lu  (irq_entries~0 while link works => rx IRQ still dead, bypassed by the poll)\n",
+                    (unsigned long)hs_ok,
+                    (unsigned long)serial_debug_irq_entries(),
+                    (unsigned long)serial_debug_irq_rxne());
+        }
+    }
+#endif
 
     /* Send transaction buffer to the slave. If this transaction requires it. */
     if (transaction->initiator2target_buffer_size) {

@@ -30,6 +30,13 @@ static inline void pio_serve_interrupt(void);
 
 #define MSG_PIO_ERROR ((msg_t)(-3))
 
+#if defined(POLY_RX_POLL_FIX) && !defined(POLY_RX_POLL_US)
+// Pre-poll window (us) before falling back to the IRQ-suspend in sync_rx. The slave echo
+// lands ~150 us after the master sends the id; 1500 us is generous headroom while still
+// far below the 20 ms receive timeout, so a dead link only costs this window extra.
+#    define POLY_RX_POLL_US 1500u
+#endif
+
 #if defined(SERIAL_PIO_USE_PIO1)
 static const PIO pio = pio1;
 
@@ -316,6 +323,12 @@ void serial_debug_rx_pop_before_recv(void) {
 uint32_t serial_debug_rx_direct_last(void){ return s_rx_direct_last; }
 uint32_t serial_debug_rx_direct_hits(void){ return s_rx_direct_hits; }
 
+// Read the master-core PIO1 IRQ counters (see pio_serve_interrupt): how often the handler
+// ran at all, and how often it took the rx-not-empty branch. On the broken split42 link
+// these stay ~0 even while bytes reach the RX FIFO -> the IRQ wake is what's dead.
+uint32_t serial_debug_irq_entries(void){ return g_pio_irq_entries; }
+uint32_t serial_debug_irq_rxne(void){ return g_pio_irq_rxne; }
+
 // FIX EXPERIMENT: fully re-initialise the master's RX state machine. Theory (from the
 // register dump + RP2040 forums): the RX SM comes up metastably-wedged at init on some
 // boots (non-deterministic) — it READS as parked at `wait 0 pin` but its execution FFs
@@ -469,6 +482,26 @@ inline bool serial_transport_send(const uint8_t* source, const size_t size) {
 
 static inline msg_t sync_rx(sysinterval_t timeout) {
     msg_t msg = MSG_OK;
+#ifdef POLY_RX_POLL_FIX
+    // FIX (split42 root cause): the master's PIO1 rx-not-empty IRQ effectively never fires
+    // (irq_entries ~0 across hundreds of transactions), even though NVIC PIO1_IRQ_0 is
+    // enabled and the RX SM decodes + pushes the echo byte into the FIFO every time. So the
+    // IRQ-driven suspend below waits the full 20 ms for a wake that never comes, and the
+    // receive only succeeds when a byte happens to be waiting already. Enabling the pointing
+    // device merely shifted timing so a byte was pre-loaded — masking, not fixing, this.
+    //
+    // Don't depend on the IRQ: poll the RX FIFO (unlocked, IRQs on) for a short window first.
+    // Because only this thread drains the master RX FIFO, seeing non-empty here means the very
+    // next locked empty-check consumes the byte with no suspend. A genuinely dead link still
+    // falls through to the normal IRQ-suspend timeout below, so this can only help.
+    if (rx_state_machine >= 0) {
+        uint32_t t0 = timer_hw->timerawl;
+        while (pio_sm_is_rx_fifo_empty(pio, rx_state_machine) &&
+               (timer_hw->timerawl - t0) < (uint32_t)POLY_RX_POLL_US) {
+            /* spin until a byte lands or the window elapses */
+        }
+    }
+#endif
     osalSysLock();
     while (pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
         pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, true);

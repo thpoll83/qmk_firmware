@@ -45,6 +45,16 @@ SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c b
 #                                     bytes out (the PIO TX state machine itself).
 # This decides which flavour of slave-TX failure it is (block vs drain-but-lost vs SM-stall).
 OPT_DEFS += -DPOLY_HANDSHAKE_DIAG
+# FIX TEST (split42 root cause): the master's PIO1 rx-not-empty IRQ never fires
+# (irq_entries~0/500) even though the RX SM decodes + pushes the echo byte into the FIFO
+# every transaction and NVIC PIO1_IRQ_0 is enabled -> sync_rx waits the full 20 ms for a
+# wake that never comes, so the receive only lands when a byte is already waiting. Enabling
+# the pointing device merely pre-loaded the byte via different timing (masking, not fixing).
+# POLY_RX_POLL_FIX makes sync_rx briefly poll the RX FIFO before the IRQ-suspend, so the byte
+# is consumed without the IRQ. If the link comes up (slave alive, HS-DIAG failures stop) this
+# is the real fix and moves into config proper. HS-OK lines then report irq_entries on the
+# SUCCESS path: staying ~0 confirms the IRQ is bypassed, not repaired.
+OPT_DEFS += -DPOLY_RX_POLL_FIX
 # FIX TEST: pin the PIO serial clock divisor to a fixed clock constant on BOTH halves
 # (instead of the live clock_get_hz(clk_sys)). Root cause traced: the master RX detects
 # every start bit but never frames a byte, and the slave's measured bit width varies

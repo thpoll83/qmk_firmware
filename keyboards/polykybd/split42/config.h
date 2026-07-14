@@ -51,12 +51,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define HW_RST_PIN GP9
 #define SPI_SCK_PIN GP6
 #define SPI_MOSI_PIN GP7
-// ROOT-CAUSE TEST (2026-07-14): GP4 is ALSO SERIAL_USART_RX_PIN — with the master's
-// PIN_SWAP, the slave's split-serial RX is GP4. Assigning GP4 to SPI0 MISO too is a
-// pin-mux conflict that clobbers the slave's serial RX → "SPLIT: receiving handshake
-// failed" (slave never echoes), exactly the observed symptom. The keycap SSD1306s are
-// write-only, so no MISO is needed. Free GP4 for the serial RX.
-#define SPI_MISO_PIN NO_PIN
+// Mirror split72 (GP4). GP4 conflict already ruled out multiple times (freeing it did
+// not help) — kept at the split72 baseline.
+#define SPI_MISO_PIN GP4
 
 //This number can be calculated by dividing the MCU’s clock speed
 //by the desired SPI clock speed. For example, an MCU running at 8 MHz

@@ -9,6 +9,8 @@
 #include "debug.h"
 #ifdef POLY_HANDSHAKE_DIAG
 #    include "hardware/gpio.h"
+#    include "hardware/structs/iobank0.h"
+#    include "hardware/structs/padsbank0.h"
 #endif
 #ifdef POLY_SLAVE_STAGE_PROBE
 // Implemented in keyboards/polykybd/poly_util.c. Lights a keycap per stage on the
@@ -248,6 +250,15 @@ void serial_debug_dump_rx_sm(void) {
                 s, (unsigned long)pio->sm[s].pinctrl, (unsigned long)pio->sm[s].execctrl,
                 (unsigned long)pio->sm[s].clkdiv, (unsigned long)pc0, (unsigned long)pc1);
     }
+    // GP4 (master TX, working) vs GP5 (master RX, dead) IO-mux + pad registers. The RX
+    // SM is correctly configured yet never sees GP5 go low — so the PIO's input view of
+    // GP5 is stuck. Compare against GP4: io ctrl FUNCSEL=[4:0] (PIO1=7), INOVER=[17:16]
+    // (0=normal; 2/3 force the *peripheral* input low/high -> would freeze the RX wait);
+    // pad IE=bit6 (input enable), OD=bit7 (output disable). gpio_get_function() decodes
+    // FUNCSEL. A GP5 INOVER!=0 or IE=0 (while GP4 is clean) is the clobber we're hunting.
+    uprintf("  GP4 func=%d ioctrl=0x%08lX pad=0x%08lX | GP5 func=%d ioctrl=0x%08lX pad=0x%08lX\n",
+            (int)gpio_get_function(4), (unsigned long)iobank0_hw->io[4].ctrl, (unsigned long)padsbank0_hw->io[4],
+            (int)gpio_get_function(5), (unsigned long)iobank0_hw->io[5].ctrl, (unsigned long)padsbank0_hw->io[5]);
 }
 #endif
 

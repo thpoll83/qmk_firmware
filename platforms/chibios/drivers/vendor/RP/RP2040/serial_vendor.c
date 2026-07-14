@@ -222,6 +222,9 @@ static pin_t    s_dbg_rx_pin = 0;   // set in pio_rx_init
 static uint     s_dbg_rx_offset = 0;   // RX program offset, for a diagnostic RX SM re-init
 static bool     s_rx_ever_low = false;
 static uint32_t s_rx_max_low_run = 0;   // longest consecutive-low sample run seen
+static uint32_t s_rx_pc_moved = 0;      // # samples the RX PC was OFF the wait (offset 19)
+static uint32_t s_rx_pc_max = 0;        // highest RX PC seen off the wait
+static uint32_t s_rx_pc_min = 0xFFFFFFFF;// lowest RX PC seen off the wait
 void serial_debug_rx_sample_burst(void) {
     // Sample the raw RX pad in a tight loop (~40-60 ns/sample). Track the LONGEST run
     // of consecutive lows across all bursts: a valid UART start bit at this baud is
@@ -236,10 +239,24 @@ void serial_debug_rx_sample_burst(void) {
         } else {
             run = 0;
         }
+        // Also watch the RX SM's PC. If it ever leaves the start-bit wait (offset 19),
+        // it DID detect a start and ran into the receive body (20..27) -> it sees the
+        // signal but fails to FRAME the byte (baud / slave-TX timing mismatch). If it
+        // never moves off 19, its input genuinely reads high -> a real input-path issue.
+        if (rx_state_machine >= 0) {
+            uint32_t pc = pio->sm[rx_state_machine].addr;
+            if (pc != s_dbg_rx_offset) {
+                s_rx_pc_moved++;
+                if (pc > s_rx_pc_max) s_rx_pc_max = pc;
+                if (pc < s_rx_pc_min) s_rx_pc_min = pc;
+            }
+        }
     }
 }
 bool     serial_debug_rx_ever_low(void)   { return s_rx_ever_low; }
 uint32_t serial_debug_rx_max_low_run(void){ return s_rx_max_low_run; }
+uint32_t serial_debug_rx_pc_moved(void)   { return s_rx_pc_moved; }
+uint32_t serial_debug_rx_pc_span(void)    { return (s_rx_pc_moved ? ((s_rx_pc_min << 8) | (s_rx_pc_max & 0xFF)) : 0); }
 
 // FIX EXPERIMENT: fully re-initialise the master's RX state machine. Theory (from the
 // register dump + RP2040 forums): the RX SM comes up metastably-wedged at init on some

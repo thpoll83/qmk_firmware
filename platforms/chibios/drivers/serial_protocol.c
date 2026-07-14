@@ -18,6 +18,8 @@ extern uint32_t serial_debug_rx_fifo_peek(void);
 extern void     serial_debug_rx_sample_burst(void);
 extern bool     serial_debug_rx_ever_low(void);
 extern uint32_t serial_debug_rx_max_low_run(void);
+extern uint32_t serial_debug_rx_pc_moved(void); // # samples the RX PC left the wait (offset 19)
+extern uint32_t serial_debug_rx_pc_span(void);  // (min<<8)|max PC seen off the wait, or 0
 extern void     serial_debug_dump_rx_sm(void);
 extern void     serial_debug_reinit_rx(void);   // FIX EXPERIMENT: re-init a wedged RX SM
 #endif
@@ -189,25 +191,21 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
                 // slave's echo actually reach us on GP5 but go unconsumed, or never
                 // arrive at all? bit31 in level = RX state machine was never claimed.
                 uint32_t rxlvl  = serial_debug_rx_fifo_level();
-                uint32_t rxpeek = serial_debug_rx_fifo_peek();
-                uprintf("HS-DIAG: total=%lu timeout(no-rx)=%lu garbage(wrong-byte)=%lu last=0x%02X exp=0x%02X rx_fifo=%lu peek=0x%02lX gp5_ever_low=%u gp5_max_low_run=%lu\n",
-                        (unsigned long)hs_total, (unsigned long)hs_timeout, (unsigned long)hs_garbage,
+                (void)serial_debug_rx_fifo_peek;
+                uint32_t span = serial_debug_rx_pc_span();
+                uprintf("HS-DIAG: total=%lu timeout=%lu last=0x%02X exp=0x%02X rx_fifo=%lu gp5_low_run=%lu rx_pc_moved=%lu rx_pc_min=%lu rx_pc_max=%lu\n",
+                        (unsigned long)hs_total, (unsigned long)hs_timeout,
                         (unsigned)transaction_id_shake, (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS),
-                        (unsigned long)rxlvl, (unsigned long)rxpeek, (unsigned)serial_debug_rx_ever_low(),
-                        (unsigned long)serial_debug_rx_max_low_run());
+                        (unsigned long)rxlvl, (unsigned long)serial_debug_rx_max_low_run(),
+                        (unsigned long)serial_debug_rx_pc_moved(),
+                        (unsigned long)(span >> 8), (unsigned long)(span & 0xFF));
                 // One-shot PIO register dump: compare the working TX SM against the
                 // dead RX SM on the same PIO block to see what's mis-set-up.
                 static bool dumped = false;
                 if (!dumped) { dumped = true; serial_debug_dump_rx_sm(); }
-                // FIX EXPERIMENT: after 500 confirmed failures, fully re-init the RX SM
-                // ONCE. If the metastable-wedge theory is right, the link comes up right
-                // after this and the timeout count stops climbing. Watch the next lines.
-                static bool reinit_done = false;
-                if (!reinit_done) {
-                    reinit_done = true;
-                    serial_debug_reinit_rx();
-                    uprintf("RX-REINIT: master RX state machine re-initialised — watch if the link recovers\n");
-                }
+                // (RX re-init experiment removed — it did NOT recover, so a bad SM state
+                //  is ruled out, consistent with the forum: synchronisers on, clean PC.)
+                (void)serial_debug_reinit_rx;
             }
         }
 #endif

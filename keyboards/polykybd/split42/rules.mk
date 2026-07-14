@@ -24,12 +24,14 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Pointing device — DISABLED (the broken config), for a CONSOLE capture of the
-# split-link failure. The firmware logs split-sync activity + the link health counter
-# ("Split link: N tx crc_err=.. transport_fail=.. giveup=.. err=..%") on the master's
-# HID console. Flash both halves, plug the master's USB into a host running the qmk
-# console / PolyKybdHost log viewer, and capture the boot log to see whether the link
-# ever establishes (and which transaction / error type fails).
+# Pointing device — DISABLED (the broken config) + SERIAL_DEBUG. The console showed
+# 100% transport_fail / crc_err=0 (QMK serial transport dead, not data corruption).
+# SERIAL_DEBUG turns on QMK's transport prints so the master says WHICH step fails:
+#   "SPLIT: sending handshake failed"   -> master can't transmit (master TX path dead)
+#   "SPLIT: receiving handshake failed" -> master TXes but slave never echoes
+#                                          (slave not servicing the link / RX path dead)
+# Flash both halves, capture the master's HID console, and look for the "SPLIT:" lines.
+OPT_DEFS += -DSERIAL_DEBUG
 
 # LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
 # bus (addr 0x23), which isn't broken out on split42, so its probe fails and the

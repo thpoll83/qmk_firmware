@@ -643,6 +643,16 @@ static void user_sync_slave_data_handler(uint8_t in_len, const void* in_data, ui
     }
 }
 
+#ifdef POLY_DUMMY_TXN_TEST
+// Root-cause experiment: a no-op split-transaction handler. Registering three of these
+// grows NUM_TOTAL_TRANSACTIONS by 3 (matching the working pointing build) without the
+// pointing device, to test whether split42's dead split link is transaction-count
+// dependent. Never actually invoked (the master never execs these ids).
+static void user_sync_dummy_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    (void)in_len; (void)in_data; (void)out_len; (void)out_data;
+}
+#endif
+
 // Master-side: mirror the HID cmd-15 stop-idle path to force the displays awake.
 static void poly_force_wake(void) {
     poly_sync_t* local_state = access_local_state();
@@ -2946,6 +2956,14 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_RESET,               user_sync_reset_handler);
 #ifdef POLYKYBD_LTR559_DRIVE
     transaction_register_rpc(USER_SYNC_SLAVE_DATA,          user_sync_slave_data_handler);
+#endif
+#ifdef POLY_DUMMY_TXN_TEST
+    // Root-cause experiment: register 3 no-op transactions so NUM_TOTAL_TRANSACTIONS
+    // grows by 3 (matching the working pointing build) without the pointing device.
+    // They are never executed — only their existence changes the transaction count.
+    transaction_register_rpc(USER_SYNC_DUMMY1, user_sync_dummy_handler);
+    transaction_register_rpc(USER_SYNC_DUMMY2, user_sync_dummy_handler);
+    transaction_register_rpc(USER_SYNC_DUMMY3, user_sync_dummy_handler);
 #endif
 
     fw_staging_init();

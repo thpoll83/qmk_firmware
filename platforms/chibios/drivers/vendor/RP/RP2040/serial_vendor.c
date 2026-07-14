@@ -121,6 +121,9 @@ static int         tx_state_machine = -1;
 volatile uint32_t g_rx_framing_errors = 0;   // RX-SM framing/break errors (bad stop bit)
 volatile uint32_t g_pio_irq_entries   = 0;   // # times the PIO1 IRQ handler actually ran
 volatile uint32_t g_pio_irq_rxne      = 0;   // # times it took the rx-not-empty branch
+volatile uint32_t g_poll_hits         = 0;   // # sync_rx polls that caught a byte in the window
+volatile uint32_t g_poll_miss         = 0;   // # sync_rx polls whose window expired empty
+volatile uint32_t g_poll_max_us       = 0;   // worst observed poll latency (us) until a byte landed
 #endif
 
 void pio_serve_interrupt(void) {
@@ -328,6 +331,12 @@ uint32_t serial_debug_rx_direct_hits(void){ return s_rx_direct_hits; }
 // these stay ~0 even while bytes reach the RX FIFO -> the IRQ wake is what's dead.
 uint32_t serial_debug_irq_entries(void){ return g_pio_irq_entries; }
 uint32_t serial_debug_irq_rxne(void){ return g_pio_irq_rxne; }
+// sync_rx pre-poll outcome (POLY_RX_POLL_FIX): how often the byte was caught by polling, how
+// often the window expired empty, and the worst latency until a byte landed. hits>0 = the byte
+// DOES arrive (just later than the old 1.5 ms window); max_us shows how much window is needed.
+uint32_t serial_debug_poll_hits(void){ return g_poll_hits; }
+uint32_t serial_debug_poll_miss(void){ return g_poll_miss; }
+uint32_t serial_debug_poll_max_us(void){ return g_poll_max_us; }
 
 // FIX EXPERIMENT: fully re-initialise the master's RX state machine. Theory (from the
 // register dump + RP2040 forums): the RX SM comes up metastably-wedged at init on some
@@ -490,16 +499,28 @@ static inline msg_t sync_rx(sysinterval_t timeout) {
     // receive only succeeds when a byte happens to be waiting already. Enabling the pointing
     // device merely shifted timing so a byte was pre-loaded — masking, not fixing, this.
     //
-    // Don't depend on the IRQ: poll the RX FIFO (unlocked, IRQs on) for a short window first.
+    // Don't depend on the IRQ: poll the RX FIFO (unlocked, IRQs on) up to POLY_RX_POLL_US.
     // Because only this thread drains the master RX FIFO, seeing non-empty here means the very
     // next locked empty-check consumes the byte with no suspend. A genuinely dead link still
-    // falls through to the normal IRQ-suspend timeout below, so this can only help.
-    if (rx_state_machine >= 0) {
-        uint32_t t0 = timer_hw->timerawl;
-        while (pio_sm_is_rx_fifo_empty(pio, rx_state_machine) &&
-               (timer_hw->timerawl - t0) < (uint32_t)POLY_RX_POLL_US) {
-            /* spin until a byte lands or the window elapses */
+    // falls through to the normal IRQ-suspend timeout below, so this can only help. Also
+    // measure whether/when the byte lands (poll hit/miss + worst latency), so we can tell
+    // "byte arrives, just later than the old window" from "byte never arrives at all".
+    if (rx_state_machine >= 0 && pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
+        uint32_t t0  = timer_hw->timerawl;
+        uint32_t dt  = 0;
+        bool     got = false;
+        while (dt < (uint32_t)POLY_RX_POLL_US) {
+            if (!pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) { got = true; break; }
+            dt = timer_hw->timerawl - t0;
         }
+#    ifdef POLY_HANDSHAKE_DIAG
+        if (got) {
+            g_poll_hits++;
+            if (dt > g_poll_max_us) g_poll_max_us = dt;
+        } else {
+            g_poll_miss++;
+        }
+#    endif
     }
 #endif
     osalSysLock();

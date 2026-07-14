@@ -55,6 +55,13 @@ OPT_DEFS += -DPOLY_HANDSHAKE_DIAG
 # is the real fix and moves into config proper. HS-OK lines then report irq_entries on the
 # SUCCESS path: staying ~0 confirms the IRQ is bypassed, not repaired.
 OPT_DEFS += -DPOLY_RX_POLL_FIX
+# Poll the WHOLE receive window (~22 ms > the 20 ms timeout) instead of the 1.5 ms default:
+# the last run showed a 1.5 ms poll did NOT catch the byte, yet an earlier run proved the byte
+# reaches the FIFO — but only after the ~1-3 ms diagnostic burst that used to precede it. So the
+# echo likely lands LATE; poll long enough to catch it and MEASURE the latency (poll_hits /
+# poll_miss / poll_max_us in the HS-DIAG + HS-OK lines) to see how late, and whether polling the
+# full window revives the link.
+OPT_DEFS += -DPOLY_RX_POLL_US=22000
 # FIX TEST: pin the PIO serial clock divisor to a fixed clock constant on BOTH halves
 # (instead of the live clock_get_hz(clk_sys)). Root cause traced: the master RX detects
 # every start bit but never frames a byte, and the slave's measured bit width varies

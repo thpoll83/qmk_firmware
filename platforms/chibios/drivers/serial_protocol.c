@@ -31,6 +31,12 @@ extern void     serial_debug_dump_rx_sm(void);
 extern void     serial_debug_reinit_rx(void);   // FIX EXPERIMENT: re-init a wedged RX SM
 extern uint32_t serial_debug_irq_entries(void); // # times the master PIO1 IRQ handler ran
 extern uint32_t serial_debug_irq_rxne(void);    // # times it took the rx-not-empty branch
+extern uint32_t serial_debug_poll_hits(void);   // # sync_rx polls that caught a byte in-window
+extern uint32_t serial_debug_poll_miss(void);   // # sync_rx polls whose window expired empty
+extern uint32_t serial_debug_poll_max_us(void); // worst poll latency (us) until a byte landed
+#    ifndef POLY_RX_POLL_US
+#        define POLY_RX_POLL_US 0
+#    endif
 #endif
 #ifdef POLY_SLAVE_STAGE_PROBE
 // Implemented in keyboards/polykybd/poly_util.c (guarded by the same define). Draws
@@ -204,10 +210,14 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
                         (unsigned long)serial_debug_rx_min_low_us(),
                         (unsigned long)serial_debug_rx_min_high_us(),
                         (unsigned long)serial_debug_rx_fifo_seen());
-                uprintf("         framing_errors=%lu direct_hits=%lu direct_last=0x%02lX  (direct_hits>0 => a byte WAS waiting in the FIFO before the receive, but sync_rx never consumed it -> the receive/IRQ-wake path is broken)\n",
+                uprintf("         framing_errors=%lu poll_hits=%lu poll_miss=%lu poll_max_us=%lu irq_entries=%lu irq_rxne=%lu  (poll_hits>0 => the echo DOES reach the FIFO, poll_max_us = how late; poll_miss w/ hits=0 => never arrives in %u us)\n",
                         (unsigned long)serial_debug_rx_framing_errors(),
-                        (unsigned long)serial_debug_rx_direct_hits(),
-                        (unsigned long)serial_debug_rx_direct_last());
+                        (unsigned long)serial_debug_poll_hits(),
+                        (unsigned long)serial_debug_poll_miss(),
+                        (unsigned long)serial_debug_poll_max_us(),
+                        (unsigned long)serial_debug_irq_entries(),
+                        (unsigned long)serial_debug_irq_rxne(),
+                        (unsigned)POLY_RX_POLL_US);
                 // One-shot PIO register dump: compare the working TX SM against the
                 // dead RX SM on the same PIO block to see what's mis-set-up.
                 static bool dumped = false;
@@ -230,10 +240,13 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
     {
         static uint32_t hs_ok = 0;
         if ((++hs_ok % 2000) == 0) {
-            uprintf("HS-OK: ok=%lu irq_entries=%lu irq_rxne=%lu  (irq_entries~0 while link works => rx IRQ still dead, bypassed by the poll)\n",
+            uprintf("HS-OK: ok=%lu irq_entries=%lu irq_rxne=%lu poll_hits=%lu poll_miss=%lu poll_max_us=%lu  (irq_entries~0 while link works => rx IRQ still dead, bypassed by the poll; poll_max_us = how late the echo lands)\n",
                     (unsigned long)hs_ok,
                     (unsigned long)serial_debug_irq_entries(),
-                    (unsigned long)serial_debug_irq_rxne());
+                    (unsigned long)serial_debug_irq_rxne(),
+                    (unsigned long)serial_debug_poll_hits(),
+                    (unsigned long)serial_debug_poll_miss(),
+                    (unsigned long)serial_debug_poll_max_us());
         }
     }
 #endif

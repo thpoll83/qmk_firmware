@@ -24,17 +24,18 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Pointing device — DISABLED for the root-cause experiment. Instead of borrowing the
-# pointing feature's every-cycle split transaction, we drive our OWN every-cycle
-# master->slave heartbeat pull over the existing USER_SYNC_SLAVE_DATA channel (see
-# the POLY_SPLIT_HEARTBEAT_EXPERIMENT block in poly_keymap.c). This tests whether
-# split42 just needs a frequent slave pull (heartbeat) or something structural to the
-# pointing feature. Requires POLYKYBD_LTR559_DRIVE (below) so USER_SYNC_SLAVE_DATA is
-# registered — split42 has it.
-#   works  -> dependency is a frequent every-cycle slave pull; proper fix goes in the
-#             poly transport, and the pointing borrow is dropped for good.
-#   breaks -> an every-cycle pull is not enough; the dependency is structural.
-OPT_DEFS += -DPOLY_SPLIT_HEARTBEAT_EXPERIMENT
+# Pointing device — DISABLED (the broken config), + BOOT TRACE to locate the slave
+# hang. FW_UP_BOOT_TRACE overwrites the keycaps with a single digit at each boot
+# milestone (poly_keymap.c boot_trace); the last digit each half shows = how far it
+# got. Execution order 0->1->2->3->4:
+#   (no digit, partial splash) -> hung IN show_splash_screen() (pre-init render)
+#   0 -> hung after splash: pre-init tail OR QMK matrix/SPLIT-transport init, before post-init
+#   1 -> hung early in keyboard_post_init_user (emj/lang/mru/overlay resets)
+#   2 -> hung in multicore_launch_core1()  (the known core1 hang)
+#   3 -> hung in transaction registration / EEPROM eeconf load
+#   4 -> post-init finished; hang is in the main loop
+# Read the digit on the SLAVE (and the MASTER) after flashing, then tell me both.
+OPT_DEFS += -DFW_UP_BOOT_TRACE
 
 # LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
 # bus (addr 0x23), which isn't broken out on split42, so its probe fails and the

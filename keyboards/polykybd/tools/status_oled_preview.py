@@ -102,21 +102,43 @@ def draw(setpix, font, x, y, text):
         x += g['xa']
 
 
+# Top-row role icons (16x16, MSB-first) — mirror of status_oled.c usb_/link_status_bitmap.
+USB_BMP = [0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8,
+           0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0]
+LINK_BMP = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00,
+            0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+
 def s(t):
     return [ord(c) for c in t]
 
 
+def draw_bitmap(setpix, data, ox, oy, w=16, h=16):
+    bw = (w + 7) // 8
+    for y in range(h):
+        for x in range(w):
+            if data[y * bw + (x >> 3)] & (0x80 >> (x & 7)):
+                setpix(ox + x, oy + y)
+
+
 def build_panel(side, disp, small, icons):
-    """side: 'L' (layout panel) or 'R' (RGB panel). Returns set of (x,y) pixels."""
+    """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
+    (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
+    Returns set of (x,y) pixels."""
     pts = set()
     setp = lambda px, py: pts.add((px, py))
-    # top line
+    # top line: layer + role icon + role word
     draw(setp, icons, 0, TOP_BASE, [0x80])                 # ICON_LAYER
     draw(setp, disp, 20, TOP_BASE, s('0'))                 # hex layer
-    draw(setp, disp, 38, TOP_BASE, s('LEFT' if side == 'L' else 'RIGHT'))
+    if side == 'L':
+        draw_bitmap(setp, USB_BMP, 38, 0)
+        draw(setp, disp, 57, TOP_BASE, s('USB'))
+    else:
+        draw_bitmap(setp, LINK_BMP, 38, 0)
+        draw(setp, disp, 57, TOP_BASE, s('Link'))
     draw(setp, icons, 108, 16, [0x8C])                     # NumLock off
     draw(setp, icons, 108, 38, [0x8E])                     # CapsLock off
-    draw(setp, small, 112, 56, s('H' if side == 'L' else 'B'))
+    draw(setp, small, 114, 56, s('L' if side == 'L' else 'R'))
     if side == 'L':
         draw(setp, small, 0, ROW2, s('Qwerty'))
         draw(setp, small, 0, ROW3, s('Dsp*')); draw(setp, small, 42, ROW3, s('50')); draw(setp, small, 64, ROW3, s('l' * 10))

@@ -29,6 +29,19 @@ extern const GFXfont NotoSans_Regular_Mid_10pt7b;
 #include "base/fontpack.h"
 #include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
 
+// Top-row role icons (16x16, row-major MSB-first, drawn via kdisp_draw_bitmap):
+// which half currently talks to the PC over USB ("USB") vs. the half bridged to it
+// over the split UART ("Link"). The role follows is_usb_host_side(), so it swaps
+// with whichever half holds the USB cable.
+static const uint8_t usb_status_bitmap[] PROGMEM = {
+    0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8,
+    0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0,
+};
+static const uint8_t link_status_bitmap[] PROGMEM = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00,
+    0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
 void oled_update_buffer(void) {
     uint32_t buffer[32];
@@ -41,10 +54,14 @@ void oled_update_buffer(void) {
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 15, ICON_LAYER);
     hex_to_u32_string((char*) buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
     kdisp_write_gfx_text(displayFont, 1, 20, 15, buffer);
-    if(side_is_undecided()) {
-        kdisp_write_gfx_text(displayFont, 1, 50, 15, U"Uknw");
+    // Top-row role: the USB-host half shows the USB glyph + "USB", the bridged half
+    // the link glyph + "Link" (follows is_usb_host_side(), so it tracks the cable).
+    if(is_usb_host_side()) {
+        kdisp_draw_bitmap(38, 0, usb_status_bitmap, 16, 16);
+        kdisp_write_gfx_text(displayFont, 1, 57, 15, U"USB");
     } else {
-        kdisp_write_gfx_text(displayFont, 1, 38, 15, is_left_side() ? U"LEFT" : U"RIGHT");
+        kdisp_draw_bitmap(38, 0, link_status_bitmap, 16, 16);
+        kdisp_write_gfx_text(displayFont, 1, 57, 15, U"Link");
     }
 
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
@@ -52,7 +69,8 @@ void oled_update_buffer(void) {
     if(global_layer->led_state.scroll_lock) {
         kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 112, 54, ARROWS_DOWNSTOP);
     } else {
-        kdisp_write_gfx_text(smallFont, 1, 112, 56, is_usb_host_side() ? U"H" : U"B");
+        // Physical side in the corner (was the H/B role marker); "?" until handedness is known.
+        kdisp_write_gfx_text(smallFont, 1, 114, 56, side_is_undecided() ? U"?" : (is_left_side() ? U"L" : U"R"));
     }
 
     // (The LTR-559 sensor values used to be rendered here during bring-up; they

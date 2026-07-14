@@ -68,9 +68,14 @@ void oled_update_buffer(void) {
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
     if(global_layer->led_state.scroll_lock) {
         kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 112, 54, ARROWS_DOWNSTOP);
+    } else if(side_is_undecided()) {
+        kdisp_write_gfx_text(smallFont, 1, 114, 56, U"?");
+    } else if(is_left_side()) {
+        kdisp_write_gfx_text(smallFont, 1, 114, 56, U"L");
     } else {
-        // Physical side in the corner (was the H/B role marker); "?" until handedness is known.
-        kdisp_write_gfx_text(smallFont, 1, 114, 56, side_is_undecided() ? U"?" : (is_left_side() ? U"L" : U"R"));
+        // Physical side in the corner (was the H/B role marker); R sits 1px left of L
+        // so the wider glyph doesn't crowd the right edge.
+        kdisp_write_gfx_text(smallFont, 1, 113, 56, U"R");
     }
 
     // (The LTR-559 sensor values used to be rendered here during bring-up; they

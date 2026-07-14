@@ -56,13 +56,14 @@ static uint32_t s_start;
 static uint32_t s_next_log;   // next elapsed-ms threshold at which to emit a progress log
 static uint32_t s_last_frame; // last idle-loop frame time (frame-rate throttle, loop only)
 
-// Idle-loop frame interval. A full procedural frame (per-pixel background across all
-// keycaps) is ~15-25 ms; rendering it EVERY housekeeping pass (as the 5 s boot intro
-// does) starves the matrix scan + USB, so as a perpetual screensaver it made key
-// presses register late. Throttling to ~15 fps leaves most passes free for the main
-// loop (responsive keys) while the time-based motion stays smooth enough. Boot intro
-// is unthrottled (renders every pass) — it's brief and owns the CPU deliberately.
-#define EDEN_IDLE_FRAME_MS 66
+// Minimum GAP (ms) between idle-loop frames, measured from the END of the previous
+// frame — NOT a frame period. A full procedural frame blocks the main loop for its
+// whole render; if that render is longer than a period-based throttle, the throttle
+// never skips a pass and the loop is starved every pass (keys register late — the
+// symptom). Measuring the gap from the frame's END instead GUARANTEES this many ms of
+// free passes between frames for the matrix scan/USB, regardless of how long a frame
+// takes. Lower fps, snappy keys. Boot intro is unthrottled (brief, owns the CPU).
+#define EDEN_IDLE_FRAME_MS 55
 
 // --- small integer helpers -------------------------------------------------
 static inline uint8_t sa_hash8(uint32_t v) {
@@ -150,9 +151,13 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
         int16_t  bob  = 6 + (int16_t)(sa_hash8(s * 17u) & 31u);
         uint8_t  hv   = sa_hash8(s * 23u + 4u);                   // per-spark look variety
         const sa_target_t *tgt = &SA_TARGETS[s % SA_NUM_TARGETS];
-        uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> 4) * spd));  // head phase (streams L→R)
+        // Idle screensaver drifts slower than the boot intro: shift `el` one more bit
+        // so the L→R comets and their vertical bob move at ~half speed (a calmer,
+        // sleeping-keyboard drift). Boot intro keeps the faster streak.
+        uint8_t tsh = s_loop ? 5 : 4;
+        uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> tsh) * spd));  // head phase (streams L→R)
         int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
-        int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> 5) * bw + ph)) - 128) * bob) >> 7));
+        int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> (uint8_t)(tsh + 1)) * bw + ph)) - 128) * bob) >> 7));
         if (cv) {   // converge toward the letter target
             sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
             sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
@@ -446,11 +451,10 @@ void startup_anim_tick(void) {
     uint32_t el = timer_elapsed32(s_start);
     if (s_loop) {
         // Idle screensaver: the perpetual comet field (no letters/converge/fade).
-        // Throttle to EDEN_IDLE_FRAME_MS so the heavy render doesn't run every pass
-        // and starve the matrix scan/USB (that made keys sluggish to register in
-        // idle). Between frames we return immediately, leaving the pass free.
+        // Only render once EDEN_IDLE_FRAME_MS has passed SINCE THE LAST FRAME ENDED,
+        // so every intervening pass returns immediately and the main loop is free to
+        // scan the matrix (responsive keys). s_last_frame is stamped AFTER the render.
         if (timer_elapsed32(s_last_frame) < EDEN_IDLE_FRAME_MS) return;
-        s_last_frame = timer_read32();
         // `el` just keeps growing so the comets keep streaming; a quiet ~5 s log
         // cadence (vs 1 s for the boot intro) keeps the console from filling up.
         if (el >= s_next_log) {
@@ -458,6 +462,7 @@ void startup_anim_tick(void) {
             s_next_log = el + 5000;
         }
         sa_render_idle_frame(el);
+        s_last_frame = timer_read32();   // gap timed from the END of the frame
         return;
     }
     if (el >= SA_TOTAL_MS) {

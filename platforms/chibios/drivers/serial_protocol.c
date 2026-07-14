@@ -59,16 +59,10 @@ void soft_serial_initiator_init(void) {
  */
 static inline bool react_to_transaction(void) {
     uint8_t transaction_id = 0;
-#ifdef POLY_SLAVE_STAGE_PROBE
-    poly_slave_stage_probe(1);   // entered handler, about to block on RX
-#endif
     /* Wait until there is a transaction for us. */
     if (unlikely(!serial_transport_receive_blocking(&transaction_id, sizeof(transaction_id)))) {
         return false;
     }
-#ifdef POLY_SLAVE_STAGE_PROBE
-    poly_slave_stage_probe(2);   // received the transaction id byte (RX works)
-#endif
 
     /* Sanity check that we are actually responding to a valid transaction. */
     if (unlikely(transaction_id >= NUM_TOTAL_TRANSACTIONS)) {
@@ -76,9 +70,6 @@ static inline bool react_to_transaction(void) {
     }
 
     split_shared_memory_lock_autounlock();
-#ifdef POLY_SLAVE_STAGE_PROBE
-    poly_slave_stage_probe(3);   // acquired split_shared_memory_lock (no mutex deadlock)
-#endif
 
     split_transaction_desc_t* transaction = &split_transaction_table[transaction_id];
 
@@ -86,13 +77,20 @@ static inline bool react_to_transaction(void) {
      to signal that the slave is ready to receive possible transaction buffers  */
     transaction_id ^= NUM_TOTAL_TRANSACTIONS;
 #ifdef POLY_SLAVE_STAGE_PROBE
-    poly_slave_stage_probe(4);   // about to echo the handshake
+    // Stages 1..3 (RX / lock / glyph) are CONFIRMED working — dropped. The probe now
+    // traces INSIDE the echo transmit (the confirmed failure point). Marker 1 = "about
+    // to call serial_transport_send"; markers 2..6 fire inside serial_vendor.c; markers
+    // 6/7/8 report the echo outcome. See poly_util.c for the keycap map.
+    poly_slave_stage_probe(1);   // about to echo (== old stage 4)
 #endif
     if (unlikely(!serial_transport_send(&transaction_id, sizeof(transaction_id)))) {
+#ifdef POLY_SLAVE_STAGE_PROBE
+        poly_slave_stage_probe(8);   // serial_transport_send returned FALSE overall
+#endif
         return false;
     }
 #ifdef POLY_SLAVE_STAGE_PROBE
-    poly_slave_stage_probe(5);   // echoed the handshake OK
+    poly_slave_stage_probe(6);   // serial_transport_send returned TRUE (echo "done")
 #endif
 
     /* Receive transaction buffer from the master. If this transaction requires it.*/

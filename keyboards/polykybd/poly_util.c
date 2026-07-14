@@ -116,28 +116,27 @@ void poly_slave_stage_probe(uint8_t stage) {
     if (stage <= s_max_stage) return;
     s_max_stage = stage;
 
-    // (1) Light one WHITE keycap per stage on the top row (display idx 6..10 for
-    //     stages 1..5). Count the solid-white keycaps: that count == the furthest
-    //     react_to_transaction stage the SlaveThread reached. Pure buffer blast, so
-    //     it can't hang on the glyph path — this alone proves whether the thread runs
-    //     and how far it gets through the transport handshake.
-    probe_fill_keycap((uint8_t)(6 + stage - 1), 0xFF);
-
-    // (2) ONE-SHOT glyph-render self-test, deferred to stage 3 (past RX + mutex, so
-    //     it can't block the earlier white markers). Renders a big '3' to display idx
-    //     0 through the SAME kdisp_write_gfx_text path update_displays() uses. If
-    //     keycap 0 shows the '3', glyph rendering works on the slave. If keycap 0
-    //     stays dark while the white stage markers ARE present, kdisp_write_gfx_text
-    //     is the wedge — i.e. the exact freeze that stalls update_displays. (The
-    //     current all-black build already hinted this: clear succeeded, glyph didn't.)
-    if (stage == 3) {
-        const GFXfont* displayFont[] = { &FreeSansBold24pt7b };
-        const uint32_t digit[2] = { U'3', 0 };
-        sr_shift_out_buffer_latch(get_key_disp_bitmask(0), get_disp_bitmask_size());
-        kdisp_set_buffer(0x00);
-        kdisp_write_gfx_text(displayFont, 1, 49, 38, digit);
-        kdisp_send_buffer();
-    }
+    // The RX / lock / glyph stages are already CONFIRMED working, so this probe now
+    // traces INSIDE the echo transmit — the confirmed failure point. Each stage lights
+    // one solid-WHITE keycap (plain buffer blast, no glyph path). Map:
+    //   ROW 1 (the "happy path", display idx 6..11):
+    //     1 (idx6)  = react_to_transaction: about to call serial_transport_send
+    //     2 (idx7)  = entered serial_transport_send
+    //     3 (idx8)  = entered send_impl
+    //     4 (idx9)  = sync_tx returned (did NOT block forever)
+    //     5 (idx10) = byte written to the TX FIFO (pio_sm_put ran)
+    //     6 (idx11) = serial_transport_send returned TRUE (echo "done")
+    //   ROW 2 (the failure markers, display idx 12..13):
+    //     7 (idx12) = sync_tx TIMED OUT (TX FIFO stayed full 20 ms) -> TX SM not draining
+    //     8 (idx13) = serial_transport_send returned FALSE overall
+    // Reading the SLAVE's screen:
+    //   * stops at 1/2/3 (no 4)        -> BLOCKED inside sync_tx (osalThreadSuspend never woke)
+    //   * 1..6 lit, row2 NEVER lights  -> echo fully succeeds + FIFO drains every time,
+    //                                     yet master silent -> master-RX / GP5 line problem
+    //   * 1..6 lit, then 7 (+8) lights -> FIFO fills up -> slave TX SM enabled but NOT
+    //                                     shifting bytes out (the SM/clock/program itself)
+    uint8_t idx = (stage <= 6) ? (uint8_t)(6 + stage - 1) : (uint8_t)(12 + (stage - 7));
+    probe_fill_keycap(idx, 0xFF);
 }
 #endif
 

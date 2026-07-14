@@ -7,6 +7,12 @@
 #include "hardware/clocks.h"
 #include "wait.h"
 #include "debug.h"
+#ifdef POLY_SLAVE_STAGE_PROBE
+// Implemented in keyboards/polykybd/poly_util.c. Lights a keycap per stage on the
+// slave so a frozen slave can report where its echo transmit wedges. All call sites
+// below are OUTSIDE osalSysLock regions (the probe drives SPI + shift registers).
+extern void poly_slave_stage_probe(uint8_t stage);
+#endif
 
 #if !defined(MCU_RP)
 #    error PIO Driver is only available for Raspberry Pi 2040 MCUs!
@@ -210,9 +216,18 @@ static inline msg_t sync_tx(sysinterval_t timeout) {
 static inline bool send_impl(const uint8_t* source, const size_t size) {
     size_t send = 0;
     msg_t  msg;
+#ifdef POLY_SLAVE_STAGE_PROBE
+    poly_slave_stage_probe(3);   // entered send_impl
+#endif
     while (send < size) {
         msg = sync_tx(TIME_MS2I(SERIAL_USART_TIMEOUT));
+#ifdef POLY_SLAVE_STAGE_PROBE
+        poly_slave_stage_probe(4);   // sync_tx returned (did NOT block forever)
+#endif
         if (msg < MSG_OK) {
+#ifdef POLY_SLAVE_STAGE_PROBE
+            poly_slave_stage_probe(7);   // sync_tx TIMED OUT -> TX FIFO stayed full
+#endif
             return false;
         }
 
@@ -229,6 +244,9 @@ static inline bool send_impl(const uint8_t* source, const size_t size) {
             send++;
         }
         osalSysUnlock();
+#ifdef POLY_SLAVE_STAGE_PROBE
+        poly_slave_stage_probe(5);   // byte(s) written to the TX FIFO (pio_sm_put ran)
+#endif
     }
 
     return send == size;
@@ -241,6 +259,9 @@ static inline bool send_impl(const uint8_t* source, const size_t size) {
  * @return false Send failed.
  */
 inline bool serial_transport_send(const uint8_t* source, const size_t size) {
+#ifdef POLY_SLAVE_STAGE_PROBE
+    poly_slave_stage_probe(2);   // entered serial_transport_send
+#endif
     leave_rx_state();
     bool result = send_impl(source, size);
     enter_rx_state();

@@ -31,22 +31,19 @@ SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c b
 #    debug needed) whether the failed handshake is a SILENT slave (rx timed out, no
 #    byte) or a slave echoing GARBAGE (a wrong byte arrived). Confirmed: silent.
 #
-#  * POLY_SLAVE_STAGE_PROBE (slave side): the slave's react_to_transaction (the
-#    HIGHPRIO SlaveThread) lights one SOLID-WHITE keycap per stage (top row, display
-#    idx 6..10 for stages 1..5) — a plain buffer blast, NO glyph rendering, NO
-#    clear-all, so the probe itself can't wedge on the glyph path and stays distinct
-#    from the main thread's own frozen output. COUNT the solid-white keycaps on the
-#    SLAVE after boot = furthest transport stage reached:
-#      (no white keycaps) -> SlaveThread never ran: global wedge / not scheduled.
-#      1 white -> ran but RX never returned a byte (slave PIO RX dead).
-#      2 white -> received the id byte (slave RX works -> master-RX / slave-TX is dead).
-#      3 white -> acquired split_shared_memory_lock (NOT a mutex deadlock).
-#      4/5 white -> reached / completed the echo (a healthy round).
-#    PLUS a one-shot glyph self-test at stage 3: renders '3' to keycap idx 0 via the
-#    same kdisp_write_gfx_text path update_displays() uses. Keycap 0 shows '3' ->
-#    glyph rendering works; keycap 0 stays dark WITH the white markers present ->
-#    kdisp_write_gfx_text is the wedge (the update_displays freeze itself).
-# This decides: thread-never-ran vs RX-dead vs TX-dead vs lock-deadlock vs glyph-wedge.
+#  * POLY_SLAVE_STAGE_PROBE (slave side): RX / lock / glyph are CONFIRMED working; the
+#    slave-TX echo is the failure. The probe now traces INSIDE serial_transport_send,
+#    lighting one solid-WHITE keycap per step (plain buffer blast, no glyph path).
+#    ROW 1 (happy path, idx 6..11): 1=about to call send, 2=in serial_transport_send,
+#      3=in send_impl, 4=sync_tx returned, 5=byte written to TX FIFO, 6=send returned TRUE.
+#    ROW 2 (failure, idx 12..13): 7=sync_tx TIMED OUT (FIFO stayed full), 8=send FALSE.
+#    Read the SLAVE screen:
+#      stops at 1/2/3 (no 4)       -> BLOCKED inside sync_tx (suspend never woke).
+#      1..6 lit, row2 NEVER lights -> echo succeeds + FIFO drains, yet master silent
+#                                     -> master-RX / GP5 line problem.
+#      1..6 lit, then row2 lights  -> FIFO fills -> slave TX SM enabled but NOT shifting
+#                                     bytes out (the PIO TX state machine itself).
+# This decides which flavour of slave-TX failure it is (block vs drain-but-lost vs SM-stall).
 OPT_DEFS += -DPOLY_HANDSHAKE_DIAG
 OPT_DEFS += -DPOLY_SLAVE_STAGE_PROBE
 

@@ -59,6 +59,7 @@
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "base/multicore/core1.h"
 #include "base/ltr559.h"
+#include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "polymod_crc32.h"
 
 #ifdef POLYKYBD_LTR559
@@ -756,6 +757,9 @@ void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
+
+    boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
+
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful
@@ -2794,116 +2798,7 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
 // "SPLIT 72" in well under a second and then hands the keycaps to the real key
 // legends.
 //
-// splash_progress(step) draws the splash frame for boot milestone `step`
-// (1..7); SPLASH_DONE draws the whole splash AND performs the final dwell +
-// legend handoff. Call sites, in boot order:
-//   step 1       keyboard_pre_init_user()          before QMK split/USB init
-//   step 2       post_init, after set_side()        split/USB init PASSED
-//   step 3       post_init, after emj/lang/mru init
-//   step 4       post_init, before core1 launch
-//   step 5       post_init, after core1 launch
-//   step 6       post_init, after RPC registration
-//   step 7       post_init, after EEPROM config load
-//   SPLASH_DONE  post_init end                      boot complete -> legends
-//
-// Each step advances the splash by one distinguishable frame, so a hang freezes
-// it at the exact milestone it reached (see readme.md "Boot splash progress"):
-//
-//   step  left "POLY KYBD"   right "SPLIT 72"
-//   ----  ----------------   ----------------
-//    1    P                  S           <- pre_init: split/USB-init hang here =
-//    2    PO                 SP             the fw-apply "slave not rebooted" case
-//    3    POL                SPL
-//    4    POLY               SPLI
-//    5    POLY K             SPLII       <- right "types in" its last letter over
-//    6    POLY KY            SPLIT          two steps (SPLII -> SPLIT) so the
-//    7    POLY KYB           SPLIT 7        leading space in " 7 2" doesn't cost
-//   DONE  POLY KYBD          SPLIT 72       it a frame — both halves get 8 steps
-//
-// A frozen SINGLE letter ("P" / "S") is the split/USB-init hang; the more letters
-// are lit, the later boot stalled; only a fully booted keyboard replaces the
-// splash with real legends. is_left_side() must be resolved (set_side()) before
-// any call — it is, at every call site.
-#define SPLASH_DONE 0xFF
-
-static uint8_t utext_len(const uint32_t* s) {
-    uint8_t n = 0;
-    while (n < 15 && s[n] != 0) {
-        n++;
-    }
-    return n;
-}
-
-// NUL-terminated copy of the first `n` glyphs of `src` into `dst` (>= 16 words).
-static void utext_prefix(uint32_t* dst, const uint32_t* src, uint8_t n) {
-    uint8_t i = 0;
-    for (; i < n && i < 15 && src[i] != 0; ++i) {
-        dst[i] = src[i];
-    }
-    dst[i] = 0;
-}
-
-static void splash_progress(uint8_t step) {
-    const bool      final   = (step == SPLASH_DONE);
-    const bool      left    = is_left_side();
-    const uint32_t* r1_word = left ? U"POLY" : POLY_SPLASH_R1;
-    const uint32_t* r2_word = left ? U"KYBD" : POLY_SPLASH_R2;
-    const uint8_t   r2_row  = left ? 2 : POLY_SPLASH_R2_ROW;
-    const uint8_t   r1_len  = utext_len(r1_word);
-    const uint8_t   r2_len  = utext_len(r2_word);
-
-    uint32_t r1buf[16];
-    uint32_t r2buf[16];
-    r1buf[0] = 0;
-    r2buf[0] = 0;
-
-    if (final) {                                  // whole splash
-        utext_prefix(r1buf, r1_word, r1_len);
-        utext_prefix(r2buf, r2_word, r2_len);
-    } else if (left) {
-        // Left "POLY KYBD" = 8 glyphs, one revealed per step -> 8 clean frames.
-        utext_prefix(r1buf, r1_word, step < r1_len ? step : r1_len);
-        if (step > r1_len) {
-            utext_prefix(r2buf, r2_word, step - r1_len);
-        }
-    } else {
-        // Right "SPLIT 72": the leading space in " 7 2" would otherwise hide the
-        // first row-2 reveal (two consecutive steps both showing "SPLIT"). So the
-        // LAST row-1 letter is "typed in" over two steps — step r1_len shows a
-        // placeholder ("SPLII", last glyph = the penultimate one), step r1_len+1
-        // corrects it ("SPLIT") — reclaiming the lost frame so the right half also
-        // gets 8 distinct steps.
-        if (step < r1_len) {                      // S, SP, SPL, SPLI
-            utext_prefix(r1buf, r1_word, step);
-        } else if (step == r1_len) {              // SPLII (placeholder last glyph)
-            utext_prefix(r1buf, r1_word, r1_len);
-            if (r1_len >= 2) {
-                r1buf[r1_len - 1] = r1_word[r1_len - 2];
-            }
-        } else {                                  // full row 1, then row 2
-            utext_prefix(r1buf, r1_word, r1_len);
-            uint8_t r2_show = step - r1_len - 1;  // 0 at the "SPLIT" correction step
-            if (r2_show > 0) {
-                // +1 so the leading space is included (the visible digit is next).
-                utext_prefix(r2buf, r2_word, r2_show + 1);
-            }
-        }
-    }
-
-    clear_all_displays();
-    display_message(1, 1, r1buf, &FreeSansBold24pt7b);
-    if (r2buf[0] != 0) {
-        display_message(r2_row, 1, r2buf, &FreeSansBold24pt7b);
-    }
-    if (final) {
-        // Boot complete: dwell on the finished splash, then hand the keycaps
-        // over to the real legends — the same tail show_splash_screen() always
-        // ran, now deferred to the end of boot so the reveal is meaningful.
-        wait_ms(400);
-        update_displays(ALL_AT_ONCE);
-    }
-}
-
+// splash_progress() and its SPLASH_DONE constant moved to boot_diag.c/.h.
 // Displays the FIRST boot-splash glyph. Kept as the external symbol / pre-init
 // call site; later reveal steps are driven from keyboard_post_init_user().
 void show_splash_screen(void) {
@@ -3014,6 +2909,8 @@ void keyboard_post_init_user(void) {
     //set these values, they will never change
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
+
+    emit_boot_banner();   // one-shot at boot; housekeeping re-emits for a late console
 
     // Boot-splash progress: reaching post_init proves QMK's split/USB init got
     // past the point where the fw-apply "slave not rebooted" hang stalls. Reveal

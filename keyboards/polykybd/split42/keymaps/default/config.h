@@ -6,8 +6,8 @@
 
 #define USB_VBUS_PIN GP24
 
-// Split42 emoji layer: right half shows the current tab's 18 slots (3 rows × 6).
+// split42 emoji picker: 18 slots/page (right half = 3 rows x 6). split72 uses 38.
 #define EMJ_SLOTS_PER_PAGE 18
-// Split42 language layer: right half shows the active region's 18 slots
-// (3 rows × 6), paged; left half = region tabs + unicode-mode keys + MRU.
+// split42 language picker: 18 slots/page (right half = 3 rows x 6), paged; left
+// half = region tabs + unicode-mode keys + MRU. Mirrors the emoji slot layout.
 #define LANG_SLOTS_PER_PAGE 18

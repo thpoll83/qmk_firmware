@@ -26,10 +26,10 @@
 #include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
 
 /*
- * Status screen layout for 128×32 OLED:
+ * Status screen layout for the 128x32 OLED (split42 has no RGB, so no RGB panel):
  *   Row 1 (y≈11): layer icon + layer number + side (L/R) | lock icons
- *   Row 2 (y≈22): default layout name (left) / brightness bar (right)
- *   Row 3 (y≈31): WPM + language
+ *   Row 2 (y≈22): default layout name (left) / USB-vs-Batt indicator (right)
+ *   Row 3 (y≈31): display-brightness + WPM + language
  */
 void oled_update_buffer(void) {
     uint32_t buffer[32];
@@ -62,7 +62,7 @@ void oled_update_buffer(void) {
     /* Row 2 right: USB/Batt indicator */
     kdisp_write_gfx_text(smallFont, 1, 112, 22, is_usb_host_side() ? U"H" : U"B");
 
-    /* Row 3: display brightness bar + WPM + language */
+    /* Row 3: display brightness + WPM + language */
     const poly_sync_t* local_state = get_local_state();
     kdisp_write_gfx_text(smallFont, 1, 0, 31, U"Dsp*");
     num_to_u32_string((char*)buffer, sizeof(buffer), local_state->contrast);
@@ -117,7 +117,6 @@ void oled_update_buffer_fw_update(void) {
 /*
  * 128×32 logo bitmaps (512 bytes each = 128*32/8).
  * TODO: Replace these placeholder bitmaps with actual 128×32 artwork.
- * Use images/png_to_code.py to generate byte arrays from PNG files.
  * For now, a minimal placeholder pattern is used so the firmware compiles.
  */
 void oled_draw_kybd(void) {

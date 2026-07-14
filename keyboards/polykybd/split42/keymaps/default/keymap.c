@@ -2,12 +2,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // split42 VARIANT DATA ONLY. All shared keymap behaviour lives in
-// keyboards/polykybd/poly_keymap.c (compiled for every variant), so
-// this 42-key variant stays in lockstep with split72. This file defines only
-// the data the linker pulls from the keymap TU:
-//   * keymaps[]      — the layer definitions (LAYOUT_crkbd)
+// keyboards/polykybd/poly_keymap.c (compiled for every variant), so this 42-key
+// variant stays in lockstep with split72. This file defines only the data the
+// linker pulls from the keymap TU:
+//   * keymaps[]      — the layer definitions (LAYOUT_lr_stacked42)
 //   * encoder_map[]  — the rotary-encoder action map
-// (split42 has no RGB matrix, so there is no g_led_config here.)
+//   * g_led_config   — the RGB matrix LED layout (42 LEDs; see the RGB-experiment
+//                      note in config.h — the subsystem is compiled in even though
+//                      no WS2812 LEDs are populated on split42)
+//
+// The 42-key layout macro is called LAYOUT_lr_stacked42 (see keyboard.json). Key order
+// per layer: LEFT rows 0-2 (6 each) + LEFT thumbs (3), then RIGHT rows 0-2 (6 each)
+// + RIGHT thumbs (3) = 42.
 #include QMK_KEYBOARD_H
 #include "split42/split42.h"
 #include "layers.h"
@@ -16,20 +22,8 @@
 #include "lang_layer.h"
 
 const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    /*
-     * Base layer 0 — Qwerty
-     *
-     * ┌─────┬────┬────┬────┬────┬────┐               ┌────┬────┬────┬────┬────┬──────┐
-     * │ Esc │ Q  │ W  │ E  │ R  │ T  │               │ Y  │ U  │ I  │ O  │ P  │ BkSp │
-     * ├─────┼────┼────┼────┼────┼────┤               ├────┼────┼────┼────┼────┼──────┤
-     * │ FN  │ A  │ S  │ D  │ F  │ G  │               │ H  │ J  │ K  │ L  │ =  │ Ret  │
-     * ├─────┼────┼────┼────┼────┼────┤               ├────┼────┼────┼────┼────┼──────┤
-     * │LSft │ Z  │ X  │ C  │ V  │ B  │               │ N  │ M  │ ,  │ ;  │ Up │RSft  │
-     * └─────┴────┴────┴──┬─┴──┬─┴──┬─┘               └──┬─┴──┬─┴──┬─┴────┴────┴──────┘
-     *                    │LCtl│Spc │Del              Lang│ /  │Left│
-     *                    └────┴────┴───                  └────┴────┘
-     */
-    [_L0] = LAYOUT_crkbd(
+    /* Base layer 0 — Qwerty */
+    [_L0] = LAYOUT_lr_stacked42(
         KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
         MO(_FL0),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
@@ -39,10 +33,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_N,    KC_M,    KC_COMM, KC_SCLN, KC_UP,   KC_RSFT,
         KC_LANG, KC_SLSH, KC_LEFT
     ),
-    /*
-     * Base layer 1 — Qwerty Staggered
-     */
-    [_L1] = LAYOUT_crkbd(
+    /* Base layer 1 — Qwerty Staggered */
+    [_L1] = LAYOUT_lr_stacked42(
         KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
         MO(_FL1),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
@@ -52,10 +44,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,
         KC_ENTER,KC_BSPC, KC_LEFT
     ),
-    /*
-     * Base layer 2 — Colemak DH
-     */
-    [_L2] = LAYOUT_crkbd(
+    /* Base layer 2 — Colemak DH */
+    [_L2] = LAYOUT_lr_stacked42(
         KC_ESC,  KC_Q,    KC_W,    KC_F,    KC_P,    KC_B,
         MO(_FL1),KC_A,    KC_R,    KC_S,    KC_T,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_D,    KC_V,
@@ -65,10 +55,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_K,    KC_H,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,
         KC_LANG, KC_BSPC, KC_LEFT
     ),
-    /*
-     * Base layer 3 — Neo
-     */
-    [_L3] = LAYOUT_crkbd(
+    /* Base layer 3 — Neo */
+    [_L3] = LAYOUT_lr_stacked42(
         KC_ESC,  KC_X,    KC_V,    KC_L,    KC_C,    KC_W,
         MO(_FL0),KC_U,    KC_I,    KC_A,    KC_E,    KC_O,
         KC_LSFT, DE_HASH, DE_UDIA, DE_ODIA, DE_ADIA, KC_P,
@@ -78,10 +66,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_B,    KC_M,    KC_COMM, KC_DOT,  DE_Y,    KC_RSFT,
         KC_LANG, KC_BSPC, KC_LEFT
     ),
-    /*
-     * Base layer 4 — Workman
-     */
-    [_L4] = LAYOUT_crkbd(
+    /* Base layer 4 — Workman */
+    [_L4] = LAYOUT_lr_stacked42(
         KC_ESC,  KC_Q,    KC_D,    KC_R,    KC_W,    KC_B,
         MO(_FL1),KC_A,    KC_S,    KC_H,    KC_T,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_M,    KC_C,    KC_V,
@@ -91,36 +77,30 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_K,    KC_L,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,
         KC_LANG, KC_BSPC, KC_LEFT
     ),
-    /*
-     * Function layer 0
-     */
-    [_FL0] = LAYOUT_crkbd(
+    /* Function layer 0 */
+    [_FL0] = LAYOUT_lr_stacked42(
         OSL(_UL),KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
-        _______,  _______,_______,_______,_______,_______,
-        KC_CAPS,  _______,_______,_______,_______,_______,
-        _______,  _______,TO(_UL),
+        _______, _______, _______, _______, _______, _______,
+        KC_CAPS, _______, _______, _______, _______, _______,
+        _______, _______, TO(_UL),
         KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,
-        MS_BTN1, MS_BTN2, _______,  _______,  _______,  KC_F12,
-        TO(_NL),  _______,  _______,  _______,  _______,  KC_INS,
-        KC_HOME,  KC_PGUP, KC_END
+        MS_BTN1, MS_BTN2, _______, _______, _______, KC_F12,
+        TO(_NL), _______, _______, _______, _______, KC_INS,
+        KC_HOME, KC_PGUP, KC_END
     ),
-    /*
-     * Function layer 1
-     */
-    [_FL1] = LAYOUT_crkbd(
+    /* Function layer 1 */
+    [_FL1] = LAYOUT_lr_stacked42(
         OSL(_UL),KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
-        _______,  _______,_______,_______,_______,_______,
-        _______,  _______,_______,_______,_______,_______,
-        _______,  _______,KC_INS,
+        _______, _______, _______, _______, _______, _______,
+        _______, _______, _______, _______, _______, _______,
+        _______, _______, KC_INS,
         KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,
-        MS_BTN1, MS_BTN2, _______,  _______,  _______,  KC_F12,
-        TO(_NL),  _______,  _______,  _______,  KC_CAPS,  _______,
-        KC_HOME,  KC_PGUP, KC_END
+        MS_BTN1, MS_BTN2, _______, _______, _______, KC_F12,
+        TO(_NL), _______, _______, _______, KC_CAPS, _______,
+        KC_HOME, KC_PGUP, KC_END
     ),
-    /*
-     * Numpad layer
-     */
-    [_NL] = LAYOUT_crkbd(
+    /* Numpad layer */
+    [_NL] = LAYOUT_lr_stacked42(
         KC_NO,   KC_NUM,  KC_PSLS, KC_PAST, KC_PMNS, KC_NO,
         MS_BTN1, KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS, KC_INS,
         KC_NO,   KC_KP_4, KC_KP_5, KC_KP_6, KC_PPLS, KC_DEL,
@@ -130,10 +110,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         MS_BTN2, KC_NO,   KC_KP_1, KC_KP_2, KC_KP_3, KC_PENT,
         KC_PENT, KC_KP_0, KC_BASE
     ),
-    /*
-     * Utility layer
-     */
-    [_UL] = LAYOUT_crkbd(
+    /* Utility layer */
+    [_UL] = LAYOUT_lr_stacked42(
         KC_NO,   KC_F13,  KC_F14,  KC_F15,  KC_F16,  KC_F17,
         KC_MYCM, KC_CALC, KC_PSCR, KC_SCRL, KC_BRK,  KC_NO,
         KC_LSFT, KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
@@ -143,10 +121,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,   KC_VOLD, KC_VOLU, KC_NO,   KC_NO,   KC_RSFT,
         KC_NO,   KC_NO,   KC_BASE
     ),
-    /*
-     * Settings layer
-     */
-    [_SL] = LAYOUT_crkbd(
+    /* Settings layer */
+    [_SL] = LAYOUT_lr_stacked42(
         KC_DDIM, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
         KC_DAUTO,KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_DBRI,
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
@@ -156,15 +132,11 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         EE_CLR,  KC_STORE_EE, KC_NO, KC_NO, KC_NO,   KC_NO,
         DB_TOGG, KC_DEADKEY, KC_BASE
     ),
-    /*
-     * Language selection layer
-     */
     // Language selection layer — mirrors the emoji picker. LEFT half: row 0 = the
     // six continent region tabs (LCAT), row 1 = the six unicode-input mode keys,
     // row 2 = the MRU recents (LMRU, top-bar marked). RIGHT half: the active
-    // region's language slots (LSLOT), paged via the thumb arrows. No Preset key —
-    // Clear is on the right thumb (former right base key); the left thumb exits.
-    [_LL] = LAYOUT_crkbd(
+    // region's language slots (LSLOT, 18 per page), paged via the thumb arrows.
+    [_LL] = LAYOUT_lr_stacked42(
         LCAT(0),   LCAT(1),   LCAT(2),   LCAT(3),   LCAT(4),   LCAT(5),
         QK_UNICODE_MODE_WINCOMPOSE, QK_UNICODE_MODE_MACOS, QK_UNICODE_MODE_EMACS, QK_UNICODE_MODE_WINDOWS, QK_UNICODE_MODE_LINUX, QK_UNICODE_MODE_BSD,
         LMRU(0),   LMRU(1),   LMRU(2),   LMRU(3),   LMRU(4),   LMRU(5),
@@ -174,26 +146,21 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         LSLOT(12), LSLOT(13), LSLOT(14), LSLOT(15), LSLOT(16), LSLOT(17),
         KC_LANG_PAGE_PREV, KC_LANG_PAGE_NEXT, KC_LANG_CLEAR
     ),
-    /*
-     * Additional latin variant layer
-     */
-    [_ADDLANG1] = LAYOUT_crkbd(
+    /* Additional latin variant layer */
+    [_ADDLANG1] = LAYOUT_lr_stacked42(
         KC_NO,   KC_NO,   KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3,
-        KC_NO,   _______,  _______,  _______,  _______,  _______,
-        KC_NO,   _______,  _______,  _______,  _______,  _______,
+        KC_NO,   _______, _______, _______, _______, _______,
+        KC_NO,   _______, _______, _______, _______, _______,
         KC_NO,   KC_NO,   _______,
         KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
-        _______,  _______,  _______,  _______,  _______,  KC_NO,
-        _______,  _______,  _______,  _______,  _______,  KC_NO,
-        _______,  _______,  _______
+        _______, _______, _______, _______, _______, KC_NO,
+        _______, _______, _______, _______, _______, KC_NO,
+        _______, _______, _______
     ),
-    /*
-     * Emoji layer — left half: 12 category tabs (rows 0-1) + 6 MRU recents on the
-     * bottom-left row (top-bar marked); right half: the current tab's 18 slots
-     * (3 rows). Paging on the right thumbs; no Preset — Clear is on the right
-     * thumb (former right base key); the left thumb still exits.
-     */
-    [_EMJ] = LAYOUT_crkbd(
+    // Emoji layer — left half: 12 category tabs (rows 0-1) + 6 MRU recents on the
+    // bottom-left row (top-bar marked); right half: the current tab's 18 slots
+    // (3 rows). Paging on the right thumbs; Clear on the right thumb; left thumb exits.
+    [_EMJ] = LAYOUT_lr_stacked42(
         KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
         KC_EMJ_CAT(6),  KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(11),
         EMRU(0),        EMRU(1),        EMRU(2),        EMRU(3),        EMRU(4),        EMRU(5),
@@ -222,3 +189,48 @@ const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [12] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
 };
 
+
+// RGB matrix LED layout (42 LEDs, 21 per side) — RE-ENABLED as an experiment.
+// No WS2812 LEDs are physically populated on split42, so the physical positions
+// here are derived from the keyboard.json key coordinates and are cosmetic only;
+// what matters for the experiment is that the RGB subsystem is compiled in and
+// running. LED order follows matrix order: LEFT rows 0-2 (6 each) + LEFT thumbs
+// (3) = 0-20, then RIGHT rows 0-2 (6 each) + RIGHT thumbs (3) = 21-41.
+//
+// Placed in .rodata so the table sits in flash rather than RAM; QMK only reads
+// g_led_config, so this is a placement override only (matching split72).
+__attribute__((section(".rodata"))) led_config_t g_led_config = { {// Key Matrix to LED Index
+                              {0,  1,  2,  3,  4,  5},
+                              {6,  7,  8,  9,  10, 11},
+                              {12, 13, 14, 15, 16, 17},
+                              {NO_LED, NO_LED, NO_LED, 18, 19, 20},
+
+                              {21, 22, 23, 24, 25, 26},
+                              {27, 28, 29, 30, 31, 32},
+                              {33, 34, 35, 36, 37, 38},
+                              {39, 40, 41, NO_LED, NO_LED, NO_LED}
+                             },
+                             {
+                                // LED Index to Physical Position
+                                {0, 4},    {15, 4},   {30, 0},   {45, 0},   {60, 0},   {75, 0},
+                                {0, 20},   {15, 20},  {30, 16},  {45, 16},  {60, 16},  {75, 16},
+                                {0, 36},   {15, 36},  {30, 32},  {45, 32},  {60, 32},  {75, 32},
+                                {52, 52},  {68, 56},  {82, 60},
+
+                                {120, 0},  {135, 0},  {150, 0},  {165, 0},  {180, 4},  {195, 4},
+                                {120, 16}, {135, 16}, {150, 16}, {165, 16}, {180, 20}, {195, 20},
+                                {120, 32}, {135, 32}, {150, 32}, {165, 32}, {180, 36}, {195, 36},
+                                {112, 60}, {128, 56}, {142, 52}
+                             },
+                             {
+                                // LED Index to Flag
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4,
+
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4, 4, 4, 4,
+                                4, 4, 4
+                             } };

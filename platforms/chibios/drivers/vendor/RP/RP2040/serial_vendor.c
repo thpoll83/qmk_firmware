@@ -219,6 +219,7 @@ uint32_t serial_debug_rx_fifo_peek(void) {
 // the master sends the id (when the slave should be echoing) tells us TX-pin-alive vs
 // dead — independent of whether the RX SM captures the byte.
 static pin_t    s_dbg_rx_pin = 0;   // set in pio_rx_init
+static uint     s_dbg_rx_offset = 0;   // RX program offset, for a diagnostic RX SM re-init
 static bool     s_rx_ever_low = false;
 static uint32_t s_rx_max_low_run = 0;   // longest consecutive-low sample run seen
 void serial_debug_rx_sample_burst(void) {
@@ -239,6 +240,24 @@ void serial_debug_rx_sample_burst(void) {
 }
 bool     serial_debug_rx_ever_low(void)   { return s_rx_ever_low; }
 uint32_t serial_debug_rx_max_low_run(void){ return s_rx_max_low_run; }
+
+// FIX EXPERIMENT: fully re-initialise the master's RX state machine. Theory (from the
+// register dump + RP2040 forums): the RX SM comes up metastably-wedged at init on some
+// boots (non-deterministic) — it READS as parked at `wait 0 pin` but its execution FFs
+// are malfunctioning, so it never responds to the valid start bits physically present on
+// GP5. A metastable SM only recovers via a real re-init. This disables it, clears the
+// FIFO, restarts the SM internal state + clock divider (fresh phase), forces the PC back
+// to the program start, and re-enables. If the link comes up after this, the root cause
+// is a bad SM power-on/init state that pointing's different init timing happens to dodge.
+void serial_debug_reinit_rx(void) {
+    if (rx_state_machine < 0) return;
+    pio_sm_set_enabled(pio, rx_state_machine, false);
+    pio_sm_clear_fifos(pio, rx_state_machine);
+    pio_sm_restart(pio, rx_state_machine);
+    pio_sm_clkdiv_restart(pio, rx_state_machine);
+    pio_sm_exec(pio, rx_state_machine, pio_encode_jmp(s_dbg_rx_offset));
+    pio_sm_set_enabled(pio, rx_state_machine, true);
+}
 
 // Dump the live PIO1 registers for BOTH serial state machines on the master. The TX SM
 // (GP4) works and the RX SM (GP5) does not, on the same PIO block — so comparing them
@@ -483,6 +502,9 @@ static inline void pio_rx_init(pin_t rx_pin) {
     s_dbg_rx_pin = rx_pin;   // remember which pin to sample (master: GP5)
 #endif
     uint offset = pio_add_program(pio, &uart_rx_program);
+#ifdef POLY_HANDSHAKE_DIAG
+    s_dbg_rx_offset = offset;
+#endif
 
 #if defined(SERIAL_USART_FULL_DUPLEX)
     uint pio_idx = pio_get_index(pio);

@@ -19,6 +19,7 @@ extern void     serial_debug_rx_sample_burst(void);
 extern bool     serial_debug_rx_ever_low(void);
 extern uint32_t serial_debug_rx_max_low_run(void);
 extern void     serial_debug_dump_rx_sm(void);
+extern void     serial_debug_reinit_rx(void);   // FIX EXPERIMENT: re-init a wedged RX SM
 #endif
 #ifdef POLY_SLAVE_STAGE_PROBE
 // Implemented in keyboards/polykybd/poly_util.c (guarded by the same define). Draws
@@ -198,6 +199,15 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
                 // dead RX SM on the same PIO block to see what's mis-set-up.
                 static bool dumped = false;
                 if (!dumped) { dumped = true; serial_debug_dump_rx_sm(); }
+                // FIX EXPERIMENT: after 500 confirmed failures, fully re-init the RX SM
+                // ONCE. If the metastable-wedge theory is right, the link comes up right
+                // after this and the timeout count stops climbing. Watch the next lines.
+                static bool reinit_done = false;
+                if (!reinit_done) {
+                    reinit_done = true;
+                    serial_debug_reinit_rx();
+                    uprintf("RX-REINIT: master RX state machine re-initialised — watch if the link recovers\n");
+                }
             }
         }
 #endif

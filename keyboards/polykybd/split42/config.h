@@ -70,13 +70,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* Rotary encoder — schematic nets ENC_A=GP2, ENC_B=GP3 (declared in keyboard.json) */
 #define ENCODER_RESOLUTION 2
 
-/* Pointing device (Cirque trackpad) — REMOVED again for the bisect. It was
-   re-enabled together with RGB + the LTR-559 sensor and the set fixed split42;
-   this step drops the trackpad (and its SPLIT_POINTING_ENABLE split
-   transaction) while keeping RGB + LTR-559, to see whether the trackpad was
-   the subsystem responsible. The split72 Cirque/pointing block is omitted. */
+/* -------------------------------------------------------------------------
+   Pointing device (Cirque trackpad) — REQUIRED. Confirmed by bisect
+   (2026-07-14): with RGB + LTR-559 on but this block removed, split42 breaks;
+   restoring it makes split42 work. It is the ONE of the three re-enabled
+   subsystems that touches the split link — SPLIT_POINTING_ENABLE registers an
+   extra split transaction over the UART bridge, and the pointing task polls
+   I2C each housekeeping cycle. The exact mechanism (why the missing split
+   transaction breaks the other half) is still to be pinned down; do NOT drop
+   this block until it is understood. No trackpad is populated and the I2C0 bus
+   (GP0/GP1) isn't broken out on this rev, so the Cirque probe just fails and
+   the driver idles. Mirrors split72's Cirque/pointing block verbatim. */
+#define CIRQUE_PINNACLE_DIAMETER_MM 35
+#define CIRQUE_PINNACLE_TAP_ENABLE
+#define CIRQUE_PINNACLE_TAPPING_TERM 100
+#define CIRQUE_PINNACLE_TOUCH_DEBOUNCE 300
+#define CIRQUE_PINNACLE_POSITION_MODE  CIRQUE_PINNACLE_RELATIVE_MODE
+#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
+#define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
 
-/* RGB matrix: RE-ENABLED as an experiment. split42 has no WS2812 LEDs populated, but
+// Enable use of pointing device on slave split (registers the split transaction).
+#define SPLIT_POINTING_ENABLE
+// Pointing device is on the right split (split72 puts the trackpad there too).
+#define POINTING_DEVICE_RIGHT
+// Limit the frequency the sensor is polled for motion.
+#define POINTING_DEVICE_TASK_THROTTLE_MS 1
+#define POINTING_DEVICE_ROTATION_90
+
+/* RGB matrix: RE-ENABLED. split42 has no WS2812 LEDs populated, but
    we keep the RGB subsystem in the build (WS2812 PIO driver + the shared RGB code
    paths) to see whether a *disabled* subsystem was implicated. The data line is
    parked on an UNUSED GPIO — GP16 (schematic net E2, the Exp0 header pad) — since

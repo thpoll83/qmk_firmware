@@ -691,8 +691,22 @@ differences one subsystem at a time**. Two concrete ways shortcuts bit:
 
 The split42 rebuild + subsystem bisect itself lives on branch
 `claude/split42-literal-split72-copy` (RGB `6694d7f6`, pointing device `4c10b0d2`,
-LTR-559 `d74e7e11`, trackpad-removed bisect step `b25f2045`); the root-cause subsystem
-was still being narrowed by flashing each step at time of writing.
+LTR-559 `d74e7e11`, trackpad-removed bisect step `b25f2045`, trackpad restored after
+the bisect confirmed it).
+
+**Bisect result (2026-07-14): the Cirque pointing device is the required subsystem.**
+- RGB + pointing device + LTR-559 (`d74e7e11`) → split42 **works**.
+- RGB + LTR-559, pointing device removed (`b25f2045`) → split42 **breaks**.
+Single-variable difference ⇒ the **pointing device** is what split42 was missing. It
+is the only one of the three that touches the split link: `SPLIT_POINTING_ENABLE`
+registers an extra split transaction over the UART bridge (and the pointing task polls
+I2C each housekeeping cycle). RGB and LTR-559 were both enabled in the broken build, so
+they are NOT the cause — but they are kept enabled too (harmless when unpopulated; not
+yet re-tested in isolation). **The mechanism — *why* the missing split transaction
+breaks the slave half — is still open** (leading theory: `SPLIT_POINTING_ENABLE`
+changes the split transport's registered-transaction set / handshake, and split72 has
+always had it). Until that's understood, do NOT drop the pointing-device block from
+split42. See the split42 `config.h`/`rules.mk` comments for the in-tree pointers.
 
 ### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
 

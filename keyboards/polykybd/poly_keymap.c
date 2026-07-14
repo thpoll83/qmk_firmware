@@ -2112,17 +2112,21 @@ bool eden_idle_erase_legend(uint8_t disp_idx) {
     if (text == NULL || text[0] == 0) {
         return false;   // no text legend — leave the plain comet field on this key
     }
-    // Draw the legend LIT at a slowly-drifting position within its own on-screen slack.
-    // roll_idle_offset() picks a uniform random offset inside the glyph's free space
-    // (fully on-screen, per-glyph — the same helper the jitter idle style uses); the
-    // seed changes once per EDEN_LEGEND_DRIFT_MS so every ~7 s the letter jumps to a
-    // fresh spot. Per-key phase (disp_idx) so they don't all move in lockstep.
+    // Draw the legend in ERASE mode (clear its pixels rather than lighting them) at a
+    // slowly-drifting position within its own on-screen slack, so the letter carves a
+    // dark cut-out that the comet field ghosts around. roll_idle_offset() picks a
+    // uniform random offset inside the glyph's free space (fully on-screen, per-glyph —
+    // the same helper the jitter idle style uses); the seed changes once per
+    // EDEN_LEGEND_DRIFT_MS so every ~7 s the letter jumps to a fresh spot. Per-key
+    // phase (disp_idx) so they don't all move in lockstep.
     uint32_t epoch = timer_read32() / EDEN_LEGEND_DRIFT_MS;
     int8_t dx, dy;
     roll_idle_offset(text, BUFFER_X, 23, epoch * 2654435761u + disp_idx, &dx, &dy);
+    kdisp_set_gfx_erase(true);
     kdisp_set_draw_offset(dx, dy);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
     kdisp_set_draw_offset(0, 0);
+    kdisp_set_gfx_erase(false);
     return true;
 }
 

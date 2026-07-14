@@ -149,7 +149,7 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
         if (sa_hash8(s * 3u + 7u) < spark_fade) continue;
         // Idle screensaver thins the field out for a calmer look + lighter render
         // (fewer comet trails to plot → snappier). ~160/256 skipped ≈ 37% kept.
-        if (s_loop && sa_hash8(s * 19u + 11u) < 160u) continue;
+        if (s_loop && sa_hash8(s * 19u + 11u) < 190u) continue;
         uint8_t  p0   = sa_hash8(s * 2u + 1u);
         // Speed 1..8 in the boot intro; idle uses a WIDER 1..16 spread so the comets
         // clearly move at different speeds (some crawl, some drift), and the extra
@@ -165,7 +165,7 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
         // Idle screensaver drifts much slower than the boot intro: shift `el` two more
         // bits so the L→R comets and their vertical bob crawl (a calm sleeping-keyboard
         // drift). Boot intro keeps the faster streak.
-        uint8_t tsh = s_loop ? 6 : 4;
+        uint8_t tsh = s_loop ? 7 : 4;
         uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> tsh) * spd));  // head phase (streams L→R)
         int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
         int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> (uint8_t)(tsh + 1)) * bw + ph)) - 128) * bob) >> 7));

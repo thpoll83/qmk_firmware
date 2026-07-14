@@ -114,7 +114,11 @@ static inline uint8_t sa_bg(int16_t gx, int16_t gy, uint8_t tp, uint8_t tprg,
         uint16_t rr = sa_dist(ax, ay);
         rr = (uint16_t)((int16_t)rr + ((sa_sin((uint8_t)(gx + 2 * gy)) - 128) >> 3));  // wobble
         uint8_t  rv    = sa_sin((uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg));
-        uint8_t  crest = rv > 215 ? (uint8_t)(rv - 215) : 0;
+        // Idle screensaver draws the rings a bit THICKER + DENSER: a lower crest
+        // threshold widens the lit band of each ring and raises its peak. Boot intro
+        // keeps the fainter 215.
+        uint8_t  thr   = s_loop ? 200 : 215;
+        uint8_t  crest = rv > thr ? (uint8_t)(rv - thr) : 0;
         uint8_t  rdens = (uint8_t)(((uint16_t)crest * ring) >> 9);
         if (rdens > dens) dens = rdens;
     }

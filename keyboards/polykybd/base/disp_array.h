@@ -28,6 +28,11 @@ void kdisp_set_draw_offset(int8_t ox, int8_t oy);
 // Remember to restore it to false after the draw.
 void kdisp_set_gfx_erase(bool erase);
 
+// When set, the glyph plotter only lights pixels on even buffer rows — a scanline
+// half-brightness look used by the Eden idle screensaver's lit legend. Restore to
+// false after the draw.
+void kdisp_set_gfx_scanline(bool scanline);
+
 // Glyph for codepoint `c` in a font set, or NULL if no font covers it (skips
 // empty gap glyphs, no '!' fallback). For coverage tests + metric reads.
 const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t c);

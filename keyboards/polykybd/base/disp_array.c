@@ -90,6 +90,16 @@ void kdisp_set_gfx_erase(bool erase) {
     s_gfx_erase = erase;
 }
 
+// When set, the glyph plotter only lights pixels on even buffer rows — a "scanline"
+// half-brightness look used by the Eden idle screensaver to make the lit legend read
+// lighter over the comet field. Absolute buffer y (not glyph-local) so the scanlines
+// stay aligned as the legend drifts. Restore to false after the draw.
+static bool s_gfx_scanline = false;
+
+void kdisp_set_gfx_scanline(bool scanline) {
+    s_gfx_scanline = scanline;
+}
+
 uint8_t* get_scratch_buffer(void) {
     return scratch_buffer;
 }
@@ -381,7 +391,7 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
             if (bits & 0x80) {
                 if (s_gfx_erase) {
                     CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
-                } else {
+                } else if (!(s_gfx_scanline && ((y + yo + yy) & 1))) {
                     SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
                 }
             }

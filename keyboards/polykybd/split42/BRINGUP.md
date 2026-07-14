@@ -69,7 +69,10 @@ was the productive one). Merged facts:
 - **Encoder** GP2/GP3 (ENC_A/ENC_B per schematic; GP25/GP29 were Exp-header pads).
 - **Matrix** `MATRIX_COLS = 6`, rows GP18–21, cols GP10–15; `NUM_SHIFT_REGISTERS = 3`.
 - **Status OLED** 128×32 (vs split72's 128×64); **PID `0x2008`**; layout `LAYOUT_lr_stacked42`.
-- **`GET_ID` reports `Split42`** (via `POLY_KB_NAME`) so the host shows the right board.
+- **`GET_ID` still reports `Split72`** — the per-variant name (`POLY_KB_NAME` /
+  cmd-6 string) was **not** merged (`hid_com.c` hardcodes `"Split72"`), so the host
+  currently shows the wrong board name for a split42. Cosmetic (PID `0x2008` already
+  distinguishes the variant to the host); a follow-up can wire `POLY_KB_NAME`.
 - **Keycap display map** — `split42.c key_display[]` is **6-wide** to match the 6-col
   matrix (split72's was 8-wide). Row 0 is hardware-verified; the thumb entries and the
   right-half fold are flagged TODO in `split42.c` (verify per §8).

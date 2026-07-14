@@ -709,6 +709,18 @@ transaction — NOT the trackpad, NOT its I2C.** Two-stage bisect:
   `SPLIT_POINTING_ENABLE` (`5de77192`) → **still works**. ⇒ the fix is **effect (1), the
   split transaction**, not the I2C stall and not the trackpad hardware.
 
+**⚠️ SYMPTOM CORRECTED (2026-07-14, after careful hardware observation):** the earlier
+"slave hangs mid-render / core1 hang" framing was WRONG (that was a misread of an
+un-refreshed splash). The real symptom is a **split-link establishment failure at boot**:
+with pointing disabled, the two halves (same image on both) can't talk — the master
+retries split transactions, exhausts `SPLIT_MAX_CONNECTION_ERRORS` (200), **times out**,
+then runs **solo** (the display stays on the boot splash until a **keypress** forces a
+refresh to the default layer). It follows the **master role** (swap USB → the behavior
+moves to the new master), not a physical half. Enabling the pointing feature makes the
+link come up; it is deterministic (not a flaky race). Consequently the heartbeat test
+result is NOT evidence about traffic — a housekeeping heartbeat can't rescue a link that
+never *establishes*. The core1 / render-hang lines above are superseded for this bug.
+
 **Resting config:** split42 keeps `SPLIT_POINTING_ENABLE` + `POINTING_DEVICE_DRIVER =
 custom` (no-op) — same fix as the real trackpad but with no dead I2C on the un-broken-out
 bus. **ROOT CAUSE STILL OPEN:** *why* the shared PolyKybd firmware depends on that

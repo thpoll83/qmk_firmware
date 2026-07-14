@@ -59,6 +59,7 @@
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "base/multicore/core1.h"
 #include "base/ltr559.h"
+#include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "polymod_crc32.h"
 
 #ifdef POLYKYBD_LTR559
@@ -644,6 +645,16 @@ static void user_sync_slave_data_handler(uint8_t in_len, const void* in_data, ui
     }
 }
 
+#ifdef POLY_DUMMY_TXN_TEST
+// Root-cause experiment: a no-op split-transaction handler. Registering three of these
+// grows NUM_TOTAL_TRANSACTIONS by 3 (matching the working pointing build) without the
+// pointing device, to test whether split42's dead split link is transaction-count
+// dependent. Never actually invoked (the master never execs these ids).
+static void user_sync_dummy_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    (void)in_len; (void)in_data; (void)out_len; (void)out_data;
+}
+#endif
+
 // Master-side: mirror the HID cmd-15 stop-idle path to force the displays awake.
 static void poly_force_wake(void) {
     poly_sync_t* local_state = access_local_state();
@@ -782,6 +793,9 @@ void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
+
+    boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
+
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful
@@ -862,6 +876,26 @@ void housekeeping_task_user(void) {
         } else {
             sync_and_refresh_displays();
         }
+#ifdef POLY_SPLIT_HEARTBEAT_EXPERIMENT
+        // ROOT-CAUSE EXPERIMENT (split42, 2026-07-14). Reproduce the every-cycle
+        // master->slave pull that SPLIT_POINTING_ENABLE provided, but with the
+        // pointing device fully DISABLED, by pulling the slave every housekeeping
+        // cycle over the existing generic USER_SYNC_SLAVE_DATA channel. (The LTR559
+        // drive pull is only every LTR559_DRIVE_MS=500ms — present in the broken
+        // build b25f2045 — so frequency is the suspected variable.) Self-contained:
+        // references only the transaction id + a raw reply buffer (>= the 4-byte
+        // ltr559_sync_t the handler writes), no pointing/LTR types. Requires
+        // USER_SYNC_SLAVE_DATA registered (POLYKYBD_LTR559_DRIVE, which split42 has).
+        //   split42 works -> the dependency is a frequent every-cycle slave pull;
+        //     the proper fix is a heartbeat in the poly transport, not a borrowed feature.
+        //   split42 breaks -> an every-cycle pull is NOT sufficient; the dependency is
+        //     structural (transaction count / split_shmem layout / a pointing init path).
+        if (is_usb_host_side()) {
+            uint8_t kind     = 0;          // SLAVE_DATA_SENSOR
+            uint8_t reply[4] = {0};        // >= sizeof(ltr559_sync_t)
+            (void)transaction_rpc_exec(USER_SYNC_SLAVE_DATA, sizeof(kind), &kind, sizeof(reply), reply);
+        }
+#endif
 #ifdef POLYKYBD_LTR559
         // Poll the expansion-port light/proximity sensor. Run on BOTH halves —
         // the sensor is auto-detected on whichever half it's soldered to (left or
@@ -2972,18 +3006,18 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     update_performed();
 };
 
-// Displays splash screen with polykybd/split72 logo and initializes displays with refresh.
+// Progressive boot splash — an always-on boot-progress indicator (no compile
+// flag). The splash fills in ONE glyph at a time as boot advances, so a boot that
+// HANGS freezes the reveal at the exact glyph where it stalled — count the lit
+// letters to read how far boot got. A healthy boot fills to the full "POLY KYBD" /
+// "SPLIT 72" in well under a second and then hands the keycaps to the real key
+// legends.
+//
+// splash_progress() and its SPLASH_DONE constant moved to boot_diag.c/.h.
+// Displays the FIRST boot-splash glyph. Kept as the external symbol / pre-init
+// call site; later reveal steps are driven from keyboard_post_init_user().
 void show_splash_screen(void) {
-    clear_all_displays();
-    if(is_left_side()) {
-        display_message(1, 1, U"POLY", &FreeSansBold24pt7b);
-        display_message(2, 1, U"KYBD", &FreeSansBold24pt7b);
-    } else {
-        display_message(1, 1, POLY_SPLASH_R1, &FreeSansBold24pt7b);
-        display_message(POLY_SPLASH_R2_ROW, 1, POLY_SPLASH_R2, &FreeSansBold24pt7b);
-    }
-    wait_ms(400);
-    update_displays(ALL_AT_ONCE);
+    splash_progress(1);
 }
 
 // Configures all displays with contrast level; shows idle pulsating animation if enabled.
@@ -3094,6 +3128,13 @@ void keyboard_post_init_user(void) {
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
 
+    emit_boot_banner();   // one-shot at boot; housekeeping re-emits for a late console
+
+    // Boot-splash progress: reaching post_init proves QMK's split/USB init got
+    // past the point where the fw-apply "slave not rebooted" hang stalls. Reveal
+    // the next glyph here (right after set_side, so is_left_side() is valid).
+    splash_progress(2);
+
 #ifdef POLYKYBD_LTR559
     // Probe for the LTR-559 on BOTH halves — it can be soldered to either half's
     // expansion port (GP0/GP1 I2C exists on both). The half that finds it uses it;
@@ -3115,6 +3156,7 @@ void keyboard_post_init_user(void) {
     emj_init();
     lang_init();
     mru_init();
+    splash_progress(3);                 // language/emoji/MRU init done
 
     reset_overlay_buffers();
     reset_overlay_usage();
@@ -3124,12 +3166,14 @@ void keyboard_post_init_user(void) {
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"2");
 #endif
+    splash_progress(4);                 // before core1 launch
 #ifdef USE_CORE1
     multicore_launch_core1();
 #endif
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"3");
 #endif
+    splash_progress(5);                 // core1 up
 
     transaction_register_rpc(USER_SYNC_POLY_DATA,           user_sync_poly_data_handler);
     transaction_register_rpc(USER_SYNC_LAYER_DATA,          user_sync_layer_data_handler);
@@ -3145,8 +3189,17 @@ void keyboard_post_init_user(void) {
 #ifdef POLYKYBD_LTR559_DRIVE
     transaction_register_rpc(USER_SYNC_SLAVE_DATA,          user_sync_slave_data_handler);
 #endif
+#ifdef POLY_DUMMY_TXN_TEST
+    // Root-cause experiment: register 3 no-op transactions so NUM_TOTAL_TRANSACTIONS
+    // grows by 3 (matching the working pointing build) without the pointing device.
+    // They are never executed — only their existence changes the transaction count.
+    transaction_register_rpc(USER_SYNC_DUMMY1, user_sync_dummy_handler);
+    transaction_register_rpc(USER_SYNC_DUMMY2, user_sync_dummy_handler);
+    transaction_register_rpc(USER_SYNC_DUMMY3, user_sync_dummy_handler);
+#endif
 
     fw_staging_init();
+    splash_progress(6);                 // split RPCs registered, fw-staging up
 
     poly_eeconf_t ee = load_user_eeconf();
     poly_sync_t* local_state = access_local_state();
@@ -3180,6 +3233,7 @@ void keyboard_post_init_user(void) {
 
     // Restore the MRU recents and schedule a one-time push to the slave half.
     mru_load(ee.mru_emoji, ee.mru_lang);
+    splash_progress(7);                 // EEPROM config (brightness/lang/OS/MRU) loaded
 
     set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
 
@@ -3195,6 +3249,7 @@ void keyboard_post_init_user(void) {
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif
+    splash_progress(SPLASH_DONE);       // boot complete: full splash, dwell, then legends
 }
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.

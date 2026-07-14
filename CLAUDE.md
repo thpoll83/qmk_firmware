@@ -26,6 +26,28 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 
+## Continuous integration (PR checks)
+
+A PolyKybd PR runs a handful of checks — know which ones **gate** and which are
+inherited-upstream noise:
+
+- **`Build firmware`** and **`HIL test (split72)`** (the polykybd-ctnd rig) are the
+  **real** checks; these are what must go green. Use the `diagnose-hil-failure` skill
+  for the HIL side.
+- **`PR Lint keyboards`** (job `lint`, `.github/workflows/lint.yml`) and **`Pull
+  Request Labeler`** (job `triage`, `labeler.yml`, `pull_request_target`) are **stock
+  upstream QMK** workflows the fork inherited. `lint` runs `qmk lint --strict` on the
+  changed keyboards; the labeler auto-labels by path. They **pass green on every normal
+  commit** and are **non-blocking**.
+- ⚠️ **A red `lint`/`triage` where BOTH cancelled at the same second (~16 min in) is an
+  infra/runner cancellation, NOT a code error** — GitHub surfaces a cancelled run as a
+  red "failure". Confirm via the workflow **run history** (they'll be green on the
+  prior commits) and reproduce locally: `qmk lint --strict --keyboard polykybd/split72`
+  (+ `split42`), `qmk ci-validate-keyboard-targets`, `qmk ci-validate-aliases`. If
+  those are clean, just **re-run the two jobs** — there is nothing to fix.
+- The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
+  above.
+
 ## Releases
 
 Firmware releases are **GitHub Releases** (tag `PolyKybd-fw-vX.Y.Z`; `FW_VERSION` in
@@ -418,6 +440,60 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
   `test_glyph_script_round_trip` (`min_protocol: 9`) + `test_glyph_script_expansion`
   (`min_protocol: 10`, walks values 2/6/10 + out-of-range NACK).
 
+### LTR-559 light+proximity sensor (`base/ltr559.c/.h`, split72) — ENTIRELY OPTIONAL
+
+An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C
+addr `0x23`) on the split72 expansion port. It **shares the Cirque I2C0 bus**
+(GP0/GP1) — no new pins. It is **compiled in unconditionally** (`split72/rules.mk`
+always adds `base/ltr559.c` + `-DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE`) but is a
+**clean no-op when no sensor is fitted**: the probe fails and the driver disables
+itself after a few bounded retries (`LTR559_MAX_RETRIES`). So anyone who solders the
+part gets it and nobody else pays more than a one-time probe. The shared code stays
+`#ifdef POLYKYBD_LTR559`-guarded, so **split42** (no expansion port) is unaffected —
+only split72 defines the macros.
+
+- **Side-agnostic** — auto-detected on **whichever half it's soldered to**.
+  `ltr559_init()`/`ltr559_task()` run on **both** halves; the one that answers uses
+  it, the other gives up after the bounded retries. ⚠️ Do **not** re-gate on
+  `is_right_side()` — it was, and a left/master-soldered sensor was never read (field).
+- **Slave→master backchannel** — brightness/idle decisions are master-only, but the
+  sensor may be on the slave, so the master **pulls** its values over a **generic
+  op-dispatched RPC** `USER_SYNC_SLAVE_DATA` (a `kind` byte selects the payload;
+  `SLAVE_DATA_SENSOR` → `{avg lux, prox}`). Works in either USB orientation and is
+  reusable for other slave-side data; consumes one split-transaction slot, guarded by
+  `POLYKYBD_LTR559_DRIVE`. If the master holds the sensor it reads locally instead.
+- **Auto-brightness** (`poly_ltr559_drive()`, master-only, every `LTR559_DRIVE_MS`)
+  feeds the 5 s average lux through the **same volatile/host-auto path the host
+  daylight feature uses** (`set_brightness_auto_mode`/`set_auto_brightness_value`). So
+  the sensor drives **only while auto mode is on**; it engages auto **once** (first
+  real reading); a **manual** change (preset keys / host explicit set) turns auto OFF
+  and the sensor **backs off** (its per-tick push no-ops while auto is off and the
+  `engaged` static never re-engages) — **manual always wins** until auto is re-enabled
+  or reboot. Refreshing ~0.5 s vs the host's ~10-min daylight, it overrides host
+  daylight values while auto is on.
+- **Boot dark-screen guards** (learned the hard way) — `ltr559_avg_lux()` is a
+  **growing-window** average (0 only until the first VALID sample). Two guards keep it
+  off the near-off floor: (1) `poly_ltr559_drive()` doesn't engage while `avg == 0`
+  (first ~1 s), so boot holds the manual/restored brightness instead of dipping; (2)
+  `lux_to_contrast()` floors at `LTR559_MIN_CONTRAST` so it never drives below a
+  visible dim level (never `B=1`/`DISP_OFF`).
+- **Proximity → idle-inhibit** — 11-bit **relative reflectance** (not calibrated
+  distance; ~5–6 cm max). `prox > LTR559_NEAR_THRESHOLD` wakes the displays +
+  `update_performed()`. Uses the PS channel (works in the dark), NOT the ambient-shadow
+  drop on the ALS channels. ⚠️ The resting baseline is **housing-dependent** — ~129 on
+  the open bench but ~325 once mounted (enclosure walls reflect IR back); re-check
+  `PRX` and the threshold after any housing/hole change.
+- **Measured tuning** (hardware): proximity resting ~129 bench / ~325 housed, ~5 cm
+  400, ~1 cm 1000, hole covered ~2000 (saturated) → `NEAR_THRESHOLD` 350. Lux (sqrt
+  curve) `LUX_FULL_REF` 100 → B≈4 dark room, 26 @ 28 lux, 35 @ 50 lux, full @ 100+ lux;
+  night floor `MIN_CONTRAST` 4; `LTR559_ALS_GAIN` 4×.
+- **Telemetry** — a 10-min `uprintf` heartbeat in housekeeping, gated on
+  `ltr559_available()` so only the sensor half logs (`LTR-559: lux=.. avg=.. prox=..
+  ch0=.. ch1=.. B=..`). The status-OLED test readout + I2C bring-up diagnostics were
+  removed once it worked; the bus scan is kept as a disabled `#if 0` reference block in
+  `ltr559.c`. No shared timed-log framework yet — see `readme.md` "Diagnostics" →
+  "Timed console logs".
+
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
 
@@ -476,6 +552,19 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     renders ASCII text with no pack. The build-time guard fails if a bundle overflows
     its slot. Order in `bundles.list` is **append-only** (the index is the on-wire id
     and the slot order; growth-prone `emoji` is last with `slot_kb: rest`).
+  - **Shadowed-glyph dedupe is DEFAULT-ON in the build** (`generate_fonts.py`,
+    `--no-dedupe` opts out; `fonts/fontpack.py` `prune_shadowed_glyphs`). Before
+    emitting bundles it **empties** (turns into a `{off,0,0,0,0,0}` gap) any pack
+    glyph a **higher-priority font already draws byte-identically** — front-to-back
+    precedence means it can never render, so it's dead weight in flash. Runs
+    build-side (not host-side) because only the build sees the **resident** set,
+    which can shadow a pack glyph a host-only view would miss. It asserts the
+    assembled front-to-back render is unchanged afterwards. ⚠️ **The shipped bundle
+    bytes + `fontpack_bundles.manifest.json` already reflect the prune**, so any
+    regeneration must run it too (a stale `fontpack.py` without `prune_shadowed_glyphs`
+    re-inflates the bundle and diverges from what's shipped). First landed 2026-07:
+    73 glyphs / 13,313 B reclaimed — only `symbol` (33,980→33,788) and `emoji`
+    (227,460→214,344) shrank; all other bundles were byte-identical.
   - **The per-font `reserved` gidx is a SORT KEY, not a dense array position.**
     `fontpack_assemble()` (`base/fontpack.c`) places the resident set first, then
     **insertion-sorts the pack fonts by their stored gidx** — nothing indexes an
@@ -508,6 +597,34 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     the others. `cmp` each regenerated `.plyf` against the shipped one to see which
     actually changed, and bump+reship only those (see the gidx note above re: why
     appending a glyph now changes only the edited bundle).
+    - **You do NOT need `fontconvert` to reship** — bundles derive deterministically
+      from the **committed** category headers. `--emit-bundles` re-runs fontconvert
+      only to *regenerate* those headers; if the headers are already committed (no
+      `fonts.yaml`/TTF change, just a reship / a dedupe bump), build the `.plyf`
+      straight from them in a throwaway script: `order =
+      fontpack.all_fonts_order(fonts_dir)`, `resident =
+      fontpack.resident_symbols(cfg, fonts_dir)`, `parsed = {}` then
+      `parsed.update(fontpack.parse_gfx_header(h.read_text()))` for every
+      `base/fonts/generated/*.h` + `parsed.update(fontpack.extra_pack_fonts(cfg,
+      fonts_dir))`, `sym2cat = fontpack.symbol_categories_from_tree(fonts_dir, cfg)`,
+      `fontpack.prune_shadowed_glyphs(order, resident, parsed)` (mirror the build!),
+      `fontpack.build_bundles(order, resident, parsed, sym2cat, cfg,
+      content_versions={all ids})`. This reproduces the shipped `.plyf` byte-for-byte
+      and also re-emits `fontpack_bundles.manifest.json` (`bundles_manifest_json`) +
+      layout header — the only way to reship inside a container without the pinned
+      FreeType/HarfBuzz build. The **`reship-fontpack-bundle` skill** wraps exactly
+      this (`--check` to report drift, `--apply ID=N` to reship). (Used 2026-07 for
+      the dedupe + fantasy reship.)
+    - **A host `.plyf` can silently LAG a firmware `fonts.yaml` render-size tweak.**
+      Because the reship is manual, a firmware-side render change (e.g. "render
+      Aurebesh smaller") changes a bundle's bitmap bytes but leaves the host copy
+      **stale at the same `content_version`** until someone reships it — so no
+      keyboard ever re-flashes the corrected glyphs. `cmp` alone flags it; to confirm
+      it's a *render* drift (not a version-byte diff), decode both packs and diff
+      **per-glyph WxH** — the font metadata (`first`/`last`/`yAdvance`) matches while
+      only the bitmap dims differ. Seen 2026-07: `fantasy` was 604 B / 124 glyphs
+      stale across Aurebesh/Cirth/APL/Braille vs 3 firmware "render smaller" commits;
+      fixed by reshipping from the committed headers and bumping v2→v3.
     - **Bump `content_version` MINIMALLY (+1 over the shipped value), don't jump.**
       No font-pack bundle has ever been deployed to a device, so the version only
       needs to exceed what a device already has (0 / nothing) — any increment works,
@@ -697,6 +814,144 @@ Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-
 ---
 
 ## Investigations in progress
+
+### Troubleshooting principle: don't take shortcuts — mechanical, auditable steps beat clever guesses
+
+**Lesson (2026-07-14, from the split42 rebuild):** when a bug resists the "smart"
+theories, do the **dumb, exhaustive, fully-auditable exercise** instead — even when
+it feels like busywork. The methodical path repeatedly turned out to be the *right*
+path here, and the clever shortcuts actively cost time.
+
+What happened: split42 (the 42-key variant) was broken and had never worked on real
+hardware; the same firmware also misbehaved on split72, so it was a shared-firmware
+problem, not split42-specific hardware. The productive move — which the **user** pushed
+for against the instinct to "just fix it" — was to **rebuild split42 from the working
+split72 in tiny, separately-committed steps** (delete → copy split72 → re-derive every
+pin from the authoritative KiCad schematic → build), then **bisect the remaining
+differences one subsystem at a time**. Two concrete ways shortcuts bit:
+- An earlier "rebuild" had silently **reused old split42 files** instead of genuinely
+  copying split72 — a shortcut that hid the real diff and produced "same problem as
+  before". Only the transparent delete/copy/apply-with-a-commit-per-step exercise
+  exposed it. **If you claim you copied/reset something, actually do it from the
+  source — a reviewer (or the next session) must be able to verify each step from the
+  git history.**
+- The bug turned out to be a **disabled subsystem** causing implicit problems — the
+  exact class of cause that no amount of reading the *enabled* code paths would find.
+  Re-enabling the subsystems split42 had dropped vs split72 (RGB matrix, Cirque
+  pointing device, LTR-559) as **separate commits** made split42 work, and dropping
+  them back one at a time is what isolates *which* one. You only get that bisect for
+  free if each change was its own commit.
+
+**Practical rules this encodes** (apply to any hard PolyKybd bug, not just split42):
+1. **One change per commit** so any subset can be flashed/reverted to bisect. The
+   deliverable of an investigation is often the *commit sequence*, not just the fix.
+2. **Derive facts from the authoritative source, not memory or an old file** — pins
+   from the KiCad schematic (in the `PolyKybd` hardware repo), not a stale header.
+3. **Suspect what's *absent/disabled*, not only what's present.** A missing/disabled
+   subsystem (RGB/pointing/sensor, a `#define` not set, a build flag dropped) can
+   change timing, linker layout, split transactions, or init order in ways that break
+   an unrelated-looking feature. Diff a broken variant against a working one for
+   *removed* config, and re-add it to test.
+4. **Don't over-narrate conclusions before the test.** State what a build contains and
+   what each outcome would imply; let the hardware result decide. ("no early
+   conclusions about the result" — the user's standing instruction during this work.)
+
+The split42 rebuild + subsystem bisect itself lives on branch
+`claude/split42-literal-split72-copy` (RGB `6694d7f6`, pointing device `4c10b0d2`,
+LTR-559 `d74e7e11`, trackpad-removed bisect step `b25f2045`, trackpad restored after
+the bisect confirmed it).
+
+**Bisect result (2026-07-14): split42 needs `SPLIT_POINTING_ENABLE`'s periodic split
+transaction — NOT the trackpad, NOT its I2C.** Two-stage bisect:
+- RGB + pointing device + LTR-559 (`d74e7e11`) → **works**; drop only the pointing
+  device (`b25f2045`) → **breaks**. ⇒ the pointing device is the required piece (RGB +
+  LTR-559 were both on in the broken build, so they're cleared; kept on anyway,
+  harmless when unpopulated).
+- Enabling the pointing device had **two** effects: (1) an extra periodic master→slave
+  split transaction (`SPLIT_POINTING_ENABLE` → the master pulls `GET_POINTING_CHECKSUM`/
+  `GET_POINTING_DATA` from the slave every cycle, `quantum/split_common/transactions.c`
+  `pointing_handlers_master/_slave`), and (2) a per-cycle slave I2C read that could stall
+  up to `CIRQUE_PINNACLE_TIMEOUT` (20 ms) since GP0/GP1 aren't broken out. Swapping the
+  Cirque driver for QMK's **no-op `custom` driver** (weak hooks do zero I2C) while keeping
+  `SPLIT_POINTING_ENABLE` (`5de77192`) → **still works**. ⇒ the fix is **effect (1), the
+  split transaction**, not the I2C stall and not the trackpad hardware.
+
+**⚠️ SYMPTOM CORRECTED (2026-07-14, after careful hardware observation):** the earlier
+"slave hangs mid-render / core1 hang" framing was WRONG (that was a misread of an
+un-refreshed splash). The real symptom is a **split-link establishment failure at boot**:
+with pointing disabled, the two halves (same image on both) can't talk — the master
+retries split transactions, exhausts `SPLIT_MAX_CONNECTION_ERRORS` (200), **times out**,
+then runs **solo** (the display stays on the boot splash until a **keypress** forces a
+refresh to the default layer). It follows the **master role** (swap USB → the behavior
+moves to the new master), not a physical half. Enabling the pointing feature makes the
+link come up; it is deterministic (not a flaky race). Consequently the heartbeat test
+result is NOT evidence about traffic — a housekeeping heartbeat can't rescue a link that
+never *establishes*. The core1 / render-hang lines above are superseded for this bug.
+
+**Resting config:** split42 keeps `SPLIT_POINTING_ENABLE` + `POINTING_DEVICE_DRIVER =
+custom` (no-op) — same fix as the real trackpad but with no dead I2C on the un-broken-out
+bus. **ROOT CAUSE STILL OPEN:** *why* the shared PolyKybd firmware depends on that
+periodic slave-pull transaction. split72 always had it (real trackpad), which hid the
+dependency. Leading theory: split42's only other regular master→slave traffic is QMK's
+built-in matrix pull + the poly custom syncs (which fire on *diffs*), so on an idle
+freshly-booted split42 the slave may go too long without being serviced by the transport
+in the way the poly split state machine expects; the pointing transaction restores a
+guaranteed every-cycle pull. **Heartbeat test (2026-07-14, `01cb83d0`) — REFUTES the frequent-pull theory.** Disabled
+the pointing device entirely and instead drove an **every-cycle** master→slave pull over
+the existing `USER_SYNC_SLAVE_DATA` channel (reused, so no new transaction / no shmem
+change — pure traffic) from `housekeeping_task_user()`. Result: split42 **still breaks**.
+So an every-cycle slave pull is **not** what split42 needs — the dependency is **not the
+traffic/frequency**.
+
+⇒ **The dependency is structural to *enabling the pointing feature itself*, or a
+memory-layout coincidence.** Enabling `POINTING_DEVICE_ENABLE`+`SPLIT_POINTING_ENABLE`
+does several things a reused-transaction heartbeat does NOT: (a) adds 3 transaction IDs
+(`GET_POINTING_CHECKSUM`/`GET_POINTING_DATA`/`PUT_POINTING_CPI`) → shifts the USER
+transaction-id numbering and bumps `NUM_TOTAL_TRANSACTIONS` (the poly table is near the
+32 cap); (b) adds a `pointing` member to `split_shared_memory_t` → changes shmem
+size/offsets; (c) links `pointing_device.c` + runs `pointing_device_init/_task` → shifts
+image/RAM layout. Any of (a)–(c) could be the real cause, **including the possibility
+that "enable pointing" merely perturbs memory layout and masks a latent bug** (a
+stack/buffer/uninitialised-use error) — the same *class* of coincidence the I2C-timing
+red herring was. **Resting fix stays `SPLIT_POINTING_ENABLE` + no-op `custom` driver
+(`5de77192`)** — that is the last confirmed-working config; the heartbeat commit
+`01cb83d0` is an experiment, to be reverted to `5de77192` if the investigation doesn't
+supersede it. NEXT: get the exact failure symptom (slave-dead vs no-USB vs display vs
+boot-hang), then discriminate (a)/(b) from (c) by adding a **dummy split transaction +
+shmem member with no task** (tests transaction-count/shmem-layout alone) and by an
+**`-Wl,-Map` layout/`.bss` diff** of the working vs broken image (tests the
+layout-coincidence hypothesis). Do NOT ship split42 off `01cb83d0`.
+
+**Transport-level findings (2026-07-14, cont.) — it's a split-link *establishment*
+failure, and the transaction COUNT is ruled out.**
+- **Master HID console (broken build):** `Split link: … crc_err=0 transport_fail=100.0%`,
+  climbing to >1.2M frames all failing. So the QMK **serial transport is dead** — every
+  frame times out at the transport layer; this is **NOT** payload/CRC corruption
+  (`crc_err=0`), and the handshake token can't mismatch (`tid ^ NUM_TOTAL_TRANSACTIONS`,
+  same image both sides). The master exhausts `SPLIT_MAX_CONNECTION_ERRORS` (200), gives
+  up, and runs solo; the "stuck splash" is just the un-refreshed screen until a keypress
+  forces `update_displays`.
+- **Corollary:** a dead transport can't be fixed by the pointing *transactions* riding it,
+  so enabling pointing must fix the transport via a **side effect**.
+- **Transaction count RULED OUT (`e260bcd4`):** registered **3 dummy split transactions**
+  (no pointing) so `NUM_TOTAL_TRANSACTIONS` matched the working build — **still 100%
+  transport_fail**. So it is NOT the count / handshake token / transaction-table size.
+- **Memory layout ruled out earlier:** `.bss`/`.data`/stacks are within ~100 B and the
+  stacks sit at identical addresses between working and broken (`5de77192` vs `01cb83d0`).
+- **Narrowed to two candidates**, both present only when `SPLIT_POINTING_ENABLE` is set:
+  **(b)** the `split_shared_memory_t` `pointing` member — it sits **immediately before the
+  RPC buffers** (`transport.h`: `pointing` at line ~210, then `rpc_info`/`rpc_m2s_buffer`/
+  `rpc_s2m_buffer`), so it **shifts the RPC buffers' offset** the poly `USER_SYNC_*`
+  transactions transfer through; vs **(c)** merely linking `pointing_device.c` + running
+  its init/task (a layout/init side effect). Discriminator flashed but not yet read back:
+  **`0e04469d`** = `POINTING_DEVICE_ENABLE` with the no-op `custom` driver but **without**
+  `SPLIT_POINTING_ENABLE` (pointing code linked/run, but no shmem member, no transactions).
+  *Link revives → (c) code-linkage (coincidental); still dead → (b) the shmem `pointing`
+  member specifically.*
+- **Working config shipped for the repo:** PR **#144** (branch
+  `claude/split42-working-all-subsystems`, cut at **`d74e7e11`** = RGB + pointing[Cirque] +
+  LTR-559, confirmed working) captures the working split42 while this root-cause work
+  continues on `claude/split42-literal-split72-copy`.
 
 ### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
 

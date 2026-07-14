@@ -17,7 +17,7 @@ OS_DETECTION_ENABLE = yes
 # poly_keymap.c holds the shared keymap logic compiled for every variant
 # (split72, split42). Each variant's keymaps/default/keymap.c carries only its
 # data (keymaps[] / encoder_map[] / g_led_config).
-POLY_SRC := poly_keymap.c side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c os_actions.c anim/startup_anim.c
+POLY_SRC := poly_keymap.c boot_diag.c side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c os_actions.c anim/startup_anim.c
 SRC += $(POLY_SRC)
 
 # Extra compiler warnings for the PolyKybd (non-QMK-core) sources ONLY. QMK already

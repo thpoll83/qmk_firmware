@@ -57,7 +57,18 @@
 #else
 #    define POLY_LTR559_TXN
 #endif
-#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FLASH_STAGE, USER_SYNC_RESET POLY_LTR559_TXN
+// ROOT-CAUSE EXPERIMENT (split42, 2026-07-14): 3 dummy split transactions to grow
+// NUM_TOTAL_TRANSACTIONS by 3 WITHOUT the pointing device — the one side effect of
+// SPLIT_POINTING_ENABLE the heartbeat test never reproduced. With pointing the link
+// establishes; without it 100% transport_fail. If these dummies (same resulting count
+// as the working pointing build) revive the link, the bug is NUM_TOTAL_TRANSACTIONS-
+// dependent in the transport. Only defined for split42 via -DPOLY_DUMMY_TXN_TEST.
+#ifdef POLY_DUMMY_TXN_TEST
+#    define POLY_DUMMY_TXN , USER_SYNC_DUMMY1, USER_SYNC_DUMMY2, USER_SYNC_DUMMY3
+#else
+#    define POLY_DUMMY_TXN
+#endif
+#define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FLASH_STAGE, USER_SYNC_RESET POLY_LTR559_TXN POLY_DUMMY_TXN
 
 #define EE_HANDS
 
@@ -115,7 +126,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.9.52"
+#define FW_VERSION "0.9.59"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK

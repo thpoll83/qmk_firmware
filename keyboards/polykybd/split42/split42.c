@@ -4,34 +4,43 @@
 
 #include "quantum.h"
 
-#include "../side.h"
-#include "../base/com.h"
-#include "../base/disp_array.h"
-#include "../base/helpers.h"
-#include "../base/spi_helper.h"
-#include "../base/shift_reg.h"
-#include "../base/text_helper.h"
+#include "side.h"
+#include "base/com.h"
+#include "base/disp_array.h"
+#include "base/helpers.h"
+#include "base/spi_helper.h"
+#include "base/shift_reg.h"
+#include "base/text_helper.h"
 
 #include <string.h>
 
 /*
- * key_display[] maps matrix slot LAYOUT_TO_INDEX(row, col) to shift-register
- * bitmasks. 4 rows × 6 cols = 24 entries per side.
+ * key_display[] maps matrix slot LAYOUT_TO_INDEX(r,c) = r*MATRIX_COLS + c = r*6 + c
+ * to the shift-register bitmask that selects that key's OLED. split42 is CRKBD:
+ * 4 matrix rows x 6 cols per side.
  *
- * CRKBD physical layout per side:
- *   Rows 0–2: 6 keys each (top / home / bottom alphanumeric rows)
- *   Row 3:    thumb cluster — only 3 of 6 col positions are physically wired.
- *             The remaining 3 slots are dummies (no display attached).
+ * ⚠️ The table MUST be laid out 6-WIDE (one matrix row per line). split72's table
+ * is 8-wide because split72 has MATRIX_COLS == 8; copying that 8-wide layout here
+ * would drift every row past row 0 by 2 and invert the wrong keycap display.
+ * Each matrix row maps to its own shift register's low 6 bits:
+ *   row 0 -> BITMASK1(0..5)
+ *   row 1 -> BITMASK2(0..5)
+ *   row 2 -> BITMASK3(0..5)
+ * The thumb row (row 3): only cols 3,4,5 are physically wired (idx 21,22,23);
+ * cols 0,1,2 (idx 18,19,20) have no key. The 6 free SR bits after rows 0-2 are
+ * BITMASK1(6),(7) / BITMASK2(6),(7) / BITMASK3(6),(7).
  *
- * TODO: Verify bitmask assignments against the actual PCB wiring:
- *   - Which shift register drives which row group
- *   - Which col positions in row 3 are the thumb keys
- *   - Whether the SR chain order matches BITMASK1/2/3 ordering in split42.h
+ * ⚠️ HARDWARE-VERIFY (bench): the thumb entries (idx 18-23) are a best guess and the
+ * whole map needs confirming against the physical shift-register wiring (press each
+ * key, note which OLED inverts). This affects keycap-OLED selection only, not the
+ * matrix scan / typing / the split link.
  */
 static const struct display_info key_display[] = {
-        {BITMASK1(0)}, {BITMASK1(1)}, {BITMASK1(2)}, {BITMASK1(3)}, {BITMASK1(4)}, {BITMASK1(5)}, {BITMASK1(6)}, {BITMASK1(7)},
-        {BITMASK2(0)}, {BITMASK2(1)}, {BITMASK2(2)}, {BITMASK2(3)}, {BITMASK2(4)}, {BITMASK2(5)}, {BITMASK2(6)}, {BITMASK2(7)},
-        {BITMASK3(0)}, {BITMASK3(1)}, {BITMASK3(2)}, {BITMASK3(3)}, {BITMASK3(4)}, {BITMASK3(5)}, {BITMASK3(6)}, {BITMASK3(7)}
+        /* row 0 (idx  0.. 5) */ {BITMASK1(0)}, {BITMASK1(1)}, {BITMASK1(2)}, {BITMASK1(3)}, {BITMASK1(4)}, {BITMASK1(5)},
+        /* row 1 (idx  6..11) */ {BITMASK2(0)}, {BITMASK2(1)}, {BITMASK2(2)}, {BITMASK2(3)}, {BITMASK2(4)}, {BITMASK2(5)},
+        /* row 2 (idx 12..17) */ {BITMASK3(0)}, {BITMASK3(1)}, {BITMASK3(2)}, {BITMASK3(3)}, {BITMASK3(4)}, {BITMASK3(5)},
+        /* row 3: idx 18-20 = no key (placeholders); idx 21-23 = thumbs (VERIFY) */
+        {BITMASK1(6)}, {BITMASK1(7)}, {BITMASK2(6)}, {BITMASK2(7)}, {BITMASK3(6)}, {BITMASK3(7)}
 };
 
 const uint8_t* get_key_disp_bitmask(uint8_t index) {
@@ -44,9 +53,10 @@ uint8_t get_disp_bitmask_size(void) {
 
 void invert_display(uint8_t r, uint8_t c, bool state) {
     /*
-     * Right-side rows are 4–7. On split72 the right side had col 0 absent,
-     * requiring c--. Check whether split42 needs the same adjustment.
-     * TODO: update this offset if the right-half matrix layout requires it.
+     * split42 is a symmetric CRKBD: the right-half matrix rows (4-7) carry all 6
+     * columns, so there is NO absent col-0 and NO c-- shift like split72 needs on
+     * its upper-right rows. Fold the matrix row into this half's 0..3 range and
+     * index the table directly, bounding to the table size for safety.
      */
     r = r % MATRIX_ROWS_PER_SIDE;
     const uint8_t disp_idx = LAYOUT_TO_INDEX(r, c);

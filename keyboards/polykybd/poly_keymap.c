@@ -758,10 +758,10 @@ static void poly_ltr559_drive(void) {
 // attached, so housekeeping re-emits it a few times over the first ~half minute
 // (bounded by BOOT_BANNER_REPEATS) to catch a console attached shortly after boot.
 #ifndef BOOT_BANNER_REPEATS
-#    define BOOT_BANNER_REPEATS 6
+#    define BOOT_BANNER_REPEATS 3
 #endif
 #ifndef BOOT_BANNER_INTERVAL_MS
-#    define BOOT_BANNER_INTERVAL_MS 5000
+#    define BOOT_BANNER_INTERVAL_MS 3000
 #endif
 
 static void emit_boot_banner(void) {

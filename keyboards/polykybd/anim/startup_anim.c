@@ -143,18 +143,24 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
         // Staggered death: each spark winks out once the rising `spark_fade` passes its
         // own hash threshold — so the sparks disappear a few at a time, not all at once.
         if (sa_hash8(s * 3u + 7u) < spark_fade) continue;
+        // Idle screensaver thins the field out (~30% fewer comets) for a calmer look.
+        if (s_loop && sa_hash8(s * 19u + 11u) < 77u) continue;
         uint8_t  p0   = sa_hash8(s * 2u + 1u);
-        uint8_t  spd  = 1u + (sa_hash8(s * 7u + 3u) & 7u);        // speed 1..8 (wide variety)
+        // Speed 1..8 in the boot intro; idle uses a WIDER 1..16 spread so the comets
+        // clearly move at different speeds (some crawl, some drift), and the extra
+        // el-shift below keeps even the fast ones slower than the boot streak.
+        uint8_t  spd  = s_loop ? (1u + (sa_hash8(s * 7u + 3u) & 15u))
+                               : (1u + (sa_hash8(s * 7u + 3u) & 7u));
         int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
         uint8_t  bw   = 1u + (sa_hash8(s * 11u + 2u) & 3u);
         uint8_t  ph   = sa_hash8(s * 13u + 5u);
         int16_t  bob  = 6 + (int16_t)(sa_hash8(s * 17u) & 31u);
         uint8_t  hv   = sa_hash8(s * 23u + 4u);                   // per-spark look variety
         const sa_target_t *tgt = &SA_TARGETS[s % SA_NUM_TARGETS];
-        // Idle screensaver drifts slower than the boot intro: shift `el` one more bit
-        // so the L→R comets and their vertical bob move at ~half speed (a calmer,
-        // sleeping-keyboard drift). Boot intro keeps the faster streak.
-        uint8_t tsh = s_loop ? 5 : 4;
+        // Idle screensaver drifts much slower than the boot intro: shift `el` two more
+        // bits so the L→R comets and their vertical bob crawl (a calm sleeping-keyboard
+        // drift). Boot intro keeps the faster streak.
+        uint8_t tsh = s_loop ? 6 : 4;
         uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> tsh) * spd));  // head phase (streams L→R)
         int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
         int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> (uint8_t)(tsh + 1)) * bw + ph)) - 128) * bob) >> 7));

@@ -345,7 +345,12 @@ bool oled_init(oled_rotation_t rotation) {
         }
     }
 
-    static const uint8_t PROGMEM display_setup2[] = {I2C_CMD, COM_PINS, OLED_COM_PINS, CONTRAST, OLED_BRIGHTNESS, PRE_CHARGE_PERIOD, OLED_PRE_CHARGE_PERIOD, VCOM_DETECT, OLED_VCOM_DETECT, DISPLAY_ALL_ON_RESUME, NORMAL_DISPLAY, DEACTIVATE_SCROLL, DISPLAY_ON};
+    // PolyKybd deviation: DISPLAY_ON intentionally NOT sent here. The panel's
+    // GDDRAM holds random data at power-on; turning the display on before the
+    // framebuffer has been pushed makes the boot flash a screenful of RAM noise.
+    // We keep the panel off, clear GDDRAM below, then enable it. See
+    // keyboards/polykybd/UPSTREAM_PATCHES.md.
+    static const uint8_t PROGMEM display_setup2[] = {I2C_CMD, COM_PINS, OLED_COM_PINS, CONTRAST, OLED_BRIGHTNESS, PRE_CHARGE_PERIOD, OLED_PRE_CHARGE_PERIOD, VCOM_DETECT, OLED_VCOM_DETECT, DISPLAY_ALL_ON_RESUME, NORMAL_DISPLAY, DEACTIVATE_SCROLL};
     if (!oled_send_cmd_P(display_setup2, ARRAY_SIZE(display_setup2))) {
         print("display_setup2 failed\n");
         return false;
@@ -360,8 +365,19 @@ bool oled_init(oled_rotation_t rotation) {
 
     oled_clear();
     oled_initialized = true;
-    oled_active      = true;
     oled_scrolling   = false;
+    // PolyKybd deviation (see UPSTREAM_PATCHES.md): the DISPLAY_ON in the init
+    // command list above was removed so the panel is still physically OFF here.
+    // Push the just-cleared (all-black) framebuffer to GDDRAM, THEN switch the
+    // panel on, so the first thing the eye sees is black -> boot splash rather
+    // than a flash of power-on RAM noise. oled_render_dirty() calls oled_on()
+    // internally, so we hold oled_active = true across the flush to suppress that
+    // (no DISPLAY_ON emitted), then clear it and call oled_on() to emit exactly
+    // one DISPLAY_ON with a clean GDDRAM already in place.
+    oled_active = true;
+    oled_render_dirty(true);
+    oled_active = false;
+    oled_on();
     return true;
 }
 

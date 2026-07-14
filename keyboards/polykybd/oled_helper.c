@@ -76,8 +76,21 @@ void oled_status_screen(void) {
         oled_on();
     }
     oled_update_buffer();
-    oled_clear();
+    // No oled_clear() here: oled_update_buffer() already composes a full 1024-byte
+    // frame into the scratch buffer (it starts with kdisp_set_buffer(0), so the
+    // background is black), and oled_write_raw() diffs byte-for-byte and marks only
+    // the blocks that actually changed dirty. Calling oled_clear() first forced ALL
+    // 16 framebuffer blocks dirty every 66 ms tick, so the whole panel was re-pushed
+    // over I2C band-by-band even when only the WPM digit / brightness bar moved —
+    // that is the "updates in multiple passes" flicker. Diffing keeps a static screen
+    // silent and shrinks an incremental change to the one or two blocks it touches.
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    // Push the changed blocks in ONE pass (see oled_fw_update_screen for the full
+    // rationale): the stock per-iteration oled_render() flushes only one block per
+    // main-loop pass, so a status change landing during a busy window (e.g. an
+    // overlay burst on an app switch) could tear top-first. This is a no-op when
+    // nothing changed, so a static screen still costs nothing on the bus.
+    oled_render_dirty(true);
 }
 
 void oled_render_logos(void) {
@@ -128,8 +141,18 @@ uint8_t fw_update_percent(void) {
 void oled_fw_update_screen(void) {
     oled_on();
     oled_update_buffer_fw_update();
-    oled_clear();
+    // Same diff-only compose as the status screen (no oled_clear() — the scratch
+    // is a full 1024-byte frame with a black background from kdisp_set_buffer(0)).
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    // Then push the changed blocks synchronously in ONE pass. During a flash the
+    // main loop is saturated feeding HID chunks / driving the deferred sector
+    // erase, so the normal per-iteration oled_render() (1 block per call) can't
+    // keep up — the status->update transition dribbled out top-first and left the
+    // bottom rows still showing the old status screen for a visible moment. A full
+    // flush here lands the whole frame on the first tick it is drawn; afterwards
+    // the master's screen is static (slave's progress bar is the only churn), so
+    // diffing keeps this to just the bar's blocks.
+    oled_render_dirty(true);
 }
 
 bool oled_task_user(void) {

@@ -24,19 +24,17 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Pointing device (Cirque trackpad) — RE-ENABLED as an experiment. No trackpad
-# is populated on split42 and its I2C0 bus isn't broken out, so the driver just
-# fails its probe and idles. Kept compiled in (and it registers an extra split
-# transaction) to test whether a disabled subsystem was implicated. Mirrors
-# split72.
-POINTING_DEVICE_ENABLE = yes
-POINTING_DEVICE_DRIVER = cirque_pinnacle_i2c
+# Pointing device (Cirque trackpad) — REMOVED again for the bisect. It was
+# re-enabled with RGB + LTR-559 and the set fixed split42; this step drops the
+# trackpad (POINTING_DEVICE_* + its SPLIT_POINTING_ENABLE split transaction,
+# see config.h) while keeping RGB + LTR-559, to test whether the trackpad was
+# the responsible subsystem.
 
-# LTR-559 light+proximity sensor — RE-ENABLED as an experiment. Shares the same
-# Cirque I2C0 bus (addr 0x23), which isn't broken out on split42, so its probe
-# also fails and the driver disables itself after a few bounded retries — the
-# same "harmless when absent" behaviour split72 relies on. Kept compiled in to
-# test whether a disabled subsystem was implicated. Mirrors split72.
+# LTR-559 light+proximity sensor — RE-ENABLED as an experiment. Shares the I2C0
+# bus (addr 0x23), which isn't broken out on split42, so its probe fails and the
+# driver disables itself after a few bounded retries — the same "harmless when
+# absent" behaviour split72 relies on. Kept compiled in to test whether a
+# disabled subsystem was implicated. Mirrors split72.
 SRC += base/ltr559.c
 OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 

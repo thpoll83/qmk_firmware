@@ -292,6 +292,22 @@ uint32_t serial_debug_rx_min_high_us(void){ return (s_rx_min_high_us == 0xFFFFFF
 uint32_t serial_debug_rx_fifo_seen(void)  { return s_rx_fifo_seen; }
 uint32_t serial_debug_rx_framing_errors(void){ return g_rx_framing_errors; }
 
+// Called from initiate_transaction right BEFORE the normal serial_transport_receive.
+// If a byte is already sitting in the RX FIFO at that instant, pop it directly (bypassing
+// sync_rx) and remember it + count it. This decides the standing paradox: a valid byte
+// present here means the SM+FIFO work and the sync_rx / IRQ-wake receive path is what
+// fails to consume it; nothing present means the byte is gone before the receive runs.
+static uint32_t s_rx_direct_last = 0xFFFF;  // last byte found waiting just before receive
+static uint32_t s_rx_direct_hits = 0;       // # transactions a byte was waiting before receive
+void serial_debug_rx_pop_before_recv(void) {
+    if (rx_state_machine >= 0 && !pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
+        s_rx_direct_last = (uint32_t)(*((uint8_t*)&pio->rxf[rx_state_machine] + 3U));
+        s_rx_direct_hits++;
+    }
+}
+uint32_t serial_debug_rx_direct_last(void){ return s_rx_direct_last; }
+uint32_t serial_debug_rx_direct_hits(void){ return s_rx_direct_hits; }
+
 // FIX EXPERIMENT: fully re-initialise the master's RX state machine. Theory (from the
 // register dump + RP2040 forums): the RX SM comes up metastably-wedged at init on some
 // boots (non-deterministic) — it READS as parked at `wait 0 pin` but its execution FFs

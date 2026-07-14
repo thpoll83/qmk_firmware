@@ -24,6 +24,9 @@ extern uint32_t serial_debug_rx_min_low_us(void);  // shortest GP5 low pulse (us
 extern uint32_t serial_debug_rx_min_high_us(void); // shortest GP5 high pulse (us)
 extern uint32_t serial_debug_rx_fifo_seen(void);   // # window samples the RX FIFO was non-empty
 extern uint32_t serial_debug_rx_framing_errors(void); // RX-SM framing/break errors (bad stop bit)
+extern void     serial_debug_rx_pop_before_recv(void); // pop the RX FIFO right before the receive
+extern uint32_t serial_debug_rx_direct_last(void);     // last byte found waiting before receive
+extern uint32_t serial_debug_rx_direct_hits(void);     // # txns a byte was waiting before receive
 extern void     serial_debug_dump_rx_sm(void);
 extern void     serial_debug_reinit_rx(void);   // FIX EXPERIMENT: re-init a wedged RX SM
 #endif
@@ -174,6 +177,12 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
     serial_debug_rx_sample_burst();
 #endif
 
+#ifdef POLY_HANDSHAKE_DIAG
+    // Right before the normal receive: is a valid byte already waiting in the RX FIFO?
+    // (Pops it directly, bypassing sync_rx. The link already fails, so stealing it is fine.)
+    serial_debug_rx_pop_before_recv();
+#endif
+
     uint8_t transaction_id_shake = 0xFF;
 
     /* Which we always read back first so that we can error out correctly.
@@ -206,8 +215,10 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
                         (unsigned long)serial_debug_rx_min_low_us(),
                         (unsigned long)serial_debug_rx_min_high_us(),
                         (unsigned long)serial_debug_rx_fifo_seen());
-                uprintf("         framing_errors=%lu  (if this ~= the fail count, the 'timeouts' are actually bad-stop-bit framing errors, not silence)\n",
-                        (unsigned long)serial_debug_rx_framing_errors());
+                uprintf("         framing_errors=%lu direct_hits=%lu direct_last=0x%02lX  (direct_hits>0 => a byte WAS waiting in the FIFO before the receive, but sync_rx never consumed it -> the receive/IRQ-wake path is broken)\n",
+                        (unsigned long)serial_debug_rx_framing_errors(),
+                        (unsigned long)serial_debug_rx_direct_hits(),
+                        (unsigned long)serial_debug_rx_direct_last());
                 // One-shot PIO register dump: compare the working TX SM against the
                 // dead RX SM on the same PIO block to see what's mis-set-up.
                 static bool dumped = false;

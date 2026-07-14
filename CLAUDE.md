@@ -755,6 +755,37 @@ shmem member with no task** (tests transaction-count/shmem-layout alone) and by 
 **`-Wl,-Map` layout/`.bss` diff** of the working vs broken image (tests the
 layout-coincidence hypothesis). Do NOT ship split42 off `01cb83d0`.
 
+**Transport-level findings (2026-07-14, cont.) — it's a split-link *establishment*
+failure, and the transaction COUNT is ruled out.**
+- **Master HID console (broken build):** `Split link: … crc_err=0 transport_fail=100.0%`,
+  climbing to >1.2M frames all failing. So the QMK **serial transport is dead** — every
+  frame times out at the transport layer; this is **NOT** payload/CRC corruption
+  (`crc_err=0`), and the handshake token can't mismatch (`tid ^ NUM_TOTAL_TRANSACTIONS`,
+  same image both sides). The master exhausts `SPLIT_MAX_CONNECTION_ERRORS` (200), gives
+  up, and runs solo; the "stuck splash" is just the un-refreshed screen until a keypress
+  forces `update_displays`.
+- **Corollary:** a dead transport can't be fixed by the pointing *transactions* riding it,
+  so enabling pointing must fix the transport via a **side effect**.
+- **Transaction count RULED OUT (`e260bcd4`):** registered **3 dummy split transactions**
+  (no pointing) so `NUM_TOTAL_TRANSACTIONS` matched the working build — **still 100%
+  transport_fail**. So it is NOT the count / handshake token / transaction-table size.
+- **Memory layout ruled out earlier:** `.bss`/`.data`/stacks are within ~100 B and the
+  stacks sit at identical addresses between working and broken (`5de77192` vs `01cb83d0`).
+- **Narrowed to two candidates**, both present only when `SPLIT_POINTING_ENABLE` is set:
+  **(b)** the `split_shared_memory_t` `pointing` member — it sits **immediately before the
+  RPC buffers** (`transport.h`: `pointing` at line ~210, then `rpc_info`/`rpc_m2s_buffer`/
+  `rpc_s2m_buffer`), so it **shifts the RPC buffers' offset** the poly `USER_SYNC_*`
+  transactions transfer through; vs **(c)** merely linking `pointing_device.c` + running
+  its init/task (a layout/init side effect). Discriminator flashed but not yet read back:
+  **`0e04469d`** = `POINTING_DEVICE_ENABLE` with the no-op `custom` driver but **without**
+  `SPLIT_POINTING_ENABLE` (pointing code linked/run, but no shmem member, no transactions).
+  *Link revives → (c) code-linkage (coincidental); still dead → (b) the shmem `pointing`
+  member specifically.*
+- **Working config shipped for the repo:** PR **#144** (branch
+  `claude/split42-working-all-subsystems`, cut at **`d74e7e11`** = RGB + pointing[Cirque] +
+  LTR-559, confirmed working) captures the working split42 while this root-cause work
+  continues on `claude/split42-literal-split72-copy`.
+
 ### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
 
 **Symptom**: Intermittently, the right/slave half stops recognising keystrokes. Only keys on the master (USB) side still work. Reconnecting (replugging) or reflashing restores it. Happens "once in a while", not on every boot.

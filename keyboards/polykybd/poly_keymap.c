@@ -148,6 +148,7 @@ void set_displays(uint8_t contrast, bool idle);
 void set_selected_displays(int8_t old_value, int8_t new_value);
 void toggle_stagger(bool new_state);
 void oled_update_buffer(void);
+void oled_fw_apply_screen(void);   // oled_helper.c — firmware-apply status screen
 void poly_suspend(void);
 
 
@@ -765,6 +766,11 @@ void housekeeping_task_user(void) {
     // progresses and the master's apply-and-reboot fires after a successful
     // commit.
     if (fw_staging_commit_pending()) {
+        // Paint the "⟳Applying / Firmware⟳" notice and flush it fully BEFORE the
+        // blocking self-flash + reset below (which never returns), so the status
+        // OLED is completely refreshed — not torn mid-transition — as the apply
+        // begins. Runs on both halves; each draws its own side's word.
+        oled_fw_apply_screen();
         save_all_dirty();   // persist MRU/settings before the firmware swap — this path resets via watchdog (never returns) and skips shutdown_quantum. Transfer is done by commit, so the blocking flash write is safe here.
         fw_staging_apply_and_reboot();
     }

@@ -17,6 +17,11 @@
 
 #include <stdio.h>
 
+// _Mid_ (10px) utility font: defined in util_font.h, owned by poly_keymap.c's
+// translation unit. Reference it via extern rather than re-including the header
+// (which would duplicate its PROGMEM tables at link time), matching status_oled.c.
+extern const GFXfont NotoSans_Regular_Mid_10pt7b;
+
 // Render `value` as a char32 (U"...") display string into `buffer`. The display
 // pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
 // glyph is one uint32_t codepoint. `buffer_len` is the byte size of the buffer.
@@ -153,6 +158,56 @@ void oled_fw_update_screen(void) {
     // the master's screen is static (slave's progress bar is the only churn), so
     // diffing keeps this to just the bar's blocks.
     oled_render_dirty(true);
+}
+
+// Small clockwise "refresh" arrow (⟳), 16x16, row-major MSB-first. The mid status
+// font is ASCII-only (0x20..0x7E), so this glyph is drawn as a bitmap next to the
+// word on the firmware-apply screen.
+static const uint8_t s_apply_spinner[] = {
+    0x00, 0x1C, 0x00, 0x3E, 0x00, 0x1E, 0x0E, 0x1E, 0x1E, 0x38, 0x38, 0x1C,
+    0x30, 0x0C, 0x70, 0x0E, 0x70, 0x0E, 0x70, 0x0E, 0x30, 0x0C, 0x30, 0x0C,
+    0x38, 0x1C, 0x1F, 0xF8, 0x0F, 0xF0, 0x00, 0x00,
+};
+#define APPLY_SPINNER_W 16
+#define APPLY_SPINNER_H 16
+
+// Shown on BOTH halves the instant a staged firmware image is applied (reboot
+// imminent). Reads across the two status OLEDs as "⟳Applying  Firmware⟳": the
+// LEFT half shows "⟳Applying", the RIGHT half "Firmware⟳", each centered. It is
+// fully flushed synchronously (oled_render_dirty(true)) so the screen is complete
+// before fw_staging_apply_and_reboot()'s blocking self-flash + hard reset (which
+// never returns) — the last thing the user sees is a finished, un-torn notice.
+void oled_fw_apply_screen(void) {
+    const GFXfont*  small[]   = { &NotoSans_Regular_Mid_10pt7b };
+    const uint32_t* word      = is_left_side() ? U"Applying" : U"Firmware";
+    const bool      icon_left = is_left_side();   // "⟳Applying" vs "Firmware⟳"
+    const int8_t    gap       = 3;                // px between icon and word
+
+    oled_on();
+    kdisp_set_buffer(0);   // clear the scratch to black
+
+    // Measure the word so the icon+word group is centered as one unit.
+    int8_t tmin = 0, tmax = 0;
+    kdisp_gfx_text_bounds(small, 1, word, &tmin, &tmax);
+    const int8_t  text_w  = (int8_t)(tmax - tmin + 1);
+    const int16_t group_w = (int16_t)APPLY_SPINNER_W + gap + text_w;
+    int16_t       gx      = (int16_t)((OLED_DISPLAY_WIDTH - group_w) / 2);
+    if (gx < 0) gx = 0;
+
+    // Vertically centre: a baseline for the word, a top-left y for the icon.
+    const int8_t baseline = (int8_t)(OLED_DISPLAY_HEIGHT / 2 + 7);
+    const int8_t icon_y   = (int8_t)((OLED_DISPLAY_HEIGHT - APPLY_SPINNER_H) / 2);
+
+    if (icon_left) {
+        kdisp_draw_bitmap((int8_t)gx, icon_y, s_apply_spinner, APPLY_SPINNER_W, APPLY_SPINNER_H);
+        kdisp_write_gfx_text(small, 1, (int8_t)(gx + APPLY_SPINNER_W + gap - tmin), baseline, word);
+    } else {
+        kdisp_write_gfx_text(small, 1, (int8_t)(gx - tmin), baseline, word);
+        kdisp_draw_bitmap((int8_t)(gx + text_w + gap), icon_y, s_apply_spinner, APPLY_SPINNER_W, APPLY_SPINNER_H);
+    }
+
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    oled_render_dirty(true);   // one synchronous full flush before the reboot
 }
 
 bool oled_task_user(void) {

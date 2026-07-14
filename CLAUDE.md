@@ -648,6 +648,144 @@ Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-
 
 ## Investigations in progress
 
+### Troubleshooting principle: don't take shortcuts — mechanical, auditable steps beat clever guesses
+
+**Lesson (2026-07-14, from the split42 rebuild):** when a bug resists the "smart"
+theories, do the **dumb, exhaustive, fully-auditable exercise** instead — even when
+it feels like busywork. The methodical path repeatedly turned out to be the *right*
+path here, and the clever shortcuts actively cost time.
+
+What happened: split42 (the 42-key variant) was broken and had never worked on real
+hardware; the same firmware also misbehaved on split72, so it was a shared-firmware
+problem, not split42-specific hardware. The productive move — which the **user** pushed
+for against the instinct to "just fix it" — was to **rebuild split42 from the working
+split72 in tiny, separately-committed steps** (delete → copy split72 → re-derive every
+pin from the authoritative KiCad schematic → build), then **bisect the remaining
+differences one subsystem at a time**. Two concrete ways shortcuts bit:
+- An earlier "rebuild" had silently **reused old split42 files** instead of genuinely
+  copying split72 — a shortcut that hid the real diff and produced "same problem as
+  before". Only the transparent delete/copy/apply-with-a-commit-per-step exercise
+  exposed it. **If you claim you copied/reset something, actually do it from the
+  source — a reviewer (or the next session) must be able to verify each step from the
+  git history.**
+- The bug turned out to be a **disabled subsystem** causing implicit problems — the
+  exact class of cause that no amount of reading the *enabled* code paths would find.
+  Re-enabling the subsystems split42 had dropped vs split72 (RGB matrix, Cirque
+  pointing device, LTR-559) as **separate commits** made split42 work, and dropping
+  them back one at a time is what isolates *which* one. You only get that bisect for
+  free if each change was its own commit.
+
+**Practical rules this encodes** (apply to any hard PolyKybd bug, not just split42):
+1. **One change per commit** so any subset can be flashed/reverted to bisect. The
+   deliverable of an investigation is often the *commit sequence*, not just the fix.
+2. **Derive facts from the authoritative source, not memory or an old file** — pins
+   from the KiCad schematic (in the `PolyKybd` hardware repo), not a stale header.
+3. **Suspect what's *absent/disabled*, not only what's present.** A missing/disabled
+   subsystem (RGB/pointing/sensor, a `#define` not set, a build flag dropped) can
+   change timing, linker layout, split transactions, or init order in ways that break
+   an unrelated-looking feature. Diff a broken variant against a working one for
+   *removed* config, and re-add it to test.
+4. **Don't over-narrate conclusions before the test.** State what a build contains and
+   what each outcome would imply; let the hardware result decide. ("no early
+   conclusions about the result" — the user's standing instruction during this work.)
+
+The split42 rebuild + subsystem bisect itself lives on branch
+`claude/split42-literal-split72-copy` (RGB `6694d7f6`, pointing device `4c10b0d2`,
+LTR-559 `d74e7e11`, trackpad-removed bisect step `b25f2045`, trackpad restored after
+the bisect confirmed it).
+
+**Bisect result (2026-07-14): split42 needs `SPLIT_POINTING_ENABLE`'s periodic split
+transaction — NOT the trackpad, NOT its I2C.** Two-stage bisect:
+- RGB + pointing device + LTR-559 (`d74e7e11`) → **works**; drop only the pointing
+  device (`b25f2045`) → **breaks**. ⇒ the pointing device is the required piece (RGB +
+  LTR-559 were both on in the broken build, so they're cleared; kept on anyway,
+  harmless when unpopulated).
+- Enabling the pointing device had **two** effects: (1) an extra periodic master→slave
+  split transaction (`SPLIT_POINTING_ENABLE` → the master pulls `GET_POINTING_CHECKSUM`/
+  `GET_POINTING_DATA` from the slave every cycle, `quantum/split_common/transactions.c`
+  `pointing_handlers_master/_slave`), and (2) a per-cycle slave I2C read that could stall
+  up to `CIRQUE_PINNACLE_TIMEOUT` (20 ms) since GP0/GP1 aren't broken out. Swapping the
+  Cirque driver for QMK's **no-op `custom` driver** (weak hooks do zero I2C) while keeping
+  `SPLIT_POINTING_ENABLE` (`5de77192`) → **still works**. ⇒ the fix is **effect (1), the
+  split transaction**, not the I2C stall and not the trackpad hardware.
+
+**⚠️ SYMPTOM CORRECTED (2026-07-14, after careful hardware observation):** the earlier
+"slave hangs mid-render / core1 hang" framing was WRONG (that was a misread of an
+un-refreshed splash). The real symptom is a **split-link establishment failure at boot**:
+with pointing disabled, the two halves (same image on both) can't talk — the master
+retries split transactions, exhausts `SPLIT_MAX_CONNECTION_ERRORS` (200), **times out**,
+then runs **solo** (the display stays on the boot splash until a **keypress** forces a
+refresh to the default layer). It follows the **master role** (swap USB → the behavior
+moves to the new master), not a physical half. Enabling the pointing feature makes the
+link come up; it is deterministic (not a flaky race). Consequently the heartbeat test
+result is NOT evidence about traffic — a housekeeping heartbeat can't rescue a link that
+never *establishes*. The core1 / render-hang lines above are superseded for this bug.
+
+**Resting config:** split42 keeps `SPLIT_POINTING_ENABLE` + `POINTING_DEVICE_DRIVER =
+custom` (no-op) — same fix as the real trackpad but with no dead I2C on the un-broken-out
+bus. **ROOT CAUSE STILL OPEN:** *why* the shared PolyKybd firmware depends on that
+periodic slave-pull transaction. split72 always had it (real trackpad), which hid the
+dependency. Leading theory: split42's only other regular master→slave traffic is QMK's
+built-in matrix pull + the poly custom syncs (which fire on *diffs*), so on an idle
+freshly-booted split42 the slave may go too long without being serviced by the transport
+in the way the poly split state machine expects; the pointing transaction restores a
+guaranteed every-cycle pull. **Heartbeat test (2026-07-14, `01cb83d0`) — REFUTES the frequent-pull theory.** Disabled
+the pointing device entirely and instead drove an **every-cycle** master→slave pull over
+the existing `USER_SYNC_SLAVE_DATA` channel (reused, so no new transaction / no shmem
+change — pure traffic) from `housekeeping_task_user()`. Result: split42 **still breaks**.
+So an every-cycle slave pull is **not** what split42 needs — the dependency is **not the
+traffic/frequency**.
+
+⇒ **The dependency is structural to *enabling the pointing feature itself*, or a
+memory-layout coincidence.** Enabling `POINTING_DEVICE_ENABLE`+`SPLIT_POINTING_ENABLE`
+does several things a reused-transaction heartbeat does NOT: (a) adds 3 transaction IDs
+(`GET_POINTING_CHECKSUM`/`GET_POINTING_DATA`/`PUT_POINTING_CPI`) → shifts the USER
+transaction-id numbering and bumps `NUM_TOTAL_TRANSACTIONS` (the poly table is near the
+32 cap); (b) adds a `pointing` member to `split_shared_memory_t` → changes shmem
+size/offsets; (c) links `pointing_device.c` + runs `pointing_device_init/_task` → shifts
+image/RAM layout. Any of (a)–(c) could be the real cause, **including the possibility
+that "enable pointing" merely perturbs memory layout and masks a latent bug** (a
+stack/buffer/uninitialised-use error) — the same *class* of coincidence the I2C-timing
+red herring was. **Resting fix stays `SPLIT_POINTING_ENABLE` + no-op `custom` driver
+(`5de77192`)** — that is the last confirmed-working config; the heartbeat commit
+`01cb83d0` is an experiment, to be reverted to `5de77192` if the investigation doesn't
+supersede it. NEXT: get the exact failure symptom (slave-dead vs no-USB vs display vs
+boot-hang), then discriminate (a)/(b) from (c) by adding a **dummy split transaction +
+shmem member with no task** (tests transaction-count/shmem-layout alone) and by an
+**`-Wl,-Map` layout/`.bss` diff** of the working vs broken image (tests the
+layout-coincidence hypothesis). Do NOT ship split42 off `01cb83d0`.
+
+**Transport-level findings (2026-07-14, cont.) — it's a split-link *establishment*
+failure, and the transaction COUNT is ruled out.**
+- **Master HID console (broken build):** `Split link: … crc_err=0 transport_fail=100.0%`,
+  climbing to >1.2M frames all failing. So the QMK **serial transport is dead** — every
+  frame times out at the transport layer; this is **NOT** payload/CRC corruption
+  (`crc_err=0`), and the handshake token can't mismatch (`tid ^ NUM_TOTAL_TRANSACTIONS`,
+  same image both sides). The master exhausts `SPLIT_MAX_CONNECTION_ERRORS` (200), gives
+  up, and runs solo; the "stuck splash" is just the un-refreshed screen until a keypress
+  forces `update_displays`.
+- **Corollary:** a dead transport can't be fixed by the pointing *transactions* riding it,
+  so enabling pointing must fix the transport via a **side effect**.
+- **Transaction count RULED OUT (`e260bcd4`):** registered **3 dummy split transactions**
+  (no pointing) so `NUM_TOTAL_TRANSACTIONS` matched the working build — **still 100%
+  transport_fail**. So it is NOT the count / handshake token / transaction-table size.
+- **Memory layout ruled out earlier:** `.bss`/`.data`/stacks are within ~100 B and the
+  stacks sit at identical addresses between working and broken (`5de77192` vs `01cb83d0`).
+- **Narrowed to two candidates**, both present only when `SPLIT_POINTING_ENABLE` is set:
+  **(b)** the `split_shared_memory_t` `pointing` member — it sits **immediately before the
+  RPC buffers** (`transport.h`: `pointing` at line ~210, then `rpc_info`/`rpc_m2s_buffer`/
+  `rpc_s2m_buffer`), so it **shifts the RPC buffers' offset** the poly `USER_SYNC_*`
+  transactions transfer through; vs **(c)** merely linking `pointing_device.c` + running
+  its init/task (a layout/init side effect). Discriminator flashed but not yet read back:
+  **`0e04469d`** = `POINTING_DEVICE_ENABLE` with the no-op `custom` driver but **without**
+  `SPLIT_POINTING_ENABLE` (pointing code linked/run, but no shmem member, no transactions).
+  *Link revives → (c) code-linkage (coincidental); still dead → (b) the shmem `pointing`
+  member specifically.*
+- **Working config shipped for the repo:** PR **#144** (branch
+  `claude/split42-working-all-subsystems`, cut at **`d74e7e11`** = RGB + pointing[Cirque] +
+  LTR-559, confirmed working) captures the working split42 while this root-cause work
+  continues on `claude/split42-literal-split72-copy`.
+
 ### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
 
 **Symptom**: Intermittently, the right/slave half stops recognising keystrokes. Only keys on the master (USB) side still work. Reconnecting (replugging) or reflashing restores it. Happens "once in a while", not on every boot.

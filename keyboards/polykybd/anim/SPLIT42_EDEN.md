@@ -53,7 +53,7 @@ which is **generated for split72 only**.
 
 `PolyKybdHost/tools/startup_anim_demo.py` generates the header:
 
-```
+```shell
 startup_anim_demo.py --emit-geom <out.h> --kle polyhost/res/polykybd-split72.json
 ```
 
@@ -97,7 +97,7 @@ table and it runs.
      reads these targets, so they must land on real (`valid`) keys.
 
 3. **Generate the split42 geom header**:
-   ```
+   ```shell
    startup_anim_demo.py --emit-geom keyboards/polykybd/anim/startup_anim_geom_split42.h \
        --kle PolyKybdHost/polyhost/res/polykybd-split42.json   # + --variant split42
    ```

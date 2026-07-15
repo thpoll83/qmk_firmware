@@ -533,38 +533,12 @@ static inline msg_t sync_rx(sysinterval_t timeout) {
     osalSysLock();
     while (pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
         pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, true);
-#ifdef POLY_RX_POLL_FIX
-        // The rx-not-empty IRQ never fires on this silicon, so suspending on it with
-        // TIME_INFINITE (the slave's id-wait) is a TRAP: a byte can sit in the FIFO
-        // forever without waking us, and the slave goes permanently deaf. Suspend only
-        // a short SLICE and re-poll, so a byte that lands while suspended is picked up on
-        // the next loop. A finite receive keeps its real timeout (the tight poll above
-        // already covered the fast case). This yields the CPU to lower-prio threads
-        // (unlike a busy-poll) while never waiting on the dead IRQ indefinitely.
-        sysinterval_t slice = (timeout == TIME_INFINITE) ? TIME_MS2I(POLY_RX_BLOCK_SLICE_MS) : timeout;
-        msg = osalThreadSuspendTimeoutS(&rx_thread, slice);
-        if (msg < MSG_OK) {
-            if (timeout == TIME_INFINITE) {
-                // Slice elapsed with no IRQ wake: re-poll the FIFO and keep waiting.
-                continue;
-            }
-            pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, false);
-            break;
-        }
-#else
         msg = osalThreadSuspendTimeoutS(&rx_thread, timeout);
         if (msg < MSG_OK) {
             pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, false);
             break;
         }
-#endif
     }
-#ifdef POLY_RX_POLL_FIX
-    // Normal exit (FIFO non-empty): a byte is waiting. Ensure the source is off and
-    // report success even if the last slice returned a timeout code.
-    pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, false);
-    if (!pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) msg = MSG_OK;
-#endif
     osalSysUnlock();
     return msg;
 }
@@ -611,7 +585,25 @@ inline bool serial_transport_receive(uint8_t* destination, const size_t size) {
  * @return false Receive failed.
  */
 inline bool serial_transport_receive_blocking(uint8_t* destination, const size_t size) {
+#ifdef POLY_RX_POLL_FIX
+    // The PIO rx-not-empty IRQ never fires on this silicon (irq_rxne=0 in every build), so a
+    // genuine TIME_INFINITE receive would suspend FOREVER on the dead IRQ after the poll
+    // window — the slave's id-wait then goes permanently deaf (it never echoes, so the master
+    // sees poll_miss=500 and the link never establishes). Enabling the pointing device only
+    // masked this by keeping the slave's receive loop cycling.
+    //
+    // Fix: loop the PROVEN finite receive instead. Each attempt re-polls the RX FIFO (via
+    // sync_rx's tight poll), so a byte that lands between attempts is always picked up and the
+    // slave can never go permanently deaf — while the bounded suspend still yields the CPU to
+    // the slave's main thread between polls (no busy-peg). This blocking receive is only ever
+    // called for the single-byte transaction id, so a retried attempt never splits a buffer.
+    while (!receive_impl(destination, size, TIME_MS2I(POLY_RX_BLOCK_SLICE_MS))) {
+        /* id not here yet — keep polling until the master sends the next one */
+    }
+    return true;
+#else
     return receive_impl(destination, size, TIME_INFINITE);
+#endif
 }
 
 static inline void pio_tx_init(pin_t tx_pin) {

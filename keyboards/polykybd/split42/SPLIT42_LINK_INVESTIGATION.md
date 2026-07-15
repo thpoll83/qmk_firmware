@@ -300,21 +300,30 @@ Putting the confirmed facts together:
    "work" still **degrade after a short time** (the slave eventually loses the race and goes
    deaf).
 
-### The candidate real fix (under test now)
+### The candidate real fix
 
-`sync_rx` (POLY_RX_POLL_FIX) no longer suspends on the dead IRQ indefinitely: a blocking
-(`TIME_INFINITE`) receive now suspends in short **`POLY_RX_BLOCK_SLICE_MS`** (4 ms) slices
-and **re-polls the FIFO** each slice, so a byte that lands while suspended is picked up on
-the next loop — the slave can never go permanently deaf, without busy-pegging the core (the
-suspend still yields to the slave's main thread). Finite receives keep their real timeout
-(the tight poll already covers the fast case). **Tested with NO pointing and NO pad** (zero
-pointing symbols linked):
-- **`poll_miss≈0`, slave alive, keystrokes on both halves, stable** → confirmed: the
-  dead-IRQ blocking-suspend trap was the root cause; this is the real fix and split42 needs
-  neither the trackpad nor `SPLIT_POINTING`. (Would then extend to split72 + drop the
-  diagnostics.)
-- **`poll_miss=500` still** → the slave-deaf model is wrong; the dependency is something
-  else about enabling the pointing feature.
+Never wait on the dead IRQ indefinitely: the slave's blocking (`TIME_INFINITE`) id-receive
+must re-poll the FIFO instead of suspending forever.
+
+**Attempt 1 (`01225dc3`) — hand-rolled suspend-slice loop inside `sync_rx`: BRICKED IT.**
+Both halves went unresponsive, no USB console, glyphs frozen (a hang before the main loop,
+on both halves). The bug was in the bespoke suspend-slice surgery in `sync_rx` (couldn't be
+pinned down safely). **Reverted.** Lesson: don't hand-roll the ChibiOS suspend loop.
+
+**Attempt 2 (current) — loop the PROVEN finite receive instead.**
+`serial_transport_receive_blocking()` (the slave's 1-byte id-wait, the only `TIME_INFINITE`
+caller) now loops the existing, well-tested `receive_impl(..., TIME_MS2I(POLY_RX_BLOCK_SLICE_MS))`
+until it succeeds — leaving `sync_rx` **untouched**. Each attempt re-polls the FIFO via
+`sync_rx`'s tight poll and yields between attempts via the bounded suspend, so a byte landing
+between attempts is always picked up and the slave can never go permanently deaf. It only
+ever receives the single-byte id, so a retried attempt never splits a buffer. `POLY_RX_POLL_US`
+dropped 22000→3000 (still covers the ~1.7 ms echo; less idle spin). **Tested with NO
+pointing, NO pad** (zero pointing symbols):
+- **link up, `poll_miss≈0`, slave alive, both-halves typing, stable (no "stops after a
+  while")** → confirmed: the dead-IRQ blocking-suspend trap was the root cause; this is the
+  real fix and split42 needs neither the trackpad nor `SPLIT_POINTING`. Then extend to
+  split72 + drop the diagnostics.
+- **still dead / bricked** → the slave-deaf model is wrong or incomplete.
 
 ---
 
@@ -373,9 +382,11 @@ last), each a single change for bisectability:
   (c) code-linkage RULED OUT. By elimination the cause is (b) the shmem `pointing` member.**
 - `6ff584d4` dummy shmem member only → **poll_miss=500; (b) shmem member RULED OUT. ALL
   isolated components now ruled out. Map diff: stacks identical → not a layout bug.**
-- (next) REAL-FIX TEST: sync_rx re-polls in short slices for blocking (TIME_INFINITE)
-  receives instead of suspending forever on the dead IRQ (slave-deaf trap). NO pointing.
-  poll_miss≈0 + stable both-halves typing = the real fix; pointing was only masking it.
+- `01225dc3` REAL-FIX attempt 1 (hand-rolled suspend-slice in sync_rx) → **BRICKED both
+  halves (no console, frozen). Reverted.**
+- (next) REAL-FIX attempt 2: loop the PROVEN finite receive_impl for the blocking id-wait
+  (sync_rx untouched), POLY_RX_POLL_US 22000→3000. NO pointing. poll_miss≈0 + stable
+  both-halves typing = the real fix.
 
 > ⚠️ **Environment note:** the remote container was rolled back to an older snapshot
 > mid-session once; the **remote branch is the source of truth**. If local `HEAD`

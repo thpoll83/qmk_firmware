@@ -61,7 +61,10 @@ OPT_DEFS += -DPOLY_RX_POLL_FIX
 # echo likely lands LATE; poll long enough to catch it and MEASURE the latency (poll_hits /
 # poll_miss / poll_max_us in the HS-DIAG + HS-OK lines) to see how late, and whether polling the
 # full window revives the link.
-OPT_DEFS += -DPOLY_RX_POLL_US=22000
+# 3 ms tight-poll: comfortably covers the ~1.7 ms echo latency (so the master catches the
+# echo without the dead IRQ), while keeping the slave's blocking-receive loop mostly yielding
+# (3 ms poll : 4 ms suspend slice) rather than busy-spinning a big window when idle.
+OPT_DEFS += -DPOLY_RX_POLL_US=3000
 # FIX TEST: pin the PIO serial clock divisor to a fixed clock constant on BOTH halves
 # (instead of the live clock_get_hz(clk_sys)). Root cause traced: the master RX detects
 # every start bit but never frames a byte, and the slave's measured bit width varies

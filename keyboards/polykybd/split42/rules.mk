@@ -44,6 +44,16 @@ POINTING_DEVICE_DRIVER = custom
 SRC += base/ltr559.c
 OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 
+# Split-link diagnostics (observation only — no behaviour change to the transport).
+# Master console prints, no debug_enable needed:
+#   HS-DIAG (every 500 failed handshakes): silent-slave vs garbage-echo, RX-FIFO level,
+#     poll_hits/poll_miss/poll_max_us (does the echo reach the master FIFO, how late), and
+#     irq_entries/irq_rxne (does the PIO rx-not-empty IRQ ever fire).
+#   HS-OK (every 2000 successes): the same counters for a working link, to compare.
+# The pre-poll that feeds poll_* only READS the RX FIFO before the existing IRQ-suspend; it
+# does not change receive semantics. See split42/SPLIT42_LINK_INVESTIGATION.md.
+OPT_DEFS += -DPOLY_HANDSHAKE_DIAG -DPOLY_RX_POLL_US=3000
+
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes
 

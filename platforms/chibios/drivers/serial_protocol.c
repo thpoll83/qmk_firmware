@@ -6,6 +6,16 @@
 #include "serial.h"
 #include "serial_protocol.h"
 #include "synchronization_util.h"
+#ifdef POLY_HANDSHAKE_DIAG
+#    include "print.h"
+// split42 split-link diagnostics (implemented in serial_vendor.c). Observation only.
+extern uint32_t serial_debug_irq_entries(void);
+extern uint32_t serial_debug_irq_rxne(void);
+extern uint32_t serial_debug_poll_hits(void);
+extern uint32_t serial_debug_poll_miss(void);
+extern uint32_t serial_debug_poll_max_us(void);
+extern uint32_t serial_debug_rx_fifo_level(void);
+#endif
 
 static inline bool initiate_transaction(uint8_t transaction_id);
 static inline bool react_to_transaction(void);
@@ -133,10 +143,43 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
      *   - due to the half duplex limitations on return codes, we always have to read *something*.
      *   - without the read, write only transactions *always* succeed, even during the boot process where the slave is not ready.
      */
-    if (unlikely(!serial_transport_receive(&transaction_id_shake, sizeof(transaction_id_shake)) || (transaction_id_shake != (transaction_id ^ NUM_TOTAL_TRANSACTIONS)))) {
+    bool hs_rx_ok = serial_transport_receive(&transaction_id_shake, sizeof(transaction_id_shake));
+    if (unlikely(!hs_rx_ok || (transaction_id_shake != (transaction_id ^ NUM_TOTAL_TRANSACTIONS)))) {
         serial_dprintf("SPLIT: receiving handshake failed\n");
+#ifdef POLY_HANDSHAKE_DIAG
+        // split42 diagnostic: on a failed handshake, report whether the slave was SILENT
+        // (rx timed out, no byte) or echoed GARBAGE (a byte arrived but mismatched), plus the
+        // RX-FIFO / poll / IRQ state. Throttled uprintf so it surfaces without debug_enable.
+        {
+            static uint32_t hs_timeout = 0, hs_garbage = 0, hs_total = 0;
+            if (!hs_rx_ok) { hs_timeout++; } else { hs_garbage++; }
+            if ((++hs_total % 500) == 0) {
+                uprintf("HS-DIAG: total=%lu timeout=%lu garbage=%lu exp=0x%02X rx_fifo=%lu poll_hits=%lu poll_miss=%lu poll_max_us=%lu irq_entries=%lu irq_rxne=%lu\n",
+                        (unsigned long)hs_total, (unsigned long)hs_timeout, (unsigned long)hs_garbage,
+                        (unsigned)(uint8_t)(transaction_id ^ NUM_TOTAL_TRANSACTIONS),
+                        (unsigned long)serial_debug_rx_fifo_level(),
+                        (unsigned long)serial_debug_poll_hits(), (unsigned long)serial_debug_poll_miss(),
+                        (unsigned long)serial_debug_poll_max_us(),
+                        (unsigned long)serial_debug_irq_entries(), (unsigned long)serial_debug_irq_rxne());
+            }
+        }
+#endif
         return false;
     }
+#ifdef POLY_HANDSHAKE_DIAG
+    // split42 diagnostic: on the SUCCESS path, periodically report the same counters so a
+    // working link can be compared against a failing one (esp. irq_rxne + poll stats).
+    {
+        static uint32_t hs_ok = 0;
+        if ((++hs_ok % 2000) == 0) {
+            uprintf("HS-OK: ok=%lu irq_entries=%lu irq_rxne=%lu poll_hits=%lu poll_miss=%lu poll_max_us=%lu\n",
+                    (unsigned long)hs_ok,
+                    (unsigned long)serial_debug_irq_entries(), (unsigned long)serial_debug_irq_rxne(),
+                    (unsigned long)serial_debug_poll_hits(), (unsigned long)serial_debug_poll_miss(),
+                    (unsigned long)serial_debug_poll_max_us());
+        }
+    }
+#endif
 
     /* Send transaction buffer to the slave. If this transaction requires it. */
     if (transaction->initiator2target_buffer_size) {

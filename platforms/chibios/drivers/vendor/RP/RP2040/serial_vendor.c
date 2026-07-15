@@ -7,6 +7,12 @@
 #include "hardware/clocks.h"
 #include "wait.h"
 #include "debug.h"
+#ifdef POLY_HANDSHAKE_DIAG
+#    include "hardware/structs/timer.h"  // timer_hw->timerawl for the diag pre-poll (us)
+#    ifndef POLY_RX_POLL_US
+#        define POLY_RX_POLL_US 3000u    // pre-poll window (us); covers the ~1.7 ms echo latency
+#    endif
+#endif
 
 #if !defined(MCU_RP)
 #    error PIO Driver is only available for Raspberry Pi 2040 MCUs!
@@ -98,8 +104,20 @@ static int         rx_state_machine = -1;
 thread_reference_t tx_thread        = NULL;
 static int         tx_state_machine = -1;
 
+#ifdef POLY_HANDSHAKE_DIAG
+// split42 split-link diagnostics (observation only). Counts whether the PIO rx-not-empty
+// IRQ actually fires on this core; on the affected silicon it stays ~0 while bytes still
+// reach the RX FIFO. See keyboards/polykybd/split42/SPLIT42_LINK_INVESTIGATION.md.
+volatile uint32_t g_pio_irq_entries = 0;  // # times this PIO IRQ handler ran at all
+volatile uint32_t g_pio_irq_rxne    = 0;  // # times it took the rx-not-empty branch
+#endif
+
 void pio_serve_interrupt(void) {
     uint32_t irqs = pio->ints0;
+#ifdef POLY_HANDSHAKE_DIAG
+    g_pio_irq_entries++;
+    if (irqs & (PIO_IRQ0_INTF_SM0_RXNEMPTY_BITS << rx_state_machine)) g_pio_irq_rxne++;
+#endif
 
     // The RX FIFO is not empty any more, therefore wake any sleeping rx thread
     if (irqs & (PIO_IRQ0_INTF_SM0_RXNEMPTY_BITS << rx_state_machine)) {
@@ -248,8 +266,48 @@ inline bool serial_transport_send(const uint8_t* source, const size_t size) {
     return result;
 }
 
+#ifdef POLY_HANDSHAKE_DIAG
+// split42 diagnostic counters (observation only): whether/when a byte lands in the RX FIFO
+// before the normal IRQ-suspend below. On the affected silicon the rx IRQ never wakes us, so
+// this pre-poll tells us if the echo reaches the FIFO at all (poll_hits) or never (poll_miss),
+// and how late (poll_max_us). It does NOT change the receive semantics: it only reads the FIFO
+// for up to POLY_RX_POLL_US before the existing suspend, and if empty falls through unchanged.
+volatile uint32_t g_poll_hits   = 0;  // # sync_rx polls that saw a byte within the window
+volatile uint32_t g_poll_miss   = 0;  // # sync_rx polls whose window expired empty
+volatile uint32_t g_poll_max_us = 0;  // worst observed latency (us) until a byte landed
+uint32_t serial_debug_irq_entries(void) { return g_pio_irq_entries; }
+uint32_t serial_debug_irq_rxne(void)    { return g_pio_irq_rxne; }
+uint32_t serial_debug_poll_hits(void)   { return g_poll_hits; }
+uint32_t serial_debug_poll_miss(void)   { return g_poll_miss; }
+uint32_t serial_debug_poll_max_us(void) { return g_poll_max_us; }
+uint32_t serial_debug_rx_fifo_level(void) {
+    if (rx_state_machine < 0) return 0x80000000u;
+    return pio_sm_get_rx_fifo_level(pio, rx_state_machine);
+}
+#endif
+
 static inline msg_t sync_rx(sysinterval_t timeout) {
     msg_t msg = MSG_OK;
+#ifdef POLY_HANDSHAKE_DIAG
+    // Benign pre-poll (unlocked, IRQs on): measure whether/when the byte lands, and let the
+    // very next locked empty-check consume it without needing the (dead) IRQ wake. If the
+    // window expires empty, fall through to the original suspend path below, unchanged.
+    if (rx_state_machine >= 0 && pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
+        uint32_t t0  = timer_hw->timerawl;
+        uint32_t dt  = 0;
+        bool     got = false;
+        while (dt < (uint32_t)POLY_RX_POLL_US) {
+            if (!pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) { got = true; break; }
+            dt = timer_hw->timerawl - t0;
+        }
+        if (got) {
+            g_poll_hits++;
+            if (dt > g_poll_max_us) g_poll_max_us = dt;
+        } else {
+            g_poll_miss++;
+        }
+    }
+#endif
     osalSysLock();
     while (pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
         pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, true);

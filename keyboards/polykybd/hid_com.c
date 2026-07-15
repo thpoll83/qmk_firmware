@@ -14,6 +14,7 @@
 #include "state.h"
 #include "anim/startup_anim.h"
 #include "side.h"
+#include "profiling/loop_profile.h"
 #include "config.h"
 #include "split_sync.h"
 #include "bridge_helper.h"
@@ -186,6 +187,17 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         }
         const poly_layer_t* local_layer = get_local_layer();
         poly_sync_t* local_state = access_local_state();
+        // Loop-timing probe: mark this iteration as overlay-handling so the profiler
+        // can separate overlay-driven main-loop stalls from normal ones (no-op unless
+        // POLYKYBD_LOOP_PROFILE). Bulk overlay/mapping commands: plain (10), flags
+        // on/off (11/12), compressed (16/17), ROI (18/19), mapping (21).
+        switch (data[1]) {
+            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21:
+                loop_profile_note_overlay_cmd();
+                break;
+            default:
+                break;
+        }
         switch(data[1]) {
             // case id_custom_channel...id_qmk_led_matrix_channel: //maybe now usable :)
             //     break;

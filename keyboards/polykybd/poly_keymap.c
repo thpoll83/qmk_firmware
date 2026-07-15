@@ -33,6 +33,7 @@
 #include "polykybd.h"
 #include "status_oled.h"
 #include "bridge_helper.h"
+#include "profiling/loop_profile.h"
 #include "split_fw_up.h"
 #include "base/fw_staging.h"
 #include "uni.h"
@@ -809,6 +810,9 @@ static void eden_idle_tick(void) {
 }
 
 void housekeeping_task_user(void) {
+    // Optional loop-timing probe (no-op unless POLYKYBD_LOOP_PROFILE). At the very
+    // top so it measures the FULL previous iteration — matrix scan, HID, bridge.
+    loop_profile_tick();
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif

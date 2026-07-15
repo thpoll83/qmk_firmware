@@ -38,6 +38,17 @@ $(INTERMEDIATE_OUTPUT)/$(patsubst %.c,%.o,$(patsubst ./%,%,$1)): FILE_SPECIFIC_C
 endef
 $(foreach s,$(POLY_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
 
+# Optional main-loop timing instrumentation (OFF by default). Measures the per-
+# iteration loop time (== the matrix-scan interval), split by overlay vs normal
+# iterations, plus the blocking time spent in send_to_bridge(). Purpose: measure
+# whether overlay transfers stall the loop enough to miss key scans, instead of
+# guessing. Build with `-e POLYKYBD_LOOP_PROFILE=yes`; needs CONSOLE_ENABLE for the
+# uprintf readout. Zero cost in a normal build (all hooks are no-op inlines).
+ifeq ($(strip $(POLYKYBD_LOOP_PROFILE)), yes)
+    OPT_DEFS += -DPOLYKYBD_LOOP_PROFILE
+    SRC += profiling/loop_profile.c
+endif
+
 # HIL test station build: fix the split role at compile time per side instead of
 # using VBUS detection, because both halves are USB-powered on the rig and the
 # two identical boards are told apart only by the test station, which flashes a

@@ -30,6 +30,8 @@
 #define SERIAL_USART_RX_PIN GP4
 #define SERIAL_USART_FULL_DUPLEX
 #define SERIAL_USART_PIN_SWAP
+// Split-link baud is set per variant via SELECT_SOFT_SERIAL_SPEED in halconf.h
+// (0 = 460800). See platforms/chibios/drivers/serial_usart.h for the mapping.
 
 #define SPLIT_TRANSPORT_MIRROR
 // #define SPLIT_LAYER_STATE_ENABLE

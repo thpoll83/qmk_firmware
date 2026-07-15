@@ -39,7 +39,11 @@
 //3	57600 baud
 //4	38400 baud
 //5	19200 baud
-#define SELECT_SOFT_SERIAL_SPEED 1
+// 460800 (was 230400): halves the duration of every overlay transfer — the bulk
+// of split-UART traffic — shortening the master->slave bridge window on each app
+// switch. Safe: the full-duplex two-wire link measured zero steady-state errors at
+// 230400 (split-link health counter, bridge_helper.c). Validate err% on hardware.
+#define SELECT_SOFT_SERIAL_SPEED 0
 
 #define PICO_FLASH_SIZE_BYTES (8 * 1024 * 1024)
 //for split keyboard setup

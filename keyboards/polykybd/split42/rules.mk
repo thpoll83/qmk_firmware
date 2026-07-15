@@ -92,19 +92,16 @@ OPT_DEFS += -DPOLY_RX_POLL_US=22000
 SRC += base/ltr559.c
 OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 
-# WORKING-vs-BROKEN COMPARISON (2026-07-15): enable the pointing device with the
-# no-op `custom` driver (QMK's weak stubs do zero I2C) — the last confirmed-working
-# split42 config (5de77192). This brings the split link UP while the POLY_HANDSHAKE_DIAG
-# + poll instrumentation stays on, so the master console prints the WORKING RX path's
-# stats via the HS-OK success line (poll_hits / irq_rxne / fifo_seen). Compare against
-# the broken no-pointing diag builds to see what's different about a working receive.
-POINTING_DEVICE_ENABLE = yes
-POINTING_DEVICE_DRIVER = custom
-# DISCRIMINATOR (2026-07-15): pointing CODE linked + init/task run, but SPLIT_POINTING_ENABLE
-# omitted (no shmem `pointing` member, no split transaction). Read poll_miss on the master
-# console: ~0 => linking/running pointing_device.c is what makes the echo arrive; ~500 =>
-# SPLIT_POINTING (the shmem member / the extra transaction) is required. See config.h note.
-OPT_DEFS += -DPOLY_NO_SPLIT_POINTING
+# (b)-DISCRIMINATOR (2026-07-15): NO pointing at all — instead add ONLY a dummy shmem
+# member identical to SPLIT_POINTING's `split_slave_pointing_sync_t pointing;` (same type,
+# same position before the RPC buffers, same size), via -DPOLY_SHMEM_POINTING_PAD in
+# quantum/split_common/transport.h. This reproduces PURELY the shared-memory layout shift
+# that enabling pointing causes — no pointing code, no split transaction. Read poll_miss:
+#   ~0   => the fix is the shmem layout shift of the RPC buffers => a latent memory/offset
+#           bug that the shift masks (the real bug to find). split42 needs neither pointing
+#           nor the trackpad — a deliberate padding would do, but the latent bug is the target.
+#   ~500 => NOT the shmem member => the echo needs the pointing SPLIT TRANSACTION itself.
+OPT_DEFS += -DPOLY_SHMEM_POINTING_PAD
 
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes

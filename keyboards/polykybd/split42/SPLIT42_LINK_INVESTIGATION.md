@@ -241,17 +241,39 @@ stopped" though `poll_miss≈0` (handshake fine). That is a *separate* higher-le
 symptom (key-event transfer / slave scan), or a diagnostic-console-flood artifact —
 tracked separately, not the handshake.
 
-**Next experiment (the (b)/(c) discriminator, now readable via `poll_miss`):** enable
-the pointing **code** (`POINTING_DEVICE_ENABLE` + custom driver → `pointing_device_init/
-_task` run) but omit `SPLIT_POINTING_ENABLE` (`-DPOLY_NO_SPLIT_POINTING`) → **no
-`split_shared_memory_t` `pointing` member, no split transaction.** Read `poll_miss`:
-- `poll_miss≈0` → merely **linking/running `pointing_device.c`** makes the echo arrive
-  (effect "c", a layout/init side effect); `SPLIT_POINTING` + its shmem/transaction are
-  NOT the cause. The real fix is then a layout/init detail, and split42 needs neither the
-  trackpad nor the split-pointing transaction.
-- `poll_miss≈500` → the echo requires `SPLIT_POINTING` specifically (the shmem `pointing`
-  member (b), which shifts the RPC-buffer offsets, or the extra transaction). Next step
-  then isolates the shmem member from the transaction.
+**(c)-discriminator build (`77ab181d`, pointing code, NO `SPLIT_POINTING`) — hardware
+(2026-07-15):**
+```
+HS-DIAG: total=500 timeout=500 … poll_hits=3 poll_miss=500 … irq_rxne=1
+```
+- **`poll_miss=500` — identical to the no-pointing broken build.** Running the pointing
+  **code** without `SPLIT_POINTING_ENABLE` does NOT make the echo arrive. **Effect (c)
+  — linking/running `pointing_device.c` — is RULED OUT.**
+
+**Candidates now (by elimination):**
+| candidate | status |
+|---|---|
+| (a) transaction **count** / table size | ruled out (`e260bcd4` dummy transactions) |
+| (a′) every-cycle **traffic** | ruled out (`01cb83d0` heartbeat) |
+| (c) pointing **code** linkage/init/task | **ruled out** (`77ab181d`, `poll_miss=500`) |
+| **(b) the `split_shared_memory_t` `pointing` member** | **last one standing** |
+
+The `pointing` member (`split_slave_pointing_sync_t`, ~8 B) sits in `transport.h`
+**immediately before the RPC buffers** (`rpc_info` / `rpc_m2s_buffer` / `rpc_s2m_buffer`)
+that the poly `USER_SYNC_*` transactions transfer through — so enabling it **shifts the
+RPC buffers' offset**. This is the **memory-layout-coincidence / latent-corruption**
+hypothesis: enabling pointing shifts the shared-memory layout and masks a real bug.
+
+**Next experiment (confirm (b) surgically):** add ONLY a dummy member **identical** to
+`pointing` (same `split_slave_pointing_sync_t` type, same position before the RPC
+buffers, same size) via `-DPOLY_SHMEM_POINTING_PAD` in `quantum/split_common/transport.h`
+— **with NO pointing code and NO split transaction** (pointing fully off, zero pointing
+symbols linked). Read `poll_miss`:
+- `poll_miss≈0` → **confirmed: it's purely the shmem layout shift of the RPC buffers.**
+  There is a latent memory/offset bug that the shift masks — that bug becomes the real
+  target (a deliberate padding would "fix" split42 but only by masking it too).
+- `poll_miss≈500` → NOT the shmem member → the echo needs the pointing **split
+  transaction** itself (register the pointing transaction handlers without the member).
 
 ---
 
@@ -306,9 +328,10 @@ last), each a single change for bisectability:
 - `78b5b99e` pointing on, sample_burst removed → **clean working read: poll_miss=2/84660,
   poll_max_us=1721. The poll IS the working receive path; pointing makes the echo arrive
   (poll_miss≈0 vs ≈500 without). poll_miss is now the root-cause probe.**
-- (next) POINTING_DEVICE_ENABLE but NO SPLIT_POINTING (`-DPOLY_NO_SPLIT_POINTING`) →
-  read poll_miss: does linking pointing_device.c alone make the echo arrive, or is the
-  split-pointing shmem member / transaction required?
+- `77ab181d` pointing code, NO SPLIT_POINTING → **poll_miss=500 (same as broken); effect
+  (c) code-linkage RULED OUT. By elimination the cause is (b) the shmem `pointing` member.**
+- (next) `-DPOLY_SHMEM_POINTING_PAD`: dummy shmem member identical to `pointing`, NO
+  pointing code/transaction → confirm (b) (poll_miss≈0 = the RPC-buffer layout shift is it).
 
 > ⚠️ **Environment note:** the remote container was rolled back to an older snapshot
 > mid-session once; the **remote branch is the source of truth**. If local `HEAD`

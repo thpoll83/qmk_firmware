@@ -114,6 +114,17 @@ typedef struct _split_slave_pointing_sync_t {
     report_mouse_t report;
     uint16_t       cpi;
 } split_slave_pointing_sync_t;
+#elif defined(POLY_SHMEM_POINTING_PAD)
+// split42 root-cause experiment: make the pointing sync struct available with NO
+// pointing enabled, so the shmem `pointing` member below can reproduce EXACTLY the
+// layout shift SPLIT_POINTING causes (same type, same position, same size) without
+// any pointing code or split transaction. report.h supplies report_mouse_t.
+#    include "report.h"
+typedef struct _split_slave_pointing_sync_t {
+    uint8_t        checksum;
+    report_mouse_t report;
+    uint16_t       cpi;
+} split_slave_pointing_sync_t;
 #endif // defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
 
 #if defined(HAPTIC_ENABLE) && defined(SPLIT_HAPTIC_ENABLE)
@@ -208,6 +219,12 @@ typedef struct _split_shared_memory_t {
 #endif // ST7565_ENABLE(OLED_ENABLE) && defined(SPLIT_ST7565_ENABLE)
 
 #if defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
+    split_slave_pointing_sync_t pointing;
+#elif defined(POLY_SHMEM_POINTING_PAD)
+    // split42 (b)-discriminator: identical member/position/size as SPLIT_POINTING's
+    // `pointing`, but with NO pointing code and NO split transaction. If this alone
+    // makes the link work (poll_miss~0), the fix is purely the shmem layout shift
+    // of the RPC buffers below -> a latent memory/offset bug this shift masks.
     split_slave_pointing_sync_t pointing;
 #endif // defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
 

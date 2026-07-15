@@ -178,6 +178,17 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
         return false;
     }
 
+#ifdef POLY_HANDSHAKE_DIAG
+    // CONTROL EXPERIMENT (split42 root cause): the byte reaches the master RX FIFO in only
+    // ~0.6% of transactions when we DON'T run this burst first, yet ran ~100% when the old
+    // build ran serial_debug_rx_sample_burst() (a ~1-3 ms GP5/PC-reading spin) before the
+    // receive. Re-add exactly that spin (but NOT pop_before_recv, which steals the byte) and
+    // let the real receive consume the echo. If the LINK now comes up, the spin is genuinely
+    // load-bearing for RX capture and we bisect what in it matters (delay vs GP5 read vs PC
+    // read). If it stays dead, something else regressed vs the direct_hits=500 build.
+    serial_debug_rx_sample_burst();
+#endif
+
     uint8_t transaction_id_shake = 0xFF;
 
     /* Which we always read back first so that we can error out correctly.

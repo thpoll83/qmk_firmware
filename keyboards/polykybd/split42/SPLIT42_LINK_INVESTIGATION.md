@@ -1,8 +1,12 @@
 # split42 split-link investigation — master PIO1 RX receive path
 
 **Branch:** `claude/split42-literal-split72-copy`
-**Status:** root cause localized to the **master's PIO1 RX consume/wake path**; a
-poll-based bypass is being validated on hardware. **Not yet fixed/shipped.**
+**Status:** localized to the **master's PIO1 RX capture path** — the master RX SM
+does not reliably capture the slave's echo (byte reaches the FIFO in only ~0.6 % of
+transactions when core0 is *not* running a tight spin during the echo window). The
+IRQ-wake theory and the poll-bypass are both dead (you can't poll a byte that never
+lands). **Not yet fixed/shipped.** A tight ~2 ms spin after the send makes capture
+succeed every time — currently isolating *why*.
 **Working fallback for the repo:** PR **#144** (`claude/split42-working-all-subsystems`,
 `d74e7e11`) = RGB + pointing[Cirque] + LTR-559, confirmed working.
 
@@ -131,23 +135,39 @@ the poll did not catch the byte. But the earlier `direct_hits=500` proof came on
 *after* the ~1–3 ms `sample_burst` loop. ⇒ Working hypothesis: **the echo lands
 late (>1.5 ms)**, and the old burst was accidentally providing exactly that delay.
 
-**Current build (in flight):** poll the **whole receive window**
-(`POLY_RX_POLL_US=22000`, just over the 20 ms timeout) and **measure** the outcome:
-- `g_poll_hits` — # polls that caught a byte in-window
-- `g_poll_miss` — # polls whose window expired empty
-- `g_poll_max_us` — worst observed latency until a byte landed
+**22 ms-poll build (`bdb71a18`) — measured on hardware (2026-07-15):**
+```
+HS-DIAG: total=500 timeout=500 … poll_hits=3 poll_miss=500 poll_max_us=426 irq_entries=14 irq_rxne=1
+```
+- `poll_miss=500`: polling the **full 22 ms**, the echo byte reaches the master RX
+  FIFO in only **3 of ~503** transactions (~0.6 %).
+- `poll_max_us=426`: when it *does* arrive, it arrives **fast (≤426 µs), not late**.
 
-Reported on both console lines:
-- `HS-DIAG:` (failure path, every 500 fails) — `… poll_hits=… poll_miss=…
-  poll_max_us=… irq_entries=… irq_rxne=…`
-- `HS-OK:` (success path, every 2000 successes) — `… irq_entries=… poll_hits=…
-  poll_max_us=…`
+**⇒ The "byte arrives late" theory is REFUTED. The byte does not arrive late — it
+almost never arrives at all.** The earlier `direct_hits=500` ("byte always in the
+FIFO") was **entirely an artifact of the `sample_burst` diagnostic loop** that ran
+before that measurement: remove the ~1–3 ms burst and the master RX SM captures the
+slave's echo ~0.6 % of the time.
 
-**Decision table for the current build:**
-| Outcome | Meaning | Next step |
-|---|---|---|
-| Slave alive + `poll_hits>0`, `poll_max_us` = some value, `irq_entries`~0 | Echo DOES arrive, just late; the IRQ is genuinely dead and merely bypassed | Make the poll the real fix; size `POLY_RX_POLL_US` from `poll_max_us` + headroom; move out of the diag flag into config; verify split72 unaffected |
-| Still dead, `poll_hits=0`, `poll_miss` high | The byte never reaches the master FIFO within 22 ms once the old burst's timing side-effect is gone | Back to the RX SM / GP5 line / the master PIO1_IRQ delivery itself; the "byte reaches FIFO" earlier finding was burst-timing-dependent |
+**⇒ The poll-bypass fix is DEAD** — you cannot poll a byte out of the FIFO that
+never lands there. The failure is **upstream of the FIFO**: the master's RX state
+machine is **not reliably capturing the echo**, and the wake-path/IRQ theory
+(§3) is downstream of a problem that mostly prevents the byte from being received
+at all.
+
+**The load-bearing clue:** running a tight ~2 ms spin (the old `sample_burst`,
+which reads GP5 + the RX PC in a loop) right after the send makes capture succeed
+**every** time; a 22 ms FIFO-status poll spin does **not**. Register reads have no
+documented hardware side effect, so the difference is either (a) *what* is read
+(GPIO_IN / the SM ADDR register vs FSTAT) or (b) the exact CPU/bus activity during
+the echo window. This is the current thread to pull.
+
+**Next experiment (control):** re-add the exact `serial_debug_rx_sample_burst()`
+spin **before** the receive (but NOT the byte-stealing `pop_before_recv`) and see
+if the **link comes up**. If yes → the spin is genuinely load-bearing for RX
+capture, and the next step bisects *what* in it matters (the delay, the GP5 read,
+the ADDR read). If no → something else regressed vs the old `direct_hits=500`
+build, and that earlier finding needs re-examination.
 
 ---
 
@@ -190,7 +210,10 @@ last), each a single change for bisectability:
 - `eebaff54` pop RX FIFO right before receive (direct_hits=500 → byte reaches FIFO)
 - `86da4d85` dump inte0/ints0 + NVIC state (irq_entries≈1 → IRQ never fires)
 - `06071ee6` FIX TEST — bypass the dead RX IRQ by polling the FIFO in sync_rx (1.5 ms)
-- `bdb71a18` poll the whole 22 ms window + measure echo latency (is the byte late?)
+- `bdb71a18` poll the whole 22 ms window + measure echo latency → **byte reaches FIFO
+  only 3/503 (poll_max_us=426); the poll bypass is dead, the byte simply isn't captured**
+- `57baf658` add this investigation doc
+- (next) control: re-add the sample_burst spin before receive — is it load-bearing?
 
 > ⚠️ **Environment note:** the remote container was rolled back to an older snapshot
 > mid-session once; the **remote branch is the source of truth**. If local `HEAD`

@@ -71,14 +71,28 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ENCODER_RESOLUTION 2
 
 /* -------------------------------------------------------------------------
-   ROOT-CAUSE EXPERIMENT (2026-07-14): pointing device DISABLED again, replaced
-   by a custom every-cycle master->slave heartbeat pull (see the
-   POLY_SPLIT_HEARTBEAT_EXPERIMENT block in poly_keymap.c housekeeping, enabled
-   from rules.mk). This tests whether split42's dependency is simply "a frequent
-   every-cycle slave pull" (which SPLIT_POINTING_ENABLE happened to provide) or
-   something structural to the pointing feature. The whole Cirque/pointing block
-   is omitted here for the test; if the heartbeat fixes split42 the proper fix is
-   in the poly transport and this block never comes back. */
+   Pointing device — REQUIRED for split42 (restores the working config).
+
+   Bisect (2026-07-14) proved split42's split link only ESTABLISHES when
+   SPLIT_POINTING_ENABLE is set — it is the ONE re-enabled subsystem that touches
+   the split link. rules.mk uses the no-op `custom` pointing driver (weak QMK
+   hooks, zero I2C), so no trackpad or I2C bus is needed; this block only supplies
+   the SPLIT_POINTING defines the driver + split transaction require.
+
+   ⚠️ This block was accidentally dropped on the default branch by the root-cause
+   EXPERIMENT commits `01cb83d0` (heartbeat — removed SPLIT_POINTING_ENABLE) and
+   `0e04469d` (rules re-enabled POINTING_DEVICE_ENABLE but not SPLIT_POINTING),
+   which left split42 broken (pointing code linked, but no split transaction). The
+   CLAUDE.md investigation notes even warned "Do NOT ship split42 off 01cb83d0."
+   Restored here to the confirmed-working `09908b43`/`5de77192` state. Do NOT drop
+   it again until the IRQ-independent root fix lands and is confirmed on hardware. */
+// Enable use of pointing device on the slave split (registers the split transaction
+// that split42 needs to bring the split link up).
+#define SPLIT_POINTING_ENABLE
+// Pointing device source is the right split (matches split72; sets the pull direction).
+#define POINTING_DEVICE_RIGHT
+// Limit how often the (no-op) report is generated.
+#define POINTING_DEVICE_TASK_THROTTLE_MS 1
 
 /* RGB matrix: RE-ENABLED. split42 has no WS2812 LEDs populated, but
    we keep the RGB subsystem in the build (WS2812 PIO driver + the shared RGB code

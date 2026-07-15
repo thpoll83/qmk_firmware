@@ -1,0 +1,198 @@
+# split42 split-link investigation — master PIO1 RX receive path
+
+**Branch:** `claude/split42-literal-split72-copy`
+**Status:** root cause localized to the **master's PIO1 RX consume/wake path**; a
+poll-based bypass is being validated on hardware. **Not yet fixed/shipped.**
+**Working fallback for the repo:** PR **#144** (`claude/split42-working-all-subsystems`,
+`d74e7e11`) = RGB + pointing[Cirque] + LTR-559, confirmed working.
+
+> This file is the running log of the split42 boot-time split-link failure. It
+> supersedes the "why does split42 need `SPLIT_POINTING_ENABLE`" open question in
+> the top-level `CLAUDE.md` (that note stays as the higher-level pointer).
+
+---
+
+## 1. The symptom
+
+split42 (42-key CRKBD-footprint PolyKybd) **never established the split link at
+boot** unless `SPLIT_POINTING_ENABLE` was defined. The same firmware image is
+flashed to **both** halves; the crossover is done at runtime by role
+(`SERIAL_USART_PIN_SWAP`, master swaps TX/RX in its init path).
+
+Observed on hardware:
+- With pointing **disabled**: the two halves can't talk. The master retries split
+  transactions, exhausts `SPLIT_MAX_CONNECTION_ERRORS` (200), times out, and runs
+  **solo** — the display sits on the boot splash until a keypress forces a refresh.
+- It follows the **master role** (swap which half has USB → the behavior follows the
+  new master), not a physical half.
+- Enabling the pointing device makes the link come up. **Deterministic, not a flaky
+  race.**
+
+Master HID console on the broken build:
+`Split link: … crc_err=0 transport_fail=100.0%` climbing to >1.2M frames, all
+failing. So the QMK serial transport is dead at the **transport** layer — every
+frame times out. It is **NOT** payload/CRC corruption (`crc_err=0`), and the
+handshake token can't mismatch (`tid ^ NUM_TOTAL_TRANSACTIONS`, same image both
+sides).
+
+---
+
+## 2. What was ruled OUT (earlier work, on-hardware)
+
+| Hypothesis | How ruled out |
+|---|---|
+| Trackpad hardware / Cirque I2C stall | No-op `custom` pointing driver (zero I2C) + `SPLIT_POINTING_ENABLE` → **still works** (`5de77192`). So the fix is the split transaction, not the I2C. |
+| Transaction **count** / handshake-token / table size | Registered 3 dummy split transactions to match `NUM_TOTAL_TRANSACTIONS` of the working build (no pointing) → **still 100% transport_fail** (`e260bcd4`). |
+| Every-cycle master→slave **traffic/frequency** | Drove an every-cycle pull over the existing `USER_SYNC_SLAVE_DATA` channel from housekeeping → **still breaks** (`01cb83d0`). Not the traffic. |
+| Memory/`.bss`/stack **layout** | `.bss`/`.data`/stacks within ~100 B and stacks at identical addresses between working and broken. |
+| **Baud mismatch** | `POLY_FIXED_SERIAL_CLKDIV` (pin the PIO clkdiv to a fixed 125 MHz constant on both halves) was a **no-op** — the master already computes the divisor at 125 MHz; forcing it changed nothing. |
+| **Framing errors** (bad stop bit at wrong baud) | `g_rx_framing_errors == 0` across the whole run. Bytes decode cleanly. |
+| **Bad RX SM state** (metastable/wedged) | A full RX SM re-init (disable, clear FIFO, restart, jmp to program start, re-enable) did **not** recover the link. Consistent with the RP2040 PIO forum "metastable crash" being a *different* failure (that needs `input_sync_bypass` set; ours has synchronizers **on**, `in_sync_bypass=0`, and a clean PC). |
+| PIO resource collision (WS2812/RGB) | Serial is on **PIO1**, WS2812 on **PIO0**. No collision. |
+
+---
+
+## 3. What was proven TRUE (master-console, race-free measurements)
+
+All of the following were measured on the master's USB console (no slave rendering
+involved, so no HIGHPRIO-thread SPI race), with `POLY_HANDSHAKE_DIAG`:
+
+1. **The slave physically transmits** valid 230400-baud UART frames on the master's
+   RX pin GP5: `min_low_us=4, min_high_us=4` (one bit ≈ 4.34 µs at 230400).
+2. **The master RX state machine is perfectly configured** (from a live register
+   dump, `serial_debug_dump_rx_sm()`):
+   - `PIO1 ctrl=0x3` (both SMs enabled), `rx_sm=1`.
+   - RX `pinctrl` IN_BASE = 5 = GP5, `execctrl` JMP_PIN = 5, `clkdiv=0x0043D100`
+     (matches the working TX SM's divisor exactly).
+   - GP5 `func=7` (PIO1), pad `IE=1`, `padoe` bit5 = 0 (master is **not** driving its
+     own RX pin), `in_sync_bypass=0` (synchronizers on), `clk_sys=125 MHz`.
+3. **The RX SM decodes cleanly and pushes the echo byte into the FIFO every
+   transaction:** `pc_moved>0` (PC leaves the `wait 0 pin` at offset 19, reaches
+   push at pc 20..27), `framing_errors=0`, and a direct FIFO pop right before the
+   receive returned the **correct** echo byte every time: `direct_hits=500,
+   direct_last=0x19` (0x19 = `tid ^ NUM_TOTAL_TRANSACTIONS` for that transaction).
+4. **The master's PIO1 rx-not-empty IRQ effectively never fires:** `irq_entries` was
+   1–14 across 500 transactions, `irq_rxne` ≈ 0–1 — even though NVIC
+   `ISER0=0x0000AA21` shows **PIO1_IRQ_0 (bit 9) enabled**, and `ISPR0=0x00010040`
+   shows SIO_IRQ_PROC1 (bit 16) pending.
+
+### The localization
+
+Putting 1–4 together: the echo byte **reaches the master RX FIFO**, but the master's
+`sync_rx()` suspends waiting on the PIO1 rx-not-empty IRQ to wake `rx_thread`, and
+**that IRQ wake never happens**. So the receive sits until the 20 ms timeout and
+fails — even though a valid byte is (or shortly becomes) available in the FIFO.
+
+Why `SPLIT_POINTING_ENABLE` "fixes" it: enabling pointing adds an extra per-cycle
+transaction that **shifts timing** so a byte is already sitting in the FIFO at the
+moment the receive checks it (the receive's first `pio_sm_is_rx_fifo_empty` check
+passes without ever needing the IRQ). This is **masking**, not repairing, the dead
+IRQ. (The old `sample_burst` diagnostic did the same by accident — see §5.)
+
+This matches the class of RP2040 PIO/SIO IRQ-delivery quirk already documented in
+this repo's **core1-hang** investigation (`CLAUDE.md`): an IRQ that is enabled in
+NVIC yet is not actually delivered/taken.
+
+---
+
+## 4. The asymmetry (an open sub-question)
+
+Both halves run the **same code**. The **slave's** RX IRQ works — the slave's
+`react_to_transaction()` reaches its echo stage every time (confirmed earlier via
+the stage probe: "RX / lock / glyph confirmed working"). Only the **master's** RX
+IRQ is dead. The only role-dependent difference in the RX path is the pin swap:
+master RX = GP5, slave RX = GP4 (the SM index `rx_sm=1` and IRQ wiring are
+identical). Why the master's PIO1_IRQ_0 delivery specifically fails is **not yet
+explained** — it is the remaining root-cause question even once the poll bypass is
+confirmed.
+
+---
+
+## 5. The fix under test (poll bypass) + a measurement gotcha
+
+**Approach:** don't depend on the IRQ. In `sync_rx()` (serial_vendor.c), before
+falling back to the IRQ-suspend, **poll the RX FIFO** (unlocked, IRQs on) for a
+bounded window. Because only this thread drains the master RX FIFO, seeing the FIFO
+non-empty means the next locked empty-check consumes the byte with no suspend. A
+genuinely dead link still falls through to the normal 20 ms IRQ-suspend timeout, so
+the poll can only help. Gated by `POLY_RX_POLL_FIX`, window `POLY_RX_POLL_US`.
+
+**Measurement gotcha (important for reading logs):** the `min_low_us`, `fifo_seen`,
+`pc_moved`, `direct_hits` fields are populated by the `serial_debug_rx_sample_burst()`
+(a ~1–3 ms GP5 sampling loop) and `serial_debug_rx_pop_before_recv()` diagnostics.
+When those calls were removed to test the poll cleanly, those fields read back as
+**zero** — that is a *measurement artifact*, NOT the slave going silent. Do not
+re-interpret zeroed diag fields as "no transmission." Also: `_pop_before_recv()`
+**steals the byte** out of the FIFO before the real receive, so it must NOT be left
+in when testing the poll (it would defeat it).
+
+**First poll result (1.5 ms window):** link **still dead**, `irq_entries≈14`, and
+the poll did not catch the byte. But the earlier `direct_hits=500` proof came only
+*after* the ~1–3 ms `sample_burst` loop. ⇒ Working hypothesis: **the echo lands
+late (>1.5 ms)**, and the old burst was accidentally providing exactly that delay.
+
+**Current build (in flight):** poll the **whole receive window**
+(`POLY_RX_POLL_US=22000`, just over the 20 ms timeout) and **measure** the outcome:
+- `g_poll_hits` — # polls that caught a byte in-window
+- `g_poll_miss` — # polls whose window expired empty
+- `g_poll_max_us` — worst observed latency until a byte landed
+
+Reported on both console lines:
+- `HS-DIAG:` (failure path, every 500 fails) — `… poll_hits=… poll_miss=…
+  poll_max_us=… irq_entries=… irq_rxne=…`
+- `HS-OK:` (success path, every 2000 successes) — `… irq_entries=… poll_hits=…
+  poll_max_us=…`
+
+**Decision table for the current build:**
+| Outcome | Meaning | Next step |
+|---|---|---|
+| Slave alive + `poll_hits>0`, `poll_max_us` = some value, `irq_entries`~0 | Echo DOES arrive, just late; the IRQ is genuinely dead and merely bypassed | Make the poll the real fix; size `POLY_RX_POLL_US` from `poll_max_us` + headroom; move out of the diag flag into config; verify split72 unaffected |
+| Still dead, `poll_hits=0`, `poll_miss` high | The byte never reaches the master FIFO within 22 ms once the old burst's timing side-effect is gone | Back to the RX SM / GP5 line / the master PIO1_IRQ delivery itself; the "byte reaches FIFO" earlier finding was burst-timing-dependent |
+
+---
+
+## 6. Key files & flags
+
+- `platforms/chibios/drivers/vendor/RP/RP2040/serial_vendor.c`
+  - `pio_serve_interrupt()` — the PIO1 IRQ handler; `g_pio_irq_entries` /
+    `g_pio_irq_rxne` count whether it fires at all.
+  - `sync_rx()` — the receive-wake path; the `POLY_RX_POLL_FIX` pre-poll + poll
+    measurement live here.
+  - `serial_debug_*()` — the diagnostic accessors (FIFO level/peek, GP5 sample
+    burst, RX PC span, framing errors, IRQ counters, poll counters, RX SM dump).
+- `platforms/chibios/drivers/serial_protocol.c`
+  - `initiate_transaction()` — master handshake; the `HS-DIAG` (fail) + `HS-OK`
+    (success) console prints, all under `POLY_HANDSHAKE_DIAG`.
+- `keyboards/polykybd/split42/rules.mk`
+  - `POLY_HANDSHAKE_DIAG` — master-side diagnostics (on).
+  - `POLY_RX_POLL_FIX` + `POLY_RX_POLL_US` — the poll bypass under test (on).
+  - `POLY_FIXED_SERIAL_CLKDIV` — the fixed-baud experiment (off, was a no-op).
+  - `POLY_SLAVE_STAGE_PROBE` — slave-side keycap stage probe (off; raced the slave's
+    own SPI, gave non-deterministic partial fills).
+
+All diagnostic defines are **split42-only** — split72 and normal builds are
+unaffected.
+
+---
+
+## 7. Commit trail (this investigation)
+
+Diagnostic + experiment commits on `claude/split42-literal-split72-copy` (most recent
+last), each a single change for bisectability:
+
+- `70c7f6af` dump PIO1 padoe/padout — is the master driving its own RX pin GP5?
+- `af780752` measure GP5 longest low-run — valid UART start bit vs glitch?
+- `503e3472` FIX EXPERIMENT — re-init the master RX state machine after boot
+- `5018d666` sample RX PC distribution — never-leaves-wait vs detects-but-misframes
+- `241b8152` FIX TEST — pin PIO serial clkdiv to a fixed constant (no-op)
+- `52b97b7e` reliable GP5 bit-time (hw timer) + did-the-RX-SM-actually-push probe
+- `5d7f2ebe` count RX framing errors (framing_errors=0)
+- `eebaff54` pop RX FIFO right before receive (direct_hits=500 → byte reaches FIFO)
+- `86da4d85` dump inte0/ints0 + NVIC state (irq_entries≈1 → IRQ never fires)
+- `06071ee6` FIX TEST — bypass the dead RX IRQ by polling the FIFO in sync_rx (1.5 ms)
+- `bdb71a18` poll the whole 22 ms window + measure echo latency (is the byte late?)
+
+> ⚠️ **Environment note:** the remote container was rolled back to an older snapshot
+> mid-session once; the **remote branch is the source of truth**. If local `HEAD`
+> looks behind, `git fetch origin <branch> && git reset --hard origin/<branch>`
+> before continuing.

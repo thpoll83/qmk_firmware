@@ -264,16 +264,57 @@ that the poly `USER_SYNC_*` transactions transfer through — so enabling it **s
 RPC buffers' offset**. This is the **memory-layout-coincidence / latent-corruption**
 hypothesis: enabling pointing shifts the shared-memory layout and masks a real bug.
 
-**Next experiment (confirm (b) surgically):** add ONLY a dummy member **identical** to
-`pointing` (same `split_slave_pointing_sync_t` type, same position before the RPC
-buffers, same size) via `-DPOLY_SHMEM_POINTING_PAD` in `quantum/split_common/transport.h`
-— **with NO pointing code and NO split transaction** (pointing fully off, zero pointing
-symbols linked). Read `poll_miss`:
-- `poll_miss≈0` → **confirmed: it's purely the shmem layout shift of the RPC buffers.**
-  There is a latent memory/offset bug that the shift masks — that bug becomes the real
-  target (a deliberate padding would "fix" split42 but only by masking it too).
-- `poll_miss≈500` → NOT the shmem member → the echo needs the pointing **split
-  transaction** itself (register the pointing transaction handlers without the member).
+**(b)-discriminator build (`6ff584d4`, dummy shmem member only) — hardware (2026-07-15):**
+```
+HS-DIAG: total=500 timeout=500 … poll_hits=0 poll_miss=500 … irq_rxne=0
+```
+(Verified the pad compiled in: flag in `cflags.txt`; the member is 8 B and shifts the RPC
+buffers by 9 B.) **`poll_miss=500` → the shmem member / RPC-offset shift is RULED OUT too.**
+
+**So EVERY isolated component is now ruled out** — (a) count, (a′) traffic, (b) shmem
+member, (c) code/task — yet full pointing (all together) works.
+
+**Linker/memory-map diff (working full-pointing vs broken pad-only, hardware-free):**
+`.text` grows with pointing (expected); `.bss`/`.data` symbols shift a few dozen bytes;
+but **the stacks are at byte-identical addresses** in both (`__main_stack_base__`
+0x20040000, `__process_stack` 0x20040400, all core1 stacks identical). **No stack move or
+suspicious overlap** → the "layout-coincidence masks a stack/buffer bug" hypothesis is
+**weakened**; the cause is more likely **functional**.
+
+### Root-cause chain (current best model) — the dead-IRQ blocking-receive trap
+
+Putting the confirmed facts together:
+1. The PIO1 rx-not-empty IRQ **never fires** (`irq_rxne=0` in every build, working or
+   broken — silicon/SDK quirk, same family as the core1-hang PIO/SIO IRQ issue).
+2. So `osalThreadSuspendTimeoutS(&rx_thread, …)` on that IRQ only wakes on its **timeout**,
+   never on a byte. For a **finite** receive that's fine (it times out and retries). For a
+   **`TIME_INFINITE`** receive — which is exactly the **slave's id-wait**
+   (`serial_transport_receive_blocking`) — it **suspends FOREVER**. Once suspended, a byte
+   landing in the FIFO can't wake it: **the slave goes permanently deaf.**
+3. `poll_miss=500` on the master = the slave never echoes = the slave isn't receiving ids
+   (it's deaf). With pointing, the extra every-cycle transactions keep the slave's receive
+   loop **cycling** (each completed transaction re-enters the receive with a fresh poll), so
+   it re-polls often enough to catch a master id before going deaf — masking, not fixing,
+   the trap. This also explains why no single isolated factor reproduced it (it's about
+   keeping the loop *cycling*, an emergent effect of real traffic), and why builds that
+   "work" still **degrade after a short time** (the slave eventually loses the race and goes
+   deaf).
+
+### The candidate real fix (under test now)
+
+`sync_rx` (POLY_RX_POLL_FIX) no longer suspends on the dead IRQ indefinitely: a blocking
+(`TIME_INFINITE`) receive now suspends in short **`POLY_RX_BLOCK_SLICE_MS`** (4 ms) slices
+and **re-polls the FIFO** each slice, so a byte that lands while suspended is picked up on
+the next loop — the slave can never go permanently deaf, without busy-pegging the core (the
+suspend still yields to the slave's main thread). Finite receives keep their real timeout
+(the tight poll already covers the fast case). **Tested with NO pointing and NO pad** (zero
+pointing symbols linked):
+- **`poll_miss≈0`, slave alive, keystrokes on both halves, stable** → confirmed: the
+  dead-IRQ blocking-suspend trap was the root cause; this is the real fix and split42 needs
+  neither the trackpad nor `SPLIT_POINTING`. (Would then extend to split72 + drop the
+  diagnostics.)
+- **`poll_miss=500` still** → the slave-deaf model is wrong; the dependency is something
+  else about enabling the pointing feature.
 
 ---
 
@@ -330,8 +371,11 @@ last), each a single change for bisectability:
   (poll_miss≈0 vs ≈500 without). poll_miss is now the root-cause probe.**
 - `77ab181d` pointing code, NO SPLIT_POINTING → **poll_miss=500 (same as broken); effect
   (c) code-linkage RULED OUT. By elimination the cause is (b) the shmem `pointing` member.**
-- (next) `-DPOLY_SHMEM_POINTING_PAD`: dummy shmem member identical to `pointing`, NO
-  pointing code/transaction → confirm (b) (poll_miss≈0 = the RPC-buffer layout shift is it).
+- `6ff584d4` dummy shmem member only → **poll_miss=500; (b) shmem member RULED OUT. ALL
+  isolated components now ruled out. Map diff: stacks identical → not a layout bug.**
+- (next) REAL-FIX TEST: sync_rx re-polls in short slices for blocking (TIME_INFINITE)
+  receives instead of suspending forever on the dead IRQ (slave-deaf trap). NO pointing.
+  poll_miss≈0 + stable both-halves typing = the real fix; pointing was only masking it.
 
 > ⚠️ **Environment note:** the remote container was rolled back to an older snapshot
 > mid-session once; the **remote branch is the source of truth**. If local `HEAD`

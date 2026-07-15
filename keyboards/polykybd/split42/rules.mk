@@ -92,16 +92,14 @@ OPT_DEFS += -DPOLY_RX_POLL_US=22000
 SRC += base/ltr559.c
 OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 
-# (b)-DISCRIMINATOR (2026-07-15): NO pointing at all — instead add ONLY a dummy shmem
-# member identical to SPLIT_POINTING's `split_slave_pointing_sync_t pointing;` (same type,
-# same position before the RPC buffers, same size), via -DPOLY_SHMEM_POINTING_PAD in
-# quantum/split_common/transport.h. This reproduces PURELY the shared-memory layout shift
-# that enabling pointing causes — no pointing code, no split transaction. Read poll_miss:
-#   ~0   => the fix is the shmem layout shift of the RPC buffers => a latent memory/offset
-#           bug that the shift masks (the real bug to find). split42 needs neither pointing
-#           nor the trackpad — a deliberate padding would do, but the latent bug is the target.
-#   ~500 => NOT the shmem member => the echo needs the pointing SPLIT TRANSACTION itself.
-OPT_DEFS += -DPOLY_SHMEM_POINTING_PAD
+# REAL-FIX TEST (2026-07-15): NO pointing, NO shmem pad. The root chain: the PIO1
+# rx-not-empty IRQ never fires on this silicon, so the slave's TIME_INFINITE id-receive
+# suspends on the dead IRQ FOREVER and goes deaf (never echoes -> master poll_miss=500).
+# The POLY_RX_POLL_FIX change in serial_vendor.c sync_rx now suspends a blocking receive
+# in short POLY_RX_BLOCK_SLICE_MS slices and re-polls the FIFO, so it never waits on the
+# dead IRQ indefinitely. If the split link comes up WITHOUT pointing (poll_miss~0, slave
+# alive, keystrokes both halves), this is the real fix and pointing was only masking the
+# dead-IRQ suspend trap by keeping the slave's receive loop cycling.
 
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes

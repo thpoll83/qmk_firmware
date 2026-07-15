@@ -36,6 +36,13 @@ static inline void pio_serve_interrupt(void);
 // far below the 20 ms receive timeout, so a dead link only costs this window extra.
 #    define POLY_RX_POLL_US 1500u
 #endif
+#if defined(POLY_RX_POLL_FIX) && !defined(POLY_RX_BLOCK_SLICE_MS)
+// Max suspend slice (ms) for a blocking (TIME_INFINITE) receive. The rx IRQ never fires,
+// so we re-poll the FIFO at least this often instead of suspending forever on it. Small
+// enough that the slave picks up a master id promptly (never goes deaf), large enough to
+// yield real CPU to the slave's main thread between polls.
+#    define POLY_RX_BLOCK_SLICE_MS 4u
+#endif
 
 #if defined(SERIAL_PIO_USE_PIO1)
 static const PIO pio = pio1;
@@ -526,12 +533,38 @@ static inline msg_t sync_rx(sysinterval_t timeout) {
     osalSysLock();
     while (pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
         pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, true);
+#ifdef POLY_RX_POLL_FIX
+        // The rx-not-empty IRQ never fires on this silicon, so suspending on it with
+        // TIME_INFINITE (the slave's id-wait) is a TRAP: a byte can sit in the FIFO
+        // forever without waking us, and the slave goes permanently deaf. Suspend only
+        // a short SLICE and re-poll, so a byte that lands while suspended is picked up on
+        // the next loop. A finite receive keeps its real timeout (the tight poll above
+        // already covered the fast case). This yields the CPU to lower-prio threads
+        // (unlike a busy-poll) while never waiting on the dead IRQ indefinitely.
+        sysinterval_t slice = (timeout == TIME_INFINITE) ? TIME_MS2I(POLY_RX_BLOCK_SLICE_MS) : timeout;
+        msg = osalThreadSuspendTimeoutS(&rx_thread, slice);
+        if (msg < MSG_OK) {
+            if (timeout == TIME_INFINITE) {
+                // Slice elapsed with no IRQ wake: re-poll the FIFO and keep waiting.
+                continue;
+            }
+            pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, false);
+            break;
+        }
+#else
         msg = osalThreadSuspendTimeoutS(&rx_thread, timeout);
         if (msg < MSG_OK) {
             pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, false);
             break;
         }
+#endif
     }
+#ifdef POLY_RX_POLL_FIX
+    // Normal exit (FIFO non-empty): a byte is waiting. Ensure the source is off and
+    // report success even if the last slice returned a timeout code.
+    pio_set_irq0_source_enabled(pio, pis_sm0_rx_fifo_not_empty + rx_state_machine, false);
+    if (!pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) msg = MSG_OK;
+#endif
     osalSysUnlock();
     return msg;
 }

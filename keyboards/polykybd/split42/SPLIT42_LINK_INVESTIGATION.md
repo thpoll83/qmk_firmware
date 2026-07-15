@@ -1,12 +1,14 @@
 # split42 split-link investigation — master PIO1 RX receive path
 
 **Branch:** `claude/split42-literal-split72-copy`
-**Status:** localized to the **master's PIO1 RX capture path** — the master RX SM
-does not reliably capture the slave's echo (byte reaches the FIFO in only ~0.6 % of
-transactions when core0 is *not* running a tight spin during the echo window). The
-IRQ-wake theory and the poll-bypass are both dead (you can't poll a byte that never
-lands). **Not yet fixed/shipped.** A tight ~2 ms spin after the send makes capture
-succeed every time — currently isolating *why*.
+**Status:** the difference between working and broken is **"is the slave's echo byte
+cleanly present in the master RX FIFO at receive time"**, NOT the IRQ. The RX-not-empty
+IRQ is **dead in BOTH** the working and broken builds (`irq_rxne`≈1/8000) — the receive
+succeeds purely by finding the byte already in the FIFO. In the working (pointing)
+build it's reliably there; in the broken build the RX SM produces a garbage-decode
+storm and the real echo is not cleanly framed/present. **Not yet fixed/shipped.**
+Currently reading the *unperturbed* working RX path (pointing on, diagnostic spin
+removed) to pin down what makes the echo land cleanly.
 **Working fallback for the repo:** PR **#144** (`claude/split42-working-all-subsystems`,
 `d74e7e11`) = RGB + pointing[Cirque] + LTR-559, confirmed working.
 
@@ -185,17 +187,39 @@ before receive) is now dead. This points at a **signal-integrity / spurious-trig
 problem on the master's GP5 RX line**, or a framing problem that only the
 pointing-enabled build's timing/layout happens to avoid.
 
-**Next experiment (the working-vs-broken comparison):** build a **pointing-enabled**
-image (`POINTING_DEVICE_ENABLE` + `POINTING_DEVICE_DRIVER=custom` no-op +
-`SPLIT_POINTING_ENABLE` — the confirmed-working `5de77192` config) **with the same
-diagnostics**. The link comes up, so the `HS-OK:` success line prints the **working**
-RX path's `poll_hits` / `irq_rxne` / `fifo_seen`. Compare against the broken builds:
-- If the working build shows the **same** garbage-storm decode (high `fifo_seen`,
-  many `pc_moved`) but a clean receive → the difference is in *consuming* the echo,
-  not the line.
-- If the working build shows a **clean** RX (one decode per txn, `fifo_seen` low,
-  `poll_hits`≈500 or `irq_rxne`>0) → the broken build's garbage storm is the disease,
-  and enabling pointing changes the line/timing enough to stop it.
+**Pointing-enabled comparison build (`ed9652fb`, still had sample_burst) — measured
+on hardware (2026-07-15). Link comes UP; `HS-OK` success lines:**
+```
+HS-OK: ok=2000 irq_entries=5051 irq_rxne=1 poll_hits=0 poll_miss=0 poll_max_us=0
+HS-OK: ok=8000 irq_entries=7703 irq_rxne=1 poll_hits=0 poll_miss=0 poll_max_us=0
+```
+Two solid conclusions (robust to the sample_burst confound):
+1. **`irq_rxne=1` in 8000 transactions → the RX-not-empty IRQ is DEAD in the WORKING
+   build too.** So the dead RX IRQ was **never** the difference between working and
+   broken — it is dead in both. The whole IRQ-wake line of inquiry is closed: the
+   receive succeeds whenever the echo byte is simply *present* in the FIFO, never via
+   the IRQ. (`irq_entries` ≈ 1/txn are TX-not-full wakes from the sends.)
+2. **`poll_hits=0 poll_miss=0` → the poll never even entered → the FIFO was ALWAYS
+   non-empty at receive time.** In the working build the echo byte is reliably present
+   when the receive checks; in the broken build it isn't (garbage storm, FIFO empty).
+
+⇒ **Working vs broken = "is the echo byte cleanly present in the FIFO at receive
+time", NOT the IRQ.** What enabling pointing changes must make the echo land cleanly
+and reliably.
+
+**Confounds in that build (being removed next):**
+- It **still ran `sample_burst`** — a ~2 ms master busy-spin *per transaction*. That
+  is almost certainly the **sluggishness + slave→master stalling** the user observed
+  (master saturated ~2 ms/txn), AND it provides a ~2 ms delay that itself lets the
+  echo arrive — so "byte always present" may be sample_burst, not pointing.
+
+**Next experiment (clean working read):** pointing enabled, poll measurement kept,
+**`sample_burst` removed**. Restores normal (non-sluggish) pointing behaviour and
+reads the *unperturbed* receive:
+- `poll_hits=0 poll_miss=0` still → pointing genuinely makes the echo reliably present.
+- poll starts triggering (`poll_hits`/`poll_miss` climb) → the byte-presence was
+  sample_burst's delay, not pointing, and the real question moves to *when* the echo
+  lands relative to the receive check.
 
 ---
 
@@ -244,7 +268,10 @@ last), each a single change for bisectability:
 - `538ccca1` control — re-add sample_burst before receive → **link STILL dead; RX SM
   decodes a garbage storm (pc_moved 20023, RXSTALL), sub-bit glitches (min_high_us=2);
   the spin theory is refuted too**
-- (next) pointing-enabled build + same diagnostics → read the WORKING RX path's HS-OK stats
+- `ed9652fb` pointing-enabled + diagnostics → **link UP; irq_rxne=1/8000 (RX IRQ dead
+  in the WORKING build too), poll never entered (byte always present). But still ran
+  sample_burst → sluggish, confounds "byte present".**
+- (next) pointing enabled, sample_burst REMOVED → clean unperturbed working read
 
 > ⚠️ **Environment note:** the remote container was rolled back to an older snapshot
 > mid-session once; the **remote branch is the source of truth**. If local `HEAD`

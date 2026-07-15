@@ -37,14 +37,33 @@ void update_displays(enum refresh_mode mode);
 #    define BOOT_BANNER_INTERVAL_MS 3000
 #endif
 
+// EEPROM boot-diag globals (poly_keymap.c) — printed here so a pasted log shows, per
+// half, exactly what EEPROM state it booted with (SPLIT42_LINK_STATUS.md).
+extern volatile uint8_t  g_eedbg_hands_enabled;
+extern volatile uint8_t  g_eedbg_hands_raw;
+extern volatile uint32_t g_eedbg_hands_ms;
+extern volatile uint8_t  g_eedbg_post_enabled;
+extern volatile uint32_t g_eedbg_load_ms;
+extern volatile uint8_t  g_eedbg_bright;
+extern volatile uint8_t  g_eedbg_lang;
+extern volatile uint8_t  g_eedbg_init_ran;
+
 void emit_boot_banner(void) {
     // PRODUCT is the QMK-generated keyboard_name from keyboard.json
     // ("PolyKybd Split72" / "PolyKybd Split42"), so the banner names the variant
     // with no extra per-variant define.
-    uprintf("== " PRODUCT " " FW_VERSION " P%d HW0x%04X | %s %s ==\n",
+    uprintf("== " PRODUCT " " FW_VERSION " P%d HW0x%04X | %s %s | build %s ==\n",
             (int)PROTOCOL_VERSION, (unsigned int)DEVICE_VER,
             is_keyboard_left() ? "left" : "right",
-            is_keyboard_master() ? "master" : "slave");
+            is_keyboard_master() ? "master" : "slave",
+            QMK_GIT_HASH);
+    // EEPROM state this half booted with. hands_enabled=0 or init_ran=1 => the EEPROM
+    // was invalid/(re)formatted; hands_ms or load_ms large => a blocking wear-leveling
+    // consolidation stalled boot (a strong split-link-establishment suspect).
+    uprintf("   eeprom: hands_en=%d hands_raw=%d hands_ms=%lu post_en=%d load_ms=%lu init_ran=%d bright=%d lang=%d\n",
+            (int)g_eedbg_hands_enabled, (int)g_eedbg_hands_raw, (unsigned long)g_eedbg_hands_ms,
+            (int)g_eedbg_post_enabled, (unsigned long)g_eedbg_load_ms, (int)g_eedbg_init_ran,
+            (int)g_eedbg_bright, (int)g_eedbg_lang);
     // Split-link role inputs — a dead bridge (both halves picking the same role,
     // so the full-duplex crossover never forms) shows up here: USB_VBUS_PIN (GP24)
     // is what stock master detection keys on, and transport_connected reports

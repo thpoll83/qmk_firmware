@@ -60,6 +60,18 @@
 #include "base/multicore/core1.h"
 #include "base/ltr559.h"
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
+
+// EEPROM boot diagnostics (SPLIT42_LINK_STATUS.md — testing whether a persistent bad
+// EEPROM / wear-leveling state, which survives firmware reflash, is what breaks the
+// split link on known-good firmware). Captured at boot (pre/post-init), printed in the banner.
+volatile uint8_t  g_eedbg_hands_enabled = 0xFF; // eeconfig_is_enabled() at the pre-init handedness read
+volatile uint8_t  g_eedbg_hands_raw     = 0xFF; // raw eeconfig_read_handedness() result
+volatile uint32_t g_eedbg_hands_ms      = 0;    // ms the pre-init handedness read took (blocking WL consolidation shows here)
+volatile uint8_t  g_eedbg_post_enabled  = 0xFF; // eeconfig_is_enabled() at post-init
+volatile uint32_t g_eedbg_load_ms       = 0;    // ms load_user_eeconf() took
+volatile uint8_t  g_eedbg_bright        = 0;    // loaded brightness byte (sanity)
+volatile uint8_t  g_eedbg_lang          = 0;    // loaded lang byte (sanity)
+volatile uint8_t  g_eedbg_init_ran      = 0;    // did eeconfig_init_user() run this boot? (1 = EEPROM was invalid/wiped)
 #include "polymod_crc32.h"
 
 #ifdef POLYKYBD_LTR559
@@ -3004,7 +3016,12 @@ void keyboard_post_init_user(void) {
     fw_staging_init();
     splash_progress(6);                 // split RPCs registered, fw-staging up
 
+    g_eedbg_post_enabled = (uint8_t)eeconfig_is_enabled();
+    uint32_t _eeload_t0 = timer_read32();
     poly_eeconf_t ee = load_user_eeconf();
+    g_eedbg_load_ms = timer_elapsed32(_eeload_t0);
+    g_eedbg_bright  = (uint8_t)ee.brightness;
+    g_eedbg_lang    = (uint8_t)ee.lang;
     poly_sync_t* local_state = access_local_state();
     local_state->lang = ee.lang;
     local_state->contrast = ee.brightness;
@@ -3081,7 +3098,15 @@ void keyboard_pre_init_user(void) {
     // lose their stored side and fall back to a master-derived handedness.
     // eeprom_driver_init() has already run, so the direct read is valid here and,
     // being read-only, can never trigger that erase.
-    set_side(eeconfig_read_handedness() ? LEFT_SIDE : RIGHT_SIDE);
+    // EEPROM diag: this is the FIRST eeconfig access at boot — time it and capture
+    // the state, so the banner can show whether a half hit a blocking wear-leveling
+    // consolidation or came up with eeconfig disabled (see SPLIT42_LINK_STATUS.md).
+    g_eedbg_hands_enabled = (uint8_t)eeconfig_is_enabled();
+    uint32_t _ee_t0 = timer_read32();
+    bool _hands = eeconfig_read_handedness();
+    g_eedbg_hands_ms  = timer_elapsed32(_ee_t0);
+    g_eedbg_hands_raw = (uint8_t)_hands;
+    set_side(_hands ? LEFT_SIDE : RIGHT_SIDE);
     show_splash_screen();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"0");
@@ -3092,6 +3117,7 @@ void keyboard_pre_init_user(void) {
 
 // Initializes EEPROM configuration with default language, brightness, and latin extension settings.
 void eeconfig_init_user(void) {
+    g_eedbg_init_ran = 1;   // EEPROM was found invalid this boot and is being (re)initialized
     uprint("Init EE config\n");
     poly_eeconf_t ee;
     ee.lang = g_lang_init;

@@ -71,14 +71,33 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ENCODER_RESOLUTION 2
 
 /* -------------------------------------------------------------------------
-   ROOT-CAUSE EXPERIMENT (2026-07-14): pointing device DISABLED again, replaced
-   by a custom every-cycle master->slave heartbeat pull (see the
-   POLY_SPLIT_HEARTBEAT_EXPERIMENT block in poly_keymap.c housekeeping, enabled
-   from rules.mk). This tests whether split42's dependency is simply "a frequent
-   every-cycle slave pull" (which SPLIT_POINTING_ENABLE happened to provide) or
-   something structural to the pointing feature. The whole Cirque/pointing block
-   is omitted here for the test; if the heartbeat fixes split42 the proper fix is
-   in the poly transport and this block never comes back. */
+   Pointing device (Cirque trackpad) — REQUIRED for the split link to establish.
+   Bisect (2026-07-14) confirmed: SPLIT_POINTING_ENABLE is the ONE re-enabled
+   subsystem that touches the split link, and split42's marginal link only comes
+   up with it set. It was accidentally dropped on the default branch by the
+   root-cause EXPERIMENT commits `01cb83d0` (heartbeat — removed
+   SPLIT_POINTING_ENABLE) and `0e04469d` (rules re-enabled POINTING_DEVICE_ENABLE
+   but not SPLIT_POINTING), which left split42 broken (pointing code linked, but
+   no split transaction registered). Restored here to the confirmed-working
+   `5de77192` state. No trackpad is populated and the I2C0 bus (GP0/GP1) isn't
+   broken out on this rev, so the Cirque probe just fails and the driver idles
+   (rules.mk uses the no-op `custom` driver — zero I2C). Do NOT drop this block
+   again until the IRQ-independent link fix lands and is confirmed on hardware. */
+#define CIRQUE_PINNACLE_DIAMETER_MM 35
+#define CIRQUE_PINNACLE_TAP_ENABLE
+#define CIRQUE_PINNACLE_TAPPING_TERM 100
+#define CIRQUE_PINNACLE_TOUCH_DEBOUNCE 300
+#define CIRQUE_PINNACLE_POSITION_MODE  CIRQUE_PINNACLE_RELATIVE_MODE
+#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
+#define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
+
+// Enable use of pointing device on the slave split (registers the split transaction).
+#define SPLIT_POINTING_ENABLE
+// Pointing device is on the right split (split72 puts the trackpad there too).
+#define POINTING_DEVICE_RIGHT
+// Limit the frequency the sensor is polled for motion.
+#define POINTING_DEVICE_TASK_THROTTLE_MS 1
+#define POINTING_DEVICE_ROTATION_90
 
 /* RGB matrix: RE-ENABLED. split42 has no WS2812 LEDs populated, but
    we keep the RGB subsystem in the build (WS2812 PIO driver + the shared RGB code

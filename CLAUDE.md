@@ -996,6 +996,74 @@ failure, and the transaction COUNT is ruled out.**
   LTR-559, confirmed working) captures the working split42 while this root-cause work
   continues on `claude/split42-literal-split72-copy`.
 
+**⚠️ The DEFAULT branch (`PolyKybd`) regressed split42 again — TWO unreverted
+experiment commits (found + FIXED 2026-07-15, confirmed on hardware).** After the
+above work, the split42 on the `PolyKybd` tip was itself broken (a fresh build from
+the default branch didn't come up). The working commit **`5de77192`** (FW 0.9.51,
+`SPLIT_POINTING_ENABLE` + no-op `custom` driver) *is an ancestor* of the tip, so a
+`git diff 5de77192..PolyKybd` restricted to split-relevant code isolated it — the
+entire split **transport** (`serial_vendor.c`, `serial_protocol.c`, `split_sync.c`,
+`bridge_helper.c`, `base/`) is **byte-identical** working↔tip, so it was neither a
+transport nor a hardware regression. Two breaks, both from root-cause EXPERIMENT
+commits committed straight onto `PolyKybd` and never reverted:
+- **Break #1 (config):** `SPLIT_POINTING_ENABLE` was removed from
+  `split42/config.h` by `01cb83d0` (heartbeat experiment) and only
+  `POINTING_DEVICE_ENABLE` was re-added by `0e04469d` — leaving the exact broken
+  **(c)** state the bisect condemned (pointing code linked, **no split transaction
+  registered**). The whole `01cb83d0…0e04469d` experiment series (heartbeat, boot
+  traces, `SERIAL_DEBUG`, 3 dummy transactions, pointing-code-only) landed on the
+  default branch; only the final one's config state survived, and it was the broken
+  one. **Lesson: revert experiment commits, or run them on a throwaway branch — do
+  NOT commit a discriminator series onto the release branch and walk away.**
+- **Break #2 (boot timing):** the progressive boot-splash rework (PR #138 + merges
+  #143/#144: `show_splash_screen()` → `splash_progress()`, `boot_diag.c`) **removed
+  the pre-init `wait_ms(400)` delay** the old blocking splash had (where it was
+  purely a **logo dwell**, now served by the progressive reveal), deferring the
+  dwell to the *end* of `post_init` and adding ~7 per-`post_init` keycap renders +
+  a boot banner. Fine on split72 (real trackpad → robust link) but split42's marginal
+  link (the dead PIO1 RX-IRQ) does not come up without that pre-init delay. This is
+  the only live shared-code delta working↔tip (the other two diffs are inert: a
+  `POLY_DUMMY_TXN` macro gated off, and a `POLY_KB_NAME` GET_ID string).
+  - ⚠️ **The delay is EMPIRICALLY load-bearing but its MECHANISM is unknown — do NOT
+    invent one.** A clean single-variable A/B on hardware (2026-07-15 eve) settled it:
+    the working restore with **only** the `wait_ms(400)` removed (identical config,
+    `SPLIT_POINTING_ENABLE` on) **fails** — the slave runs just its own local scan
+    (keypress display inversion works) while the rest of the split link never
+    establishes. So the delay genuinely fixes something on the link; *why* a boot
+    delay affects it is not understood. An earlier version of this note (and the
+    in-code comment) claimed a "settle window so the slave comes up before the master
+    hammers transactions" — that was a **fabricated mechanism**, corrected here. The
+    value 400 is inherited from the old splash (known-good, not a measured minimum).
+  - **RULED OUT — it is NOT the pointing driver / per-cycle I2C (2026-07-15 eve).**
+    Follow-up A/B: split42 built with the **real `cirque_pinnacle_i2c` driver** (like
+    split72, so each pointing cycle does a real I2C read — GP0/GP1 aren't broken out so
+    it just times out ~20 ms) **and no delay** → **still broken**, same symptom (no
+    split link, slave only doing its autonomous local invert). So split42 needs the
+    delay **regardless of pointing driver** (no-op `custom` and real Cirque both fail
+    without it), and split72 needs no delay — the split72↔split42 difference that
+    requires the delay is therefore **not** the pointing driver and **not** the
+    per-cycle I2C activity. ⚠️ This also means the earlier bisect's "the fix is the
+    split transaction, not the I2C stall" was tested *with the delay present*, which
+    masked this — the I2C stall is now cleanly ruled out on its own. Leading remaining
+    hypothesis (UNPROVEN): split72 simply **boots slower** (36 vs 21 keycap OLEDs/side,
+    real RGB, bigger status OLED), and with the dead PIO1 RX-IRQ making establishment a
+    *polling race*, a slower master boot wins the race — the 400 ms stands in for that.
+    The proper fix is the IRQ-independent pre-poll (`claude/split42-link-diag-minimal`),
+    not more delay tuning.
+- **Fix (branch `claude/split42-fresh-rebuild-4m3vip`, restarted from the tip; one
+  restore commit — PR #141 on it was closed unmerged, so the stale rebuild history
+  was discarded per the restart-from-default procedure):**
+  (1) restore the Cirque/pointing block + `SPLIT_POINTING_ENABLE` in
+  `split42/config.h`; (2) restore the pre-init `wait_ms(400)` delay in
+  `show_splash_screen()`, **split42-only** (`#if defined(KEYBOARD_polykybd_split42)`)
+  so the progressive reveal is kept and split72 is untouched. Confirmed working on
+  hardware 2026-07-15. The delay is a **stopgap** (empirically needed, mechanism
+  unknown — see the ⚠️ above) — drop it once the IRQ-independent link fix lands (the
+  deeper "why does the marginal link need the pointing transaction *and* a boot
+  delay" root cause is still open; see the `claude/split42-link-diag-minimal`
+  pre-poll work, where `poll_miss` — pointing OFF ≈500, pointing ON ≈2 — is the
+  definitive probe of the dead RX-IRQ).
+
 ### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
 
 **Symptom**: Intermittently, the right/slave half stops recognising keystrokes. Only keys on the master (USB) side still work. Reconnecting (replugging) or reflashing restores it. Happens "once in a while", not on every boot.

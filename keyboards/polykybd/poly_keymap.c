@@ -2809,6 +2809,21 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
 // call site; later reveal steps are driven from keyboard_post_init_user().
 void show_splash_screen(void) {
     splash_progress(1);
+#if defined(KEYBOARD_polykybd_split42)
+    // split42 needs this pre-init delay to bring up its split link — EMPIRICAL,
+    // mechanism NOT understood. This wait was inherited from the old blocking
+    // splash, where it was purely a logo dwell (now served by the progressive
+    // reveal), so it does not "belong" here on its own terms — but a clean
+    // single-variable A/B on hardware (2026-07-15) showed it is load-bearing:
+    // the identical build (SPLIT_POINTING_ENABLE on) with ONLY this wait removed
+    // leaves split42 broken — the slave runs just its own local scan (keypress
+    // display inversion works) while the rest of the split link never comes up.
+    // WHY a boot delay affects split42's marginal link (the dead PIO1 RX-IRQ) is
+    // unknown; do NOT infer a "settle window" or any other mechanism from it (an
+    // earlier comment did, wrongly). Stopgap until the IRQ-independent link fix
+    // lands. split72 is unaffected (real trackpad -> robust link) and untouched.
+    wait_ms(400);
+#endif
 }
 
 // Configures all displays with contrast level; shows idle pulsating animation if enabled.

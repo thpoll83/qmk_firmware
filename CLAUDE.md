@@ -228,6 +228,18 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
 - **GFXfont bitmaps are continuous-bit-packed, byte-padded per *glyph* — NOT per
   scanline.** Index bits as `bit = yy*w + xx; byte = bitmapOffset + bit/8; msb-first`.
   A per-scanline-stride reader produces garbage that *looks* like dithering noise.
+- **Composable plotter modes** (`disp_array.c/.h`, static flags toggled around a
+  draw): `kdisp_set_gfx_erase(bool)` makes the glyph plotter **clear** pixels
+  instead of setting them, and `kdisp_set_gfx_scanline(bool)` lights **only even
+  *absolute buffer* rows** — the gate is `(y + yo + yy) & 1`, i.e. the final buffer
+  y, **NOT** a glyph-local row, so two glyphs at different y still interleave to one
+  consistent scanline pattern. Used to render the Eden idle legend as a dim
+  half-density overlay. Always pair the set with a reset (`(false)`) after the draw.
+- **`kdisp_send_window()` vs `kdisp_send_buffer()`**: `kdisp_send_buffer()` pushes
+  the full 1024-byte scratch; `kdisp_send_window()` pushes only the **visible 360
+  bytes** (pages 0–4 at column `BUFFER_X`) — the same region the keycap actually
+  shows — so it is ~2.9× less SPI. Prefer `kdisp_send_window()` for any per-key
+  redraw that only touches the visible window (the standard case).
 - **To preview a keycap faithfully, use `PolyKybdHost/tools/oled_preview.py`** (its
   `gfx_font` loader + `oled_to_rgb`) — it parses the generated headers correctly and
   renders the real 72×40 OLED look. A hand-rolled renderer cost two wrong "flag
@@ -310,8 +322,13 @@ Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA
 
 ### Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**
-pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
-`poly_idle_style` in `state.h`):
+pixels in. **Four** styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
+`poly_idle_style` in `state.h`): `IDLE_STYLE_PULSE` (0), `IDLE_STYLE_JITTER` (1),
+`IDLE_STYLE_IDDQD` (2, the DOOM attract-demo screensaver), `IDLE_STYLE_EDEN` (3,
+the looping "Eden" comet-field screensaver). The first two are described in detail
+below; IDDQD/EDEN are full-screen animations that own the keycaps via their own
+tick (`doom_tick()` / `startup_anim_tick()`), so `update_displays()` early-returns
+while they run (see "Eden startup animation & idle screensaver" below for EDEN):
 - **`IDLE_STYLE_PULSE` (0, default, legacy):** `kdisp_idle()` only modulates each
   keycap's SSD1306 contrast register (a per-key out-of-phase "breathing"). The
   buffer is never re-rendered, so the lit pixels never move — the burn-in risk.
@@ -375,6 +392,36 @@ pixels in. Two styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
   A "Matrix-style" idle animation was considered but shelved — it defeats the
   "glance at the dimmed legend and resume typing" hint the pulse preserves; jitter
   was chosen as the default-preserving, legibility-preserving fix.
+
+### Eden startup animation & idle screensaver (`anim/startup_anim.*`, `poly_keymap.c`)
+A **fully procedural** (no framebuffer) per-keycap comet-field animation that
+converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
+- **One-shot intro** — `startup_anim_start()` (`s_loop == false`): runs to black
+  then ends. Fired by the **`KC_EDEN`** keycode and the host **HID cmd 31**
+  (REPLAY_ANIM). ⚠️ **cmd 31 is NOT protocol-gated / bumps NO `PROTOCOL_VERSION`**
+  — it's dispatched independently in `hid_com.c` case 31, like the fontpack cmds.
+  There is deliberately **no boot auto-play yet** (see the TODO in
+  `anim/startup_anim.h`: play the intro after the boot splash with a fade-in).
+- **Looping screensaver** — `IDLE_STYLE_EDEN` (3): `startup_anim_start_loop(contrast)`
+  holds the opening comet field open forever at the idle brightness, no letters/
+  converge/fade. `eden_idle_tick()` in `poly_keymap.c` drives it; it is a **no-op
+  while awake** (only runs when `idle_style == EDEN` and idle). While the animation
+  owns the keycaps (`startup_anim_active()`), `update_displays()` early-returns.
+- **The idle legend** (the resting key label drawn over the comet haze) is rendered
+  **LIT + scanline** (`kdisp_set_gfx_scanline(true)` around the text draw), not
+  erased — the scanline halves the lit pixels so the legend reads as a dim overlay
+  while still drifting via `roll_idle_offset()`. (ERASE mode was tried but looked
+  worse with the drifting glyphs.)
+- **split72-only.** `anim/startup_anim.c` gates on
+  `#if defined(KEYBOARD_polykybd_split72)` (else no-op stubs) because it needs the
+  generated per-board geometry header `anim/startup_anim_geom.h` (key OLED
+  positions/rotations + splash-letter targets), produced by
+  `PolyKybdHost/tools/startup_anim_demo.py --emit-geom … --kle …`. **The recipe to
+  add split42 is `anim/SPLIT42_EDEN.md`** (author a split42 KLE + splash plan,
+  regenerate the geom header, drop the stub).
+- **Boot-intro-done persistence** rides the suspend-only dirty-flag EEPROM model:
+  `mark_boot_intro_done()` sets `g_boot_dirty` (NOT a direct write); `save_all_dirty()`
+  flushes it — do not add a direct EEPROM write here.
 
 ### Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+; expanded v10)
 An OS-independent **override** of the language-layer legends with an alternative

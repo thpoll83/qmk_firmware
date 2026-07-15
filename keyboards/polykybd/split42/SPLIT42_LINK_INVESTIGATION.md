@@ -213,13 +213,45 @@ and reliably.
   (master saturated ~2 ms/txn), AND it provides a ~2 ms delay that itself lets the
   echo arrive — so "byte always present" may be sample_burst, not pointing.
 
-**Next experiment (clean working read):** pointing enabled, poll measurement kept,
-**`sample_burst` removed**. Restores normal (non-sluggish) pointing behaviour and
-reads the *unperturbed* receive:
-- `poll_hits=0 poll_miss=0` still → pointing genuinely makes the echo reliably present.
-- poll starts triggering (`poll_hits`/`poll_miss` climb) → the byte-presence was
-  sample_burst's delay, not pointing, and the real question moves to *when* the echo
-  lands relative to the receive check.
+**Clean working read (`78b5b99e`, pointing on, sample_burst removed) — hardware
+(2026-07-15). Link works (slave keystrokes came back, briefly); `HS-OK`:**
+```
+HS-OK: ok=42000 irq_entries=5219 irq_rxne=0 poll_hits=84658 poll_miss=2 poll_max_us=1721
+```
+- `poll_hits=84658` (~2 per txn), `poll_miss=2` (essentially zero), `irq_rxne=0`.
+- **`poll_max_us=1721` — the echo arrives with up to ~1.7 ms latency, and the poll
+  catches it essentially every time.** So the byte was NOT instantly present — the
+  earlier "always present" (`ed9652fb`) *was* the sample_burst delay. Here, with the
+  spin gone, **the poll (`POLY_RX_POLL_FIX`) is the actual receive mechanism, and it
+  works** (the dead RX IRQ is bypassed).
+
+**⇒ Crisp, quantitative root-cause probe found: `poll_miss`.**
+| Build | pointing | `poll_miss` | echo arrives? |
+|---|---|---|---|
+| `bdb71a18` | OFF | ~500 / 503 | **no** |
+| `78b5b99e` | ON (custom, split) | 2 / 84660 | **yes**, ≤1.7 ms |
+
+**⇒ Pointing makes the slave's echo actually come back; without it the echo doesn't
+arrive at all. The poll-fix is a real fix for the dead RX IRQ — but it can only catch
+a byte that arrives.** `poll_miss` now discriminates the cause on the master console
+with no rendering needed.
+
+**Open thread:** even in the working build the slave keystrokes "worked briefly then
+stopped" though `poll_miss≈0` (handshake fine). That is a *separate* higher-level
+symptom (key-event transfer / slave scan), or a diagnostic-console-flood artifact —
+tracked separately, not the handshake.
+
+**Next experiment (the (b)/(c) discriminator, now readable via `poll_miss`):** enable
+the pointing **code** (`POINTING_DEVICE_ENABLE` + custom driver → `pointing_device_init/
+_task` run) but omit `SPLIT_POINTING_ENABLE` (`-DPOLY_NO_SPLIT_POINTING`) → **no
+`split_shared_memory_t` `pointing` member, no split transaction.** Read `poll_miss`:
+- `poll_miss≈0` → merely **linking/running `pointing_device.c`** makes the echo arrive
+  (effect "c", a layout/init side effect); `SPLIT_POINTING` + its shmem/transaction are
+  NOT the cause. The real fix is then a layout/init detail, and split42 needs neither the
+  trackpad nor the split-pointing transaction.
+- `poll_miss≈500` → the echo requires `SPLIT_POINTING` specifically (the shmem `pointing`
+  member (b), which shifts the RPC-buffer offsets, or the extra transaction). Next step
+  then isolates the shmem member from the transaction.
 
 ---
 
@@ -271,7 +303,12 @@ last), each a single change for bisectability:
 - `ed9652fb` pointing-enabled + diagnostics → **link UP; irq_rxne=1/8000 (RX IRQ dead
   in the WORKING build too), poll never entered (byte always present). But still ran
   sample_burst → sluggish, confounds "byte present".**
-- (next) pointing enabled, sample_burst REMOVED → clean unperturbed working read
+- `78b5b99e` pointing on, sample_burst removed → **clean working read: poll_miss=2/84660,
+  poll_max_us=1721. The poll IS the working receive path; pointing makes the echo arrive
+  (poll_miss≈0 vs ≈500 without). poll_miss is now the root-cause probe.**
+- (next) POINTING_DEVICE_ENABLE but NO SPLIT_POINTING (`-DPOLY_NO_SPLIT_POINTING`) →
+  read poll_miss: does linking pointing_device.c alone make the echo arrive, or is the
+  split-pointing shmem member / transaction required?
 
 > ⚠️ **Environment note:** the remote container was rolled back to an older snapshot
 > mid-session once; the **remote branch is the source of truth**. If local `HEAD`

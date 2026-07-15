@@ -86,8 +86,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
    direct comparison against the broken (no-pointing) diag builds — enabled from
    rules.mk (POINTING_DEVICE_ENABLE + POINTING_DEVICE_DRIVER=custom). */
 #if defined(POINTING_DEVICE_ENABLE)
-#    define SPLIT_POINTING_ENABLE
-#    define POINTING_DEVICE_RIGHT
+// DISCRIMINATOR (2026-07-15): POLY_NO_SPLIT_POINTING (from rules.mk) keeps the pointing
+// CODE linked + pointing_device_init/_task running (effect "c") but omits
+// SPLIT_POINTING_ENABLE — so NO split_shared_memory_t `pointing` member (effect "b") and
+// NO extra split transaction (effect "a"). Read poll_miss on the master console:
+//   poll_miss~0  => merely linking/running pointing_device.c makes the echo arrive (c);
+//                   SPLIT_POINTING + its shmem/transaction are NOT the cause.
+//   poll_miss~500 => the echo needs SPLIT_POINTING specifically (the shmem member or txn).
+#    if !defined(POLY_NO_SPLIT_POINTING)
+#        define SPLIT_POINTING_ENABLE
+#        define POINTING_DEVICE_RIGHT
+#    endif
 #    define POINTING_DEVICE_TASK_THROTTLE_MS 1
 #endif
 

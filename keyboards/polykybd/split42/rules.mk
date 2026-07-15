@@ -100,6 +100,11 @@ OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 # the broken no-pointing diag builds to see what's different about a working receive.
 POINTING_DEVICE_ENABLE = yes
 POINTING_DEVICE_DRIVER = custom
+# DISCRIMINATOR (2026-07-15): pointing CODE linked + init/task run, but SPLIT_POINTING_ENABLE
+# omitted (no shmem `pointing` member, no split transaction). Read poll_miss on the master
+# console: ~0 => linking/running pointing_device.c is what makes the echo arrive; ~500 =>
+# SPLIT_POINTING (the shmem member / the extra transaction) is required. See config.h note.
+OPT_DEFS += -DPOLY_NO_SPLIT_POINTING
 
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes

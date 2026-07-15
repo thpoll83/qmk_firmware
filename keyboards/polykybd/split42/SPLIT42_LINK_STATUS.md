@@ -63,6 +63,22 @@ know it's the genuine old one.)
 | 7 | 07-15 PM | `b5bcf07a` | 0.9.63 | custom | 400 | **blocking** | no | right | ❌ FAIL | user's splash hypothesis — refuted |
 | 8 | 07-15 PM | `5de77192` (KNOWN-GOOD, rebuilt) | 0.9.51 | custom | 400 | blocking | no | both | ❌ **FAIL** | **worked in AM, fails now** |
 | 9 | 07-15 PM | `9253a328` (#144, real Cirque) | 0.9.5x | cirque_i2c | 400 | blocking | no | ? | ❌ **FAIL** | was confirmed working; fails now |
+| 10 | 07-15 PM | `981e5158` EEPROM-diag | 0.9.63 | custom | 400 | progressive | no | right & left | ❌ FAIL | **EEPROM CLEAN on both halves** — see below |
+
+### Row 10 — EEPROM ruled out (2026-07-15 ~21:50)
+Both halves read out healthy and consistent; EEPROM is **not** the cause:
+```
+right: eeprom: hands_en=1 hands_raw=0 hands_ms=0 post_en=1 load_ms=0 init_ran=0 bright=50 lang=0   (+ "USER_SYNC_POLY_DATA failed to send")
+left:  eeprom: hands_en=1 hands_raw=1 hands_ms=0 post_en=1 load_ms=0 init_ran=0 bright=50 lang=0
+```
+- `hands_en=1` / `post_en=1` both → eeconfig valid on both halves.
+- `hands_raw`: right=0 (right side), left=1 (left side) → **handedness correct on both**.
+- `hands_ms=0`, `load_ms=0` → **no blocking wear-leveling consolidation** at boot.
+- `init_ran=0` → EEPROM was valid, NOT reformatted this boot.
+- `bright=50 lang=0` identical on both → no EEPROM divergence.
+⇒ The EEPROM/wear-leveling hypothesis is dead. Nothing persistent-in-software is
+wrong. The master still logs `USER_SYNC_POLY_DATA failed to send` = the split bridge
+gets no response (consistent with the `transport_fail=100%` earlier).
 
 **The jump from rows 1–2 (works, AM) to rows 3–9 (fail, PM) with overlapping/identical
 firmware is the whole story: something changed on the bench between AM and PM.**

@@ -92,6 +92,15 @@ OPT_DEFS += -DPOLY_RX_POLL_US=22000
 SRC += base/ltr559.c
 OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 
+# WORKING-vs-BROKEN COMPARISON (2026-07-15): enable the pointing device with the
+# no-op `custom` driver (QMK's weak stubs do zero I2C) — the last confirmed-working
+# split42 config (5de77192). This brings the split link UP while the POLY_HANDSHAKE_DIAG
+# + poll instrumentation stays on, so the master console prints the WORKING RX path's
+# stats via the HS-OK success line (poll_hits / irq_rxne / fifo_seen). Compare against
+# the broken no-pointing diag builds to see what's different about a working receive.
+POINTING_DEVICE_ENABLE = yes
+POINTING_DEVICE_DRIVER = custom
+
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes
 

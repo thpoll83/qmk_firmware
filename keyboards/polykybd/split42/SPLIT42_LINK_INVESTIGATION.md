@@ -162,12 +162,40 @@ documented hardware side effect, so the difference is either (a) *what* is read
 (GPIO_IN / the SM ADDR register vs FSTAT) or (b) the exact CPU/bus activity during
 the echo window. This is the current thread to pull.
 
-**Next experiment (control):** re-add the exact `serial_debug_rx_sample_burst()`
-spin **before** the receive (but NOT the byte-stealing `pop_before_recv`) and see
-if the **link comes up**. If yes → the spin is genuinely load-bearing for RX
-capture, and the next step bisects *what* in it matters (the delay, the GP5 read,
-the ADDR read). If no → something else regressed vs the old `direct_hits=500`
-build, and that earlier finding needs re-examination.
+**Control build (`538ccca1`) — measured on hardware (2026-07-15):**
+```
+HS-DIAG: total=500 timeout=500 … pc_moved=20023 pc=20..27 min_low_us=4 min_high_us=2
+         fifo_seen=697269 poll_hits=0 poll_miss=500 poll_max_us=0 irq_entries=140 irq_rxne=0
+         fdebug=0x01000002   (RXSTALL bit set)
+```
+- **The link is STILL DEAD** (`timeout=500`, `USER_SYNC_POLY_DATA failed to send`).
+  ⇒ the `sample_burst` spin does **NOT** fix the link — the "spin makes capture
+  work" theory is **also refuted**.
+- `pc_moved=20023` ≈ **40 decodes per transaction** (only ONE echo is expected),
+  `fifo_seen=697269`, `fdebug` **RXSTALL** set ⇒ the RX SM is decoding a **storm of
+  bytes and overflowing the FIFO** — far more than the single echo.
+- `min_high_us=2` ⇒ **sub-bit-width (2 µs) glitches on GP5** (a bit is 4.34 µs).
+- `irq_rxne=0` (the 140 `irq_entries` are TX-not-full wakes from the sends, not RX).
+
+**⇒ The master RX SM is not *failing to capture* — it is capturing GARBAGE
+continuously and never cleanly framing the single expected echo.** The earlier
+`direct_hits=500 / direct_last=0x19` was mostly this garbage, with `0x19` popping up
+occasionally by luck. Every software-side theory so far (IRQ wake, poll bypass, spin
+before receive) is now dead. This points at a **signal-integrity / spurious-trigger
+problem on the master's GP5 RX line**, or a framing problem that only the
+pointing-enabled build's timing/layout happens to avoid.
+
+**Next experiment (the working-vs-broken comparison):** build a **pointing-enabled**
+image (`POINTING_DEVICE_ENABLE` + `POINTING_DEVICE_DRIVER=custom` no-op +
+`SPLIT_POINTING_ENABLE` — the confirmed-working `5de77192` config) **with the same
+diagnostics**. The link comes up, so the `HS-OK:` success line prints the **working**
+RX path's `poll_hits` / `irq_rxne` / `fifo_seen`. Compare against the broken builds:
+- If the working build shows the **same** garbage-storm decode (high `fifo_seen`,
+  many `pc_moved`) but a clean receive → the difference is in *consuming* the echo,
+  not the line.
+- If the working build shows a **clean** RX (one decode per txn, `fifo_seen` low,
+  `poll_hits`≈500 or `irq_rxne`>0) → the broken build's garbage storm is the disease,
+  and enabling pointing changes the line/timing enough to stop it.
 
 ---
 
@@ -213,7 +241,10 @@ last), each a single change for bisectability:
 - `bdb71a18` poll the whole 22 ms window + measure echo latency → **byte reaches FIFO
   only 3/503 (poll_max_us=426); the poll bypass is dead, the byte simply isn't captured**
 - `57baf658` add this investigation doc
-- (next) control: re-add the sample_burst spin before receive — is it load-bearing?
+- `538ccca1` control — re-add sample_burst before receive → **link STILL dead; RX SM
+  decodes a garbage storm (pc_moved 20023, RXSTALL), sub-bit glitches (min_high_us=2);
+  the spin theory is refuted too**
+- (next) pointing-enabled build + same diagnostics → read the WORKING RX path's HS-OK stats
 
 > ⚠️ **Environment note:** the remote container was rolled back to an older snapshot
 > mid-session once; the **remote branch is the source of truth**. If local `HEAD`

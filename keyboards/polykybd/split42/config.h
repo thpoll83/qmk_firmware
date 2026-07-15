@@ -79,6 +79,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
    is omitted here for the test; if the heartbeat fixes split42 the proper fix is
    in the poly transport and this block never comes back. */
 
+/* WORKING-vs-BROKEN COMPARISON (2026-07-15): re-enable the pointing device with the
+   no-op `custom` driver (the last confirmed-working config, 5de77192) WHILE keeping
+   the POLY_HANDSHAKE_DIAG + poll instrumentation, so the master console prints the
+   WORKING RX path's stats (HS-OK: poll_hits / irq_rxne / fifo_seen). This is the
+   direct comparison against the broken (no-pointing) diag builds — enabled from
+   rules.mk (POINTING_DEVICE_ENABLE + POINTING_DEVICE_DRIVER=custom). */
+#if defined(POINTING_DEVICE_ENABLE)
+#    define SPLIT_POINTING_ENABLE
+#    define POINTING_DEVICE_RIGHT
+#    define POINTING_DEVICE_TASK_THROTTLE_MS 1
+#endif
+
 /* RGB matrix: RE-ENABLED. split42 has no WS2812 LEDs populated, but
    we keep the RGB subsystem in the build (WS2812 PIO driver + the shared RGB code
    paths) to see whether a *disabled* subsystem was implicated. The data line is

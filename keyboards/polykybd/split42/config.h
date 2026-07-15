@@ -71,14 +71,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ENCODER_RESOLUTION 2
 
 /* -------------------------------------------------------------------------
-   ROOT-CAUSE EXPERIMENT (2026-07-14): pointing device DISABLED again, replaced
-   by a custom every-cycle master->slave heartbeat pull (see the
-   POLY_SPLIT_HEARTBEAT_EXPERIMENT block in poly_keymap.c housekeeping, enabled
-   from rules.mk). This tests whether split42's dependency is simply "a frequent
-   every-cycle slave pull" (which SPLIT_POINTING_ENABLE happened to provide) or
-   something structural to the pointing feature. The whole Cirque/pointing block
-   is omitted here for the test; if the heartbeat fixes split42 the proper fix is
-   in the poly transport and this block never comes back. */
+   Pointing device (no-op `custom` driver, from rules.mk) + SPLIT_POINTING —
+   RE-ENABLED here on the diagnostics branch. This is the "pointing + poll
+   pre-poll + logging" combination that actually brought the link up this session
+   (build 78b5b99e: poll_miss=2). Pure pointing (no pre-poll) does NOT work on the
+   current base because the RX IRQ is dead — pointing makes the echo arrive, the
+   POLY_HANDSHAKE_DIAG pre-poll in sync_rx catches it without the IRQ. Kept with
+   the diagnostics so the master console reports poll_miss/irq_rxne to confirm. */
+#define SPLIT_POINTING_ENABLE
+#define POINTING_DEVICE_RIGHT
+#define POINTING_DEVICE_TASK_THROTTLE_MS 1
 
 /* RGB matrix: RE-ENABLED. split42 has no WS2812 LEDs populated, but
    we keep the RGB subsystem in the build (WS2812 PIO driver + the shared RGB code

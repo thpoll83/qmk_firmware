@@ -7,12 +7,15 @@ description: Scan the current (or a past) Claude Code session for things worth k
 
 A session often discovers things that took real iteration to find, and runs
 workflows that will recur. Both are cheap to lose and valuable to keep. This
-skill turns a session into two concrete outputs:
+skill turns a session into three concrete outputs:
 
 1. **Learnings** → appended to the right `CLAUDE.md` / `docs/*.md` (or saved as
    memory) so the next session starts knowing them.
 2. **New skills** → scaffolded `SKILL.md`s for repeatable workflows that were
    done by hand this time.
+3. **Docs gaps** → user-facing features added/changed this session that the
+   public docs (the `polykybd-docs` site) don't yet describe. Run the
+   **`update-polykybd-docs`** skill to close them (a separate PR in that repo).
 
 The deliverable is a *ranked proposal you approve*, then the files. Don't write
 anything until the user picks what to keep.
@@ -75,12 +78,26 @@ for f in $(find . /root/.claude/skills ~/.claude/skills -name SKILL.md 2>/dev/nu
   awk -F': ' '/^name:/{n=$2} /^description:/{print "  "n": "substr($2,1,80)}' "$f"; done
 ```
 
+## 3b. What counts as a DOCS gap (document-worthy)
+
+A **user-facing** change this session that would make the public docs wrong or
+leave a new capability undocumented — a new/changed HID command or
+`PROTOCOL_VERSION`, a new `polyctl` subcommand, a host setting or tray entry, a
+keyboard feature (glyph script, idle style, brightness, font pack), or a new
+language. These belong on the `polykybd-docs` **site**, not in a `CLAUDE.md`.
+
+Don't flag internal refactors, bug fixes with no visible effect, or dev plumbing.
+For each gap, name the change and the likely target page, then hand it to the
+**`update-polykybd-docs`** skill (it owns the page map, the build/verify, and the
+separate-PR flow). The retro's job is only to *notice* the gap and trigger that
+skill — it does not itself edit the docs site.
+
 ## 4. Procedure
 
 1. **Map the session** into its main threads/tasks (2–6 of them). For each, note
    what was *figured out* and what *workflow* was executed.
-2. **Extract candidates** — learnings (§2) and skills (§3) — citing the evidence
-   (what happened, ideally which step/message).
+2. **Extract candidates** — learnings (§2), skills (§3), and docs gaps (§3b) —
+   citing the evidence (what happened, ideally which step/message).
 3. **Dedup**: grep the relevant `CLAUDE.md`/docs for each learning; list existing
    skills for each workflow. Drop anything already captured (or propose an *edit*
    to the existing item instead of a new one).
@@ -95,6 +112,9 @@ for f in $(find . /root/.claude/skills ~/.claude/skills -name SKILL.md 2>/dev/nu
      procedural body with concrete commands, an output format, and a
      **Pitfalls** section). Put reusable helper scripts beside it. Model the
      depth on `qmk_firmware/.claude/skills/firmware-size-diff/SKILL.md`.
+   - Docs gaps → invoke the **`update-polykybd-docs`** skill for each (it edits
+     the `polykybd-docs` site on its own branch + PR). This retro only surfaces
+     them; that skill does the writing.
    - Offer to commit + push the new/edited files (don't unless asked, per repo
      rules).
 
@@ -111,6 +131,10 @@ SKILL CANDIDATES (codify)
      steps: <3–6 word outline>; done <N>× this session
      location: <repo>/.claude/skills/  (or ~/.claude/skills for cross-repo)
   B. ...
+
+DOCS GAPS (→ update-polykybd-docs)
+  i. <feature added/changed> → <likely polykybd-docs page>
+  ii. ...
 
 ALREADY COVERED (skipped): <item> → <existing doc/skill>
 

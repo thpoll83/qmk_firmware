@@ -95,6 +95,17 @@ static const pio_program_t uart_rx_program = {
 thread_reference_t rx_thread        = NULL;
 static int         rx_state_machine = -1;
 
+#ifdef POLY_RX_LINE_PROBE
+// Raw RX-line activity counters (split42 physical-vs-firmware probe). IRQ-independent:
+// counted where bytes are actually pulled from / seen in the RX FIFO, so they answer
+// "is ANY signal arriving on GP4 (RX)?" regardless of the dead rx-not-empty IRQ. Zero
+// while tx climbs => the RX wire is physically open; non-zero => the wire is alive.
+volatile uint32_t g_rx_bytes_total    = 0;  // bytes read out of the RX FIFO (any, incl. garbage)
+volatile uint32_t g_rx_clear_nonempty = 0;  // times the FIFO had data at transaction-clear
+uint32_t serial_debug_rx_bytes(void)         { return g_rx_bytes_total; }
+uint32_t serial_debug_rx_clear_nonempty(void){ return g_rx_clear_nonempty; }
+#endif
+
 thread_reference_t tx_thread        = NULL;
 static int         tx_state_machine = -1;
 
@@ -186,6 +197,11 @@ static inline void leave_rx_state(void) {}
  */
 inline void serial_transport_driver_clear(void) {
     osalSysLock();
+#ifdef POLY_RX_LINE_PROBE
+    if (!pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
+        g_rx_clear_nonempty++;   // the FIFO had data at clear time => RX line is alive
+    }
+#endif
     while (!pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
         pio_sm_clear_fifos(pio, rx_state_machine);
     }
@@ -281,6 +297,9 @@ static inline bool receive_impl(uint8_t* destination, const size_t size, sysinte
             }
             *destination++ = *((uint8_t*)&pio->rxf[rx_state_machine] + 3U);
             read++;
+#ifdef POLY_RX_LINE_PROBE
+            g_rx_bytes_total++;
+#endif
         }
         osalSysUnlock();
     }

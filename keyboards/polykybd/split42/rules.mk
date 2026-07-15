@@ -44,6 +44,9 @@ POINTING_DEVICE_DRIVER = custom
 SRC += base/ltr559.c
 OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 
+# Raw RX-line activity probe (split42 physical-vs-firmware isolation, SPLIT42_LINK_STATUS.md).
+OPT_DEFS += -DPOLY_RX_LINE_PROBE
+
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes
 

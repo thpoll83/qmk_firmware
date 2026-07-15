@@ -77,10 +77,21 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
         ls_last_log = ls_attempts;
         uint32_t errs    = ls_crc_err + ls_transport_fail;
         uint32_t permille = ls_attempts ? (uint32_t)(((uint64_t)errs * 1000U) / ls_attempts) : 0U;
-        uprintf("Split link: %lu tx crc_err=%lu transport_fail=%lu giveup=%lu err=%lu.%lu%%\n",
+        uprintf("Split link: %lu tx crc_err=%lu transport_fail=%lu giveup=%lu err=%lu.%lu%%",
                 (unsigned long)ls_attempts, (unsigned long)ls_crc_err,
                 (unsigned long)ls_transport_fail, (unsigned long)ls_call_giveup,
                 (unsigned long)(permille / 10U), (unsigned long)(permille % 10U));
+#ifdef POLY_RX_LINE_PROBE
+        // Raw RX-line activity: is ANY signal arriving on GP4 (RX)? rx_bytes/rx_clr both
+        // 0 while tx climbs => the RX wire is physically open (it's hardware); non-zero
+        // => the wire is alive and the fault is upstream (firmware/timing).
+        extern uint32_t serial_debug_rx_bytes(void);
+        extern uint32_t serial_debug_rx_clear_nonempty(void);
+        uprintf(" rx_bytes=%lu rx_clr=%lu",
+                (unsigned long)serial_debug_rx_bytes(),
+                (unsigned long)serial_debug_rx_clear_nonempty());
+#endif
+        uprintf("\n");
     }
 
     *((uint32_t *)buffer_with4crc_bytes) = crc32_1byte(&((uint8_t *)buffer_with4crc_bytes)[4], num_bytes-4, 0);

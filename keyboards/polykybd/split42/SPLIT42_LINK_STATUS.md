@@ -105,6 +105,111 @@ If a cable swap or reseat brings `5de77192` back to ✅, the firmware chase is o
 was a degrading physical connection all along, and rows 3–9 were all the same cable
 fault, not the configs we were varying.
 
+## Re-analysis with fresh eyes (2026-07-16, pre-probe) — three overlooked things
+
+A from-scratch re-read of the whole investigation, verifying the load-bearing claims
+against the code instead of against earlier conclusions. Three findings, one big.
+
+### 1. The "dead RX IRQ" was a MEASUREMENT ARTIFACT (observer effect)
+
+The cornerstone claim — "the PIO rx-not-empty IRQ never fires, even in a working
+link (`irq_rxne≈0`)" — does not survive a code read. In `sync_rx()`
+(`serial_vendor.c`) the RXNEMPTY interrupt source is **only enabled inside the
+FIFO-empty loop**:
+
+```c
+while (pio_sm_is_rx_fifo_empty(...)) {
+    pio_set_irq0_source_enabled(..., true);   // <-- only reached if FIFO empty at check
+    osalThreadSuspendTimeoutS(...);
+}
+```
+
+If the byte is **already in the FIFO** when `sync_rx` is called — which the working-era
+diag runs themselves reported ("poll never entered (byte always present)",
+`poll_hits=84658`) — the IRQ source is **never enabled**, so it never fires, so
+`irq_rxne` reads ~0 **in a perfectly healthy system**. And the diag pre-poll made this
+worse: it deliberately waited for the byte *before* the locked check, guaranteeing the
+IRQ was never needed. In broken runs `irq_rxne=0` simply because **no bytes ever
+arrived** (nothing to interrupt about). Either way, `irq_rxne≈0` proved nothing.
+
+**Decisive counter-evidence that the IRQ path actually works:** the morning restore
+build (row 2) had **no pre-poll at all** and worked. With a genuinely dead IRQ, every
+first-byte wait would have suspended into the 20 ms timeout and the link could never
+have functioned. It did. ⇒ The IRQ wakes fine when bytes arrive. The entire
+"dead-IRQ blocking-receive trap" root-cause chain in SPLIT42_LINK_INVESTIGATION.md is
+built on this artifact and is hereby superseded.
+
+### 2. Permanent 100 % transport_fail is INCOMPATIBLE with every timing/boot-order theory
+
+Verified in `split_util.c`/`transactions.c`: after `SPLIT_MAX_CONNECTION_ERRORS` the
+master does NOT stop — it keeps probing (reduced cadence, `num_retries` drops 10→1,
+`SPLIT_CONNECTION_CHECK_TIMEOUT` backoff) and a single success resets
+`connection_errors` to 0. The slave's main loop demonstrably runs (keypress inversion).
+So ANY theory of the form "the halves missed each other at boot" (delay, splash churn,
+slow slave, busy master) predicts **eventual recovery** — the master offers a
+handshake ~forever and a live slave eventually answers one. We observe 1005+/1005
+failures over minutes, repeatedly. ⇒ The failure is **structural** for the whole
+session: the id byte doesn't reach the slave, or the echo doesn't reach the master.
+Bytes are simply not crossing.
+
+### 3. The pointing "fix" had an unexamined hole: POINTING_DEVICE_RIGHT + orientation
+
+Verified in `quantum/split_common/transactions.c` `pointing_handlers_master()`: with
+`POINTING_DEVICE_RIGHT`, **if the master is the right half it returns immediately — no
+pointing transaction at all**. The extra "healing" split traffic only exists when the
+**left** half is master. No working-era test recorded which half was USB master (the
+banner didn't exist yet). So the pointing hypothesis was only ever coherent for
+left-master boots, and was never actually tested against orientation.
+
+### The synthesis (hypothesis, to be tested — not a conclusion)
+
+One mechanism explains EVERY row of this table plus the entire historical bisect:
+**a marginal physical inter-half contact (TRRS jack / solder joint on GP4/GP5) whose
+state flips across replug/flash handling cycles.** Every firmware test involved
+physical handling (bootloader replug, cable flex). A contact lottery:
+- mints false bisect signals (pointing "needed", delay "needed" — whichever build was
+  in hand when the contact happened to seat),
+- explains why NO software mechanism was ever found (traffic/count/shmem/linkage/
+  layout/EEPROM all individually refuted — because there isn't one),
+- explains morning-works → evening-fails on identical firmware (contact finally went
+  fully open mid-day, after dozens of handling cycles),
+- explains the symmetric failure (either conductor open kills both orientations:
+  master TXs on GP4 and RXs on GP5 regardless of which half is master),
+- survives every reflash and a clean EEPROM.
+
+### What tonight's RX probe (`7ddc2f49`) actually discriminates — THREE ways
+
+This build has **no pre-poll**, so the IRQ path runs un-observed for the first time
+while the counters watch the FIFO independently:
+- **`rx_bytes=0 rx_clr=0`** while tx climbs → nothing arrives → **wire/contact open**
+  (hardware). Next: the slave-blink probe below to localize the direction/conductor.
+- **`rx_clr` climbing** (bytes arrive but land in the *next* transaction's clear) →
+  bytes DO arrive but the suspend never woke → **the first real evidence of a broken
+  IRQ path** (this time without the observer effect). Firmware angle reopens.
+- **`rx_bytes≈tx`, failures low** → it works (the contact re-seated — also
+  informative: marginal, not open).
+
+### Prepared next step if rx=0: the slave-blink probe (no console needed on the slave)
+
+A build where the slave visibly flashes its keycap displays on ANY received byte.
+Plug USB into the left half, watch the right: flashing = master→slave conductor alive
+(the cut is the echo path); dark = master→slave conductor dead. Localizes the broken
+direction with zero instruments.
+
+### Open questions for the bench (cheap, high-information)
+
+1. **Was PolyKybdHost running during the tests?** It autostarts at login. On any
+   successful protocol-matched connect it silently auto-flashes ALL font-pack bundles
+   (split42 has NO status OLED connected and NO RGB — the flash is INVISIBLE) while
+   bridging chunks to the slave. That both perturbs link tests and is a persistent
+   non-EEPROM state change (the 4–8 MB resource region) dating exactly to the first
+   morning success. Kill the host for clean tests; read GET_ID's v6 bundle block on
+   each half to see if bundles landed.
+2. **"Cables work fine on split72" — which cable?** If the *split42's* cable was
+   cross-tested on split72, the cable is exonerated and the fault localizes to
+   split42's jacks/pads. If split72's own cable was meant: swap it onto split42.
+3. Which half was USB master in the morning "works" tests? (Relevant to §3.)
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

@@ -17,7 +17,26 @@ OS_DETECTION_ENABLE = yes
 # poly_keymap.c holds the shared keymap logic compiled for every variant
 # (split72, split42). Each variant's keymaps/default/keymap.c carries only its
 # data (keymaps[] / encoder_map[] / g_led_config).
-SRC += poly_keymap.c boot_diag.c side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c os_actions.c
+POLY_SRC := poly_keymap.c boot_diag.c side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c os_actions.c anim/startup_anim.c
+SRC += $(POLY_SRC)
+
+# Extra compiler warnings for the PolyKybd (non-QMK-core) sources ONLY. QMK already
+# builds with -Wall -Werror globally, but -Wall does NOT include -Wtype-limits — the
+# warning that would have caught the `uint8_t s < 340` spark-loop overflow that hung
+# the keyboard. -Wextra adds it (plus -Wsign-compare, -Wshadow-ish family, etc.).
+# Scoped per-object via FILE_SPECIFIC_CFLAGS (the same hook QMK uses for board hooks)
+# so QMK core stays quiet. -Werror is inherited from the global CFLAGS, so these are
+# hard errors for our files — a build FAILS rather than shipping the bug.
+# -Wextra brings in -Wtype-limits (the bug-catcher). The two suppressed categories
+# are pure noise for this codebase: -Wunused-parameter fires on QMK's fixed callback
+# signatures (the param can't be dropped), and -Wold-style-declaration is GCC ordering
+# pedantry (`const static` vs `static const`). Everything else in -Wextra stays a hard
+# error (global -Werror), so a real always-true comparison / sign mismatch fails the build.
+POLY_WARN_CFLAGS := -Wextra -Wno-unused-parameter -Wno-old-style-declaration
+define POLY_APPLY_WARN
+$(INTERMEDIATE_OUTPUT)/$(patsubst %.c,%.o,$(patsubst ./%,%,$1)): FILE_SPECIFIC_CFLAGS += $(POLY_WARN_CFLAGS)
+endef
+$(foreach s,$(POLY_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
 
 # HIL test station build: fix the split role at compile time per side instead of
 # using VBUS detection, because both halves are USB-powered on the rig and the

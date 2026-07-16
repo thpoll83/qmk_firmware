@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #define ENABLE_COMPILE_KEYCODE
 
-#define EECONFIG_USER_DATA_SIZE 65   // +1 for poly_eeconf_t.glyph_script (within POLY_EECONFIG_USER_RESERVED=128, no keymap relocation)
+#define EECONFIG_USER_DATA_SIZE 66   // +1 for poly_eeconf_t.glyph_script, +1 for boot_flags (within POLY_EECONFIG_USER_RESERVED=128, no keymap relocation)
 
 // Emoji picker: 38 slots/page (rows 2-4; the top row is the MRU, row 1 the tabs).
 #define EMJ_SLOTS_PER_PAGE 38

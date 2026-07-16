@@ -23,6 +23,16 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
 // the idle "jitter" anti-burn-in relocation redraw. Pass 0,0 to disable.
 void kdisp_set_draw_offset(int8_t ox, int8_t oy);
 
+// When true, subsequent gfx-char/text draws CLEAR their glyph pixels instead of
+// setting them (erase mode). Used to cut a legend out of the Eden idle comet field.
+// Remember to restore it to false after the draw.
+void kdisp_set_gfx_erase(bool erase);
+
+// When set, the glyph plotter only lights pixels on even buffer rows — a scanline
+// half-brightness look used by the Eden idle screensaver's lit legend. Restore to
+// false after the draw.
+void kdisp_set_gfx_scanline(bool scanline);
+
 // Glyph for codepoint `c` in a font set, or NULL if no font covers it (skips
 // empty gap glyphs, no '!' fallback). For coverage tests + metric reads.
 const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t c);
@@ -72,6 +82,8 @@ void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], i
 void kdisp_set_buffer(uint8_t vertical_pixel_row_of_8_pixels);
 
 void kdisp_send_buffer(void);
+
+void kdisp_send_window(void);
 
 void kdisp_invert(bool invert);
 

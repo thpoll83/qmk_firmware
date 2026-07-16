@@ -28,6 +28,10 @@ static uint8_t g_idle_style = IDLE_STYLE_PULSE;
 // poly_eeconf_t (its own byte, like os_state) and flushed via g_glyph_dirty.
 static uint8_t g_glyph_script = GLYPH_STD;
 static bool    g_glyph_dirty  = false;
+// First-boot startup-animation marker (poly_eeconf_t.boot_flags). 0xFF/0 (fresh
+// EEPROM) => intro pending; BOOT_INTRO_DONE => already played.
+static uint8_t g_boot_flags = 0xFF;
+static bool    g_boot_dirty = false;
 
 // Host-driven (daylight/auto) brightness mode. While engaged, the keyboard
 // applies the host's VOLATILE brightness updates and restores to the last auto
@@ -421,6 +425,24 @@ void note_glyph_script(uint8_t script) {
     g_glyph_script = (script == 0xFF) ? GLYPH_STD : script;
 }
 
+// ---- First-boot startup animation marker (poly_eeconf_t.boot_flags) ----
+void note_boot_flags(uint8_t flags) {
+    g_boot_flags = flags;
+}
+bool boot_intro_pending(void) {
+    return g_boot_flags != BOOT_INTRO_DONE;
+}
+// Marks the boot-intro-played tail byte dirty once the intro has finished. The
+// actual EEPROM write is deferred to the next centralized flush (save_all_dirty at
+// suspend/shutdown/store) — never a direct write here, since this runs from the
+// housekeeping task. Worst case on power loss before a flush: the one-time intro
+// replays next boot (cosmetic, harmless).
+void mark_boot_intro_done(void) {
+    if (g_boot_flags == BOOT_INTRO_DONE) return;
+    g_boot_flags = BOOT_INTRO_DONE;
+    g_boot_dirty = true;
+}
+
 // ---- Active host-OS (enum poly_os) ----
 
 // The OS in effect: the manual pin while pinned, else the last resolved OS in auto
@@ -519,6 +541,13 @@ static void save_user_glyph_script(void) {
                                    sizeof(g_glyph_script));
 }
 
+// Writes just the boot-intro marker tail byte (like glyph_script, it sits at the
+// tail of poly_eeconf_t, not in the contiguous settings block).
+static void save_user_boot_flags(void) {
+    eeconfig_update_user_datablock(&g_boot_flags, offsetof(poly_eeconf_t, boot_flags),
+                                   sizeof(g_boot_flags));
+}
+
 // Defers a default-layer EEPROM write — safe to call from split sync handlers.
 // The actual write happens at the next flush (save_all_dirty).
 void defer_default_layer_save(layer_state_t def_layer) {
@@ -541,6 +570,7 @@ void save_all_dirty(void) {
     if (g_brightness_dirty) { save_user_settings(); g_brightness_dirty = false; }
     if (g_os_dirty)         { save_user_os();       g_os_dirty = false; }
     if (g_glyph_dirty)      { save_user_glyph_script(); g_glyph_dirty = false; }
+    if (g_boot_dirty)       { save_user_boot_flags(); g_boot_dirty = false; }
     if (g_latin_dirty)      { save_user_latin();    g_latin_dirty = false; }
     if (g_def_layer_dirty)  { eeconfig_update_default_layer(g_def_layer_pending); g_def_layer_dirty = false; }
     save_user_mru_if_dirty();

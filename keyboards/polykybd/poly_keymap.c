@@ -77,6 +77,7 @@
 #include "layers.h"
 #include "keycode_helper.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
+#include "anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
 #include "os_actions.h"
 #include "uni.h"
 #include "emoji/emoji_layer.h"
@@ -754,6 +755,41 @@ static void poly_ltr559_drive(void) {
 }
 #endif  // POLYKYBD_LTR559_DRIVE
 
+// Eden idle screensaver runs DIM (anti-burn-in + it's a sleeping-keyboard ambience,
+// not a legend you need to read). This is the OLED contrast register value, not a
+// brightness level — a small number is a faint glow.
+#define EDEN_IDLE_BRIGHTNESS 4
+
+// Idle "Eden" screensaver driver (IDLE_STYLE_EDEN), run every housekeeping pass on
+// BOTH halves (like doom_tick). It renders the looping boot animation while the
+// synced idle state says we are idling in EDEN style — the signal is DISP_IDLE +
+// idle_style, both already carried on the poly sync, so no extra UART field. Each
+// half draws its own keycaps off its own local timer (a few ms of skew, invisible,
+// exactly like the boot animation). The one-shot boot/KC_EDEN animation is never
+// disturbed: `want` requires DISP_IDLE (never set during boot) and we skip while a
+// one-shot is active. On wake/turn-off the flag clears (display_wakeup / poly_suspend)
+// and the loop stops, handing the keycaps back to update_displays.
+static void eden_idle_tick(void) {
+    const poly_sync_t* ls = get_local_state();
+    const bool one_shot = startup_anim_active() && !startup_anim_is_loop();
+    const bool want = (ls->idle_style == IDLE_STYLE_EDEN) &&
+                      ((ls->flags & DISP_IDLE) != 0) && !one_shot;
+    if (want) {
+        if (!startup_anim_is_loop()) {
+            startup_anim_start_loop(EDEN_IDLE_BRIGHTNESS);   // dim glow, both halves
+        }
+        startup_anim_tick();
+    } else if (startup_anim_is_loop()) {
+        // Loop just ended (woke / turned off). Request a refresh so THIS half repaints
+        // its real legends now that Eden released the keycaps — the slave has no
+        // display_wakeup of its own (keys are processed on the master), so without
+        // this it could keep the last Eden frame until the next unrelated diff
+        // (the "slave didn't repaint on a plain key, only on Shift" symptom).
+        startup_anim_stop();
+        request_disp_refresh();
+    }
+}
+
 void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
@@ -800,7 +836,57 @@ void housekeeping_task_user(void) {
         // Runs before the display sync: it keeps last_update fresh so the
         // idle/fade pipeline below never fights the game blitter.
         doom_tick();
-        sync_and_refresh_displays();
+        // Idle "Eden" screensaver frame tick (IDLE_STYLE_EDEN, both halves). Runs
+        // before the boot-animation block below and owns the LOOPING variant; the
+        // block below is for the ONE-SHOT boot/KC_EDEN animation only.
+        eden_idle_tick();
+        // One-time startup animation: render a frame while active (both halves
+        // render their own keycaps). On the finishing edge, persist the "played"
+        // marker and request a normal refresh so the base legends come back. Gated
+        // to the ONE-SHOT animation — the looping idle screensaver is driven by
+        // eden_idle_tick() above and must not run the finish edge / nonce sync here.
+        if (startup_anim_active() && !startup_anim_is_loop()) {
+            // Render THIS half's frame first — the keycap animation must never wait on
+            // the split link (the boot-time link is flaky; blocking here left the master
+            // stuck on the splash with dark keycaps).
+            startup_anim_tick();
+            // Then, ONCE and only when the transport is actually up, deliver the replay
+            // nonce to the slave so a HID replay (cmd 31) or a KC_EDEN-rearmed boot plays
+            // on both halves in lockstep. We skip the normal per-pass
+            // sync_and_refresh_displays() while Eden owns the displays, so this is the
+            // only carrier for the nonce. Gated on is_transport_connected() (non-blocking)
+            // so a fresh boot — where both halves already animate from their own marker —
+            // never stalls waiting on a slave that is still coming up; the send just
+            // rides along once the link settles and the slave's !active guard makes it a
+            // no-op there. Retried each pass until it lands (or the animation ends).
+            static bool s_anim_synced = false;
+            if (!s_anim_synced && is_usb_host_side() && is_transport_connected()) {
+                // Classify the ack via sync_succeeded() — never bool-test send_to_bridge()
+                // directly (every return is non-zero). Only latch on a genuine success so a
+                // failed send stays eligible for retry on a later pass.
+                uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 3);
+                if (sync_succeeded(ack)) {
+                    s_anim_synced = true;
+                }
+            }
+            if (!startup_anim_active()) {   // just finished this pass
+                s_anim_synced = false;      // re-arm for the next replay (KC_EDEN / HID)
+                mark_boot_intro_done();
+                // Eden ran at full brightness; restore the user's normal
+                // brightness behaviour now that it has faded to black, then
+                // redraw the real legends and resume normal split sync.
+                set_displays(get_local_state()->contrast, false);
+                request_disp_refresh();
+                sync_and_refresh_displays();
+            }
+            // While Eden plays we OWN the displays: skip sync_and_refresh_displays
+            // (its set_displays() would overwrite our full-bright contrast with the
+            // user brightness — the "brightness changes mid-animation" bug) and skip
+            // the boot forced-layer-resync's per-pass blocking UART, which also
+            // stole frame time. Each half renders its own keycaps independently.
+        } else {
+            sync_and_refresh_displays();
+        }
 #ifdef POLY_SPLIT_HEARTBEAT_EXPERIMENT
         // ROOT-CAUSE EXPERIMENT (split42, 2026-07-14). Reproduce the every-cycle
         // master->slave pull that SPLIT_POINTING_ENABLE provided, but with the
@@ -849,7 +935,10 @@ void housekeeping_task_user(void) {
 #    endif
 #endif
     }
-    if(is_idle_tracking()) {
+    // The ONE-SHOT boot/KC_EDEN animation owns the whole idle pipeline; skip it.
+    // The LOOPING Eden screensaver, however, still needs this block to run — it sets
+    // DISP_IDLE, keeps contrast steady, and reaches the TURN_OFF suspend deadline.
+    if(is_idle_tracking() && !(startup_anim_active() && !startup_anim_is_loop())) {
         //turn off displays
         // Full uint32 elapsed via timer_elapsed32 — no sign gate, so idle keeps
         // working past ~24.86 days of uptime (when timer_read32() sets bit 31).
@@ -879,6 +968,16 @@ void housekeeping_task_user(void) {
                         // can't start (non-doom build, fw staging active).
                         contrast = get_active_brightness();
                         uprint("Transition to doom screensaver\n");
+                    } else if (get_idle_style() == IDLE_STYLE_EDEN) {
+                        // Eden screensaver: enter DISP_IDLE like the pulse (so the
+                        // wake-on-key and TURN_OFF suspend paths work unchanged and
+                        // the flag+idle_style tell the slave to loop too), but hold
+                        // contrast DIM and steady — eden_idle_tick() owns the pixels
+                        // every pass and the loop migrates them itself, so there is no
+                        // burn-in and no per-pass pulse contrast to fight.
+                        contrast = EDEN_IDLE_BRIGHTNESS;
+                        flags |= DISP_IDLE;
+                        uprint("Transition to eden screensaver\n");
                     } else {
                         contrast = DISP_OFF;
                         flags |= DISP_IDLE;
@@ -900,11 +999,18 @@ void housekeeping_task_user(void) {
                 contrast = local_state->contrast;
                 flags = local_state->flags;
             } else if((flags & DISP_IDLE)!=0) {
-                int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
-                contrast = time_after%50;
-                // In JITTER style each key relocates its own legend independently as
-                // it pulses dark (kdisp_idle) — there is no shared per-cycle offset
-                // to compute here; only the pulse `contrast` drives both halves.
+                if (get_idle_style() == IDLE_STYLE_EDEN) {
+                    // Eden owns the visuals via eden_idle_tick(); keep the panel DIM and
+                    // steady and DON'T compute a pulse contrast (a per-pass contrast diff
+                    // would call kdisp_idle() and fight the animation).
+                    contrast = EDEN_IDLE_BRIGHTNESS;
+                } else {
+                    int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
+                    contrast = time_after%50;
+                    // In JITTER style each key relocates its own legend independently as
+                    // it pulses dark (kdisp_idle) — there is no shared per-cycle offset
+                    // to compute here; only the pulse `contrast` drives both halves.
+                }
             } else {
                 flags &= ~((uint8_t)DISP_IDLE);
             }
@@ -1999,6 +2105,76 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     return true;
 }
 
+// How often the Eden idle legend relocates to a fresh spot (anti-burn-in "ghosting").
+#define EDEN_LEGEND_DRIFT_MS 7000u
+
+// Eden idle screensaver: draw a key's resting legend LIT into the comet field the
+// animation just built, so the letter is clearly visible as a faint "ghost" the
+// comets drift around — and relocate it to a fresh in-glyph-slack spot every
+// EDEN_LEGEND_DRIFT_MS so it slowly wanders (anti-burn-in), like the jitter style.
+// (An earlier version ERASED the legend as a dark cutout, but at the dim idle
+// brightness the sparse comet field had too few lit pixels for a cutout to read.)
+// Called per panel from sa_render_idle_frame() (startup_anim.c) AFTER the comet
+// field is drawn and BEFORE the send, so it does NOT clear the buffer and does NOT
+// send. `disp_idx` is the display index == the anim's geom index == LAYOUT_TO_INDEX(r,c);
+// invert it to (r,c) to resolve the keycode. Returns false without touching the
+// buffer for keys with no plain-text legend (flags/emoji/tabs/overlays) — those faces
+// just show the plain comet field. Mirrors render_idle_key's legend derivation.
+bool eden_idle_erase_legend(uint8_t disp_idx) {
+    if (disp_idx >= MATRIX_ROWS_PER_SIDE * MATRIX_COLS) return false;
+    // disp_idx == the anim geom index == display row*8 + col. Invert to the matrix
+    // (row,col), undoing the right-half `c--` display fold that invert_display()
+    // applies to the upper display rows (mirrors the host sim's disp_mp): LEFT is a
+    // straight (dr, dc); RIGHT is (dr+MATRIX_ROWS_PER_SIDE, dc+1) on rows 0..3 and
+    // (dr+MATRIX_ROWS_PER_SIDE, dc) on the bottom row 4.
+    uint8_t dr = disp_idx / MATRIX_COLS, dc = disp_idx % MATRIX_COLS;
+    uint8_t mr, mc;
+    if (is_left_side()) {
+        mr = dr;
+        mc = dc;
+    } else {
+        mr = dr + MATRIX_ROWS_PER_SIDE;
+        mc = (dr < 4) ? (uint8_t)(dc + 1) : dc;
+    }
+    if (mc >= MATRIX_COLS) return false;   // phantom col — no OLED behind it
+    const poly_layer_t* local_layer = get_local_layer();
+    uint16_t keycode = display_keycode_at(local_layer, mr, mc);
+    if (keycode == KC_NO || keycode == KC_TRNS) return false;
+
+    const poly_sync_t* local_state = get_local_state();
+    led_t state = local_layer->led_state;
+    uint32_t unimap[2] = {0, 0};
+    const uint32_t* text = to_static_text(keycode, state);
+    if (text == NULL) {
+        text = translate_keycode(local_state->lang, keycode, false, state.caps_lock);
+    }
+    if (text == NULL && (keycode & QK_UNICODEMAP_PAIR) == QK_UNICODEMAP_PAIR) {
+        uint16_t chr = state.caps_lock ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode)
+                                       : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
+        unimap[0] = unicode_map[chr];
+        text = unimap;
+    }
+    if (text == NULL || text[0] == 0) {
+        return false;   // no text legend — leave the plain comet field on this key
+    }
+    // Draw the legend LIT but with a scanline half-brightness effect (only even buffer
+    // rows lit) so it reads lighter over the comet field, at a slowly-drifting position
+    // within its own on-screen slack. roll_idle_offset() picks a uniform random offset
+    // inside the glyph's free space (fully on-screen, per-glyph — the same helper the
+    // jitter idle style uses); the seed changes once per EDEN_LEGEND_DRIFT_MS so every
+    // ~7 s the letter jumps to a fresh spot. Per-key phase (disp_idx) so they don't all
+    // move in lockstep.
+    uint32_t epoch = timer_read32() / EDEN_LEGEND_DRIFT_MS;
+    int8_t dx, dy;
+    roll_idle_offset(text, BUFFER_X, 23, epoch * 2654435761u + disp_idx, &dx, &dy);
+    kdisp_set_gfx_scanline(true);
+    kdisp_set_draw_offset(dx, dy);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
+    kdisp_set_draw_offset(0, 0);
+    kdisp_set_gfx_scanline(false);
+    return true;
+}
+
 // Per-key "was dark on the previous kdisp_idle() pass" latch (this half only), so a
 // key relocates at most once per pulse-dark episode rather than every pass while it
 // is dark. Reset on every wake/suspend/stop-idle path (reset_idle_jitter) so a fresh
@@ -2042,6 +2218,11 @@ void update_displays(enum refresh_mode mode) {
     // Doom easter egg: while game mode owns the keycaps, the blitter is the
     // only writer — a legend re-render here would tear the game frame.
     if (doom_mode_active()) {
+        return;
+    }
+    // Same for the one-time startup animation: while it owns the keycaps, its
+    // procedural blitter is the only writer.
+    if (startup_anim_active()) {
         return;
     }
     const poly_sync_t* local_state = get_local_state();
@@ -2231,6 +2412,19 @@ void update_displays(enum refresh_mode mode) {
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
                                 kdisp_write_gfx_char(g_all_fonts, g_all_font_count, BUFFER_X, 23, unicode_map[chr], 0);
                             }
+                        } else if (keycode == KC_EDEN) {
+                            // "Reset / Eden" — draw a size smaller (10px mid font) as two
+                            // centred lines so it reads as a minor settings action rather
+                            // than a primary legend. (Legend text lives in keycode_helper.)
+                            static const uint32_t l1[] = U"Reset";
+                            static const uint32_t l2[] = U"Eden";
+                            int8_t lo = 0, hi = 0;
+                            kdisp_gfx_text_bounds(mid_fonts, 1, l1, &lo, &hi);
+                            kdisp_write_gfx_text(mid_fonts, 1,
+                                (int8_t)(BUFFER_X + (SCREEN_WIDTH - (hi - lo + 1)) / 2 - lo), 17, l1);
+                            kdisp_gfx_text_bounds(mid_fonts, 1, l2, &lo, &hi);
+                            kdisp_write_gfx_text(mid_fonts, 1,
+                                (int8_t)(BUFFER_X + (SCREEN_WIDTH - (hi - lo + 1)) / 2 - lo), 32, l2);
                         } else if (r == MATRIX_ROWS_PER_SIDE - 1) {
                             // Bottom (thumb) row: centre the legend horizontally.
                             draw_legend_cx(text, 23);
@@ -2294,6 +2488,13 @@ uint8_t to_brightness(uint8_t b) {
 // OLED's own memory; only a 1-bit-per-key "was dark" latch (s_idle_was_dark) gates
 // the once-per-episode redraw.
 void kdisp_idle(uint8_t contrast) {
+    // Eden idle style: the looping screensaver (eden_idle_tick) owns the keycaps —
+    // do NOT pulse/blank them here. Returning also leaves the panels enabled at the
+    // brightness Eden's own start set, so the transition-pass set_displays(idle=true)
+    // can't flash a black/pulse frame over the animation.
+    if (get_local_state()->idle_style == IDLE_STYLE_EDEN) {
+        return;
+    }
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t skip = 0;
     const bool jitter = get_local_state()->idle_style == IDLE_STYLE_JITTER;
@@ -2360,6 +2561,17 @@ void kdisp_idle(uint8_t contrast) {
 static uint8_t s_apple_swap_latch = 0;
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+
+    // While the ONE-SHOT startup ("Eden") animation is playing, swallow every key
+    // event — no typing is wanted (or needed) during the intro. Keys from both
+    // halves funnel through the master's process_record before USB reporting, so
+    // gating here stops all input from reaching the host until the intro ends.
+    // The LOOPING idle Eden screensaver is deliberately NOT swallowed: like the
+    // pulse, the first key press should dismiss it and pass through to the wake
+    // (display_wakeup clears DISP_IDLE → eden_idle_tick stops the loop next pass).
+    if (startup_anim_active() && !startup_anim_is_loop()) {
+        return false;
+    }
 
     // Doom easter egg: in game mode every key event is swallowed (fed to the
     // game, never the host); outside game mode this only advances the trigger
@@ -2718,6 +2930,14 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
             local_state->overlay_flags &= ~SAVE_EEPROM;
             break;
+        case KC_EDEN:
+            // Trigger the startup ("Eden") animation NOW on this (master) half and bump
+            // the synced nonce so the slave plays in lockstep (the nonce is delivered by
+            // the one-shot bridge send in housekeeping, once the transport is up — see
+            // sync_and_refresh_displays gating). Input is swallowed while it plays.
+            startup_anim_start();
+            local_state->anim_nonce++;
+            break;
         // ── Language layer: region tabs, paging, MRU controls, slot/MRU select ──
         case KC_LANG_CAT_BASE ... KC_LANG_PAGE_PREV - 1:
             lang_select_region((uint8_t)(keycode - KC_LANG_CAT_BASE));
@@ -2849,6 +3069,9 @@ bool display_wakeup(keyrecord_t* record) {
         if(local_state->contrast==DISP_OFF && (local_state->flags&DEAD_KEY_ON_WAKEUP)!=0) {
             accept_keypress = get_time_since_last_update()<= TURN_OFF_TIME;
         }
+        // Stop the looping Eden idle screensaver immediately so update_displays() (no
+        // longer blocked by startup_anim_active()) can repaint the woken legends.
+        startup_anim_stop();
         local_state->contrast = get_active_brightness();
         local_state->flags &= ~((uint8_t)DISP_IDLE);
         local_state->flags |= STATUS_DISP_ON;
@@ -3039,6 +3262,16 @@ void keyboard_post_init_user(void) {
     splash_progress(7);                 // EEPROM config (brightness/lang/OS/MRU) loaded
 
     set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
+
+    // One-time startup animation: on the very first boot (fresh EEPROM), play the
+    // procedural intro once, then persist BOOT_INTRO_DONE (in the housekeeping
+    // finish edge). Each half reads its own flag and animates its own keycaps.
+    note_boot_flags(ee.boot_flags);
+    // Boot-time auto-play of the Eden animation is intentionally NOT started here:
+    // running it during boot was wedging a half (see the startup logs in
+    // startup_anim.c). The animation is triggered on demand by the KC_EDEN key
+    // instead (process_record_user), when the board is fully up and the split link
+    // is live. Re-enable a guarded boot auto-play once the startup hang is understood.
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif
@@ -3124,6 +3357,7 @@ void poly_suspend(void) {
     // keep blitting into panels this function is about to switch off. No-op for
     // a real game session and on the slave.
     doom_screensaver_stop();
+    startup_anim_stop();   // tear down the looping Eden idle screensaver on suspend
     poly_sync_t* local_state = access_local_state();
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
     local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);// & ~((uint8_t)RGB_ON);

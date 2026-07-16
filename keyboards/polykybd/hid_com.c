@@ -12,6 +12,7 @@
 #include "raw_hid.h"
 
 #include "state.h"
+#include "anim/startup_anim.h"
 #include "side.h"
 #include "config.h"
 #include "split_sync.h"
@@ -850,6 +851,19 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         uprintf("Set glyph script to %u.\n", arg);
                     }
                     raw_hid_send(data, length);
+                }
+                break;
+            case 31: //replay the startup ("Eden") animation on demand
+                {
+                    // Fun/debug: re-play the one-time boot animation without a
+                    // power cycle. Start it on this (master) half and bump the
+                    // synced nonce so the slave replays too (see split_sync.c).
+                    startup_anim_start();
+                    access_local_state()->anim_nonce++;
+                    memset(data, 0, length);
+                    hid_reply(data, 0x1f, true);
+                    raw_hid_send(data, length);
+                    uprint("Replaying startup animation.\n");
                 }
                 break;
             default:

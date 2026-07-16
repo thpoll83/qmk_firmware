@@ -81,6 +81,25 @@ void kdisp_set_draw_offset(int8_t ox, int8_t oy) {
     s_draw_oy = oy;
 }
 
+// Erase mode for gfx-char/text draws: when set, glyph pixels CLEAR the buffer
+// instead of setting it — used by the Eden idle screensaver to cut a key's legend
+// out of the comet field as a dark silhouette. Restore to false after the draw.
+static bool s_gfx_erase = false;
+
+void kdisp_set_gfx_erase(bool erase) {
+    s_gfx_erase = erase;
+}
+
+// When set, the glyph plotter only lights pixels on even buffer rows — a "scanline"
+// half-brightness look used by the Eden idle screensaver to make the lit legend read
+// lighter over the comet field. Absolute buffer y (not glyph-local) so the scanlines
+// stay aligned as the legend drifts. Restore to false after the draw.
+static bool s_gfx_scanline = false;
+
+void kdisp_set_gfx_scanline(bool scanline) {
+    s_gfx_scanline = scanline;
+}
+
 uint8_t* get_scratch_buffer(void) {
     return scratch_buffer;
 }
@@ -370,7 +389,11 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
                 bits = pgm_read_byte(&bitmap[bo++]);
             }
             if (bits & 0x80) {
-                SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                if (s_gfx_erase) {
+                    CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                } else if (!(s_gfx_scanline && ((y + yo + yy) & 1))) {
+                    SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                }
             }
             bits <<= 1;
         }
@@ -664,6 +687,28 @@ void kdisp_send_buffer(void) {
     spi_transmit(scratch_buffer, BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT);
 
     //spi_stop();
+}
+
+// Push ONLY the visible 72x40 window (BUFFER_X..+71, pages 0..4) = 360 bytes,
+// instead of the whole 1024-byte controller RAM. ~2.9x less SPI per keycap — used
+// by the procedural startup animation for a higher framerate. The caller must
+// still have written the visible pixels into scratch_buffer at column BUFFER_X.
+void kdisp_send_window(void) {
+    spi_prepare_commands();
+    static const uint8_t PROGMEM dlist[] = {SSD1306_PAGEADDR,
+                                            0,                            // page start
+                                            BUFFER_BYTE_VIS_HEIGHT - 1,   // page end (4)
+                                            SSD1306_COLUMNADDR,
+                                            BUFFER_X};                    // column start (28)
+    spi_transmit(dlist, sizeof(dlist));
+    spi_write(BUFFER_X + BUFFER_BYTE_VIS_WIDTH - 1);   // column end (28+72-1 = 99)
+    spi_prepare_data();
+    // Horizontal addressing (as kdisp_send_buffer uses): page-major, so send each
+    // visible page's 72 columns from BUFFER_X; the controller wraps col 99->28.
+    for (uint8_t page = 0; page < BUFFER_BYTE_VIS_HEIGHT; ++page) {
+        spi_transmit(&scratch_buffer[(size_t)page * BUFFER_BYTE_WIDTH + BUFFER_X],
+                     BUFFER_BYTE_VIS_WIDTH);
+    }
 }
 
 void kdisp_invert(bool invert) {

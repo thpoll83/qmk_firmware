@@ -591,7 +591,11 @@ void register_unicodemap_poly(uint16_t index) {
 }
 
 bool process_unicodemap_poly(uint16_t keycode, keyrecord_t *record) {
-    if (keycode >= QK_UNICODEMAP && keycode <= QK_UNICODEMAP_PAIR_MAX && record->event.pressed) {
+    // Match the whole UnicodeMap keycode space (QK_UNICODEMAP .. QK_UNICODEMAP_PAIR_MAX).
+    // QK_UNICODEMAP_PAIR_MAX is 0xFFFF (== UINT16_MAX), the top of the keycode type, so
+    // ">= QK_UNICODEMAP" already captures the full range — an explicit upper bound would
+    // be an always-true compare (-Wtype-limits). No pragma needed.
+    if (keycode >= QK_UNICODEMAP && record->event.pressed) {
         register_unicodemap_poly(unicodemap_index_poly(keycode));
         return true;
     }

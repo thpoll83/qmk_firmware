@@ -14,11 +14,16 @@
 // pulse (doom/README.md) — chrome-free, dismissed by the first key press; on a
 // build/board where the demo can't start (no POLYKYBD_DOOM, staging active) it
 // falls back to PULSE at runtime, so the value is always safe to accept/persist.
+// EDEN loops the "Eden" boot animation as a screensaver (split72 only): it reuses
+// the normal idle machinery (DISP_IDLE flag → wake on key + TURN_OFF suspend) but
+// renders looping Eden frames on both halves instead of the pulse; on split42 the
+// no-op anim stubs leave it behaving like PULSE.
 // Values are append-only (persisted + on the wire in poly_sync_t.idle_style).
 enum poly_idle_style {
     IDLE_STYLE_PULSE  = 0,
     IDLE_STYLE_JITTER = 1,
     IDLE_STYLE_IDDQD  = 2,   // doom attract-demo screensaver (host: IdleStyle.IDDQD)
+    IDLE_STYLE_EDEN   = 3,   // looping "Eden" boot animation screensaver (host: IdleStyle.EDEN)
     IDLE_STYLE_COUNT
 };
 
@@ -136,6 +141,11 @@ typedef struct _poly_sync_t {
     // flash, suppressed while firing). Both halves render it locally in
     // rgb_matrix_indicators_kb via doom_rgb_indicators().
     uint8_t  doom_rgb;
+    // One-shot replay trigger for the startup ("Eden") animation. The master
+    // bumps this on the HID replay command; the slave starts its own animation
+    // when it sees the value change (see user_sync_poly_data_handler). It is a
+    // nonce, not a state — any change triggers exactly one replay.
+    uint8_t  anim_nonce;
 } poly_sync_t;
 
 typedef struct _poly_last_t {
@@ -173,7 +183,16 @@ typedef struct _poly_eeconf_t {
     // Growing EECONFIG_USER_DATA_SIZE 64->65 stays within POLY_EECONFIG_USER_RESERVED
     // (128), so the dynamic keymap does NOT relocate — no user EEPROM reset needed.
     uint8_t  glyph_script;
+    // First-boot marker for the one-time startup animation. Appended tail byte
+    // (same pattern as os_state/glyph_script) so earlier offsets are unchanged.
+    // A fresh/erased EEPROM reads 0xFF (or 0 after eeconfig_init) — anything other
+    // than BOOT_INTRO_DONE means "not yet played", so the intro runs once and then
+    // writes BOOT_INTRO_DONE. Growing EECONFIG_USER_DATA_SIZE 65->66 stays within
+    // POLY_EECONFIG_USER_RESERVED (128): no keymap relocation / user reset.
+    uint8_t  boot_flags;
 } poly_eeconf_t;
+
+#define BOOT_INTRO_DONE 0x5A   // sentinel written after the startup animation has played
 
 
 static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");
@@ -302,6 +321,14 @@ void set_glyph_script(uint8_t script);
 // Records the glyph script without marking dirty (boot-time EEPROM load); an
 // out-of-range (uninitialised-EEPROM) value falls back to GLYPH_STD.
 void note_glyph_script(uint8_t script);
+
+// ---- First-boot startup animation marker (poly_eeconf_t.boot_flags) ----
+// Records the boot_flags byte at EEPROM load (no dirty flag).
+void note_boot_flags(uint8_t flags);
+// True until BOOT_INTRO_DONE has been persisted — i.e. the intro hasn't played.
+bool boot_intro_pending(void);
+// Persist BOOT_INTRO_DONE (one-time tail-byte write) so the intro won't replay.
+void mark_boot_intro_done(void);
 
 // ---- Active host-OS (enum poly_os) — see the poly_os comment in this header. ----
 

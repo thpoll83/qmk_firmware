@@ -48,12 +48,22 @@ void soft_serial_initiator_init(void) {
 /**
  * @brief React to transactions started by the master.
  */
+#ifdef POLY_SLAVE_RX_BLINK
+// Number of transaction-id bytes the SlaveThread actually received+woke for. Second
+// latch source for the slave-side visual probe: catches the case where the slave
+// consumes bytes so fast the housekeeping FIFO poll never sees a non-empty FIFO.
+volatile uint32_t g_slave_rx_ids = 0;
+#endif
+
 static inline bool react_to_transaction(void) {
     uint8_t transaction_id = 0;
     /* Wait until there is a transaction for us. */
     if (unlikely(!serial_transport_receive_blocking(&transaction_id, sizeof(transaction_id)))) {
         return false;
     }
+#ifdef POLY_SLAVE_RX_BLINK
+    g_slave_rx_ids++;
+#endif
 
     /* Sanity check that we are actually responding to a valid transaction. */
     if (unlikely(transaction_id >= NUM_TOTAL_TRANSACTIONS)) {

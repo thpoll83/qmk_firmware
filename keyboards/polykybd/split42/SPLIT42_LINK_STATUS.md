@@ -64,6 +64,23 @@ know it's the genuine old one.)
 | 8 | 07-15 PM | `5de77192` (KNOWN-GOOD, rebuilt) | 0.9.51 | custom | 400 | blocking | no | both | ❌ **FAIL** | **worked in AM, fails now** |
 | 9 | 07-15 PM | `9253a328` (#144, real Cirque) | 0.9.5x | cirque_i2c | 400 | blocking | no | ? | ❌ **FAIL** | was confirmed working; fails now |
 | 10 | 07-15 PM | `981e5158` EEPROM-diag | 0.9.63 | custom | 400 | progressive | no | right & left | ❌ FAIL | **EEPROM CLEAN on both halves** — see below |
+| 11 | 07-16 eve | `7ddc2f49` RX-line probe | 0.9.63 | custom | 400 | progressive | no | **left & right, HOST QUIT, qmk console** | ❌ FAIL | **`rx_bytes=0 rx_clr=0` BOTH orientations** — see below |
+
+### Row 11 — ZERO bytes reach the master's RX, either orientation (2026-07-16)
+Clean test (PolyKybdHost quit, `qmk console` only). Both sides identical:
+```
+Split link: 201 tx crc_err=0 transport_fail=201 giveup=67 err=100.0% rx_bytes=0 rx_clr=0
+eeprom: clean on both halves again (hands correct, no stall, no reformat)
+```
+- **Not one byte ever entered the master's RX FIFO** across 201 transactions, from
+  either side. This is the wire-dead signature, not a wake/IRQ problem (nothing to
+  wake for) and not host interference (host was off; result unchanged).
+- The slave half boots + renders while powered only via the split cable ⇒ the cable's
+  **power conductors are fine**; the failure is specifically the **data path**.
+- Remaining candidates: the GP4 conductor/joints (master→slave direction — the master
+  always TXs on GP4 via the swap), the GP5 conductor/joints (slave→master echo path —
+  the slave always TXs on GP5), a dead pad/pin on one half, or the slave never
+  transmitting. The next probe (below) splits these without instruments.
 
 ### Row 10 — EEPROM ruled out (2026-07-15 ~21:50)
 Both halves read out healthy and consistent; EEPROM is **not** the cause:

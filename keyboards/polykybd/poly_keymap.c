@@ -773,6 +773,32 @@ void housekeeping_task_user(void) {
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
 
+#ifdef POLY_SLAVE_RX_BLINK
+    // Slave-side visual RX probe (SPLIT42_LINK_STATUS.md): once this half — as the
+    // SLAVE — has EVER seen a byte on its split RX (FIFO level / sticky RXSTALL via
+    // serial_probe_rx_seen(), or an id byte the SlaveThread actually processed via
+    // g_slave_rx_ids), blink ALL its keycap displays at ~1.6 Hz. Read with USB in
+    // the OTHER half, watching this one:
+    //   BLINKING = the master->slave direction is ALIVE (master TX/GP4 wire/slave RX
+    //              all work) => the break is the echo path (slave TX -> master RX).
+    //   DARK/static = master->slave direction dead (master TX pad, GP4 conductor, or
+    //              slave RX pad). Repeat with USB on the other side to localize.
+    // Diagnostic build only — a working link also blinks (it hears bytes; expected).
+    {
+        extern bool              serial_probe_rx_seen(void);
+        extern volatile uint32_t g_slave_rx_ids;
+        static uint32_t          s_blink_timer = 0;
+        static bool              s_blink_on    = true;
+        if (!is_keyboard_master() && (serial_probe_rx_seen() || g_slave_rx_ids > 0)) {
+            if (timer_elapsed32(s_blink_timer) >= 300) {
+                s_blink_timer = timer_read32();
+                s_blink_on    = !s_blink_on;
+                set_displays(s_blink_on ? 50 : DISP_OFF, false);
+            }
+        }
+    }
+#endif
+
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful

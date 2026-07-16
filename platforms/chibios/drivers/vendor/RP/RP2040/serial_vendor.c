@@ -106,6 +106,25 @@ uint32_t serial_debug_rx_bytes(void)         { return g_rx_bytes_total; }
 uint32_t serial_debug_rx_clear_nonempty(void){ return g_rx_clear_nonempty; }
 #endif
 
+#ifdef POLY_SLAVE_RX_BLINK
+// Sticky "has this half's RX ever seen a byte" latch, for the SLAVE-side visual probe
+// (SPLIT42_LINK_STATUS.md). Read-only observation: samples the RX FIFO level and the
+// sticky FDEBUG RXSTALL flag (set when the 4-deep FIFO overflowed because nothing
+// consumed it) — never pops the FIFO, never clears flags, so it cannot interfere with
+// the SlaveThread's normal receive path. Polled from housekeeping.
+bool serial_probe_rx_seen(void) {
+    static bool latched = false;
+    if (!latched && rx_state_machine >= 0) {
+        if (!pio_sm_is_rx_fifo_empty(pio, rx_state_machine)) {
+            latched = true;
+        } else if (pio->fdebug & (1u << (PIO_FDEBUG_RXSTALL_LSB + rx_state_machine))) {
+            latched = true;
+        }
+    }
+    return latched;
+}
+#endif
+
 thread_reference_t tx_thread        = NULL;
 static int         tx_state_machine = -1;
 

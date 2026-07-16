@@ -47,6 +47,11 @@ OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
 # Raw RX-line activity probe (split42 physical-vs-firmware isolation, SPLIT42_LINK_STATUS.md).
 OPT_DEFS += -DPOLY_RX_LINE_PROBE
 
+# Slave-side visual RX probe: the slave blinks all keycap displays once its split RX
+# has ever seen a byte — localizes WHICH direction of the link is dead, no console
+# needed on the slave (SPLIT42_LINK_STATUS.md).
+OPT_DEFS += -DPOLY_SLAVE_RX_BLINK
+
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes
 

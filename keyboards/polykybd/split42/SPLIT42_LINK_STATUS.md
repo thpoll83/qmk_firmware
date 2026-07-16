@@ -250,6 +250,63 @@ direction with zero instruments.
   cross-tested on split72, the cable is exonerated and the fault localizes to
   split42's jacks/pads. If split72's own cable was meant: swap it onto split42.
 
+## Row 12 + the schematic deep-dive (2026-07-16 late)
+
+### Row 12 — slave-blink probe: NEITHER half ever hears a byte; user has 5 BOARDS, all identical
+
+| # | when | build | result |
+|---|------|-------|--------|
+| 12 | 07-16 | `36bb1f5b` slave-blink probe | ❌ **No blink in either orientation** — the slave never receives a single byte. Master rx also 0 (row 11). **Both directions dead.** |
+
+**And the pivotal bench fact: the user has FIVE boards — ALL show the identical
+failure.** A bad joint does not replicate 5×. ⇒ per-unit hardware faults (joints,
+pads, marginal contacts) are RULED OUT. Whatever this is, it is **systematic**:
+design, firmware, or something **shared across all five setups**.
+
+### Schematic verification (hardware repo `PolyKybd`, KiCad, all four sheets)
+
+The inter-half link is a **USB Type-C receptacle** (`USB2` HRO TYPE-C-31-M-12 + TPD4E05
+flow-through ESD + ferrite), NOT a TRRS jack. Traced with a geometric net parser
+(junction-aware) on split42-left/right AND split72-left/right:
+
+- `SERIAL_COM1 → GP4`, `SERIAL_COM2 → GP5` on **every half of both variants** (identical).
+- **The receptacle is FLIP-PROOF:** both orientation contact pairs are tied —
+  `DP1 + DP2 → SERIAL_COM1`, `DN1 + DN2 → SERIAL_COM2` — on all four sheets. A standard
+  USB 2.0 C-to-C cable lands D+→COM1 / D−→COM2 in either plug orientation, giving the
+  straight COM1↔COM1 / COM2↔COM2 connection the firmware's `SERIAL_USART_PIN_SWAP`
+  expects. ⇒ **Cable-flip theory refuted at the schematic level.** The design is right.
+- The ESD chip (TPD4E05, flow-through) passes both COM lines; CC1/CC2 and SBU1/SBU2 are
+  grounded on both halves (no CC gating of VBUS in this custom link — power flows
+  regardless of cable type).
+
+### The one suspect left standing: THE CABLE ITSELF IS A CHARGE-ONLY USB-C CABLE
+
+Everything now converges on a single, mundane explanation. The split link needs a USB-C
+cable **with data wires (D+/D−)**. **Charge-only USB-C cables — extremely common
+(power banks, lamps, fans ship with them, visually identical to data cables) — carry
+VBUS/GND but NO data pair.** With one in place:
+- Slave half powers and boots normally (VBUS/GND fine) ✓ observed
+- ZERO bytes cross in either direction (no D+/D− wires) ✓ rows 11–12
+- Identical on all 5 boards (the cable is the shared component) ✓
+- Survives every reflash, EEPROM clean, firmware irrelevant ✓
+- Morning-works → evening-fails on identical firmware = **the cable was swapped or
+  mixed up with a look-alike between sessions** (e.g., during the "verify cables on
+  split72" step — which required unplugging things) ✓
+- Even the entire flaky pointing/delay history is explained if multiple look-alike
+  C-cables live on the bench and sessions grabbed different ones ✓
+
+### THE decisive 30-second test (no flashing, no instruments)
+
+Take the **exact cable that currently joins the split42 halves** and put it **between
+the split72 halves**:
+- split72 dies with it → **case closed: charge-only cable.** (And split42 with
+  split72's known-working cable must come alive — verify both directions of the swap.)
+- split72 still works with it → the cable carries data; theory dead; back to
+  systematic analysis with the cable exonerated FOR REAL this time.
+
+⚠️ Then label the cables. The earlier "cables work fine on split72" datapoint is
+ambiguous — it may have tested split72's own cables, not the split42 bench cable.
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

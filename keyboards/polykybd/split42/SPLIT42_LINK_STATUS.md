@@ -196,19 +196,42 @@ Plug USB into the left half, watch the right: flashing = master→slave conducto
 (the cut is the echo path); dark = master→slave conductor dead. Localizes the broken
 direction with zero instruments.
 
-### Open questions for the bench (cheap, high-information)
+### Bench answers (2026-07-16, user) — two questions closed
 
-1. **Was PolyKybdHost running during the tests?** It autostarts at login. On any
-   successful protocol-matched connect it silently auto-flashes ALL font-pack bundles
-   (split42 has NO status OLED connected and NO RGB — the flash is INVISIBLE) while
-   bridging chunks to the slave. That both perturbs link tests and is a persistent
-   non-EEPROM state change (the 4–8 MB resource region) dating exactly to the first
-   morning success. Kill the host for clean tests; read GET_ID's v6 bundle block on
-   each half to see if bundles landed.
-2. **"Cables work fine on split72" — which cable?** If the *split42's* cable was
-   cross-tested on split72, the cable is exonerated and the fault localizes to
-   split42's jacks/pads. If split72's own cable was meant: swap it onto split42.
-3. Which half was USB master in the morning "works" tests? (Relevant to §3.)
+1. **Orientation: works-era builds worked on BOTH sides.** The user routinely swapped
+   the USB side on working AND failing builds. Since a right-master boot has **zero**
+   pointing split traffic (§3), a build that worked in both orientations cannot have
+   been fixed by pointing traffic. ⇒ **The pointing-traffic mechanism is now
+   definitively dead** (the user had independently suspected POINTING_DEVICE_RIGHT).
+   Whatever `SPLIT_POINTING_ENABLE` correlated with, it was not the transactions.
+2. **PolyKybdHost was ALWAYS running (it autostarts) — in every test, works and
+   fails.** Consequences:
+   - As a *constant* it is not the morning→evening flip variable by itself, BUT the
+     **one-time first successful P11 connect (the morning restore) would have kicked
+     the silent font-pack auto-flash** — ~500 KB+ to the 4–8 MB region, every chunk
+     bridged to the slave, **completely invisible on split42** (no status OLED, no
+     RGB). Replug mid-flash = partial slot (CRC-invalid ⇒ skipped at boot, in theory
+     harmless — but this is the one persistent non-EEPROM state that changed exactly
+     in the works window).
+   - Worse for test hygiene: **every evening test was polluted** — the host↔master
+     HID link works fine (protocol matches), so on every enumeration the host
+     connects and **re-attempts the font-pack flash against the DEAD slave bridge**,
+     each chunk eating full bridge-retry timeouts on the master, invisibly.
+   - ⇒ **Protocol from now on: quit PolyKybdHost (tray Quit / kill the daemon too —
+     daemon mode keeps a headless process) and use `qmk console` only.** The
+     `Split link:` line prints unconditionally (not debug-gated), so `qmk console`
+     sees it.
+   - **Forensics TODO:** the host writes logs (log viewer / `daemon_log.txt`). The
+     MORNING session's host log should show connect events, the fontpack autocheck
+     decision, flash progress/errors — potentially pinning the exact minute the link
+     flipped and what the host was doing at that moment. Also `polyctl fontpack
+     status` (or the GET_ID v6 block) on each half shows whether bundles landed.
+
+### Still open (bench)
+
+- **"Cables work fine on split72" — which cable?** If the *split42's* cable was
+  cross-tested on split72, the cable is exonerated and the fault localizes to
+  split42's jacks/pads. If split72's own cable was meant: swap it onto split42.
 
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.

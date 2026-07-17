@@ -83,3 +83,25 @@ holding `oled_active = true` across the flush makes that a no-op, so exactly one
 If upstream restructures `oled_init()` / the init command list, re-apply by
 hand: no `DISPLAY_ON` in the command list; flush-then-enable at the tail. End
 state is unchanged (`oled_active == true`, panel on).
+
+## quantum/split_common/transport.h
+
+`POLY_SPLIT_SHMEM_RPC_GUARD`: when defined (split42 `rules.mk`) and
+`SPLIT_POINTING_ENABLE` is not, insert `split_slave_pointing_pad_t
+poly_pointing_pad` — a byte-identical stand-in for the pointing sync member —
+at the pointing member's position in `split_shared_memory_t`, immediately
+before `rpc_info`/`rpc_m2s_buffer`/`rpc_s2m_buffer`. Empirically required for
+split42's split link to establish (see
+`keyboards/polykybd/split42/SPLIT42_LINK_STATUS.md`, rows 20–24: the pad alone
+revives the link that the whole pointing subsystem was previously carried to
+fix). Guards against a suspected latent out-of-bounds write into the RPC
+region; remove once that writer is found and fixed. split72 (real
+`SPLIT_POINTING_ENABLE`) is unaffected.
+
+```diff
+ #if defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
+     split_slave_pointing_sync_t pointing;
++#elif defined(POLY_SPLIT_SHMEM_RPC_GUARD)
++    split_slave_pointing_pad_t poly_pointing_pad;
+ #endif
+```

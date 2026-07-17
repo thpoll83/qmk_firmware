@@ -951,6 +951,31 @@ The split42 rebuild + subsystem bisect itself lives on branch
 LTR-559 `d74e7e11`, trackpad-removed bisect step `b25f2045`, trackpad restored after
 the bisect confirmed it).
 
+> ## ✅ RESOLVED (2026-07-17): the split42 split-link saga — two compounding root
+> causes, neither of which was the pointing feature or the boot delay.
+> **Authoritative record: `keyboards/polykybd/split42/SPLIT42_LINK_STATUS.md`**
+> (the per-boot test log, rows 1–24 + resolution summary). The narrative below this
+> banner is the HISTORICAL investigation trail — its conclusions about
+> `SPLIT_POINTING_ENABLE` being required, the `wait_ms(400)` being load-bearing,
+> the "dead PIO1 RX-IRQ", and the heartbeat/dummy-transaction refutations are all
+> **SUPERSEDED** (they were taken through an unrecognized hardware coin-flip).
+> The two real causes:
+> 1. **Hardware:** the split42-left v1.0 board leaves the flipped-orientation
+>    link-USB-C data pads copper-orphaned behind U26 (ESD array). With U26's
+>    bridge broken and both halves being left boards (no right boards were ever
+>    fabbed), only **1 of 4 plug-orientation combinations** links — the source of
+>    every works↔dead flip on identical firmware. Bench fix: reflow/populate U26
+>    or bodge `USB2.8→6` + `USB2.5→7`; next-rev items in the hardware repo's
+>    `SPLIT42_REDESIGN_NOTES.md`.
+> 2. **Firmware:** with the orientation controlled, split42 needs exactly an
+>    **8-byte pad at the pointing member's position in `split_shared_memory_t`**,
+>    in front of the RPC buffers — now shipped explicitly as
+>    `POLY_SPLIT_SHMEM_RPC_GUARD` (`transport.h`, tracked in
+>    `UPSTREAM_PATCHES.md`). The pointing subsystem and the 400 ms delay were
+>    both removed from split42. **Open follow-up:** find the latent writer the pad
+>    guards against (canary plan in the status doc, row 24) — until then do NOT
+>    remove the guard.
+
 **Bisect result (2026-07-14): split42 needs `SPLIT_POINTING_ENABLE`'s periodic split
 transaction — NOT the trackpad, NOT its I2C.** Two-stage bisect:
 - RGB + pointing device + LTR-559 (`d74e7e11`) → **works**; drop only the pointing

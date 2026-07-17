@@ -521,6 +521,22 @@ flows (VBUS/GND pads all hard-wired) but ZERO data, both directions, any baud, D
 included.** The right board and both split72 boards are orientation-proof in copper, so
 only the LEFT split42 end carries the coin-flip.
 
+**⚠️ USER FACT (2026-07-17): ALL split42 hardware in hand is the LEFT layout — no
+right boards were built.** Both halves of every assembled split42 pair are the
+defective left copper. Consequences:
+- **BOTH ends of the link cable carry the coin-flip.** With U26's bridge broken on
+  both boards, the link needs the correct plug orientation at *each* end
+  independently → only **1 of 4** plug-orientation combinations works. That fits the
+  observed hit rate ("works occasionally, mostly dead") even better than a single
+  coin flip would.
+- In the split72↔split42 cross-pair tests only the split42 end was vulnerable (the
+  split72 end is orientation-proof) — a single coin flip there, matching that those
+  sessions saw both outcomes.
+- The "split42 RIGHT" row in the table above describes an **unbuilt layout** — it
+  proves the designer wired it correctly once, but no such board exists to compare
+  against on the bench. Use a split72 board (also correct) as the visual reference
+  for how U26 should look, or compare U26 across the five left boards.
+
 **This one bit — the plug orientation at the left half — explains every row of this
 investigation:** works-era vs dead-era on identical firmware (replug coin-flips), the
 pointing/delay "fixes" (coincided with replugs), morning-works/evening-fails (the
@@ -553,16 +569,22 @@ the boards in hand), all 4 copper layers, gerbv:
 ⇒ The fabbed boards match the layout finding exactly. This is what's physically on
 all v1.0 left boards.
 
-### Confirmation protocol (10 seconds, no flashing)
-1. Any firmware on both halves: **flip the link plug 180° at the LEFT half.** Link
-   alive in exactly one orientation = CONFIRMED.
-2. Visual: inspect **U26** on a left board (10-pin chip by the link USB-C, back side)
-   vs a right board — missing / skewed / unsoldered?
+### Confirmation protocol (no flashing; both halves are left boards → try all 4 combos)
+1. Any firmware on both halves, link dead: **walk the four plug-orientation
+   combinations** — flip the plug 180° at one end, test, flip at the other end, test,
+   flip the first back, test. With U26's bridge broken on both boards exactly **one**
+   of the four combinations comes up = CONFIRMED. (Mark the working orientation on
+   the housings with tape/pen.)
+2. Visual: inspect **U26** on the left boards (10-pin chip by the link USB-C, back
+   side) — missing / skewed / unsoldered? Compare against a split72 board (its link
+   copper is correct, so its U26 look is the reference), or across the five left
+   boards for outliers.
 
 ### If confirmed
-- Hardware fix: populate/reflow U26 on left boards (restores flip-immunity); or bodge
-  `USB2.8->USB2.6` + `USB2.5->USB2.7`; layout fix next rev: two short traces joining
-  the B-row pads to their A-row partners (as the right board already has).
+- Hardware fix **on BOTH halves** (both are left boards): populate/reflow U26
+  (restores flip-immunity); or bodge `USB2.8->USB2.6` + `USB2.5->USB2.7`; layout fix
+  next rev: two short traces joining the B-row pads to their A-row partners (as the
+  unbuilt right layout already has).
 - Firmware cleanup: the SPLIT_POINTING + 400 ms-delay workarounds (PR #151) were
   plug-orientation coincidences — re-test without them and remove; update CLAUDE.md's
   investigation notes accordingly.

@@ -102,3 +102,45 @@ void display_message(uint8_t row, uint8_t col, const uint32_t* message, const GF
         }
     }
 }
+
+// Like display_message(), but each visible glyph is drawn either SOLID or DIM
+// (scanline, half-density) depending on its position in the reveal sequence:
+// the first `solid_count` visible glyphs (counting from `base_visible`, i.e.
+// including glyphs already drawn on a previous row) render solid, the rest
+// render scanline-dimmed. Spaces occupy their keycap (drawn as nothing) but do
+// not advance the visible counter, so alignment spaces never cost a reveal step.
+// Used by the progressive boot splash: the whole word is present from the first
+// frame (dim), then solidifies letter-by-letter as boot advances.
+void display_message_progressive(uint8_t row, uint8_t col, const uint32_t* message,
+                                 const GFXfont* font, uint8_t base_visible, uint8_t solid_count) {
+
+    const GFXfont* displayFont[] = { font };
+    uint8_t index   = 0;
+    uint8_t visible = base_visible;
+    for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+
+        uint8_t disp_idx = LAYOUT_TO_INDEX(row, c);
+
+        if (disp_idx != 255) {
+
+            sr_shift_out_buffer_latch(get_key_disp_bitmask(disp_idx), get_disp_bitmask_size());
+            kdisp_set_buffer(0x00);
+
+            if (c >= col && message[index] != 0) {
+                const uint32_t cp = message[index];
+                if (cp != U' ') {
+                    const uint32_t text[2] = { cp, 0 };
+                    // Not-yet-solid letters render dim via the coarse 2-on/2-off
+                    // scanline — cleaner than the fine 1-on/1-off on the big
+                    // 24pt splash glyphs, which flickered.
+                    kdisp_set_gfx_scanline2(visible >= solid_count);
+                    kdisp_write_gfx_text(displayFont, 1, 49, 38, text);
+                    kdisp_set_gfx_scanline2(false);
+                    visible++;
+                }
+                index++;
+            }
+            kdisp_send_buffer();
+        }
+    }
+}

@@ -33,6 +33,11 @@ void kdisp_set_gfx_erase(bool erase);
 // false after the draw.
 void kdisp_set_gfx_scanline(bool scanline);
 
+// Coarser 2-on/2-off scanline band (vs the 1-on/1-off of kdisp_set_gfx_scanline).
+// Reads as a cleaner intentional dim on large glyphs (the boot-splash logo), where
+// the fine scanline looks like flicker. Restore to false after the draw.
+void kdisp_set_gfx_scanline2(bool scanline);
+
 // Glyph for codepoint `c` in a font set, or NULL if no font covers it (skips
 // empty gap glyphs, no '!' fallback). For coverage tests + metric reads.
 const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t c);

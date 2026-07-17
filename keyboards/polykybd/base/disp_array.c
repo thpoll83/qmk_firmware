@@ -90,14 +90,33 @@ void kdisp_set_gfx_erase(bool erase) {
     s_gfx_erase = erase;
 }
 
-// When set, the glyph plotter only lights pixels on even buffer rows — a "scanline"
-// half-brightness look used by the Eden idle screensaver to make the lit legend read
-// lighter over the comet field. Absolute buffer y (not glyph-local) so the scanlines
-// stay aligned as the legend drifts. Restore to false after the draw.
-static bool s_gfx_scanline = false;
+// Scanline dimming mode for the glyph plotter — a half-brightness "present but
+// dim" look. 0 = off, 1 = fine (light even buffer rows only, 1-on/1-off), 2 =
+// coarse (light rows in 2-on/2-off bands). Gated on ABSOLUTE buffer y (not
+// glyph-local) so the bands stay aligned as a legend drifts / across glyphs.
+// The Eden idle screensaver uses the fine mode; the boot splash uses the coarse
+// mode, which on the big 24pt letters reads as an intentional dim rather than a
+// fine shimmer. Restore to 0 after the draw.
+static uint8_t s_gfx_scanline = 0;
+
+// Returns true if absolute buffer row `abs_y` must stay dark in the active
+// scanline mode.
+static inline bool scanline_skip_row(int abs_y) {
+    switch (s_gfx_scanline) {
+        case 1:  return (abs_y & 1);   // 1-on/1-off: skip odd rows
+        case 2:  return (abs_y & 2);   // 2-on/2-off: skip rows 2,3 of each 4
+        default: return false;
+    }
+}
 
 void kdisp_set_gfx_scanline(bool scanline) {
-    s_gfx_scanline = scanline;
+    s_gfx_scanline = scanline ? 1 : 0;
+}
+
+// Coarse 2-on/2-off variant — a better fit than the fine scanline for large
+// glyphs (the boot-splash logo), where 1-on/1-off stripes read as flicker.
+void kdisp_set_gfx_scanline2(bool scanline) {
+    s_gfx_scanline = scanline ? 2 : 0;
 }
 
 uint8_t* get_scratch_buffer(void) {
@@ -391,7 +410,7 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
             if (bits & 0x80) {
                 if (s_gfx_erase) {
                     CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
-                } else if (!(s_gfx_scanline && ((y + yo + yy) & 1))) {
+                } else if (!scanline_skip_row(y + yo + yy)) {
                     SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
                 }
             }

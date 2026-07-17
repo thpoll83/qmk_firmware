@@ -530,6 +530,10 @@ identical (same vulnerability; orientation preserved across board swaps), split7
 immune, same cable fine on split72, v3/v4's perfectly clean TX pad (swinging into an
 unloaded open), slave always powered.
 
+![Copper comparison: split42-left vs split42-right vs split72-left](split42_link_copper_comparison.png)
+*(rendered from the .kicad_pcb files: COM-net copper around U26 + the link receptacle;
+red = copper islands that reach the MCU only through U26's internal flow-through metal)*
+
 ### Confirmation protocol (10 seconds, no flashing)
 1. Any firmware on both halves: **flip the link plug 180° at the LEFT half.** Link
    alive in exactly one orientation = CONFIRMED.

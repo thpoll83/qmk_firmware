@@ -2214,6 +2214,32 @@ static void draw_legend_cx(const uint32_t* text, int8_t y) {
     kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, left, y, text, KDISP_CY_DEFAULT);
 }
 
+// ── Keycap-OLED selection strategy (update_displays / kdisp_idle) ─────────────
+// Both scans walk every key on this half and must select that key's OLED before
+// rendering. Two strategies, chosen per variant:
+//   * DEFAULT (split72): a single 0-bit is walked through the shift-register
+//     chain — latch a seed on the first key of the half, then shift once per
+//     column. Valid ONLY when each matrix row fills a whole 8-bit shift register
+//     (split72: MATRIX_COLS == 8), so a per-column shift lands the next key on the
+//     next register with no gaps.
+//   * split42 (POLY_DISP_SELECT_BY_TABLE): the 6-column matrix occupies only the
+//     low 6 bits of each 8-bit register (the 2 high bits carry the thumb OLEDs), so
+//     a per-column walk under-shifts by 2 every row and mis-aligns every row below
+//     row 0 (the reported "home row shows S D F G shift" offset — and the thumb
+//     seed would then collide with row 2). Instead select each key directly from
+//     the authoritative key_display[] table — the SAME source keypress-invert uses,
+//     so the legend render and press feedback can never drift, and any remaining
+//     physical-wiring correction is a one-line edit to that one table.
+#if defined(POLY_DISP_SELECT_BY_TABLE)
+#  define POLY_DISP_SEED(bm)     ((void)(bm))
+#  define POLY_DISP_SELECT(idx)  sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size())
+#  define POLY_DISP_ADVANCE()    ((void)0)
+#else
+#  define POLY_DISP_SEED(bm)     sr_shift_out_buffer_latch((bm), sizeof(struct display_info))
+#  define POLY_DISP_SELECT(idx)  ((void)(idx))
+#  define POLY_DISP_ADVANCE()    sr_shift_once_latch()
+#endif
+
 void update_displays(enum refresh_mode mode) {
     // Doom easter egg: while game mode owns the keycaps, the blitter is the
     // only writer — a legend re-render here would tear the game frame.
@@ -2249,16 +2275,18 @@ void update_displays(enum refresh_mode mode) {
 
     //select first display (and later on shift that 0 till the end)
     if (mode == START_SECOND_HALF) {
-        sr_shift_out_buffer_latch(disp_row_3.bitmask, sizeof(struct display_info));
+        POLY_DISP_SEED(disp_row_3.bitmask);
         start_row = 3;
     }
     else {
-        sr_shift_out_buffer_latch(disp_row_0.bitmask, sizeof(struct display_info));
+        POLY_DISP_SEED(disp_row_0.bitmask);
     }
 
     const uint8_t max_rows = mode == START_FIRST_HALF ? 3 : MATRIX_ROWS_PER_SIDE;
 
+#if !defined(POLY_DISP_SELECT_BY_TABLE)
     uint8_t skip = 0;
+#endif
     for (uint8_t r = start_row; r < max_rows; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
@@ -2267,10 +2295,15 @@ void update_displays(enum refresh_mode mode) {
             //except there was a leading and missing physical key (KC_NO on base layer)
             uint16_t keycode = keymaps[_BL][r + offset][c];
             if (keycode == KC_NO) {
+#if defined(POLY_DISP_SELECT_BY_TABLE)
+                continue;   // no OLED behind an absent key; table-select needs no gap shift
+#else
                 skip++;
+#endif
             }
             else {
                 if (disp_idx != 255) {
+                    POLY_DISP_SELECT(disp_idx);
                     keycode = display_keycode_at(local_layer, r + offset, c);
                     // Doom egg menu item: rewrites the EEPROM keymap's KC_NO at
                     // the armed utilities-layer position (see doom_mode.h;
@@ -2450,13 +2483,15 @@ void update_displays(enum refresh_mode mode) {
                         }
                     }
                 }
-                sr_shift_once_latch();
+                POLY_DISP_ADVANCE();
             }
 
         }
+#if !defined(POLY_DISP_SELECT_BY_TABLE)
         for (;skip > 0;skip--) {
             sr_shift_once_latch();
         }
+#endif
     }
     kdisp_set_draw_offset(0, 0);   // clear the jitter offset so non-idle renders stay centred
 }
@@ -2496,11 +2531,13 @@ void kdisp_idle(uint8_t contrast) {
         return;
     }
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
+#if !defined(POLY_DISP_SELECT_BY_TABLE)
     uint8_t skip = 0;
+#endif
     const bool jitter = get_local_state()->idle_style == IDLE_STYLE_JITTER;
     const poly_layer_t* local_layer = get_local_layer();
     const led_t led_state = local_layer->led_state;
-    sr_shift_out_buffer_latch(disp_row_0.bitmask, sizeof(struct display_info));
+    POLY_DISP_SEED(disp_row_0.bitmask);
 
     //uint8_t idx = 0;
     for (uint8_t r = 0; r < MATRIX_ROWS_PER_SIDE; ++r) {
@@ -2514,9 +2551,14 @@ void kdisp_idle(uint8_t contrast) {
             // from the active layer below so it matches the awake render.
             uint16_t base_kc = keymaps[_BL][r + offset][c];
             if (base_kc == KC_NO) {
+#if defined(POLY_DISP_SELECT_BY_TABLE)
+                continue;   // no OLED behind an absent key; table-select needs no gap shift
+#else
                 skip++;
+#endif
             } else {
                 if (disp_idx != 255) {
+                    POLY_DISP_SELECT(disp_idx);
                     uint8_t idle_brightness = to_brightness((contrast+(c%3+r)*base_kc+offset+r)%50);
                     if(idle_brightness==0) {
                         // Lit -> dark edge in JITTER style: relocate this key now. Turn
@@ -2544,13 +2586,15 @@ void kdisp_idle(uint8_t contrast) {
                         kdisp_set_contrast(idle_brightness-1);
                     }
                 }
-                sr_shift_once_latch();
+                POLY_DISP_ADVANCE();
             }
 
         }
+#if !defined(POLY_DISP_SELECT_BY_TABLE)
         for (;skip > 0;skip--) {
             sr_shift_once_latch();
         }
+#endif
     }
 }
 

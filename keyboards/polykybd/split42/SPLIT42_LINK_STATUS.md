@@ -597,6 +597,36 @@ all v1.0 left boards.
   plug-orientation coincidences — re-test without them and remove; update CLAUDE.md's
   investigation notes accordingly.
 
+## ROW 18 — FLIP TEST: CONFIRMED ON HARDWARE (2026-07-17 eve)
+
+**Test:** current default branch (`PolyKybd` tip, i.e. WITH the PR #151 stopgaps),
+link dead as usual → **rotated the USB-link connector once → link came up.** Firmware
+untouched; the only changed variable was the plug orientation. This is the outcome
+row 17 predicted, on the first try.
+
+**Status: plug-orientation dependence CONFIRMED.** Direct corollaries:
+- U26's flow-through bridge is broken (part missing or cold joints) on at least the
+  flipped end's board — the B-row pads are genuinely floating there.
+- Every past "works / doesn't work" flip-flop on identical firmware — including the
+  default-branch re-break that triggered the start-over and this whole table — was
+  (at least in part) the orientation coin-flip, not firmware.
+
+**To seal it (A/B/A, 10 s):** flip that connector back → link should die again →
+flip once more → alive. That removes the last "something else moved during the
+replug" doubt. Then mark the working orientation on plug + housings.
+
+**Next steps once sealed:**
+1. **U26 inspection/reflow (or the two bodges) on all five left boards** — restores
+   flip-immunity, ends the coin-flip permanently.
+2. **Firmware cleanup experiment** — with the orientation held fixed-good, rebuild
+   the default branch WITHOUT the PR #151 stopgaps (`SPLIT_POINTING_ENABLE` +
+   split42-only `wait_ms(400)`), one removal per build. The bisect results that
+   justified them were all taken across replug sessions, i.e. through the
+   orientation coin-flip — they are now suspect. If both removals survive repeated
+   replugs (same orientation), drop the stopgaps and correct CLAUDE.md.
+3. Redesign items: hardware repo `SPLIT42_REDESIGN_NOTES.md` (link copper, I2C0
+   header, missing J18 socket at SW_K_18, permanent LTR-559, right-board design).
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

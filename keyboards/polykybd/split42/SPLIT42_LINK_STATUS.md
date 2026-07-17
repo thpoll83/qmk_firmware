@@ -698,6 +698,44 @@ The `on/off` cell separates "needs the pointing feature specifically" from "need
 either one" (both historical failures of pointing-off configs had the delay present
 — but those runs went through the coin-flip, so they don't count).
 
+## ROW 22 — delay-on/pointing-off FAILS: the matrix is complete (2026-07-17 eve)
+
+**Build:** `60872dd0` = `d44c2c08` (pointing removed) + the `wait_ms(400)` re-added.
+Orientation held fixed-good. **Result (user): fails.**
+
+**Completed matrix (orientation fixed, all four cells now measured cleanly):**
+| delay | pointing | result | row |
+|---|---|---|---|
+| off | on  | **WORKS** | 20 |
+| on  | on  | **WORKS** | 18 (default branch) |
+| off | off | fails | 21 |
+| on  | off | fails | 22 |
+
+**Conclusion: `SPLIT_POINTING_ENABLE` (the pointing feature) is the necessary and
+sufficient firmware variable; the `wait_ms(400)` delay is BOTH unnecessary (row 20)
+and insufficient (row 22) — it contributed nothing and can be dropped from the
+default branch.** The pointing dependency is real and independent of the copper
+defect.
+
+**⚠️ All the old refutations are coin-flip-contaminated and BACK ON THE TABLE.**
+The heartbeat test ("not traffic/frequency"), the 3-dummy-transaction test ("not
+the count"), and the `0e04469d` (c)-state test all ran through the orientation
+coin-flip — their conclusions are unsafe. The candidate list for WHAT
+`SPLIT_POINTING_ENABLE` provides is therefore back to full width: (a) the 3 extra
+transaction IDs / `NUM_TOTAL_TRANSACTIONS`, (b) the `split_shared_memory_t`
+`pointing` member (shifts the RPC buffer offsets), (c) linking + running
+`pointing_device.c`, (d) the every-cycle master→slave pointing pull itself.
+Redo the discriminators with the orientation fixed, one per build:
+1. `POINTING_DEVICE_ENABLE` + `custom` driver WITHOUT `SPLIT_POINTING_ENABLE`
+   (the (c)-state; one variable vs row 20's working build) — works → (c);
+   fails → SPLIT_POINTING's additions (a/b/d).
+2. If 1 fails: dummy shmem member + dummy transactions (no pointing) → (a/b) vs (d).
+3. If those fail: the heartbeat-style every-cycle pull (no pointing) → (d).
+
+**Interim default-branch cleanup (safe now):** remove the `wait_ms(400)` from
+`PolyKybd` (rows 20+18 prove it's dead weight; boots faster); KEEP
+`SPLIT_POINTING_ENABLE` + no-op `custom` driver until the discrimination lands.
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

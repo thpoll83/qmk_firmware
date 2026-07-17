@@ -121,23 +121,37 @@ uint32_t serial_debug_rx_clear_nonempty(void){ return g_rx_clear_nonempty; }
 #    include "hardware/structs/iobank0.h"
 #    include "hardware/structs/padsbank0.h"
 static pin_t      g_probe_tx_pin  = 0xFF;  // captured in pio_tx_init (role-resolved)
-volatile uint32_t g_txpad_edges   = 0;     // OUTTOPAD transitions observed during sends
+volatile uint32_t g_txpad_edges   = 0;     // OUTTOPAD transitions (mux DATA output) during sends
+volatile uint32_t g_txpin_edges   = 0;     // INFROMPAD transitions (ACTUAL PIN level, via input buffer)
+volatile uint32_t g_txoe_ok       = 0;     // sends where OETOPAD (output-enable) was ever asserted
 volatile uint32_t g_txpad_sends   = 0;     // sends sampled
 uint32_t serial_probe_txpad_edges(void) { return g_txpad_edges; }
+uint32_t serial_probe_txpin_edges(void) { return g_txpin_edges; }
+uint32_t serial_probe_txoe_ok(void)     { return g_txoe_ok; }
 uint32_t serial_probe_txpad_sends(void) { return g_txpad_sends; }
 uint8_t  serial_probe_tx_pin(void)      { return (uint8_t)g_probe_tx_pin; }
 uint8_t  serial_probe_funcsel(uint8_t pin) { return (uint8_t)(iobank0_hw->io[pin].ctrl & 0x1F); }
 uint8_t  serial_probe_pad_ie(uint8_t pin)  { return (padsbank0_hw->io[pin] & PADS_BANK0_GPIO0_IE_BITS) ? 1 : 0; }
 static inline void probe_sample_txpad(void) {
     if (g_probe_tx_pin == 0xFF) return;
-    uint32_t t0   = timer_hw->timerawl;
-    bool     last = (iobank0_hw->io[g_probe_tx_pin].status & IO_BANK0_GPIO0_STATUS_OUTTOPAD_BITS) != 0;
-    uint32_t edges = 0;
-    while ((timer_hw->timerawl - t0) < 120u) {   // 120 us window
-        bool now = (iobank0_hw->io[g_probe_tx_pin].status & IO_BANK0_GPIO0_STATUS_OUTTOPAD_BITS) != 0;
-        if (now != last) { edges++; last = now; }
+    const volatile uint32_t *status = &iobank0_hw->io[g_probe_tx_pin].status;
+    uint32_t t0    = timer_hw->timerawl;
+    uint32_t st    = *status;
+    bool last_out  = (st & IO_BANK0_GPIO0_STATUS_OUTTOPAD_BITS) != 0;
+    bool last_pin  = (st & IO_BANK0_GPIO0_STATUS_INFROMPAD_BITS) != 0;
+    bool oe_seen   = (st & IO_BANK0_GPIO0_STATUS_OETOPAD_BITS) != 0;
+    uint32_t out_edges = 0, pin_edges = 0;
+    while ((timer_hw->timerawl - t0) < 120u) {   // 120 us window over the live transmission
+        st = *status;
+        bool now_out = (st & IO_BANK0_GPIO0_STATUS_OUTTOPAD_BITS) != 0;
+        bool now_pin = (st & IO_BANK0_GPIO0_STATUS_INFROMPAD_BITS) != 0;
+        if (st & IO_BANK0_GPIO0_STATUS_OETOPAD_BITS) oe_seen = true;
+        if (now_out != last_out) { out_edges++; last_out = now_out; }
+        if (now_pin != last_pin) { pin_edges++; last_pin = now_pin; }
     }
-    g_txpad_edges += edges;
+    g_txpad_edges += out_edges;
+    g_txpin_edges += pin_edges;
+    if (oe_seen) g_txoe_ok++;
     g_txpad_sends++;
 }
 #endif

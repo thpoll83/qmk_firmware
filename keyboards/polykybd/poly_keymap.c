@@ -846,16 +846,23 @@ void housekeeping_task_user(void) {
             s_rep_timer = timer_read32();
             if (is_keyboard_master()) {
                 extern uint32_t serial_probe_txpad_edges(void);
+                extern uint32_t serial_probe_txpin_edges(void);
+                extern uint32_t serial_probe_txoe_ok(void);
                 extern uint32_t serial_probe_txpad_sends(void);
                 extern uint8_t  serial_probe_tx_pin(void);
                 extern uint8_t  serial_probe_funcsel(uint8_t pin);
                 extern uint8_t  serial_probe_pad_ie(uint8_t pin);
-                // txpad: cumulative OUTTOPAD edges observed during sends / sends sampled.
-                //   txpad=0 with sends climbing => the pad-mux output never moves during
-                //   transmission => PIO not driving the pad (mux stolen or SM dead).
-                //   fs4/fs5: funcsel (7 = PIO1 correct; 1 = SPI stole it; 5 = SIO).
-                uprintf("EDGE: txpad=%lu/%lu sends (txpin=GP%d) rx_gp5=%lu | fs4=%d ie4=%d fs5=%d ie5=%d\n",
-                        (unsigned long)serial_probe_txpad_edges(), (unsigned long)serial_probe_txpad_sends(),
+                // out  = OUTTOPAD edges (mux DATA output) during sends — PIO generating.
+                // pin  = INFROMPAD edges (ACTUAL PIN level via input buffer) — pad moving.
+                // oeok = sends where OETOPAD (output-enable) was asserted — pad DRIVEN.
+                //   out>0, oeok=0 or pin=0  => pad never driven / never moves: the line
+                //     sits high-Z on the pull-up — explains DC-loopback-passes (SIO sets
+                //     OE) + UART-never-crosses at any baud. FIRMWARE/config, fixable.
+                //   out>0, oeok=sends, pin~out => the pin really toggles; loss is
+                //     downstream (ESD/connector/cable) at UART speed — bench next.
+                uprintf("EDGE: out=%lu pin=%lu oeok=%lu/%lu sends (txpin=GP%d) rx_gp5=%lu | fs4=%d ie4=%d fs5=%d ie5=%d\n",
+                        (unsigned long)serial_probe_txpad_edges(), (unsigned long)serial_probe_txpin_edges(),
+                        (unsigned long)serial_probe_txoe_ok(), (unsigned long)serial_probe_txpad_sends(),
                         (int)serial_probe_tx_pin(), (unsigned long)s_gp4_edges,
                         (int)serial_probe_funcsel(GP4), (int)serial_probe_pad_ie(GP4),
                         (int)serial_probe_funcsel(GP5), (int)serial_probe_pad_ie(GP5));

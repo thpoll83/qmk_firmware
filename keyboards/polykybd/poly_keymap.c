@@ -2263,8 +2263,8 @@ static void render_codex_key(uint16_t keycode) {
             U"idle", U"think", U"think", U"done", U"done", U"error"
         };
         const uint32_t label[3] = { U'A', (uint32_t)(U'1' + n), 0 };
-        draw_codex_line_mid(label,     17);   // top line: A1..A6
-        draw_codex_line_mid(status[n], 32);   // bottom line: state word
+        draw_codex_line_mid(label,     14);   // top line: A1..A6 (near the top edge)
+        draw_codex_line_mid(status[n], 36);   // bottom line: state word (near the bottom)
         return;
     }
     uint32_t cp = 0;

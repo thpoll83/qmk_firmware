@@ -6,6 +6,7 @@
 #include "print.h"
 #include "version.h"
 #include "split_util.h"   // is_transport_connected()
+#include "transaction_id_define.h" // NUM_TOTAL_TRANSACTIONS (banner NT= field)
 #include "side.h"         // is_left_side()
 #include "poly_util.h"    // clear_all_displays(), display_message()
 #include "base/update.h"       // enum refresh_mode / ALL_AT_ONCE
@@ -52,11 +53,14 @@ void emit_boot_banner(void) {
     // PRODUCT is the QMK-generated keyboard_name from keyboard.json
     // ("PolyKybd Split72" / "PolyKybd Split42"), so the banner names the variant
     // with no extra per-variant define.
-    uprintf("== " PRODUCT " " FW_VERSION " P%d HW0x%04X | %s %s | build %s ==\n",
+    // NT = NUM_TOTAL_TRANSACTIONS: the QMK handshake echo is `id ^ NT`, so two halves
+    // can only link if their NT values MATCH — printed for cross-variant pairings
+    // (split72 half <-> split42 half; a mismatch fails the handshake by design).
+    uprintf("== " PRODUCT " " FW_VERSION " P%d HW0x%04X | %s %s | build %s NT=%d ==\n",
             (int)PROTOCOL_VERSION, (unsigned int)DEVICE_VER,
             is_keyboard_left() ? "left" : "right",
             is_keyboard_master() ? "master" : "slave",
-            QMK_GIT_HASH);
+            QMK_GIT_HASH, (int)NUM_TOTAL_TRANSACTIONS);
     // EEPROM state this half booted with. hands_enabled=0 or init_ran=1 => the EEPROM
     // was invalid/(re)formatted; hands_ms or load_ms large => a blocking wear-leveling
     // consolidation stalled boot (a strong split-link-establishment suspect).

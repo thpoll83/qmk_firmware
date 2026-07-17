@@ -736,6 +736,39 @@ Redo the discriminators with the orientation fixed, one per build:
 `PolyKybd` (rows 20+18 prove it's dead weight; boots faster); KEEP
 `SPLIT_POINTING_ENABLE` + no-op `custom` driver until the discrimination lands.
 
+## ROW 23 — (c)-state FAILS cleanly: code linkage ruled out (2026-07-17 eve)
+
+**Build:** `3493bf4b` (branch `claude/split42-cstate-retest`) — one-line functional
+diff vs the WORKING row-20 build `700080fc`: only `SPLIT_POINTING_ENABLE` (+ the
+`POINTING_DEVICE_RIGHT` QMK requires with it) removed. Pointing code compiled,
+linked, `pointing_device_init/_task` running with the no-op `custom` driver.
+Orientation fixed. **Result (user): fails.**
+
+**(c) — "merely linking/running the pointing code" — is now CLEANLY ruled out**
+(the old `0e04469d` run said the same but through the coin-flip; this one counts).
+The requirement is specifically among what `SPLIT_POINTING_ENABLE` adds:
+- (a) the 3 pointing transaction registrations (`GET_POINTING_CHECKSUM`/`_DATA`/
+  `PUT_POINTING_CPI`) and the `NUM_TOTAL_TRANSACTIONS` shift,
+- (b) the `split_slave_pointing_sync_t pointing` member in `split_shared_memory_t`
+  (sits immediately before `rpc_info`/`rpc_m2s_buffer`/`rpc_s2m_buffer` — shifts
+  the RPC buffers to higher offsets),
+- (d) the every-cycle master→slave pointing pull in the split task.
+
+**Next discriminator (built): (b) ALONE — the shmem PAD test.** A byte-identical
+dummy member (`checksum + report_mouse_t + cpi`) inserted at exactly the pointing
+member's position in `split_shared_memory_t` (QMK-core `transport.h`, gated
+`POLY_DUMMY_SHMEM_PAD`), with NO pointing, NO transactions, NO pull, NO delay —
+one variable vs the FAILING row-21 build `d44c2c08`.
+- **Works** → the pointing feature was never the requirement: its shmem member acts
+  as **padding that absorbs a buffer overflow** which otherwise clobbers the RPC
+  buffers/`rpc_info` the poly `USER_SYNC_*` transactions ride through — a latent
+  memory bug, address now bracketed (something writes past the member preceding
+  `pointing`). Hunt: `-Wl,-Map` + `awatch` on the pad, or canary-fill the pad and
+  dump it over HID.
+- **Fails** → layout is innocent; next separate (a) transactions-registered from
+  (d) the per-cycle pull (dummy registered transactions first, then the
+  every-cycle pull re-run — the old heartbeat, redone clean).
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

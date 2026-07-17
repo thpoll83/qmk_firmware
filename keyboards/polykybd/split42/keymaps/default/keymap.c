@@ -23,19 +23,31 @@
 
 // Right-half mirror (POLY_SPLIT42_MIRROR_RIGHT, config.h). split42 currently ships as
 // two LEFT boards; the one used as the RIGHT half is physically mirrored across the
-// vertical axis. POLY_LAYOUT wraps the generated LAYOUT_lr_stacked42 and, when the
-// switch is on, REVERSES each right-half row's columns (and the right thumb triple)
-// so a left-board-as-right reads and types as a mirror image. Off → straight
-// pass-through (identical to calling LAYOUT_lr_stacked42 directly). keyboard.json is
-// untouched; this is compile-time only. (Arg order = the LAYOUT_lr_stacked42 arg
-// order: L rows 0-2 + L thumbs, then R rows 0-2 + R thumbs.)
+// vertical axis AND its thumbs are wired to matrix cols 3-5 (like the left half), not
+// the cols 0-2 that keyboard.json's LAYOUT_lr_stacked42 reserves for a *proper* right
+// board. When the switch is on, POLY_LAYOUT therefore does NOT go through that generated
+// macro (which hardcodes the right thumbs into cols 0-2 and leaves 3-5 as KC_NO). It
+// expands DIRECTLY to the [MATRIX_ROWS][MATRIX_COLS] initializer, so it can:
+//   * reverse each right-half letter row's columns (visual mirror), and
+//   * place the right thumbs at cols 3-5 (row 7), where a left-board-as-right actually
+//     scans — the left thumbs already sit at cols 3-5 (row 3), unchanged here.
+// Off → straight pass-through to LAYOUT_lr_stacked42 (a real right board: thumbs 0-2).
+// keyboard.json is untouched; this is compile-time only. Arg order = the
+// LAYOUT_lr_stacked42 arg order: L rows 0-2 + L thumbs, then R rows 0-2 + R thumbs.
+// ⚠️ Because the firmware runs the DYNAMIC (VIA) keymap seeded from this compiled keymap,
+// a change to the switch only takes effect after an EEPROM reset (see config.h).
 #if defined(POLY_SPLIT42_MIRROR_RIGHT)
 #  define POLY_LAYOUT( \
      L00,L01,L02,L03,L04,L05,  L10,L11,L12,L13,L14,L15,  L20,L21,L22,L23,L24,L25,  LT0,LT1,LT2, \
      R00,R01,R02,R03,R04,R05,  R10,R11,R12,R13,R14,R15,  R20,R21,R22,R23,R24,R25,  RT0,RT1,RT2) \
-   LAYOUT_lr_stacked42( \
-     L00,L01,L02,L03,L04,L05,  L10,L11,L12,L13,L14,L15,  L20,L21,L22,L23,L24,L25,  LT0,LT1,LT2, \
-     R05,R04,R03,R02,R01,R00,  R15,R14,R13,R12,R11,R10,  R25,R24,R23,R22,R21,R20,  RT2,RT1,RT0)
+   { { L00,L01,L02,L03,L04,L05 }, \
+     { L10,L11,L12,L13,L14,L15 }, \
+     { L20,L21,L22,L23,L24,L25 }, \
+     { KC_NO,KC_NO,KC_NO, LT0,LT1,LT2 }, \
+     { R05,R04,R03,R02,R01,R00 }, \
+     { R15,R14,R13,R12,R11,R10 }, \
+     { R25,R24,R23,R22,R21,R20 }, \
+     { KC_NO,KC_NO,KC_NO, RT2,RT1,RT0 } }
 #else
 #  define POLY_LAYOUT(...) LAYOUT_lr_stacked42(__VA_ARGS__)
 #endif

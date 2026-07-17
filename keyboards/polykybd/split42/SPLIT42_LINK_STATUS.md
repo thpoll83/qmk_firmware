@@ -295,17 +295,53 @@ VBUS/GND but NO data pair.** With one in place:
 - Even the entire flaky pointing/delay history is explained if multiple look-alike
   C-cables live on the bench and sessions grabbed different ones ✓
 
-### THE decisive 30-second test (no flashing, no instruments)
+### ~~Charge-only-cable theory~~ REFUTED by the user (2026-07-16)
 
-Take the **exact cable that currently joins the split42 halves** and put it **between
-the split72 halves**:
-- split72 dies with it → **case closed: charge-only cable.** (And split42 with
-  split72's known-working cable must come alive — verify both directions of the swap.)
-- split72 still works with it → the cable carries data; theory dead; back to
-  systematic analysis with the cable exonerated FOR REAL this time.
+The user had already done the decisive test (and re-did it): **the exact same cable
+links split72 fine**, and used as the host cable it carries USB data (master
+enumerates and types, sluggishly, as expected with a dead link). **Cable exonerated
+definitively.**
 
-⚠️ Then label the cables. The earlier "cables work fine on split72" datapoint is
-ambiguous — it may have tested split72's own cables, not the split42 bench cable.
+### PCB LAYOUT verification (rev-1 boards) — CLEAN
+
+Since schematic ≠ copper, traced the actual `.kicad_pcb` files:
+- USB2 (the link receptacle) pads 5/6/7/8 → `SERIAL_COM2/COM1/COM2/COM1` — matches
+  the schematic's DN2/DP1/DN1/DP2 tie-both-orientations wiring, on left AND right.
+- `SERIAL_COM1`/`COM2` are **fully routed** (21–25 track segments + vias per net).
+- The footprint (`EnvUSB:HRO-TYPE-C-31-M-12-Assembly`) is the **same one split72
+  uses** — and split72 works — so the footprint pad-mapping is proven correct.
+⇒ **The rev-1 board design is verified good end-to-end** (schematic + copper).
+
+### DISCOVERY 1 — every half has TWO IDENTICAL USB-C receptacles → the MISPLUG theory
+
+The layouts show **two Type-C ports per half**: `USB1` = **host USB, top edge**;
+`USB2` = **split link, INNER edge** (the edge facing the other half). They are
+visually identical connectors. **If the inter-half cable is plugged into the SLAVE
+half's HOST port (USB1) instead of its link port (USB2):**
+- the slave still powers and boots (VBUS reaches VSYS from either port) ✓
+- the slave never enumerates (no host behind the cable) → becomes slave normally ✓
+- its real link port (GP4/GP5) is simply UNCONNECTED → zero bytes both directions ✓
+- identical on all 5 boards (same plugging habit) ✓ · survives reflash, EEPROM clean ✓
+- **resolves the works-paradox**: morning = correctly plugged; after the mid-day
+  re-cabling (the split72 cable test required unplugging everything) the link cable
+  went back into the wrong port and STAYED there across all evening tests ✓
+- master side is self-correcting (a misplugged host cable wouldn't enumerate, so the
+  user would notice) — only the SLAVE's end can silently be wrong.
+**CHECK: on both halves, is the link cable in the receptacle on the INNER edge
+(facing the other half)? The top-edge port is the host port.**
+
+### DISCOVERY 2 — `left2`/`right2` layouts are a DIFFERENT hardware generation
+
+`poly_corne_split42_left2/right2.kicad_pcb` are an **integrated-RP2040 revision**
+(QFN-56 chip, crystal, solder jumpers — no Pico module) with a **completely different
+link**: a **TRS audio jack** (PJ-398A/PJ-399B, J2/rJ2) carrying a single-wire link on
+its Ring pad, connected to **RP2040 GPIO12** (QFN pad 15) — and on that revision
+**GPIO4/GPIO5 are matrix/encoder pins** (`KEY14`, `KEY15`, `KEYEX1`, `RE0A`). Current
+firmware (full-duplex PIO on GP4/GP5) would be flat-out wrong for those boards.
+**CHECK: which revision are the 5 boards?** Pico module + two USB-C ports per half =
+rev-1 (firmware pinout correct); bare RP2040 chip + audio jack = rev-2 (firmware
+pinout wrong for the link — different fix entirely). The working matrix/displays
+suggest rev-1, but confirm visually. A MIX of revisions would also explain a lot.
 
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.

@@ -114,6 +114,19 @@ typedef struct _split_slave_pointing_sync_t {
     report_mouse_t report;
     uint16_t       cpi;
 } split_slave_pointing_sync_t;
+#elif defined(POLY_SPLIT_SHMEM_RPC_GUARD)
+// PolyKybd split42 (tracked in keyboards/polykybd/UPSTREAM_PATCHES.md): a
+// byte-identical stand-in for split_slave_pointing_sync_t so the shared-memory
+// LAYOUT matches a SPLIT_POINTING build without the pointing feature. This pad
+// in front of the RPC region is EMPIRICALLY load-bearing for split42's split
+// link (see keyboards/polykybd/split42/SPLIT42_LINK_STATUS.md rows 20-24);
+// the suspected latent writer it guards against is still being hunted.
+#    include "report.h"
+typedef struct _split_slave_pointing_pad_t {
+    uint8_t        checksum;
+    report_mouse_t report;
+    uint16_t       cpi;
+} split_slave_pointing_pad_t;
 #endif // defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
 
 #if defined(HAPTIC_ENABLE) && defined(SPLIT_HAPTIC_ENABLE)
@@ -209,6 +222,12 @@ typedef struct _split_shared_memory_t {
 
 #if defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
     split_slave_pointing_sync_t pointing;
+#elif defined(POLY_SPLIT_SHMEM_RPC_GUARD)
+    // PolyKybd RPC-guard pad: same size/alignment/position as `pointing` above,
+    // so rpc_info + the RPC buffers land at the same offsets as in a
+    // SPLIT_POINTING build. Never read or written by any code (a future canary
+    // instrument for the writer hunt — SPLIT42_LINK_STATUS.md row 24).
+    split_slave_pointing_pad_t poly_pointing_pad;
 #endif // defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
 
 #if defined(SPLIT_WATCHDOG_ENABLE)

@@ -14,6 +14,9 @@ void clear_all_displays(void);
 
 void display_message(uint8_t row, uint8_t col, const uint32_t* message, const GFXfont* font);
 
+void display_message_progressive(uint8_t row, uint8_t col, const uint32_t* message,
+                                 const GFXfont* font, uint8_t base_visible, uint8_t solid_count);
+
 void display_bootloader_message(void);
 
 void poly_announce_bootloader(void);

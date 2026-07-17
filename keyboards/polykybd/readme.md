@@ -112,33 +112,40 @@ keyboards/polykybd/create_fonts.sh     # invoke fontconvert per range; writes ba
 ### Boot splash progress (always on)
 
 The boot splash (`POLY KYBD` on the left half, `SPLIT 72` / `SPLIT 42` on the
-right) fills in **one glyph at a time** as boot advances, instead of appearing
-complete at once. Because each keycap OLED holds the last frame it was sent, a
-boot that **hangs** freezes the reveal at the exact glyph it reached — so you read
-how far boot got by **counting the lit letters**. No compile flag: this is always
-on (`splash_progress()` in `poly_keymap.c`, driven from `keyboard_pre_init_user()`
-+ several points in `keyboard_post_init_user()`).
+right) shows the **whole word from the first frame**, but every letter starts
+**dim** (a scanline / half-density render) and **solidifies one letter at a time**
+as boot advances. This appears instantly — no "slow", letter-by-letter typing wait
+— while still doubling as a progress indicator: because each keycap OLED holds the
+last frame it was sent, a boot that **hangs** freezes the reveal at the exact
+letter it reached, so you read how far boot got by **counting the SOLID (bright)
+letters** (the rest are present but dim). No compile flag: this is always on
+(`splash_progress()` in `boot_diag.c`, driven from `keyboard_pre_init_user()` +
+several points in `keyboard_post_init_user()`).
 
-Each lit letter maps to a boot milestone (read the **hung half** — in the
-firmware-apply hang that's the master/USB half):
+Each solid letter maps to a boot milestone (read the **hung half** — in the
+firmware-apply hang that's the master/USB half; letters shown below are the ones
+rendered **solid**, the remainder are dim):
 
 | Step | Milestone reached | Left (`POLY KYBD`) | Right (`SPLIT 72`) |
 |---|---|---|---|
-| 1 | `pre_init` (before split/USB init) | `P` | `S` |
-| 2 | after `set_side()` (**split/USB init passed**) | `PO` | `SP` |
-| 3 | language/emoji/MRU init done | `POL` | `SPL` |
-| 4 | before core 1 launch | `POLY` | `SPLI` |
-| 5 | after core 1 launch | `POLY K` | `SPLII` \* |
-| 6 | split RPCs + fw-staging up | `POLY KY` | `SPLIT` |
-| 7 | EEPROM config loaded | `POLY KYB` | `SPLIT 7` |
+| 1 | `pre_init` (before split/USB init) | *(all dim)* | *(all dim)* |
+| 2 | after `set_side()` (**split/USB init passed**) | `P` | `S` |
+| 3 | language/emoji/MRU init done | `PO` | `SP` |
+| 4 | before core 1 launch | `POL` | `SPL` |
+| 5 | after core 1 launch | `POLY` | `SPLI` |
+| 6 | split RPCs + fw-staging up | `POLY K` | `SPLIT` |
+| 7 | EEPROM config loaded | `POLY KY` | `SPLIT 7` |
 | all | boot complete → real key legends | `POLY KYBD` | `SPLIT 72` |
 
-\* The right half "types in" its last letter over two steps — step 5 shows a
-placeholder `SPLII` (last glyph repeated), step 6 corrects it to `SPLIT` — so the
-leading space in `" 7 2"` doesn't cost the right half a distinguishable frame.
-Both halves therefore give 8 distinct steps.
+The whole word being present from step 1 frees a frame (the old scheme spent step
+1 on a single letter), so the reveal now has 7 solidify frames. The right half has
+exactly 7 visible glyphs → one solidifies per step, retiring the old `" 7 2"`
+leading-space placeholder trick (there used to be a `SPLII → SPLIT` two-step
+reveal). The left half has 8, one more than the frames, so the final step
+solidifies its **last two letters** (`B D`) at once.
 
-So a frozen **single letter** (`P` / `S`) is the split/USB-init hang — the
+So a frozen frame with **no solid letter** (whole word dim) is the split/USB-init
+hang — the
 **"hangs on the boot splash after a firmware apply"** case (`hid_fw_up.c`
 `CMD_FW_UP_APPLY`: the slave never rebooted, so the master waits for a split
 handshake that never comes; recovery = replug/reset or re-run Apply). The more

@@ -148,6 +148,12 @@ void splash_progress(uint8_t step) {
     display_message_progressive(1, 1, r1_word, &FreeSansBold24pt7b, 0, solid_count);
     display_message_progressive(r2_row, 1, r2_word, &FreeSansBold24pt7b, r1_vis, solid_count);
 
+    if (step == 1) {
+        // Hold the all-dim preview briefly so the eye registers the whole logo
+        // before letters begin solidifying — the reveal otherwise starts the
+        // instant boot leaves pre_init, too quick to read the dim frame.
+        wait_ms(300);
+    }
     if (final) {
         // Boot complete: dwell on the finished splash, then hand the keycaps
         // over to the real legends — the same tail show_splash_screen() always

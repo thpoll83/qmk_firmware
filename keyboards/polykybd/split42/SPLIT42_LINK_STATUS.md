@@ -343,6 +343,54 @@ rev-1 (firmware pinout correct); bare RP2040 chip + audio jack = rev-2 (firmware
 pinout wrong for the link — different fix entirely). The working matrix/displays
 suggest rev-1, but confirm visually. A MIX of revisions would also explain a lot.
 
+## THE JULY-12 RECORD (2026-07-16 discovery) — this was all investigated BEFORE
+
+`claude/split42-hardware-config-fixes` commit `9812f0dc` (Jul 12) contains
+**`SPLIT_LINK_DIAGNOSTICS.md`** — a full record of THIS EXACT SYMPTOM from the
+original bring-up, BEFORE the works era, plus a bench toolkit of diagnostic build
+flags (on `claude/split42-oled-status-display-8uok79`). Key facts it establishes:
+
+- The identical failure (`transport_fail=100% crc_err=0`, slave hears nothing) existed
+  at bring-up on **3 boards** (now 5). Even "it worked once" existed then.
+- **The user's GP4/GP5 bit-flip test = `POLYKYBD_PIN_LOOPBACK`** (GP4 @0.7 s, GP5
+  @1.1 s, read on the other half's keycaps). It showed all four combinations
+  `00/01/10/11` ⇒ conductors independent, no shorts, no opens — **and it passed WHILE
+  the UART link was simultaneously dead.** "DC crosses + UART never does" COEXIST.
+- UART failed at **230400, 115200 AND 19200 baud**, on **PIO full-duplex, PIO
+  half-duplex, and bitbang**. (Bitbang flagged as weak evidence.)
+- **A known-good split72 half used as the SLAVE still failed against a split42
+  master** ⇒ localized to the split42 master's GP4/GP5 serial path.
+- Schematic + layout were already verified there too (22 Ω series R, no filter cap,
+  path `U10.6/7 → U26 ESD → USB2`, right half byte-identical) — matching today's
+  re-verification.
+- Its verdict: firmware/design exhausted; "the residual is the physical build or
+  something only a bench instrument can see." The bench step (scope GP5 at pad → ESD
+  → connector; continuity + flex) was **never done** — the works era interrupted.
+- It also fixed `SPI_MISO_PIN` GP4 → `NO_PIN` (never merged; benign — split72 ships
+  with GP4-as-MISO and works).
+
+**Synthesis:** the works era (Jul 14–15 morning) was a temporary remission inside a
+longer-running fault that predates it. The "DC crosses but UART-rate signals never
+do, only on split42, only on its master side" pattern from Jul 12 is still the
+sharpest characterization — and the missing measurement is whether UART-speed edges
+even leave the master's pad.
+
+## Row 13 pending — the EDGE-RATE probe (`POLY_LINK_EDGE_PROBE`)
+
+One build answers the three-way fork without a scope. The RP2040 pad input path reads
+the real pad level regardless of funcsel, so the master can read back its OWN TX pad:
+- Master console every 2 s: `EDGE: gp4=<n> gp5=<n>` — **gp4 = its own TX readback**
+  (the master retries the handshake continuously, so bursts MUST appear if the PIO
+  drives the pad), gp5 = anything from the slave.
+- Slave: **FAST blink (~3 Hz)** while UART-speed edges arrive on its GP4 — vs the
+  slow 1.6 Hz byte-latch blink (framed bytes) from row 12's probe.
+
+| master gp4 | slave | meaning |
+|---|---|---|
+| **0** | dark | the PIO never drives the master's pad → **firmware pin claim/mux conflict on the split42 master** — findable + fixable |
+| **>0** | dark | edges leave the pad but die en route at UART speed while DC crosses → analog; bench (scope/continuity+flex per the Jul-12 procedure) |
+| **>0** | fast-blink | the signal ARRIVES; fault is in the slave's RX capture/framing |
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

@@ -52,6 +52,11 @@ OPT_DEFS += -DPOLY_RX_LINE_PROBE
 # needed on the slave (SPLIT42_LINK_STATUS.md).
 OPT_DEFS += -DPOLY_SLAVE_RX_BLINK
 
+# Edge-rate probe: does the master's UART-speed TX signal (a) leave its own pad
+# (self-readback on GP4), (b) arrive at the slave (fast-blink)? Follow-up to the
+# Jul-12 SPLIT_LINK_DIAGNOSTICS loopback (DC crosses; UART never does).
+OPT_DEFS += -DPOLY_LINK_EDGE_PROBE
+
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes
 

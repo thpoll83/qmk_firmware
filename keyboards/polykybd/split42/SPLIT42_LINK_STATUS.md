@@ -499,6 +499,51 @@ INTR edge-latch. Swap USB to test the other direction. Reading matrix:
 | dark | dark | span truly OPEN today — receptacle pins/solder/cable seating, multimeter |
 | (blinks) | — | edges DID arrive in v4: slave PIO RX capture at fault — firmware |
 
+## ROW 17 — THE COPPER FINDING (2026-07-17): the left board's link is PLUG-ORIENTATION-DEPENDENT
+
+User correction (right again): there are NO series resistors in the link path — the
+schematic R1/R2 "22R" are the SPI display-bus resistors (layout pad nets:
+`GPIO6<->SCLK_RAW`, `GPIO7<->SDIN_RAW`). Resistor theory withdrawn. The link path is:
+`RP2040 GP4/GP5 pad -> trace -> U26 (TPD4E05 ESD, flow-through) -> USB2 receptacle`.
+
+Full copper-connectivity analysis (segments + vias + pads, per net) of three boards:
+
+| board | COM copper |
+|---|---|
+| split42 RIGHT | one island — both plug-orientation data pads hard-wired |
+| split72 LEFT | one island — both plug-orientation data pads hard-wired |
+| **split42 LEFT** | **TWO islands per net** — `USB2.8` (B6/COM1) and `USB2.5` (B7/COM2) are copper-orphaned, bridged ONLY by U26's internal flow-through metal (pads 1<->10, 5<->6) |
+
+**Failure mode (requires U26's bridge broken on the left board — part missing or cold
+joints on the 0.5 mm DQA package):** the left half's link data reaches only the A-row
+receptacle contacts. Plug the link cable one way — works; **flip the plug 180° — power
+flows (VBUS/GND pads all hard-wired) but ZERO data, both directions, any baud, DC
+included.** The right board and both split72 boards are orientation-proof in copper, so
+only the LEFT split42 end carries the coin-flip.
+
+**This one bit — the plug orientation at the left half — explains every row of this
+investigation:** works-era vs dead-era on identical firmware (replug coin-flips), the
+pointing/delay "fixes" (coincided with replugs), morning-works/evening-fails (the
+split72 cable test replugged the left end), the Jul-12 DC-passes-while-UART-fails
+inconsistency (different insertions across that multi-replug session), 5 boards
+identical (same vulnerability; orientation preserved across board swaps), split72
+immune, same cable fine on split72, v3/v4's perfectly clean TX pad (swinging into an
+unloaded open), slave always powered.
+
+### Confirmation protocol (10 seconds, no flashing)
+1. Any firmware on both halves: **flip the link plug 180° at the LEFT half.** Link
+   alive in exactly one orientation = CONFIRMED.
+2. Visual: inspect **U26** on a left board (10-pin chip by the link USB-C, back side)
+   vs a right board — missing / skewed / unsoldered?
+
+### If confirmed
+- Hardware fix: populate/reflow U26 on left boards (restores flip-immunity); or bodge
+  `USB2.8->USB2.6` + `USB2.5->USB2.7`; layout fix next rev: two short traces joining
+  the B-row pads to their A-row partners (as the right board already has).
+- Firmware cleanup: the SPLIT_POINTING + 400 ms-delay workarounds (PR #151) were
+  plug-orientation coincidences — re-test without them and remove; update CLAUDE.md's
+  investigation notes accordingly.
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

@@ -39,8 +39,18 @@ static const struct display_info key_display[] = {
         /* row 0 (idx  0.. 5) */ {BITMASK1(0)}, {BITMASK1(1)}, {BITMASK1(2)}, {BITMASK1(3)}, {BITMASK1(4)}, {BITMASK1(5)},
         /* row 1 (idx  6..11) */ {BITMASK2(0)}, {BITMASK2(1)}, {BITMASK2(2)}, {BITMASK2(3)}, {BITMASK2(4)}, {BITMASK2(5)},
         /* row 2 (idx 12..17) */ {BITMASK3(0)}, {BITMASK3(1)}, {BITMASK3(2)}, {BITMASK3(3)}, {BITMASK3(4)}, {BITMASK3(5)},
-        /* row 3: idx 18-20 = no key (placeholders); idx 21-23 = thumbs (VERIFY) */
-        {BITMASK1(6)}, {BITMASK1(7)}, {BITMASK2(6)}, {BITMASK2(7)}, {BITMASK3(6)}, {BITMASK3(7)}
+        /*
+         * row 3 thumbs — bench-verified 2026-07-17 on the master (left) half:
+         * each physical thumb OLED is bit 6 of successive shift registers, in
+         * physical left→right order (bit 7 of every register is an unused phantom):
+         *   thumb pos 1/2/3 (left→right) = BITMASK1(6) / BITMASK2(6) / BITMASK3(6).
+         * The LEFT half's thumbs are matrix cols 3,4,5 (idx 21,22,23 = Ctrl/Space/Del);
+         * cols 0-2 (idx 18-20) are KC_NO on the left, so those entries only matter for
+         * the RIGHT half (matrix cols 0,1,2). Right col→position order is the symmetric
+         * guess — ⚠️ VERIFY on a real right half (none available yet).
+         */
+        /* idx 18-20 (RIGHT thumbs, cols 0-2) */ {BITMASK1(6)}, {BITMASK2(6)}, {BITMASK3(6)},
+        /* idx 21-23 (LEFT  thumbs, cols 3-5) */ {BITMASK1(6)}, {BITMASK2(6)}, {BITMASK3(6)}
 };
 
 const uint8_t* get_key_disp_bitmask(uint8_t index) {

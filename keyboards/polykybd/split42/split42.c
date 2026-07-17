@@ -84,6 +84,10 @@ static matrix_row_t last_matrix[MATRIX_ROWS_PER_SIDE];
 
 void matrix_scan_kb(void) {
     const uint8_t first = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
+    // Keycap-invert feedback reads the RAW (physical) matrix, so the physical
+    // column c is the OLED column directly — no mirror needed here even on the
+    // mirrored right half (the column reverse for QMK's keycode dispatch happens
+    // afterwards, below).
     bool changed = false;
     for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
         if (last_matrix[r - first] != matrix[r]) {
@@ -102,6 +106,31 @@ void matrix_scan_kb(void) {
     if (changed) {
         memcpy(last_matrix, &matrix[first], sizeof(last_matrix));
     }
+#if defined(POLY_SPLIT42_MIRROR_RIGHT)
+    // split42 uses a LEFT board as the RIGHT half, mounted mirrored across the
+    // vertical axis. Reverse the low MATRIX_COLS bits of the RIGHT half's combined
+    // rows (MATRIX_ROWS_PER_SIDE..MATRIX_ROWS-1) so QMK dispatches the right-half
+    // keycodes that line up with the mirrored board — the thumb cluster (physical
+    // cols 3-5) then reaches the keymap's thumb cols (0-2). This runs on the MASTER:
+    // QMK calls matrix_scan_kb() only after transport has merged the slave's rows,
+    // whereas the slave ships its raw rows BEFORE matrix_slave_scan_kb(), so a reverse
+    // there would arrive too late. Whichever board holds USB, the right half is always
+    // rows [MATRIX_ROWS_PER_SIDE, MATRIX_ROWS). The matrix is re-scanned fresh every
+    // cycle, so this is applied once per scan and never accumulates. The display side
+    // mirrors identically (poly_kc_src_col) so a key's legend always matches what it
+    // types; the OLED invert above deliberately runs on the raw matrix (physical
+    // column == OLED column), before this reverse.
+    if (is_keyboard_master()) {
+        for (uint8_t r = MATRIX_ROWS_PER_SIDE; r < MATRIX_ROWS; r++) {
+            matrix_row_t src = matrix[r];
+            matrix_row_t rev = src & ~(matrix_row_t)((1u << MATRIX_COLS) - 1);
+            for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+                if ((src >> c) & 1) rev |= (matrix_row_t)1 << (MATRIX_COLS - 1 - c);
+            }
+            matrix[r] = rev;
+        }
+    }
+#endif
     matrix_scan_user();
 }
 

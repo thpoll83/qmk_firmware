@@ -2240,6 +2240,19 @@ static void draw_legend_cx(const uint32_t* text, int8_t y) {
 #  define POLY_DISP_ADVANCE()    sr_shift_once_latch()
 #endif
 
+// Right-half column mirror. split42 uses a LEFT board as the RIGHT half, so its
+// columns are reversed (POLY_SPLIT42_MIRROR_RIGHT, config.h). The keycode/legend for
+// the physical key at column c then lives at keymap column MATRIX_COLS-1-c, while the
+// OLED itself stays selected by the physical column c. This mirrors the matrix reverse
+// done in split42.c so the legend a key shows always equals what it types. No-op unless
+// the variant defines the flag AND this board is the right half.
+static inline uint8_t poly_kc_src_col(uint8_t c) {
+#if defined(POLY_SPLIT42_MIRROR_RIGHT)
+    if (!is_left_side()) return (uint8_t)(MATRIX_COLS - 1 - c);
+#endif
+    return c;
+}
+
 void update_displays(enum refresh_mode mode) {
     // Doom easter egg: while game mode owns the keycaps, the blitter is the
     // only writer — a legend re-render here would tear the game frame.
@@ -2290,10 +2303,14 @@ void update_displays(enum refresh_mode mode) {
     for (uint8_t r = start_row; r < max_rows; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
+            // On the right half of split42 the columns are mirrored (see
+            // poly_kc_src_col): the OLED stays at physical column c, but its
+            // keycode/legend comes from keymap column kc_col.
+            const uint8_t kc_col = poly_kc_src_col(c);
 
             //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
             //except there was a leading and missing physical key (KC_NO on base layer)
-            uint16_t keycode = keymaps[_BL][r + offset][c];
+            uint16_t keycode = keymaps[_BL][r + offset][kc_col];
             if (keycode == KC_NO) {
 #if defined(POLY_DISP_SELECT_BY_TABLE)
                 continue;   // no OLED behind an absent key; table-select needs no gap shift
@@ -2304,7 +2321,7 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     POLY_DISP_SELECT(disp_idx);
-                    keycode = display_keycode_at(local_layer, r + offset, c);
+                    keycode = display_keycode_at(local_layer, r + offset, kc_col);
                     // Doom egg menu item: rewrites the EEPROM keymap's KC_NO at
                     // the armed utilities-layer position (see doom_mode.h;
                     // pass-through no-op in non-doom builds and while unarmed).
@@ -2543,13 +2560,16 @@ void kdisp_idle(uint8_t contrast) {
     for (uint8_t r = 0; r < MATRIX_ROWS_PER_SIDE; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
+            // Right-half column mirror (split42, see poly_kc_src_col): OLED at
+            // physical column c, keycode/legend from keymap column kc_col.
+            const uint8_t kc_col = poly_kc_src_col(c);
 
             //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
             //except there was a leading and missing physical key (KC_NO on base layer)
             // base_kc drives the physical-layout skip and the per-key pulse phase (both
             // layout-, not layer-, dependent); the relocated legend itself is resolved
             // from the active layer below so it matches the awake render.
-            uint16_t base_kc = keymaps[_BL][r + offset][c];
+            uint16_t base_kc = keymaps[_BL][r + offset][kc_col];
             if (base_kc == KC_NO) {
 #if defined(POLY_DISP_SELECT_BY_TABLE)
                 continue;   // no OLED behind an absent key; table-select needs no gap shift
@@ -2575,7 +2595,7 @@ void kdisp_idle(uint8_t contrast) {
                         // Only relocate every IDLE_JITTER_PERIOD-th dark episode, so the
                         // legend drifts slowly rather than on every ~7.5 s dark valley.
                         if(jitter && dark_edge && (s_idle_episode[r][c]++ % IDLE_JITTER_PERIOD) == 0) {
-                            uint16_t kc = display_keycode_at(local_layer, r + offset, c);
+                            uint16_t kc = display_keycode_at(local_layer, r + offset, kc_col);
                             if(kc != KC_TRNS) {
                                 render_idle_key(kc, led_state, s_idle_roll++);
                             }

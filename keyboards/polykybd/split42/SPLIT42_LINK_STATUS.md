@@ -769,6 +769,74 @@ one variable vs the FAILING row-21 build `d44c2c08`.
   (d) the per-cycle pull (dummy registered transactions first, then the
   every-cycle pull re-run — the old heartbeat, redone clean).
 
+## ROW 24 — SHMEM PAD WORKS, BOTH ORIENTATIONS: firmware root cause localized (2026-07-17 eve)
+
+**Build:** `4dcfddcf` (branch `claude/split42-shmempad-retest`) = the failing row-21
+build `d44c2c08` + ONE change: a byte-identical dummy (`checksum + report_mouse_t +
+cpi`, 8 bytes) at the pointing member's exact position in `split_shared_memory_t`
+(`transport.h`, gated `POLY_DUMMY_SHMEM_PAD`). No pointing code, no transactions,
+no pull, no delay. **Result (user): WORKS — confirmed with EITHER half as USB
+master.**
+
+**Conclusion — the pointing feature was NEVER the requirement.** What split42 needs
+is the **8-byte layout shift its shmem member happens to provide in front of the
+RPC region** (`rpc_info` + `rpc_m2s_buffer` + `rpc_s2m_buffer` — the buffers every
+poly `USER_SYNC_*` transaction rides through). Candidates (a) transactions and
+(d) per-cycle pull are ruled out by this build containing neither.
+
+**Absolute placement is ruled out too** (linker-symbol check, `nm -S`):
+| build | `shared_memory` addr | size | link |
+|---|---|---|---|
+| `d44c2c08` no pointing, no pad | `2003b250` | 0xc0 | DEAD |
+| `4dcfddcf` no pointing, + pad | **`2003b250`** | 0xc8 | **WORKS** |
+| `700080fc` real SPLIT_POINTING | `2003b280` | 0xc8 | WORKS |
+The working pad build sits at the SAME absolute address as the dead build — only
+the intra-struct offsets of the RPC region moved (+8). So this is not a global
+memory-layout coincidence; something interacts with the **first 8 bytes of the RPC
+region** (or the bytes just before it) specifically.
+
+**Leading theory (UNPROVEN — next investigation phase): a latent out-of-bounds
+write.** Some code writes past a member that precedes the pad position (on split42's
+config: smatrix / encoders / sync_timer / layers / rgb_matrix_sync / wpm / oled
+state, per enabled defines) and, without the pad, clobbers `rpc_info` /
+`rpc_m2s_buffer` — corrupting the very handshake/payload area the poly transactions
+use, which presents as the familiar `crc_err=0 transport_fail=100%` dead transport.
+With the pad (or the pointing member) there, the overflow lands in a byte-hole
+nothing reads. split72 always had the pointing member, which is why it never showed.
+**Hunt plan (when the investigation resumes):** canary-fill the pad (0xA5 pattern)
+at boot, expose it over a HID debug read + a housekeeping check that uprintf's on
+first corruption — the canary bytes identify the writer's reach and timing; then
+inspect the writer (likely a checksum/size mismatch in a split sync path or an
+off-by-N in a member serializer).
+
+## RESOLUTION SUMMARY (2026-07-17)
+
+Two independent, compounding root causes — either alone kills the link; both were
+present:
+
+1. **HARDWARE (SEALED, rows 17–19):** the split42-left v1.0 board leaves the
+   flipped-orientation link-USB-C data pads (`USB2.5`/`USB2.8`) copper-orphaned,
+   bridged only by U26's internal metal. With U26's bridge broken (all 5 boards) and
+   both halves being left boards, exactly **1 of 4 plug-orientation combinations**
+   works. Fix: reflow/populate U26 or bodge `USB2.8->6` + `USB2.5->7` per board;
+   next-rev copper fix + all redesign items in the hardware repo's
+   `SPLIT42_REDESIGN_NOTES.md`. Until fixed: keep the marked orientation.
+2. **FIRMWARE (LOCALIZED, rows 20–24):** with the orientation held fixed, split42
+   needs an 8-byte pad at the pointing member's shmem position — nothing else. The
+   historical `SPLIT_POINTING_ENABLE` "fix" worked via its shmem member; the
+   `wait_ms(400)` never contributed (its A/B was an orientation artifact). Shipped
+   resting config: **no delay, no pointing subsystem, + the explicit RPC-guard pad**
+   (renamed `POLY_SPLIT_SHMEM_RPC_GUARD` in the PR). The *writer* that makes the pad
+   necessary is still to be found (canary hunt above) — the pad is an honest,
+   documented guard until then, and doubles as the instrument.
+
+Every historical contradiction is now explained: works↔dead flips on identical
+firmware = orientation coin-flips; "pointing required" = its shmem member;
+"delay required" = coin-flip artifact; split72 immunity = correct copper + always
+had the pointing member; DC-loopback-passes-while-UART-fails = different insertions;
+the v3/v4 probes' clean TX into silence = transmitter fine, path open at the
+flipped pads.
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

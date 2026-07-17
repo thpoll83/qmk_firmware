@@ -651,6 +651,23 @@ The investigation's hardware question is closed. Remaining work:
    RX-IRQ / boot-timing race" narrative is likely orientation artifacts end to end.
 4. Next-rev copper fixes: hardware repo `SPLIT42_REDESIGN_NOTES.md`.
 
+## ROW 20 — STOPGAP RE-TEST 1/2: wait_ms(400) removal PASSES (2026-07-17 eve)
+
+**Build:** `700080fc` (branch `claude/split42-no-delay-retest`, cut from the
+`PolyKybd` tip @ FW 0.9.64) — ONLY change: the split42-only pre-init `wait_ms(400)`
+in `show_splash_screen()` removed. Link-cable orientation held at the marked
+working position. Flashed over HID (PolyKybdHost) to both halves.
+
+**Result (user): works.** So the delay was NOT load-bearing — the 2026-07-15 A/B
+that condemned its removal ran through the plug-orientation coin-flip (the replug
+between builds changed the orientation, not the firmware behavior). First stopgap
+retired pending step 2.
+
+**Step 2 queued:** build `d44c2c08` additionally removes the entire pointing
+subsystem (`POINTING_DEVICE_ENABLE`/`custom` driver in rules.mk + the Cirque/
+`SPLIT_POINTING_ENABLE` block in config.h). If it also passes, the default branch
+gets both removals as clean commits and the CLAUDE.md narrative is corrected.
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

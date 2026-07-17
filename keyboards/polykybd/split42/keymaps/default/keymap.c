@@ -21,9 +21,28 @@
 #include "emoji/emoji_layer.h"
 #include "lang_layer.h"
 
+// Right-half mirror (POLY_SPLIT42_MIRROR_RIGHT, config.h). split42 currently ships as
+// two LEFT boards; the one used as the RIGHT half is physically mirrored across the
+// vertical axis. POLY_LAYOUT wraps the generated LAYOUT_lr_stacked42 and, when the
+// switch is on, REVERSES each right-half row's columns (and the right thumb triple)
+// so a left-board-as-right reads and types as a mirror image. Off → straight
+// pass-through (identical to calling LAYOUT_lr_stacked42 directly). keyboard.json is
+// untouched; this is compile-time only. (Arg order = the LAYOUT_lr_stacked42 arg
+// order: L rows 0-2 + L thumbs, then R rows 0-2 + R thumbs.)
+#if defined(POLY_SPLIT42_MIRROR_RIGHT)
+#  define POLY_LAYOUT( \
+     L00,L01,L02,L03,L04,L05,  L10,L11,L12,L13,L14,L15,  L20,L21,L22,L23,L24,L25,  LT0,LT1,LT2, \
+     R00,R01,R02,R03,R04,R05,  R10,R11,R12,R13,R14,R15,  R20,R21,R22,R23,R24,R25,  RT0,RT1,RT2) \
+   LAYOUT_lr_stacked42( \
+     L00,L01,L02,L03,L04,L05,  L10,L11,L12,L13,L14,L15,  L20,L21,L22,L23,L24,L25,  LT0,LT1,LT2, \
+     R05,R04,R03,R02,R01,R00,  R15,R14,R13,R12,R11,R10,  R25,R24,R23,R22,R21,R20,  RT2,RT1,RT0)
+#else
+#  define POLY_LAYOUT(...) LAYOUT_lr_stacked42(__VA_ARGS__)
+#endif
+
 const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /* Base layer 0 — Qwerty */
-    [_L0] = LAYOUT_lr_stacked42(
+    [_L0] = POLY_LAYOUT(
         KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
         MO(_FL0),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
@@ -34,7 +53,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG, KC_SLSH, KC_LEFT
     ),
     /* Base layer 1 — Qwerty Staggered */
-    [_L1] = LAYOUT_lr_stacked42(
+    [_L1] = POLY_LAYOUT(
         KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
         MO(_FL1),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
@@ -45,7 +64,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_ENTER,KC_BSPC, KC_LEFT
     ),
     /* Base layer 2 — Colemak DH */
-    [_L2] = LAYOUT_lr_stacked42(
+    [_L2] = POLY_LAYOUT(
         KC_ESC,  KC_Q,    KC_W,    KC_F,    KC_P,    KC_B,
         MO(_FL1),KC_A,    KC_R,    KC_S,    KC_T,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_D,    KC_V,
@@ -56,7 +75,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG, KC_BSPC, KC_LEFT
     ),
     /* Base layer 3 — Neo */
-    [_L3] = LAYOUT_lr_stacked42(
+    [_L3] = POLY_LAYOUT(
         KC_ESC,  KC_X,    KC_V,    KC_L,    KC_C,    KC_W,
         MO(_FL0),KC_U,    KC_I,    KC_A,    KC_E,    KC_O,
         KC_LSFT, DE_HASH, DE_UDIA, DE_ODIA, DE_ADIA, KC_P,
@@ -67,7 +86,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG, KC_BSPC, KC_LEFT
     ),
     /* Base layer 4 — Workman */
-    [_L4] = LAYOUT_lr_stacked42(
+    [_L4] = POLY_LAYOUT(
         KC_ESC,  KC_Q,    KC_D,    KC_R,    KC_W,    KC_B,
         MO(_FL1),KC_A,    KC_S,    KC_H,    KC_T,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_M,    KC_C,    KC_V,
@@ -78,7 +97,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG, KC_BSPC, KC_LEFT
     ),
     /* Function layer 0 */
-    [_FL0] = LAYOUT_lr_stacked42(
+    [_FL0] = POLY_LAYOUT(
         OSL(_UL),KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
         _______, _______, _______, _______, _______, _______,
         KC_CAPS, _______, _______, _______, _______, _______,
@@ -89,7 +108,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_HOME, KC_PGUP, KC_END
     ),
     /* Function layer 1 */
-    [_FL1] = LAYOUT_lr_stacked42(
+    [_FL1] = POLY_LAYOUT(
         OSL(_UL),KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
         _______, _______, _______, _______, _______, _______,
         _______, _______, _______, _______, _______, _______,
@@ -100,7 +119,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_HOME, KC_PGUP, KC_END
     ),
     /* Numpad layer */
-    [_NL] = LAYOUT_lr_stacked42(
+    [_NL] = POLY_LAYOUT(
         KC_NO,   KC_NUM,  KC_PSLS, KC_PAST, KC_PMNS, KC_NO,
         MS_BTN1, KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS, KC_INS,
         KC_NO,   KC_KP_4, KC_KP_5, KC_KP_6, KC_PPLS, KC_DEL,
@@ -111,7 +130,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_PENT, KC_KP_0, KC_BASE
     ),
     /* Utility layer */
-    [_UL] = LAYOUT_lr_stacked42(
+    [_UL] = POLY_LAYOUT(
         KC_NO,   KC_F13,  KC_F14,  KC_F15,  KC_F16,  KC_F17,
         KC_MYCM, KC_CALC, KC_PSCR, KC_SCRL, KC_BRK,  KC_NO,
         KC_LSFT, KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
@@ -122,7 +141,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,   KC_NO,   KC_BASE
     ),
     /* Settings layer */
-    [_SL] = LAYOUT_lr_stacked42(
+    [_SL] = POLY_LAYOUT(
         KC_DDIM, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
         KC_DAUTO,KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_DBRI,
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
@@ -136,7 +155,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // six continent region tabs (LCAT), row 1 = the six unicode-input mode keys,
     // row 2 = the MRU recents (LMRU, top-bar marked). RIGHT half: the active
     // region's language slots (LSLOT, 18 per page), paged via the thumb arrows.
-    [_LL] = LAYOUT_lr_stacked42(
+    [_LL] = POLY_LAYOUT(
         LCAT(0),   LCAT(1),   LCAT(2),   LCAT(3),   LCAT(4),   LCAT(5),
         QK_UNICODE_MODE_WINCOMPOSE, QK_UNICODE_MODE_MACOS, QK_UNICODE_MODE_EMACS, QK_UNICODE_MODE_WINDOWS, QK_UNICODE_MODE_LINUX, QK_UNICODE_MODE_BSD,
         LMRU(0),   LMRU(1),   LMRU(2),   LMRU(3),   LMRU(4),   LMRU(5),
@@ -147,7 +166,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG_PAGE_PREV, KC_LANG_PAGE_NEXT, KC_LANG_CLEAR
     ),
     /* Additional latin variant layer */
-    [_ADDLANG1] = LAYOUT_lr_stacked42(
+    [_ADDLANG1] = POLY_LAYOUT(
         KC_NO,   KC_NO,   KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3,
         KC_NO,   _______, _______, _______, _______, _______,
         KC_NO,   _______, _______, _______, _______, _______,
@@ -160,7 +179,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // Emoji layer — left half: 12 category tabs (rows 0-1) + 6 MRU recents on the
     // bottom-left row (top-bar marked); right half: the current tab's 18 slots
     // (3 rows). Paging on the right thumbs; Clear on the right thumb; left thumb exits.
-    [_EMJ] = LAYOUT_lr_stacked42(
+    [_EMJ] = POLY_LAYOUT(
         KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
         KC_EMJ_CAT(6),  KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(11),
         EMRU(0),        EMRU(1),        EMRU(2),        EMRU(3),        EMRU(4),        EMRU(5),

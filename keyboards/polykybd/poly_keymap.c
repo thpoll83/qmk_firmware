@@ -802,6 +802,46 @@ void housekeeping_task_user(void) {
     }
 #endif
 
+#ifdef POLY_DC_LOOPBACK
+    // DC loopback (SPLIT42_LINK_STATUS.md row 16): re-establish TODAY's ground truth
+    // for "does the GP4 conductor pass DC at all" — the Jul-12 loopback is 5 days
+    // old and predates the current dead state. The MASTER (USB side) claims GP4 as
+    // a plain SIO output (funcsel switch overrides the PIO) and toggles it at
+    // ~1.4 Hz; the SLAVE's INTR edge-latch blink (edge-probe block below) fires on
+    // those slow edges just as it would on UART edges. Only GP4 is driven — GP5 is
+    // the slave's PIO TX (idle-high push-pull); driving it would be contention.
+    // Test the other conductor/direction by swapping which half has USB.
+    //   Slave fast-blinks  => the GP4 conductor passes DC TODAY (span alive at DC).
+    //   Slave stays dark   => the conductor is OPEN today — mundane physical break
+    //                         (receptacle data pins / cable plug springs), bench.
+    if (is_keyboard_master()) {
+        static bool dc_init = false;
+        if (!dc_init) {
+            gpio_set_pin_output(GP4);
+            dc_init = true;
+        }
+        gpio_write_pin(GP4, (timer_read32() / 700) & 1);
+    } else {
+        // Slave: take GP4 as a plain SIO input with NO pull-up. This removes the
+        // receiver pull-up from the line, killing the (series-R vs pull-up)
+        // voltage divider — the discriminator for the wrong-value-series-resistor
+        // theory: a too-large series R (e.g. 22k fitted instead of 22R) divides a
+        // driven LOW against the ~50k pull-up to ~1.0V, right at the Schmitt
+        // threshold => marginal/no edges with pull-up, but FULL swing with no pull
+        // (no divider without a second current path). Combined readings:
+        //   v4 UART probe dark (pull-up on) + THIS build blinks => series R too
+        //     large / level problem ON THE SPLIT42 BOARD — read R1/R2's part code.
+        //   THIS build also dark => the span is truly OPEN today (receptacle pins
+        //     / solder / cable seating) — multimeter time.
+        // (This deliberately steals GP4 from the PIO RX — it's a DC diag build.)
+        static bool dc_rx_init = false;
+        if (!dc_rx_init) {
+            gpio_set_pin_input(GP4);
+            dc_rx_init = true;
+        }
+    }
+#endif
+
 #ifdef POLY_LINK_EDGE_PROBE
     // Raw EDGE-RATE probe (SPLIT42_LINK_STATUS.md — the "does the UART signal leave
     // the pad?" test, follow-up to the Jul-12 SPLIT_LINK_DIAGNOSTICS record). The

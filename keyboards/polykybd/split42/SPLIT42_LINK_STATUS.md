@@ -459,6 +459,46 @@ fast-blinks (~3 Hz) on any latched edge in a 2 s period.
   procedure. **Re-run the Jul-12 DC loopback in the CURRENT state first** to confirm
   DC still crosses today.
 
+### Row 15 — v4 (morning, 07-17): hardware-latched, still silent; split72 restored & WORKS
+
+Both masters (cross-pair): `out≈pin oeok=100%` (TX perfect, still) and **`rx_intr=0`**
+— the hardware edge-latch confirms nothing EVER arrives at either master's RX pin.
+**PENDING from the bench: did either SLAVE half fast-blink in this run?** (That is the
+one number v4 was built for.) Meanwhile the user restored split72 to its normal
+firmware — **split72↔split72 works today**: the split72 halves, their receptacles and
+that cable are all proven healthy NOW.
+
+**Triangulation:** every element of the split72 side is proven; the split42's TX pad
+provably swings; both cross directions are dead ⇒ the fault localizes to **the span
+on the split42 board between the RP2040 pad and its link receptacle** — the 22 Ω
+series resistors (R1/R2), the TPD4E05 ESD array, or the receptacle solder — and it is
+**identical on all 5 boards ⇒ assembly/BOM-level, not damage**.
+
+### The one theory that fits EVERY row: wrong-value series resistor (e.g. 22 k not 22 R)
+
+Driving LOW through an accidentally-fitted 22 kΩ against the receiver's ~50 kΩ
+internal pull-up parks the line at ≈1.0 V — right at the RP2040 Schmitt threshold:
+- marginal by temperature/board/day ⇒ **works-era vs dead-era on identical firmware** ✓
+- DC loopback "passes" marginally (Jul-12) while UART fails **at every baud** (it is a
+  LEVEL problem, not a speed problem — matching bitbang/19200 also failing) ✓
+- identical on all 5 boards (same reel/BOM) ✓ · same cable fine on split72 ✓
+- master's own pad readback (BEFORE the series R) shows perfect swings — v3/v4 ✓
+**Bench check #1 (one minute): read R1/R2's part code / measure them on a split42 vs
+split72.** (Jul-12 already noted "22 Ω R1/R2" from the SCHEMATIC — the question is
+what was FITTED.)
+
+### Row 16 pending — the DC loopback build (`POLY_DC_LOOPBACK`, evening kit)
+
+One image, both halves; role decides: the **master** SIO-drives GP4 at ~1.4 Hz (DC —
+today's ground truth, the Jul-12 loopback is 5 days old); the **slave** takes GP4 as a
+**NO-pull-up** input (removes the series-R/pull-up divider) and fast-blinks on the
+INTR edge-latch. Swap USB to test the other direction. Reading matrix:
+| v4 UART probe (pull-up on) | DC build (no pull) | verdict |
+|---|---|---|
+| dark | **blinks** | series-R/level problem on the split42 board — read R1/R2 |
+| dark | dark | span truly OPEN today — receptacle pins/solder/cable seating, multimeter |
+| (blinks) | — | edges DID arrive in v4: slave PIO RX capture at fault — firmware |
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

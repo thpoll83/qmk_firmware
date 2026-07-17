@@ -510,9 +510,16 @@ Full copper-connectivity analysis (segments + vias + pads, per net) of three boa
 
 | board | COM copper |
 |---|---|
-| split42 RIGHT | one island — both plug-orientation data pads hard-wired |
+| split42 RIGHT¹ | one island — both plug-orientation data pads hard-wired |
 | split72 LEFT | one island — both plug-orientation data pads hard-wired |
 | **split42 LEFT** | **TWO islands per net** — `USB2.8` (B6/COM1) and `USB2.5` (B7/COM2) are copper-orphaned, bridged ONLY by U26's internal flow-through metal (pads 1<->10, 5<->6) |
+
+¹ **Correction (2026-07-17, per user):** `poly_corne_split42_right.kicad_pcb` is a
+**byte-identical copy of `poly_kybd_split72_right.kicad_pcb`** (cmp-verified; 36 key
+sockets) — an untouched split72 stub, NOT a designed split42 right side (that design
+doesn't exist yet). Its "healthy" row above is therefore just split72's wiring seen
+twice; the healthy references are the two split72 boards. Implication: the orphaned
+pads were introduced during the split42-LEFT rework of the (correct) split72 layout.
 
 **Failure mode (requires U26's bridge broken on the left board — part missing or cold
 joints on the 0.5 mm DQA package):** the left half's link data reaches only the A-row
@@ -532,10 +539,10 @@ defective left copper. Consequences:
 - In the split72↔split42 cross-pair tests only the split42 end was vulnerable (the
   split72 end is orientation-proof) — a single coin flip there, matching that those
   sessions saw both outcomes.
-- The "split42 RIGHT" row in the table above describes an **unbuilt layout** — it
-  proves the designer wired it correctly once, but no such board exists to compare
-  against on the bench. Use a split72 board (also correct) as the visual reference
-  for how U26 should look, or compare U26 across the five left boards.
+- The "split42 RIGHT" row in the table above is a **verbatim split72 stub** (see
+  footnote ¹) — no split42-right design exists, let alone a board. Use a split72
+  board as the visual reference for how U26 should look, or compare U26 across the
+  five left boards.
 
 **This one bit — the plug orientation at the left half — explains every row of this
 investigation:** works-era vs dead-era on identical firmware (replug coin-flips), the
@@ -583,8 +590,9 @@ all v1.0 left boards.
 ### If confirmed
 - Hardware fix **on BOTH halves** (both are left boards): populate/reflow U26
   (restores flip-immunity); or bodge `USB2.8->USB2.6` + `USB2.5->USB2.7`; layout fix
-  next rev: two short traces joining the B-row pads to their A-row partners (as the
-  unbuilt right layout already has).
+  next rev: two short traces joining the B-row pads to their A-row partners (as
+  split72 already has). Redesign items collected in the hardware repo:
+  `poly_kybd/variations/poly_corne/SPLIT42_REDESIGN_NOTES.md`.
 - Firmware cleanup: the SPLIT_POINTING + 400 ms-delay workarounds (PR #151) were
   plug-orientation coincidences — re-test without them and remove; update CLAUDE.md's
   investigation notes accordingly.

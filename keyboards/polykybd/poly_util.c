@@ -130,9 +130,12 @@ void display_message_progressive(uint8_t row, uint8_t col, const uint32_t* messa
                 const uint32_t cp = message[index];
                 if (cp != U' ') {
                     const uint32_t text[2] = { cp, 0 };
-                    kdisp_set_gfx_scanline(visible >= solid_count);
+                    // Not-yet-solid letters render dim via the coarse 2-on/2-off
+                    // scanline — cleaner than the fine 1-on/1-off on the big
+                    // 24pt splash glyphs, which flickered.
+                    kdisp_set_gfx_scanline2(visible >= solid_count);
                     kdisp_write_gfx_text(displayFont, 1, 49, 38, text);
-                    kdisp_set_gfx_scanline(false);
+                    kdisp_set_gfx_scanline2(false);
                     visible++;
                 }
                 index++;

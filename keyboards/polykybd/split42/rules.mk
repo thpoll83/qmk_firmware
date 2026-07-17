@@ -24,17 +24,9 @@ WS2812_DRIVER = vendor
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c base/multicore/core1.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
 
-# Root-cause experiment: POINTING_DEVICE_ENABLE with a no-op driver but WITHOUT
-# SPLIT_POINTING_ENABLE. This LINKS pointing_device.c + runs its init/task, but adds
-# NO split transaction and NO `pointing` member to split_shared_memory_t (SPLIT_POINTING
-# is what adds those, and it's not defined here). The dummy-transaction test already
-# ruled out NUM_TOTAL_TRANSACTIONS. So this separates the last two candidates:
-#   link revives -> merely linking/running the pointing code fixes it (a layout/init
-#                   side effect — the "fix" is coincidental, real bug is elsewhere).
-#   still dead   -> it's SPLIT_POINTING's split_shmem `pointing` member specifically
-#                   (which shifts the RPC buffers' offset), a real transport dependency.
-POINTING_DEVICE_ENABLE = yes
-POINTING_DEVICE_DRIVER = custom
+# Pointing device: REMOVED — no trackpad exists on split42; it was only ever a
+# split-link workaround. The real requirement is the shmem RPC-guard pad below
+# (SPLIT42_LINK_STATUS.md rows 20-24 and split42/config.h).
 
 # LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
 # bus (addr 0x23), which isn't broken out on split42, so its probe fails and the

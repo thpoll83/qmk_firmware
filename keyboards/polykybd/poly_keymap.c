@@ -823,31 +823,46 @@ void housekeeping_task_user(void) {
     {
         static uint32_t s_win_timer    = 0;
         static uint32_t s_rep_timer    = 0;
-        static uint32_t s_gp4_edges    = 0;
-        static uint32_t s_gp5_edges    = 0;
+        static uint32_t s_gp4_edges    = 0;   // RX-pin edges (role-resolved)
         static uint32_t s_slave_fast   = 0;   // timestamp of last fast-blink toggle
         static bool     s_fast_on      = false;
         static uint32_t s_slave_seen_at = 0;  // last report period with GP4 edges (slave)
+        // Window-sample ONLY this role's RX pin (its pad has PAL_RP_PAD_IE, so
+        // gpio_read_pin is valid there): master RX = GP5, slave RX = GP4. The TX
+        // readback comes from the synchronous OUTTOPAD sampler inside
+        // serial_transport_send (serial_vendor.c) — the TX pad has NO input enable,
+        // so a gpio_read_pin readback there is blind by construction (the first
+        // probe's gp4=0 artifact).
         if (timer_elapsed32(s_win_timer) >= 100) {
             s_win_timer = timer_read32();
-            bool l4 = gpio_read_pin(GP4), l5 = gpio_read_pin(GP5);
+            pin_t rxpin = is_keyboard_master() ? GP5 : GP4;
+            bool  last  = gpio_read_pin(rxpin);
             for (uint32_t i = 0; i < 20000; i++) {   // ~ a few ms tight sampling
-                bool n4 = gpio_read_pin(GP4);
-                bool n5 = gpio_read_pin(GP5);
-                if (n4 != l4) { s_gp4_edges++; l4 = n4; }
-                if (n5 != l5) { s_gp5_edges++; l5 = n5; }
+                bool now = gpio_read_pin(rxpin);
+                if (now != last) { s_gp4_edges++; last = now; }   // s_gp4_edges = RX edges (either role)
             }
         }
         if (timer_elapsed32(s_rep_timer) >= 2000) {
             s_rep_timer = timer_read32();
             if (is_keyboard_master()) {
-                uprintf("EDGE: gp4=%lu gp5=%lu (master: gp4=own TX readback, gp5=from slave)\n",
-                        (unsigned long)s_gp4_edges, (unsigned long)s_gp5_edges);
+                extern uint32_t serial_probe_txpad_edges(void);
+                extern uint32_t serial_probe_txpad_sends(void);
+                extern uint8_t  serial_probe_tx_pin(void);
+                extern uint8_t  serial_probe_funcsel(uint8_t pin);
+                extern uint8_t  serial_probe_pad_ie(uint8_t pin);
+                // txpad: cumulative OUTTOPAD edges observed during sends / sends sampled.
+                //   txpad=0 with sends climbing => the pad-mux output never moves during
+                //   transmission => PIO not driving the pad (mux stolen or SM dead).
+                //   fs4/fs5: funcsel (7 = PIO1 correct; 1 = SPI stole it; 5 = SIO).
+                uprintf("EDGE: txpad=%lu/%lu sends (txpin=GP%d) rx_gp5=%lu | fs4=%d ie4=%d fs5=%d ie5=%d\n",
+                        (unsigned long)serial_probe_txpad_edges(), (unsigned long)serial_probe_txpad_sends(),
+                        (int)serial_probe_tx_pin(), (unsigned long)s_gp4_edges,
+                        (int)serial_probe_funcsel(GP4), (int)serial_probe_pad_ie(GP4),
+                        (int)serial_probe_funcsel(GP5), (int)serial_probe_pad_ie(GP5));
             } else if (s_gp4_edges >= 8) {
                 s_slave_seen_at = timer_read32();   // arm fast-blink for the next period
             }
             s_gp4_edges = 0;
-            s_gp5_edges = 0;
         }
         // Slave fast-blink while edges were seen in the last report period.
         if (!is_keyboard_master() && s_slave_seen_at != 0 && timer_elapsed32(s_slave_seen_at) < 2500) {

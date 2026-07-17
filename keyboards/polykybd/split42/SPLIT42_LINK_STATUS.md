@@ -391,6 +391,38 @@ the real pad level regardless of funcsel, so the master can read back its OWN TX
 | **>0** | dark | edges leave the pad but die en route at UART speed while DC crosses → analog; bench (scope/continuity+flex per the Jul-12 procedure) |
 | **>0** | fast-blink | the signal ARRIVES; fault is in the slave's RX capture/framing |
 
+### Row 13 — edge probe v1: TX readback was BLIND (artifact); v2 fixes it
+
+Cross-pair run (split42-left <-> split72-right, both roles): `NT=28` on BOTH variants
+(handshake-compatible ✓ — a real result). Both masters printed `EDGE: gp4=0 gp5=0` —
+**but the gp4 (own-TX) readback was blind BY CONSTRUCTION**: the full-duplex TX pin
+mode in `pio_tx_init` sets NO `PAL_RP_PAD_IE`, so the TX pad's input buffer is
+disabled and `gpio_read_pin` reads a constant even on a perfectly transmitting half
+(the known-good split72 reading 0 exposed this). Additionally the window sampler
+(3 ms per 100 ms) statistically misses the post-giveup retry bursts (43 us per 500 ms
+= 0.009 % duty). The REAL new facts from row 13: NT matches, and **a split72 master
+also gets 100 % transport_fail against a split42 slave** (Jul-12 only had the
+reverse direction).
+
+**Probe v2** replaces the TX readback with a **synchronous IO_BANK0
+`GPIOx_STATUS.OUTTOPAD` sampler inside `serial_transport_send`** (samples the value
+delivered to the pad AFTER the function mux, during the actual 43 us transmission,
+readable regardless of IE) and prints each pin's **FUNCSEL/IE**
+(`fs4=/ie4=/fs5=/ie5=`; 7 = PIO1 correct, 1 = SPI stole the mux, 5 = SIO):
+```
+EDGE: txpad=<edges>/<sends> sends (txpin=GPn) rx_gp5=<n> | fs4= ie4= fs5= ie5=
+```
+- `txpad=0` with sends climbing => the pad-mux output never moves during transmission
+  => PIO not driving the pad (mux stolen / SM dead) — firmware, fixable.
+- `txpad>0` => the waveform reaches the pad; if the far side still hears nothing,
+  the loss is between the pads at UART speed (analog; bench).
+- fs4/fs5 != 7 on either half => the pin mux was stolen — smoking gun, no bench needed.
+
+**Missing control (CRITICAL): split72<->split72 with this same build/tree.** The
+"working" split72 runs an older release — the 0.9.6x tip has possibly NEVER been
+link-validated on real split72 hardware. If split72<->split72 FAILS on this build,
+the fault is in the current tree for ALL variants and split42 was never special.
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

@@ -7,6 +7,9 @@
 #include "hardware/clocks.h"
 #include "wait.h"
 #include "debug.h"
+#ifdef POLY_LINK_EDGE_PROBE
+#    include "hardware/structs/timer.h"  // timer_hw->timerawl for the TX-pad probe window
+#endif
 
 #if !defined(MCU_RP)
 #    error PIO Driver is only available for Raspberry Pi 2040 MCUs!
@@ -104,6 +107,39 @@ volatile uint32_t g_rx_bytes_total    = 0;  // bytes read out of the RX FIFO (an
 volatile uint32_t g_rx_clear_nonempty = 0;  // times the FIFO had data at transaction-clear
 uint32_t serial_debug_rx_bytes(void)         { return g_rx_bytes_total; }
 uint32_t serial_debug_rx_clear_nonempty(void){ return g_rx_clear_nonempty; }
+#endif
+
+#ifdef POLY_LINK_EDGE_PROBE
+// Synchronous TX-pad probe (SPLIT42_LINK_STATUS.md row 13). The full-duplex TX pin
+// mode has NO PAL_RP_PAD_IE, so the pad input buffer is disabled and gpio_read_pin()
+// on the TX pin reads a constant — a naive readback is blind BY CONSTRUCTION (this
+// blinded the first edge probe). Instead sample IO_BANK0 GPIOx_STATUS.OUTTOPAD — the
+// value actually delivered to the pad AFTER the function mux — in a tight window
+// right after each send's bytes are pushed (the 1-byte handshake lasts ~43 us; the
+// 120 us window covers it). Also expose FUNCSEL/IE so a stolen pin mux is directly
+// visible (PIO1 = funcsel 7; SPI = 1; SIO = 5).
+#    include "hardware/structs/iobank0.h"
+#    include "hardware/structs/padsbank0.h"
+static pin_t      g_probe_tx_pin  = 0xFF;  // captured in pio_tx_init (role-resolved)
+volatile uint32_t g_txpad_edges   = 0;     // OUTTOPAD transitions observed during sends
+volatile uint32_t g_txpad_sends   = 0;     // sends sampled
+uint32_t serial_probe_txpad_edges(void) { return g_txpad_edges; }
+uint32_t serial_probe_txpad_sends(void) { return g_txpad_sends; }
+uint8_t  serial_probe_tx_pin(void)      { return (uint8_t)g_probe_tx_pin; }
+uint8_t  serial_probe_funcsel(uint8_t pin) { return (uint8_t)(iobank0_hw->io[pin].ctrl & 0x1F); }
+uint8_t  serial_probe_pad_ie(uint8_t pin)  { return (padsbank0_hw->io[pin] & PADS_BANK0_GPIO0_IE_BITS) ? 1 : 0; }
+static inline void probe_sample_txpad(void) {
+    if (g_probe_tx_pin == 0xFF) return;
+    uint32_t t0   = timer_hw->timerawl;
+    bool     last = (iobank0_hw->io[g_probe_tx_pin].status & IO_BANK0_GPIO0_STATUS_OUTTOPAD_BITS) != 0;
+    uint32_t edges = 0;
+    while ((timer_hw->timerawl - t0) < 120u) {   // 120 us window
+        bool now = (iobank0_hw->io[g_probe_tx_pin].status & IO_BANK0_GPIO0_STATUS_OUTTOPAD_BITS) != 0;
+        if (now != last) { edges++; last = now; }
+    }
+    g_txpad_edges += edges;
+    g_txpad_sends++;
+}
 #endif
 
 #ifdef POLY_SLAVE_RX_BLINK
@@ -278,6 +314,12 @@ static inline bool send_impl(const uint8_t* source, const size_t size) {
 inline bool serial_transport_send(const uint8_t* source, const size_t size) {
     leave_rx_state();
     bool result = send_impl(source, size);
+#ifdef POLY_LINK_EDGE_PROBE
+    // Sample the pad-mux output DURING the transmission: send_impl returns once the
+    // bytes are pushed to the TX FIFO; the PIO SM is still clocking them out (43 us
+    // per byte), so the 120 us OUTTOPAD window overlaps the actual wire activity.
+    probe_sample_txpad();
+#endif
     enter_rx_state();
 
     return result;
@@ -347,6 +389,9 @@ inline bool serial_transport_receive_blocking(uint8_t* destination, const size_t
 }
 
 static inline void pio_tx_init(pin_t tx_pin) {
+#ifdef POLY_LINK_EDGE_PROBE
+    g_probe_tx_pin = tx_pin;   // role-resolved (master swaps: TX=GP4; slave: TX=GP5)
+#endif
     uint pio_idx = pio_get_index(pio);
     uint offset  = pio_add_program(pio, &uart_tx_program);
 

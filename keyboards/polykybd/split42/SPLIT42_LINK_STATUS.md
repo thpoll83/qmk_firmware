@@ -627,6 +627,30 @@ replug" doubt. Then mark the working orientation on plug + housings.
 3. Redesign items: hardware repo `SPLIT42_REDESIGN_NOTES.md` (link copper, I2C0
    header, missing J18 socket at SW_K_18, permanent LTR-559, right-board design).
 
+## ROW 19 — A/B/A + FULL 4-COMBINATION WALK: SEALED (2026-07-17 eve)
+
+**Test (user):** verified the flip result reversibly (A/B/A), then walked the plug
+orientation at **both** ends. Result: **exactly ONE of the four plug-orientation
+combinations links up**; the other three are dead.
+
+**Status: ROOT CAUSE SEALED.** 1-of-4 is the exact signature of the B-row
+receptacle pads floating at **both** cable ends — i.e. U26's flow-through bridge is
+broken on **both** boards in the pair (and, given all five boards behave alike, most
+plausibly U26 is unpopulated or systematically badly soldered across the batch —
+check visually). Every alternative left standing after rows 1–17 predicted either
+0-of-4 (dead transport regardless of orientation) or 4-of-4 (orientation-immune);
+only the copper finding predicts 1-of-4.
+
+The investigation's hardware question is closed. Remaining work:
+1. **Fix the five left boards** (U26 reflow/populate, or bodge `USB2.8->6` +
+   `USB2.5->7`, per board) — until then, keep the marked working orientation.
+2. **Firmware stopgap re-test** (orientation held fixed-good): default branch minus
+   `wait_ms(400)`, then minus `SPLIT_POINTING_ENABLE`, one removal per build — the
+   bisects that justified them ran through the orientation coin-flip.
+3. **CLAUDE.md corrections** once (2) has results — the "marginal link / dead
+   RX-IRQ / boot-timing race" narrative is likely orientation artifacts end to end.
+4. Next-rev copper fixes: hardware repo `SPLIT42_REDESIGN_NOTES.md`.
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

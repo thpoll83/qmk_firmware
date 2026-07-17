@@ -534,6 +534,25 @@ unloaded open), slave always powered.
 *(rendered from the .kicad_pcb files: COM-net copper around U26 + the link receptacle;
 red = copper islands that reach the MCU only through U26's internal flow-through metal)*
 
+### Gerber verification (the FABBED files — ground truth incl. pours)
+
+Rendered from **`production/PolyCorne_Split42_L_1.0.zip`** (the actual fab package of
+the boards in hand), all 4 copper layers, gerbv:
+
+![split42-left fabbed gerbers, 4 copper layers](split42_left_gerber_4layers.png)
+
+- **B.Cu** shows the tell directly: **four** data stubs run from the receptacle
+  contact row into U26's pad columns, but only **two** lines leave U26's other side
+  toward the RP2040. Pads 6/7 (A6/A7) are copper-continuous because their in- and
+  out-traces meet ON the same U26 pad (a pad is board copper — chip or no chip);
+  pads 5/8 (B7/B6) land on one U26 pad while the continuation exits a *different*
+  pad — bridged only by the chip's internal metal. 4-in/2-out is the defect, visible
+  to the naked eye.
+- **In1.Cu / In2.Cu / F.Cu**: no copper at the orphaned pads' positions (ghost
+  markers) — no via rescue on any layer, pours don't touch them (clearance).
+⇒ The fabbed boards match the layout finding exactly. This is what's physically on
+all v1.0 left boards.
+
 ### Confirmation protocol (10 seconds, no flashing)
 1. Any firmware on both halves: **flip the link plug 180° at the LEFT half.** Link
    alive in exactly one orientation = CONFIRMED.

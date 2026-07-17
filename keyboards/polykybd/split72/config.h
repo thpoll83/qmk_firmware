@@ -110,9 +110,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // _ADDLANG1, _EMJ) are served straight from the compiled keymap in flash by
 // poly_keycode_at()/keymap_key_to_keycode() in keymap.c, so they can't be remapped and
 // always reflect the flashed firmware (no keymap reset, no stale layout). QMK requires
-// DYNAMIC_KEYMAP_LAYER_COUNT >= the number of compiled layers, so it stays 13 even
-// though only 0..8 are actually dynamic.
-#define DYNAMIC_KEYMAP_LAYER_COUNT 13
+// DYNAMIC_KEYMAP_LAYER_COUNT >= the number of compiled layers, so it stays 14 even
+// though only 0..8 are actually dynamic. (13 base layers + the _CODEX demo layer.)
+#define DYNAMIC_KEYMAP_LAYER_COUNT 14
 
 // Pin the dynamic-keymap / POLY custom-config base to a FIXED EEPROM address so that
 // growing EECONFIG_USER_DATA_SIZE (e.g. adding MRU/feature data) does NOT relocate the

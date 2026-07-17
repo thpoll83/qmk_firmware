@@ -16,4 +16,8 @@ enum kb_layers {
     _SL,
     _LL,
     _ADDLANG1,
-    _EMJ };
+    _EMJ,
+    // One-shot "Codex-style" macropad demo layer (split72 only). Forced active at
+    // boot in keyboard_post_init_user(); the twelve cluster keys carry display-only
+    // KC_CDX_* keycodes, every other key is KC_TRNS so the base legends still show.
+    _CODEX };

@@ -297,6 +297,25 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,      ESLOT(25),      ESLOT(26),      ESLOT(27),      ESLOT(28),      ESLOT(29),      ESLOT(30),      KC_NO,
         ESLOT(31),  ESLOT(32),      ESLOT(33),      ESLOT(34),      ESLOT(35),      ESLOT(36),      ESLOT(37),      KC_NO,
         EMRU(6),    EMRU(7),        EMRU(8),                        EMRU(9),        EMRU(10),       EMRU(11),       KC_EMJ_CLEAR
+        ),
+    // One-shot "Codex-style" macropad photo layer. Forced active at boot in
+    // keyboard_post_init_user() (split72). The top-left block carries the twelve
+    // display-only KC_CDX_* keys; every other key is KC_TRNS and falls through to
+    // the active base layer, so the rest of the board keeps its normal legends.
+    //   row 0 (number row) cols 1..6 : Agent 1..6   (number + live state word)
+    //   row 1 (QWERTY row) cols 1..6 : accept reject branch voice reason workflow
+    [_CODEX] = LAYOUT_left_right_stacked(
+        KC_TRNS,    KC_CDX_A1,  KC_CDX_A2,  KC_CDX_A3,  KC_CDX_A4,  KC_CDX_A5,  KC_CDX_A6,
+        KC_TRNS,    KC_CDX_ACCEPT, KC_CDX_REJECT, KC_CDX_BRANCH, KC_CDX_VOICE, KC_CDX_REASON, KC_CDX_FLOW,
+        KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,
+        KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,
+        KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,                KC_TRNS,    KC_TRNS,    KC_TRNS,
+
+                    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,
+                    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,
+        KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,
+        KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS,
+        KC_TRNS,    KC_TRNS,    KC_TRNS,                KC_TRNS,    KC_TRNS,    KC_TRNS,    KC_TRNS
         )
 };
 
@@ -363,5 +382,6 @@ const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [10] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
     [11] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
     [12] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_CODEX] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
 };
 

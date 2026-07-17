@@ -216,6 +216,32 @@ bool rgb_matrix_indicators_kb(void) {
         }
         return false;
     }
+#if defined(KEYBOARD_polykybd_split72)
+    // Codex-style demo layer: paint the twelve cluster LEDs with the agent-status
+    // palette (mirrors render_codex_key's state order) so the photo shows the
+    // colour cue on top of the on-screen state words. Runs on each half; the
+    // cluster LED indices (0..12) are all on the LEFT half, so on the right half
+    // those set_color calls are no-ops and only the dim wash applies. Everything
+    // else is knocked down to a dim wash so the status colours read cleanly.
+    if (layer_state_is(_CODEX)) {
+        rgb_matrix_set_color_all(6, 6, 8);
+        // Agents A1..A6 -> LED index 5..0 (matrix row0 cols1..6).
+        rgb_matrix_set_color(5, 130, 130, 130);   // A1 idle  = white
+        rgb_matrix_set_color(4,  30,  90, 220);   // A2 think = blue
+        rgb_matrix_set_color(3,  30,  90, 220);   // A3 think = blue
+        rgb_matrix_set_color(2,  30, 200,  80);   // A4 done  = green
+        rgb_matrix_set_color(1,  30, 200,  80);   // A5 done  = green
+        rgb_matrix_set_color(0, 220,  40,  30);   // A6 error = red
+        // Actions accept/reject/branch/voice/reason/flow -> LED 12..7 (row1 cols1..6).
+        rgb_matrix_set_color(12,  30, 200,  80);  // accept = green
+        rgb_matrix_set_color(11, 220,  40,  30);  // reject = red
+        rgb_matrix_set_color(10,   0, 120, 150);  // branch = cyan
+        rgb_matrix_set_color(9,    0, 120, 150);  // voice
+        rgb_matrix_set_color(8,    0, 120, 150);  // reason
+        rgb_matrix_set_color(7,    0, 120, 150);  // flow
+        return false;
+    }
+#endif
     // Doom sound->RGB cue (doom_mode.c): while game mode runs, the matrix is
     // the game's "speaker" — yellow fire flash, blue world sounds, red base
     // as health degrades. False = it painted this frame. Inline pass-through
@@ -2214,6 +2240,47 @@ static void draw_legend_cx(const uint32_t* text, int8_t y) {
     kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, left, y, text, KDISP_CY_DEFAULT);
 }
 
+// ---- Codex-style macropad demo keys (split72 _CODEX photo layer) --------------
+// A one-shot marketing render: the six agent keys show "A<n>" over a live-looking
+// state word in the small 10px mid font (both lines horizontally centred, like the
+// KC_EDEN legend), and the six action keys show a single centred icon glyph. The
+// icons live in the external-flash font pack (they render on a keyboard that has the
+// pack flashed; without it the renderer falls back to '!'). Called from
+// update_displays(); assumes the scratch buffer is already cleared.
+static void draw_codex_line_mid(const uint32_t* text, int8_t y) {
+    int8_t lo = 0, hi = 0;
+    kdisp_gfx_text_bounds(mid_fonts, 1, text, &lo, &hi);
+    const int8_t left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - (hi - lo + 1)) / 2 - lo);
+    kdisp_write_gfx_text(mid_fonts, 1, left, y, text);
+}
+
+static void render_codex_key(uint16_t keycode) {
+    if (keycode >= KC_CDX_A1 && keycode <= KC_CDX_A6) {
+        const uint8_t n = (uint8_t)(keycode - KC_CDX_A1);   // agent index 0..5
+        // States shown left→right as a little pipeline; the RGB block in
+        // rgb_matrix_indicators_kb() uses the SAME order/colours.
+        static const uint32_t* const status[6] = {
+            U"idle", U"think", U"think", U"done", U"done", U"error"
+        };
+        const uint32_t label[3] = { U'A', (uint32_t)(U'1' + n), 0 };
+        draw_codex_line_mid(label,     17);   // top line: A1..A6
+        draw_codex_line_mid(status[n], 32);   // bottom line: state word
+        return;
+    }
+    uint32_t cp = 0;
+    switch (keycode) {
+        case KC_CDX_ACCEPT: cp = 0x2714;  break;   // ✔ heavy check
+        case KC_CDX_REJECT: cp = 0x2716;  break;   // ✖ heavy multiplication X
+        case KC_CDX_BRANCH: cp = 0x1F500; break;   // 🔀 branch / shuffle threads
+        case KC_CDX_VOICE:  cp = 0x1F3A4; break;   // 🎤 voice input
+        case KC_CDX_REASON: cp = 0x1F39B; break;   // 🎛 reasoning-level dial (encoder)
+        case KC_CDX_FLOW:   cp = 0x1F504; break;   // 🔄 switch workflow (joystick)
+        default: return;
+    }
+    const uint32_t glyph[2] = { cp, 0 };
+    draw_legend_cx(glyph, 23);   // single icon, horizontally centred
+}
+
 void update_displays(enum refresh_mode mode) {
     // Doom easter egg: while game mode owns the keycaps, the blitter is the
     // only writer — a legend re-render here would tear the game frame.
@@ -2399,6 +2466,11 @@ void update_displays(enum refresh_mode mode) {
                             lang_draw_tab_bottom(keycode);
                             render_lang_region_tab(keycode);
                             kdisp_send_buffer();
+                        } else if (keycode >= KC_CDX_FIRST && keycode <= KC_CDX_LAST) {
+                            // Codex-style macropad demo key (split72 _CODEX layer).
+                            kdisp_set_buffer(0x00);
+                            render_codex_key(keycode);
+                            kdisp_send_buffer();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
                         kdisp_set_buffer(0x00);
@@ -2561,6 +2633,12 @@ void kdisp_idle(uint8_t contrast) {
 static uint8_t s_apple_swap_latch = 0;
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+
+    // Codex-style demo keys are display-only: swallow them so a stray press on the
+    // photo layer emits nothing (they occupy real keys like 1..6 / q..t).
+    if (keycode >= KC_CDX_FIRST && keycode <= KC_CDX_LAST) {
+        return false;
+    }
 
     // While the ONE-SHOT startup ("Eden") animation is playing, swallow every key
     // event — no typing is wanted (or needed) during the intro. Keys from both
@@ -3132,6 +3210,15 @@ void keyboard_post_init_user(void) {
     access_local_state()->unicode_mode = get_unicode_input_mode();
     layer_clear();
     layer_on(default_layer);
+#if defined(KEYBOARD_polykybd_split72)
+    // One-shot "Codex-style" macropad photo firmware: bring up the _CODEX demo
+    // layer on top of the base layer at boot. Its twelve cluster keys render the
+    // Codex-style legends; every other key is KC_TRNS and falls through to the
+    // base layer, so the rest of the board keeps its normal legends. Runs on both
+    // halves (each boots the firmware), so the cluster shows regardless of which
+    // half holds USB. Remove this block to return to a normal boot.
+    layer_on(_CODEX);
+#endif
     g_force_layer_resync = true;   // push this boot's default layer to the slave
     g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;  // (re-arm the bounded budget)
 

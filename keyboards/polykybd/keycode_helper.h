@@ -169,11 +169,33 @@ enum my_keycodes {
     // Settings-layer key: replay the one-time startup ("Eden") animation on demand.
     // Appended at the very end (QK_USER range) so no existing keycode is renumbered.
     KC_EDEN,
+
+    // ---- Codex-style macropad DEMO keycodes (split72 _CODEX photo layer) ----
+    // Display-only: they carry a custom keycap legend but have NO process_record
+    // action, so pressing one emits nothing. Rendered by render_codex_key() in
+    // poly_keymap.c (agents = centred number + status word; actions = one icon).
+    // Contiguous block bounded by KC_CDX_FIRST..KC_CDX_LAST; the six agent keys
+    // are the first six so (keycode - KC_CDX_A1) is the agent index 0..5.
+    KC_CDX_A1,        // KC_CDX_FIRST
+    KC_CDX_A2,
+    KC_CDX_A3,
+    KC_CDX_A4,
+    KC_CDX_A5,
+    KC_CDX_A6,
+    KC_CDX_ACCEPT,
+    KC_CDX_REJECT,
+    KC_CDX_BRANCH,
+    KC_CDX_VOICE,
+    KC_CDX_REASON,
+    KC_CDX_FLOW,      // KC_CDX_LAST
 };
+#define KC_CDX_FIRST KC_CDX_A1
+#define KC_CDX_LAST  KC_CDX_FLOW
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_DAUTO < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
+static_assert((int)KC_CDX_LAST <= 0x7FFF, "Codex demo keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

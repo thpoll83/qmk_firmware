@@ -60,6 +60,9 @@
 #include "base/multicore/core1.h"
 #include "base/ltr559.h"
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
+#ifdef POLY_LINK_EDGE_PROBE
+#    include "hardware/structs/iobank0.h"  // INTR raw edge-latch bits for the RX-pin probe
+#endif
 
 // EEPROM boot diagnostics (SPLIT42_LINK_STATUS.md — testing whether a persistent bad
 // EEPROM / wear-leveling state, which survives firmware reflash, is what breaks the
@@ -821,26 +824,25 @@ void housekeeping_task_user(void) {
     //           master gp4>0, slave FAST-blinks => signal arrives; fault is in the
     //                                  slave's RX capture/framing path.
     {
-        static uint32_t s_win_timer    = 0;
         static uint32_t s_rep_timer    = 0;
         static uint32_t s_gp4_edges    = 0;   // RX-pin edges (role-resolved)
         static uint32_t s_slave_fast   = 0;   // timestamp of last fast-blink toggle
         static bool     s_fast_on      = false;
         static uint32_t s_slave_seen_at = 0;  // last report period with GP4 edges (slave)
-        // Window-sample ONLY this role's RX pin (its pad has PAL_RP_PAD_IE, so
-        // gpio_read_pin is valid there): master RX = GP5, slave RX = GP4. The TX
-        // readback comes from the synchronous OUTTOPAD sampler inside
-        // serial_transport_send (serial_vendor.c) — the TX pad has NO input enable,
-        // so a gpio_read_pin readback there is blind by construction (the first
-        // probe's gp4=0 artifact).
-        if (timer_elapsed32(s_win_timer) >= 100) {
-            s_win_timer = timer_read32();
+        // ALWAYS-ON RX edge detection via the IO_BANK0 INTR raw status register:
+        // its EDGE_LOW/EDGE_HIGH bits are hardware STICKY latches that set on any
+        // edge regardless of interrupt enables — no sampling window to miss the
+        // sparse 43 us bursts (the flaw that blinded the v2/v3 window sampler and
+        // v1's TX readback). Polled+cleared every housekeeping pass. Master RX =
+        // GP5, slave RX = GP4.
+        {
             pin_t rxpin = is_keyboard_master() ? GP5 : GP4;
-            bool  last  = gpio_read_pin(rxpin);
-            for (uint32_t i = 0; i < 20000; i++) {   // ~ a few ms tight sampling
-                bool now = gpio_read_pin(rxpin);
-                if (now != last) { s_gp4_edges++; last = now; }   // s_gp4_edges = RX edges (either role)
-            }
+            volatile uint32_t *intr  = &iobank0_hw->intr[rxpin / 8];
+            uint32_t           shift = (uint32_t)(rxpin % 8) * 4u;
+            uint32_t           bits  = (*intr >> shift) & 0xFu;
+            if (bits & 0x4u) s_gp4_edges++;              // EDGE_LOW latched since last pass
+            if (bits & 0x8u) s_gp4_edges++;              // EDGE_HIGH latched since last pass
+            if (bits & 0xCu) *intr = (bits & 0xCu) << shift;   // W1C: re-arm the latches
         }
         if (timer_elapsed32(s_rep_timer) >= 2000) {
             s_rep_timer = timer_read32();
@@ -860,13 +862,13 @@ void housekeeping_task_user(void) {
                 //     OE) + UART-never-crosses at any baud. FIRMWARE/config, fixable.
                 //   out>0, oeok=sends, pin~out => the pin really toggles; loss is
                 //     downstream (ESD/connector/cable) at UART speed — bench next.
-                uprintf("EDGE: out=%lu pin=%lu oeok=%lu/%lu sends (txpin=GP%d) rx_gp5=%lu | fs4=%d ie4=%d fs5=%d ie5=%d\n",
+                uprintf("EDGE: out=%lu pin=%lu oeok=%lu/%lu sends (txpin=GP%d) rx_intr=%lu | fs4=%d ie4=%d fs5=%d ie5=%d\n",
                         (unsigned long)serial_probe_txpad_edges(), (unsigned long)serial_probe_txpin_edges(),
                         (unsigned long)serial_probe_txoe_ok(), (unsigned long)serial_probe_txpad_sends(),
                         (int)serial_probe_tx_pin(), (unsigned long)s_gp4_edges,
                         (int)serial_probe_funcsel(GP4), (int)serial_probe_pad_ie(GP4),
                         (int)serial_probe_funcsel(GP5), (int)serial_probe_pad_ie(GP5));
-            } else if (s_gp4_edges >= 8) {
+            } else if (s_gp4_edges >= 2) {   // >= one full latched edge pair in the period
                 s_slave_seen_at = timer_read32();   // arm fast-blink for the next period
             }
             s_gp4_edges = 0;

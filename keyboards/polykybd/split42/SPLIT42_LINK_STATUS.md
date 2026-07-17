@@ -423,6 +423,42 @@ EDGE: txpad=<edges>/<sends> sends (txpin=GPn) rx_gp5=<n> | fs4= ie4= fs5= ie5=
 link-validated on real split72 hardware. If split72<->split72 FAILS on this build,
 the fault is in the current tree for ALL variants and split42 was never special.
 
+### Row 14 — v3: THE TRANSMITTER IS FULLY EXONERATED AT THE PHYSICAL PIN
+
+Both masters (split42-left AND split72-right, cross-pair):
+```
+EDGE: out=1211 pin=1211 oeok=420/420 sends (txpin=GP4) rx_gp5=0 | fs4=7 ie4=1 fs5=7 ie5=1
+```
+- **`out == pin` EXACTLY** (every mux edge appears on the ACTUAL PIN via the input
+  buffer) and **`oeok = 100 % of sends`** (pad driven). The TX pin physically swings a
+  clean full UART waveform at 230400 on both halves. Mux correct, OE asserted, pin
+  moving: the entire transmit side — SM, mux, OE, pad driver, pin — is **exonerated**.
+- Perfect out==pin also implies the pad node is essentially unloaded (a short/heavy
+  load downstream of the 22 Ω series R would attenuate/distort and drop edges).
+- Baud parity re-verified in-tree: both variants `SELECT_SOFT_SERIAL_SPEED 1`
+  (230400); the Jul-12 `e1d3fdbb` lowering WAS properly reverted.
+
+⚠️ **Remaining gap: the slave's "dark" was still not trustworthy in v2/v3** — the
+slave-side window sampler has the same statistical blindness as v1's TX readback
+(60 ms listening per 2 s vs 43 us bursts every 500 ms ≈ ~0 catch probability). What
+IS reliable: the framed-byte latch (sticky RXSTALL/FIFO + SlaveThread counter) never
+fired ⇒ no *framed bytes* at the slave. Raw *edges* at the slave: unknown until v4.
+
+### Row 15 pending — v4: hardware sticky edge-latch (IO_BANK0 INTR)
+
+v4 replaces the RX window sampler with the **IO_BANK0 INTR raw EDGE_LOW/EDGE_HIGH
+bits — hardware latches that set on ANY edge, always-on, regardless of interrupt
+enables** — polled+cleared every housekeeping pass. No window to miss. The EDGE line
+now reports `rx_intr=<n>` (latched edge events on this role's RX pin); the slave
+fast-blinks (~3 Hz) on any latched edge in a 2 s period.
+- master `pin>0` (proven) + slave `rx_intr`/blink **>0** ⇒ edges DO arrive but never
+  frame ⇒ the fault is in the slave's PIO RX capture — firmware territory again.
+- master `pin>0` + slave dark with v4 ⇒ edges truly die between the pads — and with
+  DC crossing (bit-flip), physics demands a frequency-selective element in the
+  passive span (ESD arrays are the prime candidate) ⇒ bench, with the Jul-12 scope
+  procedure. **Re-run the Jul-12 DC loopback in the CURRENT state first** to confirm
+  DC still crosses today.
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

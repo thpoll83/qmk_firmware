@@ -668,6 +668,36 @@ subsystem (`POINTING_DEVICE_ENABLE`/`custom` driver in rules.mk + the Cirque/
 `SPLIT_POINTING_ENABLE` block in config.h). If it also passes, the default branch
 gets both removals as clean commits and the CLAUDE.md narrative is corrected.
 
+## ROW 21 — STOPGAP RE-TEST 2/2 FAILS: the pointing dependency is REAL (2026-07-17 eve)
+
+**Build:** `d44c2c08` = `700080fc` (no delay) + the whole pointing subsystem removed
+(`POINTING_DEVICE_ENABLE`/driver out of rules.mk; Cirque + `SPLIT_POINTING_ENABLE`
+block out of config.h). Link-cable orientation unchanged from the working row-20
+session. **Result (user): stopped working.**
+
+**This is the first pointing data point taken WITHOUT the orientation coin-flip —
+and it confirms the dependency is genuine**, not an orientation artifact (unlike the
+delay, which row 20 cleared). With the same cable, same orientation, same base
+commit: pointing-on works, pointing-off fails. The copper defect and the firmware
+dependency are two SEPARATE, real problems that were confounded all along:
+- Hardware: the orientation coin-flip (rows 17-19) — explains works↔dead flips on
+  IDENTICAL firmware across replugs.
+- Firmware: split42 (still) needs something `SPLIT_POINTING_ENABLE` provides —
+  explains the config bisects (which compared different FIRMWARE, now reproduced
+  with the hardware variable controlled).
+
+**Matrix so far (orientation held fixed-good):**
+| delay | pointing | result | row |
+|---|---|---|---|
+| off | on | WORKS | 20 |
+| off | off | FAILS | 21 |
+| on | off | ? | ← next discriminator (`delay-on/pointing-off`) |
+| on | on | (default branch, works) | 18 |
+
+The `on/off` cell separates "needs the pointing feature specifically" from "needs
+either one" (both historical failures of pointing-off configs had the delay present
+— but those runs went through the coin-flip, so they don't count).
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

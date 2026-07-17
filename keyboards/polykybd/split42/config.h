@@ -31,18 +31,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_COLS+(col))
 
-/* split42 ships as two LEFT boards (no right board was ever fabbed). A left board
-   used as the RIGHT half sits mirrored across the vertical axis: its physical
-   columns run the opposite way and its thumb cluster is at matrix cols 3-5, while
-   the right-half keymap expects thumbs at cols 0-2. POLY_SPLIT42_MIRROR_RIGHT
-   reverses the right half's columns (c -> MATRIX_COLS-1-c) for BOTH the matrix
-   scan (so every key — thumbs included — registers) and the per-key display (so
-   legends/invert stay on the physically-correct OLED). On by default; build with
-   -DPOLY_SPLIT42_NO_MIRROR_RIGHT (e.g. once real right boards exist) to disable. */
-#ifndef POLY_SPLIT42_NO_MIRROR_RIGHT
-#  define POLY_SPLIT42_MIRROR_RIGHT
-#endif
-
 
 /* Shift registers select the active keycap display. split42 has 3 (24 outputs,
    21 keycap displays per side) vs split72's 5. Nets SR_DATA/SR_CLOCK/SR_LATCH. */

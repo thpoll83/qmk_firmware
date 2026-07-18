@@ -226,19 +226,19 @@ bool rgb_matrix_indicators_kb(void) {
     if (layer_state_is(_CODEX)) {
         rgb_matrix_set_color_all(0, 0, 0);        // every non-cluster key OFF, so the cluster stands out
         // Agents A1..A6 -> LED index 5..0 (matrix row0 cols1..6).
-        rgb_matrix_set_color(5,  20,  20,  20);   // A1 idle  = white, kept very dim (idle = low activity)
-        rgb_matrix_set_color(4,  30,  90, 220);   // A2 think = blue
-        rgb_matrix_set_color(3,  30,  90, 220);   // A3 think = blue
+        rgb_matrix_set_color(5,   5,   5,   5);   // A1 idle  = white, very dim (idle = low activity)
+        rgb_matrix_set_color(4,   0,  20, 255);   // A2 think = pure blue
+        rgb_matrix_set_color(3,   0,  20, 255);   // A3 think = pure blue
         rgb_matrix_set_color(2,  30, 200,  80);   // A4 done  = green
         rgb_matrix_set_color(1,  30, 200,  80);   // A5 done  = green
-        rgb_matrix_set_color(0, 220,  40,  30);   // A6 error = red
+        rgb_matrix_set_color(0, 255,   0,   0);   // A6 error = pure red
         // Actions accept/reject/branch/voice/reason/flow -> LED 12..7 (row1 cols1..6).
         rgb_matrix_set_color(12,  30, 200,  80);  // accept = green
-        rgb_matrix_set_color(11, 220,  40,  30);  // reject = red
-        rgb_matrix_set_color(10,   0, 120, 150);  // branch = cyan
-        rgb_matrix_set_color(9,    0, 120, 150);  // voice
-        rgb_matrix_set_color(8,    0, 120, 150);  // reason
-        rgb_matrix_set_color(7,    0, 120, 150);  // flow
+        rgb_matrix_set_color(11, 255,   0,   0);  // reject = pure red
+        rgb_matrix_set_color(10,   0,   5,   5);  // branch = cyan, very dim
+        rgb_matrix_set_color(9,    0,   5,   5);  // voice  = cyan, very dim
+        rgb_matrix_set_color(8,    0,   5,   5);  // reason = cyan, very dim
+        rgb_matrix_set_color(7,    0,   5,   5);  // flow   = cyan, very dim
         return false;
     }
 #endif

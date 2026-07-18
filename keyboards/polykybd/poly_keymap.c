@@ -650,8 +650,9 @@ typedef struct {
     uint32_t first_ms;            // uptime of the FIRST corruption (0 while clean)
     uint8_t  bad;                 // 0 = pristine, 1 = corrupted at least once
     uint8_t  changes;             // distinct corrupt values seen (saturates at 255)
-    uint8_t  snap[CANARY_LEN];    // latest corrupt bytes
+    uint8_t  snap[8];             // latest corrupt bytes (first CANARY_LEN valid)
 } canary_report_t;
+_Static_assert(CANARY_LEN <= 8, "canary snap holds at most 8 bytes");
 
 static bool            s_canary_armed = false;
 static canary_report_t s_canary       = {0};

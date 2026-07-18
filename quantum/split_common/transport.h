@@ -122,10 +122,11 @@ typedef struct _split_slave_pointing_sync_t {
 // link (see keyboards/polykybd/split42/SPLIT42_LINK_STATUS.md rows 20-24);
 // the suspected latent writer it guards against is still being hunted.
 #    include "report.h"
+// SIZE DISCRIMINATOR (investigation build I3, SPLIT42_LINK_STATUS.md row-24
+// hunt): pad shrunk 8 -> 4 bytes to measure the writer's reach past the
+// preceding member. Works -> reach <= 4 bytes; fails -> reach 5..8 bytes.
 typedef struct _split_slave_pointing_pad_t {
-    uint8_t        checksum;
-    report_mouse_t report;
-    uint16_t       cpi;
+    uint8_t bytes[4];
 } split_slave_pointing_pad_t;
 #endif // defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
 

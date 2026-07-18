@@ -224,9 +224,9 @@ bool rgb_matrix_indicators_kb(void) {
     // those set_color calls are no-ops and only the dim wash applies. Everything
     // else is knocked down to a dim wash so the status colours read cleanly.
     if (layer_state_is(_CODEX)) {
-        rgb_matrix_set_color_all(6, 6, 8);
+        rgb_matrix_set_color_all(0, 0, 0);        // every non-cluster key OFF, so the cluster stands out
         // Agents A1..A6 -> LED index 5..0 (matrix row0 cols1..6).
-        rgb_matrix_set_color(5, 130, 130, 130);   // A1 idle  = white
+        rgb_matrix_set_color(5,  20,  20,  20);   // A1 idle  = white, kept very dim (idle = low activity)
         rgb_matrix_set_color(4,  30,  90, 220);   // A2 think = blue
         rgb_matrix_set_color(3,  30,  90, 220);   // A3 think = blue
         rgb_matrix_set_color(2,  30, 200,  80);   // A4 done  = green

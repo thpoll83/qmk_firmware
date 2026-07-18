@@ -60,3 +60,7 @@ DYNAMIC_KEYMAP_ENABLE = yes
 # The latent writer it guards against is still being hunted; do not remove
 # without re-running the row-24 test.
 OPT_DEFS += -DPOLY_SPLIT_SHMEM_RPC_GUARD
+
+# INVESTIGATION BUILD (canary probe — SPLIT42_LINK_STATUS.md row-24 hunt):
+# pattern-fill the RPC-guard pad and watch it for corruption on both halves.
+OPT_DEFS += -DPOLY_RPC_GUARD_CANARY

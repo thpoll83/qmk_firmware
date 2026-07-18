@@ -621,13 +621,78 @@ void poly_prepare_for_flash(void) {
 // versioning); the handler just bounds every copy by out_len.
 enum slave_data_kind {
     SLAVE_DATA_SENSOR = 0,  // ltr559_sync_t: {avg lux, proximity}
-    // SLAVE_DATA_xxx = 1, ...  // future slave-side data reuses this slot
+    SLAVE_DATA_CANARY = 1,  // canary_report_t: RPC-guard-pad canary state (POLY_RPC_GUARD_CANARY)
+    // SLAVE_DATA_xxx = 2, ...  // future slave-side data reuses this slot
 };
 
 typedef struct {
     uint16_t lux;   // 5 s-average lux
     uint16_t prox;  // latest raw proximity (0..2047)
 } ltr559_sync_t;
+
+#ifdef POLY_RPC_GUARD_CANARY
+// ---------------------------------------------------------------------------
+// RPC-guard-pad CANARY (SPLIT42_LINK_STATUS.md row 24 hunt): the pad
+// (`split_shmem->poly_pointing_pad`, POLY_SPLIT_SHMEM_RPC_GUARD) is empirically
+// load-bearing but nothing legitimately writes it — so fill it with a known
+// pattern at post-init and watch for corruption. A corrupted canary catches the
+// suspected latent writer red-handed; the corrupt BYTES identify it. Runs on
+// BOTH halves (each checks its own local shmem copy); the master additionally
+// pulls the slave's state over SLAVE_DATA_CANARY and reports both on the HID
+// console every 5 s.
+// ---------------------------------------------------------------------------
+#include "transport.h"   // split_shmem + split_slave_pointing_pad_t
+
+#define CANARY_PATTERN 0xA5
+#define CANARY_LEN     sizeof(split_slave_pointing_pad_t)
+
+typedef struct {
+    uint32_t first_ms;            // uptime of the FIRST corruption (0 while clean)
+    uint8_t  bad;                 // 0 = pristine, 1 = corrupted at least once
+    uint8_t  changes;             // distinct corrupt values seen (saturates at 255)
+    uint8_t  snap[CANARY_LEN];    // latest corrupt bytes
+} canary_report_t;
+
+static bool            s_canary_armed = false;
+static canary_report_t s_canary       = {0};
+
+static void canary_arm(void) {
+    memset((void*)&split_shmem->poly_pointing_pad, CANARY_PATTERN, CANARY_LEN);
+    s_canary_armed = true;
+}
+
+static void canary_check(void) {
+    if (!s_canary_armed) return;
+    const uint8_t* p     = (const uint8_t*)&split_shmem->poly_pointing_pad;
+    bool           clean = true;
+    for (size_t i = 0; i < CANARY_LEN; ++i) {
+        if (p[i] != CANARY_PATTERN) { clean = false; break; }
+    }
+    if (clean) return;
+    if (!s_canary.bad) {
+        s_canary.bad      = 1;
+        s_canary.first_ms = timer_read32();
+        s_canary.changes  = 1;
+        memcpy(s_canary.snap, p, CANARY_LEN);
+    } else if (memcmp(s_canary.snap, p, CANARY_LEN) != 0) {
+        memcpy(s_canary.snap, p, CANARY_LEN);
+        if (s_canary.changes < 255) s_canary.changes++;
+    }
+}
+
+static void canary_print(const char* side, const canary_report_t* r, bool valid) {
+    if (!valid) {
+        uprintf("CANARY %s: no-reply\n", side);
+    } else if (!r->bad) {
+        uprintf("CANARY %s: OK\n", side);
+    } else {
+        uprintf("CANARY %s: BAD first=%lums changes=%u [%02X %02X %02X %02X %02X %02X %02X %02X]\n",
+                side, (unsigned long)r->first_ms, r->changes,
+                r->snap[0], r->snap[1], r->snap[2], r->snap[3],
+                r->snap[4], r->snap[5], r->snap[6], r->snap[7]);
+    }
+}
+#endif // POLY_RPC_GUARD_CANARY
 
 // Slave side: answer the master's pull for the requested `kind`. Registered on
 // both halves; only ever runs on the slave (the master initiates the exec).
@@ -641,6 +706,15 @@ static void user_sync_slave_data_handler(uint8_t in_len, const void* in_data, ui
             }
             break;
         }
+#ifdef POLY_RPC_GUARD_CANARY
+        case SLAVE_DATA_CANARY: {
+            canary_check();   // freshen right before replying
+            if (out_len >= sizeof(canary_report_t)) {
+                memcpy(out_data, &s_canary, sizeof(canary_report_t));
+            }
+            break;
+        }
+#endif
         default:
             break;  // unknown kind: leave the reply buffer as-is
     }
@@ -796,6 +870,24 @@ void housekeeping_task_user(void) {
 #endif
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
+
+#ifdef POLY_RPC_GUARD_CANARY
+    // RPC-guard-pad canary: every pass check this half's pad; the master also
+    // pulls the slave's state and reports both every 5 s (see canary block above).
+    canary_check();
+    if (is_keyboard_master()) {
+        static uint32_t s_canary_report_timer = 0;
+        if (timer_elapsed32(s_canary_report_timer) >= 5000) {
+            s_canary_report_timer = timer_read32();
+            canary_print("M", &s_canary, true);
+            uint8_t         kind = SLAVE_DATA_CANARY;
+            canary_report_t sr;
+            memset(&sr, 0, sizeof(sr));
+            bool ok = transaction_rpc_exec(USER_SYNC_SLAVE_DATA, sizeof(kind), &kind, sizeof(sr), &sr);
+            canary_print("S", &sr, ok);
+        }
+    }
+#endif
 
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
@@ -3138,6 +3230,10 @@ void keyboard_post_init_user(void) {
     //set these values, they will never change
     set_com_state(is_keyboard_master() ? USB_HOST : BRIDGE);
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
+
+#ifdef POLY_RPC_GUARD_CANARY
+    canary_arm();   // pattern-fill the RPC-guard pad; housekeeping watches it
+#endif
 
     emit_boot_banner();   // one-shot at boot; housekeeping re-emits for a late console
 

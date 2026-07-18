@@ -837,6 +837,69 @@ had the pointing member; DC-loopback-passes-while-UART-fails = different inserti
 the v3/v4 probes' clean TX into silence = transmitter fine, path open at the
 flipped pads.
 
+## PHASE 2 — PREPARED WRITER-HUNT BUILDS (2026-07-17, awaiting hardware time)
+
+Three builds, each on its own branch, all cut from the merged working config
+(PR #155 tip `8545ce41`). Together they answer: *who writes into the guard
+region, from where, and how far?* Any subset of results advances the hunt;
+even a dead link still yields data (the master's canary line prints regardless).
+
+**Ground rules for every test:** keep the link cable in the MARKED orientation.
+Attach `qmk console` before/right after plugging in and save the full log.
+Flash order: the keyboard runs the PR build (link up) → PolyHost flash+apply
+works for I1. After a build whose link is DOWN, PolyHost can't reach the slave
+— recover/flash via `.uf2` on both halves (or master-PolyHost + slave-BOOTSEL).
+Recommended order: **I1 (long observation) → I3 (quick) → I2 (quick)**, back to
+the PR build afterwards.
+
+| id | branch / commit | change vs PR build | `rpc_info` offset (dead=41, PR=49) |
+|---|---|---|---|
+| I1 | `claude/split42-canary-probe` `fc467fca` | canary only: pad 0xA5-filled at post-init, checked every housekeeping pass on BOTH halves, master reports M+S every 5 s (`SLAVE_DATA_CANARY` on the existing generic RPC) | 49 (unchanged) |
+| I2 | `claude/split42-pad-after-rpc` `f31ea258` | I1 + pad moved AFTER the RPC region | 41 (dead build's) |
+| I3 | `claude/split42-pad-4bytes` `4677f5c4` | I1 + pad shrunk to 4 bytes (still before RPC) | 45 (DWARF-verified; total struct size stays 0xc8 via tail alignment — the offsets are what shifted) |
+
+**Console line format** (every 5 s on the master):
+`CANARY M: OK` / `CANARY M: BAD first=<ms> changes=<n> [8-byte hex]` and the
+same for `S:` (slave, pulled over the link; `S: no-reply` when the link is
+down). `snap[i]` maps to shmem offset `41+i`. The pad spans offsets 41..48
+(I1/I2-tail) or 41..44 (I3).
+
+### How to run I1 (the observation build — give it time)
+Expected: link WORKS. Let it sit ≥10 min on the console, then exercise real
+traffic: type on both halves, hold modifiers, switch apps so the host pushes
+overlays/MRU, let it go through one idle fade cycle, wake it. The interesting
+output is whether/when a `CANARY … BAD` line appears and what the hex says.
+
+### Interpretation — single builds
+
+| I1 observation | meaning |
+|---|---|
+| `M: OK` + `S: OK` forever, incl. under overlay/typing/idle load | Nothing touches the pad directly → the "overflow INTO the pad" theory weakens; the pad's effect is positional/size — I2/I3 decide between those. |
+| `BAD` on either half | **Writer caught.** Note WHICH half, `first=` (boot window <5000 ms vs steady-state; correlate with what you were doing), and the bytes: `00`s → a memset/zeroing overrun; plausible live values → a struct copy; only the FIRST pad bytes corrupt → overflow out of the member before offset 41; only the LAST → underflow from the `rpc_info` side; `changes` growing → a periodic writer (per-sync), static → one-shot (init path). |
+| link DEAD in I1 | Unexpected (canary is one memset + reads) — itself a clue; record + revert to the PR build. |
+
+| I2 result (rpc offsets back at DEAD values, size unchanged) | meaning |
+|---|---|
+| WORKS | RPC offsets do NOT matter → the requirement is total size / a trailing guard → suspicion shifts to something overrunning past the END of `shared_memory` (prime suspects: RPC payloads at exactly the 72-byte buffer size — `doom_mirror` is exactly `RPC_M2S_BUFFER_SIZE`; `fw_staging` 64/68 B — any off-by-N there runs past the struct). The trailing canary likely shows the culprit bytes. |
+| DEAD | The PRE-RPC position is essential → an overflow out of a member BEFORE the RPC region (smatrix/encoders/sync_timer/layers/rgb_matrix_sync/wpm/oled-state). Combined with I1's hexdump the writer is bracketed. |
+
+| I3 result (4-byte pad before RPC) | meaning |
+|---|---|
+| WORKS | The guard's needed reach is ≤ 4 bytes — a small (e.g. uint32-sized) overrun right before offset 45. |
+| DEAD | Reach is 5..8 bytes — a full pointing-sync/mouse-report-sized write (8-byte memcpy shape). |
+
+### Interpretation — combined outcomes (quick reference)
+
+| I1 canary | I2 | I3 | conclusion / next step |
+|---|---|---|---|
+| BAD | any | any | Writer identified by bytes+timing — go straight at the code that produces those bytes; I2/I3 refine position/reach. |
+| OK | works | any | Past-the-end overrun → audit the 72-byte RPC payload paths (`doom_mirror`, `fw_staging` chunk copy, any `transaction_rpc_exec` with size == buffer). |
+| OK | dead | works | ≤4-byte overflow immediately before the RPC region (bytes 41-44) → audit the writers of the members just before offset 41 (rgb_matrix_sync / wpm / oled-state serializers). |
+| OK | dead | dead | 5..8-byte reach before the RPC region → audit for an 8-byte copy targeting the pointing slot (stale pointing-offset assumption somewhere?). |
+| OK | works | works | Contradiction with row 21 (guardless failed) → re-verify orientation was held, then re-run the row-21 build as a control before concluding anything. |
+
+Results go into this table as new rows (25+), one boot per row, as always.
+
 ## Rule for this doc
 - Add a row for **every** real boot, pass or fail, with the verbatim banner + USB side.
 - Never delete rows. Never conclude from one boot — look for the ratio / the pattern.

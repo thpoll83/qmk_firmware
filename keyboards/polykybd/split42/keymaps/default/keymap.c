@@ -53,16 +53,19 @@
 #endif
 
 const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    /* Base layer 0 — Qwerty (clean Corne: ; on home row, , . / on bottom row) */
+    /* Base layer 0 — Qwerty, faithful Corne outer columns + thumbs:
+       left outer Tab / Ctrl / Shift, right pinky ' and Esc; thumbs
+       GUI / MO(_FL0) / Space (left) and Enter / MO(_UL) / RAlt (right).
+       Corne has no LANG on base — language-layer access lives on _FL0. */
     [_L0] = POLY_LAYOUT(
-        KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
-        MO(_FL0),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
+        KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
+        KC_LCTL, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
-        KC_LCTL, KC_SPC,  KC_DEL,
+        KC_LGUI, MO(_FL0),KC_SPC,
         KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSPC,
-        KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_ENTER,
-        KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,
-        KC_LANG, KC_BSPC, KC_LEFT
+        KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,
+        KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_ESC,
+        KC_ENT,  MO(_UL), KC_RALT
     ),
     /* Base layer 1 — Qwerty Staggered (split72 "QWERTY!": ANSI \ at home pinky,
        Enter on the thumb since the grid pinky holds \) */
@@ -115,7 +118,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_FL0] = POLY_LAYOUT(
         OSL(_UL),KC_1,    KC_2,    KC_3,    KC_4,    KC_5,
         _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
-        KC_CAPS, _______, _______, _______, _______, _______,
+        KC_CAPS, KC_LANG, _______, _______, _______, KC_DEL,
         _______, _______, TO(_UL),
         KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_BSPC,
         KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  _______,
@@ -127,7 +130,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_FL1] = POLY_LAYOUT(
         OSL(_UL),KC_1,    KC_2,    KC_3,    KC_4,    KC_5,
         _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
-        KC_CAPS, _______, _______, _______, _______, _______,
+        KC_CAPS, KC_LANG, _______, _______, _______, KC_DEL,
         _______, _______, TO(_UL),
         KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_BSPC,
         KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  _______,

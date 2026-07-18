@@ -222,12 +222,6 @@ typedef struct _split_shared_memory_t {
 
 #if defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
     split_slave_pointing_sync_t pointing;
-#elif defined(POLY_SPLIT_SHMEM_RPC_GUARD)
-    // PolyKybd RPC-guard pad: same size/alignment/position as `pointing` above,
-    // so rpc_info + the RPC buffers land at the same offsets as in a
-    // SPLIT_POINTING build. Never read or written by any code (a future canary
-    // instrument for the writer hunt — SPLIT42_LINK_STATUS.md row 24).
-    split_slave_pointing_pad_t poly_pointing_pad;
 #endif // defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
 
 #if defined(SPLIT_WATCHDOG_ENABLE)
@@ -247,6 +241,16 @@ typedef struct _split_shared_memory_t {
     uint8_t         rpc_m2s_buffer[RPC_M2S_BUFFER_SIZE];
     uint8_t         rpc_s2m_buffer[RPC_S2M_BUFFER_SIZE];
 #endif // defined(SPLIT_TRANSACTION_RPC)
+
+#if defined(POLY_SPLIT_SHMEM_RPC_GUARD) && !(defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE))
+    // POSITION DISCRIMINATOR (investigation build I2, SPLIT42_LINK_STATUS.md row-24
+    // hunt): the RPC-guard pad moved AFTER the RPC region. Struct size unchanged
+    // vs the working PR build, but rpc_info/the RPC buffers are back at the DEAD
+    // build's offsets. Works -> total size / past-the-end matters, not the RPC
+    // offsets; fails -> the pre-RPC position is essential (overflow from an
+    // earlier member). Canary-watched either way.
+    split_slave_pointing_pad_t poly_pointing_pad;
+#endif
 
 #if defined(OS_DETECTION_ENABLE) && defined(SPLIT_DETECTED_OS_ENABLE)
     os_variant_t detected_os;

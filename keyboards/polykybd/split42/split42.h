@@ -44,12 +44,20 @@ struct display_info {
 //                          the second-half (row-3) scan, then shifts across.
 //   POLY_SPLASH_*        — the right-half boot splash (128x32 status OLED, 2 rows).
 //
-// ⚠️ HARDWARE-VERIFY (bench): update_displays() assumes MATRIX_COLS==8 (one full
-// shift register per matrix row) — true on split72, NOT on split42 (6 cols per
-// 8-bit register). POLY_DISP_ROW_3 (the thumb-row scan seed) and the key_display[]
-// map in split42.c therefore need confirming against the physical shift-register
-// wiring. This only affects keycap-OLED rendering, not the matrix scan / typing /
-// split link. Value below is a reasoned starting point, to be checked on hardware.
+// split42's 6-column matrix occupies only the low 6 bits of each 8-bit shift
+// register (the 2 high bits carry the thumb OLEDs), so the split72-style scan
+// (one 0-bit walked one shift per column) under-shifts by 2 per row and mis-aligns
+// every row below row 0. POLY_DISP_SELECT_BY_TABLE switches the shared render/idle
+// scans (poly_keymap.c) to select each key straight from key_display[] instead — the
+// SAME table keypress-invert uses — so render and invert can never drift and the
+// only place physical-wiring knowledge lives is that one table. Consequently
+// POLY_DISP_ROW_0/_3 are unused for split42 (the seed is a no-op in table mode);
+// they are kept only to satisfy the shared declarations.
+//
+// ⚠️ HARDWARE-VERIFY (bench): the THUMB entries in key_display[] (split42.c) are still
+// a best guess — press each thumb, note which OLED inverts, and correct that one
+// table. The letter rows are confirmed correct.
+#define POLY_DISP_SELECT_BY_TABLE 1
 #define POLY_DISP_ROW_0    BITMASK1(0)
 #define POLY_DISP_ROW_3    BITMASK3(2)
 #define POLY_SPLASH_R1     U"SPLIT"

@@ -31,6 +31,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_COLS+(col))
 
+/* split42 currently ships as two LEFT boards (no right board was ever fabbed). A
+   left board used as the RIGHT half sits physically mirrored across the vertical
+   axis, so its right-half keycaps read/type reversed. POLY_SPLIT42_MIRROR_RIGHT
+   reverses the right half's per-row columns in the COMPILED keymap (see POLY_LAYOUT
+   in keymaps/default/keymap.c), so a left-board-as-right reads correctly. This is a
+   pure compile-time switch — keyboard.json is untouched and there is no runtime cost.
+   Comment it out for a real right board.
+   ⚠️ The firmware runs the DYNAMIC (VIA) keymap from EEPROM, which flashing does NOT
+   overwrite. After flashing a change to this switch you MUST reset the keyboard
+   (clear EEPROM / dynamic keymap, e.g. EE_CLR) so the compiled keymap re-seeds it. */
+#define POLY_SPLIT42_MIRROR_RIGHT
+
 
 /* Shift registers select the active keycap display. split42 has 3 (24 outputs,
    21 keycap displays per side) vs split72's 5. Nets SR_DATA/SR_CLOCK/SR_LATCH. */

@@ -43,6 +43,20 @@ void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
     digits_to_u32_string(buffer, buffer_len, value, 10);
 }
 
+// 16-bit decimal, no leading zeros (0 renders as "0"). digits_to_u32_string above is
+// uint8_t-only; the hue-in-degrees readout needs three digits up to 359.
+void num16_to_u32_string(char* buffer, uint8_t buffer_len, uint16_t value) {
+    uint32_t* out = (uint32_t*)buffer;
+    uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
+    uint8_t   i   = 0;
+    uint16_t  div = 10000;
+    while (div > 1 && value < div) div /= 10;
+    for (; div > 0; div /= 10) {
+        if (i < cap) out[i++] = U'0' + (uint32_t)((value / div) % 10);
+    }
+    if (i < cap) out[i] = 0;
+}
+
 // Widen an ASCII C string into the 32-bit codepoint string the kdisp text pipeline
 // expects (kdisp_write_gfx_text takes const uint32_t*). NUL-terminated, never
 // overruns `buffer_len`. Used for the font-pack bundle name on the flash screen.
@@ -122,18 +136,34 @@ void oled_fw_update_progress_bar(int8_t top_y, int8_t bottom_y, uint8_t pct) {
     if (fill) kdisp_fill_rect(0, top_y, fill, height);
 }
 
-// Draw `pct` (0..100) as digits RIGHT-ALIGNED so the number's right edge ends a
-// couple px before `pct_sign_x` — the fixed x where the caller then draws the
-// "%" sign. The number grows leftward as it gains digits, so a 2- or 3-digit
-// value no longer overruns the "%" (the old left-anchored draw overwrote it).
-void oled_fw_update_percent(const GFXfont *const *font, int8_t pct_sign_x, int8_t y, uint8_t pct) {
-    uint32_t buf[6];
-    num_to_u32_string((char*) buf, sizeof(buf), pct);
+// Draw `text` so its rightmost lit pixel lands on `right_x`. A variable-width number
+// then grows leftward instead of running into whatever is anchored to its right, which
+// is what fixed-position numbers on the status screen keep getting wrong.
+void oled_draw_text_right(const GFXfont *const *font, int8_t right_x, int8_t y, const uint32_t *text) {
     int8_t lo = 0, hi = 0;
-    kdisp_gfx_text_bounds(font, 1, buf, &lo, &hi);   // pixel extents at draw-origin 0
-    int8_t x = (int8_t)(pct_sign_x - 2 - hi);        // right edge ~2 px before the "%"
+    kdisp_gfx_text_bounds(font, 1, text, &lo, &hi);   // pixel extents at draw-origin 0
+    int8_t x = (int8_t)(right_x - hi);
     if (x < 0) x = 0;
-    kdisp_write_gfx_text(font, 1, x, y, buf);
+    kdisp_write_gfx_text(font, 1, x, y, text);
+}
+
+// Draw `value` right-aligned so it ends on `right_x`.
+void oled_draw_num_right(const GFXfont *const *font, int8_t right_x, int8_t y, uint8_t value) {
+    uint32_t buf[6];
+    num_to_u32_string((char*) buf, sizeof(buf), value);
+    oled_draw_text_right(font, right_x, y, buf);
+}
+
+void oled_draw_num16_right(const GFXfont *const *font, int8_t right_x, int8_t y, uint16_t value) {
+    uint32_t buf[8];
+    num16_to_u32_string((char*) buf, sizeof(buf), value);
+    oled_draw_text_right(font, right_x, y, buf);
+}
+
+// Draw `pct` (0..100) as digits ending a couple px before `pct_sign_x` — the fixed x
+// where the caller then draws the "%" sign.
+void oled_fw_update_percent(const GFXfont *const *font, int8_t pct_sign_x, int8_t y, uint8_t pct) {
+    oled_draw_num_right(font, (int8_t)(pct_sign_x - 2), y, pct);
 }
 
 // Shared 0..100 progress of the in-flight flash (current bundle's bytes).

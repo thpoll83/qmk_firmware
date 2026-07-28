@@ -92,3 +92,24 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
     }
 }
 
+// Sector boundaries are the usual colour-wheel names in DEGREES (hue byte scaled to
+// 0..359), so they stay readable if the underlying 0..255 encoding ever changes.
+// Below ~10% saturation the hue is not perceptible, so it reports "White" — showing
+// "Green" for what the user sees as white would be worse than showing nothing.
+const uint32_t* get_hue_name(uint8_t hue, uint8_t sat) {
+    if (sat < 26) return U"White";
+    const uint16_t deg = (uint16_t)(((uint16_t)hue * 360u) / 255u);
+    if (deg <  15) return U"Red";
+    if (deg <  45) return U"Orange";
+    if (deg <  70) return U"Yellow";
+    if (deg < 100) return U"Lime";
+    if (deg < 165) return U"Green";
+    if (deg < 195) return U"Cyan";
+    if (deg < 240) return U"Azure";
+    if (deg < 270) return U"Blue";
+    if (deg < 300) return U"Violet";
+    if (deg < 330) return U"Magenta";
+    if (deg < 345) return U"Pink";
+    return U"Red";   // wraps back past 345 deg
+}
+

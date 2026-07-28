@@ -88,6 +88,25 @@ static const uint8_t lang_globe_bitmap[] PROGMEM = {
 #define GLOBE_W 13
 #define GLOBE_H 13
 
+// RGB panel markers. The status font is ASCII 0x20..0x7e only, so neither ">>" as a
+// single glyph nor a degree sign exists in it — both are cheaper as bitmaps than as
+// a font-set lookup through g_all_fonts (which would also baseline-align to fonts[0]).
+static const uint8_t speed_chevron_bitmap[] PROGMEM = {  // 7x7 ">>" fast-forward
+    0x90, 0x48, 0x24, 0x12, 0x24, 0x48, 0x90,
+};
+#define CHEVRON_W 7
+#define CHEVRON_H 7
+static const uint8_t degree_ring_bitmap[] PROGMEM = {    // 3x3 degree sign
+    0xe0, 0xa0, 0xe0,
+};
+#define DEGREE_W 3
+#define DEGREE_H 3
+
+// v (0..255) as a percentage, rounded to nearest.
+static uint8_t byte_to_percent(uint8_t v) {
+    return (uint8_t)(((uint16_t)v * 100u + 127u) / 255u);
+}
+
 // Gauge geometry. The bars are bottom-aligned one pixel above the row baseline so
 // they sit on the same floor as the digits next to them, and the tallest bar stays
 // clear of the layout name on the row above.
@@ -162,24 +181,40 @@ void oled_update_buffer(void) {
     // now go to a periodic log — see the sensor telemetry heartbeat in
     // housekeeping_task_user() — so the status OLED shows the normal panel.)
     if(is_right_side()) {
-        kdisp_write_gfx_text(smallFont, 1, 0, 29, U"RGB");
-
         if(!rgb_matrix_is_enabled()) {
+            kdisp_write_gfx_text(smallFont, 1, 0, 29, U"RGB");
             kdisp_write_gfx_text(smallFont, 1, 34, 29, U"Off");
         } else {
+            // Effect: index + short name, then the speed after a ">>" marker,
+            // right-aligned so a 3-digit speed grows left instead of into the
+            // lock icons. The "RGB" label is dropped — this panel is only ever
+            // the RGB one, and the row needs the width.
             num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
-            kdisp_write_gfx_text(smallFont, 1, 34, 29, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 58, 29, get_led_matrix_text(rgb_matrix_get_mode()));
-            kdisp_write_gfx_text(smallFont, 1, 0, 44, U"HSV");
-            hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_hue());
-            kdisp_write_gfx_text(smallFont, 1, 38, 44, buffer);
-            hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_sat());
-            kdisp_write_gfx_text(smallFont, 1, 60, 44, buffer);
-            hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_val());
-            kdisp_write_gfx_text(smallFont, 1, 82, 44, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 0, 59, U"Speed");
-            num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_speed());
-            kdisp_write_gfx_text(smallFont, 1, 58, 59, buffer);
+            kdisp_write_gfx_text(smallFont, 1, 0, 29, buffer);
+            kdisp_write_gfx_text(smallFont, 1, 22, 29, get_led_matrix_text(rgb_matrix_get_mode()));
+            kdisp_draw_bitmap(68, 22, speed_chevron_bitmap, CHEVRON_W, CHEVRON_H);
+            oled_draw_num_right(smallFont, 104, 29, rgb_matrix_get_speed());
+
+            // Colour as a NAME + degrees on the wheel, instead of the raw hue byte
+            // in hex: "Cyan 180°" says what the LEDs actually look like, where
+            // "HSV 80" needed the reader to decode it.
+            const uint8_t hue = rgb_matrix_get_hue();
+            const uint8_t sat = rgb_matrix_get_sat();
+            kdisp_write_gfx_text(smallFont, 1, 0, 44, get_hue_name(hue, sat));
+            oled_draw_num16_right(smallFont, 100, 44, (uint16_t)(((uint16_t)hue * 360u) / 255u));
+            kdisp_draw_bitmap(102, 34, degree_ring_bitmap, DEGREE_W, DEGREE_H);
+
+            // Saturation / value as percentages rather than 0x00..0xFF.
+            // The lock icons stop above this row (their glyphs end around y=38), so
+            // only the L/R side marker at x=112 bounds it — the two groups get the
+            // full width, with the numbers right-aligned into their slot so a
+            // 3-digit 100% never crowds its label.
+            kdisp_write_gfx_text(smallFont, 1, 0, 59, U"S");
+            oled_draw_num_right(smallFont, 38, 59, byte_to_percent(sat));
+            kdisp_write_gfx_text(smallFont, 1, 40, 59, U"%");
+            kdisp_write_gfx_text(smallFont, 1, 58, 59, U"V");
+            oled_draw_num_right(smallFont, 94, 59, byte_to_percent(rgb_matrix_get_val()));
+            kdisp_write_gfx_text(smallFont, 1, 96, 59, U"%");
         }
     } else {
         oled_draw_layout_name(smallFont, 0, 29, get_local_layer()->def_layer);
@@ -197,7 +232,7 @@ void oled_update_buffer(void) {
         // Language slot: globe icon in place of the old "L" label.
         // y so the globe's bottom row lands on the digits' bottom row (baseline - 1),
         // not on the baseline itself.
-        kdisp_draw_bitmap(68, 46, lang_globe_bitmap, GLOBE_W, GLOBE_H);
+        kdisp_draw_bitmap(68, 47, lang_globe_bitmap, GLOBE_W, GLOBE_H);
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
         kdisp_write_gfx_text(smallFont, 1, 85, 59, buffer);
     }

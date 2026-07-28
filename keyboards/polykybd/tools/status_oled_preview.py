@@ -102,6 +102,21 @@ def draw(setpix, font, x, y, text):
         x += g['xa']
 
 
+def draw_right(setpix, font, right_x, y, text):
+    """Mirror of oled_draw_text_right: rightmost lit pixel lands on right_x."""
+    f, bm, gl = font
+    x = 0
+    hi = 0
+    for cp in text:
+        if not (f['first'] <= cp <= f['last']):
+            continue
+        g = gl[cp - f['first']]
+        if g['w']:
+            hi = max(hi, x + g['xo'] + g['w'] - 1)
+        x += g['xa']
+    draw(setpix, font, max(0, right_x - hi), y, text)
+
+
 def fill_rect(setpix, x, y, w, h):
     """Mirror of kdisp_fill_rect."""
     for px in range(x, x + w):
@@ -117,6 +132,27 @@ GLOBE_BMP = [0x0f, 0x80, 0x38, 0xe0, 0x68, 0xb0, 0x48, 0x90, 0x90, 0x48, 0x90, 0
              0xff, 0xf8, 0x90, 0x48, 0x90, 0x48, 0x48, 0x90, 0x68, 0xb0, 0x38, 0xe0,
              0x0f, 0x80]
 GLOBE_W = GLOBE_H = 13
+CHEVRON_BMP = [0x90, 0x48, 0x24, 0x12, 0x24, 0x48, 0x90]   # 7x7 ">>" speed marker
+CHEVRON_W = CHEVRON_H = 7
+DEGREE_BMP = [0xe0, 0xa0, 0xe0]                            # 3x3 degree sign
+DEGREE_W = DEGREE_H = 3
+
+
+def hue_name(hue, sat):
+    """Mirror of text_helper.c get_hue_name()."""
+    if sat < 26:
+        return 'White'
+    deg = hue * 360 // 255
+    for limit, name in ((15, 'Red'), (45, 'Orange'), (70, 'Yellow'), (100, 'Lime'),
+                        (165, 'Green'), (195, 'Cyan'), (240, 'Azure'), (270, 'Blue'),
+                        (300, 'Violet'), (330, 'Magenta'), (345, 'Pink')):
+        if deg < limit:
+            return name
+    return 'Red'
+
+
+def byte_to_percent(v):
+    return (v * 100 + 127) // 255
 GAUGE_SEGMENTS, GAUGE_BAR_W, GAUGE_PITCH, GAUGE_MIN_H = 10, 4, 6, 3
 FULL_BRIGHT = 50
 
@@ -154,7 +190,7 @@ def draw_bitmap(setpix, data, ox, oy, w=16, h=16):
                 setpix(ox + x, oy + y)
 
 
-def build_panel(side, disp, small, icons, brightness=50):
+def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80, 5)):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
     Returns set of (x,y) pixels."""
@@ -181,12 +217,23 @@ def build_panel(side, disp, small, icons, brightness=50):
         draw(setp, small, 15, ROW3, s(str(brightness)))
         draw_brightness_bars(setp, 40, 43, brightness_to_level(brightness))
         draw(setp, small, 0, ROW4, s('WPM')); draw(setp, small, 44, ROW4, s('0'))
-        draw_bitmap(setp, GLOBE_BMP, 68, 46, GLOBE_W, GLOBE_H)
+        draw_bitmap(setp, GLOBE_BMP, 68, 47, GLOBE_W, GLOBE_H)
         draw(setp, small, 85, ROW4, s('0'))
     else:
-        draw(setp, small, 0, ROW2, s('RGB')); draw(setp, small, 34, ROW2, s('5')); draw(setp, small, 58, ROW2, s('Rnbw'))
-        draw(setp, small, 0, ROW3, s('HSV')); draw(setp, small, 38, ROW3, s('0')); draw(setp, small, 60, ROW3, s('FF')); draw(setp, small, 82, ROW3, s('64'))
-        draw(setp, small, 0, ROW4, s('Speed')); draw(setp, small, 58, ROW4, s('80'))
+        hue, sat, val, speed, mode = rgb
+        draw(setp, small, 0, ROW2, s(str(mode)))
+        draw(setp, small, 22, ROW2, s('Rnbw'))
+        draw_bitmap(setp, CHEVRON_BMP, 68, 22, CHEVRON_W, CHEVRON_H)
+        draw_right(setp, small, 104, ROW2, s(str(speed)))
+        draw(setp, small, 0, ROW3, s(hue_name(hue, sat)))
+        draw_right(setp, small, 100, ROW3, s(str(hue * 360 // 255)))
+        draw_bitmap(setp, DEGREE_BMP, 102, 34, DEGREE_W, DEGREE_H)
+        draw(setp, small, 0, ROW4, s('S'))
+        draw_right(setp, small, 38, ROW4, s(str(byte_to_percent(sat))))
+        draw(setp, small, 40, ROW4, s('%'))
+        draw(setp, small, 58, ROW4, s('V'))
+        draw_right(setp, small, 94, ROW4, s(str(byte_to_percent(val))))
+        draw(setp, small, 96, ROW4, s('%'))
     return pts
 
 

@@ -71,20 +71,22 @@ static const uint8_t brightness_sun_bitmap[] PROGMEM = {
 // centre meridian gives a crosshair and evenly spaced latitudes give a grid
 // (both were rendered and rejected).
 static const uint8_t lang_globe_bitmap[] PROGMEM = {
-    0x1f, 0x00,
-    0x3b, 0x80,
-    0x51, 0x40,
-    0xd1, 0x60,
-    0x91, 0x20,
-    0xff, 0xe0,
-    0x91, 0x20,
-    0xd1, 0x60,
-    0x51, 0x40,
-    0x3b, 0x80,
-    0x1f, 0x00,
+    0x0f, 0x80,
+    0x38, 0xe0,
+    0x68, 0xb0,
+    0x48, 0x90,
+    0x90, 0x48,
+    0x90, 0x48,
+    0xff, 0xf8,
+    0x90, 0x48,
+    0x90, 0x48,
+    0x48, 0x90,
+    0x68, 0xb0,
+    0x38, 0xe0,
+    0x0f, 0x80,
 };
-#define GLOBE_W 11
-#define GLOBE_H 11
+#define GLOBE_W 13
+#define GLOBE_H 13
 
 // Gauge geometry. The bars are bottom-aligned one pixel above the row baseline so
 // they sit on the same floor as the digits next to them, and the tallest bar stays
@@ -193,9 +195,11 @@ void oled_update_buffer(void) {
         kdisp_write_gfx_text(smallFont, 1, 44, 59, buffer);
 
         // Language slot: globe icon in place of the old "L" label.
-        kdisp_draw_bitmap(68, 48, lang_globe_bitmap, GLOBE_W, GLOBE_H);
+        // y so the globe's bottom row lands on the digits' bottom row (baseline - 1),
+        // not on the baseline itself.
+        kdisp_draw_bitmap(68, 46, lang_globe_bitmap, GLOBE_W, GLOBE_H);
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
-        kdisp_write_gfx_text(smallFont, 1, 84, 59, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 85, 59, buffer);
     }
 }
 

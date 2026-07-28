@@ -113,9 +113,10 @@ def fill_rect(setpix, x, y, w, h):
 SUN_BMP = [0x04, 0x00, 0x44, 0x40, 0x20, 0x80, 0x0e, 0x00, 0x1f, 0x00, 0xdf, 0x60,
            0x1f, 0x00, 0x0e, 0x00, 0x20, 0x80, 0x44, 0x40, 0x04, 0x00]
 SUN_W = SUN_H = 11
-GLOBE_BMP = [0x1f, 0x00, 0x3b, 0x80, 0x51, 0x40, 0xd1, 0x60, 0x91, 0x20, 0xff, 0xe0,
-             0x91, 0x20, 0xd1, 0x60, 0x51, 0x40, 0x3b, 0x80, 0x1f, 0x00]
-GLOBE_W = GLOBE_H = 11
+GLOBE_BMP = [0x0f, 0x80, 0x38, 0xe0, 0x68, 0xb0, 0x48, 0x90, 0x90, 0x48, 0x90, 0x48,
+             0xff, 0xf8, 0x90, 0x48, 0x90, 0x48, 0x48, 0x90, 0x68, 0xb0, 0x38, 0xe0,
+             0x0f, 0x80]
+GLOBE_W = GLOBE_H = 13
 GAUGE_SEGMENTS, GAUGE_BAR_W, GAUGE_PITCH, GAUGE_MIN_H = 10, 4, 6, 3
 FULL_BRIGHT = 50
 
@@ -180,8 +181,8 @@ def build_panel(side, disp, small, icons, brightness=50):
         draw(setp, small, 15, ROW3, s(str(brightness)))
         draw_brightness_bars(setp, 40, 43, brightness_to_level(brightness))
         draw(setp, small, 0, ROW4, s('WPM')); draw(setp, small, 44, ROW4, s('0'))
-        draw_bitmap(setp, GLOBE_BMP, 68, 48, GLOBE_W, GLOBE_H)
-        draw(setp, small, 84, ROW4, s('0'))
+        draw_bitmap(setp, GLOBE_BMP, 68, 46, GLOBE_W, GLOBE_H)
+        draw(setp, small, 85, ROW4, s('0'))
     else:
         draw(setp, small, 0, ROW2, s('RGB')); draw(setp, small, 34, ROW2, s('5')); draw(setp, small, 58, ROW2, s('Rnbw'))
         draw(setp, small, 0, ROW3, s('HSV')); draw(setp, small, 38, ROW3, s('0')); draw(setp, small, 60, ROW3, s('FF')); draw(setp, small, 82, ROW3, s('64'))

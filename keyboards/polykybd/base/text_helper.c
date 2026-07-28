@@ -5,90 +5,93 @@
 
 #include QMK_KEYBOARD_H
 
+// Names are the longest form that fits the status OLED's effect field (~82px in the
+// 8pt font at x=22..104) — the row lost its speed readout to the vertical gauge in the
+// right column, so there is finally room for words instead of 4-letter codes.
 const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
     switch(rgb_mode) {
         case RGB_MATRIX_SPLASH:
-            return U"Sp";
+            return U"Splash";
         case RGB_MATRIX_MULTISPLASH:
-            return U"SpMu";
+            return U"MultiSpl";
         case RGB_MATRIX_SOLID_SPLASH:
-            return U"SpSo";
+            return U"SolidSpl";
         case RGB_MATRIX_SOLID_MULTISPLASH:
-            return U"SpSM";
+            return U"SolidMulti";
         case RGB_MATRIX_RAINBOW_MOVING_CHEVRON:
-            return U"Rnbw";
+            return U"Rainbow";
         case RGB_MATRIX_BREATHING:
-            return U"Brth";
+            return U"Breathing";
         case RGB_MATRIX_SOLID_REACTIVE_SIMPLE:
-            return U"Smpl";
+            return U"Simple";
         case RGB_MATRIX_SOLID_REACTIVE_CROSS:
-            return U"Crss";
+            return U"Cross";
         case RGB_MATRIX_SOLID_REACTIVE:
-            return U"Rctv";
+            return U"Reactive";
         case RGB_MATRIX_SOLID_REACTIVE_WIDE:
-            return U"RtWd";
+            return U"ReactWide";
         case RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE:
-            return U"RtMW";
+            return U"MultiWide";
         case RGB_MATRIX_SOLID_REACTIVE_MULTICROSS:
-            return U"RtMC";
+            return U"MultiCross";
         case RGB_MATRIX_SOLID_REACTIVE_MULTINEXUS:
-            return U"RtMN";
+            return U"MultNexus";
         case RGB_MATRIX_SOLID_REACTIVE_NEXUS:
-            return U"RtNe";
+            return U"Nexus";
         case RGB_MATRIX_ALPHAS_MODS:
-            return U"AlpM";
+            return U"AlphaMod";
         case RGB_MATRIX_GRADIENT_UP_DOWN:
-            return U"GrUD";
+            return U"GradUpDn";
         case RGB_MATRIX_GRADIENT_LEFT_RIGHT:
-            return U"GrLR";
+            return U"GradLtRt";
         case RGB_MATRIX_BAND_SAT:
-            return U"BndS";
+            return U"BandSat";
         case RGB_MATRIX_BAND_VAL:
-            return U"BndV";
+            return U"BandVal";
         case RGB_MATRIX_BAND_PINWHEEL_SAT:
-            return U"BPwS";
+            return U"PinwhlSat";
         case RGB_MATRIX_BAND_PINWHEEL_VAL:
-            return U"BPwV";
+            return U"PinwhlVal";
         case RGB_MATRIX_BAND_SPIRAL_SAT:
-            return U"BSpS";
+            return U"SpiralSat";
         case RGB_MATRIX_CYCLE_ALL:
-            return U"All";
+            return U"CycleAll";
         case RGB_MATRIX_CYCLE_LEFT_RIGHT:
-            return U"CyLR";
+            return U"CycleLtRt";
         case RGB_MATRIX_CYCLE_UP_DOWN:
-            return U"CyUD";
+            return U"CycleUpDn";
         case RGB_MATRIX_CYCLE_OUT_IN:
-            return U"CyOI";
+            return U"CycOutIn";
         case RGB_MATRIX_CYCLE_OUT_IN_DUAL:
-            return U"CyDu";
+            return U"CycleDual";
         case RGB_MATRIX_CYCLE_PINWHEEL:
-            return U"CyPw";
+            return U"CyclePnwl";
         case RGB_MATRIX_CYCLE_SPIRAL:
-            return U"CySp";
+            return U"CycSpiral";
         case RGB_MATRIX_DUAL_BEACON:
-            return U"DuBc";
+            return U"DualBeacn";
         case RGB_MATRIX_RAINBOW_BEACON:
-            return U"RnBc";
+            return U"RnbwBcn";
         case RGB_MATRIX_RAINBOW_PINWHEELS:
-            return U"RnPw";
+            return U"RnbwPnwl";
         case RGB_MATRIX_RAINDROPS:
-            return U"Rndp";
+            return U"Raindrops";
         case RGB_MATRIX_JELLYBEAN_RAINDROPS:
-            return U"JRnp";
+            return U"Jellybean";
         case RGB_MATRIX_HUE_BREATHING:
-            return U"HueB";
+            return U"HueBreath";
         case RGB_MATRIX_HUE_PENDULUM:
-            return U"HueP";
+            return U"HuePend";
         case RGB_MATRIX_HUE_WAVE:
-            return U"HueW";
+            return U"HueWave";
         case RGB_MATRIX_PIXEL_FRACTAL:
-            return U"PxlF";
+            return U"PixFract";
         case RGB_MATRIX_PIXEL_FLOW:
-            return U"PxlF";
+            return U"PixelFlow";
         case RGB_MATRIX_PIXEL_RAIN:
-            return U"PxlR";
+            return U"PixelRain";
         default:
-            return U"Unkn";
+            return U"Unknown";
     }
 }
 

@@ -107,6 +107,29 @@ static uint8_t byte_to_percent(uint8_t v) {
     return (uint8_t)(((uint16_t)v * 100u + 127u) / 255u);
 }
 
+// RGB speed as a vertical gauge in the right column, where the RGB panel used to
+// mirror the Num/Caps lock icons. Same footprint and the same rounded-box styling as
+// those icons (17 wide, r=4) so the column still reads as one family of indicators,
+// with a ">>" cap above it saying what is being measured.
+#define SPEED_BOX_X 109
+#define SPEED_BOX_Y 9
+#define SPEED_BOX_W 17
+#define SPEED_BOX_H 35
+#define SPEED_FILL_X (SPEED_BOX_X + 2)                     // 2px in from the border
+#define SPEED_FILL_W (SPEED_BOX_W - 4)
+#define SPEED_FILL_BOTTOM (SPEED_BOX_Y + SPEED_BOX_H - 3)  // last fillable row
+#define SPEED_FILL_H (SPEED_BOX_H - 4)                     // full-scale column height
+
+static void draw_speed_gauge(uint8_t speed) {
+    kdisp_draw_bitmap(SPEED_BOX_X + (SPEED_BOX_W - CHEVRON_W) / 2, 0,
+                      speed_chevron_bitmap, CHEVRON_W, CHEVRON_H);
+    kdisp_draw_round_rect(SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 4);
+    const uint8_t fill = (uint8_t)(((uint16_t)speed * SPEED_FILL_H + 127u) / 255u);
+    if(fill) {
+        kdisp_fill_rect(SPEED_FILL_X, (int8_t)(SPEED_FILL_BOTTOM - fill + 1), SPEED_FILL_W, (int8_t)fill);
+    }
+}
+
 // Gauge geometry. The bars are bottom-aligned one pixel above the row baseline so
 // they sit on the same floor as the digits next to them, and the tallest bar stays
 // clear of the layout name on the row above.
@@ -163,9 +186,18 @@ void oled_update_buffer(void) {
         kdisp_write_gfx_text(displayFont, 1, 57, 15, U"Link");
     }
 
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
-    if(global_layer->led_state.scroll_lock) {
+    // Lock LEDs live on the LAYOUT panel only. They render from global_layer, so both
+    // halves were drawing the identical Num/Caps/Scroll state — the second copy bought
+    // nothing and cost the RGB panel its entire right column, which now carries the
+    // speed gauge instead.
+    const bool lock_panel = !is_right_side();
+    if(lock_panel) {
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
+    }
+    if(lock_panel && global_layer->led_state.scroll_lock) {
+        // Scroll lock replaces the side marker (and is 26px tall, so it would run
+        // straight through the speed gauge on the other panel).
         kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 112, 54, ARROWS_DOWNSTOP);
     } else if(side_is_undecided()) {
         kdisp_write_gfx_text(smallFont, 1, 114, 56, U"?");
@@ -185,15 +217,13 @@ void oled_update_buffer(void) {
             kdisp_write_gfx_text(smallFont, 1, 0, 29, U"RGB");
             kdisp_write_gfx_text(smallFont, 1, 34, 29, U"Off");
         } else {
-            // Effect: index + short name, then the speed after a ">>" marker,
-            // right-aligned so a 3-digit speed grows left instead of into the
-            // lock icons. The "RGB" label is dropped — this panel is only ever
-            // the RGB one, and the row needs the width.
+            // Effect: index + name. With the speed moved to the gauge in the right
+            // column and the redundant "RGB" label dropped, the name gets x=22..104
+            // — enough for a word instead of a 4-letter code.
             num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
             kdisp_write_gfx_text(smallFont, 1, 0, 29, buffer);
             kdisp_write_gfx_text(smallFont, 1, 22, 29, get_led_matrix_text(rgb_matrix_get_mode()));
-            kdisp_draw_bitmap(68, 22, speed_chevron_bitmap, CHEVRON_W, CHEVRON_H);
-            oled_draw_num_right(smallFont, 104, 29, rgb_matrix_get_speed());
+            draw_speed_gauge(rgb_matrix_get_speed());
 
             // Colour as a NAME + degrees on the wheel, instead of the raw hue byte
             // in hex: "Cyan 180°" says what the LEDs actually look like, where

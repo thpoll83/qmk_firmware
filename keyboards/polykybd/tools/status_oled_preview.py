@@ -124,6 +124,47 @@ def fill_rect(setpix, x, y, w, h):
             setpix(px, py)
 
 
+def round_rect(setpix, x, y, w, h, r):
+    """Mirror of kdisp_draw_round_rect (same midpoint-arc walk, so the corners land
+    on the same pixels as the firmware's)."""
+    if w < 2 or h < 2:
+        return
+    x0, y0, x1, y1 = x, y, x + w - 1, y + h - 1
+    r = max(0, min(r, (w - 1) // 2, (h - 1) // 2))
+    for i in range(x0 + r, x1 - r + 1):
+        setpix(i, y0); setpix(i, y1)
+    for j in range(y0 + r, y1 - r + 1):
+        setpix(x0, j); setpix(x1, j)
+    cxl, cxr, cyt, cyb = x0 + r, x1 - r, y0 + r, y1 - r
+    f, ddF_x, ddF_y, px, py = 1 - r, 1, -2 * r, 0, r
+    while px < py:
+        if f >= 0:
+            py -= 1; ddF_y += 2; f += ddF_y
+        px += 1; ddF_x += 2; f += ddF_x
+        for sx, sy in ((cxr + px, cyt - py), (cxr + py, cyt - px),
+                       (cxl - px, cyt - py), (cxl - py, cyt - px),
+                       (cxr + px, cyb + py), (cxr + py, cyb + px),
+                       (cxl - px, cyb + py), (cxl - py, cyb + px)):
+            setpix(sx, sy)
+
+
+# ---- RGB speed gauge, kept in sync with split72/status_oled.c ----
+SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 109, 9, 17, 35
+SPEED_FILL_X = SPEED_BOX_X + 2
+SPEED_FILL_W = SPEED_BOX_W - 4
+SPEED_FILL_BOTTOM = SPEED_BOX_Y + SPEED_BOX_H - 3
+SPEED_FILL_H = SPEED_BOX_H - 4
+
+
+def draw_speed_gauge(setpix, speed):
+    draw_bitmap(setpix, CHEVRON_BMP, SPEED_BOX_X + (SPEED_BOX_W - CHEVRON_W) // 2, 0,
+                CHEVRON_W, CHEVRON_H)
+    round_rect(setpix, SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 4)
+    fill = (speed * SPEED_FILL_H + 127) // 255
+    if fill:
+        fill_rect(setpix, SPEED_FILL_X, SPEED_FILL_BOTTOM - fill + 1, SPEED_FILL_W, fill)
+
+
 # ---- brightness gauge, kept in sync with split72/status_oled.c ----
 SUN_BMP = [0x04, 0x00, 0x44, 0x40, 0x20, 0x80, 0x0e, 0x00, 0x1f, 0x00, 0xdf, 0x60,
            0x1f, 0x00, 0x0e, 0x00, 0x20, 0x80, 0x44, 0x40, 0x04, 0x00]
@@ -190,7 +231,7 @@ def draw_bitmap(setpix, data, ox, oy, w=16, h=16):
                 setpix(ox + x, oy + y)
 
 
-def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80, 5)):
+def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow')):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
     Returns set of (x,y) pixels."""
@@ -205,9 +246,11 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
     else:
         draw_bitmap(setp, LINK_BMP, 38, 0)
         draw(setp, disp, 57, TOP_BASE, s('Link'))
-    draw(setp, icons, 108, 16, [0x8C])                     # NumLock off
-    draw(setp, icons, 108, 38, [0x8E])                     # CapsLock off
+    # Lock LEDs render on the layout panel only (identical state on both halves) —
+    # the RGB panel's right column is the speed gauge now.
     if side == 'L':
+        draw(setp, icons, 108, 16, [0x8C])                 # NumLock off
+        draw(setp, icons, 108, 38, [0x8E])                 # CapsLock off
         draw(setp, small, 114, 56, s('L'))
     else:
         draw(setp, small, 112, 56, s('R'))   # R nudged 2px left of L (see status_oled.c)
@@ -220,11 +263,10 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
         draw_bitmap(setp, GLOBE_BMP, 68, 47, GLOBE_W, GLOBE_H)
         draw(setp, small, 85, ROW4, s('0'))
     else:
-        hue, sat, val, speed, mode = rgb
+        hue, sat, val, speed, mode, name = rgb
         draw(setp, small, 0, ROW2, s(str(mode)))
-        draw(setp, small, 22, ROW2, s('Rnbw'))
-        draw_bitmap(setp, CHEVRON_BMP, 68, 22, CHEVRON_W, CHEVRON_H)
-        draw_right(setp, small, 104, ROW2, s(str(speed)))
+        draw(setp, small, 22, ROW2, s(name))
+        draw_speed_gauge(setp, speed)
         draw(setp, small, 0, ROW3, s(hue_name(hue, sat)))
         draw_right(setp, small, 100, ROW3, s(str(hue * 360 // 255)))
         draw_bitmap(setp, DEGREE_BMP, 102, 34, DEGREE_W, DEGREE_H)

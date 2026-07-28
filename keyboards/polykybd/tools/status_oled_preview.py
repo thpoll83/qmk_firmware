@@ -286,7 +286,8 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
         draw(setp, small, name_x, ROW2, s(name.rstrip('2')))
         if name.endswith('2'):      # "Splash2" in the fixture -> "Splash" + superscript
             f, _bm, gl = small
-            hi = 0; cx = 0
+            hi = 0
+            cx = 0
             for cp in s(name.rstrip('2')):
                 g = gl[cp - f['first']]
                 if g['w']:
@@ -302,7 +303,8 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
              s('%d%%' % byte_to_percent(sat)))
         vtxt = s('%d%%' % byte_to_percent(val))
         f, _bm, gl = small
-        hi = 0; cx = 0
+        hi = 0
+        cx = 0
         for cp in vtxt:
             g = gl[cp - f['first']]
             if g['w']:

@@ -44,8 +44,8 @@ ROW4 = 59       # WPM+lang / Speed                                  [was 58]
 # RGB-off re-flow: three evenly-spaced rows on both panels instead of four.
 OFF_ROW_B = 37
 OFF_ROW_C = 59
-OFF_GLOBE_Y = 4
-OFF_LANG_BASE = 29
+OFF_GLOBE_Y = 2
+OFF_LANG_BASE = 33
 
 
 # ----------------------------- GFXfont parsing -----------------------------

@@ -223,9 +223,9 @@ static uint8_t brightness_to_level(uint8_t contrast) {
 // everything re-flows onto three evenly-spaced rows (15/37/59) on BOTH panels.
 #define OFF_ROW_B     37
 #define OFF_ROW_C     59
-#define OFF_GLOBE_Y    4   // globe bitmap top, in the column the gauge vacated
-#define OFF_LANG_BASE 29   // tight under the globe: any lower and the number lands on
-                           // the "RGB Off" baseline beside it and reads as its index
+#define OFF_GLOBE_Y    2   // globe bitmap top, in the column the gauge vacated
+#define OFF_LANG_BASE 33   // under the globe, but kept off the "RGB Off" baseline beside
+                           // it (38) -- level with it the number reads as its index
 
 // Brightness: sun icon, the raw value, then the staircase meter. Grouped so the whole
 // row can be placed at either panel's origin without duplicating the offsets.

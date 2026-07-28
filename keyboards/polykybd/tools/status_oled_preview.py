@@ -63,23 +63,10 @@ def _parse_header(text, bitmaps, glyphs, fonts):
                                  first=int(parts[2], 0), last=int(parts[3], 0))
 
 
-def _slice_font(path, sym):
-    """Pull a single font's three declarations out of a huge generated header.
-    emoji_fonts.h is 1.4 MB; regexing all of it to get one 40x40 globe is wasteful."""
-    text = open(path).read()
-    start = text.index('const uint8_t %sBitmaps' % sym)
-    end = text.index('};', text.index('const GFXfont %s' % sym)) + 2
-    return text[start:end]
-
-
 def load_fonts():
     B, G, F = {}, {}, {}
     for rel in ("NotoSans_Regular_Base_11pt.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h"):
         _parse_header(open(os.path.join(FONTDIR, rel)).read(), B, G, F)
-    # The globe (U+1F310) is a resident emoji font (RESIDENT_FONTS), reachable from
-    # the status screen through g_all_fonts like the layer/lock icons.
-    _parse_header(_slice_font(os.path.join(FONTDIR, "generated", "emoji_fonts.h"),
-                              "NotoEmoji_Medium_World_20pt16b"), B, G, F)
 
     def bundle(name):
         f = F[name]
@@ -87,13 +74,12 @@ def load_fonts():
 
     disp = bundle('NotoSans_Regular11pt7b')
     small = bundle('NotoSans_Medium8pt7b')
-    world = bundle('NotoEmoji_Medium_World_20pt16b')
     icons = None
     for n, f in F.items():
         if f['first'] <= 0x80 <= f['last'] and f['gly'] in G:
             icons = (f, B[f['bmp']], G[f['gly']])
             break
-    return disp, small, icons, world
+    return disp, small, icons
 
 
 def draw(setpix, font, x, y, text):
@@ -116,29 +102,6 @@ def draw(setpix, font, x, y, text):
         x += g['xa']
 
 
-def draw_half(setpix, font, x, y, cp):
-    """Mirror of kdisp_draw_glyph_half_at: 2x2-OR downsample, (x, y) is the literal
-    top-left (no baseline align), halved dims rounded UP."""
-    f, bm, gl = font
-    if not (f['first'] <= cp <= f['last']):
-        return
-    g = gl[cp - f['first']]
-    w, h, bo = g['w'], g['h'], g['off']
-    for dy in range((h + 1) // 2):
-        for dx in range((w + 1) // 2):
-            lit = False
-            for oy in range(2):
-                for ox in range(2):
-                    sx, sy = dx * 2 + ox, dy * 2 + oy
-                    if sx >= w or sy >= h:
-                        continue
-                    bit = sy * w + sx
-                    if bm[bo + (bit >> 3)] & (0x80 >> (bit & 7)):
-                        lit = True
-            if lit:
-                setpix(x + dx, y + dy)
-
-
 def fill_rect(setpix, x, y, w, h):
     """Mirror of kdisp_fill_rect."""
     for px in range(x, x + w):
@@ -150,6 +113,9 @@ def fill_rect(setpix, x, y, w, h):
 SUN_BMP = [0x04, 0x00, 0x44, 0x40, 0x20, 0x80, 0x0e, 0x00, 0x1f, 0x00, 0xdf, 0x60,
            0x1f, 0x00, 0x0e, 0x00, 0x20, 0x80, 0x44, 0x40, 0x04, 0x00]
 SUN_W = SUN_H = 11
+GLOBE_BMP = [0x1f, 0x00, 0x3b, 0x80, 0x51, 0x40, 0xd1, 0x60, 0x91, 0x20, 0xff, 0xe0,
+             0x91, 0x20, 0xd1, 0x60, 0x51, 0x40, 0x3b, 0x80, 0x1f, 0x00]
+GLOBE_W = GLOBE_H = 11
 GAUGE_SEGMENTS, GAUGE_BAR_W, GAUGE_PITCH, GAUGE_MIN_H = 10, 4, 6, 3
 FULL_BRIGHT = 50
 
@@ -187,7 +153,7 @@ def draw_bitmap(setpix, data, ox, oy, w=16, h=16):
                 setpix(ox + x, oy + y)
 
 
-def build_panel(side, disp, small, icons, world, brightness=50):
+def build_panel(side, disp, small, icons, brightness=50):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
     Returns set of (x,y) pixels."""
@@ -214,8 +180,8 @@ def build_panel(side, disp, small, icons, world, brightness=50):
         draw(setp, small, 15, ROW3, s(str(brightness)))
         draw_brightness_bars(setp, 40, 43, brightness_to_level(brightness))
         draw(setp, small, 0, ROW4, s('WPM')); draw(setp, small, 44, ROW4, s('0'))
-        draw_half(setp, world, 68, 44, 0x1F310)
-        draw(setp, small, 91, ROW4, s('0'))
+        draw_bitmap(setp, GLOBE_BMP, 68, 48, GLOBE_W, GLOBE_H)
+        draw(setp, small, 84, ROW4, s('0'))
     else:
         draw(setp, small, 0, ROW2, s('RGB')); draw(setp, small, 34, ROW2, s('5')); draw(setp, small, 58, ROW2, s('Rnbw'))
         draw(setp, small, 0, ROW3, s('HSV')); draw(setp, small, 38, ROW3, s('0')); draw(setp, small, 60, ROW3, s('FF')); draw(setp, small, 82, ROW3, s('64'))
@@ -266,9 +232,9 @@ def main():
                     help='keycap brightness 0..50 shown in the gauge (default 50)')
     args = ap.parse_args()
 
-    disp, small, icons, world = load_fonts()
-    L = build_panel('L', disp, small, icons, world, args.brightness)
-    R = build_panel('R', disp, small, icons, world, args.brightness)
+    disp, small, icons = load_fonts()
+    L = build_panel('L', disp, small, icons, args.brightness)
+    R = build_panel('R', disp, small, icons, args.brightness)
 
     if args.diag:
         Li, lc = render_diag(L, 'LEFT (layout)  128x64  |  RED = clipped')

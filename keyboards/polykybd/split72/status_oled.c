@@ -62,6 +62,30 @@ static const uint8_t brightness_sun_bitmap[] PROGMEM = {
 #define SUN_W 11
 #define SUN_H 11
 
+// Language-slot globe (row 4). Hand-drawn rather than the resident U+1F310 emoji:
+// that glyph is 40x40, so even halved by kdisp_draw_glyph_half_at it lands at
+// 20x20 and towers over the 8pt digits beside it (the row only has ~16px of
+// height). At this size a downsample would be mush anyway, so it is line art
+// matched to the sun icon above it: outline circle + equator + two CURVED
+// meridians. The curve is what makes it read as a globe — a single straight
+// centre meridian gives a crosshair and evenly spaced latitudes give a grid
+// (both were rendered and rejected).
+static const uint8_t lang_globe_bitmap[] PROGMEM = {
+    0x1f, 0x00,
+    0x3b, 0x80,
+    0x51, 0x40,
+    0xd1, 0x60,
+    0x91, 0x20,
+    0xff, 0xe0,
+    0x91, 0x20,
+    0xd1, 0x60,
+    0x51, 0x40,
+    0x3b, 0x80,
+    0x1f, 0x00,
+};
+#define GLOBE_W 11
+#define GLOBE_H 11
+
 // Gauge geometry. The bars are bottom-aligned one pixel above the row baseline so
 // they sit on the same floor as the digits next to them, and the tallest bar stays
 // clear of the layout name on the row above.
@@ -168,13 +192,10 @@ void oled_update_buffer(void) {
         num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
         kdisp_write_gfx_text(smallFont, 1, 44, 59, buffer);
 
-        // Language slot: the globe glyph at half size (the pack/resident emoji is
-        // 40x40 — kdisp_draw_glyph_half_at 2x2-ORs it down to 20x20, which keeps the
-        // meridians readable where a plain decimation would drop them). (x, y) is the
-        // literal top-left, so it is placed directly, not off the text baseline.
-        kdisp_draw_glyph_half_at(g_all_fonts, g_all_font_count, 68, 44, 0x1F310);
+        // Language slot: globe icon in place of the old "L" label.
+        kdisp_draw_bitmap(68, 48, lang_globe_bitmap, GLOBE_W, GLOBE_H);
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
-        kdisp_write_gfx_text(smallFont, 1, 91, 59, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 84, 59, buffer);
     }
 }
 

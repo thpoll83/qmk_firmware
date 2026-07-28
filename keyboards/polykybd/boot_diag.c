@@ -1,3 +1,5 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
 // Boot diagnostics — HID-console identification banner + boot-splash progress.
 // Extracted from poly_keymap.c so the keymap file stays focused on keymap logic;
 // both features are self-contained boot instrumentation with no keymap state.

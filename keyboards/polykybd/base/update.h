@@ -7,6 +7,20 @@ enum refresh_mode { START_FIRST_HALF, START_SECOND_HALF, DONE_ALL, ALL_AT_ONCE }
 
 // Records current timestamp for idle timeout tracking and idle display animation.
 // Marks idle tracking active. Global variables: last_update, idle_tracking
+//
+// ⚠️ Call this ONLY for real USER activity on the keyboard — a keypress, a wake
+// (key / proximity / host stop-idle), or a deliberate host command. It is NOT a
+// generic "something changed, redraw" hook; use request_disp_refresh() for that.
+//
+// In particular the overlay-upload completion paths must NOT call it. An overlay
+// push is the HOST reacting to a window switch on the computer, which says nothing
+// about whether the user is at the keyboard — and because the host re-pushes
+// overlays on every focus change, a keyboard attached to a busy machine had its
+// idle countdown restarted indefinitely and never reached the fade. Worse, it is
+// silent: update_performed() does not clear DISP_IDLE, so it never produced a wake
+// log line, it just reset the pulse phase and pushed the TURN_OFF deadline back.
+// It also re-enabled idle_tracking after a deliberate disable_idle_tracking()
+// (turn-off reached / host display-off cmd 24), quietly re-arming STATUS_DISP_ON.
 void update_performed(void);
 
 uint32_t get_last_update(void);

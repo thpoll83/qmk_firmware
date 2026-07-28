@@ -399,6 +399,17 @@ void note_idle_style(uint8_t style) {
     g_idle_style = (style < IDLE_STYLE_COUNT) ? style : IDLE_STYLE_PULSE;
 }
 
+// Console-log name for an idle style. Keep in sync with enum poly_idle_style.
+const char* idle_style_name(uint8_t style) {
+    switch (style) {
+        case IDLE_STYLE_PULSE:  return "pulse";
+        case IDLE_STYLE_JITTER: return "jitter";
+        case IDLE_STYLE_IDDQD:  return "iddqd";
+        case IDLE_STYLE_EDEN:   return "eden";
+        default:                return "?";
+    }
+}
+
 // The active glyph-script override (GLYPH_STD = normal language legends).
 uint8_t get_glyph_script(void) {
     return g_glyph_script;

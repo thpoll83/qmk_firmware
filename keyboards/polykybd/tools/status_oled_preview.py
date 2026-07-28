@@ -173,6 +173,8 @@ GLOBE_BMP = [0x0f, 0x80, 0x38, 0xe0, 0x68, 0xb0, 0x48, 0x90, 0x90, 0x48, 0x90, 0
 GLOBE_W = GLOBE_H = 13
 DEGREE_BMP = [0xe0, 0xa0, 0xe0]                            # 3x3 degree sign
 DEGREE_W = DEGREE_H = 3
+SUPER2_BMP = [0x70, 0x88, 0x10, 0x20, 0x40, 0xf8]          # 5x6 superscript 2
+SUPER2_W, SUPER2_H = 5, 6
 
 
 def hue_name(hue, sat):
@@ -267,7 +269,17 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
     else:
         hue, sat, val, speed, mode, name = rgb
         draw(setp, small, TEXT_X, ROW2, s(str(mode)))
-        draw(setp, small, TEXT_X + 22, ROW2, s(name))
+        name_x = TEXT_X + 22
+        draw(setp, small, name_x, ROW2, s(name.rstrip('2')))
+        if name.endswith('2'):      # "Splash2" in the fixture -> "Splash" + superscript
+            f, bm, gl = small
+            hi = 0; cx = 0
+            for cp in s(name.rstrip('2')):
+                g = gl[cp - f['first']]
+                if g['w']:
+                    hi = max(hi, cx + g['xo'] + g['w'] - 1)
+                cx += g['xa']
+            draw_bitmap(setp, SUPER2_BMP, name_x + hi + 2, 18, SUPER2_W, SUPER2_H)
         draw_speed_gauge(setp, COL_X, speed)
         draw(setp, small, TEXT_X, ROW3, s(hue_name(hue, sat)))
         draw_right(setp, small, TEXT_R - 4, ROW3, s(str(hue * 360 // 255)))

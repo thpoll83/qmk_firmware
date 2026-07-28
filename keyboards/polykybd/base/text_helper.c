@@ -5,15 +5,16 @@
 
 #include QMK_KEYBOARD_H
 
-// Names are the longest form that fits the status OLED's effect field (~82px in the
-// 8pt font at x=22..104) — the row lost its speed readout to the vertical gauge in the
-// right column, so there is finally room for words instead of 4-letter codes.
+// Names are the longest form that fits the status OLED's effect field (~86px in the
+// 8pt font, TEXT_X+22..TEXT_R) — the row lost its speed readout to the vertical gauge
+// in the indicator column, so there is finally room for words instead of 4-letter
+// codes. Measure any new name against that budget; it is clipped, not wrapped.
 const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
     switch(rgb_mode) {
         case RGB_MATRIX_SPLASH:
             return U"Splash";
         case RGB_MATRIX_MULTISPLASH:
-            return U"MultSplash";
+            return U"Splash";
         case RGB_MATRIX_SOLID_SPLASH:
             return U"SolidSpl";
         case RGB_MATRIX_SOLID_MULTISPLASH:
@@ -93,6 +94,13 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         default:
             return U"Unknown";
     }
+}
+
+// MULTISPLASH shares SPLASH's name and is distinguished by a superscript 2 the caller
+// draws after it ("Splash²"). The status OLED's font is ASCII 0x20..0x7e, so the
+// superscript cannot live in the string itself.
+bool led_matrix_text_superscript2(uint8_t rgb_mode) {
+    return rgb_mode == RGB_MATRIX_MULTISPLASH;
 }
 
 // Sector boundaries are the usual colour-wheel names in DEGREES (hue byte scaled to

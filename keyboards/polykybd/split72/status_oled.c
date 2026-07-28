@@ -96,6 +96,11 @@ static const uint8_t degree_ring_bitmap[] PROGMEM = {    // 3x3 degree sign
 };
 #define DEGREE_W 3
 #define DEGREE_H 3
+static const uint8_t superscript2_bitmap[] PROGMEM = {   // 5x6, for "Splash²"
+    0x70, 0x88, 0x10, 0x20, 0x40, 0xf8,
+};
+#define SUPER2_W 5
+#define SUPER2_H 6
 
 // v (0..255) as a percentage, rounded to nearest.
 static uint8_t byte_to_percent(uint8_t v) {
@@ -236,9 +241,19 @@ void oled_update_buffer(void) {
             // Effect: index + name. With the speed moved to the gauge in the column
             // and the redundant "RGB" label dropped, the name gets TEXT_X+22..TEXT_R
             // — enough for a word instead of a 4-letter code.
-            num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
+            const uint8_t mode = rgb_matrix_get_mode();
+            const uint32_t* mode_name = get_led_matrix_text(mode);
+            num_to_u32_string((char*) buffer, sizeof(buffer), mode);
             kdisp_write_gfx_text(smallFont, 1, TEXT_X, 29, buffer);
-            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 22), 29, get_led_matrix_text(rgb_matrix_get_mode()));
+            const int8_t name_x = (int8_t)(TEXT_X + 22);
+            kdisp_write_gfx_text(smallFont, 1, name_x, 29, mode_name);
+            if(led_matrix_text_superscript2(mode)) {
+                // "Splash²" — measure the name so the superscript lands just past it
+                // whatever the font metrics are, raised to the top of the cap height.
+                int8_t lo = 0, hi = 0;
+                kdisp_gfx_text_bounds(smallFont, 1, mode_name, &lo, &hi);
+                kdisp_draw_bitmap((int8_t)(name_x + hi + 2), 18, superscript2_bitmap, SUPER2_W, SUPER2_H);
+            }
             draw_speed_gauge(COL_X, rgb_matrix_get_speed());
 
             // Colour as a NAME + degrees on the wheel, instead of the raw hue byte

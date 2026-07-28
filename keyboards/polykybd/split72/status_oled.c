@@ -42,6 +42,60 @@ static const uint8_t link_status_bitmap[] PROGMEM = {
     0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
+// Keycap-brightness gauge (row 3 of the left/USB panel): an 11x11 sun (disc + 8
+// detached rays) followed by a staircase bar meter. This replaces the old
+// "Dsp*" label + a run of 'l' glyphs, which cost ~40px of label for no
+// information and read as a picket fence rather than a level.
+static const uint8_t brightness_sun_bitmap[] PROGMEM = {
+    0x04, 0x00,
+    0x44, 0x40,
+    0x20, 0x80,
+    0x0e, 0x00,
+    0x1f, 0x00,
+    0xdf, 0x60,
+    0x1f, 0x00,
+    0x0e, 0x00,
+    0x20, 0x80,
+    0x44, 0x40,
+    0x04, 0x00,
+};
+#define SUN_W 11
+#define SUN_H 11
+
+// Gauge geometry. The bars are bottom-aligned one pixel above the row baseline so
+// they sit on the same floor as the digits next to them, and the tallest bar stays
+// clear of the layout name on the row above.
+#define GAUGE_SEGMENTS 10
+#define GAUGE_BAR_W    4
+#define GAUGE_PITCH    6
+#define GAUGE_MIN_H    3   // height of the first (leftmost) bar; each next one is +1
+
+// Draw the staircase meter with `level` of GAUGE_SEGMENTS bars lit. A lit bar is a
+// solid rectangle; an unlit one keeps a 1px foot so the full scale stays visible
+// (an outline would read as "filled" at the short left end, where the outline is
+// the whole bar).
+static void draw_brightness_bars(int8_t x, int8_t bottom_y, uint8_t level) {
+    for (uint8_t i = 0; i < GAUGE_SEGMENTS; ++i) {
+        const int8_t bx = (int8_t)(x + i * GAUGE_PITCH);
+        const int8_t h  = (int8_t)(GAUGE_MIN_H + i);
+        if (i < level) {
+            kdisp_fill_rect(bx, (int8_t)(bottom_y - h + 1), GAUGE_BAR_W, h);
+        } else {
+            kdisp_fill_rect(bx, bottom_y, GAUGE_BAR_W, 1);
+        }
+    }
+}
+
+// contrast (0..FULL_BRIGHT) -> 0..GAUGE_SEGMENTS lit bars, rounded to nearest so a
+// low-but-nonzero brightness still lights one bar (the old contrast/5 truncation
+// showed an empty meter for everything below 5).
+static uint8_t brightness_to_level(uint8_t contrast) {
+    if (contrast > FULL_BRIGHT) contrast = FULL_BRIGHT;
+    uint8_t level = (uint8_t)(((uint16_t)contrast * GAUGE_SEGMENTS + (FULL_BRIGHT / 2)) / FULL_BRIGHT);
+    if (level > GAUGE_SEGMENTS) level = GAUGE_SEGMENTS;
+    return level;
+}
+
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
 void oled_update_buffer(void) {
     uint32_t buffer[32];
@@ -104,24 +158,23 @@ void oled_update_buffer(void) {
     } else {
         oled_draw_layout_name(smallFont, 0, 29, get_local_layer()->def_layer);
         const poly_sync_t* local_state = get_local_state();
-        kdisp_write_gfx_text(smallFont, 1, 0, 44, U"Dsp*");
+        // Brightness: sun icon, the raw value, then the staircase meter.
+        kdisp_draw_bitmap(0, 33, brightness_sun_bitmap, SUN_W, SUN_H);
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->contrast);
-        kdisp_write_gfx_text(smallFont, 1, 42, 44, buffer);
-        uint8_t i=0;
-        for(;i<(local_state->contrast/5);++i) {
-            buffer[i] = 'l';
-        }
-        buffer[i] = 0;
-        buffer[i+1] = 0;
-        kdisp_write_gfx_text(smallFont, 1, 64, 44, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 15, 44, buffer);
+        draw_brightness_bars(40, 43, brightness_to_level(local_state->contrast));
 
         kdisp_write_gfx_text(smallFont, 1, 0, 59, U"WPM");
         num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
         kdisp_write_gfx_text(smallFont, 1, 44, 59, buffer);
 
-        kdisp_write_gfx_text(smallFont, 1, 68, 59, U"L");
+        // Language slot: the globe glyph at half size (the pack/resident emoji is
+        // 40x40 — kdisp_draw_glyph_half_at 2x2-ORs it down to 20x20, which keeps the
+        // meridians readable where a plain decimation would drop them). (x, y) is the
+        // literal top-left, so it is placed directly, not off the text baseline.
+        kdisp_draw_glyph_half_at(g_all_fonts, g_all_font_count, 68, 44, 0x1F310);
         num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
-        kdisp_write_gfx_text(smallFont, 1, 84, 59, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 91, 59, buffer);
     }
 }
 

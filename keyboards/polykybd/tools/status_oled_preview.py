@@ -63,10 +63,23 @@ def _parse_header(text, bitmaps, glyphs, fonts):
                                  first=int(parts[2], 0), last=int(parts[3], 0))
 
 
+def _slice_font(path, sym):
+    """Pull a single font's three declarations out of a huge generated header.
+    emoji_fonts.h is 1.4 MB; regexing all of it to get one 40x40 globe is wasteful."""
+    text = open(path).read()
+    start = text.index('const uint8_t %sBitmaps' % sym)
+    end = text.index('};', text.index('const GFXfont %s' % sym)) + 2
+    return text[start:end]
+
+
 def load_fonts():
     B, G, F = {}, {}, {}
     for rel in ("NotoSans_Regular_Base_11pt.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h"):
         _parse_header(open(os.path.join(FONTDIR, rel)).read(), B, G, F)
+    # The globe (U+1F310) is a resident emoji font (RESIDENT_FONTS), reachable from
+    # the status screen through g_all_fonts like the layer/lock icons.
+    _parse_header(_slice_font(os.path.join(FONTDIR, "generated", "emoji_fonts.h"),
+                              "NotoEmoji_Medium_World_20pt16b"), B, G, F)
 
     def bundle(name):
         f = F[name]
@@ -74,12 +87,13 @@ def load_fonts():
 
     disp = bundle('NotoSans_Regular11pt7b')
     small = bundle('NotoSans_Medium8pt7b')
+    world = bundle('NotoEmoji_Medium_World_20pt16b')
     icons = None
     for n, f in F.items():
         if f['first'] <= 0x80 <= f['last'] and f['gly'] in G:
             icons = (f, B[f['bmp']], G[f['gly']])
             break
-    return disp, small, icons
+    return disp, small, icons, world
 
 
 def draw(setpix, font, x, y, text):
@@ -102,6 +116,58 @@ def draw(setpix, font, x, y, text):
         x += g['xa']
 
 
+def draw_half(setpix, font, x, y, cp):
+    """Mirror of kdisp_draw_glyph_half_at: 2x2-OR downsample, (x, y) is the literal
+    top-left (no baseline align), halved dims rounded UP."""
+    f, bm, gl = font
+    if not (f['first'] <= cp <= f['last']):
+        return
+    g = gl[cp - f['first']]
+    w, h, bo = g['w'], g['h'], g['off']
+    for dy in range((h + 1) // 2):
+        for dx in range((w + 1) // 2):
+            lit = False
+            for oy in range(2):
+                for ox in range(2):
+                    sx, sy = dx * 2 + ox, dy * 2 + oy
+                    if sx >= w or sy >= h:
+                        continue
+                    bit = sy * w + sx
+                    if bm[bo + (bit >> 3)] & (0x80 >> (bit & 7)):
+                        lit = True
+            if lit:
+                setpix(x + dx, y + dy)
+
+
+def fill_rect(setpix, x, y, w, h):
+    """Mirror of kdisp_fill_rect."""
+    for px in range(x, x + w):
+        for py in range(y, y + h):
+            setpix(px, py)
+
+
+# ---- brightness gauge, kept in sync with split72/status_oled.c ----
+SUN_BMP = [0x04, 0x00, 0x44, 0x40, 0x20, 0x80, 0x0e, 0x00, 0x1f, 0x00, 0xdf, 0x60,
+           0x1f, 0x00, 0x0e, 0x00, 0x20, 0x80, 0x44, 0x40, 0x04, 0x00]
+SUN_W = SUN_H = 11
+GAUGE_SEGMENTS, GAUGE_BAR_W, GAUGE_PITCH, GAUGE_MIN_H = 10, 4, 6, 3
+FULL_BRIGHT = 50
+
+
+def brightness_to_level(contrast):
+    contrast = min(contrast, FULL_BRIGHT)
+    return min((contrast * GAUGE_SEGMENTS + FULL_BRIGHT // 2) // FULL_BRIGHT, GAUGE_SEGMENTS)
+
+
+def draw_brightness_bars(setpix, x, bottom_y, level):
+    for i in range(GAUGE_SEGMENTS):
+        bx, h = x + i * GAUGE_PITCH, GAUGE_MIN_H + i
+        if i < level:
+            fill_rect(setpix, bx, bottom_y - h + 1, GAUGE_BAR_W, h)
+        else:
+            fill_rect(setpix, bx, bottom_y, GAUGE_BAR_W, 1)
+
+
 # Top-row role icons (16x16, MSB-first) — mirror of status_oled.c usb_/link_status_bitmap.
 USB_BMP = [0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8,
            0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0]
@@ -121,7 +187,7 @@ def draw_bitmap(setpix, data, ox, oy, w=16, h=16):
                 setpix(ox + x, oy + y)
 
 
-def build_panel(side, disp, small, icons):
+def build_panel(side, disp, small, icons, world, brightness=50):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
     Returns set of (x,y) pixels."""
@@ -144,9 +210,12 @@ def build_panel(side, disp, small, icons):
         draw(setp, small, 112, 56, s('R'))   # R nudged 2px left of L (see status_oled.c)
     if side == 'L':
         draw(setp, small, 0, ROW2, s('Qwerty'))
-        draw(setp, small, 0, ROW3, s('Dsp*')); draw(setp, small, 42, ROW3, s('50')); draw(setp, small, 64, ROW3, s('l' * 10))
+        draw_bitmap(setp, SUN_BMP, 0, 33, SUN_W, SUN_H)
+        draw(setp, small, 15, ROW3, s(str(brightness)))
+        draw_brightness_bars(setp, 40, 43, brightness_to_level(brightness))
         draw(setp, small, 0, ROW4, s('WPM')); draw(setp, small, 44, ROW4, s('0'))
-        draw(setp, small, 68, ROW4, s('L')); draw(setp, small, 84, ROW4, s('0'))
+        draw_half(setp, world, 68, 44, 0x1F310)
+        draw(setp, small, 91, ROW4, s('0'))
     else:
         draw(setp, small, 0, ROW2, s('RGB')); draw(setp, small, 34, ROW2, s('5')); draw(setp, small, 58, ROW2, s('Rnbw'))
         draw(setp, small, 0, ROW3, s('HSV')); draw(setp, small, 38, ROW3, s('0')); draw(setp, small, 60, ROW3, s('FF')); draw(setp, small, 82, ROW3, s('64'))
@@ -193,11 +262,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--diag', action='store_true', help='clipping diagnostic (gutter + red out-of-bounds)')
     ap.add_argument('-o', '--out', help='output PNG (default: /tmp/status_oled[_diag].png)')
+    ap.add_argument('-b', '--brightness', type=int, default=50,
+                    help='keycap brightness 0..50 shown in the gauge (default 50)')
     args = ap.parse_args()
 
-    disp, small, icons = load_fonts()
-    L = build_panel('L', disp, small, icons)
-    R = build_panel('R', disp, small, icons)
+    disp, small, icons, world = load_fonts()
+    L = build_panel('L', disp, small, icons, world, args.brightness)
+    R = build_panel('R', disp, small, icons, world, args.brightness)
 
     if args.diag:
         Li, lc = render_diag(L, 'LEFT (layout)  128x64  |  RED = clipped')

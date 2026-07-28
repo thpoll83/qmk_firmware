@@ -70,7 +70,8 @@ def _parse_header(text, bitmaps, glyphs, fonts):
 
 def load_fonts():
     B, G, F = {}, {}, {}
-    for rel in ("NotoSans_Regular_Base_11pt.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h"):
+    for rel in ("NotoSans_Regular_Base_11pt.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h",
+                "lang_label_font.h"):
         _parse_header(open(os.path.join(FONTDIR, rel)).read(), B, G, F)
 
     def bundle(name):
@@ -79,12 +80,13 @@ def load_fonts():
 
     disp = bundle('NotoSans_Regular11pt7b')
     small = bundle('NotoSans_Medium8pt7b')
+    tiny = bundle('NotoSans_Regular_Tiny_6pt7b')   # language index only (see status_oled.c)
     icons = None
     for n, f in F.items():
         if f['first'] <= 0x80 <= f['last'] and f['gly'] in G:
             icons = (f, B[f['bmp']], G[f['gly']])
             break
-    return disp, small, icons
+    return disp, small, icons, tiny
 
 
 def draw(setpix, font, x, y, text):
@@ -255,11 +257,11 @@ def draw_brightness_row(setp, small, x, base_y, brightness):
     draw_brightness_bars(setp, x + 40, base_y - 1, brightness_to_level(brightness))
 
 
-def draw_lang_column(setp, small, x, lang):
+def draw_lang_column(setp, tiny, x, lang):
     """Mirror of draw_lang_column(): globe over a centred number."""
     draw_bitmap(setp, GLOBE_BMP, x + (COL_W - GLOBE_W) // 2, OFF_GLOBE_Y, GLOBE_W, GLOBE_H)
     txt = s(str(lang))
-    f, _bm, gl = small
+    f, _bm, gl = tiny
     lo, hi, cx = 127, 0, 0
     for cp in txt:
         g = gl[cp - f['first']]
@@ -267,11 +269,12 @@ def draw_lang_column(setp, small, x, lang):
             lo = min(lo, cx + g['xo'])
             hi = max(hi, cx + g['xo'] + g['w'] - 1)
         cx += g['xa']
-    draw(setp, small, x + (COL_W - (hi - lo + 1)) // 2 - lo, OFF_LANG_BASE, txt)
+    nx = x + (COL_W - (hi - lo + 1)) // 2 - lo
+    draw(setp, tiny, max(x, nx), OFF_LANG_BASE, txt)
 
 
-def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'),
-                lang=0):
+def build_panel(side, disp, small, icons, tiny, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'),
+                lang=0, wpm=0):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
     rgb=None models RGB being switched off, which re-flows BOTH panels.
@@ -283,7 +286,7 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
     # text origin differs per panel.
     lock_panel = (side == 'L')
     COL_X  = 108 if lock_panel else 0
-    TEXT_X = 0 if lock_panel else 20
+    TEXT_X = 0 if lock_panel else (20 if rgb_on else 26)
     TEXT_R = 104 if lock_panel else 127
     # top line: layer + role icon + role word
     draw(setp, icons, TEXT_X, TOP_BASE, [0x80])                 # ICON_LAYER
@@ -307,15 +310,15 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
         if rgb_on:
             draw_brightness_row(setp, small, 0, ROW3, brightness)
         draw(setp, small, 0, ROW4, s('WPM'))
-        draw(setp, small, 44, ROW4, s('0'))
+        draw(setp, small, 44, ROW4, s(str(wpm)))
         if rgb_on:
-            draw_bitmap(setp, GLOBE_BMP, 68, 47, GLOBE_W, GLOBE_H)
-            draw(setp, small, 85, ROW4, s(str(lang)))
+            draw_bitmap(setp, GLOBE_BMP, 70, 47, GLOBE_W, GLOBE_H)
+            draw(setp, tiny, 85, ROW4, s(str(lang)))
     elif not rgb_on:
         draw(setp, small, TEXT_X, OFF_ROW_B, s('RGB'))
         draw(setp, small, TEXT_X + 34, OFF_ROW_B, s('Off'))
         draw_brightness_row(setp, small, TEXT_X, OFF_ROW_C, brightness)
-        draw_lang_column(setp, small, COL_X, lang)
+        draw_lang_column(setp, tiny, COL_X, lang)
     else:
         hue, sat, val, speed, mode, name = rgb
         draw(setp, small, TEXT_X, ROW2, s(str(mode)))
@@ -401,14 +404,16 @@ def main():
 
     ap.add_argument('-b', '--brightness', type=brightness_arg, default=FULL_BRIGHT,
                     help='keycap brightness 0..%d shown in the gauge (default %d)' % (FULL_BRIGHT, FULL_BRIGHT))
+    ap.add_argument('--lang', type=int, default=0, help='language index shown (0..159)')
+    ap.add_argument('--wpm', type=int, default=0, help='WPM value shown')
     ap.add_argument('--rgb-off', action='store_true',
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
     args = ap.parse_args()
 
-    disp, small, icons = load_fonts()
+    disp, small, icons, tiny = load_fonts()
     rgb = None if args.rgb_off else (128, 255, 100, 80, 5, 'Rainbow')
-    L = build_panel('L', disp, small, icons, args.brightness, rgb)
-    R = build_panel('R', disp, small, icons, args.brightness, rgb)
+    L = build_panel('L', disp, small, icons, tiny, args.brightness, rgb, args.lang, args.wpm)
+    R = build_panel('R', disp, small, icons, tiny, args.brightness, rgb, args.lang, args.wpm)
 
     if args.diag:
         Li, lc = render_diag(L, 'LEFT (layout)  128x64  |  RED = clipped')

@@ -15,6 +15,11 @@
 // poly_keymap.c's translation unit. Reference it via extern here rather than
 // re-including the header (which would duplicate its PROGMEM tables at link time).
 extern const GFXfont NotoSans_Regular_Mid_10pt7b;
+// _Tiny_ (6px), same ownership caveat. Used ONLY for the language index: there are 160
+// languages, so the index reaches 3 digits, which is 25px in the 8pt status font — wider
+// than the 17px indicator column and enough to overrun the layout panel's right limit
+// into the lock icons. At 6pt "159" is 19px, which fits both slots.
+extern const GFXfont NotoSans_Regular_Tiny_6pt7b;
 #include "../lang/named_glyphs.h"
 #include "../oled_helper.h"
 
@@ -246,7 +251,11 @@ static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang)
     num_to_u32_string((char*) buffer, sizeof(buffer), lang);
     int8_t lo = 0, hi = 0;
     kdisp_gfx_text_bounds(font, 1, buffer, &lo, &hi);
-    kdisp_write_gfx_text(font, 1, (int8_t)(x + (COL_W - (hi - lo + 1)) / 2 - lo), OFF_LANG_BASE, buffer);
+    int8_t nx = (int8_t)(x + (COL_W - (hi - lo + 1)) / 2 - lo);
+    // A 3-digit index is still 2px wider than the column even at 6pt, so centring would
+    // push it off the panel edge. Clamp: it grows into the gap before the text origin.
+    if(nx < x) nx = x;
+    kdisp_write_gfx_text(font, 1, nx, OFF_LANG_BASE, buffer);
 }
 
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
@@ -258,6 +267,7 @@ void oled_update_buffer(void) {
     const poly_layer_t* global_layer = get_global_layer();
     const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
+    const GFXfont* tinyFont[]  = { &NotoSans_Regular_Tiny_6pt7b };   // language index only
 
     // Each half's indicator column sits on its INNER edge, so on an assembled
     // keyboard the two columns face each other across the gap: the layout panel keeps
@@ -271,7 +281,11 @@ void oled_update_buffer(void) {
 
     const bool lock_panel = !is_right_side();
     const int8_t COL_X  = lock_panel ? 108 : 0;    // indicator column (17px wide)
-    const int8_t TEXT_X = lock_panel ?   0 : 20;   // content origin
+    // The RGB panel's text origin sits 6px further right when RGB is off: the language
+    // index that moves into the column is up to 19px wide (3 digits, 160 languages) in a
+    // 17px column, so at the normal origin it ends 1px from "RGB Off" and reads as one
+    // word. The whole panel shifts together, so its rows stay mutually aligned.
+    const int8_t TEXT_X = lock_panel ? 0 : (rgb_on ? 20 : 26);
     const int8_t TEXT_R = lock_panel ? 104 : 127;  // right limit for right-aligned content
 
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, TEXT_X, 15, ICON_LAYER);
@@ -320,7 +334,7 @@ void oled_update_buffer(void) {
             kdisp_write_gfx_text(smallFont, 1, TEXT_X, OFF_ROW_B, U"RGB");
             kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 34), OFF_ROW_B, U"Off");
             draw_brightness_row(smallFont, TEXT_X, OFF_ROW_C, local_state->contrast);
-            draw_lang_column(smallFont, COL_X, local_state->lang);
+            draw_lang_column(tinyFont, COL_X, local_state->lang);
         } else {
             // Effect: index + name. With the speed moved to the gauge in the column
             // and the redundant "RGB" label dropped, the name gets TEXT_X+22..TEXT_R
@@ -383,9 +397,12 @@ void oled_update_buffer(void) {
             // Language slot: globe icon in place of the old "L" label.
             // y so the globe's bottom row lands on the digits' bottom row (baseline - 1),
             // not on the baseline itself.
-            kdisp_draw_bitmap(68, 47, lang_globe_bitmap, GLOBE_W, GLOBE_H);
+            // Globe at 70 (not 68) and the index in the 6pt font: worst case the WPM
+            // value is 3 digits too, so 8pt "255" already reaches x=68. At 6pt the index
+            // ends at 103, inside TEXT_R (104) and clear of the lock column at 108.
+            kdisp_draw_bitmap(70, 47, lang_globe_bitmap, GLOBE_W, GLOBE_H);
             num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
-            kdisp_write_gfx_text(smallFont, 1, 85, 59, buffer);
+            kdisp_write_gfx_text(tinyFont, 1, 85, 59, buffer);
         }
     }
 }

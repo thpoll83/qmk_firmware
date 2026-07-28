@@ -88,14 +88,9 @@ static const uint8_t lang_globe_bitmap[] PROGMEM = {
 #define GLOBE_W 13
 #define GLOBE_H 13
 
-// RGB panel markers. The status font is ASCII 0x20..0x7e only, so neither ">>" as a
-// single glyph nor a degree sign exists in it — both are cheaper as bitmaps than as
-// a font-set lookup through g_all_fonts (which would also baseline-align to fonts[0]).
-static const uint8_t speed_chevron_bitmap[] PROGMEM = {  // 7x7 ">>" fast-forward
-    0x90, 0x48, 0x24, 0x12, 0x24, 0x48, 0x90,
-};
-#define CHEVRON_W 7
-#define CHEVRON_H 7
+// The status font is ASCII 0x20..0x7e only, so the degree sign does not exist in it —
+// cheaper as a bitmap than a font-set lookup through g_all_fonts (which would also
+// baseline-align to fonts[0]).
 static const uint8_t degree_ring_bitmap[] PROGMEM = {    // 3x3 degree sign
     0xe0, 0xa0, 0xe0,
 };
@@ -108,22 +103,22 @@ static uint8_t byte_to_percent(uint8_t v) {
 }
 
 // RGB speed as a vertical gauge in the right column, where the RGB panel used to
-// mirror the Num/Caps lock icons. Same footprint and the same rounded-box styling as
-// those icons (17 wide, r=4) so the column still reads as one family of indicators,
-// with a ">>" cap above it saying what is being measured.
+// mirror the Num/Caps lock icons. It takes their exact footprint — 17 px wide, top
+// aligned with Num Lock, bottom aligned with Caps Lock — and their chrome: a 2px
+// rounded border (two nested round-rects, r=3/2, matching the icon glyphs' own 2px
+// wall and chamfer), filled from the bottom.
 #define SPEED_BOX_X 109
-#define SPEED_BOX_Y 9
+#define SPEED_BOX_Y 0
 #define SPEED_BOX_W 17
-#define SPEED_BOX_H 35
-#define SPEED_FILL_X (SPEED_BOX_X + 2)                     // 2px in from the border
-#define SPEED_FILL_W (SPEED_BOX_W - 4)
-#define SPEED_FILL_BOTTOM (SPEED_BOX_Y + SPEED_BOX_H - 3)  // last fillable row
-#define SPEED_FILL_H (SPEED_BOX_H - 4)                     // full-scale column height
+#define SPEED_BOX_H 39                                     // Num Lock top .. Caps Lock bottom
+#define SPEED_FILL_X (SPEED_BOX_X + 3)                     // 2px border + 1px gap
+#define SPEED_FILL_W (SPEED_BOX_W - 6)
+#define SPEED_FILL_BOTTOM (SPEED_BOX_Y + SPEED_BOX_H - 4)  // last fillable row
+#define SPEED_FILL_H (SPEED_BOX_H - 6)                     // full-scale column height
 
 static void draw_speed_gauge(uint8_t speed) {
-    kdisp_draw_bitmap(SPEED_BOX_X + (SPEED_BOX_W - CHEVRON_W) / 2, 0,
-                      speed_chevron_bitmap, CHEVRON_W, CHEVRON_H);
-    kdisp_draw_round_rect(SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 4);
+    kdisp_draw_round_rect(SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 3);
+    kdisp_draw_round_rect(SPEED_BOX_X + 1, SPEED_BOX_Y + 1, SPEED_BOX_W - 2, SPEED_BOX_H - 2, 2);
     const uint8_t fill = (uint8_t)(((uint16_t)speed * SPEED_FILL_H + 127u) / 255u);
     if(fill) {
         kdisp_fill_rect(SPEED_FILL_X, (int8_t)(SPEED_FILL_BOTTOM - fill + 1), SPEED_FILL_W, (int8_t)fill);

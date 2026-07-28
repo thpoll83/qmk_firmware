@@ -149,17 +149,16 @@ def round_rect(setpix, x, y, w, h, r):
 
 
 # ---- RGB speed gauge, kept in sync with split72/status_oled.c ----
-SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 109, 9, 17, 35
-SPEED_FILL_X = SPEED_BOX_X + 2
-SPEED_FILL_W = SPEED_BOX_W - 4
-SPEED_FILL_BOTTOM = SPEED_BOX_Y + SPEED_BOX_H - 3
-SPEED_FILL_H = SPEED_BOX_H - 4
+SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 109, 0, 17, 39
+SPEED_FILL_X = SPEED_BOX_X + 3
+SPEED_FILL_W = SPEED_BOX_W - 6
+SPEED_FILL_BOTTOM = SPEED_BOX_Y + SPEED_BOX_H - 4
+SPEED_FILL_H = SPEED_BOX_H - 6
 
 
 def draw_speed_gauge(setpix, speed):
-    draw_bitmap(setpix, CHEVRON_BMP, SPEED_BOX_X + (SPEED_BOX_W - CHEVRON_W) // 2, 0,
-                CHEVRON_W, CHEVRON_H)
-    round_rect(setpix, SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 4)
+    round_rect(setpix, SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 3)
+    round_rect(setpix, SPEED_BOX_X + 1, SPEED_BOX_Y + 1, SPEED_BOX_W - 2, SPEED_BOX_H - 2, 2)
     fill = (speed * SPEED_FILL_H + 127) // 255
     if fill:
         fill_rect(setpix, SPEED_FILL_X, SPEED_FILL_BOTTOM - fill + 1, SPEED_FILL_W, fill)
@@ -173,8 +172,6 @@ GLOBE_BMP = [0x0f, 0x80, 0x38, 0xe0, 0x68, 0xb0, 0x48, 0x90, 0x90, 0x48, 0x90, 0
              0xff, 0xf8, 0x90, 0x48, 0x90, 0x48, 0x48, 0x90, 0x68, 0xb0, 0x38, 0xe0,
              0x0f, 0x80]
 GLOBE_W = GLOBE_H = 13
-CHEVRON_BMP = [0x90, 0x48, 0x24, 0x12, 0x24, 0x48, 0x90]   # 7x7 ">>" speed marker
-CHEVRON_W = CHEVRON_H = 7
 DEGREE_BMP = [0xe0, 0xa0, 0xe0]                            # 3x3 degree sign
 DEGREE_W = DEGREE_H = 3
 

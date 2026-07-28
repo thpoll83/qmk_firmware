@@ -162,8 +162,13 @@ static void pct_to_u32_string(char* out, uint8_t out_len, uint8_t pct) {
 // aligned with Num Lock, bottom aligned with Caps Lock — and their chrome: a 2px
 // rounded border (two nested round-rects, r=3/2, matching the icon glyphs' own 2px
 // wall and chamfer), filled from the bottom.
+// Width of the indicator column both panels reserve on their inner edge (lock LEDs
+// on one side, speed gauge on the other). Anything parked in that column centres on
+// it, so it is named separately from the gauge that usually fills it.
+#define COL_W 17
+
 #define SPEED_BOX_Y 0
-#define SPEED_BOX_W 17
+#define SPEED_BOX_W COL_W
 #define SPEED_BOX_H 39                                     // Num Lock top .. Caps Lock bottom
 #define SPEED_FILL_W (SPEED_BOX_W - 6)
 #define SPEED_FILL_BOTTOM (SPEED_BOX_Y + SPEED_BOX_H - 4)  // last fillable row
@@ -212,6 +217,38 @@ static uint8_t brightness_to_level(uint8_t contrast) {
     return level;
 }
 
+// Row baselines. With RGB on both panels run four rows (15/29/44/59). With RGB off
+// the effect / colour / S+V rows and the speed gauge all vanish, leaving the RGB
+// panel almost empty — so the two movable groups below migrate into that space and
+// everything re-flows onto three evenly-spaced rows (15/37/59) on BOTH panels.
+#define OFF_ROW_B     37
+#define OFF_ROW_C     59
+#define OFF_GLOBE_Y    4   // globe bitmap top, in the column the gauge vacated
+#define OFF_LANG_BASE 29   // tight under the globe: any lower and the number lands on
+                           // the "RGB Off" baseline beside it and reads as its index
+
+// Brightness: sun icon, the raw value, then the staircase meter. Grouped so the whole
+// row can be placed at either panel's origin without duplicating the offsets.
+static void draw_brightness_row(const GFXfont* const* font, int8_t x, int8_t base_y, uint8_t contrast) {
+    uint32_t buffer[8];
+    kdisp_draw_bitmap(x, (int8_t)(base_y - 11), brightness_sun_bitmap, SUN_W, SUN_H);
+    num_to_u32_string((char*) buffer, sizeof(buffer), contrast);
+    kdisp_write_gfx_text(font, 1, (int8_t)(x + 15), base_y, buffer);
+    draw_brightness_bars((int8_t)(x + 40), (int8_t)(base_y - 1), brightness_to_level(contrast));
+}
+
+// Language slot stacked vertically for the indicator column: globe above, number
+// centred under it. Centring is measured (not a fixed x) so a 1- vs 2-digit index
+// stays under the globe.
+static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang) {
+    uint32_t buffer[8];
+    kdisp_draw_bitmap((int8_t)(x + (COL_W - GLOBE_W) / 2), OFF_GLOBE_Y, lang_globe_bitmap, GLOBE_W, GLOBE_H);
+    num_to_u32_string((char*) buffer, sizeof(buffer), lang);
+    int8_t lo = 0, hi = 0;
+    kdisp_gfx_text_bounds(font, 1, buffer, &lo, &hi);
+    kdisp_write_gfx_text(font, 1, (int8_t)(x + (COL_W - (hi - lo + 1)) / 2 - lo), OFF_LANG_BASE, buffer);
+}
+
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
 void oled_update_buffer(void) {
     uint32_t buffer[32];
@@ -227,6 +264,11 @@ void oled_update_buffer(void) {
     // its lock LEDs on the right, the RGB panel puts its speed gauge on the left. The
     // text origin follows, which is why every element below is placed relative to
     // TEXT_X / TEXT_R rather than at an absolute x.
+    // RGB_MATRIX_SPLIT syncs the matrix config master->slave, so both halves agree on
+    // this and can re-flow together — the layout panel has to know too, since it gives
+    // up its brightness + language groups when the RGB panel has room for them.
+    const bool rgb_on = rgb_matrix_is_enabled();
+
     const bool lock_panel = !is_right_side();
     const int8_t COL_X  = lock_panel ? 108 : 0;    // indicator column (17px wide)
     const int8_t TEXT_X = lock_panel ?   0 : 20;   // content origin
@@ -270,9 +312,15 @@ void oled_update_buffer(void) {
     // now go to a periodic log — see the sensor telemetry heartbeat in
     // housekeeping_task_user() — so the status OLED shows the normal panel.)
     if(is_right_side()) {
-        if(!rgb_matrix_is_enabled()) {
-            kdisp_write_gfx_text(smallFont, 1, TEXT_X, 29, U"RGB");
-            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 34), 29, U"Off");
+        if(!rgb_on) {
+            // Nothing left to report but the off state, so this panel takes over the
+            // two groups the layout panel can spare: the brightness meter under the
+            // label, and the language slot in the column the gauge vacated.
+            const poly_sync_t* local_state = get_local_state();
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, OFF_ROW_B, U"RGB");
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 34), OFF_ROW_B, U"Off");
+            draw_brightness_row(smallFont, TEXT_X, OFF_ROW_C, local_state->contrast);
+            draw_lang_column(smallFont, COL_X, local_state->lang);
         } else {
             // Effect: index + name. With the speed moved to the gauge in the column
             // and the redundant "RGB" label dropped, the name gets TEXT_X+22..TEXT_R
@@ -319,24 +367,26 @@ void oled_update_buffer(void) {
             kdisp_write_gfx_text(smallFont, 1, val_x, 59, buffer);
         }
     } else {
-        oled_draw_layout_name(smallFont, 0, 29, get_local_layer()->def_layer);
         const poly_sync_t* local_state = get_local_state();
-        // Brightness: sun icon, the raw value, then the staircase meter.
-        kdisp_draw_bitmap(0, 33, brightness_sun_bitmap, SUN_W, SUN_H);
-        num_to_u32_string((char*) buffer, sizeof(buffer), local_state->contrast);
-        kdisp_write_gfx_text(smallFont, 1, 15, 44, buffer);
-        draw_brightness_bars(40, 43, brightness_to_level(local_state->contrast));
+        // With RGB off the brightness and language groups move to the other panel, so
+        // the two rows that remain spread out to match its three-row rhythm.
+        oled_draw_layout_name(smallFont, 0, rgb_on ? 29 : OFF_ROW_B, get_local_layer()->def_layer);
+        if(rgb_on) {
+            draw_brightness_row(smallFont, 0, 44, local_state->contrast);
+        }
 
         kdisp_write_gfx_text(smallFont, 1, 0, 59, U"WPM");
         num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
         kdisp_write_gfx_text(smallFont, 1, 44, 59, buffer);
 
-        // Language slot: globe icon in place of the old "L" label.
-        // y so the globe's bottom row lands on the digits' bottom row (baseline - 1),
-        // not on the baseline itself.
-        kdisp_draw_bitmap(68, 47, lang_globe_bitmap, GLOBE_W, GLOBE_H);
-        num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
-        kdisp_write_gfx_text(smallFont, 1, 85, 59, buffer);
+        if(rgb_on) {
+            // Language slot: globe icon in place of the old "L" label.
+            // y so the globe's bottom row lands on the digits' bottom row (baseline - 1),
+            // not on the baseline itself.
+            kdisp_draw_bitmap(68, 47, lang_globe_bitmap, GLOBE_W, GLOBE_H);
+            num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
+            kdisp_write_gfx_text(smallFont, 1, 85, 59, buffer);
+        }
     }
 }
 

@@ -41,6 +41,11 @@ TOP_BASE = 15   # first text line (layer icon / hex layer / side)  [was 14]
 ROW2 = 29       # layout name / "RGB <mode>"                        [was 30]
 ROW3 = 44       # Dsp brightness / HSV
 ROW4 = 59       # WPM+lang / Speed                                  [was 58]
+# RGB-off re-flow: three evenly-spaced rows on both panels instead of four.
+OFF_ROW_B = 37
+OFF_ROW_C = 59
+OFF_GLOBE_Y = 4
+OFF_LANG_BASE = 29
 
 
 # ----------------------------- GFXfont parsing -----------------------------
@@ -149,7 +154,8 @@ def round_rect(setpix, x, y, w, h, r):
 
 
 # ---- RGB speed gauge, kept in sync with split72/status_oled.c ----
-SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 0, 17, 39
+COL_W = 17          # indicator column both panels reserve on their inner edge
+SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 0, COL_W, 39
 SPEED_FILL_W = SPEED_BOX_W - 6
 SPEED_FILL_BOTTOM = SPEED_BOX_Y + SPEED_BOX_H - 4
 SPEED_FILL_H = SPEED_BOX_H - 6
@@ -242,10 +248,35 @@ def draw_bitmap(setpix, data, ox, oy, w=16, h=16):
                 setpix(ox + x, oy + y)
 
 
-def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow')):
+def draw_brightness_row(setp, small, x, base_y, brightness):
+    """Mirror of draw_brightness_row()."""
+    draw_bitmap(setp, SUN_BMP, x, base_y - 11, SUN_W, SUN_H)
+    draw(setp, small, x + 15, base_y, s(str(brightness)))
+    draw_brightness_bars(setp, x + 40, base_y - 1, brightness_to_level(brightness))
+
+
+def draw_lang_column(setp, small, x, lang):
+    """Mirror of draw_lang_column(): globe over a centred number."""
+    draw_bitmap(setp, GLOBE_BMP, x + (COL_W - GLOBE_W) // 2, OFF_GLOBE_Y, GLOBE_W, GLOBE_H)
+    txt = s(str(lang))
+    f, _bm, gl = small
+    lo, hi, cx = 127, 0, 0
+    for cp in txt:
+        g = gl[cp - f['first']]
+        if g['w']:
+            lo = min(lo, cx + g['xo'])
+            hi = max(hi, cx + g['xo'] + g['w'] - 1)
+        cx += g['xa']
+    draw(setp, small, x + (COL_W - (hi - lo + 1)) // 2 - lo, OFF_LANG_BASE, txt)
+
+
+def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'),
+                lang=0):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
+    rgb=None models RGB being switched off, which re-flows BOTH panels.
     Returns set of (x,y) pixels."""
+    rgb_on = rgb is not None
     pts = set()
     setp = lambda px, py: pts.add((px, py))
     # Each half's indicator column sits on its INNER edge (see status_oled.c), so the
@@ -272,13 +303,19 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
     else:
         draw(setp, small, COL_X + 4, 56, s('R'))
     if lock_panel:
-        draw(setp, small, TEXT_X, ROW2, s('Qwerty'))
-        draw_bitmap(setp, SUN_BMP, 0, 33, SUN_W, SUN_H)
-        draw(setp, small, 15, ROW3, s(str(brightness)))
-        draw_brightness_bars(setp, 40, 43, brightness_to_level(brightness))
-        draw(setp, small, 0, ROW4, s('WPM')); draw(setp, small, 44, ROW4, s('0'))
-        draw_bitmap(setp, GLOBE_BMP, 68, 47, GLOBE_W, GLOBE_H)
-        draw(setp, small, 85, ROW4, s('0'))
+        draw(setp, small, TEXT_X, ROW2 if rgb_on else OFF_ROW_B, s('Qwerty'))
+        if rgb_on:
+            draw_brightness_row(setp, small, 0, ROW3, brightness)
+        draw(setp, small, 0, ROW4, s('WPM'))
+        draw(setp, small, 44, ROW4, s('0'))
+        if rgb_on:
+            draw_bitmap(setp, GLOBE_BMP, 68, 47, GLOBE_W, GLOBE_H)
+            draw(setp, small, 85, ROW4, s(str(lang)))
+    elif not rgb_on:
+        draw(setp, small, TEXT_X, OFF_ROW_B, s('RGB'))
+        draw(setp, small, TEXT_X + 34, OFF_ROW_B, s('Off'))
+        draw_brightness_row(setp, small, TEXT_X, OFF_ROW_C, brightness)
+        draw_lang_column(setp, small, COL_X, lang)
     else:
         hue, sat, val, speed, mode, name = rgb
         draw(setp, small, TEXT_X, ROW2, s(str(mode)))
@@ -364,11 +401,14 @@ def main():
 
     ap.add_argument('-b', '--brightness', type=brightness_arg, default=FULL_BRIGHT,
                     help='keycap brightness 0..%d shown in the gauge (default %d)' % (FULL_BRIGHT, FULL_BRIGHT))
+    ap.add_argument('--rgb-off', action='store_true',
+                    help='preview the RGB-off layout (both panels re-flow to three rows)')
     args = ap.parse_args()
 
     disp, small, icons = load_fonts()
-    L = build_panel('L', disp, small, icons, args.brightness)
-    R = build_panel('R', disp, small, icons, args.brightness)
+    rgb = None if args.rgb_off else (128, 255, 100, 80, 5, 'Rainbow')
+    L = build_panel('L', disp, small, icons, args.brightness, rgb)
+    R = build_panel('R', disp, small, icons, args.brightness, rgb)
 
     if args.diag:
         Li, lc = render_diag(L, 'LEFT (layout)  128x64  |  RED = clipped')

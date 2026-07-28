@@ -175,6 +175,13 @@ DEGREE_BMP = [0xe0, 0xa0, 0xe0]                            # 3x3 degree sign
 DEGREE_W = DEGREE_H = 3
 SUPER2_BMP = [0x70, 0x88, 0x10, 0x20, 0x40, 0xf8]          # 5x6 superscript 2
 SUPER2_W, SUPER2_H = 5, 6
+DROPLET_BMP = [0x08, 0x00, 0x08, 0x00, 0x1c, 0x00, 0x1c, 0x00, 0x3e, 0x00,
+               0x7f, 0x00, 0x7f, 0x00, 0x7f, 0x00, 0x3e, 0x00, 0x1c, 0x00]
+DROPLET_W, DROPLET_H, DROPLET_Y = 9, 10, 49                # saturation
+SUN_SMALL_BMP = [0x08, 0x00, 0x41, 0x00, 0x1c, 0x00, 0x3e, 0x00, 0xbe, 0x80,
+                 0x3e, 0x00, 0x1c, 0x00, 0x41, 0x00, 0x08, 0x00]
+SUN_SMALL_W, SUN_SMALL_H, SUN_SMALL_Y = 9, 9, 50           # value
+SV_ICON_GAP = 2
 
 
 def hue_to_degrees(hue):
@@ -290,8 +297,21 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
         draw(setp, small, TEXT_X, ROW3, s(hue_name(hue, sat)))
         draw_right(setp, small, TEXT_R - 4, ROW3, s(str(hue_to_degrees(hue))))
         draw_bitmap(setp, DEGREE_BMP, TEXT_R - 2, 34, DEGREE_W, DEGREE_H)
-        draw(setp, small, TEXT_X, ROW4, s('S%d%%' % byte_to_percent(sat)))
-        draw_right(setp, small, TEXT_R, ROW4, s('V%d%%' % byte_to_percent(val)))
+        draw_bitmap(setp, DROPLET_BMP, TEXT_X, DROPLET_Y, DROPLET_W, DROPLET_H)
+        draw(setp, small, TEXT_X + DROPLET_W + SV_ICON_GAP, ROW4,
+             s('%d%%' % byte_to_percent(sat)))
+        vtxt = s('%d%%' % byte_to_percent(val))
+        f, _bm, gl = small
+        hi = 0; cx = 0
+        for cp in vtxt:
+            g = gl[cp - f['first']]
+            if g['w']:
+                hi = max(hi, cx + g['xo'] + g['w'] - 1)
+            cx += g['xa']
+        vx = TEXT_R - hi
+        draw_bitmap(setp, SUN_SMALL_BMP, vx - SV_ICON_GAP - SUN_SMALL_W, SUN_SMALL_Y,
+                    SUN_SMALL_W, SUN_SMALL_H)
+        draw(setp, small, vx, ROW4, vtxt)
     return pts
 
 

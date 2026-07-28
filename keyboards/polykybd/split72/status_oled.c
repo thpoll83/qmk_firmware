@@ -102,18 +102,54 @@ static const uint8_t superscript2_bitmap[] PROGMEM = {   // 5x6, for "Splash²"
 #define SUPER2_W 5
 #define SUPER2_H 6
 
+// Saturation / Value markers on the RGB panel's bottom row. Hand-drawn for the same
+// reason as the sun above: every resident icon is sized for the 72x40 keycaps (the
+// moon-phase Brightness font, the obvious fit semantically, is 32x33 — 16x17 even
+// halved) and this row has ~12px of height. Width is the harder limit: "100%" alone
+// is 40px of the 108px row, so a group only fits with an icon of <= 9px.
+// Droplet = saturation and sun = value are the colour-picker conventions; the sun
+// also matches the keycap-brightness sun on the other panel — same meaning.
+static const uint8_t sat_droplet_bitmap[] PROGMEM = {   // 9x10
+    0x08, 0x00,
+    0x08, 0x00,
+    0x1c, 0x00,
+    0x1c, 0x00,
+    0x3e, 0x00,
+    0x7f, 0x00,
+    0x7f, 0x00,
+    0x7f, 0x00,
+    0x3e, 0x00,
+    0x1c, 0x00,
+};
+#define DROPLET_W 9
+#define DROPLET_H 10
+#define DROPLET_Y 49                                    // bottom row lands on the digits'
+static const uint8_t val_sun_bitmap[] PROGMEM = {       // 9x9
+    0x08, 0x00,
+    0x41, 0x00,
+    0x1c, 0x00,
+    0x3e, 0x00,
+    0xbe, 0x80,
+    0x3e, 0x00,
+    0x1c, 0x00,
+    0x41, 0x00,
+    0x08, 0x00,
+};
+#define SUN_SMALL_W 9
+#define SUN_SMALL_H 9
+#define SUN_SMALL_Y 50
+#define SV_ICON_GAP 2
+
 // v (0..255) as a percentage, rounded to nearest.
 static uint8_t byte_to_percent(uint8_t v) {
     return (uint8_t)(((uint16_t)v * 100u + 127u) / 255u);
 }
 
-// "<label><pct>%" as one string, so the whole group can be placed (or right-aligned)
-// as a unit and can never be split across the panel edge by a 3-digit value.
-static void sv_to_u32_string(char* out, uint8_t out_len, uint32_t label, uint8_t pct) {
+// "<pct>%" as one string. `out` must be a uint32_t[] (see oled_helper.h).
+static void pct_to_u32_string(char* out, uint8_t out_len, uint8_t pct) {
     uint32_t* s = (uint32_t*)out;
     uint8_t   cap = out_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i = 0;
-    if(i < cap) s[i++] = label;
     uint32_t digits[6];
     num_to_u32_string((char*)digits, sizeof(digits), pct);
     for(uint8_t d = 0; digits[d] && i < cap; ++d) s[i++] = digits[d];
@@ -265,14 +301,22 @@ void oled_update_buffer(void) {
             oled_draw_num16_right(smallFont, (int8_t)(TEXT_R - 4), 44, hue_to_degrees(hue));
             kdisp_draw_bitmap((int8_t)(TEXT_R - 2), 34, degree_ring_bitmap, DEGREE_W, DEGREE_H);
 
-            // Saturation / value as percentages rather than 0x00..0xFF. Each group is
-            // one flowed string so it can never split across the panel edge: S anchors
-            // left, V right-aligns to TEXT_R. Worst case ("S100%" + "V100%") is 103px
-            // of the 108 available, so they stay clear of each other.
-            sv_to_u32_string((char*) buffer, sizeof(buffer), U'S', byte_to_percent(sat));
-            kdisp_write_gfx_text(smallFont, 1, TEXT_X, 59, buffer);
-            sv_to_u32_string((char*) buffer, sizeof(buffer), U'V', byte_to_percent(rgb_matrix_get_val()));
-            oled_draw_text_right(smallFont, TEXT_R, 59, buffer);
+            // Saturation / value as percentages rather than 0x00..0xFF, each behind its
+            // icon. The icon is a bitmap, so a group is NOT one text run — the value
+            // group right-aligns to the panel edge, so its icon has to be placed from
+            // the measured digits rather than a fixed x. Worst case (both 100%) is
+            // 2x51px of the 108px row, leaving 6px between the groups.
+            pct_to_u32_string((char*) buffer, sizeof(buffer), byte_to_percent(sat));
+            kdisp_draw_bitmap(TEXT_X, DROPLET_Y, sat_droplet_bitmap, DROPLET_W, DROPLET_H);
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + DROPLET_W + SV_ICON_GAP), 59, buffer);
+
+            pct_to_u32_string((char*) buffer, sizeof(buffer), byte_to_percent(rgb_matrix_get_val()));
+            int8_t val_lo = 0, val_hi = 0;
+            kdisp_gfx_text_bounds(smallFont, 1, buffer, &val_lo, &val_hi);
+            const int8_t val_x = (int8_t)(TEXT_R - val_hi);
+            kdisp_draw_bitmap((int8_t)(val_x - SV_ICON_GAP - SUN_SMALL_W), SUN_SMALL_Y,
+                              val_sun_bitmap, SUN_SMALL_W, SUN_SMALL_H);
+            kdisp_write_gfx_text(smallFont, 1, val_x, 59, buffer);
         }
     } else {
         oled_draw_layout_name(smallFont, 0, 29, get_local_layer()->def_layer);

@@ -142,7 +142,8 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
             set_overlay_usage_post_upload(idx);
             uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
                 keycode, ctx_mod, pos_to_str(pos), bit_index/8);
-            update_performed();
+            // No update_performed() — a host overlay push is not user activity and
+            // must not restart the idle countdown (see base/update.h).
             request_disp_refresh();
         }
 #endif
@@ -194,7 +195,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             bit_index = copy_rectangle_to_overlay(bit_index, get_overlay(idx), first?(&(data[5])):data, &ctx_roi, data_len);
             if(bit_index >= 2880) {
                 set_overlay_usage_post_upload(idx);
-                update_performed();
+                // No update_performed() — see base/update.h.
                 request_disp_refresh();
             }
             set_fragment_context_bit_index(bit_index);

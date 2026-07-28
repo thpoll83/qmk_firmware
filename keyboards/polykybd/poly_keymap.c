@@ -657,11 +657,16 @@ static void user_sync_dummy_handler(uint8_t in_len, const void* in_data, uint8_t
 #endif
 
 // Master-side: mirror the HID cmd-15 stop-idle path to force the displays awake.
+// Logged because this is the ONLY wake with no user-visible trigger — a proximity
+// wake used to restart the whole idle countdown silently, so the console showed a
+// second "Transition to idle" with nothing explaining the first one ending.
 static void poly_force_wake(void) {
     poly_sync_t* local_state = access_local_state();
     if ((local_state->flags & (STATUS_DISP_ON | DISP_IDLE)) == 0) {
+        uprint("Wake by proximity (from suspend)\n");
         suspend_wakeup_init_kb();   // fully suspended -> full wake
     } else if (local_state->flags & DISP_IDLE) {
+        uprint("Wake by proximity (from idle)\n");
         local_state->contrast = get_active_brightness();
         local_state->flags &= ~((uint8_t)DISP_IDLE);
         local_state->flags |= STATUS_DISP_ON;
@@ -699,8 +704,9 @@ static uint8_t lux_to_contrast(uint16_t lux) {
 }
 
 static void poly_ltr559_drive(void) {
-    static uint32_t last    = 0;
-    static bool     engaged = false;
+    static uint32_t last        = 0;
+    static bool     engaged     = false;
+    static uint8_t  last_logged = 0xFF;   // last brightness announced to the console
     if (!is_usb_host_side()) {
         return;   // decisions are master-only (the slave just serves reads)
     }
@@ -744,8 +750,20 @@ static void poly_ltr559_drive(void) {
         }
         set_brightness_auto_mode(true);
         engaged = true;
+        uprintf("LTR-559: auto-brightness engaged (avg lux %u)\n", lux);
     }
-    set_auto_brightness_value(lux_to_contrast(lux));
+
+    // Announce every brightness the sensor drives — but only when it actually
+    // changes: this runs every LTR559_DRIVE_MS (500 ms), so an unconditional print
+    // would drown the console. Without it a sensor-driven brightness move is
+    // indistinguishable from a key/host change (or from a bug) in the log.
+    const uint8_t target = lux_to_contrast(lux);
+    if (target != last_logged) {
+        last_logged = target;
+        uprintf("LTR-559: auto brightness -> %u (avg lux %u)%s\n", target, lux,
+                get_brightness_auto_mode() ? "" : " [auto off, not applied]");
+    }
+    set_auto_brightness_value(target);
 
     // Proximity: something is close -> defer idle (and wake if already idle).
     if (prox > LTR559_NEAR_THRESHOLD) {
@@ -957,7 +975,12 @@ void housekeeping_task_user(void) {
 
                 //transition to pulsing mode
                 if(brightness<=MIN_BRIGHT) {
-                    if (get_idle_style() == IDLE_STYLE_IDDQD && doom_screensaver_start()) {
+                    // Log the CONFIGURED style on every transition: three different
+                    // styles land in the pulse branch below (pulse, jitter, and an
+                    // iddqd that could not start its demo), so an unnamed
+                    // "Transition to pulsing" cannot tell you which one is active.
+                    const uint8_t style = get_idle_style();
+                    if (style == IDLE_STYLE_IDDQD && doom_screensaver_start()) {
                         // Doom attract screensaver instead of the pulse: the demo
                         // owns the keycaps at the user brightness — no DISP_IDLE,
                         // and IDLE_TRANSITION stays dropped (cleared above), which
@@ -967,8 +990,8 @@ void housekeeping_task_user(void) {
                         // deadline. Falls through to the pulse whenever the demo
                         // can't start (non-doom build, fw staging active).
                         contrast = get_active_brightness();
-                        uprint("Transition to doom screensaver\n");
-                    } else if (get_idle_style() == IDLE_STYLE_EDEN) {
+                        uprint("Transition to idle [style=iddqd] - doom screensaver\n");
+                    } else if (style == IDLE_STYLE_EDEN) {
                         // Eden screensaver: enter DISP_IDLE like the pulse (so the
                         // wake-on-key and TURN_OFF suspend paths work unchanged and
                         // the flag+idle_style tell the slave to loop too), but hold
@@ -977,12 +1000,18 @@ void housekeeping_task_user(void) {
                         // burn-in and no per-pass pulse contrast to fight.
                         contrast = EDEN_IDLE_BRIGHTNESS;
                         flags |= DISP_IDLE;
-                        uprint("Transition to eden screensaver\n");
+                        uprint("Transition to idle [style=eden] - eden screensaver\n");
                     } else {
                         contrast = DISP_OFF;
                         flags |= DISP_IDLE;
                         flags |= IDLE_TRANSITION;
-                        uprint("Transition to pulsing\n");
+                        // An IDDQD here means doom_screensaver_start() refused (no
+                        // doom build / fw staging active) and we silently degraded
+                        // to the legacy pulse — say so rather than reporting a plain
+                        // "pulsing" the user never selected.
+                        uprintf("Transition to idle [style=%s] - pulsing%s\n",
+                                idle_style_name(style),
+                                style == IDLE_STYLE_IDDQD ? " (doom unavailable)" : "");
                     }
                 } else if(brightness>FULL_BRIGHT) {
                     contrast = FULL_BRIGHT;
@@ -3101,6 +3130,7 @@ bool display_wakeup(keyrecord_t* record) {
         // Stop the looping Eden idle screensaver immediately so update_displays() (no
         // longer blocked by startup_anim_active()) can repaint the woken legends.
         startup_anim_stop();
+        uprint("Wake by keypress\n");
         local_state->contrast = get_active_brightness();
         local_state->flags &= ~((uint8_t)DISP_IDLE);
         local_state->flags |= STATUS_DISP_ON;
@@ -3267,6 +3297,7 @@ void keyboard_post_init_user(void) {
     // the host re-engages). Overrides local_state->contrast when auto was on.
     load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
+    emit_idle_config();   // the style is only known here — the banner tick re-emits it
     note_glyph_script(ee.glyph_script);
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin

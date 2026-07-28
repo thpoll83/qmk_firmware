@@ -444,7 +444,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
                         fill_overlay_buffer(segment, &data[HID_DATA_IDX+2]);
                         if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
-                            update_performed();
+                            // Refresh only — deliberately NOT update_performed().
+                            // An overlay upload is the HOST reacting to a window
+                            // switch, not the user touching the keyboard; counting
+                            // it as activity restarted the whole idle countdown
+                            // every time the focused app changed (so a keyboard
+                            // watching a busy machine never idled) with nothing in
+                            // the log to explain it. See the note in base/update.h.
                             request_disp_refresh();
                         }
                     }

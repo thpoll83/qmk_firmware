@@ -61,7 +61,10 @@ void core1_entry(void) {
 
                     if (core1_bit_index >= 360*8 -1) {
                         set_overlay_usage_post_upload(core1_idx);
-                        update_performed();
+                        // No update_performed() — a host overlay push is not user
+                        // activity and must not restart the idle countdown (see
+                        // base/update.h). Also keeps core1 out of the idle-timer
+                        // state entirely; only core0 writes it now.
                         request_disp_refresh();
                         core1_bit_index = 0;
                     }
@@ -80,7 +83,7 @@ void core1_entry(void) {
                     core1_bit_index = copy_rectangle_to_overlay(core1_bit_index, get_overlay(core1_idx), core1_buffer, &core1_roi, data_len);
                     if(core1_bit_index >= 2880) {
                         set_overlay_usage_post_upload(core1_idx);
-                        update_performed();
+                        // No update_performed() — see base/update.h.
                         request_disp_refresh();
                         core1_bit_index = 0;
                     }

@@ -8,6 +8,7 @@
 #include "split_util.h"   // is_transport_connected()
 #include "side.h"         // is_left_side()
 #include "poly_util.h"    // clear_all_displays(), display_message()
+#include "state.h"        // get_idle_style(), idle_style_name()
 #include "base/update.h"       // enum refresh_mode / ALL_AT_ONCE
 #include "base/disp_array.h"   // GFXfont type
 // Only the single splash font is needed. Don't pull in gfx_used_fonts.h — the
@@ -57,6 +58,19 @@ void emit_boot_banner(void) {
 #endif
 }
 
+// The configured idle (anti-burn-in) style + the timings that drive the idle
+// state machine. Emitted separately from the identity banner because the style
+// is only known after the EEPROM config load, which happens well after the
+// one-shot emit_boot_banner() call — so a console can no longer see a fade/pulse
+// happen without also seeing which style was actually selected.
+void emit_idle_config(void) {
+    const uint8_t style = get_idle_style();
+    uprintf("   idle: style=%s (%u) fade_out=%ums fade=%ums turn_off=%ums\n",
+            idle_style_name(style), (unsigned int)style,
+            (unsigned int)FADE_OUT_TIME, (unsigned int)FADE_TRANSITION_TIME,
+            (unsigned int)TURN_OFF_TIME);
+}
+
 void boot_banner_housekeeping_tick(void) {
     // Re-emit the boot identification banner a few times after power-on so a
     // `qmk console` attached shortly after boot still catches it (the one-shot
@@ -68,6 +82,7 @@ void boot_banner_housekeeping_tick(void) {
             banner_timer = timer_read32();   // arm on the first housekeeping pass
         } else if (timer_elapsed32(banner_timer) >= BOOT_BANNER_INTERVAL_MS) {
             emit_boot_banner();
+            emit_idle_config();
             banner_timer = timer_read32();
             banner_repeats++;
         }

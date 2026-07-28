@@ -309,6 +309,10 @@ void set_idle_style(uint8_t style);
 // Records the idle style without marking settings dirty (boot-time EEPROM load).
 void note_idle_style(uint8_t style);
 
+// Human-readable name of an idle style, for console logs ("pulse"/"jitter"/…).
+// Never NULL — an unknown value reads as "?".
+const char* idle_style_name(uint8_t style);
+
 // ---- Glyph-script override (enum poly_glyph_script) — see enum comment above. ----
 
 // The active glyph-script override (GLYPH_STD = normal language legends).

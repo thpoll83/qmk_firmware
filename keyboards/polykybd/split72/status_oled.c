@@ -102,26 +102,38 @@ static uint8_t byte_to_percent(uint8_t v) {
     return (uint8_t)(((uint16_t)v * 100u + 127u) / 255u);
 }
 
+// "<label><pct>%" as one string, so the whole group can be placed (or right-aligned)
+// as a unit and can never be split across the panel edge by a 3-digit value.
+static void sv_to_u32_string(char* out, uint8_t out_len, uint32_t label, uint8_t pct) {
+    uint32_t* s = (uint32_t*)out;
+    uint8_t   cap = out_len / (uint8_t)sizeof(uint32_t);
+    uint8_t   i = 0;
+    if(i < cap) s[i++] = label;
+    uint32_t digits[6];
+    num_to_u32_string((char*)digits, sizeof(digits), pct);
+    for(uint8_t d = 0; digits[d] && i < cap; ++d) s[i++] = digits[d];
+    if(i < cap) s[i++] = U'%';
+    if(i < cap) s[i] = 0;
+}
+
 // RGB speed as a vertical gauge in the right column, where the RGB panel used to
 // mirror the Num/Caps lock icons. It takes their exact footprint — 17 px wide, top
 // aligned with Num Lock, bottom aligned with Caps Lock — and their chrome: a 2px
 // rounded border (two nested round-rects, r=3/2, matching the icon glyphs' own 2px
 // wall and chamfer), filled from the bottom.
-#define SPEED_BOX_X 109
 #define SPEED_BOX_Y 0
 #define SPEED_BOX_W 17
 #define SPEED_BOX_H 39                                     // Num Lock top .. Caps Lock bottom
-#define SPEED_FILL_X (SPEED_BOX_X + 3)                     // 2px border + 1px gap
 #define SPEED_FILL_W (SPEED_BOX_W - 6)
 #define SPEED_FILL_BOTTOM (SPEED_BOX_Y + SPEED_BOX_H - 4)  // last fillable row
 #define SPEED_FILL_H (SPEED_BOX_H - 6)                     // full-scale column height
 
-static void draw_speed_gauge(uint8_t speed) {
-    kdisp_draw_round_rect(SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 3);
-    kdisp_draw_round_rect(SPEED_BOX_X + 1, SPEED_BOX_Y + 1, SPEED_BOX_W - 2, SPEED_BOX_H - 2, 2);
+static void draw_speed_gauge(int8_t x, uint8_t speed) {
+    kdisp_draw_round_rect(x, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 3);
+    kdisp_draw_round_rect((int8_t)(x + 1), SPEED_BOX_Y + 1, SPEED_BOX_W - 2, SPEED_BOX_H - 2, 2);
     const uint8_t fill = (uint8_t)(((uint16_t)speed * SPEED_FILL_H + 127u) / 255u);
     if(fill) {
-        kdisp_fill_rect(SPEED_FILL_X, (int8_t)(SPEED_FILL_BOTTOM - fill + 1), SPEED_FILL_W, (int8_t)fill);
+        kdisp_fill_rect((int8_t)(x + 3), (int8_t)(SPEED_FILL_BOTTOM - fill + 1), SPEED_FILL_W, (int8_t)fill);
     }
 }
 
@@ -168,40 +180,49 @@ void oled_update_buffer(void) {
     const poly_layer_t* global_layer = get_global_layer();
     const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 15, ICON_LAYER);
+
+    // Each half's indicator column sits on its INNER edge, so on an assembled
+    // keyboard the two columns face each other across the gap: the layout panel keeps
+    // its lock LEDs on the right, the RGB panel puts its speed gauge on the left. The
+    // text origin follows, which is why every element below is placed relative to
+    // TEXT_X / TEXT_R rather than at an absolute x.
+    const bool lock_panel = !is_right_side();
+    const int8_t COL_X  = lock_panel ? 108 : 0;    // indicator column (17px wide)
+    const int8_t TEXT_X = lock_panel ?   0 : 20;   // content origin
+    const int8_t TEXT_R = lock_panel ? 104 : 127;  // right limit for right-aligned content
+
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, TEXT_X, 15, ICON_LAYER);
     hex_to_u32_string((char*) buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
-    kdisp_write_gfx_text(displayFont, 1, 20, 15, buffer);
+    kdisp_write_gfx_text(displayFont, 1, (int8_t)(TEXT_X + 20), 15, buffer);
     // Top-row role: the USB-host half shows the USB glyph + "USB", the bridged half
     // the link glyph + "Link" (follows is_usb_host_side(), so it tracks the cable).
     if(is_usb_host_side()) {
-        kdisp_draw_bitmap(38, 0, usb_status_bitmap, 16, 16);
-        kdisp_write_gfx_text(displayFont, 1, 57, 15, U"USB");
+        kdisp_draw_bitmap((int8_t)(TEXT_X + 38), 0, usb_status_bitmap, 16, 16);
+        kdisp_write_gfx_text(displayFont, 1, (int8_t)(TEXT_X + 57), 15, U"USB");
     } else {
-        kdisp_draw_bitmap(38, 0, link_status_bitmap, 16, 16);
-        kdisp_write_gfx_text(displayFont, 1, 57, 15, U"Link");
+        kdisp_draw_bitmap((int8_t)(TEXT_X + 38), 0, link_status_bitmap, 16, 16);
+        kdisp_write_gfx_text(displayFont, 1, (int8_t)(TEXT_X + 57), 15, U"Link");
     }
 
     // Lock LEDs live on the LAYOUT panel only. They render from global_layer, so both
     // halves were drawing the identical Num/Caps/Scroll state — the second copy bought
-    // nothing and cost the RGB panel its entire right column, which now carries the
-    // speed gauge instead.
-    const bool lock_panel = !is_right_side();
+    // nothing and cost the RGB panel a whole column, which now carries the speed gauge.
     if(lock_panel) {
-        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
-        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, COL_X, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, COL_X, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
     }
     if(lock_panel && global_layer->led_state.scroll_lock) {
         // Scroll lock replaces the side marker (and is 26px tall, so it would run
         // straight through the speed gauge on the other panel).
-        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 112, 54, ARROWS_DOWNSTOP);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, (int8_t)(COL_X + 4), 54, ARROWS_DOWNSTOP);
     } else if(side_is_undecided()) {
-        kdisp_write_gfx_text(smallFont, 1, 114, 56, U"?");
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), 56, U"?");
     } else if(is_left_side()) {
-        kdisp_write_gfx_text(smallFont, 1, 114, 56, U"L");
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), 56, U"L");
     } else {
-        // Physical side in the corner (was the H/B role marker); R sits 2px left of L
-        // so the wider glyph doesn't crowd the right edge.
-        kdisp_write_gfx_text(smallFont, 1, 112, 56, U"R");
+        // Physical side at the foot of the column; R sits 2px in from L so the wider
+        // glyph stays centred under it.
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 4), 56, U"R");
     }
 
     // (The LTR-559 sensor values used to be rendered here during bring-up; they
@@ -209,37 +230,34 @@ void oled_update_buffer(void) {
     // housekeeping_task_user() — so the status OLED shows the normal panel.)
     if(is_right_side()) {
         if(!rgb_matrix_is_enabled()) {
-            kdisp_write_gfx_text(smallFont, 1, 0, 29, U"RGB");
-            kdisp_write_gfx_text(smallFont, 1, 34, 29, U"Off");
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, 29, U"RGB");
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 34), 29, U"Off");
         } else {
-            // Effect: index + name. With the speed moved to the gauge in the right
-            // column and the redundant "RGB" label dropped, the name gets x=22..104
+            // Effect: index + name. With the speed moved to the gauge in the column
+            // and the redundant "RGB" label dropped, the name gets TEXT_X+22..TEXT_R
             // — enough for a word instead of a 4-letter code.
             num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
-            kdisp_write_gfx_text(smallFont, 1, 0, 29, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 22, 29, get_led_matrix_text(rgb_matrix_get_mode()));
-            draw_speed_gauge(rgb_matrix_get_speed());
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, 29, buffer);
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 22), 29, get_led_matrix_text(rgb_matrix_get_mode()));
+            draw_speed_gauge(COL_X, rgb_matrix_get_speed());
 
             // Colour as a NAME + degrees on the wheel, instead of the raw hue byte
             // in hex: "Cyan 180°" says what the LEDs actually look like, where
             // "HSV 80" needed the reader to decode it.
             const uint8_t hue = rgb_matrix_get_hue();
             const uint8_t sat = rgb_matrix_get_sat();
-            kdisp_write_gfx_text(smallFont, 1, 0, 44, get_hue_name(hue, sat));
-            oled_draw_num16_right(smallFont, 100, 44, (uint16_t)(((uint16_t)hue * 360u) / 255u));
-            kdisp_draw_bitmap(102, 34, degree_ring_bitmap, DEGREE_W, DEGREE_H);
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, 44, get_hue_name(hue, sat));
+            oled_draw_num16_right(smallFont, (int8_t)(TEXT_R - 4), 44, (uint16_t)(((uint16_t)hue * 360u) / 255u));
+            kdisp_draw_bitmap((int8_t)(TEXT_R - 2), 34, degree_ring_bitmap, DEGREE_W, DEGREE_H);
 
-            // Saturation / value as percentages rather than 0x00..0xFF.
-            // The lock icons stop above this row (their glyphs end around y=38), so
-            // only the L/R side marker at x=112 bounds it — the two groups get the
-            // full width, with the numbers right-aligned into their slot so a
-            // 3-digit 100% never crowds its label.
-            kdisp_write_gfx_text(smallFont, 1, 0, 59, U"S");
-            oled_draw_num_right(smallFont, 38, 59, byte_to_percent(sat));
-            kdisp_write_gfx_text(smallFont, 1, 40, 59, U"%");
-            kdisp_write_gfx_text(smallFont, 1, 58, 59, U"V");
-            oled_draw_num_right(smallFont, 94, 59, byte_to_percent(rgb_matrix_get_val()));
-            kdisp_write_gfx_text(smallFont, 1, 96, 59, U"%");
+            // Saturation / value as percentages rather than 0x00..0xFF. Each group is
+            // one flowed string so it can never split across the panel edge: S anchors
+            // left, V right-aligns to TEXT_R. Worst case ("S100%" + "V100%") is 103px
+            // of the 108 available, so they stay clear of each other.
+            sv_to_u32_string((char*) buffer, sizeof(buffer), U'S', byte_to_percent(sat));
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, 59, buffer);
+            sv_to_u32_string((char*) buffer, sizeof(buffer), U'V', byte_to_percent(rgb_matrix_get_val()));
+            oled_draw_text_right(smallFont, TEXT_R, 59, buffer);
         }
     } else {
         oled_draw_layout_name(smallFont, 0, 29, get_local_layer()->def_layer);

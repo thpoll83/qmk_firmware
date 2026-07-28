@@ -13,7 +13,7 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_SPLASH:
             return U"Splash";
         case RGB_MATRIX_MULTISPLASH:
-            return U"MultiSpl";
+            return U"MultSplash";
         case RGB_MATRIX_SOLID_SPLASH:
             return U"SolidSpl";
         case RGB_MATRIX_SOLID_MULTISPLASH:
@@ -71,9 +71,9 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_DUAL_BEACON:
             return U"DualBeacn";
         case RGB_MATRIX_RAINBOW_BEACON:
-            return U"RnbwBcn";
+            return U"Beacon";
         case RGB_MATRIX_RAINBOW_PINWHEELS:
-            return U"RnbwPnwl";
+            return U"Wheel";
         case RGB_MATRIX_RAINDROPS:
             return U"Raindrops";
         case RGB_MATRIX_JELLYBEAN_RAINDROPS:
@@ -81,7 +81,7 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_HUE_BREATHING:
             return U"HueBreath";
         case RGB_MATRIX_HUE_PENDULUM:
-            return U"HuePend";
+            return U"Pendulum";
         case RGB_MATRIX_HUE_WAVE:
             return U"HueWave";
         case RGB_MATRIX_PIXEL_FRACTAL:

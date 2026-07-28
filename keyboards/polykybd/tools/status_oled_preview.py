@@ -149,19 +149,18 @@ def round_rect(setpix, x, y, w, h, r):
 
 
 # ---- RGB speed gauge, kept in sync with split72/status_oled.c ----
-SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 109, 0, 17, 39
-SPEED_FILL_X = SPEED_BOX_X + 3
+SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 0, 17, 39
 SPEED_FILL_W = SPEED_BOX_W - 6
 SPEED_FILL_BOTTOM = SPEED_BOX_Y + SPEED_BOX_H - 4
 SPEED_FILL_H = SPEED_BOX_H - 6
 
 
-def draw_speed_gauge(setpix, speed):
-    round_rect(setpix, SPEED_BOX_X, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 3)
-    round_rect(setpix, SPEED_BOX_X + 1, SPEED_BOX_Y + 1, SPEED_BOX_W - 2, SPEED_BOX_H - 2, 2)
+def draw_speed_gauge(setpix, x, speed):
+    round_rect(setpix, x, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 3)
+    round_rect(setpix, x + 1, SPEED_BOX_Y + 1, SPEED_BOX_W - 2, SPEED_BOX_H - 2, 2)
     fill = (speed * SPEED_FILL_H + 127) // 255
     if fill:
-        fill_rect(setpix, SPEED_FILL_X, SPEED_FILL_BOTTOM - fill + 1, SPEED_FILL_W, fill)
+        fill_rect(setpix, x + 3, SPEED_FILL_BOTTOM - fill + 1, SPEED_FILL_W, fill)
 
 
 # ---- brightness gauge, kept in sync with split72/status_oled.c ----
@@ -234,25 +233,31 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
     Returns set of (x,y) pixels."""
     pts = set()
     setp = lambda px, py: pts.add((px, py))
+    # Each half's indicator column sits on its INNER edge (see status_oled.c), so the
+    # text origin differs per panel.
+    lock_panel = (side == 'L')
+    COL_X  = 108 if lock_panel else 0
+    TEXT_X = 0 if lock_panel else 20
+    TEXT_R = 104 if lock_panel else 127
     # top line: layer + role icon + role word
-    draw(setp, icons, 0, TOP_BASE, [0x80])                 # ICON_LAYER
-    draw(setp, disp, 20, TOP_BASE, s('0'))                 # hex layer
-    if side == 'L':
-        draw_bitmap(setp, USB_BMP, 38, 0)
-        draw(setp, disp, 57, TOP_BASE, s('USB'))
+    draw(setp, icons, TEXT_X, TOP_BASE, [0x80])                 # ICON_LAYER
+    draw(setp, disp, TEXT_X + 20, TOP_BASE, s('0'))             # hex layer
+    if lock_panel:
+        draw_bitmap(setp, USB_BMP, TEXT_X + 38, 0)
+        draw(setp, disp, TEXT_X + 57, TOP_BASE, s('USB'))
     else:
-        draw_bitmap(setp, LINK_BMP, 38, 0)
-        draw(setp, disp, 57, TOP_BASE, s('Link'))
+        draw_bitmap(setp, LINK_BMP, TEXT_X + 38, 0)
+        draw(setp, disp, TEXT_X + 57, TOP_BASE, s('Link'))
     # Lock LEDs render on the layout panel only (identical state on both halves) —
-    # the RGB panel's right column is the speed gauge now.
-    if side == 'L':
-        draw(setp, icons, 108, 16, [0x8C])                 # NumLock off
-        draw(setp, icons, 108, 38, [0x8E])                 # CapsLock off
-        draw(setp, small, 114, 56, s('L'))
+    # the RGB panel's column is the speed gauge now.
+    if lock_panel:
+        draw(setp, icons, COL_X, 16, [0x8C])                    # NumLock off
+        draw(setp, icons, COL_X, 38, [0x8E])                    # CapsLock off
+        draw(setp, small, COL_X + 6, 56, s('L'))
     else:
-        draw(setp, small, 112, 56, s('R'))   # R nudged 2px left of L (see status_oled.c)
-    if side == 'L':
-        draw(setp, small, 0, ROW2, s('Qwerty'))
+        draw(setp, small, COL_X + 4, 56, s('R'))
+    if lock_panel:
+        draw(setp, small, TEXT_X, ROW2, s('Qwerty'))
         draw_bitmap(setp, SUN_BMP, 0, 33, SUN_W, SUN_H)
         draw(setp, small, 15, ROW3, s(str(brightness)))
         draw_brightness_bars(setp, 40, 43, brightness_to_level(brightness))
@@ -261,18 +266,14 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
         draw(setp, small, 85, ROW4, s('0'))
     else:
         hue, sat, val, speed, mode, name = rgb
-        draw(setp, small, 0, ROW2, s(str(mode)))
-        draw(setp, small, 22, ROW2, s(name))
-        draw_speed_gauge(setp, speed)
-        draw(setp, small, 0, ROW3, s(hue_name(hue, sat)))
-        draw_right(setp, small, 100, ROW3, s(str(hue * 360 // 255)))
-        draw_bitmap(setp, DEGREE_BMP, 102, 34, DEGREE_W, DEGREE_H)
-        draw(setp, small, 0, ROW4, s('S'))
-        draw_right(setp, small, 38, ROW4, s(str(byte_to_percent(sat))))
-        draw(setp, small, 40, ROW4, s('%'))
-        draw(setp, small, 58, ROW4, s('V'))
-        draw_right(setp, small, 94, ROW4, s(str(byte_to_percent(val))))
-        draw(setp, small, 96, ROW4, s('%'))
+        draw(setp, small, TEXT_X, ROW2, s(str(mode)))
+        draw(setp, small, TEXT_X + 22, ROW2, s(name))
+        draw_speed_gauge(setp, COL_X, speed)
+        draw(setp, small, TEXT_X, ROW3, s(hue_name(hue, sat)))
+        draw_right(setp, small, TEXT_R - 4, ROW3, s(str(hue * 360 // 255)))
+        draw_bitmap(setp, DEGREE_BMP, TEXT_R - 2, 34, DEGREE_W, DEGREE_H)
+        draw(setp, small, TEXT_X, ROW4, s('S%d%%' % byte_to_percent(sat)))
+        draw_right(setp, small, TEXT_R, ROW4, s('V%d%%' % byte_to_percent(val)))
     return pts
 
 

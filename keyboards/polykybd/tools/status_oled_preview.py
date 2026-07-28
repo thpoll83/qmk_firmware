@@ -259,7 +259,7 @@ def draw_brightness_row(setp, small, x, base_y, brightness):
 
 def draw_lang_column(setp, tiny, x, lang):
     """Mirror of draw_lang_column(): globe over a centred number."""
-    draw_bitmap(setp, GLOBE_BMP, x + (COL_W - GLOBE_W) // 2, OFF_GLOBE_Y, GLOBE_W, GLOBE_H)
+    draw_bitmap(setp, GLOBE_BMP, x + (COL_W - GLOBE_W) // 2 + 1, OFF_GLOBE_Y, GLOBE_W, GLOBE_H)
     txt = s(str(lang))
     f, _bm, gl = tiny
     lo, hi, cx = 127, 0, 0
@@ -304,7 +304,7 @@ def build_panel(side, disp, small, icons, tiny, brightness=50, rgb=(128, 255, 10
         draw(setp, icons, COL_X, 38, [0x8E])                    # CapsLock off
         draw(setp, small, COL_X + 6, 56, s('L'))
     else:
-        draw(setp, small, COL_X + 4, 56, s('R'))
+        draw(setp, small, COL_X + 5, 56, s('R'))
     if lock_panel:
         draw(setp, small, TEXT_X, ROW2 if rgb_on else OFF_ROW_B, s('Qwerty'))
         if rgb_on:

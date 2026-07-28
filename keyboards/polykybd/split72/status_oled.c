@@ -247,7 +247,7 @@ static void draw_brightness_row(const GFXfont* const* font, int8_t x, int8_t bas
 // stays under the globe.
 static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang) {
     uint32_t buffer[8];
-    kdisp_draw_bitmap((int8_t)(x + (COL_W - GLOBE_W) / 2), OFF_GLOBE_Y, lang_globe_bitmap, GLOBE_W, GLOBE_H);
+    kdisp_draw_bitmap((int8_t)(x + (COL_W - GLOBE_W) / 2 + 1), OFF_GLOBE_Y, lang_globe_bitmap, GLOBE_W, GLOBE_H);
     num_to_u32_string((char*) buffer, sizeof(buffer), lang);
     int8_t lo = 0, hi = 0;
     kdisp_gfx_text_bounds(font, 1, buffer, &lo, &hi);
@@ -317,9 +317,9 @@ void oled_update_buffer(void) {
     } else if(is_left_side()) {
         kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), 56, U"L");
     } else {
-        // Physical side at the foot of the column; R sits 2px in from L so the wider
+        // Physical side at the foot of the column; R sits 1px in from L so the wider
         // glyph stays centred under it.
-        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 4), 56, U"R");
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 5), 56, U"R");
     }
 
     // (The LTR-559 sensor values used to be rendered here during bring-up; they

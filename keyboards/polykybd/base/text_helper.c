@@ -107,9 +107,13 @@ bool led_matrix_text_superscript2(uint8_t rgb_mode) {
 // 0..359), so they stay readable if the underlying 0..255 encoding ever changes.
 // Below ~10% saturation the hue is not perceptible, so it reports "White" — showing
 // "Green" for what the user sees as white would be worse than showing nothing.
+uint16_t hue_to_degrees(uint8_t hue) {
+    return (uint16_t)(((uint16_t)hue * 360u) / 255u);
+}
+
 const uint32_t* get_hue_name(uint8_t hue, uint8_t sat) {
     if (sat < 26) return U"White";
-    const uint16_t deg = (uint16_t)(((uint16_t)hue * 360u) / 255u);
+    const uint16_t deg = hue_to_degrees(hue);
     if (deg <  15) return U"Red";
     if (deg <  45) return U"Orange";
     if (deg <  70) return U"Yellow";

@@ -104,7 +104,7 @@ def draw(setpix, font, x, y, text):
 
 def draw_right(setpix, font, right_x, y, text):
     """Mirror of oled_draw_text_right: rightmost lit pixel lands on right_x."""
-    f, bm, gl = font
+    f, _bm, gl = font
     x = 0
     hi = 0
     for cp in text:
@@ -177,11 +177,16 @@ SUPER2_BMP = [0x70, 0x88, 0x10, 0x20, 0x40, 0xf8]          # 5x6 superscript 2
 SUPER2_W, SUPER2_H = 5, 6
 
 
+def hue_to_degrees(hue):
+    """Mirror of text_helper.c hue_to_degrees()."""
+    return hue * 360 // 255
+
+
 def hue_name(hue, sat):
     """Mirror of text_helper.c get_hue_name()."""
     if sat < 26:
         return 'White'
-    deg = hue * 360 // 255
+    deg = hue_to_degrees(hue)
     for limit, name in ((15, 'Red'), (45, 'Orange'), (70, 'Yellow'), (100, 'Lime'),
                         (165, 'Green'), (195, 'Cyan'), (240, 'Azure'), (270, 'Blue'),
                         (300, 'Violet'), (330, 'Magenta'), (345, 'Pink')):
@@ -192,6 +197,7 @@ def hue_name(hue, sat):
 
 def byte_to_percent(v):
     return (v * 100 + 127) // 255
+# GAUGE_* mirror the defines in split72/status_oled.c; FULL_BRIGHT mirrors config.h.
 GAUGE_SEGMENTS, GAUGE_BAR_W, GAUGE_PITCH, GAUGE_MIN_H = 10, 4, 6, 3
 FULL_BRIGHT = 50
 
@@ -272,7 +278,7 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
         name_x = TEXT_X + 22
         draw(setp, small, name_x, ROW2, s(name.rstrip('2')))
         if name.endswith('2'):      # "Splash2" in the fixture -> "Splash" + superscript
-            f, bm, gl = small
+            f, _bm, gl = small
             hi = 0; cx = 0
             for cp in s(name.rstrip('2')):
                 g = gl[cp - f['first']]
@@ -282,7 +288,7 @@ def build_panel(side, disp, small, icons, brightness=50, rgb=(128, 255, 100, 80,
             draw_bitmap(setp, SUPER2_BMP, name_x + hi + 2, 18, SUPER2_W, SUPER2_H)
         draw_speed_gauge(setp, COL_X, speed)
         draw(setp, small, TEXT_X, ROW3, s(hue_name(hue, sat)))
-        draw_right(setp, small, TEXT_R - 4, ROW3, s(str(hue * 360 // 255)))
+        draw_right(setp, small, TEXT_R - 4, ROW3, s(str(hue_to_degrees(hue))))
         draw_bitmap(setp, DEGREE_BMP, TEXT_R - 2, 34, DEGREE_W, DEGREE_H)
         draw(setp, small, TEXT_X, ROW4, s('S%d%%' % byte_to_percent(sat)))
         draw_right(setp, small, TEXT_R, ROW4, s('V%d%%' % byte_to_percent(val)))
@@ -328,8 +334,14 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--diag', action='store_true', help='clipping diagnostic (gutter + red out-of-bounds)')
     ap.add_argument('-o', '--out', help='output PNG (default: /tmp/status_oled[_diag].png)')
-    ap.add_argument('-b', '--brightness', type=int, default=50,
-                    help='keycap brightness 0..50 shown in the gauge (default 50)')
+    def brightness_arg(v):
+        n = int(v)
+        if not 0 <= n <= FULL_BRIGHT:
+            raise argparse.ArgumentTypeError('brightness must be 0..%d' % FULL_BRIGHT)
+        return n
+
+    ap.add_argument('-b', '--brightness', type=brightness_arg, default=FULL_BRIGHT,
+                    help='keycap brightness 0..%d shown in the gauge (default %d)' % (FULL_BRIGHT, FULL_BRIGHT))
     args = ap.parse_args()
 
     disp, small, icons = load_fonts()

@@ -262,7 +262,7 @@ void oled_update_buffer(void) {
             const uint8_t hue = rgb_matrix_get_hue();
             const uint8_t sat = rgb_matrix_get_sat();
             kdisp_write_gfx_text(smallFont, 1, TEXT_X, 44, get_hue_name(hue, sat));
-            oled_draw_num16_right(smallFont, (int8_t)(TEXT_R - 4), 44, (uint16_t)(((uint16_t)hue * 360u) / 255u));
+            oled_draw_num16_right(smallFont, (int8_t)(TEXT_R - 4), 44, hue_to_degrees(hue));
             kdisp_draw_bitmap((int8_t)(TEXT_R - 2), 34, degree_ring_bitmap, DEGREE_W, DEGREE_H);
 
             // Saturation / value as percentages rather than 0x00..0xFF. Each group is

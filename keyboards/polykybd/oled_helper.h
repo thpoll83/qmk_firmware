@@ -6,7 +6,10 @@
 #include <stdbool.h>
 #include "base/fonts/gfxfont.h"
 
-/* Utility: encode an 8-bit value as digit glyphs into a char32 (UTF-32) buffer */
+/* Utility: encode a value as digit glyphs into a char32 (UTF-32) buffer.
+   ⚠️ `buffer` is written as uint32_t codepoints, so every caller must pass a
+   uint32_t[] cast to char* (the char* signature is historical) — a char[] would
+   be misaligned. `buffer_len` is the BYTE size, i.e. sizeof(that array). */
 void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);
 void num16_to_u32_string(char* buffer, uint8_t buffer_len, uint16_t value);
 void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);

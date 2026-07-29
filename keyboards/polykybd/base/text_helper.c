@@ -11,14 +11,21 @@
 // codes. Measure any new name against that budget; it is clipped, not wrapped.
 const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
     switch(rgb_mode) {
+        // Enabled effects with no case here render as "Unknown". RGB_MATRIX_SOLID_COLOR
+        // is mode 1 on this board (the enum is built from the ENABLE_RGB_MATRIX_* set,
+        // so it is NOT the order of this switch) and was showing exactly that.
+        case RGB_MATRIX_SOLID_COLOR:
+            return U"Solid";
+        case RGB_MATRIX_BAND_SPIRAL_VAL:
+            return U"SpiralVal";
         case RGB_MATRIX_SPLASH:
             return U"Splash";
         case RGB_MATRIX_MULTISPLASH:
             return U"Splash";
         case RGB_MATRIX_SOLID_SPLASH:
-            return U"SolidSpl";
+            return U"SolidSplash";
         case RGB_MATRIX_SOLID_MULTISPLASH:
-            return U"SolidMulti";
+            return U"SolidSplsh";
         case RGB_MATRIX_RAINBOW_MOVING_CHEVRON:
             return U"Rainbow";
         case RGB_MATRIX_BREATHING:
@@ -26,19 +33,19 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_SOLID_REACTIVE_SIMPLE:
             return U"Simple";
         case RGB_MATRIX_SOLID_REACTIVE_CROSS:
-            return U"Cross";
+            return U"ReactCrss";
         case RGB_MATRIX_SOLID_REACTIVE:
             return U"Reactive";
         case RGB_MATRIX_SOLID_REACTIVE_WIDE:
             return U"ReactWide";
         case RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE:
-            return U"MultiWide";
+            return U"ReactWide";
         case RGB_MATRIX_SOLID_REACTIVE_MULTICROSS:
-            return U"MultiCross";
+            return U"ReactCrss";
         case RGB_MATRIX_SOLID_REACTIVE_MULTINEXUS:
-            return U"MultNexus";
+            return U"ReactNex";
         case RGB_MATRIX_SOLID_REACTIVE_NEXUS:
-            return U"Nexus";
+            return U"ReactNex";
         case RGB_MATRIX_ALPHAS_MODS:
             return U"AlphaMod";
         case RGB_MATRIX_GRADIENT_UP_DOWN:
@@ -50,9 +57,9 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_BAND_VAL:
             return U"BandVal";
         case RGB_MATRIX_BAND_PINWHEEL_SAT:
-            return U"PinwhlSat";
+            return U"PinwheelS";
         case RGB_MATRIX_BAND_PINWHEEL_VAL:
-            return U"PinwhlVal";
+            return U"PinwheelV";
         case RGB_MATRIX_BAND_SPIRAL_SAT:
             return U"SpiralSat";
         case RGB_MATRIX_CYCLE_ALL:
@@ -68,7 +75,7 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_CYCLE_PINWHEEL:
             return U"CyclePnwl";
         case RGB_MATRIX_CYCLE_SPIRAL:
-            return U"CycSpiral";
+            return U"CycleSpirl";
         case RGB_MATRIX_DUAL_BEACON:
             return U"DualBeacn";
         case RGB_MATRIX_RAINBOW_BEACON:
@@ -88,19 +95,28 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_PIXEL_FRACTAL:
             return U"PixFract";
         case RGB_MATRIX_PIXEL_FLOW:
-            return U"PixelFlow";
+            return U"PixFlow";
         case RGB_MATRIX_PIXEL_RAIN:
-            return U"PixelRain";
+            return U"PixRain";
         default:
             return U"Unknown";
     }
 }
 
-// MULTISPLASH shares SPLASH's name and is distinguished by a superscript 2 the caller
-// draws after it ("Splash²"). The status OLED's font is ASCII 0x20..0x7e, so the
-// superscript cannot live in the string itself.
+// A "multi" effect shares its sibling's name and is distinguished by a superscript 2
+// the caller draws after it ("Splash" / "Splash\u00b2"). The status OLED's font is ASCII
+// 0x20..0x7e, so the superscript cannot live in the string itself.
 bool led_matrix_text_superscript2(uint8_t rgb_mode) {
-    return rgb_mode == RGB_MATRIX_MULTISPLASH;
+    switch(rgb_mode) {
+        case RGB_MATRIX_MULTISPLASH:
+        case RGB_MATRIX_SOLID_MULTISPLASH:
+        case RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE:
+        case RGB_MATRIX_SOLID_REACTIVE_MULTICROSS:
+        case RGB_MATRIX_SOLID_REACTIVE_MULTINEXUS:
+            return true;
+        default:
+            return false;
+    }
 }
 
 // Sector boundaries are the usual colour-wheel names in DEGREES (hue byte scaled to

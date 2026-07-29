@@ -297,7 +297,7 @@ static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang)
         line[2] = 0;
         int8_t lo = 0, hi = 0;
         kdisp_gfx_text_bounds(font, 1, line, &lo, &hi);
-        int8_t nx = (int8_t)(x + (COL_W - (hi - lo + 1)) / 2 - lo);
+        int8_t nx = (int8_t)(x + (COL_W - (hi - lo + 1)) / 2 - lo + 1);
         // The widest pair ("TW") is 18px, 1px over the column, so centring would put it
         // off the panel edge. Clamp: it grows into the gutter before the text origin.
         if(nx < x) nx = x;

@@ -83,7 +83,7 @@ def load_fonts():
     small = bundle('NotoSans_Medium8pt7b')
     tiny = bundle('NotoSans_Regular_Tiny_6pt7b')   # language index only (see status_oled.c)
     icons = None
-    for n, f in F.items():
+    for _n, f in F.items():
         if f['first'] <= 0x80 <= f['last'] and f['gly'] in G:
             icons = (f, B[f['bmp']], G[f['gly']])
             break
@@ -110,8 +110,9 @@ def draw(setpix, font, x, y, text):
         x += g['xa']
 
 
-def draw_right(setpix, font, right_x, y, text):
-    """Mirror of oled_draw_text_right: rightmost lit pixel lands on right_x."""
+def measure_width(font, text):
+    """Rightmost lit pixel of `text`, mirroring kdisp_gfx_text_bounds' hi. Skips
+    out-of-range codepoints exactly as draw() does, so a missing glyph can't raise."""
     f, _bm, gl = font
     x = 0
     hi = 0
@@ -122,7 +123,12 @@ def draw_right(setpix, font, right_x, y, text):
         if g['w']:
             hi = max(hi, x + g['xo'] + g['w'] - 1)
         x += g['xa']
-    draw(setpix, font, max(0, right_x - hi), y, text)
+    return hi
+
+
+def draw_right(setpix, font, right_x, y, text):
+    """Mirror of oled_draw_text_right: rightmost lit pixel lands on right_x."""
+    draw(setpix, font, max(0, right_x - measure_width(font, text)), y, text)
 
 
 def fill_rect(setpix, x, y, w, h):
@@ -280,7 +286,7 @@ def draw_lang_column(setp, tiny, x, code):
                 lo = min(lo, cx + g['xo'])
                 hi = max(hi, cx + g['xo'] + g['w'] - 1)
             cx += g['xa']
-        nx = x + (COL_W - (hi - lo + 1)) // 2 - lo
+        nx = x + (COL_W - (hi - lo + 1)) // 2 - lo + 1
         draw(setp, tiny, max(x, nx), base, txt)
 
 
@@ -292,7 +298,8 @@ def build_panel(side, disp, small, icons, tiny, brightness=50, rgb=(128, 255, 10
     Returns set of (x,y) pixels."""
     rgb_on = rgb is not None
     pts = set()
-    setp = lambda px, py: pts.add((px, py))
+    def setp(px, py):
+        pts.add((px, py))
     # Each half's indicator column sits on its INNER edge (see status_oled.c), so the
     # text origin differs per panel.
     lock_panel = (side == 'L')

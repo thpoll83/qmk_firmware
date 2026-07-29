@@ -689,24 +689,23 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   `.plyf` reship and no `content_version` bump**. The gain is real but modest at
   27 px (the `_Base_` size): measured mirror-asymmetry improves 12.4% → 7.1%,
   versus 14.9% → 4.4% at the 15 px status size.
-- **Every TEXT script is grid-fitted too; only the PICTOGRAM categories are not.**
-  `hinting: auto` is set on the `latin`, `hebrew`, `jp`, `kr`, `arabic`,
-  `devanagari`, `bengali`, `telugu`, `tamil`, `thai`, `georgian`, `armenian`,
-  `bopomofo`, `vietnamese`, `ethiopic`, `canadian`, `cherokee`, `tengwar` and
-  `gscript` categories, plus the single `_Arrows_` **entry** (a per-font override —
-  the yaml merges an entry over its category defaults). Left on `native`:
-  `symbols`, `emoji`, `emoji_fig` and the `flags` `pack_extra` — pictographs, where
-  the autohinter's text blue-zones buy nothing.
-  - **`_Arrows_` is a per-entry override on purpose.** It draws the Tab / Enter /
-    Undo / Redo / refresh / nav-stop **key legends** — line art read as glyphs, and
-    visibly more even grid-fitted — but it is in `index.resident_fonts`, so setting
-    it alone changes only the compiled-in font and the **`symbol` bundle stays
-    byte-identical (no reship)**. Setting it on the whole `symbols` category instead
-    would drag every pictogram icon in and force a `symbol` reship for no gain.
-  - **This cost a 4-bundle reship** (`mideast` 1→2, `syllabic` 1→2, `asia` 1→2,
-    `fantasy` 3→4); `symbol`, `flags` and `emoji` were byte-identical and were left
-    alone. Use the `reship-fontpack-bundle` skill — its `--check` is what tells you
-    which bundles actually moved.
+- **Everything is grid-fitted EXCEPT emoji.** `hinting: auto` is set on every
+  category — `latin`, `hebrew`, `jp`, `kr`, `arabic`, `devanagari`, `bengali`,
+  `telugu`, `tamil`, `thai`, `georgian`, `armenian`, `bopomofo`, `vietnamese`,
+  `ethiopic`, `canadian`, `cherokee`, `tengwar`, `gscript` and `symbols`. Only
+  **`emoji` / `emoji_fig`** (and the `flags` `pack_extra`) stay on `native`.
+  - ⚠️ **Do not "finish the job" by setting it on emoji — it is a measured no-op.**
+    The autohinter assigns each glyph to a script by codepoint range and applies
+    that script's blue zones (stems, x-/cap-height, baselines). Emoji codepoints
+    match none of its ranges, so they get the no-script style with no zones:
+    **0 of 1156 emoji glyphs and 0 of 51 emoji_fig glyphs change**. Setting it
+    there only rewrites the provenance comment in the header (the flag is echoed
+    into it) — the bitmaps are byte-identical. `symbols` by contrast is line art
+    read as glyphs (arrows, modifier symbols, util icons) and 134 of 1060 do change.
+  - **Reship cost so far**: `mideast` 1→2, `syllabic` 1→2, `asia` 1→2, `fantasy`
+    3→4 (the text scripts), then `symbol` 6→7 (119 glyphs). `flags` and `emoji`
+    stayed byte-identical throughout. Use the `reship-fontpack-bundle` skill — its
+    `--check` is what tells you which bundles actually moved.
 - ⚠️ **Two committed generated artifacts were already STALE before this work and
   `--check` flags them**: `fontpack.manifest.json`'s `total_size` (the committed
   480140 is the *post-dedupe* size, but the script builds that manifest **before**

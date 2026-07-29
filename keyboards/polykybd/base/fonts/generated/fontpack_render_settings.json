@@ -250,6 +250,7 @@
     },
     "19": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_SymBmp1_",
       "render_height": 50,
       "source": "noto-sans-symbols2",
@@ -257,6 +258,7 @@
     },
     "20": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_SymBmp2_",
       "render_height": 50,
       "source": "noto-sans-symbols2",
@@ -264,6 +266,7 @@
     },
     "21": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_SymBmp3_",
       "render_height": 50,
       "source": "noto-sans-symbols2",
@@ -271,6 +274,7 @@
     },
     "22": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_SymBmp4_",
       "render_height": 50,
       "source": "noto-sans-symbols2",
@@ -278,6 +282,7 @@
     },
     "23": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_SymBmp5_",
       "render_height": 50,
       "source": "noto-sans-symbols2",
@@ -285,6 +290,7 @@
     },
     "24": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_SymBmp6_",
       "render_height": 50,
       "source": "noto-sans-symbols2",
@@ -385,6 +391,7 @@
     },
     "37": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Technical2_",
       "render_height": 50,
       "source": "noto-sans-symbols2",
@@ -392,6 +399,7 @@
     },
     "38": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Technical_",
       "render_height": 50,
       "source": "noto-sans-symbols",
@@ -399,6 +407,7 @@
     },
     "39": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_GuiKey_",
       "render_height": 50,
       "source": "noto-sans-symbols2",
@@ -422,6 +431,7 @@
     },
     "42": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Util_",
       "render_height": 50,
       "bits": 32,
@@ -462,6 +472,7 @@
     },
     "47": {
       "size": 18,
+      "hinting": "auto",
       "variant": "_Window_",
       "render_height": 50,
       "bits": 32,
@@ -1239,6 +1250,7 @@
     },
     "142": {
       "size": 18,
+      "hinting": "auto",
       "variant": "_WinSwitch_",
       "render_height": 50,
       "bits": 32,
@@ -1247,6 +1259,7 @@
     },
     "143": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_MathHints_",
       "render_height": 50,
       "source": "noto-sans-math",
@@ -1254,6 +1267,7 @@
     },
     "144": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Dictation_",
       "render_height": 50,
       "bits": 32,
@@ -1262,6 +1276,7 @@
     },
     "145": {
       "size": 18,
+      "hinting": "auto",
       "variant": "_Network_",
       "render_height": 50,
       "bits": 32,
@@ -1270,6 +1285,7 @@
     },
     "146": {
       "size": 18,
+      "hinting": "auto",
       "variant": "_Knobs_",
       "render_height": 50,
       "bits": 32,

@@ -217,9 +217,14 @@ categories:
     # (and listed after _Tengwar_ in `fonts:`) so tengwar_fonts.h is untouched.
     output: gscript_fonts.h
     defaults: {size: 20, render_height: 30, yadvance: 40, hinting: auto}
+  # symbols carries the line-art KEY LEGENDS (arrows, modifier symbols, util
+  # icons), which read as glyphs and come out more even grid-fitted.  emoji /
+  # emoji_fig are deliberately NOT grid-fitted: measured, the autohinter changes
+  # 0 of 1156 emoji glyphs -- their codepoints match none of its script ranges,
+  # so there are no blue zones to snap to and it is a pure no-op there.
   symbols:
     output: symbol_fonts.h
-    defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
+    defaults: {source: noto-sans-symbols2, size: 20, render_height: 50, hinting: auto}
   emoji:
     output: emoji_fonts.h
     # Default: monochrome NotoEmoji line-art (the original).  Most emoji read
@@ -288,13 +293,7 @@ fonts:
   - {category: emoji, variant: _Meh_, bits: 32, ranges: [[0x1f410, 0x1f410]]}
   - {category: emoji, variant: _Settings_, bits: 32, ranges: [[0x1f527, 0x1f527]]}
   - {category: emoji, variant: _World_, bits: 32, ranges: [[0x1f310, 0x1f310]]}
-  # Grid-fitted (see the latin note): these are the Tab / Enter / Undo / Redo /
-  # refresh / nav-stop KEY LEGENDS, i.e. line art read as glyphs, and they come
-  # out visibly more even for it.  _Arrows_ is in index.resident_fonts, so this
-  # changes only the compiled-in font -- the `symbol` bundle stays byte-identical
-  # and needs no reship.  The rest of the `symbols` category (pictogram icons)
-  # stays on native.
-  - {category: symbols, variant: _Arrows_, hinting: auto, ranges: [[0x2b6f, 0x2b73], [0x2b7e, 0x2b7e], [0x2b8c, 0x2b8c], [0x2b8e, 0x2b8e], [0x2ba0, 0x2ba0]]}
+  - {category: symbols, variant: _Arrows_, ranges: [[0x2b6f, 0x2b73], [0x2b7e, 0x2b7e], [0x2b8c, 0x2b8c], [0x2b8e, 0x2b8e], [0x2ba0, 0x2ba0]]}
   - {category: symbols, variant: _Technical2_, ranges: [[0x2318, 0x2318], [0x2325, 0x2326], [0x232b, 0x232b]]}
   - {category: symbols, variant: _Technical_, source: noto-sans-symbols, ranges: [[0x2387, 0x2388], [0x238b, 0x238b], [0x2399, 0x2399]]}
   - {category: symbols, variant: _GuiKey_, ranges: [[0x2756, 0x2756]], note: 'GUI/Super key legend ❖ (DINGBAT_BLACK_DIA_X, U+2756). Kept resident (index.resident_fonts) so the GUI modifier renders with no pack; also present in _SymBmp4_ but resident wins.'}

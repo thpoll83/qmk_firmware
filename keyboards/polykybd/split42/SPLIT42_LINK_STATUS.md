@@ -557,21 +557,22 @@ unloaded open), slave always powered.
 > the `.kicad_pcb` files: COM-net copper around U26 + the link receptacle; red = copper
 > islands that reach the MCU only through U26's internal flow-through metal.
 >
-> ⚠️ The rendered PNG is **not kept in-tree**: `.gitignore` ignores `*.png`, and
-> `qmk lint --strict` fails a keyboard directory that contains any gitignored file, so
-> committing it turned the `lint` check red on every unrelated split42 PR. Recover it with
-> `git show 11f37c17:keyboards/polykybd/split42/split42_link_copper_comparison.png > /tmp/x.png`,
-> or re-render from the KiCad sources in the PolyKybd hardware repo.
+> 📎 **The image lives in the hardware repo**, beside the boards it documents:
+> [`thpoll83/PolyKybd` → `images/split42_link_copper_comparison.png`](https://github.com/thpoll83/PolyKybd/blob/PolyKybd/images/split42_link_copper_comparison.png).
+> It is deliberately not kept here: `.gitignore` matches `*.png` and `qmk lint --strict`
+> fails any keyboard directory containing a gitignored file, so committing it under
+> `keyboards/` turned the `lint` check red on every unrelated split42 PR. Re-render from
+> the `.kicad_pcb` sources in that same repo.
 
 ### Gerber verification (the FABBED files — ground truth incl. pours)
 
 Rendered from **`production/PolyCorne_Split42_L_1.0.zip`** (the actual fab package of
 the boards in hand), all 4 copper layers, gerbv:
 
-> **split42-left fabbed gerbers, all 4 copper layers** (gerbv). Not kept in-tree for the
-> same reason as the copper comparison above — recover with
-> `git show 11f37c17:keyboards/polykybd/split42/split42_left_gerber_4layers.png > /tmp/x.png`,
-> or re-render from `production/PolyCorne_Split42_L_1.0.zip`.
+> **split42-left fabbed gerbers, all 4 copper layers** (gerbv). In the hardware repo for
+> the same reason as the copper comparison above:
+> [`thpoll83/PolyKybd` → `images/split42_left_gerber_4layers.png`](https://github.com/thpoll83/PolyKybd/blob/PolyKybd/images/split42_left_gerber_4layers.png).
+> Re-render from `production/PolyCorne_Split42_L_1.0.zip`.
 >
 > The findings it shows are stated in full below, so the text stands on its own.
 

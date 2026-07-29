@@ -264,7 +264,7 @@ void oled_update_buffer(void) {
     }
 
     // Physical side marker at the very bottom
-    pdraw_text_center(tinyFont, 1, 126, side_is_undecided() ? U"?" : (is_left_side() ? U"L" : U"R"), buf);
+    pdraw_text_center(tinyFont, 1, 127, side_is_undecided() ? U"?" : (is_left_side() ? U"L" : U"R"), buf);
 }
 
 // "Updating fonts/firmware …" screen (128x32) shown while a flash is in progress.

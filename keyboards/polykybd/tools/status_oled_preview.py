@@ -49,6 +49,7 @@ RGB_ROW_B = 30    # effect index + name
 RGB_ROW_C = 45    # colour name + hue
 RGB_ROW_D = 63    # saturation + value
 # RGB-off re-flow: three rows on both panels instead of four, again bottomed out on 63.
+SIDE_MARKER_BASE = 63   # physical-side marker, bottomed out (was 56)
 OFF_ROW_B = 37
 OFF_ROW_C = 63
 RGB_OFF_ROW_B = 39
@@ -357,9 +358,9 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
     if lock_panel:
         draw(setp, icons, COL_X, 16, [0x8C])                    # NumLock off
         draw(setp, icons, COL_X, 38, [0x8E])                    # CapsLock off
-        draw(setp, small, COL_X + 6, 56, s('L'))
+        draw(setp, small, COL_X + 6, SIDE_MARKER_BASE, s('L'))
     else:
-        draw(setp, small, COL_X + 5, 56, s('R'))
+        draw(setp, small, COL_X + 5, SIDE_MARKER_BASE, s('R'))
     if lock_panel:
         draw(setp, small, TEXT_X, LOCK_ROW_B if rgb_on else OFF_ROW_B, s('Qwerty'))
         # Speed (+ the language slot sharing its row) and brightness trade rows when RGB

@@ -224,7 +224,7 @@ def build(side, mid, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0]
         for half in range(2):
             draw_text_center(setp, tiny, 68 + gh + 12 + half * 12, lang[half * 3:half * 3 + 2])
     # side marker
-    draw_text_center(setp, tiny, 126, side)
+    draw_text_center(setp, tiny, 127, side)
     return pts
 
 

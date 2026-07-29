@@ -249,6 +249,12 @@ static uint8_t brightness_to_level(uint8_t contrast) {
 // With RGB off the effect / colour / S+V rows and the speed gauge all vanish, leaving
 // the RGB panel almost empty — so the two movable groups migrate into that space and
 // each panel re-flows onto three rows, again bottomed out on row 63.
+// The physical-side marker is the LAST thing in the indicator column on either
+// panel, so it bottoms out on row 63 like the text rows do. It used to sit at 56,
+// which left a 7px dead strip under it and — once the language stack grew — put the
+// R only 2px below "US". NOT shared with the scroll-lock arrow that replaces it:
+// that glyph is 26px tall and would run up into the Caps Lock icon from down here.
+#define SIDE_MARKER_BASE 63
 #define OFF_ROW_B      37  // layout name  (27..41 incl. descenders)
 #define OFF_ROW_C      63  // speed        (53..63; no globe here, so shorter than row C)
 #define RGB_OFF_ROW_B  39  // "RGB Off"    (28..39 — no descenders, so 2px below the
@@ -348,13 +354,13 @@ void oled_update_buffer(void) {
         // straight through the speed gauge on the other panel).
         kdisp_write_gfx_text(g_all_fonts, g_all_font_count, (int8_t)(COL_X + 4), 54, ARROWS_DOWNSTOP);
     } else if(side_is_undecided()) {
-        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), 56, U"?");
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), SIDE_MARKER_BASE, U"?");
     } else if(is_left_side()) {
-        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), 56, U"L");
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), SIDE_MARKER_BASE, U"L");
     } else {
         // Physical side at the foot of the column; R sits 1px in from L so the wider
         // glyph stays centred under it.
-        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 5), 56, U"R");
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 5), SIDE_MARKER_BASE, U"R");
     }
 
     // (The LTR-559 sensor values used to be rendered here during bring-up; they

@@ -10,7 +10,6 @@
 #include "../base/com.h"
 #include "../base/disp_array.h"
 #include "../base/text_helper.h"
-#include "../base/fonts/NotoSans_Regular_Base_11pt.h"
 #include "../base/fonts/NotoSans_Medium_Base_8pt.h"
 #include "../lang/named_glyphs.h"
 #include "../config.h"                          // FULL_BRIGHT

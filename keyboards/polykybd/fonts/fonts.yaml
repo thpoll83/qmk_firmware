@@ -139,13 +139,19 @@ bundles:
 categories:
   latin:
     output: latin_fonts.h
+    # hinting: auto -> force FreeType's autohinter (fontconvert -Hauto).  NotoSans
+    # ships with NO hinting bytecode (maxSizeOfInstructions == 0, no fpgm, a 7-byte
+    # prep that only sets dropout control), and FreeType does not fall back to its
+    # own autohinter when a face has even that stub prep -- so without this these
+    # render completely ungridfitted and stem edges round independently.  See
+    # fonts/gen-status-fonts.sh for the long-form explanation.
     # resident == compiled into the firmware image (the "functional minimum"),
     # NOT shipped in the external-flash font pack. The latin category covers
     # ASCII + Latin-extended + Cyrillic + Greek keycaps, so the keyboard stays
     # usable for those layouts with no pack present. See base/fontpack.h and
     # fonts/fontpack.py. (IconsFont — index.prepend_fonts — is resident too.)
     resident: true
-    defaults: {source: noto-sans, size: 14}
+    defaults: {source: noto-sans, size: 14, hinting: auto}
   hebrew:
     output: hebrew_fonts.h
     defaults: {source: noto-sans-hebrew, size: 22, weight: 400}

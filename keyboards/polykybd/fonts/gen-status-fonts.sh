@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-# Generate the four standalone UI text fonts — the ones that render the status
+# Generate the three standalone UI text fonts — the ones that render the status
 # OLED, the firmware-update screens and the language-code labels:
 #
-#   base/fonts/NotoSans_Regular_Base_11pt.h   _Disp_  21 px  status OLED top row
 #   base/fonts/NotoSans_Medium_Base_8pt.h     _Small_ 15 px  status OLED body rows
-#   base/fonts/util_font.h                    _Mid_   19 px  fw-update / utility text
+#   base/fonts/util_font.h                    _Mid_   19 px  status OLED TOP row,
+#                                                            fw-update / utility text
 #   base/fonts/nano_font.h                    _Nano_  10 px  language codes +
 #                                                            split42 layout name
 #
 # These are NOT in fonts.yaml / ALL_FONTS — each is used through a dedicated
 # single-font array (see split72/status_oled.c, split42/status_oled.c,
 # oled_helper.c, poly_keymap.c), so they never compete with _Base_ over ASCII.
-# Two of them (the _Disp_ and _Small_ Base headers) previously had no generator
-# at all and were hand-made from a long-gone local NotoSans-Medium.ttf; this
-# script is now the single source of truth for all four.
+# The _Small_ Base header previously had no generator at all -- it was hand-made
+# from a long-gone local NotoSans-Medium.ttf; this script is now the single source
+# of truth for all three.  There used to be a separate 21 px _Disp_ face for the
+# status-OLED top row; at that size grid-fitting has essentially converged with
+# the unhinted render, so it bought nothing over _Mid_ 19 px and was dropped.
 #
 # ── Why these particular flags ───────────────────────────────────────────────
 #
@@ -73,16 +75,12 @@ emit() {
     echo "wrote $out"
 }
 
-emit base/fonts/NotoSans_Regular_Base_11pt.h \
-     "Status-OLED display font (NotoSans 21 px, grid-fitted) — top row." \
-     -p21 -w400 -Hauto -v_Disp_
-
 emit base/fonts/NotoSans_Medium_Base_8pt.h \
      "Status-OLED body font (NotoSans Semibold 15 px, grid-fitted) — the rows that carry the numbers." \
      -p15 -w600 -Hauto -v_Small_
 
 emit base/fonts/util_font.h \
-     "Mid utility-label font (NotoSans Medium 19 px, grid-fitted) — fw-update screens and misc utility-key text." \
+     "Mid utility-label font (NotoSans Medium 19 px, grid-fitted) — status-OLED top row, fw-update screens, misc utility-key text." \
      -p19 -w500 -Hauto -v_Mid_
 
 # split42's layout name has only the 32 px portrait width for a 5-char name. It

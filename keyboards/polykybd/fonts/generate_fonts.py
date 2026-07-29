@@ -51,7 +51,8 @@ RENDER_SETTINGS = "fontpack_render_settings.json"
 # does not affect the rendered bytes (fontconvert parses options order-free); it
 # only shapes the provenance comment fontconvert prints on the first line.
 FIELD_FLAGS = [
-    ("size", "-s"), ("variant", "-v"), ("grayscale", "-g"), ("normalize", "-N"),
+    ("size", "-s"), ("pixel_size", "-p"), ("hinting", "-H"),
+    ("variant", "-v"), ("grayscale", "-g"), ("normalize", "-N"),
     ("render_height", "-r"),
     ("yadvance", "-Y"), ("xshift", "-X"), ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
     ("contrast", "-c"), ("gamma", "-G"), ("saturation", "-B"), ("sharpness", "-U"),

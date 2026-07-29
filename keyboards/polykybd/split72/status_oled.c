@@ -9,9 +9,8 @@
 #include "../base/com.h"
 #include "../base/disp_array.h"
 #include "../base/text_helper.h"
-#include "../base/fonts/NotoSans_Regular_Base_11pt.h"
 #include "../base/fonts/NotoSans_Medium_Base_8pt.h"
-// _Mid_ (10px) utility font: defined in util_font.h, whose definitions are owned by
+// _Mid_ (19px) utility font: defined in util_font.h, whose definitions are owned by
 // poly_keymap.c's translation unit. Reference it via extern here rather than
 // re-including the header (which would duplicate its PROGMEM tables at link time).
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
@@ -312,7 +311,9 @@ void oled_update_buffer(void) {
     kdisp_set_buffer(0);
 
     const poly_layer_t* global_layer = get_global_layer();
-    const GFXfont* displayFont[] = { &NotoSans_Regular_Disp_21px7b };
+    // Top row shares _Mid_ with the fw-update screens: at 19-21px grid-fitting has
+    // converged with the unhinted render, so a dedicated 21px face bought nothing.
+    const GFXfont* displayFont[] = { &NotoSans_Regular_Mid_19px7b };
     const GFXfont* smallFont[] = { &NotoSans_Regular_Small_15px7b };
     const GFXfont* tinyFont[]  = { &NotoSans_Regular_Nano_10px7b };   // language index only
 

@@ -93,6 +93,45 @@ static const uint8_t lang_globe_bitmap[] PROGMEM = {
 #define GLOBE_W 13
 #define GLOBE_H 13
 
+// Bigger sibling for the RGB-off layout, where the language slot moves into the
+// indicator column and has the whole column width to itself. Same construction as
+// the 13x13 (rim + equator + two curved meridians), redrawn at 17px rather than
+// scaled — a 2x2-OR upscale of the small one breaks the 1px strokes.
+static const uint8_t lang_globe_big_bitmap[] PROGMEM = {   // 17x17 language globe, RGB-off column
+    0x07, 0xf0, 0x00,
+    0x0e, 0x38, 0x00,
+    0x32, 0x26, 0x00,
+    0x24, 0x12, 0x00,
+    0x44, 0x11, 0x00,
+    0xc4, 0x11, 0x80,
+    0x84, 0x10, 0x80,
+    0x84, 0x10, 0x80,
+    0xff, 0xff, 0x80,
+    0x84, 0x10, 0x80,
+    0x84, 0x10, 0x80,
+    0xc4, 0x11, 0x80,
+    0x44, 0x11, 0x00,
+    0x24, 0x12, 0x00,
+    0x32, 0x26, 0x00,
+    0x0e, 0x38, 0x00,
+    0x07, 0xf0, 0x00,
+};
+#define GLOBE_BIG_W 17
+#define GLOBE_BIG_H 17
+
+// Typing speed. "WPM" as text costs 38px of a 105px row, which a 3-digit rate plus
+// the language slot can no longer afford — a dial reads the same and costs 11.
+static const uint8_t wpm_gauge_bitmap[] PROGMEM = {   // 11x6 speedometer replacing the WPM label
+    0x1f, 0x00,
+    0x71, 0xc0,
+    0x43, 0x40,
+    0xc2, 0x60,
+    0x86, 0x20,
+    0x8e, 0x20,
+};
+#define WPM_ICON_W 11
+#define WPM_ICON_H 6
+
 // The status font is ASCII 0x20..0x7e only, so the degree sign does not exist in it —
 // cheaper as a bitmap than a font-set lookup through g_all_fonts (which would also
 // baseline-align to fonts[0]).
@@ -228,9 +267,9 @@ static uint8_t brightness_to_level(uint8_t contrast) {
 // everything re-flows onto three evenly-spaced rows (15/37/59) on BOTH panels.
 #define OFF_ROW_B     37
 #define OFF_ROW_C     59
-#define OFF_GLOBE_Y    2   // globe bitmap top, in the column the gauge vacated
-#define OFF_LANG_BASE 33   // under the globe, but kept off the "RGB Off" baseline beside
-                           // it (38) -- level with it the number reads as its index
+#define OFF_GLOBE_Y    1   // big globe top, in the column the gauge vacated
+#define OFF_CODE1_BASE 30  // "en" under it, then "US" under that -- the code does not fit
+#define OFF_CODE2_BASE 41  // on one line in a 17px column ("TW" alone is 18px at 6pt)
 
 // Brightness: sun icon, the raw value, then the staircase meter. Grouped so the whole
 // row can be placed at either panel's origin without duplicating the offsets.
@@ -242,20 +281,28 @@ static void draw_brightness_row(const GFXfont* const* font, int8_t x, int8_t bas
     draw_brightness_bars((int8_t)(x + 40), (int8_t)(base_y - 1), brightness_to_level(contrast));
 }
 
-// Language slot stacked vertically for the indicator column: globe above, number
-// centred under it. Centring is measured (not a fixed x) so a 1- vs 2-digit index
-// stays under the globe.
+// Language slot stacked vertically for the indicator column: big globe, then the
+// "xx-YY" code split over two lines. Each line centres on the column independently,
+// so "ja" over "JP" stays stacked whatever the glyph widths are.
 static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang) {
-    uint32_t buffer[8];
-    kdisp_draw_bitmap((int8_t)(x + (COL_W - GLOBE_W) / 2 + 1), OFF_GLOBE_Y, lang_globe_bitmap, GLOBE_W, GLOBE_H);
-    num_to_u32_string((char*) buffer, sizeof(buffer), lang);
-    int8_t lo = 0, hi = 0;
-    kdisp_gfx_text_bounds(font, 1, buffer, &lo, &hi);
-    int8_t nx = (int8_t)(x + (COL_W - (hi - lo + 1)) / 2 - lo);
-    // A 3-digit index is still 2px wider than the column even at 6pt, so centring would
-    // push it off the panel edge. Clamp: it grows into the gap before the text origin.
-    if(nx < x) nx = x;
-    kdisp_write_gfx_text(font, 1, nx, OFF_LANG_BASE, buffer);
+    uint32_t line[3];
+    const uint32_t* code = poly_lang_code(lang);
+    kdisp_draw_bitmap((int8_t)(x + (COL_W - GLOBE_BIG_W) / 2 + 1), OFF_GLOBE_Y,
+                      lang_globe_big_bitmap, GLOBE_BIG_W, GLOBE_BIG_H);
+    if(code[0] == 0) return;
+    // "xx-YY": codepoints 0,1 over 3,4 -- the line break replaces the separator.
+    for(uint8_t half = 0; half < 2; ++half) {
+        line[0] = code[half * 3];
+        line[1] = code[half * 3 + 1];
+        line[2] = 0;
+        int8_t lo = 0, hi = 0;
+        kdisp_gfx_text_bounds(font, 1, line, &lo, &hi);
+        int8_t nx = (int8_t)(x + (COL_W - (hi - lo + 1)) / 2 - lo);
+        // The widest pair ("TW") is 18px, 1px over the column, so centring would put it
+        // off the panel edge. Clamp: it grows into the gutter before the text origin.
+        if(nx < x) nx = x;
+        kdisp_write_gfx_text(font, 1, nx, half ? OFF_CODE2_BASE : OFF_CODE1_BASE, line);
+    }
 }
 
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
@@ -389,20 +436,17 @@ void oled_update_buffer(void) {
             draw_brightness_row(smallFont, 0, 44, local_state->contrast);
         }
 
-        kdisp_write_gfx_text(smallFont, 1, 0, 59, U"WPM");
+        // Row 4 carries typing speed AND the language slot, both variable width, so the
+        // 105px budget is real: a 3-digit rate plus a code as wide as "mn-MN". The dial
+        // buys back the 38px the "WPM" label cost, and the code runs in 6pt (40px worst)
+        // rather than 8pt (54px, which does not fit at any packing).
+        kdisp_draw_bitmap(0, 51, wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
         num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
-        kdisp_write_gfx_text(smallFont, 1, 44, 59, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 15, 59, buffer);
 
         if(rgb_on) {
-            // Language slot: globe icon in place of the old "L" label.
-            // y so the globe's bottom row lands on the digits' bottom row (baseline - 1),
-            // not on the baseline itself.
-            // Globe at 70 (not 68) and the index in the 6pt font: worst case the WPM
-            // value is 3 digits too, so 8pt "255" already reaches x=68. At 6pt the index
-            // ends at 103, inside TEXT_R (104) and clear of the lock column at 108.
-            kdisp_draw_bitmap(70, 47, lang_globe_bitmap, GLOBE_W, GLOBE_H);
-            num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
-            kdisp_write_gfx_text(tinyFont, 1, 85, 59, buffer);
+            kdisp_draw_bitmap(46, 47, lang_globe_bitmap, GLOBE_W, GLOBE_H);
+            kdisp_write_gfx_text(tinyFont, 1, 62, 59, poly_lang_code(local_state->lang));
         }
     }
 }

@@ -7,6 +7,11 @@
 
 const uint32_t* get_led_matrix_text(uint8_t rgb_mode);
 
+/* "xx-YY" for a language index (0..NUM_LANG-1), "" when out of range.
+   DEFINED IN poly_keymap.c, which owns the cog-generated code table — declared here
+   because this is the display-text header the status OLED already includes. */
+const uint32_t* poly_lang_code(uint8_t lang);
+
 /* True when the effect's name is followed by a superscript 2 ("Splash²" for
    MULTISPLASH). The ASCII-only status font has no such glyph, so the caller draws it
    as a bitmap right after the name. */

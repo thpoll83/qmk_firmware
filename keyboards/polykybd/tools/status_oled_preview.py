@@ -44,8 +44,9 @@ ROW4 = 59       # WPM+lang / Speed                                  [was 58]
 # RGB-off re-flow: three evenly-spaced rows on both panels instead of four.
 OFF_ROW_B = 37
 OFF_ROW_C = 59
-OFF_GLOBE_Y = 2
-OFF_LANG_BASE = 33
+OFF_GLOBE_Y = 1
+OFF_CODE1_BASE = 30
+OFF_CODE2_BASE = 41
 
 
 # ----------------------------- GFXfont parsing -----------------------------
@@ -179,6 +180,14 @@ GLOBE_BMP = [0x0f, 0x80, 0x38, 0xe0, 0x68, 0xb0, 0x48, 0x90, 0x90, 0x48, 0x90, 0
              0xff, 0xf8, 0x90, 0x48, 0x90, 0x48, 0x48, 0x90, 0x68, 0xb0, 0x38, 0xe0,
              0x0f, 0x80]
 GLOBE_W = GLOBE_H = 13
+GLOBE_BIG_BMP = [0x07,0xf0,0x00, 0x0e,0x38,0x00, 0x32,0x26,0x00, 0x24,0x12,0x00,
+                 0x44,0x11,0x00, 0xc4,0x11,0x80, 0x84,0x10,0x80, 0x84,0x10,0x80,
+                 0xff,0xff,0x80, 0x84,0x10,0x80, 0x84,0x10,0x80, 0xc4,0x11,0x80,
+                 0x44,0x11,0x00, 0x24,0x12,0x00, 0x32,0x26,0x00, 0x0e,0x38,0x00,
+                 0x07,0xf0,0x00]
+GLOBE_BIG_W = GLOBE_BIG_H = 17
+WPM_BMP = [0x1f,0x00, 0x71,0xc0, 0x43,0x40, 0xc2,0x60, 0x86,0x20, 0x8e,0x20]
+WPM_ICON_W, WPM_ICON_H = 11, 6
 DEGREE_BMP = [0xe0, 0xa0, 0xe0]                            # 3x3 degree sign
 DEGREE_W = DEGREE_H = 3
 SUPER2_BMP = [0x70, 0x88, 0x10, 0x20, 0x40, 0xf8]          # 5x6 superscript 2
@@ -257,24 +266,26 @@ def draw_brightness_row(setp, small, x, base_y, brightness):
     draw_brightness_bars(setp, x + 40, base_y - 1, brightness_to_level(brightness))
 
 
-def draw_lang_column(setp, tiny, x, lang):
-    """Mirror of draw_lang_column(): globe over a centred number."""
-    draw_bitmap(setp, GLOBE_BMP, x + (COL_W - GLOBE_W) // 2 + 1, OFF_GLOBE_Y, GLOBE_W, GLOBE_H)
-    txt = s(str(lang))
+def draw_lang_column(setp, tiny, x, code):
+    """Mirror of draw_lang_column(): big globe over the code on two lines."""
+    draw_bitmap(setp, GLOBE_BIG_BMP, x + (COL_W - GLOBE_BIG_W) // 2 + 1, OFF_GLOBE_Y,
+                GLOBE_BIG_W, GLOBE_BIG_H)
     f, _bm, gl = tiny
-    lo, hi, cx = 127, 0, 0
-    for cp in txt:
-        g = gl[cp - f['first']]
-        if g['w']:
-            lo = min(lo, cx + g['xo'])
-            hi = max(hi, cx + g['xo'] + g['w'] - 1)
-        cx += g['xa']
-    nx = x + (COL_W - (hi - lo + 1)) // 2 - lo
-    draw(setp, tiny, max(x, nx), OFF_LANG_BASE, txt)
+    for half, base in ((0, OFF_CODE1_BASE), (1, OFF_CODE2_BASE)):
+        txt = s(code[half * 3:half * 3 + 2])
+        lo, hi, cx = 127, 0, 0
+        for cp in txt:
+            g = gl[cp - f['first']]
+            if g['w']:
+                lo = min(lo, cx + g['xo'])
+                hi = max(hi, cx + g['xo'] + g['w'] - 1)
+            cx += g['xa']
+        nx = x + (COL_W - (hi - lo + 1)) // 2 - lo
+        draw(setp, tiny, max(x, nx), base, txt)
 
 
 def build_panel(side, disp, small, icons, tiny, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'),
-                lang=0, wpm=0):
+                lang='en-US', wpm=0):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
     rgb=None models RGB being switched off, which re-flows BOTH panels.
@@ -309,11 +320,11 @@ def build_panel(side, disp, small, icons, tiny, brightness=50, rgb=(128, 255, 10
         draw(setp, small, TEXT_X, ROW2 if rgb_on else OFF_ROW_B, s('Qwerty'))
         if rgb_on:
             draw_brightness_row(setp, small, 0, ROW3, brightness)
-        draw(setp, small, 0, ROW4, s('WPM'))
-        draw(setp, small, 44, ROW4, s(str(wpm)))
+        draw_bitmap(setp, WPM_BMP, 0, 51, WPM_ICON_W, WPM_ICON_H)
+        draw(setp, small, 15, ROW4, s(str(wpm)))
         if rgb_on:
-            draw_bitmap(setp, GLOBE_BMP, 70, 47, GLOBE_W, GLOBE_H)
-            draw(setp, tiny, 85, ROW4, s(str(lang)))
+            draw_bitmap(setp, GLOBE_BMP, 46, 47, GLOBE_W, GLOBE_H)
+            draw(setp, tiny, 62, ROW4, s(lang))
     elif not rgb_on:
         draw(setp, small, TEXT_X, OFF_ROW_B, s('RGB'))
         draw(setp, small, TEXT_X + 34, OFF_ROW_B, s('Off'))
@@ -404,7 +415,7 @@ def main():
 
     ap.add_argument('-b', '--brightness', type=brightness_arg, default=FULL_BRIGHT,
                     help='keycap brightness 0..%d shown in the gauge (default %d)' % (FULL_BRIGHT, FULL_BRIGHT))
-    ap.add_argument('--lang', type=int, default=0, help='language index shown (0..159)')
+    ap.add_argument('--lang', default='en-US', help="language code shown, e.g. mn-MN")
     ap.add_argument('--wpm', type=int, default=0, help='WPM value shown')
     ap.add_argument('--rgb-off', action='store_true',
                     help='preview the RGB-off layout (both panels re-flow to three rows)')

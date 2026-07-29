@@ -1112,6 +1112,17 @@ layer_state_t get_function_layer(layer_state_t def_layer) {
 
 
 // Returns display text for special keys.
+const uint32_t* to_static_text(uint16_t keycode, led_t state);   // defined just below
+
+// "xx-YY" for a language index. The code table is cog-generated inside
+// to_static_text() below, so route through it rather than keeping a second copy —
+// the status OLED needs the same string the language layer prints under each flag.
+const uint32_t* poly_lang_code(uint8_t lang) {
+    if(lang >= NUM_LANG) return U"";
+    const led_t none = {0};
+    return to_static_text((uint16_t)(KCL_ENUS + lang), none);
+}
+
 const uint32_t* to_static_text(uint16_t keycode, led_t state) {
 
     const uint32_t *emj = emj_display_text(keycode);

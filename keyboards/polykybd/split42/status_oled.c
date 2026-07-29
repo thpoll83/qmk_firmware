@@ -204,6 +204,19 @@ static void pdraw_brightness(uint8_t contrast, int top_y, uint8_t* buf) {
     }
 }
 
+// Typing-speed dial, byte-identical to split72's — "WPM" as text costs 3 of the ~5
+// characters this 32px column can hold, and the dial says the same thing in 11x6.
+static const uint8_t wpm_gauge_bitmap[] PROGMEM = {   // 11x6
+    0x1f, 0x00,
+    0x71, 0xc0,
+    0x43, 0x40,
+    0xc2, 0x60,
+    0x86, 0x20,
+    0x8e, 0x20,
+};
+#define WPM_ICON_W 11
+#define WPM_ICON_H 6
+
 // split42 short layout names — must stay in sync with oled_helper.c's full-name
 // array (indexed by def_layer). Shortened so they fit the 32px-wide portrait column.
 static const uint32_t* layout_name_short(uint8_t def_layer) {
@@ -226,30 +239,39 @@ void oled_update_buffer(void) {
     if (is_usb_host_side()) { pdraw_bitmap(usb_status_bitmap,  -3, 0, 16, 16, buf); pdraw_text(tinyFont, 1, 10, 12, U"Usb", buf); }
     else                    { pdraw_bitmap(link_status_bitmap, -8, 0, 16, 16, buf); pdraw_text(tinyFont, 1, 10, 12, U"Lnk", buf); }
 
-    // Row 2: layer icon + number
-    pdraw_glyph(g_all_fonts, g_all_font_count, 0, 33, 0x80 /*ICON_LAYER*/, buf);
-    hex_to_u32_string((char*)nbuf, sizeof(nbuf), get_highest_layer(gl->layer));
-    pdraw_text(tinyFont, 1, 17, 32, nbuf, buf);
-
-    // Row 3: layout name (short), Mid 10pt at half scale, centered
-    pdraw_text_center_half(midFont, 1, 38, layout_name_short(get_local_layer()->def_layer), buf);
-
-    // Per-side middle band: LEFT display = brightness + WPM, RIGHT display = locks
-    bool locks_side = (!side_is_undecided() && !is_left_side());
+    // The two halves carry DIFFERENT panels rather than the same one twice: at 32px
+    // wide there is no room to repeat, and layer/layout/brightness/speed all describe
+    // the keyboard as a whole, so one copy is enough. The layout half keeps those; the
+    // lock half gets the locks and the language slot. Each is then spread over the
+    // full 128px column instead of bunching at the top.
+    const bool locks_side = (!side_is_undecided() && !is_left_side());
     if (!locks_side) {
-        pdraw_brightness(ls->contrast, 52, buf);
-        pdraw_text_center(tinyFont, 1, 68, U"WPM", buf);
+        // Layer icon + number
+        pdraw_glyph(g_all_fonts, g_all_font_count, 0, 42, 0x80 /*ICON_LAYER*/, buf);
+        hex_to_u32_string((char*)nbuf, sizeof(nbuf), get_highest_layer(gl->layer));
+        pdraw_text(tinyFont, 1, 17, 41, nbuf, buf);
+        // Layout name (short), Mid 10pt at half scale, centered
+        pdraw_text_center_half(midFont, 1, 59, layout_name_short(get_local_layer()->def_layer), buf);
+        pdraw_brightness(ls->contrast, 76, buf);
+        // Typing speed: dial over the value
+        pdraw_bitmap(wpm_gauge_bitmap, (P_W - WPM_ICON_W) / 2, 95, WPM_ICON_W, WPM_ICON_H, buf);
         num_to_u32_string((char*)nbuf, sizeof(nbuf), get_current_wpm());
-        pdraw_text_center(tinyFont, 1, 80, nbuf, buf);
+        pdraw_text_center(tinyFont, 1, 113, nbuf, buf);
     } else {
-        pdraw_glyph_center(g_all_fonts, g_all_font_count, 64, gl->led_state.num_lock  ? 0x8D : 0x8C, buf);
-        pdraw_glyph_center(g_all_fonts, g_all_font_count, 82, gl->led_state.caps_lock ? 0x8F : 0x8E, buf);
+        pdraw_glyph_center(g_all_fonts, g_all_font_count, 44, gl->led_state.num_lock  ? 0x8D : 0x8C, buf);
+        pdraw_glyph_center(g_all_fonts, g_all_font_count, 68, gl->led_state.caps_lock ? 0x8F : 0x8E, buf);
+        // Globe (half-scale) + the "xx-YY" code stacked under it, as split72 does in
+        // its RGB-off column. One line will not do: "en-US" is 32px at 6pt, the exact
+        // panel width, and the widest code ("mn-MN") is 40px.
+        const int gh = pdraw_glyph_half(g_all_fonts, g_all_font_count, (P_W - 20) / 2, 72, 0x1F310 /*🌐*/, buf);
+        const uint32_t* code = poly_lang_code(ls->lang);
+        for(uint8_t half = 0; half < 2 && code[0]; ++half) {
+            nbuf[0] = code[half * 3];
+            nbuf[1] = code[half * 3 + 1];
+            nbuf[2] = 0;
+            pdraw_text_center(tinyFont, 1, 72 + gh + 10 + half * 11, nbuf, buf);
+        }
     }
-
-    // Globe (language icon, half-scale) centered + lang index centered under it
-    int gh = pdraw_glyph_half(g_all_fonts, g_all_font_count, (P_W - 20) / 2, 85, 0x1F310 /*🌐*/, buf);
-    num_to_u32_string((char*)nbuf, sizeof(nbuf), ls->lang);
-    pdraw_text_center(tinyFont, 1, 85 + gh + 9, nbuf, buf);
 
     // Physical side marker at the very bottom
     pdraw_text_center(tinyFont, 1, 126, side_is_undecided() ? U"?" : (is_left_side() ? U"L" : U"R"), buf);

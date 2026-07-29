@@ -192,31 +192,35 @@ def draw_brightness(setpix, contrast, top_y):
 
 
 # ------------------------------- compose -----------------------------------
-def build(side, mid, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0]):
+WPM_BMP = [0x1f,0x00, 0x71,0xc0, 0x43,0x40, 0xc2,0x60, 0x86,0x20, 0x8e,0x20]
+
+
+def build(side, mid, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0],
+          lang='en-US', wpm=0):
     """side 'L' (USB host, brightness+WPM) or 'R' (Link bridge, locks)."""
     pts = set()
-    setp = lambda px, py: pts.add((px, py))
+    def setp(px, py):
+        pts.add((px, py))
     # role
     if side == 'L':
         draw_bitmap(setp, USB_BMP, -3, 0); draw_text(setp, tiny, 10, 12, 'Usb')
     else:
         draw_bitmap(setp, LINK_BMP, -8, 0); draw_text(setp, tiny, 10, 12, 'Lnk')
-    # layer
-    draw_glyph(setp, icons, 0, 33, 0x80)
-    draw_text(setp, tiny, 17, 32, '0')
-    # layout name (short, half-scale)
-    draw_text_center_half(setp, mid, 38, SHORT_NAMES[0])
-    # per-side band
+    # Asymmetric halves: layout half = layer/layout/brightness/speed, lock half =
+    # locks + language. Mirrors status_oled.c.
     if side == 'L':
-        draw_brightness(setp, contrast, 52)
-        draw_text_center(setp, tiny, 68, 'WPM')
-        draw_text_center(setp, tiny, 80, '0')
+        draw_glyph(setp, icons, 0, 42, 0x80)
+        draw_text(setp, tiny, 17, 41, '0')
+        draw_text_center_half(setp, mid, 59, layout_name)
+        draw_brightness(setp, contrast, 76)
+        draw_bitmap(setp, WPM_BMP, (P_W - 11) // 2, 95, 11, 6)
+        draw_text_center(setp, tiny, 113, str(wpm))
     else:
-        draw_glyph_center(setp, icons, 64, 0x8C)   # NumLock off
-        draw_glyph_center(setp, icons, 82, 0x8E)   # CapsLock off
-    # globe + lang index
-    gh = draw_glyph_half(setp, world, (P_W - 20) // 2, 85, 0x1F310)
-    draw_text_center(setp, tiny, 85 + gh + 9, '0')
+        draw_glyph_center(setp, icons, 44, 0x8C)   # NumLock off
+        draw_glyph_center(setp, icons, 68, 0x8E)   # CapsLock off
+        gh = draw_glyph_half(setp, world, (P_W - 20) // 2, 72, 0x1F310)
+        for half in range(2):
+            draw_text_center(setp, tiny, 72 + gh + 10 + half * 11, lang[half * 3:half * 3 + 2])
     # side marker
     draw_text_center(setp, tiny, 126, side)
     return pts

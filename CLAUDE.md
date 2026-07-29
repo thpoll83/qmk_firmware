@@ -427,10 +427,15 @@ touching at a **0px** gap, while 4 rows sat unused under the bottom row.
   `extern const GFXfont X;`** instead — the pattern `oled_helper.c` already uses.
   (`NotoSans_Regular_Base_11pt.h`/`Medium_Base_8pt.h` are only included here, so those
   `#include`s are safe.)
-- **32 px width budget:** at 32 px only ~5 chars fit even in the **Tiny 11 px** font
-  (the smallest compiled in); half-scaling (2×2-OR) any font reads **bold**, and the
-  decimation ("thin") downsample breaks strokes — **Mid 19 px at half scale (~9 px)**
-  is the crispest small option (used for the layout name). split42 uses **short**
+- **32 px width budget:** at 32 px only ~5 chars fit, and the layout name is the
+  tightest thing on the panel. ⚠️ **Do NOT half-scale a bigger font to get there** —
+  a 2×2-OR downsample ORs pixel pairs together, which thickens every stem back to
+  ~2 px and closes the counters that grid-fitting just opened (`Qwrty` ran its `w`
+  and `r` together); the decimation ("thin") downsample instead breaks strokes.
+  Render a real small face at native size: the layout name uses the dedicated
+  **`_Nano_` 10 px** (`nano_font.h`), the largest that fits — its widest short name
+  `Wkmn` is 30 px, versus 33 px (1 px past the panel) at the `_Tiny_` 11 px size.
+  `LAYOUT_NAME_BASE` in `split42/status_oled.c` places it by cap height. split42 uses **short**
   layout names via `layout_name_short()` in `status_oled.c` (`Qwrty/Stag!/ColDH/Neo/
   Wkmn/Unkn`); split72 keeps the full names in the shared `oled_helper.c` array — keep
   the two in sync when layouts change.
@@ -893,7 +898,9 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   15 px (`NotoSans_Medium_Base_8pt.h`, the status-OLED rows carrying the numbers),
   `_Mid_` 19 px (`util_font.h`, `mid_fonts[]` — fw-update screens + misc
   utility-key text; a full `ll-CC` fits one line here but overflows 72 px at 14 px)
-  and `_Tiny_` 11 px (`lang_label_font.h`, the lang-code labels). The two Base
+  `_Tiny_` 11 px (`lang_label_font.h`, the lang-code labels) and `_Nano_` 10 px
+  (`nano_font.h`, split42's layout name — see the 32 px width-budget note below).
+  The two Base
   headers previously had **no generator at all** (hand-made from a long-gone local
   `NotoSans-Medium.ttf`); `gen-lang-fonts.sh` now owns only the flag font.
   - ⚠️ **These four are built `-Hauto` (grid-fitted) and sized with `-p` (pixels),

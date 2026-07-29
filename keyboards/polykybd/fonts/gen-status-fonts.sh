@@ -87,3 +87,14 @@ emit base/fonts/util_font.h \
 emit base/fonts/lang_label_font.h \
      "Tiny label font for the language codes under each flag (NotoSans Medium 11 px, grid-fitted)." \
      -p11 -w500 -Hauto -v_Tiny_
+
+# split42's layout name has only the 32 px portrait width for a 5-char name. It
+# used to be _Mid_ drawn through a 2x2-OR half-scale downsample, which is exactly
+# the wrong thing for grid-fitted output: ORing pairs of pixels together thickens
+# every stem back to ~2 px and closes the counters the grid-fitting just opened
+# ("Qwrty" ran its w and r together). Render at the real size instead. 10 px is
+# the largest that still fits the column -- the widest short name, "Wkmn", is
+# 30 px here and 33 px at the _Tiny_ 11 px size, i.e. 1 px past the panel.
+emit base/fonts/nano_font.h \
+     "Nano label font (NotoSans Medium 10 px, grid-fitted) — the split42 layout name in the 32 px portrait column." \
+     -p10 -w500 -Hauto -v_Nano_

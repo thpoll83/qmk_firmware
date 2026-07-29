@@ -5,90 +5,146 @@
 
 #include QMK_KEYBOARD_H
 
+// Names are the longest form that fits the status OLED's effect field (~86px in the
+// 8pt font, TEXT_X+22..TEXT_R) — the row lost its speed readout to the vertical gauge
+// in the indicator column, so there is finally room for words instead of 4-letter
+// codes. Measure any new name against that budget; it is clipped, not wrapped.
 const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
     switch(rgb_mode) {
+        // Enabled effects with no case here render as "Unknown". RGB_MATRIX_SOLID_COLOR
+        // is mode 1 on this board (the enum is built from the ENABLE_RGB_MATRIX_* set,
+        // so it is NOT the order of this switch) and was showing exactly that.
+        case RGB_MATRIX_SOLID_COLOR:
+            return U"Solid";
+        case RGB_MATRIX_BAND_SPIRAL_VAL:
+            return U"SpiralVal";
         case RGB_MATRIX_SPLASH:
-            return U"Sp";
+            return U"Splash";
         case RGB_MATRIX_MULTISPLASH:
-            return U"SpMu";
+            return U"MultiSplsh";
         case RGB_MATRIX_SOLID_SPLASH:
-            return U"SpSo";
+            return U"Splash";
         case RGB_MATRIX_SOLID_MULTISPLASH:
-            return U"SpSM";
+            return U"MultiSplsh";
         case RGB_MATRIX_RAINBOW_MOVING_CHEVRON:
-            return U"Rnbw";
+            return U"Rainbow";
         case RGB_MATRIX_BREATHING:
-            return U"Brth";
+            return U"Breathing";
         case RGB_MATRIX_SOLID_REACTIVE_SIMPLE:
-            return U"Smpl";
+            return U"Simple";
         case RGB_MATRIX_SOLID_REACTIVE_CROSS:
-            return U"Crss";
+            return U"ReactX";
         case RGB_MATRIX_SOLID_REACTIVE:
-            return U"Rctv";
+            return U"Reactive";
         case RGB_MATRIX_SOLID_REACTIVE_WIDE:
-            return U"RtWd";
+            return U"ReactWide";
         case RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE:
-            return U"RtMW";
+            return U"ReactWide";
         case RGB_MATRIX_SOLID_REACTIVE_MULTICROSS:
-            return U"RtMC";
+            return U"ReactX";
         case RGB_MATRIX_SOLID_REACTIVE_MULTINEXUS:
-            return U"RtMN";
+            return U"ReactNex";
         case RGB_MATRIX_SOLID_REACTIVE_NEXUS:
-            return U"RtNe";
+            return U"ReactNex";
         case RGB_MATRIX_ALPHAS_MODS:
-            return U"AlpM";
+            return U"AlphaMod";
         case RGB_MATRIX_GRADIENT_UP_DOWN:
-            return U"GrUD";
+            return U"GradUpDn";
         case RGB_MATRIX_GRADIENT_LEFT_RIGHT:
-            return U"GrLR";
+            return U"GradLtRt";
         case RGB_MATRIX_BAND_SAT:
-            return U"BndS";
+            return U"BandSat";
         case RGB_MATRIX_BAND_VAL:
-            return U"BndV";
+            return U"BandVal";
         case RGB_MATRIX_BAND_PINWHEEL_SAT:
-            return U"BPwS";
+            return U"PinwheelS";
         case RGB_MATRIX_BAND_PINWHEEL_VAL:
-            return U"BPwV";
+            return U"PinwheelV";
         case RGB_MATRIX_BAND_SPIRAL_SAT:
-            return U"BSpS";
+            return U"SpiralSat";
         case RGB_MATRIX_CYCLE_ALL:
-            return U"All";
+            return U"CycleAll";
         case RGB_MATRIX_CYCLE_LEFT_RIGHT:
-            return U"CyLR";
+            return U"CycleLtRt";
         case RGB_MATRIX_CYCLE_UP_DOWN:
-            return U"CyUD";
+            return U"CycleUpDn";
         case RGB_MATRIX_CYCLE_OUT_IN:
-            return U"CyOI";
+            return U"CycOutIn";
         case RGB_MATRIX_CYCLE_OUT_IN_DUAL:
-            return U"CyDu";
+            return U"CycleDual";
         case RGB_MATRIX_CYCLE_PINWHEEL:
-            return U"CyPw";
+            return U"CyclePnwl";
         case RGB_MATRIX_CYCLE_SPIRAL:
-            return U"CySp";
+            return U"CycleSpirl";
         case RGB_MATRIX_DUAL_BEACON:
-            return U"DuBc";
+            return U"DualBeacn";
         case RGB_MATRIX_RAINBOW_BEACON:
-            return U"RnBc";
+            return U"Beacon";
         case RGB_MATRIX_RAINBOW_PINWHEELS:
-            return U"RnPw";
+            return U"Wheel";
         case RGB_MATRIX_RAINDROPS:
-            return U"Rndp";
+            return U"Raindrops";
         case RGB_MATRIX_JELLYBEAN_RAINDROPS:
-            return U"JRnp";
+            return U"Jellybean";
         case RGB_MATRIX_HUE_BREATHING:
-            return U"HueB";
+            return U"HueBreath";
         case RGB_MATRIX_HUE_PENDULUM:
-            return U"HueP";
+            return U"Pendulum";
         case RGB_MATRIX_HUE_WAVE:
-            return U"HueW";
+            return U"HueWave";
         case RGB_MATRIX_PIXEL_FRACTAL:
-            return U"PxlF";
+            return U"PixFract";
         case RGB_MATRIX_PIXEL_FLOW:
-            return U"PxlF";
+            return U"PixFlow";
         case RGB_MATRIX_PIXEL_RAIN:
-            return U"PxlR";
+            return U"PixRain";
         default:
-            return U"Unkn";
+            return U"Unknown";
     }
+}
+
+// Paired effects share one name and the second of the pair is marked with a
+// superscript 2 the caller draws after it. Which member carries the mark differs by
+// family because the names do: the splash pair already says "Multi", so the mark
+// distinguishes SOLID there, while every reactive effect is solid and the mark
+// distinguishes MULTI. Either way the two members of a pair never render alike.
+// The status OLED's font is ASCII 0x20..0x7e, so the superscript cannot live in the
+// string itself.
+bool led_matrix_text_superscript2(uint8_t rgb_mode) {
+    switch(rgb_mode) {
+        case RGB_MATRIX_SOLID_SPLASH:
+        case RGB_MATRIX_SOLID_MULTISPLASH:
+        case RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE:
+        case RGB_MATRIX_SOLID_REACTIVE_MULTICROSS:
+        case RGB_MATRIX_SOLID_REACTIVE_MULTINEXUS:
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Sector boundaries are the usual colour-wheel names in DEGREES (hue byte scaled to
+// 0..359), so they stay readable if the underlying 0..255 encoding ever changes.
+// Below ~10% saturation the hue is not perceptible, so it reports "White" — showing
+// "Green" for what the user sees as white would be worse than showing nothing.
+uint16_t hue_to_degrees(uint8_t hue) {
+    return (uint16_t)(((uint16_t)hue * 360u) / 255u);
+}
+
+const uint32_t* get_hue_name(uint8_t hue, uint8_t sat) {
+    if (sat < 26) return U"White";
+    const uint16_t deg = hue_to_degrees(hue);
+    if (deg <  15) return U"Red";
+    if (deg <  45) return U"Orange";
+    if (deg <  70) return U"Yellow";
+    if (deg < 100) return U"Lime";
+    if (deg < 165) return U"Green";
+    if (deg < 195) return U"Cyan";
+    if (deg < 240) return U"Azure";
+    if (deg < 270) return U"Blue";
+    if (deg < 300) return U"Violet";
+    if (deg < 330) return U"Magenta";
+    if (deg < 345) return U"Pink";
+    return U"Red";   // wraps back past 345 deg
 }
 

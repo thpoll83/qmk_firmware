@@ -15,6 +15,11 @@
 // poly_keymap.c's translation unit. Reference it via extern here rather than
 // re-including the header (which would duplicate its PROGMEM tables at link time).
 extern const GFXfont NotoSans_Regular_Mid_10pt7b;
+// _Tiny_ (6px), same ownership caveat. Used ONLY for the language index: there are 160
+// languages, so the index reaches 3 digits, which is 25px in the 8pt status font — wider
+// than the 17px indicator column and enough to overrun the layout panel's right limit
+// into the lock icons. At 6pt "159" is 19px, which fits both slots.
+extern const GFXfont NotoSans_Regular_Tiny_6pt7b;
 #include "../lang/named_glyphs.h"
 #include "../oled_helper.h"
 
@@ -42,6 +47,264 @@ static const uint8_t link_status_bitmap[] PROGMEM = {
     0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
+// Keycap-brightness gauge (row 3 of the left/USB panel): an 11x11 sun (disc + 8
+// detached rays) followed by a staircase bar meter. This replaces the old
+// "Dsp*" label + a run of 'l' glyphs, which cost ~40px of label for no
+// information and read as a picket fence rather than a level.
+static const uint8_t brightness_sun_bitmap[] PROGMEM = {
+    0x04, 0x00,
+    0x44, 0x40,
+    0x20, 0x80,
+    0x0e, 0x00,
+    0x1f, 0x00,
+    0xdf, 0x60,
+    0x1f, 0x00,
+    0x0e, 0x00,
+    0x20, 0x80,
+    0x44, 0x40,
+    0x04, 0x00,
+};
+#define SUN_W 11
+#define SUN_H 11
+
+// Language-slot globe (row 4). Hand-drawn rather than the resident U+1F310 emoji:
+// that glyph is 40x40, so even halved by kdisp_draw_glyph_half_at it lands at
+// 20x20 and towers over the 8pt digits beside it (the row only has ~16px of
+// height). At this size a downsample would be mush anyway, so it is line art
+// matched to the sun icon above it: outline circle + equator + two CURVED
+// meridians. The curve is what makes it read as a globe — a single straight
+// centre meridian gives a crosshair and evenly spaced latitudes give a grid
+// (both were rendered and rejected).
+static const uint8_t lang_globe_bitmap[] PROGMEM = {
+    0x0f, 0x80,
+    0x38, 0xe0,
+    0x68, 0xb0,
+    0x48, 0x90,
+    0x90, 0x48,
+    0x90, 0x48,
+    0xff, 0xf8,
+    0x90, 0x48,
+    0x90, 0x48,
+    0x48, 0x90,
+    0x68, 0xb0,
+    0x38, 0xe0,
+    0x0f, 0x80,
+};
+#define GLOBE_W 13
+#define GLOBE_H 13
+
+// The RGB-off layout draws the language slot with the REAL globe (U+1F310) instead
+// of a bitmap: kdisp_draw_glyph_half_at 2x2-ORs the resident 40x40 emoji down to
+// 20x20, which carries meridians and parallels that hand-drawn line art at this size
+// cannot. It only works here because the RGB-off panel shifts its text origin to 26 —
+// 20px overhangs the 17px column, and that gutter is what absorbs it. (Row 4 of the
+// RGB-on layout has no such room, so it keeps the 13x13 bitmap.)
+
+// The status font is ASCII 0x20..0x7e only, so the degree sign does not exist in it —
+// cheaper as a bitmap than a font-set lookup through g_all_fonts (which would also
+// baseline-align to fonts[0]).
+static const uint8_t degree_ring_bitmap[] PROGMEM = {    // 3x3 degree sign
+    0xe0, 0xa0, 0xe0,
+};
+#define DEGREE_W 3
+#define DEGREE_H 3
+static const uint8_t superscript2_bitmap[] PROGMEM = {   // 5x6, for "Splash²"
+    0x70, 0x88, 0x10, 0x20, 0x40, 0xf8,
+};
+#define SUPER2_W 5
+#define SUPER2_H 6
+
+// Saturation / Value markers on the RGB panel's bottom row. Hand-drawn for the same
+// reason as the sun above: every resident icon is sized for the 72x40 keycaps (the
+// moon-phase Brightness font, the obvious fit semantically, is 32x33 — 16x17 even
+// halved) and this row has ~12px of height. Width is the harder limit: "100%" alone
+// is 40px of the 108px row, so a group only fits with an icon of <= 9px.
+// Droplet = saturation and sun = value are the colour-picker conventions; the sun
+// also matches the keycap-brightness sun on the other panel — same meaning.
+static const uint8_t sat_droplet_bitmap[] PROGMEM = {   // 9x10
+    0x08, 0x00,
+    0x08, 0x00,
+    0x1c, 0x00,
+    0x1c, 0x00,
+    0x3e, 0x00,
+    0x7f, 0x00,
+    0x7f, 0x00,
+    0x7f, 0x00,
+    0x3e, 0x00,
+    0x1c, 0x00,
+};
+#define DROPLET_W 9
+#define DROPLET_H 10
+#define DROPLET_Y 53                                    // bottom row lands on the digits'
+static const uint8_t val_sun_bitmap[] PROGMEM = {       // 9x9
+    0x08, 0x00,
+    0x41, 0x00,
+    0x1c, 0x00,
+    0x3e, 0x00,
+    0xbe, 0x80,
+    0x3e, 0x00,
+    0x1c, 0x00,
+    0x41, 0x00,
+    0x08, 0x00,
+};
+#define SUN_SMALL_W 9
+#define SUN_SMALL_H 9
+#define SUN_SMALL_Y 54
+#define SV_ICON_GAP 2
+
+// v (0..255) as a percentage, rounded to nearest.
+static uint8_t byte_to_percent(uint8_t v) {
+    return (uint8_t)(((uint16_t)v * 100u + 127u) / 255u);
+}
+
+// "<pct>%" as one string. `out` must be a uint32_t[] (see oled_helper.h).
+static void pct_to_u32_string(char* out, uint8_t out_len, uint8_t pct) {
+    uint32_t* s = (uint32_t*)out;
+    uint8_t   cap = out_len / (uint8_t)sizeof(uint32_t);
+    uint8_t   i = 0;
+    uint32_t digits[6];
+    num_to_u32_string((char*)digits, sizeof(digits), pct);
+    for(uint8_t d = 0; digits[d] && i < cap; ++d) s[i++] = digits[d];
+    if(i < cap) s[i++] = U'%';
+    if(i < cap) s[i] = 0;
+}
+
+// RGB speed as a vertical gauge in the right column, where the RGB panel used to
+// mirror the Num/Caps lock icons. It takes their exact footprint — 17 px wide, top
+// aligned with Num Lock, bottom aligned with Caps Lock — and their chrome: a 2px
+// rounded border (two nested round-rects, r=3/2, matching the icon glyphs' own 2px
+// wall and chamfer), filled from the bottom.
+// Width of the indicator column both panels reserve on their inner edge (lock LEDs
+// on one side, speed gauge on the other). Anything parked in that column centres on
+// it, so it is named separately from the gauge that usually fills it.
+#define COL_W 17
+
+#define SPEED_BOX_Y 0
+#define SPEED_BOX_W COL_W
+#define SPEED_BOX_H 44                                     // Num Lock top .. Caps Lock bottom
+#define SPEED_FILL_W (SPEED_BOX_W - 6)
+#define SPEED_FILL_BOTTOM (SPEED_BOX_Y + SPEED_BOX_H - 4)  // last fillable row
+#define SPEED_FILL_H (SPEED_BOX_H - 6)                     // full-scale column height
+
+static void draw_speed_gauge(int8_t x, uint8_t speed) {
+    kdisp_draw_round_rect(x, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 3);
+    kdisp_draw_round_rect((int8_t)(x + 1), SPEED_BOX_Y + 1, SPEED_BOX_W - 2, SPEED_BOX_H - 2, 2);
+    const uint8_t fill = (uint8_t)(((uint16_t)speed * SPEED_FILL_H + 127u) / 255u);
+    if(fill) {
+        kdisp_fill_rect((int8_t)(x + 3), (int8_t)(SPEED_FILL_BOTTOM - fill + 1), SPEED_FILL_W, (int8_t)fill);
+    }
+}
+
+// Gauge geometry. The bars are bottom-aligned one pixel above the row baseline so
+// they sit on the same floor as the digits next to them, and the tallest bar stays
+// clear of the layout name on the row above.
+#define GAUGE_SEGMENTS 10
+#define GAUGE_BAR_W    4
+#define GAUGE_PITCH    6
+#define GAUGE_MIN_H    3   // height of the first (leftmost) bar; each next one is +1
+
+// Draw the staircase meter with `level` of GAUGE_SEGMENTS bars lit. A lit bar is a
+// solid rectangle; an unlit one keeps a 1px foot so the full scale stays visible
+// (an outline would read as "filled" at the short left end, where the outline is
+// the whole bar).
+static void draw_brightness_bars(int8_t x, int8_t bottom_y, uint8_t level) {
+    for (uint8_t i = 0; i < GAUGE_SEGMENTS; ++i) {
+        const int8_t bx = (int8_t)(x + i * GAUGE_PITCH);
+        const int8_t h  = (int8_t)(GAUGE_MIN_H + i);
+        if (i < level) {
+            kdisp_fill_rect(bx, (int8_t)(bottom_y - h + 1), GAUGE_BAR_W, h);
+        } else {
+            kdisp_fill_rect(bx, bottom_y, GAUGE_BAR_W, 1);
+        }
+    }
+}
+
+// contrast (0..FULL_BRIGHT) -> 0..GAUGE_SEGMENTS lit bars, rounded to nearest so a
+// low-but-nonzero brightness still lights one bar (the old contrast/5 truncation
+// showed an empty meter for everything below 5).
+static uint8_t brightness_to_level(uint8_t contrast) {
+    if (contrast > FULL_BRIGHT) contrast = FULL_BRIGHT;
+    uint8_t level = (uint8_t)(((uint16_t)contrast * GAUGE_SEGMENTS + (FULL_BRIGHT / 2)) / FULL_BRIGHT);
+    if (level > GAUGE_SEGMENTS) level = GAUGE_SEGMENTS;
+    return level;
+}
+
+// Row baselines. The header is row A (baseline 15); rows B..D below it are spaced so
+// the LAST row's bottom pixel lands on screen row 63 — no dead strip under it — and
+// the leftover space is split as evenly as the rows allow.
+//
+// The spacing is PER PANEL because the two panels have opposite shapes: the layout
+// panel's row B carries descenders ("Qwerty Stag!" reaches 4px below the baseline
+// across most of the row, so it cannot be treated as a baseline-height row) while the
+// RGB panel's descenders are on row C instead ("Cyan"). One shared set of baselines
+// can only reach a 1px minimum gap; splitting them gives 3/2/2 and 4/3/3. The two
+// halves are physically far apart, so the 2-3px row misalignment between them does
+// not read as such.
+#define LOCK_ROW_B    29   // layout name          (19..33 incl. descenders)
+#define LOCK_ROW_C    48   // speed + language     (36..48, globe is 13 tall)
+#define LOCK_ROW_D    63   // brightness           (51..63, tallest bar is 12)
+#define RGB_ROW_B     30   // effect index + name  (19..30)
+#define RGB_ROW_C     45   // colour name + hue    (35..49 incl. descenders)
+#define RGB_ROW_D     63   // saturation + value   (53..63)
+// With RGB off the effect / colour / S+V rows and the speed gauge all vanish, leaving
+// the RGB panel almost empty — so the two movable groups migrate into that space and
+// each panel re-flows onto three rows, again bottomed out on row 63.
+// The physical-side marker is the LAST thing in the indicator column on either
+// panel, so it bottoms out on row 63 like the text rows do. It used to sit at 56,
+// which left a 7px dead strip under it and — once the language stack grew — put the
+// R only 2px below "US". NOT shared with the scroll-lock arrow that replaces it:
+// that glyph is 26px tall and would run up into the Caps Lock icon from down here.
+// Caps Lock baseline. Num Lock sits at the top of the column (baseline 16, rows
+// 0..16); Caps Lock is placed so the two gaps left over above the bottomed-out
+// side marker come out even (10 and 9). The speed gauge on the other panel is
+// DEFINED as "Num Lock top .. Caps Lock bottom", so SPEED_BOX_H tracks this --
+// keep the two in step (44 = CAPS_LOCK_BASE + 1).
+#define CAPS_LOCK_BASE 43
+#define SIDE_MARKER_BASE 63
+#define OFF_ROW_B      37  // layout name  (27..41 incl. descenders)
+#define OFF_ROW_C      63  // speed        (53..63; no globe here, so shorter than row C)
+#define RGB_OFF_ROW_B  39  // "RGB Off"    (28..39 — no descenders, so 2px below the
+                           //               layout name to keep ITS gaps even)
+#define RGB_OFF_ROW_C  63  // brightness   (51..63)
+#define OFF_GLOBE_Y    1   // big globe top, in the column the gauge vacated
+#define OFF_CODE1_BASE 31  // "en" under it, then "US" under that -- the code does not fit
+#define OFF_CODE2_BASE 43  // on one line in a 17px column ("TW" alone is 18px at 6pt)
+
+// Brightness: sun icon, the raw value, then the staircase meter. Grouped so the whole
+// row can be placed at either panel's origin without duplicating the offsets.
+static void draw_brightness_row(const GFXfont* const* font, int8_t x, int8_t base_y, uint8_t contrast) {
+    uint32_t buffer[8];
+    kdisp_draw_bitmap(x, (int8_t)(base_y - 11), brightness_sun_bitmap, SUN_W, SUN_H);
+    num_to_u32_string((char*) buffer, sizeof(buffer), contrast);
+    kdisp_write_gfx_text(font, 1, (int8_t)(x + 15), base_y, buffer);
+    draw_brightness_bars((int8_t)(x + 40), (int8_t)(base_y - 1), brightness_to_level(contrast));
+}
+
+// Language slot stacked vertically for the indicator column: big globe, then the
+// "xx-YY" code split over two lines. Each line centres on the column independently,
+// so "ja" over "JP" stays stacked whatever the glyph widths are.
+static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang) {
+    uint32_t line[3];
+    const uint32_t* code = poly_lang_code(lang);
+    // Wider than the column, so it cannot centre on it -- pin it to the column origin
+    // and let it reach into the gutter.
+    kdisp_draw_glyph_half_at(g_all_fonts, g_all_font_count, x, OFF_GLOBE_Y, U'\U0001F310');
+    if(code[0] == 0) return;
+    // "xx-YY": codepoints 0,1 over 3,4 -- the line break replaces the separator.
+    for(uint8_t half = 0; half < 2; ++half) {
+        line[0] = code[half * 3];
+        line[1] = code[half * 3 + 1];
+        line[2] = 0;
+        int8_t lo = 0, hi = 0;
+        kdisp_gfx_text_bounds(font, 1, line, &lo, &hi);
+        int8_t nx = (int8_t)(x + (COL_W - (hi - lo + 1)) / 2 - lo + 1);
+        // The widest pair ("TW") is 18px, 1px over the column, so centring would put it
+        // off the panel edge. Clamp: it grows into the gutter before the text origin.
+        if(nx < x) nx = x;
+        kdisp_write_gfx_text(font, 1, nx, half ? OFF_CODE2_BASE : OFF_CODE1_BASE, line);
+    }
+}
+
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
 void oled_update_buffer(void) {
     uint32_t buffer[32];
@@ -51,77 +314,150 @@ void oled_update_buffer(void) {
     const poly_layer_t* global_layer = get_global_layer();
     const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
     const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 15, ICON_LAYER);
+    const GFXfont* tinyFont[]  = { &NotoSans_Regular_Tiny_6pt7b };   // language index only
+
+    // Each half's indicator column sits on its INNER edge, so on an assembled
+    // keyboard the two columns face each other across the gap: the layout panel keeps
+    // its lock LEDs on the right, the RGB panel puts its speed gauge on the left. The
+    // text origin follows, which is why every element below is placed relative to
+    // TEXT_X / TEXT_R rather than at an absolute x.
+    // RGB_MATRIX_SPLIT syncs the matrix config master->slave, so both halves agree on
+    // this and can re-flow together — the layout panel has to know too, since it gives
+    // up its brightness + language groups when the RGB panel has room for them.
+    const bool rgb_on = rgb_matrix_is_enabled();
+
+    const bool lock_panel = !is_right_side();
+    const int8_t COL_X  = lock_panel ? 108 : 0;    // indicator column (17px wide)
+    // The RGB panel's text origin sits 6px further right when RGB is off: the language
+    // index that moves into the column is up to 19px wide (3 digits, 160 languages) in a
+    // 17px column, so at the normal origin it ends 1px from "RGB Off" and reads as one
+    // word. The whole panel shifts together, so its rows stay mutually aligned.
+    const int8_t TEXT_X = lock_panel ? 0 : (rgb_on ? 20 : 26);
+    const int8_t TEXT_R = lock_panel ? 104 : 127;  // right limit for right-aligned content
+
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, TEXT_X, 15, ICON_LAYER);
     hex_to_u32_string((char*) buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
-    kdisp_write_gfx_text(displayFont, 1, 20, 15, buffer);
+    kdisp_write_gfx_text(displayFont, 1, (int8_t)(TEXT_X + 20), 15, buffer);
     // Top-row role: the USB-host half shows the USB glyph + "USB", the bridged half
     // the link glyph + "Link" (follows is_usb_host_side(), so it tracks the cable).
     if(is_usb_host_side()) {
-        kdisp_draw_bitmap(38, 0, usb_status_bitmap, 16, 16);
-        kdisp_write_gfx_text(displayFont, 1, 57, 15, U"USB");
+        kdisp_draw_bitmap((int8_t)(TEXT_X + 38), 0, usb_status_bitmap, 16, 16);
+        kdisp_write_gfx_text(displayFont, 1, (int8_t)(TEXT_X + 57), 15, U"USB");
     } else {
-        kdisp_draw_bitmap(38, 0, link_status_bitmap, 16, 16);
-        kdisp_write_gfx_text(displayFont, 1, 57, 15, U"Link");
+        kdisp_draw_bitmap((int8_t)(TEXT_X + 38), 0, link_status_bitmap, 16, 16);
+        kdisp_write_gfx_text(displayFont, 1, (int8_t)(TEXT_X + 57), 15, U"Link");
     }
 
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 108, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
-    if(global_layer->led_state.scroll_lock) {
-        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 112, 54, ARROWS_DOWNSTOP);
+    // Lock LEDs live on the LAYOUT panel only. They render from global_layer, so both
+    // halves were drawing the identical Num/Caps/Scroll state — the second copy bought
+    // nothing and cost the RGB panel a whole column, which now carries the speed gauge.
+    if(lock_panel) {
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, COL_X, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, COL_X, CAPS_LOCK_BASE, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
+    }
+    if(lock_panel && global_layer->led_state.scroll_lock) {
+        // Scroll lock replaces the side marker (and is 26px tall, so it would run
+        // straight through the speed gauge on the other panel).
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, (int8_t)(COL_X + 4), 54, ARROWS_DOWNSTOP);
     } else if(side_is_undecided()) {
-        kdisp_write_gfx_text(smallFont, 1, 114, 56, U"?");
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), SIDE_MARKER_BASE, U"?");
     } else if(is_left_side()) {
-        kdisp_write_gfx_text(smallFont, 1, 114, 56, U"L");
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), SIDE_MARKER_BASE, U"L");
     } else {
-        // Physical side in the corner (was the H/B role marker); R sits 2px left of L
-        // so the wider glyph doesn't crowd the right edge.
-        kdisp_write_gfx_text(smallFont, 1, 112, 56, U"R");
+        // Physical side at the foot of the column; R sits 1px in from L so the wider
+        // glyph stays centred under it.
+        kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 5), SIDE_MARKER_BASE, U"R");
     }
 
     // (The LTR-559 sensor values used to be rendered here during bring-up; they
     // now go to a periodic log — see the sensor telemetry heartbeat in
     // housekeeping_task_user() — so the status OLED shows the normal panel.)
     if(is_right_side()) {
-        kdisp_write_gfx_text(smallFont, 1, 0, 29, U"RGB");
-
-        if(!rgb_matrix_is_enabled()) {
-            kdisp_write_gfx_text(smallFont, 1, 34, 29, U"Off");
+        if(!rgb_on) {
+            // Nothing left to report but the off state, so this panel takes over the
+            // two groups the layout panel can spare: the speed under the label, and the
+            // language slot in the column the gauge vacated. (WPM is valid on this half
+            // too -- config.h sets SPLIT_WPM_ENABLE, so the master syncs it.)
+            const poly_sync_t* local_state = get_local_state();
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, RGB_OFF_ROW_B, U"RGB");
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 34), RGB_OFF_ROW_B, U"Off");
+            kdisp_draw_bitmap(TEXT_X, (int8_t)(RGB_OFF_ROW_C - 8), wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
+            num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 15), RGB_OFF_ROW_C, buffer);
+            draw_lang_column(tinyFont, COL_X, local_state->lang);
         } else {
-            num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_mode());
-            kdisp_write_gfx_text(smallFont, 1, 34, 29, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 58, 29, get_led_matrix_text(rgb_matrix_get_mode()));
-            kdisp_write_gfx_text(smallFont, 1, 0, 44, U"HSV");
-            hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_hue());
-            kdisp_write_gfx_text(smallFont, 1, 38, 44, buffer);
-            hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_sat());
-            kdisp_write_gfx_text(smallFont, 1, 60, 44, buffer);
-            hex_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_val());
-            kdisp_write_gfx_text(smallFont, 1, 82, 44, buffer);
-            kdisp_write_gfx_text(smallFont, 1, 0, 59, U"Speed");
-            num_to_u32_string((char*) buffer, sizeof(buffer), rgb_matrix_get_speed());
-            kdisp_write_gfx_text(smallFont, 1, 58, 59, buffer);
+            // Effect: index + name. With the speed moved to the gauge in the column
+            // and the redundant "RGB" label dropped, the name gets TEXT_X+22..TEXT_R
+            // — enough for a word instead of a 4-letter code.
+            const uint8_t mode = rgb_matrix_get_mode();
+            const uint32_t* mode_name = get_led_matrix_text(mode);
+            num_to_u32_string((char*) buffer, sizeof(buffer), mode);
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, RGB_ROW_B, buffer);
+            const int8_t name_x = (int8_t)(TEXT_X + 22);
+            kdisp_write_gfx_text(smallFont, 1, name_x, RGB_ROW_B, mode_name);
+            if(led_matrix_text_superscript2(mode)) {
+                // "Splash²" — measure the name so the superscript lands just past it
+                // whatever the font metrics are, raised to the top of the cap height.
+                int8_t lo = 0, hi = 0;
+                kdisp_gfx_text_bounds(smallFont, 1, mode_name, &lo, &hi);
+                kdisp_draw_bitmap((int8_t)(name_x + hi + 2), 18, superscript2_bitmap, SUPER2_W, SUPER2_H);
+            }
+            draw_speed_gauge(COL_X, rgb_matrix_get_speed());
+
+            // Colour as a NAME + degrees on the wheel, instead of the raw hue byte
+            // in hex: "Cyan 180°" says what the LEDs actually look like, where
+            // "HSV 80" needed the reader to decode it.
+            const uint8_t hue = rgb_matrix_get_hue();
+            const uint8_t sat = rgb_matrix_get_sat();
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, RGB_ROW_C, get_hue_name(hue, sat));
+            oled_draw_num16_right(smallFont, (int8_t)(TEXT_R - 4), RGB_ROW_C, hue_to_degrees(hue));
+            kdisp_draw_bitmap((int8_t)(TEXT_R - 2), 34, degree_ring_bitmap, DEGREE_W, DEGREE_H);
+
+            // Saturation / value as percentages rather than 0x00..0xFF, each behind its
+            // icon. The icon is a bitmap, so a group is NOT one text run — the value
+            // group right-aligns to the panel edge, so its icon has to be placed from
+            // the measured digits rather than a fixed x. Worst case (both 100%) is
+            // 2x51px of the 108px row, leaving 6px between the groups.
+            pct_to_u32_string((char*) buffer, sizeof(buffer), byte_to_percent(sat));
+            kdisp_draw_bitmap(TEXT_X, DROPLET_Y, sat_droplet_bitmap, DROPLET_W, DROPLET_H);
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + DROPLET_W + SV_ICON_GAP), RGB_ROW_D, buffer);
+
+            pct_to_u32_string((char*) buffer, sizeof(buffer), byte_to_percent(rgb_matrix_get_val()));
+            int8_t val_lo = 0, val_hi = 0;
+            kdisp_gfx_text_bounds(smallFont, 1, buffer, &val_lo, &val_hi);
+            const int8_t val_x = (int8_t)(TEXT_R - val_hi);
+            kdisp_draw_bitmap((int8_t)(val_x - SV_ICON_GAP - SUN_SMALL_W), SUN_SMALL_Y,
+                              val_sun_bitmap, SUN_SMALL_W, SUN_SMALL_H);
+            kdisp_write_gfx_text(smallFont, 1, val_x, RGB_ROW_D, buffer);
         }
     } else {
-        oled_draw_layout_name(smallFont, 0, 29, get_local_layer()->def_layer);
         const poly_sync_t* local_state = get_local_state();
-        kdisp_write_gfx_text(smallFont, 1, 0, 44, U"Dsp*");
-        num_to_u32_string((char*) buffer, sizeof(buffer), local_state->contrast);
-        kdisp_write_gfx_text(smallFont, 1, 42, 44, buffer);
-        uint8_t i=0;
-        for(;i<(local_state->contrast/5);++i) {
-            buffer[i] = 'l';
+        // With RGB off the language slot and one of the two value groups move to the
+        // other panel, so the two rows that remain spread out to match its rhythm.
+        oled_draw_layout_name(smallFont, 0, rgb_on ? LOCK_ROW_B : OFF_ROW_B, get_local_layer()->def_layer);
+
+        if(rgb_on) {
+            // The speed row carries typing speed AND the language slot, both variable
+            // width, so the 105px budget is real: a 3-digit rate plus a code as wide as
+            // "mn-MN". The dial buys back the 38px the "WPM" label cost, and the code runs
+            // in 6pt (40px worst) rather than 8pt (54px, which does not fit at any packing).
+            //
+            // Speed sits directly under the layout name and brightness takes the bottom
+            // row. The brightness meter is ~98px wide, so it can only ever hold a row on
+            // its own -- which is why the language slot rides with the speed group.
+            kdisp_draw_bitmap(0, (int8_t)(LOCK_ROW_C - 8), wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
+            num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
+            kdisp_write_gfx_text(smallFont, 1, 15, LOCK_ROW_C, buffer);
+            kdisp_draw_bitmap(46, (int8_t)(LOCK_ROW_C - 12), lang_globe_bitmap, GLOBE_W, GLOBE_H);
+            kdisp_write_gfx_text(tinyFont, 1, 62, LOCK_ROW_C, poly_lang_code(local_state->lang));
+            draw_brightness_row(smallFont, 0, LOCK_ROW_D, local_state->contrast);
+        } else {
+            // Brightness holds this panel's bottom row in BOTH modes -- so the group that
+            // migrates to the near-empty RGB panel is the speed, not the meter. (Before
+            // the two swapped it was the other way round, which left the bottom row
+            // meaning "brightness" with RGB on and "speed" with RGB off.)
+            draw_brightness_row(smallFont, 0, OFF_ROW_C, local_state->contrast);
         }
-        buffer[i] = 0;
-        buffer[i+1] = 0;
-        kdisp_write_gfx_text(smallFont, 1, 64, 44, buffer);
-
-        kdisp_write_gfx_text(smallFont, 1, 0, 59, U"WPM");
-        num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
-        kdisp_write_gfx_text(smallFont, 1, 44, 59, buffer);
-
-        kdisp_write_gfx_text(smallFont, 1, 68, 59, U"L");
-        num_to_u32_string((char*) buffer, sizeof(buffer), local_state->lang);
-        kdisp_write_gfx_text(smallFont, 1, 84, 59, buffer);
     }
 }
 

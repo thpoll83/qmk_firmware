@@ -213,6 +213,18 @@
 // episode to slow the drift (3 -> ~every 22 s per key). Raise for a calmer display.
 #define IDLE_JITTER_PERIOD 3
 
+// Overlay-burst coalescing (sync_and_refresh_displays + base/update.c). A program
+// switch arrives as a burst of overlay/mapping HID reports; each would otherwise
+// trigger a full ~50-100 ms keycap re-render of half-staged state (measured ~12 per
+// switch). Defer starting a fresh render until QUIET ms after the last overlay
+// command — the burst is then complete and one render suffices. MAX caps the total
+// hold so a pathological slow trickle still renders (and bounds how long the keycaps
+// keep the previous complete image). QUIET is a couple of main-loop iterations; it
+// only delays the visible swap, and the loop stays responsive to keystrokes while
+// deferred (the whole point). Tune against the LoopProf "ovltot" line on hardware.
+#define OVERLAY_COALESCE_QUIET_MS 12
+#define OVERLAY_COALESCE_MAX_MS   250
+
 //######################################
 //#          Overlays specific         #
 //######################################

@@ -53,6 +53,17 @@ uint32_t get_time_since_last_update(void);
 // Global variables: g_refresh
 void request_disp_refresh(void);
 
+// Overlay-burst coalescing. The host streams a program switch as a BURST of
+// overlay/mapping HID reports, and each one currently triggers a full ~50-100 ms
+// keycap re-render of half-staged overlay state that the very next report
+// immediately obsoletes (measured: ~12 renders per switch). note_overlay_activity()
+// timestamps every bulk overlay/mapping command (hid_com.c on the master, the
+// bridged handlers in split_sync.c on the slave); sync_and_refresh_displays() then
+// DEFERS starting a fresh render while overlay_activity_elapsed() is small (the
+// burst is still arriving) and renders ONCE after it settles. Global: g_last_overlay
+void     note_overlay_activity(void);
+uint32_t overlay_activity_elapsed(void);
+
 // Called just before a font-pack / firmware flash begins (which blocks normal
 // interaction): drop to the base/default layer and render it once, so the user
 // can still type plain characters and the keycaps show legible legends while the

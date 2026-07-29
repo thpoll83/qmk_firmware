@@ -513,6 +513,28 @@ void sync_and_refresh_displays(void) {
     }
 
     enum refresh_mode refresh = get_refresh_mode();
+
+    // Overlay-burst coalescing: while a program-switch overlay burst is still
+    // arriving, DEFER starting a fresh render. Each report would otherwise redraw
+    // half-staged overlays that the next report obsoletes (measured ~12 full renders
+    // per switch); instead we render ONCE, OVERLAY_COALESCE_QUIET_MS after the burst
+    // settles. Only a FRESH render is held — a render already in progress
+    // (START_SECOND_HALF) always finishes, and non-overlay refreshes fall straight
+    // through (their overlay_activity_elapsed() is already large). s_hold_since caps
+    // the total deferral so a pathological trickle still renders. The state/bridge
+    // sync above already ran, so deferring the render doesn't stall the slave; and
+    // the loop stays fast (no ~100 ms render) while held — which is the whole point.
+    static bool     s_holding    = false;
+    static uint32_t s_hold_since = 0;
+    if ((refresh == ALL_AT_ONCE || refresh == START_FIRST_HALF)
+        && overlay_activity_elapsed() < OVERLAY_COALESCE_QUIET_MS) {
+        if (!s_holding) { s_holding = true; s_hold_since = timer_read32(); }
+        if (timer_elapsed32(s_hold_since) < OVERLAY_COALESCE_MAX_MS) {
+            return;   // hold the render; g_refresh stays pending for a later pass
+        }
+    }
+    s_holding = false;
+
     if (refresh == START_FIRST_HALF) {
 #ifdef POLYKYBD_LOOP_PROFILE
         uint32_t _lp_r0 = timer_hw->timerawl;
@@ -3166,7 +3188,14 @@ bool display_wakeup(keyrecord_t* record) {
         local_state->flags |= STATUS_DISP_ON;
         reset_idle_jitter();   // fresh, centred idle session next time
         update_performed();
-        request_disp_refresh();
+        // Wake-from-idle is the single worst render stall (measured ~107 ms in one
+        // pass — the user is pressing a key to wake it, so it is also the most likely
+        // to swallow a keystroke). Split it across two housekeeping passes via the
+        // existing two-pass path (rows 0-2, matrix scan, rows 3-4) instead of the
+        // one-shot ALL_AT_ONCE request_disp_refresh(). A subsequent overlay burst
+        // (program-switch wake) may still re-request ALL_AT_ONCE, but coalescing then
+        // collapses that to one render; a plain wake keeps the two-pass split.
+        set_disp_refresh(START_FIRST_HALF);
     }
 
     return accept_keypress;

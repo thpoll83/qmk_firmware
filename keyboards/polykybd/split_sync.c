@@ -170,6 +170,7 @@ void user_sync_layer_data_handler(uint8_t in_len, const void* in_data, uint8_t o
 // Handles incoming overlay segment data on bridge with CRC32 validation, marks as used when complete.
 void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     SYNC_VALIDATE_OR_RETURN(overlay_sync_t);
+    note_overlay_activity();   // coalesce the slave's per-chunk renders (see update.h)
     const overlay_sync_t* ov = ((const overlay_sync_t *)in_data);
     // NOTE (FW-6, risk accepted): `ov->segment` is not bounded here, so a value
     // outside 0..NUM_SEGMENTS_PER_OVERLAY-1 would offset the memcpy past the
@@ -193,6 +194,7 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
 // Global variables: hid_bit_index
 void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     SYNC_VALIDATE_OR_RETURN(compressed_overlay_sync_t);
+    note_overlay_activity();   // coalesce the slave's per-chunk renders (see update.h)
     const compressed_overlay_sync_t* ov = ((const compressed_overlay_sync_t *)in_data);
 #ifdef USE_CORE1
     //keycode info is lost, so KC_NO used (only used for diagnostics)
@@ -214,6 +216,7 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
 
 void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     SYNC_VALIDATE_OR_RETURN(roi_overlay_sync_t);
+    note_overlay_activity();   // coalesce the slave's per-chunk renders (see update.h)
     const roi_overlay_sync_t* roi_ov = ((const roi_overlay_sync_t *)in_data);
     bool first = roi_ov->msg_idx==0;
     const uint8_t* start = roi_ov->data;
@@ -341,6 +344,7 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
     }
 #endif
     SYNC_VALIDATE_OR_RETURN(overlay_map_sync_t);
+    note_overlay_activity();   // coalesce the slave's per-chunk renders (see update.h)
     const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
     set_10bit_overlay_mapping((uint8_t *)data->mapping);
     request_disp_refresh();

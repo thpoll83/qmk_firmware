@@ -553,16 +553,27 @@ identical (same vulnerability; orientation preserved across board swaps), split7
 immune, same cable fine on split72, v3/v4's perfectly clean TX pad (swinging into an
 unloaded open), slave always powered.
 
-![Copper comparison: split42-left vs split42-right vs split72-left](split42_link_copper_comparison.png)
-*(rendered from the .kicad_pcb files: COM-net copper around U26 + the link receptacle;
-red = copper islands that reach the MCU only through U26's internal flow-through metal)*
+> **Copper comparison — split42-left vs split42-right vs split72-left.** Rendered from
+> the `.kicad_pcb` files: COM-net copper around U26 + the link receptacle; red = copper
+> islands that reach the MCU only through U26's internal flow-through metal.
+>
+> ⚠️ The rendered PNG is **not kept in-tree**: `.gitignore` ignores `*.png`, and
+> `qmk lint --strict` fails a keyboard directory that contains any gitignored file, so
+> committing it turned the `lint` check red on every unrelated split42 PR. Recover it with
+> `git show 11f37c17:keyboards/polykybd/split42/split42_link_copper_comparison.png > /tmp/x.png`,
+> or re-render from the KiCad sources in the PolyKybd hardware repo.
 
 ### Gerber verification (the FABBED files — ground truth incl. pours)
 
 Rendered from **`production/PolyCorne_Split42_L_1.0.zip`** (the actual fab package of
 the boards in hand), all 4 copper layers, gerbv:
 
-![split42-left fabbed gerbers, 4 copper layers](split42_left_gerber_4layers.png)
+> **split42-left fabbed gerbers, all 4 copper layers** (gerbv). Not kept in-tree for the
+> same reason as the copper comparison above — recover with
+> `git show 11f37c17:keyboards/polykybd/split42/split42_left_gerber_4layers.png > /tmp/x.png`,
+> or re-render from `production/PolyCorne_Split42_L_1.0.zip`.
+>
+> The findings it shows are stated in full below, so the text stands on its own.
 
 - **B.Cu** shows the tell directly: **four** data stubs run from the receptacle
   contact row into U26's pad columns, but only **two** lines leave U26's other side

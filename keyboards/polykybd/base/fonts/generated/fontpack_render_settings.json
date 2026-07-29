@@ -377,6 +377,7 @@
     },
     "36": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Arrows_",
       "render_height": 50,
       "source": "noto-sans-symbols2",
@@ -501,6 +502,7 @@
     },
     "52": {
       "size": 15,
+      "hinting": "auto",
       "variant": "_Cjk4e2d_",
       "weight": 400,
       "source": "noto-sans-jp",
@@ -508,6 +510,7 @@
     },
     "53": {
       "size": 15,
+      "hinting": "auto",
       "variant": "_Cjk5eff_",
       "weight": 400,
       "source": "noto-sans-jp",
@@ -515,6 +518,7 @@
     },
     "54": {
       "size": 15,
+      "hinting": "auto",
       "variant": "_Cjk96e3_",
       "weight": 400,
       "source": "noto-sans-jp",
@@ -522,6 +526,7 @@
     },
     "55": {
       "size": 15,
+      "hinting": "auto",
       "variant": "_Cjk91cd_",
       "weight": 400,
       "source": "noto-sans-jp",
@@ -529,6 +534,7 @@
     },
     "56": {
       "size": 15,
+      "hinting": "auto",
       "variant": "_KangXi_",
       "weight": 400,
       "source": "noto-sans-jp",
@@ -927,6 +933,7 @@
     },
     "106": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_FormsB_",
       "render_height": 40,
       "source": "noto-sans-arabic",
@@ -934,6 +941,7 @@
     },
     "107": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Isolated_",
       "render_height": 40,
       "source": "noto-sans-arabic",
@@ -941,6 +949,7 @@
     },
     "108": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_PerArab_",
       "render_height": 40,
       "source": "noto-sans-arabic",
@@ -948,6 +957,7 @@
     },
     "109": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Deva_",
       "render_height": 40,
       "source": "noto-sans-devanagari",
@@ -955,6 +965,7 @@
     },
     "110": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_DevaMatra_",
       "render_height": 40,
       "source": "noto-sans-devanagari",
@@ -965,6 +976,7 @@
     },
     "111": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Bengali_",
       "render_height": 40,
       "source": "noto-sans-bengali",
@@ -972,6 +984,7 @@
     },
     "112": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_BengaliMatra_",
       "render_height": 40,
       "source": "noto-sans-bengali",
@@ -982,6 +995,7 @@
     },
     "113": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Telugu_",
       "render_height": 40,
       "source": "noto-sans-telugu",
@@ -989,6 +1003,7 @@
     },
     "114": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_TeluguMatra_",
       "render_height": 40,
       "source": "noto-sans-telugu",
@@ -999,6 +1014,7 @@
     },
     "115": {
       "size": 14,
+      "hinting": "auto",
       "variant": "_Tamil_",
       "render_height": 40,
       "source": "noto-sans-tamil",
@@ -1006,6 +1022,7 @@
     },
     "116": {
       "size": 14,
+      "hinting": "auto",
       "variant": "_TamilMatra_",
       "render_height": 40,
       "source": "noto-sans-tamil",
@@ -1016,6 +1033,7 @@
     },
     "117": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Thai_",
       "render_height": 40,
       "source": "noto-sans-thai",
@@ -1023,6 +1041,7 @@
     },
     "118": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_ThaiMatra_",
       "render_height": 40,
       "source": "noto-sans-thai",
@@ -1033,6 +1052,7 @@
     },
     "119": {
       "size": 17,
+      "hinting": "auto",
       "variant": "_Georgian_",
       "render_height": 40,
       "weight": 500,
@@ -1041,6 +1061,7 @@
     },
     "120": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Armenian_",
       "render_height": 40,
       "weight": 500,
@@ -1049,6 +1070,7 @@
     },
     "121": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Bopomofo_",
       "render_height": 40,
       "weight": 500,
@@ -1057,6 +1079,7 @@
     },
     "122": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Ethiopic_",
       "render_height": 40,
       "source": "noto-sans-ethiopic",
@@ -1087,6 +1110,7 @@
     },
     "126": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Sorani_",
       "render_height": 40,
       "source": "noto-sans-arabic",
@@ -1094,6 +1118,7 @@
     },
     "127": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Pashto_",
       "render_height": 40,
       "source": "noto-sans-arabic",
@@ -1101,6 +1126,7 @@
     },
     "128": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_CanAborig_",
       "render_height": 40,
       "source": "noto-sans-canadian-aboriginal",
@@ -1108,6 +1134,7 @@
     },
     "129": {
       "size": 13,
+      "hinting": "auto",
       "variant": "_Cherokee_",
       "render_height": 40,
       "source": "noto-sans-cherokee",
@@ -1115,6 +1142,7 @@
     },
     "130": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_VietTones_",
       "render_height": 40,
       "source": "noto-sans",
@@ -1125,6 +1153,7 @@
     },
     "131": {
       "size": 15,
+      "hinting": "auto",
       "variant": "_Hiragana_",
       "weight": 400,
       "source": "noto-sans-jp",
@@ -1132,6 +1161,7 @@
     },
     "132": {
       "size": 15,
+      "hinting": "auto",
       "variant": "_Punct2_",
       "weight": 400,
       "source": "noto-sans-jp",
@@ -1139,6 +1169,7 @@
     },
     "133": {
       "size": 15,
+      "hinting": "auto",
       "variant": "_Punct_",
       "weight": 400,
       "source": "noto-sans-jp",
@@ -1146,6 +1177,7 @@
     },
     "134": {
       "size": 22,
+      "hinting": "auto",
       "variant": "_HebrewDots_",
       "weight": 400,
       "source": "noto-sans-hebrew",
@@ -1153,6 +1185,7 @@
     },
     "135": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Hebrew_",
       "weight": 400,
       "source": "noto-sans-hebrew",
@@ -1189,6 +1222,7 @@
     },
     "140": {
       "size": 21,
+      "hinting": "auto",
       "variant": "_Consonants_",
       "weight": 400,
       "source": "noto-serif-kr",
@@ -1196,6 +1230,7 @@
     },
     "141": {
       "size": 21,
+      "hinting": "auto",
       "variant": "_Vowels_",
       "render_height": 51,
       "weight": 400,
@@ -1243,6 +1278,7 @@
     },
     "147": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Tengwar_",
       "render_height": 30,
       "yadvance": 40,
@@ -1253,6 +1289,7 @@
     },
     "148": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Runes_",
       "render_height": 30,
       "yadvance": 40,
@@ -1263,6 +1300,7 @@
     },
     "149": {
       "size": 14,
+      "hinting": "auto",
       "variant": "_Aurebesh_",
       "render_height": 30,
       "yadvance": 40,
@@ -1273,6 +1311,7 @@
     },
     "150": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Sga_",
       "render_height": 30,
       "yadvance": 40,
@@ -1283,6 +1322,7 @@
     },
     "151": {
       "size": 16,
+      "hinting": "auto",
       "variant": "_Cirth_",
       "render_height": 30,
       "yadvance": 40,
@@ -1293,6 +1333,7 @@
     },
     "152": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Ibmvga_",
       "render_height": 30,
       "yadvance": 40,
@@ -1303,6 +1344,7 @@
     },
     "153": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_C64_",
       "render_height": 30,
       "yadvance": 40,
@@ -1313,6 +1355,7 @@
     },
     "154": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Amiga_",
       "render_height": 30,
       "yadvance": 40,
@@ -1323,6 +1366,7 @@
     },
     "155": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Apl_",
       "render_height": 30,
       "yadvance": 40,
@@ -1333,6 +1377,7 @@
     },
     "156": {
       "size": 20,
+      "hinting": "auto",
       "variant": "_Braille_",
       "render_height": 44,
       "yadvance": 40,

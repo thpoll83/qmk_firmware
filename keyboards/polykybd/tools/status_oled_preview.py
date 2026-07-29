@@ -72,7 +72,7 @@ def _parse_header(text, bitmaps, glyphs, fonts):
 def load_fonts():
     B, G, F = {}, {}, {}
     for rel in ("NotoSans_Regular_Base_11pt.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h",
-                "lang_label_font.h"):
+                "lang_label_font.h", "generated/emoji_fonts.h"):
         _parse_header(open(os.path.join(FONTDIR, rel)).read(), B, G, F)
 
     def bundle(name):
@@ -87,7 +87,8 @@ def load_fonts():
         if f['first'] <= 0x80 <= f['last'] and f['gly'] in G:
             icons = (f, B[f['bmp']], G[f['gly']])
             break
-    return disp, small, icons, tiny
+    globe = bundle('NotoEmoji_Medium_World_20pt16b')
+    return disp, small, icons, tiny, globe
 
 
 def draw(setpix, font, x, y, text):
@@ -108,6 +109,30 @@ def draw(setpix, font, x, y, text):
                 bits = (bits << 1) & 0xFF
                 bit += 1
         x += g['xa']
+
+
+def draw_glyph_half(setpix, font, x, y, cp):
+    """Mirror of kdisp_draw_glyph_half_at: 2x2-OR downsample, dims rounded up,
+    (x, y) is the TOP-LEFT of the halved glyph (no baseline/yOffset math)."""
+    f, bm, gl = font
+    if not (f['first'] <= cp <= f['last']):
+        return
+    g = gl[cp - f['first']]
+    w, h = g['w'], g['h']
+    for dy in range((h + 1) // 2):
+        for dx in range((w + 1) // 2):
+            for oy in range(2):
+                for ox in range(2):
+                    sx, sy = dx * 2 + ox, dy * 2 + oy
+                    if sx >= w or sy >= h:
+                        continue
+                    bit = sy * w + sx
+                    if bm[g['off'] + (bit >> 3)] & (0x80 >> (bit & 7)):
+                        setpix(x + dx, y + dy)
+                        break
+                else:
+                    continue
+                break
 
 
 def measure_width(font, text):
@@ -272,10 +297,9 @@ def draw_brightness_row(setp, small, x, base_y, brightness):
     draw_brightness_bars(setp, x + 40, base_y - 1, brightness_to_level(brightness))
 
 
-def draw_lang_column(setp, tiny, x, code):
+def draw_lang_column(setp, tiny, globe, x, code):
     """Mirror of draw_lang_column(): big globe over the code on two lines."""
-    draw_bitmap(setp, GLOBE_BIG_BMP, x + (COL_W - GLOBE_BIG_W) // 2 + 1, OFF_GLOBE_Y,
-                GLOBE_BIG_W, GLOBE_BIG_H)
+    draw_glyph_half(setp, globe, x, OFF_GLOBE_Y, 0x1F310)
     f, _bm, gl = tiny
     for half, base in ((0, OFF_CODE1_BASE), (1, OFF_CODE2_BASE)):
         txt = s(code[half * 3:half * 3 + 2])
@@ -290,7 +314,7 @@ def draw_lang_column(setp, tiny, x, code):
         draw(setp, tiny, max(x, nx), base, txt)
 
 
-def build_panel(side, disp, small, icons, tiny, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'),
+def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'),
                 lang='en-US', wpm=0):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
@@ -336,7 +360,7 @@ def build_panel(side, disp, small, icons, tiny, brightness=50, rgb=(128, 255, 10
         draw(setp, small, TEXT_X, OFF_ROW_B, s('RGB'))
         draw(setp, small, TEXT_X + 34, OFF_ROW_B, s('Off'))
         draw_brightness_row(setp, small, TEXT_X, OFF_ROW_C, brightness)
-        draw_lang_column(setp, tiny, COL_X, lang)
+        draw_lang_column(setp, tiny, globe, COL_X, lang)
     else:
         hue, sat, val, speed, mode, name = rgb
         draw(setp, small, TEXT_X, ROW2, s(str(mode)))
@@ -428,10 +452,10 @@ def main():
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
     args = ap.parse_args()
 
-    disp, small, icons, tiny = load_fonts()
+    disp, small, icons, tiny, globe = load_fonts()
     rgb = None if args.rgb_off else (128, 255, 100, 80, 5, 'Rainbow')
-    L = build_panel('L', disp, small, icons, tiny, args.brightness, rgb, args.lang, args.wpm)
-    R = build_panel('R', disp, small, icons, tiny, args.brightness, rgb, args.lang, args.wpm)
+    L = build_panel('L', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang, args.wpm)
+    R = build_panel('R', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang, args.wpm)
 
     if args.diag:
         Li, lc = render_diag(L, 'LEFT (layout)  128x64  |  RED = clipped')

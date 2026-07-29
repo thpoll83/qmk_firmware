@@ -93,31 +93,12 @@ static const uint8_t lang_globe_bitmap[] PROGMEM = {
 #define GLOBE_W 13
 #define GLOBE_H 13
 
-// Bigger sibling for the RGB-off layout, where the language slot moves into the
-// indicator column and has the whole column width to itself. Same construction as
-// the 13x13 (rim + equator + two curved meridians), redrawn at 17px rather than
-// scaled — a 2x2-OR upscale of the small one breaks the 1px strokes.
-static const uint8_t lang_globe_big_bitmap[] PROGMEM = {   // 17x17 language globe, RGB-off column
-    0x07, 0xf0, 0x00,
-    0x0e, 0x38, 0x00,
-    0x32, 0x26, 0x00,
-    0x24, 0x12, 0x00,
-    0x44, 0x11, 0x00,
-    0xc4, 0x11, 0x80,
-    0x84, 0x10, 0x80,
-    0x84, 0x10, 0x80,
-    0xff, 0xff, 0x80,
-    0x84, 0x10, 0x80,
-    0x84, 0x10, 0x80,
-    0xc4, 0x11, 0x80,
-    0x44, 0x11, 0x00,
-    0x24, 0x12, 0x00,
-    0x32, 0x26, 0x00,
-    0x0e, 0x38, 0x00,
-    0x07, 0xf0, 0x00,
-};
-#define GLOBE_BIG_W 17
-#define GLOBE_BIG_H 17
+// The RGB-off layout draws the language slot with the REAL globe (U+1F310) instead
+// of a bitmap: kdisp_draw_glyph_half_at 2x2-ORs the resident 40x40 emoji down to
+// 20x20, which carries meridians and parallels that hand-drawn line art at this size
+// cannot. It only works here because the RGB-off panel shifts its text origin to 26 —
+// 20px overhangs the 17px column, and that gutter is what absorbs it. (Row 4 of the
+// RGB-on layout has no such room, so it keeps the 13x13 bitmap.)
 
 // Typing speed. "WPM" as text costs 38px of a 105px row, which a 3-digit rate plus
 // the language slot can no longer afford — a dial reads the same and costs 11.
@@ -287,8 +268,9 @@ static void draw_brightness_row(const GFXfont* const* font, int8_t x, int8_t bas
 static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang) {
     uint32_t line[3];
     const uint32_t* code = poly_lang_code(lang);
-    kdisp_draw_bitmap((int8_t)(x + (COL_W - GLOBE_BIG_W) / 2 + 1), OFF_GLOBE_Y,
-                      lang_globe_big_bitmap, GLOBE_BIG_W, GLOBE_BIG_H);
+    // Wider than the column, so it cannot centre on it -- pin it to the column origin
+    // and let it reach into the gutter.
+    kdisp_draw_glyph_half_at(g_all_fonts, g_all_font_count, x, OFF_GLOBE_Y, U'\U0001F310');
     if(code[0] == 0) return;
     // "xx-YY": codepoints 0,1 over 3,4 -- the line break replaces the separator.
     for(uint8_t half = 0; half < 2; ++half) {

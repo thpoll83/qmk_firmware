@@ -54,8 +54,8 @@ OFF_ROW_C = 63
 RGB_OFF_ROW_B = 39
 RGB_OFF_ROW_C = 63
 OFF_GLOBE_Y = 1
-OFF_CODE1_BASE = 30
-OFF_CODE2_BASE = 41
+OFF_CODE1_BASE = 31
+OFF_CODE2_BASE = 43
 
 
 # ----------------------------- GFXfont parsing -----------------------------

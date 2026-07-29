@@ -259,7 +259,7 @@ void oled_update_buffer(void) {
             nbuf[0] = code[half * 3];
             nbuf[1] = code[half * 3 + 1];
             nbuf[2] = 0;
-            pdraw_text_center(tinyFont, 1, 68 + gh + 11 + half * 11, nbuf, buf);
+            pdraw_text_center(tinyFont, 1, 68 + gh + 12 + half * 12, nbuf, buf);
         }
     }
 

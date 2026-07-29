@@ -255,8 +255,8 @@ static uint8_t brightness_to_level(uint8_t contrast) {
                            //               layout name to keep ITS gaps even)
 #define RGB_OFF_ROW_C  63  // brightness   (51..63)
 #define OFF_GLOBE_Y    1   // big globe top, in the column the gauge vacated
-#define OFF_CODE1_BASE 30  // "en" under it, then "US" under that -- the code does not fit
-#define OFF_CODE2_BASE 41  // on one line in a 17px column ("TW" alone is 18px at 6pt)
+#define OFF_CODE1_BASE 31  // "en" under it, then "US" under that -- the code does not fit
+#define OFF_CODE2_BASE 43  // on one line in a 17px column ("TW" alone is 18px at 6pt)
 
 // Brightness: sun icon, the raw value, then the staircase meter. Grouped so the whole
 // row can be placed at either panel's origin without duplicating the offsets.

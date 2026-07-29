@@ -148,7 +148,7 @@ static const uint8_t sat_droplet_bitmap[] PROGMEM = {   // 9x10
 };
 #define DROPLET_W 9
 #define DROPLET_H 10
-#define DROPLET_Y 49                                    // bottom row lands on the digits'
+#define DROPLET_Y 53                                    // bottom row lands on the digits'
 static const uint8_t val_sun_bitmap[] PROGMEM = {       // 9x9
     0x08, 0x00,
     0x41, 0x00,
@@ -162,7 +162,7 @@ static const uint8_t val_sun_bitmap[] PROGMEM = {       // 9x9
 };
 #define SUN_SMALL_W 9
 #define SUN_SMALL_H 9
-#define SUN_SMALL_Y 50
+#define SUN_SMALL_Y 54
 #define SV_ICON_GAP 2
 
 // v (0..255) as a percentage, rounded to nearest.
@@ -242,12 +242,31 @@ static uint8_t brightness_to_level(uint8_t contrast) {
     return level;
 }
 
-// Row baselines. With RGB on both panels run four rows (15/29/44/59). With RGB off
-// the effect / colour / S+V rows and the speed gauge all vanish, leaving the RGB
-// panel almost empty — so the two movable groups below migrate into that space and
-// everything re-flows onto three evenly-spaced rows (15/37/59) on BOTH panels.
-#define OFF_ROW_B     37
-#define OFF_ROW_C     59
+// Row baselines. The header is row A (baseline 15); rows B..D below it are spaced so
+// the LAST row's bottom pixel lands on screen row 63 — no dead strip under it — and
+// the leftover space is split as evenly as the rows allow.
+//
+// The spacing is PER PANEL because the two panels have opposite shapes: the layout
+// panel's row B carries descenders ("Qwerty Stag!" reaches 4px below the baseline
+// across most of the row, so it cannot be treated as a baseline-height row) while the
+// RGB panel's descenders are on row C instead ("Cyan"). One shared set of baselines
+// can only reach a 1px minimum gap; splitting them gives 3/2/2 and 4/3/3. The two
+// halves are physically far apart, so the 2-3px row misalignment between them does
+// not read as such.
+#define LOCK_ROW_B    29   // layout name          (19..33 incl. descenders)
+#define LOCK_ROW_C    48   // speed + language     (36..48, globe is 13 tall)
+#define LOCK_ROW_D    63   // brightness           (51..63, tallest bar is 12)
+#define RGB_ROW_B     30   // effect index + name  (19..30)
+#define RGB_ROW_C     45   // colour name + hue    (35..49 incl. descenders)
+#define RGB_ROW_D     63   // saturation + value   (53..63)
+// With RGB off the effect / colour / S+V rows and the speed gauge all vanish, leaving
+// the RGB panel almost empty — so the two movable groups migrate into that space and
+// each panel re-flows onto three rows, again bottomed out on row 63.
+#define OFF_ROW_B      37  // layout name  (27..41 incl. descenders)
+#define OFF_ROW_C      63  // speed        (53..63; no globe here, so shorter than row C)
+#define RGB_OFF_ROW_B  39  // "RGB Off"    (28..39 — no descenders, so 2px below the
+                           //               layout name to keep ITS gaps even)
+#define RGB_OFF_ROW_C  63  // brightness   (51..63)
 #define OFF_GLOBE_Y    1   // big globe top, in the column the gauge vacated
 #define OFF_CODE1_BASE 30  // "en" under it, then "US" under that -- the code does not fit
 #define OFF_CODE2_BASE 41  // on one line in a 17px column ("TW" alone is 18px at 6pt)
@@ -360,9 +379,9 @@ void oled_update_buffer(void) {
             // two groups the layout panel can spare: the brightness meter under the
             // label, and the language slot in the column the gauge vacated.
             const poly_sync_t* local_state = get_local_state();
-            kdisp_write_gfx_text(smallFont, 1, TEXT_X, OFF_ROW_B, U"RGB");
-            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 34), OFF_ROW_B, U"Off");
-            draw_brightness_row(smallFont, TEXT_X, OFF_ROW_C, local_state->contrast);
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, RGB_OFF_ROW_B, U"RGB");
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 34), RGB_OFF_ROW_B, U"Off");
+            draw_brightness_row(smallFont, TEXT_X, RGB_OFF_ROW_C, local_state->contrast);
             draw_lang_column(tinyFont, COL_X, local_state->lang);
         } else {
             // Effect: index + name. With the speed moved to the gauge in the column
@@ -371,9 +390,9 @@ void oled_update_buffer(void) {
             const uint8_t mode = rgb_matrix_get_mode();
             const uint32_t* mode_name = get_led_matrix_text(mode);
             num_to_u32_string((char*) buffer, sizeof(buffer), mode);
-            kdisp_write_gfx_text(smallFont, 1, TEXT_X, 29, buffer);
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, RGB_ROW_B, buffer);
             const int8_t name_x = (int8_t)(TEXT_X + 22);
-            kdisp_write_gfx_text(smallFont, 1, name_x, 29, mode_name);
+            kdisp_write_gfx_text(smallFont, 1, name_x, RGB_ROW_B, mode_name);
             if(led_matrix_text_superscript2(mode)) {
                 // "Splash²" — measure the name so the superscript lands just past it
                 // whatever the font metrics are, raised to the top of the cap height.
@@ -388,8 +407,8 @@ void oled_update_buffer(void) {
             // "HSV 80" needed the reader to decode it.
             const uint8_t hue = rgb_matrix_get_hue();
             const uint8_t sat = rgb_matrix_get_sat();
-            kdisp_write_gfx_text(smallFont, 1, TEXT_X, 44, get_hue_name(hue, sat));
-            oled_draw_num16_right(smallFont, (int8_t)(TEXT_R - 4), 44, hue_to_degrees(hue));
+            kdisp_write_gfx_text(smallFont, 1, TEXT_X, RGB_ROW_C, get_hue_name(hue, sat));
+            oled_draw_num16_right(smallFont, (int8_t)(TEXT_R - 4), RGB_ROW_C, hue_to_degrees(hue));
             kdisp_draw_bitmap((int8_t)(TEXT_R - 2), 34, degree_ring_bitmap, DEGREE_W, DEGREE_H);
 
             // Saturation / value as percentages rather than 0x00..0xFF, each behind its
@@ -399,7 +418,7 @@ void oled_update_buffer(void) {
             // 2x51px of the 108px row, leaving 6px between the groups.
             pct_to_u32_string((char*) buffer, sizeof(buffer), byte_to_percent(sat));
             kdisp_draw_bitmap(TEXT_X, DROPLET_Y, sat_droplet_bitmap, DROPLET_W, DROPLET_H);
-            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + DROPLET_W + SV_ICON_GAP), 59, buffer);
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + DROPLET_W + SV_ICON_GAP), RGB_ROW_D, buffer);
 
             pct_to_u32_string((char*) buffer, sizeof(buffer), byte_to_percent(rgb_matrix_get_val()));
             int8_t val_lo = 0, val_hi = 0;
@@ -407,13 +426,13 @@ void oled_update_buffer(void) {
             const int8_t val_x = (int8_t)(TEXT_R - val_hi);
             kdisp_draw_bitmap((int8_t)(val_x - SV_ICON_GAP - SUN_SMALL_W), SUN_SMALL_Y,
                               val_sun_bitmap, SUN_SMALL_W, SUN_SMALL_H);
-            kdisp_write_gfx_text(smallFont, 1, val_x, 59, buffer);
+            kdisp_write_gfx_text(smallFont, 1, val_x, RGB_ROW_D, buffer);
         }
     } else {
         const poly_sync_t* local_state = get_local_state();
         // With RGB off the brightness and language groups move to the other panel, so
         // the two rows that remain spread out to match its three-row rhythm.
-        oled_draw_layout_name(smallFont, 0, rgb_on ? 29 : OFF_ROW_B, get_local_layer()->def_layer);
+        oled_draw_layout_name(smallFont, 0, rgb_on ? LOCK_ROW_B : OFF_ROW_B, get_local_layer()->def_layer);
 
         // The speed row carries typing speed AND the language slot, both variable width,
         // so the 105px budget is real: a 3-digit rate plus a code as wide as "mn-MN". The
@@ -424,7 +443,7 @@ void oled_update_buffer(void) {
         // the bottom row. The brightness meter is ~98px wide, so it can only ever hold a
         // row on its own -- which is why the language slot rides with the speed group
         // instead of staying on the bottom row when the two swap.
-        const int8_t speed_base = rgb_on ? 44 : OFF_ROW_C;
+        const int8_t speed_base = rgb_on ? LOCK_ROW_C : OFF_ROW_C;
         kdisp_draw_bitmap(0, (int8_t)(speed_base - 8), wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
         num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
         kdisp_write_gfx_text(smallFont, 1, 15, speed_base, buffer);
@@ -432,7 +451,7 @@ void oled_update_buffer(void) {
         if(rgb_on) {
             kdisp_draw_bitmap(46, (int8_t)(speed_base - 12), lang_globe_bitmap, GLOBE_W, GLOBE_H);
             kdisp_write_gfx_text(tinyFont, 1, 62, speed_base, poly_lang_code(local_state->lang));
-            draw_brightness_row(smallFont, 0, 59, local_state->contrast);
+            draw_brightness_row(smallFont, 0, LOCK_ROW_D, local_state->contrast);
         }
     }
 }

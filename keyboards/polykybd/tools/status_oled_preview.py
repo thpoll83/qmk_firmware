@@ -38,12 +38,21 @@ P_W, P_H = 128, 64  # split72 status OLED
 
 # ---- coordinates, kept in sync with split72/status_oled.c oled_update_buffer ----
 TOP_BASE = 15   # first text line (layer icon / hex layer / side)  [was 14]
-ROW2 = 29       # layout name / "RGB <mode>"                        [was 30]
-ROW3 = 44       # Dsp brightness / HSV
-ROW4 = 59       # WPM+lang / Speed                                  [was 58]
-# RGB-off re-flow: three evenly-spaced rows on both panels instead of four.
+# Rows B..D are spaced PER PANEL so the bottom row's last pixel lands on screen row
+# 63 and the slack splits evenly -- the layout panel's descenders sit on row B
+# ("Qwerty Stag!") while the RGB panel's sit on row C ("Cyan"), so one shared set
+# cannot space both. See the matching block in split72/status_oled.c.
+LOCK_ROW_B = 29   # layout name
+LOCK_ROW_C = 48   # speed + language
+LOCK_ROW_D = 63   # brightness
+RGB_ROW_B = 30    # effect index + name
+RGB_ROW_C = 45    # colour name + hue
+RGB_ROW_D = 63    # saturation + value
+# RGB-off re-flow: three rows on both panels instead of four, again bottomed out on 63.
 OFF_ROW_B = 37
-OFF_ROW_C = 59
+OFF_ROW_C = 63
+RGB_OFF_ROW_B = 39
+RGB_OFF_ROW_C = 63
 OFF_GLOBE_Y = 1
 OFF_CODE1_BASE = 30
 OFF_CODE2_BASE = 41
@@ -225,10 +234,10 @@ SUPER2_BMP = [0x70, 0x88, 0x10, 0x20, 0x40, 0xf8]          # 5x6 superscript 2
 SUPER2_W, SUPER2_H = 5, 6
 DROPLET_BMP = [0x08, 0x00, 0x08, 0x00, 0x1c, 0x00, 0x1c, 0x00, 0x3e, 0x00,
                0x7f, 0x00, 0x7f, 0x00, 0x7f, 0x00, 0x3e, 0x00, 0x1c, 0x00]
-DROPLET_W, DROPLET_H, DROPLET_Y = 9, 10, 49                # saturation
+DROPLET_W, DROPLET_H, DROPLET_Y = 9, 10, 53                # saturation
 SUN_SMALL_BMP = [0x08, 0x00, 0x41, 0x00, 0x1c, 0x00, 0x3e, 0x00, 0xbe, 0x80,
                  0x3e, 0x00, 0x1c, 0x00, 0x41, 0x00, 0x08, 0x00]
-SUN_SMALL_W, SUN_SMALL_H, SUN_SMALL_Y = 9, 9, 50           # value
+SUN_SMALL_W, SUN_SMALL_H, SUN_SMALL_Y = 9, 9, 54           # value
 SV_ICON_GAP = 2
 
 
@@ -348,26 +357,26 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
     else:
         draw(setp, small, COL_X + 5, 56, s('R'))
     if lock_panel:
-        draw(setp, small, TEXT_X, ROW2 if rgb_on else OFF_ROW_B, s('Qwerty'))
+        draw(setp, small, TEXT_X, LOCK_ROW_B if rgb_on else OFF_ROW_B, s('Qwerty'))
         # Speed (+ the language slot sharing its row) and brightness trade rows when RGB
         # is on -- the ~98px meter can only hold a row on its own.
-        speed_base = ROW3 if rgb_on else OFF_ROW_C
+        speed_base = LOCK_ROW_C if rgb_on else OFF_ROW_C
         draw_bitmap(setp, WPM_BMP, 0, speed_base - 8, WPM_ICON_W, WPM_ICON_H)
         draw(setp, small, 15, speed_base, s(str(wpm)))
         if rgb_on:
             draw_bitmap(setp, GLOBE_BMP, 46, speed_base - 12, GLOBE_W, GLOBE_H)
             draw(setp, tiny, 62, speed_base, s(lang))
-            draw_brightness_row(setp, small, 0, ROW4, brightness)
+            draw_brightness_row(setp, small, 0, LOCK_ROW_D, brightness)
     elif not rgb_on:
-        draw(setp, small, TEXT_X, OFF_ROW_B, s('RGB'))
-        draw(setp, small, TEXT_X + 34, OFF_ROW_B, s('Off'))
-        draw_brightness_row(setp, small, TEXT_X, OFF_ROW_C, brightness)
+        draw(setp, small, TEXT_X, RGB_OFF_ROW_B, s('RGB'))
+        draw(setp, small, TEXT_X + 34, RGB_OFF_ROW_B, s('Off'))
+        draw_brightness_row(setp, small, TEXT_X, RGB_OFF_ROW_C, brightness)
         draw_lang_column(setp, tiny, globe, COL_X, lang)
     else:
         hue, sat, val, speed, mode, name = rgb
-        draw(setp, small, TEXT_X, ROW2, s(str(mode)))
+        draw(setp, small, TEXT_X, RGB_ROW_B, s(str(mode)))
         name_x = TEXT_X + 22
-        draw(setp, small, name_x, ROW2, s(name.rstrip('2')))
+        draw(setp, small, name_x, RGB_ROW_B, s(name.rstrip('2')))
         if name.endswith('2'):      # "Splash2" in the fixture -> "Splash" + superscript
             f, _bm, gl = small
             hi = 0
@@ -379,11 +388,11 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
                 cx += g['xa']
             draw_bitmap(setp, SUPER2_BMP, name_x + hi + 2, 18, SUPER2_W, SUPER2_H)
         draw_speed_gauge(setp, COL_X, speed)
-        draw(setp, small, TEXT_X, ROW3, s(hue_name(hue, sat)))
-        draw_right(setp, small, TEXT_R - 4, ROW3, s(str(hue_to_degrees(hue))))
+        draw(setp, small, TEXT_X, RGB_ROW_C, s(hue_name(hue, sat)))
+        draw_right(setp, small, TEXT_R - 4, RGB_ROW_C, s(str(hue_to_degrees(hue))))
         draw_bitmap(setp, DEGREE_BMP, TEXT_R - 2, 34, DEGREE_W, DEGREE_H)
         draw_bitmap(setp, DROPLET_BMP, TEXT_X, DROPLET_Y, DROPLET_W, DROPLET_H)
-        draw(setp, small, TEXT_X + DROPLET_W + SV_ICON_GAP, ROW4,
+        draw(setp, small, TEXT_X + DROPLET_W + SV_ICON_GAP, RGB_ROW_D,
              s('%d%%' % byte_to_percent(sat)))
         vtxt = s('%d%%' % byte_to_percent(val))
         f, _bm, gl = small
@@ -397,7 +406,7 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
         vx = TEXT_R - hi
         draw_bitmap(setp, SUN_SMALL_BMP, vx - SV_ICON_GAP - SUN_SMALL_W, SUN_SMALL_Y,
                     SUN_SMALL_W, SUN_SMALL_H)
-        draw(setp, small, vx, ROW4, vtxt)
+        draw(setp, small, vx, RGB_ROW_D, vtxt)
     return pts
 
 

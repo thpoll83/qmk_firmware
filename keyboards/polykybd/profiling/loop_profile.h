@@ -14,9 +14,13 @@
 // This module measures that per-iteration time in microseconds, buckets it, and
 // SPLITS the histogram by whether the iteration handled a bulk overlay/mapping HID
 // command — so an overlay-handling iteration that runs long shows up distinctly
-// from a normal one. It also accounts the blocking time spent inside
-// send_to_bridge() (the suspected culprit: the master->slave UART relay) per
-// iteration, so the summary shows whether a stall is dominated by the bridge.
+// from a normal one. It also accounts, per iteration, the blocking time spent inside
+// send_to_bridge() (the master->slave UART relay) and inside update_displays() (the
+// per-keycap OLED re-render) — the two suspected culprits — and ACCUMULATES both as
+// running TOTALS across every overlay iteration (not just the single worst one). The
+// summary then attributes the overlay-iteration wall time to bridge / render / rest,
+// which is what tells apart a transfer-bound stall (revives the baked-resource idea)
+// from a render-bound one.
 //
 // Enable:  qmk compile -kb polykybd/split72 -km default -e POLYKYBD_LOOP_PROFILE=yes
 //          (rules.mk then adds loop_profile.c + -DPOLYKYBD_LOOP_PROFILE)
@@ -42,10 +46,16 @@ void loop_profile_note_overlay_cmd(void);
 // iteration (called from send_to_bridge() with its measured transport cost).
 void loop_profile_add_bridge_us(uint32_t us);
 
+// Add microseconds spent inside update_displays() (the per-keycap OLED re-render)
+// during the current iteration (called from sync_and_refresh_displays() around the
+// update_displays() calls).
+void loop_profile_add_render_us(uint32_t us);
+
 #else
 
 static inline void loop_profile_tick(void) {}
 static inline void loop_profile_note_overlay_cmd(void) {}
 static inline void loop_profile_add_bridge_us(uint32_t us) { (void)us; }
+static inline void loop_profile_add_render_us(uint32_t us) { (void)us; }
 
 #endif

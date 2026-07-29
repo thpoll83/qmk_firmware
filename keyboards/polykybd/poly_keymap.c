@@ -34,6 +34,9 @@
 #include "status_oled.h"
 #include "bridge_helper.h"
 #include "profiling/loop_profile.h"
+#ifdef POLYKYBD_LOOP_PROFILE
+#    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
+#endif
 #include "split_fw_up.h"
 #include "base/fw_staging.h"
 #include "uni.h"
@@ -511,11 +514,23 @@ void sync_and_refresh_displays(void) {
 
     enum refresh_mode refresh = get_refresh_mode();
     if (refresh == START_FIRST_HALF) {
+#ifdef POLYKYBD_LOOP_PROFILE
+        uint32_t _lp_r0 = timer_hw->timerawl;
+#endif
         update_displays(START_FIRST_HALF);
+#ifdef POLYKYBD_LOOP_PROFILE
+        loop_profile_add_render_us(timer_hw->timerawl - _lp_r0);
+#endif
         set_disp_refresh(START_SECOND_HALF);
     }
     else if (refresh == START_SECOND_HALF || refresh == ALL_AT_ONCE) {
+#ifdef POLYKYBD_LOOP_PROFILE
+        uint32_t _lp_r0 = timer_hw->timerawl;
+#endif
         update_displays(refresh);
+#ifdef POLYKYBD_LOOP_PROFILE
+        loop_profile_add_render_us(timer_hw->timerawl - _lp_r0);
+#endif
         set_disp_refresh(DONE_ALL);
     }
 }

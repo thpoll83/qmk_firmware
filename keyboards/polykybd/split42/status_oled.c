@@ -15,13 +15,12 @@
 #include "../lang/named_glyphs.h"
 #include "../config.h"                          // FULL_BRIGHT
 
-// Portrait body text (Tiny 11px). The font data lives in lang_label_font.h,
-// already compiled into poly_keymap.c — declare it extern here to avoid a
-// duplicate definition at link time (same pattern oled_helper.c uses).
-extern const GFXfont NotoSans_Regular_Tiny_11px7b;
-// The layout name gets its own 10px face, included directly (nano_font.h is not
-// compiled into any other TU, so there is no double-definition risk here).
-#include "../base/fonts/nano_font.h"
+// _Nano_ 10px carries BOTH the portrait body text (language code) and the layout
+// name — it replaced the old _Tiny_ 11px, which had the same cap height but was
+// too wide for the 32px layout-name column. The data lives in nano_font.h, already
+// compiled into poly_keymap.c — declare it extern here to avoid a duplicate
+// definition at link time (same pattern oled_helper.c uses).
+extern const GFXfont NotoSans_Regular_Nano_10px7b;
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
@@ -186,7 +185,7 @@ void oled_update_buffer(void) {
     const poly_layer_t* gl = get_global_layer();
     const poly_sync_t*  ls = get_local_state();
     const GFXfont* nanoFont[] = { &NotoSans_Regular_Nano_10px7b };
-    const GFXfont* tinyFont[] = { &NotoSans_Regular_Tiny_11px7b };
+    const GFXfont* tinyFont[] = { &NotoSans_Regular_Nano_10px7b };
     uint32_t nbuf[8];
 
     // Row 1: role icon (USB trident / Link ⇄) + word. Link icon runs half off the

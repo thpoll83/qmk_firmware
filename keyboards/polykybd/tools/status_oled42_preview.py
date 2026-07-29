@@ -71,7 +71,7 @@ def _parse_header(text, bitmaps, glyphs, fonts):
 
 def load():
     B, G, F = {}, {}, {}
-    heads = ["nano_font.h", "lang_label_font.h", "gfx_icons.h",
+    heads = ["nano_font.h", "gfx_icons.h",
              os.path.join("generated", "emoji_fonts.h")]
     for rel in heads:
         p = os.path.join(FONTDIR, rel)
@@ -83,7 +83,7 @@ def load():
         return f, B[f['bmp']], G[f['gly']]
 
     nano = bundle('NotoSans_Regular_Nano_10px7b')
-    tiny = bundle('NotoSans_Regular_Tiny_11px7b')
+    tiny = bundle('NotoSans_Regular_Nano_10px7b')
     icons = next((F[k], B[F[k]['bmp']], G[F[k]['gly']]) for k in F
                  if F[k]['first'] <= 0x80 <= F[k]['last'] and F[k]['gly'] in G)
     world = bundle('NotoEmoji_Medium_World_20pt16b')

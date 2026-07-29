@@ -15,11 +15,11 @@
 // poly_keymap.c's translation unit. Reference it via extern here rather than
 // re-including the header (which would duplicate its PROGMEM tables at link time).
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
-// _Tiny_ (6px), same ownership caveat. Used ONLY for the language index: there are 160
+// _Nano_ (10px), same ownership caveat. Used ONLY for the language index: there are 160
 // languages, so the index reaches 3 digits, which is 25px in the 8pt status font — wider
 // than the 17px indicator column and enough to overrun the layout panel's right limit
 // into the lock icons. At 6pt "159" is 19px, which fits both slots.
-extern const GFXfont NotoSans_Regular_Tiny_11px7b;
+extern const GFXfont NotoSans_Regular_Nano_10px7b;
 #include "../lang/named_glyphs.h"
 #include "../oled_helper.h"
 
@@ -314,7 +314,7 @@ void oled_update_buffer(void) {
     const poly_layer_t* global_layer = get_global_layer();
     const GFXfont* displayFont[] = { &NotoSans_Regular_Disp_21px7b };
     const GFXfont* smallFont[] = { &NotoSans_Regular_Small_15px7b };
-    const GFXfont* tinyFont[]  = { &NotoSans_Regular_Tiny_11px7b };   // language index only
+    const GFXfont* tinyFont[]  = { &NotoSans_Regular_Nano_10px7b };   // language index only
 
     // Each half's indicator column sits on its INNER edge, so on an assembled
     // keyboard the two columns face each other across the gap: the layout panel keeps

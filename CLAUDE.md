@@ -898,9 +898,8 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   15 px (`NotoSans_Medium_Base_8pt.h`, the status-OLED rows carrying the numbers),
   `_Mid_` 19 px (`util_font.h`, `mid_fonts[]` — fw-update screens + misc
   utility-key text; a full `ll-CC` fits one line here but overflows 72 px at 14 px)
-  `_Tiny_` 11 px (`lang_label_font.h`, the lang-code labels) and `_Nano_` 10 px
-  (`nano_font.h`, split42's layout name — see the 32 px width-budget note below).
-  The two Base
+  and `_Nano_` 10 px (`nano_font.h`, the lang-code labels **and** split42's layout
+  name — see the 32 px width-budget note below). The two Base
   headers previously had **no generator at all** (hand-made from a long-gone local
   `NotoSans-Medium.ttf`); `gen-lang-fonts.sh` now owns only the flag font.
   - ⚠️ **These four are built `-Hauto` (grid-fitted) and sized with `-p` (pixels),

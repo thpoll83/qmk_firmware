@@ -19,8 +19,8 @@
 // data live in util_font.h / lang_label_font.h, already compiled into poly_keymap.c
 // (mid_fonts / lang label) — declare them extern here to avoid a duplicate
 // definition at link time (same pattern oled_helper.c uses for its externs).
-extern const GFXfont NotoSans_Regular_Mid_10pt7b;
-extern const GFXfont NotoSans_Regular_Tiny_6pt7b;
+extern const GFXfont NotoSans_Regular_Mid_19px7b;
+extern const GFXfont NotoSans_Regular_Tiny_11px7b;
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
@@ -220,8 +220,8 @@ void oled_update_buffer(void) {
 
     const poly_layer_t* gl = get_global_layer();
     const poly_sync_t*  ls = get_local_state();
-    const GFXfont* midFont[]  = { &NotoSans_Regular_Mid_10pt7b };
-    const GFXfont* tinyFont[] = { &NotoSans_Regular_Tiny_6pt7b };
+    const GFXfont* midFont[]  = { &NotoSans_Regular_Mid_19px7b };
+    const GFXfont* tinyFont[] = { &NotoSans_Regular_Tiny_11px7b };
     uint32_t nbuf[8];
 
     // Row 1: role icon (USB trident / Link ⇄) + word. Link icon runs half off the
@@ -273,7 +273,7 @@ void oled_update_buffer(void) {
 void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
-    const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
+    const GFXfont* smallFont[] = { &NotoSans_Regular_Small_15px7b };
     uint8_t target = fw_staging_active_target();
     bool    fonts = (target == FW_TARGET_FONTPACK || target == FW_TARGET_DOOMWAD);
     uint8_t pct   = fw_update_percent();

@@ -1963,11 +1963,11 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // they resolve through g_all_fonts only when a pack is present. With no pack the
 // flag is simply omitted — the xx-YY code label below it still identifies the
 // language (graceful fallback). The tiny label font stays resident.
-static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_6pt7b };
+static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Tiny_11px7b };
 // Mid (10px) utility font for the no-pack fallback code — between Tiny and Base,
 // so a full "ll-CC" fits on one line (~52px) yet stays readable. Reuse this
 // `mid_fonts` array for any misc utility-key text that wants a middle size.
-static const GFXfont* const mid_fonts[]        = { &NotoSans_Regular_Mid_10pt7b };
+static const GFXfont* const mid_fonts[]        = { &NotoSans_Regular_Mid_19px7b };
 
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
     const GFXfont* flag_font = NULL;
@@ -1996,7 +1996,7 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
                              (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
                              FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
         // Language code: vertical, up the right side; inverted bar when selected.
-        kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_6pt7b, LABEL_COL_X, label,
+        kdisp_write_gfx_vtext(&NotoSans_Regular_Tiny_11px7b, LABEL_COL_X, label,
                               current_lang == idx);
     } else {
         // No font pack flashed: the flag glyphs are pack-only. Show the "ll-CC"

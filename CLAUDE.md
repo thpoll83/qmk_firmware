@@ -420,16 +420,16 @@ touching at a **0px** gap, while 4 rows sat unused under the bottom row.
   reproduce this bug — it validates the *layout*, not the compiled C sign-handling
   (this shipped once, PR #149, caught in review).
 - ⚠️ **Font-header DOUBLE-DEFINITION trap** (cost a full link cycle): `util_font.h`
-  (`NotoSans_Regular_Mid_10pt7b`) and `lang_label_font.h`
-  (`NotoSans_Regular_Tiny_6pt7b`) **define** the font *data* (non-`static`) and are
+  (`NotoSans_Regular_Mid_19px7b`) and `lang_label_font.h`
+  (`NotoSans_Regular_Tiny_11px7b`) **define** the font *data* (non-`static`) and are
   **already compiled into `poly_keymap.c`**. `#include`ing them in `status_oled.c` too
   gives a `multiple definition of …` **link** error (compiles fine). **Declare them
   `extern const GFXfont X;`** instead — the pattern `oled_helper.c` already uses.
   (`NotoSans_Regular_Base_11pt.h`/`Medium_Base_8pt.h` are only included here, so those
   `#include`s are safe.)
-- **32 px width budget:** at 32 px only ~5 chars fit even in the **Tiny 6 px** font
+- **32 px width budget:** at 32 px only ~5 chars fit even in the **Tiny 11 px** font
   (the smallest compiled in); half-scaling (2×2-OR) any font reads **bold**, and the
-  decimation ("thin") downsample breaks strokes — **Mid 10 pt at half scale (~5 px)**
+  decimation ("thin") downsample breaks strokes — **Mid 19 px at half scale (~9 px)**
   is the crispest small option (used for the layout name). split42 uses **short**
   layout names via `layout_name_short()` in `status_oled.c` (`Qwrty/Stag!/ColDH/Neo/
   Wkmn/Unkn`); split72 keeps the full names in the shared `oled_helper.c` array — keep
@@ -675,7 +675,7 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   `PolyKybdHost/polyhost/res/fonts/noto-fonts.yaml` (its "Download Noto…" button in
   the font-pack extend dialog reads the same catalog) — keep both in sync (`cmp`).
 - `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
-- **`fonts/gen-lang-fonts.sh`** — generates the two standalone headers for the language-selection layer (`_LL`): `base/fonts/flag_fonts.h` (country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically) and `base/fonts/lang_label_font.h` (a 6 px NotoSans label font). These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes. It also emits **`base/fonts/generated/lang_flags.json`** — the flag font's render record (source NotoColorEmoji, the `-s20 -g -r54 -W72 -O1 -Dfs -e-0.10` options, `seq_first` 0xE000, and the per-flag regional-indicator `sequence`). The flag font isn't in `fonts.yaml`, so `generate_fonts.py` emits no render record for it; this sidecar lets the host font-pack **editor** rebuild a single flag (sequence mode). ⚠️ Mirrored **byte-identically** in `PolyKybdHost/polyhost/res/fontpack/lang_flags.json` — keep both in sync (`cmp`).
+- **`fonts/gen-lang-fonts.sh`** — generates `base/fonts/flag_fonts.h` for the language-selection layer (`_LL`): country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically. (The `_Tiny_` lang-code label font moved to `fonts/gen-status-fonts.sh` — see "Standalone UI text fonts" below.) These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes. It also emits **`base/fonts/generated/lang_flags.json`** — the flag font's render record (source NotoColorEmoji, the `-s20 -g -r54 -W72 -O1 -Dfs -e-0.10` options, `seq_first` 0xE000, and the per-flag regional-indicator `sequence`). The flag font isn't in `fonts.yaml`, so `generate_fonts.py` emits no render record for it; this sidecar lets the host font-pack **editor** rebuild a single flag (sequence mode). ⚠️ Mirrored **byte-identically** in `PolyKybdHost/polyhost/res/fontpack/lang_flags.json` — keep both in sync (`cmp`).
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.
 
 See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
@@ -887,11 +887,37 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   a font resident↔pack should change **only** `gfx_used_fonts.h`,
   `fontpack.manifest.json`, `all_fonts_order.json` (and the new font's category
   header) — if other category headers diff, the toolchain/source drifted.
-- **Standalone label fonts** (not in `fonts.yaml`/`ALL_FONTS`) are generated by
-  `gen-lang-fonts.sh` and used via dedicated single-font arrays: `_Tiny_` 6 px
-  (`lang_label_font.h`, lang-code labels) and `_Mid_` 10 px (`util_font.h`,
-  `mid_fonts[]` — a size between Tiny and Base for misc utility-key text; a full
-  `ll-CC` fits one line at 10 px but overflows 72 px at 14 px).
+- **Standalone UI text fonts** (not in `fonts.yaml`/`ALL_FONTS`, each used via a
+  dedicated single-font array) are all generated by **`fonts/gen-status-fonts.sh`**:
+  `_Disp_` 21 px (`NotoSans_Regular_Base_11pt.h`, status-OLED top row), `_Small_`
+  15 px (`NotoSans_Medium_Base_8pt.h`, the status-OLED rows carrying the numbers),
+  `_Mid_` 19 px (`util_font.h`, `mid_fonts[]` — fw-update screens + misc
+  utility-key text; a full `ll-CC` fits one line here but overflows 72 px at 14 px)
+  and `_Tiny_` 11 px (`lang_label_font.h`, the lang-code labels). The two Base
+  headers previously had **no generator at all** (hand-made from a long-gone local
+  `NotoSans-Medium.ttf`); `gen-lang-fonts.sh` now owns only the flag font.
+  - ⚠️ **These four are built `-Hauto` (grid-fitted) and sized with `-p` (pixels),
+    and that is load-bearing — do not regenerate them with plain `-s`.** NotoSans
+    ships as a variable font with **no hinting bytecode** (`maxSizeOfInstructions
+    == 0`, no `fpgm`, a 7-byte `prep` that only sets dropout control), and FreeType
+    does **not** fall back to its own autohinter when a face has even that stub
+    `prep` — so without `-Hauto` they render completely ungridfitted. At 11–21 px a
+    stem is 1–2 px, so the two edges of one stem then round independently: the same
+    stem lands 1 px on one side of a glyph and 2 px on the other, bowls go lopsided
+    and crossbars drop out. That was the "numbers and smaller text look strange"
+    report (2026-07); the digits `0 6 8 9` and the 11 px `S` were the worst.
+    `fontconvert.c`'s `TT_INTERPRETER_VERSION_35` does **not** cover this — there is
+    no bytecode for it to interpret.
+  - **The `-p` sizes are measured, not guessed.** Grid-fitting snaps cap-height to
+    whole pixels so the reachable heights come in steps, and `-s` (points at a fixed
+    141 DPI) only lands on even ppem — 15 px and 11 px are simply not expressible in
+    points. Each size was picked to hold the previous header's **string widths**
+    while gaining grid-fitting: the status-OLED row gaps went 3/2/3 + 3/3/3 → 4/3/3
+    + 4/3/4 (every gap +1 px, nothing moved, bottom still pinned at 63). Re-run
+    `.claude/skills/status-oled-layout/measure_bands.py 72` after any size change.
+  - Symbols are named for their **real** size (`NotoSans_Regular_Small_15px7b`,
+    `..._Tiny_11px7b`, `..._Mid_19px7b`, `..._Disp_21px7b`). The old `…8pt7b`/`…6pt7b`
+    names were fiction — the "pt" is the 141 DPI convention, so "8pt" was 16 px.
 - **HID flow** (`BEGIN`/`CHUNK`/`COMMIT`, cmds `0x50`–`0x53`): reuses the
   `fw_staging` machinery (deferred sector erase, slave bridge). `FONTPACK_BEGIN`
   carries a **`bundle_id` byte** (data[10]); the master resolves it to the slot via

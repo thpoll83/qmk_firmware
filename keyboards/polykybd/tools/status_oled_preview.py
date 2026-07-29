@@ -90,9 +90,9 @@ def load_fonts():
         f = F[name]
         return f, B[f['bmp']], G[f['gly']]
 
-    disp = bundle('NotoSans_Regular11pt7b')
-    small = bundle('NotoSans_Medium8pt7b')
-    tiny = bundle('NotoSans_Regular_Tiny_6pt7b')   # language index only (see status_oled.c)
+    disp = bundle('NotoSans_Regular_Disp_21px7b')
+    small = bundle('NotoSans_Regular_Small_15px7b')
+    tiny = bundle('NotoSans_Regular_Tiny_11px7b')   # language index only (see status_oled.c)
     icons = None
     for _n, f in F.items():
         if f['first'] <= 0x80 <= f['last'] and f['gly'] in G:

@@ -82,8 +82,8 @@ def load():
         f = F[name]
         return f, B[f['bmp']], G[f['gly']]
 
-    mid = bundle('NotoSans_Regular_Mid_10pt7b')
-    tiny = bundle('NotoSans_Regular_Tiny_6pt7b')
+    mid = bundle('NotoSans_Regular_Mid_19px7b')
+    tiny = bundle('NotoSans_Regular_Tiny_11px7b')
     icons = next((F[k], B[F[k]['bmp']], G[F[k]['gly']]) for k in F
                  if F[k]['first'] <= 0x80 <= F[k]['last'] and F[k]['gly'] in G)
     world = bundle('NotoEmoji_Medium_World_20pt16b')

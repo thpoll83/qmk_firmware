@@ -14,12 +14,12 @@
 // _Mid_ (10px) utility font: defined in util_font.h, whose definitions are owned by
 // poly_keymap.c's translation unit. Reference it via extern here rather than
 // re-including the header (which would duplicate its PROGMEM tables at link time).
-extern const GFXfont NotoSans_Regular_Mid_10pt7b;
+extern const GFXfont NotoSans_Regular_Mid_19px7b;
 // _Tiny_ (6px), same ownership caveat. Used ONLY for the language index: there are 160
 // languages, so the index reaches 3 digits, which is 25px in the 8pt status font — wider
 // than the 17px indicator column and enough to overrun the layout panel's right limit
 // into the lock icons. At 6pt "159" is 19px, which fits both slots.
-extern const GFXfont NotoSans_Regular_Tiny_6pt7b;
+extern const GFXfont NotoSans_Regular_Tiny_11px7b;
 #include "../lang/named_glyphs.h"
 #include "../oled_helper.h"
 
@@ -312,9 +312,9 @@ void oled_update_buffer(void) {
     kdisp_set_buffer(0);
 
     const poly_layer_t* global_layer = get_global_layer();
-    const GFXfont* displayFont[] = { &NotoSans_Regular11pt7b };
-    const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
-    const GFXfont* tinyFont[]  = { &NotoSans_Regular_Tiny_6pt7b };   // language index only
+    const GFXfont* displayFont[] = { &NotoSans_Regular_Disp_21px7b };
+    const GFXfont* smallFont[] = { &NotoSans_Regular_Small_15px7b };
+    const GFXfont* tinyFont[]  = { &NotoSans_Regular_Tiny_11px7b };   // language index only
 
     // Each half's indicator column sits on its INNER edge, so on an assembled
     // keyboard the two columns face each other across the gap: the layout panel keeps
@@ -468,7 +468,7 @@ void oled_update_buffer(void) {
 void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
-    const GFXfont* small[] = { &NotoSans_Regular_Mid_10pt7b };
+    const GFXfont* small[] = { &NotoSans_Regular_Mid_19px7b };
     const uint8_t target = fw_staging_active_target();
     const bool fonts = (target == FW_TARGET_FONTPACK || target == FW_TARGET_DOOMWAD);
     uint8_t pct   = fw_update_percent();

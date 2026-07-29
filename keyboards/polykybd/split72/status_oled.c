@@ -414,21 +414,25 @@ void oled_update_buffer(void) {
         // With RGB off the brightness and language groups move to the other panel, so
         // the two rows that remain spread out to match its three-row rhythm.
         oled_draw_layout_name(smallFont, 0, rgb_on ? 29 : OFF_ROW_B, get_local_layer()->def_layer);
-        if(rgb_on) {
-            draw_brightness_row(smallFont, 0, 44, local_state->contrast);
-        }
 
-        // Row 4 carries typing speed AND the language slot, both variable width, so the
-        // 105px budget is real: a 3-digit rate plus a code as wide as "mn-MN". The dial
-        // buys back the 38px the "WPM" label cost, and the code runs in 6pt (40px worst)
-        // rather than 8pt (54px, which does not fit at any packing).
-        kdisp_draw_bitmap(0, 51, wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
+        // The speed row carries typing speed AND the language slot, both variable width,
+        // so the 105px budget is real: a 3-digit rate plus a code as wide as "mn-MN". The
+        // dial buys back the 38px the "WPM" label cost, and the code runs in 6pt (40px
+        // worst) rather than 8pt (54px, which does not fit at any packing).
+        //
+        // With RGB on that group sits directly under the layout name and brightness takes
+        // the bottom row. The brightness meter is ~98px wide, so it can only ever hold a
+        // row on its own -- which is why the language slot rides with the speed group
+        // instead of staying on the bottom row when the two swap.
+        const int8_t speed_base = rgb_on ? 44 : OFF_ROW_C;
+        kdisp_draw_bitmap(0, (int8_t)(speed_base - 8), wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
         num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
-        kdisp_write_gfx_text(smallFont, 1, 15, 59, buffer);
+        kdisp_write_gfx_text(smallFont, 1, 15, speed_base, buffer);
 
         if(rgb_on) {
-            kdisp_draw_bitmap(46, 47, lang_globe_bitmap, GLOBE_W, GLOBE_H);
-            kdisp_write_gfx_text(tinyFont, 1, 62, 59, poly_lang_code(local_state->lang));
+            kdisp_draw_bitmap(46, (int8_t)(speed_base - 12), lang_globe_bitmap, GLOBE_W, GLOBE_H);
+            kdisp_write_gfx_text(tinyFont, 1, 62, speed_base, poly_lang_code(local_state->lang));
+            draw_brightness_row(smallFont, 0, 59, local_state->contrast);
         }
     }
 }

@@ -349,13 +349,15 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
         draw(setp, small, COL_X + 5, 56, s('R'))
     if lock_panel:
         draw(setp, small, TEXT_X, ROW2 if rgb_on else OFF_ROW_B, s('Qwerty'))
+        # Speed (+ the language slot sharing its row) and brightness trade rows when RGB
+        # is on -- the ~98px meter can only hold a row on its own.
+        speed_base = ROW3 if rgb_on else OFF_ROW_C
+        draw_bitmap(setp, WPM_BMP, 0, speed_base - 8, WPM_ICON_W, WPM_ICON_H)
+        draw(setp, small, 15, speed_base, s(str(wpm)))
         if rgb_on:
-            draw_brightness_row(setp, small, 0, ROW3, brightness)
-        draw_bitmap(setp, WPM_BMP, 0, 51, WPM_ICON_W, WPM_ICON_H)
-        draw(setp, small, 15, ROW4, s(str(wpm)))
-        if rgb_on:
-            draw_bitmap(setp, GLOBE_BMP, 46, 47, GLOBE_W, GLOBE_H)
-            draw(setp, tiny, 62, ROW4, s(lang))
+            draw_bitmap(setp, GLOBE_BMP, 46, speed_base - 12, GLOBE_W, GLOBE_H)
+            draw(setp, tiny, 62, speed_base, s(lang))
+            draw_brightness_row(setp, small, 0, ROW4, brightness)
     elif not rgb_on:
         draw(setp, small, TEXT_X, OFF_ROW_B, s('RGB'))
         draw(setp, small, TEXT_X + 34, OFF_ROW_B, s('Off'))

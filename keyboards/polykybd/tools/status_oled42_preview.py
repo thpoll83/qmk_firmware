@@ -210,7 +210,7 @@ def build(side, mid, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0]
     # locks + language. Mirrors status_oled.c.
     if side == 'L':
         draw_glyph(setp, icons, 0, 41, 0x80)
-        draw_text(setp, tiny, 17, 40, '0')
+        draw_text(setp, tiny, 18, 38, '0')
         draw_text_center_half(setp, mid, 52, layout_name)
         draw_brightness(setp, contrast, 82)
         draw_bitmap(setp, WPM_BMP, (P_W - 11) // 2, 93, 11, 6)

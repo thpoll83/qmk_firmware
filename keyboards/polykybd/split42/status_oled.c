@@ -252,7 +252,7 @@ void oled_update_buffer(void) {
         // Layer icon + number
         pdraw_glyph(g_all_fonts, g_all_font_count, 0, 41, 0x80 /*ICON_LAYER*/, buf);
         hex_to_u32_string((char*)nbuf, sizeof(nbuf), get_highest_layer(gl->layer));
-        pdraw_text(tinyFont, 1, 17, 40, nbuf, buf);
+        pdraw_text(tinyFont, 1, 18, 38, nbuf, buf);
         // Layout name (short), Mid 10pt at half scale, centered
         pdraw_text_center_half(midFont, 1, 52, layout_name_short(get_local_layer()->def_layer), buf);
         pdraw_brightness(ls->contrast, 82, buf);

@@ -23,7 +23,7 @@
 // time), matching status_oled.c. The Arrows font is a resident symbol font
 // (RESIDENT_FONTS) — it carries the circular "refresh" arrow U+2B6F used on the
 // firmware-apply screen, so no pack and no custom bitmap are needed.
-extern const GFXfont NotoSans_Regular_Mid_10pt7b;
+extern const GFXfont NotoSans_Regular_Mid_19px7b;
 extern const GFXfont NotoSansSymbols2_Regular_Arrows_20pt16b;
 
 // Render `value` as a char32 (U"...") display string into `buffer`. The display
@@ -202,7 +202,7 @@ void oled_fw_update_screen(void) {
 // complete before fw_staging_apply_and_reboot()'s blocking self-flash + hard reset
 // (which never returns) — the last thing the user sees is a finished, un-torn notice.
 void oled_fw_apply_screen(void) {
-    const GFXfont*  mid[]     = { &NotoSans_Regular_Mid_10pt7b };
+    const GFXfont*  mid[]     = { &NotoSans_Regular_Mid_19px7b };
     const GFXfont*  arrow[]   = { &NotoSansSymbols2_Regular_Arrows_20pt16b };
     const uint32_t* icon      = U"\U00002B6F";   // resident circular "refresh" arrow ⭯
     const uint32_t* word      = is_left_side() ? U"Applying" : U"Firmware";

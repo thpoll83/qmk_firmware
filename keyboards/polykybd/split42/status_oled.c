@@ -10,17 +10,16 @@
 #include "../base/com.h"
 #include "../base/disp_array.h"
 #include "../base/text_helper.h"
-#include "../base/fonts/NotoSans_Regular_Base_11pt.h"
 #include "../base/fonts/NotoSans_Medium_Base_8pt.h"
 #include "../lang/named_glyphs.h"
 #include "../config.h"                          // FULL_BRIGHT
 
-// Layout name (Mid 10pt, half-scale) + portrait body text (Tiny 6px). These font
-// data live in util_font.h / lang_label_font.h, already compiled into poly_keymap.c
-// (mid_fonts / lang label) — declare them extern here to avoid a duplicate
-// definition at link time (same pattern oled_helper.c uses for its externs).
-extern const GFXfont NotoSans_Regular_Mid_10pt7b;
-extern const GFXfont NotoSans_Regular_Tiny_6pt7b;
+// _Nano_ 10px carries BOTH the portrait body text (language code) and the layout
+// name — it replaced the old _Tiny_ 11px, which had the same cap height but was
+// too wide for the 32px layout-name column. The data lives in nano_font.h, already
+// compiled into poly_keymap.c — declare it extern here to avoid a duplicate
+// definition at link time (same pattern oled_helper.c uses).
+extern const GFXfont NotoSans_Regular_Nano_10px7b;
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
@@ -59,7 +58,7 @@ static const uint8_t link_status_bitmap[] PROGMEM = {
  *   ─────────────────────────────           ─────────        ──────────
  *   role icon + Usb/Lnk                      brightness bars   Num lock
  *   layer icon + number                      WPM + value       Caps lock
- *   layout name (Mid 10pt, half-scale)       ┐
+ *   layout name (Nano 10px, native)          ┐
  *   [ per-side band ]                         ┴ globe + lang index (both)
  *   globe + lang index                        side L/R (both, very bottom)
  */
@@ -139,50 +138,14 @@ static int pdraw_glyph_half(const GFXfont* const* fonts, uint8_t n, int x, int t
     return (h + 1) / 2;
 }
 
-// Word-level half-scale text, centered horizontally at logical row top_y. Renders
-// the whole word full-scale into a temp bitmap then 2x2-OR downsamples it (keeps
-// inter-glyph spacing, unlike per-glyph halving). Used for the compact layout name.
-#define TMP_W 96
-#define TMP_H 24
-#define TMP_WB ((TMP_W + 7) / 8)
-#define TMP_BASE 18
-static void pdraw_text_center_half(const GFXfont* const* fonts, uint8_t n, int top_y, const uint32_t* t, uint8_t* buf) {
-    uint8_t tmp[TMP_H * TMP_WB];
-    memset(tmp, 0, sizeof(tmp));
-    int cx = 0, minx = TMP_W, maxx = -1, miny = TMP_H, maxy = -1;
-    for (; *t; t++) {
-        const GFXfont* f; const GFXglyph* g = kdisp_gfx_glyph_font(fonts, n, *t, &f);
-        if (!g) { cx += 4; continue; }   // fallback advance (e.g. a space with no glyph)
-        uint16_t bo = pgm_read_word(&g->bitmapOffset);
-        int w = pgm_read_byte(&g->width),  h  = pgm_read_byte(&g->height);
-        int xo = (int8_t)pgm_read_byte(&g->xOffset), yo = (int8_t)pgm_read_byte(&g->yOffset);
-        const uint8_t* bmp = (const uint8_t*)pgm_read_ptr(&f->bitmap);
-        int bit = 0; uint8_t bits = 0;
-        for (int gy = 0; gy < h; gy++)
-            for (int gx = 0; gx < w; gx++) {
-                if (!(bit++ & 7)) bits = pgm_read_byte(&bmp[bo++]);
-                if (bits & 0x80) {
-                    int tx = cx + xo + gx, ty = TMP_BASE + yo + gy;
-                    if ((unsigned)tx < TMP_W && (unsigned)ty < TMP_H) {
-                        tmp[ty * TMP_WB + (tx >> 3)] |= (uint8_t)(0x80 >> (tx & 7));
-                        if (tx < minx) minx = tx;
-                        if (tx > maxx) maxx = tx;
-                        if (ty < miny) miny = ty;
-                        if (ty > maxy) maxy = ty;
-                    }
-                }
-                bits <<= 1;
-            }
-        cx += pgm_read_byte(&g->xAdvance);
-    }
-    if (maxx < 0) return;                          // empty
-    int hw = ((maxx - minx) / 2) + 1;
-    int ox = (P_W - hw) / 2; if (ox < 0) ox = 0;
-    for (int ty = miny; ty <= maxy; ty++)
-        for (int tx = minx; tx <= maxx; tx++)
-            if (tmp[ty * TMP_WB + (tx >> 3)] & (0x80 >> (tx & 7)))
-                pset(buf, ox + (tx - minx) / 2, top_y + (ty - miny) / 2);
-}
+// The layout name is drawn at NATIVE size (see LAYOUT_NAME_BASE). It used to go
+// through a word-level 2x2-OR half-scale downsample of the 19px _Mid_ font; that
+// is the wrong tool for grid-fitted output -- ORing pixel pairs thickens every
+// stem back to ~2px and closes the counters, so "Qwrty" ran its w and r
+// together. A real 10px face (nano_font.h) is both crisper and narrower.
+// Cap top lands on logical row 52, where the half-scale render put it:
+// the _Nano_ cap height is 7, so baseline = 52 + 7.
+#define LAYOUT_NAME_BASE 59
 
 static void pdraw_bitmap(const uint8_t* pgm, int ox, int oy, int w, int h, uint8_t* buf) {
     int bw = (w + 7) / 8;
@@ -220,8 +183,8 @@ void oled_update_buffer(void) {
 
     const poly_layer_t* gl = get_global_layer();
     const poly_sync_t*  ls = get_local_state();
-    const GFXfont* midFont[]  = { &NotoSans_Regular_Mid_10pt7b };
-    const GFXfont* tinyFont[] = { &NotoSans_Regular_Tiny_6pt7b };
+    const GFXfont* nanoFont[] = { &NotoSans_Regular_Nano_10px7b };
+    const GFXfont* tinyFont[] = { &NotoSans_Regular_Nano_10px7b };
     uint32_t nbuf[8];
 
     // Row 1: role icon (USB trident / Link ⇄) + word. Link icon runs half off the
@@ -240,8 +203,10 @@ void oled_update_buffer(void) {
         pdraw_glyph(g_all_fonts, g_all_font_count, 0, 41, 0x80 /*ICON_LAYER*/, buf);
         hex_to_u32_string((char*)nbuf, sizeof(nbuf), get_highest_layer(gl->layer));
         pdraw_text(tinyFont, 1, 18, 38, nbuf, buf);
-        // Layout name (short), Mid 10pt at half scale, centered
-        pdraw_text_center_half(midFont, 1, 52, layout_name_short(get_local_layer()->def_layer), buf);
+        // Layout name (short), Nano 10px at NATIVE size, centered. LAYOUT_NAME_BASE
+        // is picked so the cap top still lands on logical row 52, exactly where the
+        // old half-scale render put it.
+        pdraw_text_center(nanoFont, 1, LAYOUT_NAME_BASE, layout_name_short(get_local_layer()->def_layer), buf);
         pdraw_brightness(ls->contrast, 82, buf);
         // Typing speed: dial over the value
         pdraw_bitmap(wpm_gauge_bitmap, (P_W - WPM_ICON_W) / 2, 93, WPM_ICON_W, WPM_ICON_H, buf);
@@ -273,7 +238,7 @@ void oled_update_buffer(void) {
 void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
-    const GFXfont* smallFont[] = { &NotoSans_Medium8pt7b };
+    const GFXfont* smallFont[] = { &NotoSans_Regular_Small_15px7b };
     uint8_t target = fw_staging_active_target();
     bool    fonts = (target == FW_TARGET_FONTPACK || target == FW_TARGET_DOOMWAD);
     uint8_t pct   = fw_update_percent();

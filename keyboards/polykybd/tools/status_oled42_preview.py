@@ -9,7 +9,7 @@ NOT re-apply the rotation — the point is to eyeball the upright portrait the u
 sees), parsing the real committed fonts straight from the headers.
 
 It mirrors the C coordinate-for-coordinate: role icon + Usb/Lnk, layer icon +
-number, half-scale layout name, a per-side band (LEFT = brightness bars + WPM,
+number, native 10px layout name, a per-side band (LEFT = brightness bars + WPM,
 RIGHT = Num/Caps lock), a half-scale globe + centered lang index, and the bottom
 L/R marker. Short layout names (Qwrty/Stag!/ColDH/Neo/Wkmn/Unkn) match
 `layout_name_short()`.
@@ -71,7 +71,7 @@ def _parse_header(text, bitmaps, glyphs, fonts):
 
 def load():
     B, G, F = {}, {}, {}
-    heads = ["util_font.h", "lang_label_font.h", "gfx_icons.h",
+    heads = ["nano_font.h", "gfx_icons.h",
              os.path.join("generated", "emoji_fonts.h")]
     for rel in heads:
         p = os.path.join(FONTDIR, rel)
@@ -82,12 +82,12 @@ def load():
         f = F[name]
         return f, B[f['bmp']], G[f['gly']]
 
-    mid = bundle('NotoSans_Regular_Mid_10pt7b')
-    tiny = bundle('NotoSans_Regular_Tiny_6pt7b')
+    nano = bundle('NotoSans_Regular_Nano_10px7b')
+    tiny = bundle('NotoSans_Regular_Nano_10px7b')
     icons = next((F[k], B[F[k]['bmp']], G[F[k]['gly']]) for k in F
                  if F[k]['first'] <= 0x80 <= F[k]['last'] and F[k]['gly'] in G)
     world = bundle('NotoEmoji_Medium_World_20pt16b')
-    return mid, tiny, icons, world
+    return nano, tiny, icons, world
 
 
 # ----------------------------- draw primitives -----------------------------
@@ -147,29 +147,9 @@ def draw_glyph_half(setpix, font, x, top_y, cp):
     return (g['h'] + 1) // 2
 
 
-def draw_text_center_half(setpix, font, top_y, text):
-    full = set(); cx = 0
-    for c in text:
-        g, bm = _glyph(font, ord(c))
-        if not g:
-            cx += 4; continue
-        bo = g['off']; bit = 0; bits = 0
-        for gy in range(g['h']):
-            for gx in range(g['w']):
-                if (bit & 7) == 0:
-                    bits = bm[bo]; bo += 1
-                if bits & 0x80:
-                    full.add((cx + g['xo'] + gx, g['yo'] + gy))
-                bits = (bits << 1) & 0xFF; bit += 1
-        cx += g['xa']
-    if not full:
-        return
-    minx = min(px for px, _ in full); miny = min(py for _, py in full)
-    half = {((px - minx) // 2, (py - miny) // 2) for px, py in full}
-    hw = max(px for px, _ in half) + 1
-    ox = max(0, (P_W - hw) // 2)
-    for (px, py) in half:
-        setpix(ox + px, top_y + py)
+# draw_text_center_half() removed with the C helper: the layout name is drawn at
+# native size now (LAYOUT_NAME_BASE in split42/status_oled.c).
+LAYOUT_NAME_BASE = 59
 
 
 def draw_bitmap(setpix, data, ox, oy, w=16, h=16):
@@ -195,7 +175,7 @@ def draw_brightness(setpix, contrast, bottom_y):
 WPM_BMP = [0x1f,0x00, 0x71,0xc0, 0x43,0x40, 0xc2,0x60, 0x86,0x20, 0x8e,0x20]
 
 
-def build(side, mid, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0],
+def build(side, nano, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0],
           lang='en-US', wpm=0):
     """side 'L' (USB host, brightness+WPM) or 'R' (Link bridge, locks)."""
     pts = set()
@@ -213,7 +193,7 @@ def build(side, mid, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0]
     if side == 'L':
         draw_glyph(setp, icons, 0, 41, 0x80)
         draw_text(setp, tiny, 18, 38, '0')
-        draw_text_center_half(setp, mid, 52, layout_name)
+        draw_text_center(setp, nano, LAYOUT_NAME_BASE, layout_name)
         draw_brightness(setp, contrast, 82)
         draw_bitmap(setp, WPM_BMP, (P_W - 11) // 2, 93, 11, 6)
         draw_text_center(setp, tiny, 110, str(wpm))
@@ -269,9 +249,9 @@ def main():
     ap.add_argument('-o', '--out', help='output PNG (default: /tmp/status_oled42[_diag].png)')
     args = ap.parse_args()
 
-    mid, tiny, icons, world = load()
-    L = build('L', mid, tiny, icons, world)
-    R = build('R', mid, tiny, icons, world)
+    nano, tiny, icons, world = load()
+    L = build('L', nano, tiny, icons, world)
+    R = build('R', nano, tiny, icons, world)
 
     if args.diag:
         # Exercise EVERY short layout name — glyph widths differ, so a clip specific
@@ -281,8 +261,8 @@ def main():
         def clip_count(pts):
             return sum(1 for (x, y) in pts if not (0 <= x < P_W and 0 <= y < P_H))
         for nm in SHORT_NAMES + ["Unkn"]:
-            lc = clip_count(build('L', mid, tiny, icons, world, layout_name=nm))
-            rc = clip_count(build('R', mid, tiny, icons, world, layout_name=nm))
+            lc = clip_count(build('L', nano, tiny, icons, world, layout_name=nm))
+            rc = clip_count(build('R', nano, tiny, icons, world, layout_name=nm))
             print(f"  {nm:6} clipped L={lc} R={rc}")
         Li, lc = render_diag(L, 'LEFT (brightness/WPM)  RED=clipped')
         Ri, rc = render_diag(R, 'RIGHT (Num/Caps lock)  RED=clipped')

@@ -82,17 +82,17 @@ def _parse_header(text, bitmaps, glyphs, fonts):
 
 def load_fonts():
     B, G, F = {}, {}, {}
-    for rel in ("NotoSans_Regular_Base_11pt.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h",
-                "lang_label_font.h", "generated/emoji_fonts.h"):
+    for rel in ("util_font.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h",
+                "nano_font.h", "generated/emoji_fonts.h"):
         _parse_header(open(os.path.join(FONTDIR, rel)).read(), B, G, F)
 
     def bundle(name):
         f = F[name]
         return f, B[f['bmp']], G[f['gly']]
 
-    disp = bundle('NotoSans_Regular11pt7b')
-    small = bundle('NotoSans_Medium8pt7b')
-    tiny = bundle('NotoSans_Regular_Tiny_6pt7b')   # language index only (see status_oled.c)
+    disp = bundle('NotoSans_Regular_Mid_19px7b')   # top row shares _Mid_
+    small = bundle('NotoSans_Regular_Small_15px7b')
+    tiny = bundle('NotoSans_Regular_Nano_10px7b')   # language index only (see status_oled.c)
     icons = None
     for _n, f in F.items():
         if f['first'] <= 0x80 <= f['last'] and f['gly'] in G:

@@ -323,8 +323,8 @@ static bool select_display_raw(uint8_t row, uint8_t disp_col) {
 // 10 px label font for the stat keys — defined by poly_keymap.c's inclusion
 // of base/fonts/util_font.h (external linkage; including the data header a
 // second time would duplicate the arrays).
-extern const GFXfont NotoSans_Regular_Mid_10pt7b;
-static const GFXfont *const hud_label_fonts[] = {&NotoSans_Regular_Mid_10pt7b};
+extern const GFXfont NotoSans_Regular_Mid_19px7b;
+static const GFXfont *const hud_label_fonts[] = {&NotoSans_Regular_Mid_19px7b};
 
 static int8_t center_x(const GFXfont *const *fonts, uint8_t n, const uint32_t *text) {
     int8_t gmin = 0, gmax = 0;

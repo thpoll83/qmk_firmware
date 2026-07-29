@@ -139,61 +139,67 @@ bundles:
 categories:
   latin:
     output: latin_fonts.h
+    # hinting: auto -> force FreeType's autohinter (fontconvert -Hauto).  NotoSans
+    # ships with NO hinting bytecode (maxSizeOfInstructions == 0, no fpgm, a 7-byte
+    # prep that only sets dropout control), and FreeType does not fall back to its
+    # own autohinter when a face has even that stub prep -- so without this these
+    # render completely ungridfitted and stem edges round independently.  See
+    # fonts/gen-status-fonts.sh for the long-form explanation.
     # resident == compiled into the firmware image (the "functional minimum"),
     # NOT shipped in the external-flash font pack. The latin category covers
     # ASCII + Latin-extended + Cyrillic + Greek keycaps, so the keyboard stays
     # usable for those layouts with no pack present. See base/fontpack.h and
     # fonts/fontpack.py. (IconsFont — index.prepend_fonts — is resident too.)
     resident: true
-    defaults: {source: noto-sans, size: 14}
+    defaults: {source: noto-sans, size: 14, hinting: auto}
   hebrew:
     output: hebrew_fonts.h
-    defaults: {source: noto-sans-hebrew, size: 22, weight: 400}
+    defaults: {source: noto-sans-hebrew, size: 22, weight: 400, hinting: auto}
   jp:
     output: jp_fonts.h
-    defaults: {source: noto-sans-jp, size: 15, weight: 400}
+    defaults: {source: noto-sans-jp, size: 15, weight: 400, hinting: auto}
   kr:
     output: kr_fonts.h
-    defaults: {source: noto-serif-kr, size: 21, weight: 400}
+    defaults: {source: noto-serif-kr, size: 21, weight: 400, hinting: auto}
   arabic:
     output: arabic_fonts.h
-    defaults: {source: noto-sans-arabic, size: 16, render_height: 40}
+    defaults: {source: noto-sans-arabic, size: 16, render_height: 40, hinting: auto}
   devanagari:
     output: devanagari_fonts.h
-    defaults: {source: noto-sans-devanagari, size: 16, render_height: 40}
+    defaults: {source: noto-sans-devanagari, size: 16, render_height: 40, hinting: auto}
   bengali:
     output: bengali_fonts.h
-    defaults: {source: noto-sans-bengali, size: 16, render_height: 40}
+    defaults: {source: noto-sans-bengali, size: 16, render_height: 40, hinting: auto}
   telugu:
     output: telugu_fonts.h
-    defaults: {source: noto-sans-telugu, size: 16, render_height: 40}
+    defaults: {source: noto-sans-telugu, size: 16, render_height: 40, hinting: auto}
   tamil:
     output: tamil_fonts.h
-    defaults: {source: noto-sans-tamil, size: 14, render_height: 40}
+    defaults: {source: noto-sans-tamil, size: 14, render_height: 40, hinting: auto}
   thai:
     output: thai_fonts.h
-    defaults: {source: noto-sans-thai, size: 16, render_height: 40}
+    defaults: {source: noto-sans-thai, size: 16, render_height: 40, hinting: auto}
   georgian:
     output: georgian_fonts.h
-    defaults: {source: noto-sans-georgian, size: 17, render_height: 40, weight: 500}
+    defaults: {source: noto-sans-georgian, size: 17, render_height: 40, weight: 500, hinting: auto}
   armenian:
     output: armenian_fonts.h
-    defaults: {source: noto-sans-armenian, size: 16, render_height: 40, weight: 500}
+    defaults: {source: noto-sans-armenian, size: 16, render_height: 40, weight: 500, hinting: auto}
   bopomofo:
     output: bopomofo_fonts.h
-    defaults: {source: noto-sans-tc, size: 16, render_height: 40, weight: 500}
+    defaults: {source: noto-sans-tc, size: 16, render_height: 40, weight: 500, hinting: auto}
   vietnamese:
     output: vietnamese_fonts.h
-    defaults: {source: noto-sans, size: 16, render_height: 40}
+    defaults: {source: noto-sans, size: 16, render_height: 40, hinting: auto}
   ethiopic:
     output: ethiopic_fonts.h
-    defaults: {source: noto-sans-ethiopic, size: 16, render_height: 40}
+    defaults: {source: noto-sans-ethiopic, size: 16, render_height: 40, hinting: auto}
   canadian:
     output: canadian_fonts.h
-    defaults: {source: noto-sans-canadian-aboriginal, size: 16, render_height: 40}
+    defaults: {source: noto-sans-canadian-aboriginal, size: 16, render_height: 40, hinting: auto}
   cherokee:
     output: cherokee_fonts.h
-    defaults: {source: noto-sans-cherokee, size: 13, render_height: 40}
+    defaults: {source: noto-sans-cherokee, size: 13, render_height: 40, hinting: auto}
   tengwar:
     # Glyph-script OVERRIDE (not a language): Tengwar letters/digits for the
     # "fantasy" bundle. The font entry uses sequence -F to relocate the CSUR
@@ -201,7 +207,7 @@ categories:
     # flags / matra PUA. Rendered at 30 px, yAdvance 40 (matches IconsFont so the
     # kdisp baseline-align is neutral, like the normal letters).
     output: tengwar_fonts.h
-    defaults: {source: alcarin-tengwar, size: 20, render_height: 30, yadvance: 40}
+    defaults: {source: alcarin-tengwar, size: 20, render_height: 30, yadvance: 40, hinting: auto}
   gscript:
     # The 2026-07 glyph-script expansion (runes, Aurebesh, SGA, Cirth, IBM VGA,
     # C64, Amiga, APL, Braille) — 9 more OVERRIDE scripts in the "fantasy" bundle,
@@ -210,10 +216,15 @@ categories:
     # tengwar so the kdisp baseline-align stays neutral. Kept in a separate header
     # (and listed after _Tengwar_ in `fonts:`) so tengwar_fonts.h is untouched.
     output: gscript_fonts.h
-    defaults: {size: 20, render_height: 30, yadvance: 40}
+    defaults: {size: 20, render_height: 30, yadvance: 40, hinting: auto}
+  # symbols carries the line-art KEY LEGENDS (arrows, modifier symbols, util
+  # icons), which read as glyphs and come out more even grid-fitted.  emoji /
+  # emoji_fig are deliberately NOT grid-fitted: measured, the autohinter changes
+  # 0 of 1156 emoji glyphs -- their codepoints match none of its script ranges,
+  # so there are no blue zones to snap to and it is a pure no-op there.
   symbols:
     output: symbol_fonts.h
-    defaults: {source: noto-sans-symbols2, size: 20, render_height: 50}
+    defaults: {source: noto-sans-symbols2, size: 20, render_height: 50, hinting: auto}
   emoji:
     output: emoji_fonts.h
     # Default: monochrome NotoEmoji line-art (the original).  Most emoji read

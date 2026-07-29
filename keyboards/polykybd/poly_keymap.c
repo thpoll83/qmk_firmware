@@ -1964,7 +1964,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // flag is simply omitted — the xx-YY code label below it still identifies the
 // language (graceful fallback). The tiny label font stays resident.
 static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Nano_10px7b };
-// Mid (10px) utility font for the no-pack fallback code — between Tiny and Base,
+// Mid (19px) utility font for the no-pack fallback code — between Small and Base,
 // so a full "ll-CC" fits on one line (~52px) yet stays readable. Reuse this
 // `mid_fonts` array for any misc utility-key text that wants a middle size.
 static const GFXfont* const mid_fonts[]        = { &NotoSans_Regular_Mid_19px7b };

@@ -74,6 +74,12 @@ def resolve(entry: dict, categories: dict) -> dict:
         sys.exit(f"font entry references unknown category {cat!r}: {entry}")
     merged = dict(categories[cat].get("defaults", {}))
     merged.update({k: v for k, v in entry.items() if k != "category"})
+    # -s and -p both set is a config mistake, not a combination: fontconvert lets
+    # pixel_size win, so the -s here would be silently ignored and the font would
+    # render at a size nobody asked for. Fail loudly instead.
+    if merged.get("size") and merged.get("pixel_size"):
+        sys.exit(f"font entry sets BOTH size ({merged['size']}) and pixel_size "
+                 f"({merged['pixel_size']}) — they are mutually exclusive: {entry}")
     return merged
 
 

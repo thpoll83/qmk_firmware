@@ -420,13 +420,13 @@ touching at a **0px** gap, while 4 rows sat unused under the bottom row.
   reproduce this bug — it validates the *layout*, not the compiled C sign-handling
   (this shipped once, PR #149, caught in review).
 - ⚠️ **Font-header DOUBLE-DEFINITION trap** (cost a full link cycle): `util_font.h`
-  (`NotoSans_Regular_Mid_19px7b`) and `lang_label_font.h`
-  (`NotoSans_Regular_Tiny_11px7b`) **define** the font *data* (non-`static`) and are
+  (`NotoSans_Regular_Mid_19px7b`) and `nano_font.h`
+  (`NotoSans_Regular_Nano_10px7b`) **define** the font *data* (non-`static`) and are
   **already compiled into `poly_keymap.c`**. `#include`ing them in `status_oled.c` too
   gives a `multiple definition of …` **link** error (compiles fine). **Declare them
   `extern const GFXfont X;`** instead — the pattern `oled_helper.c` already uses.
-  (`NotoSans_Regular_Base_11pt.h`/`Medium_Base_8pt.h` are only included here, so those
-  `#include`s are safe.)
+  (`NotoSans_Medium_Base_8pt.h` is only included here, so that
+  `#include` is safe.)
 - **32 px width budget:** at 32 px only ~5 chars fit, and the layout name is the
   tightest thing on the panel. ⚠️ **Do NOT half-scale a bigger font to get there** —
   a 2×2-OR downsample ORs pixel pairs together, which thickens every stem back to
@@ -954,8 +954,8 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     + 4/3/4 (every gap +1 px, nothing moved, bottom still pinned at 63). Re-run
     `.claude/skills/status-oled-layout/measure_bands.py 72` after any size change.
   - Symbols are named for their **real** size (`NotoSans_Regular_Small_15px7b`,
-    `..._Tiny_11px7b`, `..._Mid_19px7b`, `..._Disp_21px7b`). The old `…8pt7b`/`…6pt7b`
-    names were fiction — the "pt" is the 141 DPI convention, so "8pt" was 16 px.
+    `..._Nano_10px7b`, `..._Mid_19px7b`). The old `…8pt7b`/`…6pt7b` names were
+    fiction — the "pt" is the 141 DPI convention, so "8pt" was 16 px.
 - **HID flow** (`BEGIN`/`CHUNK`/`COMMIT`, cmds `0x50`–`0x53`): reuses the
   `fw_staging` machinery (deferred sector erase, slave bridge). `FONTPACK_BEGIN`
   carries a **`bundle_id` byte** (data[10]); the master resolves it to the slot via

@@ -681,6 +681,29 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   the font-pack extend dialog reads the same catalog) — keep both in sync (`cmp`).
 - `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
 - **`fonts/gen-lang-fonts.sh`** — generates `base/fonts/flag_fonts.h` for the language-selection layer (`_LL`): country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically. (The `_Tiny_` lang-code label font moved to `fonts/gen-status-fonts.sh` — see "Standalone UI text fonts" below.) These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes. It also emits **`base/fonts/generated/lang_flags.json`** — the flag font's render record (source NotoColorEmoji, the `-s20 -g -r54 -W72 -O1 -Dfs -e-0.10` options, `seq_first` 0xE000, and the per-flag regional-indicator `sequence`). The flag font isn't in `fonts.yaml`, so `generate_fonts.py` emits no render record for it; this sidecar lets the host font-pack **editor** rebuild a single flag (sequence mode). ⚠️ Mirrored **byte-identically** in `PolyKybdHost/polyhost/res/fontpack/lang_flags.json` — keep both in sync (`cmp`).
+- **The keycap `latin` category is built grid-fitted (`hinting: auto` in
+  `fonts.yaml` → `fontconvert -Hauto`).** Same reason as the status fonts: NotoSans
+  ships no hinting bytecode, so without it the ASCII/Cyrillic/Greek keycap legends
+  render ungridfitted. `latin` is `resident: true`, so this changes only the
+  compiled-in font — **every font-pack bundle stays byte-identical, so there is NO
+  `.plyf` reship and no `content_version` bump**. The gain is real but modest at
+  27 px (the `_Base_` size): measured mirror-asymmetry improves 12.4% → 7.1%,
+  versus 14.9% → 4.4% at the 15 px status size.
+  - The other categories are deliberately left on `native`. They are mostly
+    **pictographs** (emoji/symbols), where the autohinter's text blue-zones buy
+    nothing, and CJK, where it is weakest — and unlike `latin` every one of them
+    *would* force a bundle regen + reship + ~460 KB re-flash per keyboard.
+    Empirically `-Hauto` is neutral-to-slightly-better on CJK/Arabic/Devanagari and
+    neutral on emoji, so this is a cost decision, not a quality one. One caveat if
+    it is ever revisited: `-Hauto` renders the `_Arrows_` shafts **1 px instead of
+    2 px** (still solid, and symmetric — but lighter on an OLED).
+- ⚠️ **Two committed generated artifacts were already STALE before this work and
+  `--check` flags them**: `fontpack.manifest.json`'s `total_size` (the committed
+  480140 is the *post-dedupe* size, but the script builds that manifest **before**
+  `prune_shadowed_glyphs` runs, so it emits the unpruned 492328), and
+  `fontpack_render_settings.json` was missing all 12 `latin` records. Regenerating
+  corrects both. If `--check` is ever wired into CI, fix the manifest/prune ordering
+  rather than hand-editing the committed value.
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.
 
 See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.

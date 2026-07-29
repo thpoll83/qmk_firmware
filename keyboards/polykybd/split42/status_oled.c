@@ -193,29 +193,19 @@ static void pdraw_bitmap(const uint8_t* pgm, int ox, int oy, int w, int h, uint8
 }
 
 // 10-segment brightness gauge (contrast 0..FULL_BRIGHT), left-aligned. Filled
-// segments are solid 2x6 bars; empty segments keep a 1px bottom tick so the full
-// gauge width always reads.
-static void pdraw_brightness(uint8_t contrast, int top_y, uint8_t* buf) {
+// segments step up in height left-to-right (same staircase as split72's gauge, at
+// half the pitch to fit 32px), so the level reads from the silhouette and not just
+// from where the bars stop. Unlit segments keep a 1px foot so the full scale shows.
+#define P42_GAUGE_MIN_H 2
+static void pdraw_brightness(uint8_t contrast, int bottom_y, uint8_t* buf) {
     int bars = (contrast * 10 + FULL_BRIGHT / 2) / FULL_BRIGHT; if (bars > 10) bars = 10;
     for (int i = 0; i < 10; i++) {
         int bx = i * 3;
-        if (i < bars) { for (int yy = 0; yy < 6; yy++) { pset(buf, bx, top_y + yy); pset(buf, bx + 1, top_y + yy); } }
-        else          { pset(buf, bx, top_y + 5); pset(buf, bx + 1, top_y + 5); }
+        int h  = (i < bars) ? P42_GAUGE_MIN_H + i : 1;
+        for (int yy = 0; yy < h; yy++) { pset(buf, bx, bottom_y - yy); pset(buf, bx + 1, bottom_y - yy); }
     }
 }
-
-// Typing-speed dial, byte-identical to split72's — "WPM" as text costs 3 of the ~5
-// characters this 32px column can hold, and the dial says the same thing in 11x6.
-static const uint8_t wpm_gauge_bitmap[] PROGMEM = {   // 11x6
-    0x1f, 0x00,
-    0x71, 0xc0,
-    0x43, 0x40,
-    0xc2, 0x60,
-    0x86, 0x20,
-    0x8e, 0x20,
-};
-#define WPM_ICON_W 11
-#define WPM_ICON_H 6
+#define P42_GAUGE_H (P42_GAUGE_MIN_H + 9)   // tallest bar == band height
 
 // split42 short layout names — must stay in sync with oled_helper.c's full-name
 // array (indexed by def_layer). Shortened so they fit the 32px-wide portrait column.
@@ -247,29 +237,29 @@ void oled_update_buffer(void) {
     const bool locks_side = (!side_is_undecided() && !is_left_side());
     if (!locks_side) {
         // Layer icon + number
-        pdraw_glyph(g_all_fonts, g_all_font_count, 0, 42, 0x80 /*ICON_LAYER*/, buf);
+        pdraw_glyph(g_all_fonts, g_all_font_count, 0, 41, 0x80 /*ICON_LAYER*/, buf);
         hex_to_u32_string((char*)nbuf, sizeof(nbuf), get_highest_layer(gl->layer));
-        pdraw_text(tinyFont, 1, 17, 41, nbuf, buf);
+        pdraw_text(tinyFont, 1, 17, 40, nbuf, buf);
         // Layout name (short), Mid 10pt at half scale, centered
-        pdraw_text_center_half(midFont, 1, 59, layout_name_short(get_local_layer()->def_layer), buf);
-        pdraw_brightness(ls->contrast, 76, buf);
+        pdraw_text_center_half(midFont, 1, 52, layout_name_short(get_local_layer()->def_layer), buf);
+        pdraw_brightness(ls->contrast, 82, buf);
         // Typing speed: dial over the value
-        pdraw_bitmap(wpm_gauge_bitmap, (P_W - WPM_ICON_W) / 2, 95, WPM_ICON_W, WPM_ICON_H, buf);
+        pdraw_bitmap(wpm_gauge_bitmap, (P_W - WPM_ICON_W) / 2, 93, WPM_ICON_W, WPM_ICON_H, buf);
         num_to_u32_string((char*)nbuf, sizeof(nbuf), get_current_wpm());
-        pdraw_text_center(tinyFont, 1, 113, nbuf, buf);
+        pdraw_text_center(tinyFont, 1, 110, nbuf, buf);
     } else {
-        pdraw_glyph_center(g_all_fonts, g_all_font_count, 44, gl->led_state.num_lock  ? 0x8D : 0x8C, buf);
-        pdraw_glyph_center(g_all_fonts, g_all_font_count, 68, gl->led_state.caps_lock ? 0x8F : 0x8E, buf);
+        pdraw_glyph_center(g_all_fonts, g_all_font_count, 36, gl->led_state.num_lock  ? 0x8D : 0x8C, buf);
+        pdraw_glyph_center(g_all_fonts, g_all_font_count, 60, gl->led_state.caps_lock ? 0x8F : 0x8E, buf);
         // Globe (half-scale) + the "xx-YY" code stacked under it, as split72 does in
         // its RGB-off column. One line will not do: "en-US" is 32px at 6pt, the exact
         // panel width, and the widest code ("mn-MN") is 40px.
-        const int gh = pdraw_glyph_half(g_all_fonts, g_all_font_count, (P_W - 20) / 2, 72, 0x1F310 /*🌐*/, buf);
+        const int gh = pdraw_glyph_half(g_all_fonts, g_all_font_count, (P_W - 20) / 2, 68, 0x1F310 /*🌐*/, buf);
         const uint32_t* code = poly_lang_code(ls->lang);
         for(uint8_t half = 0; half < 2 && code[0]; ++half) {
             nbuf[0] = code[half * 3];
             nbuf[1] = code[half * 3 + 1];
             nbuf[2] = 0;
-            pdraw_text_center(tinyFont, 1, 72 + gh + 10 + half * 11, nbuf, buf);
+            pdraw_text_center(tinyFont, 1, 68 + gh + 11 + half * 11, nbuf, buf);
         }
     }
 

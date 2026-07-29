@@ -180,15 +180,15 @@ def draw_bitmap(setpix, data, ox, oy, w=16, h=16):
                 setpix(ox + x, oy + y)
 
 
-def draw_brightness(setpix, contrast, top_y):
-    bars = min(10, (contrast * 10 + FULL_BRIGHT // 2) // FULL_BRIGHT)
+def draw_brightness(setpix, contrast, bottom_y):
+    """Mirror of pdraw_brightness: 10 stepped bars, unlit keep a 1px foot."""
+    bars = (contrast * 10 + FULL_BRIGHT // 2) // FULL_BRIGHT
+    bars = min(bars, 10)
     for i in range(10):
-        bx = i * 3
-        if i < bars:
-            for yy in range(6):
-                setpix(bx, top_y + yy); setpix(bx + 1, top_y + yy)
-        else:
-            setpix(bx, top_y + 5); setpix(bx + 1, top_y + 5)
+        h = (2 + i) if i < bars else 1
+        for yy in range(h):
+            setpix(i * 3, bottom_y - yy)
+            setpix(i * 3 + 1, bottom_y - yy)
 
 
 # ------------------------------- compose -----------------------------------
@@ -209,18 +209,18 @@ def build(side, mid, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0]
     # Asymmetric halves: layout half = layer/layout/brightness/speed, lock half =
     # locks + language. Mirrors status_oled.c.
     if side == 'L':
-        draw_glyph(setp, icons, 0, 42, 0x80)
-        draw_text(setp, tiny, 17, 41, '0')
-        draw_text_center_half(setp, mid, 59, layout_name)
-        draw_brightness(setp, contrast, 76)
-        draw_bitmap(setp, WPM_BMP, (P_W - 11) // 2, 95, 11, 6)
-        draw_text_center(setp, tiny, 113, str(wpm))
+        draw_glyph(setp, icons, 0, 41, 0x80)
+        draw_text(setp, tiny, 17, 40, '0')
+        draw_text_center_half(setp, mid, 52, layout_name)
+        draw_brightness(setp, contrast, 82)
+        draw_bitmap(setp, WPM_BMP, (P_W - 11) // 2, 93, 11, 6)
+        draw_text_center(setp, tiny, 110, str(wpm))
     else:
-        draw_glyph_center(setp, icons, 44, 0x8C)   # NumLock off
-        draw_glyph_center(setp, icons, 68, 0x8E)   # CapsLock off
-        gh = draw_glyph_half(setp, world, (P_W - 20) // 2, 72, 0x1F310)
+        draw_glyph_center(setp, icons, 36, 0x8C)   # NumLock off
+        draw_glyph_center(setp, icons, 60, 0x8E)   # CapsLock off
+        gh = draw_glyph_half(setp, world, (P_W - 20) // 2, 68, 0x1F310)
         for half in range(2):
-            draw_text_center(setp, tiny, 72 + gh + 10 + half * 11, lang[half * 3:half * 3 + 2])
+            draw_text_center(setp, tiny, 68 + gh + 11 + half * 11, lang[half * 3:half * 3 + 2])
     # side marker
     draw_text_center(setp, tiny, 126, side)
     return pts

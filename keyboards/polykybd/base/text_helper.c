@@ -21,11 +21,11 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_SPLASH:
             return U"Splash";
         case RGB_MATRIX_MULTISPLASH:
-            return U"Splash";
+            return U"MultiSplsh";
         case RGB_MATRIX_SOLID_SPLASH:
-            return U"SolidSplash";
+            return U"Splash";
         case RGB_MATRIX_SOLID_MULTISPLASH:
-            return U"SolidSplsh";
+            return U"MultiSplsh";
         case RGB_MATRIX_RAINBOW_MOVING_CHEVRON:
             return U"Rainbow";
         case RGB_MATRIX_BREATHING:
@@ -33,7 +33,7 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_SOLID_REACTIVE_SIMPLE:
             return U"Simple";
         case RGB_MATRIX_SOLID_REACTIVE_CROSS:
-            return U"ReactCrss";
+            return U"ReactX";
         case RGB_MATRIX_SOLID_REACTIVE:
             return U"Reactive";
         case RGB_MATRIX_SOLID_REACTIVE_WIDE:
@@ -41,7 +41,7 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
         case RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE:
             return U"ReactWide";
         case RGB_MATRIX_SOLID_REACTIVE_MULTICROSS:
-            return U"ReactCrss";
+            return U"ReactX";
         case RGB_MATRIX_SOLID_REACTIVE_MULTINEXUS:
             return U"ReactNex";
         case RGB_MATRIX_SOLID_REACTIVE_NEXUS:
@@ -103,12 +103,16 @@ const uint32_t* get_led_matrix_text(uint8_t rgb_mode) {
     }
 }
 
-// A "multi" effect shares its sibling's name and is distinguished by a superscript 2
-// the caller draws after it ("Splash" / "Splash\u00b2"). The status OLED's font is ASCII
-// 0x20..0x7e, so the superscript cannot live in the string itself.
+// Paired effects share one name and the second of the pair is marked with a
+// superscript 2 the caller draws after it. Which member carries the mark differs by
+// family because the names do: the splash pair already says "Multi", so the mark
+// distinguishes SOLID there, while every reactive effect is solid and the mark
+// distinguishes MULTI. Either way the two members of a pair never render alike.
+// The status OLED's font is ASCII 0x20..0x7e, so the superscript cannot live in the
+// string itself.
 bool led_matrix_text_superscript2(uint8_t rgb_mode) {
     switch(rgb_mode) {
-        case RGB_MATRIX_MULTISPLASH:
+        case RGB_MATRIX_SOLID_SPLASH:
         case RGB_MATRIX_SOLID_MULTISPLASH:
         case RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE:
         case RGB_MATRIX_SOLID_REACTIVE_MULTICROSS:

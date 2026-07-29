@@ -530,6 +530,29 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   converge/fade. `eden_idle_tick()` in `poly_keymap.c` drives it; it is a **no-op
   while awake** (only runs when `idle_style == EDEN` and idle). While the animation
   owns the keycaps (`startup_anim_active()`), `update_displays()` early-returns.
+- ⚠️ **The looping idle frame is TIME-SLICED — never render it as one blocking unit.**
+  A full frame is ~36 keycaps × (procedural 72×40 background + comet trails + the
+  drifting legend + a 360 B SPI push), tens of ms during which the main loop cannot
+  scan the matrix. Rendered whole, a short tap that starts *and* ends inside a frame
+  is simply never seen — the "Eden doesn't wake on the first keypress" report
+  (2026-07-29) — and on the slave half it also stalls that half's own scan and the
+  master's matrix pull. `startup_anim_tick()` therefore renders keycaps until
+  `EDEN_IDLE_SLICE_MS` (3) is spent, returns, and **resumes at the same keycap** on
+  the next pass; `el` and the spark set are latched once per frame (`s_frame_el` /
+  `sa_build_sparks`) so the slices compose into one coherent frame, and
+  `EDEN_IDLE_FRAME_MS` (55) still gates the gap between frames measured from the
+  **end** of the last one. `startup_anim_stop()` drops a half-rendered frame so its
+  leftover slices can't paint comets over freshly-woken legends. The ~5 s idle log
+  reports `frame Nms, worst slice Nms` — **the worst slice is the responsiveness
+  number**; tune `EDEN_IDLE_SLICE_MS` against it, not against the frame time.
+  The boot intro (`sa_render_frame`) is deliberately left unsliced/unthrottled: it is
+  brief, swallows every key anyway, and owns the CPU.
+- **The idle path's background is 2×2-coarsened on the ROTATED thumbs too** (the boot
+  intro keeps them full-res, so its look is byte-identical): in local space it is the
+  same block approximation the flat keys already use and it cuts a thumb's `sa_bg`
+  calls 4×. Both paths also early-out on `bgv == 0` before the noise lookup — exactly
+  equivalent (0 can never exceed an unsigned threshold) and most pixels are 0 at this
+  faint density.
 - **The idle legend** (the resting key label drawn over the comet haze) is rendered
   **LIT + scanline** (`kdisp_set_gfx_scanline(true)` around the text draw), not
   erased — the scanline halves the lit pixels so the legend reads as a dim overlay

@@ -364,19 +364,23 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
         draw(setp, small, COL_X + 5, SIDE_MARKER_BASE, s('R'))
     if lock_panel:
         draw(setp, small, TEXT_X, LOCK_ROW_B if rgb_on else OFF_ROW_B, s('Qwerty'))
-        # Speed (+ the language slot sharing its row) and brightness trade rows when RGB
-        # is on -- the ~98px meter can only hold a row on its own.
-        speed_base = LOCK_ROW_C if rgb_on else OFF_ROW_C
-        draw_bitmap(setp, WPM_BMP, 0, speed_base - 8, WPM_ICON_W, WPM_ICON_H)
-        draw(setp, small, 15, speed_base, s(str(wpm)))
         if rgb_on:
-            draw_bitmap(setp, GLOBE_BMP, 46, speed_base - 12, GLOBE_W, GLOBE_H)
-            draw(setp, tiny, 62, speed_base, s(lang))
+            # Speed (+ the language slot sharing its row) sits under the layout name and
+            # brightness takes the bottom row -- the ~98px meter needs a row to itself.
+            draw_bitmap(setp, WPM_BMP, 0, LOCK_ROW_C - 8, WPM_ICON_W, WPM_ICON_H)
+            draw(setp, small, 15, LOCK_ROW_C, s(str(wpm)))
+            draw_bitmap(setp, GLOBE_BMP, 46, LOCK_ROW_C - 12, GLOBE_W, GLOBE_H)
+            draw(setp, tiny, 62, LOCK_ROW_C, s(lang))
             draw_brightness_row(setp, small, 0, LOCK_ROW_D, brightness)
+        else:
+            # Brightness holds this panel's bottom row in BOTH modes, so the speed is
+            # what migrates to the near-empty RGB panel.
+            draw_brightness_row(setp, small, 0, OFF_ROW_C, brightness)
     elif not rgb_on:
         draw(setp, small, TEXT_X, RGB_OFF_ROW_B, s('RGB'))
         draw(setp, small, TEXT_X + 34, RGB_OFF_ROW_B, s('Off'))
-        draw_brightness_row(setp, small, TEXT_X, RGB_OFF_ROW_C, brightness)
+        draw_bitmap(setp, WPM_BMP, TEXT_X, RGB_OFF_ROW_C - 8, WPM_ICON_W, WPM_ICON_H)
+        draw(setp, small, TEXT_X + 15, RGB_OFF_ROW_C, s(str(wpm)))
         draw_lang_column(setp, tiny, globe, COL_X, lang)
     else:
         hue, sat, val, speed, mode, name = rgb

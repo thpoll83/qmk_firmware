@@ -375,12 +375,15 @@ void oled_update_buffer(void) {
     if(is_right_side()) {
         if(!rgb_on) {
             // Nothing left to report but the off state, so this panel takes over the
-            // two groups the layout panel can spare: the brightness meter under the
-            // label, and the language slot in the column the gauge vacated.
+            // two groups the layout panel can spare: the speed under the label, and the
+            // language slot in the column the gauge vacated. (WPM is valid on this half
+            // too -- config.h sets SPLIT_WPM_ENABLE, so the master syncs it.)
             const poly_sync_t* local_state = get_local_state();
             kdisp_write_gfx_text(smallFont, 1, TEXT_X, RGB_OFF_ROW_B, U"RGB");
             kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 34), RGB_OFF_ROW_B, U"Off");
-            draw_brightness_row(smallFont, TEXT_X, RGB_OFF_ROW_C, local_state->contrast);
+            kdisp_draw_bitmap(TEXT_X, (int8_t)(RGB_OFF_ROW_C - 8), wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
+            num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
+            kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 15), RGB_OFF_ROW_C, buffer);
             draw_lang_column(tinyFont, COL_X, local_state->lang);
         } else {
             // Effect: index + name. With the speed moved to the gauge in the column
@@ -429,28 +432,31 @@ void oled_update_buffer(void) {
         }
     } else {
         const poly_sync_t* local_state = get_local_state();
-        // With RGB off the brightness and language groups move to the other panel, so
-        // the two rows that remain spread out to match its three-row rhythm.
+        // With RGB off the language slot and one of the two value groups move to the
+        // other panel, so the two rows that remain spread out to match its rhythm.
         oled_draw_layout_name(smallFont, 0, rgb_on ? LOCK_ROW_B : OFF_ROW_B, get_local_layer()->def_layer);
 
-        // The speed row carries typing speed AND the language slot, both variable width,
-        // so the 105px budget is real: a 3-digit rate plus a code as wide as "mn-MN". The
-        // dial buys back the 38px the "WPM" label cost, and the code runs in 6pt (40px
-        // worst) rather than 8pt (54px, which does not fit at any packing).
-        //
-        // With RGB on that group sits directly under the layout name and brightness takes
-        // the bottom row. The brightness meter is ~98px wide, so it can only ever hold a
-        // row on its own -- which is why the language slot rides with the speed group
-        // instead of staying on the bottom row when the two swap.
-        const int8_t speed_base = rgb_on ? LOCK_ROW_C : OFF_ROW_C;
-        kdisp_draw_bitmap(0, (int8_t)(speed_base - 8), wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
-        num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
-        kdisp_write_gfx_text(smallFont, 1, 15, speed_base, buffer);
-
         if(rgb_on) {
-            kdisp_draw_bitmap(46, (int8_t)(speed_base - 12), lang_globe_bitmap, GLOBE_W, GLOBE_H);
-            kdisp_write_gfx_text(tinyFont, 1, 62, speed_base, poly_lang_code(local_state->lang));
+            // The speed row carries typing speed AND the language slot, both variable
+            // width, so the 105px budget is real: a 3-digit rate plus a code as wide as
+            // "mn-MN". The dial buys back the 38px the "WPM" label cost, and the code runs
+            // in 6pt (40px worst) rather than 8pt (54px, which does not fit at any packing).
+            //
+            // Speed sits directly under the layout name and brightness takes the bottom
+            // row. The brightness meter is ~98px wide, so it can only ever hold a row on
+            // its own -- which is why the language slot rides with the speed group.
+            kdisp_draw_bitmap(0, (int8_t)(LOCK_ROW_C - 8), wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
+            num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
+            kdisp_write_gfx_text(smallFont, 1, 15, LOCK_ROW_C, buffer);
+            kdisp_draw_bitmap(46, (int8_t)(LOCK_ROW_C - 12), lang_globe_bitmap, GLOBE_W, GLOBE_H);
+            kdisp_write_gfx_text(tinyFont, 1, 62, LOCK_ROW_C, poly_lang_code(local_state->lang));
             draw_brightness_row(smallFont, 0, LOCK_ROW_D, local_state->contrast);
+        } else {
+            // Brightness holds this panel's bottom row in BOTH modes -- so the group that
+            // migrates to the near-empty RGB panel is the speed, not the meter. (Before
+            // the two swapped it was the other way round, which left the bottom row
+            // meaning "brightness" with RGB on and "speed" with RGB off.)
+            draw_brightness_row(smallFont, 0, OFF_ROW_C, local_state->contrast);
         }
     }
 }

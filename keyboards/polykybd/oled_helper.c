@@ -242,6 +242,20 @@ void oled_fw_apply_screen(void) {
     oled_render_dirty(true);   // one synchronous full flush before the reboot
 }
 
+// Typing-speed dial (11x6 speedometer). Shared by BOTH variants' status OLEDs, so it
+// is defined once here (oled_helper.c is in the shared POLY_SRC) and referenced via
+// extern from each status_oled.c -- defining it per variant drifts the two copies.
+// It replaces a "WPM" text label, which cost 38px of a 105px row to say what the dial
+// says in 11.
+const uint8_t wpm_gauge_bitmap[] PROGMEM = {
+    0x1f, 0x00,
+    0x71, 0xc0,
+    0x43, 0x40,
+    0xc2, 0x60,
+    0x86, 0x20,
+    0x8e, 0x20,
+};
+
 bool oled_task_user(void) {
     if (fw_staging_fw_up_active()) {
         oled_scroll_off();

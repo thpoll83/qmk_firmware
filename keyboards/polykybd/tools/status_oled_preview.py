@@ -314,6 +314,10 @@ def draw_lang_column(setp, tiny, globe, x, code):
         txt = s(code[half * 3:half * 3 + 2])
         lo, hi, cx = 127, 0, 0
         for cp in txt:
+            # Same range guard draw()/measure_width() use -- `code` comes from --lang,
+            # so an out-of-range char would index gl[] out of bounds (or wrap negative).
+            if not (f['first'] <= cp <= f['last']):
+                continue
             g = gl[cp - f['first']]
             if g['w']:
                 lo = min(lo, cx + g['xo'])
@@ -378,14 +382,7 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
         name_x = TEXT_X + 22
         draw(setp, small, name_x, RGB_ROW_B, s(name.rstrip('2')))
         if name.endswith('2'):      # "Splash2" in the fixture -> "Splash" + superscript
-            f, _bm, gl = small
-            hi = 0
-            cx = 0
-            for cp in s(name.rstrip('2')):
-                g = gl[cp - f['first']]
-                if g['w']:
-                    hi = max(hi, cx + g['xo'] + g['w'] - 1)
-                cx += g['xa']
+            hi = measure_width(small, s(name.rstrip('2')))
             draw_bitmap(setp, SUPER2_BMP, name_x + hi + 2, 18, SUPER2_W, SUPER2_H)
         draw_speed_gauge(setp, COL_X, speed)
         draw(setp, small, TEXT_X, RGB_ROW_C, s(hue_name(hue, sat)))
@@ -395,15 +392,7 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
         draw(setp, small, TEXT_X + DROPLET_W + SV_ICON_GAP, RGB_ROW_D,
              s('%d%%' % byte_to_percent(sat)))
         vtxt = s('%d%%' % byte_to_percent(val))
-        f, _bm, gl = small
-        hi = 0
-        cx = 0
-        for cp in vtxt:
-            g = gl[cp - f['first']]
-            if g['w']:
-                hi = max(hi, cx + g['xo'] + g['w'] - 1)
-            cx += g['xa']
-        vx = TEXT_R - hi
+        vx = TEXT_R - measure_width(small, vtxt)
         draw_bitmap(setp, SUN_SMALL_BMP, vx - SV_ICON_GAP - SUN_SMALL_W, SUN_SMALL_Y,
                     SUN_SMALL_W, SUN_SMALL_H)
         draw(setp, small, vx, RGB_ROW_D, vtxt)

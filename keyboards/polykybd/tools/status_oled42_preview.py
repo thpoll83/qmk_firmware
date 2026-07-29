@@ -203,9 +203,11 @@ def build(side, mid, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0]
         pts.add((px, py))
     # role
     if side == 'L':
-        draw_bitmap(setp, USB_BMP, -3, 0); draw_text(setp, tiny, 10, 12, 'Usb')
+        draw_bitmap(setp, USB_BMP, -3, 0)
+        draw_text(setp, tiny, 10, 12, 'Usb')
     else:
-        draw_bitmap(setp, LINK_BMP, -8, 0); draw_text(setp, tiny, 10, 12, 'Lnk')
+        draw_bitmap(setp, LINK_BMP, -8, 0)
+        draw_text(setp, tiny, 10, 12, 'Lnk')
     # Asymmetric halves: layout half = layer/layout/brightness/speed, lock half =
     # locks + language. Mirrors status_oled.c.
     if side == 'L':

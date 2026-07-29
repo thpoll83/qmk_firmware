@@ -100,19 +100,6 @@ static const uint8_t lang_globe_bitmap[] PROGMEM = {
 // 20px overhangs the 17px column, and that gutter is what absorbs it. (Row 4 of the
 // RGB-on layout has no such room, so it keeps the 13x13 bitmap.)
 
-// Typing speed. "WPM" as text costs 38px of a 105px row, which a 3-digit rate plus
-// the language slot can no longer afford — a dial reads the same and costs 11.
-static const uint8_t wpm_gauge_bitmap[] PROGMEM = {   // 11x6 speedometer replacing the WPM label
-    0x1f, 0x00,
-    0x71, 0xc0,
-    0x43, 0x40,
-    0xc2, 0x60,
-    0x86, 0x20,
-    0x8e, 0x20,
-};
-#define WPM_ICON_W 11
-#define WPM_ICON_H 6
-
 // The status font is ASCII 0x20..0x7e only, so the degree sign does not exist in it —
 // cheaper as a bitmap than a font-set lookup through g_all_fonts (which would also
 // baseline-align to fonts[0]).

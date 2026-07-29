@@ -193,19 +193,6 @@ static void pdraw_bitmap(const uint8_t* pgm, int ox, int oy, int w, int h, uint8
 }
 
 // 10-segment brightness gauge (contrast 0..FULL_BRIGHT), left-aligned. Filled
-// Typing-speed dial, byte-identical to split72's — "WPM" as text costs 3 of the ~5
-// characters this 32px column can hold, and the dial says the same thing in 11x6.
-static const uint8_t wpm_gauge_bitmap[] PROGMEM = {   // 11x6
-    0x1f, 0x00,
-    0x71, 0xc0,
-    0x43, 0x40,
-    0xc2, 0x60,
-    0x86, 0x20,
-    0x8e, 0x20,
-};
-#define WPM_ICON_W 11
-#define WPM_ICON_H 6
-
 // segments step up in height left-to-right (same staircase as split72's gauge, at
 // half the pitch to fit 32px), so the level reads from the silhouette and not just
 // from where the bars stop. Unlit segments keep a 1px foot so the full scale shows.

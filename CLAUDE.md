@@ -7,6 +7,24 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 ## Code review conventions (all PolyKybd repos)
 
 - **Docstring coverage: ignore CodeRabbit's "Docstring Coverage … threshold 80%" pre-merge check.** That 80% target is a CodeRabbit default, **not** a project policy — the check is non-blocking and we deliberately do not chase it. Do **not** add docstrings to existing functions just to satisfy it (out-of-scope churn). Document new code where a docstring genuinely helps a reader, and no more.
+- **On a rapidly-iterating PR, keep CodeRabbit OFF and ask for ONE review at the
+  end.** A design/layout PR that lands many small pushes (a preview render per
+  tweak) makes CodeRabbit re-review from scratch on every one. Two costs, both hit
+  in a single session (2026-07-29, PR #159): it burns the **per-developer review
+  rate limit** — five pushes came back `Review limit reached … next review in
+  31/41/46 minutes` and were never reviewed at all — and each landed review is
+  against a head you have already moved past. So the reviews you *do* spend are
+  the least useful ones.
+  - CodeRabbit notices this itself and **auto-pauses** the branch ("this branch is
+    under active development"), governed by
+    `reviews.auto_review.auto_pause_after_reviewed_commits`. ⚠️ Its paused comment
+    still renders a walkthrough + pre-merge checks, so it **reads like a completed
+    clean review** — check for the "Reviews paused" note before concluding the PR
+    was reviewed.
+  - Workflow: let it pause (or pause it deliberately), iterate freely, then
+    comment **`@coderabbitai review`** on the final commit for a single full-diff
+    review; **`@coderabbitai resume`** turns automatic reviews back on. Both
+    commands are listed in the paused comment itself.
 
 ## Branching (all PolyKybd repos)
 
@@ -45,6 +63,34 @@ inherited-upstream noise:
   prior commits) and reproduce locally: `qmk lint --strict --keyboard polykybd/split72`
   (+ `split42`), `qmk ci-validate-keyboard-targets`, `qmk ci-validate-aliases`. If
   those are clean, just **re-run the two jobs** — there is nothing to fix.
+- ⚠️ **A red `lint` on ONE keyboard with `The file "…" should not exist!` is a
+  TRACKED-but-GITIGNORED file — real, and it fails every PR that touches that
+  keyboard until someone removes it.** `lib/python/qmk/cli/lint.py` calls
+  `git_get_ignored_files()` = **`git ls-files -c -o -i --exclude-from=.gitignore
+  keyboards/<kb>/`**, so any committed file the root `.gitignore` matches fails the
+  keyboard. The classic trap is **images**: `.gitignore` has `*.png` with only
+  `!docs/public/**.png` exempt, so a screenshot/render force-added under
+  `keyboards/` is committed *and* ignored. Two split42 evidence PNGs did exactly
+  this from 2026-07-17 (`11f37c17`) and turned `lint` red on **nine** consecutive
+  commits of an unrelated PR. Fixes: delete the file (blobs stay recoverable via
+  `git show <sha>:<path>`), move it to `docs/public/`, or add a negation
+  (`!keyboards/polykybd/**/*.png`) — all three verified to make `qmk lint --strict`
+  pass. **This contradicts the "lint passes green on every normal commit" line
+  above** — that holds only while no such file exists.
+- **Reproduce the whole `lint` job locally instead of reading the CI log** — it is
+  ~5 s and definitive, whereas the GitHub MCP `get_job_logs` caps its response at
+  ~2 KB *regardless of `tail_lines`*, so you often cannot scroll back far enough to
+  see the actual error:
+  ```bash
+  export QMK_HOME=$PWD
+  qmk lint --strict --keyboard polykybd/split42     # and split72
+  git ls-files -c -o -i --exclude-from=.gitignore keyboards/polykybd/   # must be empty
+  qmk format-text $(git diff --name-only --diff-filter=d origin/PolyKybd...HEAD)
+  git diff --quiet -- $(git diff --name-only --diff-filter=d origin/PolyKybd...HEAD) \
+      && echo "format clean"        # the job's second half: any diff = "Requires Formatting"
+  ```
+  ⚠️ Drop `keyboards/polykybd/tools/__pycache__` first or it shows up as a false
+  positive in the ignored-files list (CI checks out clean, so it never sees it).
 - The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
   above.
 
@@ -333,6 +379,35 @@ lookup but plot through `pset` (the shared `kdisp_write_gfx_*` draw landscape in
 else changes; everything composes in logical space). The flash/update + boot-logo
 screens are still landscape (deferred). Preview + clip check:
 `tools/status_oled42_preview.py` (`--diag`) mirrors the C coordinate-for-coordinate.
+
+**Layout work: MEASURE the pixel bands, don't eyeball the render** (2026-07-29).
+`--diag` only catches pixels off the *panel*; it says nothing about rows colliding
+or slack pooling at the bottom. Both previews are importable, so wrap their draw
+helpers to tag which pixels each call produced, then reduce to contiguous lit-row
+bands and the gaps between them — the **`status-oled-layout` skill** wraps this
+whole loop (instrument → bands → place → render → build). What it caught that the
+eye did not: the layout name's descenders **overlapping the row below by 2px**
+(`Qwerty Stag!` descends to baseline+4 across x7..90 — a *wide* tail, not a narrow
+one, so the row below cannot dodge it), and the RGB panel's colour/S+V rows
+touching at a **0px** gap, while 4 rows sat unused under the bottom row.
+- **Space each panel independently; do NOT share one set of row baselines.** The
+  two panels have opposite shapes — the layout panel's descenders are on row B,
+  the RGB panel's on row C — so a shared set is over-constrained: a brute force
+  over all (rowB, rowC) pairs maxed out at a **1px** minimum gap with a lopsided
+  7px elsewhere, vs **3/2/2** and **3/3/3** when split. The halves sit ~20cm apart,
+  so the 1–3px row offset between them does not read as misalignment.
+- **Pin the bottom row so its last pixel lands on the final screen row** (63 on
+  split72), and give the side marker that same baseline — it then sits level with
+  the last content row instead of floating. Derive each row's extent from its own
+  content: text is `base-10..base` (`+4` with descenders), the 13px globe is
+  `base-12..base`, a full brightness gauge is `base-12..base` and 98px wide, so the
+  meter can only ever hold a row alone.
+- **Check the worst case, not the default fixture**: longest layout name
+  (`Qwerty Stag!`, 95px), a fully-lit gauge, and a 3-digit WPM. And when moving a
+  readout between panels, confirm the value is actually available there —
+  `get_current_wpm()` reads correctly on both halves only because `config.h` sets
+  **`SPLIT_WPM_ENABLE`** (the master syncs it); without that it renders 0 on the
+  non-master half.
 
 - ⚠️ **Read glyph `xOffset`/`yOffset` through `int8_t`** in the portrait draw
   helpers: `pgm_read_byte()` returns `uint8_t` and **zero-extends** the Adafruit-GFX

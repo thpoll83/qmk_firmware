@@ -181,7 +181,7 @@ static void pct_to_u32_string(char* out, uint8_t out_len, uint8_t pct) {
 
 #define SPEED_BOX_Y 0
 #define SPEED_BOX_W COL_W
-#define SPEED_BOX_H 39                                     // Num Lock top .. Caps Lock bottom
+#define SPEED_BOX_H 44                                     // Num Lock top .. Caps Lock bottom
 #define SPEED_FILL_W (SPEED_BOX_W - 6)
 #define SPEED_FILL_BOTTOM (SPEED_BOX_Y + SPEED_BOX_H - 4)  // last fillable row
 #define SPEED_FILL_H (SPEED_BOX_H - 6)                     // full-scale column height
@@ -254,6 +254,12 @@ static uint8_t brightness_to_level(uint8_t contrast) {
 // which left a 7px dead strip under it and — once the language stack grew — put the
 // R only 2px below "US". NOT shared with the scroll-lock arrow that replaces it:
 // that glyph is 26px tall and would run up into the Caps Lock icon from down here.
+// Caps Lock baseline. Num Lock sits at the top of the column (baseline 16, rows
+// 0..16); Caps Lock is placed so the two gaps left over above the bottomed-out
+// side marker come out even (10 and 9). The speed gauge on the other panel is
+// DEFINED as "Num Lock top .. Caps Lock bottom", so SPEED_BOX_H tracks this --
+// keep the two in step (44 = CAPS_LOCK_BASE + 1).
+#define CAPS_LOCK_BASE 43
 #define SIDE_MARKER_BASE 63
 #define OFF_ROW_B      37  // layout name  (27..41 incl. descenders)
 #define OFF_ROW_C      63  // speed        (53..63; no globe here, so shorter than row C)
@@ -347,7 +353,7 @@ void oled_update_buffer(void) {
     // nothing and cost the RGB panel a whole column, which now carries the speed gauge.
     if(lock_panel) {
         kdisp_write_gfx_text(g_all_fonts, g_all_font_count, COL_X, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
-        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, COL_X, 38, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, COL_X, CAPS_LOCK_BASE, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
     }
     if(lock_panel && global_layer->led_state.scroll_lock) {
         // Scroll lock replaces the side marker (and is 26px tall, so it would run

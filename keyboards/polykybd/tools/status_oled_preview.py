@@ -49,6 +49,7 @@ RGB_ROW_B = 30    # effect index + name
 RGB_ROW_C = 45    # colour name + hue
 RGB_ROW_D = 63    # saturation + value
 # RGB-off re-flow: three rows on both panels instead of four, again bottomed out on 63.
+CAPS_LOCK_BASE = 43     # evens the column gaps (10/9); SPEED_BOX_H tracks it
 SIDE_MARKER_BASE = 63   # physical-side marker, bottomed out (was 56)
 OFF_ROW_B = 37
 OFF_ROW_C = 63
@@ -199,7 +200,7 @@ def round_rect(setpix, x, y, w, h, r):
 
 # ---- RGB speed gauge, kept in sync with split72/status_oled.c ----
 COL_W = 17          # indicator column both panels reserve on their inner edge
-SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 0, COL_W, 39
+SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 0, COL_W, 44   # Num Lock top .. Caps Lock bottom
 SPEED_FILL_W = SPEED_BOX_W - 6
 SPEED_FILL_BOTTOM = SPEED_BOX_Y + SPEED_BOX_H - 4
 SPEED_FILL_H = SPEED_BOX_H - 6
@@ -357,7 +358,7 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
     # the RGB panel's column is the speed gauge now.
     if lock_panel:
         draw(setp, icons, COL_X, 16, [0x8C])                    # NumLock off
-        draw(setp, icons, COL_X, 38, [0x8E])                    # CapsLock off
+        draw(setp, icons, COL_X, CAPS_LOCK_BASE, [0x8E])        # CapsLock off
         draw(setp, small, COL_X + 6, SIDE_MARKER_BASE, s('L'))
     else:
         draw(setp, small, COL_X + 5, SIDE_MARKER_BASE, s('R'))

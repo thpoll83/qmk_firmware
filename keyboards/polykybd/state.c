@@ -5,6 +5,7 @@
 
 #include <string.h>
 #include "eeconfig.h"
+#include "base/com.h"   // enum poly_flag — the display-state bits guarding the auto push
 
 static poly_layer_t l_layer;
 static poly_layer_t g_layer;
@@ -291,12 +292,34 @@ bool get_brightness_auto_mode(void) {
     return g_auto_brightness;
 }
 
+// True only while the panels are actually showing the awake brightness. False
+// once they are dark (USB suspend, or the TURN_OFF_TIME branch) and while the
+// idle fade/pulse owns the contrast.
+//
+// ⚠️ The host-auto (daylight) and LTR-559 pushes below are UNATTENDED — they fire
+// on a timer with no user in the loop — so they must not write l_state.contrast in
+// those states. Writing it after TURN_OFF_TIME is what re-lit the whole keyboard:
+// the turn-off branch calls disable_idle_tracking(), so the housekeeping idle
+// ladder no longer runs, and the contrast diff switched every keycap OLED back on
+// with nothing left to ever switch them off again (field 2026-07-30: 10-min
+// daylight push six minutes after "Turning off" → both halves lit until the next
+// keypress). The value is still remembered in g_last_auto_brightness, and every
+// wake path restores through get_active_brightness(), so it lands on the next
+// real wake instead.
+static bool displays_awake(void) {
+    return l_state.contrast != DISP_OFF &&
+           (l_state.flags & (uint8_t)STATUS_DISP_ON) != 0 &&
+           (l_state.flags & ((uint8_t)DISP_IDLE | (uint8_t)IDLE_TRANSITION)) == 0;
+}
+
 // Engage/disengage host-driven brightness, applying the resulting active
 // brightness to the display. The mode (and last value, below) is persisted so a
 // reboot in auto mode restores the auto brightness, not the stale manual value.
 void set_brightness_auto_mode(bool on) {
     g_auto_brightness = on;
-    l_state.contrast  = get_active_brightness();
+    if (displays_awake()) {
+        l_state.contrast = get_active_brightness();
+    }
     g_brightness_dirty = true;   // persist the new auto-mode state (flushed at suspend/store)
 }
 
@@ -312,7 +335,9 @@ void set_auto_brightness_value(uint8_t value) {
     g_last_auto_brightness = value;
     g_auto_value_known     = true;
     if (g_auto_brightness) {
-        l_state.contrast = value;
+        if (displays_awake()) {      // never light dark/idling panels — see displays_awake()
+            l_state.contrast = value;
+        }
         g_brightness_dirty = true;   // remember the latest auto value for the next boot
     }
 }

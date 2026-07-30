@@ -467,6 +467,8 @@ static void sa_begin(bool loop, uint8_t contrast) {
     s_last_frame = s_start - EDEN_IDLE_FRAME_MS;   // render the first idle frame at once
     s_frame_busy = false;                          // no half-rendered frame carried over
     s_frame_idx  = 0;
+    s_frame_ms       = 0;   // don't report the PREVIOUS idle session's timings in the
+    s_slice_worst_ms = 0;   // first log line of this one
     // Non-blocking progress trace (HID console; dropped when nothing is attached).
     // If a half wedges during the animation, the last line printed shows how far it
     // got. Only the USB (master) half's console is readable — to diagnose the left

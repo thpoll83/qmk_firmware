@@ -31,12 +31,26 @@
 
 #include <stdint.h>
 
+// Render sub-phases inside update_displays()'s per-keycap main path — the finer
+// breakdown of where a full re-render's time actually goes. Defined unconditionally
+// so the LP_RP_* names resolve in a normal build too (the hooks below discard them).
+//   CLEAR   — kdisp_set_buffer(0) (wipe the 1 KB scratch)
+//   LEGEND  — base legend + tab/MRU chrome (glyph lookup across g_all_fonts + raster)
+//   OVERLAY — copy_overlay_to_buffer() bitmap blit + any hint text
+//   SEND    — kdisp_send_window() (the 360-byte SPI push to the panel)
+enum loop_profile_rphase { LP_RP_CLEAR = 0, LP_RP_LEGEND, LP_RP_OVERLAY, LP_RP_SEND, LP_RP_COUNT };
+
 #ifdef POLYKYBD_LOOP_PROFILE
 
 // Call once per main-loop iteration (top of housekeeping_task_user). Closes the
 // previous iteration's measurement, updates the histograms, and emits a summary
 // line every LOOP_PROFILE_LOG_EVERY iterations.
 void loop_profile_tick(void);
+
+// Accumulate microseconds spent in one render sub-phase (see enum above) into an
+// all-time running total, reported on the `rphase` summary line. Called from the
+// per-keycap main path in update_displays().
+void loop_profile_add_render_phase(uint8_t phase, uint32_t us);
 
 // Mark the current iteration as one that handled a bulk overlay/mapping HID
 // command (called from raw_hid_receive()).
@@ -57,5 +71,6 @@ static inline void loop_profile_tick(void) {}
 static inline void loop_profile_note_overlay_cmd(void) {}
 static inline void loop_profile_add_bridge_us(uint32_t us) { (void)us; }
 static inline void loop_profile_add_render_us(uint32_t us) { (void)us; }
+static inline void loop_profile_add_render_phase(uint8_t phase, uint32_t us) { (void)phase; (void)us; }
 
 #endif

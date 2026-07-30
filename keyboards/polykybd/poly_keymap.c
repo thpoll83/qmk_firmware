@@ -36,6 +36,13 @@
 #include "profiling/loop_profile.h"
 #ifdef POLYKYBD_LOOP_PROFILE
 #    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
+// Render sub-phase timing (update_displays main path). LP_MARK() stamps a start,
+// LP_PHASE(ph) accounts the elapsed us to sub-phase `ph`. No-ops in a normal build.
+#    define LP_MARK()    (_lp_p0 = timer_hw->timerawl)
+#    define LP_PHASE(ph) loop_profile_add_render_phase((ph), timer_hw->timerawl - _lp_p0)
+#else
+#    define LP_MARK()    ((void)0)
+#    define LP_PHASE(ph) ((void)0)
 #endif
 #include "split_fw_up.h"
 #include "base/fw_staging.h"
@@ -2353,6 +2360,9 @@ static void draw_legend_cx(const uint32_t* text, int8_t y) {
 #endif
 
 void update_displays(enum refresh_mode mode) {
+#ifdef POLYKYBD_LOOP_PROFILE
+    uint32_t _lp_p0 = 0;   // render sub-phase start stamp (LP_MARK/LP_PHASE)
+#endif
     // Doom easter egg: while game mode owns the keycaps, the blitter is the
     // only writer — a legend re-render here would tear the game frame.
     if (doom_mode_active()) {
@@ -2551,7 +2561,10 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_send_window();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
+                        LP_MARK();
                         kdisp_set_buffer(0x00);
+                        LP_PHASE(LP_RP_CLEAR);
+                        LP_MARK();
                         // Draw the tab frame / row bar FIRST, then the emoji glyph with
                         // courtyard clearing so the icon punches a clean margin through it.
                         emj_draw_tab_indicator(keycode);
@@ -2581,7 +2594,9 @@ void update_displays(enum refresh_mode mode) {
                         } else {
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
+                        LP_PHASE(LP_RP_LEGEND);
                         text = NULL;
+                        LP_MARK();
                         if(display_overlays) {
                             if(!copy_overlay_to_buffer(keycode, mods)) {
                                 text = keycode_to_disp_overlay(keycode, state); //fallback to hardcoded
@@ -2596,7 +2611,10 @@ void update_displays(enum refresh_mode mode) {
                             // per-keycode special-case is needed here.
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
+                        LP_PHASE(LP_RP_OVERLAY);
+                        LP_MARK();
                         kdisp_send_window();
+                        LP_PHASE(LP_RP_SEND);
                         }
                     }
                 }

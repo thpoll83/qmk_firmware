@@ -47,6 +47,13 @@ static uint32_t s_ovl_wall_us   = 0;
 static uint32_t s_ovl_bridge_us = 0;
 static uint32_t s_ovl_render_us = 0;
 
+// All-time render sub-phase totals (microseconds), broken out of the render time
+// above so a render-bound stall can be pinned to clear / legend / overlay / send.
+// These accumulate only during the per-keycap main path in update_displays(), so
+// their sum is slightly below s_ovl_render_us (the difference = the per-key loop
+// overhead + the rare chrome/lang/doom paths that aren't sub-timed).
+static uint32_t s_rphase_us[LP_RP_COUNT];
+
 static uint32_t s_iters     = 0;  // total iterations measured
 static uint32_t s_ovl_iters = 0;  // of those, iterations that handled an overlay cmd
 static uint32_t s_last_log  = 0;  // s_iters at the last emitted summary
@@ -71,6 +78,12 @@ void loop_profile_add_bridge_us(uint32_t us) {
 
 void loop_profile_add_render_us(uint32_t us) {
     s_render_us += us;
+}
+
+void loop_profile_add_render_phase(uint8_t phase, uint32_t us) {
+    if (phase < LP_RP_COUNT) {
+        s_rphase_us[phase] += us;
+    }
 }
 
 void loop_profile_tick(void) {
@@ -132,6 +145,14 @@ void loop_profile_tick(void) {
                     (unsigned long)(s_ovl_bridge_us / 1000u),
                     (unsigned long)(s_ovl_render_us / 1000u),
                     (unsigned long)(rest_us         / 1000u));
+            // Where the render time itself goes, in aggregate (ms totals). Breaks
+            // down the `render=` figure above: clear (scratch wipe) / legend (glyph
+            // lookup + raster) / overlay (bitmap blit) / send (SPI window push).
+            uprintf("  rphase clear=%lums legend=%lums overlay=%lums send=%lums\n",
+                    (unsigned long)(s_rphase_us[LP_RP_CLEAR]   / 1000u),
+                    (unsigned long)(s_rphase_us[LP_RP_LEGEND]  / 1000u),
+                    (unsigned long)(s_rphase_us[LP_RP_OVERLAY] / 1000u),
+                    (unsigned long)(s_rphase_us[LP_RP_SEND]    / 1000u));
         }
     }
 

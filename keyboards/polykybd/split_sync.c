@@ -350,8 +350,12 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
     SYNC_VALIDATE_OR_RETURN(overlay_map_sync_t);
     note_overlay_activity();   // coalesce the slave's per-chunk renders (see update.h)
     const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
-    set_10bit_overlay_mapping((uint8_t *)data->mapping);
-    request_disp_refresh();
+    // Render only if this chunk remapped an on-screen position (the slave has its own
+    // displayed-slot set + synced mods); an all-off-screen chunk is shown by the
+    // enable-overlays state sync (DISPLAY_OVERLAYS in OVERLAY_SYNCED_STATE_FLAGS).
+    if (set_10bit_overlay_mapping((uint8_t *)data->mapping)) {
+        request_disp_refresh();
+    }
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
 }
 

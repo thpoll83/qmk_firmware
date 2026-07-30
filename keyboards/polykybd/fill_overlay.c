@@ -91,6 +91,22 @@ static bool overlay_visible(uint16_t base_slot, uint8_t ctx_mod) {
            overlay_mod_variant(ctx_mod) == overlay_mod_variant(get_local_layer()->mods);
 }
 
+// Same visibility test for an overlay-map "from" index, which already encodes the
+// variant (from = base_slot + NUM_OVERLAYS*variant). Used to gate the mapping-chunk
+// render — an all-off-screen chunk (e.g. only non-held modifier variants, or F-key
+// slots while Fn is inactive) need not re-render; the visible state is guaranteed by
+// the enable-overlays refresh (case 11 / the synced DISPLAY_OVERLAYS state change).
+// Works on both halves (the slave also has local_layer->mods + the displayed set).
+static bool overlay_from_index_visible(uint16_t from) {
+    if (from >= OVERLAY_MAP_IDX_CNT) {
+        return false;   // host padding / out of range
+    }
+    uint16_t base_slot = from % NUM_OVERLAYS;
+    uint8_t  variant   = (uint8_t)(from / NUM_OVERLAYS);
+    return overlay_slot_displayed(base_slot) &&
+           variant == overlay_mod_variant(get_local_layer()->mods);
+}
+
 // Computes the 0..89 overlay slot index for a (translate_a_to_z'd) overlay keycode.
 // Returns false and logs when the index is out of range.
 static bool overlay_slot_index(uint8_t keycode, uint16_t* out_idx) {
@@ -262,7 +278,11 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
 // `to` indexes overlays[] (0..NUM_OVERLAYS*NUM_VARIATIONS-1, currently 630) — the
 // physical pool. A `to` >= NUM_OVERLAYS*NUM_VARIATIONS is an out-of-pool value
 // and would cause an OOB read in copy_overlay_to_buffer / fill_overlay_buffer.
-void set_10bit_overlay_mapping(uint8_t* mapping) {
+// Returns true if any mapping in this chunk lands on a currently-displayed position
+// (see overlay_from_index_visible) — the caller renders only then; an all-off-screen
+// chunk is staged silently and shown by the eventual layer/modifier/enable refresh.
+bool set_10bit_overlay_mapping(uint8_t* mapping) {
+    bool any_visible = false;
     uint16_t from = UNSET_OVERLAY_MAPPING;
     for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
         // start_bit must be wide enough to hold idx*10 up to 480 — uint8_t wraps at idx=26.
@@ -282,6 +302,9 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
                     // "in use" iff it has an overlay assigned. Establishing
                     // the mapping is exactly that act, so set the bit here.
                     set_overlay_usage(from);
+                    if (overlay_from_index_visible(from)) {
+                        any_visible = true;
+                    }
                     uprintf("Setting overlay mapping from %u to %u\n", from, to);
                 } else {
                     uprintf("REJECTED overlay mapping from %u to %u (to out of pool, max %u)\n",
@@ -292,6 +315,7 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
             from = UNSET_OVERLAY_MAPPING;
         }
     }
+    return any_visible;
 }
 
 void apply_overlay_action_flags(uint8_t flags) {

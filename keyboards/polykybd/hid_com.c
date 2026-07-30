@@ -686,8 +686,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     overlay_map_sync_t map_sync;
                     memcpy(map_sync.mapping, &data[HID_DATA_IDX], HID_DATA_MAX);
                     send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync, sizeof(overlay_map_sync_t), 10);
-                    set_10bit_overlay_mapping(&data[HID_DATA_IDX]);
-                    request_disp_refresh();
+                    // Render only if this chunk remapped a position that is on screen;
+                    // an all-off-screen chunk (non-held variants, off-layer keys) is
+                    // staged silently and shown by the enable-overlays refresh.
+                    if (set_10bit_overlay_mapping(&data[HID_DATA_IDX])) {
+                        request_disp_refresh();
+                    }
                     uprintf("Overlay mapping data received.\n");
                 }
                 break;

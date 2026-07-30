@@ -15,6 +15,7 @@
 #include "bridge_helper.h"
 #include "base/com.h"
 #include "base/overlay.h"
+#include "base/update.h"
 #include "lang/lang_lut.h"
 
 #include <print.h>
@@ -71,17 +72,23 @@ static uint8_t overlay_mod_variant(uint8_t mods) {
     return mods & 0x0f;
 }
 
-// True if an overlay staged for modifier-variant `ctx_mod` is the variant currently on
-// screen. update_displays() indexes the overlay pool by the *held* modifier variant
-// directly (adjust_overlay_idx_to_mod does no fall-down to a lower variant), so an
-// overlay for a variant the user isn't holding — e.g. a Shift image while Shift is up —
-// lands in overlay memory but is NOT visible, and completing it need not trigger a
-// re-render: the modifier-press path re-renders and picks it up from memory. At rest
-// (no mods held) a program switch pushes all 9 variants but only variant 0 is visible,
-// so skipping the other 8's renders is the bulk of the coalescing win. Uses the same
-// local_layer->mods the display resolves against, so it never suppresses a live render.
-static bool overlay_variant_visible(uint8_t ctx_mod) {
-    return overlay_mod_variant(ctx_mod) == overlay_mod_variant(get_local_layer()->mods);
+// True if an overlay staged for keycode-slot `base_slot` (0..89) and modifier-variant
+// `ctx_mod` is what would be on screen right now — i.e. its key is currently displayed
+// AND the held modifier variant matches. Two independent invisibility axes:
+//   - LAYER: `overlay_slot_displayed()` is false when no displayed key resolves to this
+//     keycode (e.g. an F-key overlay while the Fn layer is inactive).
+//   - MODIFIER: update_displays() indexes the pool by the *held* variant directly
+//     (adjust_overlay_idx_to_mod does no fall-down), so a Shift image while Shift is up
+//     is staged into memory but not shown.
+// Either way the overlay lands in overlay memory and is picked up by the eventual
+// layer/modifier-change refresh (both ungated), so completing it need not re-render now.
+// At rest a program switch pushes all 9 variants of every key incl. off-layer keys, and
+// only the displayed variant-0 slots are visible — skipping the rest is the coalescing
+// win. Uses the same local_layer->mods + displayed-slot set the display resolves against,
+// so it never suppresses a render that is actually on screen.
+static bool overlay_visible(uint16_t base_slot, uint8_t ctx_mod) {
+    return overlay_slot_displayed(base_slot) &&
+           overlay_mod_variant(ctx_mod) == overlay_mod_variant(get_local_layer()->mods);
 }
 
 // Computes the 0..89 overlay slot index for a (translate_a_to_z'd) overlay keycode.
@@ -148,6 +155,8 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
         return;
     }
     uint8_t ctx_mod = get_fragment_context()->modifier;
+    uint16_t base_slot = idx;   // 0..89, before the modifier/mapping resolve — for the visibility gate
+    bool visible = overlay_visible(base_slot, ctx_mod);
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
     idx = get_overlay_mapping(idx);
 
@@ -157,7 +166,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
 
     if (is_on_current_side(pos)) {
 #ifdef USE_CORE1
-        core1_decompress_fragment(keycode, ctx_mod, idx, compressed, overlay_variant_visible(ctx_mod));
+        core1_decompress_fragment(keycode, ctx_mod, idx, compressed, visible);
 #else
         int16_t maxlen = 360 - bit_index/8;
         bit_index += rle_decompress(get_overlay(idx)+bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, bit_index);
@@ -168,8 +177,8 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
                 keycode, ctx_mod, pos_to_str(pos), bit_index/8);
             // No update_performed() — a host overlay push is not user activity and
             // must not restart the idle countdown (see base/update.h).
-            // Only refresh if this variant is on screen (see overlay_variant_visible).
-            if (overlay_variant_visible(ctx_mod)) {
+            // Only refresh if this overlay is on screen (see overlay_visible).
+            if (visible) {
                 request_disp_refresh();
             }
         }
@@ -201,6 +210,8 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
         return;
     }
     uint8_t ctx_mod = get_fragment_context()->modifier;
+    uint16_t base_slot = idx;   // 0..89, before the modifier/mapping resolve — for the visibility gate
+    bool visible = overlay_visible(base_slot, ctx_mod);
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
     idx = get_overlay_mapping(idx);
 
@@ -212,7 +223,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             if(first) {
                 core1_roi_start();
             }
-            core1_update_roi(keycode, ctx_mod, idx, first?(&(data[5])):data, &ctx_roi, overlay_variant_visible(ctx_mod));
+            core1_update_roi(keycode, ctx_mod, idx, first?(&(data[5])):data, &ctx_roi, visible);
         #else
             uint16_t data_len = first?ROI_START:ROI_MAX;
             uint16_t bit_index = get_fragment_context()->bit_index;
@@ -223,8 +234,8 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             if(bit_index >= 2880) {
                 set_overlay_usage_post_upload(idx);
                 // No update_performed() — see base/update.h.
-                // Only refresh if this variant is on screen (see overlay_variant_visible).
-                if (overlay_variant_visible(ctx_mod)) {
+                // Only refresh if this overlay is on screen (see overlay_visible).
+                if (visible) {
                     request_disp_refresh();
                 }
             }

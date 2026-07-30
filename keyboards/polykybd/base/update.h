@@ -84,3 +84,10 @@ enum refresh_mode get_refresh_mode(void) ;
 // starts from the centred awake legend and relocates every key cleanly. Call on any
 // wake / suspend / stop-idle path. Defined in poly_keymap.c.
 void reset_idle_jitter(void);
+
+// True if overlay keycode-slot `base_slot` (0..89, pre-modifier/mapping) is currently
+// on screen — i.e. some physical key resolves to that keycode under the active layer.
+// Rebuilt by every full update_displays() pass; used by the overlay-completion
+// visibility gate to skip re-renders for overlays whose key isn't shown (e.g. F-key
+// overlays while the Fn layer is inactive). Defined in poly_keymap.c.
+bool overlay_slot_displayed(uint16_t base_slot);

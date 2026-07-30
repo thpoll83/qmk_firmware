@@ -1968,6 +1968,28 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     return NULL;
 }
 
+// Which of the 90 overlay keycode-slots are currently on screen, rebuilt as a side
+// effect of every full update_displays() pass (set in copy_overlay_to_buffer below,
+// the display's own per-key lookup). A slot is "displayed" iff some physical key on
+// this half currently resolves to that keycode under the active layer stack — so it
+// captures LAYER visibility (an F-key overlay's slot is absent while the Fn layer is
+// inactive). The overlay-completion visibility gate (fill_overlay.c) ANDs this with the
+// modifier-variant check to skip re-renders for overlays that aren't on screen. The set
+// only changes on a layer/mods change, which forces its own (ungated) refresh, so an
+// overlay burst — which never changes the layer — safely reads the last full render's set.
+static uint8_t s_displayed_slots[(90 + 7) / 8];
+
+static void clear_displayed_slots(void) {
+    memset(s_displayed_slots, 0, sizeof(s_displayed_slots));
+}
+
+bool overlay_slot_displayed(uint16_t base_slot) {
+    if (base_slot >= 90) {
+        return false;
+    }
+    return (s_displayed_slots[base_slot >> 3] & (uint8_t)(1u << (base_slot & 7))) != 0;
+}
+
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(keycode>KC_RGUI || (keycode>KC_NUM_LOCK && keycode<KC_NUBS) || (keycode>KC_APP && keycode<KC_LEFT_CTRL)) {
         return false;
@@ -1976,6 +1998,8 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(idx>=90) {
         return false;
     }
+    // Record that this keycode-slot is on screen (LAYER visibility for the render gate).
+    s_displayed_slots[idx >> 3] |= (uint8_t)(1u << (idx & 7));
     idx = adjust_overlay_idx_to_mod(idx, mods);
     // use_overlay[] is from-indexed (see set_10bit_overlay_mapping): check it
     // here on the display position, before resolving to the pool slot.
@@ -2375,6 +2399,11 @@ void update_displays(enum refresh_mode mode) {
 #if !defined(POLY_DISP_SELECT_BY_TABLE)
     uint8_t skip = 0;
 #endif
+    // Start (or restart) the displayed-slot set for this full render; the two-pass
+    // path (START_SECOND_HALF) keeps accumulating into the set the first pass began.
+    if (mode != START_SECOND_HALF) {
+        clear_displayed_slots();
+    }
     for (uint8_t r = start_row; r < max_rows; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);

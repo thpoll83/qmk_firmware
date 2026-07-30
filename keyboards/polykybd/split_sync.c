@@ -198,7 +198,11 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
     const compressed_overlay_sync_t* ov = ((const compressed_overlay_sync_t *)in_data);
 #ifdef USE_CORE1
     //keycode info is lost, so KC_NO used (only used for diagnostics)
-    core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed);
+    // Bridged overlays carry only the pre-resolved pool slot (variant already folded
+    // into adj_idx), so the slave can't tell an off-screen variant from a visible one —
+    // pass visible=true (always refresh, still coalesced by note_overlay_activity above).
+    // The visibility gate is a master-side optimization (see fill_overlay.c).
+    core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed, true);
 #else
     if(ov->len == COMPRESSED_START) {
         hid_bit_index = 0;
@@ -235,7 +239,7 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
         if(first) {
             core1_roi_start();
         }
-        core1_update_roi(ctx->keycode, ctx->modifier, roi_ov->adj_idx, start, &ctx->roi);
+        core1_update_roi(ctx->keycode, ctx->modifier, roi_ov->adj_idx, start, &ctx->roi, true);   // slave always refreshes (see compressed handler above)
         ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK; // we cannot send SIG, we do not know if we are finished
     #else
         uint16_t new_index = copy_rectangle_to_overlay(ctx->bit_index, get_overlay(roi_ov->adj_idx), start, &ctx->roi, first?ROI_START:ROI_MAX);

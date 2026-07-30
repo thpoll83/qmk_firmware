@@ -60,6 +60,30 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
     return idx + NUM_OVERLAYS * mods;
 }
 
+// Modifier-variant (0..8) of a modifier byte, mirroring adjust_overlay_idx_to_mod's
+// math: GUI is variant 8 (it doesn't combine with others for overlays); otherwise the
+// L/R-folded ctrl/shift/alt bitmask 0..7.
+static uint8_t overlay_mod_variant(uint8_t mods) {
+    if ((mods & 0x88) != 0) {
+        return 8;
+    }
+    mods |= mods >> 4;
+    return mods & 0x0f;
+}
+
+// True if an overlay staged for modifier-variant `ctx_mod` is the variant currently on
+// screen. update_displays() indexes the overlay pool by the *held* modifier variant
+// directly (adjust_overlay_idx_to_mod does no fall-down to a lower variant), so an
+// overlay for a variant the user isn't holding — e.g. a Shift image while Shift is up —
+// lands in overlay memory but is NOT visible, and completing it need not trigger a
+// re-render: the modifier-press path re-renders and picks it up from memory. At rest
+// (no mods held) a program switch pushes all 9 variants but only variant 0 is visible,
+// so skipping the other 8's renders is the bulk of the coalescing win. Uses the same
+// local_layer->mods the display resolves against, so it never suppresses a live render.
+static bool overlay_variant_visible(uint8_t ctx_mod) {
+    return overlay_mod_variant(ctx_mod) == overlay_mod_variant(get_local_layer()->mods);
+}
+
 // Computes the 0..89 overlay slot index for a (translate_a_to_z'd) overlay keycode.
 // Returns false and logs when the index is out of range.
 static bool overlay_slot_index(uint8_t keycode, uint16_t* out_idx) {
@@ -133,7 +157,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
 
     if (is_on_current_side(pos)) {
 #ifdef USE_CORE1
-        core1_decompress_fragment(keycode, ctx_mod, idx, compressed);
+        core1_decompress_fragment(keycode, ctx_mod, idx, compressed, overlay_variant_visible(ctx_mod));
 #else
         int16_t maxlen = 360 - bit_index/8;
         bit_index += rle_decompress(get_overlay(idx)+bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, bit_index);
@@ -144,7 +168,10 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
                 keycode, ctx_mod, pos_to_str(pos), bit_index/8);
             // No update_performed() — a host overlay push is not user activity and
             // must not restart the idle countdown (see base/update.h).
-            request_disp_refresh();
+            // Only refresh if this variant is on screen (see overlay_variant_visible).
+            if (overlay_variant_visible(ctx_mod)) {
+                request_disp_refresh();
+            }
         }
 #endif
     }
@@ -185,7 +212,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             if(first) {
                 core1_roi_start();
             }
-            core1_update_roi(keycode, ctx_mod, idx, first?(&(data[5])):data, &ctx_roi);
+            core1_update_roi(keycode, ctx_mod, idx, first?(&(data[5])):data, &ctx_roi, overlay_variant_visible(ctx_mod));
         #else
             uint16_t data_len = first?ROI_START:ROI_MAX;
             uint16_t bit_index = get_fragment_context()->bit_index;
@@ -196,7 +223,10 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             if(bit_index >= 2880) {
                 set_overlay_usage_post_upload(idx);
                 // No update_performed() — see base/update.h.
-                request_disp_refresh();
+                // Only refresh if this variant is on screen (see overlay_variant_visible).
+                if (overlay_variant_visible(ctx_mod)) {
+                    request_disp_refresh();
+                }
             }
             set_fragment_context_bit_index(bit_index);
         #endif

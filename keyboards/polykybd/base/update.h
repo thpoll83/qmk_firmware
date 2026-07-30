@@ -60,9 +60,15 @@ void request_disp_refresh(void);
 // timestamps every bulk overlay/mapping command (hid_com.c on the master, the
 // bridged handlers in split_sync.c on the slave); sync_and_refresh_displays() then
 // DEFERS starting a fresh render while overlay_activity_elapsed() is small (the
-// burst is still arriving) and renders ONCE after it settles. Global: g_last_overlay
+// burst is still arriving) — but flushes anyway once overlay_pending_count() reaches
+// a threshold, so a LONG burst renders in a few reactive chunks (the keys visibly
+// fill in) instead of holding one frame back until the whole transfer ends.
+// clear_overlay_pending() is called by the render path once it consumes them.
+// Globals: g_last_overlay, g_overlay_pending
 void     note_overlay_activity(void);
 uint32_t overlay_activity_elapsed(void);
+uint16_t overlay_pending_count(void);
+void     clear_overlay_pending(void);
 
 // Called just before a font-pack / firmware flash begins (which blocks normal
 // interaction): drop to the base/default layer and render it once, so the user

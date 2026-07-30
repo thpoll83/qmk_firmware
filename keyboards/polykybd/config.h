@@ -216,14 +216,21 @@
 // Overlay-burst coalescing (sync_and_refresh_displays + base/update.c). A program
 // switch arrives as a burst of overlay/mapping HID reports; each would otherwise
 // trigger a full ~50-100 ms keycap re-render of half-staged state (measured ~12 per
-// switch). Defer starting a fresh render until QUIET ms after the last overlay
-// command — the burst is then complete and one render suffices. MAX caps the total
-// hold so a pathological slow trickle still renders (and bounds how long the keycaps
-// keep the previous complete image). QUIET is a couple of main-loop iterations; it
-// only delays the visible swap, and the loop stays responsive to keystrokes while
-// deferred (the whole point). Tune against the LoopProf "ovltot" line on hardware.
-#define OVERLAY_COALESCE_QUIET_MS 12
-#define OVERLAY_COALESCE_MAX_MS   250
+// switch). A fresh render is deferred while the burst is still arriving, and fires on
+// whichever comes first:
+//   QUIET_MS   - no overlay command for this long: the burst settled, render once.
+//   FLUSH_COUNT- this many overlay commands piled up: flush a render mid-burst so a
+//                LONG transfer stays reactive (the keys visibly fill in) instead of
+//                showing nothing until the whole thing lands. This is the key knob
+//                for perceived latency: lower = snappier + more (smaller) renders,
+//                higher = fewer renders + longer delay before the first appears.
+//   MAX_MS     - hard cap on the total hold (backstop for a dense trickle that never
+//                reaches FLUSH_COUNT and never goes quiet).
+// Deferring keeps the loop responsive to keystrokes (the whole point); only the
+// VISIBLE swap is delayed. Tune against the LoopProf "ovltot" line on hardware.
+#define OVERLAY_COALESCE_QUIET_MS   12
+#define OVERLAY_COALESCE_FLUSH_COUNT 8
+#define OVERLAY_COALESCE_MAX_MS     120
 
 //######################################
 //#          Overlays specific         #

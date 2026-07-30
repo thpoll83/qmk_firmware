@@ -517,23 +517,30 @@ void sync_and_refresh_displays(void) {
     // Overlay-burst coalescing: while a program-switch overlay burst is still
     // arriving, DEFER starting a fresh render. Each report would otherwise redraw
     // half-staged overlays that the next report obsoletes (measured ~12 full renders
-    // per switch); instead we render ONCE, OVERLAY_COALESCE_QUIET_MS after the burst
-    // settles. Only a FRESH render is held — a render already in progress
-    // (START_SECOND_HALF) always finishes, and non-overlay refreshes fall straight
-    // through (their overlay_activity_elapsed() is already large). s_hold_since caps
-    // the total deferral so a pathological trickle still renders. The state/bridge
-    // sync above already ran, so deferring the render doesn't stall the slave; and
-    // the loop stays fast (no ~100 ms render) while held — which is the whole point.
+    // per switch). Render on whichever fires first: the burst going quiet
+    // (OVERLAY_COALESCE_QUIET_MS), enough overlays piling up to stay reactive on a
+    // long transfer (OVERLAY_COALESCE_FLUSH_COUNT), or the hard cap
+    // (OVERLAY_COALESCE_MAX_MS). Only a FRESH render is held — a render already in
+    // progress (START_SECOND_HALF) always finishes, and non-overlay refreshes fall
+    // straight through (their overlay_activity_elapsed() is already large, pending 0).
+    // The state/bridge sync above already ran, so deferring the render doesn't stall
+    // the slave; the loop stays fast (no ~100 ms render) while held.
     static bool     s_holding    = false;
     static uint32_t s_hold_since = 0;
-    if ((refresh == ALL_AT_ONCE || refresh == START_FIRST_HALF)
-        && overlay_activity_elapsed() < OVERLAY_COALESCE_QUIET_MS) {
-        if (!s_holding) { s_holding = true; s_hold_since = timer_read32(); }
-        if (timer_elapsed32(s_hold_since) < OVERLAY_COALESCE_MAX_MS) {
-            return;   // hold the render; g_refresh stays pending for a later pass
+    if (refresh == ALL_AT_ONCE || refresh == START_FIRST_HALF) {
+        bool settled = overlay_activity_elapsed() >= OVERLAY_COALESCE_QUIET_MS;
+        bool enough  = overlay_pending_count()   >= OVERLAY_COALESCE_FLUSH_COUNT;
+        if (!settled && !enough) {
+            if (!s_holding) { s_holding = true; s_hold_since = timer_read32(); }
+            if (timer_elapsed32(s_hold_since) < OVERLAY_COALESCE_MAX_MS) {
+                return;   // hold the render; g_refresh stays pending for a later pass
+            }
         }
+        // Committing to a fresh render now: reset the hold + consume the pending
+        // overlays so the next FLUSH_COUNT is counted from here (chunked progress).
+        s_holding = false;
+        clear_overlay_pending();
     }
-    s_holding = false;
 
     if (refresh == START_FIRST_HALF) {
 #ifdef POLYKYBD_LOOP_PROFILE

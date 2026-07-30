@@ -33,6 +33,10 @@
 #include "polykybd.h"
 #include "status_oled.h"
 #include "bridge_helper.h"
+#include "profiling/loop_profile.h"
+#ifdef POLYKYBD_LOOP_PROFILE
+#    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
+#endif
 #include "split_fw_up.h"
 #include "base/fw_staging.h"
 #include "uni.h"
@@ -509,12 +513,53 @@ void sync_and_refresh_displays(void) {
     }
 
     enum refresh_mode refresh = get_refresh_mode();
+
+    // Overlay-burst coalescing: while a program-switch overlay burst is still
+    // arriving, DEFER starting a fresh render. Each report would otherwise redraw
+    // half-staged overlays that the next report obsoletes (measured ~12 full renders
+    // per switch). Render on whichever fires first: the burst going quiet
+    // (OVERLAY_COALESCE_QUIET_MS), enough overlays piling up to stay reactive on a
+    // long transfer (OVERLAY_COALESCE_FLUSH_COUNT), or the hard cap
+    // (OVERLAY_COALESCE_MAX_MS). Only a FRESH render is held — a render already in
+    // progress (START_SECOND_HALF) always finishes, and non-overlay refreshes fall
+    // straight through (their overlay_activity_elapsed() is already large, pending 0).
+    // The state/bridge sync above already ran, so deferring the render doesn't stall
+    // the slave; the loop stays fast (no ~100 ms render) while held.
+    static bool     s_holding    = false;
+    static uint32_t s_hold_since = 0;
+    if (refresh == ALL_AT_ONCE || refresh == START_FIRST_HALF) {
+        bool settled = overlay_activity_elapsed() >= OVERLAY_COALESCE_QUIET_MS;
+        bool enough  = overlay_pending_count()   >= OVERLAY_COALESCE_FLUSH_COUNT;
+        if (!settled && !enough) {
+            if (!s_holding) { s_holding = true; s_hold_since = timer_read32(); }
+            if (timer_elapsed32(s_hold_since) < OVERLAY_COALESCE_MAX_MS) {
+                return;   // hold the render; g_refresh stays pending for a later pass
+            }
+        }
+        // Committing to a fresh render now: reset the hold + consume the pending
+        // overlays so the next FLUSH_COUNT is counted from here (chunked progress).
+        s_holding = false;
+        clear_overlay_pending();
+    }
+
     if (refresh == START_FIRST_HALF) {
+#ifdef POLYKYBD_LOOP_PROFILE
+        uint32_t _lp_r0 = timer_hw->timerawl;
+#endif
         update_displays(START_FIRST_HALF);
+#ifdef POLYKYBD_LOOP_PROFILE
+        loop_profile_add_render_us(timer_hw->timerawl - _lp_r0);
+#endif
         set_disp_refresh(START_SECOND_HALF);
     }
     else if (refresh == START_SECOND_HALF || refresh == ALL_AT_ONCE) {
+#ifdef POLYKYBD_LOOP_PROFILE
+        uint32_t _lp_r0 = timer_hw->timerawl;
+#endif
         update_displays(refresh);
+#ifdef POLYKYBD_LOOP_PROFILE
+        loop_profile_add_render_us(timer_hw->timerawl - _lp_r0);
+#endif
         set_disp_refresh(DONE_ALL);
     }
 }
@@ -809,6 +854,9 @@ static void eden_idle_tick(void) {
 }
 
 void housekeeping_task_user(void) {
+    // Optional loop-timing probe (no-op unless POLYKYBD_LOOP_PROFILE). At the very
+    // top so it measures the FULL previous iteration — matrix scan, HID, bridge.
+    loop_profile_tick();
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
@@ -1920,6 +1968,28 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     return NULL;
 }
 
+// Which of the 90 overlay keycode-slots are currently on screen, rebuilt as a side
+// effect of every full update_displays() pass (set in copy_overlay_to_buffer below,
+// the display's own per-key lookup). A slot is "displayed" iff some physical key on
+// this half currently resolves to that keycode under the active layer stack — so it
+// captures LAYER visibility (an F-key overlay's slot is absent while the Fn layer is
+// inactive). The overlay-completion visibility gate (fill_overlay.c) ANDs this with the
+// modifier-variant check to skip re-renders for overlays that aren't on screen. The set
+// only changes on a layer/mods change, which forces its own (ungated) refresh, so an
+// overlay burst — which never changes the layer — safely reads the last full render's set.
+static uint8_t s_displayed_slots[(90 + 7) / 8];
+
+static void clear_displayed_slots(void) {
+    memset(s_displayed_slots, 0, sizeof(s_displayed_slots));
+}
+
+bool overlay_slot_displayed(uint16_t base_slot) {
+    if (base_slot >= 90) {
+        return false;
+    }
+    return (s_displayed_slots[base_slot >> 3] & (uint8_t)(1u << (base_slot & 7))) != 0;
+}
+
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(keycode>KC_RGUI || (keycode>KC_NUM_LOCK && keycode<KC_NUBS) || (keycode>KC_APP && keycode<KC_LEFT_CTRL)) {
         return false;
@@ -1928,6 +1998,8 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(idx>=90) {
         return false;
     }
+    // Record that this keycode-slot is on screen (LAYER visibility for the render gate).
+    s_displayed_slots[idx >> 3] |= (uint8_t)(1u << (idx & 7));
     idx = adjust_overlay_idx_to_mod(idx, mods);
     // use_overlay[] is from-indexed (see set_10bit_overlay_mapping): check it
     // here on the display position, before resolving to the pool slot.
@@ -2141,7 +2213,7 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     kdisp_set_draw_offset(dx, dy);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
     kdisp_set_draw_offset(0, 0);
-    kdisp_send_buffer();
+    kdisp_send_window();   // idle jitter draws within the 72x40 window (roll_idle_offset clamps to it)
     return true;
 }
 
@@ -2327,6 +2399,11 @@ void update_displays(enum refresh_mode mode) {
 #if !defined(POLY_DISP_SELECT_BY_TABLE)
     uint8_t skip = 0;
 #endif
+    // Start (or restart) the displayed-slot set for this full render; the two-pass
+    // path (START_SECOND_HALF) keeps accumulating into the set the first pass began.
+    if (mode != START_SECOND_HALF) {
+        clear_displayed_slots();
+    }
     for (uint8_t r = start_row; r < max_rows; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
@@ -2368,7 +2445,7 @@ void update_displays(enum refresh_mode mode) {
                             doom_handled = true;
                         } else {
                             kdisp_set_buffer(0x00);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         }
                     } else if (local_state->doom_ctl) {
@@ -2420,31 +2497,31 @@ void update_displays(enum refresh_mode mode) {
                                     kdisp_draw_bitmap(BUFFER_X, SCREEN_HEIGHT - 2, ready_bar, 72, 2);
                                 }
                             }
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         } else if (pad == KC_ESC) {
                             // The shared exit-hint face — byte-identical to
                             // the master's HUD corner key (field rd 18).
                             doom_render_esc_key();
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         } else if (keycode == KC_LCTL || keycode == KC_RCTL) {
                             // Ctrl fires in DOOM — show a crosshair reticle
                             // instead of the plain Ctrl legend (field rd 16).
                             kdisp_set_buffer(0x00);
                             doom_render_fire_key();
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         } else if (keycode == KC_SPACE) {
                             // Space is DOOM's use/open — a door symbol
                             // instead of the space legend (field rd 17).
                             kdisp_set_buffer(0x00);
                             doom_render_use_key();
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         } else if (!doom_key_is_control(keycode)) {
                             kdisp_set_buffer(0x00);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         }
                     }
@@ -2458,20 +2535,20 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_set_buffer(0x00);
                             draw_mru_top_bar(keycode);
                             render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state), local_state->lang);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                         } else if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET ||
                                    keycode == KC_EMJ_CLEAR  || keycode == KC_LANG_CLEAR) {
                             // Top-row MRU controls: "Preset" / "Clear".
                             kdisp_set_buffer(0x00);
                             render_mru_ctrl_key(keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                         } else if (keycode >= KC_LANG_CAT_BASE && keycode < KC_LANG_PAGE_PREV) {
                             // Language region tab — continent label + active frame.
                             kdisp_set_buffer(0x00);
                             lang_draw_tab_indicator(keycode);
                             lang_draw_tab_bottom(keycode);
                             render_lang_region_tab(keycode);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
                         kdisp_set_buffer(0x00);
@@ -2519,7 +2596,7 @@ void update_displays(enum refresh_mode mode) {
                             // per-keycode special-case is needed here.
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
-                        kdisp_send_buffer();
+                        kdisp_send_window();
                         }
                     }
                 }
@@ -3147,7 +3224,14 @@ bool display_wakeup(keyrecord_t* record) {
         local_state->flags |= STATUS_DISP_ON;
         reset_idle_jitter();   // fresh, centred idle session next time
         update_performed();
-        request_disp_refresh();
+        // Wake-from-idle is the single worst render stall (measured ~107 ms in one
+        // pass — the user is pressing a key to wake it, so it is also the most likely
+        // to swallow a keystroke). Split it across two housekeeping passes via the
+        // existing two-pass path (rows 0-2, matrix scan, rows 3-4) instead of the
+        // one-shot ALL_AT_ONCE request_disp_refresh(). A subsequent overlay burst
+        // (program-switch wake) may still re-request ALL_AT_ONCE, but coalescing then
+        // collapses that to one render; a plain wake keeps the two-pass split.
+        set_disp_refresh(START_FIRST_HALF);
     }
 
     return accept_keypress;

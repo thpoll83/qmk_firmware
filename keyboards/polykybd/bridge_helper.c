@@ -8,6 +8,10 @@
 #include "polymod_crc32.h"
 #include "split_sync.h"
 #include "config.h"
+#include "profiling/loop_profile.h"
+#ifdef POLYKYBD_LOOP_PROFILE
+#    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
+#endif
 
 #include <print.h>
 #include <transactions.h>
@@ -89,7 +93,15 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
         // untouched when transport_write/read fails, so without this the log
         // line below would print the previous successful call's ack value.
         reply.ack = SYNC_CRC32_ERR;
+#ifdef POLYKYBD_LOOP_PROFILE
+        uint32_t _lp_t0 = timer_hw->timerawl;
+#endif
         bool sync_success = transaction_rpc_exec(tid, num_bytes, buffer_with4crc_bytes, sizeof(poly_sync_reply_t), &reply);
+#ifdef POLYKYBD_LOOP_PROFILE
+        // Account the blocking transport time (this retry) against the current
+        // main-loop iteration, so the profiler can attribute stalls to the bridge.
+        loop_profile_add_bridge_us(timer_hw->timerawl - _lp_t0);
+#endif
         ls_attempts++;
         if(sync_success && (reply.ack == SYNC_ACK || reply.ack == SYNC_ACK_SIG)) {
             // A recovered retry is a non-event — the LINK_STATS summary already

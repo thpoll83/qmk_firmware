@@ -27,6 +27,13 @@ static volatile uint8_t core1_buffer[HID_DATA_MAX];
 static volatile int16_t core1_max_bitlen;
 static volatile uint16_t core1_idx;
 static volatile roi_update_data_t core1_roi;
+// Set by the dispatcher (core0) before pushing each fragment: whether the overlay being
+// staged is the modifier variant currently on screen. core1 only requests a display
+// refresh on completion when it is — an off-screen variant (e.g. a Shift image while
+// Shift is up) is written to memory but needn't re-render (the modifier-press path picks
+// it up). Same publish-before-FIFO-push ordering as core1_idx, so core1 reads the value
+// that belongs to the fragment it is completing. See fill_overlay.c overlay_variant_visible.
+static volatile bool core1_visible = true;
 
 typedef enum {
     CORE1_CMD_DECOMPRESS     = 0xcafe0001,
@@ -65,7 +72,10 @@ void core1_entry(void) {
                         // activity and must not restart the idle countdown (see
                         // base/update.h). Also keeps core1 out of the idle-timer
                         // state entirely; only core0 writes it now.
-                        request_disp_refresh();
+                        // Only refresh a variant that is actually on screen (core1_visible).
+                        if (core1_visible) {
+                            request_disp_refresh();
+                        }
                         core1_bit_index = 0;
                     }
                     core1_decomp_count++;
@@ -84,7 +94,10 @@ void core1_entry(void) {
                     if(core1_bit_index >= 2880) {
                         set_overlay_usage_post_upload(core1_idx);
                         // No update_performed() — see base/update.h.
-                        request_disp_refresh();
+                        // Only refresh a variant that is actually on screen (core1_visible).
+                        if (core1_visible) {
+                            request_disp_refresh();
+                        }
                         core1_bit_index = 0;
                     }
                     core1_decomp_count++;
@@ -115,7 +128,7 @@ bool raw_hid_pre_receive_kb(void) {
     return !core1_is_busy();
 }
 
-void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed) {
+void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed, bool visible) {
     // Defense in depth: callers that respect the raw_hid_pre_receive_kb() gate
     // will never enter the wait. For any caller that didn't gate (e.g. the
     // split-sync bridge path), spin without the uprintf — the previous wait
@@ -129,6 +142,7 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
     uint8_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
     core1_max_bitlen = 360 - core1_bit_index/8;
     core1_idx = overlay_idx;
+    core1_visible = visible;
     for(uint8_t i=0;i<data_len;++i) {
         core1_buffer[i] = compressed[i]; //memcopy not avialable for volatile memory
     }
@@ -160,7 +174,7 @@ void core1_roi_start(void) {
     multicore_fifo_push_blocking(CORE1_CMD_RESET_BIT_IDX);
 }
 
-void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi) {
+void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi, bool visible) {
     // See core1_decompress_fragment for the backpressure rationale.
     dmb();
     while(core0_decomp_count!=core1_decomp_count) {
@@ -170,6 +184,7 @@ void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const 
     //core1_max_bitlen = 360 - core1_bit_index/8;
     core1_roi = *roi;
     core1_idx = overlay_idx;
+    core1_visible = visible;
     const uint8_t data_len = core1_bit_index==0?ROI_START:ROI_MAX;
     for(uint8_t i=0;i<data_len;++i) {
         core1_buffer[i] =  data[i]; //memcopy not available for volatile memory

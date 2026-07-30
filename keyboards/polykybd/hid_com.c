@@ -14,6 +14,7 @@
 #include "state.h"
 #include "anim/startup_anim.h"
 #include "side.h"
+#include "profiling/loop_profile.h"
 #include "config.h"
 #include "split_sync.h"
 #include "bridge_helper.h"
@@ -186,6 +187,20 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         }
         const poly_layer_t* local_layer = get_local_layer();
         poly_sync_t* local_state = access_local_state();
+        // Bulk overlay/mapping commands: plain (10), flags on/off (11/12), compressed
+        // (16/17), ROI (18/19), mapping (21). Two markers:
+        //  - note_overlay_activity() timestamps the burst so sync_and_refresh_displays()
+        //    can coalesce the many per-report renders of a program switch into one.
+        //  - loop_profile_note_overlay_cmd() tags the iteration for the timing profiler
+        //    (no-op unless POLYKYBD_LOOP_PROFILE).
+        switch (data[1]) {
+            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21:
+                note_overlay_activity();
+                loop_profile_note_overlay_cmd();
+                break;
+            default:
+                break;
+        }
         switch(data[1]) {
             // case id_custom_channel...id_qmk_led_matrix_channel: //maybe now usable :)
             //     break;
@@ -671,8 +686,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     overlay_map_sync_t map_sync;
                     memcpy(map_sync.mapping, &data[HID_DATA_IDX], HID_DATA_MAX);
                     send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync, sizeof(overlay_map_sync_t), 10);
-                    set_10bit_overlay_mapping(&data[HID_DATA_IDX]);
-                    request_disp_refresh();
+                    // Render only if this chunk remapped a position that is on screen;
+                    // an all-off-screen chunk (non-held variants, off-layer keys) is
+                    // staged silently and shown by the enable-overlays refresh.
+                    if (set_10bit_overlay_mapping(&data[HID_DATA_IDX])) {
+                        request_disp_refresh();
+                    }
                     uprintf("Overlay mapping data received.\n");
                 }
                 break;

@@ -16,7 +16,9 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first);
 void fill_roi_overlay_buffer(uint8_t* data, bool first);
 
 // Unpacks 10-bit overlay mapping pairs from buffer and updates overlay_map array.
-void set_10bit_overlay_mapping(uint8_t* mapping);
+// Returns true if any pair maps a currently-displayed position, so the caller can
+// skip the display refresh for an all-off-screen chunk (see fill_overlay.c).
+bool set_10bit_overlay_mapping(uint8_t* mapping);
 
 // Runs the four overlay self-actions (RESET_BUFFERS / USAGE_RESET /
 // MAPPING_RESET / MAPPING_ALLSET) for whichever bits are set in `flags`.

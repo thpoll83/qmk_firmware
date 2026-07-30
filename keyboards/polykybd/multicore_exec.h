@@ -16,12 +16,15 @@ bool core1_is_busy(void);
 
 // Decompress the supplied buffer on core1, will block if previous decompression is still ongoing
 // All fragments have to be processed in order and until the end, no parallel processing possible
+// `visible` = this overlay's modifier variant is the one currently on screen; core1 only
+// requests a display refresh on completion when it is (see fill_overlay.c overlay_variant_visible).
 // Global variables: core0_decomp_count, core1_decomp_count, core1_bit_index, core1_max_bitlen, core1_idx, core1_buffer, hid_modifier
-void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed);
+void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed, bool visible);
 
 // Queues a region-of-interest overlay update for core1 processing, waits if previous update is ongoing.
+// `visible`: see core1_decompress_fragment.
 // Global variables: core0_decomp_count, core1_decomp_count, core1_bit_index, core1_roi, core1_idx, core1_buffer, hid_modifier
-void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi);
+void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi, bool visible);
 
 // Signals core1 to reset bit index for next region-of-interest update.
 // Global variables: (none - sends FIFO command only)

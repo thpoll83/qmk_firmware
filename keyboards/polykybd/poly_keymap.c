@@ -513,6 +513,35 @@ void sync_and_refresh_displays(void) {
     }
 
     enum refresh_mode refresh = get_refresh_mode();
+
+    // Overlay-burst coalescing: while a program-switch overlay burst is still
+    // arriving, DEFER starting a fresh render. Each report would otherwise redraw
+    // half-staged overlays that the next report obsoletes (measured ~12 full renders
+    // per switch). Render on whichever fires first: the burst going quiet
+    // (OVERLAY_COALESCE_QUIET_MS), enough overlays piling up to stay reactive on a
+    // long transfer (OVERLAY_COALESCE_FLUSH_COUNT), or the hard cap
+    // (OVERLAY_COALESCE_MAX_MS). Only a FRESH render is held — a render already in
+    // progress (START_SECOND_HALF) always finishes, and non-overlay refreshes fall
+    // straight through (their overlay_activity_elapsed() is already large, pending 0).
+    // The state/bridge sync above already ran, so deferring the render doesn't stall
+    // the slave; the loop stays fast (no ~100 ms render) while held.
+    static bool     s_holding    = false;
+    static uint32_t s_hold_since = 0;
+    if (refresh == ALL_AT_ONCE || refresh == START_FIRST_HALF) {
+        bool settled = overlay_activity_elapsed() >= OVERLAY_COALESCE_QUIET_MS;
+        bool enough  = overlay_pending_count()   >= OVERLAY_COALESCE_FLUSH_COUNT;
+        if (!settled && !enough) {
+            if (!s_holding) { s_holding = true; s_hold_since = timer_read32(); }
+            if (timer_elapsed32(s_hold_since) < OVERLAY_COALESCE_MAX_MS) {
+                return;   // hold the render; g_refresh stays pending for a later pass
+            }
+        }
+        // Committing to a fresh render now: reset the hold + consume the pending
+        // overlays so the next FLUSH_COUNT is counted from here (chunked progress).
+        s_holding = false;
+        clear_overlay_pending();
+    }
+
     if (refresh == START_FIRST_HALF) {
 #ifdef POLYKYBD_LOOP_PROFILE
         uint32_t _lp_r0 = timer_hw->timerawl;
@@ -1939,6 +1968,28 @@ const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state) {
     return NULL;
 }
 
+// Which of the 90 overlay keycode-slots are currently on screen, rebuilt as a side
+// effect of every full update_displays() pass (set in copy_overlay_to_buffer below,
+// the display's own per-key lookup). A slot is "displayed" iff some physical key on
+// this half currently resolves to that keycode under the active layer stack — so it
+// captures LAYER visibility (an F-key overlay's slot is absent while the Fn layer is
+// inactive). The overlay-completion visibility gate (fill_overlay.c) ANDs this with the
+// modifier-variant check to skip re-renders for overlays that aren't on screen. The set
+// only changes on a layer/mods change, which forces its own (ungated) refresh, so an
+// overlay burst — which never changes the layer — safely reads the last full render's set.
+static uint8_t s_displayed_slots[(90 + 7) / 8];
+
+static void clear_displayed_slots(void) {
+    memset(s_displayed_slots, 0, sizeof(s_displayed_slots));
+}
+
+bool overlay_slot_displayed(uint16_t base_slot) {
+    if (base_slot >= 90) {
+        return false;
+    }
+    return (s_displayed_slots[base_slot >> 3] & (uint8_t)(1u << (base_slot & 7))) != 0;
+}
+
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(keycode>KC_RGUI || (keycode>KC_NUM_LOCK && keycode<KC_NUBS) || (keycode>KC_APP && keycode<KC_LEFT_CTRL)) {
         return false;
@@ -1947,6 +1998,8 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(idx>=90) {
         return false;
     }
+    // Record that this keycode-slot is on screen (LAYER visibility for the render gate).
+    s_displayed_slots[idx >> 3] |= (uint8_t)(1u << (idx & 7));
     idx = adjust_overlay_idx_to_mod(idx, mods);
     // use_overlay[] is from-indexed (see set_10bit_overlay_mapping): check it
     // here on the display position, before resolving to the pool slot.
@@ -2346,6 +2399,11 @@ void update_displays(enum refresh_mode mode) {
 #if !defined(POLY_DISP_SELECT_BY_TABLE)
     uint8_t skip = 0;
 #endif
+    // Start (or restart) the displayed-slot set for this full render; the two-pass
+    // path (START_SECOND_HALF) keeps accumulating into the set the first pass began.
+    if (mode != START_SECOND_HALF) {
+        clear_displayed_slots();
+    }
     for (uint8_t r = start_row; r < max_rows; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
@@ -3166,7 +3224,14 @@ bool display_wakeup(keyrecord_t* record) {
         local_state->flags |= STATUS_DISP_ON;
         reset_idle_jitter();   // fresh, centred idle session next time
         update_performed();
-        request_disp_refresh();
+        // Wake-from-idle is the single worst render stall (measured ~107 ms in one
+        // pass — the user is pressing a key to wake it, so it is also the most likely
+        // to swallow a keystroke). Split it across two housekeeping passes via the
+        // existing two-pass path (rows 0-2, matrix scan, rows 3-4) instead of the
+        // one-shot ALL_AT_ONCE request_disp_refresh(). A subsequent overlay burst
+        // (program-switch wake) may still re-request ALL_AT_ONCE, but coalescing then
+        // collapses that to one render; a plain wake keeps the two-pass split.
+        set_disp_refresh(START_FIRST_HALF);
     }
 
     return accept_keypress;

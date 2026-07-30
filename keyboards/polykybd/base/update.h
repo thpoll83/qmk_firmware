@@ -53,6 +53,23 @@ uint32_t get_time_since_last_update(void);
 // Global variables: g_refresh
 void request_disp_refresh(void);
 
+// Overlay-burst coalescing. The host streams a program switch as a BURST of
+// overlay/mapping HID reports, and each one currently triggers a full ~50-100 ms
+// keycap re-render of half-staged overlay state that the very next report
+// immediately obsoletes (measured: ~12 renders per switch). note_overlay_activity()
+// timestamps every bulk overlay/mapping command (hid_com.c on the master, the
+// bridged handlers in split_sync.c on the slave); sync_and_refresh_displays() then
+// DEFERS starting a fresh render while overlay_activity_elapsed() is small (the
+// burst is still arriving) — but flushes anyway once overlay_pending_count() reaches
+// a threshold, so a LONG burst renders in a few reactive chunks (the keys visibly
+// fill in) instead of holding one frame back until the whole transfer ends.
+// clear_overlay_pending() is called by the render path once it consumes them.
+// Globals: g_last_overlay, g_overlay_pending
+void     note_overlay_activity(void);
+uint32_t overlay_activity_elapsed(void);
+uint16_t overlay_pending_count(void);
+void     clear_overlay_pending(void);
+
 // Called just before a font-pack / firmware flash begins (which blocks normal
 // interaction): drop to the base/default layer and render it once, so the user
 // can still type plain characters and the keycaps show legible legends while the
@@ -67,3 +84,10 @@ enum refresh_mode get_refresh_mode(void) ;
 // starts from the centred awake legend and relocates every key cleanly. Call on any
 // wake / suspend / stop-idle path. Defined in poly_keymap.c.
 void reset_idle_jitter(void);
+
+// True if overlay keycode-slot `base_slot` (0..89, pre-modifier/mapping) is currently
+// on screen — i.e. some physical key resolves to that keycode under the active layer.
+// Rebuilt by every full update_displays() pass; used by the overlay-completion
+// visibility gate to skip re-renders for overlays whose key isn't shown (e.g. F-key
+// overlays while the Fn layer is inactive). Defined in poly_keymap.c.
+bool overlay_slot_displayed(uint16_t base_slot);

@@ -15,6 +15,7 @@
 #include "bridge_helper.h"
 #include "base/com.h"
 #include "base/overlay.h"
+#include "base/update.h"
 #include "lang/lang_lut.h"
 
 #include <print.h>
@@ -58,6 +59,52 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
     mods |= mods>>4;
     mods &= 0x0f;
     return idx + NUM_OVERLAYS * mods;
+}
+
+// Modifier-variant (0..8) of a modifier byte, mirroring adjust_overlay_idx_to_mod's
+// math: GUI is variant 8 (it doesn't combine with others for overlays); otherwise the
+// L/R-folded ctrl/shift/alt bitmask 0..7.
+static uint8_t overlay_mod_variant(uint8_t mods) {
+    if ((mods & 0x88) != 0) {
+        return 8;
+    }
+    mods |= mods >> 4;
+    return mods & 0x0f;
+}
+
+// True if an overlay staged for keycode-slot `base_slot` (0..89) and modifier-variant
+// `ctx_mod` is what would be on screen right now — i.e. its key is currently displayed
+// AND the held modifier variant matches. Two independent invisibility axes:
+//   - LAYER: `overlay_slot_displayed()` is false when no displayed key resolves to this
+//     keycode (e.g. an F-key overlay while the Fn layer is inactive).
+//   - MODIFIER: update_displays() indexes the pool by the *held* variant directly
+//     (adjust_overlay_idx_to_mod does no fall-down), so a Shift image while Shift is up
+//     is staged into memory but not shown.
+// Either way the overlay lands in overlay memory and is picked up by the eventual
+// layer/modifier-change refresh (both ungated), so completing it need not re-render now.
+// At rest a program switch pushes all 9 variants of every key incl. off-layer keys, and
+// only the displayed variant-0 slots are visible — skipping the rest is the coalescing
+// win. Uses the same local_layer->mods + displayed-slot set the display resolves against,
+// so it never suppresses a render that is actually on screen.
+static bool overlay_visible(uint16_t base_slot, uint8_t ctx_mod) {
+    return overlay_slot_displayed(base_slot) &&
+           overlay_mod_variant(ctx_mod) == overlay_mod_variant(get_local_layer()->mods);
+}
+
+// Same visibility test for an overlay-map "from" index, which already encodes the
+// variant (from = base_slot + NUM_OVERLAYS*variant). Used to gate the mapping-chunk
+// render — an all-off-screen chunk (e.g. only non-held modifier variants, or F-key
+// slots while Fn is inactive) need not re-render; the visible state is guaranteed by
+// the enable-overlays refresh (case 11 / the synced DISPLAY_OVERLAYS state change).
+// Works on both halves (the slave also has local_layer->mods + the displayed set).
+static bool overlay_from_index_visible(uint16_t from) {
+    if (from >= OVERLAY_MAP_IDX_CNT) {
+        return false;   // host padding / out of range
+    }
+    uint16_t base_slot = from % NUM_OVERLAYS;
+    uint8_t  variant   = (uint8_t)(from / NUM_OVERLAYS);
+    return overlay_slot_displayed(base_slot) &&
+           variant == overlay_mod_variant(get_local_layer()->mods);
 }
 
 // Computes the 0..89 overlay slot index for a (translate_a_to_z'd) overlay keycode.
@@ -124,6 +171,8 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
         return;
     }
     uint8_t ctx_mod = get_fragment_context()->modifier;
+    uint16_t base_slot = idx;   // 0..89, before the modifier/mapping resolve — for the visibility gate
+    bool visible = overlay_visible(base_slot, ctx_mod);
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
     idx = get_overlay_mapping(idx);
 
@@ -133,7 +182,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
 
     if (is_on_current_side(pos)) {
 #ifdef USE_CORE1
-        core1_decompress_fragment(keycode, ctx_mod, idx, compressed);
+        core1_decompress_fragment(keycode, ctx_mod, idx, compressed, visible);
 #else
         int16_t maxlen = 360 - bit_index/8;
         bit_index += rle_decompress(get_overlay(idx)+bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, bit_index);
@@ -144,7 +193,10 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
                 keycode, ctx_mod, pos_to_str(pos), bit_index/8);
             // No update_performed() — a host overlay push is not user activity and
             // must not restart the idle countdown (see base/update.h).
-            request_disp_refresh();
+            // Only refresh if this overlay is on screen (see overlay_visible).
+            if (visible) {
+                request_disp_refresh();
+            }
         }
 #endif
     }
@@ -174,6 +226,8 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
         return;
     }
     uint8_t ctx_mod = get_fragment_context()->modifier;
+    uint16_t base_slot = idx;   // 0..89, before the modifier/mapping resolve — for the visibility gate
+    bool visible = overlay_visible(base_slot, ctx_mod);
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
     idx = get_overlay_mapping(idx);
 
@@ -185,7 +239,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             if(first) {
                 core1_roi_start();
             }
-            core1_update_roi(keycode, ctx_mod, idx, first?(&(data[5])):data, &ctx_roi);
+            core1_update_roi(keycode, ctx_mod, idx, first?(&(data[5])):data, &ctx_roi, visible);
         #else
             uint16_t data_len = first?ROI_START:ROI_MAX;
             uint16_t bit_index = get_fragment_context()->bit_index;
@@ -196,7 +250,10 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             if(bit_index >= 2880) {
                 set_overlay_usage_post_upload(idx);
                 // No update_performed() — see base/update.h.
-                request_disp_refresh();
+                // Only refresh if this overlay is on screen (see overlay_visible).
+                if (visible) {
+                    request_disp_refresh();
+                }
             }
             set_fragment_context_bit_index(bit_index);
         #endif
@@ -221,7 +278,11 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
 // `to` indexes overlays[] (0..NUM_OVERLAYS*NUM_VARIATIONS-1, currently 630) — the
 // physical pool. A `to` >= NUM_OVERLAYS*NUM_VARIATIONS is an out-of-pool value
 // and would cause an OOB read in copy_overlay_to_buffer / fill_overlay_buffer.
-void set_10bit_overlay_mapping(uint8_t* mapping) {
+// Returns true if any mapping in this chunk lands on a currently-displayed position
+// (see overlay_from_index_visible) — the caller renders only then; an all-off-screen
+// chunk is staged silently and shown by the eventual layer/modifier/enable refresh.
+bool set_10bit_overlay_mapping(uint8_t* mapping) {
+    bool any_visible = false;
     uint16_t from = UNSET_OVERLAY_MAPPING;
     for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
         // start_bit must be wide enough to hold idx*10 up to 480 — uint8_t wraps at idx=26.
@@ -241,6 +302,9 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
                     // "in use" iff it has an overlay assigned. Establishing
                     // the mapping is exactly that act, so set the bit here.
                     set_overlay_usage(from);
+                    if (overlay_from_index_visible(from)) {
+                        any_visible = true;
+                    }
                     uprintf("Setting overlay mapping from %u to %u\n", from, to);
                 } else {
                     uprintf("REJECTED overlay mapping from %u to %u (to out of pool, max %u)\n",
@@ -251,6 +315,7 @@ void set_10bit_overlay_mapping(uint8_t* mapping) {
             from = UNSET_OVERLAY_MAPPING;
         }
     }
+    return any_visible;
 }
 
 void apply_overlay_action_flags(uint8_t flags) {

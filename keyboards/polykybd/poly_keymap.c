@@ -2213,7 +2213,7 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     kdisp_set_draw_offset(dx, dy);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
     kdisp_set_draw_offset(0, 0);
-    kdisp_send_buffer();
+    kdisp_send_window();   // idle jitter draws within the 72x40 window (roll_idle_offset clamps to it)
     return true;
 }
 

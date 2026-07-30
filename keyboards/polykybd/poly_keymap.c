@@ -2213,7 +2213,7 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     kdisp_set_draw_offset(dx, dy);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
     kdisp_set_draw_offset(0, 0);
-    kdisp_send_buffer();
+    kdisp_send_window();   // idle jitter draws within the 72x40 window (roll_idle_offset clamps to it)
     return true;
 }
 
@@ -2445,7 +2445,7 @@ void update_displays(enum refresh_mode mode) {
                             doom_handled = true;
                         } else {
                             kdisp_set_buffer(0x00);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         }
                     } else if (local_state->doom_ctl) {
@@ -2497,31 +2497,31 @@ void update_displays(enum refresh_mode mode) {
                                     kdisp_draw_bitmap(BUFFER_X, SCREEN_HEIGHT - 2, ready_bar, 72, 2);
                                 }
                             }
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         } else if (pad == KC_ESC) {
                             // The shared exit-hint face — byte-identical to
                             // the master's HUD corner key (field rd 18).
                             doom_render_esc_key();
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         } else if (keycode == KC_LCTL || keycode == KC_RCTL) {
                             // Ctrl fires in DOOM — show a crosshair reticle
                             // instead of the plain Ctrl legend (field rd 16).
                             kdisp_set_buffer(0x00);
                             doom_render_fire_key();
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         } else if (keycode == KC_SPACE) {
                             // Space is DOOM's use/open — a door symbol
                             // instead of the space legend (field rd 17).
                             kdisp_set_buffer(0x00);
                             doom_render_use_key();
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         } else if (!doom_key_is_control(keycode)) {
                             kdisp_set_buffer(0x00);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                             doom_handled = true;
                         }
                     }
@@ -2535,20 +2535,20 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_set_buffer(0x00);
                             draw_mru_top_bar(keycode);
                             render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state), local_state->lang);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                         } else if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET ||
                                    keycode == KC_EMJ_CLEAR  || keycode == KC_LANG_CLEAR) {
                             // Top-row MRU controls: "Preset" / "Clear".
                             kdisp_set_buffer(0x00);
                             render_mru_ctrl_key(keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                         } else if (keycode >= KC_LANG_CAT_BASE && keycode < KC_LANG_PAGE_PREV) {
                             // Language region tab — continent label + active frame.
                             kdisp_set_buffer(0x00);
                             lang_draw_tab_indicator(keycode);
                             lang_draw_tab_bottom(keycode);
                             render_lang_region_tab(keycode);
-                            kdisp_send_buffer();
+                            kdisp_send_window();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
                         kdisp_set_buffer(0x00);
@@ -2596,7 +2596,7 @@ void update_displays(enum refresh_mode mode) {
                             // per-keycode special-case is needed here.
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
-                        kdisp_send_buffer();
+                        kdisp_send_window();
                         }
                     }
                 }

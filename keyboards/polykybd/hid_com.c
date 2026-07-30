@@ -495,8 +495,19 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 12: //overlays flags off
                 {
                     uint8_t flags_to_clear = data[HID_DATA_IDX];
-                    local_state->overlay_flags = flag_off(local_state->overlay_flags, flags_to_clear);
-                    if(flags_to_clear & OVERLAY_SYNCED_STATE_FLAGS) {
+                    uint8_t old_flags = local_state->overlay_flags;
+                    local_state->overlay_flags = flag_off(old_flags, flags_to_clear);
+                    // Only sync + full-refresh when a synced-state bit (MIRROR /
+                    // DISPLAY overlays) actually TRANSITIONED set->clear. Re-clearing
+                    // an already-clear bit changes nothing on screen, so gating on the
+                    // real transition avoids a blocking slave bridge-sync + full
+                    // 72-keycap re-render for a no-op. A host that re-asserts
+                    // "overlays off" on every active-window poll — e.g. a focused
+                    // window with no overlays whose TITLE keeps changing (a terminal
+                    // animating a spinner in its title) — would otherwise force one
+                    // full render per poll. (The host now dedups this too; this is the
+                    // firmware-side backstop for any client that re-asserts state.)
+                    if(old_flags & flags_to_clear & OVERLAY_SYNCED_STATE_FLAGS) {
                         send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
                         request_disp_refresh();
                     }

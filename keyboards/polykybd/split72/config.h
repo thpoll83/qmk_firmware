@@ -58,7 +58,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //This number can be calculated by dividing the MCU’s clock speed
 //by the desired SPI clock speed. For example, an MCU running at 8 MHz
 //wanting to talk to an SPI device at 4 MHz would set the divisor to 2
-#define SPI_DIVISOR (CPU_CLOCK / 10000000) //rp1040 runs at 133Mhz, SPI at 10Mhz
+#define SPI_DIVISOR (CPU_CLOCK / 12000000) //EXPERIMENT: 12 MHz SPI (was 10). SSD1315 datasheet max is 10 MHz (tcycle 100ns); 16 MHz tested with flaws, trying 12 MHz. 133/12=11 -> ~12.1 MHz actual
 
 // Shift register to select the display
 //#define SR_NMR_PIN //NO_PIN if possible

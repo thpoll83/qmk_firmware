@@ -55,6 +55,7 @@
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
+#include "base/fonts/generated/base_colfont.h"  // column-native base-font companion (build-time)
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
 // Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
@@ -3300,7 +3301,7 @@ void keyboard_post_init_user(void) {
     // Transpose the resident base Latin keycap font into a column-native (OLED
     // page-format) RAM store once, so awake ASCII legends blit whole vertical
     // bytes instead of the per-pixel flash raster plot (the legend hot path).
-    kdisp_set_base_colcache_font(&NotoSans_Regular_Base_14pt7b);
+    kdisp_set_base_colfont(&NotoSans_Regular_Base_14pt7b_Col);
 
     layer_state_t default_layer = persistent_default_layer_get();
     access_local_layer()->def_layer = default_layer;

@@ -544,6 +544,11 @@ static void doom_exit(void) {
     // keycaps blank (field). Harmless on the slave (its GET_ID is never read).
     poly_mark_fresh_boot();
     set_last_update((int32_t)timer_read32());
+    // Symmetric with doom_slave_stop(): the blitter drew untracked full-window
+    // frames, so force a full-window repaint on the handback. On the master the
+    // generic s_disp_render_active path already covers this, but keeping it
+    // explicit makes both teardown halves identical and independent of that gate.
+    doom_blit_invalidate_windows();
     request_disp_refresh();
     printf("doom: exit done\n");
 }
@@ -1187,6 +1192,14 @@ static void doom_slave_stop(void) {
     reset_overlay_usage();
     reset_overlay_mapping();
     reset_fragment_context();
+    // The game blitter owned these panels with untracked full-window sends and the
+    // slave never drove s_disp_render_active false (doom_mode_active() is the
+    // master-only s_active, and the pad-legend render kept it true), so the generic
+    // invalidate in update_displays() won't fire here — force it so the repaint below
+    // erases the whole window per panel instead of streaming a stale sub-rectangle
+    // (DOOM-exit leftovers on the slave). Eden is unaffected: its startup_anim_active()
+    // gate IS true on the slave, so that path invalidates on its own.
+    doom_blit_invalidate_windows();
     request_disp_refresh();
 }
 

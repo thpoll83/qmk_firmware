@@ -712,6 +712,20 @@ static void user_sync_dummy_handler(uint8_t in_len, const void* in_data, uint8_t
 // second "Transition to idle" with nothing explaining the first one ending.
 static void poly_force_wake(void) {
     poly_sync_t* local_state = access_local_state();
+    // The DOOM attract screensaver (IDLE_STYLE_IDDQD) runs with STATUS_DISP_ON SET
+    // and DISP_IDLE CLEARED — it owns the keycaps at active brightness via
+    // doom_tick(), not through the DISP_IDLE pulse path. So it matches NEITHER
+    // branch below, and proximity would be a silent no-op over it while pulse /
+    // jitter / eden (all DISP_IDLE) and full suspend wake normally — the reported
+    // "doom idle doesn't react to the proximity sensor, the other idle modes do".
+    // Tear it down exactly like a keypress does (doom_exit restores the legends and
+    // stamps a fresh last_update); only the screensaver, never an active game.
+    if (doom_mode_screensaver()) {
+        uprint("Wake by proximity (from doom screensaver)\n");
+        doom_screensaver_stop();
+        update_performed();
+        return;
+    }
     if ((local_state->flags & (STATUS_DISP_ON | DISP_IDLE)) == 0) {
         uprint("Wake by proximity (from suspend)\n");
         suspend_wakeup_init_kb();   // fully suspended -> full wake

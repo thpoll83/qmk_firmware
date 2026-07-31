@@ -52,20 +52,64 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 #define SA_RING_ASPECT 230      // oval aspect: ax = (gx-cxr)*SA_RING_ASPECT>>8 (230/256≈0.9, near
                                 // round). A shift, NOT a divide — no per-pixel software divide.
 
+// Number of keycap slots per half in the generated geometry tables.
+#define SA_NUM_KEYS 40
+// Both halves are walked by the same `idx < SA_NUM_KEYS` loop, so assert BOTH —
+// a regenerated geom header that changed only one table would otherwise read past
+// the shorter one with no compiler complaint.
+_Static_assert(sizeof(SA_GEOM_LEFT) / sizeof(SA_GEOM_LEFT[0]) == SA_NUM_KEYS,
+               "SA_NUM_KEYS must match the generated SA_GEOM_LEFT table length");
+_Static_assert(sizeof(SA_GEOM_RIGHT) / sizeof(SA_GEOM_RIGHT[0]) == SA_NUM_KEYS,
+               "SA_NUM_KEYS must match the generated SA_GEOM_RIGHT table length");
+
 static bool     s_active;
 static bool     s_loop;       // true: idle screensaver — restart at the end instead of ending
 static uint32_t s_start;
 static uint32_t s_next_log;   // next elapsed-ms threshold at which to emit a progress log
 static uint32_t s_last_frame; // last idle-loop frame time (frame-rate throttle, loop only)
 
+// ---- idle-loop frame slicing (the responsiveness lever) ----
+// A full idle frame renders ~36 keycaps, each a procedural 72x40 background + comet
+// trails + the drifting legend + a 360 B SPI push — tens of ms in total. Rendered as
+// ONE blocking unit that is a window in which the main loop cannot scan the matrix,
+// so a short tap that starts AND ends inside a frame is simply never seen ("the
+// keyboard doesn't wake on the first keypress"), and everything else (USB, the split
+// transport, and on the slave half its own matrix scan) stalls with it.
+//
+// So a frame is rendered in TIME-SLICED chunks instead: each tick renders keycaps
+// until EDEN_IDLE_SLICE_MS is spent, then returns so QMK gets the loop back, and the
+// next tick RESUMES at the same keycap. The whole frame still uses one latched `el`
+// and one spark build, so the slices compose into a single coherent frame. The
+// worst-case main-loop stall drops from a whole frame to one slice + one keycap.
+// The budget is checked AFTER each keycap, so at least one always makes progress.
+#define EDEN_IDLE_SLICE_MS 3
+
+static uint32_t s_frame_el;    // `el` latched for the frame currently being sliced
+static uint8_t  s_frame_idx;   // next keycap index to render in that frame
+static bool     s_frame_busy;  // a frame is partially rendered (slices pending)
+// Telemetry for the ~5 s idle log: total ms of render per frame, and the WORST single
+// slice — i.e. the longest the main loop was held off. The worst slice is the number
+// that matters for key responsiveness (a missed tap needs a stall longer than the tap),
+// so it is the one to watch when tuning EDEN_IDLE_SLICE_MS on real hardware.
+static uint16_t s_frame_ms;
+static uint16_t s_slice_worst_ms;
+static bool     s_logged_frame;   // a completed frame has been reported this session
+
 // Minimum GAP (ms) between idle-loop frames, measured from the END of the previous
-// frame — NOT a frame period. A full procedural frame blocks the main loop for its
-// whole render; if that render is longer than a period-based throttle, the throttle
-// never skips a pass and the loop is starved every pass (keys register late — the
-// symptom). Measuring the gap from the frame's END instead GUARANTEES this many ms of
-// free passes between frames for the matrix scan/USB, regardless of how long a frame
-// takes. Lower fps, snappy keys. Boot intro is unthrottled (brief, owns the CPU).
-#define EDEN_IDLE_FRAME_MS 55
+// frame — NOT a frame period, so the throttle can never collapse to "render every
+// pass" when a frame costs more than the period.
+//
+// This used to be 55 ms, back when it was the ONLY thing handing the main loop back
+// between (unsliced, ~150 ms) frames. The slicing above now does that structurally,
+// so the gap stopped buying responsiveness and was purely costing frame rate: at a
+// measured ~250 ms period (≈150 ms render + 55 gap + ~45 of main-loop time across
+// the ~30 slices) it was 22% of the budget. Cut to 10 ms — enough to guarantee at
+// least one completely unencumbered main-loop pass per frame as a backstop, without
+// the animation paying a fifth of its rate for it. Do NOT take it to 0: a clean pass
+// between frames is a cheap safety property worth keeping.
+// The latency dial is EDEN_IDLE_SLICE_MS, not this. Boot intro is unthrottled and
+// unsliced (brief, swallows keys, owns the CPU).
+#define EDEN_IDLE_FRAME_MS 10
 
 // --- small integer helpers -------------------------------------------------
 static inline uint8_t sa_hash8(uint32_t v) {
@@ -273,7 +317,7 @@ static void sa_render_frame(uint32_t el) {
 
     if (sparks) sa_build_sparks(el, cv, spark_fade);   // once per frame (key-independent)
 
-    for (uint8_t idx = 0; idx < 40; ++idx) {
+    for (uint8_t idx = 0; idx < SA_NUM_KEYS; ++idx) {
         const sa_key_geom_t *g = &T[idx];
         if (!g->valid) continue;
         const bool rot = (g->ang != 0);                                // only the 4 thumbs
@@ -312,7 +356,9 @@ static void sa_render_frame(uint32_t el) {
                 } else {
                     bgv = s_brow[lx];                                       // reuse the even row
                 }
-                if (bgv > sa_noise(gx, gy))
+                // bgv == 0 can never beat the (unsigned) noise threshold, and at this
+                // faint density most pixels are 0 — skip the table lookup for them.
+                if (bgv && bgv > sa_noise(gx, gy))
                     buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
             }
         }
@@ -352,72 +398,77 @@ static void sa_render_frame(uint32_t el) {
     }
 }
 
-// Idle screensaver frame: the intro's OPENING look — streaming comets over the
-// plasma+ripple haze — held open forever. It is the boot animation with the
-// letter/converge/fade machinery removed: cv is forced 0 (comets stream straight
-// across instead of gathering into the letter zones), letters are never drawn, and
-// there is no bg fade / letter fade / scanline / black tail. Time (`el`) still
-// advances, so the comets keep coming and going and the ripples keep expanding —
-// the lit pixels are always moving, which is the whole point (anti-burn-in).
-static void sa_render_idle_frame(uint32_t el) {
-    const bool left = is_left_side();
-    const sa_key_geom_t *T = left ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
+// ONE keycap of an idle screensaver frame: the intro's OPENING look — streaming
+// comets over the plasma+ripple haze — held open forever. It is the boot animation
+// with the letter/converge/fade machinery removed: cv is forced 0 (comets stream
+// straight across instead of gathering into the letter zones), letters are never
+// drawn, and there is no bg fade / letter fade / scanline / black tail. Time (`el`)
+// still advances, so the comets keep coming and going and the ripples keep expanding
+// — the lit pixels are always moving, which is the whole point (anti-burn-in).
+//
+// One keycap at a time (rather than a whole frame) is what lets the tick below hand
+// the main loop back mid-frame; every key of a frame reads the same latched
+// `s_frame_el` + the spark set built once at frame start, so the slices still
+// compose into one coherent frame.
+static void sa_render_idle_key(uint8_t idx) {
+    const sa_key_geom_t *T = is_left_side() ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
+    const sa_key_geom_t *g = &T[idx];
+    if (!g->valid) return;
 
-    const uint8_t  tp    = (uint8_t)(el >> 4);
-    const uint8_t  tprg  = (uint8_t)(el >> 5);
+    const uint8_t  tp    = (uint8_t)(s_frame_el >> 4);
+    const uint8_t  tprg  = (uint8_t)(s_frame_el >> 5);
     const uint8_t  ring  = 255;          // ripples always present (they expand via tprg)
     const uint16_t pgain = SA_PGAIN;     // constant faint haze — no background fade
     const int16_t  cxr   = SA_BOARD_W / 2;
     const int16_t  cyr   = (int16_t)((int32_t)SA_BOARD_H * 42 / 100);
 
-    sa_build_sparks(el, 0, 0);           // cv=0: no converge; spark_fade=0: none wink out
+    const bool rot = (g->ang != 0);
+    int16_t cosv = (int16_t)sa_sin((uint8_t)(g->ang + 64)) - 128;
+    int16_t sinv = (int16_t)sa_sin(g->ang) - 128;
 
-    for (uint8_t idx = 0; idx < 40; ++idx) {
-        const sa_key_geom_t *g = &T[idx];
-        if (!g->valid) continue;
-        const bool rot = (g->ang != 0);
-        int16_t cosv = (int16_t)sa_sin((uint8_t)(g->ang + 64)) - 128;
-        int16_t sinv = (int16_t)sa_sin(g->ang) - 128;
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+    kdisp_set_buffer(0x00);
+    uint8_t *buf = get_scratch_buffer();
 
-        sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
-        kdisp_set_buffer(0x00);
-        uint8_t *buf = get_scratch_buffer();
-
-        for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
-            int16_t dy = (int16_t)(ly - 20);
-            int16_t gy_flat = (int16_t)(g->cy + dy);
-            const bool erow = !rot && ((ly & 1) == 0);
-            for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx) {
-                int16_t dx = (int16_t)(lx - 36);
-                int16_t gx, gy;
-                if (rot) {
-                    gx = (int16_t)(g->cx + ((dx * cosv - dy * sinv) >> 7));
-                    gy = (int16_t)(g->cy + ((dx * sinv + dy * cosv) >> 7));
-                } else {
-                    gx = (int16_t)(g->cx + dx);
-                    gy = gy_flat;
-                }
-                uint8_t bgv;
-                if (rot) {
-                    bgv = sa_bg(gx, gy, tp, tprg, ring, pgain, cxr, cyr);
-                } else if (erow) {
-                    bgv = (lx & 1) ? s_brow[lx - 1] : sa_bg(gx, gy, tp, tprg, ring, pgain, cxr, cyr);
-                    s_brow[lx] = bgv;
-                } else {
-                    bgv = s_brow[lx];
-                }
-                if (bgv > sa_noise(gx, gy))
-                    buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
+    for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
+        int16_t dy = (int16_t)(ly - 20);
+        int16_t gy_flat = (int16_t)(g->cy + dy);
+        // 2x2-coarsen the background (sa_bg is the expensive part: 3 sines + the
+        // ring) for the ROTATED thumbs too, not just the flat keys — in local space
+        // it is the same block approximation, and it cuts a thumb's sa_bg calls 4x.
+        // The boot intro deliberately keeps its thumbs full-res (it is unsliced and
+        // owns the CPU, so there is nothing to buy there and its look is unchanged).
+        const bool erow = ((ly & 1) == 0);
+        for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx) {
+            int16_t dx = (int16_t)(lx - 36);
+            int16_t gx, gy;
+            if (rot) {
+                gx = (int16_t)(g->cx + ((dx * cosv - dy * sinv) >> 7));
+                gy = (int16_t)(g->cy + ((dx * sinv + dy * cosv) >> 7));
+            } else {
+                gx = (int16_t)(g->cx + dx);
+                gy = gy_flat;
             }
+            uint8_t bgv;
+            if (erow) {
+                bgv = (lx & 1) ? s_brow[lx - 1] : sa_bg(gx, gy, tp, tprg, ring, pgain, cxr, cyr);
+                s_brow[lx] = bgv;
+            } else {
+                bgv = s_brow[lx];
+            }
+            // bgv == 0 can never beat the (unsigned) noise threshold, and at this
+            // faint density most pixels are 0 — skip the table lookup for them.
+            if (bgv && bgv > sa_noise(gx, gy))
+                buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
         }
-
-        sa_plot_sparks(buf, g, rot, cosv, sinv);
-        // Cut this key's resting legend out of the comet field (dark silhouette the
-        // comets ghost around). Implemented in poly_keymap.c where the keycode/legend
-        // live; idx here is the display index it maps from. No-op for image legends.
-        eden_idle_erase_legend(idx);
-        kdisp_send_window();
     }
+
+    sa_plot_sparks(buf, g, rot, cosv, sinv);
+    // Cut this key's resting legend out of the comet field (dark silhouette the
+    // comets ghost around). Implemented in poly_keymap.c where the keycode/legend
+    // live; idx here is the display index it maps from. No-op for image legends.
+    eden_idle_erase_legend(idx);
+    kdisp_send_window();
 }
 
 // Shared start path for the one-shot (boot/KC_EDEN) and the looping idle screensaver.
@@ -429,6 +480,11 @@ static void sa_begin(bool loop, uint8_t contrast) {
     s_loop       = loop;
     s_next_log   = 0;
     s_last_frame = s_start - EDEN_IDLE_FRAME_MS;   // render the first idle frame at once
+    s_frame_busy = false;                          // no half-rendered frame carried over
+    s_frame_idx  = 0;
+    s_frame_ms       = 0;   // don't report the PREVIOUS idle session's timings in the
+    s_slice_worst_ms = 0;   // first log line of this one
+    s_logged_frame   = false;
     // Non-blocking progress trace (HID console; dropped when nothing is attached).
     // If a half wedges during the animation, the last line printed shows how far it
     // got. Only the USB (master) half's console is readable — to diagnose the left
@@ -454,6 +510,11 @@ void startup_anim_start_loop(uint8_t contrast) {
 void startup_anim_stop(void) {
     s_active = false;
     s_loop   = false;
+    // Drop any partially-rendered frame — the keycaps are handed straight back to
+    // update_displays(), so resuming its remaining slices later would paint comets
+    // over freshly-woken legends.
+    s_frame_busy = false;
+    s_frame_idx  = 0;
 }
 
 bool startup_anim_is_loop(void) { return s_active && s_loop; }
@@ -464,19 +525,46 @@ void startup_anim_tick(void) {
     if (!s_active) return;
     uint32_t el = timer_elapsed32(s_start);
     if (s_loop) {
-        // Idle screensaver: the perpetual comet field (no letters/converge/fade).
-        // Only render once EDEN_IDLE_FRAME_MS has passed SINCE THE LAST FRAME ENDED,
-        // so every intervening pass returns immediately and the main loop is free to
-        // scan the matrix (responsive keys). s_last_frame is stamped AFTER the render.
-        if (timer_elapsed32(s_last_frame) < EDEN_IDLE_FRAME_MS) return;
-        // `el` just keeps growing so the comets keep streaming; a quiet ~5 s log
-        // cadence (vs 1 s for the boot intro) keeps the console from filling up.
-        if (el >= s_next_log) {
-            uprintf("Eden idle %lums\n", (unsigned long)el);
-            s_next_log = el + 5000;
+        // Idle screensaver: the perpetual comet field (no letters/converge/fade),
+        // rendered a slice of keycaps at a time so the main loop keeps scanning the
+        // matrix mid-frame (see EDEN_IDLE_SLICE_MS). Between frames every pass
+        // returns immediately until EDEN_IDLE_FRAME_MS has elapsed SINCE THE LAST
+        // FRAME ENDED — s_last_frame is stamped when the final slice completes.
+        if (!s_frame_busy) {
+            if (timer_elapsed32(s_last_frame) < EDEN_IDLE_FRAME_MS) return;
+            // Latch the frame's time + build its comet set ONCE, so every slice of
+            // this frame draws the same instant (no shear across the keycaps).
+            s_frame_el  = el;
+            sa_build_sparks(el, 0, 0);   // cv=0: no converge; spark_fade=0: none wink out
+            s_frame_idx = 0;
+            s_frame_ms  = 0;
+            s_frame_busy = true;
         }
-        sa_render_idle_frame(el);
-        s_last_frame = timer_read32();   // gap timed from the END of the frame
+        // Render keycaps until the slice budget is spent. Checked AFTER each key, so
+        // a slice always makes progress; skipped (invalid) slots cost nothing.
+        const uint32_t slice_start = timer_read32();
+        do {
+            sa_render_idle_key(s_frame_idx++);
+        } while (s_frame_idx < SA_NUM_KEYS && timer_elapsed32(slice_start) < EDEN_IDLE_SLICE_MS);
+        const uint16_t slice_ms = (uint16_t)timer_elapsed32(slice_start);
+        s_frame_ms += slice_ms;
+        if (slice_ms > s_slice_worst_ms) s_slice_worst_ms = slice_ms;
+        if (s_frame_idx >= SA_NUM_KEYS) {
+            s_frame_busy = false;
+            s_last_frame = timer_read32();   // gap timed from the END of the frame
+            // Report at frame END (so the numbers describe the frame that just
+            // finished) and report the FIRST completed frame immediately, then on a
+            // quiet ~5 s cadence. A 5 s-only cadence yields NOTHING from a short idle
+            // session — a 4.4 s glance at the screensaver printed no timing at all,
+            // which makes the instrument useless exactly when you want a quick look.
+            if (!s_logged_frame || el >= s_next_log) {
+                uprintf("Eden idle %lums (frame %ums, worst slice %ums)\n",
+                        (unsigned long)el, s_frame_ms, s_slice_worst_ms);
+                s_next_log       = el + 5000;
+                s_slice_worst_ms = 0;   // worst-since-the-last-report, not worst-ever
+                s_logged_frame   = true;
+            }
+        }
         return;
     }
     if (el >= SA_TOTAL_MS) {

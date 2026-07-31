@@ -530,6 +530,46 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   converge/fade. `eden_idle_tick()` in `poly_keymap.c` drives it; it is a **no-op
   while awake** (only runs when `idle_style == EDEN` and idle). While the animation
   owns the keycaps (`startup_anim_active()`), `update_displays()` early-returns.
+- ⚠️ **The looping idle frame is TIME-SLICED — never render it as one blocking unit.**
+  A full frame is ~36 keycaps × (procedural 72×40 background + comet trails + the
+  drifting legend + a 360 B SPI push), tens of ms during which the main loop cannot
+  scan the matrix. Rendered whole, a short tap that starts *and* ends inside a frame
+  is simply never seen — the "Eden doesn't wake on the first keypress" report
+  (2026-07-29) — and on the slave half it also stalls that half's own scan and the
+  master's matrix pull. `startup_anim_tick()` therefore renders keycaps until
+  `EDEN_IDLE_SLICE_MS` (3) is spent, returns, and **resumes at the same keycap** on
+  the next pass; `el` and the spark set are latched once per frame (`s_frame_el` /
+  `sa_build_sparks`) so the slices compose into one coherent frame, and
+  `EDEN_IDLE_FRAME_MS` (10) still gates the gap between frames measured from the
+  **end** of the last one. `startup_anim_stop()` drops a half-rendered frame so its
+  leftover slices can't paint comets over freshly-woken legends. The idle log
+  reports `frame Nms, worst slice Nms` at frame END (first frame of a session
+  immediately, then ~5 s) — **the worst slice is the responsiveness number**; tune
+  `EDEN_IDLE_SLICE_MS` against it, not against the frame time.
+  - **`EDEN_IDLE_FRAME_MS` is NOT a latency dial** — it was 55 ms only because it
+    was once the sole thing handing the main loop back between unsliced frames. With
+    slicing it just cost frame rate (22% of a measured ~250 ms period), so it is now
+    10 ms: one guaranteed clean main-loop pass per frame as a backstop, nothing more.
+    Don't raise it to "help responsiveness" (that's `EDEN_IDLE_SLICE_MS`) and don't
+    take it to 0.
+  - ⚠️ **Measured on hardware (2026-07-31), so don't re-litigate it by arithmetic:**
+    a frame is **~150 ms** of CPU for ~36 keycaps (~4.3 ms each, of which only
+    ~0.3 ms is the 360 B SPI push — so ~93% is compute in the 2,880-px inner loop /
+    `sa_plot_sparks` / the legend draw). An A/B probe alternating the 4 KB `SA_NOISE`
+    tile between XIP flash and SRAM *every frame* measured **154 ms vs 145 ms — ~6%**,
+    refuting the theory that XIP stalls dominate. **The tile stays in flash**; moving
+    it is not worth 4 KB of the ~5.8 KB free SRAM (the `.heap` remainder, and there is
+    no allocator in the image to consume it). If you want the frame cost down, stub
+    out one stage at a time and read the `frame Nms` line — estimating from cycle
+    counts was off by 2.5× and sent this chase down a dead end.
+  The boot intro (`sa_render_frame`) is deliberately left unsliced/unthrottled: it is
+  brief, swallows every key anyway, and owns the CPU.
+- **The idle path's background is 2×2-coarsened on the ROTATED thumbs too** (the boot
+  intro keeps them full-res, so its look is byte-identical): in local space it is the
+  same block approximation the flat keys already use and it cuts a thumb's `sa_bg`
+  calls 4×. Both paths also early-out on `bgv == 0` before the noise lookup — exactly
+  equivalent (0 can never exceed an unsigned threshold) and most pixels are 0 at this
+  faint density.
 - **The idle legend** (the resting key label drawn over the comet haze) is rendered
   **LIT + scanline** (`kdisp_set_gfx_scanline(true)` around the text draw), not
   erased — the scanline halves the lit pixels so the legend reads as a dim overlay

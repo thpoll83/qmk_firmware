@@ -40,7 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 MAGIC = b"PlyF"
-ABI_VERSION = 1
+ABI_VERSION = 2             # 2: column-native (OLED page) glyph bitmaps (see _glyph_len)
 HEADER_SIZE = 32
 FONT_REC_SIZE = 20
 GLYPH_REC_SIZE = 8
@@ -48,6 +48,14 @@ GLYPH_REC_SIZE = 8
 HEADER_FMT = "<4sHHIIIII"   # magic, abi, flags, content_ver, count, table_off, total, crc, (reserved appended)
 FONT_FMT = "<IIIIhH"         # bitmap_off, glyph_off, first, last, yAdvance, reserved
 GLYPH_FMT = "<Hbbbbbx"       # bitmapOffset, w, h, xAdvance, xOffset, yOffset, pad
+
+
+def _glyph_len(w: int, h: int) -> int:
+    """Per-glyph bitmap byte count for the COLUMN-NATIVE (OLED page) layout (ABI 2):
+    cb = (h+7)//8 page-bytes per column × w columns. (ABI 1 was row-major (w*h+7)//8.)
+    The generated GFX headers are column-native, so this is the slice length into a
+    parsed font's flat `bitmaps` blob."""
+    return w * ((h + 7) // 8)
 
 
 # ─────────────────────────── parsing the C headers ──────────────────────────
@@ -344,7 +352,7 @@ def _glyph_key(pf: ParsedFont, i: int):
     o, w, h, xa, xo, yo = pf.glyphs[i]
     if w == 0 or h == 0:
         return None
-    n = (w * h + 7) // 8
+    n = _glyph_len(w, h)
     return (w, h, xa, xo, yo, bytes(pf.bitmaps[o:o + n]))
 
 
@@ -362,7 +370,7 @@ def _repack_font_without(pf: ParsedFont, empty_idxs: set[int]) -> ParsedFont:
             new_glyphs.append((len(blob), w, h, xa, xo, yo))    # already empty
         else:
             new_glyphs.append((len(blob), w, h, xa, xo, yo))
-            blob += pf.bitmaps[o:o + (w * h + 7) // 8]
+            blob += pf.bitmaps[o:o + _glyph_len(w, h)]
     return ParsedFont(pf.symbol, pf.first, pf.last, pf.yadvance, new_glyphs, bytes(blob))
 
 
@@ -412,7 +420,7 @@ def prune_shadowed_glyphs(order: list[str], resident: set[str],
     saved: list[tuple[str, int, int]] = []
     for sym, idxs in to_empty.items():
         pf = parsed[sym]
-        b = sum((pf.glyphs[i][1] * pf.glyphs[i][2] + 7) // 8 for i in idxs)
+        b = sum(_glyph_len(pf.glyphs[i][1], pf.glyphs[i][2]) for i in idxs)
         parsed[sym] = _repack_font_without(pf, idxs)
         saved.append((sym, len(idxs), b))
 

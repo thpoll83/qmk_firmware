@@ -92,10 +92,19 @@ static bool     s_logged_frame;   // a completed frame has been reported this se
 
 // Minimum GAP (ms) between idle-loop frames, measured from the END of the previous
 // frame — NOT a frame period, so the throttle can never collapse to "render every
-// pass" when a frame costs more than the period. Together with the slicing above it
-// caps the animation's duty cycle (SPI + CPU) while the slicing caps its latency.
-// Boot intro is unthrottled and unsliced (brief, swallows keys, owns the CPU).
-#define EDEN_IDLE_FRAME_MS 55
+// pass" when a frame costs more than the period.
+//
+// This used to be 55 ms, back when it was the ONLY thing handing the main loop back
+// between (unsliced, ~150 ms) frames. The slicing above now does that structurally,
+// so the gap stopped buying responsiveness and was purely costing frame rate: at a
+// measured ~250 ms period (≈150 ms render + 55 gap + ~45 of main-loop time across
+// the ~30 slices) it was 22% of the budget. Cut to 10 ms — enough to guarantee at
+// least one completely unencumbered main-loop pass per frame as a backstop, without
+// the animation paying a fifth of its rate for it. Do NOT take it to 0: a clean pass
+// between frames is a cheap safety property worth keeping.
+// The latency dial is EDEN_IDLE_SLICE_MS, not this. Boot intro is unthrottled and
+// unsliced (brief, swallows keys, owns the CPU).
+#define EDEN_IDLE_FRAME_MS 10
 
 // --- small integer helpers -------------------------------------------------
 static inline uint8_t sa_hash8(uint32_t v) {

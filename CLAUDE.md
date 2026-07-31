@@ -540,11 +540,28 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   `EDEN_IDLE_SLICE_MS` (3) is spent, returns, and **resumes at the same keycap** on
   the next pass; `el` and the spark set are latched once per frame (`s_frame_el` /
   `sa_build_sparks`) so the slices compose into one coherent frame, and
-  `EDEN_IDLE_FRAME_MS` (55) still gates the gap between frames measured from the
+  `EDEN_IDLE_FRAME_MS` (10) still gates the gap between frames measured from the
   **end** of the last one. `startup_anim_stop()` drops a half-rendered frame so its
-  leftover slices can't paint comets over freshly-woken legends. The ~5 s idle log
-  reports `frame Nms, worst slice Nms` — **the worst slice is the responsiveness
-  number**; tune `EDEN_IDLE_SLICE_MS` against it, not against the frame time.
+  leftover slices can't paint comets over freshly-woken legends. The idle log
+  reports `frame Nms, worst slice Nms` at frame END (first frame of a session
+  immediately, then ~5 s) — **the worst slice is the responsiveness number**; tune
+  `EDEN_IDLE_SLICE_MS` against it, not against the frame time.
+  - **`EDEN_IDLE_FRAME_MS` is NOT a latency dial** — it was 55 ms only because it
+    was once the sole thing handing the main loop back between unsliced frames. With
+    slicing it just cost frame rate (22% of a measured ~250 ms period), so it is now
+    10 ms: one guaranteed clean main-loop pass per frame as a backstop, nothing more.
+    Don't raise it to "help responsiveness" (that's `EDEN_IDLE_SLICE_MS`) and don't
+    take it to 0.
+  - ⚠️ **Measured on hardware (2026-07-31), so don't re-litigate it by arithmetic:**
+    a frame is **~150 ms** of CPU for ~36 keycaps (~4.3 ms each, of which only
+    ~0.3 ms is the 360 B SPI push — so ~93% is compute in the 2,880-px inner loop /
+    `sa_plot_sparks` / the legend draw). An A/B probe alternating the 4 KB `SA_NOISE`
+    tile between XIP flash and SRAM *every frame* measured **154 ms vs 145 ms — ~6%**,
+    refuting the theory that XIP stalls dominate. **The tile stays in flash**; moving
+    it is not worth 4 KB of the ~5.8 KB free SRAM (the `.heap` remainder, and there is
+    no allocator in the image to consume it). If you want the frame cost down, stub
+    out one stage at a time and read the `frame Nms` line — estimating from cycle
+    counts was off by 2.5× and sent this chase down a dead end.
   The boot intro (`sa_render_frame`) is deliberately left unsliced/unthrottled: it is
   brief, swallows every key anyway, and owns the CPU.
 - **The idle path's background is 2×2-coarsened on the ROTATED thumbs too** (the boot

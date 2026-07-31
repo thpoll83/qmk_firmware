@@ -119,6 +119,80 @@ void kdisp_set_gfx_scanline2(bool scanline) {
     s_gfx_scanline = scanline ? 2 : 0;
 }
 
+// ---------------------------------------------------------------------------
+// Column-native (OLED page-format) cache for one resident range font.
+//
+// The keycap OLED buffer is column-major: one byte holds 8 VERTICAL pixels
+// (GET_BUFFER_OFFSET/SET_PIXEL above). Adafruit-GFX glyph bitmaps are the
+// transpose — one byte packs 8 HORIZONTAL pixels, MSB-first, continuous per
+// glyph. So the normal raster plot walks pixel-by-pixel, reading the packed
+// glyph from XIP flash: that per-pixel plot is ~98% of the legend render and
+// the legend is ~half of an overlay-switch re-render (loop profiler).
+//
+// For the ONE resident font that draws the bulk of ASCII keycap legends we
+// transpose every glyph once at boot into a RAM store already laid out like
+// the OLED buffer (column-major). Drawing a glyph of that font then becomes a
+// whole-byte vertical blit — shift each column's bytes into page alignment and
+// OR them into the buffer — instead of a per-pixel loop. Same set bits, far
+// fewer ops and sequential RAM reads instead of scattered flash reads.
+//
+// Bounds are generous (base Latin 0x20..0x7E is 95 glyphs / ~3 KB transposed);
+// a font that would overflow either bound simply leaves the cache disabled and
+// every draw falls back to the flash raster path (no behavioural change).
+GFXglyph *pgm_read_glyph_ptr(const GFXfont *font, uint32_t c);  // defined below
+uint8_t  *pgm_read_bitmap_ptr(const GFXfont *font);             // defined below
+
+#define COLCACHE_MAX_GLYPHS 128u
+#define COLCACHE_MAX_BYTES  4096u
+static uint8_t         s_colcache[COLCACHE_MAX_BYTES];
+static uint16_t        s_colcache_off[COLCACHE_MAX_GLYPHS];  // per-glyph byte offset into s_colcache
+static const GFXfont  *s_colcache_font  = 0;
+static bool            s_colcache_ready  = false;
+
+void kdisp_set_base_colcache_font(const GFXfont *f) {
+    s_colcache_ready = false;
+    s_colcache_font  = 0;
+    if (!f) return;
+
+    const uint32_t first  = pgm_read_dword(&f->first);
+    const uint32_t last   = pgm_read_dword(&f->last);
+    if (last < first) return;
+    const uint32_t nglyph = last - first + 1u;
+    if (nglyph > COLCACHE_MAX_GLYPHS) return;
+
+    const uint8_t *bitmap = pgm_read_bitmap_ptr(f);
+    uint16_t out = 0;
+    for (uint32_t gi = 0; gi < nglyph; gi++) {
+        const GFXglyph *g  = pgm_read_glyph_ptr(f, gi);
+        const uint8_t   w  = pgm_read_byte(&g->width);
+        const uint8_t   h  = pgm_read_byte(&g->height);
+        uint16_t        bo = pgm_read_word(&g->bitmapOffset);
+        const uint8_t   cb = (uint8_t)((h + 7u) >> 3);   // page-bytes per pixel column
+        const uint16_t  need = (uint16_t)w * cb;
+        if ((uint32_t)out + need > COLCACHE_MAX_BYTES) return;   // would overflow -> bail (disabled)
+
+        s_colcache_off[gi] = out;
+        for (uint16_t i = 0; i < need; i++) s_colcache[out + i] = 0;
+
+        // Transpose the row-major, MSB-first packed glyph into column-major bytes.
+        uint16_t bit  = 0;
+        uint8_t  bits = 0;
+        for (uint8_t yy = 0; yy < h; yy++) {
+            for (uint8_t xx = 0; xx < w; xx++) {
+                if (!(bit++ & 7)) bits = pgm_read_byte(&bitmap[bo++]);
+                if (bits & 0x80) {
+                    s_colcache[out + (uint16_t)xx * cb + (yy >> 3)] |= (uint8_t)(1u << (yy & 7));
+                }
+                bits <<= 1;
+            }
+        }
+        out += need;
+    }
+
+    s_colcache_font  = f;
+    s_colcache_ready = true;
+}
+
 uint8_t* get_scratch_buffer(void) {
     return scratch_buffer;
 }
@@ -402,19 +476,80 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
         kdisp_clear_bitmap_courtyard(x+xo, y+yo, &bitmap[bo], w, h, cy_radius);
     }
 
-    for (yy = 0; yy < h; yy++) {
-        for (xx = 0; xx < w; xx++) {
-            if (!(bit++ & 7)) {
-                bits = pgm_read_byte(&bitmap[bo++]);
+    // Fast path (the common awake-legend case): if the WHOLE glyph fits inside the
+    // 128x64 scratch buffer, every pixel is provably in-bounds, so drop the per-pixel
+    // WITHIN_BUFFER clip and hoist the row page-base + bit mask + scanline test out of
+    // the column loop — the plot becomes `row[xx] |= mask`. Byte-identical to the
+    // clipped path for in-bounds glyphs (raster is ~52% of the overlay-switch render
+    // and ~98% of it is this pixel plot; the WITHIN_BUFFER check ran per lit pixel).
+    // Erase mode and any out-of-bounds glyph fall through to the original clipped loop.
+    const int gx0 = x + xo, gy0 = y + yo;
+    const bool glyph_in_buffer = (gx0 >= 0) && (gy0 >= 0) &&
+                                 (gx0 + w <= BUFFER_BYTE_WIDTH) &&
+                                 (gy0 + h <= BUFFER_BYTE_HEIGHT * 8);
+
+    // Column-native fast path: for the cached resident base font, blit whole
+    // vertical bytes from the pre-transposed OLED-format store instead of plotting
+    // pixel-by-pixel from flash. Same OR'd bits, ~3x fewer ops + sequential RAM
+    // reads. Gated to a fully-in-buffer glyph with neither erase nor scanline mode
+    // (those still go through the raster path below, which handles them). `ch` is
+    // already the font-local glyph index (bounded < nglyph <= COLCACHE_MAX_GLYPHS).
+    if (s_colcache_ready && currentFont == s_colcache_font && glyph_in_buffer &&
+        !s_gfx_erase && s_gfx_scanline == 0 && w > 0 && h > 0) {
+        const uint8_t *col   = &s_colcache[s_colcache_off[ch]];
+        const uint8_t  cb    = (uint8_t)((h + 7) >> 3);   // page-bytes per column
+        const uint8_t  shift = (uint8_t)(gy0 & 7);
+        const int      page0 = gy0 >> 3;
+        const uint8_t  nb    = (uint8_t)((h + shift + 7) >> 3);  // buffer pages spanned
+        // Per column, walk its pages carrying the shift overflow into the next
+        // page — all 8/16-bit, no wide accumulator. dst page p gets the low byte
+        // of (col[p] << shift) OR the high byte carried from (col[p-1] << shift).
+        // Byte-identical to a per-column uint64 assemble+shift, but drops the
+        // costly M0+ 64-bit variable shifts. Reads the column store sequentially.
+        for (uint8_t cx = 0; cx < (uint8_t)w; cx++) {
+            const uint8_t *cp  = &col[(uint16_t)cx * cb];
+            uint8_t       *dst = &scratch_buffer[page0 * BUFFER_BYTE_WIDTH + gx0 + cx];
+            uint8_t        carry = 0;
+            for (uint8_t p = 0; p < nb; p++) {
+                uint16_t s = (p < cb) ? ((uint16_t)cp[p] << shift) : 0u;
+                dst[p * BUFFER_BYTE_WIDTH] |= (uint8_t)s | carry;
+                carry = (uint8_t)(s >> 8);
             }
-            if (bits & 0x80) {
-                if (s_gfx_erase) {
-                    CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
-                } else if (!scanline_skip_row(y + yo + yy)) {
-                    SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+        }
+        return pgm_read_byte(&glyph->xAdvance);
+    }
+
+    if (glyph_in_buffer && !s_gfx_erase) {
+        for (yy = 0; yy < h; yy++) {
+            const int     py   = gy0 + yy;
+            const bool    skip = scanline_skip_row(py);
+            uint8_t      *row  = &scratch_buffer[(py >> 3) * BUFFER_BYTE_WIDTH + gx0];
+            const uint8_t mask = (uint8_t)(1u << (py & 7));
+            for (xx = 0; xx < w; xx++) {
+                if (!(bit++ & 7)) {
+                    bits = pgm_read_byte(&bitmap[bo++]);
                 }
+                if ((bits & 0x80) && !skip) {
+                    row[xx] |= mask;
+                }
+                bits <<= 1;
             }
-            bits <<= 1;
+        }
+    } else {
+        for (yy = 0; yy < h; yy++) {
+            for (xx = 0; xx < w; xx++) {
+                if (!(bit++ & 7)) {
+                    bits = pgm_read_byte(&bitmap[bo++]);
+                }
+                if (bits & 0x80) {
+                    if (s_gfx_erase) {
+                        CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                    } else if (!scanline_skip_row(y + yo + yy)) {
+                        SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                    }
+                }
+                bits <<= 1;
+            }
         }
     }
 

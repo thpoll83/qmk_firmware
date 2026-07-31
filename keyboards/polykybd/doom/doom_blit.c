@@ -690,4 +690,8 @@ void doom_blit_blank_all(void) {
     }
 }
 
+void doom_blit_invalidate_windows(void) {
+    kdisp_invalidate_all_windows();
+}
+
 #endif // POLYKYBD_DOOM

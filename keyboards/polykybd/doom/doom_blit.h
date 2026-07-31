@@ -65,6 +65,17 @@ void doom_blit_esc_key(uint8_t row, uint8_t disp_col);
 // outside the viewport keep whatever legend they held otherwise).
 void doom_blit_blank_all(void);
 
+// Force every panel's dirty-window bbox to "full" (kdisp_invalidate_all_windows).
+// The game blitter draws the viewport with UNTRACKED full-window sends, so on the
+// handback to update_displays() the next per-panel tracked send must erase the whole
+// visible window — otherwise the awake render streams only its own sub-rectangle and
+// the DOOM frame's pixels outside it stay on screen (slave leftovers on exit). The
+// generic s_disp_render_active path in update_displays() covers this on the master
+// but NOT on the slave, where doom_mode_active() (== master s_active) is false and the
+// pad-legend render keeps s_disp_render_active true through the game. Call at every
+// DOOM->awake handback on this half.
+void doom_blit_invalidate_windows(void);
+
 // Outer-column HUD helpers: draw a stat key — word label (10 px) over a
 // full-size value — on the display at (row, DISPLAY col — no viewport
 // mapping), or blank that key. Used for the vitals beside the game viewport.

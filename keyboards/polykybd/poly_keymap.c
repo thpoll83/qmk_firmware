@@ -187,6 +187,11 @@ void early_hardware_init_post(void) {
 static uint8_t flags = 0;
 static uint8_t overlay_flags = 0;
 
+// Tracks whether the previous update_displays() pass reached the keycap render (vs
+// early-returning for idle / Eden / DOOM). On the mode->render edge we invalidate
+// the dirty-window bboxes so the first awake render erases whatever the mode drew.
+static bool s_disp_render_active = false;
+
 // Continuously suppress RGB on the bridge when display is off.
 // The split transport may re-enable RGB by copying master's rgb_matrix_config; this
 // indicator callback runs every render cycle (before flush) and zeros the LED buffer,
@@ -2356,11 +2361,13 @@ void update_displays(enum refresh_mode mode) {
     // Doom easter egg: while game mode owns the keycaps, the blitter is the
     // only writer — a legend re-render here would tear the game frame.
     if (doom_mode_active()) {
+        s_disp_render_active = false;
         return;
     }
     // Same for the one-time startup animation: while it owns the keycaps, its
     // procedural blitter is the only writer.
     if (startup_anim_active()) {
+        s_disp_render_active = false;
         return;
     }
     const poly_sync_t* local_state = get_local_state();
@@ -2371,7 +2378,16 @@ void update_displays(enum refresh_mode mode) {
     // awake chrome. The displays already hold the last centred awake render when we
     // enter idle, so there is nothing to do until we wake.
     if(idle || local_state->contrast<=DISP_OFF) {
+        s_disp_render_active = false;
         return;
+    }
+
+    // We are about to render the keycaps. If the previous pass early-returned for a
+    // mode (idle / Eden / DOOM), an untracked path drew the panels — invalidate every
+    // dirty-window bbox so this first awake render erases the whole window per panel.
+    if (!s_disp_render_active) {
+        kdisp_invalidate_all_windows();
+        s_disp_render_active = true;
     }
 
     //uint8_t layer = get_highest_layer(layer_state);
@@ -2421,6 +2437,7 @@ void update_displays(enum refresh_mode mode) {
             else {
                 if (disp_idx != 255) {
                     POLY_DISP_SELECT(disp_idx);
+                    kdisp_track_panel(disp_idx);   // dirty-window: send only this keycap's changed rect
                     keycode = display_keycode_at(local_layer, r + offset, c);
                     // Doom egg menu item: rewrites the EEPROM keymap's KC_NO at
                     // the armed utilities-layer position (see doom_mode.h;

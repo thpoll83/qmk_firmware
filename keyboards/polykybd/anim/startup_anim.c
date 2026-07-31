@@ -88,6 +88,7 @@ static bool     s_frame_busy;  // a frame is partially rendered (slices pending)
 // so it is the one to watch when tuning EDEN_IDLE_SLICE_MS on real hardware.
 static uint16_t s_frame_ms;
 static uint16_t s_slice_worst_ms;
+static bool     s_logged_frame;   // a completed frame has been reported this session
 
 // Minimum GAP (ms) between idle-loop frames, measured from the END of the previous
 // frame — NOT a frame period, so the throttle can never collapse to "render every
@@ -469,6 +470,7 @@ static void sa_begin(bool loop, uint8_t contrast) {
     s_frame_idx  = 0;
     s_frame_ms       = 0;   // don't report the PREVIOUS idle session's timings in the
     s_slice_worst_ms = 0;   // first log line of this one
+    s_logged_frame   = false;
     // Non-blocking progress trace (HID console; dropped when nothing is attached).
     // If a half wedges during the animation, the last line printed shows how far it
     // got. Only the USB (master) half's console is readable — to diagnose the left
@@ -516,14 +518,6 @@ void startup_anim_tick(void) {
         // FRAME ENDED — s_last_frame is stamped when the final slice completes.
         if (!s_frame_busy) {
             if (timer_elapsed32(s_last_frame) < EDEN_IDLE_FRAME_MS) return;
-            // `el` just keeps growing so the comets keep streaming; a quiet ~5 s log
-            // cadence (vs 1 s for the boot intro) keeps the console from filling up.
-            if (el >= s_next_log) {
-                uprintf("Eden idle %lums (frame %ums, worst slice %ums)\n",
-                        (unsigned long)el, s_frame_ms, s_slice_worst_ms);
-                s_next_log       = el + 5000;
-                s_slice_worst_ms = 0;   // worst-of-the-last-5s, not worst-ever
-            }
             // Latch the frame's time + build its comet set ONCE, so every slice of
             // this frame draws the same instant (no shear across the keycaps).
             s_frame_el  = el;
@@ -544,6 +538,18 @@ void startup_anim_tick(void) {
         if (s_frame_idx >= SA_NUM_KEYS) {
             s_frame_busy = false;
             s_last_frame = timer_read32();   // gap timed from the END of the frame
+            // Report at frame END (so the numbers describe the frame that just
+            // finished) and report the FIRST completed frame immediately, then on a
+            // quiet ~5 s cadence. A 5 s-only cadence yields NOTHING from a short idle
+            // session — a 4.4 s glance at the screensaver printed no timing at all,
+            // which makes the instrument useless exactly when you want a quick look.
+            if (!s_logged_frame || el >= s_next_log) {
+                uprintf("Eden idle %lums (frame %ums, worst slice %ums)\n",
+                        (unsigned long)el, s_frame_ms, s_slice_worst_ms);
+                s_next_log       = el + 5000;
+                s_slice_worst_ms = 0;   // worst-since-the-last-report, not worst-ever
+                s_logged_frame   = true;
+            }
         }
         return;
     }

@@ -7,9 +7,11 @@
 // across frames, so animated frames don't "crawl" (DOOM_FEASIBILITY.md,
 // Challenge 1).
 //
-// v1 uses kdisp_send_buffer() (full 128x64 controller RAM, ~0.85 ms/key at
-// 10 MHz -> ~21 ms per 25-key frame). The window-addressed 360 B path from the
-// study (~8 ms/frame) is a later optimisation of this file only.
+// Every tile is composed into the visible 72x40 window (cleared scratch, drawn
+// at column BUFFER_X), so we push it with kdisp_send_window() (360 B, pages 0-4
+// at BUFFER_X) rather than kdisp_send_buffer() (full 128x64 = 1024 B). The
+// off-window controller RAM is never displayed, so this is visually identical
+// and ~2.9x less SPI per key (~21 ms -> ~8 ms per 25-key frame at 10 MHz).
 #include QMK_KEYBOARD_H
 
 #include "doom_blit.h"
@@ -227,7 +229,7 @@ void doom_blit_frame(const uint8_t *fb, uint16_t fb_rows, const uint8_t *luma256
                     dst[x] = bits;
                 }
             }
-            kdisp_send_buffer();
+            kdisp_send_window();
         }
     }
 }
@@ -303,7 +305,7 @@ void doom_blit_frame_engine(const uint8_t *luma256, bool skip_bottom_row, bool m
                        bands + (size_t)vc * band_bytes + (size_t)page * SCREEN_WIDTH,
                        SCREEN_WIDTH);
             }
-            kdisp_send_buffer();
+            kdisp_send_window();
         }
     }
 }
@@ -481,7 +483,7 @@ void doom_blit_esc_key(uint8_t row, uint8_t disp_col) {
         return;
     }
     doom_render_esc_key();
-    kdisp_send_buffer();
+    kdisp_send_window();
 }
 
 // Vitals value in the game's own tall red status-bar digits (STTNUM/STTMINUS
@@ -556,7 +558,7 @@ bool doom_blit_stat_num_key(uint8_t row, uint8_t disp_col, const uint32_t *label
         }
         x += w;
     }
-    kdisp_send_buffer();
+    kdisp_send_window();
     return true;
 }
 
@@ -572,7 +574,7 @@ void doom_blit_stat_key(uint8_t row, uint8_t disp_col, const uint32_t *label, co
     kdisp_write_gfx_text(hud_label_fonts, 1, center_x(hud_label_fonts, 1, label), 13, label);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count,
                          center_x(g_all_fonts, g_all_font_count, value), 36, value);
-    kdisp_send_buffer();
+    kdisp_send_window();
 }
 
 // Fire/attack symbol for the slave pad's Ctrl keys (Ctrl is DOOM's fire
@@ -618,7 +620,7 @@ void doom_blit_fire_key(uint8_t row, uint8_t disp_col) {
     }
     kdisp_set_buffer(0x00);
     doom_render_fire_key();
-    kdisp_send_buffer();
+    kdisp_send_window();
 }
 
 // Use/open symbol for the pad's Space key (DOOM's use binding — round 17
@@ -669,7 +671,7 @@ void doom_blit_menu(const uint8_t *luma256, bool skull_alt, bool full) {
                 memcpy(buf + (size_t)page * stride + BUFFER_X,
                        tile + (size_t)page * SCREEN_WIDTH, SCREEN_WIDTH);
             }
-            kdisp_send_buffer();
+            kdisp_send_window();
         }
     }
 }
@@ -679,14 +681,14 @@ void doom_blit_blank_key(uint8_t row, uint8_t disp_col) {
         return;
     }
     kdisp_set_buffer(0x00);
-    kdisp_send_buffer();
+    kdisp_send_window();
 }
 
 void doom_blit_blank_all(void) {
     kdisp_set_buffer(0x00);
     for (uint8_t i = 0; i < (uint8_t)(NUM_SHIFT_REGISTERS * 8); ++i) {
         sr_shift_out_buffer_latch(get_key_disp_bitmask(i), get_disp_bitmask_size());
-        kdisp_send_buffer();
+        kdisp_send_window();
     }
 }
 

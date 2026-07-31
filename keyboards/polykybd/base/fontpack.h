@@ -50,7 +50,10 @@
 // fonts and flags the mismatch so the host can push a matching pack). Bump ONLY
 // when the byte layout of the header / font record changes — NOT when the font
 // list content changes (that is content_version).
-#define FONTPACK_ABI_VERSION 1u
+// v2: glyph bitmaps are COLUMN-NATIVE (OLED page format) — per-glyph length is
+// w*((h+7)>>3), not (w*h+7)/8 (see fonts/gfxfont.h). Old row-major v1 packs are
+// rejected (resident-only) until the host reflashes the matching column bundles.
+#define FONTPACK_ABI_VERSION 2u
 
 // 32-byte pack header. crc32 covers every byte AFTER the header
 // (i.e. [sizeof(fontpack_header_t) .. total_size)).

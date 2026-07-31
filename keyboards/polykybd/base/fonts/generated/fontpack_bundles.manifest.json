@@ -1,5 +1,5 @@
 {
-  "abi_version": 1,
+  "abi_version": 2,
   "layout_version": 1,
   "region_size": 2097152,
   "dir_offset": 0,
@@ -11,7 +11,7 @@
       "index": 0,
       "slot_offset": 4096,
       "slot_size": 98304,
-      "total_size": 33924,
+      "total_size": 37200,
       "font_count": 12,
       "fonts": [
         {
@@ -93,7 +93,7 @@
       "index": 1,
       "slot_offset": 102400,
       "slot_size": 98304,
-      "total_size": 35036,
+      "total_size": 38632,
       "font_count": 8,
       "fonts": [
         {
@@ -151,7 +151,7 @@
       "index": 2,
       "slot_offset": 200704,
       "slot_size": 98304,
-      "total_size": 45732,
+      "total_size": 50464,
       "font_count": 2,
       "fonts": [
         {
@@ -173,7 +173,7 @@
       "index": 3,
       "slot_offset": 299008,
       "slot_size": 131072,
-      "total_size": 63020,
+      "total_size": 70044,
       "font_count": 24,
       "fonts": [
         {
@@ -327,7 +327,7 @@
       "index": 4,
       "slot_offset": 430080,
       "slot_size": 131072,
-      "total_size": 62932,
+      "total_size": 65172,
       "font_count": 1,
       "fonts": [
         {
@@ -343,7 +343,7 @@
       "index": 5,
       "slot_offset": 561152,
       "slot_size": 786432,
-      "total_size": 214344,
+      "total_size": 220628,
       "font_count": 77,
       "fonts": [
         {
@@ -815,7 +815,7 @@
       "index": 6,
       "slot_offset": 1347584,
       "slot_size": 749568,
-      "total_size": 23660,
+      "total_size": 26624,
       "font_count": 10,
       "fonts": [
         {

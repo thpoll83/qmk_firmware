@@ -271,9 +271,35 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   the old compiled-in `{ &flag_font }` path did. `kdisp_gfx_glyph_font(fonts, n, cp,
   &out_font)` returns the glyph **and** its owning font in one scan for exactly this
   (`kdisp_gfx_glyph` is the `out_font = NULL` wrapper).
-- **GFXfont bitmaps are continuous-bit-packed, byte-padded per *glyph* — NOT per
-  scanline.** Index bits as `bit = yy*w + xx; byte = bitmapOffset + bit/8; msb-first`.
-  A per-scanline-stride reader produces garbage that *looks* like dithering noise.
+- **GFXfont bitmaps are COLUMN-NATIVE (OLED page format) since the PolyColGfx
+  rollout (font-pack ABI 2).** 1 byte = 8 *vertical* pixels, so the firmware blits a
+  whole column-byte into the SSD1306 page memory at once. `cb = (h + 7) >> 3`
+  page-bytes per column; index `bitmap[bitmapOffset + xx*cb + (yy>>3)]`, bit
+  `1 << (yy & 7)` (**LSB = top of the page**); a glyph is `width * cb` whole bytes.
+  Canonical types are `PolyColGfx`/`PolyColGlyph` (`base/fonts/gfxfont.h`) with
+  `GFXfont`/`GFXglyph` kept as compat aliases. ⚠️ **NOT** the classic Adafruit
+  row-major layout (`bit = yy*w + xx`, MSB-first) — a row-major reader (or an
+  un-transposed header, see below) produces garbage that *looks* like dithering
+  noise. `fontconvert` emits column-native (`emit_buf_col`); the ABI-2 `.plyf` packs
+  and every reader (host + firmware) match, so it's a coordinated host↔firmware↔rig
+  ABI 1→2 change (a keyboard rejects a mismatched-ABI pack by design). Column
+  padding grows the *resident* fonts ~10 KB in the image (only glyphs whose height
+  isn't a multiple of 8 grow — IconsFont at h=40 grew 0 B) — the inherent, benign
+  cost of one uniform format with no runtime transpose cache.
+  - ⚠️ **`base/fonts/gfx_icons.h` (IconsFont + a NULL-bitmap HelperFont) is
+    hand-maintained and lives OUTSIDE `fonts.yaml`/`generated/`, so bulk font-header
+    tooling silently skips it.** Any glyph-format change (the column transpose, a
+    future re-pack) MUST include it explicitly — missing it leaves every resident
+    icon (layer / arrows / caps+num lock / OS logos / mouse buttons) rendering
+    garbage while pack glyphs look fine (the exact 2026-07 symptom that cost a debug
+    round on hardware).
+  - ⚠️ **When transposing/parsing a committed header, STRIP the `/* 0x80 ICON_LAYER
+    14x16 */` comment tags before pulling `0x..` bytes** — the tag hex pollutes a
+    naive byte regex and shifts the whole array. And **verify against the rendered
+    glyph shape, not a transform∘inverse round-trip**: a self-check that reads back
+    through the same (polluted) data falsely reports "0 mismatches" — that shipped a
+    broken IconsFont fix once; ASCII-rendering LAYER/LEFT/RIGHT against the row-major
+    source is what actually caught it.
 - **Composable plotter modes** (`disp_array.c/.h`, static flags toggled around a
   draw): `kdisp_set_gfx_erase(bool)` makes the glyph plotter **clear** pixels
   instead of setting them, and `kdisp_set_gfx_scanline(bool)` lights **only even

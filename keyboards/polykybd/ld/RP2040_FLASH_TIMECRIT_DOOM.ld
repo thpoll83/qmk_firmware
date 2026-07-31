@@ -169,7 +169,7 @@ SECTIONS
         *doom/engine/*.o(COMMON)
         . = ALIGN(4);
         __doom_shared_statics_end__ = .;
-        . = __doom_shared_base__ + 226800;
+        . = __doom_shared_base__ + 216000;
         __doom_shared_end__ = .;
     } > BSS_RAM
 }

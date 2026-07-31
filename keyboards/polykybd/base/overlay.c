@@ -14,7 +14,7 @@
 
 static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 // ⚠️ overlays[] IS the doom easter-egg's entire game arena (borrowed as RAM). Its
-// size = NUM_OVERLAYS*NUM_VARIATIONS*360 = 226,800 B today. If you SHRINK the pool
+// size = NUM_OVERLAY_SLOTS*360 = 216,000 B today. If you SHRINK the pool
 // to reclaim RAM, keep it >= ~205 KB or the doom build won't fit: the engine floor
 // is ~144 KB of fixed structure (frame buffer 53,760 + pd_render 58,880 + statics
 // 20,824 + vpatch/compose/mirror/stack) plus a >=~58 KB zone heap. The monolith
@@ -31,7 +31,7 @@ static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 // its statics AT the array's measured address instead — doom/PACK_DESIGN.md.)
 extern uint8_t __doom_shared_base__[];
 #define overlays ((uint8_t (*)[72*40/8])__doom_shared_base__)
-#define OVERLAYS_SIZE (NUM_OVERLAYS*NUM_VARIATIONS*(72*40/8))
+#define OVERLAYS_SIZE (NUM_OVERLAY_SLOTS*(72*40/8))
 #elif defined(POLYKYBD_DOOM_PACK)
 // DoomPack flavour: the pool is PINNED at the RAM origin (0x20000000) via
 // the dedicated .overlay_pool section (ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld)
@@ -39,10 +39,10 @@ extern uint8_t __doom_shared_base__[];
 // Like the monolith's .doom_shared the section is NOLOAD (crt0 does not
 // zero it) — the usage bits above gate every read and the reset/refill
 // paths memset it, so boot behaviour is unchanged.
-static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8] __attribute__((section(".overlay_pool")));
+static uint8_t overlays [NUM_OVERLAY_SLOTS][72*40/8] __attribute__((section(".overlay_pool")));
 #define OVERLAYS_SIZE sizeof(overlays)
 #else
-static /*volatile*/ uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
+static /*volatile*/ uint8_t overlays [NUM_OVERLAY_SLOTS][72*40/8]; // ResX*ResY/PixelPerByte
 #define OVERLAYS_SIZE sizeof(overlays)
 #endif
 static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
@@ -137,12 +137,12 @@ uint8_t* get_overlay(uint16_t overlay_idx) {
     // memory-safe AND non-destructive (no real slot is read or overwritten; slot 0
     // would have been a legitimate keycap image). Logged once so a stale/buggy
     // mapping doesn't disappear silently, one-shot to avoid flooding the render path.
-    if (overlay_idx >= NUM_OVERLAYS*NUM_VARIATIONS) {
+    if (overlay_idx >= NUM_OVERLAY_SLOTS) {
         static bool s_logged = false;
         if (!s_logged) {
             s_logged = true;
             uprintf("get_overlay: index %u out of range (max %u) — discarding.\n",
-                    (unsigned)overlay_idx, (unsigned)(NUM_OVERLAYS*NUM_VARIATIONS - 1));
+                    (unsigned)overlay_idx, (unsigned)(NUM_OVERLAY_SLOTS - 1));
         }
         return s_overlay_discard;
     }
@@ -181,13 +181,19 @@ void set_all_overlay_mapping(void) {
     }
 }
 
+// Clear every (keycode-slot, modifier-variant) -> pool-slot association.
+//
+// There is deliberately NO identity default any more. The pool is no longer
+// indexed by (slot, variant) — it is a plain bank of NUM_OVERLAY_SLOTS images
+// that the host assigns via cmd 21, so "slot i holds variant i's image" is not a
+// meaningful starting state (and with 810 map entries over 600 slots it isn't
+// even expressible). Every call site pairs this with reset_overlay_usage(), and
+// rendering is gated on those usage bits, so the values here are don't-care —
+// they are zeroed only to keep every entry trivially in range for any reader
+// that reaches get_overlay() without consulting the usage bit first.
 void reset_overlay_mapping(void) {
-    for(int16_t i = 0; i < NUM_OVERLAYS*NUM_VARIATIONS; ++i) {
-        overlay_map[i] = i;
-    }
-    //the additional map entries for Ctrl+Alt+Shift and GUI Modifiers will point to the no_modifier version (0-NUM_OVERLAYS)
-    for(int16_t i = NUM_OVERLAYS*NUM_VARIATIONS; i < NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP; ++i) {
-        overlay_map[i] = i%NUM_OVERLAYS;
+    for(int16_t i = 0; i < OVERLAY_MAP_IDX_CNT; ++i) {
+        overlay_map[i] = 0;
     }
 }
 

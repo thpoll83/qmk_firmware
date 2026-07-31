@@ -251,8 +251,22 @@
 #define ROI_START (HID_REPORT_SIZE-7) // additional minus keycode and 4 bytes compressed roi header -> -7
 
 #define NUM_OVERLAYS 90
-#define NUM_VARIATIONS 7 // NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5), ALT_SHIFT(6), Not supported without overlay mapping CTRL_ALT_SHIFT(7) GUI_KEY(8)
-#define NUM_VARIATIONS_WITH_MAP 9 //all modifiers supported (current maximum would be 14, maybe later support GUI+CTL/ALT/SHIFT -> 12)
+#define NUM_VARIATIONS_WITH_MAP 9 // ALL modifier variants are addressable: NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5), ALT_SHIFT(6), CTRL_ALT_SHIFT(7), GUI_KEY(8) (maximum would be 14, maybe later support GUI+CTL/ALT/SHIFT -> 12)
+
+// Physical overlay pool: how many DISTINCT 360-byte keycap images can be resident
+// at once. Deliberately DECOUPLED from NUM_OVERLAYS*variants — overlay mapping is
+// mandatory, so overlay_map[] (810 entries, every keycode-slot x variant pair)
+// points each pair at any pool slot. Variants that share artwork therefore cost
+// ONE slot, not one each: measured across the 24 shipped app templates, the
+// heaviest app needs 62 distinct images and the median 31, so 600 holds ~10 apps
+// at worst case. It was previously NUM_OVERLAYS*7 = 630 purely because the array
+// was indexed directly by (slot, variant).
+// ⚠️ Lower bound is set by DOOM, not by overlays: the pool IS the game arena
+// (see base/overlay.c + doom/doom_arena.h), whose floor is ~205 KB / 584 slots.
+// ⚠️ Mirrored in ld/RP2040_FLASH_TIMECRIT_DOOM.ld, ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld,
+// doom/pack/build_pack.sh (RAM_SIZE) and PolyKybdHost device_settings.py — all five
+// must move together, and the pack's .plyx carries the size in its header.
+#define NUM_OVERLAY_SLOTS 600
 #define OVERLAY_MAP_IDX_CNT (NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP)
 #define OVERLAY_MAP_IDX_BITS 10
 #define OVERLAY_MAP_IDX_CNT_PER_REPORT (HID_DATA_MAX*8/OVERLAY_MAP_IDX_BITS)

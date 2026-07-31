@@ -59,7 +59,7 @@ extern uint8_t __doom_shared_end__[];
 // linker script. The pool is base/overlay.c's plain array (borrowed via
 // get_overlays() as always) and the engine-statics/arena split inside it
 // comes from the loaded pack's header (doom_pack_arena_off()).
-#define DOOM_POOL_BYTES ((uint32_t)NUM_OVERLAYS * NUM_VARIATIONS * (72 * 40 / 8))
+#define DOOM_POOL_BYTES ((uint32_t)NUM_OVERLAY_SLOTS * (72 * 40 / 8))
 #endif
 
 // The engine's view height (SCREENHEIGHT 200 - the 32 px vpatch status bar).

@@ -42,7 +42,7 @@ typedef enum {
 } fifo_command_t;
 
 // Overlay buffers for core1 processing
-extern uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
+extern uint8_t overlays [NUM_OVERLAY_SLOTS][72*40/8]; // ResX*ResY/PixelPerByte
 
 // Main function for core1, do not use any prtintf or similar, stack is limited!
 // Processes decompression and ROI update commands from core0 via FIFO, handles overlay buffer updates.

@@ -135,7 +135,7 @@ SECTIONS
     {
         __overlay_pool_base__ = .;
         *(.overlay_pool)
-        . = __overlay_pool_base__ + 226800;
+        . = __overlay_pool_base__ + 216000;
         __overlay_pool_end__ = .;
     } > BSS_RAM
 

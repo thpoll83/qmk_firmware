@@ -3314,6 +3314,12 @@ void keyboard_post_init_user(void) {
     pointing_device_set_cpi(650);
 #endif
     //pimoroni_trackball_set_rgbw(0,0,255,100);
+
+    // Transpose the resident base Latin keycap font into a column-native (OLED
+    // page-format) RAM store once, so awake ASCII legends blit whole vertical
+    // bytes instead of the per-pixel flash raster plot (the legend hot path).
+    kdisp_set_base_colcache_font(&NotoSans_Regular_Base_14pt7b);
+
     layer_state_t default_layer = persistent_default_layer_get();
     access_local_layer()->def_layer = default_layer;
     access_local_state()->unicode_mode = get_unicode_input_mode();

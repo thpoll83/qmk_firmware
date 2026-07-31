@@ -505,15 +505,19 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
         const uint8_t  shift = (uint8_t)(gy0 & 7);
         const int      page0 = gy0 >> 3;
         const uint8_t  nb    = (uint8_t)((h + shift + 7) >> 3);  // buffer pages spanned
+        // Per column, walk its pages carrying the shift overflow into the next
+        // page — all 8/16-bit, no wide accumulator. dst page p gets the low byte
+        // of (col[p] << shift) OR the high byte carried from (col[p-1] << shift).
+        // Byte-identical to a per-column uint64 assemble+shift, but drops the
+        // costly M0+ 64-bit variable shifts. Reads the column store sequentially.
         for (uint8_t cx = 0; cx < (uint8_t)w; cx++) {
-            uint64_t v = 0;
-            for (uint8_t b = 0; b < cb; b++) {
-                v |= (uint64_t)col[(uint16_t)cx * cb + b] << (8u * b);
-            }
-            v <<= shift;
-            uint8_t *dst = &scratch_buffer[page0 * BUFFER_BYTE_WIDTH + gx0 + cx];
+            const uint8_t *cp  = &col[(uint16_t)cx * cb];
+            uint8_t       *dst = &scratch_buffer[page0 * BUFFER_BYTE_WIDTH + gx0 + cx];
+            uint8_t        carry = 0;
             for (uint8_t p = 0; p < nb; p++) {
-                dst[p * BUFFER_BYTE_WIDTH] |= (uint8_t)((v >> (8u * p)) & 0xFFu);
+                uint16_t s = (p < cb) ? ((uint16_t)cp[p] << shift) : 0u;
+                dst[p * BUFFER_BYTE_WIDTH] |= (uint8_t)s | carry;
+                carry = (uint8_t)(s >> 8);
             }
         }
         loop_profile_add_render_phase(LP_RP_LEG_RASTER, loop_profile_now_us() - _lp_rs0);

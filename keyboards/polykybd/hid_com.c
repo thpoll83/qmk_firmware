@@ -902,6 +902,66 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     uprint("Replaying startup animation.\n");
                 }
                 break;
+#ifdef POLYKYBD_LOOP_PROFILE
+            case 32: //main-loop profiler control (POLYKYBD_LOOP_PROFILE builds only)
+                {
+                    // Lets an automated harness (the polykybd-ctnd rig) bound ONE
+                    // measurement: reset the counters, drive a workload, read the
+                    // window back as binary. Without it the only readout is the
+                    // periodic console block, whose counters are cumulative from
+                    // boot and whose `worst` is an all-time maximum — impossible to
+                    // attribute to a specific workload.
+                    //
+                    // NOT protocol-gated and bumps NO PROTOCOL_VERSION — like cmd 31
+                    // (REPLAY_ANIM) and the fontpack commands, it is dispatched
+                    // independently. On a normal (non-profiling) build the whole case
+                    // is compiled out, so the command NACKs via the default branch;
+                    // that NACK is how the rig distinguishes "no profiler in this
+                    // firmware" from a real answer.
+                    //
+                    // data[2] = sub-command, data[3] = page (READ only).
+                    const uint8_t sub  = hid_payload_avail(length, 2) > 0 ? data[2] : 0xFFu;
+                    const uint8_t page = hid_payload_avail(length, 3) > 0 ? data[3] : 0;
+                    switch (sub) {
+                        case 0: // RESET — zero the counters and start a fresh window
+                            loop_profile_reset();
+                            memset(data, 0, length);
+                            hid_reply(data, 32, true);
+                            raw_hid_send(data, length);
+                            break;
+                        case 1: { // READ — binary snapshot of the current window
+                            uint8_t body[64];
+                            uint8_t n = loop_profile_snapshot(page, body, (uint8_t)sizeof(body));
+                            memset(data, 0, length);
+                            hid_reply(data, 32, n > 0);
+                            if (n > 0) {
+                                data[3] = page;
+                                // Header is 4 bytes (P, cmd, status, page), so the
+                                // body is bounded by whatever the report holds after
+                                // it — via the shared helper, so a short report can
+                                // never underflow into a huge memcpy.
+                                const uint16_t room = hid_payload_avail(length, 4);
+                                if ((uint16_t)n > room) n = (uint8_t)room;
+                                memcpy(&data[4], body, n);
+                            }
+                            raw_hid_send(data, length);
+                            break;
+                        }
+                        case 2: // LOG — dump the console summary block immediately
+                            loop_profile_log_now();
+                            memset(data, 0, length);
+                            hid_reply(data, 32, true);
+                            raw_hid_send(data, length);
+                            break;
+                        default:
+                            memset(data, 0, length);
+                            hid_reply(data, 32, false);
+                            raw_hid_send(data, length);
+                            break;
+                    }
+                }
+                break;
+#endif
             default:
                 if (hid_fw_up_receive(data, length)) {
                     break;

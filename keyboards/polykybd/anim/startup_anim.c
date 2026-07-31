@@ -54,8 +54,13 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 
 // Number of keycap slots per half in the generated geometry tables.
 #define SA_NUM_KEYS 40
+// Both halves are walked by the same `idx < SA_NUM_KEYS` loop, so assert BOTH —
+// a regenerated geom header that changed only one table would otherwise read past
+// the shorter one with no compiler complaint.
 _Static_assert(sizeof(SA_GEOM_LEFT) / sizeof(SA_GEOM_LEFT[0]) == SA_NUM_KEYS,
-               "SA_NUM_KEYS must match the generated SA_GEOM_* table length");
+               "SA_NUM_KEYS must match the generated SA_GEOM_LEFT table length");
+_Static_assert(sizeof(SA_GEOM_RIGHT) / sizeof(SA_GEOM_RIGHT[0]) == SA_NUM_KEYS,
+               "SA_NUM_KEYS must match the generated SA_GEOM_RIGHT table length");
 
 static bool     s_active;
 static bool     s_loop;       // true: idle screensaver — restart at the end instead of ending

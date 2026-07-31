@@ -99,6 +99,12 @@ void kdisp_send_buffer(void);
 
 void kdisp_send_window(void);
 
+// Block until any in-flight async window-send DMA (kdisp_send_window) has drained.
+// Currently kdisp_send_window waits internally, so this is only needed by the
+// (upcoming) render/send-overlap path, which defers the wait to the caller. Safe to
+// call when nothing is in flight (no-op).
+void kdisp_send_wait(void);
+
 void kdisp_invert(bool invert);
 
 void kdisp_scroll(bool activate);

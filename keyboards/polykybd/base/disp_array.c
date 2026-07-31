@@ -849,10 +849,30 @@ void kdisp_send_buffer(void) {
     //spi_stop();
 }
 
+// --- Contiguous-gather keycap-window send (DMA-overlap groundwork) ------------
+// The visible 72x40 window is 5 pages x 72 cols = 360 bytes, but NON-contiguous
+// in scratch_buffer (stride BUFFER_BYTE_WIDTH=128, only 72 of each 128 used). We
+// gather it into one private CONTIGUOUS 360-byte buffer and push it with a single
+// blocking DMA (spi_transmit -> spiSend). One contiguous DMA is byte-identical to
+// the old 5x per-page transmit (SSD1306 horizontal addressing wraps col 99->28
+// into the next page). The gather into a private buffer also DECOUPLES the DMA
+// source from scratch_buffer — the groundwork the render/send overlap needs (so a
+// later step can refill scratch_buffer for the next keycap while this buffer's DMA
+// drains). This step keeps the send SYNCHRONOUS (blocking spi_transmit), so
+// on-screen behaviour and timing are unchanged.
+#define WIN_BYTES (BUFFER_BYTE_VIS_HEIGHT * BUFFER_BYTE_VIS_WIDTH)   // 5*72 = 360
+static uint8_t s_win_buf[WIN_BYTES];
+
+// Reserved for the render/send-overlap path: an async send there defers its wait
+// to the caller. The current send is synchronous, so nothing is ever in flight and
+// this is a no-op. (An async send needs an SPIConfig end_cb to complete correctly
+// on this ChibiOS port — the no-end_cb completion ISR never returns the driver to
+// SPI_READY; the blocking spiSend does that itself. See the overlap step.)
+void kdisp_send_wait(void) { }
+
 // Push ONLY the visible 72x40 window (BUFFER_X..+71, pages 0..4) = 360 bytes,
-// instead of the whole 1024-byte controller RAM. ~2.9x less SPI per keycap — used
-// by the procedural startup animation for a higher framerate. The caller must
-// still have written the visible pixels into scratch_buffer at column BUFFER_X.
+// instead of the whole 1024-byte controller RAM. ~2.9x less SPI per keycap. The
+// caller must have written the visible pixels into scratch_buffer at column BUFFER_X.
 void kdisp_send_window(void) {
     spi_prepare_commands();
     static const uint8_t PROGMEM dlist[] = {SSD1306_PAGEADDR,
@@ -862,13 +882,17 @@ void kdisp_send_window(void) {
                                             BUFFER_X};                    // column start (28)
     spi_transmit(dlist, sizeof(dlist));
     spi_write(BUFFER_X + BUFFER_BYTE_VIS_WIDTH - 1);   // column end (28+72-1 = 99)
-    spi_prepare_data();
-    // Horizontal addressing (as kdisp_send_buffer uses): page-major, so send each
-    // visible page's 72 columns from BUFFER_X; the controller wraps col 99->28.
+
+    // Gather the non-contiguous visible pages into the contiguous send buffer, then
+    // push all 360 bytes in one DMA (horizontal addressing streams them page-major).
     for (uint8_t page = 0; page < BUFFER_BYTE_VIS_HEIGHT; ++page) {
-        spi_transmit(&scratch_buffer[(size_t)page * BUFFER_BYTE_WIDTH + BUFFER_X],
-                     BUFFER_BYTE_VIS_WIDTH);
+        memcpy(&s_win_buf[(size_t)page * BUFFER_BYTE_VIS_WIDTH],
+               &scratch_buffer[(size_t)page * BUFFER_BYTE_WIDTH + BUFFER_X],
+               BUFFER_BYTE_VIS_WIDTH);
     }
+
+    spi_prepare_data();
+    spi_transmit(s_win_buf, WIN_BYTES);
 }
 
 void kdisp_invert(bool invert) {

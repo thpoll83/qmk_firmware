@@ -99,6 +99,18 @@ void kdisp_send_buffer(void);
 
 void kdisp_send_window(void);
 
+// Dirty-window send: mark which panel the NEXT kdisp_send_window() draws, so it can
+// stream only the changed sub-rectangle (union of this panel's previously-sent box
+// and the new content). The awake per-keycap render loop calls this right after
+// selecting the keycap; the tracking is consumed by that one send. Idle / Eden /
+// DOOM sends don't call it and so stream the whole window.
+void kdisp_track_panel(uint8_t idx);
+
+// Force every panel's remembered window to "full" so the next tracked send to each
+// erases the whole visible window. Call on boot and on any mode->awake transition
+// (idle / Eden / DOOM exit), where an untracked path drew the panels.
+void kdisp_invalidate_all_windows(void);
+
 // Block until any in-flight async window-send DMA (kdisp_send_window) has drained.
 // Currently kdisp_send_window waits internally, so this is only needed by the
 // (upcoming) render/send-overlap path, which defers the wait to the caller. Safe to

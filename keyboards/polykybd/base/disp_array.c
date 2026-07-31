@@ -849,50 +849,119 @@ void kdisp_send_buffer(void) {
     //spi_stop();
 }
 
-// --- Contiguous-gather keycap-window send (DMA-overlap groundwork) ------------
-// The visible 72x40 window is 5 pages x 72 cols = 360 bytes, but NON-contiguous
-// in scratch_buffer (stride BUFFER_BYTE_WIDTH=128, only 72 of each 128 used). We
-// gather it into one private CONTIGUOUS 360-byte buffer and push it with a single
-// blocking DMA (spi_transmit -> spiSend). One contiguous DMA is byte-identical to
-// the old 5x per-page transmit (SSD1306 horizontal addressing wraps col 99->28
-// into the next page). The gather into a private buffer also DECOUPLES the DMA
-// source from scratch_buffer — the groundwork the render/send overlap needs (so a
-// later step can refill scratch_buffer for the next keycap while this buffer's DMA
-// drains). This step keeps the send SYNCHRONOUS (blocking spi_transmit), so
-// on-screen behaviour and timing are unchanged.
+// --- Dirty-window keycap send (transfer only the changed sub-rectangle) -------
+// The visible 72x40 window is 5 pages x 72 cols = 360 bytes, but a legend usually
+// touches far less. During the AWAKE per-keycap render loop we track, PER PANEL,
+// the bounding box of what we last SENT, and address+stream only union(prev, new):
+// the new frame's zeros land on the old pixels (erasing them) and the new content
+// is drawn, while everything outside the union is left untouched (0 in both
+// frames). The SSD1315 rectangular address window (0x21/0x22) makes this a single
+// gathered DMA. Legends shrink a lot; full-bleed content (overlays) has a near-full
+// bbox and streams the whole window (no regression).
+//
+// Opt-in per keycap: the awake loop calls kdisp_track_panel(idx) before each send.
+// Idle / Eden / DOOM sends stay UNTRACKED (full window); the mode->awake transition
+// calls kdisp_invalidate_all_windows() so the first awake render erases whatever the
+// mode left. Per-panel state is 4 bytes x KDISP_NUM_PANELS (~160 B on split72).
 #define WIN_BYTES (BUFFER_BYTE_VIS_HEIGHT * BUFFER_BYTE_VIS_WIDTH)   // 5*72 = 360
 static uint8_t s_win_buf[WIN_BYTES];
 
-// Reserved for the render/send-overlap path: an async send there defers its wait
-// to the caller. The current send is synchronous, so nothing is ever in flight and
-// this is a no-op. (An async send needs an SPIConfig end_cb to complete correctly
-// on this ChibiOS port — the no-end_cb completion ISR never returns the driver to
-// SPI_READY; the blocking spiSend does that itself. See the overlap step.)
+#ifndef NUM_SHIFT_REGISTERS
+#  define NUM_SHIFT_REGISTERS 6
+#endif
+#define KDISP_NUM_PANELS  (NUM_SHIFT_REGISTERS * 8)
+#define WIN_BBOX_EMPTY    0xFFu   // c0 == this -> panel currently blank (nothing lit)
+
+// Window-relative bbox: cols 0..BUFFER_BYTE_VIS_WIDTH-1, pages 0..BUFFER_BYTE_VIS_HEIGHT-1.
+typedef struct { uint8_t c0, c1, p0, p1; } win_bbox_t;
+static win_bbox_t s_prev_win[KDISP_NUM_PANELS];
+static int16_t    s_track_panel = -1;   // >=0 only during the awake keycap render
+
+// Mark the panel the next kdisp_send_window() draws (the awake render loop calls
+// this right after selecting the keycap). Consumed by that one send.
+void kdisp_track_panel(uint8_t idx) {
+    s_track_panel = (idx < KDISP_NUM_PANELS) ? (int16_t)idx : -1;
+}
+
+// Force every panel's remembered window to "full", so the next tracked send to
+// each erases the whole visible window. Called on boot and on any mode->awake
+// transition (idle / Eden / DOOM exit), where an untracked path drew the panels.
+void kdisp_invalidate_all_windows(void) {
+    for (uint16_t i = 0; i < KDISP_NUM_PANELS; ++i) {
+        s_prev_win[i].c0 = 0;
+        s_prev_win[i].c1 = BUFFER_BYTE_VIS_WIDTH - 1;
+        s_prev_win[i].p0 = 0;
+        s_prev_win[i].p1 = BUFFER_BYTE_VIS_HEIGHT - 1;
+    }
+}
+
+// Reserved for the render/send-overlap path (a future async send would defer its
+// wait here). The current send is synchronous, so this is a no-op.
 void kdisp_send_wait(void) { }
 
-// Push ONLY the visible 72x40 window (BUFFER_X..+71, pages 0..4) = 360 bytes,
-// instead of the whole 1024-byte controller RAM. ~2.9x less SPI per keycap. The
-// caller must have written the visible pixels into scratch_buffer at column BUFFER_X.
-void kdisp_send_window(void) {
+// Stream a rectangular sub-window [c0..c1] x [p0..p1] (window-relative) from
+// scratch_buffer, gathered contiguous, in one DMA. c/p already validated.
+static void send_window_rect(uint8_t c0, uint8_t c1, uint8_t p0, uint8_t p1) {
+    const uint8_t ncols = (uint8_t)(c1 - c0 + 1);
     spi_prepare_commands();
-    static const uint8_t PROGMEM dlist[] = {SSD1306_PAGEADDR,
-                                            0,                            // page start
-                                            BUFFER_BYTE_VIS_HEIGHT - 1,   // page end (4)
-                                            SSD1306_COLUMNADDR,
-                                            BUFFER_X};                    // column start (28)
+    const uint8_t dlist[6] = {SSD1306_PAGEADDR, p0, p1,
+                              SSD1306_COLUMNADDR, (uint8_t)(BUFFER_X + c0), (uint8_t)(BUFFER_X + c1)};
     spi_transmit(dlist, sizeof(dlist));
-    spi_write(BUFFER_X + BUFFER_BYTE_VIS_WIDTH - 1);   // column end (28+72-1 = 99)
 
-    // Gather the non-contiguous visible pages into the contiguous send buffer, then
-    // push all 360 bytes in one DMA (horizontal addressing streams them page-major).
-    for (uint8_t page = 0; page < BUFFER_BYTE_VIS_HEIGHT; ++page) {
-        memcpy(&s_win_buf[(size_t)page * BUFFER_BYTE_VIS_WIDTH],
-               &scratch_buffer[(size_t)page * BUFFER_BYTE_WIDTH + BUFFER_X],
-               BUFFER_BYTE_VIS_WIDTH);
+    uint16_t n = 0;
+    for (uint8_t page = p0; page <= p1; ++page) {
+        memcpy(&s_win_buf[n],
+               &scratch_buffer[(size_t)page * BUFFER_BYTE_WIDTH + BUFFER_X + c0],
+               ncols);
+        n += ncols;
+    }
+    spi_prepare_data();
+    spi_transmit(s_win_buf, n);
+}
+
+// Push the visible 72x40 window. When a panel is being tracked (awake render), only
+// union(prev, new) is streamed; otherwise the whole window. The caller must have
+// written the visible pixels into scratch_buffer at column BUFFER_X.
+void kdisp_send_window(void) {
+    const int16_t panel = s_track_panel;
+    s_track_panel = -1;                       // one-shot: this send consumes the tracking
+
+    if (panel < 0) {                          // untracked (idle / Eden / DOOM): whole window
+        send_window_rect(0, BUFFER_BYTE_VIS_WIDTH - 1, 0, BUFFER_BYTE_VIS_HEIGHT - 1);
+        return;
     }
 
-    spi_prepare_data();
-    spi_transmit(s_win_buf, WIN_BYTES);
+    // Scan the visible window for the new content's bbox (col x page granularity).
+    uint8_t nc0 = 0xFF, nc1 = 0, np0 = 0xFF, np1 = 0;
+    for (uint8_t page = 0; page < BUFFER_BYTE_VIS_HEIGHT; ++page) {
+        const uint8_t *row = &scratch_buffer[(size_t)page * BUFFER_BYTE_WIDTH + BUFFER_X];
+        bool page_has = false;
+        for (uint8_t c = 0; c < BUFFER_BYTE_VIS_WIDTH; ++c) {
+            if (row[c]) { page_has = true; if (c < nc0) nc0 = c; if (c > nc1) nc1 = c; }
+        }
+        if (page_has) { if (page < np0) np0 = page; if (page > np1) np1 = page; }
+    }
+    const bool new_empty = (np0 == 0xFF);
+
+    win_bbox_t *prev = &s_prev_win[panel];
+    const bool prev_empty = (prev->c0 == WIN_BBOX_EMPTY);
+
+    if (!(new_empty && prev_empty)) {
+        // Send union(prev, new) — erases the old content and draws the new.
+        uint8_t uc0 = 0xFF, uc1 = 0, up0 = 0xFF, up1 = 0;
+        if (!new_empty)  { uc0 = nc0;      uc1 = nc1;      up0 = np0;      up1 = np1;      }
+        if (!prev_empty) {
+            if (prev->c0 < uc0) uc0 = prev->c0;
+            if (prev->c1 > uc1) uc1 = prev->c1;
+            if (prev->p0 < up0) up0 = prev->p0;
+            if (prev->p1 > up1) up1 = prev->p1;
+        }
+        send_window_rect(uc0, uc1, up0, up1);
+    }
+
+    // Remember the new content as this panel's window for next time.
+    if (new_empty) { prev->c0 = WIN_BBOX_EMPTY; }
+    else           { prev->c0 = nc0; prev->c1 = nc1; prev->p0 = np0; prev->p1 = np1; }
 }
 
 void kdisp_invert(bool invert) {

@@ -1241,12 +1241,19 @@ static void doom_slave_tick(void) {
         const bool fell = s_slave_blit_bottom && !bottom;
         s_slave_blit_bottom = bottom;
         if (fell && live) {
+            // Bottom row was blitted (untracked full window); pad legends return
+            // there — force the full-window repaint or the dirty-window send leaves
+            // DOOM pixels on the handed-back keys (same as the exit case).
+            doom_blit_invalidate_windows();
             request_disp_refresh(); // attract -> map/menu: thumb legends return
         }
     }
     if (live != s_slave_blit) {
         s_slave_blit = live;
         if (!live) {
+            // Viewport blitter released these panels; update_displays repaints the
+            // legends — invalidate the stale per-panel windows first (see above).
+            doom_blit_invalidate_windows();
             request_disp_refresh(); // hand the viewport back to the pad legends
         }
     }

@@ -926,6 +926,13 @@ void kdisp_send_window(void) {
     const int16_t panel = s_track_panel;
     s_track_panel = -1;                       // one-shot: this send consumes the tracking
 
+#ifdef POLY_DIRTYWIN_DISABLE
+    // A/B control build: always stream the whole visible window (the pre-dirty-window
+    // behaviour), so a like-for-like profiling run isolates the dirty-window send delta.
+    (void)panel;
+    send_window_rect(0, BUFFER_BYTE_VIS_WIDTH - 1, 0, BUFFER_BYTE_VIS_HEIGHT - 1);
+    return;
+#else
     if (panel < 0) {                          // untracked (idle / Eden / DOOM): whole window
         send_window_rect(0, BUFFER_BYTE_VIS_WIDTH - 1, 0, BUFFER_BYTE_VIS_HEIGHT - 1);
         return;
@@ -962,6 +969,7 @@ void kdisp_send_window(void) {
     // Remember the new content as this panel's window for next time.
     if (new_empty) { prev->c0 = WIN_BBOX_EMPTY; }
     else           { prev->c0 = nc0; prev->c1 = nc1; prev->p0 = np0; prev->p1 = np1; }
+#endif
 }
 
 void kdisp_invert(bool invert) {

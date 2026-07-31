@@ -19,15 +19,6 @@
 
 int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c, int8_t cy_radius);
 
-// Registers a resident range font (e.g. the base Latin keycap font) whose glyphs
-// are transposed once into a RAM column-native (OLED page-format) store at boot.
-// When kdisp_write_gfx_char later draws a glyph of THIS font that fits wholly in
-// the scratch buffer (no erase / no scanline), it blits whole vertical bytes from
-// the store instead of plotting pixel-by-pixel from XIP flash — the raster
-// hot-path fix. Pass NULL (or an over-large font) to disable; the plot then falls
-// back to the flash raster path with no behavioural change.
-void kdisp_set_base_colcache_font(const GFXfont *f);
-
 // Sets a global pixel offset added to every subsequent gfx-char/text draw, used by
 // the idle "jitter" anti-burn-in relocation redraw. Pass 0,0 to disable.
 void kdisp_set_draw_offset(int8_t ox, int8_t oy);

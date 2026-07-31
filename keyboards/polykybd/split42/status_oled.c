@@ -90,13 +90,14 @@ static int pdraw_glyph(const GFXfont* const* fonts, uint8_t n, int x, int baseli
     int w = pgm_read_byte(&g->width),  h  = pgm_read_byte(&g->height);
     int xo = (int8_t)pgm_read_byte(&g->xOffset), yo = (int8_t)pgm_read_byte(&g->yOffset);
     const uint8_t* bmp = (const uint8_t*)pgm_read_ptr(&f->bitmap);
-    int bit = 0; uint8_t bits = 0;
-    for (int gy = 0; gy < h; gy++)
-        for (int gx = 0; gx < w; gx++) {
-            if (!(bit++ & 7)) bits = pgm_read_byte(&bmp[bo++]);
-            if (bits & 0x80)  pset(buf, x + xo + gx, baseline + yo + gy);
-            bits <<= 1;
-        }
+    const uint8_t cb = (h > 0) ? (uint8_t)((h + 7) >> 3) : 0;   // column-major page-bytes/col
+    for (int gy = 0; gy < h; gy++) {
+        const uint16_t vbase = bo + (uint16_t)(gy >> 3);
+        const uint8_t  vmsk  = (uint8_t)(1u << (gy & 7));
+        for (int gx = 0; gx < w; gx++)
+            if (pgm_read_byte(&bmp[vbase + (uint16_t)gx * cb]) & vmsk)
+                pset(buf, x + xo + gx, baseline + yo + gy);
+    }
     return pgm_read_byte(&g->xAdvance);
 }
 
@@ -128,13 +129,14 @@ static int pdraw_glyph_half(const GFXfont* const* fonts, uint8_t n, int x, int t
     uint16_t bo = pgm_read_word(&g->bitmapOffset);
     int w = pgm_read_byte(&g->width), h = pgm_read_byte(&g->height);
     const uint8_t* bmp = (const uint8_t*)pgm_read_ptr(&f->bitmap);
-    int bit = 0; uint8_t bits = 0;
-    for (int gy = 0; gy < h; gy++)
-        for (int gx = 0; gx < w; gx++) {
-            if (!(bit++ & 7)) bits = pgm_read_byte(&bmp[bo++]);
-            if (bits & 0x80)  pset(buf, x + gx / 2, top_y + gy / 2);
-            bits <<= 1;
-        }
+    const uint8_t cb = (h > 0) ? (uint8_t)((h + 7) >> 3) : 0;   // column-major page-bytes/col
+    for (int gy = 0; gy < h; gy++) {
+        const uint16_t vbase = bo + (uint16_t)(gy >> 3);
+        const uint8_t  vmsk  = (uint8_t)(1u << (gy & 7));
+        for (int gx = 0; gx < w; gx++)
+            if (pgm_read_byte(&bmp[vbase + (uint16_t)gx * cb]) & vmsk)
+                pset(buf, x + gx / 2, top_y + gy / 2);
+    }
     return (h + 1) / 2;
 }
 

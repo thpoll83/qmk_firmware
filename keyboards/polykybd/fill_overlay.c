@@ -284,6 +284,13 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
 bool set_10bit_overlay_mapping(uint8_t* mapping) {
     bool any_visible = false;
     uint16_t from = UNSET_OVERLAY_MAPPING;
+    // Accumulate this report's mappings into ONE log line instead of one uprintf
+    // per pair (24 pairs/report flooded the console). "from>to" pairs, space-sep.
+    char    map_log[220];
+    int     map_log_n  = 0;
+    uint8_t map_count  = 0;   // pairs accepted (established) this report
+    uint8_t map_shown  = 0;   // pairs actually rendered into map_log (may be fewer if it filled)
+    map_log[0] = '\0';
     for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
         // start_bit must be wide enough to hold idx*10 up to 480 — uint8_t wraps at idx=26.
         uint16_t start_bit = (uint16_t)idx*OVERLAY_MAP_IDX_BITS;
@@ -305,7 +312,21 @@ bool set_10bit_overlay_mapping(uint8_t* mapping) {
                     if (overlay_from_index_visible(from)) {
                         any_visible = true;
                     }
-                    uprintf("Setting overlay mapping from %u to %u\n", from, to);
+                    // Build the log line only when console debugging is on — the
+                    // accumulation is purely for the uprintf below (itself gated on
+                    // debug_enable), so skip the snprintf work entirely otherwise.
+                    if (debug_enable) {
+                        ++map_count;
+                        // Append " from>to" only if it fits whole (snprintf returns the
+                        // length it WOULD write; a value >= rem means truncation → skip it
+                        // and let the "(N, M shown)" line below flag the omission).
+                        int rem = (int)sizeof(map_log) - map_log_n;
+                        int w   = snprintf(map_log + map_log_n, rem, " %u>%u", from, to);
+                        if (w > 0 && w < rem) {
+                            map_log_n += w;
+                            ++map_shown;
+                        }
+                    }
                 } else {
                     uprintf("REJECTED overlay mapping from %u to %u (to out of pool, max %u)\n",
                             from, to, NUM_OVERLAYS*NUM_VARIATIONS - 1);
@@ -313,6 +334,15 @@ bool set_10bit_overlay_mapping(uint8_t* mapping) {
             }
             // from >= OVERLAY_MAP_IDX_CNT is the host's deliberate noop padding (e.g. 810/810); silent.
             from = UNSET_OVERLAY_MAPPING;
+        }
+    }
+    if (map_count) {
+        if (map_shown == map_count) {
+            uprintf("Overlay mapping (%u):%s\n", map_count, map_log);
+        } else {
+            // Buffer filled before all pairs fit — say how many are shown so the
+            // count never overstates the listed pairs.
+            uprintf("Overlay mapping (%u, %u shown):%s\n", map_count, map_shown, map_log);
         }
     }
     return any_visible;

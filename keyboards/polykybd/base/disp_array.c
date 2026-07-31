@@ -406,19 +406,48 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
         kdisp_clear_bitmap_courtyard(x+xo, y+yo, &bitmap[bo], w, h, cy_radius);
     }
 
-    for (yy = 0; yy < h; yy++) {
-        for (xx = 0; xx < w; xx++) {
-            if (!(bit++ & 7)) {
-                bits = pgm_read_byte(&bitmap[bo++]);
-            }
-            if (bits & 0x80) {
-                if (s_gfx_erase) {
-                    CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
-                } else if (!scanline_skip_row(y + yo + yy)) {
-                    SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+    // Fast path (the common awake-legend case): if the WHOLE glyph fits inside the
+    // 128x64 scratch buffer, every pixel is provably in-bounds, so drop the per-pixel
+    // WITHIN_BUFFER clip and hoist the row page-base + bit mask + scanline test out of
+    // the column loop — the plot becomes `row[xx] |= mask`. Byte-identical to the
+    // clipped path for in-bounds glyphs (raster is ~52% of the overlay-switch render
+    // and ~98% of it is this pixel plot; the WITHIN_BUFFER check ran per lit pixel).
+    // Erase mode and any out-of-bounds glyph fall through to the original clipped loop.
+    const int gx0 = x + xo, gy0 = y + yo;
+    const bool glyph_in_buffer = (gx0 >= 0) && (gy0 >= 0) &&
+                                 (gx0 + w <= BUFFER_BYTE_WIDTH) &&
+                                 (gy0 + h <= BUFFER_BYTE_HEIGHT * 8);
+    if (glyph_in_buffer && !s_gfx_erase) {
+        for (yy = 0; yy < h; yy++) {
+            const int     py   = gy0 + yy;
+            const bool    skip = scanline_skip_row(py);
+            uint8_t      *row  = &scratch_buffer[(py >> 3) * BUFFER_BYTE_WIDTH + gx0];
+            const uint8_t mask = (uint8_t)(1u << (py & 7));
+            for (xx = 0; xx < w; xx++) {
+                if (!(bit++ & 7)) {
+                    bits = pgm_read_byte(&bitmap[bo++]);
                 }
+                if ((bits & 0x80) && !skip) {
+                    row[xx] |= mask;
+                }
+                bits <<= 1;
             }
-            bits <<= 1;
+        }
+    } else {
+        for (yy = 0; yy < h; yy++) {
+            for (xx = 0; xx < w; xx++) {
+                if (!(bit++ & 7)) {
+                    bits = pgm_read_byte(&bitmap[bo++]);
+                }
+                if (bits & 0x80) {
+                    if (s_gfx_erase) {
+                        CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                    } else if (!scanline_skip_row(y + yo + yy)) {
+                        SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
+                    }
+                }
+                bits <<= 1;
+            }
         }
     }
 

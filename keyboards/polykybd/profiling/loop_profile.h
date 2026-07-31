@@ -38,7 +38,13 @@
 //   LEGEND  — base legend + tab/MRU chrome (glyph lookup across g_all_fonts + raster)
 //   OVERLAY — copy_overlay_to_buffer() bitmap blit + any hint text
 //   SEND    — kdisp_send_window() (the 360-byte SPI push to the panel)
-enum loop_profile_rphase { LP_RP_CLEAR = 0, LP_RP_LEGEND, LP_RP_OVERLAY, LP_RP_SEND, LP_RP_COUNT };
+//   LEG_LOOKUP / LEG_RASTER — a finer split of the LEGEND phase, measured inside
+//   kdisp_write_gfx_char(): the g_all_fonts font-resolution scan (LOOKUP) vs the
+//   per-pixel bitmap plot that reads the packed glyph from XIP flash (RASTER).
+//   Reported on the `rlegend` line so we can tell whether a legend fix is a
+//   font-lookup cache or an unchanged-legend cache.
+enum loop_profile_rphase { LP_RP_CLEAR = 0, LP_RP_LEGEND, LP_RP_OVERLAY, LP_RP_SEND,
+                           LP_RP_LEG_LOOKUP, LP_RP_LEG_RASTER, LP_RP_COUNT };
 
 #ifdef POLYKYBD_LOOP_PROFILE
 
@@ -65,6 +71,11 @@ void loop_profile_add_bridge_us(uint32_t us);
 // update_displays() calls).
 void loop_profile_add_render_us(uint32_t us);
 
+// Raw 1 MHz microsecond counter (timer_hw->timerawl). Exposed so hot draw code in
+// disp_array.c can bracket a sub-phase without pulling in the pico timer header
+// itself. Returns 0 in a normal (non-profiling) build so the call sites fold away.
+uint32_t loop_profile_now_us(void);
+
 #else
 
 static inline void loop_profile_tick(void) {}
@@ -72,5 +83,6 @@ static inline void loop_profile_note_overlay_cmd(void) {}
 static inline void loop_profile_add_bridge_us(uint32_t us) { (void)us; }
 static inline void loop_profile_add_render_us(uint32_t us) { (void)us; }
 static inline void loop_profile_add_render_phase(uint8_t phase, uint32_t us) { (void)phase; (void)us; }
+static inline uint32_t loop_profile_now_us(void) { return 0; }
 
 #endif

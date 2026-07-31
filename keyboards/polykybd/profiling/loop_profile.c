@@ -86,6 +86,10 @@ void loop_profile_add_render_phase(uint8_t phase, uint32_t us) {
     }
 }
 
+uint32_t loop_profile_now_us(void) {
+    return timer_hw->timerawl;
+}
+
 void loop_profile_tick(void) {
     uint32_t now = timer_hw->timerawl;
 
@@ -153,6 +157,11 @@ void loop_profile_tick(void) {
                     (unsigned long)(s_rphase_us[LP_RP_LEGEND]  / 1000u),
                     (unsigned long)(s_rphase_us[LP_RP_OVERLAY] / 1000u),
                     (unsigned long)(s_rphase_us[LP_RP_SEND]    / 1000u));
+            // Finer split of `legend`: font-resolution scan vs the per-pixel bitmap
+            // plot (XIP-flash reads). Decides lookup-cache vs unchanged-legend-cache.
+            uprintf("  rlegend lookup=%lums raster=%lums\n",
+                    (unsigned long)(s_rphase_us[LP_RP_LEG_LOOKUP] / 1000u),
+                    (unsigned long)(s_rphase_us[LP_RP_LEG_RASTER] / 1000u));
         }
     }
 

@@ -12,6 +12,7 @@
 
 #include "fonts/base_font.h"
 #include "com.h"
+#include "profiling/loop_profile.h"   // no-op hooks unless POLYKYBD_LOOP_PROFILE
 
 #define SSD1306_MEMORYMODE 0x20           ///< See datasheet
 #define SSD1306_COLUMNADDR 0x21           ///< See datasheet
@@ -304,6 +305,7 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
     const GFXfont * currentFont = 0;
     uint32_t first = 0;
     uint32_t last = 0;
+    const uint32_t _lp_lk0 = loop_profile_now_us();   // legend lookup vs raster probe
 
     // Font selection: pick the first font in `fonts` whose [first,last] contains
     // `ch`. Array order is precedence — ranges may overlap deliberately (a narrow
@@ -386,6 +388,8 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
             if (s_mru_len < FONT_MRU_N) ++s_mru_len;
         }
     }
+    loop_profile_add_render_phase(LP_RP_LEG_LOOKUP, loop_profile_now_us() - _lp_lk0);
+    const uint32_t _lp_rs0 = loop_profile_now_us();
     ch -= first;
     const GFXglyph *glyph  = pgm_read_glyph_ptr(currentFont, ch);
     const uint8_t  *bitmap = pgm_read_bitmap_ptr(currentFont);
@@ -418,6 +422,7 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
         }
     }
 
+    loop_profile_add_render_phase(LP_RP_LEG_RASTER, loop_profile_now_us() - _lp_rs0);
     return pgm_read_byte(&glyph->xAdvance);
 }
 

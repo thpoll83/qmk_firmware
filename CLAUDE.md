@@ -110,15 +110,20 @@ inherited-upstream noise:
   (`!keyboards/polykybd/**/*.png`) — all three verified to make `qmk lint --strict`
   pass. **This contradicts the "lint passes green on every normal commit" line
   above** — that holds only while no such file exists.
-- ⚠️ **A PR has TWO check runs per workflow — one for the `push` event, one for
-  `pull_request` — and re-running one does NOT touch the other.** Both build the
-  same commit, so a code fix clears both; but a fix that lives **outside the
-  commit** (a branch/tag/repo-state change) needs each run re-run separately.
-  `rerun_failed_jobs` takes a **run id**, so it only ever fixes the run you named:
-  on wincompose#3 (2026-08-01) re-running one turned that check green and the PR
-  was reported green off it, while the other check run — same commit, same failure
-  — stayed red until it was re-run too. **Before calling a PR green, look at every
-  check run, not the one you just acted on.**
+- ⚠️ **A workflow yields TWO check runs — `push` and `pull_request` — whenever the
+  branch matches BOTH triggers, and re-running one does NOT touch the other.**
+  Here that mostly doesn't happen: `qmk-test.yml` pushes only on `PolyKybd`/
+  `PolyKybd/**`, `unit_test.yml` only on `master`/`develop`, and `lint`/`labeler`
+  are PR-only — so a `claude/**` PR gets a single run per workflow. **The sibling
+  repos differ**: wincompose's `build.yml` pushes on `main` *and* `claude/**` on
+  top of `pull_request`, so every branch PR there carries two, and that is where
+  this bit (2026-08-01). Both runs build the same commit, so a code fix clears
+  both — but a fix that lives **outside the commit** (a branch/tag/repo-state
+  change) has to be re-run per run, and `rerun_failed_jobs` takes a **run id**, so
+  it only ever fixes the one you named. On wincompose#3 re-running one turned that
+  check green and the PR was reported green off it while the other — same commit,
+  same failure — stayed red. **Before calling a PR green, look at every check run,
+  not the one you just acted on.**
 - **Reproduce the whole `lint` job locally instead of reading the CI log** — it is
   ~5 s and definitive. (The GitHub MCP `get_job_logs` *does* work — see the
   tail-size note below — but a local run is faster and gives the whole picture):

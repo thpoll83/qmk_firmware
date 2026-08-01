@@ -49,7 +49,14 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods);
 // The master holds the authoritative overlay_map[] + use_overlay[] (it applies
 // every chunk locally regardless of the bridge), so it can rebuild the slave's
 // view from its own tables. note_..._lost() latches the failure;
-// repush_..._if_lost() re-sends the whole used mapping and is called at the end
-// of the app switch (enable_overlays, hid_com.c case 11).
+// arm_...() starts a repair at the end of the app switch (enable_overlays,
+// hid_com.c case 11); overlay_map_repair_tick() does the actual sending from
+// housekeeping, a bounded number of reports per tick.
+//
+// ⚠️ The send loop is deliberately NOT run inline in the HID handler: a full
+// mapping is up to 34 reports and each bridge can burn 10 retries x the bridge
+// timeout, which on the bad link that caused the repair would block the main
+// loop for seconds inside one HID command.
 void note_overlay_map_sync_lost(void);
-bool repush_overlay_mapping_if_lost(void);
+void arm_overlay_map_repair(void);
+void overlay_map_repair_tick(void);

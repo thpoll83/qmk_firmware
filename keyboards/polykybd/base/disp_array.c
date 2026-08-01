@@ -733,9 +733,13 @@ void clear_line(int8_t from_x, int8_t to_x, int8_t y) {
 // reader to column-native and left the row-major overlay call site behind.
 
 // Emit the dilated clears for one detected run [run_start, run_end] on source row bmp_y.
+// `dy` is int16_t, not int8_t: at radius == INT8_MAX the int8_t counter would
+// wrap at 127 instead of exceeding `radius`, and the loop would never terminate.
+// Unreachable today (callers pass KDISP_CY_DEFAULT 3, or 1 for the lang flags),
+// but the counter costs nothing and the function takes any positive int8_t.
 static void courtyard_clear_run(int8_t x, int8_t y, int8_t bmp_y,
                                 int8_t run_start, int8_t run_end, int8_t radius) {
-    for (int8_t dy = -radius; dy <= radius; ++dy) {
+    for (int16_t dy = -(int16_t)radius; dy <= (int16_t)radius; ++dy) {
         clear_line(x + run_start - radius, x + run_end + 1 + radius, bmp_y + y + dy);
     }
 }

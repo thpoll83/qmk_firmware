@@ -385,50 +385,72 @@ static void pack_10bit_map_value(uint8_t *buf, uint8_t idx, uint16_t v) {
     buf[b + 1] |= (uint8_t)(v >> low);
 }
 
-bool repush_overlay_mapping_if_lost(void) {
+// Repair cursor. The walk is SPLIT ACROSS HOUSEKEEPING TICKS rather than run in
+// one go: a full mapping is up to 34 reports, and each send_to_bridge can burn
+// 10 retries x the bridge timeout before giving up — precisely on the bad link
+// that triggers a repair in the first place. Done inline in raw_hid_receive that
+// is seconds of dead main loop inside one HID command; two reports per tick keeps
+// each pass in the same cost class as the periodic syncs while still finishing
+// the whole mapping within a few milliseconds of wall clock.
+#define MAP_REPAIR_REPORTS_PER_TICK 2
+static bool     s_repair_active = false;
+static uint16_t s_repair_from   = 0;
+static uint16_t s_repair_pairs  = 0;
+static uint8_t  s_repair_reports = 0;
+
+void arm_overlay_map_repair(void) {
     if (!s_map_sync_lost) {
-        return false;
+        return;
     }
-    // Clear up front: a give-up during the repair re-latches it via the caller's
-    // own check, and we must not spin here if the link is genuinely down.
-    s_map_sync_lost = false;
+    s_map_sync_lost  = false;
+    s_repair_active  = true;
+    s_repair_from    = 0;
+    s_repair_pairs   = 0;
+    s_repair_reports = 0;
+}
 
+void overlay_map_repair_tick(void) {
+    if (!s_repair_active) {
+        return;
+    }
     overlay_map_sync_t msg;
-    uint8_t  slot     = 0;      // value slot within this report (from,to,from,to,...)
-    uint16_t pairs    = 0;
-    uint8_t  reports  = 0;
-    bool     all_sent = true;
-    memset(msg.mapping, 0, sizeof(msg.mapping));
+    uint8_t sent_this_tick = 0;
 
-    for (uint16_t from = 0; from <= OVERLAY_MAP_IDX_CNT; ++from) {
-        bool flush_only = (from == OVERLAY_MAP_IDX_CNT);   // sentinel pass: flush the tail
-        if (!flush_only) {
-            if (!is_overlay_used(from)) {
-                continue;
+    while (sent_this_tick < MAP_REPAIR_REPORTS_PER_TICK) {
+        uint8_t slot = 0;       // value slot in this report (from,to,from,to,...)
+        memset(msg.mapping, 0, sizeof(msg.mapping));
+        // Collect up to one report's worth of used entries from the cursor.
+        while (s_repair_from < OVERLAY_MAP_IDX_CNT && slot < OVERLAY_MAP_IDX_CNT_PER_REPORT) {
+            if (is_overlay_used(s_repair_from)) {
+                pack_10bit_map_value(msg.mapping, slot++, s_repair_from);
+                pack_10bit_map_value(msg.mapping, slot++, get_overlay_mapping(s_repair_from));
+                ++s_repair_pairs;
             }
-            pack_10bit_map_value(msg.mapping, slot++, from);
-            pack_10bit_map_value(msg.mapping, slot++, get_overlay_mapping(from));
-            ++pairs;
+            ++s_repair_from;
         }
-        if (slot == OVERLAY_MAP_IDX_CNT_PER_REPORT || (flush_only && slot > 0)) {
-            // Pad the tail with the host's noop convention: a `from` outside the
-            // map is ignored by set_10bit_overlay_mapping on the far side.
-            while (slot < OVERLAY_MAP_IDX_CNT_PER_REPORT) {
-                pack_10bit_map_value(msg.mapping, slot++, OVERLAY_MAP_IDX_CNT);
-            }
-            if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void *)&msg,
-                                               sizeof(overlay_map_sync_t), 10))) {
-                all_sent = false;
-                note_overlay_map_sync_lost();   // try again at the next enable
-            }
-            ++reports;
-            slot = 0;
-            memset(msg.mapping, 0, sizeof(msg.mapping));
+        if (slot == 0) {        // cursor ran out with nothing pending -> done
+            s_repair_active = false;
+            uprintf("Overlay mapping repair: re-pushed %u pairs in %u report(s) to the slave.\n",
+                    (unsigned)s_repair_pairs, (unsigned)s_repair_reports);
+            return;
         }
+        // Pad with the host's noop convention: a `from` outside the map is
+        // ignored by set_10bit_overlay_mapping on the far side.
+        while (slot < OVERLAY_MAP_IDX_CNT_PER_REPORT) {
+            pack_10bit_map_value(msg.mapping, slot++, OVERLAY_MAP_IDX_CNT);
+        }
+        if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void *)&msg,
+                                           sizeof(overlay_map_sync_t), 10))) {
+            // Give up on this pass rather than grinding through the rest of the
+            // pool against a dead link; re-latch so the next enable re-arms.
+            s_repair_active = false;
+            note_overlay_map_sync_lost();
+            uprint("Overlay mapping repair: bridge still failing, aborting this pass.\n");
+            return;
+        }
+        ++s_repair_reports;
+        ++sent_this_tick;
     }
-    uprintf("Overlay mapping repair: re-pushed %u pairs in %u report(s) to the slave%s.\n",
-            (unsigned)pairs, (unsigned)reports, all_sent ? "" : " (INCOMPLETE)");
-    return true;
 }
 
 void apply_overlay_action_flags(uint8_t flags) {

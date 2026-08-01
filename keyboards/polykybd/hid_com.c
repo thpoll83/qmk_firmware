@@ -496,11 +496,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         request_disp_refresh();
                     }
                     // End of the host's app-switch sequence (prepare -> images ->
-                    // mapping -> enable): if any bridge above dropped, rebuild the
-                    // slave's mapping from our own tables now, while the host still
-                    // considers the switch in progress.
+                    // mapping -> enable): if any bridge above dropped, arm a repair
+                    // that rebuilds the slave's mapping from our own tables. The
+                    // sending itself runs in housekeeping (overlay_map_repair_tick),
+                    // NOT here — see the warning in fill_overlay.h.
                     if(new_flags & DISPLAY_OVERLAYS) {
-                        repush_overlay_mapping_if_lost();
+                        arm_overlay_map_repair();
                     }
                     memset(data, 0, length);
                     hid_reply(data, 0x0b, true);

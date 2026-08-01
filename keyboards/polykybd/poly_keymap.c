@@ -972,6 +972,13 @@ void housekeeping_task_user(void) {
         } else {
             sync_and_refresh_displays();
         }
+        // Drain a pending overlay-mapping repair (armed by enable_overlays when a
+        // bridge dropped during an app switch). Master-only — it re-pushes OUR
+        // tables to the slave — and bounded per tick, so it can never turn into
+        // the multi-second main-loop stall an inline repair would be on a bad link.
+        if (is_usb_host_side()) {
+            overlay_map_repair_tick();
+        }
 #ifdef POLY_SPLIT_HEARTBEAT_EXPERIMENT
         // ROOT-CAUSE EXPERIMENT (split42, 2026-07-14). Reproduce the every-cycle
         // master->slave pull that SPLIT_POINTING_ENABLE provided, but with the

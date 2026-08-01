@@ -4,10 +4,30 @@ on:
   push:
     branches: [PolyKybd, "PolyKybd/**"]
   pull_request:
+    # `labeled` is NOT in GitHub's default set (opened/synchronize/reopened), and
+    # without it adding the `perf` label to an open PR fires no run at all — the
+    # label condition below would only ever be evaluated on the next push. The
+    # normal build + HIL jobs opt out of label events (`github.event.action !=
+    # 'labeled'`) so the repo's auto-labeler can't re-run the whole expensive
+    # pipeline every time it tags a PR by path.
+    types: [opened, synchronize, reopened, labeled]
+  # Manual trigger for the opt-in performance measurement below (the normal
+  # build + HIL test always run; perf does not). No inputs: the baseline is moved
+  # by committing the run's JSON to polykybd-ctnd, not by a workflow switch — the
+  # rig's checkout is force-synced to origin/main before every run, so anything
+  # written there would be discarded on the next one.
+  # ⚠️ workflow_dispatch only becomes available once this file is on the DEFAULT
+  # branch — it cannot be used to try the perf job out from an unmerged PR.
+  workflow_dispatch:
 
 jobs:
   build:
     name: Build firmware
+    # A `labeled` event means someone (or the auto-labeler) tagged the PR; it is
+    # not a code change, so there is nothing new to build or HIL-test. Only the
+    # opt-in perf jobs below act on it. `github.event.action` is null for push /
+    # workflow_dispatch, so those still run normally.
+    if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
     outputs:
       split72: ${{ steps.names.outputs.split72 }}
@@ -212,6 +232,166 @@ jobs:
             let diag = '(diagnostics file not found — the test step failed before producing output)';
             try { diag = fs.readFileSync('/tmp/hil-diagnostics.md', 'utf8'); } catch (e) {}
             let body = '<!-- hil-diagnostics -->\n' + diag;
+            const MAX = 65000;
+            if (body.length > MAX) body = body.slice(0, MAX) + '\n\n…(truncated)';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+  # --- Performance measurement (OPT-IN) ---------------------------------------
+  #
+  # Not part of the normal PR gate: it flashes a *different* firmware (the
+  # profiler build) and occupies the rig for a few more minutes, so it only runs
+  # when asked for. Three ways to ask, each with its own scope:
+  #   * add the `perf` label to a PR — the way to measure a PR (needs the
+  #     `labeled` event type above; the label stays on, so later pushes to that
+  #     PR keep measuring),
+  #   * put `[perf]` in a commit message — PUSH events only. `head_commit` does
+  #     not exist on a pull_request event, so this does nothing on a PR; it
+  #     applies to pushes to PolyKybd branches (i.e. after merge),
+  #   * run the workflow manually (Actions -> Run workflow) — only available
+  #     once this file is on the default branch.
+  #
+  # It reports numbers and compares them against the baseline committed in the
+  # polykybd-ctnd repo (perf/baselines/<board>.json). It deliberately NEVER fails
+  # the check on a regression — these are wall-clock measurements on shared
+  # hardware, and a flaky red check is a check people learn to ignore. Only a
+  # measurement failure (wrong build flashed, device unresponsive) fails the job.
+  build-perf:
+    name: Build firmware (profiling)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'perf') ||
+      contains(github.event.head_commit.message, '[perf]')
+    runs-on: ubuntu-latest
+    outputs:
+      hil_left: ${{ steps.names.outputs.hil_left }}
+      hil_right: ${{ steps.names.outputs.hil_right }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Same flags as the graded HIL build (so the measurement reflects the
+      # shipping shape) PLUS POLYKYBD_LOOP_PROFILE, which compiles in the
+      # main-loop profiler and its on-demand HID control command (32). Without
+      # that flag the command NACKs and the perf run fails fast with a clear
+      # "not a POLYKYBD_LOOP_PROFILE build" message rather than reporting zeros.
+      - name: Build split72 (profiling, HIL left/master)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_LOOP_PROFILE=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_perf_hil_left
+
+      - name: Build split72 (profiling, HIL right/slave)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_LOOP_PROFILE=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_perf_hil_right
+
+      - id: names
+        run: |
+          echo "hil_left=$(ls polykybd_split72_perf_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "hil_right=$(ls polykybd_split72_perf_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-perf
+          path: "*_perf_hil_*.uf2"
+          retention-days: 7
+
+  perf-test:
+    name: Performance measurement (split72)
+    # Ordered after hil-test so the two rig jobs can't interleave their flashes.
+    # `always()` so a red HIL suite doesn't skip the measurement — a perf number
+    # is often exactly what explains a timing-related HIL failure. It still needs
+    # its own build to have succeeded.
+    needs: [build-perf, hil-test]
+    if: always() && needs.build-perf.result == 'success'
+    runs-on: [self-hosted, polykybd-ctnd]
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Locate station directory
+        id: ctnd
+        run: |
+          dir="${CTND_DIR:-}"
+          if [ -z "$dir" ]; then
+            for candidate in /opt/polykybd-ctnd "$HOME/polykybd-ctnd"; do
+              if [ -f "$candidate/venv/bin/python" ]; then
+                dir="$candidate"
+                break
+              fi
+            done
+          fi
+          if [ -z "$dir" ]; then
+            echo "ERROR: could not find a polykybd-ctnd install with a venv." >&2
+            exit 1
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      # Same reason as the HIL job: CI runs the *installed* station copy, so pull
+      # it to origin/main first or a lagging self-update timer silently measures
+      # with stale harness code (and a stale baseline).
+      - name: Sync station to current ctnd main
+        run: |
+          dir="${{ steps.ctnd.outputs.dir }}"
+          if [ ! -d "$dir/.git" ]; then
+            echo "WARNING: $dir is not a git checkout — running the installed station as-is" >&2
+            exit 0
+          fi
+          git -C "$dir" fetch --quiet origin main \
+            && git -C "$dir" checkout -q -f -B main origin/main \
+            && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
+            || echo "WARNING: could not sync $dir to origin/main" >&2
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-perf
+          path: ${{ steps.ctnd.outputs.dir }}/firmware
+
+      - name: Measure
+        run: |
+          cd ${{ steps.ctnd.outputs.dir }}
+          set -o pipefail
+          venv/bin/python -u -m station.perf_runner \
+            --left  "firmware/${{ needs.build-perf.outputs.hil_left }}" \
+            --right "firmware/${{ needs.build-perf.outputs.hil_right }}" \
+            --label split72 \
+            --json /tmp/perf-report.json \
+            --markdown /tmp/perf-report.md \
+            2>&1 | tee /tmp/perf-run.log
+
+      # The JSON is what you commit to polykybd-ctnd's perf/baselines/split72.json
+      # to move the baseline — there is deliberately no automatic baseline update
+      # (an auto-updating baseline ratchets a slow regression in silently).
+      - name: Upload perf report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-report
+          path: |
+            /tmp/perf-report.json
+            /tmp/perf-report.md
+            /tmp/perf-run.log
+          retention-days: 30
+
+      - name: Post perf report as PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body;
+            try {
+              body = fs.readFileSync('/tmp/perf-report.md', 'utf8');
+            } catch (e) {
+              body = '## ⏱️ Firmware performance\n\n> ❌ The perf run produced no report — see the job log.';
+            }
+            body = '<!-- perf-report -->\n' + body;
             const MAX = 65000;
             if (body.length > MAX) body = body.slice(0, MAX) + '\n\n…(truncated)';
             await github.rest.issues.createComment({

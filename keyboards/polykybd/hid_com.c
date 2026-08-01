@@ -730,10 +730,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // Render only if this chunk remapped a position that is on screen;
                     // an all-off-screen chunk (non-held variants, off-layer keys) is
                     // staged silently and shown by the enable-overlays refresh.
-                    if (set_10bit_overlay_mapping(&data[HID_DATA_IDX])) {
+                    if (set_packed_overlay_mapping(&data[HID_DATA_IDX])) {
                         request_disp_refresh();
                     }
-                    // Routine per-chunk chatter — set_10bit_overlay_mapping already
+                    // Routine per-chunk chatter — set_packed_overlay_mapping already
                     // logs the decoded pairs under the same gate.
                     if (debug_enable) {
                         uprint("Overlay mapping data received.\n");

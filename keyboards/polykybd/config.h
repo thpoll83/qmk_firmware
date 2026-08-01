@@ -188,7 +188,18 @@
 //      firmware read 1 byte past the report (harmless on a no-MMU MCU, but the
 //      last data byte of each segment was undefined). Compressed/ROI paths are
 //      unchanged. Host must match v11 to connect (exact-match gate).
-#define PROTOCOL_VERSION 11
+// v12: GUI (Cmd) COMBINES with the other modifiers for overlays. The modifier
+//      variant is now simply the L/R-folded QMK modifier bitmask 0..15 (bit0 Ctrl,
+//      bit1 Shift, bit2 Alt, bit3 GUI), so Cmd+Shift, Cmd+Alt, Cmd+Shift+Alt, ...
+//      each address their own overlay instead of collapsing onto the bare-GUI
+//      variant 8 (see adjust_overlay_idx_to_mod in fill_overlay.c). The upload
+//      commands are UNCHANGED (all three already carry the modifier in a 4-bit
+//      field), but the flat (slot, variant) index space grows 810 -> 1440, which
+//      no longer fits the 10-bit fields of SEND_OVERLAY_MAPPING (cmd 21) — so its
+//      packed indices widen to OVERLAY_MAP_IDX_BITS 11 (22 pairs/report, was 24).
+//      That is the only wire change; the host encodes cmd 21 at 10 or 11 bits by
+//      the device's protocol and never sends a variant > 8 to a pre-v12 keyboard.
+#define PROTOCOL_VERSION 12
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -251,7 +262,15 @@
 #define ROI_START (HID_REPORT_SIZE-7) // additional minus keycode and 4 bytes compressed roi header -> -7
 
 #define NUM_OVERLAYS 90
-#define NUM_VARIATIONS_WITH_MAP 9 // ALL modifier variants are addressable: NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5), ALT_SHIFT(6), CTRL_ALT_SHIFT(7), GUI_KEY(8) (maximum would be 14, maybe later support GUI+CTL/ALT/SHIFT -> 12)
+// The modifier variant IS the L/R-folded QMK modifier bitmask (bit0 Ctrl, bit1
+// Shift, bit2 Alt, bit3 GUI), so all 16 combinations are addressable and the
+// numbering is self-describing: 0 = none, 1 = Ctrl, 2 = Shift, 3 = Ctrl+Shift,
+// 4 = Alt, ... 8 = GUI, 9 = GUI+Ctrl, 10 = GUI+Shift, ... 15 = GUI+Ctrl+Alt+Shift.
+// Protocol v12 grew this from 9 (GUI could not be combined — every GUI+x chord
+// collapsed onto the bare-GUI variant 8, so e.g. a Mac Cmd+Shift+P shortcut drew
+// the Cmd image). ⚠️ Growing it further would need OVERLAY_MAP_IDX_BITS to grow
+// too — see the note there.
+#define NUM_VARIATIONS_WITH_MAP 16
 
 // Physical overlay pool: how many DISTINCT 360-byte keycap images can be resident
 // at once. Deliberately DECOUPLED from NUM_OVERLAYS*variants — overlay mapping is
@@ -268,7 +287,14 @@
 // must move together, and the pack's .plyx carries the size in its header.
 #define NUM_OVERLAY_SLOTS 600
 #define OVERLAY_MAP_IDX_CNT (NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP)
-#define OVERLAY_MAP_IDX_BITS 10
+// Bit width of ONE packed value in a SEND_OVERLAY_MAPPING (cmd 21) report. Both
+// halves of a pair use it: `from` (a flat (slot, variant) index, 0..1439) and `to`
+// (a pool slot, 0..NUM_OVERLAY_SLOTS-1). ⚠️ It must hold OVERLAY_MAP_IDX_CNT
+// itself, not just CNT-1 — that value is the host's / the repair's noop padding
+// sentinel. 11 bits covers 1440; it was 10 while the index space was 810. Widening
+// it is a WIRE CHANGE (fewer pairs per report, different bit offsets) and needs a
+// PROTOCOL_VERSION bump plus a matching host encode branch.
+#define OVERLAY_MAP_IDX_BITS 11
 #define OVERLAY_MAP_IDX_CNT_PER_REPORT (HID_DATA_MAX*8/OVERLAY_MAP_IDX_BITS)
 #define UNSET_OVERLAY_MAPPING 0xffff
 

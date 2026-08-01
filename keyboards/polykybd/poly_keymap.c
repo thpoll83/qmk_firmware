@@ -2027,7 +2027,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     // Record that this keycode-slot is on screen (LAYER visibility for the render gate).
     s_displayed_slots[idx >> 3] |= (uint8_t)(1u << (idx & 7));
     idx = adjust_overlay_idx_to_mod(idx, mods);
-    // use_overlay[] is from-indexed (see set_10bit_overlay_mapping): check it
+    // use_overlay[] is from-indexed (see set_packed_overlay_mapping): check it
     // here on the display position, before resolving to the pool slot.
     if(!is_overlay_used(idx)) {
         return false;

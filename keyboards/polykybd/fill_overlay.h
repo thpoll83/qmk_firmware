@@ -15,10 +15,11 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first);
 // Fills region-of-interest of overlay buffer with data and syncs to bridge when needed.
 void fill_roi_overlay_buffer(uint8_t* data, bool first);
 
-// Unpacks 10-bit overlay mapping pairs from buffer and updates overlay_map array.
+// Unpacks OVERLAY_MAP_IDX_BITS-wide overlay mapping pairs from buffer and updates
+// the overlay_map array.
 // Returns true if any pair maps a currently-displayed position, so the caller can
 // skip the display refresh for an all-off-screen chunk (see fill_overlay.c).
-bool set_10bit_overlay_mapping(uint8_t* mapping);
+bool set_packed_overlay_mapping(uint8_t* mapping);
 
 // Runs the four overlay self-actions (RESET_BUFFERS / USAGE_RESET /
 // MAPPING_RESET / MAPPING_ALLSET) for whichever bits are set in `flags`.
@@ -32,7 +33,7 @@ void apply_overlay_action_flags(uint8_t flags);
 // so setting the bit here would cause the wrong display position (the one
 // whose firmware address happens to coincide with the pool slot) to render
 // at every press. In MRU mode use_overlay is exclusively set by
-// set_10bit_overlay_mapping for from-indices in the host's mapping.
+// set_packed_overlay_mapping for from-indices in the host's mapping.
 void set_overlay_usage_post_upload(uint16_t idx);
 
 uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods);
@@ -44,7 +45,7 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods);
 // host happened to re-send the whole mapping on the next app switch. Symptom:
 // one keycap on the link-side half falls back to its plain legend while the
 // rest of the overlay set renders (the slave's render gate is the usage bit,
-// which set_10bit_overlay_mapping is what sets).
+// which set_packed_overlay_mapping is what sets).
 //
 // The master holds the authoritative overlay_map[] + use_overlay[] (it applies
 // every chunk locally regardless of the bridge), so it can rebuild the slave's

@@ -188,8 +188,30 @@ branch** (`gh api …/contents/<TAG>.md?ref=release-notes`). If present, CI appl
 `gh release create` when it doesn't. If absent, it leaves the user's notes / auto-generates.
 
 **Lifecycle: one file per tag, never overwritten or deleted.** `PolyKybd-fw-vX.Y.Z.md`
-(firmware) / `vX.Y.Z.md` (host) is written once; the next release adds a new file. The
-branch is an accumulating changelog archive — don't reuse or clear old files.
+(firmware) / `vX.Y.Z.md` (host) / `PK-X.Y.Z.md` (wincompose) is written once; the next
+release adds a new file. The branch is an accumulating changelog archive — don't reuse
+or clear old files.
+
+⚠️ **If you ever create the `release-notes` branch from scratch, do NOT make it an
+orphan.** It holds only `.md` files, so `git checkout --orphan` / a parentless
+`commit-tree` is the obvious move — and in **wincompose it breaks every build**.
+`language.csproj` runs GitVersion (MsBuild 5.6.10), which walks **every local branch**
+to infer a feature branch's parent; a branch sharing no ancestor makes `FindMergeBase`
+return null, which GitVersion dereferences:
+
+    ERROR An unexpected error occurred:
+    System.NullReferenceException: Object reference not set to an instance of an object.
+       at GitVersion.Commit..ctor(Commit innerCommit)
+       at GitVersion.GitRepository.<FindMergeBase>b__0()
+
+⚠️ **`main` keeps building green**, because a branch that matches a GitVersion branch
+config never takes the inherit-from-parent path — so this looks like "PR builds are
+broken" and hides its own cause (cost a full debug round, 2026-08). Root the branch on
+the repo's initial commit instead, which costs nothing and leaves the content identical:
+
+    ROOT=$(git rev-list --max-parents=0 origin/<default>)
+    NEW=$(git commit-tree <tree> -p "$ROOT" -m "…")
+    git branch -f release-notes "$NEW" && git push --force-with-lease origin release-notes
 
 ### Recommended flow (near hands-off)
 1. Write the approved notes to a file whose **first line is `# <crafted title>`** and the

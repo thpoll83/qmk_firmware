@@ -7,21 +7,24 @@ Run from anywhere inside either repo checkout:
     python scripts/publish_release.py --dry-run  # show what it would do
 
 What it does (no bash-isms, no extra pip installs — Python 3.7+ stdlib only):
-  1. Auto-detects the repo (firmware qmk_firmware vs host PolyKybdHost) and the
-     current version from the DEFAULT branch (config.h / polyhost/_version.py),
-     so it is independent of whatever branch you have checked out.
+  1. Auto-detects the repo (firmware qmk_firmware / host PolyKybdHost /
+     wincompose) and the current version from the DEFAULT branch (config.h /
+     polyhost/_version.py / wincompose.csproj), so it is independent of
+     whatever branch you have checked out.
   2. Reads the prepared release notes for that tag from the unprotected
      `release-notes` branch (`<TAG>.md`, first line `# <title>`, rest = body).
   3. Creates + publishes the GitHub Release (or updates it if it already exists).
-     Firmware: publishing fires the `release: published` workflow, which builds
-     and attaches the .bin/.uf2 — you do NOT attach anything by hand.
+     Firmware and wincompose: publishing fires the `release: published`
+     workflow, which builds and attaches the assets (.bin/.uf2 / the installer
+     + portable zip + SHA256SUMS) — you do NOT attach anything by hand.
 
 Auth: uses `GH_TOKEN` / `GITHUB_TOKEN` if set, else `gh auth token`. No token and
 no `gh` -> it tells you how to fix it. `gh` is optional; a token alone is enough.
 
 Tags:
-  firmware  PolyKybd-fw-v<version>   (target branch: PolyKybd)
-  host      v<version>               (target branch: main)
+  firmware    PolyKybd-fw-v<version>   (target branch: PolyKybd)
+  host        v<version>               (target branch: main)
+  wincompose  PK-<version>             (target branch: main)
 """
 import argparse
 import json
@@ -58,7 +61,12 @@ def detect(root):
         return ("firmware", "keyboards/polykybd/config.h", "PolyKybd", "PolyKybd-fw-v")
     if os.path.exists(os.path.join(root, "polyhost", "_version.py")):
         return ("host", "polyhost/_version.py", "main", "v")
-    die("can't tell which repo this is (no keyboards/polykybd/config.h or polyhost/_version.py).")
+    # The fork tags PK-<version> (GitVersion.yml tag-prefix), and the shipped
+    # version is the csproj AssemblyVersion that iscc reads off the built exe.
+    if os.path.exists(os.path.join(root, "src", "wincompose", "wincompose.csproj")):
+        return ("wincompose", "src/wincompose/wincompose.csproj", "main", "PK-")
+    die("can't tell which repo this is (no keyboards/polykybd/config.h, "
+        "polyhost/_version.py or src/wincompose/wincompose.csproj).")
 
 
 def show(ref_path):
@@ -73,6 +81,11 @@ def parse_version(kind, text):
         if not m:
             die("couldn't find FW_VERSION in config.h.")
         return m.group(1)
+    if kind == "wincompose":
+        m = re.search(r'<AssemblyVersion>(\d+)\.(\d+)\.(\d+)', text)
+        if not m:
+            die("couldn't find <AssemblyVersion> in wincompose.csproj.")
+        return f"{m.group(1)}.{m.group(2)}.{m.group(3)}"
     maj = re.search(r'__major__\s*=\s*(\d+)', text)
     mnr = re.search(r'__minor__\s*=\s*(\d+)', text)
     pat = re.search(r'__patch__\s*=\s*(\d+)', text)
@@ -237,6 +250,9 @@ def main():
     print(res.get("html_url"))
     if kind == "firmware":
         print("firmware CI (release: published) will now build and attach the .bin/.uf2.")
+    elif kind == "wincompose":
+        print("wincompose CI (release: published) will now build and attach the "
+              "installer .exe, the portable .zip and SHA256SUMS.txt.")
 
 
 if __name__ == "__main__":

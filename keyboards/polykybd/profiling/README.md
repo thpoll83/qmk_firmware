@@ -153,6 +153,25 @@ report with a comparison against a committed baseline. It runs as the **opt-in**
 images with `-e POLYKYBD_LOOP_PROFILE=yes` or the run fails fast with a clear
 "not a POLYKYBD_LOOP_PROFILE build" message.
 
+### Sanity check: `ovl_iters` must equal the overlay reports sent
+
+The cheapest check that the instrumentation is working at all — independent of any
+timing — is that a bounded window's `ovl_iters` equals the number of bulk overlay
+reports the host sent inside it. One report ⇒ one tagged iteration. The first rig
+run measured 48 and 8 against 48 and 8 reports, which is what actually established
+that the C encoder and the Python decoder agree on real silicon. If they diverge,
+the `loop_profile_note_overlay_cmd()` tagging (or the snapshot decode) is broken
+and **no timing number from that window should be trusted**.
+
+### First measured result (2026-08-01)
+
+A plain overlay burst came out **render-bound**: render 166.4 ms of 261.25 ms
+(64%) against bridge 12.17 ms (4.7%). By the attribution rule above, that argues
+*against* a keyboard-side resource pack being the fix. See
+[`../OVERLAY_FLASH_CACHE_DESIGN.md`](../OVERLAY_FLASH_CACHE_DESIGN.md) §6 for the
+full table, the caveats that stop it settling the question (synthetic 8-keycode
+blank-overlay workload, no reconnect in the loop) and what still needs measuring.
+
 ## How to take a clean measurement
 
 - **Type / switch programs while watching the console.** The counters are all-time

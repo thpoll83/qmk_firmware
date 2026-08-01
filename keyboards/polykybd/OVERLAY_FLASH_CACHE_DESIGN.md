@@ -231,6 +231,53 @@ Do **not** build the full bake-manager first. Prove the win:
    If cold-switch is already acceptable in practice, shelve it — the complexity isn't
    free.
 
+### First measurement (2026-08-01) — this workload is RENDER-bound, not transfer-bound
+
+Step 3's numbers can now be produced automatically: the rig drives the firmware's
+main-loop profiler through its on-demand control command and reports a bounded
+window per workload (qmk `CLAUDE.md` → "Performance measurement (split72)";
+`polykybd-ctnd` `station/perf_runner.py`). The first run on real hardware:
+
+| | plain (cmd 10) | RLE/core1 (cmd 16) |
+|---|---:|---:|
+| overlay-iteration wall | 261.25 ms | 16.17 ms |
+| **render** (`update_displays`) | **166.4 ms (64%)** | 0.0 ms |
+| **bridge** (master→slave UART) | **12.17 ms (4.7%)** | 2.23 ms |
+| rest | 82.68 ms (32%) | 13.94 ms |
+| worst single iteration | 36.99 ms | 3.96 ms |
+
+⚠️ **This cuts against the parenthetical prediction in step 4 above.**
+`profiling/README.md`'s attribution rule is explicit: **render** dominant ⇒ the
+stall is render-bound and *a keyboard-side resource pack would not help*;
+**bridge** dominant ⇒ transfer-bound and it would. At 64% render vs 4.7% bridge,
+this workload is firmly the former — which puts a question mark over **win #2**
+("cuts the biggest remaining app-switch cost + split-link load"). It says nothing
+against **win #1** (the reconnect wipe-and-resend oscillation), which is about
+*not re-sending at all*, not about how fast a send is.
+
+**Do NOT treat this as settling the question — it does not.** The measured
+workload is a synthetic burst of **blank** overlays to **8 keycodes** driven from
+the rig, and every way it differs from a real cold app switch pushes the bridge
+share *down*:
+
+- **8 keycodes, not ~90.** Bridge cost scales with the bytes relayed to the slave;
+  a real switch relays roughly an order of magnitude more.
+- **Blank bitmaps** RLE to ~23 bytes, so the compressed path moves almost nothing.
+- **No reconnect in the loop**, so the deaf-window/oscillation cost that motivates
+  win #1 is not exercised at all.
+- The rig uses the same full-duplex link a shipping keyboard has, so the *link* is
+  representative — the *volume* is not.
+
+⚠️ The compressed column's `render = 0.0 ms` is a **measurement artefact, not a
+result.** Both paths ultimately redraw the same keycaps, so the core1-deferred
+render almost certainly landed after the window closed — the harness ends a window
+when the master answers HID again, which is not the same as "the render finished".
+Do not quote a plain-vs-RLE ratio from this table.
+
+**So step 3 still needs the same measurement at realistic volume**: a full-keycap
+set of *real* bitmaps, with a reconnect in the loop, comparing activate-by-id
+against `send_overlays_mru`. The harness now exists; only the workload is missing.
+
 ## 7. Risks
 - **Couples two flash budgets** (staging↔overlay, or font-pack↔overlay) — document
   the cap and keep the linker/region guards honest so an overflow *fails to build*

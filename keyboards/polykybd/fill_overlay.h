@@ -36,3 +36,20 @@ void apply_overlay_action_flags(uint8_t flags);
 void set_overlay_usage_post_upload(uint16_t idx);
 
 uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods);
+
+// --- Slave overlay-mapping repair ---------------------------------------
+// A mapping chunk (cmd 21) is bridged to the slave ONCE and then dropped — it
+// has no diff-based retry queue like the periodic state syncs, so a bridge
+// give-up used to lose those display positions on the slave silently until the
+// host happened to re-send the whole mapping on the next app switch. Symptom:
+// one keycap on the link-side half falls back to its plain legend while the
+// rest of the overlay set renders (the slave's render gate is the usage bit,
+// which set_10bit_overlay_mapping is what sets).
+//
+// The master holds the authoritative overlay_map[] + use_overlay[] (it applies
+// every chunk locally regardless of the bridge), so it can rebuild the slave's
+// view from its own tables. note_..._lost() latches the failure;
+// repush_..._if_lost() re-sends the whole used mapping and is called at the end
+// of the app switch (enable_overlays, hid_com.c case 11).
+void note_overlay_map_sync_lost(void);
+bool repush_overlay_mapping_if_lost(void);

@@ -479,15 +479,34 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     const bool needs_force_sync =
                         (new_flags & OVERLAY_ACTION_FLAGS) || (new_flags & OVERLAY_SYNCED_STATE_FLAGS);
                     if(needs_force_sync) {
-                        send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
+                        if(!sync_succeeded(send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10))) {
+                            // The ACTION bits (reset buffers/usage/mapping) are cleared
+                            // right below and never re-sent, so a give-up here leaves the
+                            // slave on the PREVIOUS program's mapping. DISPLAY_OVERLAYS /
+                            // MIRROR_OVERLAYS are in OVERLAY_SYNCED_STATE_FLAGS and do get
+                            // re-fired by the periodic diff, so only the action bits are
+                            // genuinely lost. The enable-time repair below re-pushes the
+                            // mapping, which is what actually corrects a stale slave.
+                            note_overlay_map_sync_lost();
+                            uprintf("Warning: overlay flags 0x%x did not reach the slave; repairing at enable.\n", new_flags);
+                        }
                         if(new_flags & OVERLAY_ACTION_FLAGS) {
                             local_state->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
                         }
                         request_disp_refresh();
                     }
+                    // End of the host's app-switch sequence (prepare -> images ->
+                    // mapping -> enable): if any bridge above dropped, rebuild the
+                    // slave's mapping from our own tables now, while the host still
+                    // considers the switch in progress.
+                    if(new_flags & DISPLAY_OVERLAYS) {
+                        repush_overlay_mapping_if_lost();
+                    }
                     memset(data, 0, length);
                     hid_reply(data, 0x0b, true);
-                    uprintf("Overlay flags 0x%x set.\n", new_flags);
+                    if (debug_enable) {
+                        uprintf("Overlay flags 0x%x set.\n", new_flags);
+                    }
                     raw_hid_send(data, length);
                 }
                 break;
@@ -696,14 +715,28 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // and the bridge completes before this case returns.
                     overlay_map_sync_t map_sync;
                     memcpy(map_sync.mapping, &data[HID_DATA_IDX], HID_DATA_MAX);
-                    send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync, sizeof(overlay_map_sync_t), 10);
+                    // A chunk is one-shot — nothing re-fires it (unlike the periodic
+                    // state syncs, where the diff IS the retry queue). Losing one used
+                    // to blank exactly the display positions it carried on the slave,
+                    // silently, until the host's next full mapping send. Latch it so
+                    // enable_overlays (case 11) rebuilds the slave's mapping from our
+                    // own tables — we applied this chunk locally either way.
+                    if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync,
+                                                       sizeof(overlay_map_sync_t), 10))) {
+                        note_overlay_map_sync_lost();
+                        uprint("Warning: overlay mapping chunk did not reach the slave; repairing at enable.\n");
+                    }
                     // Render only if this chunk remapped a position that is on screen;
                     // an all-off-screen chunk (non-held variants, off-layer keys) is
                     // staged silently and shown by the enable-overlays refresh.
                     if (set_10bit_overlay_mapping(&data[HID_DATA_IDX])) {
                         request_disp_refresh();
                     }
-                    uprintf("Overlay mapping data received.\n");
+                    // Routine per-chunk chatter — set_10bit_overlay_mapping already
+                    // logs the decoded pairs under the same gate.
+                    if (debug_enable) {
+                        uprint("Overlay mapping data received.\n");
+                    }
                 }
                 break;
             case 22: // get default layer

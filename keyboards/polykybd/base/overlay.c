@@ -14,7 +14,7 @@
 
 static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 // ⚠️ overlays[] IS the doom easter-egg's entire game arena (borrowed as RAM). Its
-// size = NUM_OVERLAYS*NUM_VARIATIONS*360 = 226,800 B today. If you SHRINK the pool
+// size = NUM_OVERLAY_SLOTS*360 = 216,000 B today. If you SHRINK the pool
 // to reclaim RAM, keep it >= ~205 KB or the doom build won't fit: the engine floor
 // is ~144 KB of fixed structure (frame buffer 53,760 + pd_render 58,880 + statics
 // 20,824 + vpatch/compose/mirror/stack) plus a >=~58 KB zone heap. The monolith
@@ -31,7 +31,7 @@ static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 // its statics AT the array's measured address instead — doom/PACK_DESIGN.md.)
 extern uint8_t __doom_shared_base__[];
 #define overlays ((uint8_t (*)[72*40/8])__doom_shared_base__)
-#define OVERLAYS_SIZE (NUM_OVERLAYS*NUM_VARIATIONS*(72*40/8))
+#define OVERLAYS_SIZE (NUM_OVERLAY_SLOTS*(72*40/8))
 #elif defined(POLYKYBD_DOOM_PACK)
 // DoomPack flavour: the pool is PINNED at the RAM origin (0x20000000) via
 // the dedicated .overlay_pool section (ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld)
@@ -39,10 +39,10 @@ extern uint8_t __doom_shared_base__[];
 // Like the monolith's .doom_shared the section is NOLOAD (crt0 does not
 // zero it) — the usage bits above gate every read and the reset/refill
 // paths memset it, so boot behaviour is unchanged.
-static uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8] __attribute__((section(".overlay_pool")));
+static uint8_t overlays [NUM_OVERLAY_SLOTS][72*40/8] __attribute__((section(".overlay_pool")));
 #define OVERLAYS_SIZE sizeof(overlays)
 #else
-static /*volatile*/ uint8_t overlays [NUM_OVERLAYS*NUM_VARIATIONS][72*40/8]; // ResX*ResY/PixelPerByte
+static /*volatile*/ uint8_t overlays [NUM_OVERLAY_SLOTS][72*40/8]; // ResX*ResY/PixelPerByte
 #define OVERLAYS_SIZE sizeof(overlays)
 #endif
 static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
@@ -137,12 +137,12 @@ uint8_t* get_overlay(uint16_t overlay_idx) {
     // memory-safe AND non-destructive (no real slot is read or overwritten; slot 0
     // would have been a legitimate keycap image). Logged once so a stale/buggy
     // mapping doesn't disappear silently, one-shot to avoid flooding the render path.
-    if (overlay_idx >= NUM_OVERLAYS*NUM_VARIATIONS) {
+    if (overlay_idx >= NUM_OVERLAY_SLOTS) {
         static bool s_logged = false;
         if (!s_logged) {
             s_logged = true;
             uprintf("get_overlay: index %u out of range (max %u) — discarding.\n",
-                    (unsigned)overlay_idx, (unsigned)(NUM_OVERLAYS*NUM_VARIATIONS - 1));
+                    (unsigned)overlay_idx, (unsigned)(NUM_OVERLAY_SLOTS - 1));
         }
         return s_overlay_discard;
     }
@@ -181,13 +181,34 @@ void set_all_overlay_mapping(void) {
     }
 }
 
+// Reset every (keycode-slot, modifier-variant) -> pool-slot association to the
+// identity, which is the state uploads address the pool through.
+//
+// The pool is no longer *indexed* by (slot, variant) for RENDERING — it is a
+// plain bank of NUM_OVERLAY_SLOTS images the host assigns to display positions
+// via cmd 21 — but the flat (slot, variant) index is still the only ADDRESS the
+// upload wire format has, so the identity is what makes "write pool slot N"
+// expressible. See the warning in the body before changing anything here.
 void reset_overlay_mapping(void) {
-    for(int16_t i = 0; i < NUM_OVERLAYS*NUM_VARIATIONS; ++i) {
+    // ⚠️ IDENTITY IS LOAD-BEARING FOR UPLOADS — do not "simplify" this to a zero
+    // fill. Every upload path resolves its destination THROUGH this table
+    // (fill_overlay.c: adjust_overlay_idx_to_mod() then get_overlay_mapping()),
+    // and an MRU upload addresses pool slot N by sending the (keycode, modifier)
+    // pair whose flat index IS N — host OverlayMRUCache.pool_slot_to_firmware_address:
+    //     keycode_slot = N % 90 ; modifier_var = N / 90
+    // The host uploads images FIRST and sends the real display->pool mapping
+    // afterwards, so throughout that window this table must be the identity or
+    // every image lands in whatever slot the table happens to point at. Zeroing it
+    // sent all of them to slot 0: nearly every keycap went blank and the Esc
+    // position (which maps to slot 0) showed the pile-up (field, 2026-08-01).
+    for(int16_t i = 0; i < NUM_OVERLAY_SLOTS; ++i) {
         overlay_map[i] = i;
     }
-    //the additional map entries for Ctrl+Alt+Shift and GUI Modifiers will point to the no_modifier version (0-NUM_OVERLAYS)
-    for(int16_t i = NUM_OVERLAYS*NUM_VARIATIONS; i < NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP; ++i) {
-        overlay_map[i] = i%NUM_OVERLAYS;
+    // Flat indices past the pool can never be an upload destination (the host only
+    // ever addresses slots < capacity), so they just need to be in range. Rendering
+    // is gated on the usage bits, which every caller clears alongside this.
+    for(int16_t i = NUM_OVERLAY_SLOTS; i < OVERLAY_MAP_IDX_CNT; ++i) {
+        overlay_map[i] = 0;
     }
 }
 

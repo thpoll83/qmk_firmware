@@ -972,6 +972,13 @@ void housekeeping_task_user(void) {
         } else {
             sync_and_refresh_displays();
         }
+        // Drain a pending overlay-mapping repair (armed by enable_overlays when a
+        // bridge dropped during an app switch). Master-only — it re-pushes OUR
+        // tables to the slave — and bounded per tick, so it can never turn into
+        // the multi-second main-loop stall an inline repair would be on a bad link.
+        if (is_usb_host_side()) {
+            overlay_map_repair_tick();
+        }
 #ifdef POLY_SPLIT_HEARTBEAT_EXPERIMENT
         // ROOT-CAUSE EXPERIMENT (split42, 2026-07-14). Reproduce the every-cycle
         // master->slave pull that SPLIT_POINTING_ENABLE provided, but with the
@@ -2027,7 +2034,12 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     }
     idx = get_overlay_mapping(idx);
 
-    kdisp_clear_bitmap_courtyard(28, 0, get_overlay(idx), 72, 40, KDISP_CY_DEFAULT);
+    // Overlay images are ROW-MAJOR MSB-first (host: np.packbits over the 40x72 mask),
+    // which is what kdisp_draw_bitmap reads — so the courtyard must use the row-major
+    // reader. The column-native variant (for font glyphs) reads the same 360 bytes
+    // without complaint and dilates a scrambled mask, which punched a big garbage
+    // rectangle through the legend underneath (field, 2026-08-01).
+    kdisp_clear_rowmajor_courtyard(28, 0, get_overlay(idx), 72, 40, KDISP_CY_DEFAULT);
     kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40); //don't understnad why we start at offset 28... need to think about it
     return true;
 }

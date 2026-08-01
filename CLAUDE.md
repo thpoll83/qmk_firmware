@@ -26,6 +26,22 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     review; **`@coderabbitai resume`** turns automatic reviews back on. Both
     commands are listed in the paused comment itself.
 
+- **Verify an AI reviewer's finding against the code before acting on it — several
+  arrive confidently wrong.** Of 7 CodeRabbit findings on one PR (2026-08-01), 3
+  were false and **two were refuted by their own evidence**: a "PACK_VERSION 3
+  needs a matching host change" (the host never parses the PlyX version — it
+  checks magic + slot fit and defers the ABI/RAM contract to the firmware loader
+  by design); a "the unpacker is not defined" whose own analysis script had
+  returned 159 bytes of output, i.e. it reasoned without the code (the decoder
+  was 90 lines above in the same file); and an `int8_t` "signed-overflow UB" that
+  the StackOverflow answer it quoted explicitly contradicts (a sub-`int` operand
+  promotes to `int`, so the narrowing back is *implementation-defined*, not UB —
+  though a real non-termination hazard did lurk nearby, so the fix was taken for
+  a different stated reason). **The rule is verify, not dismiss:** the same review
+  round produced one genuinely valuable finding (a bulk repair loop running inline
+  in `raw_hid_receive()`, worth seconds of blocked main loop) that was adopted.
+  Reply to the false ones with the evidence so they are not re-raised.
+
 ## Branching (all PolyKybd repos)
 
 - **Give every branch a name that hints at its content** (a short descriptive slug, e.g. `claude/fix-slave-layer-after-fw-apply`, not just the auto-generated `claude/<random-scientist>-<id>`) so the branch list reads as a changelog.
@@ -43,6 +59,23 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 - **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
+- ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk` and is NOT on
+  `PATH`.** `build_pack.sh` (and anything else shelling out to `qmk`) dies with
+  `qmk: command not found`. Prefix every build:
+  `export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"`. The
+  `deliver-test-firmware` skill wraps this.
+- ⚠️ **The checkout can be SILENTLY RESET to an older commit** when the web/remote
+  container is reclaimed — your commits survive on `origin`, but the working tree
+  and `HEAD` roll back, and nothing announces it. It happened **three times** in one
+  session (2026-08-01); once it sent a code review chasing a `NUM_VARIATIONS` /
+  pool-size mismatch that existed only in the reverted tree. **Run
+  `git log --oneline -1` before trusting any grep or "the code says…" conclusion**,
+  especially at the start of a turn or after a long build. Restore with:
+  ```bash
+  git fetch origin <branch> && git reset --hard origin/<branch>
+  ```
+  Uncommitted work is lost, so push early. This applies to every repo in the
+  session, not just this one.
 
 ## Continuous integration (PR checks)
 
@@ -93,6 +126,16 @@ inherited-upstream noise:
   positive in the ignored-files list (CI checks out clean, so it never sees it).
 - The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
   above.
+- ⚠️ **PR CI does NOT build the monolith.** `qmk-test.yml` builds only
+  `POLYKYBD_DOOM_PACK=yes` (+ split42); the **monolithic** `POLYKYBD_DOOM=yes`
+  flavour — whose objects the `.plyx` is harvested from — is built **exclusively by
+  the release workflow**. So a PR can be fully green and still break at *publish*
+  time: that is exactly what #172 did, and why v0.9.81 was never built at all. The
+  monolith is also the tightest RAM flavour (it had **20 bytes** of `.heap` free at
+  v0.9.82), so it is the first to fail on any RAM growth. **Build it locally before
+  merging anything that adds statics:**
+  `qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes`, or run
+  `doom/pack/build_pack.sh`, which builds both flavours.
 - **`Performance measurement (split72)` is OPT-IN and never gates.** It builds a
   second pair of HIL images with `-e POLYKYBD_LOOP_PROFILE=yes` and has the rig
   measure main-loop timing, overlay cost (bridge/render/rest) and HID latency, then
@@ -265,6 +308,20 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`, protocol 11+: modifier+segment packed into one header byte), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)
+- ⚠️ **That flat index is the only ADDRESS an overlay upload has, and it is
+  resolved through `overlay_map[]` — so `reset_overlay_mapping()`'s identity
+  default is LOAD-BEARING FOR WRITES, not just a display convenience.** All three
+  write sites in `fill_overlay.c` (plain / compressed / ROI) run the same pair the
+  render path does — `adjust_overlay_idx_to_mod()` then `get_overlay_mapping()` —
+  and the host addresses pool slot N by sending the (keycode, modifier) pair whose
+  flat index *is* N (`OverlayMRUCache.pool_slot_to_firmware_address`: `kc = N % 90`,
+  `mod = N // 90`). It uploads every image **before** sending the real display→pool
+  mapping, so the identity must hold throughout that window. Zeroing the table
+  "because the pool is no longer variant-indexed" sent every image to slot 0:
+  nearly every keycap blank, the whole set piled onto Esc (field, 2026-08-01 —
+  cost a hardware round). The pool being smaller (600) than the flat index space
+  (810) only changes the identity's **extent**: indices `< NUM_OVERLAY_SLOTS` are
+  identity, the rest are a 0 fill that can never be an upload destination.
 
 ### Language list encoding (`lang/iso_lang_country.py`)
 The packed list (cmd `27`) maps each 4-char code to two 1-byte indices: the
@@ -315,6 +372,21 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   padding grows the *resident* fonts ~10 KB in the image (only glyphs whose height
   isn't a multiple of 8 grow — IconsFont at h=40 grew 0 B) — the inherent, benign
   cost of one uniform format with no runtime transpose cache.
+  - ⚠️ **TWO layouts coexist and a 72×40 image is EXACTLY 360 bytes in BOTH, so
+    crossing them fails silently — no size mismatch, no crash, just a scrambled
+    read.** Font glyphs are column-native (above, read by `kdisp_write_gfx_char`);
+    **overlay images are ROW-MAJOR MSB-first** — 9 bytes/row × 40 (host:
+    `np.packbits` over the 40×72 mask; firmware: `kdisp_draw_bitmap`, index
+    `pgm_bmp[y*byte_width + (x>>3)] & 0x80`) — versus 5 page-bytes/col × 72
+    column-native. **Any helper that reads a bitmap must be paired with the DRAW
+    function that owns its layout.** `b69eddcf` moved `kdisp_clear_bitmap_courtyard`
+    to column-native for its glyph caller and left the row-major overlay call site
+    behind: the courtyard then dilated a garbage mask and wiped **82 %** of the
+    keycap (measured on a shipped template cell) instead of the intended 39 %,
+    erasing the legend underneath. Hence the split into
+    `kdisp_clear_bitmap_courtyard` (column-native) / `kdisp_clear_rowmajor_courtyard`
+    (row-major) — named by layout, deliberately not a `bool` parameter, so the
+    pairing is visible at the call site.
   - ⚠️ **`base/fonts/gfx_icons.h` (IconsFont + a NULL-bitmap HelperFont) is
     hand-maintained and lives OUTSIDE `fonts.yaml`/`generated/`, so bulk font-header
     tooling silently skips it.** Any glyph-format change (the column transpose, a
@@ -1554,6 +1626,65 @@ brightness every boot), so the slave can't independently bank a stale auto value
 - `keyboards/polykybd/split_sync.c` — `user_sync_overlay_map_data_handler`
 - `keyboards/polykybd/hid_com.c` — case 21
 - `keyboards/polykybd/base/com.h` — `OVERLAY_SYNCED_STATE_FLAGS`
+
+---
+
+### Bug: one keycap's overlay missing on the SLAVE half after an app switch, fixed by switching away and back
+
+**Symptom (field, 2026-08-01)**: intermittently one keycap on the link-side half
+falls back to its plain legend while the rest of the app's overlay set renders
+(observed on **Esc**, Explorer). Switching to another app and back fixes it.
+
+**Root cause**: every phase of an app switch bridges to the slave with the return
+value **DISCARDED** — prepare (cmd 11), image uploads (`fill_overlay.c`), mapping
+chunks (cmd 21), enable (cmd 11). `send_to_bridge()` returns the slave's ACK byte
+*or* `SYNC_CRC32_ERR` once its retries are exhausted, so a give-up was
+indistinguishable from success: the master applied the change to its own tables and
+moved on, halves diverged, **no log line anywhere**. ⚠️ This is the *discarding*
+sibling of the documented "never bool-test `send_to_bridge()`" rule — classify
+every ack with `sync_succeeded()`, including the fire-and-forget bulk sends.
+
+A **mapping chunk** is the one that bites: it is **one-shot** — nothing re-fires it,
+unlike the periodic state syncs where the diff *is* the retry queue — and the
+slave's render gate is the usage bit that `set_10bit_overlay_mapping()` sets. So a
+lost chunk blanks exactly the positions it carried. Esc is display index 37, which
+at 24 pairs/report lands in **chunk 2** (the same "later chunk" position as the
+2026-05-17 ESC bug).
+
+**⚠️ The differential that identifies WHICH bridge dropped** — `resolve_upload_side()`
+means the master keeps **no copy of an other-side overlay image** (`is_on_current_side()`
+is false → the local `memcpy` is skipped, the bytes go only over the wire), while the
+host's MRU cache records that image as resident and will **not** re-send it:
+
+| lost bridge | symptom | recovers on next app switch? |
+|---|---|---|
+| prepare (reset) | previous app's icons | yes |
+| **image** | blank/stale keycap | **NO** — MRU hit, never re-sent; sticks until the cache resets |
+| **mapping chunk** | **missing icon, others fine** | **yes** — full mapping re-sent every switch |
+| enable | *all* icons missing on that half | yes |
+
+Self-healing therefore points at the **mapping**, and rules the image path out.
+
+**Fix (2026-08-01)**: all four acks classified with `sync_succeeded()` + a named
+warning. The mapping is additionally **repaired**: the master holds the authoritative
+`overlay_map[]` + `use_overlay[]` (it applies every chunk locally either way), so a
+loss arms a repair that rebuilds the slave's view from the master's own tables.
+⚠️ The repair **drains from `housekeeping_task_user()`**, 2 reports/tick from a saved
+cursor — **never inline in the HID handler**: a full mapping is up to 34 reports and
+each bridge can burn 10 retries × the bridge timeout, i.e. *seconds* of dead main loop
+on exactly the bad link that triggered the repair. The 10-bit packer is the inverse of
+`set_10bit_overlay_mapping()`'s decode — verify any change to it by round-tripping
+through that decoder, not by eye.
+
+The two **image** bridges are checked and logged but deliberately **not repaired** —
+per the table above the master cannot: it never had the bytes. Closing that would need
+a master-side shadow copy (RAM it does not have) or a host-visible failure signal (a
+protocol change). Do it only if the logs show it actually happens.
+
+**Relevant files**: `keyboards/polykybd/hid_com.c` (cases 11, 21),
+`keyboards/polykybd/fill_overlay.c` (`arm_overlay_map_repair`,
+`overlay_map_repair_tick`, `resolve_upload_side`), `keyboards/polykybd/poly_keymap.c`
+(housekeeping drain)
 
 ---
 

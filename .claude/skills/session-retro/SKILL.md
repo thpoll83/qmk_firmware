@@ -16,6 +16,8 @@ skill turns a session into three concrete outputs:
 3. **Docs gaps** → user-facing features added/changed this session that the
    public docs (the `polykybd-docs` site) don't yet describe. Run the
    **`update-polykybd-docs`** skill to close them (a separate PR in that repo).
+4. **Open-PR sweep** → every PR the session touched, checked for red CI and for
+   review feedback that arrived while you were working (§3c).
 
 The deliverable is a *ranked proposal you approve*, then the files. Don't write
 anything until the user picks what to keep.
@@ -91,6 +93,37 @@ For each gap, name the change and the likely target page, then hand it to the
 **`update-polykybd-docs`** skill (it owns the page map, the build/verify, and the
 separate-PR flow). The retro's job is only to *notice* the gap and trigger that
 skill — it does not itself edit the docs site.
+
+## 3c. The open-PR sweep
+
+Bot reviewers land minutes-to-hours after a push, so a PR opened early in the
+session almost always has feedback nobody has read by the end of it — and a late
+push may have gone red. Sweep every PR the session opened or pushed to:
+
+```bash
+# per repo touched this session — the PR for the current branch
+gh pr view --json number,title,url,mergeable 2>/dev/null   # or the GitHub MCP tools
+```
+
+With the GitHub MCP tools, for each PR: `pull_request_read` with `get_check_runs`
+(CI), `get_comments` (top-level, incl. bot summaries) and **`get_review_comments`**
+(the inline threads — these are where real findings live and are easy to miss).
+
+For each finding, in order:
+
+1. **Verify it against the code before acting.** Confidently-wrong findings are
+   common — see "Code review conventions" in the repo `CLAUDE.md` for the
+   2026-08-01 tally (3 of 7 false, two refuted by their own cited evidence). Read
+   the actual lines; do not take a severity label at face value.
+2. **Fix** what is real, in a commit that says which finding it answers.
+3. **Reply with the evidence** to what is not, so it is not re-raised. Skipping a
+   valid-but-out-of-scope finding is fine — say *why* (pre-existing, different PR).
+4. **Refresh the PR description** if the scope grew during the session. A body
+   written at hour one routinely no longer describes what the branch does, and it
+   is the first thing a human reviewer reads.
+
+Report the outcome in the retro proposal as a table: PR → CI state → findings
+fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
 
 ## 4. Procedure
 

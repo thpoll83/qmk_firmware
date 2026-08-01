@@ -41,11 +41,30 @@ CC=arm-none-eabi-gcc
 NM=arm-none-eabi-nm
 OBJCOPY=arm-none-eabi-objcopy
 
+# Run a build quietly, but print everything it said if it FAILS.
+#
+# QMK's build funnels compiler/linker diagnostics through its own formatter on
+# stdout, so a bare `>/dev/null` discards the actual error and leaves only
+# gmake's "Error 1" -- which is what happened to the v0.9.82 release: the
+# monolith link failed and the log carried no reason at all. Capture instead of
+# discard, and dump the capture on the failure path.
+run_quiet() {
+    local log rc=0
+    log=$(mktemp)
+    "$@" >"$log" 2>&1 || rc=$?
+    if [[ $rc -ne 0 ]]; then
+        echo "--- build failed (exit $rc); captured output follows ---" >&2
+        cat "$log" >&2
+    fi
+    rm -f "$log"
+    return $rc
+}
+
 rm -rf "$STASH"
 mkdir -p "$STASH/obj"
 
 echo "== 1/5 monolithic build (engine objects) =="
-(cd "$REPO" && "$QMK" compile -kb "$KB" -km "$KM" -e POLYKYBD_DOOM=yes >/dev/null)
+(cd "$REPO" && run_quiet "$QMK" compile -kb "$KB" -km "$KM" -e POLYKYBD_DOOM=yes)
 # Keep the monolith (dev-harness) artifacts — step 2's build overwrites them.
 cp "$BUILD/polykybd_split72_default.elf" "$STASH/monolith.elf"
 cp "$BUILD/polykybd_split72_default.uf2" "$STASH/monolith.uf2"
@@ -62,7 +81,7 @@ cp "$OBJ/lib/pico-sdk/src/rp2_common/hardware_sync/sync.o" "$STASH/obj/"
 echo "   $(ls "$STASH/obj" | wc -l) objects stashed"
 
 echo "== 2/5 pack-flavour firmware build (RAM pairing target) =="
-(cd "$REPO" && "$QMK" compile -kb "$KB" -km "$KM" -e POLYKYBD_DOOM_PACK=yes >/dev/null)
+(cd "$REPO" && run_quiet "$QMK" compile -kb "$KB" -km "$KM" -e POLYKYBD_DOOM_PACK=yes)
 FW_ELF="$BUILD/polykybd_split72_default.elf"
 cp "$FW_ELF" "$STASH/firmware.elf"
 
@@ -71,9 +90,9 @@ RAM_BASE=0x$("$NM" "$STASH/firmware.elf" | awk '$3 == "overlays" {print $1}')
 # The pack flavour PINS the pool at the RAM origin (RP2040_FLASH_TIMECRIT_DOOMPACK.ld)
 # so packs survive firmware rebuilds — hard-fail if that invariant ever regresses.
 [[ "$RAM_BASE" == "0x20000000" ]] || { echo "build_pack: pool at $RAM_BASE, expected pinned 0x20000000 (ldscript regression?)" >&2; exit 1; }
-# Pool bytes: NUM_OVERLAYS(90) * NUM_VARIATIONS(9) * 360 — assert against the
+# Pool bytes: NUM_OVERLAY_SLOTS(600) * 360 — assert against the
 # firmware if these ever change (kept in lockstep with base/overlay.c).
-RAM_SIZE=226800
+RAM_SIZE=216000
 echo "   pool at $RAM_BASE (+$RAM_SIZE)"
 
 echo "== 3/5 pack_init compile + pack link =="

@@ -82,7 +82,13 @@ void kdisp_write_base_char(int8_t x, int8_t y, char c);
 
 void kdisp_draw_bitmap(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height);
 
+// Clear a dilated "courtyard" behind artwork about to be drawn. ⚠️ The two variants
+// differ ONLY in how they read the source bits — pick the one matching the draw call
+// you pair it with (a mismatch silently dilates a garbage mask; see disp_array.c):
+//   _courtyard()          column-native page-format, pairs with kdisp_write_gfx_char
+//   _rowmajor_courtyard() row-major MSB-first,       pairs with kdisp_draw_bitmap
 void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius);
+void kdisp_clear_rowmajor_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius);
 
 void kdisp_set_buffer(uint8_t vertical_pixel_row_of_8_pixels);
 

@@ -93,6 +93,27 @@ inherited-upstream noise:
   positive in the ignored-files list (CI checks out clean, so it never sees it).
 - The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
   above.
+- **`Performance measurement (split72)` is OPT-IN and never gates.** It builds a
+  second pair of HIL images with `-e POLYKYBD_LOOP_PROFILE=yes` and has the rig
+  measure main-loop timing, overlay cost (bridge/render/rest) and HID latency, then
+  posts a table to the job summary + a PR comment and compares against the baseline
+  committed in `polykybd-ctnd` (`perf/baselines/split72.json`). Trigger it with the
+  **`perf` PR label** (the way to measure a PR), **`[perf]` in a commit message**
+  (PUSH events only — `head_commit` doesn't exist on a `pull_request` event, so it
+  does nothing on a PR), or a manual **`workflow_dispatch`** (only available once
+  the workflow is on the default branch). ⚠️ The label needs `labeled` in the
+  workflow's `pull_request` `types:` — it is **not** in GitHub's default set, so
+  without it labelling an open PR fires no run at all; `build`/`hil-test` opt out
+  of label events so the auto-labeler can't re-run the whole pipeline.
+  ⚠️ It **never fails on a regression** (wall-clock numbers on
+  shared hardware — a flaky red check is one people learn to ignore); only a
+  *measurement* failure (wrong build flashed, device dead) fails the job. Ordered
+  `needs: [build-perf, hil-test]` + `always()` so the two rig jobs can't interleave
+  flashes, but a red HIL suite still yields a perf number — often exactly what
+  explains a timing-related HIL failure. **Use this instead of asking the user to
+  flash a build and paste the console log.** See
+  `keyboards/polykybd/profiling/README.md` (§ on-demand control, HID cmd 32) and the
+  `polykybd-ctnd` CLAUDE.md § Performance measurement.
 
 ## Releases
 
@@ -233,6 +254,14 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   paths are untouched** (their headers already fit). **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep** — the host connect gate is exact-match.
+- **Cmd `32` = main-loop profiler control — present ONLY in a
+  `POLYKYBD_LOOP_PROFILE` build, and bumps NO `PROTOCOL_VERSION`** (dispatched
+  independently like cmd 31 / the fontpack commands). Sub-commands `0` RESET / `1`
+  READ (binary snapshot, `data[3]` = page) / `2` LOG. ⚠️ The whole `case 32` is
+  inside `#ifdef POLYKYBD_LOOP_PROFILE`, so a normal build **NACKs** it — that
+  NACK is the deliberate capability signal telling a host "no profiler here"
+  instead of handing back a page of zeros. Consumed by the rig's automated perf
+  run; see `keyboards/polykybd/profiling/README.md`.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`, protocol 11+: modifier+segment packed into one header byte), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)

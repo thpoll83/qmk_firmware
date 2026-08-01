@@ -5,6 +5,7 @@
 #ifdef POLYKYBD_LOOP_PROFILE
 
 #include <print.h>
+#include <string.h>
 #include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
                                       // (lightweight struct header; avoids the pico
                                       // alarm API inlines that trip QMK's -Werror)
@@ -26,7 +27,7 @@ static bool     s_have_start    = false;  // false until the first boundary is s
 
 // Iteration-time buckets (microseconds), split overlay vs normal:
 //   0:<1ms 1:1-2 2:2-5 3:5-10 4:10-20 5:20-50 6:>=50ms
-#define NBUCKET 7
+#define NBUCKET LOOP_PROFILE_NBUCKET
 static uint32_t s_bkt_norm[NBUCKET];
 static uint32_t s_bkt_ovl[NBUCKET];
 
@@ -50,6 +51,9 @@ static uint32_t s_ovl_render_us = 0;
 static uint32_t s_iters     = 0;  // total iterations measured
 static uint32_t s_ovl_iters = 0;  // of those, iterations that handled an overlay cmd
 static uint32_t s_last_log  = 0;  // s_iters at the last emitted summary
+
+// Defined below, next to the on-demand control API it shares.
+static void emit_summary(void);
 
 static uint8_t bucket_of(uint32_t us) {
     if (us <  1000u) return 0;
@@ -106,32 +110,7 @@ void loop_profile_tick(void) {
 
         if ((s_iters - s_last_log) >= LOOP_PROFILE_LOG_EVERY) {
             s_last_log = s_iters;
-            uprintf("LoopProf: iters=%lu ovl=%lu worst=%lums(%s br=%lums rn=%lums)\n",
-                    (unsigned long)s_iters, (unsigned long)s_ovl_iters,
-                    (unsigned long)(s_max_us / 1000u),
-                    s_max_overlay ? "ovl" : "norm",
-                    (unsigned long)(s_max_bridge_us / 1000u),
-                    (unsigned long)(s_max_render_us / 1000u));
-            uprintf("  norm  <1=%lu 1-2=%lu 2-5=%lu 5-10=%lu 10-20=%lu 20-50=%lu 50+=%lu\n",
-                    (unsigned long)s_bkt_norm[0], (unsigned long)s_bkt_norm[1],
-                    (unsigned long)s_bkt_norm[2], (unsigned long)s_bkt_norm[3],
-                    (unsigned long)s_bkt_norm[4], (unsigned long)s_bkt_norm[5],
-                    (unsigned long)s_bkt_norm[6]);
-            uprintf("  ovl   <1=%lu 1-2=%lu 2-5=%lu 5-10=%lu 10-20=%lu 20-50=%lu 50+=%lu\n",
-                    (unsigned long)s_bkt_ovl[0], (unsigned long)s_bkt_ovl[1],
-                    (unsigned long)s_bkt_ovl[2], (unsigned long)s_bkt_ovl[3],
-                    (unsigned long)s_bkt_ovl[4], (unsigned long)s_bkt_ovl[5],
-                    (unsigned long)s_bkt_ovl[6]);
-            // Where the OVERLAY-iteration wall time goes, in aggregate (ms totals).
-            // rest = wall - bridge - render. This is the line that settles bridge-vs-
-            // render: a big render share points at update_displays (baked resources
-            // would not help); a big bridge share points at the master->slave relay.
-            uint32_t rest_us = s_ovl_wall_us - s_ovl_bridge_us - s_ovl_render_us;
-            uprintf("  ovltot wall=%lums bridge=%lums render=%lums rest=%lums\n",
-                    (unsigned long)(s_ovl_wall_us   / 1000u),
-                    (unsigned long)(s_ovl_bridge_us / 1000u),
-                    (unsigned long)(s_ovl_render_us / 1000u),
-                    (unsigned long)(rest_us         / 1000u));
+            emit_summary();
         }
     }
 
@@ -141,6 +120,108 @@ void loop_profile_tick(void) {
     s_render_us     = 0;
     s_overlay_iter  = false;
     s_have_start    = true;
+}
+
+// Emit the human-readable summary block. Shared by the periodic path in
+// loop_profile_tick() and the on-demand loop_profile_log_now() so the console
+// readout can never drift between the two.
+static void emit_summary(void) {
+    uprintf("LoopProf: iters=%lu ovl=%lu worst=%lums(%s br=%lums rn=%lums)\n",
+            (unsigned long)s_iters, (unsigned long)s_ovl_iters,
+            (unsigned long)(s_max_us / 1000u),
+            s_max_overlay ? "ovl" : "norm",
+            (unsigned long)(s_max_bridge_us / 1000u),
+            (unsigned long)(s_max_render_us / 1000u));
+    uprintf("  norm  <1=%lu 1-2=%lu 2-5=%lu 5-10=%lu 10-20=%lu 20-50=%lu 50+=%lu\n",
+            (unsigned long)s_bkt_norm[0], (unsigned long)s_bkt_norm[1],
+            (unsigned long)s_bkt_norm[2], (unsigned long)s_bkt_norm[3],
+            (unsigned long)s_bkt_norm[4], (unsigned long)s_bkt_norm[5],
+            (unsigned long)s_bkt_norm[6]);
+    uprintf("  ovl   <1=%lu 1-2=%lu 2-5=%lu 5-10=%lu 10-20=%lu 20-50=%lu 50+=%lu\n",
+            (unsigned long)s_bkt_ovl[0], (unsigned long)s_bkt_ovl[1],
+            (unsigned long)s_bkt_ovl[2], (unsigned long)s_bkt_ovl[3],
+            (unsigned long)s_bkt_ovl[4], (unsigned long)s_bkt_ovl[5],
+            (unsigned long)s_bkt_ovl[6]);
+    // Where the OVERLAY-iteration wall time goes, in aggregate (ms totals).
+    // rest = wall - bridge - render. This is the line that settles bridge-vs-
+    // render: a big render share points at update_displays (baked resources
+    // would not help); a big bridge share points at the master->slave relay.
+    uint32_t rest_us = s_ovl_wall_us - s_ovl_bridge_us - s_ovl_render_us;
+    uprintf("  ovltot wall=%lums bridge=%lums render=%lums rest=%lums\n",
+            (unsigned long)(s_ovl_wall_us   / 1000u),
+            (unsigned long)(s_ovl_bridge_us / 1000u),
+            (unsigned long)(s_ovl_render_us / 1000u),
+            (unsigned long)(rest_us         / 1000u));
+}
+
+void loop_profile_log_now(void) {
+    // Keep the periodic cadence anchored to "now" so an on-demand dump does not
+    // leave the next automatic block due immediately after it.
+    s_last_log = s_iters;
+    emit_summary();
+}
+
+void loop_profile_reset(void) {
+    memset(s_bkt_norm, 0, sizeof(s_bkt_norm));
+    memset(s_bkt_ovl,  0, sizeof(s_bkt_ovl));
+    s_max_us        = 0;
+    s_max_bridge_us = 0;
+    s_max_render_us = 0;
+    s_max_overlay   = false;
+    s_ovl_wall_us   = 0;
+    s_ovl_bridge_us = 0;
+    s_ovl_render_us = 0;
+    s_iters         = 0;
+    s_ovl_iters     = 0;
+    s_last_log      = 0;
+    // Drop the in-flight iteration instead of counting it into the fresh window:
+    // it is the one dispatching this very HID command, so its cost is host
+    // plumbing rather than the workload about to be measured. Clearing
+    // s_have_start makes the next tick() re-arm without recording, which also
+    // means the reset itself can never land in the worst-iteration slot.
+    s_have_start    = false;
+    s_bridge_us     = 0;
+    s_render_us     = 0;
+    s_overlay_iter  = false;
+}
+
+// Little-endian u32 store — the snapshot is decoded by Python (struct '<I'), so
+// pin the byte order explicitly rather than memcpy'ing the native layout.
+static uint8_t put_u32(uint8_t *out, uint32_t v) {
+    out[0] = (uint8_t)(v & 0xFFu);
+    out[1] = (uint8_t)((v >> 8) & 0xFFu);
+    out[2] = (uint8_t)((v >> 16) & 0xFFu);
+    out[3] = (uint8_t)((v >> 24) & 0xFFu);
+    return 4;
+}
+
+uint8_t loop_profile_snapshot(uint8_t page, uint8_t *out, uint8_t cap) {
+    uint8_t n = 0;
+    if (page == 0) {
+        // 4 header bytes + 8 u32 = 36
+        if (cap < 36) return 0;
+        out[n++] = (uint8_t)LOOP_PROFILE_SNAPSHOT_VERSION;
+        out[n++] = (uint8_t)(s_max_overlay ? 0x01u : 0x00u);
+        out[n++] = 0;  // reserved
+        out[n++] = 0;  // reserved
+        n += put_u32(&out[n], s_iters);
+        n += put_u32(&out[n], s_ovl_iters);
+        n += put_u32(&out[n], s_max_us);
+        n += put_u32(&out[n], s_max_bridge_us);
+        n += put_u32(&out[n], s_max_render_us);
+        n += put_u32(&out[n], s_ovl_wall_us);
+        n += put_u32(&out[n], s_ovl_bridge_us);
+        n += put_u32(&out[n], s_ovl_render_us);
+        return n;
+    }
+    if (page == 1) {
+        // 2 histograms x 7 u32 = 56
+        if (cap < (uint8_t)(NBUCKET * 8)) return 0;
+        for (uint8_t i = 0; i < NBUCKET; ++i) n += put_u32(&out[n], s_bkt_norm[i]);
+        for (uint8_t i = 0; i < NBUCKET; ++i) n += put_u32(&out[n], s_bkt_ovl[i]);
+        return n;
+    }
+    return 0;
 }
 
 #endif // POLYKYBD_LOOP_PROFILE

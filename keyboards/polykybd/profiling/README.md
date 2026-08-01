@@ -108,6 +108,51 @@ ms-rounding loses the sub-millisecond-per-iteration render slices. `bridge` is c
 to the iteration wall and `render` into the remaining wall, so the derived `rest` can
 never underflow on a measurement artefact.
 
+## On-demand control (HID command 32) — how the rig automates this
+
+The periodic block above is fine for a human watching the console, but it cannot
+*bound* a measurement: the counters are cumulative from boot and `worst` is an
+all-time maximum, so there is no way to attribute a number to one workload. HID
+command **32** fixes that. It exists **only in a `POLYKYBD_LOOP_PROFILE` build** —
+the whole `case 32` in `hid_com.c` is inside `#ifdef POLYKYBD_LOOP_PROFILE`, so a
+normal build falls through to the dispatcher's default branch and **NACKs**. That
+NACK is the contract: it is how a host tells "this firmware has no profiler" apart
+from "the profiler answered", instead of silently reading back a page of zeros.
+
+Like cmd 31 (`REPLAY_ANIM`) and the fontpack commands it is dispatched
+independently and bumps **no `PROTOCOL_VERSION`**.
+
+Request: `data[0]='P'`, `data[1]=32`, `data[2]=sub-command`, `data[3]=page`.
+
+| sub | name | effect |
+|-----|------|--------|
+| 0 | `RESET` | Zero every counter and re-arm. The in-flight iteration (the one dispatching this command) is **dropped**, not counted — its cost is HID plumbing, not the workload. |
+| 1 | `READ` | Reply with one binary snapshot page (`data[3]` selects it). |
+| 2 | `LOG` | Emit the console summary block immediately. |
+
+`READ` replies `P<32><status><page>` followed by the little-endian body:
+
+* **page 0** — `[version][flags][2 reserved]` then `u32`: `iters`, `ovl_iters`,
+  `max_us`, `max_bridge_us`, `max_render_us`, `ovl_wall_us`, `ovl_bridge_us`,
+  `ovl_render_us`. `flags` bit 0 = the worst iteration was overlay-handling.
+* **page 1** — `u32 bkt_norm[7]` then `u32 bkt_ovl[7]`.
+
+`version` is `LOOP_PROFILE_SNAPSHOT_VERSION` (`loop_profile.h`). **Bump it if the
+field layout ever changes** — the reader refuses an unknown version rather than
+mis-decoding a reordered struct.
+
+So one bounded measurement is: `RESET` → run the workload → `READ` page 0 + 1.
+
+**The rig does all of this for you.** In `polykybd-ctnd`,
+`station/perf.py` + `station/perf_runner.py` flash a profiling HIL pair, wait out
+the boot window using the same settle gates as the HIL suite, drive the overlay /
+latency / idle workloads each inside its own window, and publish a JSON + markdown
+report with a comparison against a committed baseline. It runs as the **opt-in**
+`Performance measurement (split72)` CI job (`qmk-test.yml`): trigger it with the
+`perf` PR label, `[perf]` in a commit message, or a manual workflow run. Build the
+images with `-e POLYKYBD_LOOP_PROFILE=yes` or the run fails fast with a clear
+"not a POLYKYBD_LOOP_PROFILE build" message.
+
 ## How to take a clean measurement
 
 - **Type / switch programs while watching the console.** The counters are all-time
@@ -131,6 +176,7 @@ All are no-ops unless `POLYKYBD_LOOP_PROFILE` is defined:
 | `loop_profile_note_overlay_cmd()` | `hid_com.c` `raw_hid_receive()`, the classifier `switch` | Tags this iteration as overlay-handling (cmds 10/11/12/16/17/18/19/21). |
 | `loop_profile_add_bridge_us(us)` | `bridge_helper.c` `send_to_bridge()`, around `transaction_rpc_exec()` | Accumulates blocking bridge microseconds for this iteration. |
 | `loop_profile_add_render_us(us)` | `poly_keymap.c` `sync_and_refresh_displays()`, around the `update_displays()` calls | Accumulates render microseconds for this iteration. |
+| `loop_profile_reset()` / `_snapshot()` / `_log_now()` | `hid_com.c` `raw_hid_receive()` case 32 | The on-demand control API above. ⚠️ Unlike the four hooks, these have **no `#else` stubs** — the call site itself is `#ifdef`-guarded so the command NACKs on a normal build. |
 
 ## Tuning the profiler itself
 

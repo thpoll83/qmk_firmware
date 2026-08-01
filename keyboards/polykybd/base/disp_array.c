@@ -708,25 +708,43 @@ void clear_line(int8_t from_x, int8_t to_x, int8_t y) {
     }
 }
 
+// Clear a "courtyard" behind the artwork: every buffer pixel within Chebyshev
+// distance `radius` of any on-pixel — i.e. a square-kernel morphological dilation
+// of the source mask. This traces the contour with an even margin: unlike a
+// per-row [first,last] span it never bridges horizontally-separated strokes (e.g.
+// the two marks of " or the legs of M), and unlike per-column extents it does not
+// fill interior vertical gaps (= , ü , " keep their holes).
+//
+// Implemented per horizontal run of on-pixels (so a solid row is a few clears, not
+// one-per-pixel): each run is cleared, widened by `radius` on each side, across the
+// rows [bmp_y-radius, bmp_y+radius]. clear_line / CLEAR_PIXEL_CLIPPED clip to the
+// buffer, so the margin spilling past the artwork edges (the intended courtyard) is
+// fine. The artwork itself is drawn right after this call, so clearing its own
+// pixels here is harmless. `radius` is the courtyard width (KDISP_CY_DEFAULT for
+// overlays; the lang-layer flags pass a smaller value so their borders stay tight).
+//
+// ⚠️ THE SOURCE BIT LAYOUT IS NOT UNIFORM ACROSS CALLERS — pick the variant that
+// matches the DRAW function you pair this with, or you dilate a scrambled mask:
+//   column-native (page-format), pairs with kdisp_write_gfx_char  -> _courtyard()
+//   row-major MSB-first,         pairs with kdisp_draw_bitmap     -> _rowmajor_courtyard()
+// A 72x40 image is exactly 360 bytes in BOTH layouts, so a mismatch neither
+// crashes nor misreads a size — it silently clears a big garbage rectangle. That
+// is precisely what happened when the PolyColGfx refactor (b69eddcf) moved this
+// reader to column-native and left the row-major overlay call site behind.
+
+// Emit the dilated clears for one detected run [run_start, run_end] on source row bmp_y.
+static void courtyard_clear_run(int8_t x, int8_t y, int8_t bmp_y,
+                                int8_t run_start, int8_t run_end, int8_t radius) {
+    for (int8_t dy = -radius; dy <= radius; ++dy) {
+        clear_line(x + run_start - radius, x + run_end + 1 + radius, bmp_y + y + dy);
+    }
+}
+
+// Column-native (OLED page-format) source: cb page-bytes per column, each byte holds
+// 8 vertical px, bit (bmp_y & 7) with the LSB at the top of the page. Run detection
+// still scans each row left to right — only the per-pixel source read is column-indexed.
 void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius) {
-    // Clear a "courtyard" behind the glyph: every buffer pixel within Chebyshev
-    // distance `radius` of any glyph-on pixel — i.e. a square-kernel morphological
-    // dilation of the glyph mask. This traces the glyph contour with an even margin:
-    // unlike a per-row [first,last] span it never bridges horizontally-separated
-    // strokes (e.g. the two marks of " or the legs of M), and unlike per-column
-    // extents it does not fill interior vertical gaps (= , ü , " keep their holes).
-    // Implemented per horizontal run of on-pixels (so a solid row is a few clears,
-    // not one-per-pixel): each run [run_start, run_end] is cleared, widened by
-    // `radius` on each side, across the rows [bmp_y-radius, bmp_y+radius].
-    // clear_line / CLEAR_PIXEL_CLIPPED clip to the buffer, so the margin spilling
-    // past the glyph edges (the intended courtyard) is fine. The glyph itself is
-    // drawn right after this call, so clearing its own pixels here is harmless.
-    // `radius` is the courtyard width (KDISP_CY_DEFAULT for overlays; the lang-layer
-    // flags pass a smaller value so their borders stay tight).
     if (radius <= 0) return;
-    // pgm_bmp is column-native (OLED page-format): cb page-bytes per column, byte
-    // holds 8 vertical px, bit (bmp_y & 7). Run detection still scans each row left
-    // to right — only the per-pixel source read is column-indexed now.
     const uint8_t cb = (bmp_height > 0) ? (uint8_t)((bmp_height + 7) >> 3) : 0;
     for (int8_t bmp_y = 0; bmp_y < bmp_height; ++bmp_y) {
         const uint16_t base = (uint16_t)(bmp_y >> 3);
@@ -735,18 +753,37 @@ void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], i
         for (int8_t bmp_x = 0; bmp_x < bmp_width; ++bmp_x) {
             bool on = (pgm_read_byte(&pgm_bmp[base + (uint16_t)bmp_x * cb]) & vmsk) != 0;
             if (on) {
-                if (run_start < 0) run_start = bmp_x;     // run begins
-            } else if (run_start >= 0) {                   // run [run_start, bmp_x-1] ends
-                for (int8_t dy = -radius; dy <= radius; ++dy) {
-                    clear_line(x + run_start - radius, x + bmp_x + radius, bmp_y + y + dy);
-                }
+                if (run_start < 0) run_start = bmp_x;      // run begins
+            } else if (run_start >= 0) {                    // run [run_start, bmp_x-1] ends
+                courtyard_clear_run(x, y, bmp_y, run_start, (int8_t)(bmp_x - 1), radius);
                 run_start = -1;
             }
         }
-        if (run_start >= 0) {                              // run runs to the row's end
-            for (int8_t dy = -radius; dy <= radius; ++dy) {
-                clear_line(x + run_start - radius, x + bmp_width + radius, bmp_y + y + dy);
+        if (run_start >= 0) {                               // run reaches the row's end
+            courtyard_clear_run(x, y, bmp_y, run_start, (int8_t)(bmp_width - 1), radius);
+        }
+    }
+}
+
+// Row-major MSB-first source (the overlay images: `(bmp_width+7)/8` bytes per row,
+// bit 0x80 leftmost) — the layout kdisp_draw_bitmap reads.
+void kdisp_clear_rowmajor_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius) {
+    if (radius <= 0) return;
+    const uint8_t bw = (bmp_width > 0) ? (uint8_t)((bmp_width + 7) >> 3) : 0;
+    for (int8_t bmp_y = 0; bmp_y < bmp_height; ++bmp_y) {
+        const uint16_t base = (uint16_t)bmp_y * bw;
+        int8_t run_start = -1;
+        for (int8_t bmp_x = 0; bmp_x < bmp_width; ++bmp_x) {
+            bool on = (pgm_read_byte(&pgm_bmp[base + (uint16_t)(bmp_x >> 3)]) & (0x80u >> (bmp_x & 7))) != 0;
+            if (on) {
+                if (run_start < 0) run_start = bmp_x;
+            } else if (run_start >= 0) {
+                courtyard_clear_run(x, y, bmp_y, run_start, (int8_t)(bmp_x - 1), radius);
+                run_start = -1;
             }
+        }
+        if (run_start >= 0) {
+            courtyard_clear_run(x, y, bmp_y, run_start, (int8_t)(bmp_width - 1), radius);
         }
     }
 }

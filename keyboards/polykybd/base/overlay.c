@@ -181,18 +181,33 @@ void set_all_overlay_mapping(void) {
     }
 }
 
-// Clear every (keycode-slot, modifier-variant) -> pool-slot association.
+// Reset every (keycode-slot, modifier-variant) -> pool-slot association to the
+// identity, which is the state uploads address the pool through.
 //
-// There is deliberately NO identity default any more. The pool is no longer
-// indexed by (slot, variant) — it is a plain bank of NUM_OVERLAY_SLOTS images
-// that the host assigns via cmd 21, so "slot i holds variant i's image" is not a
-// meaningful starting state (and with 810 map entries over 600 slots it isn't
-// even expressible). Every call site pairs this with reset_overlay_usage(), and
-// rendering is gated on those usage bits, so the values here are don't-care —
-// they are zeroed only to keep every entry trivially in range for any reader
-// that reaches get_overlay() without consulting the usage bit first.
+// The pool is no longer *indexed* by (slot, variant) for RENDERING — it is a
+// plain bank of NUM_OVERLAY_SLOTS images the host assigns to display positions
+// via cmd 21 — but the flat (slot, variant) index is still the only ADDRESS the
+// upload wire format has, so the identity is what makes "write pool slot N"
+// expressible. See the warning in the body before changing anything here.
 void reset_overlay_mapping(void) {
-    for(int16_t i = 0; i < OVERLAY_MAP_IDX_CNT; ++i) {
+    // ⚠️ IDENTITY IS LOAD-BEARING FOR UPLOADS — do not "simplify" this to a zero
+    // fill. Every upload path resolves its destination THROUGH this table
+    // (fill_overlay.c: adjust_overlay_idx_to_mod() then get_overlay_mapping()),
+    // and an MRU upload addresses pool slot N by sending the (keycode, modifier)
+    // pair whose flat index IS N — host OverlayMRUCache.pool_slot_to_firmware_address:
+    //     keycode_slot = N % 90 ; modifier_var = N / 90
+    // The host uploads images FIRST and sends the real display->pool mapping
+    // afterwards, so throughout that window this table must be the identity or
+    // every image lands in whatever slot the table happens to point at. Zeroing it
+    // sent all of them to slot 0: nearly every keycap went blank and the Esc
+    // position (which maps to slot 0) showed the pile-up (field, 2026-08-01).
+    for(int16_t i = 0; i < NUM_OVERLAY_SLOTS; ++i) {
+        overlay_map[i] = i;
+    }
+    // Flat indices past the pool can never be an upload destination (the host only
+    // ever addresses slots < capacity), so they just need to be in range. Rendering
+    // is gated on the usage bits, which every caller clears alongside this.
+    for(int16_t i = NUM_OVERLAY_SLOTS; i < OVERLAY_MAP_IDX_CNT; ++i) {
         overlay_map[i] = 0;
     }
 }

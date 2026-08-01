@@ -1,16 +1,20 @@
 ---
 name: polykybd-github-release
-description: Cut a GitHub Release for the PolyKybd firmware (qmk_firmware) or the host app (PolyKybdHost) — draft customer-facing release notes (newest version first, maintenance-only bumps skipped, concise, informative-over-funny), get the user's review, then publish with the correct tag, title, "latest" flag and (firmware) CI-built .bin/.uf2/.plyx assets. Use when asked to "cut/create/make/publish a release", "release the firmware/host", "release vX.Y.Z", "draft the release for …".
+description: Cut a GitHub Release for the PolyKybd firmware (qmk_firmware), the host app (PolyKybdHost) or WinCompose (wincompose) — draft customer-facing release notes (newest version first, maintenance-only bumps skipped, concise, informative-over-funny), get the user's review, then publish with the correct tag, title, "latest" flag and CI-built assets (firmware .bin/.uf2/.plyx; wincompose installer/portable/SHA256SUMS). Use when asked to "cut/create/make/publish a release", "release the firmware/host/wincompose", "release vX.Y.Z", "draft the release for …".
 ---
 
 # PolyKybd GitHub release
 
-Prepare and hand off a **GitHub Release** for one of the two shipping artifacts:
+Prepare and hand off a **GitHub Release** for one of the three shipping artifacts:
 
 | Target | Repo | Default branch | Version source | Release tag |
 |--------|------|----------------|----------------|-------------|
 | **Firmware** | `thpoll83/qmk_firmware` | `PolyKybd` | `FW_VERSION` in `keyboards/polykybd/config.h` | `PolyKybd-fw-vX.Y.Z` |
 | **Host** | `thpoll83/PolyKybdHost` | `main` | `polyhost/_version.py` (`__major/minor/patch__`) | `vX.Y.Z` |
+| **WinCompose** | `thpoll83/wincompose` | `main` | `<AssemblyVersion>` in `src/wincompose/wincompose.csproj` | `PK-X.Y.Z` |
+
+> The `PK-` prefix is not arbitrary — `GitVersion.yml` sets `tag-prefix: 'PK-'`, so the
+> build derives its version from tags of exactly that shape. Don't tag wincompose `vX.Y.Z`.
 
 This skill **builds on `polykybd-release-notes`** for gathering commits per version,
 but applies a **release-specific voice** (below) and adds two things the plain
@@ -33,6 +37,12 @@ exactly as `polykybd-release-notes` does:
   (bumped-but-unreleased), so always anchor on the release, not the newest bump commit.
 - **High end = current tree** — read the version source above.
 - If they're equal there's nothing to release — say so.
+- **WinCompose has no bump commits to anchor on.** Firmware/host versions are
+  produced by `bump-version.yml` at PR-merge time, so their history is punctuated by
+  `chore: bump … version` commits. **wincompose has no such workflow** — the version is
+  simply whatever `<AssemblyVersion>` currently says, and it only changes when someone
+  edits it. So the range is "last published release → csproj", and the per-version
+  grouping the notes skill does collapses to a single set of commits.
 
 State the resolved range back before drafting (e.g. "Last firmware release is
 0.9.23, tree is 0.9.42 — release notes for 0.9.24 → 0.9.42").
@@ -77,6 +87,27 @@ Per-version shape:
 - <why you care / or "requires matching host+firmware — protocol vN" when a protocol bumped>
 ```
 
+## 2b. WinCompose only — three things to do BEFORE the review gate
+
+WinCompose needs manual prep the other two repos automate away. Do all three, then
+include them in what you show the user at the review gate.
+
+1. **Bump `<AssemblyVersion>` in `src/wincompose/wincompose.csproj`** if the release
+   should carry a new number. There is no `bump-version.yml` here, so nothing does it
+   for you. Everything downstream derives from it: `iscc` reads the built exe's version
+   resource, which names `WinCompose-Setup-<ver>.exe`, and the workflow derives the zip
+   name and the tag's expected assets from the same value. `AssemblyVersion` is 4-part
+   (`0.9.16.0`); the release uses MAJOR.MINOR.REV.
+2. **Bump `Latest:` in `status.txt`** to the version being released. ⚠️ **This fails
+   silently if you forget.** WinCompose's own updater (`src/wincompose/Updater.cs`)
+   fetches that file from `raw.githubusercontent.com/thpoll83/wincompose/main/status.txt`
+   and only offers a download when `Latest` is **greater** than the running version — so
+   a stale value means **every existing install never learns about the release**. It
+   costs nothing to check and cannot be noticed by testing the release itself.
+   (PolyKybdHost's "Install WinCompose…" tray entry is unaffected — it always resolves
+   `releases/latest` — so this breaks only for people who already have it installed.)
+3. **Stage `PK-<version>.md`** on the `release-notes` branch, as for the other repos.
+
 ## 3. REVIEW GATE — get sign-off before creating anything
 
 Present to the user, in chat:
@@ -99,6 +130,7 @@ headline number.
 - Firmware: `PolyKybd v0.9.23 Fantasy scripts` · `PolyKybd-fw-v0.9.18 OS Shortcuts` ·
   `PolyKybd-fw-v0.8.21: 143 New languages, Emoji/Lang layer unification`
 - Host: `v0.9.16 Glyph Script control` · `v0.8.47 Background service & snappier Windows tray`
+- WinCompose: `WinCompose 0.9.16 — the first PolyKybd build`
 
 Pick the theme from the **headline feature** of the newest/most significant version in
 the range; keep it to ~2–6 words. Confirm it in the review gate. Note: CI's fallback
@@ -227,4 +259,13 @@ note above).
   must tell users to update host + firmware together (exact-match connect gate).
 - **No git tags in the firmware tree** — releases are the GitHub Releases API; history
   boundaries are the `bump firmware/host version` commits (see `polykybd-release-notes`).
+- **WinCompose: a stale `status.txt` silently strands existing installs** — see step 2b.
+  The release itself looks perfect; only users who already run WinCompose are affected,
+  and they simply never see the update prompt.
+- **WinCompose: a published release whose build failed cannot be fixed by re-running it.**
+  A re-run of the `release` job replays the workflow file **from that tag's commit**, so
+  it reproduces the same failure. Fix the workflow on `main`, then **Actions → Release →
+  Run workflow with the `tag` input set** to the published tag — that builds and attaches
+  the assets to the existing release. (Its notes are unaffected either way:
+  `publish_release.py` sets title/body over the API, independent of CI.)
 - Keep the model identifier out of everything pushed (commit messages, release body).

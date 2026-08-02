@@ -129,7 +129,7 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
 
     uint8_t mods = get_fragment_context()->modifier;
     idx = adjust_overlay_idx_to_mod(idx, mods);
-    idx = get_overlay_mapping(idx);
+    idx = get_display_pool_slot(idx);
 
     enum key_split_pos pos = resolve_upload_side(keycode);
     if (is_on_current_side(pos)) {
@@ -153,7 +153,7 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
     }
 
     if (segment_index == NUM_SEGMENTS_PER_OVERLAY - 1) {
-        set_overlay_usage_post_upload(idx);
+        mark_display_has_overlay_post_upload(idx);
         uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n",
                 keycode, mods, (segment_index+1)*BYTES_PER_SEGMENT, idx, pos_to_str(pos));
     }
@@ -176,7 +176,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
     uint16_t base_slot = idx;   // 0..89, before the modifier/mapping resolve — for the visibility gate
     bool visible = overlay_visible(base_slot, ctx_mod);
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
-    idx = get_overlay_mapping(idx);
+    idx = get_display_pool_slot(idx);
 
     enum key_split_pos pos = resolve_upload_side(keycode);
     uint16_t bit_index = get_fragment_context()->bit_index;
@@ -190,7 +190,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
         bit_index += rle_decompress(get_overlay(idx)+bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, bit_index);
 
         if (bit_index >= 360*8 -1) {
-            set_overlay_usage_post_upload(idx);
+            mark_display_has_overlay_post_upload(idx);
             uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
                 keycode, ctx_mod, pos_to_str(pos), bit_index/8);
             // No update_performed() — a host overlay push is not user activity and
@@ -237,7 +237,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     uint16_t base_slot = idx;   // 0..89, before the modifier/mapping resolve — for the visibility gate
     bool visible = overlay_visible(base_slot, ctx_mod);
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
-    idx = get_overlay_mapping(idx);
+    idx = get_display_pool_slot(idx);
 
     enum key_split_pos pos = resolve_upload_side(keycode);
 
@@ -256,7 +256,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             }
             bit_index = copy_rectangle_to_overlay(bit_index, get_overlay(idx), first?(&(data[5])):data, &ctx_roi, data_len);
             if(bit_index >= 2880) {
-                set_overlay_usage_post_upload(idx);
+                mark_display_has_overlay_post_upload(idx);
                 // No update_performed() — see base/update.h.
                 // Only refresh if this overlay is on screen (see overlay_visible).
                 if (visible) {
@@ -281,8 +281,8 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     }
 }
 
-// Unpacks 10-bit overlay mapping pairs from buffer and updates overlay_map array.
-// `from` indexes overlay_map[] (0..OVERLAY_MAP_IDX_CNT-1, currently 1440).
+// Unpacks 10-bit overlay mapping pairs from buffer and updates display_to_pool array.
+// `from` indexes display_to_pool[] (0..OVERLAY_MAP_IDX_CNT-1, currently 1440).
 // `to` indexes overlays[] (0..NUM_OVERLAY_SLOTS-1, currently 600) — the
 // physical pool. A `to` >= NUM_OVERLAY_SLOTS is an out-of-pool value
 // and would cause an OOB read in copy_overlay_to_buffer / fill_overlay_buffer.
@@ -321,11 +321,11 @@ bool set_packed_overlay_mapping(uint8_t* mapping) {
         } else {
             if(from < OVERLAY_MAP_IDX_CNT) {
                 if(to < NUM_OVERLAY_SLOTS) {
-                    set_overlay_mapping(from, to);
-                    // use_overlay[] is from-indexed: a display position is
+                    set_display_pool_slot(from, to);
+                    // display_has_overlay_bits[] is from-indexed: a display position is
                     // "in use" iff it has an overlay assigned. Establishing
                     // the mapping is exactly that act, so set the bit here.
-                    set_overlay_usage(from);
+                    mark_display_has_overlay(from);
                     if (overlay_from_index_visible(from)) {
                         any_visible = true;
                     }
@@ -430,9 +430,9 @@ void overlay_map_repair_tick(void) {
         memset(msg.mapping, 0, sizeof(msg.mapping));
         // Collect up to one report's worth of used entries from the cursor.
         while (s_repair_from < OVERLAY_MAP_IDX_CNT && slot < OVERLAY_MAP_IDX_CNT_PER_REPORT) {
-            if (is_overlay_used(s_repair_from)) {
+            if (display_has_overlay(s_repair_from)) {
                 pack_map_value(msg.mapping, slot++, s_repair_from);
-                pack_map_value(msg.mapping, slot++, get_overlay_mapping(s_repair_from));
+                pack_map_value(msg.mapping, slot++, get_display_pool_slot(s_repair_from));
                 ++s_repair_pairs;
             }
             ++s_repair_from;
@@ -463,14 +463,14 @@ void overlay_map_repair_tick(void) {
 }
 
 void apply_overlay_action_flags(uint8_t flags) {
-    if(test_flag(flags, RESET_BUFFERS))  reset_overlay_buffers();
-    if(test_flag(flags, USAGE_RESET))    reset_overlay_usage();
-    if(test_flag(flags, MAPPING_RESET))  reset_overlay_mapping();
-    if(test_flag(flags, MAPPING_ALLSET)) set_all_overlay_mapping();
+    if(test_flag(flags, RESET_BUFFERS))  reset_overlay_pool();
+    if(test_flag(flags, USAGE_RESET))    clear_display_has_overlay();
+    if(test_flag(flags, MAPPING_RESET))  reset_display_to_pool();
+    if(test_flag(flags, MAPPING_ALLSET)) set_all_display_has_overlay();
 }
 
-void set_overlay_usage_post_upload(uint16_t idx) {
+void mark_display_has_overlay_post_upload(uint16_t idx) {
     if (!test_flag(get_local_state()->overlay_flags, MIRROR_OVERLAYS)) {
-        set_overlay_usage(idx);
+        mark_display_has_overlay(idx);
     }
 }

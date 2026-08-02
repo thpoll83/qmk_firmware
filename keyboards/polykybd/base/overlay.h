@@ -1,5 +1,39 @@
 #pragma once
 
+// Overlay vocabulary — three distinct things that all used to be called "overlay
+// something", which was the main source of confusion when reading this code:
+//
+//   overlay_pool[NUM_OVERLAY_SLOTS][360]  the physical bank of keycap IMAGES.
+//                                         Addressed by a "pool slot" (0..599).
+//   display_to_pool[OVERLAY_MAP_IDX_CNT]  "display position" -> pool slot. A
+//                                         display position is a flat index
+//                                         (keycode slot 0..89) + 90*(modifier
+//                                         variant 0..15), i.e. WHICH KEY under
+//                                         WHICH modifier state.
+//   display_has_overlay_bits[]            1 bit per display position: does it
+//                                         have an image assigned at all? This is
+//                                         the render gate.
+//
+// The indirection is what lets several modifier variants that share the same
+// artwork share ONE pool slot — which is why the pool (600) is much smaller than
+// the position space (1440).
+//
+// The host uses the same two words: PolyKybdHost's OverlayMRUCache has
+// display_flat_idx() and pool_slot_to_firmware_address(). Keep them aligned.
+//
+// LEGACY NAMES (renamed 2026-08, may still appear in older commits/comments/docs):
+//   overlays              -> overlay_pool
+//   overlay_map           -> display_to_pool
+//   get/set_overlay_mapping -> get/set_display_pool_slot
+//   reset_overlay_mapping -> reset_display_to_pool
+//   use_overlay           -> display_has_overlay_bits
+//   is_overlay_used       -> display_has_overlay
+//   set_overlay_usage     -> mark_display_has_overlay
+//   reset_overlay_usage   -> clear_display_has_overlay
+//   set_all_overlay_mapping -> set_all_display_has_overlay
+//   reset_overlay_buffers -> reset_overlay_pool
+// get_overlay(pool_slot) kept its name — it already reads as a pool accessor.
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -42,35 +76,35 @@ void set_fragment_context_byte_len(uint8_t byte_len);
 void set_fragment_context_msg_count(uint8_t msg_count);
 void set_fragment_context_roi(uint8_t x, uint8_t y, uint8_t xx, uint8_t yy, bool compressed);
 
-uint8_t (*get_overlays(void))[72*40/8];
+uint8_t (*get_overlay_pool(void))[72*40/8];
 
 uint8_t* get_overlay(uint16_t overlay_idx);
 
-uint16_t get_overlay_mapping(uint16_t overlay_idx);
+uint16_t get_display_pool_slot(uint16_t overlay_idx);
 
-void set_overlay_mapping(uint16_t overlay_idx, uint16_t val);
+void set_display_pool_slot(uint16_t overlay_idx, uint16_t val);
 
-void set_overlay_usage(uint16_t overlay_idx);
+void mark_display_has_overlay(uint16_t overlay_idx);
 
 // Checks if the specified overlay is marked as being used.
-// Global variables: use_overlay
-bool is_overlay_used(uint16_t overlay_idx);
+// Global variables: display_has_overlay_bits
+bool display_has_overlay(uint16_t overlay_idx);
 
 // Clears all overlay buffer data by setting it to zero.
 // Global variables: overlays
-void reset_overlay_buffers(void);
+void reset_overlay_pool(void);
 
 // Resets all overlay usage flags by clearing the entire usage array.
-// Global variables: use_overlay
-void reset_overlay_usage(void);
+// Global variables: display_has_overlay_bits
+void clear_display_has_overlay(void);
 
-// Marks every overlay slot as used (inverse of reset_overlay_usage).
-// Global variables: use_overlay
-void set_all_overlay_mapping(void);
+// Marks every overlay slot as used (inverse of clear_display_has_overlay).
+// Global variables: display_has_overlay_bits
+void set_all_display_has_overlay(void);
 
 // Initializes the overlay mapping indices: standard entries map 1:1, followed by modifier combinations.
-// Global variables: overlay_map
-void reset_overlay_mapping(void);
+// Global variables: display_to_pool
+void reset_display_to_pool(void);
 
 // Copies rectangle region of overlay data handling both compressed and uncompressed formats.
 // Global variables: (none - uses passed parameters only)

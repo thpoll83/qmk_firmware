@@ -274,7 +274,7 @@
 
 // Physical overlay pool: how many DISTINCT 360-byte keycap images can be resident
 // at once. Deliberately DECOUPLED from NUM_OVERLAYS*variants — overlay mapping is
-// mandatory, so overlay_map[] (810 entries, every keycode-slot x variant pair)
+// mandatory, so display_to_pool[] (810 entries, every keycode-slot x variant pair)
 // points each pair at any pool slot. Variants that share artwork therefore cost
 // ONE slot, not one each: measured across the 24 shipped app templates, the
 // heaviest app needs 62 distinct images and the median 31, so 600 holds ~10 apps

@@ -289,33 +289,41 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
 // Returns true if any mapping in this chunk lands on a currently-displayed position
 // (see overlay_from_index_visible) — the caller renders only then; an all-off-screen
 // chunk is staged silently and shown by the eventual layer/modifier/enable refresh.
-bool set_packed_overlay_mapping(uint8_t* mapping) {
+bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width) {
     bool any_visible = false;
     uint16_t from = UNSET_OVERLAY_MAPPING;
+    if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
+        uprintf("REJECTED overlay mapping report: bad width %u\n", (unsigned)width);
+        return false;
+    }
     // Accumulate this report's mappings into ONE log line instead of one uprintf
-    // per pair (22 pairs/report flooded the console). "from>to" pairs, space-sep.
+    // per pair (20-30 pairs/report flooded the console). "from>to" pairs, space-sep.
     char    map_log[220];
     int     map_log_n  = 0;
     uint8_t map_count  = 0;   // pairs accepted (established) this report
     uint8_t map_shown  = 0;   // pairs actually rendered into map_log (may be fewer if it filled)
     map_log[0] = '\0';
-    for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
-        // start_bit must be wide enough to hold idx*OVERLAY_MAP_IDX_BITS (up to ~484)
-        // — a uint8_t would wrap.
-        uint16_t start_bit = (uint16_t)idx*OVERLAY_MAP_IDX_BITS;
+    const uint16_t values = OVERLAY_MAP_VALUES(bytes, width);
+    for(uint16_t idx=0;idx<values;++idx) {
+        // start_bit must be wide enough to hold idx*width (up to ~488) — a uint8_t
+        // would wrap.
+        uint16_t start_bit = idx*(uint16_t)width;
         uint8_t start_byte = start_bit/8;
         uint8_t start_bit_in_byte = start_bit%8;
-        // ⚠️ An 11-bit value can span THREE bytes (offset 6 or 7 reaches bit 17),
-        // which a 10-bit one never did — 10 % 8 == 2 kept every offset in {0,2,4,6}.
-        // Read the third byte only when the value actually extends into it, so the
-        // load can never run past the report buffer.
-        uint32_t acc = (uint32_t)mapping[start_byte] |
-                       ((uint32_t)mapping[start_byte+1] << 8);
-        if (start_bit_in_byte + OVERLAY_MAP_IDX_BITS > 16) {
+        // ⚠️ How many bytes a value spans depends on the width, so BOTH the second
+        // and third byte are conditional — the load must never reach past the last
+        // data byte. At width 8 (gcd(8,8)==8) every value is one whole byte at
+        // offset 0; at 10 or 12 (gcd 2 / 4) the offset stays low enough for two;
+        // only the odd widths 9/11 (gcd 1) walk all eight offsets and reach a third.
+        uint32_t acc = (uint32_t)mapping[start_byte];
+        if (start_bit_in_byte + width > 8) {
+            acc |= (uint32_t)mapping[start_byte+1] << 8;
+        }
+        if (start_bit_in_byte + width > 16) {
             acc |= (uint32_t)mapping[start_byte+2] << 16;
         }
         uint16_t to = (uint16_t)((acc >> start_bit_in_byte) &
-                                 ((1u << OVERLAY_MAP_IDX_BITS) - 1u));
+                                 ((1u << width) - 1u));
         if(from==UNSET_OVERLAY_MAPPING) {
             from = to;
         } else {
@@ -374,22 +382,22 @@ void note_overlay_map_sync_lost(void) {
     s_map_sync_lost = true;
 }
 
-// Inverse of the unpacking in set_packed_overlay_mapping: write `v` as
-// OVERLAY_MAP_IDX_BITS bits at `idx`'s bit offset. `buf` must be zeroed first
-// (this ORs in). OVERLAY_MAP_IDX_CNT_PER_REPORT is derived from HID_DATA_MAX, so
-// the last value's bits always land inside the buffer.
-// ⚠️ Mirror of the decoder's three-byte span: an 11-bit value starting at bit
-// offset 6 or 7 reaches into the third byte. Write it only when the value really
-// extends there, so this can never touch a byte past the last one the decoder
-// reads. Verify any change by round-tripping through the decoder, not by eye.
-static void pack_map_value(uint8_t *buf, uint8_t idx, uint16_t v) {
-    uint16_t start_bit = (uint16_t)idx * OVERLAY_MAP_IDX_BITS;
+// Inverse of the unpacking in set_packed_overlay_mapping: write `v` as `width`
+// bits at `idx`'s bit offset. `buf` must be zeroed first (this ORs in).
+// ⚠️ Mirror the decoder's conditional byte reads exactly — write the second and
+// third byte only when the value really extends there, so this can never touch a
+// byte past the last one the decoder reads. Verify any change by round-tripping
+// through the decoder, not by eye.
+static void pack_map_value(uint8_t *buf, uint16_t idx, uint16_t v, uint8_t width) {
+    uint16_t start_bit = idx * (uint16_t)width;
     uint8_t  b         = (uint8_t)(start_bit / 8);
     uint8_t  s         = (uint8_t)(start_bit % 8);
     uint32_t shifted   = (uint32_t)v << s;
-    buf[b]     |= (uint8_t)(shifted & 0xff);
-    buf[b + 1] |= (uint8_t)((shifted >> 8) & 0xff);
-    if (s + OVERLAY_MAP_IDX_BITS > 16) {
+    buf[b] |= (uint8_t)(shifted & 0xff);
+    if (s + width > 8) {
+        buf[b + 1] |= (uint8_t)((shifted >> 8) & 0xff);
+    }
+    if (s + width > 16) {
         buf[b + 2] |= (uint8_t)((shifted >> 16) & 0xff);
     }
 }
@@ -425,14 +433,24 @@ void overlay_map_repair_tick(void) {
     overlay_map_sync_t msg;
     uint8_t sent_this_tick = 0;
 
+    // The repair packs at the WIDEST width so any display position fits — it walks
+    // the whole index space, unlike the host which partitions by required width.
+    const uint8_t  width  = OVERLAY_MAP_REPAIR_WIDTH;
+    const uint16_t values = OVERLAY_MAP_VALUES(sizeof(msg.mapping), width);
+
     while (sent_this_tick < MAP_REPAIR_REPORTS_PER_TICK) {
-        uint8_t slot = 0;       // value slot in this report (from,to,from,to,...)
+        uint16_t slot = 0;      // value slot in this report (from,to,from,to,...)
+        uint16_t last_from = 0, last_to = 0;
         memset(msg.mapping, 0, sizeof(msg.mapping));
+        msg.width = width;
+        msg.bytes = (uint8_t)sizeof(msg.mapping);
         // Collect up to one report's worth of used entries from the cursor.
-        while (s_repair_from < OVERLAY_MAP_IDX_CNT && slot < OVERLAY_MAP_IDX_CNT_PER_REPORT) {
+        while (s_repair_from < OVERLAY_MAP_IDX_CNT && slot + 1 < values) {
             if (display_has_overlay(s_repair_from)) {
-                pack_map_value(msg.mapping, slot++, s_repair_from);
-                pack_map_value(msg.mapping, slot++, get_display_pool_slot(s_repair_from));
+                last_from = s_repair_from;
+                last_to   = get_display_pool_slot(s_repair_from);
+                pack_map_value(msg.mapping, slot++, last_from, width);
+                pack_map_value(msg.mapping, slot++, last_to,   width);
                 ++s_repair_pairs;
             }
             ++s_repair_from;
@@ -443,10 +461,16 @@ void overlay_map_repair_tick(void) {
                     (unsigned)s_repair_pairs, (unsigned)s_repair_reports);
             return;
         }
-        // Pad with the host's noop convention: a `from` outside the map is
-        // ignored by set_packed_overlay_mapping on the far side.
-        while (slot < OVERLAY_MAP_IDX_CNT_PER_REPORT) {
-            pack_map_value(msg.mapping, slot++, OVERLAY_MAP_IDX_CNT);
+        // Pad by REPEATING THE LAST PAIR. Re-applying a mapping is idempotent
+        // (set_display_pool_slot + mark_display_has_overlay), so a duplicate is a
+        // semantic no-op and needs no reserved sentinel — which matters because a
+        // sentinel would have to exceed OVERLAY_MAP_IDX_CNT (1440) and so could not
+        // be expressed at the narrower widths at all. Every value must be written:
+        // there is no count field, so anything left zero would decode as the real
+        // pair 0>0 and wrongly light up display position 0.
+        while (slot + 1 < values) {
+            pack_map_value(msg.mapping, slot++, last_from, width);
+            pack_map_value(msg.mapping, slot++, last_to,   width);
         }
         if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void *)&msg,
                                            sizeof(overlay_map_sync_t), 10))) {

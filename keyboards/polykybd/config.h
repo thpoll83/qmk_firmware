@@ -287,15 +287,38 @@
 // must move together, and the pack's .plyx carries the size in its header.
 #define NUM_OVERLAY_SLOTS 600
 #define OVERLAY_MAP_IDX_CNT (NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP)
-// Bit width of ONE packed value in a SEND_OVERLAY_MAPPING (cmd 21) report. Both
-// halves of a pair use it: `from` (a flat (slot, variant) index, 0..1439) and `to`
-// (a pool slot, 0..NUM_OVERLAY_SLOTS-1). ⚠️ It must hold OVERLAY_MAP_IDX_CNT
-// itself, not just CNT-1 — that value is the host's / the repair's noop padding
-// sentinel. 11 bits covers 1440; it was 10 while the index space was 810. Widening
-// it is a WIRE CHANGE (fewer pairs per report, different bit offsets) and needs a
-// PROTOCOL_VERSION bump plus a matching host encode branch.
-#define OVERLAY_MAP_IDX_BITS 11
+// --- overlay-mapping wire widths -------------------------------------------
+// A mapping report is a flat LSB-first bit stream of equal-width values read as
+// alternating `from, to, from, to, …`. `from` is a display position (a flat
+// (slot, variant) index, 0..OVERLAY_MAP_IDX_CNT-1) and `to` is a pool slot
+// (0..NUM_OVERLAY_SLOTS-1), so the width a given pair NEEDS is
+// max(bits(from), bits(to)).
+//
+// Two commands carry that stream:
+//   cmd 21 SEND_OVERLAY_MAPPING    — fixed 10 bits. Unchanged since forever, and
+//                                    the only one a pre-v12 keyboard understands.
+//   cmd 33 SEND_OVERLAY_MAPPING_W  — v12+. data[2] is the WIDTH, data[3..] the
+//                                    stream, so the host can pick the narrowest
+//                                    width each group of pairs fits in.
+// Pairs are order-independent (each is a standalone assignment), so the host
+// partitions them BY REQUIRED WIDTH rather than by index order: variants 0..10
+// stay in the 10-bit form (24 pairs/report, no regression), only the high GUI
+// combos need 11, and low-index pairs can ride at 9 or even 8 (27 / 30 pairs).
+// 11 is the ceiling — max `from` is 1439 < 2048 — so 12+ is never needed today.
+#define OVERLAY_MAP_IDX_BITS 10                 // cmd 21's fixed width
 #define OVERLAY_MAP_IDX_CNT_PER_REPORT (HID_DATA_MAX*8/OVERLAY_MAP_IDX_BITS)
+// cmd 33: one extra header byte for the width, so one fewer data byte.
+#define OVERLAY_MAP_W_HDR   3                   // report id + cmd + width
+#define OVERLAY_MAP_W_BYTES (HID_REPORT_SIZE-OVERLAY_MAP_W_HDR)
+#define OVERLAY_MAP_WIDTH_MIN 8
+#define OVERLAY_MAP_WIDTH_MAX 16
+// Values a stream of `bytes` bytes holds at `width` bits — the ONE definition
+// host and firmware must agree on, since there is no count field: the host fills
+// every value (padding by repeating the last pair, which is idempotent) so a
+// disagreement would decode trailing junk as real mappings.
+#define OVERLAY_MAP_VALUES(bytes, width) ((uint16_t)((bytes)*8/(width)))
+// Width the master's own repair packer uses — the widest, so any index fits.
+#define OVERLAY_MAP_REPAIR_WIDTH 11
 #define UNSET_OVERLAY_MAPPING 0xffff
 
 #define PICO_FLASH_SIZE_BYTES (8 * 1024 * 1024)

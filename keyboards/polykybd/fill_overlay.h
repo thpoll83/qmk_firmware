@@ -19,7 +19,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first);
 // the display_to_pool array.
 // Returns true if any pair maps a currently-displayed position, so the caller can
 // skip the display refresh for an all-off-screen chunk (see fill_overlay.c).
-bool set_packed_overlay_mapping(uint8_t* mapping);
+bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width);
 
 // Runs the four overlay self-actions (RESET_BUFFERS / USAGE_RESET /
 // MAPPING_RESET / MAPPING_ALLSET) for whichever bits are set in `flags`.

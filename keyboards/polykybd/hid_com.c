@@ -194,7 +194,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         //  - loop_profile_note_overlay_cmd() tags the iteration for the timing profiler
         //    (no-op unless POLYKYBD_LOOP_PROFILE).
         switch (data[1]) {
-            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21:
+            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21: case 33:
                 note_overlay_activity();
                 loop_profile_note_overlay_cmd();
                 break;
@@ -715,6 +715,8 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // (case 11) still holds: reports are dispatched sequentially
                     // and the bridge completes before this case returns.
                     overlay_map_sync_t map_sync;
+                    map_sync.width = OVERLAY_MAP_IDX_BITS;   // cmd 21 is fixed 10-bit
+                    map_sync.bytes = HID_DATA_MAX;
                     memcpy(map_sync.mapping, &data[HID_DATA_IDX], HID_DATA_MAX);
                     // A chunk is one-shot — nothing re-fires it (unlike the periodic
                     // state syncs, where the diff IS the retry queue). Losing one used
@@ -730,13 +732,42 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // Render only if this chunk remapped a position that is on screen;
                     // an all-off-screen chunk (non-held variants, off-layer keys) is
                     // staged silently and shown by the enable-overlays refresh.
-                    if (set_packed_overlay_mapping(&data[HID_DATA_IDX])) {
+                    if (set_packed_overlay_mapping(&data[HID_DATA_IDX], HID_DATA_MAX,
+                                                   OVERLAY_MAP_IDX_BITS)) {
                         request_disp_refresh();
                     }
                     // Routine per-chunk chatter — set_packed_overlay_mapping already
                     // logs the decoded pairs under the same gate.
                     if (debug_enable) {
                         uprint("Overlay mapping data received.\n");
+                    }
+                }
+                break;
+            case 33: // receive overlay mapping, host-chosen value width (v12+)
+                {
+                    // Same stream as cmd 21, but data[2] carries the WIDTH so the host
+                    // can send each group of pairs at the narrowest width it fits in:
+                    // 8 bits = 30 pairs/report, 9 = 27, 10 = 24, 11 = 22. Pairs are
+                    // order-independent (each is a standalone assignment), so the host
+                    // partitions them by required width rather than by index order —
+                    // variants 0..10 keep riding the dense 10-bit form and only the
+                    // high GUI combos pay for 11. Silent, like cmd 21.
+                    const uint8_t width = data[HID_DATA_IDX];
+                    overlay_map_sync_t map_sync;
+                    map_sync.width = width;
+                    map_sync.bytes = OVERLAY_MAP_W_BYTES;
+                    memcpy(map_sync.mapping, &data[OVERLAY_MAP_W_HDR], OVERLAY_MAP_W_BYTES);
+                    if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync,
+                                                       sizeof(overlay_map_sync_t), 10))) {
+                        note_overlay_map_sync_lost();
+                        uprint("Warning: overlay mapping chunk did not reach the slave; repairing at enable.\n");
+                    }
+                    if (set_packed_overlay_mapping(&data[OVERLAY_MAP_W_HDR],
+                                                   OVERLAY_MAP_W_BYTES, width)) {
+                        request_disp_refresh();
+                    }
+                    if (debug_enable) {
+                        uprintf("Overlay mapping data received (%u-bit).\n", (unsigned)width);
                     }
                 }
                 break;

@@ -188,7 +188,23 @@
 //      firmware read 1 byte past the report (harmless on a no-MMU MCU, but the
 //      last data byte of each segment was undefined). Compressed/ROI paths are
 //      unchanged. Host must match v11 to connect (exact-match gate).
-#define PROTOCOL_VERSION 11
+// v12: GUI (Cmd) COMBINES with the other modifiers for overlays. The modifier
+//      variant is now simply the L/R-folded QMK modifier bitmask 0..15 (bit0 Ctrl,
+//      bit1 Shift, bit2 Alt, bit3 GUI), so Cmd+Shift, Cmd+Alt, Cmd+Shift+Alt, ...
+//      each address their own overlay instead of collapsing onto the bare-GUI
+//      variant 8 (see adjust_overlay_idx_to_mod in fill_overlay.c). The upload
+//      commands are UNCHANGED (all three already carry the modifier in a 4-bit
+//      field), but the flat (slot, variant) index space grows 810 -> 1440, which
+//      no longer fits the 10-bit fields of SEND_OVERLAY_MAPPING (cmd 21).
+//      cmd 21 STAYS FIXED AT 10 BITS — unchanged, and still the only mapping
+//      command a pre-v12 keyboard understands. The wider space rides a NEW
+//      command, SEND_OVERLAY_MAPPING_W (cmd 33), whose data[2] carries the value
+//      width: the host groups mapping pairs by the width they need (8/9/10/11 ->
+//      30/27/24/22 pairs per report) and sends each group at its own width. Since
+//      variants 0..10 still fit 10 bits, the common case keeps cmd 21's density;
+//      only indices >= 1024 need 11. A pre-v12 keyboard gets cmd 21 only, and
+//      never a variant > 8 (it has no index space for one).
+#define PROTOCOL_VERSION 12
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -251,11 +267,19 @@
 #define ROI_START (HID_REPORT_SIZE-7) // additional minus keycode and 4 bytes compressed roi header -> -7
 
 #define NUM_OVERLAYS 90
-#define NUM_VARIATIONS_WITH_MAP 9 // ALL modifier variants are addressable: NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5), ALT_SHIFT(6), CTRL_ALT_SHIFT(7), GUI_KEY(8) (maximum would be 14, maybe later support GUI+CTL/ALT/SHIFT -> 12)
+// The modifier variant IS the L/R-folded QMK modifier bitmask (bit0 Ctrl, bit1
+// Shift, bit2 Alt, bit3 GUI), so all 16 combinations are addressable and the
+// numbering is self-describing: 0 = none, 1 = Ctrl, 2 = Shift, 3 = Ctrl+Shift,
+// 4 = Alt, ... 8 = GUI, 9 = GUI+Ctrl, 10 = GUI+Shift, ... 15 = GUI+Ctrl+Alt+Shift.
+// Protocol v12 grew this from 9 (GUI could not be combined — every GUI+x chord
+// collapsed onto the bare-GUI variant 8, so e.g. a Mac Cmd+Shift+P shortcut drew
+// the Cmd image). ⚠️ Growing it further would need OVERLAY_MAP_IDX_BITS to grow
+// too — see the note there.
+#define NUM_VARIATIONS_WITH_MAP 16
 
 // Physical overlay pool: how many DISTINCT 360-byte keycap images can be resident
 // at once. Deliberately DECOUPLED from NUM_OVERLAYS*variants — overlay mapping is
-// mandatory, so overlay_map[] (810 entries, every keycode-slot x variant pair)
+// mandatory, so display_to_pool[] (810 entries, every keycode-slot x variant pair)
 // points each pair at any pool slot. Variants that share artwork therefore cost
 // ONE slot, not one each: measured across the 24 shipped app templates, the
 // heaviest app needs 62 distinct images and the median 31, so 600 holds ~10 apps
@@ -268,8 +292,48 @@
 // must move together, and the pack's .plyx carries the size in its header.
 #define NUM_OVERLAY_SLOTS 600
 #define OVERLAY_MAP_IDX_CNT (NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP)
-#define OVERLAY_MAP_IDX_BITS 10
+// --- overlay-mapping wire widths -------------------------------------------
+// A mapping report is a flat LSB-first bit stream of equal-width values read as
+// alternating `from, to, from, to, …`. `from` is a display position (a flat
+// (slot, variant) index, 0..OVERLAY_MAP_IDX_CNT-1) and `to` is a pool slot
+// (0..NUM_OVERLAY_SLOTS-1), so the width a given pair NEEDS is
+// max(bits(from), bits(to)).
+//
+// Two commands carry that stream:
+//   cmd 21 SEND_OVERLAY_MAPPING    — fixed 10 bits. Unchanged since forever, and
+//                                    the only one a pre-v12 keyboard understands.
+//   cmd 33 SEND_OVERLAY_MAPPING_W  — v12+. data[2] is the WIDTH, data[3..] the
+//                                    stream, so the host can pick the narrowest
+//                                    width each group of pairs fits in.
+// Pairs are order-independent (each is a standalone assignment), so the host
+// partitions them BY REQUIRED WIDTH rather than by index order: variants 0..10
+// stay in the 10-bit form (24 pairs/report, no regression), only the high GUI
+// combos need 11, and low-index pairs can ride at 9 or even 8 (27 / 30 pairs).
+// 11 is the ceiling — max `from` is 1439 < 2048 — so 12+ is never needed today.
+#define OVERLAY_MAP_IDX_BITS 10                 // cmd 21's fixed width
 #define OVERLAY_MAP_IDX_CNT_PER_REPORT (HID_DATA_MAX*8/OVERLAY_MAP_IDX_BITS)
+// cmd 33: one extra header byte for the width, so one fewer data byte.
+#define OVERLAY_MAP_W_HDR   3                   // report id + cmd + width
+#define OVERLAY_MAP_W_BYTES (HID_REPORT_SIZE-OVERLAY_MAP_W_HDR)
+// Widths the DECODER accepts. Deliberately wider than the 8..11 the host emits
+// today: the decoder is width-generic, and every value it produces is still
+// range-checked against OVERLAY_MAP_IDX_CNT / NUM_OVERLAY_SLOTS before it can
+// touch a table, so a stream at 12..16 can only ever be rejected pair-by-pair —
+// it cannot address anything a narrower one couldn't. Accepting them keeps
+// headroom for a future index-space growth without a second command, in the same
+// spirit as the open-ended glyph-script index (v10). ⚠️ The bound that actually
+// protects memory is the per-value range check, NOT this range; both the read and
+// the write side touch a byte only when the value truly extends into it, verified
+// by round-tripping the packer through the decoder across all of 8..16.
+#define OVERLAY_MAP_WIDTH_MIN 8
+#define OVERLAY_MAP_WIDTH_MAX 16
+// Values a stream of `bytes` bytes holds at `width` bits — the ONE definition
+// host and firmware must agree on, since there is no count field: the host fills
+// every value (padding by repeating the last pair, which is idempotent) so a
+// disagreement would decode trailing junk as real mappings.
+#define OVERLAY_MAP_VALUES(bytes, width) ((uint16_t)((bytes)*8/(width)))
+// Width the master's own repair packer uses — the widest, so any index fits.
+#define OVERLAY_MAP_REPAIR_WIDTH 11
 #define UNSET_OVERLAY_MAPPING 0xffff
 
 #define PICO_FLASH_SIZE_BYTES (8 * 1024 * 1024)

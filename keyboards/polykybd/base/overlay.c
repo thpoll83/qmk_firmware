@@ -12,8 +12,8 @@
 // correct if the display geometry ever changes.
 #define OVERLAY_BIT_CAPACITY (SCREEN_WIDTH * SCREEN_HEIGHT)
 
-static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
-// ⚠️ overlays[] IS the doom easter-egg's entire game arena (borrowed as RAM). Its
+static volatile uint8_t display_has_overlay_bits[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
+// ⚠️ overlay_pool[] IS the doom easter-egg's entire game arena (borrowed as RAM). Its
 // size = NUM_OVERLAY_SLOTS*360 = 216,000 B today. If you SHRINK the pool
 // to reclaim RAM, keep it >= ~205 KB or the doom build won't fit: the engine floor
 // is ~144 KB of fixed structure (frame buffer 53,760 + pd_render 58,880 + statics
@@ -30,8 +30,8 @@ static volatile uint8_t use_overlay[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 // (The DoomPack flavour keeps the plain array below: the flashed pack links
 // its statics AT the array's measured address instead — doom/PACK_DESIGN.md.)
 extern uint8_t __doom_shared_base__[];
-#define overlays ((uint8_t (*)[72*40/8])__doom_shared_base__)
-#define OVERLAYS_SIZE (NUM_OVERLAY_SLOTS*(72*40/8))
+#define overlay_pool ((uint8_t (*)[72*40/8])__doom_shared_base__)
+#define OVERLAY_POOL_SIZE (NUM_OVERLAY_SLOTS*(72*40/8))
 #elif defined(POLYKYBD_DOOM_PACK)
 // DoomPack flavour: the pool is PINNED at the RAM origin (0x20000000) via
 // the dedicated .overlay_pool section (ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld)
@@ -39,13 +39,13 @@ extern uint8_t __doom_shared_base__[];
 // Like the monolith's .doom_shared the section is NOLOAD (crt0 does not
 // zero it) — the usage bits above gate every read and the reset/refill
 // paths memset it, so boot behaviour is unchanged.
-static uint8_t overlays [NUM_OVERLAY_SLOTS][72*40/8] __attribute__((section(".overlay_pool")));
-#define OVERLAYS_SIZE sizeof(overlays)
+static uint8_t overlay_pool [NUM_OVERLAY_SLOTS][72*40/8] __attribute__((section(".overlay_pool")));
+#define OVERLAY_POOL_SIZE sizeof(overlay_pool)
 #else
-static /*volatile*/ uint8_t overlays [NUM_OVERLAY_SLOTS][72*40/8]; // ResX*ResY/PixelPerByte
-#define OVERLAYS_SIZE sizeof(overlays)
+static /*volatile*/ uint8_t overlay_pool [NUM_OVERLAY_SLOTS][72*40/8]; // ResX*ResY/PixelPerByte
+#define OVERLAY_POOL_SIZE sizeof(overlay_pool)
 #endif
-static uint16_t overlay_map [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
+static uint16_t display_to_pool [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 
 static overlay_fragment_context_t g_fragment_context = {0};
 
@@ -75,7 +75,7 @@ roi_bounds_t set_fragment_context_from_buffer(const uint8_t *buffer) {
     // SECURITY: the ROI bounds are raw host bytes (y/yy up to 63, x up to 255,
     // xx up to 127) but the keycap is only 72x40. Unclamped, copy_rectangle_to_overlay_xy
     // would index a 360-byte overlay row well past its end (OOB write into adjacent
-    // overlays[]). Clip to the visible window so x/y are valid start coords and
+    // overlay_pool[]). Clip to the visible window so x/y are valid start coords and
     // xx/yy are valid exclusive ends. (A second backstop lives in the copy loop.)
     // NOTE: x/y are INCLUSIVE start pixels (max SCREEN_-1) while xx/yy are
     // EXCLUSIVE ends (max SCREEN_); width = xx-x, so a 1px ROI (xx==x+1) is valid
@@ -120,8 +120,8 @@ void set_fragment_context_roi(uint8_t x, uint8_t y, uint8_t xx, uint8_t yy, bool
 }
 
 
-uint8_t (* get_overlays(void))[72*40/8] {
-    return overlays;
+uint8_t (* get_overlay_pool(void))[72*40/8] {
+    return overlay_pool;
 }
 
 // Throwaway row returned for an out-of-range overlay index — so an OOB access
@@ -130,8 +130,8 @@ uint8_t (* get_overlays(void))[72*40/8] {
 static uint8_t s_overlay_discard[72*40/8];
 
 uint8_t* get_overlay(uint16_t overlay_idx) {
-    // SECURITY: this is the single place overlays[] is dereferenced. The index
-    // arrives from the host-programmed mapping (get_overlay_mapping -> overlay_map[],
+    // SECURITY: this is the single place overlay_pool[] is dereferenced. The index
+    // arrives from the host-programmed mapping (get_display_pool_slot -> display_to_pool[],
     // cmd 21) and is only validated at write time today, so an out-of-range value
     // here would read/write past the pool. Route it to a discard row instead —
     // memory-safe AND non-destructive (no real slot is read or overwritten; slot 0
@@ -146,38 +146,38 @@ uint8_t* get_overlay(uint16_t overlay_idx) {
         }
         return s_overlay_discard;
     }
-    return overlays[overlay_idx];
+    return overlay_pool[overlay_idx];
 }
 
-uint16_t get_overlay_mapping(uint16_t overlay_idx) {
-    return overlay_map[overlay_idx];
+uint16_t get_display_pool_slot(uint16_t overlay_idx) {
+    return display_to_pool[overlay_idx];
 }
 
-void set_overlay_mapping(uint16_t overlay_idx, uint16_t val) {
-    overlay_map[overlay_idx] = val;
+void set_display_pool_slot(uint16_t overlay_idx, uint16_t val) {
+    display_to_pool[overlay_idx] = val;
 }
 
-void set_overlay_usage(uint16_t overlay_idx) {
-    use_overlay[overlay_idx/8] |= (1<<(overlay_idx%8));
+void mark_display_has_overlay(uint16_t overlay_idx) {
+    display_has_overlay_bits[overlay_idx/8] |= (1<<(overlay_idx%8));
 }
 
-bool is_overlay_used(uint16_t overlay_idx) {
-    return (use_overlay[overlay_idx/8] & (1<<(overlay_idx%8))) != 0;
+bool display_has_overlay(uint16_t overlay_idx) {
+    return (display_has_overlay_bits[overlay_idx/8] & (1<<(overlay_idx%8))) != 0;
 }
 
-void reset_overlay_buffers(void) {
-    memset(overlays, 0, OVERLAYS_SIZE);
+void reset_overlay_pool(void) {
+    memset(overlay_pool, 0, OVERLAY_POOL_SIZE);
 }
 
-void reset_overlay_usage(void) {
-    for(int16_t i = 0; i < sizeof(use_overlay); ++i) {
-        use_overlay[i] = 0;
+void clear_display_has_overlay(void) {
+    for(int16_t i = 0; i < sizeof(display_has_overlay_bits); ++i) {
+        display_has_overlay_bits[i] = 0;
     }
 }
 
-void set_all_overlay_mapping(void) {
-    for(int16_t i = 0; i < sizeof(use_overlay); ++i) {
-        use_overlay[i] = 0xff;
+void set_all_display_has_overlay(void) {
+    for(int16_t i = 0; i < sizeof(display_has_overlay_bits); ++i) {
+        display_has_overlay_bits[i] = 0xff;
     }
 }
 
@@ -189,10 +189,10 @@ void set_all_overlay_mapping(void) {
 // via cmd 21 — but the flat (slot, variant) index is still the only ADDRESS the
 // upload wire format has, so the identity is what makes "write pool slot N"
 // expressible. See the warning in the body before changing anything here.
-void reset_overlay_mapping(void) {
+void reset_display_to_pool(void) {
     // ⚠️ IDENTITY IS LOAD-BEARING FOR UPLOADS — do not "simplify" this to a zero
     // fill. Every upload path resolves its destination THROUGH this table
-    // (fill_overlay.c: adjust_overlay_idx_to_mod() then get_overlay_mapping()),
+    // (fill_overlay.c: adjust_overlay_idx_to_mod() then get_display_pool_slot()),
     // and an MRU upload addresses pool slot N by sending the (keycode, modifier)
     // pair whose flat index IS N — host OverlayMRUCache.pool_slot_to_firmware_address:
     //     keycode_slot = N % 90 ; modifier_var = N / 90
@@ -202,13 +202,13 @@ void reset_overlay_mapping(void) {
     // sent all of them to slot 0: nearly every keycap went blank and the Esc
     // position (which maps to slot 0) showed the pile-up (field, 2026-08-01).
     for(int16_t i = 0; i < NUM_OVERLAY_SLOTS; ++i) {
-        overlay_map[i] = i;
+        display_to_pool[i] = i;
     }
     // Flat indices past the pool can never be an upload destination (the host only
     // ever addresses slots < capacity), so they just need to be in range. Rendering
     // is gated on the usage bits, which every caller clears alongside this.
     for(int16_t i = NUM_OVERLAY_SLOTS; i < OVERLAY_MAP_IDX_CNT; ++i) {
-        overlay_map[i] = 0;
+        display_to_pool[i] = 0;
     }
 }
 

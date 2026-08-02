@@ -78,7 +78,7 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     // Detect action flags newly set in this sync and run them immediately,
     // mirroring the master's case-11 handling. Without this, a mapping
     // bridge transaction arriving before housekeeping runs would have its
-    // use_overlay bits wiped by a later deferred reset_overlay_usage().
+    // display_has_overlay_bits bits wiped by a later deferred clear_display_has_overlay().
     uint8_t newly_set     = (incoming->overlay_flags & ~current->overlay_flags);
 #ifdef RGB_MATRIX_ENABLE
     uint8_t newly_cleared = (current->overlay_flags  & ~incoming->overlay_flags);
@@ -184,7 +184,7 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
     // get_overlay()/FW-4.)
     memcpy(get_overlay(ov->adj_idx) + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
     if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
-        set_overlay_usage_post_upload(ov->adj_idx);
+        mark_display_has_overlay_post_upload(ov->adj_idx);
         request_disp_refresh();
     }
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
@@ -210,7 +210,7 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
     int16_t maxlen = 360 - hid_bit_index/8;
     hid_bit_index += rle_decompress(get_overlay(ov->adj_idx)+hid_bit_index/8, PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
     if (hid_bit_index >= 360*8) {
-        set_overlay_usage_post_upload(ov->adj_idx);
+        mark_display_has_overlay_post_upload(ov->adj_idx);
         request_disp_refresh();
         hid_bit_index = 0;
     }
@@ -246,7 +246,7 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
         if(new_index >= 2880) {
             //finished roi update
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
-            set_overlay_usage_post_upload(roi_ov->adj_idx);
+            mark_display_has_overlay_post_upload(roi_ov->adj_idx);
             request_disp_refresh();
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
@@ -353,7 +353,7 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
     // Render only if this chunk remapped an on-screen position (the slave has its own
     // displayed-slot set + synced mods); an all-off-screen chunk is shown by the
     // enable-overlays state sync (DISPLAY_OVERLAYS in OVERLAY_SYNCED_STATE_FLAGS).
-    if (set_10bit_overlay_mapping((uint8_t *)data->mapping)) {
+    if (set_packed_overlay_mapping(data->mapping, data->bytes, data->width)) {
         request_disp_refresh();
     }
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;

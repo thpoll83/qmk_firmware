@@ -57,7 +57,7 @@ extern uint8_t __doom_shared_end__[];
 #else
 // DoomPack flavour (PACK_DESIGN.md): no engine in the image, no custom
 // linker script. The pool is base/overlay.c's plain array (borrowed via
-// get_overlays() as always) and the engine-statics/arena split inside it
+// get_overlay_pool() as always) and the engine-statics/arena split inside it
 // comes from the loaded pack's header (doom_pack_arena_off()).
 #define DOOM_POOL_BYTES ((uint32_t)NUM_OVERLAY_SLOTS * (72 * 40 / 8))
 #endif
@@ -419,7 +419,7 @@ static bool doom_session_start(void) {
     // The runtime handoff: the overlay pool becomes the game arena. The pool
     // is entirely reconstructible — the host re-sends overlays on every app
     // switch, so nothing is lost (see DOOM_FEASIBILITY.md, Challenge 2).
-    s_fb = (uint8_t *)get_overlays();
+    s_fb = (uint8_t *)get_overlay_pool();
 #ifdef POLYKYBD_DOOM_PACK
     // Zero the whole pool, then bring up the flashed engine pack: its init
     // re-runs the pack crt0 (.data copy + .bss zero inside the pool), so
@@ -533,9 +533,9 @@ static void doom_exit(void) {
     s_fb = NULL;
     // Hand the pool back in the same state a fresh boot / font-pack wipe leaves
     // it: blank buffers, no usage bits, identity mapping.
-    reset_overlay_buffers();
-    reset_overlay_usage();
-    reset_overlay_mapping();
+    reset_overlay_pool();
+    clear_display_has_overlay();
+    reset_display_to_pool();
     reset_fragment_context();
     // Actively tell the host its overlays are gone: re-raise the GET_ID fresh-boot
     // marker so the next reconnect probe (~1 s) resets the host MRU cache and
@@ -1188,9 +1188,9 @@ static void doom_slave_stop(void) {
 #endif
     s_fb = NULL;
     // Same pool hand-back contract as doom_exit: blank + reconstructible.
-    reset_overlay_buffers();
-    reset_overlay_usage();
-    reset_overlay_mapping();
+    reset_overlay_pool();
+    clear_display_has_overlay();
+    reset_display_to_pool();
     reset_fragment_context();
     // The game blitter owned these panels with untracked full-window sends and the
     // slave never drove s_disp_render_active false (doom_mode_active() is the
@@ -1617,6 +1617,7 @@ bool doom_hid_frozen(uint8_t cmd) {
         case 18: // start ROI overlay          (0x12)
         case 19: // ROI overlay data           (0x13)
         case 21: // overlay mapping            (0x15)
+        case 33: // overlay mapping, sized      (0x21)
             // All ACKless bulk writes into the borrowed pool / fragment
             // context — the dispatcher drops them without a reply.
             return true;

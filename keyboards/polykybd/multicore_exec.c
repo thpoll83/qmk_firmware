@@ -11,7 +11,7 @@
 #include "polymod_rle.h"
 #include "base/disp_array.h"
 #include "base/multicore/core1.h"
-#include "fill_overlay.h"   // for set_overlay_usage_post_upload
+#include "fill_overlay.h"   // for mark_display_has_overlay_post_upload
 
 #ifdef USE_CORE1
 static volatile uint16_t core1_bit_index = 0;
@@ -67,7 +67,7 @@ void core1_entry(void) {
                     core1_bit_index += rle_decompress(get_overlay(core1_idx)+core1_bit_index/8, PK_MAX(0,core1_max_bitlen), core1_buffer, data_len, core1_bit_index);
 
                     if (core1_bit_index >= 360*8 -1) {
-                        set_overlay_usage_post_upload(core1_idx);
+                        mark_display_has_overlay_post_upload(core1_idx);
                         // No update_performed() — a host overlay push is not user
                         // activity and must not restart the idle countdown (see
                         // base/update.h). Also keeps core1 out of the idle-timer
@@ -92,7 +92,7 @@ void core1_entry(void) {
                     }
                     core1_bit_index = copy_rectangle_to_overlay(core1_bit_index, get_overlay(core1_idx), core1_buffer, &core1_roi, data_len);
                     if(core1_bit_index >= 2880) {
-                        set_overlay_usage_post_upload(core1_idx);
+                        mark_display_has_overlay_post_upload(core1_idx);
                         // No update_performed() — see base/update.h.
                         // Only refresh a variant that is actually on screen (core1_visible).
                         if (core1_visible) {

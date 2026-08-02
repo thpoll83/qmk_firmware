@@ -2027,12 +2027,12 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     // Record that this keycode-slot is on screen (LAYER visibility for the render gate).
     s_displayed_slots[idx >> 3] |= (uint8_t)(1u << (idx & 7));
     idx = adjust_overlay_idx_to_mod(idx, mods);
-    // use_overlay[] is from-indexed (see set_10bit_overlay_mapping): check it
+    // display_has_overlay_bits[] is from-indexed (see set_packed_overlay_mapping): check it
     // here on the display position, before resolving to the pool slot.
-    if(!is_overlay_used(idx)) {
+    if(!display_has_overlay(idx)) {
         return false;
     }
-    idx = get_overlay_mapping(idx);
+    idx = get_display_pool_slot(idx);
 
     // Overlay images are ROW-MAJOR MSB-first (host: np.packbits over the 40x72 mask),
     // which is what kdisp_draw_bitmap reads — so the courtyard must use the row-major
@@ -3382,10 +3382,10 @@ void keyboard_post_init_user(void) {
     mru_init();
     splash_progress(3);                 // language/emoji/MRU init done
 
-    reset_overlay_buffers();
-    reset_overlay_usage();
+    reset_overlay_pool();
+    clear_display_has_overlay();
     //standard mapping is 1:1
-    reset_overlay_mapping();
+    reset_display_to_pool();
 
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"2");

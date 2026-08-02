@@ -56,7 +56,7 @@ enum overlay_flag {
 // be force-synced from master to slave at the moment the host changes them,
 // not deferred to the next housekeeping cycle.
 // MIRROR_OVERLAYS: upload bridge handlers use it immediately to decide whether
-//   set_overlay_usage_post_upload is a no-op — must arrive before any upload.
+//   mark_display_has_overlay_post_upload is a no-op — must arrive before any upload.
 // DISPLAY_OVERLAYS: adding it here makes enable_overlays() force-sync to slave
 //   via case 11, triggering a state_diff refresh on slave after all mapping
 //   chunks are guaranteed delivered — fixes ESC (and any key in a later chunk)

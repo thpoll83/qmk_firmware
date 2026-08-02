@@ -55,8 +55,16 @@ typedef struct _dynamic_keymap_sync_t {
     uint8_t  commands[RAW_EPSIZE];
 } dynamic_keymap_sync_t;
 
+// A bridged overlay-mapping report. `width`/`bytes` describe the packed stream so
+// the slave decodes it exactly as the master did — they differ per source: cmd 21
+// is always (10, HID_DATA_MAX) while cmd 33 carries the host's chosen width over
+// OVERLAY_MAP_W_BYTES. There is no count field (the sender fills every value by
+// repeating the last pair), so getting these two wrong decodes trailing junk as
+// real mappings.
 typedef struct _overlay_map_sync_t {
     uint32_t crc32;
+    uint8_t  width;
+    uint8_t  bytes;
     uint8_t  mapping[HID_DATA_MAX];
 } overlay_map_sync_t;
 

@@ -46,30 +46,23 @@ static enum key_split_pos resolve_upload_side(uint8_t keycode) {
 }
 
 
-// Maps overlay index to modifier combination offset
-// NO_MOD(0), CTRL(1), SHIFT(2), CTRL_SHIFT(3), ALT(4), CTRL_ALT(5),
-// ALT_SHIFT(6), CTRL_ALT_SHIFT(7) and GUI_KEY(8)
-uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
-    // GUI_KEY key cannot be combined with other modifiers in case of overlays
-    // for the moment, so GUI_KEY takes priority over all modifiers
-    if((mods&0x88) != 0) {
-        return idx + NUM_OVERLAYS * 8;
-    }
-    //no difference between r&l mods:
-    mods |= mods>>4;
-    mods &= 0x0f;
-    return idx + NUM_OVERLAYS * mods;
-}
-
-// Modifier-variant (0..8) of a modifier byte, mirroring adjust_overlay_idx_to_mod's
-// math: GUI is variant 8 (it doesn't combine with others for overlays); otherwise the
-// L/R-folded ctrl/shift/alt bitmask 0..7.
+// Modifier-variant (0..NUM_VARIATIONS_WITH_MAP-1) of a QMK modifier byte: fold the
+// right-hand mods onto the left-hand ones and keep the low nibble, so the variant IS
+// the modifier bitmask (bit0 Ctrl, bit1 Shift, bit2 Alt, bit3 GUI).
+//
+// ⚠️ Protocol v12 removed a GUI special case here: GUI used to short-circuit to
+// variant 8, i.e. Cmd+Shift / Cmd+Alt / Cmd+Shift+Alt all rendered the *bare Cmd*
+// overlay. Mac apps lean on those chords (Sublime Text's Cmd+Shift+P command
+// palette was the report), so all 16 combinations are addressable now. The upload
+// paths pass an already-4-bit value from the host, which this leaves untouched.
 static uint8_t overlay_mod_variant(uint8_t mods) {
-    if ((mods & 0x88) != 0) {
-        return 8;
-    }
     mods |= mods >> 4;
     return mods & 0x0f;
+}
+
+// Maps overlay index to modifier combination offset (see overlay_mod_variant).
+uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods) {
+    return idx + NUM_OVERLAYS * overlay_mod_variant(mods);
 }
 
 // True if an overlay staged for keycode-slot `base_slot` (0..89) and modifier-variant
@@ -82,7 +75,7 @@ static uint8_t overlay_mod_variant(uint8_t mods) {
 //     is staged into memory but not shown.
 // Either way the overlay lands in overlay memory and is picked up by the eventual
 // layer/modifier-change refresh (both ungated), so completing it need not re-render now.
-// At rest a program switch pushes all 9 variants of every key incl. off-layer keys, and
+// At rest a program switch pushes every modifier variant of every key incl. off-layer keys, and
 // only the displayed variant-0 slots are visible — skipping the rest is the coalescing
 // win. Uses the same local_layer->mods + displayed-slot set the display resolves against,
 // so it never suppresses a render that is actually on screen.
@@ -136,7 +129,7 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
 
     uint8_t mods = get_fragment_context()->modifier;
     idx = adjust_overlay_idx_to_mod(idx, mods);
-    idx = get_overlay_mapping(idx);
+    idx = get_display_pool_slot(idx);
 
     enum key_split_pos pos = resolve_upload_side(keycode);
     if (is_on_current_side(pos)) {
@@ -160,7 +153,7 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
     }
 
     if (segment_index == NUM_SEGMENTS_PER_OVERLAY - 1) {
-        set_overlay_usage_post_upload(idx);
+        mark_display_has_overlay_post_upload(idx);
         uprintf("Received overlay for keycode 0x%x (modifiers: 0x%x): %d bytes, index %d, side: %s.\n",
                 keycode, mods, (segment_index+1)*BYTES_PER_SEGMENT, idx, pos_to_str(pos));
     }
@@ -183,7 +176,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
     uint16_t base_slot = idx;   // 0..89, before the modifier/mapping resolve — for the visibility gate
     bool visible = overlay_visible(base_slot, ctx_mod);
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
-    idx = get_overlay_mapping(idx);
+    idx = get_display_pool_slot(idx);
 
     enum key_split_pos pos = resolve_upload_side(keycode);
     uint16_t bit_index = get_fragment_context()->bit_index;
@@ -197,7 +190,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
         bit_index += rle_decompress(get_overlay(idx)+bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, bit_index);
 
         if (bit_index >= 360*8 -1) {
-            set_overlay_usage_post_upload(idx);
+            mark_display_has_overlay_post_upload(idx);
             uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
                 keycode, ctx_mod, pos_to_str(pos), bit_index/8);
             // No update_performed() — a host overlay push is not user activity and
@@ -244,7 +237,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     uint16_t base_slot = idx;   // 0..89, before the modifier/mapping resolve — for the visibility gate
     bool visible = overlay_visible(base_slot, ctx_mod);
     idx = adjust_overlay_idx_to_mod(idx, ctx_mod);
-    idx = get_overlay_mapping(idx);
+    idx = get_display_pool_slot(idx);
 
     enum key_split_pos pos = resolve_upload_side(keycode);
 
@@ -263,7 +256,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
             }
             bit_index = copy_rectangle_to_overlay(bit_index, get_overlay(idx), first?(&(data[5])):data, &ctx_roi, data_len);
             if(bit_index >= 2880) {
-                set_overlay_usage_post_upload(idx);
+                mark_display_has_overlay_post_upload(idx);
                 // No update_performed() — see base/update.h.
                 // Only refresh if this overlay is on screen (see overlay_visible).
                 if (visible) {
@@ -288,42 +281,61 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     }
 }
 
-// Unpacks 10-bit overlay mapping pairs from buffer and updates overlay_map array.
-// `from` indexes overlay_map[] (0..OVERLAY_MAP_IDX_CNT-1, currently 810).
-// `to` indexes overlays[] (0..NUM_OVERLAY_SLOTS-1, currently 600) — the
+// Unpacks `width`-bit overlay mapping pairs from `bytes` bytes of buffer and
+// updates the display_to_pool array. Both values of a pair share the width; the
+// caller supplies it (cmd 21 is always OVERLAY_MAP_IDX_BITS, cmd 33 carries it).
+// `from` indexes display_to_pool[] (0..OVERLAY_MAP_IDX_CNT-1, currently 1440).
+// `to` indexes overlay_pool[] (0..NUM_OVERLAY_SLOTS-1, currently 600) — the
 // physical pool. A `to` >= NUM_OVERLAY_SLOTS is an out-of-pool value
 // and would cause an OOB read in copy_overlay_to_buffer / fill_overlay_buffer.
 // Returns true if any mapping in this chunk lands on a currently-displayed position
 // (see overlay_from_index_visible) — the caller renders only then; an all-off-screen
 // chunk is staged silently and shown by the eventual layer/modifier/enable refresh.
-bool set_10bit_overlay_mapping(uint8_t* mapping) {
+bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width) {
     bool any_visible = false;
     uint16_t from = UNSET_OVERLAY_MAPPING;
+    if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
+        uprintf("REJECTED overlay mapping report: bad width %u\n", (unsigned)width);
+        return false;
+    }
     // Accumulate this report's mappings into ONE log line instead of one uprintf
-    // per pair (24 pairs/report flooded the console). "from>to" pairs, space-sep.
+    // per pair (20-30 pairs/report flooded the console). "from>to" pairs, space-sep.
     char    map_log[220];
     int     map_log_n  = 0;
     uint8_t map_count  = 0;   // pairs accepted (established) this report
     uint8_t map_shown  = 0;   // pairs actually rendered into map_log (may be fewer if it filled)
     map_log[0] = '\0';
-    for(uint8_t idx=0;idx<OVERLAY_MAP_IDX_CNT_PER_REPORT;++idx) {
-        // start_bit must be wide enough to hold idx*10 up to 480 — uint8_t wraps at idx=26.
-        uint16_t start_bit = (uint16_t)idx*OVERLAY_MAP_IDX_BITS;
+    const uint16_t values = OVERLAY_MAP_VALUES(bytes, width);
+    for(uint16_t idx=0;idx<values;++idx) {
+        // start_bit must be wide enough to hold idx*width (up to ~488) — a uint8_t
+        // would wrap.
+        uint16_t start_bit = idx*(uint16_t)width;
         uint8_t start_byte = start_bit/8;
         uint8_t start_bit_in_byte = start_bit%8;
-        uint8_t num_bits_in_byte2 = OVERLAY_MAP_IDX_BITS-(8-start_bit_in_byte);
-        uint16_t to =   ((uint16_t)(mapping[start_byte]>>start_bit_in_byte)) |
-                        ((uint16_t)(0xff>>(8-num_bits_in_byte2))&mapping[start_byte+1])<<(8-start_bit_in_byte);
+        // ⚠️ How many bytes a value spans depends on the width, so BOTH the second
+        // and third byte are conditional — the load must never reach past the last
+        // data byte. At width 8 (gcd(8,8)==8) every value is one whole byte at
+        // offset 0; at 10 or 12 (gcd 2 / 4) the offset stays low enough for two;
+        // only the odd widths 9/11 (gcd 1) walk all eight offsets and reach a third.
+        uint32_t acc = (uint32_t)mapping[start_byte];
+        if (start_bit_in_byte + width > 8) {
+            acc |= (uint32_t)mapping[start_byte+1] << 8;
+        }
+        if (start_bit_in_byte + width > 16) {
+            acc |= (uint32_t)mapping[start_byte+2] << 16;
+        }
+        uint16_t to = (uint16_t)((acc >> start_bit_in_byte) &
+                                 ((1u << width) - 1u));
         if(from==UNSET_OVERLAY_MAPPING) {
             from = to;
         } else {
             if(from < OVERLAY_MAP_IDX_CNT) {
                 if(to < NUM_OVERLAY_SLOTS) {
-                    set_overlay_mapping(from, to);
-                    // use_overlay[] is from-indexed: a display position is
+                    set_display_pool_slot(from, to);
+                    // display_has_overlay_bits[] is from-indexed: a display position is
                     // "in use" iff it has an overlay assigned. Establishing
                     // the mapping is exactly that act, so set the bit here.
-                    set_overlay_usage(from);
+                    mark_display_has_overlay(from);
                     if (overlay_from_index_visible(from)) {
                         any_visible = true;
                     }
@@ -347,7 +359,7 @@ bool set_10bit_overlay_mapping(uint8_t* mapping) {
                             from, to, NUM_OVERLAY_SLOTS - 1);
                 }
             }
-            // from >= OVERLAY_MAP_IDX_CNT is the host's deliberate noop padding (e.g. 810/810); silent.
+            // from >= OVERLAY_MAP_IDX_CNT is the host's deliberate noop padding (e.g. 1440/1440); silent.
             from = UNSET_OVERLAY_MAPPING;
         }
     }
@@ -372,17 +384,24 @@ void note_overlay_map_sync_lost(void) {
     s_map_sync_lost = true;
 }
 
-// Inverse of the unpacking in set_10bit_overlay_mapping: write `v` as
-// OVERLAY_MAP_IDX_BITS bits at `idx`'s bit offset. `buf` must be zeroed first
-// (this ORs in). The highest index touches buf[58]/buf[59], so a HID_DATA_MAX
-// (60 B) buffer holds the full OVERLAY_MAP_IDX_CNT_PER_REPORT values.
-static void pack_10bit_map_value(uint8_t *buf, uint8_t idx, uint16_t v) {
-    uint16_t start_bit = (uint16_t)idx * OVERLAY_MAP_IDX_BITS;
+// Inverse of the unpacking in set_packed_overlay_mapping: write `v` as `width`
+// bits at `idx`'s bit offset. `buf` must be zeroed first (this ORs in).
+// ⚠️ Mirror the decoder's conditional byte reads exactly — write the second and
+// third byte only when the value really extends there, so this can never touch a
+// byte past the last one the decoder reads. Verify any change by round-tripping
+// through the decoder, not by eye.
+static void pack_map_value(uint8_t *buf, uint16_t idx, uint16_t v, uint8_t width) {
+    uint16_t start_bit = idx * (uint16_t)width;
     uint8_t  b         = (uint8_t)(start_bit / 8);
     uint8_t  s         = (uint8_t)(start_bit % 8);
-    uint8_t  low       = (uint8_t)(8 - s);          // bits landing in buf[b]
-    buf[b]     |= (uint8_t)((v & ((1u << low) - 1u)) << s);
-    buf[b + 1] |= (uint8_t)(v >> low);
+    uint32_t shifted   = (uint32_t)v << s;
+    buf[b] |= (uint8_t)(shifted & 0xff);
+    if (s + width > 8) {
+        buf[b + 1] |= (uint8_t)((shifted >> 8) & 0xff);
+    }
+    if (s + width > 16) {
+        buf[b + 2] |= (uint8_t)((shifted >> 16) & 0xff);
+    }
 }
 
 // Repair cursor. The walk is SPLIT ACROSS HOUSEKEEPING TICKS rather than run in
@@ -416,14 +435,24 @@ void overlay_map_repair_tick(void) {
     overlay_map_sync_t msg;
     uint8_t sent_this_tick = 0;
 
+    // The repair packs at the WIDEST width so any display position fits — it walks
+    // the whole index space, unlike the host which partitions by required width.
+    const uint8_t  width  = OVERLAY_MAP_REPAIR_WIDTH;
+    const uint16_t values = OVERLAY_MAP_VALUES(sizeof(msg.mapping), width);
+
     while (sent_this_tick < MAP_REPAIR_REPORTS_PER_TICK) {
-        uint8_t slot = 0;       // value slot in this report (from,to,from,to,...)
+        uint16_t slot = 0;      // value slot in this report (from,to,from,to,...)
+        uint16_t last_from = 0, last_to = 0;
         memset(msg.mapping, 0, sizeof(msg.mapping));
+        msg.width = width;
+        msg.bytes = (uint8_t)sizeof(msg.mapping);
         // Collect up to one report's worth of used entries from the cursor.
-        while (s_repair_from < OVERLAY_MAP_IDX_CNT && slot < OVERLAY_MAP_IDX_CNT_PER_REPORT) {
-            if (is_overlay_used(s_repair_from)) {
-                pack_10bit_map_value(msg.mapping, slot++, s_repair_from);
-                pack_10bit_map_value(msg.mapping, slot++, get_overlay_mapping(s_repair_from));
+        while (s_repair_from < OVERLAY_MAP_IDX_CNT && slot + 1 < values) {
+            if (display_has_overlay(s_repair_from)) {
+                last_from = s_repair_from;
+                last_to   = get_display_pool_slot(s_repair_from);
+                pack_map_value(msg.mapping, slot++, last_from, width);
+                pack_map_value(msg.mapping, slot++, last_to,   width);
                 ++s_repair_pairs;
             }
             ++s_repair_from;
@@ -434,10 +463,16 @@ void overlay_map_repair_tick(void) {
                     (unsigned)s_repair_pairs, (unsigned)s_repair_reports);
             return;
         }
-        // Pad with the host's noop convention: a `from` outside the map is
-        // ignored by set_10bit_overlay_mapping on the far side.
-        while (slot < OVERLAY_MAP_IDX_CNT_PER_REPORT) {
-            pack_10bit_map_value(msg.mapping, slot++, OVERLAY_MAP_IDX_CNT);
+        // Pad by REPEATING THE LAST PAIR. Re-applying a mapping is idempotent
+        // (set_display_pool_slot + mark_display_has_overlay), so a duplicate is a
+        // semantic no-op and needs no reserved sentinel — which matters because a
+        // sentinel would have to exceed OVERLAY_MAP_IDX_CNT (1440) and so could not
+        // be expressed at the narrower widths at all. Every value must be written:
+        // there is no count field, so anything left zero would decode as the real
+        // pair 0>0 and wrongly light up display position 0.
+        while (slot + 1 < values) {
+            pack_map_value(msg.mapping, slot++, last_from, width);
+            pack_map_value(msg.mapping, slot++, last_to,   width);
         }
         if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void *)&msg,
                                            sizeof(overlay_map_sync_t), 10))) {
@@ -454,14 +489,14 @@ void overlay_map_repair_tick(void) {
 }
 
 void apply_overlay_action_flags(uint8_t flags) {
-    if(test_flag(flags, RESET_BUFFERS))  reset_overlay_buffers();
-    if(test_flag(flags, USAGE_RESET))    reset_overlay_usage();
-    if(test_flag(flags, MAPPING_RESET))  reset_overlay_mapping();
-    if(test_flag(flags, MAPPING_ALLSET)) set_all_overlay_mapping();
+    if(test_flag(flags, RESET_BUFFERS))  reset_overlay_pool();
+    if(test_flag(flags, USAGE_RESET))    clear_display_has_overlay();
+    if(test_flag(flags, MAPPING_RESET))  reset_display_to_pool();
+    if(test_flag(flags, MAPPING_ALLSET)) set_all_display_has_overlay();
 }
 
-void set_overlay_usage_post_upload(uint16_t idx) {
+void mark_display_has_overlay_post_upload(uint16_t idx) {
     if (!test_flag(get_local_state()->overlay_flags, MIRROR_OVERLAYS)) {
-        set_overlay_usage(idx);
+        mark_display_has_overlay(idx);
     }
 }

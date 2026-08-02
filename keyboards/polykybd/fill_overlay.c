@@ -281,9 +281,11 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
     }
 }
 
-// Unpacks 10-bit overlay mapping pairs from buffer and updates display_to_pool array.
+// Unpacks `width`-bit overlay mapping pairs from `bytes` bytes of buffer and
+// updates the display_to_pool array. Both values of a pair share the width; the
+// caller supplies it (cmd 21 is always OVERLAY_MAP_IDX_BITS, cmd 33 carries it).
 // `from` indexes display_to_pool[] (0..OVERLAY_MAP_IDX_CNT-1, currently 1440).
-// `to` indexes overlays[] (0..NUM_OVERLAY_SLOTS-1, currently 600) — the
+// `to` indexes overlay_pool[] (0..NUM_OVERLAY_SLOTS-1, currently 600) — the
 // physical pool. A `to` >= NUM_OVERLAY_SLOTS is an out-of-pool value
 // and would cause an OOB read in copy_overlay_to_buffer / fill_overlay_buffer.
 // Returns true if any mapping in this chunk lands on a currently-displayed position

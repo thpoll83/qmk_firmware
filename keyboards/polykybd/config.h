@@ -195,10 +195,15 @@
 //      variant 8 (see adjust_overlay_idx_to_mod in fill_overlay.c). The upload
 //      commands are UNCHANGED (all three already carry the modifier in a 4-bit
 //      field), but the flat (slot, variant) index space grows 810 -> 1440, which
-//      no longer fits the 10-bit fields of SEND_OVERLAY_MAPPING (cmd 21) — so its
-//      packed indices widen to OVERLAY_MAP_IDX_BITS 11 (22 pairs/report, was 24).
-//      That is the only wire change; the host encodes cmd 21 at 10 or 11 bits by
-//      the device's protocol and never sends a variant > 8 to a pre-v12 keyboard.
+//      no longer fits the 10-bit fields of SEND_OVERLAY_MAPPING (cmd 21).
+//      cmd 21 STAYS FIXED AT 10 BITS — unchanged, and still the only mapping
+//      command a pre-v12 keyboard understands. The wider space rides a NEW
+//      command, SEND_OVERLAY_MAPPING_W (cmd 33), whose data[2] carries the value
+//      width: the host groups mapping pairs by the width they need (8/9/10/11 ->
+//      30/27/24/22 pairs per report) and sends each group at its own width. Since
+//      variants 0..10 still fit 10 bits, the common case keeps cmd 21's density;
+//      only indices >= 1024 need 11. A pre-v12 keyboard gets cmd 21 only, and
+//      never a variant > 8 (it has no index space for one).
 #define PROTOCOL_VERSION 12
 
 #define FULL_BRIGHT 50
@@ -310,6 +315,16 @@
 // cmd 33: one extra header byte for the width, so one fewer data byte.
 #define OVERLAY_MAP_W_HDR   3                   // report id + cmd + width
 #define OVERLAY_MAP_W_BYTES (HID_REPORT_SIZE-OVERLAY_MAP_W_HDR)
+// Widths the DECODER accepts. Deliberately wider than the 8..11 the host emits
+// today: the decoder is width-generic, and every value it produces is still
+// range-checked against OVERLAY_MAP_IDX_CNT / NUM_OVERLAY_SLOTS before it can
+// touch a table, so a stream at 12..16 can only ever be rejected pair-by-pair —
+// it cannot address anything a narrower one couldn't. Accepting them keeps
+// headroom for a future index-space growth without a second command, in the same
+// spirit as the open-ended glyph-script index (v10). ⚠️ The bound that actually
+// protects memory is the per-value range check, NOT this range; both the read and
+// the write side touch a byte only when the value truly extends into it, verified
+// by round-tripping the packer through the decoder across all of 8..16.
 #define OVERLAY_MAP_WIDTH_MIN 8
 #define OVERLAY_MAP_WIDTH_MAX 16
 // Values a stream of `bytes` bytes holds at `width` bits — the ONE definition

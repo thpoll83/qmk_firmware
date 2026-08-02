@@ -15,8 +15,9 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first);
 // Fills region-of-interest of overlay buffer with data and syncs to bridge when needed.
 void fill_roi_overlay_buffer(uint8_t* data, bool first);
 
-// Unpacks OVERLAY_MAP_IDX_BITS-wide overlay mapping pairs from buffer and updates
-// the display_to_pool array.
+// Unpacks `width`-wide overlay mapping pairs from `bytes` bytes of buffer and
+// updates the display_to_pool array. `bytes`/`width` come from the command that
+// carried the stream — they are NOT globals, since cmd 21 and cmd 33 differ.
 // Returns true if any pair maps a currently-displayed position, so the caller can
 // skip the display refresh for an all-off-screen chunk (see fill_overlay.c).
 bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width);

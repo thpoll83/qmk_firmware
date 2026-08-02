@@ -40,8 +40,18 @@ def run(cmd):
     # Force UTF-8: git output (release notes) is UTF-8, but on Windows the
     # default is the locale codec (cp1252), which raises UnicodeDecodeError on
     # emoji/em-dashes and silently drops the output.
-    return subprocess.run(cmd, capture_output=True, text=True,
-                          encoding="utf-8", errors="replace")
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace")
+    except (FileNotFoundError, NotADirectoryError, PermissionError) as e:
+        # The executable isn't installed / isn't runnable. Report it as an
+        # ordinary non-zero result so callers can fall back, instead of letting
+        # it escape as a traceback. get_token() probes `gh`, which plenty of
+        # machines don't have — on Windows that surfaced as a raw
+        # "[WinError 2] The system cannot find the file specified" traceback
+        # instead of the "no GitHub token…" message that was already written
+        # for exactly this case.
+        return subprocess.CompletedProcess(cmd, 127, stdout="", stderr=str(e))
 
 
 def die(msg):

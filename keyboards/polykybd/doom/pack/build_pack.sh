@@ -85,14 +85,36 @@ echo "== 2/5 pack-flavour firmware build (RAM pairing target) =="
 FW_ELF="$BUILD/polykybd_split72_default.elf"
 cp "$FW_ELF" "$STASH/firmware.elf"
 
-RAM_BASE=0x$("$NM" "$STASH/firmware.elf" | awk '$3 == "overlays" {print $1}')
-[[ "$RAM_BASE" != "0x" ]] || { echo "build_pack: overlays symbol not found in $FW_ELF" >&2; exit 1; }
+# Pool address + size come from the .overlay_pool section symbols the ldscript
+# defines (RP2040_FLASH_TIMECRIT_DOOMPACK.ld). Deriving the SIZE here rather than
+# hardcoding it keeps the pack's RAM contract in lockstep with the firmware by
+# construction — a hardcoded copy is exactly what goes stale.
+# ⚠️ In the pack flavour there is no `overlay_pool` C array at all (base/overlay.c
+# #defines it to a pointer at __doom_shared_base__), and the pre-2026-08 global
+# `overlays` array is gone, so these section symbols are the only reliable handle.
+# The legacy name is still accepted so a pack can be rebuilt from an older tag.
+pool_sym() { "$NM" "$STASH/firmware.elf" | awk -v s="$1" '$3 == s {print $1; exit}'; }
+POOL_BASE=$(pool_sym __overlay_pool_base__)
+POOL_END=$(pool_sym __overlay_pool_end__)
+if [[ -n "$POOL_BASE" && -n "$POOL_END" ]]; then
+    RAM_BASE=0x$POOL_BASE
+    RAM_SIZE=$(( 0x$POOL_END - 0x$POOL_BASE ))
+else
+    RAM_BASE=0x$(pool_sym overlays)      # pre-rename layout
+    RAM_SIZE=216000
+fi
+[[ "$RAM_BASE" != "0x" ]] || {
+    echo "build_pack: overlay pool symbols (__overlay_pool_base__/__overlay_pool_end__," \
+         "or legacy 'overlays') not found in $FW_ELF" >&2; exit 1; }
 # The pack flavour PINS the pool at the RAM origin (RP2040_FLASH_TIMECRIT_DOOMPACK.ld)
 # so packs survive firmware rebuilds — hard-fail if that invariant ever regresses.
 [[ "$RAM_BASE" == "0x20000000" ]] || { echo "build_pack: pool at $RAM_BASE, expected pinned 0x20000000 (ldscript regression?)" >&2; exit 1; }
-# Pool bytes: NUM_OVERLAY_SLOTS(600) * 360 — assert against the
-# firmware if these ever change (kept in lockstep with base/overlay.c).
-RAM_SIZE=216000
+# Pool bytes = NUM_OVERLAY_SLOTS * 360 (600 * 360 = 216000 today). Sanity-check the
+# shape rather than the value, so a deliberate pool resize just works — but a
+# garbage symbol read still fails loudly instead of linking a bogus arena.
+(( RAM_SIZE > 0 && RAM_SIZE % 360 == 0 )) || {
+    echo "build_pack: implausible pool size $RAM_SIZE B (expected a positive multiple of 360)" >&2
+    exit 1; }
 echo "   pool at $RAM_BASE (+$RAM_SIZE)"
 
 echo "== 3/5 pack_init compile + pack link =="

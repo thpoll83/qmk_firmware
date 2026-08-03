@@ -240,7 +240,7 @@ The host software (`PolyKybdHost/`) communicates with this firmware over a custo
 | `poly_keymap.c` | **Shared keymap logic, compiled for every variant** — rendering (`render_key`, `update_displays`, `to_static_text`), HID/overlay handling, language selection, idle/suspend, split sync glue, the firmware-update state machine, and all QMK `*_user`/`*_kb` callbacks. Holds the keymap-side cog blocks (the language tables). |
 | `hid_com.c` | `raw_hid_receive()` — main HID command dispatcher (21 command IDs, `0x01`–`0x15`) |
 | `fill_overlay.c` | Receives overlay segments from host, decompresses RLE, writes to overlay memory |
-| `base/overlay.c` | Overlay memory: `overlays[810][360]` — 90 keycap slots × 9 modifier variants × 360 bytes |
+| `base/overlay.c` | Overlay memory: `overlay_pool[600][360]` images, addressed indirectly through `display_to_pool[1440]` (90 keycap slots × 16 modifier variants) |
 | `base/disp_array.c` | Per-keycap OLED driver: `kdisp_write_gfx_char()`, `kdisp_draw_bitmap()`, `kdisp_invert()` |
 | `base/shift_reg.c` | Shift-register multiplexing — selects which keycap OLED receives the next SPI write |
 | `split_sync.c` | CRC32-validated transactions that synchronise overlays and state to the other half |
@@ -331,9 +331,37 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   segment was undefined (the old FW-7 finding; fixed in the wire format instead of a bounce
   buffer). The firmware unpacks the byte in `hid_com.c` case 10 *before* `set_fragment_context_key`,
   so `adjust_overlay_idx_to_mod` is unchanged; **compressed (`0x10`/`0x11`) and ROI (`0x12`/`0x13`)
-  paths are untouched** (their headers already fit). **Bump `FW_VERSION` +
-  `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
-  lockstep** — the host connect gate is exact-match.
+  paths are untouched** (their headers already fit).
+  **v12** makes the **modifier variant the modifier bitmask itself** — bit0 Ctrl, bit1 Shift,
+  bit2 Alt, bit3 GUI — so all **16** combinations are addressable (GUI can finally be combined
+  with the others; pre-v12 `GUI+Shift` etc. all fell back to the plain GUI artwork, which is
+  what macOS `Cmd+Shift+…` chords need). The flat index space grows 810 → **1440**, so the
+  10-bit fields of `SEND_OVERLAY_MAPPING` (cmd `21`) no longer reach it: **cmd `33`
+  `SEND_OVERLAY_MAPPING_W`** was added beside it, carrying a **width byte** in `data[2]`
+  (3-byte header, 61 data bytes) so the host packs each group of pairs at the narrowest width
+  that fits — 8/9/10/11 bits → 30/27/24/22 pairs per report. Cmd `21` is unchanged (fixed
+  10-bit) and stays the path for a pre-v12 keyboard. RAM is unchanged: the image pool is
+  decoupled (600 slots), so the wider address space costs only the `display_to_pool[]` table.
+  - ⚠️ **The decoder's byte arithmetic differs per width, and `gcd(width, 8)` is what says
+    how.** At width 8 every value is one whole byte at bit offset 0; at 10 the offsets stay in
+    {0,2,4,6} and a value never reaches a **third** byte; only the odd widths **9 and 11**
+    (gcd 1) walk all eight offsets *and* read a third byte. Those two are new at v12 and are
+    exactly where the old fixed expression computed `0xff >> (8 - n)` with `n` = 10 (a shift
+    by −2, unreachable while the width was always 10). Test 8/9/10/11 — testing only 10 proves
+    nothing about the new ones. The rig's `overlay mapping widths (v12)` test does this.
+  - Padding a short report uses a **duplicated pair** (idempotent), not an out-of-range
+    sentinel: 810 is a **real** index now.
+  - `OVERLAY_MAP_WIDTH_MIN 8` / `MAX 16` is deliberate headroom — memory safety comes from the
+    per-value range checks (`from < OVERLAY_MAP_IDX_CNT`, `to < NUM_OVERLAY_SLOTS`), not from
+    narrowing the accepted width.
+
+  **Bump `FW_VERSION` + `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost
+  `_version.py`) in lockstep** — not because the host gate is exact-match (it is **not**; see
+  the host CLAUDE.md's range-connect note) but because `__protocol__` defines the host's
+  newest-known protocol and the `FEATURE_MIN_PROTOCOL` threshold for the new command.
+  ⚠️ A protocol PR **always** conflicts on `polyhost/_version.py` — every merged host PR
+  auto-bumps `__patch__` there, so resolve by keeping **both** sides (their `__patch__`, your
+  `__protocol__`), never by taking one whole side.
 - **Cmd `32` = main-loop profiler control — present ONLY in a
   `POLYKYBD_LOOP_PROFILE` build, and bumps NO `PROTOCOL_VERSION`** (dispatched
   independently like cmd 31 / the fontpack commands). Sub-commands `0` RESET / `1`
@@ -344,12 +372,15 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   run; see `keyboards/polykybd/profiling/README.md`.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`, protocol 11+: modifier+segment packed into one header byte), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
-- Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)
+- Overlay index = `keycode_slot + 90 * modifier_variant`. Since **v12** the variant *is* the
+  L/R-folded QMK modifier bitmask (bit0 Ctrl, bit1 Shift, bit2 Alt, bit3 GUI) → **16** variants,
+  1440 addresses. Pre-v12 it was 9 hand-numbered variants with GUI un-combinable.
 - ⚠️ **That flat index is the only ADDRESS an overlay upload has, and it is
-  resolved through `overlay_map[]` — so `reset_overlay_mapping()`'s identity
+  resolved through `display_to_pool[]` (legacy name `overlay_map[]`) — so
+  `reset_overlay_mapping()`'s identity
   default is LOAD-BEARING FOR WRITES, not just a display convenience.** All three
   write sites in `fill_overlay.c` (plain / compressed / ROI) run the same pair the
-  render path does — `adjust_overlay_idx_to_mod()` then `get_overlay_mapping()` —
+  render path does — `adjust_overlay_idx_to_mod()` then `get_display_pool_slot()` —
   and the host addresses pool slot N by sending the (keycode, modifier) pair whose
   flat index *is* N (`OverlayMRUCache.pool_slot_to_firmware_address`: `kc = N % 90`,
   `mod = N // 90`). It uploads every image **before** sending the real display→pool
@@ -357,7 +388,7 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   "because the pool is no longer variant-indexed" sent every image to slot 0:
   nearly every keycap blank, the whole set piled onto Esc (field, 2026-08-01 —
   cost a hardware round). The pool being smaller (600) than the flat index space
-  (810) only changes the identity's **extent**: indices `< NUM_OVERLAY_SLOTS` are
+  (1440) only changes the identity's **extent**: indices `< NUM_OVERLAY_SLOTS` are
   identity, the rest are a 0 fill that can never be an upload destination.
 
 ### Language list encoding (`lang/iso_lang_country.py`)
@@ -1704,12 +1735,12 @@ Self-healing therefore points at the **mapping**, and rules the image path out.
 
 **Fix (2026-08-01)**: all four acks classified with `sync_succeeded()` + a named
 warning. The mapping is additionally **repaired**: the master holds the authoritative
-`overlay_map[]` + `use_overlay[]` (it applies every chunk locally either way), so a
-loss arms a repair that rebuilds the slave's view from the master's own tables.
+`display_to_pool[]` + `display_has_overlay_bits[]` (it applies every chunk locally either
+way), so a loss arms a repair that rebuilds the slave's view from the master's own tables.
 ⚠️ The repair **drains from `housekeeping_task_user()`**, 2 reports/tick from a saved
 cursor — **never inline in the HID handler**: a full mapping is up to 34 reports and
 each bridge can burn 10 retries × the bridge timeout, i.e. *seconds* of dead main loop
-on exactly the bad link that triggered the repair. The 10-bit packer is the inverse of
+on exactly the bad link that triggered the repair. The packer is the inverse of
 `set_10bit_overlay_mapping()`'s decode — verify any change to it by round-tripping
 through that decoder, not by eye.
 

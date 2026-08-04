@@ -99,6 +99,13 @@ POOL_END=$(pool_sym __overlay_pool_end__)
 if [[ -n "$POOL_BASE" && -n "$POOL_END" ]]; then
     RAM_BASE=0x$POOL_BASE
     RAM_SIZE=$(( 0x$POOL_END - 0x$POOL_BASE ))
+elif [[ -n "$POOL_BASE" || -n "$POOL_END" ]]; then
+    # Exactly one of the pair — a half-renamed ldscript. Falling through to the
+    # legacy branch would pair a REAL new-layout base with the hardcoded 216000,
+    # which is the silent wrong-arena case this whole change exists to remove.
+    echo "build_pack: found only one of __overlay_pool_base__/__overlay_pool_end__" \
+         "in $FW_ELF — refusing to guess the pool bounds" >&2
+    exit 1
 else
     RAM_BASE=0x$(pool_sym overlays)      # pre-rename layout
     RAM_SIZE=216000

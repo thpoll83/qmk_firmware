@@ -25,6 +25,18 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     comment **`@coderabbitai review`** on the final commit for a single full-diff
     review; **`@coderabbitai resume`** turns automatic reviews back on. Both
     commands are listed in the paused comment itself.
+  - ⚠️ **A push while a review is in flight ABORTS it** — "Review failed: The head
+    commit changed during the review from `<a>` to `<b>`". The run is lost, not
+    resumed, and re-triggering costs another slot against the rate limit. So once
+    a review starts, **hold pushes until it reports** (2026-08, cost a full cycle).
+  - ⚠️ **Order matters: `resume` BEFORE `review` makes the review a no-op.**
+    CodeRabbit is incremental and "does not re-review already reviewed commits";
+    that guard is only relaxed *while reviews are paused*. Resuming first
+    un-pauses, so the following `review` finds nothing to do and silently reviews
+    nothing. Either `review` first and `resume` after, or use **`@coderabbitai
+    full review`**, which re-reviews the whole diff regardless of state — that is
+    also the command to reach for after an aborted run, since the failed run
+    recorded nothing but the head has already moved.
 
 ## Branching (all PolyKybd repos)
 

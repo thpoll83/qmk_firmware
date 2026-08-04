@@ -84,7 +84,7 @@ def load_fonts():
     B, G, F = {}, {}, {}
     for rel in ("util_font.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h",
                 "nano_font.h", "generated/emoji_fonts.h"):
-        _parse_header(open(os.path.join(FONTDIR, rel)).read(), B, G, F)
+        _parse_header(open(os.path.join(FONTDIR, rel), encoding="utf-8").read(), B, G, F)
 
     def bundle(name):
         f = F[name]

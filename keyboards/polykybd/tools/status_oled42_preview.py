@@ -76,7 +76,7 @@ def load():
     for rel in heads:
         p = os.path.join(FONTDIR, rel)
         if os.path.exists(p):
-            _parse_header(open(p).read(), B, G, F)
+            _parse_header(open(p, encoding="utf-8").read(), B, G, F)
 
     def bundle(name):
         f = F[name]

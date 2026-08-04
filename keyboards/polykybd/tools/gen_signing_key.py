@@ -92,7 +92,15 @@ def main() -> int:
         args.out_privkey.chmod(0o600)
     except OSError:
         pass
-    args.out_pubkey.write_text(PUBKEY_TEMPLATE.replace("{rows}", _fmt_c_array(pub)))
+    # encoding="utf-8" is REQUIRED, not tidiness: the template contains "—" and
+    # "─", and Path.write_text() defaults to the locale codec — cp1252 on a
+    # Windows console, which raises UnicodeEncodeError. It fails *after*
+    # write_bytes() has already written the private key and *before* --print-b64
+    # runs, so the user is left holding an unusable keypair: a secret on disk they
+    # never saw the base64 for, and a fw_pubkey.h truncated by the failed open.
+    # (Same trap as scripts/publish_release.py — see the Releases note in CLAUDE.md.)
+    args.out_pubkey.write_text(PUBKEY_TEMPLATE.replace("{rows}", _fmt_c_array(pub)),
+                               encoding="utf-8")
 
     print(f"private seed  -> {args.out_privkey}  (KEEP SECRET, do not commit)")
     print(f"public header -> {args.out_pubkey}   (commit this)")

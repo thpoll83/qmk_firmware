@@ -47,7 +47,7 @@ const uint32_t                                                              magi
 // populated function pointer tables to the optimized math functions in the
 // bootrom. This function is called just prior to main.
 void __late_init(void) {
-#if defined(POLYKYBD_VREG_VSEL)
+#    if defined(POLYKYBD_VREG_VSEL)
     // Raise the core voltage BEFORE clocks_init() brings the system PLL up.
     // A system clock above the 133 MHz / 1.10 V operating point is only
     // certified at a higher VREG setting (RP2040 datasheet 2.15.3: 200 MHz
@@ -63,7 +63,7 @@ void __late_init(void) {
     for (volatile uint32_t i = 0; i < 1000U; i++) {
         __asm__ volatile("nop");
     }
-#endif
+#    endif
     // All clocks have to be enabled before jumping to the bootloader function,
     // otherwise the bootrom will be stuck infinitely.
     clocks_init();

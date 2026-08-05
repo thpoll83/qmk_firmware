@@ -263,22 +263,46 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // milestone: fw_staging_finalize() verifies the O(1) running CRC, clears
             // fw_up_active and restarts core1 — it does NOT apply or reboot.  Actually
             // installing the staged image is the explicit FW_UP_APPLY step (phase 2).
+            // FW-2: an explicit cancel of a pending confirmation. Safe to expose
+            // over HID precisely because it can only ever DENY — it withdraws the
+            // prompt and refuses the image. (Accepting over HID would be worthless:
+            // the flash channel is what signing defends, so anything a host can
+            // send an attacker can send too.) Used by the HIL rig, which cannot
+            // press a key and would otherwise leave the board modal for the whole
+            // FW_CONFIRM_WINDOW_MS, and by the host's Cancel button.
+            if (data[2] == 'x' && fw_staging_awaiting_confirm()) {
+                fw_staging_confirm_answer(false);
+            }
             fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
-            uint8_t slave_ack  = send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10);
+            // FW-2: while the unsigned-image prompt is up the host re-polls COMMIT,
+            // and each poll would otherwise re-run the SLAVE's finalize — which
+            // re-erases and re-stamps its 4 KB staging header sector every time.
+            // The slave committed on the first COMMIT and skips the signature check
+            // anyway (that is the master's job), so it has nothing left to do.
+            uint8_t slave_ack = fw_staging_confirm_in_progress()
+                                    ? SYNC_ACK
+                                    : send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg,
+                                                     sizeof(commit_msg), 10);
             bool master_ok = fw_staging_finalize();   // also clears fw_up_active + restarts master core1
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
             memset(data, 0, length);
-            // Three outcomes, not two. 'S' distinguishes "refused: not validly
-            // signed" from '!' "staged CRC mismatch". They were the same byte
-            // until 2026-08-05, so the host and the HIL rig both reported a
-            // signature refusal as a CRC failure — a wrong answer at exactly the
-            // moment someone is trying to work out why a flash was rejected.
-            const char *status = ok ? "P\x42."
-                                    : (fw_staging_refused_unsigned() ? "P\x42S" : "P\x42!");
+            // Four outcomes, not two. '?' means "waiting for the user to confirm an
+            // unsigned image on the keyboard" (re-poll me); 'S' distinguishes
+            // "refused: not validly signed" from '!' "staged CRC mismatch". The
+            // last two were the same byte until 2026-08-05, so the host and the HIL
+            // rig both reported a signature refusal as a CRC failure — a wrong
+            // answer at exactly the moment someone is working out why a flash was
+            // rejected.
+            const bool awaiting = fw_staging_awaiting_confirm();
+            const char *status = ok       ? "P\x42."
+                               : awaiting ? "P\x42?"
+                               : fw_staging_refused_unsigned() ? "P\x42S"
+                                                               : "P\x42!";
             memcpy(data, status, 3);
             uprintf("FW_UP_COMMIT: slave_ack=0x%02x master_finalize=%d%s\n",
                     slave_ack, master_ok,
-                    fw_staging_refused_unsigned() ? " (refused: unsigned)" : "");
+                    awaiting ? " (awaiting keyboard confirmation)"
+                             : fw_staging_refused_unsigned() ? " (refused: unsigned)" : "");
             raw_hid_send(data, length);
             return true;
         }

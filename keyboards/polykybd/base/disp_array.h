@@ -55,6 +55,13 @@ const GFXglyph *kdisp_gfx_glyph_font(const GFXfont *const *fonts, uint8_t num_fo
 // Win+Ctrl+Shift+B reload 🗘 drawn into the monitor's screen cavity).
 void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c);
 
+// The mirror of the above: composite a glyph scaled 2x (nearest, each source
+// pixel becomes a 2x2 block) with its top-left at buffer coords (x,y) — again no
+// baseline align, (x,y) is the literal top-left. The keycap fonts top out at the
+// 27px _Base_ face, so this is the only way to fill a 72x40 panel with a single
+// character; used for the unsigned-firmware A/R confirmation prompt.
+void kdisp_draw_glyph_double_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c);
+
 void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text);
 
 void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius);

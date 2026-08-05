@@ -231,6 +231,27 @@ void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, in
     }
 }
 
+void kdisp_draw_glyph_double_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
+    const GFXfont *font = NULL;
+    const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
+    if (glyph == NULL || font == NULL) return;
+    const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
+    uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
+    int16_t  w  = pgm_read_byte(&glyph->width);
+    int16_t  h  = pgm_read_byte(&glyph->height);
+    const uint8_t cb = (uint8_t)((h + 7) >> 3);   // column-major page-bytes per column
+    for (int16_t sx = 0; sx < w; ++sx) {
+        for (int16_t sy = 0; sy < h; ++sy) {
+            uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
+            if (!(byte & (1u << (sy & 7)))) continue;
+            SET_PIXEL_CLIPPED(x + sx * 2,     y + sy * 2);
+            SET_PIXEL_CLIPPED(x + sx * 2 + 1, y + sy * 2);
+            SET_PIXEL_CLIPPED(x + sx * 2,     y + sy * 2 + 1);
+            SET_PIXEL_CLIPPED(x + sx * 2 + 1, y + sy * 2 + 1);
+        }
+    }
+}
+
 
 void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
     for (int x = x_start; x < (x_start + width); ++x) {

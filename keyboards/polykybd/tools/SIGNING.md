@@ -61,18 +61,32 @@ over HID. Two ways through:
    python3 keyboards/polykybd/tools/sign_firmware.py --privkey fw_signing_key.bin out.bin
    ```
 
-2. **Arm the physical override**: press **`KC_ALLOW_UNSIGNED`** on the keyboard
-   (settings layer, next to the Eden key), then start the flash within
-   **`FW_UNSIGNED_ARM_WINDOW_MS`** (2 minutes). It is **single-use** — consumed by
-   the next COMMIT whether or not that image was signed — and **RAM-only**, so a
-   reboot disarms it.
+2. **Confirm it on the keyboard**: just flash. At COMMIT the keyboard notices the
+   image is not validly signed and **turns its keycaps into a dialog** — every key
+   goes dark except one on each half: a big **A / ACCEPT** on the left home-row
+   index key (`D`) and a big **R / REJECT** on the right one (`J`). Press A to let
+   this image through, R to refuse. The host shows "Confirm on the KEYBOARD…" and
+   re-polls until you answer.
 
-⚠️ **Why a keycode and not a host dialog / HID command.** The threat FW-2 addresses
-is *any process that can talk the HID flash protocol*. An acknowledgement carried
-over that same channel is forgeable by exactly the attacker it is meant to stop:
-malware would set the flag and flash whatever it liked. A keypress cannot be
-produced remotely, so the override is worth something. Do not "improve" this into a
-host-side confirmation.
+   * The prompt lasts **`FW_CONFIRM_WINDOW_MS`** (60 s); a timeout means *reject*.
+   * It authorises **exactly the image being committed** — the state is consumed
+     by the COMMIT that acts on it, so the next unsigned flash asks again.
+   * It is **RAM-only** and reset by every `BEGIN`, so nothing survives a reboot or
+     leaks between flashes.
+   * All other keys are swallowed while the prompt is up — the board *is* the
+     dialog, so it cannot be mistaken for normal typing.
+
+⚠️ **Why the answer comes off the matrix and not from a host dialog / HID command.**
+The threat FW-2 addresses is *any process that can talk the HID flash protocol*. An
+acknowledgement carried over that same channel is forgeable by exactly the attacker
+it is meant to stop: malware would set the flag and flash whatever it liked. A
+keypress cannot be produced remotely, so the confirmation is worth something. Do
+not "improve" this into a host-side confirmation.
+
+The one thing HID *may* do is **cancel** the prompt (a COMMIT carrying `'x'` in
+`data[2]`), because cancelling can only ever DENY. The host's abort path uses it so
+a cancelled flash takes the dialog off the keycaps, and the HIL rig uses it because
+it has no fingers and would otherwise leave the board modal for the full window.
 
 **BOOTSEL/UF2 is unaffected** — it bypasses `fw_staging` entirely, so it remains an
 unconditional recovery path and enforcement cannot brick a board. That also means

@@ -87,7 +87,8 @@
 //This number can be calculated by dividing the MCU's clock speed
 //by the desired SPI clock speed. For example, an MCU running at 8 MHz
 //wanting to talk to an SPI device at 4 MHz would set the divisor to 2
-#define SPI_DIVISOR (CPU_CLOCK / 10000000) //rp1040 runs at 133Mhz, SPI at 10Mhz
+#define SPI_DIVISOR (CPU_CLOCK / 10000000) // CPU_CLOCK is the LIVE clk_sys (RP_CORE_CLK), so
+                                           // SPI stays at 10 MHz on any POLYKYBD_SYS_CLK
 
 
 //only for v3 and later

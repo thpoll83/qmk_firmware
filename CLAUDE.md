@@ -1981,7 +1981,7 @@ retries=3; if it climbs, attack `p` at the source.
 - `keyboards/polykybd/bridge_helper.c` / `.h` — `send_to_bridge` retries + the link health counters / `LINK_STATS_LOG_EVERY` summary
 - `keyboards/polykybd/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`
 - `keyboards/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`; the full-duplex defines (`SERIAL_USART_FULL_DUPLEX`, `SERIAL_USART_TX_PIN GP5`, `SERIAL_USART_RX_PIN GP4`, `SERIAL_USART_PIN_SWAP`)
-- `<variant>/halconf.h` — `SELECT_SOFT_SERIAL_SPEED` (baud)
+- `<variant>/halconf.h` — `SELECT_SOFT_SERIAL_SPEED`. ⚠️ **Currently `0`, i.e. 460800 baud** in both variants — *not* the 230400 quoted in the historical half-duplex paragraph above, which describes the pre-2026-06-16 setup and is the figure a reader otherwise carries forward. The mapping lives in `platforms/chibios/drivers/serial_usart.h` (0→460800, 1→230400, 2→115200, …) and nothing in `keyboards/polykybd/` overrides `SERIAL_USART_SPEED` directly. It matters for any wire-time estimate: at 460800 8N1 one byte is **21.7 µs**, so the per-scan split transactions (slave matrix + pointing, unconditional in `transactions_master()`) are a fixed cost that does **not** shrink when the CPU clock rises — measured at ~473 µs, about half of an idle main-loop iteration (see the 200 MHz measurement in PR #187).
 - `platforms/chibios/drivers/serial_protocol.c`, `drivers/vendor/RP/RP2040/serial_vendor.c` — QMK transport (no payload integrity)
 
 ---

@@ -169,6 +169,13 @@ enum my_keycodes {
     // Settings-layer key: replay the one-time startup ("Eden") animation on demand.
     // Appended at the very end (QK_USER range) so no existing keycode is renumbered.
     KC_EDEN,
+
+    // FW-2: arm the physical-presence override that lets ONE unsigned/invalid
+    // firmware image through under FW_REQUIRE_SIGNATURE. Must be a keycode rather
+    // than a HID command — the HID flash path is precisely what signing defends,
+    // so an acknowledgement sent over it would be forgeable. Appended at the end,
+    // same reason as KC_EDEN.
+    KC_ALLOW_UNSIGNED,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_DAUTO < (int)KCL_ENUS, "Overlap detected");

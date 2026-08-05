@@ -277,3 +277,18 @@ ifneq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
            lib/pico-sdk/src/rp2_common/hardware_sync/sync.c
 endif
 endif
+
+# FW-2: enforce firmware image signatures. Only an image carrying a valid Ed25519
+# signature over the project key (base/fw_pubkey.h) is applied.
+#
+# Enabled 2026-08-04, after the full chain was verified on hardware: a signed
+# release produced "image signature OK" and a byte-flipped signature produced
+# "INVALID", so the check is known to discriminate rather than rubber-stamp.
+#
+# There is a deliberate escape hatch for unsigned developer builds:
+# KC_ALLOW_UNSIGNED arms a 2-minute, single-use, RAM-only override ON THE
+# KEYBOARD. It is a keycode and not a HID command because the HID flash surface
+# is exactly what this defends — an acknowledgement sent over HID would be
+# forgeable by an attacker. BOOTSEL/UF2 also remains unaffected (it bypasses
+# fw_staging entirely), so this can never brick a board.
+OPT_DEFS += -DFW_REQUIRE_SIGNATURE

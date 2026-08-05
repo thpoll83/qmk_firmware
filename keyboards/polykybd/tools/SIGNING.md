@@ -26,10 +26,41 @@ pipeline are put in place. The serial/HID console shows one of:
     FW_UP: image signature INVALID
     FW_UP: image UNSIGNED (no signature supplied)
 
-To **enforce** later (reject anything but a valid signature), define
-`FW_REQUIRE_SIGNATURE` (e.g. in `rules.mk`: `OPT_DEFS += -DFW_REQUIRE_SIGNATURE`)
-and flash that build — but only **after** the steps below, and after adding
-slave-side verification (see "Not yet done" at the bottom).
+**ENFORCEMENT IS NOW ON** (2026-08-04, `rules.mk`: `OPT_DEFS += -DFW_REQUIRE_SIGNATURE`).
+An image without a valid signature is refused at COMMIT. Enabled only after the
+whole chain was demonstrated on hardware: a signed release logged `image signature
+OK`, and a byte-flipped signature logged `INVALID` — the second test is the one that
+matters, since it proves the check discriminates rather than rubber-stamps, and a
+passing flash alone cannot show that.
+
+## Flashing an UNSIGNED build (developer escape hatch)
+
+Your own `qmk compile` output is unsigned, so under enforcement it will be refused
+over HID. Two ways through:
+
+1. **Sign it** (preferred — same path releases take):
+
+   ```bash
+   arm-none-eabi-objcopy -O binary .build/polykybd_split72_default.elf out.bin
+   python3 keyboards/polykybd/tools/sign_firmware.py --privkey fw_signing_key.bin out.bin
+   ```
+
+2. **Arm the physical override**: press **`KC_ALLOW_UNSIGNED`** on the keyboard
+   (settings layer, next to the Eden key), then start the flash within
+   **`FW_UNSIGNED_ARM_WINDOW_MS`** (2 minutes). It is **single-use** — consumed by
+   the next COMMIT whether or not that image was signed — and **RAM-only**, so a
+   reboot disarms it.
+
+⚠️ **Why a keycode and not a host dialog / HID command.** The threat FW-2 addresses
+is *any process that can talk the HID flash protocol*. An acknowledgement carried
+over that same channel is forgeable by exactly the attacker it is meant to stop:
+malware would set the flag and flash whatever it liked. A keypress cannot be
+produced remotely, so the override is worth something. Do not "improve" this into a
+host-side confirmation.
+
+**BOOTSEL/UF2 is unaffected** — it bypasses `fw_staging` entirely, so it remains an
+unconditional recovery path and enforcement cannot brick a board. That also means
+the HIL rig is untouched: `polykybd-ctnd` flashes with `picotool`, not over HID.
 
 ## One-time setup
 

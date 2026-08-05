@@ -133,6 +133,13 @@ static uint32_t s_staged_crc;    // running CRC32 of received image bytes (for O
 static uint8_t  s_signature[FW_SIG_LEN];
 static bool     s_signature_present;
 
+// FW-2 physical-presence confirmation state (see the block above
+// fw_staging_awaiting_confirm for the rationale). Declared here because
+// fw_staging_begin, further up, resets it per flash.
+static enum { CONFIRM_IDLE = 0, CONFIRM_PENDING, CONFIRM_ACCEPTED, CONFIRM_REJECTED }
+                s_confirm    = CONFIRM_IDLE;
+static uint32_t s_confirm_at = 0;
+
 static bool     s_commit_pending;
 static bool     s_reboot_pending;   // deferred plain reboot (QK_REBOOT slave path)
 static bool     s_fontpack_reload_pending;  // slave: defer the heavy FONTPACK reload to housekeeping
@@ -250,6 +257,7 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
     s_buf_fill       = 0;
     s_staged_crc     = 0;
     s_signature_present = false;  // FW-2: each new image must re-supply its signature
+    s_confirm           = CONFIRM_IDLE;   // ...and re-confirm, if it turns out unsigned
     s_commit_pending = false;
     s_erase_pending  = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
@@ -303,6 +311,7 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     s_buf_fill       = 0;
     s_staged_crc     = 0;
     s_signature_present = false;  // FW-2: each new image must re-supply its signature
+    s_confirm           = CONFIRM_IDLE;   // ...and re-confirm, if it turns out unsigned
     s_commit_pending = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
 
@@ -467,17 +476,17 @@ void fw_staging_set_signature(const uint8_t sig[FW_SIG_LEN]) {
     s_signature_present = true;
 }
 
-// FW-2 physical-presence override. Under FW_REQUIRE_SIGNATURE an unsigned or badly
-// signed image is refused — but a developer flashing their own build needs a way
-// through that malware cannot take. An acknowledgement carried over HID would be
-// worthless: the HID flash surface is exactly what signing defends, so anything a
-// host can send, an attacker can send too. A KEYPRESS cannot be forged remotely,
-// so arming is a physical act on the keyboard and nothing else can do it.
+// FW-2 physical-presence confirmation. Under FW_REQUIRE_SIGNATURE an unsigned or
+// badly signed image is not simply refused — a developer flashing their own build
+// needs a way through that malware cannot take. An acknowledgement carried over
+// HID would be worthless: the HID flash surface is exactly what signing defends,
+// so anything a host can send, an attacker can send too. A KEYPRESS cannot be
+// forged remotely, so the answer is a physical act on the keyboard.
 //
-// RAM-only and time-limited on purpose: it must not survive a reboot or sit armed
-// indefinitely, or it degrades into a permanently disabled check.
-static bool     s_unsigned_armed    = false;
-static uint32_t s_unsigned_armed_at = 0;
+// The state is RAM-only and re-armed per flash (fw_staging_begin clears it), so it
+// cannot survive a reboot or linger as a permanently disabled check.
+// (s_confirm / s_confirm_at are declared up with s_signature — fw_staging_begin
+// needs to reset them and sits above this block.)
 
 // Why the last COMMIT was refused. Without this the caller cannot tell a
 // signature refusal from a CRC mismatch — fw_staging_finalize() returns a bare
@@ -486,22 +495,28 @@ static uint32_t s_unsigned_armed_at = 0;
 // CRC was perfect, and sent a diagnosis the wrong way (2026-08-05).
 static bool s_refused_unsigned = false;
 
-void fw_staging_arm_unsigned(void) {
-    s_unsigned_armed    = true;
-    s_unsigned_armed_at = timer_read32();
-    uprintf("FW_UP: unsigned-image override ARMED for %lus\n",
-            (unsigned long)(FW_UNSIGNED_ARM_WINDOW_MS / 1000));
+bool fw_staging_awaiting_confirm(void) {
+    return s_confirm == CONFIRM_PENDING;
 }
 
-bool fw_staging_unsigned_armed(void) {
+bool fw_staging_confirm_in_progress(void) {
+    return s_confirm != CONFIRM_IDLE;
+}
+
+void fw_staging_confirm_answer(bool accept) {
+    if (s_confirm != CONFIRM_PENDING) return;   // first answer wins; ignore stray keys
+    s_confirm = accept ? CONFIRM_ACCEPTED : CONFIRM_REJECTED;
+    uprintf("FW_UP: unsigned image %s on the keyboard\n", accept ? "ACCEPTED" : "REJECTED");
+}
+
+void fw_staging_confirm_tick(void) {
     // timer_elapsed32() is modular, so this stays correct across the 49.7-day
     // timer wrap — the same trap that once disabled idle for a 25-day window
     // (see the update.c signed-timestamp bug).
-    return s_unsigned_armed && timer_elapsed32(s_unsigned_armed_at) < FW_UNSIGNED_ARM_WINDOW_MS;
-}
-
-void fw_staging_disarm_unsigned(void) {
-    s_unsigned_armed = false;
+    if (s_confirm == CONFIRM_PENDING && timer_elapsed32(s_confirm_at) >= FW_CONFIRM_WINDOW_MS) {
+        s_confirm = CONFIRM_REJECTED;
+        uprint("FW_UP: unsigned-image confirmation timed out — refusing\n");
+    }
 }
 
 bool fw_staging_refused_unsigned(void) {
@@ -614,24 +629,58 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
                 uprintf("FW_UP: image UNSIGNED (no signature supplied)\n");
             }
 #ifdef FW_REQUIRE_SIGNATURE
-            // Enforcement: reject anything but a valid signature, UNLESS the user
-            // physically armed the override on the keyboard (KC_ALLOW_UNSIGNED)
-            // within the last FW_UNSIGNED_ARM_WINDOW_MS. See fw_staging_arm_unsigned.
-            if (sig != 1) {
-                if (fw_staging_unsigned_armed()) {
-                    uprintf("FW_UP: unsigned/invalid image ALLOWED — physical override armed\n");
-                } else {
-                    s_refused_unsigned = true;
-                    uprintf("FW_UP: REJECTED — image not validly signed. Press the "
-                            "'allow unsigned firmware' key on the keyboard, then flash "
-                            "again within %lus.\n",
-                            (unsigned long)(FW_UNSIGNED_ARM_WINDOW_MS / 1000));
-                    ok = false;
+            // Enforcement: anything but a valid signature needs the user to confirm
+            // ON THE KEYBOARD. The first COMMIT raises the prompt and answers '?';
+            // the host re-polls COMMIT (staging state is untouched, so re-running
+            // finalize is free) until a keypress or the timeout resolves it.
+            //
+            // We must NOT block here waiting for the answer: COMMIT runs inside
+            // raw_hid_receive() on the main loop, and the matrix is scanned by that
+            // same loop — a busy-wait would guarantee the keypress is never seen.
+            //
+            // ⚠️ The prompt is offered for an image with NO signature (sig == 0) —
+            // a developer build — and NOT for one whose signature is present and
+            // fails to verify (sig == -1). Those are different events: the first is
+            // "you compiled this yourself", the second is "this file is not what it
+            // claims to be", i.e. corruption or tampering. Inviting a keypress to
+            // accept the second would hand the attacker the one thing the physical
+            // gate exists to withhold — a user who has been told to press A. So an
+            // invalid signature is refused outright, with no way through.
+            if (sig == -1) {
+                s_refused_unsigned = true;
+                uprint("FW_UP: REJECTED — signature does not verify (corrupt or tampered image). "
+                       "No confirmation is offered for this case.\n");
+                ok = false;
+                s_confirm = CONFIRM_IDLE;
+            } else if (sig == 0) {
+                switch (s_confirm) {
+                    case CONFIRM_IDLE:
+                        s_confirm    = CONFIRM_PENDING;
+                        s_confirm_at = timer_read32();
+                        uprintf("FW_UP: image UNSIGNED — confirm on the keyboard "
+                                "(A = accept, R = reject) within %lus\n",
+                                (unsigned long)(FW_CONFIRM_WINDOW_MS / 1000));
+                        ok = false;
+                        break;
+                    case CONFIRM_PENDING:
+                        ok = false;                 // still waiting; COMMIT answers '?'
+                        break;
+                    case CONFIRM_ACCEPTED:
+                        // Consumed here, so one confirmation authorises exactly this
+                        // image — a second unsigned flash prompts again.
+                        s_confirm = CONFIRM_IDLE;
+                        uprint("FW_UP: unsigned image ALLOWED by physical confirmation\n");
+                        break;
+                    case CONFIRM_REJECTED:
+                        s_confirm          = CONFIRM_IDLE;
+                        s_refused_unsigned = true;
+                        uprint("FW_UP: REJECTED — unsigned image, not confirmed\n");
+                        ok = false;
+                        break;
                 }
+            } else if (s_confirm != CONFIRM_IDLE) {
+                s_confirm = CONFIRM_IDLE;           // signed image: nothing left to ask
             }
-            // One flash per arming: consume it either way, so a single keypress can
-            // never authorise a second image the user did not intend.
-            fw_staging_disarm_unsigned();
 #endif
         }
         // FIRMWARE: stamp the staging header {magic,size,crc} so the staged image

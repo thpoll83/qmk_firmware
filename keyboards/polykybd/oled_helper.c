@@ -25,6 +25,9 @@
 // firmware-apply screen, so no pack and no custom bitmap are needed.
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
 extern const GFXfont NotoSansSymbols2_Regular_Arrows_20pt16b;
+// Defined in <variant>/status_oled.c's translation unit — extern here for the
+// same reason (its PROGMEM tables must not be duplicated at link time).
+extern const GFXfont NotoSans_Regular_Small_15px7b;
 
 // Render `value` as a char32 (U"...") display string into `buffer`. The display
 // pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
@@ -194,6 +197,52 @@ void oled_fw_update_screen(void) {
     oled_render_dirty(true);
 }
 
+// FW-2: the question behind the A/R keycaps. The keycaps alone say WHICH key does
+// what but not WHY the board went modal, and a user who has never seen this before
+// has no way to find out — the host is stuck at "verifying" and the console is not
+// something anyone has open. So the status OLED states it in words, on both halves
+// (poly_sync_t.fw_confirm is synced), each naming its OWN half's key.
+//
+// Deliberately landscape on split42 too, matching the flash/apply screens there —
+// the portrait rework of those is still deferred.
+void oled_fw_confirm_screen(void) {
+    const GFXfont*  small = &NotoSans_Regular_Small_15px7b;
+    const GFXfont*  fonts[] = { small };
+    // Three lines on the 64px panel; the 32px one only has room for the verdict
+    // and the key, so it drops the "firmware!" continuation.
+    const bool      tall  = OLED_DISPLAY_HEIGHT >= 64;
+    const uint32_t* l0    = tall ? U"Unsigned" : U"Unsigned!";
+    const uint32_t* l1    = tall ? U"firmware!" : NULL;
+    const uint32_t* l2    = is_left_side() ? U"A = ACCEPT" : U"R = REJECT";
+
+    oled_on();
+    kdisp_set_buffer(0);   // clear the scratch to black
+
+    const uint32_t* lines[3] = { l0, l1, l2 };
+    const uint8_t   count    = l1 ? 3 : 2;
+    // Even vertical distribution: line i owns the band [i*H/count, (i+1)*H/count),
+    // and each line is centred in its own band from its own bbox — so a line with a
+    // descender ("firmware!" has none, but the key lines end in caps) sits level
+    // rather than being pushed by the tallest line in the set.
+    const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
+    for (uint8_t i = 0; i < count; ++i) {
+        const uint32_t* txt = lines[i];
+        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+        kdisp_gfx_text_bbox(fonts, 1, txt, &x0, &x1, &y0, &y1);
+        const int8_t w    = (int8_t)(x1 - x0 + 1);
+        int16_t      x    = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
+        if (x < 0) x = 0;
+        const int8_t base = (int8_t)(band * i + band / 2 - (y0 + y1) / 2);
+        kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, txt);
+    }
+
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    // One synchronous pass, same reason as the flash screen: this is a full-screen
+    // transition and the user must be able to read it immediately, not watch it
+    // dribble in a block at a time.
+    oled_render_dirty(true);
+}
+
 // Shown on BOTH halves the instant a staged firmware image is applied (reboot
 // imminent). Reads across the two status OLEDs as "⟳Applying  Firmware⟳": the
 // LEFT half shows the resident circular refresh arrow U+2B6F + "Applying", the
@@ -257,7 +306,15 @@ const uint8_t wpm_gauge_bitmap[] PROGMEM = {
 };
 
 bool oled_task_user(void) {
-    if (fw_staging_fw_up_active()) {
+    // FW-2: the unsigned-image question outranks everything else — the board is a
+    // modal dialog and nothing else it could show is actionable. Checked before the
+    // flash screen because by the time the prompt goes up finalize has already
+    // cleared fw_up_active, so this would otherwise fall through to the idle/status
+    // screen and leave the keycaps asking a question the panel never states.
+    if (get_local_state()->fw_confirm) {
+        oled_scroll_off();
+        oled_fw_confirm_screen();
+    } else if (fw_staging_fw_up_active()) {
         oled_scroll_off();
         oled_fw_update_screen();
 #ifdef POLYKYBD_DOOM

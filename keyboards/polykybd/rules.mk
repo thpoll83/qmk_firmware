@@ -285,10 +285,11 @@ endif
 # release produced "image signature OK" and a byte-flipped signature produced
 # "INVALID", so the check is known to discriminate rather than rubber-stamp.
 #
-# There is a deliberate escape hatch for unsigned developer builds:
-# KC_ALLOW_UNSIGNED arms a 2-minute, single-use, RAM-only override ON THE
-# KEYBOARD. It is a keycode and not a HID command because the HID flash surface
-# is exactly what this defends — an acknowledgement sent over HID would be
-# forgeable by an attacker. BOOTSEL/UF2 also remains unaffected (it bypasses
-# fw_staging entirely), so this can never brick a board.
+# There is a deliberate escape hatch for unsigned developer builds: at COMMIT the
+# keyboard turns its keycaps into an ACCEPT/REJECT dialog (big A on the left half's
+# home-row index key, big R on the right's) and waits up to FW_CONFIRM_WINDOW_MS
+# for a press. The answer comes off the MATRIX and not over HID because the HID
+# flash surface is exactly what this defends — an acknowledgement sent over it
+# would be forgeable by the attacker it is meant to stop. BOOTSEL/UF2 also remains
+# unaffected (it bypasses fw_staging entirely), so this can never brick a board.
 OPT_DEFS += -DFW_REQUIRE_SIGNATURE

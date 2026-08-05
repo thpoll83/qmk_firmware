@@ -214,8 +214,10 @@ bool rgb_matrix_indicators_kb(void) {
         uint8_t phase = (uint8_t)(timer_read32() >> 3);         // ~2 s cycle
         uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
         uint8_t v     = 5 + (tri >> 2);                         // ~5..36 (half brightness — bright enough)
-        if (fw_staging_commit_pending()) {
+        if (fw_staging_commit_pending() || get_local_state()->fw_confirm) {
             // Applying the staged firmware → reboot imminent, you can't type → orange.
+            // The FW-2 confirmation prompt joins it: while it is up every key except
+            // A/R is swallowed, which is exactly the "can't type" state orange means.
             rgb_matrix_set_color_all(v, v >> 2, 0);            // breathing orange
         } else {
             // Staging a font pack OR firmware: the board still runs and you can keep
@@ -251,7 +253,10 @@ static void flash_rgb_tick(void) {
     // Light the matrix while a flash is staging, and also while an apply is pending
     // (commit_pending) so a standalone "apply staged firmware" still shows the orange
     // reboot cue even though no chunks are streaming.
-    if (fw_staging_fw_up_active() || fw_staging_commit_pending()) {
+    // ...and while the FW-2 confirmation prompt is up (synced, so both halves glow):
+    // the board is modal there, so it belongs to the same "can't type" cue.
+    if (fw_staging_fw_up_active() || fw_staging_commit_pending() ||
+        get_local_state()->fw_confirm) {
         s_flash_rgb_seen   = timer_read();
     }
     bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
@@ -266,6 +271,26 @@ static void flash_rgb_tick(void) {
     }
 }
 
+#endif
+
+// Force the orange "applying — you cannot type" cue onto the LEDs synchronously.
+//
+// rgb_matrix_indicators_kb() already picks orange while commit_pending, but that
+// only runs from the next rgb_matrix_task() — and on the apply path there is no
+// next task: the blocking self-flash / mcu_reset never returns. So the cue the
+// code appears to implement was in practice never seen. Push it out here, the
+// same way oled_fw_apply_screen() flushes the status OLED in one pass.
+//
+// No-op on a variant without an RGB matrix (split42), so callers stay unguarded.
+static void poly_flash_rgb_now(void) {
+#ifdef RGB_MATRIX_ENABLE
+    if (!rgb_matrix_is_enabled()) rgb_matrix_enable_noeeprom();
+    rgb_matrix_set_color_all(24, 6, 0);      // same orange as the bootloader cue
+    rgb_matrix_update_pwm_buffers();
+#endif
+}
+
+#ifdef RGB_MATRIX_ENABLE
 #define RGB_REPEAT_INITIAL_DELAY_MS 400
 #define RGB_REPEAT_RATE_MS          40
 
@@ -887,15 +912,25 @@ void housekeeping_task_user(void) {
     // progresses and the master's apply-and-reboot fires after a successful
     // commit.
     if (fw_staging_commit_pending()) {
+        // Release anything still held. From here the main loop never scans the
+        // matrix again (the self-flash below does not return), so a key that is
+        // physically down when the apply is armed would never have its release
+        // reported — the host keeps it registered and auto-repeats until USB
+        // drops at the reboot (field: hundreds of repetitions).
+        clear_keyboard();
+        poly_flash_rgb_now();
         // Paint the "⟳Applying / Firmware⟳" notice and flush it fully BEFORE the
         // blocking self-flash + reset below (which never returns), so the status
         // OLED is completely refreshed — not torn mid-transition — as the apply
-        // begins. Runs on both halves; each draws its own side's word.
+        // begins. Runs on both halves; each draws its own side's word. Its ~26 ms
+        // of I2C also gives the clear_keyboard() report time to leave over USB.
         oled_fw_apply_screen();
         save_all_dirty();   // persist MRU/settings before the firmware swap — this path resets via watchdog (never returns) and skips shutdown_quantum. Transfer is done by commit, so the blocking flash write is safe here.
         fw_staging_apply_and_reboot();
     }
     if (fw_staging_reboot_pending()) {
+        clear_keyboard();   // same as above: no further matrix scan before the reset
+        poly_flash_rgb_now();
         save_all_dirty();   // persist before the full-chip reset — this path skips shutdown_quantum too
         mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
     }
@@ -906,6 +941,40 @@ void housekeeping_task_user(void) {
     // ~20 ms window). Refresh the keycaps once the new pack's fonts are live.
     if (fw_staging_process_fontpack_reload()) {
         request_disp_refresh();
+    }
+
+    // FW-2: drive the unsigned-image confirmation prompt. The master owns the
+    // decision, but poly_sync_t.fw_confirm is synced so BOTH halves turn their
+    // keycaps into the dialog (the slave's own render is driven by the sync
+    // handler's refresh). Deliberately outside the !fw_up_active gate below: the
+    // prompt only goes up at COMMIT, i.e. after finalize has already cleared
+    // fw_up_active, and a prompt that could not be drawn would be unanswerable.
+    // is_keyboard_master(), not is_usb_host_side(): the confirmation state only
+    // ever exists on the half that verified the signature, and fw_staging gates
+    // that on is_keyboard_master() (which the HIL images override per side).
+    if (is_keyboard_master()) {
+        fw_staging_confirm_tick();
+        const uint8_t want = fw_staging_awaiting_confirm() ? 1 : 0;
+        poly_sync_t *cfm_state = access_local_state();
+        if (cfm_state->fw_confirm != want) {
+            cfm_state->fw_confirm = want;
+            if (want) {
+                // Release anything still registered host-side BEFORE we start
+                // swallowing events. A key held when the prompt goes up would
+                // otherwise never have its release forwarded — the host keeps the
+                // keycode down and auto-repeats it for the whole window (field:
+                // "a few hundred repetitions until the keyboard rebooted"). Same
+                // reasoning, same fix as doom_begin().
+                clear_keyboard();
+            }
+            request_disp_refresh();
+        }
+        // Hold the idle timer off while we are asking: the fade/pulse would dim
+        // the prompt out from under the user (update_displays early-returns once
+        // DISP_IDLE is set, so it would never be redrawn either).
+        if (want) {
+            update_performed();
+        }
     }
 
     // While a fw_up is in progress, skip EEPROM saves (wear-leveling consolidate
@@ -2072,6 +2141,55 @@ static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Nano_10px7b
 // `mid_fonts` array for any misc utility-key text that wants a middle size.
 static const GFXfont* const mid_fonts[]        = { &NotoSans_Regular_Mid_19px7b };
 
+// --- FW-2 unsigned-image confirmation prompt -------------------------------
+//
+// Which key on EACH half carries the prompt. The same LOCAL matrix position on
+// both halves, so the two keycaps sit symmetrically: the home-row index finger,
+// which is findable by touch without hunting across 36 keycaps. The keycap grid
+// is not rectangular and the right half folds its display column, but this is a
+// matrix position — update_displays' loop indexes the matrix directly, so no
+// fold applies. Left half = ACCEPT, right half = REJECT (fixed by side, not by
+// which half happens to be master, so the prompt never moves between flashes).
+#if defined(KEYBOARD_polykybd_split42)
+#  define FW_CONFIRM_ROW 1      // middle letter row (a s d f g)
+#else
+#  define FW_CONFIRM_ROW 2      // split72 home row (Fn a s d f g ')
+#endif
+#define FW_CONFIRM_COL 3
+
+// Compose the prompt keycap into the scratch buffer: a big 2x letter above a tiny
+// caption. Everything is measured from the font metrics rather than hardcoded —
+// "REJECT" descends 2px below the baseline (the J) where "ACCEPT" does not, so a
+// fixed bottom baseline would clip one of them.
+static void render_fw_confirm_key(bool accept) {
+    const uint32_t  letter    = accept ? (uint32_t)'A' : (uint32_t)'R';
+    const uint32_t *caption   = accept ? U"ACCEPT" : U"REJECT";
+
+    kdisp_set_buffer(0x00);
+
+    int8_t cxmin, cxmax, cymin, cymax;
+    kdisp_gfx_text_bbox(lang_label_fonts, 1, caption, &cxmin, &cxmax, &cymin, &cymax);
+    // Pin the caption's lowest lit pixel to the last screen row.
+    const int8_t cap_base = (int8_t)(SCREEN_HEIGHT - 1 - cymax);
+    kdisp_write_gfx_text(lang_label_fonts, 1,
+                         (int8_t)(BUFFER_X + (SCREEN_WIDTH - (cxmax - cxmin + 1)) / 2 - cxmin),
+                         cap_base, caption);
+
+    // The big letter, centred in what is left above the caption.
+    const GFXfont  *lf = NULL;
+    const GFXglyph *lg = kdisp_gfx_glyph_font(mid_fonts, 1, letter, &lf);
+    if (lg == NULL) return;
+    // _double_at takes the literal top-left of the INK (no baseline align, no
+    // xOffset), so the glyph box is centred directly — nothing to compensate for.
+    const int16_t lw = (int16_t)pgm_read_byte(&lg->width)  * 2;
+    const int16_t lh = (int16_t)pgm_read_byte(&lg->height) * 2;
+    const int8_t  free_rows = (int8_t)(cap_base + cymin);   // rows 0 .. caption top - 1
+    kdisp_draw_glyph_double_at(mid_fonts, 1,
+                               (int8_t)(BUFFER_X + (SCREEN_WIDTH - lw) / 2),
+                               (int8_t)((free_rows - lh) / 2),
+                               letter);
+}
+
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
     const GFXfont* flag_font = NULL;
     const GFXglyph* g = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count,
@@ -2477,7 +2595,21 @@ void update_displays(enum refresh_mode mode) {
                     // the game-control keys keep their legends, everything
                     // else goes dark.
                     bool doom_handled = false;
-                    if (local_state->doom_ctl == 2) {
+                    // FW-2: an unsigned firmware image is waiting for a physical
+                    // yes/no. The whole board becomes the dialog — every keycap
+                    // goes dark except this half's prompt key — so it cannot be
+                    // mistaken for normal typing, and it does not depend on which
+                    // layer happens to be active. Checked first: this outranks
+                    // every other per-key mode below.
+                    if (local_state->fw_confirm) {
+                        if (r == FW_CONFIRM_ROW && c == FW_CONFIRM_COL) {
+                            render_fw_confirm_key(is_left_side());
+                        } else {
+                            kdisp_set_buffer(0x00);
+                        }
+                        kdisp_send_window();
+                        doom_handled = true;
+                    } else if (local_state->doom_ctl == 2) {
                         // Attract screensaver: chrome-free — no pad, no ESC face,
                         // no control legends. Every key belongs to the mirror
                         // blitter while its view is live (the full-viewport
@@ -2774,6 +2906,27 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // pulse, the first key press should dismiss it and pass through to the wake
     // (display_wakeup clears DISP_IDLE → eden_idle_tick stops the loop next pass).
     if (startup_anim_active() && !startup_anim_is_loop()) {
+        return false;
+    }
+
+    // FW-2: while the unsigned-image prompt is up the whole board IS the dialog —
+    // every key event is swallowed (nothing should reach the host mid-decision)
+    // and only the two prompt keys mean anything. Only the master runs
+    // process_record — the slave's matrix is pulled over the split link — so a
+    // press on EITHER half arrives here, and the matrix row is what says which.
+    if (fw_staging_awaiting_confirm()) {
+        // Answer on the RELEASE, not the press. split72.c's matrix_scan_kb inverts a
+        // keycap on press and un-inverts it on release, entirely independently of
+        // process_record — so acting on the press tears the prompt down and redraws
+        // the normal legend while that keycap is still inverted, and it stays
+        // inverted until the finger lifts.
+        if (!record->event.pressed && record->event.key.col == FW_CONFIRM_COL) {
+            if (record->event.key.row == FW_CONFIRM_ROW) {
+                fw_staging_confirm_answer(true);    // left half  -> A / ACCEPT
+            } else if (record->event.key.row == FW_CONFIRM_ROW + MATRIX_ROWS_PER_SIDE) {
+                fw_staging_confirm_answer(false);   // right half -> R / REJECT
+            }
+        }
         return false;
     }
 
@@ -3122,16 +3275,6 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             request_disp_refresh();
             break;
         }
-        case KC_ALLOW_UNSIGNED:
-            // FW-2: arm the physical-presence override for one unsigned/invalid
-            // firmware image (see fw_staging_arm_unsigned). Master-only — the
-            // master is what verifies the signature and gates the apply, so
-            // arming on the slave would have nothing to authorise.
-            if (is_keyboard_master()) {
-                fw_staging_arm_unsigned();
-            }
-            break;
-
         case KC_STORE_EE:
             // Manual "commit everything to EEPROM" — for users who want to be
             // sure their changes survive a hard power-cut without suspending.

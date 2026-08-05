@@ -34,24 +34,40 @@
 // The split RPC struct is 4 CRC + 4 offset + 56 data = 64 bytes < RPC_M2S_BUFFER_SIZE 72 bytes.
 #define FW_UP_CHUNK_SIZE 56
 
-// Must be called once before any other fw_staging_* function.
-// FW-2 physical-presence override: how long an arming keypress stays valid.
-// Long enough to arm, alt-tab and start a flash; short enough that it cannot be
-// left armed by accident. RAM-only — a reboot always disarms.
-#define FW_UNSIGNED_ARM_WINDOW_MS 120000u
+// FW-2 physical-presence confirmation. Under FW_REQUIRE_SIGNATURE an image that
+// is not validly signed is not refused outright: COMMIT raises a prompt ON THE
+// KEYCAPS (a big A/ACCEPT on the left half, R/REJECT on the right) and waits for
+// a keypress. The acknowledgement is deliberately NOT carried over HID — signing
+// defends against any process that can talk the flash protocol, and such a
+// process could forge a reply on that same channel. A keypress cannot be produced
+// remotely, so the answer has to come off the matrix.
+//
+// How long the prompt stays up. Long enough to read it, walk to the keyboard and
+// decide; short enough that an unattended board falls back to refusing. RAM-only,
+// and re-armed per flash — a reboot or a new BEGIN always clears it.
+#define FW_CONFIRM_WINDOW_MS 60000u
 
-// Arm/query/consume the override. Arming is deliberately reachable ONLY from a
-// keycode (KC_ALLOW_UNSIGNED): an acknowledgement sent over HID would be
-// forgeable by the very surface signing defends, so it must be a physical act.
-void fw_staging_arm_unsigned(void);
-bool fw_staging_unsigned_armed(void);
-void fw_staging_disarm_unsigned(void);
+// True while the prompt is up: COMMIT answers '?' and the keycaps show A/R.
+bool fw_staging_awaiting_confirm(void);
+// True from the moment the prompt goes up until the answer is consumed by the
+// COMMIT that acts on it. COMMIT uses this to skip re-bridging to the slave while
+// the host re-polls: the slave committed on the first COMMIT and re-running its
+// finalize would re-erase the staging header sector once per poll.
+bool fw_staging_confirm_in_progress(void);
+// The physical answer, from process_record_user on the master. Idempotent — only
+// the first call while pending decides.
+void fw_staging_confirm_answer(bool accept);
+// Times the prompt out (-> reject). Call once per housekeeping pass.
+void fw_staging_confirm_tick(void);
 
 // True when the last fw_staging_finalize() refused the image because it was not
-// validly signed (as opposed to a CRC mismatch). Lets COMMIT answer with a
-// distinct status so the host and the HIL rig can report the real reason instead
-// of guessing — they are indistinguishable from the bool alone.
+// validly signed (rejected or timed out at the prompt), as opposed to a CRC
+// mismatch. Lets COMMIT answer with a distinct status so the host and the HIL rig
+// can report the real reason instead of guessing — they are indistinguishable
+// from the bool alone.
 bool fw_staging_refused_unsigned(void);
+
+// Must be called once before any other fw_staging_* function.
 
 void fw_staging_init(void);
 

@@ -146,6 +146,12 @@ typedef struct _poly_sync_t {
     // when it sees the value change (see user_sync_poly_data_handler). It is a
     // nonce, not a state — any change triggers exactly one replay.
     uint8_t  anim_nonce;
+    // FW-2 unsigned-image confirmation prompt active on the master (0/1). Synced so
+    // BOTH halves turn their keycaps into the prompt: update_displays blanks every
+    // key and draws A/ACCEPT (left half) or R/REJECT (right half) on the home-row
+    // middle key. The answer comes back over the normal matrix pull — only the
+    // master runs process_record, so it sees either half's press.
+    uint8_t  fw_confirm;
 } poly_sync_t;
 
 typedef struct _poly_last_t {

@@ -96,8 +96,11 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     // animation when the slave is idle — a genuine HID replay (cmd 31) or a
     // KC_EDEN-rearmed boot where the slave's own marker was already consumed.
     bool anim_replay = (incoming->anim_nonce != current->anim_nonce) && !startup_anim_active();
+    // FW-2: the master raised or cleared the unsigned-image confirmation prompt ->
+    // re-render this half's keycaps (into the prompt, or back to the legends).
+    bool fw_confirm_changed = incoming->fw_confirm != current->fw_confirm;
     copy_local_state(incoming);
-    if (doom_ctl_changed) {
+    if (doom_ctl_changed || fw_confirm_changed) {
         request_disp_refresh();
     }
     if (anim_replay) {

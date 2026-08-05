@@ -606,6 +606,49 @@ touching at a **0px** gap, while 4 rows sat unused under the bottom row.
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.
 
+### Firmware signing enforcement & the on-keycap confirmation (FW-2)
+
+`rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so `fw_staging_finalize()` only stamps the
+staging header for an image carrying a valid Ed25519 signature over `base/fw_pubkey.h`.
+An image that fails that check is **not refused outright** — the keyboard asks:
+
+- **The board becomes the dialog.** `poly_sync_t.fw_confirm` (synced, so both halves
+  render) makes `update_displays()` blank every keycap except one per half: a 2×-scaled
+  **A / ACCEPT** on the left home-row index key and **R / REJECT** on the right, both at
+  local matrix `(FW_CONFIRM_ROW, FW_CONFIRM_COL)` — the *same* local position on both
+  halves, and a matrix position, so the non-rectangular display grid and the right
+  half's `c--` display fold don't apply. `process_record_user` swallows every other key
+  while it is up. Side is decided by `is_left_side()`, not by which half is master, so
+  the prompt never moves between flashes.
+- **⚠️ COMMIT must NOT block waiting for the answer.** It runs inside
+  `raw_hid_receive()` on the main loop, which is also what scans the matrix — a
+  busy-wait would guarantee the keypress is never seen. So it is a state machine:
+  the first COMMIT raises the prompt and answers **`?`**; the host re-polls COMMIT
+  (~1 Hz) until a keypress or `FW_CONFIRM_WINDOW_MS` (60 s) resolves it to `.` or `S`.
+  Re-running finalize is free — `s_buf_fill` is 0 and the CRCs are untouched — but
+  COMMIT skips **re-bridging to the slave** while `fw_staging_confirm_in_progress()`,
+  or every poll would re-erase and re-stamp the slave's 4 KB staging header sector.
+- **Only the master runs `process_record`** (the slave's matrix is pulled over the
+  split link), so a press on *either* half arrives there; the matrix row says which.
+- **Accept is physical, cancel may be remote.** The threat model is any process that
+  can talk the HID flash protocol, so an acceptance sent over HID would be forgeable by
+  exactly the attacker signing defends against. A **cancel** (COMMIT with `'x'` in
+  `data[2]`) can only ever deny, so it *is* exposed — the host's abort path and the HIL
+  rig (no fingers) use it instead of leaving the board modal for the full window.
+- Housekeeping calls `fw_staging_confirm_tick()` **outside** the `!fw_up_active` gate
+  and holds `update_performed()` while pending, so the idle fade can't dim the prompt
+  out from under the user (`update_displays` early-returns once `DISP_IDLE` is set, so
+  it would never be redrawn either).
+- `kdisp_draw_glyph_double_at()` (`base/disp_array.c`) is the 2× mirror of
+  `kdisp_draw_glyph_half_at()` — the keycap fonts top out at the 27 px `_Base_` face,
+  so it is the only way to fill a 72×40 panel with one character. Both take the literal
+  top-left of the **ink** (no baseline align, no `xOffset`).
+- Layout is measured from the font metrics at runtime, not hardcoded: "REJECT" descends
+  2 px below the baseline (the J) and "ACCEPT" does not, so a fixed bottom baseline
+  clips one of them. Preview the cells with `PolyKybdHost/tools/gfx_font.py`.
+- Full user-facing story: `keyboards/polykybd/tools/SIGNING.md`. BOOTSEL/UF2 bypasses
+  `fw_staging` entirely, so enforcement can never brick a board.
+
 ### Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**
 pixels in. **Four** styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum

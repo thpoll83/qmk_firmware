@@ -77,6 +77,14 @@ print('console_tail:', d['console_tail'][:3])
 Reject the run if any of these fail:
 - **`ready_gate_ok` or `settled` is false** → it measured the master's boot-time
   busy window, not the workload. Re-run; never baseline it.
+- ⚠️ **`hid_latency.misses > 0`** → the gates can BOTH pass and the run still be
+  unbankable. One unanswered GET_ID out of 100 is the rig's known transient
+  deafness, not a latency regression — but the retry lands in the sample set as a
+  ~1000 ms `max`. Seen 2026-08-05: `p50 3.0 / p95 4.01 / max 1006.12 ms, 1 miss(es)`,
+  reported as **+20062 %**. Reading `p50` and `p95` (both unmoved) is what identifies
+  it as an outlier. **Never baseline a run with misses**: storing that `max` bakes
+  200× phantom headroom into the one metric meant to catch a latency regression, and
+  the guard never fires again. Re-run until `0 miss(es)`.
 - **`ovl_iters != reports`** → the instrumentation is broken (one bulk overlay
   report must produce exactly one tagged iteration). No timing from that window is
   trustworthy.

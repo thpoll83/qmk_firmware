@@ -122,6 +122,13 @@ inherited-upstream noise:
   (`!keyboards/polykybd/**/*.png`) — all three verified to make `qmk lint --strict`
   pass. **This contradicts the "lint passes green on every normal commit" line
   above** — that holds only while no such file exists.
+- ⚠️ **Applying N labels in ONE API call fires N `labeled` events, i.e. N workflow
+  runs.** `qmk-test.yml` listens for `labeled` (it must, or the `perf` label would
+  trigger nothing), so adding `perf` + `bump:minor` together started **two identical
+  perf runs** — a wasted rig build + flash each (2026-08-05). The rig executes one job
+  at a time so they queue rather than collide, but cancel the duplicate. Apply labels
+  one call at a time when one of them is a trigger, or expect to clean up. This is a
+  *different* mechanism from the push/pull_request duplication below.
 - ⚠️ **A workflow yields TWO check runs — `push` and `pull_request` — whenever the
   branch matches BOTH triggers, and re-running one does NOT touch the other.**
   Here that mostly doesn't happen: `qmk-test.yml` pushes only on `PolyKybd`/
@@ -635,6 +642,34 @@ An image that fails that check is **not refused outright** — the keyboard asks
   exactly the attacker signing defends against. A **cancel** (COMMIT with `'x'` in
   `data[2]`) can only ever deny, so it *is* exposed — the host's abort path and the HIL
   rig (no fingers) use it instead of leaving the board modal for the full window.
+- ⚠️ **An UNSIGNED image (`sig == 0`) gets the prompt; an INVALID one (`sig == -1`) is
+  refused outright.** They are opposite events: the first is "you compiled this
+  yourself", the second is a file that is not what it claims to be. Offering a keypress
+  for the second would hand an attacker the one thing the physical gate exists to
+  withhold — a user who has been told to press A. The host tells the two apart from a
+  single `S` status because it knows whether it sent a signature.
+- ⚠️ **`clear_keyboard()` before ANY path that swallows keys or does not return.** Two
+  different mechanisms stranded a held key on the host, both fixed the same way (the
+  call `doom_begin()` already made, for the same reason): the prompt swallows the
+  *release* of a key that was already down, and the apply path never scans the matrix
+  again once `fw_staging_apply_and_reboot()`/`mcu_reset()` is entered, so the release is
+  never even produced. Either way the host keeps the keycode registered and auto-repeats
+  it until USB drops — field-reported as "a few hundred repetitions until the keyboard
+  rebooted". On the apply path the following `oled_fw_apply_screen()` conveniently gives
+  the cleared report ~26 ms to leave over USB.
+- **Answer the prompt on the RELEASE, not the press.** `split72.c`'s `matrix_scan_kb`
+  inverts a keycap on press and un-inverts on release *independently of
+  `process_record`*, so acting on the press tears the prompt down and redraws the normal
+  legend while that keycap is still inverted — and it stays inverted until the finger
+  lifts.
+- ⚠️ **A visual cue set on a path that never returns is never painted.**
+  `rgb_matrix_indicators_kb` had picked orange while `commit_pending` for a long time,
+  but it only runs from the next `rgb_matrix_task()` — and on the apply path there is no
+  next task. The cue the code appeared to implement had, in practice, **never been
+  seen**. `poly_flash_rgb_now()` pushes it synchronously (`rgb_matrix_update_pwm_buffers`),
+  the same way `oled_fw_apply_screen()` flushes the status OLED in one pass. Generalise:
+  anything that must be *visible* before a blocking self-flash / reset has to be flushed
+  by the code that draws it, not left to a periodic task.
 - Housekeeping calls `fw_staging_confirm_tick()` **outside** the `!fw_up_active` gate
   and holds `update_performed()` while pending, so the idle fade can't dim the prompt
   out from under the user (`update_displays` early-returns once `DISP_IDLE` is set, so

@@ -214,8 +214,10 @@ bool rgb_matrix_indicators_kb(void) {
         uint8_t phase = (uint8_t)(timer_read32() >> 3);         // ~2 s cycle
         uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
         uint8_t v     = 5 + (tri >> 2);                         // ~5..36 (half brightness — bright enough)
-        if (fw_staging_commit_pending()) {
+        if (fw_staging_commit_pending() || get_local_state()->fw_confirm) {
             // Applying the staged firmware → reboot imminent, you can't type → orange.
+            // The FW-2 confirmation prompt joins it: while it is up every key except
+            // A/R is swallowed, which is exactly the "can't type" state orange means.
             rgb_matrix_set_color_all(v, v >> 2, 0);            // breathing orange
         } else {
             // Staging a font pack OR firmware: the board still runs and you can keep
@@ -251,7 +253,10 @@ static void flash_rgb_tick(void) {
     // Light the matrix while a flash is staging, and also while an apply is pending
     // (commit_pending) so a standalone "apply staged firmware" still shows the orange
     // reboot cue even though no chunks are streaming.
-    if (fw_staging_fw_up_active() || fw_staging_commit_pending()) {
+    // ...and while the FW-2 confirmation prompt is up (synced, so both halves glow):
+    // the board is modal there, so it belongs to the same "can't type" cue.
+    if (fw_staging_fw_up_active() || fw_staging_commit_pending() ||
+        get_local_state()->fw_confirm) {
         s_flash_rgb_seen   = timer_read();
     }
     bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
@@ -266,6 +271,26 @@ static void flash_rgb_tick(void) {
     }
 }
 
+#endif
+
+// Force the orange "applying — you cannot type" cue onto the LEDs synchronously.
+//
+// rgb_matrix_indicators_kb() already picks orange while commit_pending, but that
+// only runs from the next rgb_matrix_task() — and on the apply path there is no
+// next task: the blocking self-flash / mcu_reset never returns. So the cue the
+// code appears to implement was in practice never seen. Push it out here, the
+// same way oled_fw_apply_screen() flushes the status OLED in one pass.
+//
+// No-op on a variant without an RGB matrix (split42), so callers stay unguarded.
+static void poly_flash_rgb_now(void) {
+#ifdef RGB_MATRIX_ENABLE
+    if (!rgb_matrix_is_enabled()) rgb_matrix_enable_noeeprom();
+    rgb_matrix_set_color_all(24, 6, 0);      // same orange as the bootloader cue
+    rgb_matrix_update_pwm_buffers();
+#endif
+}
+
+#ifdef RGB_MATRIX_ENABLE
 #define RGB_REPEAT_INITIAL_DELAY_MS 400
 #define RGB_REPEAT_RATE_MS          40
 
@@ -887,15 +912,25 @@ void housekeeping_task_user(void) {
     // progresses and the master's apply-and-reboot fires after a successful
     // commit.
     if (fw_staging_commit_pending()) {
+        // Release anything still held. From here the main loop never scans the
+        // matrix again (the self-flash below does not return), so a key that is
+        // physically down when the apply is armed would never have its release
+        // reported — the host keeps it registered and auto-repeats until USB
+        // drops at the reboot (field: hundreds of repetitions).
+        clear_keyboard();
+        poly_flash_rgb_now();
         // Paint the "⟳Applying / Firmware⟳" notice and flush it fully BEFORE the
         // blocking self-flash + reset below (which never returns), so the status
         // OLED is completely refreshed — not torn mid-transition — as the apply
-        // begins. Runs on both halves; each draws its own side's word.
+        // begins. Runs on both halves; each draws its own side's word. Its ~26 ms
+        // of I2C also gives the clear_keyboard() report time to leave over USB.
         oled_fw_apply_screen();
         save_all_dirty();   // persist MRU/settings before the firmware swap — this path resets via watchdog (never returns) and skips shutdown_quantum. Transfer is done by commit, so the blocking flash write is safe here.
         fw_staging_apply_and_reboot();
     }
     if (fw_staging_reboot_pending()) {
+        clear_keyboard();   // same as above: no further matrix scan before the reset
+        poly_flash_rgb_now();
         save_all_dirty();   // persist before the full-chip reset — this path skips shutdown_quantum too
         mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
     }
@@ -923,6 +958,15 @@ void housekeeping_task_user(void) {
         poly_sync_t *cfm_state = access_local_state();
         if (cfm_state->fw_confirm != want) {
             cfm_state->fw_confirm = want;
+            if (want) {
+                // Release anything still registered host-side BEFORE we start
+                // swallowing events. A key held when the prompt goes up would
+                // otherwise never have its release forwarded — the host keeps the
+                // keycode down and auto-repeats it for the whole window (field:
+                // "a few hundred repetitions until the keyboard rebooted"). Same
+                // reasoning, same fix as doom_begin().
+                clear_keyboard();
+            }
             request_disp_refresh();
         }
         // Hold the idle timer off while we are asking: the fade/pulse would dim
@@ -2871,7 +2915,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // process_record — the slave's matrix is pulled over the split link — so a
     // press on EITHER half arrives here, and the matrix row is what says which.
     if (fw_staging_awaiting_confirm()) {
-        if (record->event.pressed && record->event.key.col == FW_CONFIRM_COL) {
+        // Answer on the RELEASE, not the press. split72.c's matrix_scan_kb inverts a
+        // keycap on press and un-inverts it on release, entirely independently of
+        // process_record — so acting on the press tears the prompt down and redraws
+        // the normal legend while that keycap is still inverted, and it stays
+        // inverted until the finger lifts.
+        if (!record->event.pressed && record->event.key.col == FW_CONFIRM_COL) {
             if (record->event.key.row == FW_CONFIRM_ROW) {
                 fw_staging_confirm_answer(true);    // left half  -> A / ACCEPT
             } else if (record->event.key.row == FW_CONFIRM_ROW + MATRIX_ROWS_PER_SIDE) {

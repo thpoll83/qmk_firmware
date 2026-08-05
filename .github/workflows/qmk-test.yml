@@ -67,12 +67,12 @@ jobs:
       - name: Build split72 (HIL left/master)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_hil_left
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_SYS_CLK=200 -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_hil_left
 
       - name: Build split72 (HIL right/slave)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_hil_right
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_SYS_CLK=200 -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_hil_right
 
       - name: Build split42
         uses: docker://qmkfm/qmk_cli
@@ -283,12 +283,12 @@ jobs:
       - name: Build split72 (profiling, HIL left/master)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_LOOP_PROFILE=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_perf_hil_left
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_LOOP_PROFILE=yes -e POLYKYBD_SYS_CLK=200 -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_perf_hil_left
 
       - name: Build split72 (profiling, HIL right/slave)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_LOOP_PROFILE=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_perf_hil_right
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_LOOP_PROFILE=yes -e POLYKYBD_SYS_CLK=200 -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_perf_hil_right
 
       - id: names
         run: |

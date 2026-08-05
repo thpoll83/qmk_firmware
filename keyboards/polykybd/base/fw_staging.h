@@ -35,6 +35,18 @@
 #define FW_UP_CHUNK_SIZE 56
 
 // Must be called once before any other fw_staging_* function.
+// FW-2 physical-presence override: how long an arming keypress stays valid.
+// Long enough to arm, alt-tab and start a flash; short enough that it cannot be
+// left armed by accident. RAM-only — a reboot always disarms.
+#define FW_UNSIGNED_ARM_WINDOW_MS 120000u
+
+// Arm/query/consume the override. Arming is deliberately reachable ONLY from a
+// keycode (KC_ALLOW_UNSIGNED): an acknowledgement sent over HID would be
+// forgeable by the very surface signing defends, so it must be a physical act.
+void fw_staging_arm_unsigned(void);
+bool fw_staging_unsigned_armed(void);
+void fw_staging_disarm_unsigned(void);
+
 void fw_staging_init(void);
 
 // Staging target: which flash region a begin/chunk/finalize sequence writes to,

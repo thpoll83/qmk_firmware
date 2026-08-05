@@ -3122,6 +3122,16 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             request_disp_refresh();
             break;
         }
+        case KC_ALLOW_UNSIGNED:
+            // FW-2: arm the physical-presence override for one unsigned/invalid
+            // firmware image (see fw_staging_arm_unsigned). Master-only — the
+            // master is what verifies the signature and gates the apply, so
+            // arming on the slave would have nothing to authorise.
+            if (is_keyboard_master()) {
+                fw_staging_arm_unsigned();
+            }
+            break;
+
         case KC_STORE_EE:
             // Manual "commit everything to EEPROM" — for users who want to be
             // sure their changes survive a hard power-cut without suspending.

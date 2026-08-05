@@ -467,6 +467,36 @@ void fw_staging_set_signature(const uint8_t sig[FW_SIG_LEN]) {
     s_signature_present = true;
 }
 
+// FW-2 physical-presence override. Under FW_REQUIRE_SIGNATURE an unsigned or badly
+// signed image is refused — but a developer flashing their own build needs a way
+// through that malware cannot take. An acknowledgement carried over HID would be
+// worthless: the HID flash surface is exactly what signing defends, so anything a
+// host can send, an attacker can send too. A KEYPRESS cannot be forged remotely,
+// so arming is a physical act on the keyboard and nothing else can do it.
+//
+// RAM-only and time-limited on purpose: it must not survive a reboot or sit armed
+// indefinitely, or it degrades into a permanently disabled check.
+static bool     s_unsigned_armed    = false;
+static uint32_t s_unsigned_armed_at = 0;
+
+void fw_staging_arm_unsigned(void) {
+    s_unsigned_armed    = true;
+    s_unsigned_armed_at = timer_read32();
+    uprintf("FW_UP: unsigned-image override ARMED for %lus\n",
+            (unsigned long)(FW_UNSIGNED_ARM_WINDOW_MS / 1000));
+}
+
+bool fw_staging_unsigned_armed(void) {
+    // timer_elapsed32() is modular, so this stays correct across the 49.7-day
+    // timer wrap — the same trap that once disabled idle for a 25-day window
+    // (see the update.c signed-timestamp bug).
+    return s_unsigned_armed && timer_elapsed32(s_unsigned_armed_at) < FW_UNSIGNED_ARM_WINDOW_MS;
+}
+
+void fw_staging_disarm_unsigned(void) {
+    s_unsigned_armed = false;
+}
+
 // FW-2: verify the staged FIRMWARE image's Ed25519 signature against the embedded
 // public key. The image is read straight from XIP flash (memory-mapped), so no RAM
 // copy of the (up to ~2 MB) image is needed. Returns:
@@ -570,13 +600,23 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
                 uprintf("FW_UP: image UNSIGNED (no signature supplied)\n");
             }
 #ifdef FW_REQUIRE_SIGNATURE
-            // Enforcement (flip on once a real key is provisioned and releases are
-            // signed): reject anything but a valid signature. Phase A leaves this
-            // undefined → verify-and-warn only, so flashing keeps working today.
+            // Enforcement: reject anything but a valid signature, UNLESS the user
+            // physically armed the override on the keyboard (KC_ALLOW_UNSIGNED)
+            // within the last FW_UNSIGNED_ARM_WINDOW_MS. See fw_staging_arm_unsigned.
             if (sig != 1) {
-                uprintf("FW_UP: REJECTED — FW_REQUIRE_SIGNATURE and image not validly signed\n");
-                ok = false;
+                if (fw_staging_unsigned_armed()) {
+                    uprintf("FW_UP: unsigned/invalid image ALLOWED — physical override armed\n");
+                } else {
+                    uprintf("FW_UP: REJECTED — image not validly signed. Press the "
+                            "'allow unsigned firmware' key on the keyboard, then flash "
+                            "again within %lus.\n",
+                            (unsigned long)(FW_UNSIGNED_ARM_WINDOW_MS / 1000));
+                    ok = false;
+                }
             }
+            // One flash per arming: consume it either way, so a single keypress can
+            // never authorise a second image the user did not intend.
+            fw_staging_disarm_unsigned();
 #endif
         }
         // FIRMWARE: stamp the staging header {magic,size,crc} so the staged image

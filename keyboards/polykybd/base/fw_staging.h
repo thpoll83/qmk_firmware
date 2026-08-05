@@ -47,6 +47,12 @@ void fw_staging_arm_unsigned(void);
 bool fw_staging_unsigned_armed(void);
 void fw_staging_disarm_unsigned(void);
 
+// True when the last fw_staging_finalize() refused the image because it was not
+// validly signed (as opposed to a CRC mismatch). Lets COMMIT answer with a
+// distinct status so the host and the HIL rig can report the real reason instead
+// of guessing — they are indistinguishable from the bool alone.
+bool fw_staging_refused_unsigned(void);
+
 void fw_staging_init(void);
 
 // Staging target: which flash region a begin/chunk/finalize sequence writes to,

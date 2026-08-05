@@ -479,6 +479,13 @@ void fw_staging_set_signature(const uint8_t sig[FW_SIG_LEN]) {
 static bool     s_unsigned_armed    = false;
 static uint32_t s_unsigned_armed_at = 0;
 
+// Why the last COMMIT was refused. Without this the caller cannot tell a
+// signature refusal from a CRC mismatch — fw_staging_finalize() returns a bare
+// bool and the signature check sits behind the CRC result, so both surfaced as
+// the same NACK. The rig duly reported "staged CRC mismatch" for an image whose
+// CRC was perfect, and sent a diagnosis the wrong way (2026-08-05).
+static bool s_refused_unsigned = false;
+
 void fw_staging_arm_unsigned(void) {
     s_unsigned_armed    = true;
     s_unsigned_armed_at = timer_read32();
@@ -495,6 +502,10 @@ bool fw_staging_unsigned_armed(void) {
 
 void fw_staging_disarm_unsigned(void) {
     s_unsigned_armed = false;
+}
+
+bool fw_staging_refused_unsigned(void) {
+    return s_refused_unsigned;
 }
 
 // FW-2: verify the staged FIRMWARE image's Ed25519 signature against the embedded
@@ -538,6 +549,9 @@ bool fw_staging_process_fontpack_reload(void) {
 }
 
 static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
+    // Cleared per attempt: a stale reason would mislabel a later CRC failure as
+    // a signature refusal, which is the exact confusion this flag exists to end.
+    s_refused_unsigned = false;
     if (!s_initialized) return false;
 
     // Flush any partial final page (padded with 0xFF already from fw_staging_begin/flush_page)
@@ -607,6 +621,7 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
                 if (fw_staging_unsigned_armed()) {
                     uprintf("FW_UP: unsigned/invalid image ALLOWED — physical override armed\n");
                 } else {
+                    s_refused_unsigned = true;
                     uprintf("FW_UP: REJECTED — image not validly signed. Press the "
                             "'allow unsigned firmware' key on the keyboard, then flash "
                             "again within %lus.\n",

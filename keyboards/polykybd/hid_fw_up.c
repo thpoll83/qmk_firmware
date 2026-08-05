@@ -268,8 +268,17 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             bool master_ok = fw_staging_finalize();   // also clears fw_up_active + restarts master core1
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
             memset(data, 0, length);
-            memcpy(data, ok ? "P\x42." : "P\x42!", 3);
-            uprintf("FW_UP_COMMIT: slave_ack=0x%02x master_finalize=%d\n", slave_ack, master_ok);
+            // Three outcomes, not two. 'S' distinguishes "refused: not validly
+            // signed" from '!' "staged CRC mismatch". They were the same byte
+            // until 2026-08-05, so the host and the HIL rig both reported a
+            // signature refusal as a CRC failure — a wrong answer at exactly the
+            // moment someone is trying to work out why a flash was rejected.
+            const char *status = ok ? "P\x42."
+                                    : (fw_staging_refused_unsigned() ? "P\x42S" : "P\x42!");
+            memcpy(data, status, 3);
+            uprintf("FW_UP_COMMIT: slave_ack=0x%02x master_finalize=%d%s\n",
+                    slave_ack, master_ok,
+                    fw_staging_refused_unsigned() ? " (refused: unsigned)" : "");
             raw_hid_send(data, length);
             return true;
         }

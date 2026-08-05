@@ -108,7 +108,8 @@ region; remove once that writer is found and fixed. split72 (real
 
 ## platforms/chibios/bootloaders/rp2040.c
 
-`POLYKYBD_VREG_VSEL`: when defined (by `-e POLYKYBD_SYS_CLK=200`, see
+`POLYKYBD_VREG_VSEL`: when defined (by `POLYKYBD_SYS_CLK=200`, the default since
+0.10.x — see
 `keyboards/polykybd/rules.mk`), raise the core-voltage select at the top of
 `__late_init()` — **before** the `clocks_init()` call already there.
 
@@ -122,7 +123,7 @@ no QMK hook early enough: `__late_init` runs before `main()`, hence before
 patch), and overriding the board dir wholesale would also detach the
 `configs/` include path QMK adds for the stock board.
 
-The raise is guarded, so a build without `POLYKYBD_SYS_CLK` compiles to
+The raise is guarded, so a build with `-e POLYKYBD_SYS_CLK=125` compiles to
 byte-identical code (verified by disassembly: stock `__late_init` still
 branches straight to `clocks_init`). The vendored pico-sdk predates the SDK's
 own automatic VREG raise for `SYS_CLK_MHZ=200` and does not compile

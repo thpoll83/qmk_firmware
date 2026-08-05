@@ -3,14 +3,14 @@
 CFLAGS += -Wno-strict-prototypes
 
 # ---------------------------------------------------------------------------
-# System clock (`-e POLYKYBD_SYS_CLK=200`)
+# System clock — 200 MHz by DEFAULT (`-e POLYKYBD_SYS_CLK=125` opts out)
 # ---------------------------------------------------------------------------
-# The RP2040 clock is NOT set by QMK or by us — ChibiOS's hal_lld_init() (and,
-# earlier, the double-tap-reset __late_init) calls the pico-sdk clocks_init(),
-# which reads the compile-time SYS_CLK_KHZ / PLL_SYS_* defines. Nothing
-# overrides them, so a stock build runs at the SDK default 125 MHz (NOT the
-# 133 MHz that several comments here used to claim — that is the chip's old
-# rated maximum, never the configured clock).
+# The RP2040 clock is NOT set by QMK — ChibiOS's hal_lld_init() (and, earlier,
+# the double-tap-reset __late_init) calls the pico-sdk clocks_init(), which
+# reads the compile-time SYS_CLK_KHZ / PLL_SYS_* defines. Nothing used to
+# override them, so every PolyKybd build before this ran at the SDK default
+# 125 MHz (NOT the 133 MHz several comments here used to claim — that is the
+# chip's old rated maximum, never the configured clock).
 #
 # Raspberry Pi certified the RP2040 for 200 MHz in 2025, but only at a core
 # voltage of >= 1.15 V (datasheet section 2.15.3); 1.10 V remains the 133 MHz
@@ -24,18 +24,34 @@ CFLAGS += -Wno-strict-prototypes
 # PLL: 12 MHz XOSC x 100 = 1200 MHz VCO / 6 / 1 = 200 MHz. That is the only
 # solution in the SDK's VCO range [750, 1600] MHz, since the VCO must be both
 # a multiple of the 12 MHz reference and 200 MHz x an integer post-divider.
-ifneq ($(strip $(POLYKYBD_SYS_CLK)),)
-  ifeq ($(strip $(POLYKYBD_SYS_CLK)),200)
+#
+# ⚠️ The peripherals do NOT need re-tuning at 200 MHz, and that is a property of
+# how they are configured rather than luck: SPI (SPI_DIVISOR), I2C, the PIO
+# split UART and WS2812 all derive their dividers from the LIVE clk_sys, and USB
+# runs off its own 48 MHz PLL. The one fixed divider is XIP flash, set in boot2
+# at clk_sys/PICO_FLASH_SPI_CLKDIV (4) — 50 MHz here, versus 31.25 at 125 MHz,
+# both far inside any QSPI part's rating. If you ever add a clock, re-check that
+# list rather than assuming it stays true.
+#
+# `?=` so a command-line `-e POLYKYBD_SYS_CLK=125` (which make treats as an
+# override) still wins — that is the escape hatch if a board ever misbehaves at
+# the higher clock, and it produces an image byte-identical to the pre-200 MHz
+# builds.
+POLYKYBD_SYS_CLK ?= 200
+ifeq ($(strip $(POLYKYBD_SYS_CLK)),200)
     OPT_DEFS += -DSYS_CLK_KHZ=200000 \
                 -DPLL_SYS_VCO_FREQ_KHZ=1200000 \
                 -DPLL_SYS_POSTDIV1=6 \
                 -DPLL_SYS_POSTDIV2=1 \
                 -DPOLYKYBD_VREG_VSEL=0xC
-  else
+else ifeq ($(strip $(POLYKYBD_SYS_CLK)),125)
+    # The SDK default: emit nothing at all, so this is the pre-200 MHz image.
+    # Deliberately NOT -DSYS_CLK_KHZ=125000 — that would be the same value by a
+    # different route and would stop the two builds being byte-comparable.
+else
     $(error POLYKYBD_SYS_CLK=$(POLYKYBD_SYS_CLK) is not a supported system clock \
-            (only 200; omit for the stock 125 MHz). Adding one means picking a \
-            VCO/postdiv triple AND the core voltage its frequency is certified at)
-  endif
+            (200 = default, 125 = the SDK stock clock). Adding one means picking \
+            a VCO/postdiv triple AND the core voltage its frequency is certified at)
 endif
 
 # OS detection (QMK feature): fingerprints the USB enumeration (wLength pattern) to

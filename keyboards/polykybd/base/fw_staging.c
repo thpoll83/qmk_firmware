@@ -637,12 +637,27 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
             // We must NOT block here waiting for the answer: COMMIT runs inside
             // raw_hid_receive() on the main loop, and the matrix is scanned by that
             // same loop — a busy-wait would guarantee the keypress is never seen.
-            if (sig != 1) {
+            //
+            // ⚠️ The prompt is offered for an image with NO signature (sig == 0) —
+            // a developer build — and NOT for one whose signature is present and
+            // fails to verify (sig == -1). Those are different events: the first is
+            // "you compiled this yourself", the second is "this file is not what it
+            // claims to be", i.e. corruption or tampering. Inviting a keypress to
+            // accept the second would hand the attacker the one thing the physical
+            // gate exists to withhold — a user who has been told to press A. So an
+            // invalid signature is refused outright, with no way through.
+            if (sig == -1) {
+                s_refused_unsigned = true;
+                uprint("FW_UP: REJECTED — signature does not verify (corrupt or tampered image). "
+                       "No confirmation is offered for this case.\n");
+                ok = false;
+                s_confirm = CONFIRM_IDLE;
+            } else if (sig == 0) {
                 switch (s_confirm) {
                     case CONFIRM_IDLE:
                         s_confirm    = CONFIRM_PENDING;
                         s_confirm_at = timer_read32();
-                        uprintf("FW_UP: image not validly signed — confirm on the keyboard "
+                        uprintf("FW_UP: image UNSIGNED — confirm on the keyboard "
                                 "(A = accept, R = reject) within %lus\n",
                                 (unsigned long)(FW_CONFIRM_WINDOW_MS / 1000));
                         ok = false;
@@ -654,12 +669,12 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
                         // Consumed here, so one confirmation authorises exactly this
                         // image — a second unsigned flash prompts again.
                         s_confirm = CONFIRM_IDLE;
-                        uprint("FW_UP: unsigned/invalid image ALLOWED by physical confirmation\n");
+                        uprint("FW_UP: unsigned image ALLOWED by physical confirmation\n");
                         break;
                     case CONFIRM_REJECTED:
                         s_confirm          = CONFIRM_IDLE;
                         s_refused_unsigned = true;
-                        uprint("FW_UP: REJECTED — image not validly signed\n");
+                        uprint("FW_UP: REJECTED — unsigned image, not confirmed\n");
                         ok = false;
                         break;
                 }

@@ -105,3 +105,35 @@ region; remove once that writer is found and fixed. split72 (real
 +    split_slave_pointing_pad_t poly_pointing_pad;
  #endif
 ```
+
+## platforms/chibios/bootloaders/rp2040.c
+
+`POLYKYBD_VREG_VSEL`: when defined (by `-e POLYKYBD_SYS_CLK=200`, see
+`keyboards/polykybd/rules.mk`), raise the core-voltage select at the top of
+`__late_init()` — **before** the `clocks_init()` call already there.
+
+That `clocks_init()` is the first point in the boot where the compile-time
+`SYS_CLK_KHZ` is applied, and the double-tap window immediately after it
+busy-waits for a full second, so this is the only place the voltage can be
+raised without running the longest stretch of the boot out of spec. There is
+no QMK hook early enough: `__late_init` runs before `main()`, hence before
+`halInit()` and every `early_hardware_init_*` hook. The one earlier hook,
+`__early_init()`, lives in ChibiOS's `board.c` (a pinned submodule, worse to
+patch), and overriding the board dir wholesale would also detach the
+`configs/` include path QMK adds for the stock board.
+
+The raise is guarded, so a build without `POLYKYBD_SYS_CLK` compiles to
+byte-identical code (verified by disassembly: stock `__late_init` still
+branches straight to `clocks_init`). The vendored pico-sdk predates the SDK's
+own automatic VREG raise for `SYS_CLK_MHZ=200` and does not compile
+`hardware_vreg` at all, which is why this is a register write rather than a
+`vreg_set_voltage()` call.
+
+```diff
+ void __late_init(void) {
++#if defined(POLYKYBD_VREG_VSEL)
++    hw_write_masked(&vreg_and_chip_reset_hw->vreg, ...VSEL...);
++    /* spin — the timer is not ticking yet */
++#endif
+     clocks_init();
+```

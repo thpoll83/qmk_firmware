@@ -7,6 +7,16 @@
 #include "wait.h"
 #include "pico/bootrom.h"
 
+#if defined(POLYKYBD_VREG_VSEL)
+#    include "hardware/structs/vreg_and_chip_reset.h"
+#    if !defined(RP2040_BOOTLOADER_DOUBLE_TAP_RESET)
+// The raise lives in __late_init, which only exists in the double-tap build. If
+// that ever stops being set, the board would silently boot its raised system
+// clock at the default 1.10 V instead — fail the build rather than ship that.
+#        error "POLYKYBD_VREG_VSEL requires RP2040_BOOTLOADER_DOUBLE_TAP_RESET"
+#    endif
+#endif
+
 #if !defined(RP2040_BOOTLOADER_DOUBLE_TAP_RESET_LED)
 #    define RP2040_BOOTLOADER_DOUBLE_TAP_RESET_LED_MASK 0U
 #else
@@ -37,6 +47,23 @@ const uint32_t                                                              magi
 // populated function pointer tables to the optimized math functions in the
 // bootrom. This function is called just prior to main.
 void __late_init(void) {
+#if defined(POLYKYBD_VREG_VSEL)
+    // Raise the core voltage BEFORE clocks_init() brings the system PLL up.
+    // A system clock above the 133 MHz / 1.10 V operating point is only
+    // certified at a higher VREG setting (RP2040 datasheet 2.15.3: 200 MHz
+    // needs >= 1.15 V). clocks_init() below is the FIRST thing in the boot to
+    // apply SYS_CLK_KHZ, and the double-tap window right after it busy-waits
+    // for a full second, so raising the voltage anywhere later would leave the
+    // longest stretch of the boot running out of spec.
+    hw_write_masked(&vreg_and_chip_reset_hw->vreg, ((unsigned)POLYKYBD_VREG_VSEL) << VREG_AND_CHIP_RESET_VREG_VSEL_LSB, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
+    // Let the regulator settle before the faster clock arrives. The timer is
+    // not ticking yet (its tick generator is set up by clocks_init), so this
+    // cannot use wait_us — spin instead. We are still on the ~6.5 MHz ROSC
+    // here, so this is comfortably longer than the regulator needs.
+    for (volatile uint32_t i = 0; i < 1000U; i++) {
+        __asm__ volatile("nop");
+    }
+#endif
     // All clocks have to be enabled before jumping to the bootloader function,
     // otherwise the bootrom will be stuck infinitely.
     clocks_init();

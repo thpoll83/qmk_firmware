@@ -2,6 +2,42 @@
 # pico-sdk host header uses K&R-style empty () prototype; suppress the warning it triggers
 CFLAGS += -Wno-strict-prototypes
 
+# ---------------------------------------------------------------------------
+# System clock (`-e POLYKYBD_SYS_CLK=200`)
+# ---------------------------------------------------------------------------
+# The RP2040 clock is NOT set by QMK or by us — ChibiOS's hal_lld_init() (and,
+# earlier, the double-tap-reset __late_init) calls the pico-sdk clocks_init(),
+# which reads the compile-time SYS_CLK_KHZ / PLL_SYS_* defines. Nothing
+# overrides them, so a stock build runs at the SDK default 125 MHz (NOT the
+# 133 MHz that several comments here used to claim — that is the chip's old
+# rated maximum, never the configured clock).
+#
+# Raspberry Pi certified the RP2040 for 200 MHz in 2025, but only at a core
+# voltage of >= 1.15 V (datasheet section 2.15.3); 1.10 V remains the 133 MHz
+# operating point. Newer pico-sdk raises VREG for you when SYS_CLK_MHZ=200 —
+# the SDK vendored here predates that AND does not compile hardware_vreg at
+# all, so POLYKYBD_VREG_VSEL below drives the raise by hand (see the patch to
+# platforms/chibios/bootloaders/rp2040.c, tracked in UPSTREAM_PATCHES.md).
+# Without it the board would run its whole boot — including the 1000 ms
+# double-tap window — at 200 MHz on 1.10 V, i.e. out of spec.
+#
+# PLL: 12 MHz XOSC x 100 = 1200 MHz VCO / 6 / 1 = 200 MHz. That is the only
+# solution in the SDK's VCO range [750, 1600] MHz, since the VCO must be both
+# a multiple of the 12 MHz reference and 200 MHz x an integer post-divider.
+ifneq ($(strip $(POLYKYBD_SYS_CLK)),)
+  ifeq ($(strip $(POLYKYBD_SYS_CLK)),200)
+    OPT_DEFS += -DSYS_CLK_KHZ=200000 \
+                -DPLL_SYS_VCO_FREQ_KHZ=1200000 \
+                -DPLL_SYS_POSTDIV1=6 \
+                -DPLL_SYS_POSTDIV2=1 \
+                -DPOLYKYBD_VREG_VSEL=0xC
+  else
+    $(error POLYKYBD_SYS_CLK=$(POLYKYBD_SYS_CLK) is not a supported system clock \
+            (only 200; omit for the stock 125 MHz). Adding one means picking a \
+            VCO/postdiv triple AND the core voltage its frequency is certified at)
+  endif
+endif
+
 # OS detection (QMK feature): fingerprints the USB enumeration (wLength pattern) to
 # guess the host OS. Used as the AUTO-mode fallback for the active-OS state — the
 # only source on machines where the host app can't run (locked-down) or doesn't

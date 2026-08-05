@@ -33,6 +33,22 @@ OK`, and a byte-flipped signature logged `INVALID` — the second test is the on
 matters, since it proves the check discriminates rather than rubber-stamps, and a
 passing flash alone cannot show that.
 
+## Telling a refusal apart from a CRC failure
+
+`FW_UP_COMMIT` answers with three status bytes, not two:
+
+| byte | meaning |
+|---|---|
+| `.` | staged image accepted (CRC verified, signature valid or not required) |
+| `S` | **refused — image not validly signed** |
+| `!` | staged CRC mismatch (or another finalize failure) |
+
+`S` exists because the signature check sits behind the CRC result inside
+`fw_staging_finalize()`, so a bare bool cannot distinguish them. Until it was added
+the host and the HIL rig both printed "staged CRC mismatch" for images whose CRC was
+perfect — a wrong answer at precisely the moment someone is trying to find out why a
+flash was rejected.
+
 ## Flashing an UNSIGNED build (developer escape hatch)
 
 Your own `qmk compile` output is unsigned, so under enforcement it will be refused

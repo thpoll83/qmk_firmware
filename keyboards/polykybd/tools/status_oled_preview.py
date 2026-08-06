@@ -110,15 +110,18 @@ def draw(setpix, font, x, y, text):
         if not (f['first'] <= cp <= f['last']):
             continue
         g = gl[cp - f['first']]
-        bo = g['off']; bit = 0; bits = 0
-        for gy in range(g['h']):
-            for gx in range(g['w']):
-                if (bit & 7) == 0:
-                    bits = bm[bo]; bo += 1
-                if bits & 0x80:
+        # COLUMN-NATIVE (OLED page) layout, matching kdisp_write_gfx_char and the
+        # host's tools/gfx_font.py: 1 byte = 8 VERTICAL pixels, cb bytes per
+        # column, LSB = top of the page. NOT the classic row-major Adafruit
+        # layout — reading it that way renders scrambled glyphs that look like
+        # dither noise (which is what this tool did before the ABI-2 transpose
+        # was accounted for here).
+        cb = (g['h'] + 7) >> 3
+        for gx in range(g['w']):
+            col = g['off'] + gx * cb
+            for gy in range(g['h']):
+                if bm[col + (gy >> 3)] & (1 << (gy & 7)):
                     setpix(x + g['xo'] + gx, y + g['yo'] + gy)
-                bits = (bits << 1) & 0xFF
-                bit += 1
         x += g['xa']
 
 
@@ -137,13 +140,59 @@ def draw_glyph_half(setpix, font, x, y, cp):
                     sx, sy = dx * 2 + ox, dy * 2 + oy
                     if sx >= w or sy >= h:
                         continue
-                    bit = sy * w + sx
-                    if bm[g['off'] + (bit >> 3)] & (0x80 >> (bit & 7)):
+                    cb = (h + 7) >> 3          # column-native, as in draw()
+                    if bm[g['off'] + sx * cb + (sy >> 3)] & (1 << (sy & 7)):
                         setpix(x + dx, y + dy)
                         break
                 else:
                     continue
                 break
+
+
+def text_bbox(font, text):
+    """Mirror of kdisp_gfx_text_bbox: lit-pixel extents of `text` drawn at
+    (x=0, baseline=0), as (x0, x1, y0, y1). Single-font array, so there is no
+    per-glyph yAdvance baseline shift to fold in."""
+    f, _bm, gl = font
+    x = 0
+    x0 = y0 = 127
+    x1 = y1 = -128
+    for cp in text:
+        if not (f['first'] <= cp <= f['last']):
+            continue
+        g = gl[cp - f['first']]
+        if g['w'] and g['h']:
+            x0 = min(x0, x + g['xo'])
+            x1 = max(x1, x + g['xo'] + g['w'] - 1)
+            y0 = min(y0, g['yo'])
+            y1 = max(y1, g['yo'] + g['h'] - 1)
+        x += g['xa']
+    return x0, x1, y0, y1
+
+
+def build_fw_confirm_panel(side, small):
+    """FW-2 unsigned-image confirmation screen — mirror of oled_helper.c's
+    oled_fw_confirm_screen(). Three lines, each centred in its own H/3 band from
+    its own bbox, so a line with a descender sits level rather than being pushed
+    by the tallest line in the set. `side` is 'L' or 'R' — each half names its
+    OWN key, exactly as the firmware does."""
+    pts = []
+    setp = lambda px, py: pts.append((px, py))
+    tall = P_H >= 64
+    l0 = s2cp("Unsigned") if tall else s2cp("Unsigned!")
+    l1 = s2cp("firmware!") if tall else None
+    l2 = s2cp("A = ACCEPT") if side == 'L' else s2cp("R = REJECT")
+    lines = [l0, l1, l2] if l1 else [l0, l2]
+    band = P_H // len(lines)
+    for i, txt in enumerate(lines):
+        bx0, bx1, by0, by1 = text_bbox(small, txt)
+        w = bx1 - bx0 + 1
+        x = (P_W - w) // 2 - bx0
+        if x < 0:
+            x = 0
+        base = band * i + band // 2 - (by0 + by1) // 2
+        draw(setp, small, x, base, txt)
+    return pts
 
 
 def measure_width(font, text):
@@ -287,6 +336,10 @@ USB_BMP = [0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x8
            0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0]
 LINK_BMP = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00,
             0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+
+def s2cp(t):
+    return [ord(c) for c in t]
 
 
 def s(t):

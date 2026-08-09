@@ -16,6 +16,10 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     import os
     import string
     from openpyxl import load_workbook
+    # data_only=True => we read the CACHED formula results.  ⚠️ Therefore NEVER SAVE
+    # lang_lut.xlsx THROUGH openpyxl: it does not recalculate, so a save drops every
+    # cached value and the next cog run emits empty tables with no error.  Edit it in
+    # Excel/LibreOffice, or patch the sheet XML in the zip.  See lang/README.md.
     wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "lang_lut.xlsx"), data_only=True)
     sheet = wb['key_lut']
 

@@ -1563,6 +1563,32 @@ static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
     return 0;
 }
 
+// Resolve the latin variation a letter key should display/emit on the _ADDLANG1
+// layer, honouring the persisted per-case pick in latin_sync_t.ex (high nibble =
+// uppercase, low nibble = lowercase).
+//
+// Returns NULL when the letter has no variations at all.  A pick that lands on an
+// empty slot falls back to variation 0 instead of handing back the NULL cell: the
+// nibble can hold 0..15 while only LATIN_EX_VARIATIONS exist, and nothing
+// re-validates a stored pick against a row that later shrank.  Feeding that NULL
+// to kdisp_write_gfx_text() / register_unicode() reads address 0 — mapped boot ROM
+// on RP2040, so no fault, just a garbage codepoint and junk on the keycap.  The
+// picker now refuses to store an empty slot (see process_record_user), but a byte
+// written before that guard — or a stale/garbage EEPROM — still arrives here.
+static const uint32_t* latin_variation(uint16_t keycode, bool upper_case) {
+    if (keycode < KC_A || keycode > KC_Z) {
+        return NULL;
+    }
+    const uint8_t row = (upper_case ? 0 : 26) + (uint8_t)(keycode - KC_A);
+    if (latin_ex_map[row][0] == NULL) {
+        return NULL;                        // this letter has no variations
+    }
+    const uint8_t   packed = get_global_latin_table()->ex[keycode - KC_A];
+    const uint8_t   idx    = upper_case ? (uint8_t)(packed >> 4) : (uint8_t)(packed & 0x0F);
+    const uint32_t* chosen = (idx < LATIN_EX_VARIATIONS) ? latin_ex_map[row][idx] : NULL;
+    return (chosen != NULL) ? chosen : latin_ex_map[row][0];
+}
+
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const poly_layer_t* local_layer = get_local_layer();
 
@@ -1572,13 +1598,9 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const bool is_letter = keycode>=KC_A && keycode<=KC_Z;
     if(is_letter && add_lang) {
         //display the previously selected latin variation of the letter
-        const latin_sync_t* global_latin_table = get_global_latin_table();
-        const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-        uint8_t variation = (shift || state.caps_lock) ? global_latin_table->ex[keycode-KC_A]>>4 : global_latin_table->ex[keycode-KC_A]&0xf;
-
-        const uint32_t* def_variation = latin_ex_map[offset+keycode-KC_A][0];
-        if(def_variation!=NULL) {
-            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, latin_ex_map[offset+keycode-KC_A][variation]);
+        const uint32_t* variation = latin_variation(keycode, shift || state.caps_lock);
+        if(variation!=NULL) {
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, variation);
             return true;
         }
         return false;
@@ -1587,7 +1609,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     //variation selection on 0~9
     uint16_t local_last_latin_keycode = get_local_last_latin_keycode();
     if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
-        if(add_lang && alt && local_last_latin_keycode!=0) {
+        if(add_lang && alt && local_last_latin_keycode>=KC_A && local_last_latin_keycode<=KC_Z) {
             //show all available alternatives for selected latin letter
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
             const uint32_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
@@ -3091,15 +3113,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                     const bool lshift = get_mods() == MOD_BIT(KC_LEFT_SHIFT);
                     const bool rshift = get_mods() == MOD_BIT(KC_RIGHT_SHIFT);
                     const bool upper_case = lshift || rshift || global_layer->led_state.caps_lock;
-                    const uint8_t offset = upper_case ? 0 : 26;
-                    if(latin_ex_map[offset+keycode-KC_A][0]) {
-                        const latin_sync_t* global_latin_table = get_global_latin_table();
-                        uint8_t variation = upper_case ? global_latin_table->ex[keycode-KC_A]>>4 : global_latin_table->ex[keycode-KC_A]&0xf;
-
+                    const uint32_t* variation = latin_variation(keycode, upper_case);
+                    if(variation!=NULL) {
                         //this is a work-around (at least for I-Bus on Linux we need to remove the shift, otherwise the Unicode sequence will not be recognized!)
                         if(lshift) unregister_code16(KC_LEFT_SHIFT);
                         if(rshift) unregister_code16(KC_RIGHT_SHIFT);
-                        register_unicode(latin_ex_map[offset+keycode-KC_A][variation][0]);
+                        register_unicode(variation[0]);
                         if(lshift) register_code16(KC_LEFT_SHIFT);
                         if(rshift) register_code16(KC_RIGHT_SHIFT);
                         return false;
@@ -3114,10 +3133,21 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         if((get_mods() & MOD_MASK_ALT) != 0 && addlang) {
             switch(keycode) {
                 case KC_LAT0 ... KC_LAT9:
-                    if( last_latin_keycode!=0) {
+                    if( last_latin_keycode>=KC_A && last_latin_keycode<=KC_Z) {
+                        const bool pick_upper = ((get_mods() & MOD_MASK_SHIFT) != 0) || global_layer->led_state.caps_lock;
+                        const uint8_t pick_row  = (pick_upper ? 0 : 26) + (uint8_t)(last_latin_keycode - KC_A);
+                        const uint8_t pick_slot = (uint8_t)(keycode - KC_LAT0);
+                        // Only the slots that exist are drawn on the picker keycaps
+                        // (render_key returns false for the rest), so a press on an
+                        // empty one is a press on a blank key.  Ignore it — storing
+                        // the index would leave ex[] pointing at a NULL cell, which
+                        // the letter then "emits" as whatever lies at address 0.
+                        if(latin_ex_map[pick_row][pick_slot] == NULL) {
+                            break;
+                        }
                         latin_sync_t* global_latin_table = access_global_latin_table();
                         uint8_t current = global_latin_table->ex[last_latin_keycode-KC_A];
-                        if((get_mods() & MOD_MASK_SHIFT) || global_layer->led_state.caps_lock) {
+                        if(pick_upper) {
                             global_latin_table->ex[last_latin_keycode-KC_A] = ((keycode-KC_LAT0)<<4) | (current&0xf);
                         } else {
                             global_latin_table->ex[last_latin_keycode-KC_A] = (keycode-KC_LAT0) | (current&0xf0);
@@ -3607,7 +3637,21 @@ void keyboard_post_init_user(void) {
     local_state->flags = STATUS_DISP_ON;   // no RGB on this variant
 #endif
 
-    memcpy(access_global_latin_table()->ex, ee.latin_ex, sizeof(ee.latin_ex));
+    // Normalise the persisted latin-variation picks.  Each nibble can hold 0..15
+    // while only LATIN_EX_VARIATIONS slots exist, and a row may have lost entries
+    // since the byte was written, so a stale EEPROM can name a slot that is empty
+    // or off the end.  latin_variation() falls back to slot 0 at read time either
+    // way; rewriting the byte here stops a dead index in one case's nibble being
+    // carried forward every time the other case is re-picked.
+    latin_sync_t* latin_table = access_global_latin_table();
+    memcpy(latin_table->ex, ee.latin_ex, sizeof(ee.latin_ex));
+    for(uint8_t i = 0; i < sizeof(latin_table->ex); i++) {
+        uint8_t hi = (uint8_t)(latin_table->ex[i] >> 4);      // uppercase pick -> row i
+        uint8_t lo = (uint8_t)(latin_table->ex[i] & 0x0F);    // lowercase pick -> row 26+i
+        if(hi >= LATIN_EX_VARIATIONS || latin_ex_map[i][hi] == NULL)        hi = 0;
+        if(lo >= LATIN_EX_VARIATIONS || latin_ex_map[26 + i][lo] == NULL)   lo = 0;
+        latin_table->ex[i] = (uint8_t)((hi << 4) | lo);
+    }
 
     // Restore the MRU recents and schedule a one-time push to the slave half.
     mru_load(ee.mru_emoji, ee.mru_lang);

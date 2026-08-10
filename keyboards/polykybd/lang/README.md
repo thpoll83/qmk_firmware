@@ -65,10 +65,18 @@ cd .. && ./run_cog.sh
 It appends to the first free slot of each named row and writes **both** cells the
 pair needs — the character, and the `=DEC2HEX(UNICODE(..))` cell below it *with the
 hex the formula would have produced*, because that cached value is what cog reads.
-Only `sheet3.xml` is rewritten; every other zip entry is copied byte-for-byte, so
-the caches on the other two sheets survive (which an openpyxl save would not — see
-above). Always pass **both** cases in one go: the table is case-symmetric and half a
-pair is the bug the section above describes.
+Only `sheet3.xml` is rewritten (read straight out of the zip, never extracted) and
+every other entry is copied byte-for-byte, so the caches on the other two sheets
+survive — which an openpyxl save would not, see above. The splices are string
+surgery, deliberately: anything that re-serialises the sheet would rewrite the
+bytes we are trying to leave alone. The result is therefore parsed for
+well-formedness **before** it replaces the workbook, so a bad edit fails loudly
+instead of shipping a corrupt `.xlsx` that only breaks when someone opens it.
+
+Pass **both** cases in one go — the table is case-symmetric, and half a pair is the
+shape of the bug the section above describes, so a one-case command is refused
+unless you mean it (`--allow-asymmetric`). Naming one letter twice is fine and
+lands in consecutive slots.
 
 Two things it will not do for you. There are only **`LATIN_EX_VARIATIONS` (10)**
 slots, because `KC_LAT0..KC_LAT9` are the picker keys — a full row (`A I O U`, both

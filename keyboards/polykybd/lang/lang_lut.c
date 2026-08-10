@@ -16,6 +16,10 @@ static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     import os
     import string
     from openpyxl import load_workbook
+    # data_only=True => we read the CACHED formula results.  ⚠️ Therefore NEVER SAVE
+    # lang_lut.xlsx THROUGH openpyxl: it does not recalculate, so a save drops every
+    # cached value and the next cog run emits empty tables with no error.  Edit it in
+    # Excel/LibreOffice, or patch the sheet XML in the zip.  See lang/README.md.
     wb = load_workbook(filename = os.path.join(os.path.abspath(os.path.dirname(cog.inFile)), "lang_lut.xlsx"), data_only=True)
     sheet = wb['key_lut']
 
@@ -9933,6 +9937,7 @@ const uint32_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
 
     max_variation_index = 0
     letter_index = 1
+    seen_letters = set()
     current_letter = latin_sheet[f"A{letter_index}"].value
     current_code = latin_sheet[f"B{letter_index+1}"].value
     while current_letter:
@@ -9943,6 +9948,18 @@ const uint32_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
             max_variation_index = max(max_variation_index, variation_index)
             variation_index = variation_index + 1
             current_code = latin_sheet[f"{chr(ord('A')+variation_index)}{letter_index+1}"].value
+
+        # A mislabelled case row (column A) is otherwise SILENT: the second
+        # occurrence overwrites the first, so one case renders the other case's
+        # glyphs and the mislabelled letter's own row goes all-NULL.  That shipped
+        # for ~2 years as "Intl+i does nothing, Intl+Shift+I types the lowercase
+        # form" (row 27 of latin_sup_ex said 'I' instead of 'i').  Fail the build
+        # instead of emitting a quietly wrong table.
+        if current_letter in seen_letters:
+            raise AssertionError(
+                f"latin_sup_ex row {letter_index}: duplicate letter label "
+                f"'{current_letter}' — check the case of column A")
+        seen_letters.add(current_letter)
 
         d.update({current_letter : variations})
         letter_index = letter_index + 2
@@ -9978,7 +9995,7 @@ const uint32_t* latin_ex_map[26*2][10] = {
   /* [5] 70/F */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   /* [6] 71/G */ { U"\x11C", U"\x11E", U"\x120", U"\x122", NULL, NULL, NULL, NULL, NULL, NULL },
   /* [7] 72/H */ { U"\x124", U"\x126", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [8] 73/I */ { U"\xEC", U"\xED", U"\xEE", U"\xEF", U"\x129", U"\x12B", U"\x12D", U"\x12F", U"\x131", U"\x133" },
+  /* [8] 73/I */ { U"\xCC", U"\xCD", U"\xCE", U"\xCF", U"\x128", U"\x12A", U"\x12C", U"\x12E", U"\x130", U"\x132" },
   /* [9] 74/J */ { U"\x134", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   /* [10] 75/K */ { U"\x136", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   /* [11] 76/L */ { U"\x139", U"\x13B", U"\x13D", U"\x13F", U"\x141", NULL, NULL, NULL, NULL, NULL },
@@ -10004,7 +10021,7 @@ const uint32_t* latin_ex_map[26*2][10] = {
   /* [31] 102/f */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   /* [32] 103/g */ { U"\x11D", U"\x11F", U"\x121", U"\x123", NULL, NULL, NULL, NULL, NULL, NULL },
   /* [33] 104/h */ { U"\x125", U"\x127", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [34] 105/i */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [34] 105/i */ { U"\xEC", U"\xED", U"\xEE", U"\xEF", U"\x129", U"\x12B", U"\x12D", U"\x12F", U"\x131", U"\x133" },
   /* [35] 106/j */ { U"\x135", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   /* [36] 107/k */ { U"\x137", U"\x138", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   /* [37] 108/l */ { U"\x13A", U"\x13C", U"\x13E", U"\x140", U"\x142", NULL, NULL, NULL, NULL, NULL },

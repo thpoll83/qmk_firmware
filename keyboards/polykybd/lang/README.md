@@ -53,3 +53,27 @@ therefore makes one case overwrite the other and leaves the mislabelled letter's
 row empty — which shipped for ~2 years as "`Intl+i` does nothing, `Intl+Shift+I`
 types the lower-case form" (`A27` said `I`). The cog now **fails the build** on a
 duplicate label rather than emitting a quietly wrong table, so a repeat is loud.
+
+### Adding a variation: `_add_latin_variation.py`
+
+```bash
+./_add_latin_variation.py --dry-run lang_lut.xlsx S 'Ș' s 'ș'   # report, change nothing
+./_add_latin_variation.py          lang_lut.xlsx S 'Ș' s 'ș'
+cd .. && ./run_cog.sh
+```
+
+It appends to the first free slot of each named row and writes **both** cells the
+pair needs — the character, and the `=DEC2HEX(UNICODE(..))` cell below it *with the
+hex the formula would have produced*, because that cached value is what cog reads.
+Only `sheet3.xml` is rewritten; every other zip entry is copied byte-for-byte, so
+the caches on the other two sheets survive (which an openpyxl save would not — see
+above). Always pass **both** cases in one go: the table is case-symmetric and half a
+pair is the bug the section above describes.
+
+Two things it will not do for you. There are only **`LATIN_EX_VARIATIONS` (10)**
+slots, because `KC_LAT0..KC_LAT9` are the picker keys — a full row (`A I O U`, both
+cases) has no room, which is what currently keeps Vietnamese `Ơ ơ Ư ư` and pinyin
+`ǖ ǘ ǚ ǜ` out. And the glyph must exist in a **resident** font or the keycap draws
+nothing without a font pack; check with `PolyKybdHost/tools/gfx_font.py` against
+`base/fonts` before adding (Latin-1 Sup / Ext-A / Ext-B are all covered by the
+`latin` category, which is `resident: true`).

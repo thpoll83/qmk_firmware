@@ -272,7 +272,12 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,      _______,    _______,    _______,    _______,    _______,    _______,
         KC_NO,      _______,    _______,    _______,    _______,    _______,    _______,    _______,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        KC_NO,      KC_NO,      _______,    _______,                _______,    _______,    _______,
+        // Ctrl is the variation-picker modifier (LATIN_PICKER_MOD), so it MUST fall
+        // through to the base layer here -- it used to be KC_NO, which is why the
+        // picker was on Alt.  Alt is now KC_NO instead: the picker swallows the keys
+        // it handles, so the host saw a bare Alt tap and Windows moved focus to the
+        // menu bar, right in the middle of typing an accented letter.
+        _______,    KC_NO,      KC_NO,      _______,                _______,    _______,    _______,
 
                     KC_LAT5,    KC_LAT6,    KC_LAT7,    KC_LAT8,    KC_LAT9,    KC_NO,      KC_NO,
                     _______,    _______,    _______,    _______,    _______,    _______,    KC_NO,

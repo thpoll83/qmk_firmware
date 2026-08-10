@@ -188,8 +188,13 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_ADDLANG1] = POLY_LAYOUT(
         KC_NO,   KC_NO,   KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3,
         KC_NO,   _______, _______, _______, _______, _______,
-        KC_NO,   _______, _______, _______, _______, _______,
-        KC_NO,   KC_NO,   _______,
+        // Shift picks which CASE the variation is stored for, so it has to reach
+        // the base layer here too (it was KC_NO).  Note nothing currently selects
+        // _ADDLANG1 on split42 -- there is no MO(_ADDLANG1) in this keymap -- so
+        // this makes the layer correct for when one is added, it does not enable it.
+        _______, _______, _______, _______, _______, _______,
+        // Ctrl (LATIN_PICKER_MOD) must reach the base layer -- see the split72 note.
+        _______, KC_NO,   _______,
         KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
         _______, _______, _______, _______, _______, KC_NO,
         _______, _______, _______, _______, _______, KC_NO,

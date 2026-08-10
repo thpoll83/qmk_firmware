@@ -3645,12 +3645,28 @@ void keyboard_post_init_user(void) {
     // carried forward every time the other case is re-picked.
     latin_sync_t* latin_table = access_global_latin_table();
     memcpy(latin_table->ex, ee.latin_ex, sizeof(ee.latin_ex));
+    bool latin_normalised = false;
     for(uint8_t i = 0; i < sizeof(latin_table->ex); i++) {
         uint8_t hi = (uint8_t)(latin_table->ex[i] >> 4);      // uppercase pick -> row i
         uint8_t lo = (uint8_t)(latin_table->ex[i] & 0x0F);    // lowercase pick -> row 26+i
         if(hi >= LATIN_EX_VARIATIONS || latin_ex_map[i][hi] == NULL)        hi = 0;
         if(lo >= LATIN_EX_VARIATIONS || latin_ex_map[26 + i][lo] == NULL)   lo = 0;
-        latin_table->ex[i] = (uint8_t)((hi << 4) | lo);
+        const uint8_t normalised = (uint8_t)((hi << 4) | lo);
+        if(normalised != latin_table->ex[i]) {
+            latin_table->ex[i] = normalised;
+            latin_normalised   = true;
+        }
+    }
+    if(latin_normalised) {
+        // access_global_latin_table() returns &g_latin, i.e. the very buffer
+        // save_user_latin() writes, so the normalised bytes are already in place --
+        // they only need scheduling for the next flush point.  Gate it on an actual
+        // change: marking latin dirty unconditionally would rewrite the 26-byte
+        // block on EVERY boot->suspend cycle with nothing to correct, and EEPROM
+        // write frequency is load-bearing here (the wear-levelling consolidation
+        // erase blocking a split transaction is what made the slave go
+        // unresponsive -- see the readme).  A corrupt byte thus converges once.
+        mark_latin_dirty();
     }
 
     // Restore the MRU recents and schedule a one-time push to the slave half.

@@ -1563,6 +1563,17 @@ static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
     return 0;
 }
 
+// The modifier that, held together with Intl (_ADDLANG1), opens the variation
+// picker on the number row.
+//
+// ⚠️ This was MOD_MASK_ALT and must not go back.  The picker swallows the keys it
+// handles (process_record_user returns false), so the host only ever saw the
+// modifier go down and back up — and a bare Alt tap is how Windows activates the
+// menu bar.  Picking a variation therefore yanked focus out of the text field in
+// a lot of programs, which is precisely when you are typing accented letters.  A
+// bare Ctrl tap does nothing in the same apps.
+#define LATIN_PICKER_MOD MOD_MASK_CTRL
+
 // Resolve the latin variation a letter key should display/emit on the _ADDLANG1
 // layer, honouring the persisted per-case pick in latin_sync_t.ex (high nibble =
 // uppercase, low nibble = lowercase).
@@ -1594,7 +1605,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
     const bool shift = ((local_layer->mods & MOD_MASK_SHIFT) != 0);
     const bool add_lang = get_highest_layer(local_layer->layer)==_ADDLANG1;
-    const bool alt = ((local_layer->mods & MOD_MASK_ALT) != 0);
+    const bool picker_mod = ((local_layer->mods & LATIN_PICKER_MOD) != 0);
     const bool is_letter = keycode>=KC_A && keycode<=KC_Z;
     if(is_letter && add_lang) {
         //display the previously selected latin variation of the letter
@@ -1609,7 +1620,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     //variation selection on 0~9
     uint16_t local_last_latin_keycode = get_local_last_latin_keycode();
     if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
-        if(add_lang && alt && local_last_latin_keycode>=KC_A && local_last_latin_keycode<=KC_Z) {
+        if(add_lang && picker_mod && local_last_latin_keycode>=KC_A && local_last_latin_keycode<=KC_Z) {
             //show all available alternatives for selected latin letter
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
             const uint32_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
@@ -3109,7 +3120,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             }
             case KC_A ... KC_Z:
                 set_local_last_latin_keycode(keycode);
-                if((get_mods() & MOD_MASK_ALT) == 0 && addlang) {
+                if((get_mods() & LATIN_PICKER_MOD) == 0 && addlang) {
                     const bool lshift = get_mods() == MOD_BIT(KC_LEFT_SHIFT);
                     const bool rshift = get_mods() == MOD_BIT(KC_RIGHT_SHIFT);
                     const bool upper_case = lshift || rshift || global_layer->led_state.caps_lock;
@@ -3130,7 +3141,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         }
         uint16_t last_latin_keycode = get_local_last_latin_keycode();
 
-        if((get_mods() & MOD_MASK_ALT) != 0 && addlang) {
+        if((get_mods() & LATIN_PICKER_MOD) != 0 && addlang) {
+            // A modifier must still reach QMK while the picker is open.  This
+            // block used to `return false` for EVERY press, so the Shift PRESS
+            // was swallowed, get_mods() never gained the bit, and pick_upper
+            // below could only ever be true if Shift had been held BEFORE the
+            // picker was opened — "press Shift first or you cannot choose the
+            // capital".  Letting it through also flips the keycaps to the
+            // upper-case row for free: `mods` is part of poly_layer_t, so the
+            // change shows up as a layer_diff and housekeeping redraws.
+            if(IS_MODIFIER_KEYCODE(keycode)) {
+                return true;
+            }
             switch(keycode) {
                 case KC_LAT0 ... KC_LAT9:
                     if( last_latin_keycode>=KC_A && last_latin_keycode<=KC_Z) {

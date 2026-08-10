@@ -45,6 +45,25 @@ file is hand-maintained and is the other half of the contract. Keep the rows in
 ascending codepoint order; column F shows the gap to the previous row, which makes
 a missing or duplicated codepoint visible at a glance.
 
+## The picker binding: `Intl` + **Ctrl** + a letter, then a digit
+
+Hold `Intl` (`MO(_ADDLANG1)`) and a letter types that letter's chosen variation;
+add **Ctrl** and the number row becomes the picker for the last letter pressed.
+Shift (or Caps) selects which *case* the pick applies to, and may be pressed at any
+point before the digit. The binding lives in one place, `LATIN_PICKER_MOD`
+(`poly_keymap.c`).
+
+⚠️ **It was Alt, and must not go back.** The picker swallows the keys it handles
+(`process_record_user` returns `false`), so the host only ever saw the modifier go
+down and up again — and a bare Alt tap is how Windows activates the menu bar, which
+pulled focus out of the text field in a lot of programs. That is exactly the moment
+you are typing accented letters. A bare Ctrl tap does nothing in those same apps.
+
+The same swallow is why modifiers are now explicitly let through
+(`IS_MODIFIER_KEYCODE` → `return true`): the Shift *press* used to be eaten too, so
+`get_mods()` never gained the bit and the upper-case row could only be reached by
+holding Shift **before** opening the picker.
+
 ## `latin_sup_ex` rows are `(UPPER, lower)` pairs and the label carries the case
 
 Column A of each pair's first row is the upper-case letter, the next pair-row is the

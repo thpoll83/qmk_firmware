@@ -173,11 +173,25 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    git push origin $(git branch --show-current)
    ```
 
+8b. **Label the PR `perf`.** A catch-up merge is the change most likely to move
+   main-loop timing with **no PolyKybd source touched** — new ChibiOS / pico-sdk pins
+   and core split/USB/scheduler changes — and it is the PR CodeRabbit skips, so
+   `Build firmware` + `HIL test` are the only other checks and neither measures
+   timing. `Performance measurement (split72)` is report-only, so it cannot redden the
+   PR. Apply it as its **own** label call: each label fires its own workflow run, so
+   batching it with `bump:*` starts two identical rig runs.
+
+   After the merge lands and the number is understood, **move the baseline** —
+   `polykybd-ctnd`'s `perf/baselines/split72.json` is compared against, never
+   auto-updated, so leaving it pre-merge makes every later PR report the merge's
+   delta as a phantom regression.
+
 9. **Report**:
    - Number of upstream commits merged.
    - Any files that had conflicts and how they were resolved.
    - New HEAD SHA.
    - Whether a build check was run and whether it passed.
+   - The perf table vs. the baseline, and whether the baseline was moved.
 
 ## Known conflict-prone files
 

@@ -5,6 +5,12 @@
 //Execute the following command to do so (via cogapp):
 //cog -r lang_lut.c
 #include "lang_lut.h"
+// ⚠️ Included for the extern declaration of latin_ex_map, so the compiler SEES both
+// it and the definition below and rejects a bound mismatch. It did not use to be,
+// which made the header's "a mismatch is a compile error at the definition" comment
+// false: the array grew 14 -> 21 -> 36 while LATIN_EX_VARIATIONS stayed 14, and
+// every consumer indexed rows at stride 14 into a stride-36 array in silence.
+#include "lang_lut_ext.h"
 #include "quantum.h"
 
 #include "../state.h"
@@ -9984,7 +9990,13 @@ const uint32_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
     # shape as the ragged-initialiser bug the padding comment below describes.
     last_emitted = len(d) - 1
 
-    cog.outl(f"const uint32_t* latin_ex_map[26*2][{max_variation_index}] = {{")
+    # Declare the bound BY NAME and assert it equals the sheet's widest row.  The
+    # include above already makes a mismatch a hard error, but that error reads as a
+    # conflicting-declaration wall of text; this one names the file to edit.
+    cog.outl(f'_Static_assert(LATIN_EX_VARIATIONS == {max_variation_index},')
+    cog.outl(f'               "LATIN_EX_VARIATIONS (lang/lang_lut_ext.h) must equal the widest '
+             f'row of latin_sup_ex - currently {max_variation_index}");')
+    cog.outl(f"const uint32_t* latin_ex_map[26*2][LATIN_EX_VARIATIONS] = {{")
     idx = 0
     for k, values in d.items():
         delim = ", "
@@ -10007,7 +10019,9 @@ const uint32_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
             cog.outl(",")
         idx = idx + 1
 ]]]*/
-const uint32_t* latin_ex_map[26*2][36] = {
+_Static_assert(LATIN_EX_VARIATIONS == 36,
+               "LATIN_EX_VARIATIONS (lang/lang_lut_ext.h) must equal the widest row of latin_sup_ex - currently 36");
+const uint32_t* latin_ex_map[26*2][LATIN_EX_VARIATIONS] = {
   /* [0] 65/A */ { U"\xC0", U"\xC1", U"\xC2", U"\xC3", U"\xC4", U"\xC5", U"\xC6", U"\x100", U"\x102", U"\x104", U"\x200", U"\x202", U"\x1CD", U"\x1DE", U"\x1E0", U"\x1FA", U"\x226", U"\x1E00", U"\x1EA0", U"\x1EA2", U"\x1EA4", U"\x1EA6", U"\x1EA8", U"\x1EAA", U"\x1EAC", U"\x1EAE", U"\x1EB0", U"\x1EB2", U"\x1EB4", U"\x1EB6", NULL, NULL, NULL, NULL, NULL, NULL },
   /* [1] 66/B */ { U"\x1E02", U"\x181", U"\x182", U"\x1E04", U"\x1E06", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   /* [2] 67/C */ { U"\xC7", U"\x106", U"\x108", U"\x10A", U"\x10C", U"\x187", U"\x1E08", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },

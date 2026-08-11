@@ -17,20 +17,27 @@
 // base-layer symbol says. Both render with NO font pack flashed, matching every
 // other layer-key icon (Lang, Settings, Emoji are all resident).
 //
-// 0x9D is the "input latin letters" tile in the RESIDENT IconsFont, derived from
-// the pack's U+1F524 glyph. NotoEmoji draws that one as a SOLID tile with the
-// letters knocked out as holes -- 91% lit, a white block that swamps every
-// neighbouring legend -- so the shipped bitmap is flood-filled to recover the
-// holes, reduced to a 1px outline, and the holes OR'd back: same icon, 17% ink,
-// in line with the rest of the set. It went into IconsFont rather than a new
-// resident font because extending IconsFont shifts no pack gidx and needs no
-// bundle reship (see CLAUDE.md, "A single bigger/custom glyph").
+// 0x9D is a hand-composed tile in the RESIDENT IconsFont: a 1px rounded-rect
+// outline around "Intl" spelled in accented latin, which says what the layer is
+// AND what it does. It replaced U+1F524 "input latin letters" -- semantically
+// right, but NotoEmoji draws that as a SOLID tile with the letters knocked out
+// as holes (91% lit, a white block that swamps every neighbouring legend), and
+// its generic "abc" said nothing this keyboard does.
+//
+// The letters are the resident 27px keycap faces at NATIVE size -- no font pack,
+// and no half-scaling, which would thicken every stem back and close the
+// counters (the documented status-OLED downsample trap). They only fit because
+// the tile is 55px wide rather than the emoji glyph's square 40.
+//
+// It lives in IconsFont rather than a new resident font because extending
+// IconsFont shifts no pack gidx and needs no bundle reship (see CLAUDE.md,
+// "A single bigger/custom glyph").
 //
 // The picker legend is plain resident latin: Ctrl on this layer is an ACTION on
 // the current letter, not a mode, so showing the transformation beats a second
 // generic icon.
-#define INTL_LAYER_LEGEND   U"\x9D"              // 🔤 — the Intl layer key itself
-#define INTL_PICKER_LEGEND  U"\xC1\xBB\xE1"      // Á»á — Ctrl: pick another variation
+#define INTL_LAYER_LEGEND   U"\x9D"              // the Intl layer key itself (gfx_icons.h ICON_INTL)
+#define INTL_PICKER_LEGEND  U"\xC1\xBB\xC6"      // Á»Æ — Ctrl: pick another variation
 
 /*[[[cog
 import cog

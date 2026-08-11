@@ -9947,7 +9947,15 @@ const uint32_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
             variations.append(current_code)
             max_variation_index = max(max_variation_index, variation_index)
             variation_index = variation_index + 1
-            current_code = latin_sheet[f"{chr(ord('A')+variation_index)}{letter_index+1}"].value
+            # ⚠️ Address the cell by NUMBER, not by building an A1 string.  This
+            # used to be chr(ord('A') + variation_index), which runs off the end of
+            # the alphabet at slot 26 and yields '[', '\\', ']' -- so the scan
+            # silently stopped somewhere in the twenties and the generated table was
+            # quietly truncated, with no error and a plausible-looking bound.  The
+            # sheet-writing tool has always used a proper base-26 colname(), so the
+            # two disagreed the moment a row grew past column Z.
+            current_code = latin_sheet.cell(row=letter_index + 1,
+                                            column=1 + variation_index).value
 
         # A mislabelled case row (column A) is otherwise SILENT: the second
         # occurrence overwrites the first, so one case renders the other case's
@@ -9999,59 +10007,59 @@ const uint32_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
             cog.outl(",")
         idx = idx + 1
 ]]]*/
-const uint32_t* latin_ex_map[26*2][21] = {
-  /* [0] 65/A */ { U"\xC0", U"\xC1", U"\xC2", U"\xC3", U"\xC4", U"\xC5", U"\xC6", U"\x100", U"\x102", U"\x104", U"\x200", U"\x202", U"\x1CD", U"\x1DE", U"\x1E0", U"\x1FA", U"\x226", NULL, NULL, NULL, NULL },
-  /* [1] 66/B */ { U"\x1E02", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [2] 67/C */ { U"\xC7", U"\x106", U"\x108", U"\x10A", U"\x10C", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [3] 68/D */ { U"\xD0", U"\x10E", U"\x110", U"\x1E0A", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [4] 69/E */ { U"\xC8", U"\xC9", U"\xCA", U"\xCB", U"\x112", U"\x114", U"\x116", U"\x118", U"\x11A", U"\x204", U"\x206", U"\x1EB8", U"\x1EBC", U"\x228", NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [5] 70/F */ { U"\x1E1E", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [6] 71/G */ { U"\x11C", U"\x11E", U"\x120", U"\x122", U"\x1E6", U"\x1F4", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [7] 72/H */ { U"\x124", U"\x126", U"\x21E", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [8] 73/I */ { U"\xCC", U"\xCD", U"\xCE", U"\xCF", U"\x128", U"\x12A", U"\x12C", U"\x12E", U"\x130", U"\x132", U"\x208", U"\x20A", U"\x1CF", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [9] 74/J */ { U"\x134", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [10] 75/K */ { U"\x136", U"\x1E8", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [11] 76/L */ { U"\x139", U"\x13B", U"\x13D", U"\x13F", U"\x141", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [12] 77/M */ { U"\x1E40", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [13] 78/N */ { U"\xD1", U"\x143", U"\x145", U"\x147", U"\x14A", U"\x1F8", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [14] 79/O */ { U"\xD2", U"\xD3", U"\xD4", U"\xD5", U"\xD6", U"\x14C", U"\x14E", U"\x150", U"\x152", U"\xD8", U"\x20C", U"\x20E", U"\x1EA", U"\x1ECC", U"\x1A0", U"\x1D1", U"\x1EC", U"\x22A", U"\x22C", U"\x22E", U"\x230" },
-  /* [15] 80/P */ { U"\x1E56", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [16] 81/Q */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [17] 82/R */ { U"\x154", U"\x156", U"\x158", U"\x210", U"\x212", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [18] 83/S */ { U"\x1E9E", U"\x15A", U"\x15C", U"\x15E", U"\x160", U"\x218", U"\x1E62", U"\x1E60", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [19] 84/T */ { U"\xDE", U"\x162", U"\x164", U"\x166", U"\x21A", U"\x1E6A", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [20] 85/U */ { U"\xD9", U"\xDA", U"\xDB", U"\xDC", U"\x168", U"\x16A", U"\x16C", U"\x16E", U"\x170", U"\x172", U"\x214", U"\x216", U"\x1AF", U"\x1D3", U"\x1D5", U"\x1D7", U"\x1D9", U"\x1DB", NULL, NULL, NULL },
-  /* [21] 86/V */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [22] 87/W */ { U"\x174", U"\x1E80", U"\x1E82", U"\x1E84", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [23] 88/X */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [24] 89/Y */ { U"\xDD", U"\x176", U"\x178", U"\x1EF2", U"\x1EF8", U"\x232", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [25] 90/Z */ { U"\x179", U"\x17B", U"\x17D", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [26] 97/a */ { U"\xE0", U"\xE1", U"\xE2", U"\xE3", U"\xE4", U"\xE5", U"\xE6", U"\x101", U"\x103", U"\x105", U"\x201", U"\x203", U"\x1CE", U"\x1DF", U"\x1E1", U"\x1FB", U"\x227", NULL, NULL, NULL, NULL },
-  /* [27] 98/b */ { U"\x1E03", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [28] 99/c */ { U"\xE7", U"\x107", U"\x109", U"\x10B", U"\x10D", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [29] 100/d */ { U"\xF0", U"\x10F", U"\x111", U"\x1E0B", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [30] 101/e */ { U"\xE8", U"\xE9", U"\xEA", U"\xEB", U"\x113", U"\x115", U"\x117", U"\x119", U"\x11B", U"\x205", U"\x207", U"\x1EB9", U"\x1EBD", U"\x229", NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [31] 102/f */ { U"\x1E1F", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [32] 103/g */ { U"\x11D", U"\x11F", U"\x121", U"\x123", U"\x1E7", U"\x1F5", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [33] 104/h */ { U"\x125", U"\x127", U"\x21F", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [34] 105/i */ { U"\xEC", U"\xED", U"\xEE", U"\xEF", U"\x129", U"\x12B", U"\x12D", U"\x12F", U"\x131", U"\x133", U"\x209", U"\x20B", U"\x1D0", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [35] 106/j */ { U"\x135", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [36] 107/k */ { U"\x137", U"\x138", U"\x1E9", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [37] 108/l */ { U"\x13A", U"\x13C", U"\x13E", U"\x140", U"\x142", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [38] 109/m */ { U"\x1E41", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [39] 110/n */ { U"\xF1", U"\x144", U"\x146", U"\x148", U"\x14B", U"\x149", U"\x1F9", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [40] 111/o */ { U"\xF2", U"\xF3", U"\xF4", U"\xF5", U"\xF6", U"\x14D", U"\x14F", U"\x151", U"\x153", U"\xF8", U"\x20D", U"\x20F", U"\x1EB", U"\x1ECD", U"\x1A1", U"\x1D2", U"\x1ED", U"\x22B", U"\x22D", U"\x22F", U"\x231" },
-  /* [41] 112/p */ { U"\x1E57", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [42] 113/q */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [43] 114/r */ { U"\x155", U"\x157", U"\x159", U"\x211", U"\x213", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [44] 115/s */ { U"\xDF", U"\x15B", U"\x15D", U"\x15F", U"\x161", U"\x219", U"\x1E63", U"\x1E61", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [45] 116/t */ { U"\xFE", U"\x163", U"\x165", U"\x167", U"\x21B", U"\x1E6B", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [46] 117/u */ { U"\xF9", U"\xFA", U"\xFB", U"\xFC", U"\x169", U"\x16B", U"\x16D", U"\x16F", U"\x171", U"\x173", U"\x215", U"\x217", U"\x1B0", U"\x1D4", U"\x1D6", U"\x1D8", U"\x1DA", U"\x1DC", NULL, NULL, NULL },
-  /* [47] 118/v */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [48] 119/w */ { U"\x175", U"\x1E81", U"\x1E83", U"\x1E85", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [49] 120/x */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [50] 121/y */ { U"\xFD", U"\x177", U"\xFF", U"\x1EF3", U"\x1EF9", U"\x233", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  /* [51] 122/z */ { U"\x17A", U"\x17C", U"\x17E", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+const uint32_t* latin_ex_map[26*2][36] = {
+  /* [0] 65/A */ { U"\xC0", U"\xC1", U"\xC2", U"\xC3", U"\xC4", U"\xC5", U"\xC6", U"\x100", U"\x102", U"\x104", U"\x200", U"\x202", U"\x1CD", U"\x1DE", U"\x1E0", U"\x1FA", U"\x226", U"\x1E00", U"\x1EA0", U"\x1EA2", U"\x1EA4", U"\x1EA6", U"\x1EA8", U"\x1EAA", U"\x1EAC", U"\x1EAE", U"\x1EB0", U"\x1EB2", U"\x1EB4", U"\x1EB6", NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [1] 66/B */ { U"\x1E02", U"\x181", U"\x182", U"\x1E04", U"\x1E06", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [2] 67/C */ { U"\xC7", U"\x106", U"\x108", U"\x10A", U"\x10C", U"\x187", U"\x1E08", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [3] 68/D */ { U"\xD0", U"\x10E", U"\x110", U"\x1E0A", U"\x18A", U"\x18B", U"\x1E0C", U"\x1E0E", U"\x1E10", U"\x1E12", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [4] 69/E */ { U"\xC8", U"\xC9", U"\xCA", U"\xCB", U"\x112", U"\x114", U"\x116", U"\x118", U"\x11A", U"\x204", U"\x206", U"\x1EB8", U"\x1EBC", U"\x228", U"\x1E14", U"\x1E16", U"\x1E18", U"\x1E1A", U"\x1E1C", U"\x1EBA", U"\x1EBE", U"\x1EC0", U"\x1EC2", U"\x1EC4", U"\x1EC6", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [5] 70/F */ { U"\x1E1E", U"\x191", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [6] 71/G */ { U"\x11C", U"\x11E", U"\x120", U"\x122", U"\x1E6", U"\x1F4", U"\x193", U"\x1E20", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [7] 72/H */ { U"\x124", U"\x126", U"\x21E", U"\x1E22", U"\x1E24", U"\x1E26", U"\x1E28", U"\x1E2A", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [8] 73/I */ { U"\xCC", U"\xCD", U"\xCE", U"\xCF", U"\x128", U"\x12A", U"\x12C", U"\x12E", U"\x130", U"\x132", U"\x208", U"\x20A", U"\x1CF", U"\x1E2C", U"\x1E2E", U"\x1EC8", U"\x1ECA", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [9] 74/J */ { U"\x134", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [10] 75/K */ { U"\x136", U"\x1E8", U"\x198", U"\x1E30", U"\x1E32", U"\x1E34", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [11] 76/L */ { U"\x139", U"\x13B", U"\x13D", U"\x13F", U"\x141", U"\x1E36", U"\x1E38", U"\x1E3A", U"\x1E3C", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [12] 77/M */ { U"\x1E40", U"\x1E3E", U"\x1E42", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [13] 78/N */ { U"\xD1", U"\x143", U"\x145", U"\x147", U"\x14A", U"\x1F8", U"\x19D", U"\x1E44", U"\x1E46", U"\x1E48", U"\x1E4A", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [14] 79/O */ { U"\xD2", U"\xD3", U"\xD4", U"\xD5", U"\xD6", U"\x14C", U"\x14E", U"\x150", U"\x152", U"\xD8", U"\x20C", U"\x20E", U"\x1EA", U"\x1ECC", U"\x1A0", U"\x1D1", U"\x1EC", U"\x22A", U"\x22C", U"\x22E", U"\x230", U"\x1E4C", U"\x1E4E", U"\x1E50", U"\x1E52", U"\x1ECE", U"\x1ED0", U"\x1ED2", U"\x1ED4", U"\x1ED6", U"\x1ED8", U"\x1EDA", U"\x1EDC", U"\x1EDE", U"\x1EE0", U"\x1EE2" },
+  /* [15] 80/P */ { U"\x1E56", U"\x1A4", U"\x1E54", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [16] 81/Q */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [17] 82/R */ { U"\x154", U"\x156", U"\x158", U"\x210", U"\x212", U"\x1E58", U"\x1E5A", U"\x1E5C", U"\x1E5E", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [18] 83/S */ { U"\x1E9E", U"\x15A", U"\x15C", U"\x15E", U"\x160", U"\x218", U"\x1E62", U"\x1E60", U"\x1E64", U"\x1E66", U"\x1E68", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [19] 84/T */ { U"\xDE", U"\x162", U"\x164", U"\x166", U"\x21A", U"\x1E6A", U"\x1AC", U"\x1AE", U"\x1E6C", U"\x1E6E", U"\x1E70", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [20] 85/U */ { U"\xD9", U"\xDA", U"\xDB", U"\xDC", U"\x168", U"\x16A", U"\x16C", U"\x16E", U"\x170", U"\x172", U"\x214", U"\x216", U"\x1AF", U"\x1D3", U"\x1D5", U"\x1D7", U"\x1D9", U"\x1DB", U"\x1E72", U"\x1E74", U"\x1E76", U"\x1E78", U"\x1E7A", U"\x1EE4", U"\x1EE6", U"\x1EE8", U"\x1EEA", U"\x1EEC", U"\x1EEE", U"\x1EF0", NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [21] 86/V */ { U"\x1B2", U"\x1E7C", U"\x1E7E", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [22] 87/W */ { U"\x174", U"\x1E80", U"\x1E82", U"\x1E84", U"\x1E86", U"\x1E88", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [23] 88/X */ { U"\x1E8A", U"\x1E8C", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [24] 89/Y */ { U"\xDD", U"\x176", U"\x178", U"\x1EF2", U"\x1EF8", U"\x232", U"\x1B3", U"\x1E8E", U"\x1EF4", U"\x1EF6", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [25] 90/Z */ { U"\x179", U"\x17B", U"\x17D", U"\x1B5", U"\x1E90", U"\x1E92", U"\x1E94", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [26] 97/a */ { U"\xE0", U"\xE1", U"\xE2", U"\xE3", U"\xE4", U"\xE5", U"\xE6", U"\x101", U"\x103", U"\x105", U"\x201", U"\x203", U"\x1CE", U"\x1DF", U"\x1E1", U"\x1FB", U"\x227", U"\x1E01", U"\x1EA1", U"\x1EA3", U"\x1EA5", U"\x1EA7", U"\x1EA9", U"\x1EAB", U"\x1EAD", U"\x1EAF", U"\x1EB1", U"\x1EB3", U"\x1EB5", U"\x1EB7", NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [27] 98/b */ { U"\x1E03", U"\x253", U"\x183", U"\x1E05", U"\x1E07", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [28] 99/c */ { U"\xE7", U"\x107", U"\x109", U"\x10B", U"\x10D", U"\x188", U"\x1E09", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [29] 100/d */ { U"\xF0", U"\x10F", U"\x111", U"\x1E0B", U"\x257", U"\x18C", U"\x1E0D", U"\x1E0F", U"\x1E11", U"\x1E13", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [30] 101/e */ { U"\xE8", U"\xE9", U"\xEA", U"\xEB", U"\x113", U"\x115", U"\x117", U"\x119", U"\x11B", U"\x205", U"\x207", U"\x1EB9", U"\x1EBD", U"\x229", U"\x1E15", U"\x1E17", U"\x1E19", U"\x1E1B", U"\x1E1D", U"\x1EBB", U"\x1EBF", U"\x1EC1", U"\x1EC3", U"\x1EC5", U"\x1EC7", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [31] 102/f */ { U"\x1E1F", U"\x192", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [32] 103/g */ { U"\x11D", U"\x11F", U"\x121", U"\x123", U"\x1E7", U"\x1F5", U"\x260", U"\x1E21", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [33] 104/h */ { U"\x125", U"\x127", U"\x21F", U"\x1E23", U"\x1E25", U"\x1E27", U"\x1E29", U"\x1E2B", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [34] 105/i */ { U"\xEC", U"\xED", U"\xEE", U"\xEF", U"\x129", U"\x12B", U"\x12D", U"\x12F", U"\x131", U"\x133", U"\x209", U"\x20B", U"\x1D0", U"\x1E2D", U"\x1E2F", U"\x1EC9", U"\x1ECB", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [35] 106/j */ { U"\x135", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [36] 107/k */ { U"\x137", U"\x138", U"\x1E9", U"\x199", U"\x1E31", U"\x1E33", U"\x1E35", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [37] 108/l */ { U"\x13A", U"\x13C", U"\x13E", U"\x140", U"\x142", U"\x1E37", U"\x1E39", U"\x1E3B", U"\x1E3D", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [38] 109/m */ { U"\x1E41", U"\x1E3F", U"\x1E43", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [39] 110/n */ { U"\xF1", U"\x144", U"\x146", U"\x148", U"\x14B", U"\x149", U"\x1F9", U"\x272", U"\x1E45", U"\x1E47", U"\x1E49", U"\x1E4B", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [40] 111/o */ { U"\xF2", U"\xF3", U"\xF4", U"\xF5", U"\xF6", U"\x14D", U"\x14F", U"\x151", U"\x153", U"\xF8", U"\x20D", U"\x20F", U"\x1EB", U"\x1ECD", U"\x1A1", U"\x1D2", U"\x1ED", U"\x22B", U"\x22D", U"\x22F", U"\x231", U"\x1E4D", U"\x1E4F", U"\x1E51", U"\x1E53", U"\x1ECF", U"\x1ED1", U"\x1ED3", U"\x1ED5", U"\x1ED7", U"\x1ED9", U"\x1EDB", U"\x1EDD", U"\x1EDF", U"\x1EE1", U"\x1EE3" },
+  /* [41] 112/p */ { U"\x1E57", U"\x1A5", U"\x1E55", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [42] 113/q */ { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [43] 114/r */ { U"\x155", U"\x157", U"\x159", U"\x211", U"\x213", U"\x1E59", U"\x1E5B", U"\x1E5D", U"\x1E5F", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [44] 115/s */ { U"\xDF", U"\x15B", U"\x15D", U"\x15F", U"\x161", U"\x219", U"\x1E63", U"\x1E61", U"\x1E65", U"\x1E67", U"\x1E69", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [45] 116/t */ { U"\xFE", U"\x163", U"\x165", U"\x167", U"\x21B", U"\x1E6B", U"\x1AD", U"\x288", U"\x1E6D", U"\x1E6F", U"\x1E71", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [46] 117/u */ { U"\xF9", U"\xFA", U"\xFB", U"\xFC", U"\x169", U"\x16B", U"\x16D", U"\x16F", U"\x171", U"\x173", U"\x215", U"\x217", U"\x1B0", U"\x1D4", U"\x1D6", U"\x1D8", U"\x1DA", U"\x1DC", U"\x1E73", U"\x1E75", U"\x1E77", U"\x1E79", U"\x1E7B", U"\x1EE5", U"\x1EE7", U"\x1EE9", U"\x1EEB", U"\x1EED", U"\x1EEF", U"\x1EF1", NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [47] 118/v */ { U"\x28B", U"\x1E7D", U"\x1E7F", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [48] 119/w */ { U"\x175", U"\x1E81", U"\x1E83", U"\x1E85", U"\x1E87", U"\x1E89", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [49] 120/x */ { U"\x1E8B", U"\x1E8D", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [50] 121/y */ { U"\xFD", U"\x177", U"\xFF", U"\x1EF3", U"\x1EF9", U"\x233", U"\x1B4", U"\x1E8F", U"\x1EF5", U"\x1EF7", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+  /* [51] 122/z */ { U"\x17A", U"\x17C", U"\x17E", U"\x1B6", U"\x1E91", U"\x1E93", U"\x1E95", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 //[[[end]]]
 };
 

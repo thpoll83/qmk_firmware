@@ -196,11 +196,15 @@ def shift_trailing_rows(xml, first, delta):
                           lambda mm, o=other: f"{mm.group(1)}{o + delta}", body)
         head = m.group(1).replace(f'r="{r}"', f'r="{r + delta}"', 1)
         xml = xml[:m.start()] + head + body + m.group(3) + xml[m.end():]
-    # Widen the aggregate ranges (…S2:S76) so they span the newly added rows.
+    # Widen the aggregate ranges (…BN2:BN92) so they span the newly added rows.
     # The block ends at the last letter row, so its DEC2HEX row -- and the end of
     # the range -- is `first - 1`.
-    xml = re.sub(r'\b([ST])2:\1%d\b' % (first - 1),
-                 lambda mm: f"{mm.group(1)}2:{mm.group(1)}{first - 1 + delta}", xml)
+    # ⚠️ Built per column rather than with a backreference: `\1` immediately
+    # followed by the row number reads as group \192, which is a regex error, and
+    # the character class was hardcoded to the old S/T columns besides.
+    for col in (HELPER_MIN, HELPER_MAX):
+        xml = re.sub(r'\b%s2:%s%d\b' % (col, col, first - 1),
+                     f"{col}2:{col}{first - 1 + delta}", xml)
     return xml
 
 

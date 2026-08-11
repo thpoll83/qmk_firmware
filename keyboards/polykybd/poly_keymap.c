@@ -1718,6 +1718,14 @@ static const uint32_t* latin_variation(uint16_t keycode, bool upper_case) {
     }
     const uint8_t   idx    = latin_pick_get(get_global_latin_table()->ex, row);
     const uint32_t* chosen = (idx < LATIN_EX_VARIATIONS) ? latin_ex_map[row][idx] : NULL;
+    // Fall back when the pick names a slot this build does not have (a stale
+    // EEPROM), and ALSO when it names a real variation whose GLYPH is missing --
+    // the table is static but the font set is not, so a variation drawn from a
+    // font-pack bundle disappears if that bundle is absent or older. Without this
+    // the keycap renders blank and the key emits a character with no legend.
+    if (chosen != NULL && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, chosen[0]) == NULL) {
+        chosen = NULL;
+    }
     return (chosen != NULL) ? chosen : latin_ex_map[row][0];
 }
 

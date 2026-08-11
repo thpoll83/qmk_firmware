@@ -267,6 +267,18 @@ inherited-upstream noise:
   flash a build and paste the console log.** See
   `keyboards/polykybd/profiling/README.md` (§ on-demand control, HID cmd 32) and the
   `polykybd-ctnd` CLAUDE.md § Performance measurement.
+- **An upstream merge is the canonical case for the `perf` label.** A catch-up merge
+  bumps the ChibiOS / pico-sdk pins and pulls core QMK changes (split transport, USB
+  stack, scheduler) — exactly the things that can move main-loop timing with **no
+  PolyKybd source changed** — and it is also the PR CodeRabbit skips outright (>100
+  files), so `Build firmware` + `HIL test` are the only other verification and
+  neither measures timing. The job is report-only, so it cannot redden an already
+  unreviewable PR. Apply `perf` as its **own** label call (N labels in one call fire
+  N runs — see the labeling note above). ⚠️ **Then move the baseline.**
+  `perf/baselines/split72.json` is compared against, never auto-updated, so once the
+  post-merge number is understood commit that run's JSON to `polykybd-ctnd` —
+  otherwise every later PR's report carries the merge's delta as a phantom
+  regression against a pre-merge reference.
 
 ## Releases
 

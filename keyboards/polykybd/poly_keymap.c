@@ -594,9 +594,31 @@ void sync_and_refresh_displays(void) {
     }
 }
 
+// The modifier that, together with Intl (_ADDLANG1), opens the variation picker
+// on the number row.
+//
+// ⚠️ This was MOD_MASK_ALT and must not go back.  The picker swallows the keys it
+// handles (process_record_user returns false), so the host only ever saw the
+// modifier go down and back up — and a bare Alt tap is how Windows activates the
+// menu bar.  Picking a variation therefore yanked focus out of the text field in
+// a lot of programs, which is precisely when you are typing accented letters.  A
+// bare Ctrl tap does nothing in the same apps.
+#define LATIN_PICKER_MOD MOD_MASK_CTRL
+
+// True only while the Ctrl the picker is riding on was registered BY the latch, so
+// dropping it on layer exit can never release a Ctrl the user is really holding.
+static bool s_picker_latched = false;
+
 // Sets layer state variable tracking the active keyboard layer.
 layer_state_t layer_state_set_user(layer_state_t state) {
     access_local_layer()->layer = state;
+    // Leaving Intl closes the picker. Without this the latched Ctrl would stay
+    // registered with the layer gone, so every following keystroke reaches the
+    // host as Ctrl+key.
+    if(s_picker_latched && get_highest_layer(state) != _ADDLANG1) {
+        unregister_mods(MOD_MASK_CTRL);
+        s_picker_latched = false;
+    }
     return state;
 }
 
@@ -1334,6 +1356,16 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
     }
 #endif
 
+    // On the Intl layer Ctrl is not a modifier you send — it is LATIN_PICKER_MOD,
+    // the key that turns the number row into the variation picker. Showing the
+    // plain Ctrl symbol there gives no hint that it changes anything, so it gets
+    // its own legend. Checked BEFORE keycode_to_static_text(), which would
+    // otherwise return the normal Ctrl glyph first.
+    if ((keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL) &&
+        get_highest_layer(get_local_layer()->layer) == _ADDLANG1) {
+        return INTL_PICKER_LEGEND;
+    }
+
     const uint32_t* text = keycode_to_static_text(keycode, state, local_state->flags);
     if(text!=NULL) {
         return text;
@@ -1624,7 +1656,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
     const bool shift = ((local_layer->mods & MOD_MASK_SHIFT) != 0);
     const bool add_lang = get_highest_layer(local_layer->layer)==_ADDLANG1;
-    const bool alt = ((local_layer->mods & MOD_MASK_ALT) != 0);
+    const bool picker_mod = ((local_layer->mods & LATIN_PICKER_MOD) != 0);
     const bool is_letter = keycode>=KC_A && keycode<=KC_Z;
     if(is_letter && add_lang) {
         //display the previously selected latin variation of the letter
@@ -1639,7 +1671,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     //variation selection on 0~9
     uint16_t local_last_latin_keycode = get_local_last_latin_keycode();
     if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
-        if(add_lang && alt && local_last_latin_keycode>=KC_A && local_last_latin_keycode<=KC_Z) {
+        if(add_lang && picker_mod && local_last_latin_keycode>=KC_A && local_last_latin_keycode<=KC_Z) {
             //show all available alternatives for selected latin letter
             const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
             const uint32_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
@@ -2518,13 +2550,22 @@ void reset_idle_jitter(void) {
 // 1×1 ink box, so kdisp_gfx_text_bounds would count those spaces as ink at x=0,
 // inflate the measured width, and push the real glyph right of centre. Skipping
 // them makes the measure+draw start at the first real glyph, truly centred.
-static void draw_legend_cx(const uint32_t* text, int8_t y) {
+// cy_radius is exposed because the courtyard clear is only wanted when something
+// is drawn UNDERNEATH the legend for it to punch a margin through (a frame, a row
+// bar, an overlay). On a deliberately filled ground — the inverted picker Ctrl —
+// there is nothing to clear away from, so the clear just eats a dark halo out of
+// the fill around every glyph. Pass 0 there.
+static void draw_legend_cx_cy(const uint32_t* text, int8_t y, int8_t cy_radius) {
     while (*text == U' ') text++;          // drop manual leading padding (skews bbox)
     int8_t lo = 0, hi = 0;
     kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &lo, &hi);
     const int8_t w    = (int8_t)(hi - lo + 1);
     const int8_t left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - lo);
-    kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, left, y, text, KDISP_CY_DEFAULT);
+    kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, left, y, text, cy_radius);
+}
+
+static void draw_legend_cx(const uint32_t* text, int8_t y) {
+    draw_legend_cx_cy(text, y, KDISP_CY_DEFAULT);
 }
 
 // ── Keycap-OLED selection strategy (update_displays / kdisp_idle) ─────────────
@@ -2593,6 +2634,17 @@ void update_displays(enum refresh_mode mode) {
     const uint8_t mods = local_layer->mods;
     const bool capital_case = ((mods & MOD_MASK_SHIFT) != 0) || state.caps_lock;
     const bool display_overlays = test_flag(local_state->overlay_flags, DISPLAY_OVERLAYS);
+    const bool add_lang = get_highest_layer(local_layer->layer) == _ADDLANG1;
+    // The Intl picker latches, so nothing on the board would otherwise say it is
+    // open — with a held key you could at least see your finger. Ctrl draws
+    // inverted (white keycap, dark legend) for as long as it is armed.
+    //
+    // Rendered inverted rather than kdisp_invert()ed: that is a panel-level SSD1306
+    // command which matrix_scan_kb already toggles on every press and release, so a
+    // latched state driven through it would be undone by the next keypress. The
+    // gate is the SYNCED mods bit (poly_layer_t), not the master-only latch static,
+    // so the slave inverts its Ctrl too when Ctrl lives on that half.
+    const bool picker_open = add_lang && ((mods & LATIN_PICKER_MOD) != 0);
     //the left side has an offset of 0, the right side an offset of MATRIX_ROWS_PER_SIDE
     const uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t start_row = 0;
@@ -2778,7 +2830,16 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_send_window();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
-                        kdisp_set_buffer(0x00);
+                        // Ctrl while the picker is armed: white ground, legend
+                        // erased out of it. Paired reset below — the plotter flags
+                        // are static, so leaving erase on would blank every
+                        // following keycap on this pass.
+                        const bool invert_key = picker_open &&
+                                                (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL);
+                        kdisp_set_buffer(invert_key ? 0xFF : 0x00);
+                        if(invert_key) {
+                            kdisp_set_gfx_erase(true);
+                        }
                         // Draw the tab frame / row bar FIRST, then the emoji glyph with
                         // courtyard clearing so the icon punches a clean margin through it.
                         emj_draw_tab_indicator(keycode);
@@ -2804,17 +2865,32 @@ void update_displays(enum refresh_mode mode) {
                                 (int8_t)(BUFFER_X + (SCREEN_WIDTH - (hi - lo + 1)) / 2 - lo), 32, l2);
                         } else if (r == MATRIX_ROWS_PER_SIDE - 1) {
                             // Bottom (thumb) row: centre the legend horizontally.
-                            draw_legend_cx(text, 23);
+                            draw_legend_cx_cy(text, 23, invert_key ? 0 : KDISP_CY_DEFAULT);
                         } else {
-                            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
+                            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text,
+                                                    invert_key ? 0 : KDISP_CY_DEFAULT);
                         }
                         text = NULL;
-                        if(display_overlays) {
-                            if(!copy_overlay_to_buffer(keycode, mods)) {
-                                text = keycode_to_disp_overlay(keycode, state); //fallback to hardcoded
+                        // ⚠️ Nothing overlays the Intl layer. Its letters ARE the
+                        // payload — render_key() has just drawn the selected
+                        // variation — and the picker modifier is Ctrl, so both
+                        // sources below would paint the CTRL view over it:
+                        // copy_overlay_to_buffer() the app's Ctrl-modifier overlay
+                        // image, and keycode_to_disp_overlay() the built-in
+                        // Ctrl-shortcut hints, on every key at once.
+                        // ⚠️ The guard has to wrap BOTH arms. Folding it into the
+                        // first condition instead (`!add_lang && display_overlays`)
+                        // looks equivalent and is not: the else would then fire on
+                        // the Intl layer and paint the hardcoded hint back over the
+                        // variation, which is the bug this exists to stop.
+                        if(!add_lang) {
+                            if(display_overlays) {
+                                if(!copy_overlay_to_buffer(keycode, mods)) {
+                                    text = keycode_to_disp_overlay(keycode, state); //fallback to hardcoded
+                                }
+                            } else {
+                                text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                             }
-                        } else {
-                            text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
                             // The hint string is a self-contained display list: any
@@ -2822,6 +2898,9 @@ void update_displays(enum refresh_mode mode) {
                             // (see the \x0E-\x12 ops in kdisp_write_gfx_text_cy), so no
                             // per-keycode special-case is needed here.
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
+                        }
+                        if(invert_key) {
+                            kdisp_set_gfx_erase(false);
                         }
                         kdisp_send_window();
                         }
@@ -3102,6 +3181,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     const bool addlang = get_highest_layer(get_local_layer()->layer)==_ADDLANG1;
     const poly_layer_t* global_layer = get_global_layer();
+    // The latch toggles on the PRESS, so the release of the tap that ARMED it must
+    // be swallowed too — otherwise QMK unregisters the modifier we just registered
+    // and the latch is over before the finger lifts.
+    //
+    // ⚠️ Gated on s_picker_latched, i.e. on us owning the modifier — NOT on the key
+    // alone. A Ctrl held down before Intl was pressed is registered by QMK, and
+    // swallowing that release would leave it registered forever, turning every
+    // later keystroke into Ctrl+key. The other two cases fall through harmlessly:
+    // the toggle-OFF press already unregistered, so QMK's release handler just
+    // unregisters nothing.
+    if(addlang && !record->event.pressed && s_picker_latched &&
+       (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) {
+        return false;
+    }
     if (record->event.pressed) {
         switch (keycode) {
             case QK_BOOTLOADER: {
@@ -3139,7 +3232,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             }
             case KC_A ... KC_Z:
                 set_local_last_latin_keycode(keycode);
-                if((get_mods() & MOD_MASK_ALT) == 0 && addlang) {
+                if((get_mods() & LATIN_PICKER_MOD) == 0 && addlang) {
                     const bool lshift = get_mods() == MOD_BIT(KC_LEFT_SHIFT);
                     const bool rshift = get_mods() == MOD_BIT(KC_RIGHT_SHIFT);
                     const bool upper_case = lshift || rshift || global_layer->led_state.caps_lock;
@@ -3160,7 +3253,40 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         }
         uint16_t last_latin_keycode = get_local_last_latin_keycode();
 
-        if((get_mods() & MOD_MASK_ALT) != 0 && addlang) {
+        // The picker LATCHES: tap Ctrl to open it, tap again to close, and it also
+        // closes as soon as a variation is chosen. Holding Intl+Ctrl+Shift+digit is
+        // four keys at once, which is what made it awkward in practice.
+        //
+        // It latches by registering the REAL modifier rather than a private flag,
+        // because poly_layer_t.mods is already synced to the other half — the slave
+        // draws the picker digits on ITS keys from that same bit, and both flag
+        // bytes in base/com.h are full, so a private flag would have nowhere to
+        // ride. s_picker_latched only records that WE registered it, so leaving the
+        // layer never unregisters a Ctrl the user is genuinely holding.
+        if(addlang && (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) {
+            if(s_picker_latched) {
+                unregister_mods(MOD_MASK_CTRL);
+                s_picker_latched = false;
+            } else if((get_mods() & LATIN_PICKER_MOD) == 0) {
+                register_mods(MOD_BIT(KC_LEFT_CTRL));
+                s_picker_latched = true;
+            }
+            request_disp_refresh();
+            return false;   // swallow: the tap is the toggle, not a modifier press
+        }
+
+        if((get_mods() & LATIN_PICKER_MOD) != 0 && addlang) {
+            // A modifier must still reach QMK while the picker is open.  This
+            // block used to `return false` for EVERY press, so the Shift PRESS
+            // was swallowed, get_mods() never gained the bit, and pick_upper
+            // below could only ever be true if Shift had been held BEFORE the
+            // picker was opened — "press Shift first or you cannot choose the
+            // capital".  Letting it through also flips the keycaps to the
+            // upper-case row for free: `mods` is part of poly_layer_t, so the
+            // change shows up as a layer_diff and housekeeping redraws.
+            if(IS_MODIFIER_KEYCODE(keycode)) {
+                return true;
+            }
             switch(keycode) {
                 case KC_LAT0 ... KC_LAT9:
                     if( last_latin_keycode>=KC_A && last_latin_keycode<=KC_Z) {
@@ -3184,6 +3310,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                         }
                         send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
 
+                        // "or an alternative character has been selected"
+                        if(s_picker_latched) {
+                            unregister_mods(MOD_MASK_CTRL);
+                            s_picker_latched = false;
+                        }
                         mark_latin_dirty();
                         request_disp_refresh();
                     }

@@ -5,12 +5,15 @@
 // both features are self-contained boot instrumentation with no keymap state.
 #include QMK_KEYBOARD_H
 
+#include <string.h>       // strcmp() — the picker verdict compares state strings
 #include "print.h"
 #include "version.h"
 #include "split_util.h"   // is_transport_connected()
 #include "side.h"         // is_left_side()
 #include "poly_util.h"    // clear_all_displays(), display_message()
 #include "state.h"        // get_idle_style(), idle_style_name()
+#include "layers.h"       // _ADDLANG1 (Intl picker banner line)
+#include "quantum/keymap_introspection.h"   // keycode_at_keymap_location_raw()
 #include "base/update.h"       // enum refresh_mode / ALL_AT_ONCE
 #include "base/disp_array.h"   // GFXfont type
 // Only the single splash font is needed. Don't pull in gfx_used_fonts.h — the
@@ -42,6 +45,73 @@ void update_displays(enum refresh_mode mode);
 #    define BOOT_BANNER_INTERVAL_MS 3000
 #endif
 
+// Report what the Intl layer actually resolves each modifier to, read out of the
+// compiled keymap rather than restated from LATIN_PICKER_MOD — same reason the
+// clock below is read back from the PLL instead of printed from SYS_CLK_KHZ: the
+// define is what we asked for, this is what shipped.
+//
+// A modifier masked with KC_NO on _ADDLANG1 draws an EMPTY keycap and makes the
+// variation picker silently unreachable, with nothing to tell that apart from a
+// code bug — which is how the picker ended up on Alt in the first place, and how a
+// board still running an older image looked identical to a regression (field,
+// 2026-08). The verdict is the point of the line: Ctrl (the picker modifier) and
+// Shift (which selects the case) must reach the base layer, Alt must not, and the
+// base layer must actually carry an Intl key.
+//
+// ⚠️ It scans EVERY position of BOTH hands per role. An earlier version returned on
+// the first left-hand hit and reported two split42 keymaps as healthy: Ctrl sits on
+// a home-row pinky on one base and a thumb on the others, and Shift has a
+// right-hand instance, and the masked ones were simply never looked at.
+static const char* addlang_state(uint8_t base, uint16_t lk, uint16_t rk) {
+    bool found = false, masked = false;
+    for (uint8_t r = 0; r < MATRIX_ROWS; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+            uint16_t kc = keycode_at_keymap_location_raw(base, r, c);
+            if (kc != lk && (rk == KC_NO || kc != rk)) continue;
+            found = true;
+            uint16_t on_layer = keycode_at_keymap_location_raw(_ADDLANG1, r, c);
+            if (on_layer != KC_TRANSPARENT && on_layer != kc) masked = true;
+        }
+    }
+    if (!found)  return "absent";
+    return masked ? "masked" : "pass";
+}
+
+static void emit_intl_picker_line(void) {
+    // ⚠️ NOT get_highest_layer(default_layer_state). This codebase drives the base
+    // layer as an INDEX through layer_clear()+layer_on() and deliberately never
+    // calls default_layer_set() (see the KC_L0..KC_L4 handlers), so
+    // default_layer_state stays at _L0 for the life of the board. Reading it made
+    // the banner always report base=L0 — which also meant the _L3 "no Intl key"
+    // case it exists to catch could never have fired. def_layer is loaded from
+    // EEPROM in keyboard_post_init_user before this runs.
+    const uint8_t base = get_local_layer()->def_layer;
+
+    // Whether this base layer can even reach the Intl layer: _L3 carries no
+    // MO(_ADDLANG1) at all, so without this the line would read OK on a base from
+    // which the picker simply cannot be opened.
+    bool intl = false;
+    for (uint8_t r = 0; r < MATRIX_ROWS && !intl; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+            if (keycode_at_keymap_location_raw(base, r, c) == MO(_ADDLANG1)) { intl = true; break; }
+        }
+    }
+
+    // Both hands for all three. One masked instance is a dead key (split42 had
+    // exactly that: right Shift masked while left Shift passed), and symmetrically
+    // one UNmasked Alt is enough to send a bare Alt tap to the host. split42's only
+    // Alt is a right-hand thumb, so a left-only check declared it clean.
+    const char* ctrl  = addlang_state(base, KC_LEFT_CTRL,  KC_RIGHT_CTRL);   // must pass
+    const char* shift = addlang_state(base, KC_LEFT_SHIFT, KC_RIGHT_SHIFT);  // must pass
+    const char* alt   = addlang_state(base, KC_LEFT_ALT,   KC_RIGHT_ALT);    // must NOT pass
+
+    const bool ok = intl && !strcmp(ctrl, "pass") && !strcmp(shift, "pass")
+                         && strcmp(alt, "pass");
+    uprintf("   intl: base=L%d intl=%s ctrl=%s shift=%s alt=%s -> picker %s\n",
+            (int)base, intl ? "yes" : "NOT-ON-THIS-BASE", ctrl, shift, alt,
+            ok ? "OK" : "BROKEN");
+}
+
 void emit_boot_banner(void) {
     // PRODUCT is the QMK-generated keyboard_name from keyboard.json
     // ("PolyKybd Split72" / "PolyKybd Split42"), so the banner names the variant
@@ -68,6 +138,7 @@ void emit_boot_banner(void) {
     uprintf("   clk: sys=%luHz vreg_vsel=0x%X\n",
             (unsigned long)clock_get_hz(clk_sys),
             (unsigned int)((vreg_and_chip_reset_hw->vreg & VREG_AND_CHIP_RESET_VREG_VSEL_BITS) >> VREG_AND_CHIP_RESET_VREG_VSEL_LSB));
+    emit_intl_picker_line();
 }
 
 // The configured idle (anti-burn-in) style + the timings that drive the idle

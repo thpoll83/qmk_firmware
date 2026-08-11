@@ -13,6 +13,15 @@
 #include "led.h"
 #include "layers.h"
 
+// Legends for the two Intl-layer keys that do something other than what their
+// base-layer symbol says. Both are plain RESIDENT latin, so they render with no
+// font pack flashed and cost no glyph: this layer is *about* latin letters, so
+// the letters are the icon. An earlier version drew a rounded-rect tile around
+// them as a custom IconsFont glyph — dropped, along with the glyph, once the
+// frame turned out to add nothing the letters were not already saying.
+#define INTL_LAYER_LEGEND   U"\x130\xF1\x21B\x142"   // Intl, spelled in accented latin
+#define INTL_PICKER_LEGEND  U"\xC1\xBB\xC6"           // Á»Æ — Ctrl: pick another variation
+
 /*[[[cog
 import cog
 import os

@@ -166,10 +166,52 @@ typedef struct _poly_last_t {
     uint16_t latin_kc;
 } poly_last_t;
 
+// --- Intl latin-variation picks: one 6-bit field per letter PER CASE ----------
+//
+// Field index is the `latin_ex_map` ROW index -- 0..25 uppercase, 26..51 lowercase
+// -- so the storage and the table are addressed identically and cannot drift.
+//
+// This was a nibble per case packed into one byte per letter (26 bytes, 16
+// variations).  Six bits covers every letter+combining-mark form that exists in
+// Unicode: the widest is O at 34 (16 single-mark plus 18 Vietnamese double-mark),
+// so 64 leaves room that will not be exhausted by anything Latin.
+//
+// ⚠️ Go through latin_pick_get/set.  The old width was open-coded at the call site
+// as `(pick << 4) | (cur & 0xf)`, which is precisely the shape that turns a width
+// change into a silent corruption of the other case's pick.
+#define LATIN_PICK_BITS   6
+#define LATIN_PICK_MAX    (1u << LATIN_PICK_BITS)              /* 64 */
+#define LATIN_PICK_FIELDS (26 * 2)                             /* upper + lower  */
+#define LATIN_PICK_BYTES  ((LATIN_PICK_FIELDS * LATIN_PICK_BITS + 7) / 8)  /* 39 */
+
 typedef struct _latin_sync_t {
     uint32_t crc32;
-    uint8_t  ex[26];
+    uint8_t  ex[LATIN_PICK_BYTES];
 } latin_sync_t;
+
+// A field can straddle a byte boundary (6 does not divide 8), so both helpers
+// read/write a 16-bit window -- guarded, because the last field ends exactly on
+// the final byte and ex[LATIN_PICK_BYTES] would be one past the array.
+static inline uint8_t latin_pick_get(const uint8_t* ex, uint8_t field) {
+    const uint16_t bit = (uint16_t)field * LATIN_PICK_BITS;
+    const uint16_t by  = bit >> 3;
+    const uint8_t  sh  = (uint8_t)(bit & 7u);
+    uint16_t w = (uint16_t)ex[by];
+    if (by + 1u < LATIN_PICK_BYTES) w |= (uint16_t)ex[by + 1u] << 8;
+    return (uint8_t)((w >> sh) & (LATIN_PICK_MAX - 1u));
+}
+
+static inline void latin_pick_set(uint8_t* ex, uint8_t field, uint8_t value) {
+    const uint16_t bit  = (uint16_t)field * LATIN_PICK_BITS;
+    const uint16_t by   = bit >> 3;
+    const uint8_t  sh   = (uint8_t)(bit & 7u);
+    const uint16_t mask = (uint16_t)(LATIN_PICK_MAX - 1u) << sh;
+    const uint16_t val  = (uint16_t)(value & (LATIN_PICK_MAX - 1u)) << sh;
+    ex[by] = (uint8_t)((ex[by] & ~(uint8_t)mask) | (uint8_t)val);
+    if (by + 1u < LATIN_PICK_BYTES) {
+        ex[by + 1u] = (uint8_t)((ex[by + 1u] & ~(uint8_t)(mask >> 8)) | (uint8_t)(val >> 8));
+    }
+}
 
 typedef struct _poly_eeconf_t {
     uint8_t lang;
@@ -203,9 +245,20 @@ typedef struct _poly_eeconf_t {
     // writes BOOT_INTRO_DONE. Growing EECONFIG_USER_DATA_SIZE 65->66 stays within
     // POLY_EECONFIG_USER_RESERVED (128): no keymap relocation / user reset.
     uint8_t  boot_flags;
+    // Widened Intl variation picks (6 bits per case -- see LATIN_PICK_* above).
+    // APPENDED rather than widening latin_ex[] in place: that array sits ahead of
+    // mru_emoji/mru_lang, so resizing it would shift every later field and an
+    // existing EEPROM would read its MRU lists out of the shifted bytes.
+    uint8_t  latin_ex_wide[LATIN_PICK_BYTES];
+    // Migration marker for latin_ex_wide. "Looks empty" is NOT decidable here --
+    // all-zero is a legitimate every-letter-on-its-first-variation state and erased
+    // flash reads 0xFF -- so the one-time conversion from the legacy nibbles is
+    // gated on an explicit sentinel instead of a guess.
+    uint8_t  latin_pick_migrated;
 } poly_eeconf_t;
 
-#define BOOT_INTRO_DONE 0x5A   // sentinel written after the startup animation has played
+#define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
+#define LATIN_PICK_MIGRATED 0xA5   // sentinel written once latin_ex[] has been widened
 
 
 static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");

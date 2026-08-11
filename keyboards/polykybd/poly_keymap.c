@@ -1716,8 +1716,7 @@ static const uint32_t* latin_variation(uint16_t keycode, bool upper_case) {
     if (latin_ex_map[row][0] == NULL) {
         return NULL;                        // this letter has no variations
     }
-    const uint8_t   packed = get_global_latin_table()->ex[keycode - KC_A];
-    const uint8_t   idx    = upper_case ? (uint8_t)(packed >> 4) : (uint8_t)(packed & 0x0F);
+    const uint8_t   idx    = latin_pick_get(get_global_latin_table()->ex, row);
     const uint32_t* chosen = (idx < LATIN_EX_VARIATIONS) ? latin_ex_map[row][idx] : NULL;
     return (chosen != NULL) ? chosen : latin_ex_map[row][0];
 }
@@ -3398,15 +3397,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                     const int8_t pick_idx = latin_picker_index(pick_row, get_local_layer()->picker_page, pick_slot);
                     if(pick_idx >= 0) {
                         latin_sync_t* global_latin_table = access_global_latin_table();
-                        uint8_t current = global_latin_table->ex[last_latin_keycode-KC_A];
                         // The ABSOLUTE variation index is what gets stored, not the
                         // slot — so a pick made on page 1 still reads back correctly,
                         // and on a variant with a different LATIN_PICKER_SLOTS.
-                        if(pick_upper) {
-                            global_latin_table->ex[last_latin_keycode-KC_A] = (uint8_t)((pick_idx<<4) | (current&0xf));
-                        } else {
-                            global_latin_table->ex[last_latin_keycode-KC_A] = (uint8_t)(pick_idx | (current&0xf0));
-                        }
+                        // The field index IS the latin_ex_map row, so the two can
+                        // never disagree about which case is being written.
+                        latin_pick_set(global_latin_table->ex, pick_row, (uint8_t)pick_idx);
                         send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
 
                         // "or an alternative character has been selected"
@@ -3927,17 +3923,25 @@ void keyboard_post_init_user(void) {
     // way; rewriting the byte here stops a dead index in one case's nibble being
     // carried forward every time the other case is re-picked.
     latin_sync_t* latin_table = access_global_latin_table();
-    memcpy(latin_table->ex, ee.latin_ex, sizeof(ee.latin_ex));
     bool latin_normalised = false;
-    for(uint8_t i = 0; i < sizeof(latin_table->ex); i++) {
-        uint8_t hi = (uint8_t)(latin_table->ex[i] >> 4);      // uppercase pick -> row i
-        uint8_t lo = (uint8_t)(latin_table->ex[i] & 0x0F);    // lowercase pick -> row 26+i
-        if(hi >= LATIN_EX_VARIATIONS || latin_ex_map[i][hi] == NULL)        hi = 0;
-        if(lo >= LATIN_EX_VARIATIONS || latin_ex_map[26 + i][lo] == NULL)   lo = 0;
-        const uint8_t normalised = (uint8_t)((hi << 4) | lo);
-        if(normalised != latin_table->ex[i]) {
-            latin_table->ex[i] = normalised;
-            latin_normalised   = true;
+    if(ee.latin_pick_migrated == LATIN_PICK_MIGRATED) {
+        memcpy(latin_table->ex, ee.latin_ex_wide, sizeof(latin_table->ex));
+    } else {
+        // One-time widening of the legacy nibble pairs (one byte per letter, high
+        // nibble = uppercase) into the 6-bit fields. Every legacy value is < 16 so
+        // it lands in the wider field unchanged and the user keeps their picks.
+        memset(latin_table->ex, 0, sizeof(latin_table->ex));
+        for(uint8_t i = 0; i < 26; i++) {
+            latin_pick_set(latin_table->ex, i,      (uint8_t)(ee.latin_ex[i] >> 4));
+            latin_pick_set(latin_table->ex, 26 + i, (uint8_t)(ee.latin_ex[i] & 0x0F));
+        }
+        latin_normalised = true;           // force the flush that stamps the sentinel
+    }
+    for(uint8_t row = 0; row < LATIN_PICK_FIELDS; row++) {
+        const uint8_t idx = latin_pick_get(latin_table->ex, row);
+        if(idx >= LATIN_EX_VARIATIONS || latin_ex_map[row][idx] == NULL) {
+            latin_pick_set(latin_table->ex, row, 0);
+            latin_normalised = true;
         }
     }
     if(latin_normalised) {
@@ -4026,6 +4030,10 @@ void eeconfig_init_user(void) {
     ee.brightness = ~FULL_BRIGHT;
     ee.auto_brightness = 0;   // host-auto off on a fresh EEPROM
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
+    // A fresh EEPROM is born already widened: zeroed picks (every letter on its
+    // first variation) plus the sentinel, so it never runs the legacy conversion.
+    memset(ee.latin_ex_wide, 0, sizeof(ee.latin_ex_wide));
+    ee.latin_pick_migrated = LATIN_PICK_MIGRATED;
     // Empty MRU recents: the serialised form uses 0 == empty for both lists, so
     // a zeroed block reads back as "no recent" (no stray category-0 / lang-0).
     memset(ee.mru_emoji, 0, sizeof(ee.mru_emoji));

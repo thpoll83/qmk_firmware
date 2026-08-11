@@ -191,9 +191,17 @@ void save_user_settings(void) {
     eeconfig_update_user_datablock(&ee, 0, offsetof(poly_eeconf_t, latin_ex));
 }
 
-// Writes only the 26-byte latin extension table to EEPROM.
+// Writes only the packed latin variation picks to EEPROM.
+// ⚠️ These go to latin_ex_wide, NOT the legacy latin_ex: g_latin.ex is now
+// LATIN_PICK_BYTES (39) wide, so writing it at the old 26-byte offset would run
+// straight into mru_emoji. The sentinel is stamped in the same breath, so a
+// half-written migration cannot leave the wide block claiming to be converted.
 void save_user_latin(void) {
-    eeconfig_update_user_datablock(g_latin.ex, offsetof(poly_eeconf_t, latin_ex), sizeof(g_latin.ex));
+    eeconfig_update_user_datablock(g_latin.ex, offsetof(poly_eeconf_t, latin_ex_wide),
+                                   sizeof(g_latin.ex));
+    const uint8_t marker = LATIN_PICK_MIGRATED;
+    eeconfig_update_user_datablock(&marker, offsetof(poly_eeconf_t, latin_pick_migrated),
+                                   sizeof(marker));
 }
 
 // Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.

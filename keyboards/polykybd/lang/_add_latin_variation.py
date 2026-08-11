@@ -24,14 +24,32 @@ SHEET = "xl/worksheets/sheet3.xml"
 # scan below happily walked into them: appending an 11th/12th variation to a row
 # overwrote the MIN/MAX formula cells, and the fixup pass then crashed trying to
 # int() a hex cached value it had just written there itself.  They now live at S/T
-# and MAX_SLOTS stops the scan at Q, so the collision is unreachable rather than
-# merely further away.  MAX_SLOTS is also the hard ceiling of the picker's stored
-# index: it is a NIBBLE (see latin_sync_t.ex), so 16 is the most that can ever be
-# addressed -- keep it in step with LATIN_EX_VARIATIONS in lang/lang_lut_ext.h.
-MAX_SLOTS    = 16
+# ⚠️ The helper position is DERIVED, never a literal.  It has been overrun twice:
+# first at N/O (ten slots past B), which the free-column scan walked into as soon
+# as a row gained an 11th variation; then at S/T, which held only while MAX_SLOTS
+# was 16 -- raising it to 64 for the 6-bit widening put the scan straight through
+# them again, and the first run wrote a variation into the MIN cell.  Deriving the
+# columns from FIRST_COL + MAX_SLOTS makes the collision unrepresentable instead of
+# merely further away.  Use _move_helper_columns.py if MAX_SLOTS ever grows again.
+#
+# MAX_SLOTS is also the hard ceiling of the picker's stored index: latin_sync_t.ex
+# packs it in a LATIN_PICK_BITS-wide field per (letter, case), so LATIN_PICK_MAX is
+# the most that can ever be addressed -- keep it in step with state.h.  (It was a
+# nibble/16 until the 6-bit widening.)
+MAX_SLOTS    = 64                # LATIN_PICK_MAX in state.h (6-bit field)
 FIRST_COL    = 2                 # column B
-HELPER_MIN   = "S"
-HELPER_MAX   = "T"
+
+
+def _colname(n):
+    s = ""
+    while n:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+
+HELPER_MIN   = _colname(FIRST_COL + MAX_SLOTS)       # first column past every slot
+HELPER_MAX   = _colname(FIRST_COL + MAX_SLOTS + 1)
 USAGE = """usage: _add_latin_variation.py [--dry-run] [--allow-asymmetric]
                               <xlsx> <letter> <char> [<letter> <char> ...]
 

@@ -181,10 +181,23 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    PR. Apply it as its **own** label call: each label fires its own workflow run, so
    batching it with `bump:*` starts two identical rig runs.
 
-   After the merge lands and the number is understood, **move the baseline** —
+   After the merge lands, **move the baseline only if something actually moved.**
    `polykybd-ctnd`'s `perf/baselines/split72.json` is compared against, never
-   auto-updated, so leaving it pre-merge makes every later PR report the merge's
-   delta as a phantom regression.
+   auto-updated, so a real shift left unrecorded becomes a phantom regression on
+   every later PR — but a re-baseline is not free either. ⚠️ **"Idle — worst
+   iteration" is a max-of-window sample and swings ~2× run to run.** The 0.33.13
+   measurement read 1.88 ms against a 3.85 ms baseline — a headline "-51%" that the
+   histogram refutes outright: that window was 4055 iterations `<1 ms` + 110 in
+   `1-2 ms` and **nothing above 2 ms**, so the baseline's 3.85 ms was one outlier
+   iteration, and the mean-like metric over the same window (main-loop rate) moved
+   -1.3%. Re-baselining to a lucky-low sample makes the next ordinary run look like
+   a +100% regression. Judge each row against its own stability — trust the
+   rate/total rows, treat the worst-iteration rows as anecdotes — and re-baseline
+   only when a stable metric has genuinely shifted.
+
+   For reference, 0.33.13 itself was **performance-neutral**: every metric within
+   ~1% except that idle artefact and a ~1 ms wobble on the 12 ms RLE total. The
+   baseline was deliberately left where it was.
 
 9. **Report**:
    - Number of upstream commits merged.

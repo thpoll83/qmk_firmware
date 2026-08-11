@@ -274,11 +274,18 @@ inherited-upstream noise:
   files), so `Build firmware` + `HIL test` are the only other verification and
   neither measures timing. The job is report-only, so it cannot redden an already
   unreviewable PR. Apply `perf` as its **own** label call (N labels in one call fire
-  N runs — see the labeling note above). ⚠️ **Then move the baseline.**
-  `perf/baselines/split72.json` is compared against, never auto-updated, so once the
-  post-merge number is understood commit that run's JSON to `polykybd-ctnd` —
-  otherwise every later PR's report carries the merge's delta as a phantom
-  regression against a pre-merge reference.
+  N runs — see the labeling note above). ⚠️ **Then move the baseline — but only if
+  something actually moved.** `perf/baselines/split72.json` is compared against,
+  never auto-updated, so a real shift left unrecorded becomes a phantom regression
+  on every later PR; equally, re-baselining on noise creates a phantom regression in
+  the other direction. **"Idle — worst iteration" is a max-of-window sample and
+  swings ~2× run to run** — the 0.33.13 dispatch read 1.88 ms against a 3.85 ms
+  baseline ("-51%") on a window whose histogram was 4055 iterations `<1 ms` + 110 in
+  `1-2 ms` and *nothing above 2 ms*, i.e. the old value was one outlier iteration,
+  while the main-loop rate over the same window moved -1.3%. Trust the rate/total
+  rows; treat the worst-iteration rows as anecdotes. **0.33.13 measured
+  performance-neutral** (everything within ~1%), so its baseline was deliberately
+  left in place.
 
 ## Releases
 

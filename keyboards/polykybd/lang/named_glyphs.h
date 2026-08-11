@@ -1961,6 +1961,13 @@
 // for the host-detected Linux desktops (POLY_OS_LINUX_GNOME/KDE).
 #define ICON_OS_GNOME               	U"\x98"
 #define ICON_OS_KDE                 	U"\x99"
+// The Intl (_ADDLANG1) layer key: a rounded-rect tile around "Intl" spelled in
+// accented latin, hand-composed in gfx_icons.h. Like the two logos above it is a
+// resident IconsFont glyph declared HERE, in the hand-maintained tail past the
+// //[[[end]]] marker, and NOT as a named_glyphs sheet row — the sheet feeds the
+// cog block above, and 0x98/0x99/0x9C are all absent from it for the same reason.
+// A macro added *inside* the cog block would be deleted on the next run_cog.sh.
+#define ICON_INTL                   	U"\x9D"
 // ---- Hint display-list building blocks --------------------------------------
 // A shortcut-hint string is a mini display list interpreted by
 // kdisp_write_gfx_text_cy() (base/disp_array.c). These macros name the control

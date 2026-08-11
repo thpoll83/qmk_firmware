@@ -36,7 +36,7 @@
 // The picker legend is plain resident latin: Ctrl on this layer is an ACTION on
 // the current letter, not a mode, so showing the transformation beats a second
 // generic icon.
-#define INTL_LAYER_LEGEND   U"\x9D"              // the Intl layer key itself (gfx_icons.h ICON_INTL)
+#define INTL_LAYER_LEGEND   ICON_INTL           // gfx_icons.h 0x9D, named in named_glyphs.h
 #define INTL_PICKER_LEGEND  U"\xC1\xBB\xC6"      // Á»Æ — Ctrl: pick another variation
 
 /*[[[cog

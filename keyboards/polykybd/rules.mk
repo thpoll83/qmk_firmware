@@ -212,6 +212,7 @@ endif
     EXTRAFLAGS += $(if $(filter %.cpp,$<),,-Wno-strict-prototypes -Wno-error=discarded-qualifiers) \
                   -Wno-unused-function \
                   -Wno-unused-but-set-variable \
+                  -Wno-unused-but-set-parameter \
                   -Wno-unused-variable \
                   -Wno-error=format \
                   -Wno-error=maybe-uninitialized \

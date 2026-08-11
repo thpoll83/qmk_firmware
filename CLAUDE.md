@@ -1172,7 +1172,41 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   `fontpack_render_settings.json` was missing all 12 `latin` records. Regenerating
   corrects both. If `--check` is ever wired into CI, fix the manifest/prune ordering
   rather than hand-editing the committed value.
-- **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.
+- **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain.
+- ⚠️ **`generate_fonts.py --check` FAILS on every committed header today, and it is a
+  FORMATTING drift, not a rendering one — do not "fix" it by regenerating the tree.**
+  The committed `base/fonts/generated/*.h` were emitted during the column-native
+  (PolyColGfx) work by a fontconvert built from a **work-in-progress tree**, not from
+  any committed Adafruit-GFX revision — `91d073a` is the tip of that work and already
+  emits the newer form. Rebuilding the pinned toolchain from Adafruit-GFX `HEAD` and
+  re-running `--only latin` reproduces **every bitmap byte and every real glyph record
+  exactly**; what differs is cosmetic (2026-08-11, verified glyph-by-glyph):
+  - `Bitmaps[]PROGMEM` → `Bitmaps[] PROGMEM`; 16 bytes/line → 12 with a
+    `/* range N (a - b): */` prefix; glyph columns width 5 → 4.
+  - `bitmapOffset` on a **gap** record: the running cumulative length → `0`. Dead
+    either way — the renderer skips a glyph on `w == 0 && h == 0` and never reads it.
+  - The trailing `// Approx. N bytes` comment: the **committed numbers are stale** and
+    disagree with the data in their own file (`_Okina_` claims 17 for 4 bitmap bytes +
+    one 7-byte record; only `_Naira_` adds up), because they predate the row-major →
+    column-native transpose that changed every bitmap length.
+  **`fonts/normalize_header_format.py` re-emits a freshly generated header in the
+  committed form**, so a font change lands as a diff of the glyphs that actually
+  changed instead of rewriting 3.4k lines. Its `--verify REFERENCE` mode asserts the
+  round trip reproduces the committed file byte for byte (size comments excluded) —
+  **run that against the unmodified header first**; it is what proves your toolchain
+  matches before you trust any regeneration. Re-formatting the whole tree to the
+  current emitter would also work, but needs *all* source fonts (`dl-fonts.sh`) so
+  every category moves together — don't leave the tree half-converted.
+- **Adding codepoints to an existing `latin` font is the cheap case, and the cheapest
+  sub-case is filling a GAP.** `latin` is `resident: true` and in no bundle, so the
+  change is confined to the firmware image: **no `.plyf` reship, no `content_version`
+  bump** — provided no *pack* font covers the new codepoints (check before assuming;
+  a new resident glyph that a pack font draws identically would be pruned by
+  `prune_shadowed_glyphs` on the next regen and change that bundle). A font emits one
+  **contiguous** `first..last` table with gap records for unassigned slots, so a
+  codepoint **inside** the existing span costs only its bitmap — the record already
+  exists. `_LatinExtAdd_` spans `0x1E62..0x1EF9` with 144 gaps, which is why the Welsh
+  `Ẁẁ Ẃẃ Ẅẅ Ỳỳ` + `Ẽ Ỹ` addition (2026-08-11) grew the table by **zero** entries.
 
 See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
 

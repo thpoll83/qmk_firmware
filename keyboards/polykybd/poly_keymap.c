@@ -2838,14 +2838,19 @@ void update_displays(enum refresh_mode mode) {
                         // copy_overlay_to_buffer() the app's Ctrl-modifier overlay
                         // image, and keycode_to_disp_overlay() the built-in
                         // Ctrl-shortcut hints, on every key at once.
-                        if(add_lang) {
-                            // leave the variation legend alone
-                        } else if(display_overlays) {
-                            if(!copy_overlay_to_buffer(keycode, mods)) {
-                                text = keycode_to_disp_overlay(keycode, state); //fallback to hardcoded
+                        // ⚠️ The guard has to wrap BOTH arms. Folding it into the
+                        // first condition instead (`!add_lang && display_overlays`)
+                        // looks equivalent and is not: the else would then fire on
+                        // the Intl layer and paint the hardcoded hint back over the
+                        // variation, which is the bug this exists to stop.
+                        if(!add_lang) {
+                            if(display_overlays) {
+                                if(!copy_overlay_to_buffer(keycode, mods)) {
+                                    text = keycode_to_disp_overlay(keycode, state); //fallback to hardcoded
+                                }
+                            } else {
+                                text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                             }
-                        } else {
-                            text = keycode_to_disp_overlay(keycode, state); //this should maybe go away - or setting?
                         }
                         if(text) {
                             // The hint string is a self-contained display list: any

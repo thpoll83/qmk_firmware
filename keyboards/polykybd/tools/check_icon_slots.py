@@ -26,6 +26,8 @@ NAMES = os.path.join(KB, "lang", "named_glyphs.h")
 
 # Latin-1 codepoints that must never hold a custom icon: IconsFont shadows them.
 PRINTABLE_LATIN1 = {0xA0: "nbsp", **{c: chr(c) for c in range(0xA1, 0x100)}}
+# End of the non-printable C1 block: the only band a custom icon may live in.
+C1_END = 0xA0
 
 
 def icons_font():
@@ -62,14 +64,19 @@ problems = []
 
 print(f"IconsFont range 0x{first:02X}..0x{last:02X}  ({len(glyphs)} glyphs)\n")
 print(f"{'cp':<6} {'glyph':<12} {'macro':<24} state")
-for cp in range(0x80, 0xA6):
+for cp in range(0x80, max(last, C1_END) + 6):
     g = glyphs.get(cp)
     nm = names.get(cp, "")
     if cp > last:
-        # Past IconsFont's `last` these fall through to NotoSans, so a macro here
-        # naming the real character is correct — the caution is about putting a
-        # custom GLYPH at the codepoint, which would then shadow that character.
-        if cp in PRINTABLE_LATIN1:
+        # Past IconsFont's `last` these fall through to NotoSans, so a macro at
+        # 0xA0+ naming the real character is correct — the caution there is about
+        # putting a custom GLYPH at the codepoint, which would shadow it. Below
+        # 0xA0 there is no character to fall through to, so a macro with no glyph
+        # behind it is simply broken and used to print as consistent.
+        if cp < 0xA0 and nm:
+            problems.append(f"0x{cp:02X} macro {nm} points past IconsFont.last (no glyph)")
+            state = "past last, but NAMED"
+        elif cp in PRINTABLE_LATIN1:
             state = f"Latin-1 {PRINTABLE_LATIN1[cp]!r} (never put a glyph here)"
         else:
             state = "free (past last)"
@@ -85,8 +92,7 @@ for cp in range(0x80, 0xA6):
             state = "gap, but NAMED"
     print(f"0x{cp:02X}   {(f'{g[0]}x{g[1]}' if g else '-'):<12} {nm:<24} {state}")
 
-free = [cp for cp in range(0x80, 0xA0) if cp not in glyphs and (cp > last or cp not in glyphs)]
-free = [cp for cp in free if cp not in PRINTABLE_LATIN1]
+free = [cp for cp in range(0x80, C1_END) if cp not in glyphs]
 print(f"\nfree C1 slots: {', '.join(f'0x{c:02X}' for c in free) or '(none — the C1 range is full)'}")
 print("⚠️  0xA0+ is printable Latin-1; a custom icon there shadows a real character.")
 

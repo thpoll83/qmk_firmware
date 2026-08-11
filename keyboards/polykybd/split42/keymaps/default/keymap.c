@@ -187,18 +187,27 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /* Additional latin variant layer */
     [_ADDLANG1] = POLY_LAYOUT(
         KC_NO,   KC_NO,   KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3,
-        KC_NO,   _______, _______, _______, _______, _______,
-        // Shift picks which CASE the variation is stored for, so it has to reach
-        // the base layer here too (it was KC_NO).  Note nothing currently selects
-        // _ADDLANG1 on split42 -- there is no MO(_ADDLANG1) in this keymap -- so
-        // this makes the layer correct for when one is added, it does not enable it.
+        // ⚠️ EVERY position that holds Ctrl or Shift on ANY base layer has to fall
+        // through here, and split42 spreads them around: the bases disagree, so Ctrl
+        // is a home-row pinky (L10, matrix [1,0]) on _L0 and a thumb (LT0, [3,3]) on
+        // _L1..._L4, and Shift is L20 on the left plus R25 on the right — which the
+        // POLY_SPLIT42_MIRROR_RIGHT column reversal lands at matrix [6,0], not [6,5].
+        // Masking any one of them kills the picker on whichever base uses it.
+        // Nothing selects _ADDLANG1 on split42 yet (no MO(_ADDLANG1) in this keymap),
+        // so this makes the layer correct for when a key is added, not enabled now.
+        _______, _______, _______, _______, _______, _______,
         _______, _______, _______, _______, _______, _______,
         // Ctrl (LATIN_PICKER_MOD) must reach the base layer -- see the split72 note.
         _______, KC_NO,   _______,
         KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
         _______, _______, _______, _______, _______, KC_NO,
-        _______, _______, _______, _______, _______, KC_NO,
-        _______, _______, _______
+        _______, _______, _______, _______, _______, _______,
+        // RT2 is the base layers' KC_RALT, split42's ONLY Alt. Mask it for the same
+        // reason split72 masks its left Alt: the picker swallows the keys it handles,
+        // so a held-and-released Alt reaches the host as a bare tap and opens the
+        // Windows menu bar. Nothing on this layer consumes AltGr — the letters render
+        // variations — so masking costs nothing here.
+        _______, _______, KC_NO
     ),
     // Emoji layer — left half: 12 category tabs (rows 0-1) + 6 MRU recents on the
     // bottom-left row (top-bar marked); right half: the current tab's 18 slots

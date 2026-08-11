@@ -33,7 +33,6 @@ except ImportError:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fontpack  # noqa: E402  (sibling module: PlyF font-pack serializer/validator)
-import normalize_header_format  # noqa: E402  (sibling: committed-format re-emitter)
 
 # Committed structural manifest for the external-flash font pack (the build
 # artifact that ships to the host). The manifest pins the pack's font order and
@@ -136,14 +135,7 @@ def render(fc: str, entries, sources, categories, root: Path, quiet: bool):
 
 
 def compose_category(blocks: list[str]) -> str:
-    # Normalise here rather than at the call sites: this is the one choke point every
-    # consumer goes through (the emitted header, the resident-set parse, the font-pack
-    # manifest and the bundle builders), so they cannot disagree about the format, and
-    # a regeneration cannot silently skip the step.  See normalize_header_format.py --
-    # today's fontconvert renders the same bytes as the committed headers but writes
-    # them differently, so without this every regeneration reformats 3.4k lines per
-    # category and buries the glyphs that actually changed.
-    return normalize_header_format.normalize("#pragma once\n\n" + "\n".join(blocks))
+    return "#pragma once\n\n" + "\n".join(blocks)
 
 
 # Render-option fields a host can re-apply when rebuilding a glyph (the fontconvert
@@ -295,9 +287,14 @@ def main() -> None:
         # Derive the font-pack manifest from the freshly composed (in-memory)
         # headers so it stays consistent with them under --check.
         cat_texts = {c: compose_category(b) for c, b in cat_blocks.items() if b}
+        # ⚠️ `dedupe` must match what the BUNDLE path below does, or the manifest
+        # describes a pack nobody builds: it was emitted here unpruned while the
+        # shipped bundles were pruned, so the committed total_size and the
+        # regenerated one could never agree and --check drifted on this file
+        # forever (documented as "already stale" rather than fixed).
         pack_data, manifest = fontpack.manifest_from_texts(
             order, cat_texts, cfg, root / "base" / "fonts",
-            content_version=args.content_version)
+            content_version=args.content_version, dedupe=not args.no_dedupe)
         outputs[gen_dir / PACK_MANIFEST] = fontpack.manifest_json(pack_data, manifest)
 
         # Split-pack bundles: one PlyF per family + their committed manifest + the

@@ -1173,30 +1173,31 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   corrects both. If `--check` is ever wired into CI, fix the manifest/prune ordering
   rather than hand-editing the committed value.
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain.
-- ⚠️ **`generate_fonts.py --check` FAILS on every committed header today, and it is a
-  FORMATTING drift, not a rendering one — do not "fix" it by regenerating the tree.**
-  The committed `base/fonts/generated/*.h` were emitted during the column-native
-  (PolyColGfx) work by a fontconvert built from a **work-in-progress tree**, not from
-  any committed Adafruit-GFX revision — `91d073a` is the tip of that work and already
-  emits the newer form. Rebuilding the pinned toolchain from Adafruit-GFX `HEAD` and
-  re-running `--only latin` reproduces **every bitmap byte and every real glyph record
-  exactly**; what differs is cosmetic (2026-08-11, verified glyph-by-glyph):
-  - `Bitmaps[]PROGMEM` → `Bitmaps[] PROGMEM`; 16 bytes/line → 12 with a
-    `/* range N (a - b): */` prefix; glyph columns width 5 → 4.
-  - `bitmapOffset` on a **gap** record: the running cumulative length → `0`. Dead
-    either way — the renderer skips a glyph on `w == 0 && h == 0` and never reads it.
-  - The trailing `// Approx. N bytes` comment: the **committed numbers are stale** and
-    disagree with the data in their own file (`_Okina_` claims 17 for 4 bitmap bytes +
-    one 7-byte record; only `_Naira_` adds up), because they predate the row-major →
-    column-native transpose that changed every bitmap length.
-  **`fonts/normalize_header_format.py` re-emits a freshly generated header in the
-  committed form**, so a font change lands as a diff of the glyphs that actually
-  changed instead of rewriting 3.4k lines. Its `--verify REFERENCE` mode asserts the
-  round trip reproduces the committed file byte for byte (size comments excluded) —
-  **run that against the unmodified header first**; it is what proves your toolchain
-  matches before you trust any regeneration. Re-formatting the whole tree to the
-  current emitter would also work, but needs *all* source fonts (`dl-fonts.sh`) so
-  every category moves together — don't leave the tree half-converted.
+- ✅ **`generate_fonts.py --check` PASSES on a clean checkout (2026-08-11) — if it
+  drifts, something is genuinely wrong.** It had failed on every header for a long
+  time, which was a **formatting** drift, not a rendering one: the committed headers
+  were emitted during the column-native (PolyColGfx) work by a fontconvert built from
+  a work-in-progress tree, so the current emitter wrote the same bytes differently
+  (`Bitmaps[]PROGMEM` vs `[] PROGMEM`, 16 vs 12 bytes per line, glyph column widths,
+  and `0` vs the running length in a **gap** record's dead `bitmapOffset`). The tree
+  has now been regenerated with the pinned toolchain, so the committed headers are
+  the emitter's native output and the interim `normalize_header_format.py` is gone.
+  Verified across **156 fonts / 6714 glyphs** that the reformat changed no data.
+  - **Two real bugs were hiding behind the permanent drift**, both fixed:
+    `manifest_from_texts()` built `fontpack.manifest.json` **without** the dedupe the
+    bundle path applies, so its `total_size` could never match the committed
+    (post-dedupe) value; and `--only <cat> --check` reported every *other* committed
+    header as `STALE`, because only the write path skipped the stale sweep under
+    `--only`.
+  - ⚠️ **`parse_gfx_header()` CANONICALISES every glyph's `bitmapOffset` to the
+    running cumulative length**, so a purely cosmetic header change cannot reach the
+    `.plyf` bytes. Without it, reformatting the tree changed **4 shipped bundles**
+    (same size, ~535 single-byte diffs, all in dead gap offsets) and would have forced
+    a reship + `content_version` bump for zero visual change. With it, all 7 bundles
+    stay byte-identical to the shipped host copies. Don't "simplify" it away.
+  - Regenerating needs **all** source fonts (`fonts/dl-fonts.sh`, ~75 MB, 21 entries)
+    plus the pinned fontconvert at `/tmp/fontconvert_pinned` (the path is echoed into
+    each header's provenance comment).
 - **Adding codepoints to an existing `latin` font is the cheap case, and the cheapest
   sub-case is filling a GAP.** `latin` is `resident: true` and in no bundle, so the
   change is confined to the firmware image: **no `.plyf` reship, no `content_version`

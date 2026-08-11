@@ -59,7 +59,7 @@ endif
 # only source on machines where the host app can't run (locked-down) or doesn't
 # exist (Android, which it reports as Linux). The host push (HID cmd 29) wins when
 # present. Do NOT also set OS_DETECTION_DEBUG_ENABLE — it conflicts with
-# DYNAMIC_KEYMAP/VIA (see quantum/os_detection.h).
+# DYNAMIC_KEYMAP (see quantum/os_detection.h).
 OS_DETECTION_ENABLE = yes
 
 # polykybd.c is the keyboard-named source — QMK compiles it automatically, so

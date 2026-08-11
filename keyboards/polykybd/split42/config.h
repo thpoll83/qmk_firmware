@@ -38,7 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
    in keymaps/default/keymap.c), so a left-board-as-right reads correctly. This is a
    pure compile-time switch — keyboard.json is untouched and there is no runtime cost.
    Comment it out for a real right board.
-   ⚠️ The firmware runs the DYNAMIC (VIA) keymap from EEPROM, which flashing does NOT
+   ⚠️ The firmware runs the DYNAMIC keymap from EEPROM, which flashing does NOT
    overwrite. After flashing a change to this switch you MUST reset the keyboard
    (clear EEPROM / dynamic keymap, e.g. EE_CLR) so the compiled keymap re-seeds it. */
 #define POLY_SPLIT42_MIRROR_RIGHT
@@ -100,7 +100,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RAW_USAGE_ID 0x62
 #define RAW_EPSIZE 64
 
-// Host-remappable layers (VIA-style dynamic keymap in EEPROM) are 0..8 — see the
+// Host-remappable layers (QMK dynamic keymap in EEPROM) are 0..8 — see the
 // DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT write cap below. Layers 9..12 (_SL, _LL,
 // _ADDLANG1, _EMJ) are served straight from the compiled keymap in flash by
 // poly_keycode_at()/keymap_key_to_keycode() in keymap.c, so they can't be remapped and

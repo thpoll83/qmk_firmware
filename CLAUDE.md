@@ -996,7 +996,15 @@ only split72 defines the macros.
   "Timed console logs".
 
 ### Notable QMK features enabled
-RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
+RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 host-remappable layers), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
+
+⚠️ **VIA is NOT supported and must not be advertised as such.** `VIA_ENABLE` is
+unset on both variants — only `DYNAMIC_KEYMAP_ENABLE` is on, and remapping happens
+through PolyKybdHost's own layout editor over our raw-HID channel. The one residue
+is `poly_keymap.c`'s `#include "quantum/via.h"`, which is where QMK happens to
+define the `id_dynamic_keymap_*` command IDs the dynamic keymap uses; that include
+is a QMK header path, not a VIA feature. Don't reintroduce "VIA-compatible" wording
+in docs, UI strings or comments.
 
 ## Font generation
 
@@ -1641,7 +1649,7 @@ Base-layer changes apply immediately and persist on the next suspend/reset/store
 **If the bug reappears after this fix**, the remaining risk is the RP2040 wear-leveling consolidation (~50 ms page erase) coinciding with a split UART transaction window, triggered by `brightness_save_if_pending()` firing in housekeeping 5 s after a brightness key press. This is a statistical coincidence, not a guaranteed block. Mitigations to try in order:
 
 1. Also defer `save_user_latin()` in `user_sync_latin_ex_data_handler()` — still a direct EEPROM write inside a sync handler (triggered on language changes).
-2. `eeprom_update_block()` in `dynamic_keymap_set_buffer_poly()` — also inside a sync handler, only during keymap remapping (VIA), lowest priority.
+2. `eeprom_update_block()` in `dynamic_keymap_set_buffer_poly()` — also inside a sync handler, only during keymap remapping, lowest priority.
 3. **Proper fix: offload EEPROM writes to core 1.** The keyboard already uses core 1 for RLE decompression via `multicore_exec.c` and the FIFO dispatch. Instead of calling `save_user_settings()` / `save_user_latin()` / `eeconfig_update_default_layer()` directly on core 0, post the write as a job to core 1 via the FIFO. Core 1 does the blocking flash operation while core 0 (QMK main loop, UART, USB) keeps running uninterrupted — eliminating the framing-corruption risk entirely. Main caveat: core 1 is currently single-purpose (RLE decompression), so the two job types must not collide; check that core 1 is idle before posting, or add a small job queue. EEPROM writes and RLE decompression are unlikely to overlap in practice since both are rare and burst-style.
 
 **Relevant files**:

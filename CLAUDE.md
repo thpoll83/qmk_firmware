@@ -518,6 +518,29 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   y, **NOT** a glyph-local row, so two glyphs at different y still interleave to one
   consistent scanline pattern. Used to render the Eden idle legend as a dim
   half-density overlay. Always pair the set with a reset (`(false)`) after the draw.
+- **To draw an INVERTED keycap, render it inverted — do NOT reach for
+  `kdisp_invert()`.** That is a panel-level SSD1306 command, and `split72.c`'s
+  `matrix_scan_kb` already toggles it on every press and un-toggles on release,
+  independently of `process_record`. So any *state* driven through it is undone by
+  the next keypress on that key — which is exactly what a latched indicator must
+  survive. Render it instead: `kdisp_set_buffer(0xFF)` for the ground +
+  `kdisp_set_gfx_erase(true)` around the legend draw (paired reset after — the flags
+  are static, so leaving erase on blanks every following keycap in that pass). Gate
+  it on **synced** state (`poly_layer_t`), not a master-only static, or the slave
+  half won't follow. The Intl picker's armed-Ctrl indicator is the worked example.
+- ⚠️ **The courtyard clear is WRONG on a deliberately-filled ground — pass
+  `cy_radius` 0 there.** `kdisp_write_gfx_text_cy(..., KDISP_CY_DEFAULT)` clears a
+  3px margin around each glyph so a legend punches cleanly through whatever is drawn
+  *underneath* (a tab frame, a row bar, an overlay image). On an inverted keycap
+  there is nothing underneath — the fill **is** the thing you want to keep — so the
+  clear eats a dark halo out of it and the key reads as *outlined* rather than
+  inverted (field, 2026-08-11: "the inversion looks like it has also a courtyard").
+  `kdisp_write_gfx_text` is itself just `_cy(..., 0)`, so radius 0 is the documented
+  no-courtyard path, not a new mode. ⚠️ Check **both** draw paths: a bottom/thumb-row
+  legend goes through `draw_legend_cx()` (now `draw_legend_cx_cy()`), everything else
+  through `kdisp_write_gfx_text_cy()` directly — on split72 `MATRIX_ROWS_PER_SIDE` is
+  5, so the Ctrl at `[4,0]` takes the *bottom-row* one and fixing only the obvious
+  call site changes nothing.
 - **`kdisp_send_window()` vs `kdisp_send_buffer()`**: `kdisp_send_buffer()` pushes
   the full 1024-byte scratch; `kdisp_send_window()` pushes only the **visible 360
   bytes** (pages 0–4 at column `BUFFER_X`) — the same region the keycap actually
@@ -909,6 +932,51 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
 - **Boot-intro-done persistence** rides the suspend-only dirty-flag EEPROM model:
   `mark_boot_intro_done()` sets `g_boot_dirty` (NOT a direct write); `save_all_dirty()`
   flushes it — do not add a direct EEPROM write here.
+
+### Intl latin-variation picker (`poly_keymap.c`, `_ADDLANG1`)
+Holding **Intl** shows each letter's selected accented variation; tapping **Ctrl**
+(`LATIN_PICKER_MOD`) turns the number row into a picker of that letter's variations.
+The mechanism is worth knowing because it is not the obvious implementation:
+
+- ⚠️ **The picker modifier is `MOD_MASK_CTRL` and must not go back to Alt.** The
+  picker swallows the keys it handles (`process_record_user` returns false), so the
+  host only ever sees the modifier go down and back up — and a bare **Alt** tap is
+  how Windows activates the menu bar, so picking a variation yanked focus out of the
+  text field in a lot of programs. A bare Ctrl tap does nothing in the same apps.
+- **The layer must PASS the modifier through.** `_ADDLANG1` masked `KC_LCTL` with
+  `KC_NO`, so Ctrl never reached the base layer and the picker could not be opened at
+  all — and that mask is *why* it was on Alt originally (Alt was the one modifier the
+  layer let through). A masked modifier draws an **empty** keycap and is otherwise
+  indistinguishable from a code bug, which is why `boot_diag.c` now reports
+  `intl: … ctrl=pass shift=pass alt=masked -> picker OK`, read out of the compiled
+  keymap. ⚠️ Verify such a fix against the **compiled `keymaps[]` in the ELF**, not by
+  counting columns in the `LAYOUT` macro — column-counting produced a first attempt
+  whose Ctrl was still masked, and the same banner scan (every position, **both**
+  hands) later found two more masks nobody had spotted on split42.
+- **The picker LATCHES by registering the REAL modifier** (`register_mods(MOD_BIT(
+  KC_LEFT_CTRL))`), not by setting a private flag. Two reasons, both binding: the
+  slave draws the picker digits on *its* own keys and only ever sees `poly_layer_t.mods`,
+  which is already synced; and **both flag bytes in `base/com.h` are full** (all 8 bits
+  used in each), so a private flag has nowhere to ride. `s_picker_latched` records only
+  that *we* registered it.
+- ⚠️ **Gate the release swallow on OWNERSHIP, not on the keycode.** The latch toggles
+  on the press, so the release of the arming tap must be swallowed or QMK unregisters
+  the modifier before the finger lifts. But a Ctrl **already held** when Intl was
+  pressed is registered by QMK — swallowing *that* release leaves it registered
+  forever and turns every later keystroke into Ctrl+key. `if(addlang && !pressed &&
+  s_picker_latched && ...)` is the correct condition; the other two cases fall through
+  harmlessly. `layer_state_set_user()` also unlatches on layer exit, for the same
+  "never release a Ctrl the user is really holding" reason.
+- **Nothing may overlay this layer.** Its letters *are* the payload (`render_key()`
+  draws the variation) and the picker modifier is Ctrl, so both overlay sources would
+  paint the *Ctrl view* over it — `copy_overlay_to_buffer()` the app's Ctrl-modifier
+  image and `keycode_to_disp_overlay()` the built-in Ctrl-shortcut hints, on every key
+  at once. ⚠️ The `!add_lang` guard must wrap **both** arms of the display_overlays
+  if/else; folding it into the first condition (`!add_lang && display_overlays`) looks
+  equivalent and is not — the `else` then fires on the Intl layer and paints the
+  hardcoded hint straight back over the variation.
+- The armed indicator is the inverted Ctrl keycap — see the two rendering bullets
+  above (render it, don't `kdisp_invert()`; and pass `cy_radius` 0).
 
 ### Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+; expanded v10)
 An OS-independent **override** of the language-layer legends with an alternative

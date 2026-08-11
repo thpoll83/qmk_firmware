@@ -198,7 +198,13 @@ enum my_keycodes {
     KC_EDEN,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
-static_assert((int)KC_DAUTO < (int)KCL_ENUS, "Overlap detected");
+// ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —
+// it stopped being last the moment KC_IDDQD and the four latin-picker keycodes were
+// appended after it, so the two asserts above silently stopped covering the tail
+// they exist to bound.  Re-anchor these whenever something is appended to the
+// QK_KB_0 block.
+static_assert((int)KC_LAT_PAGE_NEXT <= (int)QK_KB_MAX, "Too many custom QK key codes");
+static_assert((int)KC_LAT_PAGE_NEXT < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 

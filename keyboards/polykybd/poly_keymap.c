@@ -1685,6 +1685,20 @@ static int8_t latin_picker_index(uint8_t row, uint8_t page, int8_t slot) {
     if (slot < 0) {
         return -1;
     }
+    // ⚠️ Clamp, don't rely on the reset: the CASE selects a different row with its
+    // own variation count and it can change while the picker is open (Shift/Caps),
+    // which latin_picker_reset_page() does NOT cover — it only fires on a letter
+    // change.  Shifting from a two-page row onto a one-page one then left the page
+    // out of range, and every exit was blocked at once: every slot returned -1 (a
+    // blank picker row), latin_page_count() said 1 so the arrows were blanked AND
+    // the KC_LAT_PAGE_* handler's `pages > 1` guard did nothing.  Reachable today on
+    // split42 (10 slots): lowercase y has 11 variations, uppercase Y has 10.
+    // Clamping here rather than resetting on the case change keeps this the single
+    // place the render path and the press path agree on — both go through it.
+    const uint8_t pages = latin_page_count(row);
+    if (page >= pages) {
+        page = (uint8_t)(pages - 1);
+    }
     const uint16_t idx = (uint16_t)page * LATIN_PICKER_SLOTS + (uint16_t)slot;
     return (idx < latin_variation_count(row)) ? (int8_t)idx : -1;
 }
@@ -3438,6 +3452,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                             // just be a key that sometimes does nothing.
                             poly_layer_t* lyr = access_local_layer();
                             uint8_t page = lyr->picker_page;
+                            // Same clamp as latin_picker_index(): the case may have
+                            // changed since the page was set, so start the wrap from a
+                            // page that exists on THIS row.
+                            if(page >= pages) {
+                                page = (uint8_t)(pages - 1);
+                            }
                             page = (keycode==KC_LAT_PAGE_NEXT) ? (uint8_t)((page + 1) % pages)
                                                                : (uint8_t)((page + pages - 1) % pages);
                             lyr->picker_page = page;
@@ -4033,7 +4053,11 @@ void keyboard_pre_init_user(void) {
 // Initializes EEPROM configuration with default language, brightness, and latin extension settings.
 void eeconfig_init_user(void) {
     uprint("Init EE config\n");
-    poly_eeconf_t ee;
+    // Zero the WHOLE struct: the write below is a full-struct write, but not every
+    // field is assigned here (idle_style, os_state, glyph_script, boot_flags are
+    // not), so an uninitialised local would persist stack garbage into a fresh
+    // EEPROM for those.
+    poly_eeconf_t ee = {0};
     ee.lang = g_lang_init;
     ee.brightness = ~FULL_BRIGHT;
     ee.auto_brightness = 0;   // host-auto off on a fresh EEPROM

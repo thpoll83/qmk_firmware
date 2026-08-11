@@ -184,7 +184,8 @@ def shift_trailing_rows(xml, first, delta):
             if col not in (HELPER_MIN, HELPER_MAX, "Q"):
                 sys.exit(f"refusing to create rows: unexpected cell {ref_of(c)} "
                          f"in trailing row {r} — this tool only knows how to "
-                         f"relocate the sheet-wide S/T/Q aggregate rows")
+                         f"relocate the sheet-wide {HELPER_MIN}/{HELPER_MAX}/Q "
+                         f"aggregate rows")
         moved.append(r)
     for r in sorted(moved, reverse=True):          # high to low: refs stay unique
         m = row_xml(xml, r)
@@ -254,7 +255,7 @@ for letter, char in pairs:
         col += 1
     if col - FIRST_COL >= MAX_SLOTS:
         die(f"{letter}: row is full — {MAX_SLOTS} variations is the ceiling "
-            f"(the picker stores its pick in a nibble; see MAX_SLOTS)")
+            f"(the picker stores its pick in a 6-bit field; see MAX_SLOTS)")
     if any(p for p in plan if p[2] == row and p[1] == char):
         die(f"{letter}: {char!r} named twice in one command")
     taken[row] = col + 1

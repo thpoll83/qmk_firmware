@@ -96,6 +96,13 @@ typedef struct _poly_layer_t {
     layer_state_t def_layer;
     led_t         led_state;
     uint8_t       mods;
+    // Which page of the Intl latin-variation picker is showing.  This has to be
+    // SYNCED, not a master-side static: the slave draws the picker slots that land
+    // on its own keys and only ever sees poly_layer_t — the same reason the picker
+    // latches by registering the real Ctrl instead of a private flag (both flag
+    // bytes in base/com.h are full).  sync_and_refresh_displays() diffs this struct
+    // with memcmp over sizeof(), so the field joins the existing sync for free.
+    uint8_t       picker_page;
 } poly_layer_t;
 
 typedef struct _poly_sync_t {

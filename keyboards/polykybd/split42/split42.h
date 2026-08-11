@@ -64,6 +64,13 @@ struct display_info {
 #define POLY_SPLASH_R2     U" 4 2"
 #define POLY_SPLASH_R2_ROW 2
 
+// The picker row is only 6 positions per half (12 total), and the right block is
+// full, so the two page arrows have to come out of the left block's spare pair —
+// which is why they sit on the outer LEFT on both variants rather than one at each
+// end. That leaves 10 variation slots here vs 12 on split72; the stored pick is an
+// ABSOLUTE variation index either way, so the two page sizes cost nothing.
+#define LATIN_PICKER_SLOTS 10
+
 // Board name reported in the GET_ID (cmd 6) string, so the host shows the right
 // variant. hid_com.c falls back to "Split72" when a variant doesn't define this,
 // so split72's GET_ID stays byte-identical (it relies on that fallback).

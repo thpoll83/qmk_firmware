@@ -186,7 +186,10 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
     /* Additional latin variant layer */
     [_ADDLANG1] = POLY_LAYOUT(
-        KC_NO,   KC_NO,   KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3,
+        // Page arrows on the outer left, then 10 variation slots (LATIN_PICKER_SLOTS).
+        // The right block below is full, so this pair is the only free space on the
+        // row — split72 puts its arrows in the same two positions to match.
+        KC_LAT_PAGE_PREV, KC_LAT_PAGE_NEXT, KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3,
         // ⚠️ EVERY position that holds Ctrl or Shift on ANY base layer has to fall
         // through here, and split42 spreads them around: the bases disagree, so Ctrl
         // is a home-row pinky (L10, matrix [1,0]) on _L0 and a thumb (LT0, [3,3]) on

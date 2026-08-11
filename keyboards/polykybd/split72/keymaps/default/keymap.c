@@ -268,7 +268,9 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         LMRU(6),    LMRU(7),    LMRU(8),                LMRU(9),    LMRU(10),   LMRU(11),   KC_LANG_CLEAR
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(
-        KC_NO,      KC_NO,      KC_LAT0,    KC_LAT1,    KC_LAT2,    KC_LAT3,    KC_LAT4,
+        // Page arrows on the outer left (same two positions as split42, which has no
+        // room for one at each end), then 12 variation slots across the two blocks.
+        KC_LAT_PAGE_PREV, KC_LAT_PAGE_NEXT, KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4,
         KC_NO,      _______,    _______,    _______,    _______,    _______,    _______,
         KC_NO,      _______,    _______,    _______,    _______,    _______,    _______,    _______,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
@@ -279,7 +281,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // menu bar, right in the middle of typing an accented letter.
         _______,    KC_NO,      KC_NO,      _______,                _______,    _______,    _______,
 
-                    KC_LAT5,    KC_LAT6,    KC_LAT7,    KC_LAT8,    KC_LAT9,    KC_NO,      KC_NO,
+                    KC_LAT5,    KC_LAT6,    KC_LAT7,    KC_LAT8,    KC_LAT9,    KC_LAT10,   KC_LAT11,
                     _______,    _______,    _______,    _______,    _______,    _______,    KC_NO,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    KC_NO,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,

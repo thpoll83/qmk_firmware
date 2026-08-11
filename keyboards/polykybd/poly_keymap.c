@@ -610,14 +610,22 @@ void sync_and_refresh_displays(void) {
 static bool s_picker_latched = false;
 
 // Sets layer state variable tracking the active keyboard layer.
+static void latin_picker_reset_page(void);   // defined with the picker helpers below
+
 layer_state_t layer_state_set_user(layer_state_t state) {
     access_local_layer()->layer = state;
-    // Leaving Intl closes the picker. Without this the latched Ctrl would stay
-    // registered with the layer gone, so every following keystroke reaches the
-    // host as Ctrl+key.
-    if(s_picker_latched && get_highest_layer(state) != _ADDLANG1) {
-        unregister_mods(MOD_MASK_CTRL);
-        s_picker_latched = false;
+    if(get_highest_layer(state) != _ADDLANG1) {
+        // Leaving Intl closes the picker. Without this the latched Ctrl would stay
+        // registered with the layer gone, so every following keystroke reaches the
+        // host as Ctrl+key.
+        if(s_picker_latched) {
+            unregister_mods(MOD_MASK_CTRL);
+            s_picker_latched = false;
+        }
+        // Reset the page unconditionally, NOT only when we owned the latch: the
+        // user can hold Ctrl themselves and page, in which case s_picker_latched is
+        // false and the page would survive to the next visit to the layer.
+        latin_picker_reset_page();
     }
     return state;
 }
@@ -1625,6 +1633,69 @@ static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
     return 0;
 }
 
+// ── Intl latin-variation picker: slots and pages ─────────────────────────────
+//
+// The picker row shows LATIN_PICKER_SLOTS variations at a time (12 on split72, 10
+// on split42 — the variant headers) and pages through any beyond that.  What is
+// STORED is always the absolute variation index, so the two page sizes cost
+// nothing and a pick made on one variant reads back correctly on the other.
+
+// ⚠️ KC_LAT0..KC_LAT9 are contiguous but KC_LAT10/KC_LAT11 are NOT — they were
+// appended further down the enum so widening the cog range could not renumber
+// KC_DAUTO/KC_IDDQD out from under the dynamic-keymap EEPROM (keycode_helper.h).
+// So resolve a picker keycode HERE; never write `keycode - KC_LAT0` or a
+// `KC_LAT0 ... KC_LAT11` case range.
+static int8_t latin_picker_slot(uint16_t keycode) {
+    int8_t slot = -1;
+    if (keycode >= KC_LAT0 && keycode <= KC_LAT9) slot = (int8_t)(keycode - KC_LAT0);
+    else if (keycode == KC_LAT10)                 slot = 10;
+    else if (keycode == KC_LAT11)                 slot = 11;
+    // split42 wires only 10 slot keys, so 10/11 are unreachable there — but the
+    // shared code is compiled for both, and a slot past the variant's row would
+    // index the picker beyond what the keymap can ever show.
+    return (slot < LATIN_PICKER_SLOTS) ? slot : -1;
+}
+
+// Rows are dense — the cog appends variations left to right and pads the tail with
+// NULL — so the first NULL is the end.
+static uint8_t latin_variation_count(uint8_t row) {
+    uint8_t n = 0;
+    while (n < LATIN_EX_VARIATIONS && latin_ex_map[row][n] != NULL) {
+        n++;
+    }
+    return n;
+}
+
+static uint8_t latin_page_count(uint8_t row) {
+    const uint8_t n = latin_variation_count(row);
+    return (n <= LATIN_PICKER_SLOTS)
+               ? 1
+               : (uint8_t)((n + LATIN_PICKER_SLOTS - 1) / LATIN_PICKER_SLOTS);
+}
+
+// The row the picker is currently showing, for the letter last touched.  Both the
+// render and the press path must agree on this, so it lives in one place.
+static uint8_t latin_picker_row(uint16_t last_latin_keycode, bool upper_case) {
+    return (uint8_t)((upper_case ? 0 : 26) + (last_latin_keycode - KC_A));
+}
+
+// Absolute variation index for a picker slot on the currently-shown page, or -1
+// when that slot is past the end of the row.
+static int8_t latin_picker_index(uint8_t row, uint8_t page, int8_t slot) {
+    if (slot < 0) {
+        return -1;
+    }
+    const uint16_t idx = (uint16_t)page * LATIN_PICKER_SLOTS + (uint16_t)slot;
+    return (idx < latin_variation_count(row)) ? (int8_t)idx : -1;
+}
+
+// Back to page 0.  Anything that makes the current page meaningless calls this:
+// picking a variation, changing the letter (a one-page letter would otherwise show
+// a whole row of blanks while page 1 was still selected), and leaving the layer.
+static void latin_picker_reset_page(void) {
+    access_local_layer()->picker_page = 0;
+}
+
 // Resolve the latin variation a letter key should display/emit on the _ADDLANG1
 // layer, honouring the persisted per-case pick in latin_sync_t.ex (high nibble =
 // uppercase, low nibble = lowercase).
@@ -1668,17 +1739,33 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         return false;
     }
 
-    //variation selection on 0~9
+    //variation selection on the picker row
     uint16_t local_last_latin_keycode = get_local_last_latin_keycode();
-    if(keycode>=KC_LAT0 && keycode<=KC_LAT9) {
-        if(add_lang && picker_mod && local_last_latin_keycode>=KC_A && local_last_latin_keycode<=KC_Z) {
-            //show all available alternatives for selected latin letter
-            const uint8_t offset = (shift || state.caps_lock) ? 0 : 26;
-            const uint32_t* variation = latin_ex_map[offset+local_last_latin_keycode-KC_A][keycode-KC_LAT0];
-            if(variation!=NULL) {
-                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, variation);
+    const bool picker_open = add_lang && picker_mod &&
+                             local_last_latin_keycode>=KC_A && local_last_latin_keycode<=KC_Z;
+    const int8_t picker_slot = latin_picker_slot(keycode);
+    if(picker_slot >= 0) {
+        if(picker_open) {
+            //show the alternatives on the current page for the selected latin letter
+            const uint8_t row = latin_picker_row(local_last_latin_keycode, shift || state.caps_lock);
+            const int8_t  idx = latin_picker_index(row, local_layer->picker_page, picker_slot);
+            if(idx >= 0) {
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, latin_ex_map[row][idx]);
                 return true;
             }
+        }
+        return false;
+    }
+    if(keycode==KC_LAT_PAGE_PREV || keycode==KC_LAT_PAGE_NEXT) {
+        // Blank unless this letter actually pages — same rule (and glyphs) as the
+        // language layer's arrows, so a row that fits on one page shows nothing
+        // rather than a control that does nothing.
+        if(picker_open &&
+           latin_page_count(latin_picker_row(local_last_latin_keycode, shift || state.caps_lock)) > 1) {
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23,
+                                 keycode==KC_LAT_PAGE_PREV ? (const uint32_t*)(U"  " ICON_LEFT)
+                                                           : (const uint32_t*)(U"  " ICON_RIGHT));
+            return true;
         }
         return false;
     }
@@ -3231,6 +3318,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 return true;   // let QMK's QK_REBOOT handler reset the master
             }
             case KC_A ... KC_Z:
+                // A different letter has a different variation count, so the page
+                // that was showing may not exist on it.  Reset here rather than in
+                // the picker-open branch below: this case runs on EVERY letter press,
+                // picker open or not, so it cannot be bypassed.
+                if(keycode != get_local_last_latin_keycode()) {
+                    latin_picker_reset_page();
+                }
                 set_local_last_latin_keycode(keycode);
                 if((get_mods() & LATIN_PICKER_MOD) == 0 && addlang) {
                     const bool lshift = get_mods() == MOD_BIT(KC_LEFT_SHIFT);
@@ -3287,26 +3381,31 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             if(IS_MODIFIER_KEYCODE(keycode)) {
                 return true;
             }
-            switch(keycode) {
-                case KC_LAT0 ... KC_LAT9:
-                    if( last_latin_keycode>=KC_A && last_latin_keycode<=KC_Z) {
-                        const bool pick_upper = ((get_mods() & MOD_MASK_SHIFT) != 0) || global_layer->led_state.caps_lock;
-                        const uint8_t pick_row  = (pick_upper ? 0 : 26) + (uint8_t)(last_latin_keycode - KC_A);
-                        const uint8_t pick_slot = (uint8_t)(keycode - KC_LAT0);
-                        // Only the slots that exist are drawn on the picker keycaps
-                        // (render_key returns false for the rest), so a press on an
-                        // empty one is a press on a blank key.  Ignore it — storing
-                        // the index would leave ex[] pointing at a NULL cell, which
-                        // the letter then "emits" as whatever lies at address 0.
-                        if(latin_ex_map[pick_row][pick_slot] == NULL) {
-                            break;
-                        }
+            // ⚠️ NOT a `case KC_LAT0 ... KC_LAT11` range — KC_LAT10/11 are appended
+            // elsewhere in the enum, so the picker slots are resolved by helper.
+            const int8_t pick_slot = latin_picker_slot(keycode);
+            if(pick_slot >= 0) {
+                if( last_latin_keycode>=KC_A && last_latin_keycode<=KC_Z) {
+                    const bool pick_upper = ((get_mods() & MOD_MASK_SHIFT) != 0) || global_layer->led_state.caps_lock;
+                    const uint8_t pick_row = latin_picker_row(last_latin_keycode, pick_upper);
+                    // Only the slots that exist are drawn on the picker keycaps
+                    // (render_key returns false for the rest), so a press on an
+                    // empty one is a press on a blank key.  Ignore it — storing
+                    // the index would leave ex[] pointing at a NULL cell, which
+                    // the letter then "emits" as whatever lies at address 0.
+                    // On a paged row this also covers the tail slots of the last
+                    // page, which are blank for exactly the same reason.
+                    const int8_t pick_idx = latin_picker_index(pick_row, get_local_layer()->picker_page, pick_slot);
+                    if(pick_idx >= 0) {
                         latin_sync_t* global_latin_table = access_global_latin_table();
                         uint8_t current = global_latin_table->ex[last_latin_keycode-KC_A];
+                        // The ABSOLUTE variation index is what gets stored, not the
+                        // slot — so a pick made on page 1 still reads back correctly,
+                        // and on a variant with a different LATIN_PICKER_SLOTS.
                         if(pick_upper) {
-                            global_latin_table->ex[last_latin_keycode-KC_A] = ((keycode-KC_LAT0)<<4) | (current&0xf);
+                            global_latin_table->ex[last_latin_keycode-KC_A] = (uint8_t)((pick_idx<<4) | (current&0xf));
                         } else {
-                            global_latin_table->ex[last_latin_keycode-KC_A] = (keycode-KC_LAT0) | (current&0xf0);
+                            global_latin_table->ex[last_latin_keycode-KC_A] = (uint8_t)(pick_idx | (current&0xf0));
                         }
                         send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
 
@@ -3315,8 +3414,31 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                             unregister_mods(MOD_MASK_CTRL);
                             s_picker_latched = false;
                         }
+                        latin_picker_reset_page();
                         mark_latin_dirty();
                         request_disp_refresh();
+                    }
+                }
+                return false;
+            }
+            switch(keycode) {
+                case KC_LAT_PAGE_PREV:
+                case KC_LAT_PAGE_NEXT:
+                    if( last_latin_keycode>=KC_A && last_latin_keycode<=KC_Z) {
+                        const bool pg_upper = ((get_mods() & MOD_MASK_SHIFT) != 0) || global_layer->led_state.caps_lock;
+                        const uint8_t pages = latin_page_count(latin_picker_row(last_latin_keycode, pg_upper));
+                        if(pages > 1) {
+                            // Wrap both ways, like the language/emoji layers: with at
+                            // most two pages on the current table, "next" and "prev"
+                            // are the same gesture and a dead end at either edge would
+                            // just be a key that sometimes does nothing.
+                            poly_layer_t* lyr = access_local_layer();
+                            uint8_t page = lyr->picker_page;
+                            page = (keycode==KC_LAT_PAGE_NEXT) ? (uint8_t)((page + 1) % pages)
+                                                               : (uint8_t)((page + pages - 1) % pages);
+                            lyr->picker_page = page;
+                            request_disp_refresh();
+                        }
                     }
                     break;
                 case KC_A ... KC_Z:

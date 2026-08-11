@@ -37,6 +37,16 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     full review`**, which re-reviews the whole diff regardless of state — that is
     also the command to reach for after an aborted run, since the failed run
     recorded nothing but the head has already moved.
+  - ⚠️ **CodeRabbit SKIPS any PR over 100 changed files, so an upstream-merge PR
+    gets NO review at all** — *"Review skipped — Too many files! This PR contains
+    N files, which is M over the limit of 100."* This is a second, different tell
+    from the rate-limit one above, with the same consequence and the difference
+    that it is **guaranteed** on a catch-up merge rather than occasional. The
+    0.33.13 merge (#197) was skipped on all four pushes (401 → 425 files), each
+    time rendering as an ordinary status comment with a file table, so the PR read
+    as reviewed. There is no way to get it reviewed short of splitting the PR — so
+    for a merge PR, treat the **build + HIL checks and hardware testing as the only
+    real verification**, and don't count the green board as review cover.
 
 - **Verify an AI reviewer's finding against the code before acting on it — several
   arrive confidently wrong.** Of 7 CodeRabbit findings on one PR (2026-08-01), 3
@@ -156,6 +166,29 @@ inherited-upstream noise:
   (`!keyboards/polykybd/**/*.png`) — all three verified to make `qmk lint --strict`
   pass. **This contradicts the "lint passes green on every normal commit" line
   above** — that holds only while no such file exists.
+- ⚠️ **An upstream-merge PR lints UPSTREAM's keyboards too, so it can go red on
+  files this fork does not maintain — and a stable tag inherits a new lint rule
+  WITHOUT its post-tag fixes.** `lint.yml` lints every keyboard with a changed file
+  outside `keymaps/`, and a catch-up merge puts most of upstream's tree in that set
+  (~60 keyboards for the 161-commit 0.33.13 merge). 0.33.13 added a **license-header
+  check** to `qmk lint --strict` (`_has_license()` — crudely, the first line must
+  start with `/*` or `//`; there is no ignore mechanism), which failed **6**
+  keyboards: 1 ours (`split72/keymaps/revision2`, genuinely missing) and 5
+  upstream's. Three of those five were fixed upstream in `14774c8482` (#26382) —
+  **7 commits AFTER tag `0.33.13`** — so merging the tag brought the rule but not
+  the fix; the other two are still unfixed on upstream master today, and are green
+  upstream only because upstream lints just the keyboards *its* PR touches.
+  - The condition is **self-clearing**: once the merge lands, those keyboards are
+    in the base branch, so later PRs no longer see them as changed.
+  - Resolution used for 0.33.13 (2026-08-11): cherry-pick upstream's own fix where
+    one exists (byte-identical afterwards ⇒ no conflict at the next merge), and for
+    the rest add `// Copyright <year> <author>` + SPDX taking the **real** author and
+    year from `git log --diff-filter=A` on each file. Don't invent attribution.
+  - ⚠️ **Enumerate ALL the failures before fixing any** — `qmk info -l` prints a
+    keyboard-layout ASCII diagram per keyboard, so the CI log tail is mostly art and
+    any excerpt of it is a partial list. Fixing the 5 files a truncated view showed
+    left **13** more in `handwired/onekey` and cost an extra CI round. Run the job's
+    loop locally and collect every `☒` line first.
 - ⚠️ **Applying N labels in ONE API call fires N `labeled` events, i.e. N workflow
   runs.** `qmk-test.yml` listens for `labeled` (it must, or the `perf` label would
   trigger nothing), so adding `perf` + `bump:minor` together started **two identical

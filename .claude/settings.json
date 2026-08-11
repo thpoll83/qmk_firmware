@@ -9,7 +9,12 @@
       "mcp__github__list_branches",
       "mcp__github__get_job_logs",
       "mcp__github__actions_get",
-      "mcp__github__actions_list"
+      "mcp__github__actions_list",
+      "Bash(git merge-base *)",
+      "Bash(git rev-list *)",
+      "Bash(git submodule status *)",
+      "Bash(qmk lint *)",
+      "Bash(arm-none-eabi-size *)"
     ]
   }
 }

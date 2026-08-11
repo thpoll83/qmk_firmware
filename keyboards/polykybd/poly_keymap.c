@@ -2550,13 +2550,22 @@ void reset_idle_jitter(void) {
 // 1×1 ink box, so kdisp_gfx_text_bounds would count those spaces as ink at x=0,
 // inflate the measured width, and push the real glyph right of centre. Skipping
 // them makes the measure+draw start at the first real glyph, truly centred.
-static void draw_legend_cx(const uint32_t* text, int8_t y) {
+// cy_radius is exposed because the courtyard clear is only wanted when something
+// is drawn UNDERNEATH the legend for it to punch a margin through (a frame, a row
+// bar, an overlay). On a deliberately filled ground — the inverted picker Ctrl —
+// there is nothing to clear away from, so the clear just eats a dark halo out of
+// the fill around every glyph. Pass 0 there.
+static void draw_legend_cx_cy(const uint32_t* text, int8_t y, int8_t cy_radius) {
     while (*text == U' ') text++;          // drop manual leading padding (skews bbox)
     int8_t lo = 0, hi = 0;
     kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &lo, &hi);
     const int8_t w    = (int8_t)(hi - lo + 1);
     const int8_t left = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - lo);
-    kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, left, y, text, KDISP_CY_DEFAULT);
+    kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, left, y, text, cy_radius);
+}
+
+static void draw_legend_cx(const uint32_t* text, int8_t y) {
+    draw_legend_cx_cy(text, y, KDISP_CY_DEFAULT);
 }
 
 // ── Keycap-OLED selection strategy (update_displays / kdisp_idle) ─────────────
@@ -2856,9 +2865,10 @@ void update_displays(enum refresh_mode mode) {
                                 (int8_t)(BUFFER_X + (SCREEN_WIDTH - (hi - lo + 1)) / 2 - lo), 32, l2);
                         } else if (r == MATRIX_ROWS_PER_SIDE - 1) {
                             // Bottom (thumb) row: centre the legend horizontally.
-                            draw_legend_cx(text, 23);
+                            draw_legend_cx_cy(text, 23, invert_key ? 0 : KDISP_CY_DEFAULT);
                         } else {
-                            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
+                            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text,
+                                                    invert_key ? 0 : KDISP_CY_DEFAULT);
                         }
                         text = NULL;
                         // ⚠️ Nothing overlays the Intl layer. Its letters ARE the

@@ -14,30 +14,13 @@
 #include "layers.h"
 
 // Legends for the two Intl-layer keys that do something other than what their
-// base-layer symbol says. Both render with NO font pack flashed, matching every
-// other layer-key icon (Lang, Settings, Emoji are all resident).
-//
-// 0x9D is a hand-composed tile in the RESIDENT IconsFont: a 1px rounded-rect
-// outline around "Intl" spelled in accented latin, which says what the layer is
-// AND what it does. It replaced U+1F524 "input latin letters" -- semantically
-// right, but NotoEmoji draws that as a SOLID tile with the letters knocked out
-// as holes (91% lit, a white block that swamps every neighbouring legend), and
-// its generic "abc" said nothing this keyboard does.
-//
-// The letters are the resident 27px keycap faces at NATIVE size -- no font pack,
-// and no half-scaling, which would thicken every stem back and close the
-// counters (the documented status-OLED downsample trap). They only fit because
-// the tile is 55px wide rather than the emoji glyph's square 40.
-//
-// It lives in IconsFont rather than a new resident font because extending
-// IconsFont shifts no pack gidx and needs no bundle reship (see CLAUDE.md,
-// "A single bigger/custom glyph").
-//
-// The picker legend is plain resident latin: Ctrl on this layer is an ACTION on
-// the current letter, not a mode, so showing the transformation beats a second
-// generic icon.
-#define INTL_LAYER_LEGEND   ICON_INTL           // gfx_icons.h 0x9D, named in named_glyphs.h
-#define INTL_PICKER_LEGEND  U"\xC1\xBB\xC6"      // Á»Æ — Ctrl: pick another variation
+// base-layer symbol says. Both are plain RESIDENT latin, so they render with no
+// font pack flashed and cost no glyph: this layer is *about* latin letters, so
+// the letters are the icon. An earlier version drew a rounded-rect tile around
+// them as a custom IconsFont glyph — dropped, along with the glyph, once the
+// frame turned out to add nothing the letters were not already saying.
+#define INTL_LAYER_LEGEND   U"\x130\xF1\x21B\x142"   // Intl, spelled in accented latin
+#define INTL_PICKER_LEGEND  U"\xC1\xBB\xC6"           // Á»Æ — Ctrl: pick another variation
 
 /*[[[cog
 import cog

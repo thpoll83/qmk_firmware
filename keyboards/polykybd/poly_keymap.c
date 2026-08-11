@@ -594,9 +594,31 @@ void sync_and_refresh_displays(void) {
     }
 }
 
+// The modifier that, together with Intl (_ADDLANG1), opens the variation picker
+// on the number row.
+//
+// ⚠️ This was MOD_MASK_ALT and must not go back.  The picker swallows the keys it
+// handles (process_record_user returns false), so the host only ever saw the
+// modifier go down and back up — and a bare Alt tap is how Windows activates the
+// menu bar.  Picking a variation therefore yanked focus out of the text field in
+// a lot of programs, which is precisely when you are typing accented letters.  A
+// bare Ctrl tap does nothing in the same apps.
+#define LATIN_PICKER_MOD MOD_MASK_CTRL
+
+// True only while the Ctrl the picker is riding on was registered BY the latch, so
+// dropping it on layer exit can never release a Ctrl the user is really holding.
+static bool s_picker_latched = false;
+
 // Sets layer state variable tracking the active keyboard layer.
 layer_state_t layer_state_set_user(layer_state_t state) {
     access_local_layer()->layer = state;
+    // Leaving Intl closes the picker. Without this the latched Ctrl would stay
+    // registered with the layer gone, so every following keystroke reaches the
+    // host as Ctrl+key.
+    if(s_picker_latched && get_highest_layer(state) != _ADDLANG1) {
+        unregister_mods(MOD_MASK_CTRL);
+        s_picker_latched = false;
+    }
     return state;
 }
 
@@ -1603,17 +1625,6 @@ static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
     return 0;
 }
 
-// The modifier that, held together with Intl (_ADDLANG1), opens the variation
-// picker on the number row.
-//
-// ⚠️ This was MOD_MASK_ALT and must not go back.  The picker swallows the keys it
-// handles (process_record_user returns false), so the host only ever saw the
-// modifier go down and back up — and a bare Alt tap is how Windows activates the
-// menu bar.  Picking a variation therefore yanked focus out of the text field in
-// a lot of programs, which is precisely when you are typing accented letters.  A
-// bare Ctrl tap does nothing in the same apps.
-#define LATIN_PICKER_MOD MOD_MASK_CTRL
-
 // Resolve the latin variation a letter key should display/emit on the _ADDLANG1
 // layer, honouring the persisted per-case pick in latin_sync_t.ex (high nibble =
 // uppercase, low nibble = lowercase).
@@ -2615,6 +2626,16 @@ void update_displays(enum refresh_mode mode) {
     const bool capital_case = ((mods & MOD_MASK_SHIFT) != 0) || state.caps_lock;
     const bool display_overlays = test_flag(local_state->overlay_flags, DISPLAY_OVERLAYS);
     const bool add_lang = get_highest_layer(local_layer->layer) == _ADDLANG1;
+    // The Intl picker latches, so nothing on the board would otherwise say it is
+    // open — with a held key you could at least see your finger. Ctrl draws
+    // inverted (white keycap, dark legend) for as long as it is armed.
+    //
+    // Rendered inverted rather than kdisp_invert()ed: that is a panel-level SSD1306
+    // command which matrix_scan_kb already toggles on every press and release, so a
+    // latched state driven through it would be undone by the next keypress. The
+    // gate is the SYNCED mods bit (poly_layer_t), not the master-only latch static,
+    // so the slave inverts its Ctrl too when Ctrl lives on that half.
+    const bool picker_open = add_lang && ((mods & LATIN_PICKER_MOD) != 0);
     //the left side has an offset of 0, the right side an offset of MATRIX_ROWS_PER_SIDE
     const uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t start_row = 0;
@@ -2800,7 +2821,16 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_send_window();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
-                        kdisp_set_buffer(0x00);
+                        // Ctrl while the picker is armed: white ground, legend
+                        // erased out of it. Paired reset below — the plotter flags
+                        // are static, so leaving erase on would blank every
+                        // following keycap on this pass.
+                        const bool invert_key = picker_open &&
+                                                (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL);
+                        kdisp_set_buffer(invert_key ? 0xFF : 0x00);
+                        if(invert_key) {
+                            kdisp_set_gfx_erase(true);
+                        }
                         // Draw the tab frame / row bar FIRST, then the emoji glyph with
                         // courtyard clearing so the icon punches a clean margin through it.
                         emj_draw_tab_indicator(keycode);
@@ -2858,6 +2888,9 @@ void update_displays(enum refresh_mode mode) {
                             // (see the \x0E-\x12 ops in kdisp_write_gfx_text_cy), so no
                             // per-keycode special-case is needed here.
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
+                        }
+                        if(invert_key) {
+                            kdisp_set_gfx_erase(false);
                         }
                         kdisp_send_window();
                         }
@@ -3138,6 +3171,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     const bool addlang = get_highest_layer(get_local_layer()->layer)==_ADDLANG1;
     const poly_layer_t* global_layer = get_global_layer();
+    // The latch toggles on the PRESS, so the release of the tap that ARMED it must
+    // be swallowed too — otherwise QMK unregisters the modifier we just registered
+    // and the latch is over before the finger lifts.
+    //
+    // ⚠️ Gated on s_picker_latched, i.e. on us owning the modifier — NOT on the key
+    // alone. A Ctrl held down before Intl was pressed is registered by QMK, and
+    // swallowing that release would leave it registered forever, turning every
+    // later keystroke into Ctrl+key. The other two cases fall through harmlessly:
+    // the toggle-OFF press already unregistered, so QMK's release handler just
+    // unregisters nothing.
+    if(addlang && !record->event.pressed && s_picker_latched &&
+       (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) {
+        return false;
+    }
     if (record->event.pressed) {
         switch (keycode) {
             case QK_BOOTLOADER: {
@@ -3196,6 +3243,28 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         }
         uint16_t last_latin_keycode = get_local_last_latin_keycode();
 
+        // The picker LATCHES: tap Ctrl to open it, tap again to close, and it also
+        // closes as soon as a variation is chosen. Holding Intl+Ctrl+Shift+digit is
+        // four keys at once, which is what made it awkward in practice.
+        //
+        // It latches by registering the REAL modifier rather than a private flag,
+        // because poly_layer_t.mods is already synced to the other half — the slave
+        // draws the picker digits on ITS keys from that same bit, and both flag
+        // bytes in base/com.h are full, so a private flag would have nowhere to
+        // ride. s_picker_latched only records that WE registered it, so leaving the
+        // layer never unregisters a Ctrl the user is genuinely holding.
+        if(addlang && (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) {
+            if(s_picker_latched) {
+                unregister_mods(MOD_MASK_CTRL);
+                s_picker_latched = false;
+            } else if((get_mods() & LATIN_PICKER_MOD) == 0) {
+                register_mods(MOD_BIT(KC_LEFT_CTRL));
+                s_picker_latched = true;
+            }
+            request_disp_refresh();
+            return false;   // swallow: the tap is the toggle, not a modifier press
+        }
+
         if((get_mods() & LATIN_PICKER_MOD) != 0 && addlang) {
             // A modifier must still reach QMK while the picker is open.  This
             // block used to `return false` for EVERY press, so the Shift PRESS
@@ -3231,6 +3300,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                         }
                         send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
 
+                        // "or an alternative character has been selected"
+                        if(s_picker_latched) {
+                            unregister_mods(MOD_MASK_CTRL);
+                            s_picker_latched = false;
+                        }
                         mark_latin_dirty();
                         request_disp_refresh();
                     }

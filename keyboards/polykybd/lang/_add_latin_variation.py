@@ -18,6 +18,20 @@ import xml.dom.minidom as minidom
 from xml.sax.saxutils import escape
 
 SHEET = "xl/worksheets/sheet3.xml"
+
+# Variations live in columns B.. ; the per-row Min/Max helpers sit to their RIGHT.
+# ⚠️ Those helpers used to be at N/O, i.e. only ten slots past B, and the free-column
+# scan below happily walked into them: appending an 11th/12th variation to a row
+# overwrote the MIN/MAX formula cells, and the fixup pass then crashed trying to
+# int() a hex cached value it had just written there itself.  They now live at S/T
+# and MAX_SLOTS stops the scan at Q, so the collision is unreachable rather than
+# merely further away.  MAX_SLOTS is also the hard ceiling of the picker's stored
+# index: it is a NIBBLE (see latin_sync_t.ex), so 16 is the most that can ever be
+# addressed -- keep it in step with LATIN_EX_VARIATIONS in lang/lang_lut_ext.h.
+MAX_SLOTS    = 16
+FIRST_COL    = 2                 # column B
+HELPER_MIN   = "S"
+HELPER_MAX   = "T"
 USAGE = """usage: _add_latin_variation.py [--dry-run] [--allow-asymmetric]
                               <xlsx> <letter> <char> [<letter> <char> ...]
 
@@ -122,11 +136,14 @@ for letter, char in pairs:
     # two pairs naming the same letter both read the same original free column,
     # and the second splice then replaced the first -- silently dropping a
     # variation the tool reported as written.
-    col = taken.get(row, 2)
+    col = taken.get(row, FIRST_COL)
     while sh.cell(row=row, column=col).value is not None:
         if sh.cell(row=row, column=col).value == char:
-            die(f"{letter}: {char!r} is already slot {col - 2}")
+            die(f"{letter}: {char!r} is already slot {col - FIRST_COL}")
         col += 1
+    if col - FIRST_COL >= MAX_SLOTS:
+        die(f"{letter}: row is full — {MAX_SLOTS} variations is the ceiling "
+            f"(the picker stores its pick in a nibble; see MAX_SLOTS)")
     if any(p for p in plan if p[2] == row and p[1] == char):
         die(f"{letter}: {char!r} named twice in one command")
     taken[row] = col + 1
@@ -163,21 +180,21 @@ for letter, char, row, col, hexv in plan:
                        f'<f aca="false">DEC2HEX(_xlfn.UNICODE({ref}))</f>'
                        f'<v>{hexv}</v></c>'})
 
-    # Helper columns N (min) / O (max) are human-facing only -- cog never reads
-    # them -- but a cache that disagrees with the row is worse than none.  N's
-    # range is maintained to span exactly the filled slots, so extend it; O
+    # Helper columns S (min) / T (max) are human-facing only -- cog never reads
+    # them -- but a cache that disagrees with the row is worse than none.  S's
+    # range is maintained to span exactly the filled slots, so extend it; T
     # already spans past the end, so only its cached value moves.
     m = row_xml(xml, row + 1)
     fixed = []
     for c in cells_of(m.group(2)):
         r = ref_of(c)
-        if r.startswith("N"):
+        if r.startswith(HELPER_MIN):
             c = re.sub(r'(<f[^>]*>MIN\()(.*?)(\)</f>)',
                        lambda mm: f"{mm.group(1)}{mm.group(2)},HEX2DEC({hex_ref}){mm.group(3)}",
                        c)
             old = int(re.search(r'<v>(-?\d+)</v>', c).group(1))
             c = re.sub(r'<v>-?\d+</v>', f'<v>{min(old, ord(char))}</v>', c)
-        elif r.startswith("O"):
+        elif r.startswith(HELPER_MAX):
             old = int(re.search(r'<v>(-?\d+)</v>', c).group(1))
             c = re.sub(r'<v>-?\d+</v>', f'<v>{max(old, ord(char))}</v>', c)
         fixed.append(c)

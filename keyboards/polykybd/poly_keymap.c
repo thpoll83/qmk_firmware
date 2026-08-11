@@ -619,20 +619,38 @@ static int8_t jitter_axis(uint32_t epoch, uint32_t salt, int8_t lo, int8_t hi) {
 // legends during the (mostly-blocking) transfer. Called from the HID BEGIN
 // handlers BEFORE fw_up activates (which freezes display updates).
 void poly_prepare_for_flash(void) {
-    // Exit idle FIRST. If the keyboard had dimmed/idled (DISP_IDLE, or contrast
-    // pulsed down to DISP_OFF) when the flash begins, the keycaps were dark and
-    // update_displays() early-returns while DISP_IDLE is set — so the legible
-    // base legends never get drawn and "some keys are not lit" during the flash.
-    // Force a full wake (mirrors suspend_wakeup_init_kb / the cmd-15 stop-idle
-    // path) so contrast is restored and the refresh below actually renders.
+    // Exit idle FIRST, in EVERY flavour it comes in. If the keyboard had
+    // dimmed/idled when the flash begins, the keycaps were dark and
+    // update_displays() early-returns — so the legible base legends never get
+    // drawn and "some keys are not lit" during the flash. The two animated idle
+    // styles do NOT show up as "DISP_IDLE, or contrast pulsed to DISP_OFF", and
+    // both own the keycaps through a tick that housekeeping FREEZES for the whole
+    // flash (doom_tick / eden_idle_tick sit behind the !fw_up_active gate), so
+    // neither can tear itself down once staging starts:
+    //   * DOOM attract (IDLE_STYLE_IDDQD) runs with STATUS_DISP_ON SET and
+    //     DISP_IDLE CLEARED at the user brightness — it matches no idle test at
+    //     all, and left up it holds a half-drawn demo frame and swallows keys for
+    //     the whole transfer. Screensaver only, never an active game — the same
+    //     rule poly_force_wake()/poly_suspend() follow.
+    //   * Eden (IDLE_STYLE_EDEN) does set DISP_IDLE, but clearing the flag is not
+    //     enough: update_displays() also early-returns while startup_anim_active(),
+    //     so the render below would draw nothing.
+    // Mirrors display_wakeup() / poly_force_wake(); deliberately UNCONDITIONAL —
+    // a partial fade (IDLE_TRANSITION, contrast somewhere in between) matches
+    // neither of the old tests, and on an awake keyboard the assignments are a
+    // no-op while the timestamp below must be stamped either way.
+    doom_screensaver_stop();   // self-guards: only an active attract demo
+    startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
     poly_sync_t* local_state = access_local_state();
-    if ((local_state->flags & DISP_IDLE) != 0 || local_state->contrast == DISP_OFF) {
-        local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
-        local_state->flags |= STATUS_DISP_ON;
-        local_state->contrast = get_active_brightness();
-        reset_idle_jitter();       // fresh centred legends, not jittered offsets
-        update_performed();
-    }
+    local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
+    local_state->flags |= STATUS_DISP_ON;
+    local_state->contrast = get_active_brightness();
+    reset_idle_jitter();       // fresh centred legends, not jittered offsets
+    // Restart the idle countdown from the start of the flash — a deliberate host
+    // command, so this is real activity by update.h's rule. Unconditional matters:
+    // a keyboard 100 s into its 120 s FADE_OUT_TIME was awake (so the old gated
+    // stamp never ran) and would fade out 20 s into the transfer.
+    update_performed();
     // Momentary/toggle layers off, then back onto the PolyKybd default layout.
     // A bare layer_clear() falls through to QMK's *saved* default layer
     // (default_layer_state), NOT the Poly def_layer — which is a layer INDEX
@@ -975,6 +993,18 @@ void housekeeping_task_user(void) {
         if (want) {
             update_performed();
         }
+    }
+
+    // Hold the idle countdown off for the whole transfer, the same way the
+    // confirmation prompt above does. The idle state machine below is NOT behind
+    // the !fw_up_active gate (only the refresh that would act on it is), so a
+    // flash long enough to cross FADE_OUT_TIME with nobody typing flips the state
+    // to idle mid-transfer — the keycaps poly_prepare_for_flash() just made
+    // legible then go dark the moment the flash releases the display path (a
+    // font-pack flash, which does not reboot, shows this plainly). A flash is a
+    // deliberate host command, so this is legitimate activity by update.h's rule.
+    if (fw_staging_fw_up_active()) {
+        update_performed();
     }
 
     // While a fw_up is in progress, skip EEPROM saves (wear-leveling consolidate

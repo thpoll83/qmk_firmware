@@ -66,7 +66,12 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 - **Toolchain**: `sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi` → `arm-none-eabi-gcc` (13.2.x). This is what `qmk setup` installs on Debian/Ubuntu; the PyPI `qmk` package is only the bootstrapper (`config/clone/console/env/setup`) and does **not** bundle the compiler. There is no `bin/qmk` in this fork — the full CLI lives in `lib/python`.
 - **qmk CLI**: `pip install qmk` (use a venv if system pip errors building `halo` — a Debian setuptools quirk), then `qmk config user.qmk_home=<repo>` (or `export QMK_HOME=<repo>`) so it discovers `compile`/`flash` from the repo's `lib/python`, plus `pip install -r requirements.txt`.
 - **Submodules** (empty in a fresh clone): `make git-submodule`. The minimum for split72 is `lib/chibios lib/chibios-contrib lib/pico-sdk lib/printf lib/lufa` (printf and lufa are needed even on RP2040 — `quantum/logging` and the ChibiOS USB stack pull them in).
-  - ⚠️ **In a web/remote container `make git-submodule` (and `qmk git-submodule`) 403s** — the injected git proxy (`127.0.0.1:*/git/…`) only serves the session's *authorized* repos, and `qmk/*` aren't in it, so the submodule clone is rejected. **This is NOT a real "build unavailable" — do not give up here.** GitHub *git-clone* is also egress-denied (403), but the **`codeload.github.com` tarball endpoint is allowed (200)**. Fetch each submodule at its pinned SHA (from `git submodule status`) directly: `curl -sSL https://codeload.github.com/qmk/<Repo>/tar.gz/<sha> | tar xz -C lib/<name> --strip-components=1` (repos: `ChibiOS`, `ChibiOS-Contrib`, `lufa`, `printf`, `pico-sdk`). Then `qmk compile` works normally — verified `split72:default` + `split42:default` → `.uf2`, 2026-06-25.
+  - ⚠️ **In a web/remote container `make git-submodule` (and `qmk git-submodule`) 403s** — the injected git proxy only serves the session's *authorized* repos, and `qmk/*` aren't in it, so the submodule clone is rejected. **This is NOT a real "build unavailable" — do not give up here.** The fix is **`add_repo`**, once per submodule repo: call it for `qmk/ChibiOS`, `qmk/ChibiOS-Contrib`, `qmk/lufa`, `qmk/printf`, `qmk/pico-sdk` and it answers `read_available` ("the git proxy serves anonymous git reads of public GitHub repos") **without attaching anything**. From then on the ordinary command just works — no tarballs, no manual unpacking:
+    ```bash
+    git submodule update --init --depth 1 --no-recommend-shallow lib/chibios   # …and the other four
+    ```
+    ⚠️ **The old `codeload.github.com` tarball recipe is DEAD — it now returns 403**, with a JSON body telling you to use `add_repo` (2026-08-11; it was documented here as "allowed (200), verified 2026-06-25", so believe the error, not this file's history). It also fails *quietly* in a pipeline: `curl -sSL … | tar xz` prints only `gzip: stdin: not in gzip format` while the shell reports success, so a loop over five submodules can look like it worked. `curl -w "HTTP=%{http_code}"` is the check.
+  - ⚠️ **An upstream merge BUMPS the submodule pins, and nothing checks them out for you.** The 0.33.13 merge moved `lib/chibios` `8bd61b80→6170ddf9` and `lib/chibios-contrib` `8d863d9e→5a9ad82b`. Re-run the init above **after** the merge (`git submodule status` shows the `-`/`+` prefixes), or you link a new QMK against an old ChibiOS — which compiles cleanly and fails at runtime.
 - **Build**: `qmk compile -kb polykybd/split72 -km default` (or `make polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
 - **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
@@ -88,6 +93,35 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   ```
   Uncommitted work is lost, so push early. This applies to every repo in the
   session, not just this one.
+- ⚠️ **The container's clone is SHALLOW, and that makes `git merge-base` return an
+  EMPTY STRING rather than an error** — so anything comparing this branch to
+  upstream silently produces nonsense instead of failing. Seen 2026-08-11: the
+  clone was 198 commits deep, `git merge-base HEAD upstream/master` printed
+  nothing, and `git rev-list --count $MB..0.33.13` with the empty variable
+  degraded to `HEAD..0.33.13` and reported **29,576 commits**, i.e. "these
+  histories are unrelated" — for a fork whose merge base is one of its own
+  branches. **Before ANY merge, diff-vs-upstream, or `git describe` reasoning:**
+  ```bash
+  git rev-parse --is-shallow-repository        # true = every history answer below is a lie
+  git fetch origin --unshallow --no-recurse-submodules   # ~1-2 min on this repo
+  ```
+  `--no-recurse-submodules` matters: the submodule repos aren't proxy-authorized
+  (see above), so a plain fetch spews `Could not access submodule 'lib/chibios'`
+  and buries the real result. Once unshallowed, the merge base resolved to
+  exactly the fork's own `master` — which is the sanity check that it worked.
+- ⚠️ **When an upstream merge breaks the build, look at the vendored DOOM engine
+  FIRST — a new upstream warning lands there, not on our own sources.** QMK builds
+  with `-Werror`, so *any* warning upstream adds to `builddefs/common_rules.mk`
+  becomes a hard failure in `doom/engine/` (a third-party rp2040-doom snapshot that
+  nobody is going to clean up). 0.33.13 added
+  `-Wunused-but-set-variable`/`-parameter` — as collateral of **"GCC 16.1
+  compatibility fix" (#26216)**, not a deliberate tightening, so the commit subject
+  gives no warning — and six `m_menu.c` menu callbacks that take an ignored
+  `choice` parameter failed the build. **The fix site is the `-Wno-error`/`-Wno-`
+  demotion block in `keyboards/polykybd/rules.mk`** (the doom-only `EXTRAFLAGS`),
+  which already carried the `-variable` half of that exact pair; add the sibling
+  there rather than editing vendored code. Keep the demotions doom-scoped so
+  PolyKybd's own sources still get the warning.
 
 ## Continuous integration (PR checks)
 
@@ -962,7 +996,15 @@ only split72 defines the macros.
   "Timed console logs".
 
 ### Notable QMK features enabled
-RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 layers, VIA-compatible), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
+RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 host-remappable layers), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
+
+⚠️ **VIA is NOT supported and must not be advertised as such.** `VIA_ENABLE` is
+unset on both variants — only `DYNAMIC_KEYMAP_ENABLE` is on, and remapping happens
+through PolyKybdHost's own layout editor over our raw-HID channel. The one residue
+is `poly_keymap.c`'s `#include "quantum/via.h"`, which is where QMK happens to
+define the `id_dynamic_keymap_*` command IDs the dynamic keymap uses; that include
+is a QMK header path, not a VIA feature. Don't reintroduce "VIA-compatible" wording
+in docs, UI strings or comments.
 
 ## Font generation
 
@@ -1607,7 +1649,7 @@ Base-layer changes apply immediately and persist on the next suspend/reset/store
 **If the bug reappears after this fix**, the remaining risk is the RP2040 wear-leveling consolidation (~50 ms page erase) coinciding with a split UART transaction window, triggered by `brightness_save_if_pending()` firing in housekeeping 5 s after a brightness key press. This is a statistical coincidence, not a guaranteed block. Mitigations to try in order:
 
 1. Also defer `save_user_latin()` in `user_sync_latin_ex_data_handler()` — still a direct EEPROM write inside a sync handler (triggered on language changes).
-2. `eeprom_update_block()` in `dynamic_keymap_set_buffer_poly()` — also inside a sync handler, only during keymap remapping (VIA), lowest priority.
+2. `eeprom_update_block()` in `dynamic_keymap_set_buffer_poly()` — also inside a sync handler, only during keymap remapping, lowest priority.
 3. **Proper fix: offload EEPROM writes to core 1.** The keyboard already uses core 1 for RLE decompression via `multicore_exec.c` and the FIFO dispatch. Instead of calling `save_user_settings()` / `save_user_latin()` / `eeconfig_update_default_layer()` directly on core 0, post the write as a job to core 1 via the FIFO. Core 1 does the blocking flash operation while core 0 (QMK main loop, UART, USB) keeps running uninterrupted — eliminating the framing-corruption risk entirely. Main caveat: core 1 is currently single-purpose (RLE decompression), so the two job types must not collide; check that core 1 is idle before posting, or add a small job queue. EEPROM writes and RLE decompression are unlikely to overlap in practice since both are rare and burst-style.
 
 **Relevant files**:

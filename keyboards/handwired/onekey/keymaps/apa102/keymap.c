@@ -1,3 +1,5 @@
+// Copyright 2020 Aldehir Rojas
+// SPDX-License-Identifier: GPL-2.0-or-later
 #include QMK_KEYBOARD_H
 #include "apa102.h" // Only needed if you want to use the global brightness function
 

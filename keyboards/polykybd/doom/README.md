@@ -378,7 +378,7 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
   Durable fix: `doom_egg_menu_keycode()` rewrites the EEPROM's KC_NO at the
   menu position ([1,5] left / [6,6] right, utilities layer, armed only) to
   KC_IDDQD for both input and rendering — no EEPROM wipe needed on any board.
-  The keymaps[] entry stays for fresh EEPROMs + VIA visibility.
+  The keymaps[] entry stays for fresh EEPROMs + keymap-editor visibility.
 - **Round 45 → v45 (2026-07-06, UNTESTED): pinned pool + halved contrast +
   the IDDQD menu gate.** Round 44 on v44: **"I just tested and it works"**
   — the DoomPack chain (pack-flavour firmware + .plyx + WHX) confirmed on

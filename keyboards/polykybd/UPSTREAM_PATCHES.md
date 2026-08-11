@@ -10,6 +10,34 @@ To check the current state at any time:
 git diff master..HEAD -- tmk_core quantum platforms builddefs lib
 ```
 
+⚠️ That command is only exact while `master` **is** the upstream point PolyKybd
+was merged from. Merge a *stable tag* while `master` tracks the upstream tip (as
+in the 0.33.13 merge, where master sat 7 commits ahead) and the diff also carries
+those extra commits, reversed. Check the gap is empty first —
+`git diff --stat <merged-tag>..master -- tmk_core quantum platforms builddefs lib`
+— or just diff against the tag you actually merged.
+
+**To PROVE the patches survived a merge, diff the diffs — don't read them.**
+Capture the patch set before merging and again after; identical output means every
+patch survived *and* upstream didn't restructure the code around it, which reading
+the diff by eye cannot tell you:
+
+```sh
+git diff <old-merge-base>..HEAD -- tmk_core quantum platforms builddefs drivers > /tmp/before.diff
+git merge <tag>
+git diff <tag>..HEAD             -- tmk_core quantum platforms builddefs drivers > /tmp/after.diff
+diff /tmp/before.diff /tmp/after.diff && echo "all patches intact, context unchanged"
+```
+
+A clean merge is **not** evidence on its own: git resolves these files without a
+conflict whenever upstream didn't touch the same hunks, so "no conflicts" and
+"patch silently dropped" look identical from the merge output. Confirm separately
+that upstream left the files alone —
+`git diff --stat <old-base>..<tag> -- <the five files>` (empty in the 0.33.13
+merge, 2026-08-11) — and finish with a `grep` for one marker per patch
+(`raw_hid_pre_receive_kb`, `ifndef RAW_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`,
+`POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`).
+
 ## tmk_core/protocol/usb_descriptor.h
 
 Wrap `RAW_EPSIZE` default in an `#ifndef` so per-keyboard `config.h` can

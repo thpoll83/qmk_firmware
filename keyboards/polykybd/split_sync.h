@@ -120,7 +120,7 @@ void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 void user_sync_doom_mirror_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 #endif
 
-// Keyboard level code can change where VIA stores the magic.
+// Keyboard level code can change where the dynamic keymap stores the magic.
 // The magic is the build date YYMMDD encoded as BCD in 3 bytes,
 // thus installing firmware built on a different date to the one
 // already installed can be detected and the EEPROM data is reset.
@@ -139,7 +139,7 @@ void user_sync_doom_mirror_handler(uint8_t in_len, const void* in_data, uint8_t 
 #    define POLY_EEPROM_LAYOUT_OPTIONS_SIZE 1
 #endif
 
-// The end of the EEPROM memory used by VIA
+// The end of the EEPROM memory used by the dynamic keymap
 // By default, dynamic keymaps will start at this if there is no
 // custom config
 #define POLY_EEPROM_CUSTOM_CONFIG_ADDR (POLY_EEPROM_LAYOUT_OPTIONS_ADDR + POLY_EEPROM_LAYOUT_OPTIONS_SIZE)

@@ -34,7 +34,7 @@
 // Off → straight pass-through to LAYOUT_lr_stacked42 (a real right board: thumbs 0-2).
 // keyboard.json is untouched; this is compile-time only. Arg order = the
 // LAYOUT_lr_stacked42 arg order: L rows 0-2 + L thumbs, then R rows 0-2 + R thumbs.
-// ⚠️ Because the firmware runs the DYNAMIC (VIA) keymap seeded from this compiled keymap,
+// ⚠️ Because the firmware runs the DYNAMIC keymap seeded from this compiled keymap,
 // a change to the switch only takes effect after an EEPROM reset (see config.h).
 #if defined(POLY_SPLIT42_MIRROR_RIGHT)
 #  define POLY_LAYOUT( \

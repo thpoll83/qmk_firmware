@@ -1,3 +1,5 @@
+// Copyright 2020 Joel Challis
+// SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
 // AVR: can change to other supported values

@@ -1,3 +1,5 @@
+// Copyright 2020 Joel Challis
+// SPDX-License-Identifier: GPL-2.0-or-later
 #include QMK_KEYBOARD_H
 #include "analog.h"
 #include <stdio.h>

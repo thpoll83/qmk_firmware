@@ -1,3 +1,5 @@
+// Copyright 2020 a-chol
+// SPDX-License-Identifier: GPL-2.0-or-later
 #include QMK_KEYBOARD_H
 
 #ifndef ADC_PIN

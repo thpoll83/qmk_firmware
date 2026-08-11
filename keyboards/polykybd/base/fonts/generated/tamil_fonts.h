@@ -458,7 +458,7 @@ const GFXfont NotoSansTamil_Regular_Tamil_14pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 5665 bytes
+// Approx. 5889 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-tamil/NotoSansTamil-Regular.ttf -s 14 -H auto -v _TamilMatra_ -r 40 -F0xE160 -C -S 25CC 0B82, 25CC 0B83, 25CC 0BBE, 25CC 0BBF, 25CC 0BC0, 25CC 0BC1, 25CC 0BC2, 25CC 0BC6, 25CC 0BC7, 25CC 0BC8, 25CC 0BCA, 25CC 0BCB, 25CC 0BCC, 25CC 0BCD 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -574,4 +574,4 @@ const GFXfont NotoSansTamil_Regular_TamilMatra_14pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 1346 bytes
+// Approx. 1414 bytes

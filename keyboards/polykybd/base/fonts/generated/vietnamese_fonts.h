@@ -38,4 +38,4 @@ const GFXfont NotoSans_Regular_VietTones_16pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 262 bytes
+// Approx. 282 bytes

@@ -508,7 +508,7 @@ const GFXfont NotoSansTelugu_Regular_Telugu_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 6005 bytes
+// Approx. 6681 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-telugu/NotoSansTelugu-Regular.ttf -s 16 -H auto -v _TeluguMatra_ -r 40 -F0xE140 -C -S 25CC 0C01, 25CC 0C02, 25CC 0C03, 25CC 0C3C, 25CC 0C3E, 25CC 0C3F, 25CC 0C40, 25CC 0C41, 25CC 0C42, 25CC 0C43, 25CC 0C46, 25CC 0C47, 25CC 0C48, 25CC 0C4A, 25CC 0C4B, 25CC 0C4C, 25CC 0C4D 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -615,4 +615,4 @@ const GFXfont NotoSansTelugu_Regular_TeluguMatra_16pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 1114 bytes
+// Approx. 1233 bytes

@@ -315,4 +315,4 @@ const GFXfont NotoSansTC_Regular_Bopomofo_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 3714 bytes
+// Approx. 4363 bytes

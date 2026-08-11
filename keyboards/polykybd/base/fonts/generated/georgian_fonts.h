@@ -482,4 +482,4 @@ const GFXfont NotoSansGeorgian_Regular_Georgian_17pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 5809 bytes
+// Approx. 6567 bytes

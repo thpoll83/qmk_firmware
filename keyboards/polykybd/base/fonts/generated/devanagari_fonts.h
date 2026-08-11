@@ -584,7 +584,7 @@ const GFXfont NotoSansDevanagari_Regular_Deva_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 6913 bytes
+// Approx. 7896 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-devanagari/NotoSansDevanagari-Regular.ttf -s 16 -H auto -v _DevaMatra_ -r 40 -F0xE100 -C -S 25CC 0901, 25CC 0902, 25CC 0903, 25CC 093C, 25CC 093E, 25CC 093F, 25CC 0940, 25CC 0941, 25CC 0942, 25CC 0943, 25CC 0944, 25CC 0945, 25CC 0946, 25CC 0947, 25CC 0948, 25CC 0949, 25CC 094A, 25CC 094B, 25CC 094C, 25CC 094D 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -711,4 +711,4 @@ const GFXfont NotoSansDevanagari_Regular_DevaMatra_16pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 1347 bytes
+// Approx. 1529 bytes

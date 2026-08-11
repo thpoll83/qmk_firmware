@@ -3152,4 +3152,4 @@ const GFXfont NotoSansCanadianAboriginal_Regular_CanAborig_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 40858 bytes
+// Approx. 44476 bytes

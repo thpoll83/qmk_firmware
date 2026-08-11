@@ -55,7 +55,7 @@ const GFXfont NotoSansHebrew_Medium_HebrewDots_22pt16b PROGMEM = {
   59   //height
  };
 
-// Approx. 322 bytes
+// Approx. 373 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Hebrew/static/NotoSansHebrew-Medium.ttf -s 16 -H auto -v _Hebrew_ -w 400 1488 1514 1520 1524 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -198,4 +198,4 @@ const GFXfont NotoSansHebrew_Medium_Hebrew_16pt16b PROGMEM = {
   43   //height
  };
 
-// Approx. 1347 bytes
+// Approx. 1613 bytes

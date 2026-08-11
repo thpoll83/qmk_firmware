@@ -390,4 +390,4 @@ const GFXfont NotoSansArmenian_Regular_Armenian_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 4950 bytes
+// Approx. 5093 bytes

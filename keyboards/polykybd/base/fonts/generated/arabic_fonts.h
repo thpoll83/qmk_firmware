@@ -33,7 +33,7 @@ const GFXfont NotoSansArabic_Regular_FormsB_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 150 bytes
+// Approx. 155 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf -s 16 -H auto -v _Isolated_ -r 40 1548 1548 1563 1563 1567 1641 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -361,7 +361,7 @@ const GFXfont NotoSansArabic_Regular_Isolated_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 3594 bytes
+// Approx. 4042 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf -s 16 -H auto -v _PerArab_ -r 40 1657 1657 1662 1662 1670 1670 1672 1672 1681 1681 1688 1688 1705 1705 1711 1711 1722 1722 1726 1726 1729 1731 1740 1740 1746 1748 1776 1785 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -606,7 +606,7 @@ const GFXfont NotoSansArabic_Regular_PerArab_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 2083 bytes
+// Approx. 2238 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf -s 16 -H auto -v _Sorani_ -r 40 1685 1685 1700 1700 1717 1717 1734 1734 1742 1742 1749 1749 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -721,7 +721,7 @@ const GFXfont NotoSansArabic_Regular_Sorani_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 817 bytes
+// Approx. 852 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-arabic/static/NotoSansArabic/NotoSansArabic-Regular.ttf -s 16 -H auto -v _Pashto_ -r 40 1642 1644 1649 1649 1660 1660 1665 1665 1669 1669 1673 1673 1683 1683 1686 1686 1690 1690 1707 1707 1719 1719 1724 1724 1735 1735 1737 1737 1741 1741 1744 1744 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -928,4 +928,4 @@ const GFXfont NotoSansArabic_Regular_Pashto_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 1691 bytes
+// Approx. 1824 bytes

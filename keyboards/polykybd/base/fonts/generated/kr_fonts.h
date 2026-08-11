@@ -98,7 +98,7 @@ const GFXfont NotoSerifKR_Medium_Consonants_21pt16b PROGMEM = {
   59   //height
  };
 
-// Approx. 946 bytes
+// Approx. 1114 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-serif-kr/NotoSerifKR-Medium.otf -s 21 -H auto -v _Vowels_ -r 51 -w 400 4449 4457 4461 4462 4466 4469 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -186,4 +186,4 @@ const GFXfont NotoSerifKR_Medium_Vowels_21pt16b PROGMEM = {
   51   //height
  };
 
-// Approx. 755 bytes
+// Approx. 866 bytes

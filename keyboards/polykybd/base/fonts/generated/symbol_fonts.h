@@ -470,7 +470,7 @@ const GFXfont NotoSansSymbols2_Regular_SymBmp1_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 5348 bytes
+// Approx. 5814 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 20 -H auto -v _SymBmp2_ -r 50 9812 9873 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -779,7 +779,7 @@ const GFXfont NotoSansSymbols2_Regular_SymBmp2_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 3666 bytes
+// Approx. 4060 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 20 -H auto -v _SymBmp3_ -r 50 9974 9991 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -874,7 +874,7 @@ const GFXfont NotoSansSymbols2_Regular_SymBmp3_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 957 bytes
+// Approx. 1037 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 20 -H auto -v _SymBmp4_ -r 50 9998 10175 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -1922,7 +1922,7 @@ const GFXfont NotoSansSymbols2_Regular_SymBmp4_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 13275 bytes
+// Approx. 14848 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 20 -H auto -v _SymBmp5_ -r 50 9993 9993 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -1953,7 +1953,7 @@ const GFXfont NotoSansSymbols2_Regular_SymBmp5_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 138 bytes
+// Approx. 166 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 20 -H auto -v _SymBmp6_ -r 50 9885 9967 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -2372,7 +2372,7 @@ const GFXfont NotoSansSymbols2_Regular_SymBmp6_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 5123 bytes
+// Approx. 5630 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 20 -H auto -v _Arrows_ -r 50 11119 11123 11134 11134 11148 11148 11150 11150 11168 11168 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -2489,7 +2489,7 @@ const GFXfont NotoSansSymbols2_Regular_Arrows_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 910 bytes
+// Approx. 1034 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 20 -H auto -v _Technical2_ -r 50 8984 8984 8997 8998 9003 9003 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -2564,7 +2564,7 @@ const GFXfont NotoSansSymbols2_Regular_Technical2_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 599 bytes
+// Approx. 665 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf -s 20 -H auto -v _Technical_ -r 50 9095 9096 9099 9099 9113 9113 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -2642,7 +2642,7 @@ const GFXfont NotoSansSymbols_Regular_Technical_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 650 bytes
+// Approx. 720 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 20 -H auto -v _GuiKey_ -r 50 10070 10070 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -2942,7 +2942,7 @@ const GFXfont NotoSansSymbols2_Regular_Util_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 2831 bytes
+// Approx. 2992 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 18 -H auto -v _Window_ -r 50 -b 32 128468 128475 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -3030,7 +3030,7 @@ const GFXfont NotoSansSymbols2_Regular_Window_18pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 897 bytes
+// Approx. 1017 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 18 -H auto -v _WinSwitch_ -r 50 -b 32 128445 128445 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -3060,7 +3060,7 @@ const GFXfont NotoSansSymbols2_Regular_WinSwitch_18pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 125 bytes
+// Approx. 150 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Math/NotoSansMath-Regular.ttf -s 20 -H auto -v _MathHints_ -r 50 8672 8672 8674 8674 8864 8864 9031 9032 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -3474,7 +3474,7 @@ const GFXfont NotoSansMath_Regular_MathHints_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 2959 bytes
+// Approx. 3008 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s 20 -H auto -v _Dictation_ -r 50 -b 32 128483 128483 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -3508,7 +3508,7 @@ const GFXfont NotoEmoji_Medium_Dictation_20pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 209 bytes
+// Approx. 214 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf -s 18 -H auto -v _Network_ -r 50 -b 32 128423 128423 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -3541,7 +3541,7 @@ const GFXfont NotoSansSymbols2_Regular_Network_18pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 172 bytes
+// Approx. 194 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/Noto_Emoji/static/NotoEmoji-Medium.ttf -s 18 -H auto -v _Knobs_ -r 50 -b 32 127899 127899 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -3573,4 +3573,4 @@ const GFXfont NotoEmoji_Medium_Knobs_18pt16b PROGMEM = {
   50   //height
  };
 
-// Approx. 172 bytes
+// Approx. 189 bytes

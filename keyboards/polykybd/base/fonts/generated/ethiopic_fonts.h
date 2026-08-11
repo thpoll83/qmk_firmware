@@ -1892,4 +1892,4 @@ const GFXfont NotoSansEthiopic_Regular_Ethiopic_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 24041 bytes
+// Approx. 26549 bytes

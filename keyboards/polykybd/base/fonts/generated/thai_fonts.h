@@ -355,7 +355,7 @@ const GFXfont NotoSansThai_Regular_Thai_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 3624 bytes
+// Approx. 4243 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-thai/NotoSansThai-Regular.ttf -s 16 -H auto -v _ThaiMatra_ -r 40 -F0xE180 -C -S 25CC 0E31, 25CC 0E34, 25CC 0E35, 25CC 0E36, 25CC 0E37, 25CC 0E38, 25CC 0E39, 25CC 0E3A, 25CC 0E47, 25CC 0E48, 25CC 0E49, 25CC 0E4A, 25CC 0E4B, 25CC 0E4C, 25CC 0E4D 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -445,4 +445,4 @@ const GFXfont NotoSansThai_Regular_ThaiMatra_16pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 889 bytes
+// Approx. 978 bytes

@@ -25,7 +25,7 @@ const GFXfont NotoSansJP_Regular_Cjk4e2d_15pt16b PROGMEM = {
   43   //height
  };
 
-// Approx. 89 bytes
+// Approx. 106 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-jp/NotoSansJP-Regular.ttf -s 15 -H auto -v _Cjk5eff_ -w 400 24319 24319 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -53,7 +53,7 @@ const GFXfont NotoSansJP_Regular_Cjk5eff_15pt16b PROGMEM = {
   43   //height
  };
 
-// Approx. 102 bytes
+// Approx. 122 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-jp/NotoSansJP-Regular.ttf -s 15 -H auto -v _Cjk96e3_ -w 400 38627 38627 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -81,7 +81,7 @@ const GFXfont NotoSansJP_Regular_Cjk96e3_15pt16b PROGMEM = {
   43   //height
  };
 
-// Approx. 106 bytes
+// Approx. 122 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-jp/NotoSansJP-Regular.ttf -s 15 -H auto -v _Cjk91cd_ -w 400 37325 37325 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -109,7 +109,7 @@ const GFXfont NotoSansJP_Regular_Cjk91cd_15pt16b PROGMEM = {
   43   //height
  };
 
-// Approx. 99 bytes
+// Approx. 118 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-jp/NotoSansJP-Regular.ttf -s 15 -H auto -v _KangXi_ -w 400 12032 12032 12040 12040 12055 12056 12061 12069 12075 12077 12088 12095 12103 12106 12116 12117 12133 12133 12149 12149 12198 12198 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -500,7 +500,7 @@ const GFXfont NotoSansJP_Regular_KangXi_15pt16b PROGMEM = {
   43   //height
  };
 
-// Approx. 3725 bytes
+// Approx. 4273 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-jp/NotoSansJP-Regular.ttf -s 15 -H auto -v _Hiragana_ -w 400 12353 12438 12441 12447 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -1035,7 +1035,7 @@ const GFXfont NotoSansJP_Regular_Hiragana_15pt16b PROGMEM = {
   43   //height
  };
 
-// Approx. 6648 bytes
+// Approx. 7364 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-jp/NotoSansJP-Regular.ttf -s 15 -H auto -v _Punct2_ -w 400 12539 12540 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -1059,7 +1059,7 @@ const GFXfont NotoSansJP_Regular_Punct2_15pt16b PROGMEM = {
   43   //height
  };
 
-// Approx. 32 bytes
+// Approx. 50 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-jp/NotoSansJP-Regular.ttf -s 15 -H auto -v _Punct_ -w 400 12289 12290 12296 12305 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -1123,4 +1123,4 @@ const GFXfont NotoSansJP_Regular_Punct_15pt16b PROGMEM = {
   43   //height
  };
 
-// Approx. 469 bytes
+// Approx. 536 bytes

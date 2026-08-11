@@ -33,6 +33,7 @@ except ImportError:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fontpack  # noqa: E402  (sibling module: PlyF font-pack serializer/validator)
+import normalize_header_format  # noqa: E402  (sibling: committed-format re-emitter)
 
 # Committed structural manifest for the external-flash font pack (the build
 # artifact that ships to the host). The manifest pins the pack's font order and
@@ -135,7 +136,14 @@ def render(fc: str, entries, sources, categories, root: Path, quiet: bool):
 
 
 def compose_category(blocks: list[str]) -> str:
-    return "#pragma once\n\n" + "\n".join(blocks)
+    # Normalise here rather than at the call sites: this is the one choke point every
+    # consumer goes through (the emitted header, the resident-set parse, the font-pack
+    # manifest and the bundle builders), so they cannot disagree about the format, and
+    # a regeneration cannot silently skip the step.  See normalize_header_format.py --
+    # today's fontconvert renders the same bytes as the committed headers but writes
+    # them differently, so without this every regeneration reformats 3.4k lines per
+    # category and buries the glyphs that actually changed.
+    return normalize_header_format.normalize("#pragma once\n\n" + "\n".join(blocks))
 
 
 # Render-option fields a host can re-apply when rebuilding a glyph (the fontconvert
@@ -328,11 +336,16 @@ def main() -> None:
             if old != content:
                 drift = True
                 print(f"DRIFT: {path.relative_to(root)}")
-        # flag any stale per-font headers left over from the old pipeline
-        for stale in sorted(gen_dir.glob("*.h")):
-            if stale not in outputs:
-                drift = True
-                print(f"STALE: {stale.relative_to(root)} (not produced by config)")
+        # Flag any stale per-font headers left over from the old pipeline.  Skipped
+        # under --only for the same reason the write path skips deleting them: that
+        # run deliberately produces ONE category, so every other committed header is
+        # absent from `outputs` and would be reported as stale -- which made
+        # `--only <cat> --check` impossible to pass.
+        if not args.only:
+            for stale in sorted(gen_dir.glob("*.h")):
+                if stale not in outputs:
+                    drift = True
+                    print(f"STALE: {stale.relative_to(root)} (not produced by config)")
         if drift:
             sys.exit("font headers are out of date; run fonts/generate_fonts.py")
         log("OK: generated headers match the committed ones.", args.quiet)

@@ -484,7 +484,7 @@ const GFXfont NotoSansBengali_Regular_Bengali_16pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 5641 bytes
+// Approx. 6310 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/noto-sans-bengali/NotoSansBengali-Regular.ttf -s 16 -H auto -v _BengaliMatra_ -r 40 -F0xE120 -C -S 25CC 0981, 25CC 0982, 25CC 0983, 25CC 09BC, 25CC 09BE, 25CC 09BF, 25CC 09C0, 25CC 09C1, 25CC 09C2, 25CC 09C3, 25CC 09C7, 25CC 09C8, 25CC 09CB, 25CC 09CC, 25CC 09CD 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -590,4 +590,4 @@ const GFXfont NotoSansBengali_Regular_BengaliMatra_16pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 1101 bytes
+// Approx. 1233 bytes

@@ -392,4 +392,4 @@ const GFXfont NotoSansCherokee_Regular_Cherokee_13pt16b PROGMEM = {
   40   //height
  };
 
-// Approx. 4099 bytes
+// Approx. 5212 bytes

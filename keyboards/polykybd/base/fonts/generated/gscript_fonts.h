@@ -144,7 +144,7 @@ const GFXfont NotoSansRunic_Regular_Runes_20pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 1590 bytes
+// Approx. 1787 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/fantasy/unifont_csur.otf -s 14 -H auto -v _Aurebesh_ -r 30 -Y 40 -F0xE880 -S E890, E891, E892, E893, E894, E895, E896, E897, E898, E899, E89A, E89B, E89C, E89D, E89E, E89F, E8A0, E8A1, E8A2, E8A3, E8A4, E8A5, E8A6, E8A7, E8A8, E8A9 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -281,7 +281,7 @@ const GFXfont unifont_csur_Aurebesh_14pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 1266 bytes
+// Approx. 1632 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/fantasy/Sga-Regular.ttf -s 20 -H auto -v _Sga_ -r 30 -Y 40 -F0xE8C0 -S 0041, 0042, 0043, 0044, 0045, 0046, 0047, 0048, 0049, 004A, 004B, 004C, 004D, 004E, 004F, 0050, 0051, 0052, 0053, 0054, 0055, 0056, 0057, 0058, 0059, 005A, 0031, 0032, 0033, 0034, 0035, 0036, 0037, 0038, 0039, 0030 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -444,7 +444,7 @@ const GFXfont Sga_Regular_Sga_20pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 1759 bytes
+// Approx. 1968 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/fantasy/unifont_csur.otf -s 16 -H auto -v _Cirth_ -r 30 -Y 40 -F0xE900 -S E080, E081, E082, E083, E084, E085, E086, E087, E088, E089, E08A, E08B, E08C, E08D, E08E, E08F, E090, E091, E092, E093, E094, E095, E096, E097, E098, E099 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -551,7 +551,7 @@ const GFXfont unifont_csur_Cirth_16pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 1039 bytes
+// Approx. 1161 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/fantasy/Px_IBM_VGA8.ttf -s 20 -H auto -v _Ibmvga_ -r 30 -Y 40 -F0xE940 -S 0041, 0042, 0043, 0044, 0045, 0046, 0047, 0048, 0049, 004A, 004B, 004C, 004D, 004E, 004F, 0050, 0051, 0052, 0053, 0054, 0055, 0056, 0057, 0058, 0059, 005A, 0031, 0032, 0033, 0034, 0035, 0036, 0037, 0038, 0039, 0030 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -721,7 +721,7 @@ const GFXfont Px_IBM_VGA8_Ibmvga_20pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 2076 bytes
+// Approx. 2082 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/fantasy/PetMe64.ttf -s 20 -H auto -v _C64_ -r 30 -Y 40 -F0xE980 -S 0041, 0042, 0043, 0044, 0045, 0046, 0047, 0048, 0049, 004A, 004B, 004C, 004D, 004E, 004F, 0050, 0051, 0052, 0053, 0054, 0055, 0056, 0057, 0058, 0059, 005A, 0031, 0032, 0033, 0034, 0035, 0036, 0037, 0038, 0039, 0030 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -1107,7 +1107,7 @@ const GFXfont PetMe64_C64_20pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 4888 bytes
+// Approx. 5539 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/fantasy/Amiga-Regular.ttf -s 20 -H auto -v _Amiga_ -r 30 -Y 40 -F0xE9C0 -S 0041, 0042, 0043, 0044, 0045, 0046, 0047, 0048, 0049, 004A, 004B, 004C, 004D, 004E, 004F, 0050, 0051, 0052, 0053, 0054, 0055, 0056, 0057, 0058, 0059, 005A, 0031, 0032, 0033, 0034, 0035, 0036, 0037, 0038, 0039, 0030 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -1370,7 +1370,7 @@ const GFXfont Amiga_Regular_Amiga_20pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 3014 bytes
+// Approx. 3559 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/fantasy/DejaVuSans.ttf -s 20 -H auto -v _Apl_ -r 30 -Y 40 -F0xEA00 -S 237A, 22A5, 2229, 230A, 2208, 005F, 2207, 2206, 2373, 2218, 0027, 25A1, 007C, 22A4, 25CB, 002A, 003F, 2374, 2308, 007E, 2193, 222A, 2375, 2283, 2191, 2282, 00A8, 00AF, 003C, 2264, 003D, 2265, 003E, 2260, 2228, 2227 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -1569,7 +1569,7 @@ const GFXfont DejaVuSans_Apl_20pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 2275 bytes
+// Approx. 2541 bytes
 
 // /tmp/fontconvert_pinned -f /home/user/qmk_firmware/keyboards/polykybd/fonts/fantasy/DejaVuSans.ttf -s 20 -H auto -v _Braille_ -r 44 -Y 40 -F0xEA40 -S 2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A, 2805, 2807, 280D, 281D, 2815, 280F, 281F, 2817, 280E, 281E, 2825, 2827, 283A, 282D, 283D, 2835, 2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A 
 // Visualize your font via https://tchapi.github.io/Adafruit-GFX-Font-Customiser
@@ -1738,4 +1738,4 @@ const GFXfont DejaVuSans_Braille_20pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 1721 bytes
+// Approx. 2055 bytes

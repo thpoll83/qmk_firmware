@@ -276,4 +276,4 @@ const GFXfont AlcarinTengwar_Regular_Tengwar_20pt7b PROGMEM = {
   40   //height
  };
 
-// Approx. 3523 bytes
+// Approx. 3799 bytes

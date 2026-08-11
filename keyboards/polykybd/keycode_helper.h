@@ -13,6 +13,25 @@
 #include "led.h"
 #include "layers.h"
 
+// Legends for the two Intl-layer keys that do something other than what their
+// base-layer symbol says. Both render with NO font pack flashed, matching every
+// other layer-key icon (Lang, Settings, Emoji are all resident).
+//
+// 0x9D is the "input latin letters" tile in the RESIDENT IconsFont, derived from
+// the pack's U+1F524 glyph. NotoEmoji draws that one as a SOLID tile with the
+// letters knocked out as holes -- 91% lit, a white block that swamps every
+// neighbouring legend -- so the shipped bitmap is flood-filled to recover the
+// holes, reduced to a 1px outline, and the holes OR'd back: same icon, 17% ink,
+// in line with the rest of the set. It went into IconsFont rather than a new
+// resident font because extending IconsFont shifts no pack gidx and needs no
+// bundle reship (see CLAUDE.md, "A single bigger/custom glyph").
+//
+// The picker legend is plain resident latin: Ctrl on this layer is an ACTION on
+// the current letter, not a mode, so showing the transformation beats a second
+// generic icon.
+#define INTL_LAYER_LEGEND   U"\x9D"              // 🔤 — the Intl layer key itself
+#define INTL_PICKER_LEGEND  U"\xC1\xBB\xE1"      // Á»á — Ctrl: pick another variation
+
 /*[[[cog
 import cog
 import os

@@ -1304,6 +1304,16 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
     }
 #endif
 
+    // On the Intl layer Ctrl is not a modifier you send — it is LATIN_PICKER_MOD,
+    // the key that turns the number row into the variation picker. Showing the
+    // plain Ctrl symbol there gives no hint that it changes anything, so it gets
+    // its own legend. Checked BEFORE keycode_to_static_text(), which would
+    // otherwise return the normal Ctrl glyph first.
+    if ((keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL) &&
+        get_highest_layer(get_local_layer()->layer) == _ADDLANG1) {
+        return INTL_PICKER_LEGEND;
+    }
+
     const uint32_t* text = keycode_to_static_text(keycode, state, local_state->flags);
     if(text!=NULL) {
         return text;
@@ -2574,6 +2584,7 @@ void update_displays(enum refresh_mode mode) {
     const uint8_t mods = local_layer->mods;
     const bool capital_case = ((mods & MOD_MASK_SHIFT) != 0) || state.caps_lock;
     const bool display_overlays = test_flag(local_state->overlay_flags, DISPLAY_OVERLAYS);
+    const bool add_lang = get_highest_layer(local_layer->layer) == _ADDLANG1;
     //the left side has an offset of 0, the right side an offset of MATRIX_ROWS_PER_SIDE
     const uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t start_row = 0;
@@ -2790,7 +2801,16 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text, KDISP_CY_DEFAULT);
                         }
                         text = NULL;
-                        if(display_overlays) {
+                        // ⚠️ Nothing overlays the Intl layer. Its letters ARE the
+                        // payload — render_key() has just drawn the selected
+                        // variation — and the picker modifier is Ctrl, so both
+                        // sources below would paint the CTRL view over it:
+                        // copy_overlay_to_buffer() the app's Ctrl-modifier overlay
+                        // image, and keycode_to_disp_overlay() the built-in
+                        // Ctrl-shortcut hints, on every key at once.
+                        if(add_lang) {
+                            // leave the variation legend alone
+                        } else if(display_overlays) {
                             if(!copy_overlay_to_buffer(keycode, mods)) {
                                 text = keycode_to_disp_overlay(keycode, state); //fallback to hardcoded
                             }

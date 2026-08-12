@@ -176,7 +176,7 @@ make test:polymod_<name>
 ```
 
 Then **break the driver on purpose and confirm the right test fails** — two mutations
-is enough (e.g. swap a byte order; delete a bound). A green suite against a
+are enough (e.g. swap a byte order; delete a bound). A green suite against a
 deliberately broken driver is measuring nothing, and this is the only cheap proof it
 isn't. Restore from a copy afterwards and re-run to confirm green.
 

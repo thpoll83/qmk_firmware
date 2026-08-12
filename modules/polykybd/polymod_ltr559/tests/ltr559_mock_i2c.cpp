@@ -26,7 +26,7 @@ void LtrMockI2C::reset() {
     i2c_init_calls_ = 0;
     probe_attempts_ = 0;
     status_reads_   = 0;
-    set_ids(0x92, 0x05);  // the real part's PART_ID / MANUFAC_ID
+    set_ids(0x92, 0x05); // the real part's PART_ID / MANUFAC_ID
 }
 
 void LtrMockI2C::set_ids(uint8_t part_id, uint8_t manufac_id) {
@@ -99,4 +99,4 @@ i2c_status_t i2c_write_register(uint8_t devaddr, uint8_t regaddr, const uint8_t*
     return LtrMockI2C::Instance().do_write(devaddr, regaddr, data, length);
 }
 
-}  // extern "C"
+} // extern "C"

@@ -31,7 +31,7 @@ static constexpr uint8_t  kRegPsNPulses   = 0x83;
 static constexpr uint8_t  kRegAlsMeasRate = 0x85;
 static constexpr uint8_t  kStatusAlsNew   = 1 << 2;
 static constexpr uint8_t  kStatusPsNew    = 1 << 0;
-static constexpr uint8_t  kStatusAlsBad   = 1 << 7;  // 1 = INVALID
+static constexpr uint8_t  kStatusAlsBad   = 1 << 7; // 1 = INVALID
 static constexpr uint32_t kPollMs         = 100;
 static constexpr uint32_t kRetryMs        = 1000;
 static constexpr uint32_t kMaxRetries     = 30;
@@ -71,10 +71,10 @@ TEST_F(Ltr559Test, ProbeSucceedsAndConfiguresThePart) {
     // Config values, and the order: the two ACTIVE bits (PS_CONTR, ALS_CONTR)
     // are written last, after the measurement-rate/pulse settings they govern.
     const std::vector<std::pair<uint8_t, uint8_t>> expected = {
-        {kRegAlsMeasRate, 0x01},  // 100 ms integration, 100 ms repeat
-        {kRegPsNPulses, 0x08},    // 8 LED pulses
-        {kRegPsContr, 0x03},      // PS active
-        {kRegAlsContr, 0x09},     // ALS active, gain 4x
+        {kRegAlsMeasRate, 0x01}, // 100 ms integration, 100 ms repeat
+        {kRegPsNPulses, 0x08},   // 8 LED pulses
+        {kRegPsContr, 0x03},     // PS active
+        {kRegAlsContr, 0x09},    // ALS active, gain 4x
     };
     EXPECT_EQ(mock().writes(), expected);
 }
@@ -102,7 +102,7 @@ TEST_F(Ltr559Test, ProbeFailsOnWrongManufacturerId) {
 // out the part is left unconfigured, and reporting it present would feed garbage
 // into the poll path. Guards the explicit comment in ltr559_probe().
 TEST_F(Ltr559Test, ProbeFailsWhenConfigurationDoesNotLand) {
-    mock().set_failing_write_reg(kRegAlsContr);  // the last of the four writes
+    mock().set_failing_write_reg(kRegAlsContr); // the last of the four writes
     EXPECT_FALSE(ltr559_init());
     EXPECT_FALSE(ltr559_available());
 }
@@ -132,13 +132,13 @@ TEST_F(Ltr559Test, RetryIsThrottledToOnePerSecond) {
     ltr559_init();
     const uint32_t after_init = mock().probe_attempts();
 
-    for (int i = 0; i < 9; ++i) {  // 900 ms total — under one retry interval
+    for (int i = 0; i < 9; ++i) { // 900 ms total — under one retry interval
         advance_time(100);
         ltr559_task();
     }
     EXPECT_EQ(mock().probe_attempts(), after_init);
 
-    advance_time(100);  // now at 1000 ms
+    advance_time(100); // now at 1000 ms
     ltr559_task();
     EXPECT_EQ(mock().probe_attempts(), after_init + 1);
 }
@@ -165,7 +165,7 @@ TEST_F(Ltr559Test, PollIsThrottledToTheSensorsOwnRate) {
     ASSERT_TRUE(ltr559_init());
     const uint32_t base = mock().status_reads();
 
-    ltr559_task();  // same millisecond as init
+    ltr559_task(); // same millisecond as init
     advance_time(kPollMs - 1);
     ltr559_task();
     EXPECT_EQ(mock().status_reads(), base) << "polled faster than the part updates";
@@ -195,19 +195,19 @@ TEST_F(Ltr559Test, LuxCoversEachBranchOfThePiecewiseFit) {
     ASSERT_TRUE(ltr559_init());
     ltr559_reading_t r;
 
-    FeedAls(1000, 200);  // ratio 0.166 -> first branch
+    FeedAls(1000, 200); // ratio 0.166 -> first branch
     ltr559_get_reading(&r);
     EXPECT_EQ(r.lux, 498);
 
-    FeedAls(1000, 1000);  // ratio 0.500 -> second branch
+    FeedAls(1000, 1000); // ratio 0.500 -> second branch
     ltr559_get_reading(&r);
     EXPECT_EQ(r.lux, 580);
 
-    FeedAls(400, 1000);  // ratio 0.714 -> third branch
+    FeedAls(400, 1000); // ratio 0.714 -> third branch
     ltr559_get_reading(&r);
     EXPECT_EQ(r.lux, 88);
 
-    FeedAls(100, 1000);  // ratio 0.909 -> out of range, reads as dark
+    FeedAls(100, 1000); // ratio 0.909 -> out of range, reads as dark
     ltr559_get_reading(&r);
     EXPECT_EQ(r.lux, 0);
 }
@@ -231,7 +231,7 @@ TEST_F(Ltr559Test, AverageStaysZeroUntilTheFirstValidSample) {
     EXPECT_EQ(ltr559_avg_lux(), 0);
 
     advance_time(kPollMs);
-    mock().set_status(0);  // a poll with no fresh ALS data
+    mock().set_status(0); // a poll with no fresh ALS data
     ltr559_task();
     EXPECT_EQ(ltr559_avg_lux(), 0);
 
@@ -244,10 +244,10 @@ TEST_F(Ltr559Test, AverageStaysZeroUntilTheFirstValidSample) {
 TEST_F(Ltr559Test, AverageIsOverTheSamplesCollectedSoFar) {
     ASSERT_TRUE(ltr559_init());
 
-    FeedAls(1000, 200);  // lux 498
+    FeedAls(1000, 200); // lux 498
     EXPECT_EQ(ltr559_avg_lux(), 498);
 
-    FeedAls(500, 100);  // lux 249
+    FeedAls(500, 100); // lux 249
     EXPECT_EQ(ltr559_avg_lux(), (498 + 249) / 2);
 }
 
@@ -255,11 +255,11 @@ TEST_F(Ltr559Test, AverageRollsTheOldestSampleOutOnceTheWindowIsFull) {
     ASSERT_TRUE(ltr559_init());
 
     for (uint32_t i = 0; i < kAvgSamples; ++i) {
-        FeedAls(1000, 200);  // lux 498
+        FeedAls(1000, 200); // lux 498
     }
     EXPECT_EQ(ltr559_avg_lux(), 498);
 
-    FeedAls(500, 100);  // lux 249 displaces one 498
+    FeedAls(500, 100); // lux 249 displaces one 498
     EXPECT_EQ(ltr559_avg_lux(), (498 * (kAvgSamples - 1) + 249) / kAvgSamples);
 }
 
@@ -268,7 +268,7 @@ TEST_F(Ltr559Test, AverageRollsTheOldestSampleOutOnceTheWindowIsFull) {
 TEST_F(Ltr559Test, InvalidSampleIsFlaggedAndKeptOutOfTheAverage) {
     ASSERT_TRUE(ltr559_init());
 
-    FeedAls(1000, 200);  // lux 498
+    FeedAls(1000, 200); // lux 498
     ASSERT_EQ(ltr559_avg_lux(), 498);
 
     FeedAls(1, 1, /*valid=*/false);

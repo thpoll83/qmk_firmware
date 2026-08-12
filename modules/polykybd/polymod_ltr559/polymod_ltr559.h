@@ -41,13 +41,13 @@
 
 // A full snapshot of everything the part reports.
 typedef struct {
-    bool     present;    // PART_ID / MANUFAC_ID matched at init
-    uint16_t ch0;        // raw ALS IR channel (0..65535)
-    uint16_t ch1;        // raw ALS visible+IR channel (0..65535)
-    uint16_t lux;        // computed approximate lux (see polymod_ltr559.c)
-    uint16_t prox;       // raw proximity 0..2047 (relative, not distance)
-    bool     prox_sat;   // proximity saturation flag
-    bool     als_valid;  // ALS data-valid bit from the last read
+    bool     present;   // PART_ID / MANUFAC_ID matched at init
+    uint16_t ch0;       // raw ALS IR channel (0..65535)
+    uint16_t ch1;       // raw ALS visible+IR channel (0..65535)
+    uint16_t lux;       // computed approximate lux (see polymod_ltr559.c)
+    uint16_t prox;      // raw proximity 0..2047 (relative, not distance)
+    bool     prox_sat;  // proximity saturation flag
+    bool     als_valid; // ALS data-valid bit from the last read
 } ltr559_reading_t;
 
 // Probe + configure the sensor. Called for you from the module's

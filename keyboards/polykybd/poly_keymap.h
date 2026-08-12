@@ -85,7 +85,7 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state);
 // modifiers, or NULL when the chord has no hint. The returned string is interpreted
 // by kdisp_write_gfx_text_cy(), which understands the HINT_* control-code ops on top
 // of plain glyphs — so it is a mini display list, not just text.
-const uint32_t* keycode_to_disp_overlay(uint16_t keycode, led_t state);
+const uint32_t* keycode_to_disp_overlay(uint16_t keycode);
 
 // "xx-YY" for a language index (0..NUM_LANG-1), "" when out of range.
 const uint32_t* poly_lang_code(uint8_t lang);

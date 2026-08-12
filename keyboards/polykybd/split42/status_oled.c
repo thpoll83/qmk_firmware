@@ -9,6 +9,7 @@
 #include "../side.h"
 #include "../base/com.h"
 #include "../base/disp_array.h"
+#include "../base/glyph_meta.h"
 #include "../base/text_helper.h"
 #include "../base/fonts/NotoSans_Medium_Base_8pt.h"
 #include "../lang/named_glyphs.h"
@@ -87,24 +88,26 @@ static int pdraw_glyph(const GFXfont* const* fonts, uint8_t n, int x, int baseli
     const GFXfont* f;
     const GFXglyph* g = kdisp_gfx_glyph_font(fonts, n, cp, &f);
     if (!g) return 0;
-    uint16_t bo = pgm_read_word(&g->bitmapOffset);
-    int w = pgm_read_byte(&g->width),  h  = pgm_read_byte(&g->height);
-    int xo = (int8_t)pgm_read_byte(&g->xOffset), yo = (int8_t)pgm_read_byte(&g->yOffset);
-    const uint8_t* bmp = (const uint8_t*)pgm_read_ptr(&f->bitmap);
-    const uint8_t cb = (h > 0) ? (uint8_t)((h + 7) >> 3) : 0;   // column-major page-bytes/col
+    uint16_t bo = glyph_bitmap_offset(g);
+    int w = glyph_width(g), h = glyph_height(g);
+    // Signed — see base/glyph_meta.h. Reading these unsigned turned a text glyph's
+    // yOffset of -8 into 248 and plotted every glyph off-screen (PR #149).
+    int xo = glyph_x_offset(g), yo = glyph_y_offset(g);
+    const uint8_t* bmp = font_bitmap(f);
+    const uint8_t cb = (h > 0) ? glyph_col_bytes((uint8_t)h) : 0;
     for (int gy = 0; gy < h; gy++) {
-        const uint16_t vbase = bo + (uint16_t)(gy >> 3);
-        const uint8_t  vmsk  = (uint8_t)(1u << (gy & 7));
+        const uint16_t vbase = glyph_row_base(bo, (uint16_t)gy);
+        const uint8_t  vmsk  = glyph_row_mask((uint16_t)gy);
         for (int gx = 0; gx < w; gx++)
-            if (pgm_read_byte(&bmp[vbase + (uint16_t)gx * cb]) & vmsk)
+            if (glyph_row_pixel_lit(bmp, vbase, vmsk, cb, (uint16_t)gx))
                 pset(buf, x + xo + gx, baseline + yo + gy);
     }
-    return pgm_read_byte(&g->xAdvance);
+    return glyph_x_advance(g);
 }
 
 static int ptext_adv(const GFXfont* const* fonts, uint8_t n, const uint32_t* t) {
     int w = 0;
-    for (; *t; t++) { const GFXfont* f; const GFXglyph* g = kdisp_gfx_glyph_font(fonts, n, *t, &f); if (g) w += pgm_read_byte(&g->xAdvance); }
+    for (; *t; t++) { const GFXfont* f; const GFXglyph* g = kdisp_gfx_glyph_font(fonts, n, *t, &f); if (g) w += glyph_x_advance(g); }
     return w;
 }
 
@@ -119,7 +122,7 @@ static void pdraw_text_center(const GFXfont* const* fonts, uint8_t n, int baseli
 
 static void pdraw_glyph_center(const GFXfont* const* fonts, uint8_t n, int baseline, uint32_t cp, uint8_t* buf) {
     const GFXfont* f; const GFXglyph* g = kdisp_gfx_glyph_font(fonts, n, cp, &f); if (!g) return;
-    int x = (P_W - pgm_read_byte(&g->xAdvance)) / 2; if (x < 0) x = 0;
+    int x = (P_W - glyph_x_advance(g)) / 2; if (x < 0) x = 0;
     pdraw_glyph(fonts, n, x, baseline, cp, buf);
 }
 
@@ -127,15 +130,15 @@ static void pdraw_glyph_center(const GFXfont* const* fonts, uint8_t n, int basel
 // kdisp_draw_glyph_half_at). Returns the halved height. Used for the globe.
 static int pdraw_glyph_half(const GFXfont* const* fonts, uint8_t n, int x, int top_y, uint32_t cp, uint8_t* buf) {
     const GFXfont* f; const GFXglyph* g = kdisp_gfx_glyph_font(fonts, n, cp, &f); if (!g) return 0;
-    uint16_t bo = pgm_read_word(&g->bitmapOffset);
-    int w = pgm_read_byte(&g->width), h = pgm_read_byte(&g->height);
-    const uint8_t* bmp = (const uint8_t*)pgm_read_ptr(&f->bitmap);
-    const uint8_t cb = (h > 0) ? (uint8_t)((h + 7) >> 3) : 0;   // column-major page-bytes/col
+    uint16_t bo = glyph_bitmap_offset(g);
+    int w = glyph_width(g), h = glyph_height(g);
+    const uint8_t* bmp = font_bitmap(f);
+    const uint8_t cb = (h > 0) ? glyph_col_bytes((uint8_t)h) : 0;
     for (int gy = 0; gy < h; gy++) {
-        const uint16_t vbase = bo + (uint16_t)(gy >> 3);
-        const uint8_t  vmsk  = (uint8_t)(1u << (gy & 7));
+        const uint16_t vbase = glyph_row_base(bo, (uint16_t)gy);
+        const uint8_t  vmsk  = glyph_row_mask((uint16_t)gy);
         for (int gx = 0; gx < w; gx++)
-            if (pgm_read_byte(&bmp[vbase + (uint16_t)gx * cb]) & vmsk)
+            if (glyph_row_pixel_lit(bmp, vbase, vmsk, cb, (uint16_t)gx))
                 pset(buf, x + gx / 2, top_y + gy / 2);
     }
     return (h + 1) / 2;

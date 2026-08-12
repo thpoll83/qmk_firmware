@@ -268,9 +268,12 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         LMRU(6),    LMRU(7),    LMRU(8),                LMRU(9),    LMRU(10),   LMRU(11),   KC_LANG_CLEAR
         ),
     [_ADDLANG1] = LAYOUT_left_right_stacked(
-        // Page arrows on the outer left (same two positions as split42, which has no
-        // room for one at each end), then 12 variation slots across the two blocks.
-        KC_LAT_PAGE_PREV, KC_LAT_PAGE_NEXT, KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4,
+        // Page arrows on the OUTER ENDS — prev at the far left of this block, next at
+        // the far right of the other one — with the 12 variation slots between them.
+        // That is the same arrangement as the emoji and language layers below
+        // (KC_EMJ_PAGE_PREV / _NEXT, KC_LANG_PAGE_PREV / _NEXT), so paging is the same
+        // gesture everywhere; split42 matches it too.
+        KC_LAT_PAGE_PREV, KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4, KC_LAT5,
         KC_NO,      _______,    _______,    _______,    _______,    _______,    _______,
         KC_NO,      _______,    _______,    _______,    _______,    _______,    _______,    _______,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
@@ -281,7 +284,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // menu bar, right in the middle of typing an accented letter.
         _______,    KC_NO,      KC_NO,      _______,                _______,    _______,    _______,
 
-                    KC_LAT5,    KC_LAT6,    KC_LAT7,    KC_LAT8,    KC_LAT9,    KC_LAT10,   KC_LAT11,
+                    KC_LAT6,    KC_LAT7,    KC_LAT8,    KC_LAT9,    KC_LAT10,   KC_LAT11,   KC_LAT_PAGE_NEXT,
                     _______,    _______,    _______,    _______,    _______,    _______,    KC_NO,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    KC_NO,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,

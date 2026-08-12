@@ -44,9 +44,10 @@ struct display_info {
 #define POLY_SPLASH_R2    U" 7 2"
 #define POLY_SPLASH_R2_ROW 3
 
-// The picker row is 7 positions per half.  Both page arrows sit on the outer left
-// (matching split42, which has no room for one at each end), leaving 5 slots on the
-// left block and 7 on the right.  Rows longer than this page; see latin_page_count().
+// The picker row is 7 positions per half.  The page arrows take the OUTER ENDS —
+// prev at the far left, next at the far right — the same arrangement as the emoji
+// and language layers, leaving 6 variation slots per block.  Rows longer than this
+// page; see latin_page_count().
 #define LATIN_PICKER_SLOTS 12
 
 void invert_display(uint8_t r, uint8_t c, bool state);

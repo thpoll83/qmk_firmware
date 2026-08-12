@@ -1172,7 +1172,42 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   `fontpack_render_settings.json` was missing all 12 `latin` records. Regenerating
   corrects both. If `--check` is ever wired into CI, fix the manifest/prune ordering
   rather than hand-editing the committed value.
-- **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain; `generate_fonts.py --check` passes against it.
+- **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain.
+- ✅ **`generate_fonts.py --check` PASSES on a clean checkout (2026-08-11) — if it
+  drifts, something is genuinely wrong.** It had failed on every header for a long
+  time, which was a **formatting** drift, not a rendering one: the committed headers
+  were emitted during the column-native (PolyColGfx) work by a fontconvert built from
+  a work-in-progress tree, so the current emitter wrote the same bytes differently
+  (`Bitmaps[]PROGMEM` vs `[] PROGMEM`, 16 vs 12 bytes per line, glyph column widths,
+  and `0` vs the running length in a **gap** record's dead `bitmapOffset`). The tree
+  has now been regenerated with the pinned toolchain, so the committed headers are
+  the emitter's native output and the interim `normalize_header_format.py` is gone.
+  Verified across **156 fonts / 6714 glyphs** that the reformat changed no data.
+  - **Two real bugs were hiding behind the permanent drift**, both fixed:
+    `manifest_from_texts()` built `fontpack.manifest.json` **without** the dedupe the
+    bundle path applies, so its `total_size` could never match the committed
+    (post-dedupe) value; and `--only <cat> --check` reported every *other* committed
+    header as `STALE`, because only the write path skipped the stale sweep under
+    `--only`.
+  - ⚠️ **`parse_gfx_header()` CANONICALISES every glyph's `bitmapOffset` to the
+    running cumulative length**, so a purely cosmetic header change cannot reach the
+    `.plyf` bytes. Without it, reformatting the tree changed **4 shipped bundles**
+    (same size, ~535 single-byte diffs, all in dead gap offsets) and would have forced
+    a reship + `content_version` bump for zero visual change. With it, all 7 bundles
+    stay byte-identical to the shipped host copies. Don't "simplify" it away.
+  - Regenerating needs **all** source fonts (`fonts/dl-fonts.sh`, ~75 MB, 21 entries)
+    plus the pinned fontconvert at `/tmp/fontconvert_pinned` (the path is echoed into
+    each header's provenance comment).
+- **Adding codepoints to an existing `latin` font is the cheap case, and the cheapest
+  sub-case is filling a GAP.** `latin` is `resident: true` and in no bundle, so the
+  change is confined to the firmware image: **no `.plyf` reship, no `content_version`
+  bump** — provided no *pack* font covers the new codepoints (check before assuming;
+  a new resident glyph that a pack font draws identically would be pruned by
+  `prune_shadowed_glyphs` on the next regen and change that bundle). A font emits one
+  **contiguous** `first..last` table with gap records for unassigned slots, so a
+  codepoint **inside** the existing span costs only its bitmap — the record already
+  exists. `_LatinExtAdd_` spans `0x1E62..0x1EF9` with 144 gaps, which is why the Welsh
+  `Ẁẁ Ẃẃ Ẅẅ Ỳỳ` + `Ẽ Ỹ` addition (2026-08-11) grew the table by **zero** entries.
 
 See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
 

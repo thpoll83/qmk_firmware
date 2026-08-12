@@ -186,7 +186,14 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
     /* Additional latin variant layer */
     [_ADDLANG1] = POLY_LAYOUT(
-        KC_NO,   KC_NO,   KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3,
+        // Page arrows on the OUTER ENDS — prev at the far left of this block, next at
+        // the far right of the other one — with the 10 variation slots
+        // (LATIN_PICKER_SLOTS) between them, matching split72 and split72's emoji /
+        // language layers.  ⚠️ split42's OWN emoji and language layers pair their two
+        // arrows on the thumb row instead, because their top rows are full of category
+        // tabs; the picker rows are not, so it follows the split72 arrangement and the
+        // two models stay identical to each other.
+        KC_LAT_PAGE_PREV, KC_LAT0, KC_LAT1, KC_LAT2, KC_LAT3, KC_LAT4,
         // ⚠️ EVERY position that holds Ctrl or Shift on ANY base layer has to fall
         // through here, and split42 spreads them around: the bases disagree, so Ctrl
         // is a home-row pinky (L10, matrix [1,0]) on _L0 and a thumb (LT0, [3,3]) on
@@ -199,7 +206,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______, _______, _______, _______, _______, _______,
         // Ctrl (LATIN_PICKER_MOD) must reach the base layer -- see the split72 note.
         _______, KC_NO,   _______,
-        KC_LAT4, KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9,
+        KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9, KC_LAT_PAGE_NEXT,
         _______, _______, _______, _______, _______, KC_NO,
         _______, _______, _______, _______, _______, _______,
         // RT2 is the base layers' KC_RALT, split42's ONLY Alt. Mask it for the same

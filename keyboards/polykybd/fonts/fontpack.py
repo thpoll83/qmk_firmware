@@ -85,6 +85,38 @@ def _parse_int(tok: str) -> int:
     return int(tok, 16) if tok.lower().startswith("0x") else int(tok, 10)
 
 
+def _canonical_offsets(symbol: str, rows: list[tuple[int, ...]]) -> list[tuple[int, ...]]:
+    """Rewrite each glyph's bitmapOffset to the running cumulative bitmap length.
+
+    ⚠️ This exists so the serialised pack does not depend on a COSMETIC choice in
+    the header.  A GAP record (w == h == 0) has no bitmap, so its offset is dead --
+    the renderer skips the glyph on `w == 0 && h == 0` and never reads it -- and
+    the two fontconvert emitters disagree about what to put there: the older one
+    wrote the running length, the current one writes 0.  Parsing verbatim let that
+    difference reach the .plyf bytes, so simply reformatting the headers changed 4
+    shipped bundles (same size, ~535 single-byte diffs) and would have forced a
+    reship plus a content_version bump for zero visual change.
+
+    The running length is the canonical form: it is what the committed headers and
+    prune_shadowed_glyphs both use, so this keeps existing bundles byte-stable.
+    For a REAL glyph the running length equals its stored offset, which is
+    asserted rather than assumed -- if it ever does not, the header is malformed
+    and silently renumbering it would corrupt every glyph after it.
+    """
+    out, run = [], 0
+    for i, g in enumerate(rows):
+        off, w, h = g[0], g[1], g[2]
+        if w and h:
+            if off != run:
+                raise ValueError(f"{symbol}Glyphs[{i}]: bitmapOffset {off} != "
+                                 f"cumulative {run} — malformed header")
+            out.append(g)
+            run += w * ((h + 7) // 8)
+        else:
+            out.append((run,) + tuple(g[1:]))
+    return out
+
+
 def parse_gfx_header(text: str) -> dict[str, ParsedFont]:
     """Parse a generated GFXfont header into {symbol: ParsedFont}.
 
@@ -113,7 +145,7 @@ def parse_gfx_header(text: str) -> dict[str, ParsedFont]:
             if len(vals) != 6:
                 raise ValueError(f"{m.group(1)}Glyphs: expected 6 fields, got {vals}")
             rows.append(tuple(vals))
-        glyphs[m.group(1)] = rows
+        glyphs[m.group(1)] = _canonical_offsets(m.group(1), rows)
 
     fonts: dict[str, ParsedFont] = {}
     for m in re.finditer(
@@ -458,7 +490,8 @@ def build_pack_from_tree(fonts_dir: Path, cfg: dict, content_version: int = 0):
 
 
 def manifest_from_texts(order: list[str], category_texts: dict[str, str],
-                        cfg: dict, fonts_dir: Path, content_version: int = 0):
+                        cfg: dict, fonts_dir: Path, content_version: int = 0,
+                        dedupe: bool = True):
     """build_pack() sourced from in-memory header text (for generate_fonts --check).
 
     `order` is the full font priority order (resident + pack); `category_texts`
@@ -477,6 +510,12 @@ def manifest_from_texts(order: list[str], category_texts: dict[str, str],
         if cats.get(cat, {}).get("resident"):
             resident |= set(fonts.keys())
     parsed.update(extra_pack_fonts(cfg, fonts_dir))
+    # Prune before measuring, so the manifest describes the pack that is actually
+    # built. The bundle path always pruned; this one did not, which is why the
+    # committed total_size (post-dedupe) and the emitted one (unpruned) disagreed
+    # on every run -- recorded as "already stale" instead of being fixed.
+    if dedupe:
+        prune_shadowed_glyphs(order, resident, parsed)
     return build_pack(order, resident, parsed, content_version)
 
 

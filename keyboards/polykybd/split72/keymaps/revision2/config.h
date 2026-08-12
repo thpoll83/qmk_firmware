@@ -3,5 +3,5 @@
 
 #define ENABLE_COMPILE_KEYCODE
 
-#define EECONFIG_USER_DATA_SIZE 66   // +1 for poly_eeconf_t.glyph_script, +1 for boot_flags (within POLY_EECONFIG_USER_RESERVED=128, no keymap relocation)
+#define EECONFIG_USER_DATA_SIZE 106  // +39 latin_ex_wide (6-bit picks) +1 latin_pick_migrated (within POLY_EECONFIG_USER_RESERVED=128, no keymap relocation)
 

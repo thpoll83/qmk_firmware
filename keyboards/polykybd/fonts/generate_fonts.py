@@ -287,9 +287,14 @@ def main() -> None:
         # Derive the font-pack manifest from the freshly composed (in-memory)
         # headers so it stays consistent with them under --check.
         cat_texts = {c: compose_category(b) for c, b in cat_blocks.items() if b}
+        # ⚠️ `dedupe` must match what the BUNDLE path below does, or the manifest
+        # describes a pack nobody builds: it was emitted here unpruned while the
+        # shipped bundles were pruned, so the committed total_size and the
+        # regenerated one could never agree and --check drifted on this file
+        # forever (documented as "already stale" rather than fixed).
         pack_data, manifest = fontpack.manifest_from_texts(
             order, cat_texts, cfg, root / "base" / "fonts",
-            content_version=args.content_version)
+            content_version=args.content_version, dedupe=not args.no_dedupe)
         outputs[gen_dir / PACK_MANIFEST] = fontpack.manifest_json(pack_data, manifest)
 
         # Split-pack bundles: one PlyF per family + their committed manifest + the
@@ -328,11 +333,16 @@ def main() -> None:
             if old != content:
                 drift = True
                 print(f"DRIFT: {path.relative_to(root)}")
-        # flag any stale per-font headers left over from the old pipeline
-        for stale in sorted(gen_dir.glob("*.h")):
-            if stale not in outputs:
-                drift = True
-                print(f"STALE: {stale.relative_to(root)} (not produced by config)")
+        # Flag any stale per-font headers left over from the old pipeline.  Skipped
+        # under --only for the same reason the write path skips deleting them: that
+        # run deliberately produces ONE category, so every other committed header is
+        # absent from `outputs` and would be reported as stale -- which made
+        # `--only <cat> --check` impossible to pass.
+        if not args.only:
+            for stale in sorted(gen_dir.glob("*.h")):
+                if stale not in outputs:
+                    drift = True
+                    print(f"STALE: {stale.relative_to(root)} (not produced by config)")
         if drift:
             sys.exit("font headers are out of date; run fonts/generate_fonts.py")
         log("OK: generated headers match the committed ones.", args.quiet)

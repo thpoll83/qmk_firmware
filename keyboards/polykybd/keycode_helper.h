@@ -84,6 +84,22 @@ enum my_keycodes {
     // Never emits HID output; a dead blank key in normal builds. Appended
     // for the same no-renumbering reason as KC_DAUTO.
     KC_IDDQD,
+    // Latin-variation picker, keys 11 and 12, plus the two page arrows.
+    //
+    // ⚠️ These are APPENDED here rather than grown out of the cog block above
+    // (`range(10)` -> `range(12)`), for the same no-renumbering reason as KC_DAUTO
+    // and KC_IDDQD: widening that range would push KC_DAUTO/KC_IDDQD up by two, and
+    // those values are what a host-remapped key stores in the dynamic-keymap EEPROM.
+    // The cost is that KC_LAT0..KC_LAT9 and KC_LAT10..KC_LAT11 are NOT contiguous —
+    // use latin_picker_slot() (poly_keymap.c) instead of `keycode - KC_LAT0`, and do
+    // not write `KC_LAT0 ... KC_LAT11` as a case range.
+    KC_LAT10,
+    KC_LAT11,
+    // Page through a letter's variations when it has more than the picker can show
+    // at once. Both live on the OUTER LEFT of the picker row on both variants, so
+    // the position is the same muscle memory on split72 (12 slots) and split42 (10).
+    KC_LAT_PAGE_PREV,
+    KC_LAT_PAGE_NEXT,
     /*[[[cog
         # Joined for the same reason as the KC_LAT block above — no trailing space.
         cog.out(", ".join("KCL_ENUS = QK_USER_0" if lang == "ENUS" else f"KCL_{lang}"
@@ -182,7 +198,13 @@ enum my_keycodes {
     KC_EDEN,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
-static_assert((int)KC_DAUTO < (int)KCL_ENUS, "Overlap detected");
+// ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —
+// it stopped being last the moment KC_IDDQD and the four latin-picker keycodes were
+// appended after it, so the two asserts above silently stopped covering the tail
+// they exist to bound.  Re-anchor these whenever something is appended to the
+// QK_KB_0 block.
+static_assert((int)KC_LAT_PAGE_NEXT <= (int)QK_KB_MAX, "Too many custom QK key codes");
+static_assert((int)KC_LAT_PAGE_NEXT < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 

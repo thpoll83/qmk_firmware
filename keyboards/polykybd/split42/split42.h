@@ -64,6 +64,13 @@ struct display_info {
 #define POLY_SPLASH_R2     U" 4 2"
 #define POLY_SPLASH_R2_ROW 2
 
+// The picker row is only 6 positions per half (12 total).  The page arrows take the
+// OUTER ENDS — prev at the far left, next at the far right — as on split72 and on
+// the emoji / language layers, leaving 5 variation slots per block, 10 vs split72's
+// 12.  The stored pick is an ABSOLUTE variation index either way, so the two page
+// sizes cost nothing: the same accent survives moving between the models.
+#define LATIN_PICKER_SLOTS 10
+
 // Board name reported in the GET_ID (cmd 6) string, so the host shows the right
 // variant. hid_com.c falls back to "Split72" when a variant doesn't define this,
 // so split72's GET_ID stays byte-identical (it relies on that fallback).

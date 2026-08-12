@@ -1061,21 +1061,39 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
   `test_glyph_script_round_trip` (`min_protocol: 9`) + `test_glyph_script_expansion`
   (`min_protocol: 10`, walks values 2/6/10 + out-of-range NACK).
 
-### LTR-559 light+proximity sensor (`base/ltr559.c/.h`, split72) — ENTIRELY OPTIONAL
+### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 
 An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C
-addr `0x23`) on the split72 expansion port. It **shares the Cirque I2C0 bus**
-(GP0/GP1) — no new pins. It is **compiled in unconditionally** (`split72/rules.mk`
-always adds `base/ltr559.c` + `-DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE`) but is a
-**clean no-op when no sensor is fitted**: the probe fails and the driver disables
-itself after a few bounded retries (`LTR559_MAX_RETRIES`). So anyone who solders the
-part gets it and nobody else pays more than a one-time probe. The shared code stays
-`#ifdef POLYKYBD_LTR559`-guarded, so **split42** (no expansion port) is unaffected —
-only split72 defines the macros.
+addr `0x23`) on the expansion port. It **shares the Cirque I2C0 bus** (GP0/GP1) — no
+new pins. It is a **clean no-op when no sensor is fitted**: the probe fails and the
+driver disables itself after a few bounded retries (`LTR559_MAX_RETRIES`). So anyone
+who solders the part gets it and nobody else pays more than ~30 s of cheap probes.
 
-- **Side-agnostic** — auto-detected on **whichever half it's soldered to**.
-  `ltr559_init()`/`ltr559_task()` run on **both** halves; the one that answers uses
-  it, the other gives up after the bounded retries. ⚠️ Do **not** re-gate on
+- ⚠️ **The DRIVER is a community module (`polykybd/polymod_ltr559`), not a
+  `keyboards/` source file** — it moved out of `base/ltr559.c/.h` (2026-08-12).
+  Consequences, all easy to trip over:
+  - **Listing it in `keyboard.json` `modules` is the entire enable.** There is no
+    `SRC +=` line and no `-DPOLYKYBD_LTR559`; the build defines
+    **`COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE`** for you, and that is what
+    `poly_keymap.c` gates its consumer code on. `POLYKYBD_LTR559_DRIVE` survives
+    unchanged as the separate gate for the PolyKybd **policy** (auto-brightness +
+    idle-inhibit + the `USER_SYNC_SLAVE_DATA` slot), so a board can carry the driver
+    without the policy.
+  - **The module probes and polls itself** from `keyboard_post_init_polymod_ltr559` /
+    `housekeeping_task_polymod_ltr559`. `poly_keymap.c` no longer calls
+    `ltr559_init()`/`ltr559_task()` — **don't re-add them**, that would double-probe.
+    The ordering is safe because `quantum/keyboard.c` runs `*_modules()` **before**
+    `_kb`/`_user`, so post_init's `ltr559_available()` and housekeeping's reading are
+    both current.
+  - **It has 19 unit tests** (`make test:polymod_ltr559`) driving the real driver
+    against a mock LTR-559 + mock I2C bus — the bounded retry, the config-write
+    refusal, the ALS byte order, the invalid-sample rule, the growing-then-rolling
+    average. Wired into the harness via `builddefs/testlist.mk` +
+    `builddefs/build_test.mk`. Run them after touching the driver; they are ~1 s.
+  - Both variants list it. Precedent: `polymod_crc32` / `polymod_rle`.
+- **Side-agnostic** — auto-detected on **whichever half it's soldered to**. The
+  module's hooks run on **both** halves; the one that answers uses it, the other
+  gives up after the bounded retries. ⚠️ Do **not** re-gate on
   `is_right_side()` — it was, and a left/master-soldered sensor was never read (field).
 - **Slave→master backchannel** — brightness/idle decisions are master-only, but the
   sensor may be on the slave, so the master **pulls** its values over a **generic
@@ -1112,7 +1130,7 @@ only split72 defines the macros.
   `ltr559_available()` so only the sensor half logs (`LTR-559: lux=.. avg=.. prox=..
   ch0=.. ch1=.. B=..`). The status-OLED test readout + I2C bring-up diagnostics were
   removed once it worked; the bus scan is kept as a disabled `#if 0` reference block in
-  `ltr559.c`. No shared timed-log framework yet — see `readme.md` "Diagnostics" →
+  `polymod_ltr559.c`. No shared timed-log framework yet — see `readme.md` "Diagnostics" →
   "Timed console logs".
 
 ### Notable QMK features enabled

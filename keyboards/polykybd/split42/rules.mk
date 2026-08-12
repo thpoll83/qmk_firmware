@@ -33,8 +33,10 @@ SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c b
 # driver disables itself after a few bounded retries — the same "harmless when
 # absent" behaviour split72 relies on. Kept compiled in to test whether a
 # disabled subsystem was implicated. Mirrors split72.
-SRC += base/ltr559.c
-OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
+# The driver itself is the polykybd/polymod_ltr559 community module (listed in
+# keyboard.json) — listing it is what compiles and auto-hooks it, so there is no
+# SRC line and no enable define here.
+OPT_DEFS += -DPOLYKYBD_LTR559_DRIVE
 
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes

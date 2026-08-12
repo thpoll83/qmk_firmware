@@ -28,10 +28,14 @@ POINTING_DEVICE_DRIVER = cirque_pinnacle_i2c #POINTING_DEVICE_DRIVER = pimoroni_
 # and it's harmless when absent — the probe just fails and the driver disables
 # itself after a few bounded retries. It drives per-keycap brightness from the
 # 5 s average lux and inhibits idle on proximity. The shared code stays guarded
-# by POLYKYBD_LTR559 / _DRIVE so split42 (no expansion port) is unaffected;
-# only split72 defines them, here.
-SRC += base/ltr559.c
-OPT_DEFS += -DPOLYKYBD_LTR559 -DPOLYKYBD_LTR559_DRIVE
+# by POLYKYBD_LTR559_DRIVE, so a board can carry the driver without the
+# PolyKybd-specific auto-brightness / idle-inhibit policy on top of it.
+#
+# The driver itself is the polykybd/polymod_ltr559 community module (listed in
+# keyboard.json) — listing it is what compiles and auto-hooks it, so there is no
+# SRC line and no enable define here. COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE is
+# defined by the build for us, and is what poly_keymap.c gates its consumer code on.
+OPT_DEFS += -DPOLYKYBD_LTR559_DRIVE
 
 #Allow raw hid communication (for bi-directional data transfer)
 RAW_ENABLE = yes

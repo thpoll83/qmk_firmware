@@ -62,11 +62,15 @@
 #include "base/fonts/nano_font.h"          // 10px label font under the flags
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "base/multicore/core1.h"
-#include "base/ltr559.h"
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "polymod_crc32.h"
 
-#ifdef POLYKYBD_LTR559
+// The LTR-559 driver is the polykybd/polymod_ltr559 community module; the build
+// defines COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE when a variant lists it, and the
+// module probes + polls the part from its own hooks. Everything below is the
+// PolyKybd-side POLICY on top of it (auto-brightness, idle-inhibit, telemetry).
+#ifdef COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE
+#    include "polymod_ltr559.h"
 #    define LTR559_LOG_MS 600000   // sensor telemetry log cadence: 10 min
 #endif
 
@@ -1120,12 +1124,14 @@ void housekeeping_task_user(void) {
             (void)transaction_rpc_exec(USER_SYNC_SLAVE_DATA, sizeof(kind), &kind, sizeof(reply), reply);
         }
 #endif
-#ifdef POLYKYBD_LTR559
-        // Poll the expansion-port light/proximity sensor. Run on BOTH halves —
-        // the sensor is auto-detected on whichever half it's soldered to (left or
-        // right). Internally throttled + non-blocking; on the half without it the
-        // probe gives up after a bounded number of retries so it can't stall.
-        ltr559_task();
+#ifdef COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE
+        // The module's own housekeeping hook has already polled the sensor this
+        // pass — quantum/keyboard.c runs housekeeping_task_modules() before
+        // housekeeping_task_user(), so the reading below is this pass's, not the
+        // previous one's. It polls on BOTH halves (the sensor is auto-detected on
+        // whichever half it is soldered to); the half without it gives up after a
+        // bounded number of retries so it can't stall the loop.
+        //
         // Sensor telemetry heartbeat: only the half that actually has the sensor
         // logs (gated on ltr559_available()), and only every LTR559_LOG_MS (10 min)
         // so it's a periodic reading, not spam. This replaces the live status-OLED
@@ -3703,13 +3709,13 @@ void keyboard_post_init_user(void) {
     // the next glyph here (right after set_side, so is_left_side() is valid).
     splash_progress(2);
 
-#ifdef POLYKYBD_LTR559
-    // Probe for the LTR-559 on BOTH halves — it can be soldered to either half's
-    // expansion port (GP0/GP1 I2C exists on both). The half that finds it uses it;
-    // the other half's probe fails and stays disabled (bounded retries in the
-    // task, so no stall). ltr559_init() brings up I2C itself, so this works even
-    // on a half with no pointing device.
-    if (ltr559_init()) {
+#ifdef COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE
+    // The module's keyboard_post_init hook has already probed the sensor — QMK
+    // runs keyboard_post_init_modules() before keyboard_post_init_kb()/_user(),
+    // so ltr559_available() is answerable here. It probes on BOTH halves (the
+    // sensor can be soldered to either half's expansion port); the half that
+    // finds it uses it, the other stays disabled after bounded retries.
+    if (ltr559_available()) {
         uprint("LTR-559 sensor detected.\n");
     }
 #endif

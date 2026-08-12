@@ -12,6 +12,7 @@
 
 #include "fonts/base_font.h"
 #include "com.h"
+#include "../poly_keymap.h"
 
 #define SSD1306_MEMORYMODE 0x20           ///< See datasheet
 #define SSD1306_COLUMNADDR 0x21           ///< See datasheet

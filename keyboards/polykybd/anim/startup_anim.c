@@ -15,6 +15,7 @@
 #include QMK_KEYBOARD_H                     // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
 #include "base/fonts/FreeSansBold24pt7b.h"  // splash glyph font
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
+#include "../poly_keymap.h"
 
 // Cut a key's resting legend out of the idle comet field (dark silhouette). Defined
 // in poly_keymap.c (it needs the keycode/legend tables); no-op for image legends.

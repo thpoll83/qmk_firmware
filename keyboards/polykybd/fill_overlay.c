@@ -20,8 +20,8 @@
 
 #include <print.h>
 #include <transactions.h>
+#include "poly_keymap.h"
 
-layer_state_t get_function_layer(layer_state_t def_layer);
 
 // Resolve which half(s) should receive an upload. With MIRROR_OVERLAYS set we
 // force POS_ON_BOTH so MRU mappings that cross the split find the bitmap on

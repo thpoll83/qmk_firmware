@@ -25,10 +25,10 @@
 #include "hardware/structs/vreg_and_chip_reset.h"     // core-voltage select
 
 #include "boot_diag.h"
+#include "poly_keymap.h"
 
 // update_displays() is defined in poly_keymap.c; the SPLASH_DONE tail calls it to
 // hand the keycaps over to the real legends.
-void update_displays(enum refresh_mode mode);
 
 // ---------------------------------------------------------------------------
 // Boot identification banner

@@ -32,6 +32,7 @@ extern const GFXfont NotoSans_Regular_Nano_10px7b;
 // which sits at the front of the runtime g_all_fonts[] table.
 #include "base/fontpack.h"
 #include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
+#include "../poly_keymap.h"
 
 // Top-row role icons (16x16, row-major MSB-first, drawn via kdisp_draw_bitmap):
 // which half currently talks to the PC over USB ("USB") vs. the half bridged to it

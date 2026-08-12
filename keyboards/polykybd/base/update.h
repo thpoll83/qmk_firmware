@@ -70,24 +70,10 @@ uint32_t overlay_activity_elapsed(void);
 uint16_t overlay_pending_count(void);
 void     clear_overlay_pending(void);
 
-// Called just before a font-pack / firmware flash begins (which blocks normal
-// interaction): drop to the base/default layer and render it once, so the user
-// can still type plain characters and the keycaps show legible legends while the
-// flash holds the main loop. Must run before fw_up freezes display updates.
-void poly_prepare_for_flash(void);
-
 void set_disp_refresh(enum refresh_mode mode);
 
 enum refresh_mode get_refresh_mode(void) ;
 
-// Clears the per-key idle anti-burn-in "was dark" latch so the next idle session
-// starts from the centred awake legend and relocates every key cleanly. Call on any
-// wake / suspend / stop-idle path. Defined in poly_keymap.c.
-void reset_idle_jitter(void);
-
-// True if overlay keycode-slot `base_slot` (0..89, pre-modifier/mapping) is currently
-// on screen — i.e. some physical key resolves to that keycode under the active layer.
-// Rebuilt by every full update_displays() pass; used by the overlay-completion
-// visibility gate to skip re-renders for overlays whose key isn't shown (e.g. F-key
-// overlays while the Fn layer is inactive). Defined in poly_keymap.c.
-bool overlay_slot_displayed(uint16_t base_slot);
+// poly_keymap.c's own exports (poly_prepare_for_flash / reset_idle_jitter /
+// overlay_slot_displayed) used to be declared here for the convenience of this
+// header's includers. They live in poly_keymap.h now.

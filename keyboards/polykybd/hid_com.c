@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include "poly_keymap.h"
 
 
 /*[[[cog
@@ -64,8 +65,6 @@ while lang_key:
 void invert_display(uint8_t r, uint8_t c, bool state);
 // Defined in the shared keyboard-level poly_keymap.c; declared here so the
 // shared HID dispatcher can drive the display-off command (case 24).
-void poly_suspend(void);
-void sync_and_refresh_displays(void);
 
 // Set on boot; cleared after the first GET_ID exchange so the host can detect
 // a firmware restart even when it never lost the USB connection.

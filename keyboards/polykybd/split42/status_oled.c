@@ -31,6 +31,7 @@ extern const GFXfont NotoSans_Regular_Nano_10px7b;
 // which sits at the front of the runtime g_all_fonts[] table.
 #include "base/fontpack.h"
 #include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
+#include "../poly_keymap.h"
 
 // Role icons (16x16, MSB-first) — USB trident (host) and Link ⇄ data-exchange
 // (bridge). Mirror of split72/status_oled.c.

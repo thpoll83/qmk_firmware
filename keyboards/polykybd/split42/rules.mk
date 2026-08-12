@@ -62,3 +62,10 @@ DYNAMIC_KEYMAP_ENABLE = yes
 # The latent writer it guards against is still being hunted; do not remove
 # without re-running the row-24 test.
 OPT_DEFS += -DPOLY_SPLIT_SHMEM_RPC_GUARD
+
+# Emoji / language picker page size: split42's right half is 3 rows x 6 = 18 slots
+# (shared-code default is 38). Board geometry, so it lives here rather than in a
+# keymap's rules.mk — poly_keymap.c / emoji_layer.c are compiled at the keyboard level
+# and never see a keymap's config.h.
+OPT_DEFS += -DEMJ_SLOTS_PER_PAGE=18
+OPT_DEFS += -DLANG_SLOTS_PER_PAGE=18

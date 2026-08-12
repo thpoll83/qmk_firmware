@@ -47,6 +47,18 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     as reviewed. There is no way to get it reviewed short of splitting the PR — so
     for a merge PR, treat the **build + HIL checks and hardware testing as the only
     real verification**, and don't count the green board as review cover.
+  - ⚠️ **Sourcery's rate-limit is QUIETER than CodeRabbit's: the `Sourcery review`
+    check run goes GREEN (`success`) while no review happened.** When its weekly
+    diff-character budget is spent it submits a `COMMENTED` review whose entire body
+    is *"you have reached your weekly rate limit of 500000 diff characters"* — and
+    that still counts as a completed check. So the PR shows a green Sourcery tick
+    with **zero findings**, which reads exactly like a clean review. CodeRabbit at
+    least renders a `> [!WARNING] Review limit reached` banner. Both were
+    simultaneously unavailable on #203 (2026-08-12), leaving a fully green board
+    that **no reviewer had read**. To tell them apart, read the review *body* via
+    `pull_request_read` `get_reviews` — do not infer from the check conclusion.
+    (The sibling rule "a bot comment is not a review" is in `PolyKybdHost/CLAUDE.md`;
+    this is the same failure with a green check instead of a long comment.)
 
 - **Verify an AI reviewer's finding against the code before acting on it — several
   arrive confidently wrong.** Of 7 CodeRabbit findings on one PR (2026-08-01), 3
@@ -82,6 +94,26 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     ```
     ⚠️ **The old `codeload.github.com` tarball recipe is DEAD — it now returns 403**, with a JSON body telling you to use `add_repo` (2026-08-11; it was documented here as "allowed (200), verified 2026-06-25", so believe the error, not this file's history). It also fails *quietly* in a pipeline: `curl -sSL … | tar xz` prints only `gzip: stdin: not in gzip format` while the shell reports success, so a loop over five submodules can look like it worked. `curl -w "HTTP=%{http_code}"` is the check.
   - ⚠️ **An upstream merge BUMPS the submodule pins, and nothing checks them out for you.** The 0.33.13 merge moved `lib/chibios` `8bd61b80→6170ddf9` and `lib/chibios-contrib` `8d863d9e→5a9ad82b`. Re-run the init above **after** the merge (`git submodule status` shows the `-`/`+` prefixes), or you link a new QMK against an old ChibiOS — which compiles cleanly and fails at runtime.
+  - ⚠️ **A `lib/*` dir can be FULL OF FILES and still be uninitialised — leftover
+    extracted tarballs from the dead codeload recipe, pinned to the wrong revision.**
+    This is a third state beyond "empty clone" and "pin bumped", and it looks healthy:
+    `ls lib/chibios` shows a complete tree, so the natural conclusion is that
+    submodules are fine. The tells: **`git submodule status` prefixes it `-`** (not
+    initialised) and **`lib/<m>/.git` does not exist**. The build then dies on a
+    *version* mismatch rather than a missing file — the signature is
+    ```
+    ./lib/chibios/os/hal/include/hal.h:136:2: error: #error "obsolete or unknown configuration file"
+    ```
+    Fix: `rm -rf` the stale dirs and re-init properly (after `add_repo`, above):
+    ```bash
+    rm -rf lib/chibios lib/chibios-contrib lib/pico-sdk lib/printf lib/lufa
+    for m in lib/chibios lib/chibios-contrib lib/printf lib/lufa lib/pico-sdk; do
+        git submodule update --init --depth 1 --no-recommend-shallow $m
+    done
+    ```
+    ⚠️ `make`'s own auto-`git-submodule` step does **not** rescue this: it tries to
+    clone into the non-empty dir, prints `destination path … already exists and is not
+    an empty directory`, and carries on to a doomed build (2026-08-12).
 - **Build**: `qmk compile -kb polykybd/split72 -km default` (or `make polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
 - **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
@@ -223,6 +255,27 @@ inherited-upstream noise:
   ```
   ⚠️ Drop `keyboards/polykybd/tools/__pycache__` first or it shows up as a false
   positive in the ignored-files list (CI checks out clean, so it never sees it).
+  - ⚠️ **The lint job runs `format-c` (clang-format) as well as `format-text`, and
+    the container can only run one of them — so "format clean" locally can be a
+    FALSE PASS.** `qmk format-text` needs **`dos2unix`, which is not installed**
+    (`FileNotFoundError: 'dos2unix'`); its job is only line endings + trailing
+    newline, which `grep -qP '\r'` and `[ -n "$(tail -c1 f)" ]` check by hand. The
+    *other* half, `qmk format-c`, is what actually fails PRs — with
+    `File '…' Requires Formatting` per file — and `clang-format` **is** installed.
+    Check the C/C++ files you touched with
+    `clang-format --dry-run -Werror <files>` before pushing (2026-08-12: verifying
+    only the line endings let a trailing-comment-spacing failure through to CI).
+  - ⚠️ **The container's clang-format is a DIFFERENT VERSION from CI's, so it flags
+    files CI accepts — do not "fix" those.** Local is clang-format 18; it wanted to
+    reformat a file the lint job had passed. **The test is whether the same file is
+    also flagged on the base branch**: if it is, it is version skew, not a finding —
+    reformatting it adds churn CI never asked for and (on a moved file) destroys
+    git's rename detection.
+    ```bash
+    git show origin/PolyKybd:<path> > /tmp/base_copy.c && cp .clang-format /tmp/
+    (cd /tmp && clang-format --dry-run -Werror base_copy.c)   # flagged too => skew
+    ```
+    Only reformat what the CI log named.
 - **`get_job_logs` works — ask for 150–350 `tail_lines`.** An earlier version of
   this file claimed it "caps its response at ~2 KB *regardless of `tail_lines`*";
   that is **wrong** (`tail_lines: 330` returned ~15 KB, 2026-08). The real problem
@@ -1114,6 +1167,87 @@ only split72 defines the macros.
   removed once it worked; the bus scan is kept as a disabled `#if 0` reference block in
   `ltr559.c`. No shared timed-log framework yet — see `readme.md` "Diagnostics" →
   "Timed console logs".
+
+### Community modules (`modules/polykybd/`)
+
+Self-contained, keyboard-independent code lives in **QMK community modules** rather
+than `keyboards/polykybd/`: currently `polymod_crc32` and `polymod_rle` (both ~55 LOC
+pure-algorithm libraries), with `polymod_ltr559` (the LTR-559 driver) extracted the
+same way. The mechanics are not obvious from the QMK docs alone:
+
+- **Declared in `keyboard.json`, not `keymap.json`.** Both variants carry a
+  `"modules": ["polykybd/polymod_crc32", …]` array. The docs describe the
+  `keymap.json` route (and External Userspace); the keyboard-level array is what this
+  fork uses, so a module lands on every keymap of that board.
+- **Listing a module IS the enable — the build defines
+  `COMMUNITY_MODULE_<NAME>_ENABLE`** (upper-cased directory name) for you, plus
+  `COMMUNITY_MODULES_ENABLE`. So a module needs **no `SRC +=` line and no bespoke
+  `-D<FEATURE>` in `rules.mk`**; gate consumer code on the generated define instead of
+  inventing a parallel one. `modules/<ns>/<name>/<name>.c` is compiled automatically
+  (matching the directory name); any *other* source file needs `SRC +=` in the module's
+  own `rules.mk`.
+- ⚠️ **Module hooks run BEFORE `_kb`/`_user`.** `quantum/keyboard.c` calls
+  `keyboard_post_init_modules()` then `keyboard_post_init_kb()`, and
+  `housekeeping_task_modules()` then `_kb` then `_user`. **This is what makes a
+  self-driving module safe**: a module that probes hardware in its post_init hook is
+  already done by the time `keyboard_post_init_user()` runs, and one that polls in its
+  housekeeping hook has produced *this* pass's sample before `housekeeping_task_user()`
+  reads it. Verify this before deleting explicit init/task calls in favour of hooks —
+  it is the whole argument.
+- ⚠️ **Overriding the non-suffixed hook means you must call the `_kb` link yourself.**
+  The build generates a weak `<api>_<module>()` → `<api>_<module>_kb()` →
+  `<api>_<module>_user()` chain. Defining `housekeeping_task_<module>()` replaces the
+  top of that chain, so it must call `housekeeping_task_<module>_kb()` or the keyboard/
+  keymap specialisations are silently dropped. `modules/qmk/hello_world` is the pattern.
+- **This fork is on module API 1.1.2.** The available hooks are the union of
+  `data/constants/module_hooks/*.hjson` (0.1.0 → 1.1.2); read those files rather than
+  the docs table, which stops at 1.1.0. 1.1.1 added LED/RGB matrix effects, **1.1.2
+  added custom split data sync** (`SPLIT_TRANSACTION_IDS_MODULE_<MODULE>`) — relevant
+  here, where several subsystems carry their own split transactions. Assert the floor
+  you rely on with `ASSERT_COMMUNITY_MODULES_MIN_API_VERSION(1, 0, 0);` (commas, not
+  periods) after `#include "community_modules.h"`.
+- **What is worth extracting**: code with no PolyKybd types and no display/protocol
+  coupling. Surveyed 2026-08: the remaining strong candidates are `base/crypto/`
+  (vendored Monocypher Ed25519), `base/multicore/` (RP2040 core1 launch + FIFO),
+  `os_actions.c` (per-OS chord table — the best *community* candidate, since
+  `qmk_module.json` `keycodes` is built for exactly that), and with a decoupling pass
+  the idle-timestamp half of `base/update.c` and `base/fw_staging.c`. **Not**
+  `poly_keymap.c` / `hid_com.c` / the overlay + display stack — that is the product.
+  The `extract-qmk-module` skill drives the whole conversion.
+
+### Unit tests (`make test:<name>`)
+
+QMK has a googletest harness; a **standalone** test (one that links a subsystem
+against mocks, rather than booting a whole fake keyboard) is the right shape for
+module code. `quantum/wear_leveling/tests/` is the model to copy — it mocks its
+backing store the way a driver test should mock its bus.
+
+```bash
+git submodule update --init --depth 1 --no-recommend-shallow lib/googletest  # needs add_repo qmk/googletest first
+export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"
+make test:polymod_ltr559          # ~1 s
+```
+
+Wiring a new one needs **two** registrations plus one non-obvious source list:
+
+- `builddefs/testlist.mk` — `include <path>/tests/testlist.mk` (which does
+  `TEST_LIST += <name>`). ⚠️ Test names **cannot contain `-`**; the makefile
+  hard-errors.
+- `builddefs/build_test.mk` — `include <path>/tests/rules.mk`, alongside the
+  `quantum/*/tests/rules.mk` lines. This defines `<name>_SRC/_INC/_DEFS`.
+- ⚠️ **A standalone test must put the timer in its own `_SRC`.**
+  `platforms/common.mk` adds `platforms/timer.c` + `platforms/test/timer.c` to `SRC`,
+  which only the **full-keyboard** harness consumes — so a standalone test links with
+  `undefined reference to timer_read32 / timer_elapsed32` until you list both files
+  yourself.
+- ⚠️ **`set_time()` / `advance_time()` have no header.** They are defined only in
+  `platforms/test/timer.c`; every test that drives the clock forward-declares them
+  (see `quantum/sequencer/tests/sequencer_tests.cpp`).
+- **Mutation-test the suite before trusting it.** Break the thing on purpose (swap a
+  byte order, delete a bound) and confirm the *expected* test fails — the same
+  discipline as "verify against the rendered glyph shape, not a transform∘inverse
+  round-trip". A suite that passes against a deliberately broken driver is measuring
+  nothing.
 
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 host-remappable layers), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.

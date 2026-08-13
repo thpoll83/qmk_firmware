@@ -103,7 +103,25 @@ typedef struct _poly_layer_t {
     // bytes in base/com.h are full).  sync_and_refresh_displays() diffs this struct
     // with memcmp over sizeof(), so the field joins the existing sync for free.
     uint8_t       picker_page;
+    // Intl letter-remap mode, synced for exactly the same reason as picker_page:
+    // the slave draws the keys that land on its own half and only ever sees
+    // poly_layer_t, and both flag bytes in base/com.h are full so there is no bit
+    // to ride on.  See enum poly_latin_remap.
+    uint8_t       remap_mode;
+    // The target slot chosen in PICKKEY, so BOTH halves can invert the right keycap
+    // — the target is often on the other side from the key that was pressed.
+    uint8_t       remap_target;
 } poly_layer_t;
+
+// Intl letter-remap: a two-step gesture that reassigns which LETTER a key hosts,
+// so several keys can carry variations of the same letter (French wants e, è, é
+// and ê at once).  Distinct from the variation picker, which chooses another form
+// of the letter a key ALREADY hosts.
+enum poly_latin_remap {
+    LATIN_REMAP_OFF     = 0,   // not remapping
+    LATIN_REMAP_PICKKEY = 1,   // non-letters blanked; waiting for the target key
+    LATIN_REMAP_PICKLTR = 2,   // target chosen (drawn inverted); waiting for the letter
+};
 
 typedef struct _poly_sync_t {
     uint32_t crc32;

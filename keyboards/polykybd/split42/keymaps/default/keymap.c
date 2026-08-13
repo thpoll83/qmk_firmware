@@ -205,7 +205,11 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______, _______, _______, _______, _______, _______,
         _______, _______, _______, _______, _______, _______,
         // Ctrl (LATIN_PICKER_MOD) must reach the base layer -- see the split72 note.
-        _______, KC_NO,   _______,
+        // [3,4] is dead on this layer and is the thumb next to [3,3], which holds
+        // Ctrl on _L1.._L4, so KC_LAT_REMAP lands beside the picker modifier here
+        // too. (split72 pairs them at [4,0]/[4,1]; split42 cannot match that exactly
+        // because its Ctrl moves between bases -- [1,0] on _L0, [3,3] elsewhere.)
+        _______, KC_LAT_REMAP, _______,
         KC_LAT5, KC_LAT6, KC_LAT7, KC_LAT8, KC_LAT9, KC_LAT_PAGE_NEXT,
         _______, _______, _______, _______, _______, KC_NO,
         _______, _______, _______, _______, _______, _______,

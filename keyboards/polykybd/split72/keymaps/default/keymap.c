@@ -282,7 +282,11 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // picker was on Alt.  Alt is now KC_NO instead: the picker swallows the keys
         // it handles, so the host saw a bare Alt tap and Windows moved focus to the
         // menu bar, right in the middle of typing an accented letter.
-        _______,    KC_NO,      KC_NO,      _______,                _______,    _______,    _______,
+        // [4,1] (GUI on the base layers) carries KC_LAT_REMAP: it is dead on this
+        // layer and sits directly beside the Ctrl at [4,0], so the two picker
+        // gestures -- Ctrl picks another FORM, this picks another LETTER -- are
+        // adjacent on the same hand.
+        _______,    KC_LAT_REMAP, KC_NO,    _______,                _______,    _______,    _______,
 
                     KC_LAT6,    KC_LAT7,    KC_LAT8,    KC_LAT9,    KC_LAT10,   KC_LAT11,   KC_LAT_PAGE_NEXT,
                     _______,    _______,    _______,    _______,    _______,    _______,    KC_NO,

@@ -615,6 +615,7 @@ static bool s_picker_latched = false;
 
 // Sets layer state variable tracking the active keyboard layer.
 static void latin_picker_reset_page(void);   // defined with the picker helpers below
+static void latin_remap_cancel(void);        // ditto
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     access_local_layer()->layer = state;
@@ -630,6 +631,9 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         // user can hold Ctrl themselves and page, in which case s_picker_latched is
         // false and the page would survive to the next visit to the layer.
         latin_picker_reset_page();
+        // Same reason: an abandoned remap would otherwise still be showing its
+        // "pick a key" prompt on the next visit to the layer.
+        latin_remap_cancel();
     }
     return state;
 }
@@ -1732,6 +1736,43 @@ static int8_t latin_picker_index(uint8_t row, uint8_t page, int8_t slot) {
     return (idx < latin_variation_count(row)) ? (int8_t)idx : -1;
 }
 
+// Leave remap mode without changing anything.
+static void latin_remap_cancel(void) {
+    poly_layer_t* ll = access_local_layer();
+    ll->remap_mode   = LATIN_REMAP_OFF;
+    ll->remap_target = 0;
+    request_disp_refresh();
+}
+
+// Point `slot` at `letter`'s variation row, or back at its own letter when the two
+// are the same — so re-picking a key's own letter is the per-key reset, with no
+// separate gesture to learn.
+static void latin_remap_apply(uint8_t slot, uint8_t letter) {
+    if(slot >= LATIN_TARGETS || letter >= LATIN_TARGETS) {
+        return;
+    }
+    latin_sync_t* table = access_global_latin_table();
+    latin_assign_set(table->assign, slot, (slot == letter) ? LATIN_ASSIGN_NONE : letter);
+    // The key now indexes a different row, so its stored pick is meaningless there
+    // (and may be past the end of a shorter row). Start it at the first variation
+    // rather than leaving a stale index for latin_variation() to fall back from.
+    latin_pick_set(table->ex, latin_pick_field((int8_t)slot, true),  0);
+    latin_pick_set(table->ex, latin_pick_field((int8_t)slot, false), 0);
+    send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
+    mark_latin_dirty();
+}
+
+// Clear every assignment. Reached by tapping the remap key on the Intl layer
+// WITHOUT opening the mode — see process_record_user.
+static void latin_remap_reset_all(void) {
+    latin_sync_t* table = access_global_latin_table();
+    memset(table->assign, 0xFF, sizeof(table->assign));   // 0xFF == all LATIN_ASSIGN_NONE
+    memset(table->ex, 0, sizeof(table->ex));
+    send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
+    mark_latin_dirty();
+    request_disp_refresh();
+}
+
 // Back to page 0.  Anything that makes the current page meaningless calls this:
 // picking a variation, changing the letter (a one-page letter would otherwise show
 // a whole row of blanks while page 1 was still selected), and leaving the layer.
@@ -1784,6 +1825,48 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const bool add_lang = get_highest_layer(local_layer->layer)==_ADDLANG1;
     const bool picker_mod = ((local_layer->mods & LATIN_PICKER_MOD) != 0);
     const bool is_letter = keycode>=KC_A && keycode<=KC_Z;
+
+    // --- letter-remap mode: the board becomes a "which key?" / "which letter?"
+    // prompt.  Everything that is not a letter blanks out, so the only thing to
+    // look at is the set you are choosing from.
+    if(add_lang && local_layer->remap_mode != LATIN_REMAP_OFF) {
+        if(!is_letter) {
+            return false;                   // blank — nothing else is pressable now
+        }
+        const int8_t  slot   = latin_target_slot(keycode);
+        const bool    picked = (local_layer->remap_mode == LATIN_REMAP_PICKLTR) &&
+                               (slot >= 0) && ((uint8_t)slot == local_layer->remap_target);
+        // ⚠️ Render the inversion, do NOT call kdisp_invert(): matrix_scan_kb toggles
+        // that on every press/release independently of process_record, so a latched
+        // indicator driven through it is undone by the next keypress.  Fill the
+        // ground and erase the glyph out of it instead — and with cy_radius 0, or
+        // the courtyard clear eats a dark halo and the key reads as outlined.
+        if(picked) {
+            kdisp_set_buffer(0xFF);
+            kdisp_set_gfx_erase(true);
+        }
+        // In PICKKEY every letter still shows what it currently hosts (so you can
+        // see what you are about to change); in PICKLTR the letters are the SOURCE
+        // menu, so each shows its own plain letter.
+        bool drawn;
+        if(local_layer->remap_mode == LATIN_REMAP_PICKKEY) {
+            const uint32_t* variation = latin_variation(keycode, shift || state.caps_lock);
+            drawn = (variation != NULL);
+            if(drawn) {
+                kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, variation, 0);
+            }
+        } else {
+            const uint32_t letter[2] = { (uint32_t)('a' + (keycode - KC_A)), 0 };
+            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, letter, 0);
+            drawn = true;
+        }
+        if(picked) {
+            kdisp_set_gfx_erase(false);     // static flag — leaving it on blanks every later key
+            drawn = true;                   // the filled ground IS the render
+        }
+        return drawn;
+    }
+
     if(is_letter && add_lang) {
         //display the previously selected latin variation of the letter
         const uint32_t* variation = latin_variation(keycode, shift || state.caps_lock);
@@ -3323,6 +3406,59 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     const bool addlang = get_highest_layer(get_local_layer()->layer)==_ADDLANG1;
     const poly_layer_t* global_layer = get_global_layer();
+
+    // --- Intl letter remap ----------------------------------------------------
+    // Runs BEFORE the letter / picker handling below, because in remap mode a
+    // letter press means "this one", not "emit your variation".
+    if(addlang && access_local_layer()->remap_mode != LATIN_REMAP_OFF) {
+        if(!record->event.pressed) {
+            return false;                   // swallow the release of whatever we consumed
+        }
+        const int8_t slot = latin_target_slot(keycode);
+        if(keycode == KC_LAT_REMAP) {
+            latin_remap_cancel();           // tap the remap key again to back out
+        } else if(slot >= 0) {
+            poly_layer_t* ll = access_local_layer();
+            if(ll->remap_mode == LATIN_REMAP_PICKKEY) {
+                ll->remap_target = (uint8_t)slot;
+                ll->remap_mode   = LATIN_REMAP_PICKLTR;
+            } else {
+                latin_remap_apply(ll->remap_target, (uint8_t)slot);
+                latin_remap_cancel();
+            }
+            request_disp_refresh();
+        }
+        // Everything else is inert while the prompt is up — the board is a dialog.
+        return false;
+    }
+    if(keycode == KC_LAT_REMAP) {
+        if(record->event.pressed && addlang) {
+            // Shift+remap clears EVERY assignment. Once the board is remapped the
+            // Intl legends no longer match the printed letters, so there has to be
+            // one way back that does not depend on remembering what was changed.
+            // (The per-key reset needs no gesture of its own: re-assigning a key to
+            // its own letter is the same thing, and latin_remap_apply stores
+            // LATIN_ASSIGN_NONE for it.)
+            if((get_mods() & MOD_MASK_SHIFT) != 0) {
+                latin_remap_reset_all();
+                return false;
+            }
+            // Held with Intl: open remap mode. The Intl layer is the only place the
+            // key exists, so there is no "outside the layer" case to guard.
+            poly_layer_t* ll = access_local_layer();
+            ll->remap_mode   = LATIN_REMAP_PICKKEY;
+            ll->remap_target = 0;
+            // Drop the variation picker if it was open: the two prompts would
+            // otherwise both claim the keycaps.
+            if(s_picker_latched) {
+                unregister_mods(MOD_MASK_CTRL);
+                s_picker_latched = false;
+            }
+            latin_picker_reset_page();
+            request_disp_refresh();
+        }
+        return false;
+    }
     // The latch toggles on the PRESS, so the release of the tap that ARMED it must
     // be swallowed too — otherwise QMK unregisters the modifier we just registered
     // and the latch is over before the finger lifts.

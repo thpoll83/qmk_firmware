@@ -3428,6 +3428,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // Runs BEFORE the letter / picker handling below, because in remap mode a
     // letter press means "this one", not "emit your variation".
     if(addlang && access_local_layer()->remap_mode != LATIN_REMAP_OFF) {
+        // ⚠️ Modifiers and LAYER keys must fall through — this block used to
+        // `return false` for every release, which swallowed the release of
+        // MO(_ADDLANG1) ITSELF.  QMK therefore never unregistered the layer: Intl
+        // went down and never came back up, so releasing it did not leave the
+        // prompt and there was no way out of the mode (field).  A held Shift was
+        // stuck the same way.  This is the picker's documented "gate the swallow on
+        // OWNERSHIP, not on the keycode" rule, which this block ignored.
+        if(IS_MODIFIER_KEYCODE(keycode) || IS_QK_MOMENTARY(keycode) || IS_QK_TO(keycode)) {
+            return true;
+        }
         if(!record->event.pressed) {
             return false;                   // swallow the release of whatever we consumed
         }

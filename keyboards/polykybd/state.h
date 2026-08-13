@@ -205,10 +205,14 @@ typedef struct _poly_last_t {
 // assign, the 26 letters plus the sentinel.  It also means BOTH arrays use the
 // same accessor.
 //
-// ⚠️ LATIN_ASSIGN_NONE is all-bits-set ON PURPOSE: erased flash reads 0xFF, so a
-// region that has never been written decodes to "every key unassigned" -- the
-// correct default -- with no migration and no sentinel.  eeconfig_init_user()
-// must therefore memset the map to 0xFF, NOT zero it with the rest of the struct.
+// ⚠️ NEVER infer "this map was never written" from its bytes -- gate it on the
+// latin_pick_migrated format version instead.  An earlier version of this relied
+// on LATIN_ASSIGN_NONE being all-bits-set and an unwritten EEPROM reading 0xFF.
+// That is wrong here: QMK's wear-levelling normalises its backing store so cleared
+// bytes arrive as ZERO (it memsets its cache to 0 and requires a 0xFF-based store
+// to return the complement), so the map read back all-0x00 = "every key hosts
+// letter 0" and the whole Intl layer showed variations of 'a' (field, first flash).
+// LATIN_ASSIGN_NONE stays all-bits-set only because it must be a non-letter value.
 //
 // ⚠️ Go through latin_pick_get/set.  The old width was open-coded at the call site
 // as `(pick << 4) | (cur & 0xf)`, which is precisely the shape that turns a width
@@ -220,6 +224,10 @@ typedef struct _poly_last_t {
 #define LATIN_PICK_BYTES   ((LATIN_PICK_FIELDS * LATIN_PICK_BITS + 7) / 8)  /* 39 */
 #define LATIN_ASSIGN_BYTES ((LATIN_TARGETS * LATIN_PICK_BITS + 7) / 8)      /* 20 */
 #define LATIN_ASSIGN_NONE  (uint8_t)(LATIN_PICK_MAX - 1u)      /* 0x3F -- see above */
+// Byte fill that makes EVERY 6-bit field read LATIN_ASSIGN_NONE. 0x3F does not tile
+// a byte (6 does not divide 8), so memset(map, LATIN_ASSIGN_NONE, n) would leave a
+// mix of values -- it is 0xFF that fills every field with all-ones.
+#define LATIN_ASSIGN_FILL  0xFFu
 
 // Pick fields are CASE-INTERLEAVED (slot*2 + case), not case-blocked.  Growing
 // LATIN_TARGETS then APPENDS fields instead of inserting a second block in the
@@ -337,8 +345,18 @@ typedef struct _poly_eeconf_t {
 } poly_eeconf_t;
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
-#define LATIN_PICK_MIGRATED 0xA5   // latin_ex[] widened to 6-bit fields, case-BLOCKED
-#define LATIN_PICK_INTERLEAVED 0xC3 // ...and re-indexed case-INTERLEAVED (current)
+// Format versions for latin_ex_wide + latin_assign, oldest first. Anything
+// unrecognised means the legacy one-byte-per-letter nibble pairs in latin_ex[].
+#define LATIN_PICK_MIGRATED    0xA5 // 6-bit fields, case-BLOCKED; no assignment map
+#define LATIN_PICK_INTERLEAVED 0xC3 // ...case-INTERLEAVED; assignment map UNTRUSTWORTHY
+#define LATIN_PICK_ASSIGN_OK   0xD7 // ...and the assignment map is real (current)
+// ⚠️ 0xC3 is deliberately NOT the current version. The build that introduced it
+// assumed an unwritten EEPROM reads 0xFF, so it copied the assignment map straight
+// out of a block that had never held one — read back as all-zero, i.e. "every key
+// hosts letter 0", and every Intl keycap rendered a variation of 'a' (field, first
+// flash). Worse, the next suspend PERSISTED those zeros under 0xC3, so a version
+// gate alone cannot tell them from a real map. Retiring the value is what heals an
+// already-flashed board: 0xC3 now means "picks are fine, discard the map".
 
 
 static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");

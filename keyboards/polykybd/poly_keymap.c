@@ -1766,7 +1766,7 @@ static void latin_remap_apply(uint8_t slot, uint8_t letter) {
 // WITHOUT opening the mode — see process_record_user.
 static void latin_remap_reset_all(void) {
     latin_sync_t* table = access_global_latin_table();
-    memset(table->assign, 0xFF, sizeof(table->assign));   // 0xFF == all LATIN_ASSIGN_NONE
+    memset(table->assign, LATIN_ASSIGN_FILL, sizeof(table->assign));
     memset(table->ex, 0, sizeof(table->ex));
     send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
     mark_latin_dirty();
@@ -4125,11 +4125,27 @@ void keyboard_post_init_user(void) {
     // carried forward every time the other case is re-picked.
     latin_sync_t* latin_table = access_global_latin_table();
     bool latin_normalised = false;
-    // The assignment map needs no conversion at any version: LATIN_ASSIGN_NONE is
-    // all-bits-set, so the 0xFF an EEPROM written before this field existed reads
-    // back here is already "every key unassigned".
-    memcpy(latin_table->assign, ee.latin_assign, sizeof(latin_table->assign));
-    if(ee.latin_pick_migrated == LATIN_PICK_INTERLEAVED) {
+    // ⚠️ The assignment map MUST be gated on the version byte — do NOT infer "never
+    // written" from the bytes themselves. An earlier version of this relied on
+    // LATIN_ASSIGN_NONE being all-bits-set and an unwritten EEPROM reading 0xFF;
+    // that is wrong for this backend. QMK's wear-levelling normalises its backing
+    // store so cleared bytes arrive as ZERO (quantum/wear_leveling/wear_leveling.c
+    // clears the cache with memset(...,0) and requires a 0xFF store to return the
+    // complement), so the map read back as all 0x00 = "every key hosts letter 0",
+    // and every keycap on the Intl layer showed a variation of 'a' (field, first
+    // flash). LATIN_PICK_INTERLEAVED is only ever stamped by firmware that writes
+    // this field in the same breath, so it is the one trustworthy witness that the
+    // bytes mean anything.
+    if(ee.latin_pick_migrated == LATIN_PICK_ASSIGN_OK) {
+        memcpy(latin_table->assign, ee.latin_assign, sizeof(latin_table->assign));
+    } else {
+        // Includes LATIN_PICK_INTERLEAVED, whose stored map is the persisted
+        // all-zero garbage described in state.h — discarding it is the recovery.
+        memset(latin_table->assign, LATIN_ASSIGN_FILL, sizeof(latin_table->assign));
+        latin_normalised = true;           // re-stamp at the next flush
+    }
+    if(ee.latin_pick_migrated == LATIN_PICK_ASSIGN_OK ||
+       ee.latin_pick_migrated == LATIN_PICK_INTERLEAVED) {
         memcpy(latin_table->ex, ee.latin_ex_wide, sizeof(latin_table->ex));
     } else if(ee.latin_pick_migrated == LATIN_PICK_MIGRATED) {
         // Re-index case-BLOCKED (case*26 + letter) to case-INTERLEAVED (slot*2 +
@@ -4262,11 +4278,10 @@ void eeconfig_init_user(void) {
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.
     memset(ee.latin_ex_wide, 0, sizeof(ee.latin_ex_wide));
-    ee.latin_pick_migrated = LATIN_PICK_INTERLEAVED;
-    // ⚠️ 0xFF, NOT the struct-wide {0}: LATIN_ASSIGN_NONE is all-bits-set, so a
-    // zeroed map would read as "every key assigned to A" and the whole Intl layer
-    // would show A's variations.
-    memset(ee.latin_assign, 0xFF, sizeof(ee.latin_assign));
+    ee.latin_pick_migrated = LATIN_PICK_ASSIGN_OK;
+    // ⚠️ LATIN_ASSIGN_FILL, NOT the struct-wide {0}: a zeroed map reads as "every
+    // key assigned to A" and the whole Intl layer shows A's variations.
+    memset(ee.latin_assign, LATIN_ASSIGN_FILL, sizeof(ee.latin_assign));
     // Empty MRU recents: the serialised form uses 0 == empty for both lists, so
     // a zeroed block reads back as "no recent" (no stray category-0 / lang-0).
     memset(ee.mru_emoji, 0, sizeof(ee.mru_emoji));

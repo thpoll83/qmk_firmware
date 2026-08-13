@@ -121,7 +121,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // budget rather than tracking the live EECONFIG_USER_DATA_SIZE; the actual size must stay
 // <= the reservation (static_assert in state.h). Bumping the reservation relocates the
 // keymap once (one final reset), then it stays put across firmware updates.
-#define POLY_EECONFIG_USER_RESERVED 128
+// Raised 128->256 (2026-08-13) for the Intl key->letter assignment map. This
+// RELOCATES the dynamic keymap once, so it resets any host-customised layout --
+// paid deliberately while there are only testers, and generously, so that
+// extending the remappable target set to the punctuation keys later (which needs
+// ~43 more bytes) costs no second reset.
+#define POLY_EECONFIG_USER_RESERVED 256
 #define DYNAMIC_KEYMAP_EEPROM_ADDR  (EECONFIG_BASE_SIZE + EECONFIG_KB_DATA_SIZE + POLY_EECONFIG_USER_RESERVED)
 #define POLY_EEPROM_MAGIC_ADDR      DYNAMIC_KEYMAP_EEPROM_ADDR
 

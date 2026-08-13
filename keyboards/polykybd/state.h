@@ -166,51 +166,102 @@ typedef struct _poly_last_t {
     uint16_t latin_kc;
 } poly_last_t;
 
-// --- Intl latin-variation picks: one 6-bit field per letter PER CASE ----------
+// --- Intl latin variations: which letter a key hosts, and which form it picks --
 //
-// Field index is the `latin_ex_map` ROW index -- 0..25 uppercase, 26..51 lowercase
-// -- so the storage and the table are addressed identically and cannot drift.
+// Two 6-bit arrays, both indexed by TARGET SLOT (the remappable key), not by
+// letter.  Today the targets are A..Z, so slot == letter index by default and the
+// two readings coincide -- which is exactly why an existing EEPROM keeps working.
 //
-// This was a nibble per case packed into one byte per letter (26 bytes, 16
-// variations).  Six bits covers every letter+combining-mark form that exists in
-// Unicode: the widest is O at 34 (16 single-mark plus 18 Vietnamese double-mark),
-// so 64 leaves room that will not be exhausted by anything Latin.
+//   assign[slot]        the base LETTER whose variation row this key hosts.
+//                       LATIN_ASSIGN_NONE = "this key's own natural behaviour",
+//                       i.e. its own letter.  Shared across case: remapping is a
+//                       property of the KEY, so Shift follows it (r -> e means
+//                       Shift+r gives E's upper-case form, not <).
+//   ex[slot][case]      the chosen variation WITHIN that row.  Per case, because
+//                       the two rows are not parallel -- lower n has 12 variations
+//                       and upper N has 11, so one shared index would be out of
+//                       range for one of them.
+//
+// Six bits covers every letter+combining-mark form that exists in Unicode (the
+// widest is O at 34 -- 16 single-mark plus 18 Vietnamese double-mark) and, for
+// assign, the 26 letters plus the sentinel.  It also means BOTH arrays use the
+// same accessor.
+//
+// ⚠️ LATIN_ASSIGN_NONE is all-bits-set ON PURPOSE: erased flash reads 0xFF, so a
+// region that has never been written decodes to "every key unassigned" -- the
+// correct default -- with no migration and no sentinel.  eeconfig_init_user()
+// must therefore memset the map to 0xFF, NOT zero it with the rest of the struct.
 //
 // ⚠️ Go through latin_pick_get/set.  The old width was open-coded at the call site
 // as `(pick << 4) | (cur & 0xf)`, which is precisely the shape that turns a width
 // change into a silent corruption of the other case's pick.
-#define LATIN_PICK_BITS   6
-#define LATIN_PICK_MAX    (1u << LATIN_PICK_BITS)              /* 64 */
-#define LATIN_PICK_FIELDS (26 * 2)                             /* upper + lower  */
-#define LATIN_PICK_BYTES  ((LATIN_PICK_FIELDS * LATIN_PICK_BITS + 7) / 8)  /* 39 */
+#define LATIN_PICK_BITS    6
+#define LATIN_PICK_MAX     (1u << LATIN_PICK_BITS)             /* 64 */
+#define LATIN_TARGETS      26                                  /* A..Z; punctuation may follow */
+#define LATIN_PICK_FIELDS  (LATIN_TARGETS * 2)                 /* upper + lower  */
+#define LATIN_PICK_BYTES   ((LATIN_PICK_FIELDS * LATIN_PICK_BITS + 7) / 8)  /* 39 */
+#define LATIN_ASSIGN_BYTES ((LATIN_TARGETS * LATIN_PICK_BITS + 7) / 8)      /* 20 */
+#define LATIN_ASSIGN_NONE  (uint8_t)(LATIN_PICK_MAX - 1u)      /* 0x3F -- see above */
+
+// Pick fields are CASE-INTERLEAVED (slot*2 + case), not case-blocked.  Growing
+// LATIN_TARGETS then APPENDS fields instead of inserting a second block in the
+// middle, so the existing letters keep their field indices.  Blocked layout was
+// the original and is converted once at load (LATIN_PICK_INTERLEAVED).
+#define LATIN_PICK_UPPER   0
+#define LATIN_PICK_LOWER   1
+#define latin_pick_field(slot, upper) (uint8_t)((slot) * 2u + ((upper) ? LATIN_PICK_UPPER : LATIN_PICK_LOWER))
 
 typedef struct _latin_sync_t {
     uint32_t crc32;
     uint8_t  ex[LATIN_PICK_BYTES];
+    uint8_t  assign[LATIN_ASSIGN_BYTES];
 } latin_sync_t;
 
 // A field can straddle a byte boundary (6 does not divide 8), so both helpers
-// read/write a 16-bit window -- guarded, because the last field ends exactly on
-// the final byte and ex[LATIN_PICK_BYTES] would be one past the array.
-static inline uint8_t latin_pick_get(const uint8_t* ex, uint8_t field) {
+// read/write a 16-bit window -- guarded by the array's own length, because the
+// last field ends exactly on the final byte and buf[len] would be one past it.
+// ⚠️ `len` is why these take the size rather than assuming LATIN_PICK_BYTES: the
+// same accessor serves the 39-byte pick array and the 20-byte assignment map, and
+// a hardcoded bound would read past the end of the shorter one.
+static inline uint8_t latin_bits_get(const uint8_t* buf, uint8_t len, uint8_t field) {
     const uint16_t bit = (uint16_t)field * LATIN_PICK_BITS;
     const uint16_t by  = bit >> 3;
     const uint8_t  sh  = (uint8_t)(bit & 7u);
-    uint16_t w = (uint16_t)ex[by];
-    if (by + 1u < LATIN_PICK_BYTES) w |= (uint16_t)ex[by + 1u] << 8;
+    uint16_t       w   = (uint16_t)buf[by];
+    if (by + 1u < len) w |= (uint16_t)buf[by + 1u] << 8;
     return (uint8_t)((w >> sh) & (LATIN_PICK_MAX - 1u));
 }
 
-static inline void latin_pick_set(uint8_t* ex, uint8_t field, uint8_t value) {
+static inline void latin_bits_set(uint8_t* buf, uint8_t len, uint8_t field, uint8_t value) {
     const uint16_t bit  = (uint16_t)field * LATIN_PICK_BITS;
     const uint16_t by   = bit >> 3;
     const uint8_t  sh   = (uint8_t)(bit & 7u);
     const uint16_t mask = (uint16_t)(LATIN_PICK_MAX - 1u) << sh;
     const uint16_t val  = (uint16_t)(value & (LATIN_PICK_MAX - 1u)) << sh;
-    ex[by] = (uint8_t)((ex[by] & ~(uint8_t)mask) | (uint8_t)val);
-    if (by + 1u < LATIN_PICK_BYTES) {
-        ex[by + 1u] = (uint8_t)((ex[by + 1u] & ~(uint8_t)(mask >> 8)) | (uint8_t)(val >> 8));
+    buf[by]             = (uint8_t)((buf[by] & ~(uint8_t)mask) | (uint8_t)val);
+    if (by + 1u < len) {
+        buf[by + 1u] = (uint8_t)((buf[by + 1u] & ~(uint8_t)(mask >> 8)) | (uint8_t)(val >> 8));
     }
+}
+
+static inline uint8_t latin_pick_get(const uint8_t* ex, uint8_t field) {
+    return latin_bits_get(ex, LATIN_PICK_BYTES, field);
+}
+
+static inline void latin_pick_set(uint8_t* ex, uint8_t field, uint8_t value) {
+    latin_bits_set(ex, LATIN_PICK_BYTES, field, value);
+}
+
+// The letter whose variation row this key hosts.  Unassigned (or a stale value
+// past the alphabet) falls back to the key's own letter, so a fresh EEPROM and a
+// corrupt one both behave like the un-remapped keyboard.
+static inline uint8_t latin_assign_get(const uint8_t* assign, uint8_t slot) {
+    const uint8_t v = latin_bits_get(assign, LATIN_ASSIGN_BYTES, slot);
+    return (v < LATIN_TARGETS) ? v : slot;
+}
+
+static inline void latin_assign_set(uint8_t* assign, uint8_t slot, uint8_t letter) {
+    latin_bits_set(assign, LATIN_ASSIGN_BYTES, slot, letter);
 }
 
 typedef struct _poly_eeconf_t {
@@ -250,15 +301,26 @@ typedef struct _poly_eeconf_t {
     // mru_emoji/mru_lang, so resizing it would shift every later field and an
     // existing EEPROM would read its MRU lists out of the shifted bytes.
     uint8_t  latin_ex_wide[LATIN_PICK_BYTES];
-    // Migration marker for latin_ex_wide. "Looks empty" is NOT decidable here --
-    // all-zero is a legitimate every-letter-on-its-first-variation state and erased
-    // flash reads 0xFF -- so the one-time conversion from the legacy nibbles is
-    // gated on an explicit sentinel instead of a guess.
+    // FORMAT VERSION for latin_ex_wide, not a boolean. "Looks empty" is NOT
+    // decidable here -- all-zero is a legitimate every-letter-on-its-first-variation
+    // state and erased flash reads 0xFF -- so each conversion is gated on an
+    // explicit sentinel instead of a guess. Anything unrecognised means the legacy
+    // one-byte-per-letter nibble pairs in latin_ex[].
+    //   LATIN_PICK_MIGRATED    6-bit fields, CASE-BLOCKED  (case*26 + letter)
+    //   LATIN_PICK_INTERLEAVED 6-bit fields, CASE-INTERLEAVED (slot*2 + case)
     uint8_t  latin_pick_migrated;
+    // Which base letter each target key hosts. Appended at the tail (like os_state
+    // / glyph_script) so every earlier offset is untouched. It needs NO sentinel:
+    // LATIN_ASSIGN_NONE is all-bits-set, so the 0xFF an old EEPROM reads here is
+    // already "every key unassigned". ⚠️ That is also why eeconfig_init_user() has
+    // to memset this to 0xFF rather than let the struct-wide {0} stand -- zeroed,
+    // it would read as "every key assigned to A".
+    uint8_t  latin_assign[LATIN_ASSIGN_BYTES];
 } poly_eeconf_t;
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
-#define LATIN_PICK_MIGRATED 0xA5   // sentinel written once latin_ex[] has been widened
+#define LATIN_PICK_MIGRATED 0xA5   // latin_ex[] widened to 6-bit fields, case-BLOCKED
+#define LATIN_PICK_INTERLEAVED 0xC3 // ...and re-indexed case-INTERLEAVED (current)
 
 
 static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");

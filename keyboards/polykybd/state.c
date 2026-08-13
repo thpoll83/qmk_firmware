@@ -199,7 +199,11 @@ void save_user_settings(void) {
 void save_user_latin(void) {
     eeconfig_update_user_datablock(g_latin.ex, offsetof(poly_eeconf_t, latin_ex_wide),
                                    sizeof(g_latin.ex));
-    const uint8_t marker = LATIN_PICK_MIGRATED;
+    eeconfig_update_user_datablock(g_latin.assign, offsetof(poly_eeconf_t, latin_assign),
+                                   sizeof(g_latin.assign));
+    // Stamp the format version LAST, so an interrupted write can never leave the
+    // block claiming a layout it does not have.
+    const uint8_t marker = LATIN_PICK_INTERLEAVED;
     eeconfig_update_user_datablock(&marker, offsetof(poly_eeconf_t, latin_pick_migrated),
                                    sizeof(marker));
 }

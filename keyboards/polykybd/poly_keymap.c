@@ -2870,6 +2870,11 @@ void update_displays(enum refresh_mode mode) {
     // gate is the SYNCED mods bit (poly_layer_t), not the master-only latch static,
     // so the slave inverts its Ctrl too when Ctrl lives on that half.
     const bool picker_open = add_lang && ((mods & LATIN_PICKER_MOD) != 0);
+    // The letter-remap prompt needs the same treatment for the same reason, and
+    // more so: the remap key LATCHES on a tap, so without an inverted keycap
+    // nothing on the board says the mode is open at all (field — "it does latch,
+    // but I did not recognize it as it did not invert").
+    const bool remap_open = add_lang && (local_layer->remap_mode != LATIN_REMAP_OFF);
     //the left side has an offset of 0, the right side an offset of MATRIX_ROWS_PER_SIDE
     const uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t start_row = 0;
@@ -3055,12 +3060,24 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_send_window();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
+                        // ⚠️ The remap prompt blanks the board through render_key(),
+                        // which is only consulted when there is NO static text — so a
+                        // key that HAS one (the remap key itself, and any other legend
+                        // on this layer) sailed straight past it and kept drawing.
+                        // Drop the text here and the existing render_key() blanking
+                        // takes over. The remap key is exempt: it stays visible so it
+                        // can render inverted and offer the way out.
+                        if(remap_open && keycode != KC_LAT_REMAP &&
+                           !(keycode >= KC_A && keycode <= KC_Z)) {
+                            text = NULL;
+                        }
                         // Ctrl while the picker is armed: white ground, legend
                         // erased out of it. Paired reset below — the plotter flags
                         // are static, so leaving erase on would blank every
                         // following keycap on this pass.
-                        const bool invert_key = picker_open &&
-                                                (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL);
+                        const bool invert_key = (picker_open &&
+                                                 (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) ||
+                                                (remap_open && keycode == KC_LAT_REMAP);
                         kdisp_set_buffer(invert_key ? 0xFF : 0x00);
                         if(invert_key) {
                             kdisp_set_gfx_erase(true);

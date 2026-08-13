@@ -43,6 +43,8 @@ from __future__ import annotations
 
 import argparse
 import collections
+import difflib
+import itertools
 import re
 import shutil
 import subprocess
@@ -129,6 +131,24 @@ def functions(elf: str, tool: str) -> "collections.OrderedDict[str, list[list[st
     return out
 
 
+def body_multiset(bodies: "list[list[str]]") -> "collections.Counter[tuple[str, ...]]":
+    """The bodies emitted under one name, as an unordered multiset.
+
+    Comparison must not depend on the ORDER the duplicate bodies were emitted in.
+    `functions()` returns them in link order, and link order is precisely what this
+    script's main use case perturbs — moving a file between rules.mk levels, or
+    reordering SRC, can swap two same-named local symbols without changing a single
+    instruction. Comparing the ordered lists reported DIFFERENT for that, i.e. the
+    tool cried wolf on exactly the class of change it exists to clear.
+
+    A multiset and not a set: {A, A} vs {A, B} must still differ, so the counts
+    carry. This is the other half of the duplicate-symbol fix — storing every body
+    (rather than overwriting) stopped the tool MISSING a real change; comparing them
+    unordered stops it INVENTING one.
+    """
+    return collections.Counter(tuple(b) for b in bodies)
+
+
 def data_symbols(elf: str, tool: str) -> "collections.Counter[tuple[str, int]]":
     """Multiset of (name, size) for .data symbols.
 
@@ -178,7 +198,11 @@ def main() -> int:
 
     only_base = sorted(set(base) - set(cand))
     only_cand = sorted(set(cand) - set(base))
-    differing = [k for k in base if k in cand and base[k] != cand[k]]
+    differing = [
+        k
+        for k in base
+        if k in cand and body_multiset(base[k]) != body_multiset(cand[k])
+    ]
 
     n_base = sum(len(v) for v in base.values())
     n_cand = sum(len(v) for v in cand.values())
@@ -200,16 +224,21 @@ def main() -> int:
         import difflib
 
         for name in differing[: args.show]:
-            b_bodies, c_bodies = base[name], cand[name]
-            if len(b_bodies) != len(c_bodies):
-                print(f"\n--- {name}: emitted {len(b_bodies)} time(s) -> {len(c_bodies)}")
-                continue
-            for idx, (b, c) in enumerate(zip(b_bodies, c_bodies)):
-                if b == c:
-                    continue
-                where = f"{name}" if len(b_bodies) == 1 else f"{name} [copy {idx + 1}/{len(b_bodies)}]"
+            # Report from the multiset difference, not by pairing the lists
+            # positionally: bodies that appear on both sides are matched and
+            # dropped by the subtraction, so what is left is only the genuinely
+            # unmatched ones. Pairing by index would instead diff a body against
+            # whichever unrelated namesake happened to land at the same position.
+            mb, mc = body_multiset(base[name]), body_multiset(cand[name])
+            gone = list((mb - mc).elements())
+            new = list((mc - mb).elements())
+            if len(base[name]) != len(cand[name]):
+                print(f"\n--- {name}: emitted {len(base[name])} time(s)"
+                      f" -> {len(cand[name])}")
+            for idx, (b, c) in enumerate(itertools.zip_longest(gone, new, fillvalue=())):
+                where = name if max(len(gone), len(new)) == 1 else f"{name} [{idx + 1}]"
                 print(f"\n--- {where} ({len(b)} -> {len(c)} insns)")
-                for line in list(difflib.unified_diff(b, c, lineterm="", n=2))[:40]:
+                for line in list(difflib.unified_diff(list(b), list(c), lineterm="", n=2))[:40]:
                     print(f"    {line}")
     else:
         print("differing bodies: 0")

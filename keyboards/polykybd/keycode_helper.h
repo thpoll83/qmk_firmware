@@ -21,10 +21,16 @@
 // frame turned out to add nothing the letters were not already saying.
 #define INTL_LAYER_LEGEND   U"\x130\xF1\x21B\x142"   // Intl, spelled in accented latin
 #define INTL_PICKER_LEGEND  U"\xC1\xBB\xC6"           // Á»Æ — Ctrl: pick another variation
-// a»ñ — reassign which LETTER this key hosts (vs Á»Æ, which picks another form of
+// à»ñ — reassign which LETTER this key hosts (vs Á»Æ, which picks another form of
 // the SAME letter). Same "»" = "becomes" idiom, lower case and a different letter
 // on the right, so the pair reads as one family without looking identical.
-#define INTL_REMAP_LEGEND   U"a\xBB\xF1"
+// ⚠️ à, NOT a: kdisp_write_gfx_char baseline-aligns every glyph by
+// `font->yAdvance - fonts[0]->yAdvance`, so glyphs from DIFFERENT fonts land on
+// different baselines. Plain 'a' is in _Base_ (yAdvance 37 => -3px) while » and ñ
+// are in _SupAndExtA_ (44 => +4px), which sat the 'a' SEVEN pixels high. Á»Æ above
+// is even only because all three of its glyphs are Latin-1, i.e. one font. Keep
+// every glyph in a multi-glyph legend inside one font, or position it explicitly.
+#define INTL_REMAP_LEGEND   U"\xE0\xBB\xF1"
 
 /*[[[cog
 import cog

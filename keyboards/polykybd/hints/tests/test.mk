@@ -1,3 +1,10 @@
+# NOTE: this file is test.mk, NOT rules.mk, and must stay that way.
+# qmk ci-validate-keyboard-targets flags every rules.mk under keyboards/
+# whose directory has no keyboard.json as a "Legacy target", so naming it
+# rules.mk (the convention used by quantum/*/tests and modules/*/tests, which
+# live outside keyboards/) fails the lint job. builddefs/build_test.mk includes
+# this by explicit path, so the name is free.
+
 POLYKYBD_HINTS_PATH := keyboards/polykybd/hints
 
 # The hint table is pure and depends only on keycodes + modifier bits, so it links

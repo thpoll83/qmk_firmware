@@ -219,10 +219,38 @@ typedef struct _poly_last_t {
 // change into a silent corruption of the other case's pick.
 #define LATIN_PICK_BITS    6
 #define LATIN_PICK_MAX     (1u << LATIN_PICK_BITS)             /* 64 */
-#define LATIN_TARGETS      26                                  /* A..Z; punctuation may follow */
+// Slots 0..25 are the LETTERS A..Z; 26..37 are the printable punctuation keys,
+// KC_MINUS 0x2D .. KC_SLASH 0x38 — a CONTIGUOUS run of twelve, so the mapping is
+// `kc - KC_MINUS + 26` with no table (see latin_target_slot()).  The run is taken
+// whole rather than hand-filtered: a key that is masked or absent on a given board
+// is simply unreachable there, which excludes `\` / non-US-hash by itself on the
+// layouts that do not want them, and costs nothing on the ones that do.
+// Only a letter can be a SOURCE — a punctuation key hosts a letter's row, never
+// the other way round — so the two bounds are deliberately separate constants.
+#define LATIN_LETTER_TARGETS 26
+#define LATIN_PUNCT_TARGETS  12
+#define LATIN_TARGETS      (LATIN_LETTER_TARGETS + LATIN_PUNCT_TARGETS)   /* 38 */
 #define LATIN_PICK_FIELDS  (LATIN_TARGETS * 2)                 /* upper + lower  */
-#define LATIN_PICK_BYTES   ((LATIN_PICK_FIELDS * LATIN_PICK_BITS + 7) / 8)  /* 39 */
-#define LATIN_ASSIGN_BYTES ((LATIN_TARGETS * LATIN_PICK_BITS + 7) / 8)      /* 20 */
+#define LATIN_PICK_BYTES   ((LATIN_PICK_FIELDS * LATIN_PICK_BITS + 7) / 8)  /* 57 */
+#define LATIN_ASSIGN_BYTES ((LATIN_TARGETS * LATIN_PICK_BITS + 7) / 8)      /* 29 */
+
+// ⚠️ EEPROM keeps the letters and the punctuation in SEPARATE blocks, and the
+// letter block keeps its original offsets and size.  Growing the stored arrays in
+// place would shift latin_pick_migrated, and a version byte that MOVES cannot be
+// found — the load would read a pick byte as the version and could not tell a real
+// format from a coincidence.  Appending instead means an old EEPROM reads the new
+// block as zeros (wear-levelling, above), which is unambiguously "not written",
+// and every existing pick and assignment survives untouched.
+//
+// The PICK split lands on a byte boundary, which is what makes it a plain memcpy:
+// 52 letter fields x 6 bits = 312 = 39 bytes exactly, and the 24 punctuation
+// fields x 6 = 144 = 18 bytes exactly, starting at byte 39.  The ASSIGN split does
+// NOT (26 x 6 = 156 bits = 19.5 bytes), so the punctuation assignments live in
+// their own array indexed FROM ZERO and are copied field-by-field, not blitted.
+#define LATIN_PICK_BASE_BYTES   ((LATIN_LETTER_TARGETS * 2 * LATIN_PICK_BITS + 7) / 8) /* 39 */
+#define LATIN_PICK_EXT_BYTES    (LATIN_PICK_BYTES - LATIN_PICK_BASE_BYTES)             /* 18 */
+#define LATIN_ASSIGN_BASE_BYTES ((LATIN_LETTER_TARGETS * LATIN_PICK_BITS + 7) / 8)     /* 20 */
+#define LATIN_ASSIGN_EXT_BYTES  ((LATIN_PUNCT_TARGETS * LATIN_PICK_BITS + 7) / 8)      /* 9  */
 #define LATIN_ASSIGN_NONE  (uint8_t)(LATIN_PICK_MAX - 1u)      /* 0x3F -- see above */
 // Byte fill that makes EVERY 6-bit field read LATIN_ASSIGN_NONE. 0x3F does not tile
 // a byte (6 does not divide 8), so memset(map, LATIN_ASSIGN_NONE, n) would leave a
@@ -242,6 +270,15 @@ typedef struct _latin_sync_t {
     uint8_t  ex[LATIN_PICK_BYTES];
     uint8_t  assign[LATIN_ASSIGN_BYTES];
 } latin_sync_t;
+
+// ⚠️ The whole table crosses the split link in ONE RPC (USER_SYNC_LATIN_EX_DATA), and
+// transaction_rpc_exec() refuses a payload larger than the buffer by returning false
+// BEFORE sending anything -- while the bulk send_to_bridge() call sites discard the
+// ack.  So outgrowing this cap does not fail loudly: the master applies the change,
+// the slave never hears it, and half the board keeps the old legends with nothing in
+// the log.  Adding targets grows this struct, so assert it rather than remember it.
+static_assert(sizeof(latin_sync_t) <= RPC_M2S_BUFFER_SIZE,
+              "latin_sync_t no longer fits one split RPC -- raise RPC_M2S_BUFFER_SIZE");
 
 // A field can straddle a byte boundary (6 does not divide 8), so both helpers
 // read/write a 16-bit window -- guarded by the array's own length, because the
@@ -278,12 +315,15 @@ static inline void latin_pick_set(uint8_t* ex, uint8_t field, uint8_t value) {
     latin_bits_set(ex, LATIN_PICK_BYTES, field, value);
 }
 
-// The letter whose variation row this key hosts.  Unassigned (or a stale value
-// past the alphabet) falls back to the key's own letter, so a fresh EEPROM and a
-// corrupt one both behave like the un-remapped keyboard.
-static inline uint8_t latin_assign_get(const uint8_t* assign, uint8_t slot) {
+// The letter whose variation row this key hosts, or -1 for "none".  Unassigned
+// (or a stale value past the alphabet) falls back to the key's OWN letter, so a
+// fresh EEPROM and a corrupt one both behave like the un-remapped keyboard — but
+// only slots 0..25 have an own letter to fall back to.  An unassigned punctuation
+// key has no row at all, which is what keeps `,` a comma until someone maps it.
+static inline int8_t latin_assign_get(const uint8_t* assign, uint8_t slot) {
     const uint8_t v = latin_bits_get(assign, LATIN_ASSIGN_BYTES, slot);
-    return (v < LATIN_TARGETS) ? v : slot;
+    if (v < LATIN_LETTER_TARGETS) return (int8_t)v;
+    return (slot < LATIN_LETTER_TARGETS) ? (int8_t)slot : -1;
 }
 
 static inline void latin_assign_set(uint8_t* assign, uint8_t slot, uint8_t letter) {
@@ -326,7 +366,12 @@ typedef struct _poly_eeconf_t {
     // APPENDED rather than widening latin_ex[] in place: that array sits ahead of
     // mru_emoji/mru_lang, so resizing it would shift every later field and an
     // existing EEPROM would read its MRU lists out of the shifted bytes.
-    uint8_t  latin_ex_wide[LATIN_PICK_BYTES];
+    // ⚠️ Sized LATIN_PICK_BASE_BYTES, NOT LATIN_PICK_BYTES: this array must keep the
+    // size it shipped with.  Growing it in place is what would shift the version
+    // byte below, and a version byte that MOVES cannot be found -- the load would
+    // read a pick byte where it expects the sentinel.  The extra targets go in
+    // latin_ex_ext at the tail instead.
+    uint8_t  latin_ex_wide[LATIN_PICK_BASE_BYTES];
     // FORMAT VERSION for latin_ex_wide, not a boolean. "Looks empty" is NOT
     // decidable here -- all-zero is a legitimate every-letter-on-its-first-variation
     // state and erased flash reads 0xFF -- so each conversion is gated on an
@@ -341,7 +386,14 @@ typedef struct _poly_eeconf_t {
     // already "every key unassigned". ⚠️ That is also why eeconfig_init_user() has
     // to memset this to 0xFF rather than let the struct-wide {0} stand -- zeroed,
     // it would read as "every key assigned to A".
-    uint8_t  latin_assign[LATIN_ASSIGN_BYTES];
+    uint8_t  latin_assign[LATIN_ASSIGN_BASE_BYTES];
+    // Punctuation targets (slots 26..37), APPENDED rather than grown into the two
+    // arrays above — see the byte-boundary note by LATIN_PICK_BASE_BYTES. An old
+    // EEPROM reads this whole block as zeros, so latin_ext_fmt != LATIN_EXT_OK is
+    // an unambiguous "never written" and the letters keep their offsets and data.
+    uint8_t  latin_ex_ext[LATIN_PICK_EXT_BYTES];
+    uint8_t  latin_assign_ext[LATIN_ASSIGN_EXT_BYTES];
+    uint8_t  latin_ext_fmt;
 } poly_eeconf_t;
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
@@ -349,7 +401,8 @@ typedef struct _poly_eeconf_t {
 // unrecognised means the legacy one-byte-per-letter nibble pairs in latin_ex[].
 #define LATIN_PICK_MIGRATED    0xA5 // 6-bit fields, case-BLOCKED; no assignment map
 #define LATIN_PICK_INTERLEAVED 0xC3 // ...case-INTERLEAVED; assignment map UNTRUSTWORTHY
-#define LATIN_PICK_ASSIGN_OK   0xD7 // ...and the assignment map is real (current)
+#define LATIN_PICK_ASSIGN_OK   0xD7 // ...and the assignment map is real (letters only)
+#define LATIN_EXT_OK           0x6B // latin_*_ext hold the punctuation targets
 // ⚠️ 0xC3 is deliberately NOT the current version. The build that introduced it
 // assumed an unwritten EEPROM reads 0xFF, so it copied the assignment map straight
 // out of a block that had never held one — read back as all-zero, i.e. "every key

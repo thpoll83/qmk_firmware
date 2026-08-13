@@ -13,10 +13,26 @@ extern "C" {
 const uint32_t* os_hint_reference(uint16_t keycode, uint8_t mods_raw, uint8_t active_os_packed);
 }
 
+#include <cstdio>   // snprintf in describe()
 #include <string>
 #include <vector>
 
 namespace {
+
+// Compare hints by CONTENT, never by pointer.
+//
+// The two tables are separate translation units returning pointers to string
+// literals, and whether the compiler pools two identical literals to one address
+// is not something a test may depend on — in either direction. A pointer test
+// would spuriously fail when a wider chord legitimately gains its own entry whose
+// text happens to match the narrower one, and would spuriously pass for two
+// distinct literals with equal content.
+bool same_hint(const uint32_t* a, const uint32_t* b) {
+    if (a == nullptr || b == nullptr) return a == b;
+    size_t i = 0;
+    while (a[i] != 0 && b[i] != 0 && a[i] == b[i]) ++i;
+    return a[i] == b[i];
+}
 
 // Every keycode the table can answer for, plus a generous margin of ones it
 // cannot, so "returns NULL" is covered as thoroughly as "returns a hint".
@@ -81,17 +97,8 @@ TEST(OsHintsExtraction, MatchesPreExtractionTableExhaustively) {
             for (uint8_t os : os_values()) {
                 const uint32_t* got  = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
                 const uint32_t* want = os_hint_reference(kc, static_cast<uint8_t>(mods), os);
-                // Both tables return pointers to string literals; the compiler may
-                // or may not pool identical literals across the two translation
-                // units, so compare CONTENT, not pointer identity.
-                if (want == nullptr || got == nullptr) {
-                    ASSERT_EQ(got == nullptr, want == nullptr) << describe(kc, mods, os);
-                } else {
-                    size_t i = 0;
-                    while (want[i] != 0 && got[i] != 0 && want[i] == got[i]) ++i;
-                    ASSERT_EQ(want[i], got[i]) << describe(kc, mods, os) << " diverges at index " << i;
-                    ++hits;
-                }
+                ASSERT_TRUE(same_hint(got, want)) << describe(kc, mods, os);
+                if (want != nullptr) ++hits;
                 ++compared;
             }
         }
@@ -119,7 +126,7 @@ TEST(OsHints, AutoFlagDoesNotChangeTheAnswer) {
                 const uint32_t* flagged =
                     os_hint_for_keycode(kc, static_cast<uint8_t>(mods),
                                         static_cast<uint8_t>(os | POLY_OS_AUTO_FLAG));
-                ASSERT_EQ(plain, flagged) << describe(kc, mods, os);
+                ASSERT_TRUE(same_hint(plain, flagged)) << describe(kc, mods, os);
             }
         }
     }
@@ -130,8 +137,8 @@ TEST(OsHints, LeftAndRightModifiersAreEquivalent) {
     for (uint16_t kc : interesting_keycodes()) {
         for (uint8_t os = 0; os < POLY_OS_COUNT; ++os) {
             for (int i = 0; i < 4; ++i) {
-                ASSERT_EQ(os_hint_for_keycode(kc, kLeftBits[i], os),
-                          os_hint_for_keycode(kc, kRightBits[i], os))
+                ASSERT_TRUE(same_hint(os_hint_for_keycode(kc, kLeftBits[i], os),
+                                      os_hint_for_keycode(kc, kRightBits[i], os)))
                     << describe(kc, kLeftBits[i], os);
             }
         }
@@ -158,9 +165,9 @@ TEST(OsHints, ExtraModifierNeverLeaksTheNarrowerHint) {
                     if (mods & extra) continue;
                     const uint8_t wider = static_cast<uint8_t>(mods | extra);
                     const uint32_t* got = os_hint_for_keycode(kc, wider, os);
-                    ASSERT_NE(got, base) << describe(kc, wider, os)
-                                         << " still shows the hint for the narrower chord 0x"
-                                         << std::hex << mods;
+                    ASSERT_FALSE(same_hint(got, base))
+                        << describe(kc, wider, os)
+                        << " still shows the hint for the narrower chord 0x" << std::hex << mods;
                     ++checked;
                 }
             }

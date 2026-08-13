@@ -74,11 +74,21 @@ static inline uint8_t glyph_col_bytes(uint8_t height) {
 // True when the pixel at (gx, gy) within the glyph is lit. `bitmap` is the font's
 // bitmap base, `bo` the glyph's bitmapOffset, `col_bytes` the value above.
 //
-// Use this only where the iteration order is not row-major (the 2x2 downsample
-// probes four scattered source pixels). For a row loop use the row_base/row_mask
-// pair below instead: both are loop-invariant across a row, and folding them into
-// a single per-pixel call measurably grew three blit functions (+18, +8 and +7
-// instructions) because the compiler stopped hoisting them.
+// This is the REFERENCE form: it states the decode in one expression, and the
+// row-loop form below is verified against it over a whole glyph
+// (`RowFormAgreesWithTheDirectForm`). The blit loops deliberately do NOT call it —
+// they call the row pair, whose two halves are loop-invariant across a row.
+// Folding them back into one per-pixel call measurably grew three blit functions
+// (+18, +8 and +7 instructions) because the compiler stopped hoisting them.
+//
+// ⚠️ The two SCALING renderers in disp_array.c (kdisp_draw_glyph_half_at,
+// _double_at) also still open-code the decode, and that is measured, not an
+// oversight: _half_at probes four scattered source pixels per destination pixel,
+// and routing those through this function costs it **+18 instructions**; _double_at
+// iterates column-major (`for gx { for gy { } }`), so the row pair does not fit it
+// and a matching column-invariant pair still costs **+2**. Both were built and
+// diffed with tools/compare_codegen.py. Re-measure before trying again rather than
+// assuming a `static inline` over pgm_read_* is always free.
 static inline bool glyph_pixel_lit(const uint8_t *bitmap, uint16_t bo, uint8_t col_bytes, uint16_t gx, uint16_t gy) {
     const uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)(gx * col_bytes) + (gy >> 3)]);
     return (byte & (uint8_t)(1u << (gy & 7u))) != 0u;

@@ -352,15 +352,17 @@ typedef struct _poly_eeconf_t {
     // Persisted glyph-script override (enum poly_glyph_script). Appended at the end
     // (like os_state) so latin_ex/mru offsets are unchanged; an old EEPROM reads an
     // uninitialised byte here, so load_user_eeconf() bounds-guards it to GLYPH_STD.
-    // Growing EECONFIG_USER_DATA_SIZE 64->65 stays within POLY_EECONFIG_USER_RESERVED
-    // (128), so the dynamic keymap does NOT relocate — no user EEPROM reset needed.
+    // Growing EECONFIG_USER_DATA_SIZE 64->65 stayed within the reservation as it then
+    // was (128), so the dynamic keymap did NOT relocate — no user EEPROM reset needed.
+    // (The reservation is 256 now; the live bound is the static_assert at the end of
+    // this header, not this note.)
     uint8_t  glyph_script;
     // First-boot marker for the one-time startup animation. Appended tail byte
     // (same pattern as os_state/glyph_script) so earlier offsets are unchanged.
     // A fresh/erased EEPROM reads 0xFF (or 0 after eeconfig_init) — anything other
     // than BOOT_INTRO_DONE means "not yet played", so the intro runs once and then
-    // writes BOOT_INTRO_DONE. Growing EECONFIG_USER_DATA_SIZE 65->66 stays within
-    // POLY_EECONFIG_USER_RESERVED (128): no keymap relocation / user reset.
+    // writes BOOT_INTRO_DONE. Growing EECONFIG_USER_DATA_SIZE 65->66 likewise stayed
+    // within the then-128-byte reservation: no keymap relocation / user reset.
     uint8_t  boot_flags;
     // Widened Intl variation picks (6 bits per case -- see LATIN_PICK_* above).
     // APPENDED rather than widening latin_ex[] in place: that array sits ahead of

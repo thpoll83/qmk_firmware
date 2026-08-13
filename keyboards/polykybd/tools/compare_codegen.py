@@ -57,27 +57,59 @@ _ADDR = re.compile(r"\b(?:0x)?[0-9a-f]{4,8}\b")
 _SYMREF = re.compile(r"<[^>]*>")
 
 
-def _objdump(elf: str, tool: str) -> str:
+def _run_tool(argv: "list[str]") -> str:
+    """Run a binutils tool and return stdout, or exit with a diagnostic.
+
+    Every invocation goes through here so a failure can never be mistaken for
+    empty output. That matters more than usual: this script's whole job is to
+    answer "did anything change", and a tool that silently produced nothing would
+    make both sides compare equal and report "equivalent" — the one wrong answer
+    a verification tool must never give.
+
+    argv is built from a hard-coded flag plus a tool name and path this script's
+    own CLI supplied; it is passed as a LIST with the default shell=False, so
+    there is no shell to inject through. shlex.quote would be actively wrong here:
+    it escapes for a shell *string*, and applied to an argv element it corrupts
+    the value.
+    """
     try:
-        res = subprocess.run(
-            [tool, "-d", elf], capture_output=True, text=True, check=True
-        )
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+        res = subprocess.run(argv, capture_output=True, text=True, check=True)
     except FileNotFoundError:
-        sys.exit(f"error: {tool} not found on PATH")
+        sys.exit(f"error: {argv[0]} not found on PATH")
     except subprocess.CalledProcessError as exc:
-        sys.exit(f"error: {tool} -d {elf} failed:\n{exc.stderr.strip()}")
+        sys.exit(f"error: {' '.join(argv)} failed:\n{(exc.stderr or '').strip()}")
     return res.stdout
 
 
-def functions(elf: str, tool: str) -> "collections.OrderedDict[str, list[str]]":
-    """Map function name -> address-normalised instruction list."""
-    out: "collections.OrderedDict[str, list[str]]" = collections.OrderedDict()
+def _objdump(elf: str, tool: str) -> str:
+    return _run_tool([tool, "-d", elf])
+
+
+def functions(elf: str, tool: str) -> "collections.OrderedDict[str, list[list[str]]]":
+    """Map function name -> EVERY address-normalised body emitted under that name.
+
+    A list of bodies, not one body: ELF allows duplicate local symbol names, and
+    this tree really has them — `port_lock`, `port_unlock`, `chThdGetSelfX`,
+    `flash_cs_force` and `flash_enable_xip_via_boot2` are each emitted in several
+    translation units, five duplicated labels per image. Keying by name alone kept
+    only the last one, so a change confined to an earlier body compared equal and
+    the script reported "equivalent". Found in review of this file's first version.
+    """
+    out: "collections.OrderedDict[str, list[list[str]]]" = collections.OrderedDict()
+    body: "list[str]" = []
     current = None
+
+    def flush() -> None:
+        if current is not None:
+            out.setdefault(current, []).append(body)
+
     for line in _objdump(elf, tool).splitlines():
         label = _LABEL.match(line)
         if label:
+            flush()
             current = label.group(1)
-            out[current] = []
+            body = []
             continue
         if current is None:
             continue
@@ -85,13 +117,15 @@ def functions(elf: str, tool: str) -> "collections.OrderedDict[str, list[str]]":
         if not insn:
             # A blank line ends the current function body.
             if not line.strip():
+                flush()
                 current = None
             continue
         text = _ADDR.sub("ADDR", insn.group(2))
         # `<foo+0x30>` and `<bar>` are annotations on the address just
         # normalised; keeping them would re-introduce the link order.
         text = _SYMREF.sub("<SYM>", text)
-        out[current].append(text)
+        body.append(text)
+    flush()
     return out
 
 
@@ -104,9 +138,11 @@ def data_symbols(elf: str, tool: str) -> "collections.Counter[tuple[str, int]]":
     in one behind its namesake.
     """
     nm = shutil.which(tool.replace("objdump", "nm")) or "nm"
-    res = subprocess.run([nm, "-S", elf], capture_output=True, text=True)
+    # Via _run_tool so a failing/absent nm exits loudly. Previously this parsed
+    # whatever stdout came back regardless of exit status, so two failed runs
+    # yielded two empty counters and the script reported ".data symbols identical".
     syms: "collections.Counter[tuple[str, int]]" = collections.Counter()
-    for line in res.stdout.splitlines():
+    for line in _run_tool([nm, "-S", elf]).splitlines():
         parts = line.split()
         if len(parts) == 4 and parts[2] in ("D", "d"):
             syms[(parts[3], int(parts[1], 16))] += 1
@@ -144,7 +180,11 @@ def main() -> int:
     only_cand = sorted(set(cand) - set(base))
     differing = [k for k in base if k in cand and base[k] != cand[k]]
 
-    print(f"functions: baseline={len(base)} candidate={len(cand)}")
+    n_base = sum(len(v) for v in base.values())
+    n_cand = sum(len(v) for v in cand.values())
+    dupes = sum(len(v) - 1 for v in base.values() if len(v) > 1)
+    print(f"functions: baseline={n_base} candidate={n_cand}"
+          f" ({len(base)} distinct names, {dupes} duplicate label(s))")
     ok = True
 
     if only_base:
@@ -157,14 +197,20 @@ def main() -> int:
     if differing:
         ok = False
         print(f"differing bodies: {len(differing)}")
-        for name in differing[: args.show]:
-            print(f"\n--- {name} ({len(base[name])} -> {len(cand[name])} insns)")
-            import difflib
+        import difflib
 
-            for line in list(
-                difflib.unified_diff(base[name], cand[name], lineterm="", n=2)
-            )[:40]:
-                print(f"    {line}")
+        for name in differing[: args.show]:
+            b_bodies, c_bodies = base[name], cand[name]
+            if len(b_bodies) != len(c_bodies):
+                print(f"\n--- {name}: emitted {len(b_bodies)} time(s) -> {len(c_bodies)}")
+                continue
+            for idx, (b, c) in enumerate(zip(b_bodies, c_bodies)):
+                if b == c:
+                    continue
+                where = f"{name}" if len(b_bodies) == 1 else f"{name} [copy {idx + 1}/{len(b_bodies)}]"
+                print(f"\n--- {where} ({len(b)} -> {len(c)} insns)")
+                for line in list(difflib.unified_diff(b, c, lineterm="", n=2))[:40]:
+                    print(f"    {line}")
     else:
         print("differing bodies: 0")
 

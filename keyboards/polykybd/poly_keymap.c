@@ -1792,10 +1792,24 @@ static void latin_remap_apply(uint8_t slot, uint8_t letter) {
 
 // Clear every assignment. Reached by tapping the remap key on the Intl layer
 // WITHOUT opening the mode — see process_record_user.
+//
+// ⚠️ Clears the picks of the REMAPPED slots only, not the whole ex[] array. A key
+// that was never remapped still hosts its own letter, so its pick is still valid
+// and is the user's own choice — wiping it would make "clear the assignments" also
+// silently discard every accent anyone had ever chosen (caught in review, #206).
+// A remapped slot's pick, by contrast, indexes the row it is losing and may be past
+// the end of its own, so that one must go back to 0.
 static void latin_remap_reset_all(void) {
     latin_sync_t* table = access_global_latin_table();
+    for(uint8_t slot = 0; slot < LATIN_TARGETS; slot++) {
+        // The RAW field, not latin_assign_get(): the getter substitutes the key's
+        // own letter for an unassigned slot, which is exactly the case to skip.
+        if(latin_bits_get(table->assign, LATIN_ASSIGN_BYTES, slot) < LATIN_LETTER_TARGETS) {
+            latin_pick_set(table->ex, latin_pick_field(slot, true),  0);
+            latin_pick_set(table->ex, latin_pick_field(slot, false), 0);
+        }
+    }
     memset(table->assign, LATIN_ASSIGN_FILL, sizeof(table->assign));
-    memset(table->ex, 0, sizeof(table->ex));
     send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
     mark_latin_dirty();
     request_disp_refresh();
@@ -3541,6 +3555,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             poly_layer_t* ll = access_local_layer();
             ll->remap_mode   = LATIN_REMAP_PICKKEY;
             ll->remap_target = 0;
+            // ⚠️ The prompt swallows every non-modifier release from here on, so a key
+            // QMK had ALREADY registered when the mode opened would never be
+            // unregistered — the host would hold it down and auto-repeat until USB
+            // dropped. Reachable: a letter with no variation falls through to QMK on
+            // this layer, so it can genuinely be down at this moment. Same remedy the
+            // firmware-confirm prompt and doom_begin() use for the same reason.
+            clear_keyboard();
             // Drop the variation picker if it was open: the two prompts would
             // otherwise both claim the keycaps.
             if(s_picker_latched) {

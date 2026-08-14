@@ -140,21 +140,25 @@ it during the flash.
 
 ## Key rotation
 
-Re-run `gen_signing_key.py`, commit the new `fw_pubkey.h`, update the
-`FW_SIGNING_KEY` secret, ship a firmware build carrying the new public key, and
-re-sign releases.
+⚠️ **The order is not the obvious one, and getting it wrong strands the fleet on a
+manual prompt.** A keyboard can only verify against the public key baked into the
+firmware it is *currently running*, so the release that **carries** a new public key
+cannot be **signed** with the new private key — every keyboard still on the old
+firmware would refuse it and drop to the ACCEPT/REJECT prompt. The release workflow
+signs with whatever `FW_SIGNING_KEY` holds at the time, so the secret must be rotated
+*after* the transition release, never before it.
 
-⚠️ **Rotation is harder now that enforcement is on**, and the old advice here — "rotate
-the firmware first while still in warn-only mode" — no longer describes anything that
-exists. A keyboard can only verify against the key baked into the firmware it is
-*currently running*, so the release that carries a new public key cannot be signed
-with the new private key: every keyboard still on the old firmware would refuse it and
-drop to the manual ACCEPT/REJECT prompt.
+(The old advice here — "rotate the firmware first while still in warn-only mode" — no
+longer describes anything that exists; warn-only is gone.)
 
-**Sign the rotation release with the OLD private key.** Keyboards verify it against the
-old public key they already trust, install the image, and come up carrying the new
-public key. Only the release *after* that one is signed with the new key. Retire the
-old private key only once the fleet has taken the rotation build.
+1. Re-run `gen_signing_key.py` and commit the new `fw_pubkey.h`.
+2. **Leave `FW_SIGNING_KEY` set to the OLD private key.**
+3. Publish the transition release. It carries the new public key and is signed with the
+   old one, so keyboards verify it against the key they already trust, install it, and
+   come up carrying the new public key.
+4. Only once the fleet has taken that build, update `FW_SIGNING_KEY` to the new private
+   key. Every later release is signed with it.
+5. Retire the old private key.
 
 A botched regeneration is also guarded: if `fw_pubkey.h` ever reverts to the all-zero
 placeholder, `fw_staging_check_signature()` refuses outright rather than verifying

@@ -15,16 +15,17 @@ proves integrity, not authenticity).
 Ed25519 here is RFC 8032 (SHA-512), so `cryptography` / `libsodium` / Monocypher
 are byte-compatible (verified with a cross-implementation test).
 
-## Rollout: Phase A (current) → enforce
+## Rollout: enforced (Phase A is history)
 
-This is shipped in **Phase A**: the firmware **verifies and logs** the signature
-but does **not reject** an unsigned or badly-signed image. Flashing keeps working
-exactly as before, so there is zero brick risk while the key + signed-release
-pipeline are put in place. The serial/HID console shows one of:
+The serial/HID console shows one of:
 
     FW_UP: image signature OK
     FW_UP: image signature INVALID
     FW_UP: image UNSIGNED (no signature supplied)
+
+Phase A — verify-and-log, reject nothing — is **over**; it existed only to carry the
+project from "no signing at all" to a provisioned key without brick risk. Do not
+describe current behaviour in Phase A terms.
 
 **ENFORCEMENT IS NOW ON** (2026-08-04, `rules.mk`: `OPT_DEFS += -DFW_REQUIRE_SIGNATURE`).
 An image without a valid signature is refused at COMMIT. Enabled only after the
@@ -124,9 +125,15 @@ Automated (releases): signing is built **into the existing release build**
 (`.github/workflows/release.yml`). On a `PolyKybd-fw-v*` tag / published release it
 builds split72, objcopies the `.bin`, then the **Sign .bin (FW-2)** step signs it
 with `FW_SIGNING_KEY` and the release step uploads `<target>.bin.sig` alongside the
-`.uf2`/`.bin`. The signing step is a **no-op when `FW_SIGNING_KEY` is unset**, so
-releases keep working (unsigned) until you add the secret — nothing to wire up
-beyond the one-time key setup above.
+`.uf2`/`.bin`.
+
+⚠️ **A release build with no `FW_SIGNING_KEY` secret now FAILS the job.** While
+verification was warn-only the step deliberately no-op'd, so releases kept working
+before a key existed. Under enforcement that default inverted: an unsigned release is
+refused by every keyboard at COMMIT and falls through to the on-keycap ACCEPT/REJECT
+prompt, teaching users to accept unsigned images on sight — the exact habit FW-2 is
+meant to prevent. Failing the release is the cheaper outcome. Non-release builds (a
+`workflow_dispatch` smoke test off a branch) still skip signing.
 
 PolyKybdHost picks up `<image>.bin.sig` next to the `.bin` automatically and sends
 it during the flash.
@@ -134,10 +141,25 @@ it during the flash.
 ## Key rotation
 
 Re-run `gen_signing_key.py`, commit the new `fw_pubkey.h`, update the
-`FW_SIGNING_KEY` secret, ship a firmware build with the new public key, and
-re-sign releases. (Until a keyboard runs firmware carrying the new public key, it
-can't verify signatures made with the new private key — rotate the firmware first
-while still in warn-only mode.)
+`FW_SIGNING_KEY` secret, ship a firmware build carrying the new public key, and
+re-sign releases.
+
+⚠️ **Rotation is harder now that enforcement is on**, and the old advice here — "rotate
+the firmware first while still in warn-only mode" — no longer describes anything that
+exists. A keyboard can only verify against the key baked into the firmware it is
+*currently running*, so the release that carries a new public key cannot be signed
+with the new private key: every keyboard still on the old firmware would refuse it and
+drop to the manual ACCEPT/REJECT prompt.
+
+**Sign the rotation release with the OLD private key.** Keyboards verify it against the
+old public key they already trust, install the image, and come up carrying the new
+public key. Only the release *after* that one is signed with the new key. Retire the
+old private key only once the fleet has taken the rotation build.
+
+A botched regeneration is also guarded: if `fw_pubkey.h` ever reverts to the all-zero
+placeholder, `fw_staging_check_signature()` refuses outright rather than verifying
+against it (that key is an order-4 curve point, so it would otherwise be *forgeable* —
+see the comment on `fw_pubkey_provisioned()` in `base/fw_staging.c`).
 
 ## Scope: master-only verification (deliberate)
 

@@ -523,6 +523,26 @@ bool fw_staging_refused_unsigned(void) {
     return s_refused_unsigned;
 }
 
+// Is a real signing key compiled in, or is this still the all-zero placeholder that
+// fw_pubkey.h ships before `gen_signing_key.py` has been run?
+//
+// ⚠️ The all-zero key is NOT an inert value that simply fails every check. Its
+// encoding is y=0, which decodes to a point that is genuinely ON the curve with
+// ORDER 4 — and crypto_eddsa_check_equation() only verifies that A and R are on the
+// curve and that 0 <= S < L. It has no low-order-key rejection. With an order-4 A,
+// [h]A depends only on h mod 4, so an attacker can guess that value and land a
+// forgery in a handful of attempts. A placeholder key therefore makes enforcement
+// FORGEABLE rather than fail-closed — the opposite of the intuition that a dummy key
+// "rejects everything". Guard it explicitly so a botched key regeneration or a bad
+// merge can never silently downgrade FW_REQUIRE_SIGNATURE into theatre.
+static bool fw_pubkey_provisioned(void) {
+    uint8_t acc = 0;
+    for (size_t i = 0; i < sizeof(FW_SIGNING_PUBKEY); i++) {
+        acc |= FW_SIGNING_PUBKEY[i];
+    }
+    return acc != 0;
+}
+
 // FW-2: verify the staged FIRMWARE image's Ed25519 signature against the embedded
 // public key. The image is read straight from XIP flash (memory-mapped), so no RAM
 // copy of the (up to ~2 MB) image is needed. Returns:
@@ -531,6 +551,12 @@ bool fw_staging_refused_unsigned(void) {
 // transaction window.
 static int fw_staging_check_signature(void) {
     if (!s_signature_present) return 0;
+    if (!fw_pubkey_provisioned()) {
+        // Report INVALID, not UNSIGNED: a signature WAS supplied, we just have no
+        // trustworthy key to judge it with. Under enforcement both are refused.
+        uprintf("FW_UP: no signing key provisioned (placeholder pubkey) — cannot verify\n");
+        return -1;
+    }
     const uint8_t *img = (const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET);
     // monocypher crypto_ed25519_check() returns 0 on success, -1 on any failure.
     return (crypto_ed25519_check(s_signature, FW_SIGNING_PUBKEY, img, s_image_size) == 0) ? 1 : -1;

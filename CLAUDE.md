@@ -116,6 +116,17 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     an empty directory`, and carries on to a doomed build (2026-08-12).
 - **Build**: `qmk compile -kb polykybd/split72 -km default` (or `make polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
 - **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
+  - ⚠️ **Put the commit sha in the FILENAME — every test build reports the same
+    `FW_VERSION`, so they are otherwise indistinguishable once flashed.** `FW_VERSION`
+    only moves on the post-merge auto-bump, so a session with several hardware rounds
+    hands over N files that all answer `0.13.1` to `polyctl fw version` and carry
+    near-identical names (`…_fix` / `…_legend` / `…_invert`). That cost a full round
+    (2026-08-13): a correct build was reported as "I did not see the new behavior",
+    and the only way to settle it was to md5 the delivered file against a fresh
+    rebuild and grep the image for a changed string literal. `split72_<sha>_<slug>.bin`
+    takes the ambiguity away. Better still, when a change alters something **visible
+    on a keycap**, say which pixel tells the builds apart — that is a check the user
+    can run without any tooling.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 - ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk` and is NOT on
@@ -775,6 +786,38 @@ touching at a **0px** gap, while 4 rows sat unused under the bottom row.
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.
 
+⚠️ **`RPC_M2S_BUFFER_SIZE` is a SILENT CEILING on every one of them, and it is a
+CAPACITY, not a transfer size.** Two independent facts, both easy to get backwards:
+
+- **Outgrowing it does not fail loudly.** `transaction_rpc_exec()`
+  (`quantum/split_common/transactions.c`) checks `initiator2target_buffer_size >
+  RPC_M2S_BUFFER_SIZE` and **returns false before sending anything** — while the bulk
+  `send_to_bridge()` call sites discard the ack (the *discarding* sibling of the
+  "never bool-test `send_to_bridge()`" rule). So a struct that grows past the cap
+  produces a master that applies the change and a slave that never hears it, with
+  **nothing in the log**. Caught in review, 2026-08-13: `latin_sync_t` went 63 → 90 B
+  when the Intl remap gained the punctuation targets. `state.h` now carries a
+  `static_assert(sizeof(latin_sync_t) <= RPC_M2S_BUFFER_SIZE)`; add one for any
+  struct that can grow.
+- **Raising it costs RAM and nothing else — measured, not reasoned.** The constant
+  appears in exactly three places in QMK: the array declaration and the two rejection
+  checks. Both ends size the real transfer from `rpc_info.payload.m2s_length`, i.e.
+  the caller's own byte count. Verified by building the same tree at 96 and 128 and
+  diffing the disassembly: `.text` identical in size, `.bss` +32 (exactly the delta),
+  and of 954 differing lines **922 are `.word` RAM address literals**; the only real
+  instruction changes are the `cmp` bounds check and two `adds` offsets into shmem.
+  **No length, loop-count or transfer-size instruction changes anywhere in the
+  image** — so unrelated traffic (matrix scan, pointing pull, overlay bursts) is
+  byte-for-byte unaffected. Raised 72 → 96 in the same change; the monolith's `.heap`
+  went 3852 → 3828.
+
+⚠️ **The overlay path sits 3 bytes under the old cap — check it before adding a
+field.** The 72 was sized for exactly these, all derived from `HID_REPORT_SIZE` 64:
+`overlay_sync_t` 67 B, `overlay_map_sync_t` / `dynamic_keymap_sync_t` 68 B, and
+**`compressed_overlay_sync_t` / `roi_overlay_sync_t` 69 B**. One more field, or an
+`HID_REPORT_SIZE` bump, and an app switch would hit the silent rejection above and
+present as missing keycap images. At 96 that path has 27 B of headroom.
+
 ### Firmware signing enforcement & the on-keycap confirmation (FW-2)
 
 `rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so `fw_staging_finalize()` only stamps the
@@ -1049,6 +1092,84 @@ The mechanism is worth knowing because it is not the obvious implementation:
   hardcoded hint straight back over the variation.
 - The armed indicator is the inverted Ctrl keycap — see the two rendering bullets
   above (render it, don't `kdisp_invert()`; and pass `cy_radius` 0).
+
+### Intl letter remap — a key can host ANOTHER letter's row (`KC_LAT_REMAP`)
+
+French needs `è é ê` at once, which one letter's picker cannot give: the picker
+chooses another *form* of the letter a key already hosts. So a key can now be
+**reassigned to a different base letter**. Hold Intl, tap the remap key (split72
+`[4,1]`, beside the Ctrl at `[4,0]`; split42 `[3,4]`), press the key to change (it
+inverts), then the letter it should host. `e`, `q` and `j` can then carry `é`, `è`
+and `ê` — and the sparse letters (`q` has one variation, `j` two) stop being dead
+keys on this layer.
+
+- **The storage splits two things the code had conflated.** The ROW comes from the
+  letter a key HOSTS (`latin_ex_map`); the PICK comes from the KEY's own slot
+  (`latin_sync_t.ex`). They are the same number only while nothing is remapped,
+  which is why one index sufficed for years. Two keys on the same letter share a
+  row but need independent picks — storing the pick at the row index has one key
+  silently overwrite the other's choice. `latin_sync_t.assign[20]` holds one 6-bit
+  base letter per target key, **shared across case** so Shift follows the remap
+  (`r → e` gives E's upper-case form, not `<`); the pick stays per case because the
+  two rows are not parallel (lower `n` has 12 variations, upper `N` 11).
+- Pick fields are **case-INTERLEAVED** (`slot*2 + case`), not case-blocked, so
+  growing `LATIN_TARGETS` appends fields instead of inserting a block mid-array.
+  Extending the targets to the punctuation keys is the obvious next step —
+  `KC_MINUS 0x2D … KC_SLASH 0x38` is a contiguous run of 12 printable punctuation
+  keycodes, so `kc - KC_MINUS + 26` needs no table. It costs ~43 bytes (the pick
+  array grows too), which is why `POLY_EECONFIG_USER_RESERVED` was taken 128 → 256
+  in the letters-only change: that relocation resets the dynamic keymap once, and
+  paying it early means punctuation later costs no second reset.
+- **Re-assigning a key to its OWN letter is the per-key reset** (stored as
+  `LATIN_ASSIGN_NONE`), so it needs no gesture of its own. **Shift+remap clears
+  everything** — once the board is remapped the Intl legends no longer match the
+  printed letters, so there has to be one way back that does not depend on
+  remembering what was changed.
+
+⚠️ **Four traps this feature hit, all of which generalise beyond it:**
+
+- **An unwritten EEPROM byte reads `0x00` here, NOT `0xFF` — never infer "never
+  written" from the bytes.** The assignment map was designed to need no migration
+  sentinel because `LATIN_ASSIGN_NONE` is all-bits-set and "erased flash reads
+  0xFF". QMK's **wear-levelling normalises its backing store so cleared bytes
+  arrive as ZERO** (`quantum/wear_leveling/wear_leveling.c` clears its cache with
+  `memset(...,0)` and its header requires a 0xFF-based store to return the
+  *complement* "such that this wear-leveling algorithm receives zeros"). The map
+  therefore read back all-zero = "every key hosts letter 0", and **every Intl
+  keycap rendered a variation of `a`** (field, first flash). Gate such a field on
+  the `latin_pick_migrated` **format version**, which is what that byte is for.
+  - ⚠️ **A version gate alone does not HEAL an already-flashed board** — the broken
+    build persisted the zeros at the next suspend *and stamped them valid*. The
+    recovery is to **retire the version value**: `0xC3` now means "picks are fine,
+    discard the map" and `0xD7` is current. Walk every version a field EEPROM can
+    present before shipping such a fix.
+  - ⚠️ The reservation bump relocates the **dynamic keymap** only. `poly_eeconf_t`
+    sits *before* it at a fixed address and is **not** reset — which is exactly why
+    the stale zeros survived the flash that was supposed to clear everything.
+- **`render_key()` is only consulted when `to_static_text()` returns NULL.** A key
+  that HAS a legend bypasses it completely. The remap prompt blanks the board from
+  inside `render_key()`, so every non-letter *with a legend* — including the remap
+  key itself — sailed past and kept drawing normally: never blanked, never
+  inverted, so nothing on the board said the latched mode was open. Any future
+  "the board becomes a dialog" mode must **also suppress `text`** in
+  `update_displays()`, not just return false from `render_key()`.
+- **Keep every glyph of a multi-glyph legend in ONE font.**
+  `kdisp_write_gfx_char` baseline-aligns by `font->yAdvance - fonts[0]->yAdvance`,
+  so glyphs from different fonts land on different baselines. `a` is in `_Base_`
+  (yAdvance 37 → −3 px) while `»`/`ñ` are in `_SupAndExtA_` (44 → +4 px): the
+  legend `a»ñ` sat its `a` **7 px** high. `Á»Æ` is even only because all three of
+  its glyphs are Latin-1, i.e. one font — hence `INTL_REMAP_LEGEND` is **`à»ñ`**.
+  ⚠️ `oled_preview.py` **cannot** show this (it models `xOffset`/`yOffset` but not
+  the baseline-align shift), so both legends render identically there — the check
+  is the font metrics, not the preview.
+- **The "gate the release swallow on OWNERSHIP" rule applies to LAYER keys too.**
+  The remap block returned `false` for every release, which swallowed the release
+  of **`MO(_ADDLANG1)` itself** — QMK never unregistered the layer, so Intl went
+  down and never came back up and the mode could not be escaped at all; a held
+  Shift was stuck the same way. Modifiers and layer keys
+  (`IS_MODIFIER_KEYCODE` / `IS_QK_MOMENTARY` / `IS_QK_TO`) must fall through. This
+  is the same rule already written up for the picker's Ctrl latch, one function
+  away, and it was still missed.
 
 ### Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+; expanded v10)
 An OS-independent **override** of the language-layer legends with an alternative

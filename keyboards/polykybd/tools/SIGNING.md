@@ -93,6 +93,37 @@ it has no fingers and would otherwise leave the board modal for the full window.
 unconditional recovery path and enforcement cannot brick a board. That also means
 the HIL rig is untouched: `polykybd-ctnd` flashes with `picotool`, not over HID.
 
+## Building this firmware yourself: use your own key
+
+Enforcement is unconditional in `rules.mk`, so **every** build of this repo — including
+yours — trusts the public key committed in `base/fw_pubkey.h`, which is the PolyKybd
+project's. That is not a leak: a public key is meant to be public, and the private half
+never leaves the maintainer's secret store. It does mean two things, though — your
+keyboard's trust anchor is someone else's key, and your own `qmk compile` output is
+unsigned, so it meets the ACCEPT/REJECT prompt above on every HID flash.
+
+To become your own trust anchor, run the **One-time setup** below against your own
+checkout: `gen_signing_key.py` overwrites `base/fw_pubkey.h` with your public key and
+writes your private seed to `fw_signing_key.bin`. Flash that firmware once (over
+BOOTSEL/UF2, or through the prompt), and from then on `sign_firmware.py --privkey
+fw_signing_key.bin` produces builds your keyboard accepts silently.
+
+⚠️ **Doing this makes official releases un-flashable over HID.** A release `.bin` ships
+with a `.bin.sig` that PolyKybdHost sends automatically, so on a keyboard carrying *your*
+key that signature is present and fails to verify — `sig == -1`, which is refused
+outright with **no** confirmation prompt. (The prompt is offered only for a genuinely
+*unsigned* image, `sig == 0`; see the escape hatch above for why those two cases are
+deliberately different.) Three ways back onto an official build:
+
+* flash the release `.uf2` over BOOTSEL/UF2 — it bypasses `fw_staging` entirely;
+* drop the `.bin.sig` so the image arrives unsigned and takes the prompt; or
+* re-sign the official `.bin` with your own key.
+
+⚠️ **Keep your keys out of git.** `fw_signing_key.bin` is your private seed — the root
+`.gitignore` matches `*.bin`, but a forced add would defeat that. And do not send your
+regenerated `fw_pubkey.h` upstream in a PR: swapping the project's public key would lock
+every other user out of official releases.
+
 ## One-time setup
 
 1. Generate the keypair (needs `pip install cryptography`):

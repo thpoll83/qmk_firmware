@@ -953,7 +953,49 @@ static void eden_idle_tick(void) {
     }
 }
 
+#ifdef POLY_LATIN_EE_DIAG
+// ── TEMPORARY latin-EEPROM probe ────────────────────────────────────────────
+// The interesting values are known at boot, but QMK drops console output that
+// nobody drains and a console tool cannot attach that early. So latch them and
+// re-emit from housekeeping until a reader has plausibly seen them.
+static uint8_t  s_diag_fmt, s_diag_ext, s_diag_norm;
+static uint8_t  s_diag_ex[4], s_diag_asg[2];
+static uint8_t  s_diag_pex[4], s_diag_pasg[2];
+static uint8_t  s_diag_reps = 0;
+static uint32_t s_diag_last = 0;
+#define LATIN_DIAG_REPS  30      // ~60 s of re-emits at 2 s apart
+#define LATIN_DIAG_MS    2000
+
+static void latin_diag_latch(uint8_t fmt, uint8_t ext, const uint8_t* ex, const uint8_t* asg) {
+    s_diag_fmt = fmt; s_diag_ext = ext;
+    memcpy(s_diag_ex,  ex,  sizeof(s_diag_ex));
+    memcpy(s_diag_asg, asg, sizeof(s_diag_asg));
+}
+
+static void latin_diag_latch_post(const uint8_t* ex, const uint8_t* asg, bool normalised) {
+    memcpy(s_diag_pex,  ex,  sizeof(s_diag_pex));
+    memcpy(s_diag_pasg, asg, sizeof(s_diag_pasg));
+    s_diag_norm = normalised ? 1 : 0;
+}
+
+static void latin_diag_tick(void) {
+    if (s_diag_reps >= LATIN_DIAG_REPS) return;
+    if (s_diag_last != 0 && timer_elapsed32(s_diag_last) < LATIN_DIAG_MS) return;
+    s_diag_last = timer_read32();
+    s_diag_reps++;
+    uprintf("LATIN_LOAD[%u]: fmt=%02X(want %02X) ext=%02X(want %02X) ex=%02X %02X %02X %02X asg=%02X %02X\n",
+            s_diag_reps, s_diag_fmt, LATIN_PICK_ASSIGN_OK, s_diag_ext, LATIN_EXT_OK,
+            s_diag_ex[0], s_diag_ex[1], s_diag_ex[2], s_diag_ex[3], s_diag_asg[0], s_diag_asg[1]);
+    uprintf("LATIN_POST[%u]: ex=%02X %02X %02X %02X asg=%02X %02X normalised=%u\n",
+            s_diag_reps, s_diag_pex[0], s_diag_pex[1], s_diag_pex[2], s_diag_pex[3],
+            s_diag_pasg[0], s_diag_pasg[1], s_diag_norm);
+}
+#endif
+
 void housekeeping_task_user(void) {
+#ifdef POLY_LATIN_EE_DIAG
+    latin_diag_tick();
+#endif
     // Optional loop-timing probe (no-op unless POLYKYBD_LOOP_PROFILE). At the very
     // top so it measures the FULL previous iteration — matrix scan, HID, bridge.
     loop_profile_tick();
@@ -4254,10 +4296,12 @@ void keyboard_post_init_user(void) {
     latin_sync_t* latin_table = access_global_latin_table();
     bool latin_normalised = false;
 #ifdef POLY_LATIN_EE_DIAG
-    uprintf("LATIN_LOAD: fmt=%02X (want %02X) ext=%02X (want %02X) ex=%02X %02X %02X %02X asg=%02X %02X\n",
-            ee.latin_pick_migrated, LATIN_PICK_ASSIGN_OK, ee.latin_ext_fmt, LATIN_EXT_OK,
-            ee.latin_ex_wide[0], ee.latin_ex_wide[1], ee.latin_ex_wide[2], ee.latin_ex_wide[3],
-            ee.latin_assign[0], ee.latin_assign[1]);
+    // ⚠️ LATCHED, not printed here. QMK drops console output that nobody is
+    // draining, and this runs long before a console tool can attach after the
+    // reboot — printing it at boot would simply lose the one line we need.
+    // latin_diag_tick() re-emits it from housekeeping until someone reads it.
+    latin_diag_latch(ee.latin_pick_migrated, ee.latin_ext_fmt,
+                     ee.latin_ex_wide, ee.latin_assign);
 #endif
     // ⚠️ The assignment map MUST be gated on the version byte — do NOT infer "never
     // written" from the bytes themselves. An earlier version of this relied on
@@ -4350,11 +4394,9 @@ void keyboard_post_init_user(void) {
         }
     }
 #ifdef POLY_LATIN_EE_DIAG
-    // After validation: if these differ from LATIN_LOAD above, the validation loop
-    // is what zeroed the picks, not the EEPROM round trip.
-    uprintf("LATIN_POST: ex=%02X %02X %02X %02X asg=%02X %02X normalised=%d\n",
-            latin_table->ex[0], latin_table->ex[1], latin_table->ex[2], latin_table->ex[3],
-            latin_table->assign[0], latin_table->assign[1], (int)latin_normalised);
+    // After validation: if these differ from the latched LOAD values, the
+    // validation loop is what zeroed the picks, not the EEPROM round trip.
+    latin_diag_latch_post(latin_table->ex, latin_table->assign, latin_normalised);
 #endif
     if(latin_normalised) {
         // access_global_latin_table() returns &g_latin, i.e. the very buffer

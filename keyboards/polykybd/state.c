@@ -203,6 +203,14 @@ void save_user_settings(void) {
 // longer be found (see state.h). So each write is explicitly bounded rather than
 // sizeof(g_latin.ex): the letters go to the original block, the rest to the tail.
 void save_user_latin(void) {
+#ifdef POLY_LATIN_EE_DIAG
+    // TEMPORARY diagnostic (POLY_LATIN_EE_DIAG builds only) — chasing letter picks
+    // lost across a power cycle while the punctuation tail survives.
+    uprintf("LATIN_SAVE: ex=%02X %02X %02X %02X asg=%02X %02X extpick=%02X %02X\n",
+            g_latin.ex[0], g_latin.ex[1], g_latin.ex[2], g_latin.ex[3],
+            g_latin.assign[0], g_latin.assign[1],
+            g_latin.ex[LATIN_PICK_BASE_BYTES], g_latin.ex[LATIN_PICK_BASE_BYTES + 1]);
+#endif
     eeconfig_update_user_datablock(g_latin.ex, offsetof(poly_eeconf_t, latin_ex_wide),
                                    LATIN_PICK_BASE_BYTES);
     eeconfig_update_user_datablock(g_latin.assign, offsetof(poly_eeconf_t, latin_assign),
@@ -229,6 +237,17 @@ void save_user_latin(void) {
     const uint8_t ext_marker = LATIN_EXT_OK;
     eeconfig_update_user_datablock(&ext_marker, offsetof(poly_eeconf_t, latin_ext_fmt),
                                    sizeof(ext_marker));
+#ifdef POLY_LATIN_EE_DIAG
+    // Read the block straight back: this is the one check that separates "the write
+    // never landed" from "something clobbered it later".
+    poly_eeconf_t back;
+    eeconfig_read_user_datablock(&back, 0, sizeof(back));
+    uprintf("LATIN_SAVE_BACK: fmt=%02X ext=%02X ex=%02X %02X %02X %02X asg=%02X %02X\n",
+            back.latin_pick_migrated, back.latin_ext_fmt,
+            back.latin_ex_wide[0], back.latin_ex_wide[1],
+            back.latin_ex_wide[2], back.latin_ex_wide[3],
+            back.latin_assign[0], back.latin_assign[1]);
+#endif
 }
 
 // Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.

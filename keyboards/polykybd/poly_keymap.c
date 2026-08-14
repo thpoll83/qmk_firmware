@@ -4253,6 +4253,12 @@ void keyboard_post_init_user(void) {
     // carried forward every time the other case is re-picked.
     latin_sync_t* latin_table = access_global_latin_table();
     bool latin_normalised = false;
+#ifdef POLY_LATIN_EE_DIAG
+    uprintf("LATIN_LOAD: fmt=%02X (want %02X) ext=%02X (want %02X) ex=%02X %02X %02X %02X asg=%02X %02X\n",
+            ee.latin_pick_migrated, LATIN_PICK_ASSIGN_OK, ee.latin_ext_fmt, LATIN_EXT_OK,
+            ee.latin_ex_wide[0], ee.latin_ex_wide[1], ee.latin_ex_wide[2], ee.latin_ex_wide[3],
+            ee.latin_assign[0], ee.latin_assign[1]);
+#endif
     // ⚠️ The assignment map MUST be gated on the version byte — do NOT infer "never
     // written" from the bytes themselves. An earlier version of this relied on
     // LATIN_ASSIGN_NONE being all-bits-set and an unwritten EEPROM reading 0xFF;
@@ -4343,6 +4349,13 @@ void keyboard_post_init_user(void) {
             }
         }
     }
+#ifdef POLY_LATIN_EE_DIAG
+    // After validation: if these differ from LATIN_LOAD above, the validation loop
+    // is what zeroed the picks, not the EEPROM round trip.
+    uprintf("LATIN_POST: ex=%02X %02X %02X %02X asg=%02X %02X normalised=%d\n",
+            latin_table->ex[0], latin_table->ex[1], latin_table->ex[2], latin_table->ex[3],
+            latin_table->assign[0], latin_table->assign[1], (int)latin_normalised);
+#endif
     if(latin_normalised) {
         // access_global_latin_table() returns &g_latin, i.e. the very buffer
         // save_user_latin() writes, so the normalised bytes are already in place --

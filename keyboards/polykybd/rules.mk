@@ -101,6 +101,15 @@ ifeq ($(strip $(POLYKYBD_LOOP_PROFILE)), yes)
     SRC += profiling/loop_profile.c
 endif
 
+# TEMPORARY: traces the latin pick/assign blocks across an EEPROM round trip —
+# what save_user_latin() writes, what reads straight back, and what load sees
+# (before and after validation). Chasing letter picks lost on a power cycle while
+# the punctuation tail survives. Build with `-e POLY_LATIN_EE_DIAG=yes`; needs
+# CONSOLE_ENABLE. Remove once the bug is found.
+ifeq ($(strip $(POLY_LATIN_EE_DIAG)), yes)
+    OPT_DEFS += -DPOLY_LATIN_EE_DIAG
+endif
+
 # FW-2: vendored Monocypher (BSD-2-Clause / CC0) provides the Ed25519 image-signature
 # verify used by fw_staging.c (firmware signing). Verify-only; warn-only until
 # FW_REQUIRE_SIGNATURE is defined.

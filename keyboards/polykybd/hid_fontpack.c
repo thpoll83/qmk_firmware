@@ -31,6 +31,22 @@
 // so COMMIT can report the just-flashed bundle's content_version.
 static uint8_t s_fontpack_bundle = 0;
 
+// Writes the 3-byte reply header for a command whose status is one of several
+// values: 'P', the command id, then the status byte. The sibling of hid_com.c's
+// boolean `hid_reply()`, which cannot express COMMIT's three outcomes.
+//
+// Building the bytes instead of writing a `"P\x52R"` literal is deliberate twice
+// over: the status comes from the FONTPACK_COMMIT_* constants (so the header owns
+// the wire values and cannot drift from what is emitted), and there is no `\xHH`
+// escape for a following letter to be swallowed into — `"P\x52C"` would be a
+// single 0x52C character constant, not three bytes, and 'C' being a hex digit is
+// the only thing that decides it. Nothing here can hit that trap.
+static inline void fontpack_reply_status(uint8_t *data, uint8_t cmd, uint8_t status) {
+    data[0] = 'P';
+    data[1] = cmd;
+    data[2] = status;
+}
+
 bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
     switch (data[1]) {
 
@@ -167,7 +183,8 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // live on the master (field 2026-08-17) — which sent the diagnosis the
             // wrong way for two rounds. Exactly the confusion FW_UP_COMMIT was split
             // into four statuses to end; this is the same mistake one command over.
-            //   '.' both halves finalized + reloaded
+            //   '.' both halves finalized (the slave's font-table reload is deferred to
+            //       its housekeeping by design, and cannot fail — see hid_fontpack.h)
             //   'R' the MASTER's finalize REJECTED the image (staged CRC mismatch, or
             //       the flashed slot did not load as a valid PlyF) — a real data
             //       problem; the host must re-flash.
@@ -176,15 +193,11 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             //       re-sending COMMIT is free (finalize leaves s_staged_crc/s_image_crc
             //       and the write cursor untouched, and the slave's flash_stage_commit
             //       is likewise idempotent), so the host retries rather than re-streams.
-            // ⚠️ Letters that are hex digits must not follow a `\xHH` escape — the
-            // compiler would merge them into one oversized character constant ("P\x52C"
-            // is a single 0x52C escape, not three bytes). 'R'/'L' are safe; if you ever
-            // pick a hex-digit letter here, split the literal ("P\x52" "C").
-            const char *status = ok         ? "P\x52."
-                               : !master_ok ? "P\x52R"
-                                            : "P\x52L";
+            uint8_t status = ok         ? FONTPACK_COMMIT_OK
+                           : !master_ok ? FONTPACK_COMMIT_REJECTED
+                                        : FONTPACK_COMMIT_NO_SLAVE;
             memset(data, 0, length);
-            memcpy(data, status, 3);
+            fontpack_reply_status(data, CMD_FONTPACK_COMMIT, status);
             // Report the slot's content_version whenever the MASTER's copy is live —
             // including 'L', where it is precisely what tells the host the data landed
             // and only the acknowledgement was lost.

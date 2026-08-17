@@ -47,6 +47,17 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     as reviewed. There is no way to get it reviewed short of splitting the PR — so
     for a merge PR, treat the **build + HIL checks and hardware testing as the only
     real verification**, and don't count the green board as review cover.
+  - ⚠️ **A STACKED PR gets no automatic review at all** — *"Review skipped — Auto
+    reviews are disabled on base/target branches other than the default branch."*
+    This is a **fourth** no-review mode (alongside the rate limit, the <10-stars
+    repo, and the >100-file skip) and it is **guaranteed, not occasional**: any PR
+    whose base is another feature branch is silently unreviewed for as long as it is
+    stacked. Seen on #211 (2026-08-17), stacked on #210. Two ways out, and prefer the
+    first: **let the parent merge** — GitHub then retargets the child to `PolyKybd`
+    and auto-review applies again (confirm a review actually lands; a base change may
+    not itself trigger one). Otherwise spend a slot on `@coderabbitai review`, which
+    works on a stacked PR but costs the same org-wide budget as any other request.
+    ⚠️ Do **not** read the resulting quiet board as "no findings" — nothing read it.
   - ⚠️ **Sourcery's rate-limit is QUIETER than CodeRabbit's: the `Sourcery review`
     check run goes GREEN (`success`) while no review happened.** When its weekly
     diff-character budget is spent it submits a `COMMENTED` review whose entire body

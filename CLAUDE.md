@@ -2687,13 +2687,33 @@ frames (count-based, no timer — the cadence follows real traffic, so it's dens
 during overlay bursts and silent when idle; gated on `debug_enable`):
 
 ```text
-Split link: 12345 tx crc_err=4 transport_fail=1 giveup=0 err=0.0%
+Split link: 12345 tx crc_err=4 nack=17 transport_fail=1 giveup=0 err=0.0%
 ```
 
 `err%` is the all-time detected-error rate over all frames — a direct read on the
 wire. **Use it to validate any link change** (baud/cable/drive/termination) by
 watching the number move, instead of by feel. `giveup` should stay ~0 with
 retries=3; if it climbs, attack `p` at the source.
+
+⚠️ **`nack` is EXCLUDED from `err%` on purpose** — it counts valid non-ACK answers
+(`SYNC_BUSY`, `SYNC_NACK_REFUSED`), where the wire worked and the slave simply said
+something other than yes. Only `crc_err` (a corrupted frame) and `transport_fail`
+(no answer) are link faults. Before the split, every non-ACK incremented
+`crc_err` — and since `SYNC_BUSY` now arrives on **every erase re-poll of a flash**,
+a single font-pack update would otherwise have added hundreds of phantom "errors"
+to the one number used to judge cable/baud changes.
+
+⚠️ **`send_to_bridge()` returns what the slave SAID; it returns `SYNC_GIVEUP` only
+when the slave never answered.** It used to return a *constant* on give-up,
+discarding `reply.ack` — and that worked only by **coincidence**, because the
+constant was `SYNC_CRC32_ERR`, which happened to equal what the slave sent in every
+case that mattered. Distinguishing the failure values exposed the discard and, with
+it, **two documented behaviours that were in fact dead code** (found in review,
+2026-08-17): `hid_fw_up.c`'s erase-progress counter matches on the begin re-poll
+value, which could never arrive; and `fw_up_slave_refused_commit()`'s "a refusal is
+self-describing, so don't spend a STATUS RPC" short-circuit never triggered, so
+every refusal paid for a probe. **Generalise: a sentinel that happens to equal a
+real value hides the fact that the real value is being thrown away.**
 
 **Reducing `p` at the source (the real root fix), in order of leverage**:
 1. **Lower the baud** — biggest, cheapest software lever. 230400 → 115200

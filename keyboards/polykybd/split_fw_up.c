@@ -106,22 +106,24 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
                        msg->target == s_begun_target && msg->bundle == s_begun_bundle);
 
     if (!same_image) {
-        s_begun_size   = msg->image_size;
-        s_begun_crc    = msg->image_crc;
-        s_begun_target = msg->target;
-        s_begun_bundle = msg->bundle;
-        // FONTPACK: point the stager at this bundle's fixed slot before erasing.
+        // ⚠️ Resolve and VALIDATE the slot before recording this identity. Caching
+        // s_begun_* first meant a refused bundle was remembered as "begun", so an
+        // identical retry — and send_to_bridge does retry a non-ACK — took the
+        // same_image path below, skipped this validation entirely, found no erase
+        // pending and could ACK a bundle we had just refused, against whatever slot
+        // was last set. Pre-existing; found in review of the refusal relabel.
         if (msg->target == FW_TARGET_FONTPACK) {
             uint32_t slot_off = 0, slot_size = 0;
-            if (fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
-                fw_staging_set_fontpack_slot(slot_off, slot_size);
-            } else {
+            if (!fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
                 // Unknown bundle id — REFUSE (not a CRC error: the frame was fine,
                 // we understood it and will not stage to a stale slot). Retrying
-                // cannot help; the halves disagree about the bundle layout.
+                // cannot help; the halves disagree about the bundle layout. Nothing
+                // has been recorded, so a repeat request is refused again.
                 ((poly_sync_reply_t *)out_data)->ack = SYNC_NACK_REFUSED;
                 return;
             }
+            // FONTPACK: point the stager at this bundle's fixed slot before erasing.
+            fw_staging_set_fontpack_slot(slot_off, slot_size);
         } else if (msg->target == FW_TARGET_DOOMWAD) {
             // The doom WHX slot is fixed (upper resource region).
             fw_staging_set_fontpack_slot(FW_DOOMWAD_SLOT_OFF, FW_DOOMWAD_SLOT_SIZE);
@@ -130,6 +132,10 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
             // doom/PACK_DESIGN.md; the slave's drone runs the same pack).
             fw_staging_set_fontpack_slot(FW_DOOMPACK_SLOT_OFF, FW_DOOMPACK_SLOT_SIZE);
         }
+        s_begun_size   = msg->image_size;
+        s_begun_crc    = msg->image_crc;
+        s_begun_target = msg->target;
+        s_begun_bundle = msg->bundle;
         fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx target=%u started erase\n",
                 msg->image_size, msg->image_crc, msg->target);

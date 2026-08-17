@@ -36,7 +36,8 @@ static enum com_state com = NOT_INITIALIZED;
 #    define LINK_STATS_LOG_EVERY 200   // emit one health line per N frames sent
 #endif
 static uint32_t ls_attempts       = 0;  // frames sent (transaction_rpc_exec calls)
-static uint32_t ls_crc_err        = 0;  // slave NACK'd / non-ACK reply → payload corrupted in flight
+static uint32_t ls_crc_err        = 0;  // reply was SYNC_CRC32_ERR → payload corrupted in flight
+static uint32_t ls_nack           = 0;  // reply was a valid non-ACK (BUSY / REFUSED) → NOT a link fault
 static uint32_t ls_transport_fail = 0;  // transport returned false (timeout / handshake / no reply)
 static uint32_t ls_call_giveup    = 0;  // send_to_bridge() calls that exhausted every retry
 static uint32_t ls_last_log       = 0;  // ls_attempts at the last emitted summary
@@ -79,15 +80,26 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
     // debug off (debug_enable now defaults false to suppress keystroke logging).
     if ((ls_attempts - ls_last_log) >= LINK_STATS_LOG_EVERY) {
         ls_last_log = ls_attempts;
+        // err% counts only real LINK faults — a corrupted frame or no answer at
+        // all. `nack` (a valid SYNC_BUSY / SYNC_NACK_REFUSED answer) is deliberately
+        // excluded: the wire worked, the slave simply said something other than yes.
+        // Counting those would inflate the one number used to judge cable / baud /
+        // drive changes — and SYNC_BUSY arrives on EVERY erase re-poll of a flash,
+        // so a font-pack update alone would have added hundreds of phantom "errors".
         uint32_t errs    = ls_crc_err + ls_transport_fail;
         uint32_t permille = ls_attempts ? (uint32_t)(((uint64_t)errs * 1000U) / ls_attempts) : 0U;
-        uprintf("Split link: %lu tx crc_err=%lu transport_fail=%lu giveup=%lu err=%lu.%lu%%\n",
-                (unsigned long)ls_attempts, (unsigned long)ls_crc_err,
+        uprintf("Split link: %lu tx crc_err=%lu nack=%lu transport_fail=%lu giveup=%lu err=%lu.%lu%%\n",
+                (unsigned long)ls_attempts, (unsigned long)ls_crc_err, (unsigned long)ls_nack,
                 (unsigned long)ls_transport_fail, (unsigned long)ls_call_giveup,
                 (unsigned long)(permille / 10U), (unsigned long)(permille % 10U));
     }
 
     *((uint32_t *)buffer_with4crc_bytes) = crc32_1byte(&((uint8_t *)buffer_with4crc_bytes)[4], num_bytes-4, 0);
+    // What the slave ACTUALLY said, kept across retries. Returning a constant on
+    // give-up threw this away, which made every non-ACK answer indistinguishable
+    // from silence — see the note at the return below.
+    uint8_t last_ack  = SYNC_GIVEUP;
+    bool    got_reply = false;
     for(; retry<max_retries; ++retry) {
         // Reset the reply each iteration: transaction_rpc_exec() leaves it
         // untouched when transport_write/read fails, so without this the log
@@ -105,18 +117,30 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
         loop_profile_add_bridge_us(timer_hw->timerawl - _lp_t0);
 #endif
         ls_attempts++;
+        if(sync_success) {
+            // The transport delivered an answer. Remember it even if we go on to
+            // retry, so the caller can still learn what the slave said.
+            got_reply = true;
+            last_ack  = reply.ack;
+        }
         if(sync_success && (reply.ack == SYNC_ACK || reply.ack == SYNC_ACK_SIG)) {
             // A recovered retry is a non-event — the LINK_STATS summary already
             // counts retries/errors. Announcing every success spammed the console
             // unusably during a font-pack flash (thousands of bridged frames).
             return reply.ack;
         }
-        // Failed attempt. sync_success==true means the transport delivered a
-        // reply but it wasn't an ACK → the slave rejected the frame on CRC (or
-        // the reply itself was corrupted): a payload-integrity miss. false means
-        // the transport gave up (timeout / bad handshake / no reply).
+        // Failed attempt — but classify WHY, because only some of these are link
+        // faults. A SYNC_CRC32_ERR reply is a payload-integrity miss (the frame
+        // arrived corrupted). SYNC_BUSY / SYNC_NACK_REFUSED are valid protocol
+        // answers over a perfectly good wire and must not be counted as errors.
+        // sync_success==false means the transport gave up (timeout / bad
+        // handshake / no reply).
         if(sync_success) {
-            ls_crc_err++;
+            if(reply.ack == SYNC_CRC32_ERR) {
+                ls_crc_err++;
+            } else {
+                ls_nack++;
+            }
         } else {
             ls_transport_fail++;
         }
@@ -129,12 +153,22 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
         uprintf("Failed to sync %d bytes for transaction %s!\n", num_bytes, tid_to_str(tid));
     }
 
-    // SYNC_GIVEUP, not SYNC_CRC32_ERR: we never obtained an answer, which is a
-    // different thing from having received a frame that failed its CRC. Callers
-    // that only ask sync_succeeded() are unaffected (it is a whitelist); the ones
-    // that classify a failure can now tell "the link went quiet" from "the slave
-    // answered and refused" without a status probe.
-    return SYNC_GIVEUP;
+    // Return what the slave SAID, and SYNC_GIVEUP only when it never answered.
+    //
+    // ⚠️ This used to return a constant, discarding reply.ack — and that silently
+    // defeated the whole point of having distinct failure values. It worked before
+    // only by COINCIDENCE: the constant was SYNC_CRC32_ERR, which happened to equal
+    // what the slave sent in every case that mattered. Two documented behaviours
+    // were in fact dead code because of it:
+    //   * hid_fw_up.c's erase-progress counter matches on the begin re-poll value.
+    //     With the slave answering SYNC_BUSY and this returning a constant, that
+    //     condition could never be true and the diagnostic never fired.
+    //   * fw_up_slave_refused_commit()'s "a refusal is self-describing, so don't
+    //     spend a STATUS RPC" short-circuit never triggered, because a refusal
+    //     arrived here as the give-up constant. Every refusal paid for a probe.
+    // Callers that only ask sync_succeeded() are unaffected — it is a whitelist,
+    // and none of these values is an ACK.
+    return got_reply ? last_ack : SYNC_GIVEUP;
 }
 
 bool differ(const void* b1, const void* b2, uint8_t byte_count) {

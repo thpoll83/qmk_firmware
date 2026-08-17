@@ -235,7 +235,7 @@ typedef struct _fw_staging_status_t {
     uint8_t  initialized;
     uint8_t  fw_up_active;
     uint8_t  erase_pending;
-    uint8_t  last_chunk_ack;        // last value returned from chunk handler (SYNC_ACK / SYNC_CRC32_ERR)
+    uint8_t  last_chunk_ack;        // last value returned from chunk handler (SYNC_ACK / SYNC_CRC32_ERR / SYNC_NACK_REFUSED)
     uint16_t erase_sector_next;
     uint16_t erase_sector_count;
     uint32_t next_offset;            // s_next_offset (bytes accepted)

@@ -92,7 +92,9 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
         // Reset the reply each iteration: transaction_rpc_exec() leaves it
         // untouched when transport_write/read fails, so without this the log
         // line below would print the previous successful call's ack value.
-        reply.ack = SYNC_CRC32_ERR;
+        // SYNC_GIVEUP is the honest sentinel — "no answer obtained" — so a
+        // transport failure no longer reports itself as a CRC error in the log.
+        reply.ack = SYNC_GIVEUP;
 #ifdef POLYKYBD_LOOP_PROFILE
         uint32_t _lp_t0 = timer_hw->timerawl;
 #endif
@@ -127,7 +129,12 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
         uprintf("Failed to sync %d bytes for transaction %s!\n", num_bytes, tid_to_str(tid));
     }
 
-    return SYNC_CRC32_ERR;
+    // SYNC_GIVEUP, not SYNC_CRC32_ERR: we never obtained an answer, which is a
+    // different thing from having received a frame that failed its CRC. Callers
+    // that only ask sync_succeeded() are unaffected (it is a whitelist); the ones
+    // that classify a failure can now tell "the link went quiet" from "the slave
+    // answered and refused" without a status probe.
+    return SYNC_GIVEUP;
 }
 
 bool differ(const void* b1, const void* b2, uint8_t byte_count) {

@@ -2608,24 +2608,41 @@ that ring/reflect on a longer split cable.
   idempotent) or, ~1/256, into a false ACK. Low impact, but it's why a tiny
   fraction of `crc_err` counts can be reply corruption rather than payload.
   - **That missing CRC is why the ack BYTE VALUES are Hamming-spaced**, and the
-    vocabulary now lives in dependency-free **`base/sync_ack.h`** (re-exported by
-    `split_sync.h`, so consumers are unchanged) with a test enforcing it:
+    vocabulary lives in dependency-free **`base/sync_ack.h`** (re-exported by
+    `split_sync.h`, so consumers are unchanged) with tests enforcing it:
     `SyncAckTest.AckValuesStayHammingSpaced` requires min pairwise distance **4**
-    across `SYNC_ACK` / `SYNC_ACK_SIG` / `SYNC_CRC32_ERR` / `SYNC_NACK_REFUSED`.
-    ⚠️ **Adding a fifth value must keep that distance** or the single-bit tolerance
-    degrades for the *whole* set; an exhaustive search says **12 spare codewords**
-    preserve it, so there is plenty of room — but avoid `0x00`/`0xFF`, which are what
-    a stuck or floating line reads as (also asserted). `sync_succeeded()` is a
-    deliberate **whitelist** so a new failure value is a failure at all 14 existing
-    call sites with no edits; `SyncSucceededIsFailClosedAcrossEveryByte` sweeps all
-    256 bytes to pin that, because a blacklist implementation passes every other test.
-  - ⚠️ **`SYNC_CRC32_ERR` is still TRIPLE-overloaded** — "still erasing" (a normal
-    `flash_stage_begin` re-poll state), "your frame arrived garbled", and
-    "send_to_bridge gave up". Only the *refusal* case was peeled off (into
-    `SYNC_NACK_REFUSED`); the remaining three are separated by nothing but a comment.
-    The clean follow-up is a distinct `SYNC_BUSY` and a distinct give-up value, which
-    the 12 spare codewords comfortably allow — then callers could back off vs retry vs
-    escalate instead of inferring from context.
+    across all six values, `EveryAckValueIsDistinct` forbids a duplicate, and
+    `NoAckValueIsAStuckLineReading` forbids `0x00`/`0xFF` (what a stuck or floating
+    line reads as). The set is built as **complement pairs**, each balanced at
+    popcount 4: `SYNC_ACK 0xCA ↔ SYNC_CRC32_ERR 0x35`, `SYNC_ACK_SIG 0x4D ↔
+    SYNC_NACK_REFUSED 0xB2`, `SYNC_BUSY 0x1B ↔ SYNC_GIVEUP 0xE4`.
+    ⚠️ **Adding a seventh value must keep distance 4** or the single-bit tolerance
+    degrades for the *whole* set. A mutually-distance-4 code containing these six
+    extends to **16**, so 10 remain (8 excluding `0x00`/`0xFF`) — take the complement
+    of an unused one to keep the pattern. `sync_succeeded()` is a deliberate
+    **whitelist** so a new failure value is a failure at all 14 existing call sites
+    with no edits; `SyncSucceededIsFailClosedAcrossEveryByte` sweeps all 256 bytes to
+    pin that, because a blacklist implementation passes every other test.
+  - ✅ **`SYNC_CRC32_ERR` is DE-OVERLOADED — it now means exactly one thing: "the
+    frame I received did not check out".** It used to mean four: that, plus "still
+    erasing", "no answer at all", and "I refuse". Each now has its own value —
+    `SYNC_BUSY` (the `flash_stage_begin` re-poll while the deferred erase runs),
+    `SYNC_GIVEUP` (`send_to_bridge` exhausted its retries, or we never asked), and
+    `SYNC_NACK_REFUSED` (processed and declined: an unknown bundle id, a rejected
+    chunk write, an apply with no valid staged image, an unknown reset action).
+    The audit that keeps it true: **every remaining `= SYNC_CRC32_ERR` sits directly
+    on a `crc32 != …->crc32` (or magic) check** —
+    `grep -rn -B3 "ack = SYNC_CRC32_ERR" --include=*.c keyboards/polykybd/` should
+    show no exceptions.
+    - **Relabelling was behaviourally inert, which is why it was safe**: every
+      consumer tests `== SYNC_ACK` / `sync_succeeded()`, i.e. ACK-or-not, so no
+      decision changed — only what the logs and the COMMIT classifier can tell apart.
+    - ⚠️ **The one place needing a compat guard is `hid_fw_up.c`'s erase-progress
+      counter**, which matches on the begin re-poll value. It accepts **both**
+      `SYNC_BUSY` and the legacy `SYNC_CRC32_ERR`, because the two halves can
+      transiently run different firmware (a fw apply reboots the master first — the
+      2026-06-22 boot-splash hang). Mismatched halves are safe in both directions
+      *because* the functional decision is ACK-or-not.
 
 **How CRC32 + retries + noise interact** (the model that drives the retry-count
 choice). With `p` = probability a single frame is corrupted (and caught by CRC32),

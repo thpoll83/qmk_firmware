@@ -34,14 +34,17 @@ enum fw_up_commit_verdict {
 };
 
 // True when the ack byte alone settles it, so the caller must NOT spend a STATUS
-// RPC. A refusal is self-describing; SYNC_CRC32_ERR is the ambiguous one (it means
-// three different things — see sync_ack.h). Keeping this separate from the
-// classification below is what lets the caller short-circuit before doing I/O
-// inside raw_hid_receive(), which runs on the main loop.
+// RPC. Only a refusal is self-describing. SYNC_GIVEUP and SYNC_CRC32_ERR both still
+// need the probe — neither says whether the slave's finalize ran, which is the whole
+// question. Keeping this separate from the classification below is what lets the
+// caller short-circuit before doing I/O inside raw_hid_receive(), which runs on the
+// main loop.
 bool fw_up_commit_ack_is_self_describing(uint8_t slave_ack);
 
 // Classify a non-ACK COMMIT.
-//   slave_ack    — what came back (or SYNC_CRC32_ERR when send_to_bridge gave up)
+//   slave_ack    — what came back: SYNC_GIVEUP when send_to_bridge exhausted its
+//                  retries, SYNC_CRC32_ERR when the slave got a garbled frame,
+//                  SYNC_NACK_REFUSED when it answered and refused
 //   status_ok    — a CRC-VALID status snapshot was obtained from the slave
 //   recorded_ack — that snapshot's last_commit_ack (ignored when !status_ok)
 //

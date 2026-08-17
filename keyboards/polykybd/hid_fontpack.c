@@ -159,19 +159,49 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             bool is_doom = s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ||
                            s_fontpack_bundle == FONTPACK_BUNDLE_DOOMPACK;
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
+
+            // THREE distinct statuses, not one '!'. A dropped split-link ACK and a
+            // staged-CRC mismatch are opposite events with opposite remedies, and
+            // collapsing them made the host report "CRC mismatch or the font pack was
+            // rejected" for a pack whose CRC was perfect and whose data was already
+            // live on the master (field 2026-08-17) — which sent the diagnosis the
+            // wrong way for two rounds. Exactly the confusion FW_UP_COMMIT was split
+            // into four statuses to end; this is the same mistake one command over.
+            //   '.' both halves finalized + reloaded
+            //   'R' the MASTER's finalize REJECTED the image (staged CRC mismatch, or
+            //       the flashed slot did not load as a valid PlyF) — a real data
+            //       problem; the host must re-flash.
+            //   'L' the master committed but the slave did not ACK within the bridge's
+            //       retries (a LINK failure). The master's copy is live and correct;
+            //       re-sending COMMIT is free (finalize leaves s_staged_crc/s_image_crc
+            //       and the write cursor untouched, and the slave's flash_stage_commit
+            //       is likewise idempotent), so the host retries rather than re-streams.
+            // ⚠️ Letters that are hex digits must not follow a `\xHH` escape — the
+            // compiler would merge them into one oversized character constant ("P\x52C"
+            // is a single 0x52C escape, not three bytes). 'R'/'L' are safe; if you ever
+            // pick a hex-digit letter here, split the literal ("P\x52" "C").
+            const char *status = ok         ? "P\x52."
+                               : !master_ok ? "P\x52R"
+                                            : "P\x52L";
             memset(data, 0, length);
-            memcpy(data, ok ? "P\x52." : "P\x52!", 3);
-            if (ok && !is_doom) {
+            memcpy(data, status, 3);
+            // Report the slot's content_version whenever the MASTER's copy is live —
+            // including 'L', where it is precisely what tells the host the data landed
+            // and only the acknowledgement was lost.
+            if (master_ok && !is_doom) {
                 uint16_t cver = fontpack_bundle_version(s_fontpack_bundle);
                 memcpy(&data[3], &cver, 2);
             }
+            const char *outcome = ok ? (is_doom ? "installed" : "live")
+                                     : (!master_ok ? "REJECTED (master finalize)"
+                                                   : "UNCONFIRMED (slave ACK lost)");
             if (is_doom) {
                 uprintf("FONTPACK_COMMIT: %s slave=0x%02x master=%d -> %s\n",
                         s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ? "DOOMWAD" : "DOOMPACK",
-                        slave_ack, master_ok, ok ? "installed" : "INVALID");
+                        slave_ack, master_ok, outcome);
             } else {
                 uprintf("FONTPACK_COMMIT: bundle=%u slave=0x%02x master=%d -> %s (present=%d fonts=%u cver=%u)\n",
-                        s_fontpack_bundle, slave_ack, master_ok, ok ? "live" : "INVALID",
+                        s_fontpack_bundle, slave_ack, master_ok, outcome,
                         fontpack_bundle_present(s_fontpack_bundle), fontpack_font_count(),
                         fontpack_bundle_version(s_fontpack_bundle));
             }

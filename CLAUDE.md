@@ -1738,6 +1738,38 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   byte-identity with the master's verified pack) and defers the heavy reload to
   `fw_staging_process_fontpack_reload()` in housekeeping. **Never do heavy work in a
   split-transaction handler.**
+  - **FONTPACK_COMMIT has THREE status bytes** (`hid_fontpack.h` `FONTPACK_COMMIT_*`):
+    `.` both halves finalized, **`R`** the master's finalize *rejected* the image (staged
+    CRC / not a valid PlyF), **`L`** the master committed but the slave did not ACK within
+    the bridge's 10 retries — a *link* failure, where the master's copy is live and
+    `reply[3..4]` carries its `content_version`. Before the split (2026-08-17) `ok =
+    slave_ok && master_ok` collapsed both into `!`, so the host reported *"CRC mismatch or
+    the font pack was rejected"* for a pack whose CRC was perfect and whose data was
+    already live — sending the field diagnosis after the data for two rounds while the real
+    culprit was the split link (`giveup=44` in that window). **This is the same mistake
+    `FW_UP_COMMIT` was split into four statuses to fix**, one command over; don't collapse
+    them back. Bumps **no** `PROTOCOL_VERSION`: the font-pack commands are dispatched
+    independently of it, an old host reads any non-`.` as failure, and a new host maps the
+    old `!` to "unspecified" — so it degrades in both directions.
+    - ⚠️ **A status letter that is a HEX DIGIT breaks the literal**: `"P\x52C"` is a single
+      `\x52C` escape, not three bytes. `R`/`L` are safe; anything in `[0-9a-fA-F]` needs a
+      split literal (`"P\x52" "C"`). Verify by grepping the built ELF — `strings` shows
+      `PRR`/`PRL` (P, 0x52, letter) exactly once each.
+    - **Re-running COMMIT is free, which is what makes `L` actionable.**
+      `fw_staging_finalize_impl` leaves `s_staged_crc`/`s_image_crc`/`s_next_offset`
+      untouched and only clears `s_commit_pending`/`s_fw_up_active`, and the slave's
+      `flash_stage_commit` is likewise idempotent — so a second COMMIT re-runs the bridge
+      with fresh retries and re-reloads, and the host retries instead of re-streaming the
+      pack. Unlike the FIRMWARE target there is no header sector to re-erase (FONTPACK
+      writes in place), so re-bridging is safe.
+  - ⚠️ **Because FONTPACK writes IN PLACE, a slot is a valid, current bundle as soon as the
+    last chunk lands — COMMIT is not what makes it so.** `fontpack_load()` validates each
+    slot with the pack's own CRC32 over everything after the 32-byte header, so a *complete*
+    stream reads back as present at the shipped `content_version` even if COMMIT never
+    succeeded (a truncated one fails that CRC and reads as absent, which is why a partial
+    write cannot fake a version). The host consequences — never trusting the version
+    comparison alone to decide a re-flash — are written up in `PolyKybdHost/CLAUDE.md`
+    under the font-pack bundles note.
 - **Wipe** = flash a 32-byte **empty pack** (`font_count == 0`), a valid empty PlyF
   sentinel → that slot contributes no fonts. `polyctl fontpack wipe [id]` wipes one
   slot, or **all** slots when `id` is omitted. ⚠️ **The FONTPACK COMMIT gates success

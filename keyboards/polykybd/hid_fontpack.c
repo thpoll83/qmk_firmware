@@ -31,6 +31,22 @@
 // so COMMIT can report the just-flashed bundle's content_version.
 static uint8_t s_fontpack_bundle = 0;
 
+// Writes the 3-byte reply header for a command whose status is one of several
+// values: 'P', the command id, then the status byte. The sibling of hid_com.c's
+// boolean `hid_reply()`, which cannot express COMMIT's three outcomes.
+//
+// Building the bytes instead of writing a `"P\x52R"` literal is deliberate twice
+// over: the status comes from the FONTPACK_COMMIT_* constants (so the header owns
+// the wire values and cannot drift from what is emitted), and there is no `\xHH`
+// escape for a following letter to be swallowed into — `"P\x52C"` would be a
+// single 0x52C character constant, not three bytes, and 'C' being a hex digit is
+// the only thing that decides it. Nothing here can hit that trap.
+static inline void fontpack_reply_status(uint8_t *data, uint8_t cmd, uint8_t status) {
+    data[0] = 'P';
+    data[1] = cmd;
+    data[2] = status;
+}
+
 bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
     switch (data[1]) {
 
@@ -159,19 +175,46 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             bool is_doom = s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ||
                            s_fontpack_bundle == FONTPACK_BUNDLE_DOOMPACK;
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
+
+            // THREE distinct statuses, not one '!'. A dropped split-link ACK and a
+            // staged-CRC mismatch are opposite events with opposite remedies, and
+            // collapsing them made the host report "CRC mismatch or the font pack was
+            // rejected" for a pack whose CRC was perfect and whose data was already
+            // live on the master (field 2026-08-17) — which sent the diagnosis the
+            // wrong way for two rounds. Exactly the confusion FW_UP_COMMIT was split
+            // into four statuses to end; this is the same mistake one command over.
+            //   '.' both halves finalized (the slave's font-table reload is deferred to
+            //       its housekeeping by design, and cannot fail — see hid_fontpack.h)
+            //   'R' the MASTER's finalize REJECTED the image (staged CRC mismatch, or
+            //       the flashed slot did not load as a valid PlyF) — a real data
+            //       problem; the host must re-flash.
+            //   'L' the master committed but the slave did not ACK within the bridge's
+            //       retries (a LINK failure). The master's copy is live and correct;
+            //       re-sending COMMIT is free (finalize leaves s_staged_crc/s_image_crc
+            //       and the write cursor untouched, and the slave's flash_stage_commit
+            //       is likewise idempotent), so the host retries rather than re-streams.
+            uint8_t status = ok         ? FONTPACK_COMMIT_OK
+                           : !master_ok ? FONTPACK_COMMIT_REJECTED
+                                        : FONTPACK_COMMIT_NO_SLAVE;
             memset(data, 0, length);
-            memcpy(data, ok ? "P\x52." : "P\x52!", 3);
-            if (ok && !is_doom) {
+            fontpack_reply_status(data, CMD_FONTPACK_COMMIT, status);
+            // Report the slot's content_version whenever the MASTER's copy is live —
+            // including 'L', where it is precisely what tells the host the data landed
+            // and only the acknowledgement was lost.
+            if (master_ok && !is_doom) {
                 uint16_t cver = fontpack_bundle_version(s_fontpack_bundle);
                 memcpy(&data[3], &cver, 2);
             }
+            const char *outcome = ok ? (is_doom ? "installed" : "live")
+                                     : (!master_ok ? "REJECTED (master finalize)"
+                                                   : "UNCONFIRMED (slave ACK lost)");
             if (is_doom) {
                 uprintf("FONTPACK_COMMIT: %s slave=0x%02x master=%d -> %s\n",
                         s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ? "DOOMWAD" : "DOOMPACK",
-                        slave_ack, master_ok, ok ? "installed" : "INVALID");
+                        slave_ack, master_ok, outcome);
             } else {
                 uprintf("FONTPACK_COMMIT: bundle=%u slave=0x%02x master=%d -> %s (present=%d fonts=%u cver=%u)\n",
-                        s_fontpack_bundle, slave_ack, master_ok, ok ? "live" : "INVALID",
+                        s_fontpack_bundle, slave_ack, master_ok, outcome,
                         fontpack_bundle_present(s_fontpack_bundle), fontpack_font_count(),
                         fontpack_bundle_version(s_fontpack_bundle));
             }

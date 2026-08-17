@@ -1428,6 +1428,24 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
   hard-errors.
 - `builddefs/build_test.mk` — `include <path>/tests/rules.mk`, alongside the
   `quantum/*/tests/rules.mk` lines. This defines `<name>_SRC/_INC/_DEFS`.
+  - ⚠️ **A test under `keyboards/` must NOT name that file `rules.mk` — CI reads it as
+    a KEYBOARD.** `qmk ci-validate-keyboard-targets` globs `keyboards/**/rules.mk` and
+    flags every hit whose path lacks a directory named `keymaps`, `common` or `lib` and
+    which has no `keyboard.json` beneath it (`lib/python/qmk/cli/ci/
+    validate_keyboard_targets.py`, 17 lines — read it, it is the whole rule). There is
+    no exemption for tests, because upstream keeps none under `keyboards/`. The failure
+    is `keyboards/polykybd/base/tests::Legacy target detected` and it is a **separate
+    lint-job step from `qmk lint`**, so `qmk lint --strict` passing tells you nothing
+    about it. `keyboards/polykybd/base/tests/` therefore uses **`test_rules.mk`**; the
+    `build_test.mk` include names the file explicitly, so the name is free.
+    (`testlist.mk` is unaffected — only `rules.mk` is globbed.) Cost a CI round
+    2026-08-17.
+  - ⚠️ **So run the WHOLE lint job locally, not just `qmk lint`.** The recipe in the CI
+    section above already lists all of it; the two `ci-validate-*` commands are the
+    ones easy to skip, and they are ~1 s each:
+    ```bash
+    qmk ci-validate-keyboard-targets && qmk ci-validate-aliases   # both must exit 0
+    ```
 - ⚠️ **A standalone test must put the timer in its own `_SRC`.**
   `platforms/common.mk` adds `platforms/timer.c` + `platforms/test/timer.c` to `SRC`,
   which only the **full-keyboard** harness consumes — so a standalone test links with

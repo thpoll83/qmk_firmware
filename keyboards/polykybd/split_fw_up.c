@@ -221,7 +221,99 @@ static void flash_stage_commit(uint8_t in_len, const void* in_data, uint8_t out_
     // window, so the master timed out and mis-reported COMMIT as a CRC failure
     // even though the pack loaded. Firmware-target finalize is O(1) (unaffected).
     bool ok = fw_staging_finalize_defer_reload();
-    ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
+    // A refusal gets SYNC_NACK_REFUSED, NOT SYNC_CRC32_ERR. We answered and the
+    // answer is "no": the master must re-flash, whereas SYNC_CRC32_ERR asks it to
+    // retry — which for a genuinely bad staged image just fails again. The garbled
+    // request above keeps SYNC_CRC32_ERR, because there a retry is exactly right.
+    uint8_t ack = ok ? SYNC_ACK : SYNC_NACK_REFUSED;
+    // Recorded so a STATUS probe can still report this verdict if the reply below
+    // never reaches the master (the case that made the two indistinguishable).
+    fw_staging_note_commit_ack(ack);
+    ((poly_sync_reply_t *)out_data)->ack = ack;
+}
+
+// Read-only STATUS probe of the other half (master side). Returns false when the
+// RPC fails or the reply's own CRC does not check out — a corrupted snapshot must
+// not be believed, since the caller uses it to decide whether a flash landed.
+//
+// Uses transaction_rpc_exec directly: send_to_bridge hardcodes the 1-byte
+// poly_sync_reply_t and cannot carry this bigger struct.
+// The bare RPC. Split out so the logger can still PRINT a snapshot whose CRC does
+// not check out (labelled as suspect) while the decision path below refuses it — a
+// corrupt snapshot is worth seeing but must never be acted on.
+static bool fetch_slave_status(fw_up_status_reply_t *reply) {
+    fw_up_status_request_t req = { .crc32 = 0, .op = FLASH_STAGE_STATUS, .dummy = 0 };
+    memset(reply, 0, sizeof(*reply));
+    return transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(req), &req, sizeof(*reply), reply);
+}
+
+static bool slave_status_crc_ok(const fw_up_status_reply_t *reply) {
+    return crc32_1byte((const uint8_t *)&reply->status, sizeof(reply->status), 0) == reply->crc32;
+}
+
+bool fw_up_query_slave_status(fw_staging_status_t *out) {
+    if (!out) return false;
+    fw_up_status_reply_t reply;
+    if (!fetch_slave_status(&reply) || !slave_status_crc_ok(&reply)) return false;
+    *out = reply.status;
+    return true;
+}
+
+void fw_up_log_slave_status(const char *tag) {
+    fw_up_status_reply_t reply;
+    if (!fetch_slave_status(&reply)) {
+        uprintf("slave status (%s): RPC FAILED — slave unresponsive\n", tag);
+        return;
+    }
+    // Printed either way; the tag says whether to trust the numbers.
+    const char *suspect = slave_status_crc_ok(&reply) ? "" : " [CRC BAD — values suspect]";
+    const fw_staging_status_t s = reply.status;
+    uprintf("slave status (%s): init=%u active=%u erase_pending=%u erase=%u/%u "
+            "next_off=%lu begin_calls=%u chunk_calls=%u chunk_errs=%u "
+            "last_chunk_off=%lu last_ack=0x%02x last_commit_ack=0x%02x "
+            "pd_calls=%u pd_advances=%u%s\n",
+            tag,
+            (unsigned)s.initialized, (unsigned)s.fw_up_active, (unsigned)s.erase_pending,
+            (unsigned)s.erase_sector_next, (unsigned)s.erase_sector_count,
+            (unsigned long)s.next_offset,
+            (unsigned)s.begin_handler_calls, (unsigned)s.chunk_handler_calls,
+            (unsigned)s.chunk_handler_errors,
+            (unsigned long)s.last_chunk_offset, (unsigned)s.last_chunk_ack,
+            (unsigned)s.last_commit_ack,
+            (unsigned)s.process_deferred_calls, (unsigned)s.process_deferred_advances, suspect);
+}
+
+// Classify a non-ACK COMMIT ack, asking the slave directly when the ack itself is
+// ambiguous. Returns true when the slave REFUSED (a data failure: re-flash), false
+// when this looks like a link failure (retrying the COMMIT is free and usually works).
+//
+// ⚠️ fw_up_active is NOT a usable discriminator on its own: finalize clears it
+// whether it succeeded or refused, so "cleared" is equally consistent with a
+// refusal and with a SUCCESS whose ack was lost in transit. Treating that as a
+// refusal would turn the common lost-ack case — which a single free COMMIT retry
+// fixes — into a full re-stream of the pack. So we read the recorded verdict.
+bool fw_up_slave_refused_commit(uint8_t slave_ack, const char *tag) {
+    if (slave_ack == SYNC_NACK_REFUSED) {
+        uprintf("%s: slave REFUSED (ack=0x%02x) -> data failure\n", tag, slave_ack);
+        return true;
+    }
+    fw_staging_status_t s;
+    if (!fw_up_query_slave_status(&s)) {
+        uprintf("%s: slave ack=0x%02x and the status probe failed too "
+                "-> assuming link failure\n", tag, slave_ack);
+        return false;
+    }
+    if (s.last_commit_ack == SYNC_NACK_REFUSED) {
+        uprintf("%s: slave ack=0x%02x lost, but its recorded verdict is REFUSED "
+                "(last_commit_ack=0x%02x) -> data failure\n",
+                tag, slave_ack, (unsigned)s.last_commit_ack);
+        return true;
+    }
+    uprintf("%s: slave ack=0x%02x, recorded verdict 0x%02x (active=%u next_off=%lu) "
+            "-> link failure, COMMIT is safe to retry\n",
+            tag, slave_ack, (unsigned)s.last_commit_ack,
+            (unsigned)s.fw_up_active, (unsigned long)s.next_offset);
+    return false;
 }
 
 // Single slave-side dispatcher for the flash-staging stream.  Reads the `op`

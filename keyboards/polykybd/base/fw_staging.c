@@ -163,6 +163,7 @@ static uint16_t s_process_deferred_calls;     // every entry into process_deferr
 static uint16_t s_process_deferred_advances;  // every actual sector erase
 static uint32_t s_last_chunk_offset;
 static uint8_t  s_last_chunk_ack;
+static uint8_t  s_last_commit_ack;   // ack the slave's COMMIT handler last returned
 
 // ---------------------------------------------------------------------------
 // Helper: chain CRC32 over a large buffer in 60 000-byte chunks
@@ -236,6 +237,7 @@ void fw_staging_init(void) {
     // last-chunk fields so they only ever describe the most recent attempt.
     s_last_chunk_offset    = 0;
     s_last_chunk_ack       = 0;
+    s_last_commit_ack      = 0;
 #ifdef USE_CORE1
     s_core1_halted   = false;
 #endif
@@ -795,6 +797,7 @@ void fw_staging_get_status(fw_staging_status_t *out) {
     out->fw_up_active         = s_fw_up_active ? 1 : 0;
     out->erase_pending        = s_erase_pending ? 1 : 0;
     out->last_chunk_ack       = s_last_chunk_ack;
+    out->last_commit_ack      = s_last_commit_ack;
     out->erase_sector_next    = (uint16_t)s_erase_sector_next;
     out->erase_sector_count   = (uint16_t)s_erase_sector_count;
     out->next_offset          = s_next_offset;
@@ -820,6 +823,10 @@ void fw_staging_note_chunk_call(uint32_t offset, uint8_t ack) {
     if (ack != 0xCA /* SYNC_ACK */) {
         if (s_chunk_handler_errors != UINT16_MAX) s_chunk_handler_errors++;
     }
+}
+
+void fw_staging_note_commit_ack(uint8_t ack) {
+    s_last_commit_ack = ack;
 }
 
 void fw_staging_set_fw_up_active(bool active) {

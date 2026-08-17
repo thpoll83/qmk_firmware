@@ -174,7 +174,8 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             bool master_ok = fw_staging_finalize();   // FONTPACK target: verifies CRC + fontpack_reload()
             bool is_doom = s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ||
                            s_fontpack_bundle == FONTPACK_BUNDLE_DOOMPACK;
-            bool ok = (slave_ack == SYNC_ACK) && master_ok;
+            bool slave_ok = (slave_ack == SYNC_ACK);
+            bool ok = slave_ok && master_ok;
 
             // THREE distinct statuses, not one '!'. A dropped split-link ACK and a
             // staged-CRC mismatch are opposite events with opposite remedies, and
@@ -188,14 +189,23 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             //   'R' the MASTER's finalize REJECTED the image (staged CRC mismatch, or
             //       the flashed slot did not load as a valid PlyF) — a real data
             //       problem; the host must re-flash.
-            //   'L' the master committed but the slave did not ACK within the bridge's
-            //       retries (a LINK failure). The master's copy is live and correct;
-            //       re-sending COMMIT is free (finalize leaves s_staged_crc/s_image_crc
-            //       and the write cursor untouched, and the slave's flash_stage_commit
-            //       is likewise idempotent), so the host retries rather than re-streams.
-            uint8_t status = ok         ? FONTPACK_COMMIT_OK
-                           : !master_ok ? FONTPACK_COMMIT_REJECTED
-                                        : FONTPACK_COMMIT_NO_SLAVE;
+            //   'L' the master committed but the slave did not ANSWER within the
+            //       bridge's retries (a LINK failure). The master's copy is live and
+            //       correct; re-sending COMMIT is free (finalize leaves
+            //       s_staged_crc/s_image_crc and the write cursor untouched, and the
+            //       slave's flash_stage_commit is likewise idempotent), so the host
+            //       retries rather than re-streams. A slave that ANSWERED and refused
+            //       is NOT this case — it is 'R', because retrying cannot change what
+            //       is in that half's flash.
+            // Only ask the slave when its answer is genuinely ambiguous: a refusal ack
+            // is self-describing, and if the MASTER already rejected the image the
+            // status is 'R' regardless — so short-circuit rather than spend an RPC
+            // inside raw_hid_receive(), which runs on the main loop.
+            bool slave_refused = !slave_ok && master_ok &&
+                                 fw_up_slave_refused_commit(slave_ack, "FONTPACK_COMMIT");
+            uint8_t status = ok                            ? FONTPACK_COMMIT_OK
+                           : (!master_ok || slave_refused) ? FONTPACK_COMMIT_REJECTED
+                                                           : FONTPACK_COMMIT_NO_SLAVE;
             memset(data, 0, length);
             fontpack_reply_status(data, CMD_FONTPACK_COMMIT, status);
             // Report the slot's content_version whenever the MASTER's copy is live —
@@ -206,8 +216,9 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 memcpy(&data[3], &cver, 2);
             }
             const char *outcome = ok ? (is_doom ? "installed" : "live")
-                                     : (!master_ok ? "REJECTED (master finalize)"
-                                                   : "UNCONFIRMED (slave ACK lost)");
+                                     : !master_ok    ? "REJECTED (master finalize)"
+                                     : slave_refused ? "REJECTED (slave refused)"
+                                                     : "UNCONFIRMED (slave ACK lost)";
             if (is_doom) {
                 uprintf("FONTPACK_COMMIT: %s slave=0x%02x master=%d -> %s\n",
                         s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ? "DOOMWAD" : "DOOMPACK",

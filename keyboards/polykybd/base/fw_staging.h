@@ -245,7 +245,14 @@ typedef struct _fw_staging_status_t {
     uint16_t chunk_handler_errors;   // chunks that hit CRC mismatch / write fail
     uint16_t process_deferred_calls; // times fw_staging_process_deferred() entered
     uint16_t process_deferred_advances; // times a sector was actually erased
-    uint16_t pad;
+    // Last ack the slave's COMMIT handler returned (0 = it has never run one).
+    // This is what lets the master tell a REFUSAL from a lost acknowledgement when
+    // the COMMIT reply itself goes missing: fw_up_active is cleared by finalize
+    // either way, so it cannot distinguish them, but this records the verdict.
+    // Consumes half the old pad, so the struct size — and therefore the RPC reply
+    // size — is unchanged.
+    uint8_t  last_commit_ack;
+    uint8_t  pad;
 } fw_staging_status_t;
 
 // Fill `out` with the current internal state.  Safe to call from anywhere.
@@ -254,6 +261,9 @@ void fw_staging_get_status(fw_staging_status_t *out);
 // Counter / state mutators used by the split handlers in split_fw_up.c.
 void fw_staging_note_begin_call(void);
 void fw_staging_note_chunk_call(uint32_t offset, uint8_t ack);
+// Record the ack the slave's COMMIT handler is about to return, so a later STATUS
+// probe can report the verdict even if that reply never reached the master.
+void fw_staging_note_commit_ack(uint8_t ack);
 
 // Diagnostic helper used while bisecting the fw_up slave-hang bug
 // (see FW_UP_DEBUG_NOTES.md): set the s_fw_up_active flag without

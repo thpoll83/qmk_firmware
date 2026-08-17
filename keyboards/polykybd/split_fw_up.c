@@ -6,6 +6,7 @@
 #include "polymod_crc32.h"
 #include "base/fw_staging.h"   // fw_staging_set_fontpack_slot
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
+#include "base/fw_up_verdict.h"  // pure COMMIT-failure classification (unit-tested)
 
 #include <transactions.h>
 #include <print.h>
@@ -248,7 +249,7 @@ static bool fetch_slave_status(fw_up_status_reply_t *reply) {
 }
 
 static bool slave_status_crc_ok(const fw_up_status_reply_t *reply) {
-    return crc32_1byte((const uint8_t *)&reply->status, sizeof(reply->status), 0) == reply->crc32;
+    return fw_up_status_crc_ok(&reply->status, reply->crc32);
 }
 
 bool fw_up_query_slave_status(fw_staging_status_t *out) {
@@ -292,28 +293,35 @@ void fw_up_log_slave_status(const char *tag) {
 // refusal and with a SUCCESS whose ack was lost in transit. Treating that as a
 // refusal would turn the common lost-ack case — which a single free COMMIT retry
 // fixes — into a full re-stream of the pack. So we read the recorded verdict.
+// The DECISION itself is fw_up_classify_commit_failure() in base/fw_up_verdict.c —
+// pure and unit-tested (base/tests/fw_up_verdict_tests.cpp). What stays here is the
+// I/O the decision needs and the diagnostics a field log is read from.
 bool fw_up_slave_refused_commit(uint8_t slave_ack, const char *tag) {
-    if (slave_ack == SYNC_NACK_REFUSED) {
+    // Short-circuit before any RPC: a refusal is self-describing, and this runs
+    // inside raw_hid_receive() on the main loop.
+    if (fw_up_commit_ack_is_self_describing(slave_ack)) {
         uprintf("%s: slave REFUSED (ack=0x%02x) -> data failure\n", tag, slave_ack);
         return true;
     }
-    fw_staging_status_t s;
-    if (!fw_up_query_slave_status(&s)) {
+    fw_staging_status_t s        = {0};
+    bool                status_ok = fw_up_query_slave_status(&s);
+    enum fw_up_commit_verdict verdict =
+        fw_up_classify_commit_failure(slave_ack, status_ok, s.last_commit_ack);
+
+    if (!status_ok) {
         uprintf("%s: slave ack=0x%02x and the status probe failed too "
                 "-> assuming link failure\n", tag, slave_ack);
-        return false;
-    }
-    if (s.last_commit_ack == SYNC_NACK_REFUSED) {
+    } else if (verdict == FW_UP_COMMIT_REFUSED) {
         uprintf("%s: slave ack=0x%02x lost, but its recorded verdict is REFUSED "
                 "(last_commit_ack=0x%02x) -> data failure\n",
                 tag, slave_ack, (unsigned)s.last_commit_ack);
-        return true;
+    } else {
+        uprintf("%s: slave ack=0x%02x, recorded verdict 0x%02x (active=%u next_off=%lu) "
+                "-> link failure, COMMIT is safe to retry\n",
+                tag, slave_ack, (unsigned)s.last_commit_ack,
+                (unsigned)s.fw_up_active, (unsigned long)s.next_offset);
     }
-    uprintf("%s: slave ack=0x%02x, recorded verdict 0x%02x (active=%u next_off=%lu) "
-            "-> link failure, COMMIT is safe to retry\n",
-            tag, slave_ack, (unsigned)s.last_commit_ack,
-            (unsigned)s.fw_up_active, (unsigned long)s.next_offset);
-    return false;
+    return verdict == FW_UP_COMMIT_REFUSED;
 }
 
 // Single slave-side dispatcher for the flash-staging stream.  Reads the `op`

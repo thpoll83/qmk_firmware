@@ -203,9 +203,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // inside raw_hid_receive(), which runs on the main loop.
             bool slave_refused = !slave_ok && master_ok &&
                                  fw_up_slave_refused_commit(slave_ack, "FONTPACK_COMMIT");
-            uint8_t status = ok                            ? FONTPACK_COMMIT_OK
-                           : (!master_ok || slave_refused) ? FONTPACK_COMMIT_REJECTED
-                                                           : FONTPACK_COMMIT_NO_SLAVE;
+            uint8_t status = fontpack_commit_status(master_ok, slave_ok, slave_refused);
             memset(data, 0, length);
             fontpack_reply_status(data, CMD_FONTPACK_COMMIT, status);
             // Report the slot's content_version whenever the MASTER's copy is live —

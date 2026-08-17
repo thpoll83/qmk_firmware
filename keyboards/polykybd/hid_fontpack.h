@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include "quantum.h"
+// stdint/stdbool only — deliberately NOT quantum.h. Nothing here needs it (the one
+// declaration below uses uint8_t and bool), and keeping the header standalone is what
+// lets the COMMIT status contract be unit-tested without the keyboard config. The
+// host's classify_commit_reply() tests the same contract from its side; a firmware
+// test is what catches this end EMITTING the wrong byte, which a host fixture cannot.
+#include <stdint.h>
+#include <stdbool.h>
 
 // HID font-pack command IDs (command byte in the HID report). Parallel to the
 // firmware-update commands (0x40–0x44) but target the external-flash font pack.
@@ -38,6 +44,23 @@
 // predates them answers '!', which a new host treats as "unspecified" — so the pair
 // degrades gracefully in both directions and needs no PROTOCOL_VERSION bump (the
 // font-pack commands are dispatched independently of it).
+// Pick the COMMIT status byte. Pure, so the host↔firmware contract is testable from
+// this end too (base/tests/fw_up_verdict_tests.cpp).
+//   master_ok     — the master's own finalize accepted the image
+//   slave_ok      — the slave answered SYNC_ACK
+//   slave_refused — the slave answered/recorded a REFUSAL. Only meaningful when
+//                   !slave_ok && master_ok; the caller passes false otherwise,
+//                   because it deliberately does NOT spend a STATUS RPC when the
+//                   master already rejected the image (the answer is 'R' either way)
+//                   or when the ack is self-describing.
+// ⚠️ A master rejection outranks everything: there is no point telling the host to
+// retry a half whose own copy is bad.
+static inline uint8_t fontpack_commit_status(bool master_ok, bool slave_ok, bool slave_refused) {
+    if (master_ok && slave_ok)      return FONTPACK_COMMIT_OK;
+    if (!master_ok || slave_refused) return FONTPACK_COMMIT_REJECTED;
+    return FONTPACK_COMMIT_NO_SLAVE;
+}
+
 #define CMD_FONTPACK_STATUS  0x53  // reply: [3]=present [4]=abi [5..6]=content_version [7]=font_count
 
 // Handle HID font-pack commands (0x50–0x53). Called from raw_hid_receive() when

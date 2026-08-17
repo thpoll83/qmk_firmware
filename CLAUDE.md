@@ -266,16 +266,38 @@ inherited-upstream noise:
   ```
   ⚠️ Drop `keyboards/polykybd/tools/__pycache__` first or it shows up as a false
   positive in the ignored-files list (CI checks out clean, so it never sees it).
-  - ⚠️ **The lint job runs `format-c` (clang-format) as well as `format-text`, and
-    the container can only run one of them — so "format clean" locally can be a
-    FALSE PASS.** `qmk format-text` needs **`dos2unix`, which is not installed**
-    (`FileNotFoundError: 'dos2unix'`); its job is only line endings + trailing
-    newline, which `grep -qP '\r'` and `[ -n "$(tail -c1 f)" ]` check by hand. The
-    *other* half, `qmk format-c`, is what actually fails PRs — with
-    `File '…' Requires Formatting` per file — and `clang-format` **is** installed.
-    Check the C/C++ files you touched with
-    `clang-format --dry-run -Werror <files>` before pushing (2026-08-12: verifying
-    only the line endings let a trailing-comment-spacing failure through to CI).
+  - ⚠️ **WHICH formatter runs is decided by the changed PATHS, and clang-format does
+    NOT cover `keyboards/**`.** An earlier version of this file said "the lint job runs
+    `format-c` as well as `format-text`" and told you to clang-format every C file you
+    touched. That is wrong for keyboard work, and following it means reformatting files
+    CI never looks at. The actual wiring (read the three workflows, verified
+    2026-08-17):
+    - **`lint.yml`** ("PR Lint keyboards") triggers on `keyboards/**` and runs
+      **`qmk format-text` only**, then fails any changed file that `git diff` shows as
+      modified — that is where `File '…' Requires Formatting` comes from.
+    - **`format.yml`** ("PR Lint Format") is the one that runs clang-format, and its
+      `paths:` are `drivers/ lib/arm_atsam/ lib/lib8tion/ lib/python/ modules/
+      platforms/ quantum/ tests/ tmk_core/` — **no `keyboards/`**.
+    - **`format_push.yml`** only fires on pushes to `master`/`develop`, i.e. the
+      upstream-mirror branches, never on `PolyKybd` or a `claude/**` PR.
+    - So the 2026-08-12 clang-format failure was real but path-specific: that change
+      extracted the LTR-559 driver into **`modules/`**, which `format.yml` does cover.
+      **Rule: clang-format only what you put under those paths.**
+  - ⚠️ **Corollary — do NOT clang-format a new file under `keyboards/`.** The
+    container's clang-format 18 disagrees with the prevailing style there on ~every
+    file (`.clang-format` sets `ColumnLimit: 1000` and `AlignConsecutive*: true`, so it
+    unwraps hand-wrapped signatures and collapses aligned `#define` columns). The
+    version-skew test in the next bullet needs a base version to compare against, which
+    a new file does not have — the check that replaces it is **whether the same
+    objection reproduces on a neighbouring committed file**. It does: the aligned
+    `#define SYNC_ACK_SIG    0b…` block is flagged identically in
+    `origin/PolyKybd:keyboards/polykybd/split_sync.h`, which CI has been passing for
+    months.
+  - `qmk format-text` itself cannot be run in the container — it needs **`dos2unix`,
+    which is not installed** (`FileNotFoundError: 'dos2unix'`). Its whole job is line
+    endings + a trailing newline, so check those by hand:
+    `grep -qP '\r' <file>` (must not match) and `[ -n "$(tail -c1 <file>)" ]` (must be
+    false, i.e. the file ends in a newline).
   - ⚠️ **The container's clang-format is a DIFFERENT VERSION from CI's, so it flags
     files CI accepts — do not "fix" those.** Local is clang-format 18; it wanted to
     reformat a file the lint job had passed. **The test is whether the same file is
@@ -1364,8 +1386,40 @@ backing store the way a driver test should mock its bus.
 ```bash
 git submodule update --init --depth 1 --no-recommend-shallow lib/googletest  # needs add_repo qmk/googletest first
 export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"
-make test:polymod_ltr559          # ~1 s
+make test:polymod_ltr559          # ~1 s, 19 tests — the LTR-559 driver vs a mock I2C bus
+make test:fw_up_verdict           # ~1 s, 21 tests — the flash-staging COMMIT decision layer
 ```
+
+- **`fw_up_verdict` is the pattern for testing DECISION logic** (as opposed to
+  `polymod_ltr559`, which is the pattern for a driver vs a mock bus). It covers the
+  COMMIT-failure classification, the ack vocabulary, the STATUS-snapshot CRC guard and
+  the font-pack status byte. **Getting it testable required decoupling first, and that
+  decoupling was worth doing on its own terms** — the two smells it exposed:
+  - `split_sync.h` conflated a **protocol contract** (4 ack bytes + `sync_succeeded`)
+    with the sync **payload structs**, which need `config.h`/`state.h`/`mru.h`. So
+    asking "is this ack a success?" pulled in the whole keyboard config, and
+    `sync_succeeded()` — the helper guarding every `send_to_bridge` call site, and
+    itself the subject of a field bug — had no test for years. The vocabulary now
+    lives in dependency-free **`base/sync_ack.h`**, re-exported by `split_sync.h` so
+    all consumers are unchanged.
+  - `fw_up_slave_refused_commit()` mixed RPC transport, CRC validation, the decision
+    and `uprintf` in one function; the decision was the only part with a bug history
+    and the only part unreachable. It is now pure in **`base/fw_up_verdict.c`**, with
+    the I/O and the four diagnostic lines left in `split_fw_up.c`. This mirrors what
+    the host repo does deliberately (`polyhost/core/decisions.py`,
+    `decide_stale_bundles`, `classify_commit_reply`) — the firmware just never had
+    the seams.
+  - ⚠️ `base/fw_up_verdict.c` is listed in the **shared** `POLY_SRC` in
+    `keyboards/polykybd/rules.mk`, NOT with the other `base/*.c` in the per-variant
+    `rules.mk` — its consumer `split_fw_up.c` is in that shared list, so a variant
+    that forgot the line would just fail to link.
+- **A host fixture can never catch THIS end emitting the wrong byte.** PolyKybdHost has
+  had `classify_commit_reply` under test for a while, but those tests encode the
+  firmware's reply bytes as fixtures — so they only catch the *host* misreading a
+  status, which is the opposite direction from the bug that actually shipped. Both ends
+  of the font-pack COMMIT contract are now pinned: `fontpack_commit_status()` is a pure
+  `static inline` in `hid_fontpack.h` (which is why that header now includes
+  stdint/stdbool instead of `quantum.h` — nothing in it needed quantum.h).
 
 Wiring a new one needs **two** registrations plus one non-obvious source list:
 
@@ -1386,7 +1440,19 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
   byte order, delete a bound) and confirm the *expected* test fails — the same
   discipline as "verify against the rendered glyph shape, not a transform∘inverse
   round-trip". A suite that passes against a deliberately broken driver is measuring
-  nothing.
+  nothing. `fw_up_verdict` was validated this way against 7 mutations (dropped
+  `!status_ok` guard, `recorded != SYNC_ACK` as the refusal test, probe outranking an
+  explicit refusal, `sync_succeeded` as a blacklist, a 1-bit-spaced ack value, a slave
+  refusal reported as retryable, and a CRC check that always passes) — each caught by
+  the intended test.
+  - ⚠️ **Strip ANSI escapes before grepping gtest output, or the mutation harness
+    FAILS OPEN.** gtest prints `\e[0;32m[  FAILED  ]`, so a regex anchored on a leading
+    `[` matches nothing and **every** mutation reads as "still green" — i.e. the
+    harness reports the exact result that means "your tests are worthless", for all of
+    them, which is itself the tell that the detector and not the suite is broken. Pipe
+    through `sed 's/\x1b\[[0-9;]*m//g'` first. Cost a full round (2026-08-17); a
+    single manual mutation is the 30 s way to confirm the harness works before
+    trusting a sweep.
 
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 host-remappable layers), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
@@ -1751,6 +1817,14 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     them back. Bumps **no** `PROTOCOL_VERSION`: the font-pack commands are dispatched
     independently of it, an old host reads any non-`.` as failure, and a new host maps the
     old `!` to "unspecified" — so it degrades in both directions.
+    - **The status selection is a pure `static inline fontpack_commit_status()` in
+      `hid_fontpack.h`, unit-tested** (`make test:fw_up_verdict`,
+      `FontpackCommitStatusTest`): master rejection outranks a healthy slave, a slave
+      *refusal* is `'R'` and not `'L'`, a lost ack is `'L'`, the three bytes are
+      distinct, none reuses the legacy `'!'`, and none is a hex digit (the
+      string-literal trap below). This is the firmware half of a contract the host
+      tests from its side — and the half that matters, since a host fixture can only
+      catch the host *misreading* a status, never this end emitting the wrong one.
     - ⚠️ **A status letter that is a HEX DIGIT breaks the literal**: `"P\x52C"` is a single
       `\x52C` escape, not three bytes. `R`/`L` are safe; anything in `[0-9a-fA-F]` needs a
       split literal (`"P\x52" "C"`). Verify by grepping the built ELF — `strings` shows
@@ -2515,6 +2589,25 @@ that ring/reflect on a longer split cable.
   corrupted reply can turn a real `SYNC_ACK` into a non-ACK → master retries (safe,
   idempotent) or, ~1/256, into a false ACK. Low impact, but it's why a tiny
   fraction of `crc_err` counts can be reply corruption rather than payload.
+  - **That missing CRC is why the ack BYTE VALUES are Hamming-spaced**, and the
+    vocabulary now lives in dependency-free **`base/sync_ack.h`** (re-exported by
+    `split_sync.h`, so consumers are unchanged) with a test enforcing it:
+    `SyncAckTest.AckValuesStayHammingSpaced` requires min pairwise distance **4**
+    across `SYNC_ACK` / `SYNC_ACK_SIG` / `SYNC_CRC32_ERR` / `SYNC_NACK_REFUSED`.
+    ⚠️ **Adding a fifth value must keep that distance** or the single-bit tolerance
+    degrades for the *whole* set; an exhaustive search says **12 spare codewords**
+    preserve it, so there is plenty of room — but avoid `0x00`/`0xFF`, which are what
+    a stuck or floating line reads as (also asserted). `sync_succeeded()` is a
+    deliberate **whitelist** so a new failure value is a failure at all 14 existing
+    call sites with no edits; `SyncSucceededIsFailClosedAcrossEveryByte` sweeps all
+    256 bytes to pin that, because a blacklist implementation passes every other test.
+  - ⚠️ **`SYNC_CRC32_ERR` is still TRIPLE-overloaded** — "still erasing" (a normal
+    `flash_stage_begin` re-poll state), "your frame arrived garbled", and
+    "send_to_bridge gave up". Only the *refusal* case was peeled off (into
+    `SYNC_NACK_REFUSED`); the remaining three are separated by nothing but a comment.
+    The clean follow-up is a distinct `SYNC_BUSY` and a distinct give-up value, which
+    the 12 spare codewords comfortably allow — then callers could back off vs retry vs
+    escalate instead of inferring from context.
 
 **How CRC32 + retries + noise interact** (the model that drives the retry-count
 choice). With `p` = probability a single frame is corrupted (and caught by CRC32),

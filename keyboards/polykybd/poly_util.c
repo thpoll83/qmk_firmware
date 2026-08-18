@@ -16,6 +16,7 @@
 #include <print.h>
 #include <transactions.h>
 #include "hardware/watchdog.h"
+#include "poly_keymap.h"
 
 // ---------------------------------------------------------------------------
 // RP2040 warm-reset fix (QK_REBOOT / soft_reset_keyboard path).
@@ -40,7 +41,6 @@ void mcu_reset(void) {
 const uint8_t* get_key_disp_bitmask(uint8_t index);
 uint8_t get_disp_bitmask_size(void);
 
-extern void set_displays(uint8_t contrast, bool idle);
 
 void select_all_displays(void) {
     sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);

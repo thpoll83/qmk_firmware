@@ -24,6 +24,7 @@
 
 #include <print.h>
 #include <string.h>
+#include "poly_keymap.h"
 
 #define HID_DATA_IDX 2
 

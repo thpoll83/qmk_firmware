@@ -15,6 +15,7 @@
 
 #include <print.h>
 #include <string.h>
+#include "poly_keymap.h"
 
 // HID report byte offsets
 #define HID_DATA_IDX 2

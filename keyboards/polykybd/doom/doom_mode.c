@@ -36,6 +36,7 @@
 #include "doomkeys.h"           // engine key codes (doom_translate_key)
 #include "doom_weapon_icons.h"  // slave weapon-pad bitmaps (shareware sprites)
 #include "hardware/structs/psm.h"
+#include "../poly_keymap.h"
 
 #ifdef POLYKYBD_DOOM
 
@@ -289,7 +290,6 @@ static const uint16_t TRIGGER_SEQ[]   = {KC_I, KC_D, KC_D, KC_Q, KC_D};
 
 // poly_keymap.c — the shared suspend path (displays off, state flushed); the
 // screensaver deadline hands over to it so its end state matches the pulse's.
-void poly_suspend(void);
 
 static bool     s_active;
 static bool     s_screensaver;  // this session is the attract screensaver

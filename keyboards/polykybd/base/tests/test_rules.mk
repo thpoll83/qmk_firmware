@@ -22,3 +22,12 @@ fw_up_verdict_INC := \
 	$(POLY_BASE_PATH)/tests \
 	$(POLY_CRC32_PATH) \
 	keyboards/polykybd
+
+# glyph_meta.h is header-only, so this test needs no firmware source — just the
+# header and gfxfont.h. That is the point of the accessors being inline.
+polykybd_glyph_meta_SRC := \
+	$(POLY_BASE_PATH)/tests/glyph_meta_tests.cpp
+
+polykybd_glyph_meta_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

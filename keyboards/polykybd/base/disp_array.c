@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "disp_array.h"
+#include "glyph_meta.h"
 #include <string.h>
 
 //#include "polykybd.h"
@@ -12,6 +13,7 @@
 
 #include "fonts/base_font.h"
 #include "com.h"
+#include "../poly_keymap.h"
 
 #define SSD1306_MEMORYMODE 0x20           ///< See datasheet
 #define SSD1306_COLUMNADDR 0x21           ///< See datasheet
@@ -206,14 +208,14 @@ void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, in
     const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
     if (glyph == NULL || font == NULL) return;
     const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
-    uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
-    int16_t w = pgm_read_byte(&glyph->width);
-    int16_t h = pgm_read_byte(&glyph->height);
+    uint16_t bo = glyph_bitmap_offset(glyph);
+    int16_t w = glyph_width(glyph);
+    int16_t h = glyph_height(glyph);
     // Round up so an odd source width/height keeps its trailing column/row (the
     // 2x2 block at the edge is just partially populated); the sx/sy bounds check
     // below guards the out-of-range half of that block.
     int16_t hw = (w + 1) / 2, hh = (h + 1) / 2;
-    const uint8_t cb = (uint8_t)((h + 7) >> 3);   // column-major page-bytes per column
+    const uint8_t cb = glyph_col_bytes((uint8_t)h);   // column-major page-bytes per column
     for (int16_t dy = 0; dy < hh; ++dy) {
         for (int16_t dx = 0; dx < hw; ++dx) {
             bool lit = false;
@@ -236,10 +238,10 @@ void kdisp_draw_glyph_double_at(const GFXfont *const *fonts, uint8_t num_fonts, 
     const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
     if (glyph == NULL || font == NULL) return;
     const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
-    uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
-    int16_t  w  = pgm_read_byte(&glyph->width);
-    int16_t  h  = pgm_read_byte(&glyph->height);
-    const uint8_t cb = (uint8_t)((h + 7) >> 3);   // column-major page-bytes per column
+    uint16_t bo = glyph_bitmap_offset(glyph);
+    int16_t  w  = glyph_width(glyph);
+    int16_t  h  = glyph_height(glyph);
+    const uint8_t cb = glyph_col_bytes((uint8_t)h);   // column-major page-bytes per column
     for (int16_t sx = 0; sx < w; ++sx) {
         for (int16_t sy = 0; sy < h; ++sy) {
             uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);

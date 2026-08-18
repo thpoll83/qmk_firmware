@@ -73,9 +73,19 @@ OS_DETECTION_ENABLE = yes
 # base/*.c sources live: its consumer (split_fw_up.c) is in this shared list, so a
 # variant that forgot the line would simply fail to link — exactly the split72/split42
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
-# flags applied below, which the per-variant base sources do not.
-POLY_SRC := poly_keymap.c boot_diag.c side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c os_actions.c anim/startup_anim.c base/fw_up_verdict.c
+# flags applied below, which the per-variant base sources do not. The same argument
+# covers emoji/emoji_layer.c and hints/os_hints.c.
+POLY_SRC := poly_keymap.c boot_diag.c side.c state.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c os_actions.c anim/startup_anim.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c
 SRC += $(POLY_SRC)
+
+# emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
+# poly_keymap.c / split_sync.c call into it (emj_*), and they also include layers.h.
+# Both used to live under <variant>/keymaps/default/ — layers.h resolved only through
+# QMK's keymap include path and emoji_layer.c only through that keymap's rules.mk — so
+# every keyboard-level source depended on one particular keymap, and split72:revision2
+# could neither compile nor link. layers.h now sits next to this file.
+# NOTE: ENCODER_MAP_ENABLE deliberately stays per-keymap — `qmk lint --strict` rejects
+# encoder_map as a keyboard-level feature, and the map itself is keymap data.
 
 # Extra compiler warnings for the PolyKybd (non-QMK-core) sources ONLY. QMK already
 # builds with -Wall -Werror globally, but -Wall does NOT include -Wtype-limits — the

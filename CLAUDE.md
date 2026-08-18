@@ -1419,6 +1419,21 @@ catch-up merge.
   the exact failure this workflow was added to remove, so it must not be able to
   recreate it one level up. The loop also continues past a failing suite, so one run
   names every broken suite rather than just the first.
+- ⚠️ **`ghcr.io/qmk/qmk_cli` runs steps under POSIX `sh` (dash), not bash** — the log
+  header says `shell: sh -e {0}`. Write every `run:` in that container POSIX-clean, and
+  **test it with `dash`, not your login shell**; `bash script.sh` passing proves nothing.
+  Two traps, and the second is the dangerous one:
+  - `done <<< "$list"` is a bash **herestring**: dash won't parse it at all —
+    `Syntax error: redirection unexpected`, exit 2. Loud, so it is the good case, but
+    it is what made this workflow's first run red.
+  - `printf … | while read` is the tempting POSIX fix and is **worse**: it parses, but
+    POSIX runs the loop body in a **subshell**, so counters and accumulators are
+    discarded at the `done`. A failing suite would leave the failure list empty and the
+    job would report **green** — which is why the count-zero guard above is not
+    redundant paranoia; it is the only thing that catches this.
+  - `for t in $LIST` (unquoted, from an `env:`) keeps state in the current shell and
+    works in every POSIX shell. Safe here because suite names are makefile identifiers
+    — the harness rejects even a `-`, so they can never contain whitespace.
 
 - **`fw_up_verdict` is the pattern for testing DECISION logic** (as opposed to
   `polymod_ltr559`, which is the pattern for a driver vs a mock bus). It covers the

@@ -1997,39 +1997,37 @@
 //   Shift                    -> full size. ICON_SHIFT is already a 14x16 inline
 //                               icon and matches the others' scaled size.
 //
-// Two columns x two rows, filled right-to-left then top-to-bottom, so a single
-// modifier lands in the top-right corner. A position is the literal ink top-left
-// for THIN/HALF but the baseline cursor for the full-size Shift, so they are per
-// mark and per cell; ALL of them are generated together with the preview render
-// (columns end at x97 and x74, rows start at y0 and y20) — regenerate both
-// rather than nudging one by hand. The left column's widest mark starts at x56,
-// clearing the widest tap legend ("W" ends at x52) by 4px.
-#define MTB_CTRL_L1  U"\x39\x01"   // (57, 1)
-#define MTB_CTRL_L2  U"\x39\x15"   // (57,21)
-#define MTB_CTRL_R1  U"\x50\x01"   // (80, 1)
-#define MTB_CTRL_R2  U"\x50\x15"   // (80,21)
-#define MTB_SHIFT_L1  U"\x3C\x11"   // (60,17)
-#define MTB_SHIFT_L2  U"\x3C\x28"   // (60,40)
-#define MTB_SHIFT_R1  U"\x53\x11"   // (83,17)
-#define MTB_SHIFT_R2  U"\x53\x28"   // (83,40)
-#define MTB_ALT_L1   U"\x38\x01"   // (56, 1)
-#define MTB_ALT_L2   U"\x38\x1F"   // (56,31)
-#define MTB_ALT_R1   U"\x4F\x01"   // (79, 1)
-#define MTB_ALT_R2   U"\x4F\x1F"   // (79,31)
-#define MTB_GUI_WINDOWS_R1  U"\x54\x01"   // (84, 1) ICON_OS_WINDOWS
-#define MTB_GUI_WINDOWS_R2  U"\x54\x1A"   // (84,26) ICON_OS_WINDOWS
-#define MTB_GUI_MACOS_R1  U"\x54\x01"   // (84, 1) TECHNICAL_COMMAND
-#define MTB_GUI_MACOS_R2  U"\x54\x1A"   // (84,26) TECHNICAL_COMMAND
-#define MTB_GUI_LINUX_R1  U"\x55\x01"   // (85, 1) ICON_OS_LINUX
-#define MTB_GUI_LINUX_R2  U"\x55\x15"   // (85,21) ICON_OS_LINUX
-#define MTB_GUI_GNOME_R1  U"\x56\x01"   // (86, 1) ICON_OS_GNOME
-#define MTB_GUI_GNOME_R2  U"\x56\x19"   // (86,25) ICON_OS_GNOME
-#define MTB_GUI_KDE_R1  U"\x53\x01"   // (83, 1) ICON_OS_KDE
-#define MTB_GUI_KDE_R2  U"\x53\x19"   // (83,25) ICON_OS_KDE
-#define MTB_GUI_ANDROID_R1  U"\x4E\x01"   // (78, 1) ICON_OS_ANDROID
-#define MTB_GUI_ANDROID_R2  U"\x4E\x1C"   // (78,28) ICON_OS_ANDROID
-#define MTB_GUI_OTHER_R1  U"\x4E\x01"   // (78, 1) DINGBAT_BLACK_DIA_X
-#define MTB_GUI_OTHER_R2  U"\x4E\x14"   // (78,20) DINGBAT_BLACK_DIA_X
+// Two columns x two rows, anchored BOTTOM-right: one modifier lands in the
+// bottom-right corner (cell RB) and the badge grows up and left from there. The
+// anchor is not cosmetic -- render_key() draws a key's shift preview in the
+// UPPER right (baseline 23, i.e. exactly where row T sits), so a top-anchored
+// badge put its very first mark on top of it. Bottom-anchored, only a 3rd or 4th
+// mark reaches row T, and a 3-modifier mod-tap is already exotic.
+// A position is the literal ink top-left for THIN/HALF but the baseline cursor
+// for the full-size Shift, so they are per mark and per cell; ALL of them are
+// generated together with the preview render (columns END at x97 and x74; row B
+// is bottom-aligned to the last screen row, row T top-aligned at y1) --
+// regenerate both rather than nudging one by hand. The left column's widest mark
+// starts at x56, clearing the widest tap legend ("W" ends at x52) by 4px.
+#define MTB_CTRL_LT  U"\x39\x01"   // (57, 1)
+#define MTB_CTRL_LB  U"\x39\x15"   // (57,21)
+#define MTB_CTRL_RT  U"\x50\x01"   // (80, 1)
+#define MTB_CTRL_RB  U"\x50\x15"   // (80,21)
+#define MTB_SHIFT_LT  U"\x3C\x11"   // (60,17)
+#define MTB_SHIFT_LB  U"\x3C\x28"   // (60,40)
+#define MTB_SHIFT_RT  U"\x53\x11"   // (83,17)
+#define MTB_SHIFT_RB  U"\x53\x28"   // (83,40)
+#define MTB_ALT_LT   U"\x38\x01"   // (56, 1)
+#define MTB_ALT_LB   U"\x38\x1F"   // (56,31)
+#define MTB_ALT_RT   U"\x4F\x01"   // (79, 1)
+#define MTB_ALT_RB   U"\x4F\x1F"   // (79,31)
+#define MTB_GUI_WINDOWS_RB  U"\x54\x1A"   // (84,26) ICON_OS_WINDOWS
+#define MTB_GUI_MACOS_RB  U"\x54\x1A"   // (84,26) TECHNICAL_COMMAND
+#define MTB_GUI_LINUX_RB  U"\x55\x15"   // (85,21) ICON_OS_LINUX
+#define MTB_GUI_GNOME_RB  U"\x56\x19"   // (86,25) ICON_OS_GNOME
+#define MTB_GUI_KDE_RB  U"\x53\x19"   // (83,25) ICON_OS_KDE
+#define MTB_GUI_ANDROID_RB  U"\x4E\x1C"   // (78,28) ICON_OS_ANDROID
+#define MTB_GUI_OTHER_RB  U"\x4E\x14"   // (78,20) DINGBAT_BLACK_DIA_X
 // Each takes one of the position macros above.
 #define MTB_CTRL(pos)      HINT_MOVE(pos) HINT_THIN TECHNICAL_CONTROL
 #define MTB_SHIFT(pos)     HINT_MOVE(pos) ICON_SHIFT

@@ -118,6 +118,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case OSL(_UL):                      return U"Util*\r\v\t" ICON_LAYER;
         case TO(_UL):                       return U"Util\r\v\t" ICON_LAYER;
         case MO(_ADDLANG1):                 return (state_flags & MORE_TEXT) != 0 ? U"Intl" : INTL_LAYER_LEGEND;
+        case KC_LAT_REMAP:                  return (state_flags & MORE_TEXT) != 0 ? U"Map" : INTL_REMAP_LEGEND;
         case KC_F1:                         return U" F1";
         case KC_F2:                         return U" F2";
         case KC_F3:                         return U" F3";

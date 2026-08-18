@@ -6,6 +6,7 @@
 #include "polymod_crc32.h"
 #include "base/fw_staging.h"   // fw_staging_set_fontpack_slot
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
+#include "base/fw_up_verdict.h"  // pure COMMIT-failure classification (unit-tested)
 
 #include <transactions.h>
 #include <print.h>
@@ -30,11 +31,11 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
     chunk_msg.offset = offset;
     memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
     chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
-    uint8_t slave_ack = SYNC_CRC32_ERR;
+    uint8_t slave_ack = SYNC_GIVEUP;   // no answer yet
     for (uint8_t retry = 0; retry < 10; ++retry) {
         fw_up_chunk_reply_t reply;
         memset(&reply, 0, sizeof(reply));
-        reply.ack = SYNC_CRC32_ERR;
+        reply.ack = SYNC_GIVEUP;   // sentinel: transaction_rpc_exec may not write it
         bool ok_rpc = transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(chunk_msg), &chunk_msg,
                                            sizeof(reply), &reply);
         if (ok_rpc && reply.ack == SYNC_ACK && reply.next_offset > offset) {
@@ -78,7 +79,7 @@ static void flash_stage_status(uint8_t in_len, const void* in_data, uint8_t out_
 //
 // Protocol:
 //   New image   : start deferred erase, return SYNC_ACK_SIG ("erase started, not ready").
-//   Re-poll     : SYNC_CRC32_ERR while erasing, SYNC_ACK once complete.
+//   Re-poll     : SYNC_BUSY while erasing, SYNC_ACK once complete.
 //                 s_begun_size/crc are NOT reset on "done" — additional polls of the
 //                 same image return SYNC_ACK without re-triggering the erase, so a
 //                 UART-missed ACK does not cause an unnecessary full re-erase cycle.
@@ -105,21 +106,24 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
                        msg->target == s_begun_target && msg->bundle == s_begun_bundle);
 
     if (!same_image) {
-        s_begun_size   = msg->image_size;
-        s_begun_crc    = msg->image_crc;
-        s_begun_target = msg->target;
-        s_begun_bundle = msg->bundle;
-        // FONTPACK: point the stager at this bundle's fixed slot before erasing.
+        // ⚠️ Resolve and VALIDATE the slot before recording this identity. Caching
+        // s_begun_* first meant a refused bundle was remembered as "begun", so an
+        // identical retry — and send_to_bridge does retry a non-ACK — took the
+        // same_image path below, skipped this validation entirely, found no erase
+        // pending and could ACK a bundle we had just refused, against whatever slot
+        // was last set. Pre-existing; found in review of the refusal relabel.
         if (msg->target == FW_TARGET_FONTPACK) {
             uint32_t slot_off = 0, slot_size = 0;
-            if (fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
-                fw_staging_set_fontpack_slot(slot_off, slot_size);
-            } else {
-                // Unknown bundle id — NACK so we never stage to a stale slot (the
-                // master guards the same way with its slot_ok check).
-                ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+            if (!fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
+                // Unknown bundle id — REFUSE (not a CRC error: the frame was fine,
+                // we understood it and will not stage to a stale slot). Retrying
+                // cannot help; the halves disagree about the bundle layout. Nothing
+                // has been recorded, so a repeat request is refused again.
+                ((poly_sync_reply_t *)out_data)->ack = SYNC_NACK_REFUSED;
                 return;
             }
+            // FONTPACK: point the stager at this bundle's fixed slot before erasing.
+            fw_staging_set_fontpack_slot(slot_off, slot_size);
         } else if (msg->target == FW_TARGET_DOOMWAD) {
             // The doom WHX slot is fixed (upper resource region).
             fw_staging_set_fontpack_slot(FW_DOOMWAD_SLOT_OFF, FW_DOOMWAD_SLOT_SIZE);
@@ -128,6 +132,10 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
             // doom/PACK_DESIGN.md; the slave's drone runs the same pack).
             fw_staging_set_fontpack_slot(FW_DOOMPACK_SLOT_OFF, FW_DOOMPACK_SLOT_SIZE);
         }
+        s_begun_size   = msg->image_size;
+        s_begun_crc    = msg->image_crc;
+        s_begun_target = msg->target;
+        s_begun_bundle = msg->bundle;
         fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx target=%u started erase\n",
                 msg->image_size, msg->image_crc, msg->target);
@@ -135,9 +143,12 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
         return;
     }
 
-    // Re-poll: same image.
+    // Re-poll: same image. SYNC_BUSY, not SYNC_CRC32_ERR — this is a perfectly
+    // normal "not yet", and calling it a CRC error is what made that value
+    // meaningless. The master's decision here is `ack == SYNC_ACK` either way, so
+    // an old master facing this new value still just keeps polling.
     if (fw_staging_erase_pending()) {
-        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_BUSY;
         return;
     }
 
@@ -195,7 +206,10 @@ static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_l
 #else
         bool ok = fw_staging_write_chunk(msg->offset, msg->data, FW_UP_CHUNK_SIZE);
 #endif
-        ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
+        // A rejected write is a REFUSAL, not a CRC error — the frame checked out
+        // above; the stager declined the offset. (The relay still retries, and the
+        // next_offset invariant still guards a stale reply.)
+        ack = ok ? SYNC_ACK : SYNC_NACK_REFUSED;
     }
     fw_staging_note_chunk_call(msg->offset, ack);
     reply->ack         = ack;
@@ -221,7 +235,106 @@ static void flash_stage_commit(uint8_t in_len, const void* in_data, uint8_t out_
     // window, so the master timed out and mis-reported COMMIT as a CRC failure
     // even though the pack loaded. Firmware-target finalize is O(1) (unaffected).
     bool ok = fw_staging_finalize_defer_reload();
-    ((poly_sync_reply_t *)out_data)->ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
+    // A refusal gets SYNC_NACK_REFUSED, NOT SYNC_CRC32_ERR. We answered and the
+    // answer is "no": the master must re-flash, whereas SYNC_CRC32_ERR asks it to
+    // retry — which for a genuinely bad staged image just fails again. The garbled
+    // request above keeps SYNC_CRC32_ERR, because there a retry is exactly right.
+    uint8_t ack = ok ? SYNC_ACK : SYNC_NACK_REFUSED;
+    // Recorded so a STATUS probe can still report this verdict if the reply below
+    // never reaches the master (the case that made the two indistinguishable).
+    fw_staging_note_commit_ack(ack);
+    ((poly_sync_reply_t *)out_data)->ack = ack;
+}
+
+// Read-only STATUS probe of the other half (master side). Returns false when the
+// RPC fails or the reply's own CRC does not check out — a corrupted snapshot must
+// not be believed, since the caller uses it to decide whether a flash landed.
+//
+// Uses transaction_rpc_exec directly: send_to_bridge hardcodes the 1-byte
+// poly_sync_reply_t and cannot carry this bigger struct.
+// The bare RPC. Split out so the logger can still PRINT a snapshot whose CRC does
+// not check out (labelled as suspect) while the decision path below refuses it — a
+// corrupt snapshot is worth seeing but must never be acted on.
+static bool fetch_slave_status(fw_up_status_reply_t *reply) {
+    fw_up_status_request_t req = { .crc32 = 0, .op = FLASH_STAGE_STATUS, .dummy = 0 };
+    memset(reply, 0, sizeof(*reply));
+    return transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(req), &req, sizeof(*reply), reply);
+}
+
+static bool slave_status_crc_ok(const fw_up_status_reply_t *reply) {
+    return fw_up_status_crc_ok(&reply->status, reply->crc32);
+}
+
+bool fw_up_query_slave_status(fw_staging_status_t *out) {
+    if (!out) return false;
+    fw_up_status_reply_t reply;
+    if (!fetch_slave_status(&reply) || !slave_status_crc_ok(&reply)) return false;
+    *out = reply.status;
+    return true;
+}
+
+void fw_up_log_slave_status(const char *tag) {
+    fw_up_status_reply_t reply;
+    if (!fetch_slave_status(&reply)) {
+        uprintf("slave status (%s): RPC FAILED — slave unresponsive\n", tag);
+        return;
+    }
+    // Printed either way; the tag says whether to trust the numbers.
+    const char *suspect = slave_status_crc_ok(&reply) ? "" : " [CRC BAD — values suspect]";
+    const fw_staging_status_t s = reply.status;
+    uprintf("slave status (%s): init=%u active=%u erase_pending=%u erase=%u/%u "
+            "next_off=%lu begin_calls=%u chunk_calls=%u chunk_errs=%u "
+            "last_chunk_off=%lu last_ack=0x%02x last_commit_ack=0x%02x "
+            "pd_calls=%u pd_advances=%u%s\n",
+            tag,
+            (unsigned)s.initialized, (unsigned)s.fw_up_active, (unsigned)s.erase_pending,
+            (unsigned)s.erase_sector_next, (unsigned)s.erase_sector_count,
+            (unsigned long)s.next_offset,
+            (unsigned)s.begin_handler_calls, (unsigned)s.chunk_handler_calls,
+            (unsigned)s.chunk_handler_errors,
+            (unsigned long)s.last_chunk_offset, (unsigned)s.last_chunk_ack,
+            (unsigned)s.last_commit_ack,
+            (unsigned)s.process_deferred_calls, (unsigned)s.process_deferred_advances, suspect);
+}
+
+// Classify a non-ACK COMMIT ack, asking the slave directly when the ack itself is
+// ambiguous. Returns true when the slave REFUSED (a data failure: re-flash), false
+// when this looks like a link failure (retrying the COMMIT is free and usually works).
+//
+// ⚠️ fw_up_active is NOT a usable discriminator on its own: finalize clears it
+// whether it succeeded or refused, so "cleared" is equally consistent with a
+// refusal and with a SUCCESS whose ack was lost in transit. Treating that as a
+// refusal would turn the common lost-ack case — which a single free COMMIT retry
+// fixes — into a full re-stream of the pack. So we read the recorded verdict.
+// The DECISION itself is fw_up_classify_commit_failure() in base/fw_up_verdict.c —
+// pure and unit-tested (base/tests/fw_up_verdict_tests.cpp). What stays here is the
+// I/O the decision needs and the diagnostics a field log is read from.
+bool fw_up_slave_refused_commit(uint8_t slave_ack, const char *tag) {
+    // Short-circuit before any RPC: a refusal is self-describing, and this runs
+    // inside raw_hid_receive() on the main loop.
+    if (fw_up_commit_ack_is_self_describing(slave_ack)) {
+        uprintf("%s: slave REFUSED (ack=0x%02x) -> data failure\n", tag, slave_ack);
+        return true;
+    }
+    fw_staging_status_t s        = {0};
+    bool                status_ok = fw_up_query_slave_status(&s);
+    enum fw_up_commit_verdict verdict =
+        fw_up_classify_commit_failure(slave_ack, status_ok, s.last_commit_ack);
+
+    if (!status_ok) {
+        uprintf("%s: slave ack=0x%02x and the status probe failed too "
+                "-> assuming link failure\n", tag, slave_ack);
+    } else if (verdict == FW_UP_COMMIT_REFUSED) {
+        uprintf("%s: slave ack=0x%02x lost, but its recorded verdict is REFUSED "
+                "(last_commit_ack=0x%02x) -> data failure\n",
+                tag, slave_ack, (unsigned)s.last_commit_ack);
+    } else {
+        uprintf("%s: slave ack=0x%02x, recorded verdict 0x%02x (active=%u next_off=%lu) "
+                "-> link failure, COMMIT is safe to retry\n",
+                tag, slave_ack, (unsigned)s.last_commit_ack,
+                (unsigned)s.fw_up_active, (unsigned long)s.next_offset);
+    }
+    return verdict == FW_UP_COMMIT_REFUSED;
 }
 
 // Single slave-side dispatcher for the flash-staging stream.  Reads the `op`
@@ -263,9 +376,11 @@ void user_sync_reset_handler(uint8_t in_len, const void* in_data, uint8_t out_le
         return;
     }
     if (msg->action == RESET_ACTION_APPLY) {
-        // Install the staged image, then reboot — reject unless a valid image is staged.
+        // Install the staged image, then reboot — reject unless a valid image is
+        // staged. REFUSED, not a CRC error: the master must re-stage, and the log
+        // line it prints (ack=0x%02x) can now say which of the two happened.
         if (!fw_staging_has_valid_staged_image()) {
-            ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+            ((poly_sync_reply_t *)out_data)->ack = SYNC_NACK_REFUSED;
             return;
         }
         fw_staging_arm_apply();    // housekeeping_task_user() → fw_staging_apply_and_reboot()
@@ -281,7 +396,7 @@ void user_sync_reset_handler(uint8_t in_len, const void* in_data, uint8_t out_le
     } else {
         // Unknown action — refuse rather than guess (magic+CRC already passed, so
         // this only happens on a genuinely malformed request).
-        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_NACK_REFUSED;
         return;
     }
     ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;

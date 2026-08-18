@@ -69,8 +69,8 @@ include $(QUANTUM_PATH)/os_detection/tests/rules.mk
 include $(QUANTUM_PATH)/sequencer/tests/rules.mk
 include $(QUANTUM_PATH)/wear_leveling/tests/rules.mk
 include modules/polykybd/polymod_ltr559/tests/rules.mk
-include keyboards/polykybd/hints/tests/test.mk
-include keyboards/polykybd/base/tests/test.mk
+include keyboards/polykybd/hints/tests/test_rules.mk
+include keyboards/polykybd/base/tests/test_rules.mk
 include $(QUANTUM_PATH)/logging/print.mk
 include $(PLATFORM_PATH)/test/rules.mk
 ifneq ($(filter $(FULL_TESTS),$(TEST)),)

@@ -617,6 +617,7 @@ static bool s_picker_latched = false;
 
 // Sets layer state variable tracking the active keyboard layer.
 static void latin_picker_reset_page(void);   // defined with the picker helpers below
+static void latin_remap_cancel(void);        // ditto
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     access_local_layer()->layer = state;
@@ -632,6 +633,9 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         // user can hold Ctrl themselves and page, in which case s_picker_latched is
         // false and the page would survive to the next visit to the layer.
         latin_picker_reset_page();
+        // Same reason: an abandoned remap would otherwise still be showing its
+        // "pick a key" prompt on the next visit to the layer.
+        latin_remap_cancel();
     }
     return state;
 }
@@ -1680,10 +1684,53 @@ static uint8_t latin_page_count(uint8_t row) {
                : (uint8_t)((n + LATIN_PICKER_SLOTS - 1) / LATIN_PICKER_SLOTS);
 }
 
-// The row the picker is currently showing, for the letter last touched.  Both the
+// --- target slots and the assignment indirection ------------------------------
+//
+// A "target" is a key that can carry an Intl variation.  Today that is A..Z and
+// slot == letter index, but the two are deliberately separate concepts: the slot
+// addresses the STORAGE (which key), the letter addresses the TABLE (whose
+// variations).  They diverge the moment a key is remapped -- which is the whole
+// point, since French wants e, and two other keys, all showing forms of e.
+static int8_t latin_target_slot(uint16_t keycode) {
+    if(keycode >= KC_A && keycode <= KC_Z) {
+        return (int8_t)(keycode - KC_A);
+    }
+    // KC_MINUS .. KC_SLASH is a contiguous run of the twelve printable punctuation
+    // keycodes, so no table. Whether a given board can actually REACH one is the
+    // keymap's business: a position masked with KC_NO on _ADDLANG1 (split42's ')
+    // or absent entirely (split42 has no [ ] `) simply never produces the keycode.
+    if(keycode >= KC_MINUS && keycode <= KC_SLASH) {
+        return (int8_t)(LATIN_LETTER_TARGETS + (keycode - KC_MINUS));
+    }
+    return -1;
+}
+
+// The base letter a target key hosts, or -1 for none. A letter defaults to itself;
+// a punctuation key defaults to nothing, so it keeps typing its own symbol until
+// it is deliberately mapped.
+static int8_t latin_slot_letter(int8_t slot) {
+    if(slot < 0) {
+        return -1;
+    }
+    return latin_assign_get(get_global_latin_table()->assign, (uint8_t)slot);
+}
+
+// True when this key currently HOSTS a variation row.  Every letter does by
+// default; a punctuation key only once it has deliberately been mapped, so an
+// unmapped one keeps typing and drawing its own symbol on the Intl layer.  This
+// is the gate the picker and the emit path use -- NOT `keycode >= KC_A`, which
+// was the same test only while the letters were the only targets.
+static bool latin_has_row(uint16_t keycode) {
+    return latin_slot_letter(latin_target_slot(keycode)) >= 0;
+}
+
+// The row the picker is currently showing, for the key last touched.  Both the
 // render and the press path must agree on this, so it lives in one place.
+// ⚠️ Precondition: latin_has_row(last_latin_keycode).  The clamp is only so a
+// stray call can never index latin_ex_map out of bounds.
 static uint8_t latin_picker_row(uint16_t last_latin_keycode, bool upper_case) {
-    return (uint8_t)((upper_case ? 0 : 26) + (last_latin_keycode - KC_A));
+    const int8_t letter = latin_slot_letter(latin_target_slot(last_latin_keycode));
+    return (uint8_t)((upper_case ? 0 : 26) + (letter < 0 ? 0 : letter));
 }
 
 // Absolute variation index for a picker slot on the currently-shown page, or -1
@@ -1710,6 +1757,65 @@ static int8_t latin_picker_index(uint8_t row, uint8_t page, int8_t slot) {
     return (idx < latin_variation_count(row)) ? (int8_t)idx : -1;
 }
 
+// Leave remap mode without changing anything.
+static void latin_remap_cancel(void) {
+    poly_layer_t* ll = access_local_layer();
+    ll->remap_mode   = LATIN_REMAP_OFF;
+    ll->remap_target = 0;
+    request_disp_refresh();
+}
+
+// Point `slot` at `letter`'s variation row, or back at its own letter when the two
+// are the same — so re-picking a key's own letter is the per-key reset, with no
+// separate gesture to learn.
+static void latin_remap_apply(uint8_t slot, uint8_t letter) {
+    // ⚠️ The two bounds are deliberately DIFFERENT. Any target can be remapped, but
+    // only a LETTER can be the source — a punctuation key hosts a letter's row,
+    // never the reverse. The one exception is slot == letter, the "point this key
+    // back at itself" clear, which is the only per-key way to unmap a punctuation
+    // key (it has no own letter to re-pick).
+    if(slot >= LATIN_TARGETS) {
+        return;
+    }
+    if(letter >= LATIN_LETTER_TARGETS && letter != slot) {
+        return;
+    }
+    latin_sync_t* table = access_global_latin_table();
+    latin_assign_set(table->assign, slot, (slot == letter) ? LATIN_ASSIGN_NONE : letter);
+    // The key now indexes a different row, so its stored pick is meaningless there
+    // (and may be past the end of a shorter row). Start it at the first variation
+    // rather than leaving a stale index for latin_variation() to fall back from.
+    latin_pick_set(table->ex, latin_pick_field((int8_t)slot, true),  0);
+    latin_pick_set(table->ex, latin_pick_field((int8_t)slot, false), 0);
+    send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
+    mark_latin_dirty();
+}
+
+// Clear every assignment. Reached by tapping the remap key on the Intl layer
+// WITHOUT opening the mode — see process_record_user.
+//
+// ⚠️ Clears the picks of the REMAPPED slots only, not the whole ex[] array. A key
+// that was never remapped still hosts its own letter, so its pick is still valid
+// and is the user's own choice — wiping it would make "clear the assignments" also
+// silently discard every accent anyone had ever chosen (caught in review, #206).
+// A remapped slot's pick, by contrast, indexes the row it is losing and may be past
+// the end of its own, so that one must go back to 0.
+static void latin_remap_reset_all(void) {
+    latin_sync_t* table = access_global_latin_table();
+    for(uint8_t slot = 0; slot < LATIN_TARGETS; slot++) {
+        // The RAW field, not latin_assign_get(): the getter substitutes the key's
+        // own letter for an unassigned slot, which is exactly the case to skip.
+        if(latin_bits_get(table->assign, LATIN_ASSIGN_BYTES, slot) < LATIN_LETTER_TARGETS) {
+            latin_pick_set(table->ex, latin_pick_field(slot, true),  0);
+            latin_pick_set(table->ex, latin_pick_field(slot, false), 0);
+        }
+    }
+    memset(table->assign, LATIN_ASSIGN_FILL, sizeof(table->assign));
+    send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
+    mark_latin_dirty();
+    request_disp_refresh();
+}
+
 // Back to page 0.  Anything that makes the current page meaningless calls this:
 // picking a variation, changing the letter (a one-page letter would otherwise show
 // a whole row of blanks while page 1 was still selected), and leaving the layer.
@@ -1730,14 +1836,23 @@ static void latin_picker_reset_page(void) {
 // picker now refuses to store an empty slot (see process_record_user), but a byte
 // written before that guard — or a stale/garbage EEPROM — still arrives here.
 static const uint32_t* latin_variation(uint16_t keycode, bool upper_case) {
-    if (keycode < KC_A || keycode > KC_Z) {
+    const int8_t slot = latin_target_slot(keycode);
+    if (slot < 0) {
         return NULL;
     }
-    const uint8_t row = (upper_case ? 0 : 26) + (uint8_t)(keycode - KC_A);
+    // ⚠️ Two DIFFERENT indices. The row comes from the letter this key HOSTS (its
+    // own, unless reassigned); the pick comes from the KEY's own storage slot. They
+    // must not be collapsed back into one: two keys assigned to the same letter
+    // share a row but need independent picks -- that is the entire feature.
+    const int8_t letter = latin_slot_letter(slot);
+    if (letter < 0) {
+        return NULL;                        // punctuation key, not mapped to anything
+    }
+    const uint8_t row = (uint8_t)((upper_case ? 0 : 26) + letter);
     if (latin_ex_map[row][0] == NULL) {
         return NULL;                        // this letter has no variations
     }
-    const uint8_t   idx    = latin_pick_get(get_global_latin_table()->ex, row);
+    const uint8_t   idx    = latin_pick_get(get_global_latin_table()->ex, latin_pick_field(slot, upper_case));
     const uint32_t* chosen = (idx < LATIN_EX_VARIATIONS) ? latin_ex_map[row][idx] : NULL;
     // Fall back when the pick names a slot this build does not have (a stale
     // EEPROM), and ALSO when it names a real variation whose GLYPH is missing --
@@ -1757,7 +1872,78 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     const bool add_lang = get_highest_layer(local_layer->layer)==_ADDLANG1;
     const bool picker_mod = ((local_layer->mods & LATIN_PICKER_MOD) != 0);
     const bool is_letter = keycode>=KC_A && keycode<=KC_Z;
-    if(is_letter && add_lang) {
+
+    // --- letter-remap mode: the board becomes a "which key?" / "which letter?"
+    // prompt.  Everything outside the set being chosen from blanks out, so the only
+    // thing to look at is that set.
+    if(add_lang && local_layer->remap_mode != LATIN_REMAP_OFF) {
+        const int8_t  slot   = latin_target_slot(keycode);
+        const bool    picked = (local_layer->remap_mode == LATIN_REMAP_PICKLTR) &&
+                               (slot >= 0) && ((uint8_t)slot == local_layer->remap_target);
+        // The two steps offer DIFFERENT sets. PICKKEY picks the key to change, so
+        // every TARGET is live — the letters and the twelve punctuation keys alike.
+        // PICKLTR picks the letter that key should host, and only a letter can be a
+        // source, so the punctuation keys go dark again — EXCEPT the one that was
+        // just picked, which has to stay visible (inverted) or the board stops
+        // showing what is being changed.
+        const bool selectable = (local_layer->remap_mode == LATIN_REMAP_PICKKEY) ? (slot >= 0)
+                                                                                 : (is_letter || picked);
+        if(!selectable) {
+            return false;                   // blank — nothing else is pressable now
+        }
+        // ⚠️ Render the inversion, do NOT call kdisp_invert(): matrix_scan_kb toggles
+        // that on every press/release independently of process_record, so a latched
+        // indicator driven through it is undone by the next keypress.  Fill the
+        // ground and erase the glyph out of it instead — and with cy_radius 0, or
+        // the courtyard clear eats a dark halo and the key reads as outlined.
+        if(picked) {
+            kdisp_set_buffer(0xFF);
+            kdisp_set_gfx_erase(true);
+        }
+        // In PICKKEY every target still shows what it currently hosts (so you can
+        // see what you are about to change); in PICKLTR the letters are the SOURCE
+        // menu, so each shows its own plain letter.
+        bool drawn;
+        if(local_layer->remap_mode == LATIN_REMAP_PICKKEY) {
+            const uint32_t* variation = latin_variation(keycode, shift || state.caps_lock);
+            if(variation == NULL) {
+                // A punctuation key that has not been mapped yet hosts nothing —
+                // draw its own symbol, so the set you are choosing from reads as the
+                // actual keyboard rather than a row of holes.
+                variation = translate_keycode(get_local_state()->lang, keycode,
+                                              shift, state.caps_lock);
+            }
+            drawn = (variation != NULL);
+            if(drawn) {
+                kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, variation, 0);
+            }
+        } else if(is_letter) {
+            const uint32_t letter[2] = { (uint32_t)('a' + (keycode - KC_A)), 0 };
+            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, letter, 0);
+            drawn = true;
+        } else {
+            // Only reachable for a PICKED punctuation target (see `selectable`), so
+            // it must draw its own symbol -- 'a' + (keycode - KC_A) would be a
+            // nonsense codepoint here.
+            const uint32_t* sym = translate_keycode(get_local_state()->lang, keycode,
+                                                    shift, state.caps_lock);
+            drawn = (sym != NULL);
+            if(drawn) {
+                kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, sym, 0);
+            }
+        }
+        if(picked) {
+            kdisp_set_gfx_erase(false);     // static flag — leaving it on blanks every later key
+            drawn = true;                   // the filled ground IS the render
+        }
+        return drawn;
+    }
+
+    // ⚠️ Gated on "hosts a row", not on is_letter: a punctuation key that has been
+    // remapped shows its host letter's variation here, and an unmapped one must
+    // fall THROUGH to the normal translate_keycode path below so it keeps drawing
+    // (and typing) its own symbol.
+    if(add_lang && latin_has_row(keycode)) {
         //display the previously selected latin variation of the letter
         const uint32_t* variation = latin_variation(keycode, shift || state.caps_lock);
         if(variation!=NULL) {
@@ -1769,8 +1955,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
     //variation selection on the picker row
     uint16_t local_last_latin_keycode = get_local_last_latin_keycode();
-    const bool picker_open = add_lang && picker_mod &&
-                             local_last_latin_keycode>=KC_A && local_last_latin_keycode<=KC_Z;
+    const bool picker_open = add_lang && picker_mod && latin_has_row(local_last_latin_keycode);
     const int8_t picker_slot = latin_picker_slot(keycode);
     if(picker_slot >= 0) {
         if(picker_open) {
@@ -2456,6 +2641,11 @@ void update_displays(enum refresh_mode mode) {
     // gate is the SYNCED mods bit (poly_layer_t), not the master-only latch static,
     // so the slave inverts its Ctrl too when Ctrl lives on that half.
     const bool picker_open = add_lang && ((mods & LATIN_PICKER_MOD) != 0);
+    // The letter-remap prompt needs the same treatment for the same reason, and
+    // more so: the remap key LATCHES on a tap, so without an inverted keycap
+    // nothing on the board says the mode is open at all (field — "it does latch,
+    // but I did not recognize it as it did not invert").
+    const bool remap_open = add_lang && (local_layer->remap_mode != LATIN_REMAP_OFF);
     //the left side has an offset of 0, the right side an offset of MATRIX_ROWS_PER_SIDE
     const uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
     uint8_t start_row = 0;
@@ -2641,12 +2831,24 @@ void update_displays(enum refresh_mode mode) {
                             kdisp_send_window();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
+                        // ⚠️ The remap prompt blanks the board through render_key(),
+                        // which is only consulted when there is NO static text — so a
+                        // key that HAS one (the remap key itself, and any other legend
+                        // on this layer) sailed straight past it and kept drawing.
+                        // Drop the text here and the existing render_key() blanking
+                        // takes over. The remap key is exempt: it stays visible so it
+                        // can render inverted and offer the way out.
+                        if(remap_open && keycode != KC_LAT_REMAP &&
+                           !(keycode >= KC_A && keycode <= KC_Z)) {
+                            text = NULL;
+                        }
                         // Ctrl while the picker is armed: white ground, legend
                         // erased out of it. Paired reset below — the plotter flags
                         // are static, so leaving erase on would blank every
                         // following keycap on this pass.
-                        const bool invert_key = picker_open &&
-                                                (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL);
+                        const bool invert_key = (picker_open &&
+                                                 (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) ||
+                                                (remap_open && keycode == KC_LAT_REMAP);
                         kdisp_set_buffer(invert_key ? 0xFF : 0x00);
                         if(invert_key) {
                             kdisp_set_gfx_erase(true);
@@ -2992,6 +3194,82 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
     const bool addlang = get_highest_layer(get_local_layer()->layer)==_ADDLANG1;
     const poly_layer_t* global_layer = get_global_layer();
+
+    // --- Intl letter remap ----------------------------------------------------
+    // Runs BEFORE the letter / picker handling below, because in remap mode a
+    // letter press means "this one", not "emit your variation".
+    if(addlang && access_local_layer()->remap_mode != LATIN_REMAP_OFF) {
+        // ⚠️ Modifiers and LAYER keys must fall through — this block used to
+        // `return false` for every release, which swallowed the release of
+        // MO(_ADDLANG1) ITSELF.  QMK therefore never unregistered the layer: Intl
+        // went down and never came back up, so releasing it did not leave the
+        // prompt and there was no way out of the mode (field).  A held Shift was
+        // stuck the same way.  This is the picker's documented "gate the swallow on
+        // OWNERSHIP, not on the keycode" rule, which this block ignored.
+        if(IS_MODIFIER_KEYCODE(keycode) || IS_QK_MOMENTARY(keycode) || IS_QK_TO(keycode)) {
+            return true;
+        }
+        if(!record->event.pressed) {
+            return false;                   // swallow the release of whatever we consumed
+        }
+        const int8_t slot = latin_target_slot(keycode);
+        if(keycode == KC_LAT_REMAP) {
+            latin_remap_cancel();           // tap the remap key again to back out
+        } else if(slot >= 0) {
+            poly_layer_t* ll = access_local_layer();
+            if(ll->remap_mode == LATIN_REMAP_PICKKEY) {
+                ll->remap_target = (uint8_t)slot;
+                ll->remap_mode   = LATIN_REMAP_PICKLTR;
+            } else if((uint8_t)slot == ll->remap_target || slot < LATIN_LETTER_TARGETS) {
+                // Only a LETTER can be a source, so a punctuation key is inert as a
+                // choice here (and renders blank) — with one exception: the TARGET
+                // itself, which is how a key is cleared. For a letter that is
+                // "re-pick your own letter"; for a punctuation key, which has no own
+                // letter, it is the only per-key way back to plain typing. Both land
+                // on LATIN_ASSIGN_NONE inside latin_remap_apply().
+                latin_remap_apply(ll->remap_target, (uint8_t)slot);
+                latin_remap_cancel();
+            }
+            request_disp_refresh();
+        }
+        // Everything else is inert while the prompt is up — the board is a dialog.
+        return false;
+    }
+    if(keycode == KC_LAT_REMAP) {
+        if(record->event.pressed && addlang) {
+            // Shift+remap clears EVERY assignment. Once the board is remapped the
+            // Intl legends no longer match the printed letters, so there has to be
+            // one way back that does not depend on remembering what was changed.
+            // (The per-key reset needs no gesture of its own: re-assigning a key to
+            // its own letter is the same thing, and latin_remap_apply stores
+            // LATIN_ASSIGN_NONE for it.)
+            if((get_mods() & MOD_MASK_SHIFT) != 0) {
+                latin_remap_reset_all();
+                return false;
+            }
+            // Held with Intl: open remap mode. The Intl layer is the only place the
+            // key exists, so there is no "outside the layer" case to guard.
+            poly_layer_t* ll = access_local_layer();
+            ll->remap_mode   = LATIN_REMAP_PICKKEY;
+            ll->remap_target = 0;
+            // ⚠️ The prompt swallows every non-modifier release from here on, so a key
+            // QMK had ALREADY registered when the mode opened would never be
+            // unregistered — the host would hold it down and auto-repeat until USB
+            // dropped. Reachable: a letter with no variation falls through to QMK on
+            // this layer, so it can genuinely be down at this moment. Same remedy the
+            // firmware-confirm prompt and doom_begin() use for the same reason.
+            clear_keyboard();
+            // Drop the variation picker if it was open: the two prompts would
+            // otherwise both claim the keycaps.
+            if(s_picker_latched) {
+                unregister_mods(MOD_MASK_CTRL);
+                s_picker_latched = false;
+            }
+            latin_picker_reset_page();
+            request_disp_refresh();
+        }
+        return false;
+    }
     // The latch toggles on the PRESS, so the release of the tap that ARMED it must
     // be swallowed too — otherwise QMK unregisters the modifier we just registered
     // and the latch is over before the finger lifts.
@@ -3042,6 +3320,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 return true;   // let QMK's QK_REBOOT handler reset the master
             }
             case KC_A ... KC_Z:
+            case KC_MINUS ... KC_SLASH:
+                // A punctuation key is a target too, but ONLY once it has been
+                // mapped. Until then it must behave exactly as it does everywhere
+                // else — never become the picker's subject, never swallow its own
+                // keystroke — so it leaves here before touching any of that. The
+                // guard is a no-op for letters, which always host themselves.
+                if(!latin_has_row(keycode)) {
+                    break;
+                }
                 // A different letter has a different variation count, so the page
                 // that was showing may not exist on it.  Reset here rather than in
                 // the picker-open branch below: this case runs on EVERY letter press,
@@ -3109,7 +3396,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             // elsewhere in the enum, so the picker slots are resolved by helper.
             const int8_t pick_slot = latin_picker_slot(keycode);
             if(pick_slot >= 0) {
-                if( last_latin_keycode>=KC_A && last_latin_keycode<=KC_Z) {
+                if( latin_has_row(last_latin_keycode)) {
                     const bool pick_upper = ((get_mods() & MOD_MASK_SHIFT) != 0) || global_layer->led_state.caps_lock;
                     const uint8_t pick_row = latin_picker_row(last_latin_keycode, pick_upper);
                     // Only the slots that exist are drawn on the picker keycaps
@@ -3125,9 +3412,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                         // The ABSOLUTE variation index is what gets stored, not the
                         // slot — so a pick made on page 1 still reads back correctly,
                         // and on a variant with a different LATIN_PICKER_SLOTS.
-                        // The field index IS the latin_ex_map row, so the two can
-                        // never disagree about which case is being written.
-                        latin_pick_set(global_latin_table->ex, pick_row, (uint8_t)pick_idx);
+                        // ⚠️ Stored against the KEY's field, read from the HOSTED
+                        // row (pick_row above). Writing it at pick_row would work
+                        // only while nothing is remapped, then silently overwrite
+                        // the pick of whichever key owns that letter.
+                        const int8_t pick_target = latin_target_slot(last_latin_keycode);
+                        latin_pick_set(global_latin_table->ex, latin_pick_field(pick_target, pick_upper), (uint8_t)pick_idx);
                         send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
 
                         // "or an alternative character has been selected"
@@ -3145,7 +3435,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             switch(keycode) {
                 case KC_LAT_PAGE_PREV:
                 case KC_LAT_PAGE_NEXT:
-                    if( last_latin_keycode>=KC_A && last_latin_keycode<=KC_Z) {
+                    if( latin_has_row(last_latin_keycode)) {
                         const bool pg_upper = ((get_mods() & MOD_MASK_SHIFT) != 0) || global_layer->led_state.caps_lock;
                         const uint8_t pages = latin_page_count(latin_picker_row(last_latin_keycode, pg_upper));
                         if(pages > 1) {
@@ -3169,6 +3459,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                     }
                     break;
                 case KC_A ... KC_Z:
+                case KC_MINUS ... KC_SLASH:
+                    // Switching the picker's subject: redraw so the slots show the
+                    // new row. Punctuation is included because a mapped one is a
+                    // subject like any letter; an unmapped one already left the
+                    // outer switch without becoming one, so this is just a repaint.
                     request_disp_refresh();
                     break;
                 default:
@@ -3655,24 +3950,94 @@ void keyboard_post_init_user(void) {
     // carried forward every time the other case is re-picked.
     latin_sync_t* latin_table = access_global_latin_table();
     bool latin_normalised = false;
-    if(ee.latin_pick_migrated == LATIN_PICK_MIGRATED) {
-        memcpy(latin_table->ex, ee.latin_ex_wide, sizeof(latin_table->ex));
+    // ⚠️ The assignment map MUST be gated on the version byte — do NOT infer "never
+    // written" from the bytes themselves. An earlier version of this relied on
+    // LATIN_ASSIGN_NONE being all-bits-set and an unwritten EEPROM reading 0xFF;
+    // that is wrong for this backend. QMK's wear-levelling normalises its backing
+    // store so cleared bytes arrive as ZERO (quantum/wear_leveling/wear_leveling.c
+    // clears the cache with memset(...,0) and requires a 0xFF store to return the
+    // complement), so the map read back as all 0x00 = "every key hosts letter 0",
+    // and every keycap on the Intl layer showed a variation of 'a' (field, first
+    // flash). LATIN_PICK_INTERLEAVED is only ever stamped by firmware that writes
+    // this field in the same breath, so it is the one trustworthy witness that the
+    // bytes mean anything.
+    // ⚠️ The letter block is copied at LATIN_*_BASE_BYTES, not sizeof(): EEPROM
+    // keeps the letters and the punctuation apart so the letter block can keep the
+    // size and offset it shipped with (see state.h). The punctuation half of both
+    // arrays is filled from the ext block further down — unconditionally, because
+    // the ASSIGN split is not byte-aligned (26 x 6 = 156 bits), so the 20th base
+    // byte carries four bits of the first punctuation field with it.
+    if(ee.latin_pick_migrated == LATIN_PICK_ASSIGN_OK) {
+        memcpy(latin_table->assign, ee.latin_assign, LATIN_ASSIGN_BASE_BYTES);
+    } else {
+        // Includes LATIN_PICK_INTERLEAVED, whose stored map is the persisted
+        // all-zero garbage described in state.h — discarding it is the recovery.
+        memset(latin_table->assign, LATIN_ASSIGN_FILL, sizeof(latin_table->assign));
+        latin_normalised = true;           // re-stamp at the next flush
+    }
+    if(ee.latin_pick_migrated == LATIN_PICK_ASSIGN_OK ||
+       ee.latin_pick_migrated == LATIN_PICK_INTERLEAVED) {
+        memcpy(latin_table->ex, ee.latin_ex_wide, LATIN_PICK_BASE_BYTES);
+    } else if(ee.latin_pick_migrated == LATIN_PICK_MIGRATED) {
+        // Re-index case-BLOCKED (case*26 + letter) to case-INTERLEAVED (slot*2 +
+        // case). Same 52 values, same width -- only the field numbering moves, so
+        // every pick is preserved.
+        memset(latin_table->ex, 0, sizeof(latin_table->ex));
+        for(uint8_t i = 0; i < 26; i++) {
+            latin_pick_set(latin_table->ex, latin_pick_field(i, true),  latin_bits_get(ee.latin_ex_wide, LATIN_PICK_BASE_BYTES, i));
+            latin_pick_set(latin_table->ex, latin_pick_field(i, false), latin_bits_get(ee.latin_ex_wide, LATIN_PICK_BASE_BYTES, (uint8_t)(26 + i)));
+        }
+        latin_normalised = true;           // force the flush that stamps the new version
     } else {
         // One-time widening of the legacy nibble pairs (one byte per letter, high
         // nibble = uppercase) into the 6-bit fields. Every legacy value is < 16 so
         // it lands in the wider field unchanged and the user keeps their picks.
         memset(latin_table->ex, 0, sizeof(latin_table->ex));
         for(uint8_t i = 0; i < 26; i++) {
-            latin_pick_set(latin_table->ex, i,      (uint8_t)(ee.latin_ex[i] >> 4));
-            latin_pick_set(latin_table->ex, 26 + i, (uint8_t)(ee.latin_ex[i] & 0x0F));
+            latin_pick_set(latin_table->ex, latin_pick_field(i, true),  (uint8_t)(ee.latin_ex[i] >> 4));
+            latin_pick_set(latin_table->ex, latin_pick_field(i, false), (uint8_t)(ee.latin_ex[i] & 0x0F));
         }
-        latin_normalised = true;           // force the flush that stamps the sentinel
+        latin_normalised = true;
     }
-    for(uint8_t row = 0; row < LATIN_PICK_FIELDS; row++) {
-        const uint8_t idx = latin_pick_get(latin_table->ex, row);
-        if(idx >= LATIN_EX_VARIATIONS || latin_ex_map[row][idx] == NULL) {
-            latin_pick_set(latin_table->ex, row, 0);
-            latin_normalised = true;
+    // The punctuation targets, from their own appended block. An EEPROM written
+    // before they existed reads this as zeros (wear-levelling clears to 0, NOT to
+    // 0xFF — see state.h), which is why "never written" is decided by the format
+    // byte and not by the bytes: zeroed assignments would mean "every punctuation
+    // key hosts A", the exact failure the letter map already shipped once.
+    if(ee.latin_ext_fmt == LATIN_EXT_OK) {
+        memcpy(latin_table->ex + LATIN_PICK_BASE_BYTES, ee.latin_ex_ext, LATIN_PICK_EXT_BYTES);
+        for(uint8_t i = 0; i < LATIN_PUNCT_TARGETS; i++) {
+            latin_assign_set(latin_table->assign, (uint8_t)(LATIN_LETTER_TARGETS + i),
+                             latin_bits_get(ee.latin_assign_ext, LATIN_ASSIGN_EXT_BYTES, i));
+        }
+    } else {
+        memset(latin_table->ex + LATIN_PICK_BASE_BYTES, 0, LATIN_PICK_EXT_BYTES);
+        for(uint8_t i = 0; i < LATIN_PUNCT_TARGETS; i++) {
+            latin_assign_set(latin_table->assign, (uint8_t)(LATIN_LETTER_TARGETS + i), LATIN_ASSIGN_NONE);
+        }
+        latin_normalised = true;           // stamp the ext block at the next flush
+    }
+    // ⚠️ Validate each pick against the row its key actually HOSTS, not against the
+    // field index. Those are the same number only while every key is unassigned;
+    // once a key is remapped, checking latin_ex_map[field] would validate the pick
+    // against the wrong letter and zero perfectly good choices.
+    for(uint8_t slot = 0; slot < LATIN_TARGETS; slot++) {
+        const int8_t letter = latin_assign_get(latin_table->assign, slot);
+        for(uint8_t c = 0; c < 2; c++) {
+            const bool    upper = (c == 0);
+            const uint8_t field = latin_pick_field(slot, upper);
+            const uint8_t idx   = latin_pick_get(latin_table->ex, field);
+            // An unassigned punctuation key hosts no row at all, so there is nothing
+            // to validate against — its pick must simply be 0, ready for whatever it
+            // is later mapped to.
+            const bool bad = (letter < 0)
+                                 ? (idx != 0)
+                                 : (idx >= LATIN_EX_VARIATIONS ||
+                                    latin_ex_map[(uint8_t)((upper ? 0 : 26) + letter)][idx] == NULL);
+            if(bad) {
+                latin_pick_set(latin_table->ex, field, 0);
+                latin_normalised = true;
+            }
         }
     }
     if(latin_normalised) {
@@ -3768,7 +4133,15 @@ void eeconfig_init_user(void) {
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.
     memset(ee.latin_ex_wide, 0, sizeof(ee.latin_ex_wide));
-    ee.latin_pick_migrated = LATIN_PICK_MIGRATED;
+    ee.latin_pick_migrated = LATIN_PICK_ASSIGN_OK;
+    // ⚠️ LATIN_ASSIGN_FILL, NOT the struct-wide {0}: a zeroed map reads as "every
+    // key assigned to A" and the whole Intl layer shows A's variations.
+    memset(ee.latin_assign, LATIN_ASSIGN_FILL, sizeof(ee.latin_assign));
+    // Same for the punctuation block, and for the same reason — plus its own format
+    // byte, so a fresh EEPROM is born with the extension already valid.
+    memset(ee.latin_ex_ext, 0, sizeof(ee.latin_ex_ext));
+    memset(ee.latin_assign_ext, LATIN_ASSIGN_FILL, sizeof(ee.latin_assign_ext));
+    ee.latin_ext_fmt = LATIN_EXT_OK;
     // Empty MRU recents: the serialised form uses 0 == empty for both lists, so
     // a zeroed block reads back as "no recent" (no stray category-0 / lang-0).
     memset(ee.mru_emoji, 0, sizeof(ee.mru_emoji));

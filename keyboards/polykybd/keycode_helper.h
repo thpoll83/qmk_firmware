@@ -21,6 +21,16 @@
 // frame turned out to add nothing the letters were not already saying.
 #define INTL_LAYER_LEGEND   U"\x130\xF1\x21B\x142"   // Intl, spelled in accented latin
 #define INTL_PICKER_LEGEND  U"\xC1\xBB\xC6"           // Á»Æ — Ctrl: pick another variation
+// à»ñ — reassign which LETTER this key hosts (vs Á»Æ, which picks another form of
+// the SAME letter). Same "»" = "becomes" idiom, lower case and a different letter
+// on the right, so the pair reads as one family without looking identical.
+// ⚠️ à, NOT a: kdisp_write_gfx_char baseline-aligns every glyph by
+// `font->yAdvance - fonts[0]->yAdvance`, so glyphs from DIFFERENT fonts land on
+// different baselines. Plain 'a' is in _Base_ (yAdvance 37 => -3px) while » and ñ
+// are in _SupAndExtA_ (44 => +4px), which sat the 'a' SEVEN pixels high. Á»Æ above
+// is even only because all three of its glyphs are Latin-1, i.e. one font. Keep
+// every glyph in a multi-glyph legend inside one font, or position it explicitly.
+#define INTL_REMAP_LEGEND   U"\xE0\xBB\xF1"
 
 /*[[[cog
 import cog
@@ -100,6 +110,11 @@ enum my_keycodes {
     // the position is the same muscle memory on split72 (12 slots) and split42 (10).
     KC_LAT_PAGE_PREV,
     KC_LAT_PAGE_NEXT,
+    // Reassign which LETTER a key hosts on the Intl layer, so several keys can carry
+    // variations of the same letter (French wants e, è, é and ê at once). Held with
+    // Intl it opens remap mode: pick the key, then pick the letter; Shift+it clears
+    // every assignment. See latin_remap_* in poly_keymap.c.
+    KC_LAT_REMAP,
     /*[[[cog
         # Joined for the same reason as the KC_LAT block above — no trailing space.
         cog.out(", ".join("KCL_ENUS = QK_USER_0" if lang == "ENUS" else f"KCL_{lang}"
@@ -203,8 +218,8 @@ static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // appended after it, so the two asserts above silently stopped covering the tail
 // they exist to bound.  Re-anchor these whenever something is appended to the
 // QK_KB_0 block.
-static_assert((int)KC_LAT_PAGE_NEXT <= (int)QK_KB_MAX, "Too many custom QK key codes");
-static_assert((int)KC_LAT_PAGE_NEXT < (int)KCL_ENUS, "Overlap detected");
+static_assert((int)KC_LAT_REMAP <= (int)QK_KB_MAX, "Too many custom QK key codes");
+static_assert((int)KC_LAT_REMAP < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 

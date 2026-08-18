@@ -1,9 +1,10 @@
-# NOTE: this file is test.mk, NOT rules.mk, and must stay that way.
-# qmk ci-validate-keyboard-targets flags every rules.mk under keyboards/
-# whose directory has no keyboard.json as a "Legacy target", so naming it
-# rules.mk (the convention used by quantum/*/tests and modules/*/tests, which
-# live outside keyboards/) fails the lint job. builddefs/build_test.mk includes
-# this by explicit path, so the name is free.
+# ⚠️ This file is deliberately NOT called rules.mk, and renaming it back breaks CI.
+# qmk ci-validate-keyboard-targets globs `keyboards/**/rules.mk` and treats every hit
+# as a keyboard unless the path contains a directory named keymaps, common or lib —
+# there is no exemption for tests, because upstream keeps none under keyboards/. So a
+# rules.mk here fails the lint job with "keyboards/polykybd/hints/tests::Legacy target
+# detected". The include in builddefs/build_test.mk names this file explicitly, so the
+# name is free.
 
 POLYKYBD_HINTS_PATH := keyboards/polykybd/hints
 

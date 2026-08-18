@@ -25,33 +25,9 @@
 // first reports ready) so we can tell from the master serial log whether
 // the slave is alive at all, whether the chunk handler ran, and what its
 // next_offset / counters look like.  See FW_UP_DEBUG_NOTES.md.
-static void fw_up_log_slave_status(const char *tag) {
-    fw_up_status_request_t req = { .crc32 = 0, .op = FLASH_STAGE_STATUS, .dummy = 0 };
-    fw_up_status_reply_t   reply;
-    memset(&reply, 0, sizeof(reply));
-    // Use transaction_rpc_exec directly — send_to_bridge hardcodes the
-    // 1-byte poly_sync_reply_t and can't carry our bigger status struct.
-    bool ok = transaction_rpc_exec(USER_SYNC_FLASH_STAGE,
-                                   sizeof(req), &req,
-                                   sizeof(reply), &reply);
-    if (!ok) {
-        uprintf("slave status (%s): RPC FAILED — slave unresponsive\n", tag);
-        return;
-    }
-    const fw_staging_status_t *s = &reply.status;
-    uprintf("slave status (%s): init=%u active=%u erase_pending=%u erase=%u/%u "
-            "next_off=%lu begin_calls=%u chunk_calls=%u chunk_errs=%u "
-            "last_chunk_off=%lu last_ack=0x%02x pd_calls=%u pd_advances=%u\n",
-            tag,
-            (unsigned)s->initialized, (unsigned)s->fw_up_active, (unsigned)s->erase_pending,
-            (unsigned)s->erase_sector_next, (unsigned)s->erase_sector_count,
-            (unsigned long)s->next_offset,
-            (unsigned)s->begin_handler_calls, (unsigned)s->chunk_handler_calls,
-            (unsigned)s->chunk_handler_errors,
-            (unsigned long)s->last_chunk_offset, (unsigned)s->last_chunk_ack,
-            (unsigned)s->process_deferred_calls,
-            (unsigned)s->process_deferred_advances);
-}
+// fw_up_log_slave_status() and the STATUS probe behind it now live in
+// split_fw_up.c, shared with the font-pack COMMIT path (which needs the same
+// probe to tell a slave refusal from a dropped acknowledgement).
 
 bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
     switch (data[1]) {
@@ -98,7 +74,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // the QMK main loop advance both deferred erases between polls.
             uint8_t slave_ack = master_ok
                 ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
-                : SYNC_CRC32_ERR;
+                : SYNC_GIVEUP;   // never asked — the master's own image is invalid
             bool slave_ok    = (slave_ack == SYNC_ACK);
             bool master_done = !fw_staging_erase_pending();   // master's own staging erased?
 
@@ -126,8 +102,15 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // print a snapshot so we can see whether erase_sector_next is
             // actually advancing.  Without this the slave can be stuck and
             // the only visible signal is "slave_ack=0x35" forever.
+            // ⚠️ Accept SYNC_CRC32_ERR as well as SYNC_BUSY. The slave now answers
+            // SYNC_BUSY while erasing, but the two halves can transiently run
+            // DIFFERENT firmware (a fw apply reboots the master first — the
+            // 2026-06-22 boot-splash hang), and an older slave still sends
+            // SYNC_CRC32_ERR here. Only this progress counter cares: the functional
+            // decision above is `slave_ack == SYNC_ACK`, so every non-ACK value
+            // keeps polling regardless, in either direction of mismatch.
             static uint16_t s_pending_poll_count = 0;
-            if (!slave_ok && slave_ack == SYNC_CRC32_ERR) {
+            if (!slave_ok && (slave_ack == SYNC_BUSY || slave_ack == SYNC_CRC32_ERR)) {
                 if ((++s_pending_poll_count & 0x0F) == 0) {
                     fw_up_log_slave_status("begin-pending");
                 }
@@ -187,7 +170,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // ended up one chunk behind and rejected the whole rest of the stream
             // (2026-06-10, updates dying at 6% / 83%).  A duplicate re-send of an
             // already-staged chunk has next_offset > offset and passes (idempotent).
-            uint8_t slave_ack = fw_up_relay_chunk_to_slave(offset, chunk_data, "FW_UP_CHUNK") ? SYNC_ACK : SYNC_CRC32_ERR;
+            uint8_t slave_ack = fw_up_relay_chunk_to_slave(offset, chunk_data, "FW_UP_CHUNK") ? SYNC_ACK : SYNC_GIVEUP;
             // First-failure diagnostic: when a chunk doesn't reach the slave,
             // immediately query the slave's internal state so we can tell from
             // the master serial log whether the slave is fully hung (status RPC
@@ -286,6 +269,13 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                                                      sizeof(commit_msg), 10);
             bool master_ok = fw_staging_finalize();   // also clears fw_up_active + restarts master core1
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
+            // The firmware-update COMMIT keeps its four statuses (a fifth for "the
+            // slave refused" would need a matching host change), but the distinction
+            // is now at least DIAGNOSABLE: this logs whether a non-ACK slave really
+            // refused or just lost its answer, which the single '!' cannot say.
+            if (!ok && slave_ack != SYNC_ACK && !fw_staging_awaiting_confirm()) {
+                (void)fw_up_slave_refused_commit(slave_ack, "FW_UP_COMMIT");
+            }
             memset(data, 0, length);
             // Four outcomes, not two. '?' means "waiting for the user to confirm an
             // unsigned image on the keyboard" (re-poll me); 'S' distinguishes

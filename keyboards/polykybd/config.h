@@ -105,8 +105,15 @@
 #define RP2040_BOOTLOADER_DOUBLE_TAP_RESET_TIMEOUT 1000U
 
 // Master to slave:
-#define RPC_M2S_BUFFER_SIZE 72
-// Slave to master:
+// ⚠️ This is a CAPACITY CAP, not a transfer size — transaction_rpc_exec() puts only
+// the caller's `initiator2target_buffer_size` bytes on the wire, so raising it costs
+// RAM in split_shared_memory_t and nothing per transaction.  It is also a SILENT
+// ceiling: an oversized payload makes transaction_rpc_exec() `return false` before
+// sending anything, and the bulk send_to_bridge() call sites discard the ack — so the
+// halves just diverge with no log line.  96 fits the largest payload, latin_sync_t
+// (90 B, asserted in state.h); the next largest is the 72 B doom mirror.
+#define RPC_M2S_BUFFER_SIZE 96
+// Slave to master: replies are a single ack byte, so this needs no headroom.
 #define RPC_S2M_BUFFER_SIZE 72
 
 // During fw_up the slave runs a deferred sector-by-sector erase (~50 ms per
@@ -129,7 +136,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.13.1"
+#define FW_VERSION "0.14.7"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK

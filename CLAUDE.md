@@ -47,6 +47,17 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     as reviewed. There is no way to get it reviewed short of splitting the PR — so
     for a merge PR, treat the **build + HIL checks and hardware testing as the only
     real verification**, and don't count the green board as review cover.
+  - ⚠️ **A STACKED PR gets no automatic review at all** — *"Review skipped — Auto
+    reviews are disabled on base/target branches other than the default branch."*
+    This is a **fourth** no-review mode (alongside the rate limit, the <10-stars
+    repo, and the >100-file skip) and it is **guaranteed, not occasional**: any PR
+    whose base is another feature branch is silently unreviewed for as long as it is
+    stacked. Seen on #211 (2026-08-17), stacked on #210. Two ways out, and prefer the
+    first: **let the parent merge** — GitHub then retargets the child to `PolyKybd`
+    and auto-review applies again (confirm a review actually lands; a base change may
+    not itself trigger one). Otherwise spend a slot on `@coderabbitai review`, which
+    works on a stacked PR but costs the same org-wide budget as any other request.
+    ⚠️ Do **not** read the resulting quiet board as "no findings" — nothing read it.
   - ⚠️ **Sourcery's rate-limit is QUIETER than CodeRabbit's: the `Sourcery review`
     check run goes GREEN (`success`) while no review happened.** When its weekly
     diff-character budget is spent it submits a `COMMENTED` review whose entire body
@@ -116,6 +127,17 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     an empty directory`, and carries on to a doomed build (2026-08-12).
 - **Build**: `qmk compile -kb polykybd/split72 -km default` (or `make polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
 - **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
+  - ⚠️ **Put the commit sha in the FILENAME — every test build reports the same
+    `FW_VERSION`, so they are otherwise indistinguishable once flashed.** `FW_VERSION`
+    only moves on the post-merge auto-bump, so a session with several hardware rounds
+    hands over N files that all answer `0.13.1` to `polyctl fw version` and carry
+    near-identical names (`…_fix` / `…_legend` / `…_invert`). That cost a full round
+    (2026-08-13): a correct build was reported as "I did not see the new behavior",
+    and the only way to settle it was to md5 the delivered file against a fresh
+    rebuild and grep the image for a changed string literal. `split72_<sha>_<slug>.bin`
+    takes the ambiguity away. Better still, when a change alters something **visible
+    on a keycap**, say which pixel tells the builds apart — that is a check the user
+    can run without any tooling.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 - ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk` and is NOT on
@@ -255,16 +277,38 @@ inherited-upstream noise:
   ```
   ⚠️ Drop `keyboards/polykybd/tools/__pycache__` first or it shows up as a false
   positive in the ignored-files list (CI checks out clean, so it never sees it).
-  - ⚠️ **The lint job runs `format-c` (clang-format) as well as `format-text`, and
-    the container can only run one of them — so "format clean" locally can be a
-    FALSE PASS.** `qmk format-text` needs **`dos2unix`, which is not installed**
-    (`FileNotFoundError: 'dos2unix'`); its job is only line endings + trailing
-    newline, which `grep -qP '\r'` and `[ -n "$(tail -c1 f)" ]` check by hand. The
-    *other* half, `qmk format-c`, is what actually fails PRs — with
-    `File '…' Requires Formatting` per file — and `clang-format` **is** installed.
-    Check the C/C++ files you touched with
-    `clang-format --dry-run -Werror <files>` before pushing (2026-08-12: verifying
-    only the line endings let a trailing-comment-spacing failure through to CI).
+  - ⚠️ **WHICH formatter runs is decided by the changed PATHS, and clang-format does
+    NOT cover `keyboards/**`.** An earlier version of this file said "the lint job runs
+    `format-c` as well as `format-text`" and told you to clang-format every C file you
+    touched. That is wrong for keyboard work, and following it means reformatting files
+    CI never looks at. The actual wiring (read the three workflows, verified
+    2026-08-17):
+    - **`lint.yml`** ("PR Lint keyboards") triggers on `keyboards/**` and runs
+      **`qmk format-text` only**, then fails any changed file that `git diff` shows as
+      modified — that is where `File '…' Requires Formatting` comes from.
+    - **`format.yml`** ("PR Lint Format") is the one that runs clang-format, and its
+      `paths:` are `drivers/ lib/arm_atsam/ lib/lib8tion/ lib/python/ modules/
+      platforms/ quantum/ tests/ tmk_core/` — **no `keyboards/`**.
+    - **`format_push.yml`** only fires on pushes to `master`/`develop`, i.e. the
+      upstream-mirror branches, never on `PolyKybd` or a `claude/**` PR.
+    - So the 2026-08-12 clang-format failure was real but path-specific: that change
+      extracted the LTR-559 driver into **`modules/`**, which `format.yml` does cover.
+      **Rule: clang-format only what you put under those paths.**
+  - ⚠️ **Corollary — do NOT clang-format a new file under `keyboards/`.** The
+    container's clang-format 18 disagrees with the prevailing style there on ~every
+    file (`.clang-format` sets `ColumnLimit: 1000` and `AlignConsecutive*: true`, so it
+    unwraps hand-wrapped signatures and collapses aligned `#define` columns). The
+    version-skew test in the next bullet needs a base version to compare against, which
+    a new file does not have — the check that replaces it is **whether the same
+    objection reproduces on a neighbouring committed file**. It does: the aligned
+    `#define SYNC_ACK_SIG    0b…` block is flagged identically in
+    `origin/PolyKybd:keyboards/polykybd/split_sync.h`, which CI has been passing for
+    months.
+  - `qmk format-text` itself cannot be run in the container — it needs **`dos2unix`,
+    which is not installed** (`FileNotFoundError: 'dos2unix'`). Its whole job is line
+    endings + a trailing newline, so check those by hand:
+    `grep -qP '\r' <file>` (must not match) and `[ -n "$(tail -c1 <file>)" ]` (must be
+    false, i.e. the file ends in a newline).
   - ⚠️ **The container's clang-format is a DIFFERENT VERSION from CI's, so it flags
     files CI accepts — do not "fix" those.** Local is clang-format 18; it wanted to
     reformat a file the lint job had passed. **The test is whether the same file is
@@ -775,6 +819,38 @@ touching at a **0px** gap, while 4 rows sat unused under the bottom row.
 ### Split synchronisation
 Seven custom QMK transaction IDs (`USER_SYNC_POLY_DATA`, `USER_SYNC_OVERLAY_DATA`, `USER_SYNC_COMPRESSED_DATA`, `USER_SYNC_ROI_DATA`, etc.) carry state and overlay data to the slave half over UART with CRC32 validation and up to 10 retries.
 
+⚠️ **`RPC_M2S_BUFFER_SIZE` is a SILENT CEILING on every one of them, and it is a
+CAPACITY, not a transfer size.** Two independent facts, both easy to get backwards:
+
+- **Outgrowing it does not fail loudly.** `transaction_rpc_exec()`
+  (`quantum/split_common/transactions.c`) checks `initiator2target_buffer_size >
+  RPC_M2S_BUFFER_SIZE` and **returns false before sending anything** — while the bulk
+  `send_to_bridge()` call sites discard the ack (the *discarding* sibling of the
+  "never bool-test `send_to_bridge()`" rule). So a struct that grows past the cap
+  produces a master that applies the change and a slave that never hears it, with
+  **nothing in the log**. Caught in review, 2026-08-13: `latin_sync_t` went 63 → 90 B
+  when the Intl remap gained the punctuation targets. `state.h` now carries a
+  `static_assert(sizeof(latin_sync_t) <= RPC_M2S_BUFFER_SIZE)`; add one for any
+  struct that can grow.
+- **Raising it costs RAM and nothing else — measured, not reasoned.** The constant
+  appears in exactly three places in QMK: the array declaration and the two rejection
+  checks. Both ends size the real transfer from `rpc_info.payload.m2s_length`, i.e.
+  the caller's own byte count. Verified by building the same tree at 96 and 128 and
+  diffing the disassembly: `.text` identical in size, `.bss` +32 (exactly the delta),
+  and of 954 differing lines **922 are `.word` RAM address literals**; the only real
+  instruction changes are the `cmp` bounds check and two `adds` offsets into shmem.
+  **No length, loop-count or transfer-size instruction changes anywhere in the
+  image** — so unrelated traffic (matrix scan, pointing pull, overlay bursts) is
+  byte-for-byte unaffected. Raised 72 → 96 in the same change; the monolith's `.heap`
+  went 3852 → 3828.
+
+⚠️ **The overlay path sits 3 bytes under the old cap — check it before adding a
+field.** The 72 was sized for exactly these, all derived from `HID_REPORT_SIZE` 64:
+`overlay_sync_t` 67 B, `overlay_map_sync_t` / `dynamic_keymap_sync_t` 68 B, and
+**`compressed_overlay_sync_t` / `roi_overlay_sync_t` 69 B**. One more field, or an
+`HID_REPORT_SIZE` bump, and an app switch would hit the silent rejection above and
+present as missing keycap images. At 96 that path has 27 B of headroom.
+
 ### Firmware signing enforcement & the on-keycap confirmation (FW-2)
 
 `rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so `fw_staging_finalize()` only stamps the
@@ -1050,6 +1126,84 @@ The mechanism is worth knowing because it is not the obvious implementation:
 - The armed indicator is the inverted Ctrl keycap — see the two rendering bullets
   above (render it, don't `kdisp_invert()`; and pass `cy_radius` 0).
 
+### Intl letter remap — a key can host ANOTHER letter's row (`KC_LAT_REMAP`)
+
+French needs `è é ê` at once, which one letter's picker cannot give: the picker
+chooses another *form* of the letter a key already hosts. So a key can now be
+**reassigned to a different base letter**. Hold Intl, tap the remap key (split72
+`[4,1]`, beside the Ctrl at `[4,0]`; split42 `[3,4]`), press the key to change (it
+inverts), then the letter it should host. `e`, `q` and `j` can then carry `é`, `è`
+and `ê` — and the sparse letters (`q` has one variation, `j` two) stop being dead
+keys on this layer.
+
+- **The storage splits two things the code had conflated.** The ROW comes from the
+  letter a key HOSTS (`latin_ex_map`); the PICK comes from the KEY's own slot
+  (`latin_sync_t.ex`). They are the same number only while nothing is remapped,
+  which is why one index sufficed for years. Two keys on the same letter share a
+  row but need independent picks — storing the pick at the row index has one key
+  silently overwrite the other's choice. `latin_sync_t.assign[20]` holds one 6-bit
+  base letter per target key, **shared across case** so Shift follows the remap
+  (`r → e` gives E's upper-case form, not `<`); the pick stays per case because the
+  two rows are not parallel (lower `n` has 12 variations, upper `N` 11).
+- Pick fields are **case-INTERLEAVED** (`slot*2 + case`), not case-blocked, so
+  growing `LATIN_TARGETS` appends fields instead of inserting a block mid-array.
+  Extending the targets to the punctuation keys is the obvious next step —
+  `KC_MINUS 0x2D … KC_SLASH 0x38` is a contiguous run of 12 printable punctuation
+  keycodes, so `kc - KC_MINUS + 26` needs no table. It costs ~43 bytes (the pick
+  array grows too), which is why `POLY_EECONFIG_USER_RESERVED` was taken 128 → 256
+  in the letters-only change: that relocation resets the dynamic keymap once, and
+  paying it early means punctuation later costs no second reset.
+- **Re-assigning a key to its OWN letter is the per-key reset** (stored as
+  `LATIN_ASSIGN_NONE`), so it needs no gesture of its own. **Shift+remap clears
+  everything** — once the board is remapped the Intl legends no longer match the
+  printed letters, so there has to be one way back that does not depend on
+  remembering what was changed.
+
+⚠️ **Four traps this feature hit, all of which generalise beyond it:**
+
+- **An unwritten EEPROM byte reads `0x00` here, NOT `0xFF` — never infer "never
+  written" from the bytes.** The assignment map was designed to need no migration
+  sentinel because `LATIN_ASSIGN_NONE` is all-bits-set and "erased flash reads
+  0xFF". QMK's **wear-levelling normalises its backing store so cleared bytes
+  arrive as ZERO** (`quantum/wear_leveling/wear_leveling.c` clears its cache with
+  `memset(...,0)` and its header requires a 0xFF-based store to return the
+  *complement* "such that this wear-leveling algorithm receives zeros"). The map
+  therefore read back all-zero = "every key hosts letter 0", and **every Intl
+  keycap rendered a variation of `a`** (field, first flash). Gate such a field on
+  the `latin_pick_migrated` **format version**, which is what that byte is for.
+  - ⚠️ **A version gate alone does not HEAL an already-flashed board** — the broken
+    build persisted the zeros at the next suspend *and stamped them valid*. The
+    recovery is to **retire the version value**: `0xC3` now means "picks are fine,
+    discard the map" and `0xD7` is current. Walk every version a field EEPROM can
+    present before shipping such a fix.
+  - ⚠️ The reservation bump relocates the **dynamic keymap** only. `poly_eeconf_t`
+    sits *before* it at a fixed address and is **not** reset — which is exactly why
+    the stale zeros survived the flash that was supposed to clear everything.
+- **`render_key()` is only consulted when `to_static_text()` returns NULL.** A key
+  that HAS a legend bypasses it completely. The remap prompt blanks the board from
+  inside `render_key()`, so every non-letter *with a legend* — including the remap
+  key itself — sailed past and kept drawing normally: never blanked, never
+  inverted, so nothing on the board said the latched mode was open. Any future
+  "the board becomes a dialog" mode must **also suppress `text`** in
+  `update_displays()`, not just return false from `render_key()`.
+- **Keep every glyph of a multi-glyph legend in ONE font.**
+  `kdisp_write_gfx_char` baseline-aligns by `font->yAdvance - fonts[0]->yAdvance`,
+  so glyphs from different fonts land on different baselines. `a` is in `_Base_`
+  (yAdvance 37 → −3 px) while `»`/`ñ` are in `_SupAndExtA_` (44 → +4 px): the
+  legend `a»ñ` sat its `a` **7 px** high. `Á»Æ` is even only because all three of
+  its glyphs are Latin-1, i.e. one font — hence `INTL_REMAP_LEGEND` is **`à»ñ`**.
+  ⚠️ `oled_preview.py` **cannot** show this (it models `xOffset`/`yOffset` but not
+  the baseline-align shift), so both legends render identically there — the check
+  is the font metrics, not the preview.
+- **The "gate the release swallow on OWNERSHIP" rule applies to LAYER keys too.**
+  The remap block returned `false` for every release, which swallowed the release
+  of **`MO(_ADDLANG1)` itself** — QMK never unregistered the layer, so Intl went
+  down and never came back up and the mode could not be escaped at all; a held
+  Shift was stuck the same way. Modifiers and layer keys
+  (`IS_MODIFIER_KEYCODE` / `IS_QK_MOMENTARY` / `IS_QK_TO`) must fall through. This
+  is the same rule already written up for the picker's Ctrl latch, one function
+  away, and it was still missed.
+
 ### Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+; expanded v10)
 An OS-independent **override** of the language-layer legends with an alternative
 script (fantasy / retro). State: `poly_eeconf_t.glyph_script` (persisted, appended
@@ -1243,8 +1397,74 @@ backing store the way a driver test should mock its bus.
 ```bash
 git submodule update --init --depth 1 --no-recommend-shallow lib/googletest  # needs add_repo qmk/googletest first
 export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"
-make test:polymod_ltr559          # ~1 s
+make test:polymod_ltr559          # ~1 s, 19 tests — the LTR-559 driver vs a mock I2C bus
+make test:fw_up_verdict           # ~1 s, 27 tests — the flash-staging COMMIT decision layer
 ```
+
+✅ **These run in CI — via `polykybd-unit-test.yml`, NOT upstream's `unit_test.yml`.**
+That distinction is the whole point: upstream's workflow filters on `builddefs/ quantum/
+platforms/ tmk_core/ tests/`, and a PolyKybd change touches none of them, so for as long
+as these suites existed **CI never ran a single one of them** — 46 tests, hand-run only,
+on a PR board that otherwise looks comprehensively green. Do **not** "fix" that by adding
+our paths to `unit_test.yml`: it is stock upstream and would conflict at the next
+catch-up merge.
+- **The suite names are DERIVED, not hardcoded.** The workflow greps every
+  `*polykybd*/testlist.mk` that `builddefs/testlist.mk` includes and reads their
+  `TEST_LIST +=` lines, so **a third suite needs no workflow edit** — register it in the
+  two builddefs files (see below) and CI picks it up. Same reasoning as
+  `sync_is_link_fault()` refusing to enumerate its siblings: a list that must be kept in
+  sync is a list that goes stale silently.
+- ⚠️ **It fails when it discovers ZERO suites**, and again if the loop runs zero. A test
+  job that quietly runs nothing and reports green is strictly worse than no job — it is
+  the exact failure this workflow was added to remove, so it must not be able to
+  recreate it one level up. The loop also continues past a failing suite, so one run
+  names every broken suite rather than just the first.
+- ⚠️ **`ghcr.io/qmk/qmk_cli` runs steps under POSIX `sh` (dash), not bash** — the log
+  header says `shell: sh -e {0}`. Write every `run:` in that container POSIX-clean, and
+  **test it with `dash`, not your login shell**; `bash script.sh` passing proves nothing.
+  Two traps, and the second is the dangerous one:
+  - `done <<< "$list"` is a bash **herestring**: dash won't parse it at all —
+    `Syntax error: redirection unexpected`, exit 2. Loud, so it is the good case, but
+    it is what made this workflow's first run red.
+  - `printf … | while read` is the tempting POSIX fix and is **worse**: it parses, but
+    POSIX runs the loop body in a **subshell**, so counters and accumulators are
+    discarded at the `done`. A failing suite would leave the failure list empty and the
+    job would report **green** — which is why the count-zero guard above is not
+    redundant paranoia; it is the only thing that catches this.
+  - `for t in $LIST` (unquoted, from an `env:`) keeps state in the current shell and
+    works in every POSIX shell. Safe here because suite names are makefile identifiers
+    — the harness rejects even a `-`, so they can never contain whitespace.
+
+- **`fw_up_verdict` is the pattern for testing DECISION logic** (as opposed to
+  `polymod_ltr559`, which is the pattern for a driver vs a mock bus). It covers the
+  COMMIT-failure classification, the ack vocabulary, the STATUS-snapshot CRC guard and
+  the font-pack status byte. **Getting it testable required decoupling first, and that
+  decoupling was worth doing on its own terms** — the two smells it exposed:
+  - `split_sync.h` conflated a **protocol contract** (4 ack bytes + `sync_succeeded`)
+    with the sync **payload structs**, which need `config.h`/`state.h`/`mru.h`. So
+    asking "is this ack a success?" pulled in the whole keyboard config, and
+    `sync_succeeded()` — the helper guarding every `send_to_bridge` call site, and
+    itself the subject of a field bug — had no test for years. The vocabulary now
+    lives in dependency-free **`base/sync_ack.h`**, re-exported by `split_sync.h` so
+    all consumers are unchanged.
+  - `fw_up_slave_refused_commit()` mixed RPC transport, CRC validation, the decision
+    and `uprintf` in one function; the decision was the only part with a bug history
+    and the only part unreachable. It is now pure in **`base/fw_up_verdict.c`**, with
+    the I/O and the four diagnostic lines left in `split_fw_up.c`. This mirrors what
+    the host repo does deliberately (`polyhost/core/decisions.py`,
+    `decide_stale_bundles`, `classify_commit_reply`) — the firmware just never had
+    the seams.
+  - ⚠️ `base/fw_up_verdict.c` is listed in the **shared** `POLY_SRC` in
+    `keyboards/polykybd/rules.mk`, NOT with the other `base/*.c` in the per-variant
+    `rules.mk` — its consumer `split_fw_up.c` is in that shared list, so a variant
+    that forgot the line would just fail to link.
+- **A host fixture can never catch THIS end emitting the wrong byte.** PolyKybdHost has
+  had `classify_commit_reply` under test for a while, but those tests encode the
+  firmware's reply bytes as fixtures — so they only catch the *host* misreading a
+  status, which is the opposite direction from the bug that actually shipped. Both ends
+  of the font-pack COMMIT contract are now pinned: `fontpack_commit_status()` is a pure
+  `static inline` in `hid_fontpack.h` (which is why that header now includes
+  stdint/stdbool instead of `quantum.h` — nothing in it needed quantum.h).
 
 Wiring a new one needs **two** registrations plus one non-obvious source list:
 
@@ -1253,6 +1473,24 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
   hard-errors.
 - `builddefs/build_test.mk` — `include <path>/tests/rules.mk`, alongside the
   `quantum/*/tests/rules.mk` lines. This defines `<name>_SRC/_INC/_DEFS`.
+  - ⚠️ **A test under `keyboards/` must NOT name that file `rules.mk` — CI reads it as
+    a KEYBOARD.** `qmk ci-validate-keyboard-targets` globs `keyboards/**/rules.mk` and
+    flags every hit whose path lacks a directory named `keymaps`, `common` or `lib` and
+    which has no `keyboard.json` beneath it (`lib/python/qmk/cli/ci/
+    validate_keyboard_targets.py`, 17 lines — read it, it is the whole rule). There is
+    no exemption for tests, because upstream keeps none under `keyboards/`. The failure
+    is `keyboards/polykybd/base/tests::Legacy target detected` and it is a **separate
+    lint-job step from `qmk lint`**, so `qmk lint --strict` passing tells you nothing
+    about it. `keyboards/polykybd/base/tests/` therefore uses **`test_rules.mk`**; the
+    `build_test.mk` include names the file explicitly, so the name is free.
+    (`testlist.mk` is unaffected — only `rules.mk` is globbed.) Cost a CI round
+    2026-08-17.
+  - ⚠️ **So run the WHOLE lint job locally, not just `qmk lint`.** The recipe in the CI
+    section above already lists all of it; the two `ci-validate-*` commands are the
+    ones easy to skip, and they are ~1 s each:
+    ```bash
+    qmk ci-validate-keyboard-targets && qmk ci-validate-aliases   # both must exit 0
+    ```
 - ⚠️ **A standalone test must put the timer in its own `_SRC`.**
   `platforms/common.mk` adds `platforms/timer.c` + `platforms/test/timer.c` to `SRC`,
   which only the **full-keyboard** harness consumes — so a standalone test links with
@@ -1261,11 +1499,30 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
 - ⚠️ **`set_time()` / `advance_time()` have no header.** They are defined only in
   `platforms/test/timer.c`; every test that drives the clock forward-declares them
   (see `quantum/sequencer/tests/sequencer_tests.cpp`).
-- **Mutation-test the suite before trusting it.** Break the thing on purpose (swap a
+- **Mutation-test the suite before trusting it — the `mutation-test-suite` skill is
+  the recipe.** Break the thing on purpose (swap a
   byte order, delete a bound) and confirm the *expected* test fails — the same
   discipline as "verify against the rendered glyph shape, not a transform∘inverse
   round-trip". A suite that passes against a deliberately broken driver is measuring
-  nothing.
+  nothing. `fw_up_verdict` was validated this way against 7 mutations (dropped
+  `!status_ok` guard, `recorded != SYNC_ACK` as the refusal test, probe outranking an
+  explicit refusal, `sync_succeeded` as a blacklist, a 1-bit-spaced ack value, a slave
+  refusal reported as retryable, and a CRC check that always passes) — each caught by
+  the intended test.
+  - ⚠️ **Strip ANSI escapes before grepping gtest output, or the mutation harness
+    FAILS OPEN.** gtest prints `\e[0;32m[  FAILED  ]`, so a regex anchored on a leading
+    `[` matches nothing and **every** mutation reads as "still green" — i.e. the
+    harness reports the exact result that means "your tests are worthless", for all of
+    them, which is itself the tell that the detector and not the suite is broken. Pipe
+    through `sed 's/\x1b\[[0-9;]*m//g'` first. Cost a full round (2026-08-17); a
+    single manual mutation is the 30 s way to confirm the harness works before
+    trusting a sweep.
+  - ⚠️ **A second fail-open path, same shape: a mutation that never APPLIED.** A
+    failed `sed`/`perl` (a C `||` collides with `sed`'s `s|…|…|` delimiter) leaves
+    the source untouched, the suite passes because nothing was broken, and the
+    empty "caught by:" reads identically to "not caught". Assert the edit landed
+    (`git diff --quiet` on the mutated file) before believing the run. Hit while
+    dogfooding the skill, 2026-08-18.
 
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 host-remappable layers), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
@@ -1617,6 +1874,55 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   byte-identity with the master's verified pack) and defers the heavy reload to
   `fw_staging_process_fontpack_reload()` in housekeeping. **Never do heavy work in a
   split-transaction handler.**
+  - **FONTPACK_COMMIT has THREE status bytes** (`hid_fontpack.h` `FONTPACK_COMMIT_*`):
+    `.` both halves finalized, **`R`** the master's finalize *rejected* the image (staged
+    CRC / not a valid PlyF), **`L`** the master committed but the slave did not ACK within
+    the bridge's 10 retries — a *link* failure, where the master's copy is live and
+    `reply[3..4]` carries its `content_version`. Before the split (2026-08-17) `ok =
+    slave_ok && master_ok` collapsed both into `!`, so the host reported *"CRC mismatch or
+    the font pack was rejected"* for a pack whose CRC was perfect and whose data was
+    already live — sending the field diagnosis after the data for two rounds while the real
+    culprit was the split link (`giveup=44` in that window). **This is the same mistake
+    `FW_UP_COMMIT` was split into four statuses to fix**, one command over; don't collapse
+    them back. Bumps **no** `PROTOCOL_VERSION`: the font-pack commands are dispatched
+    independently of it, an old host reads any non-`.` as failure, and a new host maps the
+    old `!` to "unspecified" — so it degrades in both directions.
+    - **The status selection is a pure `static inline fontpack_commit_status()` in
+      `hid_fontpack.h`, unit-tested** (`make test:fw_up_verdict`,
+      `FontpackCommitStatusTest`): master rejection outranks a healthy slave, a slave
+      *refusal* is `'R'` and not `'L'`, a lost ack is `'L'`, the three bytes are
+      distinct, none reuses the legacy `'!'`, and none is a hex digit (the
+      string-literal trap below). This is the firmware half of a contract the host
+      tests from its side — and the half that matters, since a host fixture can only
+      catch the host *misreading* a status, never this end emitting the wrong one.
+    - ⚠️ **A status letter that is a HEX DIGIT breaks the literal**: `"P\x52C"` is a single
+      `\x52C` escape, not three bytes. `R`/`L` are safe; anything in `[0-9a-fA-F]` needs a
+      split literal (`"P\x52" "C"`).
+      - ⚠️ **Do NOT try to verify that by grepping the ELF for `PRR`/`PRL`** — an earlier
+        version of this note said `strings` shows them "exactly once each", and it does
+        not show them at all. The COMMIT reply is **assembled at runtime**, byte by byte,
+        by `fontpack_reply_status()` (`data[0]='P'; data[1]=cmd; data[2]=status;`), so no
+        such literal exists in any build. Their absence is the *expected* state and reads
+        exactly like a broken image — it cost a double-take while verifying a delivered
+        `.bin` (2026-08-18). The escape hazard is a **compile-time** property, so check it
+        where it lives: read the source literal, or `make test:fw_up_verdict`
+        (`FontpackCommitStatusTest.StatusBytesAreSafeInAStringLiteral` pins it). Grep the
+        ELF only for status bytes that genuinely ARE emitted as literals.
+    - **Re-running COMMIT is free, which is what makes `L` actionable.**
+      `fw_staging_finalize_impl` leaves `s_staged_crc`/`s_image_crc`/`s_next_offset`
+      untouched and only clears `s_commit_pending`/`s_fw_up_active`, and the slave's
+      `flash_stage_commit` is likewise idempotent — so a second COMMIT re-runs the bridge
+      with fresh retries and re-reloads, and the host retries instead of re-streaming the
+      pack. Unlike the FIRMWARE target there is no header sector to re-erase (FONTPACK
+      writes in place), so re-bridging is safe.
+  - ⚠️ **Because FONTPACK writes IN PLACE, a slot is a valid, current bundle as soon as the
+    last chunk lands — COMMIT is not what makes it so.** `fontpack_load()` validates each
+    slot with the pack's own CRC32 over everything after the 32-byte header, so a *complete*
+    stream reads back as present at the shipped `content_version` even if COMMIT never
+    succeeded (a truncated one fails that CRC and reads as absent, which is why a partial
+    write cannot fake a version). The host consequences — never trusting the version
+    comparison alone to decide a re-flash — are written up in `PolyKybdHost/CLAUDE.md`
+    under the font-pack bundles note.
 - **Wipe** = flash a 32-byte **empty pack** (`font_count == 0`), a valid empty PlyF
   sentinel → that slot contributes no fonts. `polyctl fontpack wipe [id]` wipes one
   slot, or **all** slots when `id` is omitted. ⚠️ **The FONTPACK COMMIT gates success
@@ -2362,6 +2668,42 @@ that ring/reflect on a longer split cable.
   corrupted reply can turn a real `SYNC_ACK` into a non-ACK → master retries (safe,
   idempotent) or, ~1/256, into a false ACK. Low impact, but it's why a tiny
   fraction of `crc_err` counts can be reply corruption rather than payload.
+  - **That missing CRC is why the ack BYTE VALUES are Hamming-spaced**, and the
+    vocabulary lives in dependency-free **`base/sync_ack.h`** (re-exported by
+    `split_sync.h`, so consumers are unchanged) with tests enforcing it:
+    `SyncAckTest.AckValuesStayHammingSpaced` requires min pairwise distance **4**
+    across all six values, `EveryAckValueIsDistinct` forbids a duplicate, and
+    `NoAckValueIsAStuckLineReading` forbids `0x00`/`0xFF` (what a stuck or floating
+    line reads as). The set is built as **complement pairs**, each balanced at
+    popcount 4: `SYNC_ACK 0xCA ↔ SYNC_CRC32_ERR 0x35`, `SYNC_ACK_SIG 0x4D ↔
+    SYNC_NACK_REFUSED 0xB2`, `SYNC_BUSY 0x1B ↔ SYNC_GIVEUP 0xE4`.
+    ⚠️ **Adding a seventh value must keep distance 4** or the single-bit tolerance
+    degrades for the *whole* set. A mutually-distance-4 code containing these six
+    extends to **16**, so 10 remain (8 excluding `0x00`/`0xFF`) — take the complement
+    of an unused one to keep the pattern. `sync_succeeded()` is a deliberate
+    **whitelist** so a new failure value is a failure at all 14 existing call sites
+    with no edits; `SyncSucceededIsFailClosedAcrossEveryByte` sweeps all 256 bytes to
+    pin that, because a blacklist implementation passes every other test.
+  - ✅ **`SYNC_CRC32_ERR` is DE-OVERLOADED — it now means exactly one thing: "the
+    frame I received did not check out".** It used to mean four: that, plus "still
+    erasing", "no answer at all", and "I refuse". Each now has its own value —
+    `SYNC_BUSY` (the `flash_stage_begin` re-poll while the deferred erase runs),
+    `SYNC_GIVEUP` (`send_to_bridge` exhausted its retries, or we never asked), and
+    `SYNC_NACK_REFUSED` (processed and declined: an unknown bundle id, a rejected
+    chunk write, an apply with no valid staged image, an unknown reset action).
+    The audit that keeps it true: **every remaining `= SYNC_CRC32_ERR` sits directly
+    on a `crc32 != …->crc32` (or magic) check** —
+    `grep -rn -B3 "ack = SYNC_CRC32_ERR" --include=*.c keyboards/polykybd/` should
+    show no exceptions.
+    - **Relabelling was behaviourally inert, which is why it was safe**: every
+      consumer tests `== SYNC_ACK` / `sync_succeeded()`, i.e. ACK-or-not, so no
+      decision changed — only what the logs and the COMMIT classifier can tell apart.
+    - ⚠️ **The one place needing a compat guard is `hid_fw_up.c`'s erase-progress
+      counter**, which matches on the begin re-poll value. It accepts **both**
+      `SYNC_BUSY` and the legacy `SYNC_CRC32_ERR`, because the two halves can
+      transiently run different firmware (a fw apply reboots the master first — the
+      2026-06-22 boot-splash hang). Mismatched halves are safe in both directions
+      *because* the functional decision is ACK-or-not.
 
 **How CRC32 + retries + noise interact** (the model that drives the retry-count
 choice). With `p` = probability a single frame is corrupted (and caught by CRC32),
@@ -2395,13 +2737,61 @@ frames (count-based, no timer — the cadence follows real traffic, so it's dens
 during overlay bursts and silent when idle; gated on `debug_enable`):
 
 ```text
-Split link: 12345 tx crc_err=4 transport_fail=1 giveup=0 err=0.0%
+Split link: 12345 tx crc_err=4 nack=17 transport_fail=1 giveup=0 err=0.0%
 ```
 
 `err%` is the all-time detected-error rate over all frames — a direct read on the
 wire. **Use it to validate any link change** (baud/cable/drive/termination) by
 watching the number move, instead of by feel. `giveup` should stay ~0 with
 retries=3; if it climbs, attack `p` at the source.
+
+⚠️ **`giveup` counts only calls that ended on a LINK fault, and `nack` is EXCLUDED
+from `err%`** — both decided by the one shared predicate `sync_is_link_fault(got_reply,
+ack)` (`base/sync_ack.h`), so the two numbers can never disagree about what a bad wire
+is. A link fault is exactly *nobody answered* or *the slave says what reached it was
+corrupt* (`SYNC_CRC32_ERR`); every other byte means the wire delivered a frame and the
+slave answered with a verdict of its own.
+- ⚠️ **It is deliberately NOT an enumeration of the non-fault values.** Listing the
+  siblings (`ack == SYNC_BUSY || ack == SYNC_NACK_REFUSED || …`) is the guard shape that
+  goes stale — a seventh ack value would be misclassified until someone remembered to
+  add it. `SyncAckTest.AnUnknownReplyValueIsNotMistakenForALinkFault` sweeps all 256
+  bytes to pin that, and it fails against the enumerating implementation.
+- **Why `giveup` needed this:** the `flash_stage_begin` re-poll runs with
+  `max_retries=1`, so **every** poll of a deferred erase exhausted its retries with a
+  perfectly good `SYNC_BUSY` answer and counted as a give-up. Measured on hardware
+  (2026-08-18) a healthy font-pack sync read `nack=11 transport_fail=1 giveup=12` — one
+  real fault, twelve reported give-ups. `giveup` is read as "the link is failing", so
+  that is the same category error that had `err%` reading 6.0% on that link instead of
+  0.5%.
+
+⚠️ **`nack` is EXCLUDED from `err%` on purpose** — it counts valid non-ACK answers
+(`SYNC_BUSY`, `SYNC_NACK_REFUSED`), where the wire worked and the slave simply said
+something other than yes. Only `crc_err` (a corrupted frame) and `transport_fail`
+(no answer) are link faults. Before the split, every non-ACK incremented
+`crc_err` — and since `SYNC_BUSY` now arrives on **every erase re-poll of a flash**,
+a single font-pack update would otherwise have added hundreds of phantom "errors"
+to the one number used to judge cable/baud changes.
+
+⚠️ **`send_to_bridge()` returns what the slave SAID; it returns `SYNC_GIVEUP` only
+when the slave never answered.** It used to return a *constant* on give-up,
+discarding `reply.ack` — and that worked only by **coincidence**, because the
+constant was `SYNC_CRC32_ERR`, which happened to equal what the slave sent in every
+case that mattered. Distinguishing the failure values exposed the discard, and with
+it **`fw_up_slave_refused_commit()`'s "a refusal is self-describing, so don't spend
+a STATUS RPC" short-circuit, which was dead code** — a refusal arrived as the
+give-up constant, never as `SYNC_NACK_REFUSED`, so every refusal paid for a probe
+(found in review, 2026-08-17). **Generalise: a sentinel that happens to equal a
+real value hides the fact that the real value is being thrown away.**
+- ⚠️ **The near-miss is the more instructive half, and it was initially reported
+  here as a second dead-code case — wrongly.** `hid_fw_up.c`'s erase-progress
+  counter kept firing throughout, just not for the reason it reads as: its guard
+  accepts `SYNC_BUSY` **or** `SYNC_CRC32_ERR`, a compat arm added for transiently
+  mismatched halves, and that arm also matched the give-up constant. A defensive
+  clause written for one hazard quietly covered the discard, so the counter fired
+  on a value the slave never sent. Verified on hardware 2026-08-18: it logs
+  `begin-pending` at poll 17 and 33 of a 117-sector erase — as it did before.
+  **Check a dead-code claim against the guard's OTHER arms before making it**; the
+  git history of the condition settles it in one `git show`.
 
 **Reducing `p` at the source (the real root fix), in order of leverage**:
 1. **Lower the baud** — biggest, cheapest software lever. 230400 → 115200

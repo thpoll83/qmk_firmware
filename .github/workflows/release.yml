@@ -85,19 +85,42 @@ jobs:
           fi
 
       # FW-2: sign the .bin with the project's Ed25519 key so the firmware can
-      # verify image authenticity at flash time. No-op (unsigned release) when the
-      # FW_SIGNING_KEY secret is not set, so releases work before a key exists.
+      # verify image authenticity at flash time.
+      #
+      # This step USED to no-op when FW_SIGNING_KEY was unset, which was correct while
+      # verification was warn-only. Enforcement is now ON (rules.mk:
+      # -DFW_REQUIRE_SIGNATURE), so an unsigned release is no longer a soft downgrade:
+      # every keyboard flashing it is refused at COMMIT and falls through to the
+      # on-keycap ACCEPT/REJECT prompt. Users who meet that prompt on every official
+      # release learn to press ACCEPT reflexively — which is precisely the habit FW-2
+      # exists to prevent. So a real release with no key now FAILS here instead of
+      # quietly shipping unsigned. Non-release builds (a workflow_dispatch smoke test
+      # off a branch) still skip signing.
       - name: Sign .bin (FW-2)
         env:
           FW_SIGNING_KEY: ${{ secrets.FW_SIGNING_KEY }}
+          IS_RELEASE: ${{ github.event_name == 'release' || github.ref_type == 'tag' }}
         run: |
+          TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
           if [ -z "${FW_SIGNING_KEY:-}" ]; then
-            echo "::notice::FW_SIGNING_KEY not set — releasing UNSIGNED firmware (verify is warn-only)."
+            if [ "${IS_RELEASE}" = "true" ]; then
+              echo "::error::FW_SIGNING_KEY is not set, but the firmware enforces signatures"
+              echo "::error::(-DFW_REQUIRE_SIGNATURE). Releasing unsigned would make every keyboard"
+              echo "::error::prompt for a manual ACCEPT. Set the FW_SIGNING_KEY secret and re-run."
+              echo "::error::See keyboards/polykybd/tools/SIGNING.md."
+              exit 1
+            fi
+            echo "::notice::FW_SIGNING_KEY not set - skipping signing on this non-release build."
             exit 0
           fi
           python3 -m pip install --quiet cryptography
-          TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
           python3 keyboards/polykybd/tools/sign_firmware.py "${TARGET}.bin"
+          # Fail loudly rather than let the release step's `[ -f ... ]` silently drop
+          # the asset: a release that is meant to be signed must not ship without .sig.
+          if [ ! -s "${TARGET}.bin.sig" ]; then
+            echo "::error::signing reported success but produced no ${TARGET}.bin.sig"
+            exit 1
+          fi
 
       # Runs on a tag push, on publishing a release, or on a manual dispatch.
       # Idempotent: creates the release if missing, otherwise (re-)uploads the

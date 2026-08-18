@@ -192,16 +192,43 @@ void save_user_settings(void) {
 }
 
 // Writes only the packed latin variation picks to EEPROM.
-// ⚠️ These go to latin_ex_wide, NOT the legacy latin_ex: g_latin.ex is now
-// LATIN_PICK_BYTES (39) wide, so writing it at the old 26-byte offset would run
-// straight into mru_emoji. The sentinel is stamped in the same breath, so a
-// half-written migration cannot leave the wide block claiming to be converted.
+// ⚠️ These go to latin_ex_wide, NOT the legacy latin_ex: g_latin.ex is 6-bit
+// fields, so writing it at the old 26-byte offset would run straight into
+// mru_emoji. The sentinel is stamped in the same breath, so a half-written
+// migration cannot leave the wide block claiming to be converted.
+//
+// ⚠️ The RAM table is one flat array over all LATIN_TARGETS, but EEPROM keeps the
+// letters and the punctuation in SEPARATE blocks — the letter block must keep the
+// size and offset it shipped with, or the format byte behind it moves and can no
+// longer be found (see state.h). So each write is explicitly bounded rather than
+// sizeof(g_latin.ex): the letters go to the original block, the rest to the tail.
 void save_user_latin(void) {
     eeconfig_update_user_datablock(g_latin.ex, offsetof(poly_eeconf_t, latin_ex_wide),
-                                   sizeof(g_latin.ex));
-    const uint8_t marker = LATIN_PICK_MIGRATED;
+                                   LATIN_PICK_BASE_BYTES);
+    eeconfig_update_user_datablock(g_latin.assign, offsetof(poly_eeconf_t, latin_assign),
+                                   LATIN_ASSIGN_BASE_BYTES);
+    // Picks split on a byte boundary (39 = 52 fields x 6 bits), so the tail is a
+    // plain slice of the same array. Assignments do NOT (26 x 6 = 156 bits), so the
+    // punctuation ones are re-packed into their own array indexed from zero.
+    eeconfig_update_user_datablock(g_latin.ex + LATIN_PICK_BASE_BYTES,
+                                   offsetof(poly_eeconf_t, latin_ex_ext),
+                                   LATIN_PICK_EXT_BYTES);
+    uint8_t assign_ext[LATIN_ASSIGN_EXT_BYTES] = {0};
+    for(uint8_t i = 0; i < LATIN_PUNCT_TARGETS; i++) {
+        latin_bits_set(assign_ext, LATIN_ASSIGN_EXT_BYTES, i,
+                       latin_bits_get(g_latin.assign, LATIN_ASSIGN_BYTES,
+                                      (uint8_t)(LATIN_LETTER_TARGETS + i)));
+    }
+    eeconfig_update_user_datablock(assign_ext, offsetof(poly_eeconf_t, latin_assign_ext),
+                                   sizeof(assign_ext));
+    // Stamp the format versions LAST, so an interrupted write can never leave a
+    // block claiming a layout it does not have.
+    const uint8_t marker = LATIN_PICK_ASSIGN_OK;
     eeconfig_update_user_datablock(&marker, offsetof(poly_eeconf_t, latin_pick_migrated),
                                    sizeof(marker));
+    const uint8_t ext_marker = LATIN_EXT_OK;
+    eeconfig_update_user_datablock(&ext_marker, offsetof(poly_eeconf_t, latin_ext_fmt),
+                                   sizeof(ext_marker));
 }
 
 // Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.

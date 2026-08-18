@@ -1981,9 +1981,11 @@
 // ---- Mod-tap badge -----------------------------------------------------------
 // A mod-tap keycap already draws its TAP legend ("A" for MT(RSFT,KC_A)) as the
 // primary text; the modifier is only what HOLDING it does. So it renders as a
-// small mark in the top-right corner rather than as a second full-size legend
+// small mark in the BOTTOM-right corner rather than as a second full-size legend
 // beside the letter — the held-modifier shortcut hints are prominent on purpose
 // (holding Ctrl makes the whole keycap mean "Ctrl+C"), a mod-tap badge is not.
+// (Bottom, not top: the shift preview owns the upper right — see the anchor note
+// on the grid below.)
 //
 // The marks are the SAME symbols the modifier keycaps use (keycode_helper.c):
 // the Technical family plus the per-OS GUI logo. Those are drawn to fill a

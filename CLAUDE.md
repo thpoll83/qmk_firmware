@@ -1398,8 +1398,27 @@ backing store the way a driver test should mock its bus.
 git submodule update --init --depth 1 --no-recommend-shallow lib/googletest  # needs add_repo qmk/googletest first
 export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"
 make test:polymod_ltr559          # ~1 s, 19 tests — the LTR-559 driver vs a mock I2C bus
-make test:fw_up_verdict           # ~1 s, 21 tests — the flash-staging COMMIT decision layer
+make test:fw_up_verdict           # ~1 s, 27 tests — the flash-staging COMMIT decision layer
 ```
+
+✅ **These run in CI — via `polykybd-unit-test.yml`, NOT upstream's `unit_test.yml`.**
+That distinction is the whole point: upstream's workflow filters on `builddefs/ quantum/
+platforms/ tmk_core/ tests/`, and a PolyKybd change touches none of them, so for as long
+as these suites existed **CI never ran a single one of them** — 46 tests, hand-run only,
+on a PR board that otherwise looks comprehensively green. Do **not** "fix" that by adding
+our paths to `unit_test.yml`: it is stock upstream and would conflict at the next
+catch-up merge.
+- **The suite names are DERIVED, not hardcoded.** The workflow greps every
+  `*polykybd*/testlist.mk` that `builddefs/testlist.mk` includes and reads their
+  `TEST_LIST +=` lines, so **a third suite needs no workflow edit** — register it in the
+  two builddefs files (see below) and CI picks it up. Same reasoning as
+  `sync_is_link_fault()` refusing to enumerate its siblings: a list that must be kept in
+  sync is a list that goes stale silently.
+- ⚠️ **It fails when it discovers ZERO suites**, and again if the loop runs zero. A test
+  job that quietly runs nothing and reports green is strictly worse than no job — it is
+  the exact failure this workflow was added to remove, so it must not be able to
+  recreate it one level up. The loop also continues past a failing suite, so one run
+  names every broken suite rather than just the first.
 
 - **`fw_up_verdict` is the pattern for testing DECISION logic** (as opposed to
   `polymod_ltr559`, which is the pattern for a driver vs a mock bus). It covers the

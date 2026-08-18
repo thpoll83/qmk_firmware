@@ -24,6 +24,7 @@
 
 #include "lang/named_glyphs.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 

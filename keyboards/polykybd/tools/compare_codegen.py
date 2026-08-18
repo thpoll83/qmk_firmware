@@ -53,10 +53,24 @@ import sys
 # `  1002a4c:\t4b0b      \tldr\tr3, [pc, #44]\t@ (1002a7c <foo+0x30>)`
 _INSN = re.compile(r"^\s*[0-9a-f]+:\s+([0-9a-f ]+)\t(.*)$")
 _LABEL = re.compile(r"^[0-9a-f]+ <(.+)>:$")
-# Any 4-8 digit hex token is an address in this ISA's disassembly; shorter
-# immediates (#44, 0x7f) are real operands and are deliberately kept.
-_ADDR = re.compile(r"\b(?:0x)?[0-9a-f]{4,8}\b")
+# A bare 4-8 digit hex token is an address in this ISA's disassembly; shorter
+# ones (0x7f) are real operands and are deliberately kept.
+#
+# The leading `#-?` group is what makes this safe: an ARM disassembly writes every
+# IMMEDIATE with a `#` sigil (`movw r0, #0x1234`) and every address without one, so
+# capturing the sigil is enough to tell the two apart. Without it the pattern also
+# rewrote wide immediates, and `#0x1234` and `#0x5678` both normalised to `#ADDR` —
+# i.e. exactly the "a size/alignment-sensitive constant moved and the compiler folded
+# it differently" case this script exists to catch would have compared EQUAL, against
+# the contract stated in the module docstring. Caught in review of this file
+# (CodeRabbit, PR #205); `_addr_sub` keeps such an operand verbatim.
+_ADDR = re.compile(r"(#-?)?\b(?:0x)?[0-9a-f]{4,8}\b")
 _SYMREF = re.compile(r"<[^>]*>")
+
+
+def _addr_sub(text: str) -> str:
+    """Normalise bare address literals, leaving `#`-sigil immediates alone."""
+    return _ADDR.sub(lambda m: m.group(0) if m.group(1) else "ADDR", text)
 
 
 def _run_tool(argv: "list[str]") -> str:
@@ -122,7 +136,7 @@ def functions(elf: str, tool: str) -> "collections.OrderedDict[str, list[list[st
                 flush()
                 current = None
             continue
-        text = _ADDR.sub("ADDR", insn.group(2))
+        text = _addr_sub(insn.group(2))
         # `<foo+0x30>` and `<bar>` are annotations on the address just
         # normalised; keeping them would re-introduce the link order.
         text = _SYMREF.sub("<SYM>", text)

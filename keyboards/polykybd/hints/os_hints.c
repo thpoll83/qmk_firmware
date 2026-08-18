@@ -23,6 +23,7 @@
 
 #include "lang/named_glyphs.h"
 
+#include <stdbool.h> // bool
 #include <stddef.h>   // NULL
 
 const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t active_os_packed) {

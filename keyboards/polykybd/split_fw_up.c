@@ -31,11 +31,11 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
     chunk_msg.offset = offset;
     memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
     chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
-    uint8_t slave_ack = SYNC_CRC32_ERR;
+    uint8_t slave_ack = SYNC_GIVEUP;   // no answer yet
     for (uint8_t retry = 0; retry < 10; ++retry) {
         fw_up_chunk_reply_t reply;
         memset(&reply, 0, sizeof(reply));
-        reply.ack = SYNC_CRC32_ERR;
+        reply.ack = SYNC_GIVEUP;   // sentinel: transaction_rpc_exec may not write it
         bool ok_rpc = transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(chunk_msg), &chunk_msg,
                                            sizeof(reply), &reply);
         if (ok_rpc && reply.ack == SYNC_ACK && reply.next_offset > offset) {
@@ -79,7 +79,7 @@ static void flash_stage_status(uint8_t in_len, const void* in_data, uint8_t out_
 //
 // Protocol:
 //   New image   : start deferred erase, return SYNC_ACK_SIG ("erase started, not ready").
-//   Re-poll     : SYNC_CRC32_ERR while erasing, SYNC_ACK once complete.
+//   Re-poll     : SYNC_BUSY while erasing, SYNC_ACK once complete.
 //                 s_begun_size/crc are NOT reset on "done" — additional polls of the
 //                 same image return SYNC_ACK without re-triggering the erase, so a
 //                 UART-missed ACK does not cause an unnecessary full re-erase cycle.
@@ -106,21 +106,24 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
                        msg->target == s_begun_target && msg->bundle == s_begun_bundle);
 
     if (!same_image) {
-        s_begun_size   = msg->image_size;
-        s_begun_crc    = msg->image_crc;
-        s_begun_target = msg->target;
-        s_begun_bundle = msg->bundle;
-        // FONTPACK: point the stager at this bundle's fixed slot before erasing.
+        // ⚠️ Resolve and VALIDATE the slot before recording this identity. Caching
+        // s_begun_* first meant a refused bundle was remembered as "begun", so an
+        // identical retry — and send_to_bridge does retry a non-ACK — took the
+        // same_image path below, skipped this validation entirely, found no erase
+        // pending and could ACK a bundle we had just refused, against whatever slot
+        // was last set. Pre-existing; found in review of the refusal relabel.
         if (msg->target == FW_TARGET_FONTPACK) {
             uint32_t slot_off = 0, slot_size = 0;
-            if (fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
-                fw_staging_set_fontpack_slot(slot_off, slot_size);
-            } else {
-                // Unknown bundle id — NACK so we never stage to a stale slot (the
-                // master guards the same way with its slot_ok check).
-                ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+            if (!fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
+                // Unknown bundle id — REFUSE (not a CRC error: the frame was fine,
+                // we understood it and will not stage to a stale slot). Retrying
+                // cannot help; the halves disagree about the bundle layout. Nothing
+                // has been recorded, so a repeat request is refused again.
+                ((poly_sync_reply_t *)out_data)->ack = SYNC_NACK_REFUSED;
                 return;
             }
+            // FONTPACK: point the stager at this bundle's fixed slot before erasing.
+            fw_staging_set_fontpack_slot(slot_off, slot_size);
         } else if (msg->target == FW_TARGET_DOOMWAD) {
             // The doom WHX slot is fixed (upper resource region).
             fw_staging_set_fontpack_slot(FW_DOOMWAD_SLOT_OFF, FW_DOOMWAD_SLOT_SIZE);
@@ -129,6 +132,10 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
             // doom/PACK_DESIGN.md; the slave's drone runs the same pack).
             fw_staging_set_fontpack_slot(FW_DOOMPACK_SLOT_OFF, FW_DOOMPACK_SLOT_SIZE);
         }
+        s_begun_size   = msg->image_size;
+        s_begun_crc    = msg->image_crc;
+        s_begun_target = msg->target;
+        s_begun_bundle = msg->bundle;
         fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         uprintf("slave FW_UP_BEGIN: size=%lu crc=0x%08lx target=%u started erase\n",
                 msg->image_size, msg->image_crc, msg->target);
@@ -136,9 +143,12 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
         return;
     }
 
-    // Re-poll: same image.
+    // Re-poll: same image. SYNC_BUSY, not SYNC_CRC32_ERR — this is a perfectly
+    // normal "not yet", and calling it a CRC error is what made that value
+    // meaningless. The master's decision here is `ack == SYNC_ACK` either way, so
+    // an old master facing this new value still just keeps polling.
     if (fw_staging_erase_pending()) {
-        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_BUSY;
         return;
     }
 
@@ -196,7 +206,10 @@ static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_l
 #else
         bool ok = fw_staging_write_chunk(msg->offset, msg->data, FW_UP_CHUNK_SIZE);
 #endif
-        ack = ok ? SYNC_ACK : SYNC_CRC32_ERR;
+        // A rejected write is a REFUSAL, not a CRC error — the frame checked out
+        // above; the stager declined the offset. (The relay still retries, and the
+        // next_offset invariant still guards a stale reply.)
+        ack = ok ? SYNC_ACK : SYNC_NACK_REFUSED;
     }
     fw_staging_note_chunk_call(msg->offset, ack);
     reply->ack         = ack;
@@ -363,9 +376,11 @@ void user_sync_reset_handler(uint8_t in_len, const void* in_data, uint8_t out_le
         return;
     }
     if (msg->action == RESET_ACTION_APPLY) {
-        // Install the staged image, then reboot — reject unless a valid image is staged.
+        // Install the staged image, then reboot — reject unless a valid image is
+        // staged. REFUSED, not a CRC error: the master must re-stage, and the log
+        // line it prints (ack=0x%02x) can now say which of the two happened.
         if (!fw_staging_has_valid_staged_image()) {
-            ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+            ((poly_sync_reply_t *)out_data)->ack = SYNC_NACK_REFUSED;
             return;
         }
         fw_staging_arm_apply();    // housekeeping_task_user() → fw_staging_apply_and_reboot()
@@ -381,7 +396,7 @@ void user_sync_reset_handler(uint8_t in_len, const void* in_data, uint8_t out_le
     } else {
         // Unknown action — refuse rather than guess (magic+CRC already passed, so
         // this only happens on a genuinely malformed request).
-        ((poly_sync_reply_t *)out_data)->ack = SYNC_CRC32_ERR;
+        ((poly_sync_reply_t *)out_data)->ack = SYNC_NACK_REFUSED;
         return;
     }
     ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;

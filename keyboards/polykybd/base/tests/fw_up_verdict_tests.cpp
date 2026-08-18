@@ -26,7 +26,8 @@ extern "C" {
 namespace {
 
 // Every ack value the split link can put in poly_sync_reply_t.
-const uint8_t kAllAcks[] = {SYNC_ACK, SYNC_ACK_SIG, SYNC_CRC32_ERR, SYNC_NACK_REFUSED};
+const uint8_t kAllAcks[] = {SYNC_ACK, SYNC_ACK_SIG, SYNC_CRC32_ERR,
+                            SYNC_NACK_REFUSED, SYNC_BUSY, SYNC_GIVEUP};
 
 int popcount8(uint8_t v) {
     int n = 0;
@@ -52,6 +53,17 @@ TEST(SyncAckTest, SyncSucceededAcceptsExactlyTheTwoAcks) {
     EXPECT_TRUE(sync_succeeded(SYNC_ACK_SIG));
     EXPECT_FALSE(sync_succeeded(SYNC_CRC32_ERR));
     EXPECT_FALSE(sync_succeeded(SYNC_NACK_REFUSED));
+    EXPECT_FALSE(sync_succeeded(SYNC_BUSY));
+    EXPECT_FALSE(sync_succeeded(SYNC_GIVEUP));
+}
+
+// Every value must be distinct: two names for one byte would make the failures
+// indistinguishable again, which is the entire thing this vocabulary exists to fix.
+TEST(SyncAckTest, EveryAckValueIsDistinct) {
+    const size_t n = sizeof(kAllAcks) / sizeof(kAllAcks[0]);
+    for (size_t i = 0; i < n; i++)
+        for (size_t j = i + 1; j < n; j++)
+            EXPECT_NE(kAllAcks[i], kAllAcks[j]) << "duplicate ack value at " << i << "," << j;
 }
 
 // The helper must be a WHITELIST, not a blacklist of known failures. That property
@@ -95,8 +107,9 @@ TEST(SyncAckTest, NoAckValueIsAStuckLineReading) {
 
 TEST(FwUpVerdictTest, OnlyARefusalAckIsSelfDescribing) {
     EXPECT_TRUE(fw_up_commit_ack_is_self_describing(SYNC_NACK_REFUSED));
-    // SYNC_CRC32_ERR means three different things, so it settles nothing — this is
-    // what makes the caller spend a STATUS probe.
+    // SYNC_CRC32_ERR now means only "the frame I received did not check out", which
+    // still does not say whether the slave's finalize ran — so it settles nothing,
+    // and the caller must spend a STATUS probe.
     EXPECT_FALSE(fw_up_commit_ack_is_self_describing(SYNC_CRC32_ERR));
     EXPECT_FALSE(fw_up_commit_ack_is_self_describing(SYNC_ACK));
 }
@@ -150,6 +163,29 @@ TEST(FwUpVerdictTest, ASlaveThatRecordsNoVerdictDegradesToLinkFailure) {
     fw_staging_status_t old_slave = {};   // every field zero, as an older reply reads
     EXPECT_EQ(fw_up_classify_commit_failure(SYNC_CRC32_ERR, true, old_slave.last_commit_ack),
               FW_UP_COMMIT_LINK_FAILURE);
+}
+
+// send_to_bridge now reports exhaustion as SYNC_GIVEUP rather than SYNC_CRC32_ERR,
+// so that is the value the classifier actually receives on the lost-answer path.
+// It must behave exactly like the old one: still ambiguous, still probe, and the
+// recorded verdict still decides.
+TEST(FwUpVerdictTest, AGiveUpIsNotSelfDescribingAndStillConsultsTheProbe) {
+    EXPECT_FALSE(fw_up_commit_ack_is_self_describing(SYNC_GIVEUP));
+    EXPECT_EQ(fw_up_classify_commit_failure(SYNC_GIVEUP, true, SYNC_NACK_REFUSED),
+              FW_UP_COMMIT_REFUSED);
+    EXPECT_EQ(fw_up_classify_commit_failure(SYNC_GIVEUP, true, 0), FW_UP_COMMIT_LINK_FAILURE);
+    EXPECT_EQ(fw_up_classify_commit_failure(SYNC_GIVEUP, true, SYNC_ACK),
+              FW_UP_COMMIT_LINK_FAILURE);
+    EXPECT_EQ(fw_up_classify_commit_failure(SYNC_GIVEUP, false, SYNC_NACK_REFUSED),
+              FW_UP_COMMIT_LINK_FAILURE);
+}
+
+// SYNC_BUSY never reaches a COMMIT classification (it is the BEGIN re-poll state),
+// but if it ever did it must not be mistaken for a refusal — the conservative
+// reading is the safe one for any value we do not specifically recognise.
+TEST(FwUpVerdictTest, BusyIsNeverReadAsARefusal) {
+    EXPECT_FALSE(fw_up_commit_ack_is_self_describing(SYNC_BUSY));
+    EXPECT_EQ(fw_up_classify_commit_failure(SYNC_BUSY, true, 0), FW_UP_COMMIT_LINK_FAILURE);
 }
 
 // ---------------------------------------------------------------------------

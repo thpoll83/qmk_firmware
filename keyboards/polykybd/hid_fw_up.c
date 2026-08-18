@@ -73,7 +73,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // the QMK main loop advance both deferred erases between polls.
             uint8_t slave_ack = master_ok
                 ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
-                : SYNC_CRC32_ERR;
+                : SYNC_GIVEUP;   // never asked — the master's own image is invalid
             bool slave_ok    = (slave_ack == SYNC_ACK);
             bool master_done = !fw_staging_erase_pending();   // master's own staging erased?
 
@@ -101,8 +101,15 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // print a snapshot so we can see whether erase_sector_next is
             // actually advancing.  Without this the slave can be stuck and
             // the only visible signal is "slave_ack=0x35" forever.
+            // ⚠️ Accept SYNC_CRC32_ERR as well as SYNC_BUSY. The slave now answers
+            // SYNC_BUSY while erasing, but the two halves can transiently run
+            // DIFFERENT firmware (a fw apply reboots the master first — the
+            // 2026-06-22 boot-splash hang), and an older slave still sends
+            // SYNC_CRC32_ERR here. Only this progress counter cares: the functional
+            // decision above is `slave_ack == SYNC_ACK`, so every non-ACK value
+            // keeps polling regardless, in either direction of mismatch.
             static uint16_t s_pending_poll_count = 0;
-            if (!slave_ok && slave_ack == SYNC_CRC32_ERR) {
+            if (!slave_ok && (slave_ack == SYNC_BUSY || slave_ack == SYNC_CRC32_ERR)) {
                 if ((++s_pending_poll_count & 0x0F) == 0) {
                     fw_up_log_slave_status("begin-pending");
                 }
@@ -162,7 +169,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // ended up one chunk behind and rejected the whole rest of the stream
             // (2026-06-10, updates dying at 6% / 83%).  A duplicate re-send of an
             // already-staged chunk has next_offset > offset and passes (idempotent).
-            uint8_t slave_ack = fw_up_relay_chunk_to_slave(offset, chunk_data, "FW_UP_CHUNK") ? SYNC_ACK : SYNC_CRC32_ERR;
+            uint8_t slave_ack = fw_up_relay_chunk_to_slave(offset, chunk_data, "FW_UP_CHUNK") ? SYNC_ACK : SYNC_GIVEUP;
             // First-failure diagnostic: when a chunk doesn't reach the slave,
             // immediately query the slave's internal state so we can tell from
             // the master serial log whether the slave is fully hung (status RPC

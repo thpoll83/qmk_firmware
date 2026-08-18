@@ -47,6 +47,17 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     as reviewed. There is no way to get it reviewed short of splitting the PR — so
     for a merge PR, treat the **build + HIL checks and hardware testing as the only
     real verification**, and don't count the green board as review cover.
+  - ⚠️ **A STACKED PR gets no automatic review at all** — *"Review skipped — Auto
+    reviews are disabled on base/target branches other than the default branch."*
+    This is a **fourth** no-review mode (alongside the rate limit, the <10-stars
+    repo, and the >100-file skip) and it is **guaranteed, not occasional**: any PR
+    whose base is another feature branch is silently unreviewed for as long as it is
+    stacked. Seen on #211 (2026-08-17), stacked on #210. Two ways out, and prefer the
+    first: **let the parent merge** — GitHub then retargets the child to `PolyKybd`
+    and auto-review applies again (confirm a review actually lands; a base change may
+    not itself trigger one). Otherwise spend a slot on `@coderabbitai review`, which
+    works on a stacked PR but costs the same org-wide budget as any other request.
+    ⚠️ Do **not** read the resulting quiet board as "no findings" — nothing read it.
   - ⚠️ **Sourcery's rate-limit is QUIETER than CodeRabbit's: the `Sourcery review`
     check run goes GREEN (`success`) while no review happened.** When its weekly
     diff-character budget is spent it submits a `COMMENTED` review whose entire body
@@ -2608,24 +2619,41 @@ that ring/reflect on a longer split cable.
   idempotent) or, ~1/256, into a false ACK. Low impact, but it's why a tiny
   fraction of `crc_err` counts can be reply corruption rather than payload.
   - **That missing CRC is why the ack BYTE VALUES are Hamming-spaced**, and the
-    vocabulary now lives in dependency-free **`base/sync_ack.h`** (re-exported by
-    `split_sync.h`, so consumers are unchanged) with a test enforcing it:
+    vocabulary lives in dependency-free **`base/sync_ack.h`** (re-exported by
+    `split_sync.h`, so consumers are unchanged) with tests enforcing it:
     `SyncAckTest.AckValuesStayHammingSpaced` requires min pairwise distance **4**
-    across `SYNC_ACK` / `SYNC_ACK_SIG` / `SYNC_CRC32_ERR` / `SYNC_NACK_REFUSED`.
-    ⚠️ **Adding a fifth value must keep that distance** or the single-bit tolerance
-    degrades for the *whole* set; an exhaustive search says **12 spare codewords**
-    preserve it, so there is plenty of room — but avoid `0x00`/`0xFF`, which are what
-    a stuck or floating line reads as (also asserted). `sync_succeeded()` is a
-    deliberate **whitelist** so a new failure value is a failure at all 14 existing
-    call sites with no edits; `SyncSucceededIsFailClosedAcrossEveryByte` sweeps all
-    256 bytes to pin that, because a blacklist implementation passes every other test.
-  - ⚠️ **`SYNC_CRC32_ERR` is still TRIPLE-overloaded** — "still erasing" (a normal
-    `flash_stage_begin` re-poll state), "your frame arrived garbled", and
-    "send_to_bridge gave up". Only the *refusal* case was peeled off (into
-    `SYNC_NACK_REFUSED`); the remaining three are separated by nothing but a comment.
-    The clean follow-up is a distinct `SYNC_BUSY` and a distinct give-up value, which
-    the 12 spare codewords comfortably allow — then callers could back off vs retry vs
-    escalate instead of inferring from context.
+    across all six values, `EveryAckValueIsDistinct` forbids a duplicate, and
+    `NoAckValueIsAStuckLineReading` forbids `0x00`/`0xFF` (what a stuck or floating
+    line reads as). The set is built as **complement pairs**, each balanced at
+    popcount 4: `SYNC_ACK 0xCA ↔ SYNC_CRC32_ERR 0x35`, `SYNC_ACK_SIG 0x4D ↔
+    SYNC_NACK_REFUSED 0xB2`, `SYNC_BUSY 0x1B ↔ SYNC_GIVEUP 0xE4`.
+    ⚠️ **Adding a seventh value must keep distance 4** or the single-bit tolerance
+    degrades for the *whole* set. A mutually-distance-4 code containing these six
+    extends to **16**, so 10 remain (8 excluding `0x00`/`0xFF`) — take the complement
+    of an unused one to keep the pattern. `sync_succeeded()` is a deliberate
+    **whitelist** so a new failure value is a failure at all 14 existing call sites
+    with no edits; `SyncSucceededIsFailClosedAcrossEveryByte` sweeps all 256 bytes to
+    pin that, because a blacklist implementation passes every other test.
+  - ✅ **`SYNC_CRC32_ERR` is DE-OVERLOADED — it now means exactly one thing: "the
+    frame I received did not check out".** It used to mean four: that, plus "still
+    erasing", "no answer at all", and "I refuse". Each now has its own value —
+    `SYNC_BUSY` (the `flash_stage_begin` re-poll while the deferred erase runs),
+    `SYNC_GIVEUP` (`send_to_bridge` exhausted its retries, or we never asked), and
+    `SYNC_NACK_REFUSED` (processed and declined: an unknown bundle id, a rejected
+    chunk write, an apply with no valid staged image, an unknown reset action).
+    The audit that keeps it true: **every remaining `= SYNC_CRC32_ERR` sits directly
+    on a `crc32 != …->crc32` (or magic) check** —
+    `grep -rn -B3 "ack = SYNC_CRC32_ERR" --include=*.c keyboards/polykybd/` should
+    show no exceptions.
+    - **Relabelling was behaviourally inert, which is why it was safe**: every
+      consumer tests `== SYNC_ACK` / `sync_succeeded()`, i.e. ACK-or-not, so no
+      decision changed — only what the logs and the COMMIT classifier can tell apart.
+    - ⚠️ **The one place needing a compat guard is `hid_fw_up.c`'s erase-progress
+      counter**, which matches on the begin re-poll value. It accepts **both**
+      `SYNC_BUSY` and the legacy `SYNC_CRC32_ERR`, because the two halves can
+      transiently run different firmware (a fw apply reboots the master first — the
+      2026-06-22 boot-splash hang). Mismatched halves are safe in both directions
+      *because* the functional decision is ACK-or-not.
 
 **How CRC32 + retries + noise interact** (the model that drives the retry-count
 choice). With `p` = probability a single frame is corrupted (and caught by CRC32),
@@ -2659,13 +2687,42 @@ frames (count-based, no timer — the cadence follows real traffic, so it's dens
 during overlay bursts and silent when idle; gated on `debug_enable`):
 
 ```text
-Split link: 12345 tx crc_err=4 transport_fail=1 giveup=0 err=0.0%
+Split link: 12345 tx crc_err=4 nack=17 transport_fail=1 giveup=0 err=0.0%
 ```
 
 `err%` is the all-time detected-error rate over all frames — a direct read on the
 wire. **Use it to validate any link change** (baud/cable/drive/termination) by
 watching the number move, instead of by feel. `giveup` should stay ~0 with
 retries=3; if it climbs, attack `p` at the source.
+
+⚠️ **`nack` is EXCLUDED from `err%` on purpose** — it counts valid non-ACK answers
+(`SYNC_BUSY`, `SYNC_NACK_REFUSED`), where the wire worked and the slave simply said
+something other than yes. Only `crc_err` (a corrupted frame) and `transport_fail`
+(no answer) are link faults. Before the split, every non-ACK incremented
+`crc_err` — and since `SYNC_BUSY` now arrives on **every erase re-poll of a flash**,
+a single font-pack update would otherwise have added hundreds of phantom "errors"
+to the one number used to judge cable/baud changes.
+
+⚠️ **`send_to_bridge()` returns what the slave SAID; it returns `SYNC_GIVEUP` only
+when the slave never answered.** It used to return a *constant* on give-up,
+discarding `reply.ack` — and that worked only by **coincidence**, because the
+constant was `SYNC_CRC32_ERR`, which happened to equal what the slave sent in every
+case that mattered. Distinguishing the failure values exposed the discard, and with
+it **`fw_up_slave_refused_commit()`'s "a refusal is self-describing, so don't spend
+a STATUS RPC" short-circuit, which was dead code** — a refusal arrived as the
+give-up constant, never as `SYNC_NACK_REFUSED`, so every refusal paid for a probe
+(found in review, 2026-08-17). **Generalise: a sentinel that happens to equal a
+real value hides the fact that the real value is being thrown away.**
+- ⚠️ **The near-miss is the more instructive half, and it was initially reported
+  here as a second dead-code case — wrongly.** `hid_fw_up.c`'s erase-progress
+  counter kept firing throughout, just not for the reason it reads as: its guard
+  accepts `SYNC_BUSY` **or** `SYNC_CRC32_ERR`, a compat arm added for transiently
+  mismatched halves, and that arm also matched the give-up constant. A defensive
+  clause written for one hazard quietly covered the discard, so the counter fired
+  on a value the slave never sent. Verified on hardware 2026-08-18: it logs
+  `begin-pending` at poll 17 and 33 of a 117-sector erase — as it did before.
+  **Check a dead-code claim against the guard's OTHER arms before making it**; the
+  git history of the condition settles it in one `git show`.
 
 **Reducing `p` at the source (the real root fix), in order of leverage**:
 1. **Lower the baud** — biggest, cheapest software lever. 230400 → 115200

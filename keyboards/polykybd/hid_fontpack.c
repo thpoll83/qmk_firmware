@@ -125,7 +125,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
 
             uint8_t slave_ack = master_ok
                 ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
-                : SYNC_CRC32_ERR;
+                : SYNC_GIVEUP;   // never asked — the master rejected the pack itself
             bool slave_ok    = (slave_ack == SYNC_ACK);
             bool master_done = !fw_staging_erase_pending();
 

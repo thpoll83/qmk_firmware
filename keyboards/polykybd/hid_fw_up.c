@@ -24,33 +24,9 @@
 // first reports ready) so we can tell from the master serial log whether
 // the slave is alive at all, whether the chunk handler ran, and what its
 // next_offset / counters look like.  See FW_UP_DEBUG_NOTES.md.
-static void fw_up_log_slave_status(const char *tag) {
-    fw_up_status_request_t req = { .crc32 = 0, .op = FLASH_STAGE_STATUS, .dummy = 0 };
-    fw_up_status_reply_t   reply;
-    memset(&reply, 0, sizeof(reply));
-    // Use transaction_rpc_exec directly — send_to_bridge hardcodes the
-    // 1-byte poly_sync_reply_t and can't carry our bigger status struct.
-    bool ok = transaction_rpc_exec(USER_SYNC_FLASH_STAGE,
-                                   sizeof(req), &req,
-                                   sizeof(reply), &reply);
-    if (!ok) {
-        uprintf("slave status (%s): RPC FAILED — slave unresponsive\n", tag);
-        return;
-    }
-    const fw_staging_status_t *s = &reply.status;
-    uprintf("slave status (%s): init=%u active=%u erase_pending=%u erase=%u/%u "
-            "next_off=%lu begin_calls=%u chunk_calls=%u chunk_errs=%u "
-            "last_chunk_off=%lu last_ack=0x%02x pd_calls=%u pd_advances=%u\n",
-            tag,
-            (unsigned)s->initialized, (unsigned)s->fw_up_active, (unsigned)s->erase_pending,
-            (unsigned)s->erase_sector_next, (unsigned)s->erase_sector_count,
-            (unsigned long)s->next_offset,
-            (unsigned)s->begin_handler_calls, (unsigned)s->chunk_handler_calls,
-            (unsigned)s->chunk_handler_errors,
-            (unsigned long)s->last_chunk_offset, (unsigned)s->last_chunk_ack,
-            (unsigned)s->process_deferred_calls,
-            (unsigned)s->process_deferred_advances);
-}
+// fw_up_log_slave_status() and the STATUS probe behind it now live in
+// split_fw_up.c, shared with the font-pack COMMIT path (which needs the same
+// probe to tell a slave refusal from a dropped acknowledgement).
 
 bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
     switch (data[1]) {
@@ -285,6 +261,13 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                                                      sizeof(commit_msg), 10);
             bool master_ok = fw_staging_finalize();   // also clears fw_up_active + restarts master core1
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
+            // The firmware-update COMMIT keeps its four statuses (a fifth for "the
+            // slave refused" would need a matching host change), but the distinction
+            // is now at least DIAGNOSABLE: this logs whether a non-ACK slave really
+            // refused or just lost its answer, which the single '!' cannot say.
+            if (!ok && slave_ack != SYNC_ACK && !fw_staging_awaiting_confirm()) {
+                (void)fw_up_slave_refused_commit(slave_ack, "FW_UP_COMMIT");
+            }
             memset(data, 0, length);
             // Four outcomes, not two. '?' means "waiting for the user to confirm an
             // unsigned image on the keyboard" (re-poll me); 'S' distinguishes

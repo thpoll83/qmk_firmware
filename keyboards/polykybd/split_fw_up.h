@@ -91,6 +91,14 @@ typedef struct _fw_up_status_reply_t {
     fw_staging_status_t status;
 } fw_up_status_reply_t;
 
+// The slave→master RPC buffer is a SILENT ceiling: transaction_rpc_exec refuses a
+// transfer bigger than it and returns false BEFORE sending anything, so outgrowing
+// it would make the status probe simply stop answering with nothing in the log.
+// (last_commit_ack was added inside the existing pad, so this is unchanged — the
+// assert is here to keep it that way.)
+static_assert(sizeof(fw_up_status_reply_t) <= RPC_S2M_BUFFER_SIZE,
+              "fw_up_status_reply_t exceeds RPC_S2M_BUFFER_SIZE — the STATUS probe would silently stop answering");
+
 // Reset/apply coordination (master → slave).  ONE transaction (USER_SYNC_RESET)
 // carries every "make the other half restart" action; the `action` byte selects
 // which.  A magic guard — on top of the CRC32 and QMK's own transport checksum —
@@ -129,6 +137,13 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
 // One slave-side dispatcher for the whole flash-staging stream (BEGIN / CHUNK /
 // COMMIT / STATUS); it reads the `op` word and routes to the per-op logic.
 void user_sync_flash_stage_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+
+// Master-side helpers over the read-only FLASH_STAGE_STATUS op.
+bool fw_up_query_slave_status(fw_staging_status_t *out);
+void fw_up_log_slave_status(const char *tag);
+// True when a non-ACK COMMIT means the slave REFUSED (re-flash) rather than the
+// link dropping the answer (retry). `tag` prefixes the diagnostic line.
+bool fw_up_slave_refused_commit(uint8_t slave_ack, const char *tag);
 // One transaction (USER_SYNC_RESET) for apply-and-reboot, plain reboot, and the
 // handedness-change reboot; the poly_reset_sync_t `action` byte selects which.
 void user_sync_reset_handler        (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

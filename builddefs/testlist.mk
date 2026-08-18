@@ -9,6 +9,7 @@ include $(QUANTUM_PATH)/sequencer/tests/testlist.mk
 include $(QUANTUM_PATH)/wear_leveling/tests/testlist.mk
 include $(PLATFORM_PATH)/test/testlist.mk
 include modules/polykybd/polymod_ltr559/tests/testlist.mk
+include keyboards/polykybd/base/tests/testlist.mk
 
 define VALIDATE_TEST_LIST
     ifneq ($1,)

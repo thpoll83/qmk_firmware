@@ -163,6 +163,7 @@ static uint16_t s_process_deferred_calls;     // every entry into process_deferr
 static uint16_t s_process_deferred_advances;  // every actual sector erase
 static uint32_t s_last_chunk_offset;
 static uint8_t  s_last_chunk_ack;
+static uint8_t  s_last_commit_ack;   // ack the slave's COMMIT handler last returned
 
 // ---------------------------------------------------------------------------
 // Helper: chain CRC32 over a large buffer in 60 000-byte chunks
@@ -236,6 +237,7 @@ void fw_staging_init(void) {
     // last-chunk fields so they only ever describe the most recent attempt.
     s_last_chunk_offset    = 0;
     s_last_chunk_ack       = 0;
+    s_last_commit_ack      = 0;
 #ifdef USE_CORE1
     s_core1_halted   = false;
 #endif
@@ -270,6 +272,13 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
     s_image_size = image_size;
     s_image_crc  = image_crc;
     s_fw_up_active = true;
+    // Per ATTEMPT, not per boot: fw_staging_init() runs once at keyboard_post_init,
+    // so clearing the verdict only there let a second flash in the same power cycle
+    // inherit the first one's. That matters because the master now READS this to
+    // classify a lost COMMIT ack — a stale refusal would turn a genuine link failure
+    // into a reported data rejection and cost a full re-stream instead of a free
+    // COMMIT retry, which is the exact case the probe exists to get right.
+    s_last_commit_ack = 0;
 
     // Erase the header sector (FIRMWARE only) then each data sector individually.
     // Re-enabling interrupts between sectors keeps USB/watchdog responsive
@@ -324,6 +333,13 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     s_image_size = image_size;
     s_image_crc  = image_crc;
     s_fw_up_active = true;
+    // Per ATTEMPT, not per boot: fw_staging_init() runs once at keyboard_post_init,
+    // so clearing the verdict only there let a second flash in the same power cycle
+    // inherit the first one's. That matters because the master now READS this to
+    // classify a lost COMMIT ack — a stale refusal would turn a genuine link failure
+    // into a reported data rejection and cost a full re-stream instead of a free
+    // COMMIT retry, which is the exact case the probe exists to get right.
+    s_last_commit_ack = 0;
 
     uint32_t data_sectors   = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
     // FIRMWARE: index 0 = header sector, 1..N = data. FONTPACK: 0..N-1 = data (no header).
@@ -795,6 +811,7 @@ void fw_staging_get_status(fw_staging_status_t *out) {
     out->fw_up_active         = s_fw_up_active ? 1 : 0;
     out->erase_pending        = s_erase_pending ? 1 : 0;
     out->last_chunk_ack       = s_last_chunk_ack;
+    out->last_commit_ack      = s_last_commit_ack;
     out->erase_sector_next    = (uint16_t)s_erase_sector_next;
     out->erase_sector_count   = (uint16_t)s_erase_sector_count;
     out->next_offset          = s_next_offset;
@@ -820,6 +837,10 @@ void fw_staging_note_chunk_call(uint32_t offset, uint8_t ack) {
     if (ack != 0xCA /* SYNC_ACK */) {
         if (s_chunk_handler_errors != UINT16_MAX) s_chunk_handler_errors++;
     }
+}
+
+void fw_staging_note_commit_ack(uint8_t ack) {
+    s_last_commit_ack = ack;
 }
 
 void fw_staging_set_fw_up_active(bool active) {

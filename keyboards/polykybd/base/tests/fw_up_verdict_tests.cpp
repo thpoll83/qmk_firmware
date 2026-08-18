@@ -15,6 +15,8 @@
 
 #include "gtest/gtest.h"
 
+#include <ios>
+
 extern "C" {
 #include "sync_ack.h"
 #include "fw_staging.h"
@@ -98,6 +100,42 @@ TEST(SyncAckTest, NoAckValueIsAStuckLineReading) {
     for (uint8_t ack : kAllAcks) {
         EXPECT_NE(ack, 0x00);
         EXPECT_NE(ack, 0xFF);
+    }
+}
+
+// sync_is_link_fault() decides both the err% numerator and the give-up counter,
+// so a mistake here silently corrupts the one number used to judge cable / baud /
+// drive changes. A link fault is "nobody answered" or "the slave says what
+// reached it was corrupt" — nothing else.
+TEST(SyncAckTest, NoAnswerIsAlwaysALinkFault) {
+    // The ack byte is meaningless when nothing was received, so it must not be
+    // consulted: every possible value still reads as a fault.
+    for (int b = 0; b <= 0xFF; ++b) {
+        EXPECT_TRUE(sync_is_link_fault(false, static_cast<uint8_t>(b)))
+            << "no reply, but ack 0x" << std::hex << b << " read as a clean link";
+    }
+}
+
+TEST(SyncAckTest, OnlyACrcErrorReplyIsALinkFault) {
+    EXPECT_TRUE(sync_is_link_fault(true, SYNC_CRC32_ERR));
+    // Everything the slave can deliberately say is a verdict, not a bad wire —
+    // most importantly SYNC_BUSY, which arrives on EVERY erase re-poll of a flash.
+    EXPECT_FALSE(sync_is_link_fault(true, SYNC_BUSY));
+    EXPECT_FALSE(sync_is_link_fault(true, SYNC_NACK_REFUSED));
+    EXPECT_FALSE(sync_is_link_fault(true, SYNC_ACK));
+    EXPECT_FALSE(sync_is_link_fault(true, SYNC_ACK_SIG));
+}
+
+// The predicate must NOT enumerate the non-fault values: a seventh ack value has
+// to classify correctly with no edit, or the counter goes stale the way an
+// enumerating guard always does. A delivered reply is by construction proof the
+// wire worked, so every byte except SYNC_CRC32_ERR is a verdict.
+TEST(SyncAckTest, AnUnknownReplyValueIsNotMistakenForALinkFault) {
+    for (int b = 0; b <= 0xFF; ++b) {
+        const uint8_t ack = static_cast<uint8_t>(b);
+        if (ack == SYNC_CRC32_ERR) continue;
+        EXPECT_FALSE(sync_is_link_fault(true, ack))
+            << "a delivered reply of 0x" << std::hex << b << " read as a link fault";
     }
 }
 

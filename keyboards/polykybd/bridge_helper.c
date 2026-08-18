@@ -39,7 +39,9 @@ static uint32_t ls_attempts       = 0;  // frames sent (transaction_rpc_exec cal
 static uint32_t ls_crc_err        = 0;  // reply was SYNC_CRC32_ERR → payload corrupted in flight
 static uint32_t ls_nack           = 0;  // reply was a valid non-ACK (BUSY / REFUSED) → NOT a link fault
 static uint32_t ls_transport_fail = 0;  // transport returned false (timeout / handshake / no reply)
-static uint32_t ls_call_giveup    = 0;  // send_to_bridge() calls that exhausted every retry
+static uint32_t ls_call_giveup    = 0;  // calls that exhausted every retry on a LINK fault
+                                        // (not counted when the slave answered BUSY/REFUSED —
+                                        //  see the note where it is incremented)
 static uint32_t ls_last_log       = 0;  // ls_attempts at the last emitted summary
 
 void set_com_state(enum com_state state) {
@@ -135,20 +137,31 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
         // answers over a perfectly good wire and must not be counted as errors.
         // sync_success==false means the transport gave up (timeout / bad
         // handshake / no reply).
-        if(sync_success) {
-            if(reply.ack == SYNC_CRC32_ERR) {
-                ls_crc_err++;
-            } else {
-                ls_nack++;
-            }
-        } else {
+        if(!sync_success) {
             ls_transport_fail++;
+        } else if(sync_is_link_fault(true, reply.ack)) {
+            ls_crc_err++;
+        } else {
+            ls_nack++;
         }
         if(debug_enable) {
             uprintf("Bridge sync retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack, num_bytes);
         }
     }
-    ls_call_giveup++;
+    // Count a give-up only when the call ended on a LINK fault. A call whose last
+    // answer was a protocol verdict — SYNC_BUSY above all — did not give up on
+    // anything: the slave answered, and the answer was simply not yes.
+    //
+    // This matters because it is the COMMON case, not an edge one. The
+    // flash_stage_begin re-poll runs with max_retries=1, so EVERY poll of a
+    // deferred erase used to land here: a healthy font-pack sync measured
+    // `nack=11 transport_fail=1 giveup=12` on hardware (2026-08-18) — a link with
+    // one real fault reporting twelve give-ups. `giveup` is read as "the link is
+    // failing", so inflating it with normal polling is the same category error
+    // that made err% read 6.0% on that link instead of 0.5%.
+    if(sync_is_link_fault(got_reply, last_ack)) {
+        ls_call_giveup++;
+    }
     if(debug_enable) {
         uprintf("Failed to sync %d bytes for transaction %s!\n", num_bytes, tid_to_str(tid));
     }

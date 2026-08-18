@@ -85,3 +85,21 @@ typedef struct _poly_sync_reply_t {
 static inline bool sync_succeeded(uint8_t ack) {
     return ack == SYNC_ACK || ack == SYNC_ACK_SIG;
 }
+
+// Was this exchange a LINK fault — a bad wire — as opposed to a verdict the
+// slave deliberately sent? Both the err% numerator and the give-up counter ask
+// this, so sharing one predicate keeps them from ever disagreeing about what a
+// bad link is.
+//
+// `got_reply` is whether the transport delivered a reply at all.
+//
+// ⚠️ Deliberately NOT an enumeration of the failure values. A link fault is
+// exactly two things: nobody answered, or the slave says what reached it was
+// corrupt. Any OTHER byte means the wire delivered a frame and the slave
+// answered with a verdict of its own — so a seventh ack value is classified
+// correctly here with no edit. A guard that instead listed its siblings
+// (`ack == SYNC_BUSY || ack == SYNC_NACK_REFUSED || …`) would need updating for
+// every new value, and would silently misclassify until someone remembered.
+static inline bool sync_is_link_fault(bool got_reply, uint8_t ack) {
+    return !got_reply || ack == SYNC_CRC32_ERR;
+}

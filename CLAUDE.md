@@ -2707,13 +2707,22 @@ to the one number used to judge cable/baud changes.
 when the slave never answered.** It used to return a *constant* on give-up,
 discarding `reply.ack` — and that worked only by **coincidence**, because the
 constant was `SYNC_CRC32_ERR`, which happened to equal what the slave sent in every
-case that mattered. Distinguishing the failure values exposed the discard and, with
-it, **two documented behaviours that were in fact dead code** (found in review,
-2026-08-17): `hid_fw_up.c`'s erase-progress counter matches on the begin re-poll
-value, which could never arrive; and `fw_up_slave_refused_commit()`'s "a refusal is
-self-describing, so don't spend a STATUS RPC" short-circuit never triggered, so
-every refusal paid for a probe. **Generalise: a sentinel that happens to equal a
+case that mattered. Distinguishing the failure values exposed the discard, and with
+it **`fw_up_slave_refused_commit()`'s "a refusal is self-describing, so don't spend
+a STATUS RPC" short-circuit, which was dead code** — a refusal arrived as the
+give-up constant, never as `SYNC_NACK_REFUSED`, so every refusal paid for a probe
+(found in review, 2026-08-17). **Generalise: a sentinel that happens to equal a
 real value hides the fact that the real value is being thrown away.**
+- ⚠️ **The near-miss is the more instructive half, and it was initially reported
+  here as a second dead-code case — wrongly.** `hid_fw_up.c`'s erase-progress
+  counter kept firing throughout, just not for the reason it reads as: its guard
+  accepts `SYNC_BUSY` **or** `SYNC_CRC32_ERR`, a compat arm added for transiently
+  mismatched halves, and that arm also matched the give-up constant. A defensive
+  clause written for one hazard quietly covered the discard, so the counter fired
+  on a value the slave never sent. Verified on hardware 2026-08-18: it logs
+  `begin-pending` at poll 17 and 33 of a 117-sector erase — as it did before.
+  **Check a dead-code claim against the guard's OTHER arms before making it**; the
+  git history of the condition settles it in one `git show`.
 
 **Reducing `p` at the source (the real root fix), in order of leverage**:
 1. **Lower the baud** — biggest, cheapest software lever. 230400 → 115200

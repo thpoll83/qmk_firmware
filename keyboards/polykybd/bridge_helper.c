@@ -158,14 +158,20 @@ uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t nu
     // ⚠️ This used to return a constant, discarding reply.ack — and that silently
     // defeated the whole point of having distinct failure values. It worked before
     // only by COINCIDENCE: the constant was SYNC_CRC32_ERR, which happened to equal
-    // what the slave sent in every case that mattered. Two documented behaviours
-    // were in fact dead code because of it:
-    //   * hid_fw_up.c's erase-progress counter matches on the begin re-poll value.
-    //     With the slave answering SYNC_BUSY and this returning a constant, that
-    //     condition could never be true and the diagnostic never fired.
-    //   * fw_up_slave_refused_commit()'s "a refusal is self-describing, so don't
-    //     spend a STATUS RPC" short-circuit never triggered, because a refusal
-    //     arrived here as the give-up constant. Every refusal paid for a probe.
+    // what the slave sent in every case that mattered.
+    //
+    // fw_up_slave_refused_commit()'s "a refusal is self-describing, so don't spend
+    // a STATUS RPC" short-circuit was DEAD CODE because of it: a refusal arrived
+    // here as the give-up constant, never as SYNC_NACK_REFUSED, so every refusal
+    // paid for a probe.
+    //
+    // hid_fw_up.c's erase-progress counter is the instructive near-miss — it kept
+    // working, but not for the reason it reads as. Its guard accepts SYNC_BUSY
+    // *or* SYNC_CRC32_ERR, a compat arm added for transiently-mismatched halves,
+    // and that arm happened to match the give-up constant too. So a defensive
+    // clause written for one hazard silently covered the discard, and the counter
+    // fired on a value the slave had not sent. It now matches SYNC_BUSY because
+    // the slave actually said SYNC_BUSY.
     // Callers that only ask sync_succeeded() are unaffected — it is a whitelist,
     // and none of these values is an ACK.
     return got_reply ? last_ack : SYNC_GIVEUP;

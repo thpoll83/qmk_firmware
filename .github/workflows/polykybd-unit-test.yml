@@ -1,0 +1,100 @@
+# Runs the PolyKybd googletest suites (`make test:<name>`).
+#
+# WHY A SEPARATE WORKFLOW: upstream's `unit_test.yml` is stock QMK and its
+# `paths:` filter lists only builddefs/ quantum/ platforms/ tmk_core/ tests/ —
+# none of which a PolyKybd change touches. So every suite under
+# keyboards/polykybd/ and modules/polykybd/ was invisible to CI: 46 tests across
+# two suites had only ever been run by hand, on a repo whose PR board otherwise
+# looks comprehensively green. Editing upstream's workflow instead would just
+# conflict at the next catch-up merge.
+name: PolyKybd Unit Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - PolyKybd
+      - 'PolyKybd/**'
+  pull_request:
+    paths:
+      - 'keyboards/polykybd/**'
+      - 'modules/polykybd/**'
+      # The harness registrations themselves: a suite can be silently
+      # de-registered by editing only these.
+      - 'builddefs/testlist.mk'
+      - 'builddefs/build_test.mk'
+      - '.github/workflows/polykybd-unit-test.yml'
+
+jobs:
+  test:
+    name: PolyKybd unit tests
+    runs-on: ubuntu-latest
+
+    container: ghcr.io/qmk/qmk_cli
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: pip3 install -r requirements-dev.txt
+
+      # Derived from the harness, never hardcoded: the suite names come from the
+      # `TEST_LIST +=` lines of every polykybd testlist.mk that builddefs includes.
+      # So adding a third suite needs no edit here — the same reason the split-link
+      # fault predicate refuses to enumerate its siblings: a list that must be kept
+      # in sync is a list that goes stale silently.
+      - name: Discover PolyKybd test suites
+        id: discover
+        run: |
+          set -euo pipefail
+          lists=$(grep -o '[^ ]*polykybd[^ ]*/testlist\.mk' builddefs/testlist.mk || true)
+          if [ -z "$lists" ]; then
+            echo "::error::No polykybd testlist.mk is included from builddefs/testlist.mk."
+            echo "Either the suites were de-registered, or the include path changed."
+            exit 1
+          fi
+          echo "Including:"; echo "$lists" | sed 's/^/  /'
+          names=$(grep -h 'TEST_LIST *+=' $lists | sed 's/.*+=[[:space:]]*//' | tr -d '\r' | sort -u)
+          if [ -z "$names" ]; then
+            echo "::error::Found polykybd testlist.mk files but no TEST_LIST entries in them."
+            exit 1
+          fi
+          echo "Suites:"; echo "$names" | sed 's/^/  /'
+          # Guard against a green board that ran nothing — the failure mode this
+          # whole workflow exists to remove.
+          echo "names<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$names"     >> "$GITHUB_OUTPUT"
+          echo "EOF"        >> "$GITHUB_OUTPUT"
+
+      - name: Run PolyKybd test suites
+        run: |
+          set -uo pipefail
+          failed=""
+          count=0
+          while IFS= read -r t; do
+            [ -n "$t" ] || continue
+            count=$((count + 1))
+            echo "::group::make test:$t"
+            if make "test:$t" -j "$(nproc)"; then
+              echo "::endgroup::"
+              echo "PASS $t"
+            else
+              echo "::endgroup::"
+              echo "::error::test suite '$t' failed"
+              failed="$failed $t"
+            fi
+          done <<< "${{ steps.discover.outputs.names }}"
+          echo "--- ran $count suite(s) ---"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::ran zero test suites"
+            exit 1
+          fi
+          if [ -n "$failed" ]; then
+            echo "Failed:$failed"
+            exit 1
+          fi
+          echo "All $count PolyKybd test suite(s) passed."

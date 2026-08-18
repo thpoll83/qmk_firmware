@@ -2695,6 +2695,25 @@ wire. **Use it to validate any link change** (baud/cable/drive/termination) by
 watching the number move, instead of by feel. `giveup` should stay ~0 with
 retries=3; if it climbs, attack `p` at the source.
 
+⚠️ **`giveup` counts only calls that ended on a LINK fault, and `nack` is EXCLUDED
+from `err%`** — both decided by the one shared predicate `sync_is_link_fault(got_reply,
+ack)` (`base/sync_ack.h`), so the two numbers can never disagree about what a bad wire
+is. A link fault is exactly *nobody answered* or *the slave says what reached it was
+corrupt* (`SYNC_CRC32_ERR`); every other byte means the wire delivered a frame and the
+slave answered with a verdict of its own.
+- ⚠️ **It is deliberately NOT an enumeration of the non-fault values.** Listing the
+  siblings (`ack == SYNC_BUSY || ack == SYNC_NACK_REFUSED || …`) is the guard shape that
+  goes stale — a seventh ack value would be misclassified until someone remembered to
+  add it. `SyncAckTest.AnUnknownReplyValueIsNotMistakenForALinkFault` sweeps all 256
+  bytes to pin that, and it fails against the enumerating implementation.
+- **Why `giveup` needed this:** the `flash_stage_begin` re-poll runs with
+  `max_retries=1`, so **every** poll of a deferred erase exhausted its retries with a
+  perfectly good `SYNC_BUSY` answer and counted as a give-up. Measured on hardware
+  (2026-08-18) a healthy font-pack sync read `nack=11 transport_fail=1 giveup=12` — one
+  real fault, twelve reported give-ups. `giveup` is read as "the link is failing", so
+  that is the same category error that had `err%` reading 6.0% on that link instead of
+  0.5%.
+
 ⚠️ **`nack` is EXCLUDED from `err%` on purpose** — it counts valid non-ACK answers
 (`SYNC_BUSY`, `SYNC_NACK_REFUSED`), where the wire worked and the slave simply said
 something other than yes. Only `crc_err` (a corrupted frame) and `transport_fail`

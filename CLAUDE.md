@@ -1499,7 +1499,8 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
 - ⚠️ **`set_time()` / `advance_time()` have no header.** They are defined only in
   `platforms/test/timer.c`; every test that drives the clock forward-declares them
   (see `quantum/sequencer/tests/sequencer_tests.cpp`).
-- **Mutation-test the suite before trusting it.** Break the thing on purpose (swap a
+- **Mutation-test the suite before trusting it — the `mutation-test-suite` skill is
+  the recipe.** Break the thing on purpose (swap a
   byte order, delete a bound) and confirm the *expected* test fails — the same
   discipline as "verify against the rendered glyph shape, not a transform∘inverse
   round-trip". A suite that passes against a deliberately broken driver is measuring
@@ -1516,6 +1517,12 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
     through `sed 's/\x1b\[[0-9;]*m//g'` first. Cost a full round (2026-08-17); a
     single manual mutation is the 30 s way to confirm the harness works before
     trusting a sweep.
+  - ⚠️ **A second fail-open path, same shape: a mutation that never APPLIED.** A
+    failed `sed`/`perl` (a C `||` collides with `sed`'s `s|…|…|` delimiter) leaves
+    the source untouched, the suite passes because nothing was broken, and the
+    empty "caught by:" reads identically to "not caught". Assert the edit landed
+    (`git diff --quiet` on the mutated file) before believing the run. Hit while
+    dogfooding the skill, 2026-08-18.
 
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 host-remappable layers), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
@@ -1890,8 +1897,17 @@ flashes all stale bundles, `flash <id>` force-flashes one).
       catch the host *misreading* a status, never this end emitting the wrong one.
     - ⚠️ **A status letter that is a HEX DIGIT breaks the literal**: `"P\x52C"` is a single
       `\x52C` escape, not three bytes. `R`/`L` are safe; anything in `[0-9a-fA-F]` needs a
-      split literal (`"P\x52" "C"`). Verify by grepping the built ELF — `strings` shows
-      `PRR`/`PRL` (P, 0x52, letter) exactly once each.
+      split literal (`"P\x52" "C"`).
+      - ⚠️ **Do NOT try to verify that by grepping the ELF for `PRR`/`PRL`** — an earlier
+        version of this note said `strings` shows them "exactly once each", and it does
+        not show them at all. The COMMIT reply is **assembled at runtime**, byte by byte,
+        by `fontpack_reply_status()` (`data[0]='P'; data[1]=cmd; data[2]=status;`), so no
+        such literal exists in any build. Their absence is the *expected* state and reads
+        exactly like a broken image — it cost a double-take while verifying a delivered
+        `.bin` (2026-08-18). The escape hazard is a **compile-time** property, so check it
+        where it lives: read the source literal, or `make test:fw_up_verdict`
+        (`FontpackCommitStatusTest.StatusBytesAreSafeInAStringLiteral` pins it). Grep the
+        ELF only for status bytes that genuinely ARE emitted as literals.
     - **Re-running COMMIT is free, which is what makes `L` actionable.**
       `fw_staging_finalize_impl` leaves `s_staged_crc`/`s_image_crc`/`s_next_offset`
       untouched and only clears `s_commit_pending`/`s_fw_up_active`, and the slave's

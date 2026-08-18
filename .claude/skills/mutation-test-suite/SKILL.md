@@ -7,10 +7,11 @@ description: Prove a googletest suite actually detects breakage before trusting 
 
 A suite that stays green against a deliberately broken implementation is
 measuring nothing. `CLAUDE.md` already requires this ("Mutation-test the suite
-before trusting it") but does not say how — and **two** separate traps make the
-harness **fail open**, reporting every mutation as "still green", which is the
-exact result that means your tests are worthless, for all of them at once. Both
-are called out below; neither announces itself.
+before trusting it") but does not say how — and **three** separate traps make the
+harness **fail open**, reporting every mutation as "still green" (or nothing at
+all), which is the exact result that means your tests are worthless, for all of
+them at once. All three are called out below; none announces itself, and each was
+hit for real. **If a sweep looks unanimously clean, suspect the harness first.**
 
 The output is a table: mutation → caught? → by which test.
 
@@ -62,7 +63,7 @@ run() {  # prints the failing test names, or nothing if the suite stayed green
 
 mutate() {  # apply, and PROVE it applied — see the second fail-open trap below
     perl -0pi -e "$1" "$SRC"
-    if git diff --quiet "$SRC"; then
+    if cmp -s "$SRC" /tmp/mut.bak; then
         echo "MUTATION DID NOT APPLY — pattern did not match. Aborting."
         return 1
     fi
@@ -124,8 +125,16 @@ line count, and it is what a reviewer cannot easily reproduce.
   because *nothing was broken*. `run()` prints nothing, and "caught by: " with an
   empty value reads identically to "NOT CAUGHT". Both fail-open paths share one
   shape: **the harness reports the alarming result for a reason that has nothing
-  to do with the tests.** Always assert the edit landed (`git diff --quiet` is
-  enough) before believing the run.
+  to do with the tests.** Always assert the edit landed before believing the run.
+- ⚠️ **Compare against the BACKUP (`cmp -s "$SRC" /tmp/mut.bak`), not against git.**
+  `git diff --quiet "$SRC"` looks like the natural applied-check and is wrong in the
+  normal case: you are usually mutating code you have just written and not yet
+  committed, so the file is *already* dirty against HEAD, the guard's condition never
+  holds, and `mutate` returns the wrong status — with `mutate … && run`, the entire
+  sweep is skipped and prints nothing at all. That is this trap's third disguise, hit
+  on 2026-08-18 while using the skill on a fresh classifier: **four mutations, zero
+  output, no error.** Silence is not success — if a sweep prints no "caught by" lines,
+  the harness broke, not the suite.
 - **Verify the harness before trusting a sweep.** If *all* mutations report
   "still green", suspect the detector, not the suite. One manual mutation checked
   by eye is the 30 s way to confirm the pipeline works before believing a clean

@@ -50,7 +50,7 @@ jobs:
       - name: Discover PolyKybd test suites
         id: discover
         run: |
-          set -euo pipefail
+          set -eu
           lists=$(grep -o '[^ ]*polykybd[^ ]*/testlist\.mk' builddefs/testlist.mk || true)
           if [ -z "$lists" ]; then
             echo "::error::No polykybd testlist.mk is included from builddefs/testlist.mk."
@@ -70,13 +70,26 @@ jobs:
           echo "$names"     >> "$GITHUB_OUTPUT"
           echo "EOF"        >> "$GITHUB_OUTPUT"
 
+      # ⚠️ The container's default shell is POSIX `sh` (dash) — `shell: sh -e {0}`.
+      # No bash-isms. Two traps, and the second is the dangerous one:
+      #   * `done <<< "$list"` is a bash HERESTRING: dash fails to parse it outright
+      #     ("Syntax error: redirection unexpected"). Loud, which is the good case.
+      #   * `printf … | while read` is the tempting POSIX fix and is WORSE: it parses,
+      #     but POSIX runs the loop body in a SUBSHELL, so `count` and `failed` are
+      #     discarded at the `done`. A failing suite would leave `failed` empty and the
+      #     job would report GREEN — the exact hole this workflow exists to close. (Here
+      #     the count-zero guard below would catch it, which is why that guard is not
+      #     redundant paranoia.)
+      # A `for` over the unquoted list is correct in every POSIX shell and keeps the
+      # accumulators in this shell. Safe because suite names are makefile identifiers:
+      # the harness rejects even a `-`, so they can never contain whitespace.
       - name: Run PolyKybd test suites
+        env:
+          SUITES: ${{ steps.discover.outputs.names }}
         run: |
-          set -uo pipefail
           failed=""
           count=0
-          while IFS= read -r t; do
-            [ -n "$t" ] || continue
+          for t in $SUITES; do
             count=$((count + 1))
             echo "::group::make test:$t"
             if make "test:$t" -j "$(nproc)"; then
@@ -87,7 +100,7 @@ jobs:
               echo "::error::test suite '$t' failed"
               failed="$failed $t"
             fi
-          done <<< "${{ steps.discover.outputs.names }}"
+          done
           echo "--- ran $count suite(s) ---"
           if [ "$count" -eq 0 ]; then
             echo "::error::ran zero test suites"

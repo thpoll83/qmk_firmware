@@ -15,6 +15,7 @@ const uint32_t* os_hint_reference(uint16_t keycode, uint8_t mods_raw, uint8_t ac
 
 #include <cstdio>   // snprintf in describe()
 #include <string>
+#include <utility>  // std::pair — badge grid-cell uniqueness
 #include <vector>
 
 namespace {
@@ -237,8 +238,12 @@ namespace {
 uint16_t mod_tap_kc(uint8_t mods_5bit) {
     return static_cast<uint16_t>(QK_MOD_TAP | (mods_5bit << 8) | KC_A);
 }
-const uint32_t* mod_tap_hint(uint8_t mods_5bit) {
-    return os_hint_for_keycode(mod_tap_kc(mods_5bit), 0, POLY_OS_WINDOWS);
+// os_hints.c builds one badge table PER OS; they differ only at the GUI-bearing
+// indices 8-15, through the MTB_GUI_<os>_R1/R2 position macros. Pinning a single
+// OS would leave a wrong position macro (or a table wired to the wrong OS) untested
+// on six of the seven, so every structural test below loops over os_values().
+const uint32_t* mod_tap_hint(uint8_t mods_5bit, uint8_t os = POLY_OS_WINDOWS) {
+    return os_hint_for_keycode(mod_tap_kc(mods_5bit), 0, os);
 }
 }  // namespace
 
@@ -247,30 +252,37 @@ const uint32_t* mod_tap_hint(uint8_t mods_5bit) {
 // the eleven combined branches were unreachable (they demanded both the left
 // AND right bit of each modifier), so HYPR_T and MEH_T drew a bare Ctrl.
 TEST(OsHints, ModTapEveryModifierCombinationIsDistinct) {
-    std::vector<std::u32string> seen;
-    for (uint8_t combo = 1; combo <= 0x0F; ++combo) {
-        const uint32_t* got = mod_tap_hint(combo);
-        ASSERT_NE(got, nullptr) << "combo 0x" << std::hex << static_cast<int>(combo);
-        std::u32string s;
-        for (size_t i = 0; got[i]; ++i) s.push_back(static_cast<char32_t>(got[i]));
-        for (size_t j = 0; j < seen.size(); ++j) {
-            EXPECT_NE(s, seen[j]) << "combo 0x" << std::hex << static_cast<int>(combo)
-                                  << " duplicates an earlier badge — the Shift+Alt row"
-                                     " carrying Ctrl+Alt's glyphs was exactly this";
+    for (uint8_t os : os_values()) {
+        std::vector<std::u32string> seen;
+        for (uint8_t combo = 1; combo <= 0x0F; ++combo) {
+            const uint32_t* got = mod_tap_hint(combo, os);
+            ASSERT_NE(got, nullptr) << "combo 0x" << std::hex << static_cast<int>(combo)
+                                    << " os " << static_cast<int>(os);
+            std::u32string s;
+            for (size_t i = 0; got[i]; ++i) s.push_back(static_cast<char32_t>(got[i]));
+            for (size_t j = 0; j < seen.size(); ++j) {
+                EXPECT_NE(s, seen[j]) << "combo 0x" << std::hex << static_cast<int>(combo)
+                                      << " os " << static_cast<int>(os)
+                                      << " duplicates an earlier badge — the Shift+Alt row"
+                                         " carrying Ctrl+Alt's glyphs was exactly this";
+            }
+            seen.push_back(s);
         }
-        seen.push_back(s);
+        EXPECT_EQ(seen.size(), 15u);
     }
-    EXPECT_EQ(seen.size(), 15u);
 }
 
 // Bit 4 is the left/right FLAG, not a modifier. Reading it as one made every
 // right-hand mod-tap (RCTL_T/RSFT_T/RALT_T/RGUI_T) collide with MOD_MASK_CTRL's
 // 0x10 bit and draw Ctrl. Both sides must now agree.
 TEST(OsHints, ModTapLeftAndRightSidesAgree) {
-    for (uint8_t combo = 1; combo <= 0x0F; ++combo) {
-        EXPECT_TRUE(same_hint(mod_tap_hint(combo),
-                              mod_tap_hint(static_cast<uint8_t>(combo | 0x10))))
-            << "left/right disagree for combo 0x" << std::hex << static_cast<int>(combo);
+    for (uint8_t os : os_values()) {
+        for (uint8_t combo = 1; combo <= 0x0F; ++combo) {
+            EXPECT_TRUE(same_hint(mod_tap_hint(combo, os),
+                                  mod_tap_hint(static_cast<uint8_t>(combo | 0x10), os)))
+                << "left/right disagree for combo 0x" << std::hex << static_cast<int>(combo)
+                << " os " << static_cast<int>(os);
+        }
     }
 }
 
@@ -294,16 +306,19 @@ TEST(OsHints, ModTapGuiOnlyIsNotTheEmptyCase) {
 // (row 1 sat at y=0) and every badge came back two codepoints long, which is why
 // the length is asserted rather than assumed.
 TEST(OsHints, ModTapBadgeIsPositionedAndComplete) {
+    for (uint8_t os : os_values()) {
     for (uint8_t combo = 1; combo <= 0x0F; ++combo) {
-        const uint32_t* got = mod_tap_hint(combo);
+        const uint32_t* got = mod_tap_hint(combo, os);
         ASSERT_NE(got, nullptr);
         EXPECT_EQ(got[0], U'\x0E') << "badge must start with a MOVE to the corner";
         size_t moves = 0, marks = 0, len = 0;
+        std::vector<std::pair<uint32_t, uint32_t>> cells;
         while (got[len] != 0) {
             const uint32_t c = got[len];
             if (c == U'\x0E') {                 // MOVE consumes x,y
                 ASSERT_NE(got[len + 1], 0u) << "a zero MOVE x truncates the badge";
                 ASSERT_NE(got[len + 2], 0u) << "a zero MOVE y truncates the badge";
+                cells.emplace_back(got[len + 1], got[len + 2]);
                 ++moves;
                 len += 3;
             } else if (c == U'\x0F' || c == U'\x11') {   // HALF / THIN + its glyph
@@ -319,6 +334,18 @@ TEST(OsHints, ModTapBadgeIsPositionedAndComplete) {
                                << std::hex << static_cast<int>(combo);
         EXPECT_EQ(marks, want) << "one mark per modifier, combo 0x"
                                << std::hex << static_cast<int>(combo);
+        // Two marks sharing a cell would draw on top of each other. The counts
+        // above cannot see that — the positions are hand-written per table row,
+        // so a copy-paste of the wrong MTB_* macro reads as a complete badge.
+        for (size_t a = 0; a + 1 < cells.size(); ++a) {
+            for (size_t b = a + 1; b < cells.size(); ++b) {
+                EXPECT_NE(cells[a], cells[b])
+                    << "two marks share grid cell (" << cells[a].first << ","
+                    << cells[a].second << "), combo 0x" << std::hex
+                    << static_cast<int>(combo) << " os " << static_cast<int>(os);
+            }
+        }
+    }
     }
 }
 

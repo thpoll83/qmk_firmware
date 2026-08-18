@@ -959,8 +959,8 @@ static void eden_idle_tick(void) {
 // nobody drains and a console tool cannot attach that early. So latch them and
 // re-emit from housekeeping until a reader has plausibly seen them.
 static uint8_t  s_diag_fmt, s_diag_ext, s_diag_norm;
-static uint8_t  s_diag_ex[4], s_diag_asg[2];
-static uint8_t  s_diag_pex[4], s_diag_pasg[2];
+static uint8_t  s_diag_ex[LATIN_PICK_BYTES], s_diag_asg[LATIN_ASSIGN_BYTES];
+static uint8_t  s_diag_pex[LATIN_PICK_BYTES], s_diag_pasg[LATIN_ASSIGN_BYTES];
 static uint8_t  s_diag_reps = 0;
 static uint32_t s_diag_last = 0;
 #define LATIN_DIAG_REPS  30      // ~60 s of re-emits at 2 s apart
@@ -983,12 +983,11 @@ static void latin_diag_tick(void) {
     if (s_diag_last != 0 && timer_elapsed32(s_diag_last) < LATIN_DIAG_MS) return;
     s_diag_last = timer_read32();
     s_diag_reps++;
-    uprintf("LATIN_LOAD[%u]: fmt=%02X(want %02X) ext=%02X(want %02X) ex=%02X %02X %02X %02X asg=%02X %02X\n",
+    uprintf("LATIN_LOAD[%u]: fmt=%02X(want %02X) ext=%02X(want %02X) %s\n",
             s_diag_reps, s_diag_fmt, LATIN_PICK_ASSIGN_OK, s_diag_ext, LATIN_EXT_OK,
-            s_diag_ex[0], s_diag_ex[1], s_diag_ex[2], s_diag_ex[3], s_diag_asg[0], s_diag_asg[1]);
-    uprintf("LATIN_POST[%u]: ex=%02X %02X %02X %02X asg=%02X %02X normalised=%u\n",
-            s_diag_reps, s_diag_pex[0], s_diag_pex[1], s_diag_pex[2], s_diag_pex[3],
-            s_diag_pasg[0], s_diag_pasg[1], s_diag_norm);
+            latin_diag_str(s_diag_ex, s_diag_asg));
+    uprintf("LATIN_POST[%u]: normalised=%u %s\n",
+            s_diag_reps, s_diag_norm, latin_diag_str(s_diag_pex, s_diag_pasg));
 }
 #endif
 

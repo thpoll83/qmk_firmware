@@ -330,6 +330,12 @@ static inline void latin_assign_set(uint8_t* assign, uint8_t slot, uint8_t lette
     latin_bits_set(assign, LATIN_ASSIGN_BYTES, slot, letter);
 }
 
+#ifdef POLY_LATIN_EE_DIAG
+// TEMPORARY probe: formats every non-zero pick + every assignment (all
+// LATIN_TARGETS, letters and punctuation) into a static buffer.
+const char* latin_diag_str(const uint8_t* ex, const uint8_t* asg);
+#endif
+
 typedef struct _poly_eeconf_t {
     uint8_t lang;
     uint8_t brightness;

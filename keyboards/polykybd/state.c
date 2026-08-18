@@ -202,14 +202,56 @@ void save_user_settings(void) {
 // size and offset it shipped with, or the format byte behind it moves and can no
 // longer be found (see state.h). So each write is explicitly bounded rather than
 // sizeof(g_latin.ex): the letters go to the original block, the rest to the tail.
+#ifdef POLY_LATIN_EE_DIAG
+// TEMPORARY probe helper: render every NON-ZERO pick and every assignment as a
+// short string, over ALL LATIN_TARGETS. The first version of this probe printed
+// only ex[0..3] — the first ~3 slots — so it could not see a pick on e/o/u at
+// all, which is exactly what the investigation needed.
+//   a^4   slot 'a', UPPER case, variation 4
+//   e_2   slot 'e', lower case, variation 2
+//   ;>e   the ';' key is assigned to host letter 'e'
+static char s_latin_diag_buf[240];
+
+static char latin_diag_slot_char(uint8_t slot) {
+    if (slot < LATIN_LETTER_TARGETS) return (char)('a' + slot);
+    static const char punct[LATIN_PUNCT_TARGETS] = {
+        '-', '=', '[', ']', '\\', '#', ';', '\'', '`', ',', '.', '/'
+    };
+    return punct[slot - LATIN_LETTER_TARGETS];
+}
+
+const char* latin_diag_str(const uint8_t* ex, const uint8_t* asg) {
+    size_t n = 0;
+    int    w = snprintf(s_latin_diag_buf, sizeof(s_latin_diag_buf), "picks:");
+    if (w > 0) n = (size_t)w;
+    for (uint8_t slot = 0; slot < LATIN_TARGETS && n < sizeof(s_latin_diag_buf) - 24; slot++) {
+        for (uint8_t c = 0; c < 2; c++) {
+            const bool    upper = (c == 0);
+            const uint8_t idx   = latin_pick_get(ex, latin_pick_field(slot, upper));
+            if (idx == 0) continue;
+            w = snprintf(s_latin_diag_buf + n, sizeof(s_latin_diag_buf) - n, " %c%c%u",
+                         latin_diag_slot_char(slot), upper ? '^' : '_', idx);
+            if (w > 0) n += (size_t)w;
+        }
+    }
+    w = snprintf(s_latin_diag_buf + n, sizeof(s_latin_diag_buf) - n, " | asg:");
+    if (w > 0) n += (size_t)w;
+    for (uint8_t slot = 0; slot < LATIN_TARGETS && n < sizeof(s_latin_diag_buf) - 12; slot++) {
+        const uint8_t v = latin_bits_get(asg, LATIN_ASSIGN_BYTES, slot);
+        if (v >= LATIN_LETTER_TARGETS) continue;          // unassigned
+        w = snprintf(s_latin_diag_buf + n, sizeof(s_latin_diag_buf) - n, " %c>%c",
+                     latin_diag_slot_char(slot), (char)('a' + v));
+        if (w > 0) n += (size_t)w;
+    }
+    return s_latin_diag_buf;
+}
+#endif
+
 void save_user_latin(void) {
 #ifdef POLY_LATIN_EE_DIAG
     // TEMPORARY diagnostic (POLY_LATIN_EE_DIAG builds only) — chasing letter picks
     // lost across a power cycle while the punctuation tail survives.
-    uprintf("LATIN_SAVE: ex=%02X %02X %02X %02X asg=%02X %02X extpick=%02X %02X\n",
-            g_latin.ex[0], g_latin.ex[1], g_latin.ex[2], g_latin.ex[3],
-            g_latin.assign[0], g_latin.assign[1],
-            g_latin.ex[LATIN_PICK_BASE_BYTES], g_latin.ex[LATIN_PICK_BASE_BYTES + 1]);
+    uprintf("LATIN_SAVE: %s\n", latin_diag_str(g_latin.ex, g_latin.assign));
 #endif
     eeconfig_update_user_datablock(g_latin.ex, offsetof(poly_eeconf_t, latin_ex_wide),
                                    LATIN_PICK_BASE_BYTES);
@@ -242,11 +284,19 @@ void save_user_latin(void) {
     // never landed" from "something clobbered it later".
     poly_eeconf_t back;
     eeconfig_read_user_datablock(&back, 0, sizeof(back));
-    uprintf("LATIN_SAVE_BACK: fmt=%02X ext=%02X ex=%02X %02X %02X %02X asg=%02X %02X\n",
-            back.latin_pick_migrated, back.latin_ext_fmt,
-            back.latin_ex_wide[0], back.latin_ex_wide[1],
-            back.latin_ex_wide[2], back.latin_ex_wide[3],
-            back.latin_assign[0], back.latin_assign[1]);
+    // Reassemble the split blocks the way the load path does, so this is
+    // directly comparable with LATIN_LOAD rather than being raw halves.
+    uint8_t rex[LATIN_PICK_BYTES];
+    uint8_t rasg[LATIN_ASSIGN_BYTES];
+    memcpy(rex, back.latin_ex_wide, LATIN_PICK_BASE_BYTES);
+    memcpy(rex + LATIN_PICK_BASE_BYTES, back.latin_ex_ext, LATIN_PICK_EXT_BYTES);
+    memcpy(rasg, back.latin_assign, LATIN_ASSIGN_BASE_BYTES);
+    for (uint8_t i = 0; i < LATIN_PUNCT_TARGETS; i++) {
+        latin_assign_set(rasg, (uint8_t)(LATIN_LETTER_TARGETS + i),
+                         latin_bits_get(back.latin_assign_ext, LATIN_ASSIGN_EXT_BYTES, i));
+    }
+    uprintf("LATIN_SAVE_BACK: fmt=%02X ext=%02X %s\n",
+            back.latin_pick_migrated, back.latin_ext_fmt, latin_diag_str(rex, rasg));
 #endif
 }
 

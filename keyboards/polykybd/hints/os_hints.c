@@ -301,38 +301,52 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
     }
 
     if(IS_QK_MOD_TAP(keycode)) {
-        uint8_t mods = QK_MOD_TAP_GET_MODS(keycode);
-        if((mods & MOD_MASK_CSAG) == MOD_MASK_CSAG) {
-            return U"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_SAG) == MOD_MASK_SAG) {
-            return U"    " ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_CAG) == MOD_MASK_CAG) {
-            return U"    " CURRENCY_SIGN NOT_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_CSG) == MOD_MASK_CSG) {
-            return U"    " CURRENCY_SIGN ICON_SHIFT KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_CSA) == MOD_MASK_CSA) {
-            return U"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN;
-        } else if((mods & MOD_MASK_AG) == MOD_MASK_AG) {
-            return U"    " NOT_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_SG) == MOD_MASK_SG) {
-            return U"    " ICON_SHIFT KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_SA) == MOD_MASK_SA) {
-            return U"    " CURRENCY_SIGN NOT_SIGN;
-        } else if((mods & MOD_MASK_CG) == MOD_MASK_CG) {
-            return U"    " CURRENCY_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_CA) == MOD_MASK_CA) {
-            return U"    " CURRENCY_SIGN NOT_SIGN;
-        } else if((mods & MOD_MASK_CS) == MOD_MASK_CS) {
-            return U"    " CURRENCY_SIGN ICON_SHIFT;
-        } else if(mods & MOD_MASK_CTRL) {
-            return U"    " CURRENCY_SIGN;
-        } else if(mods & MOD_MASK_ALT) {
-            return U"    " NOT_SIGN;
-        } else if (mods & MOD_MASK_SHIFT) {
-            return U"    " ICON_SHIFT;
-        } else {
-            return U"   " KATAKANA_MIDDLE_DOT;
-        }
+        // ⚠️ QK_MOD_TAP_GET_MODS() yields QMK's *5-bit* mod form (quantum/modifiers.h
+        // `enum mods_5bit`): bits 0-3 = Ctrl/Shift/Alt/Gui and **bit 4 is the
+        // left/right flag**, not a fifth modifier. The MOD_MASK_* constants are the
+        // *8-bit paired* form (MOD_MASK_CTRL == 0x11, _SHIFT == 0x22, ...). Testing one
+        // against the other mis-read every mod-tap: RCTL_T/RSFT_T/RALT_T/RGUI_T all
+        // carry bit 4, whose 0x10 is MOD_MASK_CTRL's right-Ctrl bit, so all four drew
+        // Ctrl; LGUI_T (0x08) intersects no MOD_MASK_* at all and drew the bare-else
+        // legend. Normalise with the expression QMK itself uses in
+        // quantum/keymap_common.c (`(mod & 0x10) ? (mod & 0xF) << 4 : mod`).
+        const uint8_t mods_5bit = QK_MOD_TAP_GET_MODS(keycode);
+        const uint8_t mods = (mods_5bit & 0x10) ? (uint8_t)((mods_5bit & 0x0F) << 4)
+                                                : (uint8_t)(mods_5bit & 0x0F);
+        // ⚠️ Second, independent half of the same bug: the old chain asked
+        // `(mods & MOD_MASK_CS) == MOD_MASK_CS`, and MOD_MASK_CS is 0x33 — *both* left
+        // AND right Ctrl AND Shift. A mod-tap keycode carries one side only, so no
+        // combination test could ever hold and HYPR_T/MEH_T fell through to the bare
+        // Ctrl mark. Presence of a modifier is `(mods & MOD_MASK_x) != 0`; the pairs and
+        // triples are then just the conjunction, so index a table by the four
+        // independent bits instead of ordering eleven overlapping tests by specificity —
+        // that ordering is what let the Shift+Alt row silently carry Ctrl+Alt's glyphs.
+        const uint8_t idx = (uint8_t)(((mods & MOD_MASK_CTRL)  ? 1u : 0u) |
+                                      ((mods & MOD_MASK_SHIFT) ? 2u : 0u) |
+                                      ((mods & MOD_MASK_ALT)   ? 4u : 0u) |
+                                      ((mods & MOD_MASK_GUI)   ? 8u : 0u));
+        // Marks read Ctrl ¤, Shift ⇧, Alt ¬, GUI ・ left-to-right, right-aligned into
+        // the top-right corner (see the MTB_* block in lang/named_glyphs.h for why a
+        // mod-tap gets a corner badge rather than a second full-size legend).
+        static const uint32_t* const mod_tap_badge[16] = {
+            [0]  = NULL,                                                        // MT(0, kc) — no modifier, no hint
+            [1]  = MTB_CTRL(MTB_X1),
+            [2]  = MTB_SHIFT(MTB_X1),
+            [3]  = MTB_CTRL(MTB_X2) MTB_SHIFT(MTB_X1),
+            [4]  = MTB_ALT(MTB_X1),
+            [5]  = MTB_CTRL(MTB_X2) MTB_ALT(MTB_X1),
+            [6]  = MTB_SHIFT(MTB_X2) MTB_ALT(MTB_X1),
+            [7]  = MTB_CTRL(MTB_X3) MTB_SHIFT(MTB_X2) MTB_ALT(MTB_X1),          // Meh
+            [8]  = MTB_GUI(MTB_X1),
+            [9]  = MTB_CTRL(MTB_X2) MTB_GUI(MTB_X1),
+            [10] = MTB_SHIFT(MTB_X2) MTB_GUI(MTB_X1),
+            [11] = MTB_CTRL(MTB_X3) MTB_SHIFT(MTB_X2) MTB_GUI(MTB_X1),
+            [12] = MTB_ALT(MTB_X2) MTB_GUI(MTB_X1),
+            [13] = MTB_CTRL(MTB_X3) MTB_ALT(MTB_X2) MTB_GUI(MTB_X1),
+            [14] = MTB_SHIFT(MTB_X3) MTB_ALT(MTB_X2) MTB_GUI(MTB_X1),
+            [15] = MTB_CTRL(MTB_X4) MTB_SHIFT(MTB_X3) MTB_ALT(MTB_X2) MTB_GUI(MTB_X1), // Hyper
+        };
+        return mod_tap_badge[idx];
     }
 
     return NULL;

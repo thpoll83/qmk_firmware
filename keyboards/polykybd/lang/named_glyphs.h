@@ -1977,6 +1977,28 @@
 #define HINT_POS_ZOOMOUT U"\x3E\x16"   // (62,22)  cursor so a base-font '-' centres in the lens
 #define HINT_POS_RUNBOX  U"\x36\x01"   // (54, 1)  Win+R run-dialog frame top-left
 #define HINT_SZ_RUNBOX   U"\x21\x1B"   // 33 x 27  Win+R run-dialog frame size
+// ---- Mod-tap badge -----------------------------------------------------------
+// A mod-tap keycap already draws its TAP legend ("A" for MT(RSFT,KC_A)) as the
+// primary text; the modifier is only what HOLDING it does. So it renders as a
+// small mark in the top-right corner rather than as a second full-size legend
+// beside the letter — the shortcut hints are prominent on purpose (holding Ctrl
+// makes the whole keycap mean "Ctrl+C"), a mod-tap badge is not.
+//
+// Four right-aligned 8px slots, X1 rightmost. HINT_HALF draws the literal ink
+// top-left with NO advance (see kdisp_write_gfx_text_cy), so every mark carries
+// its own MOVE — which is also what lets each one bake in its own y and put all
+// four bottoms on a common line at y=9 despite half-heights of 8/7/4/3.
+// Measured half sizes: ¤ 7x7, ⇧ 7x8, ¬ 7x4, ・ 3x3 (tools/gfx_font.py).
+// The top-right corner is free on a keycap whose legend sits at x28..46, y4..23.
+#define MTB_X1           U"\x5C"       // x=92, rightmost slot
+#define MTB_X2           U"\x54"       // x=84
+#define MTB_X3           U"\x4C"       // x=76
+#define MTB_X4           U"\x44"       // x=68, leftmost (4-modifier case only)
+// Each takes a slot macro; the y is per-glyph so the marks bottom-align.
+#define MTB_CTRL(x)      U"\x0E" x U"\x02" U"\x0F" CURRENCY_SIGN        // y=2, 7x7
+#define MTB_SHIFT(x)     U"\x0E" x U"\x01" U"\x0F" ICON_SHIFT           // y=1, 7x8
+#define MTB_ALT(x)       U"\x0E" x U"\x05" U"\x0F" NOT_SIGN             // y=5, 7x4
+#define MTB_GUI(x)       U"\x0E" x U"\x06" U"\x0F" KATAKANA_MIDDLE_DOT  // y=6, 3x3
 // Windows Super-chord hint glyphs (wave D), as drawn by keycode_to_disp_overlay()'s
 // win_or_unknown branch. All are display-only previews of the Win+<key> shortcut.
 // Only the Explorer folder pixmap (ICON_EXPLORER, \x9C) is a resident IconsFont

@@ -93,6 +93,13 @@ std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
 TEST(OsHintsExtraction, MatchesPreExtractionTableExhaustively) {
     size_t compared = 0, hits = 0;
     for (uint16_t kc : interesting_keycodes()) {
+        // ⚠️ Mod-taps are DELIBERATELY excluded: their block was rewritten to fix the
+        // 5-bit/8-bit encoding bug and to render as a corner badge, so it no longer
+        // matches the reference — that is the point of the change. The reference file
+        // stays a verbatim pre-extraction copy (its value is being unedited), and the
+        // new mod-tap behaviour is pinned by the ModTap* tests at the bottom of this
+        // file instead. Everything else still has to match exactly.
+        if (IS_QK_MOD_TAP(kc)) continue;
         for (unsigned mods = 0; mods < 256; ++mods) {
             for (uint8_t os : os_values()) {
                 const uint32_t* got  = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
@@ -218,28 +225,86 @@ TEST(OsHints, UnknownOsBehavesAsTheNonAppleDefault) {
         << "Ctrl+A is not a macOS chord — if this changes the test above needs a new probe";
 }
 
-// The mod-tap hint block derives its glyphs from the KEYCODE's own mods, and its
-// eleven combined-modifier branches are UNREACHABLE: they test
-// `(mods & MOD_MASK_XY) == MOD_MASK_XY` where mods is the 5-bit mod-tap encoding
-// (0x00..0x1F) and MOD_MASK_* are 8-bit packed masks (MOD_MASK_CS == 0x33), so the
-// equality can never hold. Only the three single-modifier `&` tests and the final
-// else can fire — a Ctrl+Shift mod-tap shows "¤" alone, never "¤⇧".
-//
-// This is PRE-EXISTING behaviour, pinned here rather than fixed: this change set is
-// a behaviour-preserving extraction, and correcting it would alter what appears on
-// a keycap. Tracked separately; when it is fixed, this test is the one to update.
-TEST(OsHints, ModTapCombinedModifierBranchesAreCurrentlyUnreachable) {
-    for (uint8_t mt = 0; mt < 0x20; ++mt) {
-        const uint16_t kc = static_cast<uint16_t>(QK_MOD_TAP | (mt << 8) | KC_A);
-        const uint32_t* got = os_hint_for_keycode(kc, 0, POLY_OS_WINDOWS);
-        ASSERT_NE(got, nullptr) << "mod-tap always yields some hint";
-        // Every reachable answer is one of the four terminal cases, so the glyph
-        // count never exceeds one modifier symbol after the leading spaces.
-        size_t len = 0;
-        while (got[len] != 0) ++len;
-        EXPECT_LE(len, 5u) << "a combined-modifier mod-tap hint became reachable for mods=0x"
-                           << std::hex << static_cast<int>(mt)
-                           << " — the dead branches are alive, update this test";
+// ---------------------------------------------------------------------------
+// Mod-tap badge. The block derives its marks from the KEYCODE's own modifiers,
+// which arrive in QMK's 5-bit form (bits 0-3 = CSAG, bit 4 = the left/right
+// flag) while the MOD_MASK_* constants it is compared against are the 8-bit
+// paired form. These tests pin both halves of the fix and replace the earlier
+// ModTapCombinedModifierBranchesAreCurrentlyUnreachable, which pinned the bug.
+// ---------------------------------------------------------------------------
+
+namespace {
+uint16_t mod_tap_kc(uint8_t mods_5bit) {
+    return static_cast<uint16_t>(QK_MOD_TAP | (mods_5bit << 8) | KC_A);
+}
+const uint32_t* mod_tap_hint(uint8_t mods_5bit) {
+    return os_hint_for_keycode(mod_tap_kc(mods_5bit), 0, POLY_OS_WINDOWS);
+}
+}  // namespace
+
+// All fifteen non-empty modifier combinations must produce a DISTINCT badge.
+// Before the fix only four answers existed across the whole 32-value domain:
+// the eleven combined branches were unreachable (they demanded both the left
+// AND right bit of each modifier), so HYPR_T and MEH_T drew a bare Ctrl.
+TEST(OsHints, ModTapEveryModifierCombinationIsDistinct) {
+    std::vector<std::u32string> seen;
+    for (uint8_t combo = 1; combo <= 0x0F; ++combo) {
+        const uint32_t* got = mod_tap_hint(combo);
+        ASSERT_NE(got, nullptr) << "combo 0x" << std::hex << static_cast<int>(combo);
+        std::u32string s;
+        for (size_t i = 0; got[i]; ++i) s.push_back(static_cast<char32_t>(got[i]));
+        for (size_t j = 0; j < seen.size(); ++j) {
+            EXPECT_NE(s, seen[j]) << "combo 0x" << std::hex << static_cast<int>(combo)
+                                  << " duplicates an earlier badge — the Shift+Alt row"
+                                     " carrying Ctrl+Alt's glyphs was exactly this";
+        }
+        seen.push_back(s);
+    }
+    EXPECT_EQ(seen.size(), 15u);
+}
+
+// Bit 4 is the left/right FLAG, not a modifier. Reading it as one made every
+// right-hand mod-tap (RCTL_T/RSFT_T/RALT_T/RGUI_T) collide with MOD_MASK_CTRL's
+// 0x10 bit and draw Ctrl. Both sides must now agree.
+TEST(OsHints, ModTapLeftAndRightSidesAgree) {
+    for (uint8_t combo = 1; combo <= 0x0F; ++combo) {
+        EXPECT_TRUE(same_hint(mod_tap_hint(combo),
+                              mod_tap_hint(static_cast<uint8_t>(combo | 0x10))))
+            << "left/right disagree for combo 0x" << std::hex << static_cast<int>(combo);
+    }
+}
+
+// LGUI_T is 0x08, which intersects NO MOD_MASK_* value, so it used to fall to
+// the final else and draw the no-modifier legend — a blank-looking keycap.
+TEST(OsHints, ModTapGuiOnlyIsNotTheEmptyCase) {
+    const uint32_t* gui = mod_tap_hint(MOD_LGUI);
+    ASSERT_NE(gui, nullptr);
+    EXPECT_FALSE(same_hint(gui, mod_tap_hint(MOD_LCTL)))
+        << "GUI-only must not render as Ctrl";
+    // A mod-tap carrying no modifier at all is the one case with no hint.
+    EXPECT_EQ(mod_tap_hint(0), nullptr);
+    EXPECT_EQ(mod_tap_hint(0x10), nullptr);
+}
+
+// The badge is a corner mark, not a second legend: every hint must position
+// itself with the MOVE op and draw each mark half-scale, so it can never be
+// mistaken for the prominent held-modifier shortcut hints.
+TEST(OsHints, ModTapBadgeIsPositionedAndHalfScale) {
+    for (uint8_t combo = 1; combo <= 0x0F; ++combo) {
+        const uint32_t* got = mod_tap_hint(combo);
+        ASSERT_NE(got, nullptr);
+        EXPECT_EQ(got[0], U'\x0E') << "badge must start with a MOVE to the corner";
+        size_t moves = 0, halves = 0, marks = 0;
+        for (size_t i = 0; got[i]; ++i) {
+            if (got[i] == U'\x0E') { ++moves; i += 2; }        // MOVE consumes x,y
+            else if (got[i] == U'\x0F') { ++halves; ++marks; ++i; }  // HALF consumes the glyph
+        }
+        // One MOVE + one HALF per set modifier bit, and nothing drawn full size.
+        const size_t want = static_cast<size_t>(__builtin_popcount(combo));
+        EXPECT_EQ(moves, want);
+        EXPECT_EQ(halves, want);
+        EXPECT_EQ(marks, want) << "a mark is drawn full-size for combo 0x"
+                               << std::hex << static_cast<int>(combo);
     }
 }
 

@@ -966,10 +966,21 @@ static uint32_t s_diag_last = 0;
 #define LATIN_DIAG_REPS  30      // ~60 s of re-emits at 2 s apart
 #define LATIN_DIAG_MS    2000
 
-static void latin_diag_latch(uint8_t fmt, uint8_t ext, const uint8_t* ex, const uint8_t* asg) {
-    s_diag_fmt = fmt; s_diag_ext = ext;
-    memcpy(s_diag_ex,  ex,  sizeof(s_diag_ex));
-    memcpy(s_diag_asg, asg, sizeof(s_diag_asg));
+// ⚠️ Takes the WHOLE eeconf and reassembles, exactly as the load path does.
+// v3 passed ee.latin_ex_wide / ee.latin_assign here and decoded the full 57/29
+// bytes out of 39/20-byte arrays, so every punctuation entry it printed was a
+// read into the neighbouring struct fields — latin_pick_migrated (0xD7) decoded
+// as pick 23, latin_assign (0xFF) as 63, etc. Pure probe artifact.
+static void latin_diag_latch(const poly_eeconf_t* ee) {
+    s_diag_fmt = ee->latin_pick_migrated;
+    s_diag_ext = ee->latin_ext_fmt;
+    memcpy(s_diag_ex, ee->latin_ex_wide, LATIN_PICK_BASE_BYTES);
+    memcpy(s_diag_ex + LATIN_PICK_BASE_BYTES, ee->latin_ex_ext, LATIN_PICK_EXT_BYTES);
+    memcpy(s_diag_asg, ee->latin_assign, LATIN_ASSIGN_BASE_BYTES);
+    for (uint8_t i = 0; i < LATIN_PUNCT_TARGETS; i++) {
+        latin_assign_set(s_diag_asg, (uint8_t)(LATIN_LETTER_TARGETS + i),
+                         latin_bits_get(ee->latin_assign_ext, LATIN_ASSIGN_EXT_BYTES, i));
+    }
 }
 
 static void latin_diag_latch_post(const uint8_t* ex, const uint8_t* asg, bool normalised) {
@@ -4299,8 +4310,7 @@ void keyboard_post_init_user(void) {
     // draining, and this runs long before a console tool can attach after the
     // reboot — printing it at boot would simply lose the one line we need.
     // latin_diag_tick() re-emits it from housekeeping until someone reads it.
-    latin_diag_latch(ee.latin_pick_migrated, ee.latin_ext_fmt,
-                     ee.latin_ex_wide, ee.latin_assign);
+    latin_diag_latch(&ee);
 #endif
     // ⚠️ The assignment map MUST be gated on the version byte — do NOT infer "never
     // written" from the bytes themselves. An earlier version of this relied on

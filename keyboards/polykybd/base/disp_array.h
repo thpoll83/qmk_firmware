@@ -55,6 +55,20 @@ const GFXglyph *kdisp_gfx_glyph_font(const GFXfont *const *fonts, uint8_t num_fo
 // Win+Ctrl+Shift+B reload 🗘 drawn into the monitor's screen cavity).
 void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c);
 
+// Same 2x downsample, but sampling ONE pixel per 2x2 block (decimation) instead
+// of OR-ing all four. The two are complementary and neither is better in
+// general — pick per glyph:
+//   _half_at (OR)   thickens strokes, so a thin line survives; but it CLOSES thin
+//                   gaps, which turns a glyph whose meaning is in its negative
+//                   space into a blob (the Windows logo becomes a solid square,
+//                   the Ctrl helm's spokes fill in).
+//   _thin_at (this) keeps gaps, so structured icons stay readable; but a 1px
+//                   stroke on an odd row/column is dropped entirely (measured:
+//                   the alt symbol keeps 54% of its lit pixels, the worst of the
+//                   set, which is why the mod-tap badge draws Ctrl and the OS
+//                   logos through here and Alt through _half_at).
+void kdisp_draw_glyph_thin_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c);
+
 // The mirror of the above: composite a glyph scaled 2x (nearest, each source
 // pixel becomes a 2x2 block) with its top-left at buffer coords (x,y) — again no
 // baseline align, (x,y) is the literal top-left. The keycap fonts top out at the

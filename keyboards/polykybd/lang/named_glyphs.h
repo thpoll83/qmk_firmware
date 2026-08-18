@@ -1969,6 +1969,7 @@
 // Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
+#define HINT_THIN        U"\x11"       // as HINT_HALF but DECIMATING (see disp_array.h)
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
 #define HINT_RESET       U"\x18"       // reset cursor to the text origin
 // Fixed buffer positions / sizes (two bytes each; decimal in the comment):
@@ -1981,24 +1982,59 @@
 // A mod-tap keycap already draws its TAP legend ("A" for MT(RSFT,KC_A)) as the
 // primary text; the modifier is only what HOLDING it does. So it renders as a
 // small mark in the top-right corner rather than as a second full-size legend
-// beside the letter — the shortcut hints are prominent on purpose (holding Ctrl
-// makes the whole keycap mean "Ctrl+C"), a mod-tap badge is not.
+// beside the letter — the held-modifier shortcut hints are prominent on purpose
+// (holding Ctrl makes the whole keycap mean "Ctrl+C"), a mod-tap badge is not.
 //
-// Four right-aligned 8px slots, X1 rightmost. HINT_HALF draws the literal ink
-// top-left with NO advance (see kdisp_write_gfx_text_cy), so every mark carries
-// its own MOVE — which is also what lets each one bake in its own y and put all
-// four bottoms on a common line at y=9 despite half-heights of 8/7/4/3.
-// Measured half sizes: ¤ 7x7, ⇧ 7x8, ¬ 7x4, ・ 3x3 (tools/gfx_font.py).
-// The top-right corner is free on a keycap whose legend sits at x28..46, y4..23.
-#define MTB_X1           U"\x5C"       // x=92, rightmost slot
-#define MTB_X2           U"\x54"       // x=84
-#define MTB_X3           U"\x4C"       // x=76
-#define MTB_X4           U"\x44"       // x=68, leftmost (4-modifier case only)
-// Each takes a slot macro; the y is per-glyph so the marks bottom-align.
-#define MTB_CTRL(x)      U"\x0E" x U"\x02" U"\x0F" CURRENCY_SIGN        // y=2, 7x7
-#define MTB_SHIFT(x)     U"\x0E" x U"\x01" U"\x0F" ICON_SHIFT           // y=1, 7x8
-#define MTB_ALT(x)       U"\x0E" x U"\x05" U"\x0F" NOT_SIGN             // y=5, 7x4
-#define MTB_GUI(x)       U"\x0E" x U"\x06" U"\x0F" KATAKANA_MIDDLE_DOT  // y=6, 3x3
+// The marks are the SAME symbols the modifier keycaps use (keycode_helper.c):
+// the Technical family plus the per-OS GUI logo. Those are drawn to fill a
+// keycap (control is 35x37), so they are downsampled 2x — and WHICH downsample
+// is per glyph, because the two fail in opposite ways (see disp_array.h):
+//   Ctrl helm + the OS logos -> HINT_THIN, or the 2x2-OR closes the gaps that
+//                               carry their meaning (the Windows logo becomes a
+//                               solid square, the helm's spokes fill in).
+//   Alt                      -> HINT_HALF; decimation costs it 46 percent of its
+//                               lit pixels, the worst of the set.
+//   Shift                    -> full size. ICON_SHIFT is already a 14x16 inline
+//                               icon and matches the others' scaled size.
+//
+// Two columns x two rows, filled right-to-left then top-to-bottom, so a single
+// modifier lands in the top-right corner. A position is the literal ink top-left
+// for THIN/HALF but the baseline cursor for the full-size Shift, so they are per
+// mark and per cell; ALL of them are generated together with the preview render
+// (columns end at x97 and x74, rows start at y0 and y20) — regenerate both
+// rather than nudging one by hand. The left column's widest mark starts at x56,
+// clearing the widest tap legend ("W" ends at x52) by 4px.
+#define MTB_CTRL_L1  U"\x39\x01"   // (57, 1)
+#define MTB_CTRL_L2  U"\x39\x15"   // (57,21)
+#define MTB_CTRL_R1  U"\x50\x01"   // (80, 1)
+#define MTB_CTRL_R2  U"\x50\x15"   // (80,21)
+#define MTB_SHIFT_L1  U"\x3C\x11"   // (60,17)
+#define MTB_SHIFT_L2  U"\x3C\x28"   // (60,40)
+#define MTB_SHIFT_R1  U"\x53\x11"   // (83,17)
+#define MTB_SHIFT_R2  U"\x53\x28"   // (83,40)
+#define MTB_ALT_L1   U"\x38\x01"   // (56, 1)
+#define MTB_ALT_L2   U"\x38\x1F"   // (56,31)
+#define MTB_ALT_R1   U"\x4F\x01"   // (79, 1)
+#define MTB_ALT_R2   U"\x4F\x1F"   // (79,31)
+#define MTB_GUI_WINDOWS_R1  U"\x54\x01"   // (84, 1) ICON_OS_WINDOWS
+#define MTB_GUI_WINDOWS_R2  U"\x54\x1A"   // (84,26) ICON_OS_WINDOWS
+#define MTB_GUI_MACOS_R1  U"\x54\x01"   // (84, 1) TECHNICAL_COMMAND
+#define MTB_GUI_MACOS_R2  U"\x54\x1A"   // (84,26) TECHNICAL_COMMAND
+#define MTB_GUI_LINUX_R1  U"\x55\x01"   // (85, 1) ICON_OS_LINUX
+#define MTB_GUI_LINUX_R2  U"\x55\x15"   // (85,21) ICON_OS_LINUX
+#define MTB_GUI_GNOME_R1  U"\x56\x01"   // (86, 1) ICON_OS_GNOME
+#define MTB_GUI_GNOME_R2  U"\x56\x19"   // (86,25) ICON_OS_GNOME
+#define MTB_GUI_KDE_R1  U"\x53\x01"   // (83, 1) ICON_OS_KDE
+#define MTB_GUI_KDE_R2  U"\x53\x19"   // (83,25) ICON_OS_KDE
+#define MTB_GUI_ANDROID_R1  U"\x4E\x01"   // (78, 1) ICON_OS_ANDROID
+#define MTB_GUI_ANDROID_R2  U"\x4E\x1C"   // (78,28) ICON_OS_ANDROID
+#define MTB_GUI_OTHER_R1  U"\x4E\x01"   // (78, 1) DINGBAT_BLACK_DIA_X
+#define MTB_GUI_OTHER_R2  U"\x4E\x14"   // (78,20) DINGBAT_BLACK_DIA_X
+// Each takes one of the position macros above.
+#define MTB_CTRL(pos)      HINT_MOVE(pos) HINT_THIN TECHNICAL_CONTROL
+#define MTB_SHIFT(pos)     HINT_MOVE(pos) ICON_SHIFT
+#define MTB_ALT(pos)       HINT_MOVE(pos) HINT_HALF TECHNICAL_ALTERNATIVE
+#define MTB_GUI(pos, icon) HINT_MOVE(pos) HINT_THIN icon
 // Windows Super-chord hint glyphs (wave D), as drawn by keycode_to_disp_overlay()'s
 // win_or_unknown branch. All are display-only previews of the Win+<key> shortcut.
 // Only the Explorer folder pixmap (ICON_EXPLORER, \x9C) is a resident IconsFont

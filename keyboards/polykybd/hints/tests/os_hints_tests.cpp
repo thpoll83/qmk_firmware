@@ -286,24 +286,38 @@ TEST(OsHints, ModTapGuiOnlyIsNotTheEmptyCase) {
     EXPECT_EQ(mod_tap_hint(0x10), nullptr);
 }
 
-// The badge is a corner mark, not a second legend: every hint must position
-// itself with the MOVE op and draw each mark half-scale, so it can never be
-// mistaken for the prominent held-modifier shortcut hints.
-TEST(OsHints, ModTapBadgeIsPositionedAndHalfScale) {
+// The badge is a corner mark, not a second legend: every mark must be MOVE-
+// positioned, and a mark is drawn in exactly one of the three modes — decimated
+// (Ctrl, GUI), 2x2-OR (Alt) or full size (Shift, whose icon is already small).
+// This also pins the NUL trap: a MOVE coordinate is a codepoint, so a zero byte
+// would terminate the string and silently truncate the badge. That shipped once
+// (row 1 sat at y=0) and every badge came back two codepoints long, which is why
+// the length is asserted rather than assumed.
+TEST(OsHints, ModTapBadgeIsPositionedAndComplete) {
     for (uint8_t combo = 1; combo <= 0x0F; ++combo) {
         const uint32_t* got = mod_tap_hint(combo);
         ASSERT_NE(got, nullptr);
         EXPECT_EQ(got[0], U'\x0E') << "badge must start with a MOVE to the corner";
-        size_t moves = 0, halves = 0, marks = 0;
-        for (size_t i = 0; got[i]; ++i) {
-            if (got[i] == U'\x0E') { ++moves; i += 2; }        // MOVE consumes x,y
-            else if (got[i] == U'\x0F') { ++halves; ++marks; ++i; }  // HALF consumes the glyph
+        size_t moves = 0, marks = 0, len = 0;
+        while (got[len] != 0) {
+            const uint32_t c = got[len];
+            if (c == U'\x0E') {                 // MOVE consumes x,y
+                ASSERT_NE(got[len + 1], 0u) << "a zero MOVE x truncates the badge";
+                ASSERT_NE(got[len + 2], 0u) << "a zero MOVE y truncates the badge";
+                ++moves;
+                len += 3;
+            } else if (c == U'\x0F' || c == U'\x11') {   // HALF / THIN + its glyph
+                ++marks;
+                len += 2;
+            } else {                            // a full-size glyph (Shift)
+                ++marks;
+                len += 1;
+            }
         }
-        // One MOVE + one HALF per set modifier bit, and nothing drawn full size.
         const size_t want = static_cast<size_t>(__builtin_popcount(combo));
-        EXPECT_EQ(moves, want);
-        EXPECT_EQ(halves, want);
-        EXPECT_EQ(marks, want) << "a mark is drawn full-size for combo 0x"
+        EXPECT_EQ(moves, want) << "one MOVE per modifier, combo 0x"
+                               << std::hex << static_cast<int>(combo);
+        EXPECT_EQ(marks, want) << "one mark per modifier, combo 0x"
                                << std::hex << static_cast<int>(combo);
     }
 }

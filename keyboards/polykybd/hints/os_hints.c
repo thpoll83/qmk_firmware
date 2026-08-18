@@ -325,28 +325,57 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
                                       ((mods & MOD_MASK_SHIFT) ? 2u : 0u) |
                                       ((mods & MOD_MASK_ALT)   ? 4u : 0u) |
                                       ((mods & MOD_MASK_GUI)   ? 8u : 0u));
-        // Marks read Ctrl ¤, Shift ⇧, Alt ¬, GUI ・ left-to-right, right-aligned into
-        // the top-right corner (see the MTB_* block in lang/named_glyphs.h for why a
-        // mod-tap gets a corner badge rather than a second full-size legend).
-        static const uint32_t* const mod_tap_badge[16] = {
-            [0]  = NULL,                                                        // MT(0, kc) — no modifier, no hint
-            [1]  = MTB_CTRL(MTB_X1),
-            [2]  = MTB_SHIFT(MTB_X1),
-            [3]  = MTB_CTRL(MTB_X2) MTB_SHIFT(MTB_X1),
-            [4]  = MTB_ALT(MTB_X1),
-            [5]  = MTB_CTRL(MTB_X2) MTB_ALT(MTB_X1),
-            [6]  = MTB_SHIFT(MTB_X2) MTB_ALT(MTB_X1),
-            [7]  = MTB_CTRL(MTB_X3) MTB_SHIFT(MTB_X2) MTB_ALT(MTB_X1),          // Meh
-            [8]  = MTB_GUI(MTB_X1),
-            [9]  = MTB_CTRL(MTB_X2) MTB_GUI(MTB_X1),
-            [10] = MTB_SHIFT(MTB_X2) MTB_GUI(MTB_X1),
-            [11] = MTB_CTRL(MTB_X3) MTB_SHIFT(MTB_X2) MTB_GUI(MTB_X1),
-            [12] = MTB_ALT(MTB_X2) MTB_GUI(MTB_X1),
-            [13] = MTB_CTRL(MTB_X3) MTB_ALT(MTB_X2) MTB_GUI(MTB_X1),
-            [14] = MTB_SHIFT(MTB_X3) MTB_ALT(MTB_X2) MTB_GUI(MTB_X1),
-            [15] = MTB_CTRL(MTB_X4) MTB_SHIFT(MTB_X3) MTB_ALT(MTB_X2) MTB_GUI(MTB_X1), // Hyper
-        };
-        return mod_tap_badge[idx];
+        // The marks are the modifier keycaps' own symbols, right-aligned into a 2x2
+        // grid in the top-right corner so a single modifier lands in the corner (the
+        // MTB_* block in lang/named_glyphs.h has the layout and the per-glyph choice
+        // of downsample). GUI follows the ACTIVE OS exactly as the GUI keycap does,
+        // so the table is generated once per OS; every other mark is OS-independent,
+        // and the compiler merges those identical string literals across the tables.
+#define MT_BADGE_TABLE(gui, gui_r1, gui_r2) {                                          \
+            [0]  = NULL,   /* MT(0, kc) — no modifier, so no hint */                   \
+            [1]  = MTB_CTRL(MTB_CTRL_R1),                                              \
+            [2]  = MTB_SHIFT(MTB_SHIFT_R1),                                            \
+            [3]  = MTB_CTRL(MTB_CTRL_L1) MTB_SHIFT(MTB_SHIFT_R1),                      \
+            [4]  = MTB_ALT(MTB_ALT_R1),                                                \
+            [5]  = MTB_CTRL(MTB_CTRL_L1) MTB_ALT(MTB_ALT_R1),                          \
+            [6]  = MTB_SHIFT(MTB_SHIFT_L1) MTB_ALT(MTB_ALT_R1),                        \
+            [7]  = MTB_CTRL(MTB_CTRL_L1) MTB_SHIFT(MTB_SHIFT_R1) MTB_ALT(MTB_ALT_R2),  \
+            [8]  = MTB_GUI(gui_r1, gui),                                               \
+            [9]  = MTB_CTRL(MTB_CTRL_L1) MTB_GUI(gui_r1, gui),                         \
+            [10] = MTB_SHIFT(MTB_SHIFT_L1) MTB_GUI(gui_r1, gui),                       \
+            [11] = MTB_CTRL(MTB_CTRL_L1) MTB_SHIFT(MTB_SHIFT_R1) MTB_GUI(gui_r2, gui), \
+            [12] = MTB_ALT(MTB_ALT_L1) MTB_GUI(gui_r1, gui),                           \
+            [13] = MTB_CTRL(MTB_CTRL_L1) MTB_ALT(MTB_ALT_R1) MTB_GUI(gui_r2, gui),     \
+            [14] = MTB_SHIFT(MTB_SHIFT_L1) MTB_ALT(MTB_ALT_R1) MTB_GUI(gui_r2, gui),   \
+            [15] = MTB_CTRL(MTB_CTRL_L1) MTB_SHIFT(MTB_SHIFT_R1)                       \
+                   MTB_ALT(MTB_ALT_L2) MTB_GUI(gui_r2, gui),                           \
+        }
+        static const uint32_t* const badge_win[16] =
+            MT_BADGE_TABLE(ICON_OS_WINDOWS, MTB_GUI_WINDOWS_R1, MTB_GUI_WINDOWS_R2);
+        static const uint32_t* const badge_mac[16] =
+            MT_BADGE_TABLE(TECHNICAL_COMMAND, MTB_GUI_MACOS_R1, MTB_GUI_MACOS_R2);
+        static const uint32_t* const badge_lnx[16] =
+            MT_BADGE_TABLE(ICON_OS_LINUX, MTB_GUI_LINUX_R1, MTB_GUI_LINUX_R2);
+        static const uint32_t* const badge_gnome[16] =
+            MT_BADGE_TABLE(ICON_OS_GNOME, MTB_GUI_GNOME_R1, MTB_GUI_GNOME_R2);
+        static const uint32_t* const badge_kde[16] =
+            MT_BADGE_TABLE(ICON_OS_KDE, MTB_GUI_KDE_R1, MTB_GUI_KDE_R2);
+        static const uint32_t* const badge_android[16] =
+            MT_BADGE_TABLE(ICON_OS_ANDROID, MTB_GUI_ANDROID_R1, MTB_GUI_ANDROID_R2);
+        static const uint32_t* const badge_other[16] =
+            MT_BADGE_TABLE(DINGBAT_BLACK_DIA_X, MTB_GUI_OTHER_R1, MTB_GUI_OTHER_R2);
+#undef MT_BADGE_TABLE
+        const uint32_t* const* badge;
+        switch (active_os) {
+            case POLY_OS_WINDOWS:     badge = badge_win;     break;
+            case POLY_OS_MACOS:       badge = badge_mac;     break;
+            case POLY_OS_LINUX:       badge = badge_lnx;     break;
+            case POLY_OS_LINUX_GNOME: badge = badge_gnome;   break;
+            case POLY_OS_LINUX_KDE:   badge = badge_kde;     break;
+            case POLY_OS_ANDROID:     badge = badge_android; break;
+            default:                  badge = badge_other;   break;
+        }
+        return badge[idx];
     }
 
     return NULL;

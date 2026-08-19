@@ -31,9 +31,11 @@ jobs:
   claude:
     # "@claude review" belongs to claude-review.yml; excluding it here is what
     # stops one comment from starting two runs.
+    # Mirrors claude-review.yml's startsWith exactly, so the two cannot both
+    # fire and no "@claude ..." comment can fall between them.
     if: >-
       contains(github.event.comment.body, '@claude') &&
-      !contains(github.event.comment.body, '@claude review')
+      !startsWith(github.event.comment.body, '@claude review')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

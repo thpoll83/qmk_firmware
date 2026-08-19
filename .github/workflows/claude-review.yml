@@ -28,19 +28,29 @@ on:
         required: true
   issue_comment:
     types: [created]
+  # Also listen on diff-hunk comments. Without this, "@claude review" typed in a
+  # review comment triggered NOTHING: this workflow did not see the event, and
+  # claude-mention.yml (which does) excludes that phrase on purpose.
+  pull_request_review_comment:
+    types: [created]
 
 jobs:
   review:
     # Comment path: only on a PR, and only for the exact "@claude review"
     # phrase, which is what keeps this from overlapping claude-mention.yml.
+    # startsWith, not contains: a comment that merely QUOTES "@claude review"
+    # (a reply, a pasted excerpt) should not spend a review. The phrase is a
+    # command, so it has to lead the comment.
     if: >-
       github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request_review_comment' &&
+       startsWith(github.event.comment.body, '@claude review')) ||
       (github.event.issue.pull_request != null &&
-       contains(github.event.comment.body, '@claude review'))
+       startsWith(github.event.comment.body, '@claude review'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
-      group: claude-review-${{ github.event.issue.number || inputs.pr }}
+      group: claude-review-${{ github.event.issue.number || github.event.pull_request.number || inputs.pr }}
       cancel-in-progress: true
     permissions:
       contents: read
@@ -56,7 +66,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
-          prompt: "/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.issue.number || inputs.pr }}"
+          prompt: "/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.issue.number || github.event.pull_request.number || inputs.pr }}"
           # Required even though the skill's own frontmatter names this tool:
           # the action only starts the inline-comment MCP server when
           # --allowedTools lists it here.

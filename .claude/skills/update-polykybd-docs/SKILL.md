@@ -60,6 +60,36 @@ Match the site's voice: **user-facing**, friendly, `<Aside>` callouts and tables
 no internal debugging detail. If you move/rename a page, add a `redirects` entry in
 `astro.config.mjs` for the old URL.
 
+## Images
+
+Two conventions, and they are **not** interchangeable:
+
+| Kind | Lives in | Referenced as |
+|---|---|---|
+| Stills (png/jpg) | `src/assets/<section>/` | **relative**: `![alt](../../../assets/using/foo.png)` |
+| Animations (gif) | `public/img/` | **absolute**: `![alt](/img/foo.gif)` |
+
+The stills go through Astro's image pipeline (hence the relative path from the page);
+the gifs are served as-is. Write a real descriptive `alt` — the existing pages do,
+and it is what a reader on a slow connection gets.
+
+**For anything the keyboard draws, GENERATE the image from the firmware's own
+rendering code rather than mocking it up or cropping a photo.** The keycap
+previews on the mod-tap page come from `keyboards/polykybd/.claude/skills/
+keycap-layout-preview/keycap_preview.py` plus the layout generator the firmware
+constants come from, so they show the real pixels and cannot drift into
+wishful-thinking territory. The status OLED has the same property via
+`tools/status_oled42_preview.py`. A generated image is also reproducible when the
+feature changes.
+
+⚠️ **Before repeating a "the software can't do X" claim, check it against the
+source** — these age badly and nobody re-reads them. The Keymap Editor page said
+layer-tap "may not be available from the keycode browser UI" long after it was, and
+one grep settled it: `BEHAVIORS` in `PolyKybdHost/polyhost/gui/layout_dialog/
+keycode_composer.py`, wired in at `keycode_browser.py:53`. The same goes for tray
+menus (`host.py`), `polyctl` subcommands (`polyhost/cli/polyctl.py`) and settings
+(`polyhost/settings.py`).
+
 ## Procedure
 
 1. **Get the docs repo current**: `git -C ../polykybd-docs fetch origin main &&

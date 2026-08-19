@@ -80,4 +80,13 @@ void invert_display(uint8_t r, uint8_t c, bool state);
 
 const uint8_t* get_key_disp_bitmask(uint8_t index);
 
+/*
+ * True when a real per-keycap OLED sits behind matrix (r,c). Every split42 key
+ * has one (42 keys, 42 OLEDs; the 6 NO_LED entries in g_led_config are matrix
+ * slots with no key at all), so this is unconditionally true here. It exists so
+ * the shared HID and split-sync call sites can guard uniformly — see the
+ * split72 header, where one key per half genuinely has no display.
+ */
+bool key_has_display(uint8_t r, uint8_t c);
+
 uint8_t get_disp_bitmask_size(void);

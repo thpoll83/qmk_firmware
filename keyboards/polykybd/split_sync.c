@@ -35,6 +35,7 @@
 void rgb_matrix_update_pwm_buffers(void);
 
 void invert_display(uint8_t r, uint8_t c, bool state);
+bool key_has_display(uint8_t r, uint8_t c);
 
 #include <stddef.h>
 #include <string.h>
@@ -309,7 +310,9 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                             //actually it should be the previous layer instead of default, but it worked so far
                             pos = get_split_matrix_pos(keycode, get_local_layer()->def_layer, &r, &c, is_left_side());
                         }
-                        if (is_on_current_side(pos)) {
+                        // key_has_display(): one key per half has no OLED, so it
+                        // must not drive a chip-select. See the split72 header.
+                        if (is_on_current_side(pos) && key_has_display(r, c)) {
                             invert_display(r, c, command_data[4] == 0);
                         }
                     }

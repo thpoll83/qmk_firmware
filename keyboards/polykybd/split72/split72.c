@@ -31,6 +31,12 @@ uint8_t get_disp_bitmask_size(void) {
     return sizeof(key_display->bitmask);
 }
 
+bool key_has_display(uint8_t r, uint8_t c) {
+    // The inner key at (3,7) on the left half and (8,0) on the right have no
+    // OLED and no RGB LED. Every other key on both halves has both.
+    return !((r == 3 && c == 7) || (r == 8 && c == 0));
+}
+
 void invert_display(uint8_t r, uint8_t c, bool state) {
     if (r>=5 && r<=8) {
         c--; //on the right side of the slit layout the first 4 rows have no key
@@ -38,12 +44,16 @@ void invert_display(uint8_t r, uint8_t c, bool state) {
 
     r = r % MATRIX_ROWS_PER_SIDE;
     const uint8_t disp_idx = LAYOUT_TO_INDEX(r, c);
+    // Bounds guard only, matching split42 — callers screen out the keys that
+    // have no display via key_has_display(). This replaces an `if (disp_idx !=
+    // 255)` test placed AFTER the indexed read, which could therefore never
+    // prevent one, and which only ever matched r%5==0 anyway.
+    const uint8_t table_size = (uint8_t)(sizeof(key_display) / sizeof(key_display[0]));
+    if (disp_idx >= table_size) return;
     const uint8_t* bitmask = get_key_disp_bitmask(disp_idx);
     sr_shift_out_buffer_latch(bitmask, sizeof(key_display->bitmask));
 
-    if (disp_idx != 255) {
-        kdisp_invert(state);
-    }
+    kdisp_invert(state);
 }
 
 // invert displays directly when pressed (no need to do split sync)
@@ -59,11 +69,11 @@ void matrix_scan_kb(void) {
             for (uint8_t c = 0; c < MATRIX_COLS; c++) {
                 bool old     = ((last_matrix[r - first] >> c) & 1) == 1;
                 bool current = ((matrix[r] >> c) & 1) == 1;
-                if (!old && current) {
-                    invert_display(r,c,true);
-                } else if (old && !current) {
-                    invert_display(r,c,false);
+                // Unchanged, or a key with no OLED behind it (see key_has_display).
+                if (old == current || !key_has_display(r, c)) {
+                    continue;
                 }
+                invert_display(r, c, current);
             }
         }
     }

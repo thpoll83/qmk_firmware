@@ -54,5 +54,22 @@ void invert_display(uint8_t r, uint8_t c, bool state);
 
 const uint8_t* get_key_disp_bitmask(uint8_t index);
 
+/*
+ * True when a real per-keycap OLED sits behind matrix (r,c).
+ *
+ * split72 has 74 keys but only 72 OLEDs: one key per half — the inner key at
+ * matrix (3,7) on the left and (8,0) on the right — has no OLED and no RGB LED
+ * (both read NO_LED in g_led_config). Callers must consult this BEFORE
+ * invert_display() so that stays a general "invert the display at (r,c)"
+ * primitive rather than carrying this board's key geometry.
+ *
+ * Without the check, (8,0) underflows invert_display's right-half `c--` to 255
+ * and wraps to display index 23, and (3,7) indexes 31 directly; both are the
+ * phantom inner column, so each press/release latched a chip-select for a slot
+ * the key does not own. Found by cppcheck, which flagged the dead
+ * `disp_idx != 255` guard that was meant to cover exactly this.
+ */
+bool key_has_display(uint8_t r, uint8_t c);
+
 uint8_t get_disp_bitmask_size(void);
 

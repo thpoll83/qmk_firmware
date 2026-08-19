@@ -61,6 +61,13 @@ uint8_t get_disp_bitmask_size(void) {
     return sizeof(key_display->bitmask);
 }
 
+bool key_has_display(uint8_t r, uint8_t c) {
+    // Every split42 key has an OLED; see the header. Parameters are unused.
+    (void)r;
+    (void)c;
+    return true;
+}
+
 void invert_display(uint8_t r, uint8_t c, bool state) {
     /*
      * split42 is a symmetric CRKBD: the right-half matrix rows (4-7) carry all 6

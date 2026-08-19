@@ -233,6 +233,30 @@ void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, in
     }
 }
 
+// Decimating sibling of kdisp_draw_glyph_half_at — see the header for when each
+// is the right one. Samples the top-left pixel of every 2x2 block; no rounding
+// games are needed on the source index because (hw-1)*2 <= w-1 by construction.
+void kdisp_draw_glyph_thin_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
+    const GFXfont *font = NULL;
+    const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
+    if (glyph == NULL || font == NULL) return;
+    const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
+    uint16_t bo = glyph_bitmap_offset(glyph);
+    int16_t w = glyph_width(glyph);
+    int16_t h = glyph_height(glyph);
+    // Round up so an odd source width/height keeps its trailing column/row.
+    int16_t hw = (w + 1) / 2, hh = (h + 1) / 2;
+    const uint8_t cb = glyph_col_bytes((uint8_t)h);   // column-major page-bytes per column
+    for (int16_t dy = 0; dy < hh; ++dy) {
+        const int16_t sy = dy * 2;
+        for (int16_t dx = 0; dx < hw; ++dx) {
+            const int16_t sx = dx * 2;
+            uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
+            if (byte & (1u << (sy & 7))) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+        }
+    }
+}
+
 void kdisp_draw_glyph_double_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
     const GFXfont *font = NULL;
     const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
@@ -556,6 +580,9 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
                 break;
             case U'\x0F':   // HALF: draw the next codepoint half-scale (2x2-OR) at the cursor, no advance
                 if (text[1]) { kdisp_draw_glyph_half_at(fonts, num_fonts, x_cursor, y_cursor, text[1]); text++; }
+                break;
+            case U'\x11':   // THIN: as HALF but decimating, for icons whose gaps matter
+                if (text[1]) { kdisp_draw_glyph_thin_at(fonts, num_fonts, x_cursor, y_cursor, text[1]); text++; }
                 break;
             case U'\x12':   // FRAME: 2px nested rounded rect at the cursor (next two codepoints = w, h)
                 if (text[1] && text[2]) {

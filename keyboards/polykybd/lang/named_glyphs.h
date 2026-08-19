@@ -1969,6 +1969,7 @@
 // Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
+#define HINT_THIN        U"\x11"       // as HINT_HALF but DECIMATING (see disp_array.h)
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
 #define HINT_RESET       U"\x18"       // reset cursor to the text origin
 // Fixed buffer positions / sizes (two bytes each; decimal in the comment):
@@ -1977,6 +1978,63 @@
 #define HINT_POS_ZOOMOUT U"\x3E\x16"   // (62,22)  cursor so a base-font '-' centres in the lens
 #define HINT_POS_RUNBOX  U"\x36\x01"   // (54, 1)  Win+R run-dialog frame top-left
 #define HINT_SZ_RUNBOX   U"\x21\x1B"   // 33 x 27  Win+R run-dialog frame size
+// ---- Mod-tap badge -----------------------------------------------------------
+// A mod-tap keycap already draws its TAP legend ("A" for MT(RSFT,KC_A)) as the
+// primary text; the modifier is only what HOLDING it does. So it renders as a
+// small mark in the BOTTOM-right corner rather than as a second full-size legend
+// beside the letter — the held-modifier shortcut hints are prominent on purpose
+// (holding Ctrl makes the whole keycap mean "Ctrl+C"), a mod-tap badge is not.
+// (Bottom, not top: the shift preview owns the upper right — see the anchor note
+// on the grid below.)
+//
+// The marks are the SAME symbols the modifier keycaps use (keycode_helper.c):
+// the Technical family plus the per-OS GUI logo. Those are drawn to fill a
+// keycap (control is 35x37), so they are downsampled 2x — and WHICH downsample
+// is per glyph, because the two fail in opposite ways (see disp_array.h):
+//   Ctrl helm + the OS logos -> HINT_THIN, or the 2x2-OR closes the gaps that
+//                               carry their meaning (the Windows logo becomes a
+//                               solid square, the helm's spokes fill in).
+//   Alt                      -> HINT_HALF; decimation costs it 46 percent of its
+//                               lit pixels, the worst of the set.
+//   Shift                    -> full size. ICON_SHIFT is already a 14x16 inline
+//                               icon and matches the others' scaled size.
+//
+// Two columns x two rows, anchored BOTTOM-right: one modifier lands in the
+// bottom-right corner (cell RB) and the badge grows up and left from there. The
+// anchor is not cosmetic -- render_key() draws a key's shift preview in the
+// UPPER right (baseline 23, i.e. exactly where row T sits), so a top-anchored
+// badge put its very first mark on top of it. Bottom-anchored, only a 3rd or 4th
+// mark reaches row T, and a 3-modifier mod-tap is already exotic.
+// A position is the literal ink top-left for THIN/HALF but the baseline cursor
+// for the full-size Shift, so they are per mark and per cell; ALL of them are
+// generated together with the preview render (columns END at x97 and x74; row B
+// is bottom-aligned to the last screen row, row T top-aligned at y1) --
+// regenerate both rather than nudging one by hand. The left column's widest mark
+// starts at x56, clearing the widest tap legend ("W" ends at x52) by 4px.
+#define MTB_CTRL_LT  U"\x39\x01"   // (57, 1)
+#define MTB_CTRL_LB  U"\x39\x15"   // (57,21)
+#define MTB_CTRL_RT  U"\x50\x01"   // (80, 1)
+#define MTB_CTRL_RB  U"\x50\x15"   // (80,21)
+#define MTB_SHIFT_LT  U"\x3C\x11"   // (60,17)
+#define MTB_SHIFT_LB  U"\x3C\x28"   // (60,40)
+#define MTB_SHIFT_RT  U"\x53\x11"   // (83,17)
+#define MTB_SHIFT_RB  U"\x53\x28"   // (83,40)
+#define MTB_ALT_LT   U"\x38\x01"   // (56, 1)
+#define MTB_ALT_LB   U"\x38\x1F"   // (56,31)
+#define MTB_ALT_RT   U"\x4F\x01"   // (79, 1)
+#define MTB_ALT_RB   U"\x4F\x1F"   // (79,31)
+#define MTB_GUI_WINDOWS_RB  U"\x54\x1A"   // (84,26) ICON_OS_WINDOWS
+#define MTB_GUI_MACOS_RB  U"\x54\x1A"   // (84,26) TECHNICAL_COMMAND
+#define MTB_GUI_LINUX_RB  U"\x55\x15"   // (85,21) ICON_OS_LINUX
+#define MTB_GUI_GNOME_RB  U"\x56\x19"   // (86,25) ICON_OS_GNOME
+#define MTB_GUI_KDE_RB  U"\x53\x19"   // (83,25) ICON_OS_KDE
+#define MTB_GUI_ANDROID_RB  U"\x4E\x1C"   // (78,28) ICON_OS_ANDROID
+#define MTB_GUI_OTHER_RB  U"\x4E\x14"   // (78,20) DINGBAT_BLACK_DIA_X
+// Each takes one of the position macros above.
+#define MTB_CTRL(pos)      HINT_MOVE(pos) HINT_THIN TECHNICAL_CONTROL
+#define MTB_SHIFT(pos)     HINT_MOVE(pos) ICON_SHIFT
+#define MTB_ALT(pos)       HINT_MOVE(pos) HINT_HALF TECHNICAL_ALTERNATIVE
+#define MTB_GUI(pos, icon) HINT_MOVE(pos) HINT_THIN icon
 // Windows Super-chord hint glyphs (wave D), as drawn by keycode_to_disp_overlay()'s
 // win_or_unknown branch. All are display-only previews of the Win+<key> shortcut.
 // Only the Explorer folder pixmap (ICON_EXPLORER, \x9C) is a resident IconsFont

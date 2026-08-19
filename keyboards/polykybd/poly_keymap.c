@@ -1866,6 +1866,18 @@ static const uint32_t* latin_variation(uint16_t keycode, bool upper_case) {
 }
 
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
+    // ⚠️ A mod-tap's LEGEND is its tap keycode's legend. to_static_text() unwraps
+    // this one function away, and update_displays() consults render_key() exactly
+    // when to_static_text() returned NULL -- which is every letter, since the
+    // language translation lives down here. So without the same unwrap a
+    // RSFT_T(KC_A) fell through every branch below (is_letter is false for 0x3204,
+    // and translate_keycode() has no row for it) and the keycap drew NO letter at
+    // all: only the mod-tap hint badge, floating in an empty cell (field, 2026-08-18).
+    // The two legend producers have to agree; keep the unwrap in both.
+    if(IS_QK_MOD_TAP(keycode)) {
+        keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
+    }
+
     const poly_layer_t* local_layer = get_local_layer();
 
     const bool shift = ((local_layer->mods & MOD_MASK_SHIFT) != 0);

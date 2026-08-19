@@ -301,38 +301,88 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
     }
 
     if(IS_QK_MOD_TAP(keycode)) {
-        uint8_t mods = QK_MOD_TAP_GET_MODS(keycode);
-        if((mods & MOD_MASK_CSAG) == MOD_MASK_CSAG) {
-            return U"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_SAG) == MOD_MASK_SAG) {
-            return U"    " ICON_SHIFT NOT_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_CAG) == MOD_MASK_CAG) {
-            return U"    " CURRENCY_SIGN NOT_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_CSG) == MOD_MASK_CSG) {
-            return U"    " CURRENCY_SIGN ICON_SHIFT KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_CSA) == MOD_MASK_CSA) {
-            return U"    " CURRENCY_SIGN ICON_SHIFT NOT_SIGN;
-        } else if((mods & MOD_MASK_AG) == MOD_MASK_AG) {
-            return U"    " NOT_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_SG) == MOD_MASK_SG) {
-            return U"    " ICON_SHIFT KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_SA) == MOD_MASK_SA) {
-            return U"    " CURRENCY_SIGN NOT_SIGN;
-        } else if((mods & MOD_MASK_CG) == MOD_MASK_CG) {
-            return U"    " CURRENCY_SIGN KATAKANA_MIDDLE_DOT;
-        } else if((mods & MOD_MASK_CA) == MOD_MASK_CA) {
-            return U"    " CURRENCY_SIGN NOT_SIGN;
-        } else if((mods & MOD_MASK_CS) == MOD_MASK_CS) {
-            return U"    " CURRENCY_SIGN ICON_SHIFT;
-        } else if(mods & MOD_MASK_CTRL) {
-            return U"    " CURRENCY_SIGN;
-        } else if(mods & MOD_MASK_ALT) {
-            return U"    " NOT_SIGN;
-        } else if (mods & MOD_MASK_SHIFT) {
-            return U"    " ICON_SHIFT;
-        } else {
-            return U"   " KATAKANA_MIDDLE_DOT;
+        // ⚠️ QK_MOD_TAP_GET_MODS() yields QMK's *5-bit* mod form (quantum/modifiers.h
+        // `enum mods_5bit`): bits 0-3 = Ctrl/Shift/Alt/Gui and **bit 4 is the
+        // left/right flag**, not a fifth modifier. The MOD_MASK_* constants are the
+        // *8-bit paired* form (MOD_MASK_CTRL == 0x11, _SHIFT == 0x22, ...). Testing one
+        // against the other mis-read every mod-tap: RCTL_T/RSFT_T/RALT_T/RGUI_T all
+        // carry bit 4, whose 0x10 is MOD_MASK_CTRL's right-Ctrl bit, so all four drew
+        // Ctrl; LGUI_T (0x08) intersects no MOD_MASK_* at all and drew the bare-else
+        // legend. Normalise with the expression QMK itself uses in
+        // quantum/keymap_common.c (`(mod & 0x10) ? (mod & 0xF) << 4 : mod`).
+        const uint8_t mods_5bit = QK_MOD_TAP_GET_MODS(keycode);
+        const uint8_t mods = (mods_5bit & 0x10) ? (uint8_t)((mods_5bit & 0x0F) << 4)
+                                                : (uint8_t)(mods_5bit & 0x0F);
+        // ⚠️ Second, independent half of the same bug: the old chain asked
+        // `(mods & MOD_MASK_CS) == MOD_MASK_CS`, and MOD_MASK_CS is 0x33 — *both* left
+        // AND right Ctrl AND Shift. A mod-tap keycode carries one side only, so no
+        // combination test could ever hold and HYPR_T/MEH_T fell through to the bare
+        // Ctrl mark. Presence of a modifier is `(mods & MOD_MASK_x) != 0`; the pairs and
+        // triples are then just the conjunction, so index a table by the four
+        // independent bits instead of ordering eleven overlapping tests by specificity —
+        // that ordering is what let the Shift+Alt row silently carry Ctrl+Alt's glyphs.
+        const uint8_t idx = (uint8_t)(((mods & MOD_MASK_CTRL)  ? 1u : 0u) |
+                                      ((mods & MOD_MASK_SHIFT) ? 2u : 0u) |
+                                      ((mods & MOD_MASK_ALT)   ? 4u : 0u) |
+                                      ((mods & MOD_MASK_GUI)   ? 8u : 0u));
+        // The marks are the modifier keycaps' own symbols, right-aligned into a 2x2
+        // grid anchored at the BOTTOM-right, so a single modifier lands in that
+        // corner and the badge grows up and left from there (the MTB_* block in
+        // lang/named_glyphs.h has the layout and the per-glyph choice of downsample).
+        // ⚠️ The bottom anchor is load-bearing, not taste: render_key() draws a key's
+        // shift preview in the UPPER right, so a top-anchored badge put its FIRST
+        // mark on top of it — measured 21 px of the '!' on a digit key. Bottom-
+        // anchored, nothing reaches row T until the 3rd modifier.
+        // Marks are placed in C,S,A,G order, so GUI is always last and therefore
+        // always takes the bottom-right cell — hence one GUI position per OS, not
+        // four. GUI follows the ACTIVE OS exactly as the GUI keycap does, so the
+        // table is generated once per OS; every other mark is OS-independent, and
+        // the compiler merges those identical string literals across the tables.
+#define MT_BADGE_TABLE(gui, gui_rb) {                                                  \
+            [0]  = NULL,   /* MT(0, kc) — no modifier, so no hint */                   \
+            [1]  = MTB_CTRL(MTB_CTRL_RB),                                              \
+            [2]  = MTB_SHIFT(MTB_SHIFT_RB),                                            \
+            [3]  = MTB_CTRL(MTB_CTRL_LB) MTB_SHIFT(MTB_SHIFT_RB),                      \
+            [4]  = MTB_ALT(MTB_ALT_RB),                                                \
+            [5]  = MTB_CTRL(MTB_CTRL_LB) MTB_ALT(MTB_ALT_RB),                          \
+            [6]  = MTB_SHIFT(MTB_SHIFT_LB) MTB_ALT(MTB_ALT_RB),                        \
+            [7]  = MTB_CTRL(MTB_CTRL_RT) MTB_SHIFT(MTB_SHIFT_LB) MTB_ALT(MTB_ALT_RB),  \
+            [8]  = MTB_GUI(gui_rb, gui),                                               \
+            [9]  = MTB_CTRL(MTB_CTRL_LB) MTB_GUI(gui_rb, gui),                         \
+            [10] = MTB_SHIFT(MTB_SHIFT_LB) MTB_GUI(gui_rb, gui),                       \
+            [11] = MTB_CTRL(MTB_CTRL_RT) MTB_SHIFT(MTB_SHIFT_LB) MTB_GUI(gui_rb, gui), \
+            [12] = MTB_ALT(MTB_ALT_LB) MTB_GUI(gui_rb, gui),                           \
+            [13] = MTB_CTRL(MTB_CTRL_RT) MTB_ALT(MTB_ALT_LB) MTB_GUI(gui_rb, gui),     \
+            [14] = MTB_SHIFT(MTB_SHIFT_RT) MTB_ALT(MTB_ALT_LB) MTB_GUI(gui_rb, gui),   \
+            [15] = MTB_CTRL(MTB_CTRL_LT) MTB_SHIFT(MTB_SHIFT_RT)                       \
+                   MTB_ALT(MTB_ALT_LB) MTB_GUI(gui_rb, gui),                           \
         }
+        static const uint32_t* const badge_win[16] =
+            MT_BADGE_TABLE(ICON_OS_WINDOWS, MTB_GUI_WINDOWS_RB);
+        static const uint32_t* const badge_mac[16] =
+            MT_BADGE_TABLE(TECHNICAL_COMMAND, MTB_GUI_MACOS_RB);
+        static const uint32_t* const badge_lnx[16] =
+            MT_BADGE_TABLE(ICON_OS_LINUX, MTB_GUI_LINUX_RB);
+        static const uint32_t* const badge_gnome[16] =
+            MT_BADGE_TABLE(ICON_OS_GNOME, MTB_GUI_GNOME_RB);
+        static const uint32_t* const badge_kde[16] =
+            MT_BADGE_TABLE(ICON_OS_KDE, MTB_GUI_KDE_RB);
+        static const uint32_t* const badge_android[16] =
+            MT_BADGE_TABLE(ICON_OS_ANDROID, MTB_GUI_ANDROID_RB);
+        static const uint32_t* const badge_other[16] =
+            MT_BADGE_TABLE(DINGBAT_BLACK_DIA_X, MTB_GUI_OTHER_RB);
+#undef MT_BADGE_TABLE
+        const uint32_t* const* badge;
+        switch (active_os) {
+            case POLY_OS_WINDOWS:     badge = badge_win;     break;
+            case POLY_OS_MACOS:       badge = badge_mac;     break;
+            case POLY_OS_LINUX:       badge = badge_lnx;     break;
+            case POLY_OS_LINUX_GNOME: badge = badge_gnome;   break;
+            case POLY_OS_LINUX_KDE:   badge = badge_kde;     break;
+            case POLY_OS_ANDROID:     badge = badge_android; break;
+            default:                  badge = badge_other;   break;
+        }
+        return badge[idx];
     }
 
     return NULL;

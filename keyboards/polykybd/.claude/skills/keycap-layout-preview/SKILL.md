@@ -1,6 +1,6 @@
 ---
 name: keycap-layout-preview
-description: Place and verify anything drawn on a PER-KEYCAP 72x40 OLED — a corner badge, a modifier mark, a status dot, a second glyph beside the legend, a repositioned hint — by rendering the real draw path in Python and MEASURING whether it collides with the legend, instead of flashing a build to look at it. Use when asked to "move the mark to the other corner", "show X on the keycap too", "does this overlap the letter", "make it smaller / put it in the corner", "give me a preview instead of another hardware round", or when a keycap render needs sign-off before a build. NOT for the STATUS OLED (that is status-oled-layout) and NOT for choosing a hint GLYPH (that is add-polykybd-shortcut-hint).
+description: Place and verify anything drawn on a PER-KEYCAP 72x40 OLED — a corner badge, a modifier mark, a status dot, a second glyph beside the legend, a repositioned hint — by rendering a faithful Python model of the firmware draw path and MEASURING whether it collides with the legend, instead of flashing a build to look at it. Use when asked to "move the mark to the other corner", "show X on the keycap too", "does this overlap the letter", "make it smaller / put it in the corner", "give me a preview instead of another hardware round", or when a keycap render needs sign-off before a build. NOT for the STATUS OLED (that is status-oled-layout) and NOT for choosing a hint GLYPH (that is add-polykybd-shortcut-hint).
 ---
 
 # Per-keycap layout changes
@@ -11,12 +11,22 @@ exists in the pixels. The two that shipped in the 2026-08-18 session were both o
 that shape — a badge drawn where the legend was, and later a badge that erased
 nothing but *merged* with the shift preview.
 
-So: **render the real draw path, then measure ink against ink.** Do not eyeball
-the PNG, and do not spend a hardware round on a placement question.
+So: **model the draw path, then measure ink against ink.** Do not eyeball the PNG,
+and do not spend a hardware round on a placement question.
 
-`keycap_preview.py` (beside this file) models `base/disp_array.c` and
-`render_key()`'s legend placement, including the parts a naive renderer misses.
-Run everything from `keyboards/polykybd/`.
+`keycap_preview.py` (beside this file) is a Python **re-implementation** of
+`base/disp_array.c` and `render_key()`'s legend placement, including the parts a
+naive renderer misses. Run everything from `keyboards/polykybd/`.
+
+⚠️ **It is a model, so it can drift from the C** — that is not hypothetical, it is
+the standing caveat on `oled_preview.py` one directory over (it models
+`xOffset`/`yOffset` but *not* the baseline-align shift, so it cannot reproduce that
+class of bug). Treat a result as evidence about **layout**, never as proof about the
+compiled firmware, and re-read the C when you touch either side: the pixel plotters
+and `KDISP_CY_DEFAULT` in `base/disp_array.c`, the legend/preview placement at the
+end of `render_key()` in `poly_keymap.c`. If a preview and the hardware ever
+disagree, the hardware is right and this file has a bug — fix it here rather than
+working around it in a caller.
 
 ## The three facts that make this necessary
 
@@ -96,7 +106,9 @@ block), emit the C **and** the preview from one script, so they cannot disagree.
 Assert the invariants there:
 
 ```python
-assert x and y, 'a zero coordinate would NUL-terminate the hint string'
+if not (x and y):        # a raise, not an assert — `python -O` strips asserts,
+    raise ValueError(    # and this one guards a silent-truncation hazard
+        'zero coordinate (%d,%d) would NUL-terminate the hint string' % (x, y))
 ```
 
 ⚠️ **A `HINT_MOVE` coordinate is a codepoint in a `U"…"` literal, so a zero byte

@@ -293,10 +293,18 @@ inherited-upstream noise:
   ```bash
   git ls-files -c -i --exclude-from=.gitignore keyboards/polykybd/   # THIS must be empty
   ```
-  ⚠️ Which is also why **`git add -A` is the wrong way to stage a change here**: it
-  happily stages that whole build directory, and a committed ignored file is exactly
-  the thing that turns `lint` red on every later PR touching the keyboard. Stage the
-  paths you edited by name (caught while committing, 2026-08-19).
+  ⚠️ **That `-o` noise is convincing enough to cause a MISDIAGNOSIS — it did,
+  while this very note was being written (2026-08-19).** Running `git add -A` and
+  then the `-c -o -i` check printed the whole `doom/pack/build/` tree, which read as
+  "`git add -A` just staged 100 ignored files"; the first draft of this bullet said
+  exactly that. It is **false** — `git add -A` honours `.gitignore` and cannot stage
+  an ignored file without `-f` (verify in 20 s in a throwaway repo). The files were
+  listed by `-o`, as untracked, before and after the add alike. **The tell is
+  `git diff --cached --name-only`** — what is *actually* staged — not an
+  `ls-files` variant that mixes tracked and untracked in one list.
+  Still prefer staging the paths you edited by name: `-A` picks up unrelated
+  working-tree changes, and it *does* stage a modification to an ignored file that
+  is already tracked, which is the state CI fails on.
   - ⚠️ **WHICH formatter runs is decided by the changed PATHS, and clang-format does
     NOT cover `keyboards/**`.** An earlier version of this file said "the lint job runs
     `format-c` as well as `format-text`" and told you to clang-format every C file you

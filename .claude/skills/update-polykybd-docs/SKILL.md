@@ -73,14 +73,20 @@ The stills go through Astro's image pipeline (hence the relative path from the p
 the gifs are served as-is. Write a real descriptive `alt` — the existing pages do,
 and it is what a reader on a slow connection gets.
 
-**For anything the keyboard draws, GENERATE the image from the firmware's own
-rendering code rather than mocking it up or cropping a photo.** The keycap
-previews on the mod-tap page come from `keyboards/polykybd/.claude/skills/
-keycap-layout-preview/keycap_preview.py` plus the layout generator the firmware
-constants come from, so they show the real pixels and cannot drift into
-wishful-thinking territory. The status OLED has the same property via
-`tools/status_oled42_preview.py`. A generated image is also reproducible when the
-feature changes.
+**For anything the keyboard draws, GENERATE the image from a renderer that shares
+the firmware's own inputs rather than mocking it up or cropping a photo.** The
+keycap previews on the mod-tap page come from `keyboards/polykybd/.claude/skills/
+keycap-layout-preview/keycap_preview.py` (fed by the same generator that emits the
+firmware's position constants), and the status OLED has
+`tools/status_oled42_preview.py`. Both read the real font headers and the real
+layout values, so the image tracks the feature instead of an artist's idea of it,
+and it is reproducible when the feature changes.
+
+⚠️ These previews are Python **models** of the C, not the C — they can drift, and
+`oled_preview.py` carries a documented blind spot of exactly that kind. So a
+generated image is the right default, but for anything subtle **confirm it against
+a photo of the hardware before publishing it**, and re-check the model after a
+change to the draw path.
 
 ⚠️ **Before repeating a "the software can't do X" claim, check it against the
 source** — these age badly and nobody re-reads them. The Keymap Editor page said

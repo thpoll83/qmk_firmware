@@ -229,10 +229,24 @@ def _cap(ink, scale):
     return out
 
 
+def _label_font(size=15):
+    """A mono label face if the host has one, else PIL's built-in bitmap font.
+
+    Only the caption under each keycap uses this — the keycap itself is drawn from
+    the firmware's own font headers — so a fallback costs nothing but looks.
+    """
+    for name in ('DejaVuSansMono-Bold.ttf', 'DejaVuSansMono.ttf',
+                 'LiberationMono-Bold.ttf', 'Menlo.ttc', 'consolab.ttf'):
+        try:
+            return ImageFont.truetype(name, size)      # PIL searches the font dirs
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
 def sheet(cells, path, scale=5, gap=26, pad=22):
     """cells: [(ink_set, label)] laid out in one row. Writes a PNG."""
-    font = ImageFont.truetype(
-        '/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf', 15)
+    font = _label_font()
     caps = [_cap(ink, scale) for ink, _ in cells]
     cw, chh = caps[0].size
     out = Image.new('RGB', (pad * 2 + cw * len(caps) + gap * (len(caps) - 1),

@@ -60,6 +60,42 @@ Match the site's voice: **user-facing**, friendly, `<Aside>` callouts and tables
 no internal debugging detail. If you move/rename a page, add a `redirects` entry in
 `astro.config.mjs` for the old URL.
 
+## Images
+
+Two conventions, and they are **not** interchangeable:
+
+| Kind | Lives in | Referenced as |
+|---|---|---|
+| Stills (png/jpg) | `src/assets/<section>/` | **relative**: `![alt](../../../assets/using/foo.png)` |
+| Animations (gif) | `public/img/` | **absolute**: `![alt](/img/foo.gif)` |
+
+The stills go through Astro's image pipeline (hence the relative path from the page);
+the gifs are served as-is. Write a real descriptive `alt` — the existing pages do,
+and it is what a reader on a slow connection gets.
+
+**For anything the keyboard draws, GENERATE the image from a renderer that shares
+the firmware's own inputs rather than mocking it up or cropping a photo.** The
+keycap previews on the mod-tap page come from `keyboards/polykybd/.claude/skills/
+keycap-layout-preview/keycap_preview.py` (fed by the same generator that emits the
+firmware's position constants), and the status OLED has
+`tools/status_oled42_preview.py`. Both read the real font headers and the real
+layout values, so the image tracks the feature instead of an artist's idea of it,
+and it is reproducible when the feature changes.
+
+⚠️ These previews are Python **models** of the C, not the C — they can drift, and
+`oled_preview.py` carries a documented blind spot of exactly that kind. So a
+generated image is the right default, but for anything subtle **confirm it against
+a photo of the hardware before publishing it**, and re-check the model after a
+change to the draw path.
+
+⚠️ **Before repeating a "the software can't do X" claim, check it against the
+source** — these age badly and nobody re-reads them. The Keymap Editor page said
+layer-tap "may not be available from the keycode browser UI" long after it was, and
+one grep settled it: `BEHAVIORS` in `PolyKybdHost/polyhost/gui/layout_dialog/
+keycode_composer.py`, wired in at `keycode_browser.py:53`. The same goes for tray
+menus (`host.py`), `polyctl` subcommands (`polyhost/cli/polyctl.py`) and settings
+(`polyhost/settings.py`).
+
 ## Procedure
 
 1. **Get the docs repo current**: `git -C ../polykybd-docs fetch origin main &&

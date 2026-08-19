@@ -70,6 +70,15 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     `pull_request_read` `get_reviews` — do not infer from the check conclusion.
     (The sibling rule "a bot comment is not a review" is in `PolyKybdHost/CLAUDE.md`;
     this is the same failure with a green check instead of a long comment.)
+    - ⚠️ **CodeRabbit's COMMIT STATUS does the same thing, so "at least it renders a
+      banner" only holds for the comment.** Its status context reads `state: success`
+      with the description **"Review rate limited"** (`pull_request_read`
+      `get_status`, head `2d61653d`, 2026-08-18) — so a head that nothing read shows
+      a green CodeRabbit tick alongside the green build. The banner lives in the
+      *comment*, which a status-only view never shows, and which vanishes on a
+      re-render anyway (see the sticky-walkthrough note above). **`get_status` can
+      only ever tell you a review RAN, never that it read the current head** — pair
+      it with `get_reviews` and compare each review's `commit_id` against the head.
 
 - **Verify an AI reviewer's finding against the code before acting on it — several
   arrive confidently wrong.** Of 7 CodeRabbit findings on one PR (2026-08-01), 3
@@ -275,8 +284,27 @@ inherited-upstream noise:
   git diff --quiet -- $(git diff --name-only --diff-filter=d origin/PolyKybd...HEAD) \
       && echo "format clean"        # the job's second half: any diff = "Requires Formatting"
   ```
-  ⚠️ Drop `keyboards/polykybd/tools/__pycache__` first or it shows up as a false
-  positive in the ignored-files list (CI checks out clean, so it never sees it).
+  ⚠️ **The `-o` in that command lists UNTRACKED ignored files too, and locally that
+  is mostly your own build output** — `keyboards/polykybd/tools/__pycache__`, and
+  after a `doom/pack/build_pack.sh` run the ~100 files under
+  `keyboards/polykybd/doom/pack/build/`. CI checks out clean, so it never sees any
+  of them. **What CI actually fails on is a TRACKED ignored file**, so when the list
+  is noisy re-run it without `-o`:
+  ```bash
+  git ls-files -c -i --exclude-from=.gitignore keyboards/polykybd/   # THIS must be empty
+  ```
+  ⚠️ **That `-o` noise is convincing enough to cause a MISDIAGNOSIS — it did,
+  while this very note was being written (2026-08-19).** Running `git add -A` and
+  then the `-c -o -i` check printed the whole `doom/pack/build/` tree, which read as
+  "`git add -A` just staged 100 ignored files"; the first draft of this bullet said
+  exactly that. It is **false** — `git add -A` honours `.gitignore` and cannot stage
+  an ignored file without `-f` (verify in 20 s in a throwaway repo). The files were
+  listed by `-o`, as untracked, before and after the add alike. **The tell is
+  `git diff --cached --name-only`** — what is *actually* staged — not an
+  `ls-files` variant that mixes tracked and untracked in one list.
+  Still prefer staging the paths you edited by name: `-A` picks up unrelated
+  working-tree changes, and it *does* stage a modification to an ignored file that
+  is already tracked, which is the state CI fails on.
   - ⚠️ **WHICH formatter runs is decided by the changed PATHS, and clang-format does
     NOT cover `keyboards/**`.** An earlier version of this file said "the lint job runs
     `format-c` as well as `format-text`" and told you to clang-format every C file you
@@ -670,6 +698,37 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   render pack/flag glyphs too. **Caveat:** the preview models glyph `xOffset/yOffset`
   but NOT the `kdisp` baseline-align shift, so it won't reproduce that bug — reason
   about `fonts[0]` separately.
+- ⚠️ **`render_key()` and `to_static_text()` are a PAIR — both must normalise the
+  keycode the same way, or a key draws its chrome and NO legend.** `update_displays()`
+  consults `render_key()` exactly when `to_static_text()` returned NULL, which is
+  **every letter** (the language translation lives inside `render_key()`). So when
+  `to_static_text()` unwrapped a mod-tap keycode and `render_key()` did not,
+  `RSFT_T(KC_A)` (`0x3204`) fell through every branch there — `is_letter` is false for
+  it and `translate_keycode()` has no row — and the keycap rendered its modifier badge
+  in an otherwise **empty cell** (field, 2026-08-18). The unwrap had been in
+  `to_static_text()` for years, one function away. This is the sibling of the already-
+  documented "`render_key()` is only consulted when `to_static_text()` returns NULL"
+  (Intl-remap section): that one is about a key with a legend *bypassing* `render_key`,
+  this one is about the same seam producing *no* legend at all. Any future keycode
+  rewriting (a second wrapper class, an alias) has to land in **both**.
+- ⚠️ **A hint/overlay string is drawn OVER the legend at the SAME origin, so
+  full-size extra art ERASES it — a secondary mark belongs MOVE'd into a corner, and
+  that corner is the BOTTOM-right.** `update_displays()` draws the legend at
+  `(BUFFER_X, 23)`, sets `text = NULL`, then draws `keycode_to_disp_overlay()`'s
+  string at the *same* origin with `KDISP_CY_DEFAULT` — whose 3px courtyard clears the
+  legend underneath before the glyph even lands. That is correct for a held-modifier
+  shortcut hint (the whole keycap *means* Ctrl+C while Ctrl is down) and wrong for a
+  mark that must coexist with the legend. The bottom anchor is not taste:
+  `render_key()` draws the **shift preview in the UPPER right** (baseline 23, x from
+  `*_HOFFSET VAR_SHIFT`), so a top-anchored corner mark lands on it. Measured badge-
+  ink-on-legend-ink over all 15 modifier combinations: a letter is 0 either way
+  (en-US sets `LETTER_*_OFFSET VAR_SHIFT` to `HIDE_KEY`), but a **digit/symbol key
+  always has a preview** and went from 21 px of overlap at 2 marks (top-anchored) to
+  21 px at 4 marks only (bottom-anchored). ⚠️ **Measure that as the INTERSECTION of
+  the two ink sets** — a "how many legend pixels survived" count reads **0 damage**
+  for a real collision, because overlapping lit-on-lit loses no pixels and still reads
+  as merged (that metric hid the digit collision for a round). The
+  `keycap-layout-preview` skill wraps the whole measure-don't-eyeball loop.
 - **The per-keycap DISPLAY grid is NOT a rectangle** (split72). Only the **bottom
   row (display row 4) is a full 8-wide row**; the upper rows (0–3) have panels at
   **cols 0–6 only** — display **col 7 is a routing phantom** (a `BITMASK` entry
@@ -1400,6 +1459,16 @@ export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"
 make test:polymod_ltr559          # ~1 s, 19 tests — the LTR-559 driver vs a mock I2C bus
 make test:fw_up_verdict           # ~1 s, 27 tests — the flash-staging COMMIT decision layer
 ```
+
+⚠️ **`make test:<name>` with a name that is not in `TEST_LIST` exits 0 and prints
+NOTHING** — no "unknown target", no test output, just a clean prompt. It is the same
+silent-green failure the CI workflow's zero-suites guard exists to catch, one level
+down and with nothing guarding it: `make test:os_hints` "passed" twice before the
+missing output was noticed (2026-08-18); the suite is `polykybd_os_hints`. **Judge the
+run by the `[  PASSED  ] N tests.` line, never by the exit code** — a real run always
+prints one. The registered names are `polykybd_os_hints`, `polykybd_glyph_meta`,
+`fw_up_verdict` and `polymod_ltr559`; `grep -rn "TEST_LIST +=" --include=testlist.mk .`
+is the authoritative list.
 
 ✅ **These run in CI — via `polykybd-unit-test.yml`, NOT upstream's `unit_test.yml`.**
 That distinction is the whole point: upstream's workflow filters on `builddefs/ quantum/

@@ -70,6 +70,14 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     `pull_request_read` `get_reviews` — do not infer from the check conclusion.
     (The sibling rule "a bot comment is not a review" is in `PolyKybdHost/CLAUDE.md`;
     this is the same failure with a green check instead of a long comment.)
+    - ⚠️ **A THIRD shape, and the quietest yet: `Sourcery review` = `success`
+      with NO REVIEW OBJECT AT ALL.** On #218 (2026-08-19) the check was green on
+      the head commit while `get_reviews` returned exactly one review, submitted
+      against the *first* commit of the branch — so the firmware fix and the two
+      new CI workflows had been read by nothing. There is no rate-limit body to
+      find here, because there is no review. **Check the review's `commit_id`
+      against the head sha**, not just that a review exists: a stale review plus a
+      fresh green check is indistinguishable from a current one at a glance.
     - ⚠️ **CodeRabbit's COMMIT STATUS does the same thing, so "at least it renders a
       banner" only holds for the comment.** Its status context reads `state: success`
       with the description **"Review rate limited"** (`pull_request_read`
@@ -111,9 +119,42 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   - ⚠️ **Comment and `workflow_dispatch` triggers always run the copy of the
     workflow on the DEFAULT branch**, so neither does anything until merged
     there — you cannot test them on the PR that adds them.
-  - Only the exact phrase `@claude review` reaches the review workflow; any other
-    `@claude ...` goes to the mention one. That split is what stops a single
-    comment starting two runs.
+  - **Routing: `startsWith('@claude review')` reaches the review workflow; any
+    other `@claude ...` goes to the mention one.** Both files use the identical
+    test, which is what stops one comment starting two runs. It is `startsWith`
+    and not `contains`, so a comment that merely *quotes* the phrase — a reply, a
+    pasted excerpt of a PR body — cannot spend a review.
+    - ⚠️ **Both workflows must listen on `issue_comment` AND
+      `pull_request_review_comment`.** This shipped with the review one listening
+      only to `issue_comment`, so `@claude review` typed on a **diff hunk**
+      triggered *nothing at all* — the mention workflow does see that event but
+      excludes the phrase by design. Silently dead in the one place a reviewer is
+      most likely to type it (caught by Sourcery, 2026-08-19). On that event
+      `github.event.issue` is null, so the PR number has to fall back through
+      `github.event.pull_request.number`.
+  - **`pull-requests: read` is CORRECT for the review workflow — do not "fix" it
+    to write.** With `github_token` omitted the action authenticates as the
+    **Claude GitHub App**, not `GITHUB_TOKEN`, so read permissions are enough to
+    post inline comments; Anthropic's own code-review example uses exactly these.
+    Reviewers raise this as a bug on every workflow change, so the refutation is
+    written down here to be quoted rather than re-derived.
+  - **The action enforces write-access and rejects bot actors ITSELF**, before
+    Claude starts, so the `if:` does not need to duplicate it — and a duplicate
+    would drift from it. That human-actor check is what stops another reviewer's
+    rate-limit notice from summoning Claude in a loop. The only residue is that a
+    runner *starts* before the rejection, which is free on a public repo.
+  - ⚠️ **A Claude review of Claude-written code is a third CORRELATED opinion,
+    not independent verification.** Most of this codebase is written in Claude
+    sessions, so the reviewer carries the author's priors and sails past the same
+    things — `send_to_bridge()`'s non-zero returns, the enumerating guard in
+    `find_matching_entry`, the `.pyc` mtime trap were each missed by an author and
+    would likely be missed by a same-model reviewer. It is genuinely useful for
+    the two jobs above (checking a *claim* against the code, and checking a diff
+    against *this file*, where the knowledge lives in the file rather than the
+    weights) and for the case where nothing else reviewed at all. The risk is not
+    that it is weak but that a clean one **reads as cover** — the same failure the
+    bot-tells above document. The last line of defence stays the HIL rig and the
+    unit suites; that asymmetry is why cppcheck was added alongside it.
 
 ## Branching (all PolyKybd repos)
 
@@ -223,6 +264,29 @@ inherited-upstream noise:
 - **`Build firmware`** and **`HIL test (split72)`** (the polykybd-ctnd rig) are the
   **real** checks; these are what must go green. Use the `diagnose-hil-failure` skill
   for the HIL side.
+- **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
+  is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
+  training data and therefore blind spots, while dataflow analysis fails elsewhere.
+  It has no quota, no star threshold and no file-count limit, so unlike every bot it
+  cannot go quiet on the PR that needs it. It earned the slot immediately, finding
+  the two no-OLED keys latching a chip-select (see § per-keycap rendering gotchas).
+  Scoped to `keyboards/polykybd` + `modules/polykybd`, excluding the vendored doom
+  engine, generated font headers, vendored monocypher and the googletest sources.
+  - **Analyse with `-DFW_REQUIRE_SIGNATURE`** — the configuration that ships.
+    Without it cppcheck reports a false `identicalInnerCondition` in `fw_staging.c`
+    that the `#ifdef` itself creates, and there is nothing wrong with the code.
+  - ⚠️ **A bare `#` line in `.cppcheck-suppressions` kills the whole run**:
+    `cppcheck: error: Failed to add suppression. No id.`, exit 1, **before checking
+    anything** — so it presents as "no findings" rather than as a syntax error. A
+    comment needs text after the hash; blank lines are fine. Cost a debugging round
+    (2026-08-19).
+  - Every suppression in that file carries a **written reason**, same discipline as
+    the Sourcery `nosemgrep` audit note. Do not add an id there to make the check
+    green; if a finding is real, fix it or record why it is deferred.
+  - **CodeQL was considered and rejected for this repo**: C/C++ wants a build, and it
+    would analyse the whole upstream QMK tree — the same trap as the
+    lint-on-upstream-keyboards problem below. The host repo runs CodeQL instead,
+    where Python needs no build and the tree is entirely ours.
 - **`PR Lint keyboards`** (job `lint`, `.github/workflows/lint.yml`) and **`Pull
   Request Labeler`** (job `triage`, `labeler.yml`, `pull_request_target`) are **stock
   upstream QMK** workflows the fork inherited. `lint` runs `qmk lint --strict` on the
@@ -766,6 +830,29 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   wrong IDDQD-screensaver revisions before this was caught. The composed model +
   verifier is committed as `doom/tools/keycap_dispmap.py` (run it after any
   placement change); full write-up in `doom/README.md` § anti-burn-in placement.
+  - ⚠️ **TWO PHYSICAL KEYS have no OLED at all — 74 keys, 72 OLEDs — and the
+    in-code comment about them is misleading.** The inner key at matrix **(3,7)**
+    on the left half and **(8,0)** on the right have neither an OLED nor an RGB
+    LED (both read `NO_LED` in `g_led_config`; both sit at y=2 on the inner edge).
+    They are the only two `NO_LED` slots that exist as keys — the other six are
+    matrix positions with no key. `invert_display()`'s comment says "on the right
+    side of the split layout the first 4 rows have no key", which is true of
+    (5,0)/(6,0)/(7,0) — they are absent from `keyboard.json` — but **(8,0) is a
+    real key**, so reading the comment as "col 0 never happens" is wrong.
+  - **Anything that maps a key to a display must gate on `key_has_display(r,c)`
+    FIRST** (declared in each variant header; split42 returns unconditional
+    `true`, since all 42 of its keys have OLEDs). `invert_display()` deliberately
+    does *not* carry this knowledge — it stays a general "invert the display at
+    matrix (r,c)" primitive, and the three callers (the split72 scan loop,
+    `hid_com.c`, `split_sync.c`) screen the keys out. ⚠️ **A bounds check is not
+    a substitute**: the right key underflows the `c--` fold to 255 and
+    `LAYOUT_TO_INDEX` truncates it to **23**, the left indexes **31** directly —
+    both in range, both the phantom inner column, so each press *and* release
+    latched a chip-select for a slot the key does not own. The old
+    `if (disp_idx != 255)` guard was written for exactly this and could never
+    fire: it sat *after* the indexed read, and 255 needs `r%5==0`, which no col-0
+    key satisfies. Found by cppcheck (2026-08-19), invisible on hardware in both
+    directions because the target slots are phantoms.
 
 ### Status OLED (128×64 split72 / 128×32 split42, SSD1306 over **I2C**)
 The status OLED is the QMK `ssd1306` driver (`OLED_DRIVER = ssd1306`, no

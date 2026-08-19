@@ -1,0 +1,54 @@
+# Static analysis of the PolyKybd firmware sources with cppcheck.
+#
+# Deliberately NOT another AI reviewer. CodeRabbit, Sourcery and the on-demand
+# Claude reviewer are all LLMs trained on much the same public code, so their
+# blind spots overlap. cppcheck is dataflow analysis: it fails in entirely
+# different places, has no quota, no star threshold and no file-count limit —
+# so unlike every bot on a PR it cannot go quiet at the moment it is needed.
+# It found a real out-of-bounds read in split72.c that none of them flagged.
+#
+# CodeQL was considered for this repo and rejected: C/C++ wants a build, and it
+# would analyse the whole upstream QMK tree — thousands of findings in code this
+# fork does not maintain, the same trap as the lint-on-upstream-keyboards
+# problem in CLAUDE.md. cppcheck scoped to keyboards/polykybd is the
+# proportionate version. The host repo does run CodeQL, where Python needs no
+# build and the tree is entirely ours.
+name: cppcheck (polykybd)
+
+on:
+  push:
+    branches: [PolyKybd]
+    paths: ['keyboards/polykybd/**', 'modules/polykybd/**', '.github/workflows/cppcheck.yml']
+  pull_request:
+    paths: ['keyboards/polykybd/**', 'modules/polykybd/**', '.github/workflows/cppcheck.yml']
+  workflow_dispatch:
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Install cppcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq cppcheck
+
+      - name: Run cppcheck
+        run: |
+          cppcheck \
+            --enable=warning,performance,portability \
+            --inline-suppr \
+            --suppressions-list=keyboards/polykybd/.cppcheck-suppressions \
+            --error-exitcode=2 \
+            -DFW_REQUIRE_SIGNATURE -DKEYBOARD_polykybd_split72 \
+            -i keyboards/polykybd/doom \
+            -i keyboards/polykybd/base/fonts \
+            -i keyboards/polykybd/base/crypto \
+            -i keyboards/polykybd/base/tests \
+            -i keyboards/polykybd/hints/tests \
+            --template='{file}:{line}: {severity}: {message} [{id}]' \
+            keyboards/polykybd modules/polykybd

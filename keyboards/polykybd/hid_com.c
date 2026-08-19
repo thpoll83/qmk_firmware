@@ -63,6 +63,7 @@ while lang_key:
 //[[[end]]]
 
 void invert_display(uint8_t r, uint8_t c, bool state);
+bool key_has_display(uint8_t r, uint8_t c);
 // Defined in the shared keyboard-level poly_keymap.c; declared here so the
 // shared HID dispatcher can drive the display-off command (case 24).
 
@@ -587,7 +588,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     if(pos==POS_NOT_FOUND) {
                         pos = get_split_matrix_pos(keycode, local_layer->def_layer, &r, &c, is_left_side());
                     }
-                    if (is_on_current_side(pos)) {
+                    // key_has_display(): one key per half has no OLED, so it must
+                    // not drive a chip-select. See the split72 header.
+                    if (is_on_current_side(pos) && key_has_display(r, c)) {
                         invert_display(r, c, pressed);
                     }
 

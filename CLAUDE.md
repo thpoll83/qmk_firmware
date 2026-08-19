@@ -96,6 +96,25 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   in `raw_hid_receive()`, worth seconds of blocked main loop) that was adopted.
   Reply to the false ones with the evidence so they are not re-raised.
 
+- **When the other reviewers are unavailable, summon Claude with `@claude review`
+  on the PR.** `.github/workflows/claude-review.yml` runs the `code-review` skill
+  on demand (never automatically — three always-on bots is already the noise
+  ceiling) and posts inline comments; `claude-mention.yml` answers a plain
+  `@claude <question>` with the repo and this file loaded, which is the cheap way
+  to **adjudicate a suspect finding** per the verify-don't-dismiss rule above.
+  Neither has an external quota, so between them they cover the three cases that
+  otherwise leave a PR genuinely unreviewed: CodeRabbit rate-limited, Sourcery's
+  green-check-but-empty weekly limit, and an upstream-merge PR over 100 files.
+  - ⚠️ **Billed to the `CLAUDE_CODE_OAUTH_TOKEN` owner's Claude SUBSCRIPTION** —
+    the same budget as an interactive session, not an API key. A 400-file merge
+    review is the case you most want it and the one that costs most.
+  - ⚠️ **Comment and `workflow_dispatch` triggers always run the copy of the
+    workflow on the DEFAULT branch**, so neither does anything until merged
+    there — you cannot test them on the PR that adds them.
+  - Only the exact phrase `@claude review` reaches the review workflow; any other
+    `@claude ...` goes to the mention one. That split is what stops a single
+    comment starting two runs.
+
 ## Branching (all PolyKybd repos)
 
 - **Give every branch a name that hints at its content** (a short descriptive slug, e.g. `claude/fix-slave-layer-after-fw-apply`, not just the auto-generated `claude/<random-scientist>-<id>`) so the branch list reads as a changelog.

@@ -1,0 +1,42 @@
+# cppcheck suppressions for the PolyKybd firmware.
+
+# Every entry here is a finding that was READ and judged false, with the reason
+# written down — the same discipline the Sourcery `# nosemgrep` audit note in
+# CLAUDE.md describes. Do not add an id here to make the check green; if a
+# finding is real, fix it or record why it is deferred.
+
+# --- cppcheck cannot see QMK's build context -------------------------------
+# We deliberately do not hand cppcheck QMK's include tree (chibios, pico-sdk,
+# tmk_core, the generated headers). Resolving it would be a rabbit hole and
+# buys nothing: cppcheck degrades gracefully and still does its dataflow work.
+missingInclude
+missingIncludeSystem
+# Same root cause: PRODUCT, STR and SS_TAP are QMK macros that are not visible
+# without that context, so cppcheck reports "unknown macro" rather than a bug.
+unknownMacro
+# Every *_kb / *_user hook is called by QMK core, never by our own code, so
+# cppcheck sees the whole callback surface as dead.
+unusedFunction
+unmatchedSuppression
+
+# --- verified false positives ----------------------------------------------
+# fw_staging_get_own_fw_size() computes the running image size as
+#   (uint32_t)(&__flash_binary_end - &__flash_binary_start)
+# By the letter of the standard, subtracting pointers into two different
+# objects is UB — but these are LINKER-DEFINED symbols marking the ends of one
+# contiguous flash region, which is the universal embedded idiom for it (the
+# vendored doom engine does the same in i_system.c). Both are declared
+# `extern uint8_t`, so the subtraction is in BYTES and the result is correct;
+# had they been `extern uint32_t` this would have silently returned size/4,
+# which is the actual bug worth watching for here.
+comparePointers:*/base/fw_staging.c
+
+# os_hint_for_keycode() is declared `const uint32_t*` and returns U"..." char32_t
+# literals — the codebase relies on char32_t and uint32_t being the same 32-bit
+# type on this target. cppcheck reads the returned expression as an integer
+# because the hint strings are a mini DISPLAY LIST: HINT_MOVE/HINT_FRAME expand
+# to raw control-code escapes (\x0E\xHH\xHH) spliced into the literal, so the
+# concatenation no longer parses as a plain string to it. The return type is
+# genuinely compatible; see the "shortcut-hint string is a mini DISPLAY LIST"
+# note in CLAUDE.md for what those escapes are.
+CastIntegerToAddressAtReturn:*/hints/os_hints.c

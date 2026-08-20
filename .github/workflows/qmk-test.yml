@@ -99,6 +99,30 @@ jobs:
     name: HIL test (split72)
     needs: build
     runs-on: [self-hosted, polykybd-ctnd]
+    # --- suite tier (OPT-IN extended checks) ---------------------------------
+    # Most HIL checks cost a report or two and run on every push. A few are slow
+    # by nature — they wait out a 10 s idle fade, a ~14 s animation, a 450-frame
+    # split-link soak and a reboot power cycle — and together they add most of a
+    # minute to the gate every push pays for. Those are EXTENDED tier
+    # (station/hil_tests.py TIER_EXTENDED) and are SKIPPED unless this run asks
+    # for them. Three ways to ask, mirroring the perf job below:
+    #   * add the `hil-extended` label to a PR — for a change big enough to want
+    #     the deep checks,
+    #   * put `[hil-extended]` in a commit message — PUSH events only
+    #     (`head_commit` does not exist on a pull_request event), i.e. after a
+    #     merge, which is the release-time route,
+    #   * run the workflow manually (Actions -> Run workflow).
+    # ⚠️ Adding the label does NOT start a run: this job opts out of `labeled`
+    # events (see the `build` job's `if:`) so the auto-labeler cannot re-run the
+    # whole pipeline. Label first and push, or re-run the workflow afterwards.
+    # The runner reads HIL_EXTENDED itself, so the run command stays identical
+    # and the tier is visible both here and in its "[runner] suite tier:" line.
+    env:
+      HIL_EXTENDED: >-
+        ${{ (github.event_name == 'workflow_dispatch' ||
+        contains(github.event.pull_request.labels.*.name, 'hil-extended') ||
+        contains(github.event.head_commit.message, '[hil-extended]'))
+        && '1' || '0' }}
     # download-artifact needs actions:read; posting the diagnostics comment needs
     # pull-requests:write. Setting permissions explicitly replaces the default set,
     # so both are listed; no other scopes are granted to the job token.
@@ -169,6 +193,13 @@ jobs:
         run: |
           cd ${{ steps.ctnd.outputs.dir }}
           set -o pipefail
+          if [ "$HIL_EXTENDED" = "1" ]; then
+            echo "suite tier: EXTENDED (slow checks included)"
+          else
+            echo "suite tier: default — add the 'hil-extended' label (then push or"
+            echo "re-run), or put [hil-extended] in a commit message, to include the"
+            echo "animation / idle / split-link-soak / reboot-persistence checks"
+          fi
           # -u: unbuffered, so the log survives even if a native lib aborts the
           # process at exit (test_runner itself os._exit()s with the real code).
           venv/bin/python -u -m station.test_runner \

@@ -24,10 +24,23 @@ jobs:
   build:
     name: Build firmware
     # A `labeled` event means someone (or the auto-labeler) tagged the PR; it is
-    # not a code change, so there is nothing new to build or HIL-test. Only the
-    # opt-in perf jobs below act on it. `github.event.action` is null for push /
-    # workflow_dispatch, so those still run normally.
-    if: github.event.action != 'labeled'
+    # not a code change, so there is normally nothing new to build or HIL-test,
+    # and letting every auto-label re-run this pipeline is expensive.
+    # `github.event.action` is null for push / workflow_dispatch, so those still
+    # run normally.
+    #
+    # ⚠️ ONE exception: `hil-extended`, which asks for the rig's slow tier (see
+    # the hil-test job). It has to start a run, because there is no other way to
+    # act on it — RE-RUNNING an existing run replays the ORIGINAL event payload,
+    # so a label added afterwards is invisible to `github.event.pull_request.
+    # labels` and the re-run would quietly repeat the default tier. Matching on
+    # `github.event.label.name` (the label just added) keeps every other label —
+    # the auto-labeler's path tags, `bump:*` — excluded as before. This is also
+    # what makes the `hil-extended` label behave like `perf`, whose job chain
+    # starts at `build-perf` and never had this exclusion.
+    if: >-
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'hil-extended'
     runs-on: ubuntu-latest
     outputs:
       split72: ${{ steps.names.outputs.split72 }}
@@ -107,14 +120,14 @@ jobs:
     # (station/hil_tests.py TIER_EXTENDED) and are SKIPPED unless this run asks
     # for them. Three ways to ask, mirroring the perf job below:
     #   * add the `hil-extended` label to a PR — for a change big enough to want
-    #     the deep checks,
+    #     the deep checks. This starts a run by itself (the `build` job makes a
+    #     deliberate exception for this one label — see its `if:`); do NOT try to
+    #     pick the label up by re-running an existing run, because a re-run
+    #     replays the original event payload and cannot see it,
     #   * put `[hil-extended]` in a commit message — PUSH events only
     #     (`head_commit` does not exist on a pull_request event), i.e. after a
     #     merge, which is the release-time route,
     #   * run the workflow manually (Actions -> Run workflow).
-    # ⚠️ Adding the label does NOT start a run: this job opts out of `labeled`
-    # events (see the `build` job's `if:`) so the auto-labeler cannot re-run the
-    # whole pipeline. Label first and push, or re-run the workflow afterwards.
     # The runner reads HIL_EXTENDED itself, so the run command stays identical
     # and the tier is visible both here and in its "[runner] suite tier:" line.
     env:
@@ -196,7 +209,7 @@ jobs:
           if [ "$HIL_EXTENDED" = "1" ]; then
             echo "suite tier: EXTENDED (slow checks included)"
           else
-            echo "suite tier: default (add the 'hil-extended' label, then push or re-run, for the slow checks)"
+            echo "suite tier: default (add the 'hil-extended' label for the slow checks — it starts its own run)"
           fi
           # -u: unbuffered, so the log survives even if a native lib aborts the
           # process at exit (test_runner itself os._exit()s with the real code).

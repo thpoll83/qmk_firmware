@@ -246,10 +246,14 @@ inherited-upstream noise:
     only when the run asks. **Ask for them on anything that touches EEPROM/persisted
     state, the split link, the idle/animation paths, or a release.** Three ways, the
     same convention as the `perf` label:
-    - the **`hil-extended`** PR label — ⚠️ **labelling alone does NOT start a run**
-      (`hil-test` needs `build`, which opts out of `labeled` events so the
-      auto-labeler cannot re-run the pipeline). Label first, then push, or re-run the
-      workflow afterwards;
+    - the **`hil-extended`** PR label — it starts its own run: `build` excludes
+      `labeled` events (so the auto-labeler cannot re-run the pipeline) with a
+      deliberate **exception for this one label**, matched on
+      `github.event.label.name`. ⚠️ **Do not try to pick the label up by re-running
+      an existing run** — a re-run replays the ORIGINAL event payload, so a label
+      added afterwards is invisible and the re-run silently repeats the default
+      tier (caught by CodeRabbit on #223; it is also why `perf` works on a label
+      and this did not until the exception was added);
     - **`[hil-extended]`** in a commit message — PUSH events only (`head_commit` does
       not exist on a `pull_request` event), i.e. after a merge / at release time;
     - a manual **`workflow_dispatch`** (default-branch copy only).

@@ -1698,6 +1698,26 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
     empty "caught by:" reads identically to "not caught". Assert the edit landed
     (`git diff --quiet` on the mutated file) before believing the run. Hit while
     dogfooding the skill, 2026-08-18.
+  - ⚠️ **…and that `git diff --quiet` guard is itself fail-open unless it
+    compares the PRE-MUTATION baseline.** Diffing against **HEAD** only works
+    while the tree is clean: mutate code you have not committed yet — the normal
+    case, since you mutation-test a suite right after writing it — and the guard
+    sees your own feature diff, reports "changed", and passes for every
+    mutation whether or not any applied. So the check meant to catch a
+    non-applied mutation is exactly the one that stops working when you need it.
+    Copy the file first and compare to the copy:
+    ```bash
+    cp path/to/src.c /tmp/base.c                      # pre-mutation baseline
+    ...apply mutation...
+    diff -q /tmp/base.c path/to/src.c >/dev/null \
+        && { echo "MUTATION DID NOT APPLY - result meaningless"; }
+    ...run suite, restore with: cp /tmp/base.c path/to/src.c
+    ```
+    Hit on the host repo 2026-08-20 (Python, same shape — the family is not
+    C-specific). The run happened to be sound because every mutation *did* apply
+    and turned the suite red, but that was luck: the guard could not have told
+    me otherwise. **A fail-open guard that is only correct on a clean tree is a
+    fail-open guard.**
 
 ### Notable QMK features enabled
 RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 host-remappable layers), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.

@@ -629,7 +629,21 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   segment was undefined (the old FW-7 finding; fixed in the wire format instead of a bounce
   buffer). The firmware unpacks the byte in `hid_com.c` case 10 *before* `set_fragment_context_key`,
   so `adjust_overlay_idx_to_mod` is unchanged; **compressed (`0x10`/`0x11`) and ROI (`0x12`/`0x13`)
-  paths are untouched** (their headers already fit). **Bump `FW_VERSION` +
+  paths are untouched** (their headers already fit).
+  **v13** adds `GET/SET_GLYPH_SIZE` (cmd `34` / `0x22`): the size a key's MAIN legend
+  is drawn at — `0` small (the original 27 px face), `1` medium, `2` large; `0xFF`
+  queries. Persisted in `poly_eeconf_t.glyph_size`, synced via `poly_sync_t.glyph_size`;
+  also reachable from the board via `KC_GLYPH_SIZE` on the settings layer.
+  ⚠️ **Its range is CLOSED and an unknown value NACKs — the deliberate OPPOSITE of the
+  glyph script's open-ended index one command over, and that asymmetry is the thing to
+  understand before "fixing" either.** An unknown SCRIPT index falls through to the
+  normal legend, so accepting it costs nothing and buys the host freedom to ship faces a
+  keyboard lacks. A SIZE names a rendering TIER whose relocation base and baseline the
+  firmware must know, so accepting an unknown one would store, sync and persist a
+  setting that silently renders small. The two HIL tests assert opposite things about
+  their neighbouring commands on purpose (`test_glyph_size_round_trip` /
+  `test_glyph_script_expansion`). See "Keycap legend size" below.
+  **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep** — the host connect gate is exact-match.
 - **Cmd `32` = main-loop profiler control — present ONLY in a
@@ -1431,6 +1445,58 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
   `test_glyph_script_round_trip` (`min_protocol: 9`) + `test_glyph_script_expansion`
   (`min_protocol: 10`, walks values 2/6/10 + out-of-range NACK).
 
+### Keycap legend size (`poly_keymap.c`, HID cmd 34, protocol v13+)
+
+Three sizes for a key's **MAIN** legend — `GLYPH_SIZE_S` (0, the 27 px face the board
+has always drawn, and the default), `M` (1, 33 px em) and `L` (2, 39 px em). State and
+plumbing mirror the glyph-script override exactly (`poly_eeconf_t.glyph_size` tail byte,
+`poly_sync_t.glyph_size` master-authoritative, housekeeping diff + `request_disp_refresh`,
+`KC_GLYPH_SIZE` on the settings layer). What is worth knowing is the parts that are NOT
+like the glyph script:
+
+- ⚠️ **The range is CLOSED — see the cmd-34 note in the protocol list above.** Do not
+  "make it open like the script".
+- **No migration sentinel, and for once that is sound rather than lucky.** The default
+  is 0 and QMK's wear levelling normalises an unwritten byte to **ZERO** — the exact
+  fact that made `latin_assign` read as "every key hosts 'a'" (see the Intl-remap traps)
+  works in our favour here. `load_user_eeconf()` still bounds-guards it.
+- **The bigger faces are RELOCATED, not a second lookup path.** `g_all_fonts` is scanned
+  front-to-back and the resident `latin` font is always in front, so a second face at
+  native codepoints could never be reached. `fonts.yaml`'s `latinbig` category emits each
+  tier at a fixed offset into supplementary PUA plane 15 (**fontconvert `-o`**, the
+  range-mode sibling of the `-F` the glyph scripts use): M at `0xF0000 + cp`, L at
+  `0xF3000 + cp`. `glyph_size_base[]` in `poly_keymap.c` must stay identical to the
+  `offset:` values in the yaml. ⚠️ `-o` was documented as "add" but implemented as
+  "subtract" (an exact alias of `-n`) until 2026-08-20; nothing used it, so the fix was
+  inert — but an older fontconvert will silently emit the WRONG range here.
+- **`glyph_size_remap()` is ALL-OR-NOTHING.** If the `latinbig` bundle is absent, or any
+  glyph of the legend is missing at that size (a CJK/Arabic/Indic keycap — this is a
+  latin-only feature), the WHOLE legend falls back to the small face. A partial hit would
+  mix two fonts in one legend, which by the documented baseline-align rule also means two
+  baselines.
+- ⚠️ **THE SIZES ARE MEASURED, AND THE PANEL IS THE BINDING CONSTRAINT.** The keycap is
+  40 px tall and the tallest latin glyph (Ḉ, `_LatinExtAdd_`) already inks **33** of them
+  at the base size, so a uniform scale factor clips the accent stacks long before the
+  plain letters run out of room — there is no single factor that gives two clean tiers.
+  Each `latinbig` entry instead takes the largest pixel size whose TALLEST glyph still
+  inks ≤ 40 px, capped at the tier target, so four entries deliberately grow less than
+  the rest (`_SupAndExtA_` L 35, `_LatinExtB_` L 37, `_LatinExtAdd_` M 31 / L 33,
+  `_Cyrillic_` M 35). `fonts/measure_glyph_sizes.py` is how those were chosen; re-run it
+  after ANY change there, and `PolyKybdHost/tools/glyph_size_preview.py --check` to
+  confirm zero clipped pixels.
+- **`yadvance: 40` on every `latinbig` entry** makes `kdisp_write_gfx_char`'s baseline
+  align a no-op, so the y `plan_main_legend()` computes IS the baseline. Side effect
+  worth having: at M/L every latin sub-font shares one baseline, where at S `a`
+  (`_Base_`, yAdv 37) and `ä` (`_SupAndExtA_`, 44) sit 7 px apart.
+- **Placement = nominal baseline THEN clamp against the legend's own bbox.** The nominal
+  keeps ordinary letters on a shared baseline; the clamp is what stops a tall accent or a
+  deep descender clipping. Two knock-ons that only bite at the bigger sizes, both in
+  `render_key()`: the overlap **stagger must not lift a big base** (already clamped to the
+  panel, so a 6 px lift pushes it off the top), and the **AltGr preview** — kept off the
+  legend by its VERTICAL offset at S — is pushed clear HORIZONTALLY instead, because a big
+  legend fills that height.
+- The shift/AltGr previews stay small **by design**: a keycap has room for one big thing.
+
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 
 An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C
@@ -1842,8 +1908,9 @@ flashes all stale bundles, `flash <id>` force-flashes one).
 
 - **Split pack (protocol 6+): the pack is N independently-versioned BUNDLES, not
   one blob.** `fonts/fonts.yaml` `bundles:` groups the non-resident categories into
-  ordered bundles (currently 6: `symbol`, `mideast`, `syllabic`, `asia`, `flags`,
-  `emoji`), each a standalone `PlyF` flashed to its **own fixed sector-aligned slot**
+  ordered bundles (currently 8: `symbol`, `mideast`, `syllabic`, `asia`, `flags`,
+  `emoji`, `fantasy`, `latinbig` — the last carrying the bigger keycap-legend faces,
+  see "Keycap legend size" above), each a standalone `PlyF` flashed to its **own fixed sector-aligned slot**
   in a **2 MB** window at `FW_RESOURCE_OFFSET` (`fontpack_layout.h`, generated). The
   set of valid slot headers **is** the directory — there is **no separate directory
   sector** (avoids a consistency class of bug). Each bundle's per-font record carries

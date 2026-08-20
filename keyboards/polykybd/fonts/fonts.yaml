@@ -130,10 +130,20 @@ bundles:
     # deployed emoji.plyf stays valid and is NOT reshipped (content unchanged).
     - {id: emoji,    slot_kb: 768,  categories: [emoji, emoji_fig]}
     # "fantasy" glyph-script bundle (Tengwar + the 2026-07 expansion of 9 more
-    # scripts; HID cmd 30). Appended last (its index is its on-wire id) with
-    # slot_kb: rest so it absorbs the remaining window. content_version bumped
-    # when the gscript fonts were added.
-    - {id: fantasy,  slot_kb: rest, categories: [tengwar, gscript]}
+    # scripts; HID cmd 30). content_version bumped when the gscript fonts were
+    # added. It used to be the trailing `rest` bundle; `latinbig` now takes the
+    # tail, so fantasy gets a fixed 128 KB slot (~4.8× its current ~26 KB). Its
+    # slot_OFFSET is unchanged — offsets are assigned in list order and fantasy
+    # is still 7th — so a deployed fantasy.plyf stays valid, keeps its
+    # content_version and is NOT reshipped.
+    - {id: fantasy,  slot_kb: 128,  categories: [tengwar, gscript]}
+    # Bigger keycap legend faces (glyph size, HID cmd 34). Two extra sizes of the
+    # WHOLE latin repertoire, relocated into supplementary private-use blocks so
+    # they can sit in the same front-to-back table as the resident 27 px
+    # originals without ever winning a normal lookup — see the `latinbig`
+    # category below. Last in the list, and the bundle most likely to grow if a
+    # further size is ever added, so it takes the tail slot.
+    - {id: latinbig, slot_kb: rest, categories: [latinbig]}
 
 # Each category -> one generated header, with defaults inherited by its fonts.
 categories:
@@ -152,6 +162,40 @@ categories:
     # fonts/fontpack.py. (IconsFont — index.prepend_fonts — is resident too.)
     resident: true
     defaults: {source: noto-sans, size: 14, hinting: auto}
+  latinbig:
+    # The two BIGGER keycap-legend sizes (glyph size M and L, HID cmd 34). Same
+    # NotoSans repertoire as `latin` above, rendered larger — so every entry here
+    # mirrors one `latin` entry's ranges.
+    #
+    # ⚠️ RELOCATED CODEPOINTS. A font table is scanned front-to-back and the first
+    # font covering a codepoint wins, so a second face of 'a' at its NATIVE 0x61
+    # could never be reached — the resident 27 px `latin` font is always in front.
+    # Each entry therefore carries `offset:` (fontconvert -o), which adds a fixed
+    # base to the emitted first/last while rendering the real characters: tier M
+    # lands at 0xF0000 + cp and tier L at 0xF3000 + cp, in supplementary
+    # private-use plane 15. render_key() adds the same base before the lookup
+    # (glyph_size_remap() in poly_keymap.c) — keep the two in sync. The spacing
+    # 0x3000 is > the highest source codepoint used here (0x2116), so the two
+    # tiers cannot overlap. This is the same trick the glyph-script fonts use, but
+    # with -o (range mode) instead of -F (sequence mode). bits: 32 is what lets
+    # first/last hold an SMP codepoint directly.
+    #
+    # ⚠️ SIZES ARE MEASURED, NOT SCALED. The keycap OLED is 40 px tall and today's
+    # tallest latin glyph (Ḉ, in _LatinExtAdd_) already inks 33 of them, so a
+    # uniform scale factor would clip the accent stacks long before the plain
+    # letters ran out of room. Each entry instead gets the largest pixel size whose
+    # TALLEST glyph still inks <= 40 px, capped at the tier target (33 px / 39 px
+    # em, i.e. cap height 24 / 27 against the base face's 20). Where that cap binds
+    # — _SupAndExtA_ (L: 35), _LatinExtB_ (L: 37), _LatinExtAdd_ (M: 31, L: 33),
+    # _Cyrillic_ (M: 35, whose base is already 31 px) — the accented/Cyrillic
+    # glyphs grow a little less than the plain ones. Re-measure with
+    # fonts/measure_glyph_sizes.py after ANY change here.
+    #
+    # yadvance: 40 matches IconsFont (g_all_fonts[0]), so kdisp_write_gfx_char's
+    # baseline align (`font->yAdvance - fonts[0]->yAdvance`) is a no-op and the y
+    # render_key() computes IS the baseline — same reason tengwar/gscript do it.
+    output: latin_big_fonts.h
+    defaults: {source: noto-sans, hinting: auto, yadvance: 40, bits: 32}
   hebrew:
     output: hebrew_fonts.h
     defaults: {source: noto-sans-hebrew, size: 22, weight: 400, hinting: auto}
@@ -455,3 +499,38 @@ fonts:
   # Braille rendered larger (round dots need the size to read); still fits 40 px after
   # the render_key bbox vertical-centering.
   - {category: gscript, variant: _Braille_,  source: dejavu-sans, render_height: 44, extra_args: ['-F0xEA40'], sequence: '2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A, 2805, 2807, 280D, 281D, 2815, 280F, 281F, 2817, 280E, 281E, 2825, 2827, 283A, 282D, 283D, 2835, 2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A'}
+
+# ── Bigger keycap legends (glyph size, HID cmd 34) ────────────────────────
+# Tier M — em 33 px (cap height 24 vs the base face's 20), emitted at
+# 0xF0000 + codepoint. Appended at the TAIL of this list on purpose: the
+# list order is the pack's gidx order, so anything inserted mid-list would
+# shift every later font's gidx and force an unrelated bundle reship.
+# The tiers' ranges are disjoint from each other and from every other font,
+# so their position among themselves does not matter.
+  - {category: latinbig, variant: _BaseM_, pixel_size: 33, offset: 0xF0000, ranges: [[0x20, 0x7e]]}
+  - {category: latinbig, variant: _LatinExtBM_, pixel_size: 33, offset: 0xF0000, ranges: [[0x180, 0x24f]]}
+  - {category: latinbig, variant: _SchwaM_, pixel_size: 33, offset: 0xF0000, ranges: [[0x253, 0x253], [0x257, 0x257], [0x259, 0x259], [0x260, 0x260], [0x272, 0x272], [0x288, 0x288], [0x28b, 0x28b]]}
+  - {category: latinbig, variant: _SupAndExtAM_, pixel_size: 33, offset: 0xF0000, ranges: [[0xa1, 0x17e]]}
+  - {category: latinbig, variant: _CurrencySignsM_, pixel_size: 33, offset: 0xF0000, ranges: [[0x20aa, 0x20ac], [0x20b1, 0x20b1], [0x20b4, 0x20b4], [0x20bc, 0x20bd], [0x2116, 0x2116]]}
+  - {category: latinbig, variant: _OkinaM_, pixel_size: 33, offset: 0xF0000, ranges: [[0x2bb, 0x2bb]]}
+  - {category: latinbig, variant: _LatinExtAddM_, pixel_size: 31, offset: 0xF0000, ranges: [[0x1e00, 0x1eff]]}
+  - {category: latinbig, variant: _NairaM_, pixel_size: 33, offset: 0xF0000, ranges: [[0x20a6, 0x20a6]]}
+  - {category: latinbig, variant: _CyrillicM_, pixel_size: 35, offset: 0xF0000, ranges: [[0x401, 0x46b], [0x490, 0x4bb], [0x4d8, 0x4e9]]}
+  - {category: latinbig, variant: _GreekM_, pixel_size: 33, offset: 0xF0000, ranges: [[0x384, 0x385], [0x391, 0x3a1], [0x3a3, 0x3c9]]}
+  - {category: latinbig, variant: _LetterModM_, pixel_size: 33, offset: 0xF0000, ranges: [[0x2c6, 0x2dd]]}
+  - {category: latinbig, variant: _SZM_, pixel_size: 33, offset: 0xF0000, ranges: [[0x1e9e, 0x1e9e]]}
+# Tier L — em 39 px (cap height 27), emitted at 0xF3000 + codepoint. Four
+# entries fall short of 39 because their tallest glyph would exceed the
+# 40 px panel: see the latinbig category comment.
+  - {category: latinbig, variant: _BaseL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x20, 0x7e]]}
+  - {category: latinbig, variant: _LatinExtBL_, pixel_size: 37, offset: 0xF3000, ranges: [[0x180, 0x24f]]}
+  - {category: latinbig, variant: _SchwaL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x253, 0x253], [0x257, 0x257], [0x259, 0x259], [0x260, 0x260], [0x272, 0x272], [0x288, 0x288], [0x28b, 0x28b]]}
+  - {category: latinbig, variant: _SupAndExtAL_, pixel_size: 35, offset: 0xF3000, ranges: [[0xa1, 0x17e]]}
+  - {category: latinbig, variant: _CurrencySignsL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x20aa, 0x20ac], [0x20b1, 0x20b1], [0x20b4, 0x20b4], [0x20bc, 0x20bd], [0x2116, 0x2116]]}
+  - {category: latinbig, variant: _OkinaL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x2bb, 0x2bb]]}
+  - {category: latinbig, variant: _LatinExtAddL_, pixel_size: 33, offset: 0xF3000, ranges: [[0x1e00, 0x1eff]]}
+  - {category: latinbig, variant: _NairaL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x20a6, 0x20a6]]}
+  - {category: latinbig, variant: _CyrillicL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x401, 0x46b], [0x490, 0x4bb], [0x4d8, 0x4e9]]}
+  - {category: latinbig, variant: _GreekL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x384, 0x385], [0x391, 0x3a1], [0x3a3, 0x3c9]]}
+  - {category: latinbig, variant: _LetterModL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x2c6, 0x2dd]]}
+  - {category: latinbig, variant: _SZL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x1e9e, 0x1e9e]]}

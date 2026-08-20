@@ -196,9 +196,7 @@ jobs:
           if [ "$HIL_EXTENDED" = "1" ]; then
             echo "suite tier: EXTENDED (slow checks included)"
           else
-            echo "suite tier: default — add the 'hil-extended' label (then push or"
-            echo "re-run), or put [hil-extended] in a commit message, to include the"
-            echo "animation / idle / split-link-soak / reboot-persistence checks"
+            echo "suite tier: default (add the 'hil-extended' label, then push or re-run, for the slow checks)"
           fi
           # -u: unbuffered, so the log survives even if a native lib aborts the
           # process at exit (test_runner itself os._exit()s with the real code).

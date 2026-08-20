@@ -114,13 +114,21 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   denied it — is unreadable, because the action logs *"full output hidden for
   security"* and uploads no artifact. Workflows and the `CLAUDE_CODE_OAUTH_TOKEN`
   secret are gone from all three repos.
-  - **So on an upstream-merge PR there is genuinely no reviewer.** CodeRabbit
+  - **So on an upstream-merge PR there is genuinely no LLM reviewer.** CodeRabbit
     skips it outright at >100 files, and nothing replaces that. Treat the
     **build + HIL checks and hardware testing as the only verification**, say so
     on the PR, and don't read the green board as review cover.
-  - **cppcheck is the one reviewer that cannot go quiet** — no quota, no star
-    threshold, no file-count limit, and not an LLM, so it doesn't share the
-    blind spots. That is why it was added, and it matters more now.
+  - **cppcheck has no quota, no star threshold and no file-count limit** — and
+    is not an LLM, so it doesn't share the others' blind spots. That is why it
+    was added, and it matters more now that it is the only automated reviewer
+    left. ⚠️ **But it is NOT unconditional, and the exception lands exactly on
+    the case above**: `cppcheck.yml` filters `pull_request` on
+    `keyboards/polykybd/**`, `modules/polykybd/**` and the workflow itself, so a
+    catch-up merge that touches only upstream paths gets **no cppcheck run at
+    all** — the check is absent, not green. Don't "fix" that by broadening the
+    trigger: analysing the whole upstream tree is the CodeQL trap this scope was
+    chosen to avoid. It means an upstream merge really is verified by the build,
+    the HIL rig and hardware alone.
 
 ## Branching (all PolyKybd repos)
 

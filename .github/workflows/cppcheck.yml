@@ -1,11 +1,19 @@
 # Static analysis of the PolyKybd firmware sources with cppcheck.
 #
-# Deliberately NOT another AI reviewer. CodeRabbit, Sourcery and the on-demand
-# Claude reviewer are all LLMs trained on much the same public code, so their
-# blind spots overlap. cppcheck is dataflow analysis: it fails in entirely
-# different places, has no quota, no star threshold and no file-count limit —
-# so unlike every bot on a PR it cannot go quiet at the moment it is needed.
-# It found a real out-of-bounds read in split72.c that none of them flagged.
+# Deliberately NOT another AI reviewer. CodeRabbit and Sourcery are both LLMs
+# trained on much the same public code, so their blind spots overlap. cppcheck
+# is dataflow analysis: it fails in entirely different places, has no quota, no
+# star threshold and no file-count limit. It found a real out-of-bounds read in
+# split72.c that none of them flagged, and since the on-demand Claude reviewer
+# was removed (2026-08-20) it is the only automated reviewer this repo has.
+#
+# ⚠️ It is NOT unconditional, though, and the exception is worth knowing:
+# the `paths:` filter below means a PR touching no `keyboards/polykybd/**` or
+# `modules/polykybd/**` file gets no cppcheck run at all — the check is absent,
+# not green. That lands squarely on an upstream catch-up merge, which is also
+# the PR CodeRabbit skips at >100 files. Such a PR is verified by the build, the
+# HIL rig and hardware alone; see CLAUDE.md. Broadening the trigger is not the
+# fix — that is the CodeQL trap described below.
 #
 # CodeQL was considered for this repo and rejected: C/C++ wants a build, and it
 # would analyse the whole upstream QMK tree — thousands of findings in code this

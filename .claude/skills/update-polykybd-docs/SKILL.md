@@ -122,9 +122,25 @@ grep -rhoE '\]\(/[a-z0-9-]+/[a-z0-9-]+' src/content/docs --include='*.md' --incl
   | while read -r l; do [ -f "src/content/docs$l.mdx" ] || [ -f "src/content/docs$l.md" ] || echo "BROKEN: $l"; done
 ```
 
-Then a full build. ⚠️ **`npm ci` fails in the sandbox because `sharp` can't fetch
-its prebuilt binary through the proxy (HTTP 403)** — this is an environment limit,
-not your change. Work around it:
+Then a full build. **Try plain `npm ci` first — it works, and `sharp` installs:**
+
+```bash
+npm ci --no-audit --no-fund
+npx astro build                    # expect "N page(s) built", no errors
+```
+
+⚠️ **The `--ignore-scripts` + `passthroughImageService` workaround below is a
+FALLBACK, not the default** — an earlier version of this skill presented it as
+mandatory ("`npm ci` fails because sharp can't fetch its prebuilt binary, HTTP
+403"). That was environment-specific and no longer holds (verified 2026-08:
+plain `npm ci` installed sharp and the build emitted real WebP).
+
+**Never use the fallback when the change involves images.** Passthrough disables
+resizing and WebP conversion entirely, so the build no longer reflects what the
+site serves — any check of an image's dimensions or weight silently measures the
+*source* file instead of the emitted asset, and reads as a pass.
+
+Only if `npm ci` genuinely fails on sharp's postinstall:
 
 ```bash
 npm ci --ignore-scripts            # installs deps, skips sharp's postinstall
@@ -151,8 +167,10 @@ between words yields a double hyphen).
   auto-add it, and an orphan page is invisible.
 - **Docs are a separate PR** in `polykybd-docs` (base `main`) — do not bury a docs
   edit inside a firmware/host PR; they merge on different branches.
-- **Never commit the passthrough image-service tweak** — it's only to let the build
-  run in the sandbox; restore `astro.config.mjs` before committing.
+- **Never commit the passthrough image-service tweak** — it's only a fallback for
+  a broken sharp install; restore `astro.config.mjs` before committing. And never
+  reach for it at all on an image change: it turns off resize + WebP, so the build
+  stops reflecting what the site serves.
 - **User voice, not dev notes.** These pages are for keyboard owners; put deep
   mechanism in the firmware/host `CLAUDE.md` or the `development/` section, not the
   user pages.

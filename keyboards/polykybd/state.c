@@ -29,6 +29,11 @@ static uint8_t g_idle_style = IDLE_STYLE_PULSE;
 // poly_eeconf_t (its own byte, like os_state) and flushed via g_glyph_dirty.
 static uint8_t g_glyph_script = GLYPH_STD;
 static bool    g_glyph_dirty  = false;
+
+// Active keycap legend size (enum poly_glyph_size). Persisted at the tail of
+// poly_eeconf_t (its own byte, like glyph_script) and flushed via g_gsize_dirty.
+static uint8_t g_glyph_size  = GLYPH_SIZE_S;
+static bool    g_gsize_dirty = false;
 // First-boot startup-animation marker (poly_eeconf_t.boot_flags). 0xFF/0 (fresh
 // EEPROM) => intro pending; BOOT_INTRO_DONE => already played.
 static uint8_t g_boot_flags = 0xFF;
@@ -279,6 +284,9 @@ poly_eeconf_t load_user_eeconf(void) {
     // Any other value is kept verbatim (a glyph-script INDEX). An index this
     // firmware doesn't know renders the normal legend; keeping it means the choice
     // survives a firmware/font-pack update that later adds that script.
+    if(ee.glyph_size >= GLYPH_SIZE_COUNT) {
+        ee.glyph_size = GLYPH_SIZE_S;       // unwritten/garbage EEPROM -> the original face
+    }
     return ee;
 }
 
@@ -496,6 +504,44 @@ void note_glyph_script(uint8_t script) {
     g_glyph_script = (script == 0xFF) ? GLYPH_STD : script;
 }
 
+// The active keycap legend size (GLYPH_SIZE_S = the original 27 px face).
+uint8_t get_glyph_size(void) {
+    return g_glyph_size;
+}
+
+// Sets the legend size and marks it dirty (flushed at next suspend/store). Unlike
+// set_glyph_script the range is CLOSED: a size names a tier that render_key has to
+// know how to relocate and place, so an unknown value is rejected rather than kept
+// verbatim. The awake re-render is driven from housekeeping (the master syncs
+// glyph_size + calls request_disp_refresh on change).
+void set_glyph_size(uint8_t size) {
+    if (size >= GLYPH_SIZE_COUNT || size == g_glyph_size) {
+        return;   // out of range or no-op: don't mark dirty / churn the split sync
+    }
+    g_glyph_size  = size;
+    g_gsize_dirty = true;
+}
+
+// Records the legend size without marking dirty (boot-time EEPROM load).
+void note_glyph_size(uint8_t size) {
+    g_glyph_size = (size < GLYPH_SIZE_COUNT) ? size : GLYPH_SIZE_S;
+}
+
+// Next legend size, wrapping — the KC_GLYPH_SIZE key.
+void cycle_glyph_size(void) {
+    set_glyph_size((uint8_t)((g_glyph_size + 1) % GLYPH_SIZE_COUNT));
+}
+
+// Console-log name for a legend size. Keep in sync with enum poly_glyph_size.
+const char* glyph_size_name(uint8_t size) {
+    switch (size) {
+        case GLYPH_SIZE_S: return "small";
+        case GLYPH_SIZE_M: return "medium";
+        case GLYPH_SIZE_L: return "large";
+        default:           return "?";
+    }
+}
+
 // ---- First-boot startup animation marker (poly_eeconf_t.boot_flags) ----
 void note_boot_flags(uint8_t flags) {
     g_boot_flags = flags;
@@ -614,6 +660,13 @@ static void save_user_glyph_script(void) {
 
 // Writes just the boot-intro marker tail byte (like glyph_script, it sits at the
 // tail of poly_eeconf_t, not in the contiguous settings block).
+// Writes the single glyph_size byte to EEPROM — same reasoning as
+// save_user_glyph_script(): it is a tail byte, not part of the settings block.
+static void save_user_glyph_size(void) {
+    eeconfig_update_user_datablock(&g_glyph_size, offsetof(poly_eeconf_t, glyph_size),
+                                   sizeof(g_glyph_size));
+}
+
 static void save_user_boot_flags(void) {
     eeconfig_update_user_datablock(&g_boot_flags, offsetof(poly_eeconf_t, boot_flags),
                                    sizeof(g_boot_flags));
@@ -641,6 +694,7 @@ void save_all_dirty(void) {
     if (g_brightness_dirty) { save_user_settings(); g_brightness_dirty = false; }
     if (g_os_dirty)         { save_user_os();       g_os_dirty = false; }
     if (g_glyph_dirty)      { save_user_glyph_script(); g_glyph_dirty = false; }
+    if (g_gsize_dirty)      { save_user_glyph_size();   g_gsize_dirty = false; }
     if (g_boot_dirty)       { save_user_boot_flags(); g_boot_dirty = false; }
     if (g_latin_dirty)      { save_user_latin();    g_latin_dirty = false; }
     if (g_def_layer_dirty)  { eeconfig_update_default_layer(g_def_layer_pending); g_def_layer_dirty = false; }

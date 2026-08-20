@@ -115,6 +115,11 @@ enum my_keycodes {
     // Intl it opens remap mode: pick the key, then pick the letter; Shift+it clears
     // every assignment. See latin_remap_* in poly_keymap.c.
     KC_LAT_REMAP,
+    // Cycle the keycap legend SIZE (enum poly_glyph_size: small -> medium -> large
+    // -> small). The same setting the host drives over HID cmd 34, on a key, so the
+    // keyboard can be made readable without the host app. Appended at the tail for
+    // the same no-renumbering reason as KC_DAUTO/KC_IDDQD/KC_LAT*.
+    KC_GLYPH_SIZE,
     /*[[[cog
         # Joined for the same reason as the KC_LAT block above — no trailing space.
         cog.out(", ".join("KCL_ENUS = QK_USER_0" if lang == "ENUS" else f"KCL_{lang}"

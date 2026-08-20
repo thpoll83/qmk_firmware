@@ -212,7 +212,18 @@
 //      variants 0..10 still fit 10 bits, the common case keeps cmd 21's density;
 //      only indices >= 1024 need 11. A pre-v12 keyboard gets cmd 21 only, and
 //      never a variant > 8 (it has no index space for one).
-#define PROTOCOL_VERSION 12
+//  v13 GET/SET_GLYPH_SIZE (cmd 34 / 0x22): the size of a key's MAIN legend —
+//      0 small (the original 27 px face), 1 medium, 2 large. 0xFF queries. The
+//      shift / AltGr previews and every other kind of chrome are deliberately
+//      unaffected: a keycap has room for one big thing. Persisted in
+//      poly_eeconf_t.glyph_size and synced via poly_sync_t.glyph_size.
+//      ⚠️ Unlike the glyph SCRIPT (cmd 30), the range is CLOSED and an unknown
+//      value NACKs — see the case-34 comment for why an open range is right for
+//      a catalogue of faces and wrong for a size. The bigger faces are latin
+//      only and live in the `latinbig` font-pack bundle; without it (or for a
+//      non-latin legend) the render falls back to small, so the setting is
+//      always safe to accept.
+#define PROTOCOL_VERSION 13
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

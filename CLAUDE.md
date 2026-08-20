@@ -1713,6 +1713,9 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
         && { echo "MUTATION DID NOT APPLY - result meaningless"; }
     ...run suite, restore with: cp /tmp/base.c path/to/src.c
     ```
+    ⚠️ That restore **overwrites whatever is in the file**, and by this note's
+    own premise the tree is uncommitted — so there is no git copy to recover
+    from. Do not edit the source between mutating it and restoring it.
     Hit on the host repo 2026-08-20 (Python, same shape — the family is not
     C-specific). The run happened to be sound because every mutation *did* apply
     and turned the suite red, but that was luck: the guard could not have told

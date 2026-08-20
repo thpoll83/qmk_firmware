@@ -1709,10 +1709,21 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
     ```bash
     cp path/to/src.c /tmp/base.c                      # pre-mutation baseline
     ...apply mutation...
-    diff -q /tmp/base.c path/to/src.c >/dev/null \
-        && { echo "MUTATION DID NOT APPLY - result meaningless"; }
+    diff -q /tmp/base.c path/to/src.c >/dev/null; rc=$?
+    case $rc in
+      0) echo "MUTATION DID NOT APPLY - result meaningless" >&2; exit 1 ;;
+      1) ;;                                           # applied, carry on
+      *) echo "diff failed ($rc) - baseline unreadable?" >&2; exit 1 ;;
+    esac
     ...run suite, restore with: cp /tmp/base.c path/to/src.c
     ```
+    ⚠️ **The guard has to EXIT, not just print** — a third instance of the same
+    family, caught in review of this very note (CodeRabbit, #221). A bare
+    `diff … && echo "DID NOT APPLY"` returns 0 and the loop carries on to report
+    the mutation as "not caught", with the warning buried in a screen of gtest
+    output. And `diff` has **three** exit codes — `0` same, `1` differs, `2`
+    could not read a file — so `else`-ing on "not 0" silently treats a missing
+    baseline as a successful mutation. Hence the `case`.
     ⚠️ That restore **overwrites whatever is in the file**, and by this note's
     own premise the tree is uncommitted — so there is no git copy to recover
     from. Do not edit the source between mutating it and restoring it.

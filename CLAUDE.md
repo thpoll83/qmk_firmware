@@ -104,57 +104,31 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   in `raw_hid_receive()`, worth seconds of blocked main loop) that was adopted.
   Reply to the false ones with the evidence so they are not re-raised.
 
-- **When the other reviewers are unavailable, summon Claude with `@claude review`
-  on the PR.** `.github/workflows/claude-review.yml` runs the `code-review` skill
-  on demand (never automatically — three always-on bots is already the noise
-  ceiling) and posts inline comments; `claude-mention.yml` answers a plain
-  `@claude <question>` with the repo and this file loaded, which is the cheap way
-  to **adjudicate a suspect finding** per the verify-don't-dismiss rule above.
-  Neither has an external quota, so between them they cover the three cases that
-  otherwise leave a PR genuinely unreviewed: CodeRabbit rate-limited, Sourcery's
-  green-check-but-empty weekly limit, and an upstream-merge PR over 100 files.
-  - ⚠️ **Billed to the `CLAUDE_CODE_OAUTH_TOKEN` owner's Claude SUBSCRIPTION** —
-    the same budget as an interactive session, not an API key. A 400-file merge
-    review is the case you most want it and the one that costs most.
-  - ⚠️ **Comment and `workflow_dispatch` triggers always run the copy of the
-    workflow on the DEFAULT branch**, so neither does anything until merged
-    there — you cannot test them on the PR that adds them.
-  - **Routing: `startsWith('@claude review')` reaches the review workflow; any
-    other `@claude ...` goes to the mention one.** Both files use the identical
-    test, which is what stops one comment starting two runs. It is `startsWith`
-    and not `contains`, so a comment that merely *quotes* the phrase — a reply, a
-    pasted excerpt of a PR body — cannot spend a review.
-    - ⚠️ **Both workflows must listen on `issue_comment` AND
-      `pull_request_review_comment`.** This shipped with the review one listening
-      only to `issue_comment`, so `@claude review` typed on a **diff hunk**
-      triggered *nothing at all* — the mention workflow does see that event but
-      excludes the phrase by design. Silently dead in the one place a reviewer is
-      most likely to type it (caught by Sourcery, 2026-08-19). On that event
-      `github.event.issue` is null, so the PR number has to fall back through
-      `github.event.pull_request.number`.
-  - **`pull-requests: read` is CORRECT for the review workflow — do not "fix" it
-    to write.** With `github_token` omitted the action authenticates as the
-    **Claude GitHub App**, not `GITHUB_TOKEN`, so read permissions are enough to
-    post inline comments; Anthropic's own code-review example uses exactly these.
-    Reviewers raise this as a bug on every workflow change, so the refutation is
-    written down here to be quoted rather than re-derived.
-  - **The action enforces write-access and rejects bot actors ITSELF**, before
-    Claude starts, so the `if:` does not need to duplicate it — and a duplicate
-    would drift from it. That human-actor check is what stops another reviewer's
-    rate-limit notice from summoning Claude in a loop. The only residue is that a
-    runner *starts* before the rejection, which is free on a public repo.
-  - ⚠️ **A Claude review of Claude-written code is a third CORRELATED opinion,
-    not independent verification.** Most of this codebase is written in Claude
-    sessions, so the reviewer carries the author's priors and sails past the same
-    things — `send_to_bridge()`'s non-zero returns, the enumerating guard in
-    `find_matching_entry`, the `.pyc` mtime trap were each missed by an author and
-    would likely be missed by a same-model reviewer. It is genuinely useful for
-    the two jobs above (checking a *claim* against the code, and checking a diff
-    against *this file*, where the knowledge lives in the file rather than the
-    weights) and for the case where nothing else reviewed at all. The risk is not
-    that it is weak but that a clean one **reads as cover** — the same failure the
-    bot-tells above document. The last line of defence stays the HIL rig and the
-    unit suites; that asymmetry is why cppcheck was added alongside it.
+- ⚠️ **An on-demand Claude reviewer (`@claude review`) was tried and REMOVED
+  (2026-08-20) — don't rebuild it.** `.github/workflows/claude-review.yml` +
+  `claude-mention.yml` existed in all three PolyKybd repos to cover exactly the
+  cases above — CodeRabbit rate-limited, Sourcery's green-check-but-empty weekly
+  limit, and the >100-file upstream-merge skip. It published one usable review in
+  its life and otherwise posted nothing while still billing the subscription
+  (~$4 total for that one review); the deciding detail — which tool the runner
+  denied it — is unreadable, because the action logs *"full output hidden for
+  security"* and uploads no artifact. Workflows and the `CLAUDE_CODE_OAUTH_TOKEN`
+  secret are gone from all three repos.
+  - **So on an upstream-merge PR there is genuinely no LLM reviewer.** CodeRabbit
+    skips it outright at >100 files, and nothing replaces that. Treat the
+    **build + HIL checks and hardware testing as the only verification**, say so
+    on the PR, and don't read the green board as review cover.
+  - **cppcheck has no quota, no star threshold and no file-count limit** — and
+    is not an LLM, so it doesn't share the others' blind spots. That is why it
+    was added, and it matters more now that it is the only automated reviewer
+    left. ⚠️ **But it is NOT unconditional, and the exception lands exactly on
+    the case above**: `cppcheck.yml` filters `pull_request` on
+    `keyboards/polykybd/**`, `modules/polykybd/**` and the workflow itself, so a
+    catch-up merge that touches only upstream paths gets **no cppcheck run at
+    all** — the check is absent, not green. Don't "fix" that by broadening the
+    trigger: analysing the whole upstream tree is the CodeQL trap this scope was
+    chosen to avoid. It means an upstream merge really is verified by the build,
+    the HIL rig and hardware alone.
 
 ## Branching (all PolyKybd repos)
 

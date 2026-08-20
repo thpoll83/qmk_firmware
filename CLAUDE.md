@@ -238,6 +238,30 @@ inherited-upstream noise:
 - **`Build firmware`** and **`HIL test (split72)`** (the polykybd-ctnd rig) are the
   **real** checks; these are what must go green. Use the `diagnose-hil-failure` skill
   for the HIL side.
+  - ⚠️ **The HIL suite has TWO tiers, and the default one deliberately skips the
+    deepest checks.** The rig's slow checks — the startup animation, idle engage +
+    the Eden screensaver, a 450-frame split-link soak, and a reboot power cycle that
+    is the ONLY thing verifying user state survives a power loss — are
+    `TIER_EXTENDED` (polykybd-ctnd `station/hil_tests.py`) and add ~50 s, so they run
+    only when the run asks. **Ask for them on anything that touches EEPROM/persisted
+    state, the split link, the idle/animation paths, or a release.** Three ways, the
+    same convention as the `perf` label:
+    - the **`hil-extended`** PR label — it starts its own run: `build` excludes
+      `labeled` events (so the auto-labeler cannot re-run the pipeline) with a
+      deliberate **exception for this one label**, matched on
+      `github.event.label.name`. ⚠️ **Do not try to pick the label up by re-running
+      an existing run** — a re-run replays the ORIGINAL event payload, so a label
+      added afterwards is invisible and the re-run silently repeats the default
+      tier (caught by CodeRabbit on #223; it is also why `perf` works on a label
+      and this did not until the exception was added);
+    - **`[hil-extended]`** in a commit message — PUSH events only (`head_commit` does
+      not exist on a `pull_request` event), i.e. after a merge / at release time;
+    - a manual **`workflow_dispatch`** (default-branch copy only).
+    The job log says which tier ran (`suite tier: …`), and so does the runner
+    (`[runner] suite tier: …`) — read it before concluding a green HIL board covered
+    the reboot/link checks, because by default it did not. Locally on the rig:
+    `python -m station.test_runner --extended` (or `HIL_EXTENDED=1`), or the touch
+    UI's **Extended** toggle beside Run Tests.
 - **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
   is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
   training data and therefore blind spots, while dataflow analysis fails elsewhere.

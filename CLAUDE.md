@@ -279,6 +279,33 @@ inherited-upstream noise:
     interleaving two flashes. Measured on run #805 (2026-08-20): ~3 min of rig time
     for the extended HIL suite plus ~1 min for the perf pass, inside a ~8.5 min
     wall-clock run (the two cloud builds are most of it).
+  - ⚠️ **The opt-in condition is a YAML FOLDED SCALAR (`>-`), and indenting its
+    continuation lines for readability breaks it SILENTLY.** `HIL_EXTENDED` is one
+    `${{ … }}` expression spread over four lines. A folded scalar joins lines with a
+    space **only while they share one indent level**; a line indented *deeper* than the
+    first is treated as more-indented content and keeps its **literal newline**. So the
+    prettier-looking form — first line at the block indent, the `contains(...)` clauses
+    indented under it — embeds newlines inside the expression and the value stops being
+    a valid GitHub expression. Nothing warns: the workflow still parses as YAML, the
+    step still runs, and `HIL_EXTENDED` just comes out wrong, so the run quietly executes
+    the **default** tier while the label says otherwise. Keep every continuation line at
+    the *same* indent as the first (that is why the block looks under-indented), and
+    verify rather than eyeball it:
+    ```python
+    import yaml
+    d = yaml.safe_load(open(".github/workflows/qmk-test.yml").read())
+    v = d["jobs"]["hil-test"]["env"]["HIL_EXTENDED"]
+    assert "\n" not in v, repr(v)
+    print(d[True]["pull_request"])   # the `on:` block — see the d[True] note below
+    ```
+    ⚠️ **Reading the `on:` block needs `d[True]`, not `d["on"]`** — PyYAML resolves the
+    bare key `on:` to the **boolean** `True` (YAML 1.1 truthiness), so `d["on"]` raises
+    `KeyError` on every GitHub workflow. `jobs` is an ordinary string key; mixing the two
+    up raises `KeyError: 'jobs'`, which is how the first version of this very snippet was
+    wrong. **Two other blocks use the same `>-` shape and deserve the same check**:
+    the `build` job's `if:` (the `hil-extended` label exception) and `build-perf`'s
+    (the `perf` opt-in) — a folded `if:` that gains a newline evaluates to a string
+    rather than a boolean, so the job silently stops matching its trigger.
 - **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
   is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
   training data and therefore blind spots, while dataflow analysis fails elsewhere.

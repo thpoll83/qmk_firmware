@@ -268,9 +268,12 @@ inherited-upstream noise:
     alone starts no perf run and `perf` alone leaves the HIL suite on its default
     tier. ⚠️ Dispatch is not the *only* way to get both: both labels on a PR, or
     **both markers in one pushed commit message** (`… [hil-extended] [perf]`), do it
-    too — and the commit-message form is the natural release-time route, since a
-    release push is a push. What dispatch buys is needing no label bookkeeping, which
-    also sidesteps the two-labels-in-one-call trap below (that fires two runs).
+    too. The commit-message form is the natural release-time route — a release push
+    is a push — but it only fires where the workflow listens for pushes at all,
+    i.e. `PolyKybd` and `PolyKybd/**`; the same marker in a commit pushed to a
+    `claude/**` branch starts nothing. What dispatch buys is needing no label
+    bookkeeping, which also sidesteps the two-labels-in-one-call trap below (that
+    fires two runs).
     Whichever route, the combination is safe: `perf-test` has `needs: [build-perf,
     hil-test]`, so the rig runs the suite first and measures afterwards rather than
     interleaving two flashes. Measured on run #805 (2026-08-20): ~3 min of rig time

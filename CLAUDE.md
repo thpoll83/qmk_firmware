@@ -302,6 +302,32 @@ inherited-upstream noise:
     would analyse the whole upstream QMK tree — the same trap as the
     lint-on-upstream-keyboards problem below. The host repo runs CodeQL instead,
     where Python needs no build and the tree is entirely ours.
+- **A Markdown-only change does NOT run the build or the rig — `qmk-test.yml` has
+  `paths-ignore: ['**.md']`** on both its `push` and `pull_request` triggers (added
+  2026-08-21). The rig executes one job at a time, so before this a comment-only PR
+  occupied it for a full flash-and-test cycle per push and delayed every real build
+  queued behind it (#224 burned three rig runs and three review slots that way).
+  Four things follow, and the last is the one that would bite:
+  - **A mixed docs+code PR still runs the gate in full.** `paths-ignore` skips the
+    workflow only when EVERY changed file matches, so nothing can be smuggled in
+    behind a README edit.
+  - **`**.md` does not match `.github/workflows/qmk-test.yml`**, so a change to the
+    CI wiring itself still triggers a run and gets verified.
+  - **`workflow_dispatch` has no paths filter**, so a manual run — including the
+    both-tiers route above — works on any commit regardless.
+  - ⚠️ **A path-filtered `pull_request` trigger applies to `labeled` too**, so
+    adding `hil-extended` or `perf` to a docs-only PR now starts nothing at all.
+    That is the intent (there is no firmware there to measure), but it is a silent
+    no-op rather than an error.
+  - ⚠️ **This only works because neither check is a REQUIRED status check.** A
+    workflow that never runs never reports, so if `Build firmware` / `HIL test
+    (split72)` are ever added to branch protection, a docs-only PR would deadlock
+    the merge button. The fix then is a paths-filter job feeding `if:` conditions —
+    a *skipped job* satisfies a required check, a never-started workflow does not.
+    (Not verifiable from a Claude Code session: no MCP tool reads branch-protection
+    settings. The indirect evidence is that PRs report `mergeable_state: clean`
+    while their checks are still in flight, which would read `blocked` if any check
+    were required.)
 - **`PR Lint keyboards`** (job `lint`, `.github/workflows/lint.yml`) and **`Pull
   Request Labeler`** (job `triage`, `labeler.yml`, `pull_request_target`) are **stock
   upstream QMK** workflows the fork inherited. `lint` runs `qmk lint --strict` on the

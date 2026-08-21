@@ -262,6 +262,16 @@ inherited-upstream noise:
     the reboot/link checks, because by default it did not. Locally on the rig:
     `python -m station.test_runner --extended` (or `HIL_EXTENDED=1`), or the touch
     UI's **Extended** toggle beside Run Tests.
+  - ✅ **`workflow_dispatch` is the "give me everything" button: it runs the extended
+    HIL tier AND the perf measurement**, because it satisfies both opt-in conditions
+    at once (they are otherwise INDEPENDENT — `hil-extended` does not trigger perf,
+    and `perf` leaves the HIL suite on the default tier). That is the route to use at
+    a release, and it is safe: `perf-test` has `needs: [build-perf, hil-test]`, so the
+    rig runs the suite first and measures afterwards rather than interleaving two
+    flashes. Measured on run #805 (2026-08-20): ~3 min of rig time for the extended
+    HIL suite plus ~1 min for the perf pass, inside a ~8.5 min wall-clock run (the
+    two cloud builds are most of it). It also sidesteps the two-labels-in-one-call
+    trap below, which would otherwise fire two runs.
 - **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
   is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
   training data and therefore blind spots, while dataflow analysis fails elsewhere.

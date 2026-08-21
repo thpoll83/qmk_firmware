@@ -127,13 +127,13 @@ jobs:
     #   * put `[hil-extended]` in a commit message — PUSH events only
     #     (`head_commit` does not exist on a pull_request event), i.e. after a
     #     merge, which is the release-time route,
-    #   * run the workflow manually (Actions -> Run workflow) — note this also
-    #     satisfies the perf job's condition below, so a dispatch runs the extended
-    #     HIL tier AND the perf measurement. They are otherwise INDEPENDENT: the
-    #     `hil-extended` label does not trigger perf, and `perf` leaves the HIL
-    #     suite on the default tier. Dispatch is therefore the release-time "run
-    #     everything" route; `perf-test` needs `hil-test`, so the two rig jobs
-    #     never interleave their flashes.
+    #   * run the workflow manually (Actions -> Run workflow) — this also satisfies
+    #     the perf job's condition below, so one dispatch runs the extended HIL tier
+    #     AND the perf measurement. The conditions are otherwise INDEPENDENT (each
+    #     opt-in drives only its own job); asking for both at once works too — both
+    #     labels, or both markers in one commit message — dispatch simply needs no
+    #     label bookkeeping. `perf-test` needs `hil-test`, so the two rig jobs never
+    #     interleave their flashes.
     # The runner reads HIL_EXTENDED itself, so the run command stays identical
     # and the tier is visible both here and in its "[runner] suite tier:" line.
     env:
@@ -302,8 +302,9 @@ jobs:
   #     applies to pushes to PolyKybd branches (i.e. after merge),
   #   * run the workflow manually (Actions -> Run workflow) — only available
   #     once this file is on the default branch. A dispatch ALSO puts the HIL
-  #     suite on its extended tier (hil-test's HIL_EXTENDED above), so it is the
-  #     one route that runs everything.
+  #     suite on its extended tier (hil-test's HIL_EXTENDED above), so one dispatch
+  #     runs both; a push commit carrying `[perf]` AND `[hil-extended]` does the
+  #     same, as do both labels on a PR.
   #
   # It reports numbers and compares them against the baseline committed in the
   # polykybd-ctnd repo (perf/baselines/<board>.json). It deliberately NEVER fails

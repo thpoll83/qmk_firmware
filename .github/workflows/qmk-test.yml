@@ -3,6 +3,25 @@ name: Build and HIL Test
 on:
   push:
     branches: [PolyKybd, "PolyKybd/**"]
+    # A Markdown-only change cannot alter the firmware, so it should not occupy
+    # the HIL rig for a full flash-and-test cycle (the rig runs one job at a
+    # time, so a docs push delays every real build queued behind it).
+    #
+    # ⚠️ `paths-ignore` skips the workflow only when EVERY changed file matches,
+    # so a mixed docs+code PR still runs the gate in full — this can never hide
+    # a code change behind a README edit.
+    #
+    # ⚠️ `**.md` does NOT match this workflow file, so a change to the CI wiring
+    # itself still triggers a run and gets verified. `workflow_dispatch` has no
+    # paths filter at all, so a manual run is unaffected either way.
+    #
+    # ⚠️ If `Build firmware` / `HIL test (split72)` are ever made REQUIRED status
+    # checks in branch protection, remove this: a workflow that never runs never
+    # reports, and the merge button would deadlock on a docs-only PR (a *skipped
+    # job* satisfies a required check; a never-started workflow does not). The
+    # fix in that case is a paths-filter job feeding `if:` conditions instead.
+    paths-ignore:
+      - '**.md'
   pull_request:
     # `labeled` is NOT in GitHub's default set (opened/synchronize/reopened), and
     # without it adding the `perf` label to an open PR fires no run at all — the
@@ -11,6 +30,9 @@ on:
     # 'labeled'`) so the repo's auto-labeler can't re-run the whole expensive
     # pipeline every time it tags a PR by path.
     types: [opened, synchronize, reopened, labeled]
+    # Same reasoning as the push trigger above.
+    paths-ignore:
+      - '**.md'
   # Manual trigger for the opt-in performance measurement below (the normal
   # build + HIL test always run; perf does not). No inputs: the baseline is moved
   # by committing the run's JSON to polykybd-ctnd, not by a workflow switch — the

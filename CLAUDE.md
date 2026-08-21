@@ -302,8 +302,10 @@ inherited-upstream noise:
     bare key `on:` to the **boolean** `True` (YAML 1.1 truthiness), so `d["on"]` raises
     `KeyError` on every GitHub workflow. `jobs` is an ordinary string key; mixing the two
     up raises `KeyError: 'jobs'`, which is how the first version of this very snippet was
-    wrong. Same check is worth running on the `build` job's `if:`, which uses the same
-    `>-` shape.
+    wrong. **Two other blocks use the same `>-` shape and deserve the same check**:
+    the `build` job's `if:` (the `hil-extended` label exception) and `build-perf`'s
+    (the `perf` opt-in) — a folded `if:` that gains a newline evaluates to a string
+    rather than a boolean, so the job silently stops matching its trigger.
 - **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
   is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
   training data and therefore blind spots, while dataflow analysis fails elsewhere.

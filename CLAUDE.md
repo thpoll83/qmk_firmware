@@ -1831,10 +1831,20 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   27 px (the `_Base_` size): measured mirror-asymmetry improves 12.4% → 7.1%,
   versus 14.9% → 4.4% at the 15 px status size.
 - **Everything is grid-fitted EXCEPT emoji.** `hinting: auto` is set on every
-  category — `latin`, `hebrew`, `jp`, `kr`, `arabic`, `devanagari`, `bengali`,
-  `telugu`, `tamil`, `thai`, `georgian`, `armenian`, `bopomofo`, `vietnamese`,
-  `ethiopic`, `canadian`, `cherokee`, `tengwar`, `gscript` and `symbols`. Only
-  **`emoji` / `emoji_fig`** (and the `flags` `pack_extra`) stay on `native`.
+  category — `latin`, `latinbig`, `hebrew`, `jp`, `kr`, `arabic`, `devanagari`,
+  `bengali`, `telugu`, `tamil`, `thai`, `georgian`, `armenian`, `bopomofo`,
+  `vietnamese`, `ethiopic`, `canadian`, `cherokee`, `tengwar`, `gscript` and
+  `symbols`. Only **`emoji` / `emoji_fig`** (and the `flags` `pack_extra`) stay
+  on `native`.
+  - **It is NOT decorative at the bigger keycap sizes — measured, not assumed.**
+    The intuition that grid-fitting only matters for small text is wrong here:
+    counting stems that come out unequal WITHIN one glyph (the tell that a stem's
+    two edges rounded independently), `latinbig` improves 26.1% → 21.4% at the
+    33 px tier and **59.2% → 19.0%** at 39 px. The large tier is the bigger win,
+    not the smaller one. Also note `latinbig` is sized with **`-p` (pixels)**, not
+    `-s`: points-at-141-DPI can only land on even ppem, so 33/35/37/39 are simply
+    not expressible in points — and those odd sizes are exactly what the 40 px
+    ink ceiling forces.
   - ⚠️ **Do not "finish the job" by setting it on emoji — it is a measured no-op.**
     The autohinter assigns each glyph to a script by codepoint range and applies
     that script's blue zones (stems, x-/cap-height, baselines). Emoji codepoints

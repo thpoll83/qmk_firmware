@@ -2075,3 +2075,11 @@
 #define ICON_QUICK_ASSIST           	U"\x1F91D"  // Win+Ctrl+Q Quick Assist (🤝 handshake, emoji font pack)
 #define ICON_SPEECH_REC             	U"\x1F3A4"  // Win+Ctrl+S Speech Recognition (🎤 microphone, emoji font pack)
 #define ICON_TEXT_RECOG             	U"\x1F524"  // Win+Q Click to Do — recognise/select text incl. from images (🔤 letters, emoji font pack)
+
+// Keycap legend SIZE keys on the settings layer (KC_GLYPH_SIZE_UP/_DOWN). Unicode
+// names these exactly: U+1F5DA INCREASE FONT SIZE SYMBOL (small A beside a big one)
+// and U+1F5DB DECREASE FONT SIZE SYMBOL (the mirror). Already shipped — both fall
+// inside the _Window_ font's 0x1F5D4-0x1F5DB range (symbol bundle), so they need no
+// new font entry and no bundle reship.
+#define ICON_FONT_BIGGER            	U"\x1F5DA"
+#define ICON_FONT_SMALLER           	U"\x1F5DB"

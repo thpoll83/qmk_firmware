@@ -527,9 +527,13 @@ void note_glyph_size(uint8_t size) {
     g_glyph_size = (size < GLYPH_SIZE_COUNT) ? size : GLYPH_SIZE_S;
 }
 
-// Next legend size, wrapping — the KC_GLYPH_SIZE key.
-void cycle_glyph_size(void) {
-    set_glyph_size((uint8_t)((g_glyph_size + 1) % GLYPH_SIZE_COUNT));
+// One tier up or down, clamped — the KC_GLYPH_SIZE_UP / _DOWN keys.
+void step_glyph_size(int8_t delta) {
+    const int8_t next = (int8_t)g_glyph_size + delta;
+    if (next < 0 || next >= (int8_t)GLYPH_SIZE_COUNT) {
+        return;   // already at an end; set_glyph_size() would be a no-op anyway
+    }
+    set_glyph_size((uint8_t)next);
 }
 
 // Console-log name for a legend size. Keep in sync with enum poly_glyph_size.

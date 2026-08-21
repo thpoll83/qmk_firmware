@@ -1381,19 +1381,6 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
     }
 #endif
 
-    // The legend-size key SHOWS the size it will give you next to its own name, so
-    // the setting is legible without the host app. Resolved here rather than in
-    // keycode_to_static_text() because the size lives in the synced state, and that
-    // function is deliberately a pure keycode -> text table (both flag bytes in
-    // base/com.h are full, so there is no spare bit to pass it through).
-    if (keycode == KC_GLYPH_SIZE) {
-        switch (local_state->glyph_size) {
-            case GLYPH_SIZE_M: return U"Size\r\v  M";
-            case GLYPH_SIZE_L: return U"Size\r\v  L";
-            default:           return U"Size\r\v  S";
-        }
-    }
-
     // On the Intl layer Ctrl is not a modifier you send — it is LATIN_PICKER_MOD,
     // the key that turns the number row into the variation picker. Showing the
     // plain Ctrl symbol there gives no hint that it changes anything, so it gets
@@ -3819,13 +3806,15 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
             local_state->overlay_flags &= ~SAVE_EEPROM;
             break;
-        case KC_GLYPH_SIZE:
-            // Cycle the keycap legend size (small -> medium -> large -> small), the
-            // same setting HID cmd 34 drives. Runs once on release (we are inside the
-            // `if (!record->event.pressed)` block). No explicit sync: housekeeping
-            // picks the new size up into local_state and the diff carries it to the
-            // slave, which re-renders on receipt (split_sync.c).
-            cycle_glyph_size();
+        case KC_GLYPH_SIZE_UP:
+        case KC_GLYPH_SIZE_DOWN:
+            // Step the keycap legend size one tier, the same setting HID cmd 34
+            // drives. Runs once on release (we are inside the `if
+            // (!record->event.pressed)` block). No explicit sync: housekeeping picks
+            // the new size up into local_state and the diff carries it to the slave,
+            // which re-renders on receipt (split_sync.c). A step at either end is a
+            // no-op, so the refresh below is the only cost of pressing past it.
+            step_glyph_size(keycode == KC_GLYPH_SIZE_UP ? 1 : -1);
             request_disp_refresh();
             break;
         case KC_EDEN:

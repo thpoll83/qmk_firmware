@@ -552,7 +552,7 @@ void note_glyph_script(uint8_t script);
 uint8_t get_glyph_size(void);
 
 // Sets the legend size and marks it dirty (deferred EEPROM write). Used by the HID
-// command (cmd 34) and the KC_GLYPH_SIZE key. Out-of-range values are ignored —
+// command (cmd 34) and the KC_GLYPH_SIZE_UP/_DOWN keys. Out-of-range values are ignored —
 // unlike glyph_script this range is CLOSED, because a size is not an open-ended
 // catalogue of faces: every value has to name a tier the render path knows how to
 // place, so an unknown one is a bug, not a graceful degradation.
@@ -562,8 +562,13 @@ void set_glyph_size(uint8_t size);
 // out-of-range value falls back to GLYPH_SIZE_S.
 void note_glyph_size(uint8_t size);
 
-// Advances to the next legend size, wrapping (the KC_GLYPH_SIZE key).
-void cycle_glyph_size(void);
+// Steps the legend size one tier (delta +1/-1), CLAMPED at small and large — the
+// KC_GLYPH_SIZE_UP / _DOWN keys. Clamping, not wrapping: with a key per direction
+// a wrap would jump from large straight back to small on the key labelled "bigger",
+// and the two Unicode symbols on those keycaps promise a direction, not a cycle.
+// A step that would leave the range is a no-op, so it neither marks EEPROM dirty
+// nor requests a redraw.
+void step_glyph_size(int8_t delta);
 
 // Human-readable name of a legend size, for console logs ("small"/"medium"/…).
 // Never NULL — an unknown value reads as "?".

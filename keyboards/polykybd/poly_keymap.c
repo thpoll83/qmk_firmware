@@ -1701,17 +1701,45 @@ static bool glyph_size_remap(uint8_t size, const uint32_t* text,
     if (size == GLYPH_SIZE_S || size >= GLYPH_SIZE_COUNT || text == NULL) return false;
     const uint32_t base = glyph_size_base[size];
     uint8_t n = 0;
-    for (; text[n] != 0; ++n) {
+    for (uint8_t i = 0; text[i] != 0; ++i) {
+        // A control code is a display-list op, not a glyph. The five zero-argument
+        // cursor nudges are DROPPED; every other op bails, because HINT_MOVE /
+        // HINT_FRAME (0x0E/0x12) consume the two codepoints after them — which we
+        // would then relocate as if they were glyphs — and HINT_HALF/HINT_THIN
+        // rescale the next glyph. Neither occurs in a language legend: measured
+        // across all 160 layouts every op present is one of these five, and every
+        // one of them LEADS the legend (0x0C x150, 0x0B x8, 0x06 x9, 0x08 x1,
+        // 0x05 x1; not one after a glyph).
+        //
+        // ⚠️ DROPPED, not carried, and that is not a preference — kdisp_gfx_text_bbox
+        // and the draw disagree about these ops. `\f` is `y = y > 1 ? y - 2 : 0`
+        // applied to the cursor, and bbox runs it from y = 0 (relative to the
+        // baseline) where it saturates to 0, while the draw runs it from the real
+        // baseline where it genuinely lifts 2px. Carrying the op therefore moves the
+        // glyph by an amount plan_main_legend's clamp cannot see, and the accent
+        // clips off the top (measured: 6-8 px lost on `é è à` at M/L). Dropped, the
+        // measured bbox IS what gets drawn and the clamp is exact — and the nudge is
+        // no loss, having been hand-tuned for the small face's fixed baseline.
+        //
+        // ⚠️ This is what makes the French number row scale at all: `é è ç à` are
+        // spelled `\f\f <letter>`, so refusing every control code outright left half
+        // of AZERTY's number row on the small face while the other half grew (found
+        // by rendering the row, 2026-08-21).
+        if (text[i] < 0x20) {
+            switch (text[i]) {
+                case 0x05: case 0x06: case 0x08:
+                case 0x0B: case 0x0C:
+                    continue;                               // a small-face nudge
+                default:
+                    return false;
+            }
+        }
         if (n + 1 >= out_cap) return false;                 // too long to relocate
-        // A control code is a display-list op (see the HINT_* ops in
-        // kdisp_write_gfx_text_cy), not a glyph — those never reach here from the
-        // language legend, but bail rather than relocate one into a stray codepoint.
-        if (text[n] < 0x20) return false;
-        const uint32_t cp = base + text[n];
+        const uint32_t cp = base + text[i];
         if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return false;
-        out[n] = cp;
+        out[n++] = cp;
     }
-    if (n == 0) return false;
+    if (n == 0) return false;                               // ops alone draw nothing
     out[n] = 0;
     return true;
 }

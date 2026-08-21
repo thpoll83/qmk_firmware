@@ -1474,6 +1474,35 @@ like the glyph script:
   latin-only feature), the WHOLE legend falls back to the small face. A partial hit would
   mix two fonts in one legend, which by the documented baseline-align rule also means two
   baselines.
+  - ⚠️ **A legend can carry LEADING CURSOR OPS, and refusing them silently halved the
+    French number row.** A base legend is a mini display list like a hint string, and 73
+    of them across the 160 layouts open with a zero-argument cursor nudge — `é è ç à` on
+    AZERTY are spelled `\f\f <letter>` (a 4 px lift hand-tuned for the small face), cs-CZ
+    uses four. The first version bailed on any codepoint `< 0x20`, so **`& " ' ( - _` grew
+    with the setting while `é è ç à` stayed small** — a real gap, invisible from the code
+    and obvious the moment the row was rendered (2026-08-21). `glyph_size_remap()` now
+    **drops** the five ops that occur (`0x05 0x06 0x08 0x0B 0x0C`) and still bails on
+    every other one: `HINT_MOVE`/`HINT_FRAME` consume the two codepoints after them, which
+    would then be relocated as if they were glyphs, and `HINT_HALF`/`HINT_THIN` rescale the
+    next glyph. Measured, so it can be re-checked: every op present is one of those five
+    and every one **leads** the legend (`0x0C` ×150, `0x0B` ×8, `0x06` ×9, `0x08` ×1,
+    `0x05` ×1; **not one after a glyph**).
+  - ⚠️ **DROPPED rather than carried, because `kdisp_gfx_text_bbox()` and the DRAW
+    disagree about these ops** — a pre-existing inconsistency this was the first code to
+    depend on. `\f` is `y = y > 1 ? y - 2 : 0` applied to the cursor; the draw runs it from
+    the real baseline (23/25/28) where it genuinely lifts 2 px, while bbox runs it from
+    `y = 0` **relative** to the baseline, where the ternary saturates and it does nothing.
+    So carrying the op moves the glyph by an amount `plan_main_legend()`'s clamp cannot
+    see. Carrying it was tried first and clipped 6–8 px off the accents of `é è à` at M/L
+    — and the reasoning that predicted it would be safe ("the clamp measures the same
+    ops") was wrong for exactly this reason. Dropped, the measured bbox **is** what gets
+    drawn, and nothing is lost: the nudge was tuned for the small face's fixed baseline,
+    which is the thing the planner replaces.
+  - **Measured after the fix**: 1467 of 1500 latin number-row keys reach the bigger face
+    (was 1338); the 33 that don't are genuinely non-latin (Thai, Bopomofo, Armenian,
+    Cherokee, Vietnamese PUA composites). Clipped pixels **drop** at M/L rather than
+    rising — cs-CZ's nine number keys clip at small and are clean at M/L, because the
+    clamp fixes what the hand nudge could not.
 - ⚠️ **THE SIZES ARE MEASURED, AND THE PANEL IS THE BINDING CONSTRAINT.** The keycap is
   40 px tall and the tallest latin glyph (Ḉ, `_LatinExtAdd_`) already inks **33** of them
   at the base size, so a uniform scale factor clips the accent stacks long before the

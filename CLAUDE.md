@@ -1513,6 +1513,38 @@ like the glyph script:
   `_Cyrillic_` M 35). `fonts/measure_glyph_sizes.py` is how those were chosen; re-run it
   after ANY change there, and `PolyKybdHost/tools/glyph_size_preview.py --check` to
   confirm zero clipped pixels.
+  - ⚠️ **Before adding a SCRIPT to the bigger tiers, MEASURE it — the obvious proxy is
+    not predictive, and it was wrong about every script it was applied to.** The
+    tempting estimate is `40 px panel ÷ what the script inks today`; it assumes the
+    glyph would fill the panel at the bigger tier, which depends on the face's own
+    ink-to-em ratio and is only knowable by rendering. `measure_glyph_sizes.py
+    --category <names>` does that — it reads each entry's real source, ranges and
+    options out of `fonts.yaml` through `generate_fonts.py`'s own `resolve()` /
+    `build_argv()`, so it cannot drift from what would actually be emitted. Measured
+    per entry (2026-08-21), largest fitting ppem's ink ÷ as-shipped ink: **latin
+    ×1.18–1.50** (the shipped feature), Cherokee ×1.52, **Japanese ×1.29–1.38**,
+    Telugu ×1.26, Bengali/Ethiopic ×1.23, Armenian/Georgian/Bopomofo/Tamil/Thai/
+    Canadian ×1.21–1.22, **Hebrew ×1.20**, Devanagari ×1.06, and **Hangul ×0.92 — it
+    would get SMALLER.** The estimate had called Hebrew and Hangul ×1.60 apiece and
+    written Japanese off as hopeless; all three were wrong, and Korean — the layout
+    that prompted the question — is the one script that provably cannot benefit.
+  - ⚠️ **`render_height` (fontconvert `-r`) is NOT an ink ceiling.** `latin` carries
+    `render_height: 44` and grows fine, because a tier overrides it with a pixel size.
+    An earlier cut of the tool verdicted off the presence of that flag and declared
+    latin unable to grow. Read the measured ink, never the flag. It does mean a script
+    can already be drawn LARGER than any tier ppem would give it, which is exactly why
+    Hangul (`render_height: 51`) shrinks.
+  - ⚠️ **Measure per ENTRY, not per category, and a range's tallest glyph may not be a
+    legend.** Latin needed four of its twelve entries capped below the tier target; a
+    per-category maximum hides that and condemns the whole category on one glyph.
+    Hebrew's range maximum is a standalone nikud mark inking 43 px that never appears
+    on a keycap, so the category number reads far worse than the letters do.
+  - **Coverage as shipped is Latin, Cyrillic and Greek.** Those scale completely
+    (`ru-RU` and `el-GR` measure 49/49 keys). The other **41 layouts come out MIXED** —
+    their digits and punctuation are latin and grow while the letters do not (`ko-KR`
+    is 23 grown / 26 unchanged). That is stated on the public `using/legend-size` page
+    rather than hidden. Don't "fix" it by gating the setting off per layout: that only
+    takes the feature away from the keys it does reach.
 - **`yadvance: 40` on every `latinbig` entry** makes `kdisp_write_gfx_char`'s baseline
   align a no-op, so the y `plan_main_legend()` computes IS the baseline. Side effect
   worth having: at M/L every latin sub-font shares one baseline, where at S `a`

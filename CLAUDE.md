@@ -262,6 +262,23 @@ inherited-upstream noise:
     the reboot/link checks, because by default it did not. Locally on the rig:
     `python -m station.test_runner --extended` (or `HIL_EXTENDED=1`), or the touch
     UI's **Extended** toggle beside Run Tests.
+  - ✅ **`workflow_dispatch` runs the extended HIL tier AND the perf measurement in
+    one action**, because it satisfies both opt-in conditions at once. The two are
+    otherwise INDEPENDENT — each opt-in drives only its own job, so `hil-extended`
+    alone starts no perf run and `perf` alone leaves the HIL suite on its default
+    tier. ⚠️ Dispatch is not the *only* way to get both: both labels on a PR, or
+    **both markers in one pushed commit message** (`… [hil-extended] [perf]`), do it
+    too. The commit-message form is the natural release-time route — a release push
+    is a push — but it only fires where the workflow listens for pushes at all,
+    i.e. `PolyKybd` and `PolyKybd/**`; the same marker in a commit pushed to a
+    `claude/**` branch starts nothing. What dispatch buys is needing no label
+    bookkeeping, which also sidesteps the two-labels-in-one-call trap below (that
+    fires two runs).
+    Whichever route, the combination is safe: `perf-test` has `needs: [build-perf,
+    hil-test]`, so the rig runs the suite first and measures afterwards rather than
+    interleaving two flashes. Measured on run #805 (2026-08-20): ~3 min of rig time
+    for the extended HIL suite plus ~1 min for the perf pass, inside a ~8.5 min
+    wall-clock run (the two cloud builds are most of it).
 - **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
   is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
   training data and therefore blind spots, while dataflow analysis fails elsewhere.

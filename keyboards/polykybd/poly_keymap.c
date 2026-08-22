@@ -2620,11 +2620,20 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     if (text == NULL || text[0] == 0) {
         return false;   // no text legend — keep the key's current frame
     }
+    // Plan at the ACTIVE legend size, exactly as the awake render does. Drawing
+    // `text` at the small face's fixed (BUFFER_X, 23) instead would shrink a
+    // medium/large legend the moment its pulse dipped dark and this relocation
+    // fired — and leave it small until wake, since update_displays() early-returns
+    // while DISP_IDLE is set. roll_idle_offset() has to measure the SAME text it
+    // will move, or the slack it computes is the wrong glyph's.
+    uint32_t      scratch[GLYPH_SIZE_MAX_LEN + 1];
+    main_legend_t plan;
+    plan_main_legend(text, BUFFER_X, 23, scratch, (uint8_t)(GLYPH_SIZE_MAX_LEN + 1), &plan);
     int8_t dx, dy;
-    roll_idle_offset(text, BUFFER_X, 23, seed, &dx, &dy);
+    roll_idle_offset(plan.text, plan.x, plan.y, seed, &dx, &dy);
     kdisp_set_buffer(0x00);
     kdisp_set_draw_offset(dx, dy);
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, plan.x, plan.y, plan.text);
     kdisp_set_draw_offset(0, 0);
     kdisp_send_window();   // idle jitter draws within the 72x40 window (roll_idle_offset clamps to it)
     return true;
@@ -2689,12 +2698,18 @@ bool eden_idle_erase_legend(uint8_t disp_idx) {
     // jitter idle style uses); the seed changes once per EDEN_LEGEND_DRIFT_MS so every
     // ~7 s the letter jumps to a fresh spot. Per-key phase (disp_idx) so they don't all
     // move in lockstep.
+    // Same glyph-size plan as render_idle_key() — this is the second idle draw path
+    // and it had the identical fixed-origin bug, so fixing only the one a reviewer
+    // pointed at would have left the Eden screensaver shrinking the legend instead.
+    uint32_t      scratch[GLYPH_SIZE_MAX_LEN + 1];
+    main_legend_t plan;
+    plan_main_legend(text, BUFFER_X, 23, scratch, (uint8_t)(GLYPH_SIZE_MAX_LEN + 1), &plan);
     uint32_t epoch = timer_read32() / EDEN_LEGEND_DRIFT_MS;
     int8_t dx, dy;
-    roll_idle_offset(text, BUFFER_X, 23, epoch * 2654435761u + disp_idx, &dx, &dy);
+    roll_idle_offset(plan.text, plan.x, plan.y, epoch * 2654435761u + disp_idx, &dx, &dy);
     kdisp_set_gfx_scanline(true);
     kdisp_set_draw_offset(dx, dy);
-    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23, text);
+    kdisp_write_gfx_text(g_all_fonts, g_all_font_count, plan.x, plan.y, plan.text);
     kdisp_set_draw_offset(0, 0);
     kdisp_set_gfx_scanline(false);
     return true;

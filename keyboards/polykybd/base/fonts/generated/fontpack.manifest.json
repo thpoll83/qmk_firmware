@@ -1,7 +1,7 @@
 {
   "abi_version": 2,
-  "font_count": 134,
-  "total_size": 508572,
+  "font_count": 158,
+  "total_size": 671068,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -803,6 +803,150 @@
     },
     {
       "all_fonts_index": 157,
+      "symbol": "NotoSans_Regular_BaseM_33px7b",
+      "first": 983072,
+      "last": 983166
+    },
+    {
+      "all_fonts_index": 158,
+      "symbol": "NotoSans_Regular_LatinExtBM_33px16b",
+      "first": 983424,
+      "last": 983631
+    },
+    {
+      "all_fonts_index": 159,
+      "symbol": "NotoSans_Regular_SchwaM_33px16b",
+      "first": 983635,
+      "last": 983691
+    },
+    {
+      "all_fonts_index": 160,
+      "symbol": "NotoSans_Regular_SupAndExtAM_33px16b",
+      "first": 983201,
+      "last": 983422
+    },
+    {
+      "all_fonts_index": 161,
+      "symbol": "NotoSans_Regular_CurrencySignsM_33px16b",
+      "first": 991402,
+      "last": 991510
+    },
+    {
+      "all_fonts_index": 162,
+      "symbol": "NotoSans_Regular_OkinaM_33px16b",
+      "first": 983739,
+      "last": 983739
+    },
+    {
+      "all_fonts_index": 163,
+      "symbol": "NotoSans_Regular_LatinExtAddM_31px16b",
+      "first": 990720,
+      "last": 990975
+    },
+    {
+      "all_fonts_index": 164,
+      "symbol": "NotoSans_Regular_NairaM_33px16b",
+      "first": 991398,
+      "last": 991398
+    },
+    {
+      "all_fonts_index": 165,
+      "symbol": "NotoSans_Regular_CyrillicM_35px16b",
+      "first": 984065,
+      "last": 984297
+    },
+    {
+      "all_fonts_index": 166,
+      "symbol": "NotoSans_Regular_GreekM_33px16b",
+      "first": 983940,
+      "last": 984009
+    },
+    {
+      "all_fonts_index": 167,
+      "symbol": "NotoSans_Regular_LetterModM_33px16b",
+      "first": 983750,
+      "last": 983773
+    },
+    {
+      "all_fonts_index": 168,
+      "symbol": "NotoSans_Regular_SZM_33px16b",
+      "first": 990878,
+      "last": 990878
+    },
+    {
+      "all_fonts_index": 169,
+      "symbol": "NotoSans_Regular_BaseL_39px7b",
+      "first": 995360,
+      "last": 995454
+    },
+    {
+      "all_fonts_index": 170,
+      "symbol": "NotoSans_Regular_LatinExtBL_37px16b",
+      "first": 995712,
+      "last": 995919
+    },
+    {
+      "all_fonts_index": 171,
+      "symbol": "NotoSans_Regular_SchwaL_39px16b",
+      "first": 995923,
+      "last": 995979
+    },
+    {
+      "all_fonts_index": 172,
+      "symbol": "NotoSans_Regular_SupAndExtAL_35px16b",
+      "first": 995489,
+      "last": 995710
+    },
+    {
+      "all_fonts_index": 173,
+      "symbol": "NotoSans_Regular_CurrencySignsL_39px16b",
+      "first": 1003690,
+      "last": 1003798
+    },
+    {
+      "all_fonts_index": 174,
+      "symbol": "NotoSans_Regular_OkinaL_39px16b",
+      "first": 996027,
+      "last": 996027
+    },
+    {
+      "all_fonts_index": 175,
+      "symbol": "NotoSans_Regular_LatinExtAddL_33px16b",
+      "first": 1003008,
+      "last": 1003263
+    },
+    {
+      "all_fonts_index": 176,
+      "symbol": "NotoSans_Regular_NairaL_39px16b",
+      "first": 1003686,
+      "last": 1003686
+    },
+    {
+      "all_fonts_index": 177,
+      "symbol": "NotoSans_Regular_CyrillicL_39px16b",
+      "first": 996353,
+      "last": 996585
+    },
+    {
+      "all_fonts_index": 178,
+      "symbol": "NotoSans_Regular_GreekL_39px16b",
+      "first": 996228,
+      "last": 996297
+    },
+    {
+      "all_fonts_index": 179,
+      "symbol": "NotoSans_Regular_LetterModL_39px16b",
+      "first": 996038,
+      "last": 996061
+    },
+    {
+      "all_fonts_index": 180,
+      "symbol": "NotoSans_Regular_SZL_39px16b",
+      "first": 1003166,
+      "last": 1003166
+    },
+    {
+      "all_fonts_index": 181,
       "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
       "first": 57344,
       "last": 57503

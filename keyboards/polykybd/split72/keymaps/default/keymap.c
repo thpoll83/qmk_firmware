@@ -236,7 +236,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                     RM_PREV,   RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RM_NEXT,
                     KC_NO,      RM_SPDD,    RM_SPDU,    KC_NO,      RM_HUED,    RM_HUEU,    KC_NO,
         _______,    KC_NO,      RM_VALD,    RM_VALU,    KC_NO,      RM_SATD,    RM_SATU,    KC_NO,
-        EE_CLR,     KC_STORE_EE, KC_EDEN,    KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
+        EE_CLR,     KC_STORE_EE, KC_EDEN,    KC_GLYPH_SIZE_DOWN, KC_GLYPH_SIZE_UP, KC_NO,  KC_NO,      KC_NO,
         DB_TOGG,    KC_DEADKEY, KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     // Language Selection Layer — mirrors the emoji picker. TOP row of the LEFT

@@ -969,6 +969,45 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     uprint("Replaying startup animation.\n");
                 }
                 break;
+            case 34: //get/set keycap legend size (protocol v13+)
+                {
+                    // data[HID_DATA_IDX] == 0xFF -> query (reply current size in data[3]).
+                    // Otherwise set the size (enum poly_glyph_size: 0 = small/original,
+                    // 1 = medium, 2 = large). Applies to the key's MAIN legend only —
+                    // the shift / AltGr previews and every other kind of chrome stay as
+                    // they are. Persisted at the next EEPROM flush (suspend / store key);
+                    // the awake re-render + slave sync run from housekeeping.
+                    //
+                    // ⚠️ The range is CLOSED, unlike the glyph script one command over.
+                    // A script index the firmware doesn't know can fall through to the
+                    // normal legend, so accepting it costs nothing and buys the host the
+                    // freedom to add faces without a protocol bump. A SIZE is different:
+                    // every value has to name a tier whose relocation base and baseline
+                    // this firmware knows, so an unknown one would be stored, synced and
+                    // persisted while rendering as small — a setting that silently does
+                    // nothing. NACK it instead, and let the host's feature gate decide.
+                    //
+                    // Sizes above small need the `latinbig` font-pack bundle. That is NOT
+                    // checked here: the bundle can be flashed after the choice is made, so
+                    // the fallback lives at draw time (glyph_size_remap), where it is
+                    // re-evaluated on every render.
+                    uint8_t arg = data[HID_DATA_IDX];
+                    memset(data, 0, length);
+                    if (arg == 0xFF) {
+                        hid_reply(data, 0x22, true);
+                        data[3] = get_glyph_size();
+                    } else if (arg < GLYPH_SIZE_COUNT) {
+                        set_glyph_size(arg);
+                        hid_reply(data, 0x22, true);
+                        data[3] = arg;
+                        uprintf("Set glyph size to %s.\n", glyph_size_name(arg));
+                    } else {
+                        hid_reply(data, 0x22, false);
+                        uprintf("Refused glyph size %u.\n", arg);
+                    }
+                    raw_hid_send(data, length);
+                }
+                break;
 #ifdef POLYKYBD_LOOP_PROFILE
             case 32: //main-loop profiler control (POLYKYBD_LOOP_PROFILE builds only)
                 {

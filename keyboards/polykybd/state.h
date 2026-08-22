@@ -51,6 +51,26 @@ enum poly_glyph_script {
     GLYPH_SCRIPT_COUNT
 };
 
+// Keycap legend SIZE (HID cmd 34, protocol v13+). Picks how large the key's MAIN
+// legend is drawn — the single glyph the key produces. The shift / AltGr previews
+// and every other kind of chrome (overlays, OS hints, tabs, flags) are deliberately
+// NOT affected: they are secondary marks, and a keycap only has room for one big
+// thing. GLYPH_SIZE_S is the size the keyboard has always drawn.
+//
+// The bigger faces are latin only and live in the `latinbig` font-pack bundle at
+// relocated codepoints (see glyph_size_remap() in poly_keymap.c). A keyboard whose
+// pack is missing that bundle — or a legend outside the latin repertoire, e.g. a
+// CJK or Arabic keycap — silently falls back to GLYPH_SIZE_S rather than blanking.
+//
+// Values are append-only: persisted in poly_eeconf_t.glyph_size and carried on the
+// wire (poly_sync_t.glyph_size), so never reorder or reuse.
+enum poly_glyph_size {
+    GLYPH_SIZE_S = 0,   // 27 px em / cap height 20 — the original, and the default
+    GLYPH_SIZE_M = 1,   // 33 px em / cap height 24
+    GLYPH_SIZE_L = 2,   // 39 px em / cap height 27
+    GLYPH_SIZE_COUNT
+};
+
 // Active host-OS identity — a FIRST-CLASS state, deliberately DECOUPLED from
 // unicode_mode (which stays a "how do I type codepoints" concern, host cmd 20).
 // active_os drives the modifier-legend swap (Cmd/Opt vs Ctrl/Alt), the OS icon,
@@ -117,6 +137,10 @@ typedef struct _poly_sync_t {
     // Active glyph-script override (enum poly_glyph_script). Master-authoritative,
     // synced so the slave renders the same legends. See render_key / to_static_text.
     uint8_t  glyph_script;
+    // Active keycap legend size (enum poly_glyph_size). Master-authoritative and
+    // synced for the same reason as glyph_script: the slave draws its own keys and
+    // only ever sees this struct. See render_key / glyph_size_remap.
+    uint8_t  glyph_size;
     // Doom game mode active on the master (0/1). Synced so the SLAVE half turns
     // itself into a control pad: update_displays blanks every key that is not a
     // game control (doom_key_is_control). The master's keycaps are driven by the
@@ -365,6 +389,14 @@ typedef struct _poly_eeconf_t {
     uint8_t  latin_ex_ext[LATIN_PICK_EXT_BYTES];
     uint8_t  latin_assign_ext[LATIN_ASSIGN_EXT_BYTES];
     uint8_t  latin_ext_fmt;
+    // Persisted keycap legend size (enum poly_glyph_size). Appended at the tail, so
+    // every earlier offset is untouched. It needs NO sentinel and no migration: the
+    // default GLYPH_SIZE_S is 0, and an EEPROM written before this field existed
+    // reads back as 0 here — QMK's wear levelling normalises cleared bytes to ZERO,
+    // not 0xFF (the trap that made latin_assign read as "every key hosts 'a'"), and
+    // for once zero is exactly the value we want. load_user_eeconf() still bounds-
+    // guards it so a stale byte outside the enum cannot select a missing face.
+    uint8_t  glyph_size;
 } poly_eeconf_t;
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
@@ -513,6 +545,34 @@ void set_glyph_script(uint8_t script);
 // Records the glyph script without marking dirty (boot-time EEPROM load); an
 // out-of-range (uninitialised-EEPROM) value falls back to GLYPH_STD.
 void note_glyph_script(uint8_t script);
+
+// ---- Keycap legend size (enum poly_glyph_size) — see the enum comment above. ----
+
+// The active legend size (GLYPH_SIZE_S = the original 27 px face).
+uint8_t get_glyph_size(void);
+
+// Sets the legend size and marks it dirty (deferred EEPROM write). Used by the HID
+// command (cmd 34) and the KC_GLYPH_SIZE_UP/_DOWN keys. Out-of-range values are ignored —
+// unlike glyph_script this range is CLOSED, because a size is not an open-ended
+// catalogue of faces: every value has to name a tier the render path knows how to
+// place, so an unknown one is a bug, not a graceful degradation.
+void set_glyph_size(uint8_t size);
+
+// Records the legend size without marking dirty (boot-time EEPROM load); an
+// out-of-range value falls back to GLYPH_SIZE_S.
+void note_glyph_size(uint8_t size);
+
+// Steps the legend size one tier (delta +1/-1), CLAMPED at small and large — the
+// KC_GLYPH_SIZE_UP / _DOWN keys. Clamping, not wrapping: with a key per direction
+// a wrap would jump from large straight back to small on the key labelled "bigger",
+// and the two Unicode symbols on those keycaps promise a direction, not a cycle.
+// A step that would leave the range is a no-op, so it neither marks EEPROM dirty
+// nor requests a redraw.
+void step_glyph_size(int8_t delta);
+
+// Human-readable name of a legend size, for console logs ("small"/"medium"/…).
+// Never NULL — an unknown value reads as "?".
+const char* glyph_size_name(uint8_t size);
 
 // ---- First-boot startup animation marker (poly_eeconf_t.boot_flags) ----
 // Records the boot_flags byte at EEPROM load (no dirty flag).

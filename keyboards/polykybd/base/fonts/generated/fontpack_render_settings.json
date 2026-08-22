@@ -1401,6 +1401,246 @@
       "sequence": "2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A, 2805, 2807, 280D, 281D, 2815, 280F, 281F, 2817, 280E, 281E, 2825, 2827, 283A, 282D, 283D, 2835, 2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A",
       "seq_first": 59968,
       "source_file": "DejaVuSans.ttf"
+    },
+    "157": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_BaseM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "158": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_LatinExtBM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "159": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_SchwaM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "160": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_SupAndExtAM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "161": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_CurrencySignsM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "162": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_OkinaM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "163": {
+      "pixel_size": 31,
+      "hinting": "auto",
+      "variant": "_LatinExtAddM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "164": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_NairaM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "165": {
+      "pixel_size": 35,
+      "hinting": "auto",
+      "variant": "_CyrillicM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "166": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_GreekM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "167": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_LetterModM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "168": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_SZM_",
+      "yadvance": 40,
+      "offset": 983040,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "169": {
+      "pixel_size": 39,
+      "hinting": "auto",
+      "variant": "_BaseL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "170": {
+      "pixel_size": 37,
+      "hinting": "auto",
+      "variant": "_LatinExtBL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "171": {
+      "pixel_size": 39,
+      "hinting": "auto",
+      "variant": "_SchwaL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "172": {
+      "pixel_size": 35,
+      "hinting": "auto",
+      "variant": "_SupAndExtAL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "173": {
+      "pixel_size": 39,
+      "hinting": "auto",
+      "variant": "_CurrencySignsL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "174": {
+      "pixel_size": 39,
+      "hinting": "auto",
+      "variant": "_OkinaL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "175": {
+      "pixel_size": 33,
+      "hinting": "auto",
+      "variant": "_LatinExtAddL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "176": {
+      "pixel_size": 39,
+      "hinting": "auto",
+      "variant": "_NairaL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "177": {
+      "pixel_size": 39,
+      "hinting": "auto",
+      "variant": "_CyrillicL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "178": {
+      "pixel_size": 39,
+      "hinting": "auto",
+      "variant": "_GreekL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "179": {
+      "pixel_size": 39,
+      "hinting": "auto",
+      "variant": "_LetterModL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
+    },
+    "180": {
+      "pixel_size": 39,
+      "hinting": "auto",
+      "variant": "_SZL_",
+      "yadvance": 40,
+      "offset": 995328,
+      "bits": 32,
+      "source": "noto-sans",
+      "source_file": "NotoSans-Regular.ttf"
     }
   }
 }

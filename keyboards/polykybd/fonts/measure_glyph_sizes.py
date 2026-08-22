@@ -66,6 +66,19 @@ def measure(ranges, ppem):
     argv = [FC, "-f", str(TTF), "-p", str(ppem), "-H", "auto", "-v", "_M_", "-b", "32"]
     for a, b in ranges:
         argv += [str(a), str(b)]
+    # Sourcery/opengrep flags every non-literal argv here. Audited: this is a
+    # developer measuring tool, run by hand from a checkout. Its argv is the
+    # fontconvert path (argv[1], chosen by whoever runs it), a repo-relative TTF,
+    # and integers/ranges from this file or from the committed fonts.yaml through
+    # generate_fonts.py's own resolver — no external or network input reaches it.
+    # shell=False with a list means no shell parses the command, so there is
+    # nothing to inject through; shlex.quote, the rule's suggested remedy, escapes
+    # for a SHELL string and would only corrupt an argv element here.
+    #
+    # ⚠️ The marker must stay on the line IMMEDIATELY above the call — semgrep
+    # applies it to the next line only, so moving it to the top of this block
+    # (where it reads better) silently does nothing and the check stays red.
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit,python.lang.security.audit.dangerous-subprocess-use-tainted-env-args
     out = subprocess.run(argv, capture_output=True, text=True)
     if out.returncode != 0:
         sys.exit(f"fontconvert failed: {' '.join(argv)}\n{out.stderr}")
@@ -107,6 +120,19 @@ def measure_entry(cfg, entry: dict, ppem=None):
         e["pixel_size"] = ppem
         e["bits"] = 32                    # relocated into plane 15
     argv = GF.build_argv(FC, e, cfg["sources"], ROOT)
+    # Sourcery/opengrep flags every non-literal argv here. Audited: this is a
+    # developer measuring tool, run by hand from a checkout. Its argv is the
+    # fontconvert path (argv[1], chosen by whoever runs it), a repo-relative TTF,
+    # and integers/ranges from this file or from the committed fonts.yaml through
+    # generate_fonts.py's own resolver — no external or network input reaches it.
+    # shell=False with a list means no shell parses the command, so there is
+    # nothing to inject through; shlex.quote, the rule's suggested remedy, escapes
+    # for a SHELL string and would only corrupt an argv element here.
+    #
+    # ⚠️ The marker must stay on the line IMMEDIATELY above the call — semgrep
+    # applies it to the next line only, so moving it to the top of this block
+    # (where it reads better) silently does nothing and the check stays red.
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit,python.lang.security.audit.dangerous-subprocess-use-tainted-env-args
     out = subprocess.run(argv, capture_output=True, text=True)
     if out.returncode != 0:
         sys.exit(f"fontconvert failed: {' '.join(argv)}\n{out.stderr}")

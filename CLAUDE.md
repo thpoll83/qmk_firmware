@@ -134,6 +134,47 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 
 - **Give every branch a name that hints at its content** (a short descriptive slug, e.g. `claude/fix-slave-layer-after-fw-apply`, not just the auto-generated `claude/<random-scientist>-<id>`) so the branch list reads as a changelog.
 - **Always start new work on a FRESH branch cut from the updated default branch — never keep committing to a branch whose PR has already merged.** Once a PR is merged, that branch is done: `git fetch origin PolyKybd` then `git checkout -b claude/<new-slug> origin/PolyKybd` for the next change. Cherry-pick only the still-unmerged commits onto the fresh branch if needed. This keeps each PR a clean, focused diff against the current default (**`PolyKybd`** here; `main` in the host/rig repos) and avoids a new PR accidentally re-including already-merged commits.
+- ⚠️ **A cross-repo feature can leave one repo with commits PUSHED and NO PR — and
+  nothing surfaces it.** A PolyKybd feature routinely spans 4–6 repos (firmware,
+  host, docs, rig, AdafruitGFX, hardware), and every "is everything saved?" check
+  passes on the repo you forgot: the branch is committed, pushed, in sync with its
+  upstream, and `git status` is clean. Only the *absence of a PR* is wrong, and no
+  local command looks for that. On 2026-08-22 the legend-size work had four PRs open
+  and reviewed while **AdafruitGFX** sat on two pushed commits with none — one of them
+  the `fontconvert -o` sign fix that the whole `latinbig` relocation depends on. It
+  was found only because the user asked whether anything was left to open.
+  **Sweep every repo before calling cross-repo work done** — `git status` is not the
+  check; commits-ahead-of-default plus "does a PR exist for this branch" is. Run a
+  `git fetch` in each repo first (below), then confirm a PR exists for every repo that
+  prints:
+  ```bash
+  seen=0
+  for e in qmk_firmware:PolyKybd PolyKybdHost:main polykybd-docs:main \
+           polykybd-ctnd:main Adafruit-GFX-Library:master PolyKybd:master; do
+      r=/home/user/${e%%:*}; d=origin/${e##*:}
+      [ -d "$r/.git" ] || continue
+      git -C "$r" fetch origin -q
+      git -C "$r" rev-parse --verify -q "$d" >/dev/null \
+          || { echo "!! $(basename $r): $d missing"; continue; }
+      seen=$((seen+1))
+      n=$(git -C "$r" rev-list --count "$d"..HEAD)
+      [ "$n" != 0 ] && echo "$(basename $r): $n commit(s) ahead of ${d#origin/} — PR?"
+  done
+  [ "$seen" = 6 ] || echo "!! inspected only $seen/6 repos — result is NOT trustworthy"
+  ```
+  ⚠️ **Three ways the obvious version of this loop FAILS OPEN — it prints nothing,
+  which reads identically to "all clean".** All three were hit writing it (2026-08-24):
+  - **`~` is `/root`, not `/home/user`** — `$HOME` is root's in this container, so a
+    `~/qmk_firmware` path matches no repo and the loop skips all six in silence. Use
+    absolute `/home/user/...`, and keep the `seen` counter so a zero-repo sweep is
+    loud rather than reassuring.
+  - **`origin/HEAD` is UNSET in every clone**, so auto-detecting the default via
+    `git symbolic-ref refs/remotes/origin/HEAD` yields nothing and any `|| origin/main`
+    fallback silently reports 0 for the firmware (default `PolyKybd`) and AdafruitGFX
+    (`master`). Hence the explicit `repo:default` table.
+  - **Without the fetch, stale remote refs cry WOLF the other way** — right after a
+    merge, an un-fetched repo still shows the merged branch as ahead of its old
+    `origin/main`. That direction is at least visible; the first two are not.
 
 ## Building & flashing
 
@@ -181,6 +222,21 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     takes the ambiguity away. Better still, when a change alters something **visible
     on a keycap**, say which pixel tells the builds apart — that is a check the user
     can run without any tooling.
+  - ⚠️ **A branch-built `.bin` reports a DIFFERENT `FW_VERSION` from the one CI and
+    the HIL rig show for the SAME commit — and that is normal, not a stale build.**
+    CI builds the PR *merged into* its base, so it picks up every auto-bump that has
+    landed on `PolyKybd` since the branch was cut; a local `qmk compile` builds the
+    branch alone. On 2026-08-22 the delivered image answered `0.15.7` while the rig
+    logged `Split72 0.15.10 P13` on commit `d8bb98ca` — a 12-commit base drift. It
+    reads exactly like handing over the wrong file, so **settle it by diffing, not by
+    rebuilding**:
+    ```bash
+    git log --oneline HEAD..origin/PolyKybd                    # what the branch lacks
+    git diff --stat HEAD...origin/PolyKybd -- keyboards/polykybd modules/polykybd
+    ```
+    If the only firmware delta is `config.h`'s version string, the `.bin` carries every
+    real change and just names itself older. If it is more than that, the branch is
+    genuinely behind and the test build is missing base fixes — merge before delivering.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 - ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk` and is NOT on

@@ -153,7 +153,7 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
            polykybd-ctnd:main Adafruit-GFX-Library:master PolyKybd:master; do
       r=/home/user/${e%%:*}; d=origin/${e##*:}
       [ -d "$r/.git" ] || continue
-      git -C "$r" fetch origin -q \
+      git -C "$r" fetch -q --no-recurse-submodules origin \
           || { echo "!! $(basename "$r"): fetch failed - NOT inspected"; continue; }
       git -C "$r" rev-parse --verify -q "$d" >/dev/null \
           || { echo "!! $(basename "$r"): $d missing"; continue; }
@@ -249,9 +249,12 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     ⚠️ **Read the CONTENT and the UNRESTRICTED path list — `--stat` scoped to
     `keyboards/polykybd` proves neither half of that sentence.** `--stat` reports line
     counts, so `config.h | 2 +-` is equally consistent with a version bump and with a
-    changed `#define` beside it; and the image links `platforms/ quantum/ drivers/
-    lib/ builddefs/` too, which a PolyKybd-scoped diff hides — exactly the paths an
-    upstream catch-up merge moves when it lands on `PolyKybd`. Even then this is a
+    changed `#define` beside it; and the image links this fork's **patched upstream
+    files** too, which a PolyKybd-scoped diff hides — `keyboards/polykybd/
+    UPSTREAM_PATCHES.md` is the maintained list of them (today `usb_descriptor.h`,
+    `usb_main.c`, `oled_driver.c`, `transport.h`, `rp2040.c`), and a catch-up merge
+    landing on `PolyKybd` is exactly what moves them. Read that file rather than
+    hardcoding the set here — it is the thing that stays current. Even then this is a
     drift check, not proof of binary equivalence: if anything outside `config.h` shows
     up, rebuild on the merged base rather than reasoning about whether it mattered.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.

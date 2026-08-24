@@ -1,6 +1,7 @@
 #pragma once
 
 #include "generated/latin_fonts.h"
+#include "generated/latin_big_fonts.h"
 #include "generated/hebrew_fonts.h"
 #include "generated/jp_fonts.h"
 #include "generated/kr_fonts.h"

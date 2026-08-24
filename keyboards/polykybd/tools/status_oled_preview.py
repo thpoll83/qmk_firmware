@@ -383,7 +383,7 @@ def draw_lang_column(setp, tiny, globe, x, code):
 
 
 def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'),
-                lang='en-US', wpm=0):
+                lang='en-US', wpm=0, layout='Qwerty'):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
     rgb=None models RGB being switched off, which re-flows BOTH panels.
@@ -416,7 +416,7 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
     else:
         draw(setp, small, COL_X + 5, SIDE_MARKER_BASE, s('R'))
     if lock_panel:
-        draw(setp, small, TEXT_X, LOCK_ROW_B if rgb_on else OFF_ROW_B, s('Qwerty'))
+        draw(setp, small, TEXT_X, LOCK_ROW_B if rgb_on else OFF_ROW_B, s(layout))
         if rgb_on:
             # Speed (+ the language slot sharing its row) sits under the layout name and
             # brightness takes the bottom row -- the ~98px meter needs a row to itself.
@@ -507,14 +507,19 @@ def main():
                     help='keycap brightness 0..%d shown in the gauge (default %d)' % (FULL_BRIGHT, FULL_BRIGHT))
     ap.add_argument('--lang', default='en-US', help="language code shown, e.g. mn-MN")
     ap.add_argument('--wpm', type=int, default=0, help='WPM value shown')
+    ap.add_argument('--layout', default='Qwerty',
+                    help="base-layout name on the layout panel, as oled_helper.c names it "
+                         "(Qwerty, 'Qwerty Stag!', 'Colemak DH', Neo, Workman)")
     ap.add_argument('--rgb-off', action='store_true',
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
     args = ap.parse_args()
 
     disp, small, icons, tiny, globe = load_fonts()
     rgb = None if args.rgb_off else (128, 255, 100, 80, 5, 'Rainbow')
-    L = build_panel('L', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang, args.wpm)
-    R = build_panel('R', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang, args.wpm)
+    L = build_panel('L', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang,
+                    args.wpm, args.layout)
+    R = build_panel('R', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang,
+                    args.wpm, args.layout)
 
     if args.diag:
         Li, lc = render_diag(L, 'LEFT (layout)  128x64  |  RED = clipped')

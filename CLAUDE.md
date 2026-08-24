@@ -699,7 +699,21 @@ extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
   segment was undefined (the old FW-7 finding; fixed in the wire format instead of a bounce
   buffer). The firmware unpacks the byte in `hid_com.c` case 10 *before* `set_fragment_context_key`,
   so `adjust_overlay_idx_to_mod` is unchanged; **compressed (`0x10`/`0x11`) and ROI (`0x12`/`0x13`)
-  paths are untouched** (their headers already fit). **Bump `FW_VERSION` +
+  paths are untouched** (their headers already fit).
+  **v13** adds `GET/SET_GLYPH_SIZE` (cmd `34` / `0x22`): the size a key's MAIN legend
+  is drawn at — `0` small (the original 27 px face), `1` medium, `2` large; `0xFF`
+  queries. Persisted in `poly_eeconf_t.glyph_size`, synced via `poly_sync_t.glyph_size`;
+  also reachable from the board via `KC_GLYPH_SIZE` on the settings layer.
+  ⚠️ **Its range is CLOSED and an unknown value NACKs — the deliberate OPPOSITE of the
+  glyph script's open-ended index one command over, and that asymmetry is the thing to
+  understand before "fixing" either.** An unknown SCRIPT index falls through to the
+  normal legend, so accepting it costs nothing and buys the host freedom to ship faces a
+  keyboard lacks. A SIZE names a rendering TIER whose relocation base and baseline the
+  firmware must know, so accepting an unknown one would store, sync and persist a
+  setting that silently renders small. The two HIL tests assert opposite things about
+  their neighbouring commands on purpose (`test_glyph_size_round_trip` /
+  `test_glyph_script_expansion`). See "Keycap legend size" below.
+  **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep** — the host connect gate is exact-match.
 - **Cmd `32` = main-loop profiler control — present ONLY in a
@@ -1501,6 +1515,119 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
   `test_glyph_script_round_trip` (`min_protocol: 9`) + `test_glyph_script_expansion`
   (`min_protocol: 10`, walks values 2/6/10 + out-of-range NACK).
 
+### Keycap legend size (`poly_keymap.c`, HID cmd 34, protocol v13+)
+
+Three sizes for a key's **MAIN** legend — `GLYPH_SIZE_S` (0, the 27 px face the board
+has always drawn, and the default), `M` (1, 33 px em) and `L` (2, 39 px em). State and
+plumbing mirror the glyph-script override exactly (`poly_eeconf_t.glyph_size` tail byte,
+`poly_sync_t.glyph_size` master-authoritative, housekeeping diff + `request_disp_refresh`,
+`KC_GLYPH_SIZE` on the settings layer). What is worth knowing is the parts that are NOT
+like the glyph script:
+
+- ⚠️ **The range is CLOSED — see the cmd-34 note in the protocol list above.** Do not
+  "make it open like the script".
+- **No migration sentinel, and for once that is sound rather than lucky.** The default
+  is 0 and QMK's wear levelling normalises an unwritten byte to **ZERO** — the exact
+  fact that made `latin_assign` read as "every key hosts 'a'" (see the Intl-remap traps)
+  works in our favour here. `load_user_eeconf()` still bounds-guards it.
+- **The bigger faces are RELOCATED, not a second lookup path.** `g_all_fonts` is scanned
+  front-to-back and the resident `latin` font is always in front, so a second face at
+  native codepoints could never be reached. `fonts.yaml`'s `latinbig` category emits each
+  tier at a fixed offset into supplementary PUA plane 15 (**fontconvert `-o`**, the
+  range-mode sibling of the `-F` the glyph scripts use): M at `0xF0000 + cp`, L at
+  `0xF3000 + cp`. `glyph_size_base[]` in `poly_keymap.c` must stay identical to the
+  `offset:` values in the yaml. ⚠️ `-o` was documented as "add" but implemented as
+  "subtract" (an exact alias of `-n`) until 2026-08-20; nothing used it, so the fix was
+  inert — but an older fontconvert will silently emit the WRONG range here.
+- **`glyph_size_remap()` is ALL-OR-NOTHING.** If the `latinbig` bundle is absent, or any
+  glyph of the legend is missing at that size (a CJK/Arabic/Indic keycap — this is a
+  latin-only feature), the WHOLE legend falls back to the small face. A partial hit would
+  mix two fonts in one legend, which by the documented baseline-align rule also means two
+  baselines.
+  - ⚠️ **A legend can carry LEADING CURSOR OPS, and refusing them silently halved the
+    French number row.** A base legend is a mini display list like a hint string, and 73
+    of them across the 160 layouts open with a zero-argument cursor nudge — `é è ç à` on
+    AZERTY are spelled `\f\f <letter>` (a 4 px lift hand-tuned for the small face), cs-CZ
+    uses four. The first version bailed on any codepoint `< 0x20`, so **`& " ' ( - _` grew
+    with the setting while `é è ç à` stayed small** — a real gap, invisible from the code
+    and obvious the moment the row was rendered (2026-08-21). `glyph_size_remap()` now
+    **drops** the five ops that occur (`0x05 0x06 0x08 0x0B 0x0C`) and still bails on
+    every other one: `HINT_MOVE`/`HINT_FRAME` consume the two codepoints after them, which
+    would then be relocated as if they were glyphs, and `HINT_HALF`/`HINT_THIN` rescale the
+    next glyph. Measured, so it can be re-checked: every op present is one of those five
+    and every one **leads** the legend (`0x0C` ×150, `0x0B` ×8, `0x06` ×9, `0x08` ×1,
+    `0x05` ×1; **not one after a glyph**).
+  - ⚠️ **DROPPED rather than carried, because `kdisp_gfx_text_bbox()` and the DRAW
+    disagree about these ops** — a pre-existing inconsistency this was the first code to
+    depend on. `\f` is `y = y > 1 ? y - 2 : 0` applied to the cursor; the draw runs it from
+    the real baseline (23/25/28) where it genuinely lifts 2 px, while bbox runs it from
+    `y = 0` **relative** to the baseline, where the ternary saturates and it does nothing.
+    So carrying the op moves the glyph by an amount `plan_main_legend()`'s clamp cannot
+    see. Carrying it was tried first and clipped 6–8 px off the accents of `é è à` at M/L
+    — and the reasoning that predicted it would be safe ("the clamp measures the same
+    ops") was wrong for exactly this reason. Dropped, the measured bbox **is** what gets
+    drawn, and nothing is lost: the nudge was tuned for the small face's fixed baseline,
+    which is the thing the planner replaces.
+  - **Measured after the fix**: 1467 of 1500 latin number-row keys reach the bigger face
+    (was 1338); the 33 that don't are genuinely non-latin (Thai, Bopomofo, Armenian,
+    Cherokee, Vietnamese PUA composites). Clipped pixels **drop** at M/L rather than
+    rising — cs-CZ's nine number keys clip at small and are clean at M/L, because the
+    clamp fixes what the hand nudge could not.
+- ⚠️ **THE SIZES ARE MEASURED, AND THE PANEL IS THE BINDING CONSTRAINT.** The keycap is
+  40 px tall and the tallest latin glyph (Ḉ, `_LatinExtAdd_`) already inks **33** of them
+  at the base size, so a uniform scale factor clips the accent stacks long before the
+  plain letters run out of room — there is no single factor that gives two clean tiers.
+  Each `latinbig` entry instead takes the largest pixel size whose TALLEST glyph still
+  inks ≤ 40 px, capped at the tier target, so four entries deliberately grow less than
+  the rest (`_SupAndExtA_` L 35, `_LatinExtB_` L 37, `_LatinExtAdd_` M 31 / L 33,
+  `_Cyrillic_` M 35). `fonts/measure_glyph_sizes.py` is how those were chosen; re-run it
+  after ANY change there, and `PolyKybdHost/tools/glyph_size_preview.py --check` to
+  confirm zero clipped pixels.
+  - ⚠️ **Before adding a SCRIPT to the bigger tiers, MEASURE it — the obvious proxy is
+    not predictive, and it was wrong about every script it was applied to.** The
+    tempting estimate is `40 px panel ÷ what the script inks today`; it assumes the
+    glyph would fill the panel at the bigger tier, which depends on the face's own
+    ink-to-em ratio and is only knowable by rendering. `measure_glyph_sizes.py
+    --category <names>` does that — it reads each entry's real source, ranges and
+    options out of `fonts.yaml` through `generate_fonts.py`'s own `resolve()` /
+    `build_argv()`, so it cannot drift from what would actually be emitted. Measured
+    per entry (2026-08-21), largest fitting ppem's ink ÷ as-shipped ink: **latin
+    ×1.18–1.50** (the shipped feature), Cherokee ×1.52, **Japanese ×1.29–1.38**,
+    Telugu ×1.26, Bengali/Ethiopic ×1.23, Armenian/Georgian/Bopomofo/Tamil/Thai/
+    Canadian ×1.21–1.22, **Hebrew ×1.20**, Devanagari ×1.06, and **Hangul ×0.92 — it
+    would get SMALLER.** The estimate had called Hebrew and Hangul ×1.60 apiece and
+    written Japanese off as hopeless; all three were wrong, and Korean — the layout
+    that prompted the question — is the one script that provably cannot benefit.
+  - ⚠️ **`render_height` (fontconvert `-r`) is NOT an ink ceiling.** `latin` carries
+    `render_height: 44` and grows fine, because a tier overrides it with a pixel size.
+    An earlier cut of the tool verdicted off the presence of that flag and declared
+    latin unable to grow. Read the measured ink, never the flag. It does mean a script
+    can already be drawn LARGER than any tier ppem would give it, which is exactly why
+    Hangul (`render_height: 51`) shrinks.
+  - ⚠️ **Measure per ENTRY, not per category, and a range's tallest glyph may not be a
+    legend.** Latin needed four of its twelve entries capped below the tier target; a
+    per-category maximum hides that and condemns the whole category on one glyph.
+    Hebrew's range maximum is a standalone nikud mark inking 43 px that never appears
+    on a keycap, so the category number reads far worse than the letters do.
+  - **Coverage as shipped is Latin, Cyrillic and Greek.** Those scale completely
+    (`ru-RU` and `el-GR` measure 49/49 keys). The other **41 layouts come out MIXED** —
+    their digits and punctuation are latin and grow while the letters do not (`ko-KR`
+    is 23 grown / 26 unchanged). That is stated on the public `using/legend-size` page
+    rather than hidden. Don't "fix" it by gating the setting off per layout: that only
+    takes the feature away from the keys it does reach.
+- **`yadvance: 40` on every `latinbig` entry** makes `kdisp_write_gfx_char`'s baseline
+  align a no-op, so the y `plan_main_legend()` computes IS the baseline. Side effect
+  worth having: at M/L every latin sub-font shares one baseline, where at S `a`
+  (`_Base_`, yAdv 37) and `ä` (`_SupAndExtA_`, 44) sit 7 px apart.
+- **Placement = nominal baseline THEN clamp against the legend's own bbox.** The nominal
+  keeps ordinary letters on a shared baseline; the clamp is what stops a tall accent or a
+  deep descender clipping. Two knock-ons that only bite at the bigger sizes, both in
+  `render_key()`: the overlap **stagger must not lift a big base** (already clamped to the
+  panel, so a 6 px lift pushes it off the top), and the **AltGr preview** — kept off the
+  legend by its VERTICAL offset at S — is pushed clear HORIZONTALLY instead, because a big
+  legend fills that height.
+- The shift/AltGr previews stay small **by design**: a keycap has room for one big thing.
+
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 
 An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C
@@ -1835,10 +1962,20 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   27 px (the `_Base_` size): measured mirror-asymmetry improves 12.4% → 7.1%,
   versus 14.9% → 4.4% at the 15 px status size.
 - **Everything is grid-fitted EXCEPT emoji.** `hinting: auto` is set on every
-  category — `latin`, `hebrew`, `jp`, `kr`, `arabic`, `devanagari`, `bengali`,
-  `telugu`, `tamil`, `thai`, `georgian`, `armenian`, `bopomofo`, `vietnamese`,
-  `ethiopic`, `canadian`, `cherokee`, `tengwar`, `gscript` and `symbols`. Only
-  **`emoji` / `emoji_fig`** (and the `flags` `pack_extra`) stay on `native`.
+  category — `latin`, `latinbig`, `hebrew`, `jp`, `kr`, `arabic`, `devanagari`,
+  `bengali`, `telugu`, `tamil`, `thai`, `georgian`, `armenian`, `bopomofo`,
+  `vietnamese`, `ethiopic`, `canadian`, `cherokee`, `tengwar`, `gscript` and
+  `symbols`. Only **`emoji` / `emoji_fig`** (and the `flags` `pack_extra`) stay
+  on `native`.
+  - **It is NOT decorative at the bigger keycap sizes — measured, not assumed.**
+    The intuition that grid-fitting only matters for small text is wrong here:
+    counting stems that come out unequal WITHIN one glyph (the tell that a stem's
+    two edges rounded independently), `latinbig` improves 26.1% → 21.4% at the
+    33 px tier and **59.2% → 19.0%** at 39 px. The large tier is the bigger win,
+    not the smaller one. Also note `latinbig` is sized with **`-p` (pixels)**, not
+    `-s`: points-at-141-DPI can only land on even ppem, so 33/35/37/39 are simply
+    not expressible in points — and those odd sizes are exactly what the 40 px
+    ink ceiling forces.
   - ⚠️ **Do not "finish the job" by setting it on emoji — it is a measured no-op.**
     The autohinter assigns each glyph to a script by codepoint range and applies
     that script's blue zones (stems, x-/cap-height, baselines). Emoji codepoints
@@ -1912,8 +2049,9 @@ flashes all stale bundles, `flash <id>` force-flashes one).
 
 - **Split pack (protocol 6+): the pack is N independently-versioned BUNDLES, not
   one blob.** `fonts/fonts.yaml` `bundles:` groups the non-resident categories into
-  ordered bundles (currently 6: `symbol`, `mideast`, `syllabic`, `asia`, `flags`,
-  `emoji`), each a standalone `PlyF` flashed to its **own fixed sector-aligned slot**
+  ordered bundles (currently 8: `symbol`, `mideast`, `syllabic`, `asia`, `flags`,
+  `emoji`, `fantasy`, `latinbig` — the last carrying the bigger keycap-legend faces,
+  see "Keycap legend size" above), each a standalone `PlyF` flashed to its **own fixed sector-aligned slot**
   in a **2 MB** window at `FW_RESOURCE_OFFSET` (`fontpack_layout.h`, generated). The
   set of valid slot headers **is** the directory — there is **no separate directory
   sector** (avoids a consistency class of bug). Each bundle's per-font record carries

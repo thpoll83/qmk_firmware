@@ -100,8 +100,12 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     // FW-2: the master raised or cleared the unsigned-image confirmation prompt ->
     // re-render this half's keycaps (into the prompt, or back to the legends).
     bool fw_confirm_changed = incoming->fw_confirm != current->fw_confirm;
+    // The master changed the keycap legend SIZE -> re-render this half's legends.
+    // Explicit rather than left to housekeeping's state-diff refresh so the new
+    // size lands on the sync itself instead of a pass later.
+    bool glyph_size_changed = incoming->glyph_size != current->glyph_size;
     copy_local_state(incoming);
-    if (doom_ctl_changed || fw_confirm_changed) {
+    if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed) {
         request_disp_refresh();
     }
     if (anim_replay) {

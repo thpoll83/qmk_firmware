@@ -153,9 +153,10 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
            polykybd-ctnd:main Adafruit-GFX-Library:master PolyKybd:master; do
       r=/home/user/${e%%:*}; d=origin/${e##*:}
       [ -d "$r/.git" ] || continue
-      git -C "$r" fetch origin -q
+      git -C "$r" fetch origin -q \
+          || { echo "!! $(basename "$r"): fetch failed - NOT inspected"; continue; }
       git -C "$r" rev-parse --verify -q "$d" >/dev/null \
-          || { echo "!! $(basename $r): $d missing"; continue; }
+          || { echo "!! $(basename "$r"): $d missing"; continue; }
       seen=$((seen+1))
       n=$(git -C "$r" rev-list --count "$d"..HEAD)
       [ "$n" != 0 ] && echo "$(basename $r): $n commit(s) ahead of ${d#origin/} — PR?"
@@ -175,6 +176,13 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   - **Without the fetch, stale remote refs cry WOLF the other way** — right after a
     merge, an un-fetched repo still shows the merged branch as ahead of its old
     `origin/main`. That direction is at least visible; the first two are not.
+    ⚠️ **A FAILED fetch is a fourth mode, and it is the one that reads as inspected.**
+    It cannot fake a clean result — measured, not reasoned: a stale `origin/<default>`
+    is *behind* the true remote, so `$d..HEAD` can only count the same or MORE, never
+    fewer (post-merge it reports 1 where a fresh ref reports 0). But the repo is then
+    compared against unknown-age data while still incrementing `seen`, which is
+    precisely what that counter exists to prevent — hence the `|| continue` on the
+    fetch, so an unreachable repo trips the `seen` guard instead of passing quietly.
 
 ## Building & flashing
 
@@ -231,12 +239,21 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     reads exactly like handing over the wrong file, so **settle it by diffing, not by
     rebuilding**:
     ```bash
-    git log --oneline HEAD..origin/PolyKybd                    # what the branch lacks
-    git diff --stat HEAD...origin/PolyKybd -- keyboards/polykybd modules/polykybd
+    git log --oneline HEAD..origin/PolyKybd                 # what the branch lacks
+    git diff --name-only HEAD...origin/PolyKybd             # EVERY path, not just ours
+    git diff HEAD...origin/PolyKybd -- keyboards/polykybd/config.h   # only FW_VERSION?
     ```
     If the only firmware delta is `config.h`'s version string, the `.bin` carries every
     real change and just names itself older. If it is more than that, the branch is
     genuinely behind and the test build is missing base fixes — merge before delivering.
+    ⚠️ **Read the CONTENT and the UNRESTRICTED path list — `--stat` scoped to
+    `keyboards/polykybd` proves neither half of that sentence.** `--stat` reports line
+    counts, so `config.h | 2 +-` is equally consistent with a version bump and with a
+    changed `#define` beside it; and the image links `platforms/ quantum/ drivers/
+    lib/ builddefs/` too, which a PolyKybd-scoped diff hides — exactly the paths an
+    upstream catch-up merge moves when it lands on `PolyKybd`. Even then this is a
+    drift check, not proof of binary equivalence: if anything outside `config.h` shows
+    up, rebuild on the merged base rather than reasoning about whether it mattered.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 - ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk` and is NOT on

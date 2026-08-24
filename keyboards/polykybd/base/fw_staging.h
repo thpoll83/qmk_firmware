@@ -10,7 +10,15 @@
 //
 //   0x000000 .. 0x200000   running firmware         (linker flash1 XIP = 2 MB)
 //   0x200000 .. 0x400000   firmware-update staging  (4 KB header + staged image)
-//   0x400000 .. 0x800000   resource / overlay data  (FW_RESOURCE_OFFSET)
+//   0x400000 .. 0x7FE000   resource / overlay data  (FW_RESOURCE_OFFSET)
+//   0x7FE000 .. 0x800000   EEPROM  (wear-levelling backing store, NOT ours)
+//
+// ⚠️ That last row is the one nothing used to declare. QMK's rp2040_flash
+// wear-levelling driver puts the emulated EEPROM at the TOP of physical flash
+// (PICO_FLASH_SIZE_BYTES - WEAR_LEVELING_BACKING_SIZE), which lands INSIDE the
+// resource region — so the resource region is 4 MB minus that reservation, not
+// a clean 4 MB. Everything a user configures lives there: the dynamic keymap,
+// brightness, language, idle style, glyph script, the Intl assignment map.
 //
 // FW_STAGING_OFFSET is kept equal to the linker's flash1 length (2 MB — see
 // RP2040_FLASH.ld, FLASH_LEN default 2048k) so the firmware can NEVER grow into
@@ -93,18 +101,34 @@ typedef enum {
     FW_TARGET_DOOMPACK = 3,
 } fw_target_t;
 
+// Bytes at the top of flash that belong to the wear-levelling EEPROM, NOT to us.
+// Must equal WEAR_LEVELING_BACKING_SIZE (pinned in keyboards/polykybd/config.h);
+// fw_staging.c _Static_asserts the two against each other. Defined here as a
+// literal rather than referencing that macro so this header stays self-contained
+// for the host-side unit tests, which include it without QMK's config.h.
+#define FW_EEPROM_RESERVE_SIZE 0x002000UL      // 8 KB
+
 // The doom slots, expressed like fontpack slots (offsets relative to
 // FW_RESOURCE_OFFSET). The upper 2 MB of the resource region is split:
 //   flash 0x600000..0x7BFFFF (1.75 MB)  WHX game data — matches the engine's
 //                                       XIP TINY_WAD_ADDR 0x10600000; the
 //                                       current doom1.whx (1,800,344 B) fits
 //                                       with ~35 KB headroom.
-//   flash 0x7C0000..0x7FFFFF (256 KB)   DoomPack (PlyX header + engine image,
-//                                       ~230 KB measured) — XIP 0x107C0000.
+//   flash 0x7C0000..0x7FDFFF (248 KB)   DoomPack (PlyX header + engine image,
+//                                       211,384 B measured) — XIP 0x107C0000.
+//   flash 0x7FE000..0x7FFFFF ( 8 KB)    EEPROM — see FW_EEPROM_RESERVE_SIZE.
+//
+// ⚠️ The DoomPack slot STOPS SHORT of the end of flash, and that is load-bearing.
+// It used to be declared as the full 256 KB to 0x800000, which overlapped the
+// EEPROM backing store exactly. Nothing caught it because the pack is 211 KB and
+// only the sectors an image actually needs are erased — but fw_staging_finalize()
+// accepts any image up to slot_size - 64, so a pack that grew into its own
+// declared slot would have erased the user's keymap and settings as a side
+// effect, with no diagnostic. Deriving the size keeps the two provably disjoint.
 #define FW_DOOMWAD_SLOT_OFF   0x200000UL
 #define FW_DOOMWAD_SLOT_SIZE  0x1C0000UL
 #define FW_DOOMPACK_SLOT_OFF  0x3C0000UL
-#define FW_DOOMPACK_SLOT_SIZE 0x040000UL
+#define FW_DOOMPACK_SLOT_SIZE (0x040000UL - FW_EEPROM_RESERVE_SIZE)   // 248 KB
 
 // On-wire pseudo bundle ids (CMD_FONTPACK_BEGIN data[10]) selecting the
 // DOOMWAD / DOOMPACK targets — the doom installs ride the font-pack HID flow.

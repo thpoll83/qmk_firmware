@@ -18,22 +18,35 @@ same engine objects re-linked at the pack address. Measured results:
 | monolithic doom (`POLYKYBD_DOOM=yes`) | 603,972 B | — |
 | **pack-flavour firmware** (`POLYKYBD_DOOM_PACK=yes`) | **398,580 B** | **−205 KB** |
 | normal (no doom) | 384,460 B | −219 KB |
-| `doom_pack_v2.plyx` (engine pack, flashed once) | 211,384 B | fits the 256 KB slot with ~50 KB headroom; engine statics 24,396 B at the pool front |
+| `doom_pack_v2.plyx` (engine pack, flashed once) | 211,384 B | fits the 248 KB slot with ~41 KB headroom; engine statics 24,396 B at the pool front |
 
 ## 1. Flash map carve-out
 
 The upper 2 MB of the resource region (`FW_RESOURCE_OFFSET` 0x400000)
 currently belongs entirely to the WHX (`FW_DOOMWAD_SLOT_*`). The pack takes
-the top 256 KB:
+the top 248 KB — **not** the top 256 KB: the last 8 KB of flash is the
+wear-levelling EEPROM (see the ⚠️ below the table).
 
 | flash offset | XIP address | size | contents |
 |---|---|---|---|
 | 0x600000 | 0x10600000 | **1.75 MB** (was 2 MB) | `doom1.whx` (`IWHX`) — engine `TINY_WAD_ADDR`; current WHX is 1,800,344 B → ~35 KB headroom |
-| 0x7C0000 | 0x107C0000 | **256 KB** | **DoomPack** (`PlyX` header + engine image); measured need ~230 KB → ~26 KB headroom |
+| 0x7C0000 | 0x107C0000 | **248 KB** | **DoomPack** (`PlyX` header + engine image); measured 211,384 B → ~41 KB headroom |
+| 0x7FE000 | 0x107FE000 | **8 KB** | **EEPROM** — wear-levelling backing store, *not* ours (`FW_EEPROM_RESERVE_SIZE`) |
+
+⚠️ **The pack slot stops at 0x7FE000 because QMK's rp2040_flash wear-levelling
+driver places the emulated EEPROM at the top of physical flash**
+(`PICO_FLASH_SIZE_BYTES - WEAR_LEVELING_BACKING_SIZE`), which lands inside our
+resource region. Until 2026-08 the slot was declared as the full 256 KB and the
+two overlapped exactly. It never bit in practice — only the sectors an image
+needs are erased, and the pack is 211 KB — but `fw_staging_finalize()` accepts an
+image up to `slot_size - 64`, so a pack that grew into its own declared slot
+would have erased the keymap, brightness, language, idle style and Intl map with
+no diagnostic. `FW_DOOMPACK_SLOT_SIZE` is now derived from the reservation and
+`_Static_assert`ed against it in `fw_staging.c`.
 
 Constants in `base/fw_staging.h`: `FW_DOOMWAD_SLOT_SIZE` shrinks
 0x200000 → 0x1C0000; new `FW_DOOMPACK_SLOT_OFF 0x3C0000` /
-`FW_DOOMPACK_SLOT_SIZE 0x40000`; new pseudo-bundle id
+`FW_DOOMPACK_SLOT_SIZE (0x40000 - FW_EEPROM_RESERVE_SIZE)`; new pseudo-bundle id
 `FONTPACK_BUNDLE_DOOMPACK 0x7E` (the WHX uses 0x7F). Static-asserted
 non-overlapping.
 

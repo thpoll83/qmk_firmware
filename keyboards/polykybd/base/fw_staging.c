@@ -22,6 +22,15 @@ _Static_assert(FW_UP_MAX_SIZE <= FW_STAGING_OFFSET,
 _Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_RESOURCE_OFFSET,
                "staging area overruns the resource region (FLASH_TARGET_OFFSET)");
 
+// The wear-levelling EEPROM sits at the TOP of flash, inside what the map above
+// calls the resource region, so the last resource slot has to stop short of it.
+// Two guards, because the reservation is expressed twice and they must agree:
+_Static_assert(FW_EEPROM_RESERVE_SIZE == WEAR_LEVELING_BACKING_SIZE,
+               "fw_staging.h EEPROM reservation disagrees with WEAR_LEVELING_BACKING_SIZE");
+_Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
+                   <= PICO_FLASH_SIZE_BYTES - WEAR_LEVELING_BACKING_SIZE,
+               "DoomPack slot overlaps the EEPROM backing store at the top of flash");
+
 // ---------------------------------------------------------------------------
 // Dual-core flash safety: halt core1 via PSM reset before any flash_range_*
 // call to prevent a CPU LOCKUP on core1.

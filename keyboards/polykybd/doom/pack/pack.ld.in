@@ -15,7 +15,7 @@ ENTRY(doom_pack_init)
 
 MEMORY
 {
-    PACKF (rx)  : ORIGIN = 0x107C0000 + 64, LENGTH = 0x40000 - 64
+    PACKF (rx)  : ORIGIN = 0x107C0000 + 64, LENGTH = @PACK_LEN@ - 64
     PACKR (rwx) : ORIGIN = @RAM_BASE@,      LENGTH = @RAM_SIZE@
 }
 

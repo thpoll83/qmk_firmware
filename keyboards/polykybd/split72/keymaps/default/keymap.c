@@ -209,7 +209,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,      KC_F13,     KC_F14,     KC_F15,     KC_F16,     KC_F17,     KC_F18,
         KC_MYCM,    KC_CALC,    KC_PSCR,    KC_SCRL,    KC_BRK,     KC_IDDQD,   KC_NO,
         KC_NO,      KC_DMIN,    KC_D1Q,     KC_DHLF,    KC_D3Q,     KC_DMAX,    KC_NO,      _______,
-        KC_LSFT,    KC_DDIM,    KC_DBRI,    KC_DAUTO,   KC_NO,      KC_NO,      KC_NO,      KC_NO,
+        // Centred under the five presets above (cols 1-5): three keys centre on col 3.
+        KC_LSFT,    KC_NO,      KC_DDIM,    KC_DBRI,    KC_DAUTO,   KC_NO,      KC_NO,      KC_NO,
         KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
                     KC_F19,     KC_F20,     KC_F21,     KC_F22,     KC_F23,     KC_F24,     KC_NO,

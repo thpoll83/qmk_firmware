@@ -220,6 +220,14 @@ enum my_keycodes {
     // Settings-layer key: replay the one-time startup ("Eden") animation on demand.
     // Appended at the very end (QK_USER range) so no existing keycode is renumbered.
     KC_EDEN,
+    // Settings-layer cycle keys for the two display settings that were previously
+    // reachable ONLY from the host (HID cmd 28 / 30), so a keyboard with no host app
+    // could not change them at all. Both CYCLE (wrap) rather than clamp, unlike
+    // KC_GLYPH_SIZE_UP/_DOWN: those carry a direction in their own glyph, while these
+    // are one key each, and the sets are short enough to walk. Appended at the very
+    // end for the same no-renumbering reason as KC_EDEN.
+    KC_IDLE_STYLE,
+    KC_GLYPH_SCRIPT,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —
@@ -227,8 +235,8 @@ static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // appended after it, so the two asserts above silently stopped covering the tail
 // they exist to bound.  Re-anchor these whenever something is appended to the
 // QK_KB_0 block.
-static_assert((int)KC_LAT_REMAP <= (int)QK_KB_MAX, "Too many custom QK key codes");
-static_assert((int)KC_LAT_REMAP < (int)KCL_ENUS, "Overlap detected");
+static_assert((int)KC_GLYPH_SIZE_UP <= (int)QK_KB_MAX, "Too many custom QK key codes");
+static_assert((int)KC_GLYPH_SIZE_UP < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 

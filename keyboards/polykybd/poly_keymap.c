@@ -3840,6 +3840,21 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
             startup_anim_start();
             local_state->anim_nonce++;
             break;
+        // Cycle the two display settings that were previously reachable only over HID
+        // (cmds 28 / 30) — a keyboard with no host app could not change them at all.
+        // Both go through the SAME setter the HID command uses, so the persist +
+        // master-authoritative sync behaviour is identical however the change arrives.
+        case KC_IDLE_STYLE:
+            set_idle_style((uint8_t)((get_idle_style() + 1u) % IDLE_STYLE_COUNT));
+            request_disp_refresh();
+            break;
+        case KC_GLYPH_SCRIPT:
+            // Wrap on GLYPH_SCRIPT_COUNT (what THIS firmware can draw), not on 0xFF:
+            // the wire accepts any index, but a key that walked past the known set
+            // would spend most of its presses showing the plain Latin fallback.
+            set_glyph_script((uint8_t)((get_glyph_script() + 1u) % GLYPH_SCRIPT_COUNT));
+            request_disp_refresh();
+            break;
         // ── Language layer: region tabs, paging, MRU controls, slot/MRU select ──
         case KC_LANG_CAT_BASE ... KC_LANG_PAGE_PREV - 1:
             lang_select_region((uint8_t)(keycode - KC_LANG_CAT_BASE));

@@ -152,22 +152,22 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_UL] = POLY_LAYOUT(
         KC_NO,   KC_F13,  KC_F14,  KC_F15,  KC_F16,  KC_F17,
         KC_MYCM, KC_CALC, KC_PSCR, KC_SCRL, KC_BRK,  KC_NO,
-        KC_LSFT, KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
-        KC_BASE, KC_NO,   KC_NO,
+        KC_LSFT, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
+        KC_BASE, KC_DDIM, KC_DBRI,
         KC_F18,  KC_F19,  KC_MPRV, KC_MPLY, KC_MSTP, KC_MNXT,
-        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_MUTE, KC_NO,
-        KC_NO,   KC_VOLD, KC_VOLU, KC_NO,   KC_NO,   KC_RSFT,
-        KC_NO,   KC_NO,   KC_BASE
+        KC_NO,   KC_NO,   KC_GLYPH_SIZE_DOWN, KC_GLYPH_SIZE_UP, KC_MUTE, KC_NO,
+        KC_MRWD, KC_VOLD, KC_VOLU, KC_MFFD, KC_NO,   KC_RSFT,
+        KC_DAUTO,KC_NO,   KC_BASE
     ),
     /* Settings layer */
     [_SL] = POLY_LAYOUT(
-        KC_DDIM, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
-        KC_DAUTO,KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_DBRI,
+        KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_NO, KC_NO, KC_NO, KC_NO,
+        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
         KC_BASE, LBL_TEXT,KC_TOGMODS,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_MAKE, QK_BOOT,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_RBT,
-        EE_CLR,  KC_STORE_EE, KC_GLYPH_SIZE_DOWN, KC_GLYPH_SIZE_UP, KC_NO, KC_NO,
+        EE_CLR,  KC_STORE_EE, KC_NO, KC_NO, KC_NO, KC_NO,
         DB_TOGG, KC_DEADKEY, KC_BASE
     ),
     // Language selection layer — mirrors the emoji picker. LEFT half: row 0 = the

@@ -27,6 +27,26 @@ static inline const uint32_t* kc_os_gui_icon(void) {
     }
 }
 
+// Legends for the two cycle keys. Both name the ACTIVE value rather than the key's
+// function, so the keycap answers "what is this set to" without being pressed — the
+// same reasoning as the OS-selector keys further down. An out-of-range value falls
+// back to "?" rather than indexing past the array: the glyph-script index is
+// deliberately OPEN-ENDED on the wire (a keyboard can be told about a script whose
+// font it does not carry), so this genuinely can be asked about an unknown value.
+static const uint32_t* idle_style_legend(void) {
+    static const uint32_t* const names[] = { U"Pulse", U"Jittr", U"IDDQD", U"Eden" };
+    const uint8_t v = get_idle_style();
+    return (v < ARRAY_SIZE(names)) ? names[v] : U"Idle?";
+}
+
+static const uint32_t* glyph_script_legend(void) {
+    static const uint32_t* const names[] = { U"Std",   U"Teng",  U"Rune",  U"Aureb",
+                                             U"SGA",   U"Cirth", U"VGA",   U"C64",
+                                             U"Amiga", U"APL",   U"Brail" };
+    const uint8_t v = get_glyph_script();
+    return (v < ARRAY_SIZE(names)) ? names[v] : U"Scr?";
+}
+
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {
     switch (keycode) {
         case SC_LCPO:                       return U"(   " CURRENCY_SIGN;
@@ -39,6 +59,23 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case TO(_EMJ):                      return U" " PRIVATE_EMOJI_1F600 U"\v" ICON_LAYER;
         case KC_DEADKEY:                    return (state_flags & DEAD_KEY_ON_WAKEUP) == 0 ? U"WakeX\r\v" ICON_SWITCH_OFF : U"WakeX\r\v" ICON_SWITCH_ON;
         case LBL_TEXT:                      return U"Text:";
+        // ⚠️ The five below had NO case at all, so to_static_text() returned NULL,
+        // translate_keycode() had no row for a QK_KB-range keycode, and the keycap
+        // rendered EMPTY. Same seam as the render_key()/to_static_text() pairing
+        // note in CLAUDE.md — a key with no legend is indistinguishable from a bug.
+        case KC_STORE_EE:                   return U"Store\r\v  EE";
+        case KC_IDDQD:                      return U"IDDQD";
+        // Layout selectors: the SHORT names, matching oled_helper.c's status-OLED
+        // array (keep the two in sync when a layout is added).
+        case KC_L0:                         return U"Qwrty";
+        case KC_L1:                         return U"Stag!";
+        case KC_L2:                         return U"ColDH";
+        case KC_L3:                         return U"Neo";
+        case KC_L4:                         return U"Wkmn";
+        // The two host-only settings that now have a key each. Both show the
+        // ACTIVE value, so the keycap answers "what is it set to" without a press.
+        case KC_IDLE_STYLE:                 return idle_style_legend();
+        case KC_GLYPH_SCRIPT:               return glyph_script_legend();
         case KC_EDEN:                       return U"Reset\r\vEden";
         // Keycap legend size, one tier per press (KC_GLYPH_SIZE_UP/_DOWN). Unicode's
         // own INCREASE/DECREASE FONT SIZE symbols, so the pair needs no words: 🗚 is a
@@ -176,7 +213,10 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_DHLF:                       return U"  " PRIVATE_DISP_HALF;
         case KC_DMIN:                       return U"  " PRIVATE_DISP_DARK;
         case KC_DMAX:                       return U"  " PRIVATE_DISP_BRIGHT;
-        case KC_DAUTO:                      return U" Auto";
+        // Auto-brightness (host daylight / LTR-559 sensor). State-reflecting like the
+        // other toggles on these layers — a bare "Auto" said neither what was
+        // automatic nor whether it was currently on.
+        case KC_DAUTO:                      return !get_brightness_auto_mode() ? U"Auto\r\v" ICON_SWITCH_OFF : U"Auto\r\v" ICON_SWITCH_ON;
         case KC_LANG:                       return (state_flags & MORE_TEXT) != 0 ? U"Lang" : PRIVATE_WORLD;
         case SH_TOGG:                       return U"SwpH";
         case QK_MAKE:                       return U"Make";

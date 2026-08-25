@@ -1314,20 +1314,25 @@ void housekeeping_task_user(void) {
 
 
 
-// Maps default layer to corresponding function layer (FL0 or FL1).
+// Maps a default layer to its function layer. There is now exactly ONE, so this is a
+// constant for every known base — kept as a function because callers pass a layer and
+// because a future variant could still want its own.
+//
+// This used to be the SECOND place the _FL0-vs-_FL1 choice was written down (the first
+// being MO(_FL*) in each base layer's keymap), and the two had to agree by hand. Both
+// encoded the same off-by-one: _L2 and _L4 were sent to the 1-6 layer while their own
+// number rows put 1-5 on the left half.
 // Global variables: (none - uses passed parameters only)
 layer_state_t get_function_layer(layer_state_t def_layer) {
     switch (def_layer) {
         case _L0:
-        case _L3:
-            return _FL0;
         case _L1:
         case _L2:
+        case _L3:
         case _L4:
-            return _FL1;
+            return _FL;
         default:
             return 0;
-
     }
 }
 
@@ -2560,6 +2565,25 @@ uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
 // base layer. The effective state folds in the default layer (`def_layer`, tracked
 // separately from the momentary `layer` stack — e.g. a Colemak/Neo base) so a key with
 // no momentary layer active still shows its default-layer legend, not _BL.
+// Resolve the KC_FKEY placeholder to the F-key matching the DIGIT this physical key
+// types on the active base layout: KC_1..KC_9 -> F1..F9, KC_0 -> F10, KC_MINUS -> F11,
+// KC_EQUAL -> F12. A position that types no digit on the current base resolves to
+// KC_NO, so it neither draws nor sends anything.
+//
+// Deriving the position is the whole point: the two layers this replaces encoded the
+// F-row split by hand and were WRONG for Colemak and Workman, whose right-half F-keys
+// each sat one position off their own number row. Reading the base layout cannot drift.
+static uint16_t resolve_fkey(uint8_t def_layer, uint8_t row, uint8_t col) {
+    const uint16_t base = poly_keycode_at(def_layer, row, col);
+    if (base >= KC_1 && base <= KC_9) { return (uint16_t)(KC_F1 + (base - KC_1)); }
+    if (base == KC_0)                 { return KC_F10; }
+    // DIGITS ONLY. F11/F12 stay literal in the keymap because they have no digit to
+    // match — and deriving them from KC_MINUS/KC_EQUAL silently cost Neo both keys:
+    // that layout spells its number-row tail with the German aliases DE_MINS/DE_GRV,
+    // which are different keycodes entirely.
+    return KC_NO;
+}
+
 static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t col) {
     layer_state_t eff = lyr->layer | ((layer_state_t)1 << lyr->def_layer);
     uint8_t layer = get_highest_layer(eff);
@@ -2567,6 +2591,10 @@ static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t
     if (kc == KC_TRNS) {
         kc = poly_keycode_at(get_highest_layer(eff & ~((layer_state_t)1 << layer)), row, col);
     }
+    // Resolve here rather than in to_static_text(): that sees only a keycode, while the
+    // F-key a KC_FKEY stands for depends on WHERE it is. Doing it at this one choke
+    // point means every existing F-key legend path keeps working untouched.
+    if (kc == KC_FKEY) { kc = resolve_fkey(lyr->def_layer, row, col); }
     return kc;
 }
 
@@ -3325,6 +3353,26 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             }
         }
         return false;
+    }
+
+    // Function layer: KC_FKEY stands for "the F-key belonging to whatever digit this
+    // physical key types on the active base layout". Resolve and forward it here, on
+    // BOTH edges — acting only on the release (as the settings keys below do) would
+    // give no auto-repeat and no held-F behaviour.
+    //
+    // Placed AFTER the two swallow-everything guards above on purpose: while the Eden
+    // intro or the unsigned-firmware prompt owns the board, nothing may reach the host.
+    if (keycode == KC_FKEY) {
+        const uint16_t fk = resolve_fkey(get_local_layer()->def_layer,
+                                         record->event.key.row, record->event.key.col);
+        if (fk != KC_NO) {
+            if (record->event.pressed) {
+                register_code16(fk);
+            } else {
+                unregister_code16(fk);
+            }
+        }
+        return false;   // a position with no digit on this base sends nothing
     }
 
     // Doom easter egg: in game mode every key event is swallowed (fed to the

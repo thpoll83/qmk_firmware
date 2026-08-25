@@ -154,8 +154,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_DELETE:                     return (state_flags & MORE_TEXT) != 0 ? U"Del" : TECHNICAL_ERASERIGHT;
         case KC_MYCM:                       return U"  " PRIVATE_PC;
         case TO(_SL):                       return PRIVATE_SETTINGS U"\v" ICON_LAYER;
-        case MO(_FL0):
-        case MO(_FL1):                      return U"Fn\r\v\t" ICON_LAYER;
+        case MO(_FL):                       return U"Fn\r\v\t" ICON_LAYER;
         case TO(_NL):                       return U"Nm\r\v\t" ICON_LAYER;
         case MO(_NL):                       return U"Nm!\r\v\t" ICON_LAYER;
         case KC_BASE:                       return U"Base\r\v\t" ICON_LAYER;

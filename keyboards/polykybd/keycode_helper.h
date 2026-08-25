@@ -228,6 +228,18 @@ enum my_keycodes {
     // end for the same no-renumbering reason as KC_EDEN.
     KC_IDLE_STYLE,
     KC_GLYPH_SCRIPT,
+    // Function-layer placeholder. Resolves at runtime to the F-key matching the
+    // DIGIT the same physical key types on the active base layout: KC_1..KC_0 ->
+    // F1..F10, KC_MINUS -> F11, KC_EQUAL -> F12. A position that types no digit on
+    // the current base resolves to KC_NO and draws blank.
+    //
+    // This replaces the two hardcoded _FL0/_FL1 layers, whose whole purpose was to
+    // offer two F-row splits so the F-keys lined up with each layout's number row —
+    // and which got it WRONG for Colemak (_L2) and Workman (_L4): both put digits
+    // 1-5 on the left half but selected the 1-6 layer, so every right-half F-key sat
+    // one position off (the key typing `6` gave F7). Deriving the position removes
+    // the hand-maintained MO(_FL0)-vs-MO(_FL1) choice that nothing validated.
+    KC_FKEY,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —

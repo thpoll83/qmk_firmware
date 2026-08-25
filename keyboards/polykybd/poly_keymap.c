@@ -3239,7 +3239,61 @@ void kdisp_idle(uint8_t contrast) {
 // if the active OS changed while the key was held. See the swap block below.
 static uint8_t s_apple_swap_latch = 0;
 
+// One physical press must produce exactly ONE settings action — and because the
+// settings/utility keycodes act on the RELEASE edge, that is not free once such a
+// key sits on a ONE-SHOT layer. QMK re-dispatches a synthetic release for a key
+// pressed while a one-shot layer is active (quantum/action.c process_action():
+// `record->event.pressed = false; layer_on(oneshot); process_record(record);`).
+// That inner dispatch runs post_process_record_user once, and because it mutates
+// the SAME record the OUTER post_process then sees pressed==false too — after
+// which the finger lifts and the real release arrives. Three release dispatches
+// for one tap. `_UL` is entered with OSL(), so moving the glyph-size and
+// brightness keys there made every step key step up to three tiers (field,
+// 2026-08-25; it reads as "twice" because the third step clamps at the end tier).
+// `_SL` is entered with TO(), which is why the same keys never doubled there.
+//
+// Fix: arm the key's matrix position on the PRESS edge — process_record_user runs
+// before process_action, so it always sees the real press — and let the FIRST
+// release consume it. A per-position bitmap rather than a single slot, so
+// overlapping presses (down A, down B, up A, up B) each keep their own arming.
+#define POLY_KEY_ARM_BYTES (((MATRIX_ROWS) * (MATRIX_COLS) + 7) / 8)
+static uint8_t s_key_armed[POLY_KEY_ARM_BYTES];
+
+static inline uint16_t key_arm_index(keypos_t key) {
+    return (uint16_t)key.row * MATRIX_COLS + key.col;
+}
+
+static inline void arm_key_action(keypos_t key) {
+    if (key.row >= MATRIX_ROWS || key.col >= MATRIX_COLS) {
+        return;
+    }
+    const uint16_t idx = key_arm_index(key);
+    s_key_armed[idx >> 3] |= (uint8_t)(1u << (idx & 7));
+}
+
+// True exactly once per armed press; clears the arming so any further release
+// dispatch for the same physical press is ignored.
+static inline bool consume_key_action(keypos_t key) {
+    if (key.row >= MATRIX_ROWS || key.col >= MATRIX_COLS) {
+        return false;
+    }
+    const uint16_t idx = key_arm_index(key);
+    const uint8_t  bit = (uint8_t)(1u << (idx & 7));
+    if ((s_key_armed[idx >> 3] & bit) == 0) {
+        return false;
+    }
+    s_key_armed[idx >> 3] &= (uint8_t)~bit;
+    return true;
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+
+    // Arm this key position for the single release-edge action allowed per press
+    // (see arm_key_action above). Done first, before any swallow path, so the
+    // arming can never be skipped for a press that is otherwise handled.
+    if (record->event.pressed) {
+        arm_key_action(record->event.key);
+    }
 
     // While the ONE-SHOT startup ("Eden") animation is playing, swallow every key
     // event — no typing is wanted (or needed) during the intro. Keys from both
@@ -3685,7 +3739,10 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     }
     poly_sync_t* local_state = access_local_state();
     poly_layer_t* local_layer = access_local_layer();
-    if (!record->event.pressed) {
+    // Consume the press arming: one physical press, one action. Without this a
+    // key on the OSL-entered _UL layer runs this block up to three times — see
+    // arm_key_action() above for the QMK mechanism.
+    if (!record->event.pressed && consume_key_action(record->event.key)) {
         switch (keycode) {
         case KC_RGB_TOG:
             local_state->flags = toggle_flag(local_state->flags, RGB_ON);

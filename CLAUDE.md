@@ -716,6 +716,38 @@ per-variant copies of the keymap logic (that drift is exactly what this
 extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
 `run_cog.sh` targets `poly_keymap.c`.
 
+### ⚠️ A release-edge action fires up to THREE times on a ONE-SHOT layer
+
+`post_process_record_user()`'s big `switch` lives inside `if (!record->event.pressed)`
+— every settings/utility keycode acts on the **release** edge. That is free on a
+`TO()` layer and **not** free on an `OSL()` one:
+
+- `process_action()` (`quantum/action.c`, the `do_release_oneshot` block at the very
+  end) re-dispatches a key pressed while a one-shot layer is active as a synthetic
+  release: `record->event.pressed = false; layer_on(oneshot); process_record(record);`.
+  That inner `process_record` runs the whole chain, `post_process_record_user`
+  included — **dispatch 1**.
+- It mutated the **same record**, so when it returns, the outer `process_record`'s own
+  `post_process_record_quantum(record)` also sees `pressed == false` — **dispatch 2**.
+- The finger then lifts and the real release arrives — **dispatch 3**.
+
+So one tap of `KC_GLYPH_SIZE_UP` stepped the legend size **three** tiers. It was
+reported as "triggered twice" (field, 2026-08-25) because the third step clamps at the
+end tier — a step key reads as ×2, an inc/dec (`KC_DDIM`/`KC_DBRI`) as ×3, and a
+**toggle** (`KC_DAUTO`) reads as *doing nothing at all*, which is the shape that would
+have been hardest to diagnose. These keys had lived on `_SL`, entered with `TO()`, for
+years; moving them to the `OSL()`-entered `_UL` is what exposed it.
+
+**Rule: gate every release-edge action on an arming set at the PRESS edge.**
+`arm_key_action()` / `consume_key_action()` in `poly_keymap.c` — a bitmap indexed by
+matrix position (not a single slot, so overlapping presses each keep their own
+arming), armed at the top of `process_record_user()` (which runs *before*
+`process_action`, so it always sees the real press) and consumed by the first release.
+⚠️ Do **not** "fix" this by moving the actions to the press edge instead: the release
+edge is deliberate — `split72.c`'s `matrix_scan_kb` inverts a keycap on press and
+un-inverts it on release independently of `process_record`, so a press-edge redraw
+fights that inversion (the same reasoning the FW-2 confirm prompt is written up with).
+
 ### HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)

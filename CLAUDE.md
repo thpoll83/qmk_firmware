@@ -738,15 +738,24 @@ end tier — a step key reads as ×2, an inc/dec (`KC_DDIM`/`KC_DBRI`) as ×3, a
 have been hardest to diagnose. These keys had lived on `_SL`, entered with `TO()`, for
 years; moving them to the `OSL()`-entered `_UL` is what exposed it.
 
-**Rule: gate every release-edge action on an arming set at the PRESS edge.**
-`arm_key_action()` / `consume_key_action()` in `poly_keymap.c` — a bitmap indexed by
-matrix position (not a single slot, so overlapping presses each keep their own
-arming), armed at the top of `process_record_user()` (which runs *before*
-`process_action`, so it always sees the real press) and consumed by the first release.
-⚠️ Do **not** "fix" this by moving the actions to the press edge instead: the release
-edge is deliberate — `split72.c`'s `matrix_scan_kb` inverts a keycap on press and
-un-inverts it on release independently of `process_record`, so a press-edge redraw
-fights that inversion (the same reasoning the FW-2 confirm prompt is written up with).
+**Rule: a custom PolyKybd keycode is handled and SWALLOWED in
+`process_record_user()`, never left to `post_process_record_user()`.** QMK has no
+per-press dedupe for `post_process_record_*` — the docs describe it only as "runs
+after each key press" — but it does not need one, because `process_record()` returns
+**before** `process_action()` when `process_record_user()` returns false, so the
+synthetic release is never generated at all. QMK compensates for the swallow in the
+same early-return path (`clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED)`), so
+`OSL()` still resolves after one key. `poly_custom_key_action()` in `poly_keymap.c`
+holds the whole settings switch (both edges) and returns whether it owned the
+keycode; `process_record_user()` calls it last, before `display_wakeup()`.
+- ⚠️ **A REAL keycode cannot use this** — swallowing it would stop it reaching the
+  host. The shifts, the `_LL` F-keys and `RM_NEXT`/`RM_PREV` therefore stay in
+  `post_process_record_user()`; all three are idempotent repaints, so the extra
+  dispatches are harmless, and a modifier never gets them (`process_action()`
+  excludes `IS_MODIFIER_KEYCODE` from the re-dispatch).
+- ⚠️ A per-key "armed on press, consumed on release" bitmap was written first and
+  **replaced** — it worked, but it is a bespoke guard for something the framework
+  already answers.
 
 ### HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload

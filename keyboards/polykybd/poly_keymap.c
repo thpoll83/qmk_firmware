@@ -3239,61 +3239,277 @@ void kdisp_idle(uint8_t contrast) {
 // if the active OS changed while the key was held. See the swap block below.
 static uint8_t s_apple_swap_latch = 0;
 
-// One physical press must produce exactly ONE settings action — and because the
-// settings/utility keycodes act on the RELEASE edge, that is not free once such a
-// key sits on a ONE-SHOT layer. QMK re-dispatches a synthetic release for a key
-// pressed while a one-shot layer is active (quantum/action.c process_action():
-// `record->event.pressed = false; layer_on(oneshot); process_record(record);`).
-// That inner dispatch runs post_process_record_user once, and because it mutates
-// the SAME record the OUTER post_process then sees pressed==false too — after
-// which the finger lifts and the real release arrives. Three release dispatches
-// for one tap. `_UL` is entered with OSL(), so moving the glyph-size and
-// brightness keys there made every step key step up to three tiers (field,
-// 2026-08-25; it reads as "twice" because the third step clamps at the end tier).
-// `_SL` is entered with TO(), which is why the same keys never doubled there.
+// Every PolyKybd settings/utility keycode is handled HERE, in process_record_user,
+// and swallowed (`return false`) — not in post_process_record_user. That is the
+// QMK-sanctioned shape for a custom keycode, and it is what keeps one physical
+// press to one action on a ONE-SHOT layer:
 //
-// Fix: arm the key's matrix position on the PRESS edge — process_record_user runs
-// before process_action, so it always sees the real press — and let the FIRST
-// release consume it. A per-position bitmap rather than a single slot, so
-// overlapping presses (down A, down B, up A, up B) each keep their own arming.
-#define POLY_KEY_ARM_BYTES (((MATRIX_ROWS) * (MATRIX_COLS) + 7) / 8)
-static uint8_t s_key_armed[POLY_KEY_ARM_BYTES];
-
-static inline uint16_t key_arm_index(keypos_t key) {
-    return (uint16_t)key.row * MATRIX_COLS + key.col;
-}
-
-static inline void arm_key_action(keypos_t key) {
-    if (key.row >= MATRIX_ROWS || key.col >= MATRIX_COLS) {
-        return;
+//  * `process_record()` (quantum/action.c) returns BEFORE `process_action()` when
+//    `process_record_user()` returns false, so the synthetic release
+//    `process_action()` re-dispatches for a key pressed while a one-shot layer is
+//    active (`record->event.pressed = false; process_record(record);`) is never
+//    generated at all. Handled in post_process_record_user instead, that inner
+//    dispatch ran the action once, the OUTER post_process ran it again (the same
+//    record had been mutated), and the real release ran it a third time — one tap
+//    of KC_GLYPH_SIZE_UP on the OSL-entered _UL stepped the legend size three
+//    tiers (field, 2026-08-25; it reads as "twice" because the third step clamps
+//    at the end tier). _SL is entered with TO(), which is why the same keys never
+//    doubled there.
+//  * QMK compensates for the swallow itself: that same early-return path still
+//    runs `clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED)`, so OSL(_UL)
+//    resolves after one key exactly as before.
+//
+// These keycodes are display/state only and never travel to the host, so
+// swallowing them costs nothing. Real keycodes that also want a repaint (the
+// shifts, the F-keys, RM_NEXT/PREV) must NOT be swallowed and stay in
+// post_process_record_user — all three of those actions are idempotent repaints,
+// so the extra dispatches cost nothing there either.
+//
+// Returns true when the keycode was ours.
+static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
+    poly_sync_t*  local_state = access_local_state();
+    poly_layer_t* local_layer = access_local_layer();
+    bool handled = true;
+    if (!record->event.pressed) {
+        switch (keycode) {
+        case KC_RGB_TOG:
+            local_state->flags = toggle_flag(local_state->flags, RGB_ON);
+            break;
+        case KC_DEADKEY:
+            local_state->flags = toggle_flag(local_state->flags, DEAD_KEY_ON_WAKEUP);
+            request_disp_refresh();
+            break;
+        case KC_TOGMODS:
+            local_state->flags = toggle_flag(local_state->flags, MODS_AS_TEXT);
+            request_disp_refresh();
+            break;
+        case KC_TOGTEXT:
+            local_state->flags = toggle_flag(local_state->flags, MORE_TEXT);
+            request_disp_refresh();
+            break;
+        // Default-layer selectors. `def_layer` holds a layer INDEX (_L0.._L4) — the
+        // same value display_keycode_at() folds in as `1 << def_layer` to pick the
+        // keycap legends. Drive QMK's resolved layer through the SAME momentary
+        // mechanism the boot path (keyboard_post_init) and KC_BASE use —
+        // layer_clear() + layer_on(index) — NOT default_layer_set(): that QMK API
+        // takes a layer_state_t BITMASK, so passing it the index set the wrong base
+        // (e.g. _L2=2 -> 0b10 = layer 1), making the keys type a different layer than
+        // the keycaps showed. Persistence still round-trips the index via eeconfig
+        // (defer_default_layer_save -> persistent_default_layer_get at boot).
+        case KC_L0:
+            local_layer->def_layer = _L0;
+            defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
+            request_disp_refresh();
+            break;
+        case KC_L1:
+            local_layer->def_layer = _L1;
+            defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
+            request_disp_refresh();
+            break;
+        case KC_L2:
+            local_layer->def_layer = _L2;
+            defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
+            request_disp_refresh();
+            break;
+        case KC_L3:
+            local_layer->def_layer = _L3;
+            defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
+            request_disp_refresh();
+            break;
+        case KC_L4:
+            local_layer->def_layer = _L4;
+            defer_default_layer_save(local_layer->def_layer);
+            layer_clear();
+            layer_on(local_layer->def_layer);
+            request_disp_refresh();
+            break;
+        case KC_BASE:
+            layer_clear();
+            layer_on(local_layer->def_layer);
+            break;
+        case KC_D1Q:
+            set_user_brightness(FULL_BRIGHT/4);
+            break;
+        case KC_D3Q:
+            set_user_brightness((FULL_BRIGHT/4)*3);
+            break;
+        case KC_DHLF:
+            set_user_brightness(FULL_BRIGHT/2);
+            break;
+        case KC_DMAX:
+            set_user_brightness(FULL_BRIGHT);
+            break;
+        case KC_DMIN:
+            set_user_brightness(2);
+            break;
+        case KC_DDIM:
+            dec_brightness();
+            break;
+        case KC_DBRI:
+            inc_brightness();
+            break;
+        case KC_DAUTO:
+            // Toggle host-driven (daylight/auto) brightness vs. manual control.
+            // This switch is inside `if (!record->event.pressed)`, so it already
+            // runs once per keypress (on release) — no extra guard needed.
+            toggle_brightness_auto_mode();
+            request_disp_refresh();
+            break;
+        case KC_OS_ICON:
+            // Cycle the active-OS selection: auto -> pin Windows -> macOS -> Linux
+            // -> Android -> auto. A manual pin overrides detection/host and survives
+            // reboots (the only way to select Android). Runs once on release.
+            if (get_os_auto_mode()) {
+                set_user_os(POLY_OS_WINDOWS);                 // auto -> first pin
+            } else if (get_active_os() >= POLY_OS_ANDROID) {
+                set_os_auto_mode(true);                       // last pin (Android) -> back to auto
+            } else {
+                set_user_os((uint8_t)(get_active_os() + 1));  // next pin
+            }
+            request_disp_refresh();
+            break;
+        case KC_OS_SET_AUTO ... KC_OS_SET_END - 1: {
+            // Direct OS selection (settings layer): KC_OS_SET_AUTO clears the pin
+            // (back to host/USB detection); the others pin a specific OS. The
+            // offset from KC_OS_SET_BASE is the poly_os value. We are already inside
+            // the `if (!record->event.pressed)` block, so this runs once on release.
+            uint8_t sel = (uint8_t)(keycode - KC_OS_SET_BASE);
+            if (sel == POLY_OS_UNKNOWN) {
+                set_os_auto_mode(true);   // auto: detection / host wins
+            } else {
+                set_user_os(sel);         // pin this OS (survives reboot)
+            }
+            request_disp_refresh();
+            break;
+        }
+        case KC_STORE_EE:
+            // Manual "commit everything to EEPROM" — for users who want to be
+            // sure their changes survive a hard power-cut without suspending.
+            // Defer our own write to housekeeping (save_all_if_requested), and
+            // signal the slave to do the same via the SAVE_EEPROM sync flag,
+            // mirroring the edge-triggered overlay action flags (hid_com case 11):
+            // set the bit, push state, then clear it locally.
+            request_eeprom_save();
+            local_state->overlay_flags |= SAVE_EEPROM;
+            send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
+            local_state->overlay_flags &= ~SAVE_EEPROM;
+            break;
+        case KC_GLYPH_SIZE_UP:
+        case KC_GLYPH_SIZE_DOWN:
+            // Step the keycap legend size one tier, the same setting HID cmd 34
+            // drives. Runs once on release (we are inside the `if
+            // (!record->event.pressed)` block). No explicit sync: housekeeping picks
+            // the new size up into local_state and the diff carries it to the slave,
+            // which re-renders on receipt (split_sync.c). A step at either end is a
+            // no-op, so the refresh below is the only cost of pressing past it.
+            step_glyph_size(keycode == KC_GLYPH_SIZE_UP ? 1 : -1);
+            request_disp_refresh();
+            break;
+        case KC_EDEN:
+            // Trigger the startup ("Eden") animation NOW on this (master) half and bump
+            // the synced nonce so the slave plays in lockstep (the nonce is delivered by
+            // the one-shot bridge send in housekeeping, once the transport is up — see
+            // sync_and_refresh_displays gating). Input is swallowed while it plays.
+            startup_anim_start();
+            local_state->anim_nonce++;
+            break;
+        // Cycle the two display settings that were previously reachable only over HID
+        // (cmds 28 / 30) — a keyboard with no host app could not change them at all.
+        // Both go through the SAME setter the HID command uses, so the persist +
+        // master-authoritative sync behaviour is identical however the change arrives.
+        case KC_IDLE_STYLE: {
+            // Skip IDLE_STYLE_IDDQD: that one is the doom easter egg and has its own
+            // way in (typing IDDQD arms the utilities-layer key, doom_mode.c). A
+            // settings key that cycled into it would hand it to anyone who pressed
+            // this key twice. A board already ON that style still cycles out of it.
+            uint8_t style = get_idle_style();
+            do {
+                style = (uint8_t)((style + 1u) % IDLE_STYLE_COUNT);
+            } while (style == IDLE_STYLE_IDDQD);
+            set_idle_style(style);
+            request_disp_refresh();
+            break;
+        }
+        case KC_GLYPH_SCRIPT:
+            // Wrap on GLYPH_SCRIPT_COUNT (what THIS firmware can draw), not on 0xFF:
+            // the wire accepts any index, but a key that walked past the known set
+            // would spend most of its presses showing the plain Latin fallback.
+            set_glyph_script((uint8_t)((get_glyph_script() + 1u) % GLYPH_SCRIPT_COUNT));
+            request_disp_refresh();
+            break;
+        // ── Language layer: region tabs, paging, MRU controls, slot/MRU select ──
+        case KC_LANG_CAT_BASE ... KC_LANG_PAGE_PREV - 1:
+            lang_select_region((uint8_t)(keycode - KC_LANG_CAT_BASE));
+            break;
+        case KC_LANG_PAGE_PREV:
+            lang_page_prev();
+            request_disp_refresh();
+            break;
+        case KC_LANG_PAGE_NEXT:
+            lang_page_next();
+            request_disp_refresh();
+            break;
+        case KC_LANG_PRESET:
+            mru_lang_preset();
+            break;
+        case KC_LANG_CLEAR:
+            mru_lang_clear();
+            break;
+        case KC_LANG_MRU_BASE ... KC_LANG_SLOT_BASE - 1:
+        case KC_LANG_SLOT_BASE ... KC_LANG_END - 1: {
+            int16_t li = lang_index_for_keycode(keycode);
+            if (li >= 0) {
+                local_state->lang = (uint8_t)li;
+                mru_lang_push((uint8_t)li);
+                mark_settings_dirty();
+                layer_off(_LL);
+            }
+            break;
+        }
+        // Direct per-language selectors on the language layer (KCL_ENUS..last).
+        // The KCL_* and LANG_* enums are both generated from the same ordered
+        // language list, so LANG_xx == (KCL_xx - KCL_ENUS) — the two _Static_asserts
+        // above guard that — and the whole per-language block is one range case.
+        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1:
+            local_state->lang = (uint8_t)(keycode - KCL_ENUS);
+            mark_settings_dirty();
+            layer_off(_LL);
+            break;
+        default:
+            handled = false;
+            break;
+        }
     }
-    const uint16_t idx = key_arm_index(key);
-    s_key_armed[idx >> 3] |= (uint8_t)(1u << (idx & 7));
-}
-
-// True exactly once per armed press; clears the arming so any further release
-// dispatch for the same physical press is ignored.
-static inline bool consume_key_action(keypos_t key) {
-    if (key.row >= MATRIX_ROWS || key.col >= MATRIX_COLS) {
-        return false;
+    else {
+        switch (keycode)
+        {
+        case KC_LANG:
+            if (IS_LAYER_ON(_LL)) {
+                local_state->lang = (local_state->lang + 1) % NUM_LANG;
+                mark_settings_dirty();
+                layer_off(_LL);
+            }
+            else {
+                layer_on(_LL);
+            }
+            break;
+        default:
+            handled = false;
+            break;
+        }
     }
-    const uint16_t idx = key_arm_index(key);
-    const uint8_t  bit = (uint8_t)(1u << (idx & 7));
-    if ((s_key_armed[idx >> 3] & bit) == 0) {
-        return false;
-    }
-    s_key_armed[idx >> 3] &= (uint8_t)~bit;
-    return true;
+    return handled;
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
-
-    // Arm this key position for the single release-edge action allowed per press
-    // (see arm_key_action above). Done first, before any swallow path, so the
-    // arming can never be skipped for a press that is otherwise handled.
-    if (record->event.pressed) {
-        arm_key_action(record->event.key);
-    }
 
     // While the ONE-SHOT startup ("Eden") animation is playing, swallow every key
     // event — no typing is wanted (or needed) during the intro. Keys from both
@@ -3729,6 +3945,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         }
     }
 
+    // A PolyKybd settings/utility keycode: act on it and swallow it here rather
+    // than in post_process_record_user — see poly_custom_key_action for why that
+    // is what makes one physical press produce exactly one action.
+    if (poly_custom_key_action(keycode, record)) {
+        display_wakeup(record);
+        return false;
+    }
+
     return display_wakeup(record);
 }
 
@@ -3737,218 +3961,17 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     if (keycode == KC_CAPS_LOCK) {
         request_disp_refresh();
     }
-    poly_sync_t* local_state = access_local_state();
-    poly_layer_t* local_layer = access_local_layer();
-    // Consume the press arming: one physical press, one action. Without this a
-    // key on the OSL-entered _UL layer runs this block up to three times — see
-    // arm_key_action() above for the QMK mechanism.
-    if (!record->event.pressed && consume_key_action(record->event.key)) {
+    // Only REAL keycodes are left here — ones that must reach process_action() and
+    // the host, so they cannot be handled-and-swallowed the way the PolyKybd
+    // settings keycodes now are (see poly_custom_key_action). All three actions are
+    // idempotent repaints, so the extra dispatches a one-shot layer produces are
+    // harmless; a modifier does not get them at all (process_action() excludes
+    // IS_MODIFIER_KEYCODE from the re-dispatch).
+    if (!record->event.pressed) {
         switch (keycode) {
-        case KC_RGB_TOG:
-            local_state->flags = toggle_flag(local_state->flags, RGB_ON);
-            break;
-        case KC_DEADKEY:
-            local_state->flags = toggle_flag(local_state->flags, DEAD_KEY_ON_WAKEUP);
-            request_disp_refresh();
-            break;
-        case KC_TOGMODS:
-            local_state->flags = toggle_flag(local_state->flags, MODS_AS_TEXT);
-            request_disp_refresh();
-            break;
-        case KC_TOGTEXT:
-            local_state->flags = toggle_flag(local_state->flags, MORE_TEXT);
-            request_disp_refresh();
-            break;
-        // Default-layer selectors. `def_layer` holds a layer INDEX (_L0.._L4) — the
-        // same value display_keycode_at() folds in as `1 << def_layer` to pick the
-        // keycap legends. Drive QMK's resolved layer through the SAME momentary
-        // mechanism the boot path (keyboard_post_init) and KC_BASE use —
-        // layer_clear() + layer_on(index) — NOT default_layer_set(): that QMK API
-        // takes a layer_state_t BITMASK, so passing it the index set the wrong base
-        // (e.g. _L2=2 -> 0b10 = layer 1), making the keys type a different layer than
-        // the keycaps showed. Persistence still round-trips the index via eeconfig
-        // (defer_default_layer_save -> persistent_default_layer_get at boot).
-        case KC_L0:
-            local_layer->def_layer = _L0;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L1:
-            local_layer->def_layer = _L1;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L2:
-            local_layer->def_layer = _L2;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L3:
-            local_layer->def_layer = _L3;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L4:
-            local_layer->def_layer = _L4;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_BASE:
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            break;
         case KC_RIGHT_SHIFT:
         case KC_LEFT_SHIFT:
             request_disp_refresh();
-            break;
-        case KC_D1Q:
-            set_user_brightness(FULL_BRIGHT/4);
-            break;
-        case KC_D3Q:
-            set_user_brightness((FULL_BRIGHT/4)*3);
-            break;
-        case KC_DHLF:
-            set_user_brightness(FULL_BRIGHT/2);
-            break;
-        case KC_DMAX:
-            set_user_brightness(FULL_BRIGHT);
-            break;
-        case KC_DMIN:
-            set_user_brightness(2);
-            break;
-        case KC_DDIM:
-            dec_brightness();
-            break;
-        case KC_DBRI:
-            inc_brightness();
-            break;
-        case KC_DAUTO:
-            // Toggle host-driven (daylight/auto) brightness vs. manual control.
-            // This switch is inside `if (!record->event.pressed)`, so it already
-            // runs once per keypress (on release) — no extra guard needed.
-            toggle_brightness_auto_mode();
-            request_disp_refresh();
-            break;
-        case KC_OS_ICON:
-            // Cycle the active-OS selection: auto -> pin Windows -> macOS -> Linux
-            // -> Android -> auto. A manual pin overrides detection/host and survives
-            // reboots (the only way to select Android). Runs once on release.
-            if (get_os_auto_mode()) {
-                set_user_os(POLY_OS_WINDOWS);                 // auto -> first pin
-            } else if (get_active_os() >= POLY_OS_ANDROID) {
-                set_os_auto_mode(true);                       // last pin (Android) -> back to auto
-            } else {
-                set_user_os((uint8_t)(get_active_os() + 1));  // next pin
-            }
-            request_disp_refresh();
-            break;
-        case KC_OS_SET_AUTO ... KC_OS_SET_END - 1: {
-            // Direct OS selection (settings layer): KC_OS_SET_AUTO clears the pin
-            // (back to host/USB detection); the others pin a specific OS. The
-            // offset from KC_OS_SET_BASE is the poly_os value. We are already inside
-            // the `if (!record->event.pressed)` block, so this runs once on release.
-            uint8_t sel = (uint8_t)(keycode - KC_OS_SET_BASE);
-            if (sel == POLY_OS_UNKNOWN) {
-                set_os_auto_mode(true);   // auto: detection / host wins
-            } else {
-                set_user_os(sel);         // pin this OS (survives reboot)
-            }
-            request_disp_refresh();
-            break;
-        }
-        case KC_STORE_EE:
-            // Manual "commit everything to EEPROM" — for users who want to be
-            // sure their changes survive a hard power-cut without suspending.
-            // Defer our own write to housekeeping (save_all_if_requested), and
-            // signal the slave to do the same via the SAVE_EEPROM sync flag,
-            // mirroring the edge-triggered overlay action flags (hid_com case 11):
-            // set the bit, push state, then clear it locally.
-            request_eeprom_save();
-            local_state->overlay_flags |= SAVE_EEPROM;
-            send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
-            local_state->overlay_flags &= ~SAVE_EEPROM;
-            break;
-        case KC_GLYPH_SIZE_UP:
-        case KC_GLYPH_SIZE_DOWN:
-            // Step the keycap legend size one tier, the same setting HID cmd 34
-            // drives. Runs once on release (we are inside the `if
-            // (!record->event.pressed)` block). No explicit sync: housekeeping picks
-            // the new size up into local_state and the diff carries it to the slave,
-            // which re-renders on receipt (split_sync.c). A step at either end is a
-            // no-op, so the refresh below is the only cost of pressing past it.
-            step_glyph_size(keycode == KC_GLYPH_SIZE_UP ? 1 : -1);
-            request_disp_refresh();
-            break;
-        case KC_EDEN:
-            // Trigger the startup ("Eden") animation NOW on this (master) half and bump
-            // the synced nonce so the slave plays in lockstep (the nonce is delivered by
-            // the one-shot bridge send in housekeeping, once the transport is up — see
-            // sync_and_refresh_displays gating). Input is swallowed while it plays.
-            startup_anim_start();
-            local_state->anim_nonce++;
-            break;
-        // Cycle the two display settings that were previously reachable only over HID
-        // (cmds 28 / 30) — a keyboard with no host app could not change them at all.
-        // Both go through the SAME setter the HID command uses, so the persist +
-        // master-authoritative sync behaviour is identical however the change arrives.
-        case KC_IDLE_STYLE:
-            set_idle_style((uint8_t)((get_idle_style() + 1u) % IDLE_STYLE_COUNT));
-            request_disp_refresh();
-            break;
-        case KC_GLYPH_SCRIPT:
-            // Wrap on GLYPH_SCRIPT_COUNT (what THIS firmware can draw), not on 0xFF:
-            // the wire accepts any index, but a key that walked past the known set
-            // would spend most of its presses showing the plain Latin fallback.
-            set_glyph_script((uint8_t)((get_glyph_script() + 1u) % GLYPH_SCRIPT_COUNT));
-            request_disp_refresh();
-            break;
-        // ── Language layer: region tabs, paging, MRU controls, slot/MRU select ──
-        case KC_LANG_CAT_BASE ... KC_LANG_PAGE_PREV - 1:
-            lang_select_region((uint8_t)(keycode - KC_LANG_CAT_BASE));
-            break;
-        case KC_LANG_PAGE_PREV:
-            lang_page_prev();
-            request_disp_refresh();
-            break;
-        case KC_LANG_PAGE_NEXT:
-            lang_page_next();
-            request_disp_refresh();
-            break;
-        case KC_LANG_PRESET:
-            mru_lang_preset();
-            break;
-        case KC_LANG_CLEAR:
-            mru_lang_clear();
-            break;
-        case KC_LANG_MRU_BASE ... KC_LANG_SLOT_BASE - 1:
-        case KC_LANG_SLOT_BASE ... KC_LANG_END - 1: {
-            int16_t li = lang_index_for_keycode(keycode);
-            if (li >= 0) {
-                local_state->lang = (uint8_t)li;
-                mru_lang_push((uint8_t)li);
-                mark_settings_dirty();
-                layer_off(_LL);
-            }
-            break;
-        }
-        // Direct per-language selectors on the language layer (KCL_ENUS..last).
-        // The KCL_* and LANG_* enums are both generated from the same ordered
-        // language list, so LANG_xx == (KCL_xx - KCL_ENUS) — the two _Static_asserts
-        // above guard that — and the whole per-language block is one range case.
-        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1:
-            local_state->lang = (uint8_t)(keycode - KCL_ENUS);
-            mark_settings_dirty();
-            layer_off(_LL);
             break;
         case KC_F1:case KC_F2:case KC_F3:case KC_F4:case KC_F5:case KC_F6:
         case KC_F7:case KC_F8:case KC_F9:case KC_F10:case KC_F11:case KC_F12:
@@ -3964,16 +3987,6 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_RIGHT_SHIFT:
         case KC_LEFT_SHIFT:
             request_disp_refresh();
-            break;
-        case KC_LANG:
-            if (IS_LAYER_ON(_LL)) {
-                local_state->lang = (local_state->lang + 1) % NUM_LANG;
-                mark_settings_dirty();
-                layer_off(_LL);
-            }
-            else {
-                layer_on(_LL);
-            }
             break;
         case RM_NEXT:
         case RM_PREV:

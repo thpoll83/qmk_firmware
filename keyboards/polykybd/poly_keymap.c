@@ -3948,12 +3948,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // A PolyKybd settings/utility keycode: act on it and swallow it here rather
     // than in post_process_record_user — see poly_custom_key_action for why that
     // is what makes one physical press produce exactly one action.
-    if (poly_custom_key_action(keycode, record)) {
-        display_wakeup(record);
+    //
+    // ⚠️ Wake FIRST and honour the verdict, which also restores the ORDER this had
+    // before the switch moved here (display_wakeup ran at the tail of
+    // process_record_user, i.e. before process_action and therefore before
+    // post_process_record_user). A dead wake press — displays off, DEAD_KEY_ON_WAKEUP
+    // set, past TURN_OFF_TIME — is meant to be thrown away, and it used to be: a false
+    // return made process_record_user() end the whole dispatch, so the action never
+    // ran. Only a PRESS can be rejected, so every release-edge settings key is
+    // unaffected; KC_LANG is the one press-edge case here and would otherwise open _LL
+    // / advance the language on the very press that exists only to wake the board.
+    const bool wake_accepted = display_wakeup(record);
+    if (wake_accepted && poly_custom_key_action(keycode, record)) {
         return false;
     }
 
-    return display_wakeup(record);
+    return wake_accepted;
 }
 
 // Post-processes keystrokes to handle display and state changes for various special keycodes.

@@ -239,6 +239,12 @@ static_assert((int)KC_GLYPH_SIZE_UP <= (int)QK_KB_MAX, "Too many custom QK key c
 static_assert((int)KC_GLYPH_SIZE_UP < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
+// ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes
+// stale: the two asserts directly above name KC_LANG_END / KC_OS_SET_END, but
+// KC_EDEN, KC_IDLE_STYLE and KC_GLYPH_SCRIPT are appended AFTER them, so neither
+// covers the tail of the QK_USER_0 block any more. Anchor on the LAST member and
+// re-anchor whenever something is appended.
+static_assert((int)KC_GLYPH_SCRIPT <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

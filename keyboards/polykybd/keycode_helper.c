@@ -207,17 +207,35 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_LSFT:
         case KC_RSFT:                       return (state_flags & MODS_AS_TEXT) != 0 ? U"Shft" : U" " ICON_SHIFT;
         case KC_NO:                         return U"";
-        case KC_DDIM:                       return U"  " ICON_LEFT;
-        case KC_DBRI:                       return U"  " ICON_RIGHT;
-        case KC_D1Q:                        return U"  " PRIVATE_DISP_DARKER;
-        case KC_D3Q:                        return U"  " PRIVATE_DISP_BRIGHTER;
-        case KC_DHLF:                       return U"  " PRIVATE_DISP_HALF;
-        case KC_DMIN:                       return U"  " PRIVATE_DISP_DARK;
-        case KC_DMAX:                       return U"  " PRIVATE_DISP_BRIGHT;
+        // The eight brightness keys read as ONE family: every legend is a sun whose
+        // rays grow with the level, so the keycaps say the same thing the status
+        // OLED's sun already says. Each is a single resident IconsFont glyph, which
+        // also keeps every glyph of a legend in one font (see the baseline-align
+        // rule in CLAUDE.md) — the old set mixed an arrow, five moon phases and a
+        // text+toggle composite and shared no visual language at all.
+        //
+        // ⚠️ The five presets were MOON PHASES, and the mapping ran BACKWARDS from
+        // the obvious reading: PRIVATE_DISP_BRIGHT was U+1F311 🌑 NEW MOON, i.e. the
+        // all-black disc, because it depicted the unlit screen rather than the
+        // brightness. Nothing else on the board used that convention.
+        // ⚠️ No leading pad space here, unlike the ICON_LEFT/_RIGHT legends above:
+        // each of these carries its own xOffset measured from BUFFER_X, so a space
+        // would advance the cursor and shift the whole cell right.
+        case KC_DMIN:                       return ICON_BRIGHT_0;
+        case KC_D1Q:                        return ICON_BRIGHT_1;
+        case KC_DHLF:                       return ICON_BRIGHT_2;
+        case KC_D3Q:                        return ICON_BRIGHT_3;
+        case KC_DMAX:                       return ICON_BRIGHT_4;
+        // Relative steps: no staircase (they name no level), so the sun's own size
+        // carries the direction and a +/- states it.
+        case KC_DDIM:                       return ICON_BRIGHT_DOWN;
+        case KC_DBRI:                       return ICON_BRIGHT_UP;
         // Auto-brightness (host daylight / LTR-559 sensor). State-reflecting like the
         // other toggles on these layers — a bare "Auto" said neither what was
-        // automatic nor whether it was currently on.
-        case KC_DAUTO:                      return !get_brightness_auto_mode() ? U"Auto\r\v" ICON_SWITCH_OFF : U"Auto\r\v" ICON_SWITCH_ON;
+        // automatic nor whether it was currently on. ⚠️ It spells the MODE out rather
+        // than wearing ICON_SWITCH_ON/OFF: a toggle beside a sun reads as "the light
+        // is on/off", which is the one thing this key does not control.
+        case KC_DAUTO:                      return get_brightness_auto_mode() ? ICON_BRIGHT_AUTO : ICON_BRIGHT_MAN;
         case KC_LANG:                       return (state_flags & MORE_TEXT) != 0 ? U"Lang" : PRIVATE_WORLD;
         case SH_TOGG:                       return U"SwpH";
         case QK_MAKE:                       return U"Make";

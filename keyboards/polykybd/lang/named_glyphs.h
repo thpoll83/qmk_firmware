@@ -2083,3 +2083,41 @@
 // new font entry and no bundle reship.
 #define ICON_FONT_BIGGER            	U"\x1F5DA"
 #define ICON_FONT_SMALLER           	U"\x1F5DB"
+
+// Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
+// The status OLED already says "brightness" with a sun, so the keycaps use the
+// same sun and grow its RAYS with the level; a staircase beside it states the
+// level outright, drawn with the status OLED's own rule that an unlit bar keeps a
+// 1px foot so the full scale stays visible.
+//
+// The staircase has FOUR steps because the five presets ARE quarters — KC_D1Q /
+// KC_DHLF / KC_D3Q / KC_DMAX set FULL_BRIGHT * 1/4, 1/2, 3/4, 1/1 — so each lights
+// exactly its own number of them, and KC_DMIN (brightness 2 of 50, below the first
+// quarter) lights none. Five steps would have put 50% and 75% on 2 and 3 of 5, i.e.
+// a meter misreporting the value it exists to state.
+//
+// ⚠️ These live in the C1 band 0x89-0x9F. Two of the slots are filled gaps and
+// three extended IconsFont's `last` 0x9C -> 0x9F; 0xA0+ stays off-limits because
+// IconsFont is g_all_fonts[0] and would shadow printable Latin-1 there. Run
+// `python3 tools/check_icon_slots.py` after touching any of this.
+//
+// ⚠️ KC_DMIN keeps a FILLED sun with zero rays, NOT a hollow one. It sets
+// brightness 2 of FULL_BRIGHT 50 — the dimmest LIT level, not off (DISP_OFF is
+// 0, MIN_BRIGHT is 1) — so a hollow sun would claim something the key does not do.
+#define ICON_BRIGHT_0               	U"\x0089"   // KC_DMIN  — no rays, staircase empty
+#define ICON_BRIGHT_1               	U"\x008A"   // KC_D1Q
+#define ICON_BRIGHT_2               	U"\x008B"   // KC_DHLF
+#define ICON_BRIGHT_3               	U"\x0093"   // KC_D3Q
+#define ICON_BRIGHT_4               	U"\x009A"   // KC_DMAX — full rays, staircase full
+#define ICON_BRIGHT_DOWN            	U"\x009B"   // KC_DDIM — small sun + '-'
+#define ICON_BRIGHT_UP              	U"\x009D"   // KC_DBRI — big sun + '+'
+#define ICON_BRIGHT_AUTO            	U"\x009E"   // KC_DAUTO while auto mode is ON
+#define ICON_BRIGHT_MAN             	U"\x009F"   // KC_DAUTO while auto mode is OFF
+
+// ⚠️ 0x8B was ICON_BACKSPACE, which nothing ever drew (verified: the macro had no
+// use outside its own definition, and no legend carried a raw \x8B). ICON_BRIGHT_2
+// now occupies that slot, so the old name is withdrawn rather than left pointing at
+// a sun. The #undef is here and not in the cog block above because that block is
+// GENERATED from the glyph sheet — deleting the line there would come back on the
+// next `cog -r lang/named_glyphs.h`, silently re-aliasing the slot.
+#undef ICON_BACKSPACE

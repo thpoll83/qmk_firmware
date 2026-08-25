@@ -3358,8 +3358,12 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             break;
         case KC_DAUTO:
             // Toggle host-driven (daylight/auto) brightness vs. manual control.
-            // This switch is inside `if (!record->event.pressed)`, so it already
-            // runs once per keypress (on release) — no extra guard needed.
+            // ⚠️ Once-per-press comes from poly_custom_key_action() being called
+            // from process_record_user() and SWALLOWING the keycode, not from the
+            // release edge on its own: on a one-shot layer a release-edge action
+            // fires up to three times, and a toggle is the shape where that reads
+            // as doing nothing at all (CLAUDE.md, "A release-edge action fires up
+            // to THREE times on a ONE-SHOT layer").
             toggle_brightness_auto_mode();
             request_disp_refresh();
             break;

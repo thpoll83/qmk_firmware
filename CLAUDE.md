@@ -1745,6 +1745,55 @@ like the glyph script:
   legend fills that height.
 - The shift/AltGr previews stay small **by design**: a keycap has room for one big thing.
 
+### Brightness keys — one icon family (`keycode_helper.c`, `base/fonts/gfx_icons.h`)
+
+The eight brightness keycodes now draw **one resident IconsFont glyph each**, all
+built on the sun the status OLED already uses for brightness: `KC_DMIN` / `KC_D1Q` /
+`KC_DHLF` / `KC_D3Q` / `KC_DMAX` are a sun whose **rays grow with the level** beside a
+staircase that states the level outright; `KC_DDIM` / `KC_DBRI` are a small/large sun
+with `−`/`+` and no staircase (they name no level); `KC_DAUTO` spells **AUTO** or
+**MANUAL** under the sun.
+
+- ⚠️ **What it replaced was actively misleading, not merely inconsistent.** The five
+  presets were **moon phases**, and the mapping ran BACKWARDS from the obvious
+  reading: `PRIVATE_DISP_BRIGHT` was **U+1F311 🌑 NEW MOON**, the all-black disc,
+  because it depicted the unlit *screen* rather than the brightness. Nothing else on
+  the board used that convention. `KC_DDIM`/`KC_DBRI` meanwhile borrowed the plain
+  page arrows `ICON_LEFT`/`ICON_RIGHT`, which say nothing about light at all.
+- **The staircase has FOUR steps because the presets ARE quarters** (`FULL_BRIGHT`
+  × 1/4, 1/2, 3/4, 1/1), so each lights exactly its own number of them and `KC_DMIN`
+  — brightness **2 of 50**, below the first quarter — lights none. Five steps put 50%
+  and 75% on 2 and 3 of 5, i.e. a meter misreporting the value it exists to state.
+  An unlit step keeps a **1px foot**, the status OLED's own rule
+  (`split72/status_oled.c` `draw_brightness_bars`), so the full scale stays visible.
+- ⚠️ **`KC_DMIN` keeps a FILLED sun with zero rays — do not "improve" it to a hollow
+  one.** It sets brightness 2, the dimmest **lit** level (`DISP_OFF` is 0,
+  `MIN_BRIGHT` is 1), so a hollow sun would claim an off state the key cannot reach.
+- ⚠️ **`KC_DAUTO` spells the mode out instead of wearing `ICON_SWITCH_ON/OFF`.** A
+  toggle beside a sun reads as *"the light is on/off"*, which is the one thing this
+  key does not control — reported in the field as exactly that confusion.
+- **One glyph per legend is the point, not an accident.** `kdisp_write_gfx_char`
+  baseline-aligns by `font->yAdvance - fonts[0]->yAdvance`, so a legend composed from
+  an icon plus base-font text sits on two baselines (the `à»ñ` note in the Intl-remap
+  traps). Baking each cell as a single IconsFont glyph — `IconsFont` **is** `fonts[0]`,
+  so its adjustment is 0 — makes the whole cell one unit at one baseline.
+  - ⚠️ **Therefore NO leading pad space**, unlike the `U"  " ICON_LEFT` legends beside
+    them. Each glyph carries its own `xOffset` measured from `BUFFER_X`; a space would
+    advance the cursor and shift the whole cell right.
+- **Cost: +1747 B of flash, 0 B of RAM** (`.data` 318292 → 320052, `.bss` unchanged).
+  Nine glyphs at 50–58 px wide; the monolithic `POLYKYBD_DOOM=yes` flavour still links.
+- ⚠️ **The now-unused `PRIVATE_DISP_*` moon macros stay, and so does the resident
+  `_Brightness_` font (1208 B) — it is NOT dead.** It covers `0x1F311..0x1F318`, which
+  the **emoji layer** also lists (`emoji/emoji_data.h`), and resident wins the
+  front-to-back lookup — so dropping it would silently re-render those emoji from the
+  pack at a different size. Removing a resident font also shifts every pack font's
+  gidx and forces a full-pack reship, for 1.2 KB against a 2 MB partition at ~38%.
+- **Verify by rendering, never by reading the header.** `PolyKybdHost/tools/gfx_font.py`
+  parses the committed headers and walks the same front-to-back `ALL_FONTS` lookup the
+  firmware does, so a sheet drawn through it checks the shipped bytes *and* the
+  codepoint routing. Count the pixels it drops outside the 72×40 window — that is the
+  clipping check, and it must be 0.
+
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 
 An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C
@@ -2313,8 +2362,29 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     migrated to the pack (settings→⚙ U+2699, cast→📶 U+1F4F6, sliders→🎛 U+1F39B,
     gfx-restart→🖵 U+1F5B5 + a half-scaled 🗘 overlay), so `IconsFont`'s `last` was
     dropped from `0xA5` to `0x9F` — the whole `0xA0+` tail is gone and **no printable
-    Latin-1 is shadowed anymore** (¢£¤¥ render from NotoSans again). The only mid-range
-    gap left is `0x9D` (C1 control, harmless).
+    Latin-1 is shadowed anymore** (¢£¤¥ render from NotoSans again).
+    - ⚠️ **The C1 band `0x80–0x9F` is now FULL — 32/32 slots.** The brightness-key
+      unification (2026-08-25) took the last nine: the five gaps `0x89 0x8A 0x93
+      0x9A 0x9B`, the dead `ICON_BACKSPACE` slot `0x8B`, and `0x9D 0x9E 0x9F` by
+      raising `last` `0x9C → 0x9F`. There is no room left for a tenth resident icon,
+      and `0xA0+` is not an option — see the shadowing trap above. The next one has
+      to go in the **pack** (a real PUA / an existing symbol codepoint), or free a
+      slot by migrating an existing icon there.
+    - **`python3 tools/check_icon_slots.py` is the gate, and it is the only thing
+      that can answer "is this slot free?"** — the named_glyphs sheet's own
+      "Distance Helper" column measures the sheet against *itself*, so a codepoint
+      that holds a real glyph but has no macro reads as free space. The script cross-
+      checks `gfx_icons.h` against `named_glyphs.h` in both directions (every glyph
+      named, every macro pointing at a real glyph) and exits 1 on either mismatch.
+      Run it after touching either file; picking an occupied slot otherwise fails
+      **silently**, because `IconsFont` is `g_all_fonts[0]` and simply wins.
+    - ⚠️ **A macro you want GONE cannot just be deleted — most of `named_glyphs.h`
+      is COG-GENERATED** (the block from `/*[[[cog` to `//[[[end]]]`, lines 9–1927,
+      comes from the glyph sheet). `ICON_BACKSPACE` lived there, so removing the line
+      would have come back on the next `cog -r lang/named_glyphs.h` and silently
+      re-aliased `0x8B` to a brightness sun. It is `#undef`'d in the hand-written
+      tail instead, which survives regeneration and turns any stale use into a
+      **compile error** rather than a wrong glyph.
   - **Removing a glyph from the MIDDLE of the range** (e.g. after migrating a hint
     to the pack): you can't delete it (the array must stay contiguous `first..last`).
     Turn its record into a **gap** `{off,0,0,0,0,0}` and drop its bitmap bytes, then

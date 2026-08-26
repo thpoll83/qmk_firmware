@@ -163,23 +163,27 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG,    KC_K,       KC_B,       KC_L,       KC_COMMA,   KC_DOT,     KC_SLASH,   KC_RSFT,
         KC_ENTER,   KC_BSPC,    KC_SPC,                 KC_LEFT,    KC_UP,      KC_DOWN,    KC_RIGHT
         ),
-    /* Function Layer (Fn) — ONE layer for all five base layouts.
+    /* Function Layer (Fn) — ONE layer for all five base layouts, with the F-ROW
+       DERIVED AT RUNTIME from whichever base layout is active.
        There used to be two, _FL0 and _FL1, differing only in where the F-row is cut
-       between the halves: _FL0 puts F1..F5 left / F6..F12 right, _FL1 F1..F6 left /
-       F7..F12 right. The stated reason was to line each layout's F-key up with its own
-       number key, and only ONE base layout needs the second cut — _L1 (Stag) carries
-       1..6 on its left half where the other four carry 1..5.
-       It had already stopped doing that job: _L2 (Colemak) and _L4 (Workman) both have
-       the ordinary 1..5 / 6..0 row and were both wired to _FL1, so F6 sat over their
-       "-"/"`" key and every F-key from 6 up was one position off. Two hand-maintained
-       near-copies drifted, which is what two hand-maintained near-copies do.
-       So: one layer, cut at 1..5 / 6..0. Qwerty and Neo are unchanged, Colemak and
-       Workman are FIXED, and Stag loses the alignment it alone had — its F6..F12 now
-       sit one key left of the matching number. That is the trade, and it is a keymap
-       edit away from being revisited (a per-layout function layer would come back
-       through get_function_layer(), which still switches on the base layer).
-       CAPS/INS also differed between the two copies with no layout justification; this
-       keeps _FL0's placement, the one Qwerty has always used. */
+       between the halves: _FL0 F1..F5 left / F6..F12 right, _FL1 F1..F6 left /
+       F7..F12 right. The reason was to line each layout's F-key up with its own
+       number key, and only _L1 (Stag) needs the second cut — it carries 1..6 on its
+       left half where the other four carry 1..5.
+       Two hand-maintained copies drifted, as two hand-maintained copies do: _L2
+       (Colemak) and _L4 (Workman) both have the ordinary 1..5 / 6..0 row and were
+       both wired to _FL1, so F6 sat over their "-" / "`" key and every F-key from 6
+       up was one position off. CAPS/INS had drifted apart too, with no layout reason.
+       So the cut is computed instead of copied — see fl_aligned_keycode() in
+       poly_keymap.c. Every layout is now aligned, Colemak and Workman included.
+       ⚠️ The 14 entries below are NOT dead data. They are the PRISTINE REFERENCE:
+       the alignment runs only while the stored row still matches them exactly, and
+       switches off for the whole row the moment the host editor changes any of it
+       (the editor reads through dynamic_keymap_get_buffer(), which cannot see a
+       runtime derivation, so aligning an edited row would show one keycode and type
+       another). They are also what a pristine Qwerty board resolves to, so the
+       default case is a no-op — verified, not assumed.
+       CAPS/INS keep _FL0's placement, the one Qwerty has always used. */
     [_FL] = LAYOUT_left_right_stacked(
         OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,     TO(_UL),
         _______,    _______,    _______,    _______,    _______,    _______,    _______,

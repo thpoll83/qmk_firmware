@@ -1969,7 +1969,10 @@
 // Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
 #define HINT_SMALL       U"\x10"      // draw the REST of the string half-scale (text, advances)
-#define HINT_BOX(sz)     U"\x13" sz    // SOLID rounded rect at the cursor, (w,h) = sz
+#define HINT_BADGE(sz, st) U"\x13" sz st  // lock badge at the cursor: (w,h) = sz,
+                                        //   st = BADGE_OFF outline / BADGE_ON solid
+#define BADGE_OFF        U"\x01"      // ...released: a 2px rounded outline
+#define BADGE_ON         U"\x02"      // ...engaged: the same silhouette, solid
 #define HINT_ERASE       U"\x14"      // draw the REST of the string as a HOLE, not as ink
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
 #define HINT_THIN        U"\x11"       // as HINT_HALF but DECIMATING (see disp_array.h)
@@ -2123,7 +2126,9 @@
 // draw the outline and the solid, and HINT_ERASE punches the arrow back out of the
 // solid one — which is what makes the engaged state read as inverted rather than as
 // a blob. The arrow is HINT_SMALL (half of 10x26 = 5x13), sized to clear the 2px
-// frame inside a 19x19 box.
+// frame inside a 19x19 box. HINT_BADGE fixes the corner radius at the one the baked
+// Caps/Num glyphs use (KDISP_BADGE_RADIUS), so the drawn box is indistinguishable
+// from theirs — HINT_FRAME's rounder radius, used first, visibly did not match.
 //
 // Geometry is measured: the box occupies visible x 44..62, y 6..24 (its bottom on the
 // text baseline, as the Caps badge's is) and the arrow inks x 51..55, y 8..20.
@@ -2134,9 +2139,9 @@
 #define HINT_SZ_SCRBOX    	U"\x13" U"\x13"   // 19 x 19
 #define HINT_POS_SCRARROW 	U"\x4E" U"\x11"   // (78,17) buffer: the half-scale arrow's baseline
 
-#define ICON_SCRLOCK_OFF  	U"Scr" HINT_MOVE(HINT_POS_SCRBOX) HINT_FRAME(HINT_SZ_SCRBOX) \
+#define ICON_SCRLOCK_OFF  	U"Scr" HINT_MOVE(HINT_POS_SCRBOX) HINT_BADGE(HINT_SZ_SCRBOX, BADGE_OFF) \
                           	HINT_MOVE(HINT_POS_SCRARROW) HINT_SMALL ARROWS_DOWNSTOP
-#define ICON_SCRLOCK_ON   	U"Scr" HINT_MOVE(HINT_POS_SCRBOX) HINT_BOX(HINT_SZ_SCRBOX) \
+#define ICON_SCRLOCK_ON   	U"Scr" HINT_MOVE(HINT_POS_SCRBOX) HINT_BADGE(HINT_SZ_SCRBOX, BADGE_ON) \
                           	HINT_MOVE(HINT_POS_SCRARROW) HINT_ERASE HINT_SMALL ARROWS_DOWNSTOP
 
 // Pause spells the word out, at half the base face (10px caps, 41px wide) so it fits

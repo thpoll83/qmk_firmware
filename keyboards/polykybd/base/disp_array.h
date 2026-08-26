@@ -156,6 +156,13 @@ void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height
 void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r);
 void kdisp_fill_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r);
 
+// Corner radius of a lock-indicator badge (HINT_BADGE, \x13). Measured, not chosen:
+// the baked ICON_CAPSLOCK_* / ICON_NUMLOCK_* glyphs inset their corners 2,1,0 px,
+// which is exactly a radius-2 arc — so a drawn badge at this radius is
+// indistinguishable from them. HINT_FRAME (\x12) keeps its own rounder radius for
+// the run-dialog hint.
+#define KDISP_BADGE_RADIUS 2
+
 // Shared tab chrome for the emoji and language selection layers: the selected-tab
 // frame (3px north/east/west border, open at the bottom, with chamfered top
 // corners) and the non-selected-tab bottom underline. Drawn page-wise straight

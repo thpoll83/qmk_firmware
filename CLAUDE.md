@@ -1824,9 +1824,18 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
   rides `poly_layer_t.led_state`, which is **synced**, so the slave half shows it too.
   - ⚠️ **The badge is DRAWN, not baked**, and that is forced: the resident C1 band is
     full (32/32), so there is nowhere to put the OFF/ON glyph pair Caps and Num each
-    get. `HINT_FRAME` draws the outline, **`HINT_BOX` (`\x13`)** the solid, and
-    **`HINT_ERASE` (`\x14`)** punches the arrow back out of the solid one — that
-    knock-out is what makes the engaged state read as *inverted* rather than as a blob.
+    get. **`HINT_BADGE` (`\x13`, args `w, h, style`)** draws either state — style 1 a
+    2px outline, style 2 the solid — and **`HINT_ERASE` (`\x14`)** punches the arrow
+    back out of the solid one; that knock-out is what makes the engaged state read as
+    *inverted* rather than as a blob.
+  - ⚠️ **The corner radius is MEASURED off the baked glyphs, and `HINT_FRAME` is the
+    wrong shape for this.** `ICON_CAPSLOCK_*` insets its corners **2, 1, 0 px** — a
+    radius-**2** arc — while `HINT_FRAME` draws at radius 4 (4, 2, 1, 1, 0), which
+    reads visibly rounder beside it. That is why `HINT_BADGE` fixes the radius at
+    `KDISP_BADGE_RADIUS` instead of taking it as an argument, and why `\x12` keeps its
+    own radius for the run-dialog hint: **do not merge the two ops.**
+  - ⚠️ **A style argument can never be 0** — these are `U"…"` strings, so a 0
+    codepoint terminates them. Hence outline = 1, solid = 2.
   - `kdisp_fill_round_rect()` is the solid sibling of `kdisp_draw_round_rect()`: a
     scanline fill whose per-row inset is `r - floor(sqrt(r² - d²))`. `r ≤ 4` in every
     caller, so the integer-sqrt loop is a few iterations — no float, no table.

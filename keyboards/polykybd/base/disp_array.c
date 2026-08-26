@@ -678,12 +678,28 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
             case U'\x11':   // THIN: as HALF but decimating, for icons whose gaps matter
                 if (text[1]) { kdisp_draw_glyph_thin_at(fonts, num_fonts, x_cursor, y_cursor, text[1]); text++; }
                 break;
-            case U'\x13':   // BOX: SOLID rounded rect at the cursor (next two = w, h) — the
-                            //   engaged half of a lock badge; pair with \x14 to punch the
-                            //   glyph back out of it, the way ICON_CAPSLOCK_ON is drawn.
-                if (text[1] && text[2]) {
-                    kdisp_fill_round_rect(x_cursor, y_cursor, (int8_t)text[1], (int8_t)text[2], 4);
-                    text += 2;
+            case U'\x13':   // BADGE: a lock-indicator box at the cursor. Next THREE codepoints
+                            //   are w, h and style — 1 = 2px outline (released), 2 = solid
+                            //   (engaged); pair the solid with \x14 to punch the glyph back
+                            //   out of it, the way ICON_CAPSLOCK_ON is drawn.
+                            //
+                            //   ⚠️ The radius is FIXED at KDISP_BADGE_RADIUS rather than taken
+                            //   as an argument, because the whole point is to match the baked
+                            //   ICON_CAPSLOCK_* / ICON_NUMLOCK_* glyphs, whose corners inset
+                            //   2,1,0 — exactly a radius-2 arc. \x12 (FRAME) keeps its own
+                            //   rounder radius for the run-dialog hint; do not merge them.
+                            //   ⚠️ style cannot be 0: a 0 codepoint terminates the string.
+                if (text[1] && text[2] && text[3]) {
+                    const int8_t bw = (int8_t)text[1], bh = (int8_t)text[2];
+                    if (text[3] == 2) {
+                        kdisp_fill_round_rect(x_cursor, y_cursor, bw, bh, KDISP_BADGE_RADIUS);
+                    } else {
+                        kdisp_draw_round_rect(x_cursor, y_cursor, bw, bh, KDISP_BADGE_RADIUS);
+                        kdisp_draw_round_rect((int8_t)(x_cursor + 1), (int8_t)(y_cursor + 1),
+                                              (int8_t)(bw - 2), (int8_t)(bh - 2),
+                                              (int8_t)(KDISP_BADGE_RADIUS - 1));
+                    }
+                    text += 3;
                 }
                 break;
             case U'\x14':   // ERASE: draw every FOLLOWING TEXT glyph as a hole, not as ink.
@@ -745,8 +761,8 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
             case U'\x11': if (text[1]) text += 1; break;            //   cursor and do not advance
             case U'\x0E':                                           // MOVE (x,y) / FRAME (w,h): two args
             case U'\x14':                    /* ERASE: a mode, no extent */ break;
-            case U'\x13':                                            // BOX (w,h): two args, and
-            case U'\x12': if (text[1] && text[2]) text += 2; break;   //   FRAME (w,h) likewise
+            case U'\x13': if (text[1] && text[2] && text[3]) text += 3; break;  // BADGE (w,h,style)
+            case U'\x12': if (text[1] && text[2]) text += 2; break;             // FRAME (w,h)
             default: {
                 // Locate the font whose [first,last] contains the codepoint (linear
                 // scan; this is a cold measuring path, no MRU cache needed).

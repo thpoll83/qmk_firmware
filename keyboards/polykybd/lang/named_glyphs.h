@@ -1975,6 +1975,9 @@
 #define BADGE_ON         U"\x02"      // ...engaged: the same silhouette, solid
 #define HINT_ERASE       U"\x14"      // draw the REST of the string as a HOLE, not as ink
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
+#define HINT_ROT(step, cp) U"\x15" step cp  // rotate cp CCW by step*15 deg, halve it,
+                                          // and plot at the cursor (no advance)
+#define ROT_CCW_120      U"\x08"      // 8 * 15 deg = 120 deg counter-clockwise
 #define HINT_THIN        U"\x11"       // as HINT_HALF but DECIMATING (see disp_array.h)
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
 #define HINT_RESET       U"\x18"       // reset cursor to the text origin
@@ -2182,17 +2185,24 @@
 #define HINT_SZ_STOPSQ              	U"\x0F" U"\x0F"   // 15 x 15
 #define ICON_MEDIA_STOP             	HINT_MOVE(HINT_POS_STOPSQ) HINT_BADGE(HINT_SZ_STOPSQ, BADGE_ON)
 
-// Context menu = the menu lines INSIDE a window frame. The bare U+2630 hamburger
-// reads as "a menu"; what this key opens is a menu belonging to something, which is
-// what the frame says - and it is the shape Windows itself puts on the Menu key.
-// The lines are HINT_HALF so they sit inside the 2px box rather than overflowing it;
-// the box is centred on the panel (buffer x48..79, y8..31) and the glyph centred in
-// it (its half-scale ink is 15x11 at buffer 56,14).
-#define HINT_POS_CTXBOX             	U"\x30" U"\x08"   // (48,8)  buffer: frame top-left
-#define HINT_SZ_CTXBOX              	U"\x20" U"\x18"   // 32 x 24
-#define HINT_POS_CTXLINES           	U"\x38" U"\x0E"   // (56,14) buffer: the half-scale lines' top-left
-#define ICON_CONTEXT_MENU           	HINT_MOVE(HINT_POS_CTXBOX) HINT_BADGE(HINT_SZ_CTXBOX, BADGE_OFF) \
-                                    	HINT_MOVE(HINT_POS_CTXLINES) HINT_HALF U"\x2630"
+// Context menu = a mouse pointer resting on the menu lines. There is no standardised
+// glyph for this: Unicode encodes no context-menu character (the two UI conventions,
+// U+22EE and U+2261, are not in the pack and are not standards for it either), and the
+// de-facto reference is the OEM legend on the physical Menu/Application key -- a menu
+// with a pointer on it, which is exactly what this draws.
+//
+// ⚠️ The pointer is a ROTATED U+27A4 because the pack contains no cursor: every
+// diagonal arrow (U+2196..99, U+2B08..0B) and every filled triangle (U+25E2..E5,
+// U+25B6, U+25C0) is MISSING from it, measured, so the only arrowheads available point
+// along an axis. 120 deg counter-clockwise from "rightwards" lands on the up-and-left
+// tilt a pointer is drawn at.
+//
+// Geometry is measured: the cell inks x11..59 y9..36 in a 0..71 x 0..39 window, so it is
+// centred horizontally to within half a pixel, with the tip clear of the bottom line
+// rather than overlapping it.
+#define HINT_POS_CTXPTR             	U"\x43" U"\x0F"   // (67,15) buffer: the pointer's top-left
+#define ICON_CONTEXT_MENU           	U" " U"\x2630" HINT_MOVE(HINT_POS_CTXPTR) \
+                                    	HINT_ROT(ROT_CCW_120, U"\x27A4")
 
 // Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
 // The status OLED already says "brightness" with a sun, so the keycaps use the

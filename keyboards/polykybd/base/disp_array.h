@@ -69,6 +69,13 @@ void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, in
 //                   logos through here and Alt through _half_at).
 void kdisp_draw_glyph_thin_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c);
 
+// Rotate a glyph counter-clockwise by `step` * 15 degrees, halve it, and plot it at
+// the literal (x, y). Same contract as kdisp_draw_glyph_half_at (no baseline align,
+// no advance); `step` is 1..24. Exists because the font pack contains NO diagonal
+// arrow and no filled triangle at all — every arrowhead in it points along an axis —
+// so a pointer/cursor can only be had by turning one.
+void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, uint8_t step);
+
 // The mirror of the above: composite a glyph scaled 2x (nearest, each source
 // pixel becomes a 2x2 block) with its top-left at buffer coords (x,y) — again no
 // baseline align, (x,y) is the literal top-left. The keycap fonts top out at the

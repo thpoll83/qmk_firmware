@@ -257,6 +257,87 @@ void kdisp_draw_glyph_thin_at(const GFXfont *const *fonts, uint8_t num_fonts, in
     }
 }
 
+// sin(k * 15 deg) in 8.8 fixed point, k = 0..23. cos(k) is sin(k + 6), so one
+// table covers both. 24 steps is the whole resolution the op offers: at these glyph
+// sizes a finer angle changes no pixels, and the table stays 48 bytes.
+static const int16_t s_sin15[24] = {
+       0,   66,  128,  181,  222,  247,  256,  247,
+     222,  181,  128,   66,    0,  -66, -128, -181,
+    -222, -247, -256, -247, -222, -181, -128,  -66,
+};
+
+// Rotate a glyph COUNTER-CLOCKWISE by step*15 degrees, then halve it, and plot the
+// result at the literal (x, y) — same "composite one icon into a hint" contract as
+// kdisp_draw_glyph_half_at (no baseline align, no xOffset, no cursor advance).
+//
+// ⚠️ It rotates at FULL resolution and halves afterwards, which is why there is a
+// 2x2 loop inside the pixel loop rather than a rotate of the already-halved glyph.
+// Halving first throws away the very pixels the rotation needs to reconstruct an
+// edge, and the arrowhead this exists for came out visibly broken that way.
+// Nothing is buffered: each destination half-pixel inverse-maps its own four
+// full-resolution positions straight back into the source, so the cost is bounded
+// by the OUTPUT size and the stack is untouched.
+//
+// Screen y runs DOWN, so a visually counter-clockwise turn is a negative angle in
+// this arithmetic — hence the (24 - step) index. The op's argument is stated in the
+// direction a reader means by "counter-clockwise", not in the sign the maths uses.
+void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, uint8_t step) {
+    const GFXfont  *font  = NULL;
+    const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
+    if (glyph == NULL || font == NULL) return;
+    const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
+    const uint16_t bo = glyph_bitmap_offset(glyph);
+    const int16_t  w  = glyph_width(glyph);
+    const int16_t  h  = glyph_height(glyph);
+    if (w <= 0 || h <= 0) return;
+    const uint8_t cb = glyph_col_bytes((uint8_t)h);
+
+    const uint8_t idx = (uint8_t)((24u - (step % 24u)) % 24u);
+    const int32_t ct  = s_sin15[(idx + 6u) % 24u];
+    const int32_t st  = s_sin15[idx];
+
+    // Centre of the source box, and the output extent, both in 8.8. The extent comes
+    // from forward-rotating the four corners: a rotated box is wider than the original.
+    const int32_t cx = ((int32_t)(w - 1) << 8) / 2;
+    const int32_t cy = ((int32_t)(h - 1) << 8) / 2;
+    int32_t x0 = INT32_MAX, x1 = INT32_MIN, y0 = INT32_MAX, y1 = INT32_MIN;
+    for (uint8_t c = 0; c < 4; ++c) {
+        const int32_t sx = (c & 1u) ? cx : -cx;
+        const int32_t sy = (c & 2u) ? cy : -cy;
+        const int32_t dx = (sx * ct - sy * st) >> 8;
+        const int32_t dy = (sx * st + sy * ct) >> 8;
+        if (dx < x0) x0 = dx;
+        if (dx > x1) x1 = dx;
+        if (dy < y0) y0 = dy;
+        if (dy > y1) y1 = dy;
+    }
+    const int16_t ow = (int16_t)(((x1 - x0) >> 8) + 1);
+    const int16_t oh = (int16_t)(((y1 - y0) >> 8) + 1);
+    const int16_t hw = (ow + 1) / 2, hh = (oh + 1) / 2;
+
+    for (int16_t dy = 0; dy < hh; ++dy) {
+        for (int16_t dx = 0; dx < hw; ++dx) {
+            bool lit = false;
+            for (uint8_t o = 0; o < 4 && !lit; ++o) {
+                // The full-resolution destination pixel this quarter stands for,
+                // expressed centre-relative so the inverse rotation is a pure rotate.
+                const int32_t fx = (((int32_t)(dx * 2 + (o & 1u))) << 8) + x0;
+                const int32_t fy = (((int32_t)(dy * 2 + (o >> 1))) << 8) + y0;
+                const int32_t sx = ((fx * ct + fy * st) >> 8) + cx;
+                const int32_t sy = ((-fx * st + fy * ct) >> 8) + cy;
+                // Round to the nearest source pixel; both are non-negative here only
+                // after the +cx/+cy shift, so round before narrowing.
+                const int32_t ix = (sx + 128) >> 8;
+                const int32_t iy = (sy + 128) >> 8;
+                if (ix < 0 || ix >= w || iy < 0 || iy >= h) continue;
+                const uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)ix * cb + (iy >> 3)]);
+                if (byte & (1u << (iy & 7))) lit = true;
+            }
+            if (lit) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+        }
+    }
+}
+
 void kdisp_draw_glyph_double_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
     const GFXfont *font = NULL;
     const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
@@ -705,6 +786,16 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
             case U'\x11':   // THIN: as HALF but decimating, for icons whose gaps matter
                 if (text[1]) { kdisp_draw_glyph_thin_at(fonts, num_fonts, x_cursor, y_cursor, text[1]); text++; }
                 break;
+            case U'\x15':   // ROT: rotate the next codepoint counter-clockwise and halve it,
+                            //   plotting at the cursor with no advance (as HALF does). Next TWO
+                            //   codepoints are the angle in 15-degree steps (1..24) and the glyph.
+                            //   ⚠️ The angle can never be 0 — a 0 codepoint terminates the string —
+                            //   which costs nothing, since a 0-degree turn is what \x0F already is.
+                if (text[1] && text[2]) {
+                    kdisp_draw_glyph_rot_half_at(fonts, num_fonts, x_cursor, y_cursor, text[2], (uint8_t)text[1]);
+                    text += 2;
+                }
+                break;
             case U'\x13':   // BADGE: a lock-indicator box at the cursor. Next THREE codepoints
                             //   are w, h and style — 1 = 2px outline (released), 2 = solid
                             //   (engaged); pair the solid with \x14 to punch the glyph back
@@ -780,6 +871,7 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
             case U'\x10':                    small = true; break;   // SMALL: rest of the run is half-scale
             case U'\x0F':                                           // HALF / THIN composite a glyph at the
             case U'\x11': if (text[1]) text += 1; break;            //   cursor and do not advance
+            case U'\x15': if (text[1] && text[2]) text += 2; break;            // ROT (angle, glyph)
             case U'\x0E':                                           // MOVE (x,y) / FRAME (w,h): two args
             case U'\x14':                    /* ERASE: a mode, no extent */ break;
             case U'\x13': if (text[1] && text[2] && text[3]) text += 3; break;  // BADGE (w,h,style)

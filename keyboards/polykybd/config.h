@@ -357,6 +357,16 @@
 
 #define PICO_FLASH_SIZE_BYTES (8 * 1024 * 1024)
 
+// ⚠️ The wear-levelling EEPROM backing store lives at the TOP of physical flash:
+// the rp2040_flash driver places it at PICO_FLASH_SIZE_BYTES - WEAR_LEVELING_BACKING_SIZE
+// (0x7FE000..0x800000 here), i.e. INSIDE our resource region — see the flash map in
+// base/fw_staging.h, where FW_DOOMPACK_SLOT_SIZE subtracts it. It is pinned here
+// rather than inherited from the driver default so that (a) the reservation is
+// visible beside the flash size it is carved out of, and (b) changing it is a
+// deliberate act that the _Static_assert in fw_staging.c re-checks against the
+// DoomPack slot. Raising it grows the store DOWNWARD into that slot.
+#define WEAR_LEVELING_BACKING_SIZE 8192
+
 #define OLED_FONT_START	32
 #define OLED_FONT_END	126
 #define OLED_FONT_H "base/fonts/base_font.h"

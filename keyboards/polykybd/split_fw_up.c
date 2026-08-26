@@ -128,7 +128,7 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
             // The doom WHX slot is fixed (upper resource region).
             fw_staging_set_fontpack_slot(FW_DOOMWAD_SLOT_OFF, FW_DOOMWAD_SLOT_SIZE);
         } else if (msg->target == FW_TARGET_DOOMPACK) {
-            // The executable engine pack slot is fixed (top 256 KB —
+            // The executable engine pack slot is fixed (top 248 KB, below the EEPROM —
             // doom/PACK_DESIGN.md; the slave's drone runs the same pack).
             fw_staging_set_fontpack_slot(FW_DOOMPACK_SLOT_OFF, FW_DOOMPACK_SLOT_SIZE);
         }

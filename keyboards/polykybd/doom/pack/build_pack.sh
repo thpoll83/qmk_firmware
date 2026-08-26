@@ -130,7 +130,18 @@ ARCH="-mcpu=cortex-m0plus -mthumb -Os -ffunction-sections -fdata-sections"
     -I"$REPO/keyboards/polykybd/doom" \
     -c "$PACK_DIR/pack_init.c" -o "$STASH/obj/pack_init.o"
 
-sed -e "s/@RAM_BASE@/$RAM_BASE/" -e "s/@RAM_SIZE@/$RAM_SIZE/" \
+# Pack slot size is DERIVED from the firmware header, never hardcoded: the slot is
+# the top 256 KB of flash MINUS the wear-levelling EEPROM reservation that sits above
+# it (FW_EEPROM_RESERVE_SIZE — the emulated EEPROM lives at the top of physical
+# flash). Hardcoding 0x40000 is how a pack the firmware would refuse — or worse, one
+# that reaches the EEPROM and erases the user's keymap — gets built.
+EEPROM_RESERVE=$(sed -n 's/^#define FW_EEPROM_RESERVE_SIZE[[:space:]]*\(0x[0-9A-Fa-f]*\)UL.*/\1/p' \
+                 "$REPO/keyboards/polykybd/base/fw_staging.h")
+[[ -n "$EEPROM_RESERVE" ]] || { echo "build_pack: cannot read FW_EEPROM_RESERVE_SIZE from fw_staging.h" >&2; exit 1; }
+PACK_LEN=$(( 0x40000 - EEPROM_RESERVE ))
+printf '   pack slot %d B (0x%X) after the %d B EEPROM reservation\n' "$PACK_LEN" "$PACK_LEN" "$((EEPROM_RESERVE))"
+
+sed -e "s/@RAM_BASE@/$RAM_BASE/" -e "s/@RAM_SIZE@/$RAM_SIZE/" -e "s/@PACK_LEN@/$PACK_LEN/" \
     "$PACK_DIR/pack.ld.in" > "$STASH/pack.ld"
 
 "$CC" $ARCH -nostartfiles \
@@ -153,7 +164,7 @@ python3 "$PACK_DIR/mkpack.py" \
 
 echo "== 5/5 budget check =="
 IMG=$(wc -c < "$STASH/doom_pack_image.bin")
-SLOT=$((0x40000 - 64))
+SLOT=$(( PACK_LEN - 64 ))   # PACK_LEN derived above; 64 = PlyX header
 [[ "$IMG" -le "$SLOT" ]] || { echo "build_pack: image $IMG B overflows the ${SLOT} B slot" >&2; exit 1; }
 STATICS=$(( 0x$("$NM" "$STASH/doom_pack.elf" | awk '$3=="__pack_statics_end__"{print $1}') - RAM_BASE ))
 echo "   image $IMG / $SLOT B, engine statics $STATICS B of $RAM_SIZE pool"

@@ -154,7 +154,15 @@ cache needs a flash home; finding it is the gating design question, not the tran
 | `0x200000–0x400000` | 2 MB | Firmware-update **staging** (4 KB header + staged image) | `FW_STAGING_OFFSET`, `FW_UP_MAX_SIZE 0x1FF000` |
 | `0x400000–0x600000` | 2 MB | **Font pack** — per-bundle slots | `FW_RESOURCE_OFFSET`, `fontpack_layout.h` |
 | `0x600000–0x7C0000` | 1.75 MB | **DOOM WAD** (opt-in, XIP-pinned) | `FW_DOOMWAD_SLOT_OFF/SIZE` |
-| `0x7C0000–0x800000` | 256 KB | **DOOM engine pack** (opt-in) | `FW_DOOMPACK_SLOT_OFF/SIZE` |
+| `0x7C0000–0x7FE000` | 248 KB | **DOOM engine pack** (opt-in) | `FW_DOOMPACK_SLOT_OFF/SIZE` |
+| `0x7FE000–0x800000` | 8 KB | **EEPROM** — wear-levelling backing store, *not available* | `FW_EEPROM_RESERVE_SIZE` / `WEAR_LEVELING_BACKING_SIZE` |
+
+⚠️ **The resource region is 4 MB minus that last 8 KB.** QMK's rp2040_flash
+wear-levelling driver puts the emulated EEPROM at the top of physical flash, so
+any scheme in this document that wants to claim flash must stop at `0x7FE000`,
+not `0x800000` — and note that *raising* the EEPROM size to buy room for
+runtime-configurable features (macros/combos) grows it downward into the pack
+slot, so the two proposals compete for the same bytes.
 
 ### 4.2 Candidate sources of ~1–2 MB (ranked by ease / least risk)
 1. **Shrink the staging window (best first candidate).** Staging is a full **2 MB**

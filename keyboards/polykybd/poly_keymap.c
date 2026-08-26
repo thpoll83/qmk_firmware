@@ -1413,6 +1413,30 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         // (doom_mode.c; always blank in non-doom builds via the stub).
         case KC_IDDQD:                      return doom_egg_armed() ? U"IDDQD" : U"";
 
+        // The legend-size key states BOTH what it will do and where you are: the
+        // increase/decrease icon plus the current tier as a digit in the top-right.
+        // Shift swaps the icon and reverses the step (poly_custom_key_action reads
+        // the same modifier), so one key replaces the old KC_GLYPH_SIZE_UP/_DOWN pair.
+        //
+        // ⚠️ It lives HERE and not in keycode_to_static_text() because both halves of
+        // it are SYNCED state: the size comes from poly_sync_t and the modifiers from
+        // poly_layer_t, and keycode_to_static_text() only receives `led_t` — so on the
+        // slave it would draw the master's tier with its own (always clear) mods.
+        case KC_GLYPH_SIZE_UP: {
+            const bool     shifted = (local_layer->mods & MOD_MASK_SHIFT) != 0;
+            const uint8_t  size    = local_state->glyph_size < GLYPH_SIZE_COUNT
+                                         ? local_state->glyph_size : GLYPH_SIZE_S;
+            static const uint32_t* const legend[2][GLYPH_SIZE_COUNT] = {
+                { GLYPH_SIZE_LEGEND(ICON_FONT_BIGGER,  U"1"),
+                  GLYPH_SIZE_LEGEND(ICON_FONT_BIGGER,  U"2"),
+                  GLYPH_SIZE_LEGEND(ICON_FONT_BIGGER,  U"3") },
+                { GLYPH_SIZE_LEGEND(ICON_FONT_SMALLER, U"1"),
+                  GLYPH_SIZE_LEGEND(ICON_FONT_SMALLER, U"2"),
+                  GLYPH_SIZE_LEGEND(ICON_FONT_SMALLER, U"3") },
+            };
+            return legend[shifted ? 1 : 0][size];
+        }
+
         // Language selection keycodes: the tiny "xx-YY" code shown under the flag
         // (the flag + selection frame are drawn by render_lang_flag_key()). KCL_ENUS..
         // are contiguous (QK_USER_0-based), so index a cog-generated table by offset.
@@ -3462,7 +3486,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             local_state->overlay_flags &= ~SAVE_EEPROM;
             break;
         case KC_GLYPH_SIZE_UP:
-        case KC_GLYPH_SIZE_DOWN:
+        case KC_GLYPH_SIZE_DOWN: {
             if (!act) break;
             // Step the keycap legend size one tier, the same setting HID cmd 34
             // drives. Runs once on release (we are inside the `if
@@ -3470,9 +3494,18 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             // the new size up into local_state and the diff carries it to the slave,
             // which re-renders on receipt (split_sync.c). A step at either end is a
             // no-op, so the refresh below is the only cost of pressing past it.
-            step_glyph_size(keycode == KC_GLYPH_SIZE_UP ? 1 : -1);
+            //
+            // Shift REVERSES the direction, which is what lets a single key on _UL
+            // cover both — the keycap swaps its icon to match (to_static_text). Read
+            // the live get_mods() rather than the synced poly_layer_t copy: this runs
+            // on the master, at the moment of the release, and must follow the finger
+            // rather than the last housekeeping snapshot the legend was drawn from.
+            int8_t dir = (keycode == KC_GLYPH_SIZE_UP) ? 1 : -1;
+            if (get_mods() & MOD_MASK_SHIFT) dir = (int8_t)-dir;
+            step_glyph_size(dir);
             request_disp_refresh();
             break;
+        }
         case KC_EDEN:
             if (!act) break;
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump

@@ -78,12 +78,13 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_IDLE_STYLE:                 return idle_style_legend();
         case KC_GLYPH_SCRIPT:               return glyph_script_legend();
         case KC_EDEN:                       return U"Reset\r\vEden";
-        // Keycap legend size, one tier per press (KC_GLYPH_SIZE_UP/_DOWN). Unicode's
-        // own INCREASE/DECREASE FONT SIZE symbols, so the pair needs no words: 🗚 is a
-        // small A beside a big one, 🗛 the mirror. The two leading spaces centre the
-        // 43 px icon on the 72 px panel (space advances 7 px in the base face) — this
-        // is the whole legend, so there is nothing to lay it out against.
-        case KC_GLYPH_SIZE_UP:              return U"  " ICON_FONT_BIGGER;
+        // ⚠️ KC_GLYPH_SIZE_UP is handled in to_static_text() (poly_keymap.c), NOT here.
+        // Its legend depends on the current tier AND on whether Shift is held, and the
+        // SYNCED mods live in poly_layer_t — this function only receives led_t, so the
+        // slave half would draw the master's tier with its own (always-clear) mods.
+        // KC_GLYPH_SIZE_DOWN keeps a plain legend: the keycode still exists and still
+        // steps down, it is simply not mapped any more (one key + Shift replaced the
+        // pair), so this case only matters to a custom keymap that maps it.
         case KC_GLYPH_SIZE_DOWN:            return U"  " ICON_FONT_SMALLER;
         case KC_TOGMODS:                    return (state_flags & MODS_AS_TEXT) == 0 ? U"Mods\r\v" ICON_SWITCH_OFF : U"Mods\r\v" ICON_SWITCH_ON;
         case KC_TOGTEXT:                    return (state_flags & MORE_TEXT) == 0 ? U"Cmds\r\v" ICON_SWITCH_OFF : U"Cmds\r\v" ICON_SWITCH_ON;
@@ -141,12 +142,14 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case MS_DOWN:                       return U"  " ICON_DOWN;
         case MS_LEFT:                       return U"  " ICON_LEFT;
         case MS_RGHT:                       return U"  " ICON_RIGHT;
-        case KC_AUDIO_MUTE:                 return U"  " PRIVATE_MUTE;
+        case KC_AUDIO_MUTE:                 return U"  " ICON_MUTE;
         case KC_AUDIO_VOL_DOWN:             return U"  " PRIVATE_VOL_DOWN;
         case KC_AUDIO_VOL_UP:               return U"  " PRIVATE_VOL_UP;
         case KC_PRINT_SCREEN:               return U"  " PRIVATE_IMAGE;
-        case KC_SCROLL_LOCK:                return U"ScLk";
-        case KC_PAUSE:                      return U"Paus";
+        // "Scr" plus the scroll-lock arrow the status OLED lights for the same state,
+        // in the bottom-right corner — the text+mark shape Caps Lock and Num Lock use.
+        case KC_SCROLL_LOCK:                return U"Scr" HINT_MOVE(HINT_POS_SCRLOCK) ARROWS_DOWNSTOP;
+        case KC_PAUSE:                      return U"  " ICON_PAUSE_BARS;
         case KC_INSERT:                     return U"Ins";
         case KC_HOME:                       return ARROWS_LEFTSTOP;
         case KC_END:                        return U"   " ARROWS_RIGHTSTOP;

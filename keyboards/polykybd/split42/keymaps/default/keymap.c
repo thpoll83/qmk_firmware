@@ -155,8 +155,11 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LSFT, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
         KC_BASE, KC_DDIM, KC_DBRI,
         KC_F18,  KC_F19,  KC_MPRV, KC_MPLY, KC_MSTP, KC_MNXT,
-        KC_NO,   KC_NO,   KC_GLYPH_SIZE_DOWN, KC_GLYPH_SIZE_UP, KC_MUTE, TO(_SL),
-        KC_MRWD, KC_VOLD, KC_VOLU, KC_MFFD, KC_NO,   KC_RSFT,
+        // Sound moved up beside the transport row so the media block reads as one group;
+        // the single legend-size key (Shift reverses, the legend shows the tier) sits
+        // under it. TO(_SL) keeps the last slot of the row it has always had.
+        KC_MRWD, KC_MUTE, KC_VOLD, KC_VOLU, KC_MFFD, TO(_SL),
+        KC_NO,   KC_NO,   KC_GLYPH_SIZE_UP, KC_NO, KC_NO,   KC_RSFT,
         KC_DAUTO,KC_NO,   KC_BASE
     ),
     /* Settings layer */
@@ -167,7 +170,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_BASE, LBL_TEXT,KC_TOGMODS,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_MAKE, QK_BOOT,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_RBT,
-        EE_CLR,  KC_STORE_EE, KC_NO, KC_NO, KC_NO, KC_NO,
+        // EE_CLR / KC_STORE_EE deliberately unmapped — see the split72 keymap for why.
+        KC_NO,   KC_NO,   KC_NO, KC_NO, KC_NO, KC_NO,
         DB_TOGG, KC_DEADKEY, KC_BASE
     ),
     // Language selection layer — mirrors the emoji picker. LEFT half: row 0 = the

@@ -210,22 +210,40 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_MYCM,    KC_CALC,    KC_PSCR,    KC_SCRL,    KC_BRK,     KC_IDDQD,   KC_NO,
         KC_NO,      KC_DMIN,    KC_D1Q,     KC_DHLF,    KC_D3Q,     KC_DMAX,    KC_NO,      _______,
         // Centred under the five presets above (cols 1-5): three keys centre on col 3.
-        KC_LSFT,    KC_NO,      KC_DDIM,    KC_DBRI,    KC_DAUTO,   KC_NO,      KC_NO,      KC_NO,
+        // Auto/manual sits BETWEEN - and +, so the row reads dimmer / mode / brighter.
+        KC_LSFT,    KC_NO,      KC_DDIM,    KC_DAUTO,   KC_DBRI,    KC_NO,      KC_NO,      KC_NO,
         KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
                     KC_F19,     KC_F20,     KC_F21,     KC_F22,     KC_F23,     KC_F24,     KC_NO,
                     KC_NO,      KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_IDDQD,   TO(_SL),
-        _______,    KC_NO,      KC_NO,      KC_GLYPH_SIZE_DOWN, KC_GLYPH_SIZE_UP, KC_NO, KC_NO, KC_NO,
-        KC_NO,      KC_MRWD,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MFFD,    KC_NO,      KC_RSFT,
+        // Sound sits directly under the transport row so the whole media block reads as
+        // one group: MRWD/MFFD bracket the volume trio, each under its transport key.
+        // KC_GLYPH_SIZE_UP is the SINGLE legend-size key — Shift reverses the direction
+        // and the legend carries the current tier as a digit, so no second key is needed.
+        _______,    KC_MRWD,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MFFD,    KC_GLYPH_SIZE_UP, KC_NO,
+        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_RSFT,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     //Settings Layer — row 2 hosts the OS selection keys: KC_OS_SET_AUTO returns to
     // auto (host/USB detection) and the rest pin a specific OS. They are radio-style
     // (the active choice shows a lit toggle in its legend). This replaces the single
     // cycling KC_OS_ICON; the per-OS semantic action keys are not mapped here.
+    //
+    // ⚠️ EE_CLR and KC_STORE_EE are deliberately NOT mapped. Both cost more than they
+    // give on a board whose persistence is automatic: KC_STORE_EE only forces a flush
+    // the next suspend/shutdown would do anyway (save_all_dirty() runs on suspend, on
+    // the host shutdown signal and before a firmware apply), so its whole value is
+    // saving a few seconds — while EE_CLR wipes every stored setting AND the dynamic
+    // keymap, with no confirmation and no undo, from a layer reached by two taps.
+    // A destructive key that near-duplicates a no-op key is the wrong trade; both stay
+    // reachable from PolyKybdHost, where a mis-click can be reconsidered.
     [_SL] = LAYOUT_left_right_stacked(
-        KC_OS_SET_AUTO, KC_OS_SET_WINDOWS, KC_OS_SET_MACOS, KC_OS_SET_LINUX, KC_OS_SET_ANDROID, KC_NO, KC_NO,
-        KC_NO,      KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_NO,   KC_NO,      KC_NO,      KC_NO,
+        // Restored to the pre-PR shape: the OS pins are back on row 2 where they were.
+        // Only the 8 brightness keys left (they live on _UL now, which is where you
+        // actually reach for them), and row 1 — freed by that — takes the two settings
+        // that used to be host-only.
+        KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_NO, KC_NO,     KC_NO,      KC_NO,      KC_NO,
+        KC_NO,      KC_OS_SET_AUTO, KC_OS_SET_WINDOWS, KC_OS_SET_MACOS, KC_OS_SET_LINUX, KC_OS_SET_ANDROID, KC_NO,
         KC_NO,      KC_L0,      KC_L1,      KC_L2,      KC_L3,      KC_L4,      KC_NO,      _______,
         KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_RBT,
         KC_BASE,    LBL_TEXT,   KC_TOGMODS, KC_TOGTEXT,             KC_NO,      QK_MAKE,    QK_BOOT,
@@ -237,7 +255,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                     RM_PREV,   RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RM_NEXT,
                     KC_NO,      RM_SPDD,    RM_SPDU,    KC_NO,      RM_HUED,    RM_HUEU,    KC_NO,
         _______,    KC_NO,      RM_VALD,    RM_VALU,    KC_NO,      RM_SATD,    RM_SATU,    KC_NO,
-        EE_CLR,     KC_STORE_EE, KC_EDEN,    KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
+        // EE_CLR and KC_STORE_EE are deliberately UNMAPPED — see the note above [_SL].
+        KC_NO,      KC_NO,      KC_EDEN,    KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
         DB_TOGG,    KC_DEADKEY, KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     // Language Selection Layer — mirrors the emoji picker. TOP row of the LEFT

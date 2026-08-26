@@ -2084,6 +2084,54 @@
 #define ICON_FONT_BIGGER            	U"\x1F5DA"
 #define ICON_FONT_SMALLER           	U"\x1F5DB"
 
+// The single legend-size key (KC_GLYPH_SIZE_UP on _UL) draws one of the two icons
+// above plus the CURRENT tier as a digit in the top-right corner, so the key states
+// where you are as well as what it will do. Shift swaps the icon and reverses the
+// step, which is why one key replaces the old up/down pair.
+//
+// ⚠️ Top-RIGHT, not top-left: render_key() puts the shift preview in the upper right
+// only for keys whose legend comes from render_key(), and this legend comes from
+// to_static_text(), so the corner is free — while the icon itself is 43px wide and
+// occupies the whole left. The digit is drawn at native size (it has to read at a
+// glance); what makes room for it is that this legend carries NO leading pad space,
+// unlike the U"  " ICON_* legends beside it — the 43px icon then starts at column 0
+// and ends at 42, leaving the right third of the panel empty.
+#define HINT_POS_SIZENUM 	U"\x55\x19"   // (85,25) buffer coords: the digit's baseline.
+                                          // Measured, not chosen: the digit inks
+                                          // rows 3..23 and columns 86..98 of the 72x40
+                                          // window, so it clears both the icon (which
+                                          // ends at column 70) and the panel edge (99).
+
+// One legend = the icon at the origin, then a MOVE to the corner and the tier digit.
+// Both halves are plain glyphs, so the cell is a two-glyph display list and needs no
+// per-keycode special case in update_displays().
+#define GLYPH_SIZE_LEGEND(icon, digit)  icon HINT_MOVE(HINT_POS_SIZENUM) digit
+
+// Scroll Lock / Pause / Mute — the three Utils-layer keys that still spelled
+// themselves out in 4-letter text while every neighbour drew an icon.
+//
+// Scroll Lock keeps the WORD and adds ARROWS_DOWNSTOP in the bottom-right corner,
+// which is the same glyph the status OLED already lights for scroll lock — so the
+// keycap and the panel agree — and it gives the key the same "text + mark" shape as
+// its two siblings Caps Lock and Num Lock. The arrow alone was tried and is too
+// sparse to identify; the badge glyphs Caps/Num use carry a literal `A` / `1` and
+// there is no `S` one, so those could not be borrowed.
+#define HINT_POS_SCRLOCK 	U"\x48\x1C"   // (72,28) buffer: right of "Scr" (40px), clear of it
+
+// Pause is the universally-read double bar. U+275A HEAVY VERTICAL BAR is already in
+// the symbol bundle, is solid rather than line art, and at 15x34 two of them fill the
+// panel without needing a new glyph.
+#define ICON_PAUSE_BARS             	U"\x275A" U"\x275A"
+
+// Mute becomes the CANCELLED speaker. The old PRIVATE_MUTE (U+1F568) is simply a
+// speaker with no waves, i.e. it differs from its two neighbours only by the absence
+// of the wave arcs — nothing on it says "muted", which is exactly how it was reported.
+// U+1F507 carries the slashed circle and, despite coming from NotoEmoji rather than
+// the NotoSansSymbols2 family the volume keys use, renders as line art of the same
+// weight (the filled U+1F508/U+1F50A pair does NOT — do not "finish the family" with
+// those, they are visibly heavier beside U+1F569/U+1F56A).
+#define ICON_MUTE                   	U"\x1F507"
+
 // Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
 // The status OLED already says "brightness" with a sun, so the keycaps use the
 // same sun and grow its RAYS with the level; a staircase beside it states the

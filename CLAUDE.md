@@ -1794,6 +1794,56 @@ with `−`/`+` and no staircase (they name no level); `KC_DAUTO` spells **AUTO**
   codepoint routing. Count the pixels it drops outside the 72×40 window — that is the
   clipping check, and it must be 0.
 
+### The utility layer's remaining text keys (`keycode_helper.c`, `poly_keymap.c`)
+
+Three `_UL` keys still spelled themselves out in four letters while every neighbour
+drew an icon, and one pair of keys was replaced by a single state-reflecting key.
+
+- **Mute is now U+1F507, the CANCELLED speaker.** The old `PRIVATE_MUTE` (U+1F568) is
+  a speaker with **no wave arcs**, i.e. it differs from `PRIVATE_VOL_DOWN` (U+1F569,
+  one arc) and `PRIVATE_VOL_UP` (U+1F56A) only by an *absence* — nothing on it says
+  "muted", which is exactly how it was reported. ⚠️ **Do not "finish the family" by
+  moving the volume keys to U+1F508/U+1F50A**: those NotoEmoji glyphs are filled and
+  render visibly heavier beside the NotoSansSymbols2 line art (rendered and compared —
+  U+1F507 happens to be line art of the same weight, which is why only it moves).
+  - A slash **composited over** the existing speaker was tried first and cannot work:
+    a legend display list has no erase op, so a lit slash over a solid glyph merges
+    into it, and a dark-gap version would need a baked glyph — which the **full** C1
+    band has no room for (see the icon-slot note above).
+- **Scroll Lock keeps the word and gains a mark**: `U"Scr"` + `ARROWS_DOWNSTOP`
+  (U+2B73) MOVE'd to the bottom-right. That is the same glyph the **status OLED**
+  already lights for scroll lock, so panel and keycap agree, and it gives the key the
+  `Cap`+badge / `Nm`+badge shape of its two siblings. The arrow **alone** was rendered
+  and is too sparse to identify; the Caps/Num badges could not be borrowed because they
+  carry a literal `A` / `1`.
+- **Pause is `U"  "` + two U+275A HEAVY VERTICAL BARs** — already in the symbol
+  bundle, solid rather than line art, 15×34 each, so two fill the panel with no new
+  glyph. (`U"Pause"` did not even fit: it clipped 34 px off the right edge.)
+
+**The legend-size key is now ONE key that states its own tier.** `KC_GLYPH_SIZE_UP` on
+`_UL` draws `ICON_FONT_BIGGER` plus the current tier as a digit in the top-right;
+holding **Shift** swaps the icon to `ICON_FONT_SMALLER` and reverses the step, so the
+`KC_GLYPH_SIZE_DOWN` keycode survives but is bound nowhere.
+
+- ⚠️ **The legend lives in `to_static_text()` (`poly_keymap.c`), NOT in
+  `keycode_to_static_text()`.** Both halves of it are **synced** state — the tier from
+  `poly_sync_t.glyph_size` and the modifier from `poly_layer_t.mods` — and
+  `keycode_to_static_text()` only receives `led_t`, so on the **slave** it would draw
+  the master's tier with its own (always-clear) mods. Any legend that depends on a
+  synced field belongs on this side of that seam.
+- **The action reads the LIVE `get_mods()`, the legend reads the synced copy** — and
+  that asymmetry is deliberate. The action runs on the master at the instant of the
+  release and must follow the finger; the legend must render identically on a half that
+  only ever sees the housekeeping snapshot.
+- **Placement is measured** (`HINT_POS_SIZENUM` = buffer (85,25)): the digit inks rows
+  3–23 and columns 86–98 of the 72×40 window, clearing both the 43 px icon (which ends
+  at column 70) and the panel edge at 99. ⚠️ What makes room for it is that this legend
+  carries **no leading pad space**, unlike the `U"  " ICON_*` legends beside it — with
+  the usual two spaces the icon ends at column 61 and the digit will not fit.
+- The legend contains a `HINT_MOVE`, so `glyph_size_remap()` bails and the key itself
+  always draws at the small face. That is correct — it is a mixed icon cell, not a
+  latin legend — but it means the size key does not demonstrate the setting it changes.
+
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 
 An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C

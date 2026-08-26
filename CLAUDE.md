@@ -967,6 +967,22 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   through `kdisp_write_gfx_text_cy()` directly — on split72 `MATRIX_ROWS_PER_SIDE` is
   5, so the Ctrl at `[4,0]` takes the *bottom-row* one and fixing only the obvious
   call site changes nothing.
+- ⚠️ **`kdisp_write_gfx_text_cy()` walks the list TWICE when a courtyard is asked
+  for, and the second pass is what makes the first correct — do not "optimise" it
+  back to one.** The courtyard is cleared per GLYPH, immediately before that glyph
+  is plotted, so glyph N+1's 3px margin removed glyph N's ink wherever the two sat
+  closer than the radius: every letter cut a slice out of the one before it (field,
+  2026-08-26). Pass 1 clears and draws as before; pass 2 redraws with NO clearing
+  and restores what was removed. Underlying art stays cleared because nothing
+  redraws it, so the courtyard keeps punching the legend through a tab frame / row
+  bar / overlay image and stops eating the legend. Safe because every drawing op is
+  idempotent (glyphs OR in, badge/frame fills are stable, an erase-mode glyph clears
+  the same pixels twice), so pass 2 can only put ink back.
+  - **It was never mid-face-specific, which is why it survived so long.** Measured
+    ink loss: `SCRIPT:/Rune` **-6.2%**, `Qwerty` -4.1%, `IDLE:/Pulse` -3.0% — but the
+    27px `Qwty` lost 10px too. The tighter 19px spacing only made a long-standing
+    defect impossible to miss. **The check is a pixel count against the same legend
+    drawn with `cy_radius` 0**, not a visual read; all 15 legends now match it exactly.
 - **`kdisp_send_window()` vs `kdisp_send_buffer()`**: `kdisp_send_buffer()` pushes
   the full 1024-byte scratch; `kdisp_send_window()` pushes only the **visible 360
   bytes** (pages 0–4 at column `BUFFER_X`) — the same region the keycap actually
@@ -993,6 +1009,26 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   (Intl-remap section): that one is about a key with a legend *bypassing* `render_key`,
   this one is about the same seam producing *no* legend at all. Any future keycode
   rewriting (a second wrapper class, an alias) has to land in **both**.
+- ⚠️ **A THIRD seam: `update_displays()` can carry a bespoke `else if (keycode ==
+  X)` branch that makes the keycode's legend DEAD — grep for your keycode there
+  before believing a legend edit does anything.** `KC_EDEN` had one: it drew its own
+  hardcoded `U"Reset"` / `U"Eden"` through `mid_fonts`, so the `keycode_helper.c`
+  case was never consulted for the awake keycap and **two successive commits edited a
+  string that never rendered**. Worse, the branch sat *after* the `text != NULL` test,
+  so the `KC_SETTINGS_MORE` gate's empty string routed straight into it and the key
+  stayed visible while every other gated key hid (field, 2026-08-26). Both are gone —
+  `HINT_MID` made the size expressible in an ordinary legend, so the special case
+  could be **deleted** rather than gated. **Prefer that: a per-keycode branch there
+  is a legend the rest of the pipeline cannot see.**
+- ⚠️ **`get_local_layer()` is the SYNCED snapshot, not live state — never gate
+  RENDERING on it.** It lags a layer change by up to one housekeeping pass, so a
+  render landing inside that window reads the OLD layer. The `KC_SETTINGS_MORE` gate
+  originally required `get_highest_layer(get_local_layer()->layer) == _SL`; a render
+  in that window concluded the gate did not apply and drew the advanced keys, and
+  `_SL` usually gets no later refresh to correct it. The clause was also redundant —
+  every gated keycode is mapped exactly once, only on `_SL`, in BOTH keymaps — so it
+  could never hide anything the keycode list did not, and could reveal what it
+  existed to hide. Gate on the keycode and the synced *value*, not on the layer.
 - ⚠️ **A hint/overlay string is drawn OVER the legend at the SAME origin, so
   full-size extra art ERASES it — a secondary mark belongs MOVE'd into a corner, and
   that corner is the BOTTOM-right.** `update_displays()` draws the legend at
@@ -1907,6 +1943,45 @@ has to be synthesised at draw time.
   entirely small text, and a toggle is a second thing to get wrong. `\x18` (reset) does
   not clear it either; it resets the cursor only.
 
+**`HINT_MID` (`\x16`) is the other direction, and the only size BETWEEN the two.**
+`HINT_SMALL` synthesises a smaller face by halving; `HINT_MID` reaches the real
+standalone **`_Mid_` 19px** one (~14px caps against the keycap face's ~20px), for
+the rest of the string. It exists because the settings labels at half the 27px face
+were reported as too small to read at a glance (2026-08-26).
+
+- **It is a SINGLE-font array on purpose** — `kdisp_write_gfx_char` baseline-aligns
+  by `font->yAdvance - fonts[0]->yAdvance`, so making the face its own `fonts[0]`
+  makes that adjustment 0, the same reason the language flags draw through
+  `{ &flag_font }`.
+- **It falls back to the caller's pool PER GLYPH.** The mid face is ASCII-only
+  (0x20..0x7E), so anything outside it — an icon — renders at its normal size
+  instead of `'!'`. That is what makes a **word-over-icon** legend possible at all
+  (the layout picks: a name over its on/off switch). The bbox mirrors this, and the
+  baseline reference must follow the **per-glyph** choice, not the latch: `fonts[0]`
+  is the mid face only for the glyphs the mid face supplied.
+- It is what let a bespoke `else if (keycode == KC_EDEN)` branch be **deleted** from
+  `update_displays()` rather than replaced — the size that branch existed to reach
+  is now expressible in an ordinary legend.
+
+⚠️ **TWO full-size TEXT lines CANNOT fit a 40px keycap, and the descender budget is
+exactly ONE — which is what decides between the two MID stacks.** `\v` advances a
+fixed 15px while the keycap face inks ~20px above the baseline, so two plain
+`\r\v` text lines overlap outright; at the mid face they fit, but only just.
+Nineteen legends shipped overlapped this way for a long time (Store/EE, Word/sel,
+Line/join — which also lost **55px** off the panel — App/sw and the twelve OS
+auto/pin cells), all now half-scale.
+
+- **`MID_TWO_LINE(top, bottom)`** — lift 10px / push 6px — spends the descender at
+  the **BOTTOM**. Values like `Teng`, `Amiga` and `Jittr` fit; the top may have
+  **neither a descender nor an ascender**, which is why the labels are `IDLE:` /
+  `SCRIPT:` / `RESET`. All caps is how that is guaranteed, not the rule itself.
+- **`MID_TWO_WORD(top, bottom)`** / **`MID_WORD_OVER_ICON(word, icon)`** — lift 8px /
+  push 8px — spend it at the **TOP**. An ascender fits (`Mods`, `Cmds`, `Colemk`);
+  the bottom must not descend.
+- ⚠️ **They cannot be merged.** Swapping the two spacings breaks four legends in
+  each direction — measured by sweeping every (lift, push) pair, not reasoned.
+  Re-measure rather than eyeball whenever a word changes.
+
 ⚠️ **`kdisp_gfx_text_bbox()` did not know the display-list ops at all, and that was a
 real bug the moment a MAIN legend started using them.** Every op byte *and each of its
 argument codepoints* fell into `default:`, matched no font, and was substituted with
@@ -1914,11 +1989,24 @@ argument codepoints* fell into `default:`, matched no font, and was substituted 
 feeds `plan_main_legend()`'s shift-preview layout and `roll_idle_offset()`'s jitter
 travel, so it was luck rather than design that nothing visibly broke (none of the
 affected keys has a shift preview, and none is drawn at idle). The ops are mirrored
-now: `\x10` switches the measurement to half-scale, `\x0F`/`\x11` consume one argument,
-`\x0E`/`\x12` consume two.
-- ⚠️ **`\x0E` (MOVE) still cannot be measured properly** — bbox works relative to the
+now: `\x10` switches the measurement to half-scale, `\x16` to the mid face,
+`\x0F`/`\x11` consume one argument, `\x0E`/`\x12` consume two, `\x13` three.
+- ⚠️ **`\x0E` (MOVE) skipped NO arguments until 2026-08-26, and that sentence above
+  was FALSE for it** — it fell through to `\x14`'s bare `break`, so a MOVE's two
+  coordinate bytes were dispatched through the same switch on the next iterations.
+  A coordinate is an arbitrary byte: **13 of the 31 `HINT_POS_*` / `HINT_SZ_*` /
+  `MTB_*` macros carry one that is also an op** — `HINT_SZ_STOPSQ` is (15,15), i.e.
+  `\x0F \x0F`, two HALFs; `HINT_SZ_SCRBOX` is (19,19), two BADGEs; `HINT_POS_SCRBOX`'s
+  y is `\x06`. Ten of those predate the ops added in 2026-08 and cost only a
+  mis-measured glyph, but the newer `\x16` latches a different FONT for the rest of
+  the run and `\x15` eats the next two codepoints — the Ctrl mod-badge hint measured
+  x1..30 where it is really x0..47. Skipping the arguments (what `\x12` two lines
+  below always did) closes the class for the existing ops **and any op added later**.
+  ⚠️ **So check a new op byte against those macros' argument bytes** — or rather,
+  don't have to, now that MOVE consumes its own.
+- ⚠️ **The MOVE itself is still ignored** — bbox works relative to the
   draw origin and MOVE names an ABSOLUTE buffer position, which is not knowable at
-  measure time. Skipping it is strictly better than measuring `'!'`, but a MOVE'd
+  measure time, so a MOVE'd
   legend's box still only covers the part laid out relatively. **Prefer the ordinary
   cursor advance over a MOVE in a main legend** — that is why `ICON_MUTE` places its X
   with `\f\f` and the glyph's own `xAdvance` rather than a MOVE.

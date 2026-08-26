@@ -129,3 +129,28 @@ badge to two codepoints; nothing crashed, the marks just silently vanished.
   (the legend), not against your own re-derivation.
 - If the change alters something visible on a keycap, say **which pixel** tells
   two builds apart — that is a check the user can run with no tooling.
+
+### Harness fidelity — four ways a preview validates the wrong thing
+
+All four cost a round on 2026-08-26, and three of them report SUCCESS while wrong.
+
+- ⚠️ **Model the COURTYARD.** A harness that skips a draw stage validates a render
+  the firmware never produces. `kdisp_write_gfx_char` clears a ±3px band per glyph
+  *before* plotting it, which at tight spacing removes the previous glyph's ink —
+  a defect that shipped precisely because the preview drew glyphs and nothing else.
+  Model it, and check **lit-pixel count against the same legend at `cy_radius` 0**;
+  a visual read will not show a few missing pixels per letter.
+- ⚠️ **Mirror C integer division.** Python's `//` FLOORS, C's `/` TRUNCATES toward
+  zero, and they differ for a negative numerator — which `\v` produces the moment a
+  `\f` lift precedes it (`(15-23)/15` is `0` in C, `-1` in Python). The first run
+  of a two-line measurement reported all 16 legends drawing both lines on top of
+  each other. Anything mirroring firmware arithmetic needs an explicit `cdiv()`.
+- ⚠️ **Parse the legends AND the spacing back out of the SHIPPED SOURCE**, never
+  retype them into the harness. Read the strings from `keycode_helper.c` /
+  `poly_keymap.c` and the lift/push/nudge out of the macro in `named_glyphs.h`, so
+  the harness cannot drift from what compiles.
+- ⚠️ **Assert the parse found something, and unescape PER LITERAL.** A regex that
+  matches zero legends reports "no failures" having checked nothing — the fail-open
+  shape this repo documents elsewhere. And a `\xNN` escape ends at the closing quote
+  in C, so joining adjacent literals before unescaping merges `\x06` + `E` into one
+  codepoint and invents a defect the compiler cannot have.

@@ -621,6 +621,12 @@ static void latin_remap_cancel(void);        // ditto
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     access_local_layer()->layer = state;
+    if(get_highest_layer(state) != _SL) {
+        // Leaving settings re-hides the advanced keys, so revealing them is a
+        // deliberate act on every visit rather than a mode you can leave armed.
+        // That is the whole safety argument for putting QK_BOOT behind the gate.
+        access_local_state()->settings_more = 0;
+    }
     if(get_highest_layer(state) != _ADDLANG1) {
         // Leaving Intl closes the picker. Without this the latched Ctrl would stay
         // registered with the layer gone, so every following keystroke reaches the
@@ -1343,6 +1349,44 @@ const uint32_t* poly_lang_code(uint8_t lang) {
     return to_static_text((uint16_t)(KCL_ENUS + lang), none);
 }
 
+// The settings layer opens with only its everyday keys; this names the rest.
+//
+// Two properties are load-bearing and easy to lose. It is keyed on the KEYCODE, not
+// on a position, so moving a key around _SL cannot silently un-gate it. And it is
+// consulted from BOTH the legend path (to_static_text) and the action path
+// (process_record_user) — a key that is blank but still fires is worse than one that
+// is merely visible, since QK_BOOT and QK_RBT are in here and neither is undoable
+// from the board.
+//
+// ⚠️ Gated on _SL being the active layer, NOT globally: split42 shares this layer
+// and these keycodes, so a global gate would have hidden them there too, and its
+// KC_SETTINGS_MORE sits in a different slot. Anything mapped outside _SL is
+// unaffected by construction.
+static bool settings_key_is_gated(uint16_t keycode) {
+    switch (keycode) {
+        case KC_IDLE_STYLE:
+        case KC_GLYPH_SCRIPT:
+        case LBL_TEXT:
+        case KC_TOGMODS:
+        case KC_TOGTEXT:
+        case QK_BOOTLOADER:
+        case QK_REBOOT:
+        case QK_DEBUG_TOGGLE:
+        case KC_DEADKEY:
+        case KC_EDEN:
+            return true;
+        default:
+            return false;
+    }
+}
+
+// True while the gated keys must stay blank and inert.
+static bool settings_more_hidden(uint16_t keycode) {
+    return settings_key_is_gated(keycode) &&
+           get_highest_layer(get_local_layer()->layer) == _SL &&
+           get_local_state()->settings_more == 0;
+}
+
 const uint32_t* to_static_text(uint16_t keycode, led_t state) {
 
     const uint32_t *emj = emj_display_text(keycode);
@@ -1391,6 +1435,14 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         return INTL_PICKER_LEGEND;
     }
 
+    // Blank the advanced settings keys until KC_SETTINGS_MORE reveals them. Returning
+    // an EMPTY string rather than NULL matters: NULL sends update_displays() on to
+    // render_key(), which would draw the key's chrome around nothing — the "modifier
+    // badge in an empty cell" shape this file already warns about.
+    if (settings_more_hidden(keycode)) {
+        return U"";
+    }
+
     const uint32_t* text = keycode_to_static_text(keycode, state, local_state->flags);
     if(text!=NULL) {
         return text;
@@ -1422,6 +1474,13 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         // it are SYNCED state: the size comes from poly_sync_t and the modifiers from
         // poly_layer_t, and keycode_to_static_text() only receives `led_t` — so on the
         // slave it would draw the master's tier with its own (always clear) mods.
+        case KC_SETTINGS_MORE:
+            // Lives here rather than in keycode_to_static_text() for the same reason
+            // KC_GLYPH_SIZE_UP does: the state it reflects is SYNCED, and that
+            // function only receives led_t, so on the slave it would draw the wrong
+            // half of the toggle.
+            return (local_state->settings_more == 0) ? U"More\r\v" ICON_SWITCH_OFF
+                                                     : U"More\r\v" ICON_SWITCH_ON;
         case KC_GLYPH_SIZE_UP: {
             const bool     shifted = (local_layer->mods & MOD_MASK_SHIFT) != 0;
             const uint8_t  size    = local_state->glyph_size < GLYPH_SIZE_COUNT
@@ -3485,6 +3544,14 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
             local_state->overlay_flags &= ~SAVE_EEPROM;
             break;
+        case KC_SETTINGS_MORE:
+            if (!act) break;
+            // Toggle, so a mis-tap is undoable without leaving the layer. The value
+            // is synced by the ordinary housekeeping diff — the slave draws its own
+            // half of the revealed row and only ever sees poly_sync_t.
+            local_state->settings_more = local_state->settings_more ? 0 : 1;
+            request_disp_refresh();
+            break;
         case KC_GLYPH_SIZE_UP:
         case KC_GLYPH_SIZE_DOWN: {
             if (!act) break;
@@ -4042,6 +4109,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // ran. Only a PRESS can be rejected, so every release-edge settings key is
     // unaffected; KC_LANG is the one press-edge case here and would otherwise open _LL
     // / advance the language on the very press that exists only to wake the board.
+    // A gated settings key is BLANK, so it must also be INERT — swallow both edges
+    // before anything can act on it. QK_BOOTLOADER / QK_REBOOT / QK_DEBUG_TOGGLE are
+    // QMK's own keycodes, handled by process_action() rather than by
+    // poly_custom_key_action(), so returning false here is the only thing that stops
+    // them: a gate that only blanked the legend would leave a keycap that reboots the
+    // board with nothing drawn on it.
+    if (settings_more_hidden(keycode)) {
+        return false;
+    }
+
     const bool wake_accepted = display_wakeup(record);
     if (wake_accepted && poly_custom_key_action(keycode, record)) {
         return false;

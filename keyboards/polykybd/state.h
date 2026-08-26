@@ -170,7 +170,20 @@ typedef struct _poly_sync_t {
     // middle key. The answer comes back over the normal matrix pull — only the
     // master runs process_record, so it sees either half's press.
     uint8_t  fw_confirm;
+    // The settings layer's advanced half is revealed (0/1) — see KC_SETTINGS_MORE.
+    // Synced because the SLAVE draws its own half of that row and only ever sees
+    // this struct; without it the two halves would disagree about what is visible.
+    // Master-authoritative and per-visit: layer_state_set_user clears it on leaving
+    // _SL, so it is never persisted and never survives a trip out of the layer.
+    uint8_t  settings_more;
 } poly_sync_t;
+
+// Same reasoning as latin_sync_t's guard: transaction_rpc_exec() refuses a payload
+// over the cap BEFORE sending anything, and every bulk send_to_bridge call site
+// discards the ack — so outgrowing this would produce a master that applies a change
+// and a slave that never hears it, with nothing in the log.
+static_assert(sizeof(poly_sync_t) <= RPC_M2S_BUFFER_SIZE,
+              "poly_sync_t exceeds RPC_M2S_BUFFER_SIZE — the split sync would be silently rejected");
 
 typedef struct _poly_last_t {
     uint32_t crc32;

@@ -168,7 +168,12 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
         KC_BASE, LBL_TEXT,KC_TOGMODS,
-        KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_MAKE, QK_BOOT,
+        // KC_SETTINGS_MORE takes the slot QK_MAKE vacated. split42 shares _SL with
+        // split72 and therefore shares its gated keycodes, so it needs its own reveal
+        // key or they would be blank and unreachable here. Its 42-key block has no
+        // row that fits them all, so they stay where they are rather than being
+        // collected onto one row as on split72.
+        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_SETTINGS_MORE, QK_BOOT,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   QK_RBT,
         // EE_CLR / KC_STORE_EE deliberately unmapped — see the split72 keymap for why.
         KC_NO,   KC_NO,   KC_NO, KC_NO, KC_NO, KC_NO,

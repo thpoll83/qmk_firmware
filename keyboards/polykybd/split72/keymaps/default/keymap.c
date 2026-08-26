@@ -243,15 +243,22 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // A destructive key that near-duplicates a no-op key is the wrong trade; both stay
     // reachable from PolyKybdHost, where a mis-click can be reconsidered.
     [_SL] = LAYOUT_left_right_stacked(
-        // Restored to the pre-PR shape: the OS pins are back on row 2 where they were.
-        // Only the 8 brightness keys left (they live on _UL now, which is where you
-        // actually reach for them), and row 1 — freed by that — takes the two settings
-        // that used to be host-only.
-        KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_NO, KC_NO,     KC_NO,      KC_NO,      KC_NO,
+        // ROW 3 (both halves) is the ADVANCED row: every key on it is blank and inert
+        // until KC_SETTINGS_MORE is tapped, and re-hides itself on leaving the layer
+        // (see settings_key_is_gated / layer_state_set_user). Rows 0-2 keep the
+        // everyday settings — OS pins, base-layer picks — visible at all times.
+        //
+        // The gated keys were scattered across rows 0 and 4 before; collecting them
+        // on one row is what makes "these are the ones behind the button" legible
+        // from the board rather than from this file. QK_MAKE is gone entirely — it
+        // rebuilds firmware from a keypress, which is a developer affordance that has
+        // no business one tap from the layer a user opens to change the OS pin.
+        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
         KC_NO,      KC_OS_SET_AUTO, KC_OS_SET_WINDOWS, KC_OS_SET_MACOS, KC_OS_SET_LINUX, KC_OS_SET_ANDROID, KC_NO,
         KC_NO,      KC_L0,      KC_L1,      KC_L2,      KC_L3,      KC_L4,      KC_NO,      _______,
-        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      QK_RBT,
-        KC_BASE,    LBL_TEXT,   KC_TOGMODS, KC_TOGTEXT,             KC_NO,      QK_MAKE,    QK_BOOT,
+        // More sits on the OUTER edge, where the row starts reading.
+        KC_SETTINGS_MORE, KC_IDLE_STYLE, KC_GLYPH_SCRIPT, LBL_TEXT, KC_TOGMODS, KC_TOGTEXT, KC_NO, KC_NO,
+        KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
 
         //             RM_PREV,    RGB_M_SW,   RGB_M_R,    KC_RGB_TOG, RGB_M_P,    RGB_M_B,    RM_NEXT,
@@ -261,8 +268,11 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                     KC_NO,      RM_SPDD,    RM_SPDU,    KC_NO,      RM_HUED,    RM_HUEU,    KC_NO,
         _______,    KC_NO,      RM_VALD,    RM_VALU,    KC_NO,      RM_SATD,    RM_SATU,    KC_NO,
         // EE_CLR and KC_STORE_EE are deliberately UNMAPPED — see the note above [_SL].
-        KC_NO,      KC_NO,      KC_EDEN,    KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,
-        DB_TOGG,    KC_DEADKEY, KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
+        // Row 3 again: the two IRREVERSIBLE keys (Restart, Boot) sit at the far OUTER
+        // end, as far from the toggles as the row allows, so a slip while reaching for
+        // Dbg cannot land on them.
+        KC_NO,      KC_NO,      DB_TOGG,    KC_DEADKEY, KC_EDEN,    KC_NO,      QK_RBT,     QK_BOOT,
+        KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     // Language Selection Layer — mirrors the emoji picker. TOP row of the LEFT
     // block = the six continent region tabs (LCAT) with the wrapping page-prev

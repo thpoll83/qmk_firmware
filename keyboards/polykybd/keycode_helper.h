@@ -228,6 +228,14 @@ enum my_keycodes {
     // end for the same no-renumbering reason as KC_EDEN.
     KC_IDLE_STYLE,
     KC_GLYPH_SCRIPT,
+    // Reveals the advanced half of the settings layer. Everything gated behind it
+    // is either irreversible from the board (Boot, Restart), a debug affordance
+    // (Dbg, WakeX), or a setting you set once and forget (idle style, glyph script,
+    // the text-mode toggles) — so the layer opens with only the everyday keys and
+    // the rest stay BLANK AND INERT until this is tapped. The reveal is per-visit:
+    // layer_state_set_user clears it on the way out, so an accidental QK_BOOT needs
+    // two deliberate presses every time, not one press ever.
+    KC_SETTINGS_MORE,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —
@@ -241,10 +249,11 @@ static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MA
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 // ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes
 // stale: the two asserts directly above name KC_LANG_END / KC_OS_SET_END, but
-// KC_EDEN, KC_IDLE_STYLE and KC_GLYPH_SCRIPT are appended AFTER them, so neither
+// KC_EDEN, KC_IDLE_STYLE, KC_GLYPH_SCRIPT and KC_SETTINGS_MORE are appended AFTER
+// them, so neither
 // covers the tail of the QK_USER_0 block any more. Anchor on the LAST member and
 // re-anchor whenever something is appended.
-static_assert((int)KC_GLYPH_SCRIPT <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
+static_assert((int)KC_SETTINGS_MORE <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

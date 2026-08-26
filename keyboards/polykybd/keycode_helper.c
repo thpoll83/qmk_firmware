@@ -60,7 +60,20 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case SC_RAPC:                       return U")    <\r     ~";
         case SC_SENT:                       return ARROWS_RETURN U"  " ICON_SHIFT;
         case TO(_EMJ):                      return U" " PRIVATE_EMOJI_1F600 U"\v" ICON_LAYER;
-        case KC_DEADKEY:                    return (state_flags & DEAD_KEY_ON_WAKEUP) == 0 ? U"WakeX\r\v" ICON_SWITCH_OFF : U"WakeX\r\v" ICON_SWITCH_ON;
+        // "WakeX" did not fit — measured, it clipped 101 pixels off the 72px panel,
+        // which is exactly how it was reported. The name was also opaque: what this
+        // toggles is whether the FIRST press after the displays go dark is swallowed
+        // (wake only) or passed through to the host, so it now says "Wake only".
+        //
+        // ⚠️ That needs HINT_SMALL, and HINT_SMALL latches for the REST of the string —
+        // including the switch, which came out a 17px blob. So the SWITCH goes FIRST,
+        // on the top line, and the small label below it. That inverts the text-then-
+        // switch order of Dbg/Mods/Cmds beside it, deliberately: this is the one key on
+        // the row whose label needs two words, and a legible state indicator beats a
+        // consistent one. Measured: inks x0..69 y9..39, zero clipped.
+        case KC_DEADKEY:                    return (state_flags & DEAD_KEY_ON_WAKEUP) == 0
+                                                       ? ICON_SWITCH_OFF U"\r\v" HINT_SMALL U"Wake only"
+                                                       : ICON_SWITCH_ON  U"\r\v" HINT_SMALL U"Wake only";
         case LBL_TEXT:                      return U"Text:";
         // ⚠️ This one had NO case at all, so to_static_text() returned NULL,
         // translate_keycode() had no row for a QK_KB-range keycode, and the keycap

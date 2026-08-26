@@ -1968,7 +1968,58 @@
 // HINT_MOVE/HINT_FRAME take a packed position macro (two bytes = x,y or w,h).
 // Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
+#define HINT_SMALL       U"\x10"      // draw the REST of the string half-scale (text, advances)
+#define HINT_MID         U"\x16"      // draw the REST of the string from the standalone 19px UI face
+
+// Two lines of MID-face text on one 72x40 keycap: a label over the value it names.
+//
+// `\v` advances a fixed 15px while the mid face inks ~14px ABOVE the baseline and
+// ~5px below it, so two plain \r\v lines collide. The first baseline is therefore
+// lifted 10px and the second pushed 6px down — 21px apart, the tightest spacing
+// that still clears a descender on the top line — landing on baselines 13 and 34.
+//
+// ⚠️ The TOP line must have NEITHER a descender NOR an ascender — all caps is the
+// easy way to guarantee both, which is why the labels are IDLE: / SCRIPT: / RESET.
+// A 40px panel has room for two 14px lines and ONE descender, not two: with a
+// lowercase label ("Script:") the `p` drops into the value's cap band and NO
+// (lift, push) pair in the whole search space clears every value — it was swept.
+// The one descender budget goes to the VALUE line, where "Teng" and "Amiga" need
+// it, and the tight lift that buys it leaves no room above for a `d` or `l`.
+// A stack whose top needs an ascender is the other shape — MID_TWO_WORD below.
+//
+// ⚠️ The 2px right nudge on the value line is load-bearing too: a capital J hooks
+// left of its own pen position, so "Jittr" clipped a pixel off the panel edge
+// without it.
+//
+// Measured over all 16 label/value pairs actually used: gaps 6-7px, zero clipped
+// pixels. Re-measure rather than eyeball if a word changes.
+#define MID_TWO_LINE(top, bottom)  \
+    HINT_MID U"\f\f\f\f\f" U##top U"\r\v\x05\x05\x05\x06" U##bottom
+
+// The OTHER MID stack — lift 8px / push 8px — for a top line that may carry an
+// ASCENDER (b d f h k l t) over a bottom line with NO DESCENDER. The 2px of extra
+// headroom comes straight out of the bottom's descender budget, which is why this
+// cannot be merged with MID_TWO_LINE: this spacing applied to the label/value
+// legends clips "Jittr", "IDDQD", "Teng" and "Amiga", and MID_TWO_LINE's spacing
+// applied here clips the `d` of "Mods"/"Cmds" and the `k`/`l` of the layout names.
+// Both users swept; gaps 3-9px, zero clipped pixels.
+//
+// MID_WORD_OVER_ICON's second line is a full-size icon: it renders at its normal
+// size because HINT_MID falls back per glyph for anything the ASCII-only mid face
+// does not carry, and it needs no nudge — its own xOffset centres it.
+#define MID_TWO_WORD(top, bottom)  \
+    HINT_MID U"\f\f\f\f" U##top U"\r\v\x05\x05\x05\x05" U##bottom
+#define MID_WORD_OVER_ICON(word, icon)  \
+    HINT_MID U"\f\f\f\f" U##word U"\r\v\x05\x05\x05\x05" icon
+#define HINT_BADGE(sz, st) U"\x13" sz st  // lock badge at the cursor: (w,h) = sz,
+                                        //   st = BADGE_OFF outline / BADGE_ON solid
+#define BADGE_OFF        U"\x01"      // ...released: a 2px rounded outline
+#define BADGE_ON         U"\x02"      // ...engaged: the same silhouette, solid
+#define HINT_ERASE       U"\x14"      // draw the REST of the string as a HOLE, not as ink
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
+#define HINT_ROT(step, cp) U"\x15" step cp  // rotate cp CCW by step*15 deg, halve it,
+                                          // and plot at the cursor (no advance)
+#define ROT_CCW_120      U"\x08"      // 8 * 15 deg = 120 deg counter-clockwise
 #define HINT_THIN        U"\x11"       // as HINT_HALF but DECIMATING (see disp_array.h)
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
 #define HINT_RESET       U"\x18"       // reset cursor to the text origin
@@ -2083,3 +2134,152 @@
 // new font entry and no bundle reship.
 #define ICON_FONT_BIGGER            	U"\x1F5DA"
 #define ICON_FONT_SMALLER           	U"\x1F5DB"
+
+// The single legend-size key (KC_GLYPH_SIZE_UP on _UL) draws one of the two icons
+// above plus the CURRENT tier as a digit in the top-right corner, so the key states
+// where you are as well as what it will do. Shift swaps the icon and reverses the
+// step, which is why one key replaces the old up/down pair.
+//
+// ⚠️ Top-RIGHT, not top-left: render_key() puts the shift preview in the upper right
+// only for keys whose legend comes from render_key(), and this legend comes from
+// to_static_text(), so the corner is free — while the icon itself is 43px wide and
+// occupies the whole left. The digit is drawn at native size (it has to read at a
+// glance); what makes room for it is that this legend carries NO leading pad space,
+// unlike the U"  " ICON_* legends beside it — the 43px icon then starts at column 0
+// and ends at 42, leaving the right third of the panel empty.
+#define HINT_POS_SIZENUM 	U"\x55\x19"   // (85,25) buffer coords: the digit's baseline.
+                                          // Measured, not chosen: the digit inks
+                                          // rows 3..23 and columns 86..98 of the 72x40
+                                          // window, so it clears both the icon (which
+                                          // ends at column 70) and the panel edge (99).
+
+// One legend = the icon at the origin, then a MOVE to the corner and the tier digit.
+// Both halves are plain glyphs, so the cell is a two-glyph display list and needs no
+// per-keycode special case in update_displays().
+#define GLYPH_SIZE_LEGEND(icon, digit)  icon HINT_MOVE(HINT_POS_SIZENUM) digit
+
+// Scroll Lock / Pause / Mute — the three Utils-layer keys that still spelled
+// themselves out in 4-letter text while every neighbour drew an icon.
+//
+// Scroll Lock keeps the WORD and puts ARROWS_DOWNSTOP — the same glyph the status
+// OLED already lights for this state — into a rounded badge that goes SOLID when the
+// lock is engaged, exactly like Caps Lock and Num Lock beside it. `led_t.scroll_lock`
+// rides `poly_layer_t.led_state`, which is synced, so the slave half shows it too.
+//
+// ⚠️ The badge is DRAWN, not a glyph: the resident C1 band is full (32/32), so there
+// is nowhere to bake the OFF/ON pair Caps and Num each get. HINT_FRAME / HINT_BOX
+// draw the outline and the solid, and HINT_ERASE punches the arrow back out of the
+// solid one — which is what makes the engaged state read as inverted rather than as
+// a blob. The arrow is HINT_SMALL (half of 10x26 = 5x13), sized to clear the 2px
+// frame inside a 19x19 box. HINT_BADGE fixes the corner radius at the one the baked
+// Caps/Num glyphs use (KDISP_BADGE_RADIUS), so the drawn box is indistinguishable
+// from theirs — HINT_FRAME's rounder radius, used first, visibly did not match.
+//
+// Geometry is measured: the box occupies visible x 44..62, y 6..24 (its bottom on the
+// text baseline, as the Caps badge's is) and the arrow inks x 51..55, y 8..20.
+// ⚠️ Several of these argument bytes happen to equal op codepoints (0x06, 0x11, 0x13).
+// That is harmless — HINT_MOVE / HINT_FRAME / HINT_BOX consume their arguments before
+// the next loop iteration, so an argument is never dispatched as an op.
+#define HINT_POS_SCRBOX   	U"\x48" U"\x06"   // (72,6)  buffer: badge top-left
+#define HINT_SZ_SCRBOX    	U"\x13" U"\x13"   // 19 x 19
+#define HINT_POS_SCRARROW 	U"\x4E" U"\x11"   // (78,17) buffer: the half-scale arrow's baseline
+
+#define ICON_SCRLOCK_OFF  	U"Scr" HINT_MOVE(HINT_POS_SCRBOX) HINT_BADGE(HINT_SZ_SCRBOX, BADGE_OFF) \
+                          	HINT_MOVE(HINT_POS_SCRARROW) HINT_SMALL ARROWS_DOWNSTOP
+#define ICON_SCRLOCK_ON   	U"Scr" HINT_MOVE(HINT_POS_SCRBOX) HINT_BADGE(HINT_SZ_SCRBOX, BADGE_ON) \
+                          	HINT_MOVE(HINT_POS_SCRARROW) HINT_ERASE HINT_SMALL ARROWS_DOWNSTOP
+
+// Pause spells the word out. HINT_SMALL halves whatever face the glyph comes from,
+// so the size is chosen by picking WHICH face: the resident 27px base halves to 10px
+// caps (41px wide), the legend-size L tier at 0xF3000 halves to 14px caps (56px) --
+// the largest that still fits the 72px panel. The full 27px face would need 106px.
+// Measured; the M tier at 0xF0000 sits between them at 12px caps / 49px.
+//
+// The leading full-size space (it precedes the op) plus two \x05 centre the run:
+// measured ink x9..61 in a 0..71 window, y14..27 in 0..39.
+//
+// ⚠️ This is the one legend on the layer that depends on the **latinbig** bundle
+// rather than symbol/emoji. A missing glyph makes kdisp_write_gfx_char_half draw
+// NOTHING (unlike the full-size writer, which substitutes '!'), so with no font pack
+// this keycap is blank -- as its whole row already is, every neighbour being a pack
+// glyph too. Drop back to the base face (plain U"Pause" after the op) if that ever
+// stops being acceptable.
+#define ICON_PAUSE_TEXT             	U" \x05" U"\x05" HINT_SMALL \
+                                    	U"\xF3050" U"\xF3061" U"\xF3075" U"\xF3073" U"\xF3065"   // "Pause" @ L tier
+
+// U+1F5D9 CANCELLATION X, the crispest of the three X glyphs already in the pack
+// (U+2717 is a script ballot X, U+2718 a heavy one) and from the same Window font the
+// legend-size icons use.
+#define ICON_CANCEL_X               	U"\x1F5D9"
+
+// Mute = the speaker we already had, with that X beside it. Placed by the ordinary
+// cursor advance rather than a MOVE, so the cell stays measurable by
+// kdisp_gfx_text_bbox; \f\f lifts the X 4px onto the speaker's optical centre.
+#define ICON_MUTE                   	PRIVATE_MUTE U"\f\f" ICON_CANCEL_X
+
+// Media STOP is DRAWN, not baked: no filled square exists anywhere in the pack
+// (U+25A0, U+23F9, U+2B1B, U+25FC, U+25FE are all absent) and the resident C1 icon
+// band is full, so the solid HINT_BADGE is the only way to get one. 15x15 is
+// measured against its own row rather than picked: the transport arrows
+// (ICON_LEFT/ICON_RIGHT, 7x13) ink y9..21, so a 15px square centred on y15 carries
+// the same visual weight - 20px read heavier than every key beside it.
+#define HINT_POS_STOPSQ             	U"\x39" U"\x08"   // (57,8) buffer: the square's top-left
+#define HINT_SZ_STOPSQ              	U"\x0F" U"\x0F"   // 15 x 15
+#define ICON_MEDIA_STOP             	HINT_MOVE(HINT_POS_STOPSQ) HINT_BADGE(HINT_SZ_STOPSQ, BADGE_ON)
+
+// Context menu = a mouse pointer resting on the menu lines. There is no standardised
+// glyph for this: Unicode encodes no context-menu character (the two UI conventions,
+// U+22EE and U+2261, are not in the pack and are not standards for it either), and the
+// de-facto reference is the OEM legend on the physical Menu/Application key -- a menu
+// with a pointer on it, which is exactly what this draws.
+//
+// ⚠️ The pointer is a ROTATED U+27A4 because the pack contains no cursor: every
+// diagonal arrow (U+2196..99, U+2B08..0B) and every filled triangle (U+25E2..E5,
+// U+25B6, U+25C0) is MISSING from it, measured, so the only arrowheads available point
+// along an axis. 120 deg counter-clockwise from "rightwards" lands on the up-and-left
+// tilt a pointer is drawn at.
+//
+// Geometry is measured: the cell inks x11..59 y9..36 in a 0..71 x 0..39 window, so it is
+// centred horizontally to within half a pixel, with the tip clear of the bottom line
+// rather than overlapping it.
+#define HINT_POS_CTXPTR             	U"\x42" U"\x0C"   // (66,12) buffer: the pointer's top-left
+#define ICON_CONTEXT_MENU           	U" " U"\x2630" HINT_MOVE(HINT_POS_CTXPTR) \
+                                    	HINT_ROT(ROT_CCW_120, U"\x27A4")
+
+// Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
+// The status OLED already says "brightness" with a sun, so the keycaps use the
+// same sun and grow its RAYS with the level; a staircase beside it states the
+// level outright, drawn with the status OLED's own rule that an unlit bar keeps a
+// 1px foot so the full scale stays visible.
+//
+// The staircase has FOUR steps because the five presets ARE quarters — KC_D1Q /
+// KC_DHLF / KC_D3Q / KC_DMAX set FULL_BRIGHT * 1/4, 1/2, 3/4, 1/1 — so each lights
+// exactly its own number of them, and KC_DMIN (brightness 2 of 50, below the first
+// quarter) lights none. Five steps would have put 50% and 75% on 2 and 3 of 5, i.e.
+// a meter misreporting the value it exists to state.
+//
+// ⚠️ These live in the C1 band 0x89-0x9F. Two of the slots are filled gaps and
+// three extended IconsFont's `last` 0x9C -> 0x9F; 0xA0+ stays off-limits because
+// IconsFont is g_all_fonts[0] and would shadow printable Latin-1 there. Run
+// `python3 tools/check_icon_slots.py` after touching any of this.
+//
+// ⚠️ KC_DMIN keeps a FILLED sun with zero rays, NOT a hollow one. It sets
+// brightness 2 of FULL_BRIGHT 50 — the dimmest LIT level, not off (DISP_OFF is
+// 0, MIN_BRIGHT is 1) — so a hollow sun would claim something the key does not do.
+#define ICON_BRIGHT_0               	U"\x0089"   // KC_DMIN  — no rays, staircase empty
+#define ICON_BRIGHT_1               	U"\x008A"   // KC_D1Q
+#define ICON_BRIGHT_2               	U"\x008B"   // KC_DHLF
+#define ICON_BRIGHT_3               	U"\x0093"   // KC_D3Q
+#define ICON_BRIGHT_4               	U"\x009A"   // KC_DMAX — full rays, staircase full
+#define ICON_BRIGHT_DOWN            	U"\x009B"   // KC_DDIM — small sun + '-'
+#define ICON_BRIGHT_UP              	U"\x009D"   // KC_DBRI — big sun + '+'
+#define ICON_BRIGHT_AUTO            	U"\x009E"   // KC_DAUTO while auto mode is ON
+#define ICON_BRIGHT_MAN             	U"\x009F"   // KC_DAUTO while auto mode is OFF
+
+// ⚠️ 0x8B was ICON_BACKSPACE, which nothing ever drew (verified: the macro had no
+// use outside its own definition, and no legend carried a raw \x8B). ICON_BRIGHT_2
+// now occupies that slot, so the old name is withdrawn rather than left pointing at
+// a sun. The #undef is here and not in the cog block above because that block is
+// GENERATED from the glyph sheet — deleting the line there would come back on the
+// next `cog -r lang/named_glyphs.h`, silently re-aliasing the slot.
+#undef ICON_BACKSPACE

@@ -716,6 +716,47 @@ per-variant copies of the keymap logic (that drift is exactly what this
 extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
 `run_cog.sh` targets `poly_keymap.c`.
 
+### ⚠️ A release-edge action fires up to THREE times on a ONE-SHOT layer
+
+`post_process_record_user()`'s big `switch` lives inside `if (!record->event.pressed)`
+— every settings/utility keycode acts on the **release** edge. That is free on a
+`TO()` layer and **not** free on an `OSL()` one:
+
+- `process_action()` (`quantum/action.c`, the `do_release_oneshot` block at the very
+  end) re-dispatches a key pressed while a one-shot layer is active as a synthetic
+  release: `record->event.pressed = false; layer_on(oneshot); process_record(record);`.
+  That inner `process_record` runs the whole chain, `post_process_record_user`
+  included — **dispatch 1**.
+- It mutated the **same record**, so when it returns, the outer `process_record`'s own
+  `post_process_record_quantum(record)` also sees `pressed == false` — **dispatch 2**.
+- The finger then lifts and the real release arrives — **dispatch 3**.
+
+So one tap of `KC_GLYPH_SIZE_UP` stepped the legend size **three** tiers. It was
+reported as "triggered twice" (field, 2026-08-25) because the third step clamps at the
+end tier — a step key reads as ×2, an inc/dec (`KC_DDIM`/`KC_DBRI`) as ×3, and a
+**toggle** (`KC_DAUTO`) reads as *doing nothing at all*, which is the shape that would
+have been hardest to diagnose. These keys had lived on `_SL`, entered with `TO()`, for
+years; moving them to the `OSL()`-entered `_UL` is what exposed it.
+
+**Rule: a custom PolyKybd keycode is handled and SWALLOWED in
+`process_record_user()`, never left to `post_process_record_user()`.** QMK has no
+per-press dedupe for `post_process_record_*` — the docs describe it only as "runs
+after each key press" — but it does not need one, because `process_record()` returns
+**before** `process_action()` when `process_record_user()` returns false, so the
+synthetic release is never generated at all. QMK compensates for the swallow in the
+same early-return path (`clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED)`), so
+`OSL()` still resolves after one key. `poly_custom_key_action()` in `poly_keymap.c`
+holds the whole settings switch (both edges) and returns whether it owned the
+keycode; `process_record_user()` calls it last, before `display_wakeup()`.
+- ⚠️ **A REAL keycode cannot use this** — swallowing it would stop it reaching the
+  host. The shifts, the `_LL` F-keys and `RM_NEXT`/`RM_PREV` therefore stay in
+  `post_process_record_user()`; all three are idempotent repaints, so the extra
+  dispatches are harmless, and a modifier never gets them (`process_action()`
+  excludes `IS_MODIFIER_KEYCODE` from the re-dispatch).
+- ⚠️ A per-key "armed on press, consumed on release" bitmap was written first and
+  **replaced** — it worked, but it is a bespoke guard for something the framework
+  already answers.
+
 ### HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)
@@ -926,6 +967,22 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   through `kdisp_write_gfx_text_cy()` directly — on split72 `MATRIX_ROWS_PER_SIDE` is
   5, so the Ctrl at `[4,0]` takes the *bottom-row* one and fixing only the obvious
   call site changes nothing.
+- ⚠️ **`kdisp_write_gfx_text_cy()` walks the list TWICE when a courtyard is asked
+  for, and the second pass is what makes the first correct — do not "optimise" it
+  back to one.** The courtyard is cleared per GLYPH, immediately before that glyph
+  is plotted, so glyph N+1's 3px margin removed glyph N's ink wherever the two sat
+  closer than the radius: every letter cut a slice out of the one before it (field,
+  2026-08-26). Pass 1 clears and draws as before; pass 2 redraws with NO clearing
+  and restores what was removed. Underlying art stays cleared because nothing
+  redraws it, so the courtyard keeps punching the legend through a tab frame / row
+  bar / overlay image and stops eating the legend. Safe because every drawing op is
+  idempotent (glyphs OR in, badge/frame fills are stable, an erase-mode glyph clears
+  the same pixels twice), so pass 2 can only put ink back.
+  - **It was never mid-face-specific, which is why it survived so long.** Measured
+    ink loss: `SCRIPT:/Rune` **-6.2%**, `Qwerty` -4.1%, `IDLE:/Pulse` -3.0% — but the
+    27px `Qwty` lost 10px too. The tighter 19px spacing only made a long-standing
+    defect impossible to miss. **The check is a pixel count against the same legend
+    drawn with `cy_radius` 0**, not a visual read; all 15 legends now match it exactly.
 - **`kdisp_send_window()` vs `kdisp_send_buffer()`**: `kdisp_send_buffer()` pushes
   the full 1024-byte scratch; `kdisp_send_window()` pushes only the **visible 360
   bytes** (pages 0–4 at column `BUFFER_X`) — the same region the keycap actually
@@ -952,6 +1009,26 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   (Intl-remap section): that one is about a key with a legend *bypassing* `render_key`,
   this one is about the same seam producing *no* legend at all. Any future keycode
   rewriting (a second wrapper class, an alias) has to land in **both**.
+- ⚠️ **A THIRD seam: `update_displays()` can carry a bespoke `else if (keycode ==
+  X)` branch that makes the keycode's legend DEAD — grep for your keycode there
+  before believing a legend edit does anything.** `KC_EDEN` had one: it drew its own
+  hardcoded `U"Reset"` / `U"Eden"` through `mid_fonts`, so the `keycode_helper.c`
+  case was never consulted for the awake keycap and **two successive commits edited a
+  string that never rendered**. Worse, the branch sat *after* the `text != NULL` test,
+  so the `KC_SETTINGS_MORE` gate's empty string routed straight into it and the key
+  stayed visible while every other gated key hid (field, 2026-08-26). Both are gone —
+  `HINT_MID` made the size expressible in an ordinary legend, so the special case
+  could be **deleted** rather than gated. **Prefer that: a per-keycode branch there
+  is a legend the rest of the pipeline cannot see.**
+- ⚠️ **`get_local_layer()` is the SYNCED snapshot, not live state — never gate
+  RENDERING on it.** It lags a layer change by up to one housekeeping pass, so a
+  render landing inside that window reads the OLD layer. The `KC_SETTINGS_MORE` gate
+  originally required `get_highest_layer(get_local_layer()->layer) == _SL`; a render
+  in that window concluded the gate did not apply and drew the advanced keys, and
+  `_SL` usually gets no later refresh to correct it. The clause was also redundant —
+  every gated keycode is mapped exactly once, only on `_SL`, in BOTH keymaps — so it
+  could never hide anything the keycode list did not, and could reveal what it
+  existed to hide. Gate on the keycode and the synced *value*, not on the layer.
 - ⚠️ **A hint/overlay string is drawn OVER the legend at the SAME origin, so
   full-size extra art ERASES it — a secondary mark belongs MOVE'd into a corner, and
   that corner is the BOTTOM-right.** `update_displays()` draws the legend at
@@ -1704,6 +1781,260 @@ like the glyph script:
   legend fills that height.
 - The shift/AltGr previews stay small **by design**: a keycap has room for one big thing.
 
+### Brightness keys — one icon family (`keycode_helper.c`, `base/fonts/gfx_icons.h`)
+
+The eight brightness keycodes now draw **one resident IconsFont glyph each**, all
+built on the sun the status OLED already uses for brightness: `KC_DMIN` / `KC_D1Q` /
+`KC_DHLF` / `KC_D3Q` / `KC_DMAX` are a sun whose **rays grow with the level** beside a
+staircase that states the level outright; `KC_DDIM` / `KC_DBRI` are a small/large sun
+with `−`/`+` and no staircase (they name no level); `KC_DAUTO` spells **AUTO** or
+**MANUAL** under the sun.
+
+- ⚠️ **What it replaced was actively misleading, not merely inconsistent.** The five
+  presets were **moon phases**, and the mapping ran BACKWARDS from the obvious
+  reading: `PRIVATE_DISP_BRIGHT` was **U+1F311 🌑 NEW MOON**, the all-black disc,
+  because it depicted the unlit *screen* rather than the brightness. Nothing else on
+  the board used that convention. `KC_DDIM`/`KC_DBRI` meanwhile borrowed the plain
+  page arrows `ICON_LEFT`/`ICON_RIGHT`, which say nothing about light at all.
+- **The staircase has FOUR steps because the presets ARE quarters** (`FULL_BRIGHT`
+  × 1/4, 1/2, 3/4, 1/1), so each lights exactly its own number of them and `KC_DMIN`
+  — brightness **2 of 50**, below the first quarter — lights none. Five steps put 50%
+  and 75% on 2 and 3 of 5, i.e. a meter misreporting the value it exists to state.
+  An unlit step keeps a **1px foot**, the status OLED's own rule
+  (`split72/status_oled.c` `draw_brightness_bars`), so the full scale stays visible.
+- ⚠️ **`KC_DMIN` keeps a FILLED sun with zero rays — do not "improve" it to a hollow
+  one.** It sets brightness 2, the dimmest **lit** level (`DISP_OFF` is 0,
+  `MIN_BRIGHT` is 1), so a hollow sun would claim an off state the key cannot reach.
+- ⚠️ **`KC_DAUTO` spells the mode out instead of wearing `ICON_SWITCH_ON/OFF`.** A
+  toggle beside a sun reads as *"the light is on/off"*, which is the one thing this
+  key does not control — reported in the field as exactly that confusion.
+- **One glyph per legend is the point, not an accident.** `kdisp_write_gfx_char`
+  baseline-aligns by `font->yAdvance - fonts[0]->yAdvance`, so a legend composed from
+  an icon plus base-font text sits on two baselines (the `à»ñ` note in the Intl-remap
+  traps). Baking each cell as a single IconsFont glyph — `IconsFont` **is** `fonts[0]`,
+  so its adjustment is 0 — makes the whole cell one unit at one baseline.
+  - ⚠️ **Therefore NO leading pad space**, unlike the `U"  " ICON_LEFT` legends beside
+    them. Each glyph carries its own `xOffset` measured from `BUFFER_X`; a space would
+    advance the cursor and shift the whole cell right.
+- **Cost: +1747 B of flash, 0 B of RAM** (`.data` 318292 → 320052, `.bss` unchanged).
+  Nine glyphs at 50–58 px wide; the monolithic `POLYKYBD_DOOM=yes` flavour still links.
+- ⚠️ **The now-unused `PRIVATE_DISP_*` moon macros stay, and so does the resident
+  `_Brightness_` font (1208 B) — it is NOT dead.** It covers `0x1F311..0x1F318`, which
+  the **emoji layer** also lists (`emoji/emoji_data.h`), and resident wins the
+  front-to-back lookup — so dropping it would silently re-render those emoji from the
+  pack at a different size. Removing a resident font also shifts every pack font's
+  gidx and forces a full-pack reship, for 1.2 KB against a 2 MB partition at ~38%.
+- **Verify by rendering, never by reading the header.** `PolyKybdHost/tools/gfx_font.py`
+  parses the committed headers and walks the same front-to-back `ALL_FONTS` lookup the
+  firmware does, so a sheet drawn through it checks the shipped bytes *and* the
+  codepoint routing. Count the pixels it drops outside the 72×40 window — that is the
+  clipping check, and it must be 0.
+
+### The utility layer's remaining text keys (`keycode_helper.c`, `poly_keymap.c`)
+
+Three `_UL` keys still spelled themselves out in four letters while every neighbour
+drew an icon, and one pair of keys was replaced by a single state-reflecting key.
+
+- **Mute is the speaker we already had, with a cancellation X beside it** —
+  `PRIVATE_MUTE` (U+1F568) + U+1F5D9, placed by the ordinary cursor advance.
+  U+1F507 (the emoji cancelled speaker) was shipped first and reverted: at 40×39 the
+  slashed circle fills the whole cell and reads as busy rather than as "muted".
+  U+1F5D9 is the crispest of the three X glyphs already in the pack (U+2717 is a
+  script ballot X, U+2718 a heavy one) and comes from the same `Window` font the
+  legend-size icons use.
+- **Why the old glyph failed, which is the part worth keeping:** The old `PRIVATE_MUTE` (U+1F568) is
+  a speaker with **no wave arcs**, i.e. it differs from `PRIVATE_VOL_DOWN` (U+1F569,
+  one arc) and `PRIVATE_VOL_UP` (U+1F56A) only by an *absence* — nothing on it says
+  "muted", which is exactly how it was reported. ⚠️ **Do not "finish the family" by
+  moving the volume keys to U+1F508/U+1F50A**: those NotoEmoji glyphs are filled and
+  render visibly heavier beside the NotoSansSymbols2 line art (rendered and compared).
+  - A slash **composited over** the speaker cannot work, which is why the X sits
+    BESIDE it: a legend display list has no erase op, so a lit slash over a solid
+    glyph merges into it, and a dark-gap version would need a baked glyph — which the
+    **full** C1 band has no room for (see the icon-slot note above). The speaker is
+    only 19 px wide, so there is room for a separate mark at no cost.
+- **Scroll Lock keeps the word and gains a STATE badge**: `U"Scr"` + `ARROWS_DOWNSTOP`
+  (U+2B73, the glyph the **status OLED** already lights for this state) at half size
+  inside a rounded box that goes **solid when the lock is engaged** — the same shape
+  Caps Lock and Num Lock use, which is why it reads at a glance. `led_t.scroll_lock`
+  rides `poly_layer_t.led_state`, which is **synced**, so the slave half shows it too.
+  - **The status OLED no longer shows scroll lock** (`split72/status_oled.c`). It used
+    to draw the same glyph while engaged, but with no *off* state and by **replacing
+    the L/R side marker** — so the half lost its side marker exactly while the lock was
+    on. The keycap badge supersedes it, which is where Caps and Num are read from
+    anyway. split42's panel never had one.
+  - ⚠️ **The badge is DRAWN, not baked**, and that is forced: the resident C1 band is
+    full (32/32), so there is nowhere to put the OFF/ON glyph pair Caps and Num each
+    get. **`HINT_BADGE` (`\x13`, args `w, h, style`)** draws either state — style 1 a
+    2px outline, style 2 the solid — and **`HINT_ERASE` (`\x14`)** punches the arrow
+    back out of the solid one; that knock-out is what makes the engaged state read as
+    *inverted* rather than as a blob.
+  - ⚠️ **The corner radius is MEASURED off the baked glyphs, and `HINT_FRAME` is the
+    wrong shape for this.** `ICON_CAPSLOCK_*` insets its corners **2, 1, 0 px** — a
+    radius-**2** arc — while `HINT_FRAME` draws at radius 4 (4, 2, 1, 1, 0), which
+    reads visibly rounder beside it. That is why `HINT_BADGE` fixes the radius at
+    `KDISP_BADGE_RADIUS` instead of taking it as an argument, and why `\x12` keeps its
+    own radius for the run-dialog hint: **do not merge the two ops.**
+  - ⚠️ **A style argument can never be 0** — these are `U"…"` strings, so a 0
+    codepoint terminates them. Hence outline = 1, solid = 2.
+  - ⚠️ **`kdisp_draw_round_rect()` CANNOT draw the released state, and two attempts to
+    make it shipped wrong.** Its Bresenham arc renders a radius-2 corner as insets
+    **1,0** where the scanline formula gives **2,1,0** — so the two disagree about what
+    "r = 2" *looks like*, and the outlined badge came out squarer than the solid one
+    even though both asked for the same radius. Stroking the 2px border as two nested
+    Bresenham rects is worse: the outer arc's pixel and the inner rect's first pixel
+    sit two apart, leaving a **1px hole in every corner**.
+  - `kdisp_draw_badge_rect(x, y, w, h, r, border)` draws both states from ONE scanline
+    fill (`border` 0 = solid, else a ring that thick), so the engaged badge is exactly
+    the released one with its middle removed — they cannot drift apart. Per-row inset
+    is `r - floor(sqrt(r² - d²))`; `r ≤ 4` in every caller, so the integer-sqrt loop is
+    a few iterations, no float and no table.
+  - ⚠️ **The HOLE keeps a 1px corner nick, which a true concentric offset does not
+    give.** Offsetting inward by `border` implies an inner radius of `r - border`, and
+    at `r == border` that is a perfectly square inner corner — one pixel short of the
+    baked `ICON_CAPSLOCK_OFF`, whose hole still insets 1 on its first row. Reported
+    from hardware as "it misses a single pixel on the inside corner", so the radius is
+    floored at 1 whenever the outer corner is rounded at all. Only the released state
+    has a hole, which is why the engaged one was right throughout.
+  - **Verify a drawn badge against the baked glyph as ASCII, not as a render.** The
+    radius error was invisible at 1× and obvious the moment both were dumped as
+    character grids and the corner insets compared row by row.
+  - ⚠️ **`HINT_ERASE` restores the PREVIOUS `s_gfx_erase`, not `false`.** It is a
+    static plotter mode, so leaving it on blanks every keycap drawn after this one in
+    the same pass — and a caller may already be mid-erase (the inverted-keycap
+    pattern), which a hardcoded `false` would clobber. It also covers only the text
+    paths; `\x0F`/`\x11` composite through `kdisp_draw_glyph_*_at`, which plot
+    unconditionally.
+  - The arrow **alone** was rendered first and is too sparse to identify, and the
+    Caps/Num badge glyphs could not be borrowed because they carry a literal `A` / `1`.
+- **Pause spells the word out**, at half the **L legend tier** (`0xF3000`) — 14 px
+  caps, 56 px wide, the largest that still fits the 72 px panel. `HINT_SMALL` halves
+  whatever face the glyph comes from, so the size is chosen by picking WHICH face: the
+  resident 27 px base halves to 10 px caps (41 px), M to 12 px (49 px), L to 14 px
+  (56 px); the full 27 px face would need 106 px. Two solid U+275A bars were tried
+  first and read as ambiguous.
+  - ⚠️ **This is the one legend on the layer that needs the `latinbig` bundle** rather
+    than `symbol`/`emoji`. A missing glyph makes `kdisp_write_gfx_char_half` draw
+    **nothing** — unlike the full-size writer, which substitutes `'!'` — so with no
+    font pack the keycap is blank, as its whole row already is (every neighbour is a
+    pack glyph too). Drop back to the base face if that stops being acceptable.
+
+**`HINT_SMALL` (`\x10`) is what makes small TEXT possible on a keycap, and it is not
+`HINT_HALF`.** The three standalone UI faces (`_Small_` 15 px, `_Mid_` 19 px, `_Nano_`
+10 px) are **not in `g_all_fonts`**, so no codepoint can reach them — the resident
+latin face has exactly one size, and `latinbig` only goes *bigger*. So a smaller face
+has to be synthesised at draw time.
+
+- `HINT_HALF` (`\x0F`) could not do it: it takes the **literal top-left of the ink**
+  and **does not advance the cursor**, because it exists to composite one icon into a
+  hint. Spelling a word with it needs a `HINT_MOVE` per letter, with the top-left
+  computed per glyph — 20 codepoints for "Pause", and each MOVE is an absolute buffer
+  position that `kdisp_gfx_text_bbox()` cannot measure.
+- `HINT_SMALL` instead latches a mode for the **rest of the string**, and
+  `kdisp_write_gfx_char_half()` keeps `kdisp_write_gfx_char`'s baseline and advance
+  semantics — only the glyph's own offsets and extents are halved, never the baseline.
+  So `U"  \x05\x05" HINT_SMALL U"Pause"` centres itself with ordinary full-size
+  spaces, exactly like the `U"  " ICON_*` legends beside it.
+- ⚠️ **Halve offsets with FLOOR, not C truncation.** `xOffset`/`yOffset` are negative
+  (above the baseline) and `/2` rounds toward zero, which puts lowercase 1 px off the
+  run's baseline. `half_floor()` is written out rather than `>> 1` because a right
+  shift of a negative value is only arithmetic by implementation guarantee.
+- There is deliberately **no "back to full size" op** — the one use is a legend that is
+  entirely small text, and a toggle is a second thing to get wrong. `\x18` (reset) does
+  not clear it either; it resets the cursor only.
+
+**`HINT_MID` (`\x16`) is the other direction, and the only size BETWEEN the two.**
+`HINT_SMALL` synthesises a smaller face by halving; `HINT_MID` reaches the real
+standalone **`_Mid_` 19px** one (~14px caps against the keycap face's ~20px), for
+the rest of the string. It exists because the settings labels at half the 27px face
+were reported as too small to read at a glance (2026-08-26).
+
+- **It is a SINGLE-font array on purpose** — `kdisp_write_gfx_char` baseline-aligns
+  by `font->yAdvance - fonts[0]->yAdvance`, so making the face its own `fonts[0]`
+  makes that adjustment 0, the same reason the language flags draw through
+  `{ &flag_font }`.
+- **It falls back to the caller's pool PER GLYPH.** The mid face is ASCII-only
+  (0x20..0x7E), so anything outside it — an icon — renders at its normal size
+  instead of `'!'`. That is what makes a **word-over-icon** legend possible at all
+  (the layout picks: a name over its on/off switch). The bbox mirrors this, and the
+  baseline reference must follow the **per-glyph** choice, not the latch: `fonts[0]`
+  is the mid face only for the glyphs the mid face supplied.
+- It is what let a bespoke `else if (keycode == KC_EDEN)` branch be **deleted** from
+  `update_displays()` rather than replaced — the size that branch existed to reach
+  is now expressible in an ordinary legend.
+
+⚠️ **TWO full-size TEXT lines CANNOT fit a 40px keycap, and the descender budget is
+exactly ONE — which is what decides between the two MID stacks.** `\v` advances a
+fixed 15px while the keycap face inks ~20px above the baseline, so two plain
+`\r\v` text lines overlap outright; at the mid face they fit, but only just.
+Nineteen legends shipped overlapped this way for a long time (Store/EE, Word/sel,
+Line/join — which also lost **55px** off the panel — App/sw and the twelve OS
+auto/pin cells), all now half-scale.
+
+- **`MID_TWO_LINE(top, bottom)`** — lift 10px / push 6px — spends the descender at
+  the **BOTTOM**. Values like `Teng`, `Amiga` and `Jittr` fit; the top may have
+  **neither a descender nor an ascender**, which is why the labels are `IDLE:` /
+  `SCRIPT:` / `RESET`. All caps is how that is guaranteed, not the rule itself.
+- **`MID_TWO_WORD(top, bottom)`** / **`MID_WORD_OVER_ICON(word, icon)`** — lift 8px /
+  push 8px — spend it at the **TOP**. An ascender fits (`Mods`, `Cmds`, `Colemk`);
+  the bottom must not descend.
+- ⚠️ **They cannot be merged.** Swapping the two spacings breaks four legends in
+  each direction — measured by sweeping every (lift, push) pair, not reasoned.
+  Re-measure rather than eyeball whenever a word changes.
+
+⚠️ **`kdisp_gfx_text_bbox()` did not know the display-list ops at all, and that was a
+real bug the moment a MAIN legend started using them.** Every op byte *and each of its
+argument codepoints* fell into `default:`, matched no font, and was substituted with
+`'!'` — so a legend carrying one `HINT_MOVE` measured **three** bogus glyphs. That box
+feeds `plan_main_legend()`'s shift-preview layout and `roll_idle_offset()`'s jitter
+travel, so it was luck rather than design that nothing visibly broke (none of the
+affected keys has a shift preview, and none is drawn at idle). The ops are mirrored
+now: `\x10` switches the measurement to half-scale, `\x16` to the mid face,
+`\x0F`/`\x11` consume one argument, `\x0E`/`\x12` consume two, `\x13` three.
+- ⚠️ **`\x0E` (MOVE) skipped NO arguments until 2026-08-26, and that sentence above
+  was FALSE for it** — it fell through to `\x14`'s bare `break`, so a MOVE's two
+  coordinate bytes were dispatched through the same switch on the next iterations.
+  A coordinate is an arbitrary byte: **13 of the 31 `HINT_POS_*` / `HINT_SZ_*` /
+  `MTB_*` macros carry one that is also an op** — `HINT_SZ_STOPSQ` is (15,15), i.e.
+  `\x0F \x0F`, two HALFs; `HINT_SZ_SCRBOX` is (19,19), two BADGEs; `HINT_POS_SCRBOX`'s
+  y is `\x06`. Ten of those predate the ops added in 2026-08 and cost only a
+  mis-measured glyph, but the newer `\x16` latches a different FONT for the rest of
+  the run and `\x15` eats the next two codepoints — the Ctrl mod-badge hint measured
+  x1..30 where it is really x0..47. Skipping the arguments (what `\x12` two lines
+  below always did) closes the class for the existing ops **and any op added later**.
+  ⚠️ **So check a new op byte against those macros' argument bytes** — or rather,
+  don't have to, now that MOVE consumes its own.
+- ⚠️ **The MOVE itself is still ignored** — bbox works relative to the
+  draw origin and MOVE names an ABSOLUTE buffer position, which is not knowable at
+  measure time, so a MOVE'd
+  legend's box still only covers the part laid out relatively. **Prefer the ordinary
+  cursor advance over a MOVE in a main legend** — that is why `ICON_MUTE` places its X
+  with `\f\f` and the glyph's own `xAdvance` rather than a MOVE.
+
+**The legend-size key is now ONE key that states its own tier.** `KC_GLYPH_SIZE_UP` on
+`_UL` draws `ICON_FONT_BIGGER` plus the current tier as a digit in the top-right;
+holding **Shift** swaps the icon to `ICON_FONT_SMALLER` and reverses the step, so the
+`KC_GLYPH_SIZE_DOWN` keycode survives but is bound nowhere.
+
+- ⚠️ **The legend lives in `to_static_text()` (`poly_keymap.c`), NOT in
+  `keycode_to_static_text()`.** Both halves of it are **synced** state — the tier from
+  `poly_sync_t.glyph_size` and the modifier from `poly_layer_t.mods` — and
+  `keycode_to_static_text()` only receives `led_t`, so on the **slave** it would draw
+  the master's tier with its own (always-clear) mods. Any legend that depends on a
+  synced field belongs on this side of that seam.
+- **The action reads the LIVE `get_mods()`, the legend reads the synced copy** — and
+  that asymmetry is deliberate. The action runs on the master at the instant of the
+  release and must follow the finger; the legend must render identically on a half that
+  only ever sees the housekeeping snapshot.
+- **Placement is measured** (`HINT_POS_SIZENUM` = buffer (85,25)): the digit inks rows
+  3–23 and columns 86–98 of the 72×40 window, clearing both the 43 px icon (which ends
+  at column 70) and the panel edge at 99. ⚠️ What makes room for it is that this legend
+  carries **no leading pad space**, unlike the `U"  " ICON_*` legends beside it — with
+  the usual two spaces the icon ends at column 61 and the digit will not fit.
+- The legend contains a `HINT_MOVE`, so `glyph_size_remap()` bails and the key itself
+  always draws at the small face. That is correct — it is a mixed icon cell, not a
+  latin legend — but it means the size key does not demonstrate the setting it changes.
+
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 
 An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C
@@ -2272,8 +2603,29 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     migrated to the pack (settings→⚙ U+2699, cast→📶 U+1F4F6, sliders→🎛 U+1F39B,
     gfx-restart→🖵 U+1F5B5 + a half-scaled 🗘 overlay), so `IconsFont`'s `last` was
     dropped from `0xA5` to `0x9F` — the whole `0xA0+` tail is gone and **no printable
-    Latin-1 is shadowed anymore** (¢£¤¥ render from NotoSans again). The only mid-range
-    gap left is `0x9D` (C1 control, harmless).
+    Latin-1 is shadowed anymore** (¢£¤¥ render from NotoSans again).
+    - ⚠️ **The C1 band `0x80–0x9F` is now FULL — 32/32 slots.** The brightness-key
+      unification (2026-08-25) took the last nine: the five gaps `0x89 0x8A 0x93
+      0x9A 0x9B`, the dead `ICON_BACKSPACE` slot `0x8B`, and `0x9D 0x9E 0x9F` by
+      raising `last` `0x9C → 0x9F`. There is no room left for a tenth resident icon,
+      and `0xA0+` is not an option — see the shadowing trap above. The next one has
+      to go in the **pack** (a real PUA / an existing symbol codepoint), or free a
+      slot by migrating an existing icon there.
+    - **`python3 tools/check_icon_slots.py` is the gate, and it is the only thing
+      that can answer "is this slot free?"** — the named_glyphs sheet's own
+      "Distance Helper" column measures the sheet against *itself*, so a codepoint
+      that holds a real glyph but has no macro reads as free space. The script cross-
+      checks `gfx_icons.h` against `named_glyphs.h` in both directions (every glyph
+      named, every macro pointing at a real glyph) and exits 1 on either mismatch.
+      Run it after touching either file; picking an occupied slot otherwise fails
+      **silently**, because `IconsFont` is `g_all_fonts[0]` and simply wins.
+    - ⚠️ **A macro you want GONE cannot just be deleted — most of `named_glyphs.h`
+      is COG-GENERATED** (the block from `/*[[[cog` to `//[[[end]]]`, lines 9–1927,
+      comes from the glyph sheet). `ICON_BACKSPACE` lived there, so removing the line
+      would have come back on the next `cog -r lang/named_glyphs.h` and silently
+      re-aliased `0x8B` to a brightness sun. It is `#undef`'d in the hand-written
+      tail instead, which survives regeneration and turns any stale use into a
+      **compile error** rather than a wrong glyph.
   - **Removing a glyph from the MIDDLE of the range** (e.g. after migrating a hint
     to the pack): you can't delete it (the array must stay contiguous `first..last`).
     Turn its record into a **gap** `{off,0,0,0,0,0}` and drop its bitmap bytes, then

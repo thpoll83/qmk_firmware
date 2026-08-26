@@ -132,6 +132,11 @@ enum my_keycodes {
     KCL_ENUS = QK_USER_0, KCL_DEDE, KCL_FRFR, KCL_ESES, KCL_PTPT, KCL_ITIT, KCL_TRTR, KCL_KOKR, KCL_JAJP, KCL_ARSA, KCL_ELGR, KCL_UKUA, KCL_RURU, KCL_BEBY, KCL_KKKZ, KCL_BGBG, KCL_PLPL, KCL_RORO, KCL_ZHCN, KCL_NLNL, KCL_HEIL, KCL_SVSE, KCL_FIFI, KCL_NNNO, KCL_DADK, KCL_HUHU, KCL_CSCZ, KCL_HRHR, KCL_SKSK, KCL_LTLT, KCL_LVLV, KCL_ETEE, KCL_PTBR, KCL_SRRS, KCL_MKMK, KCL_FAIR, KCL_HIIN, KCL_MRIN, KCL_NENP, KCL_MNMN, KCL_URPK, KCL_ENGB, KCL_ESMX, KCL_DECH, KCL_FRBE, KCL_FRCA, KCL_THTH, KCL_BNIN, KCL_TEIN, KCL_TAIN, KCL_ZHTW, KCL_KAGE, KCL_HYAM, KCL_IDID, KCL_AZAZ, KCL_ISIS, KCL_VIVN, KCL_ZHHK, KCL_ENAU, KCL_ENNZ, KCL_MINZ, KCL_SMWS, KCL_FJFJ, KCL_TLPH, KCL_HWUS, KCL_ENZA, KCL_AFZA, KCL_AREG, KCL_SWKE, KCL_AMET, KCL_YONG, KCL_ENNG, KCL_ARMA, KCL_ARIQ, KCL_KUIQ, KCL_MSMY, KCL_UZUZ, KCL_ENCA, KCL_ESAR, KCL_ENPG, KCL_TYPF, KCL_ESCO, KCL_ESPE, KCL_ESVE, KCL_ESCL, KCL_ESEC, KCL_ESGT, KCL_ESDO, KCL_ESBO, KCL_ESPY, KCL_ESCR, KCL_ESSV, KCL_ESHN, KCL_ESPA, KCL_ESUY, KCL_ESNI, KCL_DEAT, KCL_NLBE, KCL_CAES, KCL_ENIE, KCL_BSBA, KCL_FRCH, KCL_SLSI, KCL_FOFO, KCL_ARAE, KCL_ARSY, KCL_ARJO, KCL_ARLB, KCL_ARYE, KCL_ARKW, KCL_AROM, KCL_ARPS, KCL_ARQA, KCL_ARBH, KCL_ARDZ, KCL_ARSD, KCL_ARTN, KCL_ARLY, KCL_FRCD, KCL_FRCI, KCL_FRCM, KCL_FRSN, KCL_FRMG, KCL_ENGH, KCL_ENUG, KCL_ENZM, KCL_SWTZ, KCL_PTAO, KCL_PTMZ, KCL_BNBD, KCL_ENIN, KCL_ENPK, KCL_ENPH, KCL_ENSG, KCL_ENLK, KCL_KYKG, KCL_TGTJ, KCL_ENGU, KCL_ENSB, KCL_ENVU, KCL_ENFM, KCL_FRNC, KCL_TOTO, KCL_EUES, KCL_GLES, KCL_RMCH, KCL_CYGB, KCL_GAIE, KCL_MTMT, KCL_LBLU, KCL_SENO, KCL_GNPY, KCL_QUPE, KCL_AYBO, KCL_NVUS, KCL_NHMX, KCL_PSAF, KCL_IUCA, KCL_CRCA, KCL_CKUS,
     //[[[end]]]
         //Lables, no functionality:
+    // ⚠️ UNMAPPED since the Mods/Cmds keys started naming their own state — the
+    // "Text:" label key that explained the two switches beside them has no job left.
+    // The entry STAYS: this block is append-only, and deleting one renumbers every
+    // keycode after it, which would silently repoint any dynamic keymap already
+    // stored in a keyboard's EEPROM.
     LBL_TEXT,
 
     // ── Emoji category layer keycodes ────────────────────────────────────────
@@ -220,6 +225,22 @@ enum my_keycodes {
     // Settings-layer key: replay the one-time startup ("Eden") animation on demand.
     // Appended at the very end (QK_USER range) so no existing keycode is renumbered.
     KC_EDEN,
+    // Settings-layer cycle keys for the two display settings that were previously
+    // reachable ONLY from the host (HID cmd 28 / 30), so a keyboard with no host app
+    // could not change them at all. Both CYCLE (wrap) rather than clamp, unlike
+    // KC_GLYPH_SIZE_UP/_DOWN: those carry a direction in their own glyph, while these
+    // are one key each, and the sets are short enough to walk. Appended at the very
+    // end for the same no-renumbering reason as KC_EDEN.
+    KC_IDLE_STYLE,
+    KC_GLYPH_SCRIPT,
+    // Reveals the advanced half of the settings layer. Everything gated behind it
+    // is either irreversible from the board (Boot, Restart), a debug affordance
+    // (Dbg, WakeX), or a setting you set once and forget (idle style, glyph script,
+    // the text-mode toggles) — so the layer opens with only the everyday keys and
+    // the rest stay BLANK AND INERT until this is tapped. The reveal is per-visit:
+    // layer_state_set_user clears it on the way out, so an accidental QK_BOOT needs
+    // two deliberate presses every time, not one press ever.
+    KC_SETTINGS_MORE,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —
@@ -227,10 +248,17 @@ static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // appended after it, so the two asserts above silently stopped covering the tail
 // they exist to bound.  Re-anchor these whenever something is appended to the
 // QK_KB_0 block.
-static_assert((int)KC_LAT_REMAP <= (int)QK_KB_MAX, "Too many custom QK key codes");
-static_assert((int)KC_LAT_REMAP < (int)KCL_ENUS, "Overlap detected");
+static_assert((int)KC_GLYPH_SIZE_UP <= (int)QK_KB_MAX, "Too many custom QK key codes");
+static_assert((int)KC_GLYPH_SIZE_UP < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
+// ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes
+// stale: the two asserts directly above name KC_LANG_END / KC_OS_SET_END, but
+// KC_EDEN, KC_IDLE_STYLE, KC_GLYPH_SCRIPT and KC_SETTINGS_MORE are appended AFTER
+// them, so neither
+// covers the tail of the QK_USER_0 block any more. Anchor on the LAST member and
+// re-anchor whenever something is appended.
+static_assert((int)KC_SETTINGS_MORE <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

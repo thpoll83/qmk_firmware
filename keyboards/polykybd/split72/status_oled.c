@@ -351,17 +351,18 @@ void oled_update_buffer(void) {
     }
 
     // Lock LEDs live on the LAYOUT panel only. They render from global_layer, so both
-    // halves were drawing the identical Num/Caps/Scroll state — the second copy bought
+    // halves were drawing the identical Num/Caps state — the second copy bought
     // nothing and cost the RGB panel a whole column, which now carries the speed gauge.
     if(lock_panel) {
         kdisp_write_gfx_text(g_all_fonts, g_all_font_count, COL_X, 16, global_layer->led_state.num_lock ? ICON_NUMLOCK_ON : ICON_NUMLOCK_OFF);
         kdisp_write_gfx_text(g_all_fonts, g_all_font_count, COL_X, CAPS_LOCK_BASE, global_layer->led_state.caps_lock ? ICON_CAPSLOCK_ON : ICON_CAPSLOCK_OFF);
     }
-    if(lock_panel && global_layer->led_state.scroll_lock) {
-        // Scroll lock replaces the side marker (and is 26px tall, so it would run
-        // straight through the speed gauge on the other panel).
-        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, (int8_t)(COL_X + 4), 54, ARROWS_DOWNSTOP);
-    } else if(side_is_undecided()) {
+    // ⚠️ Scroll lock is NOT shown here. It used to replace the side marker while
+    // engaged — the only lock without an off state on this panel, and it cost the
+    // half its L/R marker exactly while it was on. The Scroll Lock KEYCAP now carries
+    // the same ARROWS_DOWNSTOP glyph in an off/on badge (keycode_helper.c), which is
+    // where Caps and Num are read from anyway, so the panel copy bought nothing.
+    if(side_is_undecided()) {
         kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), SIDE_MARKER_BASE, U"?");
     } else if(is_left_side()) {
         kdisp_write_gfx_text(smallFont, 1, (int8_t)(COL_X + 6), SIDE_MARKER_BASE, U"L");

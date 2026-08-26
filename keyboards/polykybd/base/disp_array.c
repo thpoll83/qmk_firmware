@@ -15,6 +15,25 @@
 #include "com.h"
 #include "../poly_keymap.h"
 
+// HINT_MID (\x16) draws the REST of the string from this standalone UI face
+// instead of the caller's array. It exists because the three standalone faces
+// (_Small_ 15px, _Mid_ 19px, _Nano_ 10px) are NOT in g_all_fonts, so no codepoint
+// can reach them — the resident keycap face has exactly one size and `latinbig`
+// only goes bigger. HINT_SMALL synthesises a SMALLER face by halving; this
+// reaches the real 19px one, which is the only size between the two.
+//
+// ⚠️ A SINGLE-font array on purpose: kdisp_write_gfx_char baseline-aligns by
+// `font->yAdvance - fonts[0]->yAdvance`, so making the face its own fonts[0]
+// makes that adjustment 0 — the same reason the language flags are drawn through
+// `{ &flag_font }`. Passing it inside a multi-font array would shift every glyph
+// by the difference instead.
+// It covers 0x20..0x7E only, so anything outside it — an icon — falls back to the
+// caller's pool PER GLYPH and draws at its normal size (see the default: case).
+// That is what lets a name-over-switch legend put the word in the mid face and
+// still render the switch.
+extern const GFXfont NotoSans_Regular_Mid_19px7b;
+static const GFXfont *const s_mid_font[] = { &NotoSans_Regular_Mid_19px7b };
+
 #define SSD1306_MEMORYMODE 0x20           ///< See datasheet
 #define SSD1306_COLUMNADDR 0x21           ///< See datasheet
 #define SSD1306_PAGEADDR 0x22             ///< See datasheet
@@ -257,6 +276,87 @@ void kdisp_draw_glyph_thin_at(const GFXfont *const *fonts, uint8_t num_fonts, in
     }
 }
 
+// sin(k * 15 deg) in 8.8 fixed point, k = 0..23. cos(k) is sin(k + 6), so one
+// table covers both. 24 steps is the whole resolution the op offers: at these glyph
+// sizes a finer angle changes no pixels, and the table stays 48 bytes.
+static const int16_t s_sin15[24] = {
+       0,   66,  128,  181,  222,  247,  256,  247,
+     222,  181,  128,   66,    0,  -66, -128, -181,
+    -222, -247, -256, -247, -222, -181, -128,  -66,
+};
+
+// Rotate a glyph COUNTER-CLOCKWISE by step*15 degrees, then halve it, and plot the
+// result at the literal (x, y) — same "composite one icon into a hint" contract as
+// kdisp_draw_glyph_half_at (no baseline align, no xOffset, no cursor advance).
+//
+// ⚠️ It rotates at FULL resolution and halves afterwards, which is why there is a
+// 2x2 loop inside the pixel loop rather than a rotate of the already-halved glyph.
+// Halving first throws away the very pixels the rotation needs to reconstruct an
+// edge, and the arrowhead this exists for came out visibly broken that way.
+// Nothing is buffered: each destination half-pixel inverse-maps its own four
+// full-resolution positions straight back into the source, so the cost is bounded
+// by the OUTPUT size and the stack is untouched.
+//
+// Screen y runs DOWN, so a visually counter-clockwise turn is a negative angle in
+// this arithmetic — hence the (24 - step) index. The op's argument is stated in the
+// direction a reader means by "counter-clockwise", not in the sign the maths uses.
+void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, uint8_t step) {
+    const GFXfont  *font  = NULL;
+    const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
+    if (glyph == NULL || font == NULL) return;
+    const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
+    const uint16_t bo = glyph_bitmap_offset(glyph);
+    const int16_t  w  = glyph_width(glyph);
+    const int16_t  h  = glyph_height(glyph);
+    if (w <= 0 || h <= 0) return;
+    const uint8_t cb = glyph_col_bytes((uint8_t)h);
+
+    const uint8_t idx = (uint8_t)((24u - (step % 24u)) % 24u);
+    const int32_t ct  = s_sin15[(idx + 6u) % 24u];
+    const int32_t st  = s_sin15[idx];
+
+    // Centre of the source box, and the output extent, both in 8.8. The extent comes
+    // from forward-rotating the four corners: a rotated box is wider than the original.
+    const int32_t cx = ((int32_t)(w - 1) << 8) / 2;
+    const int32_t cy = ((int32_t)(h - 1) << 8) / 2;
+    int32_t x0 = INT32_MAX, x1 = INT32_MIN, y0 = INT32_MAX, y1 = INT32_MIN;
+    for (uint8_t c = 0; c < 4; ++c) {
+        const int32_t sx = (c & 1u) ? cx : -cx;
+        const int32_t sy = (c & 2u) ? cy : -cy;
+        const int32_t dx = (sx * ct - sy * st) >> 8;
+        const int32_t dy = (sx * st + sy * ct) >> 8;
+        if (dx < x0) x0 = dx;
+        if (dx > x1) x1 = dx;
+        if (dy < y0) y0 = dy;
+        if (dy > y1) y1 = dy;
+    }
+    const int16_t ow = (int16_t)(((x1 - x0) >> 8) + 1);
+    const int16_t oh = (int16_t)(((y1 - y0) >> 8) + 1);
+    const int16_t hw = (ow + 1) / 2, hh = (oh + 1) / 2;
+
+    for (int16_t dy = 0; dy < hh; ++dy) {
+        for (int16_t dx = 0; dx < hw; ++dx) {
+            bool lit = false;
+            for (uint8_t o = 0; o < 4 && !lit; ++o) {
+                // The full-resolution destination pixel this quarter stands for,
+                // expressed centre-relative so the inverse rotation is a pure rotate.
+                const int32_t fx = (((int32_t)(dx * 2 + (o & 1u))) << 8) + x0;
+                const int32_t fy = (((int32_t)(dy * 2 + (o >> 1))) << 8) + y0;
+                const int32_t sx = ((fx * ct + fy * st) >> 8) + cx;
+                const int32_t sy = ((-fx * st + fy * ct) >> 8) + cy;
+                // Round to the nearest source pixel; both are non-negative here only
+                // after the +cx/+cy shift, so round before narrowing.
+                const int32_t ix = (sx + 128) >> 8;
+                const int32_t iy = (sy + 128) >> 8;
+                if (ix < 0 || ix >= w || iy < 0 || iy >= h) continue;
+                const uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)ix * cb + (iy >> 3)]);
+                if (byte & (1u << (iy & 7))) lit = true;
+            }
+            if (lit) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+        }
+    }
+}
+
 void kdisp_draw_glyph_double_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
     const GFXfont *font = NULL;
     const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
@@ -350,6 +450,57 @@ void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
         SET_PIXEL_CLIPPED(cxl - px, cyt - py); SET_PIXEL_CLIPPED(cxl - py, cyt - px); // top-left
         SET_PIXEL_CLIPPED(cxr + px, cyb + py); SET_PIXEL_CLIPPED(cxr + py, cyb + px); // bottom-right
         SET_PIXEL_CLIPPED(cxl - px, cyb + py); SET_PIXEL_CLIPPED(cxl - py, cyb + px); // bottom-left
+    }
+}
+
+// Horizontal inset of a rounded-rect row: how far in from each edge row `j` starts.
+static int rr_row_inset(int j, int top, int bot, int r) {
+    const int d = (j < top + r) ? (top + r - j) : ((j > bot - r) ? (j - (bot - r)) : 0);
+    if (d <= 0) return 0;
+    const int rem = r * r - d * d;
+    int k = 0;
+    while ((k + 1) * (k + 1) <= rem) ++k;   // k = floor(sqrt(rem))
+    return r - k;
+}
+
+// The lock-badge shape, solid (`border` 0) or as a ring of that thickness. Scanline
+// filled from rr_row_inset() so BOTH states share one silhouette by construction —
+// the engaged badge is exactly the released one with its middle removed.
+//
+// ⚠️ This exists because kdisp_draw_round_rect() CANNOT draw the released state, and
+// the reason is worth keeping: its Bresenham arc plots a radius-2 corner as insets
+// 1,0 where the scanline formula gives 2,1,0, so the two disagree about what "r = 2"
+// looks like. Stroking a 2px border as two nested Bresenham rects is worse still — it
+// leaves a 1px HOLE in each corner, because the outer arc's pixel and the inner rect's
+// first pixel are two apart. Both were shipped and both were wrong.
+void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r, int8_t border) {
+    if (width < 2 || height < 2) return;
+    if (r < 0) r = 0;
+    if (r > (width - 1) / 2)  r = (width - 1) / 2;
+    if (r > (height - 1) / 2) r = (height - 1) / 2;
+    if (border < 0) border = 0;
+    const int x0 = x, y0 = y, x1 = x + width - 1, y1 = y + height - 1;
+    // The hole is the same shape inset by `border`. A true concentric offset would give
+    // it radius r - border, which at r == border is a perfectly SQUARE inner corner --
+    // and that is one pixel short of the baked ICON_CAPSLOCK_OFF, whose hole still
+    // insets 1 on its first row. Measured, not chosen: keep a 1px nick whenever the
+    // outer corner is rounded at all, so the ring reads as a ring and not as a square
+    // hole punched in a rounded plate.
+    const int hx0 = x0 + border, hy0 = y0 + border, hx1 = x1 - border, hy1 = y1 - border;
+    int hr = r - border;
+    if (hr < 1) hr = (r > 0) ? 1 : 0;
+    for (int j = y0; j <= y1; ++j) {
+        const int ins = rr_row_inset(j, y0, y1, r);
+        const int a = x0 + ins, b = x1 - ins;
+        if (border > 0 && j >= hy0 && j <= hy1 && hx0 <= hx1) {
+            const int hins = rr_row_inset(j, hy0, hy1, hr);
+            const int ha = hx0 + hins, hb = hx1 - hins;
+            for (int i = a; i <= b; ++i) {
+                if (i < ha || i > hb) SET_PIXEL_CLIPPED(i, j);
+            }
+            continue;
+        }
+        for (int i = a; i <= b; ++i) SET_PIXEL_CLIPPED(i, j);
     }
 }
 
@@ -534,13 +685,85 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
     return pgm_read_byte(&glyph->xAdvance);
 }
 
+// Floor division by two. Glyph offsets are negative (above the baseline) and C
+// truncates toward zero, which would round those the wrong way and put a lowercase
+// glyph 1px off its run's baseline. Written out rather than `>> 1` because a right
+// shift of a negative value is only arithmetic by implementation guarantee.
+static inline int16_t half_floor(int16_t v) {
+    return (int16_t)((v >= 0) ? (v / 2) : -((int16_t)(((-v) + 1) / 2)));
+}
+
+// Half-scale sibling of kdisp_write_gfx_char, with the SAME baseline and advance
+// semantics — so a run of them lays out as text. This is what HINT_SMALL (\x10)
+// switches the text writer into, and it is the only way to get a smaller face onto
+// a keycap: the three standalone UI faces (_Small_ / _Mid_ / _Nano_) are not in
+// g_all_fonts, so no codepoint reaches them, and the resident latin face has
+// exactly one size.
+//
+// ⚠️ Not the same thing as kdisp_draw_glyph_half_at(), which takes the literal
+// top-left of the ink and does NOT advance — that one is for compositing a single
+// icon into a hint, this one is for text. The BASELINE is not halved here, only
+// the glyph's own offsets relative to it.
+static int8_t kdisp_write_gfx_char_half(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
+    const GFXfont  *font  = NULL;
+    const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
+    if (glyph == NULL || font == NULL) return 0;
+    x += s_draw_ox;   // anti-burn-in jitter offset, as the full-size writer applies
+    y += s_draw_oy;
+    const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
+    const uint16_t bo = glyph_bitmap_offset(glyph);
+    const int16_t  w  = glyph_width(glyph);
+    const int16_t  h  = glyph_height(glyph);
+    const int16_t  xo = (int16_t)(int8_t)pgm_read_byte(&glyph->xOffset);
+    const int16_t  yo = (int16_t)(int8_t)pgm_read_byte(&glyph->yOffset);
+    const int16_t  yadj = (int16_t)pgm_read_byte(&font->yAdvance) - (int16_t)pgm_read_byte(&fonts[0]->yAdvance);
+    const int16_t  gx0 = (int16_t)(x + half_floor(xo));
+    const int16_t  gy0 = (int16_t)(y + half_floor((int16_t)(yadj + yo)));
+    const int16_t  hw = (int16_t)((w + 1) / 2), hh = (int16_t)((h + 1) / 2);
+    const uint8_t  cb = glyph_col_bytes((uint8_t)h);
+    for (int16_t dy = 0; dy < hh; ++dy) {
+        for (int16_t dx = 0; dx < hw; ++dx) {
+            bool lit = false;
+            for (int16_t oy = 0; oy < 2 && !lit; ++oy) {
+                for (int16_t ox = 0; ox < 2; ++ox) {
+                    int16_t sx = (int16_t)(dx * 2 + ox), sy = (int16_t)(dy * 2 + oy);
+                    if (sx >= w || sy >= h) continue;
+                    if (pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]) & (1u << (sy & 7))) { lit = true; break; }
+                }
+            }
+            if (!lit) continue;
+            if (s_gfx_erase) {
+                CLEAR_PIXEL_CLIPPED(gx0 + dx, gy0 + dy);
+            } else if (!scanline_skip_row(gy0 + dy)) {
+                SET_PIXEL_CLIPPED(gx0 + dx, gy0 + dy);
+            }
+        }
+    }
+    return (int8_t)((pgm_read_byte(&glyph->xAdvance) + 1) / 2);
+}
+
 void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text) {
     kdisp_write_gfx_text_cy(fonts, num_fonts, x, y, text, 0);
 }
 
-void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius) {
+// One walk of the display list. Called twice by kdisp_write_gfx_text_cy when a
+// courtyard is requested — see there for why.
+static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius) {
     int8_t x_cursor = x;
     int8_t y_cursor = y;
+    // HINT_SMALL (\x10) latches this for the REST of the string — there is no
+    // "back to full size" op, because the one use is a legend that is entirely
+    // small text and a toggle would just be a second thing to get wrong.
+    bool   small    = false;
+    // HINT_MID (\x16) latches the same way, and the two compose: \x10 after \x16
+    // half-scales the 19px face (~7px caps), which is smaller than either alone.
+    bool   mid      = false;
+    // HINT_ERASE (\x14) latches likewise. ⚠️ s_gfx_erase is a STATIC plotter mode —
+    // leaving it on blanks every keycap drawn after this one in the same pass — so
+    // the previous value is restored at the single exit below, not hardcoded false:
+    // a caller may already be mid-erase (the inverted-keycap pattern).
+    bool       erase_latched = false;
+    const bool erase_prev    = s_gfx_erase;
     while (*text != 0) {
         switch(*text) {
             case U'\x05'://enquiry
@@ -578,11 +801,49 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
             case U'\x0E':   // MOVE cursor to buffer coords (next two codepoints = x, y)
                 if (text[1] && text[2]) { x_cursor = (int8_t)text[1]; y_cursor = (int8_t)text[2]; text += 2; }
                 break;
+            case U'\x10':   // SMALL: draw every FOLLOWING glyph half-scale, advancing half
+                small = true;
+                break;
             case U'\x0F':   // HALF: draw the next codepoint half-scale (2x2-OR) at the cursor, no advance
                 if (text[1]) { kdisp_draw_glyph_half_at(fonts, num_fonts, x_cursor, y_cursor, text[1]); text++; }
                 break;
             case U'\x11':   // THIN: as HALF but decimating, for icons whose gaps matter
                 if (text[1]) { kdisp_draw_glyph_thin_at(fonts, num_fonts, x_cursor, y_cursor, text[1]); text++; }
+                break;
+            case U'\x15':   // ROT: rotate the next codepoint counter-clockwise and halve it,
+                            //   plotting at the cursor with no advance (as HALF does). Next TWO
+                            //   codepoints are the angle in 15-degree steps (1..24) and the glyph.
+                            //   ⚠️ The angle can never be 0 — a 0 codepoint terminates the string —
+                            //   which costs nothing, since a 0-degree turn is what \x0F already is.
+                if (text[1] && text[2]) {
+                    kdisp_draw_glyph_rot_half_at(fonts, num_fonts, x_cursor, y_cursor, text[2], (uint8_t)text[1]);
+                    text += 2;
+                }
+                break;
+            case U'\x13':   // BADGE: a lock-indicator box at the cursor. Next THREE codepoints
+                            //   are w, h and style — 1 = 2px outline (released), 2 = solid
+                            //   (engaged); pair the solid with \x14 to punch the glyph back
+                            //   out of it, the way ICON_CAPSLOCK_ON is drawn.
+                            //
+                            //   ⚠️ The radius is FIXED at KDISP_BADGE_RADIUS rather than taken
+                            //   as an argument, because the whole point is to match the baked
+                            //   ICON_CAPSLOCK_* / ICON_NUMLOCK_* glyphs, whose corners inset
+                            //   2,1,0 — exactly a radius-2 arc. \x12 (FRAME) keeps its own
+                            //   rounder radius for the run-dialog hint; do not merge them.
+                            //   ⚠️ style cannot be 0: a 0 codepoint terminates the string.
+                if (text[1] && text[2] && text[3]) {
+                    kdisp_draw_badge_rect(x_cursor, y_cursor, (int8_t)text[1], (int8_t)text[2],
+                                          KDISP_BADGE_RADIUS,
+                                          (text[3] == 2) ? 0 : KDISP_BADGE_BORDER);
+                    text += 3;
+                }
+                break;
+            case U'\x14':   // ERASE: draw every FOLLOWING TEXT glyph as a hole, not as ink.
+                            //   ⚠️ Covers the ordinary and \x10 (SMALL) paths, which both
+                            //   honour s_gfx_erase — NOT the \x0F/\x11 composite ops, whose
+                            //   kdisp_draw_glyph_*_at plot unconditionally.
+                erase_latched = true;
+                s_gfx_erase   = true;
                 break;
             case U'\x12':   // FRAME: 2px nested rounded rect at the cursor (next two codepoints = w, h)
                 if (text[1] && text[2]) {
@@ -592,12 +853,52 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
                     text += 2;
                 }
                 break;
-            default:
-                x_cursor += kdisp_write_gfx_char(fonts, num_fonts, x_cursor, y_cursor, *text, cy_radius);
+            case U'\x16':   // MID: draw the REST of the string from the standalone 19px UI
+                            //   face. See s_mid_font above for why it is a single-font array.
+                mid = true;
                 break;
+            default: {
+                // In a MID run, fall back to the caller's pool for anything the mid
+                // face does not carry. It is ASCII-only, so without this an icon in a
+                // MID legend renders '!' — which is what a name-over-switch legend is
+                // made of. Costs one extra range scan per glyph on a cold draw path.
+                const bool            use_mid = mid && kdisp_gfx_glyph(s_mid_font, 1, *text) != NULL;
+                const GFXfont *const *f = use_mid ? s_mid_font : fonts;
+                const uint8_t         n = use_mid ? 1u : num_fonts;
+                x_cursor += small
+                    ? kdisp_write_gfx_char_half(f, n, x_cursor, y_cursor, *text)
+                    : kdisp_write_gfx_char(f, n, x_cursor, y_cursor, *text, cy_radius);
+                break;
+            }
         }
         text++;
     }
+    if (erase_latched) s_gfx_erase = erase_prev;
+}
+
+void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius) {
+    // ⚠️ TWO passes when a courtyard is asked for, and the second one is what makes
+    // the first correct. The courtyard is cleared per GLYPH, immediately before that
+    // glyph is plotted (kdisp_write_gfx_char), so glyph N+1's 3px margin ate glyph
+    // N's ink wherever the two sat closer than the radius — the legend came out with
+    // slices cut out of the letter before each one. Measured on the shipped legends:
+    // "SCRIPT:/Rune" lost 6.2% of its lit pixels, "Qwerty" 4.1%, and even the 27px
+    // "Qwty" lost 10px, so this was never mid-face-specific — the tighter 19px
+    // spacing just made a long-standing defect impossible to miss (field, 2026-08-26).
+    //
+    // Pass 1 clears and draws exactly as before; pass 2 redraws the same list with NO
+    // clearing, restoring any ink a later glyph's margin removed. Underlying art stays
+    // cleared, because nothing redraws it — so the courtyard keeps doing the one job
+    // it exists for (punching the legend through a tab frame / row bar / overlay
+    // image) and stops doing the one it never should have.
+    //
+    // Every drawing op is idempotent (glyphs OR in, the badge/frame fills are stable,
+    // an erase-mode glyph clears the same pixels twice), so a second pass cannot
+    // change the result other than by putting ink back.
+    if (cy_radius > 0) {
+        gfx_text_run(fonts, num_fonts, x, y, text, cy_radius);
+    }
+    gfx_text_run(fonts, num_fonts, x, y, text, 0);
 }
 
 void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,
@@ -608,6 +909,15 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
     int16_t x = 0, y = 0;
     int16_t xmn = 127, xmx = -128, ymn = 127, ymx = -128;
     const int16_t base_yadv = pgm_read_byte(&fonts[0]->yAdvance);
+    bool small = false;
+    // HINT_MID (\x16) swaps the font array for the rest of the run, exactly as the
+    // draw does — and, exactly as the draw does, PER GLYPH: the mid face is
+    // ASCII-only and anything outside it falls back to the caller's pool. The
+    // baseline reference has to follow that per-glyph choice, because the draw
+    // aligns by `font->yAdvance - fonts[0]->yAdvance` and fonts[0] is the mid face
+    // only for the glyphs the mid face supplied. Using one base for the whole run
+    // would report every fallback glyph shifted by the difference between the faces.
+    bool mid   = false;
     while (*text != 0) {
         switch (*text) {
             case U'\x05':                     y += 2; break; // down 2px
@@ -619,35 +929,85 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
             case U'\x06':                     x += 2; break; // nudge right 2px
             case U'\t':                       x += ((x) / 36 + 1) * 36; break;
             case U'\n':                       y += base_yadv; x = 0; break;
+            // ---- the hint display-list ops, mirrored so their ARGUMENT codepoints are
+            //      not measured as glyphs. Without this each op byte and each argument
+            //      falls into `default:`, matches no font and is substituted with '!',
+            //      so a legend carrying one MOVE measured three bogus glyphs.
+            //      \x0E is an ABSOLUTE buffer position, which this relative-to-origin
+            //      measurement cannot resolve; skipping it is strictly better than
+            //      measuring '!', but a MOVE'd legend's box still only covers the part
+            //      of it that is laid out relatively.
+            case U'\x10':                    small = true; break;   // SMALL: rest of the run is half-scale
+            case U'\x16':                                            // MID: rest of the run is the 19px UI face
+                mid = true;                                          //   (per glyph — see the fallback below)
+                break;
+            case U'\x0F':                                           // HALF / THIN composite a glyph at the
+            case U'\x11': if (text[1]) text += 1; break;            //   cursor and do not advance
+            case U'\x15': if (text[1] && text[2]) text += 2; break;            // ROT (angle, glyph)
+            case U'\x0E':   // MOVE (x,y): the cursor lands on an ABSOLUTE buffer position, which
+                             //   this relative-to-origin measurement cannot resolve — so the move
+                             //   itself is ignored and a MOVE'd legend's box covers only the part
+                             //   laid out relatively. Its two ARGUMENTS are still skipped.
+                             //
+                             //   ⚠️ They MUST be, and this used to fall through to \x14 and skip
+                             //   nothing. A coordinate is an arbitrary byte, so it lands in this
+                             //   very switch on the next iteration: 13 of the 31 HINT_POS_* /
+                             //   HINT_SZ_* / MTB_* macros carry a byte that is also an op
+                             //   (HINT_SZ_STOPSQ is 15,15 = \x0F \x0F, i.e. HALF HALF). Before,
+                             //   that mis-measured a glyph; once \x15/\x16 existed it could
+                             //   silently latch a font for the rest of the run or eat two real
+                             //   codepoints. Skipping the arguments closes the whole class,
+                             //   including for any op added later.
+                if (text[1] && text[2]) text += 2;
+                break;
+            case U'\x14':                    /* ERASE: a mode, no extent */ break;
+            case U'\x13': if (text[1] && text[2] && text[3]) text += 3; break;  // BADGE (w,h,style)
+            case U'\x12': if (text[1] && text[2]) text += 2; break;             // FRAME (w,h)
             default: {
                 // Locate the font whose [first,last] contains the codepoint (linear
                 // scan; this is a cold measuring path, no MRU cache needed).
                 uint32_t ch = *text, first = 0, last = 0;
+                // Mirror the draw's per-glyph fallback: MID applies only to codepoints
+                // the mid face actually has.
+                const bool            use_mid = mid && kdisp_gfx_glyph(s_mid_font, 1, *text) != NULL;
+                const GFXfont *const *pool = use_mid ? s_mid_font : fonts;
+                const uint8_t         cnt  = use_mid ? 1u : num_fonts;
                 const GFXfont *f = 0;
-                for (uint8_t i = 0; i < num_fonts; ++i) {
-                    first = pgm_read_dword(&fonts[i]->first);
-                    last  = pgm_read_dword(&fonts[i]->last);
-                    if (ch >= first && ch <= last) { f = fonts[i]; break; }
+                for (uint8_t i = 0; i < cnt; ++i) {
+                    first = pgm_read_dword(&pool[i]->first);
+                    last  = pgm_read_dword(&pool[i]->last);
+                    if (ch >= first && ch <= last) { f = pool[i]; break; }
                 }
-                if (!f) { f = fonts[0]; first = pgm_read_dword(&f->first); ch = U'!'; }
+                if (!f) { f = pool[0]; first = pgm_read_dword(&f->first); ch = U'!'; }
                 const GFXglyph *g = pgm_read_glyph_ptr(f, ch - first);
                 int8_t w  = pgm_read_byte(&g->width);
                 int8_t h  = pgm_read_byte(&g->height);
                 int8_t xo = pgm_read_byte(&g->xOffset);
                 int8_t yo = pgm_read_byte(&g->yOffset);
                 if (w > 0 && h > 0) {
-                    int16_t l = x + xo, r = x + xo + w - 1;
+                    // In a SMALL run mirror kdisp_write_gfx_char_half instead of
+                    // kdisp_write_gfx_char — halved extents and offsets with the same
+                    // floor rounding — so the measured box still matches the pixels.
+                    int16_t gx = small ? half_floor((int16_t)xo) : (int16_t)xo;
+                    int16_t gw = small ? (int16_t)((w + 1) / 2) : (int16_t)w;
+                    int16_t gh = small ? (int16_t)((h + 1) / 2) : (int16_t)h;
+                    int16_t l = x + gx, r = x + gx + gw - 1;
                     if (l < xmn) xmn = l;
                     if (r > xmx) xmx = r;
                     // kdisp_write_gfx_char shifts each glyph by (font yAdvance - fonts[0]
                     // yAdvance) before applying yOffset; mirror it so the vertical box
                     // matches the rasterised pixels.
-                    int16_t yadj = (int16_t)pgm_read_byte(&f->yAdvance) - base_yadv;
-                    int16_t t = y + yadj + yo, b = t + h - 1;
+                    int16_t yadj = (int16_t)pgm_read_byte(&f->yAdvance) -
+                                   (use_mid ? (int16_t)pgm_read_byte(&s_mid_font[0]->yAdvance) : base_yadv);
+                    int16_t gy = small ? half_floor((int16_t)(yadj + yo)) : (int16_t)(yadj + yo);
+                    int16_t t = y + gy, b = t + gh - 1;
                     if (t < ymn) ymn = t;
                     if (b > ymx) ymx = b;
                 }
-                x += pgm_read_byte(&g->xAdvance);
+                {
+                    int16_t adv = (int16_t)pgm_read_byte(&g->xAdvance);
+                    x += small ? (int16_t)((adv + 1) / 2) : adv;
+                }
                 break;
             }
         }

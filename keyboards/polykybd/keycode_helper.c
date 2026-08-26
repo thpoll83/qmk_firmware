@@ -27,6 +27,52 @@ static inline const uint32_t* kc_os_gui_icon(void) {
     }
 }
 
+// Legends for the two cycle keys. Both name the ACTIVE value rather than the key's
+// function, so the keycap answers "what is this set to" without being pressed — the
+// same reasoning as the OS-selector keys further down. An out-of-range value falls
+// back to "?" rather than indexing past the array: the glyph-script index is
+// deliberately OPEN-ENDED on the wire (a keyboard can be told about a script whose
+// font it does not carry), so this genuinely can be asked about an unknown value.
+// The IDDQD entry is only ever reached by a board that is ALREADY on that style —
+// the cycle key skips it (see KC_IDLE_STYLE in poly_keymap.c), so naming it here
+// cannot give the easter egg away to anyone who has not turned it on.
+//
+// Both are TWO LINES at half scale: the setting's name on top, the active value
+// under it. The value alone ("Std") does not say what it is a value OF, which is
+// the whole reason these keys carry a legend at all.
+//
+// They are drawn in the standalone 19px UI face (MID_TWO_LINE), not half-scale:
+// half of the 27px keycap face is ~10px caps, which was reported as too small to
+// read at a glance. The mid face is ~14px, the only size between "half the keycap
+// face" and "the keycap face", and the one this board already uses for the
+// status-OLED top row.
+#define SETTING_LBL(label, value) MID_TWO_LINE(label, value)
+
+static const uint32_t* idle_style_legend(void) {
+    static const uint32_t* const names[] = { SETTING_LBL("IDLE:", "Pulse"),
+                                             SETTING_LBL("IDLE:", "Jittr"),
+                                             SETTING_LBL("IDLE:", "IDDQD"),
+                                             SETTING_LBL("IDLE:", "Eden") };
+    const uint8_t v = get_idle_style();
+    return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("IDLE:", "?");
+}
+
+static const uint32_t* glyph_script_legend(void) {
+    static const uint32_t* const names[] = { SETTING_LBL("SCRIPT:", "Std"),
+                                             SETTING_LBL("SCRIPT:", "Teng"),
+                                             SETTING_LBL("SCRIPT:", "Rune"),
+                                             SETTING_LBL("SCRIPT:", "Aureb"),
+                                             SETTING_LBL("SCRIPT:", "SGA"),
+                                             SETTING_LBL("SCRIPT:", "Cirth"),
+                                             SETTING_LBL("SCRIPT:", "VGA"),
+                                             SETTING_LBL("SCRIPT:", "C64"),
+                                             SETTING_LBL("SCRIPT:", "Amiga"),
+                                             SETTING_LBL("SCRIPT:", "APL"),
+                                             SETTING_LBL("SCRIPT:", "Brail") };
+    const uint8_t v = get_glyph_script();
+    return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("SCRIPT:", "?");
+}
+
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {
     switch (keycode) {
         case SC_LCPO:                       return U"(   " CURRENCY_SIGN;
@@ -37,18 +83,85 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case SC_RAPC:                       return U")    <\r     ~";
         case SC_SENT:                       return ARROWS_RETURN U"  " ICON_SHIFT;
         case TO(_EMJ):                      return U" " PRIVATE_EMOJI_1F600 U"\v" ICON_LAYER;
-        case KC_DEADKEY:                    return (state_flags & DEAD_KEY_ON_WAKEUP) == 0 ? U"WakeX\r\v" ICON_SWITCH_OFF : U"WakeX\r\v" ICON_SWITCH_ON;
-        case LBL_TEXT:                      return U"Text:";
-        case KC_EDEN:                       return U"Reset\r\vEden";
-        // Keycap legend size, one tier per press (KC_GLYPH_SIZE_UP/_DOWN). Unicode's
-        // own INCREASE/DECREASE FONT SIZE symbols, so the pair needs no words: 🗚 is a
-        // small A beside a big one, 🗛 the mirror. The two leading spaces centre the
-        // 43 px icon on the 72 px panel (space advances 7 px in the base face) — this
-        // is the whole legend, so there is nothing to lay it out against.
-        case KC_GLYPH_SIZE_UP:              return U"  " ICON_FONT_BIGGER;
+        // "WakeX" did not fit — measured, it clipped 101 pixels off the 72px panel,
+        // which is exactly how it was reported. The name was also opaque: what this
+        // toggles is whether the FIRST press after the displays go dark is swallowed
+        // (wake only) or passed through to the host, so it now says "Wake only".
+        //
+        // ⚠️ That needs HINT_SMALL, and HINT_SMALL latches for the REST of the string —
+        // including the switch, which came out a 17px blob. So the SWITCH goes FIRST,
+        // on the top line, and the small label below it. That inverts the text-then-
+        // switch order of Dbg/Mods/Cmds beside it, deliberately: this is the one key on
+        // the row whose label needs two words, and a legible state indicator beats a
+        // consistent one. Measured: inks x0..69 y9..39, zero clipped.
+        // The word on top, the switch under it. HINT_SMALL latches for the REST of
+        // the string (icons included), so the switch has to come first if it is to
+        // stay full size -- hence the two lines are ordered word-then-switch here
+        // and switch-then-word nowhere.
+        case KC_DEADKEY:                    return (state_flags & DEAD_KEY_ON_WAKEUP) == 0
+                                                       ? U"Wake\r\v" ICON_SWITCH_OFF
+                                                       : U"Wake\r\v" ICON_SWITCH_ON;
+        // No on/off switch: the reveal is momentary chrome, not a setting anyone
+        // needs to read back — pressing it makes the extra keys appear, which is
+        // the whole of the feedback. It leaves the layer with the rest of the
+        // state, so there is nothing to report when the board is not on _SL.
+        case KC_SETTINGS_MORE:              return U"More";
+        // ⚠️ This one had NO case at all, so to_static_text() returned NULL,
+        // translate_keycode() had no row for a QK_KB-range keycode, and the keycap
+        // rendered EMPTY. Same seam as the render_key()/to_static_text() pairing
+        // note in CLAUDE.md — a key with no legend is indistinguishable from a bug.
+        // ⚠️ Do NOT add KC_IDDQD or KC_L0..KC_L4 here. They are not missing: this
+        // function is consulted FIRST by to_static_text(), which carries its own,
+        // better cases for them further down — KC_IDDQD is deliberately BLANK until
+        // typing IDDQD arms the doom easter egg (doom_mode.c), and KC_L0..KC_L4 draw
+        // a lit/unlit toggle showing which layout is active. A case here shadows
+        // both, which gives the easter egg away and loses the active-layout mark.
+        // ⚠️ EVERY two-line TEXT legend on the board is HINT_SMALL, and it has to be:
+        // `\v` advances a fixed 15px while the base face inks ~20px above the baseline,
+        // so two full-size text lines physically cannot fit a 40px panel. At full size
+        // all 19 of them overlapped by ~5 rows and five also ran off the right edge
+        // (Line/join lost 55 pixels, the four `pin` cells 9 each). There is no placement
+        // that rescues it — a 2px gap would need the second baseline at y45, past the
+        // panel — so the face is the only variable left.
+        //
+        // The leading spaces are RE-TUNED, not inherited: a space advances half as far
+        // at half scale, so the old counts collapsed the centring they existed to
+        // provide. Each pair was measured (line 2 centred under line 1, block centred in
+        // the 72px window, zero clipped pixels); re-measure rather than eyeball if you
+        // change a word.
+        //
+        // The word-over-SWITCH and word-over-ICON_LAYER legends are deliberately NOT in
+        // this set and stay full size — a 15px switch and a 16px layer icon both clear
+        // the 15px advance (measured: 2-3px gaps, nothing clipped).
+        case KC_STORE_EE:                   return HINT_SMALL U"    Store\r\v      EE";
+        // The two host-only settings that now have a key each. Both show the
+        // ACTIVE value, so the keycap answers "what is it set to" without a press.
+        case KC_IDLE_STYLE:                 return idle_style_legend();
+        case KC_GLYPH_SCRIPT:               return glyph_script_legend();
+        // ⚠️ This legend used to be DEAD: update_displays() carried a bespoke
+        // `else if (keycode == KC_EDEN)` branch that drew its own hardcoded strings
+        // through mid_fonts and never consulted this string at all. That branch also
+        // sat AFTER the `text != NULL` test, so it bypassed the KC_SETTINGS_MORE gate
+        // and the key stayed visible while every other advanced key hid. Both are gone
+        // — the branch is deleted and this is the real legend, drawn like any other.
+        case KC_EDEN:                       return MID_TWO_LINE("RESET", "Eden");
+        // ⚠️ KC_GLYPH_SIZE_UP is handled in to_static_text() (poly_keymap.c), NOT here.
+        // Its legend depends on the current tier AND on whether Shift is held, and the
+        // SYNCED mods live in poly_layer_t — this function only receives led_t, so the
+        // slave half would draw the master's tier with its own (always-clear) mods.
+        // KC_GLYPH_SIZE_DOWN keeps a plain legend: the keycode still exists and still
+        // steps down, it is simply not mapped any more (one key + Shift replaced the
+        // pair), so this case only matters to a custom keymap that maps it.
         case KC_GLYPH_SIZE_DOWN:            return U"  " ICON_FONT_SMALLER;
-        case KC_TOGMODS:                    return (state_flags & MODS_AS_TEXT) == 0 ? U"Mods\r\v" ICON_SWITCH_OFF : U"Mods\r\v" ICON_SWITCH_ON;
-        case KC_TOGTEXT:                    return (state_flags & MORE_TEXT) == 0 ? U"Cmds\r\v" ICON_SWITCH_OFF : U"Cmds\r\v" ICON_SWITCH_ON;
+        // These two name the STATE they select rather than wearing an on/off switch.
+        // A switch under "Mods" answers "is it on?", which was never the question —
+        // both keys choose between two renderings, so the keycap says which one is
+        // showing. That also retires the separate "Text:" label key that used to sit
+        // beside them explaining what the switches meant.
+        case KC_TOGMODS:                    return (state_flags & MODS_AS_TEXT) == 0 ? MID_TWO_WORD("Mods", "Icon")
+                                                                                     : MID_TWO_WORD("Mods", "Text");
+        case KC_TOGTEXT:                    return (state_flags & MORE_TEXT) == 0 ? MID_TWO_WORD("Cmds", "Icon")
+                                                                                  : MID_TWO_WORD("Cmds", "Text");
         case QK_LEAD:                       return U"Lead";
         case KC_HYPR:                       return (state_flags & MORE_TEXT) != 0 ? U"Hypr" : U" " PRIVATE_HYPER;
         case KC_MEH:                        return (state_flags & MORE_TEXT) != 0 ? U"Meh" : U" " PRIVATE_MEH;
@@ -91,7 +204,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case RGB_MODE_RAINBOW:              return U"Rnbw";
         case KC_MEDIA_NEXT_TRACK:           return ICON_RIGHT ICON_RIGHT;
         case KC_MEDIA_PLAY_PAUSE:           return U"  " ICON_RIGHT;
-        case KC_MEDIA_STOP:                 return U"Stop";
+        case KC_MEDIA_STOP:                 return ICON_MEDIA_STOP;
         case KC_MEDIA_PREV_TRACK:           return ICON_LEFT ICON_LEFT;
         case MS_ACL0:                       return U">>";
         case MS_ACL1:                       return U">>>";
@@ -103,12 +216,18 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case MS_DOWN:                       return U"  " ICON_DOWN;
         case MS_LEFT:                       return U"  " ICON_LEFT;
         case MS_RGHT:                       return U"  " ICON_RIGHT;
-        case KC_AUDIO_MUTE:                 return U"  " PRIVATE_MUTE;
+        // No leading pad: ICON_MUTE is two glyphs 56px wide and already centred by
+        // the speaker's own xOffset — the U"  " its neighbours carry would push the
+        // cancellation X off the panel.
+        case KC_AUDIO_MUTE:                 return ICON_MUTE;
         case KC_AUDIO_VOL_DOWN:             return U"  " PRIVATE_VOL_DOWN;
         case KC_AUDIO_VOL_UP:               return U"  " PRIVATE_VOL_UP;
         case KC_PRINT_SCREEN:               return U"  " PRIVATE_IMAGE;
-        case KC_SCROLL_LOCK:                return U"ScLk";
-        case KC_PAUSE:                      return U"Paus";
+        // "Scr" plus a badge that goes solid while the lock is engaged — the same
+        // shape as the Caps Lock and Num Lock keys above, which is why it reads at a
+        // glance. Drawn rather than baked: the resident icon band has no free slots.
+        case KC_SCROLL_LOCK:                return state.scroll_lock ? ICON_SCRLOCK_ON : ICON_SCRLOCK_OFF;
+        case KC_PAUSE:                      return ICON_PAUSE_TEXT;
         case KC_INSERT:                     return U"Ins";
         case KC_HOME:                       return ARROWS_LEFTSTOP;
         case KC_END:                        return U"   " ARROWS_RIGHTSTOP;
@@ -169,21 +288,42 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_LSFT:
         case KC_RSFT:                       return (state_flags & MODS_AS_TEXT) != 0 ? U"Shft" : U" " ICON_SHIFT;
         case KC_NO:                         return U"";
-        case KC_DDIM:                       return U"  " ICON_LEFT;
-        case KC_DBRI:                       return U"  " ICON_RIGHT;
-        case KC_D1Q:                        return U"  " PRIVATE_DISP_DARKER;
-        case KC_D3Q:                        return U"  " PRIVATE_DISP_BRIGHTER;
-        case KC_DHLF:                       return U"  " PRIVATE_DISP_HALF;
-        case KC_DMIN:                       return U"  " PRIVATE_DISP_DARK;
-        case KC_DMAX:                       return U"  " PRIVATE_DISP_BRIGHT;
-        case KC_DAUTO:                      return U" Auto";
+        // The eight brightness keys read as ONE family: every legend is a sun whose
+        // rays grow with the level, so the keycaps say the same thing the status
+        // OLED's sun already says. Each is a single resident IconsFont glyph, which
+        // also keeps every glyph of a legend in one font (see the baseline-align
+        // rule in CLAUDE.md) — the old set mixed an arrow, five moon phases and a
+        // text+toggle composite and shared no visual language at all.
+        //
+        // ⚠️ The five presets were MOON PHASES, and the mapping ran BACKWARDS from
+        // the obvious reading: PRIVATE_DISP_BRIGHT was U+1F311 🌑 NEW MOON, i.e. the
+        // all-black disc, because it depicted the unlit screen rather than the
+        // brightness. Nothing else on the board used that convention.
+        // ⚠️ No leading pad space here, unlike the ICON_LEFT/_RIGHT legends above:
+        // each of these carries its own xOffset measured from BUFFER_X, so a space
+        // would advance the cursor and shift the whole cell right.
+        case KC_DMIN:                       return ICON_BRIGHT_0;
+        case KC_D1Q:                        return ICON_BRIGHT_1;
+        case KC_DHLF:                       return ICON_BRIGHT_2;
+        case KC_D3Q:                        return ICON_BRIGHT_3;
+        case KC_DMAX:                       return ICON_BRIGHT_4;
+        // Relative steps: no staircase (they name no level), so the sun's own size
+        // carries the direction and a +/- states it.
+        case KC_DDIM:                       return ICON_BRIGHT_DOWN;
+        case KC_DBRI:                       return ICON_BRIGHT_UP;
+        // Auto-brightness (host daylight / LTR-559 sensor). State-reflecting like the
+        // other toggles on these layers — a bare "Auto" said neither what was
+        // automatic nor whether it was currently on. ⚠️ It spells the MODE out rather
+        // than wearing ICON_SWITCH_ON/OFF: a toggle beside a sun reads as "the light
+        // is on/off", which is the one thing this key does not control.
+        case KC_DAUTO:                      return get_brightness_auto_mode() ? ICON_BRIGHT_AUTO : ICON_BRIGHT_MAN;
         case KC_LANG:                       return (state_flags & MORE_TEXT) != 0 ? U"Lang" : PRIVATE_WORLD;
         case SH_TOGG:                       return U"SwpH";
         case QK_MAKE:                       return U"Make";
         case EE_CLR:                        return U"ClrEE";
         case QK_REBOOT:                     return U" " ARROWS_CIRCLE;
         case KC_LNG1:                       return U"Han/Y";
-        case KC_APP:                        return U" Ctx";
+        case KC_APP:                        return (state_flags & MORE_TEXT) != 0 ? U" Ctx" : ICON_CONTEXT_MENU;
         case DE_GRV:                        return U"`"; //neo layout
         case KC_CUT:                        return U"Cut";
         case KC_COPY:                       return U"Copy";
@@ -191,10 +331,10 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_UNDO:                       return U"Undo";
         case KC_AGAIN:                      return U"Redo";
         case KC_FIND:                       return U"Find";
-        case KC_SELECT:                     return U"Word\r\v   sel";
-        case KC_EXSEL:                      return U"Line\r\v    sel";
-        case KC_OPER:                       return U"Line\r\v    join";
-        case KC_CRSEL:                      return U"Line\r\v    del";
+        case KC_SELECT:                     return HINT_SMALL U"    Word\r\v      sel";
+        case KC_EXSEL:                      return HINT_SMALL U"    Line\r\v     sel";
+        case KC_OPER:                       return HINT_SMALL U"    Line\r\v     join";
+        case KC_CRSEL:                      return HINT_SMALL U"    Line\r\v     del";
 
         // OS-semantic action keys (KC_OS_*): plain labels for now; an OS-aware
         // legend (⌘ vs ⌃) follows with the modifier-legend swap.
@@ -208,8 +348,8 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_OS_LOCK:                    return U"Lock";
         case KC_OS_SCRSHOT:                 return U"Snip";
         case KC_OS_SEARCH:                  return U"Srch";
-        case KC_OS_APP_SWITCH:              return U"App\r\v  sw";
-        case KC_OS_WIN_SWITCH:              return U"Win\r\v  sw";
+        case KC_OS_APP_SWITCH:              return HINT_SMALL U"    App\r\v     sw";
+        case KC_OS_WIN_SWITCH:              return HINT_SMALL U"    Win\r\v     sw";
         case KC_OS_EMOJI:                   return U"Emoji";
         case KC_OS_WORD_LEFT:               return U"Word" ICON_LEFT;
         case KC_OS_WORD_RIGHT:              return U"Word" ICON_RIGHT;
@@ -219,13 +359,13 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_OS_ICON: {
             const bool autom = (get_local_state()->active_os & POLY_OS_AUTO_FLAG) != 0;
             switch (get_local_state()->active_os & POLY_OS_VALUE_MASK) {
-                case POLY_OS_WINDOWS: return autom ? U"Win\r\v auto" : U"Win\r\v  pin";
-                case POLY_OS_MACOS:   return autom ? U"Mac\r\v auto" : U"Mac\r\v  pin";
-                case POLY_OS_LINUX:   return autom ? U"Lnx\r\v auto" : U"Lnx\r\v  pin";
-                case POLY_OS_LINUX_GNOME: return U"Gnm\r\v auto";   // DE is host-detected (auto-only)
-                case POLY_OS_LINUX_KDE:   return U"Kde\r\v auto";
-                case POLY_OS_ANDROID: return autom ? U"And\r\v auto" : U"And\r\v  pin";
-                default:              return autom ? U"OS?\r\v auto" : U"OS?\r\v  pin";
+                case POLY_OS_WINDOWS: return autom ? HINT_SMALL U"    Win\r\v    auto" : HINT_SMALL U"    Win\r\v    pin";
+                case POLY_OS_MACOS:   return autom ? HINT_SMALL U"    Mac\r\v    auto" : HINT_SMALL U"    Mac\r\v     pin";
+                case POLY_OS_LINUX:   return autom ? HINT_SMALL U"    Lnx\r\v    auto" : HINT_SMALL U"    Lnx\r\v    pin";
+                case POLY_OS_LINUX_GNOME: return HINT_SMALL U"    Gnm\r\v    auto";   // DE is host-detected (auto-only)
+                case POLY_OS_LINUX_KDE:   return HINT_SMALL U"    Kde\r\v    auto";
+                case POLY_OS_ANDROID: return autom ? HINT_SMALL U"    And\r\v    auto" : HINT_SMALL U"    And\r\v    pin";
+                default:              return autom ? HINT_SMALL U"    OS?\r\v    auto" : HINT_SMALL U"    OS?\r\v    pin";
             }
         }
         // OS selection keys: name on top, a toggle glyph below marking the active

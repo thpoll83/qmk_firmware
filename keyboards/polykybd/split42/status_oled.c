@@ -1,6 +1,7 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "status_oled.h"
+#include "layer_names.h"
 #include "../oled_helper.h"
 
 #include "split42.h"
@@ -176,13 +177,6 @@ static void pdraw_brightness(uint8_t contrast, int bottom_y, uint8_t* buf) {
 }
 #define P42_GAUGE_H (P42_GAUGE_MIN_H + 9)   // tallest bar == band height
 
-// split42 short layout names — must stay in sync with oled_helper.c's full-name
-// array (indexed by def_layer). Shortened so they fit the 32px-wide portrait column.
-static const uint32_t* layout_name_short(uint8_t def_layer) {
-    static const uint32_t* const names[] = { U"Qwrty", U"Stag!", U"ColDH", U"Neo", U"Wkmn" };
-    return (def_layer < ARRAY_SIZE(names)) ? names[def_layer] : U"Unkn";
-}
-
 void oled_update_buffer(void) {
     uint8_t* buf = get_scratch_buffer();
     kdisp_set_buffer(0);                            // clear the whole scratch to black
@@ -212,7 +206,7 @@ void oled_update_buffer(void) {
         // Layout name (short), Nano 10px at NATIVE size, centered. LAYOUT_NAME_BASE
         // is picked so the cap top still lands on logical row 52, exactly where the
         // old half-scale render put it.
-        pdraw_text_center(nanoFont, 1, LAYOUT_NAME_BASE, layout_name_short(get_local_layer()->def_layer), buf);
+        pdraw_text_center(nanoFont, 1, LAYOUT_NAME_BASE, poly_layout_name_short(get_local_layer()->def_layer), buf);
         pdraw_brightness(ls->contrast, 82, buf);
         // Typing speed: dial over the value
         pdraw_bitmap(wpm_gauge_bitmap, (P_W - WPM_ICON_W) / 2, 93, WPM_ICON_W, WPM_ICON_H, buf);

@@ -36,6 +36,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "poly_keymap.h"
+#include "layer_names.h"
 
 
 /*[[[cog
@@ -1006,6 +1007,67 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         uprintf("Refused glyph size %u.\n", arg);
                     }
                     raw_hid_send(data, length);
+                }
+                break;
+            case 35: //report the host-remappable layers and their names (protocol v14+)
+                {
+                    // Reply: "P\x23." then the payload
+                    //
+                    //     [0] total   whole payload length, THIS BYTE INCLUDED
+                    //     [1] count   number of layers named
+                    //     [2..] count NUL-terminated ASCII names, <= POLY_LAYER_NAME_MAX each
+                    //
+                    // split across as many reports as it needs (54 bytes / one report today).
+                    //
+                    // ⚠️ The TOTAL is what makes this decodable, and it is why the length
+                    // does not live in the records. The host reads byte 0, keeps reading
+                    // until it holds that many bytes, and only then splits on the NULs —
+                    // so termination is arithmetic rather than a scan, and the zero fill
+                    // past the payload is never examined. Two encodings were tried first
+                    // and both are worse:
+                    //   - fixed-width 8-byte records also give an arithmetic length, but
+                    //     cost 65 bytes and therefore a second report;
+                    //   - terminated records with no total force the decoder to scan for
+                    //     the end, and the only way to tell a real terminator from the
+                    //     report's zero fill is "an empty name means padding" — which
+                    //     makes an UNNAMED layer (poly_layer_name_wire returning NULL,
+                    //     i.e. a bare terminator) indistinguishable from the fill and
+                    //     silently truncates the list.
+                    //
+                    // The count is DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT — the SAME value
+                    // id_dynamic_keymap_get_layer_count already answers with, on purpose:
+                    // the editor sizes its tab strip from that command and labels the tabs
+                    // from this one, so two different counts would let it draw a tab it has
+                    // no name for. Layers at or above the cap are served from flash and
+                    // cannot be remapped, so they get no name.
+                    //
+                    // This exists because the names used to be a build-time artifact on the
+                    // host, generated from layers.h by a script whose source path had gone
+                    // stale — so the editor labelled tabs from an enum the firmware had not
+                    // had for a long time. A name the keyboard states itself cannot drift.
+                    const uint8_t count = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT;
+                    uint8_t payload[LAYER_NAMES_PAYLOAD_MAX];
+                    uint16_t used = 2;
+                    payload[1] = count;
+                    for (uint8_t layer = 0; layer < count; layer++) {
+                        const char* name = poly_layer_name_wire(layer);
+                        // Clamp rather than trust the table: an over-long name would
+                        // otherwise run past the buffer sized from POLY_LAYER_NAME_MAX.
+                        for (uint8_t i = 0; name != NULL && name[i] != '\0' && i < POLY_LAYER_NAME_MAX; i++) {
+                            payload[used++] = (uint8_t)name[i];
+                        }
+                        payload[used++] = '\0';
+                    }
+                    payload[0] = (uint8_t)used;
+
+                    const uint16_t chunk = hid_payload_avail(length, 3);
+                    for (uint16_t off = 0; off < used; off += chunk) {
+                        const uint16_t n = (used - off < chunk) ? (uint16_t)(used - off) : chunk;
+                        memset(data, 0, length);
+                        hid_reply(data, 0x23, true);
+                        memcpy(&data[3], &payload[off], n);
+                        raw_hid_send(data, length);
+                    }
                 }
                 break;
 #ifdef POLYKYBD_LOOP_PROFILE

@@ -1,6 +1,7 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "oled_helper.h"
+#include "layer_names.h"
 
 #include "state.h"
 #include "side.h"
@@ -83,14 +84,9 @@ void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
 }
 
 void oled_draw_layout_name(const GFXfont* const* font, int8_t x, int8_t y, uint8_t def_layer) {
-    // Indexed by def_layer (the _L0.._L4 default-layout enum in each variant's
-    // keymaps/default/layers.h). Keep in sync with the KC_L0..KC_L4 selectors in
-    // poly_keymap.c; an out-of-range value falls back to "Unknown".
-    static const uint32_t* const names[] = {
-        U"Qwerty", U"Qwerty Stag!", U"Colemak DH", U"Neo", U"Workman",
-    };
-    const uint32_t* name = (def_layer < ARRAY_SIZE(names)) ? names[def_layer] : U"Unknown";
-    kdisp_write_gfx_text(font, 1, x, y, name);
+    // The table lives in layer_names.c, which also feeds split42's short forms and
+    // HID cmd 35 -- see the header for why all three widths share one record.
+    kdisp_write_gfx_text(font, 1, x, y, poly_layout_name(def_layer));
 }
 
 void oled_status_screen(void) {

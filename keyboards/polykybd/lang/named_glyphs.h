@@ -2144,21 +2144,24 @@
 #define ICON_SCRLOCK_ON   	U"Scr" HINT_MOVE(HINT_POS_SCRBOX) HINT_BADGE(HINT_SZ_SCRBOX, BADGE_ON) \
                           	HINT_MOVE(HINT_POS_SCRARROW) HINT_ERASE HINT_SMALL ARROWS_DOWNSTOP
 
-// Pause spells the word out, at half the base face (10px caps, 41px wide) so it fits
-// where the full 27px face needs 106px. HINT_SMALL is what makes that possible — the
-// three standalone UI faces are not in g_all_fonts, so no codepoint reaches a smaller
-// font. The two leading spaces are full-size (they precede the op) and centre the run
-// exactly as the U"  " ICON_* legends beside it; \x05\x05 drops the baseline 4px so
-// the short 10px band sits in the middle of the 40px panel rather than 3px high.
-#define ICON_PAUSE_TEXT             	U"  \x05" U"\x05" HINT_SMALL U"Pause"
+// Pause spells the word out. HINT_SMALL halves whatever face the glyph comes from,
+// so the size is chosen by picking WHICH face: the resident 27px base halves to 10px
+// caps (41px wide), the legend-size L tier at 0xF3000 halves to 14px caps (56px) --
+// the largest that still fits the 72px panel. The full 27px face would need 106px.
+// Measured; the M tier at 0xF0000 sits between them at 12px caps / 49px.
+//
+// The leading full-size space (it precedes the op) plus two \x05 centre the run:
+// measured ink x9..61 in a 0..71 window, y14..27 in 0..39.
+//
+// ⚠️ This is the one legend on the layer that depends on the **latinbig** bundle
+// rather than symbol/emoji. A missing glyph makes kdisp_write_gfx_char_half draw
+// NOTHING (unlike the full-size writer, which substitutes '!'), so with no font pack
+// this keycap is blank -- as its whole row already is, every neighbour being a pack
+// glyph too. Drop back to the base face (plain U"Pause" after the op) if that ever
+// stops being acceptable.
+#define ICON_PAUSE_TEXT             	U" \x05" U"\x05" HINT_SMALL \
+                                    	U"\xF3050" U"\xF3061" U"\xF3075" U"\xF3073" U"\xF3065"   // "Pause" @ L tier
 
-// Mute becomes the CANCELLED speaker. The old PRIVATE_MUTE (U+1F568) is simply a
-// speaker with no waves, i.e. it differs from its two neighbours only by the absence
-// of the wave arcs — nothing on it says "muted", which is exactly how it was reported.
-// U+1F507 carries the slashed circle and, despite coming from NotoEmoji rather than
-// the NotoSansSymbols2 family the volume keys use, renders as line art of the same
-// weight (the filled U+1F508/U+1F50A pair does NOT — do not "finish the family" with
-// those, they are visibly heavier beside U+1F569/U+1F56A).
 // U+1F5D9 CANCELLATION X, the crispest of the three X glyphs already in the pack
 // (U+2717 is a script ballot X, U+2718 a heavy one) and from the same Window font the
 // legend-size icons use.

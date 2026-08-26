@@ -1822,6 +1822,11 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
   inside a rounded box that goes **solid when the lock is engaged** — the same shape
   Caps Lock and Num Lock use, which is why it reads at a glance. `led_t.scroll_lock`
   rides `poly_layer_t.led_state`, which is **synced**, so the slave half shows it too.
+  - **The status OLED no longer shows scroll lock** (`split72/status_oled.c`). It used
+    to draw the same glyph while engaged, but with no *off* state and by **replacing
+    the L/R side marker** — so the half lost its side marker exactly while the lock was
+    on. The keycap badge supersedes it, which is where Caps and Num are read from
+    anyway. split42's panel never had one.
   - ⚠️ **The badge is DRAWN, not baked**, and that is forced: the resident C1 band is
     full (32/32), so there is nowhere to put the OFF/ON glyph pair Caps and Num each
     get. **`HINT_BADGE` (`\x13`, args `w, h, style`)** draws either state — style 1 a
@@ -1859,9 +1864,17 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
     unconditionally.
   - The arrow **alone** was rendered first and is too sparse to identify, and the
     Caps/Num badge glyphs could not be borrowed because they carry a literal `A` / `1`.
-- **Pause spells the word out at HALF the base face** — 10 px caps, 41 px wide,
-  where the full 27 px face needs 106 px and clips 34 px off the panel. Two solid
-  U+275A bars were tried first and read as ambiguous.
+- **Pause spells the word out**, at half the **L legend tier** (`0xF3000`) — 14 px
+  caps, 56 px wide, the largest that still fits the 72 px panel. `HINT_SMALL` halves
+  whatever face the glyph comes from, so the size is chosen by picking WHICH face: the
+  resident 27 px base halves to 10 px caps (41 px), M to 12 px (49 px), L to 14 px
+  (56 px); the full 27 px face would need 106 px. Two solid U+275A bars were tried
+  first and read as ambiguous.
+  - ⚠️ **This is the one legend on the layer that needs the `latinbig` bundle** rather
+    than `symbol`/`emoji`. A missing glyph makes `kdisp_write_gfx_char_half` draw
+    **nothing** — unlike the full-size writer, which substitutes `'!'` — so with no
+    font pack the keycap is blank, as its whole row already is (every neighbour is a
+    pack glyph too). Drop back to the base face if that stops being acceptable.
 
 **`HINT_SMALL` (`\x10`) is what makes small TEXT possible on a keycap, and it is not
 `HINT_HALF`.** The three standalone UI faces (`_Small_` 15 px, `_Mid_` 19 px, `_Nano_`

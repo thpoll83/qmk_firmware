@@ -36,18 +36,41 @@ static inline const uint32_t* kc_os_gui_icon(void) {
 // The IDDQD entry is only ever reached by a board that is ALREADY on that style —
 // the cycle key skips it (see KC_IDLE_STYLE in poly_keymap.c), so naming it here
 // cannot give the easter egg away to anyone who has not turned it on.
+//
+// Both are TWO LINES at half scale: the setting's name on top, the active value
+// under it. The value alone ("Std") does not say what it is a value OF, which is
+// the whole reason these keys carry a legend at all.
+//
+// The second line is nudged 2px right (\x06). That is not decoration: the value
+// starts at the text origin, and a capital J hooks 2px LEFT of its own pen
+// position, so "Jittr" lost the tail of its J off the panel edge (measured: 4
+// clipped pixels at x-1/x-2). Every other value is unaffected by the nudge, and
+// with it the whole set renders with zero clipped pixels.
+#define SETTING_LBL(label, value) HINT_SMALL U##label U"\r\v\x06" U##value
+
 static const uint32_t* idle_style_legend(void) {
-    static const uint32_t* const names[] = { U"Pulse", U"Jittr", U"IDDQD", U"Eden" };
+    static const uint32_t* const names[] = { SETTING_LBL("Idle:", "Pulse"),
+                                             SETTING_LBL("Idle:", "Jittr"),
+                                             SETTING_LBL("Idle:", "IDDQD"),
+                                             SETTING_LBL("Idle:", "Eden") };
     const uint8_t v = get_idle_style();
-    return (v < ARRAY_SIZE(names)) ? names[v] : U"Idle?";
+    return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("Idle:", "?");
 }
 
 static const uint32_t* glyph_script_legend(void) {
-    static const uint32_t* const names[] = { U"Std",   U"Teng",  U"Rune",  U"Aureb",
-                                             U"SGA",   U"Cirth", U"VGA",   U"C64",
-                                             U"Amiga", U"APL",   U"Brail" };
+    static const uint32_t* const names[] = { SETTING_LBL("Script:", "Std"),
+                                             SETTING_LBL("Script:", "Teng"),
+                                             SETTING_LBL("Script:", "Rune"),
+                                             SETTING_LBL("Script:", "Aureb"),
+                                             SETTING_LBL("Script:", "SGA"),
+                                             SETTING_LBL("Script:", "Cirth"),
+                                             SETTING_LBL("Script:", "VGA"),
+                                             SETTING_LBL("Script:", "C64"),
+                                             SETTING_LBL("Script:", "Amiga"),
+                                             SETTING_LBL("Script:", "APL"),
+                                             SETTING_LBL("Script:", "Brail") };
     const uint8_t v = get_glyph_script();
-    return (v < ARRAY_SIZE(names)) ? names[v] : U"Scr?";
+    return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("Script:", "?");
 }
 
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {
@@ -71,9 +94,18 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         // switch order of Dbg/Mods/Cmds beside it, deliberately: this is the one key on
         // the row whose label needs two words, and a legible state indicator beats a
         // consistent one. Measured: inks x0..69 y9..39, zero clipped.
+        // The word on top, the switch under it. HINT_SMALL latches for the REST of
+        // the string (icons included), so the switch has to come first if it is to
+        // stay full size -- hence the two lines are ordered word-then-switch here
+        // and switch-then-word nowhere.
         case KC_DEADKEY:                    return (state_flags & DEAD_KEY_ON_WAKEUP) == 0
-                                                       ? ICON_SWITCH_OFF U"\r\v" HINT_SMALL U"Wake only"
-                                                       : ICON_SWITCH_ON  U"\r\v" HINT_SMALL U"Wake only";
+                                                       ? U"Wake\r\v" ICON_SWITCH_OFF
+                                                       : U"Wake\r\v" ICON_SWITCH_ON;
+        // No on/off switch: the reveal is momentary chrome, not a setting anyone
+        // needs to read back — pressing it makes the extra keys appear, which is
+        // the whole of the feedback. It leaves the layer with the rest of the
+        // state, so there is nothing to report when the board is not on _SL.
+        case KC_SETTINGS_MORE:              return U"More";
         case LBL_TEXT:                      return U"Text:";
         // ⚠️ This one had NO case at all, so to_static_text() returned NULL,
         // translate_keycode() had no row for a QK_KB-range keycode, and the keycap

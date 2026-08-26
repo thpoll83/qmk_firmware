@@ -1358,10 +1358,10 @@ const uint32_t* poly_lang_code(uint8_t lang) {
 // is merely visible, since QK_BOOT and QK_RBT are in here and neither is undoable
 // from the board.
 //
-// ⚠️ Gated on _SL being the active layer, NOT globally: split42 shares this layer
-// and these keycodes, so a global gate would have hidden them there too, and its
-// KC_SETTINGS_MORE sits in a different slot. Anything mapped outside _SL is
-// unaffected by construction.
+// Every keycode listed here is mapped exactly once, on _SL, in both keymaps —
+// split42 carries its own KC_SETTINGS_MORE — so the list alone is a sufficient
+// gate and settings_more_hidden() needs no layer test (see the note there).
+// Re-check that if one of these is ever mapped somewhere else.
 static bool settings_key_is_gated(uint16_t keycode) {
     switch (keycode) {
         case KC_IDLE_STYLE:
@@ -1381,10 +1381,18 @@ static bool settings_key_is_gated(uint16_t keycode) {
 }
 
 // True while the gated keys must stay blank and inert.
+//
+// ⚠️ Deliberately NOT also gated on _SL being the active layer. Every gated
+// keycode is mapped exactly once, on _SL, in BOTH keymaps (split42 has its own
+// KC_SETTINGS_MORE), so the layer test could only ever be redundant — and it is
+// read from get_local_layer(), the SYNCED snapshot, which lags a layer change by
+// up to one housekeeping pass. A render that lands inside that window sees the
+// old layer, decides the gate does not apply, and draws the advanced keys; only
+// a later refresh would blank them, and _SL usually gets no later refresh. So the
+// clause could not hide anything the keycode test does not, and could reveal what
+// it is there to hide.
 static bool settings_more_hidden(uint16_t keycode) {
-    return settings_key_is_gated(keycode) &&
-           get_highest_layer(get_local_layer()->layer) == _SL &&
-           get_local_state()->settings_more == 0;
+    return settings_key_is_gated(keycode) && get_local_state()->settings_more == 0;
 }
 
 const uint32_t* to_static_text(uint16_t keycode, led_t state) {
@@ -1474,13 +1482,6 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         // it are SYNCED state: the size comes from poly_sync_t and the modifiers from
         // poly_layer_t, and keycode_to_static_text() only receives `led_t` — so on the
         // slave it would draw the master's tier with its own (always clear) mods.
-        case KC_SETTINGS_MORE:
-            // Lives here rather than in keycode_to_static_text() for the same reason
-            // KC_GLYPH_SIZE_UP does: the state it reflects is SYNCED, and that
-            // function only receives led_t, so on the slave it would draw the wrong
-            // half of the toggle.
-            return (local_state->settings_more == 0) ? U"More\r\v" ICON_SWITCH_OFF
-                                                     : U"More\r\v" ICON_SWITCH_ON;
         case KC_GLYPH_SIZE_UP: {
             const bool     shifted = (local_layer->mods & MOD_MASK_SHIFT) != 0;
             const uint8_t  size    = local_state->glyph_size < GLYPH_SIZE_COUNT

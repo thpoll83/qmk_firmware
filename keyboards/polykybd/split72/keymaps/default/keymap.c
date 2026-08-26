@@ -268,10 +268,13 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                     KC_NO,      RM_SPDD,    RM_SPDU,    KC_NO,      RM_HUED,    RM_HUEU,    KC_NO,
         _______,    KC_NO,      RM_VALD,    RM_VALU,    KC_NO,      RM_SATD,    RM_SATU,    KC_NO,
         // EE_CLR and KC_STORE_EE are deliberately UNMAPPED — see the note above [_SL].
-        // Row 3 again: the two IRREVERSIBLE keys (Restart, Boot) sit at the far OUTER
-        // end, as far from the toggles as the row allows, so a slip while reaching for
-        // Dbg cannot land on them.
-        KC_NO,      KC_NO,      DB_TOGG,    KC_DEADKEY, KC_EDEN,    KC_NO,      QK_RBT,     QK_BOOT,
+        // Row 3 again: the two IRREVERSIBLE keys (Restart, Boot) sit at the OUTER end,
+        // away from the toggles, so a slip while reaching for Dbg cannot land on them —
+        // but with no GAP before them. A blank key mid-row reads as a key that failed to
+        // render rather than as spacing, which is the one thing a row of keys that are
+        // blank until revealed must not look like; the row's slack sits at the far edge
+        // instead, where the left half already puts its own.
+        KC_NO,      KC_NO,      DB_TOGG,    KC_DEADKEY, KC_EDEN,    QK_RBT,     QK_BOOT,    KC_NO,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     // Language Selection Layer — mirrors the emoji picker. TOP row of the LEFT

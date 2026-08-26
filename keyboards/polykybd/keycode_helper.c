@@ -122,7 +122,15 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         // ACTIVE value, so the keycap answers "what is it set to" without a press.
         case KC_IDLE_STYLE:                 return idle_style_legend();
         case KC_GLYPH_SCRIPT:               return glyph_script_legend();
-        case KC_EDEN:                       return U"Reset\r\vEden";
+        // ⚠️ HALF SCALE, and it has to be: `\v` advances a fixed 15px while the base
+        // face inks ~20px above the baseline, so TWO FULL-SIZE TEXT LINES CANNOT FIT
+        // a 40px panel. At full size this legend's lines collided over 5 rows
+        // (measured: "Reset" inks y1..20, "Eden" y16..35) and "Reset" also ran 4px
+        // off the right edge. Half-scale clears both — and matches the two-line
+        // labels on the neighbouring keys of this row. Any other two-line TEXT legend
+        // has the same collision; the switch-over-word ones are fine, because the
+        // switch icon is only 15px tall.
+        case KC_EDEN:                       return HINT_SMALL U"Reset\r\v\x06" U"Eden";
         // ⚠️ KC_GLYPH_SIZE_UP is handled in to_static_text() (poly_keymap.c), NOT here.
         // Its legend depends on the current tier AND on whether Shift is held, and the
         // SYNCED mods live in poly_layer_t — this function only receives led_t, so the

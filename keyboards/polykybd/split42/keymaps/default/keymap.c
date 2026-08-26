@@ -55,13 +55,13 @@
 const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /* Base layer 0 — Qwerty, faithful Corne outer columns + thumbs:
        left outer Tab / Ctrl / Shift, right pinky ' and Esc; thumbs
-       GUI / MO(_FL0) / Space (left) and Enter / MO(_UL) / RAlt (right).
-       Corne has no LANG on base — language-layer access lives on _FL0. */
+       GUI / MO(_FL) / Space (left) and Enter / MO(_UL) / RAlt (right).
+       Corne has no LANG on base — language-layer access lives on _FL. */
     [_L0] = POLY_LAYOUT(
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
         KC_LCTL, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
-        KC_LGUI, MO(_FL0),KC_SPC,
+        KC_LGUI, MO(_FL),KC_SPC,
         KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSPC,
         KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,
         KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_ESC,
@@ -71,7 +71,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
        Enter on the thumb since the grid pinky holds \) */
     [_L1] = POLY_LAYOUT(
         KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
-        MO(_FL0),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
+        MO(_FL),KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
         KC_LCTL, KC_SPC,  KC_DEL,
         KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSPC,
@@ -82,7 +82,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /* Base layer 2 — Colemak DH */
     [_L2] = POLY_LAYOUT(
         KC_ESC,  KC_Q,    KC_W,    KC_F,    KC_P,    KC_B,
-        MO(_FL1),KC_A,    KC_R,    KC_S,    KC_T,    KC_G,
+        MO(_FL),KC_A,    KC_R,    KC_S,    KC_T,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_D,    KC_V,
         KC_LCTL, KC_SPC,  KC_DEL,
         KC_J,    KC_L,    KC_U,    KC_Y,    KC_SCLN, KC_BSPC,
@@ -93,7 +93,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /* Base layer 3 — Neo */
     [_L3] = POLY_LAYOUT(
         KC_ESC,  KC_X,    KC_V,    KC_L,    KC_C,    KC_W,
-        MO(_FL0),KC_U,    KC_I,    KC_A,    KC_E,    KC_O,
+        MO(_FL),KC_U,    KC_I,    KC_A,    KC_E,    KC_O,
         KC_LSFT, DE_HASH, DE_UDIA, DE_ODIA, DE_ADIA, KC_P,
         KC_LCTL, KC_SPC,  KC_DEL,
         KC_K,    KC_H,    KC_G,    KC_F,    KC_Q,    KC_BSPC,
@@ -104,7 +104,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /* Base layer 4 — Workman */
     [_L4] = POLY_LAYOUT(
         KC_ESC,  KC_Q,    KC_D,    KC_R,    KC_W,    KC_B,
-        MO(_FL1),KC_A,    KC_S,    KC_H,    KC_T,    KC_G,
+        MO(_FL),KC_A,    KC_S,    KC_H,    KC_T,    KC_G,
         KC_LSFT, KC_Z,    KC_X,    KC_M,    KC_C,    KC_V,
         KC_LCTL, KC_SPC,  KC_DEL,
         KC_J,    KC_F,    KC_U,    KC_P,    KC_SCLN, KC_BSPC,
@@ -112,22 +112,12 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_K,    KC_L,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,
         KC_LANG, KC_BSPC, KC_LEFT
     ),
-    /* Function layer 0 — number row 1..0 across the top, F1..F10 on the home row
+    /* Function layer — number row 1..0 across the top, F1..F10 on the home row
        (higher F-keys dropped to make room for the numbers), plus caps / numpad /
-       mouse / nav / utility access. */
-    [_FL0] = POLY_LAYOUT(
-        OSL(_UL),KC_1,    KC_2,    KC_3,    KC_4,    KC_5,
-        _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
-        KC_CAPS, KC_LANG, _______, _______, _______, KC_DEL,
-        _______, _______, TO(_UL),
-        KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_BSPC,
-        KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  _______,
-        TO(_NL), MS_BTN1, MS_BTN2, _______, KC_INS,  _______,
-        KC_HOME, KC_PGUP, KC_END
-    ),
-    /* Function layer 1 — identical to _FL0 so every base layer's function layer
-       has the number row. */
-    [_FL1] = POLY_LAYOUT(
+       mouse / nav / utility access. One layer for every base layout: split42's
+       five bases all carry the same 1..0 number row, so the second copy this
+       replaced was byte-identical to it. */
+    [_FL] = POLY_LAYOUT(
         OSL(_UL),KC_1,    KC_2,    KC_3,    KC_4,    KC_5,
         _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,
         KC_CAPS, KC_LANG, _______, _______, _______, KC_DEL,
@@ -258,7 +248,6 @@ const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [9]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
     [10] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
     [11] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [12] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
 };
 
 

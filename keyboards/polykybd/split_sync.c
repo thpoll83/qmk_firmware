@@ -16,6 +16,7 @@
 #include "eeprom.h"
 #include "nvm_eeprom_eeconfig_internal.h"
 #include "dynamic_keymap.h"
+#include "poly_keymap.h"   // poly_fl_row_cache_invalidate()
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/update.h"
@@ -271,6 +272,7 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
     if (offset >= max) return;
     uint16_t clamped = (offset + size > max) ? max - offset : size;
     eeprom_update_block(data, (void *)(POLY_EEPROM_CONFIG_END + offset), clamped);
+    poly_fl_row_cache_invalidate();
 }
 
 // Same layer cap as dynamic_keymap_set_buffer_poly, but for single-keycode writes:
@@ -279,6 +281,16 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
 void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode) {
     if (layer >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) return;
     dynamic_keymap_set_keycode(layer, row, column, keycode);
+    poly_fl_row_cache_invalidate();
+}
+
+// Reset wrapper, so that EVERY mutation of the dynamic keymap goes through a *_poly
+// function and none can forget the cache invalidation. Deliberately a wrapper rather
+// than a list of "remember to also call this here" call sites — that is the guard
+// shape this codebase keeps getting caught by.
+void dynamic_keymap_reset_poly(void) {
+    dynamic_keymap_reset();
+    poly_fl_row_cache_invalidate();
 }
 
 // Handles dynamic keymap commands on the bridge with CRC32 validation, including keymap resets and key press events.
@@ -290,7 +302,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
             const uint8_t* command_data = &data->commands[1];
             switch(data->commands[0]) {
                 case id_dynamic_keymap_reset:
-                    dynamic_keymap_reset();
+                    dynamic_keymap_reset_poly();
                     request_disp_refresh();
                     break;
                 case id_dynamic_keymap_set_keycode:

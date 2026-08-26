@@ -35,7 +35,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L0] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_NUBS,
         KC_TAB,     KC_Q,       KC_W,       KC_E,       KC_R,       KC_T,       KC_GRAVE,
-        MO(_FL0),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   MS_BTN1,
+        MO(_FL),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   MS_BTN1,
         KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       TO(_EMJ),   MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -66,7 +66,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L1] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_6,
         KC_TAB,     KC_Q,       KC_W,       KC_E,       KC_R,       KC_T,       KC_GRAVE,
-        MO(_FL1),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   MS_BTN1,
+        MO(_FL),   KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_QUOTE,   MS_BTN1,
         KC_LSFT,    TO(_EMJ),   KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    MO(_ADDLANG1),          KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -95,7 +95,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L2] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_NUBS,
         KC_TAB,     KC_Q,       KC_W,       KC_F,       KC_P,       KC_B,       KC_GRAVE,
-        MO(_FL1),   KC_A,       KC_R,       KC_S,       KC_T,       KC_G,       KC_QUOTE,   MS_BTN1,
+        MO(_FL),   KC_A,       KC_R,       KC_S,       KC_T,       KC_G,       KC_QUOTE,   MS_BTN1,
         KC_LSFT,    KC_Z,       KC_X,       KC_C,       KC_D,       KC_V,       TO(_EMJ),    MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -124,7 +124,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L3] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       DE_LABK,
         KC_TAB,     KC_X,       KC_V,       KC_L,       KC_C,       KC_W,       DE_CIRC,
-        MO(_FL0),   KC_U,       KC_I,       KC_A,       KC_E,       KC_O,       KC_QUOTE,   MS_BTN1,
+        MO(_FL),   KC_U,       KC_I,       KC_A,       KC_E,       KC_O,       KC_QUOTE,   MS_BTN1,
         KC_LSFT,    DE_HASH,    DE_UDIA,    DE_ODIA,    DE_ADIA,    KC_P,       DE_Z,       MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -153,7 +153,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L4] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_GRAVE,
         KC_TAB,     KC_Q,       KC_D,       KC_R,       KC_W,       KC_B,       KC_HYPR,
-        MO(_FL1),   KC_A,       KC_S,       KC_H,       KC_T,       KC_G,       TO(_EMJ),     MS_BTN1,
+        MO(_FL),   KC_A,       KC_S,       KC_H,       KC_T,       KC_G,       TO(_EMJ),     MS_BTN1,
         KC_LSFT,    KC_Z,       KC_X,       KC_M,       KC_C,       KC_V,       MO(_ADDLANG1), MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
@@ -163,8 +163,28 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LANG,    KC_K,       KC_B,       KC_L,       KC_COMMA,   KC_DOT,     KC_SLASH,   KC_RSFT,
         KC_ENTER,   KC_BSPC,    KC_SPC,                 KC_LEFT,    KC_UP,      KC_DOWN,    KC_RIGHT
         ),
-    //Function Layer (Fn)
-    [_FL0] = LAYOUT_left_right_stacked(
+    /* Function Layer (Fn) — ONE layer for all five base layouts, with the F-ROW
+       DERIVED AT RUNTIME from whichever base layout is active.
+       There used to be two, _FL0 and _FL1, differing only in where the F-row is cut
+       between the halves: _FL0 F1..F5 left / F6..F12 right, _FL1 F1..F6 left /
+       F7..F12 right. The reason was to line each layout's F-key up with its own
+       number key, and only _L1 (Stag) needs the second cut — it carries 1..6 on its
+       left half where the other four carry 1..5.
+       Two hand-maintained copies drifted, as two hand-maintained copies do: _L2
+       (Colemak) and _L4 (Workman) both have the ordinary 1..5 / 6..0 row and were
+       both wired to _FL1, so F6 sat over their "-" / "`" key and every F-key from 6
+       up was one position off. CAPS/INS had drifted apart too, with no layout reason.
+       So the cut is computed instead of copied — see fl_aligned_keycode() in
+       poly_keymap.c. Every layout is now aligned, Colemak and Workman included.
+       ⚠️ The 14 entries below are NOT dead data. They are the PRISTINE REFERENCE:
+       the alignment runs only while the stored row still matches them exactly, and
+       switches off for the whole row the moment the host editor changes any of it
+       (the editor reads through dynamic_keymap_get_buffer(), which cannot see a
+       runtime derivation, so aligning an edited row would show one keycode and type
+       another). They are also what a pristine Qwerty board resolves to, so the
+       default case is a no-op — verified, not assumed.
+       CAPS/INS keep _FL0's placement, the one Qwerty has always used. */
+    [_FL] = LAYOUT_left_right_stacked(
         OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,     TO(_UL),
         _______,    _______,    _______,    _______,    _______,    _______,    _______,
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
@@ -175,19 +195,6 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                     MS_BTN1,    MS_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
         _______,    MS_BTN3,    _______,    _______,    _______,   _______,    _______,    _______,
         TO(_NL),    _______,    _______,    _______,    _______,    _______,    _______,    KC_INS,
-        KC_RALT,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
-        ),
-    [_FL1] = LAYOUT_left_right_stacked(
-        OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,      KC_F6,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    _______,    _______,    _______,                _______,    _______,    KC_INS,
-
-                    KC_F7,      KC_F8,      KC_F9,      KC_F10,     KC_F11,     KC_F12,     TO(_UL),
-                    MS_BTN1,    MS_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
-        _______,    MS_BTN3,    _______,    _______,    _______,    _______,    _______,    KC_CAPS,
-        TO(_NL),    _______,    _______,    _______,    _______,    _______,    _______,    _______,
         KC_RALT,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
         ),
      //Num Layer
@@ -414,6 +421,5 @@ const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [9] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
     [10] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
     [11] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [12] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
 };
 

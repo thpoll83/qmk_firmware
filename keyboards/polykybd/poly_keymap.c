@@ -1320,17 +1320,20 @@ void housekeeping_task_user(void) {
 
 
 
-// Maps default layer to corresponding function layer (FL0 or FL1).
+// The function layer a base layout reaches. There is exactly ONE (`_FL`) — the split
+// into _FL0/_FL1 existed only so the F-row lined up with each layout's number row, and
+// that is now computed per layout instead (fl_aligned_keycode). Kept as a function
+// rather than inlining `_FL` at the call site: `default: 0` still says "this base layer
+// has no function layer" for anything outside the five.
 // Global variables: (none - uses passed parameters only)
 layer_state_t get_function_layer(layer_state_t def_layer) {
     switch (def_layer) {
         case _L0:
-        case _L3:
-            return _FL0;
         case _L1:
         case _L2:
+        case _L3:
         case _L4:
-            return _FL1;
+            return _FL;
         default:
             return 0;
 
@@ -2624,15 +2627,129 @@ static void draw_mru_top_bar(uint16_t keycode) {
     if (is_mru) kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 3);
 }
 
+#if defined(POLY_FL_ALIGN_FROW)
+// ── Function-layer F-row alignment ───────────────────────────────────────────
+// The F-row is DERIVED from the active base layout's own number row, so F5 always
+// sits on the key that types 5 whichever layout is loaded. This replaces the old
+// _FL0/_FL1 pair: two hand-maintained copies that drifted (Colemak and Workman were
+// both wired to the 1..6 variant despite carrying an ordinary 1..5 row).
+//
+// The rule, which reproduces BOTH retired layers exactly: walk the base layer's top
+// row across the two halves; every slot holding KC_1..KC_0 takes the matching
+// F1..F10, the two slots after the last number take F11/F12, and whatever is left
+// over takes the layer keys (OSL(_UL) at the far left, TO(_UL) for the other).
+//
+// ⚠️ It is ALL-OR-NOTHING and switches itself OFF the moment the row is customised.
+// _FL sits below the dynamic-keymap write cap, so the host layout editor can remap
+// it — and the editor reads keycodes through dynamic_keymap_get_buffer(), which does
+// NOT come through here, so anything derived at runtime is invisible to it. Aligning
+// a row the user had edited would therefore mean the editor showing one keycode
+// while the board types another, with no way to see why. So: align only while all 14
+// slots still hold exactly what the firmware compiled, and otherwise hand back the
+// stored row untouched. Tweak one F-key and the magic stops for the whole row —
+// editor and board agree again, which is the state you are in whenever you care.
+#define FL_TOP_SLOTS 14
+
+// The 14 top-row matrix positions in reading order: left half is row 0 cols 0..6,
+// right half is row MATRIX_ROWS_PER_SIDE cols 1..7 (col 0 is not a key up there).
+static bool fl_top_slot(uint8_t row, uint8_t col, uint8_t* slot) {
+    if (row == 0 && col <= 6) {
+        *slot = col;
+        return true;
+    }
+    if (row == MATRIX_ROWS_PER_SIDE && col >= 1 && col <= 7) {
+        *slot = (uint8_t)(6 + col);
+        return true;
+    }
+    return false;
+}
+
+static void fl_slot_pos(uint8_t slot, uint8_t* row, uint8_t* col) {
+    if (slot <= 6) {
+        *row = 0;
+        *col = slot;
+    } else {
+        *row = MATRIX_ROWS_PER_SIDE;
+        *col = (uint8_t)(slot - 6);
+    }
+}
+
+// What the F-row slot SHOULD hold for this base layout. Reads the base layer from the
+// compiled keymap, never the dynamic one: the number row is the layout's identity, and
+// a user who has remapped their digits has not thereby asked for a different F-row.
+static uint16_t fl_aligned_keycode(uint8_t def_layer, uint8_t want) {
+    uint8_t last_num = 0xFF;
+    for (uint8_t i = 0; i < FL_TOP_SLOTS; i++) {
+        uint8_t r, c;
+        fl_slot_pos(i, &r, &c);
+        const uint16_t base = keymaps[def_layer][r][c];
+        if (base >= KC_1 && base <= KC_0) {
+            // KC_1..KC_9 then KC_0 are contiguous, and so are KC_F1..KC_F10.
+            if (i == want) return (uint16_t)(KC_F1 + (base - KC_1));
+            last_num = i;
+        }
+    }
+    // F11/F12 continue past the last digit (where a layout has "-" and "=").
+    if (last_num != 0xFF) {
+        if (want == last_num + 1) return KC_F11;
+        if (want == last_num + 2) return KC_F12;
+    }
+    // Everything else is a layer key: the far-left slot sits over Esc and holds the
+    // one-shot into _UL, the remaining leftover is the sticky TO(_UL).
+    return (want == 0) ? OSL(_UL) : TO(_UL);
+}
+
+// Is the stored F-row still exactly what we compiled? Cached, because this runs on
+// the render path (72 keycaps) as well as the key-event path, and each probe is 14
+// dynamic-keymap reads. Invalidated by every write to the dynamic keymap.
+static int8_t s_fl_row_pristine = -1;   // -1 unknown, 0 customised, 1 pristine
+
+static bool fl_row_is_pristine(void) {
+    if (s_fl_row_pristine < 0) {
+        s_fl_row_pristine = 1;
+        for (uint8_t i = 0; i < FL_TOP_SLOTS; i++) {
+            uint8_t r, c;
+            fl_slot_pos(i, &r, &c);
+            if (keycode_at_keymap_location(_FL, r, c) != keymaps[_FL][r][c]) {
+                s_fl_row_pristine = 0;
+                break;
+            }
+        }
+    }
+    return s_fl_row_pristine == 1;
+}
+#endif // POLY_FL_ALIGN_FROW
+
+// Drop the cached "is the F-row untouched?" answer. Called from every dynamic-keymap
+// mutation (the three *_poly wrappers in split_sync.c), so a remap takes effect on the
+// very next render rather than at the next reboot. A no-op on a board with no F-row to
+// align, so the call sites need no #ifdef of their own.
+void poly_fl_row_cache_invalidate(void) {
+#if defined(POLY_FL_ALIGN_FROW)
+    s_fl_row_pristine = -1;
+#endif
+}
+
 // Layers below the host-write cap are remappable and live in the dynamic keymap
 // (EEPROM); layers at/above it (the language/emoji function layers) are served straight
 // from the compiled keymap in flash, so they never read the dynamic keymap and always
 // reflect the flashed firmware. Used by both the display and the key-event path.
 static uint16_t poly_keycode_at(uint8_t layer, uint8_t row, uint8_t col) {
-    if (layer >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) {
-        return keymaps[layer][row][col];   // static, compiled-in (flash)
+    const uint16_t kc = (layer >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT)
+                            ? keymaps[layer][row][col]      // static, compiled-in (flash)
+                            : keycode_at_keymap_location(layer, row, col);
+#if defined(POLY_FL_ALIGN_FROW)
+    // Both the render path (display_keycode_at) and the key-event path
+    // (keymap_key_to_keycode) resolve through here, so the legend and the keycode can
+    // never disagree about which F-key a slot holds — the render/action pairing rule.
+    // The base layout comes from the SYNCED snapshot for the same reason: it is the
+    // only source both halves share, and it is what the renderer already uses.
+    uint8_t slot;
+    if (layer == _FL && fl_top_slot(row, col, &slot) && fl_row_is_pristine()) {
+        return fl_aligned_keycode((uint8_t)get_local_layer()->def_layer, slot);
     }
-    return keycode_at_keymap_location(layer, row, col);
+#endif
+    return kc;
 }
 
 // Override QMK's weak resolver so key events on the static function layers come from the
@@ -4386,6 +4503,19 @@ void keyboard_post_init_user(void) {
     emit_idle_config();   // the style is only known here — the banner tick re-emits it
     note_glyph_script(ee.glyph_script);
     note_glyph_size(ee.glyph_size);
+    // The dynamic keymap is stored BY LAYER INDEX and QMK does not version it, so a
+    // build whose layer enum has shifted would read the previous occupant of every
+    // slot above the change. Discard it once, then stamp the revision so the next
+    // boot is a no-op. Done here rather than in eeconfig_init_user() because the
+    // user datablock and the keymap are separate blocks with separate lifetimes —
+    // the keymap survives a user-data re-init, which is exactly the case that would
+    // otherwise slip through.
+    if (ee.keymap_layers_fmt != KEYMAP_LAYERS_FL_MERGED) {
+        uprintf("Keymap layer enum changed (fmt %u) - resetting dynamic keymap\n",
+                (unsigned)ee.keymap_layers_fmt);
+        dynamic_keymap_reset_poly();
+        stamp_keymap_layers_fmt();
+    }
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before

@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "quantum.h"
 #include "mru.h"
+#include "layers.h"
 
 // Idle (anti-burn-in) display style, persisted in poly_eeconf_t.idle_style and
 // toggled over HID (cmd 28). PULSE is the legacy contrast-only breathing; JITTER
@@ -410,6 +411,15 @@ typedef struct _poly_eeconf_t {
     // for once zero is exactly the value we want. load_user_eeconf() still bounds-
     // guards it so a stale byte outside the enum cannot select a missing face.
     uint8_t  glyph_size;
+    // Which LAYER ENUM the stored dynamic keymap was written against. Unlike every
+    // other tail byte here this is not a setting — it exists because the dynamic
+    // keymap is indexed BY LAYER NUMBER, so removing a layer silently repoints every
+    // stored layer above it (dropping _FL1 slid _NL 7->6, _UL 8->7, ...). Nothing in
+    // QMK versions that block, so without a gate a board would come up running the
+    // old _FL1 data as its numpad layer. Zero is the "written by an older build"
+    // value: `poly_eeconf_t ee = {0}` in eeconfig_init_user() leaves it zero on a
+    // fresh EEPROM too, and a fresh EEPROM wants the reset just as much.
+    uint8_t  keymap_layers_fmt;
 } poly_eeconf_t;
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
@@ -419,6 +429,10 @@ typedef struct _poly_eeconf_t {
 #define LATIN_PICK_INTERLEAVED 0xC3 // ...case-INTERLEAVED; assignment map UNTRUSTWORTHY
 #define LATIN_PICK_ASSIGN_OK   0xD7 // ...and the assignment map is real (letters only)
 #define LATIN_EXT_OK           0x6B // latin_*_ext hold the punctuation targets
+// Layer-enum revision the stored dynamic keymap matches. Bump this ONLY when a layer
+// is added, removed or reordered — not when a layer's CONTENTS change, which needs no
+// reset. Anything else (0 included) means "written against a different enum, discard".
+#define KEYMAP_LAYERS_FL_MERGED 0x71 // single _FL; _NL/_UL/_SL shifted down one
 // ⚠️ 0xC3 is deliberately NOT the current version. The build that introduced it
 // assumed an unwritten EEPROM reads 0xFF, so it copied the assignment map straight
 // out of a block that had never held one — read back as all-zero, i.e. "every key
@@ -434,6 +448,21 @@ static_assert(sizeof(poly_eeconf_t) == EECONFIG_USER_DATA_SIZE, "Mismatch in key
 // would overlap the stored keymap. Raise POLY_EECONFIG_USER_RESERVED (a one-time
 // keymap relocation/reset) if this trips.
 static_assert(EECONFIG_USER_DATA_SIZE <= POLY_EECONFIG_USER_RESERVED, "poly_eeconf_t exceeds POLY_EECONFIG_USER_RESERVED — bump the reservation (one-time reset)");
+
+// Pin the two dynamic-keymap counts to the layer enum itself. Both were hand-kept
+// numbers that a layer add/remove silently invalidates, and the failure is quiet in
+// the worst way: the keymap is stored BY LAYER INDEX, so a stale cap does not error,
+// it just serves the previous occupant of every slot that moved. Collapsing
+// _FL0/_FL1 is exactly that change, which is why these are asserts now rather than
+// a comment asking the next person to remember.
+//   * DYNAMIC_KEYMAP_LAYER_COUNT must cover every compiled layer (QMK's own rule).
+//   * The write cap IS the first read-only layer: _SL and everything above it is
+//     served from flash by poly_keycode_at(), so the host must not be told it can
+//     write there. Anything that moves _SL moves the cap with it.
+static_assert(_EMJ + 1 <= DYNAMIC_KEYMAP_LAYER_COUNT,
+              "DYNAMIC_KEYMAP_LAYER_COUNT is below the number of compiled layers");
+static_assert(_SL == DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT,
+              "DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT must equal _SL — the first flash-served layer");
 
 void reset_all_states_and_layers(void);
 
@@ -481,6 +510,7 @@ void save_user_mru_if_dirty(void);
 void load_user_mru(void);
 
 // Saves both settings and latin table (convenience wrapper around the two above).
+void stamp_keymap_layers_fmt(void);
 void save_user_eeconf(void);
 
 // Loads user keyboard configuration from EEPROM with brightness validation against maximum.

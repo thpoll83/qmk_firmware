@@ -111,7 +111,7 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
 
     switch(*command_id) {
         case id_dynamic_keymap_reset:
-            dynamic_keymap_reset();
+            dynamic_keymap_reset_poly();
             data_len = 1;
             break;
         case id_dynamic_keymap_set_keycode:

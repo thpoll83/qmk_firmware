@@ -236,6 +236,16 @@ void save_user_latin(void) {
                                    sizeof(ext_marker));
 }
 
+// Record that the stored dynamic keymap now matches this build's layer enum. Written
+// straight through rather than via the dirty-flag/suspend path: the keymap has already
+// been reset by the time this is called, so losing the stamp to a power cut would cost
+// the user a SECOND reset on the next boot.
+void stamp_keymap_layers_fmt(void) {
+    const uint8_t marker = KEYMAP_LAYERS_FL_MERGED;
+    eeconfig_update_user_datablock(&marker, offsetof(poly_eeconf_t, keymap_layers_fmt),
+                                   sizeof(marker));
+}
+
 // Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.
 void save_user_eeconf(void) {
     save_user_settings();

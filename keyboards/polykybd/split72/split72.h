@@ -40,6 +40,11 @@ struct display_info {
 //   LATIN_PICKER_SLOTS   — variation keys on the Intl picker row (see _ADDLANG1)
 #define POLY_DISP_ROW_0   BITMASK1(0)
 #define POLY_DISP_ROW_3   BITMASK4(0)
+// The function layer's F-row is ALIGNED at runtime to the active base layout's own
+// number row (see fl_aligned_keycode() in poly_keymap.c). split72 only: split42's
+// _FL top row carries the number row itself, so there is nothing to align there.
+#define POLY_FL_ALIGN_FROW
+
 #define POLY_SPLASH_R1    U"SPLIT"
 #define POLY_SPLASH_R2    U" 7 2"
 #define POLY_SPLASH_R2_ROW 3

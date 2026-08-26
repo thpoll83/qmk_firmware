@@ -97,6 +97,9 @@ const uint32_t* poly_lang_code(uint8_t lang);
 // The function layer that pairs with `def_layer` (the active default layer).
 layer_state_t get_function_layer(layer_state_t def_layer);
 
+// Invalidate the cached F-row-is-pristine answer after any dynamic-keymap write.
+void poly_fl_row_cache_invalidate(void);
+
 // The keycode at a matrix position on a layer, resolved through the dynamic keymap.
 uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key);
 

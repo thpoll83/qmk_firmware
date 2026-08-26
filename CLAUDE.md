@@ -292,6 +292,16 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   (see above), so a plain fetch spews `Could not access submodule 'lib/chibios'`
   and buries the real result. Once unshallowed, the merge base resolved to
   exactly the fork's own `master` — which is the sanity check that it worked.
+  - ⚠️ **It breaks a RELEASE RANGE the same way, and that one reads as plausible
+    history rather than as nonsense.** `git log <tag>..origin/PolyKybd` on a shallow
+    clone walks truncated history and returns a wrong set **with no error** — asked
+    for 0.15.2→0.15.14 it returned commits from the **0.9.54** era, complete with
+    believable bump-commit boundaries (2026-08-26). The 29,576-commit case above at
+    least screams; this one would simply have shipped release notes describing the
+    wrong versions. So the `--is-shallow-repository` check belongs in front of ANY
+    tag-anchored history question, not just merge-base reasoning — and note the tag
+    itself resolves fine (`git rev-parse <tag>` succeeds), so a tag-exists check
+    proves nothing. Unshallowing took **45 s** here; the count went 84 commits.
 - ⚠️ **When an upstream merge breaks the build, look at the vendored DOOM engine
   FIRST — a new upstream warning lands there, not on our own sources.** QMK builds
   with `-Werror`, so *any* warning upstream adds to `builddefs/common_rules.mk`
@@ -691,6 +701,67 @@ The host software (`PolyKybdHost/`) communicates with this firmware over a custo
 | `state.c` | `poly_sync_t` / `poly_layer_t` — shared state structs with CRC32, persisted via EEPROM |
 | `multicore_exec.c` | Offloads RLE decompression to RP2040 core1 via FIFO, keeping QMK's core0 responsive |
 | `lang/lang_lut.c` | 81-language lookup table (code-generated from `lang_lut.xlsx` via cog) |
+
+### ⚠️ The dynamic keymap is indexed BY LAYER NUMBER, and QMK does not version it
+
+Remove or reorder a layer and every stored layer above it silently changes meaning.
+There is no magic, no format byte, no size check in `dynamic_keymap` — the EEPROM block
+is just `layer * MATRIX_ROWS * MATRIX_COLS * 2` bytes, so dropping `_FL1` slid `_NL`
+7→6, `_UL` 8→7 and `_SL` 9→8, and a board would have come up **running the old `_FL1`
+data as its numpad layer**. No error, no log line, just wrong keys on three layers.
+
+`poly_eeconf_t.keymap_layers_fmt` is the gate: `keyboard_post_init_user` compares it to
+`KEYMAP_LAYERS_FL_MERGED` and, on a mismatch, runs `dynamic_keymap_reset_poly()` and
+stamps it. **Bump that constant whenever a layer is added, removed or reordered — never
+when a layer's CONTENTS change**, which needs no reset. Zero means "written by an older
+build", which is also what a fresh EEPROM reads (QMK's wear levelling normalises cleared
+bytes to zero — the fact that made `latin_assign` read as "every key hosts 'a'"), and
+both want the reset. The stamp is written straight through rather than via the
+suspend-only dirty-flag path, so a power cut cannot cost the user a *second* reset.
+
+⚠️ **Two hand-kept numbers move with the enum, and both are now asserted rather than
+remembered** (`state.h`): `DYNAMIC_KEYMAP_LAYER_COUNT` must cover every compiled layer,
+and the write cap **IS** the first flash-served layer, so `_SL == DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT`.
+A stale cap does not error — it just tells the host it may write to a layer
+`poly_keycode_at()` serves from flash. Mutation-checked: setting the cap back to 9 fails
+the build with the assert's own message.
+
+⚠️ **Every mutation goes through a `*_poly` wrapper in `split_sync.c`** —
+`dynamic_keymap_set_buffer_poly`, `dynamic_keymap_set_keycode_poly`, and
+`dynamic_keymap_reset_poly()` (added purely so the reset has one too). That is
+deliberate: the alternative was a list of call sites to remember to invalidate the F-row
+cache at, which is the guard shape this repo keeps getting caught by (`sync_is_link_fault()`,
+the CI suite names, the log-source registry). The invariant is "all keymap mutation goes
+through a `_poly` function", not "these four places also call the invalidator".
+
+### `poly_keycode_at()` is the ONE resolver for both the render and the key-event path
+
+`display_keycode_at()` (legend) and `keymap_key_to_keycode()` (action) both bottom out
+there, so anything derived inside it **cannot** make a keycap show one thing and type
+another. That makes it the correct — and only correct — seam for a runtime keycode
+derivation. The F-row alignment (`fl_aligned_keycode`, split72's `POLY_FL_ALIGN_FROW`)
+lives there for exactly that reason.
+
+Both callers feed it the **synced** `def_layer` from `get_local_layer()`, not live state
+for one and synced for the other. ⚠️ This is the OPPOSITE of the glyph-size key's
+deliberate asymmetry, and the difference is what changes at human speed: *modifiers*
+change within a single keypress so the action must follow the finger, while `def_layer`
+only moves on a deliberate layout switch — so the one-housekeeping-pass lag is
+irrelevant and two sources could render F6 on a keycap that types F7.
+
+⚠️ **The host layout editor CANNOT see anything derived there — it reads through
+`dynamic_keymap_get_buffer()` (`hid_com.c`), straight out of EEPROM.** So a derivation
+on a host-remappable layer would show one keycode in the editor while the board typed
+another, with nothing on screen to explain it. That constraint, not taste, is why the
+F-row alignment is **all-or-nothing and self-disabling**: it applies only while all 14
+slots still hold exactly what was compiled, and any edit hands the whole row back to the
+stored values. Two options were rejected — deriving unconditionally (fights the editor)
+and moving `_FL` above the write cap (costs remappability entirely). Any future runtime
+derivation on a remappable layer faces the same three-way choice.
+
+⚠️ **The derivation is cached** (`fl_row_is_pristine`, 14 dynamic-keymap reads) because
+`poly_keycode_at()` runs per keycap per render, not just per keypress. See the `_poly`
+wrapper invariant above for how it is invalidated.
 
 ### Keyboard variants & the shared keymap (`poly_keymap.c`)
 

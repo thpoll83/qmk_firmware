@@ -47,6 +47,18 @@ exactly as `polykybd-release-notes` does:
 State the resolved range back before drafting (e.g. "Last firmware release is
 0.9.23, tree is 0.9.42 — release notes for 0.9.24 → 0.9.42").
 
+⚠️ **Check the clone is not SHALLOW before you trust the range** — the container's
+clones are, and `git log <tag>..origin/<default>` then walks truncated history and
+returns a **plausible-looking but wrong** set with no error. Asked for 0.15.2→0.15.14 it
+returned commits from the **0.9.54** era, bump-commit boundaries and all (2026-08-26).
+The tag itself resolves fine, so "the tag exists" proves nothing.
+
+```bash
+git rev-parse --is-shallow-repository                  # true => the range below is a lie
+git fetch origin --unshallow --no-recurse-submodules   # ~45 s
+git fetch origin 'refs/tags/*:refs/tags/*'             # host clones may lack the tag
+```
+
 Gather the commits per version with the `polykybd-release-notes` mechanics (bump
 commits are the boundaries: `chore: bump firmware version to X.Y.Z [skip ci]` /
 `chore: bump host version to X.Y.Z [skip ci]`; pull commit bodies + the relevant

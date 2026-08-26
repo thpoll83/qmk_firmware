@@ -909,7 +909,22 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
             case U'\x0F':                                           // HALF / THIN composite a glyph at the
             case U'\x11': if (text[1]) text += 1; break;            //   cursor and do not advance
             case U'\x15': if (text[1] && text[2]) text += 2; break;            // ROT (angle, glyph)
-            case U'\x0E':                                           // MOVE (x,y) / FRAME (w,h): two args
+            case U'\x0E':   // MOVE (x,y): the cursor lands on an ABSOLUTE buffer position, which
+                             //   this relative-to-origin measurement cannot resolve — so the move
+                             //   itself is ignored and a MOVE'd legend's box covers only the part
+                             //   laid out relatively. Its two ARGUMENTS are still skipped.
+                             //
+                             //   ⚠️ They MUST be, and this used to fall through to \x14 and skip
+                             //   nothing. A coordinate is an arbitrary byte, so it lands in this
+                             //   very switch on the next iteration: 13 of the 31 HINT_POS_* /
+                             //   HINT_SZ_* / MTB_* macros carry a byte that is also an op
+                             //   (HINT_SZ_STOPSQ is 15,15 = \x0F \x0F, i.e. HALF HALF). Before,
+                             //   that mis-measured a glyph; once \x15/\x16 existed it could
+                             //   silently latch a font for the rest of the run or eat two real
+                             //   codepoints. Skipping the arguments closes the whole class,
+                             //   including for any op added later.
+                if (text[1] && text[2]) text += 2;
+                break;
             case U'\x14':                    /* ERASE: a mode, no extent */ break;
             case U'\x13': if (text[1] && text[2] && text[3]) text += 3; break;  // BADGE (w,h,style)
             case U'\x12': if (text[1] && text[2]) text += 2; break;             // FRAME (w,h)

@@ -746,7 +746,9 @@ void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t
     kdisp_write_gfx_text_cy(fonts, num_fonts, x, y, text, 0);
 }
 
-void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius) {
+// One walk of the display list. Called twice by kdisp_write_gfx_text_cy when a
+// courtyard is requested — see there for why.
+static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius) {
     int8_t x_cursor = x;
     int8_t y_cursor = y;
     // HINT_SMALL (\x10) latches this for the REST of the string — there is no
@@ -872,6 +874,31 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
         text++;
     }
     if (erase_latched) s_gfx_erase = erase_prev;
+}
+
+void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius) {
+    // ⚠️ TWO passes when a courtyard is asked for, and the second one is what makes
+    // the first correct. The courtyard is cleared per GLYPH, immediately before that
+    // glyph is plotted (kdisp_write_gfx_char), so glyph N+1's 3px margin ate glyph
+    // N's ink wherever the two sat closer than the radius — the legend came out with
+    // slices cut out of the letter before each one. Measured on the shipped legends:
+    // "SCRIPT:/Rune" lost 6.2% of its lit pixels, "Qwerty" 4.1%, and even the 27px
+    // "Qwty" lost 10px, so this was never mid-face-specific — the tighter 19px
+    // spacing just made a long-standing defect impossible to miss (field, 2026-08-26).
+    //
+    // Pass 1 clears and draws exactly as before; pass 2 redraws the same list with NO
+    // clearing, restoring any ink a later glyph's margin removed. Underlying art stays
+    // cleared, because nothing redraws it — so the courtyard keeps doing the one job
+    // it exists for (punching the legend through a tab frame / row bar / overlay
+    // image) and stops doing the one it never should have.
+    //
+    // Every drawing op is idempotent (glyphs OR in, the badge/frame fills are stable,
+    // an erase-mode glyph clears the same pixels twice), so a second pass cannot
+    // change the result other than by putting ink back.
+    if (cy_radius > 0) {
+        gfx_text_run(fonts, num_fonts, x, y, text, cy_radius);
+    }
+    gfx_text_run(fonts, num_fonts, x, y, text, 0);
 }
 
 void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,

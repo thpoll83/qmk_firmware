@@ -353,6 +353,30 @@ void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
     }
 }
 
+// Solid sibling of kdisp_draw_round_rect — same (x,y)=top-left, w, h, r geometry.
+// Scanline fill: for a row inside a corner band, the horizontal inset is
+// r - floor(sqrt(r^2 - d^2)) where d is how far into the band the row sits. r is
+// small (<= 4 in every caller), so the integer-sqrt loop is a handful of iterations
+// and no float or table is needed.
+void kdisp_fill_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r) {
+    if (width < 2 || height < 2) return;
+    if (r < 0) r = 0;
+    if (r > (width - 1) / 2)  r = (width - 1) / 2;
+    if (r > (height - 1) / 2) r = (height - 1) / 2;
+    const int x0 = x, y0 = y, x1 = x + width - 1, y1 = y + height - 1;
+    for (int j = y0; j <= y1; ++j) {
+        int d = (j < y0 + r) ? (y0 + r - j) : ((j > y1 - r) ? (j - (y1 - r)) : 0);
+        int inset = 0;
+        if (d > 0) {
+            const int rem = r * r - d * d;
+            int k = 0;
+            while ((k + 1) * (k + 1) <= rem) ++k;   // k = floor(sqrt(rem))
+            inset = r - k;
+        }
+        for (int i = x0 + inset; i <= x1 - inset; ++i) SET_PIXEL_CLIPPED(i, j);
+    }
+}
+
 // Draw a single character at bottom-left (x,y); ch is a 32-bit Unicode codepoint
 // (SMP codepoints > 0xFFFF allowed).
 int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, int8_t cy_radius) {
@@ -602,6 +626,12 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
     // "back to full size" op, because the one use is a legend that is entirely
     // small text and a toggle would just be a second thing to get wrong.
     bool   small    = false;
+    // HINT_ERASE (\x14) latches likewise. ⚠️ s_gfx_erase is a STATIC plotter mode —
+    // leaving it on blanks every keycap drawn after this one in the same pass — so
+    // the previous value is restored at the single exit below, not hardcoded false:
+    // a caller may already be mid-erase (the inverted-keycap pattern).
+    bool       erase_latched = false;
+    const bool erase_prev    = s_gfx_erase;
     while (*text != 0) {
         switch(*text) {
             case U'\x05'://enquiry
@@ -648,6 +678,21 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
             case U'\x11':   // THIN: as HALF but decimating, for icons whose gaps matter
                 if (text[1]) { kdisp_draw_glyph_thin_at(fonts, num_fonts, x_cursor, y_cursor, text[1]); text++; }
                 break;
+            case U'\x13':   // BOX: SOLID rounded rect at the cursor (next two = w, h) — the
+                            //   engaged half of a lock badge; pair with \x14 to punch the
+                            //   glyph back out of it, the way ICON_CAPSLOCK_ON is drawn.
+                if (text[1] && text[2]) {
+                    kdisp_fill_round_rect(x_cursor, y_cursor, (int8_t)text[1], (int8_t)text[2], 4);
+                    text += 2;
+                }
+                break;
+            case U'\x14':   // ERASE: draw every FOLLOWING TEXT glyph as a hole, not as ink.
+                            //   ⚠️ Covers the ordinary and \x10 (SMALL) paths, which both
+                            //   honour s_gfx_erase — NOT the \x0F/\x11 composite ops, whose
+                            //   kdisp_draw_glyph_*_at plot unconditionally.
+                erase_latched = true;
+                s_gfx_erase   = true;
+                break;
             case U'\x12':   // FRAME: 2px nested rounded rect at the cursor (next two codepoints = w, h)
                 if (text[1] && text[2]) {
                     int8_t fw = (int8_t)text[1], fh = (int8_t)text[2];
@@ -664,6 +709,7 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
         }
         text++;
     }
+    if (erase_latched) s_gfx_erase = erase_prev;
 }
 
 void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,
@@ -698,7 +744,9 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
             case U'\x0F':                                           // HALF / THIN composite a glyph at the
             case U'\x11': if (text[1]) text += 1; break;            //   cursor and do not advance
             case U'\x0E':                                           // MOVE (x,y) / FRAME (w,h): two args
-            case U'\x12': if (text[1] && text[2]) text += 2; break;
+            case U'\x14':                    /* ERASE: a mode, no extent */ break;
+            case U'\x13':                                            // BOX (w,h): two args, and
+            case U'\x12': if (text[1] && text[2]) text += 2; break;   //   FRAME (w,h) likewise
             default: {
                 // Locate the font whose [first,last] contains the codepoint (linear
                 // scan; this is a cold measuring path, no MRU cache needed).

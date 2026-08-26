@@ -1817,12 +1817,27 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
     glyph merges into it, and a dark-gap version would need a baked glyph — which the
     **full** C1 band has no room for (see the icon-slot note above). The speaker is
     only 19 px wide, so there is room for a separate mark at no cost.
-- **Scroll Lock keeps the word and gains a mark**: `U"Scr"` + `ARROWS_DOWNSTOP`
-  (U+2B73) MOVE'd to the bottom-right. That is the same glyph the **status OLED**
-  already lights for scroll lock, so panel and keycap agree, and it gives the key the
-  `Cap`+badge / `Nm`+badge shape of its two siblings. The arrow **alone** was rendered
-  and is too sparse to identify; the Caps/Num badges could not be borrowed because they
-  carry a literal `A` / `1`.
+- **Scroll Lock keeps the word and gains a STATE badge**: `U"Scr"` + `ARROWS_DOWNSTOP`
+  (U+2B73, the glyph the **status OLED** already lights for this state) at half size
+  inside a rounded box that goes **solid when the lock is engaged** — the same shape
+  Caps Lock and Num Lock use, which is why it reads at a glance. `led_t.scroll_lock`
+  rides `poly_layer_t.led_state`, which is **synced**, so the slave half shows it too.
+  - ⚠️ **The badge is DRAWN, not baked**, and that is forced: the resident C1 band is
+    full (32/32), so there is nowhere to put the OFF/ON glyph pair Caps and Num each
+    get. `HINT_FRAME` draws the outline, **`HINT_BOX` (`\x13`)** the solid, and
+    **`HINT_ERASE` (`\x14`)** punches the arrow back out of the solid one — that
+    knock-out is what makes the engaged state read as *inverted* rather than as a blob.
+  - `kdisp_fill_round_rect()` is the solid sibling of `kdisp_draw_round_rect()`: a
+    scanline fill whose per-row inset is `r - floor(sqrt(r² - d²))`. `r ≤ 4` in every
+    caller, so the integer-sqrt loop is a few iterations — no float, no table.
+  - ⚠️ **`HINT_ERASE` restores the PREVIOUS `s_gfx_erase`, not `false`.** It is a
+    static plotter mode, so leaving it on blanks every keycap drawn after this one in
+    the same pass — and a caller may already be mid-erase (the inverted-keycap
+    pattern), which a hardcoded `false` would clobber. It also covers only the text
+    paths; `\x0F`/`\x11` composite through `kdisp_draw_glyph_*_at`, which plot
+    unconditionally.
+  - The arrow **alone** was rendered first and is too sparse to identify, and the
+    Caps/Num badge glyphs could not be borrowed because they carry a literal `A` / `1`.
 - **Pause spells the word out at HALF the base face** — 10 px caps, 41 px wide,
   where the full 27 px face needs 106 px and clips 34 px off the panel. Two solid
   U+275A bars were tried first and read as ambiguous.

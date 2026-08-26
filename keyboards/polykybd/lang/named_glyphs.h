@@ -1969,6 +1969,8 @@
 // Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
 #define HINT_SMALL       U"\x10"      // draw the REST of the string half-scale (text, advances)
+#define HINT_BOX(sz)     U"\x13" sz    // SOLID rounded rect at the cursor, (w,h) = sz
+#define HINT_ERASE       U"\x14"      // draw the REST of the string as a HOLE, not as ink
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
 #define HINT_THIN        U"\x11"       // as HINT_HALF but DECIMATING (see disp_array.h)
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
@@ -2111,13 +2113,31 @@
 // Scroll Lock / Pause / Mute — the three Utils-layer keys that still spelled
 // themselves out in 4-letter text while every neighbour drew an icon.
 //
-// Scroll Lock keeps the WORD and adds ARROWS_DOWNSTOP in the bottom-right corner,
-// which is the same glyph the status OLED already lights for scroll lock — so the
-// keycap and the panel agree — and it gives the key the same "text + mark" shape as
-// its two siblings Caps Lock and Num Lock. The arrow alone was tried and is too
-// sparse to identify; the badge glyphs Caps/Num use carry a literal `A` / `1` and
-// there is no `S` one, so those could not be borrowed.
-#define HINT_POS_SCRLOCK 	U"\x48\x1C"   // (72,28) buffer: right of "Scr" (40px), clear of it
+// Scroll Lock keeps the WORD and puts ARROWS_DOWNSTOP — the same glyph the status
+// OLED already lights for this state — into a rounded badge that goes SOLID when the
+// lock is engaged, exactly like Caps Lock and Num Lock beside it. `led_t.scroll_lock`
+// rides `poly_layer_t.led_state`, which is synced, so the slave half shows it too.
+//
+// ⚠️ The badge is DRAWN, not a glyph: the resident C1 band is full (32/32), so there
+// is nowhere to bake the OFF/ON pair Caps and Num each get. HINT_FRAME / HINT_BOX
+// draw the outline and the solid, and HINT_ERASE punches the arrow back out of the
+// solid one — which is what makes the engaged state read as inverted rather than as
+// a blob. The arrow is HINT_SMALL (half of 10x26 = 5x13), sized to clear the 2px
+// frame inside a 19x19 box.
+//
+// Geometry is measured: the box occupies visible x 44..62, y 6..24 (its bottom on the
+// text baseline, as the Caps badge's is) and the arrow inks x 51..55, y 8..20.
+// ⚠️ Several of these argument bytes happen to equal op codepoints (0x06, 0x11, 0x13).
+// That is harmless — HINT_MOVE / HINT_FRAME / HINT_BOX consume their arguments before
+// the next loop iteration, so an argument is never dispatched as an op.
+#define HINT_POS_SCRBOX   	U"\x48" U"\x06"   // (72,6)  buffer: badge top-left
+#define HINT_SZ_SCRBOX    	U"\x13" U"\x13"   // 19 x 19
+#define HINT_POS_SCRARROW 	U"\x4E" U"\x11"   // (78,17) buffer: the half-scale arrow's baseline
+
+#define ICON_SCRLOCK_OFF  	U"Scr" HINT_MOVE(HINT_POS_SCRBOX) HINT_FRAME(HINT_SZ_SCRBOX) \
+                          	HINT_MOVE(HINT_POS_SCRARROW) HINT_SMALL ARROWS_DOWNSTOP
+#define ICON_SCRLOCK_ON   	U"Scr" HINT_MOVE(HINT_POS_SCRBOX) HINT_BOX(HINT_SZ_SCRBOX) \
+                          	HINT_MOVE(HINT_POS_SCRARROW) HINT_ERASE HINT_SMALL ARROWS_DOWNSTOP
 
 // Pause spells the word out, at half the base face (10px caps, 41px wide) so it fits
 // where the full 27px face needs 106px. HINT_SMALL is what makes that possible — the

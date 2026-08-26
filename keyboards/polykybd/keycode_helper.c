@@ -149,9 +149,10 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_AUDIO_VOL_DOWN:             return U"  " PRIVATE_VOL_DOWN;
         case KC_AUDIO_VOL_UP:               return U"  " PRIVATE_VOL_UP;
         case KC_PRINT_SCREEN:               return U"  " PRIVATE_IMAGE;
-        // "Scr" plus the scroll-lock arrow the status OLED lights for the same state,
-        // in the bottom-right corner — the text+mark shape Caps Lock and Num Lock use.
-        case KC_SCROLL_LOCK:                return U"Scr" HINT_MOVE(HINT_POS_SCRLOCK) ARROWS_DOWNSTOP;
+        // "Scr" plus a badge that goes solid while the lock is engaged — the same
+        // shape as the Caps Lock and Num Lock keys above, which is why it reads at a
+        // glance. Drawn rather than baked: the resident icon band has no free slots.
+        case KC_SCROLL_LOCK:                return state.scroll_lock ? ICON_SCRLOCK_ON : ICON_SCRLOCK_OFF;
         case KC_PAUSE:                      return ICON_PAUSE_TEXT;
         case KC_INSERT:                     return U"Ins";
         case KC_HOME:                       return ARROWS_LEFTSTOP;

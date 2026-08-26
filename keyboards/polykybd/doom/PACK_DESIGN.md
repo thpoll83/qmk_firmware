@@ -22,9 +22,9 @@ same engine objects re-linked at the pack address. Measured results:
 
 ## 1. Flash map carve-out
 
-The upper 2 MB of the resource region (`FW_RESOURCE_OFFSET` 0x400000)
-currently belongs entirely to the WHX (`FW_DOOMWAD_SLOT_*`). The pack takes
-the top 248 KB — **not** the top 256 KB: the last 8 KB of flash is the
+The upper 2 MB of the resource region (`FW_RESOURCE_OFFSET` 0x400000) is the
+Doom allocation: the WHX (`FW_DOOMWAD_SLOT_*`) holds the lower 1.75 MB and the
+pack takes the top 248 KB — **not** the top 256 KB: the last 8 KB of flash is the
 wear-levelling EEPROM (see the ⚠️ below the table).
 
 | flash offset | XIP address | size | contents |

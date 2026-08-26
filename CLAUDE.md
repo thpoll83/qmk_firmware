@@ -1799,26 +1799,73 @@ with `−`/`+` and no staircase (they name no level); `KC_DAUTO` spells **AUTO**
 Three `_UL` keys still spelled themselves out in four letters while every neighbour
 drew an icon, and one pair of keys was replaced by a single state-reflecting key.
 
-- **Mute is now U+1F507, the CANCELLED speaker.** The old `PRIVATE_MUTE` (U+1F568) is
+- **Mute is the speaker we already had, with a cancellation X beside it** —
+  `PRIVATE_MUTE` (U+1F568) + U+1F5D9, placed by the ordinary cursor advance.
+  U+1F507 (the emoji cancelled speaker) was shipped first and reverted: at 40×39 the
+  slashed circle fills the whole cell and reads as busy rather than as "muted".
+  U+1F5D9 is the crispest of the three X glyphs already in the pack (U+2717 is a
+  script ballot X, U+2718 a heavy one) and comes from the same `Window` font the
+  legend-size icons use.
+- **Why the old glyph failed, which is the part worth keeping:** The old `PRIVATE_MUTE` (U+1F568) is
   a speaker with **no wave arcs**, i.e. it differs from `PRIVATE_VOL_DOWN` (U+1F569,
   one arc) and `PRIVATE_VOL_UP` (U+1F56A) only by an *absence* — nothing on it says
   "muted", which is exactly how it was reported. ⚠️ **Do not "finish the family" by
   moving the volume keys to U+1F508/U+1F50A**: those NotoEmoji glyphs are filled and
-  render visibly heavier beside the NotoSansSymbols2 line art (rendered and compared —
-  U+1F507 happens to be line art of the same weight, which is why only it moves).
-  - A slash **composited over** the existing speaker was tried first and cannot work:
-    a legend display list has no erase op, so a lit slash over a solid glyph merges
-    into it, and a dark-gap version would need a baked glyph — which the **full** C1
-    band has no room for (see the icon-slot note above).
+  render visibly heavier beside the NotoSansSymbols2 line art (rendered and compared).
+  - A slash **composited over** the speaker cannot work, which is why the X sits
+    BESIDE it: a legend display list has no erase op, so a lit slash over a solid
+    glyph merges into it, and a dark-gap version would need a baked glyph — which the
+    **full** C1 band has no room for (see the icon-slot note above). The speaker is
+    only 19 px wide, so there is room for a separate mark at no cost.
 - **Scroll Lock keeps the word and gains a mark**: `U"Scr"` + `ARROWS_DOWNSTOP`
   (U+2B73) MOVE'd to the bottom-right. That is the same glyph the **status OLED**
   already lights for scroll lock, so panel and keycap agree, and it gives the key the
   `Cap`+badge / `Nm`+badge shape of its two siblings. The arrow **alone** was rendered
   and is too sparse to identify; the Caps/Num badges could not be borrowed because they
   carry a literal `A` / `1`.
-- **Pause is `U"  "` + two U+275A HEAVY VERTICAL BARs** — already in the symbol
-  bundle, solid rather than line art, 15×34 each, so two fill the panel with no new
-  glyph. (`U"Pause"` did not even fit: it clipped 34 px off the right edge.)
+- **Pause spells the word out at HALF the base face** — 10 px caps, 41 px wide,
+  where the full 27 px face needs 106 px and clips 34 px off the panel. Two solid
+  U+275A bars were tried first and read as ambiguous.
+
+**`HINT_SMALL` (`\x10`) is what makes small TEXT possible on a keycap, and it is not
+`HINT_HALF`.** The three standalone UI faces (`_Small_` 15 px, `_Mid_` 19 px, `_Nano_`
+10 px) are **not in `g_all_fonts`**, so no codepoint can reach them — the resident
+latin face has exactly one size, and `latinbig` only goes *bigger*. So a smaller face
+has to be synthesised at draw time.
+
+- `HINT_HALF` (`\x0F`) could not do it: it takes the **literal top-left of the ink**
+  and **does not advance the cursor**, because it exists to composite one icon into a
+  hint. Spelling a word with it needs a `HINT_MOVE` per letter, with the top-left
+  computed per glyph — 20 codepoints for "Pause", and each MOVE is an absolute buffer
+  position that `kdisp_gfx_text_bbox()` cannot measure.
+- `HINT_SMALL` instead latches a mode for the **rest of the string**, and
+  `kdisp_write_gfx_char_half()` keeps `kdisp_write_gfx_char`'s baseline and advance
+  semantics — only the glyph's own offsets and extents are halved, never the baseline.
+  So `U"  \x05\x05" HINT_SMALL U"Pause"` centres itself with ordinary full-size
+  spaces, exactly like the `U"  " ICON_*` legends beside it.
+- ⚠️ **Halve offsets with FLOOR, not C truncation.** `xOffset`/`yOffset` are negative
+  (above the baseline) and `/2` rounds toward zero, which puts lowercase 1 px off the
+  run's baseline. `half_floor()` is written out rather than `>> 1` because a right
+  shift of a negative value is only arithmetic by implementation guarantee.
+- There is deliberately **no "back to full size" op** — the one use is a legend that is
+  entirely small text, and a toggle is a second thing to get wrong. `\x18` (reset) does
+  not clear it either; it resets the cursor only.
+
+⚠️ **`kdisp_gfx_text_bbox()` did not know the display-list ops at all, and that was a
+real bug the moment a MAIN legend started using them.** Every op byte *and each of its
+argument codepoints* fell into `default:`, matched no font, and was substituted with
+`'!'` — so a legend carrying one `HINT_MOVE` measured **three** bogus glyphs. That box
+feeds `plan_main_legend()`'s shift-preview layout and `roll_idle_offset()`'s jitter
+travel, so it was luck rather than design that nothing visibly broke (none of the
+affected keys has a shift preview, and none is drawn at idle). The ops are mirrored
+now: `\x10` switches the measurement to half-scale, `\x0F`/`\x11` consume one argument,
+`\x0E`/`\x12` consume two.
+- ⚠️ **`\x0E` (MOVE) still cannot be measured properly** — bbox works relative to the
+  draw origin and MOVE names an ABSOLUTE buffer position, which is not knowable at
+  measure time. Skipping it is strictly better than measuring `'!'`, but a MOVE'd
+  legend's box still only covers the part laid out relatively. **Prefer the ordinary
+  cursor advance over a MOVE in a main legend** — that is why `ICON_MUTE` places its X
+  with `\f\f` and the glyph's own `xAdvance` rather than a MOVE.
 
 **The legend-size key is now ONE key that states its own tier.** `KC_GLYPH_SIZE_UP` on
 `_UL` draws `ICON_FONT_BIGGER` plus the current tier as a digit in the top-right;

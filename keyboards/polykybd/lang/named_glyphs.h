@@ -1968,6 +1968,7 @@
 // HINT_MOVE/HINT_FRAME take a packed position macro (two bytes = x,y or w,h).
 // Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
+#define HINT_SMALL       U"\x10"      // draw the REST of the string half-scale (text, advances)
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
 #define HINT_THIN        U"\x11"       // as HINT_HALF but DECIMATING (see disp_array.h)
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
@@ -2118,10 +2119,13 @@
 // there is no `S` one, so those could not be borrowed.
 #define HINT_POS_SCRLOCK 	U"\x48\x1C"   // (72,28) buffer: right of "Scr" (40px), clear of it
 
-// Pause is the universally-read double bar. U+275A HEAVY VERTICAL BAR is already in
-// the symbol bundle, is solid rather than line art, and at 15x34 two of them fill the
-// panel without needing a new glyph.
-#define ICON_PAUSE_BARS             	U"\x275A" U"\x275A"
+// Pause spells the word out, at half the base face (10px caps, 41px wide) so it fits
+// where the full 27px face needs 106px. HINT_SMALL is what makes that possible — the
+// three standalone UI faces are not in g_all_fonts, so no codepoint reaches a smaller
+// font. The two leading spaces are full-size (they precede the op) and centre the run
+// exactly as the U"  " ICON_* legends beside it; \x05\x05 drops the baseline 4px so
+// the short 10px band sits in the middle of the 40px panel rather than 3px high.
+#define ICON_PAUSE_TEXT             	U"  \x05" U"\x05" HINT_SMALL U"Pause"
 
 // Mute becomes the CANCELLED speaker. The old PRIVATE_MUTE (U+1F568) is simply a
 // speaker with no waves, i.e. it differs from its two neighbours only by the absence
@@ -2130,7 +2134,15 @@
 // the NotoSansSymbols2 family the volume keys use, renders as line art of the same
 // weight (the filled U+1F508/U+1F50A pair does NOT — do not "finish the family" with
 // those, they are visibly heavier beside U+1F569/U+1F56A).
-#define ICON_MUTE                   	U"\x1F507"
+// U+1F5D9 CANCELLATION X, the crispest of the three X glyphs already in the pack
+// (U+2717 is a script ballot X, U+2718 a heavy one) and from the same Window font the
+// legend-size icons use.
+#define ICON_CANCEL_X               	U"\x1F5D9"
+
+// Mute = the speaker we already had, with that X beside it. Placed by the ordinary
+// cursor advance rather than a MOVE, so the cell stays measurable by
+// kdisp_gfx_text_bbox; \f\f lifts the X 4px onto the speaker's optical centre.
+#define ICON_MUTE                   	PRIVATE_MUTE U"\f\f" ICON_CANCEL_X
 
 // Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
 // The status OLED already says "brightness" with a sun, so the keycaps use the

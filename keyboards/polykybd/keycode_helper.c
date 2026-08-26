@@ -142,14 +142,17 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case MS_DOWN:                       return U"  " ICON_DOWN;
         case MS_LEFT:                       return U"  " ICON_LEFT;
         case MS_RGHT:                       return U"  " ICON_RIGHT;
-        case KC_AUDIO_MUTE:                 return U"  " ICON_MUTE;
+        // No leading pad: ICON_MUTE is two glyphs 56px wide and already centred by
+        // the speaker's own xOffset — the U"  " its neighbours carry would push the
+        // cancellation X off the panel.
+        case KC_AUDIO_MUTE:                 return ICON_MUTE;
         case KC_AUDIO_VOL_DOWN:             return U"  " PRIVATE_VOL_DOWN;
         case KC_AUDIO_VOL_UP:               return U"  " PRIVATE_VOL_UP;
         case KC_PRINT_SCREEN:               return U"  " PRIVATE_IMAGE;
         // "Scr" plus the scroll-lock arrow the status OLED lights for the same state,
         // in the bottom-right corner — the text+mark shape Caps Lock and Num Lock use.
         case KC_SCROLL_LOCK:                return U"Scr" HINT_MOVE(HINT_POS_SCRLOCK) ARROWS_DOWNSTOP;
-        case KC_PAUSE:                      return U"  " ICON_PAUSE_BARS;
+        case KC_PAUSE:                      return ICON_PAUSE_TEXT;
         case KC_INSERT:                     return U"Ins";
         case KC_HOME:                       return ARROWS_LEFTSTOP;
         case KC_END:                        return U"   " ARROWS_RIGHTSTOP;

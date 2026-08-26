@@ -207,7 +207,9 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     //Util Layer
     [_UL] = LAYOUT_left_right_stacked(
         KC_NO,      KC_F13,     KC_F14,     KC_F15,     KC_F16,     KC_F17,     KC_F18,
-        KC_MYCM,    KC_CALC,    KC_PSCR,    KC_SCRL,    KC_BRK,     KC_IDDQD,   KC_NO,
+        // Shifted one column INWARD so the outer column (Tab on the base layers)
+        // stays free, and each key lines up under an F-key above it.
+        KC_NO,      KC_MYCM,    KC_CALC,    KC_PSCR,    KC_SCRL,    KC_BRK,     KC_IDDQD,
         KC_NO,      KC_DMIN,    KC_D1Q,     KC_DHLF,    KC_D3Q,     KC_DMAX,    KC_NO,      _______,
         // Centred under the five presets above (cols 1-5): three keys centre on col 3.
         // Auto/manual sits BETWEEN - and +, so the row reads dimmer / mode / brighter.
@@ -218,10 +220,13 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                     KC_NO,      KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_IDDQD,   TO(_SL),
         // Sound sits directly under the transport row so the whole media block reads as
         // one group: MRWD/MFFD bracket the volume trio, each under its transport key.
-        // KC_GLYPH_SIZE_UP is the SINGLE legend-size key — Shift reverses the direction
+        // Shifted one column OUTWARD to make that alignment true - MRWD now sits under
+        // MPRV, MUTE under MPLY, and so on to MFFD under the IDDQD slot.
+        _______,    KC_NO,      KC_MRWD,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MFFD,    KC_NO,
+        // KC_GLYPH_SIZE_UP is the SINGLE legend-size key - Shift reverses the direction
         // and the legend carries the current tier as a digit, so no second key is needed.
-        _______,    KC_MRWD,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MFFD,    KC_GLYPH_SIZE_UP, KC_NO,
-        KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_NO,      KC_RSFT,
+        // It sits where Ctx (KC_APP) lives on the base layers.
+        KC_NO,      KC_GLYPH_SIZE_UP, KC_NO, KC_NO,     KC_NO,      KC_NO,      KC_NO,      KC_RSFT,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     //Settings Layer — row 2 hosts the OS selection keys: KC_OS_SET_AUTO returns to

@@ -130,7 +130,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case RGB_MODE_RAINBOW:              return U"Rnbw";
         case KC_MEDIA_NEXT_TRACK:           return ICON_RIGHT ICON_RIGHT;
         case KC_MEDIA_PLAY_PAUSE:           return U"  " ICON_RIGHT;
-        case KC_MEDIA_STOP:                 return U"Stop";
+        case KC_MEDIA_STOP:                 return ICON_MEDIA_STOP;
         case KC_MEDIA_PREV_TRACK:           return ICON_LEFT ICON_LEFT;
         case MS_ACL0:                       return U">>";
         case MS_ACL1:                       return U">>>";
@@ -249,7 +249,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case EE_CLR:                        return U"ClrEE";
         case QK_REBOOT:                     return U" " ARROWS_CIRCLE;
         case KC_LNG1:                       return U"Han/Y";
-        case KC_APP:                        return U" Ctx";
+        case KC_APP:                        return (state_flags & MORE_TEXT) != 0 ? U" Ctx" : ICON_CONTEXT_MENU;
         case DE_GRV:                        return U"`"; //neo layout
         case KC_CUT:                        return U"Cut";
         case KC_COPY:                       return U"Copy";

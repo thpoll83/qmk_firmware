@@ -2172,6 +2172,28 @@
 // kdisp_gfx_text_bbox; \f\f lifts the X 4px onto the speaker's optical centre.
 #define ICON_MUTE                   	PRIVATE_MUTE U"\f\f" ICON_CANCEL_X
 
+// Media STOP is DRAWN, not baked: no filled square exists anywhere in the pack
+// (U+25A0, U+23F9, U+2B1B, U+25FC, U+25FE are all absent) and the resident C1 icon
+// band is full, so the solid HINT_BADGE is the only way to get one. 15x15 is
+// measured against its own row rather than picked: the transport arrows
+// (ICON_LEFT/ICON_RIGHT, 7x13) ink y9..21, so a 15px square centred on y15 carries
+// the same visual weight - 20px read heavier than every key beside it.
+#define HINT_POS_STOPSQ             	U"\x39" U"\x08"   // (57,8) buffer: the square's top-left
+#define HINT_SZ_STOPSQ              	U"\x0F" U"\x0F"   // 15 x 15
+#define ICON_MEDIA_STOP             	HINT_MOVE(HINT_POS_STOPSQ) HINT_BADGE(HINT_SZ_STOPSQ, BADGE_ON)
+
+// Context menu = the menu lines INSIDE a window frame. The bare U+2630 hamburger
+// reads as "a menu"; what this key opens is a menu belonging to something, which is
+// what the frame says - and it is the shape Windows itself puts on the Menu key.
+// The lines are HINT_HALF so they sit inside the 2px box rather than overflowing it;
+// the box is centred on the panel (buffer x48..79, y8..31) and the glyph centred in
+// it (its half-scale ink is 15x11 at buffer 56,14).
+#define HINT_POS_CTXBOX             	U"\x30" U"\x08"   // (48,8)  buffer: frame top-left
+#define HINT_SZ_CTXBOX              	U"\x20" U"\x18"   // 32 x 24
+#define HINT_POS_CTXLINES           	U"\x38" U"\x0E"   // (56,14) buffer: the half-scale lines' top-left
+#define ICON_CONTEXT_MENU           	HINT_MOVE(HINT_POS_CTXBOX) HINT_BADGE(HINT_SZ_CTXBOX, BADGE_OFF) \
+                                    	HINT_MOVE(HINT_POS_CTXLINES) HINT_HALF U"\x2630"
+
 // Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
 // The status OLED already says "brightness" with a sun, so the keycaps use the
 // same sun and grow its RAYS with the level; a staircase beside it states the

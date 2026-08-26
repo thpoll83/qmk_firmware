@@ -527,11 +527,16 @@ void note_glyph_size(uint8_t size) {
     g_glyph_size = (size < GLYPH_SIZE_COUNT) ? size : GLYPH_SIZE_S;
 }
 
-// One tier up or down, clamped — the KC_GLYPH_SIZE_UP / _DOWN keys.
+// One tier up or down, WRAPPING at the ends — the KC_GLYPH_SIZE_UP / _DOWN keys.
+// One key drives both directions (Shift reverses it), so an end tier must still
+// lead somewhere: clamping would make the key look dead at 1 and at 3.
 void step_glyph_size(int8_t delta) {
-    const int8_t next = (int8_t)g_glyph_size + delta;
-    if (next < 0 || next >= (int8_t)GLYPH_SIZE_COUNT) {
-        return;   // already at an end; set_glyph_size() would be a no-op anyway
+    int8_t next = (int8_t)g_glyph_size + delta;
+    while (next < 0) {
+        next += (int8_t)GLYPH_SIZE_COUNT;
+    }
+    while (next >= (int8_t)GLYPH_SIZE_COUNT) {
+        next -= (int8_t)GLYPH_SIZE_COUNT;
     }
     set_glyph_size((uint8_t)next);
 }

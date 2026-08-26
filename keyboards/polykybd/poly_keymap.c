@@ -3492,8 +3492,8 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             // drives. Runs once on release (we are inside the `if
             // (!record->event.pressed)` block). No explicit sync: housekeeping picks
             // the new size up into local_state and the diff carries it to the slave,
-            // which re-renders on receipt (split_sync.c). A step at either end is a
-            // no-op, so the refresh below is the only cost of pressing past it.
+            // which re-renders on receipt (split_sync.c). The step WRAPS at the ends
+            // (3 -> 1, 1 -> 3), so every press changes the tier and redraws.
             //
             // Shift REVERSES the direction, which is what lets a single key on _UL
             // cover both — the keycap swaps its icon to match (to_static_text). Read

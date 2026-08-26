@@ -563,11 +563,12 @@ void set_glyph_size(uint8_t size);
 void note_glyph_size(uint8_t size);
 
 // Steps the legend size one tier (delta +1/-1), CLAMPED at small and large — the
-// KC_GLYPH_SIZE_UP / _DOWN keys. Clamping, not wrapping: with a key per direction
-// a wrap would jump from large straight back to small on the key labelled "bigger",
-// and the two Unicode symbols on those keycaps promise a direction, not a cycle.
-// A step that would leave the range is a no-op, so it neither marks EEPROM dirty
-// nor requests a redraw.
+// KC_GLYPH_SIZE_UP / _DOWN keys. WRAPPING, not clamping. That is a consequence of
+// the layer now carrying ONE size key rather than a pair: a clamped end tier leaves
+// that key looking dead until you remember to hold Shift, whereas the digit in its
+// legend already tells you which tier you are on, so a cycle cannot get you lost.
+// (The older per-direction pair wanted the opposite — a "bigger" keycap that jumped
+// to small would have contradicted its own arrow.)
 void step_glyph_size(int8_t delta);
 
 // Human-readable name of a legend size, for console logs ("small"/"medium"/…).

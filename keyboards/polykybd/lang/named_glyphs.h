@@ -1990,10 +1990,20 @@
 // without it.
 //
 // Measured over all 16 label/value pairs actually used: gaps 6-7px, zero clipped
-// pixels. Re-measure rather than eyeball if a word changes; the mid face is
-// ASCII-only (0x20..0x7E).
+// pixels. Re-measure rather than eyeball if a word changes.
 #define MID_TWO_LINE(top, bottom)  \
     HINT_MID U"\f\f\f\f\f" U##top U"\r\v\x05\x05\x05\x06" U##bottom
+
+// A MID-face word over a full-size ICON (the layout picks: a name over its on/off
+// switch). Deliberately NOT MID_TWO_LINE's spacing: the second line here is a 15px
+// icon rather than a 14px text line, and at the text spacing the ascenders of `k`
+// and `l` clipped the panel top while the `y` of "Qwerty" dropped into the switch.
+// Swept over all five names in BOTH switch states: lift 8px / push 8px, gaps 3-8px,
+// zero clipped pixels. The icon needs no nudge — it is centred by its own xOffset,
+// and it renders full size because HINT_MID falls back per glyph for anything the
+// ASCII-only mid face does not carry.
+#define MID_WORD_OVER_ICON(word, icon)  \
+    HINT_MID U"\f\f\f\f" U##word U"\r\v\x05\x05\x05\x05" icon
 #define HINT_BADGE(sz, st) U"\x13" sz st  // lock badge at the cursor: (w,h) = sz,
                                         //   st = BADGE_OFF outline / BADGE_ON solid
 #define BADGE_OFF        U"\x01"      // ...released: a 2px rounded outline

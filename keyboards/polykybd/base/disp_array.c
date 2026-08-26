@@ -27,8 +27,10 @@
 // makes that adjustment 0 — the same reason the language flags are drawn through
 // `{ &flag_font }`. Passing it inside a multi-font array would shift every glyph
 // by the difference instead.
-// ⚠️ It covers 0x20..0x7E only. A codepoint outside that renders '!', so keep a
-// HINT_MID run to plain ASCII.
+// It covers 0x20..0x7E only, so anything outside it — an icon — falls back to the
+// caller's pool PER GLYPH and draws at its normal size (see the default: case).
+// That is what lets a name-over-switch legend put the word in the mid face and
+// still render the switch.
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
 static const GFXfont *const s_mid_font[] = { &NotoSans_Regular_Mid_19px7b };
 
@@ -854,8 +856,13 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
                 mid = true;
                 break;
             default: {
-                const GFXfont *const *f = mid ? s_mid_font : fonts;
-                const uint8_t         n = mid ? 1u : num_fonts;
+                // In a MID run, fall back to the caller's pool for anything the mid
+                // face does not carry. It is ASCII-only, so without this an icon in a
+                // MID legend renders '!' — which is what a name-over-switch legend is
+                // made of. Costs one extra range scan per glyph on a cold draw path.
+                const bool            use_mid = mid && kdisp_gfx_glyph(s_mid_font, 1, *text) != NULL;
+                const GFXfont *const *f = use_mid ? s_mid_font : fonts;
+                const uint8_t         n = use_mid ? 1u : num_fonts;
                 x_cursor += small
                     ? kdisp_write_gfx_char_half(f, n, x_cursor, y_cursor, *text)
                     : kdisp_write_gfx_char(f, n, x_cursor, y_cursor, *text, cy_radius);
@@ -874,13 +881,15 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
     // so the measured box matches what would actually be drawn — both axes.
     int16_t x = 0, y = 0;
     int16_t xmn = 127, xmx = -128, ymn = 127, ymx = -128;
-    int16_t base_yadv = pgm_read_byte(&fonts[0]->yAdvance);
+    const int16_t base_yadv = pgm_read_byte(&fonts[0]->yAdvance);
     bool small = false;
     // HINT_MID (\x16) swaps the font array for the rest of the run, exactly as the
-    // draw does. base_yadv has to move WITH it: the draw aligns each glyph by
-    // `font->yAdvance - fonts[0]->yAdvance`, and after the swap fonts[0] IS the mid
-    // face, so a measurement still using the caller's base would report every mid
-    // glyph shifted by the difference between the two faces.
+    // draw does — and, exactly as the draw does, PER GLYPH: the mid face is
+    // ASCII-only and anything outside it falls back to the caller's pool. The
+    // baseline reference has to follow that per-glyph choice, because the draw
+    // aligns by `font->yAdvance - fonts[0]->yAdvance` and fonts[0] is the mid face
+    // only for the glyphs the mid face supplied. Using one base for the whole run
+    // would report every fallback glyph shifted by the difference between the faces.
     bool mid   = false;
     while (*text != 0) {
         switch (*text) {
@@ -903,8 +912,7 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
             //      of it that is laid out relatively.
             case U'\x10':                    small = true; break;   // SMALL: rest of the run is half-scale
             case U'\x16':                                            // MID: rest of the run is the 19px UI face
-                mid = true;
-                base_yadv = pgm_read_byte(&s_mid_font[0]->yAdvance);
+                mid = true;                                          //   (per glyph — see the fallback below)
                 break;
             case U'\x0F':                                           // HALF / THIN composite a glyph at the
             case U'\x11': if (text[1]) text += 1; break;            //   cursor and do not advance
@@ -932,8 +940,11 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
                 // Locate the font whose [first,last] contains the codepoint (linear
                 // scan; this is a cold measuring path, no MRU cache needed).
                 uint32_t ch = *text, first = 0, last = 0;
-                const GFXfont *const *pool = mid ? s_mid_font : fonts;
-                const uint8_t         cnt  = mid ? 1u : num_fonts;
+                // Mirror the draw's per-glyph fallback: MID applies only to codepoints
+                // the mid face actually has.
+                const bool            use_mid = mid && kdisp_gfx_glyph(s_mid_font, 1, *text) != NULL;
+                const GFXfont *const *pool = use_mid ? s_mid_font : fonts;
+                const uint8_t         cnt  = use_mid ? 1u : num_fonts;
                 const GFXfont *f = 0;
                 for (uint8_t i = 0; i < cnt; ++i) {
                     first = pgm_read_dword(&pool[i]->first);
@@ -959,7 +970,8 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
                     // kdisp_write_gfx_char shifts each glyph by (font yAdvance - fonts[0]
                     // yAdvance) before applying yOffset; mirror it so the vertical box
                     // matches the rasterised pixels.
-                    int16_t yadj = (int16_t)pgm_read_byte(&f->yAdvance) - base_yadv;
+                    int16_t yadj = (int16_t)pgm_read_byte(&f->yAdvance) -
+                                   (use_mid ? (int16_t)pgm_read_byte(&s_mid_font[0]->yAdvance) : base_yadv);
                     int16_t gy = small ? half_floor((int16_t)(yadj + yo)) : (int16_t)(yadj + yo);
                     int16_t t = y + gy, b = t + gh - 1;
                     if (t < ymn) ymn = t;

@@ -1464,11 +1464,16 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case QK_UNICODE_MODE_BSD:           return local_state->unicode_mode == UNICODE_MODE_BSD ? U"BSD\r\v" ICON_SWITCH_ON : U"BSD\r\v" ICON_SWITCH_OFF;
         case QK_UNICODE_MODE_WINCOMPOSE:    return local_state->unicode_mode == UNICODE_MODE_WINCOMPOSE ? U"WinC\r\v" ICON_SWITCH_ON : U"WinC\r\v" ICON_SWITCH_OFF;
         case QK_UNICODE_MODE_EMACS:         return local_state->unicode_mode == UNICODE_MODE_EMACS ? U"Emcs\r\v" ICON_SWITCH_ON : U"Emcs\r\v" ICON_SWITCH_OFF;
-        case KC_L0:                         return local_layer->def_layer == _L0 ? U"Qwty\r\v" ICON_SWITCH_ON : U"Qwty\r\v" ICON_SWITCH_OFF;
-        case KC_L1:                         return local_layer->def_layer == _L1 ? U"Qwty!\r\v" ICON_SWITCH_ON : U"Qwty!\r\v" ICON_SWITCH_OFF;
-        case KC_L2:                         return local_layer->def_layer == _L2 ? U"Clmk\r\v" ICON_SWITCH_ON : U"Clmk\r\v" ICON_SWITCH_OFF;
-        case KC_L3:                         return local_layer->def_layer == _L3 ? U"Neo\r\v" ICON_SWITCH_ON : U"Neo\r\v" ICON_SWITCH_OFF;
-        case KC_L4:                         return local_layer->def_layer == _L4 ? U"Wkm\r\v" ICON_SWITCH_ON : U"Wkm\r\v" ICON_SWITCH_OFF;
+        case KC_L0:                         return local_layer->def_layer == _L0 ? MID_WORD_OVER_ICON("Qwerty", ICON_SWITCH_ON)
+                                                                                          : MID_WORD_OVER_ICON("Qwerty", ICON_SWITCH_OFF);
+        case KC_L1:                         return local_layer->def_layer == _L1 ? MID_WORD_OVER_ICON("Stag!", ICON_SWITCH_ON)
+                                                                                          : MID_WORD_OVER_ICON("Stag!", ICON_SWITCH_OFF);
+        case KC_L2:                         return local_layer->def_layer == _L2 ? MID_WORD_OVER_ICON("Colemk", ICON_SWITCH_ON)
+                                                                                          : MID_WORD_OVER_ICON("Colemk", ICON_SWITCH_OFF);
+        case KC_L3:                         return local_layer->def_layer == _L3 ? MID_WORD_OVER_ICON("Neo", ICON_SWITCH_ON)
+                                                                                          : MID_WORD_OVER_ICON("Neo", ICON_SWITCH_OFF);
+        case KC_L4:                         return local_layer->def_layer == _L4 ? MID_WORD_OVER_ICON("Workm", ICON_SWITCH_ON)
+                                                                                          : MID_WORD_OVER_ICON("Workm", ICON_SWITCH_OFF);
         // Doom easter-egg menu item: blank until typing IDDQD arms it
         // (doom_mode.c; always blank in non-doom builds via the stub).
         case KC_IDDQD:                      return doom_egg_armed() ? U"IDDQD" : U"";

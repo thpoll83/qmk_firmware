@@ -1836,9 +1836,21 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
     own radius for the run-dialog hint: **do not merge the two ops.**
   - ⚠️ **A style argument can never be 0** — these are `U"…"` strings, so a 0
     codepoint terminates them. Hence outline = 1, solid = 2.
-  - `kdisp_fill_round_rect()` is the solid sibling of `kdisp_draw_round_rect()`: a
-    scanline fill whose per-row inset is `r - floor(sqrt(r² - d²))`. `r ≤ 4` in every
-    caller, so the integer-sqrt loop is a few iterations — no float, no table.
+  - ⚠️ **`kdisp_draw_round_rect()` CANNOT draw the released state, and two attempts to
+    make it shipped wrong.** Its Bresenham arc renders a radius-2 corner as insets
+    **1,0** where the scanline formula gives **2,1,0** — so the two disagree about what
+    "r = 2" *looks like*, and the outlined badge came out squarer than the solid one
+    even though both asked for the same radius. Stroking the 2px border as two nested
+    Bresenham rects is worse: the outer arc's pixel and the inner rect's first pixel
+    sit two apart, leaving a **1px hole in every corner**.
+  - `kdisp_draw_badge_rect(x, y, w, h, r, border)` draws both states from ONE scanline
+    fill (`border` 0 = solid, else a ring that thick), so the engaged badge is exactly
+    the released one with its middle removed — they cannot drift apart. Per-row inset
+    is `r - floor(sqrt(r² - d²))`; `r ≤ 4` in every caller, so the integer-sqrt loop is
+    a few iterations, no float and no table.
+  - **Verify a drawn badge against the baked glyph as ASCII, not as a render.** The
+    radius error was invisible at 1× and obvious the moment both were dumped as
+    character grids and the corner insets compared row by row.
   - ⚠️ **`HINT_ERASE` restores the PREVIOUS `s_gfx_erase`, not `false`.** It is a
     static plotter mode, so leaving it on blanks every keycap drawn after this one in
     the same pass — and a caller may already be mid-erase (the inverted-keycap

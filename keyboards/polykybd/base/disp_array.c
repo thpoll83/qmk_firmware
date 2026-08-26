@@ -353,27 +353,49 @@ void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
     }
 }
 
-// Solid sibling of kdisp_draw_round_rect — same (x,y)=top-left, w, h, r geometry.
-// Scanline fill: for a row inside a corner band, the horizontal inset is
-// r - floor(sqrt(r^2 - d^2)) where d is how far into the band the row sits. r is
-// small (<= 4 in every caller), so the integer-sqrt loop is a handful of iterations
-// and no float or table is needed.
-void kdisp_fill_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r) {
+// Horizontal inset of a rounded-rect row: how far in from each edge row `j` starts.
+static int rr_row_inset(int j, int top, int bot, int r) {
+    const int d = (j < top + r) ? (top + r - j) : ((j > bot - r) ? (j - (bot - r)) : 0);
+    if (d <= 0) return 0;
+    const int rem = r * r - d * d;
+    int k = 0;
+    while ((k + 1) * (k + 1) <= rem) ++k;   // k = floor(sqrt(rem))
+    return r - k;
+}
+
+// The lock-badge shape, solid (`border` 0) or as a ring of that thickness. Scanline
+// filled from rr_row_inset() so BOTH states share one silhouette by construction —
+// the engaged badge is exactly the released one with its middle removed.
+//
+// ⚠️ This exists because kdisp_draw_round_rect() CANNOT draw the released state, and
+// the reason is worth keeping: its Bresenham arc plots a radius-2 corner as insets
+// 1,0 where the scanline formula gives 2,1,0, so the two disagree about what "r = 2"
+// looks like. Stroking a 2px border as two nested Bresenham rects is worse still — it
+// leaves a 1px HOLE in each corner, because the outer arc's pixel and the inner rect's
+// first pixel are two apart. Both were shipped and both were wrong.
+void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r, int8_t border) {
     if (width < 2 || height < 2) return;
     if (r < 0) r = 0;
     if (r > (width - 1) / 2)  r = (width - 1) / 2;
     if (r > (height - 1) / 2) r = (height - 1) / 2;
+    if (border < 0) border = 0;
     const int x0 = x, y0 = y, x1 = x + width - 1, y1 = y + height - 1;
+    // The hole is the same shape inset by `border`, one radius per pixel of border.
+    const int hx0 = x0 + border, hy0 = y0 + border, hx1 = x1 - border, hy1 = y1 - border;
+    int hr = r - border;
+    if (hr < 0) hr = 0;
     for (int j = y0; j <= y1; ++j) {
-        int d = (j < y0 + r) ? (y0 + r - j) : ((j > y1 - r) ? (j - (y1 - r)) : 0);
-        int inset = 0;
-        if (d > 0) {
-            const int rem = r * r - d * d;
-            int k = 0;
-            while ((k + 1) * (k + 1) <= rem) ++k;   // k = floor(sqrt(rem))
-            inset = r - k;
+        const int ins = rr_row_inset(j, y0, y1, r);
+        const int a = x0 + ins, b = x1 - ins;
+        if (border > 0 && j >= hy0 && j <= hy1 && hx0 <= hx1) {
+            const int hins = rr_row_inset(j, hy0, hy1, hr);
+            const int ha = hx0 + hins, hb = hx1 - hins;
+            for (int i = a; i <= b; ++i) {
+                if (i < ha || i > hb) SET_PIXEL_CLIPPED(i, j);
+            }
+            continue;
         }
-        for (int i = x0 + inset; i <= x1 - inset; ++i) SET_PIXEL_CLIPPED(i, j);
+        for (int i = a; i <= b; ++i) SET_PIXEL_CLIPPED(i, j);
     }
 }
 
@@ -690,15 +712,9 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
                             //   rounder radius for the run-dialog hint; do not merge them.
                             //   ⚠️ style cannot be 0: a 0 codepoint terminates the string.
                 if (text[1] && text[2] && text[3]) {
-                    const int8_t bw = (int8_t)text[1], bh = (int8_t)text[2];
-                    if (text[3] == 2) {
-                        kdisp_fill_round_rect(x_cursor, y_cursor, bw, bh, KDISP_BADGE_RADIUS);
-                    } else {
-                        kdisp_draw_round_rect(x_cursor, y_cursor, bw, bh, KDISP_BADGE_RADIUS);
-                        kdisp_draw_round_rect((int8_t)(x_cursor + 1), (int8_t)(y_cursor + 1),
-                                              (int8_t)(bw - 2), (int8_t)(bh - 2),
-                                              (int8_t)(KDISP_BADGE_RADIUS - 1));
-                    }
+                    kdisp_draw_badge_rect(x_cursor, y_cursor, (int8_t)text[1], (int8_t)text[2],
+                                          KDISP_BADGE_RADIUS,
+                                          (text[3] == 2) ? 0 : KDISP_BADGE_BORDER);
                     text += 3;
                 }
                 break;

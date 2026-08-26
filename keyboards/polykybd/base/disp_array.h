@@ -154,7 +154,9 @@ int16_t get_scratch_buffer_size(void);
 void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height);
 
 void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r);
-void kdisp_fill_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r);
+// The lock-badge shape: solid when `border` is 0, otherwise a ring that thick.
+// Both states come from one scanline fill, so they share a silhouette exactly.
+void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r, int8_t border);
 
 // Corner radius of a lock-indicator badge (HINT_BADGE, \x13). Measured, not chosen:
 // the baked ICON_CAPSLOCK_* / ICON_NUMLOCK_* glyphs inset their corners 2,1,0 px,
@@ -162,6 +164,7 @@ void kdisp_fill_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
 // indistinguishable from them. HINT_FRAME (\x12) keeps its own rounder radius for
 // the run-dialog hint.
 #define KDISP_BADGE_RADIUS 2
+#define KDISP_BADGE_BORDER 2   // the released badge's stroke, matching those glyphs
 
 // Shared tab chrome for the emoji and language selection layers: the selected-tab
 // frame (3px north/east/west border, open at the bottom, with chamfered top

@@ -117,7 +117,24 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         // typing IDDQD arms the doom easter egg (doom_mode.c), and KC_L0..KC_L4 draw
         // a lit/unlit toggle showing which layout is active. A case here shadows
         // both, which gives the easter egg away and loses the active-layout mark.
-        case KC_STORE_EE:                   return U"Store\r\v  EE";
+        // ⚠️ EVERY two-line TEXT legend on the board is HINT_SMALL, and it has to be:
+        // `\v` advances a fixed 15px while the base face inks ~20px above the baseline,
+        // so two full-size text lines physically cannot fit a 40px panel. At full size
+        // all 19 of them overlapped by ~5 rows and five also ran off the right edge
+        // (Line/join lost 55 pixels, the four `pin` cells 9 each). There is no placement
+        // that rescues it — a 2px gap would need the second baseline at y45, past the
+        // panel — so the face is the only variable left.
+        //
+        // The leading spaces are RE-TUNED, not inherited: a space advances half as far
+        // at half scale, so the old counts collapsed the centring they existed to
+        // provide. Each pair was measured (line 2 centred under line 1, block centred in
+        // the 72px window, zero clipped pixels); re-measure rather than eyeball if you
+        // change a word.
+        //
+        // The word-over-SWITCH and word-over-ICON_LAYER legends are deliberately NOT in
+        // this set and stay full size — a 15px switch and a 16px layer icon both clear
+        // the 15px advance (measured: 2-3px gaps, nothing clipped).
+        case KC_STORE_EE:                   return HINT_SMALL U"    Store\r\v      EE";
         // The two host-only settings that now have a key each. Both show the
         // ACTIVE value, so the keycap answers "what is it set to" without a press.
         case KC_IDLE_STYLE:                 return idle_style_legend();
@@ -310,10 +327,10 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_UNDO:                       return U"Undo";
         case KC_AGAIN:                      return U"Redo";
         case KC_FIND:                       return U"Find";
-        case KC_SELECT:                     return U"Word\r\v   sel";
-        case KC_EXSEL:                      return U"Line\r\v    sel";
-        case KC_OPER:                       return U"Line\r\v    join";
-        case KC_CRSEL:                      return U"Line\r\v    del";
+        case KC_SELECT:                     return HINT_SMALL U"    Word\r\v      sel";
+        case KC_EXSEL:                      return HINT_SMALL U"    Line\r\v     sel";
+        case KC_OPER:                       return HINT_SMALL U"    Line\r\v     join";
+        case KC_CRSEL:                      return HINT_SMALL U"    Line\r\v     del";
 
         // OS-semantic action keys (KC_OS_*): plain labels for now; an OS-aware
         // legend (⌘ vs ⌃) follows with the modifier-legend swap.
@@ -327,8 +344,8 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_OS_LOCK:                    return U"Lock";
         case KC_OS_SCRSHOT:                 return U"Snip";
         case KC_OS_SEARCH:                  return U"Srch";
-        case KC_OS_APP_SWITCH:              return U"App\r\v  sw";
-        case KC_OS_WIN_SWITCH:              return U"Win\r\v  sw";
+        case KC_OS_APP_SWITCH:              return HINT_SMALL U"    App\r\v     sw";
+        case KC_OS_WIN_SWITCH:              return HINT_SMALL U"    Win\r\v     sw";
         case KC_OS_EMOJI:                   return U"Emoji";
         case KC_OS_WORD_LEFT:               return U"Word" ICON_LEFT;
         case KC_OS_WORD_RIGHT:              return U"Word" ICON_RIGHT;
@@ -338,13 +355,13 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_OS_ICON: {
             const bool autom = (get_local_state()->active_os & POLY_OS_AUTO_FLAG) != 0;
             switch (get_local_state()->active_os & POLY_OS_VALUE_MASK) {
-                case POLY_OS_WINDOWS: return autom ? U"Win\r\v auto" : U"Win\r\v  pin";
-                case POLY_OS_MACOS:   return autom ? U"Mac\r\v auto" : U"Mac\r\v  pin";
-                case POLY_OS_LINUX:   return autom ? U"Lnx\r\v auto" : U"Lnx\r\v  pin";
-                case POLY_OS_LINUX_GNOME: return U"Gnm\r\v auto";   // DE is host-detected (auto-only)
-                case POLY_OS_LINUX_KDE:   return U"Kde\r\v auto";
-                case POLY_OS_ANDROID: return autom ? U"And\r\v auto" : U"And\r\v  pin";
-                default:              return autom ? U"OS?\r\v auto" : U"OS?\r\v  pin";
+                case POLY_OS_WINDOWS: return autom ? HINT_SMALL U"    Win\r\v    auto" : HINT_SMALL U"    Win\r\v    pin";
+                case POLY_OS_MACOS:   return autom ? HINT_SMALL U"    Mac\r\v    auto" : HINT_SMALL U"    Mac\r\v     pin";
+                case POLY_OS_LINUX:   return autom ? HINT_SMALL U"    Lnx\r\v    auto" : HINT_SMALL U"    Lnx\r\v    pin";
+                case POLY_OS_LINUX_GNOME: return HINT_SMALL U"    Gnm\r\v    auto";   // DE is host-detected (auto-only)
+                case POLY_OS_LINUX_KDE:   return HINT_SMALL U"    Kde\r\v    auto";
+                case POLY_OS_ANDROID: return autom ? HINT_SMALL U"    And\r\v    auto" : HINT_SMALL U"    And\r\v    pin";
+                default:              return autom ? HINT_SMALL U"    OS?\r\v    auto" : HINT_SMALL U"    OS?\r\v    pin";
             }
         }
         // OS selection keys: name on top, a toggle glyph below marking the active

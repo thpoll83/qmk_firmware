@@ -1320,17 +1320,21 @@ void housekeeping_task_user(void) {
 
 
 
-// Maps default layer to corresponding function layer (FL0 or FL1).
+// The function layer a base layout reaches. There is exactly ONE (`_FL`) — the split
+// into _FL0/_FL1 existed only so the F-row lined up with each layout's number row, and
+// it had already stopped doing that (see the keymap comment above `[_FL]`). Kept as a
+// function rather than inlining `_FL` at the call site: it is the seam where a future
+// per-layout function layer would go back, and `default: 0` still says "this base layer
+// has no function layer" for anything outside the five.
 // Global variables: (none - uses passed parameters only)
 layer_state_t get_function_layer(layer_state_t def_layer) {
     switch (def_layer) {
         case _L0:
-        case _L3:
-            return _FL0;
         case _L1:
         case _L2:
+        case _L3:
         case _L4:
-            return _FL1;
+            return _FL;
         default:
             return 0;
 
@@ -4386,6 +4390,19 @@ void keyboard_post_init_user(void) {
     emit_idle_config();   // the style is only known here — the banner tick re-emits it
     note_glyph_script(ee.glyph_script);
     note_glyph_size(ee.glyph_size);
+    // The dynamic keymap is stored BY LAYER INDEX and QMK does not version it, so a
+    // build whose layer enum has shifted would read the previous occupant of every
+    // slot above the change. Discard it once, then stamp the revision so the next
+    // boot is a no-op. Done here rather than in eeconfig_init_user() because the
+    // user datablock and the keymap are separate blocks with separate lifetimes —
+    // the keymap survives a user-data re-init, which is exactly the case that would
+    // otherwise slip through.
+    if (ee.keymap_layers_fmt != KEYMAP_LAYERS_FL_MERGED) {
+        uprintf("Keymap layer enum changed (fmt %u) - resetting dynamic keymap\n",
+                (unsigned)ee.keymap_layers_fmt);
+        dynamic_keymap_reset();
+        stamp_keymap_layers_fmt();
+    }
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before

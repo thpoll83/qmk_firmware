@@ -257,7 +257,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,      KC_OS_SET_AUTO, KC_OS_SET_WINDOWS, KC_OS_SET_MACOS, KC_OS_SET_LINUX, KC_OS_SET_ANDROID, KC_NO,
         KC_NO,      KC_L0,      KC_L1,      KC_L2,      KC_L3,      KC_L4,      KC_NO,      _______,
         // More sits on the OUTER edge, where the row starts reading.
-        KC_SETTINGS_MORE, KC_IDLE_STYLE, KC_GLYPH_SCRIPT, LBL_TEXT, KC_TOGMODS, KC_TOGTEXT, KC_NO, KC_NO,
+        KC_SETTINGS_MORE, KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_TOGMODS, KC_TOGTEXT, KC_NO, KC_NO, KC_NO,
         KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
 

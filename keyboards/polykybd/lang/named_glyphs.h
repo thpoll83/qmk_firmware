@@ -1978,12 +1978,14 @@
 // lifted 10px and the second pushed 6px down — 21px apart, the tightest spacing
 // that still clears a descender on the top line — landing on baselines 13 and 34.
 //
-// ⚠️ The TOP line must be ALL CAPS, and that is a constraint, not a style choice.
+// ⚠️ The TOP line must have NEITHER a descender NOR an ascender — all caps is the
+// easy way to guarantee both, which is why the labels are IDLE: / SCRIPT: / RESET.
 // A 40px panel has room for two 14px lines and ONE descender, not two: with a
 // lowercase label ("Script:") the `p` drops into the value's cap band and NO
 // (lift, push) pair in the whole search space clears every value — it was swept.
-// Capitals have no descenders, so the one remaining descender budget goes to the
-// value line, where "Teng" and "Amiga" need it.
+// The one descender budget goes to the VALUE line, where "Teng" and "Amiga" need
+// it, and the tight lift that buys it leaves no room above for a `d` or `l`.
+// A stack whose top needs an ascender is the other shape — MID_TWO_WORD below.
 //
 // ⚠️ The 2px right nudge on the value line is load-bearing too: a capital J hooks
 // left of its own pen position, so "Jittr" clipped a pixel off the panel edge
@@ -1994,14 +1996,19 @@
 #define MID_TWO_LINE(top, bottom)  \
     HINT_MID U"\f\f\f\f\f" U##top U"\r\v\x05\x05\x05\x06" U##bottom
 
-// A MID-face word over a full-size ICON (the layout picks: a name over its on/off
-// switch). Deliberately NOT MID_TWO_LINE's spacing: the second line here is a 15px
-// icon rather than a 14px text line, and at the text spacing the ascenders of `k`
-// and `l` clipped the panel top while the `y` of "Qwerty" dropped into the switch.
-// Swept over all five names in BOTH switch states: lift 8px / push 8px, gaps 3-8px,
-// zero clipped pixels. The icon needs no nudge — it is centred by its own xOffset,
-// and it renders full size because HINT_MID falls back per glyph for anything the
-// ASCII-only mid face does not carry.
+// The OTHER MID stack — lift 8px / push 8px — for a top line that may carry an
+// ASCENDER (b d f h k l t) over a bottom line with NO DESCENDER. The 2px of extra
+// headroom comes straight out of the bottom's descender budget, which is why this
+// cannot be merged with MID_TWO_LINE: this spacing applied to the label/value
+// legends clips "Jittr", "IDDQD", "Teng" and "Amiga", and MID_TWO_LINE's spacing
+// applied here clips the `d` of "Mods"/"Cmds" and the `k`/`l` of the layout names.
+// Both users swept; gaps 3-9px, zero clipped pixels.
+//
+// MID_WORD_OVER_ICON's second line is a full-size icon: it renders at its normal
+// size because HINT_MID falls back per glyph for anything the ASCII-only mid face
+// does not carry, and it needs no nudge — its own xOffset centres it.
+#define MID_TWO_WORD(top, bottom)  \
+    HINT_MID U"\f\f\f\f" U##top U"\r\v\x05\x05\x05\x05" U##bottom
 #define MID_WORD_OVER_ICON(word, icon)  \
     HINT_MID U"\f\f\f\f" U##word U"\r\v\x05\x05\x05\x05" icon
 #define HINT_BADGE(sz, st) U"\x13" sz st  // lock badge at the cursor: (w,h) = sz,

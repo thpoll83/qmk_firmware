@@ -167,7 +167,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_NO, KC_NO, KC_NO, KC_NO,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
-        KC_BASE, LBL_TEXT,KC_TOGMODS,
+        KC_BASE, KC_TOGMODS, KC_NO,
         // KC_SETTINGS_MORE takes the slot QK_MAKE vacated. split42 shares _SL with
         // split72 and therefore shares its gated keycodes, so it needs its own reveal
         // key or they would be blank and unreachable here. Its 42-key block has no

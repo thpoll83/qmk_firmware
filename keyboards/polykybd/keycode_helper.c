@@ -106,7 +106,6 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         // the whole of the feedback. It leaves the layer with the rest of the
         // state, so there is nothing to report when the board is not on _SL.
         case KC_SETTINGS_MORE:              return U"More";
-        case LBL_TEXT:                      return U"Text:";
         // ⚠️ This one had NO case at all, so to_static_text() returned NULL,
         // translate_keycode() had no row for a QK_KB-range keycode, and the keycap
         // rendered EMPTY. Same seam as the render_key()/to_static_text() pairing
@@ -154,8 +153,15 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         // steps down, it is simply not mapped any more (one key + Shift replaced the
         // pair), so this case only matters to a custom keymap that maps it.
         case KC_GLYPH_SIZE_DOWN:            return U"  " ICON_FONT_SMALLER;
-        case KC_TOGMODS:                    return (state_flags & MODS_AS_TEXT) == 0 ? U"Mods\r\v" ICON_SWITCH_OFF : U"Mods\r\v" ICON_SWITCH_ON;
-        case KC_TOGTEXT:                    return (state_flags & MORE_TEXT) == 0 ? U"Cmds\r\v" ICON_SWITCH_OFF : U"Cmds\r\v" ICON_SWITCH_ON;
+        // These two name the STATE they select rather than wearing an on/off switch.
+        // A switch under "Mods" answers "is it on?", which was never the question —
+        // both keys choose between two renderings, so the keycap says which one is
+        // showing. That also retires the separate "Text:" label key that used to sit
+        // beside them explaining what the switches meant.
+        case KC_TOGMODS:                    return (state_flags & MODS_AS_TEXT) == 0 ? MID_TWO_WORD("Mods", "Icon")
+                                                                                     : MID_TWO_WORD("Mods", "Text");
+        case KC_TOGTEXT:                    return (state_flags & MORE_TEXT) == 0 ? MID_TWO_WORD("Cmds", "Icon")
+                                                                                  : MID_TWO_WORD("Cmds", "Text");
         case QK_LEAD:                       return U"Lead";
         case KC_HYPR:                       return (state_flags & MORE_TEXT) != 0 ? U"Hypr" : U" " PRIVATE_HYPER;
         case KC_MEH:                        return (state_flags & MORE_TEXT) != 0 ? U"Meh" : U" " PRIVATE_MEH;

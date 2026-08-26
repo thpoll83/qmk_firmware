@@ -1853,6 +1853,13 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
     the released one with its middle removed — they cannot drift apart. Per-row inset
     is `r - floor(sqrt(r² - d²))`; `r ≤ 4` in every caller, so the integer-sqrt loop is
     a few iterations, no float and no table.
+  - ⚠️ **The HOLE keeps a 1px corner nick, which a true concentric offset does not
+    give.** Offsetting inward by `border` implies an inner radius of `r - border`, and
+    at `r == border` that is a perfectly square inner corner — one pixel short of the
+    baked `ICON_CAPSLOCK_OFF`, whose hole still insets 1 on its first row. Reported
+    from hardware as "it misses a single pixel on the inside corner", so the radius is
+    floored at 1 whenever the outer corner is rounded at all. Only the released state
+    has a hole, which is why the engaged one was right throughout.
   - **Verify a drawn badge against the baked glyph as ASCII, not as a render.** The
     radius error was invisible at 1× and obvious the moment both were dumped as
     character grids and the corner insets compared row by row.

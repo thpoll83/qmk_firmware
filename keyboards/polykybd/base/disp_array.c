@@ -380,10 +380,15 @@ void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
     if (r > (height - 1) / 2) r = (height - 1) / 2;
     if (border < 0) border = 0;
     const int x0 = x, y0 = y, x1 = x + width - 1, y1 = y + height - 1;
-    // The hole is the same shape inset by `border`, one radius per pixel of border.
+    // The hole is the same shape inset by `border`. A true concentric offset would give
+    // it radius r - border, which at r == border is a perfectly SQUARE inner corner --
+    // and that is one pixel short of the baked ICON_CAPSLOCK_OFF, whose hole still
+    // insets 1 on its first row. Measured, not chosen: keep a 1px nick whenever the
+    // outer corner is rounded at all, so the ring reads as a ring and not as a square
+    // hole punched in a rounded plate.
     const int hx0 = x0 + border, hy0 = y0 + border, hx1 = x1 - border, hy1 = y1 - border;
     int hr = r - border;
-    if (hr < 0) hr = 0;
+    if (hr < 1) hr = (r > 0) ? 1 : 0;
     for (int j = y0; j <= y1; ++j) {
         const int ins = rr_row_inset(j, y0, y1, r);
         const int a = x0 + ins, b = x1 - ins;

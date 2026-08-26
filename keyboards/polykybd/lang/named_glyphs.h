@@ -2200,7 +2200,7 @@
 // Geometry is measured: the cell inks x11..59 y9..36 in a 0..71 x 0..39 window, so it is
 // centred horizontally to within half a pixel, with the tip clear of the bottom line
 // rather than overlapping it.
-#define HINT_POS_CTXPTR             	U"\x43" U"\x0F"   // (67,15) buffer: the pointer's top-left
+#define HINT_POS_CTXPTR             	U"\x42" U"\x0C"   // (66,12) buffer: the pointer's top-left
 #define ICON_CONTEXT_MENU           	U" " U"\x2630" HINT_MOVE(HINT_POS_CTXPTR) \
                                     	HINT_ROT(ROT_CCW_120, U"\x27A4")
 

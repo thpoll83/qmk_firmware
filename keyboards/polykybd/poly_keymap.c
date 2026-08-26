@@ -3146,19 +3146,6 @@ void update_displays(enum refresh_mode mode) {
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
                                 kdisp_write_gfx_char(g_all_fonts, g_all_font_count, BUFFER_X, 23, unicode_map[chr], 0);
                             }
-                        } else if (keycode == KC_EDEN) {
-                            // "Reset / Eden" — draw a size smaller (10px mid font) as two
-                            // centred lines so it reads as a minor settings action rather
-                            // than a primary legend. (Legend text lives in keycode_helper.)
-                            static const uint32_t l1[] = U"Reset";
-                            static const uint32_t l2[] = U"Eden";
-                            int8_t lo = 0, hi = 0;
-                            kdisp_gfx_text_bounds(mid_fonts, 1, l1, &lo, &hi);
-                            kdisp_write_gfx_text(mid_fonts, 1,
-                                (int8_t)(BUFFER_X + (SCREEN_WIDTH - (hi - lo + 1)) / 2 - lo), 17, l1);
-                            kdisp_gfx_text_bounds(mid_fonts, 1, l2, &lo, &hi);
-                            kdisp_write_gfx_text(mid_fonts, 1,
-                                (int8_t)(BUFFER_X + (SCREEN_WIDTH - (hi - lo + 1)) / 2 - lo), 32, l2);
                         } else if (r == MATRIX_ROWS_PER_SIDE - 1) {
                             // Bottom (thumb) row: centre the legend horizontally.
                             draw_legend_cx_cy(text, 23, invert_key ? 0 : KDISP_CY_DEFAULT);

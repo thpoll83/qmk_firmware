@@ -15,6 +15,23 @@
 #include "com.h"
 #include "../poly_keymap.h"
 
+// HINT_MID (\x16) draws the REST of the string from this standalone UI face
+// instead of the caller's array. It exists because the three standalone faces
+// (_Small_ 15px, _Mid_ 19px, _Nano_ 10px) are NOT in g_all_fonts, so no codepoint
+// can reach them — the resident keycap face has exactly one size and `latinbig`
+// only goes bigger. HINT_SMALL synthesises a SMALLER face by halving; this
+// reaches the real 19px one, which is the only size between the two.
+//
+// ⚠️ A SINGLE-font array on purpose: kdisp_write_gfx_char baseline-aligns by
+// `font->yAdvance - fonts[0]->yAdvance`, so making the face its own fonts[0]
+// makes that adjustment 0 — the same reason the language flags are drawn through
+// `{ &flag_font }`. Passing it inside a multi-font array would shift every glyph
+// by the difference instead.
+// ⚠️ It covers 0x20..0x7E only. A codepoint outside that renders '!', so keep a
+// HINT_MID run to plain ASCII.
+extern const GFXfont NotoSans_Regular_Mid_19px7b;
+static const GFXfont *const s_mid_font[] = { &NotoSans_Regular_Mid_19px7b };
+
 #define SSD1306_MEMORYMODE 0x20           ///< See datasheet
 #define SSD1306_COLUMNADDR 0x21           ///< See datasheet
 #define SSD1306_PAGEADDR 0x22             ///< See datasheet
@@ -734,6 +751,9 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
     // "back to full size" op, because the one use is a legend that is entirely
     // small text and a toggle would just be a second thing to get wrong.
     bool   small    = false;
+    // HINT_MID (\x16) latches the same way, and the two compose: \x10 after \x16
+    // half-scales the 19px face (~7px caps), which is smaller than either alone.
+    bool   mid      = false;
     // HINT_ERASE (\x14) latches likewise. ⚠️ s_gfx_erase is a STATIC plotter mode —
     // leaving it on blanks every keycap drawn after this one in the same pass — so
     // the previous value is restored at the single exit below, not hardcoded false:
@@ -829,11 +849,18 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
                     text += 2;
                 }
                 break;
-            default:
-                x_cursor += small
-                    ? kdisp_write_gfx_char_half(fonts, num_fonts, x_cursor, y_cursor, *text)
-                    : kdisp_write_gfx_char(fonts, num_fonts, x_cursor, y_cursor, *text, cy_radius);
+            case U'\x16':   // MID: draw the REST of the string from the standalone 19px UI
+                            //   face. See s_mid_font above for why it is a single-font array.
+                mid = true;
                 break;
+            default: {
+                const GFXfont *const *f = mid ? s_mid_font : fonts;
+                const uint8_t         n = mid ? 1u : num_fonts;
+                x_cursor += small
+                    ? kdisp_write_gfx_char_half(f, n, x_cursor, y_cursor, *text)
+                    : kdisp_write_gfx_char(f, n, x_cursor, y_cursor, *text, cy_radius);
+                break;
+            }
         }
         text++;
     }
@@ -847,8 +874,14 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
     // so the measured box matches what would actually be drawn — both axes.
     int16_t x = 0, y = 0;
     int16_t xmn = 127, xmx = -128, ymn = 127, ymx = -128;
-    const int16_t base_yadv = pgm_read_byte(&fonts[0]->yAdvance);
+    int16_t base_yadv = pgm_read_byte(&fonts[0]->yAdvance);
     bool small = false;
+    // HINT_MID (\x16) swaps the font array for the rest of the run, exactly as the
+    // draw does. base_yadv has to move WITH it: the draw aligns each glyph by
+    // `font->yAdvance - fonts[0]->yAdvance`, and after the swap fonts[0] IS the mid
+    // face, so a measurement still using the caller's base would report every mid
+    // glyph shifted by the difference between the two faces.
+    bool mid   = false;
     while (*text != 0) {
         switch (*text) {
             case U'\x05':                     y += 2; break; // down 2px
@@ -869,6 +902,10 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
             //      measuring '!', but a MOVE'd legend's box still only covers the part
             //      of it that is laid out relatively.
             case U'\x10':                    small = true; break;   // SMALL: rest of the run is half-scale
+            case U'\x16':                                            // MID: rest of the run is the 19px UI face
+                mid = true;
+                base_yadv = pgm_read_byte(&s_mid_font[0]->yAdvance);
+                break;
             case U'\x0F':                                           // HALF / THIN composite a glyph at the
             case U'\x11': if (text[1]) text += 1; break;            //   cursor and do not advance
             case U'\x15': if (text[1] && text[2]) text += 2; break;            // ROT (angle, glyph)
@@ -880,13 +917,15 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
                 // Locate the font whose [first,last] contains the codepoint (linear
                 // scan; this is a cold measuring path, no MRU cache needed).
                 uint32_t ch = *text, first = 0, last = 0;
+                const GFXfont *const *pool = mid ? s_mid_font : fonts;
+                const uint8_t         cnt  = mid ? 1u : num_fonts;
                 const GFXfont *f = 0;
-                for (uint8_t i = 0; i < num_fonts; ++i) {
-                    first = pgm_read_dword(&fonts[i]->first);
-                    last  = pgm_read_dword(&fonts[i]->last);
-                    if (ch >= first && ch <= last) { f = fonts[i]; break; }
+                for (uint8_t i = 0; i < cnt; ++i) {
+                    first = pgm_read_dword(&pool[i]->first);
+                    last  = pgm_read_dword(&pool[i]->last);
+                    if (ch >= first && ch <= last) { f = pool[i]; break; }
                 }
-                if (!f) { f = fonts[0]; first = pgm_read_dword(&f->first); ch = U'!'; }
+                if (!f) { f = pool[0]; first = pgm_read_dword(&f->first); ch = U'!'; }
                 const GFXglyph *g = pgm_read_glyph_ptr(f, ch - first);
                 int8_t w  = pgm_read_byte(&g->width);
                 int8_t h  = pgm_read_byte(&g->height);

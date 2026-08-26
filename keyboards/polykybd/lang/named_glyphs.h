@@ -1969,6 +1969,31 @@
 // Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
 #define HINT_SMALL       U"\x10"      // draw the REST of the string half-scale (text, advances)
+#define HINT_MID         U"\x16"      // draw the REST of the string from the standalone 19px UI face
+
+// Two lines of MID-face text on one 72x40 keycap: a label over the value it names.
+//
+// `\v` advances a fixed 15px while the mid face inks ~14px ABOVE the baseline and
+// ~5px below it, so two plain \r\v lines collide. The first baseline is therefore
+// lifted 10px and the second pushed 6px down — 21px apart, the tightest spacing
+// that still clears a descender on the top line — landing on baselines 13 and 34.
+//
+// ⚠️ The TOP line must be ALL CAPS, and that is a constraint, not a style choice.
+// A 40px panel has room for two 14px lines and ONE descender, not two: with a
+// lowercase label ("Script:") the `p` drops into the value's cap band and NO
+// (lift, push) pair in the whole search space clears every value — it was swept.
+// Capitals have no descenders, so the one remaining descender budget goes to the
+// value line, where "Teng" and "Amiga" need it.
+//
+// ⚠️ The 2px right nudge on the value line is load-bearing too: a capital J hooks
+// left of its own pen position, so "Jittr" clipped a pixel off the panel edge
+// without it.
+//
+// Measured over all 16 label/value pairs actually used: gaps 6-7px, zero clipped
+// pixels. Re-measure rather than eyeball if a word changes; the mid face is
+// ASCII-only (0x20..0x7E).
+#define MID_TWO_LINE(top, bottom)  \
+    HINT_MID U"\f\f\f\f\f" U##top U"\r\v\x05\x05\x05\x06" U##bottom
 #define HINT_BADGE(sz, st) U"\x13" sz st  // lock badge at the cursor: (w,h) = sz,
                                         //   st = BADGE_OFF outline / BADGE_ON solid
 #define BADGE_OFF        U"\x01"      // ...released: a 2px rounded outline

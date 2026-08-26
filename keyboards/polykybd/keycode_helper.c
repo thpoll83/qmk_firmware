@@ -41,36 +41,36 @@ static inline const uint32_t* kc_os_gui_icon(void) {
 // under it. The value alone ("Std") does not say what it is a value OF, which is
 // the whole reason these keys carry a legend at all.
 //
-// The second line is nudged 2px right (\x06). That is not decoration: the value
-// starts at the text origin, and a capital J hooks 2px LEFT of its own pen
-// position, so "Jittr" lost the tail of its J off the panel edge (measured: 4
-// clipped pixels at x-1/x-2). Every other value is unaffected by the nudge, and
-// with it the whole set renders with zero clipped pixels.
-#define SETTING_LBL(label, value) HINT_SMALL U##label U"\r\v\x06" U##value
+// They are drawn in the standalone 19px UI face (MID_TWO_LINE), not half-scale:
+// half of the 27px keycap face is ~10px caps, which was reported as too small to
+// read at a glance. The mid face is ~14px, the only size between "half the keycap
+// face" and "the keycap face", and the one this board already uses for the
+// status-OLED top row.
+#define SETTING_LBL(label, value) MID_TWO_LINE(label, value)
 
 static const uint32_t* idle_style_legend(void) {
-    static const uint32_t* const names[] = { SETTING_LBL("Idle:", "Pulse"),
-                                             SETTING_LBL("Idle:", "Jittr"),
-                                             SETTING_LBL("Idle:", "IDDQD"),
-                                             SETTING_LBL("Idle:", "Eden") };
+    static const uint32_t* const names[] = { SETTING_LBL("IDLE:", "Pulse"),
+                                             SETTING_LBL("IDLE:", "Jittr"),
+                                             SETTING_LBL("IDLE:", "IDDQD"),
+                                             SETTING_LBL("IDLE:", "Eden") };
     const uint8_t v = get_idle_style();
-    return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("Idle:", "?");
+    return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("IDLE:", "?");
 }
 
 static const uint32_t* glyph_script_legend(void) {
-    static const uint32_t* const names[] = { SETTING_LBL("Script:", "Std"),
-                                             SETTING_LBL("Script:", "Teng"),
-                                             SETTING_LBL("Script:", "Rune"),
-                                             SETTING_LBL("Script:", "Aureb"),
-                                             SETTING_LBL("Script:", "SGA"),
-                                             SETTING_LBL("Script:", "Cirth"),
-                                             SETTING_LBL("Script:", "VGA"),
-                                             SETTING_LBL("Script:", "C64"),
-                                             SETTING_LBL("Script:", "Amiga"),
-                                             SETTING_LBL("Script:", "APL"),
-                                             SETTING_LBL("Script:", "Brail") };
+    static const uint32_t* const names[] = { SETTING_LBL("SCRIPT:", "Std"),
+                                             SETTING_LBL("SCRIPT:", "Teng"),
+                                             SETTING_LBL("SCRIPT:", "Rune"),
+                                             SETTING_LBL("SCRIPT:", "Aureb"),
+                                             SETTING_LBL("SCRIPT:", "SGA"),
+                                             SETTING_LBL("SCRIPT:", "Cirth"),
+                                             SETTING_LBL("SCRIPT:", "VGA"),
+                                             SETTING_LBL("SCRIPT:", "C64"),
+                                             SETTING_LBL("SCRIPT:", "Amiga"),
+                                             SETTING_LBL("SCRIPT:", "APL"),
+                                             SETTING_LBL("SCRIPT:", "Brail") };
     const uint8_t v = get_glyph_script();
-    return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("Script:", "?");
+    return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("SCRIPT:", "?");
 }
 
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {
@@ -139,15 +139,13 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         // ACTIVE value, so the keycap answers "what is it set to" without a press.
         case KC_IDLE_STYLE:                 return idle_style_legend();
         case KC_GLYPH_SCRIPT:               return glyph_script_legend();
-        // ⚠️ HALF SCALE, and it has to be: `\v` advances a fixed 15px while the base
-        // face inks ~20px above the baseline, so TWO FULL-SIZE TEXT LINES CANNOT FIT
-        // a 40px panel. At full size this legend's lines collided over 5 rows
-        // (measured: "Reset" inks y1..20, "Eden" y16..35) and "Reset" also ran 4px
-        // off the right edge. Half-scale clears both — and matches the two-line
-        // labels on the neighbouring keys of this row. Any other two-line TEXT legend
-        // has the same collision; the switch-over-word ones are fine, because the
-        // switch icon is only 15px tall.
-        case KC_EDEN:                       return HINT_SMALL U"Reset\r\v\x06" U"Eden";
+        // ⚠️ This legend used to be DEAD: update_displays() carried a bespoke
+        // `else if (keycode == KC_EDEN)` branch that drew its own hardcoded strings
+        // through mid_fonts and never consulted this string at all. That branch also
+        // sat AFTER the `text != NULL` test, so it bypassed the KC_SETTINGS_MORE gate
+        // and the key stayed visible while every other advanced key hid. Both are gone
+        // — the branch is deleted and this is the real legend, drawn like any other.
+        case KC_EDEN:                       return MID_TWO_LINE("RESET", "Eden");
         // ⚠️ KC_GLYPH_SIZE_UP is handled in to_static_text() (poly_keymap.c), NOT here.
         // Its legend depends on the current tier AND on whether Shift is held, and the
         // SYNCED mods live in poly_layer_t — this function only receives led_t, so the

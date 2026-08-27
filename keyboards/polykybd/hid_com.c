@@ -1089,6 +1089,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     data[6] = (uint8_t)(cap >> 8);
                     data[7] = (uint8_t)(used & 0xFF);
                     data[8] = (uint8_t)(used >> 8);
+                    // How many keycap styles this firmware can actually DRAW. The host
+                    // may offer more (an unknown style degrades to the index rather
+                    // than being refused), but a menu that lists only what the board
+                    // renders is the honest one -- and this costs a byte in a report
+                    // with 55 spare.
+                    data[9] = POLY_MACRO_STYLE_COUNT;
                     raw_hid_send(data, length);
                 }
                 break;
@@ -1130,13 +1136,26 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     }
                 }
                 break;
-            case 38: //macro label get/set (protocol v15+)
+            case 38: //macro look get/set (protocol v15+)
                 {
-                    // data[2] = macro id, data[3] = 0xFF query else byte count,
-                    // data[4..] = label text. ASCII only -- poly_macro_label_set drops
-                    // anything the _Nano_ face cannot draw, so what is stored is what the
-                    // keycap will show.
-                    const uint8_t header = 4;
+                    // The whole appearance of one macro in one exchange:
+                    //   data[2]    macro id
+                    //   data[3]    0xFF query, else the caption byte count
+                    //   data[4]    style (POLY_MACRO_STYLE_*)
+                    //   data[5..8] icon codepoint, little-endian
+                    //   data[9..]  caption text
+                    // The reply mirrors the same layout.
+                    //
+                    // One command rather than three, because a macro keycap composes
+                    // the caption WITH the style and the icon -- splitting them lets a
+                    // host apply half an appearance, and the keycap then draws a
+                    // combination the user never asked for until the next write lands.
+                    //
+                    // ASCII only: poly_macro_look_set drops anything the _Nano_ face
+                    // cannot draw, so what is stored is what the keycap will show. An
+                    // unknown style is stored as STYLE_INDEX rather than refused -- see
+                    // poly_macro.h.
+                    const uint8_t header = 9;
                     uint8_t       id     = data[HID_DATA_IDX];
                     uint8_t       n      = data[3];
                     if (id >= POLY_MACRO_COUNT) {
@@ -1149,19 +1168,26 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         const uint16_t avail = hid_payload_avail(length, header);
                         if (n > avail) n = (uint8_t)avail;
                         if (n > POLY_MACRO_LABEL_LEN) n = POLY_MACRO_LABEL_LEN;
-                        char text[POLY_MACRO_LABEL_LEN + 1];
-                        memcpy(text, &data[header], n);
-                        text[n] = '\0';
-                        poly_macro_label_set(id, text);
+                        poly_macro_look_t look;
+                        look.style = data[4];
+                        look.icon  = (uint32_t)data[5] | ((uint32_t)data[6] << 8)
+                                   | ((uint32_t)data[7] << 16) | ((uint32_t)data[8] << 24);
+                        memcpy(look.text, &data[header], n);
+                        look.text[n] = '\0';
+                        poly_macro_look_set(id, &look);
                         request_disp_refresh();
                     }
-                    char label[POLY_MACRO_LABEL_LEN + 1];
-                    poly_macro_label_get(id, label);
-                    uint8_t len = (uint8_t)strlen(label);
+                    poly_macro_look_t look;
+                    poly_macro_look_get(id, &look);
+                    uint8_t len = (uint8_t)strlen(look.text);
                     memset(data, 0, length);
                     hid_reply(data, 0x26, true);
                     data[3] = len;
-                    memcpy(&data[header], label, len);
+                    data[4] = look.style;
+                    for (uint8_t b = 0; b < POLY_MACRO_ICON_LEN; b++) {
+                        data[5 + b] = (uint8_t)((look.icon >> (8 * b)) & 0xFFu);
+                    }
+                    memcpy(&data[header], look.text, len);
                     raw_hid_send(data, length);
                 }
                 break;

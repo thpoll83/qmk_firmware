@@ -83,92 +83,143 @@ void poly_macro_write(uint16_t offset, uint16_t size, const uint8_t *data) {
 // ---------------------------------------------------------------------------
 // Labels
 
-// Push ONE macro label to the slave over the dynamic-keymap transaction.
+// Push ONE macro's whole look to the slave over the dynamic-keymap transaction.
+//
+// The style, the icon and the caption travel together, so the slave can never render a
+// caption in a style the master has already replaced -- that is the reason they are one
+// record rather than three.
 //
 // Classified with sync_succeeded() rather than bool-tested: send_to_bridge returns the
 // byte the slave SAID, and every possible return is non-zero, so `if(!send_to_bridge())`
 // is dead code (the 2026-06-18 stuck-slave bug). Returning the verdict lets the caller
-// keep the label queued and re-send, which is what makes the dirty mask a retry queue.
-bool poly_macro_label_bridge(uint8_t id, const char *label) {
+// keep the look queued and re-send, which is what makes the dirty mask a retry queue.
+bool poly_macro_look_bridge(uint8_t id, const poly_macro_look_t *look) {
     dynamic_keymap_sync_t msg = {0};
     msg.commands[0] = POLY_KEYMAP_OP_MACRO_LABEL;
     msg.commands[1] = id;
+    msg.commands[2] = look->style;
+    for (uint8_t n = 0; n < POLY_MACRO_ICON_LEN; n++) {
+        msg.commands[3 + n] = (uint8_t)((look->icon >> (8 * n)) & 0xFFu);
+    }
     uint8_t n = 0;
-    for (; n < POLY_MACRO_LABEL_LEN && label[n] != '\0'; n++) {
-        msg.commands[2 + n] = (uint8_t)label[n];
+    for (; n < POLY_MACRO_LABEL_LEN && look->text[n] != '\0'; n++) {
+        msg.commands[2 + POLY_MACRO_LOOK_LEN - POLY_MACRO_LABEL_LEN + n] = (uint8_t)look->text[n];
     }
     // 2 header bytes + the full stride, so the payload size is constant and a shorter
-    // label cannot leave stale bytes from a previous send in the tail.
-    const uint8_t payload = (uint8_t)(sizeof(uint32_t) + 2 + POLY_MACRO_LABEL_LEN);
+    // caption cannot leave stale bytes from a previous send in the tail.
+    const uint8_t payload = (uint8_t)(sizeof(uint32_t) + 2 + POLY_MACRO_LOOK_LEN);
     msg.crc32 = crc32_1byte(msg.commands, (uint8_t)(payload - sizeof(uint32_t)), 0);
     return sync_succeeded(send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, &msg, payload, 3));
 }
 
 
-// RAM cache, on both halves. 192 B buys two things: the render path never touches
-// EEPROM (it runs for every macro keycap on every refresh), and the slave -- whose own
-// EEPROM never sees a macro -- has somewhere to put what the master pushes it.
-static char     s_labels[POLY_MACRO_COUNT][POLY_MACRO_LABEL_LEN];
-static uint16_t s_label_dirty;   // one bit per macro, master -> slave send queue
+// RAM cache, on both halves. It buys two things: the render path never touches EEPROM
+// (it runs for every macro keycap on every refresh), and the slave -- whose own EEPROM
+// never sees a macro -- has somewhere to put what the master pushes it.
+//
+// The caption, the style and the icon are ONE record rather than three arrays, so a
+// render can never compose a caption with a style that was written at a different
+// moment, and the whole appearance crosses the split link in a single message.
+static poly_macro_look_t s_looks[POLY_MACRO_COUNT];
+static uint16_t          s_label_dirty;   // one bit per macro, master -> slave queue
 
 _Static_assert(POLY_MACRO_COUNT <= 16, "the dirty mask is 16 bits wide");
 
 static uint16_t label_addr(uint8_t id) {
-    return (uint16_t)(POLY_MACRO_LABEL_ADDR + (uint16_t)id * POLY_MACRO_LABEL_LEN);
+    return (uint16_t)(POLY_MACRO_LABEL_ADDR + (uint16_t)id * POLY_MACRO_LOOK_LEN);
+}
+
+// A style this build does not know draws as INDEX rather than as nothing. The index is
+// the one style that needs neither a font pack nor a stored icon, so it is the safe
+// floor -- the same reasoning as the glyph script falling back to the normal legend.
+static uint8_t style_or_default(uint8_t style) {
+    return style < POLY_MACRO_STYLE_COUNT ? style : (uint8_t)POLY_MACRO_STYLE_INDEX;
 }
 
 void poly_macro_labels_load(void) {
     for (uint8_t id = 0; id < POLY_MACRO_COUNT; id++) {
         const uint16_t base = label_addr(id);
-        for (uint8_t n = 0; n < POLY_MACRO_LABEL_LEN; n++) {
-            s_labels[id][n] = (char)eeprom_read_byte((const uint8_t *)(uintptr_t)(base + n));
+        uint8_t raw[POLY_MACRO_LOOK_LEN];
+        for (uint8_t n = 0; n < POLY_MACRO_LOOK_LEN; n++) {
+            raw[n] = eeprom_read_byte((const uint8_t *)(uintptr_t)(base + n));
         }
+        s_looks[id].style = style_or_default(raw[0]);
+        // Little-endian, matching the wire. An unwritten record reads as all-zero
+        // (QMK's wear levelling normalises a cleared byte to 0, NOT 0xFF -- the fact
+        // that made latin_assign read as "every key hosts 'a'"), which is exactly the
+        // default look, so no migration sentinel is needed here.
+        s_looks[id].icon = (uint32_t)raw[1] | ((uint32_t)raw[2] << 8)
+                         | ((uint32_t)raw[3] << 16) | ((uint32_t)raw[4] << 24);
+        for (uint8_t n = 0; n < POLY_MACRO_LABEL_LEN; n++) {
+            s_looks[id].text[n] = (char)raw[1 + POLY_MACRO_ICON_LEN + n];
+        }
+        s_looks[id].text[POLY_MACRO_LABEL_LEN] = '\0';
     }
 }
 
-void poly_macro_label_get(uint8_t id, char *out) {
+void poly_macro_look_get(uint8_t id, poly_macro_look_t *out) {
+    if (out == NULL) return;
     if (id >= POLY_MACRO_COUNT) {
-        out[0] = '\0';
+        out->style = POLY_MACRO_STYLE_INDEX;
+        out->icon  = 0;
+        out->text[0] = '\0';
         return;
     }
+    *out = s_looks[id];
+    out->text[POLY_MACRO_LABEL_LEN] = '\0';
+}
+
+void poly_macro_label_get(uint8_t id, char *out) {
+    poly_macro_look_t look;
+    poly_macro_look_get(id, &look);
     uint8_t n = 0;
-    for (; n < POLY_MACRO_LABEL_LEN && s_labels[id][n] != '\0'; n++) {
-        out[n] = s_labels[id][n];
+    for (; n < POLY_MACRO_LABEL_LEN && look.text[n] != '\0'; n++) {
+        out[n] = look.text[n];
     }
     out[n] = '\0';
 }
 
-// Normalises into the cache: ASCII only, NUL-padded to the full stride. Shared by the
-// master (which then persists) and the slave (which does not), so the two halves can
-// never disagree about what a given label is.
-static void label_store(uint8_t id, const char *text) {
+// Normalises into the cache: ASCII only, NUL-padded to the full stride, style bounded.
+// Shared by the master (which then persists) and the slave (which does not), so the two
+// halves can never disagree about what a given macro looks like.
+static void look_store(uint8_t id, const poly_macro_look_t *look) {
+    s_looks[id].style = style_or_default(look != NULL ? look->style
+                                                      : (uint8_t)POLY_MACRO_STYLE_INDEX);
+    s_looks[id].icon  = look != NULL ? look->icon : 0u;
     uint8_t n = 0;
-    if (text != NULL) {
-        for (const char *p = text; *p && n < POLY_MACRO_LABEL_LEN; ++p) {
+    if (look != NULL) {
+        for (const char *p = look->text; *p && n < POLY_MACRO_LABEL_LEN; ++p) {
             // The _Nano_ face is 0x20..0x7E. Anything else draws nothing, which on a
             // keycap is indistinguishable from a bug -- so it never gets stored.
             if ((uint8_t)*p < 0x20 || (uint8_t)*p > 0x7E) continue;
-            s_labels[id][n++] = *p;
+            s_looks[id].text[n++] = *p;
         }
     }
-    for (; n < POLY_MACRO_LABEL_LEN; n++) {
-        s_labels[id][n] = '\0';
+    for (; n <= POLY_MACRO_LABEL_LEN; n++) {
+        s_looks[id].text[n] = '\0';
     }
 }
 
-void poly_macro_label_set(uint8_t id, const char *text) {
+void poly_macro_look_set(uint8_t id, const poly_macro_look_t *look) {
     if (id >= POLY_MACRO_COUNT) return;
-    label_store(id, text);
+    look_store(id, look);
     const uint16_t base = label_addr(id);
+    const uint32_t icon = s_looks[id].icon;
+    eeprom_update_byte((uint8_t *)(uintptr_t)(base + 0), s_looks[id].style);
+    for (uint8_t n = 0; n < POLY_MACRO_ICON_LEN; n++) {
+        eeprom_update_byte((uint8_t *)(uintptr_t)(base + 1 + n),
+                           (uint8_t)((icon >> (8 * n)) & 0xFFu));
+    }
     for (uint8_t n = 0; n < POLY_MACRO_LABEL_LEN; n++) {
-        eeprom_update_byte((uint8_t *)(uintptr_t)(base + n), (uint8_t)s_labels[id][n]);
+        eeprom_update_byte((uint8_t *)(uintptr_t)(base + 1 + POLY_MACRO_ICON_LEN + n),
+                           (uint8_t)s_looks[id].text[n]);
     }
     s_label_dirty |= (uint16_t)1u << id;
 }
 
-void poly_macro_label_adopt(uint8_t id, const char *text) {
+void poly_macro_look_adopt(uint8_t id, const poly_macro_look_t *look) {
     if (id >= POLY_MACRO_COUNT) return;
-    label_store(id, text);
+    look_store(id, look);
 }
 
 void poly_macro_labels_mark_all_dirty(void) {
@@ -180,13 +231,13 @@ bool poly_macro_label_sync_tick(void) {
     for (uint8_t id = 0; id < POLY_MACRO_COUNT; id++) {
         const uint16_t bit = (uint16_t)1u << id;
         if (!(s_label_dirty & bit)) continue;
-        char label[POLY_MACRO_LABEL_LEN + 1];
-        poly_macro_label_get(id, label);
+        poly_macro_look_t look;
+        poly_macro_look_get(id, &look);
         // Clear the bit only on a real ACK: send_to_bridge returns what the slave SAID,
         // and every return value is non-zero, so it must be classified rather than
         // bool-tested. On a give-up the bit stays set and the next pass re-sends -- the
         // dirty mask IS the retry queue, the same shape the state diff uses.
-        if (poly_macro_label_bridge(id, label)) {
+        if (poly_macro_look_bridge(id, &look)) {
             s_label_dirty &= (uint16_t)~bit;
         }
         return true;   // at most one bridge per housekeeping pass
@@ -203,11 +254,11 @@ void poly_macro_reset_all(void) {
         eeprom_update_byte((uint8_t *)(uintptr_t)(POLY_MACRO_LABEL_ADDR + i), 0);
     }
     // The EEPROM is only half of it: both halves RENDER from the RAM cache, so leaving
-    // it populated makes poly_macro_label_get() and render_macro_key() keep drawing the
-    // label of a macro that no longer exists -- and the pending dirty bits would then
-    // push those stale labels to the slave. Marking all dirty is what sends the cleared
+    // it populated makes poly_macro_look_get() and render_macro_key() keep drawing the
+    // look of a macro that no longer exists -- and the pending dirty bits would then
+    // push those stale looks to the slave. Marking all dirty is what sends the cleared
     // ones across.
-    memset(s_labels, 0, sizeof(s_labels));
+    memset(s_looks, 0, sizeof(s_looks));
     poly_macro_labels_mark_all_dirty();
 }
 

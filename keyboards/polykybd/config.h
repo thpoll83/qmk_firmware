@@ -424,7 +424,24 @@
 #define POLY_MACRO_LABEL_LEN   12
 #define POLY_MACRO_COUNT       16
 #define DYNAMIC_KEYMAP_MACRO_COUNT POLY_MACRO_COUNT
-#define POLY_MACRO_LABEL_BYTES (POLY_MACRO_COUNT * POLY_MACRO_LABEL_LEN)
+
+// A macro OWNS its keycap -- it cannot be folded into a modifier or a tap-hold, because
+// QMK carries the wrapped key in the low byte (MT/LT are `(kc) & 0xFF`) and a macro
+// keycode is 0x7700+. Since the whole cell is the macro's, the cell is free to be more
+// than a legend, so each record carries HOW to draw it alongside the text:
+//
+//   style  1 B   POLY_MACRO_STYLE_*
+//   icon   4 B   codepoint drawn above the caption, 0 = none. Four bytes because the
+//                interesting glyphs are emoji at 0x1F300+, well past 16 bits.
+//   text  12 B   the caption
+//
+// One record, one address, one dirty bit, one bridge -- deliberately NOT a parallel
+// array beside the labels, which is the shape that goes out of step and then needs a
+// guard to remember it (see the enumerating-guard note in CLAUDE.md). The appearance
+// cannot arrive half-applied on the slave because it never travels in two pieces.
+#define POLY_MACRO_ICON_LEN    4
+#define POLY_MACRO_LOOK_LEN    (1 + POLY_MACRO_ICON_LEN + POLY_MACRO_LABEL_LEN)
+#define POLY_MACRO_LABEL_BYTES (POLY_MACRO_COUNT * POLY_MACRO_LOOK_LEN)
 
 // QMK derives this inside nvm_dynamic_keymap.c, i.e. it exists in exactly one
 // translation unit. Everything below (and poly_macro.c) needs the same number, so

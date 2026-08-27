@@ -2583,9 +2583,85 @@ static void render_fw_confirm_key(bool accept) {
 // 'W' is about three times an 'i', so a fixed cut either clips a wide label off the
 // panel or wastes half the band on a narrow one. The host runs the same measurement in
 // its editor, so what you type is what the keycap shows.
+// Draw `text` centred in the whole cell at the largest face that fits it, biggest
+// first. Returns false when even the smallest face overflows, which the caller treats
+// as "nothing to draw" rather than clipping.
+//
+// The ladder is the point: a caption alone has the entire 72x40 to spend, and the
+// _Nano_ 10 px face the bottom band uses would waste it. The two big tiers live in the
+// `latinbig` PACK bundle, so they are simply absent on a keyboard with no font pack --
+// glyph_size_remap() is all-or-nothing and returns false there, and the ladder walks
+// past them to the resident faces. That is why the resident 27 px face is on the list
+// rather than being the assumed floor.
+static bool draw_macro_caption_big(const uint32_t* text) {
+    uint32_t scratch[POLY_MACRO_LABEL_LEN + 1];
+
+    for (uint8_t tier = 0; tier < 4; tier++) {
+        const GFXfont* const* fonts = NULL;
+        uint8_t               count = 0;
+        const uint32_t*       run   = text;
+
+        switch (tier) {
+            case 0:
+            case 1:
+                // GLYPH_SIZE_L then _M, relocated into the supplementary PUA planes the
+                // latinbig entries are emitted at. Same helper the legend-size feature
+                // uses, so a caption cannot end up at a size the legends cannot reach.
+                if (!glyph_size_remap((uint8_t)(tier == 0 ? GLYPH_SIZE_L : GLYPH_SIZE_M),
+                                      text, scratch,
+                                      (uint8_t)(POLY_MACRO_LABEL_LEN + 1))) {
+                    continue;
+                }
+                run   = scratch;
+                fonts = g_all_fonts;
+                count = g_all_font_count;
+                break;
+            case 2:
+                // The resident latin face (~20 px caps). Always present.
+                fonts = g_all_fonts;
+                count = g_all_font_count;
+                break;
+            default:
+                fonts = mid_fonts;
+                count = 1;
+                break;
+        }
+
+        int8_t xmin, xmax, ymin, ymax;
+        kdisp_gfx_text_bbox(fonts, count, run, &xmin, &xmax, &ymin, &ymax);
+        const int16_t w = (int16_t)(xmax - xmin + 1);
+        const int16_t h = (int16_t)(ymax - ymin + 1);
+        if (w > SCREEN_WIDTH || h > SCREEN_HEIGHT) continue;
+
+        kdisp_write_gfx_text(fonts, count,
+                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - xmin),
+                             (int8_t)((SCREEN_HEIGHT - h) / 2 - ymin),
+                             run);
+        return true;
+    }
+    return false;
+}
+
 static void render_macro_key(uint8_t id) {
-    char label[POLY_MACRO_LABEL_LEN + 1];
-    poly_macro_label_get(id, label);
+    poly_macro_look_t look;
+    poly_macro_look_get(id, &look);
+    const char *label = look.text;
+
+    // Widen the caption to codepoints once -- both the big-text style and the captioned
+    // styles below need it, and the display list wants uint32_t anyway.
+    uint32_t text[POLY_MACRO_LABEL_LEN + 1];
+    uint8_t  tlen = 0;
+    for (; label[tlen] != '\0' && tlen < POLY_MACRO_LABEL_LEN; tlen++) {
+        text[tlen] = (uint32_t)(uint8_t)label[tlen];
+    }
+    text[tlen] = 0;
+
+    // Caption alone, filling the cell. Falls through to the captioned styles when the
+    // caption is empty (there would be nothing to draw) or when even the smallest face
+    // overflows -- an empty keycap is worse than the small one it replaced.
+    if (look.style == POLY_MACRO_STYLE_TEXT && tlen > 0) {
+        if (draw_macro_caption_big(text)) return;
+    }
 
     // "M12" -- built by hand rather than snprintf, which is not worth linking for two
     // digits, and the display list wants uint32_t codepoints anyway.
@@ -2596,26 +2672,46 @@ static void render_macro_key(uint8_t id) {
     index_text[n++] = (uint32_t)('0' + id % 10);
     index_text[n]   = 0;
 
+    // The mark above the caption: a chosen glyph, or the index. The icon is looked up
+    // through its OWN single-font array once found, because kdisp_write_gfx_char
+    // baseline-aligns every glyph to fonts[0] -- with g_all_fonts that is IconsFont
+    // (yAdvance 40) and a taller pack glyph is shifted down by the difference, which is
+    // exactly the language-flag gap-at-top regression. An icon this keyboard has no
+    // glyph for falls back to the index rather than drawing nothing, so a caption
+    // picked on a host with a richer font pack still names its macro here.
+    const GFXfont*       icon_font = NULL;
+    const GFXfont*       icon_arr[1];
+    const GFXfont* const* mark_fonts = mid_fonts;
+    uint8_t              mark_count  = 1;
+    uint32_t             mark_text[2];
+    const uint32_t*      mark = index_text;
+
+    if (look.style == POLY_MACRO_STYLE_ICON && look.icon != 0) {
+        if (kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count, look.icon, &icon_font)) {
+            icon_arr[0]  = icon_font;
+            mark_fonts   = (const GFXfont* const*)icon_arr;
+            mark_count   = 1;
+            mark_text[0] = look.icon;
+            mark_text[1] = 0;
+            mark         = mark_text;
+        }
+    }
+
     if (label[0] == '\0') {
-        // No label: centre the index in the whole cell.
+        // No caption: centre the mark in the whole cell.
         int8_t ixmin, ixmax, iymin, iymax;
-        kdisp_gfx_text_bbox(mid_fonts, 1, index_text, &ixmin, &ixmax, &iymin, &iymax);
-        kdisp_write_gfx_text(mid_fonts, 1,
+        kdisp_gfx_text_bbox(mark_fonts, mark_count, mark, &ixmin, &ixmax, &iymin, &iymax);
+        kdisp_write_gfx_text(mark_fonts, mark_count,
                              (int8_t)(BUFFER_X + (SCREEN_WIDTH - (ixmax - ixmin + 1)) / 2 - ixmin),
                              (int8_t)((SCREEN_HEIGHT - (iymax - iymin + 1)) / 2 - iymin),
-                             index_text);
+                             mark);
         return;
     }
 
-    // Widen to codepoints, then drop trailing characters until the run fits the panel.
-    // Measuring after each drop rather than estimating from a per-character width is
-    // the point -- the face is proportional, so an estimate is wrong in both directions.
-    uint32_t text[POLY_MACRO_LABEL_LEN + 1];
-    uint8_t  len = 0;
-    for (; label[len] != '\0' && len < POLY_MACRO_LABEL_LEN; len++) {
-        text[len] = (uint32_t)(uint8_t)label[len];
-    }
-    text[len] = 0;
+    // Drop trailing characters until the caption fits the panel. Measuring after each
+    // drop rather than estimating from a per-character width is the point -- the face
+    // is proportional, so an estimate is wrong in both directions.
+    uint8_t len = tlen;
 
     int8_t lxmin = 0, lxmax = 0, lymin = 0, lymax = 0;
     while (len > 0) {
@@ -2635,16 +2731,17 @@ static void render_macro_key(uint8_t id) {
                          (int8_t)(BUFFER_X + (SCREEN_WIDTH - (lxmax - lxmin + 1)) / 2 - lxmin),
                          cap_base, text);
 
-    // The index, centred in whatever the caption left. Skipped rather than squeezed if
-    // a tall label leaves no room -- a clipped index is worse than none.
+    // The mark, centred in whatever the caption left. Skipped rather than squeezed if a
+    // tall caption leaves no room -- a clipped mark is worse than none, and that is the
+    // same call for a 40 px emoji as for a two-digit index.
     int8_t ixmin, ixmax, iymin, iymax;
-    kdisp_gfx_text_bbox(mid_fonts, 1, index_text, &ixmin, &ixmax, &iymin, &iymax);
+    kdisp_gfx_text_bbox(mark_fonts, mark_count, mark, &ixmin, &ixmax, &iymin, &iymax);
     const int8_t ih = (int8_t)(iymax - iymin + 1);
     if (ih < free_rows) {
-        kdisp_write_gfx_text(mid_fonts, 1,
+        kdisp_write_gfx_text(mark_fonts, mark_count,
                              (int8_t)(BUFFER_X + (SCREEN_WIDTH - (ixmax - ixmin + 1)) / 2 - ixmin),
                              (int8_t)((free_rows - ih) / 2 - iymin),
-                             index_text);
+                             mark);
     }
 }
 

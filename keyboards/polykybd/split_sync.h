@@ -12,6 +12,9 @@
 // config this file needs for the structs below. Re-exported here, so every
 // existing `#include "split_sync.h"` consumer is unaffected.
 #include "base/sync_ack.h"
+// poly_macro_look_t crosses this link, so the declaration below needs the type. It is
+// a plain POD header (stdint/stdbool + config.h), so this costs nothing.
+#include "poly_macro.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -106,9 +109,9 @@ void dynamic_keymap_reset_poly(void);
 // _set_buffer 0x13, plus the private 'P' 0x50) and below id_unhandled 0xFF.
 #define POLY_KEYMAP_OP_MACRO_LABEL 0xB1
 
-// Push one macro label to the slave. Returns true only on a real ACK -- callers use
-// that to decide whether to keep the label queued.
-bool poly_macro_label_bridge(uint8_t id, const char *label);
+// Push one macro's whole look to the slave. Returns true only on a real ACK -- callers
+// use that to decide whether to keep it queued.
+bool poly_macro_look_bridge(uint8_t id, const poly_macro_look_t *look);
 
 void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 

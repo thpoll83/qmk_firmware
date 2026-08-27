@@ -2726,7 +2726,8 @@ static void render_macro_key(uint8_t id) {
     uint32_t             mark_text[2];
     const uint32_t*      mark = index_text;
 
-    if (look.style == POLY_MACRO_STYLE_ICON && look.icon != 0) {
+    if ((look.style == POLY_MACRO_STYLE_ICON || look.style == POLY_MACRO_STYLE_ICON_ONLY)
+        && look.icon != 0) {
         icon_glyph = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count, look.icon,
                                           &icon_font);
         if (icon_glyph != NULL) {
@@ -2739,8 +2740,17 @@ static void render_macro_key(uint8_t id) {
         }
     }
 
-    if (label[0] == '\0') {
-        // No caption: centre the mark in the whole cell.
+    // ICON_ONLY draws the icon alone, centred in the whole cell, exactly as an
+    // uncaptioned key does -- the caption is KEPT in storage so switching back does
+    // not lose it, it is simply not drawn. An icon this keyboard has no glyph for
+    // leaves icon_glyph NULL and falls through to the captioned index, which is the
+    // same fallback every other icon path takes: a keycap is never left blank.
+    const bool icon_only = (look.style == POLY_MACRO_STYLE_ICON_ONLY && icon_glyph != NULL);
+
+    if (label[0] == '\0' || icon_only) {
+        // No caption to place around: centre the mark in the whole cell. No fit check
+        // and no halving here -- the tallest pack glyph is exactly SCREEN_HEIGHT, and
+        // filling the cell is the point of this branch.
         int8_t ixmin, ixmax, iymin, iymax;
         kdisp_gfx_text_bbox(mark_fonts, mark_count, mark, &ixmin, &ixmax, &iymin, &iymax);
         kdisp_write_gfx_text(mark_fonts, mark_count,

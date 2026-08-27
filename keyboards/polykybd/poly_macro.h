@@ -58,6 +58,7 @@ enum poly_macro_style {
                                  // one that needs no font pack and no decision.
     POLY_MACRO_STYLE_ICON  = 1,  // a chosen glyph above the caption
     POLY_MACRO_STYLE_TEXT  = 2,  // the caption alone, at the largest face that fits
+    POLY_MACRO_STYLE_ICON_ONLY = 3,  // the icon alone, centred in the whole cell
     POLY_MACRO_STYLE_COUNT
 };
 

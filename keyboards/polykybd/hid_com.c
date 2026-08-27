@@ -1114,10 +1114,15 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         memcpy(&data[header], buf, want);
                         raw_hid_send(data, length);
                     } else {
-                        // A write lands mid-buffer, so a macro that is being replaced is
-                        // briefly inconsistent. poly_macro_start() refuses to play a
-                        // buffer whose last byte is not NUL, which is what the host
-                        // leaves clear until the final chunk -- same guard QMK uses.
+                        // A write lands mid-buffer, so a macro that is being replaced
+                        // is briefly inconsistent -- and an interrupted upload would
+                        // otherwise leave a playable splice of the new text and
+                        // whatever preceded it. poly_macro_start() refuses to play a
+                        // buffer whose last byte is not NUL; the HOST raises a non-zero
+                        // marker there before it streams and clears it with the final
+                        // window, so the guard is armed for exactly that window. The
+                        // marker is the host's job because only the host knows a write
+                        // has begun -- from here every window looks alike.
                         poly_macro_write(offset, (uint16_t)want, &data[header]);
                         memset(data, 0, length);
                         hid_reply(data, 0x25, true);

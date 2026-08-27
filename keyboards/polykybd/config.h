@@ -223,7 +223,7 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-#define PROTOCOL_VERSION 13
+#define PROTOCOL_VERSION 14
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

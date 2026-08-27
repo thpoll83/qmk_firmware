@@ -223,7 +223,7 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-#define PROTOCOL_VERSION 13
+#define PROTOCOL_VERSION 14
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -406,3 +406,34 @@
     (DYNAMIC_KEYMAP_EEPROM_ADDR + (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2))
 #define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR \
     (DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR + (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * NUM_ENCODERS * 2 * 2))
+
+// --- Macro labels -----------------------------------------------------------
+// The label a macro keycap spells out along its bottom edge. Stored as a FIXED-STRIDE
+// array carved off the top of the macro region, NUL-padded, deliberately NOT inside
+// the NUL-delimited body buffer: a body is addressed by counting separators from the
+// start, which is fine once per keypress and wrong for something the render path reads
+// for every keycap on every display refresh. Fixed stride makes label(n) a multiply.
+//
+// Shrinking DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE is what keeps the two apart -- every QMK
+// path that touches the body bounds itself on that constant, so nothing upstream can
+// reach the labels even though they sit in the same region.
+//
+// 12 bytes is the measured average that fits the 72 px panel in the _Nano_ 10 px face
+// (8 in the worst case, all-W; 24 of narrow letters). Truncation is by PIXEL WIDTH at
+// render time, not by this length -- see poly_macro_label_fit().
+#define POLY_MACRO_LABEL_LEN   12
+#define POLY_MACRO_COUNT       16
+#define DYNAMIC_KEYMAP_MACRO_COUNT POLY_MACRO_COUNT
+#define POLY_MACRO_LABEL_BYTES (POLY_MACRO_COUNT * POLY_MACRO_LABEL_LEN)
+
+// QMK derives this inside nvm_dynamic_keymap.c, i.e. it exists in exactly one
+// translation unit. Everything below (and poly_macro.c) needs the same number, so
+// define it here -- QMK's own #ifndef then picks ours up and the two cannot disagree.
+#ifndef DYNAMIC_KEYMAP_EEPROM_MAX_ADDR
+#    define DYNAMIC_KEYMAP_EEPROM_MAX_ADDR (TOTAL_EEPROM_BYTE_COUNT - 1)
+#endif
+
+#define DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE \
+    ((DYNAMIC_KEYMAP_EEPROM_MAX_ADDR - DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + 1) - POLY_MACRO_LABEL_BYTES)
+#define POLY_MACRO_LABEL_ADDR \
+    (DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE)

@@ -77,6 +77,7 @@
 #endif
 
 #include "state.h"
+#include "poly_macro.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
 #include "poly_util.h"
@@ -970,6 +971,12 @@ void housekeeping_task_user(void) {
 #endif
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
+
+    // Advance a playing macro by at most one step. Deliberately near the TOP of
+    // housekeeping and outside every fw_up/idle gate: a macro is user-visible typing,
+    // so it must not be starved by a flash or by the idle machinery, and a step that
+    // took the long way round would show up as uneven keystroke timing on the host.
+    poly_macro_tick();
 
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
@@ -3801,6 +3808,28 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 fw_staging_confirm_answer(false);   // right half -> R / REJECT
             }
         }
+        return false;
+    }
+
+    // A macro is interruptible: any PRESS while one is playing stops it. That is the
+    // "make it stop" a user reaches for, and it is also what keeps a macro from
+    // interleaving its own keystrokes with live typing. The aborting key then falls
+    // through and behaves normally -- the abort is not a swallow.
+    if (poly_macro_active() && record->event.pressed) {
+        poly_macro_abort();
+    }
+
+    // Macro keycodes (QK_MACRO_0..QK_MACRO_MAX). Nothing else in the build consumes
+    // them -- via.c is the only core dispatcher and VIA_ENABLE is unset -- so they are
+    // ours, and they are SWALLOWED here rather than handled on the release edge: an
+    // OSL() layer re-dispatches a release-edge action up to three times
+    // (process_action's do_release_oneshot), which for a macro would mean playing it
+    // two or three times over.
+    if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
+        if (record->event.pressed) {
+            poly_macro_start((uint8_t)(keycode - QK_MACRO));
+        }
+        display_wakeup(record);
         return false;
     }
 

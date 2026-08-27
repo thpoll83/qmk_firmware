@@ -18,6 +18,7 @@
 #include "dynamic_keymap.h"
 #include "keymap_introspection.h"   // keycode_at_keymap_location_raw() for the capped reset
 #include "poly_keymap.h"   // poly_fl_row_cache_invalidate()
+#include "poly_macro.h"
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/update.h"
@@ -331,7 +332,8 @@ void dynamic_keymap_reset_poly(void) {
         }
 #endif
     }
-    dynamic_keymap_macro_reset();
+    poly_macro_reset_all();   // bodies AND labels — a stale label on a cleared macro
+                             // is worse than no label, it names something that is gone
     poly_fl_row_cache_invalidate();
 }
 

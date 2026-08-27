@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "hid_com.h"
+#include "poly_macro.h"
 #include "hid_fw_up.h"
 #include "hid_fontpack.h"
 #include "split_fw_up.h"
@@ -1005,6 +1006,95 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         hid_reply(data, 0x22, false);
                         uprintf("Refused glyph size %u.\n", arg);
                     }
+                    raw_hid_send(data, length);
+                }
+                break;
+            case 35: //macro info: how many, how big, how much is in use (protocol v14+)
+                {
+                    // Read-only. The host needs all four before it can lay out an editor:
+                    // the count and the label stride are compile-time, the capacity is
+                    // whatever survived the EEPROM layout, and `used` is what makes the
+                    // shared-storage bar honest -- the bodies share one buffer, so a long
+                    // macro takes room from the others and that has to be visible before
+                    // a save fails rather than after.
+                    memset(data, 0, length);
+                    hid_reply(data, 0x23, true);
+                    data[3] = POLY_MACRO_COUNT;
+                    data[4] = POLY_MACRO_LABEL_LEN;
+                    uint16_t cap  = poly_macro_capacity();
+                    uint16_t used = poly_macro_bytes_used();
+                    data[5] = (uint8_t)(cap & 0xFF);
+                    data[6] = (uint8_t)(cap >> 8);
+                    data[7] = (uint8_t)(used & 0xFF);
+                    data[8] = (uint8_t)(used >> 8);
+                    raw_hid_send(data, length);
+                }
+                break;
+            case 36: //macro body read/write, windowed (protocol v14+)
+                {
+                    // data[2] = 0 read / 1 write, data[3..4] = offset LE, data[5] = count,
+                    // data[6..] = bytes. Windowed rather than whole-macro because the
+                    // buffer is up to ~2 KB and a report holds 64 -- the host streams it
+                    // the same way it streams an overlay.
+                    const uint8_t  header = 6;
+                    uint8_t        sub    = data[HID_DATA_IDX];
+                    uint16_t       offset = (uint16_t)data[3] | ((uint16_t)data[4] << 8);
+                    uint16_t       want   = data[5];
+                    const uint16_t avail  = hid_payload_avail(length, header);
+                    if (want > avail) want = avail;
+
+                    if (sub == 0) {
+                        uint8_t buf[64];
+                        poly_macro_read(offset, (uint16_t)want, buf);
+                        memset(data, 0, length);
+                        hid_reply(data, 0x24, true);
+                        data[3] = (uint8_t)want;
+                        memcpy(&data[header], buf, want);
+                        raw_hid_send(data, length);
+                    } else {
+                        // A write lands mid-buffer, so a macro that is being replaced is
+                        // briefly inconsistent. poly_macro_start() refuses to play a
+                        // buffer whose last byte is not NUL, which is what the host
+                        // leaves clear until the final chunk -- same guard QMK uses.
+                        poly_macro_write(offset, (uint16_t)want, &data[header]);
+                        memset(data, 0, length);
+                        hid_reply(data, 0x24, true);
+                        raw_hid_send(data, length);
+                    }
+                }
+                break;
+            case 37: //macro label get/set (protocol v14+)
+                {
+                    // data[2] = macro id, data[3] = 0xFF query else byte count,
+                    // data[4..] = label text. ASCII only -- poly_macro_label_set drops
+                    // anything the _Nano_ face cannot draw, so what is stored is what the
+                    // keycap will show.
+                    const uint8_t header = 4;
+                    uint8_t       id     = data[HID_DATA_IDX];
+                    uint8_t       n      = data[3];
+                    if (id >= POLY_MACRO_COUNT) {
+                        memset(data, 0, length);
+                        hid_reply(data, 0x25, false);
+                        raw_hid_send(data, length);
+                        break;
+                    }
+                    if (n != 0xFF) {
+                        const uint16_t avail = hid_payload_avail(length, header);
+                        if (n > avail) n = (uint8_t)avail;
+                        if (n > POLY_MACRO_LABEL_LEN) n = POLY_MACRO_LABEL_LEN;
+                        char text[POLY_MACRO_LABEL_LEN + 1];
+                        memcpy(text, &data[header], n);
+                        text[n] = '\0';
+                        poly_macro_label_set(id, text);
+                        request_disp_refresh();
+                    }
+                    char label[POLY_MACRO_LABEL_LEN + 1];
+                    poly_macro_label_get(id, label);
+                    uint8_t len = (uint8_t)strlen(label);
+                    memset(data, 0, length);
+                    hid_reply(data, 0x25, true);
+                    data[3] = len;
+                    memcpy(&data[header], label, len);
                     raw_hid_send(data, length);
                 }
                 break;

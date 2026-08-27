@@ -31,3 +31,16 @@ polykybd_glyph_meta_SRC := \
 polykybd_glyph_meta_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# The decoder is dependency-free by construction -- no quantum.h, no EEPROM, no timer --
+# so the suite links just it and the tests. That is the same seam as fw_up_verdict: the
+# part with the arithmetic is the part worth testing, and it only became reachable once
+# it stopped sharing a function with the I/O.
+polykybd_macro_decode_SRC := \
+	$(POLY_BASE_PATH)/macro_decode.c \
+	$(POLY_BASE_PATH)/tests/macro_decode_tests.cpp
+
+polykybd_macro_decode_INC := \
+	$(POLY_BASE_PATH) \
+	$(POLY_BASE_PATH)/tests \
+	keyboards/polykybd

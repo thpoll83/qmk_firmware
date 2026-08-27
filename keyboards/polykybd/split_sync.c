@@ -280,6 +280,13 @@ _Static_assert(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR >
                    DYNAMIC_KEYMAP_EEPROM_ADDR +
                        (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2),
                "macro buffer must start above the capped keymap region");
+// The label array is carved off the TOP of the macro region by subtraction, which on
+// unsigned arithmetic wraps to a vast size instead of erroring. Pin it here rather than
+// in config.h: that header is also read by the C++ test harness, where `_Static_assert`
+// is not the spelling.
+_Static_assert(DYNAMIC_KEYMAP_EEPROM_MAX_ADDR - DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + 1 >
+                   POLY_MACRO_LABEL_BYTES,
+               "macro label carve-out does not fit the reclaimed macro region");
 
 // Writes data to EEPROM at specified offset within the dynamic keymap region with bounds checking.
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data) {

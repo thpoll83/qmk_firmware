@@ -52,6 +52,28 @@ void poly_macro_read(uint16_t offset, uint16_t size, uint8_t *out) {
 
 void poly_macro_write(uint16_t offset, uint16_t size, const uint8_t *data) {
     const uint16_t cap = poly_macro_capacity();
+    if (cap == 0 || size == 0) return;
+
+    // A window that does NOT carry the buffer's final byte invalidates it first, so a
+    // stream that stops early reads as not-intact and poly_macro_start() refuses it.
+    // Without this, an interrupted upload leaves a playable splice of the new text and
+    // whatever preceded it -- which can promote the tail of a former macro (a password,
+    // say) into a macro of its own.
+    //
+    // ⚠️ The HOST also raises a marker before it streams, and that is NOT redundant: it
+    // is the tested half (a mocked write cannot exercise EEPROM), while this half is
+    // what makes the guarantee hold for a host that never learned to. The firmware must
+    // not depend on the host to arm its own integrity guard.
+    //
+    // The consequence to know: a deliberate PREFIX write leaves the buffer unplayable
+    // until something writes the tail. That is correct -- a partially rewritten buffer
+    // is exactly what must not play -- but it means a caller probing a prefix has to
+    // restore the final byte too.
+    if ((uint32_t)offset + size < cap) {
+        eeprom_update_byte((uint8_t *)(uintptr_t)(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + cap - 1),
+                           POLY_MACRO_INCOMPLETE);
+    }
+
     for (uint16_t i = 0; i < size; i++) {
         if (offset + i >= cap) return;
         eeprom_update_byte((uint8_t *)(uintptr_t)(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + offset + i), data[i]);
@@ -180,6 +202,13 @@ void poly_macro_reset_all(void) {
     for (uint16_t i = 0; i < (uint16_t)POLY_MACRO_LABEL_BYTES; i++) {
         eeprom_update_byte((uint8_t *)(uintptr_t)(POLY_MACRO_LABEL_ADDR + i), 0);
     }
+    // The EEPROM is only half of it: both halves RENDER from the RAM cache, so leaving
+    // it populated makes poly_macro_label_get() and render_macro_key() keep drawing the
+    // label of a macro that no longer exists -- and the pending dirty bits would then
+    // push those stale labels to the slave. Marking all dirty is what sends the cleared
+    // ones across.
+    memset(s_labels, 0, sizeof(s_labels));
+    poly_macro_labels_mark_all_dirty();
 }
 
 // ---------------------------------------------------------------------------

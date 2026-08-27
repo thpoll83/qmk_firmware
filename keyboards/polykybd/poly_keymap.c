@@ -2642,6 +2642,45 @@ static bool draw_macro_caption_big(const uint32_t* text) {
     return false;
 }
 
+// Draws `mark` centred in the `free_rows` a caption left above it, and reports
+// whether it landed.
+//
+// ⚠️ An ICON that overflows at its native size is HALVED rather than dropped, and
+// that is the whole point of this function existing. A pack emoji is rendered at
+// 40 px while a captioned keycap leaves about 29 rows, so the earlier
+// native-size-or-nothing rule drew NOTHING for most icons a user could pick --
+// measured over the picker's own set, four in five (field, 2026-08-27: "after
+// selecting the icon I cannot see it ... also not on the keyboard"). The failure
+// was silent on both ends because the host preview mirrors this placement.
+//
+// The 2x2-OR downsample keeps thin strokes that plain decimation loses, and half of
+// even the tallest pack glyph is ~20 px, which fits any single-line caption.
+static bool draw_macro_mark(const GFXfont* const* fonts, uint8_t count,
+                            const uint32_t* mark, int8_t free_rows,
+                            const GFXglyph* glyph, uint32_t cp) {
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(fonts, count, mark, &xmin, &xmax, &ymin, &ymax);
+    const int8_t h = (int8_t)(ymax - ymin + 1);
+    if (h < free_rows) {
+        kdisp_write_gfx_text(fonts, count,
+                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - (xmax - xmin + 1)) / 2 - xmin),
+                             (int8_t)((free_rows - h) / 2 - ymin), mark);
+        return true;
+    }
+    if (glyph == NULL) return false;   // text marks (the index) are never rescaled
+    // ⚠️ kdisp_draw_glyph_half_at takes the literal TOP-LEFT of the ink -- no baseline
+    // align, no xOffset -- so the position comes from the glyph's own halved extents
+    // and NOT from the bbox above. Halve rounding UP, or an odd-width glyph loses its
+    // last column.
+    const int8_t hw = (int8_t)((pgm_read_byte(&glyph->width) + 1) / 2);
+    const int8_t hh = (int8_t)((pgm_read_byte(&glyph->height) + 1) / 2);
+    if (hh >= free_rows) return false;
+    kdisp_draw_glyph_half_at(fonts, count,
+                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - hw) / 2),
+                             (int8_t)((free_rows - hh) / 2), cp);
+    return true;
+}
+
 static void render_macro_key(uint8_t id) {
     poly_macro_look_t look;
     poly_macro_look_get(id, &look);
@@ -2679,7 +2718,8 @@ static void render_macro_key(uint8_t id) {
     // exactly the language-flag gap-at-top regression. An icon this keyboard has no
     // glyph for falls back to the index rather than drawing nothing, so a caption
     // picked on a host with a richer font pack still names its macro here.
-    const GFXfont*       icon_font = NULL;
+    const GFXfont*       icon_font  = NULL;
+    const GFXglyph*      icon_glyph = NULL;
     const GFXfont*       icon_arr[1];
     const GFXfont* const* mark_fonts = mid_fonts;
     uint8_t              mark_count  = 1;
@@ -2687,7 +2727,9 @@ static void render_macro_key(uint8_t id) {
     const uint32_t*      mark = index_text;
 
     if (look.style == POLY_MACRO_STYLE_ICON && look.icon != 0) {
-        if (kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count, look.icon, &icon_font)) {
+        icon_glyph = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count, look.icon,
+                                          &icon_font);
+        if (icon_glyph != NULL) {
             icon_arr[0]  = icon_font;
             mark_fonts   = (const GFXfont* const*)icon_arr;
             mark_count   = 1;
@@ -2731,17 +2773,13 @@ static void render_macro_key(uint8_t id) {
                          (int8_t)(BUFFER_X + (SCREEN_WIDTH - (lxmax - lxmin + 1)) / 2 - lxmin),
                          cap_base, text);
 
-    // The mark, centred in whatever the caption left. Skipped rather than squeezed if a
-    // tall caption leaves no room -- a clipped mark is worse than none, and that is the
-    // same call for a 40 px emoji as for a two-digit index.
-    int8_t ixmin, ixmax, iymin, iymax;
-    kdisp_gfx_text_bbox(mark_fonts, mark_count, mark, &ixmin, &ixmax, &iymin, &iymax);
-    const int8_t ih = (int8_t)(iymax - iymin + 1);
-    if (ih < free_rows) {
-        kdisp_write_gfx_text(mark_fonts, mark_count,
-                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - (ixmax - ixmin + 1)) / 2 - ixmin),
-                             (int8_t)((free_rows - ih) / 2 - iymin),
-                             mark);
+    // The mark, centred in whatever the caption left: native size, else halved.
+    // An icon that fits at NO size falls back to the index, which always does --
+    // the same fallback a missing glyph already takes, so an icon can never leave
+    // the keycap without a mark.
+    if (!draw_macro_mark(mark_fonts, mark_count, mark, free_rows, icon_glyph, look.icon)
+        && icon_glyph != NULL) {
+        draw_macro_mark(mid_fonts, 1, index_text, free_rows, NULL, 0);
     }
 }
 

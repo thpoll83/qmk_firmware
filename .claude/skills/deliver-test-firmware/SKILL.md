@@ -79,6 +79,21 @@ Confirm:
 - `.heap` is non-trivially positive (free SRAM). A near-zero value means the next
   small feature will fail to link.
 - The `.bin` is a plausible size (~430 KB) and **newer than the source edit**.
+- **A string you changed is actually in the image.** ⚠️ `strings` defaults to a
+  **4-character minimum**, so short literals read as MISSING from a perfectly good
+  binary — verifying eight new layer names, `Neo` and `Fn` both came back absent
+  (2026-08-27) and it looked exactly like a broken build. Use `-n 2`, and match
+  whole lines so a substring cannot fake a hit:
+
+  ```bash
+  for s in Qwerty Neo Fn Utility; do
+      strings -n 2 "$BIN" | grep -qxF "$s" && echo "OK   $s" || echo "MISS $s"
+  done
+  ```
+
+  Only for literals the compiler actually emits. A reply **assembled byte-by-byte at
+  runtime** is absent by design and its absence proves nothing — see the `PRR`/`PRL`
+  note in `CLAUDE.md`, which cost a double-take for exactly this reason.
 
 ## 4. Send
 

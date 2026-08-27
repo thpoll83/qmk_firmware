@@ -6,7 +6,8 @@ description: >
   check fails, a `❌ HIL test failed — rig diagnostics` comment appears, the user
   asks to "look at the HIL failure / rig test / why is CI red", or when deciding
   whether to re-run the HIL job. Classifies the failure into stale-rig-code /
-  no-enumeration / boot-burst flake / stale-rig-test / real-firmware-bug, then
+  no-enumeration / boot-burst flake / stale-rig-test / real-firmware-bug, or a
+  rig-network failure that dies in workflow setup with no log at all, then
   acts (re-run, fix the ctnd test, or flag the rig). NOT for building firmware
   (that's the build job) or for non-HIL CI.
 ---
@@ -37,6 +38,45 @@ mcp__github__actions_list  method=list_workflow_runs  resource_id=qmk-test.yml
 mcp__github__actions_list  method=list_workflow_jobs  resource_id=<run_id>  filter=all
 ```
 
+## 1.5 Did the suite RUN at all? — the no-log case
+
+⚠️ **Before step 2: if the log ends at `Prepare all required actions`, there is no
+settle line to read and NONE of the classes below apply.** The job died in workflow
+SETUP — before checkout, before the station sync, before a single `[test]` line.
+Signature (seen 3× on 2026-08-27, twice on a PR and again on the `PolyKybd` merge
+push):
+
+```
+Download action repository 'actions/download-artifact@v4'
+##[warning]Failed to download action 'https://codeload.github.com/actions/download-artifact/tar.gz/...'.
+           Error: The request was canceled due to the configured HttpClient.Timeout of 100 seconds elapsing.
+##[error]Failed to download archive ... after 3 attempts.
+```
+
+That is the **rig's own network** — not the firmware, not the rig's test code, and
+not something a re-run fixes once it has reproduced. Three things make it
+diagnosable:
+
+- **A runner being ONLINE does not mean its network is fine.** It picked the job up,
+  streamed logs and reported status, so `api.github.com` and the Actions service are
+  reachable while `codeload.github.com` is not. That is a *selective* failure, not
+  "the rig is offline" — don't go hunting for a dead runner.
+- **Rule out a GitHub incident before blaming the rig**, one call:
+  `https://www.githubstatus.com/api/v2/summary.json`. On 2026-08-27 Actions, Git
+  Operations and API Requests were all operational, which is what pinned it to the Pi.
+- ⚠️ **This is NOT the `codeload` note in `qmk_firmware/CLAUDE.md`.** That one is the
+  *dev container's* submodule fetches getting a **403** from the injected git proxy,
+  fixed with `add_repo`. This is the *rig runner* getting a **timeout** fetching a
+  GitHub Action. Same hostname, different machine, different symptom — the container
+  note's fix does not apply, and conflating them sends you to `add_repo` for nothing.
+
+**Action:** it qualifies for the one re-run (it died before any test body ran), but a
+second identical failure is real — stop re-running, say so, and keep the PR watched.
+There is **no fix to port**: nothing in a firmware PR can reach the runner's
+connectivity, and widening the PR to work around an Actions download is the wrong
+shape. Recovery is the rig's network; after that the HIL job re-runs on its own
+(it reuses the build artifact and force-syncs the station itself).
+
 ## 2. Check rig freshness FIRST — the settle line
 
 Before anything else, read this line:
@@ -60,6 +100,7 @@ Before anything else, read this line:
 | Signature in the log | Class | Meaning / action |
 |---|---|---|
 | `raw HID interfaces present: 0` + every test fails `Raw HID interface not found` | **no-enumeration** | The master never enumerated its raw HID interface. NOT a display/font/keymap change (USB inits before rendering). Rig USB/flash/boot wedged or slow → **re-run**; if it persists across re-runs the rig needs physical attention (reseat/power-cycle a half), not a code fix. |
+| **No `[test]` line at all**; log ends at `Prepare all required actions` | **rig network / setup** | The job never ran. See §1.5 — the runner cannot reach `codeload.github.com` to fetch an action. One re-run is allowed; a second identical failure is real and there is nothing in the PR to fix. |
 | An early read (e.g. `GET_ID #2`, a layer/keymap read) times out (`None`), **everything after passes** | **boot-burst flake** | The async slave-connect render burst (~5 s stall) landed on an early test. It *wanders* onto a different adjacent test pair each run. `need=15` settle usually rides past it; a lone straggler → **re-run**. |
 | One test fails on a **wrong value** (`status 0xNN != expected`, byte mismatch — a *response*, not a timeout), everything else passes | **stale rig test** | A rig-side mirror of a firmware constant/enum drifted. Compare the firmware source to the rig's mirror and fix the **ctnd** test, not the firmware. (2026-07: `POLY_OS_COUNT` was 6 on the rig but the firmware enum grew to 8 — `SET_OS(6)`=GNOME is valid, so the "invalid" probe wrongly ACKed.) |
 | Broad failures with genuinely wrong data / NACKs where ACK expected across many commands | **real firmware bug** | Investigate the PR diff. This is the rare case the HIL suite exists to catch. |
@@ -90,6 +131,8 @@ flag rig). One or two sentences per point.
 
 ## Pitfalls
 
+- **No settle line at all? You are in §1.5, not step 2.** Every class in the
+  table presupposes the suite ran; a setup failure produces no log to classify.
 - **Read the settle line before diagnosing.** `need=3` = stale rig; fixing the
   firmware/test is wasted effort until the rig is current.
 - **Re-running a stale rig reproduces the same red.** Get the rig current first.

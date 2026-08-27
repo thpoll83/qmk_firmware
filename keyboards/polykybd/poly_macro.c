@@ -10,6 +10,10 @@
 #include "send_string.h"
 
 #include "base/macro_decode.h"
+#include "split_sync.h"      // POLY_KEYMAP_OP_MACRO_LABEL, sync_succeeded()
+#include "bridge_helper.h"   // send_to_bridge()
+#include <transactions.h>    // USER_SYNC_DYNAMIC_KEYMAP_DATA
+#include "polymod_crc32.h"
 
 // The label array must not overlap the bodies, and both must stay inside the region
 // QMK sized. If a later edit to POLY_MACRO_LABEL_LEN or the count breaks either, the
@@ -57,37 +61,115 @@ void poly_macro_write(uint16_t offset, uint16_t size, const uint8_t *data) {
 // ---------------------------------------------------------------------------
 // Labels
 
+// Push ONE macro label to the slave over the dynamic-keymap transaction.
+//
+// Classified with sync_succeeded() rather than bool-tested: send_to_bridge returns the
+// byte the slave SAID, and every possible return is non-zero, so `if(!send_to_bridge())`
+// is dead code (the 2026-06-18 stuck-slave bug). Returning the verdict lets the caller
+// keep the label queued and re-send, which is what makes the dirty mask a retry queue.
+bool poly_macro_label_bridge(uint8_t id, const char *label) {
+    dynamic_keymap_sync_t msg = {0};
+    msg.commands[0] = POLY_KEYMAP_OP_MACRO_LABEL;
+    msg.commands[1] = id;
+    uint8_t n = 0;
+    for (; n < POLY_MACRO_LABEL_LEN && label[n] != '\0'; n++) {
+        msg.commands[2 + n] = (uint8_t)label[n];
+    }
+    // 2 header bytes + the full stride, so the payload size is constant and a shorter
+    // label cannot leave stale bytes from a previous send in the tail.
+    const uint8_t payload = (uint8_t)(sizeof(uint32_t) + 2 + POLY_MACRO_LABEL_LEN);
+    msg.crc32 = crc32_1byte(msg.commands, (uint8_t)(payload - sizeof(uint32_t)), 0);
+    return sync_succeeded(send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, &msg, payload, 3));
+}
+
+
+// RAM cache, on both halves. 192 B buys two things: the render path never touches
+// EEPROM (it runs for every macro keycap on every refresh), and the slave -- whose own
+// EEPROM never sees a macro -- has somewhere to put what the master pushes it.
+static char     s_labels[POLY_MACRO_COUNT][POLY_MACRO_LABEL_LEN];
+static uint16_t s_label_dirty;   // one bit per macro, master -> slave send queue
+
+_Static_assert(POLY_MACRO_COUNT <= 16, "the dirty mask is 16 bits wide");
+
+static uint16_t label_addr(uint8_t id) {
+    return (uint16_t)(POLY_MACRO_LABEL_ADDR + (uint16_t)id * POLY_MACRO_LABEL_LEN);
+}
+
+void poly_macro_labels_load(void) {
+    for (uint8_t id = 0; id < POLY_MACRO_COUNT; id++) {
+        const uint16_t base = label_addr(id);
+        for (uint8_t n = 0; n < POLY_MACRO_LABEL_LEN; n++) {
+            s_labels[id][n] = (char)eeprom_read_byte((const uint8_t *)(uintptr_t)(base + n));
+        }
+    }
+}
+
 void poly_macro_label_get(uint8_t id, char *out) {
     if (id >= POLY_MACRO_COUNT) {
         out[0] = '\0';
         return;
     }
-    const uint16_t base = POLY_MACRO_LABEL_ADDR + (uint16_t)id * POLY_MACRO_LABEL_LEN;
-    uint8_t        n    = 0;
-    for (; n < POLY_MACRO_LABEL_LEN; n++) {
-        uint8_t c = eeprom_read_byte((const uint8_t *)(uintptr_t)(base + n));
-        if (c == 0) break;
-        out[n] = (char)c;
+    uint8_t n = 0;
+    for (; n < POLY_MACRO_LABEL_LEN && s_labels[id][n] != '\0'; n++) {
+        out[n] = s_labels[id][n];
     }
     out[n] = '\0';
 }
 
-void poly_macro_label_set(uint8_t id, const char *text) {
-    if (id >= POLY_MACRO_COUNT) return;
-    const uint16_t base = POLY_MACRO_LABEL_ADDR + (uint16_t)id * POLY_MACRO_LABEL_LEN;
-    uint8_t        n    = 0;
+// Normalises into the cache: ASCII only, NUL-padded to the full stride. Shared by the
+// master (which then persists) and the slave (which does not), so the two halves can
+// never disagree about what a given label is.
+static void label_store(uint8_t id, const char *text) {
+    uint8_t n = 0;
     if (text != NULL) {
         for (const char *p = text; *p && n < POLY_MACRO_LABEL_LEN; ++p) {
             // The _Nano_ face is 0x20..0x7E. Anything else draws nothing, which on a
             // keycap is indistinguishable from a bug -- so it never gets stored.
             if ((uint8_t)*p < 0x20 || (uint8_t)*p > 0x7E) continue;
-            eeprom_update_byte((uint8_t *)(uintptr_t)(base + n), (uint8_t)*p);
-            n++;
+            s_labels[id][n++] = *p;
         }
     }
     for (; n < POLY_MACRO_LABEL_LEN; n++) {
-        eeprom_update_byte((uint8_t *)(uintptr_t)(base + n), 0);
+        s_labels[id][n] = '\0';
     }
+}
+
+void poly_macro_label_set(uint8_t id, const char *text) {
+    if (id >= POLY_MACRO_COUNT) return;
+    label_store(id, text);
+    const uint16_t base = label_addr(id);
+    for (uint8_t n = 0; n < POLY_MACRO_LABEL_LEN; n++) {
+        eeprom_update_byte((uint8_t *)(uintptr_t)(base + n), (uint8_t)s_labels[id][n]);
+    }
+    s_label_dirty |= (uint16_t)1u << id;
+}
+
+void poly_macro_label_adopt(uint8_t id, const char *text) {
+    if (id >= POLY_MACRO_COUNT) return;
+    label_store(id, text);
+}
+
+void poly_macro_labels_mark_all_dirty(void) {
+    s_label_dirty = (uint16_t)((1u << POLY_MACRO_COUNT) - 1u);
+}
+
+bool poly_macro_label_sync_tick(void) {
+    if (s_label_dirty == 0) return false;
+    for (uint8_t id = 0; id < POLY_MACRO_COUNT; id++) {
+        const uint16_t bit = (uint16_t)1u << id;
+        if (!(s_label_dirty & bit)) continue;
+        char label[POLY_MACRO_LABEL_LEN + 1];
+        poly_macro_label_get(id, label);
+        // Clear the bit only on a real ACK: send_to_bridge returns what the slave SAID,
+        // and every return value is non-zero, so it must be classified rather than
+        // bool-tested. On a give-up the bit stays set and the next pass re-sends -- the
+        // dirty mask IS the retry queue, the same shape the state diff uses.
+        if (poly_macro_label_bridge(id, label)) {
+            s_label_dirty &= (uint16_t)~bit;
+        }
+        return true;   // at most one bridge per housekeeping pass
+    }
+    return false;
 }
 
 void poly_macro_reset_all(void) {

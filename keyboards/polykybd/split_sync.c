@@ -360,6 +360,18 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     request_disp_refresh();
                     break;
                 }
+                case POLY_KEYMAP_OP_MACRO_LABEL:
+                    // RAM only on this side. The slave never persists a label: the
+                    // master owns the EEPROM copy and re-pushes every label at boot,
+                    // so a slave-side write would only be a second thing to go stale.
+                    {
+                        char label[POLY_MACRO_LABEL_LEN + 1];
+                        memcpy(label, &command_data[1], POLY_MACRO_LABEL_LEN);
+                        label[POLY_MACRO_LABEL_LEN] = '\0';
+                        poly_macro_label_adopt(command_data[0], label);
+                        request_disp_refresh();
+                    }
+                    break;
                 case id_custom_save: //handle the same way
                 case 'P':
                     if(command_data[0]==14) {

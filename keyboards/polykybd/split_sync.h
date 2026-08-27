@@ -95,6 +95,21 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
 void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode);
 void dynamic_keymap_reset_poly(void);
 
+// Macro labels ride the DYNAMIC KEYMAP transaction rather than spending one of the 32
+// split-transaction slots (config.h explains how close to the cap that table is). That
+// handler is already op-dispatched on commands[0], so a private op costs nothing --
+// this is the same multiplexing the MRU snapshots and the doom mirror do on
+// USER_SYNC_OVERLAY_MAP_DATA.
+//
+// The value sits well clear of every VIA id the handler already matches
+// (id_dynamic_keymap_set_keycode 0x05, _reset 0x06, id_custom_save 0x09,
+// _set_buffer 0x13, plus the private 'P' 0x50) and below id_unhandled 0xFF.
+#define POLY_KEYMAP_OP_MACRO_LABEL 0xB1
+
+// Push one macro label to the slave. Returns true only on a real ACK -- callers use
+// that to decide whether to keep the label queued.
+bool poly_macro_label_bridge(uint8_t id, const char *label);
+
 void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
 // Handles incoming overlay mapping data on bridge with CRC32 validation.

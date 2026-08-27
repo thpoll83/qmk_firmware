@@ -46,14 +46,37 @@ void poly_macro_reset_all(void);
 // ---------------------------------------------------------------------------
 // Labels
 
+// Labels live in a RAM cache on BOTH halves, not just in EEPROM. Two reasons, and the
+// second is the binding one: the render path reads a label for every macro keycap on
+// every refresh, and the slave has no other way to know them at all -- the host writes
+// macros to the master, and the slave's own EEPROM never sees them.
+//
 // Copies macro `id`'s label into `out` as a NUL-terminated string. `out` must hold at
 // least POLY_MACRO_LABEL_LEN + 1 bytes. An empty label yields "".
 void poly_macro_label_get(uint8_t id, char *out);
 
-// Stores up to POLY_MACRO_LABEL_LEN bytes, NUL-padded. Non-ASCII bytes are dropped:
-// the _Nano_ face covers 0x20..0x7E only, so anything else would render as nothing and
-// read as a bug. Rejecting at the door means what is stored is what is drawable.
+// Stores up to POLY_MACRO_LABEL_LEN bytes, NUL-padded, and queues it for the slave.
+// Non-ASCII bytes are dropped: the _Nano_ face covers 0x20..0x7E only, so anything else
+// would render as nothing and read as a bug. Rejecting at the door means what is stored
+// is what is drawable.
 void poly_macro_label_set(uint8_t id, const char *text);
+
+// Fill the RAM cache from EEPROM. Master only -- called once at boot.
+void poly_macro_labels_load(void);
+
+// Slave side: adopt a label pushed over the split link. RAM only; the slave never
+// persists a label, because the master is authoritative and re-pushes every boot.
+void poly_macro_label_adopt(uint8_t id, const char *text);
+
+// Master side: push at most ONE queued label to the slave. Call from housekeeping --
+// never inline in the HID handler, where sixteen bridges of up to ten retries each
+// would be seconds of dead main loop on exactly the bad link that needed the retries.
+// Returns true when it sent something, so the caller can see the queue draining.
+bool poly_macro_label_sync_tick(void);
+
+// Queue every label for the slave. Used at boot, once the link is up: the slave comes
+// up with an empty cache and nothing else would ever fill it.
+void poly_macro_labels_mark_all_dirty(void);
 
 // ---------------------------------------------------------------------------
 // Playback

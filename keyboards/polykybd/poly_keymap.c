@@ -155,6 +155,7 @@ const struct display_info disp_row_3 = { POLY_DISP_ROW_3 };
 
 
 bool display_wakeup(keyrecord_t* record);
+static void render_macro_key(uint8_t id);   // defined below, used from render_key()
 void update_displays(enum refresh_mode mode);
 void set_displays(uint8_t contrast, bool idle);
 void set_selected_displays(int8_t old_value, int8_t new_value);
@@ -977,6 +978,13 @@ void housekeeping_task_user(void) {
     // so it must not be starved by a flash or by the idle machinery, and a step that
     // took the long way round would show up as uneven keystroke timing on the host.
     poly_macro_tick();
+
+    // Drain at most one queued macro label to the slave. Master-only (the slave is the
+    // receiver), and one per pass because each bridge can spend its retries -- sixteen
+    // of them back to back would be a visible stall on a link that is already unhappy.
+    if (is_keyboard_master()) {
+        poly_macro_label_sync_tick();
+    }
 
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
@@ -2277,6 +2285,14 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         }
     }
 
+    // Macro keys draw their own cell: the index, and the label along the bottom edge.
+    // Reached because to_static_text() has no case for QK_MACRO_*, which is exactly the
+    // seam update_displays() uses -- a key WITH a legend never gets here.
+    if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
+        render_macro_key((uint8_t)(keycode - QK_MACRO));
+        return true;
+    }
+
     if (mods & MOD_RALT) {
         const uint32_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
@@ -2551,6 +2567,85 @@ static void render_fw_confirm_key(bool accept) {
                                (int8_t)(BUFFER_X + (SCREEN_WIDTH - lw) / 2),
                                (int8_t)((free_rows - lh) / 2),
                                letter);
+}
+
+// Compose a macro keycap: the macro's index above, its label along the bottom edge.
+//
+// Same split as render_lang_flag_key -- identity on top, a tiny _Nano_ caption below --
+// because it is the shape this board already uses for "what is this, and which one".
+// The INDEX rather than a generic macro glyph: a generic glyph would be identical on
+// all sixteen keys, so it says "this is a macro" and nothing else, while the index says
+// which one and needs no font pack (the pack glyphs are the one thing a fresh keyboard
+// might not have). When a label is set it carries the meaning and the index shrinks
+// out of the way; when it is not, the index is all there is, so it takes the cell.
+//
+// The label is truncated by MEASURED WIDTH, never by character count: in this face a
+// 'W' is about three times an 'i', so a fixed cut either clips a wide label off the
+// panel or wastes half the band on a narrow one. The host runs the same measurement in
+// its editor, so what you type is what the keycap shows.
+static void render_macro_key(uint8_t id) {
+    char label[POLY_MACRO_LABEL_LEN + 1];
+    poly_macro_label_get(id, label);
+
+    // "M12" -- built by hand rather than snprintf, which is not worth linking for two
+    // digits, and the display list wants uint32_t codepoints anyway.
+    uint32_t index_text[4];
+    uint8_t  n = 0;
+    index_text[n++] = (uint32_t)'M';
+    if (id >= 10) index_text[n++] = (uint32_t)('0' + id / 10);
+    index_text[n++] = (uint32_t)('0' + id % 10);
+    index_text[n]   = 0;
+
+    if (label[0] == '\0') {
+        // No label: centre the index in the whole cell.
+        int8_t ixmin, ixmax, iymin, iymax;
+        kdisp_gfx_text_bbox(mid_fonts, 1, index_text, &ixmin, &ixmax, &iymin, &iymax);
+        kdisp_write_gfx_text(mid_fonts, 1,
+                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - (ixmax - ixmin + 1)) / 2 - ixmin),
+                             (int8_t)((SCREEN_HEIGHT - (iymax - iymin + 1)) / 2 - iymin),
+                             index_text);
+        return;
+    }
+
+    // Widen to codepoints, then drop trailing characters until the run fits the panel.
+    // Measuring after each drop rather than estimating from a per-character width is
+    // the point -- the face is proportional, so an estimate is wrong in both directions.
+    uint32_t text[POLY_MACRO_LABEL_LEN + 1];
+    uint8_t  len = 0;
+    for (; label[len] != '\0' && len < POLY_MACRO_LABEL_LEN; len++) {
+        text[len] = (uint32_t)(uint8_t)label[len];
+    }
+    text[len] = 0;
+
+    int8_t lxmin = 0, lxmax = 0, lymin = 0, lymax = 0;
+    while (len > 0) {
+        kdisp_gfx_text_bbox(lang_label_fonts, 1, text, &lxmin, &lxmax, &lymin, &lymax);
+        if ((int16_t)(lxmax - lxmin + 1) <= SCREEN_WIDTH) break;
+        text[--len] = 0;
+    }
+    if (len == 0) return;
+
+    // Pin the caption's lowest lit pixel to the last screen row, exactly as the FW-2
+    // prompt does -- the descender budget differs per string, so a fixed baseline
+    // clips whichever label happens to carry a 'y'.
+    const int8_t cap_base  = (int8_t)(SCREEN_HEIGHT - 1 - lymax);
+    const int8_t free_rows = (int8_t)(cap_base + lymin);   // rows above the caption
+
+    kdisp_write_gfx_text(lang_label_fonts, 1,
+                         (int8_t)(BUFFER_X + (SCREEN_WIDTH - (lxmax - lxmin + 1)) / 2 - lxmin),
+                         cap_base, text);
+
+    // The index, centred in whatever the caption left. Skipped rather than squeezed if
+    // a tall label leaves no room -- a clipped index is worse than none.
+    int8_t ixmin, ixmax, iymin, iymax;
+    kdisp_gfx_text_bbox(mid_fonts, 1, index_text, &ixmin, &ixmax, &iymin, &iymax);
+    const int8_t ih = (int8_t)(iymax - iymin + 1);
+    if (ih < free_rows) {
+        kdisp_write_gfx_text(mid_fonts, 1,
+                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - (ixmax - ixmin + 1)) / 2 - ixmin),
+                             (int8_t)((free_rows - ih) / 2 - iymin),
+                             index_text);
+    }
 }
 
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
@@ -4414,6 +4509,16 @@ static void boot_trace(const uint32_t* digit) {
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
 // Global variables: com
 void keyboard_post_init_user(void) {
+    // Labels live in RAM on both halves (the render path reads one per macro keycap per
+    // refresh). Each half loads its own EEPROM copy, then the master overwrites the
+    // slave's over the link -- so a role swap makes whichever half the host talks to
+    // the authority, with no handedness bookkeeping.
+    poly_macro_labels_load();
+    // Queue them all. Nothing detects "the link is up" here and nothing needs to: the
+    // sync tick only clears a label's bit on a real ACK, so the queue simply drains
+    // once the slave starts answering. Same shape as the state diff being its own
+    // retry queue.
+    poly_macro_labels_mark_all_dirty();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"1");
 #endif

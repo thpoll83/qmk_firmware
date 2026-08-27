@@ -2225,6 +2225,11 @@ knowing is the parts that are NOT what you would write from scratch:
   the host's layout editor, so a user who never opens it pays nothing — and `via.c` is
   the only core dispatcher for that range, which we do not compile, so the keycodes
   are ours outright.
+- **Cost: 208 B of RAM** (the 192 B label cache + the playback state), 0 B of EEPROM
+  beyond the reclaim above. ⚠️ Verified against the **monolithic `POLYKYBD_DOOM=yes`**
+  flavour, which PR CI does not build and which is the first thing to fail on any RAM
+  growth: `.heap` 3828 → **3620 B** free. Re-measure there, not on the pack build,
+  before adding another static.
 
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 

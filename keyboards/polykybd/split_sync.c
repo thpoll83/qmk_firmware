@@ -16,6 +16,7 @@
 #include "eeprom.h"
 #include "nvm_eeprom_eeconfig_internal.h"
 #include "dynamic_keymap.h"
+#include "keymap_introspection.h"   // keycode_at_keymap_location_raw() for the capped reset
 #include "poly_keymap.h"   // poly_fl_row_cache_invalidate()
 #include "base/com.h"
 #include "base/disp_array.h"
@@ -266,6 +267,19 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 
 _Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COUNT, "Maximum cannot exceed DYNAMIC_KEYMAP_LAYER_COUNT");
 
+// The reclaim in config.h is only sound while the encoder/macro regions really do sit
+// at the WRITE CAP rather than at DYNAMIC_KEYMAP_LAYER_COUNT. Pin both, so a future
+// edit to either constant fails the build instead of silently handing the macro buffer
+// back to storage nothing reads.
+_Static_assert(DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR ==
+                   DYNAMIC_KEYMAP_EEPROM_ADDR +
+                       (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2),
+               "encoder map must be based on the write cap, not DYNAMIC_KEYMAP_LAYER_COUNT");
+_Static_assert(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR >
+                   DYNAMIC_KEYMAP_EEPROM_ADDR +
+                       (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2),
+               "macro buffer must start above the capped keymap region");
+
 // Writes data to EEPROM at specified offset within the dynamic keymap region with bounds checking.
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data) {
     uint16_t max = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
@@ -288,8 +302,36 @@ void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column,
 // function and none can forget the cache invalidation. Deliberately a wrapper rather
 // than a list of "remember to also call this here" call sites — that is the guard
 // shape this codebase keeps getting caught by.
+//
+// ⚠️ This deliberately does NOT call QMK's dynamic_keymap_reset(). That one loops to
+// DYNAMIC_KEYMAP_LAYER_COUNT (12) and writes through nvm_dynamic_keymap_update_keycode(),
+// whose bound check is the same 12 — so with the encoder/macro regions rebased on the
+// 8-layer offset (config.h) it writes layers 8..11 straight over them. Walking the write
+// cap instead is also what the reclaim is FOR: those four layers are served from flash
+// by poly_keycode_at(), so storing them was only ever paying rent on unread bytes.
+//
+// The encoder map is reset over the same capped range for the same reason. The macro
+// buffer is zeroed because a keymap reset is exactly when a stale macro body would
+// otherwise survive — and because this is the repair path for QMK's unbounded reset
+// (eeconfig_init_kb, poly_keymap.c).
 void dynamic_keymap_reset_poly(void) {
-    dynamic_keymap_reset();
+    for (uint8_t layer = 0; layer < DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT; layer++) {
+        for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+            for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+                dynamic_keymap_set_keycode(layer, row, col,
+                                           keycode_at_keymap_location_raw(layer, row, col));
+            }
+        }
+#ifdef ENCODER_MAP_ENABLE
+        for (uint8_t enc = 0; enc < NUM_ENCODERS; enc++) {
+            dynamic_keymap_set_encoder(layer, enc, true,
+                                       keycode_at_encodermap_location_raw(layer, enc, true));
+            dynamic_keymap_set_encoder(layer, enc, false,
+                                       keycode_at_encodermap_location_raw(layer, enc, false));
+        }
+#endif
+    }
+    dynamic_keymap_macro_reset();
     poly_fl_row_cache_invalidate();
 }
 

@@ -4510,7 +4510,7 @@ void keyboard_post_init_user(void) {
     // user datablock and the keymap are separate blocks with separate lifetimes —
     // the keymap survives a user-data re-init, which is exactly the case that would
     // otherwise slip through.
-    if (ee.keymap_layers_fmt != KEYMAP_LAYERS_FL_MERGED) {
+    if (ee.keymap_layers_fmt != KEYMAP_STORAGE_CURRENT) {
         uprintf("Keymap layer enum changed (fmt %u) - resetting dynamic keymap\n",
                 (unsigned)ee.keymap_layers_fmt);
         dynamic_keymap_reset_poly();
@@ -4708,6 +4708,29 @@ void keyboard_pre_init_user(void) {
 #endif
 
     gpio_set_pin_input_high(I2C1_SDA_PIN);
+}
+
+// Runs immediately after QMK's own dynamic_keymap_reset() in eeconfig_init_quantum().
+//
+// That call is the ONE remaining reachable use of the unbounded reset, and with the
+// encoder/macro regions rebased on DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT (config.h) it
+// writes layers 8..11 straight over both of them. It cannot be prevented from here --
+// eeconfig.c is upstream and we deliberately do not patch it for this -- but it CAN be
+// repaired, because eeconfig_init_quantum() calls us three lines later, unconditionally,
+// in the same function. dynamic_keymap_reset_poly() rewrites layers 0..7 and the capped
+// encoder map from flash and zeroes the macro buffer, which is exactly the state a fresh
+// EEPROM should be in, so this is the normal initialisation rather than a fix-up that
+// happens to also repair.
+//
+// Nearly free despite running second: eeprom_update_byte() only writes a byte that
+// actually changed, and QMK's pass has already put the correct values in layers 0..7.
+void eeconfig_init_kb(void) {
+    // Replicate what the weak default does before adding the repair -- overriding it
+    // replaces the whole body, and dropping either half here would be silent
+    // (eeconfig.c, EECONFIG_KB_DATA_SIZE == 0 branch).
+    eeconfig_update_kb(0);
+    dynamic_keymap_reset_poly();
+    eeconfig_init_user();
 }
 
 // Initializes EEPROM configuration with default language, brightness, and latin extension settings.

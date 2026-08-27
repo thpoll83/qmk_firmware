@@ -241,7 +241,7 @@ void save_user_latin(void) {
 // been reset by the time this is called, so losing the stamp to a power cut would cost
 // the user a SECOND reset on the next boot.
 void stamp_keymap_layers_fmt(void) {
-    const uint8_t marker = KEYMAP_LAYERS_FL_MERGED;
+    const uint8_t marker = KEYMAP_STORAGE_CURRENT;
     eeconfig_update_user_datablock(&marker, offsetof(poly_eeconf_t, keymap_layers_fmt),
                                    sizeof(marker));
 }

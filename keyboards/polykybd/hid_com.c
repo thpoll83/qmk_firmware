@@ -1119,7 +1119,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         data[3] = (uint8_t)want;
                         memcpy(&data[header], buf, want);
                         raw_hid_send(data, length);
-                    } else {
+                    } else if (sub == 1) {
                         // A write lands mid-buffer, so a macro that is being replaced
                         // is briefly inconsistent -- and an interrupted upload would
                         // otherwise leave a playable splice of the new text and
@@ -1132,6 +1132,14 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         poly_macro_write(offset, (uint16_t)want, &data[header]);
                         memset(data, 0, length);
                         hid_reply(data, 0x25, true);
+                        raw_hid_send(data, length);
+                    } else {
+                        // Anything else NACKs rather than falling into the write. The
+                        // `else` used to catch every value, so a malformed or newer
+                        // client silently modified macro EEPROM instead of being told
+                        // the sub-command means nothing here (CodeRabbit, 2026-08-27).
+                        memset(data, 0, length);
+                        hid_reply(data, 0x25, false);
                         raw_hid_send(data, length);
                     }
                 }

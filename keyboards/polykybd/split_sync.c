@@ -284,6 +284,12 @@ _Static_assert(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR >
 // unsigned arithmetic wraps to a vast size instead of erroring. Pin it here rather than
 // in config.h: that header is also read by the C++ test harness, where `_Static_assert`
 // is not the spelling.
+// Order first: the subtraction below is only meaningful once the region is known to
+// start inside the EEPROM at all. Whether a reversed pair would wrap or go negative
+// depends on the promoted type of two macros defined three headers apart, which is not
+// a thing to leave to inspection.
+_Static_assert(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR <= DYNAMIC_KEYMAP_EEPROM_MAX_ADDR,
+               "macro region starts beyond the end of EEPROM");
 _Static_assert(DYNAMIC_KEYMAP_EEPROM_MAX_ADDR - DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + 1 >
                    POLY_MACRO_LABEL_BYTES,
                "macro label carve-out does not fit the reclaimed macro region");
@@ -371,6 +377,13 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     // RAM only on this side. The slave never persists a look: the
                     // master owns the EEPROM copy and re-pushes every one at boot,
                     // so a slave-side write would only be a second thing to go stale.
+                    //
+                    // The length check is this op's own, because the CRC does not pin
+                    // it: the slave computes it over `in_len - 4`, so a short frame
+                    // validates against its own truncated payload. This op reads the
+                    // most of any here -- a whole POLY_MACRO_LOOK_LEN record -- and a
+                    // short one would install a caption built from stale buffer bytes.
+                    if (in_len < sizeof(uint32_t) + 2 + POLY_MACRO_LOOK_LEN) break;
                     {
                         poly_macro_look_t look;
                         look.style = command_data[1];

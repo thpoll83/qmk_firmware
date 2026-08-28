@@ -190,116 +190,10 @@ void copy_global_latin_table(const latin_sync_t* value) {
 }
 
 
-// Writes only lang+brightness+idle_style+unused (4 bytes) to EEPROM.
-void save_user_settings(void) {
-    const poly_eeconf_t ee = { .lang = l_state.lang, .brightness = (uint8_t)(~g_user_brightness),
-                               .idle_style = g_idle_style, .auto_brightness = pack_auto_brightness() };
-    eeconfig_update_user_datablock(&ee, 0, offsetof(poly_eeconf_t, latin_ex));
-}
-
-// Writes only the packed latin variation picks to EEPROM.
-// ⚠️ These go to latin_ex_wide, NOT the legacy latin_ex: g_latin.ex is 6-bit
-// fields, so writing it at the old 26-byte offset would run straight into
-// mru_emoji. The sentinel is stamped in the same breath, so a half-written
-// migration cannot leave the wide block claiming to be converted.
-//
-// ⚠️ The RAM table is one flat array over all LATIN_TARGETS, but EEPROM keeps the
-// letters and the punctuation in SEPARATE blocks — the letter block must keep the
-// size and offset it shipped with, or the format byte behind it moves and can no
-// longer be found (see state.h). So each write is explicitly bounded rather than
-// sizeof(g_latin.ex): the letters go to the original block, the rest to the tail.
-void save_user_latin(void) {
-    eeconfig_update_user_datablock(g_latin.ex, offsetof(poly_eeconf_t, latin_ex_wide),
-                                   LATIN_PICK_BASE_BYTES);
-    eeconfig_update_user_datablock(g_latin.assign, offsetof(poly_eeconf_t, latin_assign),
-                                   LATIN_ASSIGN_BASE_BYTES);
-    // Picks split on a byte boundary (39 = 52 fields x 6 bits), so the tail is a
-    // plain slice of the same array. Assignments do NOT (26 x 6 = 156 bits), so the
-    // punctuation ones are re-packed into their own array indexed from zero.
-    eeconfig_update_user_datablock(g_latin.ex + LATIN_PICK_BASE_BYTES,
-                                   offsetof(poly_eeconf_t, latin_ex_ext),
-                                   LATIN_PICK_EXT_BYTES);
-    uint8_t assign_ext[LATIN_ASSIGN_EXT_BYTES] = {0};
-    for(uint8_t i = 0; i < LATIN_PUNCT_TARGETS; i++) {
-        latin_bits_set(assign_ext, LATIN_ASSIGN_EXT_BYTES, i,
-                       latin_bits_get(g_latin.assign, LATIN_ASSIGN_BYTES,
-                                      (uint8_t)(LATIN_LETTER_TARGETS + i)));
-    }
-    eeconfig_update_user_datablock(assign_ext, offsetof(poly_eeconf_t, latin_assign_ext),
-                                   sizeof(assign_ext));
-    // Stamp the format versions LAST, so an interrupted write can never leave a
-    // block claiming a layout it does not have.
-    const uint8_t marker = LATIN_PICK_ASSIGN_OK;
-    eeconfig_update_user_datablock(&marker, offsetof(poly_eeconf_t, latin_pick_migrated),
-                                   sizeof(marker));
-    const uint8_t ext_marker = LATIN_EXT_OK;
-    eeconfig_update_user_datablock(&ext_marker, offsetof(poly_eeconf_t, latin_ext_fmt),
-                                   sizeof(ext_marker));
-}
-
-// Record that the stored dynamic keymap now matches this build's layer enum. Written
-// straight through rather than via the dirty-flag/suspend path: the keymap has already
-// been reset by the time this is called, so losing the stamp to a power cut would cost
-// the user a SECOND reset on the next boot.
-void stamp_keymap_layers_fmt(void) {
-    const uint8_t marker = KEYMAP_STORAGE_CURRENT;
-    eeconfig_update_user_datablock(&marker, offsetof(poly_eeconf_t, keymap_layers_fmt),
-                                   sizeof(marker));
-}
-
-// Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.
-void save_user_eeconf(void) {
-    save_user_settings();
-    save_user_latin();
-}
-
-// Writes the MRU blob (emoji + lang recents) to EEPROM, but only when it changed
-// since the last load/save. Keeps the write off the hot path so flash wear and
-// the ~50 ms consolidation erase only ever happen on a real suspend.
-void save_user_mru_if_dirty(void) {
-    if (!mru_dirty()) {
-        return;
-    }
-    uint8_t packed[MRU_EMOJI_PACKED];
-    mru_emoji_pack(packed);
-    eeconfig_update_user_datablock(packed, offsetof(poly_eeconf_t, mru_emoji), MRU_EMOJI_PACKED);
-    uint8_t lang_packed[MRU_CAP];
-    mru_lang_pack(lang_packed);
-    eeconfig_update_user_datablock(lang_packed, offsetof(poly_eeconf_t, mru_lang),
-                                   MRU_CAP * sizeof(uint8_t));
-    mru_clear_dirty();
-}
-
-// Loads the persisted MRU lists from EEPROM into the RAM lists.
-void load_user_mru(void) {
-    poly_eeconf_t ee;
-    eeconfig_read_user_datablock(&ee, 0, sizeof(ee));
-    mru_load(ee.mru_emoji, ee.mru_lang);
-}
-
-// Loads user keyboard configuration from EEPROM with brightness validation against maximum.
-// Global variables: (none - returns result)
-poly_eeconf_t load_user_eeconf(void) {
-    poly_eeconf_t ee;
-    eeconfig_read_user_datablock(&ee, 0, sizeof(ee));
-    ee.brightness = ~ee.brightness;
-    if(ee.brightness>FULL_BRIGHT) {
-        ee.brightness = FULL_BRIGHT;
-    }
-    if(ee.idle_style >= IDLE_STYLE_COUNT) {
-        ee.idle_style = IDLE_STYLE_PULSE;   // unwritten/garbage EEPROM -> safe default
-    }
-    if(ee.glyph_script == 0xFF) {
-        ee.glyph_script = GLYPH_STD;        // erased/uninitialised EEPROM byte -> normal legends
-    }
-    // Any other value is kept verbatim (a glyph-script INDEX). An index this
-    // firmware doesn't know renders the normal legend; keeping it means the choice
-    // survives a firmware/font-pack update that later adds that script.
-    if(ee.glyph_size >= GLYPH_SIZE_COUNT) {
-        ee.glyph_size = GLYPH_SIZE_S;       // unwritten/garbage EEPROM -> the original face
-    }
-    return ee;
-}
+// The EEPROM block I/O — everything that knows the poly_eeconf_t offsets and
+// calls eeconfig_* — lives in state_store.c (the persistence half of this
+// module); this file owns the RAM state, the policy and the dirty flags, and
+// the store reads the values it persists through the public getters.
 
 // Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT.
 // EEPROM write is deferred to the next flush (suspend / store key) via the dirty flag.
@@ -580,6 +474,11 @@ void mark_boot_intro_done(void) {
     g_boot_dirty = true;
 }
 
+// The raw boot_flags byte, for the persistence half (save_user_boot_flags).
+uint8_t get_boot_flags(void) {
+    return g_boot_flags;
+}
+
 // ---- Active host-OS (enum poly_os) ----
 
 // The OS in effect: the manual pin while pinned, else the last resolved OS in auto
@@ -658,36 +557,6 @@ void load_os_state(uint8_t packed) {
     if (val == POLY_OS_IOS) { val = POLY_OS_MACOS; }
     if (g_os_auto) g_resolved_os = g_os_known ? val : (uint8_t)POLY_OS_UNKNOWN;
     else           g_user_os     = g_os_known ? val : (uint8_t)POLY_OS_UNKNOWN;
-}
-
-// Writes the single os_state byte to EEPROM. Separate from save_user_settings()
-// because os_state sits at the end of poly_eeconf_t (the former alignment byte),
-// not in the contiguous lang/brightness/idle/auto settings block.
-static void save_user_os(void) {
-    uint8_t packed = pack_os_state();
-    eeconfig_update_user_datablock(&packed, offsetof(poly_eeconf_t, os_state), sizeof(packed));
-}
-
-// Writes the single glyph_script byte to EEPROM. Separate from save_user_settings()
-// because glyph_script sits at the tail of poly_eeconf_t, not in the contiguous
-// lang/brightness/idle/auto settings block.
-static void save_user_glyph_script(void) {
-    eeconfig_update_user_datablock(&g_glyph_script, offsetof(poly_eeconf_t, glyph_script),
-                                   sizeof(g_glyph_script));
-}
-
-// Writes just the boot-intro marker tail byte (like glyph_script, it sits at the
-// tail of poly_eeconf_t, not in the contiguous settings block).
-// Writes the single glyph_size byte to EEPROM — same reasoning as
-// save_user_glyph_script(): it is a tail byte, not part of the settings block.
-static void save_user_glyph_size(void) {
-    eeconfig_update_user_datablock(&g_glyph_size, offsetof(poly_eeconf_t, glyph_size),
-                                   sizeof(g_glyph_size));
-}
-
-static void save_user_boot_flags(void) {
-    eeconfig_update_user_datablock(&g_boot_flags, offsetof(poly_eeconf_t, boot_flags),
-                                   sizeof(g_boot_flags));
 }
 
 // Defers a default-layer EEPROM write — safe to call from split sync handlers.

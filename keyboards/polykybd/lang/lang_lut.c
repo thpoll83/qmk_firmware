@@ -14,7 +14,6 @@
 #include "quantum.h"
 
 #include "../state.h"
-#include "../hid_com.h"
 
 static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*[[[cog

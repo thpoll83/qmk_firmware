@@ -145,8 +145,11 @@ void kdisp_set_gfx_scanline2(bool scanline) {
 // so kdisp_write_gfx_char blits whole vertical bytes straight from flash. The old
 // runtime column-transpose cache (kdisp_set_base_colcache_font / s_colcache) is
 // gone — the data is already in the buffer's layout on disk.
-GFXglyph *pgm_read_glyph_ptr(const GFXfont *font, uint32_t c);  // defined below
-uint8_t  *pgm_read_bitmap_ptr(const GFXfont *font);             // defined below
+// pgm_read_glyph_ptr / pgm_read_bitmap_ptr, the glyph lookup
+// (kdisp_gfx_glyph_font / kdisp_gfx_glyph) and the display-list-aware bounding
+// box moved to base/font_lookup.h/.c (unit-tested on the host, see
+// base/tests/font_bbox_tests.cpp); this file keeps the draw paths and the
+// kdisp_gfx_text_bbox wrapper binding s_mid_font.
 
 uint8_t* get_scratch_buffer(void) {
     return scratch_buffer;
@@ -154,65 +157,6 @@ uint8_t* get_scratch_buffer(void) {
 
 int16_t get_scratch_buffer_size(void) {
     return BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT;
-}
-
-inline GFXglyph *pgm_read_glyph_ptr(const GFXfont *font, uint32_t c) {
-#ifdef __AVR__
-    return &(((GFXglyph *)pgm_read_pointer(&font->glyph))[c]);
-#else
-    // expression in __AVR__ section may generate "dereferencing type-punned
-    // pointer will break strict-aliasing rules" warning In fact, on other
-    // platforms (such as STM32) there is no need to do this pointer magic as
-    // program memory may be read in a usual way So expression may be simplified
-    return font->glyph + c;
-#endif  //__AVR__
-}
-
-inline uint8_t *pgm_read_bitmap_ptr(const GFXfont *font) {
-#ifdef __AVR__
-    return (uint8_t *)pgm_read_pointer(&font->bitmap);
-#else
-    // expression in __AVR__ section generates "dereferencing type-punned pointer
-    // will break strict-aliasing rules" warning In fact, on other platforms (such
-    // as STM32) there is no need to do this pointer magic as program memory may
-    // be read in a usual way So expression may be simplified
-    return font->bitmap;
-#endif  //__AVR__
-}
-
-// Locate the glyph for codepoint `ch` in a font set, scanning front-to-back and
-// skipping empty (0x0) gap glyphs, exactly like the renderer's own lookup.
-// Returns NULL when no font actually covers `ch` (no '!' fallback) — callers use
-// this both to test coverage and to read glyph metrics. Used by the language
-// layer to draw a country flag only when the font pack supplying it is present.
-// As kdisp_gfx_glyph(), but also reports the font that owns the glyph (when
-// out_font != NULL). The language layer uses this to redraw the flag through a
-// single-font array { flag_font }: kdisp_write_gfx_char baseline-aligns every
-// glyph to fonts[0]->yAdvance, so drawing a pack font via the full g_all_fonts
-// (fonts[0] == IconsFont) shifts it by their yAdvance difference — passing the
-// owning font alone makes that adjustment zero.
-const GFXglyph *kdisp_gfx_glyph_font(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t ch,
-                                     const GFXfont **out_font) {
-    for (uint8_t idx = 0; idx < num_fonts; ++idx) {
-        const GFXfont *f = fonts[idx];
-        uint32_t first = pgm_read_dword(&f->first);
-        uint32_t last  = pgm_read_dword(&f->last);
-        if (ch >= first && ch <= last) {
-            const GFXglyph *gg = pgm_read_glyph_ptr(f, ch - first);
-            if (pgm_read_byte(&gg->width) == 0 && pgm_read_byte(&gg->height) == 0 &&
-                pgm_read_byte(&gg->xAdvance) == 0) {
-                continue;  // non-contiguous-range padding; a later font may have it
-            }
-            if (out_font) *out_font = f;
-            return gg;
-        }
-    }
-    if (out_font) *out_font = NULL;
-    return NULL;
-}
-
-const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t ch) {
-    return kdisp_gfx_glyph_font(fonts, num_fonts, ch, NULL);
 }
 
 // Blit a glyph at half resolution (2x2-OR downsample) with its top-left at buffer
@@ -684,14 +628,6 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
     return pgm_read_byte(&glyph->xAdvance);
 }
 
-// Floor division by two. Glyph offsets are negative (above the baseline) and C
-// truncates toward zero, which would round those the wrong way and put a lowercase
-// glyph 1px off its run's baseline. Written out rather than `>> 1` because a right
-// shift of a negative value is only arithmetic by implementation guarantee.
-static inline int16_t half_floor(int16_t v) {
-    return (int16_t)((v >= 0) ? (v / 2) : -((int16_t)(((-v) + 1) / 2)));
-}
-
 // Half-scale sibling of kdisp_write_gfx_char, with the SAME baseline and advance
 // semantics — so a run of them lays out as text. This is what HINT_SMALL (\x10)
 // switches the text writer into, and it is the only way to get a smaller face onto
@@ -716,8 +652,8 @@ static int8_t kdisp_write_gfx_char_half(const GFXfont *const *fonts, uint8_t num
     const int16_t  xo = (int16_t)(int8_t)pgm_read_byte(&glyph->xOffset);
     const int16_t  yo = (int16_t)(int8_t)pgm_read_byte(&glyph->yOffset);
     const int16_t  yadj = (int16_t)pgm_read_byte(&font->yAdvance) - (int16_t)pgm_read_byte(&fonts[0]->yAdvance);
-    const int16_t  gx0 = (int16_t)(x + half_floor(xo));
-    const int16_t  gy0 = (int16_t)(y + half_floor((int16_t)(yadj + yo)));
+    const int16_t  gx0 = (int16_t)(x + glyph_half_floor(xo));
+    const int16_t  gy0 = (int16_t)(y + glyph_half_floor((int16_t)(yadj + yo)));
     const int16_t  hw = (int16_t)((w + 1) / 2), hh = (int16_t)((h + 1) / 2);
     const uint8_t  cb = glyph_col_bytes((uint8_t)h);
     for (int16_t dy = 0; dy < hh; ++dy) {
@@ -902,121 +838,11 @@ void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int
 
 void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,
                          int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax) {
-    // Cursor relative to the draw origin: x from 0, y from the baseline (0). Mirrors
-    // every cursor rule of kdisp_write_gfx_text_cy, including the vertical controls,
-    // so the measured box matches what would actually be drawn — both axes.
-    int16_t x = 0, y = 0;
-    int16_t xmn = 127, xmx = -128, ymn = 127, ymx = -128;
-    const int16_t base_yadv = pgm_read_byte(&fonts[0]->yAdvance);
-    bool small = false;
-    // HINT_MID (\x16) swaps the font array for the rest of the run, exactly as the
-    // draw does — and, exactly as the draw does, PER GLYPH: the mid face is
-    // ASCII-only and anything outside it falls back to the caller's pool. The
-    // baseline reference has to follow that per-glyph choice, because the draw
-    // aligns by `font->yAdvance - fonts[0]->yAdvance` and fonts[0] is the mid face
-    // only for the glyphs the mid face supplied. Using one base for the whole run
-    // would report every fallback glyph shifted by the difference between the faces.
-    bool mid   = false;
-    while (*text != 0) {
-        switch (*text) {
-            case U'\x05':                     y += 2; break; // down 2px
-            case U'\f':                       y = y > 1 ? y - 2 : 0; break; // up 2px
-            case U'\v':                       y += ((y) / 15 + 1) * 15; break;
-            case U'\x18':                     x = 0; y = 0; break; // cancel -> origin
-            case U'\r':                       x = 0; break;
-            case U'\b':                       x = x > 1 ? x - 2 : 0; break;
-            case U'\x06':                     x += 2; break; // nudge right 2px
-            case U'\t':                       x += ((x) / 36 + 1) * 36; break;
-            case U'\n':                       y += base_yadv; x = 0; break;
-            // ---- the hint display-list ops, mirrored so their ARGUMENT codepoints are
-            //      not measured as glyphs. Without this each op byte and each argument
-            //      falls into `default:`, matches no font and is substituted with '!',
-            //      so a legend carrying one MOVE measured three bogus glyphs.
-            //      \x0E is an ABSOLUTE buffer position, which this relative-to-origin
-            //      measurement cannot resolve; skipping it is strictly better than
-            //      measuring '!', but a MOVE'd legend's box still only covers the part
-            //      of it that is laid out relatively.
-            case U'\x10':                    small = true; break;   // SMALL: rest of the run is half-scale
-            case U'\x16':                                            // MID: rest of the run is the 19px UI face
-                mid = true;                                          //   (per glyph — see the fallback below)
-                break;
-            case U'\x0F':                                           // HALF / THIN composite a glyph at the
-            case U'\x11': if (text[1]) text += 1; break;            //   cursor and do not advance
-            case U'\x15': if (text[1] && text[2]) text += 2; break;            // ROT (angle, glyph)
-            case U'\x0E':   // MOVE (x,y): the cursor lands on an ABSOLUTE buffer position, which
-                             //   this relative-to-origin measurement cannot resolve — so the move
-                             //   itself is ignored and a MOVE'd legend's box covers only the part
-                             //   laid out relatively. Its two ARGUMENTS are still skipped.
-                             //
-                             //   ⚠️ They MUST be, and this used to fall through to \x14 and skip
-                             //   nothing. A coordinate is an arbitrary byte, so it lands in this
-                             //   very switch on the next iteration: 13 of the 31 HINT_POS_* /
-                             //   HINT_SZ_* / MTB_* macros carry a byte that is also an op
-                             //   (HINT_SZ_STOPSQ is 15,15 = \x0F \x0F, i.e. HALF HALF). Before,
-                             //   that mis-measured a glyph; once \x15/\x16 existed it could
-                             //   silently latch a font for the rest of the run or eat two real
-                             //   codepoints. Skipping the arguments closes the whole class,
-                             //   including for any op added later.
-                if (text[1] && text[2]) text += 2;
-                break;
-            case U'\x14':                    /* ERASE: a mode, no extent */ break;
-            case U'\x13': if (text[1] && text[2] && text[3]) text += 3; break;  // BADGE (w,h,style)
-            case U'\x12': if (text[1] && text[2]) text += 2; break;             // FRAME (w,h)
-            default: {
-                // Locate the font whose [first,last] contains the codepoint (linear
-                // scan; this is a cold measuring path, no MRU cache needed).
-                uint32_t ch = *text, first = 0, last = 0;
-                // Mirror the draw's per-glyph fallback: MID applies only to codepoints
-                // the mid face actually has.
-                const bool            use_mid = mid && kdisp_gfx_glyph(s_mid_font, 1, *text) != NULL;
-                const GFXfont *const *pool = use_mid ? s_mid_font : fonts;
-                const uint8_t         cnt  = use_mid ? 1u : num_fonts;
-                const GFXfont *f = 0;
-                for (uint8_t i = 0; i < cnt; ++i) {
-                    first = pgm_read_dword(&pool[i]->first);
-                    last  = pgm_read_dword(&pool[i]->last);
-                    if (ch >= first && ch <= last) { f = pool[i]; break; }
-                }
-                if (!f) { f = pool[0]; first = pgm_read_dword(&f->first); ch = U'!'; }
-                const GFXglyph *g = pgm_read_glyph_ptr(f, ch - first);
-                int8_t w  = pgm_read_byte(&g->width);
-                int8_t h  = pgm_read_byte(&g->height);
-                int8_t xo = pgm_read_byte(&g->xOffset);
-                int8_t yo = pgm_read_byte(&g->yOffset);
-                if (w > 0 && h > 0) {
-                    // In a SMALL run mirror kdisp_write_gfx_char_half instead of
-                    // kdisp_write_gfx_char — halved extents and offsets with the same
-                    // floor rounding — so the measured box still matches the pixels.
-                    int16_t gx = small ? half_floor((int16_t)xo) : (int16_t)xo;
-                    int16_t gw = small ? (int16_t)((w + 1) / 2) : (int16_t)w;
-                    int16_t gh = small ? (int16_t)((h + 1) / 2) : (int16_t)h;
-                    int16_t l = x + gx, r = x + gx + gw - 1;
-                    if (l < xmn) xmn = l;
-                    if (r > xmx) xmx = r;
-                    // kdisp_write_gfx_char shifts each glyph by (font yAdvance - fonts[0]
-                    // yAdvance) before applying yOffset; mirror it so the vertical box
-                    // matches the rasterised pixels.
-                    int16_t yadj = (int16_t)pgm_read_byte(&f->yAdvance) -
-                                   (use_mid ? (int16_t)pgm_read_byte(&s_mid_font[0]->yAdvance) : base_yadv);
-                    int16_t gy = small ? half_floor((int16_t)(yadj + yo)) : (int16_t)(yadj + yo);
-                    int16_t t = y + gy, b = t + gh - 1;
-                    if (t < ymn) ymn = t;
-                    if (b > ymx) ymx = b;
-                }
-                {
-                    int16_t adv = (int16_t)pgm_read_byte(&g->xAdvance);
-                    x += small ? (int16_t)((adv + 1) / 2) : adv;
-                }
-                break;
-            }
-        }
-        text++;
-    }
-    if (xmx < xmn) { xmn = 0; xmx = 0; ymn = 0; ymx = 0; }   // empty / whitespace-only
-    *out_xmin = (int8_t)xmn;
-    *out_xmax = (int8_t)xmx;
-    *out_ymin = (int8_t)ymn;
-    *out_ymax = (int8_t)ymx;
+    // The interpreter itself is pure and lives in base/font_lookup.c
+    // (kdisp_gfx_text_bbox_in, unit-tested on the host); this wrapper binds the
+    // firmware's resident HINT_MID face — the same s_mid_font the draw uses — so
+    // the measurement and the draw cannot disagree about which face \x16 reaches.
+    kdisp_gfx_text_bbox_in(fonts, num_fonts, s_mid_font, 1, text, out_xmin, out_xmax, out_ymin, out_ymax);
 }
 
 void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text, int8_t *out_min, int8_t *out_max) {

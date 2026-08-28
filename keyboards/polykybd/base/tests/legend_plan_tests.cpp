@@ -160,14 +160,28 @@ TEST(LegendPlanRemapTest, OpsAloneDrawNothing) {
 TEST(LegendPlanRemapTest, ATooLongLegendFallsBack) {
     FakeFonts f   = latin_world();
     auto      env = env_for(&f);
-    // GLYPH_SIZE_MAX_LEN glyphs fit a cap of GLYPH_SIZE_MAX_LEN + 1; one more must not.
+    // The buffer is deliberately LARGER than GLYPH_SIZE_MAX_LEN + 1, so this pins
+    // the glyph-count contract itself, not the caller's buffer bound: a five-glyph
+    // legend must fall back even when the output has room for it.
     std::vector<uint32_t> text(GLYPH_SIZE_MAX_LEN, 'a');
     text.push_back(0);
-    uint32_t out[GLYPH_SIZE_MAX_LEN + 1];
-    EXPECT_TRUE(legend_plan_remap(&env, LEGEND_PLAN_SIZE_M, text.data(), out, GLYPH_SIZE_MAX_LEN + 1));
+    uint32_t out[GLYPH_SIZE_MAX_LEN + 4];
+    EXPECT_TRUE(legend_plan_remap(&env, LEGEND_PLAN_SIZE_M, text.data(), out, GLYPH_SIZE_MAX_LEN + 4));
     text.back() = 'a';
     text.push_back(0);
-    EXPECT_FALSE(legend_plan_remap(&env, LEGEND_PLAN_SIZE_M, text.data(), out, GLYPH_SIZE_MAX_LEN + 1));
+    EXPECT_FALSE(legend_plan_remap(&env, LEGEND_PLAN_SIZE_M, text.data(), out, GLYPH_SIZE_MAX_LEN + 4));
+}
+
+TEST(LegendPlanRemapTest, ATightBufferStillBounds) {
+    FakeFonts f   = latin_world();
+    auto      env = env_for(&f);
+    // The out_cap half of the guard: a legend within the glyph-count contract
+    // must still be refused when the caller's buffer cannot hold it + terminator.
+    std::vector<uint32_t> text(2, 'a');
+    text.push_back(0);
+    uint32_t out[GLYPH_SIZE_MAX_LEN + 1];
+    EXPECT_FALSE(legend_plan_remap(&env, LEGEND_PLAN_SIZE_M, text.data(), out, 2));
+    EXPECT_TRUE(legend_plan_remap(&env, LEGEND_PLAN_SIZE_M, text.data(), out, 3));
 }
 
 TEST(LegendPlanMainTest, BigUsesTheTiersNominalBaseline) {

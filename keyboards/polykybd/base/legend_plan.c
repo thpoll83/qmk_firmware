@@ -65,7 +65,11 @@ bool legend_plan_remap(const legend_plan_env_t* env, uint8_t size, const uint32_
                     return false;
             }
         }
-        if (n + 1 >= out_cap) return false;                 // too long to relocate
+        // The glyph-count contract (GLYPH_SIZE_MAX_LEN) is enforced independently
+        // of the caller's buffer: the firmware always passes a MAX_LEN+1 buffer,
+        // where the two limits coincide, but the pure function must not let a
+        // larger buffer relocate a longer legend than the header promises.
+        if (n >= GLYPH_SIZE_MAX_LEN || n + 1 >= out_cap) return false;   // too long to relocate
         const uint32_t cp = base + text[i];
         if (!env->has_glyph(cp, env->ctx)) return false;
         out[n++] = cp;

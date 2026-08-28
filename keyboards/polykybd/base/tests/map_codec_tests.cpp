@@ -21,6 +21,12 @@ extern "C" {
 #include <cstring>
 #include <vector>
 
+#if defined(__unix__) || defined(__APPLE__)
+#    include <sys/mman.h>
+#    include <unistd.h>
+#    define MAP_CODEC_HAVE_GUARD_PAGE 1
+#endif
+
 namespace {
 
 constexpr uint8_t kWidthMin = 8;   // OVERLAY_MAP_WIDTH_MIN (config.h)
@@ -82,10 +88,68 @@ TEST(MapCodecTest, WriteThenReadRoundTripsEveryWidth) {
     }
 }
 
+#ifdef MAP_CODEC_HAVE_GUARD_PAGE
+// Two mapped pages with the second one PROT_NONE: data placed flush against the
+// boundary makes any access past a value's span a deterministic SIGSEGV, with no
+// sanitizer needed. This is what actually catches the historical width-8 bug —
+// an unconditional-but-correctly-MASKED extra read returns the right value, so a
+// poison-byte comparison alone cannot see it (Sourcery's finding on this suite).
+class GuardPagedBuffer {
+   public:
+    GuardPagedBuffer() {
+        page_ = (size_t)sysconf(_SC_PAGESIZE);
+        base_ = (uint8_t*)mmap(nullptr, 2 * page_, PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        EXPECT_NE(base_, MAP_FAILED);
+        EXPECT_EQ(mprotect(base_ + page_, page_, PROT_NONE), 0);
+    }
+    ~GuardPagedBuffer() { munmap(base_, 2 * page_); }
+    // A pointer whose n-th byte is the LAST accessible one before the guard page.
+    uint8_t* ending_at_boundary(size_t n) { return base_ + page_ - n; }
+
+   private:
+    uint8_t* base_;
+    size_t   page_;
+};
+
+TEST(MapCodecTest, ReadNeverTouchesMemoryPastTheValuesSpan) {
+    GuardPagedBuffer gp;
+    for (uint8_t width = kWidthMin; width <= kWidthMax; ++width) {
+        // Every bit offset the width can produce, each with its span's last byte
+        // flush against the guard page — one byte too far faults the test.
+        for (uint16_t idx = 0; idx < 8; ++idx) {
+            size_t   span = span_end_byte(idx, width) + 1;
+            uint8_t* buf  = gp.ending_at_boundary(span);
+            for (size_t j = 0; j < span; ++j) buf[j] = (uint8_t)(0xA0 + j);
+            uint16_t got = map_codec_read(buf, idx, width);
+            EXPECT_EQ(got, reference_read(buf, idx, width))
+                << "width " << (int)width << " idx " << idx;
+        }
+    }
+}
+
+TEST(MapCodecTest, WriteNeverTouchesMemoryPastTheValuesSpan) {
+    GuardPagedBuffer gp;
+    for (uint8_t width = kWidthMin; width <= kWidthMax; ++width) {
+        uint16_t mask = (uint16_t)((1u << width) - 1u);
+        for (uint16_t idx = 0; idx < 8; ++idx) {
+            size_t   span = span_end_byte(idx, width) + 1;
+            uint8_t* buf  = gp.ending_at_boundary(span);
+            std::memset(buf, 0, span);
+            map_codec_write(buf, idx, mask, width);
+            EXPECT_EQ(map_codec_read(buf, idx, width), mask)
+                << "width " << (int)width << " idx " << idx;
+        }
+    }
+}
+#endif  // MAP_CODEC_HAVE_GUARD_PAGE
+
 TEST(MapCodecTest, ReadNeverConsultsBytesPastTheValuesSpan) {
-    // Regression pin for the width-8 OOB read: decode the same value from two
-    // buffers that differ ONLY in the bytes past the value's span. If the result
-    // differs, the codec read a byte it must not.
+    // Behavioural half of the span contract: decode the same value from two
+    // buffers that differ ONLY in the bytes past the value's span — the result
+    // must not depend on them. (The MEMORY half — no out-of-span access at all,
+    // even a correctly-masked one — is the guard-page pair above; this
+    // comparison alone cannot see a masked extra read.)
     for (uint8_t width = kWidthMin; width <= kWidthMax; ++width) {
         uint8_t a[64], b[64];
         uint32_t seed = 0xdeadbeefu;

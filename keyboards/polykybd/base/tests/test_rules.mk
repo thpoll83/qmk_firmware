@@ -44,3 +44,47 @@ polykybd_macro_decode_INC := \
 	$(POLY_BASE_PATH) \
 	$(POLY_BASE_PATH)/tests \
 	keyboards/polykybd
+
+# map_codec.h is header-only (static inline), so the suite is just the tests —
+# the same shape as glyph_meta. The codec itself is what fill_overlay.c's
+# decoder and the slave-repair packer both call.
+polykybd_map_codec_SRC := \
+	$(POLY_BASE_PATH)/tests/map_codec_tests.cpp
+
+polykybd_map_codec_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
+# mode_byte.h is header-only too — the shared EEPROM byte layout behind
+# pack/load_auto_brightness and pack/load_os_state.
+polykybd_mode_byte_SRC := \
+	$(POLY_BASE_PATH)/tests/mode_byte_tests.cpp
+
+polykybd_mode_byte_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
+# base/update.c depends only on the timer, so it links standalone against the
+# mock clock — platforms/common.mk puts the timer into SRC, which only the
+# full-keyboard harness consumes, hence both timer files listed here (the same
+# note as polymod_ltr559's rules).
+polykybd_idle_update_SRC := \
+	$(POLY_BASE_PATH)/update.c \
+	$(POLY_BASE_PATH)/tests/idle_update_tests.cpp \
+	$(PLATFORM_PATH)/timer.c \
+	$(PLATFORM_PATH)/test/timer.c
+
+polykybd_idle_update_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
+# layer_names.c needs only config.h + layers.h (both macro/enum-only), so the
+# HID cmd 35 wire encoder links without quantum. The keyboards/polykybd include
+# path is what resolves those two.
+polykybd_layer_names_SRC := \
+	keyboards/polykybd/layer_names.c \
+	$(POLY_BASE_PATH)/tests/layer_names_tests.cpp
+
+polykybd_layer_names_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

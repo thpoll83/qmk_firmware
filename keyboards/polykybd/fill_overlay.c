@@ -14,6 +14,7 @@
 #include "multicore_exec.h"
 #include "bridge_helper.h"
 #include "base/com.h"
+#include "base/map_codec.h"
 #include "base/overlay.h"
 #include "base/update.h"
 #include "lang/lang_lut.h"
@@ -307,25 +308,10 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
     map_log[0] = '\0';
     const uint16_t values = OVERLAY_MAP_VALUES(bytes, width);
     for(uint16_t idx=0;idx<values;++idx) {
-        // start_bit must be wide enough to hold idx*width (up to ~488) — a uint8_t
-        // would wrap.
-        uint16_t start_bit = idx*(uint16_t)width;
-        uint8_t start_byte = start_bit/8;
-        uint8_t start_bit_in_byte = start_bit%8;
-        // ⚠️ How many bytes a value spans depends on the width, so BOTH the second
-        // and third byte are conditional — the load must never reach past the last
-        // data byte. At width 8 (gcd(8,8)==8) every value is one whole byte at
-        // offset 0; at 10 or 12 (gcd 2 / 4) the offset stays low enough for two;
-        // only the odd widths 9/11 (gcd 1) walk all eight offsets and reach a third.
-        uint32_t acc = (uint32_t)mapping[start_byte];
-        if (start_bit_in_byte + width > 8) {
-            acc |= (uint32_t)mapping[start_byte+1] << 8;
-        }
-        if (start_bit_in_byte + width > 16) {
-            acc |= (uint32_t)mapping[start_byte+2] << 16;
-        }
-        uint16_t to = (uint16_t)((acc >> start_bit_in_byte) &
-                                 ((1u << width) - 1u));
+        // The bit arithmetic lives in base/map_codec.h (shared with the repair
+        // packer below and unit-tested there) — the conditional byte reads are
+        // what keep a value's load inside the last data byte it occupies.
+        uint16_t to = map_codec_read(mapping, idx, width);
         if(from==UNSET_OVERLAY_MAPPING) {
             from = to;
         } else {
@@ -384,24 +370,11 @@ void note_overlay_map_sync_lost(void) {
     s_map_sync_lost = true;
 }
 
-// Inverse of the unpacking in set_packed_overlay_mapping: write `v` as `width`
-// bits at `idx`'s bit offset. `buf` must be zeroed first (this ORs in).
-// ⚠️ Mirror the decoder's conditional byte reads exactly — write the second and
-// third byte only when the value really extends there, so this can never touch a
-// byte past the last one the decoder reads. Verify any change by round-tripping
-// through the decoder, not by eye.
+// Inverse of the unpacking in set_packed_overlay_mapping — now literally the
+// same pair, base/map_codec.h, where the round-trip is unit-tested instead of
+// verified by eye.
 static void pack_map_value(uint8_t *buf, uint16_t idx, uint16_t v, uint8_t width) {
-    uint16_t start_bit = idx * (uint16_t)width;
-    uint8_t  b         = (uint8_t)(start_bit / 8);
-    uint8_t  s         = (uint8_t)(start_bit % 8);
-    uint32_t shifted   = (uint32_t)v << s;
-    buf[b] |= (uint8_t)(shifted & 0xff);
-    if (s + width > 8) {
-        buf[b + 1] |= (uint8_t)((shifted >> 8) & 0xff);
-    }
-    if (s + width > 16) {
-        buf[b + 2] |= (uint8_t)((shifted >> 16) & 0xff);
-    }
+    map_codec_write(buf, idx, v, width);
 }
 
 // Repair cursor. The walk is SPLIT ACROSS HOUSEKEEPING TICKS rather than run in

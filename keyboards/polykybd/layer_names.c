@@ -56,3 +56,20 @@ const char* poly_layer_name_wire(uint8_t layer) {
     const uint8_t idx = (uint8_t)(layer - NUM_LAYOUTS);
     return (idx < sizeof(fixed_wire) / sizeof(fixed_wire[0])) ? fixed_wire[idx] : NULL;
 }
+
+uint16_t poly_layer_names_payload(uint8_t* payload) {
+    const uint8_t count = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT;
+    uint16_t      used  = 2;
+    payload[1] = count;
+    for (uint8_t layer = 0; layer < count; layer++) {
+        const char* name = poly_layer_name_wire(layer);
+        // Clamp rather than trust the table: an over-long name would otherwise
+        // run past the buffer sized from POLY_LAYER_NAME_MAX.
+        for (uint8_t i = 0; name != NULL && name[i] != '\0' && i < POLY_LAYER_NAME_MAX; i++) {
+            payload[used++] = (uint8_t)name[i];
+        }
+        payload[used++] = '\0';
+    }
+    payload[0] = (uint8_t)used;
+    return used;
+}

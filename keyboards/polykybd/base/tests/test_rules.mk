@@ -63,3 +63,17 @@ polykybd_mode_byte_SRC := \
 polykybd_mode_byte_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# base/update.c depends only on the timer, so it links standalone against the
+# mock clock — platforms/common.mk puts the timer into SRC, which only the
+# full-keyboard harness consumes, hence both timer files listed here (the same
+# note as polymod_ltr559's rules).
+polykybd_idle_update_SRC := \
+	$(POLY_BASE_PATH)/update.c \
+	$(POLY_BASE_PATH)/tests/idle_update_tests.cpp \
+	$(PLATFORM_PATH)/timer.c \
+	$(PLATFORM_PATH)/test/timer.c
+
+polykybd_idle_update_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

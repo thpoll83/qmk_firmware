@@ -1046,21 +1046,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // host, generated from layers.h by a script whose source path had gone
                     // stale — so the editor labelled tabs from an enum the firmware had not
                     // had for a long time. A name the keyboard states itself cannot drift.
-                    const uint8_t count = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT;
-                    uint8_t payload[LAYER_NAMES_PAYLOAD_MAX];
-                    uint16_t used = 2;
-                    payload[1] = count;
-                    for (uint8_t layer = 0; layer < count; layer++) {
-                        const char* name = poly_layer_name_wire(layer);
-                        // Clamp rather than trust the table: an over-long name would
-                        // otherwise run past the buffer sized from POLY_LAYER_NAME_MAX.
-                        for (uint8_t i = 0; name != NULL && name[i] != '\0' && i < POLY_LAYER_NAME_MAX; i++) {
-                            payload[used++] = (uint8_t)name[i];
-                        }
-                        payload[used++] = '\0';
-                    }
-                    payload[0] = (uint8_t)used;
-
+                    // The payload itself is built by poly_layer_names_payload()
+                    // (layer_names.c, unit-tested) — this case only chunks it into
+                    // reports.
+                    uint8_t        payload[LAYER_NAMES_PAYLOAD_MAX];
+                    const uint16_t used  = poly_layer_names_payload(payload);
                     const uint16_t chunk = hid_payload_avail(length, 3);
                     for (uint16_t off = 0; off < used; off += chunk) {
                         const uint16_t n = (used - off < chunk) ? (uint16_t)(used - off) : chunk;

@@ -77,3 +77,14 @@ polykybd_idle_update_SRC := \
 polykybd_idle_update_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# layer_names.c needs only config.h + layers.h (both macro/enum-only), so the
+# HID cmd 35 wire encoder links without quantum. The keyboards/polykybd include
+# path is what resolves those two.
+polykybd_layer_names_SRC := \
+	keyboards/polykybd/layer_names.c \
+	$(POLY_BASE_PATH)/tests/layer_names_tests.cpp
+
+polykybd_layer_names_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

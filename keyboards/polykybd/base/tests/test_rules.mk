@@ -88,3 +88,13 @@ polykybd_layer_names_SRC := \
 polykybd_layer_names_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+# legend_plan.c is pure by construction — the font lookup and the bbox
+# measurement arrive through callbacks — so the size planner links with no fonts,
+# no display and no keyboard config. The firmware binding lives in poly_keymap.c.
+polykybd_legend_plan_SRC := \
+	$(POLY_BASE_PATH)/legend_plan.c \
+	$(POLY_BASE_PATH)/tests/legend_plan_tests.cpp
+
+polykybd_legend_plan_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

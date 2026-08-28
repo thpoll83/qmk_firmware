@@ -58,6 +58,7 @@
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
+#include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
 // Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
@@ -1562,139 +1563,43 @@ static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
 
 // ── Keycap legend SIZE (enum poly_glyph_size, HID cmd 34) ────────────────────
 //
-// The two bigger faces are the SAME latin repertoire rendered larger, so they
-// cannot be looked up by their natural codepoints: g_all_fonts is scanned
-// front-to-back and the resident 27 px `latin` font is always in front, so a
-// second 'a' at 0x61 could never be reached. fonts.yaml therefore emits each
-// tier at a fixed offset into supplementary private-use plane 15 (fontconvert
-// -o), and the render path adds the same offset before the lookup. Keep these
-// bases identical to the `offset:` values in the fonts.yaml `latinbig` entries.
-//
-// The spacing (0x3000) exceeds the highest source codepoint the latin category
-// covers (0x2116, the numero sign), so the tiers can never overlap.
-static const uint32_t glyph_size_base[GLYPH_SIZE_COUNT] = {
-    [GLYPH_SIZE_S] = 0u,          // the resident face, at its natural codepoints
-    [GLYPH_SIZE_M] = 0xF0000u,
-    [GLYPH_SIZE_L] = 0xF3000u,
-};
+// The relocation + placement arithmetic is the PURE planner in base/legend_plan.c
+// (unit-tested: make test:polykybd_legend_plan); the wrappers below bind it to the
+// assembled font set and this variant's visible window, keeping the signatures the
+// render path has always called.
+_Static_assert(LEGEND_PLAN_SIZE_COUNT == GLYPH_SIZE_COUNT,
+               "legend_plan's size table no longer covers poly_glyph_size");
+_Static_assert(LEGEND_PLAN_SIZE_S == GLYPH_SIZE_S && LEGEND_PLAN_SIZE_M == GLYPH_SIZE_M &&
+               LEGEND_PLAN_SIZE_L == GLYPH_SIZE_L,
+               "legend_plan's size indices drifted from poly_glyph_size");
 
-// Longest legend the size override will relocate. A main legend is normally ONE
-// glyph; a couple of codepoints covers the composed forms, and anything longer is
-// not the kind of thing that wants to be drawn large anyway.
-#define GLYPH_SIZE_MAX_LEN 4
-
-// Rewrites `text` into `out` at the requested size, returning false — leaving the
-// caller on the normal face — if the size is S, the legend is too long, or ANY of
-// its glyphs is missing at that size.
-//
-// ⚠️ All-or-nothing on purpose. A partial hit would mix two faces in one legend,
-// which is the "keep every glyph of a multi-glyph legend in ONE font" rule broken
-// the worst possible way: kdisp_write_gfx_char baseline-aligns per font, so the
-// halves would also sit at different heights. Falling back whole means a keyboard
-// with no `latinbig` bundle, or a CJK/Arabic/Indic legend that this latin-only
-// feature does not cover, simply keeps drawing what it always drew.
-static bool glyph_size_remap(uint8_t size, const uint32_t* text,
-                             uint32_t* out, uint8_t out_cap) {
-    if (size == GLYPH_SIZE_S || size >= GLYPH_SIZE_COUNT || text == NULL) return false;
-    const uint32_t base = glyph_size_base[size];
-    uint8_t n = 0;
-    for (uint8_t i = 0; text[i] != 0; ++i) {
-        // A control code is a display-list op, not a glyph. The five zero-argument
-        // cursor nudges are DROPPED; every other op bails, because HINT_MOVE /
-        // HINT_FRAME (0x0E/0x12) consume the two codepoints after them — which we
-        // would then relocate as if they were glyphs — and HINT_HALF/HINT_THIN
-        // rescale the next glyph. Neither occurs in a language legend: measured
-        // across all 160 layouts every op present is one of these five, and every
-        // one of them LEADS the legend (0x0C x150, 0x0B x8, 0x06 x9, 0x08 x1,
-        // 0x05 x1; not one after a glyph).
-        //
-        // ⚠️ DROPPED, not carried, and that is not a preference — kdisp_gfx_text_bbox
-        // and the draw disagree about these ops. `\f` is `y = y > 1 ? y - 2 : 0`
-        // applied to the cursor, and bbox runs it from y = 0 (relative to the
-        // baseline) where it saturates to 0, while the draw runs it from the real
-        // baseline where it genuinely lifts 2px. Carrying the op therefore moves the
-        // glyph by an amount plan_main_legend's clamp cannot see, and the accent
-        // clips off the top (measured: 6-8 px lost on `é è à` at M/L). Dropped, the
-        // measured bbox IS what gets drawn and the clamp is exact — and the nudge is
-        // no loss, having been hand-tuned for the small face's fixed baseline.
-        //
-        // ⚠️ This is what makes the French number row scale at all: `é è ç à` are
-        // spelled `\f\f <letter>`, so refusing every control code outright left half
-        // of AZERTY's number row on the small face while the other half grew (found
-        // by rendering the row, 2026-08-21).
-        if (text[i] < 0x20) {
-            switch (text[i]) {
-                case 0x05: case 0x06: case 0x08:
-                case 0x0B: case 0x0C:
-                    continue;                               // a small-face nudge
-                default:
-                    return false;
-            }
-        }
-        if (n + 1 >= out_cap) return false;                 // too long to relocate
-        const uint32_t cp = base + text[i];
-        if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return false;
-        out[n++] = cp;
-    }
-    if (n == 0) return false;                               // ops alone draw nothing
-    out[n] = 0;
-    return true;
+static bool legend_has_glyph_cb(uint32_t cp, void* ctx) {
+    (void)ctx;
+    return kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL;
 }
 
-// Nominal baseline for each size, chosen so the cap height sits where the small
-// face's does (top of a capital ~1 px below the top of the panel): cap 20 -> 21,
-// 24 -> 25, 27 -> 28. render_key() then CLAMPS it against the legend's own ink box,
-// so a tall accent stack or a deep descender shifts to fit instead of clipping —
-// the nominal value is what keeps every ordinary letter on a shared baseline.
-static const int8_t glyph_size_baseline[GLYPH_SIZE_COUNT] = {
-    [GLYPH_SIZE_S] = 21, [GLYPH_SIZE_M] = 25, [GLYPH_SIZE_L] = 28,
+static void legend_bbox_cb(const uint32_t* text, int8_t* xmin, int8_t* xmax, int8_t* ymin, int8_t* ymax, void* ctx) {
+    (void)ctx;
+    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, text, xmin, xmax, ymin, ymax);
+}
+
+static const legend_plan_env_t legend_plan_env = {
+    .has_glyph = legend_has_glyph_cb,
+    .bbox      = legend_bbox_cb,
+    .ctx       = NULL,
+    .win_x0    = BUFFER_X,
+    .win_x1    = BUFFER_X + SCREEN_WIDTH - 1,
+    .win_y1    = SCREEN_HEIGHT - 1,
 };
 
-// A planned main legend: what to draw, where, and how much room it takes.
-typedef struct {
-    const uint32_t* text;      // the legend, relocated to the bigger face when big
-    int8_t x, y;               // draw origin (y is the baseline)
-    int8_t ink_min, ink_max;   // leftmost / rightmost lit pixel, in buffer coords
-    bool   big;                // a bigger face was selected
-} main_legend_t;
+static bool glyph_size_remap(uint8_t size, const uint32_t* text, uint32_t* out, uint8_t out_cap) {
+    return legend_plan_remap(&legend_plan_env, size, text, out, out_cap);
+}
 
-// Works out how a key's MAIN legend should be drawn at the active size, WITHOUT
-// drawing it — the shift-preview layout below needs the base glyph's extent before
-// anything lands on the buffer. `small_x`/`small_y` are the origin the small face
-// has always used (the per-language offsets), taken verbatim at GLYPH_SIZE_S.
-// `scratch` must outlive the returned plan: it holds the relocated codepoints.
 static void plan_main_legend(const uint32_t* text, int8_t small_x, int8_t small_y,
                              uint32_t* scratch, uint8_t scratch_cap, main_legend_t* out) {
-    const uint8_t size = get_local_state()->glyph_size;
-    int8_t xmin = 0, xmax = 0;
-    if (glyph_size_remap(size, text, scratch, scratch_cap)) {
-        int8_t ymin, ymax;
-        kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, scratch, &xmin, &xmax, &ymin, &ymax);
-        // Keep the language's own horizontal origin — centring instead would eat the
-        // space the shift preview lives in — but clamp both edges into the window,
-        // since a big glyph runs up to 43 px wide.
-        int8_t x = small_x;
-        if (x + xmax > BUFFER_X + SCREEN_WIDTH - 1) x = (int8_t)(BUFFER_X + SCREEN_WIDTH - 1 - xmax);
-        if (x + xmin < BUFFER_X)                    x = (int8_t)(BUFFER_X - xmin);
-        // The tier's nominal baseline, clamped so the ink stays on the panel. The
-        // nominal is what keeps ordinary letters on a shared baseline; the clamp is
-        // what stops a tall accent stack or a deep descender from clipping.
-        int8_t y = glyph_size_baseline[size];
-        if (y + ymin < 0)                 y = (int8_t)(-ymin);
-        if (y + ymax > SCREEN_HEIGHT - 1) y = (int8_t)(SCREEN_HEIGHT - 1 - ymax);
-        out->text = scratch;
-        out->x = x; out->y = y;
-        out->ink_min = (int8_t)(x + xmin);
-        out->ink_max = (int8_t)(x + xmax);
-        out->big = true;
-        return;
-    }
-    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &xmin, &xmax);
-    out->text = text;
-    out->x = small_x; out->y = small_y;
-    out->ink_min = (int8_t)(small_x + xmin);
-    out->ink_max = (int8_t)(small_x + xmax);
-    out->big = false;
+    legend_plan_main(&legend_plan_env, get_local_state()->glyph_size, text, small_x, small_y,
+                     scratch, scratch_cap, out);
 }
 
 static inline void draw_main_legend(const main_legend_t* p) {

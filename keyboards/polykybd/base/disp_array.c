@@ -13,7 +13,6 @@
 
 #include "fonts/base_font.h"
 #include "com.h"
-#include "../poly_keymap.h"
 
 // HINT_MID (\x16) draws the REST of the string from this standalone UI face
 // instead of the caller's array. It exists because the three standalone faces

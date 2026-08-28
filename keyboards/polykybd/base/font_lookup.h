@@ -22,28 +22,16 @@
 #    include "progmem.h"
 #endif
 
+// The Adafruit-GFX originals carried an #ifdef __AVR__ pointer-punning branch
+// here; this firmware only ever targets the RP2040 (and the host test harness),
+// where program memory is addressed like any other, so the accessors are the
+// plain reads the non-AVR branch always compiled to.
 static inline GFXglyph *pgm_read_glyph_ptr(const GFXfont *font, uint32_t c) {
-#ifdef __AVR__
-    return &(((GFXglyph *)pgm_read_pointer(&font->glyph))[c]);
-#else
-    // expression in __AVR__ section may generate "dereferencing type-punned
-    // pointer will break strict-aliasing rules" warning In fact, on other
-    // platforms (such as STM32) there is no need to do this pointer magic as
-    // program memory may be read in a usual way So expression may be simplified
     return font->glyph + c;
-#endif  //__AVR__
 }
 
 static inline uint8_t *pgm_read_bitmap_ptr(const GFXfont *font) {
-#ifdef __AVR__
-    return (uint8_t *)pgm_read_pointer(&font->bitmap);
-#else
-    // expression in __AVR__ section generates "dereferencing type-punned pointer
-    // will break strict-aliasing rules" warning In fact, on other platforms (such
-    // as STM32) there is no need to do this pointer magic as program memory may
-    // be read in a usual way So expression may be simplified
     return font->bitmap;
-#endif  //__AVR__
 }
 
 // Floor division by two. Glyph offsets are negative (above the baseline) and C

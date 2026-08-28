@@ -2298,6 +2298,42 @@ knowing is the parts that are NOT what you would write from scratch:
   the host's layout editor, so a user who never opens it pays nothing — and `via.c` is
   the only core dispatcher for that range, which we do not compile, so the keycodes
   are ours outright.
+- ⚠️ **A PREVIEW THAT MIRRORS THE IMPLEMENTATION AGREES BY CONSTRUCTION — it cannot
+  catch a placement bug, and this is the limit of the repo's "verify by rendering"
+  rule.** `draw_macro_mark()` first drew a chosen icon at its native size or skipped
+  it. A pack emoji inks **26–39 px** while a captioned keycap leaves about **29 rows**
+  above the label, so measured over the icons the host picker offers, **four in five
+  drew nothing at all**. `macro_label_preview.py` models the same placement, so it
+  showed the same nothing — the field report was *"after selecting the icon I cannot
+  see it in the preview and also not on the keyboard"* (2026-08-27), and neither half
+  could contradict the other. Rendering only proves the C and the Python agree; the
+  check that would have caught this is **measuring the glyph against the space it has
+  to fit**, which is a different question and needs the real font metrics. The fix
+  halves an overflowing icon through `kdisp_draw_glyph_half_at` (2×2-OR, which keeps
+  the thin strokes plain decimation loses; half of even the tallest pack glyph is
+  ~20 px) and falls back to the index when it fits at no size — the same fallback a
+  missing glyph already took, so a keycap can never end up unmarked.
+- ⚠️ **A guard whose precondition NOBODY ESTABLISHES is not a guard, and the comment
+  claiming it holds is what hides that.** `poly_macro_start()` refuses to play a
+  buffer whose last byte is not NUL (`poly_macro_buffer_intact`), and the case-37
+  comment asserted this covered a half-streamed upload because "the host leaves the
+  last byte clear until the final chunk". It does not: `join_buffer()` zero-fills to
+  capacity, so the byte reads 0 **before** a write, **during** it and **after** it —
+  the guard could never fire. An interrupted upload therefore left a *playable*
+  splice, and the splice is made of the old macro:
+  ```
+  before: "password123\0"   write: "hi\0" (interrupted)
+  after:  "hi\0sword123\0"  -> macro 0 = "hi", macro 1 = "sword123"
+  ```
+  i.e. a fragment of a former macro becomes something a keypress types. Closed at
+  **both** ends and the two are not redundant: the host raises a non-zero marker in
+  the last byte *before* streaming and clears it with the final window
+  (`write_macro_buffer`), and `poly_macro_write()` invalidates that byte on any
+  window that does not carry it — the firmware must not depend on the host to arm its
+  own integrity guard, and the host half is the one a mocked test can exercise.
+  ⚠️ Consequence: a deliberate **prefix** write now leaves the buffer unplayable until
+  something writes the tail. That is correct, and it is why the rig's prefix-write
+  test restores the terminating NUL.
 - **Cost: 208 B of RAM** (the 192 B label cache + the playback state), 0 B of EEPROM
   beyond the reclaim above. ⚠️ Verified against the **monolithic `POLYKYBD_DOOM=yes`**
   flavour, which PR CI does not build and which is the first thing to fail on any RAM

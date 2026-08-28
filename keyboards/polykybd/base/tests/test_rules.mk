@@ -44,3 +44,13 @@ polykybd_macro_decode_INC := \
 	$(POLY_BASE_PATH) \
 	$(POLY_BASE_PATH)/tests \
 	keyboards/polykybd
+
+# map_codec.h is header-only (static inline), so the suite is just the tests —
+# the same shape as glyph_meta. The codec itself is what fill_overlay.c's
+# decoder and the slave-repair packer both call.
+polykybd_map_codec_SRC := \
+	$(POLY_BASE_PATH)/tests/map_codec_tests.cpp
+
+polykybd_map_codec_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

@@ -1,3 +1,4 @@
 TEST_LIST += fw_up_verdict
 TEST_LIST += polykybd_glyph_meta
 TEST_LIST += polykybd_macro_decode
+TEST_LIST += polykybd_map_codec

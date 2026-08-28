@@ -54,3 +54,12 @@ polykybd_map_codec_SRC := \
 polykybd_map_codec_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# mode_byte.h is header-only too — the shared EEPROM byte layout behind
+# pack/load_auto_brightness and pack/load_os_state.
+polykybd_mode_byte_SRC := \
+	$(POLY_BASE_PATH)/tests/mode_byte_tests.cpp
+
+polykybd_mode_byte_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

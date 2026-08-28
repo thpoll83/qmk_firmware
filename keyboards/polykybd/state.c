@@ -6,6 +6,7 @@
 #include <string.h>
 #include "eeconfig.h"
 #include "base/com.h"   // enum poly_flag — the display-state bits guarding the auto push
+#include "base/mode_byte.h"
 
 static poly_layer_t l_layer;
 static poly_layer_t g_layer;
@@ -419,9 +420,9 @@ void note_user_brightness(uint8_t value) {
 // treat it as known and snap to it (the very FULL_BRIGHT jump get_active_brightness
 // guards against at runtime). 0 when auto is off.
 uint8_t pack_auto_brightness(void) {
-    if (!g_auto_brightness)  return 0u;       // auto off
-    if (!g_auto_value_known) return 0x80u;    // auto on, no host value yet (bit6 clear)
-    return (uint8_t)(0x80u | 0x40u | (g_last_auto_brightness & 0x3Fu));  // mode + known + value
+    if (!g_auto_brightness) return 0u;        // auto off (bit7 clear = off here)
+    return mode_byte_pack(true, g_auto_value_known,
+                          g_auto_value_known ? g_last_auto_brightness : 0u);
 }
 
 // Restore the host-auto state at boot from the packed byte. If auto was engaged
@@ -431,11 +432,11 @@ uint8_t pack_auto_brightness(void) {
 // fall back to the manual brightness (g_auto_value_known stays false). Off-state
 // leaves the manual brightness (l_state.contrast = ee.brightness) untouched.
 void load_auto_brightness(uint8_t packed) {
-    bool on = (packed & 0x80u) != 0;
+    bool on = mode_byte_flag(packed);
     g_auto_brightness = on;
     if (on) {
-        if (packed & 0x40u) {                  // a real host auto value was persisted
-            uint8_t value = packed & 0x3Fu;
+        if (mode_byte_known(packed)) {         // a real host auto value was persisted
+            uint8_t value = mode_byte_value(packed);
             if (value > FULL_BRIGHT) value = FULL_BRIGHT;
             g_last_auto_brightness = value;
             g_auto_value_known     = true;
@@ -637,20 +638,18 @@ void set_detected_os(uint8_t os) {
 // the value (the pin in manual mode, the last resolved OS in auto — stored so a
 // reboot shows the right OS immediately, before host/detection re-confirm).
 uint8_t pack_os_state(void) {
-    uint8_t b = 0;
-    uint8_t val;
-    if (!g_os_auto) { b |= 0x80u; val = g_user_os; }   // manual pin
-    else            { val = g_resolved_os; }            // auto: last resolved
-    if (g_os_known) b |= 0x40u;
-    return (uint8_t)(b | (val & 0x3Fu));
+    // bit7 here means "manual pin engaged" (the opposite polarity from
+    // pack_auto_brightness) so a zeroed byte still reads as this setting's default.
+    return mode_byte_pack(!g_os_auto, g_os_known,
+                          g_os_auto ? g_resolved_os : g_user_os);
 }
 
 // Restore the active-OS state at boot from the packed byte (0 from an old EEPROM =
 // auto, unknown — the desired default).
 void load_os_state(uint8_t packed) {
-    g_os_auto  = (packed & 0x80u) == 0;     // bit7 set => manual pin
-    g_os_known = (packed & 0x40u) != 0;
-    uint8_t val = packed & 0x3Fu;
+    g_os_auto  = !mode_byte_flag(packed);   // bit7 set => manual pin
+    g_os_known = mode_byte_known(packed);
+    uint8_t val = mode_byte_value(packed);
     if (val >= POLY_OS_COUNT) { val = POLY_OS_UNKNOWN; g_os_known = false; }
     // Migrate the retired POLY_OS_IOS (5): a protocol-7 EEPROM may still hold it
     // (pinned or last-detected). iOS is now folded into macOS, so normalise it here

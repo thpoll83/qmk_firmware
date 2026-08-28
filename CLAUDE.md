@@ -687,6 +687,48 @@ The firmware runs on a **Raspberry Pi RP2040** (dual-core ARM M0+) and is a heav
 
 The host software (`PolyKybdHost/`) communicates with this firmware over a custom HID report protocol (64-byte reports, v0.7.0+).
 
+### EEPROM layout: the reclaimed dynamic-keymap tail
+
+`DYNAMIC_KEYMAP_LAYER_COUNT` must stay **12** — QMK asserts it is >= the compiled
+layer count (`keymap_introspection.c`) — but only layers **0..7** are ever read or
+written from EEPROM; `_SL` and up are served straight out of flash by
+`poly_keycode_at()`. QMK's default addresses put the encoder map and the macro buffer
+after all twelve, so 640 B of keymap plus 32 B of encoder map sat there addressed by
+nothing. `config.h` rebases both on **`DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT`**:
+measured on split72, the macro region went **1787 → 2459 B (+672)**.
+
+⚠️ **The reclaim is only sound while nothing writes layers >= the cap, and QMK's own
+`dynamic_keymap_reset()` DOES.** It loops to `DYNAMIC_KEYMAP_LAYER_COUNT` through a
+bound check that is also `DYNAMIC_KEYMAP_LAYER_COUNT`, so it writes layers 8..11
+straight over both reclaimed regions. Two guards, and both are load-bearing:
+- `dynamic_keymap_reset_poly()` **no longer calls it** — it walks the cap itself,
+  resets the capped encoder map and zeroes the macro buffer.
+- `eeconfig_init_kb()` **repairs after the one call site we cannot remove**
+  (`eeconfig_init_quantum`, three lines above ours in the same function,
+  unconditional). Because that repair rewrites layers 0..7 from flash and zeroes the
+  macros, it IS the state a fresh EEPROM wants rather than a fix-up bolted on. ⚠️ The
+  override also has to replicate the weak default's `eeconfig_update_kb(0)`, which
+  replacing the body would otherwise drop silently.
+Two `_Static_assert`s in `split_sync.c` pin the addresses to the write cap, so a later
+edit to either constant fails the build instead of quietly handing the space back.
+
+The **encoder map moves**, so a board flashed over the old layout would read two
+layers' worth of keycodes as its encoder assignments — hence the
+`KEYMAP_STORAGE_RECLAIMED` bump on the existing `keymap_layers_fmt` gate (`state.h`),
+which discards the stored keymap once on the first boot after flashing.
+
+⚠️ **`DYNAMIC_KEYMAP_EEPROM_MAX_ADDR` is derived INSIDE `nvm_dynamic_keymap.c`**, i.e.
+it exists in exactly one translation unit — so anything else that needs the same number
+(here `poly_macro.c`) cannot see it. `config.h` defines it explicitly and QMK's own
+`#ifndef` picks ours up, so the two cannot disagree.
+
+**Reading the real numbers**: the addresses are macros, so they are not symbols in the
+ELF and `nm` cannot find them. Append a `const uint32_t probe[] = {…}` to a real
+firmware source, build, and read the **object file** — the linker gc's an unreferenced
+array out of the final image, but `.build/obj_*/…/<file>.o` still has it:
+`arm-none-eabi-objdump -s -j .rodata.probe <obj>`. That is how the +672 above was
+measured rather than derived.
+
 ### Key source files
 
 | File | Role |
@@ -909,6 +951,13 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
   `id_dynamic_keymap_get_layer_count` already answers with — the host editor sizes
   its tab strip from that command and labels the tabs from this one, so two counts
   could let it draw a tab it has no name for. See "Layer names over the wire" below.
+  **v15** adds **macros**: `MACRO_INFO` (cmd `36` / `0x24`, read-only — count, label
+  stride, capacity u16, bytes-used u16), `MACRO_BODY` (cmd `37` / `0x25`, windowed
+  read/write of the shared body buffer: `data[2]` 0 read / 1 write, `data[3..4]` offset
+  LE, `data[5]` count, `data[6..]` bytes) and `MACRO_LABEL` (cmd `38` / `0x26`,
+  `data[2]` id, `data[3]` 0xFF query else length, `data[4..]` text). All three sit
+  behind ONE host feature gate — a host that could read the info header but not the
+  bodies would render an editor over data it cannot fetch. See "Dynamic macros" below.
   **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep.** ⚠️ The old note here said "the host connect gate is exact-match"; it is
@@ -2178,6 +2227,82 @@ holding **Shift** swaps the icon to `ICON_FONT_SMALLER` and reverses the step, s
 - The legend contains a `HINT_MOVE`, so `glyph_size_remap()` bails and the key itself
   always draws at the small face. That is correct — it is a mixed icon cell, not a
   latin legend — but it means the size key does not demonstrate the setting it changes.
+
+### Dynamic macros (`poly_macro.c`, HID cmds 36/37/38, protocol v15+)
+
+A macro is text (or a short key sequence) stored on the keyboard, typed back on one
+keypress, with a **label the keycap spells out** along its bottom edge. What is worth
+knowing is the parts that are NOT what you would write from scratch:
+
+- **Storage is QMK's own dynamic-macro buffer** — a run of NUL-terminated bodies at
+  `DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR`, macro N found by counting N terminators. We did
+  not invent a format; `dynamic_keymap_macro_get/set_buffer` already manage it.
+- **The LABELS are a separate fixed-stride array**, carved off the TOP of the same
+  region by shrinking `DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE` (config.h). Deliberately not
+  inside the NUL-delimited buffer: a body is addressed by counting separators — fine
+  once per keypress, wrong for something `render_key()` reads for every macro keycap
+  on every refresh. Shrinking the QMK constant is what keeps them apart, since every
+  upstream path bounds itself on it and so cannot reach the labels.
+- ⚠️ **Playback is OURS and must stay a state machine.**
+  `dynamic_keymap_macro_send()` runs the whole macro inline and spells its delay
+  `while (ms--) wait_ms(1)`. On a single-controller board that is merely rude; here
+  the same loop scans the matrix, drives the split UART, services USB HID and pushes
+  72 SPI displays, so a macro with a half-second delay would freeze the board and drop
+  the link. `poly_macro_tick()` runs at most ONE step per housekeeping pass and treats
+  a delay as a deadline. **No time-slicing is needed** (unlike Eden): steps have to be
+  SPACED anyway for the host to see distinct events, so the pacing IS the yield.
+- **The wire format is QMK's send-string encoding, NOT Vial's extension of it** —
+  `0x01 0x01/02/03 <kc>` tap/down/up, `0x01 0x04 <ascii digits>` delay. Staying on the
+  base encoding means the buffer is still playable by `dynamic_keymap_macro_send()`, a
+  real cross-check rather than a theoretical one. Cost: 8-bit keycodes, so no mod-taps
+  or layer keys; every modifier is 0xE0..0xE7, so chords are fine.
+  - ⚠️ **The byte ENDING a delay is NOT consumed** — send_string re-reads it as the
+    next step. Consuming it silently swallows the character after every delay, which
+    presents as "the macro drops a letter sometimes".
+- **The decoding is pure in `base/macro_decode.c`** (a byte-reader callback; no
+  quantum.h, no EEPROM, no timer), the same seam as `base/fw_up_verdict.c`: the
+  arithmetic is the part with a bug history and it was only unreachable because it
+  shared a function with the I/O. `make test:polykybd_macro_decode` — 23 tests,
+  mutation-tested against 7 deliberate breaks, each caught by the intended test.
+- ⚠️ **`clear_keyboard()` on abort.** A DOWN step leaves a modifier registered, and
+  any key press aborts playback — without the clear the host auto-repeats a key
+  nothing will ever release. Same rule as the FW-2 prompt and `doom_begin()`.
+- **Swallowed in `process_record_user()`**, not left to the release edge — an `OSL()`
+  layer re-dispatches a release-edge action up to three times, which for a macro means
+  playing it two or three times over (§ "A release-edge action fires up to THREE
+  times").
+- **Labels live in a RAM cache on BOTH halves** (192 B). Partly speed, mostly
+  necessity: the host writes macros to the master, so the slave's own EEPROM never
+  sees one. The master pushes each label over the split link, ONE per housekeeping
+  pass, clearing its dirty bit only on a real ACK — so the mask is its own retry queue
+  and nothing has to detect "the link is up". ⚠️ Never inline in the HID handler:
+  sixteen bridges of up to ten retries each is seconds of dead main loop on exactly
+  the link that needed the retries.
+  - It **multiplexes onto `USER_SYNC_DYNAMIC_KEYMAP_DATA`** with a private op byte
+    (`POLY_KEYMAP_OP_MACRO_LABEL`) rather than spending one of the 32 transaction
+    slots — that handler was already op-dispatched, the same trick the MRU snapshots
+    and the doom mirror use on `USER_SYNC_OVERLAY_MAP_DATA`.
+- **The keycap draws the index above and the label below**, mirroring
+  `render_lang_flag_key`. The INDEX rather than a generic macro glyph: a generic glyph
+  is identical on all sixteen keys, so it says "this is a macro" and nothing else,
+  while the index says which one and needs no font pack.
+  - ⚠️ **Truncate by MEASURED WIDTH, never by character count.** Measured against the
+    shipped `_Nano_` face: `WWWWWWWW` is exactly 72 px (8 chars) and `iiiiiiiiiiii`
+    is 34 px (12 chars) — an estimate is wrong in both directions.
+    `PolyKybdHost/tools/macro_label_preview.py --check` renders the keycap the way
+    `render_macro_key()` composes it and counts pixels outside the 72×40 window (320
+    cells, 0 clipped). Its measurement lives in the Qt-free
+    `polyhost/services/macro_label.py` because the host editor shows the same
+    truncation while the user types, and an approximation would disagree with the key.
+- **Nothing binds `QK_MACRO_*` in the default keymap.** A macro key is assigned from
+  the host's layout editor, so a user who never opens it pays nothing — and `via.c` is
+  the only core dispatcher for that range, which we do not compile, so the keycodes
+  are ours outright.
+- **Cost: 208 B of RAM** (the 192 B label cache + the playback state), 0 B of EEPROM
+  beyond the reclaim above. ⚠️ Verified against the **monolithic `POLYKYBD_DOOM=yes`**
+  flavour, which PR CI does not build and which is the first thing to fail on any RAM
+  growth: `.heap` 3828 → **3620 B** free. Re-measure there, not on the pack build,
+  before adding another static.
 
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 

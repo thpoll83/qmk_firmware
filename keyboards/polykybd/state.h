@@ -432,7 +432,17 @@ typedef struct _poly_eeconf_t {
 // Layer-enum revision the stored dynamic keymap matches. Bump this ONLY when a layer
 // is added, removed or reordered — not when a layer's CONTENTS change, which needs no
 // reset. Anything else (0 included) means "written against a different enum, discard".
-#define KEYMAP_LAYERS_FL_MERGED 0x71 // single _FL; _NL/_UL/_SL shifted down one
+// Format versions for the stored dynamic keymap, oldest first. Anything that changes
+// what a stored byte MEANS -- the layer enum shifting, or the region moving -- gets a
+// new value here, and load_user_eeconf() discards the keymap once when it does not
+// match KEYMAP_STORAGE_CURRENT. Same shape as the LATIN_PICK_* list below.
+#define KEYMAP_LAYERS_FL_MERGED  0x71 // single _FL; _NL/_UL/_SL shifted down one
+#define KEYMAP_STORAGE_RECLAIMED 0x72 // ...and the encoder map + macro buffer moved down
+                                      // to the 8-layer offset (config.h). The keymap
+                                      // itself did not move, but the ENCODER map did, so
+                                      // a board flashed over 0x71 would read two layers'
+                                      // worth of keycodes as its encoder assignments.
+#define KEYMAP_STORAGE_CURRENT   KEYMAP_STORAGE_RECLAIMED
 // ⚠️ 0xC3 is deliberately NOT the current version. The build that introduced it
 // assumed an unwritten EEPROM reads 0xFF, so it copied the assignment map straight
 // out of a block that had never held one — read back as all-zero, i.e. "every key

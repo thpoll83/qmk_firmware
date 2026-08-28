@@ -223,7 +223,7 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-#define PROTOCOL_VERSION 14
+#define PROTOCOL_VERSION 15
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -379,3 +379,78 @@
 #define USE_CORE1
 
 #define DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT 8
+
+// Reclaim the storage QMK reserves for the layers we never store.
+//
+// DYNAMIC_KEYMAP_LAYER_COUNT must stay 12 (QMK asserts it is >= the compiled layer
+// count, keymap_introspection.c), but only layers 0..7 are ever READ or WRITTEN from
+// EEPROM -- everything from _SL up is served straight out of flash by poly_keycode_at().
+// QMK's default addresses put the encoder map and the macro buffer after all TWELVE
+// layers, so 640 B (split72) / 384 B (split42) of keymap plus a further 32 B of encoder
+// map sit there addressed by nothing. Basing both on the write cap instead hands that
+// space to the macro buffer, which is the one region sized by "whatever is left".
+//
+// The bodies are expanded at the USE site (nvm_dynamic_keymap.c), not here, so
+// MATRIX_ROWS/COLS and NUM_ENCODERS do not have to be defined yet -- exactly how QMK's
+// own defaults are written.
+//
+// WARNING: this only works because nothing writes layers >= the cap. Two guards keep
+// that true and BOTH are load-bearing: the host cannot (dynamic_keymap_set_keycode_poly
+// / _set_buffer_poly clamp to the cap), and OUR reset walks the cap rather than
+// DYNAMIC_KEYMAP_LAYER_COUNT. QMK's own dynamic_keymap_reset() does NOT -- it loops to
+// DYNAMIC_KEYMAP_LAYER_COUNT and calls nvm_dynamic_keymap_update_keycode(), whose bound
+// check is also DYNAMIC_KEYMAP_LAYER_COUNT, so it writes layers 8..11 straight over the
+// encoder map and the macro buffer. It is still reachable from eeconfig_init_quantum();
+// eeconfig_init_kb() repairs after it (see poly_keymap.c). Do not add a third call site.
+#define DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR \
+    (DYNAMIC_KEYMAP_EEPROM_ADDR + (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2))
+#define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR \
+    (DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR + (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * NUM_ENCODERS * 2 * 2))
+
+// --- Macro labels -----------------------------------------------------------
+// The label a macro keycap spells out along its bottom edge. Stored as a FIXED-STRIDE
+// array carved off the top of the macro region, NUL-padded, deliberately NOT inside
+// the NUL-delimited body buffer: a body is addressed by counting separators from the
+// start, which is fine once per keypress and wrong for something the render path reads
+// for every keycap on every display refresh. Fixed stride makes label(n) a multiply.
+//
+// Shrinking DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE is what keeps the two apart -- every QMK
+// path that touches the body bounds itself on that constant, so nothing upstream can
+// reach the labels even though they sit in the same region.
+//
+// 12 bytes is the measured average that fits the 72 px panel in the _Nano_ 10 px face
+// (8 in the worst case, all-W; 24 of narrow letters). Truncation is by PIXEL WIDTH at
+// render time, not by this length -- see poly_macro_label_fit().
+#define POLY_MACRO_LABEL_LEN   12
+#define POLY_MACRO_COUNT       16
+#define DYNAMIC_KEYMAP_MACRO_COUNT POLY_MACRO_COUNT
+
+// A macro OWNS its keycap -- it cannot be folded into a modifier or a tap-hold, because
+// QMK carries the wrapped key in the low byte (MT/LT are `(kc) & 0xFF`) and a macro
+// keycode is 0x7700+. Since the whole cell is the macro's, the cell is free to be more
+// than a legend, so each record carries HOW to draw it alongside the text:
+//
+//   style  1 B   POLY_MACRO_STYLE_*
+//   icon   4 B   codepoint drawn above the caption, 0 = none. Four bytes because the
+//                interesting glyphs are emoji at 0x1F300+, well past 16 bits.
+//   text  12 B   the caption
+//
+// One record, one address, one dirty bit, one bridge -- deliberately NOT a parallel
+// array beside the labels, which is the shape that goes out of step and then needs a
+// guard to remember it (see the enumerating-guard note in CLAUDE.md). The appearance
+// cannot arrive half-applied on the slave because it never travels in two pieces.
+#define POLY_MACRO_ICON_LEN    4
+#define POLY_MACRO_LOOK_LEN    (1 + POLY_MACRO_ICON_LEN + POLY_MACRO_LABEL_LEN)
+#define POLY_MACRO_LABEL_BYTES (POLY_MACRO_COUNT * POLY_MACRO_LOOK_LEN)
+
+// QMK derives this inside nvm_dynamic_keymap.c, i.e. it exists in exactly one
+// translation unit. Everything below (and poly_macro.c) needs the same number, so
+// define it here -- QMK's own #ifndef then picks ours up and the two cannot disagree.
+#ifndef DYNAMIC_KEYMAP_EEPROM_MAX_ADDR
+#    define DYNAMIC_KEYMAP_EEPROM_MAX_ADDR (TOTAL_EEPROM_BYTE_COUNT - 1)
+#endif
+
+#define DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE \
+    ((DYNAMIC_KEYMAP_EEPROM_MAX_ADDR - DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + 1) - POLY_MACRO_LABEL_BYTES)
+#define POLY_MACRO_LABEL_ADDR \
+    (DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE)

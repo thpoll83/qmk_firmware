@@ -77,6 +77,7 @@
 #endif
 
 #include "state.h"
+#include "poly_macro.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
 #include "poly_util.h"
@@ -154,6 +155,7 @@ const struct display_info disp_row_3 = { POLY_DISP_ROW_3 };
 
 
 bool display_wakeup(keyrecord_t* record);
+static void render_macro_key(uint8_t id);   // defined below, used from render_key()
 void update_displays(enum refresh_mode mode);
 void set_displays(uint8_t contrast, bool idle);
 void set_selected_displays(int8_t old_value, int8_t new_value);
@@ -970,6 +972,19 @@ void housekeeping_task_user(void) {
 #endif
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
+
+    // Advance a playing macro by at most one step. Deliberately near the TOP of
+    // housekeeping and outside every fw_up/idle gate: a macro is user-visible typing,
+    // so it must not be starved by a flash or by the idle machinery, and a step that
+    // took the long way round would show up as uneven keystroke timing on the host.
+    poly_macro_tick();
+
+    // Drain at most one queued macro label to the slave. Master-only (the slave is the
+    // receiver), and one per pass because each bridge can spend its retries -- sixteen
+    // of them back to back would be a visible stall on a link that is already unhappy.
+    if (is_keyboard_master()) {
+        poly_macro_label_sync_tick();
+    }
 
     // fw_up state machine: apply on success path, advance deferred erase.
     // Both must run regardless of fw_up_active so the slave's erase actually
@@ -2270,6 +2285,14 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         }
     }
 
+    // Macro keys draw their own cell: the index, and the label along the bottom edge.
+    // Reached because to_static_text() has no case for QK_MACRO_*, which is exactly the
+    // seam update_displays() uses -- a key WITH a legend never gets here.
+    if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
+        render_macro_key((uint8_t)(keycode - QK_MACRO));
+        return true;
+    }
+
     if (mods & MOD_RALT) {
         const uint32_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
@@ -2544,6 +2567,230 @@ static void render_fw_confirm_key(bool accept) {
                                (int8_t)(BUFFER_X + (SCREEN_WIDTH - lw) / 2),
                                (int8_t)((free_rows - lh) / 2),
                                letter);
+}
+
+// Compose a macro keycap: the macro's index above, its label along the bottom edge.
+//
+// Same split as render_lang_flag_key -- identity on top, a tiny _Nano_ caption below --
+// because it is the shape this board already uses for "what is this, and which one".
+// The INDEX rather than a generic macro glyph: a generic glyph would be identical on
+// all sixteen keys, so it says "this is a macro" and nothing else, while the index says
+// which one and needs no font pack (the pack glyphs are the one thing a fresh keyboard
+// might not have). When a label is set it carries the meaning and the index shrinks
+// out of the way; when it is not, the index is all there is, so it takes the cell.
+//
+// The label is truncated by MEASURED WIDTH, never by character count: in this face a
+// 'W' is about three times an 'i', so a fixed cut either clips a wide label off the
+// panel or wastes half the band on a narrow one. The host runs the same measurement in
+// its editor, so what you type is what the keycap shows.
+// Draw `text` centred in the whole cell at the largest face that fits it, biggest
+// first. Returns false when even the smallest face overflows, which the caller treats
+// as "nothing to draw" rather than clipping.
+//
+// The ladder is the point: a caption alone has the entire 72x40 to spend, and the
+// _Nano_ 10 px face the bottom band uses would waste it. The two big tiers live in the
+// `latinbig` PACK bundle, so they are simply absent on a keyboard with no font pack --
+// glyph_size_remap() is all-or-nothing and returns false there, and the ladder walks
+// past them to the resident faces. That is why the resident 27 px face is on the list
+// rather than being the assumed floor.
+static bool draw_macro_caption_big(const uint32_t* text) {
+    uint32_t scratch[POLY_MACRO_LABEL_LEN + 1];
+
+    for (uint8_t tier = 0; tier < 4; tier++) {
+        const GFXfont* const* fonts = NULL;
+        uint8_t               count = 0;
+        const uint32_t*       run   = text;
+
+        switch (tier) {
+            case 0:
+            case 1:
+                // GLYPH_SIZE_L then _M, relocated into the supplementary PUA planes the
+                // latinbig entries are emitted at. Same helper the legend-size feature
+                // uses, so a caption cannot end up at a size the legends cannot reach.
+                if (!glyph_size_remap((uint8_t)(tier == 0 ? GLYPH_SIZE_L : GLYPH_SIZE_M),
+                                      text, scratch,
+                                      (uint8_t)(POLY_MACRO_LABEL_LEN + 1))) {
+                    continue;
+                }
+                run   = scratch;
+                fonts = g_all_fonts;
+                count = g_all_font_count;
+                break;
+            case 2:
+                // The resident latin face (~20 px caps). Always present.
+                fonts = g_all_fonts;
+                count = g_all_font_count;
+                break;
+            default:
+                fonts = mid_fonts;
+                count = 1;
+                break;
+        }
+
+        int8_t xmin, xmax, ymin, ymax;
+        kdisp_gfx_text_bbox(fonts, count, run, &xmin, &xmax, &ymin, &ymax);
+        const int16_t w = (int16_t)(xmax - xmin + 1);
+        const int16_t h = (int16_t)(ymax - ymin + 1);
+        if (w > SCREEN_WIDTH || h > SCREEN_HEIGHT) continue;
+
+        kdisp_write_gfx_text(fonts, count,
+                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - xmin),
+                             (int8_t)((SCREEN_HEIGHT - h) / 2 - ymin),
+                             run);
+        return true;
+    }
+    return false;
+}
+
+// Draws `mark` centred in the `free_rows` a caption left above it, and reports
+// whether it landed.
+//
+// ⚠️ An ICON that overflows at its native size is HALVED rather than dropped, and
+// that is the whole point of this function existing. A pack emoji is rendered at
+// 40 px while a captioned keycap leaves about 29 rows, so the earlier
+// native-size-or-nothing rule drew NOTHING for most icons a user could pick --
+// measured over the picker's own set, four in five (field, 2026-08-27: "after
+// selecting the icon I cannot see it ... also not on the keyboard"). The failure
+// was silent on both ends because the host preview mirrors this placement.
+//
+// The 2x2-OR downsample keeps thin strokes that plain decimation loses, and half of
+// even the tallest pack glyph is ~20 px, which fits any single-line caption.
+static bool draw_macro_mark(const GFXfont* const* fonts, uint8_t count,
+                            const uint32_t* mark, int8_t free_rows,
+                            const GFXglyph* glyph, uint32_t cp) {
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(fonts, count, mark, &xmin, &xmax, &ymin, &ymax);
+    const int8_t h = (int8_t)(ymax - ymin + 1);
+    if (h < free_rows) {
+        kdisp_write_gfx_text(fonts, count,
+                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - (xmax - xmin + 1)) / 2 - xmin),
+                             (int8_t)((free_rows - h) / 2 - ymin), mark);
+        return true;
+    }
+    if (glyph == NULL) return false;   // text marks (the index) are never rescaled
+    // ⚠️ kdisp_draw_glyph_half_at takes the literal TOP-LEFT of the ink -- no baseline
+    // align, no xOffset -- so the position comes from the glyph's own halved extents
+    // and NOT from the bbox above. Halve rounding UP, or an odd-width glyph loses its
+    // last column.
+    const int8_t hw = (int8_t)((pgm_read_byte(&glyph->width) + 1) / 2);
+    const int8_t hh = (int8_t)((pgm_read_byte(&glyph->height) + 1) / 2);
+    if (hh >= free_rows) return false;
+    kdisp_draw_glyph_half_at(fonts, count,
+                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - hw) / 2),
+                             (int8_t)((free_rows - hh) / 2), cp);
+    return true;
+}
+
+static void render_macro_key(uint8_t id) {
+    poly_macro_look_t look;
+    poly_macro_look_get(id, &look);
+    const char *label = look.text;
+
+    // Widen the caption to codepoints once -- both the big-text style and the captioned
+    // styles below need it, and the display list wants uint32_t anyway.
+    uint32_t text[POLY_MACRO_LABEL_LEN + 1];
+    uint8_t  tlen = 0;
+    for (; label[tlen] != '\0' && tlen < POLY_MACRO_LABEL_LEN; tlen++) {
+        text[tlen] = (uint32_t)(uint8_t)label[tlen];
+    }
+    text[tlen] = 0;
+
+    // Caption alone, filling the cell. Falls through to the captioned styles when the
+    // caption is empty (there would be nothing to draw) or when even the smallest face
+    // overflows -- an empty keycap is worse than the small one it replaced.
+    if (look.style == POLY_MACRO_STYLE_TEXT && tlen > 0) {
+        if (draw_macro_caption_big(text)) return;
+    }
+
+    // "M12" -- built by hand rather than snprintf, which is not worth linking for two
+    // digits, and the display list wants uint32_t codepoints anyway.
+    uint32_t index_text[4];
+    uint8_t  n = 0;
+    index_text[n++] = (uint32_t)'M';
+    if (id >= 10) index_text[n++] = (uint32_t)('0' + id / 10);
+    index_text[n++] = (uint32_t)('0' + id % 10);
+    index_text[n]   = 0;
+
+    // The mark above the caption: a chosen glyph, or the index. The icon is looked up
+    // through its OWN single-font array once found, because kdisp_write_gfx_char
+    // baseline-aligns every glyph to fonts[0] -- with g_all_fonts that is IconsFont
+    // (yAdvance 40) and a taller pack glyph is shifted down by the difference, which is
+    // exactly the language-flag gap-at-top regression. An icon this keyboard has no
+    // glyph for falls back to the index rather than drawing nothing, so a caption
+    // picked on a host with a richer font pack still names its macro here.
+    const GFXfont*       icon_font  = NULL;
+    const GFXglyph*      icon_glyph = NULL;
+    const GFXfont*       icon_arr[1];
+    const GFXfont* const* mark_fonts = mid_fonts;
+    uint8_t              mark_count  = 1;
+    uint32_t             mark_text[2];
+    const uint32_t*      mark = index_text;
+
+    if ((look.style == POLY_MACRO_STYLE_ICON || look.style == POLY_MACRO_STYLE_ICON_ONLY)
+        && look.icon != 0) {
+        icon_glyph = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count, look.icon,
+                                          &icon_font);
+        if (icon_glyph != NULL) {
+            icon_arr[0]  = icon_font;
+            mark_fonts   = (const GFXfont* const*)icon_arr;
+            mark_count   = 1;
+            mark_text[0] = look.icon;
+            mark_text[1] = 0;
+            mark         = mark_text;
+        }
+    }
+
+    // ICON_ONLY draws the icon alone, centred in the whole cell, exactly as an
+    // uncaptioned key does -- the caption is KEPT in storage so switching back does
+    // not lose it, it is simply not drawn. An icon this keyboard has no glyph for
+    // leaves icon_glyph NULL and falls through to the captioned index, which is the
+    // same fallback every other icon path takes: a keycap is never left blank.
+    const bool icon_only = (look.style == POLY_MACRO_STYLE_ICON_ONLY && icon_glyph != NULL);
+
+    if (label[0] == '\0' || icon_only) {
+        // No caption to place around: centre the mark in the whole cell. No fit check
+        // and no halving here -- the tallest pack glyph is exactly SCREEN_HEIGHT, and
+        // filling the cell is the point of this branch.
+        int8_t ixmin, ixmax, iymin, iymax;
+        kdisp_gfx_text_bbox(mark_fonts, mark_count, mark, &ixmin, &ixmax, &iymin, &iymax);
+        kdisp_write_gfx_text(mark_fonts, mark_count,
+                             (int8_t)(BUFFER_X + (SCREEN_WIDTH - (ixmax - ixmin + 1)) / 2 - ixmin),
+                             (int8_t)((SCREEN_HEIGHT - (iymax - iymin + 1)) / 2 - iymin),
+                             mark);
+        return;
+    }
+
+    // Drop trailing characters until the caption fits the panel. Measuring after each
+    // drop rather than estimating from a per-character width is the point -- the face
+    // is proportional, so an estimate is wrong in both directions.
+    uint8_t len = tlen;
+
+    int8_t lxmin = 0, lxmax = 0, lymin = 0, lymax = 0;
+    while (len > 0) {
+        kdisp_gfx_text_bbox(lang_label_fonts, 1, text, &lxmin, &lxmax, &lymin, &lymax);
+        if ((int16_t)(lxmax - lxmin + 1) <= SCREEN_WIDTH) break;
+        text[--len] = 0;
+    }
+    if (len == 0) return;
+
+    // Pin the caption's lowest lit pixel to the last screen row, exactly as the FW-2
+    // prompt does -- the descender budget differs per string, so a fixed baseline
+    // clips whichever label happens to carry a 'y'.
+    const int8_t cap_base  = (int8_t)(SCREEN_HEIGHT - 1 - lymax);
+    const int8_t free_rows = (int8_t)(cap_base + lymin);   // rows above the caption
+
+    kdisp_write_gfx_text(lang_label_fonts, 1,
+                         (int8_t)(BUFFER_X + (SCREEN_WIDTH - (lxmax - lxmin + 1)) / 2 - lxmin),
+                         cap_base, text);
+
+    // The mark, centred in whatever the caption left: native size, else halved.
+    // An icon that fits at NO size falls back to the index, which always does --
+    // the same fallback a missing glyph already takes, so an icon can never leave
+    // the keycap without a mark.
+    if (!draw_macro_mark(mark_fonts, mark_count, mark, free_rows, icon_glyph, look.icon)
+        && icon_glyph != NULL) {
+        draw_macro_mark(mid_fonts, 1, index_text, free_rows, NULL, 0);
+    }
 }
 
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
@@ -3804,6 +4051,28 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         return false;
     }
 
+    // A macro is interruptible: any PRESS while one is playing stops it. That is the
+    // "make it stop" a user reaches for, and it is also what keeps a macro from
+    // interleaving its own keystrokes with live typing. The aborting key then falls
+    // through and behaves normally -- the abort is not a swallow.
+    if (poly_macro_active() && record->event.pressed) {
+        poly_macro_abort();
+    }
+
+    // Macro keycodes (QK_MACRO_0..QK_MACRO_MAX). Nothing else in the build consumes
+    // them -- via.c is the only core dispatcher and VIA_ENABLE is unset -- so they are
+    // ours, and they are SWALLOWED here rather than handled on the release edge: an
+    // OSL() layer re-dispatches a release-edge action up to three times
+    // (process_action's do_release_oneshot), which for a macro would mean playing it
+    // two or three times over.
+    if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
+        if (record->event.pressed) {
+            poly_macro_start((uint8_t)(keycode - QK_MACRO));
+        }
+        display_wakeup(record);
+        return false;
+    }
+
     // Doom easter egg: in game mode every key event is swallowed (fed to the
     // game, never the host); outside game mode this only advances the trigger
     // matcher. Inline no-op false unless built with POLYKYBD_DOOM.
@@ -4385,6 +4654,16 @@ static void boot_trace(const uint32_t* digit) {
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
 // Global variables: com
 void keyboard_post_init_user(void) {
+    // Labels live in RAM on both halves (the render path reads one per macro keycap per
+    // refresh). Each half loads its own EEPROM copy, then the master overwrites the
+    // slave's over the link -- so a role swap makes whichever half the host talks to
+    // the authority, with no handedness bookkeeping.
+    poly_macro_labels_load();
+    // Queue them all. Nothing detects "the link is up" here and nothing needs to: the
+    // sync tick only clears a label's bit on a real ACK, so the queue simply drains
+    // once the slave starts answering. Same shape as the state diff being its own
+    // retry queue.
+    poly_macro_labels_mark_all_dirty();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"1");
 #endif
@@ -4510,7 +4789,7 @@ void keyboard_post_init_user(void) {
     // user datablock and the keymap are separate blocks with separate lifetimes —
     // the keymap survives a user-data re-init, which is exactly the case that would
     // otherwise slip through.
-    if (ee.keymap_layers_fmt != KEYMAP_LAYERS_FL_MERGED) {
+    if (ee.keymap_layers_fmt != KEYMAP_STORAGE_CURRENT) {
         uprintf("Keymap layer enum changed (fmt %u) - resetting dynamic keymap\n",
                 (unsigned)ee.keymap_layers_fmt);
         dynamic_keymap_reset_poly();
@@ -4708,6 +4987,29 @@ void keyboard_pre_init_user(void) {
 #endif
 
     gpio_set_pin_input_high(I2C1_SDA_PIN);
+}
+
+// Runs immediately after QMK's own dynamic_keymap_reset() in eeconfig_init_quantum().
+//
+// That call is the ONE remaining reachable use of the unbounded reset, and with the
+// encoder/macro regions rebased on DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT (config.h) it
+// writes layers 8..11 straight over both of them. It cannot be prevented from here --
+// eeconfig.c is upstream and we deliberately do not patch it for this -- but it CAN be
+// repaired, because eeconfig_init_quantum() calls us three lines later, unconditionally,
+// in the same function. dynamic_keymap_reset_poly() rewrites layers 0..7 and the capped
+// encoder map from flash and zeroes the macro buffer, which is exactly the state a fresh
+// EEPROM should be in, so this is the normal initialisation rather than a fix-up that
+// happens to also repair.
+//
+// Nearly free despite running second: eeprom_update_byte() only writes a byte that
+// actually changed, and QMK's pass has already put the correct values in layers 0..7.
+void eeconfig_init_kb(void) {
+    // Replicate what the weak default does before adding the repair -- overriding it
+    // replaces the whole body, and dropping either half here would be silent
+    // (eeconfig.c, EECONFIG_KB_DATA_SIZE == 0 branch).
+    eeconfig_update_kb(0);
+    dynamic_keymap_reset_poly();
+    eeconfig_init_user();
 }
 
 // Initializes EEPROM configuration with default language, brightness, and latin extension settings.

@@ -16,7 +16,9 @@
 #include "eeprom.h"
 #include "nvm_eeprom_eeconfig_internal.h"
 #include "dynamic_keymap.h"
+#include "keymap_introspection.h"   // keycode_at_keymap_location_raw() for the capped reset
 #include "poly_keymap.h"   // poly_fl_row_cache_invalidate()
+#include "poly_macro.h"
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/update.h"
@@ -266,6 +268,32 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 
 _Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COUNT, "Maximum cannot exceed DYNAMIC_KEYMAP_LAYER_COUNT");
 
+// The reclaim in config.h is only sound while the encoder/macro regions really do sit
+// at the WRITE CAP rather than at DYNAMIC_KEYMAP_LAYER_COUNT. Pin both, so a future
+// edit to either constant fails the build instead of silently handing the macro buffer
+// back to storage nothing reads.
+_Static_assert(DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR ==
+                   DYNAMIC_KEYMAP_EEPROM_ADDR +
+                       (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2),
+               "encoder map must be based on the write cap, not DYNAMIC_KEYMAP_LAYER_COUNT");
+_Static_assert(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR >
+                   DYNAMIC_KEYMAP_EEPROM_ADDR +
+                       (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2),
+               "macro buffer must start above the capped keymap region");
+// The label array is carved off the TOP of the macro region by subtraction, which on
+// unsigned arithmetic wraps to a vast size instead of erroring. Pin it here rather than
+// in config.h: that header is also read by the C++ test harness, where `_Static_assert`
+// is not the spelling.
+// Order first: the subtraction below is only meaningful once the region is known to
+// start inside the EEPROM at all. Whether a reversed pair would wrap or go negative
+// depends on the promoted type of two macros defined three headers apart, which is not
+// a thing to leave to inspection.
+_Static_assert(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR <= DYNAMIC_KEYMAP_EEPROM_MAX_ADDR,
+               "macro region starts beyond the end of EEPROM");
+_Static_assert(DYNAMIC_KEYMAP_EEPROM_MAX_ADDR - DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + 1 >
+                   POLY_MACRO_LABEL_BYTES,
+               "macro label carve-out does not fit the reclaimed macro region");
+
 // Writes data to EEPROM at specified offset within the dynamic keymap region with bounds checking.
 void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_t *data) {
     uint16_t max = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
@@ -288,8 +316,37 @@ void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column,
 // function and none can forget the cache invalidation. Deliberately a wrapper rather
 // than a list of "remember to also call this here" call sites — that is the guard
 // shape this codebase keeps getting caught by.
+//
+// ⚠️ This deliberately does NOT call QMK's dynamic_keymap_reset(). That one loops to
+// DYNAMIC_KEYMAP_LAYER_COUNT (12) and writes through nvm_dynamic_keymap_update_keycode(),
+// whose bound check is the same 12 — so with the encoder/macro regions rebased on the
+// 8-layer offset (config.h) it writes layers 8..11 straight over them. Walking the write
+// cap instead is also what the reclaim is FOR: those four layers are served from flash
+// by poly_keycode_at(), so storing them was only ever paying rent on unread bytes.
+//
+// The encoder map is reset over the same capped range for the same reason. The macro
+// buffer is zeroed because a keymap reset is exactly when a stale macro body would
+// otherwise survive — and because this is the repair path for QMK's unbounded reset
+// (eeconfig_init_kb, poly_keymap.c).
 void dynamic_keymap_reset_poly(void) {
-    dynamic_keymap_reset();
+    for (uint8_t layer = 0; layer < DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT; layer++) {
+        for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+            for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+                dynamic_keymap_set_keycode(layer, row, col,
+                                           keycode_at_keymap_location_raw(layer, row, col));
+            }
+        }
+#ifdef ENCODER_MAP_ENABLE
+        for (uint8_t enc = 0; enc < NUM_ENCODERS; enc++) {
+            dynamic_keymap_set_encoder(layer, enc, true,
+                                       keycode_at_encodermap_location_raw(layer, enc, true));
+            dynamic_keymap_set_encoder(layer, enc, false,
+                                       keycode_at_encodermap_location_raw(layer, enc, false));
+        }
+#endif
+    }
+    poly_macro_reset_all();   // bodies AND labels — a stale label on a cleared macro
+                             // is worse than no label, it names something that is gone
     poly_fl_row_cache_invalidate();
 }
 
@@ -316,6 +373,31 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     request_disp_refresh();
                     break;
                 }
+                case POLY_KEYMAP_OP_MACRO_LABEL:
+                    // RAM only on this side. The slave never persists a look: the
+                    // master owns the EEPROM copy and re-pushes every one at boot,
+                    // so a slave-side write would only be a second thing to go stale.
+                    //
+                    // The length check is this op's own, because the CRC does not pin
+                    // it: the slave computes it over `in_len - 4`, so a short frame
+                    // validates against its own truncated payload. This op reads the
+                    // most of any here -- a whole POLY_MACRO_LOOK_LEN record -- and a
+                    // short one would install a caption built from stale buffer bytes.
+                    if (in_len < sizeof(uint32_t) + 2 + POLY_MACRO_LOOK_LEN) break;
+                    {
+                        poly_macro_look_t look;
+                        look.style = command_data[1];
+                        look.icon  = (uint32_t)command_data[2]
+                                   | ((uint32_t)command_data[3] << 8)
+                                   | ((uint32_t)command_data[4] << 16)
+                                   | ((uint32_t)command_data[5] << 24);
+                        memcpy(look.text, &command_data[2 + POLY_MACRO_ICON_LEN],
+                               POLY_MACRO_LABEL_LEN);
+                        look.text[POLY_MACRO_LABEL_LEN] = '\0';
+                        poly_macro_look_adopt(command_data[0], &look);
+                        request_disp_refresh();
+                    }
+                    break;
                 case id_custom_save: //handle the same way
                 case 'P':
                     if(command_data[0]==14) {

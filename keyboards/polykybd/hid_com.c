@@ -3,6 +3,7 @@
 
 #include "hid_com.h"
 #include "hid_fw_up.h"
+#include "poly_macro.h"
 #include "hid_fontpack.h"
 #include "split_fw_up.h"
 
@@ -1068,6 +1069,134 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         memcpy(&data[3], &payload[off], n);
                         raw_hid_send(data, length);
                     }
+                }
+                break;
+            case 36: //macro info: how many, how big, how much is in use (protocol v15+)
+                {
+                    // Read-only. The host needs all four before it can lay out an editor:
+                    // the count and the label stride are compile-time, the capacity is
+                    // whatever survived the EEPROM layout, and `used` is what makes the
+                    // shared-storage bar honest -- the bodies share one buffer, so a long
+                    // macro takes room from the others and that has to be visible before
+                    // a save fails rather than after.
+                    memset(data, 0, length);
+                    hid_reply(data, 0x24, true);
+                    data[3] = POLY_MACRO_COUNT;
+                    data[4] = POLY_MACRO_LABEL_LEN;
+                    uint16_t cap  = poly_macro_capacity();
+                    uint16_t used = poly_macro_bytes_used();
+                    data[5] = (uint8_t)(cap & 0xFF);
+                    data[6] = (uint8_t)(cap >> 8);
+                    data[7] = (uint8_t)(used & 0xFF);
+                    data[8] = (uint8_t)(used >> 8);
+                    // How many keycap styles this firmware can actually DRAW. The host
+                    // may offer more (an unknown style degrades to the index rather
+                    // than being refused), but a menu that lists only what the board
+                    // renders is the honest one -- and this costs a byte in a report
+                    // with 55 spare.
+                    data[9] = POLY_MACRO_STYLE_COUNT;
+                    raw_hid_send(data, length);
+                }
+                break;
+            case 37: //macro body read/write, windowed (protocol v15+)
+                {
+                    // data[2] = 0 read / 1 write, data[3..4] = offset LE, data[5] = count,
+                    // data[6..] = bytes. Windowed rather than whole-macro because the
+                    // buffer is up to ~2 KB and a report holds 64 -- the host streams it
+                    // the same way it streams an overlay.
+                    const uint8_t  header = 6;
+                    uint8_t        sub    = data[HID_DATA_IDX];
+                    uint16_t       offset = (uint16_t)data[3] | ((uint16_t)data[4] << 8);
+                    uint16_t       want   = data[5];
+                    const uint16_t avail  = hid_payload_avail(length, header);
+                    if (want > avail) want = avail;
+
+                    if (sub == 0) {
+                        uint8_t buf[64];
+                        poly_macro_read(offset, (uint16_t)want, buf);
+                        memset(data, 0, length);
+                        hid_reply(data, 0x25, true);
+                        data[3] = (uint8_t)want;
+                        memcpy(&data[header], buf, want);
+                        raw_hid_send(data, length);
+                    } else if (sub == 1) {
+                        // A write lands mid-buffer, so a macro that is being replaced
+                        // is briefly inconsistent -- and an interrupted upload would
+                        // otherwise leave a playable splice of the new text and
+                        // whatever preceded it. poly_macro_start() refuses to play a
+                        // buffer whose last byte is not NUL; the HOST raises a non-zero
+                        // marker there before it streams and clears it with the final
+                        // window, so the guard is armed for exactly that window. The
+                        // marker is the host's job because only the host knows a write
+                        // has begun -- from here every window looks alike.
+                        poly_macro_write(offset, (uint16_t)want, &data[header]);
+                        memset(data, 0, length);
+                        hid_reply(data, 0x25, true);
+                        raw_hid_send(data, length);
+                    } else {
+                        // Anything else NACKs rather than falling into the write. The
+                        // `else` used to catch every value, so a malformed or newer
+                        // client silently modified macro EEPROM instead of being told
+                        // the sub-command means nothing here (CodeRabbit, 2026-08-27).
+                        memset(data, 0, length);
+                        hid_reply(data, 0x25, false);
+                        raw_hid_send(data, length);
+                    }
+                }
+                break;
+            case 38: //macro look get/set (protocol v15+)
+                {
+                    // The whole appearance of one macro in one exchange:
+                    //   data[2]    macro id
+                    //   data[3]    0xFF query, else the caption byte count
+                    //   data[4]    style (POLY_MACRO_STYLE_*)
+                    //   data[5..8] icon codepoint, little-endian
+                    //   data[9..]  caption text
+                    // The reply mirrors the same layout.
+                    //
+                    // One command rather than three, because a macro keycap composes
+                    // the caption WITH the style and the icon -- splitting them lets a
+                    // host apply half an appearance, and the keycap then draws a
+                    // combination the user never asked for until the next write lands.
+                    //
+                    // ASCII only: poly_macro_look_set drops anything the _Nano_ face
+                    // cannot draw, so what is stored is what the keycap will show. An
+                    // unknown style is stored as STYLE_INDEX rather than refused -- see
+                    // poly_macro.h.
+                    const uint8_t header = 9;
+                    uint8_t       id     = data[HID_DATA_IDX];
+                    uint8_t       n      = data[3];
+                    if (id >= POLY_MACRO_COUNT) {
+                        memset(data, 0, length);
+                        hid_reply(data, 0x26, false);
+                        raw_hid_send(data, length);
+                        break;
+                    }
+                    if (n != 0xFF) {
+                        const uint16_t avail = hid_payload_avail(length, header);
+                        if (n > avail) n = (uint8_t)avail;
+                        if (n > POLY_MACRO_LABEL_LEN) n = POLY_MACRO_LABEL_LEN;
+                        poly_macro_look_t look;
+                        look.style = data[4];
+                        look.icon  = (uint32_t)data[5] | ((uint32_t)data[6] << 8)
+                                   | ((uint32_t)data[7] << 16) | ((uint32_t)data[8] << 24);
+                        memcpy(look.text, &data[header], n);
+                        look.text[n] = '\0';
+                        poly_macro_look_set(id, &look);
+                        request_disp_refresh();
+                    }
+                    poly_macro_look_t look;
+                    poly_macro_look_get(id, &look);
+                    uint8_t len = (uint8_t)strlen(look.text);
+                    memset(data, 0, length);
+                    hid_reply(data, 0x26, true);
+                    data[3] = len;
+                    data[4] = look.style;
+                    for (uint8_t b = 0; b < POLY_MACRO_ICON_LEN; b++) {
+                        data[5 + b] = (uint8_t)((look.icon >> (8 * b)) & 0xFFu);
+                    }
+                    memcpy(&data[header], look.text, len);
+                    raw_hid_send(data, length);
                 }
                 break;
 #ifdef POLYKYBD_LOOP_PROFILE

@@ -615,6 +615,17 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
             case 15: //start/stop idle
                 if(data[HID_DATA_IDX]==0) {
+                    // A host "stop idle" is a wake, so it must tear down the DOOM
+                    // attract screensaver (IDLE_STYLE_IDDQD) too — exactly as a
+                    // keypress wake does via poly_force_wake()/poly_prepare_for_flash().
+                    // The attract demo runs with STATUS_DISP_ON SET and DISP_IDLE
+                    // CLEARED, so the flag handling below never reaches it; without
+                    // this the host cannot stop the screensaver over HID, and while
+                    // doom holds the overlay pool a subsequent font/doom re-flash is
+                    // refused (hid_fontpack.c FONTPACK_BEGIN gates on !doom_mode_active()).
+                    // Self-guards: only an active attract demo is affected; a no-op
+                    // inline stub on a non-doom build.
+                    doom_screensaver_stop();
                     if((local_state->flags & (STATUS_DISP_ON|DISP_IDLE))==0) {
                         suspend_wakeup_init_kb();
                     } else {

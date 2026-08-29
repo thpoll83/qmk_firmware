@@ -27,8 +27,16 @@ jobs:
 
       - name: Determine bump type from PR labels
         id: bump_type
+        # Label names reach the script through the ENVIRONMENT, never by being
+        # interpolated into its text. A GitHub label may contain a single
+        # quote, which in the old `LABELS='${{ ... }}'` form closed the shell
+        # string and let the rest of the name run as commands. Applying a label
+        # needs write access, which already allows more than this would buy, so
+        # this is defence in depth rather than a closed hole -- but the safe
+        # form costs nothing.
+        env:
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |
-          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
           if echo "$LABELS" | grep -q '"bump:major"'; then
             echo "type=major" >> "$GITHUB_OUTPUT"
           elif echo "$LABELS" | grep -q '"bump:minor"'; then
@@ -40,8 +48,16 @@ jobs:
           fi
 
       - name: Bump version in config.h
+        # Same rule as above: the bump type is read from the environment rather
+        # than pasted into the Python source. It can only be one of four
+        # literals this workflow itself wrote, so nothing is exploitable here --
+        # but with this there is no `${{ }}` left inside any `run:` body, which
+        # makes the file safe by inspection instead of by tracing each value.
+        env:
+          BUMP_TYPE: ${{ steps.bump_type.outputs.type }}
         run: |
           python3 - <<'PYEOF'
+          import os
           import re
 
           path = "keyboards/polykybd/config.h"
@@ -54,7 +70,7 @@ jobs:
           m_proto = re.search(r'#define PROTOCOL_VERSION (\d+)', content)
           proto = int(m_proto.group(1)) if m_proto else 1
 
-          bump = "${{ steps.bump_type.outputs.type }}"
+          bump = os.environ["BUMP_TYPE"]
           if bump == "major":
               major += 1; minor = 0; patch = 0
           elif bump == "minor":

@@ -526,6 +526,14 @@ void save_user_eeconf(void);
 // Loads user keyboard configuration from EEPROM with brightness validation against maximum.
 poly_eeconf_t load_user_eeconf(void);
 
+// The single-tail-byte writers (implemented in state_store.c with the rest of
+// the EEPROM block I/O). Each is dirty-gated by save_all_dirty(); nothing else
+// should call them, since a direct call bypasses the dirty bookkeeping.
+void save_user_os(void);
+void save_user_glyph_script(void);
+void save_user_glyph_size(void);
+void save_user_boot_flags(void);
+
 // Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT (deferred EEPROM write).
 void inc_brightness(void);
 
@@ -635,6 +643,9 @@ void note_boot_flags(uint8_t flags);
 bool boot_intro_pending(void);
 // Persist BOOT_INTRO_DONE (one-time tail-byte write) so the intro won't replay.
 void mark_boot_intro_done(void);
+
+// The raw boot_flags byte, for the persistence half (save_user_boot_flags).
+uint8_t get_boot_flags(void);
 
 // ---- Active host-OS (enum poly_os) — see the poly_os comment in this header. ----
 

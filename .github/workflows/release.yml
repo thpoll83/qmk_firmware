@@ -121,6 +121,21 @@ jobs:
             echo "::error::signing reported success but produced no ${TARGET}.bin.sig"
             exit 1
           fi
+          # FW-9: the .plyx is EXECUTABLE code on the same transport, so it is
+          # signed with the same key — embedded in the file (a 64-byte trailer
+          # over header+image), verified by the firmware at load time. An
+          # unsigned .plyx is refused outright by FW_REQUIRE_SIGNATURE builds
+          # (no on-keycap prompt exists for it: the load runs at idle), so a
+          # release shipping one would ship a dead asset.
+          PACK_VER=$(cat keyboards/polykybd/doom/pack/PACK_VERSION)
+          PLYX="doom_pack_v${PACK_VER}.plyx"
+          BEFORE=$(stat -c%s "${PLYX}")
+          python3 keyboards/polykybd/tools/sign_doompack.py "${PLYX}"
+          AFTER=$(stat -c%s "${PLYX}")
+          if [ "${AFTER}" -ne $((BEFORE + 64)) ] && [ "${AFTER}" -ne "${BEFORE}" ]; then
+            echo "::error::${PLYX} size moved ${BEFORE} -> ${AFTER}; expected +64 (fresh sign) or unchanged (re-sign)"
+            exit 1
+          fi
 
       # Runs on a tag push, on publishing a release, or on a manual dispatch.
       # Idempotent: creates the release if missing, otherwise (re-)uploads the

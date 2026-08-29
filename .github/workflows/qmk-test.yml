@@ -316,16 +316,16 @@ jobs:
   # Not part of the normal PR gate: it flashes a *different* firmware (the
   # profiler build) and occupies the rig for a few more minutes, so it only runs
   # when asked for. Three ways to ask, each with its own scope:
-  #   * add the `perf` label to a PR — the way to measure a PR (needs the
+  #   * add the `hil-perf` label to a PR — the way to measure a PR (needs the
   #     `labeled` event type above; the label stays on, so later pushes to that
   #     PR keep measuring),
-  #   * put `[perf]` in a commit message — PUSH events only. `head_commit` does
+  #   * put `[hil-perf]` in a commit message — PUSH events only. `head_commit` does
   #     not exist on a pull_request event, so this does nothing on a PR; it
   #     applies to pushes to PolyKybd branches (i.e. after merge),
   #   * run the workflow manually (Actions -> Run workflow) — only available
   #     once this file is on the default branch. A dispatch ALSO puts the HIL
   #     suite on its extended tier (hil-test's HIL_EXTENDED above), so one dispatch
-  #     runs both; a push commit carrying `[perf]` AND `[hil-extended]` does the
+  #     runs both; a push commit carrying `[hil-perf]` AND `[hil-extended]` does the
   #     same, as do both labels on a PR.
   #
   # It reports numbers and compares them against the baseline committed in the
@@ -337,8 +337,8 @@ jobs:
     name: Build firmware (profiling)
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'perf') ||
-      contains(github.event.head_commit.message, '[perf]')
+      contains(github.event.pull_request.labels.*.name, 'hil-perf') ||
+      contains(github.event.head_commit.message, '[hil-perf]')
     runs-on: ubuntu-latest
     outputs:
       hil_left: ${{ steps.names.outputs.hil_left }}
@@ -477,8 +477,8 @@ jobs:
   # ── FW-9 signed DOOM engine-pack HIL coverage (opt-in) ─────────────────────
   # Builds a HIL image + a matching signed .plyx so the rig can exercise the
   # LOAD-time Ed25519 gate in doom_pack_load.c (accept / tampered / unsigned).
-  # Opt-in like `perf` (dispatch / `doom` label / `[doom]` commit marker) because
-  # build_pack.sh is a full monolith+pack rebuild and the tests flash ~230 KB.
+  # Opt-in like `hil-perf` (dispatch / `hil-doom` label / `[hil-doom]` commit marker)
+  # because build_pack.sh is a full monolith+pack rebuild and the tests flash ~230 KB.
   #
   # ⚠️ SECURITY: this does NOT use the real FW_SIGNING_KEY (that secret is confined
   # to release.yml). It generates an EPHEMERAL keypair, bakes its pubkey into these
@@ -490,13 +490,13 @@ jobs:
   #
   # ⚠️ DEPENDENCY: only meaningful on firmware that HAS the FW-9 load-time check
   # (qmk #243). On a tree without it the refuse tests cannot pass — apply the
-  # `doom` opt-in only once that has merged.
+  # `hil-doom` opt-in only once that has merged.
   build-doom:
     name: Build firmware + signed pack (doom FW-9)
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'doom') ||
-      contains(github.event.head_commit.message, '[doom]')
+      contains(github.event.pull_request.labels.*.name, 'hil-doom') ||
+      contains(github.event.head_commit.message, '[hil-doom]')
     runs-on: ubuntu-latest
     outputs:
       hil_left: ${{ steps.names.outputs.hil_left }}

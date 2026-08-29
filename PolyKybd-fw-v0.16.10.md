@@ -1,4 +1,4 @@
-# PolyKybd v0.16.9 Macros & a signed engine pack
+# PolyKybd v0.16.10 Macros & a signed engine pack
 
 ## 0.16.8 — The DOOM engine pack is signed 🔐
 The `.plyx` engine pack is executable code flashed over HID and jumped into, and it
@@ -49,6 +49,6 @@ emulated EEPROM.
   brightness, language and Intl settings with no diagnostic. The slot now ends exactly
   at the EEPROM base, keeping ~41 KB of headroom.
 
-Plus maintenance releases 0.15.16, 0.15.18 and 0.16.1–0.16.7, 0.16.9 🧹 — an
+Plus maintenance releases 0.15.16, 0.15.18 and 0.16.1–0.16.7, 0.16.9–0.16.10 🧹 — an
 architecture pass that extracted testable seams out of the display and keymap code
 (+62 unit tests across four new suites), and the CI to rig-test the signed pack.

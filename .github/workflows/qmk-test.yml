@@ -621,12 +621,23 @@ jobs:
           path: ${{ steps.ctnd.outputs.dir }}/firmware
 
       - name: Flash and run the doom signature set
+        # Pass the build-doom filenames through env vars rather than interpolating
+        # ${{ }} straight into the script: the values are runner-set filenames
+        # (fixed by the -e TARGET= above, not PR-controlled), but expanding them as
+        # quoted shell vars keeps a metacharacter in a name from ever breaking out
+        # of the string — the GitHub-recommended shape for an untrusted-looking
+        # value on a self-hosted runner.
+        env:
+          CTND_DIR: ${{ steps.ctnd.outputs.dir }}
+          HIL_LEFT: ${{ needs.build-doom.outputs.hil_left }}
+          HIL_RIGHT: ${{ needs.build-doom.outputs.hil_right }}
+          PLYX: ${{ needs.build-doom.outputs.plyx }}
         run: |
-          cd ${{ steps.ctnd.outputs.dir }}
+          cd "$CTND_DIR"
           set -o pipefail
           venv/bin/python -u -m station.test_runner \
-            --left  "firmware/${{ needs.build-doom.outputs.hil_left }}" \
-            --right "firmware/${{ needs.build-doom.outputs.hil_right }}" \
+            --left  "firmware/$HIL_LEFT" \
+            --right "firmware/$HIL_RIGHT" \
             --doom \
-            --plyx-valid "firmware/${{ needs.build-doom.outputs.plyx }}" \
+            --plyx-valid "firmware/$PLYX" \
             2>&1 | tee /tmp/doom-test.log

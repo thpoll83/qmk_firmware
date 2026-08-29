@@ -1,5 +1,5 @@
-#include "core1.h"
-#include "irq.h"
+#include "polymod_core1.h"
+#include "polymod_core1_irq.h"
 
 #include "hardware/structs/scb.h"
 #include "hardware/timer.h"   // time_us_64 (bounded launch deadline)

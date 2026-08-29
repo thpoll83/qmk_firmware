@@ -57,7 +57,7 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 // fw_staging_finalize() restarts core1 explicitly.
 // ---------------------------------------------------------------------------
 #ifdef USE_CORE1
-#include "base/multicore/core1.h"
+#include "polymod_core1.h"
 
 #define _PSM_FRCE_OFF  (*(volatile uint32_t *)0x40010004u)
 #define _PSM_PROC1_BIT (1u << 16)

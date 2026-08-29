@@ -11,6 +11,7 @@
         "device_version": "1.0.0"
     },
     "modules": [
+        "polykybd/polymod_core1",
         "polykybd/polymod_crc32",
         "polykybd/polymod_ltr559",
         "polykybd/polymod_monocypher",

@@ -64,7 +64,7 @@
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
 #include "base/fonts/nano_font.h"          // 10px label font under the flags
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
-#include "base/multicore/core1.h"
+#include "polymod_core1.h"
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "polymod_crc32.h"
 

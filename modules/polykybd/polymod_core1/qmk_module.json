@@ -1,0 +1,6 @@
+{
+    "module_name": "RP2040 core1 launch + FIFO",
+    "maintainer": "PolyKybd",
+    "license": "GPL-2.0-or-later",
+    "url": "https://github.com/thpoll83/qmk_firmware"
+}

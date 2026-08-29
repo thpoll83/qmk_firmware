@@ -1,4 +1,21 @@
-# PolyKybd v0.16.0 Macros with keycap labels
+# PolyKybd v0.16.9 Macros & a signed engine pack
+
+## 0.16.8 — The DOOM engine pack is signed 🔐
+The `.plyx` engine pack is executable code flashed over HID and jumped into, and it
+was authenticated by a CRC32 — an integrity check anyone crafting a pack satisfies.
+It now carries an Ed25519 signature over the header *and* the image, checked at load.
+- Closes the last unsigned code path into the firmware: anything that could talk raw
+  HID could previously flash a crafted pack, select the DOOM screensaver (cmd 28) and
+  run its own code with full firmware privilege on the next idle — around the firmware
+  image signing entirely.
+- Checked at **load**, not at flash time, because flash can be rewritten after a
+  successful commit. The header is signed too — `entry_off`/`ram_base` are what an
+  attacker would edit to re-point an otherwise valid image.
+- ⚠️ **An unsigned pack is refused and the fire demo runs instead.** There is no keycap
+  prompt for this one: the load happens while the board is idle, with nobody there to
+  answer it. Flash the signed `.plyx` from this release (`PACK_VERSION 4`) to get DOOM
+  back. No host update is needed for this, and a signed pack still loads on older
+  firmware.
 
 ## 0.16.0 — Macros ⌨️
 Store a phrase or a key sequence on the keyboard and type it back with one key — and
@@ -32,4 +49,6 @@ emulated EEPROM.
   brightness, language and Intl settings with no diagnostic. The slot now ends exactly
   at the EEPROM base, keeping ~41 KB of headroom.
 
-Plus maintenance releases 0.15.16 and 0.15.18 🧹
+Plus maintenance releases 0.15.16, 0.15.18 and 0.16.1–0.16.7, 0.16.9 🧹 — an
+architecture pass that extracted testable seams out of the display and keymap code
+(+62 unit tests across four new suites), and the CI to rig-test the signed pack.

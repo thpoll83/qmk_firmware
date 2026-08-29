@@ -548,6 +548,10 @@ jobs:
         run: |
           PACK_VER=$(cat keyboards/polykybd/doom/pack/PACK_VERSION)
           PLYX="keyboards/polykybd/doom/pack/doom_pack_v${PACK_VER}.plyx"
+          # build_pack.sh runs in the qmk_cli container as root, so the .plyx lands
+          # root-owned in the mounted workspace; sign_doompack.py rewrites it in place,
+          # which the host runner user cannot do until it takes ownership.
+          sudo chown "$(id -u):$(id -g)" "$PLYX"
           before=$(stat -c%s "$PLYX")
           python3 keyboards/polykybd/tools/sign_doompack.py --privkey /tmp/doom_ephemeral_key.bin "$PLYX"
           after=$(stat -c%s "$PLYX")

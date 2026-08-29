@@ -331,14 +331,19 @@ inherited-upstream noise:
     `TIER_EXTENDED` (polykybd-ctnd `station/hil_tests.py`) and add ~50 s, so they run
     only when the run asks. **Ask for them on anything that touches EEPROM/persisted
     state, the split link, the idle/animation paths, or a release.** Three ways, the
-    same convention as the `perf` label:
+    same convention as the `hil-perf` label.
+    - ⚠️ **The opt-in labels are the `hil-*` set since 2026-08-29** — `hil-extended`,
+      `hil-perf` (the perf job, renamed from `perf`) and `hil-doom` (the FW-9 signed-pack
+      job). The bare `perf` / `doom` names, and the `[perf]` / `[doom]` commit markers,
+      now fire **NOTHING** — a silent no-op, since the `if:` matches only the new
+      strings. Anywhere below still saying "`perf` label" means `hil-perf`.
     - the **`hil-extended`** PR label — it starts its own run: `build` excludes
       `labeled` events (so the auto-labeler cannot re-run the pipeline) with a
       deliberate **exception for this one label**, matched on
       `github.event.label.name`. ⚠️ **Do not try to pick the label up by re-running
       an existing run** — a re-run replays the ORIGINAL event payload, so a label
       added afterwards is invisible and the re-run silently repeats the default
-      tier (caught by CodeRabbit on #223; it is also why `perf` works on a label
+      tier (caught by CodeRabbit on #223; it is also why `hil-perf` works on a label
       and this did not until the exception was added);
     - **`[hil-extended]`** in a commit message — PUSH events only (`head_commit` does
       not exist on a `pull_request` event), i.e. after a merge / at release time;
@@ -348,13 +353,15 @@ inherited-upstream noise:
     the reboot/link checks, because by default it did not. Locally on the rig:
     `python -m station.test_runner --extended` (or `HIL_EXTENDED=1`), or the touch
     UI's **Extended** toggle beside Run Tests.
-  - ✅ **`workflow_dispatch` runs the extended HIL tier AND the perf measurement in
-    one action**, because it satisfies both opt-in conditions at once. The two are
+  - ✅ **`workflow_dispatch` runs all THREE opt-ins at once — the extended HIL tier,
+    the perf measurement AND the FW-9 doom set** — because it satisfies every opt-in
+    `if:` at once (each names `github.event_name == 'workflow_dispatch'`). They are
     otherwise INDEPENDENT — each opt-in drives only its own job, so `hil-extended`
-    alone starts no perf run and `perf` alone leaves the HIL suite on its default
-    tier. ⚠️ Dispatch is not the *only* way to get both: both labels on a PR, or
-    **both markers in one pushed commit message** (`… [hil-extended] [perf]`), do it
-    too. The commit-message form is the natural release-time route — a release push
+    alone starts no perf run and `hil-perf` alone leaves the HIL suite on its default
+    tier. ⚠️ Dispatch is not the *only* way to get them: the matching labels on a PR, or
+    **the markers in one pushed commit message** (`… [hil-extended] [hil-perf] [hil-doom]`),
+    do it too. **A dispatch is also the way to exercise the doom set when there is no
+    open PR to label** (used 2026-08-29, run #894, right after the trilogy merged). The commit-message form is the natural release-time route — a release push
     is a push — but it only fires where the workflow listens for pushes at all,
     i.e. `PolyKybd` and `PolyKybd/**`; the same marker in a commit pushed to a
     `claude/**` branch starts nothing. What dispatch buys is needing no label
@@ -390,8 +397,52 @@ inherited-upstream noise:
     up raises `KeyError: 'jobs'`, which is how the first version of this very snippet was
     wrong. **Two other blocks use the same `>-` shape and deserve the same check**:
     the `build` job's `if:` (the `hil-extended` label exception) and `build-perf`'s
-    (the `perf` opt-in) — a folded `if:` that gains a newline evaluates to a string
-    rather than a boolean, so the job silently stops matching its trigger.
+    (the `hil-perf` opt-in) — a folded `if:` that gains a newline evaluates to a string
+    rather than a boolean, so the job silently stops matching its trigger. The
+    `build-doom` `if:` (the `hil-doom` opt-in) is the same shape and deserves the same
+    check.
+  - **The FW-9 doom set is a THIRD opt-in tier (`hil-doom`), and it signs its test
+    artifact with an EPHEMERAL key — never the production one.** `build-doom` +
+    `doom-test` (mirroring `build-perf`/`perf-test`) build a doom-flavour HIL image
+    pair + a matching signed `.plyx`, then the rig drives the load-time Ed25519 gate in
+    `doom_pack_load.c` (accept / tampered / unsigned — `TIER_DOOM` in the ctnd suite).
+    ⚠️ **The production `FW_SIGNING_KEY` is confined to `release.yml` and must NOT be
+    used by a PR-triggered workflow.** So `build-doom` **generates a throwaway Ed25519
+    keypair** (`gen_signing_key.py`, which rewrites `base/fw_pubkey.h`), builds the HIL
+    images with that disposable pubkey baked in, and signs the pack with the ephemeral
+    seed (`sign_doompack.py --privkey`, asserting the size grew by exactly +64). The
+    signature code runs against a real — but disposable — key, so the real key never
+    touches a PR run; the images are throwaway (a non-shipping pubkey) and the next
+    normal run reflashes the shipping image. This is the pattern for any future
+    signature-gated HIL test. The accept path is reachable because the `.plyx`'s
+    `ram_base` = the pack-flavour ELF's `__overlay_pool_base__`, pinned at `0x20000000`
+    by the DOOMPACK ldscript, so a same-commit pack passes the RAM-pairing gate and
+    *reaches* the Ed25519 check.
+    - ⚠️ **The `.plyx` from `build_pack.sh` is ROOT-OWNED (docker), so signing it
+      in place FAILS on the host runner** — `PermissionError [Errno 13]` at
+      `sign_doompack.py`'s `write_bytes`. The pack is emitted by the `qmkfm/qmk_cli`
+      **container** (runs as root) into the mounted workspace; the next step is a host
+      `run:` as the `runner` user and `sign_doompack.py` rewrites the file in place, so
+      it needs write access it doesn't have. `release.yml` never hit this because it
+      signs the host-produced `.bin` and only *reads* (`cp`) the `.plyx`. Fix:
+      `sudo chown "$(id -u):$(id -g)" "$PLYX"` before signing (GitHub-hosted runners
+      have passwordless sudo). Found on the first real `hil-doom` run (dispatch #894,
+      2026-08-29); build-doom failed at signing so `doom-test` was `skipped` (it
+      `needs: build-doom`).
+  - ⚠️ **The zizmor `artipacked` / `persist-credentials: false` warning is MOOT on
+    these build jobs, and setting it can BREAK the build.** `build`/`build-perf`/
+    `build-doom` upload only **named-glob** artifacts (`*.uf2`, `*.plyx`), never the
+    repo root or `.git`, so a persisted checkout token cannot ride along in an
+    artifact — the exfiltration path the warning describes does not exist here.
+    Meanwhile `persist-credentials: false` interacts with `submodules: recursive`
+    (recursive submodule auth can depend on the persisted credential), which is exactly
+    what these builds need for the ChibiOS/pico-sdk tree. So the build jobs deliberately
+    omit it; `build-doom` carries `permissions: contents: read` instead (least
+    privilege, matching the rig test jobs). CodeRabbit accepted this and withdrew the
+    finding (#244, 2026-08-29). ⚠️ Pinning `docker://qmkfm/qmk_cli` to an immutable
+    digest is a *real* hardening but a **repo-wide** one — 10 uses in `qmk-test.yml` +
+    more in `release.yml` — so it is a deliberate all-uses-at-once change (ideally with
+    Dependabot), never a piecemeal one-job edit.
 - **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
   is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
   training data and therefore blind spots, while dataflow analysis fails elsewhere.
@@ -429,7 +480,7 @@ inherited-upstream noise:
   - **`workflow_dispatch` has no paths filter**, so a manual run — including the
     both-tiers route above — works on any commit regardless.
   - ⚠️ **A path-filtered `pull_request` trigger applies to `labeled` too**, so
-    adding `hil-extended` or `perf` to a docs-only PR now starts nothing at all.
+    adding `hil-extended` or `hil-perf` to a docs-only PR now starts nothing at all.
     That is the intent (there is no firmware there to measure), but it is a silent
     no-op rather than an error.
   - ⚠️ **This only works because neither check is a REQUIRED status check.** A
@@ -490,8 +541,8 @@ inherited-upstream noise:
     left **13** more in `handwired/onekey` and cost an extra CI round. Run the job's
     loop locally and collect every `☒` line first.
 - ⚠️ **Applying N labels in ONE API call fires N `labeled` events, i.e. N workflow
-  runs.** `qmk-test.yml` listens for `labeled` (it must, or the `perf` label would
-  trigger nothing), so adding `perf` + `bump:minor` together started **two identical
+  runs.** `qmk-test.yml` listens for `labeled` (it must, or the `hil-perf` label would
+  trigger nothing), so adding `hil-perf` + `bump:minor` together started **two identical
   perf runs** — a wasted rig build + flash each (2026-08-05). The rig executes one job
   at a time so they queue rather than collide, but cancel the duplicate. Apply labels
   one call at a time when one of them is a trigger, or expect to clean up. This is a
@@ -613,7 +664,7 @@ inherited-upstream noise:
   measure main-loop timing, overlay cost (bridge/render/rest) and HID latency, then
   posts a table to the job summary + a PR comment and compares against the baseline
   committed in `polykybd-ctnd` (`perf/baselines/split72.json`). Trigger it with the
-  **`perf` PR label** (the way to measure a PR), **`[perf]` in a commit message**
+  **`hil-perf` PR label** (the way to measure a PR), **`[hil-perf]` in a commit message**
   (PUSH events only — `head_commit` doesn't exist on a `pull_request` event, so it
   does nothing on a PR), or a manual **`workflow_dispatch`** (only available once
   the workflow is on the default branch). ⚠️ The label needs `labeled` in the
@@ -629,13 +680,13 @@ inherited-upstream noise:
   flash a build and paste the console log.** See
   `keyboards/polykybd/profiling/README.md` (§ on-demand control, HID cmd 32) and the
   `polykybd-ctnd` CLAUDE.md § Performance measurement.
-- **An upstream merge is the canonical case for the `perf` label.** A catch-up merge
+- **An upstream merge is the canonical case for the `hil-perf` label.** A catch-up merge
   bumps the ChibiOS / pico-sdk pins and pulls core QMK changes (split transport, USB
   stack, scheduler) — exactly the things that can move main-loop timing with **no
   PolyKybd source changed** — and it is also the PR CodeRabbit skips outright (>100
   files), so `Build firmware` + `HIL test` are the only other verification and
   neither measures timing. The job is report-only, so it cannot redden an already
-  unreviewable PR. Apply `perf` as its **own** label call (N labels in one call fire
+  unreviewable PR. Apply `hil-perf` as its **own** label call (N labels in one call fire
   N runs — see the labeling note above). ⚠️ **Then move the baseline — but only if
   something actually moved.** `perf/baselines/split72.json` is compared against,
   never auto-updated, so a real shift left unrecorded becomes a phantom regression

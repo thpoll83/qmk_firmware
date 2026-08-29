@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fifo.h"
+#include "polymod_core1_fifo.h"
 
 #include <stddef.h>
 

@@ -160,7 +160,7 @@ tracer also exists behind the `FW_UP_BOOT_TRACE` compile flag — see `boot_trac
 
 ### Core 1 stack high-water mark (`CORE1_STACK_HWM`)
 
-`base/multicore/core1.c` ships a small stack-painting probe that measures how deep core 1 actually drives its stack. It is **off by default** (the painting loop and walk add cycles to `multicore_launch_core1` and to every overlay/ROI dispatch) and gated by `CORE1_STACK_HWM`.
+`modules/polykybd/polymod_core1/polymod_core1.c` (the polymod_core1 community module) ships a small stack-painting probe that measures how deep core 1 actually drives its stack. It is **off by default** (the painting loop and walk add cycles to `multicore_launch_core1` and to every overlay/ROI dispatch) and gated by `CORE1_STACK_HWM`.
 
 Enable it for a build by adding the define to `rules.mk`:
 

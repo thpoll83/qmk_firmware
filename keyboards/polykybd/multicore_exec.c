@@ -10,7 +10,7 @@
 #include "base/update.h"
 #include "polymod_rle.h"
 #include "base/disp_array.h"
-#include "base/multicore/core1.h"
+#include "polymod_core1.h"
 #include "fill_overlay.h"   // for mark_display_has_overlay_post_upload
 
 #ifdef USE_CORE1

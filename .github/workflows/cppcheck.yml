@@ -55,7 +55,8 @@ jobs:
             -DFW_REQUIRE_SIGNATURE -DKEYBOARD_polykybd_split72 \
             -i keyboards/polykybd/doom \
             -i keyboards/polykybd/base/fonts \
-            -i keyboards/polykybd/base/crypto \
+            -i modules/polykybd/polymod_monocypher/monocypher.c \
+            -i modules/polykybd/polymod_monocypher/monocypher-ed25519.c \
             -i keyboards/polykybd/base/tests \
             -i keyboards/polykybd/hints/tests \
             --template='{file}:{line}: {severity}: {message} [{id}]' \

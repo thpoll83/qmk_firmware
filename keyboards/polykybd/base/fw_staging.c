@@ -6,7 +6,7 @@
 #include "fw_staging.h"
 #include "fontpack.h"        // FONTPACK target: fontpack_reload()/present + max size
 #include "polymod_crc32.h"
-#include "crypto/monocypher-ed25519.h"   // FW-2: Ed25519 image signature verify
+#include "monocypher-ed25519.h"   // FW-2: Ed25519 image signature verify (polymod_monocypher)
 #include "fw_pubkey.h"                    // FW-2: FW_SIGNING_PUBKEY (image signing key)
 
 #include "hardware/flash.h"

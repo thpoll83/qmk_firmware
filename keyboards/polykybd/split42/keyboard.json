@@ -13,6 +13,7 @@
     "modules": [
         "polykybd/polymod_crc32",
         "polykybd/polymod_ltr559",
+        "polykybd/polymod_monocypher",
         "polykybd/polymod_rle"
     ],
     "features": {

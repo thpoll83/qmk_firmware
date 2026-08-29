@@ -498,6 +498,11 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'hil-doom') ||
       contains(github.event.head_commit.message, '[hil-doom]')
     runs-on: ubuntu-latest
+    # Least privilege: this job only checks out, builds and uploads an artifact —
+    # it needs no write scopes. Matches the explicit permissions the rig test jobs
+    # (hil-test / perf-test / doom-test) already carry.
+    permissions:
+      contents: read
     outputs:
       hil_left: ${{ steps.names.outputs.hil_left }}
       hil_right: ${{ steps.names.outputs.hil_right }}

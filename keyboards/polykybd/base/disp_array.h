@@ -4,6 +4,11 @@
 #pragma once
 
 #include "fonts/gfxfont.h"
+// The pure lookup + measurement half (kdisp_gfx_glyph / kdisp_gfx_glyph_font /
+// kdisp_gfx_text_bbox_in) lives in font_lookup.h so it links on the host without
+// the SPI/display plumbing; re-exported here so consumers are unchanged (the same
+// pattern as split_sync.h re-exporting base/sync_ack.h).
+#include "font_lookup.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -38,15 +43,8 @@ void kdisp_set_gfx_scanline(bool scanline);
 // the fine scanline looks like flicker. Restore to false after the draw.
 void kdisp_set_gfx_scanline2(bool scanline);
 
-// Glyph for codepoint `c` in a font set, or NULL if no font covers it (skips
-// empty gap glyphs, no '!' fallback). For coverage tests + metric reads.
-const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t c);
-
-// As above, but also writes the owning font to *out_font (or NULL when not
-// found / out_font is NULL) — lets a caller redraw a glyph through a single-font
-// array to avoid kdisp_write_gfx_char's baseline-align-to-fonts[0] shift.
-const GFXglyph *kdisp_gfx_glyph_font(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t c,
-                                     const GFXfont **out_font);
+// kdisp_gfx_glyph / kdisp_gfx_glyph_font (glyph lookup, NULL when uncovered, gap
+// glyphs skipped) are declared in font_lookup.h, included above.
 
 // Composite a glyph downsampled 2x (2x2-OR) with its top-left at buffer coords
 // (x,y) — no baseline align, (x,y) is the literal top-left. OR-combining each 2x2
@@ -98,6 +96,8 @@ void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const
 // x, y from the baseline), mirroring every cursor rule — and the per-glyph vertical
 // shift — of kdisp_write_gfx_text_cy. Lets a caller clamp a draw offset so the
 // glyph stays fully on-screen (idle anti-burn-in jitter). All four are 0 for blank text.
+// A wrapper over font_lookup.h's kdisp_gfx_text_bbox_in binding the firmware's
+// resident HINT_MID face (the same s_mid_font the draw uses).
 void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,
                          int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax);
 

@@ -88,6 +88,7 @@ polykybd_layer_names_SRC := \
 polykybd_layer_names_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
 # legend_plan.c is pure by construction — the font lookup and the bbox
 # measurement arrive through callbacks — so the size planner links with no fonts,
 # no display and no keyboard config. The firmware binding lives in poly_keymap.c.
@@ -96,5 +97,17 @@ polykybd_legend_plan_SRC := \
 	$(POLY_BASE_PATH)/tests/legend_plan_tests.cpp
 
 polykybd_legend_plan_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
+# font_lookup.c is the pure lookup + bounding-box half of disp_array.c — no SPI,
+# no display, no quantum.h — so it links against synthetic in-memory fonts. The
+# progmem accessors resolve through platforms/progmem.h's host mapping, the same
+# route the glyph_meta suite takes.
+polykybd_font_bbox_SRC := \
+	$(POLY_BASE_PATH)/font_lookup.c \
+	$(POLY_BASE_PATH)/tests/font_bbox_tests.cpp
+
+polykybd_font_bbox_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd

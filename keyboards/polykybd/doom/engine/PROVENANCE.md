@@ -14,8 +14,9 @@ reviewable. Upstream's own README is `README-upstream.md`.
 
 Included: `src/` (engine + `doom/` game core + `pico/` RP2040 backends +
 `whd_gen/` WAD converter + `adpcm-xq/`), `textscreen/` (headers are on the pico
-include path), `cmake/`, the root CMake build files (reference for source lists
-and flags — we use QMK's build, not CMake).
+include path **in upstream's CMake build** — our QMK build does not put it on
+any include path; see "Static analysis" below), `cmake/`, the root CMake build
+files (reference for source lists and flags — we use QMK's build, not CMake).
 
 Excluded (not needed for the port, refetchable any time): `src/heretic`,
 `src/hexen`, `src/strife`, `src/setup`, `opl/`, `pcsound/`, `midiproc/`,
@@ -46,3 +47,66 @@ curl -sSL -o doom1.whx https://raw.githubusercontent.com/kilograham/rp2040-doom/
 curl -sSL -o doom1.wad https://raw.githubusercontent.com/Akbar30Bill/DOOM_wads/master/doom1.wad
 echo "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771  doom1.wad" | sha256sum -c
 ```
+
+## Static analysis: what is compiled, and what only looks alarming
+
+Only files listed in `keyboards/polykybd/rules.mk` under `POLYKYBD_DOOM*` are
+compiled — all of them under `src/`. **No `.c` file in `textscreen/` is ever
+built**: grep the whole repository for `textscreen` across `*.mk` / `Makefile` /
+`*.json` and there are no hits. The only textscreen artifact any built thing
+touches is `textscreen/fonts/normal.h`, included by `src/whd_gen/whd_gen.cpp` —
+itself a *host-side* WAD converter, not firmware, and it reaches it by a
+**relative** include (`#include "../../textscreen/fonts/normal.h"`), not through
+any `-I` directory. (`src/net_gui.c` does `#include "textscreen.h"`, but it is
+not in `SRC` either. `src/doom/f_finale.c` declares its own unrelated local
+`textscreen_t` struct, which is what a name grep otherwise hits.)
+
+Two mechanisms keep it out, and it is worth being precise about which does what,
+because the "What is included / excluded" section above describes **upstream's**
+CMake build rather than ours:
+
+- **Not compiled.** `rules.mk` builds only what it lists in `SRC`, and every
+  entry is under `doom/engine/src/`. Nothing excludes `textscreen/` explicitly —
+  it is simply never named, which is why a grep for it in the build files comes
+  back empty.
+- **Not even reachable by `#include`.** `DOOM_INC` is `src/`, `src/doom/`,
+  `src/pico/` and five pico-sdk directories. `textscreen/` is not among them, so
+  a firmware translation unit cannot pull in a textscreen header by the short
+  name upstream uses (`#include "textscreen.h"`) even if someone added one.
+
+That directory is kept because the snapshot is verbatim and refetchable, not
+because it is used.
+
+⚠️ **The reason the findings below are inert is the build membership above, and
+nothing else.** It is tempting to add that the flagged code is "desktop-only"
+because it sits inside `#ifndef _WIN32` and calls `system()` / `fprintf(stderr)`
+— but that argument does not hold and should not be repeated: an RP2040 build is
+not `_WIN32` either, so the preprocessor would take exactly that branch, and the
+`system()` / `fprintf(stderr)` calls describe what the code would fail to *do* at
+runtime, not why it is absent. Both are consequences of it being desktop code,
+not the mechanism that keeps it out. The mechanism is that no `textscreen/`
+translation unit enters the firmware build at all, so none of it is ever
+preprocessed, compiled or linked.
+
+Scanners flag it anyway, repeatedly. Recorded here so the same report does not
+have to be re-investigated each time:
+
+- **`txt_window.c` `TXT_OpenURL()` — use-after-free (real, unreachable).**
+  `free(cmd)` runs before the `fprintf` that prints `cmd`. It is a genuine bug
+  in upstream rp2040-doom (inherited from chocolate-doom), and it is dead code
+  here.
+- **`txt_window.c` `system(cmd)` — command built from a URL.** Same function,
+  same dead path. The URL is a compiled-in help link in the desktop setup tool.
+- **`txt_fileselect.c` `system(ZENITY_BINARY " --help >/dev/null 2>&1")`.**
+  A string literal with no interpolation at all, so the usual "never build a
+  command from user input" rule does not even apply to it.
+
+**Do not patch these in place.** The value of this directory is that it is a
+byte-for-byte upstream snapshot, which is what keeps the port diff reviewable
+and lets `../tools/mirror_rp2040_doom.py` refetch it — a local fix to a
+never-compiled file would be silently reverted by the next refetch while adding
+a permanent fork delta for zero runtime benefit. If a future change actually
+compiles any of `textscreen/`, fix the above first.
+
+`cppcheck.yml` already excludes `keyboards/polykybd/doom` wholesale for the same
+reason; configure any other analyser to match.

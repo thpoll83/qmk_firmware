@@ -2458,10 +2458,10 @@ down and with nothing guarding it: `make test:os_hints` "passed" twice before th
 missing output was noticed (2026-08-18); the suite is `polykybd_os_hints`. **Judge the
 run by the `[  PASSED  ] N tests.` line, never by the exit code** — a real run always
 prints one. `grep -rn "TEST_LIST +=" --include=testlist.mk .` is the authoritative
-list of registered names — 11 PolyKybd suites at the time of writing (`fw_up_verdict`
-plus eight `polykybd_*` in `base/tests/testlist.mk`, `polykybd_os_hints` in
-`hints/tests/`, and `polymod_ltr559`); an enumeration here goes stale, which is
-exactly how this sentence once listed four while eleven existed.
+list of registered names — they live in `base/tests/testlist.mk`,
+`hints/tests/testlist.mk` and each `modules/polykybd/polymod_*/tests/`; neither a
+count nor an enumeration is kept here, because this sentence once listed four
+suites while eleven existed.
 
 ✅ **These run in CI — via `polykybd-unit-test.yml`, NOT upstream's `unit_test.yml`.**
 That distinction is the whole point: upstream's workflow filters on `builddefs/ quantum/

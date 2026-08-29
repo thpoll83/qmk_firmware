@@ -316,16 +316,16 @@ jobs:
   # Not part of the normal PR gate: it flashes a *different* firmware (the
   # profiler build) and occupies the rig for a few more minutes, so it only runs
   # when asked for. Three ways to ask, each with its own scope:
-  #   * add the `perf` label to a PR — the way to measure a PR (needs the
+  #   * add the `hil-perf` label to a PR — the way to measure a PR (needs the
   #     `labeled` event type above; the label stays on, so later pushes to that
   #     PR keep measuring),
-  #   * put `[perf]` in a commit message — PUSH events only. `head_commit` does
+  #   * put `[hil-perf]` in a commit message — PUSH events only. `head_commit` does
   #     not exist on a pull_request event, so this does nothing on a PR; it
   #     applies to pushes to PolyKybd branches (i.e. after merge),
   #   * run the workflow manually (Actions -> Run workflow) — only available
   #     once this file is on the default branch. A dispatch ALSO puts the HIL
   #     suite on its extended tier (hil-test's HIL_EXTENDED above), so one dispatch
-  #     runs both; a push commit carrying `[perf]` AND `[hil-extended]` does the
+  #     runs both; a push commit carrying `[hil-perf]` AND `[hil-extended]` does the
   #     same, as do both labels on a PR.
   #
   # It reports numbers and compares them against the baseline committed in the
@@ -337,8 +337,8 @@ jobs:
     name: Build firmware (profiling)
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'perf') ||
-      contains(github.event.head_commit.message, '[perf]')
+      contains(github.event.pull_request.labels.*.name, 'hil-perf') ||
+      contains(github.event.head_commit.message, '[hil-perf]')
     runs-on: ubuntu-latest
     outputs:
       hil_left: ${{ steps.names.outputs.hil_left }}
@@ -473,3 +473,176 @@ jobs:
               issue_number: context.issue.number,
               body,
             });
+
+  # ── FW-9 signed DOOM engine-pack HIL coverage (opt-in) ─────────────────────
+  # Builds a HIL image + a matching signed .plyx so the rig can exercise the
+  # LOAD-time Ed25519 gate in doom_pack_load.c (accept / tampered / unsigned).
+  # Opt-in like `hil-perf` (dispatch / `hil-doom` label / `[hil-doom]` commit marker)
+  # because build_pack.sh is a full monolith+pack rebuild and the tests flash ~230 KB.
+  #
+  # ⚠️ SECURITY: this does NOT use the real FW_SIGNING_KEY (that secret is confined
+  # to release.yml). It generates an EPHEMERAL keypair, bakes its pubkey into these
+  # HIL images (gen_signing_key.py rewrites base/fw_pubkey.h), and signs the pack
+  # with the ephemeral seed. The signature code runs against a real key — just a
+  # disposable one — so the production key is never exposed to a PR-triggered run.
+  # These images are throwaway (a non-shipping pubkey); only the rig ever flashes
+  # them, and the next normal run reflashes the real image.
+  #
+  # ⚠️ DEPENDENCY: only meaningful on firmware that HAS the FW-9 load-time check
+  # (qmk #243). On a tree without it the refuse tests cannot pass — apply the
+  # `hil-doom` opt-in only once that has merged.
+  build-doom:
+    name: Build firmware + signed pack (doom FW-9)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'hil-doom') ||
+      contains(github.event.head_commit.message, '[hil-doom]')
+    runs-on: ubuntu-latest
+    # Least privilege: this job only checks out, builds and uploads an artifact —
+    # it needs no write scopes. Matches the explicit permissions the rig test jobs
+    # (hil-test / perf-test / doom-test) already carry.
+    permissions:
+      contents: read
+    outputs:
+      hil_left: ${{ steps.names.outputs.hil_left }}
+      hil_right: ${{ steps.names.outputs.hil_right }}
+      plyx: ${{ steps.names.outputs.plyx }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Ephemeral signing key -> base/fw_pubkey.h (baked into the images below) +
+      # a seed the pack is signed with. Runs on the host before the docker builds
+      # so they pick up the rewritten header. cryptography is needed here and for
+      # the signing step.
+      - name: Generate an ephemeral signing key
+        run: |
+          python3 -m pip install --quiet cryptography
+          python3 keyboards/polykybd/tools/gen_signing_key.py \
+            --out-privkey /tmp/doom_ephemeral_key.bin \
+            --out-pubkey keyboards/polykybd/base/fw_pubkey.h \
+            --force
+          echo "ephemeral pubkey baked into base/fw_pubkey.h"
+
+      - name: Build split72 (doom HIL left/master)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_doom_hil_left
+
+      - name: Build split72 (doom HIL right/slave)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_doom_hil_right
+
+      # Full monolith + pack-flavour rebuild that emits the unsigned .plyx. The
+      # pack's ram_base is read from the pack-flavour ELF's pinned overlay pool
+      # (0x20000000), which the HIL images above share — so it passes ram-pairing
+      # at load and REACHES the signature check.
+      - name: Build the DOOM engine pack
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: bash keyboards/polykybd/doom/pack/build_pack.sh
+
+      - name: Sign the pack with the ephemeral key
+        run: |
+          PACK_VER=$(cat keyboards/polykybd/doom/pack/PACK_VERSION)
+          PLYX="keyboards/polykybd/doom/pack/doom_pack_v${PACK_VER}.plyx"
+          before=$(stat -c%s "$PLYX")
+          python3 keyboards/polykybd/tools/sign_doompack.py --privkey /tmp/doom_ephemeral_key.bin "$PLYX"
+          after=$(stat -c%s "$PLYX")
+          if [ "$after" -ne "$((before + 64))" ]; then
+            echo "::error::signing did not append exactly 64 bytes ($before -> $after)"
+            exit 1
+          fi
+          cp "$PLYX" "doom_pack_signed_v${PACK_VER}.plyx"
+          rm -f /tmp/doom_ephemeral_key.bin
+          echo "signed $PLYX ($before -> $after bytes)"
+
+      - id: names
+        run: |
+          echo "hil_left=$(ls polykybd_split72_doom_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "hil_right=$(ls polykybd_split72_doom_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "plyx=$(ls doom_pack_signed_v*.plyx 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-doom
+          path: |
+            polykybd_split72_doom_hil_*.uf2
+            doom_pack_signed_v*.plyx
+          retention-days: 7
+
+  doom-test:
+    name: DOOM engine-pack signature (split72)
+    # Ordered after hil-test so the two rig jobs can't interleave their flashes
+    # (same reason as perf-test). `always()` so it still runs when hil-test was
+    # skipped (a pure `doom` label does not run the build/hil-test pipeline); it
+    # flashes its own doom HIL images, so it does not depend on hil-test's flash.
+    needs: [build-doom, hil-test]
+    if: always() && needs.build-doom.result == 'success'
+    runs-on: [self-hosted, polykybd-ctnd]
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Locate station directory
+        id: ctnd
+        run: |
+          dir="${CTND_DIR:-}"
+          if [ -z "$dir" ]; then
+            for candidate in /opt/polykybd-ctnd "$HOME/polykybd-ctnd"; do
+              if [ -f "$candidate/venv/bin/python" ]; then
+                dir="$candidate"
+                break
+              fi
+            done
+          fi
+          if [ -z "$dir" ]; then
+            echo "ERROR: could not find a polykybd-ctnd install with a venv." >&2
+            exit 1
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      # CI runs the INSTALLED station copy — pull it to origin/main first, or a
+      # lagging self-update timer silently runs the doom set with stale harness
+      # code (or without it at all, before this feature is on the rig).
+      - name: Sync station to current ctnd main
+        run: |
+          dir="${{ steps.ctnd.outputs.dir }}"
+          if [ ! -d "$dir/.git" ]; then
+            echo "WARNING: $dir is not a git checkout — running the installed station as-is" >&2
+            exit 0
+          fi
+          git -C "$dir" fetch --quiet origin main \
+            && git -C "$dir" checkout -q -f -B main origin/main \
+            && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
+            || echo "WARNING: could not sync $dir to origin/main" >&2
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-doom
+          path: ${{ steps.ctnd.outputs.dir }}/firmware
+
+      - name: Flash and run the doom signature set
+        # Pass the build-doom filenames through env vars rather than interpolating
+        # ${{ }} straight into the script: the values are runner-set filenames
+        # (fixed by the -e TARGET= above, not PR-controlled), but expanding them as
+        # quoted shell vars keeps a metacharacter in a name from ever breaking out
+        # of the string — the GitHub-recommended shape for an untrusted-looking
+        # value on a self-hosted runner.
+        env:
+          CTND_DIR: ${{ steps.ctnd.outputs.dir }}
+          HIL_LEFT: ${{ needs.build-doom.outputs.hil_left }}
+          HIL_RIGHT: ${{ needs.build-doom.outputs.hil_right }}
+          PLYX: ${{ needs.build-doom.outputs.plyx }}
+        run: |
+          cd "$CTND_DIR"
+          set -o pipefail
+          venv/bin/python -u -m station.test_runner \
+            --left  "firmware/$HIL_LEFT" \
+            --right "firmware/$HIL_RIGHT" \
+            --doom \
+            --plyx-valid "firmware/$PLYX" \
+            2>&1 | tee /tmp/doom-test.log

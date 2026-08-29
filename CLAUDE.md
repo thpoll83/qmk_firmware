@@ -114,10 +114,28 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   denied it — is unreadable, because the action logs *"full output hidden for
   security"* and uploads no artifact. Workflows and the `CLAUDE_CODE_OAUTH_TOKEN`
   secret are gone from all three repos.
-  - **So on an upstream-merge PR there is genuinely no LLM reviewer.** CodeRabbit
-    skips it outright at >100 files, and nothing replaces that. Treat the
-    **build + HIL checks and hardware testing as the only verification**, say so
-    on the PR, and don't read the green board as review cover.
+  - ✅ **The on-demand LLM reviewer is now GREPTILE (`@greptileai`) — reach for it
+    when the other bots hit their limits.** Added 2026-08-29 (thpoll83) as a
+    **non-automatic** bot: it reviews a PR only when someone comments `@greptileai`
+    on it (GitHub won't autocomplete a bot handle — type it out anyway; a
+    `@greptileai` reply *in a thread* asks it for interactive fix suggestions).
+    This is the replacement for the removed `@claude review` above, and the answer
+    to the three-bots-down case in `PolyKybdHost/CLAUDE.md`: summon it when
+    CodeRabbit is rate-limited / has spent its ~1-per-hour quota, Sourcery's weekly
+    diff-char budget is gone (its green check / rate-limit review), or Qodo's
+    subscription is lapsed. ⚠️ It is an LLM, so it **shares the training-data blind
+    spots** CodeRabbit/Sourcery have and cppcheck does not — verify every finding
+    against the code (the "verify, not dismiss" rule), and it does **not** replace
+    cppcheck, the HIL rig or hardware testing. Confirmed installed on `qmk_firmware`
+    (PR #249, 2026-08-29); verify it is on the host/docs repos before relying on it
+    there, and don't assume it survives the >100-file skip (unverified — CodeRabbit
+    does not).
+  - **So on an upstream-merge PR there is no AUTOMATIC LLM reviewer** (Greptile is
+    manual — summon it with `@greptileai`, though whether it too balks at >100
+    files is unverified). CodeRabbit skips it outright at >100 files, and nothing
+    *automatic* replaces that. Treat the **build + HIL checks and hardware testing
+    as the real verification**, say so on the PR, and don't read the green board as
+    review cover.
   - **cppcheck has no quota, no star threshold and no file-count limit** — and
     is not an LLM, so it doesn't share the others' blind spots. That is why it
     was added, and it matters more now that it is the only automated reviewer

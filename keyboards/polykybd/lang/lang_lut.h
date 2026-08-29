@@ -9,6 +9,15 @@
 #include <stdbool.h>
 #include "named_glyphs.h"
 
+// Pack a 4-char language code ("enUS") into one big-endian uint32 — the form
+// decode_lang() answers with and the HID change-language command compares
+// against. These live HERE because they are the lang-code encoding, not a HID
+// concern: they used to sit in hid_com.h, which forced this cog-generated
+// module to reach sideways into the HID layer for one macro (the include graph's
+// only upward edge out of lang/).
+#define LANG_TO_UI32(a,b,c,d) (((uint32_t)(a))<<24 | ((uint32_t)(b))<<16 | ((uint32_t)(c))<<8 | (d))
+#define LANG_TO_UI32_ARR(arr) (((uint32_t)(arr[0]))<<24 | ((uint32_t)(arr[1]))<<16 | ((uint32_t)(arr[2]))<<8 | (arr[3]))
+
 enum {ALPHA = 26, NUM = 10, ADDITIONAL = 18};
 enum variation_index{VAR_SMALL = 0, VAR_SHIFT, VAR_CAPS, VAR_ALTGR};
 enum lang_layer {

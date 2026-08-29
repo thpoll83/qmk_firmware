@@ -276,6 +276,14 @@ typedef struct _fw_staging_status_t {
     // Consumes half the old pad, so the struct size — and therefore the RPC reply
     // size — is unchanged.
     uint8_t  last_commit_ack;
+    // Bounded core1 relaunch diagnostics (doom teardown + fw_staging FONTPACK/doom
+    // restart both funnel through multicore_launch_core1_bounded). A non-zero
+    // timeout count means a relaunch left core1 desynced — the suspected trigger of
+    // the intermittent slave wedge on a post-doom reflash (FW-9). Read early (at the
+    // first doom BEGIN) the count reflects the doom-teardown relaunch; a later
+    // increment is the fw_staging restart. Clamped to 255. Replaces the old pad.
+    uint8_t  core1_relaunch_calls;
+    uint8_t  core1_relaunch_timeouts;
     uint8_t  pad;
 } fw_staging_status_t;
 

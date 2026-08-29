@@ -5,11 +5,26 @@
 #include "hardware/timer.h"   // time_us_64 (bounded launch deadline)
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define CORE1_STACK_SIZE 384
 
 static uint32_t core1_stack[CORE1_STACK_SIZE/4]
     __attribute__((aligned(8)));
+
+// Diagnostic counters for the BOUNDED runtime relaunch (doom session teardown
+// and the fw_staging FONTPACK/doom-flash restart both funnel through
+// multicore_launch_core1_bounded). A non-zero timeout count means a relaunch
+// left core1 desynced — the suspected trigger of the intermittent slave wedge on
+// a post-doom reflash (FW-9). Surfaced to the master via fw_staging's status RPC
+// so the rig (master console only) can read them; see fw_up_log_slave_status.
+static uint16_t s_bounded_launch_calls    = 0;
+static uint16_t s_bounded_launch_timeouts = 0;
+
+void multicore_launch_core1_bounded_stats(uint16_t *calls, uint16_t *timeouts) {
+    if (calls)    *calls    = s_bounded_launch_calls;
+    if (timeouts) *timeouts = s_bounded_launch_timeouts;
+}
 
 #ifdef CORE1_STACK_HWM
 // Stack high-water-mark instrumentation. Enable by adding CORE1_STACK_HWM to
@@ -139,6 +154,7 @@ bool multicore_launch_core1_bounded(uint32_t total_timeout_us) {
     const uint32_t cmd_sequence[] =
             {0, 0, 1, (uintptr_t) scb_hw->vtor, (uintptr_t) stack_ptr, (uintptr_t) core1_trampoline};
 
+    if (s_bounded_launch_calls != UINT16_MAX) s_bounded_launch_calls++;
     const uint64_t deadline = time_us_64() + total_timeout_us;
     bool ok  = true;
     uint seq = 0;
@@ -165,5 +181,6 @@ bool multicore_launch_core1_bounded(uint32_t total_timeout_us) {
     } while (seq < count_of(cmd_sequence));
 
     irq_set_enabled(irq_num, enabled);
+    if (!ok && s_bounded_launch_timeouts != UINT16_MAX) s_bounded_launch_timeouts++;
     return ok;
 }

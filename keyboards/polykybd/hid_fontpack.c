@@ -131,6 +131,17 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
                 uprintf("FONTPACK_BEGIN: bundle=%u size=%lu crc=0x%08lx (master+slave staging)\n",
                         bundle, (unsigned long)pack_size, (unsigned long)pack_crc);
+                // A2 instrumentation: read the slave EARLY — the BEGIN bridge above is
+                // synchronous, so by here the slave has just handled it (or gone dark).
+                // At this instant its core1_relaunch counters reflect the DOOM TEARDOWN
+                // relaunch (which ran back in stop-idle, before this BEGIN) — the
+                // fw_staging restart only runs ~14s later, after the slave's own erase.
+                // So a timeout here pins the wedge to the teardown; a slave already dark
+                // here means it died at/before the teardown. Doom-only, to keep normal
+                // font-pack flashes quiet.
+                if (is_doomwad || is_doompack) {
+                    fw_up_log_slave_status("begin-first");
+                }
             }
 
             uint8_t slave_ack = master_ok

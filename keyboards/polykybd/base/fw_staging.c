@@ -843,6 +843,10 @@ void fw_staging_get_status(fw_staging_status_t *out) {
     out->chunk_handler_errors      = s_chunk_handler_errors;
     out->process_deferred_calls    = s_process_deferred_calls;
     out->process_deferred_advances = s_process_deferred_advances;
+    uint16_t c1_calls = 0, c1_timeouts = 0;
+    multicore_launch_core1_bounded_stats(&c1_calls, &c1_timeouts);
+    out->core1_relaunch_calls    = (uint8_t)(c1_calls    > 255 ? 255 : c1_calls);
+    out->core1_relaunch_timeouts = (uint8_t)(c1_timeouts > 255 ? 255 : c1_timeouts);
     out->pad                       = 0;
 }
 

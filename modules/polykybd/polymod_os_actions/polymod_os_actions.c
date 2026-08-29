@@ -19,8 +19,7 @@ typedef struct {
     uint8_t kc;
 } os_key_t;
 
-#define NA \
-    { 0, KC_NO }
+#define NA {0, KC_NO}
 #define CTL MOD_LCTL
 #define SFT MOD_LSFT
 #define ALT MOD_LALT

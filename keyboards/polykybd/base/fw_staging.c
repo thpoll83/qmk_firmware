@@ -76,7 +76,20 @@ static void fw_staging_halt_core1(void) {
 static void fw_staging_restart_core1(void) {
     _PSM_FRCE_OFF &= ~_PSM_PROC1_BIT;
     s_core1_halted = false;
-    multicore_launch_core1();
+    // BOUNDED relaunch, NOT the unbounded multicore_launch_core1(). core0 can
+    // reach here with core1's FIFO launch handshake left desynced by a prior Doom
+    // engine launch/stop cycle (doom_engine_stop uses the bounded launcher for the
+    // same reason). The unbounded handshake then blocks FOREVER, freezing this
+    // half — on the SLAVE that means it never answers the master's FONTPACK BEGIN
+    // re-poll, so the master polls '~' forever and the flash hangs. Seen on the
+    // 3rd consecutive doom-slot flash of the FW-9 rig set (accept/tampered/unsigned),
+    // once two doom load+teardown cycles had degraded core1. Bounded: a still-wedged
+    // core1 leaves the RLE service down until the next reboot (the identical worst
+    // case doom_engine_stop already accepts) but keeps THIS half's main loop alive,
+    // so the erase's cleared s_erase_pending is actually observable to the master.
+    if (!multicore_launch_core1_bounded(100u * 1000u)) {
+        uprintf("fw_staging: core1 relaunch timed out — RLE service down until reboot\n");
+    }
 }
 #endif
 

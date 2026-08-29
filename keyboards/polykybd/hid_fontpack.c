@@ -130,6 +130,21 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             bool slave_ok    = (slave_ack == SYNC_ACK);
             bool master_done = !fw_staging_erase_pending();
 
+            // Telemetry for the FW-9 3rd-doom-flash hang: when OUR erase is done but
+            // the slave still isn't ready, surface WHAT the slave answered. The rig
+            // reads the master console only, so this is the one place that can tell
+            // "slave alive, still erasing" (SYNC_ACK_SIG / SYNC_BUSY) apart from
+            // "slave not answering / wedged" (SYNC_GIVEUP / SYNC_CRC32_ERR). Change-
+            // triggered so it never floods the ~1 Hz re-poll.
+            if (master_ok && master_done && !slave_ok) {
+                static uint8_t s_last_begin_slave_ack = 0xFF;
+                if (slave_ack != s_last_begin_slave_ack) {
+                    s_last_begin_slave_ack = slave_ack;
+                    uprintf("FONTPACK_BEGIN: master erased, slave not ready (bundle=%u slave_ack=0x%02x)\n",
+                            bundle, slave_ack);
+                }
+            }
+
             memset(data, 0, length);
             if (!master_ok) {
                 memcpy(data, "P\x50!", 3);   // invalid size

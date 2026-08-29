@@ -104,6 +104,14 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             static uint32_t s_erased_size   = 0;
             static uint32_t s_erased_crc    = 0;
             static uint8_t  s_erased_bundle = 0xFF;
+            // One-shot dedup for the "slave not ready" diagnostic below. Hoisted
+            // here (not local to the telemetry block) so a fresh flash re-arms it:
+            // otherwise a second flash whose slave_ack equals the first's is
+            // suppressed — which is exactly why the FW-9 unsigned test logged no
+            // snapshot last round (same 0xe4 as the tampered test). It is keyed on
+            // the image, not the bundle: tampered/unsigned share bundle 0x7e but
+            // differ in pack_crc, so new_image re-arms between them.
+            static uint8_t  s_last_begin_slave_ack = 0xFF;
             bool new_image = (pack_size != s_erased_size || pack_crc != s_erased_crc ||
                               bundle != s_erased_bundle);
 
@@ -111,6 +119,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 s_erased_size   = pack_size;
                 s_erased_crc    = pack_crc;
                 s_erased_bundle = bundle;
+                s_last_begin_slave_ack = 0xFF;   // re-arm the not-ready diagnostic for this flash
                 // Drop to the base layer + refresh before the flash holds the main
                 // loop, so the user can still type plain characters meanwhile.
                 poly_prepare_for_flash();
@@ -137,7 +146,6 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // "slave not answering / wedged" (SYNC_GIVEUP / SYNC_CRC32_ERR). Change-
             // triggered so it never floods the ~1 Hz re-poll.
             if (master_ok && master_done && !slave_ok) {
-                static uint8_t s_last_begin_slave_ack = 0xFF;
                 if (slave_ack != s_last_begin_slave_ack) {
                     s_last_begin_slave_ack = slave_ack;
                     uprintf("FONTPACK_BEGIN: master erased, slave not ready (bundle=%u slave_ack=0x%02x)\n",

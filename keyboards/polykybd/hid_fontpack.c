@@ -104,6 +104,14 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             static uint32_t s_erased_size   = 0;
             static uint32_t s_erased_crc    = 0;
             static uint8_t  s_erased_bundle = 0xFF;
+            // One-shot dedup for the "slave not ready" diagnostic below. Hoisted
+            // here (not local to the telemetry block) so a fresh flash re-arms it:
+            // otherwise a second flash whose slave_ack equals the first's is
+            // suppressed — which is exactly why the FW-9 unsigned test logged no
+            // snapshot last round (same 0xe4 as the tampered test). It is keyed on
+            // the image, not the bundle: tampered/unsigned share bundle 0x7e but
+            // differ in pack_crc, so new_image re-arms between them.
+            static uint8_t  s_last_begin_slave_ack = 0xFF;
             bool new_image = (pack_size != s_erased_size || pack_crc != s_erased_crc ||
                               bundle != s_erased_bundle);
 
@@ -111,6 +119,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 s_erased_size   = pack_size;
                 s_erased_crc    = pack_crc;
                 s_erased_bundle = bundle;
+                s_last_begin_slave_ack = 0xFF;   // re-arm the not-ready diagnostic for this flash
                 // Drop to the base layer + refresh before the flash holds the main
                 // loop, so the user can still type plain characters meanwhile.
                 poly_prepare_for_flash();
@@ -129,6 +138,31 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 : SYNC_GIVEUP;   // never asked — the master rejected the pack itself
             bool slave_ok    = (slave_ack == SYNC_ACK);
             bool master_done = !fw_staging_erase_pending();
+
+            // Telemetry for the FW-9 3rd-doom-flash hang: when OUR erase is done but
+            // the slave still isn't ready, surface WHAT the slave answered. The rig
+            // reads the master console only, so this is the one place that can tell
+            // "slave alive, still erasing" (SYNC_ACK_SIG / SYNC_BUSY) apart from
+            // "slave not answering / wedged" (SYNC_GIVEUP / SYNC_CRC32_ERR). Change-
+            // triggered so it never floods the ~1 Hz re-poll.
+            if (master_ok && master_done && !slave_ok) {
+                if (slave_ack != s_last_begin_slave_ack) {
+                    s_last_begin_slave_ack = slave_ack;
+                    uprintf("FONTPACK_BEGIN: master erased, slave not ready (bundle=%u slave_ack=0x%02x)\n",
+                            bundle, slave_ack);
+                    // A) slave visibility for the FW-9 doom re-flash wedge. The rig
+                    // reads the master console only, so dump the slave's fw_staging
+                    // counters over the read-only STATUS op (its own transaction, not
+                    // a core1/erase change). It answers the exact question the
+                    // slave_ack alone can't: is the slave DARK ("RPC FAILED — slave
+                    // unresponsive") or ALIVE-BUT-STUCK — and if alive, whether it
+                    // even saw the BEGIN (begin_handler_calls), started erasing
+                    // (erase_sector_next/count), and is still ticking process_deferred.
+                    // Change-triggered like the line above, so one snapshot per state,
+                    // no re-poll flood. Read-only: adds a probe path, changes nothing.
+                    fw_up_log_slave_status("begin-not-ready");
+                }
+            }
 
             memset(data, 0, length);
             if (!master_ok) {

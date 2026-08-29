@@ -58,6 +58,7 @@
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
+#include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
 // Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
@@ -75,6 +76,7 @@
 #    include "polymod_ltr559.h"
 #    define LTR559_LOG_MS 600000   // sensor telemetry log cadence: 10 min
 #endif
+#include "ltr559_policy.h"        // the POLICY on the module (POLYKYBD_LTR559_DRIVE)
 
 #include "state.h"
 #include "poly_macro.h"
@@ -716,76 +718,9 @@ void poly_prepare_for_flash(void) {
     sync_and_refresh_displays();
 }
 
-#ifdef POLYKYBD_LTR559_DRIVE
-// --- LTR-559 auto-brightness + idle-inhibit (opt-in; needs hardware tuning) -----
-//
-// The sensor is just another SOURCE feeding the existing auto-brightness path:
-// the 5 s-average lux is mapped to a contrast and pushed through
-// set_auto_brightness_value() — exactly the volatile/host-auto channel the PC
-// host uses — so the resulting contrast reaches the slave over the existing
-// poly_sync_t brightness transport.
-//
-// Brightness and idle are master-authoritative, so the decision runs on the
-// master. The sensor lives on the RIGHT half, so:
-//   * master IS the right half  -> read the sensor locally
-//   * master is the LEFT half   -> pull {avg lux, proximity} from the slave over
-//     the generic USER_SYNC_SLAVE_DATA channel (kind = SLAVE_DATA_SENSOR) — the
-//     split slot freed by the FW_UP transaction consolidation.
-// Either way driving works regardless of which half USB is plugged into.
-// All tunables below are first-cut guesses to be dialled in against the OLED.
-// Proximity (0..2047) that counts as "close" -> wake / inhibit idle. Measured on
-// hardware: hand at ~5 cm 400, ~1 cm 1000, hole fully covered ~2000 (saturated).
-// The resting (nothing near) baseline depends on the housing: ~129 on the open
-// bench, ~325 once mounted in the enclosure (its walls reflect IR back). 350 was
-// kept as the wake point (wakes as a hand comes within ~5-6 cm). NOTE: with the
-// housed ~325 baseline the margin is only ~25 counts — raise toward 400 if the
-// mounted sensor ever self-triggers; lower toward the baseline for an earlier wake.
-#    define LTR559_NEAR_THRESHOLD 350
-#    define LTR559_DRIVE_MS 500         // how often the master samples + applies
-#    define LTR559_LUX_FULL_REF 100     // avg lux mapped to FULL_BRIGHT (ceiling)
-                                        // Tuned on hardware: a ~28 lux office reads
-                                        // B≈26 (was B≈19 at 200), matching the level
-                                        // the user set by hand. Curve (sqrt): ~4 in a
-                                        // dark room, 26 @ 28 lux, 35 @ 50 lux, full @ 100+.
-#    define LTR559_MIN_CONTRAST 4       // auto-brightness floor — the sensor never
-                                        // drives below this. 4 = a dim but visible
-                                        // night level; still clear of the near-off
-                                        // B=1/DISP_OFF. (The power-on dark-screen was a
-                                        // separate boot transient, fixed by the
-                                        // don't-engage-until-first-reading guard below.)
-
-// USER_SYNC_SLAVE_DATA is a GENERIC op-dispatched slave->master pull channel (see
-// config.h): the master's request is a 1-byte `kind` selecting which slave-side
-// payload to return. Append a new kind + a case below to carry other data over
-// the same one split slot — no new transaction needed. Both halves run the same
-// firmware image, so the per-kind payload structs can change freely (no split
-// versioning); the handler just bounds every copy by out_len.
-enum slave_data_kind {
-    SLAVE_DATA_SENSOR = 0,  // ltr559_sync_t: {avg lux, proximity}
-    // SLAVE_DATA_xxx = 1, ...  // future slave-side data reuses this slot
-};
-
-typedef struct {
-    uint16_t lux;   // 5 s-average lux
-    uint16_t prox;  // latest raw proximity (0..2047)
-} ltr559_sync_t;
-
-// Slave side: answer the master's pull for the requested `kind`. Registered on
-// both halves; only ever runs on the slave (the master initiates the exec).
-static void user_sync_slave_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    uint8_t kind = (in_len >= 1) ? ((const uint8_t*)in_data)[0] : SLAVE_DATA_SENSOR;
-    switch (kind) {
-        case SLAVE_DATA_SENSOR: {
-            ltr559_sync_t s = { ltr559_avg_lux(), ltr559_prox() };
-            if (out_len >= sizeof(s)) {
-                memcpy(out_data, &s, sizeof(s));
-            }
-            break;
-        }
-        default:
-            break;  // unknown kind: leave the reply buffer as-is
-    }
-}
+// The LTR-559 auto-brightness + idle-inhibit POLICY (the slave-data pull channel,
+// lux -> contrast mapping and the proximity wake) lives in ltr559_policy.c —
+// see poly_ltr559_register_split_handler() / poly_ltr559_drive().
 
 #ifdef POLY_DUMMY_TXN_TEST
 // Root-cause experiment: a no-op split-transaction handler. Registering three of these
@@ -796,137 +731,6 @@ static void user_sync_dummy_handler(uint8_t in_len, const void* in_data, uint8_t
     (void)in_len; (void)in_data; (void)out_len; (void)out_data;
 }
 #endif
-
-// Master-side: mirror the HID cmd-15 stop-idle path to force the displays awake.
-// Logged because this is the ONLY wake with no user-visible trigger — a proximity
-// wake used to restart the whole idle countdown silently, so the console showed a
-// second "Transition to idle" with nothing explaining the first one ending.
-static void poly_force_wake(void) {
-    poly_sync_t* local_state = access_local_state();
-    // The DOOM attract screensaver (IDLE_STYLE_IDDQD) runs with STATUS_DISP_ON SET
-    // and DISP_IDLE CLEARED — it owns the keycaps at active brightness via
-    // doom_tick(), not through the DISP_IDLE pulse path. So it matches NEITHER
-    // branch below, and proximity would be a silent no-op over it while pulse /
-    // jitter / eden (all DISP_IDLE) and full suspend wake normally — the reported
-    // "doom idle doesn't react to the proximity sensor, the other idle modes do".
-    // Tear it down exactly like a keypress does (doom_exit restores the legends and
-    // stamps a fresh last_update); only the screensaver, never an active game.
-    if (doom_mode_screensaver()) {
-        uprint("Wake by proximity (from doom screensaver)\n");
-        doom_screensaver_stop();
-        update_performed();
-        return;
-    }
-    if ((local_state->flags & (STATUS_DISP_ON | DISP_IDLE)) == 0) {
-        uprint("Wake by proximity (from suspend)\n");
-        suspend_wakeup_init_kb();   // fully suspended -> full wake
-    } else if (local_state->flags & DISP_IDLE) {
-        uprint("Wake by proximity (from idle)\n");
-        local_state->contrast = get_active_brightness();
-        local_state->flags &= ~((uint8_t)DISP_IDLE);
-        local_state->flags |= STATUS_DISP_ON;
-        reset_idle_jitter();
-        request_disp_refresh();
-        update_performed();
-    }
-}
-
-static uint32_t isqrt32(uint32_t x) {
-    uint32_t r = 0, b = 1UL << 30;
-    while (b > x) b >>= 2;
-    while (b) {
-        if (x >= r + b) { x -= r + b; r = (r >> 1) + b; }
-        else            { r >>= 1; }
-        b >>= 2;
-    }
-    return r;
-}
-
-static uint8_t lux_to_contrast(uint16_t lux) {
-    // Perceptual (sqrt) curve: brightness rises quickly out of the dark and eases
-    // toward the ceiling, so ordinary indoor light already gives a usable level
-    // instead of the near-off B=2 a linear map produced. LTR559_LUX_FULL_REF is
-    // the lux that reaches FULL_BRIGHT. (×100 before the sqrt for resolution.)
-    uint32_t sref = isqrt32((uint32_t)LTR559_LUX_FULL_REF * 100u);
-    uint32_t slux = isqrt32((uint32_t)lux * 100u);
-    if (slux >= sref) {
-        return FULL_BRIGHT;
-    }
-    uint32_t c = MIN_BRIGHT + ((uint32_t)(FULL_BRIGHT - MIN_BRIGHT) * slux) / sref;
-    if (c < LTR559_MIN_CONTRAST) c = LTR559_MIN_CONTRAST;  // never near-off
-    if (c > FULL_BRIGHT) c = FULL_BRIGHT;
-    return (uint8_t)c;
-}
-
-static void poly_ltr559_drive(void) {
-    static uint32_t last        = 0;
-    static bool     engaged     = false;
-    static uint8_t  last_logged = 0xFF;   // last brightness announced to the console
-    if (!is_usb_host_side()) {
-        return;   // decisions are master-only (the slave just serves reads)
-    }
-    if (timer_elapsed32(last) < LTR559_DRIVE_MS) {
-        return;
-    }
-    last = timer_read32();
-
-    // Brightness/idle decisions are master-only; the sensor is auto-detected on
-    // whichever half it's soldered to.
-    uint16_t lux, prox;
-    if (ltr559_available()) {
-        // The master itself has the sensor — read locally.
-        lux  = ltr559_avg_lux();
-        prox = ltr559_prox();
-    } else {
-        // Sensor is on the slave (right) half — pull its latest values up over the
-        // generic slave->master channel (kind = SLAVE_DATA_SENSOR), so driving
-        // works in either USB orientation.
-        uint8_t       kind = SLAVE_DATA_SENSOR;
-        ltr559_sync_t s;
-        if (!transaction_rpc_exec(USER_SYNC_SLAVE_DATA, sizeof(kind), &kind, sizeof(s), &s)) {
-            return;   // slave busy this round; try again next tick
-        }
-        lux  = s.lux;
-        prox = s.prox;
-    }
-
-    // Auto-brightness from the 5 s average lux, via the same volatile/host-auto
-    // path the host uses (keeps the manual brightness untouched).
-    //
-    // Don't engage until the sensor has produced a real reading: for the first
-    // ~1 s after boot the 5 s average is still 0 (no samples), and engaging then
-    // would yank the displays down to the floor. Hold at the manual/restored
-    // brightness until the first non-zero average, then engage. Once engaged we
-    // keep applying — a genuine dark-room 0 is floored by lux_to_contrast (never
-    // off), so a momentary 0 can't blank the keys.
-    if (!engaged) {
-        if (lux == 0) {
-            return;
-        }
-        set_brightness_auto_mode(true);
-        engaged = true;
-        uprintf("LTR-559: auto-brightness engaged (avg lux %u)\n", lux);
-    }
-
-    // Announce every brightness the sensor drives — but only when it actually
-    // changes: this runs every LTR559_DRIVE_MS (500 ms), so an unconditional print
-    // would drown the console. Without it a sensor-driven brightness move is
-    // indistinguishable from a key/host change (or from a bug) in the log.
-    const uint8_t target = lux_to_contrast(lux);
-    if (target != last_logged) {
-        last_logged = target;
-        uprintf("LTR-559: auto brightness -> %u (avg lux %u)%s\n", target, lux,
-                get_brightness_auto_mode() ? "" : " [auto off, not applied]");
-    }
-    set_auto_brightness_value(target);
-
-    // Proximity: something is close -> defer idle (and wake if already idle).
-    if (prox > LTR559_NEAR_THRESHOLD) {
-        poly_force_wake();
-        update_performed();
-    }
-}
-#endif  // POLYKYBD_LTR559_DRIVE
 
 // Eden idle screensaver runs DIM (anti-burn-in + it's a sleeping-keyboard ambience,
 // not a legend you need to read). This is the OLED contrast register value, not a
@@ -1759,139 +1563,43 @@ static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
 
 // ── Keycap legend SIZE (enum poly_glyph_size, HID cmd 34) ────────────────────
 //
-// The two bigger faces are the SAME latin repertoire rendered larger, so they
-// cannot be looked up by their natural codepoints: g_all_fonts is scanned
-// front-to-back and the resident 27 px `latin` font is always in front, so a
-// second 'a' at 0x61 could never be reached. fonts.yaml therefore emits each
-// tier at a fixed offset into supplementary private-use plane 15 (fontconvert
-// -o), and the render path adds the same offset before the lookup. Keep these
-// bases identical to the `offset:` values in the fonts.yaml `latinbig` entries.
-//
-// The spacing (0x3000) exceeds the highest source codepoint the latin category
-// covers (0x2116, the numero sign), so the tiers can never overlap.
-static const uint32_t glyph_size_base[GLYPH_SIZE_COUNT] = {
-    [GLYPH_SIZE_S] = 0u,          // the resident face, at its natural codepoints
-    [GLYPH_SIZE_M] = 0xF0000u,
-    [GLYPH_SIZE_L] = 0xF3000u,
-};
+// The relocation + placement arithmetic is the PURE planner in base/legend_plan.c
+// (unit-tested: make test:polykybd_legend_plan); the wrappers below bind it to the
+// assembled font set and this variant's visible window, keeping the signatures the
+// render path has always called.
+_Static_assert(LEGEND_PLAN_SIZE_COUNT == GLYPH_SIZE_COUNT,
+               "legend_plan's size table no longer covers poly_glyph_size");
+_Static_assert(LEGEND_PLAN_SIZE_S == GLYPH_SIZE_S && LEGEND_PLAN_SIZE_M == GLYPH_SIZE_M &&
+               LEGEND_PLAN_SIZE_L == GLYPH_SIZE_L,
+               "legend_plan's size indices drifted from poly_glyph_size");
 
-// Longest legend the size override will relocate. A main legend is normally ONE
-// glyph; a couple of codepoints covers the composed forms, and anything longer is
-// not the kind of thing that wants to be drawn large anyway.
-#define GLYPH_SIZE_MAX_LEN 4
-
-// Rewrites `text` into `out` at the requested size, returning false — leaving the
-// caller on the normal face — if the size is S, the legend is too long, or ANY of
-// its glyphs is missing at that size.
-//
-// ⚠️ All-or-nothing on purpose. A partial hit would mix two faces in one legend,
-// which is the "keep every glyph of a multi-glyph legend in ONE font" rule broken
-// the worst possible way: kdisp_write_gfx_char baseline-aligns per font, so the
-// halves would also sit at different heights. Falling back whole means a keyboard
-// with no `latinbig` bundle, or a CJK/Arabic/Indic legend that this latin-only
-// feature does not cover, simply keeps drawing what it always drew.
-static bool glyph_size_remap(uint8_t size, const uint32_t* text,
-                             uint32_t* out, uint8_t out_cap) {
-    if (size == GLYPH_SIZE_S || size >= GLYPH_SIZE_COUNT || text == NULL) return false;
-    const uint32_t base = glyph_size_base[size];
-    uint8_t n = 0;
-    for (uint8_t i = 0; text[i] != 0; ++i) {
-        // A control code is a display-list op, not a glyph. The five zero-argument
-        // cursor nudges are DROPPED; every other op bails, because HINT_MOVE /
-        // HINT_FRAME (0x0E/0x12) consume the two codepoints after them — which we
-        // would then relocate as if they were glyphs — and HINT_HALF/HINT_THIN
-        // rescale the next glyph. Neither occurs in a language legend: measured
-        // across all 160 layouts every op present is one of these five, and every
-        // one of them LEADS the legend (0x0C x150, 0x0B x8, 0x06 x9, 0x08 x1,
-        // 0x05 x1; not one after a glyph).
-        //
-        // ⚠️ DROPPED, not carried, and that is not a preference — kdisp_gfx_text_bbox
-        // and the draw disagree about these ops. `\f` is `y = y > 1 ? y - 2 : 0`
-        // applied to the cursor, and bbox runs it from y = 0 (relative to the
-        // baseline) where it saturates to 0, while the draw runs it from the real
-        // baseline where it genuinely lifts 2px. Carrying the op therefore moves the
-        // glyph by an amount plan_main_legend's clamp cannot see, and the accent
-        // clips off the top (measured: 6-8 px lost on `é è à` at M/L). Dropped, the
-        // measured bbox IS what gets drawn and the clamp is exact — and the nudge is
-        // no loss, having been hand-tuned for the small face's fixed baseline.
-        //
-        // ⚠️ This is what makes the French number row scale at all: `é è ç à` are
-        // spelled `\f\f <letter>`, so refusing every control code outright left half
-        // of AZERTY's number row on the small face while the other half grew (found
-        // by rendering the row, 2026-08-21).
-        if (text[i] < 0x20) {
-            switch (text[i]) {
-                case 0x05: case 0x06: case 0x08:
-                case 0x0B: case 0x0C:
-                    continue;                               // a small-face nudge
-                default:
-                    return false;
-            }
-        }
-        if (n + 1 >= out_cap) return false;                 // too long to relocate
-        const uint32_t cp = base + text[i];
-        if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return false;
-        out[n++] = cp;
-    }
-    if (n == 0) return false;                               // ops alone draw nothing
-    out[n] = 0;
-    return true;
+static bool legend_has_glyph_cb(uint32_t cp, void* ctx) {
+    (void)ctx;
+    return kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL;
 }
 
-// Nominal baseline for each size, chosen so the cap height sits where the small
-// face's does (top of a capital ~1 px below the top of the panel): cap 20 -> 21,
-// 24 -> 25, 27 -> 28. render_key() then CLAMPS it against the legend's own ink box,
-// so a tall accent stack or a deep descender shifts to fit instead of clipping —
-// the nominal value is what keeps every ordinary letter on a shared baseline.
-static const int8_t glyph_size_baseline[GLYPH_SIZE_COUNT] = {
-    [GLYPH_SIZE_S] = 21, [GLYPH_SIZE_M] = 25, [GLYPH_SIZE_L] = 28,
+static void legend_bbox_cb(const uint32_t* text, int8_t* xmin, int8_t* xmax, int8_t* ymin, int8_t* ymax, void* ctx) {
+    (void)ctx;
+    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, text, xmin, xmax, ymin, ymax);
+}
+
+static const legend_plan_env_t legend_plan_env = {
+    .has_glyph = legend_has_glyph_cb,
+    .bbox      = legend_bbox_cb,
+    .ctx       = NULL,
+    .win_x0    = BUFFER_X,
+    .win_x1    = BUFFER_X + SCREEN_WIDTH - 1,
+    .win_y1    = SCREEN_HEIGHT - 1,
 };
 
-// A planned main legend: what to draw, where, and how much room it takes.
-typedef struct {
-    const uint32_t* text;      // the legend, relocated to the bigger face when big
-    int8_t x, y;               // draw origin (y is the baseline)
-    int8_t ink_min, ink_max;   // leftmost / rightmost lit pixel, in buffer coords
-    bool   big;                // a bigger face was selected
-} main_legend_t;
+static bool glyph_size_remap(uint8_t size, const uint32_t* text, uint32_t* out, uint8_t out_cap) {
+    return legend_plan_remap(&legend_plan_env, size, text, out, out_cap);
+}
 
-// Works out how a key's MAIN legend should be drawn at the active size, WITHOUT
-// drawing it — the shift-preview layout below needs the base glyph's extent before
-// anything lands on the buffer. `small_x`/`small_y` are the origin the small face
-// has always used (the per-language offsets), taken verbatim at GLYPH_SIZE_S.
-// `scratch` must outlive the returned plan: it holds the relocated codepoints.
 static void plan_main_legend(const uint32_t* text, int8_t small_x, int8_t small_y,
                              uint32_t* scratch, uint8_t scratch_cap, main_legend_t* out) {
-    const uint8_t size = get_local_state()->glyph_size;
-    int8_t xmin = 0, xmax = 0;
-    if (glyph_size_remap(size, text, scratch, scratch_cap)) {
-        int8_t ymin, ymax;
-        kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, scratch, &xmin, &xmax, &ymin, &ymax);
-        // Keep the language's own horizontal origin — centring instead would eat the
-        // space the shift preview lives in — but clamp both edges into the window,
-        // since a big glyph runs up to 43 px wide.
-        int8_t x = small_x;
-        if (x + xmax > BUFFER_X + SCREEN_WIDTH - 1) x = (int8_t)(BUFFER_X + SCREEN_WIDTH - 1 - xmax);
-        if (x + xmin < BUFFER_X)                    x = (int8_t)(BUFFER_X - xmin);
-        // The tier's nominal baseline, clamped so the ink stays on the panel. The
-        // nominal is what keeps ordinary letters on a shared baseline; the clamp is
-        // what stops a tall accent stack or a deep descender from clipping.
-        int8_t y = glyph_size_baseline[size];
-        if (y + ymin < 0)                 y = (int8_t)(-ymin);
-        if (y + ymax > SCREEN_HEIGHT - 1) y = (int8_t)(SCREEN_HEIGHT - 1 - ymax);
-        out->text = scratch;
-        out->x = x; out->y = y;
-        out->ink_min = (int8_t)(x + xmin);
-        out->ink_max = (int8_t)(x + xmax);
-        out->big = true;
-        return;
-    }
-    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &xmin, &xmax);
-    out->text = text;
-    out->x = small_x; out->y = small_y;
-    out->ink_min = (int8_t)(small_x + xmin);
-    out->ink_max = (int8_t)(small_x + xmax);
-    out->big = false;
+    legend_plan_main(&legend_plan_env, get_local_state()->glyph_size, text, small_x, small_y,
+                     scratch, scratch_cap, out);
 }
 
 static inline void draw_main_legend(const main_legend_t* p) {
@@ -4754,7 +4462,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_FLASH_STAGE,         user_sync_flash_stage_handler);
     transaction_register_rpc(USER_SYNC_RESET,               user_sync_reset_handler);
 #ifdef POLYKYBD_LTR559_DRIVE
-    transaction_register_rpc(USER_SYNC_SLAVE_DATA,          user_sync_slave_data_handler);
+    poly_ltr559_register_split_handler();
 #endif
 #ifdef POLY_DUMMY_TXN_TEST
     // Root-cause experiment: register 3 no-op transactions so NUM_TOTAL_TRANSACTIONS

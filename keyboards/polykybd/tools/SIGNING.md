@@ -183,3 +183,34 @@ verification, including once `FW_REQUIRE_SIGNATURE` is enabled:
 
 The enforcement flip is therefore just `OPT_DEFS += -DFW_REQUIRE_SIGNATURE` once a
 real key is provisioned and releases are signed — no slave-side work required.
+
+## The DOOM engine pack (`.plyx`) is signed too (FW-9)
+
+Signing the firmware image alone never closed the code-execution surface: the
+`.plyx` engine pack is **executable code** flashed over the same HID transport,
+and `doom_pack_load.c` used to authenticate it with a CRC32 only before
+branching into it — so anyone who could talk raw HID had arbitrary code
+execution on the next idle (SECURITY_AUDIT.md FW-9). The same key now covers it:
+
+- **Format**: a 64-byte Ed25519 signature over the pack's *(header ‖ image)*
+  sits immediately **after** the image (offset `64 + image_size`). Signing the
+  header too is load-bearing — `entry_off`/`ram_base` are exactly what an
+  attacker would edit to re-target a signed image. The header layout and pack
+  ABI are unchanged, so a signed pack still loads on pre-signature firmware
+  (which never reads past the image).
+- **Signing**: `tools/sign_doompack.py <pack>.plyx` rewrites the file in place
+  (same key sources as `sign_firmware.py`; re-signing replaces the trailer;
+  self-verifies before writing). `release.yml` runs it in the same step that
+  signs the `.bin`.
+- **Verification**: `FW_REQUIRE_SIGNATURE` builds check the signature in
+  `doom_pack_load()` at **load** time, immediately before computing the entry
+  pointer — not at flash COMMIT, because flash can be rewritten after a COMMIT
+  succeeds. Cost is one SHA-512 over ~230 KB once per game session, the same
+  order of work as the CRC walk beside it.
+- **No escape hatch, deliberately**: an unsigned *firmware* image raises the
+  on-keycap ACCEPT/REJECT prompt; an unsigned *pack* is refused outright (the
+  fire demo runs instead), because the load happens at idle when nobody is
+  present to answer a prompt. Developers iterating on the engine use the
+  monolithic `POLYKYBD_DOOM=yes` flavour, which embeds the engine and needs no
+  pack at all; a locally built pack can be signed with a locally generated key
+  pair (`gen_signing_key.py` + rebuild with the matching `fw_pubkey.h`).

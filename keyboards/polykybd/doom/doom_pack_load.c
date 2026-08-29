@@ -16,7 +16,27 @@
 #include "base/fw_staging.h"
 #include "polymod_crc32.h"
 
+#ifdef FW_REQUIRE_SIGNATURE
+// FW-9: the pack is executable code, so it gets the same Ed25519 gate as the
+// firmware image — verified HERE, at load time, not at flash COMMIT (flash can
+// be rewritten after a COMMIT succeeds, so a "was validated once" flag is not a
+// control). The __has_include fallback bridges the vendored Monocypher's move
+// into the polymod_monocypher module (#242) — drop it once that lands.
+#    if defined(__has_include) && __has_include("monocypher-ed25519.h")
+#        include "monocypher-ed25519.h"
+#    else
+#        include "base/crypto/monocypher-ed25519.h"
+#    endif
+#    include "base/fw_pubkey.h"
+#endif
+
 #include <string.h>
+
+// FW-9: a 64-byte Ed25519 signature over (header || image) — the header too, or
+// a signed image could be re-targeted by editing entry_off/ram_base around it —
+// trails the image at slot + DOOM_PACK_HDR_SIZE + image_size. Emitted by
+// tools/sign_doompack.py; release.yml signs the .plyx beside the .bin.
+#define DOOM_PACK_SIG_SIZE 64u
 
 // ── Stub table: every call safe before a pack is loaded ─────────────────────
 static void     stub_void(void) {}
@@ -171,6 +191,35 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size) {
                (unsigned long)crc, (unsigned long)hdr->image_crc);
         return false;
     }
+
+#ifdef FW_REQUIRE_SIGNATURE
+    // FW-9: authenticate before branching into the image. The CRC above is an
+    // integrity check anyone crafting a pack satisfies; this is the authorship
+    // check, over header + image so no signed field can be re-targeted. There
+    // is deliberately NO on-keycap escape hatch here (unlike an unsigned
+    // FIRMWARE image): the load runs at idle, when nobody is present to answer
+    // a prompt — an unsigned pack is simply refused and the fire demo runs.
+    if (hdr->image_size > FW_DOOMPACK_SLOT_SIZE - sizeof(*hdr) - DOOM_PACK_SIG_SIZE) {
+        printf("doom: pack leaves no room for its signature — refuse\n");
+        return false;
+    }
+    const uint8_t *sig = slot + sizeof(*hdr) + hdr->image_size;
+    if (crypto_ed25519_check(sig, FW_SIGNING_PUBKEY, slot, sizeof(*hdr) + hdr->image_size) != 0) {
+        // Erased flash reads 0xFF; a pre-signing pack ends at image_size — both
+        // present as a blank signature. Distinguish for the log only: the
+        // decision is the same refusal either way.
+        bool blank = true;
+        for (uint32_t i = 0; i < DOOM_PACK_SIG_SIZE; i++) {
+            if (sig[i] != 0x00 && sig[i] != 0xFF) {
+                blank = false;
+                break;
+            }
+        }
+        printf("doom: pack %s — refuse (FW-9: flash a release-signed .plyx)\n",
+               blank ? "is unsigned" : "signature is INVALID");
+        return false;
+    }
+#endif
 
     // Entry: image offset -> XIP address, Thumb bit set. init runs the pack
     // crt0 (.data copy + .bss zero inside the pool — virgin engine statics

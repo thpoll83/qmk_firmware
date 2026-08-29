@@ -38,6 +38,15 @@ extern "C" {
 
 // Little-endian, at the start of the DOOMPACK flash slot; the linked image
 // (.text + .rodata + .data initializers) follows immediately.
+//
+// FW-9: a released pack additionally carries a 64-byte Ed25519 signature over
+// (header || image) immediately AFTER the image — its position derives from
+// image_size, so the header layout (and the ABI) is unchanged, and a signed
+// pack still loads on pre-signature firmware (which never reads past the
+// image). Signing the header too is load-bearing: entry_off/ram_base are what
+// an attacker would edit to re-target a signed image. tools/sign_doompack.py
+// appends it; doom_pack_load.c verifies it (FW_REQUIRE_SIGNATURE builds)
+// against base/fw_pubkey.h at LOAD time, before computing the entry pointer.
 typedef struct {
     char     magic[4];   // "PlyX"
     uint32_t abi;        // DOOM_PACK_ABI of the pack build

@@ -22,6 +22,7 @@ Usage:
 Requires: ``pip install cryptography``.
 """
 import argparse
+import re
 import struct
 import sys
 from pathlib import Path
@@ -32,6 +33,20 @@ from sign_firmware import _load_seed  # noqa: E402  (same key handling + diagnos
 HDR_SIZE = 64          # doom_pack_abi.h DOOM_PACK_HDR_SIZE
 SIG_SIZE = 64
 MAGIC = b"PlyX"
+PUBKEY_H = Path(__file__).resolve().parent.parent / "base" / "fw_pubkey.h"
+
+
+def _embedded_pubkey() -> bytes:
+    """The 32-byte FW_SIGNING_PUBKEY the firmware verifies against, read from
+    base/fw_pubkey.h so signing and the on-device check share one source."""
+    text = PUBKEY_H.read_text()
+    m = re.search(r"FW_SIGNING_PUBKEY\[\d*\]\s*=\s*\{(.*?)\}", text, re.DOTALL)
+    if not m:
+        raise SystemExit(f"error: could not find FW_SIGNING_PUBKEY in {PUBKEY_H}")
+    key = bytes(int(b, 16) for b in re.findall(r"0x([0-9a-fA-F]{2})", m.group(1)))
+    if len(key) != 32:
+        raise SystemExit(f"error: FW_SIGNING_PUBKEY in {PUBKEY_H} is {len(key)} bytes, not 32")
+    return key
 
 
 def main() -> int:
@@ -63,11 +78,27 @@ def main() -> int:
             f"(expected 0 unsigned or {SIG_SIZE} signed) — refusing to guess")
 
     key = Ed25519PrivateKey.from_private_bytes(_load_seed(args.privkey))
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+    pub = key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+    # The firmware verifies against the embedded FW_SIGNING_PUBKEY, so a signature
+    # made with any other key loads on nothing. Verifying with the derived public
+    # key alone is a tautology (a wrong-but-valid seed passes it); catch that here
+    # by refusing a seed whose public half isn't the one the release firmware
+    # carries, rather than letting it surface as a keyboard rejecting the asset.
+    embedded = _embedded_pubkey()
+    if pub != embedded:
+        raise SystemExit(
+            "error: signing key does not match FW_SIGNING_PUBKEY in base/fw_pubkey.h — "
+            "the firmware would reject this pack. Sign with the release key, or "
+            "regenerate the key pair (gen_signing_key.py rewrites fw_pubkey.h) and "
+            "rebuild the firmware.")
     sig = key.sign(data[:signed_len])
     assert len(sig) == SIG_SIZE
-    # Self-verify against the derived public key before writing — a raised
-    # exception here means the signing itself is broken, not the pack.
-    key.public_key().verify(sig, data[:signed_len])
+    # Belt and braces: verify the signature over exactly the signed range against
+    # the embedded key before writing, so a broken crypto lib or a signed-range
+    # mismatch fails here rather than on the keyboard.
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    Ed25519PublicKey.from_public_bytes(embedded).verify(sig, data[:signed_len])
 
     args.plyx.write_bytes(data[:signed_len] + sig)
     print(f"signed {args.plyx} (header + {image_size} image bytes; "

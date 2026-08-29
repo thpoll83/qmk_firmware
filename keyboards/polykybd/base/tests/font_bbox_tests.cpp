@@ -296,6 +296,19 @@ TEST_F(FontBboxTest, SmallFloorsANegativeOffsetInsteadOfTruncating) {
     EXPECT_EQ(measure({0x10, 'b'}), (Box{1, 3, -5, -1}));
 }
 
+TEST_F(FontBboxTest, SmallSkipsAMissingGlyphInsteadOfSubstitutingBang) {
+    // ⚠️ The one place the measure and the draw used to disagree by construction.
+    // kdisp_write_gfx_char_half returns 0 for a glyph it cannot find — no ink, no
+    // advance — while this function substituted '!' unconditionally. So a SMALL run
+    // containing an uncovered codepoint measured a half-'!' AND spent its advance,
+    // putting every following glyph at the wrong x. 0x4000 is in no pool font.
+    EXPECT_EQ(measure({0x10, 0x4000}), (Box{0, 0, 0, 0}));
+    // ...and the phantom advance is gone too: the run measures as if it weren't there.
+    EXPECT_EQ(measure({0x10, 0x4000, 'a'}), measure({0x10, 'a'}));
+    // FULL size still substitutes, because kdisp_write_gfx_char does.
+    EXPECT_EQ(measure({0x4000}), measure({'!'}));
+}
+
 TEST_F(FontBboxTest, SmallLatchesForTheRestOfTheRun) {
     // No back-to-full op exists, and \x18 resets only the cursor.
     EXPECT_EQ(measure({0x10, 'a', 0x18, 'a'}), (Box{0, 2, -5, -1}));
@@ -330,6 +343,30 @@ TEST_F(FontBboxTest, ANullMidPoolMakesEveryMidGlyphFallBack) {
     // The wrapper always passes the resident face, but the pure function
     // tolerates measuring with none: \x16 then changes nothing.
     EXPECT_EQ(measure({0x16, 'a'}, nullptr, 0), measure({'a'}));
+}
+
+// ---------------------------------------------------------------------------
+// The bbox resolves through that same resolver — so a GAP record falls through
+// here too. It did not until 2026-08-29: this function ran its own range scan
+// with no gap check, so a codepoint inside a padded span measured the empty 0x0
+// record while the draw resolved the filler font's real glyph.
+
+TEST(FontBboxGapTest, AGapRecordIsSkippedSoTheFillerFontIsMeasured) {
+    TestFont gappy  = make_gappy();
+    TestFont filler = make_gap_filler();
+    const GFXfont *pool[2] = {&gappy.font, &filler.font};
+
+    auto measure = [&](uint32_t cp) {
+        const uint32_t text[] = {cp, 0};
+        Box            b{};
+        kdisp_gfx_text_bbox_in(pool, 2, nullptr, 0, text, &b.xmin, &b.xmax, &b.ymin, &b.ymax);
+        return b;
+    };
+    // 0x105 is a gap in `gappy` and real in `filler` (7x8, xo 1, yo -8, yAdv 44):
+    // yadj = 44-40 = +4, so top = 4-8 = -4, bottom = -4+8-1 = 3.
+    EXPECT_EQ(measure(0x105), (Box{1, 7, -4, 3}));
+    // An ordinary codepoint still measures from the FIRST font, gap or not.
+    EXPECT_EQ(measure(0x104), (Box{0, 2, -5, -1}));
 }
 
 // ---------------------------------------------------------------------------

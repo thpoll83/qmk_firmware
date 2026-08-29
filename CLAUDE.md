@@ -2564,7 +2564,42 @@ op-argument table, the SMALL/MID semantics and the baseline-shift rule.
     by origin), so its 34 existing tests still pin it. **Use the absolute one whenever
     you need to know where ALL of a legend lands** — which is exactly what the idle
     jitter needs, and what it did not have (below).
-
+- ✅ **TWO bbox-vs-draw asymmetries were FIXED 2026-08-29 — both made the measured
+  box describe glyphs the draw would not produce.** Worth knowing they existed,
+  because the shape recurs: this function and the draw resolved glyphs by two
+  different routes, so they could disagree without either looking wrong.
+  1. **The `'!'` substitution had no `small` guard.** The measure path did
+     `if (!f) { f = pool[0]; …; ch = U'!'; }` unconditionally, while the SMALL draw
+     (`kdisp_write_gfx_char_half`) does `if (glyph == NULL …) return 0;` — no ink and
+     **no advance**. So a `HINT_SMALL` run containing an uncovered codepoint measured a
+     half-`'!'` *and* spent an advance the draw never spends, putting every following
+     glyph at the wrong x.
+  2. **The scan did not skip 0x0 GAP records.** It was a bare
+     `if (ch >= first && ch <= last) { f = pool[i]; break; }`, where every draw path
+     goes through `kdisp_gfx_glyph_font`, which skips a `{0,0,0,0,0,0}` padding record
+     so a later font wins. A codepoint inside a padded span — Pashto letters under
+     `_PerArab_`'s wider range — measured the empty gap while the draw resolved a real
+     glyph from the next font.
+  **The fix is one line of intent: resolve through `kdisp_gfx_glyph_font`, the same
+  lookup the draw uses**, and skip the codepoint instead of substituting when a SMALL
+  run finds nothing. Don't reintroduce a private range scan here — that is what made
+  (2) possible, and a second resolver can always drift from the first.
+  - **It mattered because `plan_main_legend()` positions the main legend from this box
+    and clamps it to the panel**, and `roll_idle_offset()` derives a glyph's idle travel
+    from it — so a wrong box is a mis-placed or clipped legend, not just a wrong number.
+    Reachability was narrow (a legend needs a missing glyph *and* a size op, or a gapped
+    codepoint), which is why nothing had reported it.
+  - ⚠️ **The old C suite passed over BOTH.** `GapRecordFallsThroughToTheNextFont` covers
+    the *resolver*, not the bbox, and there was no missing-glyph-in-a-SMALL-run case at
+    all — 34 tests, neither asymmetry visible. The two added with the fix
+    (`SmallSkipsAMissingGlyphInsteadOfSubstitutingBang`, `FontBboxGapTest`) were
+    confirmed to FAIL against the pre-fix file and pass after, with the other 34
+    unmoved. **A suite that measures a resolver is not measuring its callers.**
+  - ⚠️ **The host's Python mirror moves with this.** `PolyKybdHost`'s
+    `oled_preview.Renderer` reproduces this function; it already skipped gaps (so (2)
+    was never wrong there) but deliberately pinned the `'!'` substitution as C parity.
+    That pin is now backwards — it needs inverting in the host repo, or the two
+    diverge again in the opposite direction.
 **The legend-size key is now ONE key that states its own tier.** `KC_GLYPH_SIZE_UP` on
 `_UL` draws `ICON_FONT_BIGGER` plus the current tier as a digit in the top-right;
 holding **Shift** swaps the icon to `ICON_FONT_SMALLER` and reverses the step, so the

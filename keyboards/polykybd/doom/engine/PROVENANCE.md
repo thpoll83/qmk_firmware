@@ -14,8 +14,9 @@ reviewable. Upstream's own README is `README-upstream.md`.
 
 Included: `src/` (engine + `doom/` game core + `pico/` RP2040 backends +
 `whd_gen/` WAD converter + `adpcm-xq/`), `textscreen/` (headers are on the pico
-include path), `cmake/`, the root CMake build files (reference for source lists
-and flags — we use QMK's build, not CMake).
+include path **in upstream's CMake build** — our QMK build does not put it on
+any include path; see "Static analysis" below), `cmake/`, the root CMake build
+files (reference for source lists and flags — we use QMK's build, not CMake).
 
 Excluded (not needed for the port, refetchable any time): `src/heretic`,
 `src/hexen`, `src/strife`, `src/setup`, `opl/`, `pcsound/`, `midiproc/`,
@@ -54,9 +55,24 @@ compiled — all of them under `src/`. **No `.c` file in `textscreen/` is ever
 built**: grep the whole repository for `textscreen` across `*.mk` / `Makefile` /
 `*.json` and there are no hits. The only textscreen artifact any built thing
 touches is `textscreen/fonts/normal.h`, included by `src/whd_gen/whd_gen.cpp` —
-itself a *host-side* WAD converter, not firmware. (`src/net_gui.c` does
-`#include "textscreen.h"`, but it is not in `SRC` either. `src/doom/f_finale.c`
-declares its own unrelated local `textscreen_t` struct.)
+itself a *host-side* WAD converter, not firmware, and it reaches it by a
+**relative** include (`#include "../../textscreen/fonts/normal.h"`), not through
+any `-I` directory. (`src/net_gui.c` does `#include "textscreen.h"`, but it is
+not in `SRC` either. `src/doom/f_finale.c` declares its own unrelated local
+`textscreen_t` struct, which is what a name grep otherwise hits.)
+
+Two mechanisms keep it out, and it is worth being precise about which does what,
+because the "What is included / excluded" section above describes **upstream's**
+CMake build rather than ours:
+
+- **Not compiled.** `rules.mk` builds only what it lists in `SRC`, and every
+  entry is under `doom/engine/src/`. Nothing excludes `textscreen/` explicitly —
+  it is simply never named, which is why a grep for it in the build files comes
+  back empty.
+- **Not even reachable by `#include`.** `DOOM_INC` is `src/`, `src/doom/`,
+  `src/pico/` and five pico-sdk directories. `textscreen/` is not among them, so
+  a firmware translation unit cannot pull in a textscreen header by the short
+  name upstream uses (`#include "textscreen.h"`) even if someone added one.
 
 That directory is kept because the snapshot is verbatim and refetchable, not
 because it is used. It is desktop code: everything below is inside `#ifndef

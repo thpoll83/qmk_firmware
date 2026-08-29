@@ -31,7 +31,7 @@
 #include "base/overlay.h"
 #include "base/update.h"
 #include "base/fw_staging.h"
-#include "base/multicore/core1.h"
+#include "polymod_core1.h"
 
 #include "doomkeys.h"           // engine key codes (doom_translate_key)
 #include "doom_weapon_icons.h"  // slave weapon-pad bitmaps (shareware sprites)
@@ -83,7 +83,7 @@ static bool doom_whx_present(void) {
 
 // Hard-reset core1 via the power-on state machine (pico-sdk
 // multicore_reset_core1 — not compiled here because the SDK's multicore.c
-// collides with the firmware's local base/multicore/core1.c launcher).
+// collides with the polymod_core1 launcher).
 static void doom_core1_reset(void) {
     io_rw_32 *power_off     = (io_rw_32 *)(PSM_BASE + PSM_FRCE_OFF_OFFSET);
     io_rw_32 *power_off_set = hw_set_alias(power_off);

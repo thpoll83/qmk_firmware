@@ -1,0 +1,6 @@
+{
+    "module_name": "Monocypher (Ed25519 + SHA-512)",
+    "maintainer": "PolyKybd",
+    "license": "BSD-2-Clause OR CC0-1.0",
+    "url": "https://github.com/thpoll83/qmk_firmware"
+}

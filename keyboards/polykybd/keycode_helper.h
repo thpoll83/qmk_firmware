@@ -176,7 +176,9 @@ enum my_keycodes {
     // e.g. KC_OS_COPY emits Ctrl+C on Windows/Linux but Cmd+C on macOS, KC_OS_LOCK
     // emits Win+L / Ctrl+Cmd+Q / Super+L. Drop them into keymaps[] like any keycode;
     // they give the "full palette on every OS" without per-OS layers. Append-only —
-    // os_action_table[] and the label switch in keycode_helper.c track this order.
+    // the polymod_os_actions chord table (its enum polymod_os_action, pinned
+    // row-by-row by the _Static_asserts in poly_keymap.c) and the label switch
+    // in keycode_helper.c track this order.
     KC_OS_ACTION_BASE,
     KC_OS_COPY = KC_OS_ACTION_BASE,
     KC_OS_CUT,

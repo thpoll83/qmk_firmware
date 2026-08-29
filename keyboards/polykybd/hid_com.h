@@ -5,8 +5,9 @@
 
 #define HID_CMD_IDX 1
 #define HID_DATA_IDX 2
-#define LANG_TO_UI32(a,b,c,d) (((uint32_t)(a))<<24 | ((uint32_t)(b))<<16 | ((uint32_t)(c))<<8 | (d))
-#define LANG_TO_UI32_ARR(arr) (((uint32_t)(arr[0]))<<24 | ((uint32_t)(arr[1]))<<16 | ((uint32_t)(arr[2]))<<8 | (arr[3]))
+// LANG_TO_UI32 / LANG_TO_UI32_ARR moved to lang/lang_lut.h — they are the
+// lang-code encoding, and keeping them here made the generated lang_lut.c
+// include the HID layer for one macro.
 
 enum legacy_command_id {
     id_get_protocol_version                 = 0x01, // always 0x01

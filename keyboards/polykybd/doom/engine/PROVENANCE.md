@@ -75,9 +75,18 @@ CMake build rather than ours:
   name upstream uses (`#include "textscreen.h"`) even if someone added one.
 
 That directory is kept because the snapshot is verbatim and refetchable, not
-because it is used. It is desktop code: everything below is inside `#ifndef
-_WIN32` and calls `system()` / `fprintf(stderr)`, neither of which means
-anything on an RP2040 with no shell and no stdio console.
+because it is used.
+
+⚠️ **The reason the findings below are inert is the build membership above, and
+nothing else.** It is tempting to add that the flagged code is "desktop-only"
+because it sits inside `#ifndef _WIN32` and calls `system()` / `fprintf(stderr)`
+— but that argument does not hold and should not be repeated: an RP2040 build is
+not `_WIN32` either, so the preprocessor would take exactly that branch, and the
+`system()` / `fprintf(stderr)` calls describe what the code would fail to *do* at
+runtime, not why it is absent. Both are consequences of it being desktop code,
+not the mechanism that keeps it out. The mechanism is that no `textscreen/`
+translation unit enters the firmware build at all, so none of it is ever
+preprocessed, compiled or linked.
 
 Scanners flag it anyway, repeatedly. Recorded here so the same report does not
 have to be re-investigated each time:

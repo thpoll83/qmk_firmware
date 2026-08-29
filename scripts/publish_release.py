@@ -167,10 +167,37 @@ def commit_for_version(kind, vpath, default_branch, version):
     before its own bump lands. Taking the newest match resolved v0.15.14 to a
     commit from PR #231, which actually shipped in 0.15.15; the oldest match is
     the bump commit, which is what every historical release was in fact tagged
-    at. Versions increase monotonically, so a version occupies exactly one
-    contiguous run of commits and the oldest match is unambiguous.
+    at.
+
+    ⚠️ The whole history is walked, with NO early exit. An earlier version broke
+    out on the first non-match after a match, on the theory that a version
+    occupies one contiguous run. That is true in time but FALSE in a path-limited
+    `git log`, where a PR's own commits and its merge commit interleave with the
+    mainline: the break stopped at the end of the first run and returned a commit
+    from a later release. Measured on this repo, 9 of 154 versions mis-resolved --
+    0.15.17 to a PR #234 feature commit that shipped in 0.16.0, and 0.15.18 to
+    that PR's merge commit. A full walk is ~1.1 s, so the break bought nothing.
+
+    ⚠️ `--first-parent` is load-bearing, for the same reason as the missing
+    break. `git log` orders by commit DATE, so commits merged in from a branch
+    interleave with the mainline and "last in the newest-first list" is not
+    topologically oldest -- measured, 6 of 151 versions then resolved to a
+    commit that is not even an ancestor of their bump. Restricting to the
+    mainline removes the interleaving at its source: 150 of 151 land exactly on
+    the `chore: bump ...` commit. The one exception (0.9.2) had its bump made on
+    a side branch, so first-parent resolves it to the merge that brought it onto
+    the mainline -- which still declares 0.9.2, so the label-matches-binary
+    invariant holds, which is the property that actually matters here.
+
+    ⚠️ The pathspec is `:(top)`-prefixed because a plain `-- <path>` is
+    CWD-RELATIVE. Run from a subdirectory -- which this script explicitly
+    supports -- it matches nothing and `git log` exits 0 with an EMPTY list, so
+    the returncode guard never fires and the caller silently falls back to the
+    branch head. (`show()` is unaffected: `<rev>:<path>` is always root-relative,
+    so nothing else looks wrong.)
     """
-    r = run(["git", "log", "--format=%H", f"origin/{default_branch}", "--", vpath])
+    r = run(["git", "log", "--format=%H", "--first-parent",
+             f"origin/{default_branch}", "--", f":(top){vpath}"])
     if r.returncode:
         return None
     found = None
@@ -181,8 +208,6 @@ def commit_for_version(kind, vpath, default_branch, version):
         try:
             if parse_version(kind, text) == version:
                 found = sha  # keep walking back; the last match is the oldest
-            elif found:
-                break        # walked past the start of this version's run
         except SystemExit:
             # An older revision the current parser can't read: skip it rather
             # than abort the publish.
@@ -228,24 +253,35 @@ def main():
     # publish* — NOT the tree version, which drifts forward on every PR merge
     # (each merge auto-bumps the version, so the tree is usually ahead of the
     # prepared release by the time you publish). Pick the newest prepared tag.
+    prepared = prepared_tags(tag_prefix)
     if args.tag:
         tag = args.tag
-        notes = show(f"origin/release-notes:{tag}.md")
-        if not notes or not notes.strip():
-            die(f"no prepared notes for {tag} on the release-notes branch "
-                f"(expected release-notes:{tag}.md).")
     else:
-        prepared = prepared_tags(tag_prefix)
         if not prepared:
             die("no prepared release notes on the release-notes branch "
                 f"(no {tag_prefix}<X.Y.Z>.md files).\n"
                 "  Draft + stage them first with the polykybd-github-release skill.")
         tag = prepared[-1][1]
-        notes = show(f"origin/release-notes:{tag}.md")
         if len(prepared) > 1:
             others = ", ".join(t for _, t in prepared[:-1])
             print(f"note: newest prepared tag is {tag}. Others on the branch: {others}")
             print(f"      (use --tag to publish a specific one.)")
+
+    # One guard for both paths. prepared_tags() matches on FILENAME only, so an
+    # empty or unreadable <TAG>.md reaches here on the auto-select path too --
+    # where it used to raise IndexError on lines[0] (or AttributeError on a None
+    # from show()) instead of saying what was wrong.
+    notes = show(f"origin/release-notes:{tag}.md")
+    if not notes or not notes.strip():
+        die(f"no prepared notes for {tag} on the release-notes branch "
+            f"(expected release-notes:{tag}.md, non-empty).")
+
+    # Only the newest prepared tag becomes "Latest release". The notes branch is
+    # an append-only archive and --tag exists to publish an older one, so an
+    # unconditional make_latest would re-point /releases/latest -- and the tray
+    # updater that reads it -- at older firmware.
+    newest_tag = prepared[-1][1] if prepared else tag
+    is_latest = (tag == newest_tag)
 
     # Tag the commit that DECLARES this version, not the branch head -- see
     # commit_for_version(). Falls back to the head so a publish never becomes
@@ -292,6 +328,8 @@ def main():
     print(f"repo    : {owner}/{repo}  ({kind})")
     print(f"tag     : {tag}   target: {target_desc}")
     print(f"title   : {title}")
+    if not is_latest:
+        print(f"latest  : NO — {newest_tag} is newer and keeps the Latest badge")
     print(f"body    : {len(body)} chars, {body.count(chr(10)) + 1} lines")
     print("-" * 60)
     print(body)
@@ -308,7 +346,7 @@ def main():
     status, rel = api(token, "GET", f"/repos/{owner}/{repo}/releases/tags/{tag}")
     if status == 200:
         st, res = api(token, "PATCH", f"/repos/{owner}/{repo}/releases/{rel['id']}",
-                      {"name": title, "body": body, "make_latest": "true", "draft": False})
+                      {"name": title, "body": body, "make_latest": str(is_latest).lower(), "draft": False})
         if st >= 300:
             die(f"updating existing release failed ({st}): {res.get('message')}")
         print(f"updated existing release {tag}")
@@ -322,7 +360,7 @@ def main():
         "target_commitish": target,
         "name": title,
         "body": body,
-        "make_latest": "true",
+        "make_latest": str(is_latest).lower(),
         "draft": False,
         "prerelease": False,
     })

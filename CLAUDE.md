@@ -2321,7 +2321,7 @@ knowing is the parts that are NOT what you would write from scratch:
   capacity, so the byte reads 0 **before** a write, **during** it and **after** it —
   the guard could never fire. An interrupted upload therefore left a *playable*
   splice, and the splice is made of the old macro:
-  ```
+  ```text
   before: "password123\0"   write: "hi\0" (interrupted)
   after:  "hi\0sword123\0"  -> macro 0 = "hi", macro 1 = "sword123"
   ```

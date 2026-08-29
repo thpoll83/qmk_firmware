@@ -142,6 +142,17 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                     s_last_begin_slave_ack = slave_ack;
                     uprintf("FONTPACK_BEGIN: master erased, slave not ready (bundle=%u slave_ack=0x%02x)\n",
                             bundle, slave_ack);
+                    // A) slave visibility for the FW-9 doom re-flash wedge. The rig
+                    // reads the master console only, so dump the slave's fw_staging
+                    // counters over the read-only STATUS op (its own transaction, not
+                    // a core1/erase change). It answers the exact question the
+                    // slave_ack alone can't: is the slave DARK ("RPC FAILED — slave
+                    // unresponsive") or ALIVE-BUT-STUCK — and if alive, whether it
+                    // even saw the BEGIN (begin_handler_calls), started erasing
+                    // (erase_sector_next/count), and is still ticking process_deferred.
+                    // Change-triggered like the line above, so one snapshot per state,
+                    // no re-poll flood. Read-only: adds a probe path, changes nothing.
+                    fw_up_log_slave_status("begin-not-ready");
                 }
             }
 

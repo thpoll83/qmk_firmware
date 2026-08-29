@@ -3,9 +3,15 @@ name: Build and HIL Test
 on:
   push:
     branches: [PolyKybd, "PolyKybd/**"]
-    # A Markdown-only change cannot alter the firmware, so it should not occupy
-    # the HIL rig for a full flash-and-test cycle (the rig runs one job at a
-    # time, so a docs push delays every real build queued behind it).
+    # A change that cannot alter the firmware should not occupy the HIL rig for
+    # a full flash-and-test cycle (the rig runs one job at a time, so such a
+    # push delays every real build queued behind it).
+    #
+    # Beyond Markdown: `scripts/` holds only publish_release.py (the release
+    # publisher — nothing the build reads), and `.claude/` holds skills and
+    # settings. A change confined to either cannot reach a firmware image.
+    # ⚠️ Verify that stays true before adding a path here: the test is whether
+    # the build or the rig ever READS it, not whether it looks unrelated.
     #
     # ⚠️ `paths-ignore` skips the workflow only when EVERY changed file matches,
     # so a mixed docs+code PR still runs the gate in full — this can never hide
@@ -22,6 +28,8 @@ on:
     # fix in that case is a paths-filter job feeding `if:` conditions instead.
     paths-ignore:
       - '**.md'
+      - 'scripts/**'
+      - '.claude/**'
   pull_request:
     # `labeled` is NOT in GitHub's default set (opened/synchronize/reopened), and
     # without it adding the `perf` label to an open PR fires no run at all — the
@@ -33,6 +41,8 @@ on:
     # Same reasoning as the push trigger above.
     paths-ignore:
       - '**.md'
+      - 'scripts/**'
+      - '.claude/**'
   # Manual trigger for the opt-in performance measurement below (the normal
   # build + HIL test always run; perf does not). No inputs: the baseline is moved
   # by committing the run's JSON to polykybd-ctnd, not by a workflow switch — the

@@ -740,7 +740,7 @@ measured rather than derived.
 | `base/disp_array.c` | Per-keycap OLED driver: `kdisp_write_gfx_char()`, `kdisp_draw_bitmap()`, `kdisp_invert()` |
 | `base/shift_reg.c` | Shift-register multiplexing — selects which keycap OLED receives the next SPI write |
 | `split_sync.c` | CRC32-validated transactions that synchronise overlays and state to the other half |
-| `state.c` | `poly_sync_t` / `poly_layer_t` — shared state structs with CRC32, persisted via EEPROM |
+| `state.c` / `state_store.c` | `poly_sync_t` / `poly_layer_t` — shared state structs with CRC32. Split 2026-08 (#240): `state.c` is the policy half (dirty flags, brightness model, sync snapshots), `state_store.c` the persistence half (every EEPROM read/write, behind `state.c`'s public getters) |
 | `multicore_exec.c` | Offloads RLE decompression to RP2040 core1 via FIFO, keeping QMK's core0 responsive |
 | `lang/lang_lut.c` | 81-language lookup table (code-generated from `lang_lut.xlsx` via cog) |
 
@@ -1861,7 +1861,12 @@ whole point of cmd 35. Three things are worth knowing:
   the host tab label's budget; the emitter clamps rather than trusting the table, so
   an over-long name can never run past the buffer.
 
-### Keycap legend size (`poly_keymap.c`, HID cmd 34, protocol v13+)
+### Keycap legend size (`base/legend_plan.c` + `poly_keymap.c`, HID cmd 34, protocol v13+)
+
+*(The planner — `glyph_size_remap()` / `plan_main_legend()` — is pure in
+`base/legend_plan.c` since #237, behind has-glyph/bbox callbacks with the firmware
+binding kept as wrappers in `poly_keymap.c`; `make test:polykybd_legend_plan` pins
+the tier bases, the all-or-nothing fallback and the origin clamps.)
 
 Three sizes for a key's **MAIN** legend — `GLYPH_SIZE_S` (0, the 27 px face the board
 has always drawn, and the default), `M` (1, 33 px em) and `L` (2, 39 px em). State and
@@ -1881,8 +1886,9 @@ like the glyph script:
   native codepoints could never be reached. `fonts.yaml`'s `latinbig` category emits each
   tier at a fixed offset into supplementary PUA plane 15 (**fontconvert `-o`**, the
   range-mode sibling of the `-F` the glyph scripts use): M at `0xF0000 + cp`, L at
-  `0xF3000 + cp`. `glyph_size_base[]` in `poly_keymap.c` must stay identical to the
-  `offset:` values in the yaml. ⚠️ `-o` was documented as "add" but implemented as
+  `0xF3000 + cp`. `glyph_size_base[]` in `base/legend_plan.c` must stay identical to the
+  `offset:` values in the yaml (a `_Static_assert` pins the size indices; the unit
+  suite pins the base values). ⚠️ `-o` was documented as "add" but implemented as
   "subtract" (an exact alias of `-n`) until 2026-08-20; nothing used it, so the fix was
   inert — but an older fontconvert will silently emit the WRONG range here.
 - **`glyph_size_remap()` is ALL-OR-NOTHING.** If the `latinbig` bundle is absent, or any
@@ -2184,6 +2190,11 @@ travel, so it was luck rather than design that nothing visibly broke (none of th
 affected keys has a shift preview, and none is drawn at idle). The ops are mirrored
 now: `\x10` switches the measurement to half-scale, `\x16` to the mid face,
 `\x0F`/`\x11` consume one argument, `\x0E`/`\x12` consume two, `\x13` three.
+Since #238 the interpreter (and the glyph resolver) live in pure
+**`base/font_lookup.c`** — `kdisp_gfx_text_bbox_in()` takes the HINT_MID pool as a
+parameter, `disp_array.c` keeps `kdisp_gfx_text_bbox()` as the wrapper binding the
+resident mid face, and `make test:polykybd_font_bbox` (34 tests) pins the whole
+op-argument table, the SMALL/MID semantics and the baseline-shift rule.
 - ⚠️ **`\x0E` (MOVE) skipped NO arguments until 2026-08-26, and that sentence above
   was FALSE for it** — it fell through to `\x14`'s bare `break`, so a MOVE's two
   coordinate bytes were dispatched through the same switch on the next iterations.
@@ -2318,10 +2329,13 @@ who solders the part gets it and nobody else pays more than ~30 s of cheap probe
   - **Listing it in `keyboard.json` `modules` is the entire enable.** There is no
     `SRC +=` line and no `-DPOLYKYBD_LTR559`; the build defines
     **`COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE`** for you, and that is what
-    `poly_keymap.c` gates its consumer code on. `POLYKYBD_LTR559_DRIVE` survives
+    the consumer code gates on. `POLYKYBD_LTR559_DRIVE` survives
     unchanged as the separate gate for the PolyKybd **policy** (auto-brightness +
     idle-inhibit + the `USER_SYNC_SLAVE_DATA` slot), so a board can carry the driver
-    without the policy.
+    without the policy. Since #237 that policy lives in **`ltr559_policy.c`**
+    (the lux→contrast curve, the drive tick, the proximity wake, the slave-pull
+    handler); `poly_keymap.c` only registers the split handler and calls
+    `poly_ltr559_drive()` from housekeeping.
   - **The module probes and polls itself** from `keyboard_post_init_polymod_ltr559` /
     `housekeeping_task_polymod_ltr559`. `poly_keymap.c` no longer calls
     `ltr559_init()`/`ltr559_task()` — **don't re-add them**, that would double-probe.
@@ -2443,9 +2457,11 @@ silent-green failure the CI workflow's zero-suites guard exists to catch, one le
 down and with nothing guarding it: `make test:os_hints` "passed" twice before the
 missing output was noticed (2026-08-18); the suite is `polykybd_os_hints`. **Judge the
 run by the `[  PASSED  ] N tests.` line, never by the exit code** — a real run always
-prints one. The registered names are `polykybd_os_hints`, `polykybd_glyph_meta`,
-`fw_up_verdict` and `polymod_ltr559`; `grep -rn "TEST_LIST +=" --include=testlist.mk .`
-is the authoritative list.
+prints one. `grep -rn "TEST_LIST +=" --include=testlist.mk .` is the authoritative
+list of registered names — they live in `base/tests/testlist.mk`,
+`hints/tests/testlist.mk` and each `modules/polykybd/polymod_*/tests/`; neither a
+count nor an enumeration is kept here, because this sentence once listed four
+suites while eleven existed.
 
 ✅ **These run in CI — via `polykybd-unit-test.yml`, NOT upstream's `unit_test.yml`.**
 That distinction is the whole point: upstream's workflow filters on `builddefs/ quantum/

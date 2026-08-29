@@ -28,7 +28,9 @@ namespace {
 struct Event {
     enum Kind { GET, SET, CLEAR, REG, UNREG, TAP } kind;
     uint8_t arg;
-    bool operator==(const Event& o) const { return kind == o.kind && arg == o.arg; }
+    bool    operator==(const Event& o) const {
+        return kind == o.kind && arg == o.arg;
+    }
 };
 
 static std::vector<Event> s_log;
@@ -127,7 +129,7 @@ TEST_F(OsActionsTest, LineHomeOnMacosIsCmdLeft) {
 // ---- no-ops and bounds -----------------------------------------------------
 
 TEST_F(OsActionsTest, AnUnboundCellEmitsNothing) {
-    emit_os_action(OSA_LOCK, OSA_OS_ANDROID);   // NA on Android
+    emit_os_action(OSA_LOCK, OSA_OS_ANDROID); // NA on Android
     EXPECT_TRUE(s_log.empty());
 }
 
@@ -153,13 +155,12 @@ TEST_F(OsActionsTest, TheCountMatchesTheEnum) {
 // ---- held-modifier hygiene -------------------------------------------------
 
 TEST_F(OsActionsTest, HeldUserModsAreClearedForTheChordAndRestoredAfter) {
-    s_mods = MOD_LSFT;   // the user is holding Shift
+    s_mods = MOD_LSFT; // the user is holding Shift
     emit_os_action(OSA_COPY, OSA_OS_WINDOWS);
     // The chord must go out as exactly Ctrl+C — no Shift leaked in — and the
     // held Shift must be back afterwards.
     std::vector<Event> expect = {
-        {Event::GET, MOD_LSFT},  {Event::CLEAR, 0},        {Event::REG, MOD_LCTL},
-        {Event::TAP, KC_C},      {Event::UNREG, MOD_LCTL}, {Event::SET, MOD_LSFT},
+        {Event::GET, MOD_LSFT}, {Event::CLEAR, 0}, {Event::REG, MOD_LCTL}, {Event::TAP, KC_C}, {Event::UNREG, MOD_LCTL}, {Event::SET, MOD_LSFT},
     };
     EXPECT_EQ(expect, s_log);
     EXPECT_EQ(MOD_LSFT, s_mods);
@@ -187,8 +188,8 @@ TEST_F(OsActionsTest, AFoldedGnomeEmitsTheLinuxChord) {
     emit_os_action(OSA_SCRSHOT, poly_os_action_column(POLY_OS_LINUX_GNOME));
     uint8_t m, k;
     ASSERT_TRUE(emitted(&m, &k));
-    EXPECT_EQ(MOD_LSFT, m);   // Shift+PrtSc, the GNOME area screenshot
+    EXPECT_EQ(MOD_LSFT, m); // Shift+PrtSc, the GNOME area screenshot
     EXPECT_EQ(KC_PSCR, k);
 }
 
-}  // namespace
+} // namespace

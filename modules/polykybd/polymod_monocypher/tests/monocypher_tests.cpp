@@ -34,16 +34,14 @@ static void from_hex(const char *hex, uint8_t *out, size_t out_len) {
 // (non-empty message, standalone public key).
 const char *kTest3Pub = "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025";
 const char *kTest3Msg = "af82";
-const char *kTest3Sig =
-    "6291d657deec24024827e69c3abe01a30ce548a284743a445e3680d7db5ac3ac"
-    "18ff9b538d16f290ae67f760984dc6594a7c15e9716ed28dc027beceea1ec40a";
+const char *kTest3Sig = "6291d657deec24024827e69c3abe01a30ce548a284743a445e3680d7db5ac3ac"
+                        "18ff9b538d16f290ae67f760984dc6594a7c15e9716ed28dc027beceea1ec40a";
 
 // RFC 8032 §7.1 TEST 1: the empty message — the degenerate length the length
 // arithmetic gets wrong first.
 const char *kTest1Pub = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
-const char *kTest1Sig =
-    "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155"
-    "5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b";
+const char *kTest1Sig = "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155"
+                        "5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b";
 
 class Ed25519KnownAnswerTest : public ::testing::Test {
    protected:
@@ -99,14 +97,13 @@ TEST_F(Ed25519KnownAnswerTest, SignRoundTripsThroughCheck) {
 }
 
 TEST(Sha512KnownAnswerTest, Fips180AbcVector) {
-    const char *expect_hex =
-        "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a"
-        "2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
-    uint8_t expect[64], got[64];
+    const char *expect_hex = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a"
+                             "2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
+    uint8_t     expect[64], got[64];
     from_hex(expect_hex, expect, sizeof expect);
     const uint8_t msg[] = {'a', 'b', 'c'};
     crypto_sha512(got, msg, sizeof msg);
     EXPECT_EQ(0, memcmp(expect, got, sizeof got));
 }
 
-}  // namespace
+} // namespace

@@ -59,5 +59,8 @@ jobs:
             -i modules/polykybd/polymod_monocypher/monocypher-ed25519.c \
             -i keyboards/polykybd/base/tests \
             -i keyboards/polykybd/hints/tests \
+            -i modules/polykybd/polymod_ltr559/tests \
+            -i modules/polykybd/polymod_monocypher/tests \
+            -i modules/polykybd/polymod_os_actions/tests \
             --template='{file}:{line}: {severity}: {message} [{id}]' \
             keyboards/polykybd modules/polykybd

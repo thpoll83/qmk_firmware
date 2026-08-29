@@ -26,31 +26,23 @@ enum polymod_os_action {
     OSA_REDO,
     OSA_SELALL,
     OSA_FIND,
-    OSA_LOCK,        // lock screen
-    OSA_SCRSHOT,     // region screenshot
-    OSA_SEARCH,      // launcher / spotlight
-    OSA_APP_SWITCH,  // application switcher
-    OSA_WIN_SWITCH,  // window switcher
-    OSA_EMOJI,       // emoji picker
-    OSA_WORD_LEFT,   // move cursor one word left
-    OSA_WORD_RIGHT,  // move cursor one word right
-    OSA_LINE_HOME,   // move to start of line
-    OSA_LINE_END,    // move to end of line
+    OSA_LOCK,       // lock screen
+    OSA_SCRSHOT,    // region screenshot
+    OSA_SEARCH,     // launcher / spotlight
+    OSA_APP_SWITCH, // application switcher
+    OSA_WIN_SWITCH, // window switcher
+    OSA_EMOJI,      // emoji picker
+    OSA_WORD_LEFT,  // move cursor one word left
+    OSA_WORD_RIGHT, // move cursor one word right
+    OSA_LINE_HOME,  // move to start of line
+    OSA_LINE_END,   // move to end of line
     OSA_ACTION_COUNT
 };
 
 // Column order of the chord table. An os value at or past OSA_OS_COUNT falls
 // back to the Unknown column, which mirrors the Windows/Linux Ctrl convention
 // so an unresolved OS still does the sensible thing.
-enum polymod_os_action_os {
-    OSA_OS_UNKNOWN = 0,
-    OSA_OS_WINDOWS,
-    OSA_OS_MACOS,
-    OSA_OS_LINUX,
-    OSA_OS_ANDROID,
-    OSA_OS_IOS,
-    OSA_OS_COUNT
-};
+enum polymod_os_action_os { OSA_OS_UNKNOWN = 0, OSA_OS_WINDOWS, OSA_OS_MACOS, OSA_OS_LINUX, OSA_OS_ANDROID, OSA_OS_IOS, OSA_OS_COUNT };
 
 // emit_os_action() taps the chord for the given action on the given OS. A cell
 // with no binding on that OS (e.g. Lock on iOS) is a no-op, as is an action_idx

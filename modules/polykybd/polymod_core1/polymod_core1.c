@@ -2,15 +2,14 @@
 #include "polymod_core1_irq.h"
 
 #include "hardware/structs/scb.h"
-#include "hardware/timer.h"   // time_us_64 (bounded launch deadline)
+#include "hardware/timer.h" // time_us_64 (bounded launch deadline)
 
 #include <stdbool.h>
 #include <stdint.h>
 
 #define CORE1_STACK_SIZE 384
 
-static uint32_t core1_stack[CORE1_STACK_SIZE/4]
-    __attribute__((aligned(8)));
+static uint32_t core1_stack[CORE1_STACK_SIZE / 4] __attribute__((aligned(8)));
 
 // Diagnostic counters for the BOUNDED runtime relaunch (doom session teardown
 // and the fw_staging FONTPACK/doom-flash restart both funnel through
@@ -22,14 +21,14 @@ static uint16_t s_bounded_launch_calls    = 0;
 static uint16_t s_bounded_launch_timeouts = 0;
 
 void multicore_launch_core1_bounded_stats(uint16_t *calls, uint16_t *timeouts) {
-    if (calls)    *calls    = s_bounded_launch_calls;
+    if (calls) *calls = s_bounded_launch_calls;
     if (timeouts) *timeouts = s_bounded_launch_timeouts;
 }
 
 #ifdef CORE1_STACK_HWM
 // Stack high-water-mark instrumentation. Enable by adding CORE1_STACK_HWM to
 // rules.mk (OPT_DEFS += -DCORE1_STACK_HWM). See readme.md "For developers".
-#define CORE1_STACK_SENTINEL 0xDEADBEEFu
+#    define CORE1_STACK_SENTINEL 0xDEADBEEFu
 
 // Walks core1_stack from the low address upward and returns the number of bytes
 // that have been written (i.e. no longer hold the sentinel). The deepest the stack
@@ -37,8 +36,8 @@ void multicore_launch_core1_bounded_stats(uint16_t *calls, uint16_t *timeouts) {
 // reads are racy w.r.t. transient writes but the high-water mark is monotonic so
 // at worst we under-report by one frame.
 uint32_t core1_stack_high_water_mark(void) {
-    const size_t total = CORE1_STACK_SIZE / sizeof(uint32_t);
-    size_t untouched = 0;
+    const size_t total     = CORE1_STACK_SIZE / sizeof(uint32_t);
+    size_t       untouched = 0;
     while (untouched < total && core1_stack[untouched] == CORE1_STACK_SENTINEL) {
         untouched++;
     }
@@ -46,7 +45,7 @@ uint32_t core1_stack_high_water_mark(void) {
 }
 #endif
 
-static void __attribute__ ((naked)) core1_trampoline(void) {
+static void __attribute__((naked)) core1_trampoline(void) {
     // Mask IRQs on core1 as its VERY FIRST instruction, before core1_wrapper or
     // core1_entry run. core1_entry() also does `cpsid i`, but several instructions
     // (this trampoline + core1_wrapper's stack-guard install) execute on core1 with
@@ -61,7 +60,7 @@ static void __attribute__ ((naked)) core1_trampoline(void) {
     // for a core1 that is stuck in the NMI (field: "stuck on the PolyKybd splash after
     // flashing / reset"). Masking here closes the window: core1 has no IRQ-driven work
     // (it polls FIFO_ST), so keeping IRQs masked for its whole lifetime is safe.
-    __asm volatile ("cpsid i\n\tpop {r0, r1, pc}");
+    __asm volatile("cpsid i\n\tpop {r0, r1, pc}");
 }
 
 void multicore_launch_core1_raw(void (*entry)(void), uint32_t *sp, uint32_t vector_table) {
@@ -77,8 +76,7 @@ void multicore_launch_core1_raw(void (*entry)(void), uint32_t *sp, uint32_t vect
     // vector_table is value for VTOR register
     // sp is initial stack pointer (SP)
     // entry is the initial program counter (PC) (don't forget to set the thumb bit!)
-    const uint32_t cmd_sequence[] =
-            {0, 0, 1, (uintptr_t) vector_table, (uintptr_t) sp, (uintptr_t) entry};
+    const uint32_t cmd_sequence[] = {0, 0, 1, (uintptr_t)vector_table, (uintptr_t)sp, (uintptr_t)entry};
 
     uint seq = 0;
     do {
@@ -105,7 +103,7 @@ int core1_wrapper(int (*entry)(void), void *stack_base) {
 #else
     (void)stack_base;
 #endif
-    //runtime_run_per_core_initializers();
+    // runtime_run_per_core_initializers();
     return (*entry)();
 }
 
@@ -123,9 +121,9 @@ void multicore_launch_core1_with_stack(void (*entry)(void), uint32_t *stack_bott
 
     stack_ptr -= 3;
     uint32_t vector_table = scb_hw->vtor;
-    stack_ptr[0] = (uintptr_t) entry;
-    stack_ptr[1] = (uintptr_t) stack_bottom;
-    stack_ptr[2] = (uintptr_t) core1_wrapper;
+    stack_ptr[0]          = (uintptr_t)entry;
+    stack_ptr[1]          = (uintptr_t)stack_bottom;
+    stack_ptr[2]          = (uintptr_t)core1_wrapper;
 
     multicore_launch_core1_raw(core1_trampoline, stack_ptr, vector_table);
 }
@@ -143,21 +141,20 @@ bool multicore_launch_core1_bounded(uint32_t total_timeout_us) {
     uint32_t *stack_bottom = core1_stack;
     uint32_t *stack_ptr    = stack_bottom + CORE1_STACK_SIZE / sizeof(uint32_t);
     stack_ptr -= 3;
-    stack_ptr[0] = (uintptr_t) core1_entry;
-    stack_ptr[1] = (uintptr_t) stack_bottom;
-    stack_ptr[2] = (uintptr_t) core1_wrapper;
+    stack_ptr[0] = (uintptr_t)core1_entry;
+    stack_ptr[1] = (uintptr_t)stack_bottom;
+    stack_ptr[2] = (uintptr_t)core1_wrapper;
 
     uint irq_num = SIO_FIFO_IRQ_NUM(0);
     bool enabled = irq_is_enabled(irq_num);
     irq_set_enabled(irq_num, false);
 
-    const uint32_t cmd_sequence[] =
-            {0, 0, 1, (uintptr_t) scb_hw->vtor, (uintptr_t) stack_ptr, (uintptr_t) core1_trampoline};
+    const uint32_t cmd_sequence[] = {0, 0, 1, (uintptr_t)scb_hw->vtor, (uintptr_t)stack_ptr, (uintptr_t)core1_trampoline};
 
     if (s_bounded_launch_calls != UINT16_MAX) s_bounded_launch_calls++;
     const uint64_t deadline = time_us_64() + total_timeout_us;
-    bool ok  = true;
-    uint seq = 0;
+    bool           ok       = true;
+    uint           seq      = 0;
     do {
         uint cmd = cmd_sequence[seq];
         if (!cmd) {
@@ -165,19 +162,25 @@ bool multicore_launch_core1_bounded(uint32_t total_timeout_us) {
             SEV();
         }
         while (!multicore_fifo_wready()) {
-            if (time_us_64() > deadline) { ok = false; break; }
+            if (time_us_64() > deadline) {
+                ok = false;
+                break;
+            }
             tight_loop_contents();
         }
         if (!ok) break;
         sio_hw->fifo_wr = cmd;
         SEV();
         while (!multicore_fifo_rvalid()) {
-            if (time_us_64() > deadline) { ok = false; break; }
+            if (time_us_64() > deadline) {
+                ok = false;
+                break;
+            }
             tight_loop_contents();
         }
         if (!ok) break;
         uint32_t response = sio_hw->fifo_rd;
-        seq = cmd == response ? seq + 1 : 0;
+        seq               = cmd == response ? seq + 1 : 0;
     } while (seq < count_of(cmd_sequence));
 
     irq_set_enabled(irq_num, enabled);

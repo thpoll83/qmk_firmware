@@ -41,3 +41,19 @@ enum poly_os {
 // POLY_OS_VALUE_MASK; the icon decodes POLY_OS_AUTO_FLAG for the badge.
 #define POLY_OS_VALUE_MASK 0x7Fu
 #define POLY_OS_AUTO_FLAG 0x80u
+
+// Map a bare poly_os value (already masked with POLY_OS_VALUE_MASK) to an
+// OS-action chord-table column (polymod_os_actions, enum polymod_os_action_os):
+// the Linux desktop refinements emit the LINUX chords — GNOME/KDE only refine
+// the Super-key *hints*, the poly_os.h note above says they "otherwise behave
+// as Linux" — and everything else passes through (values the module doesn't
+// know fall back to its Unknown column there). Before this fold existed,
+// GNOME/KDE indexed columns the 6-wide table never initialised, so every
+// KC_OS_* action key was silently dead exactly when the host had pushed a
+// Linux desktop environment over cmd 29 (latent since the DE refinements
+// landed; found during the polymod_os_actions extraction). poly_keymap.c
+// _Static_asserts pin POLY_OS_* == OSA_OS_* for the six shared values, which
+// is what makes the pass-through half of this correct.
+static inline uint8_t poly_os_action_column(uint8_t os) {
+    return (os == POLY_OS_LINUX_GNOME || os == POLY_OS_LINUX_KDE) ? (uint8_t)POLY_OS_LINUX : os;
+}

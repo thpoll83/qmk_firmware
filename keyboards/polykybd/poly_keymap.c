@@ -91,7 +91,7 @@
 #include "keycode_helper.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
-#include "os_actions.h"
+#include "polymod_os_actions.h"
 #include "uni.h"
 #include "emoji/emoji_layer.h"
 #include "lang_layer.h"
@@ -100,6 +100,38 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
+
+// The KC_OS_* keycode range and enum poly_os bind POSITIONALLY to the
+// polymod_os_actions module's own two index spaces (its rows and columns) — the
+// module owns no keyboard enum, so these asserts are the whole contract. Every
+// row is pinned (not just first/last/count): both enums are append-only, but a
+// middle insertion on one side alone would silently shift every action after it.
+_Static_assert(KC_OS_COPY       - KC_OS_ACTION_BASE == OSA_COPY,       "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_CUT        - KC_OS_ACTION_BASE == OSA_CUT,        "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_PASTE      - KC_OS_ACTION_BASE == OSA_PASTE,      "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_UNDO       - KC_OS_ACTION_BASE == OSA_UNDO,       "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_REDO       - KC_OS_ACTION_BASE == OSA_REDO,       "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_SELALL     - KC_OS_ACTION_BASE == OSA_SELALL,     "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_FIND       - KC_OS_ACTION_BASE == OSA_FIND,       "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_LOCK       - KC_OS_ACTION_BASE == OSA_LOCK,       "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_SCRSHOT    - KC_OS_ACTION_BASE == OSA_SCRSHOT,    "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_SEARCH     - KC_OS_ACTION_BASE == OSA_SEARCH,     "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_APP_SWITCH - KC_OS_ACTION_BASE == OSA_APP_SWITCH, "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_WIN_SWITCH - KC_OS_ACTION_BASE == OSA_WIN_SWITCH, "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_EMOJI      - KC_OS_ACTION_BASE == OSA_EMOJI,      "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_WORD_LEFT  - KC_OS_ACTION_BASE == OSA_WORD_LEFT,  "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_WORD_RIGHT - KC_OS_ACTION_BASE == OSA_WORD_RIGHT, "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_LINE_HOME  - KC_OS_ACTION_BASE == OSA_LINE_HOME,  "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_LINE_END   - KC_OS_ACTION_BASE == OSA_LINE_END,   "KC_OS_* order must match enum polymod_os_action");
+_Static_assert(KC_OS_ACTION_END - KC_OS_ACTION_BASE == OSA_ACTION_COUNT, "the KC_OS_* range and the chord table must be the same length");
+// …and the six shared OS values, which is what makes poly_os_action_column()'s
+// pass-through half correct (the GNOME/KDE refinements are folded, not shared).
+_Static_assert((int)POLY_OS_UNKNOWN == (int)OSA_OS_UNKNOWN, "enum poly_os must match enum polymod_os_action_os");
+_Static_assert((int)POLY_OS_WINDOWS == (int)OSA_OS_WINDOWS, "enum poly_os must match enum polymod_os_action_os");
+_Static_assert((int)POLY_OS_MACOS   == (int)OSA_OS_MACOS,   "enum poly_os must match enum polymod_os_action_os");
+_Static_assert((int)POLY_OS_LINUX   == (int)OSA_OS_LINUX,   "enum poly_os must match enum polymod_os_action_os");
+_Static_assert((int)POLY_OS_ANDROID == (int)OSA_OS_ANDROID, "enum poly_os must match enum polymod_os_action_os");
+_Static_assert((int)POLY_OS_IOS     == (int)OSA_OS_IOS,     "enum poly_os must match enum polymod_os_action_os");
 
 #ifdef RGB_MATRIX_ENABLE
 // Forward-declare this helper function
@@ -3872,9 +3904,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         case KC_OS_ACTION_BASE ... KC_OS_ACTION_END - 1:
             // OS-semantic action key: emit the chord for the active OS. active_os
             // is synced from the master, so this resolves correctly on either half.
+            // poly_os_action_column() folds the Linux-DE refinements (GNOME/KDE)
+            // to the LINUX column — without it they indexed columns the 6-wide
+            // chord table never had, and every action key was dead on those
+            // desktops (see the note on the helper in poly_os.h).
             if (record->event.pressed) {
                 emit_os_action((uint16_t)(keycode - KC_OS_ACTION_BASE),
-                               get_local_state()->active_os & POLY_OS_VALUE_MASK);
+                               poly_os_action_column(get_local_state()->active_os & POLY_OS_VALUE_MASK));
             }
             return false;
         case KC_OPER:

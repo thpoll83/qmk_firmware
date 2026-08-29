@@ -70,6 +70,7 @@ include $(QUANTUM_PATH)/sequencer/tests/rules.mk
 include $(QUANTUM_PATH)/wear_leveling/tests/rules.mk
 include modules/polykybd/polymod_ltr559/tests/rules.mk
 include modules/polykybd/polymod_monocypher/tests/rules.mk
+include modules/polykybd/polymod_os_actions/tests/rules.mk
 include keyboards/polykybd/hints/tests/test_rules.mk
 include keyboards/polykybd/base/tests/test_rules.mk
 include $(QUANTUM_PATH)/logging/print.mk

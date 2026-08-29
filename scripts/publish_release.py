@@ -13,7 +13,10 @@ What it does (no bash-isms, no extra pip installs — Python 3.7+ stdlib only):
      whatever branch you have checked out.
   2. Reads the prepared release notes for that tag from the unprotected
      `release-notes` branch (`<TAG>.md`, first line `# <title>`, rest = body).
-  3. Creates + publishes the GitHub Release (or updates it if it already exists).
+  3. Creates + publishes the GitHub Release (or updates it if it already exists),
+     tagging the commit that DECLARES the prepared version rather than the
+     branch head — so a merge landing between preparing the notes and
+     publishing them cannot ship a binary whose version differs from its label.
      Firmware and wincompose: publishing fires the `release: published`
      workflow, which builds and attaches the assets (.bin/.uf2 / the installer
      + portable zip + SHA256SUMS) — you do NOT attach anything by hand.
@@ -21,10 +24,10 @@ What it does (no bash-isms, no extra pip installs — Python 3.7+ stdlib only):
 Auth: uses `GH_TOKEN` / `GITHUB_TOKEN` if set, else `gh auth token`. No token and
 no `gh` -> it tells you how to fix it. `gh` is optional; a token alone is enough.
 
-Tags:
-  firmware    PolyKybd-fw-v<version>   (target branch: PolyKybd)
-  host        v<version>               (target branch: main)
-  wincompose  PK-<version>             (target branch: main)
+Tags (created at the commit declaring <version>, found on the branch named):
+  firmware    PolyKybd-fw-v<version>   (branch: PolyKybd)
+  host        v<version>               (branch: main)
+  wincompose  PK-<version>             (branch: main)
 """
 import argparse
 import json
@@ -142,6 +145,51 @@ def api(token, method, path, payload=None):
             return e.code, {"message": e.read().decode(errors="replace")}
 
 
+def commit_for_version(kind, vpath, default_branch, version):
+    """OLDEST commit on the default branch whose <vpath> declares `version`.
+
+    The release must be tagged at a commit that actually reports the version the
+    notes describe, not at whatever the branch head happens to be. Tagging the
+    head means any merge between preparing the notes and publishing them ships a
+    binary whose version differs from its label -- and since `bump-version.yml`
+    has no paths filter, *every* merge bumps, docs-only ones included. Left
+    unfixed that is not merely cosmetic: on 2026-08-29 nine merges landed inside
+    that window, one of them the FW-9 engine-pack signing fix, which would have
+    shipped under notes that never mentioned it.
+
+    Resolved by reading the version file at each commit rather than by matching a
+    `chore: bump ... version to X` message: it checks the property we actually
+    care about, and it works for wincompose, which has no bump commits at all.
+
+    ⚠️ OLDEST, not newest, and the difference is not academic. A version stays
+    declared from its bump commit until the next bump, so several commits report
+    it -- and the later ones are the NEXT release's work, sitting in the window
+    before its own bump lands. Taking the newest match resolved v0.15.14 to a
+    commit from PR #231, which actually shipped in 0.15.15; the oldest match is
+    the bump commit, which is what every historical release was in fact tagged
+    at. Versions increase monotonically, so a version occupies exactly one
+    contiguous run of commits and the oldest match is unambiguous.
+    """
+    r = run(["git", "log", "--format=%H", f"origin/{default_branch}", "--", vpath])
+    if r.returncode:
+        return None
+    found = None
+    for sha in r.stdout.split():  # git log is newest-first
+        text = show(f"{sha}:{vpath}")
+        if not text:
+            continue
+        try:
+            if parse_version(kind, text) == version:
+                found = sha  # keep walking back; the last match is the oldest
+            elif found:
+                break        # walked past the start of this version's run
+        except SystemExit:
+            # An older revision the current parser can't read: skip it rather
+            # than abort the publish.
+            continue
+    return found
+
+
 def prepared_tags(prefix):
     """All prepared <prefix><X.Y.Z>.md files on the release-notes branch,
     as (version_tuple, tag) sorted ascending."""
@@ -199,14 +247,38 @@ def main():
             print(f"note: newest prepared tag is {tag}. Others on the branch: {others}")
             print(f"      (use --tag to publish a specific one.)")
 
-    # Informational: warn if the tree has already bumped past this tag.
+    # Tag the commit that DECLARES this version, not the branch head -- see
+    # commit_for_version(). Falls back to the head so a publish never becomes
+    # impossible, but says so loudly, because the fallback is the old broken
+    # behaviour and must not pass unnoticed.
+    version = tag[len(tag_prefix):]
+    target = commit_for_version(kind, vpath, default_branch, version)
+    if target is None:
+        shallow = (run(["git", "rev-parse", "--is-shallow-repository"])
+                   .stdout.strip() == "true")
+        print(f"WARNING: no commit on {default_branch} declares version {version}; "
+              f"falling back to the branch head.")
+        if shallow:
+            print("         This clone is SHALLOW, so the search saw truncated "
+                  "history. Run `git fetch origin --unshallow` and retry.")
+        else:
+            print("         The published binary may then report a different "
+                  "version than this tag's label. Check before announcing it.")
+        target = default_branch
+        target_desc = default_branch
+    else:
+        target_desc = f"{target[:10]} (declares {version})"
+
+    # Informational: the tree drifting past the prepared tag is normal and, now
+    # that the tag is pinned above, harmless -- later merges ship in the NEXT
+    # release rather than silently joining this one.
     vtext = show(f"origin/{default_branch}:{vpath}")
     if vtext:
         try:
             tree_tag = tag_prefix + parse_version(kind, vtext)
             if tree_tag != tag:
-                print(f"note: default branch is at {tree_tag}; publishing prepared {tag} "
-                      f"(the difference is post-prep merges, typically release tooling).")
+                print(f"note: default branch has moved on to {tree_tag}; publishing "
+                      f"prepared {tag} at its own commit, so the drift is harmless.")
         except SystemExit:
             pass
     lines = notes.splitlines()
@@ -218,7 +290,7 @@ def main():
     owner, repo = owner_repo(root)
 
     print(f"repo    : {owner}/{repo}  ({kind})")
-    print(f"tag     : {tag}   target: {default_branch}")
+    print(f"tag     : {tag}   target: {target_desc}")
     print(f"title   : {title}")
     print(f"body    : {len(body)} chars, {body.count(chr(10)) + 1} lines")
     print("-" * 60)
@@ -247,7 +319,7 @@ def main():
 
     st, res = api(token, "POST", f"/repos/{owner}/{repo}/releases", {
         "tag_name": tag,
-        "target_commitish": default_branch,
+        "target_commitish": target,
         "name": title,
         "body": body,
         "make_latest": "true",

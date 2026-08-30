@@ -109,15 +109,36 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   reachable?** This is a fork of a 30k-commit project, so almost everything a
   path-based scanner walks was written by someone else and most of it is
   unreachable here. The checks, in order:
-  1. **Is it stock?** Fetch the same path from upstream at the merge base and
-     `diff`. Byte-identical means the finding is upstream's to fix (or not) and
-     ours only if we can reach it:
+  1. **Is it stock?** `diff` the same path against upstream. Byte-identical means
+     the finding is upstream's to fix (or not) and ours only if we can reach it:
      ```bash
      curl -sSL "https://raw.githubusercontent.com/qmk/qmk_firmware/master/<path>" \
        | diff - "<path>" && echo "IDENTICAL TO UPSTREAM"
      ```
+     ⚠️ **That compares against upstream's CURRENT master, which moves — so read
+     the two outcomes asymmetrically.** Identical is conclusive: we did not write
+     it. A **difference is not proof we own it** — upstream may simply have
+     changed the file since our last catch-up merge. Check
+     `keyboards/polykybd/UPSTREAM_PATCHES.md` (the maintained list of upstream
+     files we patch) and `git log --oneline -- <path>` before concluding we wrote
+     it; getting this backwards means "fixing" an inherited file and buying a
+     conflict at the next merge. When the distinction actually decides a finding,
+     compare at the **merge base** instead:
+     ```bash
+     git remote add upstream https://github.com/qmk/qmk_firmware   # usually absent here
+     git fetch -q upstream master
+     git show "$(git merge-base HEAD upstream/master):<path>" | diff - "<path>"
+     ```
+     ⚠️ **Run the `--is-shallow-repository` check first** — the container clone is
+     shallow, `git merge-base` then returns an **empty string** rather than
+     failing, and the command above silently degrades to `git show :<path>`. That
+     trap is written up under "Building & flashing"; it is why `master` is the
+     default recipe here and the merge base the deliberate escalation.
      ⚠️ **For workflows, don't guess which are ours — ask upstream.** A 404 means
-     the file does not exist there, i.e. we wrote it. Measured 2026-08-29:
+     the file does not exist there, i.e. we wrote it. (This one asks about
+     *existence*, not content, so the moving-master caveat above does not apply —
+     upstream deleting a workflow we still carry is the only way it misleads.)
+     Measured 2026-08-29:
      **only 5 of 23 are ours** — `bump-version.yml`, `cppcheck.yml`,
      `polykybd-unit-test.yml`, `qmk-test.yml`, `release.yml`. Re-derive rather
      than trusting that list:
@@ -186,8 +207,11 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
       is not evidence either way. ⚠️ **And its `Greptile Review` check run is not
       the answer** — measured, a green `success` one accompanied a PR it did not
       review, the same trap recorded above for Sourcery. Check `pull_request_read`
-      `get_reviews` on the PR in front of you, `commit_id` against the head sha,
-      rather than inferring from a check run or from this paragraph.
+      `get_reviews` on the PR in front of you and require **both** that a review's
+      `commit_id` equals the head sha **and** that its body is not a refusal
+      notice — a Sourcery refusal is itself a review object carrying the head sha,
+      so the sha alone reads as reviewed. Never infer from a check run or from
+      this paragraph.
   - **cppcheck has no quota, no star threshold and no file-count limit** — and
     is not an LLM, so it doesn't share the others' blind spots. That is why it
     was added, and it matters more now that it is the only automated reviewer

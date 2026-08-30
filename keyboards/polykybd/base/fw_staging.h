@@ -319,6 +319,13 @@ typedef struct _fw_staging_status_t {
     uint8_t  doom_stop_result;    // 0 = teardown never ran, 1 = relaunch ok, 2 = timed out
     uint8_t  doom_stop_attempts;  // bounded-relaunch attempts used (1..3), 0 if never ran
     uint16_t doom_stop_ms;        // teardown relaunch elapsed (clamped to 65535)
+    // Disambiguates a doom_stop_result==0 seen at begin-first: did the slave never
+    // run doom at all, or run it and never tear it down (core1 left on doom when the
+    // next flash halts it)? doom_started rises when doom_engine_start() launches core1;
+    // doom_stop_entered rises at the TOP of doom_engine_stop(), before its
+    // s_engine_running guard — so started=1 stop_entered=0 is "ran doom, never stopped".
+    uint8_t  doom_started;        // doom_engine_start() launched the engine on this half
+    uint8_t  doom_stop_entered;   // doom_engine_stop() was reached (before its guard)
 } fw_staging_status_t;
 
 // Fill `out` with the current internal state.  Safe to call from anywhere.
@@ -338,6 +345,10 @@ void fw_staging_note_commit_ack(uint8_t ack);
 // Both are pure recorders — they never touch control flow.
 void fw_staging_note_stage(uint8_t stage);
 void fw_staging_note_doom_teardown(uint8_t result, uint8_t attempts, uint16_t ms);
+// Disambiguators (see the struct fields): doom_engine_start() calls _started,
+// doom_engine_stop() calls _stop_entered at its very top.
+void fw_staging_note_doom_started(void);
+void fw_staging_note_doom_stop_entered(void);
 
 // Diagnostic helper used while bisecting the fw_up slave-hang bug
 // (see FW_UP_DEBUG_NOTES.md): set the s_fw_up_active flag without

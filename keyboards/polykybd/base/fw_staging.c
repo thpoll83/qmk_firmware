@@ -63,6 +63,8 @@ static uint8_t  s_stage = FW_STAGE_IDLE;
 static uint8_t  s_doom_stop_result;    // 0 none, 1 relaunch ok, 2 timed out
 static uint8_t  s_doom_stop_attempts;
 static uint16_t s_doom_stop_ms;
+static uint8_t  s_doom_started;        // doom_engine_start launched the engine here
+static uint8_t  s_doom_stop_entered;   // doom_engine_stop reached (before its guard)
 
 #ifdef USE_CORE1
 #include "polymod_core1.h"
@@ -864,6 +866,8 @@ void fw_staging_get_status(fw_staging_status_t *out) {
     out->doom_stop_result    = s_doom_stop_result;
     out->doom_stop_attempts  = s_doom_stop_attempts;
     out->doom_stop_ms        = s_doom_stop_ms;
+    out->doom_started        = s_doom_started;
+    out->doom_stop_entered   = s_doom_stop_entered;
 }
 
 // FW-9 observability recorders. Pure — they only stamp the diagnostic snapshot
@@ -876,6 +880,14 @@ void fw_staging_note_doom_teardown(uint8_t result, uint8_t attempts, uint16_t ms
     s_doom_stop_result   = result;
     s_doom_stop_attempts = attempts;
     s_doom_stop_ms       = ms;
+}
+
+void fw_staging_note_doom_started(void) {
+    s_doom_started = 1;
+}
+
+void fw_staging_note_doom_stop_entered(void) {
+    s_doom_stop_entered = 1;
 }
 
 void fw_staging_note_begin_call(void) {

@@ -137,9 +137,13 @@ static void doom_engine_start(void) {
 #endif
     multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
     s_engine_running = true;
+    fw_staging_note_doom_started();   // FW-9: this half booted the doom engine on core1
 }
 
 static void doom_engine_stop(void) {
+    // FW-9: stamped BEFORE the s_engine_running guard so the master can tell "ran
+    // doom, never stopped it" (started=1 stop_entered=0) from "never ran doom".
+    fw_staging_note_doom_stop_entered();
     if (s_engine_running) {
         s_engine_running = false;
         // Kill the game mid-frame (it only touches pool memory) and hand core1

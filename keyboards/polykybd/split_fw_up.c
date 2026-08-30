@@ -286,7 +286,7 @@ void fw_up_log_slave_status(const char *tag) {
             "next_off=%lu begin_calls=%u chunk_calls=%u chunk_errs=%u "
             "last_chunk_off=%lu last_ack=0x%02x last_commit_ack=0x%02x "
             "pd_calls=%u pd_advances=%u core1_relaunch=%u/%u "
-            "stage=%u doom_stop=%u/%u/%ums%s\n",
+            "stage=%u doom_stop=%u/%u/%ums started=%u stop_entered=%u%s\n",
             tag,
             (unsigned)s.initialized, (unsigned)s.fw_up_active, (unsigned)s.erase_pending,
             (unsigned)s.erase_sector_next, (unsigned)s.erase_sector_count,
@@ -299,7 +299,8 @@ void fw_up_log_slave_status(const char *tag) {
             (unsigned)s.core1_relaunch_timeouts, (unsigned)s.core1_relaunch_calls,
             (unsigned)s.stage,
             (unsigned)s.doom_stop_result, (unsigned)s.doom_stop_attempts,
-            (unsigned)s.doom_stop_ms, suspect);
+            (unsigned)s.doom_stop_ms,
+            (unsigned)s.doom_started, (unsigned)s.doom_stop_entered, suspect);
 }
 
 // Classify a non-ACK COMMIT ack, asking the slave directly when the ack itself is

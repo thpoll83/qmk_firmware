@@ -85,14 +85,10 @@ static bool doom_whx_present(void) {
 // multicore_reset_core1 — not compiled here because the SDK's multicore.c
 // collides with the polymod_core1 launcher).
 static void doom_core1_reset(void) {
-    io_rw_32 *power_off     = (io_rw_32 *)(PSM_BASE + PSM_FRCE_OFF_OFFSET);
-    io_rw_32 *power_off_set = hw_set_alias(power_off);
-    io_rw_32 *power_off_clr = hw_clear_alias(power_off);
-    *power_off_set = PSM_FRCE_OFF_PROC1_BITS;
-    while (!(*power_off & PSM_FRCE_OFF_PROC1_BITS)) {
-        tight_loop_contents();
-    }
-    *power_off_clr = PSM_FRCE_OFF_PROC1_BITS;
+    // Force-off + wait-for-latch, then clear — the proven core1 reset now shared
+    // with fw_staging's flash halt/restart (see polymod_core1).
+    multicore_hold_core1_off();
+    multicore_release_core1_off();
 }
 
 static void doom_core1_entry(void) {

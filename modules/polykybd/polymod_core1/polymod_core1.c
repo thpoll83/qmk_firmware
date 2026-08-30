@@ -2,7 +2,8 @@
 #include "polymod_core1_irq.h"
 
 #include "hardware/structs/scb.h"
-#include "hardware/timer.h" // time_us_64 (bounded launch deadline)
+#include "hardware/structs/psm.h" // PSM FRCE_OFF (core1 hold/release)
+#include "hardware/timer.h"       // time_us_64 (bounded launch deadline)
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -23,6 +24,23 @@ static uint16_t s_bounded_launch_timeouts = 0;
 void multicore_launch_core1_bounded_stats(uint16_t *calls, uint16_t *timeouts) {
     if (calls) *calls = s_bounded_launch_calls;
     if (timeouts) *timeouts = s_bounded_launch_timeouts;
+}
+
+void multicore_hold_core1_off(void) {
+    io_rw_32 *power_off     = (io_rw_32 *)(PSM_BASE + PSM_FRCE_OFF_OFFSET);
+    io_rw_32 *power_off_set = hw_set_alias(power_off);
+    *power_off_set          = PSM_FRCE_OFF_PROC1_BITS;
+    // WAIT for the reset to latch: a bare write is not enough — the caller erases
+    // flash next, and a core1 still executing from XIP would fault (post-doom wedge).
+    while (!(*power_off & PSM_FRCE_OFF_PROC1_BITS)) {
+        tight_loop_contents();
+    }
+}
+
+void multicore_release_core1_off(void) {
+    io_rw_32 *power_off     = (io_rw_32 *)(PSM_BASE + PSM_FRCE_OFF_OFFSET);
+    io_rw_32 *power_off_clr = hw_clear_alias(power_off);
+    *power_off_clr          = PSM_FRCE_OFF_PROC1_BITS;
 }
 
 #ifdef CORE1_STACK_HWM

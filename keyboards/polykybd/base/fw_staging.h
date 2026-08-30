@@ -277,11 +277,13 @@ typedef struct _fw_staging_status_t {
     // size — is unchanged.
     uint8_t  last_commit_ack;
     // Bounded core1 relaunch diagnostics (doom teardown + fw_staging FONTPACK/doom
-    // restart both funnel through multicore_launch_core1_bounded). A non-zero
-    // timeout count means a relaunch left core1 desynced — the suspected trigger of
-    // the intermittent slave wedge on a post-doom reflash (FW-9). Read early (at the
-    // first doom BEGIN) the count reflects the doom-teardown relaunch; a later
-    // increment is the fw_staging restart. Clamped to 255. Replaces the old pad.
+    // restart both funnel through multicore_launch_core1_bounded). Clamped to 255.
+    // These are a DIAGNOSTIC add for the FW-9 wedge hunt: they grew the struct by two
+    // bytes (kept the trailing pad rather than reusing it), so the embedded status
+    // reply is now 36 B — still far under RPC_M2S_BUFFER_SIZE (96), and both split
+    // halves run the same image over this fontpack/doom path, so the reply length
+    // always matches. The rig read `core1_relaunch=0/255` (zero timeouts): the
+    // relaunch never times out, so this pair is kept only as a cross-check.
     uint8_t  core1_relaunch_calls;
     uint8_t  core1_relaunch_timeouts;
     uint8_t  pad;

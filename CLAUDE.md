@@ -104,6 +104,64 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   in `raw_hid_receive()`, worth seconds of blocked main loop) that was adopted.
   Reply to the false ones with the evidence so they are not re-raised.
 
+- ⚠️ **A security-scanner finding on a file under `.github/` or `lib/` is
+  probably UPSTREAM's, and two checks settle it in minutes: is it stock, and is it
+  reachable?** This is a fork of a 30k-commit project, so almost everything a
+  path-based scanner walks was written by someone else and most of it is
+  unreachable here. The checks, in order:
+  1. **Is it stock?** Fetch the same path from upstream at the merge base and
+     `diff`. Byte-identical means the finding is upstream's to fix (or not) and
+     ours only if we can reach it:
+     ```bash
+     curl -sSL "https://raw.githubusercontent.com/qmk/qmk_firmware/master/<path>" \
+       | diff - "<path>" && echo "IDENTICAL TO UPSTREAM"
+     ```
+     ⚠️ **For workflows, don't guess which are ours — ask upstream.** A 404 means
+     the file does not exist there, i.e. we wrote it. Measured 2026-08-29:
+     **only 5 of 23 are ours** — `bump-version.yml`, `cppcheck.yml`,
+     `polykybd-unit-test.yml`, `qmk-test.yml`, `release.yml`. Re-derive rather
+     than trusting that list:
+     ```bash
+     for f in .github/workflows/*.yml; do b=$(basename "$f")
+       c=$(curl -sSL -o /dev/null -w '%{http_code}' \
+           "https://raw.githubusercontent.com/qmk/qmk_firmware/master/.github/workflows/$b")
+       [ "$c" = 404 ] && echo "OURS: $b"; done
+     ```
+  2. **Is it reachable?** For a workflow, read its triggers and its callers — a
+     `workflow_call`-only file is dead unless something calls it, and upstream
+     gates several on `if: github.repository == 'qmk/qmk_firmware'`, which is
+     **permanently false** in a fork. For C, grep the `SRC`/`OBJ` lists: a file no
+     build includes cannot have a vulnerability in the shipped image.
+  Worked example (2026-08-29): an external audit reported a **critical** template
+  injection in `.github/workflows/ci_build_major_branch_keymap.yml`
+  (`qmk find -km ${{ inputs.keymap }}`). It is byte-identical to upstream, is
+  `workflow_call`-only, and its sole caller is repo-gated — so the chain cannot
+  execute here at all. Two commands, no change, finding closed.
+  - ⚠️ **The inverse is the part that makes this worth doing: the scanner looked
+    at the inherited file and NOT at ours.** The one genuine injection in the same
+    sweep was in `bump-version.yml` — a file we wrote — interpolating
+    `github.event.pull_request.labels.*.name` straight into a `run:` body, where a
+    PR label is attacker-controllable text. Nothing flagged it. **So when a report
+    names an upstream path, treat it as a prompt to audit the sibling files we own,
+    not just to dismiss the one it named.** The fix pattern is to pass every
+    `${{ }}` through `env:` and read it as `"$VAR"` / `os.environ[...]`, which is
+    what `bump-version.yml` now does.
+    - ⚠️ **That property holds for `bump-version.yml` ALONE — do not read it as
+      repo-wide.** A sweep the same day found **31 interpolations inside `run:`
+      bodies across 8 workflows**, `qmk-test.yml` and `release.yml` among them.
+      None is known to be exploitable — they carry build outputs, `env:` constants
+      and `matrix.*` values the workflow itself wrote, not user text — but that is
+      a judgement per site, not an audited fact, and the two files have not been
+      gone through line by line. `polykybd-ctnd/.claude/skills/verify-security-finding/`
+      carries the checker and the triage procedure.
+  - **Record the disposition even when nothing changes** — dismissed findings that
+    leave no artifact get re-raised in full by the next scan. The tracker is
+    `polykybd-ctnd/docs/SECURITY_AUDIT.md` § *"Checked and NOT vulnerable — don't
+    re-litigate"*. For a vendored tree the note belongs beside the code instead:
+    `keyboards/polykybd/doom/engine/PROVENANCE.md` carries the disposition of the
+    `textscreen/` findings, because that tree is a **verbatim upstream snapshot**
+    and must not be patched in place.
+
 - ⚠️ **An on-demand Claude reviewer (`@claude review`) was tried and REMOVED
   (2026-08-20) — don't rebuild it.** `.github/workflows/claude-review.yml` +
   `claude-mention.yml` existed in all three PolyKybd repos to cover exactly the
@@ -115,9 +173,19 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   security"* and uploads no artifact. Workflows and the `CLAUDE_CODE_OAUTH_TOKEN`
   secret are gone from all three repos.
   - **So on an upstream-merge PR there is genuinely no LLM reviewer.** CodeRabbit
-    skips it outright at >100 files, and nothing replaces that. Treat the
+    skips it outright at >100 files, and **Sourcery has its own ceiling that lands
+    on the same PRs** — it refuses any diff over **20,000 lines** outright (*"the
+    GitHub API does not allow us to fetch diffs exceeding 20000 lines"*, a hard
+    limit, not a quota, so waiting does nothing). Treat the
     **build + HIL checks and hardware testing as the only verification**, say so
     on the PR, and don't read the green board as review cover.
+    - ⚠️ **A fourth bot, Greptile, now exists — see the Greptile entry in
+      `PolyKybdHost/CLAUDE.md` before repeating "no LLM reviewer" as a fact.**
+      Whether it reviews a catch-up merge is **untested**; what is measured is
+      that it reviews only some PRs and says *nothing at all* when it doesn't, so
+      its silence is not evidence either way. Check `pull_request_read`
+      `get_reviews` on the PR in front of you rather than inferring from this
+      paragraph.
   - **cppcheck has no quota, no star threshold and no file-count limit** — and
     is not an LLM, so it doesn't share the others' blind spots. That is why it
     was added, and it matters more now that it is the only automated reviewer

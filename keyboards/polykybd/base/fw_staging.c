@@ -66,14 +66,37 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 static bool s_core1_halted = false;
 
 static void fw_staging_halt_core1(void) {
+    // Force core1 off AND wait for the force-off to LATCH before returning. The
+    // caller immediately does flash_range_* (which flushes the XIP cache core1
+    // executes from), so a core1 that is not yet actually held in reset would
+    // fault on its next instruction fetch. A bare write plus a DSB (the previous
+    // form) only ordered the store — it did not confirm the reset took. This is
+    // doom_core1_reset()'s set-then-wait; FRCE_OFF.PROC1 is a core0-owned control
+    // bit that reads back essentially immediately, so the spin is a few cycles
+    // (doom relies on the same, unbounded).
     _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
-    // FRCE_OFF takes effect within a few cycles; DSB ensures the write
-    // reaches the PSM peripheral before the caller touches flash.
+    while (!(_PSM_FRCE_OFF & _PSM_PROC1_BIT)) {
+        __asm volatile("" ::: "memory");
+    }
     __asm volatile ("dsb" ::: "memory");
     s_core1_halted = true;
 }
 
 static void fw_staging_restart_core1(void) {
+    // Do a FULL power-on reset PULSE first — set FRCE_OFF.PROC1, wait for the
+    // latch, then clear — so core1 is guaranteed back in the bootrom FIFO-wait
+    // loop (a known-good launch state) before the handshake, rather than merely
+    // releasing it from a halt that may not have cleanly latched. This is
+    // exactly doom_core1_reset() + multicore_launch_core1_bounded(), the pair
+    // doom_engine_stop() uses, which is proven to survive repeated launch/stop
+    // cycles. A bare clear (the previous form) could release core1 from an
+    // indeterminate state: the bounded handshake then times out, the RLE service
+    // stays down, and — the FW-9 soak+accept signal — a wedged core1 also broke
+    // the NEXT doom-slot flash's engine launch.
+    _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
+    while (!(_PSM_FRCE_OFF & _PSM_PROC1_BIT)) {
+        __asm volatile("" ::: "memory");
+    }
     _PSM_FRCE_OFF &= ~_PSM_PROC1_BIT;
     s_core1_halted = false;
     // BOUNDED relaunch, NOT the unbounded multicore_launch_core1(). core0 can

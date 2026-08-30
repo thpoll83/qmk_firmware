@@ -466,17 +466,36 @@ inherited-upstream noise:
     would analyse the whole upstream QMK tree — the same trap as the
     lint-on-upstream-keyboards problem below. The host repo runs CodeQL instead,
     where Python needs no build and the tree is entirely ours.
-- **A Markdown-only change does NOT run the build or the rig — `qmk-test.yml` has
-  `paths-ignore: ['**.md']`** on both its `push` and `pull_request` triggers (added
-  2026-08-21). The rig executes one job at a time, so before this a comment-only PR
-  occupied it for a full flash-and-test cycle per push and delayed every real build
-  queued behind it (#224 burned three rig runs and three review slots that way).
-  Four things follow, and the last is the one that would bite:
-  - **A mixed docs+code PR still runs the gate in full.** `paths-ignore` skips the
-    workflow only when EVERY changed file matches, so nothing can be smuggled in
-    behind a README edit.
-  - **`**.md` does not match `.github/workflows/qmk-test.yml`**, so a change to the
-    CI wiring itself still triggers a run and gets verified.
+- **A change that cannot alter the firmware does NOT run the build or the rig —
+  `qmk-test.yml` path-filters both its `push` and `pull_request` triggers.** Markdown
+  since 2026-08-21, then `scripts/` and `.claude/`, then the sibling workflow files
+  (#253, 2026-08-29). The rig executes one job at a time, so before this a
+  comment-only PR occupied it for a full flash-and-test cycle per push and delayed
+  every real build queued behind it (#224 burned three rig runs and three review
+  slots that way; #251 later did the same as a workflow-only PR). What follows —
+  the last one is still the one that would bite:
+  - ⚠️ **It is a `paths` list with `!` negations, NOT `paths-ignore`, and it cannot
+    be either one.** The `!` prefix works ONLY in `paths`, and the two filters may
+    not both be used for one event — so "exclude the sibling workflows but still
+    verify this one" is inexpressible with `paths-ignore`. The list is `**`,
+    `!**.md`, `!scripts/**`, `!.claude/**`, `!.github/workflows/**`,
+    `.github/workflows/qmk-test.yml`, identical on both triggers.
+  - ⚠️ **ORDER IS LOAD-BEARING — the LAST matching pattern decides.** The leading
+    `**` is what makes an ordinary source file match at all, and the trailing
+    `.github/workflows/qmk-test.yml` is what keeps the gate verifying its own edits.
+    Move that line above `!.github/workflows/**`, or drop it, and a change to this
+    workflow silently stops being built and rig-tested; drop the `**` and ordinary
+    firmware sources stop triggering anything. Both were confirmed by mutating the
+    list and re-running a simulation of GitHub's matcher, which is the only way to
+    check this without merging and waiting.
+  - **A mixed docs+code — or workflow+code — PR still runs the gate in full**, since
+    the workflow runs when AT LEAST ONE changed file is included. Nothing can be
+    smuggled in behind a README or a CI edit.
+  - **The exclusion is scoped to `.github/workflows/**`, not all of `.github/`.**
+    Nothing under `.github/` is a build input today — there is no `uses: ./...`
+    anywhere in `qmk-test.yml`, every action is external — but the narrower scope
+    leaves a composite action added later under `.github/actions/` still triggering
+    a run, which is the safe direction.
   - **`workflow_dispatch` has no paths filter**, so a manual run — including the
     both-tiers route above — works on any commit regardless.
   - ⚠️ **A path-filtered `pull_request` trigger applies to `labeled` too**, so

@@ -8,28 +8,50 @@ on:
     # push delays every real build queued behind it).
     #
     # Beyond Markdown: `scripts/` holds only publish_release.py (the release
-    # publisher — nothing the build reads), and `.claude/` holds skills and
-    # settings. A change confined to either cannot reach a firmware image.
-    # ⚠️ Verify that stays true before adding a path here: the test is whether
-    # the build or the rig ever READS it, not whether it looks unrelated.
+    # publisher — nothing the build reads), `.claude/` holds skills and settings,
+    # and the other workflows are not build inputs (see the note on that line).
+    # A change confined to any of them cannot reach a firmware image.
+    # ⚠️ Verify that stays true before adding an exclusion here: the test is
+    # whether the build or the rig ever READS it, not whether it looks unrelated.
     #
-    # ⚠️ `paths-ignore` skips the workflow only when EVERY changed file matches,
-    # so a mixed docs+code PR still runs the gate in full — this can never hide
-    # a code change behind a README edit.
+    # ⚠️ The workflow runs when AT LEAST ONE changed file is included, so a mixed
+    # docs+code (or workflow+code) PR still runs the gate in full — this can
+    # never hide a code change behind a README or a CI edit.
     #
-    # ⚠️ `**.md` does NOT match this workflow file, so a change to the CI wiring
-    # itself still triggers a run and gets verified. `workflow_dispatch` has no
-    # paths filter at all, so a manual run is unaffected either way.
+    # ⚠️ This is `paths`, NOT `paths-ignore`, and it has to be: the `!` negation
+    # prefix works ONLY in `paths`, and the two filters cannot both be used for
+    # one event. Excluding the other workflows while still verifying THIS one is
+    # not expressible with `paths-ignore` at all.
+    #
+    # ⚠️ ORDER IS LOAD-BEARING. The last pattern that matches a path decides it:
+    # a negative after a positive excludes, a positive after a negative
+    # re-includes. So the leading `**` is what makes an ordinary source file
+    # match, and the qmk-test.yml line MUST stay last or this workflow stops
+    # verifying changes to itself.
+    #
+    # ⚠️ `workflow_dispatch` has no paths filter at all, so a manual run is
+    # unaffected either way.
     #
     # ⚠️ If `Build firmware` / `HIL test (split72)` are ever made REQUIRED status
     # checks in branch protection, remove this: a workflow that never runs never
     # reports, and the merge button would deadlock on a docs-only PR (a *skipped
     # job* satisfies a required check; a never-started workflow does not). The
     # fix in that case is a paths-filter job feeding `if:` conditions instead.
-    paths-ignore:
-      - '**.md'
-      - 'scripts/**'
-      - '.claude/**'
+    paths:
+      - '**'
+      - '!**.md'
+      - '!scripts/**'
+      - '!.claude/**'
+      # No `uses: ./...` anywhere in this file — every action it runs is external
+      # (docker://qmkfm/qmk_cli, actions/*) — so no workflow is a build input and
+      # a workflow-only change cannot alter a firmware image. Deliberately scoped
+      # to `workflows/` rather than all of `.github/`: if a composite action is
+      # ever added under `.github/actions/` and used here, it stays outside this
+      # exclusion and keeps triggering a run, which is the safe direction.
+      - '!.github/workflows/**'
+      # …except this file. It IS the gate, so a change to it must still be built
+      # and run on the rig. Positive-after-negative re-includes; keep it LAST.
+      - '.github/workflows/qmk-test.yml'
   pull_request:
     # `labeled` is NOT in GitHub's default set (opened/synchronize/reopened), and
     # without it adding the `perf` label to an open PR fires no run at all — the
@@ -38,11 +60,15 @@ on:
     # 'labeled'`) so the repo's auto-labeler can't re-run the whole expensive
     # pipeline every time it tags a PR by path.
     types: [opened, synchronize, reopened, labeled]
-    # Same reasoning as the push trigger above.
-    paths-ignore:
-      - '**.md'
-      - 'scripts/**'
-      - '.claude/**'
+    # Same reasoning, same ordering constraint, as the push trigger above — keep
+    # the two lists identical, and keep the qmk-test.yml re-include last.
+    paths:
+      - '**'
+      - '!**.md'
+      - '!scripts/**'
+      - '!.claude/**'
+      - '!.github/workflows/**'
+      - '.github/workflows/qmk-test.yml'
   # Manual trigger for the opt-in performance measurement below (the normal
   # build + HIL test always run; perf does not). No inputs: the baseline is moved
   # by committing the run's JSON to polykybd-ctnd, not by a workflow switch — the

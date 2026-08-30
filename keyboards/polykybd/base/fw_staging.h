@@ -273,8 +273,6 @@ typedef struct _fw_staging_status_t {
     // This is what lets the master tell a REFUSAL from a lost acknowledgement when
     // the COMMIT reply itself goes missing: fw_up_active is cleared by finalize
     // either way, so it cannot distinguish them, but this records the verdict.
-    // Consumes half the old pad, so the struct size — and therefore the RPC reply
-    // size — is unchanged.
     uint8_t  last_commit_ack;
     // Bounded core1 relaunch diagnostics (doom teardown + fw_staging FONTPACK/doom
     // restart both funnel through multicore_launch_core1_bounded). Clamped to 255.

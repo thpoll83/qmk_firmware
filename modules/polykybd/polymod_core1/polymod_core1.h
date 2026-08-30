@@ -23,19 +23,6 @@ bool multicore_launch_core1_bounded(uint32_t total_timeout_us);
 // wedge correlates with a relaunch timeout. Either pointer may be NULL.
 void multicore_launch_core1_bounded_stats(uint16_t *calls, uint16_t *timeouts);
 
-// Hold core1 in PSM reset for a flash operation and WAIT for the reset to
-// actually latch before returning. A bare FRCE_OFF write returns before the core
-// has stopped, so a caller that then erases/programs flash (XIP disappears) can
-// fault a still-running core1 and take core0 down with it — the intermittent
-// post-doom slave wedge (FW-9): once the doom engine has run on core1, the next
-// big erase wedged the slave partway through. Spinning until the FRCE_OFF bit
-// reads back set is the proven guard the Doom engine teardown already used.
-void multicore_hold_core1_off(void);
-
-// Release the PSM reset taken by multicore_hold_core1_off(). Does NOT relaunch
-// core1 — pair with multicore_launch_core1_bounded() to restart the RLE service.
-void multicore_release_core1_off(void);
-
 // Launch core1 with a caller-provided entry + stack (the underlying primitive
 // of multicore_launch_core1; used by the Doom easter egg to hand core1 to the
 // game with a pool-backed stack).

@@ -59,10 +59,6 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 #ifdef USE_CORE1
 #include "polymod_core1.h"
 
-// PSM FRCE_OFF register + the PROC1 bit, as raw literals. Used ONLY by the
-// not-in-flash apply path (fw_staging_do_apply), which cannot call the
-// flash-resident multicore_hold_core1_off(); the ordinary halt/restart go through
-// that shared primitive instead.
 #define _PSM_FRCE_OFF  (*(volatile uint32_t *)0x40010004u)
 #define _PSM_PROC1_BIT (1u << 16)
 
@@ -70,18 +66,15 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 static bool s_core1_halted = false;
 
 static void fw_staging_halt_core1(void) {
-    // Force core1 into PSM reset and WAIT for the reset to latch before the caller
-    // touches flash. A bare force-off + DSB returns before core1 has actually
-    // stopped; once the doom engine has run on core1, the subsequent big erase then
-    // faults a still-running core1 and takes the whole (slave) half down — the
-    // intermittent post-doom slave wedge (FW-9). Consolidated with the Doom
-    // teardown's proven force-off→wait-for-latch sequence in polymod_core1.
-    multicore_hold_core1_off();
+    _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
+    // FRCE_OFF takes effect within a few cycles; DSB ensures the write
+    // reaches the PSM peripheral before the caller touches flash.
+    __asm volatile ("dsb" ::: "memory");
     s_core1_halted = true;
 }
 
 static void fw_staging_restart_core1(void) {
-    multicore_release_core1_off();
+    _PSM_FRCE_OFF &= ~_PSM_PROC1_BIT;
     s_core1_halted = false;
     // BOUNDED relaunch, NOT the unbounded multicore_launch_core1(). core0 can
     // reach here with core1's FIFO launch handshake left desynced by a prior Doom
@@ -919,15 +912,12 @@ ram_word_copy(uint32_t *dst, const uint32_t *src, uint32_t nbytes) {
 // ---------------------------------------------------------------------------
 static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_size) {
 #ifdef USE_CORE1
-    // Halt core1 via PSM reset, INLINED here: this function runs not-in-flash, so
-    // it cannot call the flash-resident multicore_hold_core1_off(). _PSM_FRCE_OFF /
-    // _PSM_PROC1_BIT are #defines (inlined register writes, no flash fetch). WAIT
-    // for the reset to latch before erasing below — a bare force-off returns before
-    // core1 has stopped, and a core1 still running from XIP faults on the erase
-    // (the same hazard fw_staging_halt_core1() waits out via the shared primitive).
+    // Halt core1 via PSM reset.  _PSM_FRCE_OFF / _PSM_PROC1_BIT are #defines
+    // (pure preprocessor text substitution → an inlined register write, no flash
+    // fetch), so this is byte-for-byte identical machine code to the raw literal
+    // it replaces — same as fw_staging_halt_core1(), inlined here for the
+    // not-in-flash apply path.
     _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
-    while (!(_PSM_FRCE_OFF & _PSM_PROC1_BIT)) { /* wait for FRCE_OFF.PROC1 to latch */
-    }
     __asm volatile ("dsb" ::: "memory");
 #endif
     static uint8_t page_buf[FLASH_PAGE_SIZE];   // static (.bss): never on a moving stack

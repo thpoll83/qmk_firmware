@@ -276,12 +276,16 @@ typedef struct _fw_staging_status_t {
     uint8_t  last_commit_ack;
     // Bounded core1 relaunch diagnostics (doom teardown + fw_staging FONTPACK/doom
     // restart both funnel through multicore_launch_core1_bounded). Clamped to 255.
-    // These are a DIAGNOSTIC add for the FW-9 wedge hunt: they grew the struct by two
-    // bytes (kept the trailing pad rather than reusing it), so the embedded status
-    // reply is now 36 B — still far under RPC_M2S_BUFFER_SIZE (96), and both split
-    // halves run the same image over this fontpack/doom path, so the reply length
-    // always matches. The rig read `core1_relaunch=0/255` (zero timeouts): the
-    // relaunch never times out, so this pair is kept only as a cross-check.
+    // A DIAGNOSTIC add for the FW-9 wedge hunt: they grew the struct by two bytes
+    // (kept the trailing pad rather than reusing it), so the embedded status reply is
+    // now 36 B — still far under RPC_M2S_BUFFER_SIZE (96), and both split halves run
+    // the same image over this fontpack/doom path, so the reply length always
+    // matches. The rig read `core1_relaunch=0/255` (zero timeouts) across #914/#915/
+    // #916 — the master-side bounded relaunch never times out, which is what refuted
+    // the relaunch-timeout theory. NOTE the wedge is on the SLAVE (its own counter is
+    // never read here), and the run-916 fix attempt — waiting for the erase-time PSM
+    // latch — did NOT change the signature, so the disturbance is doom's own teardown
+    // on the slave, not the fw_staging erase halt. This pair is kept as a cross-check.
     uint8_t  core1_relaunch_calls;
     uint8_t  core1_relaunch_timeouts;
     uint8_t  pad;

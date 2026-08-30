@@ -182,10 +182,12 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     - ⚠️ **A fourth bot, Greptile, now exists — see the Greptile entry in
       `PolyKybdHost/CLAUDE.md` before repeating "no LLM reviewer" as a fact.**
       Whether it reviews a catch-up merge is **untested**; what is measured is
-      that it reviews only some PRs and says *nothing at all* when it doesn't, so
-      its silence is not evidence either way. Check `pull_request_read`
-      `get_reviews` on the PR in front of you rather than inferring from this
-      paragraph.
+      that it reviews only some PRs and announces a skip nowhere, so its silence
+      is not evidence either way. ⚠️ **And its `Greptile Review` check run is not
+      the answer** — measured, a green `success` one accompanied a PR it did not
+      review, the same trap recorded above for Sourcery. Check `pull_request_read`
+      `get_reviews` on the PR in front of you, `commit_id` against the head sha,
+      rather than inferring from a check run or from this paragraph.
   - **cppcheck has no quota, no star threshold and no file-count limit** — and
     is not an LLM, so it doesn't share the others' blind spots. That is why it
     was added, and it matters more now that it is the only automated reviewer

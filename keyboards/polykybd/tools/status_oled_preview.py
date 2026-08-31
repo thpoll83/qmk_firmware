@@ -208,7 +208,10 @@ def build_telemetry_panel(usb_side, small, fw="0.16.18", proto=15, hw="0x0320",
     (err_permille, frames) for the master, or None for a link that has sent
     nothing yet."""
     pts = []
-    setp = lambda px, py: pts.append((px, py))
+
+    def setp(px, py):
+        pts.append((px, py))
+
     l_fw = "FW %s" % fw
     l_ver = "P%d  HW %s" % (proto, hw)
     l_up = "%s  up %s" % ("USB" if usb_side else "LNK", uptime)
@@ -564,15 +567,34 @@ def main():
     ap.add_argument('--telemetry', action='store_true',
                     help='preview the settings->More telemetry screen instead of the status screen')
     ap.add_argument('--uptime', default='1:23:45', help='uptime string shown by --telemetry')
-    ap.add_argument('--link', default='4,1234',
+    def link_arg(v):
+        # Validated here rather than at use: an unparsable value otherwise reached
+        # the "pm, frames = link" unpack and came out as a raw traceback, and a
+        # negative / >100% rate rendered a reading the firmware counters cannot
+        # produce. argparse reports it as an ordinary usage error instead.
+        if v == 'idle':
+            return None
+        parts = v.split(',')
+        if len(parts) != 2:
+            raise argparse.ArgumentTypeError('link must be "idle" or "<err_permille>,<frames>"')
+        try:
+            pm, frames = (int(p) for p in parts)
+        except ValueError:
+            raise argparse.ArgumentTypeError('link fields must be whole numbers')
+        if not 0 <= pm <= 1000:
+            raise argparse.ArgumentTypeError('err_permille must be 0..1000 (1000 = 100 percent)')
+        if frames < 0:
+            raise argparse.ArgumentTypeError('frames must not be negative')
+        return (pm, frames)
+
+    ap.add_argument('--link', type=link_arg, default=(4, 1234),
                     help='--telemetry link health as "<err_permille>,<frames>", or "idle"')
     args = ap.parse_args()
 
     disp, small, icons, tiny, globe = load_fonts()
     if args.telemetry:
-        link = None if args.link == 'idle' else tuple(int(v) for v in args.link.split(','))
-        L = build_telemetry_panel(True,  small, uptime=args.uptime, link=link)
-        R = build_telemetry_panel(False, small, uptime=args.uptime, link=link)
+        L = build_telemetry_panel(True,  small, uptime=args.uptime, link=args.link)
+        R = build_telemetry_panel(False, small, uptime=args.uptime, link=args.link)
     else:
         rgb = None if args.rgb_off else (128, 255, 100, 80, 5, 'Rainbow')
         L = build_panel('L', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang,

@@ -228,6 +228,26 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 
 - **Give every branch a name that hints at its content** (a short descriptive slug, e.g. `claude/fix-slave-layer-after-fw-apply`, not just the auto-generated `claude/<random-scientist>-<id>`) so the branch list reads as a changelog.
 - **Always start new work on a FRESH branch cut from the updated default branch — never keep committing to a branch whose PR has already merged.** Once a PR is merged, that branch is done: `git fetch origin PolyKybd` then `git checkout -b claude/<new-slug> origin/PolyKybd` for the next change. Cherry-pick only the still-unmerged commits onto the fresh branch if needed. This keeps each PR a clean, focused diff against the current default (**`PolyKybd`** here; `main` in the host/rig repos) and avoids a new PR accidentally re-including already-merged commits.
+- ⚠️ **`git checkout -b <branch> origin/<default> || git checkout <branch>` is a
+  TRAP: when the branch already exists the fallback puts you on the OLD one, off
+  a stale base, and nothing says so.** The `-b` fails ("already exists"), the
+  fallback succeeds, `git status` is clean, commits apply and the push goes
+  through — the only symptom arrives days later as a merge conflict. Hit on
+  polykybd-ctnd (2026-08-31): the branch survived from earlier work in the same
+  session, so the rig change landed on a base **21 commits** behind `main`, and
+  conflicted with a `--doom` parameter added meanwhile in the same two lines.
+  It is easy to write by accident precisely because the `||` reads as "reuse the
+  branch if it's already there", which is the intent — but not off the old base.
+  - Check it in one line right after the checkout, when the fix is still free:
+    ```bash
+    git rev-list --count HEAD..origin/<default>    # 0 = actually cut from the tip
+    ```
+  - Already behind? **Merge the base in, never rebase** — the branch is pushed,
+    and a merge commit keeps anyone's checkout valid. Then verify what git
+    resolved *silently*, not just the marked hunks: run the suite and confirm
+    the test COUNT moved (main's new tests must show up), and grep your own
+    notes back by name, because taking one side wholesale also deletes anything
+    of yours that merely shared a conflict block.
 - ⚠️ **A cross-repo feature can leave one repo with commits PUSHED and NO PR — and
   nothing surfaces it.** A PolyKybd feature routinely spans 4–6 repos (firmware,
   host, docs, rig, AdafruitGFX, hardware), and every "is everything saved?" check
@@ -358,6 +378,22 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   `qmk: command not found`. Prefix every build:
   `export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"`. The
   `deliver-test-firmware` skill wraps this.
+- ⚠️ **`nohup … &` INSIDE a backgrounded tool call is killed when that call
+  returns — and a script that walks tags then leaves the repo DETACHED.** Two
+  aborted runs of a build-every-release-tag scan (2026-08-31) before the cause
+  was obvious: the harness already backgrounds the command, so adding `nohup`
+  and `&` on top spawns a grandchild that the wrapper reaps on exit. It looks
+  like success — the tool reports "completed, exit 0" and the output file holds
+  a partial result, which reads as "the scan finished and found little".
+  - The damage is not the lost scan, it is **`HEAD` left detached at whatever
+    tag the script had checked out**, which then silently poisons every later
+    grep, build and `git log` in that repo. This is the same hazard as the
+    container-reclaim reset below, self-inflicted; the same recovery applies
+    (`git checkout --force <branch>`), and `git log --oneline -1` is again the
+    thing to run before trusting any conclusion.
+  - So: pass the script to the background runner **directly**, and give anything
+    that moves `HEAD` a `trap ... EXIT` that restores the branch, so a kill
+    mid-run cannot leave the tree somewhere else.
 - ⚠️ **The checkout can be SILENTLY RESET to an older commit** when the web/remote
   container is reclaimed — your commits survive on `origin`, but the working tree
   and `HEAD` roll back, and nothing announces it. It happened **three times** in one
@@ -1569,6 +1605,44 @@ first sector faulted the core. Ten rounds of probes were aimed at the applier's
 *code* on the strength of that byte-identical comparison. **When a bisect blames a
 commit that cannot have touched the failing code, check whether it moved the failing
 code's DATA** — `arm-none-eabi-nm -S <elf> | grep <buffer>` and look at `addr % 4`.
+
+⚠️ **Which builds are affected is a COIN FLIP, not a version range — alignment 1
+means the linker re-rolls the address on every change that alters `.bss`, so
+roughly 1 in 4 builds is safe by luck.** A release that worked was not correct,
+it was lucky, and that includes local and CI builds, not only tagged ones. So
+"is version X affected?" cannot be answered from the changelog; it has to be
+measured per build:
+
+```bash
+# for each tag carrying the code, build the SHIPPING flavour and read the symbol
+qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes
+arm-none-eabi-nm -S .build/polykybd_split72_default.elf | grep page_buf   # addr % 4
+```
+
+Measured 2026-08-31 — three of these have field results and all three matched,
+which is what made the prediction trustworthy:
+
+| Release | `page_buf` | mod 4 | Predicted | Field |
+|---|---|---|---|---|
+| v0.15.2 | `0x20039920` | 0 | safe | ✅ works |
+| v0.15.14 | `0x20039928` | 0 | safe | ✅ works |
+| v0.16.9 | `0x200398f3` | 3 | bricks | — |
+| v0.16.10 | `0x200398f3` | 3 | bricks | ❌ hangs |
+
+⚠️ Three things make that scan harder than it looks: **the 0.9.x/0.11.0 tags do
+not build here** (their submodule pins predate the current checkout, giving the
+`hal.h:136: #error "obsolete or unknown configuration file"` from the stale-lib
+trap above); **a local build only predicts a release if you validate it** against
+known-good/bad field results, since CI's toolchain need not lay `.bss` out
+identically; and the scan must build the **shipping flavour**
+(`POLYKYBD_DOOM_PACK=yes`) — a plain build links differently and its symbol
+addresses say nothing about what shipped.
+
+⚠️ **The applier that runs during an update belongs to the firmware ALREADY
+INSTALLED, not the one being installed.** So a board on an affected build cannot
+take the fix over HID — that update runs the old broken applier and bricks. It
+has to go on once via BOOTSEL+UF2, after which HID updates work again. Say this
+in the release notes; nothing else will tell the user.
 
 **The fix is the type, not an `aligned(4)` attribute**: the buffer is declared
 `static uint32_t page_buf[FLASH_PAGE_SIZE / 4]` and the `(uint32_t *)` casts are

@@ -5,6 +5,7 @@
 // self-contained boot instrumentation; poly_keymap.c just calls into them.
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 // SPLASH_DONE draws the whole splash AND performs the final dwell + legend
@@ -21,6 +22,18 @@ void emit_boot_banner(void);
 // EEPROM config load; call it once from post_init after that load (the banner tick
 // re-emits it alongside the banner for a late console).
 void emit_idle_config(void);
+
+// Records what keyboard_post_init_user() found in poly_eeconf_t.keymap_layers_fmt and
+// whether that forced a dynamic-keymap discard (and how long the discard blocked).
+void note_keymap_storage(uint8_t stored_fmt, bool reset_ran, uint32_t elapsed_ms);
+
+// The stored dynamic-keymap format version + whether this boot discarded the keymap.
+// Re-emitted by the banner tick, like emit_idle_config().
+void emit_keymap_storage_line(void);
+
+// What the previous self-apply reached, if this boot followed one (watchdog-scratch
+// breadcrumb). Silent when no apply preceded this boot.
+void emit_apply_breadcrumb_line(void);
 
 // Throttled re-emit of the boot banner, called once per housekeeping pass. The
 // one-shot print in keyboard_post_init_user fires before a console is usually

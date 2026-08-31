@@ -1548,6 +1548,45 @@ field.** The 72 was sized for exactly these, all derived from `HID_REPORT_SIZE` 
 `HID_REPORT_SIZE` bump, and an app switch would hit the silent rejection above and
 present as missing keycap images. At 96 that path has 27 B of headroom.
 
+### ⚠️ The self-apply's page buffer must be `uint32_t` — a `uint8_t` one bricked the board
+
+`fw_staging_do_apply()` copies the staged image a page at a time through a static
+buffer, with `ram_word_copy()` — which takes `uint32_t *`, so the compiler emits
+word loads and stores. The buffer was declared `static uint8_t page_buf[256]`,
+whose alignment requirement is **1**, so the linker packed it at whatever byte
+offset the previous `.bss` symbol happened to leave. An unaligned `STMIA` is a
+**HardFault on Cortex-M0+**, taken with `PRIMASK` set inside a function that never
+returns — an instant lockup, no console line, no breadcrumb. The board comes back
+only via BOOTSEL+UF2.
+
+⚠️ **This is why the bisect and the disassembly disagreed, and the disassembly was
+the misleading one.** A HID update that reported success then bricked the keyboard
+bisected cleanly to the macro PR (#234) — which touches nothing in the applier. And
+`fw_staging_do_apply` really was **byte-identical** across the regression: same
+address, same size, same instructions. What #234 changed was `.bss`: its label cache
+shifted `page_buf` from a 4-aligned address to `…ce3`, and the first page of the
+first sector faulted the core. Ten rounds of probes were aimed at the applier's
+*code* on the strength of that byte-identical comparison. **When a bisect blames a
+commit that cannot have touched the failing code, check whether it moved the failing
+code's DATA** — `arm-none-eabi-nm -S <elf> | grep <buffer>` and look at `addr % 4`.
+
+**The fix is the type, not an `aligned(4)` attribute**: the buffer is declared
+`static uint32_t page_buf[FLASH_PAGE_SIZE / 4]` and the `(uint32_t *)` casts are
+gone, so no later edit can silently reintroduce the hazard. `flash_range_program`
+takes `(const uint8_t *)page_buf`.
+
+Two things that made this diagnosable, and are worth keeping:
+- **The in-flash progress log** (`FW_APPLY_LOG_OFFSET`, `FW_STAGING_OFFSET + 1 MB`):
+  erased at the start of every apply, one page written per completed sector, plus
+  bracket markers around the first sector. It lives past the image, so it survives
+  the BOOTSEL recovery that reading it requires — the watchdog scratch does not
+  (scratch survives a watchdog reset, **not** a power cycle).
+- ⚠️ **The log markers worked while the copy did not, and that asymmetry IS the
+  clue.** GCC knew `page_buf` was byte-aligned, so it compiled
+  `((uint32_t *)page_buf)[0] = marker` into four `strb`s — which are fine unaligned.
+  Only the `uint32_t *`-typed helper got word instructions. So "flash writes work
+  here but that one copy dies" was pointing at alignment the whole time.
+
 ### Firmware signing enforcement & the on-keycap confirmation (FW-2)
 
 `rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so `fw_staging_finalize()` only stamps the

@@ -869,8 +869,18 @@ void housekeeping_task_user(void) {
                 // lock core1 out itself. Core1 was relaunched moments ago by the staging
                 // erase, so it is free to be fetching from XIP exactly when the QSPI
                 // leaves XIP mode — the bus then stalls and the erase never returns.
+                //
+                // ⚠️ The lockout is RELEASED before returning, not held across the
+                // remaining stages. Each stage hands control back to the main loop,
+                // which can service a raw-HID overlay -- and a compressed one is
+                // dispatched to core1 through a BLOCKING FIFO push plus a spin on
+                // core1's completion counter. With core1 in PSM reset nothing drains
+                // it, so core0 would hang before the apply could even start. The
+                // window is a pass or two; the failure is permanent. Holding it here
+                // bought nothing either: fw_staging_do_apply() halts core1 itself.
                 fw_staging_core1_lockout_begin();
                 save_all_dirty();
+                fw_staging_core1_lockout_end();
                 uprintf("APPLY 2/4: EEPROM flushed with core1 held off\n");
                 apply_step = 2;
                 return;
@@ -891,7 +901,6 @@ void housekeeping_task_user(void) {
                     // cannot vouch for. The board stays usable and the host can retry.
                     uprintf("APPLY: refusing to overwrite firmware from a bad staged image\n");
                     fw_staging_cancel_apply();
-                    fw_staging_core1_lockout_end();
                     apply_step = 0;
                     return;
                 }
@@ -903,9 +912,12 @@ void housekeeping_task_user(void) {
                 // log, the copy was entered and did not come back.
                 apply_step = 0;
                 fw_staging_apply_and_reboot();
-                // Only reached when the apply was refused (no valid staged image); it
-                // disarms itself there, so hand core1 back rather than leaving the RLE
-                // service down on a board that is going to keep running.
+                // Only reached when the apply was refused (no valid staged image /
+                // failed flash CRC); it disarms itself there and the board keeps
+                // running. Stage 2 already handed core1 back, and the refusal checks
+                // sit above the PSM halt inside do_apply, so this is a no-op today --
+                // kept because it is the one path where a future halt-then-refuse
+                // would otherwise leave the RLE service down for good.
                 fw_staging_core1_lockout_end();
                 break;
         }

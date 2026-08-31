@@ -38,6 +38,5 @@ uint32_t core1_stack_high_water_mark(void);
 #endif
 
 static inline void dmb(void) {
-    __asm volatile ("dmb" ::: "memory");
+    __asm volatile("dmb" ::: "memory");
 }
-

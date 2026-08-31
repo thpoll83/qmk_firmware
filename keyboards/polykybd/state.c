@@ -24,7 +24,7 @@ static bool g_brightness_dirty = false;   // lang + brightness need a flush
 static uint8_t g_user_brightness = FULL_BRIGHT;
 
 // Active idle (anti-burn-in) display style — persisted alongside lang+brightness.
-static uint8_t g_idle_style = IDLE_STYLE_PULSE;
+static uint8_t g_idle_style = POLY_DEFAULT_IDLE_STYLE;
 
 // Active glyph-script override (enum poly_glyph_script). Persisted at the tail of
 // poly_eeconf_t (its own byte, like os_state) and flushed via g_glyph_dirty.
@@ -369,7 +369,7 @@ void set_idle_style(uint8_t style) {
 
 // Records the idle style without marking settings dirty (boot-time EEPROM load).
 void note_idle_style(uint8_t style) {
-    g_idle_style = (style < IDLE_STYLE_COUNT) ? style : IDLE_STYLE_PULSE;
+    g_idle_style = (style < IDLE_STYLE_COUNT) ? style : POLY_DEFAULT_IDLE_STYLE;
 }
 
 // Console-log name for an idle style. Keep in sync with enum poly_idle_style.

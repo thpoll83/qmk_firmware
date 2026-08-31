@@ -1706,7 +1706,47 @@ the looping "Eden" comet-field screensaver). The first two are described in deta
 below; IDDQD/EDEN are full-screen animations that own the keycaps via their own
 tick (`doom_tick()` / `startup_anim_tick()`), so `update_displays()` early-returns
 while they run (see "Eden startup animation & idle screensaver" below for EDEN):
-- **`IDLE_STYLE_PULSE` (0, default, legacy):** `kdisp_idle()` only modulates each
+
+⚠️ **The DEFAULT is board-dependent since 2026-08-31: `POLY_DEFAULT_IDLE_STYLE`
+(`state.h`) is EDEN on split72 and PULSE everywhere else.** Three things about that
+change generalise well beyond this setting:
+- ⚠️ **EDEN on split42 would have been an anti-burn-in setting that does NOTHING —
+  and the enum's own comment claimed it "behaves like PULSE".** It does not.
+  `anim/startup_anim.c` is `#if defined(KEYBOARD_polykybd_split72)` with no-op
+  stubs, *and* every other idle painter stands down for EDEN by design:
+  `kdisp_idle()` returns immediately, the engage branch holds contrast at
+  `EDEN_IDLE_BRIGHTNESS` instead of computing a pulse, and `update_displays()`
+  early-returns while `DISP_IDLE`. So the legends **freeze**, dim and unmoving,
+  until the TURN_OFF suspend — the one outcome this whole feature exists to
+  prevent. The default macro is gated on the **same** board macro the animation
+  compiles itself on, so a default whose renderer is not in the image is not
+  expressible. **Before defaulting anything to a feature with stubs, check what the
+  stub path actually leaves running** — "degrades gracefully" was written down and
+  was wrong.
+- ⚠️ **An explicit PULSE on a pre-2026-08-31 board is NOT RECOVERABLE, because the
+  old format never recorded it.** `IDLE_STYLE_PULSE` is 0 and QMK's wear levelling
+  hands back a cleared byte as **zero** (the trap that made `latin_assign` read as
+  "every key hosts 'a'"), so "chose pulse" and "never chose" are the *same byte*. No
+  migration scheme can separate them, which is what makes the one-time move of the
+  whole pre-sentinel population to the board default the honest reading rather than
+  a compromise. Say so plainly in release notes: **existing keyboards that never
+  picked JITTER/IDDQD/EDEN will come up in the new default once.**
+- **The fix for next time is the `idle_style_fmt` sentinel** (`0x3C`, tail byte,
+  same shape as `latin_ext_fmt` / `keymap_layers_fmt`). `load_user_eeconf()`
+  substitutes the board default while it is unstamped; `save_user_settings()` stamps
+  it **after** the block it guards, so an interrupted write cannot claim a choice
+  that was not stored. From the first save onwards the byte is taken verbatim — so a
+  *future* default change can no longer overwrite a real choice, which is exactly
+  the property this one lacked. `eeconfig_init_user()` writes both, so a fresh
+  EEPROM is born stamped and never migrates. Cost: `EECONFIG_USER_DATA_SIZE`
+  156 → 157, well inside the 256-byte reservation, so **no keymap relocation and no
+  user reset**.
+- **Verify the gate in the compiled object, not the preprocessor.** `g_idle_style`
+  lands in `.data` on split72 (`objdump -s -j .data.g_idle_style` → `03`) and in
+  `.bss` on split42 (zero = PULSE) — one command per board, against the image that
+  actually ships.
+
+- **`IDLE_STYLE_PULSE` (0, legacy; the default on boards without Eden):** `kdisp_idle()` only modulates each
   keycap's SSD1306 contrast register (a per-key out-of-phase "breathing"). The
   buffer is never re-rendered, so the lit pixels never move — the burn-in risk.
 - **`IDLE_STYLE_JITTER` (1):** keeps the pulse, but **each key independently**
@@ -1768,7 +1808,11 @@ while they run (see "Eden startup animation & idle screensaver" below for EDEN):
     synced offset.)
   A "Matrix-style" idle animation was considered but shelved — it defeats the
   "glance at the dimmed legend and resume typing" hint the pulse preserves; jitter
-  was chosen as the default-preserving, legibility-preserving fix.
+  was chosen as the default-preserving, legibility-preserving fix. ⚠️ **That
+  reasoning no longer describes the shipped default on split72**, which is EDEN (see
+  the board-default note at the top of this section) — a deliberate trade of the
+  glance affordance for a screensaver that actually repaints the panel. It still
+  describes why JITTER, not an animation, was the fix *within* the pulse family.
 
 ### Eden startup animation & idle screensaver (`anim/startup_anim.*`, `poly_keymap.c`)
 A **fully procedural** (no framebuffer) per-keycap comet-field animation that

@@ -22,6 +22,13 @@ void save_user_settings(void) {
     const poly_eeconf_t ee = { .lang = get_local_state()->lang, .brightness = (uint8_t)(~get_user_brightness()),
                                .idle_style = get_idle_style(), .auto_brightness = pack_auto_brightness() };
     eeconfig_update_user_datablock(&ee, 0, offsetof(poly_eeconf_t, latin_ex));
+    // Stamp the idle-style format marker AFTER the block it describes, same rule as
+    // the latin sentinels below: an interrupted write must never leave the byte
+    // claiming a choice that was not stored. From here on load_user_eeconf() takes
+    // idle_style verbatim, so a future default change cannot overwrite a real one.
+    const uint8_t idle_marker = IDLE_STYLE_FMT_OK;
+    eeconfig_update_user_datablock(&idle_marker, offsetof(poly_eeconf_t, idle_style_fmt),
+                                   sizeof(idle_marker));
 }
 
 // Writes only the packed latin variation picks to EEPROM.
@@ -113,8 +120,16 @@ poly_eeconf_t load_user_eeconf(void) {
     if(ee.brightness>FULL_BRIGHT) {
         ee.brightness = FULL_BRIGHT;
     }
-    if(ee.idle_style >= IDLE_STYLE_COUNT) {
-        ee.idle_style = IDLE_STYLE_PULSE;   // unwritten/garbage EEPROM -> safe default
+    // ⚠️ Gate the idle style on its format byte, NOT on the value. PULSE is 0 and an
+    // unwritten byte reads back as 0 (wear levelling), so on a pre-sentinel EEPROM
+    // "the user chose pulse" and "nobody ever chose" are indistinguishable — see the
+    // idle_style_fmt comment in state.h. Substituting the board default for the whole
+    // pre-sentinel population is therefore the only honest reading, and it is what
+    // moves an existing board onto the new default exactly once.
+    // Two ways to reach the board default, one remedy: the byte predates the
+    // sentinel, or it is out of range.
+    if(ee.idle_style_fmt != IDLE_STYLE_FMT_OK || ee.idle_style >= IDLE_STYLE_COUNT) {
+        ee.idle_style = POLY_DEFAULT_IDLE_STYLE;
     }
     if(ee.glyph_script == 0xFF) {
         ee.glyph_script = GLYPH_STD;        // erased/uninitialised EEPROM byte -> normal legends

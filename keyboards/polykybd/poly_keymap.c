@@ -4768,13 +4768,18 @@ void eeconfig_init_kb(void) {
 void eeconfig_init_user(void) {
     uprint("Init EE config\n");
     // Zero the WHOLE struct: the write below is a full-struct write, but not every
-    // field is assigned here (idle_style, os_state, glyph_script, boot_flags are
-    // not), so an uninitialised local would persist stack garbage into a fresh
-    // EEPROM for those.
+    // field is assigned here (os_state, glyph_script, boot_flags are not), so an
+    // uninitialised local would persist stack garbage into a fresh EEPROM for those.
     poly_eeconf_t ee = {0};
     ee.lang = g_lang_init;
     ee.brightness = ~FULL_BRIGHT;
     ee.auto_brightness = 0;   // host-auto off on a fresh EEPROM
+    // Born with the board default already recorded as a real choice, rather than
+    // leaning on load_user_eeconf()'s pre-sentinel substitution. Same reasoning as
+    // latin_ex_wide being born widened: a fresh EEPROM should never have to be
+    // migrated, and the zero that {0} leaves here means PULSE, not "unset".
+    ee.idle_style     = POLY_DEFAULT_IDLE_STYLE;
+    ee.idle_style_fmt = IDLE_STYLE_FMT_OK;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

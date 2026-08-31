@@ -634,6 +634,14 @@ jobs:
         with:
           submodules: recursive
 
+      # ⚠️ The SHA goes in the FILENAME. Every test build reports the same
+      # FW_VERSION (it only moves on the post-merge auto-bump), so images from
+      # different commits are otherwise indistinguishable once flashed -- which
+      # has already cost a full hardware round on this project. See CLAUDE.md,
+      # "Deliverable for testing is the .bin".
+      - id: sha
+        run: echo "short=$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
+
       # ⚠️ EPHEMERAL key, never the production FW_SIGNING_KEY — that secret is
       # confined to release.yml and must not be reachable from a PR-triggered
       # workflow. Same pattern as build-doom: the throwaway pubkey is baked into
@@ -652,21 +660,23 @@ jobs:
       - name: Build split72 (HIL left/master)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_fwapply_hil_left
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_left
 
       - name: Build split72 (HIL right/slave)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_fwapply_hil_right
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_right
 
       # The rig stages the raw image, not the UF2 wrapper, and applies it to a
       # master already running it — so this .bin must come from the SAME ELF as
       # the left .uf2 above. The runner re-checks that against the flashed UF2
       # and refuses to apply anything else; this step is what makes that pass.
       - name: Extract and sign the master image
+        env:
+          SHA: ${{ steps.sha.outputs.short }}
         run: |
-          ELF=.build/polykybd_split72_fwapply_hil_left.elf
-          BIN=polykybd_split72_fwapply_hil_left.bin
+          ELF=".build/polykybd_split72_fwapply_${SHA}_hil_left.elf"
+          BIN="polykybd_split72_fwapply_${SHA}_hil_left.bin"
           # The docker builds run as root, so the workspace artifacts land
           # root-owned and the host runner user cannot write beside them.
           sudo chown -R "$(id -u):$(id -g)" .build
@@ -685,17 +695,17 @@ jobs:
 
       - id: names
         run: |
-          echo "hil_left=$(ls polykybd_split72_fwapply_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
-          echo "hil_right=$(ls polykybd_split72_fwapply_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
-          echo "apply_bin=polykybd_split72_fwapply_hil_left.bin" >> "$GITHUB_OUTPUT"
+          echo "hil_left=$(ls polykybd_split72_fwapply_*_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "hil_right=$(ls polykybd_split72_fwapply_*_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "apply_bin=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_left.bin" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
           name: firmware-fwapply
           path: |
-            polykybd_split72_fwapply_hil_*.uf2
-            polykybd_split72_fwapply_hil_left.bin
-            polykybd_split72_fwapply_hil_left.bin.sig
+            polykybd_split72_fwapply_*_hil_*.uf2
+            polykybd_split72_fwapply_*_hil_left.bin
+            polykybd_split72_fwapply_*_hil_left.bin.sig
 
   doom-test:
     name: DOOM engine-pack signature (split72)

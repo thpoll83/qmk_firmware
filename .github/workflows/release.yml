@@ -153,9 +153,32 @@ jobs:
         run: |
           TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
           PACK_VER=$(cat keyboards/polykybd/doom/pack/PACK_VERSION)
-          ASSETS=( "${TARGET}.uf2" "${TARGET}.bin" "doom_pack_v${PACK_VER}.plyx" )
+          # ⚠️ Stamp the VERSION into the asset filenames. Every release used to
+          # ship "polykybd_split72_default.{uf2,bin,bin.sig}", identical across all
+          # releases, so downloading two versions to compare them collides in the
+          # browser and you get "... (1).bin" / "... (2).bin" with nothing to say
+          # which is which. That is not cosmetic: it produced a mis-flash during a
+          # firmware-update bisect (#258) and sent the investigation to a wrong
+          # conclusion for several rounds. The board cannot help either -- every
+          # test build reports its own FW_VERSION only once it is already running.
+          #
+          # Safe for the host updater: polyhost/services/updater.py selects assets
+          # by SUFFIX (endswith ".bin" / ".uf2" / ".bin.sig"), never by exact name,
+          # so the version prefix is invisible to it. Keep the suffixes intact --
+          # and note ".bin.sig" must keep ending in ".bin.sig", since the updater
+          # tests it BEFORE ".bin".
+          VER="${TAG#PolyKybd-fw-v}"
+          NAMED="polykybd_split72_v${VER}"
+          cp "${TARGET}.uf2" "${NAMED}.uf2"
+          cp "${TARGET}.bin" "${NAMED}.bin"
+          ASSETS=( "${NAMED}.uf2" "${NAMED}.bin" "doom_pack_v${PACK_VER}.plyx" )
           # Include the detached signature when the Sign step produced one (FW-2).
-          [ -f "${TARGET}.bin.sig" ] && ASSETS+=("${TARGET}.bin.sig")
+          # It must travel as "<bin>.sig" of the RENAMED bin, or hid_fw_up.py will
+          # not find it (sig_path = bin_path + ".sig").
+          if [ -f "${TARGET}.bin.sig" ]; then
+            cp "${TARGET}.bin.sig" "${NAMED}.bin.sig"
+            ASSETS+=("${NAMED}.bin.sig")
+          fi
           if [ "$HAVE_NOTES" = "1" ]; then
             NOTES_ARGS=( --title "$TITLE" --notes-file _release_body.md )
           else

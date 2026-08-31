@@ -1280,6 +1280,40 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     27px `Qwty` lost 10px too. The tighter 19px spacing only made a long-standing
     defect impossible to miss. **The check is a pixel count against the same legend
     drawn with `cy_radius` 0**, not a visual read; all 15 legends now match it exactly.
+- ⚠️ **The anti-burn-in jitter offset is applied ONCE at the display-list cursor
+  (`gfx_text_run`), NOT inside the drawing primitives — it used to be the other way
+  round and that moved only the text.** `s_draw_ox/oy` were added in
+  `kdisp_write_gfx_char` and `kdisp_write_gfx_char_half`, which between them cover
+  ordinary glyphs and `HINT_SMALL` and nothing else: every **composite op** plots
+  through a primitive of its own (`\x0F` HALF, `\x11` THIN, `\x15` ROT →
+  `kdisp_draw_glyph_*_at`; `\x13` BADGE, `\x12` FRAME → the rect drawers), none of
+  which ever saw the offset. So an idle relocation slid the letters and left the
+  composited art pinned to the buffer — reported from hardware as *"the cursor on the
+  context menu icon is not moving in the idle modes, but the hamburger menu icon
+  does"* (2026-08-31). It is a CLASS bug, not one icon: `ICON_CONTEXT_MENU`'s pointer,
+  and the `ICON_SCRLOCK_ON/OFF` + `ICON_MEDIA_STOP` badges, which are composite art
+  **only** and so never moved at all.
+  - **The fix is the choke point, not five more `+= s_draw_ox` lines.** Offsetting the
+    cursor once means a sixth composite op inherits it by construction; adding it per
+    primitive is the enumerating-guard shape this repo keeps getting caught by
+    (`sync_is_link_fault()`, the log-source registry, the `find_matching_entry` gate).
+    ⚠️ A MOVE must **re-apply** it (`x_cursor = sat8(text[1] + s_draw_ox)`) — an
+    absolute position is exactly what the cursor's own offset does not reach, and
+    assigning the raw coordinate is what pinned the art in the first place.
+  - ⚠️ **Fixing the DRAW alone would have made it worse, and that is the half worth
+    remembering.** `roll_idle_offset()` measured the slack with the RELATIVE bbox,
+    which for `ICON_CONTEXT_MENU` is the hamburger alone — so once the whole cell
+    moved as a unit, that slack would have carried the pointer off the panel; and for
+    `ICON_MEDIA_STOP`, whose legend is a MOVE plus a BADGE and nothing else, the
+    relative box is **empty** (`0,0,0,0`), i.e. "you may move it anywhere". Hence
+    `kdisp_gfx_text_bbox_abs()` above, and hence the pair had to land together.
+  - **The ROT geometry moved to `font_lookup.c` (`kdisp_gfx_rot_half_extent`) so the
+    drawer and the measurement cannot disagree** about which pixels a rotated glyph
+    touches — a box that disagrees with the pixels is a legend that clips. ⚠️ Its
+    tests derive the expectation from **arithmetic** (a 0° turn is exactly the halved
+    size; a 90° turn swaps the axes), because the first version asked the helper what
+    to expect and therefore agreed with it by construction — a "don't halve the width"
+    mutation sailed straight through. Same trap as the macro-icon preview note below.
 - **`kdisp_send_window()` vs `kdisp_send_buffer()`**: `kdisp_send_buffer()` pushes
   the full 1024-byte scratch; `kdisp_send_window()` pushes only the **visible 360
   bytes** (pages 0–4 at column `BUFFER_X`) — the same region the keycap actually
@@ -1435,6 +1469,34 @@ flushed, **then** `DISPLAY_ON` — boot shows black → splash.
 landed; revisit only if a full swap still looks slow on hardware): raise
 `OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
 above SSD1306 spec — A/B on real hardware).
+
+**Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
+`oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced
+`poly_sync_t.settings_more`). Four lines on the 64 px panel, two on the 32 px one:
+`FW <version>` · `P<protocol> HW <device_ver>` · `<USB|LNK> up <h:mm:ss>` ·
+`Lnk <err>% <frames>`. Shared across both variants and landscape on split42 too,
+matching the flash / confirm / apply screens there.
+
+- **The identity fields are the ones `GET_ID` reports** (`FW_VERSION`,
+  `PROTOCOL_VERSION`, `DEVICE_VER` — the same macros `hid_com.c` builds its string
+  from), so the panel and the host's view of the board cannot disagree.
+- ⚠️ **The link line reads `Lnk n/a` on the non-USB half, NOT `0.0%`.** The counters
+  live in `bridge_helper.c` and only the master calls `send_to_bridge()`, so the
+  slave's are zero because it never initiates — rendering that as a perfect link
+  would be a flattering lie on exactly the panel someone reads to judge the wire.
+  `poly_get_link_stats()` / `poly_link_err_permille()` expose them; the percentage is
+  computed by the same expression as the periodic console line, so the two can never
+  diverge. This puts the split-link health somewhere you can actually see it — until
+  now it existed only in a line emitted every 200 frames on a console nobody has open.
+- ⚠️ **Both link fields are COMPACTED, and the default fixture is what hides why.**
+  `ls_attempts` climbs for as long as the board is up (millions within hours), so
+  spelled out in full the line measures **135 px against a 127 px budget** — while the
+  `1234tx` of a fresh boot fits comfortably. The count is abbreviated `k`/`M` and the
+  rate drops its decimal at/above 10 %, which puts the widest reachable form at
+  122 px. Checked with `tools/status_oled_preview.py --telemetry --diag` at the worst
+  case (`--link 1000,4294967295 --uptime "999d 23h"`), not at the default.
+- `tools/status_oled_preview.py --telemetry` renders it (both halves, `--diag` for the
+  clipping check) — the same mirror-the-C treatment `build_fw_confirm_panel` gets.
 
 **split42: PORTRAIT status OLED (2026-07).** The split42 panel is 128×32 physical
 but **mounted rotated 90°**, so the user reads it as **32 wide × 128 tall**. The poly
@@ -2372,12 +2434,20 @@ op-argument table, the SMALL/MID semantics and the baseline-shift rule.
   below always did) closes the class for the existing ops **and any op added later**.
   ⚠️ **So check a new op byte against those macros' argument bytes** — or rather,
   don't have to, now that MOVE consumes its own.
-- ⚠️ **The MOVE itself is still ignored** — bbox works relative to the
-  draw origin and MOVE names an ABSOLUTE buffer position, which is not knowable at
-  measure time, so a MOVE'd
-  legend's box still only covers the part laid out relatively. **Prefer the ordinary
-  cursor advance over a MOVE in a main legend** — that is why `ICON_MUTE` places its X
-  with `\f\f` and the glyph's own `xAdvance` rather than a MOVE.
+- ⚠️ **`kdisp_gfx_text_bbox()` still ignores the MOVE itself** — it works relative to
+  the draw origin and MOVE names an ABSOLUTE buffer position, which is not knowable
+  without one, so a MOVE'd legend's box only covers the part laid out relatively (and
+  the composite ops contribute no extent at all — measuring them at an unresolvable
+  cursor would be worse than skipping them). **Prefer the ordinary cursor advance over
+  a MOVE in a main legend** — that is why `ICON_MUTE` places its X with `\f\f` and the
+  glyph's own `xAdvance` rather than a MOVE.
+  - ✅ **There IS now a form that resolves it: `kdisp_gfx_text_bbox_abs()`**, which
+    takes the draw origin and returns the ABSOLUTE buffer box — MOVE resolved, and
+    `\x0F`/`\x11`/`\x15`/`\x13`/`\x12` measured at their real extents. The relative
+    form is unchanged to the byte (both are one walk in `bbox_walk()`, parameterised
+    by origin), so its 34 existing tests still pin it. **Use the absolute one whenever
+    you need to know where ALL of a legend lands** — which is exactly what the idle
+    jitter needs, and what it did not have (below).
 
 **The legend-size key is now ONE key that states its own tier.** `KC_GLYPH_SIZE_UP` on
 `_UL` draws `ICON_FONT_BIGGER` plus the current tier as a digit in the top-right;

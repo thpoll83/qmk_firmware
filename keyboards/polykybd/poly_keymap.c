@@ -839,8 +839,15 @@ void housekeeping_task_user(void) {
     // marker a main loop to go out on, so the log names the stage that wedged.
     // (2) EVERY stage below touches flash or the split link, and they must not be
     // interleaved with the rest of housekeeping while core1 is locked out.
+    // ⚠️ FUNCTION-SCOPE, not inside the `if`: the sequence below only advances
+    // while the apply is armed, and BOTH fw_staging_begin_target() and
+    // fw_staging_begin_deferred_target() clear s_commit_pending. A host that
+    // abandons an update and starts a fresh one mid-sequence would otherwise
+    // leave this stuck at 1-3, and the NEXT apply would resume there -- skipping
+    // clear_keyboard() (a key down at that moment auto-repeats on the host until
+    // USB drops) and save_all_dirty(). The else-branch below puts it back.
+    static uint8_t apply_step = 0;
     if (fw_staging_commit_pending()) {
-        static uint8_t apply_step = 0;
         switch (apply_step) {
             case 0:
                 // Release anything still held. From here the main loop never scans the
@@ -921,6 +928,11 @@ void housekeeping_task_user(void) {
                 fw_staging_core1_lockout_end();
                 break;
         }
+    } else if (apply_step != 0) {
+        // Disarmed from another path (a new BEGIN) part-way through. Start the
+        // next apply from stage 0 rather than resuming mid-sequence.
+        uprintf("APPLY: disarmed at stage %u — sequence reset\n", (unsigned)apply_step);
+        apply_step = 0;
     }
     if (fw_staging_reboot_pending()) {
         clear_keyboard();   // same as above: no further matrix scan before the reset

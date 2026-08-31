@@ -127,7 +127,6 @@ static void doom_engine_start(void) {
     // Take core1 from the overlay-RLE service (idle in game mode — the
     // pool-writing HID commands are frozen) and give it to the game, with its
     // stack at the tail of the pool.
-    doom_core1_reset();
 #ifdef POLYKYBD_DOOM_PACK
     uint32_t *stack_bottom = (uint32_t *)(s_fb + DOOM_POOL_BYTES - DOOM_ARENA_STACK_BYTES);
 #else
@@ -135,7 +134,27 @@ static void doom_engine_start(void) {
     // GCC's array-bounds check)
     uint32_t *stack_bottom = (uint32_t *)((uintptr_t)__doom_shared_end__ - DOOM_ARENA_STACK_BYTES);
 #endif
-    multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
+    // BOUNDED launch, mirroring doom_engine_stop's relaunch: the plain
+    // multicore_launch_core1_with_stack blocks core0 FOREVER if core1 is not
+    // cleanly back in the bootrom wait loop, and cumulative doom-slot flashes
+    // (the signed-accept path after a soak) can leave it exactly that way — the
+    // console then never drains and the session reads as a 30 s silence
+    // (verdict=none). PSM-reset + bounded handshake, retry, and on a total miss
+    // degrade to the fire demo (observable) rather than wedging the main loop.
+    const uint32_t t0 = timer_read32();
+    bool ok = false;
+    for (uint8_t attempt = 0; attempt < 3 && !ok; ++attempt) {
+        doom_core1_reset();
+        ok = multicore_launch_core1_with_stack_bounded(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES, 100u * 1000u);
+    }
+    if (!ok) {
+        // core1 would not come up for the game — do NOT leave core0 blocked.
+        // Fall back to the fire demo, the same degradation as a missing WHX.
+        printf("doom: core1 launch FAILED after %lu ms — running the fire demo instead\n",
+               (unsigned long)timer_elapsed32(t0));
+        s_engine_running = false;
+        return;
+    }
     s_engine_running = true;
 }
 

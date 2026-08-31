@@ -119,16 +119,23 @@ void multicore_launch_core1(void) {
     multicore_launch_core1_with_stack(core1_entry, core1_stack, CORE1_STACK_SIZE);
 }
 
-// Bounded variant of the launch handshake (see core1.h). Identical protocol
-// to multicore_launch_core1_raw, but every FIFO wait checks an overall
-// deadline — if core1 is not in the bootrom wait loop (held in reset, or
-// mid power-up after a PSM force-off), the unbounded handshake blocks
-// forever (fw_staging.c carries the same lore for the post-apply reboot).
-bool multicore_launch_core1_bounded(uint32_t total_timeout_us) {
-    uint32_t *stack_bottom = core1_stack;
-    uint32_t *stack_ptr    = stack_bottom + CORE1_STACK_SIZE / sizeof(uint32_t);
+// Bounded variant of the launch handshake, with a caller-provided entry +
+// stack (the bounded sibling of multicore_launch_core1_with_stack — see
+// core1.h). Identical protocol to multicore_launch_core1_raw, but every FIFO
+// wait checks an overall deadline — if core1 is not in the bootrom wait loop
+// (held in reset, or mid power-up after a PSM force-off), the unbounded
+// handshake blocks forever (fw_staging.c carries the same lore for the
+// post-apply reboot). Returns false on a miss so the caller can PSM-reset
+// core1 and retry (or degrade gracefully) instead of wedging core0.
+bool multicore_launch_core1_with_stack_bounded(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes, uint32_t total_timeout_us) {
+#ifdef CORE1_STACK_HWM
+    for (size_t i = 0; i < stack_size_bytes / sizeof(uint32_t); i++) {
+        stack_bottom[i] = CORE1_STACK_SENTINEL;
+    }
+#endif
+    uint32_t *stack_ptr = stack_bottom + stack_size_bytes / sizeof(uint32_t);
     stack_ptr -= 3;
-    stack_ptr[0] = (uintptr_t) core1_entry;
+    stack_ptr[0] = (uintptr_t) entry;
     stack_ptr[1] = (uintptr_t) stack_bottom;
     stack_ptr[2] = (uintptr_t) core1_wrapper;
 
@@ -166,4 +173,10 @@ bool multicore_launch_core1_bounded(uint32_t total_timeout_us) {
 
     irq_set_enabled(irq_num, enabled);
     return ok;
+}
+
+// Bounded relaunch into the built-in RLE service (core1_entry). Thin wrapper
+// over multicore_launch_core1_with_stack_bounded.
+bool multicore_launch_core1_bounded(uint32_t total_timeout_us) {
+    return multicore_launch_core1_with_stack_bounded(core1_entry, core1_stack, CORE1_STACK_SIZE, total_timeout_us);
 }

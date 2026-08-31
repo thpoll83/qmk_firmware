@@ -54,5 +54,9 @@ uint8_t fw_update_percent(void);   /* 0..100 progress of the in-flight flash */
 extern const uint8_t wpm_gauge_bitmap[];
 #define WPM_ICON_W 11
 #define WPM_ICON_H 6
+/* Settings -> "More": firmware / protocol / hardware version, this half's uptime and
+   the split-link health, in place of the ordinary status screen while the advanced
+   settings row is revealed. Driven by the synced poly_sync_t.settings_more. */
+void oled_telemetry_screen(void);
 void oled_render_logos(void);
 bool oled_task_user(void);

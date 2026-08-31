@@ -195,6 +195,55 @@ def build_fw_confirm_panel(side, small):
     return pts
 
 
+def build_telemetry_panel(usb_side, small, fw="0.16.18", proto=15, hw="0x0320",
+                          uptime="1:23:45", link=None):
+    """Settings -> "More" telemetry screen — mirror of oled_helper.c's
+    oled_telemetry_screen(). Four lines on the 64px panel (two on a 32px one),
+    each centred in its own band from its own bbox, exactly as the FW-2 confirm
+    screen above and the C do.
+
+    `usb_side` picks the half: the USB (master) half is the only one that owns the
+    split-link counters, so the LINK line reads "n/a" on the other — the C refuses
+    to render the slave's all-zero counters as a perfect 0.0%. `link` is
+    (err_permille, frames) for the master, or None for a link that has sent
+    nothing yet."""
+    pts = []
+    setp = lambda px, py: pts.append((px, py))
+    l_fw = "FW %s" % fw
+    l_ver = "P%d  HW %s" % (proto, hw)
+    l_up = "%s  up %s" % ("USB" if usb_side else "LNK", uptime)
+    if not usb_side:
+        l_link = "Lnk n/a"
+    elif link is None:
+        l_link = "Lnk idle"
+    else:
+        pm, frames = link
+        # Same compaction as the C: the count climbs into the millions, so it is
+        # abbreviated, and the rate drops its decimal at/above 10% -- both so the
+        # WORST case fits the 128px panel rather than only the fresh-boot one.
+        if frames < 1000:
+            tx = "%d" % frames
+        elif frames < 1000000:
+            tx = "%dk" % (frames // 1000)
+        else:
+            tx = "%dM" % (frames // 1000000)
+        l_link = ("Lnk %d.%d%% %s" % (pm // 10, pm % 10, tx)) if pm < 100 \
+            else ("Lnk %d%% %s" % ((pm + 5) // 10, tx))
+
+    lines = [l_fw, l_ver, l_up, l_link][:(4 if P_H >= 64 else 2)]
+    band = P_H // len(lines)
+    for i, line in enumerate(lines):
+        txt = s2cp(line)
+        bx0, bx1, by0, by1 = text_bbox(small, txt)
+        w = bx1 - bx0 + 1
+        x = (P_W - w) // 2 - bx0
+        if x < 0:
+            x = 0
+        base = band * i + band // 2 - (by0 + by1) // 2
+        draw(setp, small, x, base, txt)
+    return pts
+
+
 def measure_width(font, text):
     """Rightmost lit pixel of `text`, mirroring kdisp_gfx_text_bounds' hi. Skips
     out-of-range codepoints exactly as draw() does, so a missing glyph can't raise."""
@@ -512,18 +561,30 @@ def main():
                          "(Qwerty, 'Qwerty Stag!', 'Colemak DH', Neo, Workman)")
     ap.add_argument('--rgb-off', action='store_true',
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
+    ap.add_argument('--telemetry', action='store_true',
+                    help='preview the settings->More telemetry screen instead of the status screen')
+    ap.add_argument('--uptime', default='1:23:45', help='uptime string shown by --telemetry')
+    ap.add_argument('--link', default='4,1234',
+                    help='--telemetry link health as "<err_permille>,<frames>", or "idle"')
     args = ap.parse_args()
 
     disp, small, icons, tiny, globe = load_fonts()
-    rgb = None if args.rgb_off else (128, 255, 100, 80, 5, 'Rainbow')
-    L = build_panel('L', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang,
-                    args.wpm, args.layout)
-    R = build_panel('R', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang,
-                    args.wpm, args.layout)
+    if args.telemetry:
+        link = None if args.link == 'idle' else tuple(int(v) for v in args.link.split(','))
+        L = build_telemetry_panel(True,  small, uptime=args.uptime, link=link)
+        R = build_telemetry_panel(False, small, uptime=args.uptime, link=link)
+    else:
+        rgb = None if args.rgb_off else (128, 255, 100, 80, 5, 'Rainbow')
+        L = build_panel('L', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang,
+                        args.wpm, args.layout)
+        R = build_panel('R', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang,
+                        args.wpm, args.layout)
 
     if args.diag:
-        Li, lc = render_diag(L, 'LEFT (layout)  128x64  |  RED = clipped')
-        Ri, rc = render_diag(R, 'RIGHT (RGB)    128x64  |  RED = clipped')
+        ltitle = 'USB half   128x64  |  RED = clipped' if args.telemetry else 'LEFT (layout)  128x64  |  RED = clipped'
+        rtitle = 'LINK half  128x64  |  RED = clipped' if args.telemetry else 'RIGHT (RGB)    128x64  |  RED = clipped'
+        Li, lc = render_diag(L, ltitle)
+        Ri, rc = render_diag(R, rtitle)
         w = max(Li.width, Ri.width)
         c = Image.new('RGB', (w, Li.height + Ri.height + 12), (18, 18, 22))
         c.paste(Li, (0, 0)); c.paste(Ri, (0, Li.height + 12))

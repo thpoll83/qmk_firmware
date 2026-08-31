@@ -44,6 +44,22 @@ static uint32_t ls_call_giveup    = 0;  // calls that exhausted every retry on a
                                         //  see the note where it is incremented)
 static uint32_t ls_last_log       = 0;  // ls_attempts at the last emitted summary
 
+void poly_get_link_stats(poly_link_stats_t* out) {
+    if (!out) return;
+    out->attempts       = ls_attempts;
+    out->crc_err        = ls_crc_err;
+    out->nack           = ls_nack;
+    out->transport_fail = ls_transport_fail;
+    out->giveup         = ls_call_giveup;
+}
+
+uint32_t poly_link_err_permille(void) {
+    // Same expression as the periodic console summary above — kept here rather than
+    // duplicated at the caller so the panel and the log can never diverge.
+    const uint32_t errs = ls_crc_err + ls_transport_fail;
+    return ls_attempts ? (uint32_t)(((uint64_t)errs * 1000U) / ls_attempts) : 0U;
+}
+
 void set_com_state(enum com_state state) {
     com = state;
 }

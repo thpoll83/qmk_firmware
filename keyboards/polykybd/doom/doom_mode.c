@@ -150,8 +150,20 @@ static void doom_engine_start(void) {
     if (!ok) {
         // core1 would not come up for the game — do NOT leave core0 blocked.
         // Fall back to the fire demo, the same degradation as a missing WHX.
-        printf("doom: core1 launch FAILED after %lu ms — running the fire demo instead\n",
-               (unsigned long)timer_elapsed32(t0));
+        // Unlike the missing-WHX/no-pack fallbacks (which return before ever
+        // touching core1), we have already reset core1, so it is sitting idle
+        // in reset — and doom_engine_stop won't relaunch the RLE service on
+        // session exit because s_engine_running is false. Put core1 back to the
+        // overlay-RLE service ourselves so overlay decompression isn't degraded
+        // until reboot; if this relaunch also misses, core1 stays reset (no
+        // worse, and still no core0 hang).
+        bool rle_ok = false;
+        for (uint8_t attempt = 0; attempt < 3 && !rle_ok; ++attempt) {
+            doom_core1_reset();
+            rle_ok = multicore_launch_core1_bounded(100u * 1000u);
+        }
+        printf("doom: core1 launch FAILED after %lu ms — fire demo; RLE core relaunch %s\n",
+               (unsigned long)timer_elapsed32(t0), rle_ok ? "ok" : "FAILED");
         s_engine_running = false;
         return;
     }

@@ -21,6 +21,15 @@ _Static_assert(FW_UP_MAX_SIZE <= FW_STAGING_OFFSET,
                "a staged image cannot be larger than the firmware partition");
 _Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_RESOURCE_OFFSET,
                "staging area overruns the resource region (FLASH_TARGET_OFFSET)");
+// ⚠️ THE wall between the staged image and the apply progress log, which lives at
+// the top of the same region. Raising FW_UP_MAX_SIZE without moving the log fails
+// the build here instead of silently erasing 32 KB of the source the applier is
+// about to copy -- after the pre-copy CRC has already verified it, and where the
+// post-copy compare would read that same corrupted source and report a match.
+_Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_APPLY_LOG_OFFSET,
+               "a staged image can reach the apply progress log");
+_Static_assert(FW_APPLY_LOG_OFFSET + FW_APPLY_LOG_BYTES <= FW_RESOURCE_OFFSET,
+               "the apply progress log runs into the resource region");
 
 // The wear-levelling EEPROM sits at the TOP of flash, inside what the map above
 // calls the resource region, so the last resource slot has to stop short of it.
@@ -89,17 +98,7 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 // image and of everything FW_UP_BEGIN erases. 8 sectors = 128 pages >= the 121 the
 // image needs, so the copy can record EXACTLY how far it got in a place that outlives
 // the power cycle a BOOTSEL recovery needs.
-// ⚠️ The log lives INSIDE the staging region, so it can collide with the staged
-// image itself: staging accepts up to FW_UP_MAX_SIZE (~2 MB, the whole region),
-// and data starts at FW_STAGING_DATA_OFFSET, so any image over ~1 MB reaches
-// this offset. The erase below would then destroy 32 KB of the source AFTER the
-// pre-copy CRC verified it and BEFORE the copy reads it -- and the post-copy
-// compare would read the same corrupted source and report a match. So the log is
-// BEST-EFFORT: a log_fits test gates every write on the image not reaching it,
-// and a too-large image is copied with no log rather than with a broken source.
-// The watchdog breadcrumb still records the sector in that case.
-#define FW_APPLY_LOG_OFFSET   (FW_STAGING_OFFSET + 0x100000u)
-#define FW_APPLY_LOG_SECTORS  8u
+// FW_APPLY_LOG_* live in the header, beside the FW_UP_MAX_SIZE they are asserted against.
 #define FW_APPLY_LOG_PAGES    (FW_APPLY_LOG_SECTORS * (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE))
 
 // DMA is the LAST bus master that can touch XIP once core1 is in reset and interrupts
@@ -1154,7 +1153,6 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     // One log page: word0 = marker, word1 = a witness value worth capturing.
     #define LOG_MARK(page, marker, witness)                                               \
         do {                                                                              \
-            if (!log_fits) break;                                                         \
             page_buf[0] = (marker);                                 \
             page_buf[1] = (witness);                                \
             flash_range_program(FW_APPLY_LOG_OFFSET + (page) * FLASH_PAGE_SIZE,           \
@@ -1188,14 +1186,10 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
             _first = false;                                                               \
         } while (0)
 
-    // Fresh progress log. Erasing here is safe only while the staged image stops
-    // short of it -- see FW_APPLY_LOG_OFFSET. When it does not, the whole log is
-    // skipped: a missing diagnostic beats a corrupted source.
-    const bool log_fits = (FW_STAGING_DATA_OFFSET + image_size) <= FW_APPLY_LOG_OFFSET;
-    if (log_fits) {
-        for (uint32_t i = 0; i < FW_APPLY_LOG_SECTORS; i++) {
-            flash_range_erase(FW_APPLY_LOG_OFFSET + i * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
-        }
+    // Fresh progress log. Safe to erase: it is not the running firmware, and the
+    // static assert above proves no accepted image can reach it.
+    for (uint32_t i = 0; i < FW_APPLY_LOG_SECTORS; i++) {
+        flash_range_erase(FW_APPLY_LOG_OFFSET + i * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
     }
     // ⚠️ Bounded by the log's own page count, not by the image's sector count: the
     // page index IS the sector number, and a >512 KB image has more sectors than
@@ -1203,7 +1197,7 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     // the log and into whatever follows it.
     #define LOG_SECTOR_DONE(sec)                                                          \
         do {                                                                              \
-            if (!log_fits || (sec) >= FW_APPLY_LOG_PAGES) break;                          \
+            if ((sec) >= FW_APPLY_LOG_PAGES) break;                                       \
             page_buf[0] = FW_APPLY_LOG_MAGIC | ((sec) & 0xFFFFu);   \
             flash_range_program(FW_APPLY_LOG_OFFSET + (sec) * FLASH_PAGE_SIZE,            \
                                 (const uint8_t *)page_buf, FLASH_PAGE_SIZE);                               \
@@ -1214,11 +1208,9 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     // this far -- distinguishing "died erasing the first sector" from "died before the
     // copy began at all", which are different bugs and were previously the same symptom.
     bool _first = true;   // bracket only the first image sector
-    if (log_fits) {
-        page_buf[0] = FW_APPLY_LOG_START;
-        flash_range_program(FW_APPLY_LOG_OFFSET + (FW_APPLY_LOG_PAGES - 1) * FLASH_PAGE_SIZE,
-                            (const uint8_t *)page_buf, FLASH_PAGE_SIZE);
-    }
+    page_buf[0] = FW_APPLY_LOG_START;
+    flash_range_program(FW_APPLY_LOG_OFFSET + (FW_APPLY_LOG_PAGES - 1) * FLASH_PAGE_SIZE,
+                        (const uint8_t *)page_buf, FLASH_PAGE_SIZE);
 
     // App body first: sectors 1..N-1, leaving sector 0's vectors written last.
     for (uint32_t sec = 1; sec < num_sectors; sec++) {

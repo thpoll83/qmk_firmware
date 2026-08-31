@@ -34,7 +34,18 @@
 #define FW_STAGING_HEADER_SIZE 0x001000UL      // first 4 KB of staging = header sector
 #define FW_STAGING_DATA_OFFSET (FW_STAGING_OFFSET + FW_STAGING_HEADER_SIZE)
 #define FW_RESOURCE_OFFSET     0x400000UL      // resource/overlay region (== FLASH_TARGET_OFFSET in keymap.c)
-#define FW_UP_MAX_SIZE         0x1FF000UL      // max staged image: 2 MB staging region minus the 4 KB header
+// The self-apply's progress log, at the TOP of the staging region. It has to live
+// somewhere the running firmware is not (it is written while that firmware is being
+// overwritten) and somewhere a BOOTSEL/UF2 recovery does not touch (reading it back
+// requires exactly that recovery) -- which leaves staging, and means it must be
+// walled off from the staged image itself. The static assert below is that wall:
+// without it, an image over ~1 MB would have 32 KB of its source erased AFTER the
+// pre-copy CRC verified it and BEFORE the copy read it, and the post-copy compare
+// would then read the same corrupted source and report a match.
+#define FW_APPLY_LOG_SECTORS   8UL
+#define FW_APPLY_LOG_BYTES     (FW_APPLY_LOG_SECTORS * 4096UL)
+#define FW_APPLY_LOG_OFFSET    (FW_RESOURCE_OFFSET - FW_APPLY_LOG_BYTES)
+#define FW_UP_MAX_SIZE         0x1F7000UL      // max staged image: staging region, minus the 4 KB header and the apply log
 #define FW_STAGING_MAGIC       0xD1F1A51BUL
 
 // Bytes per firmware-update chunk (HID and split-RPC payload).

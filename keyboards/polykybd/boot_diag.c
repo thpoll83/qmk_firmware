@@ -14,6 +14,7 @@
 #include "state.h"        // get_idle_style(), idle_style_name()
 #include "layers.h"       // _ADDLANG1 (Intl picker banner line)
 #include "quantum/keymap_introspection.h"   // keycode_at_keymap_location_raw()
+#include "base/fw_staging.h"   // fw_staging_apply_breadcrumb()
 #include "base/update.h"       // enum refresh_mode / ALL_AT_ONCE
 #include "base/disp_array.h"   // GFXfont type
 // Only the single splash font is needed. Don't pull in gfx_used_fonts.h — the
@@ -154,6 +155,86 @@ void emit_idle_config(void) {
             (unsigned int)TURN_OFF_TIME);
 }
 
+// The stored dynamic-keymap format version and whether this boot had to discard the
+// keymap because of it. Emitted on the banner tick for the same reason emit_idle_config()
+// is: it is only known after the EEPROM config load, which happens long after the
+// one-shot banner print, and the reset it reports is a once-per-upgrade event that
+// blocks post_init while it rewrites a few kB of wear-levelled EEPROM. A console that
+// cannot see it cannot tell "the board is still resetting its keymap" from "the board
+// is dead".
+static uint8_t  s_keymap_fmt_seen  = 0xFF;   // 0xFF = post_init has not run yet
+static bool     s_keymap_reset_ran = false;
+static uint32_t s_keymap_reset_ms  = 0;
+
+void note_keymap_storage(uint8_t stored_fmt, bool reset_ran, uint32_t elapsed_ms) {
+    s_keymap_fmt_seen  = stored_fmt;
+    s_keymap_reset_ran = reset_ran;
+    s_keymap_reset_ms  = elapsed_ms;
+}
+
+// What the previous self-apply achieved, if this boot followed one. Printed with the
+// banner because that is the only channel: fw_staging_do_apply() runs with interrupts
+// off and never returns, so it can leave a breadcrumb in the watchdog scratch and
+// nothing else.
+void emit_apply_breadcrumb_line(void) {
+    uint32_t last_sector = 0, spins = 0;
+    bool     completed   = false;
+    uint32_t p_low = 0, p_high = 0, p_count = 0;
+    if (fw_staging_apply_progress(&p_low, &p_high, &p_count)) {
+        uprintf("   apply: copy log - %lu sectors done, sectors %lu..%lu\n",
+                (unsigned long)p_count, (unsigned long)p_low, (unsigned long)p_high);
+    } else if (fw_staging_apply_started()) {
+        uprintf("   apply: copy log - STARTED but not one sector completed\n");
+    }
+    uint32_t m_stage = 0, m_addr = 0, m_erased = 0, m_progd = 0, m_srcw = 0;
+    if (fw_staging_apply_marks(&m_stage, &m_addr, &m_erased, &m_progd, &m_srcw)) {
+        static const char *const where[] = {"", "died IN the erase",
+                                            "died reading the staging source",
+                                            "died IN the program of the image",
+                                            "first page written OK"};
+        uprintf("   apply: first image sector 0x%lx - reached stage %lu (%s)\n",
+                (unsigned long)m_addr, (unsigned long)m_stage,
+                where[m_stage < 5 ? m_stage : 0]);
+        if (m_stage >= 2) uprintf("   apply: word after erase   = %08lx (ffffffff = erase took)\n",
+                                  (unsigned long)m_erased);
+        if (m_stage >= 3) uprintf("   apply: staging source word = %08lx (read OK)\n",
+                                  (unsigned long)m_srcw);
+        if (m_stage >= 4) uprintf("   apply: word after program  = %08lx\n", (unsigned long)m_progd);
+    }
+    uint32_t d_sectors = 0, d_size = 0, d_spins = 0;
+    if (fw_staging_last_apply_completed(&d_sectors, &d_size, &d_spins)) {
+        // From the in-flash record, so this survives the power cycle that a BOOTSEL
+        // recovery needs -- it describes the last apply that ran, not necessarily one
+        // that preceded THIS boot.
+        uprintf("   apply: last self-apply COMPLETED its copy (%lu sectors, %lu B, psm_spins=%lu)\n",
+                (unsigned long)d_sectors, (unsigned long)d_size, (unsigned long)d_spins);
+        uint32_t off = 0, got = 0, want = 0;
+        if (fw_staging_last_apply_diff(&off, &got, &want)) {
+            if (off == 0xFFFFFFFFu) {
+                uprintf("   apply: written image MATCHED the staged source exactly\n");
+            } else {
+                uprintf("   apply: written image DIFFERS at offset %lu (0x%lx): got %08lx want %08lx\n",
+                        (unsigned long)off, (unsigned long)off,
+                        (unsigned long)got, (unsigned long)want);
+            }
+        }
+    }
+    if (!fw_staging_apply_breadcrumb(&last_sector, &completed, &spins)) return;
+    uprintf("   apply: previous self-apply reached sector %lu, copy %s (psm_spins=%lu)\n",
+            (unsigned long)last_sector, completed ? "COMPLETE" : "INCOMPLETE",
+            (unsigned long)spins);
+}
+
+void emit_keymap_storage_line(void) {
+    uprintf("   keymap: stored_fmt=0x%02X current=0x%02X reset=%s%s\n",
+            (unsigned int)s_keymap_fmt_seen, (unsigned int)KEYMAP_STORAGE_CURRENT,
+            s_keymap_reset_ran ? "YES" : "no",
+            s_keymap_reset_ran ? "" : " (no discard needed)");
+    if (s_keymap_reset_ran) {
+        uprintf("   keymap: discard took %lums\n", (unsigned long)s_keymap_reset_ms);
+    }
+}
+
 void boot_banner_housekeeping_tick(void) {
     // Re-emit the boot identification banner a few times after power-on so a
     // `qmk console` attached shortly after boot still catches it (the one-shot
@@ -166,6 +247,8 @@ void boot_banner_housekeeping_tick(void) {
         } else if (timer_elapsed32(banner_timer) >= BOOT_BANNER_INTERVAL_MS) {
             emit_boot_banner();
             emit_idle_config();
+            emit_keymap_storage_line();
+            emit_apply_breadcrumb_line();
             banner_timer = timer_read32();
             banner_repeats++;
         }

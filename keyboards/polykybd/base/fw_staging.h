@@ -77,7 +77,56 @@ bool fw_staging_refused_unsigned(void);
 
 // Must be called once before any other fw_staging_* function.
 
+// Hold core1 out of flash for a caller doing its own flash work (EEPROM flush).
+// See the comment on the definition: QMK's wear-levelling backing store erases with
+// core1 running, which is only survivable while the window stays small.
+void fw_staging_core1_lockout_begin(void);
+void fw_staging_core1_lockout_end(void);
+
+// Re-CRC the staged image AS IT SITS IN FLASH. COMMIT only checks the bytes as they
+// arrived in RAM, so it says nothing about what actually landed -- and the applier is
+// about to erase the only working firmware on the strength of it.
+bool fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc);
+
+// Disarm an armed apply without applying it.
+void fw_staging_cancel_apply(void);
+
+// Whether the LAST self-apply (this boot or any earlier one, until the next BEGIN
+// erases the record) finished its copy. Recorded in flash rather than the watchdog
+// scratch because the case that matters is a half that never came back: the scratch
+// dies with the power, this does not.
+bool fw_staging_last_apply_completed(uint32_t *sectors, uint32_t *size, uint32_t *psm_spins);
+
+// Where the last self-apply's copy first disagreed with its source, checked by the
+// applier itself before it reset. 0xFFFFFFFF = the written image matched the staged
+// one exactly, so the copy is not the problem.
+bool fw_staging_last_apply_diff(uint32_t *offset, uint32_t *got, uint32_t *want);
+
+// How far the last self-apply's copy actually got, from the per-sector log it writes
+// into staging. Survives the power cycle a BOOTSEL recovery needs, which the watchdog
+// scratch does not -- and a copy that stops partway leaves no other trace at all.
+// How far the last self-apply's sector copy got, read back from the in-flash progress
+// log. The copy runs top-down (N-1 .. 1, then 0), so *lowest is the sector it stopped
+// at; false means no sector completed at all.
+bool fw_staging_apply_progress(uint32_t *lowest, uint32_t *highest, uint32_t *count);
+
+// True when the last self-apply erased its log and marked it started, i.e. it reached
+// the copy. Separates "died before the first sector" from "died erasing it".
+bool fw_staging_apply_started(void);
+
+// Bracket markers around the first image sector the copy touched: how far into that
+// one sector it got (1 = about to erase, 2 = erase returned, 3 = first page written),
+// which flash offset, and the sector's first word read back at stages 2 and 3.
+bool fw_staging_apply_marks(uint32_t *stage, uint32_t *addr, uint32_t *erased, uint32_t *progd, uint32_t *srcw);
+
 void fw_staging_init(void);
+
+// What the LAST self-apply managed before this boot, read out of the watchdog scratch
+// registers (they survive a watchdog reset, not a power cycle) and cleared at init.
+// Returns false when no apply preceded this boot. The apply routine cannot log: the
+// console is gone, interrupts are off and it never returns -- so this is how a half
+// that came back reports how far its copy got.
+bool fw_staging_apply_breadcrumb(uint32_t *last_sector, bool *completed, uint32_t *psm_spins);
 
 // Staging target: which flash region a begin/chunk/finalize sequence writes to,
 // and how finalize completes. FIRMWARE stages to the 2 MB firmware-update region

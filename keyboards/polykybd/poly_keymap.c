@@ -818,7 +818,11 @@ void housekeeping_task_user(void) {
     // Drain at most one queued macro label to the slave. Master-only (the slave is the
     // receiver), and one per pass because each bridge can spend its retries -- sixteen
     // of them back to back would be a visible stall on a link that is already unhappy.
-    if (is_keyboard_master()) {
+    // Not while an apply is armed: the slave has already been told to reboot, so every
+    // bridge here spends its full retry budget on a link that is going dark -- hundreds
+    // of ms of blocked main loop immediately before the self-flash, for a label nobody
+    // will read.
+    if (is_keyboard_master() && !fw_staging_commit_pending()) {
         poly_macro_label_sync_tick();
     }
 
@@ -826,22 +830,85 @@ void housekeeping_task_user(void) {
     // Both must run regardless of fw_up_active so the slave's erase actually
     // progresses and the master's apply-and-reboot fires after a successful
     // commit.
+    // Split across housekeeping passes ON PURPOSE, one stage per pass.
+    //
+    // Two reasons, and the second is why it is worth the three extra passes. (1) The
+    // console only leaves this board from the main loop, so a marker printed
+    // immediately before a call that never returns is simply lost -- which is how a
+    // hang here has repeatedly been invisible. Returning between stages gives each
+    // marker a main loop to go out on, so the log names the stage that wedged.
+    // (2) EVERY stage below touches flash or the split link, and they must not be
+    // interleaved with the rest of housekeeping while core1 is locked out.
     if (fw_staging_commit_pending()) {
-        // Release anything still held. From here the main loop never scans the
-        // matrix again (the self-flash below does not return), so a key that is
-        // physically down when the apply is armed would never have its release
-        // reported — the host keeps it registered and auto-repeats until USB
-        // drops at the reboot (field: hundreds of repetitions).
-        clear_keyboard();
-        poly_flash_rgb_now();
-        // Paint the "⟳Applying / Firmware⟳" notice and flush it fully BEFORE the
-        // blocking self-flash + reset below (which never returns), so the status
-        // OLED is completely refreshed — not torn mid-transition — as the apply
-        // begins. Runs on both halves; each draws its own side's word. Its ~26 ms
-        // of I2C also gives the clear_keyboard() report time to leave over USB.
-        oled_fw_apply_screen();
-        save_all_dirty();   // persist MRU/settings before the firmware swap — this path resets via watchdog (never returns) and skips shutdown_quantum. Transfer is done by commit, so the blocking flash write is safe here.
-        fw_staging_apply_and_reboot();
+        static uint8_t apply_step = 0;
+        switch (apply_step) {
+            case 0:
+                // Release anything still held. From here the main loop never scans the
+                // matrix again (the self-flash below does not return), so a key that is
+                // physically down when the apply is armed would never have its release
+                // reported — the host keeps it registered and auto-repeats until USB
+                // drops at the reboot (field: hundreds of repetitions).
+                clear_keyboard();
+                poly_flash_rgb_now();
+                // Paint the "⟳Applying / Firmware⟳" notice and flush it fully BEFORE the
+                // blocking self-flash below (which never returns), so the status OLED is
+                // completely refreshed — not torn mid-transition — as the apply begins.
+                // Runs on both halves; each draws its own side's word. Its ~26 ms of I2C
+                // also gives the clear_keyboard() report time to leave over USB.
+                oled_fw_apply_screen();
+                uprintf("APPLY 1/4: keys cleared, RGB + OLED flushed\n");
+                apply_step = 1;
+                return;
+            case 1:
+                // Persist MRU/settings before the firmware swap — this path resets via
+                // watchdog (never returns) and skips shutdown_quantum. Transfer is done
+                // by commit, so the blocking flash write is safe here.
+                //
+                // ⚠️ Under the core1 lockout: this can force a wear-levelling
+                // CONSOLIDATION, i.e. a flash erase, and QMK's backing store does not
+                // lock core1 out itself. Core1 was relaunched moments ago by the staging
+                // erase, so it is free to be fetching from XIP exactly when the QSPI
+                // leaves XIP mode — the bus then stalls and the erase never returns.
+                fw_staging_core1_lockout_begin();
+                save_all_dirty();
+                uprintf("APPLY 2/4: EEPROM flushed with core1 held off\n");
+                apply_step = 2;
+                return;
+            case 2: {
+                // Verify the staged bytes IN FLASH and report them, then RETURN so the
+                // line actually goes out. Everything below this point is a call that
+                // does not come back, and the console only drains from the main loop --
+                // a marker printed immediately before it is simply lost, which is how
+                // "did it enter the copy?" stayed unanswerable for several rounds.
+                uint32_t size = 0, want = 0, got = 0;
+                const bool good = fw_staging_verify_staged_flash(&size, &want, &got);
+                uprintf("APPLY 3/4: staged %lu B (%lu sectors) crc want=%08lx got=%08lx -> %s\n",
+                        (unsigned long)size,
+                        (unsigned long)((size + 4095u) / 4096u),
+                        (unsigned long)want, (unsigned long)got, good ? "OK" : "MISMATCH");
+                if (!good) {
+                    // Refuse rather than erase a working firmware with an image we
+                    // cannot vouch for. The board stays usable and the host can retry.
+                    uprintf("APPLY: refusing to overwrite firmware from a bad staged image\n");
+                    fw_staging_cancel_apply();
+                    fw_staging_core1_lockout_end();
+                    apply_step = 0;
+                    return;
+                }
+                apply_step = 3;
+                return;
+            }
+            default:
+                // Nothing but the call: if the 3/4 line above is the last thing in the
+                // log, the copy was entered and did not come back.
+                apply_step = 0;
+                fw_staging_apply_and_reboot();
+                // Only reached when the apply was refused (no valid staged image); it
+                // disarms itself there, so hand core1 back rather than leaving the RLE
+                // service down on a board that is going to keep running.
+                fw_staging_core1_lockout_end();
+                break;
+        }
     }
     if (fw_staging_reboot_pending()) {
         clear_keyboard();   // same as above: no further matrix scan before the reset
@@ -4533,12 +4600,22 @@ void keyboard_post_init_user(void) {
     // user datablock and the keymap are separate blocks with separate lifetimes —
     // the keymap survives a user-data re-init, which is exactly the case that would
     // otherwise slip through.
-    if (ee.keymap_layers_fmt != KEYMAP_STORAGE_CURRENT) {
+    // Timed and reported on the banner tick (note_keymap_storage) as well as printed
+    // here: this discard rewrites the capped keymap, the encoder map and the whole
+    // macro region -- a few kB of wear-levelled EEPROM -- inside post_init, before USB
+    // is up. The one-shot uprintf below is usually emitted before a console can see
+    // it, so a board that spends a long time here (or never leaves) looks simply dead.
+    const uint8_t  stored_fmt = ee.keymap_layers_fmt;
+    const bool     need_reset = (stored_fmt != KEYMAP_STORAGE_CURRENT);
+    const uint32_t reset_t0   = timer_read32();
+    if (need_reset) {
         uprintf("Keymap layer enum changed (fmt %u) - resetting dynamic keymap\n",
-                (unsigned)ee.keymap_layers_fmt);
+                (unsigned)stored_fmt);
         dynamic_keymap_reset_poly();
         stamp_keymap_layers_fmt();
     }
+    note_keymap_storage(stored_fmt, need_reset,
+                        need_reset ? timer_elapsed32(reset_t0) : 0);
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before

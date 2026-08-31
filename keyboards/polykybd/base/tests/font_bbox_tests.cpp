@@ -126,6 +126,15 @@ class FontBboxTest : public ::testing::Test {
     Box measure_mid(std::initializer_list<uint32_t> cps) {
         return measure(cps, midarr_, 1);
     }
+    // The ABSOLUTE-frame measurement, at a draw origin — what the idle jitter uses.
+    Box measure_abs(std::initializer_list<uint32_t> cps, int8_t ox, int8_t oy,
+                    const GFXfont *const *mid = nullptr, uint8_t mid_count = 0) {
+        std::vector<uint32_t> text(cps);
+        text.push_back(0);
+        Box b{};
+        kdisp_gfx_text_bbox_abs_in(pool_, 2, mid, mid_count, text.data(), ox, oy, &b.xmin, &b.xmax, &b.ymin, &b.ymax);
+        return b;
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -367,6 +376,126 @@ TEST(FontLookupTest, HalfFloorFloorsNegativeValues) {
     EXPECT_EQ(glyph_half_floor(-9), -5);   // truncation would give -4
     EXPECT_EQ(glyph_half_floor(0), 0);
     EXPECT_EQ(glyph_half_floor(-1), -1);
+}
+
+
+// ---------------------------------------------------------------------------
+// The ABSOLUTE-frame measurement (kdisp_gfx_text_bbox_abs_in).
+//
+// This is what the idle anti-burn-in jitter clamps against, and the reason it
+// exists is a real field bug: the jitter offset moves the WHOLE display list, but
+// the relative box only covers what the cursor laid out — so composited art was
+// left out of the slack calculation entirely. The relative form's own behaviour is
+// unchanged and still pinned by the tests above; these pin the difference.
+
+TEST_F(FontBboxTest, AbsoluteBoxIsTheRelativeBoxTranslatedToTheOrigin) {
+    const Box rel = measure({'a', 'a'});
+    const Box abs = measure_abs({'a', 'a'}, 28, 23);
+    EXPECT_EQ(abs.xmin, rel.xmin + 28);
+    EXPECT_EQ(abs.xmax, rel.xmax + 28);
+    EXPECT_EQ(abs.ymin, rel.ymin + 23);
+    EXPECT_EQ(abs.ymax, rel.ymax + 23);
+}
+
+TEST_F(FontBboxTest, AbsoluteAtOriginZeroMatchesTheRelativeBox) {
+    // The two forms are one walk; at origin (0,0) they must agree exactly, which is
+    // what makes the relative form's 34 existing expectations evidence for both.
+    EXPECT_EQ(measure_abs({'a', 'b', 'a'}, 0, 0), measure({'a', 'b', 'a'}));
+    EXPECT_EQ(measure_abs({0x10, 'a', 'b'}, 0, 0), measure({0x10, 'a', 'b'}));
+    EXPECT_EQ(measure_abs({'a', 0x16, 'b'}, 0, 0, midarr_, 1), measure_mid({'a', 0x16, 'b'}));
+}
+
+TEST_F(FontBboxTest, AbsoluteResolvesMoveWhereRelativeIgnoresIt) {
+    // MOVE names an absolute buffer position, so only the absolute form can place
+    // what follows it. Relative measures the 'a' at the pre-MOVE cursor; absolute
+    // measures it at (60,30) + the glyph's own offsets.
+    const Box rel = measure({0x0E, 60, 30, 'a'});
+    EXPECT_EQ(rel, measure({'a'}));                       // move ignored
+    const Box abs = measure_abs({0x0E, 60, 30, 'a'}, 28, 23);
+    EXPECT_EQ(abs.xmin, 61);                              // 60 + xOffset 1
+    EXPECT_EQ(abs.xmax, 66);                              // + width 6 - 1
+    EXPECT_EQ(abs.ymin, 20);                              // 30 + yOffset -10
+    EXPECT_EQ(abs.ymax, 29);                              // + height 10 - 1
+}
+
+TEST_F(FontBboxTest, AbsoluteMeasuresCompositeOpsThatRelativeSkips) {
+    // HALF/THIN plot the literal top-left at the cursor at ceil(w/2) x ceil(h/2).
+    // The tall face is 20x30 -> 10x15.
+    EXPECT_EQ(measure({0x0F, 0xE000}), (Box{0, 0, 0, 0}));   // relative: no extent
+    EXPECT_EQ(measure_abs({0x0F, 0xE000}, 28, 23), (Box{28, 37, 23, 37}));
+    EXPECT_EQ(measure_abs({0x11, 0xE000}, 28, 23), (Box{28, 37, 23, 37}));
+}
+
+TEST_F(FontBboxTest, AbsoluteMeasuresBadgeAndFrameRects) {
+    // BADGE (w,h,style) and FRAME (w,h) ink inside their own w x h box at the cursor.
+    EXPECT_EQ(measure({0x13, 15, 15, 2}), (Box{0, 0, 0, 0}));
+    EXPECT_EQ(measure_abs({0x13, 15, 15, 2}, 40, 10), (Box{40, 54, 10, 24}));
+    EXPECT_EQ(measure_abs({0x12, 20, 12}, 40, 10), (Box{40, 59, 10, 21}));
+}
+
+// ⚠️ Derive the rotated extent from ARITHMETIC, not from the helper — a test that
+// computes its expectation by calling the thing under test agrees by construction
+// and cannot catch a wrong result. Two angles have a knowable answer: a 0-degree
+// turn must give exactly the un-rotated HALF size, and a 90-degree turn the same
+// with the axes swapped. (Written after a "don't halve the width" mutation escaped
+// a test that had asked the helper what to expect.)
+TEST_F(FontBboxTest, RotHalfExtentIsTheHalvedSizeAtZeroDegrees) {
+    kdisp_rot_half_t rot;
+    kdisp_gfx_rot_half_extent(20, 30, 0, &rot);
+    EXPECT_EQ(rot.w, 10);   // ceil(20/2)
+    EXPECT_EQ(rot.h, 15);   // ceil(30/2)
+    kdisp_gfx_rot_half_extent(21, 31, 0, &rot);
+    EXPECT_EQ(rot.w, 11);   // odd sizes round UP, as the drawer's loop bound does
+    EXPECT_EQ(rot.h, 16);
+}
+
+TEST_F(FontBboxTest, RotHalfExtentSwapsTheAxesAtNinetyDegrees) {
+    kdisp_rot_half_t rot;
+    kdisp_gfx_rot_half_extent(20, 30, 6, &rot);   // 6 * 15 == 90 degrees
+    EXPECT_EQ(rot.w, 15);
+    EXPECT_EQ(rot.h, 10);
+}
+
+TEST_F(FontBboxTest, AbsoluteMeasuresARotatedCompositeGlyph) {
+    // ROT plots at the cursor too. The extent must be the ROTATED one — a rotated
+    // box is wider than the original — and it must come from the same helper the
+    // drawer uses, so the two cannot disagree about which pixels are touched.
+    kdisp_rot_half_t rot;
+    kdisp_gfx_rot_half_extent(20, 30, 8, &rot);   // the tall face's 20x30 at 120 deg
+    ASSERT_GT(rot.w, 0);
+    ASSERT_GT(rot.h, 0);
+    const Box abs = measure_abs({0x15, 8, 0xE000}, 50, 12);
+    EXPECT_EQ(abs, (Box{50, (int8_t)(50 + rot.w - 1), 12, (int8_t)(12 + rot.h - 1)}));
+    // A rotation genuinely widens the 20-wide source, so this is not measuring the
+    // un-rotated glyph by accident.
+    EXPECT_GT(rot.w, 10);
+}
+
+TEST_F(FontBboxTest, AbsoluteCoversMovedCompositeArtBesideCursorText) {
+    // The shipped ICON_CONTEXT_MENU shape: a cursor-laid-out glyph, then a MOVE, then
+    // composited art. The absolute box must span BOTH — this is exactly the case the
+    // relative box under-reports, which let the jitter carry the art off the panel.
+    const Box abs = measure_abs({0xE000, 0x0E, 90, 30, 0x0F, 0xE001}, 28, 23);
+    EXPECT_EQ(abs.xmin, 30);                 // the tall glyph at 28 + xOffset 2
+    EXPECT_EQ(abs.xmax, 99);                 // the half-scale art at 90, 10 wide
+    const Box rel_only = measure_abs({0xE000}, 28, 23);
+    EXPECT_LT(rel_only.xmax, abs.xmax);      // the art really extends the box
+}
+
+TEST_F(FontBboxTest, EmptyTextDegeneratesToThePointAtTheOrigin) {
+    // Whitespace-only reports a degenerate box AT the origin, so a caller's clamp
+    // sees a point where the legend is rather than a point at buffer (0,0).
+    EXPECT_EQ(measure_abs({' ', ' '}, 28, 23), (Box{28, 28, 23, 23}));
+    EXPECT_EQ(measure({' ', ' '}), (Box{0, 0, 0, 0}));   // relative form unchanged
+}
+
+TEST_F(FontBboxTest, AbsoluteStillSkipsOpArgumentsSoTheyAreNotMeasuredAsGlyphs) {
+    // The op-argument skipping is the interpreter's worst bug history, and resolving
+    // MOVE must not weaken it: (15,15) is HALF HALF and (19,19) is BADGE BADGE.
+    EXPECT_EQ(measure_abs({0x0E, 15, 15, 'a'}, 0, 0), measure_abs({0x0E, 15, 15, 'a'}, 0, 0));
+    const Box b = measure_abs({0x0E, 15, 15, 'a'}, 0, 0);
+    EXPECT_EQ(b.xmin, 16);   // 'a' at x=15 + xOffset 1 — one glyph, not three
+    EXPECT_EQ(b.xmax, 21);
 }
 
 }  // namespace

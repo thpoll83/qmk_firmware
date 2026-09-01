@@ -421,6 +421,54 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     tag-anchored history question, not just merge-base reasoning — and note the tag
     itself resolves fine (`git rev-parse <tag>` succeeds), so a tag-exists check
     proves nothing. Unshallowing took **45 s** here; the count went 84 commits.
+- **`-Wcast-align` is on for PolyKybd's OWN sources, and it exists for the
+  HID-apply brick class.** `fw_staging`'s page buffer was `static uint8_t
+  page_buf[256]` (alignment 1) word-copied through a `(uint32_t *)` cast; the
+  linker put it at a byte offset, the unaligned `STMIA` HardFaulted the M0+ in a
+  function that never returns, and it shipped in a release. The warning names
+  exactly that — *"cast increases required alignment of target type"* — and with
+  `-Werror` already on it is a build failure on the PR that writes it. That is
+  the only place a bisect can find this class, because the brick itself was a
+  **layout** effect: a macro PR grew `.bss` and moved the buffer, so the guilty
+  commit never touched the failing code.
+  - ⚠️ **Scoped by path via the `$<` per-recipe filter** (`rules.mk`, the same
+    mechanism the doom `EXTRAFLAGS` block uses). `EXTRAFLAGS` otherwise lands on
+    **every** compile line — upstream QMK, ChibiOS, pico-sdk — which is the trap
+    that kept CodeQL out of this repo.
+  - ⚠️ **The WHOLE `doom/` tree is excluded, not just the vendored engine, and
+    the reason for our own sources is worth knowing: `doom_arena_at()` returns
+    `uint8_t *` because that signature IS the pack ABI** (`doom_pack_abi.h`,
+    handed to a **signed** `.plyx`). So every `(doom_mirror_t *)doom_arena_at(…)`
+    is a widening cast the check cannot be satisfied about without editing a
+    cross-boundary contract — which is not something to do on a warning's
+    account. `void *` would be the better type for untyped arena storage; it was
+    tried and reverted for exactly that reason. The offsets are
+    `_Static_assert`ed 4-aligned in `doom_arena.h` instead, which is the
+    substance, and the one such cast **outside** the doom tree (`split_sync.c`'s
+    mirror handler) carries a narrow `#pragma` pointing at those asserts.
+  - ⚠️ **A path filter that matches nothing FAILS OPEN** — the flag never applies
+    and the guard looks installed while doing nothing. Verify by compiling a
+    deliberate misalignment in a PolyKybd source and confirming the build
+    **fails**, not by reading the make output.
+  - **`void *` casts do not warn** (GCC exempts them), so `bridge_helper.c`'s
+    split-link CRC store is unaffected — and is separately safe, since every
+    caller passes a struct whose first member is a `uint32_t`.
+  - **It found two real latent instances of the same shape**, both now asserted
+    rather than assumed: `doom_mode.c` casts the core1 **stack pointer** out of a
+    `uint8_t *` pool (where a misalignment is worse than the applier's HardFault
+    — 8-aligned base, both offsets multiples of 8, which is also what AAPCS
+    demands), and every `doom_arena_at()` consumer relies on arena offsets that
+    nothing checked. ⚠️ Do **not** launder such a cast through `uintptr_t` to
+    silence the warning — that proves nothing and hides the next one.
+  - ⚠️ **Verified the hard way, and it earned its keep immediately**: the first
+    build with the flag FAILED on `split_sync.c`, which is simultaneously the
+    proof that the path filter matches (it would otherwise fail open) and a real
+    find. Do not take a clean build as evidence the flag is active — take a build
+    that fails on a deliberate misalignment.
+  - The clean-up it required was itself worth having: the OLED helpers took a
+    `uint32_t[]`, cast it down to `char *` at the call and back up inside, which
+    was safe only by convention. They take `uint32_t *` now.
+
 - ⚠️ **When an upstream merge breaks the build, look at the vendored DOOM engine
   FIRST — a new upstream warning lands there, not on our own sources.** QMK builds
   with `-Werror`, so *any* warning upstream adds to `builddefs/common_rules.mk`

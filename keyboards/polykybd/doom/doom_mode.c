@@ -129,6 +129,19 @@ static void doom_engine_start(void) {
     // stack at the tail of the pool.
     doom_core1_reset();
 #ifdef POLYKYBD_DOOM_PACK
+    // ⚠️ This widens the alignment requirement (uint8_t* -> uint32_t*) on a
+    // CORE1 STACK POINTER, where an unaligned result is worse than the HardFault
+    // that bricked the applier (qmk#258, a `static uint8_t` page buffer that was
+    // word-copied). It is safe, and these asserts are the proof rather than a
+    // convention: the pool base is 8-aligned by the ldscript (pinned at
+    // 0x20000000 for the pack flavour) and both offsets are multiples of 8, which
+    // is also what AAPCS requires of a stack pointer. (-Wcast-align does not
+    // reach this file — the doom tree is excluded in rules.mk because it carries
+    // the pack ABI — so these asserts, not the compiler, are the guard here.)
+    _Static_assert(DOOM_POOL_BYTES % 8u == 0u,
+                   "overlay pool size must keep the core1 stack 8-aligned");
+    _Static_assert(DOOM_ARENA_STACK_BYTES % 8u == 0u,
+                   "core1 stack size must keep its base 8-aligned (AAPCS)");
     uint32_t *stack_bottom = (uint32_t *)(s_fb + DOOM_POOL_BYTES - DOOM_ARENA_STACK_BYTES);
 #else
     // (uintptr_t detour: negative offsets from a zero-size linker symbol trip

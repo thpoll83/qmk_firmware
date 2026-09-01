@@ -34,8 +34,8 @@ extern const GFXfont NotoSans_Regular_Small_15px7b;
 // Render `value` as a char32 (U"...") display string into `buffer`. The display
 // pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
 // glyph is one uint32_t codepoint. `buffer_len` is the byte size of the buffer.
-static inline void digits_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value, uint8_t base) {
-    uint32_t* out = (uint32_t*)buffer;
+static inline void digits_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint8_t value, uint8_t base) {
+    uint32_t* out = buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i   = 0;
     if (value >= base * base && i < cap) out[i++] = U'0' + (value / (base * base)) % base;
@@ -44,14 +44,14 @@ static inline void digits_to_u32_string(char* buffer, uint8_t buffer_len, uint8_
     if (i < cap) out[i] = 0;
 }
 
-void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
+void num_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint8_t value) {
     digits_to_u32_string(buffer, buffer_len, value, 10);
 }
 
 // 16-bit decimal, no leading zeros (0 renders as "0"). digits_to_u32_string above is
 // uint8_t-only; the hue-in-degrees readout needs three digits up to 359.
-void num16_to_u32_string(char* buffer, uint8_t buffer_len, uint16_t value) {
-    uint32_t* out = (uint32_t*)buffer;
+void num16_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint16_t value) {
+    uint32_t* out = buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i   = 0;
     uint16_t  div = 10000;
@@ -65,8 +65,8 @@ void num16_to_u32_string(char* buffer, uint8_t buffer_len, uint16_t value) {
 // Widen an ASCII C string into the 32-bit codepoint string the kdisp text pipeline
 // expects (kdisp_write_gfx_text takes const uint32_t*). NUL-terminated, never
 // overruns `buffer_len`. Used for the font-pack bundle name on the flash screen.
-void ascii_to_u32_string(char* buffer, uint8_t buffer_len, const char* s) {
-    uint32_t* out = (uint32_t*)buffer;
+void ascii_to_u32_string(uint32_t* buffer, uint8_t buffer_len, const char* s) {
+    uint32_t* out = buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i   = 0;
     if (s) {
@@ -75,8 +75,8 @@ void ascii_to_u32_string(char* buffer, uint8_t buffer_len, const char* s) {
     if (i < cap) out[i] = 0;
 }
 
-void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
-    uint32_t* out = (uint32_t*)buffer;
+void hex_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint8_t value) {
+    uint32_t* out = buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i   = 0;
     if (value >= 16 && i < cap) { uint8_t hi = value / 16; out[i++] = (hi < 10 ? U'0' + hi : U'A' + hi - 10); }
@@ -150,13 +150,13 @@ void oled_draw_text_right(const GFXfont *const *font, int8_t right_x, int8_t y, 
 // Draw `value` right-aligned so it ends on `right_x`.
 void oled_draw_num_right(const GFXfont *const *font, int8_t right_x, int8_t y, uint8_t value) {
     uint32_t buf[6];
-    num_to_u32_string((char*) buf, sizeof(buf), value);
+    num_to_u32_string(buf, sizeof(buf), value);
     oled_draw_text_right(font, right_x, y, buf);
 }
 
 void oled_draw_num16_right(const GFXfont *const *font, int8_t right_x, int8_t y, uint16_t value) {
     uint32_t buf[8];
-    num16_to_u32_string((char*) buf, sizeof(buf), value);
+    num16_to_u32_string(buf, sizeof(buf), value);
     oled_draw_text_right(font, right_x, y, buf);
 }
 
@@ -381,7 +381,7 @@ void oled_telemetry_screen(void) {
     const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
     for (uint8_t i = 0; i < count; ++i) {
         uint32_t txt[24];
-        ascii_to_u32_string((char*)txt, sizeof(txt), lines[i]);
+        ascii_to_u32_string(txt, sizeof(txt), lines[i]);
         int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
         kdisp_gfx_text_bbox(fonts, 1, txt, &x0, &x1, &y0, &y1);
         const int8_t w = (int8_t)(x1 - x0 + 1);

@@ -201,7 +201,7 @@ void oled_update_buffer(void) {
     if (!locks_side) {
         // Layer icon + number
         pdraw_glyph(g_all_fonts, g_all_font_count, 0, 41, 0x80 /*ICON_LAYER*/, buf);
-        hex_to_u32_string((char*)nbuf, sizeof(nbuf), get_highest_layer(gl->layer));
+        hex_to_u32_string(nbuf, sizeof(nbuf), get_highest_layer(gl->layer));
         pdraw_text(tinyFont, 1, 18, 38, nbuf, buf);
         // Layout name (short), Nano 10px at NATIVE size, centered. LAYOUT_NAME_BASE
         // is picked so the cap top still lands on logical row 52, exactly where the
@@ -210,7 +210,7 @@ void oled_update_buffer(void) {
         pdraw_brightness(ls->contrast, 82, buf);
         // Typing speed: dial over the value
         pdraw_bitmap(wpm_gauge_bitmap, (P_W - WPM_ICON_W) / 2, 93, WPM_ICON_W, WPM_ICON_H, buf);
-        num_to_u32_string((char*)nbuf, sizeof(nbuf), get_current_wpm());
+        num_to_u32_string(nbuf, sizeof(nbuf), get_current_wpm());
         pdraw_text_center(tinyFont, 1, 110, nbuf, buf);
     } else {
         pdraw_glyph_center(g_all_fonts, g_all_font_count, 36, gl->led_state.num_lock  ? 0x8D : 0x8C, buf);
@@ -255,7 +255,7 @@ void oled_update_buffer_fw_update(void) {
         const char* bname = fontpack_slot_name(fw_staging_fontpack_slot_off());
         kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Fonts:");
         if (bname) {
-            ascii_to_u32_string((char*)buffer, sizeof(buffer), bname);
+            ascii_to_u32_string(buffer, sizeof(buffer), bname);
             kdisp_write_gfx_text(smallFont, 1, 44, 10, buffer);
         }
         oled_fw_update_percent(smallFont, 24, 22, pct);

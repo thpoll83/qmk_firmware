@@ -71,8 +71,29 @@ extern "C" {
 // upstream's ~58 K (zone + wrapped-malloc heap) working set.
 #define DOOM_ARENA_ZONE_OFF   (DOOM_ARENA_MIRROR_OFF + DOOM_ARENA_MIRROR_BYTES)
 
+// ⚠️ Every arena offset must keep a 4-byte-aligned base 4-byte aligned: callers
+// cast the result to structs holding uint32_t (doom_mirror_t), and an unaligned
+// 32-bit access is a HardFault on the M0+ — the same failure that bricked the
+// firmware applier (qmk#258). These asserts are what make that a build error
+// instead of arithmetic nobody re-checks when a region is resized.
+_Static_assert(DOOM_ARENA_FB_OFF      % 4u == 0u, "arena offset must stay 4-aligned");
+_Static_assert(DOOM_ARENA_PD_OFF      % 4u == 0u, "arena offset must stay 4-aligned");
+_Static_assert(DOOM_ARENA_VPATCH_OFF  % 4u == 0u, "arena offset must stay 4-aligned");
+_Static_assert(DOOM_ARENA_COMPOSE_OFF % 4u == 0u, "arena offset must stay 4-aligned");
+_Static_assert(DOOM_ARENA_MIRROR_OFF  % 4u == 0u, "arena offset must stay 4-aligned");
+_Static_assert(DOOM_ARENA_ZONE_OFF    % 4u == 0u, "arena offset must stay 4-aligned");
+
 // Arena base (= first byte after the engine statics) + offset, or NULL while
 // game mode is inactive (doom_mode.c).
+//
+// ⚠️ Stays `uint8_t *` because this signature IS the pack ABI — it is handed to
+// a loaded .plyx as `s_fw_api.arena_at` (doom_pack_abi.h). `void *` would be the
+// better type for untyped arena storage and would make every
+// `(doom_mirror_t *)doom_arena_at(...)` exempt from -Wcast-align, but changing a
+// cross-boundary contract that a SIGNED pack is built against is not something
+// to do on a warning's account. The alignment those casts rely on is asserted
+// above instead, which is the substance; the one cast site outside the doom tree
+// (split_sync.c) carries a narrow pragma pointing here.
 uint8_t *doom_arena_at(unsigned offset);
 
 #ifdef __cplusplus

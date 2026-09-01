@@ -120,10 +120,44 @@ static bool validate_and_append(const uint8_t *base, uint32_t cap, uint16_t *out
         if (tbl[i].glyph_off >= h->total_size || tbl[i].bitmap_off >= h->total_size) {
             return false;  // dangling offset
         }
+        // ⚠️ glyph_off is FILE-CONTROLLED and is cast to PolyColGlyph*, whose
+        // first member is a uint16_t — so an ODD offset makes every glyph lookup
+        // an unaligned 16-bit read, which is a HardFault on the M0+. A .plyf
+        // rides the UNSIGNED resource transport (SECURITY_AUDIT.md FW-9 tail:
+        // "the exposure is parser bugs"), and the pack lives in flash and is
+        // re-loaded at boot, so a crafted odd offset is a PERSISTENT fault loop
+        // needing BOOTSEL to clear. Found by -Wcast-align (see rules.mk), which
+        // is the whole argument for that flag.
+        if ((tbl[i].glyph_off & 1u) != 0u) {
+            return false;  // misaligned glyph array
+        }
+        // The old check bounded only the START of the glyph array. The array is
+        // (last - first + 1) records long, all read on lookup, so a truthful
+        // offset with an oversized range still walks off the end of the pack.
+        if (tbl[i].last < tbl[i].first) {
+            return false;  // inverted range
+        }
+        {
+            // Division, not multiplication: `count * sizeof(GFXglyph)` overflows
+            // a uint32 for a hostile `last`, and 64-bit arithmetic would pull a
+            // libcall into a Cortex-M0+ for no reason. `total_size - glyph_off`
+            // cannot underflow — glyph_off < total_size is checked above.
+            uint32_t count = tbl[i].last - tbl[i].first + 1u;
+            if (count > (h->total_size - tbl[i].glyph_off) / sizeof(GFXglyph)) {
+                return false;  // glyph array runs past the end of the pack
+            }
+        }
         GFXfont *f = &s_pack[s_pack_count];
         // bitmap/glyph are non-const in GFXfont; we only ever read them.
         f->bitmap   = (uint8_t *)(base + tbl[i].bitmap_off);
+        // -Wcast-align (rules.mk) is right that this widens alignment; the
+        // even-offset check above is what makes it safe, and it is a RUNTIME
+        // check because the offset is runtime data. Suppressed for this one
+        // line, with that validation as the proof.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
         f->glyph    = (GFXglyph *)(base + tbl[i].glyph_off);
+#pragma GCC diagnostic pop
         f->first    = tbl[i].first;
         f->last     = tbl[i].last;
         f->yAdvance = tbl[i].yAdvance;

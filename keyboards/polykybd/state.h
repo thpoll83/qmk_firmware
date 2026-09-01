@@ -17,8 +17,16 @@
 // falls back to PULSE at runtime, so the value is always safe to accept/persist.
 // EDEN loops the "Eden" boot animation as a screensaver (split72 only): it reuses
 // the normal idle machinery (DISP_IDLE flag → wake on key + TURN_OFF suspend) but
-// renders looping Eden frames on both halves instead of the pulse; on split42 the
-// no-op anim stubs leave it behaving like PULSE.
+// renders looping Eden frames on both halves instead of the pulse.
+// ⚠️ On split42 EDEN does NOT degrade to the pulse — it degrades to NOTHING, which is
+// the one thing an anti-burn-in setting must never do. The animation is
+// split72-only (anim/startup_anim.c is #if'd on the board, with no-op stubs
+// otherwise), and every other idle painter stands down for EDEN by design:
+// kdisp_idle() returns immediately, the engage branch holds contrast steady at
+// EDEN_IDLE_BRIGHTNESS instead of computing a pulse, and update_displays()
+// early-returns while DISP_IDLE. So the legends simply FREEZE, dim and unmoving,
+// until the TURN_OFF suspend. That is why POLY_DEFAULT_IDLE_STYLE below is
+// board-gated — do not hand split42 an EDEN default.
 // Values are append-only (persisted + on the wire in poly_sync_t.idle_style).
 enum poly_idle_style {
     IDLE_STYLE_PULSE  = 0,
@@ -27,6 +35,18 @@ enum poly_idle_style {
     IDLE_STYLE_EDEN   = 3,   // looping "Eden" boot animation screensaver (host: IdleStyle.EDEN)
     IDLE_STYLE_COUNT
 };
+
+// The idle style a board comes up with when nothing has been chosen. EDEN wherever
+// the animation exists, because a screensaver that repaints the whole keycap is
+// strictly better anti-burn-in than a pulse that never moves a lit pixel; PULSE
+// elsewhere, per the ⚠️ above — the stubs would leave split42 with no anti-burn-in
+// at all. Gated on the SAME macro anim/startup_anim.c compiles itself on, so the
+// two cannot drift into a default whose renderer isn't in the image.
+#if defined(KEYBOARD_polykybd_split72)
+#    define POLY_DEFAULT_IDLE_STYLE IDLE_STYLE_EDEN
+#else
+#    define POLY_DEFAULT_IDLE_STYLE IDLE_STYLE_PULSE
+#endif
 
 // Glyph-script override (HID cmd 30, protocol v9+). Replaces the language-layer
 // letter/digit legends with an alternative script's glyphs while leaving overlays
@@ -420,9 +440,23 @@ typedef struct _poly_eeconf_t {
     // value: `poly_eeconf_t ee = {0}` in eeconfig_init_user() leaves it zero on a
     // fresh EEPROM too, and a fresh EEPROM wants the reset just as much.
     uint8_t  keymap_layers_fmt;
+    // Whether `idle_style` above was written by a build that knew about
+    // POLY_DEFAULT_IDLE_STYLE. It exists because idle_style is the one setting whose
+    // default MOVED, and on the old format an explicit PULSE and "never chosen" are
+    // the SAME BYTE: PULSE is 0 and QMK's wear levelling hands back cleared bytes as
+    // zero (the trap that made latin_assign read as "every key hosts 'a'"). So no
+    // scheme can rescue an old board's deliberate PULSE — it is not recorded anywhere
+    // — and the honest thing is to migrate every pre-sentinel board to the board
+    // default once, then never touch it again. Anything but IDLE_STYLE_FMT_OK means
+    // "predates the default change, or fresh"; load_user_eeconf() substitutes
+    // POLY_DEFAULT_IDLE_STYLE and save_user_settings() stamps the marker with the
+    // block it guards, so from the first save onwards the stored style is verbatim
+    // and a LATER default change cannot silently overwrite a real choice.
+    uint8_t  idle_style_fmt;
 } poly_eeconf_t;
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
+#define IDLE_STYLE_FMT_OK   0x3C   // poly_eeconf_t.idle_style holds a real choice (see above)
 // Format versions for latin_ex_wide + latin_assign, oldest first. Anything
 // unrecognised means the legacy one-byte-per-letter nibble pairs in latin_ex[].
 #define LATIN_PICK_MIGRATED    0xA5 // 6-bit fields, case-BLOCKED; no assignment map

@@ -96,6 +96,13 @@ uint8_t scratch_buffer[BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT];
 static int8_t s_draw_ox = 0;
 static int8_t s_draw_oy = 0;
 
+// Saturating narrow to int8_t. Buffer coordinates and the jitter offset are both
+// int8_t, and their sum can leave the range on a legend near the right edge — where
+// a silent wrap would draw the art at a WRONG place rather than clipping it away.
+static inline int8_t sat8(int16_t v) {
+    return (int8_t)((v < -128) ? -128 : ((v > 127) ? 127 : v));
+}
+
 void kdisp_set_draw_offset(int8_t ox, int8_t oy) {
     s_draw_ox = ox;
     s_draw_oy = oy;
@@ -137,6 +144,29 @@ void kdisp_set_gfx_scanline(bool scanline) {
 // glyphs (the boot-splash logo), where 1-on/1-off stripes read as flicker.
 void kdisp_set_gfx_scanline2(bool scanline) {
     s_gfx_scanline = scanline ? 2 : 0;
+}
+
+// Plot one INK pixel, honouring the two static plotter modes.
+//
+// ⚠️ The modes used to live inside the two char writers only — exactly the shape
+// that left the jitter offset covering the text and nothing else (see gfx_text_run).
+// Every composite display-list op (\x0F HALF, \x11 THIN, \x15 ROT, \x13 BADGE,
+// \x12 FRAME) plots through a primitive of its own, so under EDEN's scanline the
+// letters came out half-density while the composited art stayed fully lit: the
+// context-menu pointer, and the scroll-lock / media-stop badges, which are composite
+// art ONLY and so ignored the dimming entirely. Routing every ink primitive through
+// one plot point means a sixth op inherits both modes by construction.
+//
+// ⚠️ Deliberately NOT pushed down into SET_PIXEL_CLIPPED itself: ground fills and
+// bitmap blits (kdisp_fill_rect, kdisp_draw_bitmap, the tab/MRU chrome, clear_line)
+// must stay unconditional. The split is what the primitive IS — glyph and badge ink
+// follows the modes, a background does not — not a list of call sites to keep in sync.
+static inline void kdisp_plot_ink(int x, int y) {
+    if (s_gfx_erase) {
+        CLEAR_PIXEL_CLIPPED(x, y);
+    } else if (!scanline_skip_row(y)) {
+        SET_PIXEL_CLIPPED(x, y);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -190,7 +220,7 @@ void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, in
                     if (byte & (1u << (sy & 7))) { lit = true; break; }
                 }
             }
-            if (lit) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+            if (lit) { kdisp_plot_ink(x + dx, y + dy); }
         }
     }
 }
@@ -214,19 +244,10 @@ void kdisp_draw_glyph_thin_at(const GFXfont *const *fonts, uint8_t num_fonts, in
         for (int16_t dx = 0; dx < hw; ++dx) {
             const int16_t sx = dx * 2;
             uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
-            if (byte & (1u << (sy & 7))) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+            if (byte & (1u << (sy & 7))) { kdisp_plot_ink(x + dx, y + dy); }
         }
     }
 }
-
-// sin(k * 15 deg) in 8.8 fixed point, k = 0..23. cos(k) is sin(k + 6), so one
-// table covers both. 24 steps is the whole resolution the op offers: at these glyph
-// sizes a finer angle changes no pixels, and the table stays 48 bytes.
-static const int16_t s_sin15[24] = {
-       0,   66,  128,  181,  222,  247,  256,  247,
-     222,  181,  128,   66,    0,  -66, -128, -181,
-    -222, -247, -256, -247, -222, -181, -128,  -66,
-};
 
 // Rotate a glyph COUNTER-CLOCKWISE by step*15 degrees, then halve it, and plot the
 // result at the literal (x, y) — same "composite one icon into a hint" contract as
@@ -240,9 +261,9 @@ static const int16_t s_sin15[24] = {
 // full-resolution positions straight back into the source, so the cost is bounded
 // by the OUTPUT size and the stack is untouched.
 //
-// Screen y runs DOWN, so a visually counter-clockwise turn is a negative angle in
-// this arithmetic — hence the (24 - step) index. The op's argument is stated in the
-// direction a reader means by "counter-clockwise", not in the sign the maths uses.
+// The rotated frame itself (angle, centre, origin, plotted size) is computed by
+// kdisp_gfx_rot_half_extent() in font_lookup.c — see there for why it lives beside
+// the bounding-box interpreter rather than here.
 void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, uint8_t step) {
     const GFXfont  *font  = NULL;
     const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
@@ -254,28 +275,15 @@ void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts
     if (w <= 0 || h <= 0) return;
     const uint8_t cb = glyph_col_bytes((uint8_t)h);
 
-    const uint8_t idx = (uint8_t)((24u - (step % 24u)) % 24u);
-    const int32_t ct  = s_sin15[(idx + 6u) % 24u];
-    const int32_t st  = s_sin15[idx];
-
-    // Centre of the source box, and the output extent, both in 8.8. The extent comes
-    // from forward-rotating the four corners: a rotated box is wider than the original.
-    const int32_t cx = ((int32_t)(w - 1) << 8) / 2;
-    const int32_t cy = ((int32_t)(h - 1) << 8) / 2;
-    int32_t x0 = INT32_MAX, x1 = INT32_MIN, y0 = INT32_MAX, y1 = INT32_MIN;
-    for (uint8_t c = 0; c < 4; ++c) {
-        const int32_t sx = (c & 1u) ? cx : -cx;
-        const int32_t sy = (c & 2u) ? cy : -cy;
-        const int32_t dx = (sx * ct - sy * st) >> 8;
-        const int32_t dy = (sx * st + sy * ct) >> 8;
-        if (dx < x0) x0 = dx;
-        if (dx > x1) x1 = dx;
-        if (dy < y0) y0 = dy;
-        if (dy > y1) y1 = dy;
-    }
-    const int16_t ow = (int16_t)(((x1 - x0) >> 8) + 1);
-    const int16_t oh = (int16_t)(((y1 - y0) >> 8) + 1);
-    const int16_t hw = (ow + 1) / 2, hh = (oh + 1) / 2;
+    // Geometry (angle, source centre, rotated-frame origin, plotted size) comes from
+    // font_lookup.c so the bounding-box interpreter measures EXACTLY what is plotted
+    // here — see kdisp_gfx_rot_half_extent().
+    kdisp_rot_half_t rot;
+    kdisp_gfx_rot_half_extent(w, h, step, &rot);
+    const int32_t ct = rot.ct, st = rot.st;
+    const int32_t cx = rot.cx, cy = rot.cy;
+    const int32_t x0 = rot.x0, y0 = rot.y0;
+    const int16_t hw = rot.w, hh = rot.h;
 
     for (int16_t dy = 0; dy < hh; ++dy) {
         for (int16_t dx = 0; dx < hw; ++dx) {
@@ -295,7 +303,7 @@ void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts
                 const uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)ix * cb + (iy >> 3)]);
                 if (byte & (1u << (iy & 7))) lit = true;
             }
-            if (lit) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+            if (lit) { kdisp_plot_ink(x + dx, y + dy); }
         }
     }
 }
@@ -313,10 +321,10 @@ void kdisp_draw_glyph_double_at(const GFXfont *const *fonts, uint8_t num_fonts, 
         for (int16_t sy = 0; sy < h; ++sy) {
             uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
             if (!(byte & (1u << (sy & 7)))) continue;
-            SET_PIXEL_CLIPPED(x + sx * 2,     y + sy * 2);
-            SET_PIXEL_CLIPPED(x + sx * 2 + 1, y + sy * 2);
-            SET_PIXEL_CLIPPED(x + sx * 2,     y + sy * 2 + 1);
-            SET_PIXEL_CLIPPED(x + sx * 2 + 1, y + sy * 2 + 1);
+            kdisp_plot_ink(x + sx * 2,     y + sy * 2);
+            kdisp_plot_ink(x + sx * 2 + 1, y + sy * 2);
+            kdisp_plot_ink(x + sx * 2,     y + sy * 2 + 1);
+            kdisp_plot_ink(x + sx * 2 + 1, y + sy * 2 + 1);
         }
     }
 }
@@ -381,18 +389,18 @@ void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
     if (r > (width - 1) / 2)  r = (width - 1) / 2;
     if (r > (height - 1) / 2) r = (height - 1) / 2;
     // straight edges
-    for (int i = x0 + r; i <= x1 - r; ++i) { SET_PIXEL_CLIPPED(i, y0); SET_PIXEL_CLIPPED(i, y1); }
-    for (int j = y0 + r; j <= y1 - r; ++j) { SET_PIXEL_CLIPPED(x0, j); SET_PIXEL_CLIPPED(x1, j); }
+    for (int i = x0 + r; i <= x1 - r; ++i) { kdisp_plot_ink(i, y0); kdisp_plot_ink(i, y1); }
+    for (int j = y0 + r; j <= y1 - r; ++j) { kdisp_plot_ink(x0, j); kdisp_plot_ink(x1, j); }
     // corner arcs (centres at the four inset corner points)
     int cxl = x0 + r, cxr = x1 - r, cyt = y0 + r, cyb = y1 - r;
     int f = 1 - r, ddF_x = 1, ddF_y = -2 * r, px = 0, py = r;
     while (px < py) {
         if (f >= 0) { py--; ddF_y += 2; f += ddF_y; }
         px++; ddF_x += 2; f += ddF_x;
-        SET_PIXEL_CLIPPED(cxr + px, cyt - py); SET_PIXEL_CLIPPED(cxr + py, cyt - px); // top-right
-        SET_PIXEL_CLIPPED(cxl - px, cyt - py); SET_PIXEL_CLIPPED(cxl - py, cyt - px); // top-left
-        SET_PIXEL_CLIPPED(cxr + px, cyb + py); SET_PIXEL_CLIPPED(cxr + py, cyb + px); // bottom-right
-        SET_PIXEL_CLIPPED(cxl - px, cyb + py); SET_PIXEL_CLIPPED(cxl - py, cyb + px); // bottom-left
+        kdisp_plot_ink(cxr + px, cyt - py); kdisp_plot_ink(cxr + py, cyt - px); // top-right
+        kdisp_plot_ink(cxl - px, cyt - py); kdisp_plot_ink(cxl - py, cyt - px); // top-left
+        kdisp_plot_ink(cxr + px, cyb + py); kdisp_plot_ink(cxr + py, cyb + px); // bottom-right
+        kdisp_plot_ink(cxl - px, cyb + py); kdisp_plot_ink(cxl - py, cyb + px); // bottom-left
     }
 }
 
@@ -439,19 +447,17 @@ void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
             const int hins = rr_row_inset(j, hy0, hy1, hr);
             const int ha = hx0 + hins, hb = hx1 - hins;
             for (int i = a; i <= b; ++i) {
-                if (i < ha || i > hb) SET_PIXEL_CLIPPED(i, j);
+                if (i < ha || i > hb) kdisp_plot_ink(i, j);
             }
             continue;
         }
-        for (int i = a; i <= b; ++i) SET_PIXEL_CLIPPED(i, j);
+        for (int i = a; i <= b; ++i) kdisp_plot_ink(i, j);
     }
 }
 
 // Draw a single character at bottom-left (x,y); ch is a 32-bit Unicode codepoint
 // (SMP codepoints > 0xFFFF allowed).
 int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, int8_t cy_radius) {
-    x += s_draw_ox;   // anti-burn-in jitter offset (0 except during an idle relocation redraw)
-    y += s_draw_oy;
     const GFXfont * currentFont = 0;
     uint32_t first = 0;
     uint32_t last = 0;
@@ -615,11 +621,7 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
             const uint8_t  vmsk = (uint8_t)(1u << (yy & 7));
             for (xx = 0; xx < w; xx++) {
                 if (pgm_read_byte(&bitmap[base + (uint16_t)xx * cb]) & vmsk) {
-                    if (s_gfx_erase) {
-                        CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
-                    } else if (!scanline_skip_row(y + yo + yy)) {
-                        SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
-                    }
+                    kdisp_plot_ink(x + xo + xx, y + yo + yy);
                 }
             }
         }
@@ -643,8 +645,6 @@ static int8_t kdisp_write_gfx_char_half(const GFXfont *const *fonts, uint8_t num
     const GFXfont  *font  = NULL;
     const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
     if (glyph == NULL || font == NULL) return 0;
-    x += s_draw_ox;   // anti-burn-in jitter offset, as the full-size writer applies
-    y += s_draw_oy;
     const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
     const uint16_t bo = glyph_bitmap_offset(glyph);
     const int16_t  w  = glyph_width(glyph);
@@ -667,11 +667,7 @@ static int8_t kdisp_write_gfx_char_half(const GFXfont *const *fonts, uint8_t num
                 }
             }
             if (!lit) continue;
-            if (s_gfx_erase) {
-                CLEAR_PIXEL_CLIPPED(gx0 + dx, gy0 + dy);
-            } else if (!scanline_skip_row(gy0 + dy)) {
-                SET_PIXEL_CLIPPED(gx0 + dx, gy0 + dy);
-            }
+            kdisp_plot_ink(gx0 + dx, gy0 + dy);
         }
     }
     return (int8_t)((pgm_read_byte(&glyph->xAdvance) + 1) / 2);
@@ -684,6 +680,22 @@ void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t
 // One walk of the display list. Called twice by kdisp_write_gfx_text_cy when a
 // courtyard is requested — see there for why.
 static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius) {
+    // ⚠️ The anti-burn-in jitter offset is applied ONCE, HERE, so that everything the
+    // display list draws moves as one unit. It used to be applied inside the two char
+    // writers instead — which covered the text and NOTHING ELSE, because every
+    // composite op (\x0F HALF, \x11 THIN, \x15 ROT, \x13 BADGE, \x12 FRAME) plots
+    // through a primitive of its own. So an idle relocation slid the letters and left
+    // the composited art pinned to the buffer: the context-menu keycap's ☰ moved while
+    // its pointer stayed put, and the scroll-lock / media-stop badges never moved at
+    // all (field, 2026-08-31 — "the cursor is not moving but the hamburger does").
+    //
+    // Putting it on the CURSOR rather than in each primitive is what keeps that fixed:
+    // a sixth composite op inherits the offset by construction instead of having to
+    // remember to add it, which is the enumerating-guard shape this repo keeps getting
+    // caught by. It is 0 outside an idle relocation redraw, so every other draw is
+    // unaffected.
+    x = sat8((int16_t)x + s_draw_ox);
+    y = sat8((int16_t)y + s_draw_oy);
     int8_t x_cursor = x;
     int8_t y_cursor = y;
     // HINT_SMALL (\x10) latches this for the REST of the string — there is no
@@ -734,7 +746,15 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
             //      chosen buffer position, so update_displays() needs no per-keycode
             //      special-case. \x0E/\x12 take the next two codepoints as arguments. ----
             case U'\x0E':   // MOVE cursor to buffer coords (next two codepoints = x, y)
-                if (text[1] && text[2]) { x_cursor = (int8_t)text[1]; y_cursor = (int8_t)text[2]; text += 2; }
+                             //   ⚠️ An ABSOLUTE position, so it has to re-apply the jitter
+                             //   offset the cursor was seeded with — assigning the raw
+                             //   coordinate is what pinned MOVE'd art in place while the
+                             //   rest of the legend moved.
+                if (text[1] && text[2]) {
+                    x_cursor = sat8((int16_t)(int8_t)text[1] + s_draw_ox);
+                    y_cursor = sat8((int16_t)(int8_t)text[2] + s_draw_oy);
+                    text += 2;
+                }
                 break;
             case U'\x10':   // SMALL: draw every FOLLOWING glyph half-scale, advancing half
                 small = true;
@@ -773,10 +793,11 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                     text += 3;
                 }
                 break;
-            case U'\x14':   // ERASE: draw every FOLLOWING TEXT glyph as a hole, not as ink.
-                            //   ⚠️ Covers the ordinary and \x10 (SMALL) paths, which both
-                            //   honour s_gfx_erase — NOT the \x0F/\x11 composite ops, whose
-                            //   kdisp_draw_glyph_*_at plot unconditionally.
+            case U'\x14':   // ERASE: draw everything FOLLOWING as a hole, not as ink —
+                            //   the composite ops (\x0F/\x11/\x15/\x13/\x12) included, since
+                            //   they now plot through kdisp_plot_ink() like the text does.
+                            //   (It used to cover the text paths ONLY, so a HINT_ERASE before
+                            //   a HALF/BADGE silently drew it lit.)
                 erase_latched = true;
                 s_gfx_erase   = true;
                 break;
@@ -843,6 +864,15 @@ void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const u
     // firmware's resident HINT_MID face — the same s_mid_font the draw uses — so
     // the measurement and the draw cannot disagree about which face \x16 reaches.
     kdisp_gfx_text_bbox_in(fonts, num_fonts, s_mid_font, 1, text, out_xmin, out_xmax, out_ymin, out_ymax);
+}
+
+void kdisp_gfx_text_bbox_abs(const GFXfont *const *fonts, uint8_t num_fonts, int8_t origin_x, int8_t origin_y,
+                             const uint32_t *text,
+                             int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax) {
+    // Same wrapper duty as kdisp_gfx_text_bbox — bind the resident HINT_MID face —
+    // for the absolute-frame measurement. See font_lookup.h for what it adds.
+    kdisp_gfx_text_bbox_abs_in(fonts, num_fonts, s_mid_font, 1, text, origin_x, origin_y,
+                               out_xmin, out_xmax, out_ymin, out_ymax);
 }
 
 void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text, int8_t *out_min, int8_t *out_max) {

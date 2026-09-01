@@ -2865,10 +2865,18 @@ static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t
 // separate clamp step is needed.
 static void roll_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, uint32_t seed,
                              int8_t* dx, int8_t* dy) {
+    // ⚠️ The ABSOLUTE box, not the relative one. The whole display list moves as a
+    // unit under the jitter offset, so the slack has to be measured over ALL of it —
+    // including art positioned by a MOVE and drawn by a composite op, which the
+    // relative box cannot see (font_lookup.h). Measuring the relative box instead
+    // reports only the cursor-laid-out part: for the context-menu keycap that is the
+    // hamburger alone, granting travel that would carry its pointer off the panel,
+    // and for a legend that is ONLY composite art (the media-stop badge) it reports
+    // an empty box and would allow the lot.
     int8_t xmin, xmax, ymin, ymax;
-    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, text, &xmin, &xmax, &ymin, &ymax);
-    int16_t axmin = ox + xmin, axmax = ox + xmax;   // glyph extent at the un-jittered origin
-    int16_t aymin = oy + ymin, aymax = oy + ymax;
+    kdisp_gfx_text_bbox_abs(g_all_fonts, g_all_font_count, ox, oy, text, &xmin, &xmax, &ymin, &ymax);
+    int16_t axmin = xmin, axmax = xmax;   // glyph extent at the un-jittered origin
+    int16_t aymin = ymin, aymax = ymax;
     int16_t xlo = (int16_t)BUFFER_X - axmin;                      // keep left edge >= BUFFER_X
     int16_t xhi = (int16_t)(BUFFER_X + SCREEN_WIDTH - 1) - axmax; // keep right edge on-screen
     int16_t ylo = -aymin;                                         // keep top >= 0
@@ -4861,13 +4869,18 @@ void eeconfig_init_kb(void) {
 void eeconfig_init_user(void) {
     uprint("Init EE config\n");
     // Zero the WHOLE struct: the write below is a full-struct write, but not every
-    // field is assigned here (idle_style, os_state, glyph_script, boot_flags are
-    // not), so an uninitialised local would persist stack garbage into a fresh
-    // EEPROM for those.
+    // field is assigned here (os_state, glyph_script, boot_flags are not), so an
+    // uninitialised local would persist stack garbage into a fresh EEPROM for those.
     poly_eeconf_t ee = {0};
     ee.lang = g_lang_init;
     ee.brightness = ~FULL_BRIGHT;
     ee.auto_brightness = 0;   // host-auto off on a fresh EEPROM
+    // Born with the board default already recorded as a real choice, rather than
+    // leaning on load_user_eeconf()'s pre-sentinel substitution. Same reasoning as
+    // latin_ex_wide being born widened: a fresh EEPROM should never have to be
+    // migrated, and the zero that {0} leaves here means PULSE, not "unset".
+    ee.idle_style     = POLY_DEFAULT_IDLE_STYLE;
+    ee.idle_style_fmt = IDLE_STYLE_FMT_OK;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

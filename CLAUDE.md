@@ -1280,6 +1280,70 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     27px `Qwty` lost 10px too. The tighter 19px spacing only made a long-standing
     defect impossible to miss. **The check is a pixel count against the same legend
     drawn with `cy_radius` 0**, not a visual read; all 15 legends now match it exactly.
+- ⚠️ **The anti-burn-in jitter offset is applied ONCE at the display-list cursor
+  (`gfx_text_run`), NOT inside the drawing primitives — it used to be the other way
+  round and that moved only the text.** `s_draw_ox/oy` were added in
+  `kdisp_write_gfx_char` and `kdisp_write_gfx_char_half`, which between them cover
+  ordinary glyphs and `HINT_SMALL` and nothing else: every **composite op** plots
+  through a primitive of its own (`\x0F` HALF, `\x11` THIN, `\x15` ROT →
+  `kdisp_draw_glyph_*_at`; `\x13` BADGE, `\x12` FRAME → the rect drawers), none of
+  which ever saw the offset. So an idle relocation slid the letters and left the
+  composited art pinned to the buffer — reported from hardware as *"the cursor on the
+  context menu icon is not moving in the idle modes, but the hamburger menu icon
+  does"* (2026-08-31). It is a CLASS bug, not one icon: `ICON_CONTEXT_MENU`'s pointer,
+  and the `ICON_SCRLOCK_ON/OFF` + `ICON_MEDIA_STOP` badges, which are composite art
+  **only** and so never moved at all.
+  - **The fix is the choke point, not five more `+= s_draw_ox` lines.** Offsetting the
+    cursor once means a sixth composite op inherits it by construction; adding it per
+    primitive is the enumerating-guard shape this repo keeps getting caught by
+    (`sync_is_link_fault()`, the log-source registry, the `find_matching_entry` gate).
+    ⚠️ A MOVE must **re-apply** it (`x_cursor = sat8(text[1] + s_draw_ox)`) — an
+    absolute position is exactly what the cursor's own offset does not reach, and
+    assigning the raw coordinate is what pinned the art in the first place.
+  - ⚠️ **Fixing the DRAW alone would have made it worse, and that is the half worth
+    remembering.** `roll_idle_offset()` measured the slack with the RELATIVE bbox,
+    which for `ICON_CONTEXT_MENU` is the hamburger alone — so once the whole cell
+    moved as a unit, that slack would have carried the pointer off the panel; and for
+    `ICON_MEDIA_STOP`, whose legend is a MOVE plus a BADGE and nothing else, the
+    relative box is **empty** (`0,0,0,0`), i.e. "you may move it anywhere". Hence
+    `kdisp_gfx_text_bbox_abs()` above, and hence the pair had to land together.
+  - **The ROT geometry moved to `font_lookup.c` (`kdisp_gfx_rot_half_extent`) so the
+    drawer and the measurement cannot disagree** about which pixels a rotated glyph
+    touches — a box that disagrees with the pixels is a legend that clips. ⚠️ Its
+    tests derive the expectation from **arithmetic** (a 0° turn is exactly the halved
+    size; a 90° turn swaps the axes), because the first version asked the helper what
+    to expect and therefore agreed with it by construction — a "don't halve the width"
+    mutation sailed straight through. Same trap as the macro-icon preview note below.
+  - ⚠️ **The offset was not the only per-primitive property the composite ops
+    bypassed — `s_gfx_erase` and `s_gfx_scanline` were the SAME shape, and the
+    scanline one was live.** Both are static plotter modes that only the two char
+    writers honoured, so under `IDLE_STYLE_EDEN` — which draws the resting legend
+    `kdisp_set_gfx_scanline(true)` as a dim half-density ghost — the text came out
+    half-density while the composited art stayed fully lit. Measured over the shipped
+    legends, three carry composite art AND are reachable as a resting legend (i.e. at
+    idle), all three on the split72 default keymap: `ICON_SCRLOCK_ON/OFF` (`KC_SCRL`,
+    a 19×19 `HINT_BADGE`), `ICON_MEDIA_STOP` (`KC_MSTP`, **badge only** — so the whole
+    keycap ignored the dimming) and `ICON_CONTEXT_MENU` (`KC_APP`, the ROT'd pointer).
+    The other three composite legends (`ICON_GFX_RESTART`/`_RELOAD`, and the
+    `HINT_FRAME` hints) are held-modifier hints, never drawn at idle.
+    - **Same remedy, one level down: `kdisp_plot_ink()`.** Every ink primitive —
+      HALF / THIN / ROT / BADGE / FRAME / `_double_at`, and both char writers — plots
+      through it, so it is now the single definition of "ink" and a sixth op inherits
+      both modes by construction.
+    - ⚠️ **Deliberately NOT pushed down into `SET_PIXEL_CLIPPED`.** Ground fills and
+      bitmap blits (`kdisp_fill_rect`, `kdisp_draw_bitmap`, the tab/MRU chrome,
+      `clear_line`) must stay unconditional, or an overlay image drawn while the flag
+      is up would silently scanline-dim. The split is what the primitive **is**, not a
+      list of call sites to keep in sync.
+    - **It made the image SMALLER**: `.text` 285320 → 284320 (**−1000 B**), `.data`
+      and `.bss` byte-identical (monolith `.heap` free 2772 either way) — fourteen
+      duplicated per-pixel plot sequences collapsed into one out-of-line call. Verified
+      in the compiled image rather than the source: `kdisp_plot_ink` is emitted
+      out-of-line and `objdump` shows every composite primitive `bl`-ing it.
+    - ⚠️ **`disp_array.c` has NO unit suite** (it owns the scratch buffer), so this
+      class is only ever caught by reading the code or by looking at hardware —
+      `oled_preview.py` refuses these ops, so the usual "render it" rule does not
+      reach them either. That is why the same mistake was made twice in one file.
 - **`kdisp_send_window()` vs `kdisp_send_buffer()`**: `kdisp_send_buffer()` pushes
   the full 1024-byte scratch; `kdisp_send_window()` pushes only the **visible 360
   bytes** (pages 0–4 at column `BUFFER_X`) — the same region the keycap actually
@@ -1435,6 +1499,34 @@ flushed, **then** `DISPLAY_ON` — boot shows black → splash.
 landed; revisit only if a full swap still looks slow on hardware): raise
 `OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
 above SSD1306 spec — A/B on real hardware).
+
+**Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
+`oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced
+`poly_sync_t.settings_more`). Four lines on the 64 px panel, two on the 32 px one:
+`FW <version>` · `P<protocol> HW <device_ver>` · `<USB|LNK> up <h:mm:ss>` ·
+`Lnk <err>% <frames>`. Shared across both variants and landscape on split42 too,
+matching the flash / confirm / apply screens there.
+
+- **The identity fields are the ones `GET_ID` reports** (`FW_VERSION`,
+  `PROTOCOL_VERSION`, `DEVICE_VER` — the same macros `hid_com.c` builds its string
+  from), so the panel and the host's view of the board cannot disagree.
+- ⚠️ **The link line reads `Lnk n/a` on the non-USB half, NOT `0.0%`.** The counters
+  live in `bridge_helper.c` and only the master calls `send_to_bridge()`, so the
+  slave's are zero because it never initiates — rendering that as a perfect link
+  would be a flattering lie on exactly the panel someone reads to judge the wire.
+  `poly_get_link_stats()` / `poly_link_err_permille()` expose them; the percentage is
+  computed by the same expression as the periodic console line, so the two can never
+  diverge. This puts the split-link health somewhere you can actually see it — until
+  now it existed only in a line emitted every 200 frames on a console nobody has open.
+- ⚠️ **Both link fields are COMPACTED, and the default fixture is what hides why.**
+  `ls_attempts` climbs for as long as the board is up (millions within hours), so
+  spelled out in full the line measures **135 px against a 127 px budget** — while the
+  `1234tx` of a fresh boot fits comfortably. The count is abbreviated `k`/`M` and the
+  rate drops its decimal at/above 10 %, which puts the widest reachable form at
+  122 px. Checked with `tools/status_oled_preview.py --telemetry --diag` at the worst
+  case (`--link 1000,4294967295 --uptime "999d 23h"`), not at the default.
+- `tools/status_oled_preview.py --telemetry` renders it (both halves, `--diag` for the
+  clipping check) — the same mirror-the-C treatment `build_fw_confirm_panel` gets.
 
 **split42: PORTRAIT status OLED (2026-07).** The split42 panel is 128×32 physical
 but **mounted rotated 90°**, so the user reads it as **32 wide × 128 tall**. The poly
@@ -1683,7 +1775,47 @@ the looping "Eden" comet-field screensaver). The first two are described in deta
 below; IDDQD/EDEN are full-screen animations that own the keycaps via their own
 tick (`doom_tick()` / `startup_anim_tick()`), so `update_displays()` early-returns
 while they run (see "Eden startup animation & idle screensaver" below for EDEN):
-- **`IDLE_STYLE_PULSE` (0, default, legacy):** `kdisp_idle()` only modulates each
+
+⚠️ **The DEFAULT is board-dependent since 2026-08-31: `POLY_DEFAULT_IDLE_STYLE`
+(`state.h`) is EDEN on split72 and PULSE everywhere else.** Three things about that
+change generalise well beyond this setting:
+- ⚠️ **EDEN on split42 would have been an anti-burn-in setting that does NOTHING —
+  and the enum's own comment claimed it "behaves like PULSE".** It does not.
+  `anim/startup_anim.c` is `#if defined(KEYBOARD_polykybd_split72)` with no-op
+  stubs, *and* every other idle painter stands down for EDEN by design:
+  `kdisp_idle()` returns immediately, the engage branch holds contrast at
+  `EDEN_IDLE_BRIGHTNESS` instead of computing a pulse, and `update_displays()`
+  early-returns while `DISP_IDLE`. So the legends **freeze**, dim and unmoving,
+  until the TURN_OFF suspend — the one outcome this whole feature exists to
+  prevent. The default macro is gated on the **same** board macro the animation
+  compiles itself on, so a default whose renderer is not in the image is not
+  expressible. **Before defaulting anything to a feature with stubs, check what the
+  stub path actually leaves running** — "degrades gracefully" was written down and
+  was wrong.
+- ⚠️ **An explicit PULSE on a pre-2026-08-31 board is NOT RECOVERABLE, because the
+  old format never recorded it.** `IDLE_STYLE_PULSE` is 0 and QMK's wear levelling
+  hands back a cleared byte as **zero** (the trap that made `latin_assign` read as
+  "every key hosts 'a'"), so "chose pulse" and "never chose" are the *same byte*. No
+  migration scheme can separate them, which is what makes the one-time move of the
+  whole pre-sentinel population to the board default the honest reading rather than
+  a compromise. Say so plainly in release notes: **existing keyboards that never
+  picked JITTER/IDDQD/EDEN will come up in the new default once.**
+- **The fix for next time is the `idle_style_fmt` sentinel** (`0x3C`, tail byte,
+  same shape as `latin_ext_fmt` / `keymap_layers_fmt`). `load_user_eeconf()`
+  substitutes the board default while it is unstamped; `save_user_settings()` stamps
+  it **after** the block it guards, so an interrupted write cannot claim a choice
+  that was not stored. From the first save onwards the byte is taken verbatim — so a
+  *future* default change can no longer overwrite a real choice, which is exactly
+  the property this one lacked. `eeconfig_init_user()` writes both, so a fresh
+  EEPROM is born stamped and never migrates. Cost: `EECONFIG_USER_DATA_SIZE`
+  156 → 157, well inside the 256-byte reservation, so **no keymap relocation and no
+  user reset**.
+- **Verify the gate in the compiled object, not the preprocessor.** `g_idle_style`
+  lands in `.data` on split72 (`objdump -s -j .data.g_idle_style` → `03`) and in
+  `.bss` on split42 (zero = PULSE) — one command per board, against the image that
+  actually ships.
+
+- **`IDLE_STYLE_PULSE` (0, legacy; the default on boards without Eden):** `kdisp_idle()` only modulates each
   keycap's SSD1306 contrast register (a per-key out-of-phase "breathing"). The
   buffer is never re-rendered, so the lit pixels never move — the burn-in risk.
 - **`IDLE_STYLE_JITTER` (1):** keeps the pulse, but **each key independently**
@@ -1745,7 +1877,11 @@ while they run (see "Eden startup animation & idle screensaver" below for EDEN):
     synced offset.)
   A "Matrix-style" idle animation was considered but shelved — it defeats the
   "glance at the dimmed legend and resume typing" hint the pulse preserves; jitter
-  was chosen as the default-preserving, legibility-preserving fix.
+  was chosen as the default-preserving, legibility-preserving fix. ⚠️ **That
+  reasoning no longer describes the shipped default on split72**, which is EDEN (see
+  the board-default note at the top of this section) — a deliberate trade of the
+  glance affordance for a screensaver that actually repaints the panel. It still
+  describes why JITTER, not an animation, was the fix *within* the pulse family.
 
 ### Eden startup animation & idle screensaver (`anim/startup_anim.*`, `poly_keymap.c`)
 A **fully procedural** (no framebuffer) per-keycap comet-field animation that
@@ -2304,9 +2440,12 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
   - ⚠️ **`HINT_ERASE` restores the PREVIOUS `s_gfx_erase`, not `false`.** It is a
     static plotter mode, so leaving it on blanks every keycap drawn after this one in
     the same pass — and a caller may already be mid-erase (the inverted-keycap
-    pattern), which a hardcoded `false` would clobber. It also covers only the text
-    paths; `\x0F`/`\x11` composite through `kdisp_draw_glyph_*_at`, which plot
-    unconditionally.
+    pattern), which a hardcoded `false` would clobber. ⚠️ It used to cover **only the
+    text paths** — `\x0F`/`\x11`/`\x15`/`\x13`/`\x12` composite through their own
+    primitives, which plotted unconditionally — so `HINT_ERASE` before a HALF or a
+    BADGE silently drew it lit. Fixed by the same choke-point move as the jitter
+    offset: every ink primitive now plots through **`kdisp_plot_ink()`**. See the
+    plotter-mode note below.
   - The arrow **alone** was rendered first and is too sparse to identify, and the
     Caps/Num badge glyphs could not be borrowed because they carry a literal `A` / `1`.
 - **Pause spells the word out**, at half the **L legend tier** (`0xF3000`) — 14 px
@@ -2411,12 +2550,20 @@ op-argument table, the SMALL/MID semantics and the baseline-shift rule.
   below always did) closes the class for the existing ops **and any op added later**.
   ⚠️ **So check a new op byte against those macros' argument bytes** — or rather,
   don't have to, now that MOVE consumes its own.
-- ⚠️ **The MOVE itself is still ignored** — bbox works relative to the
-  draw origin and MOVE names an ABSOLUTE buffer position, which is not knowable at
-  measure time, so a MOVE'd
-  legend's box still only covers the part laid out relatively. **Prefer the ordinary
-  cursor advance over a MOVE in a main legend** — that is why `ICON_MUTE` places its X
-  with `\f\f` and the glyph's own `xAdvance` rather than a MOVE.
+- ⚠️ **`kdisp_gfx_text_bbox()` still ignores the MOVE itself** — it works relative to
+  the draw origin and MOVE names an ABSOLUTE buffer position, which is not knowable
+  without one, so a MOVE'd legend's box only covers the part laid out relatively (and
+  the composite ops contribute no extent at all — measuring them at an unresolvable
+  cursor would be worse than skipping them). **Prefer the ordinary cursor advance over
+  a MOVE in a main legend** — that is why `ICON_MUTE` places its X with `\f\f` and the
+  glyph's own `xAdvance` rather than a MOVE.
+  - ✅ **There IS now a form that resolves it: `kdisp_gfx_text_bbox_abs()`**, which
+    takes the draw origin and returns the ABSOLUTE buffer box — MOVE resolved, and
+    `\x0F`/`\x11`/`\x15`/`\x13`/`\x12` measured at their real extents. The relative
+    form is unchanged to the byte (both are one walk in `bbox_walk()`, parameterised
+    by origin), so its 34 existing tests still pin it. **Use the absolute one whenever
+    you need to know where ALL of a legend lands** — which is exactly what the idle
+    jitter needs, and what it did not have (below).
 
 **The legend-size key is now ONE key that states its own tier.** `KC_GLYPH_SIZE_UP` on
 `_UL` draws `ICON_FONT_BIGGER` plus the current tier as a digit in the top-right;

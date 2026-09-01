@@ -68,3 +68,39 @@ static inline const GFXglyph *kdisp_gfx_glyph(const GFXfont *const *fonts, uint8
 // unknowable at measure time, so its arguments are consumed and the reposition
 // itself is ignored. Empty / whitespace-only input reports all-zero.
 void kdisp_gfx_text_bbox_in(const GFXfont *const *fonts, uint8_t num_fonts, const GFXfont *const *mid_font, uint8_t mid_count, const uint32_t *text, int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax);
+
+// The geometry of kdisp_draw_glyph_rot_half_at(): a glyph of `w` x `h` rotated
+// counter-clockwise by `step` * 15 degrees and then halved. `w`/`h` are the
+// PLOTTED size (the rotation runs at full resolution and is halved after); the
+// rest is the rotated frame the drawer inverse-maps each output pixel through,
+// in 8.8 fixed point.
+//
+// ⚠️ It lives HERE, next to the bounding-box interpreter, rather than inside the
+// drawer, because BOTH need it and a second copy would drift: the measurement
+// decides how far the idle jitter may move a legend, so a box that disagrees with
+// the pixels is a legend that clips.
+typedef struct {
+    int32_t ct, st;   // cos / sin of the applied angle
+    int32_t cx, cy;   // centre of the source box
+    int32_t x0, y0;   // origin of the rotated frame
+    int16_t w, h;     // plotted (halved) output size, in pixels
+} kdisp_rot_half_t;
+
+void kdisp_gfx_rot_half_extent(int16_t w, int16_t h, uint8_t step, kdisp_rot_half_t *out);
+
+// The ABSOLUTE-buffer sibling of kdisp_gfx_text_bbox_in: the box the SAME display
+// list would ink if drawn at origin (origin_x, origin_y), in buffer coordinates.
+//
+// Two things it can do that the relative form cannot, both because it knows the
+// origin: a MOVE (\x0E) is RESOLVED rather than ignored, and the composite ops
+// (\x0F HALF, \x11 THIN, \x15 ROT, \x13 BADGE, \x12 FRAME) contribute their real
+// extents — they plot at the cursor through primitives of their own, so without a
+// resolvable cursor their position is unknowable and measuring them would be worse
+// than skipping them, which is exactly what the relative form does.
+//
+// That is what the idle anti-burn-in jitter measures with: it moves the whole
+// legend as one unit, so it has to know where ALL of it lands, composited art
+// included. Measuring the relative box instead reports only the part laid out by
+// the cursor — for a legend whose art hangs off a MOVE that can be most of it —
+// and the jitter then happily shifts the rest off the panel.
+void kdisp_gfx_text_bbox_abs_in(const GFXfont *const *fonts, uint8_t num_fonts, const GFXfont *const *mid_font, uint8_t mid_count, const uint32_t *text, int8_t origin_x, int8_t origin_y, int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax);

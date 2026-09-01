@@ -715,9 +715,14 @@ inherited-upstream noise:
   `probe: <name>`** and the rig builds that branch, flashes both halves, runs a
   probe committed at `keyboards/polykybd/tools/hil_probes/<name>.py`, and pipes
   the firmware's own console into the job log as `[qmk] …` lines. Edit, push,
-  dispatch, read the log. The rig side is `polykybd-ctnd/station/probe.py`
-  (`--probe`); the probe format and the pitfalls are in that directory's
-  `README.md`. This existed in pieces before — the rig has echoed `[qmk]` lines
+  dispatch, read the log. **The `debug-firmware-on-rig` skill drives the whole
+  loop** (when a probe beats the graded suite, the dispatch call, reading the
+  `[qmk]` lines back out, and the measured cost of a turn); the rig side is
+  `polykybd-ctnd/station/probe.py` (`--probe`) and the probe format + pitfalls
+  are in `keyboards/polykybd/tools/hil_probes/README.md`. Verified end to end
+  2026-09-01, run `33559310727`: `Debug probe (split72)` green with every other
+  job — `HIL test (split72)` included — correctly skipped, 5m21s wall clock of
+  which 4m03s is the cloud build. This existed in pieces before — the rig has echoed `[qmk]` lines
   into the log all along — and what was missing was any way to run an *arbitrary*
   question instead of the fixed suite.
   - ⚠️ **DISPATCH-ONLY, and that `if:` IS the security control.** Triggering a

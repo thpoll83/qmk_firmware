@@ -918,6 +918,34 @@ Firmware releases are **GitHub Releases** (tag `PolyKybd-fw-vX.Y.Z`; `FW_VERSION
 `polykybd-github-release` skill to draft the notes and drive the flow. The mechanics
 that cost real debugging to learn (2026-07):
 
+- ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
+  released** (`tools/require_fwapply_run.py`, the first step of `release.yml`,
+  before the build so a refusal changes nothing). The HID-apply brick shipped
+  because no release artifact had ever been applied on hardware — the rig flashes
+  by UF2 over GPIO BOOTSEL, which bypasses `fw_staging` entirely, and this
+  workflow runs no HIL at all. With the fwapply tier now running on every merge
+  to `PolyKybd`, the gate is normally a formality; it exists for a hand-made tag,
+  a re-publish, or a merge whose rig run went red and was forgotten.
+  - ⚠️ **It CANNOT simply demand a run on `github.sha`** — release tags land on
+    the auto-bump `[skip ci]` commit, which by construction no workflow ran on, so
+    that gate would refuse every release. It walks back through ancestors and then
+    **proves the delta to the release commit is only the `FW_VERSION` bump**;
+    accepting an ancestor without that proof would report coverage belonging to
+    different firmware, which is worse than no gate.
+  - **The job name is DERIVED from the checked-out workflow**, not hardcoded — a
+    rename would otherwise turn the gate into a silent no-op that reports "never
+    covered" for firmware that was. Same reason the ctnd unit-test workflow greps
+    its suite names instead of listing them.
+  - **Self-tested** (`--selftest`, run as the same CI step) because this repo has
+    no Python test harness and untested decision logic in a release gate is the
+    thing `fw_up_verdict.c` was extracted to avoid. Mutation-checked against 8
+    breaks; one escaped first — deleting the filename check passed every fixture,
+    because none of them had a *different* file whose lines mention `FW_VERSION`,
+    and `hid_com.c` is exactly such a file. The fixture that closes it is in the
+    selftest with that reasoning attached.
+  - **Recovery when it refuses**: dispatch *Build and HIL Test* on that commit
+    with `tier: fwapply`, wait for green, re-run the release job. The error names
+    every commit it checked and why each failed.
 - **A pushed tag does NOT create a release.** Release tags land on the auto-bump
   `chore: … [skip ci]` commit (`bump-version.yml`), and `[skip ci]` **suppresses the
   tag-push workflow trigger** — so `release.yml` runs on **`release: published`** (every

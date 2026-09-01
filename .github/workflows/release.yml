@@ -17,6 +17,8 @@ concurrency:
 
 permissions:
   contents: write
+  # The pre-publish gate below reads this repo's workflow runs + jobs.
+  actions: read
 
 env:
   KB: polykybd/split72
@@ -30,6 +32,36 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      # ── refuse to publish firmware no APPLY run has covered ─────────────────
+      # The HID-apply brick (qmk#258) shipped in a release because nothing ever
+      # applied an image on hardware: the rig flashes by UF2 over GPIO BOOTSEL,
+      # which bypasses fw_staging entirely, and this workflow runs no HIL at all.
+      # qmk-test.yml's fwapply tier now runs on every merge to PolyKybd, so in the
+      # normal case this is a formality — it is here for the cases that are not
+      # normal (a hand-made tag, a re-publish, a merge whose rig run went red and
+      # was forgotten), where the failure is silent and costs a release.
+      #
+      # ⚠️ It runs BEFORE the build so a refusal costs nothing and, more
+      # importantly, changes nothing: no assets uploaded, no release body edited.
+      #
+      # ⚠️ The release tag does NOT point at a commit any workflow ran on —
+      # release tags land on the auto-bump "chore: … [skip ci]" commit, and
+      # [skip ci] suppresses the run. So the script walks back through ancestors
+      # and then PROVES the delta to the release commit is only the FW_VERSION
+      # bump; accepting an ancestor without that proof would report coverage
+      # belonging to different firmware, which is worse than no gate.
+      #
+      # Self-tested (mutation-checked) — `--selftest` is why the decision logic
+      # in a release gate is not the only untested code in the repo.
+      - name: Require a green firmware-apply run for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          python3 keyboards/polykybd/tools/require_fwapply_run.py --selftest
+          python3 keyboards/polykybd/tools/require_fwapply_run.py
 
       # Shipping shape is the POLYKYBD_DOOM_PACK flavour (doom/PACK_DESIGN.md):
       # the doom easter egg's loader + trigger compile in, the engine ships as a

@@ -682,12 +682,28 @@ inherited-upstream noise:
       gate (`tools/require_fwapply_run.py`) refuses to publish firmware no apply
       run has covered, so a dropped push event costs a **manual dispatch at release
       time**, not a bricked release. That is the gate doing exactly its job.
-    - **Recovery: dispatch *Build and HIL Test* with `tier: fwapply`.** ✅ A
-      dispatch takes a **branch**, so the run lands on the branch TIP — the
-      auto-bump commit, which is precisely the sha a release tag lands on. The gate
-      then finds coverage on the release sha **directly** and never needs its
-      walk-back-through-ancestors path. Verified 2026-09-01, run #959: build ✅,
-      HIL suite ✅ 2m55, apply round-trip ✅ 3m40 (its first-ever execution).
+    - **Recovery: dispatch *Build and HIL Test* with `tier: fwapply`.** Verified
+      2026-09-01, run #959: build ✅, HIL suite ✅ 2m55, apply round-trip ✅ 3m40
+      (its first-ever execution).
+      ⚠️ **WHICH ref you dispatch on decides whether the gate can ever see it, and
+      "the branch" is only right IMMEDIATELY after the merge.** A dispatch attaches
+      the run to whatever its `ref` points at. Dispatching on `PolyKybd` therefore
+      covers the release sha **only while the tip is still that version's own bump
+      commit** — true if you do it right after the merge, as above, and false as
+      soon as another PR lands. It is not a general recipe, because the two ends
+      move in opposite directions: `publish_release.py` tags the **oldest** commit
+      declaring the version (`commit_for_version()`, deliberately not the head),
+      while `require_fwapply_run.py` only ever walks **ancestors** of the release
+      sha, bounded by `MAX_BUMP_COMMITS`. A run on a *descendant* is invisible to
+      it, so a late branch-tip dispatch produces a green run the gate still refuses.
+      **Once the branch has moved on, dispatch on the release TAG instead** — the
+      API takes a branch *or* a tag, and the tag exists by then (publishing creates
+      it, and the gate runs on `release: published`), so the run attaches to the
+      release sha itself. ⚠️ Untested here, and it carries its own trap: a dispatch
+      runs the workflow **as of that ref**, so a tag predating the `tier` input has
+      no `fwapply` value to select. (Caught by Greptile on #265 — the original
+      wording generalised one true observation into a rule that only held on the
+      day it was written.)
     - ⚠️ **So don't read "runs unasked on every merge" as a guarantee.** After a
       merge you care about, confirm a run actually exists for the merge sha —
       `actions_list list_workflow_runs` filtered `event: push` — rather than

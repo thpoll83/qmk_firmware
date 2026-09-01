@@ -277,6 +277,31 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     compared against unknown-age data while still incrementing `seen`, which is
     precisely what that counter exists to prevent — hence the `|| continue` on the
     fetch, so an unreachable repo trips the `seen` guard instead of passing quietly.
+  - ⚠️ **A FIFTH mode, and it is the loop's own blind spot: `$d..HEAD` inspects only
+    the branch that happens to be CHECKED OUT.** Anything pushed to another branch is
+    invisible, so standing on a merged branch makes the sweep print a clean board for
+    a repo that has work sitting on a different one. Measured 2026-09-01: the loop
+    reported all six repos clean while this repo's `claude/firmware-feature-gaps-jvp9hz`
+    was 13 commits ahead — found only because that branch was restarted for unrelated
+    reasons. (Benign in the event: the commits were superseded, their content already
+    on `PolyKybd`. But the sweep could not have told me that either way.)
+  - ⚠️ **Do NOT "fix" it by sweeping every remote `claude/**` branch — measured, that
+    is unusable.** A squash- or merge-merged branch reads as ahead of the default
+    forever, so across the five repos there are **525** `claude/*` branches, **95**
+    read as "ahead", and only **3** of those had an open PR. A ~95% false-positive
+    rate is a check nobody will read twice.
+    ```bash
+    # what the numbers came from — per repo, count branches vs branches "ahead"
+    for b in $(git -C "$r" for-each-ref --format='%(refname:short)' 'refs/remotes/origin/claude/*'); do
+        [ "$(git -C "$r" rev-list --count "$d".."$b")" != 0 ] && echo "$b"
+    done
+    ```
+    **So "commits ahead" cannot answer this question at all, on one branch or on all
+    of them — the only reliable signal is whether a PR EXISTS**, which is a GitHub
+    query and not a git one. That is what this note already prescribes and what the
+    loop never implemented; the loop is a cheap prompt to go and check, never a clean
+    bill of health. Treat a silent sweep as "nothing obvious on the branch I am
+    standing on", nothing more.
 
 ## Building & flashing
 
@@ -2662,8 +2687,17 @@ op-argument table, the SMALL/MID semantics and the baseline-shift rule.
   - ⚠️ **The host's Python mirror moves with this.** `PolyKybdHost`'s
     `oled_preview.Renderer` reproduces this function; it already skipped gaps (so (2)
     was never wrong there) but deliberately pinned the `'!'` substitution as C parity.
-    That pin is now backwards — it needs inverting in the host repo, or the two
-    diverge again in the opposite direction.
+    ✅ **That pin has been INVERTED to match (PolyKybdHost#209, 2026-09-01)** —
+    `Renderer.bbox()` now skips an unresolvable glyph in a `HINT_SMALL` run too, and
+    its test is ported from `SmallSkipsAMissingGlyphInsteadOfSubstitutingBang`.
+    ⚠️ **The general point outlives this instance: a cross-repo parity pin is a
+    LIABILITY the moment one side moves, because nothing fails when it goes stale.**
+    Neither suite would have gone red — the host would simply have been wrong in the
+    opposite direction, silently. Measured after the fix: of the host's 197 static
+    legends, 12 use `HINT_SMALL` and **none** carries a glyph the pool cannot resolve,
+    so nothing rendered differently either way, which is exactly why only a written
+    note could have caught it. **When you pin parity, name the change on the other
+    side that would invalidate the pin.**
 **The legend-size key is now ONE key that states its own tier.** `KC_GLYPH_SIZE_UP` on
 `_UL` draws `ICON_FONT_BIGGER` plus the current tier as a digit in the top-right;
 holding **Shift** swaps the icon to `ICON_FONT_SMALLER` and reverses the step, so the

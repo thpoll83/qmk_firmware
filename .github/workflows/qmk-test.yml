@@ -613,6 +613,100 @@ jobs:
             doom_pack_signed_v*.plyx
           retention-days: 7
 
+  build-fwapply:
+    name: Build signed HIL images (firmware apply)
+    # ⚠️ The `if:` is a FOLDED scalar. Every continuation line must sit at the
+    # SAME indent as the first, or YAML keeps the newline, the expression stops
+    # being valid, and the job silently stops matching its trigger.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'hil-fwapply') ||
+      contains(github.event.head_commit.message, '[hil-fwapply]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      hil_left: ${{ steps.names.outputs.hil_left }}
+      hil_right: ${{ steps.names.outputs.hil_right }}
+      apply_bin: ${{ steps.names.outputs.apply_bin }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # ⚠️ The SHA goes in the FILENAME. Every test build reports the same
+      # FW_VERSION (it only moves on the post-merge auto-bump), so images from
+      # different commits are otherwise indistinguishable once flashed -- which
+      # has already cost a full hardware round on this project. See CLAUDE.md,
+      # "Deliverable for testing is the .bin".
+      - id: sha
+        run: echo "short=$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
+
+      # ⚠️ EPHEMERAL key, never the production FW_SIGNING_KEY — that secret is
+      # confined to release.yml and must not be reachable from a PR-triggered
+      # workflow. Same pattern as build-doom: the throwaway pubkey is baked into
+      # base/fw_pubkey.h before the builds, so the images trust exactly this key
+      # and nothing else. The images are disposable (a non-shipping pubkey) and
+      # the next ordinary run reflashes the rig with the real ones.
+      - name: Generate an ephemeral signing key
+        run: |
+          python3 -m pip install --quiet cryptography
+          python3 keyboards/polykybd/tools/gen_signing_key.py \
+            --out-privkey /tmp/fwapply_ephemeral_key.bin \
+            --out-pubkey keyboards/polykybd/base/fw_pubkey.h \
+            --force
+          echo "ephemeral pubkey baked into base/fw_pubkey.h"
+
+      - name: Build split72 (HIL left/master)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_left
+
+      - name: Build split72 (HIL right/slave)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_right
+
+      # The rig stages the raw image, not the UF2 wrapper, and applies it to a
+      # master already running it — so this .bin must come from the SAME ELF as
+      # the left .uf2 above. The runner re-checks that against the flashed UF2
+      # and refuses to apply anything else; this step is what makes that pass.
+      - name: Extract and sign the master image
+        env:
+          SHA: ${{ steps.sha.outputs.short }}
+        run: |
+          ELF=".build/polykybd_split72_fwapply_${SHA}_hil_left.elf"
+          BIN="polykybd_split72_fwapply_${SHA}_hil_left.bin"
+          # The docker builds run as root, so the workspace artifacts land
+          # root-owned and the host runner user cannot write beside them.
+          sudo chown -R "$(id -u):$(id -g)" .build
+          arm-none-eabi-objcopy -O binary "$ELF" "$BIN" 2>/dev/null \
+            || docker run --rm -v "$PWD:/w" -w /w qmkfm/qmk_cli \
+                 arm-none-eabi-objcopy -O binary "$ELF" "$BIN"
+          sudo chown "$(id -u):$(id -g)" "$BIN"
+          python3 keyboards/polykybd/tools/sign_firmware.py \
+            --privkey /tmp/fwapply_ephemeral_key.bin "$BIN"
+          rm -f /tmp/fwapply_ephemeral_key.bin
+          if [ ! -s "$BIN.sig" ]; then
+            echo "::error::signing produced no $BIN.sig — the rig would SKIP the apply"
+            exit 1
+          fi
+          echo "signed $BIN ($(stat -c%s "$BIN") bytes) -> $BIN.sig ($(stat -c%s "$BIN.sig") bytes)"
+
+      - id: names
+        run: |
+          echo "hil_left=$(ls polykybd_split72_fwapply_*_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "hil_right=$(ls polykybd_split72_fwapply_*_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "apply_bin=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_left.bin" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-fwapply
+          path: |
+            polykybd_split72_fwapply_*_hil_*.uf2
+            polykybd_split72_fwapply_*_hil_left.bin
+            polykybd_split72_fwapply_*_hil_left.bin.sig
+
   doom-test:
     name: DOOM engine-pack signature (split72)
     # Ordered after hil-test so the two rig jobs can't interleave their flashes
@@ -686,3 +780,72 @@ jobs:
             --doom \
             --plyx-valid "firmware/$PLYX" \
             2>&1 | tee /tmp/doom-test.log
+
+  fwapply-test:
+    name: Firmware apply round-trip (split72)
+    # Ordered after the other rig jobs so the flashes cannot interleave — the rig
+    # runs one job at a time, and this one reflashes both halves with its own
+    # ephemeral-key images. `always()` so it still runs when hil-test/doom-test
+    # were skipped (a bare hil-fwapply label does not start the main pipeline).
+    needs: [build-fwapply, hil-test, doom-test]
+    if: always() && needs.build-fwapply.result == 'success'
+    runs-on: [self-hosted, polykybd-ctnd]
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Locate station directory
+        id: ctnd
+        run: |
+          dir="${CTND_DIR:-}"
+          if [ -z "$dir" ]; then
+            for candidate in /opt/polykybd-ctnd "$HOME/polykybd-ctnd"; do
+              if [ -f "$candidate/venv/bin/python" ]; then
+                dir="$candidate"
+                break
+              fi
+            done
+          fi
+          if [ -z "$dir" ]; then
+            echo "ERROR: could not find a polykybd-ctnd install with a venv." >&2
+            exit 1
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      # CI runs the INSTALLED station copy, so sync it — otherwise a lagging
+      # self-update timer runs this with a station that has never heard of
+      # --apply-bin, and the whole job silently tests nothing.
+      - name: Sync station to current ctnd main
+        run: |
+          dir="${{ steps.ctnd.outputs.dir }}"
+          if [ ! -d "$dir/.git" ]; then
+            echo "WARNING: $dir is not a git checkout — running the installed station as-is" >&2
+            exit 0
+          fi
+          git -C "$dir" fetch --quiet origin main \
+            && git -C "$dir" checkout -q -f -B main origin/main \
+            && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
+            || echo "WARNING: could not sync $dir to origin/main" >&2
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-fwapply
+          path: ${{ steps.ctnd.outputs.dir }}/firmware
+
+      - name: Flash, then drive a real HID update through APPLY
+        # Filenames go through env vars rather than straight ${{ }} interpolation
+        # into the script body — the same shape the doom job uses.
+        env:
+          CTND_DIR: ${{ steps.ctnd.outputs.dir }}
+          HIL_LEFT: ${{ needs.build-fwapply.outputs.hil_left }}
+          HIL_RIGHT: ${{ needs.build-fwapply.outputs.hil_right }}
+          APPLY_BIN: ${{ needs.build-fwapply.outputs.apply_bin }}
+        run: |
+          cd "$CTND_DIR"
+          set -o pipefail
+          venv/bin/python -u -m station.test_runner \
+            --left  "firmware/$HIL_LEFT" \
+            --right "firmware/$HIL_RIGHT" \
+            --apply-bin "firmware/$APPLY_BIN" \
+            --extended \
+            2>&1 | tee /tmp/fwapply-test.log

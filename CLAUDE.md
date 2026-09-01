@@ -2662,8 +2662,17 @@ op-argument table, the SMALL/MID semantics and the baseline-shift rule.
   - ⚠️ **The host's Python mirror moves with this.** `PolyKybdHost`'s
     `oled_preview.Renderer` reproduces this function; it already skipped gaps (so (2)
     was never wrong there) but deliberately pinned the `'!'` substitution as C parity.
-    That pin is now backwards — it needs inverting in the host repo, or the two
-    diverge again in the opposite direction.
+    ✅ **That pin has been INVERTED to match (PolyKybdHost#209, 2026-09-01)** —
+    `Renderer.bbox()` now skips an unresolvable glyph in a `HINT_SMALL` run too, and
+    its test is ported from `SmallSkipsAMissingGlyphInsteadOfSubstitutingBang`.
+    ⚠️ **The general point outlives this instance: a cross-repo parity pin is a
+    LIABILITY the moment one side moves, because nothing fails when it goes stale.**
+    Neither suite would have gone red — the host would simply have been wrong in the
+    opposite direction, silently. Measured after the fix: of the host's 197 static
+    legends, 12 use `HINT_SMALL` and **none** carries a glyph the pool cannot resolve,
+    so nothing rendered differently either way, which is exactly why only a written
+    note could have caught it. **When you pin parity, name the change on the other
+    side that would invalidate the pin.**
 **The legend-size key is now ONE key that states its own tier.** `KC_GLYPH_SIZE_UP` on
 `_UL` draws `ICON_FONT_BIGGER` plus the current tier as a digit in the top-right;
 holding **Shift** swaps the icon to `ICON_FONT_SMALLER` and reverses the step, so the

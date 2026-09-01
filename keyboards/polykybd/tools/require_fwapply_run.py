@@ -49,6 +49,10 @@ VERSION_FILE = "keyboards/polykybd/config.h"
 # lines, or outside this file, still fails.
 VERSION_MACRO = "FW_VERSION"
 VERSION_MACROS = ("FW_VERSION", "PROTOCOL_VERSION")
+# `+/-` stripped by the caller; leading whitespace allowed, nothing else before
+# the directive and nothing but the macro name after it.
+VERSION_DEFINE_RE = re.compile(
+    r"^\s*#\s*define\s+(?:" + "|".join(VERSION_MACROS) + r")\b")
 MAX_ANCESTORS = 12
 # GitHub's compare API returns at most this many files, silently truncated. A
 # truncated list cannot prove "nothing else changed", so it is refused rather
@@ -118,7 +122,12 @@ def only_a_version_bump(files):
             return False
         for line in patch.splitlines():
             if line[:1] in ("+", "-") and not line.startswith(("+++", "---")):
-                if not any(macro in line for macro in VERSION_MACROS):
+                # ⚠️ An explicit `#define <MACRO>` definition, not merely a line
+                # MENTIONING the token. config.h has other lines that reference
+                # these macros, so a substring test would accept a real code edit
+                # sitting next to one — precisely the change this gate exists to
+                # refuse (caught in review of #264).
+                if not VERSION_DEFINE_RE.match(line[1:]):
                     return False
     return True
 
@@ -269,6 +278,30 @@ def selftest():
         # bump:protocol changes ONLY this line — FW_VERSION is rewritten to the
         # same value and never appears in the diff. Accepting just FW_VERSION
         # would refuse a well-covered protocol release at publish time.
+        # ⚠️ A line that merely MENTIONS the macro is not the bump. config.h
+        # has such lines, so a substring test would wave through a real code
+        # edit that happens to sit beside one.
+        ("a real edit that only references the macro",
+         [patch("@@", "-  build_id(FW_VERSION, 1);", "+  build_id(FW_VERSION, 2);")],
+         False),
+        ("a #define of something else that references the macro",
+         [patch("@@", "-#define BANNER \"fw \" FW_VERSION", "+#define BANNER \"v\" FW_VERSION")],
+         False),
+        # ⚠️ Word boundary: a DIFFERENT macro that merely starts with the same
+        # name is not the bump. Without \\b in the regex this passes.
+        ("a different macro sharing the prefix",
+         [patch("@@", "-#define FW_VERSION_MAJOR 0", "+#define FW_VERSION_MAJOR 1")],
+         False),
+        # ⚠️ The filename check is what rejects this — the LINE is a perfectly
+        # well-formed version define, so the regex alone cannot. Before this
+        # fixture existed, deleting the filename check escaped the whole sweep.
+        ("a real version define in a DIFFERENT file",
+         [{"filename": "keyboards/polykybd/base/fw_staging.c",
+           "patch": "@@\n-#define FW_VERSION \"a\"\n+#define FW_VERSION \"b\""}],
+         False),
+        ("indented / spaced directive is still the bump",
+         [patch("@@", "-  #  define FW_VERSION \"a\"", "+  #  define FW_VERSION \"b\"")],
+         True),
         ("protocol-only bump (bump:protocol)",
          [patch("@@", "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16")],
          True),

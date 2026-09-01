@@ -146,7 +146,17 @@ static void doom_engine_start(void) {
 #else
     // (uintptr_t detour: negative offsets from a zero-size linker symbol trip
     // GCC's array-bounds check)
-    uint32_t *stack_bottom = (uint32_t *)((uintptr_t)__doom_shared_end__ - DOOM_ARENA_STACK_BYTES);
+    //
+    // ⚠️ Masked down to 8, because unlike the pack branch above nothing here
+    // GUARANTEES the alignment: this address comes from a linker symbol, and
+    // `.doom_shared` was ALIGN(4) until #264 — the block size and the stack
+    // size are both multiples of 8, so the stack base inherits the SECTION's
+    // alignment, and 4 would violate the AAPCS 8-byte stack rule. The ld is
+    // ALIGN(8) now; this mask means a future edit to it cannot silently
+    // reintroduce the hazard, at the cost of up to 4 bytes of a 4 KB stack.
+    uintptr_t stack_top = ((uintptr_t)__doom_shared_end__ - DOOM_ARENA_STACK_BYTES)
+                          & ~(uintptr_t)7u;
+    uint32_t *stack_bottom = (uint32_t *)stack_top;
 #endif
     multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
     s_engine_running = true;

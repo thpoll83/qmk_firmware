@@ -76,12 +76,26 @@ extern "C" {
 // 32-bit access is a HardFault on the M0+ — the same failure that bricked the
 // firmware applier (qmk#258). These asserts are what make that a build error
 // instead of arithmetic nobody re-checks when a region is resized.
-_Static_assert(DOOM_ARENA_FB_OFF      % 4u == 0u, "arena offset must stay 4-aligned");
-_Static_assert(DOOM_ARENA_PD_OFF      % 4u == 0u, "arena offset must stay 4-aligned");
-_Static_assert(DOOM_ARENA_VPATCH_OFF  % 4u == 0u, "arena offset must stay 4-aligned");
-_Static_assert(DOOM_ARENA_COMPOSE_OFF % 4u == 0u, "arena offset must stay 4-aligned");
-_Static_assert(DOOM_ARENA_MIRROR_OFF  % 4u == 0u, "arena offset must stay 4-aligned");
-_Static_assert(DOOM_ARENA_ZONE_OFF    % 4u == 0u, "arena offset must stay 4-aligned");
+//
+// ⚠️ NOT a bare `_Static_assert`: this header is included by the doom engine's
+// pd_render.cpp, and `_Static_assert` is C-only — C++ spells it `static_assert`.
+// A bare one compiles fine everywhere PR CI looks and breaks ONLY the monolithic
+// POLYKYBD_DOOM flavour, which CI does not build at all (see CLAUDE.md, "PR CI
+// does NOT build the monolith"). It shipped that way for a few commits on #264
+// and was caught by building the monolith by hand, which is the whole reason
+// that instruction exists.
+#ifdef __cplusplus
+#  define DOOM_ARENA_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
+#else
+#  define DOOM_ARENA_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
+#endif
+
+DOOM_ARENA_STATIC_ASSERT(DOOM_ARENA_FB_OFF      % 4u == 0u, "arena offset must stay 4-aligned");
+DOOM_ARENA_STATIC_ASSERT(DOOM_ARENA_PD_OFF      % 4u == 0u, "arena offset must stay 4-aligned");
+DOOM_ARENA_STATIC_ASSERT(DOOM_ARENA_VPATCH_OFF  % 4u == 0u, "arena offset must stay 4-aligned");
+DOOM_ARENA_STATIC_ASSERT(DOOM_ARENA_COMPOSE_OFF % 4u == 0u, "arena offset must stay 4-aligned");
+DOOM_ARENA_STATIC_ASSERT(DOOM_ARENA_MIRROR_OFF  % 4u == 0u, "arena offset must stay 4-aligned");
+DOOM_ARENA_STATIC_ASSERT(DOOM_ARENA_ZONE_OFF    % 4u == 0u, "arena offset must stay 4-aligned");
 
 // Arena base (= first byte after the engine statics) + offset, or NULL while
 // game mode is inactive (doom_mode.c).

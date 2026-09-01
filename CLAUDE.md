@@ -421,6 +421,54 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     tag-anchored history question, not just merge-base reasoning — and note the tag
     itself resolves fine (`git rev-parse <tag>` succeeds), so a tag-exists check
     proves nothing. Unshallowing took **45 s** here; the count went 84 commits.
+- **`-Wcast-align` is on for PolyKybd's OWN sources, and it exists for the
+  HID-apply brick class.** `fw_staging`'s page buffer was `static uint8_t
+  page_buf[256]` (alignment 1) word-copied through a `(uint32_t *)` cast; the
+  linker put it at a byte offset, the unaligned `STMIA` HardFaulted the M0+ in a
+  function that never returns, and it shipped in a release. The warning names
+  exactly that — *"cast increases required alignment of target type"* — and with
+  `-Werror` already on it is a build failure on the PR that writes it. That is
+  the only place a bisect can find this class, because the brick itself was a
+  **layout** effect: a macro PR grew `.bss` and moved the buffer, so the guilty
+  commit never touched the failing code.
+  - ⚠️ **Scoped by path via the `$<` per-recipe filter** (`rules.mk`, the same
+    mechanism the doom `EXTRAFLAGS` block uses). `EXTRAFLAGS` otherwise lands on
+    **every** compile line — upstream QMK, ChibiOS, pico-sdk — which is the trap
+    that kept CodeQL out of this repo.
+  - ⚠️ **The WHOLE `doom/` tree is excluded, not just the vendored engine, and
+    the reason for our own sources is worth knowing: `doom_arena_at()` returns
+    `uint8_t *` because that signature IS the pack ABI** (`doom_pack_abi.h`,
+    handed to a **signed** `.plyx`). So every `(doom_mirror_t *)doom_arena_at(…)`
+    is a widening cast the check cannot be satisfied about without editing a
+    cross-boundary contract — which is not something to do on a warning's
+    account. `void *` would be the better type for untyped arena storage; it was
+    tried and reverted for exactly that reason. The offsets are
+    `_Static_assert`ed 4-aligned in `doom_arena.h` instead, which is the
+    substance, and the one such cast **outside** the doom tree (`split_sync.c`'s
+    mirror handler) carries a narrow `#pragma` pointing at those asserts.
+  - ⚠️ **A path filter that matches nothing FAILS OPEN** — the flag never applies
+    and the guard looks installed while doing nothing. Verify by compiling a
+    deliberate misalignment in a PolyKybd source and confirming the build
+    **fails**, not by reading the make output.
+  - **`void *` casts do not warn** (GCC exempts them), so `bridge_helper.c`'s
+    split-link CRC store is unaffected — and is separately safe, since every
+    caller passes a struct whose first member is a `uint32_t`.
+  - **It found two real latent instances of the same shape**, both now asserted
+    rather than assumed: `doom_mode.c` casts the core1 **stack pointer** out of a
+    `uint8_t *` pool (where a misalignment is worse than the applier's HardFault
+    — 8-aligned base, both offsets multiples of 8, which is also what AAPCS
+    demands), and every `doom_arena_at()` consumer relies on arena offsets that
+    nothing checked. ⚠️ Do **not** launder such a cast through `uintptr_t` to
+    silence the warning — that proves nothing and hides the next one.
+  - ⚠️ **Verified the hard way, and it earned its keep immediately**: the first
+    build with the flag FAILED on `split_sync.c`, which is simultaneously the
+    proof that the path filter matches (it would otherwise fail open) and a real
+    find. Do not take a clean build as evidence the flag is active — take a build
+    that fails on a deliberate misalignment.
+  - The clean-up it required was itself worth having: the OLED helpers took a
+    `uint32_t[]`, cast it down to `char *` at the call and back up inside, which
+    was safe only by convention. They take `uint32_t *` now.
+
 - ⚠️ **When an upstream merge breaks the build, look at the vendored DOOM engine
   FIRST — a new upstream warning lands there, not on our own sources.** QMK builds
   with `-Werror`, so *any* warning upstream adds to `builddefs/common_rules.mk`
@@ -474,7 +522,17 @@ inherited-upstream noise:
     UI's **Extended** toggle beside Run Tests.
   - ✅ **`workflow_dispatch` runs all THREE opt-ins at once — the extended HIL tier,
     the perf measurement AND the FW-9 doom set** — because it satisfies every opt-in
-    `if:` at once (each names `github.event_name == 'workflow_dispatch'`). They are
+    `if:` at once (each names `github.event_name == 'workflow_dispatch'`).
+    ⚠️ **Since the `tier` input (2026-09-01) that is what `tier: all` does, and `all`
+    is the DEFAULT**, so an ordinary dispatch still behaves exactly as described here.
+    The narrower values (`default`, `extended`, `perf`, `doom`, `fwapply`, `debug`)
+    each drive one opt-in, and `tier` is read **only** under
+    `github.event_name == 'workflow_dispatch'` — push and pull_request keep their
+    label/marker gating untouched. `debug` is the odd one out: it **skips the graded
+    suite entirely** (the only `if:` on `hil-test`) and runs just the probe, because a
+    debug loop pays the rig cost on every iteration. The whole table was verified by
+    simulating the conditions across every trigger, not by reading them — that is the
+    only way to check a folded-scalar `if:` short of merging and waiting. They are
     otherwise INDEPENDENT — each opt-in drives only its own job, so `hil-extended`
     alone starts no perf run and `hil-perf` alone leaves the HIL suite on its default
     tier. ⚠️ Dispatch is not the *only* way to get them: the matching labels on a PR, or
@@ -562,6 +620,69 @@ inherited-upstream noise:
     digest is a *real* hardening but a **repo-wide** one — 10 uses in `qmk-test.yml` +
     more in `release.yml` — so it is a deliberate all-uses-at-once change (ideally with
     Dependabot), never a piecemeal one-job edit.
+- **The FW-APPLY set (`build-fwapply` + `fwapply-test`) is the fourth tier, and it
+  is the ONLY one that runs unasked — on every push to `PolyKybd`.** It builds a
+  HIL image pair, signs the master `.bin` with an **ephemeral** key
+  (`gen_signing_key.py` rewrites `base/fw_pubkey.h`, same pattern as `build-doom`
+  — the production `FW_SIGNING_KEY` stays confined to `release.yml`), then has the
+  rig drive a real HID update through **APPLY** and confirm the board comes back.
+  It is also reachable by the `hil-fwapply` label, `[hil-fwapply]` in a pushed
+  commit, or `tier: fwapply`.
+  - ⚠️ **Why it is not opt-in, when everything else is: the HID-apply brick
+    (qmk#258) shipped in a RELEASE, and it was a LAYOUT effect.** `fw_staging`'s
+    page buffer was `static uint8_t` (alignment 1) and word-copied; a macro PR grew
+    `.bss`, shifted it off a word boundary, and the unaligned `STMIA` HardFaulted
+    on the M0+ inside a function that never returns — recoverable only over
+    BOOTSEL. So **the guilty PR never touched the applier**, `fw_staging_do_apply`
+    was byte-identical across the regression, and the bisect blamed the wrong
+    commit. Any PR can move `.bss`, so per-PR is not where this class is catchable;
+    what IS catchable is dating it to a **merge** that can still be bisected. A
+    release-time-only check would name the release that bricks, with no bisect and
+    a release to redo.
+  - **The cost is bounded**: the rig already runs a HIL cycle per merge, so this
+    adds a cloud build plus one apply+reboot, not a new cadence. PRs are untouched
+    — the tier stays opt-in there, so no PR pipeline gets slower.
+  - ⚠️ **`--apply-bin` is destructive by design and safe only because the image is
+    the one already running** — the rig checks that pairing rather than assuming
+    it. And it is safe *at all* only because a brick on the rig is self-recovering
+    over GPIO BOOTSEL.
+  - ⚠️ **An ephemeral-key image REFUSES a production-signed image over HID** (its
+    baked pubkey does not match, so the keyboard raises the A/ACCEPT prompt, which
+    the rig cancels). Benign on the rig, which recovers itself — but it is why an
+    ephemeral-key build must never be handed to a user to flash.
+
+- ✅ **The DEBUG LOOP: a firmware bug can now be chased on the rig with nobody
+  flashing a `.bin`.** Dispatch `qmk-test.yml` on a branch with **`tier: debug`,
+  `probe: <name>`** and the rig builds that branch, flashes both halves, runs a
+  probe committed at `keyboards/polykybd/tools/hil_probes/<name>.py`, and pipes
+  the firmware's own console into the job log as `[qmk] …` lines. Edit, push,
+  dispatch, read the log. The rig side is `polykybd-ctnd/station/probe.py`
+  (`--probe`); the probe format and the pitfalls are in that directory's
+  `README.md`. This existed in pieces before — the rig has echoed `[qmk]` lines
+  into the log all along — and what was missing was any way to run an *arbitrary*
+  question instead of the fixed suite.
+  - ⚠️ **DISPATCH-ONLY, and that `if:` IS the security control.** Triggering a
+    dispatch needs write access, so a fork PR can never reach the rig through it —
+    which matters because the rig is a self-hosted runner for a **public** repo
+    (HIL-2). **Do not add a `hil-debug` label trigger**: a label is applied to a PR
+    whose head may be a fork. The containment check in `station/probe.py` is *not*
+    this control and its own docstring says so; it is operational (CI has already
+    checked out the whole repo and the build jobs have already run code from it).
+  - **Dispatch with `ref:` set to a branch runs that branch's workflow and builds
+    that branch's firmware**, so a probe iterates entirely unmerged. That is also
+    the answer to "workflow_dispatch only exists on the default branch": the
+    *entry* must be there, the *code* need not.
+  - ⚠️ **The console cannot see a flash window.** QMK drops output nobody drains
+    and during a flash nothing does, so a probe observes before and after an
+    update, never during. A gap in the `[qmk]` timestamps spanning a flash is
+    expected, not a symptom.
+  - ✅ **A brick is self-recovering on the rig** — it asserts BOOTSEL over GPIO,
+    and BOOTSEL/UF2 bypasses `fw_staging` entirely. So the rig is the right, and
+    the only, place to exercise the firmware-apply path: the failure this whole
+    area guards against cannot strand the hardware.
+  - **A probe is disposable.** Delete it when the bug closes, or promote it into
+    `station/hil_tests.py` if the question is worth asking forever.
+
 - **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
   is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
   training data and therefore blind spots, while dataflow analysis fails elsewhere.
@@ -845,6 +966,39 @@ Firmware releases are **GitHub Releases** (tag `PolyKybd-fw-vX.Y.Z`; `FW_VERSION
 `polykybd-github-release` skill to draft the notes and drive the flow. The mechanics
 that cost real debugging to learn (2026-07):
 
+- ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
+  released** (`tools/require_fwapply_run.py`, the first step of `release.yml`,
+  before the build so a refusal changes nothing). The HID-apply brick shipped
+  because no release artifact had ever been applied on hardware — the rig flashes
+  by UF2 over GPIO BOOTSEL, which bypasses `fw_staging` entirely, and this
+  workflow runs no HIL at all. With the fwapply tier now running on every merge
+  to `PolyKybd`, the gate is normally a formality; it exists for a hand-made tag,
+  a re-publish, or a merge whose rig run went red and was forgotten.
+  - ⚠️ **It CANNOT simply demand a run on `github.sha`** — release tags land on
+    the auto-bump `[skip ci]` commit, which by construction no workflow ran on, so
+    that gate would refuse every release. It walks back through ancestors and then
+    **proves the delta to the release commit is only the auto-bump** — meaning
+    `FW_VERSION` *or* `PROTOCOL_VERSION` in `config.h` and nothing else, since a
+    `bump:protocol` merge increments only the latter and rewrites the semver to
+    the same value, producing no `FW_VERSION` diff line at all. Accepting an
+    ancestor without that proof would report coverage belonging to different
+    firmware, which is worse than no gate; accepting only `FW_VERSION` would
+    refuse a well-covered protocol release at publish time (caught in review of
+    the PR that added it, #264).
+  - **The job name is DERIVED from the checked-out workflow**, not hardcoded — a
+    rename would otherwise turn the gate into a silent no-op that reports "never
+    covered" for firmware that was. Same reason the ctnd unit-test workflow greps
+    its suite names instead of listing them.
+  - **Self-tested** (`--selftest`, run as the same CI step) because this repo has
+    no Python test harness and untested decision logic in a release gate is the
+    thing `fw_up_verdict.c` was extracted to avoid. Mutation-checked against 8
+    breaks; one escaped first — deleting the filename check passed every fixture,
+    because none of them had a *different* file whose lines mention `FW_VERSION`,
+    and `hid_com.c` is exactly such a file. The fixture that closes it is in the
+    selftest with that reasoning attached.
+  - **Recovery when it refuses**: dispatch *Build and HIL Test* on that commit
+    with `tier: fwapply`, wait for green, re-run the release job. The error names
+    every commit it checked and why each failed.
 - **A pushed tag does NOT create a release.** Release tags land on the auto-bump
   `chore: … [skip ci]` commit (`bump-version.yml`), and `[skip ci]` **suppresses the
   tag-push workflow trigger** — so `release.yml` runs on **`release: published`** (every

@@ -10,11 +10,11 @@
    ⚠️ `buffer` is written as uint32_t codepoints, so every caller must pass a
    uint32_t[] cast to char* (the char* signature is historical) — a char[] would
    be misaligned. `buffer_len` is the BYTE size, i.e. sizeof(that array). */
-void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);
-void num16_to_u32_string(char* buffer, uint8_t buffer_len, uint16_t value);
-void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value);
+void num_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint8_t value);
+void num16_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint16_t value);
+void hex_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint8_t value);
 /* Widen an ASCII string into a UTF-32 buffer for the kdisp text pipeline */
-void ascii_to_u32_string(char* buffer, uint8_t buffer_len, const char* s);
+void ascii_to_u32_string(uint32_t* buffer, uint8_t buffer_len, const char* s);
 
 /* Draw the active default-layout name (Qwerty / Colemak DH / …) at (x,y). Shared
    by both status-OLED variants so the layout list can't drift between them. */

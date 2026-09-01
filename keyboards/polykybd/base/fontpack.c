@@ -139,11 +139,20 @@ static bool validate_and_append(const uint8_t *base, uint32_t cap, uint16_t *out
         }
         {
             // Division, not multiplication: `count * sizeof(GFXglyph)` overflows
-            // a uint32 for a hostile `last`, and 64-bit arithmetic would pull a
-            // libcall into a Cortex-M0+ for no reason. `total_size - glyph_off`
-            // cannot underflow — glyph_off < total_size is checked above.
-            uint32_t count = tbl[i].last - tbl[i].first + 1u;
-            if (count > (h->total_size - tbl[i].glyph_off) / sizeof(GFXglyph)) {
+            // a uint32 for a hostile `last`. `total_size - glyph_off` cannot
+            // underflow — glyph_off < total_size is checked above.
+            //
+            // ⚠️ COMPARE SPANS, NOT COUNTS. `last - first + 1` is itself a uint32
+            // and wraps to ZERO for first=0, last=0xFFFFFFFF — which sails through
+            // any `count > limit` test and then declares the font to cover EVERY
+            // codepoint, so one lookup indexes megabytes past the pack. That is the
+            // crafted-range OOB this whole block exists to stop, and the first
+            // version of it had exactly that hole (caught in review of #264).
+            // `span = last - first` cannot overflow, because last >= first is
+            // already established.
+            uint32_t span     = tbl[i].last - tbl[i].first;
+            uint32_t capacity = (h->total_size - tbl[i].glyph_off) / sizeof(GFXglyph);
+            if (capacity == 0u || span > capacity - 1u) {
                 return false;  // glyph array runs past the end of the pack
             }
         }

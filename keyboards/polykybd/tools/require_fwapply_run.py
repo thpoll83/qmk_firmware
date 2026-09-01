@@ -50,6 +50,14 @@ VERSION_FILE = "keyboards/polykybd/config.h"
 VERSION_MACRO = "FW_VERSION"
 VERSION_MACROS = ("FW_VERSION", "PROTOCOL_VERSION")
 MAX_ANCESTORS = 12
+# GitHub's compare API returns at most this many files, silently truncated. A
+# truncated list cannot prove "nothing else changed", so it is refused rather
+# than trusted — the whole gate rests on that proof.
+COMPARE_FILE_CAP = 300
+# The delta from a covered ancestor to the release commit is the auto-bump: one
+# commit. Anything more is not the bump, and bounding it means the file list is
+# small enough that the cap above cannot have hidden anything.
+MAX_BUMP_COMMITS = 2
 
 
 def job_name(workflow_text=None):
@@ -115,6 +123,35 @@ def only_a_version_bump(files):
     return True
 
 
+def compare_is_conclusive(compare):
+    """True when a compare response can PROVE what changed.
+
+    Pure, so it is testable without the network. Two ways the API can leave the
+    question open, both of which must refuse rather than assume:
+
+    * the ``files`` list is capped at ``COMPARE_FILE_CAP`` and silently truncated
+      — a partial list cannot establish "and nothing else";
+    * the delta is more commits than an auto-bump can be, which means whatever is
+      being compared is not the bump at all.
+
+    Returns ``(ok, reason)``; ``reason`` is empty when ok.
+    """
+    files = compare.get("files")
+    if files is None:
+        return False, "the compare response carried no file list"
+    if len(files) >= COMPARE_FILE_CAP:
+        return False, (f"the compare lists {len(files)} files, at or past GitHub's "
+                       f"{COMPARE_FILE_CAP}-file cap — the list may be truncated, so "
+                       f"it cannot prove nothing else changed")
+    ahead = compare.get("ahead_by")
+    if ahead is None:
+        return False, "the compare response carried no ahead_by"
+    if ahead > MAX_BUMP_COMMITS:
+        return False, (f"{ahead} commits separate the covered run from the release "
+                       f"commit; an auto-bump is one")
+    return True, ""
+
+
 def covered_by(runs_jobs, name=None):
     """Return the id of a run whose apply job SUCCEEDED, else None.
 
@@ -176,10 +213,17 @@ def main():
                   f"({candidate[:8]}) by run {run_id}")
             return 0
         try:
-            files = api(f"/repos/{repo}/compare/{candidate}...{sha}", token).get("files", [])
+            compare = api(f"/repos/{repo}/compare/{candidate}...{sha}", token)
         except urllib.error.HTTPError as exc:
             print(f"::error::cannot compare {candidate[:8]}...{sha[:8]}: {exc}", file=sys.stderr)
             return 1
+        conclusive, why = compare_is_conclusive(compare)
+        if not conclusive:
+            print(f"::error::cannot prove {candidate[:8]}...{sha[:8]} is only the "
+                  f"version bump: {why}. Refusing rather than assuming.",
+                  file=sys.stderr)
+            return 1
+        files = compare.get("files", [])
         if only_a_version_bump(files):
             print(f"::notice::firmware apply verified on {candidate[:8]} by run {run_id}; "
                   f"the only delta to {sha[:8]} is the {VERSION_MACRO} bump")
@@ -264,6 +308,42 @@ def selftest():
         got = only_a_version_bump(files)
         if got != want:
             print(f"selftest FAIL: only_a_version_bump({name}) = {got}, want {want}")
+            ok = False
+
+    bump = [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"")]
+    compare_cases = [
+        ("an ordinary one-commit bump", {"files": bump, "ahead_by": 1}, True),
+        ("identical commits", {"files": [], "ahead_by": 0}, True),
+        # ⚠️ GitHub truncates `files` at 300. A truncated list cannot prove
+        # "and nothing else changed", which is the only thing this gate asserts.
+        ("a file list at GitHub's cap (may be truncated)",
+         {"files": [{"filename": VERSION_FILE, "patch": "@@"}] * COMPARE_FILE_CAP,
+          "ahead_by": 1}, False),
+        ("more commits than an auto-bump can be",
+         {"files": bump, "ahead_by": 40}, False),
+        ("no file list at all", {"ahead_by": 1}, False),
+        ("no ahead_by at all", {"files": bump}, False),
+    ]
+    for name, compare, want in compare_cases:
+        got, _ = compare_is_conclusive(compare)
+        if got != want:
+            print(f"selftest FAIL: compare_is_conclusive({name}) = {got}, want {want}")
+            ok = False
+
+    # ⚠️ The crafted range that shipped in the first cut of the firmware guard:
+    # last - first + 1 wraps a uint32 to ZERO. Mirrored here because the same
+    # arithmetic trap applies to anything reasoning about these ranges.
+    def span_ok(first, last, capacity):
+        span = (last - first) & 0xFFFFFFFF
+        return capacity != 0 and span <= capacity - 1
+    span_cases = [("normal", (0x41, 0x5A, 8751), True),
+                  ("uint32 wrap first=0 last=0xFFFFFFFF", (0, 0xFFFFFFFF, 8751), False),
+                  ("exactly fits", (0, 8750, 8751), True),
+                  ("one past", (0, 8751, 8751), False),
+                  ("zero capacity", (0, 0, 0), False)]
+    for name, (a, b, cap), want in span_cases:
+        if span_ok(a, b, cap) != want:
+            print(f"selftest FAIL: span_ok({name}) = {not want}, want {want}")
             ok = False
 
     green = {"name": JOB_NAME, "conclusion": "success"}

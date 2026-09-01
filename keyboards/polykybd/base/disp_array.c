@@ -146,6 +146,29 @@ void kdisp_set_gfx_scanline2(bool scanline) {
     s_gfx_scanline = scanline ? 2 : 0;
 }
 
+// Plot one INK pixel, honouring the two static plotter modes.
+//
+// ⚠️ The modes used to live inside the two char writers only — exactly the shape
+// that left the jitter offset covering the text and nothing else (see gfx_text_run).
+// Every composite display-list op (\x0F HALF, \x11 THIN, \x15 ROT, \x13 BADGE,
+// \x12 FRAME) plots through a primitive of its own, so under EDEN's scanline the
+// letters came out half-density while the composited art stayed fully lit: the
+// context-menu pointer, and the scroll-lock / media-stop badges, which are composite
+// art ONLY and so ignored the dimming entirely. Routing every ink primitive through
+// one plot point means a sixth op inherits both modes by construction.
+//
+// ⚠️ Deliberately NOT pushed down into SET_PIXEL_CLIPPED itself: ground fills and
+// bitmap blits (kdisp_fill_rect, kdisp_draw_bitmap, the tab/MRU chrome, clear_line)
+// must stay unconditional. The split is what the primitive IS — glyph and badge ink
+// follows the modes, a background does not — not a list of call sites to keep in sync.
+static inline void kdisp_plot_ink(int x, int y) {
+    if (s_gfx_erase) {
+        CLEAR_PIXEL_CLIPPED(x, y);
+    } else if (!scanline_skip_row(y)) {
+        SET_PIXEL_CLIPPED(x, y);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Glyph accessors. The glyph array + bitmap live in the font struct (flash), and
 // every glyph bitmap is stored COLUMN-NATIVE (OLED page-format — see gfxfont.h),
@@ -197,7 +220,7 @@ void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, in
                     if (byte & (1u << (sy & 7))) { lit = true; break; }
                 }
             }
-            if (lit) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+            if (lit) { kdisp_plot_ink(x + dx, y + dy); }
         }
     }
 }
@@ -221,7 +244,7 @@ void kdisp_draw_glyph_thin_at(const GFXfont *const *fonts, uint8_t num_fonts, in
         for (int16_t dx = 0; dx < hw; ++dx) {
             const int16_t sx = dx * 2;
             uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
-            if (byte & (1u << (sy & 7))) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+            if (byte & (1u << (sy & 7))) { kdisp_plot_ink(x + dx, y + dy); }
         }
     }
 }
@@ -280,7 +303,7 @@ void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts
                 const uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)ix * cb + (iy >> 3)]);
                 if (byte & (1u << (iy & 7))) lit = true;
             }
-            if (lit) { SET_PIXEL_CLIPPED(x + dx, y + dy); }
+            if (lit) { kdisp_plot_ink(x + dx, y + dy); }
         }
     }
 }
@@ -298,10 +321,10 @@ void kdisp_draw_glyph_double_at(const GFXfont *const *fonts, uint8_t num_fonts, 
         for (int16_t sy = 0; sy < h; ++sy) {
             uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
             if (!(byte & (1u << (sy & 7)))) continue;
-            SET_PIXEL_CLIPPED(x + sx * 2,     y + sy * 2);
-            SET_PIXEL_CLIPPED(x + sx * 2 + 1, y + sy * 2);
-            SET_PIXEL_CLIPPED(x + sx * 2,     y + sy * 2 + 1);
-            SET_PIXEL_CLIPPED(x + sx * 2 + 1, y + sy * 2 + 1);
+            kdisp_plot_ink(x + sx * 2,     y + sy * 2);
+            kdisp_plot_ink(x + sx * 2 + 1, y + sy * 2);
+            kdisp_plot_ink(x + sx * 2,     y + sy * 2 + 1);
+            kdisp_plot_ink(x + sx * 2 + 1, y + sy * 2 + 1);
         }
     }
 }
@@ -366,18 +389,18 @@ void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
     if (r > (width - 1) / 2)  r = (width - 1) / 2;
     if (r > (height - 1) / 2) r = (height - 1) / 2;
     // straight edges
-    for (int i = x0 + r; i <= x1 - r; ++i) { SET_PIXEL_CLIPPED(i, y0); SET_PIXEL_CLIPPED(i, y1); }
-    for (int j = y0 + r; j <= y1 - r; ++j) { SET_PIXEL_CLIPPED(x0, j); SET_PIXEL_CLIPPED(x1, j); }
+    for (int i = x0 + r; i <= x1 - r; ++i) { kdisp_plot_ink(i, y0); kdisp_plot_ink(i, y1); }
+    for (int j = y0 + r; j <= y1 - r; ++j) { kdisp_plot_ink(x0, j); kdisp_plot_ink(x1, j); }
     // corner arcs (centres at the four inset corner points)
     int cxl = x0 + r, cxr = x1 - r, cyt = y0 + r, cyb = y1 - r;
     int f = 1 - r, ddF_x = 1, ddF_y = -2 * r, px = 0, py = r;
     while (px < py) {
         if (f >= 0) { py--; ddF_y += 2; f += ddF_y; }
         px++; ddF_x += 2; f += ddF_x;
-        SET_PIXEL_CLIPPED(cxr + px, cyt - py); SET_PIXEL_CLIPPED(cxr + py, cyt - px); // top-right
-        SET_PIXEL_CLIPPED(cxl - px, cyt - py); SET_PIXEL_CLIPPED(cxl - py, cyt - px); // top-left
-        SET_PIXEL_CLIPPED(cxr + px, cyb + py); SET_PIXEL_CLIPPED(cxr + py, cyb + px); // bottom-right
-        SET_PIXEL_CLIPPED(cxl - px, cyb + py); SET_PIXEL_CLIPPED(cxl - py, cyb + px); // bottom-left
+        kdisp_plot_ink(cxr + px, cyt - py); kdisp_plot_ink(cxr + py, cyt - px); // top-right
+        kdisp_plot_ink(cxl - px, cyt - py); kdisp_plot_ink(cxl - py, cyt - px); // top-left
+        kdisp_plot_ink(cxr + px, cyb + py); kdisp_plot_ink(cxr + py, cyb + px); // bottom-right
+        kdisp_plot_ink(cxl - px, cyb + py); kdisp_plot_ink(cxl - py, cyb + px); // bottom-left
     }
 }
 
@@ -424,11 +447,11 @@ void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
             const int hins = rr_row_inset(j, hy0, hy1, hr);
             const int ha = hx0 + hins, hb = hx1 - hins;
             for (int i = a; i <= b; ++i) {
-                if (i < ha || i > hb) SET_PIXEL_CLIPPED(i, j);
+                if (i < ha || i > hb) kdisp_plot_ink(i, j);
             }
             continue;
         }
-        for (int i = a; i <= b; ++i) SET_PIXEL_CLIPPED(i, j);
+        for (int i = a; i <= b; ++i) kdisp_plot_ink(i, j);
     }
 }
 
@@ -598,11 +621,7 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
             const uint8_t  vmsk = (uint8_t)(1u << (yy & 7));
             for (xx = 0; xx < w; xx++) {
                 if (pgm_read_byte(&bitmap[base + (uint16_t)xx * cb]) & vmsk) {
-                    if (s_gfx_erase) {
-                        CLEAR_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
-                    } else if (!scanline_skip_row(y + yo + yy)) {
-                        SET_PIXEL_CLIPPED(x + xo + xx, y + yo + yy);
-                    }
+                    kdisp_plot_ink(x + xo + xx, y + yo + yy);
                 }
             }
         }
@@ -648,11 +667,7 @@ static int8_t kdisp_write_gfx_char_half(const GFXfont *const *fonts, uint8_t num
                 }
             }
             if (!lit) continue;
-            if (s_gfx_erase) {
-                CLEAR_PIXEL_CLIPPED(gx0 + dx, gy0 + dy);
-            } else if (!scanline_skip_row(gy0 + dy)) {
-                SET_PIXEL_CLIPPED(gx0 + dx, gy0 + dy);
-            }
+            kdisp_plot_ink(gx0 + dx, gy0 + dy);
         }
     }
     return (int8_t)((pgm_read_byte(&glyph->xAdvance) + 1) / 2);
@@ -778,10 +793,11 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                     text += 3;
                 }
                 break;
-            case U'\x14':   // ERASE: draw every FOLLOWING TEXT glyph as a hole, not as ink.
-                            //   ⚠️ Covers the ordinary and \x10 (SMALL) paths, which both
-                            //   honour s_gfx_erase — NOT the \x0F/\x11 composite ops, whose
-                            //   kdisp_draw_glyph_*_at plot unconditionally.
+            case U'\x14':   // ERASE: draw everything FOLLOWING as a hole, not as ink —
+                            //   the composite ops (\x0F/\x11/\x15/\x13/\x12) included, since
+                            //   they now plot through kdisp_plot_ink() like the text does.
+                            //   (It used to cover the text paths ONLY, so a HINT_ERASE before
+                            //   a HALF/BADGE silently drew it lit.)
                 erase_latched = true;
                 s_gfx_erase   = true;
                 break;

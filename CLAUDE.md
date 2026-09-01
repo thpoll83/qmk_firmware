@@ -1314,6 +1314,36 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     size; a 90° turn swaps the axes), because the first version asked the helper what
     to expect and therefore agreed with it by construction — a "don't halve the width"
     mutation sailed straight through. Same trap as the macro-icon preview note below.
+  - ⚠️ **The offset was not the only per-primitive property the composite ops
+    bypassed — `s_gfx_erase` and `s_gfx_scanline` were the SAME shape, and the
+    scanline one was live.** Both are static plotter modes that only the two char
+    writers honoured, so under `IDLE_STYLE_EDEN` — which draws the resting legend
+    `kdisp_set_gfx_scanline(true)` as a dim half-density ghost — the text came out
+    half-density while the composited art stayed fully lit. Measured over the shipped
+    legends, three carry composite art AND are reachable as a resting legend (i.e. at
+    idle), all three on the split72 default keymap: `ICON_SCRLOCK_ON/OFF` (`KC_SCRL`,
+    a 19×19 `HINT_BADGE`), `ICON_MEDIA_STOP` (`KC_MSTP`, **badge only** — so the whole
+    keycap ignored the dimming) and `ICON_CONTEXT_MENU` (`KC_APP`, the ROT'd pointer).
+    The other three composite legends (`ICON_GFX_RESTART`/`_RELOAD`, and the
+    `HINT_FRAME` hints) are held-modifier hints, never drawn at idle.
+    - **Same remedy, one level down: `kdisp_plot_ink()`.** Every ink primitive —
+      HALF / THIN / ROT / BADGE / FRAME / `_double_at`, and both char writers — plots
+      through it, so it is now the single definition of "ink" and a sixth op inherits
+      both modes by construction.
+    - ⚠️ **Deliberately NOT pushed down into `SET_PIXEL_CLIPPED`.** Ground fills and
+      bitmap blits (`kdisp_fill_rect`, `kdisp_draw_bitmap`, the tab/MRU chrome,
+      `clear_line`) must stay unconditional, or an overlay image drawn while the flag
+      is up would silently scanline-dim. The split is what the primitive **is**, not a
+      list of call sites to keep in sync.
+    - **It made the image SMALLER**: `.text` 285320 → 284320 (**−1000 B**), `.data`
+      and `.bss` byte-identical (monolith `.heap` free 2772 either way) — fourteen
+      duplicated per-pixel plot sequences collapsed into one out-of-line call. Verified
+      in the compiled image rather than the source: `kdisp_plot_ink` is emitted
+      out-of-line and `objdump` shows every composite primitive `bl`-ing it.
+    - ⚠️ **`disp_array.c` has NO unit suite** (it owns the scratch buffer), so this
+      class is only ever caught by reading the code or by looking at hardware —
+      `oled_preview.py` refuses these ops, so the usual "render it" rule does not
+      reach them either. That is why the same mistake was made twice in one file.
 - **`kdisp_send_window()` vs `kdisp_send_buffer()`**: `kdisp_send_buffer()` pushes
   the full 1024-byte scratch; `kdisp_send_window()` pushes only the **visible 360
   bytes** (pages 0–4 at column `BUFFER_X`) — the same region the keycap actually
@@ -2410,9 +2440,12 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
   - ⚠️ **`HINT_ERASE` restores the PREVIOUS `s_gfx_erase`, not `false`.** It is a
     static plotter mode, so leaving it on blanks every keycap drawn after this one in
     the same pass — and a caller may already be mid-erase (the inverted-keycap
-    pattern), which a hardcoded `false` would clobber. It also covers only the text
-    paths; `\x0F`/`\x11` composite through `kdisp_draw_glyph_*_at`, which plot
-    unconditionally.
+    pattern), which a hardcoded `false` would clobber. ⚠️ It used to cover **only the
+    text paths** — `\x0F`/`\x11`/`\x15`/`\x13`/`\x12` composite through their own
+    primitives, which plotted unconditionally — so `HINT_ERASE` before a HALF or a
+    BADGE silently drew it lit. Fixed by the same choke-point move as the jitter
+    offset: every ink primitive now plots through **`kdisp_plot_ink()`**. See the
+    plotter-mode note below.
   - The arrow **alone** was rendered first and is too sparse to identify, and the
     Caps/Num badge glyphs could not be borrowed because they carry a literal `A` / `1`.
 - **Pause spells the word out**, at half the **L legend tier** (`0xF3000`) — 14 px

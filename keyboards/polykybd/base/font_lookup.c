@@ -215,22 +215,32 @@ static void bbox_walk(const GFXfont *const *fonts, uint8_t num_fonts,
                 }
                 break;
             default: {
-                // Locate the font whose [first,last] contains the codepoint (linear
-                // scan; this is a cold measuring path, no MRU cache needed).
-                uint32_t ch = *text, first = 0, last = 0;
                 // Mirror the draw's per-glyph fallback: MID applies only to codepoints
                 // the mid face actually has.
                 const bool            use_mid = mid && kdisp_gfx_glyph(mid_font, mid_count, *text) != NULL;
                 const GFXfont *const *pool = use_mid ? mid_font : fonts;
                 const uint8_t         cnt  = use_mid ? mid_count : num_fonts;
-                const GFXfont *f = 0;
-                for (uint8_t i = 0; i < cnt; ++i) {
-                    first = pgm_read_dword(&pool[i]->first);
-                    last  = pgm_read_dword(&pool[i]->last);
-                    if (ch >= first && ch <= last) { f = pool[i]; break; }
+                // ⚠️ Resolve through kdisp_gfx_glyph_font, the SAME lookup every draw
+                // path uses, rather than a hand-rolled range scan. The scan that used to
+                // be here did not skip a 0x0 GAP record (the generated headers' padding
+                // for a non-contiguous range), so a codepoint inside a padded span —
+                // Pashto letters under _PerArab_'s wider range is the documented case —
+                // measured the empty gap while the draw resolved a real glyph from the
+                // next font. Measuring a glyph the draw will not produce mis-places the
+                // legend, because plan_main_legend() positions from this box.
+                const GFXfont  *f = NULL;
+                const GFXglyph *g = kdisp_gfx_glyph_font(pool, cnt, *text, &f);
+                if (g == NULL) {
+                    // Nothing covers it. The full-size writer substitutes '!' from
+                    // fonts[0] and advances, so the box must too — but
+                    // kdisp_write_gfx_char_half returns 0: it draws NOTHING and does not
+                    // advance. Substituting here in a SMALL run therefore invented both
+                    // ink and an advance the draw never spends, shifting every following
+                    // glyph. Skip the codepoint instead, exactly as the half writer does.
+                    if (small) break;
+                    f = pool[0];
+                    g = pgm_read_glyph_ptr(f, U'!' - pgm_read_dword(&f->first));
                 }
-                if (!f) { f = pool[0]; first = pgm_read_dword(&f->first); ch = U'!'; }
-                const GFXglyph *g = pgm_read_glyph_ptr(f, ch - first);
                 int8_t w  = pgm_read_byte(&g->width);
                 int8_t h  = pgm_read_byte(&g->height);
                 int8_t xo = pgm_read_byte(&g->xOffset);

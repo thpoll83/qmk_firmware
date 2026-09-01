@@ -2,7 +2,17 @@ name: Build and HIL Test
 
 on:
   push:
-    branches: [PolyKybd, "PolyKybd/**"]
+    # ⚠️ `PolyKybd` ONLY. A `PolyKybd/**` pattern was carried here for a long
+    # time and could never match anything: git forbids a ref that is a PREFIX
+    # of another ref, so while `refs/heads/PolyKybd` exists as a branch,
+    # `refs/heads/PolyKybd/<anything>` cannot be created at all --
+    #   fatal: cannot lock ref 'refs/heads/PolyKybd/x': 'refs/heads/PolyKybd'
+    #          exists; cannot create 'refs/heads/PolyKybd/x'
+    # `git ls-remote --heads origin 'refs/heads/PolyKybd/*'` confirms none has
+    # ever existed. It read as a staging-branch escape hatch and was not one:
+    # anyone reaching for `PolyKybd/staging` gets git's refusal, and a
+    # differently-named branch then silently runs nothing.
+    branches: [PolyKybd]
     # A change that cannot alter the firmware should not occupy the HIL rig for
     # a full flash-and-test cycle (the rig runs one job at a time, so such a
     # push delays every real build queued behind it).

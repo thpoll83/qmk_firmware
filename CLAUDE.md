@@ -540,10 +540,16 @@ inherited-upstream noise:
     do it too. **A dispatch is also the way to exercise the doom set when there is no
     open PR to label** (used 2026-08-29, run #894, right after the trilogy merged). The commit-message form is the natural release-time route — a release push
     is a push — but it only fires where the workflow listens for pushes at all,
-    i.e. `PolyKybd` and `PolyKybd/**`; the same marker in a commit pushed to a
-    `claude/**` branch starts nothing. What dispatch buys is needing no label
-    bookkeeping, which also sidesteps the two-labels-in-one-call trap below (that
-    fires two runs).
+    i.e. **`PolyKybd`, and only `PolyKybd`**; the same marker in a commit pushed to
+    a `claude/**` branch starts nothing. ⚠️ The trigger used to read `[PolyKybd,
+    "PolyKybd/**"]` and that second pattern was **unreachable**: git refuses a ref
+    that is a PREFIX of another ref, so `refs/heads/PolyKybd/<x>` cannot exist while
+    `refs/heads/PolyKybd` does (`git ls-remote --heads origin 'refs/heads/PolyKybd/*'`
+    → 0, ever). It read as a staging-branch escape hatch and was not one — git
+    refuses to create the branch, and a differently-named one silently runs nothing.
+    Dropped from `qmk-test.yml` and `polykybd-unit-test.yml` (2026-09-01).
+    What dispatch buys is needing no label bookkeeping, which also sidesteps
+    the two-labels-in-one-call trap below (that fires two runs).
     Whichever route, the combination is safe: `perf-test` has `needs: [build-perf,
     hil-test]`, so the rig runs the suite first and measures afterwards rather than
     interleaving two flashes. Measured on run #805 (2026-08-20): ~3 min of rig time
@@ -650,6 +656,43 @@ inherited-upstream noise:
     baked pubkey does not match, so the keyboard raises the A/ACCEPT prompt, which
     the rig cancels). Benign on the rig, which recovers itself — but it is why an
     ephemeral-key build must never be handed to a user to flash.
+  - ⚠️ **"On every push" is only as good as GitHub DELIVERING the push event, and it
+    does not always — measured, on the very merge that added this tier.** Merging
+    #264 (`43cc2559`, 2026-09-01) created **no push-event workflow run at all**:
+    not `qmk-test`, not `cppcheck`, not `polykybd-unit-test`. That last one is the
+    decisive part — it has **no `paths:` filter whatsoever**, and it had fired on
+    #263's `CLAUDE.md`-only merge hours earlier, yet stayed silent on a merge
+    carrying nine C files. So this was not a paths filter, and not ours. Ruled out
+    too: no GitHub Actions incident that day (the one Git Operations incident ran
+    15:00–16:01 UTC, hours earlier); the merge was a **direct click** on *Merge
+    pull request* by the repo owner — confirmed with them, not inferred — so
+    neither the GITHUB_TOKEN no-recursive-runs rule nor the reported
+    auto-merge-skips-CI-on-the-target-branch behaviour applies; and every previous
+    merge is followed by the same `[skip ci]` auto-bump at +13–16 s, so the bump
+    cannot be it either.
+    ⚠️ **`merged_by` alone CANNOT settle that** — an auto-merge is still attributed
+    to whoever enabled it, so the field reads identically either way. The only
+    signals are the timing (auto-merge fires within seconds of the last check
+    turning green; this one landed 10 minutes later) and asking the person.
+    The run object simply never existed. GitHub's own troubleshooting says a
+    workflow that does not trigger "silently does nothing", and dropped runs under
+    load are a documented class — so treat this as a **delivery** failure, not a
+    config bug, and do not go looking for a mechanism in the workflow.
+    - **The design already absorbs it, which is the reassuring half.** The release
+      gate (`tools/require_fwapply_run.py`) refuses to publish firmware no apply
+      run has covered, so a dropped push event costs a **manual dispatch at release
+      time**, not a bricked release. That is the gate doing exactly its job.
+    - **Recovery: dispatch *Build and HIL Test* with `tier: fwapply`.** ✅ A
+      dispatch takes a **branch**, so the run lands on the branch TIP — the
+      auto-bump commit, which is precisely the sha a release tag lands on. The gate
+      then finds coverage on the release sha **directly** and never needs its
+      walk-back-through-ancestors path. Verified 2026-09-01, run #959: build ✅,
+      HIL suite ✅ 2m55, apply round-trip ✅ 3m40 (its first-ever execution).
+    - ⚠️ **So don't read "runs unasked on every merge" as a guarantee.** After a
+      merge you care about, confirm a run actually exists for the merge sha —
+      `actions_list list_workflow_runs` filtered `event: push` — rather than
+      assuming. A missing run looks identical to a repo where nothing was
+      configured.
 
 - ✅ **The DEBUG LOOP: a firmware bug can now be chased on the rig with nobody
   flashing a `.bin`.** Dispatch `qmk-test.yml` on a branch with **`tier: debug`,
@@ -808,8 +851,8 @@ inherited-upstream noise:
   *different* mechanism from the push/pull_request duplication below.
 - ⚠️ **A workflow yields TWO check runs — `push` and `pull_request` — whenever the
   branch matches BOTH triggers, and re-running one does NOT touch the other.**
-  Here that mostly doesn't happen: `qmk-test.yml` pushes only on `PolyKybd`/
-  `PolyKybd/**`, `unit_test.yml` only on `master`/`develop`, and `lint`/`labeler`
+  Here that mostly doesn't happen: `qmk-test.yml` pushes only on `PolyKybd`,
+  `unit_test.yml` only on `master`/`develop`, and `lint`/`labeler`
   are PR-only — so a `claude/**` PR gets a single run per workflow. **The sibling
   repos differ**: wincompose's `build.yml` pushes on `main` *and* `claude/**` on
   top of `pull_request`, so every branch PR there carries two, and that is where

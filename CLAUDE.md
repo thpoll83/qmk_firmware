@@ -474,7 +474,17 @@ inherited-upstream noise:
     UI's **Extended** toggle beside Run Tests.
   - ✅ **`workflow_dispatch` runs all THREE opt-ins at once — the extended HIL tier,
     the perf measurement AND the FW-9 doom set** — because it satisfies every opt-in
-    `if:` at once (each names `github.event_name == 'workflow_dispatch'`). They are
+    `if:` at once (each names `github.event_name == 'workflow_dispatch'`).
+    ⚠️ **Since the `tier` input (2026-09-01) that is what `tier: all` does, and `all`
+    is the DEFAULT**, so an ordinary dispatch still behaves exactly as described here.
+    The narrower values (`default`, `extended`, `perf`, `doom`, `fwapply`, `debug`)
+    each drive one opt-in, and `tier` is read **only** under
+    `github.event_name == 'workflow_dispatch'` — push and pull_request keep their
+    label/marker gating untouched. `debug` is the odd one out: it **skips the graded
+    suite entirely** (the only `if:` on `hil-test`) and runs just the probe, because a
+    debug loop pays the rig cost on every iteration. The whole table was verified by
+    simulating the conditions across every trigger, not by reading them — that is the
+    only way to check a folded-scalar `if:` short of merging and waiting. They are
     otherwise INDEPENDENT — each opt-in drives only its own job, so `hil-extended`
     alone starts no perf run and `hil-perf` alone leaves the HIL suite on its default
     tier. ⚠️ Dispatch is not the *only* way to get them: the matching labels on a PR, or
@@ -562,6 +572,38 @@ inherited-upstream noise:
     digest is a *real* hardening but a **repo-wide** one — 10 uses in `qmk-test.yml` +
     more in `release.yml` — so it is a deliberate all-uses-at-once change (ideally with
     Dependabot), never a piecemeal one-job edit.
+- ✅ **The DEBUG LOOP: a firmware bug can now be chased on the rig with nobody
+  flashing a `.bin`.** Dispatch `qmk-test.yml` on a branch with **`tier: debug`,
+  `probe: <name>`** and the rig builds that branch, flashes both halves, runs a
+  probe committed at `keyboards/polykybd/tools/hil_probes/<name>.py`, and pipes
+  the firmware's own console into the job log as `[qmk] …` lines. Edit, push,
+  dispatch, read the log. The rig side is `polykybd-ctnd/station/probe.py`
+  (`--probe`); the probe format and the pitfalls are in that directory's
+  `README.md`. This existed in pieces before — the rig has echoed `[qmk]` lines
+  into the log all along — and what was missing was any way to run an *arbitrary*
+  question instead of the fixed suite.
+  - ⚠️ **DISPATCH-ONLY, and that `if:` IS the security control.** Triggering a
+    dispatch needs write access, so a fork PR can never reach the rig through it —
+    which matters because the rig is a self-hosted runner for a **public** repo
+    (HIL-2). **Do not add a `hil-debug` label trigger**: a label is applied to a PR
+    whose head may be a fork. The containment check in `station/probe.py` is *not*
+    this control and its own docstring says so; it is operational (CI has already
+    checked out the whole repo and the build jobs have already run code from it).
+  - **Dispatch with `ref:` set to a branch runs that branch's workflow and builds
+    that branch's firmware**, so a probe iterates entirely unmerged. That is also
+    the answer to "workflow_dispatch only exists on the default branch": the
+    *entry* must be there, the *code* need not.
+  - ⚠️ **The console cannot see a flash window.** QMK drops output nobody drains
+    and during a flash nothing does, so a probe observes before and after an
+    update, never during. A gap in the `[qmk]` timestamps spanning a flash is
+    expected, not a symptom.
+  - ✅ **A brick is self-recovering on the rig** — it asserts BOOTSEL over GPIO,
+    and BOOTSEL/UF2 bypasses `fw_staging` entirely. So the rig is the right, and
+    the only, place to exercise the firmware-apply path: the failure this whole
+    area guards against cannot strand the hardware.
+  - **A probe is disposable.** Delete it when the bug closes, or promote it into
+    `station/hil_tests.py` if the question is worth asking forever.
+
 - **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
   is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
   training data and therefore blind spots, while dataflow analysis fails elsewhere.

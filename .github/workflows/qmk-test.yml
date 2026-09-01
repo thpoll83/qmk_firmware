@@ -69,14 +69,38 @@ on:
       - '!.claude/**'
       - '!.github/workflows/**'
       - '.github/workflows/qmk-test.yml'
-  # Manual trigger for the opt-in performance measurement below (the normal
-  # build + HIL test always run; perf does not). No inputs: the baseline is moved
-  # by committing the run's JSON to polykybd-ctnd, not by a workflow switch — the
-  # rig's checkout is force-synced to origin/main before every run, so anything
-  # written there would be discarded on the next one.
+  # Manual trigger for the opt-in tiers below (the normal build + HIL test always
+  # run; perf/doom/fwapply/debug do not).
+  #
+  # ⚠️ `tier` narrows a dispatch and affects NOTHING ELSE — it is read only under
+  # `github.event_name == 'workflow_dispatch'`, so push and pull_request keep
+  # their existing label/marker gating untouched. It defaults to `all`, which is
+  # exactly the previous dispatch behaviour (every opt-in at once), so an existing
+  # habit of "just dispatch it" keeps working. The narrower values exist because a
+  # DEBUG LOOP pays the rig cost on every iteration: `debug` skips the graded
+  # suite entirely and runs only the probe.
+  #
+  # ⚠️ The baseline for perf is still moved by committing the run's JSON to
+  # polykybd-ctnd, NOT by a workflow switch — the rig's checkout is force-synced
+  # to origin/main before every run, so anything written there is discarded next
+  # run. Do not add an input for it.
+  #
   # ⚠️ workflow_dispatch only becomes available once this file is on the DEFAULT
-  # branch — it cannot be used to try the perf job out from an unmerged PR.
+  # branch — it cannot be used to try a job out from an unmerged PR. Dispatching
+  # WITH `ref:` set to a branch does run that branch's copy of the workflow, which
+  # is what makes the debug loop usable on unmerged firmware.
   workflow_dispatch:
+    inputs:
+      tier:
+        description: "Which tier to run (dispatch only; 'all' = previous behaviour)"
+        type: choice
+        default: all
+        options: [all, default, extended, perf, doom, fwapply, debug]
+      probe:
+        description: "tier=debug only: probe name under keyboards/polykybd/tools/hil_probes/"
+        type: string
+        required: false
+        default: ""
 
 jobs:
   build:
@@ -169,6 +193,16 @@ jobs:
   hil-test:
     name: HIL test (split72)
     needs: build
+    # The graded suite is skipped for ONE case only: a `debug` dispatch, which
+    # exists to iterate on a probe and pays the rig cost on every turn. Every
+    # other event and tier runs it exactly as before — `inputs.tier` is null
+    # outside a dispatch, and the left operand short-circuits there.
+    # ⚠️ doom-test / perf-test / fwapply-test all `needs: hil-test` purely to
+    # stop the flashes interleaving, and all carry `always()`, so skipping this
+    # job does not cascade into skipping them.
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.tier != 'debug'
     runs-on: [self-hosted, polykybd-ctnd]
     # --- suite tier (OPT-IN extended checks) ---------------------------------
     # Most HIL checks cost a report or two and run on every push. A few are slow
@@ -196,7 +230,8 @@ jobs:
     # and the tier is visible both here and in its "[runner] suite tier:" line.
     env:
       HIL_EXTENDED: >-
-        ${{ (github.event_name == 'workflow_dispatch' ||
+        ${{ ((github.event_name == 'workflow_dispatch' &&
+        (inputs.tier == 'all' || inputs.tier == 'extended')) ||
         contains(github.event.pull_request.labels.*.name, 'hil-extended') ||
         contains(github.event.head_commit.message, '[hil-extended]'))
         && '1' || '0' }}
@@ -372,7 +407,8 @@ jobs:
   build-perf:
     name: Build firmware (profiling)
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.tier == 'all' || inputs.tier == 'perf')) ||
       contains(github.event.pull_request.labels.*.name, 'hil-perf') ||
       contains(github.event.head_commit.message, '[hil-perf]')
     runs-on: ubuntu-latest
@@ -530,7 +566,8 @@ jobs:
   build-doom:
     name: Build firmware + signed pack (doom FW-9)
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.tier == 'all' || inputs.tier == 'doom')) ||
       contains(github.event.pull_request.labels.*.name, 'hil-doom') ||
       contains(github.event.head_commit.message, '[hil-doom]')
     runs-on: ubuntu-latest
@@ -619,7 +656,8 @@ jobs:
     # SAME indent as the first, or YAML keeps the newline, the expression stops
     # being valid, and the job silently stops matching its trigger.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.tier == 'all' || inputs.tier == 'fwapply')) ||
       contains(github.event.pull_request.labels.*.name, 'hil-fwapply') ||
       contains(github.event.head_commit.message, '[hil-fwapply]')
     runs-on: ubuntu-latest
@@ -780,6 +818,101 @@ jobs:
             --doom \
             --plyx-valid "firmware/$PLYX" \
             2>&1 | tee /tmp/doom-test.log
+
+  # ── ad-hoc debug probe (dispatch-only) ──────────────────────────────────────
+  # The debug loop. A PROBE is a Python file committed on this branch under
+  # keyboards/polykybd/tools/hil_probes/ that drives the flashed keyboard over
+  # raw HID and asserts whatever the bug of the day needs. The rig pipes the
+  # firmware's own console into the job log as `[qmk] …` lines, so the whole
+  # flash -> drive -> read-what-it-printed cycle happens here rather than through
+  # someone flashing a .bin by hand and pasting a log back. See
+  # polykybd-ctnd/CLAUDE.md "Debug loop".
+  #
+  # ⚠️ DISPATCH-ONLY, and that IS the security control. Triggering a
+  # workflow_dispatch requires write access to this repo, so a fork PR can never
+  # reach this job — which matters because the rig is a self-hosted runner for a
+  # PUBLIC repo (HIL-2, polykybd-ctnd/docs/SECURITY_AUDIT.md). Do NOT add a
+  # `hil-debug` label trigger: a label is applied to a PR whose head may be a
+  # fork, and that would hand arbitrary code on the rig to anyone who can open
+  # one. The containment check in station/probe.py is NOT this control (it is
+  # operational — see its module docstring); this `if:` is.
+  #
+  # Dispatch WITH `ref:` set to a branch runs that branch's workflow and builds
+  # that branch's firmware, so a probe can be iterated on entirely unmerged.
+  debug-test:
+    name: Debug probe (split72)
+    # `needs: hil-test` only orders the rig flashes; a `debug` dispatch skips
+    # that job, hence `always()` plus an explicit check that the BUILD succeeded.
+    needs: [build, hil-test]
+    if: >-
+      always() && github.event_name == 'workflow_dispatch' &&
+      inputs.tier == 'debug' && inputs.probe != '' &&
+      needs.build.result == 'success'
+    runs-on: [self-hosted, polykybd-ctnd]
+    permissions:
+      contents: read
+    steps:
+      # The probe lives in THIS repo, so unlike the other rig jobs this one needs
+      # the sources, not just the built artifact.
+      - uses: actions/checkout@v4
+
+      - name: Locate station directory
+        id: ctnd
+        run: |
+          dir="${CTND_DIR:-}"
+          if [ -z "$dir" ]; then
+            for candidate in /opt/polykybd-ctnd "$HOME/polykybd-ctnd"; do
+              if [ -f "$candidate/venv/bin/python" ]; then
+                dir="$candidate"
+                break
+              fi
+            done
+          fi
+          if [ -z "$dir" ]; then
+            echo "ERROR: could not find a polykybd-ctnd install with a venv." >&2
+            exit 1
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      # CI runs the INSTALLED station copy, so sync it — otherwise a lagging
+      # self-update timer runs this with a station that has never heard of
+      # --probe, and argparse fails with an unrelated-looking error.
+      - name: Sync station to current ctnd main
+        run: |
+          dir="${{ steps.ctnd.outputs.dir }}"
+          if [ ! -d "$dir/.git" ]; then
+            echo "WARNING: $dir is not a git checkout — running the installed station as-is" >&2
+            exit 0
+          fi
+          git -C "$dir" fetch --quiet origin main \
+            && git -C "$dir" checkout -q -f -B main origin/main \
+            && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
+            || echo "WARNING: could not sync $dir to origin/main" >&2
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: ${{ steps.ctnd.outputs.dir }}/firmware
+
+      - name: Flash, then run the probe
+        # The probe name goes through env rather than straight ${{ }} into the
+        # script body — same shape as the doom and fwapply jobs, and here it is
+        # load-bearing rather than stylistic: `probe` is free-text workflow input.
+        env:
+          CTND_DIR: ${{ steps.ctnd.outputs.dir }}
+          HIL_LEFT: ${{ needs.build.outputs.split72_hil_left }}
+          HIL_RIGHT: ${{ needs.build.outputs.split72_hil_right }}
+          PROBE: ${{ inputs.probe }}
+          FIRMWARE_DIR: ${{ github.workspace }}
+        run: |
+          cd "$CTND_DIR"
+          set -o pipefail
+          venv/bin/python -u -m station.test_runner \
+            --left  "firmware/$HIL_LEFT" \
+            --right "firmware/$HIL_RIGHT" \
+            --probe "$PROBE" \
+            --firmware-dir "$FIRMWARE_DIR" \
+            2>&1 | tee /tmp/debug-probe.log
 
   fwapply-test:
     name: Firmware apply round-trip (split72)

@@ -217,7 +217,12 @@ def build_telemetry_panel(usb_side, small, fw="0.16.18", proto=15, hw="0x0320",
     l_up = "%s  up %s" % ("USB" if usb_side else "LNK", uptime)
     if not usb_side:
         l_link = "Lnk n/a"
-    elif link is None:
+    elif link is None or link[1] == 0:
+        # ⚠️ frames == 0 is the SAME branch, because the C tests `ls.attempts == 0U`
+        # BEFORE it computes a rate -- so a zero-frame panel showing a percentage is
+        # a reading no keyboard can produce. Mirroring only the None case let
+        # `--link 0,0` render "Lnk 0.0% 0", i.e. the preview drifting from the C in
+        # exactly the direction it exists to catch.
         l_link = "Lnk idle"
     else:
         pm, frames = link
@@ -587,6 +592,12 @@ def main():
         # reading the panel can never show -- same reasoning as the rate bound above.
         if not 0 <= frames <= 0xFFFFFFFF:
             raise argparse.ArgumentTypeError('frames must be 0..4294967295 (the uint32_t counter)')
+        # poly_link_err_permille() returns 0 when attempts is 0, so a non-zero rate
+        # over no frames describes no device. (Zero frames alone is fine -- it is
+        # spelled "idle", which the renderer above produces either way.)
+        if frames == 0 and pm != 0:
+            raise argparse.ArgumentTypeError(
+                'a non-zero err_permille needs frames > 0 (the firmware reports "idle" at 0 frames)')
         return (pm, frames)
 
     ap.add_argument('--link', type=link_arg, default=(4, 1234),

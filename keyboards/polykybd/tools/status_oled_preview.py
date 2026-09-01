@@ -580,11 +580,13 @@ def main():
         try:
             pm, frames = (int(p) for p in parts)
         except ValueError:
-            raise argparse.ArgumentTypeError('link fields must be whole numbers')
+            raise argparse.ArgumentTypeError('link fields must be whole numbers') from None
         if not 0 <= pm <= 1000:
             raise argparse.ArgumentTypeError('err_permille must be 0..1000 (1000 = 100 percent)')
-        if frames < 0:
-            raise argparse.ArgumentTypeError('frames must not be negative')
+        # The firmware counter is a uint32_t, so anything outside that range is a
+        # reading the panel can never show -- same reasoning as the rate bound above.
+        if not 0 <= frames <= 0xFFFFFFFF:
+            raise argparse.ArgumentTypeError('frames must be 0..4294967295 (the uint32_t counter)')
         return (pm, frames)
 
     ap.add_argument('--link', type=link_arg, default=(4, 1234),

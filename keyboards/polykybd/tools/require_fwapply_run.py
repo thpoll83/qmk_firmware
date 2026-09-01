@@ -40,7 +40,15 @@ JOB_ID = "fwapply-test"
 JOB_NAME = "Firmware apply round-trip (split72)"
 # The bump commit edits only this, and only its version line.
 VERSION_FILE = "keyboards/polykybd/config.h"
+# BOTH macros, because bump-version.yml writes either one depending on the merged
+# PR's label: `bump:protocol` increments PROTOCOL_VERSION and leaves the semver
+# alone, so FW_VERSION is re-substituted with the same value and produces no diff
+# line at all. Accepting only FW_VERSION would refuse a perfectly well-covered
+# protocol release — and it would do so at publish time, which is the worst
+# moment to discover it. This does not widen the gate: any change outside these
+# lines, or outside this file, still fails.
 VERSION_MACRO = "FW_VERSION"
+VERSION_MACROS = ("FW_VERSION", "PROTOCOL_VERSION")
 MAX_ANCESTORS = 12
 
 
@@ -102,7 +110,7 @@ def only_a_version_bump(files):
             return False
         for line in patch.splitlines():
             if line[:1] in ("+", "-") and not line.startswith(("+++", "---")):
-                if VERSION_MACRO not in line:
+                if not any(macro in line for macro in VERSION_MACROS):
                     return False
     return True
 
@@ -214,6 +222,20 @@ def selftest():
         ("bump with a diff header",
          [patch("--- a/x", "+++ b/x", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"")],
          True),
+        # bump:protocol changes ONLY this line — FW_VERSION is rewritten to the
+        # same value and never appears in the diff. Accepting just FW_VERSION
+        # would refuse a well-covered protocol release at publish time.
+        ("protocol-only bump (bump:protocol)",
+         [patch("@@", "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16")],
+         True),
+        ("both version macros bumped",
+         [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"",
+                "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16")],
+         True),
+        ("protocol bump PLUS a real edit in the same file",
+         [patch("@@", "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16",
+                "-#define SOMETHING 1", "+#define SOMETHING 2")],
+         False),
         ("version bump PLUS a real edit in the same file",
          [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"",
                 "-#define SOMETHING 1", "+#define SOMETHING 2")],

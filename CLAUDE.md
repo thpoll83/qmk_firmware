@@ -977,9 +977,14 @@ that cost real debugging to learn (2026-07):
   - ⚠️ **It CANNOT simply demand a run on `github.sha`** — release tags land on
     the auto-bump `[skip ci]` commit, which by construction no workflow ran on, so
     that gate would refuse every release. It walks back through ancestors and then
-    **proves the delta to the release commit is only the `FW_VERSION` bump**;
-    accepting an ancestor without that proof would report coverage belonging to
-    different firmware, which is worse than no gate.
+    **proves the delta to the release commit is only the auto-bump** — meaning
+    `FW_VERSION` *or* `PROTOCOL_VERSION` in `config.h` and nothing else, since a
+    `bump:protocol` merge increments only the latter and rewrites the semver to
+    the same value, producing no `FW_VERSION` diff line at all. Accepting an
+    ancestor without that proof would report coverage belonging to different
+    firmware, which is worse than no gate; accepting only `FW_VERSION` would
+    refuse a well-covered protocol release at publish time (caught in review of
+    the PR that added it, #264).
   - **The job name is DERIVED from the checked-out workflow**, not hardcoded — a
     rename would otherwise turn the gate into a silent no-op that reports "never
     covered" for firmware that was. Same reason the ctnd unit-test workflow greps

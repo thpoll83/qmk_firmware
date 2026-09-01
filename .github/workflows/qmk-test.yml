@@ -655,7 +655,19 @@ jobs:
     # ⚠️ The `if:` is a FOLDED scalar. Every continuation line must sit at the
     # SAME indent as the first, or YAML keeps the newline, the expression stops
     # being valid, and the job silently stops matching its trigger.
+    # ⚠️ Runs on EVERY push to PolyKybd, not just on request — this is the one
+    # opt-in that is not purely opt-in, and the reason is the HID-apply brick
+    # (qmk#258, shipped in a release). That bug was a LAYOUT effect: a macro PR
+    # grew .bss, which shifted fw_staging's page buffer off a word boundary, and
+    # the unaligned word copy HardFaulted the applier — so the guilty PR never
+    # touched the applier and a bisect blamed the wrong commit. Any PR can move
+    # .bss, so per-PR is not where this is catchable; what IS catchable is
+    # dating it to a merge you can still bisect. Checking only at release time
+    # would tell you which release bricks, with no bisect and a release to redo.
+    # Cost is bounded: the rig already runs a HIL cycle per merge, so this adds
+    # a cloud build plus one apply+reboot, not a new cadence.
     if: >-
+      github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' &&
       (inputs.tier == 'all' || inputs.tier == 'fwapply')) ||
       contains(github.event.pull_request.labels.*.name, 'hil-fwapply') ||

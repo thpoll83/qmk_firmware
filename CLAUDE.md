@@ -572,6 +572,37 @@ inherited-upstream noise:
     digest is a *real* hardening but a **repo-wide** one — 10 uses in `qmk-test.yml` +
     more in `release.yml` — so it is a deliberate all-uses-at-once change (ideally with
     Dependabot), never a piecemeal one-job edit.
+- **The FW-APPLY set (`build-fwapply` + `fwapply-test`) is the fourth tier, and it
+  is the ONLY one that runs unasked — on every push to `PolyKybd`.** It builds a
+  HIL image pair, signs the master `.bin` with an **ephemeral** key
+  (`gen_signing_key.py` rewrites `base/fw_pubkey.h`, same pattern as `build-doom`
+  — the production `FW_SIGNING_KEY` stays confined to `release.yml`), then has the
+  rig drive a real HID update through **APPLY** and confirm the board comes back.
+  It is also reachable by the `hil-fwapply` label, `[hil-fwapply]` in a pushed
+  commit, or `tier: fwapply`.
+  - ⚠️ **Why it is not opt-in, when everything else is: the HID-apply brick
+    (qmk#258) shipped in a RELEASE, and it was a LAYOUT effect.** `fw_staging`'s
+    page buffer was `static uint8_t` (alignment 1) and word-copied; a macro PR grew
+    `.bss`, shifted it off a word boundary, and the unaligned `STMIA` HardFaulted
+    on the M0+ inside a function that never returns — recoverable only over
+    BOOTSEL. So **the guilty PR never touched the applier**, `fw_staging_do_apply`
+    was byte-identical across the regression, and the bisect blamed the wrong
+    commit. Any PR can move `.bss`, so per-PR is not where this class is catchable;
+    what IS catchable is dating it to a **merge** that can still be bisected. A
+    release-time-only check would name the release that bricks, with no bisect and
+    a release to redo.
+  - **The cost is bounded**: the rig already runs a HIL cycle per merge, so this
+    adds a cloud build plus one apply+reboot, not a new cadence. PRs are untouched
+    — the tier stays opt-in there, so no PR pipeline gets slower.
+  - ⚠️ **`--apply-bin` is destructive by design and safe only because the image is
+    the one already running** — the rig checks that pairing rather than assuming
+    it. And it is safe *at all* only because a brick on the rig is self-recovering
+    over GPIO BOOTSEL.
+  - ⚠️ **An ephemeral-key image REFUSES a production-signed image over HID** (its
+    baked pubkey does not match, so the keyboard raises the A/ACCEPT prompt, which
+    the rig cancels). Benign on the rig, which recovers itself — but it is why an
+    ephemeral-key build must never be handed to a user to flash.
+
 - ✅ **The DEBUG LOOP: a firmware bug can now be chased on the rig with nobody
   flashing a `.bin`.** Dispatch `qmk-test.yml` on a branch with **`tier: debug`,
   `probe: <name>`** and the rig builds that branch, flashes both halves, runs a

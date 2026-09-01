@@ -841,6 +841,23 @@ that cost real debugging to learn (2026-07):
 - **Version bump is label-driven**: the merged PR's `bump:major`/`bump:minor`/
   `bump:protocol` label (else patch) drives `bump-version.yml`. Protocol PRs often bump
   `PROTOCOL_VERSION` in-source and *omit* `bump:protocol` (the label would double-bump).
+  - ⚠️ **A MISSING bump label is silent, and it can make the LIVE DOCS wrong within
+    minutes — apply the label before the merge, not after.** The label is read at merge
+    time and there is no second chance: the bump lands as a `chore:` commit and the
+    version is then whatever it produced. On 2026-09-01 qmk#259 merged without its
+    intended `bump:minor`, so `FW_VERSION` went to **0.16.21**; docs#68 merged three
+    seconds later naming **v0.17.0** in a `<SupportedSince>` tag and an upgrade note,
+    and `polykybd-docs` deploys on push — so the public site was promising a version
+    that would never exist while the firmware had not even been released yet.
+  - **The asymmetry is what makes it bite**: a docs PR ships the moment it merges, a
+    firmware PR only bumps a number and waits for a release. So a cross-repo pair has
+    *two* orderings to get right — the label before the qmk merge, and the docs merge
+    after the release (already noted in `polykybd-docs/CLAUDE.md`). Getting the second
+    right does not save you from the first.
+  - **Recovering** is a choice, not a fix: either correct the docs to the version that
+    actually bumped, or land a `bump:minor` PR that does **not** itself edit `config.h`
+    (the workflow bumps *after* merge, so an edited version file would be bumped on top
+    of) — the same cosmetic-realignment move described in the host repo's note.
 - ⚠️ **From Claude Code on the web you can neither push tags (git proxy returns 403 on
   `refs/tags/*`) nor create a release (no `gh` CLI, no create-release MCP tool)** — stage
   the notes on the branch and hand the user `python scripts/publish_release.py`.
@@ -1527,6 +1544,22 @@ matching the flash / confirm / apply screens there.
   case (`--link 1000,4294967295 --uptime "999d 23h"`), not at the default.
 - `tools/status_oled_preview.py --telemetry` renders it (both halves, `--diag` for the
   clipping check) — the same mirror-the-C treatment `build_fw_confirm_panel` gets.
+  - ⚠️ **Mirror the C's GUARDS, not just its formatting — a preview's INPUT DOMAIN can
+    be wider than the device's reachable state space.** `oled_telemetry_screen()` tests
+    `ls.attempts == 0U` and prints `Lnk idle` **before** it computes a rate (and
+    `poly_link_err_permille()` returns 0 at zero attempts anyway), so a percentage over
+    zero frames is a reading no keyboard can display. The preview mirrored only the
+    `link is None` case, so `--link 0,0` rendered `Lnk 0.0% 0` and `--link 250,0`
+    rendered `Lnk 25.0% 0` — the preview depicting the impossible, which is the
+    direction it exists to catch. This is the **sibling** of the "A PREVIEW THAT MIRRORS
+    THE IMPLEMENTATION AGREES BY CONSTRUCTION" note below, not the same thing: there the
+    preview and the C are wrong identically; here the preview can render a state the C
+    cannot reach.
+  - **Fix the RENDERER, not just the argparse validator** — the `status-oled-layout`
+    skill imports `build_telemetry_panel()` directly and never sees argparse. The
+    validator is the second half (it refuses a non-zero rate over zero frames, an input
+    describing no device), not the first. Check it by rendering: `--link 0,0` and
+    `--link idle` must produce **byte-identical** PNGs.
 
 **split42: PORTRAIT status OLED (2026-07).** The split42 panel is 128×32 physical
 but **mounted rotated 90°**, so the user reads it as **32 wide × 128 tall**. The poly
@@ -1811,9 +1844,30 @@ change generalise well beyond this setting:
   156 → 157, well inside the 256-byte reservation, so **no keymap relocation and no
   user reset**.
 - **Verify the gate in the compiled object, not the preprocessor.** `g_idle_style`
-  lands in `.data` on split72 (`objdump -s -j .data.g_idle_style` → `03`) and in
-  `.bss` on split42 (zero = PULSE) — one command per board, against the image that
-  actually ships.
+  lands in `.data` on split72 (initialiser `03` = EDEN) and in `.bss` on split42
+  (zero = PULSE) — one check per board, against the image that actually ships.
+  - ⚠️ **`objdump -s -j .data.<sym>` is NOT that check — it prints only the
+    file-format header and looks like an empty section.** GCC merges the symbol into
+    plain `.data` here, so no per-symbol section exists. ⚠️ `nm` is misleading too:
+    it reported `g_idle_style` as type **`t`** (text) for a symbol whose address is
+    inside `.data`'s VMA range. **Classify by ADDRESS against the section VMAs, then
+    read the byte** — which also gives you the value, not just the section:
+    ```bash
+    arm-none-eabi-nm -S <elf> | grep -w g_idle_style        # -> ADDR SIZE TYPE NAME
+    arm-none-eabi-objdump -h <elf> | awk '$2==".data"{print $4}'   # .data VMA
+    arm-none-eabi-objcopy -O binary --only-section=.data <elf> /tmp/data.bin
+    od -An -tu1 -j $(( ADDR - VMA )) -N1 /tmp/data.bin
+    ```
+    `.data` membership alone already proves it is not PULSE — a zero-initialised
+    static would be in `.bss`.
+- ⚠️ **A `static inline` helper is often emitted OUT-OF-LINE, so "grep the caller for
+  the flag address" reads as "the fix didn't take".** Verifying `kdisp_plot_ink`, all
+  five composite primitives showed **0** references to `s_gfx_erase`/`s_gfx_scanline`
+  — and were correct: GCC emitted the helper as a real local function and they `bl`
+  it. Grep for the **call**, not the data address:
+  `objdump -d <elf> | grep -c "bl.*<kdisp_plot_ink>"`. Same family as the note above:
+  when checking a change in the image, find the thing that MOVED, not the thing you
+  wrote.
 
 - **`IDLE_STYLE_PULSE` (0, legacy; the default on boards without Eden):** `kdisp_idle()` only modulates each
   keycap's SSD1306 contrast register (a per-key out-of-phase "breathing"). The

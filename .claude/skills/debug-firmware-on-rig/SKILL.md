@@ -96,11 +96,23 @@ Find the run (it appears within seconds), then read the probe job:
 ```
 mcp__github__actions_list  method: list_workflow_runs
     resource_id: qmk-test.yml
-    workflow_runs_filter: { event: workflow_dispatch }   per_page: 3
+    workflow_runs_filter: { event: workflow_dispatch, branch: <your branch> }
+    per_page: 3
 mcp__github__actions_list  method: list_workflow_jobs   resource_id: <run id>
 mcp__github__get_job_logs  job_id: <numeric id of "Debug probe (split72)">
                            tail_lines: 300
 ```
+
+⚠️ **The `branch` filter narrows; the `head_sha` DECIDES. Confirm it is the commit
+you just pushed — never just take the newest dispatch.** Measured on this repo: a
+`tier: fwapply` recovery run and a `tier: debug` run sit adjacent in that list,
+80 minutes apart, **both `workflow_dispatch` and both on `PolyKybd`** — so the
+branch filter alone does not separate them, and neither does recency once someone
+else dispatches too. Reading the wrong run attributes another commit's console
+output to the firmware you are investigating, which is worse than reading nothing.
+The sha check is also what catches the `ref:` mistake above: dispatch `PolyKybd`
+by accident and the run exists, goes green, and tested none of your change — only
+its `head_sha` says so.
 
 ⚠️ **`actions_list` saves a large JSON to a file and hands you the path** — parse
 that, don't retry with a smaller `per_page`; it is the per-run payload that is

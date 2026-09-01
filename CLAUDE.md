@@ -1555,11 +1555,21 @@ matching the flash / confirm / apply screens there.
     THE IMPLEMENTATION AGREES BY CONSTRUCTION" note below, not the same thing: there the
     preview and the C are wrong identically; here the preview can render a state the C
     cannot reach.
-  - **Fix the RENDERER, not just the argparse validator** — the `status-oled-layout`
-    skill imports `build_telemetry_panel()` directly and never sees argparse. The
-    validator is the second half (it refuses a non-zero rate over zero frames, an input
-    describing no device), not the first. Check it by rendering: `--link 0,0` and
-    `--link idle` must produce **byte-identical** PNGs.
+  - **Fix the RENDERER, not just the argparse validator** — these panel builders are a
+    LIBRARY surface, not only a CLI. `status-oled-layout`'s `measure_bands.py` does
+    `import status_oled_preview as P` and calls `P.build_panel(...)` directly, so a
+    guard living in `link_arg()` is simply absent for an importing caller.
+    `build_telemetry_panel()` has no such caller *yet* — it is reached only from the
+    tool's own `main()` — which is exactly why the guard has to go in the renderer
+    now rather than after one appears. The validator is the second half (it refuses a
+    non-zero rate over zero frames, an input describing no device), not the first.
+    Check it by rendering: `--link 0,0` and `--link idle` must produce
+    **byte-identical** PNGs.
+    - ⚠️ This bullet previously asserted that the skill imports `build_telemetry_panel()`
+      itself. It does not — one `grep` settles it — and a note about verifying claims is
+      the worst place to leave an unverified one. Caught by Greptile on #262, which is
+      the cross-file consistency check an LLM reviewer is genuinely good at and a linter
+      cannot do at all.
 
 **split42: PORTRAIT status OLED (2026-07).** The split42 panel is 128×32 physical
 but **mounted rotated 90°**, so the user reads it as **32 wide × 128 tall**. The poly

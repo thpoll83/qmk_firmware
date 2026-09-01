@@ -54,8 +54,8 @@ def probe(raw, log):
 ```
 
 ⚠️ **Iterate on a branch with no open PR.** A push to a `claude/**` branch starts
-nothing on its own (`qmk-test.yml` listens for pushes only on `PolyKybd` and
-`PolyKybd/**`), so the dispatch is the only thing that occupies the rig. Open a
+nothing on its own (`qmk-test.yml` listens for pushes only on `PolyKybd`), so
+the dispatch is the only thing that occupies the rig. Open a
 PR and every probe edit *also* runs the full build + HIL pipeline behind your
 dispatch — the rig runs one job at a time, so that is double the wait per turn.
 Open the PR when the investigation is done.

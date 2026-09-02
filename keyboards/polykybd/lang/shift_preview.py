@@ -37,7 +37,9 @@ def _decode_literal(body):
     while i < len(body):
         ch = body[i]
         if ch != '\\':
-            out.append(ord(ch)); i += 1; continue
+            out.append(ord(ch))
+            i += 1
+            continue
         if i + 1 >= len(body):
             return None
         nxt = body[i + 1]
@@ -47,9 +49,13 @@ def _decode_literal(body):
                 j += 1
             if j == i + 2:
                 return None
-            out.append(int(body[i + 2:j], 16)); i = j; continue
+            out.append(int(body[i + 2:j], 16))
+            i = j
+            continue
         if nxt in _ESCAPES:
-            out.append(_ESCAPES[nxt]); i += 2; continue
+            out.append(_ESCAPES[nxt])
+            i += 2
+            continue
         return None
     return out
 

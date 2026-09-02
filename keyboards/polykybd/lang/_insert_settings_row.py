@@ -45,6 +45,13 @@ XLSX, KEY, VARIATION = sys.argv[1], sys.argv[2], int(sys.argv[3])
 # exist, because the tuner can only offer a setting the spreadsheet already carries.
 LANGS = [s for s in sys.argv[4].split(",") if s]
 VALUE = sys.argv[5] if len(sys.argv) > 5 else "1"
+# The cell is written with t="n" below, so a non-numeric value would produce a
+# numeric cell holding text -- a workbook Excel and openpyxl both reject, from a
+# script whose whole job is not to corrupt this file.
+try:
+    int(VALUE)
+except ValueError:
+    sys.exit(f"value must be an integer: {VALUE!r}")
 if not (0 <= VARIATION <= 3):
     sys.exit("variation must be 0..3")
 if not os.path.isfile(XLSX):
@@ -107,10 +114,10 @@ try:
     while (name := cell_text(1, c)):
         langs.append(name)
         c += 4
-    unknown = [l for l in LANGS if l not in langs]
+    unknown = [lang for lang in LANGS if lang not in langs]
     if unknown:
         sys.exit(f"unknown language(s): {unknown}")
-    targets = {2 + 4 * langs.index(l) + VARIATION for l in LANGS}
+    targets = {2 + 4 * langs.index(lang) + VARIATION for lang in LANGS}
 
     # Clone the last settings row: same row attributes, same per-cell styles.
     seg = xml[rows[last][0]:rows[last][1]]

@@ -1812,11 +1812,40 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     byte-identical and the monolith's `.heap` unchanged (the halving scratch is on the
     stack).
   - ⚠️ **A settings row must be INSERTED, not appended** — cog collects the block by
-    walking column A until the first empty cell, and row 63 is the `lower/upper/caps/
-    ALT Gr` legend, so anything below it is invisible. `lang/_insert_settings_row.py`
-    renumbers the rows underneath; it is safe only because this workbook has no
-    formulas, no conditional formatting and no merges outside row 1, which it re-checks
-    before writing.
+    walking column A until the first empty cell, and the row after it is the
+    `lower/upper/caps/ALT Gr` legend, so anything below that is invisible.
+    `lang/_insert_settings_row.py` renumbers the rows underneath.
+  - ⚠️ **A row number lives in FOUR places in sheet2.xml and only two are inside
+    `<sheetData>`.** `<row r>` and `<c r>` are; **`<mergeCell ref>` and `<hyperlink
+    ref>` sit after it**, so a renumbering pass that slices the tail of `sheetData`
+    never reaches them. This sheet has **27 merges and 10 hyperlinks anchored on the
+    legend row** — exactly the row an insert pushes down — so the old script left them
+    one row short. That claim it made about "no merged cells outside row 1" was simply
+    never true.
+    - **The failure is SILENT and asymmetric between openpyxl's two readers, which is
+      what makes it vicious.** `read_only=True` streams row elements and reports the
+      sheet as perfect; the eager loader keys on cell refs, materialises a phantom cell
+      where the stale hyperlink still points, and hands back its `display` text as that
+      cell's value. **cog uses the eager loader**, so the first inserted settings row
+      came out with `https://www.branah.com/english` as its en-US offset (2026-09-02).
+      Verifying with the streaming reader alone says everything is fine.
+    - The script now renumbers both and **runs `_verify_readers_agree()` after every
+      write**, comparing the two readers over the edited region. Compare
+      **asymmetrically**: eager holding a value streaming lacks is the corruption;
+      eager holding `None` where streaming has a value is a pre-existing shared-string
+      quirk on the legend row (present in the *untouched* workbook — the docstring used
+      to blame inserts for it) and must be tolerated, or the guard can never be green.
+  - ⚠️ **Never size a generated table from `key_index` or any other cog variable left
+    over from an earlier block.** The Shift-suppression bitmap did
+    `num_keys = key_index - 2`, where `key_index` is where the *settings*-block walk
+    stopped — so it was 63, not the real 54, and `row = 2 + k` walked into the settings
+    rows evaluating the redundancy rule on offsets like `35` and `HIDE`. Harmless by
+    luck (`index` maxes at 53, so the stray bits at k >= 54 are unreachable, and all of
+    them came out 0 — the suppression count was never wrong), but the array was two
+    bytes per language too wide, and adding six settings rows silently took the stride
+    from 8 to 9. It derives `num_keys` from the sheet now. **A generated array's
+    dimension is a fact about the data; if it moves when you add an unrelated row, the
+    derivation is wrong.**
   - ⚠️ **The AltGr view when AltGr is actually HELD is untouched, and must stay so** —
     that branch is at the top of `render_key()` and there the glyph IS the legend, not
     a hint.

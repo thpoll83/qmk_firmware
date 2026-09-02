@@ -2158,13 +2158,19 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             // a different category and a different variation than the glyph drawn.
             int8_t v_set;
             int8_t h_set;
+            int8_t held_v_set;   // {<cat>.heldvoffset} — the delta from the hint position
+            int8_t held_h_set;   // {<cat>.heldhoffset}
             if(is_letter) {
-                v_set = SETTING_LETTER_VOFFSET;
-                h_set = SETTING_LETTER_HOFFSET;
+                v_set      = SETTING_LETTER_VOFFSET;
+                h_set      = SETTING_LETTER_HOFFSET;
+                held_v_set = SETTING_LETTER_HELDVOFFSET;
+                held_h_set = SETTING_LETTER_HELDHOFFSET;
             } else {
                 const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
-                v_set = is_num ? SETTING_NUM_VOFFSET : SETTING_SYM_VOFFSET;
-                h_set = is_num ? SETTING_NUM_HOFFSET : SETTING_SYM_HOFFSET;
+                v_set      = is_num ? SETTING_NUM_VOFFSET      : SETTING_SYM_VOFFSET;
+                h_set      = is_num ? SETTING_NUM_HOFFSET      : SETTING_SYM_HOFFSET;
+                held_v_set = is_num ? SETTING_NUM_HELDVOFFSET  : SETTING_SYM_HELDVOFFSET;
+                held_h_set = is_num ? SETTING_NUM_HELDHOFFSET  : SETTING_SYM_HELDHOFFSET;
             }
             // HIDE on either axis falls through to the resting legend, as before —
             // hiding the hint says "do not show the AltGr" for this layout. Measured:
@@ -2197,8 +2203,24 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // ink off an edge with nothing to report it. Measured over all 160
                 // layouts: 191 keys / 1528 px across 69 layouts, down to the single
                 // he-IL KC_BACKSLASH nikud that is 43 px tall in a 40 px panel.
+                // {<cat>.heldhoffset} / {<cat>.heldvoffset}: a per-layout, per-category
+                // DELTA from the hint position, defaulting to 0 so nothing moves until a
+                // layout is tuned. It exists because the hint's own offsets place a glyph
+                // that shares the keycap with the base legend and the Shift preview, while
+                // the held view has the panel to itself — so the best spot is not
+                // necessarily the same one, and that is a per-layout judgement.
+                //
+                // ⚠️ HIDE_KEY is treated as 0, NOT as -128. It is the tuner's "hide this
+                // variation" sentinel and is meaningless for a delta; taken literally it
+                // would fling the glyph a hundred pixels off the panel. Hiding the held
+                // view is what the AltGr offsets above already do.
+                int8_t held_h = get_setting(held_h_set, local_state->lang, VAR_ALTGR);
+                int8_t held_v = get_setting(held_v_set, local_state->lang, VAR_ALTGR);
+                if (held_h == HIDE_KEY) held_h = 0;
+                if (held_v == HIDE_KEY) held_v = 0;
+
                 int8_t axmin, axmax, aymin, aymax;
-                int8_t hx = (int8_t)(28+h_off), hy = (int8_t)(23+v_off);
+                int8_t hx = (int8_t)(28+h_off+held_h), hy = (int8_t)(23+v_off+held_v);
                 kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter,
                                     &axmin, &axmax, &aymin, &aymax);
                 clamp_legend(&hx, &hy, axmin, axmax, aymin, aymax);

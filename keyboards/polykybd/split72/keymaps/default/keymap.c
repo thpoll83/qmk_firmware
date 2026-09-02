@@ -365,6 +365,21 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // QMK only reads g_led_config (verified in quantum/{led,rgb}_matrix/*.c); the
 // type stays non-const to match the upstream extern declaration in
 // quantum/rgb_matrix/rgb_matrix.h, so this is a placement override only.
+//
+// ⚠️ EXPECTED BUILD WARNING, and it is OURS despite where it points. This line is
+// what makes every build print
+//     /tmp/ccXXXXXX.s: Assembler messages:
+//     /tmp/ccXXXXXX.s:NNN: Warning: setting incorrect section attributes for .rodata
+// attributed to `quantum/keymap_introspection.c` — which is STOCK UPSTREAM and
+// contains no section attribute at all. It compiles this file (`#include KEYMAP_C`),
+// so the warning is reported against it. Mechanism: g_led_config cannot be const (it
+// must match the upstream `extern led_config_t g_led_config`), so GCC emits
+// `.section .rodata,"aw"` — allocatable AND writable — while .rodata already exists
+// as "a", read-only. The first definition's attributes win, so the table really does
+// end up read-only in flash: `arm-none-eabi-objdump -t <elf> | grep g_led_config`
+// shows it in .rodata at a 0x10xxxxxx (flash) address, not 0x20xxxxxx (RAM).
+// Benign — do NOT "fix" it by dropping the attribute (that costs the RAM this saves)
+// or by adding const (it would clash with the upstream extern).
 __attribute__((section(".rodata"))) led_config_t g_led_config = { {// Key Matrix to LED Index
                               {6, 5, 4, 3, 2, 1, 0, NO_LED},
                               {13, 12, 11, 10, 9, 8, 7, NO_LED},

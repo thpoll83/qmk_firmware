@@ -469,6 +469,27 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     `uint32_t[]`, cast it down to `char *` at the call and back up inside, which
     was safe only by convention. They take `uint32_t *` now.
 
+- ✅ **The `.rodata` assembler warning on EVERY build is EXPECTED, and it is OURS —
+  even though it names a stock upstream file.** Every build of either variant prints
+  `Warning: setting incorrect section attributes for .rodata`, attributed to
+  **`quantum/keymap_introspection.c`** — which is stock upstream and contains no
+  section attribute at all. It compiles the keymap (`#include KEYMAP_C`), so the
+  warning is reported against it while originating in
+  `split{42,72}/keymaps/default/keymap.c`:
+  `__attribute__((section(".rodata"))) led_config_t g_led_config`. That override
+  keeps the table (296 B on split72) in flash instead of RAM; `g_led_config` cannot
+  be `const` (it must match upstream's `extern led_config_t g_led_config`), so GCC
+  emits `.section .rodata,"aw"` — writable — while `.rodata` already exists as `"a"`.
+  The first attributes win, so it really is read-only in flash. Verify rather than
+  trust: `arm-none-eabi-objdump -t <elf> | grep g_led_config` must show `.rodata` at a
+  `0x10xxxxxx` (flash) address, not `0x20xxxxxx` (RAM). **Nothing to fix** — dropping
+  the attribute costs the RAM it saves, and adding `const` clashes with the extern.
+  - ⚠️ **This is the exact INVERSE of the security-scanner rule below** ("a finding on
+    an upstream path is probably UPSTREAM's"): here the *file named* is upstream's and
+    the *cause* is ours. `diff`ing `keymap_introspection.c` against upstream proves it
+    identical and proves nothing about the warning. When a diagnostic names an
+    inherited file, check what that file **includes** before concluding it is not ours.
+
 - ⚠️ **When an upstream merge breaks the build, look at the vendored DOOM engine
   FIRST — a new upstream warning lands there, not on our own sources.** QMK builds
   with `-Werror`, so *any* warning upstream adds to `builddefs/common_rules.mk`

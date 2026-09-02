@@ -1,6 +1,7 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "oled_helper.h"
+#include "anim/tutorial.h"
 #include "layer_names.h"
 
 #include "state.h"
@@ -301,7 +302,57 @@ const uint8_t wpm_gauge_bitmap[] PROGMEM = {
     0x8e, 0x20,
 };
 
+// First-run tutorial prose: at most two centred lines, resident-font ASCII only (at
+// first boot the font pack may never have been flashed, so a pack glyph here would
+// render as nothing on the very first screen a new user sees).
+//
+// ⚠️ The panel normally runs at OLED_BRIGHTNESS (60 of 255, ~24%) — deliberately dim
+// for a status readout, too dim for the one screen that has to be read across a desk.
+// It is raised for the tutorial and put back afterwards. Raised HERE rather than left
+// to sync_and_refresh_displays(), which only touches brightness on a state CHANGE and
+// is skipped entirely while the tutorial owns the displays.
+static bool s_tut_oled_raised = false;
+
+void oled_tutorial_screen(void) {
+    const GFXfont*  small   = &NotoSans_Regular_Small_15px7b;
+    const GFXfont*  fonts[] = {small};
+    const uint32_t* l0      = tutorial_line(0);
+    const uint32_t* l1      = tutorial_line(1);
+
+    oled_on();
+    kdisp_set_buffer(0);
+
+    const uint32_t* lines[2] = {l0, l1};
+    const uint8_t   count    = (uint8_t)((l0 ? 1 : 0) + (l1 ? 1 : 0));
+    if (count > 0) {
+        // Same even-band placement as the FW-2 prompt: each line is centred in its own
+        // band from its own bbox, so a descender does not push its neighbour.
+        const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
+        uint8_t      slot = 0;
+        for (uint8_t i = 0; i < 2; ++i) {
+            if (lines[i] == NULL) continue;
+            int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+            kdisp_gfx_text_bbox(fonts, 1, lines[i], &x0, &x1, &y0, &y1);
+            const int8_t w = (int8_t)(x1 - x0 + 1);
+            int16_t      x = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
+            if (x < 0) x = 0;
+            const int8_t base = (int8_t)(band * slot + band / 2 - (y0 + y1) / 2);
+            kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, lines[i]);
+            slot++;
+        }
+    }
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    oled_render_dirty(true);   // one synchronous pass — a line must not dribble in
+}
+
 bool oled_task_user(void) {
+    // Brightness ownership for the tutorial, on its edges only (an unconditional
+    // oled_set_brightness every tick would be pointless I2C traffic).
+    if (tutorial_active() != s_tut_oled_raised) {
+        s_tut_oled_raised = tutorial_active();
+        oled_set_brightness(s_tut_oled_raised ? 255 : OLED_BRIGHTNESS);
+    }
+
     // FW-2: the unsigned-image question outranks everything else — the board is a
     // modal dialog and nothing else it could show is actionable. Checked before the
     // flash screen because by the time the prompt goes up finalize has already
@@ -313,6 +364,11 @@ bool oled_task_user(void) {
     } else if (fw_staging_fw_up_active()) {
         oled_scroll_off();
         oled_fw_update_screen();
+    } else if (tutorial_active()) {
+        // Below the two firmware screens (a signing question or a live flash outranks a
+        // lesson) and above everything else — while it runs, the tutorial IS the board.
+        oled_scroll_off();
+        oled_tutorial_screen();
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {
         // Game mode status OLED — master directly, slave via the synced

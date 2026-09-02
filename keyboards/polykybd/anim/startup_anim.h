@@ -47,3 +47,20 @@ bool startup_anim_is_loop(void);
 void startup_anim_tick(void);
 // True while the animation owns the keycaps — update_displays() must early-return.
 bool startup_anim_active(void);
+
+// Per-key board geometry, for other renderers that work in the same board space (the
+// first-run tutorial's ripple). Returning the rotation ALREADY resolved to cos/sin
+// keeps the sine table and the geometry tables in one translation unit — a second
+// #include of startup_anim_geom.h would duplicate ~1 KB of tables in flash and give
+// the board two sources of truth for where the keys are.
+typedef struct {
+    int16_t cx, cy;      // board-space centre (SA_BOARD_W x SA_BOARD_H space)
+    int16_t cosv, sinv;  // rotation, scaled by 128 (>>7 after multiplying)
+    bool    rot;         // false: axis-aligned, skip the rotate entirely
+    bool    valid;       // false: no OLED behind this slot (phantom column)
+} sa_geom_t;
+sa_geom_t startup_anim_key_geom(bool right, uint8_t idx);
+// Extent of the board in the same units, so a caller can size a sweep across it.
+uint16_t startup_anim_board_w(void);
+uint16_t startup_anim_board_h(void);
+

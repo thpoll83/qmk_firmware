@@ -471,7 +471,17 @@ bool boot_intro_pending(void) {
 void mark_boot_intro_done(void) {
     if (g_boot_flags == BOOT_INTRO_DONE) return;
     g_boot_flags = BOOT_INTRO_DONE;
-    g_boot_dirty = true;
+    // ⚠️ Written STRAIGHT THROUGH, not via g_boot_dirty. The deferred path only flushes
+    // at suspend / shutdown / the store key, so a user who finishes the tutorial and
+    // then pulls the cable would be shown the whole first-run experience again on every
+    // boot, forever. This is the same reasoning as the keymap_layers_fmt stamp, and it
+    // is what makes "flash a new build, don't see it again" actually hold.
+    //
+    // Safe in housekeeping despite the usual rule about EEPROM writes there: this fires
+    // ONCE in the life of a board (or once per RESET Eden), not periodically, so it
+    // cannot become the recurring split-UART stall that rule exists to prevent.
+    g_boot_dirty = false;
+    save_user_boot_flags();
 }
 
 // The raw boot_flags byte, for the persistence half (save_user_boot_flags).

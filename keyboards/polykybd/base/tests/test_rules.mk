@@ -111,3 +111,14 @@ polykybd_font_bbox_SRC := \
 polykybd_font_bbox_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# tutorial_plan.c is pure by construction — no quantum.h, no display, no EEPROM, no
+# timer (the caller passes `now` in) — so the first-run tutorial's phase machine,
+# curves and letter selection link standalone. The firmware binding is anim/tutorial.c.
+polykybd_tutorial_plan_SRC := \
+	$(POLY_BASE_PATH)/tutorial_plan.c \
+	$(POLY_BASE_PATH)/tests/tutorial_plan_tests.cpp
+
+polykybd_tutorial_plan_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

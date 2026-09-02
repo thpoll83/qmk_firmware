@@ -501,6 +501,26 @@ static void sa_begin(bool loop, uint8_t contrast) {
     kdisp_set_contrast(contrast);
 }
 
+
+// ---- geometry accessor (see startup_anim.h) -------------------------------
+// The tutorial's ripple works in the same board space, so it asks here rather than
+// including the geometry header a second time.
+sa_geom_t startup_anim_key_geom(bool right, uint8_t idx) {
+    sa_geom_t out = {0, 0, 0, 0, false, false};
+    if (idx >= SA_NUM_KEYS) return out;
+    const sa_key_geom_t *g = &(right ? SA_GEOM_RIGHT : SA_GEOM_LEFT)[idx];
+    if (!g->valid) return out;
+    out.cx    = g->cx;
+    out.cy    = g->cy;
+    out.rot   = (g->ang != 0);
+    out.cosv  = (int16_t)sa_sin((uint8_t)(g->ang + 64)) - 128;
+    out.sinv  = (int16_t)sa_sin(g->ang) - 128;
+    out.valid = true;
+    return out;
+}
+uint16_t startup_anim_board_w(void) { return SA_BOARD_W; }
+uint16_t startup_anim_board_h(void) { return SA_BOARD_H; }
+
 void startup_anim_start(void) { sa_begin(false, 255); }
 
 void startup_anim_start_loop(uint8_t contrast) {
@@ -589,4 +609,7 @@ void startup_anim_stop(void) {}
 bool startup_anim_is_loop(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }
+sa_geom_t startup_anim_key_geom(bool right, uint8_t idx) { (void)right; (void)idx; sa_geom_t o = {0,0,0,0,false,false}; return o; }
+uint16_t startup_anim_board_w(void) { return 0; }
+uint16_t startup_anim_board_h(void) { return 0; }
 #endif

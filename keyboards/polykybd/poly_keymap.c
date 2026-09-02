@@ -65,6 +65,8 @@
 #include "base/fonts/nano_font.h"          // 10px label font under the flags
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "polymod_core1.h"
+#include "anim/tutorial.h"                 // first-run tutorial (see anim/TUTORIAL.md)
+#include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "polymod_crc32.h"
 
@@ -799,6 +801,11 @@ static void eden_idle_tick(void) {
     }
 }
 
+// Armed when the first-run experience starts, so Eden's finishing edge knows to hand
+// off to the tutorial rather than stamping the marker itself.
+static bool     s_tutorial_armed  = false;
+static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
+
 void housekeeping_task_user(void) {
     // Optional loop-timing probe (no-op unless POLYKYBD_LOOP_PROFILE). At the very
     // top so it measures the FULL previous iteration — matrix scan, HID, bridge.
@@ -952,19 +959,68 @@ void housekeeping_task_user(void) {
             }
             if (!startup_anim_active()) {   // just finished this pass
                 s_anim_synced = false;      // re-arm for the next replay (KC_EDEN / HID)
-                mark_boot_intro_done();
+                // Hand off to the tutorial rather than stamping the marker here. The
+                // marker must record "the TUTORIAL was seen", not "Eden played":
+                // stamped here, RESET Eden would clear it, replay the animation, and
+                // this line would re-stamp it a second later — so the tutorial could
+                // never appear, with nothing in any log to say why.
+                if (s_tutorial_armed) {
+                    s_tutorial_armed = false;
+                    s_tut_skip_since = 0;
+                    tutorial_start(timer_read32());
+                    if (!tutorial_active()) mark_boot_intro_done();   // nothing to teach
+                }
                 // Eden ran at full brightness; restore the user's normal
                 // brightness behaviour now that it has faded to black, then
-                // redraw the real legends and resume normal split sync.
-                set_displays(get_local_state()->contrast, false);
-                request_disp_refresh();
-                sync_and_refresh_displays();
+                // redraw the real legends and resume normal split sync. Skipped when
+                // the tutorial just took the keycaps over — it owns them now.
+                if (!tutorial_active()) {
+                    set_displays(get_local_state()->contrast, false);
+                    request_disp_refresh();
+                    sync_and_refresh_displays();
+                }
             }
             // While Eden plays we OWN the displays: skip sync_and_refresh_displays
             // (its set_displays() would overwrite our full-bright contrast with the
             // user brightness — the "brightness changes mid-animation" bug) and skip
             // the boot forced-layer-resync's per-pass blocking UART, which also
             // stole frame time. Each half renders its own keycaps independently.
+        } else if (tutorial_active()) {
+            // The tutorial owns the keycaps. Its renderer is SLICED (a few ms per pass)
+            // precisely so the matrix keeps being scanned mid-frame — it has to notice
+            // a tap, which the unsliced Eden path provably cannot.
+            tutorial_tick();
+            // Hold the idle pipeline off: update_displays() early-returns while the
+            // tutorial is up, so a fade would dim it away with nothing to redraw it.
+            update_performed();
+            // The documented skip: hold either outer-edge top key. A held key emits no
+            // events, so the duration is measured here rather than in process_record.
+            if (s_tut_skip_since != 0 &&
+                timer_elapsed32(s_tut_skip_since) >= TUT_SKIP_HOLD_MS) {
+                s_tut_skip_since = 0;
+                tutorial_skip();
+            }
+            // Push the step/ripple to the slave: it draws the keys that land on its own
+            // half. Gated on the transport being up (non-blocking) for the same reason
+            // Eden's nonce is — a fresh boot must never stall on a slave still coming up.
+            if (is_usb_host_side() && tutorial_sync_pending() && is_transport_connected()) {
+                poly_sync_t* ls = access_local_state();
+                tutorial_sync_fill(ls->tut);
+                const uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void*)ls,
+                                                   sizeof(poly_sync_t), 3);
+                if (sync_succeeded(ack)) tutorial_sync_sent();
+            }
+            if (tutorial_finished()) {
+                // Straight-through EEPROM write (see mark_boot_intro_done): the deferred
+                // dirty-flag path only flushes at suspend/store, so a user who finishes
+                // and then unplugs would be shown the whole thing again on every boot.
+                mark_boot_intro_done();
+                uprintf("Tutorial %s\n", tutorial_was_skipped() ? "skipped" : "done");
+                tutorial_stop();
+                set_displays(get_local_state()->contrast, false);
+                request_disp_refresh();
+                sync_and_refresh_displays();
+            }
         } else {
             sync_and_refresh_displays();
         }
@@ -1021,7 +1077,11 @@ void housekeeping_task_user(void) {
             }
         }
 #    ifdef POLYKYBD_LTR559_DRIVE
-        poly_ltr559_drive();   // master-side auto-brightness + idle-inhibit
+        // Not while Eden or the tutorial owns the displays: the sensor pushes a fresh
+        // contrast about twice a second and would dim the intro out from under itself.
+        if (!startup_anim_active() && !tutorial_active()) {
+            poly_ltr559_drive();   // master-side auto-brightness + idle-inhibit
+        }
 #    endif
 #endif
     }
@@ -2847,6 +2907,67 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
 // invert it to (r,c) to resolve the keycode. Returns false without touching the
 // buffer for keys with no plain-text legend (flags/emoji/tabs/overlays) — those faces
 // just show the plain comet field. Mirrors render_idle_key's legend derivation.
+// ---- first-run tutorial callbacks (see anim/tutorial.h) -------------------
+// Matrix (row,col) -> packed display slot, or TUT_SLOT_NONE when no OLED sits behind
+// that key. The INVERSE of eden_idle_erase_legend's mapping, right-half `c--` display
+// fold included. That fold is why the mirrored skip key at the outer edge is NOT the
+// same local column on both halves: right display col 0 is the INNER edge.
+static uint8_t tutorial_slot_of(uint8_t row, uint8_t col) {
+    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) return TUT_SLOT_NONE;
+    uint8_t side_right = 0, dr = row, dc = col;
+    if (row >= MATRIX_ROWS_PER_SIDE) {
+        side_right = 1;
+        dr         = (uint8_t)(row - MATRIX_ROWS_PER_SIDE);
+        if (dr < 4) {
+            if (col == 0) return TUT_SLOT_NONE;   // folds off the panel entirely
+            dc = (uint8_t)(col - 1);
+        }
+    }
+    if (!key_has_display(row, col)) return TUT_SLOT_NONE;
+    return TUT_SLOT(side_right, (uint8_t)(dr * MATRIX_COLS + dc));
+}
+
+uint8_t tutorial_collect_candidates(uint8_t* out, uint8_t max) {
+    uint8_t n = 0;
+    for (uint8_t r = 0; r < MATRIX_ROWS && n < max; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS && n < max; ++c) {
+            const uint16_t kc = keymaps[_BL][r][c];
+            if (kc < KC_A || kc > KC_Z) continue;          // plain letters only
+            const uint8_t slot = tutorial_slot_of(r, c);
+            if (slot != TUT_SLOT_NONE) out[n++] = slot;
+        }
+    }
+    return n;
+}
+
+uint32_t tutorial_slot_letter(uint8_t slot) {
+    if (slot == TUT_SLOT_NONE) return 0;
+    const uint8_t idx = TUT_SLOT_IDX(slot);
+    const uint8_t dr = (uint8_t)(idx / MATRIX_COLS), dc = (uint8_t)(idx % MATRIX_COLS);
+    uint8_t       mr, mc;
+    if (TUT_SLOT_RIGHT(slot)) {
+        mr = (uint8_t)(dr + MATRIX_ROWS_PER_SIDE);
+        mc = (dr < 4) ? (uint8_t)(dc + 1) : dc;
+    } else {
+        mr = dr;
+        mc = dc;
+    }
+    if (mr >= MATRIX_ROWS || mc >= MATRIX_COLS) return 0;
+    const uint16_t kc = keymaps[_BL][mr][mc];
+    if (kc < KC_A || kc > KC_Z) return 0;
+    // Upper case: at 2x the 19px face this fills the keycap, and a lone capital reads
+    // as "this one" rather than as a letter you are being asked to type.
+    return (uint32_t)('A' + (kc - KC_A));
+}
+
+// The two outer-edge top keys — the documented (not displayed) skip gesture. LEFT is
+// display (0,0); RIGHT is display (0,6), the outer edge at board x=223, NOT (0,0)
+// which the `c--` fold puts on the inner edge at x=143.
+static bool tutorial_is_skip_key(uint8_t row, uint8_t col) {
+    const uint8_t slot = tutorial_slot_of(row, col);
+    return slot == TUT_SLOT(0, 0) || slot == TUT_SLOT(1, 6);
+}
+
 bool eden_idle_erase_legend(uint8_t disp_idx) {
     if (disp_idx >= MATRIX_ROWS_PER_SIDE * MATRIX_COLS) return false;
     // disp_idx == the anim geom index == display row*8 + col. Invert to the matrix
@@ -2992,6 +3113,12 @@ void update_displays(enum refresh_mode mode) {
     // Same for the one-time startup animation: while it owns the keycaps, its
     // procedural blitter is the only writer.
     if (startup_anim_active()) {
+        s_disp_render_active = false;
+        return;
+    }
+    // Same for the first-run tutorial — its sliced blitter is the only writer while
+    // it is up, and a repaint here would erase the lit letter mid-step.
+    if (tutorial_active()) {
         s_disp_render_active = false;
         return;
     }
@@ -3672,6 +3799,12 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         }
         case KC_EDEN:
             if (!act) break;
+            // ⚠️ PROTOTYPE BEHAVIOUR: this runs Eden AND the tutorial on the spot so the
+            // whole sequence can be retried without rebooting. The SHIPPING semantics
+            // (anim/TUTORIAL.md) are different: this key RE-ARMS the first-run
+            // experience for the next startup and only replays the animation now.
+            s_tutorial_armed = true;
+            s_tut_skip_since = 0;
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump
             // the synced nonce so the slave plays in lockstep (the nonce is delivered by
             // the one-shot bridge send in housekeeping, once the transport is up — see
@@ -3767,6 +3900,25 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // pulse, the first key press should dismiss it and pass through to the wake
     // (display_wakeup clears DISP_IDLE → eden_idle_tick stops the loop next pass).
     if (startup_anim_active() && !startup_anim_is_loop()) {
+        return false;
+    }
+
+    // The first-run tutorial IS the board while it runs: every key event is swallowed
+    // (nothing should reach the host mid-lesson) and consumed here instead. Swallowed
+    // in process_record_user rather than on the release edge — an OSL layer
+    // re-dispatches a release-edge action up to three times.
+    if (tutorial_active()) {
+        const uint8_t row = record->event.key.row, col = record->event.key.col;
+        if (record->event.pressed) {
+            // A press that is not the key being asked for does NOTHING, deliberately:
+            // silence is the correction. The only other meaning a key can carry here
+            // is the documented hold-to-skip.
+            if (!tutorial_press(tutorial_slot_of(row, col)) && tutorial_is_skip_key(row, col)) {
+                if (s_tut_skip_since == 0) s_tut_skip_since = timer_read32();
+            }
+        } else if (tutorial_is_skip_key(row, col)) {
+            s_tut_skip_since = 0;   // released early — the hold has to be continuous
+        }
         return false;
     }
 
@@ -4686,6 +4838,20 @@ void keyboard_post_init_user(void) {
     boot_trace(U"4");
 #endif
     splash_progress(SPLASH_DONE);       // boot complete: full splash, dwell, then legends
+
+    // First-run experience: Eden, then the tutorial. boot_intro_pending() reads the
+    // EEPROM marker — which is stamped only once the TUTORIAL has been seen or skipped,
+    // so an interrupted first run replays both and a completed one never returns. The
+    // marker survives a firmware flash: EEPROM is the last 8 KB of the chip
+    // (0x7FE000..0x800000), outside every region any flash path writes.
+    //
+    // ⚠️ boot_intro_pending() had NO callers before this — the marker, the pending check
+    // and the finish edge all existed, but nothing ever started the animation at boot.
+    if (boot_intro_pending()) {
+        s_tutorial_armed = true;
+        s_tut_skip_since = 0;
+        startup_anim_start();
+    }
 }
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.

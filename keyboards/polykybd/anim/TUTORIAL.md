@@ -93,6 +93,39 @@ proved:
 `startup_anim_active()`). `update_performed()` is called each pass so the idle fade cannot
 dim the tutorial out from under the user.
 
+## 4a. Handing the panels back — the DOOM contract
+
+⚠️ **Found on hardware (round 1): after the tutorial, keycaps came back part black and
+part garbage.** The cause is documented in `doom_slave_stop()` for its own reason, and
+the tutorial hits it by a different route:
+
+`update_displays()` is reached **only** through the refresh drain, and housekeeping does
+not call `sync_and_refresh_displays()` while the tutorial owns the panels. So
+`update_displays()` never runs during the tutorial, and its
+`if (tutorial_active()) { s_disp_render_active = false; return; }` early-return is **dead
+code**. `s_disp_render_active` stays true, so the generic
+`kdisp_invalidate_all_windows()` at the top of the next render is skipped — and that
+render streams a stale sub-rectangle per panel instead of erasing the whole window.
+DOOM calls the same failure *"DOOM-exit leftovers"*.
+
+So a mode that owns the panels must hand them back explicitly. `tutorial_stop()` does
+what `doom_exit()` / `doom_slave_stop()` do:
+
+- `clear_keyboard()` — every key event was swallowed, so anything held would stay
+  registered on the host and auto-repeat;
+- blank every panel on this half, and restore contrast;
+- **force `kdisp_invalidate_all_windows()`** (`doom_blit_invalidate_windows()` is
+  literally this call) so the next render redraws each window in full.
+
+The overlay-pool half of DOOM's handback (`reset_overlay_pool`, `clear_display_has_overlay`,
+`reset_display_to_pool`, `reset_fragment_context`) does **not** apply — the tutorial never
+touches the overlay pool.
+
+The teardown order in housekeeping matters too: blank → restore brightness → repaint
+(two-pass, as `display_wakeup()` does) → **then** the EEPROM write, whose wear-levelling
+consolidation can hold interrupts off for ~50-100 ms and must not land between the SPI
+writes handing the displays back.
+
 ## 5. Brightness — both display kinds, plus the sensor
 
 ⚠️ Three things will otherwise dim the tutorial mid-run: the restored user brightness, the

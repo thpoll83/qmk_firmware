@@ -235,6 +235,10 @@ void tutorial_start(uint32_t seed) {
     sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);
     kdisp_enable(true);
     kdisp_set_contrast(255);
+    // Every key event is swallowed from here on, so anything already held would stay
+    // registered on the host and auto-repeat until something released it. Same rule
+    // and the same call as doom_begin() and the FW-2 confirmation prompt.
+    clear_keyboard();
     uprintf("Tutorial start (left=%d, master=%d)\n", (int)is_left_side(),
             (int)is_usb_host_side());
 }
@@ -257,10 +261,25 @@ void tutorial_stop(void) {
     // Two belts: blank every panel on this half so nothing stale can survive, and
     // invalidate the boxes so the next render redraws each window in full rather
     // than a delta. Costs one 36-panel blank, once, at the end of the tutorial.
+    // Release anything the swallow left held, before the host sees keys again —
+    // doom_exit() does the same on its way out.
+    clear_keyboard();
+
     sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);   // all panels on this half
     kdisp_set_buffer(0x00);
     kdisp_send_window();
     kdisp_set_contrast(255);
+    // ⚠️ This invalidate is NOT belt-and-braces — it is THE fix, and the reason is
+    // worth knowing. update_displays() is reached only through the refresh drain, and
+    // housekeeping does not call sync_and_refresh_displays() while the tutorial owns
+    // the panels — so update_displays() never runs during the tutorial and its
+    // `if (tutorial_active()) s_disp_render_active = false;` early-return is DEAD
+    // CODE. s_disp_render_active therefore stays true, the generic invalidate at the
+    // top of the next render is skipped, and that render streams a stale
+    // sub-rectangle per panel: half-erased and black keycaps (hardware, round 1).
+    // doom_slave_stop() documents the identical failure for its own reason
+    // ("DOOM-exit leftovers") and forces the same call — doom_blit_invalidate_windows()
+    // is literally kdisp_invalidate_all_windows().
     kdisp_invalidate_all_windows();
     for (uint8_t i = 0; i < sizeof(s_lit); ++i) s_lit[i] = 0;
 }

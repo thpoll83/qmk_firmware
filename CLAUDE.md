@@ -1668,6 +1668,38 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   for a real collision, because overlapping lit-on-lit loses no pixels and still reads
   as merged (that metric hid the digit collision for a round). The
   `keycap-layout-preview` skill wraps the whole measure-don't-eyeball loop.
+- ⚠️ **The Shift and AltGr hints are laid out as a PAIR, and it took a field report
+  to notice they were not.** Both sit right of the base legend — Shift upper, AltGr
+  lower — and until 2026-09-02 the only thing holding them apart was their
+  per-language VERTICAL offsets. That is fine for a narrow Latin pair and wrong for
+  a tall script: swept over all 160 layouts × 49 keys, **24 keys across 19 layouts**
+  drew the two through each other — every `ar-*` layout on `KC_F` by 13 px, `bn-BD`
+  worst at 6 keys and up to **57 px** on `KC_D`. `en-US` never shows it because its
+  letter Shift offset is `HIDE_KEY`, which is exactly why it survived so long.
+  - ⚠️ **It reads as a MISSING GLYPH, not as a layout bug** — reported as *"I can see
+    wildcards rendered on a d f"*. Those are correct Shift previews (`\` on A, `]`
+    on D, `[` on F) landing inside the AltGr glyph's box; `s` and `g` have no Shift
+    preview, which is why they looked skipped. Check `overlap_detail` before chasing
+    a font.
+  - ⚠️ **A per-language OFFSET cannot fix this, so don't reach for `lang_lut.xlsx`.**
+    The offsets are per *language* while the room left over is decided by the WIDTH
+    of this key's three glyphs — one number would have to satisfy the layout's worst
+    key and would crush every other key into the base. `bn-BD` needs a different
+    separation on `C` (3 px) than on `D` (57 px).
+  - The fix is the same shape as the shift-vs-base logic one branch up: resolve the
+    AltGr hint **before drawing**, and when the two ink boxes intersect in **both**
+    axes pull the Shift **left** into the gap between the base and the right-clamped
+    AltGr — floored at the base's own 2 px margin, and never moved right (which could
+    only walk it into the clamp). Generic and glyph-width driven, no per-language code.
+  - **Measured, not eyeballed**: `shift^altgr` 24 keys / 398 px → **1 key / 22 px**,
+    `base^altgr` 0 either way, `base^shift` unchanged at its one pre-existing 2 px
+    key, and the off-panel pixel count **byte-identical per key**. 53 keys move.
+    `PolyKybdHost/tools/oled_preview.py` is both the mirror and the measuring
+    instrument; its `report=` gives per-element ink boxes, overlap and out-of-bounds.
+  - ⚠️ **One key legitimately does NOT come clean: `bn-BD KC_H`.** A 22 px base plus a
+    27 px Shift plus a 37 px AltGr cannot be laid out on 72 px at all; the pull
+    shrinks it 29 → 22 px and stops. That is a panel constraint, not a bug — a change
+    that "fixes" it has to say which of the three it dropped.
 - **The per-keycap DISPLAY grid is NOT a rectangle** (split72). Only the **bottom
   row (display row 4) is a full 8-wide row**; the upper rows (0–3) have panels at
   **cols 0–6 only** — display **col 7 is a routing phantom** (a `BITMASK` entry

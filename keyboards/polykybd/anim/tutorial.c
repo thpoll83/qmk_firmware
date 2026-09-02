@@ -16,11 +16,14 @@
 #include QMK_KEYBOARD_H             // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
 #include "startup_anim.h"           // sa_geom_t / startup_anim_key_geom
 
-// The 19px standalone UI face, DECLARED not included: util_font.h defines the data
-// non-static and it is already compiled into poly_keymap.c, so including it here is a
-// multiple-definition LINK error (the trap oled_helper.c documents).
-extern const GFXfont NotoSans_Regular_Mid_19px7b;
-static const GFXfont *const tut_fonts[] = {&NotoSans_Regular_Mid_19px7b};
+#include "base/fontpack.h"   // g_all_fonts / g_all_font_count
+
+// The letter is drawn in the NORMAL keycap face, one tier larger — the same relocated
+// `latinbig` glyphs the legend-size feature uses (M = 0xF0000, see glyph_size_base[] in
+// base/legend_plan.c; the two must agree). ⚠️ It was previously the 19px UI face at 2x
+// via kdisp_draw_glyph_double_at, which came out both too large (38 of the 40 px panel)
+// and wrong — that face is the status-OLED face, not the one the keycaps wear.
+#define TUT_LETTER_TIER_BASE 0xF0000u
 
 #define TUT_NUM_KEYS 40                 // display slots per half (8 x 5, some phantom)
 #define TUT_STRIDE   128                // scratch bytes per page row
@@ -108,16 +111,28 @@ static void tut_draw_ring(uint8_t *buf, const sa_geom_t *g) {
 }
 
 static void tut_draw_letter(uint32_t cp) {
-    const GFXfont  *lf = NULL;
-    const GFXglyph *lg = kdisp_gfx_glyph_font(tut_fonts, 1, cp, &lf);
-    if (lg == NULL) return;
-    // _double_at takes the literal top-left of the INK (no baseline align, no
-    // xOffset), so the box is centred directly.
-    const int16_t w = (int16_t)pgm_read_byte(&lg->width) * 2;
-    const int16_t h = (int16_t)pgm_read_byte(&lg->height) * 2;
-    kdisp_draw_glyph_double_at(tut_fonts, 1,
-                               (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2),
-                               (int8_t)((SCREEN_HEIGHT - h) / 2), cp);
+    uint32_t        use = TUT_LETTER_TIER_BASE + cp;
+    const GFXfont  *of  = NULL;
+    const GFXglyph *g   = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count, use, &of);
+    if (g == NULL) {
+        // No `latinbig` bundle flashed (a keyboard that has never met the host app):
+        // fall back to the resident face at its natural codepoint. Smaller, but the
+        // right typeface, and never blank.
+        use = cp;
+        g   = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count, use, &of);
+        if (g == NULL) return;
+    }
+    // Drawn through a SINGLE-font array so kdisp_write_gfx_char's baseline align
+    // (font->yAdvance - fonts[0]->yAdvance) is a no-op — the same reason the language
+    // flags draw through { &flag_font }. Centred from the measured box, so it is
+    // centred whichever of the two faces answered.
+    const GFXfont *one[1] = {of};
+    const uint32_t txt[2] = {use, 0};
+    int8_t         x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+    kdisp_gfx_text_bbox(one, 1, txt, &x0, &x1, &y0, &y1);
+    kdisp_write_gfx_text(one, 1,
+                         (int8_t)(BUFFER_X + (SCREEN_WIDTH - (x1 - x0 + 1)) / 2 - x0),
+                         (int8_t)((SCREEN_HEIGHT - (y1 - y0 + 1)) / 2 - y0), txt);
 }
 
 static void tut_render_key(uint8_t idx) {
@@ -231,6 +246,23 @@ void tutorial_stop(void) {
     // legends update_displays() has already put back.
     s_frame_busy = false;
     s_frame_idx  = 0;
+
+    // ⚠️ Hand the panels back in a KNOWN state. The tutorial writes them UNTRACKED
+    // (kdisp_send_window with no kdisp_track_panel), so the per-panel dirty-window
+    // bboxes in disp_array.c describe whatever was there before — and every key the
+    // tutorial never lit was never written at all. Left to chance, the first awake
+    // render can push a delta against a stale box: black keys and half-erased ones,
+    // which is exactly what the first hardware round showed.
+    //
+    // Two belts: blank every panel on this half so nothing stale can survive, and
+    // invalidate the boxes so the next render redraws each window in full rather
+    // than a delta. Costs one 36-panel blank, once, at the end of the tutorial.
+    sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);   // all panels on this half
+    kdisp_set_buffer(0x00);
+    kdisp_send_window();
+    kdisp_set_contrast(255);
+    kdisp_invalidate_all_windows();
+    for (uint8_t i = 0; i < sizeof(s_lit); ++i) s_lit[i] = 0;
 }
 
 bool tutorial_active(void)    { return s_active; }
@@ -289,9 +321,15 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
     if (is_usb_host_side()) return false;              // master is authoritative
     const bool want_active = (in[0] != 0);
     if (!want_active) {
-        const bool was = s_active;
-        tutorial_stop();
-        return was;
+        // ⚠️ Do NOT tutorial_stop() here. That clears s_active, so tutorial_finished()
+        // goes false and the slave's own housekeeping teardown — the restore trio that
+        // hands the panels back and repaints — never runs, leaving this half showing
+        // the tutorial forever. Route it through the SAME finish edge the master uses
+        // by ending the phase instead, so there is one teardown path, not two.
+        if (!s_active) return false;
+        s_st.phase       = TUT_DONE;
+        s_st.phase_start = timer_read32();
+        return true;
     }
     if (!s_active) tutorial_start(0);                  // slave: no slots of its own
     bool changed = false;

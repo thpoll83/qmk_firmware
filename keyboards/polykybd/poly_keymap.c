@@ -1102,15 +1102,23 @@ void housekeeping_task_user(void) {
                 if (sync_succeeded(ack)) tutorial_sync_sent();
             }
             if (tutorial_finished()) {
-                // Straight-through EEPROM write (see mark_boot_intro_done): the deferred
-                // dirty-flag path only flushes at suspend/store, so a user who finishes
-                // and then unplugs would be shown the whole thing again on every boot.
-                mark_boot_intro_done();
-                uprintf("Tutorial %s\n", tutorial_was_skipped() ? "skipped" : "done");
+                const bool was_skipped = tutorial_was_skipped();
+                // Order matters. tutorial_stop() blanks every panel and invalidates the
+                // dirty-window boxes, THEN the brightness is restored, THEN the legends
+                // are redrawn — so the panels are never repainted against stale state.
                 tutorial_stop();
                 set_displays(get_local_state()->contrast, false);
-                request_disp_refresh();
+                // Two-pass (rows 0-2, matrix scan, rows 3-4) rather than a one-shot
+                // ALL_AT_ONCE, for the reason display_wakeup() gives: a full render is
+                // ~107 ms in one pass and would swallow the keystroke right after.
+                set_disp_refresh(START_FIRST_HALF);
                 sync_and_refresh_displays();
+                // ⚠️ EEPROM LAST. The straight-through write (see mark_boot_intro_done)
+                // can trigger a wear-levelling consolidation — ~50-100 ms with
+                // interrupts off — and that must not land between the SPI writes that
+                // are handing the displays back.
+                mark_boot_intro_done();
+                uprintf("Tutorial %s; displays handed back\n", was_skipped ? "skipped" : "done");
             }
         } else {
             sync_and_refresh_displays();

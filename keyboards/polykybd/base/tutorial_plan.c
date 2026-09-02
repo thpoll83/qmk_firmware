@@ -112,9 +112,14 @@ uint16_t tut_ripple_radius(uint8_t p) {
 }
 
 uint8_t tut_ripple_density(uint8_t p) {
-    // Quadratic fade: solid as it leaves the key, thinning to nothing at the edge.
-    const uint32_t q = 255u - (uint32_t)p;
-    return (uint8_t)((q * q) / 255u);
+    // Hold FULL density while the ring establishes itself, then dissolve linearly over
+    // the rest. The old quadratic started fading from the first frame, so at any speed
+    // the ring was already thinning before it had read as a circle — which is why the
+    // dissolve was invisible on hardware rather than merely quick.
+    if (p <= TUT_RIPPLE_SOLID_P) return 255u;
+    const uint32_t span = 255u - TUT_RIPPLE_SOLID_P;
+    const uint32_t gone = (uint32_t)p - TUT_RIPPLE_SOLID_P;
+    return (uint8_t)(255u - (gone * 255u) / span);
 }
 
 // ---- letter selection -----------------------------------------------------

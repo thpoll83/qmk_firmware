@@ -119,7 +119,9 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     // copy_local_state so it reads the values that just arrived, and it is a no-op on
     // the master (which is authoritative). The slave times its own ripple from receipt
     // — the two MCUs share no clock.
-    tutorial_sync_apply(incoming->tut);
+    if (tutorial_sync_apply(incoming->tut)) {
+        request_disp_refresh();
+    }
     emj_apply_sync(incoming->emj_category, incoming->emj_page);
     lang_apply_sync(incoming->lang_page);
     if(newly_set & OVERLAY_ACTION_FLAGS) {

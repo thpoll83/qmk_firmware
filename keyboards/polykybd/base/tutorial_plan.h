@@ -16,8 +16,12 @@
 #define TUT_BLANK_MS      600u   // after Eden: everything dark and still
 #define TUT_TEXT_MS       900u   // status line up, keycaps still dark
 #define TUT_LETTER_IN_MS  500u   // a letter fades in (contrast 0 -> full)
-#define TUT_RIPPLE_MS     400u   // ripple expands across the board and is gone
-#define TUT_GAP_MS        400u   // stillness before the next letter fades in
+// ⚠️ The ripple was 400 ms and read as a flicker — "the opposite of calm; I cannot
+// even tell if they dissolved" (hardware, first round). It crosses ~1795 board units,
+// so 400 ms is ~4.5 units/ms: most of the board in a couple of frames. At 2200 ms it
+// is ~0.8 units/ms, about a keycap width every 90 ms, which is a wave you can watch.
+#define TUT_RIPPLE_MS    2200u   // ripple expands across the board and dissolves
+#define TUT_GAP_MS        700u   // stillness before the next letter fades in
 #define TUT_SKIP_HOLD_MS 1000u   // hold Esc this long to skip
 
 #define TUT_LETTERS 3            // step 1 asks for three keys
@@ -80,8 +84,12 @@ uint8_t tut_fade_contrast(uint8_t p);
 // 5px disc and expands past the far corner so it leaves the board cleanly.
 uint16_t tut_ripple_radius(uint8_t p);
 
-// Ripple ink density 0..255 at progress p: solid at the start, thinning to nothing.
+// Ripple ink density 0..255 at progress p: SOLID for the first stretch, then
+// dissolving to nothing. A curve that starts fading immediately never reads as a
+// solid circle at all — the ring has to establish itself before it can dissolve.
 uint8_t tut_ripple_density(uint8_t p);
+// Progress at which the dissolve begins; solid below it.
+#define TUT_RIPPLE_SOLID_P 96u
 
 // ---- letter selection -----------------------------------------------------
 

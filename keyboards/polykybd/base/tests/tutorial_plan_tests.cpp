@@ -222,6 +222,24 @@ TEST(TutorialCurves, RippleRadiusIsMonotonic) {
     }
 }
 
+// The ring must READ as a solid circle before it dissolves. The original curve faded
+// from the very first frame, so on hardware the dissolve was never visible — it was
+// already thinning before it had established itself.
+TEST(TutorialCurves, RippleStaysSolidBeforeItDissolves) {
+    for (uint16_t p = 0; p <= TUT_RIPPLE_SOLID_P; ++p) {
+        EXPECT_EQ(tut_ripple_density((uint8_t)p), 255) << "at p=" << p;
+    }
+    EXPECT_LT(tut_ripple_density((uint8_t)(TUT_RIPPLE_SOLID_P + 1)), 255);
+}
+
+// A ripple you cannot watch is the defect this feature is most likely to regress into.
+TEST(TutorialCurves, RippleIsSlowEnoughToFollow) {
+    // ~1795 board units of travel; board units are about a display pixel, and a keycap
+    // is 72 wide. Anything under ~50 ms per keycap width reads as a flash, not a wave.
+    const uint32_t ms_per_keycap = (TUT_RIPPLE_MS * 72u) / 1795u;
+    EXPECT_GE(ms_per_keycap, 50u) << "ripple crosses a keycap in " << ms_per_keycap << " ms";
+}
+
 TEST(TutorialCurves, RippleDensityFadesToNothing) {
     EXPECT_EQ(tut_ripple_density(0), 255);
     EXPECT_EQ(tut_ripple_density(255), 0);

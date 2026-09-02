@@ -3153,11 +3153,16 @@ knowing is the parts that are NOT what you would write from scratch:
         | awk '$2==".heap"{print $3}')))"
     ```
     ⚠️ **Do NOT reach for `awk '{print strtonum("0x"$3)}'` — Debian's default awk is
-    mawk, which has no `strtonum`, and the failure is SILENT**: awk errors to stderr
-    and the field prints empty, which reads as "there is no `.heap` section" rather
-    than "your awk cannot do hex". Hence the shell `$((16#…))`. Same family as the
-    `objdump -s -j .data.<sym>` trap above — the tool answers a different question
-    than the one you asked and does not say so.
+    mawk (1.3.4 here), which has no `strtonum`.** It is not a silent failure — awk
+    prints `awk: line N: function strtonum never defined` on **stderr** and exits
+    **2** — but wrapped in the `printf "%d bytes" "$(…)"` form above the substitution
+    swallows that status, so the **outer command exits 0 and prints a confident
+    `0 bytes`**. That is the trap: a plausible number, not a missing one, with the
+    real error a few lines up in stderr where a build log interleaves it out of
+    sight. Hence the shell `$((16#…))`, which needs no awk function at all. Same
+    family as the `objdump -s -j .data.<sym>` trap above — the tool answers a
+    different question than the one you asked — except that here it does say so, and
+    the wrapper is what hides it.
   - **Take the baseline from a build, not from this file.** Measured 2026-09-02 the
     monolith read 2772 B free at `44baf433`; that it matched the figure written here
     is what proved the baseline build was the right one. A quoted number can be

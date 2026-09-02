@@ -707,9 +707,19 @@ inherited-upstream noise:
     does not always — measured, on the very merge that added this tier.** Merging
     #264 (`43cc2559`, 2026-09-01) created **no push-event workflow run at all**:
     not `qmk-test`, not `cppcheck`, not `polykybd-unit-test`. That last one is the
-    decisive part — it has **no `paths:` filter whatsoever**, and it had fired on
-    #263's `CLAUDE.md`-only merge hours earlier, yet stayed silent on a merge
-    carrying nine C files. So this was not a paths filter, and not ours. Ruled out
+    decisive part — its **`push` trigger has no `paths:` filter** (just
+    `branches: [PolyKybd]`), and it had fired on #263's `CLAUDE.md`-only merge hours
+    earlier, yet stayed silent on a merge carrying nine C files. So this was not a
+    paths filter, and not ours. ⚠️ **Read that as "the PUSH trigger", not the
+    workflow** — this note said "no `paths:` filter whatsoever" until 2026-09-02, and
+    that is false of its `pull_request` trigger, which filters on
+    `keyboards/polykybd/**`, `modules/polykybd/**`, the two `builddefs/*_test*.mk`
+    and itself. The conclusion about the dropped push event is unaffected (a merge to
+    `PolyKybd` IS a push, and that trigger really is unfiltered), but the sentence
+    misleads anyone reasoning about a **PR**: on a docs-only PR the unit tests are
+    correctly silent, and reading them as "should always fire" turns a working filter
+    into a phantom second dropped-delivery incident. Found while checking exactly
+    that on #269. Ruled out
     too: no GitHub Actions incident that day (the one Git Operations incident ran
     15:00–16:01 UTC, hours earlier); the merge was a **direct click** on *Merge
     pull request* by the repo owner — confirmed with them, not inferred — so

@@ -2220,7 +2220,15 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 if (held_v == HIDE_KEY) held_v = 0;
 
                 int8_t axmin, axmax, aymin, aymax;
-                int8_t hx = (int8_t)(28+h_off+held_h), hy = (int8_t)(23+v_off+held_v);
+                // ⚠️ SATURATE, don't narrow. Three int8_t values are summed here and the
+                // promoted result can leave int8_t range: ps-AF already carries a letter
+                // H offset of 65, so 28+65 leaves only +34 of headroom and a hand-tuned
+                // held delta of +35 would WRAP to a negative x — drawing the glyph at the
+                // wrong place instead of letting clamp_legend pin it at the edge. That is
+                // exactly the failure kdisp_sat8()'s comment describes, so use it rather
+                // than bounding the tuner's input and hoping the spreadsheet agrees.
+                int8_t hx = kdisp_sat8((int16_t)(28+h_off+held_h));
+                int8_t hy = kdisp_sat8((int16_t)(23+v_off+held_v));
                 kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter,
                                     &axmin, &axmax, &aymin, &aymax);
                 clamp_legend(&hx, &hy, axmin, axmax, aymin, aymax);

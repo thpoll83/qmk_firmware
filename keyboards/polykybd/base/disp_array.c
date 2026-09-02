@@ -96,13 +96,6 @@ uint8_t scratch_buffer[BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT];
 static int8_t s_draw_ox = 0;
 static int8_t s_draw_oy = 0;
 
-// Saturating narrow to int8_t. Buffer coordinates and the jitter offset are both
-// int8_t, and their sum can leave the range on a legend near the right edge — where
-// a silent wrap would draw the art at a WRONG place rather than clipping it away.
-static inline int8_t sat8(int16_t v) {
-    return (int8_t)((v < -128) ? -128 : ((v > 127) ? 127 : v));
-}
-
 void kdisp_set_draw_offset(int8_t ox, int8_t oy) {
     s_draw_ox = ox;
     s_draw_oy = oy;
@@ -694,8 +687,8 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
     // remember to add it, which is the enumerating-guard shape this repo keeps getting
     // caught by. It is 0 outside an idle relocation redraw, so every other draw is
     // unaffected.
-    x = sat8((int16_t)x + s_draw_ox);
-    y = sat8((int16_t)y + s_draw_oy);
+    x = kdisp_sat8((int16_t)x + s_draw_ox);
+    y = kdisp_sat8((int16_t)y + s_draw_oy);
     int8_t x_cursor = x;
     int8_t y_cursor = y;
     // HINT_SMALL (\x10) latches this for the REST of the string — there is no
@@ -751,8 +744,8 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                              //   coordinate is what pinned MOVE'd art in place while the
                              //   rest of the legend moved.
                 if (text[1] && text[2]) {
-                    x_cursor = sat8((int16_t)(int8_t)text[1] + s_draw_ox);
-                    y_cursor = sat8((int16_t)(int8_t)text[2] + s_draw_oy);
+                    x_cursor = kdisp_sat8((int16_t)(int8_t)text[1] + s_draw_ox);
+                    y_cursor = kdisp_sat8((int16_t)(int8_t)text[2] + s_draw_oy);
                     text += 2;
                 }
                 break;

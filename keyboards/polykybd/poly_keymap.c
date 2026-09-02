@@ -2208,14 +2208,15 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         // big thing, and the whole point of the size setting is the main legend.
         const uint32_t* shift_letter = NULL;
         int8_t preview_x = 0, preview_v = 0;
+        int8_t pmin = 0, pmax = 0, pymin = 0, pymax = 0;
         if(!shift && !state.caps_lock) {
             int8_t v_pv = get_setting(v_set, local_state->lang, VAR_SHIFT);
             int8_t h_pv = get_setting(h_set, local_state->lang, VAR_SHIFT);
             if(v_pv!=HIDE_KEY && h_pv!=HIDE_KEY) {
                 shift_letter = translate_keycode_only_shift(local_state->lang, keycode);
                 if (shift_letter != NULL) {
-                    int8_t pmin, pmax;
-                    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, shift_letter, &pmin, &pmax);
+                    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, shift_letter,
+                                        &pmin, &pmax, &pymin, &pymax);
                     preview_x = 28+h_pv;
                     if (preview_x + pmin < base_plan.ink_max + 2)         // keep clear of the base
                         preview_x = base_plan.ink_max + 2 - pmin;
@@ -2234,11 +2235,11 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             }
         }
 
-        draw_main_legend(&base_plan);
-        if (shift_letter != NULL)
-            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, preview_x, 23+preview_v, shift_letter);
-
-        //preview alt representation
+        // Resolve the AltGr hint BEFORE anything is drawn, for the same reason the
+        // shift preview above is resolved first: the two hints have to be laid out
+        // as a pair (see the separation block below).
+        const uint32_t* alt_letter = NULL;
+        int8_t alt_x = 0, alt_v = 0, aymin = 0, aymax = 0;
         letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
             int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
@@ -2247,8 +2248,8 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // Clamp to the right edge like the shift preview — wide glyphs
                 // (e.g. @ on the French/Tahitian 0 key) otherwise clip off-screen.
                 int8_t amin, amax;
-                kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, letter, &amin, &amax);
-                int8_t alt_x = 28+h_off;
+                kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter, &amin, &amax, &aymin, &aymax);
+                alt_x = 28+h_off;
                 // At the small size this mark is kept off the legend by its VERTICAL
                 // offset — it sits below the base glyph. A big legend fills that
                 // height, so there the only separation left is horizontal: push it
@@ -2257,9 +2258,45 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                     alt_x = (int8_t)(base_plan.ink_max + 2 - amin);
                 if (alt_x + amax > BUFFER_X + SCREEN_WIDTH - 1)
                     alt_x = (int8_t)((BUFFER_X + SCREEN_WIDTH - 1) - amax);
-                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, alt_x, 23+v_off, letter);
+                alt_letter = letter;
+                alt_v = v_off;
+
+                // Keep the two hints off EACH OTHER. Both sit right of the base —
+                // shift upper, AltGr lower — and it is their VERTICAL offsets that
+                // hold them apart. True for a narrow Latin pair, false for a tall
+                // script: on every ar-* KC_F the shift tick lands inside the AltGr's
+                // 29 px box, and bn-BD KC_D shares 57 px. A per-language offset
+                // cannot fix that — the room left over is decided by the WIDTH of
+                // this key's three glyphs, so one number per language would have to
+                // satisfy the worst key and would crush the rest into the base.
+                //
+                // The base is bottom-left and narrow on exactly these keys, so the
+                // free space is between it and the (right-clamped) AltGr: pull the
+                // shift LEFT into that gap, never past the base's own 2 px margin,
+                // and never to the right — which could only walk it into the clamp.
+                // Where three wide glyphs genuinely do not fit on 72 px the pull
+                // still shrinks the overlap rather than removing it.
+                if (shift_letter != NULL) {
+                    const int8_t sy0 = (int8_t)(23 + preview_v + pymin);
+                    const int8_t sy1 = (int8_t)(23 + preview_v + pymax);
+                    const int8_t ay0 = (int8_t)(23 + alt_v + aymin);
+                    const int8_t ay1 = (int8_t)(23 + alt_v + aymax);
+                    if (preview_x + pmin <= alt_x + amax && alt_x + amin <= preview_x + pmax
+                        && sy0 <= ay1 && ay0 <= sy1) {
+                        int16_t want  = (int16_t)(alt_x + amin - 2 - pmax);
+                        const int16_t floor_x = (int16_t)(base_plan.ink_max + 2 - pmin);
+                        if (want < floor_x) want = floor_x;
+                        if (want < preview_x) preview_x = (int8_t)want;
+                    }
+                }
             }
         }
+
+        draw_main_legend(&base_plan);
+        if (shift_letter != NULL)
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, preview_x, 23+preview_v, shift_letter);
+        if (alt_letter != NULL)
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, alt_x, 23+alt_v, alt_letter);
         return true;
     }
     return false;

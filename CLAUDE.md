@@ -1699,6 +1699,44 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   - **`bn-BD KC_H` is the key the pull alone could NOT fix** — a 22 px base plus a
     27 px Shift plus a 37 px AltGr will not fit 72 px at full size, so the pull could
     only shrink it 29 → 22 px. Halving the AltGr hint (below) is what closes it.
+- ⚠️ **A Shift CELL has TWO jobs, and emptying it to hide the PREVIEW destroys the
+  uppercase — the suppression is a build-time BITMAP instead
+  (`shift_preview_redundant`, `lang/lang_lut.c`).** The cell is the preview drawn in
+  the unshifted view AND the legend drawn while Shift is actually held, so clearing
+  it leaves `translate_keycode()` falling back to `lower_case` — and `VAR_CAPS` is
+  empty on those keys, so the capital then lives nowhere and the keycap shows `ä`
+  with Shift down. Reported from hardware 2026-09-02 after a tuning pass emptied 164
+  cells across 52 layouts to hide previews that only repeated the base letter.
+  - **The rule is `lang/shift_preview.py`**: a preview is redundant when the base and
+    the Shift each resolve to exactly ONE printable glyph and they are a case pair in
+    either direction (`ä`/`Ä`, and `Ø`/`ø` where a few layouts store the capital as
+    the base). An exact duplicate needs no clause — a caseless character is its own
+    upper case. It fails SAFE: anything it cannot resolve keeps its preview, because
+    a stray preview is cosmetic and a missing one is information lost.
+  - **The case comparison is done in PYTHON at build time**, where the Unicode tables
+    are, and emitted as `uint8_t[NUM_LANG][8]` — 1280 B of `.rodata`, no RAM. All 164
+    hand-emptied cells are covered by the generic rule (verified), and it finds the
+    same shape on 72 more keys: **236 previews suppressed across 75 layouts**, of the
+    4388 that draw at all.
+  - ⚠️ **The HOST PREVIEW imports that module and feeds it the RAW cells** rather than
+    re-deriving anything — `oled_preview.shift_preview_rule()` /
+    `shift_preview_cells()`, mirrored into `gen_keycap_tuner.py` so the tuner cannot
+    offer offsets for a preview the board never draws. Sharing the *resolver* and not
+    just the rule is the point: measured, two resolvers disagreed on **59** of ~3300
+    keys. A bit-level check over all 160 × 49 (lang, key) pairs is what proves parity
+    — 0 mismatches.
+  - ⚠️ **The named-glyph table must be built from column B (HEX INPUT) of the
+    `named_glyphs` sheet, NOT column C (CALC DEC).** C is a FORMULA, and openpyxl's
+    `data_only` pass returns `None` for a formula with no cached result — the state of
+    **942 of ~1400 rows** in this workbook, and the state it has been in on every
+    revision checked. Reading C silently drops those names, so their cells resolve to
+    `None` and *keep* their preview; that was the whole 59-key disagreement above.
+    `named_glyphs.h` is generated from column B, so B is what the firmware draws.
+  - ⚠️ **A literal close-comment inside a `/*[[[cog … ]]]*/` block ends the C comment
+    early** and the compiler then parses the generator source as C
+    (`missing terminating ' character`, `-Werror`, dead build). The emitter builds its
+    trailing `/* lang */` marker by concatenation for exactly that reason. It costs
+    two build cycles to notice, because cog itself is perfectly happy.
 - **EVERY element of a keycap is clamped onto the panel, on ALL FOUR edges, through
   ONE helper — `legend_plan_clamp()` (`base/legend_plan.c`).** The main legend, the
   Shift preview and the AltGr hint all pass their measured ink box through it, so

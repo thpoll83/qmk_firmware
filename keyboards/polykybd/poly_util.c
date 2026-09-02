@@ -133,9 +133,12 @@ void display_message_progressive(uint8_t row, uint8_t col, const uint32_t* messa
                     // Not-yet-solid letters render dim via the coarse 2-on/2-off
                     // scanline — cleaner than the fine 1-on/1-off on the big
                     // 24pt splash glyphs, which flickered.
-                    kdisp_set_gfx_scanline2(visible >= solid_count);
+                    // Phase 0: the splash is a few seconds at boot, so a fixed
+                    // band alignment costs nothing and a rolling one would read as
+                    // shimmer across the reveal.
+                    kdisp_set_gfx_scanline2(visible >= solid_count, 0);
                     kdisp_write_gfx_text(displayFont, 1, 49, 38, text);
-                    kdisp_set_gfx_scanline2(false);
+                    kdisp_set_gfx_scanline2(false, 0);
                     visible++;
                 }
                 index++;

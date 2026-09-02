@@ -235,6 +235,7 @@ enum settings_keys {
     SETTING_NUM_VOFFSET,
     SETTING_SYM_HOFFSET,
     SETTING_SYM_VOFFSET,
+    SETTING_LETTER_ALTGRHALF,
     SETTINGS_NUM
     //[[[end]]]
 };

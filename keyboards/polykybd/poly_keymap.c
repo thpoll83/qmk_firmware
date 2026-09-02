@@ -2260,17 +2260,32 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter, &amin, &amax, &aymin, &aymax);
 
                 // The AltGr glyph is a HINT — what this key would type under a
-                // modifier nobody is holding — so it is drawn at HALF size: it reads
-                // as subordinate to the base legend, and a full-size script glyph is
-                // most of what made the two hints fight for the right-hand side.
+                // modifier nobody is holding — so on a script whose letters fill the
+                // keycap it is drawn at HALF size: it reads as subordinate to the
+                // base legend, and a full-size script glyph is most of what made the
+                // two hints fight for the right-hand side.
                 //
-                // ⚠️ Except when it is already tiny, which halving destroys — a
-                // Hebrew nikud is 2×3 px and comes out a dot. The threshold is
-                // MEASURED, not chosen: over the 318 distinct AltGr cells the
-                // ink-height histogram has an EMPTY BIN at 8 px, with marks below it
-                // (44 cells — nikud, diaeresis, middle dot, hyphen) and letterforms
-                // from 9 px up (274 cells). The data separates itself; 7 is the gap.
-                if (aymax - aymin + 1 > ALTGR_HALF_MIN_INK_H && letter[0] != U'\x10') {
+                // ⚠️ WHICH layouts is DATA, not a size test, and the measurement is
+                // why. The intuition is "Arabic and Indic have very large glyphs",
+                // but AltGr ink HEIGHT does not separate them at all — median 20 px
+                // on Arabic letters against 21 px on Latin ones. What is actually
+                // different is that on those layouts the base and the Shift hint are
+                // wide too, so the row reads crowded. That is a per-LAYOUT judgement
+                // no glyph measurement can make, so it lives where layout decisions
+                // live: `{letter.altgrhalf}` in lang_lut.xlsx, one cell per language.
+                // Flip a layout by editing that cell, not by tuning a threshold here.
+                //
+                // ⚠️ The size test that REMAINS is only the mark guard: halving a
+                // glyph that is already tiny destroys it — a Hebrew nikud is 2×3 px
+                // and comes out a dot. That threshold IS measured: over the 318
+                // distinct AltGr cells the ink-height histogram has an EMPTY BIN at
+                // 8 px, marks below it (44 cells — nikud, diaeresis, middle dot,
+                // hyphen) and letterforms from 9 px up (274). It matters most on the
+                // Indic layouts, whose letter AltGr hints are mostly bare combining
+                // marks — median 4 px — so most of them stay full size even here.
+                if (is_letter
+                    && get_setting(SETTING_LETTER_ALTGRHALF, local_state->lang, VAR_ALTGR) != 0
+                    && aymax - aymin + 1 > ALTGR_HALF_MIN_INK_H && letter[0] != U'\x10') {
                     uint8_t n = 0;
                     while (n < ALTGR_HALF_MAX_LEN && letter[n] != 0) n++;
                     if (letter[n] == 0) {        // fits the scratch; else stay full size

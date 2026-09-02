@@ -1699,21 +1699,42 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   - **`bn-BD KC_H` is the key the pull alone could NOT fix** — a 22 px base plus a
     27 px Shift plus a 37 px AltGr will not fit 72 px at full size, so the pull could
     only shrink it 29 → 22 px. Halving the AltGr hint (below) is what closes it.
-- **The AltGr hint is drawn at HALF size, and the size threshold is a MEASURED gap
-  rather than a taste call.** It is a hint — what the key would type under a modifier
-  nobody is holding — so it reads better subordinate to the base legend, and a
+- **The AltGr hint is drawn at HALF size on the layouts that ask for it, and WHICH
+  layouts is DATA — `{letter.altgrhalf}`, row 62 of `lang_lut.xlsx`.** It is a hint —
+  what the key would type under a modifier nobody is holding — so on a script whose
+  letters fill the keycap it reads better subordinate to the base legend, and a
   full-size script glyph was most of what made the two hints fight over the right-hand
   side. `render_key()` prepends `HINT_SMALL` to the cell and re-measures.
-  - ⚠️ **A mark that is already tiny must NOT halve** — a Hebrew nikud is 2×3 px and
-    comes out a dot. Over the **318 distinct AltGr cells** the ink-height histogram has
-    an **EMPTY BIN at 8 px**: 44 cells below it (nikud, diaeresis, middle dot, hyphen)
-    and 274 letterforms from 9 px up. So `ALTGR_HALF_MIN_INK_H` is 7 because the data
-    separates itself there, and a host test asserts nothing inks exactly 8 px tall — a
-    new language landing in the gap has to **re-derive** the constant from the
-    histogram, not nudge it.
-  - **Measured**: hint-on-hint overlap 1 key / 22 px → **0**, off-panel ink
-    3934 → 3776 px, 1309 of the 1710 AltGr keycaps halve, `.text` +152 B and
-    `.data`/`.bss` byte-identical (the scratch is on the stack).
+  - ⚠️ **A SIZE test cannot express which layouts, and the measurement is the reason.**
+    The intuition is "Arabic and Indic have very large glyphs"; AltGr ink **height does
+    not separate them at all** — median **20 px** on Arabic letters against **21 px** on
+    Latin ones. What actually differs is that on those layouts the base and the Shift
+    hint are wide too, so the row reads crowded. That is a per-**layout** judgement no
+    glyph measurement can make, which is why it lives in the spreadsheet — one cell per
+    language, flipped by editing the cell, never by tuning a threshold in the C.
+    Shipped on: every Arabic-script layout (`ar-*`, `fa-IR`, `ur-PK`, `ku-IQ`, `ps-AF`)
+    and the Indic ones (`hi-IN`, `mr-IN`, `ne-NP`, `bn-IN`, `bn-BD`, `te-IN`, `ta-IN`) —
+    29 in all, and **letters only** (`{letter.…}`), so the digit and symbol rows of the
+    same layout keep full-size hints.
+  - ⚠️ **The one size test that REMAINS is the mark guard, and its threshold IS
+    measured.** Halving a glyph that is already tiny destroys it — a Hebrew nikud is
+    2×3 px and comes out a dot. Over the **318 distinct AltGr cells** the ink-height
+    histogram has an **EMPTY BIN at 8 px**: 44 cells below it (nikud, diaeresis, middle
+    dot, hyphen) and 274 letterforms from 9 px up. So `ALTGR_HALF_MIN_INK_H` is 7
+    because the data separates itself there, and a host test asserts nothing inks
+    exactly 8 px tall — a new language landing in the gap has to **re-derive** the
+    constant from the histogram, not nudge it. It carries most of the **Indic** layouts
+    on its own: their letter AltGr hints are mostly bare combining marks at a median
+    4 px, so they stay full size even though the layout opted in.
+  - **Measured**: hint-on-hint overlap 1 key / 22 px → **0**, `.text` +184 B, `.rodata`
+    +640 B (the new settings row: `int8_t[NUM_LANG*4]`), `.data`/`.bss` byte-identical
+    and the monolith's `.heap` unchanged (the halving scratch is on the stack).
+  - ⚠️ **A settings row must be INSERTED, not appended** — cog collects the block by
+    walking column A until the first empty cell, and row 63 is the `lower/upper/caps/
+    ALT Gr` legend, so anything below it is invisible. `lang/_insert_settings_row.py`
+    renumbers the rows underneath; it is safe only because this workbook has no
+    formulas, no conditional formatting and no merges outside row 1, which it re-checks
+    before writing.
   - ⚠️ **The AltGr view when AltGr is actually HELD is untouched, and must stay so** —
     that branch is at the top of `render_key()` and there the glyph IS the legend, not
     a hint.

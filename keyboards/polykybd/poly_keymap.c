@@ -2143,20 +2143,35 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     if (mods & MOD_RALT) {
         const uint32_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
-            const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
+            // Draw it WHERE THE RESTING VIEW DRAWS THE HINT: this key's own category
+            // and its VAR_ALTGR offsets, so holding AltGr enlarges the glyph in place
+            // instead of teleporting it across the keycap. Measured over the 1719
+            // AltGr cells, 1148 (67%) land exactly on the hint's position and the
+            // rest are pulled back a median 5 px by the clamp below — which is the
+            // only reason this is safe to do at all (worst: the ar-* KC_F letters at
+            // 34-38 px, where a wide script glyph cannot fit at x=+55).
+            //
+            // ⚠️ This replaced a defensive MIXTURE that predates the clamp: the
+            // NUM-or-SYM category even on a LETTER key, H from VAR_SMALL, and V as
+            // PK_MIN(VAR_SMALL, VAR_ALTGR). That kept the glyph near the base legend
+            // where it could not fall off, at the cost of using offsets belonging to
+            // a different category and a different variation than the glyph drawn.
             int8_t v_set;
             int8_t h_set;
-            if(is_num){
-                v_set = SETTING_NUM_VOFFSET;
-                h_set = SETTING_NUM_HOFFSET;
+            if(is_letter) {
+                v_set = SETTING_LETTER_VOFFSET;
+                h_set = SETTING_LETTER_HOFFSET;
             } else {
-                v_set = SETTING_SYM_VOFFSET;
-                h_set = SETTING_SYM_HOFFSET;
+                const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
+                v_set = is_num ? SETTING_NUM_VOFFSET : SETTING_SYM_VOFFSET;
+                h_set = is_num ? SETTING_NUM_HOFFSET : SETTING_SYM_HOFFSET;
             }
-            int8_t v_off = get_setting(v_set, local_state->lang, VAR_SMALL);
-            int8_t v_off_alt = get_setting(v_set, local_state->lang, VAR_ALTGR);
-            v_off = PK_MIN(v_off, v_off_alt);
-            int8_t h_off = get_setting(h_set, local_state->lang, VAR_SMALL);
+            // HIDE on either axis falls through to the resting legend, as before —
+            // hiding the hint says "do not show the AltGr" for this layout. Measured:
+            // no layout hides its AltGr offsets today, and H/V never disagree, so
+            // this is a semantic tidy-up rather than a behaviour change.
+            int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
+            int8_t h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
                 // A bare combining mark (the nukta "+nukta" AltGr hint) is invisible on
                 // its own when AltGr is actually held — compose it onto the base

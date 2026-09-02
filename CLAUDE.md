@@ -224,6 +224,32 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     chosen to avoid. It means an upstream merge really is verified by the build,
     the HIL rig and hardware alone.
 
+- ⚠️ **After changing a function SIGNATURE, grep THIS FILE for other prose
+  references to it — nothing in CI reads Markdown, so a stale API example ships
+  silently.** `CLAUDE.md` narrates dozens of APIs across sections that have no
+  reason to be open when you edit one, and an example that no longer compiles is
+  worse than no example: it reads as authoritative and the next session copies it.
+  Changing `kdisp_set_gfx_scanline(bool)` to `(bool, uint8_t)` updated the section
+  being edited and left the one-arg form in two *other* notes — the `kdisp_plot_ink`
+  account of the EDEN dimming bug and the Eden-screensaver section (#267,
+  2026-09-02). Every build was green under `-Werror` precisely because the **code**
+  call sites were all correct. The check is one command, before you push:
+  ```bash
+  grep -n "kdisp_set_gfx_scanline" CLAUDE.md    # …and any other renamed symbol
+  ```
+  - **It was caught by Greptile, and that is the pattern rather than the luck.**
+    A cross-file consistency claim in prose is what an LLM reviewer is genuinely
+    better at than every other check here — cppcheck cannot read the file, the
+    compiler cannot see it, and the author is the one person guaranteed not to
+    re-read the sections they did not open. The same reviewer caught a note
+    contradicting one two paragraphs above it earlier (`PolyKybdHost/CLAUDE.md`).
+    So when a reviewer raises a *documentation* inconsistency, verify it like any
+    other finding — but expect it to be right more often than its severity label
+    suggests.
+  - ⚠️ Applies to a **renamed or re-typed** symbol just as much as a new argument,
+    and to the sibling repos' `CLAUDE.md` files when the symbol is one they mirror
+    (`iso_lang_country.py`, `noto-fonts.yaml`, the font-pack render manifests).
+
 ## Branching (all PolyKybd repos)
 
 - **Give every branch a name that hints at its content** (a short descriptive slug, e.g. `claude/fix-slave-layer-after-fw-apply`, not just the auto-generated `claude/<random-scientist>-<id>`) so the branch list reads as a changelog.
@@ -336,6 +362,27 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     ⚠️ `make`'s own auto-`git-submodule` step does **not** rescue this: it tries to
     clone into the non-empty dir, prints `destination path … already exists and is not
     an empty directory`, and carries on to a doomed build (2026-08-12).
+  - ⚠️ **In a FRESH container that loop can fail for EVERY module — retry them one at
+    a time.** Run back-to-back straight after the five `add_repo` calls (2026-09-02),
+    all five died with `fatal: clone of '<url>' failed / Failed to clone '<path>' a
+    second time, aborting`, while `git ls-remote` against the same URL succeeded — so
+    the remote was reachable and it is not an authorisation failure. Re-running
+    `lib/printf` **alone** then worked first time, and the other four followed once
+    each was retried individually:
+    ```bash
+    for m in lufa chibios chibios-contrib pico-sdk; do
+        rm -rf .git/modules/lib/$m lib/$m     # a failed clone leaves a half-state
+        git submodule update --init --depth 1 --no-recommend-shallow lib/$m
+        sleep 5
+    done
+    git submodule status lib/*                # every line must start with a SPACE
+    ```
+    ⚠️ **Cause unestablished — do not theorise one.** The plausible candidates (the
+    proxy's 429 concurrency cap, authorisation needing a moment to propagate after
+    `add_repo`) were not tested, and this file's own history is full of confident
+    mechanisms that turned out wrong. Record the remedy, not a story. The tell is
+    cheap: `git submodule status` prefixes an uninitialised module `-`, so check it
+    rather than assuming the loop worked.
 - **Build**: `qmk compile -kb polykybd/split72 -km default` (or `make polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
 - **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
   - ⚠️ **Put the commit sha in the FILENAME — every test build reports the same
@@ -660,9 +707,19 @@ inherited-upstream noise:
     does not always — measured, on the very merge that added this tier.** Merging
     #264 (`43cc2559`, 2026-09-01) created **no push-event workflow run at all**:
     not `qmk-test`, not `cppcheck`, not `polykybd-unit-test`. That last one is the
-    decisive part — it has **no `paths:` filter whatsoever**, and it had fired on
-    #263's `CLAUDE.md`-only merge hours earlier, yet stayed silent on a merge
-    carrying nine C files. So this was not a paths filter, and not ours. Ruled out
+    decisive part — its **`push` trigger has no `paths:` filter** (just
+    `branches: [PolyKybd]`), and it had fired on #263's `CLAUDE.md`-only merge hours
+    earlier, yet stayed silent on a merge carrying nine C files. So this was not a
+    paths filter, and not ours. ⚠️ **Read that as "the PUSH trigger", not the
+    workflow** — this note said "no `paths:` filter whatsoever" until 2026-09-02, and
+    that is false of its `pull_request` trigger, which filters on
+    `keyboards/polykybd/**`, `modules/polykybd/**`, the two `builddefs/*_test*.mk`
+    and itself. The conclusion about the dropped push event is unaffected (a merge to
+    `PolyKybd` IS a push, and that trigger really is unfiltered), but the sentence
+    misleads anyone reasoning about a **PR**: on a docs-only PR the unit tests are
+    correctly silent, and reading them as "should always fire" turns a working filter
+    into a phantom second dropped-delivery incident. Found while checking exactly
+    that on #269. Ruled out
     too: no GitHub Actions incident that day (the one Git Operations incident ran
     15:00–16:01 UTC, hours earlier); the merge was a **direct click** on *Merge
     pull request* by the repo owner — confirmed with them, not inferred — so
@@ -778,6 +835,15 @@ inherited-upstream noise:
   every real build queued behind it (#224 burned three rig runs and three review
   slots that way; #251 later did the same as a workflow-only PR). What follows —
   the last one is still the one that would bite:
+  - **`qmk-test.yml` has NO `concurrency:` group, so a push mid-run does not CANCEL
+    the in-flight run — it queues a second one behind it on the single-job rig.**
+    Worth knowing because it decides "push the fix now or wait?": nothing is aborted,
+    so the running job still finishes and still tells you whether the code is sound,
+    but you spend a second full flash-and-test cycle. Verified before pushing a
+    docs-only follow-up on #267 (`grep -n concurrency .github/workflows/qmk-test.yml`
+    → no match); runs 964 and 965 then both queued on the same head. ⚠️ The older
+    run's conclusion attaches to the **superseded sha**, so it stops being the PR's
+    reported status even though it is the one that actually exercised the code.
   - ⚠️ **It is a `paths` list with `!` negations, NOT `paths-ignore`, and it cannot
     be either one.** The `!` prefix works ONLY in `paths`, and the two filters may
     not both be used for one event — so "exclude the sibling workflows but still
@@ -3080,6 +3146,27 @@ knowing is the parts that are NOT what you would write from scratch:
   flavour, which PR CI does not build and which is the first thing to fail on any RAM
   growth: `.heap` 3828 → **3620 B** free. Re-measure there, not on the pack build,
   before adding another static.
+  - **Reading that number** (this file quotes it repeatedly and never says how):
+    ```bash
+    qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes
+    printf '%d bytes\n' "$((16#$(arm-none-eabi-objdump -h .build/polykybd_split72_default.elf \
+        | awk '$2==".heap"{print $3}')))"
+    ```
+    ⚠️ **Do NOT reach for `awk '{print strtonum("0x"$3)}'` — Debian's default awk is
+    mawk (1.3.4 here), which has no `strtonum`.** It is not a silent failure — awk
+    prints `awk: line N: function strtonum never defined` on **stderr** and exits
+    **2** — but wrapped in the `printf "%d bytes" "$(…)"` form above the substitution
+    swallows that status, so the **outer command exits 0 and prints a confident
+    `0 bytes`**. That is the trap: a plausible number, not a missing one, with the
+    real error a few lines up in stderr where a build log interleaves it out of
+    sight. Hence the shell `$((16#…))`, which needs no awk function at all. Same
+    family as the `objdump -s -j .data.<sym>` trap above — the tool answers a
+    different question than the one you asked — except that here it does say so, and
+    the wrapper is what hides it.
+  - **Take the baseline from a build, not from this file.** Measured 2026-09-02 the
+    monolith read 2772 B free at `44baf433`; that it matched the figure written here
+    is what proved the baseline build was the right one. A quoted number can be
+    several PRs stale — it is evidence only when you have just reproduced it.
 
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 

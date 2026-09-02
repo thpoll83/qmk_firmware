@@ -1700,7 +1700,7 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     27 px Shift plus a 37 px AltGr will not fit 72 px at full size, so the pull could
     only shrink it 29 → 22 px. Halving the AltGr hint (below) is what closes it.
 - **The AltGr hint is drawn at HALF size on the layouts that ask for it, and WHICH
-  layouts is DATA — `{letter.altgrhalf}`, row 62 of `lang_lut.xlsx`.** It is a hint —
+  layouts is DATA — `{letter|num|sym.altgrhalf}`, rows 62–64 of `lang_lut.xlsx`.** It is a hint —
   what the key would type under a modifier nobody is holding — so on a script whose
   letters fill the keycap it reads better subordinate to the base legend, and a
   full-size script glyph was most of what made the two hints fight over the right-hand
@@ -1714,8 +1714,11 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     language, flipped by editing the cell, never by tuning a threshold in the C.
     Shipped on: every Arabic-script layout (`ar-*`, `fa-IR`, `ur-PK`, `ku-IQ`, `ps-AF`)
     and the Indic ones (`hi-IN`, `mr-IN`, `ne-NP`, `bn-IN`, `bn-BD`, `te-IN`, `ta-IN`) —
-    29 in all, and **letters only** (`{letter.…}`), so the digit and symbol rows of the
-    same layout keep full-size hints.
+    29 in all. The opt-in is **per category**, the same three-way split the H/V offsets
+    use, so `render_key()` picks `half_set` beside `v_set`/`h_set`; **only `{letter.…}`
+    is set today**, and `{num.…}` / `{sym.…}` exist so the choice can be made per layout
+    in the keycap tuner. ⚠️ A row nothing uses still has to EXIST — the tuner can only
+    offer a setting the spreadsheet carries — so do not "clean up" an all-blank one.
   - ⚠️ **The one size test that REMAINS is the mark guard, and its threshold IS
     measured.** Halving a glyph that is already tiny destroys it — a Hebrew nikud is
     2×3 px and comes out a dot. Over the **318 distinct AltGr cells** the ink-height
@@ -1726,9 +1729,10 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     constant from the histogram, not nudge it. It carries most of the **Indic** layouts
     on its own: their letter AltGr hints are mostly bare combining marks at a median
     4 px, so they stay full size even though the layout opted in.
-  - **Measured**: hint-on-hint overlap 1 key / 22 px → **0**, `.text` +184 B, `.rodata`
-    +640 B (the new settings row: `int8_t[NUM_LANG*4]`), `.data`/`.bss` byte-identical
-    and the monolith's `.heap` unchanged (the halving scratch is on the stack).
+  - **Measured**: hint-on-hint overlap 1 key / 22 px → **0**, `.text` +192 B, `.rodata`
+    +1920 B (three settings rows at `int8_t[NUM_LANG*4]` = 640 B each), `.data`/`.bss`
+    byte-identical and the monolith's `.heap` unchanged (the halving scratch is on the
+    stack).
   - ⚠️ **A settings row must be INSERTED, not appended** — cog collects the block by
     walking column A until the first empty cell, and row 63 is the `lower/upper/caps/
     ALT Gr` legend, so anything below it is invisible. `lang/_insert_settings_row.py`

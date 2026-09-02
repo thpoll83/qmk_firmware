@@ -14,12 +14,21 @@ on a workbook that has grown any.
 The new row is CLONED from the last settings row, so it inherits that row's cell
 styles and column layout exactly; only the values differ.
 
+⚠️ After an insert, openpyxl's EAGER loader mis-reads a couple of shared-string cells
+in the legend row (`upper`/`caps` come back as None) while `read_only=True`, the raw
+XML and cog all read them correctly -- verified by a full cell-by-cell round trip: 0
+lost, 0 changed, only the intended new cells. So do not chase that; check a workbook
+edit with `load_workbook(..., read_only=True)`, and judge the result by whether the
+cog regeneration is purely ADDITIVE.
+
 usage: _insert_settings_row.py <xlsx> <{key.name}> <variation 0-3> <lang,lang,...> [value]
 
   variation  0 lower / 1 upper / 2 caps / 3 ALT Gr -- which of the language's four
              sub-columns carries the value (VAR_SMALL/SHIFT/CAPS/ALTGR in the C).
   value      what to write for each named language (default 1); every other
-             language is left blank, which cog emits as 0.
+             language is left blank, which cog emits as 0. An EMPTY lang list adds
+             the row with no language set, which is how an opt-in nothing uses yet
+             still becomes selectable in the keycap tuner.
 """
 import os
 import re
@@ -31,7 +40,10 @@ from xml.sax.saxutils import escape
 
 if len(sys.argv) < 5:
     sys.exit(__doc__)
-XLSX, KEY, VARIATION, LANGS = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4].split(",")
+XLSX, KEY, VARIATION = sys.argv[1], sys.argv[2], int(sys.argv[3])
+# An EMPTY list is legitimate: a row every layout opts out of by default still has to
+# exist, because the tuner can only offer a setting the spreadsheet already carries.
+LANGS = [s for s in sys.argv[4].split(",") if s]
 VALUE = sys.argv[5] if len(sys.argv) > 5 else "1"
 if not (0 <= VARIATION <= 3):
     sys.exit("variation must be 0..3")

@@ -2176,17 +2176,21 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     if (letter != NULL) {
         int8_t v_set;
         int8_t h_set;
+        int8_t half_set;   // {<cat>.altgrhalf} — the per-layout half-size AltGr opt-in
         if(is_letter) {
-            v_set = SETTING_LETTER_VOFFSET;
-            h_set = SETTING_LETTER_HOFFSET;
+            v_set    = SETTING_LETTER_VOFFSET;
+            h_set    = SETTING_LETTER_HOFFSET;
+            half_set = SETTING_LETTER_ALTGRHALF;
         } else {
             const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
             if(is_num){
-                v_set = SETTING_NUM_VOFFSET;
-                h_set = SETTING_NUM_HOFFSET;
+                v_set    = SETTING_NUM_VOFFSET;
+                h_set    = SETTING_NUM_HOFFSET;
+                half_set = SETTING_NUM_ALTGRHALF;
             } else {
-                v_set = SETTING_SYM_VOFFSET;
-                h_set = SETTING_SYM_HOFFSET;
+                v_set    = SETTING_SYM_VOFFSET;
+                h_set    = SETTING_SYM_HOFFSET;
+                half_set = SETTING_SYM_ALTGRHALF;
             }
         }
         int8_t v_small = get_setting(v_set, local_state->lang, VAR_SMALL);
@@ -2272,8 +2276,11 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // different is that on those layouts the base and the Shift hint are
                 // wide too, so the row reads crowded. That is a per-LAYOUT judgement
                 // no glyph measurement can make, so it lives where layout decisions
-                // live: `{letter.altgrhalf}` in lang_lut.xlsx, one cell per language.
-                // Flip a layout by editing that cell, not by tuning a threshold here.
+                // live: `{letter|num|sym.altgrhalf}` in lang_lut.xlsx, one cell per
+                // language PER CATEGORY — the same three-way split the H/V offsets
+                // already use, so a layout can halve its letters while its digit and
+                // symbol rows keep full-size hints. Flip one by editing that cell,
+                // not by tuning a threshold here. Only `{letter.…}` is set today.
                 //
                 // ⚠️ The size test that REMAINS is only the mark guard: halving a
                 // glyph that is already tiny destroys it — a Hebrew nikud is 2×3 px
@@ -2283,8 +2290,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // hyphen) and letterforms from 9 px up (274). It matters most on the
                 // Indic layouts, whose letter AltGr hints are mostly bare combining
                 // marks — median 4 px — so most of them stay full size even here.
-                if (is_letter
-                    && get_setting(SETTING_LETTER_ALTGRHALF, local_state->lang, VAR_ALTGR) != 0
+                if (get_setting(half_set, local_state->lang, VAR_ALTGR) != 0
                     && aymax - aymin + 1 > ALTGR_HALF_MIN_INK_H && letter[0] != U'\x10') {
                     uint8_t n = 0;
                     while (n < ALTGR_HALF_MAX_LEN && letter[n] != 0) n++;

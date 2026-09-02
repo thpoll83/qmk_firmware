@@ -50,6 +50,14 @@ static uint8_t     s_seen_seq;                      // slave: last ripple seq ac
 // state syncs; here there is no diff to re-fire, so the timer is it.
 #define TUT_SYNC_REARM_MS 400u
 static uint32_t    s_sync_at;                       // last push
+// ⚠️ Deferred start. tutorial_sync_apply() runs inside user_sync_poly_data_handler(),
+// a split-transaction callback with a ~20 ms window, and tutorial_start() does SPI to
+// every panel on the half plus clear_keyboard(). Doing that in the handler is the
+// documented way to make the master time out and the slave look dead — the same
+// mistake the font-pack COMMIT made, fixed there by ACKing first and deferring the
+// heavy work to housekeeping (fw_staging_finalize_defer_reload). Same fix here: the
+// handler only records the intent, tutorial_tick() acts on it.
+static bool        s_start_pending;
 
 // Frame latch — every slice of one frame must draw the SAME instant, or the ripple
 // shears across the board (the same reason the idle loop latches its comet set once).
@@ -271,7 +279,9 @@ void tutorial_start(uint32_t seed) {
     // Every key event is swallowed from here on, so anything already held would stay
     // registered on the host and auto-repeat until something released it. Same rule
     // and the same call as doom_begin() and the FW-2 confirmation prompt.
-    clear_keyboard();
+    // MASTER ONLY: the slave sends no reports, and this touches the shared report
+    // state from a half that has no business doing so.
+    if (is_usb_host_side()) clear_keyboard();
     uprintf("Tutorial start (left=%d, master=%d)\n", (int)is_left_side(),
             (int)is_usb_host_side());
 }
@@ -295,8 +305,8 @@ void tutorial_stop(void) {
     // invalidate the boxes so the next render redraws each window in full rather
     // than a delta. Costs one 36-panel blank, once, at the end of the tutorial.
     // Release anything the swallow left held, before the host sees keys again —
-    // doom_exit() does the same on its way out.
-    clear_keyboard();
+    // doom_exit() does the same on its way out. Master only, as on entry.
+    if (is_usb_host_side()) clear_keyboard();
 
     sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);   // all panels on this half
     kdisp_set_buffer(0x00);
@@ -335,6 +345,11 @@ void tutorial_skip(void) {
 }
 
 void tutorial_tick(void) {
+    // Drain a start the split handler asked for (it must not do this itself).
+    if (s_start_pending) {
+        s_start_pending = false;
+        tutorial_start(0);
+    }
     if (!s_active) return;
     const uint32_t now = timer_read32();
 
@@ -388,7 +403,12 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
         s_st.phase_start = timer_read32();
         return true;
     }
-    if (!s_active) tutorial_start(0);                  // slave: no slots of its own
+    if (!s_active) {
+        // NOT tutorial_start() — see s_start_pending. Record and get out of the
+        // handler; the next housekeeping pass starts it.
+        s_start_pending = true;
+        return true;
+    }
     bool changed = false;
 
     // Each half runs its OWN clock from receipt — the two MCUs share no time base, so

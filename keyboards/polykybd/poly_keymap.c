@@ -1097,8 +1097,12 @@ void housekeeping_task_user(void) {
             if (is_usb_host_side() && tutorial_sync_pending() && is_transport_connected()) {
                 poly_sync_t* ls = access_local_state();
                 tutorial_sync_fill(ls->tut);
+                // ONE attempt, not three. The push is re-armed on a timer, so a
+                // failure costs 400 ms rather than a retry; three blocking retries
+                // every 400 ms is main-loop time taken from the matrix scan and the
+                // slave pull — which presents as a sluggish keypress.
                 const uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void*)ls,
-                                                   sizeof(poly_sync_t), 3);
+                                                   sizeof(poly_sync_t), 1);
                 if (sync_succeeded(ack)) {
                     tutorial_sync_sent();
                 } else {

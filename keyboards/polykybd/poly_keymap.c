@@ -2162,18 +2162,32 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // its own when AltGr is actually held — compose it onto the base
                 // consonant (क + ़ = क़) so the held view shows the real output. The
                 // unshifted preview still draws the lone dot via the cell's own controls.
+                uint32_t composed[10];
                 if (altgr_is_bare_combining(letter)) {
                     const uint32_t* base = translate_keycode(local_state->lang, keycode, false, false);
                     if (base != NULL) {
-                        uint32_t composed[10]; uint8_t ci = 0;
+                        uint8_t ci = 0;
                         for (const uint32_t* p = base;   *p && ci < 8; ++p) composed[ci++] = *p;
                         for (const uint32_t* p = letter; *p && ci < 9; ++p) if (*p >= 0x20) composed[ci++] = *p;
                         composed[ci] = 0;
-                        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 28+h_off, 23+v_off, composed);
-                        return true;
+                        letter = composed;
                     }
                 }
-                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 28+h_off, 23+v_off, letter);
+                // Clamp onto the panel, exactly as the resting view's three elements
+                // do. This branch was the ONE element still drawn at a raw origin, and
+                // it is the same defect the four-edge clamp closed for the small base
+                // legend: the offsets here are the NUM/SYM ones, tuned against those
+                // categories' own glyphs, while the glyph drawn is the AltGr cell's —
+                // so a layout whose AltGr glyphs are wider or taller silently pushed
+                // ink off an edge with nothing to report it. Measured over all 160
+                // layouts: 191 keys / 1528 px across 69 layouts, down to the single
+                // he-IL KC_BACKSLASH nikud that is 43 px tall in a 40 px panel.
+                int8_t axmin, axmax, aymin, aymax;
+                int8_t hx = (int8_t)(28+h_off), hy = (int8_t)(23+v_off);
+                kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter,
+                                    &axmin, &axmax, &aymin, &aymax);
+                clamp_legend(&hx, &hy, axmin, axmax, aymin, aymax);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, hx, hy, letter);
                 return true;
             }
         }

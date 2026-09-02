@@ -1950,6 +1950,14 @@ static const uint32_t* latin_variation(uint16_t keycode, bool upper_case) {
     return (chosen != NULL) ? chosen : latin_ex_map[row][0];
 }
 
+// The AltGr hint is drawn half-scale unless its ink is this tall or shorter. See
+// the comment at the use site for why 7 is a measured gap and not a taste call.
+#define ALTGR_HALF_MIN_INK_H 7
+// Longest AltGr cell the halving scratch can hold. The longest in the LUT today is
+// 9 codepoints (ps-AF KC_Z, five cursor nudges then the glyph); a longer one simply
+// stays full size rather than being truncated.
+#define ALTGR_HALF_MAX_LEN   12
+
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // ⚠️ A mod-tap's LEGEND is its tap keycode's legend. to_static_text() unwraps
     // this one function away, and update_displays() consults render_key() exactly
@@ -2240,6 +2248,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         // as a pair (see the separation block below).
         const uint32_t* alt_letter = NULL;
         int8_t alt_x = 0, alt_v = 0, aymin = 0, aymax = 0;
+        uint32_t alt_scratch[ALTGR_HALF_MAX_LEN + 2];   // HINT_SMALL + the cell + NUL
         letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
             int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
@@ -2249,6 +2258,30 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // (e.g. @ on the French/Tahitian 0 key) otherwise clip off-screen.
                 int8_t amin, amax;
                 kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter, &amin, &amax, &aymin, &aymax);
+
+                // The AltGr glyph is a HINT — what this key would type under a
+                // modifier nobody is holding — so it is drawn at HALF size: it reads
+                // as subordinate to the base legend, and a full-size script glyph is
+                // most of what made the two hints fight for the right-hand side.
+                //
+                // ⚠️ Except when it is already tiny, which halving destroys — a
+                // Hebrew nikud is 2×3 px and comes out a dot. The threshold is
+                // MEASURED, not chosen: over the 318 distinct AltGr cells the
+                // ink-height histogram has an EMPTY BIN at 8 px, with marks below it
+                // (44 cells — nikud, diaeresis, middle dot, hyphen) and letterforms
+                // from 9 px up (274 cells). The data separates itself; 7 is the gap.
+                if (aymax - aymin + 1 > ALTGR_HALF_MIN_INK_H && letter[0] != U'\x10') {
+                    uint8_t n = 0;
+                    while (n < ALTGR_HALF_MAX_LEN && letter[n] != 0) n++;
+                    if (letter[n] == 0) {        // fits the scratch; else stay full size
+                        alt_scratch[0] = U'\x10';    // HINT_SMALL
+                        for (uint8_t i = 0; i < n; ++i) alt_scratch[i + 1] = letter[i];
+                        alt_scratch[n + 1] = 0;
+                        letter = alt_scratch;
+                        kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter,
+                                            &amin, &amax, &aymin, &aymax);
+                    }
+                }
                 alt_x = 28+h_off;
                 // At the small size this mark is kept off the legend by its VERTICAL
                 // offset — it sits below the base glyph. A big legend fills that

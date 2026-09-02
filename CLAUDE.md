@@ -1696,10 +1696,33 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     key, and the off-panel pixel count **byte-identical per key**. 53 keys move.
     `PolyKybdHost/tools/oled_preview.py` is both the mirror and the measuring
     instrument; its `report=` gives per-element ink boxes, overlap and out-of-bounds.
-  - ⚠️ **One key legitimately does NOT come clean: `bn-BD KC_H`.** A 22 px base plus a
-    27 px Shift plus a 37 px AltGr cannot be laid out on 72 px at all; the pull
-    shrinks it 29 → 22 px and stops. That is a panel constraint, not a bug — a change
-    that "fixes" it has to say which of the three it dropped.
+  - **`bn-BD KC_H` is the key the pull alone could NOT fix** — a 22 px base plus a
+    27 px Shift plus a 37 px AltGr will not fit 72 px at full size, so the pull could
+    only shrink it 29 → 22 px. Halving the AltGr hint (below) is what closes it.
+- **The AltGr hint is drawn at HALF size, and the size threshold is a MEASURED gap
+  rather than a taste call.** It is a hint — what the key would type under a modifier
+  nobody is holding — so it reads better subordinate to the base legend, and a
+  full-size script glyph was most of what made the two hints fight over the right-hand
+  side. `render_key()` prepends `HINT_SMALL` to the cell and re-measures.
+  - ⚠️ **A mark that is already tiny must NOT halve** — a Hebrew nikud is 2×3 px and
+    comes out a dot. Over the **318 distinct AltGr cells** the ink-height histogram has
+    an **EMPTY BIN at 8 px**: 44 cells below it (nikud, diaeresis, middle dot, hyphen)
+    and 274 letterforms from 9 px up. So `ALTGR_HALF_MIN_INK_H` is 7 because the data
+    separates itself there, and a host test asserts nothing inks exactly 8 px tall — a
+    new language landing in the gap has to **re-derive** the constant from the
+    histogram, not nudge it.
+  - **Measured**: hint-on-hint overlap 1 key / 22 px → **0**, off-panel ink
+    3934 → 3776 px, 1309 of the 1710 AltGr keycaps halve, `.text` +152 B and
+    `.data`/`.bss` byte-identical (the scratch is on the stack).
+  - ⚠️ **The AltGr view when AltGr is actually HELD is untouched, and must stay so** —
+    that branch is at the top of `render_key()` and there the glyph IS the legend, not
+    a hint.
+  - ⚠️ **`kdisp_write_gfx_char_half` draws NOTHING for a missing glyph** (no `'!'`
+    substitution, no advance), where the full-size writer substitutes. Every AltGr cell
+    resolves against the full font set today, so this is only reachable on a keyboard
+    whose font pack is absent or behind — where the hint silently disappears instead of
+    showing `!`. Acceptable for a hint; do not extend the halving to a **base** legend
+    on the same reasoning.
 - **The per-keycap DISPLAY grid is NOT a rectangle** (split72). Only the **bottom
   row (display row 4) is a full 8-wide row**; the upper rows (0–3) have panels at
   **cols 0–6 only** — display **col 7 is a routing phantom** (a `BITMASK` entry

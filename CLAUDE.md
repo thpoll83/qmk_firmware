@@ -1746,13 +1746,19 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     hint are wide too, so the row reads crowded. That is a per-**layout** judgement no
     glyph measurement can make, which is why it lives in the spreadsheet — one cell per
     language, flipped by editing the cell, never by tuning a threshold in the C.
-    Shipped on: every Arabic-script layout (`ar-*`, `fa-IR`, `ur-PK`, `ku-IQ`, `ps-AF`)
-    and the Indic ones (`hi-IN`, `mr-IN`, `ne-NP`, `bn-IN`, `bn-BD`, `te-IN`, `ta-IN`) —
-    29 in all. The opt-in is **per category**, the same three-way split the H/V offsets
-    use, so `render_key()` picks `half_set` beside `v_set`/`h_set`; **only `{letter.…}`
-    is set today**, and `{num.…}` / `{sym.…}` exist so the choice can be made per layout
-    in the keycap tuner. ⚠️ A row nothing uses still has to EXIST — the tuner can only
-    offer a setting the spreadsheet carries — so do not "clean up" an all-blank one.
+    The opt-in is **per category**, the same three-way split the H/V offsets use, so
+    `render_key()` picks `half_set` beside `v_set`/`h_set`. As tuned on hardware
+    (2026-09-02): **`{letter.altgrhalf}` on 27 layouts** — every Arabic-script one
+    (`ar-*`, `fa-IR`, `ur-PK`, `ku-IQ`, `ps-AF`) plus `ne-NP`, `bn-IN`, `bn-BD`,
+    `te-IN`, `ta-IN` — and **`{sym.altgrhalf}` on the 18 `ar-*` layouts**, whose
+    symbol row is as crowded as their letters. `{num.…}` is set nowhere.
+    ⚠️ **`hi-IN` and `mr-IN` were turned OFF again after looking at them** — their
+    letter AltGr cells are mostly bare combining marks that the mark guard leaves full
+    size anyway, so the flag bought nothing and only made the few real letterforms
+    inconsistent with their neighbours. Derive the current set from the spreadsheet
+    rather than from this list; it is a judgement per layout and it moves.
+    ⚠️ A row nothing uses still has to EXIST — the tuner can only offer a setting the
+    spreadsheet carries — so do not "clean up" the all-blank `{num.…}` one.
   - ⚠️ **The one size test that REMAINS is the mark guard, and its threshold IS
     measured.** Halving a glyph that is already tiny destroys it — a Hebrew nikud is
     2×3 px and comes out a dot. Over the **318 distinct AltGr cells** the ink-height

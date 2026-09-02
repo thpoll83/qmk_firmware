@@ -1604,7 +1604,7 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     bypassed — `s_gfx_erase` and `s_gfx_scanline` were the SAME shape, and the
     scanline one was live.** Both are static plotter modes that only the two char
     writers honoured, so under `IDLE_STYLE_EDEN` — which draws the resting legend
-    `kdisp_set_gfx_scanline(true)` as a dim half-density ghost — the text came out
+    `kdisp_set_gfx_scanline(true, phase)` as a dim half-density ghost — the text came out
     half-density while the composited art stayed fully lit. Measured over the shipped
     legends, three carry composite art AND are reachable as a resting legend (i.e. at
     idle), all three on the split72 default keymap: `ICON_SCRLOCK_ON/OFF` (`KC_SCRL`,
@@ -2271,10 +2271,13 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   equivalent (0 can never exceed an unsigned threshold) and most pixels are 0 at this
   faint density.
 - **The idle legend** (the resting key label drawn over the comet haze) is rendered
-  **LIT + scanline** (`kdisp_set_gfx_scanline(true)` around the text draw), not
+  **LIT + scanline** (`kdisp_set_gfx_scanline(true, phase)` around the text draw), not
   erased — the scanline halves the lit pixels so the legend reads as a dim overlay
   while still drifting via `roll_idle_offset()`. (ERASE mode was tried but looked
-  worse with the drifting glyphs.)
+  worse with the drifting glyphs.) ⚠️ The `phase` is not optional here — it is rolled
+  off the same `epoch` as the drift, because the scanline gate is on ABSOLUTE buffer
+  y and a fixed phase would light the same panel rows forever; see the plotter-mode
+  note in the per-keycap rendering gotchas.
 - **split72-only.** `anim/startup_anim.c` gates on
   `#if defined(KEYBOARD_polykybd_split72)` (else no-op stubs) because it needs the
   generated per-board geometry header `anim/startup_anim_geom.h` (key OLED

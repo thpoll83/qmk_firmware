@@ -1496,11 +1496,37 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     source is what actually caught it.
 - **Composable plotter modes** (`disp_array.c/.h`, static flags toggled around a
   draw): `kdisp_set_gfx_erase(bool)` makes the glyph plotter **clear** pixels
-  instead of setting them, and `kdisp_set_gfx_scanline(bool)` lights **only even
-  *absolute buffer* rows** — the gate is `(y + yo + yy) & 1`, i.e. the final buffer
-  y, **NOT** a glyph-local row, so two glyphs at different y still interleave to one
-  consistent scanline pattern. Used to render the Eden idle legend as a dim
-  half-density overlay. Always pair the set with a reset (`(false)`) after the draw.
+  instead of setting them, and `kdisp_set_gfx_scanline(bool, phase)` /
+  `kdisp_set_gfx_scanline2(bool, phase)` light only every other row (1-on/1-off) or
+  2-on/2-off bands. The gate is on the **ABSOLUTE buffer y**, not a glyph-local
+  row, so two glyphs at different y still interleave into one consistent pattern.
+  Used to render the Eden idle legend as a dim half-density overlay. Always pair the
+  set with a reset (`(false, 0)`) after the draw.
+  - ⚠️ **`phase` exists because that absolute gate is a BURN-IN trap, and the drift
+    offset does not spring it for you.** Left at a fixed phase the fine mode lights
+    the even panel rows and only ever the even panel rows — every idle session, for
+    the life of the board — so half the panel takes the legend's entire share of the
+    wear and the other half takes none. `kdisp_set_draw_offset()` does not spread
+    it: it moves the **cursor** (`gfx_text_run`), i.e. it slides the glyph past a
+    *stationary* stripe pattern, changing which rows OF THE GLYPH are dropped while
+    the lit PANEL rows never move. Only rolling the phase moves the stripes. It is a
+    parameter of the enable rather than a setter of its own so that a caller cannot
+    turn the mode on without answering that question, and so a phase cannot leak
+    into the next keycap of the same pass.
+  - **The Eden legend rolls it off the SAME `epoch` as its position drift**
+    (`poly_keymap.c`, a third salt `0x2000` on `jitter_axis`, so it is uncorrelated
+    with dx/dy): the stripe flip then lands on the very frame the letter jumps
+    anyway, which is what keeps it invisible instead of a shimmer. The boot splash
+    passes phase 0 deliberately — it runs for a few seconds, so a fixed alignment
+    costs nothing and a rolling one would read as flicker across the reveal.
+  - ⚠️ **`disp_array.c` has no unit suite** (it owns the scratch buffer), so the
+    phase table was checked by compiling `scanline_skip_row()` standalone: phase 0
+    reproduces the old pattern **exactly** (so nothing that passes 0 changed), fine
+    phase 1 is its exact complement (every panel row reachable across the two),
+    coarse phase 0..3 gives four distinct band alignments, an out-of-range phase is
+    masked, and `(false, …)` ignores it. Do the same rather than eyeballing it — the
+    modes are invisible from every preview tool (`oled_preview.py` models no plotter
+    mode) and on hardware only over months.
 - **To draw an INVERTED keycap, render it inverted — do NOT reach for
   `kdisp_invert()`.** That is a panel-level SSD1306 command, and `split72.c`'s
   `matrix_scan_kb` already toggles it on every press and un-toggles on release,
@@ -1578,7 +1604,7 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     bypassed — `s_gfx_erase` and `s_gfx_scanline` were the SAME shape, and the
     scanline one was live.** Both are static plotter modes that only the two char
     writers honoured, so under `IDLE_STYLE_EDEN` — which draws the resting legend
-    `kdisp_set_gfx_scanline(true)` as a dim half-density ghost — the text came out
+    `kdisp_set_gfx_scanline(true, phase)` as a dim half-density ghost — the text came out
     half-density while the composited art stayed fully lit. Measured over the shipped
     legends, three carry composite art AND are reachable as a resting legend (i.e. at
     idle), all three on the split72 default keymap: `ICON_SCRLOCK_ON/OFF` (`KC_SCRL`,
@@ -2245,10 +2271,13 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   equivalent (0 can never exceed an unsigned threshold) and most pixels are 0 at this
   faint density.
 - **The idle legend** (the resting key label drawn over the comet haze) is rendered
-  **LIT + scanline** (`kdisp_set_gfx_scanline(true)` around the text draw), not
+  **LIT + scanline** (`kdisp_set_gfx_scanline(true, phase)` around the text draw), not
   erased — the scanline halves the lit pixels so the legend reads as a dim overlay
   while still drifting via `roll_idle_offset()`. (ERASE mode was tried but looked
-  worse with the drifting glyphs.)
+  worse with the drifting glyphs.) ⚠️ The `phase` is not optional here — it is rolled
+  off the same `epoch` as the drift, because the scanline gate is on ABSOLUTE buffer
+  y and a fixed phase would light the same panel rows forever; see the plotter-mode
+  note in the per-keycap rendering gotchas.
 - **split72-only.** `anim/startup_anim.c` gates on
   `#if defined(KEYBOARD_polykybd_split72)` (else no-op stubs) because it needs the
   generated per-board geometry header `anim/startup_anim_geom.h` (key OLED

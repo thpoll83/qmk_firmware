@@ -2983,8 +2983,8 @@ bool eden_idle_erase_legend(uint8_t disp_idx) {
     if (text == NULL || text[0] == 0) {
         return false;   // no text legend — leave the plain comet field on this key
     }
-    // Draw the legend LIT but with a scanline half-brightness effect (only even buffer
-    // rows lit) so it reads lighter over the comet field, at a slowly-drifting position
+    // Draw the legend LIT but with a scanline half-brightness effect (every other buffer
+    // row lit) so it reads lighter over the comet field, at a slowly-drifting position
     // within its own on-screen slack. roll_idle_offset() picks a uniform random offset
     // inside the glyph's free space (fully on-screen, per-glyph — the same helper the
     // jitter idle style uses); the seed changes once per EDEN_LEGEND_DRIFT_MS so every
@@ -2997,13 +2997,25 @@ bool eden_idle_erase_legend(uint8_t disp_idx) {
     main_legend_t plan;
     plan_main_legend(text, BUFFER_X, 23, scratch, (uint8_t)(GLYPH_SIZE_MAX_LEN + 1), &plan);
     uint32_t epoch = timer_read32() / EDEN_LEGEND_DRIFT_MS;
+    uint32_t seed  = epoch * 2654435761u + disp_idx;
     int8_t dx, dy;
-    roll_idle_offset(plan.text, plan.x, plan.y, epoch * 2654435761u + disp_idx, &dx, &dy);
-    kdisp_set_gfx_scanline(true);
+    roll_idle_offset(plan.text, plan.x, plan.y, seed, &dx, &dy);
+    // ⚠️ The scanline phase has to roll TOO, and the drift offset above does NOT do
+    // it: scanline_skip_row() gates on absolute buffer y, so the drift slides the
+    // glyph past a stationary stripe pattern — it changes which rows OF THE GLYPH are
+    // dropped while the lit PANEL rows never move. Left at a fixed phase this lights
+    // the even panel rows and only ever the even panel rows, for every idle session
+    // the board will ever have: half the panel takes the legend's entire share of the
+    // wear and the other half takes none, which is the fixed-pixel burn an idle style
+    // exists to prevent. A third salt on the same jitter hash (so uncorrelated with
+    // dx/dy) flips it, and rolling it on the same `epoch` puts the flip on the frame
+    // the letter jumps anyway — invisible, rather than a shimmer.
+    uint8_t sl_phase = (uint8_t)jitter_axis(seed, 0x2000u, 0, 1);
+    kdisp_set_gfx_scanline(true, sl_phase);
     kdisp_set_draw_offset(dx, dy);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, plan.x, plan.y, plan.text);
     kdisp_set_draw_offset(0, 0);
-    kdisp_set_gfx_scanline(false);
+    kdisp_set_gfx_scanline(false, 0);
     return true;
 }
 

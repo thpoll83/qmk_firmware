@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "oled_helper.h"
 #include "anim/tutorial.h"
+#include "anim/startup_anim.h"
 #include "layer_names.h"
 
 #include "state.h"
@@ -431,7 +432,7 @@ void oled_tutorial_screen(void) {
     const uint32_t* l0      = tutorial_line(0);
     const uint32_t* l1      = tutorial_line(1);
 
-    oled_on();
+    oled_on();   // Eden left the panel off; the tutorial is the first thing to speak
     kdisp_set_buffer(0);
 
     const uint32_t* lines[2] = {l0, l1};
@@ -470,6 +471,14 @@ bool oled_task_user(void) {
     // flash screen because by the time the prompt goes up finalize has already
     // cleared fw_up_active, so this would otherwise fall through to the idle/status
     // screen and leave the keycaps asking a question the panel never states.
+    // The one-shot Eden intro owns the whole board: the status panels stay DARK for
+    // its duration rather than showing a status readout beside the animation. Checked
+    // first because every branch below would otherwise paint something.
+    if (startup_anim_active() && !startup_anim_is_loop()) {
+        oled_scroll_off();
+        oled_off();
+        return false;
+    }
     if (get_local_state()->fw_confirm) {
         oled_scroll_off();
         oled_fw_confirm_screen();

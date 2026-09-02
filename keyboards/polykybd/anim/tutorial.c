@@ -42,6 +42,14 @@ static uint8_t     s_slots[TUT_LETTERS];
 static uint8_t     s_lit[(TUT_NUM_KEYS + 7) / 8];   // 1 bit per slot: had ink last frame
 static bool        s_sync_dirty;                    // master has news for the slave
 static uint8_t     s_seen_seq;                      // slave: last ripple seq acted on
+// ⚠️ The push is RE-ARMED on a timer, not sent once per change. A single send that is
+// lost — or that lands while the slave is still finishing its own Eden and not yet
+// listening — would otherwise leave that half out of the tutorial for good: dark
+// keycaps and its ordinary status screen, with the master still asking for a key the
+// user cannot see. Same reasoning as "the diff IS the retry queue" for the periodic
+// state syncs; here there is no diff to re-fire, so the timer is it.
+#define TUT_SYNC_REARM_MS 400u
+static uint32_t    s_sync_at;                       // last push
 
 // Frame latch — every slice of one frame must draw the SAME instant, or the ripple
 // shears across the board (the same reason the idle loop latches its comet set once).
@@ -188,6 +196,21 @@ static void tut_latch_frame(uint32_t now) {
         default:              s_f_contrast = 255; break;
     }
 
+    // One line per phase change: what this half believes it should be drawing. If the
+    // master says LETTER_WAIT with mine=0 and the slave never reports the same slot,
+    // the letter is on a half that is not rendering it.
+    static uint8_t s_logged_phase = 0xFF;
+    static uint8_t s_logged_slot  = 0xFF;
+    if (s_st.phase != s_logged_phase || s_f_slot != s_logged_slot) {
+        s_logged_phase = s_st.phase;
+        s_logged_slot  = s_f_slot;
+        const bool mine = (s_f_slot != TUT_SLOT_NONE) &&
+                          (TUT_SLOT_RIGHT(s_f_slot) == !is_left_side());
+        uprintf("Tutorial ph=%u step=%u slot=%u mine=%d glyph=%u left=%d\n",
+                (unsigned)s_st.phase, (unsigned)s_st.step, (unsigned)s_f_slot,
+                (int)mine, (unsigned)s_f_letter, (int)is_left_side());
+    }
+
     s_f_ripple = (s_st.phase == TUT_RIPPLE) && (s_st.ripple_slot != TUT_SLOT_NONE);
     if (s_f_ripple) {
         const sa_geom_t rg = startup_anim_key_geom(TUT_SLOT_RIGHT(s_st.ripple_slot),
@@ -216,8 +239,18 @@ void tutorial_start(uint32_t seed) {
         uint8_t cand[TUT_NUM_KEYS * 2];
         const uint8_t n = tutorial_collect_candidates(cand, (uint8_t)sizeof(cand));
         if (tut_choose_slots(cand, n, seed, s_slots) < TUT_LETTERS) {
-            uprintf("Tutorial: only %u letter keys — skipping\n", (unsigned)n);
+            uprintf("Tutorial: only %u letter keys - skipping\n", (unsigned)n);
             return;   // nothing sensible to teach; the caller stamps the marker
+        }
+        // Which keys were picked, which half each is on, and the glyph each resolves
+        // to. "no key was lit" is otherwise indistinguishable from "the letter was on
+        // the other half", "the slot did not map back", and "the glyph is missing".
+        for (uint8_t i = 0; i < TUT_LETTERS; ++i) {
+            uprintf("Tutorial slot%u: %s idx=%u letter=%c(%u) cands=%u\n", i,
+                    TUT_SLOT_RIGHT(s_slots[i]) ? "RIGHT" : "LEFT",
+                    (unsigned)TUT_SLOT_IDX(s_slots[i]),
+                    (char)tutorial_slot_letter(s_slots[i]),
+                    (unsigned)tutorial_slot_letter(s_slots[i]), (unsigned)n);
         }
     }
 
@@ -306,7 +339,12 @@ void tutorial_tick(void) {
     const uint32_t now = timer_read32();
 
     // The master owns the step machine; the slave's phase arrives over the link.
-    if (is_usb_host_side() && tut_tick(&s_st, now)) s_sync_dirty = true;
+    if (is_usb_host_side()) {
+        if (tut_tick(&s_st, now)) s_sync_dirty = true;
+        // Re-offer the state even when nothing changed, so a half that missed the
+        // start (or came up late) joins in within a few hundred ms.
+        if ((uint32_t)(now - s_sync_at) >= TUT_SYNC_REARM_MS) s_sync_dirty = true;
+    }
     if (s_st.phase == TUT_DONE) return;      // the caller tears down on the finish edge
 
     if (!s_frame_busy) {
@@ -378,7 +416,7 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
 }
 
 bool tutorial_sync_pending(void) { return s_sync_dirty; }
-void tutorial_sync_sent(void)    { s_sync_dirty = false; }
+void tutorial_sync_sent(void)    { s_sync_dirty = false; s_sync_at = timer_read32(); }
 
 // ---- status OLED prose ----------------------------------------------------
 // Resident-font ASCII only: at first boot the font pack may never have been flashed,

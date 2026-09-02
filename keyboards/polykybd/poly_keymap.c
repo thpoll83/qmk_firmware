@@ -1099,7 +1099,18 @@ void housekeeping_task_user(void) {
                 tutorial_sync_fill(ls->tut);
                 const uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void*)ls,
                                                    sizeof(poly_sync_t), 3);
-                if (sync_succeeded(ack)) tutorial_sync_sent();
+                if (sync_succeeded(ack)) {
+                    tutorial_sync_sent();
+                } else {
+                    // Never bool-test the ack (every return is non-zero). Logged
+                    // because a slave that never joins the tutorial shows dark
+                    // keycaps and its ordinary status screen — which reads as "the
+                    // tutorial is broken" rather than "the link dropped one frame".
+                    static uint8_t s_tut_sync_fail;
+                    if (++s_tut_sync_fail <= 5) {
+                        uprintf("Tutorial sync to slave failed (ack=0x%02X)\n", ack);
+                    }
+                }
             }
             if (tutorial_finished()) {
                 const bool was_skipped = tutorial_was_skipped();

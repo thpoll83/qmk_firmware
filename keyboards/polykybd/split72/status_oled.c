@@ -157,13 +157,17 @@ static uint8_t byte_to_percent(uint8_t v) {
     return (uint8_t)(((uint16_t)v * 100u + 127u) / 255u);
 }
 
-// "<pct>%" as one string. `out` must be a uint32_t[] (see oled_helper.h).
-static void pct_to_u32_string(char* out, uint8_t out_len, uint8_t pct) {
-    uint32_t* s = (uint32_t*)out;
+// "<pct>%" as one string, into a uint32_t[] (the kdisp text pipeline is 32-bit).
+// ⚠️ Takes uint32_t* rather than char*: the caller's buffer IS a uint32_t[], and
+// the char* round-trip it used to take is exactly the shape -Wcast-align rejects
+// (see rules.mk) — a cast that widens the alignment requirement is only safe by
+// convention, and the convention is what the HID-apply brick broke.
+static void pct_to_u32_string(uint32_t* out, uint8_t out_len, uint8_t pct) {
+    uint32_t* s = out;
     uint8_t   cap = out_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i = 0;
     uint32_t digits[6];
-    num_to_u32_string((char*)digits, sizeof(digits), pct);
+    num_to_u32_string(digits, sizeof(digits), pct);
     for(uint8_t d = 0; digits[d] && i < cap; ++d) s[i++] = digits[d];
     if(i < cap) s[i++] = U'%';
     if(i < cap) s[i] = 0;
@@ -275,7 +279,7 @@ static uint8_t brightness_to_level(uint8_t contrast) {
 static void draw_brightness_row(const GFXfont* const* font, int8_t x, int8_t base_y, uint8_t contrast) {
     uint32_t buffer[8];
     kdisp_draw_bitmap(x, (int8_t)(base_y - 11), brightness_sun_bitmap, SUN_W, SUN_H);
-    num_to_u32_string((char*) buffer, sizeof(buffer), contrast);
+    num_to_u32_string(buffer, sizeof(buffer), contrast);
     kdisp_write_gfx_text(font, 1, (int8_t)(x + 15), base_y, buffer);
     draw_brightness_bars((int8_t)(x + 40), (int8_t)(base_y - 1), brightness_to_level(contrast));
 }
@@ -338,7 +342,7 @@ void oled_update_buffer(void) {
     const int8_t TEXT_R = lock_panel ? 104 : 127;  // right limit for right-aligned content
 
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, TEXT_X, 15, ICON_LAYER);
-    hex_to_u32_string((char*) buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
+    hex_to_u32_string(buffer, sizeof(buffer), get_highest_layer(global_layer->layer));
     kdisp_write_gfx_text(displayFont, 1, (int8_t)(TEXT_X + 20), 15, buffer);
     // Top-row role: the USB-host half shows the USB glyph + "USB", the bridged half
     // the link glyph + "Link" (follows is_usb_host_side(), so it tracks the cable).
@@ -385,7 +389,7 @@ void oled_update_buffer(void) {
             kdisp_write_gfx_text(smallFont, 1, TEXT_X, RGB_OFF_ROW_B, U"RGB");
             kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 34), RGB_OFF_ROW_B, U"Off");
             kdisp_draw_bitmap(TEXT_X, (int8_t)(RGB_OFF_ROW_C - 8), wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
-            num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
+            num_to_u32_string(buffer, sizeof(buffer), get_current_wpm());
             kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + 15), RGB_OFF_ROW_C, buffer);
             draw_lang_column(tinyFont, COL_X, local_state->lang);
         } else {
@@ -394,7 +398,7 @@ void oled_update_buffer(void) {
             // — enough for a word instead of a 4-letter code.
             const uint8_t mode = rgb_matrix_get_mode();
             const uint32_t* mode_name = get_led_matrix_text(mode);
-            num_to_u32_string((char*) buffer, sizeof(buffer), mode);
+            num_to_u32_string(buffer, sizeof(buffer), mode);
             kdisp_write_gfx_text(smallFont, 1, TEXT_X, RGB_ROW_B, buffer);
             const int8_t name_x = (int8_t)(TEXT_X + 22);
             kdisp_write_gfx_text(smallFont, 1, name_x, RGB_ROW_B, mode_name);
@@ -421,11 +425,11 @@ void oled_update_buffer(void) {
             // group right-aligns to the panel edge, so its icon has to be placed from
             // the measured digits rather than a fixed x. Worst case (both 100%) is
             // 2x51px of the 108px row, leaving 6px between the groups.
-            pct_to_u32_string((char*) buffer, sizeof(buffer), byte_to_percent(sat));
+            pct_to_u32_string(buffer, sizeof(buffer), byte_to_percent(sat));
             kdisp_draw_bitmap(TEXT_X, DROPLET_Y, sat_droplet_bitmap, DROPLET_W, DROPLET_H);
             kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + DROPLET_W + SV_ICON_GAP), RGB_ROW_D, buffer);
 
-            pct_to_u32_string((char*) buffer, sizeof(buffer), byte_to_percent(rgb_matrix_get_val()));
+            pct_to_u32_string(buffer, sizeof(buffer), byte_to_percent(rgb_matrix_get_val()));
             int8_t val_lo = 0, val_hi = 0;
             kdisp_gfx_text_bounds(smallFont, 1, buffer, &val_lo, &val_hi);
             const int8_t val_x = (int8_t)(TEXT_R - val_hi);
@@ -449,7 +453,7 @@ void oled_update_buffer(void) {
             // row. The brightness meter is ~98px wide, so it can only ever hold a row on
             // its own -- which is why the language slot rides with the speed group.
             kdisp_draw_bitmap(0, (int8_t)(LOCK_ROW_C - 8), wpm_gauge_bitmap, WPM_ICON_W, WPM_ICON_H);
-            num_to_u32_string((char*) buffer, sizeof(buffer), get_current_wpm());
+            num_to_u32_string(buffer, sizeof(buffer), get_current_wpm());
             kdisp_write_gfx_text(smallFont, 1, 15, LOCK_ROW_C, buffer);
             kdisp_draw_bitmap(46, (int8_t)(LOCK_ROW_C - 12), lang_globe_bitmap, GLOBE_W, GLOBE_H);
             kdisp_write_gfx_text(tinyFont, 1, 62, LOCK_ROW_C, poly_lang_code(local_state->lang));
@@ -487,7 +491,7 @@ void oled_update_buffer_fw_update(void) {
                 const char* fontpack_name = fontpack_slot_name(fw_staging_fontpack_slot_off());
                 kdisp_write_gfx_text(small, 1, 0, 14, U"Fontpack:");
                 if (fontpack_name) {
-                    ascii_to_u32_string((char*) buffer, sizeof(buffer), fontpack_name);
+                    ascii_to_u32_string(buffer, sizeof(buffer), fontpack_name);
                     kdisp_write_gfx_text(small, 1, 0, 36, buffer);
                 } else {
                     kdisp_write_gfx_text(small, 1, 0, 36, U"<EMPTY>");

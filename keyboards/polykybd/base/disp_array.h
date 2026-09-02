@@ -101,6 +101,13 @@ void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const
 void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,
                          int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax);
 
+// The ABSOLUTE-buffer sibling, binding the same mid face: the box this display list
+// would ink if drawn at (origin_x, origin_y). Resolves MOVE and measures the
+// composite ops, which the relative form cannot — see font_lookup.h.
+void kdisp_gfx_text_bbox_abs(const GFXfont *const *fonts, uint8_t num_fonts, int8_t origin_x, int8_t origin_y,
+                             const uint32_t *text,
+                             int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax);
+
 // Vertical (rotated -90°, bottom-to-top) single-font text, centred in the visible
 // height with its baseline along x = col_x.  `selected` draws it as dark text on
 // a filled bar (else lit text on the dark background).  Used by the lang layer.

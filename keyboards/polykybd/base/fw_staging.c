@@ -21,6 +21,15 @@ _Static_assert(FW_UP_MAX_SIZE <= FW_STAGING_OFFSET,
                "a staged image cannot be larger than the firmware partition");
 _Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_RESOURCE_OFFSET,
                "staging area overruns the resource region (FLASH_TARGET_OFFSET)");
+// ⚠️ THE wall between the staged image and the apply progress log, which lives at
+// the top of the same region. Raising FW_UP_MAX_SIZE without moving the log fails
+// the build here instead of silently erasing 32 KB of the source the applier is
+// about to copy -- after the pre-copy CRC has already verified it, and where the
+// post-copy compare would read that same corrupted source and report a match.
+_Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_APPLY_LOG_OFFSET,
+               "a staged image can reach the apply progress log");
+_Static_assert(FW_APPLY_LOG_OFFSET + FW_APPLY_LOG_BYTES <= FW_RESOURCE_OFFSET,
+               "the apply progress log runs into the resource region");
 
 // The wear-levelling EEPROM sits at the TOP of flash, inside what the map above
 // calls the resource region, so the last resource slot has to stop short of it.
@@ -59,17 +68,85 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 #ifdef USE_CORE1
 #include "polymod_core1.h"
 
+#define _PSM_WDSEL     (*(volatile uint32_t *)(0x40010000u + 0x08u))
+#define _WD_CTRL       (*(volatile uint32_t *)(0x40058000u + 0x00u))
+// SCRATCH0..3 are free for us; the bootrom owns SCRATCH4..7. These survive a
+// watchdog reset (not a power cycle), which is what makes them the only channel a
+// self-flash has: the console is gone, interrupts are off, and the routine never
+// returns. A half that comes back can then say how far its copy got; a half that
+// does not come back is identified by its silence.
+#define _WD_SCRATCH0   (*(volatile uint32_t *)(0x40058000u + 0x0cu))
+#define _WD_SCRATCH1   (*(volatile uint32_t *)(0x40058000u + 0x10u))
+#define _WD_SCRATCH2   (*(volatile uint32_t *)(0x40058000u + 0x14u))
+#define _WD_SCRATCH4   (*(volatile uint32_t *)(0x40058000u + 0x1cu))
+#define FW_APPLY_CRUMB_SECTOR 0xB0070000u   // | sector currently being written
+#define FW_APPLY_CRUMB_DONE   0xB007D01Eu   // copy loop finished, about to reset
+#define FW_APPLY_DONE_MAGIC   0xD09EF1A5u   // same, recorded in flash so it outlives a power cycle
+#define FW_APPLY_LOG_MAGIC    0x5EC70000u   // | sector, one page per completed sector
+#define FW_APPLY_LOG_START    0x57A27EDDu   // written to the log's LAST page before sector 1 is touched
+// Bracket markers around the FIRST image sector only -- the copy dies there, and log
+// writes provably work at that moment, so these name the exact call that kills it.
+#define FW_APPLY_LOG_PRE_ERASE   0xB1000001u
+#define FW_APPLY_LOG_POST_ERASE  0xB1000002u
+#define FW_APPLY_LOG_POST_PROG   0xB1000003u
+#define FW_APPLY_LOG_PAGE_PRE    121u
+#define FW_APPLY_LOG_POST        122u
+#define FW_APPLY_LOG_PAGE_PROG   123u
+#define FW_APPLY_LOG_POST_READ   0xB1000004u
+#define FW_APPLY_LOG_PAGE_READ   124u
+// A per-sector progress log, far enough into staging (1 MB in) to be clear of the
+// image and of everything FW_UP_BEGIN erases. 8 sectors = 128 pages >= the 121 the
+// image needs, so the copy can record EXACTLY how far it got in a place that outlives
+// the power cycle a BOOTSEL recovery needs.
+// FW_APPLY_LOG_* live in the header, beside the FW_UP_MAX_SIZE they are asserted against.
+#define FW_APPLY_LOG_PAGES    (FW_APPLY_LOG_SECTORS * (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE))
+
+// DMA is the LAST bus master that can touch XIP once core1 is in reset and interrupts
+// are off. A channel still in flight whose read address is in flash will stall the bus
+// the moment the QSPI leaves XIP mode for an erase -- and nothing on this path stops
+// DMA. Abort every channel and wait for them to actually go quiet. Raw register writes
+// (DMA_BASE + CHAN_ABORT) so this stays inlinable in the RAM routine with no call.
+#define _DMA_ABORT (*(volatile uint32_t *)(0x50000000u + 0x444u))
+static inline void __attribute__((always_inline)) dma_abort_all(void) {
+    _DMA_ABORT = 0xFFFFu;
+    __asm volatile ("dsb" ::: "memory");
+    uint32_t spins = 0;
+    while (_DMA_ABORT && spins < 1000000u) spins++;
+}
+
 #define _PSM_FRCE_OFF  (*(volatile uint32_t *)0x40010004u)
+#define _PSM_DONE      (*(volatile uint32_t *)0x4001000cu)
 #define _PSM_PROC1_BIT (1u << 16)
+
+// Spin until the PSM has actually driven core1 into reset, and report how long it
+// took. Writing FRCE_OFF and issuing a DSB only guarantees the STORE reached the
+// peripheral -- it says nothing about the reset having propagated, and core1 keeps
+// fetching instructions from XIP until it has. The moment core0 takes the QSPI out
+// of XIP mode for an erase, an in-flight core1 fetch can never complete: the bus
+// stalls, flash_range_erase() never returns, and the half is wedged mid-apply with
+// no reset and no way to say so.
+//
+// always_inline because callers include the RAM-resident apply routine, which must
+// not generate a call into flash (invariant 1 there).  Bounded so a PSM that never
+// reports DONE degrades to the old behaviour instead of replacing one hang with
+// another; the count is a breadcrumb, not a control flow input.
+static inline uint32_t __attribute__((always_inline)) psm_wait_proc1_off(void) {
+    uint32_t spins = 0;
+    while ((_PSM_DONE & _PSM_PROC1_BIT) && spins < 1000000u) {
+        spins++;
+    }
+    return spins;
+}
 
 // True while this module holds a PSM reset on core1.
 static bool s_core1_halted = false;
 
 static void fw_staging_halt_core1(void) {
     _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
-    // FRCE_OFF takes effect within a few cycles; DSB ensures the write
-    // reaches the PSM peripheral before the caller touches flash.
     __asm volatile ("dsb" ::: "memory");
+    // ...and then WAIT for it. The DSB orders the store; only PSM->DONE says the
+    // reset has landed and core1 has stopped fetching from XIP. See psm_wait_proc1_off().
+    (void)psm_wait_proc1_off();
     s_core1_halted = true;
 }
 
@@ -248,7 +325,136 @@ static void write_staging_header(uint32_t size, uint32_t crc) {
 // Public API
 // ---------------------------------------------------------------------------
 
+// Captured once at boot from the watchdog scratch registers, then cleared so a later
+// boot cannot re-report a stale apply. Printed by the boot banner (boot_diag.c).
+static uint32_t s_crumb_sector = 0;
+static uint32_t s_crumb_done   = 0;
+static uint32_t s_crumb_spins  = 0;
+static uint32_t s_done_sectors = 0;   // from the in-flash record, 0 = none present
+static uint32_t s_done_size    = 0;
+static uint32_t s_done_spins   = 0;
+static uint32_t s_done_diff_at = 0xFFFFFFFFu;   // offset of the first byte the copy got wrong
+static uint32_t s_done_diff_got = 0;
+static uint32_t s_done_diff_want = 0;
+static uint32_t s_log_max   = 0;   // highest sector the copy logged as completed
+static uint32_t s_log_min   = 0;   // lowest ditto -- the copy runs top-down, so this is where it stopped
+static uint32_t s_log_count = 0;   // how many sectors it logged at all
+static bool     s_log_started = false;   // the copy reached its first sector
+static uint32_t s_mark_stage = 0;        // 0 none, 1 pre-erase, 2 post-erase, 3 post-program
+static uint32_t s_mark_addr  = 0;        // flash offset of the first image sector touched
+static uint32_t s_mark_read_erased = 0;  // its first word read back after the erase
+static uint32_t s_mark_read_progd  = 0;  // ...and after the first page was programmed
+static uint32_t s_mark_src_word    = 0;  // first word read back from the staging source
+
+bool fw_staging_apply_marks(uint32_t *stage, uint32_t *addr, uint32_t *erased, uint32_t *progd, uint32_t *srcw) {
+    if (s_mark_stage == 0) return false;
+    if (stage)  *stage  = s_mark_stage;
+    if (addr)   *addr   = s_mark_addr;
+    if (erased) *erased = s_mark_read_erased;
+    if (progd)  *progd  = s_mark_read_progd;
+    if (srcw)   *srcw   = s_mark_src_word;
+    return true;
+}
+
+bool fw_staging_apply_progress(uint32_t *lowest, uint32_t *highest, uint32_t *count) {
+    if (s_log_count == 0) return false;
+    if (lowest)  *lowest  = s_log_min;
+    if (highest) *highest = s_log_max;
+    if (count)   *count   = s_log_count;
+    return true;
+}
+
+bool fw_staging_apply_started(void) { return s_log_started; }
+
+bool fw_staging_last_apply_completed(uint32_t *sectors, uint32_t *size, uint32_t *psm_spins) {
+    if (s_done_sectors == 0) return false;
+    if (sectors)   *sectors   = s_done_sectors;
+    if (size)      *size      = s_done_size;
+    if (psm_spins) *psm_spins = s_done_spins;
+    return true;
+}
+
+bool fw_staging_last_apply_diff(uint32_t *offset, uint32_t *got, uint32_t *want) {
+    if (s_done_sectors == 0) return false;
+    if (offset) *offset = s_done_diff_at;
+    if (got)    *got    = s_done_diff_got;
+    if (want)   *want   = s_done_diff_want;
+    return true;
+}
+
+bool fw_staging_apply_breadcrumb(uint32_t *last_sector, bool *completed, uint32_t *psm_spins) {
+    if ((s_crumb_sector & 0xFFFF0000u) != FW_APPLY_CRUMB_SECTOR) return false;
+    if (last_sector) *last_sector = s_crumb_sector & 0xFFFFu;
+    if (completed)   *completed   = (s_crumb_done == FW_APPLY_CRUMB_DONE);
+    if (psm_spins)   *psm_spins   = s_crumb_spins;
+    return true;
+}
+
+// Public core1 lockout for a caller that is about to do its OWN flash work.
+//
+// The RP2040 hazard is not specific to this file: while core0 has the QSPI out of
+// XIP mode, core1 must not fetch an instruction from flash or the bus stalls and the
+// operation never completes. fw_staging halts core1 around every write it makes --
+// but QMK's wear-levelling backing store (platforms/chibios/drivers/wear_leveling/
+// wear_leveling_rp2040_flash.c) calls flash_range_erase() with core1 running and free
+// to be anywhere. Normally the window is small enough to get away with; on the apply
+// path save_all_dirty() can force a consolidation at the exact moment core1 has just
+// been relaunched after the staging erase, which is where it stops being survivable.
+//
+// Wrapping the whole flush is the fix, and it is a lockout rather than a fw_staging
+// internal because the caller (poly_keymap's apply block) owns the sequencing.
+void fw_staging_core1_lockout_begin(void) {
+#ifdef USE_CORE1
+    if (!s_core1_halted) fw_staging_halt_core1();
+#endif
+}
+
+void fw_staging_core1_lockout_end(void) {
+#ifdef USE_CORE1
+    if (s_core1_halted) fw_staging_restart_core1();
+#endif
+}
+
 void fw_staging_init(void) {
+    for (uint32_t i = 0; i < FW_APPLY_LOG_PAGES; i++) {
+        const uint32_t w = *(const uint32_t *)(XIP_BASE + FW_APPLY_LOG_OFFSET + i * FLASH_PAGE_SIZE);
+        const uint32_t w1 = *(const uint32_t *)(XIP_BASE + FW_APPLY_LOG_OFFSET + i * FLASH_PAGE_SIZE + 4);
+        if (w == FW_APPLY_LOG_START) {
+            s_log_started = true;
+        } else if (w == FW_APPLY_LOG_PRE_ERASE) {
+            s_mark_stage = 1; s_mark_addr = w1;
+        } else if (w == FW_APPLY_LOG_POST_ERASE) {
+            if (s_mark_stage < 2) s_mark_stage = 2;
+            s_mark_read_erased = w1;
+        } else if (w == FW_APPLY_LOG_POST_READ) {
+            if (s_mark_stage < 3) s_mark_stage = 3;
+            s_mark_src_word = w1;
+        } else if (w == FW_APPLY_LOG_POST_PROG) {
+            if (s_mark_stage < 4) s_mark_stage = 4;
+            s_mark_read_progd = w1;
+        } else if ((w & 0xFFFF0000u) == FW_APPLY_LOG_MAGIC) {
+            s_log_count++;
+            const uint32_t sec = w & 0xFFFFu;
+            if (sec > s_log_max || s_log_count == 1) s_log_max = sec;
+            if (sec < s_log_min || s_log_count == 1) s_log_min = sec;
+        }
+    }
+    const uint32_t *done = (const uint32_t *)(XIP_BASE + FW_STAGING_OFFSET + FLASH_PAGE_SIZE);
+    if (done[0] == FW_APPLY_DONE_MAGIC) {
+        s_done_sectors = done[1];
+        s_done_size    = done[2];
+        s_done_spins   = done[3];
+        s_done_diff_at   = done[4];
+        s_done_diff_got  = done[5];
+        s_done_diff_want = done[6];
+    }
+    s_crumb_sector = _WD_SCRATCH0;
+    s_crumb_done   = _WD_SCRATCH1;
+    s_crumb_spins  = _WD_SCRATCH2;
+    _WD_SCRATCH0 = 0;
+    _WD_SCRATCH1 = 0;
+    _WD_SCRATCH2 = 0;
+
     s_initialized          = true;
     s_commit_pending       = false;
     s_reboot_pending       = false;
@@ -915,8 +1121,26 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     // not-in-flash apply path.
     _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
     __asm volatile ("dsb" ::: "memory");
+    // The DSB only orders the store. Wait for the reset to actually land before any
+    // flash operation, or core1 is still fetching from XIP when the QSPI leaves XIP
+    // mode and the bus stalls for good. This is the one unsynchronised step in the
+    // whole apply, and a few-cycle window is exactly why it presented as one half
+    // completing while the other wedged on identical code (field, 2026-08-31).
+    const uint32_t psm_spins = psm_wait_proc1_off();
+    _WD_SCRATCH2 = psm_spins;
 #endif
-    static uint8_t page_buf[FLASH_PAGE_SIZE];   // static (.bss): never on a moving stack
+    dma_abort_all();
+    // ⚠️ uint32_t, NOT uint8_t, and the type is the whole fix. ram_word_copy() below
+    // copies words, so the compiler emits ldmia/stmia -- and an unaligned STMIA is a
+    // HardFault on Cortex-M0+, taken with PRIMASK set inside a function that never
+    // returns, i.e. an instant lockup with no trace. A uint8_t[256] has alignment 1,
+    // so the linker packs it at whatever byte offset the previous .bss symbol leaves.
+    // That is what bricked the HID firmware update: adding the macro label cache to
+    // .bss shifted this buffer to ...ce3, and the first page of the first sector
+    // faulted the core. The applier's CODE was byte-identical across the regression;
+    // only its buffer moved, which is why a disassembly diff found nothing.
+    // Declaring it as words means no cast can silently reintroduce the hazard.
+    static uint32_t page_buf[FLASH_PAGE_SIZE / 4];   // static (.bss): never on a moving stack
     uint32_t num_sectors = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
     uint32_t pages = FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
 
@@ -926,27 +1150,121 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     // Erase+program one sector from staging.  Reads source via XIP (re-enabled by
     // flash_range_erase on return) into the RAM page buffer BEFORE program() drops
     // XIP again.  Staging (≥1 MB) is never erased here, so it stays XIP-readable.
+    // One log page: word0 = marker, word1 = a witness value worth capturing.
+    #define LOG_MARK(page, marker, witness)                                               \
+        do {                                                                              \
+            page_buf[0] = (marker);                                 \
+            page_buf[1] = (witness);                                \
+            flash_range_program(FW_APPLY_LOG_OFFSET + (page) * FLASH_PAGE_SIZE,           \
+                                (const uint8_t *)page_buf, FLASH_PAGE_SIZE);                               \
+        } while (0)
+
     #define APPLY_ONE_SECTOR(sec)                                                         \
         do {                                                                              \
+            _WD_SCRATCH0 = FW_APPLY_CRUMB_SECTOR | ((sec) & 0xFFFFu);                     \
             uint32_t _dst = (sec) * FLASH_SECTOR_SIZE;                                    \
             uint32_t _src = XIP_BASE + FW_STAGING_DATA_OFFSET + (sec) * FLASH_SECTOR_SIZE;\
+            if (_first) LOG_MARK(FW_APPLY_LOG_PAGE_PRE, FW_APPLY_LOG_PRE_ERASE, _dst);    \
             flash_range_erase(_dst, FLASH_SECTOR_SIZE);                                   \
+            if (_first) LOG_MARK(FW_APPLY_LOG_POST, FW_APPLY_LOG_POST_ERASE,              \
+                                 *(const volatile uint32_t *)(XIP_BASE + _dst));          \
             for (uint32_t _pg = 0; _pg < pages; _pg++) {                                  \
-                ram_word_copy((uint32_t *)page_buf,                                       \
+                ram_word_copy(page_buf,                                                   \
                               (const uint32_t *)(_src + _pg * FLASH_PAGE_SIZE),            \
                               FLASH_PAGE_SIZE);                                           \
-                flash_range_program(_dst + _pg * FLASH_PAGE_SIZE, page_buf, FLASH_PAGE_SIZE); \
+                uint32_t _w0 = page_buf[0];                                               \
+                flash_range_program(_dst + _pg * FLASH_PAGE_SIZE,                          \
+                                    (const uint8_t *)page_buf, FLASH_PAGE_SIZE);           \
+                if (_first && _pg == 0) LOG_MARK(FW_APPLY_LOG_PAGE_READ,                  \
+                                                 FW_APPLY_LOG_POST_READ, _w0);            \
+                if (_first && _pg == 0) {                                                 \
+                    LOG_MARK(FW_APPLY_LOG_PAGE_PROG, FW_APPLY_LOG_POST_PROG,              \
+                             *(const volatile uint32_t *)(XIP_BASE + _dst));              \
+                    _first = false;                                                       \
+                }                                                                         \
             }                                                                             \
+            _first = false;                                                               \
         } while (0)
+
+    // Fresh progress log. Safe to erase: it is not the running firmware, and the
+    // static assert above proves no accepted image can reach it.
+    for (uint32_t i = 0; i < FW_APPLY_LOG_SECTORS; i++) {
+        flash_range_erase(FW_APPLY_LOG_OFFSET + i * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
+    }
+    // ⚠️ Bounded by the log's own page count, not by the image's sector count: the
+    // page index IS the sector number, and a >512 KB image has more sectors than
+    // the log has pages, so an unbounded index would run straight off the end of
+    // the log and into whatever follows it.
+    #define LOG_SECTOR_DONE(sec)                                                          \
+        do {                                                                              \
+            if ((sec) >= FW_APPLY_LOG_PAGES) break;                                       \
+            page_buf[0] = FW_APPLY_LOG_MAGIC | ((sec) & 0xFFFFu);   \
+            flash_range_program(FW_APPLY_LOG_OFFSET + (sec) * FLASH_PAGE_SIZE,            \
+                                (const uint8_t *)page_buf, FLASH_PAGE_SIZE);                               \
+        } while (0)
+
+    // The log is erased and its start marker written BEFORE any sector of the running
+    // image is touched, so an empty log on the next boot means the applier never got
+    // this far -- distinguishing "died erasing the first sector" from "died before the
+    // copy began at all", which are different bugs and were previously the same symptom.
+    bool _first = true;   // bracket only the first image sector
+    page_buf[0] = FW_APPLY_LOG_START;
+    flash_range_program(FW_APPLY_LOG_OFFSET + (FW_APPLY_LOG_PAGES - 1) * FLASH_PAGE_SIZE,
+                        (const uint8_t *)page_buf, FLASH_PAGE_SIZE);
 
     // App body first: sectors 1..N-1, leaving sector 0's vectors written last.
     for (uint32_t sec = 1; sec < num_sectors; sec++) {
         APPLY_ONE_SECTOR(sec);
+        LOG_SECTOR_DONE(sec);
     }
     if (num_sectors > 0) {
         APPLY_ONE_SECTOR(0);   // vectors LAST
+        LOG_SECTOR_DONE(0);
     }
+    #undef LOG_SECTOR_DONE
     #undef APPLY_ONE_SECTOR
+    _WD_SCRATCH1 = FW_APPLY_CRUMB_DONE;   // the copy finished; anything after this is the reset
+
+    // ...and the same fact in FLASH, because the scratch register is useless in the
+    // case that matters: a half that never reboots, or reboots into an image that
+    // cannot print, can never read it back -- so "hung mid-copy" and "copied fine,
+    // booted dead" look identical from the outside. This page is in the staging
+    // header sector, erased by every BEGIN and otherwise unused, so it survives a
+    // power cycle and a BOOTSEL recovery and the NEXT firmware can report it.
+    // ⚠️ Do NOT clear page_buf first. A `for` loop filling it is recognised by GCC and
+    // turned into a call to memset -- which lives in FLASH, inside the region this
+    // routine has just erased. That is invariant (1) above, and it is what bricked the
+    // part in run 2. Only the first four words are read back; the rest of the page is
+    // residue from the last copied page, which nothing ever looks at.
+    // Check our own work before resetting into it. The source has already been
+    // verified byte-correct in flash (APPLY 3/4), so comparing the region we just
+    // wrote against that same source answers the one remaining question -- did the
+    // copy put the right bytes down? -- and it answers it in a place that survives
+    // the BOOTSEL recovery, which is the only way back from a bad apply.
+    //
+    // volatile so GCC cannot turn this into a memcmp() call: that lives in flash,
+    // inside the region just erased and rewritten, and calling into it here is the
+    // invariant-(1) violation that bricked the part in run 2.
+    volatile const uint32_t *wrote = (volatile const uint32_t *)(XIP_BASE);
+    volatile const uint32_t *want  = (volatile const uint32_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET);
+    uint32_t diff_at = 0xFFFFFFFFu, got_w = 0, want_w = 0;
+    for (uint32_t w = 0; w < image_size / 4u; w++) {
+        if (wrote[w] != want[w]) {
+            diff_at = w * 4u;
+            got_w   = wrote[w];
+            want_w  = want[w];
+            break;
+        }
+    }
+
+    page_buf[0] = FW_APPLY_DONE_MAGIC;
+    page_buf[1] = num_sectors;
+    page_buf[2] = image_size;
+    page_buf[3] = psm_spins;
+    page_buf[4] = diff_at;
+    page_buf[5] = got_w;
+    page_buf[6] = want_w;
+    flash_range_program(FW_STAGING_OFFSET + FLASH_PAGE_SIZE, (const uint8_t *)page_buf, FLASH_PAGE_SIZE);
 
     // Full-chip reset via the watchdog — NOT NVIC_SystemReset().  NVIC_SystemReset
     // only resets the M0+ core (AIRCR.SYSRESETREQ) and leaves USB/PLL/peripheral
@@ -958,9 +1276,6 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     //   WATCHDOG_SCRATCH4 = 0  → bootrom takes the normal flash boot path
     //   WATCHDOG_CTRL |= TRIGGER → immediate full reset
     // (RP2040 datasheet §4.7; mirrors pico-sdk watchdog_reboot(0,0,0).)
-    #define _PSM_WDSEL       (*(volatile uint32_t *)(0x40010000u + 0x08u))
-    #define _WD_CTRL         (*(volatile uint32_t *)(0x40058000u + 0x00u))
-    #define _WD_SCRATCH4     (*(volatile uint32_t *)(0x40058000u + 0x1cu))
 #ifdef USE_CORE1
     // Release core1 from the PSM force-off asserted at the top of this function,
     // so it is NOT left held in reset across the watchdog reboot.  The watchdog
@@ -980,9 +1295,69 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     while (1) { /* wait for the watchdog reset to take effect */ }
 }
 
+// Re-CRC the staged bytes AS THEY SIT IN FLASH.
+//
+// COMMIT does not do this and never has: s_staged_crc is accumulated in
+// fw_staging_write_chunk() over the bytes as they ARRIVE, in RAM. That proves the
+// host's image reached us intact; it proves nothing about what landed in flash. The
+// applier is about to erase the only working copy of the firmware on the strength of
+// it, so verify the actual source first and refuse if it does not match -- a refusal
+// leaves a working keyboard, writing an unverified image does not.
+//
+// Affordable here (~25 ms over ~490 KB) precisely because this runs from housekeeping.
+// The same scan inside COMMIT overflowed the split-transaction window on the slave,
+// which is why finalize keeps the O(1) running CRC -- do not move this there.
+bool fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc) {
+    const uint32_t *hdr = (const uint32_t *)(XIP_BASE + FW_STAGING_OFFSET);
+    if (hdr[0] != FW_STAGING_MAGIC) return false;
+    // ⚠️ crc32_large(), NOT crc32_1byte(): that one takes a uint16_t length, so a
+    // ~490 KB image silently truncates to (size & 0xFFFF) and the CRC is computed over
+    // the first few percent of the file. It then never matches, so the verify below
+    // refuses EVERY image over 64 KB -- which is exactly what it did on its first
+    // outing (reported c48f3db3, the CRC of the leading 34164 bytes of a 492916-byte
+    // image). The helper exists for this and says so in its own comment.
+    const uint32_t crc = crc32_large((const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET),
+                                     hdr[1]);
+    if (size)       *size       = hdr[1];
+    if (expect_crc) *expect_crc = hdr[2];
+    if (actual_crc) *actual_crc = crc;
+    return crc == hdr[2];
+}
+
+void fw_staging_cancel_apply(void) {
+    s_commit_pending = false;
+}
+
 void fw_staging_apply_and_reboot(void) {
     const uint32_t *hdr = (const uint32_t *)(XIP_BASE + FW_STAGING_OFFSET);
-    if (hdr[0] != FW_STAGING_MAGIC) return;   // no valid staged image
+    if (hdr[0] != FW_STAGING_MAGIC) {
+        // ⚠️ This used to be a bare `return`, which left s_commit_pending SET — so
+        // housekeeping re-entered the WHOLE apply block on every pass, forever:
+        // clear_keyboard() (board dead), poly_flash_rgb_now() (orange latched),
+        // oled_fw_apply_screen() ("Applying") and save_all_dirty(). From the outside
+        // that is indistinguishable from a half-written flash, and nothing anywhere
+        // said why. Report it and disarm so the board stays usable.
+        uprintf("FWAPPLY refused: no staged image (magic %08lx)\n", (unsigned long)hdr[0]);
+        s_commit_pending = false;
+        return;
+    }
+
+    // The size the applier trusts, printed BEFORE the blocking self-flash — this is
+    // the last thing the console can ever see from this build (the copy disables
+    // interrupts, never returns, and console_task() never runs again). The filler
+    // line that follows is not decoration: QMK's console only ships FULL 32-byte HID
+    // reports and the remainder waits for a main loop that is about to stop existing,
+    // so without it the tail of the real line is lost.
+    if (!fw_staging_verify_staged_flash(NULL, NULL, NULL)) {
+        uprintf("FWAPPLY refused: staged image FAILED its flash CRC - not overwriting\n");
+        s_commit_pending = false;
+        return;
+    }
+
+    const uint32_t sectors = (hdr[1] + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
+    uprintf("FWAPPLY sectors=%lu size=%lu crc=%08lx\n",
+            (unsigned long)sectors, (unsigned long)hdr[1], (unsigned long)hdr[2]);
+    uprint("FWAPPLY ------------------------------------------------------------\n");
 
     s_commit_pending = false;
     fw_staging_do_apply(hdr[1]);   // never returns

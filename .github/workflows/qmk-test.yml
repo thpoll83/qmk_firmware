@@ -2,34 +2,66 @@ name: Build and HIL Test
 
 on:
   push:
-    branches: [PolyKybd, "PolyKybd/**"]
+    # ⚠️ `PolyKybd` ONLY. A `PolyKybd/**` pattern was carried here for a long
+    # time and could never match anything: git forbids a ref that is a PREFIX
+    # of another ref, so while `refs/heads/PolyKybd` exists as a branch,
+    # `refs/heads/PolyKybd/<anything>` cannot be created at all --
+    #   fatal: cannot lock ref 'refs/heads/PolyKybd/x': 'refs/heads/PolyKybd'
+    #          exists; cannot create 'refs/heads/PolyKybd/x'
+    # `git ls-remote --heads origin 'refs/heads/PolyKybd/*'` confirms none has
+    # ever existed. It read as a staging-branch escape hatch and was not one:
+    # anyone reaching for `PolyKybd/staging` gets git's refusal, and a
+    # differently-named branch then silently runs nothing.
+    branches: [PolyKybd]
     # A change that cannot alter the firmware should not occupy the HIL rig for
     # a full flash-and-test cycle (the rig runs one job at a time, so such a
     # push delays every real build queued behind it).
     #
     # Beyond Markdown: `scripts/` holds only publish_release.py (the release
-    # publisher — nothing the build reads), and `.claude/` holds skills and
-    # settings. A change confined to either cannot reach a firmware image.
-    # ⚠️ Verify that stays true before adding a path here: the test is whether
-    # the build or the rig ever READS it, not whether it looks unrelated.
+    # publisher — nothing the build reads), `.claude/` holds skills and settings,
+    # and the other workflows are not build inputs (see the note on that line).
+    # A change confined to any of them cannot reach a firmware image.
+    # ⚠️ Verify that stays true before adding an exclusion here: the test is
+    # whether the build or the rig ever READS it, not whether it looks unrelated.
     #
-    # ⚠️ `paths-ignore` skips the workflow only when EVERY changed file matches,
-    # so a mixed docs+code PR still runs the gate in full — this can never hide
-    # a code change behind a README edit.
+    # ⚠️ The workflow runs when AT LEAST ONE changed file is included, so a mixed
+    # docs+code (or workflow+code) PR still runs the gate in full — this can
+    # never hide a code change behind a README or a CI edit.
     #
-    # ⚠️ `**.md` does NOT match this workflow file, so a change to the CI wiring
-    # itself still triggers a run and gets verified. `workflow_dispatch` has no
-    # paths filter at all, so a manual run is unaffected either way.
+    # ⚠️ This is `paths`, NOT `paths-ignore`, and it has to be: the `!` negation
+    # prefix works ONLY in `paths`, and the two filters cannot both be used for
+    # one event. Excluding the other workflows while still verifying THIS one is
+    # not expressible with `paths-ignore` at all.
+    #
+    # ⚠️ ORDER IS LOAD-BEARING. The last pattern that matches a path decides it:
+    # a negative after a positive excludes, a positive after a negative
+    # re-includes. So the leading `**` is what makes an ordinary source file
+    # match, and the qmk-test.yml line MUST stay last or this workflow stops
+    # verifying changes to itself.
+    #
+    # ⚠️ `workflow_dispatch` has no paths filter at all, so a manual run is
+    # unaffected either way.
     #
     # ⚠️ If `Build firmware` / `HIL test (split72)` are ever made REQUIRED status
     # checks in branch protection, remove this: a workflow that never runs never
     # reports, and the merge button would deadlock on a docs-only PR (a *skipped
     # job* satisfies a required check; a never-started workflow does not). The
     # fix in that case is a paths-filter job feeding `if:` conditions instead.
-    paths-ignore:
-      - '**.md'
-      - 'scripts/**'
-      - '.claude/**'
+    paths:
+      - '**'
+      - '!**.md'
+      - '!scripts/**'
+      - '!.claude/**'
+      # No `uses: ./...` anywhere in this file — every action it runs is external
+      # (docker://qmkfm/qmk_cli, actions/*) — so no workflow is a build input and
+      # a workflow-only change cannot alter a firmware image. Deliberately scoped
+      # to `workflows/` rather than all of `.github/`: if a composite action is
+      # ever added under `.github/actions/` and used here, it stays outside this
+      # exclusion and keeps triggering a run, which is the safe direction.
+      - '!.github/workflows/**'
+      # …except this file. It IS the gate, so a change to it must still be built
+      # and run on the rig. Positive-after-negative re-includes; keep it LAST.
+      - '.github/workflows/qmk-test.yml'
   pull_request:
     # `labeled` is NOT in GitHub's default set (opened/synchronize/reopened), and
     # without it adding the `perf` label to an open PR fires no run at all — the
@@ -38,19 +70,47 @@ on:
     # 'labeled'`) so the repo's auto-labeler can't re-run the whole expensive
     # pipeline every time it tags a PR by path.
     types: [opened, synchronize, reopened, labeled]
-    # Same reasoning as the push trigger above.
-    paths-ignore:
-      - '**.md'
-      - 'scripts/**'
-      - '.claude/**'
-  # Manual trigger for the opt-in performance measurement below (the normal
-  # build + HIL test always run; perf does not). No inputs: the baseline is moved
-  # by committing the run's JSON to polykybd-ctnd, not by a workflow switch — the
-  # rig's checkout is force-synced to origin/main before every run, so anything
-  # written there would be discarded on the next one.
+    # Same reasoning, same ordering constraint, as the push trigger above — keep
+    # the two lists identical, and keep the qmk-test.yml re-include last.
+    paths:
+      - '**'
+      - '!**.md'
+      - '!scripts/**'
+      - '!.claude/**'
+      - '!.github/workflows/**'
+      - '.github/workflows/qmk-test.yml'
+  # Manual trigger for the opt-in tiers below (the normal build + HIL test always
+  # run; perf/doom/fwapply/debug do not).
+  #
+  # ⚠️ `tier` narrows a dispatch and affects NOTHING ELSE — it is read only under
+  # `github.event_name == 'workflow_dispatch'`, so push and pull_request keep
+  # their existing label/marker gating untouched. It defaults to `all`, which is
+  # exactly the previous dispatch behaviour (every opt-in at once), so an existing
+  # habit of "just dispatch it" keeps working. The narrower values exist because a
+  # DEBUG LOOP pays the rig cost on every iteration: `debug` skips the graded
+  # suite entirely and runs only the probe.
+  #
+  # ⚠️ The baseline for perf is still moved by committing the run's JSON to
+  # polykybd-ctnd, NOT by a workflow switch — the rig's checkout is force-synced
+  # to origin/main before every run, so anything written there is discarded next
+  # run. Do not add an input for it.
+  #
   # ⚠️ workflow_dispatch only becomes available once this file is on the DEFAULT
-  # branch — it cannot be used to try the perf job out from an unmerged PR.
+  # branch — it cannot be used to try a job out from an unmerged PR. Dispatching
+  # WITH `ref:` set to a branch does run that branch's copy of the workflow, which
+  # is what makes the debug loop usable on unmerged firmware.
   workflow_dispatch:
+    inputs:
+      tier:
+        description: "Which tier to run (dispatch only; 'all' = previous behaviour)"
+        type: choice
+        default: all
+        options: [all, default, extended, perf, doom, fwapply, debug]
+      probe:
+        description: "tier=debug only: probe name under keyboards/polykybd/tools/hil_probes/"
+        type: string
+        required: false
+        default: ""
 
 jobs:
   build:
@@ -143,6 +203,16 @@ jobs:
   hil-test:
     name: HIL test (split72)
     needs: build
+    # The graded suite is skipped for ONE case only: a `debug` dispatch, which
+    # exists to iterate on a probe and pays the rig cost on every turn. Every
+    # other event and tier runs it exactly as before — `inputs.tier` is null
+    # outside a dispatch, and the left operand short-circuits there.
+    # ⚠️ doom-test / perf-test / fwapply-test all `needs: hil-test` purely to
+    # stop the flashes interleaving, and all carry `always()`, so skipping this
+    # job does not cascade into skipping them.
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.tier != 'debug'
     runs-on: [self-hosted, polykybd-ctnd]
     # --- suite tier (OPT-IN extended checks) ---------------------------------
     # Most HIL checks cost a report or two and run on every push. A few are slow
@@ -170,7 +240,8 @@ jobs:
     # and the tier is visible both here and in its "[runner] suite tier:" line.
     env:
       HIL_EXTENDED: >-
-        ${{ (github.event_name == 'workflow_dispatch' ||
+        ${{ ((github.event_name == 'workflow_dispatch' &&
+        (inputs.tier == 'all' || inputs.tier == 'extended')) ||
         contains(github.event.pull_request.labels.*.name, 'hil-extended') ||
         contains(github.event.head_commit.message, '[hil-extended]'))
         && '1' || '0' }}
@@ -346,7 +417,8 @@ jobs:
   build-perf:
     name: Build firmware (profiling)
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.tier == 'all' || inputs.tier == 'perf')) ||
       contains(github.event.pull_request.labels.*.name, 'hil-perf') ||
       contains(github.event.head_commit.message, '[hil-perf]')
     runs-on: ubuntu-latest
@@ -504,7 +576,8 @@ jobs:
   build-doom:
     name: Build firmware + signed pack (doom FW-9)
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.tier == 'all' || inputs.tier == 'doom')) ||
       contains(github.event.pull_request.labels.*.name, 'hil-doom') ||
       contains(github.event.head_commit.message, '[hil-doom]')
     runs-on: ubuntu-latest
@@ -587,6 +660,113 @@ jobs:
             doom_pack_signed_v*.plyx
           retention-days: 7
 
+  build-fwapply:
+    name: Build signed HIL images (firmware apply)
+    # ⚠️ The `if:` is a FOLDED scalar. Every continuation line must sit at the
+    # SAME indent as the first, or YAML keeps the newline, the expression stops
+    # being valid, and the job silently stops matching its trigger.
+    # ⚠️ Runs on EVERY push to PolyKybd, not just on request — this is the one
+    # opt-in that is not purely opt-in, and the reason is the HID-apply brick
+    # (qmk#258, shipped in a release). That bug was a LAYOUT effect: a macro PR
+    # grew .bss, which shifted fw_staging's page buffer off a word boundary, and
+    # the unaligned word copy HardFaulted the applier — so the guilty PR never
+    # touched the applier and a bisect blamed the wrong commit. Any PR can move
+    # .bss, so per-PR is not where this is catchable; what IS catchable is
+    # dating it to a merge you can still bisect. Checking only at release time
+    # would tell you which release bricks, with no bisect and a release to redo.
+    # Cost is bounded: the rig already runs a HIL cycle per merge, so this adds
+    # a cloud build plus one apply+reboot, not a new cadence.
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.tier == 'all' || inputs.tier == 'fwapply')) ||
+      contains(github.event.pull_request.labels.*.name, 'hil-fwapply') ||
+      contains(github.event.head_commit.message, '[hil-fwapply]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      hil_left: ${{ steps.names.outputs.hil_left }}
+      hil_right: ${{ steps.names.outputs.hil_right }}
+      apply_bin: ${{ steps.names.outputs.apply_bin }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # ⚠️ The SHA goes in the FILENAME. Every test build reports the same
+      # FW_VERSION (it only moves on the post-merge auto-bump), so images from
+      # different commits are otherwise indistinguishable once flashed -- which
+      # has already cost a full hardware round on this project. See CLAUDE.md,
+      # "Deliverable for testing is the .bin".
+      - id: sha
+        run: echo "short=$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
+
+      # ⚠️ EPHEMERAL key, never the production FW_SIGNING_KEY — that secret is
+      # confined to release.yml and must not be reachable from a PR-triggered
+      # workflow. Same pattern as build-doom: the throwaway pubkey is baked into
+      # base/fw_pubkey.h before the builds, so the images trust exactly this key
+      # and nothing else. The images are disposable (a non-shipping pubkey) and
+      # the next ordinary run reflashes the rig with the real ones.
+      - name: Generate an ephemeral signing key
+        run: |
+          python3 -m pip install --quiet cryptography
+          python3 keyboards/polykybd/tools/gen_signing_key.py \
+            --out-privkey /tmp/fwapply_ephemeral_key.bin \
+            --out-pubkey keyboards/polykybd/base/fw_pubkey.h \
+            --force
+          echo "ephemeral pubkey baked into base/fw_pubkey.h"
+
+      - name: Build split72 (HIL left/master)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_left
+
+      - name: Build split72 (HIL right/slave)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_right
+
+      # The rig stages the raw image, not the UF2 wrapper, and applies it to a
+      # master already running it — so this .bin must come from the SAME ELF as
+      # the left .uf2 above. The runner re-checks that against the flashed UF2
+      # and refuses to apply anything else; this step is what makes that pass.
+      - name: Extract and sign the master image
+        env:
+          SHA: ${{ steps.sha.outputs.short }}
+        run: |
+          ELF=".build/polykybd_split72_fwapply_${SHA}_hil_left.elf"
+          BIN="polykybd_split72_fwapply_${SHA}_hil_left.bin"
+          # The docker builds run as root, so the workspace artifacts land
+          # root-owned and the host runner user cannot write beside them.
+          sudo chown -R "$(id -u):$(id -g)" .build
+          arm-none-eabi-objcopy -O binary "$ELF" "$BIN" 2>/dev/null \
+            || docker run --rm -v "$PWD:/w" -w /w qmkfm/qmk_cli \
+                 arm-none-eabi-objcopy -O binary "$ELF" "$BIN"
+          sudo chown "$(id -u):$(id -g)" "$BIN"
+          python3 keyboards/polykybd/tools/sign_firmware.py \
+            --privkey /tmp/fwapply_ephemeral_key.bin "$BIN"
+          rm -f /tmp/fwapply_ephemeral_key.bin
+          if [ ! -s "$BIN.sig" ]; then
+            echo "::error::signing produced no $BIN.sig — the rig would SKIP the apply"
+            exit 1
+          fi
+          echo "signed $BIN ($(stat -c%s "$BIN") bytes) -> $BIN.sig ($(stat -c%s "$BIN.sig") bytes)"
+
+      - id: names
+        run: |
+          echo "hil_left=$(ls polykybd_split72_fwapply_*_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "hil_right=$(ls polykybd_split72_fwapply_*_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "apply_bin=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_left.bin" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-fwapply
+          path: |
+            polykybd_split72_fwapply_*_hil_*.uf2
+            polykybd_split72_fwapply_*_hil_left.bin
+            polykybd_split72_fwapply_*_hil_left.bin.sig
+
   doom-test:
     name: DOOM engine-pack signature (split72)
     # Ordered after hil-test so the two rig jobs can't interleave their flashes
@@ -660,3 +840,167 @@ jobs:
             --doom \
             --plyx-valid "firmware/$PLYX" \
             2>&1 | tee /tmp/doom-test.log
+
+  # ── ad-hoc debug probe (dispatch-only) ──────────────────────────────────────
+  # The debug loop. A PROBE is a Python file committed on this branch under
+  # keyboards/polykybd/tools/hil_probes/ that drives the flashed keyboard over
+  # raw HID and asserts whatever the bug of the day needs. The rig pipes the
+  # firmware's own console into the job log as `[qmk] …` lines, so the whole
+  # flash -> drive -> read-what-it-printed cycle happens here rather than through
+  # someone flashing a .bin by hand and pasting a log back. See
+  # polykybd-ctnd/CLAUDE.md "Debug loop".
+  #
+  # ⚠️ DISPATCH-ONLY, and that IS the security control. Triggering a
+  # workflow_dispatch requires write access to this repo, so a fork PR can never
+  # reach this job — which matters because the rig is a self-hosted runner for a
+  # PUBLIC repo (HIL-2, polykybd-ctnd/docs/SECURITY_AUDIT.md). Do NOT add a
+  # `hil-debug` label trigger: a label is applied to a PR whose head may be a
+  # fork, and that would hand arbitrary code on the rig to anyone who can open
+  # one. The containment check in station/probe.py is NOT this control (it is
+  # operational — see its module docstring); this `if:` is.
+  #
+  # Dispatch WITH `ref:` set to a branch runs that branch's workflow and builds
+  # that branch's firmware, so a probe can be iterated on entirely unmerged.
+  debug-test:
+    name: Debug probe (split72)
+    # `needs: hil-test` only orders the rig flashes; a `debug` dispatch skips
+    # that job, hence `always()` plus an explicit check that the BUILD succeeded.
+    needs: [build, hil-test]
+    if: >-
+      always() && github.event_name == 'workflow_dispatch' &&
+      inputs.tier == 'debug' && inputs.probe != '' &&
+      needs.build.result == 'success'
+    runs-on: [self-hosted, polykybd-ctnd]
+    permissions:
+      contents: read
+    steps:
+      # The probe lives in THIS repo, so unlike the other rig jobs this one needs
+      # the sources, not just the built artifact.
+      - uses: actions/checkout@v4
+
+      - name: Locate station directory
+        id: ctnd
+        run: |
+          dir="${CTND_DIR:-}"
+          if [ -z "$dir" ]; then
+            for candidate in /opt/polykybd-ctnd "$HOME/polykybd-ctnd"; do
+              if [ -f "$candidate/venv/bin/python" ]; then
+                dir="$candidate"
+                break
+              fi
+            done
+          fi
+          if [ -z "$dir" ]; then
+            echo "ERROR: could not find a polykybd-ctnd install with a venv." >&2
+            exit 1
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      # CI runs the INSTALLED station copy, so sync it — otherwise a lagging
+      # self-update timer runs this with a station that has never heard of
+      # --probe, and argparse fails with an unrelated-looking error.
+      - name: Sync station to current ctnd main
+        run: |
+          dir="${{ steps.ctnd.outputs.dir }}"
+          if [ ! -d "$dir/.git" ]; then
+            echo "WARNING: $dir is not a git checkout — running the installed station as-is" >&2
+            exit 0
+          fi
+          git -C "$dir" fetch --quiet origin main \
+            && git -C "$dir" checkout -q -f -B main origin/main \
+            && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
+            || echo "WARNING: could not sync $dir to origin/main" >&2
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: ${{ steps.ctnd.outputs.dir }}/firmware
+
+      - name: Flash, then run the probe
+        # The probe name goes through env rather than straight ${{ }} into the
+        # script body — same shape as the doom and fwapply jobs, and here it is
+        # load-bearing rather than stylistic: `probe` is free-text workflow input.
+        env:
+          CTND_DIR: ${{ steps.ctnd.outputs.dir }}
+          HIL_LEFT: ${{ needs.build.outputs.split72_hil_left }}
+          HIL_RIGHT: ${{ needs.build.outputs.split72_hil_right }}
+          PROBE: ${{ inputs.probe }}
+          FIRMWARE_DIR: ${{ github.workspace }}
+        run: |
+          cd "$CTND_DIR"
+          set -o pipefail
+          venv/bin/python -u -m station.test_runner \
+            --left  "firmware/$HIL_LEFT" \
+            --right "firmware/$HIL_RIGHT" \
+            --probe "$PROBE" \
+            --firmware-dir "$FIRMWARE_DIR" \
+            2>&1 | tee /tmp/debug-probe.log
+
+  fwapply-test:
+    name: Firmware apply round-trip (split72)
+    # Ordered after the other rig jobs so the flashes cannot interleave — the rig
+    # runs one job at a time, and this one reflashes both halves with its own
+    # ephemeral-key images. `always()` so it still runs when hil-test/doom-test
+    # were skipped (a bare hil-fwapply label does not start the main pipeline).
+    needs: [build-fwapply, hil-test, doom-test]
+    if: always() && needs.build-fwapply.result == 'success'
+    runs-on: [self-hosted, polykybd-ctnd]
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Locate station directory
+        id: ctnd
+        run: |
+          dir="${CTND_DIR:-}"
+          if [ -z "$dir" ]; then
+            for candidate in /opt/polykybd-ctnd "$HOME/polykybd-ctnd"; do
+              if [ -f "$candidate/venv/bin/python" ]; then
+                dir="$candidate"
+                break
+              fi
+            done
+          fi
+          if [ -z "$dir" ]; then
+            echo "ERROR: could not find a polykybd-ctnd install with a venv." >&2
+            exit 1
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      # CI runs the INSTALLED station copy, so sync it — otherwise a lagging
+      # self-update timer runs this with a station that has never heard of
+      # --apply-bin, and the whole job silently tests nothing.
+      - name: Sync station to current ctnd main
+        run: |
+          dir="${{ steps.ctnd.outputs.dir }}"
+          if [ ! -d "$dir/.git" ]; then
+            echo "WARNING: $dir is not a git checkout — running the installed station as-is" >&2
+            exit 0
+          fi
+          git -C "$dir" fetch --quiet origin main \
+            && git -C "$dir" checkout -q -f -B main origin/main \
+            && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
+            || echo "WARNING: could not sync $dir to origin/main" >&2
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-fwapply
+          path: ${{ steps.ctnd.outputs.dir }}/firmware
+
+      - name: Flash, then drive a real HID update through APPLY
+        # Filenames go through env vars rather than straight ${{ }} interpolation
+        # into the script body — the same shape the doom job uses.
+        env:
+          CTND_DIR: ${{ steps.ctnd.outputs.dir }}
+          HIL_LEFT: ${{ needs.build-fwapply.outputs.hil_left }}
+          HIL_RIGHT: ${{ needs.build-fwapply.outputs.hil_right }}
+          APPLY_BIN: ${{ needs.build-fwapply.outputs.apply_bin }}
+        run: |
+          cd "$CTND_DIR"
+          set -o pipefail
+          venv/bin/python -u -m station.test_runner \
+            --left  "firmware/$HIL_LEFT" \
+            --right "firmware/$HIL_RIGHT" \
+            --apply-bin "firmware/$APPLY_BIN" \
+            --extended \
+            2>&1 | tee /tmp/fwapply-test.log

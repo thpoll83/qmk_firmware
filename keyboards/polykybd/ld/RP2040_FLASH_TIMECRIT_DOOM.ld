@@ -160,8 +160,18 @@ SECTIONS
         PROVIDE(end = .);
     } > BSS_RAM
 
-    /* The overlay pool / doom arena shared block -- see file header. */
-    .doom_shared (NOLOAD) : ALIGN(4)
+    /* The overlay pool / doom arena shared block -- see file header.
+     *
+     * ALIGN(8), not 4: doom_mode.c carves the core1 stack out of the TAIL of
+     * this block (__doom_shared_end__ - DOOM_ARENA_STACK_BYTES), and AAPCS
+     * requires an 8-byte-aligned stack pointer. The block's size (216000) and
+     * the stack size (4096) are both multiples of 8, so the end -- and hence
+     * the stack base -- inherits whatever alignment the START has. At ALIGN(4)
+     * that could be 4-aligned. The DOOMPACK flavour is unaffected because its
+     * pool is pinned at the RAM origin, which is 8-aligned by construction.
+     * (Caught in review of #264; doom_mode.c also masks the pointer down, so
+     * neither half alone is load-bearing.) */
+    .doom_shared (NOLOAD) : ALIGN(8)
     {
         __doom_shared_base__ = .;
         *doom/engine/*.o(.bss)

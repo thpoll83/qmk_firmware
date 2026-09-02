@@ -6,6 +6,7 @@
 
 #include "state.h"
 #include "side.h"
+#include "bridge_helper.h"   // is_usb_host_side() + the split-link health counters
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
@@ -34,8 +35,8 @@ extern const GFXfont NotoSans_Regular_Small_15px7b;
 // Render `value` as a char32 (U"...") display string into `buffer`. The display
 // pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
 // glyph is one uint32_t codepoint. `buffer_len` is the byte size of the buffer.
-static inline void digits_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value, uint8_t base) {
-    uint32_t* out = (uint32_t*)buffer;
+static inline void digits_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint8_t value, uint8_t base) {
+    uint32_t* out = buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i   = 0;
     if (value >= base * base && i < cap) out[i++] = U'0' + (value / (base * base)) % base;
@@ -44,14 +45,14 @@ static inline void digits_to_u32_string(char* buffer, uint8_t buffer_len, uint8_
     if (i < cap) out[i] = 0;
 }
 
-void num_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
+void num_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint8_t value) {
     digits_to_u32_string(buffer, buffer_len, value, 10);
 }
 
 // 16-bit decimal, no leading zeros (0 renders as "0"). digits_to_u32_string above is
 // uint8_t-only; the hue-in-degrees readout needs three digits up to 359.
-void num16_to_u32_string(char* buffer, uint8_t buffer_len, uint16_t value) {
-    uint32_t* out = (uint32_t*)buffer;
+void num16_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint16_t value) {
+    uint32_t* out = buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i   = 0;
     uint16_t  div = 10000;
@@ -65,8 +66,8 @@ void num16_to_u32_string(char* buffer, uint8_t buffer_len, uint16_t value) {
 // Widen an ASCII C string into the 32-bit codepoint string the kdisp text pipeline
 // expects (kdisp_write_gfx_text takes const uint32_t*). NUL-terminated, never
 // overruns `buffer_len`. Used for the font-pack bundle name on the flash screen.
-void ascii_to_u32_string(char* buffer, uint8_t buffer_len, const char* s) {
-    uint32_t* out = (uint32_t*)buffer;
+void ascii_to_u32_string(uint32_t* buffer, uint8_t buffer_len, const char* s) {
+    uint32_t* out = buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i   = 0;
     if (s) {
@@ -75,8 +76,8 @@ void ascii_to_u32_string(char* buffer, uint8_t buffer_len, const char* s) {
     if (i < cap) out[i] = 0;
 }
 
-void hex_to_u32_string(char* buffer, uint8_t buffer_len, uint8_t value) {
-    uint32_t* out = (uint32_t*)buffer;
+void hex_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint8_t value) {
+    uint32_t* out = buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);
     uint8_t   i   = 0;
     if (value >= 16 && i < cap) { uint8_t hi = value / 16; out[i++] = (hi < 10 ? U'0' + hi : U'A' + hi - 10); }
@@ -150,13 +151,13 @@ void oled_draw_text_right(const GFXfont *const *font, int8_t right_x, int8_t y, 
 // Draw `value` right-aligned so it ends on `right_x`.
 void oled_draw_num_right(const GFXfont *const *font, int8_t right_x, int8_t y, uint8_t value) {
     uint32_t buf[6];
-    num_to_u32_string((char*) buf, sizeof(buf), value);
+    num_to_u32_string(buf, sizeof(buf), value);
     oled_draw_text_right(font, right_x, y, buf);
 }
 
 void oled_draw_num16_right(const GFXfont *const *font, int8_t right_x, int8_t y, uint16_t value) {
     uint32_t buf[8];
-    num16_to_u32_string((char*) buf, sizeof(buf), value);
+    num16_to_u32_string(buf, sizeof(buf), value);
     oled_draw_text_right(font, right_x, y, buf);
 }
 
@@ -288,6 +289,117 @@ void oled_fw_apply_screen(void) {
     oled_render_dirty(true);   // one synchronous full flush before the reboot
 }
 
+// ---------------------------------------------------------------------------
+// Settings -> "More" telemetry screen
+//
+// The advanced settings row is revealed by KC_SETTINGS_MORE, and while it is open
+// the status OLED has nothing to say that the keycaps do not — so it states what
+// the board IS instead: the versions a support round always asks for first, and
+// the split-link health, which until now existed only in the periodic console line
+// (every 200 frames, on a console nobody has open).
+//
+// Deliberately landscape on split42 too, matching the flash / confirm / apply
+// screens there — that panel's portrait rework is still deferred, so it renders
+// sideways on split42 rather than not at all.
+//
+// Driven by the SYNCED poly_sync_t.settings_more, so both halves show it together
+// and it clears itself when the settings layer is left (layer_state_set_user).
+
+// Uptime as h:mm:ss, or Nd Nh once hours reach three digits. Sourced from
+// timer_read32(), so it is THIS half's own uptime and it wraps with the 32-bit ms
+// timer at 49.7 days — long enough to be useful, short enough to say so.
+static void telemetry_uptime(char* out, size_t cap) {
+    const uint32_t secs = timer_read32() / 1000U;
+    const uint32_t h    = secs / 3600U;
+    if (h < 100U) {
+        snprintf(out, cap, "%lu:%02lu:%02lu", (unsigned long)h,
+                 (unsigned long)((secs / 60U) % 60U), (unsigned long)(secs % 60U));
+    } else {
+        snprintf(out, cap, "%lud %luh", (unsigned long)(h / 24U), (unsigned long)(h % 24U));
+    }
+}
+
+void oled_telemetry_screen(void) {
+    const GFXfont* small    = &NotoSans_Regular_Small_15px7b;
+    const GFXfont* fonts[]  = { small };
+    const bool     tall     = OLED_DISPLAY_HEIGHT >= 64;
+
+    char up[16];
+    telemetry_uptime(up, sizeof(up));
+
+    // The identity fields are exactly the ones GET_ID reports (hid_com.c), so the
+    // panel and the host's view of the board can never disagree.
+    char l_fw[24], l_ver[24], l_up[24], l_link[24];
+    snprintf(l_fw,  sizeof(l_fw),  "FW %s", FW_VERSION);
+    snprintf(l_ver, sizeof(l_ver), "P%d  HW %s", (int)PROTOCOL_VERSION, STR(DEVICE_VER));
+    snprintf(l_up,  sizeof(l_up),  "%s  up %s", is_usb_host_side() ? "USB" : "LNK", up);
+
+    poly_link_stats_t ls;
+    poly_get_link_stats(&ls);
+    if (!is_usb_host_side()) {
+        // ⚠️ Not "0.0%". Only the master initiates bridges, so this half's counters
+        // are zero because it never sends — rendering that as a perfect link would
+        // be a flattering lie on exactly the panel someone reads to judge the wire.
+        snprintf(l_link, sizeof(l_link), "Lnk n/a");
+    } else if (ls.attempts == 0U) {
+        snprintf(l_link, sizeof(l_link), "Lnk idle");
+    } else {
+        // ⚠️ Both fields are COMPACTED because the worst case, not the typical one,
+        // decides whether the line fits: the frame count climbs for as long as the
+        // board is up (millions within hours), and spelled out in full it runs off
+        // the 128 px panel — measured at 135 px against a 127 px budget, while the
+        // "1234tx" a fresh boot shows fits comfortably and hides it.
+        // One decimal below 10 % (where the precision is the whole point) and a
+        // whole percent above it keeps the widest form at 122 px.
+        char tx[8];
+        if (ls.attempts < 1000U) {
+            snprintf(tx, sizeof(tx), "%lu", (unsigned long)ls.attempts);
+        } else if (ls.attempts < 1000000U) {
+            snprintf(tx, sizeof(tx), "%luk", (unsigned long)(ls.attempts / 1000U));
+        } else {
+            snprintf(tx, sizeof(tx), "%luM", (unsigned long)(ls.attempts / 1000000U));
+        }
+        const uint32_t pm = poly_link_err_permille();
+        if (pm < 100U) {
+            snprintf(l_link, sizeof(l_link), "Lnk %lu.%lu%% %s",
+                     (unsigned long)(pm / 10U), (unsigned long)(pm % 10U), tx);
+        } else {
+            snprintf(l_link, sizeof(l_link), "Lnk %lu%% %s", (unsigned long)((pm + 5U) / 10U), tx);
+        }
+    }
+
+    // The 32 px panel holds two lines, so it keeps the two that cannot be read off
+    // anything else on the board; uptime and link health are split72-only.
+    const char* lines[4] = { l_fw, l_ver, l_up, l_link };
+    const uint8_t count  = tall ? 4u : 2u;
+
+    oled_on();
+    kdisp_set_buffer(0);   // clear the scratch to black
+
+    // Even vertical distribution, each line centred in its own band from its OWN
+    // bbox — the same layout the FW-2 confirm screen uses, so a line with a
+    // descender sits level instead of being pushed by the tallest line in the set.
+    const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
+    for (uint8_t i = 0; i < count; ++i) {
+        uint32_t txt[24];
+        ascii_to_u32_string(txt, sizeof(txt), lines[i]);
+        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+        kdisp_gfx_text_bbox(fonts, 1, txt, &x0, &x1, &y0, &y1);
+        const int8_t w = (int8_t)(x1 - x0 + 1);
+        int16_t      x = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
+        if (x < 0) x = 0;
+        const int8_t base = (int8_t)(band * i + band / 2 - (y0 + y1) / 2);
+        kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, txt);
+    }
+
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    // One synchronous pass: this is a full-screen swap the user asked for by pressing
+    // a key, so it must land complete rather than dribble in a block per main loop.
+    // A no-op once the screen is static (oled_render_dirty early-returns when clean),
+    // which matters because the uptime line changes only once a second.
+    oled_render_dirty(true);
+}
+
 // Typing-speed dial (11x6 speedometer). Shared by BOTH variants' status OLEDs, so it
 // is defined once here (oled_helper.c is in the shared POLY_SRC) and referenced via
 // extern from each status_oled.c -- defining it per variant drifts the two copies.
@@ -393,6 +505,12 @@ bool oled_task_user(void) {
 #endif
     } else if ((get_local_state()->flags & DISP_IDLE) != 0) {
         oled_render_logos();
+    } else if (get_local_state()->settings_more != 0) {
+        // Settings -> "More" is open: show what the board IS. Below the idle branch
+        // on purpose — an idled board has nothing to report and the logos are the
+        // lower-power screen; settings_more clears itself on leaving the layer.
+        oled_scroll_off();
+        oled_telemetry_screen();
     } else {
         oled_scroll_off();
         oled_status_screen();

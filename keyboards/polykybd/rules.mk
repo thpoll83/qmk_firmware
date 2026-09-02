@@ -3,6 +3,48 @@
 CFLAGS += -Wno-strict-prototypes
 
 # ---------------------------------------------------------------------------
+# -Wcast-align on OUR sources only (the HID-apply brick class)
+# ---------------------------------------------------------------------------
+# fw_staging's page buffer was `static uint8_t page_buf[256]` (alignment 1) and
+# was word-copied through a `(uint32_t *)` cast. The linker put it at a byte
+# offset, the unaligned STMIA HardFaulted the M0+ inside a function that never
+# returns, and the board came back only over BOOTSEL — shipped in a release
+# (qmk#258). -Wcast-align names exactly that: "cast increases required alignment
+# of target type". With -Werror already on, it is now a build failure on the PR
+# that writes it, which is the only place a bisect can still find it — the brick
+# itself was a LAYOUT effect (a macro PR grew .bss and moved the buffer), so the
+# guilty commit never touched the failing code.
+#
+# ⚠️ SCOPED BY PATH, deliberately. EXTRAFLAGS lands last on EVERY compile line,
+# upstream QMK / ChibiOS / pico-sdk included, and analysing 30k commits of other
+# people's code is the trap that kept CodeQL out of this repo. The $< filter is
+# the same per-recipe mechanism the doom block below uses.
+#
+# ⚠️ The WHOLE doom tree is excluded, not just the vendored engine. The engine is
+# a third-party snapshot nobody is going to clean up; our own doom sources are
+# excluded for a different and more interesting reason — `doom_arena_at()`
+# returns `uint8_t *` because that signature IS the pack ABI (doom_pack_abi.h,
+# handed to a SIGNED .plyx), so every `(doom_mirror_t *)doom_arena_at(...)` is a
+# widening cast the check cannot be satisfied about without editing a
+# cross-boundary contract. Those offsets are `_Static_assert`ed 4-aligned in
+# doom_arena.h instead, which is the substance; the one such cast OUTSIDE the
+# doom tree (split_sync.c) carries a narrow pragma pointing at those asserts.
+#
+# ⚠️ A path filter that matches NOTHING fails open: the flag simply never
+# applies and the guard looks installed while doing nothing. Verify by building
+# with a deliberate misalignment and confirming it FAILS, not by reading the
+# make output.
+#
+# Casts from `void *` do not warn (GCC exempts them), so the split-link CRC store
+# in bridge_helper.c is unaffected — and is separately safe, since every caller
+# passes a struct whose first member is a uint32_t.
+# modules/polykybd/ is ours too (polymod_crc32 / _rle / _ltr559); polymod_monocypher
+# is vendored, so it is excluded alongside the doom tree.
+POLY_CAST_ALIGN_SRC = $(filter keyboards/polykybd/% modules/polykybd/%,$<)
+POLY_CAST_ALIGN_SKIP = $(filter keyboards/polykybd/doom/% modules/polykybd/polymod_monocypher/%,$<)
+EXTRAFLAGS += $(if $(POLY_CAST_ALIGN_SRC),$(if $(POLY_CAST_ALIGN_SKIP),,-Wcast-align))
+
+# ---------------------------------------------------------------------------
 # System clock — 200 MHz by DEFAULT (`-e POLYKYBD_SYS_CLK=125` opts out)
 # ---------------------------------------------------------------------------
 # The RP2040 clock is NOT set by QMK — ChibiOS's hal_lld_init() (and, earlier,

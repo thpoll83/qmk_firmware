@@ -14,9 +14,11 @@ permissions:
 
 on:
   push:
+    # `PolyKybd` only -- a `PolyKybd/**` branch is UNCREATABLE while `PolyKybd`
+    # itself is a branch (git refuses a ref that is a prefix of another ref).
+    # See the longer note in qmk-test.yml.
     branches:
       - PolyKybd
-      - 'PolyKybd/**'
   pull_request:
     paths:
       - 'keyboards/polykybd/**'

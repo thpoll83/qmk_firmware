@@ -104,6 +104,85 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   in `raw_hid_receive()`, worth seconds of blocked main loop) that was adopted.
   Reply to the false ones with the evidence so they are not re-raised.
 
+- ⚠️ **A security-scanner finding on a file under `.github/` or `lib/` is
+  probably UPSTREAM's, and two checks settle it in minutes: is it stock, and is it
+  reachable?** This is a fork of a 30k-commit project, so almost everything a
+  path-based scanner walks was written by someone else and most of it is
+  unreachable here. The checks, in order:
+  1. **Is it stock?** `diff` the same path against upstream. Byte-identical means
+     the finding is upstream's to fix (or not) and ours only if we can reach it:
+     ```bash
+     curl -sSL "https://raw.githubusercontent.com/qmk/qmk_firmware/master/<path>" \
+       | diff - "<path>" && echo "IDENTICAL TO UPSTREAM"
+     ```
+     ⚠️ **That compares against upstream's CURRENT master, which moves — so read
+     the two outcomes asymmetrically.** Identical is conclusive: we did not write
+     it. A **difference is not proof we own it** — upstream may simply have
+     changed the file since our last catch-up merge. Check
+     `keyboards/polykybd/UPSTREAM_PATCHES.md` (the maintained list of upstream
+     files we patch) and `git log --oneline -- <path>` before concluding we wrote
+     it; getting this backwards means "fixing" an inherited file and buying a
+     conflict at the next merge. When the distinction actually decides a finding,
+     compare at the **merge base** instead:
+     ```bash
+     git remote add upstream https://github.com/qmk/qmk_firmware   # usually absent here
+     git fetch -q upstream master
+     git show "$(git merge-base HEAD upstream/master):<path>" | diff - "<path>"
+     ```
+     ⚠️ **Run the `--is-shallow-repository` check first** — the container clone is
+     shallow, `git merge-base` then returns an **empty string** rather than
+     failing, and the command above silently degrades to `git show :<path>`. That
+     trap is written up under "Building & flashing"; it is why `master` is the
+     default recipe here and the merge base the deliberate escalation.
+     ⚠️ **For workflows, don't guess which are ours — ask upstream.** A 404 means
+     the file does not exist there, i.e. we wrote it. (This one asks about
+     *existence*, not content, so the moving-master caveat above does not apply —
+     upstream deleting a workflow we still carry is the only way it misleads.)
+     Measured 2026-08-29:
+     **only 5 of 23 are ours** — `bump-version.yml`, `cppcheck.yml`,
+     `polykybd-unit-test.yml`, `qmk-test.yml`, `release.yml`. Re-derive rather
+     than trusting that list:
+     ```bash
+     for f in .github/workflows/*.yml; do b=$(basename "$f")
+       c=$(curl -sSL -o /dev/null -w '%{http_code}' \
+           "https://raw.githubusercontent.com/qmk/qmk_firmware/master/.github/workflows/$b")
+       [ "$c" = 404 ] && echo "OURS: $b"; done
+     ```
+  2. **Is it reachable?** For a workflow, read its triggers and its callers — a
+     `workflow_call`-only file is dead unless something calls it, and upstream
+     gates several on `if: github.repository == 'qmk/qmk_firmware'`, which is
+     **permanently false** in a fork. For C, grep the `SRC`/`OBJ` lists: a file no
+     build includes cannot have a vulnerability in the shipped image.
+  Worked example (2026-08-29): an external audit reported a **critical** template
+  injection in `.github/workflows/ci_build_major_branch_keymap.yml`
+  (`qmk find -km ${{ inputs.keymap }}`). It is byte-identical to upstream, is
+  `workflow_call`-only, and its sole caller is repo-gated — so the chain cannot
+  execute here at all. Two commands, no change, finding closed.
+  - ⚠️ **The inverse is the part that makes this worth doing: the scanner looked
+    at the inherited file and NOT at ours.** The one genuine injection in the same
+    sweep was in `bump-version.yml` — a file we wrote — interpolating
+    `github.event.pull_request.labels.*.name` straight into a `run:` body, where a
+    PR label is attacker-controllable text. Nothing flagged it. **So when a report
+    names an upstream path, treat it as a prompt to audit the sibling files we own,
+    not just to dismiss the one it named.** The fix pattern is to pass every
+    `${{ }}` through `env:` and read it as `"$VAR"` / `os.environ[...]`, which is
+    what `bump-version.yml` now does.
+    - ⚠️ **That property holds for `bump-version.yml` ALONE — do not read it as
+      repo-wide.** A sweep the same day found **31 interpolations inside `run:`
+      bodies across 8 workflows**, `qmk-test.yml` and `release.yml` among them.
+      None is known to be exploitable — they carry build outputs, `env:` constants
+      and `matrix.*` values the workflow itself wrote, not user text — but that is
+      a judgement per site, not an audited fact, and the two files have not been
+      gone through line by line. `polykybd-ctnd/.claude/skills/verify-security-finding/`
+      carries the checker and the triage procedure.
+  - **Record the disposition even when nothing changes** — dismissed findings that
+    leave no artifact get re-raised in full by the next scan. The tracker is
+    `polykybd-ctnd/docs/SECURITY_AUDIT.md` § *"Checked and NOT vulnerable — don't
+    re-litigate"*. For a vendored tree the note belongs beside the code instead:
+    `keyboards/polykybd/doom/engine/PROVENANCE.md` carries the disposition of the
+    `textscreen/` findings, because that tree is a **verbatim upstream snapshot**
+    and must not be patched in place.
+
 - ⚠️ **An on-demand Claude reviewer (`@claude review`) was tried and REMOVED
   (2026-08-20) — don't rebuild it.** `.github/workflows/claude-review.yml` +
   `claude-mention.yml` existed in all three PolyKybd repos to cover exactly the
@@ -115,9 +194,24 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   security"* and uploads no artifact. Workflows and the `CLAUDE_CODE_OAUTH_TOKEN`
   secret are gone from all three repos.
   - **So on an upstream-merge PR there is genuinely no LLM reviewer.** CodeRabbit
-    skips it outright at >100 files, and nothing replaces that. Treat the
+    skips it outright at >100 files, and **Sourcery has its own ceiling that lands
+    on the same PRs** — it refuses any diff over **20,000 lines** outright (*"the
+    GitHub API does not allow us to fetch diffs exceeding 20000 lines"*, a hard
+    limit, not a quota, so waiting does nothing). Treat the
     **build + HIL checks and hardware testing as the only verification**, say so
     on the PR, and don't read the green board as review cover.
+    - ⚠️ **A fourth bot, Greptile, now exists — see the Greptile entry in
+      `PolyKybdHost/CLAUDE.md` before repeating "no LLM reviewer" as a fact.**
+      Whether it reviews a catch-up merge is **untested**; what is measured is
+      that it reviews only some PRs and announces a skip nowhere, so its silence
+      is not evidence either way. ⚠️ **And its `Greptile Review` check run is not
+      the answer** — measured, a green `success` one accompanied a PR it did not
+      review, the same trap recorded above for Sourcery. Check `pull_request_read`
+      `get_reviews` on the PR in front of you and require **both** that a review's
+      `commit_id` equals the head sha **and** that its body is not a refusal
+      notice — a Sourcery refusal is itself a review object carrying the head sha,
+      so the sha alone reads as reviewed. Never infer from a check run or from
+      this paragraph.
   - **cppcheck has no quota, no star threshold and no file-count limit** — and
     is not an LLM, so it doesn't share the others' blind spots. That is why it
     was added, and it matters more now that it is the only automated reviewer
@@ -183,6 +277,31 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     compared against unknown-age data while still incrementing `seen`, which is
     precisely what that counter exists to prevent — hence the `|| continue` on the
     fetch, so an unreachable repo trips the `seen` guard instead of passing quietly.
+  - ⚠️ **A FIFTH mode, and it is the loop's own blind spot: `$d..HEAD` inspects only
+    the branch that happens to be CHECKED OUT.** Anything pushed to another branch is
+    invisible, so standing on a merged branch makes the sweep print a clean board for
+    a repo that has work sitting on a different one. Measured 2026-09-01: the loop
+    reported all six repos clean while this repo's `claude/firmware-feature-gaps-jvp9hz`
+    was 13 commits ahead — found only because that branch was restarted for unrelated
+    reasons. (Benign in the event: the commits were superseded, their content already
+    on `PolyKybd`. But the sweep could not have told me that either way.)
+  - ⚠️ **Do NOT "fix" it by sweeping every remote `claude/**` branch — measured, that
+    is unusable.** A squash- or merge-merged branch reads as ahead of the default
+    forever, so across the five repos there are **525** `claude/*` branches, **95**
+    read as "ahead", and only **3** of those had an open PR. A ~95% false-positive
+    rate is a check nobody will read twice.
+    ```bash
+    # what the numbers came from — per repo, count branches vs branches "ahead"
+    for b in $(git -C "$r" for-each-ref --format='%(refname:short)' 'refs/remotes/origin/claude/*'); do
+        [ "$(git -C "$r" rev-list --count "$d".."$b")" != 0 ] && echo "$b"
+    done
+    ```
+    **So "commits ahead" cannot answer this question at all, on one branch or on all
+    of them — the only reliable signal is whether a PR EXISTS**, which is a GitHub
+    query and not a git one. That is what this note already prescribes and what the
+    loop never implemented; the loop is a cheap prompt to go and check, never a clean
+    bill of health. Treat a silent sweep as "nothing obvious on the branch I am
+    standing on", nothing more.
 
 ## Building & flashing
 
@@ -302,6 +421,54 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     tag-anchored history question, not just merge-base reasoning — and note the tag
     itself resolves fine (`git rev-parse <tag>` succeeds), so a tag-exists check
     proves nothing. Unshallowing took **45 s** here; the count went 84 commits.
+- **`-Wcast-align` is on for PolyKybd's OWN sources, and it exists for the
+  HID-apply brick class.** `fw_staging`'s page buffer was `static uint8_t
+  page_buf[256]` (alignment 1) word-copied through a `(uint32_t *)` cast; the
+  linker put it at a byte offset, the unaligned `STMIA` HardFaulted the M0+ in a
+  function that never returns, and it shipped in a release. The warning names
+  exactly that — *"cast increases required alignment of target type"* — and with
+  `-Werror` already on it is a build failure on the PR that writes it. That is
+  the only place a bisect can find this class, because the brick itself was a
+  **layout** effect: a macro PR grew `.bss` and moved the buffer, so the guilty
+  commit never touched the failing code.
+  - ⚠️ **Scoped by path via the `$<` per-recipe filter** (`rules.mk`, the same
+    mechanism the doom `EXTRAFLAGS` block uses). `EXTRAFLAGS` otherwise lands on
+    **every** compile line — upstream QMK, ChibiOS, pico-sdk — which is the trap
+    that kept CodeQL out of this repo.
+  - ⚠️ **The WHOLE `doom/` tree is excluded, not just the vendored engine, and
+    the reason for our own sources is worth knowing: `doom_arena_at()` returns
+    `uint8_t *` because that signature IS the pack ABI** (`doom_pack_abi.h`,
+    handed to a **signed** `.plyx`). So every `(doom_mirror_t *)doom_arena_at(…)`
+    is a widening cast the check cannot be satisfied about without editing a
+    cross-boundary contract — which is not something to do on a warning's
+    account. `void *` would be the better type for untyped arena storage; it was
+    tried and reverted for exactly that reason. The offsets are
+    `_Static_assert`ed 4-aligned in `doom_arena.h` instead, which is the
+    substance, and the one such cast **outside** the doom tree (`split_sync.c`'s
+    mirror handler) carries a narrow `#pragma` pointing at those asserts.
+  - ⚠️ **A path filter that matches nothing FAILS OPEN** — the flag never applies
+    and the guard looks installed while doing nothing. Verify by compiling a
+    deliberate misalignment in a PolyKybd source and confirming the build
+    **fails**, not by reading the make output.
+  - **`void *` casts do not warn** (GCC exempts them), so `bridge_helper.c`'s
+    split-link CRC store is unaffected — and is separately safe, since every
+    caller passes a struct whose first member is a `uint32_t`.
+  - **It found two real latent instances of the same shape**, both now asserted
+    rather than assumed: `doom_mode.c` casts the core1 **stack pointer** out of a
+    `uint8_t *` pool (where a misalignment is worse than the applier's HardFault
+    — 8-aligned base, both offsets multiples of 8, which is also what AAPCS
+    demands), and every `doom_arena_at()` consumer relies on arena offsets that
+    nothing checked. ⚠️ Do **not** launder such a cast through `uintptr_t` to
+    silence the warning — that proves nothing and hides the next one.
+  - ⚠️ **Verified the hard way, and it earned its keep immediately**: the first
+    build with the flag FAILED on `split_sync.c`, which is simultaneously the
+    proof that the path filter matches (it would otherwise fail open) and a real
+    find. Do not take a clean build as evidence the flag is active — take a build
+    that fails on a deliberate misalignment.
+  - The clean-up it required was itself worth having: the OLED helpers took a
+    `uint32_t[]`, cast it down to `char *` at the call and back up inside, which
+    was safe only by convention. They take `uint32_t *` now.
+
 - ⚠️ **When an upstream merge breaks the build, look at the vendored DOOM engine
   FIRST — a new upstream warning lands there, not on our own sources.** QMK builds
   with `-Werror`, so *any* warning upstream adds to `builddefs/common_rules.mk`
@@ -355,7 +522,17 @@ inherited-upstream noise:
     UI's **Extended** toggle beside Run Tests.
   - ✅ **`workflow_dispatch` runs all THREE opt-ins at once — the extended HIL tier,
     the perf measurement AND the FW-9 doom set** — because it satisfies every opt-in
-    `if:` at once (each names `github.event_name == 'workflow_dispatch'`). They are
+    `if:` at once (each names `github.event_name == 'workflow_dispatch'`).
+    ⚠️ **Since the `tier` input (2026-09-01) that is what `tier: all` does, and `all`
+    is the DEFAULT**, so an ordinary dispatch still behaves exactly as described here.
+    The narrower values (`default`, `extended`, `perf`, `doom`, `fwapply`, `debug`)
+    each drive one opt-in, and `tier` is read **only** under
+    `github.event_name == 'workflow_dispatch'` — push and pull_request keep their
+    label/marker gating untouched. `debug` is the odd one out: it **skips the graded
+    suite entirely** (the only `if:` on `hil-test`) and runs just the probe, because a
+    debug loop pays the rig cost on every iteration. The whole table was verified by
+    simulating the conditions across every trigger, not by reading them — that is the
+    only way to check a folded-scalar `if:` short of merging and waiting. They are
     otherwise INDEPENDENT — each opt-in drives only its own job, so `hil-extended`
     alone starts no perf run and `hil-perf` alone leaves the HIL suite on its default
     tier. ⚠️ Dispatch is not the *only* way to get them: the matching labels on a PR, or
@@ -363,10 +540,16 @@ inherited-upstream noise:
     do it too. **A dispatch is also the way to exercise the doom set when there is no
     open PR to label** (used 2026-08-29, run #894, right after the trilogy merged). The commit-message form is the natural release-time route — a release push
     is a push — but it only fires where the workflow listens for pushes at all,
-    i.e. `PolyKybd` and `PolyKybd/**`; the same marker in a commit pushed to a
-    `claude/**` branch starts nothing. What dispatch buys is needing no label
-    bookkeeping, which also sidesteps the two-labels-in-one-call trap below (that
-    fires two runs).
+    i.e. **`PolyKybd`, and only `PolyKybd`**; the same marker in a commit pushed to
+    a `claude/**` branch starts nothing. ⚠️ The trigger used to read `[PolyKybd,
+    "PolyKybd/**"]` and that second pattern was **unreachable**: git refuses a ref
+    that is a PREFIX of another ref, so `refs/heads/PolyKybd/<x>` cannot exist while
+    `refs/heads/PolyKybd` does (`git ls-remote --heads origin 'refs/heads/PolyKybd/*'`
+    → 0, ever). It read as a staging-branch escape hatch and was not one — git
+    refuses to create the branch, and a differently-named one silently runs nothing.
+    Dropped from `qmk-test.yml` and `polykybd-unit-test.yml` (2026-09-01).
+    What dispatch buys is needing no label bookkeeping, which also sidesteps
+    the two-labels-in-one-call trap below (that fires two runs).
     Whichever route, the combination is safe: `perf-test` has `needs: [build-perf,
     hil-test]`, so the rig runs the suite first and measures afterwards rather than
     interleaving two flashes. Measured on run #805 (2026-08-20): ~3 min of rig time
@@ -443,6 +626,127 @@ inherited-upstream noise:
     digest is a *real* hardening but a **repo-wide** one — 10 uses in `qmk-test.yml` +
     more in `release.yml` — so it is a deliberate all-uses-at-once change (ideally with
     Dependabot), never a piecemeal one-job edit.
+- **The FW-APPLY set (`build-fwapply` + `fwapply-test`) is the fourth tier, and it
+  is the ONLY one that runs unasked — on every push to `PolyKybd`.** It builds a
+  HIL image pair, signs the master `.bin` with an **ephemeral** key
+  (`gen_signing_key.py` rewrites `base/fw_pubkey.h`, same pattern as `build-doom`
+  — the production `FW_SIGNING_KEY` stays confined to `release.yml`), then has the
+  rig drive a real HID update through **APPLY** and confirm the board comes back.
+  It is also reachable by the `hil-fwapply` label, `[hil-fwapply]` in a pushed
+  commit, or `tier: fwapply`.
+  - ⚠️ **Why it is not opt-in, when everything else is: the HID-apply brick
+    (qmk#258) shipped in a RELEASE, and it was a LAYOUT effect.** `fw_staging`'s
+    page buffer was `static uint8_t` (alignment 1) and word-copied; a macro PR grew
+    `.bss`, shifted it off a word boundary, and the unaligned `STMIA` HardFaulted
+    on the M0+ inside a function that never returns — recoverable only over
+    BOOTSEL. So **the guilty PR never touched the applier**, `fw_staging_do_apply`
+    was byte-identical across the regression, and the bisect blamed the wrong
+    commit. Any PR can move `.bss`, so per-PR is not where this class is catchable;
+    what IS catchable is dating it to a **merge** that can still be bisected. A
+    release-time-only check would name the release that bricks, with no bisect and
+    a release to redo.
+  - **The cost is bounded**: the rig already runs a HIL cycle per merge, so this
+    adds a cloud build plus one apply+reboot, not a new cadence. PRs are untouched
+    — the tier stays opt-in there, so no PR pipeline gets slower.
+  - ⚠️ **`--apply-bin` is destructive by design and safe only because the image is
+    the one already running** — the rig checks that pairing rather than assuming
+    it. And it is safe *at all* only because a brick on the rig is self-recovering
+    over GPIO BOOTSEL.
+  - ⚠️ **An ephemeral-key image REFUSES a production-signed image over HID** (its
+    baked pubkey does not match, so the keyboard raises the A/ACCEPT prompt, which
+    the rig cancels). Benign on the rig, which recovers itself — but it is why an
+    ephemeral-key build must never be handed to a user to flash.
+  - ⚠️ **"On every push" is only as good as GitHub DELIVERING the push event, and it
+    does not always — measured, on the very merge that added this tier.** Merging
+    #264 (`43cc2559`, 2026-09-01) created **no push-event workflow run at all**:
+    not `qmk-test`, not `cppcheck`, not `polykybd-unit-test`. That last one is the
+    decisive part — it has **no `paths:` filter whatsoever**, and it had fired on
+    #263's `CLAUDE.md`-only merge hours earlier, yet stayed silent on a merge
+    carrying nine C files. So this was not a paths filter, and not ours. Ruled out
+    too: no GitHub Actions incident that day (the one Git Operations incident ran
+    15:00–16:01 UTC, hours earlier); the merge was a **direct click** on *Merge
+    pull request* by the repo owner — confirmed with them, not inferred — so
+    neither the GITHUB_TOKEN no-recursive-runs rule nor the reported
+    auto-merge-skips-CI-on-the-target-branch behaviour applies; and every previous
+    merge is followed by the same `[skip ci]` auto-bump at +13–16 s, so the bump
+    cannot be it either.
+    ⚠️ **`merged_by` alone CANNOT settle that** — an auto-merge is still attributed
+    to whoever enabled it, so the field reads identically either way. The only
+    signals are the timing (auto-merge fires within seconds of the last check
+    turning green; this one landed 10 minutes later) and asking the person.
+    The run object simply never existed. GitHub's own troubleshooting says a
+    workflow that does not trigger "silently does nothing", and dropped runs under
+    load are a documented class — so treat this as a **delivery** failure, not a
+    config bug, and do not go looking for a mechanism in the workflow.
+    - **The design already absorbs it, which is the reassuring half.** The release
+      gate (`tools/require_fwapply_run.py`) refuses to publish firmware no apply
+      run has covered, so a dropped push event costs a **manual dispatch at release
+      time**, not a bricked release. That is the gate doing exactly its job.
+    - **Recovery: dispatch *Build and HIL Test* with `tier: fwapply`.** Verified
+      2026-09-01, run #959: build ✅, HIL suite ✅ 2m55, apply round-trip ✅ 3m40
+      (its first-ever execution).
+      ⚠️ **WHICH ref you dispatch on decides whether the gate can ever see it, and
+      "the branch" is only right IMMEDIATELY after the merge.** A dispatch attaches
+      the run to whatever its `ref` points at. Dispatching on `PolyKybd` therefore
+      covers the release sha **only while the tip is still that version's own bump
+      commit** — true if you do it right after the merge, as above, and false as
+      soon as another PR lands. It is not a general recipe, because the two ends
+      move in opposite directions: `publish_release.py` tags the **oldest** commit
+      declaring the version (`commit_for_version()`, deliberately not the head),
+      while `require_fwapply_run.py` only ever walks **ancestors** of the release
+      sha, bounded by `MAX_BUMP_COMMITS`. A run on a *descendant* is invisible to
+      it, so a late branch-tip dispatch produces a green run the gate still refuses.
+      **Once the branch has moved on, dispatch on the release TAG instead** — the
+      API takes a branch *or* a tag, and the tag exists by then (publishing creates
+      it, and the gate runs on `release: published`), so the run attaches to the
+      release sha itself. ⚠️ Untested here, and it carries its own trap: a dispatch
+      runs the workflow **as of that ref**, so a tag predating the `tier` input has
+      no `fwapply` value to select. (Caught by Greptile on #265 — the original
+      wording generalised one true observation into a rule that only held on the
+      day it was written.)
+    - ⚠️ **So don't read "runs unasked on every merge" as a guarantee.** After a
+      merge you care about, confirm a run actually exists for the merge sha —
+      `actions_list list_workflow_runs` filtered `event: push` — rather than
+      assuming. A missing run looks identical to a repo where nothing was
+      configured.
+
+- ✅ **The DEBUG LOOP: a firmware bug can now be chased on the rig with nobody
+  flashing a `.bin`.** Dispatch `qmk-test.yml` on a branch with **`tier: debug`,
+  `probe: <name>`** and the rig builds that branch, flashes both halves, runs a
+  probe committed at `keyboards/polykybd/tools/hil_probes/<name>.py`, and pipes
+  the firmware's own console into the job log as `[qmk] …` lines. Edit, push,
+  dispatch, read the log. **The `debug-firmware-on-rig` skill drives the whole
+  loop** (when a probe beats the graded suite, the dispatch call, reading the
+  `[qmk]` lines back out, and the measured cost of a turn); the rig side is
+  `polykybd-ctnd/station/probe.py` (`--probe`) and the probe format + pitfalls
+  are in `keyboards/polykybd/tools/hil_probes/README.md`. Verified end to end
+  2026-09-01, run `33559310727`: `Debug probe (split72)` green with every other
+  job — `HIL test (split72)` included — correctly skipped, 5m21s wall clock of
+  which 4m03s is the cloud build. This existed in pieces before — the rig has echoed `[qmk]` lines
+  into the log all along — and what was missing was any way to run an *arbitrary*
+  question instead of the fixed suite.
+  - ⚠️ **DISPATCH-ONLY, and that `if:` IS the security control.** Triggering a
+    dispatch needs write access, so a fork PR can never reach the rig through it —
+    which matters because the rig is a self-hosted runner for a **public** repo
+    (HIL-2). **Do not add a `hil-debug` label trigger**: a label is applied to a PR
+    whose head may be a fork. The containment check in `station/probe.py` is *not*
+    this control and its own docstring says so; it is operational (CI has already
+    checked out the whole repo and the build jobs have already run code from it).
+  - **Dispatch with `ref:` set to a branch runs that branch's workflow and builds
+    that branch's firmware**, so a probe iterates entirely unmerged. That is also
+    the answer to "workflow_dispatch only exists on the default branch": the
+    *entry* must be there, the *code* need not.
+  - ⚠️ **The console cannot see a flash window.** QMK drops output nobody drains
+    and during a flash nothing does, so a probe observes before and after an
+    update, never during. A gap in the `[qmk]` timestamps spanning a flash is
+    expected, not a symptom.
+  - ✅ **A brick is self-recovering on the rig** — it asserts BOOTSEL over GPIO,
+    and BOOTSEL/UF2 bypasses `fw_staging` entirely. So the rig is the right, and
+    the only, place to exercise the firmware-apply path: the failure this whole
+    area guards against cannot strand the hardware.
+  - **A probe is disposable.** Delete it when the bug closes, or promote it into
+    `station/hil_tests.py` if the question is worth asking forever.
+
 - **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
   is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
   training data and therefore blind spots, while dataflow analysis fails elsewhere.
@@ -466,17 +770,36 @@ inherited-upstream noise:
     would analyse the whole upstream QMK tree — the same trap as the
     lint-on-upstream-keyboards problem below. The host repo runs CodeQL instead,
     where Python needs no build and the tree is entirely ours.
-- **A Markdown-only change does NOT run the build or the rig — `qmk-test.yml` has
-  `paths-ignore: ['**.md']`** on both its `push` and `pull_request` triggers (added
-  2026-08-21). The rig executes one job at a time, so before this a comment-only PR
-  occupied it for a full flash-and-test cycle per push and delayed every real build
-  queued behind it (#224 burned three rig runs and three review slots that way).
-  Four things follow, and the last is the one that would bite:
-  - **A mixed docs+code PR still runs the gate in full.** `paths-ignore` skips the
-    workflow only when EVERY changed file matches, so nothing can be smuggled in
-    behind a README edit.
-  - **`**.md` does not match `.github/workflows/qmk-test.yml`**, so a change to the
-    CI wiring itself still triggers a run and gets verified.
+- **A change that cannot alter the firmware does NOT run the build or the rig —
+  `qmk-test.yml` path-filters both its `push` and `pull_request` triggers.** Markdown
+  since 2026-08-21, then `scripts/` and `.claude/`, then the sibling workflow files
+  (#253, 2026-08-29). The rig executes one job at a time, so before this a
+  comment-only PR occupied it for a full flash-and-test cycle per push and delayed
+  every real build queued behind it (#224 burned three rig runs and three review
+  slots that way; #251 later did the same as a workflow-only PR). What follows —
+  the last one is still the one that would bite:
+  - ⚠️ **It is a `paths` list with `!` negations, NOT `paths-ignore`, and it cannot
+    be either one.** The `!` prefix works ONLY in `paths`, and the two filters may
+    not both be used for one event — so "exclude the sibling workflows but still
+    verify this one" is inexpressible with `paths-ignore`. The list is `**`,
+    `!**.md`, `!scripts/**`, `!.claude/**`, `!.github/workflows/**`,
+    `.github/workflows/qmk-test.yml`, identical on both triggers.
+  - ⚠️ **ORDER IS LOAD-BEARING — the LAST matching pattern decides.** The leading
+    `**` is what makes an ordinary source file match at all, and the trailing
+    `.github/workflows/qmk-test.yml` is what keeps the gate verifying its own edits.
+    Move that line above `!.github/workflows/**`, or drop it, and a change to this
+    workflow silently stops being built and rig-tested; drop the `**` and ordinary
+    firmware sources stop triggering anything. Both were confirmed by mutating the
+    list and re-running a simulation of GitHub's matcher, which is the only way to
+    check this without merging and waiting.
+  - **A mixed docs+code — or workflow+code — PR still runs the gate in full**, since
+    the workflow runs when AT LEAST ONE changed file is included. Nothing can be
+    smuggled in behind a README or a CI edit.
+  - **The exclusion is scoped to `.github/workflows/**`, not all of `.github/`.**
+    Nothing under `.github/` is a build input today — there is no `uses: ./...`
+    anywhere in `qmk-test.yml`, every action is external — but the narrower scope
+    leaves a composite action added later under `.github/actions/` still triggering
+    a run, which is the safe direction.
   - **`workflow_dispatch` has no paths filter**, so a manual run — including the
     both-tiers route above — works on any commit regardless.
   - ⚠️ **A path-filtered `pull_request` trigger applies to `labeled` too**, so
@@ -549,8 +872,8 @@ inherited-upstream noise:
   *different* mechanism from the push/pull_request duplication below.
 - ⚠️ **A workflow yields TWO check runs — `push` and `pull_request` — whenever the
   branch matches BOTH triggers, and re-running one does NOT touch the other.**
-  Here that mostly doesn't happen: `qmk-test.yml` pushes only on `PolyKybd`/
-  `PolyKybd/**`, `unit_test.yml` only on `master`/`develop`, and `lint`/`labeler`
+  Here that mostly doesn't happen: `qmk-test.yml` pushes only on `PolyKybd`,
+  `unit_test.yml` only on `master`/`develop`, and `lint`/`labeler`
   are PR-only — so a `claude/**` PR gets a single run per workflow. **The sibling
   repos differ**: wincompose's `build.yml` pushes on `main` *and* `claude/**` on
   top of `pull_request`, so every branch PR there carries two, and that is where
@@ -707,6 +1030,39 @@ Firmware releases are **GitHub Releases** (tag `PolyKybd-fw-vX.Y.Z`; `FW_VERSION
 `polykybd-github-release` skill to draft the notes and drive the flow. The mechanics
 that cost real debugging to learn (2026-07):
 
+- ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
+  released** (`tools/require_fwapply_run.py`, the first step of `release.yml`,
+  before the build so a refusal changes nothing). The HID-apply brick shipped
+  because no release artifact had ever been applied on hardware — the rig flashes
+  by UF2 over GPIO BOOTSEL, which bypasses `fw_staging` entirely, and this
+  workflow runs no HIL at all. With the fwapply tier now running on every merge
+  to `PolyKybd`, the gate is normally a formality; it exists for a hand-made tag,
+  a re-publish, or a merge whose rig run went red and was forgotten.
+  - ⚠️ **It CANNOT simply demand a run on `github.sha`** — release tags land on
+    the auto-bump `[skip ci]` commit, which by construction no workflow ran on, so
+    that gate would refuse every release. It walks back through ancestors and then
+    **proves the delta to the release commit is only the auto-bump** — meaning
+    `FW_VERSION` *or* `PROTOCOL_VERSION` in `config.h` and nothing else, since a
+    `bump:protocol` merge increments only the latter and rewrites the semver to
+    the same value, producing no `FW_VERSION` diff line at all. Accepting an
+    ancestor without that proof would report coverage belonging to different
+    firmware, which is worse than no gate; accepting only `FW_VERSION` would
+    refuse a well-covered protocol release at publish time (caught in review of
+    the PR that added it, #264).
+  - **The job name is DERIVED from the checked-out workflow**, not hardcoded — a
+    rename would otherwise turn the gate into a silent no-op that reports "never
+    covered" for firmware that was. Same reason the ctnd unit-test workflow greps
+    its suite names instead of listing them.
+  - **Self-tested** (`--selftest`, run as the same CI step) because this repo has
+    no Python test harness and untested decision logic in a release gate is the
+    thing `fw_up_verdict.c` was extracted to avoid. Mutation-checked against 8
+    breaks; one escaped first — deleting the filename check passed every fixture,
+    because none of them had a *different* file whose lines mention `FW_VERSION`,
+    and `hid_com.c` is exactly such a file. The fixture that closes it is in the
+    selftest with that reasoning attached.
+  - **Recovery when it refuses**: dispatch *Build and HIL Test* on that commit
+    with `tier: fwapply`, wait for green, re-run the release job. The error names
+    every commit it checked and why each failed.
 - **A pushed tag does NOT create a release.** Release tags land on the auto-bump
   `chore: … [skip ci]` commit (`bump-version.yml`), and `[skip ci]` **suppresses the
   tag-push workflow trigger** — so `release.yml` runs on **`release: published`** (every
@@ -728,6 +1084,23 @@ that cost real debugging to learn (2026-07):
 - **Version bump is label-driven**: the merged PR's `bump:major`/`bump:minor`/
   `bump:protocol` label (else patch) drives `bump-version.yml`. Protocol PRs often bump
   `PROTOCOL_VERSION` in-source and *omit* `bump:protocol` (the label would double-bump).
+  - ⚠️ **A MISSING bump label is silent, and it can make the LIVE DOCS wrong within
+    minutes — apply the label before the merge, not after.** The label is read at merge
+    time and there is no second chance: the bump lands as a `chore:` commit and the
+    version is then whatever it produced. On 2026-09-01 qmk#259 merged without its
+    intended `bump:minor`, so `FW_VERSION` went to **0.16.21**; docs#68 merged three
+    seconds later naming **v0.17.0** in a `<SupportedSince>` tag and an upgrade note,
+    and `polykybd-docs` deploys on push — so the public site was promising a version
+    that would never exist while the firmware had not even been released yet.
+  - **The asymmetry is what makes it bite**: a docs PR ships the moment it merges, a
+    firmware PR only bumps a number and waits for a release. So a cross-repo pair has
+    *two* orderings to get right — the label before the qmk merge, and the docs merge
+    after the release (already noted in `polykybd-docs/CLAUDE.md`). Getting the second
+    right does not save you from the first.
+  - **Recovering** is a choice, not a fix: either correct the docs to the version that
+    actually bumped, or land a `bump:minor` PR that does **not** itself edit `config.h`
+    (the workflow bumps *after* merge, so an edited version file would be bumped on top
+    of) — the same cosmetic-realignment move described in the host repo's note.
 - ⚠️ **From Claude Code on the web you can neither push tags (git proxy returns 403 on
   `refs/tags/*`) nor create a release (no `gh` CLI, no create-release MCP tool)** — stage
   the notes on the branch and hand the user `python scripts/publish_release.py`.
@@ -1167,6 +1540,70 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     27px `Qwty` lost 10px too. The tighter 19px spacing only made a long-standing
     defect impossible to miss. **The check is a pixel count against the same legend
     drawn with `cy_radius` 0**, not a visual read; all 15 legends now match it exactly.
+- ⚠️ **The anti-burn-in jitter offset is applied ONCE at the display-list cursor
+  (`gfx_text_run`), NOT inside the drawing primitives — it used to be the other way
+  round and that moved only the text.** `s_draw_ox/oy` were added in
+  `kdisp_write_gfx_char` and `kdisp_write_gfx_char_half`, which between them cover
+  ordinary glyphs and `HINT_SMALL` and nothing else: every **composite op** plots
+  through a primitive of its own (`\x0F` HALF, `\x11` THIN, `\x15` ROT →
+  `kdisp_draw_glyph_*_at`; `\x13` BADGE, `\x12` FRAME → the rect drawers), none of
+  which ever saw the offset. So an idle relocation slid the letters and left the
+  composited art pinned to the buffer — reported from hardware as *"the cursor on the
+  context menu icon is not moving in the idle modes, but the hamburger menu icon
+  does"* (2026-08-31). It is a CLASS bug, not one icon: `ICON_CONTEXT_MENU`'s pointer,
+  and the `ICON_SCRLOCK_ON/OFF` + `ICON_MEDIA_STOP` badges, which are composite art
+  **only** and so never moved at all.
+  - **The fix is the choke point, not five more `+= s_draw_ox` lines.** Offsetting the
+    cursor once means a sixth composite op inherits it by construction; adding it per
+    primitive is the enumerating-guard shape this repo keeps getting caught by
+    (`sync_is_link_fault()`, the log-source registry, the `find_matching_entry` gate).
+    ⚠️ A MOVE must **re-apply** it (`x_cursor = sat8(text[1] + s_draw_ox)`) — an
+    absolute position is exactly what the cursor's own offset does not reach, and
+    assigning the raw coordinate is what pinned the art in the first place.
+  - ⚠️ **Fixing the DRAW alone would have made it worse, and that is the half worth
+    remembering.** `roll_idle_offset()` measured the slack with the RELATIVE bbox,
+    which for `ICON_CONTEXT_MENU` is the hamburger alone — so once the whole cell
+    moved as a unit, that slack would have carried the pointer off the panel; and for
+    `ICON_MEDIA_STOP`, whose legend is a MOVE plus a BADGE and nothing else, the
+    relative box is **empty** (`0,0,0,0`), i.e. "you may move it anywhere". Hence
+    `kdisp_gfx_text_bbox_abs()` above, and hence the pair had to land together.
+  - **The ROT geometry moved to `font_lookup.c` (`kdisp_gfx_rot_half_extent`) so the
+    drawer and the measurement cannot disagree** about which pixels a rotated glyph
+    touches — a box that disagrees with the pixels is a legend that clips. ⚠️ Its
+    tests derive the expectation from **arithmetic** (a 0° turn is exactly the halved
+    size; a 90° turn swaps the axes), because the first version asked the helper what
+    to expect and therefore agreed with it by construction — a "don't halve the width"
+    mutation sailed straight through. Same trap as the macro-icon preview note below.
+  - ⚠️ **The offset was not the only per-primitive property the composite ops
+    bypassed — `s_gfx_erase` and `s_gfx_scanline` were the SAME shape, and the
+    scanline one was live.** Both are static plotter modes that only the two char
+    writers honoured, so under `IDLE_STYLE_EDEN` — which draws the resting legend
+    `kdisp_set_gfx_scanline(true)` as a dim half-density ghost — the text came out
+    half-density while the composited art stayed fully lit. Measured over the shipped
+    legends, three carry composite art AND are reachable as a resting legend (i.e. at
+    idle), all three on the split72 default keymap: `ICON_SCRLOCK_ON/OFF` (`KC_SCRL`,
+    a 19×19 `HINT_BADGE`), `ICON_MEDIA_STOP` (`KC_MSTP`, **badge only** — so the whole
+    keycap ignored the dimming) and `ICON_CONTEXT_MENU` (`KC_APP`, the ROT'd pointer).
+    The other three composite legends (`ICON_GFX_RESTART`/`_RELOAD`, and the
+    `HINT_FRAME` hints) are held-modifier hints, never drawn at idle.
+    - **Same remedy, one level down: `kdisp_plot_ink()`.** Every ink primitive —
+      HALF / THIN / ROT / BADGE / FRAME / `_double_at`, and both char writers — plots
+      through it, so it is now the single definition of "ink" and a sixth op inherits
+      both modes by construction.
+    - ⚠️ **Deliberately NOT pushed down into `SET_PIXEL_CLIPPED`.** Ground fills and
+      bitmap blits (`kdisp_fill_rect`, `kdisp_draw_bitmap`, the tab/MRU chrome,
+      `clear_line`) must stay unconditional, or an overlay image drawn while the flag
+      is up would silently scanline-dim. The split is what the primitive **is**, not a
+      list of call sites to keep in sync.
+    - **It made the image SMALLER**: `.text` 285320 → 284320 (**−1000 B**), `.data`
+      and `.bss` byte-identical (monolith `.heap` free 2772 either way) — fourteen
+      duplicated per-pixel plot sequences collapsed into one out-of-line call. Verified
+      in the compiled image rather than the source: `kdisp_plot_ink` is emitted
+      out-of-line and `objdump` shows every composite primitive `bl`-ing it.
+    - ⚠️ **`disp_array.c` has NO unit suite** (it owns the scratch buffer), so this
+      class is only ever caught by reading the code or by looking at hardware —
+      `oled_preview.py` refuses these ops, so the usual "render it" rule does not
+      reach them either. That is why the same mistake was made twice in one file.
 - **`kdisp_send_window()` vs `kdisp_send_buffer()`**: `kdisp_send_buffer()` pushes
   the full 1024-byte scratch; `kdisp_send_window()` pushes only the **visible 360
   bytes** (pages 0–4 at column `BUFFER_X`) — the same region the keycap actually
@@ -1323,6 +1760,60 @@ landed; revisit only if a full swap still looks slow on hardware): raise
 `OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
 above SSD1306 spec — A/B on real hardware).
 
+**Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
+`oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced
+`poly_sync_t.settings_more`). Four lines on the 64 px panel, two on the 32 px one:
+`FW <version>` · `P<protocol> HW <device_ver>` · `<USB|LNK> up <h:mm:ss>` ·
+`Lnk <err>% <frames>`. Shared across both variants and landscape on split42 too,
+matching the flash / confirm / apply screens there.
+
+- **The identity fields are the ones `GET_ID` reports** (`FW_VERSION`,
+  `PROTOCOL_VERSION`, `DEVICE_VER` — the same macros `hid_com.c` builds its string
+  from), so the panel and the host's view of the board cannot disagree.
+- ⚠️ **The link line reads `Lnk n/a` on the non-USB half, NOT `0.0%`.** The counters
+  live in `bridge_helper.c` and only the master calls `send_to_bridge()`, so the
+  slave's are zero because it never initiates — rendering that as a perfect link
+  would be a flattering lie on exactly the panel someone reads to judge the wire.
+  `poly_get_link_stats()` / `poly_link_err_permille()` expose them; the percentage is
+  computed by the same expression as the periodic console line, so the two can never
+  diverge. This puts the split-link health somewhere you can actually see it — until
+  now it existed only in a line emitted every 200 frames on a console nobody has open.
+- ⚠️ **Both link fields are COMPACTED, and the default fixture is what hides why.**
+  `ls_attempts` climbs for as long as the board is up (millions within hours), so
+  spelled out in full the line measures **135 px against a 127 px budget** — while the
+  `1234tx` of a fresh boot fits comfortably. The count is abbreviated `k`/`M` and the
+  rate drops its decimal at/above 10 %, which puts the widest reachable form at
+  122 px. Checked with `tools/status_oled_preview.py --telemetry --diag` at the worst
+  case (`--link 1000,4294967295 --uptime "999d 23h"`), not at the default.
+- `tools/status_oled_preview.py --telemetry` renders it (both halves, `--diag` for the
+  clipping check) — the same mirror-the-C treatment `build_fw_confirm_panel` gets.
+  - ⚠️ **Mirror the C's GUARDS, not just its formatting — a preview's INPUT DOMAIN can
+    be wider than the device's reachable state space.** `oled_telemetry_screen()` tests
+    `ls.attempts == 0U` and prints `Lnk idle` **before** it computes a rate (and
+    `poly_link_err_permille()` returns 0 at zero attempts anyway), so a percentage over
+    zero frames is a reading no keyboard can display. The preview mirrored only the
+    `link is None` case, so `--link 0,0` rendered `Lnk 0.0% 0` and `--link 250,0`
+    rendered `Lnk 25.0% 0` — the preview depicting the impossible, which is the
+    direction it exists to catch. This is the **sibling** of the "A PREVIEW THAT MIRRORS
+    THE IMPLEMENTATION AGREES BY CONSTRUCTION" note below, not the same thing: there the
+    preview and the C are wrong identically; here the preview can render a state the C
+    cannot reach.
+  - **Fix the RENDERER, not just the argparse validator** — these panel builders are a
+    LIBRARY surface, not only a CLI. `status-oled-layout`'s `measure_bands.py` does
+    `import status_oled_preview as P` and calls `P.build_panel(...)` directly, so a
+    guard living in `link_arg()` is simply absent for an importing caller.
+    `build_telemetry_panel()` has no such caller *yet* — it is reached only from the
+    tool's own `main()` — which is exactly why the guard has to go in the renderer
+    now rather than after one appears. The validator is the second half (it refuses a
+    non-zero rate over zero frames, an input describing no device), not the first.
+    Check it by rendering: `--link 0,0` and `--link idle` must produce
+    **byte-identical** PNGs.
+    - ⚠️ This bullet previously asserted that the skill imports `build_telemetry_panel()`
+      itself. It does not — one `grep` settles it — and a note about verifying claims is
+      the worst place to leave an unverified one. Caught by Greptile on #262, which is
+      the cross-file consistency check an LLM reviewer is genuinely good at and a linter
+      cannot do at all.
+
 **split42: PORTRAIT status OLED (2026-07).** The split42 panel is 128×32 physical
 but **mounted rotated 90°**, so the user reads it as **32 wide × 128 tall**. The poly
 pipeline blits a **raw page-format buffer** via `oled_write_raw`, which **bypasses
@@ -1435,6 +1926,45 @@ field.** The 72 was sized for exactly these, all derived from `HID_REPORT_SIZE` 
 `HID_REPORT_SIZE` bump, and an app switch would hit the silent rejection above and
 present as missing keycap images. At 96 that path has 27 B of headroom.
 
+### ⚠️ The self-apply's page buffer must be `uint32_t` — a `uint8_t` one bricked the board
+
+`fw_staging_do_apply()` copies the staged image a page at a time through a static
+buffer, with `ram_word_copy()` — which takes `uint32_t *`, so the compiler emits
+word loads and stores. The buffer was declared `static uint8_t page_buf[256]`,
+whose alignment requirement is **1**, so the linker packed it at whatever byte
+offset the previous `.bss` symbol happened to leave. An unaligned `STMIA` is a
+**HardFault on Cortex-M0+**, taken with `PRIMASK` set inside a function that never
+returns — an instant lockup, no console line, no breadcrumb. The board comes back
+only via BOOTSEL+UF2.
+
+⚠️ **This is why the bisect and the disassembly disagreed, and the disassembly was
+the misleading one.** A HID update that reported success then bricked the keyboard
+bisected cleanly to the macro PR (#234) — which touches nothing in the applier. And
+`fw_staging_do_apply` really was **byte-identical** across the regression: same
+address, same size, same instructions. What #234 changed was `.bss`: its label cache
+shifted `page_buf` from a 4-aligned address to `…ce3`, and the first page of the
+first sector faulted the core. Ten rounds of probes were aimed at the applier's
+*code* on the strength of that byte-identical comparison. **When a bisect blames a
+commit that cannot have touched the failing code, check whether it moved the failing
+code's DATA** — `arm-none-eabi-nm -S <elf> | grep <buffer>` and look at `addr % 4`.
+
+**The fix is the type, not an `aligned(4)` attribute**: the buffer is declared
+`static uint32_t page_buf[FLASH_PAGE_SIZE / 4]` and the `(uint32_t *)` casts are
+gone, so no later edit can silently reintroduce the hazard. `flash_range_program`
+takes `(const uint8_t *)page_buf`.
+
+Two things that made this diagnosable, and are worth keeping:
+- **The in-flash progress log** (`FW_APPLY_LOG_OFFSET`, `FW_STAGING_OFFSET + 1 MB`):
+  erased at the start of every apply, one page written per completed sector, plus
+  bracket markers around the first sector. It lives past the image, so it survives
+  the BOOTSEL recovery that reading it requires — the watchdog scratch does not
+  (scratch survives a watchdog reset, **not** a power cycle).
+- ⚠️ **The log markers worked while the copy did not, and that asymmetry IS the
+  clue.** GCC knew `page_buf` was byte-aligned, so it compiled
+  `((uint32_t *)page_buf)[0] = marker` into four `strb`s — which are fine unaligned.
+  Only the `uint32_t *`-typed helper got word instructions. So "flash writes work
+  here but that one copy dies" was pointing at alignment the whole time.
+
 ### Firmware signing enforcement & the on-keycap confirmation (FW-2)
 
 `rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so `fw_staging_finalize()` only stamps the
@@ -1531,7 +2061,68 @@ the looping "Eden" comet-field screensaver). The first two are described in deta
 below; IDDQD/EDEN are full-screen animations that own the keycaps via their own
 tick (`doom_tick()` / `startup_anim_tick()`), so `update_displays()` early-returns
 while they run (see "Eden startup animation & idle screensaver" below for EDEN):
-- **`IDLE_STYLE_PULSE` (0, default, legacy):** `kdisp_idle()` only modulates each
+
+⚠️ **The DEFAULT is board-dependent since 2026-08-31: `POLY_DEFAULT_IDLE_STYLE`
+(`state.h`) is EDEN on split72 and PULSE everywhere else.** Three things about that
+change generalise well beyond this setting:
+- ⚠️ **EDEN on split42 would have been an anti-burn-in setting that does NOTHING —
+  and the enum's own comment claimed it "behaves like PULSE".** It does not.
+  `anim/startup_anim.c` is `#if defined(KEYBOARD_polykybd_split72)` with no-op
+  stubs, *and* every other idle painter stands down for EDEN by design:
+  `kdisp_idle()` returns immediately, the engage branch holds contrast at
+  `EDEN_IDLE_BRIGHTNESS` instead of computing a pulse, and `update_displays()`
+  early-returns while `DISP_IDLE`. So the legends **freeze**, dim and unmoving,
+  until the TURN_OFF suspend — the one outcome this whole feature exists to
+  prevent. The default macro is gated on the **same** board macro the animation
+  compiles itself on, so a default whose renderer is not in the image is not
+  expressible. **Before defaulting anything to a feature with stubs, check what the
+  stub path actually leaves running** — "degrades gracefully" was written down and
+  was wrong.
+- ⚠️ **An explicit PULSE on a pre-2026-08-31 board is NOT RECOVERABLE, because the
+  old format never recorded it.** `IDLE_STYLE_PULSE` is 0 and QMK's wear levelling
+  hands back a cleared byte as **zero** (the trap that made `latin_assign` read as
+  "every key hosts 'a'"), so "chose pulse" and "never chose" are the *same byte*. No
+  migration scheme can separate them, which is what makes the one-time move of the
+  whole pre-sentinel population to the board default the honest reading rather than
+  a compromise. Say so plainly in release notes: **existing keyboards that never
+  picked JITTER/IDDQD/EDEN will come up in the new default once.**
+- **The fix for next time is the `idle_style_fmt` sentinel** (`0x3C`, tail byte,
+  same shape as `latin_ext_fmt` / `keymap_layers_fmt`). `load_user_eeconf()`
+  substitutes the board default while it is unstamped; `save_user_settings()` stamps
+  it **after** the block it guards, so an interrupted write cannot claim a choice
+  that was not stored. From the first save onwards the byte is taken verbatim — so a
+  *future* default change can no longer overwrite a real choice, which is exactly
+  the property this one lacked. `eeconfig_init_user()` writes both, so a fresh
+  EEPROM is born stamped and never migrates. Cost: `EECONFIG_USER_DATA_SIZE`
+  156 → 157, well inside the 256-byte reservation, so **no keymap relocation and no
+  user reset**.
+- **Verify the gate in the compiled object, not the preprocessor.** `g_idle_style`
+  lands in `.data` on split72 (initialiser `03` = EDEN) and in `.bss` on split42
+  (zero = PULSE) — one check per board, against the image that actually ships.
+  - ⚠️ **`objdump -s -j .data.<sym>` is NOT that check — it prints only the
+    file-format header and looks like an empty section.** GCC merges the symbol into
+    plain `.data` here, so no per-symbol section exists. ⚠️ `nm` is misleading too:
+    it reported `g_idle_style` as type **`t`** (text) for a symbol whose address is
+    inside `.data`'s VMA range. **Classify by ADDRESS against the section VMAs, then
+    read the byte** — which also gives you the value, not just the section:
+    ```bash
+    arm-none-eabi-nm -S <elf> | grep -w g_idle_style        # -> ADDR SIZE TYPE NAME
+    arm-none-eabi-objdump -h <elf> | awk '$2==".data"{print $4}'   # .data VMA
+    arm-none-eabi-objcopy -O binary --only-section=.data <elf> /tmp/data.bin
+    od -An -tu1 -j $(( ADDR - VMA )) -N1 /tmp/data.bin
+    ```
+    `.data` membership alone already proves it is not PULSE — a zero-initialised
+    static would be in `.bss`.
+- ⚠️ **A `static inline` helper is often emitted OUT-OF-LINE, so "grep the caller for
+  the flag address" reads as "the fix didn't take".** Verifying `kdisp_plot_ink`, all
+  five composite primitives showed **0** references to `s_gfx_erase`/`s_gfx_scanline`
+  — and were correct: GCC emitted the helper as a real local function and they `bl`
+  it. Grep for the **call**, not the data address:
+  `objdump -d <elf> | grep -c "bl.*<kdisp_plot_ink>"`. Same family as the note above:
+  when checking a change in the image, find the thing that MOVED, not the thing you
+  wrote.
+
+- **`IDLE_STYLE_PULSE` (0, legacy; the default on boards without Eden):** `kdisp_idle()` only modulates each
   keycap's SSD1306 contrast register (a per-key out-of-phase "breathing"). The
   buffer is never re-rendered, so the lit pixels never move — the burn-in risk.
 - **`IDLE_STYLE_JITTER` (1):** keeps the pulse, but **each key independently**
@@ -1593,7 +2184,11 @@ while they run (see "Eden startup animation & idle screensaver" below for EDEN):
     synced offset.)
   A "Matrix-style" idle animation was considered but shelved — it defeats the
   "glance at the dimmed legend and resume typing" hint the pulse preserves; jitter
-  was chosen as the default-preserving, legibility-preserving fix.
+  was chosen as the default-preserving, legibility-preserving fix. ⚠️ **That
+  reasoning no longer describes the shipped default on split72**, which is EDEN (see
+  the board-default note at the top of this section) — a deliberate trade of the
+  glance affordance for a screensaver that actually repaints the panel. It still
+  describes why JITTER, not an animation, was the fix *within* the pulse family.
 
 ### Eden startup animation & idle screensaver (`anim/startup_anim.*`, `poly_keymap.c`)
 A **fully procedural** (no framebuffer) per-keycap comet-field animation that
@@ -2152,9 +2747,12 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
   - ⚠️ **`HINT_ERASE` restores the PREVIOUS `s_gfx_erase`, not `false`.** It is a
     static plotter mode, so leaving it on blanks every keycap drawn after this one in
     the same pass — and a caller may already be mid-erase (the inverted-keycap
-    pattern), which a hardcoded `false` would clobber. It also covers only the text
-    paths; `\x0F`/`\x11` composite through `kdisp_draw_glyph_*_at`, which plot
-    unconditionally.
+    pattern), which a hardcoded `false` would clobber. ⚠️ It used to cover **only the
+    text paths** — `\x0F`/`\x11`/`\x15`/`\x13`/`\x12` composite through their own
+    primitives, which plotted unconditionally — so `HINT_ERASE` before a HALF or a
+    BADGE silently drew it lit. Fixed by the same choke-point move as the jitter
+    offset: every ink primitive now plots through **`kdisp_plot_ink()`**. See the
+    plotter-mode note below.
   - The arrow **alone** was rendered first and is too sparse to identify, and the
     Caps/Num badge glyphs could not be borrowed because they carry a literal `A` / `1`.
 - **Pause spells the word out**, at half the **L legend tier** (`0xF3000`) — 14 px
@@ -2259,13 +2857,65 @@ op-argument table, the SMALL/MID semantics and the baseline-shift rule.
   below always did) closes the class for the existing ops **and any op added later**.
   ⚠️ **So check a new op byte against those macros' argument bytes** — or rather,
   don't have to, now that MOVE consumes its own.
-- ⚠️ **The MOVE itself is still ignored** — bbox works relative to the
-  draw origin and MOVE names an ABSOLUTE buffer position, which is not knowable at
-  measure time, so a MOVE'd
-  legend's box still only covers the part laid out relatively. **Prefer the ordinary
-  cursor advance over a MOVE in a main legend** — that is why `ICON_MUTE` places its X
-  with `\f\f` and the glyph's own `xAdvance` rather than a MOVE.
-
+- ⚠️ **`kdisp_gfx_text_bbox()` still ignores the MOVE itself** — it works relative to
+  the draw origin and MOVE names an ABSOLUTE buffer position, which is not knowable
+  without one, so a MOVE'd legend's box only covers the part laid out relatively (and
+  the composite ops contribute no extent at all — measuring them at an unresolvable
+  cursor would be worse than skipping them). **Prefer the ordinary cursor advance over
+  a MOVE in a main legend** — that is why `ICON_MUTE` places its X with `\f\f` and the
+  glyph's own `xAdvance` rather than a MOVE.
+  - ✅ **There IS now a form that resolves it: `kdisp_gfx_text_bbox_abs()`**, which
+    takes the draw origin and returns the ABSOLUTE buffer box — MOVE resolved, and
+    `\x0F`/`\x11`/`\x15`/`\x13`/`\x12` measured at their real extents. The relative
+    form is unchanged to the byte (both are one walk in `bbox_walk()`, parameterised
+    by origin), so its 34 existing tests still pin it. **Use the absolute one whenever
+    you need to know where ALL of a legend lands** — which is exactly what the idle
+    jitter needs, and what it did not have (below).
+- ✅ **TWO bbox-vs-draw asymmetries were FIXED 2026-08-29 — both made the measured
+  box describe glyphs the draw would not produce.** Worth knowing they existed,
+  because the shape recurs: this function and the draw resolved glyphs by two
+  different routes, so they could disagree without either looking wrong.
+  1. **The `'!'` substitution had no `small` guard.** The measure path did
+     `if (!f) { f = pool[0]; …; ch = U'!'; }` unconditionally, while the SMALL draw
+     (`kdisp_write_gfx_char_half`) does `if (glyph == NULL …) return 0;` — no ink and
+     **no advance**. So a `HINT_SMALL` run containing an uncovered codepoint measured a
+     half-`'!'` *and* spent an advance the draw never spends, putting every following
+     glyph at the wrong x.
+  2. **The scan did not skip 0x0 GAP records.** It was a bare
+     `if (ch >= first && ch <= last) { f = pool[i]; break; }`, where every draw path
+     goes through `kdisp_gfx_glyph_font`, which skips a `{0,0,0,0,0,0}` padding record
+     so a later font wins. A codepoint inside a padded span — Pashto letters under
+     `_PerArab_`'s wider range — measured the empty gap while the draw resolved a real
+     glyph from the next font.
+  **The fix is one line of intent: resolve through `kdisp_gfx_glyph_font`, the same
+  lookup the draw uses**, and skip the codepoint instead of substituting when a SMALL
+  run finds nothing. Don't reintroduce a private range scan here — that is what made
+  (2) possible, and a second resolver can always drift from the first.
+  - **It mattered because `plan_main_legend()` positions the main legend from this box
+    and clamps it to the panel**, and `roll_idle_offset()` derives a glyph's idle travel
+    from it — so a wrong box is a mis-placed or clipped legend, not just a wrong number.
+    Reachability was narrow (a legend needs a missing glyph *and* a size op, or a gapped
+    codepoint), which is why nothing had reported it.
+  - ⚠️ **The old C suite passed over BOTH.** `GapRecordFallsThroughToTheNextFont` covers
+    the *resolver*, not the bbox, and there was no missing-glyph-in-a-SMALL-run case at
+    all — 34 tests, neither asymmetry visible. The two added with the fix
+    (`SmallSkipsAMissingGlyphInsteadOfSubstitutingBang`, `FontBboxGapTest`) were
+    confirmed to FAIL against the pre-fix file and pass after, with the other 34
+    unmoved. **A suite that measures a resolver is not measuring its callers.**
+  - ⚠️ **The host's Python mirror moves with this.** `PolyKybdHost`'s
+    `oled_preview.Renderer` reproduces this function; it already skipped gaps (so (2)
+    was never wrong there) but deliberately pinned the `'!'` substitution as C parity.
+    ✅ **That pin has been INVERTED to match (PolyKybdHost#209, 2026-09-01)** —
+    `Renderer.bbox()` now skips an unresolvable glyph in a `HINT_SMALL` run too, and
+    its test is ported from `SmallSkipsAMissingGlyphInsteadOfSubstitutingBang`.
+    ⚠️ **The general point outlives this instance: a cross-repo parity pin is a
+    LIABILITY the moment one side moves, because nothing fails when it goes stale.**
+    Neither suite would have gone red — the host would simply have been wrong in the
+    opposite direction, silently. Measured after the fix: of the host's 197 static
+    legends, 12 use `HINT_SMALL` and **none** carries a glyph the pool cannot resolve,
+    so nothing rendered differently either way, which is exactly why only a written
+    note could have caught it. **When you pin parity, name the change on the other
+    side that would invalidate the pin.**
 **The legend-size key is now ONE key that states its own tier.** `KC_GLYPH_SIZE_UP` on
 `_UL` draws `ICON_FONT_BIGGER` plus the current tier as a digit in the top-right;
 holding **Shift** swaps the icon to `ICON_FONT_SMALLER` and reverses the step, so the

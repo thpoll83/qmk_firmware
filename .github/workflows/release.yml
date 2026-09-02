@@ -17,6 +17,8 @@ concurrency:
 
 permissions:
   contents: write
+  # The pre-publish gate below reads this repo's workflow runs + jobs.
+  actions: read
 
 env:
   KB: polykybd/split72
@@ -30,6 +32,36 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      # ── refuse to publish firmware no APPLY run has covered ─────────────────
+      # The HID-apply brick (qmk#258) shipped in a release because nothing ever
+      # applied an image on hardware: the rig flashes by UF2 over GPIO BOOTSEL,
+      # which bypasses fw_staging entirely, and this workflow runs no HIL at all.
+      # qmk-test.yml's fwapply tier now runs on every merge to PolyKybd, so in the
+      # normal case this is a formality — it is here for the cases that are not
+      # normal (a hand-made tag, a re-publish, a merge whose rig run went red and
+      # was forgotten), where the failure is silent and costs a release.
+      #
+      # ⚠️ It runs BEFORE the build so a refusal costs nothing and, more
+      # importantly, changes nothing: no assets uploaded, no release body edited.
+      #
+      # ⚠️ The release tag does NOT point at a commit any workflow ran on —
+      # release tags land on the auto-bump "chore: … [skip ci]" commit, and
+      # [skip ci] suppresses the run. So the script walks back through ancestors
+      # and then PROVES the delta to the release commit is only the FW_VERSION
+      # bump; accepting an ancestor without that proof would report coverage
+      # belonging to different firmware, which is worse than no gate.
+      #
+      # Self-tested (mutation-checked) — `--selftest` is why the decision logic
+      # in a release gate is not the only untested code in the repo.
+      - name: Require a green firmware-apply run for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          python3 keyboards/polykybd/tools/require_fwapply_run.py --selftest
+          python3 keyboards/polykybd/tools/require_fwapply_run.py
 
       # Shipping shape is the POLYKYBD_DOOM_PACK flavour (doom/PACK_DESIGN.md):
       # the doom easter egg's loader + trigger compile in, the engine ships as a
@@ -153,9 +185,32 @@ jobs:
         run: |
           TARGET=$(echo "${{ env.KB }}" | tr '/' '_')_${{ env.KM }}
           PACK_VER=$(cat keyboards/polykybd/doom/pack/PACK_VERSION)
-          ASSETS=( "${TARGET}.uf2" "${TARGET}.bin" "doom_pack_v${PACK_VER}.plyx" )
+          # ⚠️ Stamp the VERSION into the asset filenames. Every release used to
+          # ship "polykybd_split72_default.{uf2,bin,bin.sig}", identical across all
+          # releases, so downloading two versions to compare them collides in the
+          # browser and you get "... (1).bin" / "... (2).bin" with nothing to say
+          # which is which. That is not cosmetic: it produced a mis-flash during a
+          # firmware-update bisect (#258) and sent the investigation to a wrong
+          # conclusion for several rounds. The board cannot help either -- every
+          # test build reports its own FW_VERSION only once it is already running.
+          #
+          # Safe for the host updater: polyhost/services/updater.py selects assets
+          # by SUFFIX (endswith ".bin" / ".uf2" / ".bin.sig"), never by exact name,
+          # so the version prefix is invisible to it. Keep the suffixes intact --
+          # and note ".bin.sig" must keep ending in ".bin.sig", since the updater
+          # tests it BEFORE ".bin".
+          VER="${TAG#PolyKybd-fw-v}"
+          NAMED="polykybd_split72_v${VER}"
+          cp "${TARGET}.uf2" "${NAMED}.uf2"
+          cp "${TARGET}.bin" "${NAMED}.bin"
+          ASSETS=( "${NAMED}.uf2" "${NAMED}.bin" "doom_pack_v${PACK_VER}.plyx" )
           # Include the detached signature when the Sign step produced one (FW-2).
-          [ -f "${TARGET}.bin.sig" ] && ASSETS+=("${TARGET}.bin.sig")
+          # It must travel as "<bin>.sig" of the RENAMED bin, or hid_fw_up.py will
+          # not find it (sig_path = bin_path + ".sig").
+          if [ -f "${TARGET}.bin.sig" ]; then
+            cp "${TARGET}.bin.sig" "${NAMED}.bin.sig"
+            ASSETS+=("${NAMED}.bin.sig")
+          fi
           if [ "$HAVE_NOTES" = "1" ]; then
             NOTES_ARGS=( --title "$TITLE" --notes-file _release_body.md )
           else

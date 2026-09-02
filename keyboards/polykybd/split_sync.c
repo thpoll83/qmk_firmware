@@ -494,7 +494,17 @@ void user_sync_mru_data_handler(uint8_t in_len, const void* in_data, uint8_t out
 void user_sync_doom_mirror_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     SYNC_VALIDATE_OR_RETURN(doom_mirror_msg_t);
     const doom_mirror_msg_t* msg = (const doom_mirror_msg_t *)in_data;
+    // ⚠️ Widens alignment (uint8_t* -> a struct of uint32_t), the shape that
+    // bricked the applier (qmk#258). Safe, and asserted rather than assumed:
+    // DOOM_ARENA_MIRROR_OFF is _Static_assert'ed 4-aligned in doom_arena.h over
+    // a 4-aligned arena base. doom_arena_at() cannot simply return void* — that
+    // signature is the pack ABI (doom_pack_abi.h), see rules.mk — so the check
+    // is suppressed for this one line, never file-wide, and never by laundering
+    // the cast through uintptr_t, which would silence it while proving nothing.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
     doom_mirror_t* m = (doom_mirror_t *)doom_arena_at(DOOM_ARENA_MIRROR_OFF);
+#pragma GCC diagnostic pop
     if (m != NULL) {
         switch (msg->kind) {
             case DOOM_MIRROR_MSG_TIC: {

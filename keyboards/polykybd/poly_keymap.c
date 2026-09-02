@@ -1725,6 +1725,14 @@ static void plan_main_legend(const uint32_t* text, int8_t small_x, int8_t small_
                      scratch, scratch_cap, out);
 }
 
+// Slide a hint's origin so its measured ink lands on the panel. The main legend
+// gets this inside legend_plan_main(); the Shift preview and the AltGr hint call it
+// here, so all three elements share ONE definition of the panel edge.
+static inline void clamp_legend(int8_t* x, int8_t* y,
+                                int8_t xmin, int8_t xmax, int8_t ymin, int8_t ymax) {
+    legend_plan_clamp(&legend_plan_env, x, y, xmin, xmax, ymin, ymax);
+}
+
 static inline void draw_main_legend(const main_legend_t* p) {
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, p->x, p->y, p->text);
 }
@@ -2219,7 +2227,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         // ⚠️ The preview stays at the SMALL size by design: a keycap has room for one
         // big thing, and the whole point of the size setting is the main legend.
         const uint32_t* shift_letter = NULL;
-        int8_t preview_x = 0, preview_v = 0;
+        int8_t preview_x = 0, preview_y = 0;
         int8_t pmin = 0, pmax = 0, pymin = 0, pymax = 0;
         if(!shift && !state.caps_lock) {
             int8_t v_pv = get_setting(v_set, local_state->lang, VAR_SHIFT);
@@ -2232,16 +2240,22 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                     preview_x = 28+h_pv;
                     if (preview_x + pmin < base_plan.ink_max + 2)         // keep clear of the base
                         preview_x = base_plan.ink_max + 2 - pmin;
-                    if (preview_x + pmax > BUFFER_X + SCREEN_WIDTH - 1)   // clamp to the right edge
-                        preview_x = (BUFFER_X + SCREEN_WIDTH - 1) - pmax;
-                    preview_v = v_pv;
+                    preview_y = (int8_t)(23 + v_pv);
+                    clamp_legend(&preview_x, &preview_y, pmin, pmax, pymin, pymax);
                     if (preview_x + pmin <= base_plan.ink_max) {          // forced to overlap -> stagger
-                        // ⚠️ Only the SMALL base can be lifted. A big one was already
-                        // clamped to the panel by plan_main_legend(), so lifting it
-                        // 6 px would push its ink off the top — exactly the clipping
-                        // the clamp exists to prevent. Drop the preview either way.
-                        if (!base_plan.big) base_plan.y -= 6;             // lift the flat base
-                        preview_v += 4;                                   // drop the preview
+                        // Both moves are re-clamped: the panel edge wins over the
+                        // stagger, which is a readability nicety and not worth a
+                        // clipped glyph. (Before the clamp covered the small base
+                        // too, this lift could push a tall flat legend off the top.)
+                        if (!base_plan.big) {
+                            base_plan.y -= 6;                             // lift the flat base
+                            clamp_legend(&base_plan.x, &base_plan.y, base_plan.box_xmin,
+                                         base_plan.box_xmax, base_plan.box_ymin, base_plan.box_ymax);
+                            base_plan.ink_min = (int8_t)(base_plan.x + base_plan.box_xmin);
+                            base_plan.ink_max = (int8_t)(base_plan.x + base_plan.box_xmax);
+                        }
+                        preview_y += 4;                                   // drop the preview
+                        clamp_legend(&preview_x, &preview_y, pmin, pmax, pymin, pymax);
                     }
                 }
             }
@@ -2251,15 +2265,13 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         // shift preview above is resolved first: the two hints have to be laid out
         // as a pair (see the separation block below).
         const uint32_t* alt_letter = NULL;
-        int8_t alt_x = 0, alt_v = 0, aymin = 0, aymax = 0;
+        int8_t alt_x = 0, alt_y = 0, aymin = 0, aymax = 0;
         uint32_t alt_scratch[ALTGR_HALF_MAX_LEN + 2];   // HINT_SMALL + the cell + NUL
         letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
             int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
             int8_t h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
-                // Clamp to the right edge like the shift preview — wide glyphs
-                // (e.g. @ on the French/Tahitian 0 key) otherwise clip off-screen.
                 int8_t amin, amax;
                 kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter, &amin, &amax, &aymin, &aymax);
 
@@ -2310,10 +2322,9 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // clear of the base's ink, exactly as the shift preview does.
                 if (base_plan.big && alt_x + amin < base_plan.ink_max + 2)
                     alt_x = (int8_t)(base_plan.ink_max + 2 - amin);
-                if (alt_x + amax > BUFFER_X + SCREEN_WIDTH - 1)
-                    alt_x = (int8_t)((BUFFER_X + SCREEN_WIDTH - 1) - amax);
+                alt_y = (int8_t)(23 + v_off);
+                clamp_legend(&alt_x, &alt_y, amin, amax, aymin, aymax);
                 alt_letter = letter;
-                alt_v = v_off;
 
                 // Keep the two hints off EACH OTHER. Both sit right of the base —
                 // shift upper, AltGr lower — and it is their VERTICAL offsets that
@@ -2331,16 +2342,20 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
                 // Where three wide glyphs genuinely do not fit on 72 px the pull
                 // still shrinks the overlap rather than removing it.
                 if (shift_letter != NULL) {
-                    const int8_t sy0 = (int8_t)(23 + preview_v + pymin);
-                    const int8_t sy1 = (int8_t)(23 + preview_v + pymax);
-                    const int8_t ay0 = (int8_t)(23 + alt_v + aymin);
-                    const int8_t ay1 = (int8_t)(23 + alt_v + aymax);
+                    const int8_t sy0 = (int8_t)(preview_y + pymin);
+                    const int8_t sy1 = (int8_t)(preview_y + pymax);
+                    const int8_t ay0 = (int8_t)(alt_y + aymin);
+                    const int8_t ay1 = (int8_t)(alt_y + aymax);
                     if (preview_x + pmin <= alt_x + amax && alt_x + amin <= preview_x + pmax
                         && sy0 <= ay1 && ay0 <= sy1) {
                         int16_t want  = (int16_t)(alt_x + amin - 2 - pmax);
                         const int16_t floor_x = (int16_t)(base_plan.ink_max + 2 - pmin);
                         if (want < floor_x) want = floor_x;
                         if (want < preview_x) preview_x = (int8_t)want;
+                        // The pull only ever moves LEFT, so only the west edge can be
+                        // violated — but re-clamp through the shared helper rather
+                        // than open-coding that one test here.
+                        clamp_legend(&preview_x, &preview_y, pmin, pmax, pymin, pymax);
                     }
                 }
             }
@@ -2348,9 +2363,9 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
         draw_main_legend(&base_plan);
         if (shift_letter != NULL)
-            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, preview_x, 23+preview_v, shift_letter);
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, preview_x, preview_y, shift_letter);
         if (alt_letter != NULL)
-            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, alt_x, 23+alt_v, alt_letter);
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, alt_x, alt_y, alt_letter);
         return true;
     }
     return false;

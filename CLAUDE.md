@@ -1699,6 +1699,40 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   - **`bn-BD KC_H` is the key the pull alone could NOT fix** — a 22 px base plus a
     27 px Shift plus a 37 px AltGr will not fit 72 px at full size, so the pull could
     only shrink it 29 → 22 px. Halving the AltGr hint (below) is what closes it.
+- **EVERY element of a keycap is clamped onto the panel, on ALL FOUR edges, through
+  ONE helper — `legend_plan_clamp()` (`base/legend_plan.c`).** The main legend, the
+  Shift preview and the AltGr hint all pass their measured ink box through it, so
+  they cannot disagree about where the edge is. Two things about this are worth
+  knowing before touching any of them:
+  - ⚠️ **It replaced an ASYMMETRY, not an absence, and the asymmetry is what made the
+    off-panel ink invisible.** The big legend tiers had been clamped on all four edges
+    inside `plan_main_legend()` since they shipped, and the two hints had a
+    right-edge-only clamp — while the **small base legend had none at all**. So a
+    per-language `VAR_SMALL` offset tuned for one script's glyph heights, applied to
+    every key of the layout, silently pushed ink off the north or west edge and it was
+    simply lost. Measured over all 160 layouts × 49 keys: **420 keys / 3934 px**
+    clipped, of which 305 elements were small base legends (worst `th-TH KC_E`, 8 px
+    off the west edge) and 138 Shift previews (worst `ku-IQ KC_L`, 8 px off the top).
+  - **Nothing is wider than the panel and exactly ONE element is taller** (he-IL's
+    43 px standalone nikud on `KC_BACKSLASH`), so the clamp is a no-op for anything
+    already inside the window and the change is confined to the keys that were losing
+    ink. Measured after: **1 key / 9 px**, which is that one glyph in a 40 px panel.
+  - ⚠️ **The clamp order decides which edge loses on an over-size glyph** — E before W
+    (west wins), N before S (south wins, so the top clips). Preserved from the big
+    path rather than chosen; changing it moves those 9 px and nothing else.
+  - **The stagger and the hint pull are re-clamped after they move something**, so the
+    panel edge beats a readability nicety. That matters most for the 6 px lift the
+    overlap stagger applies to a *small* base — which, now that a small base is
+    clamped, could otherwise push a tall legend straight back off the top.
+  - ⚠️ **A big per-language offset is therefore a NO-OP past saturation rather than a
+    way to hide a glyph.** `HIDE_KEY` (-128) is the hide mechanism and is checked
+    before any of this, so nothing that relied on hiding changes; but the keycap tuner
+    sliders now stop moving an element at the edge for all three, where before only the
+    two hints saturated and the base ran off the panel.
+  - **Cost: `.text` +432 B, `.rodata`/`.data`/`.bss` byte-identical, monolith `.heap`
+    free unchanged at 2772.** The bboxes were already computed for all three elements,
+    so the clamp is a handful of compares per element on data the render path had
+    anyway.
 - **The AltGr hint is drawn at HALF size on the layouts that ask for it, and WHICH
   layouts is DATA — `{letter|num|sym.altgrhalf}`, rows 62–64 of `lang_lut.xlsx`.** It is a hint —
   what the key would type under a modifier nobody is holding — so on a script whose
@@ -2635,17 +2669,16 @@ like the glyph script:
     next glyph. Measured, so it can be re-checked: every op present is one of those five
     and every one **leads** the legend (`0x0C` ×150, `0x0B` ×8, `0x06` ×9, `0x08` ×1,
     `0x05` ×1; **not one after a glyph**).
-  - ⚠️ **DROPPED rather than carried, because `kdisp_gfx_text_bbox()` and the DRAW
-    disagree about these ops** — a pre-existing inconsistency this was the first code to
-    depend on. `\f` is `y = y > 1 ? y - 2 : 0` applied to the cursor; the draw runs it from
-    the real baseline (23/25/28) where it genuinely lifts 2 px, while bbox runs it from
-    `y = 0` **relative** to the baseline, where the ternary saturates and it does nothing.
-    So carrying the op moves the glyph by an amount `plan_main_legend()`'s clamp cannot
-    see. Carrying it was tried first and clipped 6–8 px off the accents of `é è à` at M/L
-    — and the reasoning that predicted it would be safe ("the clamp measures the same
-    ops") was wrong for exactly this reason. Dropped, the measured bbox **is** what gets
-    drawn, and nothing is lost: the nudge was tuned for the small face's fixed baseline,
-    which is the thing the planner replaces.
+  - ⚠️ **DROPPED rather than carried — and the REASON CHANGED on 2026-09-02, so do not
+    restore the op on the old rationale.** It used to be that `kdisp_gfx_text_bbox()`
+    and the draw disagreed about `\f`: the draw clamps its cursor at buffer 0, while the
+    relative walk starts at 0 where that clamp swallowed the lift entirely and the op
+    measured as a no-op. **That is fixed** (see the `saturate` note under the bbox
+    section below), so the measured box now matches the draw for these ops too. What
+    remains is that the nudge was hand-tuned for the SMALL face's fixed baseline — 2 px
+    lifts chosen against a 27 px glyph at baseline 23 — and the planner replaces exactly
+    that baseline with a measured, clamped one. Carrying it was tried and clipped 6–8 px
+    off the accents of `é è à` at M/L.
   - **Measured after the fix**: 1467 of 1500 latin number-row keys reach the bigger face
     (was 1338); the 33 that don't are genuinely non-latin (Thai, Bopomofo, Armenian,
     Cherokee, Vietnamese PUA composites). Clipped pixels **drop** at M/L rather than
@@ -2951,6 +2984,29 @@ op-argument table, the SMALL/MID semantics and the baseline-shift rule.
     by origin), so its 34 existing tests still pin it. **Use the absolute one whenever
     you need to know where ALL of a legend lands** — which is exactly what the idle
     jitter needs, and what it did not have (below).
+- ✅ **A THIRD asymmetry, FIXED 2026-09-02, and it was the biggest of the three by
+  pixels: the RELATIVE walk saturated the cursor nudges at 0.** `\f` is `y = y > 1 ?
+  y - 2 : 0` and `\b` the same in x — correct in the DRAW, where the cursor is a real
+  buffer coordinate and 0 is the panel edge, and wrong in a relative walk that *starts*
+  at 0, where the clamp swallows the nudge and the op measures as a no-op.
+  `bbox_walk()` now takes a `saturate` flag: **false for the relative form, true for
+  the absolute one**, which is the draw's own rule at a real origin.
+  - **It mattered because 73 of the 160 layouts' legends open with one to six of these
+    nudges** — `é è ç à` on AZERTY are `\f\f <letter>`, cs-CZ uses four, he-IL's
+    `KC_BACKSLASH` AltGr six — so the measured box sat up to **12 px** below its own
+    ink and `render_key()`'s panel clamp could not see the overrun. With the four-edge
+    clamp in place but the saturation still there, 11 keys / 92 px stayed clipped; with
+    both, **1 key / 9 px**, and that one is a 43 px glyph in a 40 px panel.
+  - **The test that pins it is the RELATIONSHIP, not either number**:
+    `RelativeAndAbsoluteAgreeAcrossTheCursorNudges` requires that shifting the origin
+    shifts the box by exactly that much, for each nudge. Two older tests asserted the
+    saturation as the contract (`measure({'\f','a'}) == measure({'a'})`) and were
+    inverted — a pinned behaviour is only as good as the reason it was pinned.
+  - ⚠️ **The host mirror moved with it** (`oled_preview.Renderer.bbox`, and the JS in
+    `keycap_tuner_template.html`), and `tests/tools/oled_preview_bbox_test.py` carries
+    the same two inverted fixtures. This is the cross-repo parity pin the note below
+    warns about, working as intended: name the change that invalidates it, then make it
+    on both sides in one go.
 - ✅ **TWO bbox-vs-draw asymmetries were FIXED 2026-08-29 — both made the measured
   box describe glyphs the draw would not produce.** Worth knowing they existed,
   because the shape recurs: this function and the draw resolved glyphs by two

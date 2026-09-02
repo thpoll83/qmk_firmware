@@ -194,14 +194,36 @@ TEST_F(FontBboxTest, MixedRunUnionsBothFontsBoxes) {
 
 TEST_F(FontBboxTest, VerticalNudgesMoveTheBaseline) {
     EXPECT_EQ(measure({0x05, 'a'}), (Box{1, 6, -8, 1}));            // down 2
-    EXPECT_EQ(measure({'\f', 'a'}), measure({'a'}));                // up 2 saturates at 0
+    // ⚠️ Up 2 really moves the RELATIVE box up 2. The draw clamps its cursor at buffer
+    // 0, which in a relative walk starting at 0 would swallow the lift and report the
+    // op as a no-op — the disagreement that let 73 layout legends (`\f\f <letter>` on
+    // AZERTY) measure up to 12 px below their own ink.
+    EXPECT_EQ(measure({'\f', 'a'}), (Box{1, 6, -12, -3}));          // up 2
     EXPECT_EQ(measure({0x05, 0x05, '\f', 'a'}), (Box{1, 6, -8, 1})); // 4 down, 2 back up
 }
 
 TEST_F(FontBboxTest, HorizontalNudgesMoveTheCursor) {
     EXPECT_EQ(measure({0x06, 'a'}), (Box{3, 8, -10, -1}));   // right 2
-    EXPECT_EQ(measure({'\b', 'a'}), measure({'a'}));         // back 2 saturates at 0
+    EXPECT_EQ(measure({'\b', 'a'}), (Box{-1, 4, -10, -1})); // back 2 (same rule as \f)
     EXPECT_EQ(measure({'a', '\b', 'a'}), (Box{1, 12, -10, -1})); // second at x=6
+}
+
+// The property that makes the relative form usable as a CLAMP input: shifting the
+// origin shifts the box by exactly that much, for a legend that carries the leading
+// cursor nudges. It failed before the saturation was scoped to the absolute walk —
+// which is the whole reason render_key()'s panel clamp could not see the overrun.
+TEST_F(FontBboxTest, RelativeAndAbsoluteAgreeAcrossTheCursorNudges) {
+    for (std::initializer_list<uint32_t> t : {std::initializer_list<uint32_t>{'\f', 'a'},
+                                              {'\f', '\f', 'a'},
+                                              {'\b', 'a'},
+                                              {0x05, 0x06, 'a'}}) {
+        const Box rel = measure(t);
+        const Box abs = measure_abs(t, 28, 23);
+        EXPECT_EQ(abs.xmin, (int8_t)(rel.xmin + 28));
+        EXPECT_EQ(abs.xmax, (int8_t)(rel.xmax + 28));
+        EXPECT_EQ(abs.ymin, (int8_t)(rel.ymin + 23));
+        EXPECT_EQ(abs.ymax, (int8_t)(rel.ymax + 23));
+    }
 }
 
 TEST_F(FontBboxTest, CarriageReturnRestartsXOnly) {

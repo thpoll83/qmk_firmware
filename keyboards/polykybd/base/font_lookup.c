@@ -84,7 +84,7 @@ void kdisp_gfx_rot_half_extent(int16_t w, int16_t h, uint8_t step, kdisp_rot_hal
 // plot AT the cursor through primitives of their own, rather than advancing it).
 static void bbox_walk(const GFXfont *const *fonts, uint8_t num_fonts,
                       const GFXfont *const *mid_font, uint8_t mid_count, const uint32_t *text,
-                      int16_t ox, int16_t oy, bool resolve,
+                      int16_t ox, int16_t oy, bool resolve, bool saturate,
                       int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax) {
     // Cursor. Mirrors every cursor rule of kdisp_write_gfx_text_cy, including the
     // vertical controls, so the measured box matches what would actually be drawn —
@@ -104,11 +104,22 @@ static void bbox_walk(const GFXfont *const *fonts, uint8_t num_fonts,
     while (*text != 0) {
         switch (*text) {
             case U'\x05':                     y += 2; break; // down 2px
-            case U'\f':                       y = y > 1 ? y - 2 : 0; break; // up 2px
+            // ⚠️ `saturate` is what makes the RELATIVE box describe the glyphs the
+            // draw actually produces. The draw clamps the cursor at buffer 0 — right
+            // there, wrong in a relative walk that starts at 0, where the clamp
+            // swallows the lift entirely and `\f` measures as a no-op. That
+            // disagreement was real: 73 legends across the 160 layouts open with one
+            // to six of these nudges (`é è ç à` on AZERTY are `\f\f <letter>`), so
+            // the measured box sat up to 12 px below the ink and the panel clamp in
+            // render_key() could not see the overrun. Measured, the last 92 px of
+            // off-panel ink across every layout was exactly this. The saturating form
+            // stays for the ABSOLUTE walk, where the origin is real and the clamp is
+            // the draw's own rule.
+            case U'\f':                       y = (saturate && y <= 1) ? 0 : y - 2; break; // up 2px
             case U'\v':                       y += ((y - oy) / 15 + 1) * 15; break;
             case U'\x18':                     x = ox; y = oy; break; // cancel -> origin
             case U'\r':                       x = ox; break;
-            case U'\b':                       x = x > 1 ? x - 2 : 0; break;
+            case U'\b':                       x = (saturate && x <= 1) ? 0 : x - 2; break;
             case U'\x06':                     x += 2; break; // nudge right 2px
             case U'\t':                       x += ((x - ox) / 36 + 1) * 36; break;
             case U'\n':                       y += base_yadv; x = ox; break;
@@ -286,7 +297,7 @@ static void bbox_walk(const GFXfont *const *fonts, uint8_t num_fonts,
 void kdisp_gfx_text_bbox_in(const GFXfont *const *fonts, uint8_t num_fonts,
                             const GFXfont *const *mid_font, uint8_t mid_count, const uint32_t *text,
                             int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax) {
-    bbox_walk(fonts, num_fonts, mid_font, mid_count, text, 0, 0, false,
+    bbox_walk(fonts, num_fonts, mid_font, mid_count, text, 0, 0, false, false,
               out_xmin, out_xmax, out_ymin, out_ymax);
 }
 
@@ -294,6 +305,6 @@ void kdisp_gfx_text_bbox_abs_in(const GFXfont *const *fonts, uint8_t num_fonts,
                                 const GFXfont *const *mid_font, uint8_t mid_count, const uint32_t *text,
                                 int8_t origin_x, int8_t origin_y,
                                 int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax) {
-    bbox_walk(fonts, num_fonts, mid_font, mid_count, text, origin_x, origin_y, true,
+    bbox_walk(fonts, num_fonts, mid_font, mid_count, text, origin_x, origin_y, true, true,
               out_xmin, out_xmax, out_ymin, out_ymax);
 }

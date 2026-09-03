@@ -195,3 +195,13 @@ void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
 void kdisp_draw_tab_frame(void);
 void kdisp_draw_tab_underline(void);
 
+// Saturating narrow to int8_t. Buffer coordinates, the jitter offset and the
+// per-layout legend offsets are all int8_t, and their sum can leave the range —
+// where a silent wrap draws the art at a WRONG place instead of letting the panel
+// clamp pin it at the edge. Shared rather than duplicated because poly_keymap.c's
+// AltGr-held placement adds two of those offsets together (ps-AF's letter H offset
+// is already 65, leaving +34 before 28+H+held wraps).
+static inline int8_t kdisp_sat8(int16_t v) {
+    return (int8_t)((v < -128) ? -128 : ((v > 127) ? 127 : v));
+}
+

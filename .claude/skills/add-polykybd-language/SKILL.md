@@ -72,13 +72,25 @@ Rule of thumb: **identical keymap → fold; different keymap → its own column.
 Add `PK/lang/_gen_<batch>_cols.py` modelled on the existing ones
 (`_gen_euam_cols.py`, `_gen_world_cols.py`). Each language = `{row: [VAR_SMALL,
 VAR_SHIFT, VAR_CAPS, VAR_ALTGR]}`; rows 2–55 = keys (`KC_A`=2 … `KC_Z`=27,
-`KC_1..0`=28..37, plus the punctuation rows), rows 56–61 = settings
-(letter/num/sym h/v offsets). Cell = `None | ["num",n] | ["str",token]`. Helpers:
+`KC_1..0`=28..37, plus the punctuation rows), rows 56–64 = settings
+(letter/num/sym h/v offsets, then `{letter|num|sym.altgrhalf}` at rows **62–64**). Cell =
+`None | ["num",n] | ["str",token]`. Helpers:
 `clone_col(sheet, langs, src)` copies a source column incl. settings; overlay a
 dict of per-key overrides on top.
 
 Output `/tmp/<batch>_cols.json` (the column spec) and `/tmp/<batch>_named.json`
 (new named glyphs `[[NAME, HEXCP], …]`).
+
+⚠️ **`{letter|num|sym.altgrhalf}` (rows 62–64) is a per-layout, per-category opt-in,
+and blank is the right default.** Put `1` in the **VAR_ALTGR** sub-column when the
+script's glyphs fill the keycap — every Arabic-script and Indic layout does, for
+`letter` — and that category's AltGr hint is then drawn at half size so it reads as
+subordinate. Only the `letter` row is set today. A blank cell
+means full size, so a new language is safe either way. It is a *layout* judgement,
+not a glyph measurement: AltGr ink height is the same on Latin and Arabic (median
+21 vs 20 px), which is exactly why this is data and not a threshold in the C.
+`lang/_insert_settings_row.py` is what adds a settings row in the first place —
+they must stay contiguous from 56, so a new one is INSERTED, not appended.
 
 ### Cell semantics (cog `make_key`)
 A cell becomes a C token: starts with `u"` **or** is a name in the `named_glyphs`

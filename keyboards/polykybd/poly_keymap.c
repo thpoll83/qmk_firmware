@@ -1725,6 +1725,14 @@ static void plan_main_legend(const uint32_t* text, int8_t small_x, int8_t small_
                      scratch, scratch_cap, out);
 }
 
+// Slide a hint's origin so its measured ink lands on the panel. The main legend
+// gets this inside legend_plan_main(); the Shift preview and the AltGr hint call it
+// here, so all three elements share ONE definition of the panel edge.
+static inline void clamp_legend(int8_t* x, int8_t* y,
+                                int8_t xmin, int8_t xmax, int8_t ymin, int8_t ymax) {
+    legend_plan_clamp(&legend_plan_env, x, y, xmin, xmax, ymin, ymax);
+}
+
 static inline void draw_main_legend(const main_legend_t* p) {
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, p->x, p->y, p->text);
 }
@@ -1950,6 +1958,14 @@ static const uint32_t* latin_variation(uint16_t keycode, bool upper_case) {
     return (chosen != NULL) ? chosen : latin_ex_map[row][0];
 }
 
+// The AltGr hint is drawn half-scale unless its ink is this tall or shorter. See
+// the comment at the use site for why 7 is a measured gap and not a taste call.
+#define ALTGR_HALF_MIN_INK_H 7
+// Longest AltGr cell the halving scratch can hold. The longest in the LUT today is
+// 9 codepoints (ps-AF KC_Z, five cursor nudges then the glyph); a longer one simply
+// stays full size rather than being truncated.
+#define ALTGR_HALF_MAX_LEN   12
+
 bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // ⚠️ A mod-tap's LEGEND is its tap keycode's legend. to_static_text() unwraps
     // this one function away, and update_displays() consults render_key() exactly
@@ -2127,37 +2143,96 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     if (mods & MOD_RALT) {
         const uint32_t* letter = translate_keycode_only_altgr(local_state->lang, keycode);
         if (letter != NULL) {
-            const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
+            // Draw it WHERE THE RESTING VIEW DRAWS THE HINT: this key's own category
+            // and its VAR_ALTGR offsets, so holding AltGr enlarges the glyph in place
+            // instead of teleporting it across the keycap. Measured over the 1719
+            // AltGr cells, 1148 (67%) land exactly on the hint's position and the
+            // rest are pulled back a median 5 px by the clamp below — which is the
+            // only reason this is safe to do at all (worst: the ar-* KC_F letters at
+            // 34-38 px, where a wide script glyph cannot fit at x=+55).
+            //
+            // ⚠️ This replaced a defensive MIXTURE that predates the clamp: the
+            // NUM-or-SYM category even on a LETTER key, H from VAR_SMALL, and V as
+            // PK_MIN(VAR_SMALL, VAR_ALTGR). That kept the glyph near the base legend
+            // where it could not fall off, at the cost of using offsets belonging to
+            // a different category and a different variation than the glyph drawn.
             int8_t v_set;
             int8_t h_set;
-            if(is_num){
-                v_set = SETTING_NUM_VOFFSET;
-                h_set = SETTING_NUM_HOFFSET;
+            int8_t held_v_set;   // {<cat>.heldvoffset} — the delta from the hint position
+            int8_t held_h_set;   // {<cat>.heldhoffset}
+            if(is_letter) {
+                v_set      = SETTING_LETTER_VOFFSET;
+                h_set      = SETTING_LETTER_HOFFSET;
+                held_v_set = SETTING_LETTER_HELDVOFFSET;
+                held_h_set = SETTING_LETTER_HELDHOFFSET;
             } else {
-                v_set = SETTING_SYM_VOFFSET;
-                h_set = SETTING_SYM_HOFFSET;
+                const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
+                v_set      = is_num ? SETTING_NUM_VOFFSET      : SETTING_SYM_VOFFSET;
+                h_set      = is_num ? SETTING_NUM_HOFFSET      : SETTING_SYM_HOFFSET;
+                held_v_set = is_num ? SETTING_NUM_HELDVOFFSET  : SETTING_SYM_HELDVOFFSET;
+                held_h_set = is_num ? SETTING_NUM_HELDHOFFSET  : SETTING_SYM_HELDHOFFSET;
             }
-            int8_t v_off = get_setting(v_set, local_state->lang, VAR_SMALL);
-            int8_t v_off_alt = get_setting(v_set, local_state->lang, VAR_ALTGR);
-            v_off = PK_MIN(v_off, v_off_alt);
-            int8_t h_off = get_setting(h_set, local_state->lang, VAR_SMALL);
+            // HIDE on either axis falls through to the resting legend, as before —
+            // hiding the hint says "do not show the AltGr" for this layout. Measured:
+            // no layout hides its AltGr offsets today, and H/V never disagree, so
+            // this is a semantic tidy-up rather than a behaviour change.
+            int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
+            int8_t h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
             if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
                 // A bare combining mark (the nukta "+nukta" AltGr hint) is invisible on
                 // its own when AltGr is actually held — compose it onto the base
                 // consonant (क + ़ = क़) so the held view shows the real output. The
                 // unshifted preview still draws the lone dot via the cell's own controls.
+                uint32_t composed[10];
                 if (altgr_is_bare_combining(letter)) {
                     const uint32_t* base = translate_keycode(local_state->lang, keycode, false, false);
                     if (base != NULL) {
-                        uint32_t composed[10]; uint8_t ci = 0;
+                        uint8_t ci = 0;
                         for (const uint32_t* p = base;   *p && ci < 8; ++p) composed[ci++] = *p;
                         for (const uint32_t* p = letter; *p && ci < 9; ++p) if (*p >= 0x20) composed[ci++] = *p;
                         composed[ci] = 0;
-                        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 28+h_off, 23+v_off, composed);
-                        return true;
+                        letter = composed;
                     }
                 }
-                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 28+h_off, 23+v_off, letter);
+                // Clamp onto the panel, exactly as the resting view's three elements
+                // do. This branch was the ONE element still drawn at a raw origin, and
+                // it is the same defect the four-edge clamp closed for the small base
+                // legend: the offsets here are the NUM/SYM ones, tuned against those
+                // categories' own glyphs, while the glyph drawn is the AltGr cell's —
+                // so a layout whose AltGr glyphs are wider or taller silently pushed
+                // ink off an edge with nothing to report it. Measured over all 160
+                // layouts: 191 keys / 1528 px across 69 layouts, down to the single
+                // he-IL KC_BACKSLASH nikud that is 43 px tall in a 40 px panel.
+                // {<cat>.heldhoffset} / {<cat>.heldvoffset}: a per-layout, per-category
+                // DELTA from the hint position, defaulting to 0 so nothing moves until a
+                // layout is tuned. It exists because the hint's own offsets place a glyph
+                // that shares the keycap with the base legend and the Shift preview, while
+                // the held view has the panel to itself — so the best spot is not
+                // necessarily the same one, and that is a per-layout judgement.
+                //
+                // ⚠️ HIDE_KEY is treated as 0, NOT as -128. It is the tuner's "hide this
+                // variation" sentinel and is meaningless for a delta; taken literally it
+                // would fling the glyph a hundred pixels off the panel. Hiding the held
+                // view is what the AltGr offsets above already do.
+                int8_t held_h = get_setting(held_h_set, local_state->lang, VAR_ALTGR);
+                int8_t held_v = get_setting(held_v_set, local_state->lang, VAR_ALTGR);
+                if (held_h == HIDE_KEY) held_h = 0;
+                if (held_v == HIDE_KEY) held_v = 0;
+
+                int8_t axmin, axmax, aymin, aymax;
+                // ⚠️ SATURATE, don't narrow. Three int8_t values are summed here and the
+                // promoted result can leave int8_t range: ps-AF already carries a letter
+                // H offset of 65, so 28+65 leaves only +34 of headroom and a hand-tuned
+                // held delta of +35 would WRAP to a negative x — drawing the glyph at the
+                // wrong place instead of letting clamp_legend pin it at the edge. That is
+                // exactly the failure kdisp_sat8()'s comment describes, so use it rather
+                // than bounding the tuner's input and hoping the spreadsheet agrees.
+                int8_t hx = kdisp_sat8((int16_t)(28+h_off+held_h));
+                int8_t hy = kdisp_sat8((int16_t)(23+v_off+held_v));
+                kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter,
+                                    &axmin, &axmax, &aymin, &aymax);
+                clamp_legend(&hx, &hy, axmin, axmax, aymin, aymax);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, hx, hy, letter);
                 return true;
             }
         }
@@ -2168,17 +2243,21 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     if (letter != NULL) {
         int8_t v_set;
         int8_t h_set;
+        int8_t half_set;   // {<cat>.altgrhalf} — the per-layout half-size AltGr opt-in
         if(is_letter) {
-            v_set = SETTING_LETTER_VOFFSET;
-            h_set = SETTING_LETTER_HOFFSET;
+            v_set    = SETTING_LETTER_VOFFSET;
+            h_set    = SETTING_LETTER_HOFFSET;
+            half_set = SETTING_LETTER_ALTGRHALF;
         } else {
             const bool is_num = keycode>=KC_1 && keycode<=KC_0; // yes the first is 1 and the last is 0
             if(is_num){
-                v_set = SETTING_NUM_VOFFSET;
-                h_set = SETTING_NUM_HOFFSET;
+                v_set    = SETTING_NUM_VOFFSET;
+                h_set    = SETTING_NUM_HOFFSET;
+                half_set = SETTING_NUM_ALTGRHALF;
             } else {
-                v_set = SETTING_SYM_VOFFSET;
-                h_set = SETTING_SYM_HOFFSET;
+                v_set    = SETTING_SYM_VOFFSET;
+                h_set    = SETTING_SYM_HOFFSET;
+                half_set = SETTING_SYM_ALTGRHALF;
             }
         }
         int8_t v_small = get_setting(v_set, local_state->lang, VAR_SMALL);
@@ -2207,28 +2286,135 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         // ⚠️ The preview stays at the SMALL size by design: a keycap has room for one
         // big thing, and the whole point of the size setting is the main legend.
         const uint32_t* shift_letter = NULL;
-        int8_t preview_x = 0, preview_v = 0;
+        int8_t preview_x = 0, preview_y = 0;
+        int8_t pmin = 0, pmax = 0, pymin = 0, pymax = 0;
         if(!shift && !state.caps_lock) {
             int8_t v_pv = get_setting(v_set, local_state->lang, VAR_SHIFT);
             int8_t h_pv = get_setting(h_set, local_state->lang, VAR_SHIFT);
             if(v_pv!=HIDE_KEY && h_pv!=HIDE_KEY) {
                 shift_letter = translate_keycode_only_shift(local_state->lang, keycode);
                 if (shift_letter != NULL) {
-                    int8_t pmin, pmax;
-                    kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, shift_letter, &pmin, &pmax);
+                    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, shift_letter,
+                                        &pmin, &pmax, &pymin, &pymax);
                     preview_x = 28+h_pv;
                     if (preview_x + pmin < base_plan.ink_max + 2)         // keep clear of the base
                         preview_x = base_plan.ink_max + 2 - pmin;
-                    if (preview_x + pmax > BUFFER_X + SCREEN_WIDTH - 1)   // clamp to the right edge
-                        preview_x = (BUFFER_X + SCREEN_WIDTH - 1) - pmax;
-                    preview_v = v_pv;
+                    preview_y = (int8_t)(23 + v_pv);
+                    clamp_legend(&preview_x, &preview_y, pmin, pmax, pymin, pymax);
                     if (preview_x + pmin <= base_plan.ink_max) {          // forced to overlap -> stagger
-                        // ⚠️ Only the SMALL base can be lifted. A big one was already
-                        // clamped to the panel by plan_main_legend(), so lifting it
-                        // 6 px would push its ink off the top — exactly the clipping
-                        // the clamp exists to prevent. Drop the preview either way.
-                        if (!base_plan.big) base_plan.y -= 6;             // lift the flat base
-                        preview_v += 4;                                   // drop the preview
+                        // Both moves are re-clamped: the panel edge wins over the
+                        // stagger, which is a readability nicety and not worth a
+                        // clipped glyph. (Before the clamp covered the small base
+                        // too, this lift could push a tall flat legend off the top.)
+                        if (!base_plan.big) {
+                            base_plan.y -= 6;                             // lift the flat base
+                            clamp_legend(&base_plan.x, &base_plan.y, base_plan.box_xmin,
+                                         base_plan.box_xmax, base_plan.box_ymin, base_plan.box_ymax);
+                            base_plan.ink_min = (int8_t)(base_plan.x + base_plan.box_xmin);
+                            base_plan.ink_max = (int8_t)(base_plan.x + base_plan.box_xmax);
+                        }
+                        preview_y += 4;                                   // drop the preview
+                        clamp_legend(&preview_x, &preview_y, pmin, pmax, pymin, pymax);
+                    }
+                }
+            }
+        }
+
+        // Resolve the AltGr hint BEFORE anything is drawn, for the same reason the
+        // shift preview above is resolved first: the two hints have to be laid out
+        // as a pair (see the separation block below).
+        const uint32_t* alt_letter = NULL;
+        int8_t alt_x = 0, alt_y = 0, aymin = 0, aymax = 0;
+        uint32_t alt_scratch[ALTGR_HALF_MAX_LEN + 2];   // HINT_SMALL + the cell + NUL
+        letter = translate_keycode_only_altgr(local_state->lang, keycode);
+        if (letter != NULL) {
+            int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
+            int8_t h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
+            if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
+                int8_t amin, amax;
+                kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter, &amin, &amax, &aymin, &aymax);
+
+                // The AltGr glyph is a HINT — what this key would type under a
+                // modifier nobody is holding — so on a script whose letters fill the
+                // keycap it is drawn at HALF size: it reads as subordinate to the
+                // base legend, and a full-size script glyph is most of what made the
+                // two hints fight for the right-hand side.
+                //
+                // ⚠️ WHICH layouts is DATA, not a size test, and the measurement is
+                // why. The intuition is "Arabic and Indic have very large glyphs",
+                // but AltGr ink HEIGHT does not separate them at all — median 20 px
+                // on Arabic letters against 21 px on Latin ones. What is actually
+                // different is that on those layouts the base and the Shift hint are
+                // wide too, so the row reads crowded. That is a per-LAYOUT judgement
+                // no glyph measurement can make, so it lives where layout decisions
+                // live: `{letter|num|sym.altgrhalf}` in lang_lut.xlsx, one cell per
+                // language PER CATEGORY — the same three-way split the H/V offsets
+                // already use, so a layout can halve its letters while its digit and
+                // symbol rows keep full-size hints. Flip one by editing that cell,
+                // not by tuning a threshold here. Only `{letter.…}` is set today.
+                //
+                // ⚠️ The size test that REMAINS is only the mark guard: halving a
+                // glyph that is already tiny destroys it — a Hebrew nikud is 2×3 px
+                // and comes out a dot. That threshold IS measured: over the 318
+                // distinct AltGr cells the ink-height histogram has an EMPTY BIN at
+                // 8 px, marks below it (44 cells — nikud, diaeresis, middle dot,
+                // hyphen) and letterforms from 9 px up (274). It matters most on the
+                // Indic layouts, whose letter AltGr hints are mostly bare combining
+                // marks — median 4 px — so most of them stay full size even here.
+                if (get_setting(half_set, local_state->lang, VAR_ALTGR) != 0
+                    && aymax - aymin + 1 > ALTGR_HALF_MIN_INK_H && letter[0] != U'\x10') {
+                    uint8_t n = 0;
+                    while (n < ALTGR_HALF_MAX_LEN && letter[n] != 0) n++;
+                    if (letter[n] == 0) {        // fits the scratch; else stay full size
+                        alt_scratch[0] = U'\x10';    // HINT_SMALL
+                        for (uint8_t i = 0; i < n; ++i) alt_scratch[i + 1] = letter[i];
+                        alt_scratch[n + 1] = 0;
+                        letter = alt_scratch;
+                        kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, letter,
+                                            &amin, &amax, &aymin, &aymax);
+                    }
+                }
+                alt_x = 28+h_off;
+                // At the small size this mark is kept off the legend by its VERTICAL
+                // offset — it sits below the base glyph. A big legend fills that
+                // height, so there the only separation left is horizontal: push it
+                // clear of the base's ink, exactly as the shift preview does.
+                if (base_plan.big && alt_x + amin < base_plan.ink_max + 2)
+                    alt_x = (int8_t)(base_plan.ink_max + 2 - amin);
+                alt_y = (int8_t)(23 + v_off);
+                clamp_legend(&alt_x, &alt_y, amin, amax, aymin, aymax);
+                alt_letter = letter;
+
+                // Keep the two hints off EACH OTHER. Both sit right of the base —
+                // shift upper, AltGr lower — and it is their VERTICAL offsets that
+                // hold them apart. True for a narrow Latin pair, false for a tall
+                // script: on every ar-* KC_F the shift tick lands inside the AltGr's
+                // 29 px box, and bn-BD KC_D shares 57 px. A per-language offset
+                // cannot fix that — the room left over is decided by the WIDTH of
+                // this key's three glyphs, so one number per language would have to
+                // satisfy the worst key and would crush the rest into the base.
+                //
+                // The base is bottom-left and narrow on exactly these keys, so the
+                // free space is between it and the (right-clamped) AltGr: pull the
+                // shift LEFT into that gap, never past the base's own 2 px margin,
+                // and never to the right — which could only walk it into the clamp.
+                // Where three wide glyphs genuinely do not fit on 72 px the pull
+                // still shrinks the overlap rather than removing it.
+                if (shift_letter != NULL) {
+                    const int8_t sy0 = (int8_t)(preview_y + pymin);
+                    const int8_t sy1 = (int8_t)(preview_y + pymax);
+                    const int8_t ay0 = (int8_t)(alt_y + aymin);
+                    const int8_t ay1 = (int8_t)(alt_y + aymax);
+                    if (preview_x + pmin <= alt_x + amax && alt_x + amin <= preview_x + pmax
+                        && sy0 <= ay1 && ay0 <= sy1) {
+                        int16_t want  = (int16_t)(alt_x + amin - 2 - pmax);
+                        const int16_t floor_x = (int16_t)(base_plan.ink_max + 2 - pmin);
+                        if (want < floor_x) want = floor_x;
+                        if (want < preview_x) preview_x = (int8_t)want;
+                        // The pull only ever moves LEFT, so only the west edge can be
+                        // violated — but re-clamp through the shared helper rather
+                        // than open-coding that one test here.
+                        clamp_legend(&preview_x, &preview_y, pmin, pmax, pymin, pymax);
                     }
                 }
             }
@@ -2236,30 +2422,9 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 
         draw_main_legend(&base_plan);
         if (shift_letter != NULL)
-            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, preview_x, 23+preview_v, shift_letter);
-
-        //preview alt representation
-        letter = translate_keycode_only_altgr(local_state->lang, keycode);
-        if (letter != NULL) {
-            int8_t v_off = get_setting(v_set, local_state->lang, VAR_ALTGR);
-            int8_t h_off = get_setting(h_set, local_state->lang, VAR_ALTGR);
-            if(v_off!=HIDE_KEY && h_off!=HIDE_KEY) {
-                // Clamp to the right edge like the shift preview — wide glyphs
-                // (e.g. @ on the French/Tahitian 0 key) otherwise clip off-screen.
-                int8_t amin, amax;
-                kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, letter, &amin, &amax);
-                int8_t alt_x = 28+h_off;
-                // At the small size this mark is kept off the legend by its VERTICAL
-                // offset — it sits below the base glyph. A big legend fills that
-                // height, so there the only separation left is horizontal: push it
-                // clear of the base's ink, exactly as the shift preview does.
-                if (base_plan.big && alt_x + amin < base_plan.ink_max + 2)
-                    alt_x = (int8_t)(base_plan.ink_max + 2 - amin);
-                if (alt_x + amax > BUFFER_X + SCREEN_WIDTH - 1)
-                    alt_x = (int8_t)((BUFFER_X + SCREEN_WIDTH - 1) - amax);
-                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, alt_x, 23+v_off, letter);
-            }
-        }
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, preview_x, preview_y, shift_letter);
+        if (alt_letter != NULL)
+            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, alt_x, alt_y, alt_letter);
         return true;
     }
     return false;

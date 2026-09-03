@@ -283,7 +283,10 @@ static uint8_t read_reset_reason(void) {
 
 void crash_record_init(void) {
     const uint8_t reason = read_reset_reason();
+    // Zeroed at declaration: only the `have` branches fill it, and cppcheck
+    // cannot see that guard (uninitStructMember).
     poly_crash_record_t captured;
+    memset(&captured, 0, sizeof(captured));
     bool have = false;
 
     if (s_ram.magic != CRASH_RAM_MAGIC) {
@@ -296,7 +299,6 @@ void crash_record_init(void) {
         // The loop stopped feeding the watchdog and nothing recorded why: a hang.
         // Synthesise a record from the breadcrumb the loop left behind -- that
         // tag is the entire diagnosis of a hang, since no frame exists.
-        memset(&captured, 0, sizeof(captured));
         captured.magic       = CRASH_RECORD_MAGIC;
         captured.kind        = CRASH_KIND_WATCHDOG;
         captured.core        = 0;

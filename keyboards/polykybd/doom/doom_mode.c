@@ -160,9 +160,13 @@ static void doom_engine_start(void) {
 #endif
     multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
     s_engine_running = true;
+    fw_staging_note_doom_started();   // FW-9: this half booted the doom engine on core1
 }
 
 static void doom_engine_stop(void) {
+    // FW-9: stamped BEFORE the s_engine_running guard so the master can tell "ran
+    // doom, never stopped it" (started=1 stop_entered=0) from "never ran doom".
+    fw_staging_note_doom_stop_entered();
     if (s_engine_running) {
         s_engine_running = false;
         // Kill the game mid-frame (it only touches pool memory) and hand core1
@@ -173,11 +177,27 @@ static void doom_engine_stop(void) {
         // disconnect during the ~15 s post-exit silence). On a miss, PSM-reset
         // core1 and retry; worst case the RLE service stays down (overlay
         // decompression degrades until reboot) but the keyboard stays alive.
+        // FW-9 observability: this teardown runs on the SLAVE too (stop-idle
+        // bridges it), and the intermittent post-doom wedge is on the slave —
+        // whose console the rig cannot read. Stamp each step + the outcome into the
+        // fw_staging status snapshot the master pulls over the STATUS RPC, so the
+        // rig sees where a wedged slave stopped and how the relaunch went. Pure
+        // recording — it changes nothing about the teardown itself.
+        fw_staging_note_stage(FW_STAGE_DOOM_STOP_ENTER);
         const uint32_t t0 = timer_read32();
-        bool ok = false;
-        for (uint8_t attempt = 0; attempt < 3 && !ok; ++attempt) {
+        bool    ok       = false;
+        uint8_t attempt  = 0;
+        for (; attempt < 3 && !ok; ++attempt) {
+            fw_staging_note_stage(FW_STAGE_DOOM_CORE1_RESET);
             doom_core1_reset();
+            fw_staging_note_stage(FW_STAGE_DOOM_RELAUNCH);
             ok = multicore_launch_core1_bounded(100u * 1000u);
+        }
+        {
+            uint32_t ms = timer_elapsed32(t0);
+            fw_staging_note_doom_teardown(ok ? 1u : 2u, attempt,
+                                          (uint16_t)(ms > 65535u ? 65535u : ms));
+            fw_staging_note_stage(FW_STAGE_DOOM_STOP_DONE);
         }
         // The engine is GONE: every standalone vpatch decoder (ESC/label
         // STCFN, tall digits, menu tiles, the face) gates on this — with it

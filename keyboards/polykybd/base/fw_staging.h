@@ -312,6 +312,31 @@ void fw_staging_arm_reboot(void);
 bool fw_staging_reboot_pending(void);
 
 // ---------------------------------------------------------------------------
+// FW-9 slave-teardown breadcrumb. The intermittent post-doom wedge is on the
+// SLAVE, and the rig reads only the MASTER console, so the slave must record
+// "where am I now" into a byte the master can pull over the STATUS RPC. Set at
+// each milestone of the two sequences that can hang a half after a doom session:
+//   doom_engine_stop() (doom's own core1 teardown) — DOOM_* below
+//   fw_staging_begin_deferred / process_deferred / restart_core1 (the erase that
+//   follows on the next flash) — BEGIN_HALT..RESTART_DONE.
+// It is a LAST-WRITE marker (not a max), so the value the master reads on its
+// final successful STATUS poll before the slave goes dark localizes the hang.
+// Observation only — setting it never changes control flow.
+// ---------------------------------------------------------------------------
+typedef enum {
+    FW_STAGE_IDLE = 0,          // nothing in flight / back in the normal main loop
+    FW_STAGE_DOOM_STOP_ENTER,   // doom_engine_stop() entered (slave doom teardown begins)
+    FW_STAGE_DOOM_CORE1_RESET,  // about to PSM-reset core1 in the teardown retry loop
+    FW_STAGE_DOOM_RELAUNCH,     // about to bounded-relaunch core1 in the teardown loop
+    FW_STAGE_DOOM_STOP_DONE,    // teardown relaunch loop returned
+    FW_STAGE_BEGIN_HALT,        // fw_staging_begin_deferred halting core1 for the erase
+    FW_STAGE_ERASING,           // process_deferred is erasing sectors (see erase_sector_next)
+    FW_STAGE_ERASE_DONE,        // last sector erased, about to restart core1
+    FW_STAGE_RESTART,           // about to bounded-relaunch core1 (any restart caller)
+    FW_STAGE_RESTART_DONE,      // core1 restart returned
+} fw_stage_t;
+
+// ---------------------------------------------------------------------------
 // Diagnostic snapshot — populated by the slave's handlers so the master can
 // query "what does the slave think happened" after a failed FW_UP_CHUNK.
 // ---------------------------------------------------------------------------
@@ -333,10 +358,34 @@ typedef struct _fw_staging_status_t {
     // This is what lets the master tell a REFUSAL from a lost acknowledgement when
     // the COMMIT reply itself goes missing: fw_up_active is cleared by finalize
     // either way, so it cannot distinguish them, but this records the verdict.
-    // Consumes half the old pad, so the struct size — and therefore the RPC reply
-    // size — is unchanged.
     uint8_t  last_commit_ack;
-    uint8_t  pad;
+    // Bounded core1 relaunch diagnostics (doom teardown + fw_staging FONTPACK/doom
+    // restart both funnel through multicore_launch_core1_bounded). Clamped to 255.
+    // A DIAGNOSTIC add for the FW-9 wedge hunt. The rig read `core1_relaunch=0/255`
+    // (zero timeouts) across #914/#915/#916 — the bounded relaunch never times out,
+    // which refuted the relaunch-timeout theory; and the run-916 fix attempt (waiting
+    // for the erase-time PSM latch) did NOT change the signature. That pointed the
+    // hunt at doom's own teardown on the slave rather than the fw_staging erase halt,
+    // which is what the stage / doom_stop_* fields below are here to observe.
+    uint8_t  core1_relaunch_calls;
+    uint8_t  core1_relaunch_timeouts;
+    // FW-9 slave-teardown observability (all set on the SLAVE, pulled by the
+    // master over the STATUS RPC — see the fw_stage_t comment above). `stage` is
+    // the last milestone reached; the doom_stop_* trio is the OUTCOME of the doom
+    // teardown that ran back in stop-idle (before the flash's BEGIN), which until
+    // now was printed only to the slave console the rig cannot see. Grows the
+    // reply to 40 B — still far under RPC_S2M_BUFFER_SIZE, asserted in split_fw_up.h.
+    uint8_t  stage;               // fw_stage_t — where the slave is NOW
+    uint8_t  doom_stop_result;    // 0 = teardown never ran, 1 = relaunch ok, 2 = timed out
+    uint8_t  doom_stop_attempts;  // bounded-relaunch attempts used (1..3), 0 if never ran
+    uint16_t doom_stop_ms;        // teardown relaunch elapsed (clamped to 65535)
+    // Disambiguates a doom_stop_result==0 seen at begin-first: did the slave never
+    // run doom at all, or run it and never tear it down (core1 left on doom when the
+    // next flash halts it)? doom_started rises when doom_engine_start() launches core1;
+    // doom_stop_entered rises at the TOP of doom_engine_stop(), before its
+    // s_engine_running guard — so started=1 stop_entered=0 is "ran doom, never stopped".
+    uint8_t  doom_started;        // doom_engine_start() launched the engine on this half
+    uint8_t  doom_stop_entered;   // doom_engine_stop() was reached (before its guard)
 } fw_staging_status_t;
 
 // Fill `out` with the current internal state.  Safe to call from anywhere.
@@ -348,6 +397,18 @@ void fw_staging_note_chunk_call(uint32_t offset, uint8_t ack);
 // Record the ack the slave's COMMIT handler is about to return, so a later STATUS
 // probe can report the verdict even if that reply never reached the master.
 void fw_staging_note_commit_ack(uint8_t ack);
+
+// FW-9 observability. fw_staging_note_stage() records the last teardown/erase/
+// restart milestone reached (a fw_stage_t) so the master's STATUS poll can localize
+// a slave that goes dark; fw_staging_note_doom_teardown() records the outcome of the
+// doom core1 teardown so the rig sees it (it was previously slave-console only).
+// Both are pure recorders — they never touch control flow.
+void fw_staging_note_stage(uint8_t stage);
+void fw_staging_note_doom_teardown(uint8_t result, uint8_t attempts, uint16_t ms);
+// Disambiguators (see the struct fields): doom_engine_start() calls _started,
+// doom_engine_stop() calls _stop_entered at its very top.
+void fw_staging_note_doom_started(void);
+void fw_staging_note_doom_stop_entered(void);
 
 // Diagnostic helper used while bisecting the fw_up slave-hang bug
 // (see FW_UP_DEBUG_NOTES.md): set the s_fw_up_active flag without

@@ -65,6 +65,16 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 // so core1 never needs to be restarted.  On the failure path (CRC mismatch),
 // fw_staging_finalize() restarts core1 explicitly.
 // ---------------------------------------------------------------------------
+// FW-9 slave-teardown observability (see fw_staging.h). Declared up here because
+// fw_staging_restart_core1() below stamps `s_stage`. Last-write breadcrumb + the
+// doom core1 teardown outcome, both pulled by the master over the STATUS RPC.
+static uint8_t  s_stage = FW_STAGE_IDLE;
+static uint8_t  s_doom_stop_result;    // 0 none, 1 relaunch ok, 2 timed out
+static uint8_t  s_doom_stop_attempts;
+static uint16_t s_doom_stop_ms;
+static uint8_t  s_doom_started;        // doom_engine_start launched the engine here
+static uint8_t  s_doom_stop_entered;   // doom_engine_stop reached (before its guard)
+
 #ifdef USE_CORE1
 #include "polymod_core1.h"
 
@@ -164,9 +174,11 @@ static void fw_staging_restart_core1(void) {
     // core1 leaves the RLE service down until the next reboot (the identical worst
     // case doom_engine_stop already accepts) but keeps THIS half's main loop alive,
     // so the erase's cleared s_erase_pending is actually observable to the master.
+    s_stage = FW_STAGE_RESTART;   // FW-9 breadcrumb: about to bounded-relaunch core1
     if (!multicore_launch_core1_bounded(100u * 1000u)) {
         uprintf("fw_staging: core1 relaunch timed out — RLE service down until reboot\n");
     }
+    s_stage = FW_STAGE_RESTART_DONE;
 }
 #endif
 
@@ -581,6 +593,7 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     // on every restart; keeping it halted throughout eliminates that risk.
     // On the success path the chip hard-resets, so core1 is never restarted.
     // On the failure path fw_staging_finalize() restarts core1 explicitly.
+    s_stage = FW_STAGE_BEGIN_HALT;   // FW-9 breadcrumb: halting core1 for the erase
     fw_staging_halt_core1();
 #endif
 }
@@ -619,6 +632,7 @@ void fw_staging_process_deferred(void) {
         offset = target_data_offset() + s_erase_sector_next * FLASH_SECTOR_SIZE;
     }
     // core1 is already halted by fw_staging_begin_deferred(); no halt/restart here.
+    s_stage = FW_STAGE_ERASING;   // FW-9 breadcrumb: erase_sector_next carries the count
     uint32_t irq = save_and_disable_interrupts();
     flash_range_erase(offset, FLASH_SECTOR_SIZE);
     restore_interrupts(irq);
@@ -631,6 +645,7 @@ void fw_staging_process_deferred(void) {
     s_erase_sector_next++;
     if (s_erase_sector_next >= s_erase_sector_count) {
         s_erase_pending = false;
+        s_stage = FW_STAGE_ERASE_DONE;   // FW-9 breadcrumb: last sector erased
 #ifdef USE_CORE1
         // DIAGNOSTIC PROBE (2026-05-29): restart core1 the instant erase
         // completes, before the first chunk arrives.  Hypothesis: holding
@@ -1049,7 +1064,36 @@ void fw_staging_get_status(fw_staging_status_t *out) {
     out->chunk_handler_errors      = s_chunk_handler_errors;
     out->process_deferred_calls    = s_process_deferred_calls;
     out->process_deferred_advances = s_process_deferred_advances;
-    out->pad                       = 0;
+    uint16_t c1_calls = 0, c1_timeouts = 0;
+    multicore_launch_core1_bounded_stats(&c1_calls, &c1_timeouts);
+    out->core1_relaunch_calls    = (uint8_t)(c1_calls    > 255 ? 255 : c1_calls);
+    out->core1_relaunch_timeouts = (uint8_t)(c1_timeouts > 255 ? 255 : c1_timeouts);
+    out->stage               = s_stage;
+    out->doom_stop_result    = s_doom_stop_result;
+    out->doom_stop_attempts  = s_doom_stop_attempts;
+    out->doom_stop_ms        = s_doom_stop_ms;
+    out->doom_started        = s_doom_started;
+    out->doom_stop_entered   = s_doom_stop_entered;
+}
+
+// FW-9 observability recorders. Pure — they only stamp the diagnostic snapshot
+// the master pulls over the STATUS RPC, never touching any control flow.
+void fw_staging_note_stage(uint8_t stage) {
+    s_stage = stage;
+}
+
+void fw_staging_note_doom_teardown(uint8_t result, uint8_t attempts, uint16_t ms) {
+    s_doom_stop_result   = result;
+    s_doom_stop_attempts = attempts;
+    s_doom_stop_ms       = ms;
+}
+
+void fw_staging_note_doom_started(void) {
+    s_doom_started = 1;
+}
+
+void fw_staging_note_doom_stop_entered(void) {
+    s_doom_stop_entered = 1;
 }
 
 void fw_staging_note_begin_call(void) {

@@ -212,6 +212,23 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
       notice — a Sourcery refusal is itself a review object carrying the head sha,
       so the sha alone reads as reviewed. Never infer from a check run or from
       this paragraph.
+      - ⚠️ **That pair-check has a FALSE NEGATIVE in the other direction, so it is
+        not sufficient either: a CLEAN CodeRabbit review produces NO REVIEW OBJECT
+        AT ALL.** It says *"No actionable comments were generated 🎉"* by editing
+        its existing summary comment, so `get_reviews` is empty for that head and
+        the check reads a clean pass as unreviewed (measured on qmk#268,
+        2026-09-03). A refusal is an object that means nothing; a clean pass is no
+        object that means everything. Read the summary comment's BODY — its
+        `📥 Commits` range and whether it says *skipped* / *no actionable comments*
+        — alongside `get_reviews`. Full write-up in `PolyKybdHost/CLAUDE.md`.
+      - ⚠️ **A commit whose only reviewable file is GENERATED is skipped outright,
+        so a per-language DATA pass is structurally unreviewable.** *"Review skipped
+        as selected files did not have any reviewable changes"* — twice on qmk#268,
+        where the diff was the cog-generated `lang_lut.c` plus `lang_lut.xlsx`, and
+        the workbook is excluded by CodeRabbit's `!**/*.xlsx` path filter. No banner,
+        no quota, nothing wrong: just no review. On such a change the verification
+        has to be your own — assert the generated diff is confined to what you meant,
+        and measure the rendered result.
   - **cppcheck has no quota, no star threshold and no file-count limit** — and
     is not an LLM, so it doesn't share the others' blind spots. That is why it
     was added, and it matters more now that it is the only automated reviewer
@@ -424,6 +441,14 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     drift check, not proof of binary equivalence: if anything outside `config.h` shows
     up, rebuild on the merged base rather than reasoning about whether it mattered.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
+- ⚠️ **NEVER run two `qmk compile` invocations at once — every flavour of a board
+  shares ONE `.build/` tree, and the collision presents as a CODE error.** Backgrounding
+  the pack build and starting the monolith beside it made the pack link die on
+  `undefined reference to doom_shim_menu_key_tile` (2026-09-03) — a symbol the pack
+  flavour genuinely does not define locally, so it reads exactly like a real
+  missing-shim bug rather than two builds overwriting each other's objects in
+  `.build/obj_polykybd_split72_default`. Serially, both link clean and nothing else
+  changes. `build_pack.sh` is safe because it sequences the two flavours itself.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 - ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk` and is NOT on
   `PATH`.** `build_pack.sh` (and anything else shelling out to `qmk`) dies with
@@ -1516,6 +1541,29 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   the old compiled-in `{ &flag_font }` path did. `kdisp_gfx_glyph_font(fonts, n, cp,
   &out_font)` returns the glyph **and** its owning font in one scan for exactly this
   (`kdisp_gfx_glyph` is the `out_font = NULL` wrapper).
+  - ⚠️ **The same shift makes a LONE Latin-1 symbol sit as low as a descender, and
+    that is what "this glyph renders under the baseline" means in practice.** The
+    two notes above frame the yAdvance gap as a *multi-glyph* hazard (`à»ñ`); the
+    single-glyph corollary is separate and is a per-cell tuning matter. `_Base_` is
+    yAdvance 37 and `_SupAndExtA_` is 44, so **every** Latin-1 supplement glyph is
+    drawn 7 px lower than a base-face letter: measured against the base face's own
+    ink bottom, `§ £ ± ¢ ¥ ½ ¼ ¾ © ®` all land where a `y` descender does, and
+    `µ ¦ ¸` deeper still. It is not a bug in any one glyph — it is the whole font.
+    - **The fix is the cursor nudge in the LUT cell**, `\f` = 2 px up (`\b` = 2 px
+      left), so a −6 px lift is `U"\f\f\f" <TOKEN>` prepended to the cell. That is
+      what the hand-tuned cells already used; the 2026-09-03 pass normalised
+      `§ £ ± µ` to exactly three across all 117 cells that draw them, having found
+      them spread over **five** different values (0, −2, −4, −6, −8).
+    - ⚠️ **The panel clamp can EAT the nudge, so measure the realised move rather
+      than the requested one.** A glyph already jammed against the south edge spends
+      part of the lift merely releasing that clamp: of 92 element positions that
+      moved, 13 moved 1–4 px instead of 6 (`af-ZA`/`se-NO` `KC_3` by 1 px). Nothing
+      reports this — the cell says −6 and the keycap moved 1.
+    - **Survey before tuning, per distinct codepoint, not per cell**: resolve every
+      single-glyph cell, take `Renderer.bbox([cp])`, and rank by `ymax`. Symbols the
+      font pushes down separate cleanly from real descenders (`g j p q y`, Arabic,
+      Hebrew nikud, brackets) that way, and it is the only way to see that a glyph
+      is inconsistently nudged across layouts.
 - **GFXfont bitmaps are COLUMN-NATIVE (OLED page format) since the PolyColGfx
   rollout (font-pack ABI 2).** 1 byte = 8 *vertical* pixels, so the firmware blits a
   whole column-byte into the SSD1306 page memory at once. `cb = (h + 7) >> 3`

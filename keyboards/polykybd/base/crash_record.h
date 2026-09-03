@@ -116,11 +116,19 @@ void     crash_phase_leave(uint32_t prev);
 
 // --- boot-time capture and reporting --------------------------------------
 
-// Call ONCE early in keyboard_post_init_user(), before the boot banner. Reads the
-// reset cause, validates the NOLOAD block, archives a fresh record to flash and
-// clears the RAM copy. Safe to call with core1 running (it takes the fw_staging
-// core1 lockout around the flash write).
+// Call ONCE early in keyboard_post_init_user(), before the boot banner and
+// BEFORE core1 is launched. Reads the reset cause, validates the NOLOAD block,
+// captures a fresh record into RAM and clears the NOLOAD copy. It does NOT touch
+// flash: the archive write needs the fw_staging core1 lockout, whose release
+// RELAUNCHES core1 (bounded) -- done before post_init's own
+// multicore_launch_core1() that would leave core1 already running and the
+// unbounded launch handshake blocked forever. Hence the split below.
 void crash_record_init(void);
+
+// Call ONCE right after multicore_launch_core1() in keyboard_post_init_user().
+// Writes the record init captured (if any) to the flash archive, under the
+// normal core1 lockout. A no-op when nothing was captured.
+void crash_record_archive_pending(void);
 
 // True when THIS boot followed a crash (a record was captured by init).
 bool crash_record_fresh(void);

@@ -4772,6 +4772,11 @@ void keyboard_post_init_user(void) {
 #ifdef USE_CORE1
     multicore_launch_core1();
 #endif
+    // Only now: the archive write takes the core1 lockout, whose release does a
+    // bounded RELAUNCH of core1 -- before the launch above that would leave the
+    // unbounded handshake blocked forever (a keyboard that hangs on the boot
+    // after every crash, i.e. the opposite of what the record is for).
+    crash_record_archive_pending();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"3");
 #endif

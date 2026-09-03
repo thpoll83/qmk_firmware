@@ -2347,11 +2347,19 @@ run on it (`test_no_crash_record`). What is worth knowing:
 - **The record lives in a NOLOAD RAM block** (`s_ram`, section `.ram0.crash_record`
   via ChibiOS's `rules_memory.ld` — the same trick as the bootloader magic) so it
   survives the `watchdog_reboot()` the handler ends with. It does NOT survive a
-  power cycle, which is why `crash_record_init()` **archives it to flash** at boot:
+  power cycle, which is why it is **archived to flash** at boot:
   one 4 KB sector at `FW_CRASH_LOG_OFFSET` (`FW_APPLY_LOG_OFFSET - 4096`), page-
   appended, erased only when full or on cmd 39 sub-op 2. `FW_UP_MAX_SIZE` shrank
   by that sector (`0x1F7000 → 0x1F6000`; the host mirror in `hid_fw_up.py` moved
   with it).
+  - ⚠️ **The archive write happens in `crash_record_archive_pending()`, AFTER
+    `multicore_launch_core1()` — not inside `crash_record_init()`, which runs
+    first.** The flash write takes the `fw_staging` core1 lockout, and releasing
+    that lockout does a bounded RELAUNCH of core1. Done before post_init's own
+    launch, core1 is already running when the unbounded FIFO handshake starts and
+    the keyboard hangs on the boot after every crash — the exact opposite of what
+    the record exists for. Caught by Greptile on #271 before it ever reached
+    hardware; the split (capture early, archive after the launch) is the fix.
   - **Verify the placement in the ELF, not the linker script**: `nm` must show
     `s_ram` inside `.ram0` and `.ram0_init` must be **size 0** (nothing initialises
     it). `objdump -h` on the split72 build: `.ram0 00000040 @ 2003e12c`, `.ram0_init

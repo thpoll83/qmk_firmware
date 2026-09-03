@@ -223,6 +223,9 @@ static bool page_erased(uint32_t i) {
     return archive_page(i)->magic == 0xFFFFFFFFu;
 }
 
+// A record init captured but has not yet written to flash (see the header).
+static bool s_archive_pending = false;
+
 static void archive_scan(void) {
     s_have_archive = false;
     for (uint32_t i = 0; i < ARCHIVE_PAGES; i++) {
@@ -325,15 +328,20 @@ void crash_record_init(void) {
 
     archive_scan();
     if (have) {
+        // Remembered now, written by crash_record_archive_pending() once core1 is
+        // up -- the flash write must not run before the launch (see the header).
         // Bounded: a firmware that crashes at every boot would otherwise rewrite
         // the same story once per boot. The first CRASH_LOOP_LIMIT go in.
-        if (captured.consecutive <= CRASH_LOOP_LIMIT) {
-            archive_append(&captured);
-        } else {
-            s_archive      = captured;
-            s_have_archive = true;
-        }
+        s_archive         = captured;
+        s_have_archive    = true;
+        s_archive_pending = captured.consecutive <= CRASH_LOOP_LIMIT;
     }
+}
+
+void crash_record_archive_pending(void) {
+    if (!s_archive_pending) return;
+    s_archive_pending = false;
+    archive_append(&s_archive);
 }
 
 bool crash_record_fresh(void) {

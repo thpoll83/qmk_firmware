@@ -24,9 +24,13 @@ The point of the survey is that "some layouts already have it" is almost always 
 understatement. Resolve every candidate cell and histogram what is actually there.
 
 ```python
-import sys, re; sys.path.insert(0, 'tools')
+import os, sys, re, subprocess; sys.path.insert(0, 'tools')
 import oled_preview as op
-pk   = '/home/user/qmk_firmware/keyboards/polykybd'
+# derive the firmware root rather than hard-coding it - this skill lives inside it,
+# and a sibling checkout under another path is the normal case for anyone else.
+qmk  = subprocess.run(['git', 'rev-parse', '--show-toplevel'], cwd=os.environ.get(
+       'QMK_HOME', '.'), capture_output=True, text=True).stdout.strip()
+pk   = os.path.join(qmk, 'keyboards', 'polykybd')
 named = op.load_named_glyphs(f'{pk}/lang/named_glyphs.h')
 L     = op.Lang(f'{pk}/lang/lang_lut.xlsx', named)
 R     = op.load_renderer(f'{pk}/base/fonts')          # NOT Renderer(load_all_fonts(...)) - see §5
@@ -66,21 +70,38 @@ tolerated, or the guard can never be green).
 
 ## 4. Re-cog, then confine the diff
 
+⚠️ **Run `run_cog.sh`, not `cog -r lang_lut.c`.** The workbook feeds **seven**
+generated files — `lang/lang_lut.c`, `lang/lang_lut.h`, `lang/named_glyphs.h`,
+`poly_keymap.c`, `keycode_helper.h`, `uni.h` and `hid_com.c` — and which of them a
+given edit reaches depends on what you touched: an offset row reaches only
+`lang_lut.c`, a named glyph or a language-list change reaches several. Regenerating
+one file leaves the rest stale with nothing to say so. `run_cog.sh` is **idempotent**
+(verified: a full run on a clean tree changes nothing), so running all seven costs
+only seconds and removes the judgement call.
+
 ```bash
-# subshell: §6 does `export QMK_HOME=$PWD`, so this must NOT leave you in lang/
-(cd keyboards/polykybd/lang && /root/.qmk_venv/bin/python -m cogapp -r lang_lut.c)
+# subshell: §6 does `export QMK_HOME=$PWD`, so this must NOT leave you in polykybd/
+(cd keyboards/polykybd && PATH="/root/.qmk_venv/bin:$PATH" ./run_cog.sh)
 ```
 
 Then **assert the generated diff contains only what you meant** — this is the check
 that replaces a reviewer:
 
 ```bash
-git diff -U0 keyboards/polykybd/lang/lang_lut.c | grep '^+' | grep -v '^++' \
-  | grep -cv '<the token or pattern you changed>'     # must be 0
-git diff -U0 keyboards/polykybd/lang/lang_lut.c | grep -c '^@@'   # expect 1 contiguous hunk
+# EVERY generated file run_cog.sh touches, and BOTH directions: a line that
+# disappeared is as much a surprise as one that appeared.
+git diff -U0 -- keyboards/polykybd/lang/ keyboards/polykybd/*.c keyboards/polykybd/*.h \
+  | grep -E '^[+-]' | grep -Ev '^(\+\+\+|---)' \
+  | grep -cvE '<the token or pattern you changed>'    # must be 0
 ```
 
-⚠️ Line counts will not match cell counts — the emitter writes one line per
+⚠️ **Do NOT expect one contiguous hunk** — the count depends entirely on how the
+changed cells are distributed through the emitted tables, and it is not a signal.
+The two passes on 2026-09-03 measured **1** hunk (six settings rows, adjacent in the
+table) and **53** (117 key cells scattered across 19 rows). Judge the *content* of
+the changed lines, not their grouping.
+
+⚠️ Line counts will not match cell counts either — the emitter writes one line per
 (language, row) carrying all four variations.
 
 ## 5. Measure the REALISED effect, not the requested one

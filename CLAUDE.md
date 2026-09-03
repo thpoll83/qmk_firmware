@@ -720,6 +720,23 @@ inherited-upstream noise:
   - **The cost is bounded**: the rig already runs a HIL cycle per merge, so this
     adds a cloud build plus one apply+reboot, not a new cadence. PRs are untouched
     — the tier stays opt-in there, so no PR pipeline gets slower.
+  - **The rig's post-apply SLAVE check is a separate opt-in on the same signals**
+    (`hil-fwapply` label, `[hil-fwapply]` in a pushed commit, `tier: fwapply`/`all`
+    dispatch), carried as **`HIL_RESLAVE`** in the step's `env:`. An apply converts
+    the rig's slave into a second master — it installs the master's bridged bytes,
+    and the halves run per-side images by construction — so the link check inside
+    the apply can only report UNVERIFIED there. With the opt-in, ctnd re-flashes
+    `*_hil_right.uf2` and measures, which answers the answerable half: **can the
+    APPLIED master image bring a split link back up.**
+    - ⚠️ **OFF on a plain push, deliberately.** This job runs on every merge, and
+      `require_fwapply_run.py` gates publishing on its conclusion being `success`
+      — so anything that can fail here can refuse a release, and the rig-side
+      check has never executed. Prove it with a dispatch, then decide.
+    - ⚠️ **Passed as an ENV VAR, not ctnd's `--reflash-slave` flag.** CI runs the
+      INSTALLED station synced to ctnd `main`, so a station predating the feature
+      would die on an unknown argparse flag — failing the release gate. An unknown
+      env var is ignored, so an old station just skips the check. That also
+      removes the merge-order constraint between the two repos.
   - ⚠️ **`--apply-bin` is destructive by design and safe only because the image is
     the one already running** — the rig checks that pairing rather than assuming
     it. And it is safe *at all* only because a brick on the rig is self-recovering

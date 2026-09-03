@@ -4683,9 +4683,8 @@ static void boot_trace(const uint32_t* digit) {
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
 // Global variables: com
 void keyboard_post_init_user(void) {
-    // (The previous run's crash record was captured at the top of
-    // keyboard_pre_init_user(); it is archived after the core1 launch below and
-    // reported by the boot banner.)
+    // (The previous run's crash record was captured and archived at the top of
+    // keyboard_pre_init_user(); the boot banner reports it.)
     // Labels live in RAM on both halves (the render path reads one per macro keycap per
     // refresh). Each half loads its own EEPROM copy, then the master overwrites the
     // slave's over the link -- so a role swap makes whichever half the host talks to
@@ -4770,11 +4769,6 @@ void keyboard_post_init_user(void) {
 #ifdef USE_CORE1
     multicore_launch_core1();
 #endif
-    // Only now: the archive write takes the core1 lockout, whose release does a
-    // bounded RELAUNCH of core1 -- before the launch above that would leave the
-    // unbounded handshake blocked forever (a keyboard that hangs on the boot
-    // after every crash, i.e. the opposite of what the record is for).
-    crash_record_archive_pending();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"3");
 #endif
@@ -5000,8 +4994,10 @@ void keyboard_pre_init_user(void) {
     // status OLED all run between here and post_init): did the previous run end
     // in a crash? Captures the NOLOAD record + reset cause into RAM and stamps
     // the phase BOOT, so a fault anywhere in this boot is recorded as one and
-    // the previous record is already safe if it recurs. No flash here -- the
-    // archive write waits for crash_record_archive_pending() in post_init.
+    // the previous record is already archived if it recurs. The flash write
+    // runs here without the core1 lockout, which is only safe because core1 has
+    // not been launched yet (see crash_record.h) -- keep this ahead of
+    // post_init's multicore_launch_core1().
     crash_record_init();
 
     // Load the external-flash font pack and assemble g_all_fonts = resident ++

@@ -120,18 +120,17 @@ void     crash_phase_leave(uint32_t prev);
 // init and before QMK's own (matrix, split link, status OLED all run between the
 // two hooks), so a fault anywhere in this boot is tagged phase BOOT and the
 // previous record is captured before it can recur. Reads the reset cause,
-// validates the NOLOAD block, captures a fresh record into RAM and clears the
-// NOLOAD copy. It does NOT touch
-// flash: the archive write needs the fw_staging core1 lockout, whose release
-// RELAUNCHES core1 (bounded) -- done before post_init's own
-// multicore_launch_core1() that would leave core1 already running and the
-// unbounded launch handshake blocked forever. Hence the split below.
+// validates the NOLOAD block, captures a fresh record into RAM, clears the
+// NOLOAD copy and writes the record to the flash archive right there -- a copy
+// parked in RAM until post_init would be lost to a reset in the boot window,
+// and a fault that recurs there every boot would then never be archived.
+// The write runs WITHOUT the fw_staging core1 lockout, and that is only
+// correct because core1 has never been launched at this point (it is parked in
+// the bootrom, fetching nothing from XIP): the lockout's release does a bounded
+// RELAUNCH of core1, which would leave post_init's unbounded
+// multicore_launch_core1() handshake blocked forever. So this must stay BEFORE
+// that launch; never move it into post_init.
 void crash_record_init(void);
-
-// Call ONCE right after multicore_launch_core1() in keyboard_post_init_user().
-// Writes the record init captured (if any) to the flash archive, under the
-// normal core1 lockout. A no-op when nothing was captured.
-void crash_record_archive_pending(void);
 
 // True when THIS boot followed a crash (a record was captured by init).
 bool crash_record_fresh(void);

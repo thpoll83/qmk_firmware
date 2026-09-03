@@ -227,9 +227,6 @@ static bool page_erased(uint32_t i) {
     return archive_page(i)->magic == 0xFFFFFFFFu;
 }
 
-// A record init captured but has not yet written to flash (see the header).
-static bool s_archive_pending = false;
-
 static void archive_scan(void) {
     s_have_archive = false;
     for (uint32_t i = 0; i < ARCHIVE_PAGES; i++) {
@@ -242,9 +239,16 @@ static void archive_scan(void) {
     }
 }
 
-static void flash_guarded(bool erase, uint32_t off, const uint8_t *page) {
+// `lockout` = take the fw_staging core1 lockout around the write. Required at
+// runtime (core1 serves RLE from XIP and must be parked while the bootrom
+// rewrites flash). MUST be false from crash_record_init(): at pre_init core1 has
+// never been launched -- it is still parked in the bootrom, fetching nothing
+// from XIP -- so there is nothing to halt, and the lockout's RELEASE would do a
+// bounded relaunch of core1 that leaves post_init's unbounded
+// multicore_launch_core1() handshake blocked forever.
+static void flash_guarded(bool erase, uint32_t off, const uint8_t *page, bool lockout) {
     uint32_t tag = crash_phase_enter(CRASH_PHASE_FLASH, erase ? 2 : 1);
-    fw_staging_core1_lockout_begin();
+    if (lockout) fw_staging_core1_lockout_begin();
     uint32_t irq = save_and_disable_interrupts();
     if (erase) {
         flash_range_erase(off, FLASH_SECTOR_SIZE);
@@ -252,23 +256,23 @@ static void flash_guarded(bool erase, uint32_t off, const uint8_t *page) {
         flash_range_program(off, page, FLASH_PAGE_SIZE);
     }
     restore_interrupts(irq);
-    fw_staging_core1_lockout_end();
+    if (lockout) fw_staging_core1_lockout_end();
     crash_phase_leave(tag);
 }
 
-static void archive_append(const poly_crash_record_t *rec) {
+static void archive_append(const poly_crash_record_t *rec, bool lockout) {
     uint32_t slot = ARCHIVE_PAGES;
     for (uint32_t i = 0; i < ARCHIVE_PAGES; i++) {
         if (page_erased(i)) { slot = i; break; }
     }
     if (slot == ARCHIVE_PAGES) {
-        flash_guarded(true, FW_CRASH_LOG_OFFSET, NULL);
+        flash_guarded(true, FW_CRASH_LOG_OFFSET, NULL, lockout);
         slot = 0;
     }
     uint8_t page[FLASH_PAGE_SIZE];
     memset(page, 0xFF, sizeof(page));
     memcpy(page, rec, sizeof(*rec));
-    flash_guarded(false, FW_CRASH_LOG_OFFSET + slot * FLASH_PAGE_SIZE, page);
+    flash_guarded(false, FW_CRASH_LOG_OFFSET + slot * FLASH_PAGE_SIZE, page, lockout);
     s_archive      = *rec;
     s_have_archive = true;
 }
@@ -332,20 +336,21 @@ void crash_record_init(void) {
 
     archive_scan();
     if (have) {
-        // Remembered now, written by crash_record_archive_pending() once core1 is
-        // up -- the flash write must not run before the launch (see the header).
+        // Archived NOW, before anything else in this boot can fault: a copy that
+        // waited in .bss for post_init would be lost to a reset in the boot
+        // window, and a fault that recurs there every boot would never be
+        // archived at all -- exactly the record worth having. No core1 lockout
+        // (see flash_guarded): core1 has not been launched yet.
         // Bounded: a firmware that crashes at every boot would otherwise rewrite
-        // the same story once per boot. The first CRASH_LOOP_LIMIT go in.
-        s_archive         = captured;
-        s_have_archive    = true;
-        s_archive_pending = captured.consecutive <= CRASH_LOOP_LIMIT;
+        // the same story once per boot. The first CRASH_LOOP_LIMIT go in; later
+        // ones are still reported from RAM by the banner.
+        if (captured.consecutive <= CRASH_LOOP_LIMIT) {
+            archive_append(&captured, /*lockout=*/false);
+        } else {
+            s_archive      = captured;
+            s_have_archive = true;
+        }
     }
-}
-
-void crash_record_archive_pending(void) {
-    if (!s_archive_pending) return;
-    s_archive_pending = false;
-    archive_append(&s_archive);
 }
 
 bool crash_record_fresh(void) {
@@ -360,7 +365,7 @@ bool crash_record_archived(poly_crash_record_t *out) {
 
 void crash_record_clear(void) {
     if (!page_erased(0)) {
-        flash_guarded(true, FW_CRASH_LOG_OFFSET, NULL);
+        flash_guarded(true, FW_CRASH_LOG_OFFSET, NULL, /*lockout=*/true);
     }
     s_have_archive = false;
     s_fresh        = false;

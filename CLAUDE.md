@@ -2352,17 +2352,29 @@ run on it (`test_no_crash_record`). What is worth knowing:
   appended, erased only when full or on cmd 39 sub-op 2. `FW_UP_MAX_SIZE` shrank
   by that sector (`0x1F7000 → 0x1F6000`; the host mirror in `hid_fw_up.py` moved
   with it).
-  - ⚠️ **The archive write happens in `crash_record_archive_pending()`, AFTER
-    `multicore_launch_core1()` — not inside `crash_record_init()`, which runs
-    first.** (First means the top of `keyboard_pre_init_user()`: QMK's own
-    matrix / split / OLED init runs between the two hooks, so capturing there
-    tags a fault anywhere in this boot `phase=boot` and has the previous record
-    safe before it can recur — CodeRabbit on #271.) The flash write takes the `fw_staging` core1 lockout, and releasing
-    that lockout does a bounded RELAUNCH of core1. Done before post_init's own
-    launch, core1 is already running when the unbounded FIFO handshake starts and
-    the keyboard hangs on the boot after every crash — the exact opposite of what
-    the record exists for. Caught by Greptile on #271 before it ever reached
-    hardware; the split (capture early, archive after the launch) is the fix.
+  - ⚠️ **The archive is written INSIDE `crash_record_init()`, at the top of
+    `keyboard_pre_init_user()`, WITHOUT the `fw_staging` core1 lockout — and
+    both halves of that sentence are load-bearing.** It went through three
+    shapes in review of #271, each catching the previous one:
+    1. Archive from init, under the lockout, in post_init after QMK's init.
+       Greptile: releasing the lockout does a bounded RELAUNCH of core1, so run
+       before post_init's own `multicore_launch_core1()` the unbounded FIFO
+       handshake finds core1 already running and blocks forever — a keyboard
+       that hangs on the boot after every crash.
+    2. Capture in `pre_init` (CodeRabbit: QMK's matrix / split / OLED init runs
+       between the two hooks, so a fault there must be tagged `phase=boot` with
+       the previous record already safe), park the copy in `.bss`, write it
+       from `crash_record_archive_pending()` after the launch. CodeRabbit again:
+       a reset in that boot window loses the parked copy, and a fault that
+       recurs there **every** boot never archives at all — precisely the record
+       worth having.
+    3. Write it at `pre_init`, no lockout. Sound because at that point core1 has
+       **never been launched** — it is parked in the bootrom, fetching nothing
+       from XIP — so there is nothing to halt and no relaunch to trigger.
+       `flash_guarded()` takes a `lockout` flag: `false` from init only, `true`
+       from the runtime `crash_record_clear()` erase, where core1 is serving RLE
+       from flash and must be parked. **Never move `crash_record_init()` after
+       the core1 launch** — the no-lockout write is only correct ahead of it.
   - **Verify the placement in the ELF, not the linker script**: `nm` must show
     `s_ram` inside `.ram0` and `.ram0_init` must be **size 0** (nothing initialises
     it). `objdump -h` on the split72 build: `.ram0 00000040 @ 2003e12c`, `.ram0_init

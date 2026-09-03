@@ -2400,6 +2400,22 @@ run on it (`test_no_crash_record`). What is worth knowing:
   ⚠️ The enum is mirrored in the host's `PHASE_NAMES` (`crash_report.py`); keep the
   numbers in step (the `CRASH_PHASE_RENDER` slot was removed before shipping, so
   SUSPEND=7, APPLY=8).
+  - ⚠️ **`WATCHDOG.REASON.TIMER` alone is NOT a hang — the bootrom's reboot after
+    a UF2 copy is a watchdog reboot too, so the FIRST BOOT AFTER EVERY BOOTSEL
+    FLASH reads TIMER.** Found by the rig the first time the crash tests ran
+    (run 33809919200, 2026-09-03): both halves reported a fresh
+    `kind=watchdog phase=2:0x0000 up=0ms n=3 reason=0x12` — `0x12` is
+    `HAD_RUN | WD_TIMER`, i.e. the rig's RUN-pin reset followed by the bootrom's
+    post-copy reboot, and `n=3` because the NOLOAD block survives a reflash, so
+    the pre-fix firmware had counted three consecutive rig flashes as three
+    consecutive hangs (two more and it would have **halted** the rig in `wfi`).
+    The discriminator is the SDK's own: `watchdog_enable()` leaves
+    `0x6ab73121` in scratch4 and every deliberate reboot path clears it (the
+    bootrom, `watchdog_reboot()`, our inlined self-apply reset, and now
+    `crash_watchdog_stop()`), so `watchdog_enable_caused_reboot()` is true only
+    for a timeout of the watchdog `crash_watchdog_start()` armed. Reading
+    `REASON` without it would have made every UF2 flash — the recovery path this
+    whole feature points users at — open with a phantom crash dialog.
 - **The watchdog is 8 s** (`CRASH_WATCHDOG_MS`), started after the boot splash
   and fed from **housekeeping and the suspend loop only**. Two places disarm it,
   and both are load-bearing: `shutdown_user()` (the bootloader jump / `mcu_reset`
@@ -2432,10 +2448,14 @@ run on it (`test_no_crash_record`). What is worth knowing:
   record is announced on the console; the archive is history for `polyctl crash
   show`. `_Static_assert(sizeof == 48)` pins the struct the host unpacks with
   `struct.Struct("<IBBBBIIIIIIHH8sI")`.
-- **Not yet exercised on hardware as of writing** — the mechanism compiled clean
-  on split72/split42/monolith and the rig tests are in place, but no deliberate
-  fault has been driven through it. The `debug-firmware-on-rig` skill with a probe
-  that dereferences a bad pointer over HID is the way to close that.
+- **Exercised on the rig by accident, not by a deliberate fault.** The UF2
+  false positive above (run 33809919200) drove the whole reporting chain end to
+  end on real hardware — boot-time capture, the console line on both halves, the
+  slave pull over the split link, cmd 39 read on master and slave, and the
+  clear — before any fault had been injected on purpose. What is still
+  unverified is the **fault path itself**: the naked handler, the stacked frame
+  and the `watchdog_reboot()` out of it. The `debug-firmware-on-rig` skill with a
+  probe that dereferences a bad pointer over HID is the way to close that.
 
 ### Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**

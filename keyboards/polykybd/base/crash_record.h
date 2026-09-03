@@ -57,7 +57,7 @@ enum crash_kind {
     CRASH_KIND_NONE      = 0,
     CRASH_KIND_HARDFAULT = 1,  // HardFault vector: frame captured from the active stack
     CRASH_KIND_UNHANDLED = 2,  // any other unhandled vector (ICSR names it)
-    CRASH_KIND_WATCHDOG  = 3,  // synthesised at boot from WATCHDOG.REASON.TIMER
+    CRASH_KIND_WATCHDOG  = 3,  // synthesised at boot: REASON.TIMER + the watchdog_enable() marker
     CRASH_KIND_HALT      = 4,  // crash_record_halt(): a deliberate "cannot continue"
 };
 
@@ -184,7 +184,10 @@ void crash_watchdog_feed(void);
 // Disarm before anything that legitimately stops the loop for longer than the
 // timeout and never returns: the firmware self-apply, a bootloader jump, a
 // deliberate reset. Leaving it armed across a BOOTSEL entry would reboot the
-// bootrom out from under a UF2 copy.
+// bootrom out from under a UF2 copy. Also clears the watchdog_enable() marker
+// (scratch4), which is what keeps the reset that follows from being reported as
+// a hang: a WD_TIMER reason counts only while that marker is still in place,
+// because the bootrom's reboot after a UF2 copy is a watchdog reboot as well.
 void crash_watchdog_stop(void);
 
 // Record a deliberate "cannot continue" (kind HALT) and reboot. Never returns.

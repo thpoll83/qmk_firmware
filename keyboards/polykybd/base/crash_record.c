@@ -306,10 +306,20 @@ void crash_record_init(void) {
     } else if (rec_valid(&s_ram.rec)) {
         captured = s_ram.rec;
         have     = true;
-    } else if (reason & CRASH_RESET_WD_TIMER) {
+    } else if ((reason & CRASH_RESET_WD_TIMER) && watchdog_enable_caused_reboot()) {
         // The loop stopped feeding the watchdog and nothing recorded why: a hang.
         // Synthesise a record from the breadcrumb the loop left behind -- that
         // tag is the entire diagnosis of a hang, since no frame exists.
+        //
+        // REASON.TIMER alone is NOT that: the bootrom's own reboot after a UF2
+        // copy is a watchdog_reboot() with a delay, so the first boot after
+        // every BOOTSEL flash reads TIMER too (the rig's flash-per-run did, and
+        // reported a hang on both halves at n=3 -- run 33809919200). What
+        // separates the two is the marker watchdog_enable() leaves in scratch4:
+        // our crash_watchdog_start() sets it, and every deliberate reboot --
+        // the bootrom's, watchdog_reboot(0,0,0) in mcu_reset() and the crash
+        // handler, the inlined self-apply reset, crash_watchdog_stop() -- clears
+        // it. That is exactly what watchdog_enable_caused_reboot() tests.
         captured.magic       = CRASH_RECORD_MAGIC;
         captured.kind        = CRASH_KIND_WATCHDOG;
         captured.core        = 0;
@@ -479,4 +489,8 @@ void crash_watchdog_feed(void) {
 
 void crash_watchdog_stop(void) {
     hw_clear_bits(&watchdog_hw->ctrl, WATCHDOG_CTRL_ENABLE_BITS);
+    // Drop the watchdog_enable() marker too, so whatever deliberate reset follows
+    // (mcu_reset, a bootloader jump, the self-apply) cannot read as a hang at the
+    // next boot -- see the WD_TIMER branch in crash_record_init().
+    watchdog_hw->scratch[4] = 0;
 }

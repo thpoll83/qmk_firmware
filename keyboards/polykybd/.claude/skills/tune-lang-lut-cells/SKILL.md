@@ -67,7 +67,8 @@ tolerated, or the guard can never be green).
 ## 4. Re-cog, then confine the diff
 
 ```bash
-cd keyboards/polykybd/lang && /root/.qmk_venv/bin/python -m cogapp -r lang_lut.c
+# subshell: §6 does `export QMK_HOME=$PWD`, so this must NOT leave you in lang/
+(cd keyboards/polykybd/lang && /root/.qmk_venv/bin/python -m cogapp -r lang_lut.c)
 ```
 
 Then **assert the generated diff contains only what you meant** — this is the check
@@ -103,6 +104,8 @@ The number in the cell is not the number on the keycap.
   blank sheet that looks like a broken font.
 
 ## 6. Gates
+
+From the **firmware root** (`QMK_HOME` is taken from `$PWD`):
 
 ```bash
 export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"

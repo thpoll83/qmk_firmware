@@ -2331,6 +2331,81 @@ An image that fails that check is **not refused outright** — the keyboard asks
   build without `POLYKYBD_DOOM_PACK`. `.whx` / `.plyf` ride the same unsigned
   transport but are data, not code.
 
+### Crash diagnostics: the crash record, the watchdog and the phase breadcrumb (`base/crash_record.*`)
+
+A HardFault, an unhandled exception or a main-loop hang used to leave **nothing**:
+the M0+ HardFault vector fell into ChibiOS's `b .` loop, the board sat dead until
+a replug, and the only evidence was "it stopped". Now every one of those is
+**recorded, rebooted through, and announced on the next boot** — on the console
+(`crash: side=master kind=hardfault core=0 pc=0x… lr=0x… sp=0x… psr=0x… icsr=0x…
+phase=3:0x0015 up=123456ms n=1 reason=0x22 fw=0.18.0`, one line, in the boot
+banner and its re-emits), over HID (**cmd 39**, protocol **v16**), and for the
+slave over the split link (the master pulls it and prints `side=slave`). The host
+turns the console line into a dialog (`PolyKybdHost/CLAUDE.md`), the rig fails the
+run on it (`test_no_crash_record`). What is worth knowing:
+
+- **The record lives in a NOLOAD RAM block** (`s_ram`, section `.ram0.crash_record`
+  via ChibiOS's `rules_memory.ld` — the same trick as the bootloader magic) so it
+  survives the `watchdog_reboot()` the handler ends with. It does NOT survive a
+  power cycle, which is why `crash_record_init()` **archives it to flash** at boot:
+  one 4 KB sector at `FW_CRASH_LOG_OFFSET` (`FW_APPLY_LOG_OFFSET - 4096`), page-
+  appended, erased only when full or on cmd 39 sub-op 2. `FW_UP_MAX_SIZE` shrank
+  by that sector (`0x1F7000 → 0x1F6000`; the host mirror in `hid_fw_up.py` moved
+  with it).
+  - **Verify the placement in the ELF, not the linker script**: `nm` must show
+    `s_ram` inside `.ram0` and `.ram0_init` must be **size 0** (nothing initialises
+    it). `objdump -h` on the split72 build: `.ram0 00000040 @ 2003e12c`, `.ram0_init
+    00000000`. And the vector table at `0x10000100` slot 3 must be OUR
+    `HardFault_Handler` (`…dddd` = `1000dddc|1`), with slots 4+ still the shared
+    weak body that `bl`s `_unhandled_exception` — which is now our strong override,
+    so both routes land in `crash_record.c`.
+- **The M0+ has only HardFault** — no BusFault/UsageFault, no CFSR/BFAR/MMFAR. So
+  the record is the **stacked frame** (pc/lr/xpsr from the exception frame, sp =
+  the frame address, `ICSR` for the active vector) plus what the firmware itself
+  knew: the **phase breadcrumb** and uptime. The handler is naked asm: `tst lr,#4`
+  picks PSP/MSP, then C. ⚠️ `frame_readable()` bounds the frame to SRAM before
+  touching it — a corrupt SP would otherwise re-fault INSIDE the handler and the
+  record would never be written.
+- **The phase breadcrumb is what makes a watchdog timeout diagnosable.** A hang
+  has no fault frame, so `crash_phase_enter(phase, arg)` / `crash_phase_leave(tag)`
+  tag the code the main loop is in: `HID` (arg = cmd id, `hid_com.c`), `BRIDGE`
+  (arg = transaction id, `send_to_bridge`), `CORE1_WAIT` (the two decompress waits
+  in `multicore_exec.c`), `FLASH`, `SUSPEND`, `APPLY`, and `LOOP` re-armed every
+  housekeeping pass. On `WATCHDOG.REASON.TIMER` with no fault record,
+  `crash_record_init()` synthesises a `kind=watchdog` record **from the phase left
+  in RAM** — the phase is written directly into the NOLOAD block for exactly that.
+  ⚠️ The enum is mirrored in the host's `PHASE_NAMES` (`crash_report.py`); keep the
+  numbers in step (the `CRASH_PHASE_RENDER` slot was removed before shipping, so
+  SUSPEND=7, APPLY=8).
+- **The watchdog is 8 s** (`CRASH_WATCHDOG_MS`), started after the boot splash
+  and fed from **housekeeping and the suspend loop only**. Two places disarm it,
+  and both are load-bearing: `shutdown_user()` (the bootloader jump / `mcu_reset`
+  would otherwise be racing an 8 s timer) and `fw_staging.c` right before
+  `fw_staging_do_apply()` (the self-apply never returns to housekeeping; a
+  watchdog reset mid-copy is the brick this whole area guards against). A new
+  blocking path longer than 8 s needs a `crash_watchdog_feed()` inside it — or
+  the record it produces will say so, which is the point.
+- **A crash loop halts instead of looping forever**: `consecutive` counts
+  back-to-back records and past `CRASH_LOOP_LIMIT` (5) the handler parks in `wfi`
+  (`kind=halt`) rather than rebooting — recoverable over BOOTSEL, and the archive
+  still says what it was doing.
+- **The slave's record rides `USER_SYNC_SLAVE_DATA`**, which is now generic and
+  unconditional: `slave_data.c` owns the op dispatch (`SLAVE_DATA_SENSOR` = the
+  LTR-559 pull that used to be the whole handler, `SLAVE_DATA_CRASH`), and the
+  master pulls the crash body once per link-up, three tries 2 s apart. ⚠️ It is
+  printed **once, at the pull**, not with the banner re-emits — the link can come
+  up long after those stop.
+- **cmd 39**: `data[2]` 0 = this half's archived record, 1 = the slave's, 2 =
+  clear, else NACK. Body `[flags][48-byte poly_crash_record_t]`, flags bit0
+  present / bit1 **fresh** (recorded by the boot before this one). Only a fresh
+  record is announced on the console; the archive is history for `polyctl crash
+  show`. `_Static_assert(sizeof == 48)` pins the struct the host unpacks with
+  `struct.Struct("<IBBBBIIIIIIHH8sI")`.
+- **Not yet exercised on hardware as of writing** — the mechanism compiled clean
+  on split72/split42/monolith and the rig tests are in place, but no deliberate
+  fault has been driven through it. The `debug-firmware-on-rig` skill with a probe
+  that dereferences a bad pointer over HID is the way to close that.
+
 ### Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**
 pixels in. **Four** styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum

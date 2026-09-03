@@ -66,6 +66,8 @@
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "polymod_core1.h"
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
+#include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
+#include "slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
 #include "polymod_crc32.h"
 
 // The LTR-559 driver is the polykybd/polymod_ltr559 community module; the build
@@ -803,11 +805,18 @@ void housekeeping_task_user(void) {
     // Optional loop-timing probe (no-op unless POLYKYBD_LOOP_PROFILE). At the very
     // top so it measures the FULL previous iteration — matrix scan, HID, bridge.
     loop_profile_tick();
+    // The watchdog is fed HERE and in suspend_power_down_kb() and nowhere else: a
+    // main loop that stops reaching housekeeping for CRASH_WATCHDOG_MS is exactly
+    // the hang the crash record exists to catch. The LOOP tag closes whatever
+    // phase the previous pass left open (a HID handler tags on entry only).
+    crash_watchdog_feed();
+    (void)crash_phase_enter(CRASH_PHASE_LOOP, 0);
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
+    slave_data_crash_pull_tick();      // master: fetch + print the slave's crash record once per link-up
 
     // Advance a playing macro by at most one step. Deliberately near the TOP of
     // housekeeping and outside every fw_up/idle gate: a macro is user-visible typing,
@@ -4674,6 +4683,11 @@ static void boot_trace(const uint32_t* digit) {
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
 // Global variables: com
 void keyboard_post_init_user(void) {
+    // FIRST: did the previous run end in a crash? Reads the NOLOAD record + the
+    // reset cause, archives it to flash, and remembers it for the banner below.
+    // Before anything that could itself fault, so the record it reports is the
+    // previous run's and not this boot's.
+    crash_record_init();
     // Labels live in RAM on both halves (the render path reads one per macro keycap per
     // refresh). Each half loads its own EEPROM copy, then the master overwrites the
     // slave's over the link -- so a role swap makes whichever half the host talks to
@@ -4716,6 +4730,7 @@ void keyboard_post_init_user(void) {
     set_side(is_keyboard_left() ? LEFT_SIDE : RIGHT_SIDE);
 
     emit_boot_banner();   // one-shot at boot; housekeeping re-emits for a late console
+    crash_record_emit_lines();   // `crash: side=master ...` when this boot followed a crash
 
     // Boot-splash progress: reaching post_init proves QMK's split/USB init got
     // past the point where the fw-apply "slave not rebooted" hang stalls. Reveal
@@ -4773,9 +4788,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
     transaction_register_rpc(USER_SYNC_FLASH_STAGE,         user_sync_flash_stage_handler);
     transaction_register_rpc(USER_SYNC_RESET,               user_sync_reset_handler);
-#ifdef POLYKYBD_LTR559_DRIVE
-    poly_ltr559_register_split_handler();
-#endif
+    slave_data_register();   // USER_SYNC_SLAVE_DATA: LTR-559 sensor pull + the slave crash record
 #ifdef POLY_DUMMY_TXN_TEST
     // Root-cause experiment: register 3 no-op transactions so NUM_TOTAL_TRANSACTIONS
     // grows by 3 (matching the working pointing build) without the pointing device.
@@ -4972,6 +4985,10 @@ void keyboard_post_init_user(void) {
     boot_trace(U"4");
 #endif
     splash_progress(SPLASH_DONE);       // boot complete: full splash, dwell, then legends
+    // LAST: arm the hardware watchdog. Everything above may block for seconds
+    // (the keymap discard, the splash dwell); from here on housekeeping feeds it
+    // every pass and a hang becomes a reset with a `kind=watchdog` crash record.
+    crash_watchdog_start();
 }
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
@@ -5107,6 +5124,11 @@ void poly_suspend(void) {
 
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
 void suspend_power_down_kb(void) {
+    // QMK's suspend loop (protocol_pre_task) calls this every ~17 ms INSTEAD of
+    // running housekeeping, so the watchdog has to be fed here too or a long
+    // suspend would read as a hang.
+    crash_watchdog_feed();
+    (void)crash_phase_enter(CRASH_PHASE_SUSPEND, 0);
     // USB suspend fires on slave when master enters bootloader; skip to keep displays lit.
     if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
         return;
@@ -5133,6 +5155,10 @@ void suspend_power_down_kb(void) {
 // suspend would discard any MRU/settings/layer changes still held in RAM.
 bool shutdown_user(bool jump_to_bootloader) {
     save_all_dirty();
+    // Disarm the watchdog before any deliberate reset / bootloader jump. Left
+    // armed across a BOOTSEL entry it would reset the bootrom out from under a
+    // UF2 copy, and a reboot it fired would be archived as a crash.
+    crash_watchdog_stop();
     return true;
 }
 

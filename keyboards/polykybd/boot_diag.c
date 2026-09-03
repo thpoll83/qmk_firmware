@@ -15,6 +15,7 @@
 #include "layers.h"       // _ADDLANG1 (Intl picker banner line)
 #include "quantum/keymap_introspection.h"   // keycode_at_keymap_location_raw()
 #include "base/fw_staging.h"   // fw_staging_apply_breadcrumb()
+#include "base/crash_record.h" // crash_record_emit_lines()
 #include "base/update.h"       // enum refresh_mode / ALL_AT_ONCE
 #include "base/disp_array.h"   // GFXfont type
 // Only the single splash font is needed. Don't pull in gfx_used_fonts.h — the
@@ -249,6 +250,7 @@ void boot_banner_housekeeping_tick(void) {
             emit_idle_config();
             emit_keymap_storage_line();
             emit_apply_breadcrumb_line();
+            crash_record_emit_lines();   // the previous run's crash, if there was one
             banner_timer = timer_read32();
             banner_repeats++;
         }

@@ -38,6 +38,7 @@
 #include <string.h>
 #include "poly_keymap.h"
 #include "layer_names.h"
+#include "base/crash_record.h"
 
 
 /*[[[cog
@@ -187,6 +188,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         if (doom_hid_frozen(data[1])) {
             return;
         }
+        // Crash-record breadcrumb: a watchdog timeout inside a handler names the
+        // command. Housekeeping resets the tag to LOOP on its next pass.
+        (void)crash_phase_enter(CRASH_PHASE_HID, data[1]);
         const poly_layer_t* local_layer = get_local_layer();
         poly_sync_t* local_state = access_local_state();
         // Bulk overlay/mapping commands: plain (10), flags on/off (11/12), compressed
@@ -1197,6 +1201,38 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         data[5 + b] = (uint8_t)((look.icon >> (8 * b)) & 0xFFu);
                     }
                     memcpy(&data[header], look.text, len);
+                    raw_hid_send(data, length);
+                }
+                break;
+            case 39: //crash record: read the last crash / clear the archive (protocol v16+)
+                {
+                    // data[HID_DATA_IDX]: 0 = this half's archived crash record,
+                    //                     1 = the slave's record as last pulled over the link,
+                    //                     2 = clear (erase the flash archive, forget both copies).
+                    // Reply "P\x27." then [flags][48-byte poly_crash_record_t]
+                    // (crash_record_hid_body): flags bit0 present, bit1 fresh -- the boot
+                    // before this one ended in that crash. A clear answers an empty body;
+                    // anything else NACKs. The record's wire layout is base/crash_record.h.
+                    //
+                    // The console line printed with the boot banner is the primary
+                    // channel (the host alerts on it); this is how polyctl and the rig
+                    // fetch the archive later, and the only way to clear it.
+                    const uint8_t which = data[HID_DATA_IDX];
+                    if (which > 2) {
+                        memset(data, 0, length);
+                        hid_reply(data, 0x27, false);
+                        raw_hid_send(data, length);
+                        break;
+                    }
+                    if (which == 2) {
+                        crash_record_clear();
+                        uprint("Crash archive cleared.\n");
+                    }
+                    memset(data, 0, length);
+                    hid_reply(data, 0x27, true);
+                    if (which <= 1) {
+                        crash_record_hid_body(which, &data[3], (uint8_t)(length - 3));
+                    }
                     raw_hid_send(data, length);
                 }
                 break;

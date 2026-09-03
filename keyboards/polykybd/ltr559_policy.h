@@ -12,13 +12,13 @@
 // Everything is gated on POLYKYBD_LTR559_DRIVE, exactly as it was in
 // poly_keymap.c — a board can carry the driver module without this policy.
 
+#include <stdint.h>
+
 #ifdef POLYKYBD_LTR559_DRIVE
-// Registers the generic slave->master pull channel (USER_SYNC_SLAVE_DATA) whose
-// slave-side handler serves {avg lux, proximity}. Call once from
-// keyboard_post_init_user(), alongside the other transaction registrations —
-// the handler stays private to ltr559_policy.c, the same way every other
-// user_sync_* handler stays private to the file that owns its data.
-void poly_ltr559_register_split_handler(void);
+// Slave-side payload for the generic slave->master pull channel
+// (USER_SYNC_SLAVE_DATA, kind SLAVE_DATA_SENSOR): {avg lux, proximity}. The
+// channel and its registration live in slave_data.c; this just fills the reply.
+void poly_ltr559_slave_sensor_reply(void* out_data, uint8_t out_len);
 
 // Master-side auto-brightness + idle-inhibit; call every housekeeping pass
 // (it self-limits to one decision per LTR559_DRIVE_MS).

@@ -4683,11 +4683,9 @@ static void boot_trace(const uint32_t* digit) {
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
 // Global variables: com
 void keyboard_post_init_user(void) {
-    // FIRST: did the previous run end in a crash? Reads the NOLOAD record + the
-    // reset cause, archives it to flash, and remembers it for the banner below.
-    // Before anything that could itself fault, so the record it reports is the
-    // previous run's and not this boot's.
-    crash_record_init();
+    // (The previous run's crash record was captured at the top of
+    // keyboard_pre_init_user(); it is archived after the core1 launch below and
+    // reported by the boot banner.)
     // Labels live in RAM on both halves (the render path reads one per macro keycap per
     // refresh). Each half loads its own EEPROM copy, then the master overwrites the
     // slave's over the link -- so a role swap makes whichever half the host talks to
@@ -4998,6 +4996,14 @@ void keyboard_post_init_user(void) {
 
 // Pre-initialization setup: initializes display hardware, loads EEPROM config, shows splash screen.
 void keyboard_pre_init_user(void) {
+    // FIRST, before any of our own init and before QMK's (matrix, split link and
+    // status OLED all run between here and post_init): did the previous run end
+    // in a crash? Captures the NOLOAD record + reset cause into RAM and stamps
+    // the phase BOOT, so a fault anywhere in this boot is recorded as one and
+    // the previous record is already safe if it recurs. No flash here -- the
+    // archive write waits for crash_record_archive_pending() in post_init.
+    crash_record_init();
+
     // Load the external-flash font pack and assemble g_all_fonts = resident ++
     // pack BEFORE the first render (show_splash_screen() below draws keycaps).
     // No valid pack (erased/corrupt/ABI mismatch) -> resident-only fonts.

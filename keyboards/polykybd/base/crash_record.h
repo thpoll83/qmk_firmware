@@ -116,9 +116,12 @@ void     crash_phase_leave(uint32_t prev);
 
 // --- boot-time capture and reporting --------------------------------------
 
-// Call ONCE early in keyboard_post_init_user(), before the boot banner and
-// BEFORE core1 is launched. Reads the reset cause, validates the NOLOAD block,
-// captures a fresh record into RAM and clears the NOLOAD copy. It does NOT touch
+// Call ONCE at the very top of keyboard_pre_init_user() -- before any PolyKybd
+// init and before QMK's own (matrix, split link, status OLED all run between the
+// two hooks), so a fault anywhere in this boot is tagged phase BOOT and the
+// previous record is captured before it can recur. Reads the reset cause,
+// validates the NOLOAD block, captures a fresh record into RAM and clears the
+// NOLOAD copy. It does NOT touch
 // flash: the archive write needs the fw_staging core1 lockout, whose release
 // RELAUNCHES core1 (bounded) -- done before post_init's own
 // multicore_launch_core1() that would leave core1 already running and the

@@ -125,8 +125,12 @@ static void __attribute__((noreturn)) record_and_reboot(uint8_t kind, const uint
     rec_fill(&s_ram.rec, kind, frame, sp);
     __asm volatile("dsb" ::: "memory");
     if (s_ram.rec.consecutive > CRASH_LOOP_LIMIT) {
-        // Crash loop: stop rebooting. The record is in RAM for the next
-        // RUN-pin / watchdog reset to archive, and the previous ones are in flash.
+        // Crash loop: stop rebooting. The watchdog may still be armed from this
+        // boot's crash_watchdog_start(); left alone it would reset the chip in
+        // CRASH_WATCHDOG_MS and turn the halt into a reboot storm with an 8 s
+        // pause. Disarm it. The record stays in RAM for the next RUN-pin reset
+        // to archive, and the previous ones are in flash.
+        crash_watchdog_stop();
         while (1) { __asm volatile("wfi"); }
     }
     // Full-chip reset via the watchdog (what mcu_reset() does) -- a plain
@@ -454,7 +458,13 @@ bool crash_record_note_slave(const uint8_t *body, uint8_t len) {
 // The watchdog
 // ---------------------------------------------------------------------------
 void crash_watchdog_start(void) {
-    s_ram.phase = CRASH_PHASE_LOOP;
+    // The boot got all the way through post_init, so whatever crashed before
+    // was not a boot loop: the back-to-back count starts over, as the field's
+    // own comment promises. A firmware that crashes at RUNTIME on every boot
+    // therefore reboots (and announces itself on each banner) rather than
+    // halting; the halt is for one that never gets this far.
+    s_ram.consecutive = 0;
+    s_ram.phase       = CRASH_PHASE_LOOP;
     watchdog_enable(CRASH_WATCHDOG_MS, true);
 }
 

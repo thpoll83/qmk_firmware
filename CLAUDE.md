@@ -2354,7 +2354,10 @@ run on it (`test_no_crash_record`). What is worth knowing:
   with it).
   - ⚠️ **The archive write happens in `crash_record_archive_pending()`, AFTER
     `multicore_launch_core1()` — not inside `crash_record_init()`, which runs
-    first.** The flash write takes the `fw_staging` core1 lockout, and releasing
+    first.** (First means the top of `keyboard_pre_init_user()`: QMK's own
+    matrix / split / OLED init runs between the two hooks, so capturing there
+    tags a fault anywhere in this boot `phase=boot` and has the previous record
+    safe before it can recur — CodeRabbit on #271.) The flash write takes the `fw_staging` core1 lockout, and releasing
     that lockout does a bounded RELAUNCH of core1. Done before post_init's own
     launch, core1 is already running when the unbounded FIFO handshake starts and
     the keyboard hangs on the boot after every crash — the exact opposite of what
@@ -2395,8 +2398,16 @@ run on it (`test_no_crash_record`). What is worth knowing:
   the record it produces will say so, which is the point.
 - **A crash loop halts instead of looping forever**: `consecutive` counts
   back-to-back records and past `CRASH_LOOP_LIMIT` (5) the handler parks in `wfi`
-  (`kind=halt`) rather than rebooting — recoverable over BOOTSEL, and the archive
-  still says what it was doing.
+  rather than rebooting — recoverable over BOOTSEL, and the archive still says
+  what it was doing. Two details, both found in review of #271: the halt
+  **disarms the watchdog first** (still armed from `crash_watchdog_start()`, it
+  would otherwise reset the chip 8 s later and turn the halt into a reboot storm
+  with a pause — CodeRabbit), and `crash_watchdog_start()`, i.e. a boot that got
+  all the way through post_init, **resets the counter to 0** — what the field's
+  comment always promised and the code did not do, so five unrelated crashes
+  across weeks of uptime would have halted the board. The halt is for a firmware
+  that never finishes booting; one that crashes at runtime reboots and announces
+  itself each time.
 - **The slave's record rides `USER_SYNC_SLAVE_DATA`**, which is now generic and
   unconditional: `slave_data.c` owns the op dispatch (`SLAVE_DATA_SENSOR` = the
   LTR-559 pull that used to be the whole handler, `SLAVE_DATA_CRASH`), and the

@@ -31,20 +31,28 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     a review starts, **hold pushes until it reports** (2026-08, cost a full cycle).
     - ⚠️ **A lost run can leave NO TRACE AT ALL — its summary comment ends as a
       bare "Review Change Stack" link, which reads as "nothing to say".**
-      Observed twice on #275 (2026-09-04, a docs PR pushed to four times): each
-      run rendered the `> [!NOTE] Currently processing new changes…` block with a
-      `📥 Commits` range, then the block was **removed** on a later edit leaving
-      only the stack link — no walkthrough, no `📥 Commits`, no *"No actionable
-      comments"*, and no error. Both ranges also trailed the head
-      (`0e2cb844..39f693fa`, then `..0f7ecef8`, never the head `73918d0`). No
-      review object was ever created, so `get_reviews` shows nothing either —
-      and that is indistinguishable from the CLEAN-pass false negative recorded
-      below, where nothing is also the answer. **The tell is the summary comment
-      itself: a bare stack link is not a clean pass, and "No actionable comments
-      were generated 🎉" is what a clean pass actually says.** ⚠️ The mechanism
-      is NOT established here — it is consistent with the abort above, but the
-      pushes were not isolated from a PR-body edit, so do not write it up as
-      one; what is measured is the rendered end state.
+      Measured on #275 (2026-09-04, a docs PR touched five times in ten
+      minutes): **four** runs each rendered the `> [!NOTE] Currently processing
+      new changes…` block with a `📥 Commits` range, then had the block
+      **removed** on a later edit leaving only the stack link — no walkthrough,
+      no `📥 Commits`, no *"No actionable comments"*, and no error. No review
+      object was created either, so `get_reviews` is empty — **indistinguishable
+      from the CLEAN-pass false negative recorded below, where empty is also the
+      answer.** The tell is the summary comment itself: a bare stack link is not
+      a clean pass; *"No actionable comments were generated 🎉"*, or a
+      walkthrough, is what a completed run leaves.
+      - ✅ **The fifth run, left UNDISTURBED, completed** — full walkthrough plus
+        `🚥 Pre-merge checks ✅ 5`, describing the real head. So the collapse is
+        caused by the PR moving under a run, not by a quirk of rendering: three
+        of the four dead runs started scoped to a head that a push had **already
+        superseded** (`..39f693fa`, `..0f7ecef8`, `..73918d0` while head was
+        `ad122c45`). That is the abort documented above, and this is what its
+        aftermath looks like — the run is not merely "lost", it erases its own
+        evidence.
+      - ⚠️ **So the cost of ignoring "hold pushes until it reports" is not one
+        wasted review, it is a PR that LOOKS unreviewed and cannot tell you
+        why.** Four cycles were burned here by pushing and editing the body
+        while runs were in flight; one quiet minute produced the review.
   - ⚠️ **Order matters: `resume` BEFORE `review` makes the review a no-op.**
     CodeRabbit is incremental and "does not re-review already reviewed commits";
     that guard is only relaxed *while reviews are paused*. Resuming first

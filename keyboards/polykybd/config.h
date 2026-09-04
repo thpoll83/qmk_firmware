@@ -53,12 +53,12 @@
 // ONE slot instead of spending another of the scarce 32. Its first user is the
 // LTR-559: when DRIVEing brightness/idle the master pulls {avg lux, proximity}
 // from the sensor (right) half via transaction_rpc_exec, so it works in either
-// USB orientation. Only compiled in when the sensor can drive (needs the slot).
-#ifdef POLYKYBD_LTR559_DRIVE
-#    define POLY_LTR559_TXN , USER_SYNC_SLAVE_DATA
-#else
-#    define POLY_LTR559_TXN
-#endif
+// USB orientation. Its second user is the crash record (slave_data.h
+// SLAVE_DATA_CRASH): the master pulls the slave's last crash over it, which is
+// the ONLY way a slave crash can reach a console. That is why the slot is now
+// unconditional -- it used to exist only under POLYKYBD_LTR559_DRIVE (the name
+// survives; both shipping boards define that anyway).
+#define POLY_LTR559_TXN , USER_SYNC_SLAVE_DATA
 // ROOT-CAUSE EXPERIMENT (split42, 2026-07-14): 3 dummy split transactions to grow
 // NUM_TOTAL_TRANSACTIONS by 3 WITHOUT the pointing device — the one side effect of
 // SPLIT_POINTING_ENABLE the heartbeat test never reproduced. With pointing the link
@@ -223,7 +223,7 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-#define PROTOCOL_VERSION 15
+#define PROTOCOL_VERSION 16
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

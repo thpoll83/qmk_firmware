@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "multicore_exec.h"
+#include "base/crash_record.h"
 #include "polykybd.h"
 
 #include "print.h"
@@ -135,9 +136,13 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
     // body was burning core0 cycles in a format-and-sink path that starved
     // matrix scan during back-pressure.
     dmb();
+    // Tagged so a watchdog timeout in this spin reads as "core0 waiting on core1"
+    // (the core1-hang class, see CLAUDE.md) rather than as an anonymous hang.
+    uint32_t crash_tag = crash_phase_enter(CRASH_PHASE_CORE1_WAIT, 0);
     while(core0_decomp_count!=core1_decomp_count) {
         dmb();
     }
+    crash_phase_leave(crash_tag);
     //copy data to dedicated buffers
     uint8_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
     core1_max_bitlen = 360 - core1_bit_index/8;
@@ -177,9 +182,13 @@ void core1_roi_start(void) {
 void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi, bool visible) {
     // See core1_decompress_fragment for the backpressure rationale.
     dmb();
+    // Tagged so a watchdog timeout in this spin reads as "core0 waiting on core1"
+    // (the core1-hang class, see CLAUDE.md) rather than as an anonymous hang.
+    uint32_t crash_tag = crash_phase_enter(CRASH_PHASE_CORE1_WAIT, 0);
     while(core0_decomp_count!=core1_decomp_count) {
         dmb();
     }
+    crash_phase_leave(crash_tag);
     //copy data to dedicated buffers
     //core1_max_bitlen = 360 - core1_bit_index/8;
     core1_roi = *roi;

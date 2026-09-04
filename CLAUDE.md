@@ -1205,6 +1205,17 @@ that cost real debugging to learn (2026-07):
     *two* orderings to get right — the label before the qmk merge, and the docs merge
     after the release (already noted in `polykybd-docs/CLAUDE.md`). Getting the second
     right does not save you from the first.
+  - ⚠️ **"Before the merge" means AT OPEN — a label applied any later races the
+    merge, and the merge wins.** qmk#271 and host#212 (2026-09-04) both asked for
+    `bump:minor` in the PR body and both merged without it (fw **0.18.3** and host
+    **0.14.17** instead of 0.19.0 / 0.15.0). The label I put on #212 the moment
+    #271's merge came through landed **12 seconds after** #212 was merged: a person
+    merging a reviewed stack clicks through it in a minute and does not re-read the
+    body, and `bump-version.yml` reads the labels at merge time. A request in the
+    body is documentation, not a label. `create_pull_request` cannot set labels, so
+    the rule is **`issue_write` with `labels: ["bump:minor"]` right after opening**,
+    before announcing the PR — and mention the label in the body only as a record of
+    what is already set.
   - **Recovering** is a choice, not a fix: either correct the docs to the version that
     actually bumped, or land a `bump:minor` PR that does **not** itself edit `config.h`
     (the workflow bumps *after* merge, so an edited version file would be bumped on top

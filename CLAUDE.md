@@ -2532,6 +2532,26 @@ run on it (`test_no_crash_record`). What is worth knowing:
   unverified is the **fault path itself**: the naked handler, the stacked frame
   and the `watchdog_reboot()` out of it. The `debug-firmware-on-rig` skill with a
   probe that dereferences a bad pointer over HID is the way to close that.
+  - **`-e POLYKYBD_CRASH_TEST=yes` is the by-hand route** (`crash_test.c`, a
+    TEST-ONLY flag — a normal build compiles inline no-ops and pays nothing).
+    Hold Ctrl+Shift+Alt and press a digit: **1** unaligned word store (the
+    qmk#258 brick, reproduced), **2** a branch to an address with bit 0 clear,
+    **3** a main-loop hang (~8 s to the watchdog), **4** `crash_record_halt()`,
+    **5** a pended SPARE NVIC IRQ, i.e. the `_unhandled_exception` funnel rather
+    than HardFault, **6** the same fault on **core1** (shared vector table;
+    PRIMASK does not mask a HardFault, so `core` reads 1), **7** the **slave**,
+    over a `SLAVE_DATA_CRASH_TEST` pull that deliberately never answers.
+  - ⚠️ **The chord tests each modifier FAMILY, not a combined mask.**
+    `MOD_MASK_CTRL` covers left and right, so `(mods & (CTRL|SHIFT|ALT)) == that`
+    demands all SIX keys and can never fire off a normal keymap — written that
+    way first, caught before the build.
+  - ⚠️ **Every address is laundered through a `volatile`.** A plain
+    `*(uint32_t *)1 = x` is undefined behaviour GCC may delete outright, and a
+    deleted fault is a test that silently proves nothing.
+  - **`clear_keyboard()` + a 25 ms settle before every trigger**, the same rule
+    the FW-2 prompt and `doom_begin()` follow: a crash is a path that does not
+    return, so the held chord would otherwise auto-repeat on the host — for a
+    full 8 s on the watchdog trigger, before the board even reboots.
 
 ### Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**

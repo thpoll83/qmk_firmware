@@ -9,6 +9,9 @@
 #include "split_util.h"        // is_transport_connected()
 #include "bridge_helper.h"     // is_usb_host_side()
 #include "base/crash_record.h"
+#ifdef POLYKYBD_CRASH_TEST
+#    include "crash_test.h"
+#endif
 #ifdef POLYKYBD_LTR559_DRIVE
 #    include "ltr559_policy.h"
 #endif
@@ -27,6 +30,10 @@ static void user_sync_slave_data_handler(uint8_t in_len, const void *in_data, ui
         case SLAVE_DATA_CRASH:
             crash_record_slave_reply((uint8_t *)out_data, out_len);
             break;
+#ifdef POLYKYBD_CRASH_TEST
+        case SLAVE_DATA_CRASH_TEST:
+            crash_test_slave_fault();   // does not return: records and reboots
+#endif
         default:
             break;  // unknown kind: leave the reply buffer as-is
     }
@@ -80,3 +87,14 @@ void slave_data_crash_pull_tick(void) {
         s_tries = CRASH_PULL_TRIES;   // done for this link-up
     }
 }
+
+#ifdef POLYKYBD_CRASH_TEST
+void slave_data_request_crash_test(void) {
+    uint8_t kind = SLAVE_DATA_CRASH_TEST;
+    uint8_t reply[CRASH_HID_BODY_LEN];
+    memset(reply, 0, sizeof(reply));
+    // Expected to return false: the slave faults inside the handler, so the
+    // transaction times out after its retries. Nothing to do with the result.
+    (void)transaction_rpc_exec(USER_SYNC_SLAVE_DATA, sizeof(kind), &kind, sizeof(reply), reply);
+}
+#endif

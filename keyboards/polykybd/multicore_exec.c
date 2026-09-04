@@ -40,6 +40,9 @@ typedef enum {
     CORE1_CMD_DECOMPRESS     = 0xcafe0001,
     CORE1_CMD_ROI_UPDATE     = 0xcafe0002,
     CORE1_CMD_RESET_BIT_IDX  = 0xcafe0003,
+#ifdef POLYKYBD_CRASH_TEST
+    CORE1_CMD_CRASH_TEST     = 0xcafe00ff,
+#endif
 } fifo_command_t;
 
 // Overlay buffers for core1 processing
@@ -111,6 +114,17 @@ void core1_entry(void) {
                 core1_bit_index = 0;
                 dmb();
                 break;
+#ifdef POLYKYBD_CRASH_TEST
+            case CORE1_CMD_CRASH_TEST: {
+                    // An unaligned word store: ARMv6-M has no unaligned access, so
+                    // this HardFaults right here. The vector table is shared with
+                    // core0 and PRIMASK does not mask a HardFault, so the naked
+                    // HardFault_Handler runs ON CORE1 and the record's `core` field
+                    // reads 1. No uprintf -- core1 has no console and a tiny stack.
+                    volatile uint32_t *bad = (volatile uint32_t *)(uintptr_t)(((uintptr_t)&core1_decomp_count) + 1u);
+                    *bad = 0xDEADBEEFu;
+                } break;
+#endif
             default: break;
         }
     }
@@ -217,4 +231,10 @@ void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const 
     //allow core1 to start decompressing
     multicore_fifo_push_blocking(CORE1_CMD_ROI_UPDATE);
 }
+#ifdef POLYKYBD_CRASH_TEST
+void core1_crash_test(void) {
+    multicore_fifo_push_blocking(CORE1_CMD_CRASH_TEST);
+}
+#endif
+
 #endif

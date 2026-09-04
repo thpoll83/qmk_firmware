@@ -1123,17 +1123,26 @@ inherited-upstream noise:
   four wasted calls before 330 reached the actual message. Prefer
   `failed_only: true` with a **run** id to find the job, then a generous
   `tail_lines` on the **job** id.
-  - ⚠️ **On a HIL/fwapply job NO tail reaches the interesting part — the firmware
-    console floods the log at roughly 200 lines a second.** The rig echoes every
-    `[qmk] …` line the keyboard prints, so on the red `Firmware apply round-trip
-    (split72)` of run 992 (job `101021479366`, 2026-09-04) a **2600-line** tail
-    covered about **two seconds** of wall clock, while the apply sequence it was
-    fetched for had happened roughly four minutes earlier. This is the same "what
-    fills the tail" problem as the cleanup spam above, three orders of magnitude
-    worse, and it is not fixable by asking for more lines. Read the rig's own
-    verdict lines instead — the graded `[test] PASS/FAIL: <name>` lines and the
-    `Split link:` summary are what carry the diagnosis — or drive the question with
-    a probe (`tier: debug`), which prints only what it asks for.
+  - ⚠️ **On a HIL/fwapply job NO tail reaches the interesting part, and the AVERAGE
+    line rate is the statistic that misleads you about it.** The rig echoes every
+    `[qmk] …` line the keyboard prints. Measured on the red `Firmware apply
+    round-trip (split72)` of run 992 (job `101021479366`, 2026-09-04): the whole
+    job is **33,422 lines over 266 s**, i.e. ~126 lines/s *averaged* — but the
+    console floods hardest at the end, so the **last 2600 lines span 1.87 s**
+    (~1400 lines/s) and the last 500 span 0.63 s. The apply sequence a tail is
+    fetched for had happened roughly **four minutes** earlier, so reaching it
+    needs a tail in the tens of thousands of lines. Same "what fills the tail"
+    problem as the cleanup spam above, an order of magnitude worse, and asking
+    for more lines is not the fix.
+    - ✅ **The escape hatch is `return_content: false`** — `get_job_logs` then
+      returns a `logs_url` (a time-limited blob link) instead of content, so
+      `curl` it and `grep`/measure the **whole** log in the shell, at no context
+      cost. That is how the numbers above were obtained, and it is strictly
+      better than any tail on a job this noisy.
+    - Otherwise read the rig's own verdict lines — the graded
+      `[test] PASS/FAIL: <name>` lines and the `Split link:` summary carry the
+      diagnosis — or drive the question with a probe (`tier: debug`), which
+      prints only what it asks for.
 - The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
   above.
 - ⚠️ **PR CI does NOT build the monolith.** `qmk-test.yml` builds only

@@ -29,6 +29,22 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     commit changed during the review from `<a>` to `<b>`". The run is lost, not
     resumed, and re-triggering costs another slot against the rate limit. So once
     a review starts, **hold pushes until it reports** (2026-08, cost a full cycle).
+    - ⚠️ **A lost run can leave NO TRACE AT ALL — its summary comment ends as a
+      bare "Review Change Stack" link, which reads as "nothing to say".**
+      Observed twice on #275 (2026-09-04, a docs PR pushed to four times): each
+      run rendered the `> [!NOTE] Currently processing new changes…` block with a
+      `📥 Commits` range, then the block was **removed** on a later edit leaving
+      only the stack link — no walkthrough, no `📥 Commits`, no *"No actionable
+      comments"*, and no error. Both ranges also trailed the head
+      (`0e2cb844..39f693fa`, then `..0f7ecef8`, never the head `73918d0`). No
+      review object was ever created, so `get_reviews` shows nothing either —
+      and that is indistinguishable from the CLEAN-pass false negative recorded
+      below, where nothing is also the answer. **The tell is the summary comment
+      itself: a bare stack link is not a clean pass, and "No actionable comments
+      were generated 🎉" is what a clean pass actually says.** ⚠️ The mechanism
+      is NOT established here — it is consistent with the abort above, but the
+      pushes were not isolated from a PR-body edit, so do not write it up as
+      one; what is measured is the rendered end state.
   - ⚠️ **Order matters: `resume` BEFORE `review` makes the review a no-op.**
     CodeRabbit is incremental and "does not re-review already reviewed commits";
     that guard is only relaxed *while reviews are paused*. Resuming first

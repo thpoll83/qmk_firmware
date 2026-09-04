@@ -29,6 +29,31 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     commit changed during the review from `<a>` to `<b>`". The run is lost, not
     resumed, and re-triggering costs another slot against the rate limit. So once
     a review starts, **hold pushes until it reports** (2026-08, cost a full cycle).
+    - ⚠️ **A lost run leaves NO REVIEW OBJECT AND NO VERDICT, and the only
+      trace it does leave is a summary comment collapsed to a bare "Review
+      Change Stack" link — which reads as "nothing to say".**
+      Measured on #275 (2026-09-04, a docs PR touched five times in ten
+      minutes): **four** runs each rendered the `> [!NOTE] Currently processing
+      new changes…` block with a `📥 Commits` range, then had the block
+      **removed** on a later edit leaving only the stack link — no walkthrough,
+      no `📥 Commits`, no *"No actionable comments"*, and no error. No review
+      object was created either, so `get_reviews` is empty — **indistinguishable
+      from the CLEAN-pass false negative recorded below, where empty is also the
+      answer.** The tell is the summary comment itself: a bare stack link is not
+      a clean pass; *"No actionable comments were generated 🎉"*, or a
+      walkthrough, is what a completed run leaves.
+      - ✅ **The fifth run, left UNDISTURBED, completed** — full walkthrough plus
+        `🚥 Pre-merge checks ✅ 5`, describing the real head. So the collapse is
+        caused by the PR moving under a run, not by a quirk of rendering: three
+        of the four dead runs started scoped to a head that a push had **already
+        superseded** (`..39f693fa`, `..0f7ecef8`, `..73918d0` while head was
+        `ad122c45`). That is the abort documented above, and this is what its
+        aftermath looks like — the run is not merely "lost", it erases its own
+        evidence.
+      - ⚠️ **So the cost of ignoring "hold pushes until it reports" is not one
+        wasted review, it is a PR that LOOKS unreviewed and cannot tell you
+        why.** Four cycles were burned here by pushing and editing the body
+        while runs were in flight; one quiet minute produced the review.
   - ⚠️ **Order matters: `resume` BEFORE `review` makes the review a no-op.**
     CodeRabbit is incremental and "does not re-review already reviewed commits";
     that guard is only relaxed *while reviews are paused*. Resuming first
@@ -78,6 +103,22 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
       find here, because there is no review. **Check the review's `commit_id`
       against the head sha**, not just that a review exists: a stale review plus a
       fresh green check is indistinguishable from a current one at a glance.
+      - ✅ **Sourcery auto-reviews a PR FIVE times and then WITHDRAWS its
+        approval, which is the one reviewer behaviour here that self-corrects
+        rather than going stale.** Measured on #275 (2026-09-04): on the sixth
+        push it commented *"Sourcery has withdrawn its approval of this pull
+        request. It auto-reviews a pull request 5 times, and this push is past
+        that limit, so the approval no longer reflects code Sourcery has read"*,
+        and the `APPROVED` review — pinned to the branch's FIRST commit while its
+        check went green on every head since — stopped counting. Two things
+        follow:
+        - ⚠️ **A withdrawn approval is NOT a rejection**, and it arrives with no
+          findings attached, so it reads like one. It means only that the head
+          has outrun what Sourcery read. `@sourcery-ai review` gets a fresh one.
+        - **It bounds the stale-approval trap above rather than removing it**:
+          within the first five pushes an approval can still sit on a commit the
+          head has left behind, and that is exactly the window most PRs live in.
+          The `commit_id`-vs-head check is still the thing to run.
     - ⚠️ **CodeRabbit's COMMIT STATUS does the same thing, so "at least it renders a
       banner" only holds for the comment.** Its status context reads `state: success`
       with the description **"Review rate limited"** (`pull_request_read`
@@ -212,6 +253,19 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
       notice — a Sourcery refusal is itself a review object carrying the head sha,
       so the sha alone reads as reviewed. Never infer from a check run or from
       this paragraph.
+      - ⚠️ **As of 2026-09-04 Greptile is REFUSING ACCOUNT-WIDE, and that is a
+        different thing from its documented silence.** It now submits a review
+        whose entire body is *"`thpoll83` has reached the 50-credit limit for
+        trial accounts"* — measured on #275, one review object, `commit_id`
+        equal to the head sha. So the pair-check above catches it (the body is a
+        refusal), and the "announces a skip nowhere" clause still holds for an
+        ordinary skip: this is a **quota**, announced, not a skip. Two
+        consequences while it lasts: it is **not review cover on any PolyKybd
+        repo**,
+        since the limit is on the account rather than the repo; and unlike
+        CodeRabbit's hourly window it does **not** come back by waiting — the
+        trial is spent until someone upgrades. Re-check with `get_reviews`
+        rather than assuming either state persists.
       - ⚠️ **That pair-check has a FALSE NEGATIVE in the other direction, so it is
         not sufficient either: a CLEAN CodeRabbit review produces NO REVIEW OBJECT
         AT ALL.** It says *"No actionable comments were generated 🎉"* by editing
@@ -737,6 +791,27 @@ inherited-upstream noise:
       would die on an unknown argparse flag — failing the release gate. An unknown
       env var is ignored, so an old station just skips the check. That also
       removes the merge-order constraint between the two repos.
+  - ⚠️ **OPEN (2026-09-04): the apply job went red on the merge of #274 with the
+    link dead, and the cause is NOT established — do not theorise one from this
+    entry.** Run 992, job `101021479366`: the master came back on the right
+    version and every other assertion passed, then the post-apply soak measured
+    `57142 tx crc_err=0 nack=0 transport_fail=57142 giveup=17995 err=100.0%` and
+    the test failed with *"the master came back but the split link did not"*.
+    Two facts that bound it, and nothing further was determined:
+    - **`HIL_RESLAVE` was OFF** (a plain push, no `hil-fwapply` label or marker),
+      so the slave was never re-flashed and the rig **graded** the link rather
+      than reporting UNVERIFIED — i.e. it did not observe the two-masters state
+      that the structural note above says an apply necessarily produces on this
+      rig. Whether that is because the enumeration read `unknown` (which that path
+      treats as one master) was not settled.
+    - **The merged change cannot plausibly produce 57k transport failures**: in a
+      non-crash-test build its only live delta is at most two extra bounded RPC
+      attempts per link-up.
+    100% `transport_fail` with `crc_err=0` is the same signature as the
+    2026-09-03 field report AND as the benign two-masters case, which is exactly
+    why it cannot be read off the numbers alone. The next step is a dispatch with
+    `tier: fwapply` (which also turns `HIL_RESLAVE` on) to see whether it
+    reproduces.
   - ⚠️ **`--apply-bin` is destructive by design and safe only because the image is
     the one already running** — the rig checks that pairing rather than assuming
     it. And it is safe *at all* only because a brick on the rig is self-recovering
@@ -808,6 +883,18 @@ inherited-upstream noise:
       `actions_list list_workflow_runs` filtered `event: push` — rather than
       assuming. A missing run looks identical to a repo where nothing was
       configured.
+    - ⚠️ **Add `branch:` to that query and it returns a STALE SUBSET — measured, and
+      it reads exactly like the dropped-delivery failure above.** On 2026-09-04
+      `list_workflow_runs` with `event: push` **and** `branch: PolyKybd` reported
+      `total_count` **25**, newest run dated **2026-08-24**; the same call with
+      `event: push` alone reported **217**, newest run **992** twelve minutes old.
+      Both were asked seconds apart, so this is not a race. Since `qmk-test.yml`
+      pushes only on `PolyKybd`, the filter is a no-op that should change nothing —
+      which is what makes it dangerous: an empty-looking result for the merge you
+      just made is the exact signature of a dropped push event, and I nearly filed
+      a second incident off it. **Use `event: push` with no branch filter, and
+      confirm the run you find carries the merge commit's own sha** (`head_sha`)
+      rather than trusting the listing's shape.
 
 - ✅ **The DEBUG LOOP: a firmware bug can now be chased on the rig with nobody
   flashing a `.bin`.** Dispatch `qmk-test.yml` on a branch with **`tier: debug`,
@@ -1078,6 +1165,26 @@ inherited-upstream noise:
   four wasted calls before 330 reached the actual message. Prefer
   `failed_only: true` with a **run** id to find the job, then a generous
   `tail_lines` on the **job** id.
+  - ⚠️ **On a HIL/fwapply job no PRACTICAL tail reaches the interesting part, and
+    the AVERAGE line rate is the statistic that misleads you about it.** The rig echoes every
+    `[qmk] …` line the keyboard prints. Measured on the red `Firmware apply
+    round-trip (split72)` of run 992 (job `101021479366`, 2026-09-04): the whole
+    job is **33,422 lines over 266 s**, i.e. ~126 lines/s *averaged* — but the
+    console floods hardest at the end, so the **last 2600 lines span 1.87 s**
+    (~1400 lines/s) and the last 500 span 0.63 s. The apply sequence a tail is
+    fetched for had happened roughly **four minutes** earlier, so reaching it
+    needs a tail in the tens of thousands of lines. Same "what fills the tail"
+    problem as the cleanup spam above, except that there the noise is ~60 lines
+    and here it is the whole log — asking for more lines is not the fix.
+    - ✅ **The escape hatch is `return_content: false`** — `get_job_logs` then
+      returns a `logs_url` (a time-limited blob link) instead of content, so
+      `curl` it and `grep`/measure the **whole** log in the shell, at no context
+      cost. That is how the numbers above were obtained, and it is strictly
+      better than any tail on a job this noisy.
+    - Otherwise read the rig's own verdict lines — the graded
+      `[test] PASS/FAIL: <name>` lines and the `Split link:` summary carry the
+      diagnosis — or drive the question with a probe (`tier: debug`), which
+      prints only what it asks for.
 - The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
   above.
 - ⚠️ **PR CI does NOT build the monolith.** `qmk-test.yml` builds only

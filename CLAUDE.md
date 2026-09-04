@@ -2552,6 +2552,39 @@ run on it (`test_no_crash_record`). What is worth knowing:
     the FW-2 prompt and `doom_begin()` follow: a crash is a path that does not
     return, so the held chord would otherwise auto-repeat on the host — for a
     full 8 s on the watchdog trigger, before the board even reboots.
+  - ✅ **PROVEN ON HARDWARE 2026-09-04 (fw 0.18.4), triggers 1 and 2** — the
+    fault path this section called unverified. Trigger 1's `pc` landed on the
+    faulting store ITSELF (`crash_test.c:53`, `601a str r2,[r3,#0]`), not its
+    successor, so one `addr2line` names the line. The disassembly also shows GCC
+    emitting the `ldr` read-back of `s_addr` before the store, i.e. the volatile
+    laundering held and the fault was not optimised away. Three readings that
+    generalise to ANY fault record, not just these two:
+    - **`psr` bit 24 (T) is a free discriminator, and both directions are now
+      measured.** Trigger 1 (faulted executing an instruction) returned
+      `psr=0xa1000000`, T **set**; trigger 2 (a `blx` to a bit-0-clear address)
+      returned `psr=0x00000000`, T **clear**. So the record separates "faulted on
+      an instruction" from "faulted trying to enter ARM state" with no symbols at
+      all — the stacked xPSR is the state BEFORE the exception.
+    - ⚠️ **`lr` is trustworthy only when the fault is AT a call.** Trigger 2
+      faulted on the `blx`, so LR still held the return address that `blx` had
+      just written and resolved to the calling line (`crash_test.c:66`). Trigger 1
+      faulted a few instructions later, so LR was a stale leftover from the
+      previous `bl` and resolved to `chThdSleep` — the `wait_ms(25)` in
+      `release_the_chord()`, nowhere near the bug. The tell is whether
+      `addr2line lr` lands adjacent to `pc`'s function; ARMv6-M stacks no call
+      chain, so this is never a backtrace.
+    - ⚠️ **`addr2line` maps a DATA address to a symbol and it reads like an
+      answer.** Trigger 2's `pc=0x20000000` resolved to `__overlay_pool_base__`
+      (`overlay.c:42`) — the overlay pool, which is not code. **Check the RANGE
+      first**: code is XIP flash `0x10……`, SRAM is `0x20……`, so a `pc` in SRAM
+      means "branched into nowhere" whatever symbol addr2line prints.
+  - ⚠️ **`reason` carries a STICKY `HAD_POR`, so the host renders a watchdog
+    reboot as "reset reason: POR, watchdog forced".** Both hardware records read
+    `reason=0x21` = `HAD_POR | WD_FORCE` on a board that had been up 148 s and
+    363 s and was never power-cycled — the fault handler's `watchdog_reboot()`
+    brought it back. `WD_FORCE` set with `WD_TIMER` clear is the informative half
+    (and is the qmk#271 discriminator working); leading with POR reads as a power
+    cycle and would send a real diagnosis the wrong way.
 
 ### Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**

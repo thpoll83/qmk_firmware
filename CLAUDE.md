@@ -29,8 +29,9 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     commit changed during the review from `<a>` to `<b>`". The run is lost, not
     resumed, and re-triggering costs another slot against the rate limit. So once
     a review starts, **hold pushes until it reports** (2026-08, cost a full cycle).
-    - ⚠️ **A lost run can leave NO TRACE AT ALL — its summary comment ends as a
-      bare "Review Change Stack" link, which reads as "nothing to say".**
+    - ⚠️ **A lost run leaves NO REVIEW OBJECT AND NO VERDICT, and the only
+      trace it does leave is a summary comment collapsed to a bare "Review
+      Change Stack" link — which reads as "nothing to say".**
       Measured on #275 (2026-09-04, a docs PR touched five times in ten
       minutes): **four** runs each rendered the `> [!NOTE] Currently processing
       new changes…` block with a `📥 Commits` range, then had the block
@@ -243,7 +244,8 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
         equal to the head sha. So the pair-check above catches it (the body is a
         refusal), and the "announces a skip nowhere" clause still holds for an
         ordinary skip: this is a **quota**, announced, not a skip. Two
-        consequences while it lasts: it is **not cover on any PolyKybd repo**,
+        consequences while it lasts: it is **not review cover on any PolyKybd
+        repo**,
         since the limit is on the account rather than the repo; and unlike
         CodeRabbit's hourly window it does **not** come back by waiting — the
         trial is spent until someone upgrades. Re-check with `get_reviews`
@@ -1147,8 +1149,8 @@ inherited-upstream noise:
   four wasted calls before 330 reached the actual message. Prefer
   `failed_only: true` with a **run** id to find the job, then a generous
   `tail_lines` on the **job** id.
-  - ⚠️ **On a HIL/fwapply job NO tail reaches the interesting part, and the AVERAGE
-    line rate is the statistic that misleads you about it.** The rig echoes every
+  - ⚠️ **On a HIL/fwapply job no PRACTICAL tail reaches the interesting part, and
+    the AVERAGE line rate is the statistic that misleads you about it.** The rig echoes every
     `[qmk] …` line the keyboard prints. Measured on the red `Firmware apply
     round-trip (split72)` of run 992 (job `101021479366`, 2026-09-04): the whole
     job is **33,422 lines over 266 s**, i.e. ~126 lines/s *averaged* — but the

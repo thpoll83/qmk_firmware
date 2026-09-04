@@ -212,6 +212,18 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
       notice — a Sourcery refusal is itself a review object carrying the head sha,
       so the sha alone reads as reviewed. Never infer from a check run or from
       this paragraph.
+      - ⚠️ **As of 2026-09-04 Greptile is REFUSING ACCOUNT-WIDE, and that is a
+        different thing from its documented silence.** It now submits a review
+        whose entire body is *"`thpoll83` has reached the 50-credit limit for
+        trial accounts"* — measured on #275, one review object, `commit_id`
+        equal to the head sha. So the pair-check above catches it (the body is a
+        refusal), and the "announces a skip nowhere" clause still holds for an
+        ordinary skip: this is a **quota**, announced, not a skip. Two
+        consequences while it lasts: it is **not cover on any PolyKybd repo**,
+        since the limit is on the account rather than the repo; and unlike
+        CodeRabbit's hourly window it does **not** come back by waiting — the
+        trial is spent until someone upgrades. Re-check with `get_reviews`
+        rather than assuming either state persists.
       - ⚠️ **That pair-check has a FALSE NEGATIVE in the other direction, so it is
         not sufficient either: a CLEAN CodeRabbit review produces NO REVIEW OBJECT
         AT ALL.** It says *"No actionable comments were generated 🎉"* by editing

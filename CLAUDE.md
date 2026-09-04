@@ -103,6 +103,22 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
       find here, because there is no review. **Check the review's `commit_id`
       against the head sha**, not just that a review exists: a stale review plus a
       fresh green check is indistinguishable from a current one at a glance.
+      - ✅ **Sourcery auto-reviews a PR FIVE times and then WITHDRAWS its
+        approval, which is the one reviewer behaviour here that self-corrects
+        rather than going stale.** Measured on #275 (2026-09-04): on the sixth
+        push it commented *"Sourcery has withdrawn its approval of this pull
+        request. It auto-reviews a pull request 5 times, and this push is past
+        that limit, so the approval no longer reflects code Sourcery has read"*,
+        and the `APPROVED` review — pinned to the branch's FIRST commit while its
+        check went green on every head since — stopped counting. Two things
+        follow:
+        - ⚠️ **A withdrawn approval is NOT a rejection**, and it arrives with no
+          findings attached, so it reads like one. It means only that the head
+          has outrun what Sourcery read. `@sourcery-ai review` gets a fresh one.
+        - **It bounds the stale-approval trap above rather than removing it**:
+          within the first five pushes an approval can still sit on a commit the
+          head has left behind, and that is exactly the window most PRs live in.
+          The `commit_id`-vs-head check is still the thing to run.
     - ⚠️ **CodeRabbit's COMMIT STATUS does the same thing, so "at least it renders a
       banner" only holds for the comment.** Its status context reads `state: success`
       with the description **"Review rate limited"** (`pull_request_read`

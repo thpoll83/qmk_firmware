@@ -1132,8 +1132,8 @@ inherited-upstream noise:
     (~1400 lines/s) and the last 500 span 0.63 s. The apply sequence a tail is
     fetched for had happened roughly **four minutes** earlier, so reaching it
     needs a tail in the tens of thousands of lines. Same "what fills the tail"
-    problem as the cleanup spam above, an order of magnitude worse, and asking
-    for more lines is not the fix.
+    problem as the cleanup spam above, except that there the noise is ~60 lines
+    and here it is the whole log — asking for more lines is not the fix.
     - ✅ **The escape hatch is `return_content: false`** — `get_job_logs` then
       returns a `logs_url` (a time-limited blob link) instead of content, so
       `curl` it and `grep`/measure the **whole** log in the shell, at no context

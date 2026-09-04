@@ -173,6 +173,9 @@ void crash_record_slave_reply(uint8_t *out, uint8_t out_len);
 // Returns false when the body did not decode (short / bad CRC).
 bool crash_record_note_slave(const uint8_t *body, uint8_t len);
 
+// Re-print the slave's line (no-op unless a fresh slave record is held).
+void crash_record_emit_slave_line(void);
+
 // --- the watchdog -----------------------------------------------------------
 
 // Arm the hardware watchdog. Call at the END of keyboard_post_init_user() -- the

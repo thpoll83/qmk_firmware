@@ -2566,6 +2566,19 @@ run on it (`test_no_crash_record`). What is worth knowing:
     the FW-2 prompt and `doom_begin()` follow: a crash is a path that does not
     return, so the held chord would otherwise auto-repeat on the host — for a
     full 8 s on the watchdog trigger, before the board even reboots.
+  - ⚠️ **A pull that lands BEFORE the slave has archived used to count as DONE.**
+    `crash_record_note_slave()` returns true for an empty reply as well (it
+    clears the master's cached copy), so testing it alone closed the pull for
+    that link-up with nothing reported — and right after a slave reboot the
+    empty reply is the normal first answer. Only a reply with
+    `CRASH_HID_FLAG_PRESENT` ends it now. Pre-existing, not specific to the
+    crash test: it applied to the ordinary post-reboot pull too.
+  - ⚠️ **The slave's line was printed exactly ONCE, so a single dropped console
+    read lost the record for good.** The master's own line survives that because
+    the boot banner repeats it; the slave's arrives long after those repeats have
+    stopped, which is why it is not in the banner. It now schedules a few repeats
+    of its own (`crash_record_emit_slave_line()`), which is safe because the host
+    dedupes identical lines — the same property the banner's repeats rely on.
   - ⚠️ **Trigger 7 cannot rely on the master OBSERVING the slave's reboot as a
     link drop.** `slave_data_crash_pull_tick()` re-pulls only on a false->true
     transition of `is_transport_connected()`, which needs

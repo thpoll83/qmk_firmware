@@ -9,6 +9,7 @@
 #include "split_util.h"        // is_transport_connected()
 #include "bridge_helper.h"     // is_usb_host_side()
 #include "base/crash_record.h"
+#include "print.h"           // uprintf (the crash-test pull diagnostic)
 #ifdef POLYKYBD_CRASH_TEST
 #    include "crash_test.h"
 #endif
@@ -51,6 +52,10 @@ void slave_data_register(void) {
 // ---------------------------------------------------------------------------
 #define CRASH_PULL_TRIES       3u
 #define CRASH_PULL_SPACING_MS  2000u
+#define SLAVE_EMIT_REPEATS     4u
+#define SLAVE_EMIT_SPACING_MS  1500u
+static uint8_t  s_emits   = 0;
+static uint32_t s_emit_at = 0;
 
 #ifdef POLYKYBD_CRASH_TEST
 // A crash-test request KNOWS a slave record is coming, so it must not depend on
@@ -71,6 +76,12 @@ static uint32_t s_last   = 0;
 
 void slave_data_crash_pull_tick(void) {
     if (!is_usb_host_side()) return;
+
+    if (s_emits > 0 && timer_elapsed32(s_emit_at) >= SLAVE_EMIT_SPACING_MS) {
+        s_emit_at = timer_read32();
+        s_emits--;
+        crash_record_emit_slave_line();
+    }
 
     const bool linked = is_transport_connected();
     if (!linked) {
@@ -101,8 +112,30 @@ void slave_data_crash_pull_tick(void) {
     uint32_t tag = crash_phase_enter(CRASH_PHASE_BRIDGE, USER_SYNC_SLAVE_DATA);
     bool ok = transaction_rpc_exec(USER_SYNC_SLAVE_DATA, sizeof(kind), &kind, sizeof(reply), reply);
     crash_phase_leave(tag);
-    if (ok && crash_record_note_slave(reply, sizeof(reply))) {
+    const bool noted   = ok && crash_record_note_slave(reply, sizeof(reply));
+    const bool present = noted && (reply[0] & CRASH_HID_FLAG_PRESENT) != 0;
+#ifdef POLYKYBD_CRASH_TEST
+    // One line per forced pull, so a round on hardware says WHICH half of this
+    // is failing instead of leaving four indistinguishable silences: the RPC not
+    // landing, the slave holding no record, a record that is not fresh, or a
+    // record that was reported and the console missed.
+    if (forcing) {
+        uprintf("crash-test: slave pull #%u ok=%u flags=0x%02X\n",
+                (unsigned)s_tries, (unsigned)ok, (unsigned)(ok ? reply[0] : 0u));
+    }
+#endif
+    // ONLY a record actually present ends the pull. crash_record_note_slave()
+    // returns true for an empty reply too (it clears the master's cached copy),
+    // so testing it alone let a pull that landed BEFORE the slave had archived
+    // -- the normal case right after a slave reboot -- count as done and close
+    // the window with nothing reported.
+    if (present) {
         s_tries = CRASH_PULL_TRIES;   // done for this link-up
+        // Schedule a few repeats of the slave's line. It is printed once at the
+        // pull and the console can drop a read, which loses the record for good;
+        // the master's own line survives that because the boot banner repeats it.
+        s_emits    = SLAVE_EMIT_REPEATS;
+        s_emit_at  = timer_read32();
 #ifdef POLYKYBD_CRASH_TEST
         s_forcing = false;
 #endif

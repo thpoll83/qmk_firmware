@@ -737,6 +737,27 @@ inherited-upstream noise:
       would die on an unknown argparse flag — failing the release gate. An unknown
       env var is ignored, so an old station just skips the check. That also
       removes the merge-order constraint between the two repos.
+  - ⚠️ **OPEN (2026-09-04): the apply job went red on the merge of #274 with the
+    link dead, and the cause is NOT established — do not theorise one from this
+    entry.** Run 992, job `101021479366`: the master came back on the right
+    version and every other assertion passed, then the post-apply soak measured
+    `57142 tx crc_err=0 nack=0 transport_fail=57142 giveup=17995 err=100.0%` and
+    the test failed with *"the master came back but the split link did not"*.
+    Two facts that bound it, and nothing further was determined:
+    - **`HIL_RESLAVE` was OFF** (a plain push, no `hil-fwapply` label or marker),
+      so the slave was never re-flashed and the rig **graded** the link rather
+      than reporting UNVERIFIED — i.e. it did not observe the two-masters state
+      that the structural note above says an apply necessarily produces on this
+      rig. Whether that is because the enumeration read `unknown` (which that path
+      treats as one master) was not settled.
+    - **The merged change cannot plausibly produce 57k transport failures**: in a
+      non-crash-test build its only live delta is at most two extra bounded RPC
+      attempts per link-up.
+    100% `transport_fail` with `crc_err=0` is the same signature as the
+    2026-09-03 field report AND as the benign two-masters case, which is exactly
+    why it cannot be read off the numbers alone. The next step is a dispatch with
+    `tier: fwapply` (which also turns `HIL_RESLAVE` on) to see whether it
+    reproduces.
   - ⚠️ **`--apply-bin` is destructive by design and safe only because the image is
     the one already running** — the rig checks that pairing rather than assuming
     it. And it is safe *at all* only because a brick on the rig is self-recovering
@@ -808,6 +829,18 @@ inherited-upstream noise:
       `actions_list list_workflow_runs` filtered `event: push` — rather than
       assuming. A missing run looks identical to a repo where nothing was
       configured.
+    - ⚠️ **Add `branch:` to that query and it returns a STALE SUBSET — measured, and
+      it reads exactly like the dropped-delivery failure above.** On 2026-09-04
+      `list_workflow_runs` with `event: push` **and** `branch: PolyKybd` reported
+      `total_count` **25**, newest run dated **2026-08-24**; the same call with
+      `event: push` alone reported **217**, newest run **992** twelve minutes old.
+      Both were asked seconds apart, so this is not a race. Since `qmk-test.yml`
+      pushes only on `PolyKybd`, the filter is a no-op that should change nothing —
+      which is what makes it dangerous: an empty-looking result for the merge you
+      just made is the exact signature of a dropped push event, and I nearly filed
+      a second incident off it. **Use `event: push` with no branch filter, and
+      confirm the run you find carries the merge commit's own sha** (`head_sha`)
+      rather than trusting the listing's shape.
 
 - ✅ **The DEBUG LOOP: a firmware bug can now be chased on the rig with nobody
   flashing a `.bin`.** Dispatch `qmk-test.yml` on a branch with **`tier: debug`,
@@ -1078,6 +1111,17 @@ inherited-upstream noise:
   four wasted calls before 330 reached the actual message. Prefer
   `failed_only: true` with a **run** id to find the job, then a generous
   `tail_lines` on the **job** id.
+  - ⚠️ **On a HIL/fwapply job NO tail reaches the interesting part — the firmware
+    console floods the log at roughly 200 lines a second.** The rig echoes every
+    `[qmk] …` line the keyboard prints, so on the red `Firmware apply round-trip
+    (split72)` of run 992 (job `101021479366`, 2026-09-04) a **2600-line** tail
+    covered about **two seconds** of wall clock, while the apply sequence it was
+    fetched for had happened roughly four minutes earlier. This is the same "what
+    fills the tail" problem as the cleanup spam above, three orders of magnitude
+    worse, and it is not fixable by asking for more lines. Read the rig's own
+    verdict lines instead — the graded `[test] PASS/FAIL: <name>` lines and the
+    `Split link:` summary are what carry the diagnosis — or drive the question with
+    a probe (`tier: debug`), which prints only what it asks for.
 - The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
   above.
 - ⚠️ **PR CI does NOT build the monolith.** `qmk-test.yml` builds only

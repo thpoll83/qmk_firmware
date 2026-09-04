@@ -16,6 +16,9 @@
 enum slave_data_kind {
     SLAVE_DATA_SENSOR = 0,  // ltr559_sync_t: {avg lux, proximity}   (POLYKYBD_LTR559_DRIVE)
     SLAVE_DATA_CRASH  = 1,  // crash_record: [flags][poly_crash_record_t] (crash_record.h)
+#ifdef POLYKYBD_CRASH_TEST
+    SLAVE_DATA_CRASH_TEST = 2,  // TEST BUILDS ONLY: fault on the slave, never answers
+#endif
 };
 
 // Registers the split handler. Call once from keyboard_post_init_user(),
@@ -27,3 +30,11 @@ void slave_data_register(void);
 // link-up (bounded retries, spaced out) and hand it to crash_record_note_slave().
 // No-op on the slave.
 void slave_data_crash_pull_tick(void);
+
+#ifdef POLYKYBD_CRASH_TEST
+// TEST BUILDS ONLY (crash_test.h). Master side: ask the slave to fault. The pull
+// necessarily FAILS -- the slave reboots instead of answering -- which is the
+// point: the link then drops and re-establishes, and slave_data_crash_pull_tick()
+// pulls the resulting record and prints it as `side=slave`.
+void slave_data_request_crash_test(void);
+#endif

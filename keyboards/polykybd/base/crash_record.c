@@ -423,8 +423,18 @@ void crash_record_emit_lines(void) {
     // Only a FRESH record is announced: the archive is a history for polyctl /
     // the HID command, not something to re-report at every boot forever.
     if (s_fresh && s_have_archive) emit_one(&s_archive, "master");
-    // The slave's line is printed ONCE, at the pull (crash_record_note_slave):
-    // the link can come up long after the banner re-emits have stopped.
+    // The slave's line is NOT here: the link can come up long after the banner
+    // re-emits have stopped, so it is scheduled separately from the pull -- see
+    // crash_record_emit_slave_line().
+}
+
+// The master's own line rides the boot banner, which repeats, so a console that
+// misses one read still gets it. The slave's had exactly one chance, and a single
+// dropped read lost the record for good. The pull schedules a few repeats through
+// here instead; the host dedupes identical lines, which is what makes the banner's
+// own repeats safe too.
+void crash_record_emit_slave_line(void) {
+    if (s_have_slave && s_slave_fresh) emit_one(&s_slave, "slave");
 }
 
 static uint8_t fill_body(uint8_t *out, uint8_t out_len, bool present, bool fresh,

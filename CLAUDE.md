@@ -2532,6 +2532,96 @@ run on it (`test_no_crash_record`). What is worth knowing:
   unverified is the **fault path itself**: the naked handler, the stacked frame
   and the `watchdog_reboot()` out of it. The `debug-firmware-on-rig` skill with a
   probe that dereferences a bad pointer over HID is the way to close that.
+  - **`-e POLYKYBD_CRASH_TEST=yes` is the by-hand route** (`crash_test.c`, a
+    TEST-ONLY flag — a normal build compiles inline no-ops and pays nothing).
+    Hold Ctrl+Shift+Alt and press a digit: **1** unaligned word store (the
+    qmk#258 brick, reproduced), **2** a branch to an address with bit 0 clear,
+    **3** a main-loop hang (~8 s to the watchdog), **4** `crash_record_halt()`,
+    **5** a pended SPARE NVIC IRQ, i.e. the `_unhandled_exception` funnel rather
+    than HardFault, **6** the same fault on **core1** (shared vector table;
+    PRIMASK does not mask a HardFault, so `core` reads 1), **7** the **slave**,
+    over a `SLAVE_DATA_CRASH_TEST` pull that deliberately never answers.
+  - ⚠️ **The chord tests each modifier FAMILY, not a combined mask.**
+    `MOD_MASK_CTRL` covers left and right, so `(mods & (CTRL|SHIFT|ALT)) == that`
+    demands all SIX keys and can never fire off a normal keymap — written that
+    way first, caught before the build.
+  - ⚠️ **Every address is laundered through a `volatile`.** A plain
+    `*(uint32_t *)1 = x` is undefined behaviour GCC may delete outright, and a
+    deleted fault is a test that silently proves nothing.
+    - ⚠️ **The mechanism that actually bit was NOT deletion — it was
+      LEGALISATION, and it is quieter.** Trigger 6 wrote its address as a
+      compile-time constant (`((uintptr_t)&core1_decomp_count) + 1u`), so GCC
+      could see the misalignment and split the `volatile uint32_t` store into
+      **four `strb`** — which never fault on ARMv6-M. Core1 wrote `EF BE AD DE`
+      and carried on, so the trigger did nothing at all and reported nothing
+      (measured 2026-09-04). A deleted store leaves no instructions to find; a
+      legalised one leaves plausible-looking code that simply cannot fault. The
+      laundering is what hides the alignment from the optimiser, and it is
+      required even where the address is not literally a constant expression.
+    - **Check it in the DISASSEMBLY, not the source**: the fault site must be a
+      single `str`, and the address must be reloaded from the volatile
+      (`ldr r4,[r2]` then `str r3,[r4,#0]`). Any `strb` on that path means the
+      trigger is inert.
+  - **`clear_keyboard()` + a 25 ms settle before every trigger**, the same rule
+    the FW-2 prompt and `doom_begin()` follow: a crash is a path that does not
+    return, so the held chord would otherwise auto-repeat on the host — for a
+    full 8 s on the watchdog trigger, before the board even reboots.
+  - ⚠️ **A pull that lands BEFORE the slave has archived used to count as DONE.**
+    `crash_record_note_slave()` returns true for an empty reply as well (it
+    clears the master's cached copy), so testing it alone closed the pull for
+    that link-up with nothing reported — and right after a slave reboot the
+    empty reply is the normal first answer. Only a reply with
+    `CRASH_HID_FLAG_PRESENT` ends it now. Pre-existing, not specific to the
+    crash test: it applied to the ordinary post-reboot pull too.
+  - ⚠️ **The slave's line was printed exactly ONCE, so a single dropped console
+    read lost the record for good.** The master's own line survives that because
+    the boot banner repeats it; the slave's arrives long after those repeats have
+    stopped, which is why it is not in the banner. It now schedules a few repeats
+    of its own (`crash_record_emit_slave_line()`), which is safe because the host
+    dedupes identical lines — the same property the banner's repeats rely on.
+  - ⚠️ **Trigger 7 cannot rely on the master OBSERVING the slave's reboot as a
+    link drop.** `slave_data_crash_pull_tick()` re-pulls only on a false->true
+    transition of `is_transport_connected()`, which needs
+    `SPLIT_MAX_CONNECTION_ERRORS` (200) consecutive failures to accumulate
+    *before* the slave is back — a race, not a guarantee. So the request opens a
+    bounded forced-retry window (`CRASH_FORCE_WINDOW_MS`, 30 s) instead.
+    ⚠️ Do **not** "re-arm" by clearing `s_tries` at request time, which was tried
+    first: with the link still reading connected, that spends all three ordinary
+    tries into a half-rebooted slave and then gives up forever — the opposite of
+    the intent. The window is additive; the drop path still re-arms normally.
+  - ✅ **PROVEN ON HARDWARE 2026-09-04 (fw 0.18.4), triggers 1 and 2** — the
+    fault path this section called unverified. Trigger 1's `pc` landed on the
+    faulting store ITSELF (`crash_test.c:53`, `601a str r2,[r3,#0]`), not its
+    successor, so one `addr2line` names the line. The disassembly also shows GCC
+    emitting the `ldr` read-back of `s_addr` before the store, i.e. the volatile
+    laundering held and the fault was not optimised away. Three readings that
+    generalise to ANY fault record, not just these two:
+    - **`psr` bit 24 (T) is a free discriminator, and both directions are now
+      measured.** Trigger 1 (faulted executing an instruction) returned
+      `psr=0xa1000000`, T **set**; trigger 2 (a `blx` to a bit-0-clear address)
+      returned `psr=0x00000000`, T **clear**. So the record separates "faulted on
+      an instruction" from "faulted trying to enter ARM state" with no symbols at
+      all — the stacked xPSR is the state BEFORE the exception.
+    - ⚠️ **`lr` is trustworthy only when the fault is AT a call.** Trigger 2
+      faulted on the `blx`, so LR still held the return address that `blx` had
+      just written and resolved to the calling line (`crash_test.c:66`). Trigger 1
+      faulted a few instructions later, so LR was a stale leftover from the
+      previous `bl` and resolved to `chThdSleep` — the `wait_ms(25)` in
+      `release_the_chord()`, nowhere near the bug. The tell is whether
+      `addr2line lr` lands adjacent to `pc`'s function; ARMv6-M stacks no call
+      chain, so this is never a backtrace.
+    - ⚠️ **`addr2line` maps a DATA address to a symbol and it reads like an
+      answer.** Trigger 2's `pc=0x20000000` resolved to `__overlay_pool_base__`
+      (`overlay.c:42`) — the overlay pool, which is not code. **Check the RANGE
+      first**: code is XIP flash `0x10……`, SRAM is `0x20……`, so a `pc` in SRAM
+      means "branched into nowhere" whatever symbol addr2line prints.
+  - ⚠️ **`reason` carries a STICKY `HAD_POR`, so the host renders a watchdog
+    reboot as "reset reason: POR, watchdog forced".** Both hardware records read
+    `reason=0x21` = `HAD_POR | WD_FORCE` on a board that had been up 148 s and
+    363 s and was never power-cycled — the fault handler's `watchdog_reboot()`
+    brought it back. `WD_FORCE` set with `WD_TIMER` clear is the informative half
+    (and is the qmk#271 discriminator working); leading with POR reads as a power
+    cycle and would send a real diagnosis the wrong way.
 
 ### Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**

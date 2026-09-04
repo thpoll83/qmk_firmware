@@ -67,6 +67,7 @@
 #include "polymod_core1.h"
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
+#include "crash_test.h"                   // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
 #include "slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
 #include "polymod_crc32.h"
 
@@ -4044,6 +4045,14 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
 
+    // TEST BUILDS ONLY (-e POLYKYBD_CRASH_TEST=yes): the deliberate-crash chord.
+    // FIRST, so it works even while another mode below would swallow the event --
+    // the whole point is to be able to fault the board on demand. Compiles to an
+    // inline `return false` in every normal build.
+    if (crash_test_process_record(keycode, record->event.pressed)) {
+        return false;
+    }
+
     // While the ONE-SHOT startup ("Eden") animation is playing, swallow every key
     // event — no typing is wanted (or needed) during the intro. Keys from both
     // halves funnel through the master's process_record before USB reporting, so
@@ -4728,6 +4737,7 @@ void keyboard_post_init_user(void) {
 
     emit_boot_banner();   // one-shot at boot; housekeeping re-emits for a late console
     crash_record_emit_lines();   // `crash: side=master ...` when this boot followed a crash
+    crash_test_announce();       // TEST BUILDS ONLY: list the deliberate-crash chords
 
     // Boot-splash progress: reaching post_init proves QMK's split/USB init got
     // past the point where the fw-apply "slave not rebooted" hang stalls. Reveal

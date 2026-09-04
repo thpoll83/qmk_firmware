@@ -29,3 +29,11 @@ void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const 
 // Signals core1 to reset bit index for next region-of-interest update.
 // Global variables: (none - sends FIFO command only)
 void core1_roi_start(void);
+
+#if defined(POLYKYBD_CRASH_TEST) && defined(USE_CORE1)
+// TEST BUILDS ONLY (crash_test.h): ask core1 to fault, so the crash record can be
+// checked on the core that has no console and used to lock up silently. Returns
+// as soon as the command is queued -- core1 faults asynchronously and the fault
+// handler reboots the whole chip from there.
+void core1_crash_test(void);
+#endif

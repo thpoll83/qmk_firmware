@@ -121,7 +121,19 @@ void core1_entry(void) {
                     // core0 and PRIMASK does not mask a HardFault, so the naked
                     // HardFault_Handler runs ON CORE1 and the record's `core` field
                     // reads 1. No uprintf -- core1 has no console and a tiny stack.
-                    volatile uint32_t *bad = (volatile uint32_t *)(uintptr_t)(((uintptr_t)&core1_decomp_count) + 1u);
+                    // ⚠️ The address MUST be laundered through a volatile. Written as a
+                    // compile-time constant, GCC sees the misalignment and LEGALISES the
+                    // store into four strb -- which never fault on ARMv6-M, so core1 wrote
+                    // the bytes and carried on and this trigger silently did nothing
+                    // (measured 2026-09-04). The volatile hides the alignment, forcing a
+                    // real str. Same rule as crash_test.c, different reason from the one
+                    // documented there: not deletion, legalisation.
+                    static volatile uintptr_t bad_addr;
+                    bad_addr = ((uintptr_t)&core1_decomp_count) + 1u;
+                    volatile uint32_t *bad = (volatile uint32_t *)bad_addr;
+                    // Tag the breadcrumb so the resulting record self-identifies as this
+                    // trigger rather than leaving `core=1` as the only evidence.
+                    (void)crash_phase_enter(CRASH_PHASE_CORE1_WAIT, 0x00C1);
                     *bad = 0xDEADBEEFu;
                 } break;
 #endif

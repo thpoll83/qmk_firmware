@@ -2548,10 +2548,34 @@ run on it (`test_no_crash_record`). What is worth knowing:
   - ⚠️ **Every address is laundered through a `volatile`.** A plain
     `*(uint32_t *)1 = x` is undefined behaviour GCC may delete outright, and a
     deleted fault is a test that silently proves nothing.
+    - ⚠️ **The mechanism that actually bit was NOT deletion — it was
+      LEGALISATION, and it is quieter.** Trigger 6 wrote its address as a
+      compile-time constant (`((uintptr_t)&core1_decomp_count) + 1u`), so GCC
+      could see the misalignment and split the `volatile uint32_t` store into
+      **four `strb`** — which never fault on ARMv6-M. Core1 wrote `EF BE AD DE`
+      and carried on, so the trigger did nothing at all and reported nothing
+      (measured 2026-09-04). A deleted store leaves no instructions to find; a
+      legalised one leaves plausible-looking code that simply cannot fault. The
+      laundering is what hides the alignment from the optimiser, and it is
+      required even where the address is not literally a constant expression.
+    - **Check it in the DISASSEMBLY, not the source**: the fault site must be a
+      single `str`, and the address must be reloaded from the volatile
+      (`ldr r4,[r2]` then `str r3,[r4,#0]`). Any `strb` on that path means the
+      trigger is inert.
   - **`clear_keyboard()` + a 25 ms settle before every trigger**, the same rule
     the FW-2 prompt and `doom_begin()` follow: a crash is a path that does not
     return, so the held chord would otherwise auto-repeat on the host — for a
     full 8 s on the watchdog trigger, before the board even reboots.
+  - ⚠️ **Trigger 7 cannot rely on the master OBSERVING the slave's reboot as a
+    link drop.** `slave_data_crash_pull_tick()` re-pulls only on a false->true
+    transition of `is_transport_connected()`, which needs
+    `SPLIT_MAX_CONNECTION_ERRORS` (200) consecutive failures to accumulate
+    *before* the slave is back — a race, not a guarantee. So the request opens a
+    bounded forced-retry window (`CRASH_FORCE_WINDOW_MS`, 30 s) instead.
+    ⚠️ Do **not** "re-arm" by clearing `s_tries` at request time, which was tried
+    first: with the link still reading connected, that spends all three ordinary
+    tries into a half-rebooted slave and then gives up forever — the opposite of
+    the intent. The window is additive; the drop path still re-arms normally.
   - ✅ **PROVEN ON HARDWARE 2026-09-04 (fw 0.18.4), triggers 1 and 2** — the
     fault path this section called unverified. Trigger 1's `pc` landed on the
     faulting store ITSELF (`crash_test.c:53`, `601a str r2,[r3,#0]`), not its

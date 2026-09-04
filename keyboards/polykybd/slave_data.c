@@ -52,11 +52,24 @@ void slave_data_register(void) {
 #define CRASH_PULL_TRIES       3u
 #define CRASH_PULL_SPACING_MS  2000u
 
-void slave_data_crash_pull_tick(void) {
-    static bool     s_linked = false;
-    static uint8_t  s_tries  = 0;
-    static uint32_t s_last   = 0;
+#ifdef POLYKYBD_CRASH_TEST
+// A crash-test request KNOWS a slave record is coming, so it must not depend on
+// the master OBSERVING a link drop: whether a slave reboot presents as a
+// disconnect at all depends on SPLIT_MAX_CONNECTION_ERRORS (200) accumulating
+// before the slave is back, which is a race. Keep retrying for a bounded window
+// instead of spending the three ordinary tries into a half-rebooted slave.
+#    define CRASH_FORCE_WINDOW_MS 30000u
+static bool     s_forcing     = false;
+static uint32_t s_force_start = 0;
+#endif
 
+// File scope rather than function statics so the crash-test request below can
+// re-arm the pull directly (see slave_data_request_crash_test).
+static bool     s_linked = false;
+static uint8_t  s_tries  = 0;
+static uint32_t s_last   = 0;
+
+void slave_data_crash_pull_tick(void) {
     if (!is_usb_host_side()) return;
 
     const bool linked = is_transport_connected();
@@ -72,7 +85,12 @@ void slave_data_crash_pull_tick(void) {
         s_last   = timer_read32();
         return;   // give the freshly-linked slave one spacing before the first pull
     }
-    if (s_tries >= CRASH_PULL_TRIES) return;
+    bool forcing = false;
+#ifdef POLYKYBD_CRASH_TEST
+    if (s_forcing && timer_elapsed32(s_force_start) >= CRASH_FORCE_WINDOW_MS) s_forcing = false;
+    forcing = s_forcing;
+#endif
+    if (!forcing && s_tries >= CRASH_PULL_TRIES) return;
     if (timer_elapsed32(s_last) < CRASH_PULL_SPACING_MS) return;
     s_last = timer_read32();
     s_tries++;
@@ -85,11 +103,22 @@ void slave_data_crash_pull_tick(void) {
     crash_phase_leave(tag);
     if (ok && crash_record_note_slave(reply, sizeof(reply))) {
         s_tries = CRASH_PULL_TRIES;   // done for this link-up
+#ifdef POLYKYBD_CRASH_TEST
+        s_forcing = false;
+#endif
     }
 }
 
 #ifdef POLYKYBD_CRASH_TEST
 void slave_data_request_crash_test(void) {
+    // Open the forced retry window (see CRASH_FORCE_WINDOW_MS). Deliberately does
+    // NOT touch s_linked/s_tries: clearing s_tries here would spend the three
+    // ordinary tries into a slave that is still rebooting, and the drop-detection
+    // path already re-arms those correctly if the master does see the disconnect.
+    s_forcing     = true;
+    s_force_start = timer_read32();
+    s_last        = timer_read32();   // give the slave one spacing to reboot first
+
     uint8_t kind = SLAVE_DATA_CRASH_TEST;
     uint8_t reply[CRASH_HID_BODY_LEN];
     memset(reply, 0, sizeof(reply));

@@ -119,6 +119,9 @@ static bool fault_slave(void) {
 }
 
 void crash_test_slave_fault(void) {
+    // Tag the breadcrumb so the slave's record self-identifies as this trigger.
+    // Honest: this really does run inside a split-transaction handler.
+    (void)crash_phase_enter(CRASH_PHASE_BRIDGE, 0x0077);
     fault_unaligned_store();
 }
 

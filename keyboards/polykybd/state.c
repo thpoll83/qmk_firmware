@@ -383,6 +383,36 @@ const char* idle_style_name(uint8_t style) {
     }
 }
 
+// Agent status the host last pushed (enum poly_ai_state). RAM only, deliberately:
+// it describes a process on the host, so it is meaningless after a reboot and there
+// is nothing to persist. AI_OFF hands the key's LED back to the running RGB effect.
+static uint8_t g_ai_state = AI_OFF;
+
+uint8_t get_ai_state(void) {
+    return g_ai_state;
+}
+
+// Sets the agent status. CLOSED range (like set_glyph_size, unlike set_glyph_script):
+// every value names a colour rgb_matrix_indicators_kb has to know how to paint, so an
+// unknown one is refused rather than stored. 0xFF is the HID query sentinel and never
+// reaches here. The sync to the slave is driven from housekeeping on the diff.
+void set_ai_state(uint8_t state) {
+    if (state >= AI_STATE_COUNT) {
+        return;
+    }
+    g_ai_state = state;
+}
+
+const char* ai_state_name(uint8_t state) {
+    switch (state) {
+        case AI_OFF:       return "off";
+        case AI_IDLE:      return "idle";
+        case AI_WORKING:   return "working";
+        case AI_ATTENTION: return "attention";
+        default:           return "?";
+    }
+}
+
 // The active glyph-script override (GLYPH_STD = normal language legends).
 uint8_t get_glyph_script(void) {
     return g_glyph_script;

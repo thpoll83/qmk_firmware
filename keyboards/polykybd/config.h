@@ -223,7 +223,12 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-#define PROTOCOL_VERSION 16
+//  v17 GET/SET_AI_STATE (cmd 40 / 0x28): the agent status the AI key wears —
+//      0 off, 1 idle, 2 working, 3 attention. 0xFF queries. RAM only (a status
+//      about a host process is meaningless after a reboot), synced via
+//      poly_sync_t.ai_state. CLOSED range like cmd 34: every value names a
+//      colour the RGB indicator paints and a word the keycap spells.
+#define PROTOCOL_VERSION 17
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

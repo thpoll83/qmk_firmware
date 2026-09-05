@@ -193,6 +193,7 @@ const struct display_info disp_row_3 = { POLY_DISP_ROW_3 };
 
 bool display_wakeup(keyrecord_t* record);
 static void render_macro_key(uint8_t id);   // defined below, used from render_key()
+static uint16_t poly_keycode_at(uint8_t layer, uint8_t row, uint8_t col);  // defined below
 void update_displays(enum refresh_mode mode);
 void set_displays(uint8_t contrast, bool idle);
 void set_selected_displays(int8_t old_value, int8_t new_value);
@@ -237,6 +238,20 @@ static uint8_t overlay_flags = 0;
 // the dirty-window bboxes so the first awake render erases whatever the mode drew.
 static bool s_disp_render_active = false;
 
+// Which LED sits under the AI key (HID cmd 40). Derived from the keymap rather than
+// hardcoded, so it follows the key wherever it is mapped — including a host remap of a
+// base layer — instead of pinning the light to the position it shipped in. Cached
+// because the scan reads the dynamic keymap (EEPROM) for every remappable slot, and
+// re-derived when the base layout changes or the keymap is written
+// (poly_keymap_cache_invalidate).
+static uint8_t s_ai_led       = 255;    // NO_LED
+static uint8_t s_ai_led_layer = 0xFF;   // the base layout s_ai_led was derived for
+static bool    s_ai_led_valid = false;
+
+static void poly_ai_led_cache_invalidate(void) {
+    s_ai_led_valid = false;
+}
+
 // Continuously suppress RGB on the bridge when display is off.
 // The split transport may re-enable RGB by copying master's rgb_matrix_config; this
 // indicator callback runs every render cycle (before flush) and zeros the LED buffer,
@@ -253,6 +268,78 @@ static bool s_disp_render_active = false;
 static bool     s_flash_rgb_active      = false;
 static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;
+
+// Same borrow bookkeeping for the AI status light: when the user keeps the RGB matrix
+// off, turn it on for as long as an agent is reporting and put it back afterwards.
+static bool     s_ai_rgb_active         = false;
+static bool     s_ai_rgb_was_enabled    = false;
+
+// The agent status light. AI_OFF paints nothing at all, so a keyboard with no agent
+// reporting lights exactly as it did before this feature existed.
+//
+// The colours are the ones the user reads at a glance across a desk: green = quiet,
+// amber = the agent is working, red = it is waiting on you. Only the red one BLINKS —
+// a light that blinks in every state is just a light, and the blink is what has to
+// pull your eye back to the keyboard. The keycap spells the same state out in text
+// (to_static_text), which is what covers split42 (no RGB matrix) and colour blindness.
+static uint8_t ai_led_index(void) {
+    const uint8_t layer = (uint8_t)get_local_layer()->def_layer;
+    if (s_ai_led_valid && s_ai_led_layer == layer) {
+        return s_ai_led;
+    }
+    s_ai_led       = NO_LED;
+    s_ai_led_layer = layer;
+    s_ai_led_valid = true;
+    for (uint8_t r = 0; r < MATRIX_ROWS && s_ai_led == NO_LED; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+            if (poly_keycode_at(layer, r, c) == KC_AI) {
+                s_ai_led = g_led_config.matrix_co[r][c];
+                break;
+            }
+        }
+    }
+    return s_ai_led;
+}
+
+// Returns true when it OWNED the frame — only ever when the matrix was off and this
+// borrowed it, in which case every other LED was blacked out and the running effect
+// must not paint over the result.
+static bool ai_rgb_paint(void) {
+    const uint8_t st = get_local_state()->ai_state;
+    if (st == AI_OFF || st >= AI_STATE_COUNT) {
+        return false;
+    }
+    const uint8_t led = ai_led_index();
+    if (led == NO_LED) {
+        return false;   // the key is not mapped on this layout (or not on this half)
+    }
+    uint8_t r = 0, g = 0, b = 0;
+    switch (st) {
+        case AI_IDLE:
+            r = 0; g = 14; b = 0;                                  // steady green
+            break;
+        case AI_WORKING: {
+            uint8_t phase = (uint8_t)(timer_read32() >> 3);        // ~2 s cycle
+            uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);
+            uint8_t v     = 6 + (tri >> 2);                        // ~6..37
+            r = v; g = (uint8_t)((v * 2) / 3); b = 0;              // breathing amber
+            break;
+        }
+        case AI_ATTENTION:
+            if (((timer_read32() >> 8) & 1) == 0) {                // ~2 Hz square
+                r = 48;                                            // blinking red
+            }
+            break;
+        default:
+            break;
+    }
+    const bool borrowed = !s_ai_rgb_was_enabled && s_ai_rgb_active;
+    if (borrowed) {
+        rgb_matrix_set_color_all(0, 0, 0);   // nothing else asked for light
+    }
+    rgb_matrix_set_color(led, r, g, b);
+    return borrowed;
+}
 
 bool rgb_matrix_indicators_kb(void) {
     if (s_flash_rgb_active) {
@@ -290,7 +377,25 @@ bool rgb_matrix_indicators_kb(void) {
             return false;
         }
     }
+    if (ai_rgb_paint()) {
+        return false;   // borrowed matrix: this frame is ours alone
+    }
     return rgb_matrix_indicators_user();
+}
+
+// Turn the RGB matrix on while an agent is reporting, if the user keeps it off, and
+// put it back exactly as it was afterwards — the same borrow the flash cue does. With
+// the matrix already on this is a no-op and the indicator simply overrides one LED.
+static void ai_rgb_tick(void) {
+    const bool want = get_local_state()->ai_state != AI_OFF;
+    if (want && !s_ai_rgb_active) {
+        s_ai_rgb_active      = true;
+        s_ai_rgb_was_enabled = rgb_matrix_is_enabled();
+        if (!s_ai_rgb_was_enabled) rgb_matrix_enable_noeeprom();
+    } else if (!want && s_ai_rgb_active) {
+        s_ai_rgb_active = false;
+        if (!s_ai_rgb_was_enabled) rgb_matrix_disable_noeeprom();
+    }
 }
 
 // Drive the flash RGB attention effect from the fw_up state (master + slave).
@@ -814,6 +919,7 @@ void housekeeping_task_user(void) {
     (void)crash_phase_enter(CRASH_PHASE_LOOP, 0);
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
+    ai_rgb_tick();      // ...and while an agent is reporting a status (HID cmd 40)
 #endif
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
@@ -1247,6 +1353,13 @@ void housekeeping_task_user(void) {
             access_local_state()->glyph_size = get_glyph_size();
             request_disp_refresh();   // size changed -> re-render every main legend
         }
+        // Master-authoritative agent status (HID cmd 40). Same shape again: the
+        // slave adopts it via copy_local_state and re-renders, which is what puts the
+        // state word on the AI key whichever half happens to carry it.
+        if (access_local_state()->ai_state != get_ai_state()) {
+            access_local_state()->ai_state = get_ai_state();
+            request_disp_refresh();   // status changed -> re-render the AI key's legend
+        }
         // Doom game mode: synced so the SLAVE strips its legends down to the
         // game controls (the split_sync poly handler refreshes on the diff).
         // No master-side refresh — its keycaps are owned by the game blitter
@@ -1455,6 +1568,33 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
                   GLYPH_SIZE_LEGEND(ICON_FONT_SMALLER, U"3") },
             };
             return legend[shifted ? 1 : 0][size];
+        }
+
+        // The agent status key. It lives HERE for the same reason KC_GLYPH_SIZE_UP
+        // does: the status is SYNCED state (poly_sync_t.ai_state) and
+        // keycode_to_static_text() only receives led_t, so on the slave it would draw
+        // nothing at all. Spelling the state out is not decoration — the colour is on
+        // the RGB LED, which split42 does not have and a colour-blind reader cannot
+        // use, so the keycap has to carry the same answer.
+        case KC_AI: {
+            const uint8_t st = local_state->ai_state < AI_STATE_COUNT
+                                   ? local_state->ai_state : AI_OFF;
+            // ⚠️ The leading spaces are MEASURED, not decorative — and they are the
+            // whole reason this legend does not read as broken. Every shipped
+            // MID_TWO_LINE legend is left-aligned and only looks centred because its
+            // words nearly fill the 72 px window ("SCRIPT:"/"Rune" spans x1..68);
+            // "AI" over a four-letter word spans x0..38 and hugs the left edge with
+            // 33 px of space beside it. Each pair below centres BOTH lines to within
+            // 3.5 px, with zero pixels off the panel — re-measure through
+            // PolyKybdHost's tools/oled_preview.py rather than eyeballing if a word
+            // changes, which is what the note on the macro itself asks for.
+            static const uint32_t* const legend[AI_STATE_COUNT] = {
+                [AI_OFF]       = HINT_MID U"\f\f\f\f" U"     AI",
+                [AI_IDLE]      = MID_TWO_LINE("     AI", "   idle"),
+                [AI_WORKING]   = MID_TWO_LINE("     AI", "  busy"),
+                [AI_ATTENTION] = MID_TWO_LINE("     AI", "   you!"),
+            };
+            return legend[st];
         }
 
         // Language selection keycodes: the tiny "xx-YY" code shown under the flag
@@ -2973,14 +3113,20 @@ static bool fl_row_is_pristine(void) {
 }
 #endif // POLY_FL_ALIGN_FROW
 
-// Drop the cached "is the F-row untouched?" answer. Called from every dynamic-keymap
-// mutation (the three *_poly wrappers in split_sync.c), so a remap takes effect on the
-// very next render rather than at the next reboot. A no-op on a board with no F-row to
-// align, so the call sites need no #ifdef of their own.
-void poly_fl_row_cache_invalidate(void) {
+// Drop every cached answer that was derived FROM the keymap. Called from each
+// dynamic-keymap mutation (the three *_poly wrappers in split_sync.c), so a remap takes
+// effect on the very next render rather than at the next reboot.
+//
+// It carries two caches now — the "is the F-row untouched?" probe and the AI key's LED
+// index — which is why it is named for the event rather than for either one. Adding a
+// third derived cache means dropping it here, not adding a fourth call site to the
+// mutation wrappers: that list is exactly the guard shape this repo keeps getting
+// caught by.
+void poly_keymap_cache_invalidate(void) {
 #if defined(POLY_FL_ALIGN_FROW)
     s_fl_row_pristine = -1;
 #endif
+    poly_ai_led_cache_invalidate();
 }
 
 // Layers below the host-write cap are remappable and live in the dynamic keymap
@@ -3775,6 +3921,22 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         case KC_RGB_TOG:
             if (!act) break;
             local_state->flags = toggle_flag(local_state->flags, RGB_ON);
+            break;
+        // The agent status key: ask the host to raise the agent's window.
+        //
+        // ⚠️ The ANNOUNCEMENT is a console line, not a reply. A custom keycode is
+        // swallowed here, so it emits no HID traffic of its own, and the firmware has
+        // no way to call the host — every other command is host-initiated. The host
+        // already drains the console every 250 ms (that is how it learns about a crash
+        // record), so one ungated uprintf is the whole channel and it costs no new
+        // transport. Consequence worth knowing: console output is dropped while a
+        // firmware or font-pack flash is streaming, so a press during a flash is lost.
+        //
+        // Acting on the RELEASE is the same rule the rest of this switch follows, and
+        // owning the press above is what stops an OSL layer re-dispatching it.
+        case KC_AI:
+            if (!act) break;
+            uprint("ai: open\n");
             break;
         case KC_DEADKEY:
             if (!act) break;

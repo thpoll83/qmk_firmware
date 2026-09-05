@@ -124,6 +124,15 @@ enum my_keycodes {
     // for the same no-renumbering reason as KC_DAUTO/KC_IDDQD/KC_LAT*.
     KC_GLYPH_SIZE_DOWN,
     KC_GLYPH_SIZE_UP,
+    // Agent ("AI") status key. The host pushes a status over HID cmd 40 (enum
+    // poly_ai_state); this key wears it — the RGB LED under it takes the colour and
+    // the keycap spells the state out, so a colour-blind reader and a split42 (no RGB
+    // matrix at all) still get the answer. Pressing it asks the host to raise the
+    // agent's window; the firmware announces that on the CONSOLE rather than over a
+    // reply channel, because a swallowed keycode produces no HID traffic of its own
+    // and the host already drains the console every 250 ms. Appended at the tail for
+    // the same no-renumbering reason as KC_DAUTO/KC_IDDQD/KC_LAT*.
+    KC_AI,
     /*[[[cog
         # Joined for the same reason as the KC_LAT block above — no trailing space.
         cog.out(", ".join("KCL_ENUS = QK_USER_0" if lang == "ENUS" else f"KCL_{lang}"
@@ -250,8 +259,8 @@ static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // appended after it, so the two asserts above silently stopped covering the tail
 // they exist to bound.  Re-anchor these whenever something is appended to the
 // QK_KB_0 block.
-static_assert((int)KC_GLYPH_SIZE_UP <= (int)QK_KB_MAX, "Too many custom QK key codes");
-static_assert((int)KC_GLYPH_SIZE_UP < (int)KCL_ENUS, "Overlap detected");
+static_assert((int)KC_AI <= (int)QK_KB_MAX, "Too many custom QK key codes");
+static_assert((int)KC_AI < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 // ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes

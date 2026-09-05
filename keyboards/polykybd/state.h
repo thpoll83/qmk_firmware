@@ -51,6 +51,21 @@ enum poly_idle_style {
 // Glyph-script override (HID cmd 30, protocol v9+). Replaces the language-layer
 // letter/digit legends with an alternative script's glyphs while leaving overlays
 // and OS-hints untouched. GLYPH_STD is the normal (language) legends. Values are
+// Agent status shown on the AI key's RGB LED (HID cmd 40, carried in
+// poly_sync_t.ai_state). CLOSED range, like glyph_size and unlike glyph_script: each
+// value names a colour the firmware has to know how to paint, so an unknown one is a
+// bug rather than a face this build happens to lack.
+//
+// AI_OFF is not a colour — it hands the LED back to the running RGB effect, so a
+// keyboard with no agent connected lights exactly as it did before this feature.
+enum poly_ai_state {
+    AI_OFF = 0,        // no agent reporting -> the normal RGB effect owns the key
+    AI_IDLE,           // agent connected and quiet -> steady green
+    AI_WORKING,        // agent busy -> breathing amber
+    AI_ATTENTION,      // agent is waiting on you -> blinking red
+    AI_STATE_COUNT
+};
+
 // append-only: persisted in poly_eeconf_t.glyph_script and carried on the wire
 // (poly_sync_t.glyph_script), so never reorder or reuse — add new scripts at the end.
 enum poly_glyph_script {
@@ -155,6 +170,12 @@ typedef struct _poly_sync_t {
     // slave's keycaps render the same legends and its semantic action keys emit the
     // same per-OS sequences. The master refreshes it every housekeeping pass.
     uint8_t  active_os;
+    // Agent ("AI") status the host pushes over HID cmd 40 (enum poly_ai_state).
+    // Master-authoritative and synced for the same reason as glyph_script: the RGB
+    // indicator is painted by whichever half owns the AI key, and the slave only
+    // ever sees this struct. Deliberately NOT persisted — a "needs you" light that
+    // survived a reboot would be claiming something about an agent that is gone.
+    uint8_t  ai_state;
     // Active glyph-script override (enum poly_glyph_script). Master-authoritative,
     // synced so the slave renders the same legends. See render_key / to_static_text.
     uint8_t  glyph_script;
@@ -640,6 +661,19 @@ void set_glyph_script(uint8_t script);
 // Records the glyph script without marking dirty (boot-time EEPROM load); an
 // out-of-range (uninitialised-EEPROM) value falls back to GLYPH_STD.
 void note_glyph_script(uint8_t script);
+
+// ---- Agent status light (enum poly_ai_state) — see the enum comment above. ----
+
+// The agent status the host last pushed (AI_OFF when none has).
+uint8_t get_ai_state(void);
+
+// Sets the agent status. Out-of-range values are ignored (the range is CLOSED — see
+// the enum). RAM only: nothing here is ever written to EEPROM.
+void set_ai_state(uint8_t state);
+
+// Human-readable name of an agent status, for console logs ("idle"/"working"/…).
+// Never NULL — an unknown value reads as "?".
+const char* ai_state_name(uint8_t state);
 
 // ---- Keycap legend size (enum poly_glyph_size) — see the enum comment above. ----
 

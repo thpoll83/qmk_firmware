@@ -1236,6 +1236,36 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     raw_hid_send(data, length);
                 }
                 break;
+            case 40: //get/set the agent ("AI") status light (protocol v17+)
+                {
+                    // data[HID_DATA_IDX] == 0xFF -> query (reply current state in data[3]).
+                    // Otherwise set it (enum poly_ai_state: 0 off, 1 idle, 2 working,
+                    // 3 attention). RAM only — nothing here is persisted, because the
+                    // state describes a process on the host and means nothing after a
+                    // reboot. Synced to the slave from housekeeping on the diff.
+                    //
+                    // The range is CLOSED and an unknown value NACKs, like the legend
+                    // size (cmd 34) and unlike the glyph script (cmd 30): every value
+                    // names a colour rgb_matrix_indicators_kb has to paint and a word
+                    // the keycap has to spell, so accepting an unknown one would store
+                    // a setting that silently shows nothing.
+                    uint8_t arg = data[HID_DATA_IDX];
+                    memset(data, 0, length);
+                    if (arg == 0xFF) {
+                        hid_reply(data, 0x28, true);
+                        data[3] = get_ai_state();
+                    } else if (arg < AI_STATE_COUNT) {
+                        set_ai_state(arg);
+                        hid_reply(data, 0x28, true);
+                        data[3] = arg;
+                        uprintf("Set AI state to %s.\n", ai_state_name(arg));
+                    } else {
+                        hid_reply(data, 0x28, false);
+                        uprintf("Refused AI state %u.\n", arg);
+                    }
+                    raw_hid_send(data, length);
+                }
+                break;
 #ifdef POLYKYBD_LOOP_PROFILE
             case 32: //main-loop profiler control (POLYKYBD_LOOP_PROFILE builds only)
                 {

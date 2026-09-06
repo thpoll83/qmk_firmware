@@ -675,7 +675,11 @@ void sync_and_refresh_displays(void) {
             if(status_disp_on) {
                 oled_set_brightness(OLED_BRIGHTNESS);
 #ifdef RGB_MATRIX_ENABLE
-                if(test_flag(local_flags, RGB_ON)) {
+                // ...or an attention cue is still running. The borrow enables once when
+                // it acquires; the branch below disabled the matrix on the way into
+                // display-off, so without this a cue that spans a sleep comes back dark
+                // and stays dark until its state changes (CodeRabbit, #276).
+                if(test_flag(local_flags, RGB_ON) || s_rgb_borrow_active) {
                     rgb_matrix_enable_noeeprom();
                 }
 #endif
@@ -5376,7 +5380,10 @@ void suspend_wakeup_init_kb(void) {
 
     //rgb_matrix_reload_from_eeprom();
 #ifdef RGB_MATRIX_ENABLE
-    if(test_flag(local_state->flags, RGB_ON)) {
+    // Same pairing as the display-on branch in sync_and_refresh_displays(): re-light for
+    // a borrow that is still running, or an attention cue that spanned the sleep would
+    // never come back (CodeRabbit, #276).
+    if(test_flag(local_state->flags, RGB_ON) || s_rgb_borrow_active) {
         rgb_matrix_enable_noeeprom();
     }
 #endif

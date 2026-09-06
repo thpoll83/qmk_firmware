@@ -272,24 +272,29 @@ static uint16_t s_flash_rgb_seen        = 0;
 // long as an agent is reporting and put it back afterwards.
 static bool     s_ai_rgb_active         = false;
 
-// ONE borrow shared by both attention cues. Two independent borrowers, each snapshotting
-// rgb_matrix_is_enabled() for itself, cannot work: the second one snapshots the state the
-// FIRST produced, so when the first releases it disables a matrix the second still needs.
-// With the matrix off that made the AI light go dark for good the moment a font-pack
-// flash ended — and those two overlap on exactly the connect that re-pushes the agent
-// status. One flag, one snapshot taken before anything was enabled, released only when
-// nobody wants it any more (caught by CodeRabbit on #276).
+// ONE borrow shared by both attention cues. Two independent borrowers cannot work: the
+// second one reads the state the FIRST produced, so when the first releases it disables a
+// matrix the second still needs. With the matrix off that made the AI light go dark for
+// good the moment a font-pack flash ended — and those two overlap on exactly the connect
+// that re-pushes the agent status. One flag, released only when nobody wants it any more
+// (caught by CodeRabbit on #276).
 static bool     s_rgb_borrow_active      = false;
-static bool     s_rgb_borrow_was_enabled = false;
 
 static void rgb_borrow_update(bool want) {
     if (want && !s_rgb_borrow_active) {
-        s_rgb_borrow_active      = true;
-        s_rgb_borrow_was_enabled = rgb_matrix_is_enabled();
-        if (!s_rgb_borrow_was_enabled) rgb_matrix_enable_noeeprom();
+        s_rgb_borrow_active = true;
+        if (!rgb_matrix_is_enabled()) rgb_matrix_enable_noeeprom();
     } else if (!want && s_rgb_borrow_active) {
         s_rgb_borrow_active = false;
-        if (!s_rgb_borrow_was_enabled) rgb_matrix_disable_noeeprom();  // mode/color auto-restore
+        // Restore what the USER wants, NOT a snapshot taken when the borrow started.
+        // KC_RGB_TOG sets the synced RGB_ON flag and sync_and_refresh_displays() applies
+        // it, so RGB_ON *is* the wish — the same thing suspend_wakeup_init_kb() restores
+        // from. An acquisition-time snapshot of rgb_matrix_is_enabled() goes stale the
+        // moment they toggle RGB during a cue, and an ATTENTION light lasts until the
+        // agent's status changes, so that window is long; releasing would then undo a
+        // matrix they had just switched on. Reading the flag needs no snapshot at all
+        // (CodeRabbit, #276). mode/colour restore themselves — we only touch enable.
+        if (!test_flag(get_local_state()->flags, RGB_ON)) rgb_matrix_disable_noeeprom();
     }
 }
 
@@ -353,8 +358,10 @@ static bool ai_rgb_paint(void) {
             break;
     }
     // "Borrowed" = the matrix is only lit because we switched it on, so nothing else
-    // asked for light and the rest of it must stay black.
-    const bool borrowed = s_ai_rgb_active && s_rgb_borrow_active && !s_rgb_borrow_was_enabled;
+    // asked for light and the rest of it must stay black. Same source of truth as the
+    // release in rgb_borrow_update(): the user does not want RGB, we do.
+    const bool borrowed = s_ai_rgb_active && s_rgb_borrow_active &&
+                          !test_flag(get_local_state()->flags, RGB_ON);
     if (borrowed) {
         rgb_matrix_set_color_all(0, 0, 0);   // nothing else asked for light
     }

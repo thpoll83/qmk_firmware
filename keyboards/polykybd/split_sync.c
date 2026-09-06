@@ -107,8 +107,12 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     // Explicit rather than left to housekeeping's state-diff refresh so the new
     // size lands on the sync itself instead of a pass later.
     bool glyph_size_changed = incoming->glyph_size != current->glyph_size;
+    // The master changed what the AI key reports -> re-render this half's legends,
+    // for the same reason as the size above: KC_AI spells its state out in text, so
+    // the slave's keycap is stale until something asks for a redraw.
+    bool ai_state_changed   = incoming->ai_state != current->ai_state;
     copy_local_state(incoming);
-    if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed) {
+    if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed || ai_state_changed) {
         request_disp_refresh();
     }
     if (anim_replay) {

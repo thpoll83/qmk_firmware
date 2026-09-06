@@ -266,13 +266,32 @@ static void poly_ai_led_cache_invalidate(void) {
 // was off, disabling it again afterwards.
 #define FLASH_RGB_HOLD_MS 2500
 static bool     s_flash_rgb_active      = false;
-static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;
 
-// Same borrow bookkeeping for the AI status light: when the user keeps the RGB matrix
-// off, turn it on for as long as an agent is reporting and put it back afterwards.
+// The AI status light wants the same borrow: with the matrix off, turn it on for as
+// long as an agent is reporting and put it back afterwards.
 static bool     s_ai_rgb_active         = false;
-static bool     s_ai_rgb_was_enabled    = false;
+
+// ONE borrow shared by both attention cues. Two independent borrowers, each snapshotting
+// rgb_matrix_is_enabled() for itself, cannot work: the second one snapshots the state the
+// FIRST produced, so when the first releases it disables a matrix the second still needs.
+// With the matrix off that made the AI light go dark for good the moment a font-pack
+// flash ended — and those two overlap on exactly the connect that re-pushes the agent
+// status. One flag, one snapshot taken before anything was enabled, released only when
+// nobody wants it any more (caught by CodeRabbit on #276).
+static bool     s_rgb_borrow_active      = false;
+static bool     s_rgb_borrow_was_enabled = false;
+
+static void rgb_borrow_update(bool want) {
+    if (want && !s_rgb_borrow_active) {
+        s_rgb_borrow_active      = true;
+        s_rgb_borrow_was_enabled = rgb_matrix_is_enabled();
+        if (!s_rgb_borrow_was_enabled) rgb_matrix_enable_noeeprom();
+    } else if (!want && s_rgb_borrow_active) {
+        s_rgb_borrow_active = false;
+        if (!s_rgb_borrow_was_enabled) rgb_matrix_disable_noeeprom();  // mode/color auto-restore
+    }
+}
 
 // The agent status light. AI_OFF paints nothing at all, so a keyboard with no agent
 // reporting lights exactly as it did before this feature existed.
@@ -311,7 +330,7 @@ static bool ai_rgb_paint(void) {
     }
     const uint8_t led = ai_led_index();
     if (led == NO_LED) {
-        return false;   // the key is not mapped on this layout (or not on this half)
+        return false;   // this layout maps no AI key
     }
     uint8_t r = 0, g = 0, b = 0;
     switch (st) {
@@ -333,7 +352,9 @@ static bool ai_rgb_paint(void) {
         default:
             break;
     }
-    const bool borrowed = !s_ai_rgb_was_enabled && s_ai_rgb_active;
+    // "Borrowed" = the matrix is only lit because we switched it on, so nothing else
+    // asked for light and the rest of it must stay black.
+    const bool borrowed = s_ai_rgb_active && s_rgb_borrow_active && !s_rgb_borrow_was_enabled;
     if (borrowed) {
         rgb_matrix_set_color_all(0, 0, 0);   // nothing else asked for light
     }
@@ -383,19 +404,13 @@ bool rgb_matrix_indicators_kb(void) {
     return rgb_matrix_indicators_user();
 }
 
-// Turn the RGB matrix on while an agent is reporting, if the user keeps it off, and
-// put it back exactly as it was afterwards — the same borrow the flash cue does. With
-// the matrix already on this is a no-op and the indicator simply overrides one LED.
+// Does an agent status want the matrix? With the matrix already on this changes
+// nothing and the indicator simply overrides one LED.
 static void ai_rgb_tick(void) {
-    const bool want = get_local_state()->ai_state != AI_OFF;
-    if (want && !s_ai_rgb_active) {
-        s_ai_rgb_active      = true;
-        s_ai_rgb_was_enabled = rgb_matrix_is_enabled();
-        if (!s_ai_rgb_was_enabled) rgb_matrix_enable_noeeprom();
-    } else if (!want && s_ai_rgb_active) {
-        s_ai_rgb_active = false;
-        if (!s_ai_rgb_was_enabled) rgb_matrix_disable_noeeprom();
-    }
+    // The key has to exist on the active layout: without that, a layout that maps no
+    // KC_AI (split72's Neo base, say) would ask for a matrix for a light that
+    // ai_rgb_paint() then declines to draw.
+    s_ai_rgb_active = get_local_state()->ai_state != AI_OFF && ai_led_index() != NO_LED;
 }
 
 // Drive the flash RGB attention effect from the fw_up state (master + slave).
@@ -410,15 +425,17 @@ static void flash_rgb_tick(void) {
         s_flash_rgb_seen   = timer_read();
     }
     bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
-    if (want && !s_flash_rgb_active) {
-        s_flash_rgb_active      = true;
-        s_flash_rgb_was_enabled = rgb_matrix_is_enabled();
-        if (!s_flash_rgb_was_enabled) rgb_matrix_enable_noeeprom();
-    } else if (!want && s_flash_rgb_active) {
-        s_flash_rgb_active = false;
-        s_flash_rgb_seen   = 0;
-        if (!s_flash_rgb_was_enabled) rgb_matrix_disable_noeeprom();  // mode/color auto-restore
+    if (!want && s_flash_rgb_active) {
+        s_flash_rgb_seen = 0;
     }
+    s_flash_rgb_active = want;
+}
+
+// Run both cues, then settle the one borrow they share. Called from housekeeping.
+static void attention_rgb_tick(void) {
+    flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
+    ai_rgb_tick();      // ...and while an agent is reporting a status (HID cmd 40)
+    rgb_borrow_update(s_flash_rgb_active || s_ai_rgb_active);
 }
 
 #endif
@@ -918,8 +935,7 @@ void housekeeping_task_user(void) {
     crash_watchdog_feed();
     (void)crash_phase_enter(CRASH_PHASE_LOOP, 0);
 #ifdef RGB_MATRIX_ENABLE
-    flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
-    ai_rgb_tick();      // ...and while an agent is reporting a status (HID cmd 40)
+    attention_rgb_tick();   // the flash + AI status cues, and the RGB borrow they share
 #endif
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console

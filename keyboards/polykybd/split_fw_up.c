@@ -388,7 +388,7 @@ void user_sync_reset_handler(uint8_t in_len, const void* in_data, uint8_t out_le
     } else if (msg->action == RESET_ACTION_REBOOT) {
         // Reboot only (QK_REBOOT path). Handedness-change carrier (see
         // poly_reset_sync_t): when requested, persist this (slave) half's new
-        // EE_HANDS marker before the reboot so it comes up on the corrected
+        // handedness stamp before the reboot so it comes up on the corrected
         // left/right assignment.  Plain QK_REBOOT leaves this zero.
         if (msg->set_handedness) {
             // Record only. This is a split-transaction callback (~20 ms budget)

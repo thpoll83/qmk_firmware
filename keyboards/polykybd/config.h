@@ -72,7 +72,22 @@
 #endif
 #define SPLIT_TRANSACTION_IDS_USER USER_SYNC_POLY_DATA, USER_SYNC_LAYER_DATA, USER_SYNC_LASTKEY_DATA, USER_SYNC_LATIN_EX_DATA, USER_SYNC_OVERLAY_DATA, USER_SYNC_COMPRESSED_DATA, USER_SYNC_ROI_DATA, USER_SYNC_DYNAMIC_KEYMAP_DATA, USER_SYNC_OVERLAY_MAP_DATA, USER_SYNC_FLASH_STAGE, USER_SYNC_RESET POLY_LTR559_TXN POLY_DUMMY_TXN
 
-#define EE_HANDS
+// No EE_HANDS. Handedness is the flash stamp (base/hand_stamp.h), which is why:
+// EE_HANDS keeps the marker in the emulated EEPROM, and QMK's wear-levelling
+// recovery clears that store WHOLE on a torn write -- leaving a zero byte that
+// EE_HANDS reads as a confident `right`, so a half comes up on the wrong side
+// with nothing reporting anything wrong (field, 2026-09-07).
+//
+// Defining it alongside the stamp would be worse than useless: is_keyboard_left_impl()
+// is overridden in polykybd.c, so the EE_HANDS branch could not decide anything --
+// it would only still run its `if (!eeconfig_is_enabled()) eeconfig_init()`, an
+// erase of the entire store, in split_pre_init(). Dropping the define removes
+// that erase from the boot path and leaves one source of truth.
+//
+// ⚠️ The handedness BYTE is still written (poly_hand_flush_pending) even though
+// nothing in this build reads it: eeconfig_read/update_handedness() are not gated
+// on EE_HANDS, and keeping the byte current is what lets a downgrade to firmware
+// that predates the stamp still come up on the right side.
 
 #define I2C_DRIVER I2CD0
 #define I2C1_SCL_PIN GP0

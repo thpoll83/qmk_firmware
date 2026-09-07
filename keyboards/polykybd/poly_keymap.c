@@ -4699,10 +4699,13 @@ static void boot_trace(const uint32_t* digit) {
 void keyboard_post_init_user(void) {
     // (The previous run's crash record was captured and archived at the top of
     // keyboard_pre_init_user(); the boot banner reports it.)
-    // Put the EEPROM handedness byte back when the flash stamp outvoted it —
-    // deliberately not in pre_init, because split_pre_init() runs between the two
-    // and its is_keyboard_left_impl() can erase the whole store on the way past.
-    // Ahead of emit_boot_banner() below, so the banner can report the repair.
+    // Put the EEPROM handedness byte back when the flash stamp outvoted it.
+    // Nothing in this build READS that byte (config.h drops EE_HANDS), so this is
+    // purely so a downgrade to firmware predating the stamp still comes up on the
+    // right side. Deliberately not in pre_init: quantum_init() runs between the
+    // two and erases the whole store when the magic reads invalid, which is
+    // exactly the state a wipe leaves behind. Ahead of emit_boot_banner() below,
+    // so the banner can report the repair.
     poly_hand_post_init();
     // Labels live in RAM on both halves (the render path reads one per macro keycap per
     // refresh). Each half loads its own EEPROM copy, then the master overwrites the
@@ -5021,11 +5024,12 @@ void keyboard_pre_init_user(void) {
     crash_record_init();
 
     // Resolve handedness while the EEPROM's own verdict is still readable. It has
-    // to be HERE: split_pre_init() runs is_keyboard_left_impl(), whose EE_HANDS
-    // branch does `if (!eeconfig_is_enabled()) eeconfig_init()` -- an erase of the
-    // whole store -- so after that point "the store was wiped" and "the store is
-    // fine" look identical. Same core1 rule as crash_record_init() above: the
-    // migration write takes no lockout because core1 has not been launched yet.
+    // to be HERE, in keyboard_setup(), because keyboard_init() later runs
+    // quantum_init()'s `if (!eeconfig_is_enabled()) eeconfig_init()` -- an erase of
+    // the whole store -- and after that point "the store was wiped" and "the store
+    // is fine" look identical, which is the one input poly_hand_decide() needs.
+    // Same core1 rule as crash_record_init() above: the migration write takes no
+    // lockout because core1 has not been launched yet.
     poly_hand_boot_init();
 
     // Load the external-flash font pack and assemble g_all_fonts = resident ++
@@ -5052,17 +5056,15 @@ void keyboard_pre_init_user(void) {
     // right-side text.  set_side() otherwise runs only in post_init, after the
     // splash, so the splash always saw side == UNDECIDED → both rendered "SPLIT 72".
     //
-    // Resolve through poly_hand_is_left(), NOT is_keyboard_left_impl(): the
-    // EE_HANDS branch of is_keyboard_left_impl() runs
-    // `if (!eeconfig_is_enabled()) eeconfig_init();`.  Called this early — right
-    // after eeprom_driver_init() in keyboard_setup, before the wear-leveling store
-    // is validated — it can see eeconfig as "not enabled" and run eeconfig_init()
-    // → nvm_eeconfig_erase() → eeprom_driver_format(), which wipes the *entire*
-    // emulated EEPROM including the per-half EE_HANDS marker.  Both halves then
-    // lose their stored side and fall back to a master-derived handedness.
-    // poly_hand_boot_init() above has already resolved the side (from the flash
-    // stamp, which no EEPROM failure can reach), so this is a cached read that
-    // touches no EEPROM at all and cannot trigger that erase.
+    // Resolve through poly_hand_is_left(), which poly_hand_boot_init() above has
+    // already settled from the flash stamp — so this is a cached read that touches
+    // no EEPROM at all.  That matters here specifically: any route through
+    // eeconfig this early — right after eeprom_driver_init() in keyboard_setup,
+    // before the wear-leveling store is validated — can see eeconfig as "not
+    // enabled" and run eeconfig_init() → nvm_eeconfig_erase() →
+    // eeprom_driver_format(), wiping the *entire* emulated EEPROM.  That is what
+    // the old eeconfig_read_handedness() call here had to be careful about, and
+    // what dropping EE_HANDS removed from split_pre_init() as well.
     set_side(poly_hand_is_left() ? LEFT_SIDE : RIGHT_SIDE);
     show_splash_screen();
 #ifdef FW_UP_BOOT_TRACE

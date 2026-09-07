@@ -99,8 +99,8 @@ static void stamp_write(bool is_left, bool lockout) {
 static void resolve(bool may_migrate) {
     bool s_left = false;
     bool have   = stamp_read(&s_left);
-    // Read-only, so it cannot trigger the eeconfig_init() erase that
-    // is_keyboard_left_impl() can at this point in the boot.
+    // Both reads are read-only, so neither can trigger the eeconfig_init() erase
+    // that other routes into eeconfig can at this point in the boot.
     poly_hand_decision_t d = poly_hand_decide(have, s_left, eeconfig_is_enabled(), eeconfig_read_handedness());
 
     s_resolved  = d.is_left ? 1 : 0;

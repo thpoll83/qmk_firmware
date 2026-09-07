@@ -52,7 +52,7 @@
 // FW_UP_MAX_SIZE dropped 0x1F7000 -> 0x1F6000 (PolyKybdHost hid_fw_up.py mirrors it).
 #define FW_CRASH_LOG_OFFSET    (FW_APPLY_LOG_OFFSET - 4096UL)
 // One sector below the crash log: the handedness stamp (base/hand_stamp.c).
-// EE_HANDS keeps the left/right marker in the emulated EEPROM, and QMK's
+// Stock EE_HANDS would keep the left/right marker in the emulated EEPROM, and QMK's
 // wear-levelling recovery is all-or-nothing -- a torn write or a checksum
 // mismatch on the consolidated area clears the WHOLE store to zeros
 // (wear_leveling.c: wear_leveling_clear_cache()). A zeroed handedness byte is

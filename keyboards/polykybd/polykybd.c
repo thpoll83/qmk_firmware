@@ -6,13 +6,26 @@
 #include "base/hand_stamp.h"
 
 // QMK's weak is_keyboard_left() hands back split_config.left, which split_pre_init()
-// filled from the EE_HANDS byte -- and a wiped EEPROM makes that byte read zero,
-// i.e. a confident "right". Route every reader through the flash stamp instead, so
+// would fill from the EEPROM handedness byte -- and a wiped store makes that byte
+// read zero, i.e. a confident "right". Route every reader through the flash stamp, so
 // an EEPROM loss cannot move a half to the other side. This is the ONE choke point:
 // QMK's matrix row ownership, the RGB clipping range and our own set_side() geometry
 // all come through here, so nothing can be left reading the old source by accident.
 // hand_stamp.h has the failure this defends against.
 bool is_keyboard_left(void) {
+    return poly_hand_is_left();
+}
+
+// ...and the impl QMK caches into split_config.left at split_pre_init(), so the
+// cached copy agrees with the answer above instead of holding a dead, wrong one.
+// Overriding this is also what lets config.h drop EE_HANDS: the stock body's
+// EE_HANDS branch runs `if (!eeconfig_is_enabled()) eeconfig_init()` -- an erase
+// of the whole store -- on its way to a decision the stamp has already made.
+// Both are overridden rather than just this one, because is_keyboard_left() is
+// the weak accessor over a value that is only filled at split_pre_init: anything
+// reading it before then would get the zero-initialised `right`, which is the
+// exact class of silent wrong answer this module exists to remove.
+bool is_keyboard_left_impl(void) {
     return poly_hand_is_left();
 }
 
@@ -27,10 +40,9 @@ bool is_keyboard_left(void) {
 // forms. The Raspberry Pi 4's built-in USB ports cannot drop that VBUS via
 // uhubctl, so power switching can't disambiguate the halves either.
 //
-// The two halves are identical hardware and the rig does not provision an
-// EE_HANDS handedness marker, so the role cannot be read from EEPROM (a fresh
-// EEPROM reads back as "not left", which would make *both* halves slaves and
-// leave zero masters). Instead the role is fixed at compile time per side: the
+// The two halves are identical hardware and the rig provisions no handedness at
+// all, so the role cannot be read from stored state (an unprovisioned half reads
+// as "not left", which would make *both* halves slaves and leave zero masters). Instead the role is fixed at compile time per side: the
 // station flashes the POLYKYBD_HIL=left image (master) to the left board and the
 // POLYKYBD_HIL=right image (slave) to the right board. This runs in
 // split_pre_init(), before the split transport is up.

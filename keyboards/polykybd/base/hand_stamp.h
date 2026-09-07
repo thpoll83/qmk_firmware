@@ -3,8 +3,8 @@
 //
 // Handedness that survives an EEPROM wipe.
 //
-// EE_HANDS stores the left/right marker in the emulated EEPROM, and
-// `is_keyboard_left()` is literally `!!eeprom_read_byte(EECONFIG_HANDEDNESS)`
+// Stock EE_HANDS would store the left/right marker in the emulated EEPROM, with
+// `is_keyboard_left()` literally `!!eeprom_read_byte(EECONFIG_HANDEDNESS)`
 // (split_util.c -> nvm_eeconfig.c). That byte has no "unknown" state: a cleared
 // store reads zero, and zero is a perfectly valid `right`. So an EEPROM loss does
 // not present as an error, it presents as a half that quietly comes up on the
@@ -103,16 +103,19 @@ poly_hand_source_t poly_hand_source(void);
 bool               poly_hand_ee_repaired(void);
 
 // --- I/O --------------------------------------------------------------------
-// Resolve + migrate. Call once from keyboard_pre_init_user(), BEFORE
-// split_pre_init() runs eeconfig_init(). No core1 lockout is taken because core1
-// has not been launched yet -- the same constraint crash_record_init() documents.
+// Resolve + migrate. Call once from keyboard_pre_init_user(), which is the last
+// hook before keyboard_init() -> quantum_init() can run eeconfig_init() and erase
+// the store, taking the `was it wiped?` signal with it. No core1 lockout is taken
+// because core1 has not been launched yet -- the constraint crash_record_init()
+// documents.
 void poly_hand_boot_init(void);
 
-// Rewrite the EEPROM handedness byte when it disagreed with the stamp. Deferred
-// to keyboard_post_init_user() on purpose: split_pre_init() calls
-// is_keyboard_left_impl(), whose EE_HANDS branch runs `if (!eeconfig_is_enabled())
-// eeconfig_init();` -- an erase of the whole store. A repair written before that
-// would be wiped by it.
+// Rewrite the EEPROM handedness byte when it disagreed with the stamp. Nothing in
+// this build reads that byte -- config.h drops EE_HANDS -- so the repair exists
+// only so a downgrade to firmware predating the stamp still comes up on the right
+// side. Deferred to keyboard_post_init_user() on purpose: quantum_init() runs
+// `if (!eeconfig_is_enabled()) eeconfig_init();` in between, an erase of the whole
+// store, and a repair written before that would be wiped by it.
 void poly_hand_post_init(void);
 
 // The resolved handedness. Safe to call at any time: it resolves on first use, so

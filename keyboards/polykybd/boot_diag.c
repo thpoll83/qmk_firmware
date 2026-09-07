@@ -133,13 +133,14 @@ void emit_boot_banner(void) {
 #else
     uprintf("   link: transport_connected=%d\n", (int)is_transport_connected());
 #endif
-    // Where this half's handedness came from. EE_HANDS keeps it in the emulated
-    // EEPROM, whose wear-levelling recovery clears the WHOLE store on a torn
-    // write -- and a cleared handedness byte is not "unknown", it reads as a
+    // Where this half's handedness came from. Stock EE_HANDS would keep it in the
+    // emulated EEPROM, whose wear-levelling recovery clears the WHOLE store on a
+    // torn write -- and a cleared handedness byte is not "unknown", it reads as a
     // valid `right`, so a half silently comes up on the wrong side (field,
-    // 2026-09-07). base/hand_stamp.c keeps the authoritative copy in a sector of
-    // our own; this line says which source answered, so the next report of a
-    // half on the wrong side is one line to diagnose instead of a guess.
+    // 2026-09-07). base/hand_stamp.c keeps it in a flash sector of our own instead
+    // and config.h drops EE_HANDS; this line says which source answered, so the
+    // next report of a half on the wrong side is one line to diagnose instead of
+    // a guess.
     {
         static const char *const src[] = {"flash stamp", "stamped from EEPROM", "EEPROM, UNSTAMPED"};
         uprintf("   hand: %s (%s)%s\n", is_keyboard_left() ? "LEFT" : "RIGHT",

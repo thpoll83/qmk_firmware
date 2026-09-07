@@ -26,6 +26,15 @@
 // somebody assigns the sides -- so a dedicated sector costs one erase per sixteen
 // changes and no wear worth thinking about.
 //
+// Being an ordinary flash sector rather than emulated EEPROM has a second
+// payoff: BOOTSEL/UF2 can write it directly. `tools/make_hand_uf2.py --side
+// left|right` builds a 512-byte UF2 that stamps one half without touching the
+// firmware, the font pack or the EEPROM, which is the recovery path for a board
+// that is already on the wrong side (and the way to provision a fresh one
+// without the host). `--append-to` folds the same block into a firmware UF2 so
+// one file does both. Nothing about the EEPROM route can offer that: the
+// wear-levelling store has no stable address a UF2 could target.
+//
 // Written APPEND-style, a page at a time, for the torn-write case specifically:
 // a partially programmed page fails its CRC and the scan falls back to the
 // previous good page, whereas erase-then-rewrite-in-place would leave nothing at

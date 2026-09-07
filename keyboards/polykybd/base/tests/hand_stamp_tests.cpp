@@ -8,6 +8,8 @@
 // just draws the other half's keycaps.
 #include "gtest/gtest.h"
 
+#include <cstddef>
+
 extern "C" {
 #include "hand_stamp.h"
 }
@@ -121,4 +123,20 @@ TEST(HandStampTest, TheChosenSideAlwaysComesFromOneOfTheTwoSources) {
             }
         }
     }
+}
+
+// --- the on-flash record ----------------------------------------------------
+
+// tools/make_hand_uf2.py writes this record from Python (STAMP_FMT "<IB3xI",
+// STAMP_CRC_SPAN 8) so a handedness stamp can be flashed over BOOTSEL. Python
+// cannot see the struct, so the layout is the one thing it repeats by hand --
+// pin it here, or a field added to poly_hand_stamp_t would silently start
+// producing UF2s the firmware rejects.
+TEST(HandStampTest, TheWireLayoutIsPinnedForTheUf2Tool) {
+    EXPECT_EQ(sizeof(poly_hand_stamp_t), 12u);
+    EXPECT_EQ(offsetof(poly_hand_stamp_t, magic), 0u);
+    EXPECT_EQ(offsetof(poly_hand_stamp_t, is_left), 4u);
+    // The CRC covers everything before it, so this offset IS the CRC span.
+    EXPECT_EQ(offsetof(poly_hand_stamp_t, crc), 8u);
+    EXPECT_EQ(POLY_HAND_STAMP_MAGIC, 0x48414E44UL) << "'HAND'";
 }

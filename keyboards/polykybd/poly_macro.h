@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "base/macro_decode.h"   // POLY_MACRO_INCOMPLETE, the wire format
+
 // Dynamic macros with a keycap legend.
 //
 // Storage is QMK's own dynamic-macro buffer (a run of NUL-terminated bodies at
@@ -41,11 +43,6 @@ void poly_macro_read(uint16_t offset, uint16_t size, uint8_t *out);
 void poly_macro_write(uint16_t offset, uint16_t size, const uint8_t *data);
 
 // Zero every body and every label.
-// Written into the buffer's last byte while a body write is in flight. Any non-zero
-// value works -- poly_macro_buffer_intact() only asks "is the final byte NUL" -- and it
-// is the same marker the host raises before it streams.
-#define POLY_MACRO_INCOMPLETE 0xFF
-
 void poly_macro_reset_all(void);
 
 // ---------------------------------------------------------------------------

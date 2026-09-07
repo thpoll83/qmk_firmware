@@ -30,6 +30,13 @@
 // dynamic_keymap_macro_send() can still play the very same buffer, which is a real
 // cross-check rather than a theoretical one.
 
+// Written into the buffer's LAST byte while a body write is in flight, so an
+// interrupted write reads as not-intact and playback refuses it. Any non-zero value
+// works -- poly_macro_buffer_intact() only asks "is the final byte NUL" -- and it is
+// the same marker the host raises before it streams. It lives here, with the format,
+// because poly_macro_buffer_intact() below is what reads it.
+#define POLY_MACRO_INCOMPLETE 0xFF
+
 #define POLY_MACRO_PREFIX    0x01
 #define POLY_MACRO_OP_TAP    0x01
 #define POLY_MACRO_OP_DOWN   0x02

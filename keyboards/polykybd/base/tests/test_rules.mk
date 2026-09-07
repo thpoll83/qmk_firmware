@@ -111,3 +111,18 @@ polykybd_font_bbox_SRC := \
 polykybd_font_bbox_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# The recorder is pure for the same reason the decoder is -- a byte reader/writer
+# callback and a caller-supplied clock, so the encoder and the splice link against a
+# RAM buffer with no EEPROM and no timer. macro_decode.c comes along deliberately:
+# poly_macro_rec_finish() closes still-held keys by READING BACK what it encoded, so
+# the two check each other rather than agreeing by construction.
+polykybd_macro_record_SRC := \
+	$(POLY_BASE_PATH)/macro_record.c \
+	$(POLY_BASE_PATH)/macro_decode.c \
+	$(POLY_BASE_PATH)/tests/macro_record_tests.cpp
+
+polykybd_macro_record_INC := \
+	$(POLY_BASE_PATH) \
+	$(POLY_BASE_PATH)/tests \
+	keyboards/polykybd

@@ -279,7 +279,9 @@ be `test_rules.mk`, not `rules.mk`: `qmk ci-validate-keyboard-targets` globs
 
 ## 10. Rollout order
 
-1. `base/macro_record.c` + `.h` + the unit suite (no behaviour change, nothing wired).
+1. ~~`base/macro_record.c` + `.h` + the unit suite~~ — **done**, 35 tests,
+   mutation-tested (nothing wired into the firmware; the module is built only by its
+   test suite, so the image is unchanged).
 2. The host-driver shim and the capture state machine, behind the gesture.
 3. `poly_sync_t` fields, the slot picker, the keycap cues.
 4. The status-OLED screen (measure with `tools/status_oled_preview.py` and the

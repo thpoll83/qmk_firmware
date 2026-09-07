@@ -117,7 +117,7 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c base/tutorial_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c base/macro_decode.c ltr559_policy.c base/legend_plan.c base/font_lookup.c
+POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c base/tutorial_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c base/macro_decode.c ltr559_policy.c base/legend_plan.c base/font_lookup.c base/crash_record.c slave_data.c
 SRC += $(POLY_SRC)
 
 # emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
@@ -402,3 +402,21 @@ endif
 # would be forgeable by the attacker it is meant to stop. BOOTSEL/UF2 also remains
 # unaffected (it bypasses fw_staging entirely), so this can never brick a board.
 OPT_DEFS += -DFW_REQUIRE_SIGNATURE
+
+# ---------------------------------------------------------------------------
+# Deliberate crashes, for exercising base/crash_record.* on real hardware
+# ---------------------------------------------------------------------------
+# `qmk compile ... -e POLYKYBD_CRASH_TEST=yes` compiles crash_test.c and makes a
+# key chord (LCtrl+LShift+LAlt + a digit) fault the board on purpose. Every other
+# part of the crash record has been driven end to end already; the FAULT HANDLERS
+# themselves never have, so the naked HardFault_Handler, the stacked-frame read,
+# the _unhandled_exception funnel, the watchdog-timeout synthesis and the
+# core1/slave paths are all unproven. This is how they get proven.
+#
+# ⚠️ TEST BUILDS ONLY -- never ship this in a release image. A normal build
+# compiles the inline no-ops in crash_test.h and pays nothing.
+ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
+    OPT_DEFS += -DPOLYKYBD_CRASH_TEST
+    SRC += crash_test.c
+    $(eval $(call POLY_APPLY_WARN,crash_test.c))
+endif

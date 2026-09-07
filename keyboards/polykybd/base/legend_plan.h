@@ -48,8 +48,30 @@ typedef struct {
     const uint32_t* text;      // the legend, relocated to the bigger face when big
     int8_t x, y;               // draw origin (y is the baseline)
     int8_t ink_min, ink_max;   // leftmost / rightmost lit pixel, in buffer coords
+    // The measured box RELATIVE to the origin, kept so a caller that MOVES the plan
+    // (render_key's overlap stagger lifts a small base 6 px) can re-clamp it without
+    // measuring the legend a second time.
+    int8_t box_xmin, box_xmax, box_ymin, box_ymax;
     bool   big;                // a bigger face was selected
 } main_legend_t;
+
+// Slides a draw origin so a measured ink box lands inside the visible window.
+// `x`/`y` are the draw origin (y is the baseline) and `xmin..ymax` the box the
+// bbox callback returned for that legend, i.e. relative to the origin.
+//
+// ⚠️ This is the ONE definition of "keep the ink on the panel", used by every
+// element of a keycap (the main legend, the Shift preview, the AltGr hint) so
+// they cannot disagree about where the edge is. Do not re-inline an edge test at
+// a call site.
+//
+// ⚠️ The two clamps of an axis FIGHT when the ink is bigger than the window, and
+// the order decides which edge loses: horizontally the WEST edge wins (the left
+// of the glyph is kept, the right clips), vertically the SOUTH edge wins (the
+// baseline area is kept, the top clips). Measured across all 160 layouts, exactly
+// one element is ever over-size — he-IL's 43 px standalone nikud on KC_BACKSLASH
+// — so this only decides where those 3 px go; every other legend fits outright.
+void legend_plan_clamp(const legend_plan_env_t* env, int8_t* x, int8_t* y,
+                       int8_t xmin, int8_t xmax, int8_t ymin, int8_t ymax);
 
 // Rewrites `text` into `out` at the requested size, returning false — leaving the
 // caller on the normal face — if the size is S, the legend is too long, or ANY of

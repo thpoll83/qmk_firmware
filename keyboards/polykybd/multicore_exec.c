@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "multicore_exec.h"
+#include "base/crash_record.h"
 #include "polykybd.h"
 
 #include "print.h"
@@ -39,6 +40,9 @@ typedef enum {
     CORE1_CMD_DECOMPRESS     = 0xcafe0001,
     CORE1_CMD_ROI_UPDATE     = 0xcafe0002,
     CORE1_CMD_RESET_BIT_IDX  = 0xcafe0003,
+#ifdef POLYKYBD_CRASH_TEST
+    CORE1_CMD_CRASH_TEST     = 0xcafe00ff,
+#endif
 } fifo_command_t;
 
 // Overlay buffers for core1 processing
@@ -110,6 +114,29 @@ void core1_entry(void) {
                 core1_bit_index = 0;
                 dmb();
                 break;
+#ifdef POLYKYBD_CRASH_TEST
+            case CORE1_CMD_CRASH_TEST: {
+                    // An unaligned word store: ARMv6-M has no unaligned access, so
+                    // this HardFaults right here. The vector table is shared with
+                    // core0 and PRIMASK does not mask a HardFault, so the naked
+                    // HardFault_Handler runs ON CORE1 and the record's `core` field
+                    // reads 1. No uprintf -- core1 has no console and a tiny stack.
+                    // ⚠️ The address MUST be laundered through a volatile. Written as a
+                    // compile-time constant, GCC sees the misalignment and LEGALISES the
+                    // store into four strb -- which never fault on ARMv6-M, so core1 wrote
+                    // the bytes and carried on and this trigger silently did nothing
+                    // (measured 2026-09-04). The volatile hides the alignment, forcing a
+                    // real str. Same rule as crash_test.c, different reason from the one
+                    // documented there: not deletion, legalisation.
+                    static volatile uintptr_t bad_addr;
+                    bad_addr = ((uintptr_t)&core1_decomp_count) + 1u;
+                    volatile uint32_t *bad = (volatile uint32_t *)bad_addr;
+                    // Tag the breadcrumb so the resulting record self-identifies as this
+                    // trigger rather than leaving `core=1` as the only evidence.
+                    (void)crash_phase_enter(CRASH_PHASE_CORE1_WAIT, 0x00C1);
+                    *bad = 0xDEADBEEFu;
+                } break;
+#endif
             default: break;
         }
     }
@@ -135,9 +162,13 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
     // body was burning core0 cycles in a format-and-sink path that starved
     // matrix scan during back-pressure.
     dmb();
+    // Tagged so a watchdog timeout in this spin reads as "core0 waiting on core1"
+    // (the core1-hang class, see CLAUDE.md) rather than as an anonymous hang.
+    uint32_t crash_tag = crash_phase_enter(CRASH_PHASE_CORE1_WAIT, 0);
     while(core0_decomp_count!=core1_decomp_count) {
         dmb();
     }
+    crash_phase_leave(crash_tag);
     //copy data to dedicated buffers
     uint8_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
     core1_max_bitlen = 360 - core1_bit_index/8;
@@ -177,9 +208,13 @@ void core1_roi_start(void) {
 void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi, bool visible) {
     // See core1_decompress_fragment for the backpressure rationale.
     dmb();
+    // Tagged so a watchdog timeout in this spin reads as "core0 waiting on core1"
+    // (the core1-hang class, see CLAUDE.md) rather than as an anonymous hang.
+    uint32_t crash_tag = crash_phase_enter(CRASH_PHASE_CORE1_WAIT, 0);
     while(core0_decomp_count!=core1_decomp_count) {
         dmb();
     }
+    crash_phase_leave(crash_tag);
     //copy data to dedicated buffers
     //core1_max_bitlen = 360 - core1_bit_index/8;
     core1_roi = *roi;
@@ -208,4 +243,10 @@ void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const 
     //allow core1 to start decompressing
     multicore_fifo_push_blocking(CORE1_CMD_ROI_UPDATE);
 }
+#ifdef POLYKYBD_CRASH_TEST
+void core1_crash_test(void) {
+    multicore_fifo_push_blocking(CORE1_CMD_CRASH_TEST);
+}
+#endif
+
 #endif

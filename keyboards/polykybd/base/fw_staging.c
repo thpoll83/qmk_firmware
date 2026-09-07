@@ -8,6 +8,7 @@
 #include "polymod_crc32.h"
 #include "monocypher-ed25519.h"   // FW-2: Ed25519 image signature verify (polymod_monocypher)
 #include "fw_pubkey.h"                    // FW-2: FW_SIGNING_PUBKEY (image signing key)
+#include "crash_record.h"                 // crash_watchdog_stop() before the self-apply
 
 #include "hardware/flash.h"
 #include "hardware/sync.h"
@@ -1360,5 +1361,11 @@ void fw_staging_apply_and_reboot(void) {
     uprint("FWAPPLY ------------------------------------------------------------\n");
 
     s_commit_pending = false;
+    // The copy below runs with interrupts off for SECONDS (erase + program of the
+    // whole image) and never returns: a still-armed watchdog would reset the chip
+    // mid-write, and the reset would be archived as a crash. Disarm it here, in
+    // flash-resident code, before the RAM-resident applier takes over.
+    (void)crash_phase_enter(CRASH_PHASE_APPLY, 0);
+    crash_watchdog_stop();
     fw_staging_do_apply(hdr[1]);   // never returns
 }

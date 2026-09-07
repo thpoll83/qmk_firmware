@@ -33,15 +33,22 @@ void kdisp_set_draw_offset(int8_t ox, int8_t oy);
 // Remember to restore it to false after the draw.
 void kdisp_set_gfx_erase(bool erase);
 
-// When set, the glyph plotter only lights pixels on even buffer rows — a scanline
-// half-brightness look used by the Eden idle screensaver's lit legend. Restore to
-// false after the draw.
-void kdisp_set_gfx_scanline(bool scanline);
+// When set, the glyph plotter lights only every other buffer row — a scanline
+// half-brightness look used by the Eden idle screensaver's lit legend. Restore
+// with (false, 0) after the draw.
+//
+// The gate is on ABSOLUTE buffer y, so `phase` (0..1) picks WHICH panel rows the
+// stripes land on. An anti-burn-in caller must roll it: at a fixed phase the same
+// physical rows light forever, and the draw offset cannot spread that (it moves
+// the glyph past a stationary pattern, not the pattern). Pass 0 only where the
+// draw is transient — a boot splash — or where a stable pattern is the point.
+void kdisp_set_gfx_scanline(bool scanline, uint8_t phase);
 
 // Coarser 2-on/2-off scanline band (vs the 1-on/1-off of kdisp_set_gfx_scanline).
 // Reads as a cleaner intentional dim on large glyphs (the boot-splash logo), where
-// the fine scanline looks like flicker. Restore to false after the draw.
-void kdisp_set_gfx_scanline2(bool scanline);
+// the fine scanline looks like flicker. `phase` is 0..3 here — four band
+// alignments rather than two. Restore with (false, 0) after the draw.
+void kdisp_set_gfx_scanline2(bool scanline, uint8_t phase);
 
 // kdisp_gfx_glyph / kdisp_gfx_glyph_font (glyph lookup, NULL when uncovered, gap
 // glyphs skipped) are declared in font_lookup.h, included above.
@@ -187,4 +194,14 @@ void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
 // each layer (the ranges differ); only the drawing is shared here.
 void kdisp_draw_tab_frame(void);
 void kdisp_draw_tab_underline(void);
+
+// Saturating narrow to int8_t. Buffer coordinates, the jitter offset and the
+// per-layout legend offsets are all int8_t, and their sum can leave the range —
+// where a silent wrap draws the art at a WRONG place instead of letting the panel
+// clamp pin it at the edge. Shared rather than duplicated because poly_keymap.c's
+// AltGr-held placement adds two of those offsets together (ps-AF's letter H offset
+// is already 65, leaving +34 before 28+H+held wraps).
+static inline int8_t kdisp_sat8(int16_t v) {
+    return (int8_t)((v < -128) ? -128 : ((v > 127) ? 127 : v));
+}
 

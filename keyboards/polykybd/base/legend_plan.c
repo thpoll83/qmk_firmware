@@ -42,15 +42,16 @@ bool legend_plan_remap(const legend_plan_env_t* env, uint8_t size, const uint32_
         // one of them LEADS the legend (0x0C x150, 0x0B x8, 0x06 x9, 0x08 x1,
         // 0x05 x1; not one after a glyph).
         //
-        // ⚠️ DROPPED, not carried, and that is not a preference — kdisp_gfx_text_bbox
-        // and the draw disagree about these ops. `\f` is `y = y > 1 ? y - 2 : 0`
-        // applied to the cursor, and bbox runs it from y = 0 (relative to the
-        // baseline) where it saturates to 0, while the draw runs it from the real
-        // baseline where it genuinely lifts 2px. Carrying the op therefore moves the
-        // glyph by an amount legend_plan_main's clamp cannot see, and the accent
-        // clips off the top (measured: 6-8 px lost on `é è à` at M/L). Dropped, the
-        // measured bbox IS what gets drawn and the clamp is exact — and the nudge is
-        // no loss, having been hand-tuned for the small face's fixed baseline.
+        // ⚠️ DROPPED, not carried — and the REASON has changed, so do not restore the
+        // op on the old rationale. It used to be that kdisp_gfx_text_bbox and the draw
+        // disagreed about `\f`: the draw clamps its cursor at buffer 0, while the
+        // relative walk starts at 0 where that clamp swallowed the lift and the op
+        // measured as a no-op. That is FIXED (font_lookup.c's `saturate` flag, false
+        // for the relative walk), so the measured box now matches the draw for these
+        // ops too. What remains is that the nudge was hand-tuned for the SMALL face's
+        // fixed baseline — 2px lifts chosen against a 27px glyph at baseline 23 — and
+        // the planner replaces exactly that baseline with a measured, clamped one.
+        // Carrying it was tried and clipped 6-8 px off the accents of `é è à` at M/L.
         //
         // ⚠️ This is what makes the French number row scale at all: `é è ç à` are
         // spelled `\f\f <letter>`, so refusing every control code outright left half
@@ -79,6 +80,16 @@ bool legend_plan_remap(const legend_plan_env_t* env, uint8_t size, const uint32_
     return true;
 }
 
+// ⚠️ Order is load-bearing; see the header. E before W means W wins an over-wide
+// glyph, N before S means S wins an over-tall one.
+void legend_plan_clamp(const legend_plan_env_t* env, int8_t* x, int8_t* y,
+                       int8_t xmin, int8_t xmax, int8_t ymin, int8_t ymax) {
+    if (*x + xmax > env->win_x1) *x = (int8_t)(env->win_x1 - xmax);
+    if (*x + xmin < env->win_x0) *x = (int8_t)(env->win_x0 - xmin);
+    if (*y + ymin < 0)           *y = (int8_t)(-ymin);
+    if (*y + ymax > env->win_y1) *y = (int8_t)(env->win_y1 - ymax);
+}
+
 // Nominal baseline for each size, chosen so the cap height sits where the small
 // face's does (top of a capital ~1 px below the top of the panel): cap 20 -> 21,
 // 24 -> 25, 27 -> 28. The caller then draws at the CLAMPED baseline this planner
@@ -99,26 +110,36 @@ void legend_plan_main(const legend_plan_env_t* env, uint8_t size, const uint32_t
         // Keep the language's own horizontal origin — centring instead would eat the
         // space the shift preview lives in — but clamp both edges into the window,
         // since a big glyph runs up to 43 px wide.
-        int8_t x = small_x;
-        if (x + xmax > env->win_x1) x = (int8_t)(env->win_x1 - xmax);
-        if (x + xmin < env->win_x0) x = (int8_t)(env->win_x0 - xmin);
         // The tier's nominal baseline, clamped so the ink stays on the panel. The
         // nominal is what keeps ordinary letters on a shared baseline; the clamp is
         // what stops a tall accent stack or a deep descender from clipping.
+        int8_t x = small_x;
         int8_t y = glyph_size_baseline[size];
-        if (y + ymin < 0)           y = (int8_t)(-ymin);
-        if (y + ymax > env->win_y1) y = (int8_t)(env->win_y1 - ymax);
+        legend_plan_clamp(env, &x, &y, xmin, xmax, ymin, ymax);
         out->text = scratch;
         out->x = x; out->y = y;
         out->ink_min = (int8_t)(x + xmin);
         out->ink_max = (int8_t)(x + xmax);
+        out->box_xmin = xmin; out->box_xmax = xmax;
+        out->box_ymin = ymin; out->box_ymax = ymax;
         out->big = true;
         return;
     }
     env->bbox(text, &xmin, &xmax, &ymin, &ymax, env->ctx);
+    // The small face keeps the language's own origin -- and is clamped onto the
+    // panel exactly as the bigger tiers are. It was NOT, for a long time, and the
+    // asymmetry cost real pixels: measured across all 160 layouts, 305 of the 420
+    // clipped elements were small base legends sliding off the north or west edge
+    // by up to 8 px, silently, because a per-language offset tuned for one script's
+    // glyph heights is applied to every key of the layout. Clamping is a no-op for
+    // anything already inside the window, so this changes only the keys that were
+    // losing ink.
+    legend_plan_clamp(env, &small_x, &small_y, xmin, xmax, ymin, ymax);
     out->text = text;
     out->x = small_x; out->y = small_y;
     out->ink_min = (int8_t)(small_x + xmin);
     out->ink_max = (int8_t)(small_x + xmax);
+    out->box_xmin = xmin; out->box_xmax = xmax;
+    out->box_ymin = ymin; out->box_ymax = ymax;
     out->big = false;
 }

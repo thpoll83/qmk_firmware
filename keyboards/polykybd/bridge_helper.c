@@ -9,6 +9,7 @@
 #include "split_sync.h"
 #include "config.h"
 #include "profiling/loop_profile.h"
+#include "base/crash_record.h"   // crash_phase_enter()/leave() around the blocking bridge
 #ifdef POLYKYBD_LOOP_PROFILE
 #    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
 #endif
@@ -86,7 +87,18 @@ const char* tid_to_str(int8_t tid) {
     }
 }
 
+static uint8_t send_to_bridge_impl(int8_t tid, void* buffer_with4crc_bytes, const uint8_t num_bytes, const uint8_t max_retries);
+
+// Tags the crash-record phase breadcrumb around the blocking bridge: a watchdog
+// timeout inside a split transaction then names the transaction it was in.
 uint8_t send_to_bridge(int8_t tid, void* buffer_with4crc_bytes, const uint8_t num_bytes, const uint8_t max_retries) {
+    uint32_t tag = crash_phase_enter(CRASH_PHASE_BRIDGE, (uint16_t)(uint8_t)tid);
+    uint8_t  ack = send_to_bridge_impl(tid, buffer_with4crc_bytes, num_bytes, max_retries);
+    crash_phase_leave(tag);
+    return ack;
+}
+
+static uint8_t send_to_bridge_impl(int8_t tid, void* buffer_with4crc_bytes, const uint8_t num_bytes, const uint8_t max_retries) {
     poly_sync_reply_t reply;
     uint8_t retry = 0;
 

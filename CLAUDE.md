@@ -29,6 +29,31 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     commit changed during the review from `<a>` to `<b>`". The run is lost, not
     resumed, and re-triggering costs another slot against the rate limit. So once
     a review starts, **hold pushes until it reports** (2026-08, cost a full cycle).
+    - ⚠️ **A lost run leaves NO REVIEW OBJECT AND NO VERDICT, and the only
+      trace it does leave is a summary comment collapsed to a bare "Review
+      Change Stack" link — which reads as "nothing to say".**
+      Measured on #275 (2026-09-04, a docs PR touched five times in ten
+      minutes): **four** runs each rendered the `> [!NOTE] Currently processing
+      new changes…` block with a `📥 Commits` range, then had the block
+      **removed** on a later edit leaving only the stack link — no walkthrough,
+      no `📥 Commits`, no *"No actionable comments"*, and no error. No review
+      object was created either, so `get_reviews` is empty — **indistinguishable
+      from the CLEAN-pass false negative recorded below, where empty is also the
+      answer.** The tell is the summary comment itself: a bare stack link is not
+      a clean pass; *"No actionable comments were generated 🎉"*, or a
+      walkthrough, is what a completed run leaves.
+      - ✅ **The fifth run, left UNDISTURBED, completed** — full walkthrough plus
+        `🚥 Pre-merge checks ✅ 5`, describing the real head. So the collapse is
+        caused by the PR moving under a run, not by a quirk of rendering: three
+        of the four dead runs started scoped to a head that a push had **already
+        superseded** (`..39f693fa`, `..0f7ecef8`, `..73918d0` while head was
+        `ad122c45`). That is the abort documented above, and this is what its
+        aftermath looks like — the run is not merely "lost", it erases its own
+        evidence.
+      - ⚠️ **So the cost of ignoring "hold pushes until it reports" is not one
+        wasted review, it is a PR that LOOKS unreviewed and cannot tell you
+        why.** Four cycles were burned here by pushing and editing the body
+        while runs were in flight; one quiet minute produced the review.
   - ⚠️ **Order matters: `resume` BEFORE `review` makes the review a no-op.**
     CodeRabbit is incremental and "does not re-review already reviewed commits";
     that guard is only relaxed *while reviews are paused*. Resuming first
@@ -78,6 +103,22 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
       find here, because there is no review. **Check the review's `commit_id`
       against the head sha**, not just that a review exists: a stale review plus a
       fresh green check is indistinguishable from a current one at a glance.
+      - ✅ **Sourcery auto-reviews a PR FIVE times and then WITHDRAWS its
+        approval, which is the one reviewer behaviour here that self-corrects
+        rather than going stale.** Measured on #275 (2026-09-04): on the sixth
+        push it commented *"Sourcery has withdrawn its approval of this pull
+        request. It auto-reviews a pull request 5 times, and this push is past
+        that limit, so the approval no longer reflects code Sourcery has read"*,
+        and the `APPROVED` review — pinned to the branch's FIRST commit while its
+        check went green on every head since — stopped counting. Two things
+        follow:
+        - ⚠️ **A withdrawn approval is NOT a rejection**, and it arrives with no
+          findings attached, so it reads like one. It means only that the head
+          has outrun what Sourcery read. `@sourcery-ai review` gets a fresh one.
+        - **It bounds the stale-approval trap above rather than removing it**:
+          within the first five pushes an approval can still sit on a commit the
+          head has left behind, and that is exactly the window most PRs live in.
+          The `commit_id`-vs-head check is still the thing to run.
     - ⚠️ **CodeRabbit's COMMIT STATUS does the same thing, so "at least it renders a
       banner" only holds for the comment.** Its status context reads `state: success`
       with the description **"Review rate limited"** (`pull_request_read`
@@ -212,6 +253,36 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
       notice — a Sourcery refusal is itself a review object carrying the head sha,
       so the sha alone reads as reviewed. Never infer from a check run or from
       this paragraph.
+      - ⚠️ **As of 2026-09-04 Greptile is REFUSING ACCOUNT-WIDE, and that is a
+        different thing from its documented silence.** It now submits a review
+        whose entire body is *"`thpoll83` has reached the 50-credit limit for
+        trial accounts"* — measured on #275, one review object, `commit_id`
+        equal to the head sha. So the pair-check above catches it (the body is a
+        refusal), and the "announces a skip nowhere" clause still holds for an
+        ordinary skip: this is a **quota**, announced, not a skip. Two
+        consequences while it lasts: it is **not review cover on any PolyKybd
+        repo**,
+        since the limit is on the account rather than the repo; and unlike
+        CodeRabbit's hourly window it does **not** come back by waiting — the
+        trial is spent until someone upgrades. Re-check with `get_reviews`
+        rather than assuming either state persists.
+      - ⚠️ **That pair-check has a FALSE NEGATIVE in the other direction, so it is
+        not sufficient either: a CLEAN CodeRabbit review produces NO REVIEW OBJECT
+        AT ALL.** It says *"No actionable comments were generated 🎉"* by editing
+        its existing summary comment, so `get_reviews` is empty for that head and
+        the check reads a clean pass as unreviewed (measured on qmk#268,
+        2026-09-03). A refusal is an object that means nothing; a clean pass is no
+        object that means everything. Read the summary comment's BODY — its
+        `📥 Commits` range and whether it says *skipped* / *no actionable comments*
+        — alongside `get_reviews`. Full write-up in `PolyKybdHost/CLAUDE.md`.
+      - ⚠️ **A commit whose only reviewable file is GENERATED is skipped outright,
+        so a per-language DATA pass is structurally unreviewable.** *"Review skipped
+        as selected files did not have any reviewable changes"* — twice on qmk#268,
+        where the diff was the cog-generated `lang_lut.c` plus `lang_lut.xlsx`, and
+        the workbook is excluded by CodeRabbit's `!**/*.xlsx` path filter. No banner,
+        no quota, nothing wrong: just no review. On such a change the verification
+        has to be your own — assert the generated diff is confined to what you meant,
+        and measure the rendered result.
   - **cppcheck has no quota, no star threshold and no file-count limit** — and
     is not an LLM, so it doesn't share the others' blind spots. That is why it
     was added, and it matters more now that it is the only automated reviewer
@@ -223,6 +294,32 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     trigger: analysing the whole upstream tree is the CodeQL trap this scope was
     chosen to avoid. It means an upstream merge really is verified by the build,
     the HIL rig and hardware alone.
+
+- ⚠️ **After changing a function SIGNATURE, grep THIS FILE for other prose
+  references to it — nothing in CI reads Markdown, so a stale API example ships
+  silently.** `CLAUDE.md` narrates dozens of APIs across sections that have no
+  reason to be open when you edit one, and an example that no longer compiles is
+  worse than no example: it reads as authoritative and the next session copies it.
+  Changing `kdisp_set_gfx_scanline(bool)` to `(bool, uint8_t)` updated the section
+  being edited and left the one-arg form in two *other* notes — the `kdisp_plot_ink`
+  account of the EDEN dimming bug and the Eden-screensaver section (#267,
+  2026-09-02). Every build was green under `-Werror` precisely because the **code**
+  call sites were all correct. The check is one command, before you push:
+  ```bash
+  grep -n "kdisp_set_gfx_scanline" CLAUDE.md    # …and any other renamed symbol
+  ```
+  - **It was caught by Greptile, and that is the pattern rather than the luck.**
+    A cross-file consistency claim in prose is what an LLM reviewer is genuinely
+    better at than every other check here — cppcheck cannot read the file, the
+    compiler cannot see it, and the author is the one person guaranteed not to
+    re-read the sections they did not open. The same reviewer caught a note
+    contradicting one two paragraphs above it earlier (`PolyKybdHost/CLAUDE.md`).
+    So when a reviewer raises a *documentation* inconsistency, verify it like any
+    other finding — but expect it to be right more often than its severity label
+    suggests.
+  - ⚠️ Applies to a **renamed or re-typed** symbol just as much as a new argument,
+    and to the sibling repos' `CLAUDE.md` files when the symbol is one they mirror
+    (`iso_lang_country.py`, `noto-fonts.yaml`, the font-pack render manifests).
 
 ## Branching (all PolyKybd repos)
 
@@ -336,6 +433,27 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     ⚠️ `make`'s own auto-`git-submodule` step does **not** rescue this: it tries to
     clone into the non-empty dir, prints `destination path … already exists and is not
     an empty directory`, and carries on to a doomed build (2026-08-12).
+  - ⚠️ **In a FRESH container that loop can fail for EVERY module — retry them one at
+    a time.** Run back-to-back straight after the five `add_repo` calls (2026-09-02),
+    all five died with `fatal: clone of '<url>' failed / Failed to clone '<path>' a
+    second time, aborting`, while `git ls-remote` against the same URL succeeded — so
+    the remote was reachable and it is not an authorisation failure. Re-running
+    `lib/printf` **alone** then worked first time, and the other four followed once
+    each was retried individually:
+    ```bash
+    for m in lufa chibios chibios-contrib pico-sdk; do
+        rm -rf .git/modules/lib/$m lib/$m     # a failed clone leaves a half-state
+        git submodule update --init --depth 1 --no-recommend-shallow lib/$m
+        sleep 5
+    done
+    git submodule status lib/*                # every line must start with a SPACE
+    ```
+    ⚠️ **Cause unestablished — do not theorise one.** The plausible candidates (the
+    proxy's 429 concurrency cap, authorisation needing a moment to propagate after
+    `add_repo`) were not tested, and this file's own history is full of confident
+    mechanisms that turned out wrong. Record the remedy, not a story. The tell is
+    cheap: `git submodule status` prefixes an uninitialised module `-`, so check it
+    rather than assuming the loop worked.
 - **Build**: `qmk compile -kb polykybd/split72 -km default` (or `make polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
 - **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
   - ⚠️ **Put the commit sha in the FILENAME — every test build reports the same
@@ -377,6 +495,14 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     drift check, not proof of binary equivalence: if anything outside `config.h` shows
     up, rebuild on the merged base rather than reasoning about whether it mattered.
 - **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
+- ⚠️ **NEVER run two `qmk compile` invocations at once — every flavour of a board
+  shares ONE `.build/` tree, and the collision presents as a CODE error.** Backgrounding
+  the pack build and starting the monolith beside it made the pack link die on
+  `undefined reference to doom_shim_menu_key_tile` (2026-09-03) — a symbol the pack
+  flavour genuinely does not define locally, so it reads exactly like a real
+  missing-shim bug rather than two builds overwriting each other's objects in
+  `.build/obj_polykybd_split72_default`. Serially, both link clean and nothing else
+  changes. `build_pack.sh` is safe because it sequences the two flavours itself.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 - ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk` and is NOT on
   `PATH`.** `build_pack.sh` (and anything else shelling out to `qmk`) dies with
@@ -669,6 +795,44 @@ inherited-upstream noise:
   - **The cost is bounded**: the rig already runs a HIL cycle per merge, so this
     adds a cloud build plus one apply+reboot, not a new cadence. PRs are untouched
     — the tier stays opt-in there, so no PR pipeline gets slower.
+  - **The rig's post-apply SLAVE check is a separate opt-in on the same signals**
+    (`hil-fwapply` label, `[hil-fwapply]` in a pushed commit, `tier: fwapply`/`all`
+    dispatch), carried as **`HIL_RESLAVE`** in the step's `env:`. An apply converts
+    the rig's slave into a second master — it installs the master's bridged bytes,
+    and the halves run per-side images by construction — so the link check inside
+    the apply can only report UNVERIFIED there. With the opt-in, ctnd re-flashes
+    `*_hil_right.uf2` and measures, which answers the answerable half: **can the
+    APPLIED master image bring a split link back up.**
+    - ⚠️ **OFF on a plain push, deliberately.** This job runs on every merge, and
+      `require_fwapply_run.py` gates publishing on its conclusion being `success`
+      — so anything that can fail here can refuse a release, and the rig-side
+      check has never executed. Prove it with a dispatch, then decide.
+    - ⚠️ **Passed as an ENV VAR, not ctnd's `--reflash-slave` flag.** CI runs the
+      INSTALLED station synced to ctnd `main`, so a station predating the feature
+      would die on an unknown argparse flag — failing the release gate. An unknown
+      env var is ignored, so an old station just skips the check. That also
+      removes the merge-order constraint between the two repos.
+  - ⚠️ **OPEN (2026-09-04): the apply job went red on the merge of #274 with the
+    link dead, and the cause is NOT established — do not theorise one from this
+    entry.** Run 992, job `101021479366`: the master came back on the right
+    version and every other assertion passed, then the post-apply soak measured
+    `57142 tx crc_err=0 nack=0 transport_fail=57142 giveup=17995 err=100.0%` and
+    the test failed with *"the master came back but the split link did not"*.
+    Two facts that bound it, and nothing further was determined:
+    - **`HIL_RESLAVE` was OFF** (a plain push, no `hil-fwapply` label or marker),
+      so the slave was never re-flashed and the rig **graded** the link rather
+      than reporting UNVERIFIED — i.e. it did not observe the two-masters state
+      that the structural note above says an apply necessarily produces on this
+      rig. Whether that is because the enumeration read `unknown` (which that path
+      treats as one master) was not settled.
+    - **The merged change cannot plausibly produce 57k transport failures**: in a
+      non-crash-test build its only live delta is at most two extra bounded RPC
+      attempts per link-up.
+    100% `transport_fail` with `crc_err=0` is the same signature as the
+    2026-09-03 field report AND as the benign two-masters case, which is exactly
+    why it cannot be read off the numbers alone. The next step is a dispatch with
+    `tier: fwapply` (which also turns `HIL_RESLAVE` on) to see whether it
+    reproduces.
   - ⚠️ **`--apply-bin` is destructive by design and safe only because the image is
     the one already running** — the rig checks that pairing rather than assuming
     it. And it is safe *at all* only because a brick on the rig is self-recovering
@@ -681,9 +845,19 @@ inherited-upstream noise:
     does not always — measured, on the very merge that added this tier.** Merging
     #264 (`43cc2559`, 2026-09-01) created **no push-event workflow run at all**:
     not `qmk-test`, not `cppcheck`, not `polykybd-unit-test`. That last one is the
-    decisive part — it has **no `paths:` filter whatsoever**, and it had fired on
-    #263's `CLAUDE.md`-only merge hours earlier, yet stayed silent on a merge
-    carrying nine C files. So this was not a paths filter, and not ours. Ruled out
+    decisive part — its **`push` trigger has no `paths:` filter** (just
+    `branches: [PolyKybd]`), and it had fired on #263's `CLAUDE.md`-only merge hours
+    earlier, yet stayed silent on a merge carrying nine C files. So this was not a
+    paths filter, and not ours. ⚠️ **Read that as "the PUSH trigger", not the
+    workflow** — this note said "no `paths:` filter whatsoever" until 2026-09-02, and
+    that is false of its `pull_request` trigger, which filters on
+    `keyboards/polykybd/**`, `modules/polykybd/**`, the two `builddefs/*_test*.mk`
+    and itself. The conclusion about the dropped push event is unaffected (a merge to
+    `PolyKybd` IS a push, and that trigger really is unfiltered), but the sentence
+    misleads anyone reasoning about a **PR**: on a docs-only PR the unit tests are
+    correctly silent, and reading them as "should always fire" turns a working filter
+    into a phantom second dropped-delivery incident. Found while checking exactly
+    that on #269. Ruled out
     too: no GitHub Actions incident that day (the one Git Operations incident ran
     15:00–16:01 UTC, hours earlier); the merge was a **direct click** on *Merge
     pull request* by the repo owner — confirmed with them, not inferred — so
@@ -730,6 +904,18 @@ inherited-upstream noise:
       `actions_list list_workflow_runs` filtered `event: push` — rather than
       assuming. A missing run looks identical to a repo where nothing was
       configured.
+    - ⚠️ **Add `branch:` to that query and it returns a STALE SUBSET — measured, and
+      it reads exactly like the dropped-delivery failure above.** On 2026-09-04
+      `list_workflow_runs` with `event: push` **and** `branch: PolyKybd` reported
+      `total_count` **25**, newest run dated **2026-08-24**; the same call with
+      `event: push` alone reported **217**, newest run **992** twelve minutes old.
+      Both were asked seconds apart, so this is not a race. Since `qmk-test.yml`
+      pushes only on `PolyKybd`, the filter is a no-op that should change nothing —
+      which is what makes it dangerous: an empty-looking result for the merge you
+      just made is the exact signature of a dropped push event, and I nearly filed
+      a second incident off it. **Use `event: push` with no branch filter, and
+      confirm the run you find carries the merge commit's own sha** (`head_sha`)
+      rather than trusting the listing's shape.
 
 - ✅ **The DEBUG LOOP: a firmware bug can now be chased on the rig with nobody
   flashing a `.bin`.** Dispatch `qmk-test.yml` on a branch with **`tier: debug`,
@@ -799,6 +985,15 @@ inherited-upstream noise:
   every real build queued behind it (#224 burned three rig runs and three review
   slots that way; #251 later did the same as a workflow-only PR). What follows —
   the last one is still the one that would bite:
+  - **`qmk-test.yml` has NO `concurrency:` group, so a push mid-run does not CANCEL
+    the in-flight run — it queues a second one behind it on the single-job rig.**
+    Worth knowing because it decides "push the fix now or wait?": nothing is aborted,
+    so the running job still finishes and still tells you whether the code is sound,
+    but you spend a second full flash-and-test cycle. Verified before pushing a
+    docs-only follow-up on #267 (`grep -n concurrency .github/workflows/qmk-test.yml`
+    → no match); runs 964 and 965 then both queued on the same head. ⚠️ The older
+    run's conclusion attaches to the **superseded sha**, so it stops being the PR's
+    reported status even though it is the one that actually exercised the code.
   - ⚠️ **It is a `paths` list with `!` negations, NOT `paths-ignore`, and it cannot
     be either one.** The `!` prefix works ONLY in `paths`, and the two filters may
     not both be used for one event — so "exclude the sibling workflows but still
@@ -991,6 +1186,26 @@ inherited-upstream noise:
   four wasted calls before 330 reached the actual message. Prefer
   `failed_only: true` with a **run** id to find the job, then a generous
   `tail_lines` on the **job** id.
+  - ⚠️ **On a HIL/fwapply job no PRACTICAL tail reaches the interesting part, and
+    the AVERAGE line rate is the statistic that misleads you about it.** The rig echoes every
+    `[qmk] …` line the keyboard prints. Measured on the red `Firmware apply
+    round-trip (split72)` of run 992 (job `101021479366`, 2026-09-04): the whole
+    job is **33,422 lines over 266 s**, i.e. ~126 lines/s *averaged* — but the
+    console floods hardest at the end, so the **last 2600 lines span 1.87 s**
+    (~1400 lines/s) and the last 500 span 0.63 s. The apply sequence a tail is
+    fetched for had happened roughly **four minutes** earlier, so reaching it
+    needs a tail in the tens of thousands of lines. Same "what fills the tail"
+    problem as the cleanup spam above, except that there the noise is ~60 lines
+    and here it is the whole log — asking for more lines is not the fix.
+    - ✅ **The escape hatch is `return_content: false`** — `get_job_logs` then
+      returns a `logs_url` (a time-limited blob link) instead of content, so
+      `curl` it and `grep`/measure the **whole** log in the shell, at no context
+      cost. That is how the numbers above were obtained, and it is strictly
+      better than any tail on a job this noisy.
+    - Otherwise read the rig's own verdict lines — the graded
+      `[test] PASS/FAIL: <name>` lines and the `Split link:` summary carry the
+      diagnosis — or drive the question with a probe (`tier: debug`), which
+      prints only what it asks for.
 - The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
   above.
 - ⚠️ **PR CI does NOT build the monolith.** `qmk-test.yml` builds only
@@ -1118,6 +1333,17 @@ that cost real debugging to learn (2026-07):
     *two* orderings to get right — the label before the qmk merge, and the docs merge
     after the release (already noted in `polykybd-docs/CLAUDE.md`). Getting the second
     right does not save you from the first.
+  - ⚠️ **"Before the merge" means AT OPEN — a label applied any later races the
+    merge, and the merge wins.** qmk#271 and host#212 (2026-09-04) both asked for
+    `bump:minor` in the PR body and both merged without it (fw **0.18.3** and host
+    **0.14.17** instead of 0.19.0 / 0.15.0). The label I put on #212 the moment
+    #271's merge came through landed **12 seconds after** #212 was merged: a person
+    merging a reviewed stack clicks through it in a minute and does not re-read the
+    body, and `bump-version.yml` reads the labels at merge time. A request in the
+    body is documentation, not a label. `create_pull_request` cannot set labels, so
+    the rule is **`issue_write` with `labels: ["bump:minor"]` right after opening**,
+    before announcing the PR — and mention the label in the body only as a record of
+    what is already set.
   - **Recovering** is a choice, not a fix: either correct the docs to the version that
     actually bumped, or land a `bump:minor` PR that does **not** itself edit `config.h`
     (the workflow bumps *after* merge, so an edited version file would be bumped on top
@@ -1471,6 +1697,29 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   the old compiled-in `{ &flag_font }` path did. `kdisp_gfx_glyph_font(fonts, n, cp,
   &out_font)` returns the glyph **and** its owning font in one scan for exactly this
   (`kdisp_gfx_glyph` is the `out_font = NULL` wrapper).
+  - ⚠️ **The same shift makes a LONE Latin-1 symbol sit as low as a descender, and
+    that is what "this glyph renders under the baseline" means in practice.** The
+    two notes above frame the yAdvance gap as a *multi-glyph* hazard (`à»ñ`); the
+    single-glyph corollary is separate and is a per-cell tuning matter. `_Base_` is
+    yAdvance 37 and `_SupAndExtA_` is 44, so **every** Latin-1 supplement glyph is
+    drawn 7 px lower than a base-face letter: measured against the base face's own
+    ink bottom, `§ £ ± ¢ ¥ ½ ¼ ¾ © ®` all land where a `y` descender does, and
+    `µ ¦ ¸` deeper still. It is not a bug in any one glyph — it is the whole font.
+    - **The fix is the cursor nudge in the LUT cell**, `\f` = 2 px up (`\b` = 2 px
+      left), so a −6 px lift is `U"\f\f\f" <TOKEN>` prepended to the cell. That is
+      what the hand-tuned cells already used; the 2026-09-03 pass normalised
+      `§ £ ± µ` to exactly three across all 117 cells that draw them, having found
+      them spread over **five** different values (0, −2, −4, −6, −8).
+    - ⚠️ **The panel clamp can EAT the nudge, so measure the realised move rather
+      than the requested one.** A glyph already jammed against the south edge spends
+      part of the lift merely releasing that clamp: of 92 element positions that
+      moved, 13 moved 1–4 px instead of 6 (`af-ZA`/`se-NO` `KC_3` by 1 px). Nothing
+      reports this — the cell says −6 and the keycap moved 1.
+    - **Survey before tuning, per distinct codepoint, not per cell**: resolve every
+      single-glyph cell, take `Renderer.bbox([cp])`, and rank by `ymax`. Symbols the
+      font pushes down separate cleanly from real descenders (`g j p q y`, Arabic,
+      Hebrew nikud, brackets) that way, and it is the only way to see that a glyph
+      is inconsistently nudged across layouts.
 - **GFXfont bitmaps are COLUMN-NATIVE (OLED page format) since the PolyColGfx
   rollout (font-pack ABI 2).** 1 byte = 8 *vertical* pixels, so the firmware blits a
   whole column-byte into the SSD1306 page memory at once. `cb = (h + 7) >> 3`
@@ -1517,11 +1766,37 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     source is what actually caught it.
 - **Composable plotter modes** (`disp_array.c/.h`, static flags toggled around a
   draw): `kdisp_set_gfx_erase(bool)` makes the glyph plotter **clear** pixels
-  instead of setting them, and `kdisp_set_gfx_scanline(bool)` lights **only even
-  *absolute buffer* rows** — the gate is `(y + yo + yy) & 1`, i.e. the final buffer
-  y, **NOT** a glyph-local row, so two glyphs at different y still interleave to one
-  consistent scanline pattern. Used to render the Eden idle legend as a dim
-  half-density overlay. Always pair the set with a reset (`(false)`) after the draw.
+  instead of setting them, and `kdisp_set_gfx_scanline(bool, phase)` /
+  `kdisp_set_gfx_scanline2(bool, phase)` light only every other row (1-on/1-off) or
+  2-on/2-off bands. The gate is on the **ABSOLUTE buffer y**, not a glyph-local
+  row, so two glyphs at different y still interleave into one consistent pattern.
+  Used to render the Eden idle legend as a dim half-density overlay. Always pair the
+  set with a reset (`(false, 0)`) after the draw.
+  - ⚠️ **`phase` exists because that absolute gate is a BURN-IN trap, and the drift
+    offset does not spring it for you.** Left at a fixed phase the fine mode lights
+    the even panel rows and only ever the even panel rows — every idle session, for
+    the life of the board — so half the panel takes the legend's entire share of the
+    wear and the other half takes none. `kdisp_set_draw_offset()` does not spread
+    it: it moves the **cursor** (`gfx_text_run`), i.e. it slides the glyph past a
+    *stationary* stripe pattern, changing which rows OF THE GLYPH are dropped while
+    the lit PANEL rows never move. Only rolling the phase moves the stripes. It is a
+    parameter of the enable rather than a setter of its own so that a caller cannot
+    turn the mode on without answering that question, and so a phase cannot leak
+    into the next keycap of the same pass.
+  - **The Eden legend rolls it off the SAME `epoch` as its position drift**
+    (`poly_keymap.c`, a third salt `0x2000` on `jitter_axis`, so it is uncorrelated
+    with dx/dy): the stripe flip then lands on the very frame the letter jumps
+    anyway, which is what keeps it invisible instead of a shimmer. The boot splash
+    passes phase 0 deliberately — it runs for a few seconds, so a fixed alignment
+    costs nothing and a rolling one would read as flicker across the reveal.
+  - ⚠️ **`disp_array.c` has no unit suite** (it owns the scratch buffer), so the
+    phase table was checked by compiling `scanline_skip_row()` standalone: phase 0
+    reproduces the old pattern **exactly** (so nothing that passes 0 changed), fine
+    phase 1 is its exact complement (every panel row reachable across the two),
+    coarse phase 0..3 gives four distinct band alignments, an out-of-range phase is
+    masked, and `(false, …)` ignores it. Do the same rather than eyeballing it — the
+    modes are invisible from every preview tool (`oled_preview.py` models no plotter
+    mode) and on hardware only over months.
 - **To draw an INVERTED keycap, render it inverted — do NOT reach for
   `kdisp_invert()`.** That is a panel-level SSD1306 command, and `split72.c`'s
   `matrix_scan_kb` already toggles it on every press and un-toggles on release,
@@ -1599,7 +1874,7 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
     bypassed — `s_gfx_erase` and `s_gfx_scanline` were the SAME shape, and the
     scanline one was live.** Both are static plotter modes that only the two char
     writers honoured, so under `IDLE_STYLE_EDEN` — which draws the resting legend
-    `kdisp_set_gfx_scanline(true)` as a dim half-density ghost — the text came out
+    `kdisp_set_gfx_scanline(true, phase)` as a dim half-density ghost — the text came out
     half-density while the composited art stayed fully lit. Measured over the shipped
     legends, three carry composite art AND are reachable as a resting legend (i.e. at
     idle), all three on the split72 default keymap: `ICON_SCRLOCK_ON/OFF` (`KC_SCRL`,
@@ -1689,6 +1964,193 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   for a real collision, because overlapping lit-on-lit loses no pixels and still reads
   as merged (that metric hid the digit collision for a round). The
   `keycap-layout-preview` skill wraps the whole measure-don't-eyeball loop.
+- ⚠️ **The Shift and AltGr hints are laid out as a PAIR, and it took a field report
+  to notice they were not.** Both sit right of the base legend — Shift upper, AltGr
+  lower — and until 2026-09-02 the only thing holding them apart was their
+  per-language VERTICAL offsets. That is fine for a narrow Latin pair and wrong for
+  a tall script: swept over all 160 layouts × 49 keys, **24 keys across 19 layouts**
+  drew the two through each other — every `ar-*` layout on `KC_F` by 13 px, `bn-BD`
+  worst at 6 keys and up to **57 px** on `KC_D`. `en-US` never shows it because its
+  letter Shift offset is `HIDE_KEY`, which is exactly why it survived so long.
+  - ⚠️ **It reads as a MISSING GLYPH, not as a layout bug** — reported as *"I can see
+    wildcards rendered on a d f"*. Those are correct Shift previews (`\` on A, `]`
+    on D, `[` on F) landing inside the AltGr glyph's box; `s` and `g` have no Shift
+    preview, which is why they looked skipped. Check `overlap_detail` before chasing
+    a font.
+  - ⚠️ **A per-language OFFSET cannot fix this, so don't reach for `lang_lut.xlsx`.**
+    The offsets are per *language* while the room left over is decided by the WIDTH
+    of this key's three glyphs — one number would have to satisfy the layout's worst
+    key and would crush every other key into the base. `bn-BD` needs a different
+    separation on `C` (3 px) than on `D` (57 px).
+  - The fix is the same shape as the shift-vs-base logic one branch up: resolve the
+    AltGr hint **before drawing**, and when the two ink boxes intersect in **both**
+    axes pull the Shift **left** into the gap between the base and the right-clamped
+    AltGr — floored at the base's own 2 px margin, and never moved right (which could
+    only walk it into the clamp). Generic and glyph-width driven, no per-language code.
+  - **Measured, not eyeballed**: `shift^altgr` 24 keys / 398 px → **1 key / 22 px**,
+    `base^altgr` 0 either way, `base^shift` unchanged at its one pre-existing 2 px
+    key, and the off-panel pixel count **byte-identical per key**. 53 keys move.
+    `PolyKybdHost/tools/oled_preview.py` is both the mirror and the measuring
+    instrument; its `report=` gives per-element ink boxes, overlap and out-of-bounds.
+  - **`bn-BD KC_H` is the key the pull alone could NOT fix** — a 22 px base plus a
+    27 px Shift plus a 37 px AltGr will not fit 72 px at full size, so the pull could
+    only shrink it 29 → 22 px. Halving the AltGr hint (below) is what closes it.
+- ⚠️ **A Shift CELL has TWO jobs, and emptying it to hide the PREVIEW destroys the
+  uppercase — the suppression is a build-time BITMAP instead
+  (`shift_preview_redundant`, `lang/lang_lut.c`).** The cell is the preview drawn in
+  the unshifted view AND the legend drawn while Shift is actually held, so clearing
+  it leaves `translate_keycode()` falling back to `lower_case` — and `VAR_CAPS` is
+  empty on those keys, so the capital then lives nowhere and the keycap shows `ä`
+  with Shift down. Reported from hardware 2026-09-02 after a tuning pass emptied 164
+  cells across 52 layouts to hide previews that only repeated the base letter.
+  - **The rule is `lang/shift_preview.py`**: a preview is redundant when the base and
+    the Shift each resolve to exactly ONE printable glyph and they are a case pair in
+    either direction (`ä`/`Ä`, and `Ø`/`ø` where a few layouts store the capital as
+    the base). An exact duplicate needs no clause — a caseless character is its own
+    upper case. It fails SAFE: anything it cannot resolve keeps its preview, because
+    a stray preview is cosmetic and a missing one is information lost.
+  - **The case comparison is done in PYTHON at build time**, where the Unicode tables
+    are, and emitted as `uint8_t[NUM_LANG][8]` — 1280 B of `.rodata`, no RAM. All 164
+    hand-emptied cells are covered by the generic rule (verified), and it finds the
+    same shape on 72 more keys: **236 previews suppressed across 75 layouts**, of the
+    4388 that draw at all.
+  - ⚠️ **The HOST PREVIEW imports that module and feeds it the RAW cells** rather than
+    re-deriving anything — `oled_preview.shift_preview_rule()` /
+    `shift_preview_cells()`, mirrored into `gen_keycap_tuner.py` so the tuner cannot
+    offer offsets for a preview the board never draws. Sharing the *resolver* and not
+    just the rule is the point: measured, two resolvers disagreed on **59** of ~3300
+    keys. A bit-level check over all 160 × 49 (lang, key) pairs is what proves parity
+    — 0 mismatches.
+  - ⚠️ **The named-glyph table must be built from column B (HEX INPUT) of the
+    `named_glyphs` sheet, NOT column C (CALC DEC).** C is a FORMULA, and openpyxl's
+    `data_only` pass returns `None` for a formula with no cached result — the state of
+    **942 of ~1400 rows** in this workbook, and the state it has been in on every
+    revision checked. Reading C silently drops those names, so their cells resolve to
+    `None` and *keep* their preview; that was the whole 59-key disagreement above.
+    `named_glyphs.h` is generated from column B, so B is what the firmware draws.
+  - ⚠️ **A literal close-comment inside a `/*[[[cog … ]]]*/` block ends the C comment
+    early** and the compiler then parses the generator source as C
+    (`missing terminating ' character`, `-Werror`, dead build). The emitter builds its
+    trailing `/* lang */` marker by concatenation for exactly that reason. It costs
+    two build cycles to notice, because cog itself is perfectly happy.
+- **EVERY element of a keycap is clamped onto the panel, on ALL FOUR edges, through
+  ONE helper — `legend_plan_clamp()` (`base/legend_plan.c`).** The main legend, the
+  Shift preview and the AltGr hint all pass their measured ink box through it, so
+  they cannot disagree about where the edge is. Two things about this are worth
+  knowing before touching any of them:
+  - ⚠️ **It replaced an ASYMMETRY, not an absence, and the asymmetry is what made the
+    off-panel ink invisible.** The big legend tiers had been clamped on all four edges
+    inside `plan_main_legend()` since they shipped, and the two hints had a
+    right-edge-only clamp — while the **small base legend had none at all**. So a
+    per-language `VAR_SMALL` offset tuned for one script's glyph heights, applied to
+    every key of the layout, silently pushed ink off the north or west edge and it was
+    simply lost. Measured over all 160 layouts × 49 keys: **420 keys / 3934 px**
+    clipped, of which 305 elements were small base legends (worst `th-TH KC_E`, 8 px
+    off the west edge) and 138 Shift previews (worst `ku-IQ KC_L`, 8 px off the top).
+  - **Nothing is wider than the panel and exactly ONE element is taller** (he-IL's
+    43 px standalone nikud on `KC_BACKSLASH`), so the clamp is a no-op for anything
+    already inside the window and the change is confined to the keys that were losing
+    ink. Measured after: **1 key / 9 px**, which is that one glyph in a 40 px panel.
+  - ⚠️ **The clamp order decides which edge loses on an over-size glyph** — E before W
+    (west wins), N before S (south wins, so the top clips). Preserved from the big
+    path rather than chosen; changing it moves those 9 px and nothing else.
+  - **The stagger and the hint pull are re-clamped after they move something**, so the
+    panel edge beats a readability nicety. That matters most for the 6 px lift the
+    overlap stagger applies to a *small* base — which, now that a small base is
+    clamped, could otherwise push a tall legend straight back off the top.
+  - ⚠️ **A big per-language offset is therefore a NO-OP past saturation rather than a
+    way to hide a glyph.** `HIDE_KEY` (-128) is the hide mechanism and is checked
+    before any of this, so nothing that relied on hiding changes; but the keycap tuner
+    sliders now stop moving an element at the edge for all three, where before only the
+    two hints saturated and the base ran off the panel.
+  - **Cost: `.text` +432 B, `.rodata`/`.data`/`.bss` byte-identical, monolith `.heap`
+    free unchanged at 2772.** The bboxes were already computed for all three elements,
+    so the clamp is a handful of compares per element on data the render path had
+    anyway.
+- **The AltGr hint is drawn at HALF size on the layouts that ask for it, and WHICH
+  layouts is DATA — `{letter|num|sym.altgrhalf}`, rows 62–64 of `lang_lut.xlsx`.** It is a hint —
+  what the key would type under a modifier nobody is holding — so on a script whose
+  letters fill the keycap it reads better subordinate to the base legend, and a
+  full-size script glyph was most of what made the two hints fight over the right-hand
+  side. `render_key()` prepends `HINT_SMALL` to the cell and re-measures.
+  - ⚠️ **A SIZE test cannot express which layouts, and the measurement is the reason.**
+    The intuition is "Arabic and Indic have very large glyphs"; AltGr ink **height does
+    not separate them at all** — median **20 px** on Arabic letters against **21 px** on
+    Latin ones. What actually differs is that on those layouts the base and the Shift
+    hint are wide too, so the row reads crowded. That is a per-**layout** judgement no
+    glyph measurement can make, which is why it lives in the spreadsheet — one cell per
+    language, flipped by editing the cell, never by tuning a threshold in the C.
+    The opt-in is **per category**, the same three-way split the H/V offsets use, so
+    `render_key()` picks `half_set` beside `v_set`/`h_set`. As tuned on hardware
+    (2026-09-02): **`{letter.altgrhalf}` on 27 layouts** — every Arabic-script one
+    (`ar-*`, `fa-IR`, `ur-PK`, `ku-IQ`, `ps-AF`) plus `ne-NP`, `bn-IN`, `bn-BD`,
+    `te-IN`, `ta-IN` — and **`{sym.altgrhalf}` on the 18 `ar-*` layouts**, whose
+    symbol row is as crowded as their letters. `{num.…}` is set nowhere.
+    ⚠️ **`hi-IN` and `mr-IN` were turned OFF again after looking at them** — their
+    letter AltGr cells are mostly bare combining marks that the mark guard leaves full
+    size anyway, so the flag bought nothing and only made the few real letterforms
+    inconsistent with their neighbours. Derive the current set from the spreadsheet
+    rather than from this list; it is a judgement per layout and it moves.
+    ⚠️ A row nothing uses still has to EXIST — the tuner can only offer a setting the
+    spreadsheet carries — so do not "clean up" the all-blank `{num.…}` one.
+  - ⚠️ **The one size test that REMAINS is the mark guard, and its threshold IS
+    measured.** Halving a glyph that is already tiny destroys it — a Hebrew nikud is
+    2×3 px and comes out a dot. Over the **318 distinct AltGr cells** the ink-height
+    histogram has an **EMPTY BIN at 8 px**: 44 cells below it (nikud, diaeresis, middle
+    dot, hyphen) and 274 letterforms from 9 px up. So `ALTGR_HALF_MIN_INK_H` is 7
+    because the data separates itself there, and a host test asserts nothing inks
+    exactly 8 px tall — a new language landing in the gap has to **re-derive** the
+    constant from the histogram, not nudge it. It carries most of the **Indic** layouts
+    on its own: their letter AltGr hints are mostly bare combining marks at a median
+    4 px, so they stay full size even though the layout opted in.
+  - **Measured**: hint-on-hint overlap 1 key / 22 px → **0**, `.text` +192 B, `.rodata`
+    +1920 B (three settings rows at `int8_t[NUM_LANG*4]` = 640 B each), `.data`/`.bss`
+    byte-identical and the monolith's `.heap` unchanged (the halving scratch is on the
+    stack).
+  - ⚠️ **A settings row must be INSERTED, not appended** — cog collects the block by
+    walking column A until the first empty cell, and the row after it is the
+    `lower/upper/caps/ALT Gr` legend, so anything below that is invisible.
+    `lang/_insert_settings_row.py` renumbers the rows underneath.
+  - ⚠️ **A row number lives in FOUR places in sheet2.xml and only two are inside
+    `<sheetData>`.** `<row r>` and `<c r>` are; **`<mergeCell ref>` and `<hyperlink
+    ref>` sit after it**, so a renumbering pass that slices the tail of `sheetData`
+    never reaches them. This sheet has **27 merges and 10 hyperlinks anchored on the
+    legend row** — exactly the row an insert pushes down — so the old script left them
+    one row short. That claim it made about "no merged cells outside row 1" was simply
+    never true.
+    - **The failure is SILENT and asymmetric between openpyxl's two readers, which is
+      what makes it vicious.** `read_only=True` streams row elements and reports the
+      sheet as perfect; the eager loader keys on cell refs, materialises a phantom cell
+      where the stale hyperlink still points, and hands back its `display` text as that
+      cell's value. **cog uses the eager loader**, so the first inserted settings row
+      came out with `https://www.branah.com/english` as its en-US offset (2026-09-02).
+      Verifying with the streaming reader alone says everything is fine.
+    - The script now renumbers both and **runs `_verify_readers_agree()` after every
+      write**, comparing the two readers over the edited region. Compare
+      **asymmetrically**: eager holding a value streaming lacks is the corruption;
+      eager holding `None` where streaming has a value is a pre-existing shared-string
+      quirk on the legend row (present in the *untouched* workbook — the docstring used
+      to blame inserts for it) and must be tolerated, or the guard can never be green.
+  - ⚠️ **Never size a generated table from `key_index` or any other cog variable left
+    over from an earlier block.** The Shift-suppression bitmap did
+    `num_keys = key_index - 2`, where `key_index` is where the *settings*-block walk
+    stopped — so it was 63, not the real 54, and `row = 2 + k` walked into the settings
+    rows evaluating the redundancy rule on offsets like `35` and `HIDE`. Harmless by
+    luck (`index` maxes at 53, so the stray bits at k >= 54 are unreachable, and all of
+    them came out 0 — the suppression count was never wrong), but the array was two
+    bytes per language too wide, and adding six settings rows silently took the stride
+    from 8 to 9. It derives `num_keys` from the sheet now. **A generated array's
+    dimension is a fact about the data; if it moves when you add an unrelated row, the
+    derivation is wrong.**
+  - ⚠️ **The AltGr view when AltGr is actually HELD is untouched, and must stay so** —
+    that branch is at the top of `render_key()` and there the glyph IS the legend, not
+    a hint.
+  - ⚠️ **`kdisp_write_gfx_char_half` draws NOTHING for a missing glyph** (no `'!'`
+    substitution, no advance), where the full-size writer substitutes. Every AltGr cell
+    resolves against the full font set today, so this is only reachable on a keyboard
+    whose font pack is absent or behind — where the hint silently disappears instead of
+    showing `!`. Acceptable for a hint; do not extend the halving to a **base** legend
+    on the same reasoning.
 - **The per-keycap DISPLAY grid is NOT a rectangle** (split72). Only the **bottom
   row (display row 4) is a full 8-wide row**; the upper rows (0–3) have panels at
   **cols 0–6 only** — display **col 7 is a routing phantom** (a `BITMASK` entry
@@ -2073,6 +2535,222 @@ An image that fails that check is **not refused outright** — the keyboard asks
   build without `POLYKYBD_DOOM_PACK`. `.whx` / `.plyf` ride the same unsigned
   transport but are data, not code.
 
+### Crash diagnostics: the crash record, the watchdog and the phase breadcrumb (`base/crash_record.*`)
+
+A HardFault, an unhandled exception or a main-loop hang used to leave **nothing**:
+the M0+ HardFault vector fell into ChibiOS's `b .` loop, the board sat dead until
+a replug, and the only evidence was "it stopped". Now every one of those is
+**recorded, rebooted through, and announced on the next boot** — on the console
+(`crash: side=master kind=hardfault core=0 pc=0x… lr=0x… sp=0x… psr=0x… icsr=0x…
+phase=3:0x0015 up=123456ms n=1 reason=0x22 fw=0.18.0`, one line, in the boot
+banner and its re-emits), over HID (**cmd 39**, protocol **v16**), and for the
+slave over the split link (the master pulls it and prints `side=slave`). The host
+turns the console line into a dialog (`PolyKybdHost/CLAUDE.md`), the rig fails the
+run on it (`test_no_crash_record`). What is worth knowing:
+
+- **The record lives in a NOLOAD RAM block** (`s_ram`, section `.ram0.crash_record`
+  via ChibiOS's `rules_memory.ld` — the same trick as the bootloader magic) so it
+  survives the `watchdog_reboot()` the handler ends with. It does NOT survive a
+  power cycle, which is why it is **archived to flash** at boot:
+  one 4 KB sector at `FW_CRASH_LOG_OFFSET` (`FW_APPLY_LOG_OFFSET - 4096`), page-
+  appended, erased only when full or on cmd 39 sub-op 2. `FW_UP_MAX_SIZE` shrank
+  by that sector (`0x1F7000 → 0x1F6000`; the host mirror in `hid_fw_up.py` moved
+  with it).
+  - ⚠️ **The archive is written INSIDE `crash_record_init()`, at the top of
+    `keyboard_pre_init_user()`, WITHOUT the `fw_staging` core1 lockout — and
+    both halves of that sentence are load-bearing.** It went through three
+    shapes in review of #271, each catching the previous one:
+    1. Archive from init, under the lockout, in post_init after QMK's init.
+       Greptile: releasing the lockout does a bounded RELAUNCH of core1, so run
+       before post_init's own `multicore_launch_core1()` the unbounded FIFO
+       handshake finds core1 already running and blocks forever — a keyboard
+       that hangs on the boot after every crash.
+    2. Capture in `pre_init` (CodeRabbit: QMK's matrix / split / OLED init runs
+       between the two hooks, so a fault there must be tagged `phase=boot` with
+       the previous record already safe), park the copy in `.bss`, write it
+       from `crash_record_archive_pending()` after the launch. CodeRabbit again:
+       a reset in that boot window loses the parked copy, and a fault that
+       recurs there **every** boot never archives at all — precisely the record
+       worth having.
+    3. Write it at `pre_init`, no lockout. Sound because at that point core1 has
+       **never been launched** — it is parked in the bootrom, fetching nothing
+       from XIP — so there is nothing to halt and no relaunch to trigger.
+       `flash_guarded()` takes a `lockout` flag: `false` from init only, `true`
+       from the runtime `crash_record_clear()` erase, where core1 is serving RLE
+       from flash and must be parked. **Never move `crash_record_init()` after
+       the core1 launch** — the no-lockout write is only correct ahead of it.
+  - **Verify the placement in the ELF, not the linker script**: `nm` must show
+    `s_ram` inside `.ram0` and `.ram0_init` must be **size 0** (nothing initialises
+    it). `objdump -h` on the split72 build: `.ram0 00000040 @ 2003e12c`, `.ram0_init
+    00000000`. And the vector table at `0x10000100` slot 3 must be OUR
+    `HardFault_Handler` (`…dddd` = `1000dddc|1`), with slots 4+ still the shared
+    weak body that `bl`s `_unhandled_exception` — which is now our strong override,
+    so both routes land in `crash_record.c`.
+- **The M0+ has only HardFault** — no BusFault/UsageFault, no CFSR/BFAR/MMFAR. So
+  the record is the **stacked frame** (pc/lr/xpsr from the exception frame, sp =
+  the frame address, `ICSR` for the active vector) plus what the firmware itself
+  knew: the **phase breadcrumb** and uptime. The handler is naked asm: `tst lr,#4`
+  picks PSP/MSP, then C. ⚠️ `frame_readable()` bounds the frame to SRAM before
+  touching it — a corrupt SP would otherwise re-fault INSIDE the handler and the
+  record would never be written.
+- **The phase breadcrumb is what makes a watchdog timeout diagnosable.** A hang
+  has no fault frame, so `crash_phase_enter(phase, arg)` / `crash_phase_leave(tag)`
+  tag the code the main loop is in: `HID` (arg = cmd id, `hid_com.c`), `BRIDGE`
+  (arg = transaction id, `send_to_bridge`), `CORE1_WAIT` (the two decompress waits
+  in `multicore_exec.c`), `FLASH`, `SUSPEND`, `APPLY`, and `LOOP` re-armed every
+  housekeeping pass. On `WATCHDOG.REASON.TIMER` with no fault record,
+  `crash_record_init()` synthesises a `kind=watchdog` record **from the phase left
+  in RAM** — the phase is written directly into the NOLOAD block for exactly that.
+  ⚠️ The enum is mirrored in the host's `PHASE_NAMES` (`crash_report.py`); keep the
+  numbers in step (the `CRASH_PHASE_RENDER` slot was removed before shipping, so
+  SUSPEND=7, APPLY=8).
+  - ⚠️ **`WATCHDOG.REASON.TIMER` alone is NOT a hang — the bootrom's reboot after
+    a UF2 copy is a watchdog reboot too, so the FIRST BOOT AFTER EVERY BOOTSEL
+    FLASH reads TIMER.** Found by the rig the first time the crash tests ran
+    (run 33809919200, 2026-09-03): both halves reported a fresh
+    `kind=watchdog phase=2:0x0000 up=0ms n=3 reason=0x12` — `0x12` is
+    `HAD_RUN | WD_TIMER`, i.e. the rig's RUN-pin reset followed by the bootrom's
+    post-copy reboot, and `n=3` because the NOLOAD block survives a reflash, so
+    the pre-fix firmware had counted three consecutive rig flashes as three
+    consecutive hangs (two more and it would have **halted** the rig in `wfi`).
+    The discriminator is the SDK's own: `watchdog_enable()` leaves
+    `0x6ab73121` in scratch4 and every deliberate reboot path clears it (the
+    bootrom, `watchdog_reboot()`, our inlined self-apply reset, and now
+    `crash_watchdog_stop()`), so `watchdog_enable_caused_reboot()` is true only
+    for a timeout of the watchdog `crash_watchdog_start()` armed. Reading
+    `REASON` without it would have made every UF2 flash — the recovery path this
+    whole feature points users at — open with a phantom crash dialog.
+- **The watchdog is 8 s** (`CRASH_WATCHDOG_MS`), started after the boot splash
+  and fed from **housekeeping and the suspend loop only**. Two places disarm it,
+  and both are load-bearing: `shutdown_user()` (the bootloader jump / `mcu_reset`
+  would otherwise be racing an 8 s timer) and `fw_staging.c` right before
+  `fw_staging_do_apply()` (the self-apply never returns to housekeeping; a
+  watchdog reset mid-copy is the brick this whole area guards against). A new
+  blocking path longer than 8 s needs a `crash_watchdog_feed()` inside it — or
+  the record it produces will say so, which is the point.
+- **A crash loop halts instead of looping forever**: `consecutive` counts
+  back-to-back records and past `CRASH_LOOP_LIMIT` (5) the handler parks in `wfi`
+  rather than rebooting — recoverable over BOOTSEL, and the archive still says
+  what it was doing. Two details, both found in review of #271: the halt
+  **disarms the watchdog first** (still armed from `crash_watchdog_start()`, it
+  would otherwise reset the chip 8 s later and turn the halt into a reboot storm
+  with a pause — CodeRabbit), and `crash_watchdog_start()`, i.e. a boot that got
+  all the way through post_init, **resets the counter to 0** — what the field's
+  comment always promised and the code did not do, so five unrelated crashes
+  across weeks of uptime would have halted the board. The halt is for a firmware
+  that never finishes booting; one that crashes at runtime reboots and announces
+  itself each time.
+- **The slave's record rides `USER_SYNC_SLAVE_DATA`**, which is now generic and
+  unconditional: `slave_data.c` owns the op dispatch (`SLAVE_DATA_SENSOR` = the
+  LTR-559 pull that used to be the whole handler, `SLAVE_DATA_CRASH`), and the
+  master pulls the crash body once per link-up, three tries 2 s apart. ⚠️ It is
+  printed **once, at the pull**, not with the banner re-emits — the link can come
+  up long after those stop.
+- **cmd 39**: `data[2]` 0 = this half's archived record, 1 = the slave's, 2 =
+  clear, else NACK. Body `[flags][48-byte poly_crash_record_t]`, flags bit0
+  present / bit1 **fresh** (recorded by the boot before this one). Only a fresh
+  record is announced on the console; the archive is history for `polyctl crash
+  show`. `_Static_assert(sizeof == 48)` pins the struct the host unpacks with
+  `struct.Struct("<IBBBBIIIIIIHH8sI")`.
+- **Exercised on the rig by accident, not by a deliberate fault.** The UF2
+  false positive above (run 33809919200) drove the whole reporting chain end to
+  end on real hardware — boot-time capture, the console line on both halves, the
+  slave pull over the split link, cmd 39 read on master and slave, and the
+  clear — before any fault had been injected on purpose. What is still
+  unverified is the **fault path itself**: the naked handler, the stacked frame
+  and the `watchdog_reboot()` out of it. The `debug-firmware-on-rig` skill with a
+  probe that dereferences a bad pointer over HID is the way to close that.
+  - **`-e POLYKYBD_CRASH_TEST=yes` is the by-hand route** (`crash_test.c`, a
+    TEST-ONLY flag — a normal build compiles inline no-ops and pays nothing).
+    Hold Ctrl+Shift+Alt and press a digit: **1** unaligned word store (the
+    qmk#258 brick, reproduced), **2** a branch to an address with bit 0 clear,
+    **3** a main-loop hang (~8 s to the watchdog), **4** `crash_record_halt()`,
+    **5** a pended SPARE NVIC IRQ, i.e. the `_unhandled_exception` funnel rather
+    than HardFault, **6** the same fault on **core1** (shared vector table;
+    PRIMASK does not mask a HardFault, so `core` reads 1), **7** the **slave**,
+    over a `SLAVE_DATA_CRASH_TEST` pull that deliberately never answers.
+  - ⚠️ **The chord tests each modifier FAMILY, not a combined mask.**
+    `MOD_MASK_CTRL` covers left and right, so `(mods & (CTRL|SHIFT|ALT)) == that`
+    demands all SIX keys and can never fire off a normal keymap — written that
+    way first, caught before the build.
+  - ⚠️ **Every address is laundered through a `volatile`.** A plain
+    `*(uint32_t *)1 = x` is undefined behaviour GCC may delete outright, and a
+    deleted fault is a test that silently proves nothing.
+    - ⚠️ **The mechanism that actually bit was NOT deletion — it was
+      LEGALISATION, and it is quieter.** Trigger 6 wrote its address as a
+      compile-time constant (`((uintptr_t)&core1_decomp_count) + 1u`), so GCC
+      could see the misalignment and split the `volatile uint32_t` store into
+      **four `strb`** — which never fault on ARMv6-M. Core1 wrote `EF BE AD DE`
+      and carried on, so the trigger did nothing at all and reported nothing
+      (measured 2026-09-04). A deleted store leaves no instructions to find; a
+      legalised one leaves plausible-looking code that simply cannot fault. The
+      laundering is what hides the alignment from the optimiser, and it is
+      required even where the address is not literally a constant expression.
+    - **Check it in the DISASSEMBLY, not the source**: the fault site must be a
+      single `str`, and the address must be reloaded from the volatile
+      (`ldr r4,[r2]` then `str r3,[r4,#0]`). Any `strb` on that path means the
+      trigger is inert.
+  - **`clear_keyboard()` + a 25 ms settle before every trigger**, the same rule
+    the FW-2 prompt and `doom_begin()` follow: a crash is a path that does not
+    return, so the held chord would otherwise auto-repeat on the host — for a
+    full 8 s on the watchdog trigger, before the board even reboots.
+  - ⚠️ **A pull that lands BEFORE the slave has archived used to count as DONE.**
+    `crash_record_note_slave()` returns true for an empty reply as well (it
+    clears the master's cached copy), so testing it alone closed the pull for
+    that link-up with nothing reported — and right after a slave reboot the
+    empty reply is the normal first answer. Only a reply with
+    `CRASH_HID_FLAG_PRESENT` ends it now. Pre-existing, not specific to the
+    crash test: it applied to the ordinary post-reboot pull too.
+  - ⚠️ **The slave's line was printed exactly ONCE, so a single dropped console
+    read lost the record for good.** The master's own line survives that because
+    the boot banner repeats it; the slave's arrives long after those repeats have
+    stopped, which is why it is not in the banner. It now schedules a few repeats
+    of its own (`crash_record_emit_slave_line()`), which is safe because the host
+    dedupes identical lines — the same property the banner's repeats rely on.
+  - ⚠️ **Trigger 7 cannot rely on the master OBSERVING the slave's reboot as a
+    link drop.** `slave_data_crash_pull_tick()` re-pulls only on a false->true
+    transition of `is_transport_connected()`, which needs
+    `SPLIT_MAX_CONNECTION_ERRORS` (200) consecutive failures to accumulate
+    *before* the slave is back — a race, not a guarantee. So the request opens a
+    bounded forced-retry window (`CRASH_FORCE_WINDOW_MS`, 30 s) instead.
+    ⚠️ Do **not** "re-arm" by clearing `s_tries` at request time, which was tried
+    first: with the link still reading connected, that spends all three ordinary
+    tries into a half-rebooted slave and then gives up forever — the opposite of
+    the intent. The window is additive; the drop path still re-arms normally.
+  - ✅ **PROVEN ON HARDWARE 2026-09-04 (fw 0.18.4), triggers 1 and 2** — the
+    fault path this section called unverified. Trigger 1's `pc` landed on the
+    faulting store ITSELF (`crash_test.c:53`, `601a str r2,[r3,#0]`), not its
+    successor, so one `addr2line` names the line. The disassembly also shows GCC
+    emitting the `ldr` read-back of `s_addr` before the store, i.e. the volatile
+    laundering held and the fault was not optimised away. Three readings that
+    generalise to ANY fault record, not just these two:
+    - **`psr` bit 24 (T) is a free discriminator, and both directions are now
+      measured.** Trigger 1 (faulted executing an instruction) returned
+      `psr=0xa1000000`, T **set**; trigger 2 (a `blx` to a bit-0-clear address)
+      returned `psr=0x00000000`, T **clear**. So the record separates "faulted on
+      an instruction" from "faulted trying to enter ARM state" with no symbols at
+      all — the stacked xPSR is the state BEFORE the exception.
+    - ⚠️ **`lr` is trustworthy only when the fault is AT a call.** Trigger 2
+      faulted on the `blx`, so LR still held the return address that `blx` had
+      just written and resolved to the calling line (`crash_test.c:66`). Trigger 1
+      faulted a few instructions later, so LR was a stale leftover from the
+      previous `bl` and resolved to `chThdSleep` — the `wait_ms(25)` in
+      `release_the_chord()`, nowhere near the bug. The tell is whether
+      `addr2line lr` lands adjacent to `pc`'s function; ARMv6-M stacks no call
+      chain, so this is never a backtrace.
+    - ⚠️ **`addr2line` maps a DATA address to a symbol and it reads like an
+      answer.** Trigger 2's `pc=0x20000000` resolved to `__overlay_pool_base__`
+      (`overlay.c:42`) — the overlay pool, which is not code. **Check the RANGE
+      first**: code is XIP flash `0x10……`, SRAM is `0x20……`, so a `pc` in SRAM
+      means "branched into nowhere" whatever symbol addr2line prints.
+  - ⚠️ **`reason` carries a STICKY `HAD_POR`, so the host renders a watchdog
+    reboot as "reset reason: POR, watchdog forced".** Both hardware records read
+    `reason=0x21` = `HAD_POR | WD_FORCE` on a board that had been up 148 s and
+    363 s and was never power-cycled — the fault handler's `watchdog_reboot()`
+    brought it back. `WD_FORCE` set with `WD_TIMER` clear is the informative half
+    (and is the qmk#271 discriminator working); leading with POR reads as a power
+    cycle and would send a real diagnosis the wrong way.
+
 ### Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**
 pixels in. **Four** styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
@@ -2266,10 +2944,13 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   equivalent (0 can never exceed an unsigned threshold) and most pixels are 0 at this
   faint density.
 - **The idle legend** (the resting key label drawn over the comet haze) is rendered
-  **LIT + scanline** (`kdisp_set_gfx_scanline(true)` around the text draw), not
+  **LIT + scanline** (`kdisp_set_gfx_scanline(true, phase)` around the text draw), not
   erased — the scanline halves the lit pixels so the legend reads as a dim overlay
   while still drifting via `roll_idle_offset()`. (ERASE mode was tried but looked
-  worse with the drifting glyphs.)
+  worse with the drifting glyphs.) ⚠️ The `phase` is not optional here — it is rolled
+  off the same `epoch` as the drift, because the scanline gate is on ABSOLUTE buffer
+  y and a fixed phase would light the same panel rows forever; see the plotter-mode
+  note in the per-keycap rendering gotchas.
 - **split72-only.** `anim/startup_anim.c` gates on
   `#if defined(KEYBOARD_polykybd_split72)` (else no-op stubs) because it needs the
   generated per-board geometry header `anim/startup_anim_geom.h` (key OLED
@@ -2576,17 +3257,16 @@ like the glyph script:
     next glyph. Measured, so it can be re-checked: every op present is one of those five
     and every one **leads** the legend (`0x0C` ×150, `0x0B` ×8, `0x06` ×9, `0x08` ×1,
     `0x05` ×1; **not one after a glyph**).
-  - ⚠️ **DROPPED rather than carried, because `kdisp_gfx_text_bbox()` and the DRAW
-    disagree about these ops** — a pre-existing inconsistency this was the first code to
-    depend on. `\f` is `y = y > 1 ? y - 2 : 0` applied to the cursor; the draw runs it from
-    the real baseline (23/25/28) where it genuinely lifts 2 px, while bbox runs it from
-    `y = 0` **relative** to the baseline, where the ternary saturates and it does nothing.
-    So carrying the op moves the glyph by an amount `plan_main_legend()`'s clamp cannot
-    see. Carrying it was tried first and clipped 6–8 px off the accents of `é è à` at M/L
-    — and the reasoning that predicted it would be safe ("the clamp measures the same
-    ops") was wrong for exactly this reason. Dropped, the measured bbox **is** what gets
-    drawn, and nothing is lost: the nudge was tuned for the small face's fixed baseline,
-    which is the thing the planner replaces.
+  - ⚠️ **DROPPED rather than carried — and the REASON CHANGED on 2026-09-02, so do not
+    restore the op on the old rationale.** It used to be that `kdisp_gfx_text_bbox()`
+    and the draw disagreed about `\f`: the draw clamps its cursor at buffer 0, while the
+    relative walk starts at 0 where that clamp swallowed the lift entirely and the op
+    measured as a no-op. **That is fixed** (see the `saturate` note under the bbox
+    section below), so the measured box now matches the draw for these ops too. What
+    remains is that the nudge was hand-tuned for the SMALL face's fixed baseline — 2 px
+    lifts chosen against a 27 px glyph at baseline 23 — and the planner replaces exactly
+    that baseline with a measured, clamped one. Carrying it was tried and clipped 6–8 px
+    off the accents of `é è à` at M/L.
   - **Measured after the fix**: 1467 of 1500 latin number-row keys reach the bigger face
     (was 1338); the 33 that don't are genuinely non-latin (Thai, Bopomofo, Armenian,
     Cherokee, Vietnamese PUA composites). Clipped pixels **drop** at M/L rather than
@@ -2892,6 +3572,29 @@ op-argument table, the SMALL/MID semantics and the baseline-shift rule.
     by origin), so its 34 existing tests still pin it. **Use the absolute one whenever
     you need to know where ALL of a legend lands** — which is exactly what the idle
     jitter needs, and what it did not have (below).
+- ✅ **A THIRD asymmetry, FIXED 2026-09-02, and it was the biggest of the three by
+  pixels: the RELATIVE walk saturated the cursor nudges at 0.** `\f` is `y = y > 1 ?
+  y - 2 : 0` and `\b` the same in x — correct in the DRAW, where the cursor is a real
+  buffer coordinate and 0 is the panel edge, and wrong in a relative walk that *starts*
+  at 0, where the clamp swallows the nudge and the op measures as a no-op.
+  `bbox_walk()` now takes a `saturate` flag: **false for the relative form, true for
+  the absolute one**, which is the draw's own rule at a real origin.
+  - **It mattered because 73 of the 160 layouts' legends open with one to six of these
+    nudges** — `é è ç à` on AZERTY are `\f\f <letter>`, cs-CZ uses four, he-IL's
+    `KC_BACKSLASH` AltGr six — so the measured box sat up to **12 px** below its own
+    ink and `render_key()`'s panel clamp could not see the overrun. With the four-edge
+    clamp in place but the saturation still there, 11 keys / 92 px stayed clipped; with
+    both, **1 key / 9 px**, and that one is a 43 px glyph in a 40 px panel.
+  - **The test that pins it is the RELATIONSHIP, not either number**:
+    `RelativeAndAbsoluteAgreeAcrossTheCursorNudges` requires that shifting the origin
+    shifts the box by exactly that much, for each nudge. Two older tests asserted the
+    saturation as the contract (`measure({'\f','a'}) == measure({'a'})`) and were
+    inverted — a pinned behaviour is only as good as the reason it was pinned.
+  - ⚠️ **The host mirror moved with it** (`oled_preview.Renderer.bbox`, and the JS in
+    `keycap_tuner_template.html`), and `tests/tools/oled_preview_bbox_test.py` carries
+    the same two inverted fixtures. This is the cross-repo parity pin the note below
+    warns about, working as intended: name the change that invalidates it, then make it
+    on both sides in one go.
 - ✅ **TWO bbox-vs-draw asymmetries were FIXED 2026-08-29 — both made the measured
   box describe glyphs the draw would not produce.** Worth knowing they existed,
   because the shape recurs: this function and the draw resolved glyphs by two
@@ -3072,6 +3775,27 @@ knowing is the parts that are NOT what you would write from scratch:
   flavour, which PR CI does not build and which is the first thing to fail on any RAM
   growth: `.heap` 3828 → **3620 B** free. Re-measure there, not on the pack build,
   before adding another static.
+  - **Reading that number** (this file quotes it repeatedly and never says how):
+    ```bash
+    qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes
+    printf '%d bytes\n' "$((16#$(arm-none-eabi-objdump -h .build/polykybd_split72_default.elf \
+        | awk '$2==".heap"{print $3}')))"
+    ```
+    ⚠️ **Do NOT reach for `awk '{print strtonum("0x"$3)}'` — Debian's default awk is
+    mawk (1.3.4 here), which has no `strtonum`.** It is not a silent failure — awk
+    prints `awk: line N: function strtonum never defined` on **stderr** and exits
+    **2** — but wrapped in the `printf "%d bytes" "$(…)"` form above the substitution
+    swallows that status, so the **outer command exits 0 and prints a confident
+    `0 bytes`**. That is the trap: a plausible number, not a missing one, with the
+    real error a few lines up in stderr where a build log interleaves it out of
+    sight. Hence the shell `$((16#…))`, which needs no awk function at all. Same
+    family as the `objdump -s -j .data.<sym>` trap above — the tool answers a
+    different question than the one you asked — except that here it does say so, and
+    the wrapper is what hides it.
+  - **Take the baseline from a build, not from this file.** Measured 2026-09-02 the
+    monolith read 2772 B free at `44baf433`; that it matched the figure written here
+    is what proved the baseline build was the right one. A quoted number can be
+    several PRs stale — it is evidence only when you have just reproduced it.
 
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 

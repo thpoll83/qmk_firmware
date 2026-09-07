@@ -96,13 +96,6 @@ uint8_t scratch_buffer[BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT];
 static int8_t s_draw_ox = 0;
 static int8_t s_draw_oy = 0;
 
-// Saturating narrow to int8_t. Buffer coordinates and the jitter offset are both
-// int8_t, and their sum can leave the range on a legend near the right edge — where
-// a silent wrap would draw the art at a WRONG place rather than clipping it away.
-static inline int8_t sat8(int16_t v) {
-    return (int8_t)((v < -128) ? -128 : ((v > 127) ? 127 : v));
-}
-
 void kdisp_set_draw_offset(int8_t ox, int8_t oy) {
     s_draw_ox = ox;
     s_draw_oy = oy;
@@ -118,32 +111,54 @@ void kdisp_set_gfx_erase(bool erase) {
 }
 
 // Scanline dimming mode for the glyph plotter — a half-brightness "present but
-// dim" look. 0 = off, 1 = fine (light even buffer rows only, 1-on/1-off), 2 =
-// coarse (light rows in 2-on/2-off bands). Gated on ABSOLUTE buffer y (not
-// glyph-local) so the bands stay aligned as a legend drifts / across glyphs.
-// The Eden idle screensaver uses the fine mode; the boot splash uses the coarse
-// mode, which on the big 24pt letters reads as an intentional dim rather than a
-// fine shimmer. Restore to 0 after the draw.
+// dim" look. 0 = off, 1 = fine (1-on/1-off), 2 = coarse (2-on/2-off bands).
+// Gated on ABSOLUTE buffer y (not glyph-local) so the bands stay aligned as a
+// legend drifts and across the glyphs of one legend. The Eden idle screensaver
+// uses the fine mode; the boot splash uses the coarse mode, which on the big
+// 24pt letters reads as an intentional dim rather than a fine shimmer. Restore
+// to 0 after the draw.
 static uint8_t s_gfx_scanline = 0;
+
+// Which absolute rows the bands sit on: 0..1 selects the two alignments of the
+// fine mode, 0..3 the four of the coarse one.
+//
+// ⚠️ This exists because the gate is on ABSOLUTE y and the mode's whole purpose
+// is ANTI-BURN-IN. Without it the fine mode lights the even panel rows and only
+// ever the even panel rows — for this idle session and every session after it —
+// so the odd rows carry no wear at all and the even ones carry the legend's
+// entire share. The drift offset does NOT spread that: kdisp_set_draw_offset
+// moves the CURSOR (gfx_text_run), i.e. it slides the glyph past a stationary
+// stripe pattern, changing which rows OF THE GLYPH are dropped while the lit
+// PANEL rows stay put. Rolling the phase is what moves the stripes themselves.
+static uint8_t s_gfx_scanline_phase = 0;
 
 // Returns true if absolute buffer row `abs_y` must stay dark in the active
 // scanline mode.
 static inline bool scanline_skip_row(int abs_y) {
+    const int y = abs_y + (int)s_gfx_scanline_phase;
     switch (s_gfx_scanline) {
-        case 1:  return (abs_y & 1);   // 1-on/1-off: skip odd rows
-        case 2:  return (abs_y & 2);   // 2-on/2-off: skip rows 2,3 of each 4
+        case 1:  return (y & 1);   // 1-on/1-off: phase 0 skips odd rows, 1 skips even
+        case 2:  return (y & 2);   // 2-on/2-off: phase 0..3 = four band alignments
         default: return false;
     }
 }
 
-void kdisp_set_gfx_scanline(bool scanline) {
-    s_gfx_scanline = scanline ? 1 : 0;
+// `phase` shifts the bands along the panel and is ignored when turning the mode
+// off. It is a parameter rather than a separate setter deliberately: enabling and
+// choosing the alignment are one decision, so a caller cannot enable the mode
+// without answering the burn-in question above, and a phase cannot leak into the
+// next keycap of the same pass (the mask restores with (false, 0) like any other
+// plotter mode). Pass 0 for the historical fixed-stripe behaviour.
+void kdisp_set_gfx_scanline(bool scanline, uint8_t phase) {
+    s_gfx_scanline       = scanline ? 1 : 0;
+    s_gfx_scanline_phase = scanline ? (uint8_t)(phase & 1u) : 0;
 }
 
 // Coarse 2-on/2-off variant — a better fit than the fine scanline for large
 // glyphs (the boot-splash logo), where 1-on/1-off stripes read as flicker.
-void kdisp_set_gfx_scanline2(bool scanline) {
-    s_gfx_scanline = scanline ? 2 : 0;
+void kdisp_set_gfx_scanline2(bool scanline, uint8_t phase) {
+    s_gfx_scanline       = scanline ? 2 : 0;
+    s_gfx_scanline_phase = scanline ? (uint8_t)(phase & 3u) : 0;
 }
 
 // Plot one INK pixel, honouring the two static plotter modes.
@@ -694,8 +709,8 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
     // remember to add it, which is the enumerating-guard shape this repo keeps getting
     // caught by. It is 0 outside an idle relocation redraw, so every other draw is
     // unaffected.
-    x = sat8((int16_t)x + s_draw_ox);
-    y = sat8((int16_t)y + s_draw_oy);
+    x = kdisp_sat8((int16_t)x + s_draw_ox);
+    y = kdisp_sat8((int16_t)y + s_draw_oy);
     int8_t x_cursor = x;
     int8_t y_cursor = y;
     // HINT_SMALL (\x10) latches this for the REST of the string — there is no
@@ -751,8 +766,8 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                              //   coordinate is what pinned MOVE'd art in place while the
                              //   rest of the legend moved.
                 if (text[1] && text[2]) {
-                    x_cursor = sat8((int16_t)(int8_t)text[1] + s_draw_ox);
-                    y_cursor = sat8((int16_t)(int8_t)text[2] + s_draw_oy);
+                    x_cursor = kdisp_sat8((int16_t)(int8_t)text[1] + s_draw_ox);
+                    y_cursor = kdisp_sat8((int16_t)(int8_t)text[2] + s_draw_oy);
                     text += 2;
                 }
                 break;

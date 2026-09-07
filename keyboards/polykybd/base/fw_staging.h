@@ -45,7 +45,13 @@
 #define FW_APPLY_LOG_SECTORS   8UL
 #define FW_APPLY_LOG_BYTES     (FW_APPLY_LOG_SECTORS * 4096UL)
 #define FW_APPLY_LOG_OFFSET    (FW_RESOURCE_OFFSET - FW_APPLY_LOG_BYTES)
-#define FW_UP_MAX_SIZE         0x1F7000UL      // max staged image: staging region, minus the 4 KB header and the apply log
+// One sector below the apply log: the crash-record archive (base/crash_record.c).
+// A fault / watchdog record is captured into NOLOAD RAM and copied here at the
+// next boot, so it survives the power cycle a BOOTSEL recovery needs. Appended a
+// page at a time (16 records per erase). Carved out of the staging maximum:
+// FW_UP_MAX_SIZE dropped 0x1F7000 -> 0x1F6000 (PolyKybdHost hid_fw_up.py mirrors it).
+#define FW_CRASH_LOG_OFFSET    (FW_APPLY_LOG_OFFSET - 4096UL)
+#define FW_UP_MAX_SIZE         0x1F6000UL      // max staged image: staging region, minus the 4 KB header, the apply log and the crash log
 #define FW_STAGING_MAGIC       0xD1F1A51BUL
 
 // Bytes per firmware-update chunk (HID and split-RPC payload).

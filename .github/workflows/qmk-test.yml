@@ -990,11 +990,41 @@ jobs:
       - name: Flash, then drive a real HID update through APPLY
         # Filenames go through env vars rather than straight ${{ }} interpolation
         # into the script body — the same shape the doom job uses.
+        #
+        # HIL_RESLAVE opts this run into the rig's post-apply slave re-flash: the
+        # apply necessarily converts the rig's slave into a second master (it
+        # installs the master's bridged bytes, and the halves run per-side images
+        # by construction), so the in-apply link check can only report UNVERIFIED
+        # there. Re-flashing the slave and measuring answers the question that IS
+        # answerable — can the APPLIED master image bring a split link back up.
+        #
+        # ⚠️ OFF on a plain push, which is the whole point. This step runs on
+        # EVERY merge to PolyKybd, and release.yml's require_fwapply_run.py gates
+        # publishing on this job's conclusion being success — so anything that can
+        # fail here can refuse a release, and the rig-side check has never
+        # executed. Prove it with a dispatch first (tier: fwapply), then decide.
+        #
+        # ⚠️ An ENV VAR, deliberately, not the station's --reflash-slave flag. CI
+        # runs the INSTALLED station synced to ctnd main, so a station that
+        # predates the feature would die on an unknown argparse flag — failing the
+        # job that gates releases. An unknown env var is ignored, so an old
+        # station simply skips the check. Same reason the doom job passes its
+        # filenames through env.
         env:
           CTND_DIR: ${{ steps.ctnd.outputs.dir }}
           HIL_LEFT: ${{ needs.build-fwapply.outputs.hil_left }}
           HIL_RIGHT: ${{ needs.build-fwapply.outputs.hil_right }}
           APPLY_BIN: ${{ needs.build-fwapply.outputs.apply_bin }}
+          # ⚠️ FOLDED SCALAR: every continuation line MUST sit at the same indent
+          # as the first, or YAML keeps a literal newline inside the expression
+          # and the value silently stops being a valid GitHub expression. That is
+          # why this block looks under-indented. Renders 'true'/'false', both of
+          # which the station parses (HIL_RESLAVE accepts 1/true/yes).
+          HIL_RESLAVE: >-
+            ${{ (github.event_name == 'workflow_dispatch' &&
+            (inputs.tier == 'all' || inputs.tier == 'fwapply')) ||
+            contains(github.event.pull_request.labels.*.name, 'hil-fwapply') ||
+            contains(github.event.head_commit.message, '[hil-fwapply]') }}
         run: |
           cd "$CTND_DIR"
           set -o pipefail

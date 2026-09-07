@@ -16,6 +16,7 @@
 #    include "base/com.h"         // STATUS_DISP_ON / DISP_IDLE flags
 #    include "base/update.h"      // update_performed() / request_disp_refresh()
 #    include "doom/doom_mode.h"   // screensaver teardown (inline no-ops without POLYKYBD_DOOM)
+#    include "slave_data.h"       // SLAVE_DATA_SENSOR (the pull channel lives there)
 
 #    ifdef COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE
 #        include "polymod_ltr559.h"
@@ -58,41 +59,19 @@
                                         // separate boot transient, fixed by the
                                         // don't-engage-until-first-reading guard below.)
 
-// USER_SYNC_SLAVE_DATA is a GENERIC op-dispatched slave->master pull channel (see
-// config.h): the master's request is a 1-byte `kind` selecting which slave-side
-// payload to return. Append a new kind + a case below to carry other data over
-// the same one split slot — no new transaction needed. Both halves run the same
-// firmware image, so the per-kind payload structs can change freely (no split
-// versioning); the handler just bounds every copy by out_len.
-enum slave_data_kind {
-    SLAVE_DATA_SENSOR = 0,  // ltr559_sync_t: {avg lux, proximity}
-    // SLAVE_DATA_xxx = 1, ...  // future slave-side data reuses this slot
-};
-
+// The slave->master pull channel itself (USER_SYNC_SLAVE_DATA, op-dispatched on a
+// `kind` byte) lives in slave_data.c; this file only supplies the SENSOR payload.
 typedef struct {
     uint16_t lux;   // 5 s-average lux
     uint16_t prox;  // latest raw proximity (0..2047)
 } ltr559_sync_t;
 
-// Slave side: answer the master's pull for the requested `kind`. Registered on
-// both halves; only ever runs on the slave (the master initiates the exec).
-static void user_sync_slave_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    uint8_t kind = (in_len >= 1) ? ((const uint8_t*)in_data)[0] : SLAVE_DATA_SENSOR;
-    switch (kind) {
-        case SLAVE_DATA_SENSOR: {
-            ltr559_sync_t s = { ltr559_avg_lux(), ltr559_prox() };
-            if (out_len >= sizeof(s)) {
-                memcpy(out_data, &s, sizeof(s));
-            }
-            break;
-        }
-        default:
-            break;  // unknown kind: leave the reply buffer as-is
+// Slave side: fill the reply for SLAVE_DATA_SENSOR, bounded by out_len.
+void poly_ltr559_slave_sensor_reply(void* out_data, uint8_t out_len) {
+    ltr559_sync_t s = { ltr559_avg_lux(), ltr559_prox() };
+    if (out_len >= sizeof(s)) {
+        memcpy(out_data, &s, sizeof(s));
     }
-}
-
-void poly_ltr559_register_split_handler(void) {
-    transaction_register_rpc(USER_SYNC_SLAVE_DATA, user_sync_slave_data_handler);
 }
 
 // Master-side: mirror the HID cmd-15 stop-idle path to force the displays awake.

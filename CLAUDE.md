@@ -3785,10 +3785,49 @@ knowing is the parts that are NOT what you would write from scratch:
     cells, 0 clipped). Its measurement lives in the Qt-free
     `polyhost/services/macro_label.py` because the host editor shows the same
     truncation while the user types, and an approximation would disagree with the key.
-- **Nothing binds `QK_MACRO_*` in the default keymap.** A macro key is assigned from
-  the host's layout editor, so a user who never opens it pays nothing — and `via.c` is
-  the only core dispatcher for that range, which we do not compile, so the keycodes
-  are ours outright.
+- **The default keymap binds `QK_MACRO_0..11` on `_UL`, where `F13..F24` used to
+  live, and SHIFT reaches `M12..M15`.** `via.c` is the only core dispatcher for that
+  range and we do not compile it, so the keycodes are ours outright. Two things about
+  the banking:
+  - **`poly_macro_banked_id(slot, shift)` is ONE implementation, called by the action
+    path and the render path.** They are the pair that must never disagree — a keycap
+    showing M13 while the key plays M1 is the same defect class as
+    `render_key()`/`to_static_text()` unwrapping a mod-tap in only one of the two. The
+    render path feeds it the **synced** modifier and the action path the live
+    `get_mods()`, the same deliberate asymmetry the glyph-size key uses.
+  - ⚠️ **`clear_keyboard()` before `poly_macro_start()`, or the bank modifier leaks
+    into the macro's output.** Playback registers keycodes with a Shift the user is
+    still holding, so M12..M15 would type in caps — and once capture exists, the same
+    held Shift would be recorded as a spurious `DOWN Shift` step.
+  - ⚠️ **`F13..F24` lose their default home**, so say so in the release notes; a user
+    who wants them back assigns them from the layout editor.
+- **An unclaimed slot ships a stock look: a game-piece icon and the caption
+  "Macro N"** (`poly_macro_seed_defaults()`). Without it a keyboard that has never met
+  the host app shows sixteen keycaps distinguished only by "M0".."M15" in the index
+  style, which is exactly the twelve-keys-that-look-alike problem the displays exist to
+  solve. Four points, three of which are measurements:
+  - **The condition is EMPTY, not "never seeded"** — no body and an all-zero look
+    record — so there is no migration sentinel to keep and clearing a macro hands its
+    keycap the stock look back. ⚠️ An unwritten record reads **all-zero, not 0xFF**
+    (QMK's wear levelling normalises a cleared byte to zero — the fact that made
+    `latin_assign` read as "every key hosts 'a'"), and zero *is* the default look, so
+    the two are genuinely the same state.
+  - ⚠️ **Every default icon is 20–30 px tall, and that is measured rather than
+    chosen.** A captioned keycap leaves **32 rows** above the label and
+    `draw_macro_mark()` draws at native size only while the glyph is *shorter* than
+    that — taller is halved, which is a fine fallback for a user's own pick and a poor
+    default. It rules out most emoji, which render at 40 px, and it also rules out the
+    obvious geometric shapes: **U+25A0/25CF/25B2/2B22 and friends are simply absent
+    from the shipped bundles.** Vet a replacement by resolving it through
+    `PolyKybdHost`'s `macro_look.find_glyph()` and comparing the glyph height against
+    the free rows, then render the keycap and look at it.
+  - **Game pieces because the point is to be TELLABLE APART, not to suggest a
+    purpose.** A slot has no purpose until someone fills it, so a gear or an envelope
+    is a wrong label rather than a neutral one. Card suits (4), dice pips (6) and chess
+    pieces (6) are three families nobody confuses with each other at 27×27 px.
+  - **They are PACK glyphs** (`NotoSansSymbols2`, the `symbol` bundle), so a keyboard
+    with no font pack draws the index instead — `render_macro_key()` already falls back
+    that way for an icon it has no glyph for, and no keycap is ever left blank.
 - ⚠️ **A PREVIEW THAT MIRRORS THE IMPLEMENTATION AGREES BY CONSTRUCTION — it cannot
   catch a placement bug, and this is the limit of the repo's "verify by rendering"
   rule.** `draw_macro_mark()` first drew a chosen icon at its native size or skipped

@@ -2146,7 +2146,15 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // Reached because to_static_text() has no case for QK_MACRO_*, which is exactly the
     // seam update_displays() uses -- a key WITH a legend never gets here.
     if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
-        render_macro_key((uint8_t)(keycode - QK_MACRO));
+        // Shift reaches the second bank (see poly_macro_banked_id). `shift` here is the
+        // SYNCED modifier state, not get_mods(): the slave draws the macro keys that
+        // land on its own half and only ever sees poly_layer_t.
+        const uint8_t id = poly_macro_banked_id((uint8_t)(keycode - QK_MACRO), shift);
+        if (id != POLY_MACRO_NONE) {
+            render_macro_key(id);
+        }
+        // A shifted slot with nothing behind it draws BLANK rather than "M16" -- the
+        // keycap is the documentation for how far the second bank goes.
         return true;
     }
 
@@ -4101,7 +4109,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // two or three times over.
     if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
         if (record->event.pressed) {
-            poly_macro_start((uint8_t)(keycode - QK_MACRO));
+            // The LIVE modifier state here, not the synced snapshot the legend uses:
+            // this runs on the master at the instant of the press and must follow the
+            // finger, while the legend must render identically on a half that only sees
+            // the housekeeping snapshot. Same deliberate asymmetry as KC_GLYPH_SIZE_UP.
+            const uint8_t id = poly_macro_banked_id((uint8_t)(keycode - QK_MACRO),
+                                                    (get_mods() & MOD_MASK_SHIFT) != 0);
+            if (id != POLY_MACRO_NONE) {
+                // ⚠️ Release everything the FINGER is holding before the macro types.
+                // Reaching the second bank means holding Shift, and playback replays
+                // through register_code/tap_code -- so without this the host applies
+                // that Shift to every keystroke the macro sends and M12..M15 type in
+                // caps. The physical release afterwards unregisters an already-clear
+                // modifier, which is harmless.
+                clear_keyboard();
+                poly_macro_start(id);
+            }
         }
         display_wakeup(record);
         return false;
@@ -4699,6 +4722,10 @@ void keyboard_post_init_user(void) {
     // slave's over the link -- so a role swap makes whichever half the host talks to
     // the authority, with no handedness bookkeeping.
     poly_macro_labels_load();
+    // Give the slots nothing has claimed their stock look, so a keyboard that has never
+    // met the host app still shows sixteen tellable-apart macro keycaps rather than
+    // sixteen "M<n>" ones. Writes EEPROM only on the boot that finds a slot empty.
+    poly_macro_seed_defaults();
     // Queue them all. Nothing detects "the link is up" here and nothing needs to: the
     // sync tick only clears a label's bit on a real ACK, so the queue simply drains
     // once the slave starts answering. Same shape as the state diff being its own

@@ -211,16 +211,50 @@ can invoke itself.
 ## 6. Getting the macro onto a key
 
 A recorded macro does nothing unless something is bound to `QK_MACRO_n`, and the
-default keymap binds none — the host editor was the only way to place one. Two
-routes, and they compose:
+default keymap bound none — the host editor was the only way to place one.
 
-- Bind `QK_MACRO_0..15` to sixteen currently-`KC_NO` keys on `_UL`. No layer-enum
-  change, so no `KEYMAP_LAYERS_FL_MERGED` bump and no dynamic-keymap reset.
-- Extend the gesture: after stopping, pick any key and write `QK_MACRO_n` into it with
-  `dynamic_keymap_set_keycode_poly()` (`split_sync.c:309`). Same shape as the Intl
-  remap's pick-key-then-pick-letter, and the same storage the host editor uses.
+**Done: `QK_MACRO_0..11` replace `F13..F24` on `_UL`, and SHIFT reaches `M12..M15`.**
+No layer-enum change, so no `KEYMAP_LAYERS_FL_MERGED` bump and no dynamic-keymap
+reset. Twelve keys rather than sixteen because that is what the row holds; Shift
+banking rather than a second layer because `_UL` already uses Shift to modify a key in
+place (`KC_GLYPH_SIZE_UP` reverses direction with it), and because a keyboard whose
+keycaps are displays can just SHOW the second bank — the four shifted slots draw
+`M12..M15` and the other eight draw blank, which explains itself.
 
-Start with the first; the second is a follow-up.
+`poly_macro_banked_id(slot, shift)` is the single resolver both the action path and
+the render path call, so the keycap and the key can never name different macros. The
+action path passes the LIVE `get_mods()` and the render path the SYNCED one, the same
+deliberate asymmetry the glyph-size key uses: the action must follow the finger, the
+legend must render identically on a half that only sees the housekeeping snapshot.
+
+⚠️ `clear_keyboard()` before `poly_macro_start()`, or the bank's Shift leaks into the
+macro's output — M12..M15 would type in caps, and once capture exists the same held
+Shift would be recorded as a spurious `DOWN Shift` step.
+
+⚠️ `F13..F24` lose their default home; say so in the release notes.
+
+**Still a follow-up:** extend the gesture so that after stopping you can pick any key
+and write `QK_MACRO_n` into it with `dynamic_keymap_set_keycode_poly()`
+(`split_sync.c:309`) — same shape as the Intl remap's pick-key-then-pick-letter, and
+the same storage the host editor uses.
+
+### 6.1 Sixteen keycaps that look alike is not a placement
+
+Twelve macro keys drawing nothing but `M0`..`M11` is the problem the displays exist to
+solve, so an unclaimed slot ships a stock look: a game-piece icon above the caption
+`Macro N` (`poly_macro_seed_defaults()`, seeded at post_init and after a reset).
+
+The condition is **empty** — no body and an all-zero look record — not "never seeded",
+so there is no migration sentinel and clearing a macro hands its keycap the stock look
+back. That works because an unwritten record reads all-zero (wear levelling normalises
+a cleared byte to zero, the `latin_assign` fact) and zero *is* the default look.
+
+Card suits, dice pips and chess pieces, because the icons have to be tellable apart
+rather than suggest a purpose — a slot has none until someone fills it. Every one is
+20–30 px tall, which is measured rather than chosen: a captioned keycap leaves 32 rows
+and `draw_macro_mark()` draws at native size only below that. That rules out most
+emoji (40 px) and, less obviously, the geometric shapes — `U+25A0`/`25CF`/`25B2` and
+friends are absent from the shipped bundles.
 
 ---
 

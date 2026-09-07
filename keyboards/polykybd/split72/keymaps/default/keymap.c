@@ -213,7 +213,13 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         ),
     //Util Layer
     [_UL] = LAYOUT_left_right_stacked(
-        KC_NO,      KC_F13,     KC_F14,     KC_F15,     KC_F16,     KC_F17,     KC_F18,
+        // MACRO ROW. F13..F24 used to live here; they are a set almost nobody presses,
+        // and this is the only place on the board where sixteen macros can be reached
+        // without the host app. Shift reaches M12..M15 on the first four (see
+        // poly_macro_banked_id); the other eight draw blank when shifted, which on a
+        // keyboard whose keycaps are displays needs no explaining. F13..F24 remain
+        // assignable to any key from the host's layout editor.
+        KC_NO,      QK_MACRO_0, QK_MACRO_1, QK_MACRO_2, QK_MACRO_3, QK_MACRO_4, QK_MACRO_5,
         // Shifted one column INWARD so the outer column (Tab on the base layers)
         // stays free, and each key lines up under an F-key above it.
         KC_NO,      KC_MYCM,    KC_CALC,    KC_PSCR,    KC_SCRL,    KC_BRK,     KC_IDDQD,
@@ -223,7 +229,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LSFT,    KC_NO,      KC_DDIM,    KC_DAUTO,   KC_DBRI,    KC_NO,      KC_NO,      KC_NO,
         KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
-                    KC_F19,     KC_F20,     KC_F21,     KC_F22,     KC_F23,     KC_F24,     KC_NO,
+                    QK_MACRO_6, QK_MACRO_7, QK_MACRO_8, QK_MACRO_9, QK_MACRO_10, QK_MACRO_11, KC_NO,
                     KC_NO,      KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_IDDQD,   TO(_SL),
         // Sound sits directly under the transport row so the whole media block reads as
         // one group: MRWD/MFFD bracket the volume trio, each under its transport key.

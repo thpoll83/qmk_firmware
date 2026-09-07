@@ -157,6 +157,86 @@ void poly_macro_labels_load(void) {
     }
 }
 
+// The stock look of an unclaimed slot: one game piece per macro, captioned "Macro N".
+//
+// Game pieces because the point is to be TELLABLE APART, not to suggest a purpose --
+// a macro slot has none until someone fills it, and an icon that implies one (a gear,
+// an envelope) is a wrong label rather than a neutral one. Card suits, dice pips and
+// chess pieces are three families of six-or-fewer that nobody confuses with each other
+// at 27x27 px.
+//
+// ⚠️ Every one of these is 20..30 px tall, and that is a MEASURED constraint, not a
+// coincidence. A captioned keycap leaves 32 rows above the label, and draw_macro_mark()
+// draws at native size only while the glyph is SHORTER than that -- anything taller is
+// halved, which is the right fallback for a user's own pick and a poor default. It also
+// rules out most emoji, which are rendered at 40 px. The check is
+// PolyKybdHost's macro-look model: resolve each codepoint through the shipped bundles
+// and compare its glyph height against the free rows, then look at the render.
+//
+// ⚠️ These are PACK glyphs (NotoSansSymbols2, the `symbol` bundle), so a keyboard with
+// no font pack draws the index "M3" instead -- render_macro_key() already falls back
+// that way for an icon it has no glyph for, so nothing here can leave a keycap blank.
+static const uint32_t s_default_icons[POLY_MACRO_COUNT] = {
+    0x2660,  // spade
+    0x2665,  // heart
+    0x2666,  // diamond
+    0x2663,  // club
+    0x2680,  // die face 1
+    0x2681,  // die face 2
+    0x2682,  // die face 3
+    0x2683,  // die face 4
+    0x2684,  // die face 5
+    0x2685,  // die face 6
+    0x2654,  // chess king
+    0x2655,  // chess queen
+    0x2656,  // chess rook
+    0x2657,  // chess bishop
+    0x2658,  // chess knight
+    0x2659,  // chess pawn
+};
+
+// True when nothing has claimed slot `id`: no body, and no stored look. An empty body
+// is a bare NUL (or a slot the buffer never reached), matching poly_macro_start()'s own
+// emptiness test -- so "the keycap shows a stock look" and "the key plays nothing" are
+// decided by the same fact rather than by two rules that can drift apart.
+static bool slot_unclaimed(uint8_t id) {
+    const uint16_t cap   = poly_macro_capacity();
+    const uint16_t start = poly_macro_find(body_read, NULL, id, cap);
+    if (start < cap && body_read(start, NULL) != 0) return false;
+    for (uint8_t n = 0; n < POLY_MACRO_LOOK_LEN; n++) {
+        if (eeprom_read_byte((const uint8_t *)(uintptr_t)(label_addr(id) + n)) != 0) return false;
+    }
+    return true;
+}
+
+void poly_macro_seed_defaults(void) {
+    // Master only, the same rule the look cache follows: the slave's own EEPROM never
+    // sees a macro, and the master pushes every look over the link anyway. Called both
+    // from post_init and from the reset path, so a role that is not yet resolved early
+    // in boot costs nothing -- post_init runs it again.
+    if (!is_keyboard_master()) return;
+    for (uint8_t id = 0; id < POLY_MACRO_COUNT; id++) {
+        if (!slot_unclaimed(id)) continue;
+        poly_macro_look_t look = {
+            .icon  = s_default_icons[id],
+            .style = POLY_MACRO_STYLE_ICON,
+        };
+        // "Macro 15" is 8 characters and 45 px in the _Nano_ face, against a 72 px
+        // panel -- built by hand rather than snprintf, which is not worth linking for
+        // two digits.
+        uint8_t n = 0;
+        const char *word = "Macro ";
+        for (; word[n] != '\0'; n++) look.text[n] = word[n];
+        if (id >= 10) look.text[n++] = (char)('0' + id / 10);
+        look.text[n++] = (char)('0' + id % 10);
+        look.text[n]   = '\0';
+        // Writes EEPROM and queues the look for the slave. Only ever on the first boot
+        // that finds the slot empty: afterwards the record is non-zero, so
+        // slot_unclaimed() is false and nothing is written again.
+        poly_macro_look_set(id, &look);
+    }
+}
+
 void poly_macro_look_get(uint8_t id, poly_macro_look_t *out) {
     if (out == NULL) return;
     if (id >= POLY_MACRO_COUNT) {
@@ -260,6 +340,9 @@ void poly_macro_reset_all(void) {
     // ones across.
     memset(s_looks, 0, sizeof(s_looks));
     poly_macro_labels_mark_all_dirty();
+    // Every slot is empty now, so this hands them all the stock look back rather than
+    // leaving sixteen blank keycaps until the next boot.
+    poly_macro_seed_defaults();
 }
 
 // ---------------------------------------------------------------------------

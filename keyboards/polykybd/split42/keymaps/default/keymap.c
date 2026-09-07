@@ -140,16 +140,17 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
     /* Utility layer */
     [_UL] = POLY_LAYOUT(
-        KC_NO,   KC_F13,  KC_F14,  KC_F15,  KC_F16,  KC_F17,
+        // MACRO ROW -- see the note on split72's _UL. Shift reaches M12..M15.
+        QK_MACRO_0, QK_MACRO_1, QK_MACRO_2, QK_MACRO_3, QK_MACRO_4, QK_MACRO_5,
         KC_MYCM, KC_CALC, KC_PSCR, KC_SCRL, KC_BRK,  KC_NO,
         KC_LSFT, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
         KC_BASE, KC_DDIM, KC_DBRI,
-        KC_F18,  KC_F19,  KC_MPRV, KC_MPLY, KC_MSTP, KC_MNXT,
+        QK_MACRO_6, QK_MACRO_7, QK_MACRO_8, QK_MACRO_9, QK_MACRO_10, QK_MACRO_11,
         // Sound moved up beside the transport row so the media block reads as one group;
         // the single legend-size key (Shift reverses, the legend shows the tier) sits
         // under it. TO(_SL) keeps the last slot of the row it has always had.
         KC_MRWD, KC_MUTE, KC_VOLD, KC_VOLU, KC_MFFD, TO(_SL),
-        KC_NO,   KC_NO,   KC_GLYPH_SIZE_UP, KC_NO, KC_NO,   KC_RSFT,
+        KC_MPRV, KC_MPLY, KC_GLYPH_SIZE_UP, KC_MSTP, KC_MNXT, KC_RSFT,
         KC_DAUTO,KC_NO,   KC_BASE
     ),
     /* Settings layer */

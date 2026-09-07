@@ -1,9 +1,9 @@
 ---
 name: mutation-test-suite
-description: Prove a googletest suite actually detects breakage before trusting it — deliberately break the code under test N ways, confirm each mutation is caught, and confirm the INTENDED test is the one that fails. Use right after writing or extending a `make test:<name>` suite, when reviewing a PR that adds tests, when a suite has never failed and you want to know whether it can, or when asked "are these tests any good / do they actually test anything". NOT for finding bugs in the code (that is what the tests are for) and NOT for firmware behaviour on hardware (see diagnose-hil-failure / measure-firmware-perf).
+description: Prove a test suite actually detects breakage before trusting it — googletest (`make test:<name>`, firmware) or Python/unittest (PolyKybdHost, polykybd-ctnd) — deliberately break the code under test N ways, confirm each mutation is caught, and confirm the INTENDED test is the one that fails. Use right after writing or extending a `make test:<name>` or `*_test.py` suite, when reviewing a PR that adds tests, when a suite has never failed and you want to know whether it can, or when asked "are these tests any good / do they actually test anything". NOT for finding bugs in the code (that is what the tests are for) and NOT for firmware behaviour on hardware (see diagnose-hil-failure / measure-firmware-perf).
 ---
 
-# Mutation-test a googletest suite
+# Mutation-test a suite — googletest or Python/unittest
 
 A suite that stays green against a deliberately broken implementation is
 measuring nothing. `CLAUDE.md` already requires this ("Mutation-test the suite
@@ -15,7 +15,10 @@ hit for real. **If a sweep looks unanimously clean, suspect the harness first.**
 
 The output is a table: mutation → caught? → by which test.
 
-## 0. Environment
+## 0. Environment (googletest / firmware)
+
+For a Python/unittest suite (`PolyKybdHost`, `polykybd-ctnd`) skip to §2b — the
+method in §1, §3 and §4 is the same, only the mechanics differ.
 
 ```bash
 cd /home/user/qmk_firmware
@@ -86,6 +89,77 @@ reports the one result that means your tests are worthless, for every mutation,
 which is itself the tell that the *detector* is broken and not the suite. This
 cost a full round on 2026-08-17.
 
+## 2b. The Python / unittest variant (PolyKybdHost, polykybd-ctnd)
+
+The discipline is identical; three things change. Used on host#218 to check the
+`glyph_script_preview` and `os_theme` fixes (3 mutations, each caught by its own
+test).
+
+```bash
+cd /home/user/PolyKybdHost
+run() {  # file, python-mutation, test-module, expected-failing-test
+  f="$1"; mut="$2"; mod="$3"; want="$4"
+  cp "$f" /tmp/base.py                                   # PRE-mutation baseline
+  python3 - "$f" <<MUT
+import io,sys
+p=sys.argv[1]; s=io.open(p,encoding='utf-8').read()
+$mut
+io.open(p,'w',encoding='utf-8').write(s)
+MUT
+  diff -q /tmp/base.py "$f" >/dev/null; rc=$?
+  case $rc in
+    0) echo "MUTATION DID NOT APPLY ($f) - result meaningless"; cp /tmp/base.py "$f"; return 1;;
+    1) :;;
+    *) echo "diff failed ($rc) - baseline unreadable?"; cp /tmp/base.py "$f"; return 1;;
+  esac
+  out=$(xvfb-run -a env QT_QPA_PLATFORM=offscreen .venv/bin/python -m unittest "$mod" 2>&1 \
+        | sed 's/\x1b\[[0-9;]*m//g')
+  cp /tmp/base.py "$f"                                   # restore FIRST
+  echo "$out" | grep -q '^Ran [0-9]* test' || { echo "NO SUMMARY LINE - harness broken"; return 1; }
+  if echo "$out" | grep -qE "^(FAIL|ERROR): $want[ (]"; then echo "CAUGHT   by $want"
+  else echo "ESCAPED  ($want did not fail)"; echo "$out" | grep -E '^(FAIL|ERROR):' | head -3; fi
+}
+```
+
+⚠️ **Pick an outer heredoc delimiter the inner one cannot collide with.** The
+mutation is itself a heredoc, so reusing `PY` for both ends the outer one early and
+the shell executes half a Python script — which is how the first attempt at writing
+*this very section* failed. `MUT` inside, something else outside.
+
+Three differences from the googletest sweep:
+
+1. **Mutate with a Python heredoc, not `sed`/`perl`.** Python source is full of
+   quotes and `|`; `s.replace()` on the file text is exact and cannot half-apply.
+   ⚠️ The heredoc delimiter is **unquoted** (`<<MUT`, not `<<'MUT'`) — that is what
+   interpolates `$mut` into the script, and it is the whole mechanism. Quote it and
+   the mutation is never applied: every call then trips the "did not apply" guard,
+   which is the guard working but a recipe that cannot run. The cost of unquoting
+   is that `$`, backticks and `\` inside the mutation are shell-expanded too, so
+   build any literal quote as `chr(34)` and keep `$` out of the mutation text.
+2. **The failure line is `^(FAIL|ERROR): <TestName>`**, not gtest's `[  FAILED  ]`
+   — and `ERROR:` matters as much as `FAIL:`, since a mutation that breaks an
+   import or raises shows up there.
+3. **Judge the run by `Ran N tests` existing**, not by the absence of failures.
+   ⚠️ In Qt code a mutation can **abort the interpreter**: an exception escaping a
+   PyQt slot makes Qt call the excepthook and then `qFatal`, so the process dies
+   before unittest prints anything and the grep finds nothing — which reads
+   *identically* to "not caught". Same fail-open family as the ANSI-escape trap
+   above, one level up. (Measured on `crash_alert_dialog`: narrowing a broad
+   `except` to `OSError` aborted mid-suite.)
+
+⚠️ **The `diff` guard must compare a PRE-MUTATION COPY, not `git diff --quiet`
+against HEAD.** You mutation-test a suite right after writing it, so the tree is
+already dirty with your own feature diff — a HEAD comparison reports "changed" for
+every mutation whether or not any applied, and the guard against a non-applied
+mutation is exactly the one that stops working when you need it. And it must
+**exit**, not just print: a bare `&& echo "DID NOT APPLY"` returns 0 and the loop
+carries on to report the mutation as "not caught", with the warning buried in a
+screen of test output. `diff` has three exit codes — `0` same, `1` differs, `2`
+unreadable — so `else` on "not 0" silently treats a missing baseline as success;
+hence the `case`. ⚠️ The restore overwrites the file, and by that premise there is
+no committed copy to recover from: **do not edit the source between mutating and
+restoring.**
+
 ## 3. Read the result correctly
 
 For each mutation, three outcomes:
@@ -108,8 +182,16 @@ MUTATION TEST — <suite>, N mutations
   M2 <what was broken>              → caught by <TestName>
   M3 <what was broken>              → NOT CAUGHT  ← finding
   ...
-  baseline restored, suite green (git status clean)
+  baseline restored, suite green
 ```
+
+⚠️ **On the Python path "git status clean" is the WRONG completion check** — that
+procedure deliberately supports a dirty worktree (you are testing a suite you have
+just written), and it restores from `/tmp/base.py`, not from git. Verify instead
+that every mutated file is byte-identical to its pre-mutation copy and that no
+mutation is left behind: `diff -q /tmp/base.py <file>` per file, plus a green
+suite. On the googletest path the tree is usually clean and `git status --short`
+is the cheaper check.
 
 Put the list in the PR body. It is the evidence that the tests are worth their
 line count, and it is what a reviewer cannot easily reproduce.

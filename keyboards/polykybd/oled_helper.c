@@ -482,6 +482,31 @@ bool oled_task_user(void) {
     if (get_local_state()->fw_confirm) {
         oled_scroll_off();
         oled_fw_confirm_screen();
+    } else if (fw_staging_commit_pending()) {
+        // An apply is armed and the reboot is imminent — nothing else the panel could
+        // show is worth reading. ⚠️ This branch is what HOLDS the notice: the apply is a
+        // staged sequence in housekeeping_task_user() that RETURNS to the main loop
+        // between each stage, and every stage boundary is a chance for this task to run
+        // and paint something else over it. Without the branch the "⟳Applying" screen
+        // was painted exactly once (stage 0) and then overwritten by oled_status_screen(),
+        // which flushes in full too — so the last thing the user saw before the reboot was
+        // the ordinary status screen.
+        //
+        // ⚠️ It read as "works on one half only", and the asymmetry is not a coincidence:
+        // OLED_UPDATE_INTERVAL is 66 ms, so whether a tick lands inside the apply sequence
+        // depends on how long that half takes. The MASTER's stage 1 is save_all_dirty()
+        // under the core1 lockout — the flash just ran, so a wear-levelling consolidation
+        // (~100 ms) is likely and a tick fits comfortably. The SLAVE usually has nothing
+        // to persist, runs all four stages inside one 66 ms window, and keeps the notice.
+        // Same shape as the fw_confirm branch above, which exists because finalize has
+        // already cleared fw_up_active by the time the prompt goes up.
+        //
+        // Set ONLY by fw_staging_arm_apply(), i.e. an explicit FW_UP_APPLY (master over
+        // HID, slave over RESET_ACTION_APPLY) — finalize deliberately leaves it clear, so
+        // a font-pack COMMIT can never light this. Idempotent and diffed, so holding it
+        // costs nothing after the first paint.
+        oled_scroll_off();
+        oled_fw_apply_screen();
     } else if (fw_staging_fw_up_active()) {
         oled_scroll_off();
         oled_fw_update_screen();

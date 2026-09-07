@@ -2243,6 +2243,40 @@ landed; revisit only if a full swap still looks slow on hardware): raise
 `OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
 above SSD1306 spec — A/B on real hardware).
 
+**The "⟳Applying / Firmware⟳" apply screen has to be HELD by a dispatch branch, not
+just painted once.** `oled_fw_apply_screen()` is called from the apply state machine's
+stage 0 (`poly_keymap.c`) and flushed synchronously — but the machine then **returns to
+the main loop** between each of its four stages, and every stage boundary is a chance
+for `oled_task_user()` to run and paint over it. With no `fw_staging_commit_pending()`
+branch in that dispatch it fell straight through to `oled_status_screen()`, which
+flushes in full too — so the last thing the user saw before the reboot was the ordinary
+status screen. Reported from the field as *"what I saw was the normal status screen
+instead of the apply firmware"*, on one half (2026-09-07).
+
+- ⚠️ **It reads as "one half only", and that asymmetry is a TIMING artefact, not a
+  master/slave difference in the drawing code.** `OLED_UPDATE_INTERVAL` is **66 ms**
+  (`config.h`), so `oled_task_user()` only runs ~15×/s and whether a tick lands inside
+  the apply sequence depends on how long that half takes to get through it. The
+  **master's** stage 1 is `save_all_dirty()` under the core1 lockout — the flash has
+  just run, so a wear-levelling consolidation (~100 ms) is likely and a tick fits
+  comfortably. The **slave** usually has nothing to persist, runs all four stages
+  inside one 66 ms window, and keeps the notice. So it is also *intermittent*: a
+  master with nothing dirty keeps it, and the same board can differ run to run.
+- **Same shape as the `fw_confirm` branch directly above it**, whose comment already
+  says why it must be a branch: finalize has cleared `fw_up_active` by the time the
+  prompt goes up, so without one it would "fall through to the idle/status screen".
+  The apply state is the same case one step later, and was missed.
+- `fw_staging_commit_pending()` is set **only** by `fw_staging_arm_apply()` — an
+  explicit FW_UP_APPLY (master over HID, slave over `RESET_ACTION_APPLY`). Finalize
+  deliberately leaves it clear, so a **font-pack COMMIT can never light this**; that is
+  what makes it safe as a dispatch condition. It is idempotent and diffed, so holding
+  it costs nothing after the first paint.
+- ⚠️ **Generalise: a screen drawn by a one-shot call is only correct on a path that
+  never returns.** `oled_fw_apply_screen()`'s synchronous flush is right for the moment
+  *before* the blocking self-flash; it is not a substitute for owning the dispatch for
+  as long as the state lasts. Anything that must stay on screen across a return to the
+  main loop needs a branch in `oled_task_user()`.
+
 **Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
 `oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced
 `poly_sync_t.settings_more`). Four lines on the 64 px panel, two on the 32 px one:

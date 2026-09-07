@@ -232,49 +232,40 @@ void oled_update_buffer(void) {
     pdraw_text_center(tinyFont, 1, 127, side_is_undecided() ? U"?" : (is_left_side() ? U"L" : U"R"), buf);
 }
 
-// "Updating …" screen (128x32), shown while a flash is in progress — IDENTICALLY on
-// both halves. kdisp_set_buffer(0) clears the scratch first. Same three zones as the
-// split72 screen (label row, percent row, bar), squeezed onto the 32 px panel; see
-// split72/status_oled.c for why the master no longer shows a static notice.
-#define FW42_PCT_SIGN_X 115   // '%' at 115..127; "100" then starts at x=88 (measured)
-
+// "Updating fonts/firmware …" screen (128x32) shown while a flash is in progress.
+// kdisp_set_buffer(0) clears the scratch first. For a FIRMWARE flash the master can't
+// repaint a moving bar mid-stream, so it shows a static notice and the slave the bar.
 void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
     const GFXfont* smallFont[] = { &NotoSans_Regular_Small_15px7b };
-    const uint8_t target = fw_staging_active_target();
-    const uint8_t pct    = fw_update_percent();
+    uint8_t target = fw_staging_active_target();
+    bool    fonts = (target == FW_TARGET_FONTPACK || target == FW_TARGET_DOOMWAD);
+    uint8_t pct   = fw_update_percent();
 
-    // ⚠️ FW_TARGET_DOOMPACK used to fall through to the firmware branch, so installing
-    // a .plyx engine pack told the user their FIRMWARE was being updated.
-    switch (target) {
-        case FW_TARGET_FONTPACK: {
-            // Name the bundle being written (fixed slot) so progress reads bundle-by-bundle.
-            const char* bname = fontpack_slot_name(fw_staging_fontpack_slot_off());
-            kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Fonts:");
-            ascii_to_u32_string(buffer, sizeof(buffer), bname ? bname : "?");
-            kdisp_write_gfx_text(smallFont, 1, 48, 10, buffer);
-            break;
-        }
-        case FW_TARGET_DOOMWAD:
-            kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Game data:");
-            break;
-        case FW_TARGET_DOOMPACK:
-            kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Game engine");
-            break;
-        default:   // FW_TARGET_FIRMWARE (and any future target, until it is labelled)
-            kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Firmware");
-            break;
+    if (!fonts && is_keyboard_master()) {
+        // Firmware, master half: static notice (only 32 px tall → two lines).
+        kdisp_write_gfx_text(smallFont, 1, 0, 12, U"PolyKybd");
+        kdisp_write_gfx_text(smallFont, 1, 0, 28, U"FW Update...");
+        return;
     }
 
-    // ⚠️ The percent was right-aligned to x=24 here, so at 100% the 25 px-wide "100"
-    // started at x=-3 and the panel clipped the leading digit — the one value it
-    // matters most to read. It is bottomed out on the right instead, which is also
-    // where the split72 screen puts it. The "— do not unplug" tail that used to
-    // follow it does not fit beside a right-aligned percent (101 px + 39 px > 128)
-    // and is dropped: the host app says it, and the split72 screen never had it.
-    oled_fw_update_percent(smallFont, FW42_PCT_SIGN_X, 22, pct);
-    kdisp_write_gfx_text(smallFont, 1, FW42_PCT_SIGN_X, 22, U"%");
+    if (fonts) {
+        // Name the bundle being written (fixed slot) so progress shows bundle-by-bundle.
+        const char* bname = fontpack_slot_name(fw_staging_fontpack_slot_off());
+        kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Fonts:");
+        if (bname) {
+            ascii_to_u32_string(buffer, sizeof(buffer), bname);
+            kdisp_write_gfx_text(smallFont, 1, 44, 10, buffer);
+        }
+        oled_fw_update_percent(smallFont, 24, 22, pct);
+        kdisp_write_gfx_text(smallFont, 1, 24, 22, U"% — do not unplug");
+    } else {
+        // Firmware, slave half: live progress.
+        kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Progress:");
+        oled_fw_update_percent(smallFont, 84, 10, pct);
+        kdisp_write_gfx_text(smallFont, 1, 84, 10, U"%");
+    }
     oled_fw_update_progress_bar(25, 31, pct);
 }
 

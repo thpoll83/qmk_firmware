@@ -195,39 +195,6 @@ def build_fw_confirm_panel(side, small):
     return pts
 
 
-FW_PCT_SIGN_X = 112   # keep in sync with split72/status_oled.c
-
-
-def build_fw_update_panel(disp, target='firmware', bundle='mideast', pct=100):
-    """Flash-progress screen — mirror of split72/status_oled.c's
-    oled_update_buffer_fw_update(). Row 1 names the target, row 2 carries the
-    detail on the left and the right-aligned percent, then the bar.
-
-    ⚠️ There is deliberately NO `side` parameter: both halves render this
-    identically, and a preview that took one would invite the asymmetry back."""
-    pts = []
-    setp = lambda px, py: pts.append((px, py))
-    if target == 'fontpack':
-        draw(setp, disp, 0, 14, s2cp("Fontpack:"))
-        draw(setp, disp, 0, 36, s2cp(bundle or "?"))
-    elif target == 'doomwad':
-        draw(setp, disp, 0, 14, s2cp("Game data:"))
-        draw(setp, disp, 0, 36, s2cp("E1M1"))
-    elif target == 'doompack':
-        draw(setp, disp, 0, 14, s2cp("Game engine"))
-    else:
-        draw(setp, disp, 0, 14, s2cp("Firmware"))
-    draw_right(setp, disp, FW_PCT_SIGN_X - 2, 36, s2cp(str(pct)))
-    draw(setp, disp, FW_PCT_SIGN_X, 36, s2cp("%"))
-    # oled_fw_update_progress_bar(50, 63, pct) -- a SOLID fill, no frame:
-    # kdisp_fill_rect(0, top_y, pct*P_W/100, bottom_y - top_y).
-    fill = min(pct, 100) * P_W // 100
-    for y in range(50, 63):
-        for x in range(fill):
-            setp(x, y)
-    return pts
-
-
 def build_telemetry_panel(usb_side, small, fw="0.16.18", proto=15, hw="0x0320",
                           uptime="1:23:45", link=None):
     """Settings -> "More" telemetry screen — mirror of oled_helper.c's
@@ -602,13 +569,6 @@ def main():
                          "(Qwerty, 'Qwerty Stag!', 'Colemak DH', Neo, Workman)")
     ap.add_argument('--rgb-off', action='store_true',
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
-    ap.add_argument('--fw-update', dest='fw_update', nargs='?', const='firmware',
-                    choices=('firmware', 'fontpack', 'doomwad', 'doompack'),
-                    help='preview the flash-progress screen for this target')
-    ap.add_argument('--pct', type=int, default=100,
-                    help='--fw-update percentage (default 100 = the widest digits)')
-    ap.add_argument('--bundle', default='mideast',
-                    help='--fw-update fontpack bundle name (default: the widest shipped one)')
     ap.add_argument('--telemetry', action='store_true',
                     help='preview the settings->More telemetry screen instead of the status screen')
     ap.add_argument('--uptime', default='1:23:45', help='uptime string shown by --telemetry')
@@ -645,10 +605,7 @@ def main():
     args = ap.parse_args()
 
     disp, small, icons, tiny, globe = load_fonts()
-    if args.fw_update:
-        L = build_fw_update_panel(disp, args.fw_update, args.bundle, args.pct)
-        R = L
-    elif args.telemetry:
+    if args.telemetry:
         L = build_telemetry_panel(True,  small, uptime=args.uptime, link=args.link)
         R = build_telemetry_panel(False, small, uptime=args.uptime, link=args.link)
     else:
@@ -659,13 +616,6 @@ def main():
                         args.wpm, args.layout)
 
     if args.diag:
-        if args.fw_update:
-            ltitle = rtitle = f'{args.fw_update} {args.pct}%  128x64  |  RED = clipped'
-            Li, lc = render_diag(L, ltitle)
-            out = args.out or '/tmp/status_oled_diag.png'
-            Li.save(out)
-            print(f"{out}  clipped={lc}")
-            return 0
         ltitle = 'USB half   128x64  |  RED = clipped' if args.telemetry else 'LEFT (layout)  128x64  |  RED = clipped'
         rtitle = 'LINK half  128x64  |  RED = clipped' if args.telemetry else 'RIGHT (RGB)    128x64  |  RED = clipped'
         Li, lc = render_diag(L, ltitle)

@@ -468,66 +468,55 @@ void oled_update_buffer(void) {
     }
 }
 
-// "Updating …" screen (128x64), shown while a flash is in progress — IDENTICALLY on
-// both halves. kdisp_set_buffer(0) clears the scratch first.
-//
-// Row 1 names WHAT is being written, row 2 carries the detail on the left and the
-// live percent on the right, and the bar spans the bottom.
-//
-// ⚠️ The MASTER used to show a static notice with no progress at all, because "the
-// master streams chunks back-to-back and can't repaint a moving bar" (e427c6d672,
-// 2026-06-22, field feedback). That reason no longer holds and the workaround was
-// never revisited:
-//   * the dribbling band-by-band repaint it describes was fixed three weeks later,
-//     for every status screen at once, by oled_fw_update_screen()'s single
-//     oled_render_dirty(true) pass (b2e3c1fe34, 2026-07-13);
-//   * the master's percentage is valid — it stages its own copy and hid_fw_up.c
-//     advances the two write cursors in LOCK-STEP (it only writes a chunk the slave
-//     has already ACKed), so fw_update_percent() reads the same number on both halves;
-//   * the cost is bounded by construction: every element here is derived from `pct`,
-//     so the frame changes at most 100 times over a whole image, and oled_write_raw
-//     diffs before dirtying a block.
-#define FW_PCT_SIGN_X 112   // '%' at 112..127; "100" then starts at x=79 (measured)
-
+// "Updating fonts/firmware …" screen (128x64) shown while a flash is in progress.
+// kdisp_set_buffer(0) clears the scratch first. For a FIRMWARE flash the master
+// streams chunks back-to-back and can't repaint a moving bar, so it shows a static
+// "PolyKybd Firmware Update…" notice and the slave shows the live progress bar.
 void oled_update_buffer_fw_update(void) {
     uint32_t buffer[8];
     kdisp_set_buffer(0);
     const GFXfont* small[] = { &NotoSans_Regular_Mid_19px7b };
     const uint8_t target = fw_staging_active_target();
-    const uint8_t pct    = fw_update_percent();
+    const bool fonts = (target == FW_TARGET_FONTPACK || target == FW_TARGET_DOOMWAD);
+    uint8_t pct   = fw_update_percent();
 
-    // ⚠️ FW_TARGET_DOOMPACK used to fall through to the firmware branch, so installing
-    // a .plyx engine pack told the user their FIRMWARE was being updated. Switch on the
-    // target rather than a fonts/not-fonts bool so a new target cannot inherit a label.
-    switch (target) {
-        case FW_TARGET_FONTPACK: {
-            const char* fontpack_name = fontpack_slot_name(fw_staging_fontpack_slot_off());
-            kdisp_write_gfx_text(small, 1, 0, 14, U"Fontpack:");
-            // Widest shipped bundle name is "mideast" (72 px), clear of the percent
-            // column at 79. NULL means the offset matches no known slot — the old
-            // "<EMPTY>" read as "the empty bundle", which is a different thing (and
-            // at 84 px it would have run into the percent).
-            ascii_to_u32_string(buffer, sizeof(buffer), fontpack_name ? fontpack_name : "?");
-            kdisp_write_gfx_text(small, 1, 0, 36, buffer);
-            break;
+    if(fonts) {
+        if(is_keyboard_master()) {
+            if (target == FW_TARGET_DOOMWAD) {
+                // Game-data install rides the resource-flash path; keep the label
+                // spoiler-free (the easter egg is discovered, not announced).
+                kdisp_write_gfx_text(small, 1, 0, 14, U"Game data:");
+                kdisp_write_gfx_text(small, 1, 0, 36, U"E1M1");
+            } else {
+                const char* fontpack_name = fontpack_slot_name(fw_staging_fontpack_slot_off());
+                kdisp_write_gfx_text(small, 1, 0, 14, U"Fontpack:");
+                if (fontpack_name) {
+                    ascii_to_u32_string(buffer, sizeof(buffer), fontpack_name);
+                    kdisp_write_gfx_text(small, 1, 0, 36, buffer);
+                } else {
+                    kdisp_write_gfx_text(small, 1, 0, 36, U"<EMPTY>");
+                }
+            }
+            kdisp_write_gfx_text(small, 1, 0, 58, U"Upload...");
+            return;
         }
-        case FW_TARGET_DOOMWAD:
-            // Game-data install rides the resource-flash path; keep the label
-            // spoiler-free (the easter egg is discovered, not announced).
-            kdisp_write_gfx_text(small, 1, 0, 14, U"Game data:");
-            kdisp_write_gfx_text(small, 1, 0, 36, U"E1M1");
-            break;
-        case FW_TARGET_DOOMPACK:
-            kdisp_write_gfx_text(small, 1, 0, 14, U"Game engine");
-            break;
-        default:   // FW_TARGET_FIRMWARE (and any future target, until it is labelled)
-            kdisp_write_gfx_text(small, 1, 0, 14, U"Firmware");
-            break;
+        kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");
+        oled_fw_update_percent(small, 70, 36, pct);
+        kdisp_write_gfx_text(small, 1, 70, 36, U"%");
+        oled_fw_update_progress_bar(50, 63, pct);
+    } else {
+        if(is_keyboard_master()) {
+            // Firmware, master half: static notice (its bar can't move mid-stream).
+            kdisp_write_gfx_text(small, 1, 0, 14, U"PolyKybd");
+            kdisp_write_gfx_text(small, 1, 0, 36, U"Firmware");
+            kdisp_write_gfx_text(small, 1, 0, 58, U"Update...");
+            return;
+        }
+        kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");
+        oled_fw_update_percent(small, 70, 36, pct);
+        kdisp_write_gfx_text(small, 1, 70, 36, U"%");
+        oled_fw_update_progress_bar(50, 63, pct);
     }
-
-    oled_fw_update_percent(small, FW_PCT_SIGN_X, 36, pct);
-    kdisp_write_gfx_text(small, 1, FW_PCT_SIGN_X, 36, U"%");
-    oled_fw_update_progress_bar(50, 63, pct);
 }
 
 void oled_draw_kybd(void) {

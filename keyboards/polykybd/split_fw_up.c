@@ -7,6 +7,7 @@
 #include "base/fw_staging.h"   // fw_staging_set_fontpack_slot
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 #include "base/fw_up_verdict.h"  // pure COMMIT-failure classification (unit-tested)
+#include "base/hand_stamp.h"     // handedness change: record here, write from the main loop
 
 #include <transactions.h>
 #include <print.h>
@@ -390,7 +391,12 @@ void user_sync_reset_handler(uint8_t in_len, const void* in_data, uint8_t out_le
         // EE_HANDS marker before the reboot so it comes up on the corrected
         // left/right assignment.  Plain QK_REBOOT leaves this zero.
         if (msg->set_handedness) {
-            eeconfig_update_handedness(msg->is_left != 0);
+            // Record only. This is a split-transaction callback (~20 ms budget)
+            // and both writes it needs -- the EEPROM byte, which can trigger a
+            // wear-levelling consolidation, and the handedness stamp, which can
+            // erase a sector -- are far too slow to do here. housekeeping's
+            // reboot path calls poly_hand_flush_pending() before mcu_reset().
+            poly_hand_set_pending(msg->is_left != 0);
         }
         fw_staging_arm_reboot();   // housekeeping_task_user() → mcu_reset()
     } else {

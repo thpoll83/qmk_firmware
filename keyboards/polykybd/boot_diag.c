@@ -27,6 +27,7 @@
 #include "hardware/structs/vreg_and_chip_reset.h"     // core-voltage select
 
 #include "boot_diag.h"
+#include "base/hand_stamp.h"
 #include "poly_keymap.h"
 
 // update_displays() is defined in poly_keymap.c; the SPLASH_DONE tail calls it to
@@ -132,6 +133,18 @@ void emit_boot_banner(void) {
 #else
     uprintf("   link: transport_connected=%d\n", (int)is_transport_connected());
 #endif
+    // Where this half's handedness came from. EE_HANDS keeps it in the emulated
+    // EEPROM, whose wear-levelling recovery clears the WHOLE store on a torn
+    // write -- and a cleared handedness byte is not "unknown", it reads as a
+    // valid `right`, so a half silently comes up on the wrong side (field,
+    // 2026-09-07). base/hand_stamp.c keeps the authoritative copy in a sector of
+    // our own; this line says which source answered, so the next report of a
+    // half on the wrong side is one line to diagnose instead of a guess.
+    {
+        static const char *const src[] = {"flash stamp", "stamped from EEPROM", "EEPROM, UNSTAMPED"};
+        uprintf("   hand: %s (%s)%s\n", is_keyboard_left() ? "LEFT" : "RIGHT",
+                src[poly_hand_source()], poly_hand_ee_repaired() ? " [EEPROM byte repaired from the stamp]" : "");
+    }
     // Read the clock back from the hardware rather than printing SYS_CLK_KHZ:
     // the define is what we ASKED for, this is what the PLL actually landed on.
     // VSEL is the core-voltage select (0xB = 1.10 V default, 0xC = 1.15 V), the

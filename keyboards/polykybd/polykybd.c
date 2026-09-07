@@ -3,6 +3,19 @@
 
 #include QMK_KEYBOARD_H
 
+#include "base/hand_stamp.h"
+
+// QMK's weak is_keyboard_left() hands back split_config.left, which split_pre_init()
+// filled from the EE_HANDS byte -- and a wiped EEPROM makes that byte read zero,
+// i.e. a confident "right". Route every reader through the flash stamp instead, so
+// an EEPROM loss cannot move a half to the other side. This is the ONE choke point:
+// QMK's matrix row ownership, the RGB clipping range and our own set_side() geometry
+// all come through here, so nothing can be left reading the old source by accident.
+// hand_stamp.h has the failure this defends against.
+bool is_keyboard_left(void) {
+    return poly_hand_is_left();
+}
+
 #ifdef POLYKYBD_HIL
 #    include "usb_util.h"
 

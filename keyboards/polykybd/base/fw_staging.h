@@ -51,7 +51,20 @@
 // page at a time (16 records per erase). Carved out of the staging maximum:
 // FW_UP_MAX_SIZE dropped 0x1F7000 -> 0x1F6000 (PolyKybdHost hid_fw_up.py mirrors it).
 #define FW_CRASH_LOG_OFFSET    (FW_APPLY_LOG_OFFSET - 4096UL)
-#define FW_UP_MAX_SIZE         0x1F6000UL      // max staged image: staging region, minus the 4 KB header, the apply log and the crash log
+// One sector below the crash log: the handedness stamp (base/hand_stamp.c).
+// EE_HANDS keeps the left/right marker in the emulated EEPROM, and QMK's
+// wear-levelling recovery is all-or-nothing -- a torn write or a checksum
+// mismatch on the consolidated area clears the WHOLE store to zeros
+// (wear_leveling.c: wear_leveling_clear_cache()). A zeroed handedness byte is
+// not "unknown", it reads as a valid `right`, so a half silently comes up as the
+// wrong side (field, 2026-09-07: a USB hub dropped mid-suspend-flush and the left
+// half booted as `right master`, with the RGB matrix and the dynamic keymap reset
+// by the same wipe). This sector is ours, outside the wear-levelling store, and
+// is written only when handedness actually changes -- so no EEPROM failure can
+// reach it. Carved out of the staging maximum the same way the crash log was:
+// FW_UP_MAX_SIZE 0x1F6000 -> 0x1F5000 (PolyKybdHost hid_fw_up.py mirrors it).
+#define FW_HAND_STAMP_OFFSET   (FW_CRASH_LOG_OFFSET - 4096UL)
+#define FW_UP_MAX_SIZE         0x1F5000UL      // max staged image: staging region, minus the 4 KB header, the apply log, the crash log and the handedness stamp
 #define FW_STAGING_MAGIC       0xD1F1A51BUL
 
 // Bytes per firmware-update chunk (HID and split-RPC payload).

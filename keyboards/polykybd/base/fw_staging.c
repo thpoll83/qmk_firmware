@@ -29,6 +29,17 @@ _Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_RESOURCE_OFFSET,
 // post-copy compare would read that same corrupted source and report a match.
 _Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_APPLY_LOG_OFFSET,
                "a staged image can reach the apply progress log");
+// ⚠️ The apply log is no longer the LOWEST thing carved off the top of staging --
+// the crash archive and the handedness stamp sit below it, so the assert above
+// stopped being the real wall when they were added. This is that wall. It has to
+// name the lowest carved-out sector, so add a term here whenever another one is
+// carved off, or a raised FW_UP_MAX_SIZE will silently overwrite it.
+_Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_HAND_STAMP_OFFSET,
+               "a staged image can reach the handedness stamp / crash archive");
+_Static_assert(FW_HAND_STAMP_OFFSET + 4096UL <= FW_CRASH_LOG_OFFSET,
+               "the handedness stamp overlaps the crash archive");
+_Static_assert(FW_CRASH_LOG_OFFSET + 4096UL <= FW_APPLY_LOG_OFFSET,
+               "the crash archive overlaps the apply progress log");
 _Static_assert(FW_APPLY_LOG_OFFSET + FW_APPLY_LOG_BYTES <= FW_RESOURCE_OFFSET,
                "the apply progress log runs into the resource region");
 

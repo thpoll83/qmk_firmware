@@ -111,3 +111,14 @@ polykybd_font_bbox_SRC := \
 polykybd_font_bbox_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# poly_hand_decide() is a static inline in hand_stamp.h, so the suite is just the
+# tests -- the same shape as map_codec and mode_byte. The flash I/O in
+# hand_stamp.c is deliberately on the other side of that line and is not linked
+# here (it needs quantum.h, the bootrom flash API and the core1 lockout).
+polykybd_hand_stamp_SRC := \
+	$(POLY_BASE_PATH)/tests/hand_stamp_tests.cpp
+
+polykybd_hand_stamp_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

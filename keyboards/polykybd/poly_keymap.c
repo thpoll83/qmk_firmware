@@ -67,6 +67,7 @@
 #include "polymod_core1.h"
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
+#include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
 #include "crash_test.h"                   // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
 #include "slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
 #include "polymod_crc32.h"
@@ -947,6 +948,10 @@ void housekeeping_task_user(void) {
     if (fw_staging_reboot_pending()) {
         clear_keyboard();   // same as above: no further matrix scan before the reset
         poly_flash_rgb_now();
+        // A handedness change arrives on this path (the reset-sync carrier). The
+        // handler only records it -- it runs inside a split-transaction callback
+        // with a ~20 ms budget, and this write can erase a sector.
+        poly_hand_flush_pending();
         save_all_dirty();   // persist before the full-chip reset — this path skips shutdown_quantum too
         mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
     }
@@ -4694,6 +4699,11 @@ static void boot_trace(const uint32_t* digit) {
 void keyboard_post_init_user(void) {
     // (The previous run's crash record was captured and archived at the top of
     // keyboard_pre_init_user(); the boot banner reports it.)
+    // Put the EEPROM handedness byte back when the flash stamp outvoted it —
+    // deliberately not in pre_init, because split_pre_init() runs between the two
+    // and its is_keyboard_left_impl() can erase the whole store on the way past.
+    // Ahead of emit_boot_banner() below, so the banner can report the repair.
+    poly_hand_post_init();
     // Labels live in RAM on both halves (the render path reads one per macro keycap per
     // refresh). Each half loads its own EEPROM copy, then the master overwrites the
     // slave's over the link -- so a role swap makes whichever half the host talks to
@@ -5010,6 +5020,14 @@ void keyboard_pre_init_user(void) {
     // post_init's multicore_launch_core1().
     crash_record_init();
 
+    // Resolve handedness while the EEPROM's own verdict is still readable. It has
+    // to be HERE: split_pre_init() runs is_keyboard_left_impl(), whose EE_HANDS
+    // branch does `if (!eeconfig_is_enabled()) eeconfig_init()` -- an erase of the
+    // whole store -- so after that point "the store was wiped" and "the store is
+    // fine" look identical. Same core1 rule as crash_record_init() above: the
+    // migration write takes no lockout because core1 has not been launched yet.
+    poly_hand_boot_init();
+
     // Load the external-flash font pack and assemble g_all_fonts = resident ++
     // pack BEFORE the first render (show_splash_screen() below draws keycaps).
     // No valid pack (erased/corrupt/ABI mismatch) -> resident-only fonts.
@@ -5034,17 +5052,18 @@ void keyboard_pre_init_user(void) {
     // right-side text.  set_side() otherwise runs only in post_init, after the
     // splash, so the splash always saw side == UNDECIDED → both rendered "SPLIT 72".
     //
-    // Read handedness with the pure eeconfig_read_handedness(), NOT
-    // is_keyboard_left_impl(): the EE_HANDS branch of is_keyboard_left_impl() runs
+    // Resolve through poly_hand_is_left(), NOT is_keyboard_left_impl(): the
+    // EE_HANDS branch of is_keyboard_left_impl() runs
     // `if (!eeconfig_is_enabled()) eeconfig_init();`.  Called this early — right
     // after eeprom_driver_init() in keyboard_setup, before the wear-leveling store
     // is validated — it can see eeconfig as "not enabled" and run eeconfig_init()
     // → nvm_eeconfig_erase() → eeprom_driver_format(), which wipes the *entire*
     // emulated EEPROM including the per-half EE_HANDS marker.  Both halves then
     // lose their stored side and fall back to a master-derived handedness.
-    // eeprom_driver_init() has already run, so the direct read is valid here and,
-    // being read-only, can never trigger that erase.
-    set_side(eeconfig_read_handedness() ? LEFT_SIDE : RIGHT_SIDE);
+    // poly_hand_boot_init() above has already resolved the side (from the flash
+    // stamp, which no EEPROM failure can reach), so this is a cached read that
+    // touches no EEPROM at all and cannot trigger that erase.
+    set_side(poly_hand_is_left() ? LEFT_SIDE : RIGHT_SIDE);
     show_splash_screen();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"0");

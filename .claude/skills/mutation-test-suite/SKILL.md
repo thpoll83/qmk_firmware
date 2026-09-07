@@ -97,10 +97,10 @@ cd /home/user/PolyKybdHost
 run() {  # file, python-mutation, test-module, expected-failing-test
   f="$1"; mut="$2"; mod="$3"; want="$4"
   cp "$f" /tmp/base.py                                   # PRE-mutation baseline
-  python3 - "$f" <<'MUT'
+  python3 - "$f" <<MUT
 import io,sys
 p=sys.argv[1]; s=io.open(p,encoding='utf-8').read()
-MUTATION_GOES_HERE
+$mut
 io.open(p,'w',encoding='utf-8').write(s)
 MUT
   diff -q /tmp/base.py "$f" >/dev/null; rc=$?
@@ -113,7 +113,7 @@ MUT
         | sed 's/\x1b\[[0-9;]*m//g')
   cp /tmp/base.py "$f"                                   # restore FIRST
   echo "$out" | grep -q '^Ran [0-9]* test' || { echo "NO SUMMARY LINE - harness broken"; return 1; }
-  if echo "$out" | grep -qE "^(FAIL|ERROR): $want"; then echo "CAUGHT   by $want"
+  if echo "$out" | grep -qE "^(FAIL|ERROR): $want[ (]"; then echo "CAUGHT   by $want"
   else echo "ESCAPED  ($want did not fail)"; echo "$out" | grep -E '^(FAIL|ERROR):' | head -3; fi
 }
 ```
@@ -127,7 +127,12 @@ Three differences from the googletest sweep:
 
 1. **Mutate with a Python heredoc, not `sed`/`perl`.** Python source is full of
    quotes and `|`; `s.replace()` on the file text is exact and cannot half-apply.
-   Build any literal quote as `chr(34)` so the outer quoting stays readable.
+   ⚠️ The heredoc delimiter is **unquoted** (`<<MUT`, not `<<'MUT'`) — that is what
+   interpolates `$mut` into the script, and it is the whole mechanism. Quote it and
+   the mutation is never applied: every call then trips the "did not apply" guard,
+   which is the guard working but a recipe that cannot run. The cost of unquoting
+   is that `$`, backticks and `\` inside the mutation are shell-expanded too, so
+   build any literal quote as `chr(34)` and keep `$` out of the mutation text.
 2. **The failure line is `^(FAIL|ERROR): <TestName>`**, not gtest's `[  FAILED  ]`
    — and `ERROR:` matters as much as `FAIL:`, since a mutation that breaks an
    import or raises shows up there.
@@ -174,8 +179,16 @@ MUTATION TEST — <suite>, N mutations
   M2 <what was broken>              → caught by <TestName>
   M3 <what was broken>              → NOT CAUGHT  ← finding
   ...
-  baseline restored, suite green (git status clean)
+  baseline restored, suite green
 ```
+
+⚠️ **On the Python path "git status clean" is the WRONG completion check** — that
+procedure deliberately supports a dirty worktree (you are testing a suite you have
+just written), and it restores from `/tmp/base.py`, not from git. Verify instead
+that every mutated file is byte-identical to its pre-mutation copy and that no
+mutation is left behind: `diff -q /tmp/base.py <file>` per file, plus a green
+suite. On the googletest path the tree is usually clean and `git status --short`
+is the cheaper check.
 
 Put the list in the PR body. It is the evidence that the tests are worth their
 line count, and it is what a reviewer cannot easily reproduce.

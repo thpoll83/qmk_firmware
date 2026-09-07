@@ -1698,10 +1698,14 @@ needs.
   exactly `nul + 1` — so prepending anything makes every deployed host read "no bundles
   on the device" and **re-flash all eight bundles on every connect**. Both blocks are
   tag-led, so a new host parses `V` first and then looks for `G`.
-- **Budget: measured 50 of 64 bytes used on split72** — a 31-byte id string plus its
-  NUL, then 18 bytes of `V` block for 8 bundles. `G` takes 3, leaving ~11 spare. ⚠️ That
-  margin is SHARED: the `V` block grows 2 bytes per bundle, so it is about five more
-  bundles, not eleven of anything.
+- **The budget is a `_Static_assert` in `hid_com.c`, not a number in a comment** —
+  `sizeof(POLY_GET_ID_STR) + 2 + FONTPACK_BUNDLE_COUNT*2 + 3 <= HID_REPORT_SIZE`. Every
+  term moves (the version string grows; the `V` block grows TWO BYTES PER BUNDLE), so a
+  measured figure would go stale, and both emitters DROP their block rather than
+  truncate if it does not fit — which would cost the host its font-pack versions
+  silently and re-flash every bundle on every connect. Mutation-checked: lowering the
+  bound fails the build with the assert's own message. Roughly 11 bytes spare at 8
+  bundles, i.e. five more.
 - **A missing `G` block means "no generation available"**, so an older firmware degrades
   to the previous behaviour (the host re-reads when a view is opened) rather than
   failing.

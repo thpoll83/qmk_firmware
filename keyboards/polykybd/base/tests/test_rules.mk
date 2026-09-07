@@ -111,3 +111,13 @@ polykybd_font_bbox_SRC := \
 polykybd_font_bbox_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# ai_light.h is header-only (static inline), so the suite is just the tests -- the same
+# shape as map_codec and mode_byte. It reads no clock: the caller hands it an already
+# computed elapsed, which is exactly what makes the fade curve testable at all.
+polykybd_ai_light_SRC := \
+	$(POLY_BASE_PATH)/tests/ai_light_tests.cpp
+
+polykybd_ai_light_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

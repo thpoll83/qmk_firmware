@@ -59,6 +59,7 @@
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
+#include "base/ai_light.h"               // the pure agent-status-light fade curve
 // Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
@@ -272,6 +273,19 @@ static uint16_t s_flash_rgb_seen        = 0;
 // long as an agent is reporting and put it back afterwards.
 static bool     s_ai_rgb_active         = false;
 
+// When the current agent status started, so the IDLE/ATTENTION fade knows its age
+// (base/ai_light.h). Restamped on any change of the SYNCED value, so the slave's
+// light fades on the same schedule as the master's without a second message.
+static uint8_t  s_ai_state_seen          = AI_OFF;
+static uint32_t s_ai_state_since         = 0;
+
+// The enum this file works in vs the mirror ai_light.h has to carry (it cannot
+// include state.h -- quantum.h). Asserted rather than remembered.
+_Static_assert(AI_OFF == AI_LIGHT_OFF && AI_IDLE == AI_LIGHT_IDLE &&
+                   AI_WORKING == AI_LIGHT_WORKING && AI_ATTENTION == AI_LIGHT_ATTENTION &&
+                   AI_STATE_COUNT == AI_LIGHT_COUNT,
+               "poly_ai_state and ai_light.h's mirror have diverged");
+
 // ONE borrow shared by both attention cues. Two independent borrowers cannot work: the
 // second one reads the state the FIRST produced, so when the first releases it disables a
 // matrix the second still needs. With the matrix off that made the AI light go dark for
@@ -325,6 +339,23 @@ static uint8_t ai_led_index(void) {
     return s_ai_led;
 }
 
+// The current status light's brightness, 0..255 (base/ai_light.h). Restamps the
+// state's age on a change, so BOTH callers -- the paint and the borrow tick -- ask
+// through here and cannot disagree about when the minute started. Stamping on
+// whichever runs first also means a light never misses its own first frame: the
+// render callback can beat housekeeping to a freshly synced state.
+static uint8_t ai_light_level(void) {
+    const uint8_t st = get_local_state()->ai_state;
+    if (st != s_ai_state_seen) {
+        s_ai_state_seen  = st;
+        s_ai_state_since = timer_read32();
+    }
+    // timer_elapsed32, not a subtraction: modular arithmetic that stays correct across
+    // the 49.7-day wrap. A hand-rolled version of this is what silently disabled idle
+    // for a 25-day window (see base/update.c's history).
+    return ai_light_scale(st, timer_elapsed32(s_ai_state_since));
+}
+
 // Returns true when it OWNED the frame — only ever when the matrix was off and this
 // borrowed it, in which case every other LED was blacked out and the running effect
 // must not paint over the result.
@@ -336,6 +367,24 @@ static bool ai_rgb_paint(void) {
     const uint8_t led = ai_led_index();
     if (led == NO_LED) {
         return false;   // this layout maps no AI key
+    }
+    const uint8_t scale = ai_light_level();
+    // "Borrowed" = the matrix is only lit because we switched it on, so nothing else
+    // asked for light and the rest of it must stay black. Same source of truth as the
+    // release in rgb_borrow_update(): the user does not want RGB, we do.
+    const bool borrowed = s_ai_rgb_active && s_rgb_borrow_active &&
+                          !test_flag(get_local_state()->flags, RGB_ON);
+    if (scale == 0) {
+        // Faded out. ⚠️ Read as BORROWED first, not returned from: the tick that drops
+        // the borrow runs in housekeeping, so on the frame the light reaches zero the
+        // matrix can still be on ONLY because we asked for it -- and handing that frame
+        // to the running effect flashes the user's whole RGB across a keyboard they had
+        // switched off. Keep it black for the frame or two until the borrow releases.
+        if (borrowed) {
+            rgb_matrix_set_color_all(0, 0, 0);
+            return true;
+        }
+        return false;   // matrix is the user's: hand the LED back to their effect
     }
     uint8_t r = 0, g = 0, b = 0;
     switch (st) {
@@ -357,15 +406,14 @@ static bool ai_rgb_paint(void) {
         default:
             break;
     }
-    // "Borrowed" = the matrix is only lit because we switched it on, so nothing else
-    // asked for light and the rest of it must stay black. Same source of truth as the
-    // release in rgb_borrow_update(): the user does not want RGB, we do.
-    const bool borrowed = s_ai_rgb_active && s_rgb_borrow_active &&
-                          !test_flag(get_local_state()->flags, RGB_ON);
     if (borrowed) {
         rgb_matrix_set_color_all(0, 0, 0);   // nothing else asked for light
     }
-    rgb_matrix_set_color(led, r, g, b);
+    // One scale over every state's colour, applied at the single point they all pass
+    // through -- so the fade cannot be forgotten by a colour added later, and WORKING
+    // gets it too (as a no-op scale of 255) rather than by skipping this line.
+    rgb_matrix_set_color(led, ai_light_apply(r, scale), ai_light_apply(g, scale),
+                         ai_light_apply(b, scale));
     return borrowed;
 }
 
@@ -417,7 +465,10 @@ static void ai_rgb_tick(void) {
     // The key has to exist on the active layout: without that, a layout that maps no
     // KC_AI (split72's Neo base, say) would ask for a matrix for a light that
     // ai_rgb_paint() then declines to draw.
-    s_ai_rgb_active = get_local_state()->ai_state != AI_OFF && ai_led_index() != NO_LED;
+    // ...and it has to still WANT the LED: once IDLE/ATTENTION has faded out, holding
+    // the matrix on to display black would leave a keyboard whose RGB the user had
+    // switched off lit up for nothing, for as long as the agent stays connected.
+    s_ai_rgb_active = ai_light_level() != 0 && ai_led_index() != NO_LED;
 }
 
 // Drive the flash RGB attention effect from the fw_up state (master + slave).

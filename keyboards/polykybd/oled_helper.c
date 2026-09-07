@@ -133,7 +133,7 @@ void oled_render_logos(void) {
 void oled_fw_update_progress_bar(int8_t top_y, int8_t bottom_y, uint8_t pct) {
     if (bottom_y <= top_y) return;   // guard: inverted bounds would wrap the unsigned height
     if (pct > 100) pct = 100;
-    uint8_t fill = (uint8_t)((uint16_t)pct * 127u / 100u);   // 0..127 across the display
+    uint8_t fill = (uint8_t)((uint16_t)pct * (uint16_t)OLED_DISPLAY_WIDTH / 100u);   // full width at 100%
     uint8_t height = (uint8_t)(bottom_y - top_y);
     if (fill) kdisp_fill_rect(0, top_y, fill, height);
 }

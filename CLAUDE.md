@@ -2243,6 +2243,54 @@ landed; revisit only if a full swap still looks slow on hardware): raise
 `OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
 above SSD1306 spec — A/B on real hardware).
 
+**The flash-progress screen is the SAME on both halves — and the workaround that
+made it asymmetric outlived its reason by a year.** `oled_update_buffer_fw_update()`
+(both variants) used to early-return a static "PolyKybd / Firmware / Update…" notice
+on the master, with **no percent and no bar**, so a user watching a firmware flash saw
+progress on one half and a frozen caption on the other. Reported from the field as
+"the status display during fw update only works as expected on one side" (2026-09-07).
+Three separately-dated facts make the workaround obsolete, and each is worth keeping:
+
+- **Its stated reason was a repaint bug that got fixed generally three weeks later.**
+  The split (`e427c6d672`, 2026-06-22) says *"the master streams chunks back-to-back
+  and can't repaint a moving bar"* — that is the dribbling band-by-band flush, which
+  `oled_fw_update_screen()`'s single `oled_render_dirty(true)` pass killed for every
+  status screen at once (`b2e3c1fe34`, 2026-07-13). Nobody went back to the
+  workaround. ⚠️ **A dated "can't do X" comment is a claim about the tree on that
+  date** — `git log -S` on the comment's own words, then on the mechanism it blames,
+  settles it in two commands.
+- **The master's percentage was valid the whole time.** `hid_fw_up.c` has staged the
+  master's own copy since PHASE 1 (2026-05-30) and advances the two halves' write
+  cursors in **lock-step** — it only writes a chunk the slave has already ACKed — so
+  `fw_update_percent()` reads the same number on both. The master was withholding a
+  number it already had.
+- **The cost is bounded by construction, not by luck**: every element of the screen is
+  derived from `pct`, so the frame changes at most 100 times over a whole image, and
+  `oled_write_raw` diffs before dirtying a block.
+
+Two more defects the same read turned up, both invisible until you enumerate the
+targets rather than testing a bool:
+
+- ⚠️ **`FW_TARGET_DOOMPACK` fell through to the FIRMWARE branch**, so installing a
+  `.plyx` engine pack told the user their **firmware** was being updated. The
+  fonts/not-fonts bool (`target == FONTPACK || target == DOOMWAD`) silently adopted
+  every target added after it was written. It is a `switch` over the target now, so a
+  new target lands in `default:` and is *labelled* rather than mislabelled.
+- ⚠️ **split42's percent was right-aligned to x=24, so at 100 % the leading digit was
+  clipped off the left edge** — the one value it most matters to read. It shared that
+  row with `"% — do not unplug"` (101 px of a 128 px panel), which is what squeezed it
+  there. The tail is dropped (the host app says it, and split72 never had it) and the
+  percent is bottomed out on the right, matching split72.
+- The bar also stopped one column short of the panel (`pct * 127 / 100`); it is
+  `OLED_DISPLAY_WIDTH` now, so 100 % fills the row.
+
+**`tools/status_oled_preview.py --fw-update [firmware|fontpack|doomwad|doompack]`**
+renders it (`--pct`, `--bundle`, `--diag` for the clipping check) — this screen had no
+preview at all, which is why nothing measured it. ⚠️ It deliberately takes **no `side`
+argument**: both halves render identically, and a preview that took one would invite
+the asymmetry straight back. The layout was chosen from measured widths, not by eye —
+widest row-2 label is `mideast` at 72 px against a percent column starting at 79.
+
 **Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
 `oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced
 `poly_sync_t.settings_more`). Four lines on the 64 px panel, two on the 32 px one:

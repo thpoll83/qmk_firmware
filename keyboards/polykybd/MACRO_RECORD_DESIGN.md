@@ -226,12 +226,37 @@ Start with the first; the second is a follow-up.
 
 ## 7. Host
 
-The host caches the macro list, so a local recording leaves it stale. Add a
-`macro_generation` u16 to the MACRO_INFO reply (cmd 36 uses 10 of 64 bytes), bumped on
-every local commit; the host re-reads bodies when it changes.
+**Less than it looks, and the first two drafts of this section were both wrong.**
 
-That is a wire change, so `PROTOCOL_VERSION` 16 → **17**, `__protocol__` in lockstep,
-and a `FEATURE_MIN_PROTOCOL["macro_generation"]` entry in `device/poly_kybd.py`.
+The host keeps no macro cache across calls: `PolyCore.macro_list()` reads live, and
+`macro_set()` re-reads the whole buffer immediately before writing it back. So a macro
+recorded on the board is NOT clobbered by a later host save of a different slot — the
+read-modify-write picks it up. Nothing is needed for storage correctness.
+
+What is left is only that a Macros tab already open shows the snapshot it loaded on
+tab-show.
+
+**The fix is the shared `['G'][u16 state_generation]` block in the GET_ID reply**, not
+a macro-specific field — see `CLAUDE.md` § *Telling the host something changed ON THE
+BOARD*. The reconnect probe fetches GET_ID every second anyway, so this costs zero
+additional reports and covers every future board-side change with one counter. A
+`macro_generation` on MACRO_INFO would have made the editor poll a second command for
+a strictly smaller result.
+
+- **No `PROTOCOL_VERSION` bump.** An older firmware simply has no `G` block, which the
+  host reads as "no generation available" and falls back to reloading on view-open —
+  today's behaviour. The precedent is the `styles` byte, added to the MACRO_INFO reply
+  with no bump and no `FEATURE_MIN_PROTOCOL` entry because a zero from old firmware is
+  a truthful answer rather than a missing one.
+- Firmware: `poly_state_touch()` at the end of the commit, beside the other board-side
+  mutations that call it.
+- Host: parse the block in `query_id()`; the tab reloads when the value moves. `M_*`
+  plumbing only if a view needs to ask outside the probe.
+
+⚠️ If the gesture also gains "assign to a key" (§6), the LAYOUT editor is a second
+stale surface and a worse one: `kb_layout_dialog.py` reads `keymap_buffer()` and
+`_load_macros()` **once in `__init__`**. The same counter covers it; the reload does
+not exist yet.
 
 ---
 
@@ -287,7 +312,8 @@ be `test_rules.mk`, not `rules.mk`: `qmk ci-validate-keyboard-targets` globs
 4. The status-OLED screen (measure with `tools/status_oled_preview.py` and the
    `status-oled-layout` skill — bands, not eyeballs).
 5. `QK_MACRO_*` on `_UL`, so a recording is usable with no host.
-6. `macro_generation` + the protocol bump + the host read-back.
+6. `poly_state_touch()` + the `G` block in the GET_ID reply + the host read-back
+   (no protocol bump — see §7).
 7. Docs (`update-polykybd-docs`, the Macros page).
 
 Sizes to watch: `POLY_MACRO_REC_BYTES` plus the shim is ~220 B of `.bss`. Measure on

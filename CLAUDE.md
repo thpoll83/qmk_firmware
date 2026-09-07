@@ -1642,6 +1642,78 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
   (810) only changes the identity's **extent**: indices `< NUM_OVERLAY_SLOTS` are
   identity, the rest are a 0 fill that can never be an upload destination.
 
+### Telling the host something changed ON THE BOARD
+
+Most state flows host → keyboard, so the host knows what it set. The reverse
+direction — the user changes something with a keycode, records a macro, remaps a
+key — has no natural notification, and the host's caches then go stale. There are
+exactly three ways to close that, and the ranking is not obvious:
+
+| | extra HID reports | latency | new machinery |
+|---|---|---|---|
+| a counter on a reply the host ALREADY polls | **0** | ≤1 s | none |
+| a dedicated command the host polls | 1 per interval | the interval | one command + an RPC method |
+| an unsolicited report pushed by the firmware | 1 per event | instant | a reader, framing, drain routing |
+
+⚠️ **Check what the host already asks for BEFORE reaching for a back channel.** The
+host's reconnect probe sends **GET_ID and GET_LANG every second**, forever, whenever
+a keyboard is attached (`PolyKybdHost` `poly_core.py`, `RECONNECT_CYCLE_MSEC = 1000`).
+So a byte on the GET_ID reply reaches the host within a second at **zero** additional
+cost, and both other options are solving a problem that does not exist. This was
+nearly missed twice — once by designing a MACRO_INFO field the editor would have had
+to poll, once by proposing a console line — because the existing poll is invisible
+from the firmware side.
+
+- ⚠️ **UNSOLICITED raw HID is not a drop-in, and the cost is NOT bandwidth.** The event
+  rate for anything a human does on the board is tens per day against the ~173,000
+  exchanges/day the probe alone already generates, so volume is a non-issue and should
+  not be the argument. What stops it is that **nothing reads that interface except a
+  pending command**: `send_and_read_validate` writes, then reads until it matches the
+  expected prefix and **drains everything else**, so an unsolicited report is discarded
+  by the next probe within a second. Its comment states the invariant the drain rests
+  on — *"Since protocol v3 the firmware sends no unsolicited replies, so a stale reply
+  here means one thing only"* — and v3 was the change that made `SEND_OVERLAY_MAPPING`
+  silent precisely to reduce escaped ACKs. Push makes a stale reply mean two things, in
+  the code path with the stale-reply bug history. Do not add it without a distinguishable
+  prefix, routing in the drain, and an idle reader.
+- **The CONSOLE is push-shaped and already tapped** (`CrashScanner` on the host, the
+  rig's `ConsoleTap`), so it is the cheapest push — but it is lossy by construction
+  (QMK drops output nobody drains, and nothing drains it during a flash), it does not
+  survive a re-enumeration, it arrives as report-sized FRAGMENTS rather than lines, and
+  **any local process can read it**, which is why keystroke logging is gated on
+  `debug_enable`. So: **the console may announce, never define.** Anything it says must
+  also be answerable over raw HID, and the pull is the truth. `crash_record` is the
+  model — the console line announces, cmd 39 reads the same record back — and nothing
+  breaks when the line is lost.
+
+**The mechanism: `['G'][u16 state_generation]` in the GET_ID reply**, bumped by
+`poly_state_touch()` whenever the BOARD changes something the host may be caching. One
+counter covers macros, glyph script, glyph size, idle style, the OS pin, the default
+layer and a board-side key reassignment; the host re-reads whatever it has open when
+the value moves. It does not say WHAT changed, which is all "refresh what is on screen"
+needs.
+
+- ⚠️ **It goes AFTER the `V` font-pack block, never before it.** The host finds that
+  block positionally — `parse_id_version_block` (`hid_fontpack.py`) requires `'V'` at
+  exactly `nul + 1` — so prepending anything makes every deployed host read "no bundles
+  on the device" and **re-flash all eight bundles on every connect**. Both blocks are
+  tag-led, so a new host parses `V` first and then looks for `G`.
+- **Budget: measured 50 of 64 bytes used on split72** — a 31-byte id string plus its
+  NUL, then 18 bytes of `V` block for 8 bundles. `G` takes 3, leaving ~11 spare. ⚠️ That
+  margin is SHARED: the `V` block grows 2 bytes per bundle, so it is about five more
+  bundles, not eleven of anything.
+- **A missing `G` block means "no generation available"**, so an older firmware degrades
+  to the previous behaviour (the host re-reads when a view is opened) rather than
+  failing.
+- **Bump it for host-initiated changes too.** Distinguishing them saves one re-read and
+  costs a rule someone has to remember.
+- ⚠️ **This IS an enumerated list of call sites, which is the shape that goes stale here
+  — and it is acceptable ONLY because of how it fails.** Forgetting a `poly_state_touch()`
+  leaves the host's view stale until something else refreshes it, i.e. exactly today's
+  behaviour; it can never corrupt state or mis-classify anything. Contrast
+  `sync_is_link_fault()`, where a forgotten case produces a WRONG answer, and which is
+  therefore written as a complement rather than a list.
+
 ### Language list encoding (`lang/iso_lang_country.py`)
 The packed list (cmd `27`) maps each 4-char code to two 1-byte indices: the
 language's position in the ISO 639-1 table and the country's in ISO 3166-1

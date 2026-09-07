@@ -321,6 +321,38 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     and to the sibling repos' `CLAUDE.md` files when the symbol is one they mirror
     (`iso_lang_country.py`, `noto-fonts.yaml`, the font-pack render manifests).
 
+## Mirrored skills (`qmk_firmware` ↔ `PolyKybdHost`)
+
+Four skills exist in **both** repos and are kept **byte-identical**:
+`mutation-test-suite`, `polykybd-github-release`, `session-retro`,
+`update-polykybd-docs`. A skill loads only from the repos a session has attached,
+so one that describes cross-repo work is unreachable from a session opened on the
+other repo alone — which is what happened to `mutation-test-suite`, extended to
+cover Python/unittest suites while living only in the firmware repo.
+
+⚠️ **They had already drifted, and every difference was pure loss — not repo-specific
+tailoring.** Measured 2026-09-07 before harmonising: `session-retro` lacked the whole
+open-PR-sweep section on the host side, `update-polykybd-docs` lacked its Images
+section there, and `polykybd-github-release` was missing the shallow-clone warning on
+the host side and the corrected WinCompose `status.txt` ordering on the firmware side —
+i.e. each copy was the newer one for a different note. Nothing anywhere flagged it,
+because a skill has no build, no test and no reviewer.
+
+**So the rule is copy, never fork**: edit one, `cp` it to the other, and check with
+
+```bash
+for s in mutation-test-suite polykybd-github-release session-retro update-polykybd-docs; do
+    cmp -s /home/user/qmk_firmware/.claude/skills/$s/SKILL.md \
+           /home/user/PolyKybdHost/.claude/skills/$s/SKILL.md \
+      && echo "$s: ok" || echo "$s: DRIFTED"
+done
+```
+
+A firmware-specific section in the host's copy (or the reverse) costs a reader one
+skipped paragraph; a fork costs a note that only one repo ever sees. Take the first.
+If a skill ever genuinely needs to differ per repo, split the differing part into a
+separate skill rather than forking the shared one.
+
 ## Branching (all PolyKybd repos)
 
 - **Give every branch a name that hints at its content** (a short descriptive slug, e.g. `claude/fix-slave-layer-after-fw-apply`, not just the auto-generated `claude/<random-scientist>-<id>`) so the branch list reads as a changelog.

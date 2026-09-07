@@ -3,7 +3,7 @@ name: mutation-test-suite
 description: Prove a test suite actually detects breakage before trusting it — googletest (`make test:<name>`, firmware) or Python/unittest (PolyKybdHost, polykybd-ctnd) — deliberately break the code under test N ways, confirm each mutation is caught, and confirm the INTENDED test is the one that fails. Use right after writing or extending a `make test:<name>` or `*_test.py` suite, when reviewing a PR that adds tests, when a suite has never failed and you want to know whether it can, or when asked "are these tests any good / do they actually test anything". NOT for finding bugs in the code (that is what the tests are for) and NOT for firmware behaviour on hardware (see diagnose-hil-failure / measure-firmware-perf).
 ---
 
-# Mutation-test a googletest suite
+# Mutation-test a suite — googletest or Python/unittest
 
 A suite that stays green against a deliberately broken implementation is
 measuring nothing. `CLAUDE.md` already requires this ("Mutation-test the suite
@@ -15,7 +15,10 @@ hit for real. **If a sweep looks unanimously clean, suspect the harness first.**
 
 The output is a table: mutation → caught? → by which test.
 
-## 0. Environment
+## 0. Environment (googletest / firmware)
+
+For a Python/unittest suite (`PolyKybdHost`, `polykybd-ctnd`) skip to §2b — the
+method in §1, §3 and §4 is the same, only the mechanics differ.
 
 ```bash
 cd /home/user/qmk_firmware

@@ -3976,6 +3976,34 @@ session gets wrong.
   panel shows `48/192 B` and the slave shows the stop hint in its place — true on both
   rather than a plausible zero on one, the same call `Lnk n/a` makes on the telemetry
   screen.
+- ⚠️ **A new custom keycode with NO legend renders a BLANK KEYCAP, and that is
+  indistinguishable from "the feature did not ship".** `KC_MACRO_REC` was added to the
+  keymaps, the action path and the OLED, and every one of those was correct — but
+  nothing gave it a case in `to_static_text()` / `keycode_to_static_text()`, so the key
+  drew nothing and the first field report was *"I still do not see the REC key"*. The
+  build is green either way: a missing legend is a missing `case`, not an error.
+  **Grep the two legend switches for a new keycode before calling it done.**
+  - **Its legend lives in `to_static_text()` (`poly_keymap.c`), NOT
+    `keycode_to_static_text()`** — it names what the key will do NEXT (`REC/macro`
+    vs `STOP/macro`), which comes from the synced `poly_sync_t.rec_state`, and that
+    function only receives `led_t`. Same seam and same reason as `KC_GLYPH_SIZE_UP`.
+  - **`MID_TWO_LINE` text, not an icon**: the resident C1 icon band is full (32/32),
+    the pack has no record dot (U+23FA / U+25CF / U+2B24 all MISSING — only U+26AB at
+    33x33), and the mid face is ASCII-only and RESIDENT, so the legend renders on a
+    keyboard with no font pack. That matters more here than elsewhere: its neighbours
+    on that row are the macro keys, and a REC key nobody can find is a gesture nobody
+    can start.
+  - **The picker draws `cancel` on it** (`render_macro_rec_cancel_key()`). Every other
+    keycap goes dark while the picker is open, so without it the one key that backs out
+    of the mode is invisible — the OLED says `REC = cancel`, but the board IS the
+    dialog and the dialog should say it too.
+  - ⚠️ **`Renderer.draw()` takes ABSOLUTE buffer coordinates and emits window-relative
+    pixels** (`plot()` does `vx = bx - BUFFER_X` and drops anything outside the 72x40
+    window). Verifying a legend at `x=0` therefore clips the first 28 columns and
+    renders a plausible-looking fragment — two of five glyphs, no error. Draw at
+    `oled_preview.BUFFER_X`, and sanity-check the harness against a SHIPPED legend
+    (`MID_TWO_LINE("RESET","Eden")`) before believing anything it says about a new one.
+    Measured that way: both states 0 off-panel pixels, ink x[1,57] y[0,34].
 - **The status OLED is the ONLY indicator** (`oled_macro_rec_screen()`), because split42
   has no RGB matrix and the keycaps are busy showing what is being typed. Three things
   about its branch in the `oled_task_user()` ladder:

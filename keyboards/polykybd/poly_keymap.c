@@ -1484,6 +1484,20 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
             return legend[shifted ? 1 : 0][size];
         }
 
+        // The macro-record key states WHAT IT WILL DO next, which is the whole reason
+        // it is here and not in keycode_to_static_text(): the gesture's state is
+        // poly_sync_t.rec_state, and that function only receives `led_t`, so on the
+        // slave the key would draw "REC" through a recording the master is already
+        // taking. Same seam, same reason, as KC_GLYPH_SIZE_UP above.
+        //
+        // The mid face is ASCII-only and RESIDENT, so this legend renders on a
+        // keyboard with no font pack flashed -- which matters more here than
+        // anywhere: its neighbours on this row are the macro keys, and a REC key
+        // nobody can find is a gesture nobody can start.
+        case KC_MACRO_REC:
+            return local_state->rec_state == POLY_REC_RECORDING ? MID_TWO_LINE("STOP", "macro")
+                                                                : MID_TWO_LINE("REC", "macro");
+
         // Language selection keycodes: the tiny "xx-YY" code shown under the flag
         // (the flag + selection frame are drawn by render_lang_flag_key()). KCL_ENUS..
         // are contiguous (QK_USER_0-based), so index a cog-generated table by offset.
@@ -2612,6 +2626,18 @@ static void render_macro_picker_key(uint8_t id, bool armed) {
     }
 }
 
+// The REC key while the picker is open. Everything else on the board goes dark, so
+// without this the one key that can back OUT of the picker is invisible -- the OLED
+// says "REC = cancel", but the board is the dialog and the dialog should say it too.
+static void render_macro_rec_cancel_key(void) {
+    const uint32_t *word = U"cancel";
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(mid_fonts, 1, word, &xmin, &xmax, &ymin, &ymax);
+    kdisp_write_gfx_text(mid_fonts, 1,
+                         (int8_t)(BUFFER_X + (SCREEN_WIDTH - (xmax - xmin + 1)) / 2 - xmin),
+                         (int8_t)((SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin), word);
+}
+
 static void render_fw_confirm_key(bool accept) {
     const uint32_t  letter    = accept ? (uint32_t)'A' : (uint32_t)'R';
     const uint32_t *caption   = accept ? U"ACCEPT" : U"REJECT";
@@ -3483,6 +3509,8 @@ void update_displays(enum refresh_mode mode) {
                             if (id != POLY_MACRO_NONE) {
                                 render_macro_picker_key(id, id == local_state->rec_slot);
                             }
+                        } else if (keycode == KC_MACRO_REC) {
+                            render_macro_rec_cancel_key();
                         }
                         kdisp_send_window();
                         doom_handled = true;

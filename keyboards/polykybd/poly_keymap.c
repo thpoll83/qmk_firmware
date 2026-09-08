@@ -3138,6 +3138,12 @@ static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t
 // every keycap went dark and neither picking a slot nor cancelling was reachable
 // (field, 2026-09-08). Both the render and the key-event path go through here, which is
 // what keeps them from disagreeing about which key is which.
+// The press the open picker is waiting to see released, so an answer is only ever
+// taken from a press/release PAIR the picker itself observed.
+#define POLY_PICK_NO_PRESS 0xFFu
+static uint8_t s_pick_press_row = POLY_PICK_NO_PRESS;
+static uint8_t s_pick_press_col = POLY_PICK_NO_PRESS;
+
 static uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col) {
     return poly_keycode_at(_UL, row, col);
 }
@@ -4242,7 +4248,28 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // process_record, so acting on the press tears the picker down while the keycap is
     // still inverted and it stays that way until the finger lifts.
     if (poly_macro_rec_state() == POLY_REC_PICKING) {
-        if (!record->event.pressed) {
+        // ⚠️ A MODIFIER falls THROUGH to QMK instead of being swallowed. Shift is what
+        // banks the row to M12..M15, and poly_macro_banked_id() reads it from
+        // get_mods() -- which only ever moves if process_action() sees the event, so
+        // swallowing Shift makes the top four slots unpickable and leaves the render's
+        // synced copy of the mods clear as well. A bare Shift tap does nothing on the
+        // host, the same reasoning the Intl picker's Ctrl latch rests on.
+        // ⚠️ The clear_keyboard() that opened the picker drops a Shift that was ALREADY
+        // held, so it has to be pressed again once the picker is up.
+        if (IS_MODIFIER_KEYCODE(keycode)) return true;
+
+        // ⚠️ Act only on a release whose PRESS this picker saw. The tap that opens the
+        // picker is handled one block down while the state is still IDLE, so its
+        // release arrives here and resolves to KC_MACRO_REC -- without this the opening
+        // tap would open the picker and immediately cancel it again. Owning the whole
+        // press/release pair closes that for every key, not just REC.
+        if (record->event.pressed) {
+            s_pick_press_row = record->event.key.row;
+            s_pick_press_col = record->event.key.col;
+        } else if (record->event.key.row == s_pick_press_row &&
+                   record->event.key.col == s_pick_press_col) {
+            s_pick_press_row = POLY_PICK_NO_PRESS;
+            s_pick_press_col = POLY_PICK_NO_PRESS;
             const uint16_t ul = macro_picker_keycode_at(record->event.key.row,
                                                         record->event.key.col);
             if (ul >= QK_MACRO && ul <= QK_MACRO_MAX) {
@@ -4269,6 +4296,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             // registered and auto-repeats it. It also stops the modifier that reached
             // this key from being the first thing a recording captures.
             clear_keyboard();
+            // This press is NOT seen by the picker block above (the state is still
+            // IDLE here), so start the session with no pending press -- its release
+            // must not be read as an answer.
+            s_pick_press_row = POLY_PICK_NO_PRESS;
+            s_pick_press_col = POLY_PICK_NO_PRESS;
             poly_macro_rec_toggle();
         }
         display_wakeup(record);

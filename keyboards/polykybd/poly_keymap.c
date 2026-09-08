@@ -4556,6 +4556,21 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
        (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) {
         return false;
     }
+    // A gated settings key is BLANK, so it must also be INERT — swallow both edges
+    // before anything can act on it.
+    //
+    // ⚠️ MUST stay above the QK_BOOTLOADER / QK_REBOOT cases below. This file
+    // intercepts both of those and returns true from inside that switch (the
+    // bootloader announce; the reboot's bridged handoff so the slave restarts too),
+    // so a gate placed after them never ran for the only two keys on the row that
+    // cannot be undone — the blank Restart keycap rebooted the board (field
+    // 2026-09-08). QK_DEBUG_TOGGLE really is left to process_action(), which is why
+    // it alone was gated. Every other gated keycode is handled further down in
+    // poly_custom_key_action(), already below this point.
+    if (settings_more_hidden(keycode)) {
+        return false;
+    }
+
     if (record->event.pressed) {
         switch (keycode) {
             case QK_BOOTLOADER: {
@@ -4761,16 +4776,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // ran. Only a PRESS can be rejected, so every release-edge settings key is
     // unaffected; KC_LANG is the one press-edge case here and would otherwise open _LL
     // / advance the language on the very press that exists only to wake the board.
-    // A gated settings key is BLANK, so it must also be INERT — swallow both edges
-    // before anything can act on it. QK_BOOTLOADER / QK_REBOOT / QK_DEBUG_TOGGLE are
-    // QMK's own keycodes, handled by process_action() rather than by
-    // poly_custom_key_action(), so returning false here is the only thing that stops
-    // them: a gate that only blanked the legend would leave a keycap that reboots the
-    // board with nothing drawn on it.
-    if (settings_more_hidden(keycode)) {
-        return false;
-    }
-
     const bool wake_accepted = display_wakeup(record);
     if (wake_accepted && poly_custom_key_action(keycode, record)) {
         return false;

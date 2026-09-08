@@ -3980,6 +3980,29 @@ session gets wrong.
   PolyKybd keycode — `_UL` is entered with `OSL()`, which re-dispatches a release-edge
   action up to three times (§ "A release-edge action fires up to THREE times"), and for
   a toggle that reads as *doing nothing at all*.
+- ⚠️ **SWALLOWING THE REC PRESS DROPS THE VERY LAYER THE PICKER LIVES ON, and that is
+  the cost of the swallow rule rather than a bug in it.** QMK's `process_record()` runs
+  `clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED)` whenever
+  `process_record_user()` returns false **on a press** (`quantum/action.c`) — which is
+  exactly what the swallow does — so a tap of `KC_MACRO_REC` reached through `OSL(_UL)`
+  opens the picker and drops `_UL` on the same edge. Both halves of the picker then
+  resolved the BASE layer, where there is no macro key and no REC key: **every keycap
+  went dark, no slot could be picked, and pressing REC again did nothing** while the
+  status OLED said `press M0-M15` (field, 2026-09-08).
+  - **The fix is to resolve the picker against `_UL` explicitly**
+    (`macro_picker_keycode_at()`), not to stop swallowing: the picker is a modal dialog
+    over a known row, so which layer happens to be active is not information it wants.
+    One resolver feeds the render AND `process_record_user`, so they cannot disagree —
+    the same render/action pairing rule as `poly_keycode_at()`.
+  - ⚠️ **The picker block therefore has to sit AHEAD of the `KC_MACRO_REC` block**, and
+    own the cancel itself: by the time it runs, `keycode` is the base layer's, so
+    neither the REC block nor the macro-playback block below can match. Entering `_UL`
+    with `TO()` instead hides all of this — the layer is sticky, everything resolves,
+    and the picker works — which is why it survived the desk test.
+  - **Generalise: any "the board becomes a dialog" mode entered from a ONE-SHOT layer
+    must resolve its own keys from that layer by number.** The FW-2 prompt is immune
+    only because it addresses a fixed matrix POSITION (`FW_CONFIRM_ROW/COL`) rather
+    than a keycode.
 - **`poly_sync_t.rec_state` / `.rec_slot` are synced** for the same reason `fw_confirm`
   and `settings_more` are: the SLAVE draws its own half of the slot picker and only ever
   sees that struct, so without them the two halves disagree about which keys are the

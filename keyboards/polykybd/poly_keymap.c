@@ -3129,6 +3129,19 @@ static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t
     return kc;
 }
 
+// Resolve what a physical position holds ON THE UTILITY LAYER, whatever layer is
+// active. The macro slot picker is a modal dialog over _UL's macro row, and it cannot
+// use the live stack: KC_MACRO_REC is SWALLOWED on the press, and QMK clears the
+// one-shot layer whenever process_record_user() returns false on a press
+// (quantum/action.c process_record), so the very tap that opens the picker drops an
+// OSL(_UL). Resolving live then finds the BASE layer -- no macro key, no REC key -- so
+// every keycap went dark and neither picking a slot nor cancelling was reachable
+// (field, 2026-09-08). Both the render and the key-event path go through here, which is
+// what keeps them from disagreeing about which key is which.
+static uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col) {
+    return poly_keycode_at(_UL, row, col);
+}
+
 // Roll a per-glyph idle jitter offset: a uniform random position within the legend's
 // OWN on-screen slack, measured from its bounding box at the draw origin (ox/oy). The
 // range is glyph-derived — never a global cap — so a slim "i" roams its full free
@@ -3498,18 +3511,20 @@ void update_displays(enum refresh_mode mode) {
                         // macro keys, which show what they already hold so you pick a
                         // caption rather than a number. Driven off the SYNCED state, so
                         // the slave draws its half of the row too.
-                        // `keycode` is this key's, already resolved for the row a few
-                        // lines above -- re-resolving it here is how the picker and
-                        // the render would come to disagree about which key is which.
+                        // Resolved against _UL, NOT the live `keycode` above: opening
+                        // the picker drops an OSL(_UL), so the live stack is the base
+                        // layer by now. macro_picker_keycode_at() is the same resolver
+                        // the key-event path uses, so the two cannot disagree.
+                        const uint16_t ul = macro_picker_keycode_at((uint8_t)(r + offset), c);
                         kdisp_set_buffer(0x00);
-                        if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
+                        if (ul >= QK_MACRO && ul <= QK_MACRO_MAX) {
                             const uint8_t id = poly_macro_banked_id(
-                                (uint8_t)(keycode - QK_MACRO),
+                                (uint8_t)(ul - QK_MACRO),
                                 (local_layer->mods & MOD_MASK_SHIFT) != 0);
                             if (id != POLY_MACRO_NONE) {
                                 render_macro_picker_key(id, id == local_state->rec_slot);
                             }
-                        } else if (keycode == KC_MACRO_REC) {
+                        } else if (ul == KC_MACRO_REC) {
                             render_macro_rec_cancel_key();
                         }
                         kdisp_send_window();
@@ -4215,6 +4230,32 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         poly_macro_abort();
     }
 
+    // While the slot picker is open the board IS the dialog: every key event is
+    // swallowed, and only a macro key or the REC key means anything. It sits AHEAD of
+    // the KC_MACRO_REC and macro-keycode blocks below so picking a slot arms the
+    // recording instead of PLAYING that macro, and so the cancel is answered here --
+    // by this point `keycode` is the BASE layer's, because opening the picker dropped
+    // the OSL(_UL) that reached the REC key, so neither of those blocks can match.
+    //
+    // Answered on the RELEASE for the same reason the FW-2 prompt is: matrix_scan_kb
+    // inverts a keycap on press and un-inverts on release independently of
+    // process_record, so acting on the press tears the picker down while the keycap is
+    // still inverted and it stays that way until the finger lifts.
+    if (poly_macro_rec_state() == POLY_REC_PICKING) {
+        if (!record->event.pressed) {
+            const uint16_t ul = macro_picker_keycode_at(record->event.key.row,
+                                                        record->event.key.col);
+            if (ul >= QK_MACRO && ul <= QK_MACRO_MAX) {
+                const uint8_t id = poly_macro_banked_id((uint8_t)(ul - QK_MACRO),
+                                                        (get_mods() & MOD_MASK_SHIFT) != 0);
+                if (id != POLY_MACRO_NONE) poly_macro_rec_pick(id);
+            } else if (ul == KC_MACRO_REC) {
+                poly_macro_rec_toggle();   // the picker's own way out
+            }
+        }
+        return false;
+    }
+
     // The record gesture. SWALLOWED on the press, never left to the release edge:
     // _UL is entered with OSL(), where a release-edge action fires up to three times
     // (process_action's do_release_oneshot) -- for a start/stop toggle that is start,
@@ -4231,23 +4272,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             poly_macro_rec_toggle();
         }
         display_wakeup(record);
-        return false;
-    }
-
-    // While the slot picker is open the board IS the dialog: every key event is
-    // swallowed, and only a macro key means anything. Placed BEFORE the macro-keycode
-    // block below so picking a slot arms the recording instead of PLAYING that macro.
-    //
-    // Answered on the RELEASE for the same reason the FW-2 prompt is: matrix_scan_kb
-    // inverts a keycap on press and un-inverts on release independently of
-    // process_record, so acting on the press tears the picker down while the keycap is
-    // still inverted and it stays that way until the finger lifts.
-    if (poly_macro_rec_state() == POLY_REC_PICKING) {
-        if (!record->event.pressed && keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
-            const uint8_t id = poly_macro_banked_id((uint8_t)(keycode - QK_MACRO),
-                                                    (get_mods() & MOD_MASK_SHIFT) != 0);
-            if (id != POLY_MACRO_NONE) poly_macro_rec_pick(id);
-        }
         return false;
     }
 

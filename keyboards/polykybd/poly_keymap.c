@@ -4417,6 +4417,30 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 eeconfig_update_rgb_matrix(&rgb_matrix_config);
             }
             return false;
+        // The settings layer's four effect presets. These are the legacy UNDERGLOW
+        // mode keycodes (RGB_MODE_PLAIN/BREATHE/RAINBOW/SWIRL, 0x782B..0x782E), and
+        // QMK does route that range through process_underglow() even on an
+        // RGB-matrix-only board — but its switch only covers toggle / next / prev /
+        // hue / sat / val / speed. The four mode presets have no case there, none in
+        // process_rgb_matrix() (which owns the RM_* range only), and IS_RGB_KEYCODE /
+        // RGB_KEYCODE_RANGE are defined in keycodes.h and dispatched nowhere. So
+        // these keycaps drew a legend (keycode_helper.c: "Plan", "Brth", "Rnbw",
+        // "Swrl") and did nothing at all. Map each onto the closest effect that is
+        // enabled on BOTH variants — CYCLE_SPIRAL is split72-only, so Swirl takes
+        // CYCLE_PINWHEEL. rgb_matrix_mode() persists the pick the way RM_NEXT does
+        // (a deferred eeconfig flag, not a blocking write), and like RM_NEXT it is a
+        // no-op while RGB is off.
+        case RGB_M_P:  case RGB_M_B:
+        case RGB_M_R:  case RGB_M_SW:
+            if (record->event.pressed) {
+                uint8_t mode = RGB_MATRIX_SOLID_COLOR;              // RGB_M_P  "Plan"
+                if      (keycode == RGB_M_B)  mode = RGB_MATRIX_BREATHING;              // "Brth"
+                else if (keycode == RGB_M_R)  mode = RGB_MATRIX_RAINBOW_MOVING_CHEVRON; // "Rnbw"
+                else if (keycode == RGB_M_SW) mode = RGB_MATRIX_CYCLE_PINWHEEL;         // "Swrl"
+                rgb_matrix_mode(mode);
+                request_disp_refresh();
+            }
+            return false;
 #endif
         case KC_CRSEL:
             if (record->event.pressed) { SEND_STRING(SS_TAP(X_HOME) SS_TAP(X_HOME) SS_LSFT(SS_TAP(X_END)) SS_TAP(X_BACKSPACE) SS_TAP(X_BACKSPACE) SS_TAP(X_DOWN)); }

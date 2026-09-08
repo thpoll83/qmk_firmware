@@ -112,7 +112,6 @@ polykybd_font_bbox_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
-<<<<<<< HEAD
 # ai_light.h is header-only (static inline), so the suite is just the tests -- the same
 # shape as map_codec and mode_byte. It reads no clock: the caller hands it an already
 # computed elapsed, which is exactly what makes the fade curve testable at all.
@@ -121,7 +120,8 @@ polykybd_ai_light_SRC := \
 
 polykybd_ai_light_INC := \
 	$(POLY_BASE_PATH) \
-=======
+	keyboards/polykybd
+
 # The recorder is pure for the same reason the decoder is -- a byte reader/writer
 # callback and a caller-supplied clock, so the encoder and the splice link against a
 # RAM buffer with no EEPROM and no timer. macro_decode.c comes along deliberately:
@@ -135,5 +135,4 @@ polykybd_macro_record_SRC := \
 polykybd_macro_record_INC := \
 	$(POLY_BASE_PATH) \
 	$(POLY_BASE_PATH)/tests \
->>>>>>> origin/PolyKybd
 	keyboards/polykybd

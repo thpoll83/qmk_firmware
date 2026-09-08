@@ -9,6 +9,8 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
+#include "poly_macro.h"          // POLY_MACRO_COUNT
+#include "poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
 #ifdef POLYKYBD_DOOM
 #include "doom/doom_mode.h"
 #include "doom/doom_logo_oled.h"
@@ -399,6 +401,97 @@ void oled_telemetry_screen(void) {
     oled_render_dirty(true);
 }
 
+// On-keyboard macro recording (MACRO_RECORD_DESIGN.md section 4). The status OLED is
+// the ONLY indicator the gesture has -- split42 has no RGB matrix, and the keycaps are
+// busy showing what the user is typing -- so it has to say where the gesture is, what
+// it is aimed at, and how to get out of it.
+//
+// Laid out like oled_telemetry_screen() above (even bands, each line centred from its
+// OWN bbox) and, like the flash / confirm / apply screens, drawn LANDSCAPE on split42
+// too: the portrait rework of that family is still deferred, and one recording screen
+// that matches its neighbours beats two that do not.
+void oled_macro_rec_screen(void) {
+    const GFXfont* small   = &NotoSans_Regular_Small_15px7b;
+    const GFXfont* fonts[] = { small };
+    const bool     tall    = OLED_DISPLAY_HEIGHT >= 64;
+
+    // Synced, so this reads the same on both halves. The byte count and the elapsed
+    // time are NOT synced: they move on every captured keystroke, and putting that on
+    // poly_sync_t would buy a bridge frame per keypress on the one link this repo has
+    // been bitten by most. So the master shows them and the slave shows the stop hint
+    // in their place -- true on both panels rather than a plausible zero on one, the
+    // same call the telemetry screen's "Lnk n/a" makes.
+    const poly_sync_t* st    = get_local_state();
+    const uint8_t      state = st->rec_state;
+    const uint8_t      slot  = st->rec_slot;
+    const bool         mine  = is_usb_host_side();
+
+    char l0[24], l1[24], l2[24], l3[24];
+    l0[0] = l1[0] = l2[0] = l3[0] = '\0';
+
+    switch (state) {
+        case POLY_REC_PICKING:
+            snprintf(l0, sizeof(l0), "Pick a macro");
+            snprintf(l1, sizeof(l1), "press M0-M%u", (unsigned)(POLY_MACRO_COUNT - 1u));
+            snprintf(l2, sizeof(l2), "REC = cancel");
+            break;
+        case POLY_REC_RECORDING:
+            // ⚠️ The whole line blinks rather than a marker beside a fixed word: each
+            // line is centred from its own ink box, so a marker that comes and goes
+            // would slide the text half a glyph twice a second. A line that appears and
+            // disappears reads as "recording NOW", which is the entire job of line 0.
+            if ((timer_read32() / 500U) & 1U) snprintf(l0, sizeof(l0), "REC M%u", (unsigned)slot);
+            if (mine) {
+                snprintf(l1, sizeof(l1), "%u/%u B", (unsigned)poly_macro_rec_bytes(),
+                         (unsigned)POLY_MACRO_REC_BYTES);
+                const uint32_t s = poly_macro_rec_elapsed_ms() / 1000U;
+                snprintf(l2, sizeof(l2), "%lu:%02lu", (unsigned long)(s / 60U),
+                         (unsigned long)(s % 60U));
+                snprintf(l3, sizeof(l3), "REC = stop");
+            } else {
+                snprintf(l1, sizeof(l1), "REC = stop");
+            }
+            break;
+        case POLY_REC_SAVING:
+            snprintf(l0, sizeof(l0), "Saving M%u", (unsigned)slot);
+            break;
+        case POLY_REC_SAVED:
+            snprintf(l0, sizeof(l0), "Saved M%u", (unsigned)slot);
+            if (mine) snprintf(l1, sizeof(l1), "%u B", (unsigned)poly_macro_rec_bytes());
+            break;
+        default:
+            return;   // IDLE: oled_task_user() never gets here, but never draw a blank frame
+    }
+
+    oled_on();
+    kdisp_set_buffer(0);   // clear the scratch to black
+
+    // The 32 px panel holds two lines, so it keeps the two that say where the gesture
+    // is and what it costs; the elapsed time and the stop hint are split72-only.
+    const char*   lines[4] = { l0, l1, l2, l3 };
+    const uint8_t count    = tall ? 4u : 2u;
+    const int8_t  band     = (int8_t)(OLED_DISPLAY_HEIGHT / count);
+    for (uint8_t i = 0; i < count; ++i) {
+        if (lines[i][0] == '\0') continue;   // the blink's dark phase, or an unused line
+        uint32_t txt[24];
+        ascii_to_u32_string(txt, sizeof(txt), lines[i]);
+        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+        kdisp_gfx_text_bbox(fonts, 1, txt, &x0, &x1, &y0, &y1);
+        const int8_t w = (int8_t)(x1 - x0 + 1);
+        int16_t      x = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
+        if (x < 0) x = 0;
+        const int8_t base = (int8_t)(band * i + band / 2 - (y0 + y1) / 2);
+        kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, txt);
+    }
+
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    // ⚠️ No oled_clear() anywhere in here, and none per frame: oled_write_raw diffs the
+    // scratch against the framebuffer and dirties only the blocks that moved, so the
+    // 1 Hz blink costs one block per second. An oled_clear() would defeat that and
+    // re-push the whole frame every tick -- the "updates in multiple passes" flicker.
+    oled_render_dirty(true);
+}
+
 // Typing-speed dial (11x6 speedometer). Shared by BOTH variants' status OLEDs, so it
 // is defined once here (oled_helper.c is in the shared POLY_SRC) and referenced via
 // extern from each status_oled.c -- defining it per variant drifts the two copies.
@@ -447,6 +540,14 @@ bool oled_task_user(void) {
         }
         // face == 1: the panel already shows the current face — leave it be.
 #endif
+    } else if (get_local_state()->rec_state != POLY_REC_IDLE) {
+        // ABOVE the idle branch on purpose: the idle timer would otherwise swap the
+        // panel to the logos mid-recording and take the only indicator with it. The
+        // recorder also holds update_performed() while it is busy (poly_keymap.c), so
+        // in practice idle never engages here -- this ordering is the belt to that
+        // brace, and it also covers the SAVING / SAVED tail after the last keystroke.
+        oled_scroll_off();
+        oled_macro_rec_screen();
     } else if ((get_local_state()->flags & DISP_IDLE) != 0) {
         oled_render_logos();
     } else if (get_local_state()->settings_more != 0) {

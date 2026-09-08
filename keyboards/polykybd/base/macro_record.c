@@ -168,6 +168,90 @@ uint16_t poly_macro_rec_finish(poly_macro_rec_t *r) {
 }
 
 // ---------------------------------------------------------------------------
+// Report diff
+
+#define POLY_MACRO_REC_MOD_FIRST 0xE0u
+
+// Is `code` one of the six slots? A 6KRO key array is a SET, not a positional record:
+// QMK compacts it when a key is released, so a key that never moved can change slots.
+// Comparing slot i to slot i therefore reports a release and a press for every key
+// after the one that went up -- which replays as those keys being re-typed.
+//
+// ⚠️ No `code == 0` guard here, deliberately: both call sites screen the sentinel with
+// their own `code != 0` before asking, so a guard in here is unreachable. It WAS here,
+// and a mutation deleting it changed nothing at all -- which is the tell that it was
+// decoration rather than a check. The live guard is at the call sites; keep it there.
+static bool kro_has(const uint8_t *keys, uint8_t code) {
+    for (uint8_t i = 0; i < POLY_MACRO_REC_KRO_KEYS; i++) {
+        if (keys[i] == code) return true;
+    }
+    return false;
+}
+
+// 0xE0..0xE7 fall inside the 240-bit map AND are carried in the `mods` byte, so a
+// scan that did not skip them could report one modifier twice -- a DOWN Ctrl followed
+// by a second DOWN Ctrl, which replays as a stuck modifier when only one UP follows.
+// QMK routes modifiers through `mods` today; skipping is a no-op in that case and the
+// guard in the other, so it costs nothing to be right either way.
+static bool nkro_skip(uint16_t code) {
+    return code >= POLY_MACRO_REC_MOD_FIRST && code <= (POLY_MACRO_REC_MOD_FIRST + 7u);
+}
+
+static bool nkro_has(const uint8_t *bits, uint16_t code) {
+    return (bits[code >> 3] & (uint8_t)(1u << (code & 7u))) != 0u;
+}
+
+// The four passes every diff makes, in the one order that replays as what was typed.
+// Modifiers are 0xE0..0xE7 and are carried in the `mods` BYTE rather than the key
+// array, so they are diffed bit by bit against that byte.
+static void emit_mod_pass(uint8_t prev_mods, uint8_t next_mods, bool pressed,
+                          poly_macro_rec_event_fn emit, void *ctx) {
+    // A press is a bit that is set now and was not; a release is the complement.
+    const uint8_t changed = pressed ? (uint8_t)(next_mods & (uint8_t)~prev_mods)
+                                    : (uint8_t)(prev_mods & (uint8_t)~next_mods);
+    for (uint8_t b = 0; b < 8u; b++) {
+        if (changed & (uint8_t)(1u << b)) {
+            emit((uint8_t)(POLY_MACRO_REC_MOD_FIRST + b), pressed, ctx);
+        }
+    }
+}
+
+void poly_macro_rec_diff_6kro(uint8_t prev_mods, const uint8_t *prev_keys,
+                              uint8_t next_mods, const uint8_t *next_keys,
+                              poly_macro_rec_event_fn emit, void *ctx) {
+    if (emit == NULL || prev_keys == NULL || next_keys == NULL) return;
+
+    for (uint8_t i = 0; i < POLY_MACRO_REC_KRO_KEYS; i++) {
+        const uint8_t code = prev_keys[i];
+        if (code != 0 && !kro_has(next_keys, code)) emit(code, false, ctx);
+    }
+    emit_mod_pass(prev_mods, next_mods, false, emit, ctx);
+    emit_mod_pass(prev_mods, next_mods, true, emit, ctx);
+    for (uint8_t i = 0; i < POLY_MACRO_REC_KRO_KEYS; i++) {
+        const uint8_t code = next_keys[i];
+        if (code != 0 && !kro_has(prev_keys, code)) emit(code, true, ctx);
+    }
+}
+
+void poly_macro_rec_diff_nkro(uint8_t prev_mods, const uint8_t *prev_bits,
+                              uint8_t next_mods, const uint8_t *next_bits,
+                              poly_macro_rec_event_fn emit, void *ctx) {
+    if (emit == NULL || prev_bits == NULL || next_bits == NULL) return;
+
+    const uint16_t codes = (uint16_t)POLY_MACRO_REC_NKRO_BYTES * 8u;
+    for (uint16_t c = 0; c < codes; c++) {
+        if (nkro_skip(c)) continue;
+        if (nkro_has(prev_bits, c) && !nkro_has(next_bits, c)) emit((uint8_t)c, false, ctx);
+    }
+    emit_mod_pass(prev_mods, next_mods, false, emit, ctx);
+    emit_mod_pass(prev_mods, next_mods, true, emit, ctx);
+    for (uint16_t c = 0; c < codes; c++) {
+        if (nkro_skip(c)) continue;
+        if (!nkro_has(prev_bits, c) && nkro_has(next_bits, c)) emit((uint8_t)c, true, ctx);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Splice
 
 poly_macro_splice_result_t poly_macro_commit_begin(poly_macro_commit_t *c,

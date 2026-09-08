@@ -86,6 +86,49 @@ bool poly_macro_rec_full(const poly_macro_rec_t *r);
 uint16_t poly_macro_rec_finish(poly_macro_rec_t *r);
 
 // ---------------------------------------------------------------------------
+// Report diff
+
+// Capture happens at the REPORT, not at the keycode: the shim wraps QMK's host driver
+// and diffs successive keyboard reports, so it records what the host actually
+// receives. That removes the whole "what cannot be recorded" category -- mod-taps,
+// the macOS GUI/Alt swap, the Intl picker's registered Ctrl and unicode input all
+// arrive here as plain 0x04..0xFF keycodes with no special cases.
+//
+// Kept pure by taking BYTES rather than report_keyboard_t: `mods` plus either the six
+// 6KRO slots or the 30-byte NKRO bitmap. The caller is what knows which QMK is
+// sending, and this file never learns.
+
+// A 6KRO report's key array. The slots are an unordered SET -- QMK compacts them on
+// release, so a key can move between slots with nothing having happened to it, and a
+// slot-by-slot comparison would report a spurious release AND press for every key
+// after the one that was let go.
+#define POLY_MACRO_REC_KRO_KEYS 6
+// An NKRO report's bitmap: 30 bytes, one bit per keycode, LSB first.
+#define POLY_MACRO_REC_NKRO_BYTES 30
+
+// Called once per key transition the diff finds. `pressed` false is a release.
+typedef void (*poly_macro_rec_event_fn)(uint8_t code, bool pressed, void *ctx);
+
+// Diff two 6KRO reports and report every transition.
+//
+// ⚠️ ORDER IS THE CONTRACT, and it is not the obvious one: key releases, then modifier
+// releases, then modifier presses, then key presses. A macro replays its steps in the
+// order they were recorded, so emitting a modifier press before the release of the key
+// it does not belong to would replay as a chord the user never typed -- and emitting
+// the new key before its modifier types the unmodified character. This is the same
+// reasoning the Intl picker's release-swallow ownership rule rests on.
+void poly_macro_rec_diff_6kro(uint8_t prev_mods, const uint8_t *prev_keys,
+                              uint8_t next_mods, const uint8_t *next_keys,
+                              poly_macro_rec_event_fn emit, void *ctx);
+
+// The NKRO form. Same ordering contract; bits ascend within each of the four groups,
+// which is arbitrary but deterministic -- two keys pressed in the same report were
+// simultaneous, so any stable order is as true as another.
+void poly_macro_rec_diff_nkro(uint8_t prev_mods, const uint8_t *prev_bits,
+                              uint8_t next_mods, const uint8_t *next_bits,
+                              poly_macro_rec_event_fn emit, void *ctx);
+
+// ---------------------------------------------------------------------------
 // Splice
 
 // Writes one byte of the macro region. The mirror of poly_macro_read_fn.

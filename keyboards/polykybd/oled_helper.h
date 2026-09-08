@@ -58,5 +58,10 @@ extern const uint8_t wpm_gauge_bitmap[];
    the split-link health, in place of the ordinary status screen while the advanced
    settings row is revealed. Driven by the synced poly_sync_t.settings_more. */
 void oled_telemetry_screen(void);
+/* On-keyboard macro recording: which slot is armed, how much of the staging buffer
+   is spent, and how to stop. Driven by the synced poly_sync_t.rec_state, so BOTH
+   halves show it -- the panel is the only indicator the gesture has (see
+   MACRO_RECORD_DESIGN.md section 2.4). */
+void oled_macro_rec_screen(void);
 void oled_render_logos(void);
 bool oled_task_user(void);

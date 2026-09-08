@@ -83,6 +83,7 @@
 
 #include "state.h"
 #include "poly_macro.h"
+#include "poly_macro_record.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
 #include "poly_util.h"
@@ -968,6 +969,32 @@ void housekeeping_task_user(void) {
     // is_keyboard_master(), not is_usb_host_side(): the confirmation state only
     // ever exists on the half that verified the signature, and fw_staging gates
     // that on is_keyboard_master() (which the HIL images override per side).
+    // On-keyboard macro recording. The master owns the gesture (only it runs
+    // process_record -- the slave's matrix is pulled over the link), and the state is
+    // mirrored into the synced struct so the SLAVE draws its half of the slot picker.
+    // Outside the !fw_up_active gate below for the same reason the FW-2 prompt is: a
+    // dialog that could not be drawn or advanced would be unanswerable.
+    if (is_keyboard_master()) {
+        poly_macro_rec_tick();
+        poly_sync_t *rec_state = access_local_state();
+        const uint8_t rs = (uint8_t)poly_macro_rec_state();
+        const uint8_t rl = poly_macro_rec_slot();
+        if (rec_state->rec_state != rs || rec_state->rec_slot != rl) {
+            rec_state->rec_state = rs;
+            rec_state->rec_slot  = rl;
+            request_disp_refresh();
+        }
+        // Hold the idle countdown off for the whole gesture, the same way the FW-2
+        // prompt below does. The panel IS the only indicator a recording has, and
+        // update_displays() early-returns once DISP_IDLE is set — so a slow-typed
+        // macro that crossed FADE_OUT_TIME would dim the picker and the REC readout
+        // out from under the user, with no way back short of a keypress that the
+        // recorder would then capture.
+        if (rs != (uint8_t)POLY_REC_IDLE) {
+            update_performed();
+        }
+    }
+
     if (is_keyboard_master()) {
         fw_staging_confirm_tick();
         const uint8_t want = fw_staging_awaiting_confirm() ? 1 : 0;
@@ -2570,6 +2597,21 @@ static const GFXfont* const mid_fonts[]        = { &NotoSans_Regular_Mid_19px7b 
 // caption. Everything is measured from the font metrics rather than hardcoded —
 // "REJECT" descends 2px below the baseline (the J) where "ACCEPT" does not, so a
 // fixed bottom baseline would clip one of them.
+// The slot picker: while the gesture is open the board becomes a list of macros, so
+// choosing one is a keypress rather than a number to remember. Draws the slot exactly
+// as it will look when recorded -- render_macro_key() -- with a frame around the one
+// that is armed, the same way the language layer frames the selected language.
+//
+// ⚠️ Reuses render_macro_key rather than drawing "M3": the whole point of a picker on
+// a display keyboard is that you pick the CAPTION, and duplicating the composition
+// here is how the two would drift.
+static void render_macro_picker_key(uint8_t id, bool armed) {
+    render_macro_key(id);
+    if (armed) {
+        kdisp_draw_round_rect(BUFFER_X, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 4);
+    }
+}
+
 static void render_fw_confirm_key(bool accept) {
     const uint32_t  letter    = accept ? (uint32_t)'A' : (uint32_t)'R';
     const uint32_t *caption   = accept ? U"ACCEPT" : U"REJECT";
@@ -3424,6 +3466,26 @@ void update_displays(enum refresh_mode mode) {
                         }
                         kdisp_send_window();
                         doom_handled = true;
+                    } else if (local_state->rec_state == POLY_REC_PICKING) {
+                        // The macro slot picker, the same "the board is the dialog"
+                        // shape as the prompt above: every keycap goes dark except the
+                        // macro keys, which show what they already hold so you pick a
+                        // caption rather than a number. Driven off the SYNCED state, so
+                        // the slave draws its half of the row too.
+                        // `keycode` is this key's, already resolved for the row a few
+                        // lines above -- re-resolving it here is how the picker and
+                        // the render would come to disagree about which key is which.
+                        kdisp_set_buffer(0x00);
+                        if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
+                            const uint8_t id = poly_macro_banked_id(
+                                (uint8_t)(keycode - QK_MACRO),
+                                (local_layer->mods & MOD_MASK_SHIFT) != 0);
+                            if (id != POLY_MACRO_NONE) {
+                                render_macro_picker_key(id, id == local_state->rec_slot);
+                            }
+                        }
+                        kdisp_send_window();
+                        doom_handled = true;
                     } else if (local_state->doom_ctl == 2) {
                         // Attract screensaver: chrome-free — no pad, no ESC face,
                         // no control legends. Every key belongs to the mirror
@@ -4123,6 +4185,42 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // through and behaves normally -- the abort is not a swallow.
     if (poly_macro_active() && record->event.pressed) {
         poly_macro_abort();
+    }
+
+    // The record gesture. SWALLOWED on the press, never left to the release edge:
+    // _UL is entered with OSL(), where a release-edge action fires up to three times
+    // (process_action's do_release_oneshot) -- for a start/stop toggle that is start,
+    // stop, start, i.e. the recording you just made is thrown away and a new one
+    // begins. Same rule the settings keys follow, and the reason they were moved.
+    if (keycode == KC_MACRO_REC) {
+        if (record->event.pressed) {
+            // Anything the finger is holding is released BEFORE the mode changes, for
+            // the reason doom_begin() and the FW-2 prompt do it: the picker swallows
+            // the RELEASE of a key that was already down, so the host keeps it
+            // registered and auto-repeats it. It also stops the modifier that reached
+            // this key from being the first thing a recording captures.
+            clear_keyboard();
+            poly_macro_rec_toggle();
+        }
+        display_wakeup(record);
+        return false;
+    }
+
+    // While the slot picker is open the board IS the dialog: every key event is
+    // swallowed, and only a macro key means anything. Placed BEFORE the macro-keycode
+    // block below so picking a slot arms the recording instead of PLAYING that macro.
+    //
+    // Answered on the RELEASE for the same reason the FW-2 prompt is: matrix_scan_kb
+    // inverts a keycap on press and un-inverts on release independently of
+    // process_record, so acting on the press tears the picker down while the keycap is
+    // still inverted and it stays that way until the finger lifts.
+    if (poly_macro_rec_state() == POLY_REC_PICKING) {
+        if (!record->event.pressed && keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
+            const uint8_t id = poly_macro_banked_id((uint8_t)(keycode - QK_MACRO),
+                                                    (get_mods() & MOD_MASK_SHIFT) != 0);
+            if (id != POLY_MACRO_NONE) poly_macro_rec_pick(id);
+        }
+        return false;
     }
 
     // Macro keycodes (QK_MACRO_0..QK_MACRO_MAX). Nothing else in the build consumes

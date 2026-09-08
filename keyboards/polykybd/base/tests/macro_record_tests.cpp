@@ -510,4 +510,180 @@ TEST(MacroSplice, ARecordedBodyRoundTripsThroughTheSpliceAndTheDecoder) {
     EXPECT_EQ(steps[4].code, KC_A_);
 }
 
+
+// ---------------------------------------------------------------------------
+// Report diff
+//
+// The shim's whole job is turning two reports into key events, and the ORDER it emits
+// them in is the contract -- a macro replays in the order it recorded. These pin both
+// the set semantics (a 6KRO array is unordered) and that order.
+
+struct Ev {
+    uint8_t code;
+    bool    pressed;
+    bool operator==(const Ev &o) const { return code == o.code && pressed == o.pressed; }
+};
+
+void collect(uint8_t code, bool pressed, void *ctx) {
+    static_cast<std::vector<Ev> *>(ctx)->push_back({code, pressed});
+}
+
+std::vector<Ev> diff6(uint8_t pm, std::vector<uint8_t> pk,
+                      uint8_t nm, std::vector<uint8_t> nk) {
+    pk.resize(POLY_MACRO_REC_KRO_KEYS, 0);
+    nk.resize(POLY_MACRO_REC_KRO_KEYS, 0);
+    std::vector<Ev> out;
+    poly_macro_rec_diff_6kro(pm, pk.data(), nm, nk.data(), collect, &out);
+    return out;
+}
+
+std::vector<uint8_t> nkro_of(std::vector<uint16_t> codes) {
+    std::vector<uint8_t> bits(POLY_MACRO_REC_NKRO_BYTES, 0);
+    for (uint16_t c : codes) bits[c >> 3] |= static_cast<uint8_t>(1u << (c & 7u));
+    return bits;
+}
+
+std::vector<Ev> diffN(uint8_t pm, std::vector<uint16_t> pc,
+                      uint8_t nm, std::vector<uint16_t> nc) {
+    auto pb = nkro_of(pc), nb = nkro_of(nc);
+    std::vector<Ev> out;
+    poly_macro_rec_diff_nkro(pm, pb.data(), nm, nb.data(), collect, &out);
+    return out;
+}
+
+TEST(ReportDiff, NoChangeEmitsNothing) {
+    EXPECT_TRUE(diff6(0, {4, 5}, 0, {4, 5}).empty());
+    EXPECT_TRUE(diffN(0, {4, 5}, 0, {4, 5}).empty());
+}
+
+TEST(ReportDiff, APlainPressAndRelease) {
+    EXPECT_EQ(diff6(0, {}, 0, {4}), (std::vector<Ev>{{4, true}}));
+    EXPECT_EQ(diff6(0, {4}, 0, {}), (std::vector<Ev>{{4, false}}));
+}
+
+TEST(ReportDiff, TheKeyArrayIsAnUnorderedSet) {
+    // QMK COMPACTS the array when a key goes up, so releasing 'a' moves 'b' and 'c'
+    // down a slot with nothing having happened to them. A slot-by-slot comparison
+    // reports a release AND a press for every one of them -- which replays as those
+    // keys being re-typed mid-macro. This is the case the set lookup exists for.
+    EXPECT_EQ(diff6(0, {4, 5, 6}, 0, {5, 6}), (std::vector<Ev>{{4, false}}));
+    // …and the same holds when the survivor lands in a slot it never occupied.
+    EXPECT_EQ(diff6(0, {4, 5}, 0, {5}), (std::vector<Ev>{{4, false}}));
+}
+
+TEST(ReportDiff, AnEmptySlotIsNotAKey) {
+    // Slot 0 is the sentinel for "nothing here", and the guard is only REACHABLE when
+    // one report is full: with a zero anywhere in the other array the set lookup finds
+    // the zero and stays quiet by accident. Six keys down, then all released, is the
+    // case that exercises it -- without the guard the press pass finds no zero in the
+    // full previous report and emits six presses of keycode 0, i.e. a macro that types
+    // six of whatever the host makes of NUL every time a full chord is let go.
+    //
+    // ⚠️ A {0,0} vs {0,0} check does NOT test this. It was the first version of this
+    // test and a mutation deleting the guard sailed straight through it.
+    const std::vector<uint8_t> full{4, 5, 6, 7, 8, 9};
+    auto up = diff6(0, full, 0, {});
+    ASSERT_EQ(up.size(), 6u);
+    for (const Ev &e : up) {
+        EXPECT_NE(e.code, 0);
+        EXPECT_FALSE(e.pressed);
+    }
+    // …and the mirror: an empty report becoming full must emit six presses, not six
+    // releases of keycode 0 alongside them.
+    auto down = diff6(0, {}, 0, full);
+    ASSERT_EQ(down.size(), 6u);
+    for (const Ev &e : down) {
+        EXPECT_NE(e.code, 0);
+        EXPECT_TRUE(e.pressed);
+    }
+    EXPECT_TRUE(diff6(0, {0, 0}, 0, {0, 0}).empty());
+}
+
+TEST(ReportDiff, ModifiersComeFromTheModsByteNotTheKeyArray) {
+    // Bit 0 is LEFT_CTRL -> 0xE0.
+    EXPECT_EQ(diff6(0x00, {}, 0x01, {}), (std::vector<Ev>{{0xE0, true}}));
+    EXPECT_EQ(diff6(0x02, {}, 0x00, {}), (std::vector<Ev>{{0xE1, false}}));
+    // Bit 7 is RIGHT_GUI -> 0xE7, the far end of the byte.
+    EXPECT_EQ(diff6(0x00, {}, 0x80, {}), (std::vector<Ev>{{0xE7, true}}));
+}
+
+TEST(ReportDiff, TheOrderIsReleasesThenModsThenPresses) {
+    // One report that lets 'a' go, drops Ctrl, takes Shift and presses 'b'. Replayed
+    // in any other order this types something the user never did: a Shift emitted
+    // before 'a' is released records a chord that never happened, and 'b' emitted
+    // before Shift types a lowercase b.
+    auto ev = diff6(0x01, {4}, 0x02, {5});
+    EXPECT_EQ(ev, (std::vector<Ev>{{4, false}, {0xE0, false}, {0xE1, true}, {5, true}}));
+}
+
+TEST(ReportDiff, AChordRecordsItsModifierBeforeItsKey) {
+    auto ev = diff6(0x00, {}, 0x02, {4});
+    ASSERT_EQ(ev.size(), 2u);
+    EXPECT_EQ(ev[0], (Ev{0xE1, true}));   // Shift first
+    EXPECT_EQ(ev[1], (Ev{4, true}));
+}
+
+TEST(ReportDiff, NkroCarriesTheSameContract) {
+    auto ev = diffN(0x01, {4}, 0x02, {5});
+    EXPECT_EQ(ev, (std::vector<Ev>{{4, false}, {0xE0, false}, {0xE1, true}, {5, true}}));
+}
+
+TEST(ReportDiff, NkroReachesAKeycodeAboveTheSixKroRange) {
+    // The point of NKRO: a keycode a 6KRO report could still carry, but well past the
+    // low ASCII block, and near the top of the 240-bit map.
+    EXPECT_EQ(diffN(0, {}, 0, {0xDF}), (std::vector<Ev>{{0xDF, true}}));
+}
+
+TEST(ReportDiff, NkroDoesNotEmitAModifierTwice) {
+    // 0xE0..0xE7 fall inside the bitmap AND are carried in the mods byte. Reporting
+    // both would give a body with two DOWNs and one UP for the same modifier, which
+    // replays as a modifier stuck down on the host.
+    auto ev = diffN(0x01, {}, 0x01, {0xE0});
+    EXPECT_TRUE(ev.empty());
+    ev = diffN(0x00, {}, 0x01, {0xE0});
+    EXPECT_EQ(ev, (std::vector<Ev>{{0xE0, true}}));
+}
+
+TEST(ReportDiff, ANullEmitterIsIgnoredRatherThanCrashing) {
+    uint8_t keys[POLY_MACRO_REC_KRO_KEYS] = {4};
+    poly_macro_rec_diff_6kro(0, keys, 0, keys, nullptr, nullptr);
+    auto bits = nkro_of({4});
+    poly_macro_rec_diff_nkro(0, bits.data(), 0, bits.data(), nullptr, nullptr);
+    SUCCEED();
+}
+
+TEST(ReportDiff, FeedsTheEncoderEndToEnd) {
+    // The two halves together: a Shift+a chord captured from reports and encoded.
+    uint8_t buf[64];
+    poly_macro_rec_t r;
+    poly_macro_rec_begin(&r, buf, sizeof(buf));
+
+    struct Sink { poly_macro_rec_t *r; uint32_t ms; } sink{&r, 1000};
+    auto feed = [](uint8_t code, bool pressed, void *ctx) {
+        auto *s = static_cast<Sink *>(ctx);
+        poly_macro_rec_key(s->r, code, pressed, s->ms);
+    };
+    uint8_t none[POLY_MACRO_REC_KRO_KEYS] = {0};
+    uint8_t a[POLY_MACRO_REC_KRO_KEYS]    = {4};
+    poly_macro_rec_diff_6kro(0x00, none, 0x02, none, feed, &sink);   // Shift down
+    poly_macro_rec_diff_6kro(0x02, none, 0x02, a,    feed, &sink);   // a down
+    poly_macro_rec_diff_6kro(0x02, a,    0x02, none, feed, &sink);   // a up
+    poly_macro_rec_diff_6kro(0x02, none, 0x00, none, feed, &sink);   // Shift up
+    const uint16_t len = poly_macro_rec_finish(&r);
+
+    Region reg{std::vector<uint8_t>(buf, buf + len)};
+    std::vector<Ev> steps;
+    uint16_t cur = 0;
+    while (cur < len) {
+        poly_macro_step_t st = poly_macro_decode(rd, &reg, cur, len);
+        if (st.kind == POLY_MACRO_STEP_END) break;
+        if (st.kind == POLY_MACRO_STEP_DOWN) steps.push_back({st.code, true});
+        if (st.kind == POLY_MACRO_STEP_UP)   steps.push_back({st.code, false});
+        if (st.kind == POLY_MACRO_STEP_TAP)  { steps.push_back({st.code, true});
+                                               steps.push_back({st.code, false}); }
+        cur = st.next;
+    }
+    EXPECT_EQ(steps, (std::vector<Ev>{{0xE1, true}, {4, true}, {4, false}, {0xE1, false}}));
+}
+
 }  // namespace

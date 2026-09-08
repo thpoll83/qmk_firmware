@@ -219,7 +219,10 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // poly_macro_banked_id); the other eight draw blank when shifted, which on a
         // keyboard whose keycaps are displays needs no explaining. F13..F24 remain
         // assignable to any key from the host's layout editor.
-        KC_NO,      QK_MACRO_0, QK_MACRO_1, QK_MACRO_2, QK_MACRO_3, QK_MACRO_4, QK_MACRO_5,
+        // REC heads its own row, on the outer column the macros deliberately left
+        // free: the gesture is tap REC, pick a slot from the row beside it, tap REC
+        // again to stop. Nothing else on the board records a macro.
+        KC_MACRO_REC, QK_MACRO_0, QK_MACRO_1, QK_MACRO_2, QK_MACRO_3, QK_MACRO_4, QK_MACRO_5,
         // Shifted one column INWARD so the outer column (Tab on the base layers)
         // stays free, and each key lines up under an F-key above it.
         KC_NO,      KC_MYCM,    KC_CALC,    KC_PSCR,    KC_SCRL,    KC_BRK,     KC_IDDQD,

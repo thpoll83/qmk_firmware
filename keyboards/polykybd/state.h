@@ -197,6 +197,14 @@ typedef struct _poly_sync_t {
     // Master-authoritative and per-visit: layer_state_set_user clears it on leaving
     // _SL, so it is never persisted and never survives a trip out of the layer.
     uint8_t  settings_more;
+    // On-keyboard macro recording: where the gesture is (enum poly_rec_state) and
+    // which slot it is aimed at (POLY_MACRO_NONE while none). Synced for the same
+    // reason fw_confirm and settings_more are -- the SLAVE draws its own half of the
+    // slot picker and only ever sees this struct, so without these the two halves
+    // would disagree about which keys are the picker and which slot is armed.
+    // Master-authoritative and never persisted: a recording does not survive a reboot.
+    uint8_t  rec_state;
+    uint8_t  rec_slot;
 } poly_sync_t;
 
 // Same reasoning as latin_sync_t's guard: transaction_rpc_exec() refuses a payload

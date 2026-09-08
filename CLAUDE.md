@@ -3925,6 +3925,80 @@ knowing is the parts that are NOT what you would write from scratch:
     is what proved the baseline build was the right one. A quoted number can be
     several PRs stale — it is evidence only when you have just reproduced it.
 
+### Recording a macro ON THE KEYBOARD (`poly_macro_record.*`, `base/macro_record.*`)
+
+`KC_MACRO_REC` on `_UL` records a macro with no host app: tap REC (the board becomes a
+slot picker), tap a macro key, type, tap REC again. The gesture and the alternatives
+weighed against it are in `MACRO_RECORD_DESIGN.md`; what follows is the part a future
+session gets wrong.
+
+- **Capture is a `host_driver_t` SHIM, and it is installed from HOUSEKEEPING, not
+  `keyboard_post_init_user()`.** `protocol_post_init()` runs *after* the post_init hooks
+  (`quantum/main.c`) and installs the USB driver, so a shim set there is overwritten a
+  moment later and the recording silently captures **nothing** — no error, no missing
+  key, just an empty macro. `poly_macro_rec_tick()` installs it on its first call and
+  leaves it in place for the life of the boot (it forwards to the previous driver
+  unconditionally, so it costs one indirect call per report while idle).
+- **What is recorded is the REPORT DIFF, not the keycode.** The shim sees
+  `report_keyboard_t` / `report_nkro_t` after every layer, mod-tap and combo has already
+  resolved, so a macro plays back what the keyboard actually SENT rather than what the
+  matrix did. `poly_macro_rec_diff_6kro()` / `_diff_nkro()` in **`base/macro_record.c`**
+  are pure (no quantum.h, no EEPROM, no timer) — the same seam as `base/fw_up_verdict.c`
+  and `base/macro_decode.c`, and for the same reason: the arithmetic is the part with a
+  bug future. `make test:polykybd_macro_record` — 47 tests, mutation-swept 7/7.
+  - ⚠️ **`keys[6]` is an unordered SET, not a stack.** The host may compact it on any
+    report, so "key at index 2 changed" means nothing; the diff has to ask whether each
+    code is present in the other report. A positional comparison records a spurious
+    release+press pair every time the host shuffles a held key down a slot.
+  - ⚠️ **Order within one diff is load-bearing: releases before presses, and modifier
+    releases before key presses.** Emitting a press first can leave the playback holding
+    a modifier the user had already lifted, which types the *shifted* character — and
+    the report the shim sees is the state AFTER the change, so the ordering is the only
+    thing carrying the sequence.
+- **Nothing reaches EEPROM until the recording stops.** Steps land in a 192 B RAM buffer
+  (`POLY_MACRO_REC_BYTES`) and the splice is pumped a chunk per housekeeping pass
+  (`POLY_REC_COMMIT_CHUNK`). A write per keystroke is a wear-levelling journal append,
+  and the consolidation erase it eventually triggers is the documented mechanism behind
+  the "slave becomes unresponsive" field bug — mid-recording is exactly when it would
+  land. A recording that fills the buffer stops cleanly rather than truncating, because
+  the encoder reserves room to close every held key.
+- **`KC_MACRO_REC` is swallowed in `process_record_user()`**, like every other custom
+  PolyKybd keycode — `_UL` is entered with `OSL()`, which re-dispatches a release-edge
+  action up to three times (§ "A release-edge action fires up to THREE times"), and for
+  a toggle that reads as *doing nothing at all*.
+- **`poly_sync_t.rec_state` / `.rec_slot` are synced** for the same reason `fw_confirm`
+  and `settings_more` are: the SLAVE draws its own half of the slot picker and only ever
+  sees that struct, so without them the two halves disagree about which keys are the
+  picker. Master-authoritative, never persisted — a recording does not survive a reboot.
+- ⚠️ **The BYTE COUNT is deliberately NOT synced**, and that is why the two panels differ.
+  It moves on every captured keystroke, so putting it in `poly_sync_t` buys a bridge
+  frame per keypress on the one link this repo has been bitten by most. The master's
+  panel shows `48/192 B` and the slave shows the stop hint in its place — true on both
+  rather than a plausible zero on one, the same call `Lnk n/a` makes on the telemetry
+  screen.
+- **The status OLED is the ONLY indicator** (`oled_macro_rec_screen()`), because split42
+  has no RGB matrix and the keycaps are busy showing what is being typed. Three things
+  about its branch in the `oled_task_user()` ladder:
+  - It sits **above `DISP_IDLE`**, or the idle timer swaps the panel to the logos
+    mid-recording and takes the indicator with it. Belt and braces: housekeeping holds
+    `update_performed()` while `rec_state != POLY_REC_IDLE`, exactly as the FW-2 prompt
+    does — `update_displays()` early-returns once `DISP_IDLE` is set, so the keycaps
+    would never be redrawn either.
+  - **The whole line blinks, not a marker beside a fixed word.** Each line is centred
+    from its own ink box (the `oled_telemetry_screen()` layout), so a marker that comes
+    and goes would slide the text half a glyph twice a second.
+  - ⚠️ **No `oled_clear()`, per frame or otherwise.** `oled_write_raw` diffs and dirties
+    only the blocks that moved, so the 1 Hz blink costs one block per second; an
+    `oled_clear()` defeats that and re-pushes the whole frame every tick (the "updates
+    in multiple passes" flicker).
+  - Measured with the committed `_Small_` face over every reachable line, both panel
+    heights: widest ink **101 px** of 128 (`press M0-M15`), tallest **14 px** in a 16 px
+    band, **0** clipped pixels. Re-measure rather than eyeball if a string changes.
+- **Cost: 336 B of RAM** — the 192 B staging buffer, the previous-report snapshots and
+  the state machine. Measured on the **monolithic `POLYKYBD_DOOM=yes`** flavour, which
+  PR CI does not build and which is the first thing to fail on any RAM growth: `.heap`
+  2592 → **2256 B** free. Re-measure there before adding another static.
+
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 
 An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C

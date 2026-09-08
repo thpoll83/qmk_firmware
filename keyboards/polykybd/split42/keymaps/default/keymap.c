@@ -142,7 +142,9 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_UL] = POLY_LAYOUT(
         // MACRO ROW -- see the note on split72's _UL. Shift reaches M12..M15.
         QK_MACRO_0, QK_MACRO_1, QK_MACRO_2, QK_MACRO_3, QK_MACRO_4, QK_MACRO_5,
-        KC_MYCM, KC_CALC, KC_PSCR, KC_SCRL, KC_BRK,  KC_NO,
+        // REC takes the free slot at the end of the row BELOW the macros -- split42's
+        // macro row is full at six keys, so it cannot head its own row as on split72.
+        KC_MYCM, KC_CALC, KC_PSCR, KC_SCRL, KC_BRK,  KC_MACRO_REC,
         KC_LSFT, KC_DMIN, KC_D1Q,  KC_DHLF, KC_D3Q,  KC_DMAX,
         KC_BASE, KC_DDIM, KC_DBRI,
         QK_MACRO_6, QK_MACRO_7, QK_MACRO_8, QK_MACRO_9, QK_MACRO_10, QK_MACRO_11,

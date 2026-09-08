@@ -3821,10 +3821,24 @@ knowing is the parts that are NOT what you would write from scratch:
   - ⚠️ **`F13..F24` lose their default home**, so say so in the release notes; a user
     who wants them back assigns them from the layout editor.
 - **An unclaimed slot ships a stock look: the MAYAN NUMERAL for its own index, over
-  the caption "Macro N"** (`poly_macro_seed_defaults()`). Without it a keyboard that
+  the caption "Macro"** (`poly_macro_seed_defaults()`). Without it a keyboard that
   has never met the host app shows sixteen keycaps distinguished only by "M0".."M15"
   in the index style, which is exactly the twelve-keys-that-look-alike problem the
   displays exist to solve. Five points, three of which are measurements:
+  - ⚠️ **The caption does NOT repeat the index, and it used to** ("Macro 0" ..
+    "Macro 15", changed 2026-09-08 on the report that it was redundant). The numeral
+    above it already states the slot, so the index spent the widest thing on the
+    keycap on the one fact the mark carries best; plain "Macro" also drops to 41 px in
+    the `_Small_` face against 57 px, so every slot has room to spare rather than only
+    the single digits.
+    - ⚠️ **A change to the stock look is INVISIBLE on an already-flashed board**, which
+      is what makes `slot_holds_legacy_seed()` necessary rather than tidy: the look is
+      stamped into EEPROM on the first boot, so `slot_unclaimed()` is false from then
+      on and the new caption would only ever reach a fresh keyboard. That helper
+      re-seeds a slot whose body is EMPTY *and* whose record matches, byte for byte,
+      what an older scheme would have written — so a caption someone typed themselves
+      is never touched, and neither is a slot holding a real macro. Delete it once no
+      field board predates the change.
   - **The condition is EMPTY, not "never seeded"** — no body and an all-zero look
     record — so there is no migration sentinel to keep and clearing a macro hands its
     keycap the stock look back. ⚠️ An unwritten record reads **all-zero, not 0xFF**

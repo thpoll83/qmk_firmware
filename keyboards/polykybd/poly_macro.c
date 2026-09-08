@@ -193,14 +193,61 @@ _Static_assert(POLY_MACRO_COUNT <= 20,
 // is a bare NUL (or a slot the buffer never reached), matching poly_macro_start()'s own
 // emptiness test -- so "the keycap shows a stock look" and "the key plays nothing" are
 // decided by the same fact rather than by two rules that can drift apart.
+// Does this slot still hold a look THIS firmware seeded under an older scheme, over an
+// empty body? Only one such scheme has shipped: the caption used to repeat the index
+// ("Macro 0" .. "Macro 15") that the Mayan numeral above it already states.
+//
+// ⚠️ Both halves of the test are load-bearing. The BODY must be empty, so nothing a
+// user has actually recorded is ever touched; and the look must match byte for byte,
+// icon and style included, so a caption someone typed themselves is left alone even
+// when it happens to read the same. A slot that passes is by definition one nobody has
+// used, so re-seeding it loses nothing.
+//
+// Delete this once no board in the field predates the change — it exists only so an
+// already-flashed keyboard picks the new caption up, which is otherwise impossible:
+// the stock look is stamped into EEPROM on the first boot and slot_unclaimed() is
+// false from then on.
+static bool slot_holds_legacy_seed(uint8_t id, const uint8_t *rec) {
+    static const char legacy[]  = "Macro ";
+    typedef char      want_buf[POLY_MACRO_LABEL_LEN + 1];
+    if (rec[0] != POLY_MACRO_STYLE_ICON) return false;
+    uint32_t icon = 0;
+    for (uint8_t n = 0; n < POLY_MACRO_ICON_LEN; n++) {
+        icon |= (uint32_t)rec[1 + n] << (8 * n);
+    }
+    if (icon != POLY_MACRO_ICON_BASE + id) return false;
+    // Rebuild the caption that scheme produced and compare, rather than parsing the
+    // stored one: "does this equal what we would have written" is the question, and
+    // it stays answerable if the scheme is ever changed again. The longest form is
+    // the word plus two digits, so the length is a build-time fact and the copy needs
+    // no runtime bound -- which is also what stops cppcheck reading the word's own
+    // 7-byte array through a 12-byte label bound.
+    _Static_assert(sizeof(legacy) + 1u <= sizeof(want_buf),
+                   "the legacy stock caption no longer fits a macro label");
+    char    want[sizeof(want_buf)];
+    uint8_t n = 0;
+    for (; n < sizeof(legacy) - 1u; n++) want[n] = legacy[n];
+    if (id >= 10) want[n++] = (char)('0' + id / 10);
+    want[n++] = (char)('0' + id % 10);
+    want[n]   = '\0';
+    const char *text = (const char *)&rec[1 + POLY_MACRO_ICON_LEN];
+    for (uint8_t i = 0; i < n; i++) {
+        if (text[i] != want[i]) return false;
+    }
+    return text[n] == '\0';
+}
+
 static bool slot_unclaimed(uint8_t id) {
     const uint16_t cap   = poly_macro_capacity();
     const uint16_t start = poly_macro_find(body_read, NULL, id, cap);
     if (start < cap && body_read(start, NULL) != 0) return false;
+    uint8_t rec[POLY_MACRO_LOOK_LEN];
+    bool    empty = true;
     for (uint8_t n = 0; n < POLY_MACRO_LOOK_LEN; n++) {
-        if (eeprom_read_byte((const uint8_t *)(uintptr_t)(label_addr(id) + n)) != 0) return false;
+        rec[n] = eeprom_read_byte((const uint8_t *)(uintptr_t)(label_addr(id) + n));
+        if (rec[n] != 0) empty = false;
     }
-    return true;
+    return empty || slot_holds_legacy_seed(id, rec);
 }
 
 void poly_macro_seed_defaults(void) {
@@ -215,15 +262,15 @@ void poly_macro_seed_defaults(void) {
             .icon  = POLY_MACRO_ICON_BASE + id,
             .style = POLY_MACRO_STYLE_ICON,
         };
-        // "Macro 15" is 8 characters and 45 px in the _Nano_ face, against a 72 px
-        // panel -- built by hand rather than snprintf, which is not worth linking for
-        // two digits.
+        // The caption does NOT repeat the index -- the Mayan numeral above it already
+        // states which slot this is, and saying it twice spends the widest thing on
+        // the keycap on the one fact the mark carries best. Plain "Macro" also drops
+        // to 41 px in the _Small_ face (against 57 px for "Macro 15"), so the caption
+        // band has room to spare on every slot rather than only the single digits.
         uint8_t n = 0;
-        const char *word = "Macro ";
+        const char *word = "Macro";
         for (; word[n] != '\0'; n++) look.text[n] = word[n];
-        if (id >= 10) look.text[n++] = (char)('0' + id / 10);
-        look.text[n++] = (char)('0' + id % 10);
-        look.text[n]   = '\0';
+        look.text[n] = '\0';
         // Writes EEPROM and queues the look for the slave. Only ever on the first boot
         // that finds the slot empty: afterwards the record is non-zero, so
         // slot_unclaimed() is false and nothing is written again.

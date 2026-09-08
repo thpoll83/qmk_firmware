@@ -3,6 +3,27 @@
 CFLAGS += -Wno-strict-prototypes
 
 # ---------------------------------------------------------------------------
+# QMK's EE_HANDS flash targets do nothing here — refuse them
+# ---------------------------------------------------------------------------
+# uf2-split-left / dfu-util-split-right and friends add -DINIT_EE_HANDS_LEFT|RIGHT
+# (platforms/chibios/flash.mk). That define is read ONLY inside the EE_HANDS branch
+# of is_keyboard_left_impl(), and PolyKybd does not define EE_HANDS: handedness
+# lives in a flash sector of its own (base/hand_stamp.h) so it survives the
+# wear-levelling wipe that a zeroed EEPROM byte reports as a confident `right`.
+#
+# So these targets would build a perfectly good image that sets no handedness at
+# all -- a silent no-op on the one command whose entire purpose is to set it, on a
+# board where the symptom is "the halves do not talk". Fail here instead, naming
+# the replacement; readme.md documents it.
+POLY_EE_HANDS_GOALS := uf2-split-left uf2-split-right dfu-util-split-left dfu-util-split-right
+ifneq (,$(filter $(MAKECMDGOALS),$(POLY_EE_HANDS_GOALS)))
+$(error PolyKybd does not use EE_HANDS, so $(filter $(MAKECMDGOALS),$(POLY_EE_HANDS_GOALS)) would set no handedness. \
+Build the image with the plain `uf2` target, then set the side with a stamp UF2: \
+`python3 keyboards/polykybd/tools/make_hand_uf2.py --side left|right` (or take the \
+polykybd-handedness-*.uf2 pair from any firmware release). See keyboards/polykybd/readme.md)
+endif
+
+# ---------------------------------------------------------------------------
 # -Wcast-align on OUR sources only (the HID-apply brick class)
 # ---------------------------------------------------------------------------
 # fw_staging's page buffer was `static uint8_t page_buf[256]` (alignment 1) and

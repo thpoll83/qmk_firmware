@@ -690,29 +690,38 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 }
                 break;
             case 20: //set unicode input mode
+                // set_unicode_input_mode() is the SETTER. unicode_input_mode_set_user()
+                // is the notification CALLBACK QMK fires from it, and our override
+                // (poly_keymap.c) only mirrors the value into local_state->unicode_mode
+                // for the keycap legend — so calling it directly relabelled the language
+                // layer's Win/WinC/Lnx keys while unicode_config.input_mode, which
+                // decides how codepoints are actually typed, kept its old value. Field
+                // report: the legend read "Win ON" at startup while emoji still went out
+                // as WinCompose sequences, and pressing the Win key (the real setter)
+                // was what finally made them agree and broke emoji.
                 switch(data[HID_DATA_IDX]) {
                     case 0: //Linux = 0
-                        unicode_input_mode_set_user(UNICODE_MODE_LINUX);
+                        set_unicode_input_mode(UNICODE_MODE_LINUX);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 1: //Mac = 1
-                        unicode_input_mode_set_user(UNICODE_MODE_MACOS);
+                        set_unicode_input_mode(UNICODE_MODE_MACOS);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 2: //Windows = 2
-                        unicode_input_mode_set_user(UNICODE_MODE_WINDOWS);
+                        set_unicode_input_mode(UNICODE_MODE_WINDOWS);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 3: //WinCompose = 3
-                        unicode_input_mode_set_user(UNICODE_MODE_WINCOMPOSE);
+                        set_unicode_input_mode(UNICODE_MODE_WINCOMPOSE);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 4: //BSD = 4
-                        unicode_input_mode_set_user(UNICODE_MODE_BSD);
+                        set_unicode_input_mode(UNICODE_MODE_BSD);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;

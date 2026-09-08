@@ -68,6 +68,7 @@
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
+#include "usb_util.h"                     // usb_vbus_state() — the suspend-time power check
 #include "crash_test.h"                   // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
 #include "slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
 #include "polymod_crc32.h"
@@ -5182,7 +5183,49 @@ void suspend_power_down_kb(void) {
     // session. Every block is dirty-gated, and the write sits at the very end of
     // the suspend sequence (after the final sync), so a flash consolidation can't
     // corrupt a live split transaction.
-    save_all_dirty();
+    //
+    // ⚠️ …but ONLY while USB is still supplying power. This hook fires ~3 ms after
+    // the bus goes idle, and a hub or cable being cut looks exactly like a host
+    // sleeping: the board then runs a few more ms on the regulator's output
+    // capacitance while this starts a flash write that takes tens of ms. The cost
+    // of losing that race is not one setting — QMK's wear-levelling recovery
+    // clears the WHOLE store on any inconsistency it cannot replay, so a torn
+    // write takes the brightness, the language, the Intl map, the dynamic keymap
+    // and (before the flash stamp) the handedness with it. That is the
+    // 2026-09-07 field report: hub interrupted mid-flush, and the half came back
+    // as `right master` with the RGB matrix on and the keymap reset.
+    //
+    // Nothing is lost by skipping: the dirty flags stay set, so the next suspend
+    // with power present, KC_STORE_EE, or the host's shutdown signal writes them.
+    // usb_vbus_state() is QMK's own accessor for USB_VBUS_PIN (GP24, set in each
+    // keymap's config.h), and this is not a new dependency on it: with that pin
+    // defined, chibios_config.h stops force-defining SPLIT_USB_DETECT, so the SAME
+    // read already decides which half is master. A GP24 this gate could not trust
+    // is a board whose split link never comes up, so it fails loudly long before
+    // it reaches here.
+    //
+    // What makes the reading useful in time is where the divider is tapped. The
+    // hardware runs USB1 -> [R8 5.6k taps here] -> D2 (1N5819WS) -> U1 (TLV62569
+    // buck), with R15 10k to ground: BEFORE the VSYS Schottky. So the node is
+    // pulled down within microseconds of the host cutting power, while the MCU
+    // runs on for milliseconds on the regulated side's capacitance. A tap after
+    // D2 would be held up by that same capacitance and could never report a loss
+    // this hook could act on.
+    // ⚠️ Gated on being the USB half as well, because on the other one the reading
+    // carries no information: a non-USB half has no VBUS of its own, so its GP24
+    // reads low always. It is powered over the split cable, so its rail really
+    // does die with the master's — it simply cannot see that coming from this pin.
+    // Without this clause the slave would silently stop flushing at suspend
+    // forever, which is a bigger behaviour change than the one being fixed.
+    if (is_keyboard_master() && !usb_vbus_state()) {
+        // Seen on resume when a host cuts VBUS to sleep — there the flush was
+        // skipped for a rail that was never in danger, and the next one takes it.
+        // Unseen when the power really was going, because the console goes with
+        // it; that silence IS the feature working.
+        uprintf("suspend: VBUS low — EEPROM flush deferred (a torn write clears the whole store)\n");
+    } else {
+        save_all_dirty();
+    }
     suspend_power_down_user();
     disable_idle_tracking();
 }

@@ -11,8 +11,8 @@
       "index": 0,
       "slot_offset": 4096,
       "slot_size": 98304,
-      "total_size": 37200,
-      "font_count": 12,
+      "total_size": 38976,
+      "font_count": 13,
       "fonts": [
         {
           "all_fonts_index": 19,
@@ -85,6 +85,12 @@
           "symbol": "NotoEmoji_Medium_Knobs_18pt16b",
           "first": 127899,
           "last": 127899
+        },
+        {
+          "all_fonts_index": 181,
+          "symbol": "NotoSansMayanNumerals_Regular_Mayan_20pt16b",
+          "first": 119520,
+          "last": 119539
         }
       ]
     },

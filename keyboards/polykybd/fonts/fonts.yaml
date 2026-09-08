@@ -31,6 +31,7 @@ sources:
   noto-sans-symbols:   fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Regular.ttf
   noto-sans-symbols2:  fonts/Noto_Sans_Symbols_2/NotoSansSymbols2-Regular.ttf
   noto-sans-math:      fonts/Noto_Sans_Math/NotoSansMath-Regular.ttf
+  noto-sans-mayan:     fonts/Noto_Sans_Mayan_Numerals/NotoSansMayanNumerals-Regular.ttf
   noto-sans-canadian-aboriginal: fonts/noto-sans-canadian-aboriginal/NotoSansCanadianAboriginal-Regular.ttf
   noto-sans-cherokee:  fonts/noto-sans-cherokee/NotoSansCherokee-Regular.ttf
   # Alcarin Tengwar (OFL 1.1) — the "fantasy" glyph-script bundle (no Noto Tengwar exists).
@@ -534,3 +535,17 @@ fonts:
   - {category: latinbig, variant: _GreekL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x384, 0x385], [0x391, 0x3a1], [0x3a3, 0x3c9]]}
   - {category: latinbig, variant: _LetterModL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x2c6, 0x2dd]]}
   - {category: latinbig, variant: _SZL_, pixel_size: 39, offset: 0xF3000, ranges: [[0x1e9e, 0x1e9e]]}
+  # Mayan numerals 0..19 (U+1D2E0-1D2F3) — the stock look of an unclaimed macro slot,
+  # one numeral per slot, so the icon COUNTS the caption beside it. NotoSansSymbols2
+  # has none of them (measured: 0 of 20 resolve in the shipped bundles), and neither
+  # does any other family already here, so this is its own tiny source font.
+  # Bar-and-dot is exactly what a 1-bit 72x40 panel draws well, and zero is a real
+  # glyph rather than an absence, which is why the set reaches M0 at all.
+  # ⚠️ Placed at the very END of this list, NOT at the end of the symbols block, so it
+  # takes the highest ALL_FONTS index and shifts no other bundle's gidx. Appending it
+  # after the other symbols entries put it at index 147 and pushed the whole `fantasy`
+  # bundle up by one, which would have forced a second .plyf reship for a font nothing
+  # else moved. The category decides which BUNDLE an entry lands in; position in this
+  # list decides its global index, and the two are independent.
+  # Bumps the symbol bundle content_version.
+  - {category: symbols, variant: _Mayan_, source: noto-sans-mayan, bits: 32, ranges: [[0x1d2e0, 0x1d2f3]]}

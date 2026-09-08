@@ -26,6 +26,7 @@
 #include "base/overlay.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "base/fontpack.h"
+#include "base/fonts/generated/fontpack_layout.h"  // FONTPACK_BUNDLE_COUNT, for the GET_ID size assert
 #include "base/update.h"
 #include "poly_util.h"
 
@@ -202,7 +203,19 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 #ifndef POLY_KB_NAME
 #    define POLY_KB_NAME "Split72"
 #endif
-    const char * name = "P\x06." POLY_KB_NAME " " FW_VERSION " P" STR(PROTOCOL_VERSION) " HW" STR(DEVICE_VER) " ";
+#define POLY_GET_ID_STR "P\x06." POLY_KB_NAME " " FW_VERSION " P" STR(PROTOCOL_VERSION) " HW" STR(DEVICE_VER) " "
+    const char * name = POLY_GET_ID_STR;
+    // The GET_ID reply is one 64-byte report carrying the id string, then the
+    // NUL-terminated blocks after it: ['V'][count][u16 x count] and ['G'][u16].
+    // ⚠️ Asserted rather than written down as a measured number, because every part
+    // of it moves: the version string grows, and the 'V' block grows TWO BYTES PER
+    // BUNDLE. Both emitters below drop their block rather than truncate if it does
+    // not fit, so overflowing would cost the host its font-pack versions SILENTLY --
+    // it would read "no bundles on the device" and re-flash all of them on every
+    // connect. sizeof() counts the string's own NUL, which is where the blocks start.
+    _Static_assert(sizeof(POLY_GET_ID_STR) + 2u + FONTPACK_BUNDLE_COUNT * 2u + 3u
+                       <= HID_REPORT_SIZE,
+                   "the GET_ID reply no longer fits one report - see the block layout above");
 
     if (length<1) {
         return;
@@ -262,6 +275,29 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         data[off++] = (uint8_t)(v & 0xFF);
                         data[off++] = (uint8_t)(v >> 8);
                     }
+                }
+                // ['G'][u16 little-endian state generation] -- bumped whenever the
+                // BOARD changes something the host may be caching, so the host learns
+                // about it from a reply it already polls every second rather than from
+                // a new command or an unsolicited report (CLAUDE.md, "Telling the host
+                // something changed ON THE BOARD").
+                //
+                // ⚠️ AFTER the 'V' block, never before. The host finds that one
+                // POSITIONALLY -- parse_id_version_block requires 'V' at exactly
+                // nul + 1 -- so anything prepended here makes every deployed host read
+                // "no bundles on the device" and re-flash all eight on every connect.
+                // Both blocks are tag-led, so a newer host walks them in order.
+                //
+                // Budget: measured 50 of 64 bytes used on split72 (31-byte id string
+                // + NUL, then 18 bytes of 'V' for 8 bundles), so this fits with ~11 to
+                // spare -- shared with the 'V' block's 2 bytes per future bundle, i.e.
+                // about five more bundles. It is emitted only if it fits, so growing
+                // past that drops the block rather than truncating the reply.
+                const uint16_t gen = poly_state_generation();
+                if (off + 3u <= length) {
+                    data[off++] = 'G';
+                    data[off++] = (uint8_t)(gen & 0xFFu);
+                    data[off++] = (uint8_t)(gen >> 8);
                 }
                 raw_hid_send(data, length);
                 break;

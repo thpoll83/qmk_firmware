@@ -1,7 +1,7 @@
 {
   "abi_version": 2,
-  "font_count": 158,
-  "total_size": 671068,
+  "font_count": 159,
+  "total_size": 672844,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -947,6 +947,12 @@
     },
     {
       "all_fonts_index": 181,
+      "symbol": "NotoSansMayanNumerals_Regular_Mayan_20pt16b",
+      "first": 119520,
+      "last": 119539
+    },
+    {
+      "all_fonts_index": 182,
       "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
       "first": 57344,
       "last": 57503

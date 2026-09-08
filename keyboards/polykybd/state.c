@@ -352,6 +352,24 @@ void mark_settings_dirty(void) {
     g_brightness_dirty = true;
 }
 
+// Bumped whenever the board changes something the host may be caching; read back
+// out of the GET_ID reply. See the note on the declaration in state.h -- in
+// particular why this is not driven off the EEPROM dirty flags.
+//
+// Wrapping is not a hazard worth guarding: the host re-reads on any CHANGE of the
+// value, and 65536 board-side changes between two one-second probes is not a state a
+// keyboard can reach. It also starts at 0 every boot, which differs from whatever the
+// host last saw and so correctly forces one re-read after a reboot.
+static uint16_t g_state_generation = 0;
+
+void poly_state_touch(void) {
+    g_state_generation++;
+}
+
+uint16_t poly_state_generation(void) {
+    return g_state_generation;
+}
+
 // The active idle (anti-burn-in) display style.
 uint8_t get_idle_style(void) {
     return g_idle_style;
@@ -365,6 +383,7 @@ void set_idle_style(uint8_t style) {
     }
     g_idle_style = style;
     g_brightness_dirty = true;
+    poly_state_touch();
 }
 
 // Records the idle style without marking settings dirty (boot-time EEPROM load).
@@ -400,6 +419,7 @@ void set_glyph_script(uint8_t script) {
     }
     g_glyph_script = script;
     g_glyph_dirty  = true;
+    poly_state_touch();
 }
 
 // Records the glyph script without marking dirty (boot-time EEPROM load). Keeps any
@@ -425,6 +445,7 @@ void set_glyph_size(uint8_t size) {
     }
     g_glyph_size  = size;
     g_gsize_dirty = true;
+    poly_state_touch();
 }
 
 // Records the legend size without marking dirty (boot-time EEPROM load).
@@ -497,6 +518,7 @@ void set_os_auto_mode(bool on) {
     if (g_os_auto == on) return;
     g_os_auto   = on;
     g_os_dirty  = true;
+    poly_state_touch();
 }
 
 // Pin the OS explicitly — manual mode. Wins over host + detection and survives
@@ -507,6 +529,7 @@ void set_user_os(uint8_t os) {
     g_os_auto  = false;
     g_os_known = true;
     g_os_dirty = true;
+    poly_state_touch();
 }
 
 // Host-pushed OS (HID cmd 29). Applied only in auto mode; marks the host as having
@@ -564,6 +587,7 @@ void load_os_state(uint8_t packed) {
 void defer_default_layer_save(layer_state_t def_layer) {
     g_def_layer_pending = def_layer;
     g_def_layer_dirty   = true;
+    poly_state_touch();
 }
 
 // Marks the latin extension table as needing an EEPROM write. Used in place of a

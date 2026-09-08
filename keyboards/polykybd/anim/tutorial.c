@@ -382,16 +382,26 @@ void tutorial_tick(void) {
 // ---- split sync -----------------------------------------------------------
 
 void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {
-    out[0] = s_active ? 1u : 0u;
+    // Preserve the ARMED bit the arm site wrote — this runs while the tutorial is up,
+    // by which point arming is over, but clobbering it would make the two writers of
+    // tut[0] fight if that ever stops being true.
+    out[0] = (uint8_t)((out[0] & TUT_SYNC_ARMED) | (s_active ? TUT_SYNC_ACTIVE : 0u));
     out[1] = s_st.phase;
     out[2] = tut_current_slot(&s_st);
     out[3] = s_st.ripple_seq;
     out[4] = s_st.ripple_slot;
 }
 
+bool tutorial_sync_says_armed(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
+    return (in[0] & TUT_SYNC_ARMED) != 0u;
+}
+
 bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
     if (is_usb_host_side()) return false;              // master is authoritative
-    const bool want_active = (in[0] != 0);
+    // ⚠️ Test the ACTIVE bit, never `in[0] != 0`. tut[0] also carries ARMED, which is
+    // set for the whole of the Eden intro — a bare non-zero test would start the
+    // tutorial on top of the animation.
+    const bool want_active = (in[0] & TUT_SYNC_ACTIVE) != 0u;
     if (!want_active) {
         // ⚠️ Do NOT tutorial_stop() here. That clears s_active, so tutorial_finished()
         // goes false and the slave's own housekeeping teardown — the restore trio that
@@ -475,6 +485,7 @@ void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {
     for (uint8_t i = 0; i < TUTORIAL_SYNC_BYTES; ++i) out[i] = 0;
 }
 bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) { (void)in; return false; }
+bool tutorial_sync_says_armed(const uint8_t in[TUTORIAL_SYNC_BYTES]) { (void)in; return false; }
 bool tutorial_sync_pending(void) { return false; }
 void tutorial_sync_sent(void) {}
 const uint32_t *tutorial_line(uint8_t which) { (void)which; return NULL; }

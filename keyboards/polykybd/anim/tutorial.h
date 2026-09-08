@@ -51,12 +51,22 @@ void tutorial_skip(void);
 // half, so it needs to know what is being asked for and when a ripple started. Both
 // halves then run their own clock from receipt — there is no shared time base.
 #define TUTORIAL_SYNC_BYTES 5
+// tut[0] is a BITFIELD, not a bool. ARMED is the half of it that makes the slave
+// behave like Eden: it says "the first-run experience is running, start the tutorial
+// when the intro ends" and is carried for the whole of Eden, so the slave gets a
+// LOCAL trigger instead of depending on one 0->1 edge landing. See the note on
+// tutorial_sync_apply() in tutorial.c.
+#define TUT_SYNC_ACTIVE 0x01u   // the tutorial itself is running
+#define TUT_SYNC_ARMED  0x02u   // armed: start it when the intro finishes
 // Kept in step with poly_sync_t.tut[] by a static_assert in state.h.
 void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]);
 // Returns true when anything changed (the caller repaints).
 bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]);
 // True when the master has state the slave has not been told about yet.
 bool tutorial_sync_pending(void);
+// True when the incoming sync says the first-run experience is armed on the master.
+// Read by the split handler so THIS half can arm its own post-intro hand-off.
+bool tutorial_sync_says_armed(const uint8_t in[TUTORIAL_SYNC_BYTES]);
 void tutorial_sync_sent(void);
 
 // ---- status OLED ----------------------------------------------------------

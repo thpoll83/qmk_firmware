@@ -133,3 +133,9 @@ bool display_wakeup(keyrecord_t* record);
 // still type plain characters and the keycaps show legible legends while the flash
 // holds the main loop. Must run before fw_up freezes display updates.
 void poly_prepare_for_flash(void);
+
+// Arm the post-intro tutorial hand-off on this half. Called by the split handler on
+// the SLAVE when the master's sync carries TUT_SYNC_ARMED, so the slave enters the
+// tutorial from its own Eden finish edge instead of depending on one 0->1 edge of
+// tut[0] landing. Idempotent.
+void poly_arm_tutorial_after_intro(void);

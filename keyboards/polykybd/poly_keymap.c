@@ -809,6 +809,40 @@ static void eden_idle_tick(void) {
 static bool     s_tutorial_armed  = false;
 static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
 
+// Arm the post-intro hand-off on THIS half, and (on the master) publish the intent on
+// the sync so the slave can arm its own.
+//
+// ⚠️ This is the shape the Eden IDLE loop already has and the tutorial did not, which
+// is why one works on both halves and the other did not. eden_idle_tick() never
+// receives a "start" message: every pass, each half re-derives `want` from state it
+// already holds (`idle_style` + DISP_IDLE, ordinary poly_sync_t fields carried by the
+// normal diff-retry sync) and starts or stops its own animation. The boot intro is the
+// same idea one level down — keyboard_post_init_user() runs on BOTH halves and each
+// reads its OWN EEPROM marker, so a cold boot needs no cross-half message at all.
+// Eden's only push is the replay nonce, for the one case with no local trigger.
+//
+// The tutorial was the opposite: the slave's entry was a single 0->1 edge on tut[0],
+// from the master, over a bespoke one-retry push, on a path where the normal state
+// sync is skipped. On the KC_EDEN path it was worse than fragile — s_tutorial_armed is
+// set in process_record_user(), which only ever runs on the master, so the slave had
+// NO local trigger and that one message was the entire mechanism. Losing it left the
+// slave dark for the whole session, with the master happily running the lesson.
+static void arm_tutorial_after_intro(void) {
+    s_tutorial_armed = true;
+    s_tut_skip_since = 0;
+    // Level, not edge: the bit rides every sync for the whole of Eden (seconds), so it
+    // has many chances to land rather than one. Cleared by tutorial_start()'s first
+    // tutorial_sync_fill(), which owns tut[0] from then on.
+    access_local_state()->tut[0] |= TUT_SYNC_ARMED;
+}
+
+// Called from the split handler on the slave when the master's sync says the first-run
+// experience is armed. Idempotent, and deliberately NOT tutorial_start(): the slave
+// starts the tutorial from its own Eden finish edge, exactly as a cold boot does.
+void poly_arm_tutorial_after_intro(void) {
+    if (!s_tutorial_armed) arm_tutorial_after_intro();
+}
+
 void housekeeping_task_user(void) {
     // Optional loop-timing probe (no-op unless POLYKYBD_LOOP_PROFILE). At the very
     // top so it measures the FULL previous iteration — matrix scan, HID, bridge.
@@ -4112,8 +4146,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             // whole sequence can be retried without rebooting. The SHIPPING semantics
             // (anim/TUTORIAL.md) are different: this key RE-ARMS the first-run
             // experience for the next startup and only replays the animation now.
-            s_tutorial_armed = true;
-            s_tut_skip_since = 0;
+            arm_tutorial_after_intro();
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump
             // the synced nonce so the slave plays in lockstep (the nonce is delivered by
             // the one-shot bridge send in housekeeping, once the transport is up — see
@@ -5177,8 +5210,7 @@ void keyboard_post_init_user(void) {
     // ⚠️ boot_intro_pending() had NO callers before this — the marker, the pending check
     // and the finish edge all existed, but nothing ever started the animation at boot.
     if (boot_intro_pending()) {
-        s_tutorial_armed = true;
-        s_tut_skip_since = 0;
+        arm_tutorial_after_intro();
         startup_anim_start();
     }
     // LAST: arm the hardware watchdog. Everything above may block for seconds

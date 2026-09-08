@@ -269,3 +269,52 @@ Steps 2+ are not yet designed.
 7. HID enable/disable + `polyctl` + the HIL test.
 8. RESET Eden re-arm semantics.
 9. Docs page.
+
+## Why the slave joins: copy Eden, do not invent a start message
+
+The Eden idle screensaver runs correctly on both halves and the tutorial did not, and
+the difference is not in the renderer — it is in **how each half learns it should be
+running**.
+
+**Eden never receives a start message.**
+
+- *Boot intro*: `keyboard_post_init_user()` runs on BOTH halves and each reads its OWN
+  EEPROM marker (`boot_intro_pending()`), so a cold boot needs no cross-half message at
+  all. The halves animate independently off their own timers; a few ms of skew is
+  invisible.
+- *Idle loop*: `eden_idle_tick()` runs every housekeeping pass on both halves and
+  re-derives `want` from state each half already holds — `idle_style == IDLE_STYLE_EDEN`
+  and the `DISP_IDLE` flag, both ordinary `poly_sync_t` fields carried by the normal
+  `sync_and_refresh_displays()` diff, where the diff IS the retry queue. It is
+  **level-triggered, every pass**: nothing to lose, no ordering requirement, and the
+  stop is derived the same way (`else if (startup_anim_is_loop())`).
+- The only thing Eden ever pushes is the **replay nonce**, for the one case with no
+  local trigger (HID cmd 31 / `KC_EDEN`) — and even that is retried every pass until
+  `sync_succeeded()`, then latched.
+
+**The tutorial was edge-triggered on a single message.** The slave entered on a `0->1`
+transition of `tut[0]`, from the master, over a bespoke **one-retry** push, on a path
+where the normal state sync is skipped. Worse on the `KC_EDEN` path:
+`s_tutorial_armed` was set inside `process_record_user()`, which only ever runs on the
+master, so the slave had **no local trigger at all** and that one push was the entire
+mechanism. Lose it and the slave sits dark for the whole session while the master
+happily runs the lesson. The 400 ms re-arm added later is a hand-rolled retry queue for
+an event — the guard shape this project keeps getting caught by.
+
+**The fix is to give the slave a local trigger, not a better retry.** `tut[0]` is now a
+bitfield: `TUT_SYNC_ACTIVE` (the tutorial is running) and `TUT_SYNC_ARMED` (the
+first-run experience is armed — start the tutorial when the intro ends). ARMED is a
+**level held for the whole of Eden**, so it rides every sync for seconds rather than
+once; the split handler calls `poly_arm_tutorial_after_intro()` on the slave, and the
+slave then enters the tutorial from its **own** Eden finish edge, exactly as a cold boot
+does. The per-step `tut[]` sync is thereby demoted from "the mechanism" to "a
+correction".
+
+- ⚠️ `tutorial_sync_apply()` must test `in[0] & TUT_SYNC_ACTIVE`, **never `in[0] != 0`**
+  — ARMED is set throughout the intro, so a bare non-zero test starts the tutorial on
+  top of the animation.
+- ⚠️ The slave's local start picks its own slots (different seed), so it can light a
+  different key until the master's `tut[2]` correction arrives. That converges within a
+  push and is strictly better than dark; if it ever reads as a flicker, carry the seed.
+- **Generalise**: before adding a start/stop message between the halves, check whether
+  each half can *derive* the state instead. Eden does, twice, and that is why it works.

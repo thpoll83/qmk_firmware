@@ -136,7 +136,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.19.1"
+#define FW_VERSION "0.21.0"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -223,12 +223,12 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-//  v17 GET/SET_AI_STATE (cmd 40 / 0x28): the agent status the AI key wears —
+//  v18 GET/SET_AI_STATE (cmd 40 / 0x28): the agent status the AI key wears —
 //      0 off, 1 idle, 2 working, 3 attention. 0xFF queries. RAM only (a status
 //      about a host process is meaningless after a reboot), synced via
 //      poly_sync_t.ai_state. CLOSED range like cmd 34: every value names a
 //      colour the RGB indicator paints and a word the keycap spells.
-#define PROTOCOL_VERSION 17
+#define PROTOCOL_VERSION 18
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

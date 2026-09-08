@@ -26,6 +26,7 @@
 #include "base/overlay.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "base/fontpack.h"
+#include "base/fonts/generated/fontpack_layout.h"  // FONTPACK_BUNDLE_COUNT, for the GET_ID size assert
 #include "base/update.h"
 #include "poly_util.h"
 
@@ -167,6 +168,34 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
 
 // Handles HID commands: device ID, language change, overlay reception, mapping, and display control.
 // Global variables: hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
+/**
+ * Apply a unicode input mode, optionally WITHOUT writing it to EEPROM.
+ *
+ * QMK's set_unicode_input_mode() always persists, and there is no noeeprom
+ * variant — but `unicode_config` is extern and unicode_input_mode_set_kb() is
+ * the notification the keycap legend rides on, so the volatile half is the
+ * persisting one minus a single call. No upstream patch.
+ *
+ * Why volatile exists: at Windows logon the host races WinCompose's own
+ * autostart, and an absent wincompose.exe is equally consistent with "not
+ * installed" and "not started yet". The host therefore applies its early
+ * reading volatile and re-asserts it persistently once it can tell the two
+ * apart. Without this, every logon on a WinCompose machine wrote Windows and
+ * then WinCompose back over it — two EEPROM writes to end where it started.
+ *
+ * NOTE the persisting path is unchanged: eeprom_update_byte() already skips a
+ * write when the byte matches, so re-asserting the SAME mode has always been
+ * free. It is only the transient wrong value that this avoids storing.
+ */
+static void apply_unicode_mode(uint8_t mode, bool persist) {
+    if (persist) {
+        set_unicode_input_mode(mode);
+        return;
+    }
+    unicode_config.input_mode = mode;
+    unicode_input_mode_set_kb(mode);
+}
+
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     // Board name in the GET_ID reply — each variant header (QMK_KEYBOARD_H) may
     // define POLY_KB_NAME; default to "Split72" so split72 (which doesn't define
@@ -174,7 +203,19 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 #ifndef POLY_KB_NAME
 #    define POLY_KB_NAME "Split72"
 #endif
-    const char * name = "P\x06." POLY_KB_NAME " " FW_VERSION " P" STR(PROTOCOL_VERSION) " HW" STR(DEVICE_VER) " ";
+#define POLY_GET_ID_STR "P\x06." POLY_KB_NAME " " FW_VERSION " P" STR(PROTOCOL_VERSION) " HW" STR(DEVICE_VER) " "
+    const char * name = POLY_GET_ID_STR;
+    // The GET_ID reply is one 64-byte report carrying the id string, then the
+    // NUL-terminated blocks after it: ['V'][count][u16 x count] and ['G'][u16].
+    // ⚠️ Asserted rather than written down as a measured number, because every part
+    // of it moves: the version string grows, and the 'V' block grows TWO BYTES PER
+    // BUNDLE. Both emitters below drop their block rather than truncate if it does
+    // not fit, so overflowing would cost the host its font-pack versions SILENTLY --
+    // it would read "no bundles on the device" and re-flash all of them on every
+    // connect. sizeof() counts the string's own NUL, which is where the blocks start.
+    _Static_assert(sizeof(POLY_GET_ID_STR) + 2u + FONTPACK_BUNDLE_COUNT * 2u + 3u
+                       <= HID_REPORT_SIZE,
+                   "the GET_ID reply no longer fits one report - see the block layout above");
 
     if (length<1) {
         return;
@@ -234,6 +275,29 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         data[off++] = (uint8_t)(v & 0xFF);
                         data[off++] = (uint8_t)(v >> 8);
                     }
+                }
+                // ['G'][u16 little-endian state generation] -- bumped whenever the
+                // BOARD changes something the host may be caching, so the host learns
+                // about it from a reply it already polls every second rather than from
+                // a new command or an unsolicited report (CLAUDE.md, "Telling the host
+                // something changed ON THE BOARD").
+                //
+                // ⚠️ AFTER the 'V' block, never before. The host finds that one
+                // POSITIONALLY -- parse_id_version_block requires 'V' at exactly
+                // nul + 1 -- so anything prepended here makes every deployed host read
+                // "no bundles on the device" and re-flash all eight on every connect.
+                // Both blocks are tag-led, so a newer host walks them in order.
+                //
+                // Budget: measured 50 of 64 bytes used on split72 (31-byte id string
+                // + NUL, then 18 bytes of 'V' for 8 bundles), so this fits with ~11 to
+                // spare -- shared with the 'V' block's 2 bytes per future bundle, i.e.
+                // about five more bundles. It is emitted only if it fits, so growing
+                // past that drops the block rather than truncating the reply.
+                const uint16_t gen = poly_state_generation();
+                if (off + 3u <= length) {
+                    data[off++] = 'G';
+                    data[off++] = (uint8_t)(gen & 0xFFu);
+                    data[off++] = (uint8_t)(gen >> 8);
                 }
                 raw_hid_send(data, length);
                 break;
@@ -690,29 +754,46 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 }
                 break;
             case 20: //set unicode input mode
+                // set_unicode_input_mode() is the SETTER. unicode_input_mode_set_user()
+                // is the notification CALLBACK QMK fires from it, and our override
+                // (poly_keymap.c) only mirrors the value into local_state->unicode_mode
+                // for the keycap legend — so calling it directly relabelled the language
+                // layer's Win/WinC/Lnx keys while unicode_config.input_mode, which
+                // decides how codepoints are actually typed, kept its old value. Field
+                // report: the legend read "Win ON" at startup while emoji still went out
+                // as WinCompose sequences, and pressing the Win key (the real setter)
+                // was what finally made them agree and broke emoji.
+                //
+                // data[3] (protocol 17+) is the VOLATILE flag: non-zero applies the
+                // mode in RAM only. It exists because at Windows logon the host
+                // cannot tell "WinCompose is not installed" from "WinCompose has not
+                // started yet" — see apply_unicode_mode() below. An older host sends
+                // a zero-padded report, so data[3] is 0 = persist, which is the
+                // behaviour it expects.
+                const bool persist = (data[HID_DATA_IDX + 1] == 0);
                 switch(data[HID_DATA_IDX]) {
                     case 0: //Linux = 0
-                        unicode_input_mode_set_user(UNICODE_MODE_LINUX);
+                        apply_unicode_mode(UNICODE_MODE_LINUX, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 1: //Mac = 1
-                        unicode_input_mode_set_user(UNICODE_MODE_MACOS);
+                        apply_unicode_mode(UNICODE_MODE_MACOS, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 2: //Windows = 2
-                        unicode_input_mode_set_user(UNICODE_MODE_WINDOWS);
+                        apply_unicode_mode(UNICODE_MODE_WINDOWS, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 3: //WinCompose = 3
-                        unicode_input_mode_set_user(UNICODE_MODE_WINCOMPOSE);
+                        apply_unicode_mode(UNICODE_MODE_WINCOMPOSE, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 4: //BSD = 4
-                        unicode_input_mode_set_user(UNICODE_MODE_BSD);
+                        apply_unicode_mode(UNICODE_MODE_BSD, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
@@ -1236,7 +1317,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     raw_hid_send(data, length);
                 }
                 break;
-            case 40: //get/set the agent ("AI") status light (protocol v17+)
+            case 40: //get/set the agent ("AI") status light (protocol v18+)
                 {
                     // data[HID_DATA_IDX] == 0xFF -> query (reply current state in data[3]).
                     // Otherwise set it (enum poly_ai_state: 0 off, 1 idle, 2 working,

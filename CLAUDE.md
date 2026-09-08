@@ -321,6 +321,38 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     and to the sibling repos' `CLAUDE.md` files when the symbol is one they mirror
     (`iso_lang_country.py`, `noto-fonts.yaml`, the font-pack render manifests).
 
+## Mirrored skills (`qmk_firmware` ↔ `PolyKybdHost`)
+
+Five skills exist in **both** repos and are kept **byte-identical**:
+`add-gated-hid-command`, `mutation-test-suite`, `polykybd-github-release`,
+`session-retro`, `update-polykybd-docs`. A skill loads only from the repos a session has attached,
+so one that describes cross-repo work is unreachable from a session opened on the
+other repo alone — which is what happened to `mutation-test-suite`, extended to
+cover Python/unittest suites while living only in the firmware repo.
+
+⚠️ **They had already drifted, and every difference was pure loss — not repo-specific
+tailoring.** Measured 2026-09-07 before harmonising: `session-retro` lacked the whole
+open-PR-sweep section on the host side, `update-polykybd-docs` lacked its Images
+section there, and `polykybd-github-release` was missing the shallow-clone warning on
+the host side and the corrected WinCompose `status.txt` ordering on the firmware side —
+i.e. each copy was the newer one for a different note. Nothing anywhere flagged it,
+because a skill has no build, no test and no reviewer.
+
+**So the rule is copy, never fork**: edit one, `cp` it to the other, and check with
+
+```bash
+for s in add-gated-hid-command mutation-test-suite polykybd-github-release session-retro update-polykybd-docs; do
+    cmp -s /home/user/qmk_firmware/.claude/skills/$s/SKILL.md \
+           /home/user/PolyKybdHost/.claude/skills/$s/SKILL.md \
+      && echo "$s: ok" || echo "$s: DRIFTED"
+done
+```
+
+A firmware-specific section in the host's copy (or the reverse) costs a reader one
+skipped paragraph; a fork costs a note that only one repo ever sees. Take the first.
+If a skill ever genuinely needs to differ per repo, split the differing part into a
+separate skill rather than forking the shared one.
+
 ## Branching (all PolyKybd repos)
 
 - **Give every branch a name that hints at its content** (a short descriptive slug, e.g. `claude/fix-slave-layer-after-fw-apply`, not just the auto-generated `claude/<random-scientist>-<id>`) so the branch list reads as a changelog.
@@ -976,6 +1008,27 @@ inherited-upstream noise:
     would analyse the whole upstream QMK tree — the same trap as the
     lint-on-upstream-keyboards problem below. The host repo runs CodeQL instead,
     where Python needs no build and the tree is entirely ours.
+- ⚠️ **A HIL job that never STARTS is a different state from a red one, it alerts
+  nobody, and it blocks the RELEASE gate hours later.** When the self-hosted rig
+  runner is offline, `HIL test (split72)` sits `status: queued` with no
+  `conclusion`, no log, no annotation and no timeout — the PR board shows a
+  spinner, not a failure, so nothing about it looks wrong. Measured 2026-09-08:
+  queued 07:34Z, still queued when the PR merged at 12:10Z, 4.5 hours later.
+  `diagnose-hil-failure` classifies a RED check and has nothing to say about this.
+  Two consequences:
+  - **Read `status` before `conclusion`.** An unfinished run carries no verdict in
+    either shape: the MCP `actions_list` response omits `conclusion` entirely (the
+    trap the note below records), while the REST API returns `"conclusion": null`.
+    So "not failed" is never "passed" — and a job whose `started_at` is hours old
+    while its status is still `queued` was never picked up by a runner at all.
+  - ⚠️ **It silently arms a release refusal.** The FW-APPLY tier runs on every push
+    to `PolyKybd`, so an offline rig means the merge's own apply run hangs too —
+    and `tools/require_fwapply_run.py` refuses to publish a release the apply tier
+    has not covered. The failure surfaces at publish time, on a commit that looked
+    fine when it merged. The recovery is the one that note already prescribes:
+    dispatch *Build and HIL Test* with `tier: fwapply` on the right ref once the
+    rig is back, and remember the ref rules there (the branch tip only works while
+    it IS the release commit; otherwise dispatch on the tag).
 - **A change that cannot alter the firmware does NOT run the build or the rig —
   `qmk-test.yml` path-filters both its `push` and `pull_request` triggers.** Markdown
   since 2026-08-21, then `scripts/` and `.claude/`, then the sibling workflow files
@@ -1628,6 +1681,58 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
   `data[2]` id, `data[3]` 0xFF query else length, `data[4..]` text). All three sit
   behind ONE host feature gate — a host that could read the info header but not the
   bodies would render an editor over data it cannot fetch. See "Dynamic macros" below.
+  **v17** adds the **VOLATILE flag** to `SET_UNICODE_MODE` (cmd `20`, `data[3]`):
+  non-zero applies the mode in RAM only, leaving EEPROM alone. It exists because at
+  Windows logon the host cannot tell "WinCompose is not installed" from "WinCompose
+  has not started yet" — so it applies its early reading volatile (plain `Windows`
+  IS how the keyboard should type while WinCompose is absent) and re-asserts it
+  persistently once it can tell the two apart. Without it, every logon on a
+  WinCompose machine wrote `Windows` and then `WinCompose` back over it.
+  ⚠️ **The wire change is backwards-compatible in one direction only.** An older
+  HOST sends a zero-padded report, so `data[3]` reads 0 = persist — fine. An older
+  FIRMWARE ignores `data[3]` and would silently STORE a mode the caller asked not to
+  store, which is precisely the transient value the flag exists to keep out of
+  EEPROM — so the host gates it (`FEATURE_MIN_PROTOCOL["unicode_mode_volatile"]`) and
+  falls back to withholding the ambiguous reading entirely.
+  ⚠️ QMK has **no `set_unicode_input_mode_noeeprom()`**; `unicode_config` is `extern`
+  and `unicode_input_mode_set_kb()` is the notification the keycap legend rides on,
+  so `apply_unicode_mode()` in `hid_com.c` is the persisting path minus one call —
+  **no upstream patch**. Note the persisting path never needed help: QMK's
+  `eeprom_update_byte` already skips a write when the byte matches, so re-asserting
+  the SAME mode has always been free; only the transient wrong value is new.
+  ⚠️ **A QMK `*_set_user` hook is a NOTIFICATION, never a setter — and calling one
+  to CHANGE state fails in the quietest possible way: the UI moves and the
+  behaviour does not.** `unicode_input_mode_set_user()` is what QMK fires *from*
+  `set_unicode_input_mode()`, and our override of it (`poly_keymap.c`) does exactly
+  one thing: mirror the value into `local_state->unicode_mode` so the language
+  layer's Mac/Lnx/Win/WinC/BSD keycaps can draw their ON/OFF switch. Cmd 20 called
+  it directly for years, so a host push relabelled those keys while
+  `unicode_config.input_mode` — which decides how codepoints are actually typed —
+  never moved. Field report 2026-09-08: the layer read **Win ON** at startup while
+  emoji still worked (i.e. the keyboard was really in WinCompose mode), and pressing
+  the Win key — the one path through the real setter — made behaviour follow the
+  legend and broke emoji. **The tell is a state whose display and effect disagree**;
+  when you find one, check whether the write went through the setter or the
+  callback. The same shape applies to every `*_set_user` QMK exposes, so grep for
+  one being called rather than implemented.
+  **v18** adds `GET/SET_AI_STATE` (cmd `40` / `0x28`): the agent status the AI key
+  wears — `0` off, `1` idle, `2` working, `3` attention; `0xFF` queries. Stored in
+  RAM ONLY and synced via `poly_sync_t.ai_state`, deliberately not persisted: a
+  "needs you" light that survived a reboot would be claiming something about a host
+  process that is gone. ⚠️ Its range is **CLOSED and an unknown value NACKs**, like
+  cmd 34 and unlike cmd 30 — every value names a colour the RGB indicator paints and
+  a word the keycap spells, so accepting an unknown one would store a setting that
+  shows nothing. The status light also FADES: green (idle) and blinking red
+  (attention) go out a minute after the state last changed, while breathing amber
+  (working) stays for as long as it takes — the curve is pure in `base/ai_light.h`
+  (`make test:polykybd_ai_light`).
+  ⚠️ **It claimed v17 first and had to be renumbered.** #278's volatile unicode
+  mode took 17 on `PolyKybd` while this branch was open, so two unrelated features
+  briefly both called themselves v17 — the number is allocated by whatever MERGES
+  first, not by whichever branch wrote it down first. Nothing catches this: both
+  sides build, both sides' tests pass, and the collision only shows up as a host
+  that gates the wrong feature on the wrong number. **Re-check `PROTOCOL_VERSION`
+  against the base before merging any long-lived protocol branch.**
   **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep.** ⚠️ The old note here said "the host connect gate is exact-match"; it is
@@ -1661,6 +1766,82 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
   cost a hardware round). The pool being smaller (600) than the flat index space
   (810) only changes the identity's **extent**: indices `< NUM_OVERLAY_SLOTS` are
   identity, the rest are a 0 fill that can never be an upload destination.
+
+### Telling the host something changed ON THE BOARD
+
+Most state flows host → keyboard, so the host knows what it set. The reverse
+direction — the user changes something with a keycode, records a macro, remaps a
+key — has no natural notification, and the host's caches then go stale. There are
+exactly three ways to close that, and the ranking is not obvious:
+
+| | extra HID reports | latency | new machinery |
+|---|---|---|---|
+| a counter on a reply the host ALREADY polls | **0** | ≤1 s | none |
+| a dedicated command the host polls | 1 per interval | the interval | one command + an RPC method |
+| an unsolicited report pushed by the firmware | 1 per event | instant | a reader, framing, drain routing |
+
+⚠️ **Check what the host already asks for BEFORE reaching for a back channel.** The
+host's reconnect probe sends **GET_ID and GET_LANG every second**, forever, whenever
+a keyboard is attached (`PolyKybdHost` `poly_core.py`, `RECONNECT_CYCLE_MSEC = 1000`).
+So a byte on the GET_ID reply reaches the host within a second at **zero** additional
+cost, and both other options are solving a problem that does not exist. This was
+nearly missed twice — once by designing a MACRO_INFO field the editor would have had
+to poll, once by proposing a console line — because the existing poll is invisible
+from the firmware side.
+
+- ⚠️ **UNSOLICITED raw HID is not a drop-in, and the cost is NOT bandwidth.** The event
+  rate for anything a human does on the board is tens per day against the ~173,000
+  exchanges/day the probe alone already generates, so volume is a non-issue and should
+  not be the argument. What stops it is that **nothing reads that interface except a
+  pending command**: `send_and_read_validate` writes, then reads until it matches the
+  expected prefix and **drains everything else**, so an unsolicited report is discarded
+  by the next probe within a second. Its comment states the invariant the drain rests
+  on — *"Since protocol v3 the firmware sends no unsolicited replies, so a stale reply
+  here means one thing only"* — and v3 was the change that made `SEND_OVERLAY_MAPPING`
+  silent precisely to reduce escaped ACKs. Push makes a stale reply mean two things, in
+  the code path with the stale-reply bug history. Do not add it without a distinguishable
+  prefix, routing in the drain, and an idle reader.
+- **The CONSOLE is push-shaped and already tapped** (`CrashScanner` on the host, the
+  rig's `ConsoleTap`), so it is the cheapest push — but it is lossy by construction
+  (QMK drops output nobody drains, and nothing drains it during a flash), it does not
+  survive a re-enumeration, it arrives as report-sized FRAGMENTS rather than lines, and
+  **any local process can read it**, which is why keystroke logging is gated on
+  `debug_enable`. So: **the console may announce, never define.** Anything it says must
+  also be answerable over raw HID, and the pull is the truth. `crash_record` is the
+  model — the console line announces, cmd 39 reads the same record back — and nothing
+  breaks when the line is lost.
+
+**The mechanism: `['G'][u16 state_generation]` in the GET_ID reply**, bumped by
+`poly_state_touch()` whenever the BOARD changes something the host may be caching. One
+counter covers macros, glyph script, glyph size, idle style, the OS pin, the default
+layer and a board-side key reassignment; the host re-reads whatever it has open when
+the value moves. It does not say WHAT changed, which is all "refresh what is on screen"
+needs.
+
+- ⚠️ **It goes AFTER the `V` font-pack block, never before it.** The host finds that
+  block positionally — `parse_id_version_block` (`hid_fontpack.py`) requires `'V'` at
+  exactly `nul + 1` — so prepending anything makes every deployed host read "no bundles
+  on the device" and **re-flash all eight bundles on every connect**. Both blocks are
+  tag-led, so a new host parses `V` first and then looks for `G`.
+- **The budget is a `_Static_assert` in `hid_com.c`, not a number in a comment** —
+  `sizeof(POLY_GET_ID_STR) + 2 + FONTPACK_BUNDLE_COUNT*2 + 3 <= HID_REPORT_SIZE`. Every
+  term moves (the version string grows; the `V` block grows TWO BYTES PER BUNDLE), so a
+  measured figure would go stale, and both emitters DROP their block rather than
+  truncate if it does not fit — which would cost the host its font-pack versions
+  silently and re-flash every bundle on every connect. Mutation-checked: lowering the
+  bound fails the build with the assert's own message. Roughly 11 bytes spare at 8
+  bundles, i.e. five more.
+- **A missing `G` block means "no generation available"**, so an older firmware degrades
+  to the previous behaviour (the host re-reads when a view is opened) rather than
+  failing.
+- **Bump it for host-initiated changes too.** Distinguishing them saves one re-read and
+  costs a rule someone has to remember.
+- ⚠️ **This IS an enumerated list of call sites, which is the shape that goes stale here
+  — and it is acceptable ONLY because of how it fails.** Forgetting a `poly_state_touch()`
+  leaves the host's view stale until something else refreshes it, i.e. exactly today's
+  behaviour; it can never corrupt state or mis-classify anything. Contrast
+  `sync_is_link_fault()`, where a forgotten case produces a WRONG answer, and which is
+  therefore written as a complement rather than a list.
 
 ### Language list encoding (`lang/iso_lang_country.py`)
 The packed list (cmd `27`) maps each 4-char code to two 1-byte indices: the
@@ -3721,6 +3902,25 @@ knowing is the parts that are NOT what you would write from scratch:
   `render_lang_flag_key`. The INDEX rather than a generic macro glyph: a generic glyph
   is identical on all sixteen keys, so it says "this is a macro" and nothing else,
   while the index says which one and needs no font pack.
+  - **The caption band has TWO faces, largest first** (`_Small_` 15px, then `_Nano_`
+    10px), and `render_macro_key()` picks the largest whose WHOLE label fits.
+    `_Nano_` alone was far smaller than the band can carry — "Macro 0" measures 40 px
+    in a 72 px panel, and the caption is the thing a reader is meant to read.
+    `_Small_` draws it at 57 px and still leaves 30 rows for the mark, which every
+    stock numeral (4–19 px ink) clears.
+    - ⚠️ **A label too wide for `_Small_` drops to `_Nano_` with its TEXT INTACT**,
+      rather than being truncated at the bigger face. Losing characters to gain size
+      is the wrong trade for a label whose job is to say what the macro does; the
+      truncation loop is the floor face's last resort, not the ladder's.
+    - ⚠️ **`extern`, not `#include`** — `NotoSans_Medium_Base_8pt.h` DEFINES the font
+      (non-static) and each variant's `status_oled.c` already includes it, so a second
+      include is a multiple-definition LINK error that compiles cleanly. Same pattern
+      `oled_helper.c` uses for the same face.
+    - **The host mirrors it in ONE place**: `macro_label.pick_face()`, called by the
+      editor's pixel meter, the shared `MacroKeycapRenderer` and
+      `tools/macro_label_preview.py`. The meter measuring at the floor face regardless
+      would report "work mail" as 48 px of 72 — a third of the panel free where there
+      is really 1 px.
   - ⚠️ **Truncate by MEASURED WIDTH, never by character count.** Measured against the
     shipped `_Nano_` face: `WWWWWWWW` is exactly 72 px (8 chars) and `iiiiiiiiiiii`
     is 34 px (12 chars) — an estimate is wrong in both directions.
@@ -3729,10 +3929,78 @@ knowing is the parts that are NOT what you would write from scratch:
     cells, 0 clipped). Its measurement lives in the Qt-free
     `polyhost/services/macro_label.py` because the host editor shows the same
     truncation while the user types, and an approximation would disagree with the key.
-- **Nothing binds `QK_MACRO_*` in the default keymap.** A macro key is assigned from
-  the host's layout editor, so a user who never opens it pays nothing — and `via.c` is
-  the only core dispatcher for that range, which we do not compile, so the keycodes
-  are ours outright.
+- **The default keymap binds `QK_MACRO_0..11` on `_UL`, where `F13..F24` used to
+  live, and SHIFT reaches `M12..M15`.** `via.c` is the only core dispatcher for that
+  range and we do not compile it, so the keycodes are ours outright. Two things about
+  the banking:
+  - **`poly_macro_banked_id(slot, shift)` is ONE implementation, called by the action
+    path and the render path.** They are the pair that must never disagree — a keycap
+    showing M13 while the key plays M1 is the same defect class as
+    `render_key()`/`to_static_text()` unwrapping a mod-tap in only one of the two. The
+    render path feeds it the **synced** modifier and the action path the live
+    `get_mods()`, the same deliberate asymmetry the glyph-size key uses.
+  - ⚠️ **`clear_keyboard()` before `poly_macro_start()`, or the bank modifier leaks
+    into the macro's output.** Playback registers keycodes with a Shift the user is
+    still holding, so M12..M15 would type in caps — and once capture exists, the same
+    held Shift would be recorded as a spurious `DOWN Shift` step.
+  - ⚠️ **`F13..F24` lose their default home**, so say so in the release notes; a user
+    who wants them back assigns them from the layout editor.
+- **An unclaimed slot ships a stock look: the MAYAN NUMERAL for its own index, over
+  the caption "Macro"** (`poly_macro_seed_defaults()`). Without it a keyboard that
+  has never met the host app shows sixteen keycaps distinguished only by "M0".."M15"
+  in the index style, which is exactly the twelve-keys-that-look-alike problem the
+  displays exist to solve. Five points, three of which are measurements:
+  - ⚠️ **The caption does NOT repeat the index, and it used to** ("Macro 0" ..
+    "Macro 15", changed 2026-09-08 on the report that it was redundant). The numeral
+    above it already states the slot, so the index spent the widest thing on the
+    keycap on the one fact the mark carries best; plain "Macro" also drops to 41 px in
+    the `_Small_` face against 57 px, so every slot has room to spare rather than only
+    the single digits.
+    - ⚠️ **A change to the stock look is INVISIBLE on an already-flashed board**, which
+      is what makes `slot_holds_legacy_seed()` necessary rather than tidy: the look is
+      stamped into EEPROM on the first boot, so `slot_unclaimed()` is false from then
+      on and the new caption would only ever reach a fresh keyboard. That helper
+      re-seeds a slot whose body is EMPTY *and* whose record matches, byte for byte,
+      what an older scheme would have written — so a caption someone typed themselves
+      is never touched, and neither is a slot holding a real macro. Delete it once no
+      field board predates the change.
+  - **The condition is EMPTY, not "never seeded"** — no body and an all-zero look
+    record — so there is no migration sentinel to keep and clearing a macro hands its
+    keycap the stock look back. ⚠️ An unwritten record reads **all-zero, not 0xFF**
+    (QMK's wear levelling normalises a cleared byte to zero — the fact that made
+    `latin_assign` read as "every key hosts 'a'"), and zero *is* the default look, so
+    the two are genuinely the same state.
+  - **A COUNTING system, not a set of pictures.** The icon then states the same fact
+    the caption does, and no purpose is read into a slot nobody has written yet — a
+    gear or an envelope is a wrong label, not a neutral one. **Mayan is the only
+    numeral system that fits**: base-20, so 0..15 are each a SINGLE glyph; it has a
+    real glyph for **zero** (the shell, U+1D2E0) rather than an absence, which is what
+    lets the set reach M0 at all; and bar-and-dot is what a 1-bit 72×40 panel draws
+    well — three bars and four dots at worst.
+  - ⚠️ **Nothing already in the pack covered them — measured, 0 of 20 codepoints
+    resolved** — so this added a source font (`NotoSansMayanNumerals`, OFL, 50 KB) and
+    a `_Mayan_` entry in the `symbols` category, and reshipped the `symbol` bundle
+    (v8 → v9, 37,200 → 38,976 B in a 96 KB slot). The obvious alternative, geometric
+    shapes, is *also* absent: **U+25A0/25CF/25B2/2B22 and friends are simply not in the
+    shipped bundles**, which is worth knowing before proposing any icon by name.
+  - ⚠️ **The entry sits at the very END of `fonts.yaml`'s `fonts` list, not at the end
+    of the symbols block — the category picks the BUNDLE, the list position picks the
+    global index, and the two are independent.** Appended after the other symbols
+    entries it took index 147 and pushed the whole `fantasy` bundle up by one, which
+    would have forced a second `.plyf` reship for a font nothing else touched. At the
+    end of the list it takes index 181 and `--check` reports every other bundle
+    identical.
+  - ⚠️ **The sizes are measured, not chosen.** A captioned keycap leaves **32 rows**
+    above the label and `draw_macro_mark()` draws at native size only while the glyph
+    is *shorter* than that. As emitted these ink **4–19 px** (M15, three bars, is the
+    tallest), so none is halved and 0 pixels clip. That check is
+    `PolyKybdHost`'s `macro_look.find_glyph()` against the committed header, then
+    rendering the keycap and looking at it. A `_Static_assert` pins
+    `POLY_MACRO_COUNT <= 20`, past which a slot would seed a codepoint outside the
+    emitted range and silently fall back to the index.
+  - **They are PACK glyphs**, so a keyboard with no font pack draws the index instead —
+    `render_macro_key()` already falls back that way for an icon it has no glyph for,
+    and no keycap is ever left blank.
 - ⚠️ **A PREVIEW THAT MIRRORS THE IMPLEMENTATION AGREES BY CONSTRUCTION — it cannot
   catch a placement bug, and this is the limit of the repo's "verify by rendering"
   rule.** `draw_macro_mark()` first drew a chosen icon at its native size or skipped
@@ -3795,6 +4063,131 @@ knowing is the parts that are NOT what you would write from scratch:
     monolith read 2772 B free at `44baf433`; that it matched the figure written here
     is what proved the baseline build was the right one. A quoted number can be
     several PRs stale — it is evidence only when you have just reproduced it.
+
+### Recording a macro ON THE KEYBOARD (`poly_macro_record.*`, `base/macro_record.*`)
+
+`KC_MACRO_REC` on `_UL` records a macro with no host app: tap REC (the board becomes a
+slot picker), tap a macro key, type, tap REC again. The gesture and the alternatives
+weighed against it are in `MACRO_RECORD_DESIGN.md`; what follows is the part a future
+session gets wrong.
+
+- **Capture is a `host_driver_t` SHIM, and it is installed from HOUSEKEEPING, not
+  `keyboard_post_init_user()`.** `protocol_post_init()` runs *after* the post_init hooks
+  (`quantum/main.c`) and installs the USB driver, so a shim set there is overwritten a
+  moment later and the recording silently captures **nothing** — no error, no missing
+  key, just an empty macro. `poly_macro_rec_tick()` installs it on its first call and
+  leaves it in place for the life of the boot (it forwards to the previous driver
+  unconditionally, so it costs one indirect call per report while idle).
+- **What is recorded is the REPORT DIFF, not the keycode.** The shim sees
+  `report_keyboard_t` / `report_nkro_t` after every layer, mod-tap and combo has already
+  resolved, so a macro plays back what the keyboard actually SENT rather than what the
+  matrix did. `poly_macro_rec_diff_6kro()` / `_diff_nkro()` in **`base/macro_record.c`**
+  are pure (no quantum.h, no EEPROM, no timer) — the same seam as `base/fw_up_verdict.c`
+  and `base/macro_decode.c`, and for the same reason: the arithmetic is the part with a
+  bug future. `make test:polykybd_macro_record` — 47 tests, mutation-swept 7/7.
+  - ⚠️ **`keys[6]` is an unordered SET, not a stack.** The host may compact it on any
+    report, so "key at index 2 changed" means nothing; the diff has to ask whether each
+    code is present in the other report. A positional comparison records a spurious
+    release+press pair every time the host shuffles a held key down a slot.
+  - ⚠️ **Order within one diff is load-bearing: releases before presses, and modifier
+    releases before key presses.** Emitting a press first can leave the playback holding
+    a modifier the user had already lifted, which types the *shifted* character — and
+    the report the shim sees is the state AFTER the change, so the ordering is the only
+    thing carrying the sequence.
+- **Nothing reaches EEPROM until the recording stops.** Steps land in a 192 B RAM buffer
+  (`POLY_MACRO_REC_BYTES`) and the splice is pumped a chunk per housekeeping pass
+  (`POLY_REC_COMMIT_CHUNK`). A write per keystroke is a wear-levelling journal append,
+  and the consolidation erase it eventually triggers is the documented mechanism behind
+  the "slave becomes unresponsive" field bug — mid-recording is exactly when it would
+  land. A recording that fills the buffer stops cleanly rather than truncating, because
+  the encoder reserves room to close every held key.
+- **`KC_MACRO_REC` is swallowed in `process_record_user()`**, like every other custom
+  PolyKybd keycode — `_UL` is entered with `OSL()`, which re-dispatches a release-edge
+  action up to three times (§ "A release-edge action fires up to THREE times"), and for
+  a toggle that reads as *doing nothing at all*.
+- ⚠️ **SWALLOWING THE REC PRESS DROPS THE VERY LAYER THE PICKER LIVES ON, and that is
+  the cost of the swallow rule rather than a bug in it.** QMK's `process_record()` runs
+  `clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED)` whenever
+  `process_record_user()` returns false **on a press** (`quantum/action.c`) — which is
+  exactly what the swallow does — so a tap of `KC_MACRO_REC` reached through `OSL(_UL)`
+  opens the picker and drops `_UL` on the same edge. Both halves of the picker then
+  resolved the BASE layer, where there is no macro key and no REC key: **every keycap
+  went dark, no slot could be picked, and pressing REC again did nothing** while the
+  status OLED said `press M0-M15` (field, 2026-09-08).
+  - **The fix is to resolve the picker against `_UL` explicitly**
+    (`macro_picker_keycode_at()`), not to stop swallowing: the picker is a modal dialog
+    over a known row, so which layer happens to be active is not information it wants.
+    One resolver feeds the render AND `process_record_user`, so they cannot disagree —
+    the same render/action pairing rule as `poly_keycode_at()`.
+  - ⚠️ **The picker block therefore has to sit AHEAD of the `KC_MACRO_REC` block**, and
+    own the cancel itself: by the time it runs, `keycode` is the base layer's, so
+    neither the REC block nor the macro-playback block below can match. Entering `_UL`
+    with `TO()` instead hides all of this — the layer is sticky, everything resolves,
+    and the picker works — which is why it survived the desk test.
+  - **Generalise: any "the board becomes a dialog" mode entered from a ONE-SHOT layer
+    must resolve its own keys from that layer by number.** The FW-2 prompt is immune
+    only because it addresses a fixed matrix POSITION (`FW_CONFIRM_ROW/COL`) rather
+    than a keycode.
+- **`poly_sync_t.rec_state` / `.rec_slot` are synced** for the same reason `fw_confirm`
+  and `settings_more` are: the SLAVE draws its own half of the slot picker and only ever
+  sees that struct, so without them the two halves disagree about which keys are the
+  picker. Master-authoritative, never persisted — a recording does not survive a reboot.
+- ⚠️ **The BYTE COUNT is deliberately NOT synced**, and that is why the two panels differ.
+  It moves on every captured keystroke, so putting it in `poly_sync_t` buys a bridge
+  frame per keypress on the one link this repo has been bitten by most. The master's
+  panel shows `48/192 B` and the slave shows the stop hint in its place — true on both
+  rather than a plausible zero on one, the same call `Lnk n/a` makes on the telemetry
+  screen.
+- ⚠️ **A new custom keycode with NO legend renders a BLANK KEYCAP, and that is
+  indistinguishable from "the feature did not ship".** `KC_MACRO_REC` was added to the
+  keymaps, the action path and the OLED, and every one of those was correct — but
+  nothing gave it a case in `to_static_text()` / `keycode_to_static_text()`, so the key
+  drew nothing and the first field report was *"I still do not see the REC key"*. The
+  build is green either way: a missing legend is a missing `case`, not an error.
+  **Grep the two legend switches for a new keycode before calling it done.**
+  - **Its legend lives in `to_static_text()` (`poly_keymap.c`), NOT
+    `keycode_to_static_text()`** — it names what the key will do NEXT (`REC/macro`
+    vs `STOP/macro`), which comes from the synced `poly_sync_t.rec_state`, and that
+    function only receives `led_t`. Same seam and same reason as `KC_GLYPH_SIZE_UP`.
+  - **`MID_TWO_LINE` text, not an icon**: the resident C1 icon band is full (32/32),
+    the pack has no record dot (U+23FA / U+25CF / U+2B24 all MISSING — only U+26AB at
+    33x33), and the mid face is ASCII-only and RESIDENT, so the legend renders on a
+    keyboard with no font pack. That matters more here than elsewhere: its neighbours
+    on that row are the macro keys, and a REC key nobody can find is a gesture nobody
+    can start.
+  - **The picker draws `cancel` on it** (`render_macro_rec_cancel_key()`). Every other
+    keycap goes dark while the picker is open, so without it the one key that backs out
+    of the mode is invisible — the OLED says `REC = cancel`, but the board IS the
+    dialog and the dialog should say it too.
+  - ⚠️ **`Renderer.draw()` takes ABSOLUTE buffer coordinates and emits window-relative
+    pixels** (`plot()` does `vx = bx - BUFFER_X` and drops anything outside the 72x40
+    window). Verifying a legend at `x=0` therefore clips the first 28 columns and
+    renders a plausible-looking fragment — two of five glyphs, no error. Draw at
+    `oled_preview.BUFFER_X`, and sanity-check the harness against a SHIPPED legend
+    (`MID_TWO_LINE("RESET","Eden")`) before believing anything it says about a new one.
+    Measured that way: both states 0 off-panel pixels, ink x[1,57] y[0,34].
+- **The status OLED is the ONLY indicator** (`oled_macro_rec_screen()`), because split42
+  has no RGB matrix and the keycaps are busy showing what is being typed. Three things
+  about its branch in the `oled_task_user()` ladder:
+  - It sits **above `DISP_IDLE`**, or the idle timer swaps the panel to the logos
+    mid-recording and takes the indicator with it. Belt and braces: housekeeping holds
+    `update_performed()` while `rec_state != POLY_REC_IDLE`, exactly as the FW-2 prompt
+    does — `update_displays()` early-returns once `DISP_IDLE` is set, so the keycaps
+    would never be redrawn either.
+  - **The whole line blinks, not a marker beside a fixed word.** Each line is centred
+    from its own ink box (the `oled_telemetry_screen()` layout), so a marker that comes
+    and goes would slide the text half a glyph twice a second.
+  - ⚠️ **No `oled_clear()`, per frame or otherwise.** `oled_write_raw` diffs and dirties
+    only the blocks that moved, so the 1 Hz blink costs one block per second; an
+    `oled_clear()` defeats that and re-pushes the whole frame every tick (the "updates
+    in multiple passes" flicker).
+  - Measured with the committed `_Small_` face over every reachable line, both panel
+    heights: widest ink **101 px** of 128 (`press M0-M15`), tallest **14 px** in a 16 px
+    band, **0** clipped pixels. Re-measure rather than eyeball if a string changes.
+- **Cost: 336 B of RAM** — the 192 B staging buffer, the previous-report snapshots and
+  the state machine. Measured on the **monolithic `POLYKYBD_DOOM=yes`** flavour, which
+  PR CI does not build and which is the first thing to fail on any RAM growth: `.heap`
+  2592 → **2256 B** free. Re-measure there before adding another static.
 
 ### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 

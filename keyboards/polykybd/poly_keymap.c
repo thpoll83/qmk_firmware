@@ -84,6 +84,7 @@
 
 #include "state.h"
 #include "poly_macro.h"
+#include "poly_macro_record.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
 #include "poly_util.h"
@@ -1152,6 +1153,32 @@ void housekeeping_task_user(void) {
     // is_keyboard_master(), not is_usb_host_side(): the confirmation state only
     // ever exists on the half that verified the signature, and fw_staging gates
     // that on is_keyboard_master() (which the HIL images override per side).
+    // On-keyboard macro recording. The master owns the gesture (only it runs
+    // process_record -- the slave's matrix is pulled over the link), and the state is
+    // mirrored into the synced struct so the SLAVE draws its half of the slot picker.
+    // Outside the !fw_up_active gate below for the same reason the FW-2 prompt is: a
+    // dialog that could not be drawn or advanced would be unanswerable.
+    if (is_keyboard_master()) {
+        poly_macro_rec_tick();
+        poly_sync_t *rec_state = access_local_state();
+        const uint8_t rs = (uint8_t)poly_macro_rec_state();
+        const uint8_t rl = poly_macro_rec_slot();
+        if (rec_state->rec_state != rs || rec_state->rec_slot != rl) {
+            rec_state->rec_state = rs;
+            rec_state->rec_slot  = rl;
+            request_disp_refresh();
+        }
+        // Hold the idle countdown off for the whole gesture, the same way the FW-2
+        // prompt below does. The panel IS the only indicator a recording has, and
+        // update_displays() early-returns once DISP_IDLE is set — so a slow-typed
+        // macro that crossed FADE_OUT_TIME would dim the picker and the REC readout
+        // out from under the user, with no way back short of a keypress that the
+        // recorder would then capture.
+        if (rs != (uint8_t)POLY_REC_IDLE) {
+            update_performed();
+        }
+    }
+
     if (is_keyboard_master()) {
         fw_staging_confirm_tick();
         const uint8_t want = fw_staging_awaiting_confirm() ? 1 : 0;
@@ -1674,6 +1701,20 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
             };
             return legend[st];
         }
+
+        // The macro-record key states WHAT IT WILL DO next, which is the whole reason
+        // it is here and not in keycode_to_static_text(): the gesture's state is
+        // poly_sync_t.rec_state, and that function only receives `led_t`, so on the
+        // slave the key would draw "REC" through a recording the master is already
+        // taking. Same seam, same reason, as KC_GLYPH_SIZE_UP above.
+        //
+        // The mid face is ASCII-only and RESIDENT, so this legend renders on a
+        // keyboard with no font pack flashed -- which matters more here than
+        // anywhere: its neighbours on this row are the macro keys, and a REC key
+        // nobody can find is a gesture nobody can start.
+        case KC_MACRO_REC:
+            return local_state->rec_state == POLY_REC_RECORDING ? MID_TWO_LINE("STOP", "macro")
+                                                                : MID_TWO_LINE("REC", "macro");
 
         // Language selection keycodes: the tiny "xx-YY" code shown under the flag
         // (the flag + selection frame are drawn by render_lang_flag_key()). KCL_ENUS..
@@ -2364,7 +2405,15 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // Reached because to_static_text() has no case for QK_MACRO_*, which is exactly the
     // seam update_displays() uses -- a key WITH a legend never gets here.
     if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
-        render_macro_key((uint8_t)(keycode - QK_MACRO));
+        // Shift reaches the second bank (see poly_macro_banked_id). `shift` here is the
+        // SYNCED modifier state, not get_mods(): the slave draws the macro keys that
+        // land on its own half and only ever sees poly_layer_t.
+        const uint8_t id = poly_macro_banked_id((uint8_t)(keycode - QK_MACRO), shift);
+        if (id != POLY_MACRO_NONE) {
+            render_macro_key(id);
+        }
+        // A shifted slot with nothing behind it draws BLANK rather than "M16" -- the
+        // keycap is the documentation for how far the second bank goes.
         return true;
     }
 
@@ -2739,6 +2788,22 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // flag is simply omitted — the xx-YY code label below it still identifies the
 // language (graceful fallback). The tiny label font stays resident.
 static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Nano_10px7b };
+
+// The MACRO caption band has two faces, largest first. _Nano_ 10px was the only one
+// and is far smaller than the band can carry: "Macro 0" measures 40 px in a 72 px
+// panel, and the caption is what a reader is meant to read. _Small_ 15px draws the
+// same string at 57 px and still leaves 30 rows for the mark, which every stock
+// numeral (4..19 px ink) clears with room to spare.
+//
+// ⚠️ A label too wide for _Small_ drops to _Nano_ with its TEXT INTACT rather than
+// being truncated at the bigger face -- losing characters is worse than losing size,
+// and the truncation loop below is the floor face's last resort, not the ladder's.
+//
+// ⚠️ extern, not #include: NotoSans_Medium_Base_8pt.h DEFINES the font (non-static),
+// and each variant's status_oled.c already includes it. A second include here is a
+// multiple-definition LINK error that compiles cleanly -- the pattern oled_helper.c
+// uses for the same font, and the trap util_font.h/nano_font.h documented first.
+extern const GFXfont NotoSans_Regular_Small_15px7b;
 // Mid (19px) utility font for the no-pack fallback code — between Small and Base,
 // so a full "ll-CC" fits on one line (~52px) yet stays readable. Reuse this
 // `mid_fonts` array for any misc utility-key text that wants a middle size.
@@ -2764,6 +2829,33 @@ static const GFXfont* const mid_fonts[]        = { &NotoSans_Regular_Mid_19px7b 
 // caption. Everything is measured from the font metrics rather than hardcoded —
 // "REJECT" descends 2px below the baseline (the J) where "ACCEPT" does not, so a
 // fixed bottom baseline would clip one of them.
+// The slot picker: while the gesture is open the board becomes a list of macros, so
+// choosing one is a keypress rather than a number to remember. Draws the slot exactly
+// as it will look when recorded -- render_macro_key() -- with a frame around the one
+// that is armed, the same way the language layer frames the selected language.
+//
+// ⚠️ Reuses render_macro_key rather than drawing "M3": the whole point of a picker on
+// a display keyboard is that you pick the CAPTION, and duplicating the composition
+// here is how the two would drift.
+static void render_macro_picker_key(uint8_t id, bool armed) {
+    render_macro_key(id);
+    if (armed) {
+        kdisp_draw_round_rect(BUFFER_X, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 4);
+    }
+}
+
+// The REC key while the picker is open. Everything else on the board goes dark, so
+// without this the one key that can back OUT of the picker is invisible -- the OLED
+// says "REC = cancel", but the board is the dialog and the dialog should say it too.
+static void render_macro_rec_cancel_key(void) {
+    const uint32_t *word = U"cancel";
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(mid_fonts, 1, word, &xmin, &xmax, &ymin, &ymax);
+    kdisp_write_gfx_text(mid_fonts, 1,
+                         (int8_t)(BUFFER_X + (SCREEN_WIDTH - (xmax - xmin + 1)) / 2 - xmin),
+                         (int8_t)((SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin), word);
+}
+
 static void render_fw_confirm_key(bool accept) {
     const uint32_t  letter    = accept ? (uint32_t)'A' : (uint32_t)'R';
     const uint32_t *caption   = accept ? U"ACCEPT" : U"REJECT";
@@ -2984,14 +3076,22 @@ static void render_macro_key(uint8_t id) {
         return;
     }
 
+    // Pick the caption face: the larger one when the WHOLE label fits it, else the
+    // floor face. A single-font array either way, so kdisp_write_gfx_char's baseline
+    // align is a no-op and the two cannot land on different baselines.
+    int8_t lxmin = 0, lxmax = 0, lymin = 0, lymax = 0;
+    const GFXfont* cap_arr[1] = { &NotoSans_Regular_Small_15px7b };
+    kdisp_gfx_text_bbox(cap_arr, 1, text, &lxmin, &lxmax, &lymin, &lymax);
+    if ((int16_t)(lxmax - lxmin + 1) > SCREEN_WIDTH) {
+        cap_arr[0] = lang_label_fonts[0];
+    }
+
     // Drop trailing characters until the caption fits the panel. Measuring after each
     // drop rather than estimating from a per-character width is the point -- the face
     // is proportional, so an estimate is wrong in both directions.
     uint8_t len = tlen;
-
-    int8_t lxmin = 0, lxmax = 0, lymin = 0, lymax = 0;
     while (len > 0) {
-        kdisp_gfx_text_bbox(lang_label_fonts, 1, text, &lxmin, &lxmax, &lymin, &lymax);
+        kdisp_gfx_text_bbox(cap_arr, 1, text, &lxmin, &lxmax, &lymin, &lymax);
         if ((int16_t)(lxmax - lxmin + 1) <= SCREEN_WIDTH) break;
         text[--len] = 0;
     }
@@ -3003,7 +3103,7 @@ static void render_macro_key(uint8_t id) {
     const int8_t cap_base  = (int8_t)(SCREEN_HEIGHT - 1 - lymax);
     const int8_t free_rows = (int8_t)(cap_base + lymin);   // rows above the caption
 
-    kdisp_write_gfx_text(lang_label_fonts, 1,
+    kdisp_write_gfx_text(cap_arr, 1,
                          (int8_t)(BUFFER_X + (SCREEN_WIDTH - (lxmax - lxmin + 1)) / 2 - lxmin),
                          cap_base, text);
 
@@ -3251,6 +3351,31 @@ static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t
         kc = poly_keycode_at(get_highest_layer(eff & ~((layer_state_t)1 << layer)), row, col);
     }
     return kc;
+}
+
+// Resolve what a physical position holds ON THE UTILITY LAYER, whatever layer is
+// active. The macro slot picker is a modal dialog over _UL's macro row, and it cannot
+// use the live stack: KC_MACRO_REC is SWALLOWED on the press, and QMK clears the
+// one-shot layer whenever process_record_user() returns false on a press
+// (quantum/action.c process_record), so the very tap that opens the picker drops an
+// OSL(_UL). Resolving live then finds the BASE layer -- no macro key, no REC key -- so
+// every keycap went dark and neither picking a slot nor cancelling was reachable
+// (field, 2026-09-08). Both the render and the key-event path go through here, which is
+// what keeps them from disagreeing about which key is which.
+// The press the open picker is waiting to see released, so an answer is only ever
+// taken from a press/release PAIR the picker itself observed.
+#define POLY_PICK_NO_PRESS 0xFFu
+static uint8_t s_pick_press_row = POLY_PICK_NO_PRESS;
+static uint8_t s_pick_press_col = POLY_PICK_NO_PRESS;
+
+static uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col) {
+    // ⚠️ Bounds-checked for the same reason keymap_key_to_keycode() is: not every
+    // record carries a MATRIX position. An encoder event is row KEYLOC_ENCODER_CW/CCW
+    // (253/252) with the encoder index as the column, so while the picker is open a
+    // turn of the knob would index the keymap far out of range and answer with
+    // whatever that read produced -- which can match a macro key or the REC key.
+    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) return KC_NO;
+    return poly_keycode_at(_UL, row, col);
 }
 
 // Roll a per-glyph idle jitter offset: a uniform random position within the legend's
@@ -3613,6 +3738,30 @@ void update_displays(enum refresh_mode mode) {
                             render_fw_confirm_key(is_left_side());
                         } else {
                             kdisp_set_buffer(0x00);
+                        }
+                        kdisp_send_window();
+                        doom_handled = true;
+                    } else if (local_state->rec_state == POLY_REC_PICKING) {
+                        // The macro slot picker, the same "the board is the dialog"
+                        // shape as the prompt above: every keycap goes dark except the
+                        // macro keys, which show what they already hold so you pick a
+                        // caption rather than a number. Driven off the SYNCED state, so
+                        // the slave draws its half of the row too.
+                        // Resolved against _UL, NOT the live `keycode` above: opening
+                        // the picker drops an OSL(_UL), so the live stack is the base
+                        // layer by now. macro_picker_keycode_at() is the same resolver
+                        // the key-event path uses, so the two cannot disagree.
+                        const uint16_t ul = macro_picker_keycode_at((uint8_t)(r + offset), c);
+                        kdisp_set_buffer(0x00);
+                        if (ul >= QK_MACRO && ul <= QK_MACRO_MAX) {
+                            const uint8_t id = poly_macro_banked_id(
+                                (uint8_t)(ul - QK_MACRO),
+                                (local_layer->mods & MOD_MASK_SHIFT) != 0);
+                            if (id != POLY_MACRO_NONE) {
+                                render_macro_picker_key(id, id == local_state->rec_slot);
+                            }
+                        } else if (ul == KC_MACRO_REC) {
+                            render_macro_rec_cancel_key();
                         }
                         kdisp_send_window();
                         doom_handled = true;
@@ -4333,6 +4482,77 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         poly_macro_abort();
     }
 
+    // While the slot picker is open the board IS the dialog: every key event is
+    // swallowed, and only a macro key or the REC key means anything. It sits AHEAD of
+    // the KC_MACRO_REC and macro-keycode blocks below so picking a slot arms the
+    // recording instead of PLAYING that macro, and so the cancel is answered here --
+    // by this point `keycode` is the BASE layer's, because opening the picker dropped
+    // the OSL(_UL) that reached the REC key, so neither of those blocks can match.
+    //
+    // Answered on the RELEASE for the same reason the FW-2 prompt is: matrix_scan_kb
+    // inverts a keycap on press and un-inverts on release independently of
+    // process_record, so acting on the press tears the picker down while the keycap is
+    // still inverted and it stays that way until the finger lifts.
+    if (poly_macro_rec_state() == POLY_REC_PICKING) {
+        // ⚠️ A MODIFIER falls THROUGH to QMK instead of being swallowed. Shift is what
+        // banks the row to M12..M15, and poly_macro_banked_id() reads it from
+        // get_mods() -- which only ever moves if process_action() sees the event, so
+        // swallowing Shift makes the top four slots unpickable and leaves the render's
+        // synced copy of the mods clear as well. A bare Shift tap does nothing on the
+        // host, the same reasoning the Intl picker's Ctrl latch rests on.
+        // ⚠️ The clear_keyboard() that opened the picker drops a Shift that was ALREADY
+        // held, so it has to be pressed again once the picker is up.
+        if (IS_MODIFIER_KEYCODE(keycode)) return true;
+
+        // ⚠️ Act only on a release whose PRESS this picker saw. The tap that opens the
+        // picker is handled one block down while the state is still IDLE, so its
+        // release arrives here and resolves to KC_MACRO_REC -- without this the opening
+        // tap would open the picker and immediately cancel it again. Owning the whole
+        // press/release pair closes that for every key, not just REC.
+        if (record->event.pressed) {
+            s_pick_press_row = record->event.key.row;
+            s_pick_press_col = record->event.key.col;
+        } else if (record->event.key.row == s_pick_press_row &&
+                   record->event.key.col == s_pick_press_col) {
+            s_pick_press_row = POLY_PICK_NO_PRESS;
+            s_pick_press_col = POLY_PICK_NO_PRESS;
+            const uint16_t ul = macro_picker_keycode_at(record->event.key.row,
+                                                        record->event.key.col);
+            if (ul >= QK_MACRO && ul <= QK_MACRO_MAX) {
+                const uint8_t id = poly_macro_banked_id((uint8_t)(ul - QK_MACRO),
+                                                        (get_mods() & MOD_MASK_SHIFT) != 0);
+                if (id != POLY_MACRO_NONE) poly_macro_rec_pick(id);
+            } else if (ul == KC_MACRO_REC) {
+                poly_macro_rec_toggle();   // the picker's own way out
+            }
+        }
+        return false;
+    }
+
+    // The record gesture. SWALLOWED on the press, never left to the release edge:
+    // _UL is entered with OSL(), where a release-edge action fires up to three times
+    // (process_action's do_release_oneshot) -- for a start/stop toggle that is start,
+    // stop, start, i.e. the recording you just made is thrown away and a new one
+    // begins. Same rule the settings keys follow, and the reason they were moved.
+    if (keycode == KC_MACRO_REC) {
+        if (record->event.pressed) {
+            // Anything the finger is holding is released BEFORE the mode changes, for
+            // the reason doom_begin() and the FW-2 prompt do it: the picker swallows
+            // the RELEASE of a key that was already down, so the host keeps it
+            // registered and auto-repeats it. It also stops the modifier that reached
+            // this key from being the first thing a recording captures.
+            clear_keyboard();
+            // This press is NOT seen by the picker block above (the state is still
+            // IDLE here), so start the session with no pending press -- its release
+            // must not be read as an answer.
+            s_pick_press_row = POLY_PICK_NO_PRESS;
+            s_pick_press_col = POLY_PICK_NO_PRESS;
+            poly_macro_rec_toggle();
+        }
+        display_wakeup(record);
+        return false;
+    }
+
     // Macro keycodes (QK_MACRO_0..QK_MACRO_MAX). Nothing else in the build consumes
     // them -- via.c is the only core dispatcher and VIA_ENABLE is unset -- so they are
     // ours, and they are SWALLOWED here rather than handled on the release edge: an
@@ -4341,7 +4561,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // two or three times over.
     if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
         if (record->event.pressed) {
-            poly_macro_start((uint8_t)(keycode - QK_MACRO));
+            // The LIVE modifier state here, not the synced snapshot the legend uses:
+            // this runs on the master at the instant of the press and must follow the
+            // finger, while the legend must render identically on a half that only sees
+            // the housekeeping snapshot. Same deliberate asymmetry as KC_GLYPH_SIZE_UP.
+            const uint8_t id = poly_macro_banked_id((uint8_t)(keycode - QK_MACRO),
+                                                    (get_mods() & MOD_MASK_SHIFT) != 0);
+            if (id != POLY_MACRO_NONE) {
+                // ⚠️ Release everything the FINGER is holding before the macro types.
+                // Reaching the second bank means holding Shift, and playback replays
+                // through register_code/tap_code -- so without this the host applies
+                // that Shift to every keystroke the macro sends and M12..M15 type in
+                // caps. The physical release afterwards unregisters an already-clear
+                // modifier, which is harmless.
+                clear_keyboard();
+                poly_macro_start(id);
+            }
         }
         display_wakeup(record);
         return false;
@@ -4891,7 +5126,13 @@ bool display_wakeup(keyrecord_t* record) {
     return accept_keypress;
 }
 
-// Updates local unicode input mode state and requests display refresh on mode change.
+// QMK's notification CALLBACK, fired from set_unicode_input_mode() /
+// unicode_input_mode_init() / the cycle keys. It mirrors the mode into the synced
+// state so the language layer's Mac/Lnx/Win/WinC/BSD keycaps can draw their ON/OFF
+// switch, and nothing else.
+// WARNING: never call this to CHANGE the mode — it does not touch
+// unicode_config.input_mode, so the keycaps would advertise a mode the keyboard
+// does not type in. Use set_unicode_input_mode() (see hid_com.c case 20).
 void unicode_input_mode_set_user(uint8_t unicode_mode) {
     access_local_state()->unicode_mode = unicode_mode;
     request_disp_refresh();
@@ -4939,6 +5180,10 @@ void keyboard_post_init_user(void) {
     // slave's over the link -- so a role swap makes whichever half the host talks to
     // the authority, with no handedness bookkeeping.
     poly_macro_labels_load();
+    // Give the slots nothing has claimed their stock look, so a keyboard that has never
+    // met the host app still shows sixteen tellable-apart macro keycaps rather than
+    // sixteen "M<n>" ones. Writes EEPROM only on the boot that finds a slot empty.
+    poly_macro_seed_defaults();
     // Queue them all. Nothing detects "the link is up" here and nothing needs to: the
     // sync tick only clears a label's bit on a real ACK, so the queue simply drains
     // once the slave starts answering. Same shape as the state diff being its own

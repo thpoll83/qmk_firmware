@@ -252,6 +252,15 @@ enum my_keycodes {
     // layer_state_set_user clears it on the way out, so an accidental QK_BOOT needs
     // two deliberate presses every time, not one press ever.
     KC_SETTINGS_MORE,
+    // Record a macro ON THE KEYBOARD, with no host app. Tap to open the slot picker,
+    // pick a slot to start, tap again to stop and save. Appended at the very end for
+    // the same no-renumbering reason as KC_EDEN.
+    //
+    // ⚠️ Handled and SWALLOWED in process_record_user(), never left to
+    // post_process_record_user(): _UL is entered with OSL(), where a release-edge
+    // action fires up to THREE times (process_action's do_release_oneshot), which for
+    // a start/stop toggle is start, stop, start.
+    KC_MACRO_REC,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —
@@ -269,7 +278,7 @@ static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_M
 // them, so neither
 // covers the tail of the QK_USER_0 block any more. Anchor on the LAST member and
 // re-anchor whenever something is appended.
-static_assert((int)KC_SETTINGS_MORE <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
+static_assert((int)KC_MACRO_REC <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

@@ -157,6 +157,127 @@ void poly_macro_labels_load(void) {
     }
 }
 
+// The stock look of an unclaimed slot: the Mayan numeral for its own index, captioned
+// "Macro N".
+//
+// A COUNTING system rather than a set of pictures, so the icon states the same fact the
+// caption does and a slot has no purpose read into it -- a gear or an envelope is a
+// wrong label on a macro nobody has written yet, not a neutral one. Mayan is the one
+// numeral system that fits: it is base-20, so 0..15 are each a SINGLE glyph, it has a
+// real glyph for ZERO (the shell) rather than an absence, and bar-and-dot is exactly
+// what a 1-bit 72x40 panel draws well -- three bars and four dots at most, no strokes
+// thinner than the ones the dice pips already use.
+//
+// The codepoints are contiguous (U+1D2E0 + value), which is why this is an expression
+// rather than a table: a sixteen-entry array of consecutive numbers is a table that can
+// disagree with itself.
+//
+// ⚠️ Measured, not assumed: a captioned keycap leaves 32 rows above the label and
+// draw_macro_mark() draws at native size only while the glyph is SHORTER than that.
+// As emitted these ink 4..19 px tall (M15, three bars, is the tallest), so none is
+// halved. Re-measure after any change to the `symbols` category size -- the check is
+// PolyKybdHost's macro_look.find_glyph() against the committed header, then rendering
+// the keycap and looking at it.
+//
+// ⚠️ These are PACK glyphs (`_Mayan_` in the `symbol` bundle), so a keyboard with no
+// font pack draws the index "M3" instead -- render_macro_key() already falls back that
+// way for an icon it has no glyph for, so nothing here can leave a keycap blank.
+#define POLY_MACRO_ICON_BASE 0x1D2E0u   // MAYAN NUMERAL ZERO
+// Base-20, so the numerals run 0..19 as single glyphs. Growing the macro count past
+// that would silently seed codepoints outside the emitted range, which resolves to no
+// glyph and falls back to the index -- a stock look that quietly stops being stock.
+_Static_assert(POLY_MACRO_COUNT <= 20,
+               "Mayan numerals are single glyphs only for 0..19");
+
+// True when nothing has claimed slot `id`: no body, and no stored look. An empty body
+// is a bare NUL (or a slot the buffer never reached), matching poly_macro_start()'s own
+// emptiness test -- so "the keycap shows a stock look" and "the key plays nothing" are
+// decided by the same fact rather than by two rules that can drift apart.
+// Does this slot still hold a look THIS firmware seeded under an older scheme, over an
+// empty body? Only one such scheme has shipped: the caption used to repeat the index
+// ("Macro 0" .. "Macro 15") that the Mayan numeral above it already states.
+//
+// ⚠️ Both halves of the test are load-bearing. The BODY must be empty, so nothing a
+// user has actually recorded is ever touched; and the look must match byte for byte,
+// icon and style included, so a caption someone typed themselves is left alone even
+// when it happens to read the same. A slot that passes is by definition one nobody has
+// used, so re-seeding it loses nothing.
+//
+// Delete this once no board in the field predates the change — it exists only so an
+// already-flashed keyboard picks the new caption up, which is otherwise impossible:
+// the stock look is stamped into EEPROM on the first boot and slot_unclaimed() is
+// false from then on.
+static bool slot_holds_legacy_seed(uint8_t id, const uint8_t *rec) {
+    static const char legacy[]  = "Macro ";
+    typedef char      want_buf[POLY_MACRO_LABEL_LEN + 1];
+    if (rec[0] != POLY_MACRO_STYLE_ICON) return false;
+    uint32_t icon = 0;
+    for (uint8_t n = 0; n < POLY_MACRO_ICON_LEN; n++) {
+        icon |= (uint32_t)rec[1 + n] << (8 * n);
+    }
+    if (icon != POLY_MACRO_ICON_BASE + id) return false;
+    // Rebuild the caption that scheme produced and compare, rather than parsing the
+    // stored one: "does this equal what we would have written" is the question, and
+    // it stays answerable if the scheme is ever changed again. The longest form is
+    // the word plus two digits, so the length is a build-time fact and the copy needs
+    // no runtime bound -- which is also what stops cppcheck reading the word's own
+    // 7-byte array through a 12-byte label bound.
+    _Static_assert(sizeof(legacy) + 1u <= sizeof(want_buf),
+                   "the legacy stock caption no longer fits a macro label");
+    char    want[sizeof(want_buf)];
+    uint8_t n = 0;
+    for (; n < sizeof(legacy) - 1u; n++) want[n] = legacy[n];
+    if (id >= 10) want[n++] = (char)('0' + id / 10);
+    want[n++] = (char)('0' + id % 10);
+    want[n]   = '\0';
+    const char *text = (const char *)&rec[1 + POLY_MACRO_ICON_LEN];
+    for (uint8_t i = 0; i < n; i++) {
+        if (text[i] != want[i]) return false;
+    }
+    return text[n] == '\0';
+}
+
+static bool slot_unclaimed(uint8_t id) {
+    const uint16_t cap   = poly_macro_capacity();
+    const uint16_t start = poly_macro_find(body_read, NULL, id, cap);
+    if (start < cap && body_read(start, NULL) != 0) return false;
+    uint8_t rec[POLY_MACRO_LOOK_LEN];
+    bool    empty = true;
+    for (uint8_t n = 0; n < POLY_MACRO_LOOK_LEN; n++) {
+        rec[n] = eeprom_read_byte((const uint8_t *)(uintptr_t)(label_addr(id) + n));
+        if (rec[n] != 0) empty = false;
+    }
+    return empty || slot_holds_legacy_seed(id, rec);
+}
+
+void poly_macro_seed_defaults(void) {
+    // Master only, the same rule the look cache follows: the slave's own EEPROM never
+    // sees a macro, and the master pushes every look over the link anyway. Called both
+    // from post_init and from the reset path, so a role that is not yet resolved early
+    // in boot costs nothing -- post_init runs it again.
+    if (!is_keyboard_master()) return;
+    for (uint8_t id = 0; id < POLY_MACRO_COUNT; id++) {
+        if (!slot_unclaimed(id)) continue;
+        poly_macro_look_t look = {
+            .icon  = POLY_MACRO_ICON_BASE + id,
+            .style = POLY_MACRO_STYLE_ICON,
+        };
+        // The caption does NOT repeat the index -- the Mayan numeral above it already
+        // states which slot this is, and saying it twice spends the widest thing on
+        // the keycap on the one fact the mark carries best. Plain "Macro" also drops
+        // to 41 px in the _Small_ face (against 57 px for "Macro 15"), so the caption
+        // band has room to spare on every slot rather than only the single digits.
+        uint8_t n = 0;
+        const char *word = "Macro";
+        for (; word[n] != '\0'; n++) look.text[n] = word[n];
+        look.text[n] = '\0';
+        // Writes EEPROM and queues the look for the slave. Only ever on the first boot
+        // that finds the slot empty: afterwards the record is non-zero, so
+        // slot_unclaimed() is false and nothing is written again.
+        poly_macro_look_set(id, &look);
+    }
+}
+
 void poly_macro_look_get(uint8_t id, poly_macro_look_t *out) {
     if (out == NULL) return;
     if (id >= POLY_MACRO_COUNT) {
@@ -260,6 +381,9 @@ void poly_macro_reset_all(void) {
     // ones across.
     memset(s_looks, 0, sizeof(s_looks));
     poly_macro_labels_mark_all_dirty();
+    // Every slot is empty now, so this hands them all the stock look back rather than
+    // leaving sixteen blank keycaps until the next boot.
+    poly_macro_seed_defaults();
 }
 
 // ---------------------------------------------------------------------------

@@ -1641,6 +1641,15 @@
       "bits": 32,
       "source": "noto-sans",
       "source_file": "NotoSans-Regular.ttf"
+    },
+    "181": {
+      "size": 20,
+      "hinting": "auto",
+      "variant": "_Mayan_",
+      "render_height": 50,
+      "bits": 32,
+      "source": "noto-sans-mayan",
+      "source_file": "NotoSansMayanNumerals-Regular.ttf"
     }
   }
 }

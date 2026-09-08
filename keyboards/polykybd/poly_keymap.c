@@ -3145,6 +3145,12 @@ static uint8_t s_pick_press_row = POLY_PICK_NO_PRESS;
 static uint8_t s_pick_press_col = POLY_PICK_NO_PRESS;
 
 static uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col) {
+    // ⚠️ Bounds-checked for the same reason keymap_key_to_keycode() is: not every
+    // record carries a MATRIX position. An encoder event is row KEYLOC_ENCODER_CW/CCW
+    // (253/252) with the encoder index as the column, so while the picker is open a
+    // turn of the knob would index the keymap far out of range and answer with
+    // whatever that read produced -- which can match a macro key or the REC key.
+    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) return KC_NO;
     return poly_keycode_at(_UL, row, col);
 }
 

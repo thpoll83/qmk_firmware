@@ -1640,6 +1640,25 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
   `data[2]` id, `data[3]` 0xFF query else length, `data[4..]` text). All three sit
   behind ONE host feature gate — a host that could read the info header but not the
   bodies would render an editor over data it cannot fetch. See "Dynamic macros" below.
+  **v17** adds the **VOLATILE flag** to `SET_UNICODE_MODE` (cmd `20`, `data[3]`):
+  non-zero applies the mode in RAM only, leaving EEPROM alone. It exists because at
+  Windows logon the host cannot tell "WinCompose is not installed" from "WinCompose
+  has not started yet" — so it applies its early reading volatile (plain `Windows`
+  IS how the keyboard should type while WinCompose is absent) and re-asserts it
+  persistently once it can tell the two apart. Without it, every logon on a
+  WinCompose machine wrote `Windows` and then `WinCompose` back over it.
+  ⚠️ **The wire change is backwards-compatible in one direction only.** An older
+  HOST sends a zero-padded report, so `data[3]` reads 0 = persist — fine. An older
+  FIRMWARE ignores `data[3]` and would silently STORE a mode the caller asked not to
+  store, which is precisely the transient value the flag exists to keep out of
+  EEPROM — so the host gates it (`FEATURE_MIN_PROTOCOL["unicode_mode_volatile"]`) and
+  falls back to withholding the ambiguous reading entirely.
+  ⚠️ QMK has **no `set_unicode_input_mode_noeeprom()`**; `unicode_config` is `extern`
+  and `unicode_input_mode_set_kb()` is the notification the keycap legend rides on,
+  so `apply_unicode_mode()` in `hid_com.c` is the persisting path minus one call —
+  **no upstream patch**. Note the persisting path never needed help: QMK's
+  `eeprom_update_byte` already skips a write when the byte matches, so re-asserting
+  the SAME mode has always been free; only the transient wrong value is new.
   **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep.** ⚠️ The old note here said "the host connect gate is exact-match"; it is

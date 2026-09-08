@@ -167,6 +167,34 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
 
 // Handles HID commands: device ID, language change, overlay reception, mapping, and display control.
 // Global variables: hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
+/**
+ * Apply a unicode input mode, optionally WITHOUT writing it to EEPROM.
+ *
+ * QMK's set_unicode_input_mode() always persists, and there is no noeeprom
+ * variant — but `unicode_config` is extern and unicode_input_mode_set_kb() is
+ * the notification the keycap legend rides on, so the volatile half is the
+ * persisting one minus a single call. No upstream patch.
+ *
+ * Why volatile exists: at Windows logon the host races WinCompose's own
+ * autostart, and an absent wincompose.exe is equally consistent with "not
+ * installed" and "not started yet". The host therefore applies its early
+ * reading volatile and re-asserts it persistently once it can tell the two
+ * apart. Without this, every logon on a WinCompose machine wrote Windows and
+ * then WinCompose back over it — two EEPROM writes to end where it started.
+ *
+ * NOTE the persisting path is unchanged: eeprom_update_byte() already skips a
+ * write when the byte matches, so re-asserting the SAME mode has always been
+ * free. It is only the transient wrong value that this avoids storing.
+ */
+static void apply_unicode_mode(uint8_t mode, bool persist) {
+    if (persist) {
+        set_unicode_input_mode(mode);
+        return;
+    }
+    unicode_config.input_mode = mode;
+    unicode_input_mode_set_kb(mode);
+}
+
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     // Board name in the GET_ID reply — each variant header (QMK_KEYBOARD_H) may
     // define POLY_KB_NAME; default to "Split72" so split72 (which doesn't define
@@ -699,29 +727,37 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 // report: the legend read "Win ON" at startup while emoji still went out
                 // as WinCompose sequences, and pressing the Win key (the real setter)
                 // was what finally made them agree and broke emoji.
+                //
+                // data[3] (protocol 17+) is the VOLATILE flag: non-zero applies the
+                // mode in RAM only. It exists because at Windows logon the host
+                // cannot tell "WinCompose is not installed" from "WinCompose has not
+                // started yet" — see apply_unicode_mode() below. An older host sends
+                // a zero-padded report, so data[3] is 0 = persist, which is the
+                // behaviour it expects.
+                const bool persist = (data[HID_DATA_IDX + 1] == 0);
                 switch(data[HID_DATA_IDX]) {
                     case 0: //Linux = 0
-                        set_unicode_input_mode(UNICODE_MODE_LINUX);
+                        apply_unicode_mode(UNICODE_MODE_LINUX, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 1: //Mac = 1
-                        set_unicode_input_mode(UNICODE_MODE_MACOS);
+                        apply_unicode_mode(UNICODE_MODE_MACOS, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 2: //Windows = 2
-                        set_unicode_input_mode(UNICODE_MODE_WINDOWS);
+                        apply_unicode_mode(UNICODE_MODE_WINDOWS, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 3: //WinCompose = 3
-                        set_unicode_input_mode(UNICODE_MODE_WINCOMPOSE);
+                        apply_unicode_mode(UNICODE_MODE_WINCOMPOSE, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;
                     case 4: //BSD = 4
-                        set_unicode_input_mode(UNICODE_MODE_BSD);
+                        apply_unicode_mode(UNICODE_MODE_BSD, persist);
                         memset(data, 0, length);
                         hid_reply(data, 0x14, true);
                         break;

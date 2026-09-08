@@ -2529,6 +2529,22 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // flag is simply omitted — the xx-YY code label below it still identifies the
 // language (graceful fallback). The tiny label font stays resident.
 static const GFXfont* const lang_label_fonts[] = { &NotoSans_Regular_Nano_10px7b };
+
+// The MACRO caption band has two faces, largest first. _Nano_ 10px was the only one
+// and is far smaller than the band can carry: "Macro 0" measures 40 px in a 72 px
+// panel, and the caption is what a reader is meant to read. _Small_ 15px draws the
+// same string at 57 px and still leaves 30 rows for the mark, which every stock
+// numeral (4..19 px ink) clears with room to spare.
+//
+// ⚠️ A label too wide for _Small_ drops to _Nano_ with its TEXT INTACT rather than
+// being truncated at the bigger face -- losing characters is worse than losing size,
+// and the truncation loop below is the floor face's last resort, not the ladder's.
+//
+// ⚠️ extern, not #include: NotoSans_Medium_Base_8pt.h DEFINES the font (non-static),
+// and each variant's status_oled.c already includes it. A second include here is a
+// multiple-definition LINK error that compiles cleanly -- the pattern oled_helper.c
+// uses for the same font, and the trap util_font.h/nano_font.h documented first.
+extern const GFXfont NotoSans_Regular_Small_15px7b;
 // Mid (19px) utility font for the no-pack fallback code — between Small and Base,
 // so a full "ll-CC" fits on one line (~52px) yet stays readable. Reuse this
 // `mid_fonts` array for any misc utility-key text that wants a middle size.
@@ -2774,14 +2790,22 @@ static void render_macro_key(uint8_t id) {
         return;
     }
 
+    // Pick the caption face: the larger one when the WHOLE label fits it, else the
+    // floor face. A single-font array either way, so kdisp_write_gfx_char's baseline
+    // align is a no-op and the two cannot land on different baselines.
+    int8_t lxmin = 0, lxmax = 0, lymin = 0, lymax = 0;
+    const GFXfont* cap_arr[1] = { &NotoSans_Regular_Small_15px7b };
+    kdisp_gfx_text_bbox(cap_arr, 1, text, &lxmin, &lxmax, &lymin, &lymax);
+    if ((int16_t)(lxmax - lxmin + 1) > SCREEN_WIDTH) {
+        cap_arr[0] = lang_label_fonts[0];
+    }
+
     // Drop trailing characters until the caption fits the panel. Measuring after each
     // drop rather than estimating from a per-character width is the point -- the face
     // is proportional, so an estimate is wrong in both directions.
     uint8_t len = tlen;
-
-    int8_t lxmin = 0, lxmax = 0, lymin = 0, lymax = 0;
     while (len > 0) {
-        kdisp_gfx_text_bbox(lang_label_fonts, 1, text, &lxmin, &lxmax, &lymin, &lymax);
+        kdisp_gfx_text_bbox(cap_arr, 1, text, &lxmin, &lxmax, &lymin, &lymax);
         if ((int16_t)(lxmax - lxmin + 1) <= SCREEN_WIDTH) break;
         text[--len] = 0;
     }
@@ -2793,7 +2817,7 @@ static void render_macro_key(uint8_t id) {
     const int8_t cap_base  = (int8_t)(SCREEN_HEIGHT - 1 - lymax);
     const int8_t free_rows = (int8_t)(cap_base + lymin);   // rows above the caption
 
-    kdisp_write_gfx_text(lang_label_fonts, 1,
+    kdisp_write_gfx_text(cap_arr, 1,
                          (int8_t)(BUFFER_X + (SCREEN_WIDTH - (lxmax - lxmin + 1)) / 2 - lxmin),
                          cap_base, text);
 

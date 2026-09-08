@@ -3777,6 +3777,25 @@ knowing is the parts that are NOT what you would write from scratch:
   `render_lang_flag_key`. The INDEX rather than a generic macro glyph: a generic glyph
   is identical on all sixteen keys, so it says "this is a macro" and nothing else,
   while the index says which one and needs no font pack.
+  - **The caption band has TWO faces, largest first** (`_Small_` 15px, then `_Nano_`
+    10px), and `render_macro_key()` picks the largest whose WHOLE label fits.
+    `_Nano_` alone was far smaller than the band can carry — "Macro 0" measures 40 px
+    in a 72 px panel, and the caption is the thing a reader is meant to read.
+    `_Small_` draws it at 57 px and still leaves 30 rows for the mark, which every
+    stock numeral (4–19 px ink) clears.
+    - ⚠️ **A label too wide for `_Small_` drops to `_Nano_` with its TEXT INTACT**,
+      rather than being truncated at the bigger face. Losing characters to gain size
+      is the wrong trade for a label whose job is to say what the macro does; the
+      truncation loop is the floor face's last resort, not the ladder's.
+    - ⚠️ **`extern`, not `#include`** — `NotoSans_Medium_Base_8pt.h` DEFINES the font
+      (non-static) and each variant's `status_oled.c` already includes it, so a second
+      include is a multiple-definition LINK error that compiles cleanly. Same pattern
+      `oled_helper.c` uses for the same face.
+    - **The host mirrors it in ONE place**: `macro_label.pick_face()`, called by the
+      editor's pixel meter, the shared `MacroKeycapRenderer` and
+      `tools/macro_label_preview.py`. The meter measuring at the floor face regardless
+      would report "work mail" as 48 px of 72 — a third of the panel free where there
+      is really 1 px.
   - ⚠️ **Truncate by MEASURED WIDTH, never by character count.** Measured against the
     shipped `_Nano_` face: `WWWWWWWW` is exactly 72 px (8 chars) and `iiiiiiiiiiii`
     is 34 px (12 chars) — an estimate is wrong in both directions.

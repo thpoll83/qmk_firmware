@@ -996,10 +996,11 @@ inherited-upstream noise:
   queued 07:34Z, still queued when the PR merged at 12:10Z, 4.5 hours later.
   `diagnose-hil-failure` classifies a RED check and has nothing to say about this.
   Two consequences:
-  - **Read `status` before `conclusion`.** An in-progress or queued run has **no
-    `conclusion` key at all** (the same trap the `actions_list` note below
-    records), so "not failed" is not "passed". A job whose `started_at` is hours
-    old and whose status is still `queued` was never picked up by a runner.
+  - **Read `status` before `conclusion`.** An unfinished run carries no verdict in
+    either shape: the MCP `actions_list` response omits `conclusion` entirely (the
+    trap the note below records), while the REST API returns `"conclusion": null`.
+    So "not failed" is never "passed" — and a job whose `started_at` is hours old
+    while its status is still `queued` was never picked up by a runner at all.
   - ⚠️ **It silently arms a release refusal.** The FW-APPLY tier runs on every push
     to `PolyKybd`, so an offline rig means the merge's own apply run hangs too —
     and `tools/require_fwapply_run.py` refuses to publish a release the apply tier

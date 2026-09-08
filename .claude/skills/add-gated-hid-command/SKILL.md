@@ -101,8 +101,11 @@ make test:<name>
 - **Pin the payload BYTES** in `poly_kybd_cmd_test.py` (`self._payload(...)[:4]`),
   including the flag byte's legacy value — that is the only test that catches the
   host and firmware disagreeing about the wire.
-- **Pin the GATE** in `poly_kybd_capabilities_test.py`: the threshold, a refusal
-  below it, and that the *unflagged* form still works below it.
+- **Pin the GATE** in `poly_kybd_capabilities_test.py`: the threshold, and a
+  refusal below it. ⚠️ When you added a FLAG to an existing command, also pin that
+  the **unflagged** form still works below the threshold — the gate is on the flag,
+  not on the command, which is ancient. A brand-new command has no unflagged form:
+  there, everything below the threshold refuses.
 - **Mutation-test** what you added (`mutation-test-suite`). A gate that is never
   exercised is a gate that does not exist.
 

@@ -282,7 +282,14 @@ poly_macro_splice_result_t poly_macro_commit_begin(poly_macro_commit_t *c,
     if (term >= end) return POLY_MACRO_SPLICE_BAD_ID;
 
     const uint16_t old_span = (uint16_t)(term + 1u - start);
-    const uint16_t new_span = (uint16_t)(len + 1u);
+    // The span is the body PLUS its terminator, so a len of UINT16_MAX wraps it to 0 --
+    // which passes the capacity check below and then never terminates, because the BODY
+    // phase exits on `cursor > len` and a uint16_t cursor can never exceed UINT16_MAX.
+    // The recorder bounds its own buffer far below this, so nothing reachable today gets
+    // here; the guard is the module's, since `len` is a uint16_t in its own contract.
+    const uint32_t span32 = (uint32_t)len + 1u;
+    if (span32 > UINT16_MAX) return POLY_MACRO_SPLICE_NO_ROOM;
+    const uint16_t new_span = (uint16_t)span32;
 
     // Everything after this macro that is worth moving. poly_macro_used() stops at the
     // last NON-EMPTY macro, so trailing empty slots collapse into the zero fill and

@@ -462,8 +462,12 @@ TEST(MacroSplice, TheBufferReadsNotIntactForTheWholeSplice) {
     Region              r = make({tap(KC_A_), tap(KC_B_), tap(KC_C_)});
     const uint16_t      end = (uint16_t)r.bytes.size();
     poly_macro_commit_t c{};
+    // commit_begin() only STORES the body pointer; the BODY phase dereferences it many
+    // steps later, so a temporary would be long dead by then.
+    const std::string body = tap(KC_C_);
     ASSERT_EQ(poly_macro_commit_begin(&c, rd, wr, &r, 1,
-                                      (const uint8_t *)tap(KC_C_).data(), 3, end),
+                                      (const uint8_t *)body.data(),
+                                      (uint16_t)body.size(), end),
               POLY_MACRO_SPLICE_OK);
 
     bool ever_intact_midway = false;
@@ -475,6 +479,19 @@ TEST(MacroSplice, TheBufferReadsNotIntactForTheWholeSplice) {
     EXPECT_FALSE(ever_intact_midway);
     EXPECT_TRUE(poly_macro_buffer_intact(rd, &r, end));
     EXPECT_GT(steps, 1) << "a one-shot commit cannot be chunked off the main loop";
+}
+
+TEST(MacroSplice, AnUnrepresentableSpanIsRefusedRatherThanWrapped) {
+    // len + 1 is the span, so UINT16_MAX would wrap it to 0: the capacity check then
+    // passes and the BODY phase never terminates, because it exits on `cursor > len`
+    // and a uint16_t cursor cannot exceed UINT16_MAX. Refusing is the only safe answer
+    // -- and NO_ROOM is honest, since no region this module can address could hold it.
+    Region              r = make({tap(KC_A_), tap(KC_B_)});
+    poly_macro_commit_t c{};
+    const std::string   body = tap(KC_C_);
+    EXPECT_EQ(poly_macro_commit_begin(&c, rd, wr, &r, 1, (const uint8_t *)body.data(),
+                                      UINT16_MAX, (uint16_t)r.bytes.size()),
+              POLY_MACRO_SPLICE_NO_ROOM);
 }
 
 TEST(MacroSplice, TheChunkSizeDoesNotChangeTheResult) {

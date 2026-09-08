@@ -204,6 +204,30 @@ jobs:
           cp "${TARGET}.uf2" "${NAMED}.uf2"
           cp "${TARGET}.bin" "${NAMED}.bin"
           ASSETS=( "${NAMED}.uf2" "${NAMED}.bin" "doom_pack_v${PACK_VER}.plyx" )
+          # Handedness provisioning. A fresh board has no handedness stamp
+          # (keyboards/polykybd/base/hand_stamp.h), and without one both halves
+          # come up as `right` and the split link never forms. These 512-byte UF2s
+          # each write that ONE 4 KB sector -- firmware, font pack and EEPROM are
+          # elsewhere and untouched -- so a board can be provisioned over BOOTSEL
+          # with no host app, and a half that has ended up on the wrong side can be
+          # corrected the same way.
+          #
+          # ⚠️ The firmware .uf2 above stays handedness-NEUTRAL, deliberately. It
+          # would be one flag to fold the stamp into it and ship left/right
+          # firmware images instead -- and then every firmware re-flash would
+          # rewrite handedness, so grabbing the wrong file silently flips a half.
+          # Provisioning and updating are different jobs; keep them different files.
+          #
+          # Board-independent: split42 and split72 share base/fw_staging.h and are
+          # both 8 MB, so the stamp sector is at the same offset for each. Versioned
+          # like every other asset only so downloads of two releases do not collide
+          # in the browser (see the note above); the bytes are identical from
+          # release to release unless the flash map itself moves.
+          python3 keyboards/polykybd/tools/make_hand_uf2.py --side left \
+            -o "polykybd-handedness-left_v${VER}.uf2"
+          python3 keyboards/polykybd/tools/make_hand_uf2.py --side right \
+            -o "polykybd-handedness-right_v${VER}.uf2"
+          ASSETS+=( "polykybd-handedness-left_v${VER}.uf2" "polykybd-handedness-right_v${VER}.uf2" )
           # Include the detached signature when the Sign step produced one (FW-2).
           # It must travel as "<bin>.sig" of the RENAMED bin, or hid_fw_up.py will
           # not find it (sig_path = bin_path + ".sig").

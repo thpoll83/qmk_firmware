@@ -323,9 +323,9 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 
 ## Mirrored skills (`qmk_firmware` ↔ `PolyKybdHost`)
 
-Four skills exist in **both** repos and are kept **byte-identical**:
-`mutation-test-suite`, `polykybd-github-release`, `session-retro`,
-`update-polykybd-docs`. A skill loads only from the repos a session has attached,
+Five skills exist in **both** repos and are kept **byte-identical**:
+`add-gated-hid-command`, `mutation-test-suite`, `polykybd-github-release`,
+`session-retro`, `update-polykybd-docs`. A skill loads only from the repos a session has attached,
 so one that describes cross-repo work is unreachable from a session opened on the
 other repo alone — which is what happened to `mutation-test-suite`, extended to
 cover Python/unittest suites while living only in the firmware repo.
@@ -341,7 +341,7 @@ because a skill has no build, no test and no reviewer.
 **So the rule is copy, never fork**: edit one, `cp` it to the other, and check with
 
 ```bash
-for s in mutation-test-suite polykybd-github-release session-retro update-polykybd-docs; do
+for s in add-gated-hid-command mutation-test-suite polykybd-github-release session-retro update-polykybd-docs; do
     cmp -s /home/user/qmk_firmware/.claude/skills/$s/SKILL.md \
            /home/user/PolyKybdHost/.claude/skills/$s/SKILL.md \
       && echo "$s: ok" || echo "$s: DRIFTED"
@@ -988,6 +988,26 @@ inherited-upstream noise:
     would analyse the whole upstream QMK tree — the same trap as the
     lint-on-upstream-keyboards problem below. The host repo runs CodeQL instead,
     where Python needs no build and the tree is entirely ours.
+- ⚠️ **A HIL job that never STARTS is a different state from a red one, it alerts
+  nobody, and it blocks the RELEASE gate hours later.** When the self-hosted rig
+  runner is offline, `HIL test (split72)` sits `status: queued` with no
+  `conclusion`, no log, no annotation and no timeout — the PR board shows a
+  spinner, not a failure, so nothing about it looks wrong. Measured 2026-09-08:
+  queued 07:34Z, still queued when the PR merged at 12:10Z, 4.5 hours later.
+  `diagnose-hil-failure` classifies a RED check and has nothing to say about this.
+  Two consequences:
+  - **Read `status` before `conclusion`.** An in-progress or queued run has **no
+    `conclusion` key at all** (the same trap the `actions_list` note below
+    records), so "not failed" is not "passed". A job whose `started_at` is hours
+    old and whose status is still `queued` was never picked up by a runner.
+  - ⚠️ **It silently arms a release refusal.** The FW-APPLY tier runs on every push
+    to `PolyKybd`, so an offline rig means the merge's own apply run hangs too —
+    and `tools/require_fwapply_run.py` refuses to publish a release the apply tier
+    has not covered. The failure surfaces at publish time, on a commit that looked
+    fine when it merged. The recovery is the one that note already prescribes:
+    dispatch *Build and HIL Test* with `tier: fwapply` on the right ref once the
+    rig is back, and remember the ref rules there (the branch tip only works while
+    it IS the release commit; otherwise dispatch on the tag).
 - **A change that cannot alter the firmware does NOT run the build or the rig —
   `qmk-test.yml` path-filters both its `push` and `pull_request` triggers.** Markdown
   since 2026-08-21, then `scripts/` and `.claude/`, then the sibling workflow files
@@ -1659,6 +1679,21 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
   **no upstream patch**. Note the persisting path never needed help: QMK's
   `eeprom_update_byte` already skips a write when the byte matches, so re-asserting
   the SAME mode has always been free; only the transient wrong value is new.
+  ⚠️ **A QMK `*_set_user` hook is a NOTIFICATION, never a setter — and calling one
+  to CHANGE state fails in the quietest possible way: the UI moves and the
+  behaviour does not.** `unicode_input_mode_set_user()` is what QMK fires *from*
+  `set_unicode_input_mode()`, and our override of it (`poly_keymap.c`) does exactly
+  one thing: mirror the value into `local_state->unicode_mode` so the language
+  layer's Mac/Lnx/Win/WinC/BSD keycaps can draw their ON/OFF switch. Cmd 20 called
+  it directly for years, so a host push relabelled those keys while
+  `unicode_config.input_mode` — which decides how codepoints are actually typed —
+  never moved. Field report 2026-09-08: the layer read **Win ON** at startup while
+  emoji still worked (i.e. the keyboard was really in WinCompose mode), and pressing
+  the Win key — the one path through the real setter — made behaviour follow the
+  legend and broke emoji. **The tell is a state whose display and effect disagree**;
+  when you find one, check whether the write went through the setter or the
+  callback. The same shape applies to every `*_set_user` QMK exposes, so grep for
+  one being called rather than implemented.
   **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep.** ⚠️ The old note here said "the host connect gate is exact-match"; it is

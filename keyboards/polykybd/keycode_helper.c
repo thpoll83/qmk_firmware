@@ -48,6 +48,27 @@ static inline const uint32_t* kc_os_gui_icon(void) {
 // status-OLED top row.
 #define SETTING_LBL(label, value) MID_TWO_LINE(label, value)
 
+// The four RGB effect presets spell the effect out instead of abbreviating it to
+// four characters ("Plan"/"Brth"/"Swrl"/"Rnbw"), at HALF scale.
+//
+// ⚠️ NOT the 19px mid face the settings labels use: measured, "Rainbow" is 78px
+// there against a 72px keycap and loses its last letters. Half of the 27px keycap
+// face is 11px caps and fits all four -- 58px worst case, 7px of margin each side.
+//
+// There is no centring op, so each legend carries a MEASURED run of \x06 (+2px
+// right) plus one \x05 (+2px down, which puts the ink's centre on the keycap's).
+// The counts come from the rendered ink box (PolyKybdHost tools/oled_preview.py),
+// not from counting characters -- the face is proportional, so "Solid" and "Cycle"
+// need different runs despite both being five letters.
+//
+// ⚠️ The nudge run is its OWN string literal, and has to be: \x06 followed by a hex
+// digit is swallowed into one escape, which the 'B' of "Breath" would do.
+#define RIGHT_6PX   U"\x06\x06\x06"
+#define RIGHT_12PX  U"\x06\x06\x06\x06\x06\x06"
+#define RIGHT_18PX  U"\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_20PX  U"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+#define RGB_PRESET(right, word)  HINT_SMALL right U"\x05" U##word
+
 static const uint32_t* idle_style_legend(void) {
     static const uint32_t* const names[] = { SETTING_LBL("IDLE:", "Pulse"),
                                              SETTING_LBL("IDLE:", "Jittr"),
@@ -198,10 +219,10 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case RM_VALD:                       return U"Bri-";
         case RM_SPDU:                       return U"Spd+";
         case RM_SPDD:                       return U"Spd-";
-        case RGB_MODE_PLAIN:                return U"Plan";
-        case RGB_MODE_BREATHE:              return U"Brth";
-        case RGB_MODE_SWIRL:                return U"Swrl";
-        case RGB_MODE_RAINBOW:              return U"Rnbw";
+        case RGB_MODE_PLAIN:                return RGB_PRESET(RIGHT_20PX, "Solid");
+        case RGB_MODE_BREATHE:              return RGB_PRESET(RIGHT_12PX, "Breath");
+        case RGB_MODE_SWIRL:                return RGB_PRESET(RIGHT_18PX, "Cycle");
+        case RGB_MODE_RAINBOW:              return RGB_PRESET(RIGHT_6PX,  "Rainbow");
         case KC_MEDIA_NEXT_TRACK:           return ICON_RIGHT ICON_RIGHT;
         case KC_MEDIA_PLAY_PAUSE:           return U"  " ICON_RIGHT;
         case KC_MEDIA_STOP:                 return ICON_MEDIA_STOP;

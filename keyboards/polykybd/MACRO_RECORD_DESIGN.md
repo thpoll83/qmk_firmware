@@ -241,20 +241,37 @@ the same storage the host editor uses.
 ### 6.1 Sixteen keycaps that look alike is not a placement
 
 Twelve macro keys drawing nothing but `M0`..`M11` is the problem the displays exist to
-solve, so an unclaimed slot ships a stock look: a game-piece icon above the caption
-`Macro N` (`poly_macro_seed_defaults()`, seeded at post_init and after a reset).
+solve, so an unclaimed slot ships a stock look: the **Mayan numeral for its own
+index** above the caption `Macro N` (`poly_macro_seed_defaults()`, seeded at post_init
+and after a reset).
 
 The condition is **empty** — no body and an all-zero look record — not "never seeded",
 so there is no migration sentinel and clearing a macro hands its keycap the stock look
 back. That works because an unwritten record reads all-zero (wear levelling normalises
 a cleared byte to zero, the `latin_assign` fact) and zero *is* the default look.
 
-Card suits, dice pips and chess pieces, because the icons have to be tellable apart
-rather than suggest a purpose — a slot has none until someone fills it. Every one is
-20–30 px tall, which is measured rather than chosen: a captioned keycap leaves 32 rows
-and `draw_macro_mark()` draws at native size only below that. That rules out most
-emoji (40 px) and, less obviously, the geometric shapes — `U+25A0`/`25CF`/`25B2` and
-friends are absent from the shipped bundles.
+A **counting** system rather than a set of pictures, so the icon states the same fact
+the caption does and no purpose is read into a slot nobody has written yet. Mayan is
+the one that fits: base-20, so 0..15 are each a single glyph; a real glyph for **zero**
+(the shell) rather than an absence, which is what lets the set reach M0; and
+bar-and-dot is what a 1-bit 72×40 panel draws well.
+
+Nothing in the shipped pack covered them — measured, **0 of 20** codepoints resolved,
+and the obvious alternative of geometric shapes (`U+25A0`/`25CF`/`25B2`) is absent too.
+So this added `NotoSansMayanNumerals` (OFL, 50 KB) as a `_Mayan_` entry in the
+`symbols` category and reshipped the `symbol` bundle, v8 → v9, 37,200 → 38,976 B in a
+96 KB slot.
+
+⚠️ The entry sits at the very **end of `fonts.yaml`'s `fonts` list**, not at the end of
+the symbols block: the category picks the bundle, the list position picks the global
+index. Appended after the other symbols entries it took index 147 and pushed the whole
+`fantasy` bundle up by one, forcing a second `.plyf` reship for a font nothing else
+touched.
+
+⚠️ The sizes are measured. A captioned keycap leaves 32 rows and `draw_macro_mark()`
+draws at native size only below that; as emitted these ink 4–19 px, so none is halved
+and 0 pixels clip. `POLY_MACRO_COUNT <= 20` is `_Static_assert`ed, past which a slot
+would seed a codepoint outside the emitted range.
 
 ---
 

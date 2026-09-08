@@ -157,43 +157,37 @@ void poly_macro_labels_load(void) {
     }
 }
 
-// The stock look of an unclaimed slot: one game piece per macro, captioned "Macro N".
+// The stock look of an unclaimed slot: the Mayan numeral for its own index, captioned
+// "Macro N".
 //
-// Game pieces because the point is to be TELLABLE APART, not to suggest a purpose --
-// a macro slot has none until someone fills it, and an icon that implies one (a gear,
-// an envelope) is a wrong label rather than a neutral one. Card suits, dice pips and
-// chess pieces are three families of six-or-fewer that nobody confuses with each other
-// at 27x27 px.
+// A COUNTING system rather than a set of pictures, so the icon states the same fact the
+// caption does and a slot has no purpose read into it -- a gear or an envelope is a
+// wrong label on a macro nobody has written yet, not a neutral one. Mayan is the one
+// numeral system that fits: it is base-20, so 0..15 are each a SINGLE glyph, it has a
+// real glyph for ZERO (the shell) rather than an absence, and bar-and-dot is exactly
+// what a 1-bit 72x40 panel draws well -- three bars and four dots at most, no strokes
+// thinner than the ones the dice pips already use.
 //
-// ⚠️ Every one of these is 20..30 px tall, and that is a MEASURED constraint, not a
-// coincidence. A captioned keycap leaves 32 rows above the label, and draw_macro_mark()
-// draws at native size only while the glyph is SHORTER than that -- anything taller is
-// halved, which is the right fallback for a user's own pick and a poor default. It also
-// rules out most emoji, which are rendered at 40 px. The check is
-// PolyKybdHost's macro-look model: resolve each codepoint through the shipped bundles
-// and compare its glyph height against the free rows, then look at the render.
+// The codepoints are contiguous (U+1D2E0 + value), which is why this is an expression
+// rather than a table: a sixteen-entry array of consecutive numbers is a table that can
+// disagree with itself.
 //
-// ⚠️ These are PACK glyphs (NotoSansSymbols2, the `symbol` bundle), so a keyboard with
-// no font pack draws the index "M3" instead -- render_macro_key() already falls back
-// that way for an icon it has no glyph for, so nothing here can leave a keycap blank.
-static const uint32_t s_default_icons[POLY_MACRO_COUNT] = {
-    0x2660,  // spade
-    0x2665,  // heart
-    0x2666,  // diamond
-    0x2663,  // club
-    0x2680,  // die face 1
-    0x2681,  // die face 2
-    0x2682,  // die face 3
-    0x2683,  // die face 4
-    0x2684,  // die face 5
-    0x2685,  // die face 6
-    0x2654,  // chess king
-    0x2655,  // chess queen
-    0x2656,  // chess rook
-    0x2657,  // chess bishop
-    0x2658,  // chess knight
-    0x2659,  // chess pawn
-};
+// ⚠️ Measured, not assumed: a captioned keycap leaves 32 rows above the label and
+// draw_macro_mark() draws at native size only while the glyph is SHORTER than that.
+// As emitted these ink 4..19 px tall (M15, three bars, is the tallest), so none is
+// halved. Re-measure after any change to the `symbols` category size -- the check is
+// PolyKybdHost's macro_look.find_glyph() against the committed header, then rendering
+// the keycap and looking at it.
+//
+// ⚠️ These are PACK glyphs (`_Mayan_` in the `symbol` bundle), so a keyboard with no
+// font pack draws the index "M3" instead -- render_macro_key() already falls back that
+// way for an icon it has no glyph for, so nothing here can leave a keycap blank.
+#define POLY_MACRO_ICON_BASE 0x1D2E0u   // MAYAN NUMERAL ZERO
+// Base-20, so the numerals run 0..19 as single glyphs. Growing the macro count past
+// that would silently seed codepoints outside the emitted range, which resolves to no
+// glyph and falls back to the index -- a stock look that quietly stops being stock.
+_Static_assert(POLY_MACRO_COUNT <= 20,
+               "Mayan numerals are single glyphs only for 0..19");
 
 // True when nothing has claimed slot `id`: no body, and no stored look. An empty body
 // is a bare NUL (or a slot the buffer never reached), matching poly_macro_start()'s own
@@ -218,7 +212,7 @@ void poly_macro_seed_defaults(void) {
     for (uint8_t id = 0; id < POLY_MACRO_COUNT; id++) {
         if (!slot_unclaimed(id)) continue;
         poly_macro_look_t look = {
-            .icon  = s_default_icons[id],
+            .icon  = POLY_MACRO_ICON_BASE + id,
             .style = POLY_MACRO_STYLE_ICON,
         };
         // "Macro 15" is 8 characters and 45 px in the _Nano_ face, against a 72 px

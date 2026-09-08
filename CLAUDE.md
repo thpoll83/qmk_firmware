@@ -3801,33 +3801,48 @@ knowing is the parts that are NOT what you would write from scratch:
     held Shift would be recorded as a spurious `DOWN Shift` step.
   - ⚠️ **`F13..F24` lose their default home**, so say so in the release notes; a user
     who wants them back assigns them from the layout editor.
-- **An unclaimed slot ships a stock look: a game-piece icon and the caption
-  "Macro N"** (`poly_macro_seed_defaults()`). Without it a keyboard that has never met
-  the host app shows sixteen keycaps distinguished only by "M0".."M15" in the index
-  style, which is exactly the twelve-keys-that-look-alike problem the displays exist to
-  solve. Four points, three of which are measurements:
+- **An unclaimed slot ships a stock look: the MAYAN NUMERAL for its own index, over
+  the caption "Macro N"** (`poly_macro_seed_defaults()`). Without it a keyboard that
+  has never met the host app shows sixteen keycaps distinguished only by "M0".."M15"
+  in the index style, which is exactly the twelve-keys-that-look-alike problem the
+  displays exist to solve. Five points, three of which are measurements:
   - **The condition is EMPTY, not "never seeded"** — no body and an all-zero look
     record — so there is no migration sentinel to keep and clearing a macro hands its
     keycap the stock look back. ⚠️ An unwritten record reads **all-zero, not 0xFF**
     (QMK's wear levelling normalises a cleared byte to zero — the fact that made
     `latin_assign` read as "every key hosts 'a'"), and zero *is* the default look, so
     the two are genuinely the same state.
-  - ⚠️ **Every default icon is 20–30 px tall, and that is measured rather than
-    chosen.** A captioned keycap leaves **32 rows** above the label and
-    `draw_macro_mark()` draws at native size only while the glyph is *shorter* than
-    that — taller is halved, which is a fine fallback for a user's own pick and a poor
-    default. It rules out most emoji, which render at 40 px, and it also rules out the
-    obvious geometric shapes: **U+25A0/25CF/25B2/2B22 and friends are simply absent
-    from the shipped bundles.** Vet a replacement by resolving it through
-    `PolyKybdHost`'s `macro_look.find_glyph()` and comparing the glyph height against
-    the free rows, then render the keycap and look at it.
-  - **Game pieces because the point is to be TELLABLE APART, not to suggest a
-    purpose.** A slot has no purpose until someone fills it, so a gear or an envelope
-    is a wrong label rather than a neutral one. Card suits (4), dice pips (6) and chess
-    pieces (6) are three families nobody confuses with each other at 27×27 px.
-  - **They are PACK glyphs** (`NotoSansSymbols2`, the `symbol` bundle), so a keyboard
-    with no font pack draws the index instead — `render_macro_key()` already falls back
-    that way for an icon it has no glyph for, and no keycap is ever left blank.
+  - **A COUNTING system, not a set of pictures.** The icon then states the same fact
+    the caption does, and no purpose is read into a slot nobody has written yet — a
+    gear or an envelope is a wrong label, not a neutral one. **Mayan is the only
+    numeral system that fits**: base-20, so 0..15 are each a SINGLE glyph; it has a
+    real glyph for **zero** (the shell, U+1D2E0) rather than an absence, which is what
+    lets the set reach M0 at all; and bar-and-dot is what a 1-bit 72×40 panel draws
+    well — three bars and four dots at worst.
+  - ⚠️ **Nothing already in the pack covered them — measured, 0 of 20 codepoints
+    resolved** — so this added a source font (`NotoSansMayanNumerals`, OFL, 50 KB) and
+    a `_Mayan_` entry in the `symbols` category, and reshipped the `symbol` bundle
+    (v8 → v9, 37,200 → 38,976 B in a 96 KB slot). The obvious alternative, geometric
+    shapes, is *also* absent: **U+25A0/25CF/25B2/2B22 and friends are simply not in the
+    shipped bundles**, which is worth knowing before proposing any icon by name.
+  - ⚠️ **The entry sits at the very END of `fonts.yaml`'s `fonts` list, not at the end
+    of the symbols block — the category picks the BUNDLE, the list position picks the
+    global index, and the two are independent.** Appended after the other symbols
+    entries it took index 147 and pushed the whole `fantasy` bundle up by one, which
+    would have forced a second `.plyf` reship for a font nothing else touched. At the
+    end of the list it takes index 181 and `--check` reports every other bundle
+    identical.
+  - ⚠️ **The sizes are measured, not chosen.** A captioned keycap leaves **32 rows**
+    above the label and `draw_macro_mark()` draws at native size only while the glyph
+    is *shorter* than that. As emitted these ink **4–19 px** (M15, three bars, is the
+    tallest), so none is halved and 0 pixels clip. That check is
+    `PolyKybdHost`'s `macro_look.find_glyph()` against the committed header, then
+    rendering the keycap and looking at it. A `_Static_assert` pins
+    `POLY_MACRO_COUNT <= 20`, past which a slot would seed a codepoint outside the
+    emitted range and silently fall back to the index.
+  - **They are PACK glyphs**, so a keyboard with no font pack draws the index instead —
+    `render_macro_key()` already falls back that way for an icon it has no glyph for,
+    and no keycap is ever left blank.
 - ⚠️ **A PREVIEW THAT MIRRORS THE IMPLEMENTATION AGREES BY CONSTRUCTION — it cannot
   catch a placement bug, and this is the limit of the repo's "verify by rendering"
   rule.** `draw_macro_mark()` first drew a chosen icon at its native size or skipped

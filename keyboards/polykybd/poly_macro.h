@@ -119,7 +119,8 @@ void poly_macro_look_set(uint8_t id, const poly_macro_look_t *look);
 // Fill the RAM cache from EEPROM. Master only -- called once at boot.
 void poly_macro_labels_load(void);
 
-// Give every EMPTY slot the stock look: a game-piece icon and the caption "Macro N".
+// Give every EMPTY slot the stock look: the Mayan numeral for its own index, over the
+// caption "Macro N".
 // Master only; the slave gets them over the link like any other look.
 //
 // The condition is "empty", not "never seeded", and that is the whole design: a slot

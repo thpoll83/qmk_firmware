@@ -1971,6 +1971,22 @@
 #define HINT_SMALL       U"\x10"      // draw the REST of the string half-scale (text, advances)
 #define HINT_MID         U"\x16"      // draw the REST of the string from the standalone 19px UI face
 
+// Centring runs: N x \x06 (+2px right each). There is no centring op, so a run
+// that must sit in the middle of the keycap prepends one of these, with N taken
+// from the rendered ink box rather than counted by eye.
+//
+// ⚠️ They live HERE and not beside their one caller in keycode_helper.c, because
+// the host's preview exporter (PolyKybdHost scripts/export_preview_data.py) reads
+// named glyphs out of THIS file and keycode_helper.h only. Defined in the .c they
+// resolve for the firmware and not for the exporter, which silently DROPS the
+// legend rather than failing -- the four RGB preset keycaps disappeared from the
+// host layout editor's key preview that way (2026-09-08). Function-like macros
+// are parsed from the .c too, so only the object-like ones have this constraint.
+#define RIGHT_6PX        U"\x06\x06\x06"
+#define RIGHT_12PX       U"\x06\x06\x06\x06\x06\x06"
+#define RIGHT_18PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_20PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+
 // Two lines of MID-face text on one 72x40 keycap: a label over the value it names.
 //
 // `\v` advances a fixed 15px while the mid face inks ~14px ABOVE the baseline and

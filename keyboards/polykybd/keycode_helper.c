@@ -63,10 +63,8 @@ static inline const uint32_t* kc_os_gui_icon(void) {
 //
 // ⚠️ The nudge run is its OWN string literal, and has to be: \x06 followed by a hex
 // digit is swallowed into one escape, which the 'B' of "Breath" would do.
-#define RIGHT_6PX   U"\x06\x06\x06"
-#define RIGHT_12PX  U"\x06\x06\x06\x06\x06\x06"
-#define RIGHT_18PX  U"\x06\x06\x06\x06\x06\x06\x06\x06\x06"
-#define RIGHT_20PX  U"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+// RIGHT_*PX live in named_glyphs.h beside HINT_SMALL -- see the note there for
+// why an object-like macro used by a legend cannot live in this file.
 #define RGB_PRESET(right, word)  HINT_SMALL right U"\x05" U##word
 
 static const uint32_t* idle_style_legend(void) {

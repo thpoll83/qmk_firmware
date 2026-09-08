@@ -4651,7 +4651,13 @@ bool display_wakeup(keyrecord_t* record) {
     return accept_keypress;
 }
 
-// Updates local unicode input mode state and requests display refresh on mode change.
+// QMK's notification CALLBACK, fired from set_unicode_input_mode() /
+// unicode_input_mode_init() / the cycle keys. It mirrors the mode into the synced
+// state so the language layer's Mac/Lnx/Win/WinC/BSD keycaps can draw their ON/OFF
+// switch, and nothing else.
+// WARNING: never call this to CHANGE the mode — it does not touch
+// unicode_config.input_mode, so the keycaps would advertise a mode the keyboard
+// does not type in. Use set_unicode_input_mode() (see hid_com.c case 20).
 void unicode_input_mode_set_user(uint8_t unicode_mode) {
     access_local_state()->unicode_mode = unicode_mode;
     request_disp_refresh();

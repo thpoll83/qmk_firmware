@@ -1169,6 +1169,17 @@ inherited-upstream noise:
     part was reading "`.claude/**` is excluded" as "any `.claude/` directory". Read a
     rename as TWO paths, and check the anchor before predicting a skip:
     `pull_request_read` `get_files` prints `previous_filename` for each one.
+    - ⚠️ **And once ONE file in the PR matches, EVERY later push re-runs the gate —
+      the `pull_request` paths filter is evaluated over the WHOLE PR's changed
+      files, not the push's.** Measured on the same #286 an hour later: a commit
+      touching only `CLAUDE.md` plus three files under `.claude/skills/`, i.e.
+      nothing but excluded paths, still started `Build firmware` and the rig,
+      because the PR still carried the renames above. So the skip you can predict
+      is per-PR, not per-push, and a docs-only follow-up on a PR that once touched
+      firmware costs a full flash-and-test cycle — which is what the "stop pushing
+      cosmetic commits while the important PR waits for the rig" rule is really
+      about. `git show --stat HEAD` proving your commit is clean says nothing;
+      `get_files` on the PR is the query that answers it.
   - **The exclusion is scoped to `.github/workflows/**`, not all of `.github/`.**
     Nothing under `.github/` is a build input today — there is no `uses: ./...`
     anywhere in `qmk-test.yml`, every action is external — but the narrower scope

@@ -1986,6 +1986,47 @@
 #define RIGHT_12PX       U"\x06\x06\x06\x06\x06\x06"
 #define RIGHT_18PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06"
 #define RIGHT_20PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_14PX       U"\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_16PX       U"\x06\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_24PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+
+// Vertical nudges (\x0C = 2px up, \x05 = 2px down), same story as the runs above:
+// a legend that lifts a glyph has to put it back before drawing the next one, since
+// both ops move the CURSOR rather than the glyph.
+#define UP_4PX           U"\x0C\x0C"
+#define UP_8PX           U"\x0C\x0C\x0C\x0C"
+#define DOWN_2PX         U"\x05"
+#define DOWN_4PX         U"\x05\x05"
+#define DOWN_6PX         U"\x05\x05\x05"
+#define DOWN_8PX         U"\x05\x05\x05\x05"
+
+// RGB value-key icons. The droplet and the sun are the same two symbols the status
+// OLED draws beside the saturation and value percentages (split72/status_oled.c has
+// them as hand-drawn bitmaps; a keycap legend can only reference a FONT glyph, so
+// these are the font originals), and the degree ring stands for the hue wheel that
+// panel already labels in degrees. Speed has no panel icon at all, so it takes the
+// guillemet.
+//
+// ⚠️ DEGREE and ICON_RGB_SPD are RESIDENT; the droplet and the sun are PACK glyphs
+// (EmjEffects / SymBmp1). On a keyboard with no font pack those two simply do not
+// draw -- kdisp_draw_glyph_half_at returns without plotting -- and the keycap keeps
+// its word, which is resident. It is never blank.
+#define ICON_RGB_SAT     U"\x1F4A7"   // droplet
+#define ICON_RGB_VAL     U"\x2600"    // sun
+#define ICON_RGB_SPD     U"\xBB"      // guillemet
+
+// Buffer positions for the two PACK icons above. They ink 26x39 and 31x33 at full
+// size -- taller than the whole 72x40 keycap -- so they are drawn through HINT_HALF,
+// which plots the literal top-left at the cursor and does NOT advance it. That is
+// what makes the sign a separate HINT_MOVE: there is no advanced cursor to draw it
+// from. Measured (tools: PolyKybdHost oled_preview.py) so the icon+sign group
+// centres on the panel and clears the word line, with zero pixels off-panel.
+#define RGB_POS_SAT_ICON U"\x30\x02"   // (48, 2)  halved droplet top-left
+#define RGB_POS_SAT_PLUS U"\x41\x17"   // (65,23)  baseline cursor for '+'
+#define RGB_POS_SAT_MINS U"\x41\x15"   // (65,21)  '-' inks 6px lower than '+' centres
+#define RGB_POS_VAL_ICON U"\x2F\x03"   // (47, 3)  halved sun top-left
+#define RGB_POS_VAL_PLUS U"\x43\x17"   // (67,23)
+#define RGB_POS_VAL_MINS U"\x43\x15"   // (67,21)
 
 // Two lines of MID-face text on one 72x40 keycap: a label over the value it names.
 //

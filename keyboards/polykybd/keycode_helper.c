@@ -55,17 +55,40 @@ static inline const uint32_t* kc_os_gui_icon(void) {
 // there against a 72px keycap and loses its last letters. Half of the 27px keycap
 // face is 11px caps and fits all four -- 58px worst case, 7px of margin each side.
 //
-// There is no centring op, so each legend carries a MEASURED run of \x06 (+2px
-// right) plus one \x05 (+2px down, which puts the ink's centre on the keycap's).
-// The counts come from the rendered ink box (PolyKybdHost tools/oled_preview.py),
-// not from counting characters -- the face is proportional, so "Solid" and "Cycle"
-// need different runs despite both being five letters.
+// The effect name sits under a "Preset:" label, so the keycap says what the key
+// selects and not just what it is called -- the same label-over-value shape the
+// settings keys use, one size down.
+//
+// There is no centring op, so each line carries a MEASURED run of \x06 (+2px
+// right). The counts come from the rendered ink box (PolyKybdHost
+// tools/oled_preview.py), not from counting characters -- the face is
+// proportional, so "Solid" and "Cycle" need different runs despite both being
+// five letters.
 //
 // ⚠️ The nudge run is its OWN string literal, and has to be: \x06 followed by a hex
 // digit is swallowed into one escape, which the 'B' of "Breath" would do.
 // RIGHT_*PX live in named_glyphs.h beside HINT_SMALL -- see the note there for
 // why an object-like macro used by a legend cannot live in this file.
-#define RGB_PRESET(right, word)  HINT_SMALL right U"\x05" U##word
+#define RGB_PRESET(right, word)  \
+    HINT_SMALL RIGHT_12PX U"Preset:" U"\r\v" HINT_SMALL right U##word
+
+// The four RGB VALUE keys name their channel with an icon over the spelled-out
+// word, instead of the abbreviation the four-character face forced ("Sat+"). Same
+// two-line shape as the presets: line 1 at the default baseline, line 2 half-scale
+// at +15.
+//
+// `top` carries the icon and the sign; the sign is the SAME full-size base-font
+// glyph on all four keys, so the row reads as one control family. That is why the
+// two oversized PACK icons go through HINT_MOVE + HINT_HALF (see RGB_POS_* in
+// named_glyphs.h) rather than HINT_SMALL: HINT_SMALL latches for the REST of the
+// run, so it would halve the sign too and give the row two different plus signs.
+//
+// ⚠️ The word is "Bright", not "Brightness": at half scale "Brightness" inks 72px
+// starting at x1, i.e. one column past the 72px panel, and no leading nudge can
+// pull it back (\x08 clamps at the origin). Measured, like every run here, from
+// the rendered ink box rather than from a character count.
+#define RGB_VALUE(top, right, word)  \
+    top U"\r\v" HINT_SMALL right U##word
 
 static const uint32_t* idle_style_legend(void) {
     static const uint32_t* const names[] = { SETTING_LBL("IDLE:", "Pulse"),
@@ -209,14 +232,14 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case RM_PREV:                       return U" " ICON_LEFT PRIVATE_LIGHT;
         case KC_RGB_TOG:                    return (state_flags & RGB_ON) == 0 ? U"RGB\r\v" ICON_SWITCH_OFF : U"RGB\r\v" ICON_SWITCH_ON;
         case RM_NEXT:                       return PRIVATE_LIGHT ICON_RIGHT;
-        case RM_HUEU:                       return U"Hue+";
-        case RM_HUED:                       return U"Hue-";
-        case RM_SATU:                       return U"Sat+";
-        case RM_SATD:                       return U"Sat-";
-        case RM_VALU:                       return U"Bri+";
-        case RM_VALD:                       return U"Bri-";
-        case RM_SPDU:                       return U"Spd+";
-        case RM_SPDD:                       return U"Spd-";
+        case RM_HUEU:                       return RGB_VALUE(RIGHT_20PX UP_4PX DEGREE DOWN_4PX U"+", RIGHT_20PX, "Hue");
+        case RM_HUED:                       return RGB_VALUE(RIGHT_24PX UP_4PX DEGREE DOWN_2PX U"-", RIGHT_20PX, "Hue");
+        case RM_SATU:                       return RGB_VALUE(HINT_MOVE(RGB_POS_SAT_ICON) HINT_HALF ICON_RGB_SAT HINT_MOVE(RGB_POS_SAT_PLUS) U"+", U"", "Saturation");
+        case RM_SATD:                       return RGB_VALUE(HINT_MOVE(RGB_POS_SAT_ICON) HINT_HALF ICON_RGB_SAT HINT_MOVE(RGB_POS_SAT_MINS) U"-", U"", "Saturation");
+        case RM_VALU:                       return RGB_VALUE(HINT_MOVE(RGB_POS_VAL_ICON) HINT_HALF ICON_RGB_VAL HINT_MOVE(RGB_POS_VAL_PLUS) U"+", RIGHT_14PX, "Bright");
+        case RM_VALD:                       return RGB_VALUE(HINT_MOVE(RGB_POS_VAL_ICON) HINT_HALF ICON_RGB_VAL HINT_MOVE(RGB_POS_VAL_MINS) U"-", RIGHT_14PX, "Bright");
+        case RM_SPDU:                       return RGB_VALUE(RIGHT_20PX UP_8PX ICON_RGB_SPD DOWN_8PX U"+", RIGHT_16PX, "Speed");
+        case RM_SPDD:                       return RGB_VALUE(RIGHT_24PX UP_8PX ICON_RGB_SPD DOWN_6PX U"-", RIGHT_16PX, "Speed");
         case RGB_MODE_PLAIN:                return RGB_PRESET(RIGHT_20PX, "Solid");
         case RGB_MODE_BREATHE:              return RGB_PRESET(RIGHT_12PX, "Breath");
         case RGB_MODE_SWIRL:                return RGB_PRESET(RIGHT_18PX, "Cycle");

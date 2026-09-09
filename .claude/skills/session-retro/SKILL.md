@@ -155,9 +155,22 @@ fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
      itself** — that is the learning above, and two copies of a technical
      conclusion drift with nothing comparing them. ⚠️ **`search_memories` for
      the question BEFORE writing** and skip if it is already indexed: a retro
-     re-run over an overlapping session would otherwise index it twice. Skip
-     entirely if nothing this session took more than a handful of files to
-     answer.
+     re-run over an overlapping session would otherwise index it twice.
+     ⚠️ **Write it raw — `add_memory(..., infer=False)`.** The default runs an
+     LLM extractor that rewrites the entry into third-person narrative prose
+     (*"User explained that …"*), losing the question / verdict / write-up
+     structure this bullet prescribes. ⚠️ Measured 2026-09-09, the
+     fully-qualified PR ref **did** survive that rewrite — so write raw for the
+     structure, and do not repeat a claim that the extractor eats the refs.
+     ⚠️ The default is also **asynchronous**: it returns `status: PENDING` plus
+     an `event_id`, where `infer=False` returns `SUCCEEDED` carrying the stored
+     text — so at the call site a written entry and a discarded one look
+     identical until you poll `get_event_status`. ⚠️ And a near-duplicate of an
+     existing entry is dropped **silently**: status `SUCCEEDED`, `results: []`,
+     nothing stored — which is exactly what a retro re-run over an overlapping
+     session produces, i.e. the case the search above exists to catch. **Read
+     `results`, never `status`.** Skip entirely if nothing this session took
+     more than a handful of files to answer.
    - Offer to commit + push the new/edited files (don't unless asked, per repo
      rules).
 

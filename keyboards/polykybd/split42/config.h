@@ -154,6 +154,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGB_MATRIX_KEYPRESSES
 #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100
 
+// Startup values, written only when the RGB eeconfig is fresh (QMK's
+// eeconfig_update_rgb_matrix_default). Both are expressed as a FRACTION of their
+// own full scale so they keep meaning the same thing if a cap ever moves: the
+// value against RGB_MATRIX_MAXIMUM_BRIGHTNESS (this board's ceiling, and what the
+// status OLED now calls 100%), the speed against the full 0..255 the speed gauge
+// draws. QMK's own defaults are full brightness and half speed.
+#define RGB_MATRIX_DEFAULT_VAL (RGB_MATRIX_MAXIMUM_BRIGHTNESS / 5)   // 20% of full
+#define RGB_MATRIX_DEFAULT_SPD (UINT8_MAX / 10)                      // 10% of full
+
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE_SIMPLE
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE_WIDE

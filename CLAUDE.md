@@ -419,6 +419,35 @@ unreachable.
   confirmed the move had worked. The claim was falsified minutes after being written,
   by the very action it was advising to defer: a "you cannot check this here" statement
   is worth one attempt at checking before it goes in the file.
+- ⚠️ **Making a skill reachable is what finally got its helper READ, and
+  `keycap_preview.py` had been parsing the WRONG SETTINGS ROWS the whole time.**
+  `_poly_settings()` split `poly_settings` by ordinal — `per = len(rows) // 6` — on
+  the premise that `lang_lut.c` emits the six H/V offset blocks. It emits **fifteen**
+  (six H/V, three `altgrhalf`, six held-offset), so `per` was 400 instead of 160,
+  each "block" spanned two and a half real ones, every language name appeared three
+  times inside it, and the last write won. Measured: `setting(S_LETTER_H, 'en-US',
+  VAR_SHIFT)` returned **35** out of `{num.hoffset}` where the real value is
+  `HIDE_KEY` — so the model drew an en-US letter a shift preview the firmware hides,
+  contradicting the docstring three lines above it. Every collision number the skill
+  had ever produced was measured against offsets from the wrong rows.
+  - **Key a generated block by its LABEL, never by its ordinal.** The generator
+    already writes `// {letter.hoffset}` markers, so splitting on those is immune to
+    a row being added — which is exactly what happened when `altgrhalf` landed
+    (2026-09-02) and silently invalidated the parser. The fix also raises on a
+    missing label rather than returning an empty dict, since the failure mode being
+    replaced was a plausible number rather than an error.
+  - ⚠️ **The check that catches this class is a DOCUMENTED value, not a schema
+    test.** A structural assertion (160 rows per block, 4 values per row) passes on
+    the broken parse. What fails is asking it something the firmware's own notes
+    already answer: en-US hides the letter shift preview, `{letter.altgrhalf}` is set
+    on exactly 27 layouts and `{sym.altgrhalf}` on 18. All three now match.
+  - **The AltGr hint was missing from `legend_ink()` too** — the module docstring
+    promised "base glyph, shift preview and AltGr preview" and the code composed the
+    first two, so a corner mark was measured against two thirds of the legend it can
+    collide with. It now mirrors the firmware's whole pair rule (the per-category
+    half-size opt-in, the `ALTGR_HALF_MIN_INK_H` mark guard, the four-edge clamp,
+    the shift stagger and the pull-left), and the pull is mutation-checked: disabling
+    that branch leaves the shift where it was, which the ink sets show.
 
 ## Branching (all PolyKybd repos)
 

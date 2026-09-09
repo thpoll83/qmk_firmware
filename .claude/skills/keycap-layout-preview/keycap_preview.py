@@ -48,10 +48,24 @@ W = 128                            # the full scratch buffer row
 CY_DEFAULT = 3                     # KDISP_CY_DEFAULT
 HIDE_KEY = -128
 
-# poly_settings row order (lang/lang_lut.h `enum settings_index`) and the
-# variation order (`enum variation_index`).
-S_LETTER_H, S_LETTER_V, S_NUM_H, S_NUM_V, S_SYM_H, S_SYM_V = range(6)
+# poly_settings rows, named as `lang_lut.c` labels them rather than by ordinal.
+# ⚠️ They USED to be `range(6)` ordinals, and that silently read the wrong rows:
+# `lang_lut.c` emits FIFTEEN blocks (the six H/V offsets, three altgrhalf, six
+# held-offset), so a parser that divides the row list by 6 gives 400 rows per
+# "block" instead of 160 and every language name appears three times inside one —
+# last write wins. Measured: `setting(S_LETTER_H, 'en-US', VAR_SHIFT)` returned 35
+# from `{num.hoffset}` instead of HIDE_KEY from `{letter.hoffset}`, i.e. the model
+# drew an en-US letter a shift preview the firmware hides. Key by the label.
+S_LETTER_H, S_LETTER_V = 'letter.hoffset', 'letter.voffset'
+S_NUM_H, S_NUM_V = 'num.hoffset', 'num.voffset'
+S_SYM_H, S_SYM_V = 'sym.hoffset', 'sym.voffset'
+S_LETTER_HALF, S_NUM_HALF, S_SYM_HALF = ('letter.altgrhalf', 'num.altgrhalf',
+                                         'sym.altgrhalf')
 VAR_SMALL, VAR_SHIFT, VAR_CAPS, VAR_ALTGR = range(4)
+
+WIN_X0, WIN_X1 = BUFFER_X, BUFFER_X + VIS_W - 1
+WIN_Y1 = H - 1
+ALTGR_HALF_MIN_INK_H = 7            # the firmware's mark guard, measured there
 
 
 # --- glyphs ------------------------------------------------------------------
@@ -113,17 +127,72 @@ def courtyard(ink, radius=CY_DEFAULT):
             for dx in range(-radius, radius + 1)}
 
 
+def small_ink(cp, cur_x, cur_y):
+    """HINT_SMALL (`\\x10`): half scale, KEEPING the baseline and advance.
+
+    ⚠️ NOT `half_ink()` — that is HINT_HALF, which takes the literal ink top-left
+    and does not advance. This mirrors `kdisp_write_gfx_char_half()`: only the
+    glyph's own offsets and extents are halved, never the baseline. The halving is
+    FLOOR (Python `//` already floors for negatives; the firmware spells it
+    `glyph_half_floor()` because C truncates toward zero, which would put
+    lowercase 1 px off the run's baseline).
+    """
+    f, g = find(cp)
+    y = cur_y + f.yAdvance - ICONS.yAdvance
+    x0, y0 = cur_x + g['xOffset'] // 2, y + g['yOffset'] // 2
+    w, h = g['width'], g['height']
+    return {(x0 + dx, y0 + dy)
+            for dy in range((h + 1) // 2) for dx in range((w + 1) // 2)
+            if any(lit(f, g, dx * 2 + ox, dy * 2 + oy)
+                   for oy in (0, 1) for ox in (0, 1)
+                   if dx * 2 + ox < w and dy * 2 + oy < h)}
+
+
+def rel_box(render, cp):
+    """(xmin, xmax, ymin, ymax) of a glyph's ink RELATIVE to its cursor.
+
+    The firmware's `kdisp_gfx_text_bbox()` in the units every placement rule below
+    is written in. Rendering at the origin is exact because the ink is linear in
+    the cursor.
+    """
+    ink = render(cp, 0, 0)
+    xs, ys = [x for x, _ in ink], [y for _, y in ink]
+    return min(xs), max(xs), min(ys), max(ys)
+
+
+def clamp(x, y, box):
+    """`legend_plan_clamp()` — every element, all four edges, one helper.
+
+    ⚠️ The ORDER decides which edge loses on an over-size glyph: east before west
+    (so west wins) and north before south (so the top clips). Preserved from the
+    firmware rather than chosen.
+    """
+    xmin, xmax, ymin, ymax = box
+    if x + xmax > WIN_X1: x = WIN_X1 - xmax
+    if x + xmin < WIN_X0: x = WIN_X0 - xmin
+    if y + ymin < 0:      y = -ymin
+    if y + ymax > WIN_Y1: y = WIN_Y1 - ymax
+    return x, y
+
+
 # --- render_key()'s legend ---------------------------------------------------
 
 def _poly_settings():
+    """`{row label: {lang: [small, shift, caps, altgr]}}` out of `lang_lut.c`.
+
+    Split on the `// {letter.hoffset}` block markers the generator emits, so
+    adding a settings row cannot shift the rows already here — see the note on
+    the S_* constants for what the ordinal version did instead.
+    """
     txt = _LANG_LUT.read_text(encoding='utf-8', errors='replace')
     body = txt[txt.rindex('static const int8_t poly_settings'):]
-    rows = re.findall(r'/\*\s*(\S+)\*/\s*(-?\d+),(-?\d+),(-?\d+),(-?\d+)', body)
-    per = len(rows) // 6
+    parts = re.split(r'//\s*\{([a-z]+\.[a-z]+)\}', body)
     out = {}
-    for block in range(6):
-        for name, *vals in rows[block * per:(block + 1) * per]:
-            out[(block, name)] = [int(v) for v in vals]
+    for label, block in zip(parts[1::2], parts[2::2]):
+        rows = re.findall(r'/\*\s*(\S+)\*/\s*(-?\d+),(-?\d+),(-?\d+),(-?\d+)', block)
+        out[label] = {name: [int(v) for v in vals] for name, *vals in rows}
+    if S_LETTER_H not in out:                       # a rename would fail open
+        raise RuntimeError('no %r block in %s' % (S_LETTER_H, _LANG_LUT))
     return out
 
 
@@ -131,47 +200,97 @@ SETTINGS = _poly_settings()
 
 
 def setting(row, lang, var):
-    return SETTINGS[(row, lang)][var]
+    return SETTINGS[row][lang][var]
 
 
-def legend_ink(ch, lang='en-US', kind=None, shifted=None):
-    """What render_key() draws for a resting (unshifted) key: the base glyph plus
-    the shift preview, placed and clamped by render_key()'s own rules.
+def legend_ink(ch, lang='en-US', kind=None, shifted=None, altgr=None):
+    """What render_key() draws for a resting (unshifted) key: the base glyph, the
+    shift preview and the AltGr hint, placed and clamped by render_key()'s own
+    rules. Returns one ink set.
 
     `kind` is 'letter' | 'num' | 'sym'; inferred from `ch` when omitted. `shifted`
-    is the upper view (inferred for letters). Returns one ink set.
+    is the upper view (inferred for letters). `altgr` is the AltGr cell's glyph.
 
-    ⚠️ The shift preview is what any corner chrome collides with — en-US HIDEs it
-    for letters, but 36 of 160 languages do not, and every language shows one on
-    the number and symbol rows.
+    ⚠️ The two hints are what corner chrome collides with, and BOTH have to be
+    passed to be measured. en-US HIDEs the shift preview for letters, but 36 of 160
+    languages do not, and every language shows one on the number and symbol rows;
+    the AltGr hint sits lower-right on the layouts that define one. Omitting
+    `altgr` measures a keycap that has no AltGr cell — which is a real case, but it
+    is not the same question as "does my mark clear this key's legend".
+
+    ⚠️ Model limits, both from the firmware's big-legend tiers: `base_plan.big` is
+    always false here (this models the SMALL face, which is what a resting keycap
+    draws unless the glyph-size setting is raised), so the AltGr's
+    push-clear-of-the-base branch and the M/L nominal baselines are not modelled.
+    Measure a raised glyph size with `tools/glyph_size_preview.py` instead.
     """
     if kind is None:
         kind = 'letter' if ch.isalpha() else ('num' if ch.isdigit() else 'sym')
-    hrow, vrow = {'letter': (S_LETTER_H, S_LETTER_V),
-                  'num': (S_NUM_H, S_NUM_V),
-                  'sym': (S_SYM_H, S_SYM_V)}[kind]
-    h_small = setting(hrow, lang, VAR_SMALL)
-    v_small = setting(vrow, lang, VAR_SMALL)
-    base_x = BUFFER_X + h_small
-    ink = full_ink(ord(ch), base_x, 23 + v_small)
+    hrow, vrow, halfrow = {
+        'letter': (S_LETTER_H, S_LETTER_V, S_LETTER_HALF),
+        'num': (S_NUM_H, S_NUM_V, S_NUM_HALF),
+        'sym': (S_SYM_H, S_SYM_V, S_SYM_HALF)}[kind]
 
+    # --- the base legend: the language's own origin, clamped onto the panel -----
+    bbox = rel_box(full_ink, ord(ch))
+    base_x = BUFFER_X + setting(hrow, lang, VAR_SMALL)
+    base_y = 23 + setting(vrow, lang, VAR_SMALL)
+    base_x, base_y = clamp(base_x, base_y, bbox)
+    base_ink_max = base_x + bbox[1]
+
+    # --- the shift preview -----------------------------------------------------
+    pv_x = pv_y = None
+    pbox = None
     h_pv, v_pv = setting(hrow, lang, VAR_SHIFT), setting(vrow, lang, VAR_SHIFT)
-    if h_pv == HIDE_KEY or v_pv == HIDE_KEY:
-        return ink
-    if shifted is None:
-        if kind != 'letter':
-            return ink                      # caller must name the shifted glyph
-        shifted = ch.upper()
-    _, bg = find(ord(ch))
-    _, pg = find(ord(shifted))
-    bmax = bg['xOffset'] + bg['width'] - 1
-    pmin, pmax = pg['xOffset'], pg['xOffset'] + pg['width'] - 1
-    px = BUFFER_X + h_pv
-    if px + pmin < base_x + bmax + 2:                     # keep clear of the base
-        px = base_x + bmax + 2 - pmin
-    if px + pmax > BUFFER_X + VIS_W - 1:                  # clamp to the right edge
-        px = (BUFFER_X + VIS_W - 1) - pmax
-    return ink | full_ink(ord(shifted), px, 23 + v_pv)
+    if h_pv != HIDE_KEY and v_pv != HIDE_KEY:
+        if shifted is None and kind == 'letter':
+            shifted = ch.upper()
+        if shifted is not None:
+            pbox = rel_box(full_ink, ord(shifted))
+            pv_x = BUFFER_X + h_pv
+            if pv_x + pbox[0] < base_ink_max + 2:          # keep clear of the base
+                pv_x = base_ink_max + 2 - pbox[0]
+            pv_y = 23 + v_pv
+            pv_x, pv_y = clamp(pv_x, pv_y, pbox)
+            if pv_x + pbox[0] <= base_ink_max:             # forced to overlap -> stagger
+                base_y -= 6                                # lift the flat base
+                base_x, base_y = clamp(base_x, base_y, bbox)
+                base_ink_max = base_x + bbox[1]
+                pv_y += 4                                  # drop the preview
+                pv_x, pv_y = clamp(pv_x, pv_y, pbox)
+
+    # --- the AltGr hint, laid out as a PAIR with the shift preview -------------
+    alt_x = alt_y = None
+    alt_render = full_ink
+    h_alt, v_alt = setting(hrow, lang, VAR_ALTGR), setting(vrow, lang, VAR_ALTGR)
+    if altgr is not None and h_alt != HIDE_KEY and v_alt != HIDE_KEY:
+        abox = rel_box(full_ink, ord(altgr))
+        # Half size is DATA per layout per category, plus the mark guard: halving a
+        # glyph that is already tiny destroys it (a Hebrew nikud is 2x3 px and comes
+        # out a dot), so the threshold is on ink HEIGHT and is measured, not chosen.
+        if setting(halfrow, lang, VAR_ALTGR) != 0 and abox[3] - abox[2] + 1 > ALTGR_HALF_MIN_INK_H:
+            alt_render = small_ink
+            abox = rel_box(small_ink, ord(altgr))
+        alt_x, alt_y = clamp(BUFFER_X + h_alt, 23 + v_alt, abox)
+        # Both hints sit right of the base — shift upper, AltGr lower — and their
+        # VERTICAL offsets are all that hold them apart. True for a narrow Latin
+        # pair, false for a tall script. When the boxes intersect in BOTH axes, pull
+        # the shift LEFT into the gap between the base and the right-clamped AltGr,
+        # never past the base's own 2 px margin and never right.
+        if pv_x is not None:
+            if (pv_x + pbox[0] <= alt_x + abox[1] and alt_x + abox[0] <= pv_x + pbox[1]
+                    and pv_y + pbox[2] <= alt_y + abox[3] and alt_y + abox[2] <= pv_y + pbox[3]):
+                want = max(alt_x + abox[0] - 2 - pbox[1], base_ink_max + 2 - pbox[0])
+                if want < pv_x:
+                    pv_x = want
+                    pv_x, pv_y = clamp(pv_x, pv_y, pbox)
+
+    ink = full_ink(ord(ch), base_x, base_y)
+    if pv_x is not None:
+        ink |= full_ink(ord(shifted), pv_x, pv_y)
+    if alt_x is not None:
+        ink |= alt_render(ord(altgr), alt_x, alt_y)
+    return ink
 
 
 # --- measuring ---------------------------------------------------------------

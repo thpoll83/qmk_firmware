@@ -78,6 +78,12 @@ fonts:
   - name: Noto Sans Math
     url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansmath/NotoSansMath-Regular.ttf
     dest: Noto_Sans_Math/NotoSansMath-Regular.ttf
+  # Mayan numerals (U+1D2E0-1D2F3) are their own tiny family — Symbols2 does not
+  # cover them.  Single-weight, so a static file.  Used by the `_Mayan_` entry, whose
+  # only consumer is the stock look of an unclaimed macro slot.
+  - name: Noto Sans Mayan Numerals
+    url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansmayannumerals/NotoSansMayanNumerals-Regular.ttf
+    dest: Noto_Sans_Mayan_Numerals/NotoSansMayanNumerals-Regular.ttf
   # NotoColorEmoji lives in a separate repo; upstream filename differs from the
   # path create_fonts.sh references (NotoColorEmoji-Regular.ttf)
   - name: Noto Color Emoji

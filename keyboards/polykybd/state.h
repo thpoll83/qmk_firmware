@@ -197,6 +197,14 @@ typedef struct _poly_sync_t {
     // Master-authoritative and per-visit: layer_state_set_user clears it on leaving
     // _SL, so it is never persisted and never survives a trip out of the layer.
     uint8_t  settings_more;
+    // On-keyboard macro recording: where the gesture is (enum poly_rec_state) and
+    // which slot it is aimed at (POLY_MACRO_NONE while none). Synced for the same
+    // reason fw_confirm and settings_more are -- the SLAVE draws its own half of the
+    // slot picker and only ever sees this struct, so without these the two halves
+    // would disagree about which keys are the picker and which slot is armed.
+    // Master-authoritative and never persisted: a recording does not survive a reboot.
+    uint8_t  rec_state;
+    uint8_t  rec_slot;
 } poly_sync_t;
 
 // Same reasoning as latin_sync_t's guard: transaction_rpc_exec() refuses a payload
@@ -613,6 +621,31 @@ uint8_t get_active_brightness(void);
 
 // Marks settings (lang + brightness) as needing an EEPROM write at the next flush.
 void mark_settings_dirty(void);
+
+// --- "something changed ON THE BOARD" -----------------------------------------
+//
+// A counter the host reads out of the GET_ID reply (the ['G'][u16] block) to learn
+// that state it may be caching has changed without it asking. The host's reconnect
+// probe already fetches GET_ID every second, so this costs no extra HID traffic and
+// no new command -- see CLAUDE.md "Telling the host something changed ON THE BOARD"
+// for why that beats both a dedicated poll and an unsolicited report.
+//
+// It says only THAT something changed, never what. The host re-reads whatever view
+// it has open, which is all any of its callers want.
+//
+// ⚠️ Touch it from the SETTER, and only for state a host view renders. It is
+// deliberately NOT derived from the EEPROM dirty flags, which look like the same
+// set and are not: set_auto_brightness_value() marks brightness dirty every time the
+// LTR-559 pushes a reading, i.e. about twice a second while auto mode is on, which
+// would turn a counter the host reads on change into a re-read at 2 Hz forever.
+//
+// ⚠️ Forgetting a call site leaves the host's view stale until something else
+// refreshes it -- exactly the behaviour before this existed -- so this list may be
+// incomplete without becoming wrong. That is why an enumerated set is acceptable
+// here and is not for sync_is_link_fault(), where a missing case gives a WRONG
+// answer and which is therefore written as a complement instead.
+void     poly_state_touch(void);
+uint16_t poly_state_generation(void);
 
 // The active idle (anti-burn-in) display style — see enum poly_idle_style.
 uint8_t get_idle_style(void);

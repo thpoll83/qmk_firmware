@@ -112,6 +112,21 @@ polykybd_font_bbox_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# The recorder is pure for the same reason the decoder is -- a byte reader/writer
+# callback and a caller-supplied clock, so the encoder and the splice link against a
+# RAM buffer with no EEPROM and no timer. macro_decode.c comes along deliberately:
+# poly_macro_rec_finish() closes still-held keys by READING BACK what it encoded, so
+# the two check each other rather than agreeing by construction.
+polykybd_macro_record_SRC := \
+	$(POLY_BASE_PATH)/macro_record.c \
+	$(POLY_BASE_PATH)/macro_decode.c \
+	$(POLY_BASE_PATH)/tests/macro_record_tests.cpp
+
+polykybd_macro_record_INC := \
+	$(POLY_BASE_PATH) \
+	$(POLY_BASE_PATH)/tests \
+	keyboards/polykybd
+
 # poly_hand_decide() is a static inline in hand_stamp.h, so the suite is just the
 # tests -- the same shape as map_codec and mode_byte. The flash I/O in
 # hand_stamp.c is deliberately on the other side of that line and is not linked

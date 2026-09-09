@@ -110,12 +110,24 @@ include them in what you show the user at the review gate.
    resource, which names `WinCompose-Setup-<ver>.exe`, and the workflow derives the zip
    name and the tag's expected assets from the same value. `AssemblyVersion` is 4-part
    (`0.9.16.0`); the release uses MAJOR.MINOR.REV.
-2. **Bump `Latest:` in `status.txt`** to the version being released. ⚠️ **This fails
-   silently if you forget.** WinCompose's own updater (`src/wincompose/Updater.cs`)
-   fetches that file from `raw.githubusercontent.com/thpoll83/wincompose/main/status.txt`
-   and only offers a download when `Latest` is **greater** than the running version — so
-   a stale value means **every existing install never learns about the release**. It
-   costs nothing to check and cannot be noticed by testing the release itself.
+2. ⚠️ **`Latest:` in `status.txt` is bumped AFTER the release is published, NOT
+   here.** It is the one piece of release prep that must not land early, and this
+   step used to say the opposite — which cost a real 20-minute window on 0.9.18
+   (2026-09-07), where every install was told 0.9.18 existed before it did.
+   `Updater.cs` reads that file from
+   `raw.githubusercontent.com/thpoll83/wincompose/main/status.txt` — from **`main`,
+   not from the releases** — and offers a download the moment `Latest` exceeds the
+   running version. So merging the bump before publishing announces a release that
+   is not there yet; the `Installer:`/`Portable:` URLs resolve `releases/latest`, so
+   the user is not 404'd, they are quietly handed the version they already have,
+   which is worse to diagnose. **The repo's own `RELEASE.md` step ④ has always said
+   "once the release exists" — it is the authority here, and this skill contradicted
+   it.**
+   ⚠️ It still **fails silently in the other direction if you forget it entirely**:
+   a stale value means every existing install never learns about the release, and no
+   amount of testing the release itself can notice. So it is not optional, only
+   later — land it as its own change after publishing, and say so at the review gate
+   so the user knows a second small merge is coming.
    (PolyKybdHost's "Install WinCompose…" tray entry is unaffected — it always resolves
    `releases/latest` — so this breaks only for people who already have it installed.)
 3. **Stage `PK-<version>.md`** on the `release-notes` branch, as for the other repos.
@@ -256,10 +268,25 @@ the repo's initial commit instead, which costs nothing and leaves the content id
    `GITHUB_TOKEN` or `gh auth token`. Tell the user to run it in each repo after you've
    staged the notes. ⚠️ **Merging the notes/tooling PR bumps the version past the prepared
    one** — that's expected; the script still publishes the prepared tag from the branch.
+   - ⚠️ **But if a PR merges between staging and publishing, re-read the staged NOTES,
+     not just the tag.** The drift above is benign when nothing else changed. It is not
+     when the merged PR changed the story: a firmware release was staged as
+     `PolyKybd-fw-v0.10.0.md` saying *"the released `.bin` here is the stock 125 MHz
+     build"*, then a `bump:minor` PR made 200 MHz the default and moved the tree to
+     0.11.0 — leaving prose that was flatly wrong for a tag that would never ship
+     (2026-08-05). Restage under the new tag and fix any cross-references (the host
+     notes named the firmware version too). `prepared_tags()` sorts by version *tuple*,
+     so the superseded file is never auto-picked — but it stays on the branch, so
+     **never `--tag` a prepared-but-superseded version.**
    - **Alternatives** (if they prefer): the GitHub UI — Draft a new release → pick the tag →
      leave the body **empty** → Publish; CI's `release: published` run then fills the
      crafted title+notes from the branch (`gh release edit`) and, for firmware, attaches
      assets. (A typed body is overwritten by the branch file — it's the source of truth.)
+
+4. **WinCompose only: after the user confirms the release is published, bump
+   `Latest:` in `status.txt`** and land it (see step 2b for why it cannot go earlier).
+   Nothing else reminds you, the release looks perfect without it, and the people it
+   fails are exactly the ones who already have WinCompose installed.
 
 **Always also deliver** the approved notes in chat as a ready-to-paste Markdown block + a
 one-line metadata summary (`tag / title / target branch / latest`), so the user can
@@ -293,9 +320,11 @@ note above).
   must tell users to update host + firmware together (exact-match connect gate).
 - **No git tags in the firmware tree** — releases are the GitHub Releases API; history
   boundaries are the `bump firmware/host version` commits (see `polykybd-release-notes`).
-- **WinCompose: a stale `status.txt` silently strands existing installs** — see step 2b.
-  The release itself looks perfect; only users who already run WinCompose are affected,
-  and they simply never see the update prompt.
+- **WinCompose: `status.txt` has a wrong value in BOTH directions, and they need
+  opposite timing** — see step 2b. Left stale, existing installs never learn about the
+  release and nothing about the release looks wrong. Bumped too early, they are told
+  about a release that does not exist and are handed the previous version instead. The
+  order is: publish, then bump.
 - **WinCompose: a published release whose build failed cannot be fixed by re-running it.**
   A re-run of the `release` job replays the workflow file **from that tag's commit**, so
   it reproduces the same failure. Fix the workflow on `main`, then **Actions → Release →

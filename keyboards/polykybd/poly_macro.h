@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "base/macro_decode.h"   // POLY_MACRO_INCOMPLETE, the wire format
+
 // Dynamic macros with a keycap legend.
 //
 // Storage is QMK's own dynamic-macro buffer (a run of NUL-terminated bodies at
@@ -20,6 +22,29 @@
 // mid-render. poly_macro_tick() executes at most one step per housekeeping pass.
 
 #define POLY_MACRO_NONE 0xFF
+
+// How many macro slots the utility layer shows at once. The layer hosts M0..M11 where
+// F13..F24 used to live, and SHIFT reaches the rest -- so the sixteen stored macros are
+// all playable from the board with no host app, on twelve keys.
+//
+// Shift banking rather than a second layer because _UL already uses Shift to modify a
+// key in place (KC_GLYPH_SIZE_UP reverses direction with it), and because a keyboard
+// whose keycaps are displays can just SHOW the second bank: the four shifted slots draw
+// M12..M15 and the other eight draw blank, which explains itself.
+#define POLY_MACRO_BANK 12
+
+// The macro a keymap slot plays, given the modifier state. Returns POLY_MACRO_NONE for
+// a shifted slot with nothing behind it, so the caller can leave the keycap blank and
+// the keypress inert.
+//
+// ⚠️ ONE implementation, called by both the action path and the render path. They are
+// the pair that must never disagree -- a keycap showing M13 while the key plays M1 is
+// the same class of defect as render_key()/to_static_text() unwrapping a mod-tap in
+// only one of the two.
+static inline uint8_t poly_macro_banked_id(uint8_t slot, bool shift) {
+    const uint16_t id = (uint16_t)slot + (shift ? POLY_MACRO_BANK : 0u);
+    return (id < POLY_MACRO_COUNT) ? (uint8_t)id : POLY_MACRO_NONE;
+}
 
 // Spacing between steps. TAP_CODE_DELAY is 0 on this board, which would run steps
 // back-to-back -- still one per main-loop pass, so still yielding, but fast enough that
@@ -41,11 +66,6 @@ void poly_macro_read(uint16_t offset, uint16_t size, uint8_t *out);
 void poly_macro_write(uint16_t offset, uint16_t size, const uint8_t *data);
 
 // Zero every body and every label.
-// Written into the buffer's last byte while a body write is in flight. Any non-zero
-// value works -- poly_macro_buffer_intact() only asks "is the final byte NUL" -- and it
-// is the same marker the host raises before it streams.
-#define POLY_MACRO_INCOMPLETE 0xFF
-
 void poly_macro_reset_all(void);
 
 // ---------------------------------------------------------------------------
@@ -98,6 +118,22 @@ void poly_macro_look_set(uint8_t id, const poly_macro_look_t *look);
 
 // Fill the RAM cache from EEPROM. Master only -- called once at boot.
 void poly_macro_labels_load(void);
+
+// Give every EMPTY slot the stock look: the Mayan numeral for its own index, over the
+// caption "Macro N".
+// Master only; the slave gets them over the link like any other look.
+//
+// The condition is "empty", not "never seeded", and that is the whole design: a slot
+// with no body and no stored look is a slot nothing has claimed, so there is nothing
+// to overwrite and no migration sentinel to keep. It follows that clearing a macro
+// hands its keycap the stock look back rather than leaving it blank, which is what an
+// empty slot should look like.
+//
+// ⚠️ An unwritten look reads as ALL-ZERO here, not 0xFF -- QMK's wear levelling
+// normalises a cleared byte to zero, the fact that once made latin_assign read as
+// "every key hosts 'a'". Zero is also the default look, so the two are the same state
+// and the check is honest.
+void poly_macro_seed_defaults(void);
 
 // Slave side: adopt a look pushed over the split link. RAM only; the slave never
 // persists one, because the master is authoritative and re-pushes every boot.

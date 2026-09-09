@@ -151,7 +151,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "0.19.1"
+#define FW_VERSION "0.21.0"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -238,7 +238,7 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-#define PROTOCOL_VERSION 16
+#define PROTOCOL_VERSION 17
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

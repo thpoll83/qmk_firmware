@@ -150,10 +150,14 @@ fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
      them; that skill does the writing.
    - Investigation index → `add_memory`, ONE entry per investigation that cost
      real effort: the question, the verdict in a sentence, and where the full
-     write-up landed (file + heading, or PR number). ⚠️ **Never the finding
+     write-up landed (`repo/file §heading`, or `owner/repo#N` — ⚠️ a bare `#N`
+     resolves to the wrong PR across the nine repos). ⚠️ **Never the finding
      itself** — that is the learning above, and two copies of a technical
-     conclusion drift with nothing comparing them. Skip entirely if nothing this
-     session took more than a handful of files to answer.
+     conclusion drift with nothing comparing them. ⚠️ **`search_memories` for
+     the question BEFORE writing** and skip if it is already indexed: a retro
+     re-run over an overlapping session would otherwise index it twice. Skip
+     entirely if nothing this session took more than a handful of files to
+     answer.
    - Offer to commit + push the new/edited files (don't unless asked, per repo
      rules).
 
@@ -177,7 +181,7 @@ DOCS GAPS (→ update-polykybd-docs)
 
 MEMORY INDEX (→ mem0)
   •. <question investigated> → <verdict in one line>
-     write-up: <file §heading | PR #N>
+     write-up: <repo/file §heading | owner/repo#N>
 
 ALREADY COVERED (skipped): <item> → <existing doc/skill>
 

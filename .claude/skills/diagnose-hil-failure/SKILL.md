@@ -8,8 +8,10 @@ description: >
   whether to re-run the HIL job. Classifies the failure into stale-rig-code /
   no-enumeration / boot-burst flake / stale-rig-test / real-firmware-bug, or a
   rig-network failure that dies in workflow setup with no log at all, then
-  acts (re-run, fix the ctnd test, or flag the rig). NOT for building firmware
-  (that's the build job) or for non-HIL CI.
+  acts (re-run, fix the ctnd test, or flag the rig). ALSO use when the HIL check
+  is NOT red but has sat `queued` for a long time with no log — a job that never
+  starts is a different state, alerts nobody, and silently arms the release gate.
+  NOT for building firmware (that's the build job) or for non-HIL CI.
 ---
 
 # Diagnose a HIL (hardware-in-the-loop) failure
@@ -23,6 +25,46 @@ classes, and re-running against a stale rig just reproduces the same red.
 The rig, its self-update model, and the flake history are documented in
 `polykybd-ctnd/CLAUDE.md` (esp. the self-update ⚠️ note) and the "Investigations"
 HIL notes in `qmk_firmware/CLAUDE.md` — read those for background.
+
+## 0. First: is it RED, or did it never START?
+
+These are different states and only one of them is this skill's usual subject.
+An offline rig runner leaves `HIL test (split72)` at `status: queued` with **no
+`conclusion`, no log, no annotation and no timeout** — the board shows a spinner,
+not a failure. Read `status` before `conclusion`: the MCP response omits
+`conclusion` entirely for an unfinished run, so "not failed" is never "passed".
+
+**If it is queued, stop here — nothing below applies.** There is no log to read
+and no class to assign. Instead:
+
+1. **Prove it is the rig, not this PR — count queued runs across heads.**
+
+   ```
+   mcp__github__actions_list  method=list_workflow_runs  resource_id=qmk-test.yml
+                              workflow_runs_filter={status: "queued"}
+   ```
+
+   Several PRs stuck at once means the runner. **A `workflow_dispatch` on
+   `PolyKybd` stuck alongside them is conclusive** — nothing on a feature branch
+   can hold up a manual run on the base branch.
+
+2. **Do not re-run.** The rig runs one job at a time, so a re-run queues another
+   job behind the ones already waiting and cannot make an absent runner appear.
+
+3. **Say it once, then go quiet.** One comment naming the check, the evidence that
+   it is not this PR's, and that you are not re-running. Re-check on a schedule;
+   do not comment again while the same blocker holds.
+
+4. **Remember the delayed consequence.** The FW-APPLY tier runs on every push to
+   `PolyKybd`, so a merge during the outage hangs the same way and
+   `tools/require_fwapply_run.py` then refuses to publish that release — at
+   publish time, on a commit that looked fine when it merged. Recovery is a
+   dispatch with `tier: fwapply` on the right ref once the rig is back (the branch
+   tip only works while it IS the release commit; otherwise dispatch on the tag).
+
+Outages have run ~2 h (2026-09-09, self-resolved) and 4.5 h (2026-09-08, still
+queued at merge). There is no useful timeout to assume — keep checking rather
+than declaring the rig dead.
 
 ## 1. Get the diagnostics
 

@@ -223,6 +223,36 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     `keyboards/polykybd/doom/engine/PROVENANCE.md` carries the disposition of the
     `textscreen/` findings, because that tree is a **verbatim upstream snapshot**
     and must not be patched in place.
+  - ⚠️ **A THIRD direction, and it is the one that silences review rather than
+    misdirecting it: an inherited upstream POLICY file tells a reviewer to REFUSE
+    the files this fork owns.** `.github/copilot-instructions.md` is byte-identical
+    to upstream's and says *"This review applies only to changes within the
+    `keyboards/` folder … defer to a QMK Collaborator"*. That is written for
+    somebody submitting a keyboard to `qmk/qmk_firmware`, where a contributor
+    cannot self-approve core changes. Here it means CodeRabbit reads the inherited
+    tree normally and declines to assess `release.yml`, `qmk-test.yml` and
+    `CLAUDE.md` — **exactly the files that are ours** — deferring them to a role
+    this repository has nobody to fill. Measured on #282 (2026-09-09): two findings,
+    both "defer to a QMK Collaborator", neither about the code.
+    - **The two commands that settle it** are the ones already above, read in the
+      opposite direction: `diff` against upstream says the *policy* is inherited,
+      and a **404** says the *flagged file* is not.
+      ```bash
+      curl -sSL "https://raw.githubusercontent.com/qmk/qmk_firmware/master/.github/copilot-instructions.md" \
+        | diff - .github/copilot-instructions.md && echo "POLICY IS UPSTREAM'S"
+      curl -sSL -o /dev/null -w '%{http_code}\n' \
+        "https://raw.githubusercontent.com/qmk/qmk_firmware/master/.github/workflows/release.yml"   # 404 = OURS
+      ```
+    - ✅ **Reply with that evidence — CodeRabbit withdrew both and stored a repo
+      learning**, the general form of which is *"verify whether an instruction
+      applies to the fork and the changed file before using it as review scope"*.
+      One reply, a permanent correction, same payoff as the stale-netlist reply
+      recorded in `PolyKybdHost/CLAUDE.md`. Declining silently buys nothing and the
+      finding returns on the next PR that touches `.github/`.
+    - ⚠️ **Do not "fix" it by deleting the inherited file.** It is stock upstream,
+      so removing it buys a conflict at the next catch-up merge for a problem one
+      reply solves. If it becomes tiresome, the place to scope CodeRabbit is its
+      own configuration, not upstream's file.
 
 - ⚠️ **An on-demand Claude reviewer (`@claude review`) was tried and REMOVED
   (2026-08-20) — don't rebuild it.** `.github/workflows/claude-review.yml` +
@@ -1009,6 +1039,25 @@ inherited-upstream noise:
     dispatch *Build and HIL Test* with `tier: fwapply` on the right ref once the
     rig is back, and remember the ref rules there (the branch tip only works while
     it IS the release commit; otherwise dispatch on the tag).
+  - ✅ **PROVE it is the rig and not your PR by COUNTING queued runs, not by
+    reasoning about the diff.** `actions_list list_workflow_runs` on `qmk-test.yml`
+    and look for `status: queued` across heads: several PRs stuck at once means
+    the runner, and **a `workflow_dispatch` on `PolyKybd` stuck alongside them is
+    conclusive** — nothing about a feature branch can hold up a manual run on the
+    base. Measured 2026-09-09: four runs queued across three heads (two PRs plus a
+    dispatch), every one with a green `Build firmware` and a HIL job that never
+    started.
+  - ⚠️ **Do NOT re-run, and do not read the drive-to-green rules as requiring
+    one.** The rig executes one job at a time, so a re-run queues a fifth job
+    behind the four already waiting and cannot make an absent runner appear. What
+    the rules do require is saying it once: a single comment naming the check, the
+    evidence that it is not this PR's, and what you are not doing about it. Then
+    silence until the state changes.
+  - **It can self-resolve, so an outage is not automatically a person's problem.**
+    The same 2026-09-09 outage ran 05:14→07:18Z (~2h05m) and cleared with no
+    intervention; the queued jobs then ran in order and passed. Between that and
+    the 4.5 h case above there is no useful timeout to assume — keep a check-in
+    scheduled rather than declaring the rig dead or waiting on it in the loop.
 - **A change that cannot alter the firmware does NOT run the build or the rig —
   `qmk-test.yml` path-filters both its `push` and `pull_request` triggers.** Markdown
   since 2026-08-21, then `scripts/` and `.claude/`, then the sibling workflow files
@@ -1132,6 +1181,16 @@ inherited-upstream noise:
   check green and the PR was reported green off it while the other — same commit,
   same failure — stayed red. **Before calling a PR green, look at every check run,
   not the one you just acted on.**
+- ⚠️ **A `check_suite.completed` wake can name a SUPERSEDED head, and read at face
+  value it says "CI is green" about a commit nobody is on.** The envelope's own text
+  is *"No third-party check suite on the PR's head_sha is still running or failed"*
+  — but `head_sha` is the suite's, not the PR's, and a suite that started before
+  your last push completes after it. Three arrived on #282 (2026-09-09) for
+  `0e027fb` and `a4dcffbc` while the head was `6f41acc`. **Compare the event's
+  `head_sha` against the PR's actual head before believing it**, which the envelope
+  also asks for in the same breath ("verify the PR's overall state before acting").
+  Same family as the stale-walkthrough traps in `PolyKybdHost/CLAUDE.md`: the signal
+  is honest about what it covers and silent about what you assumed it covered.
 - **Reproduce the whole `lint` job locally instead of reading the CI log** — it is
   ~5 s and definitive. (The GitHub MCP `get_job_logs` *does* work — see the
   tail-size note below — but a local run is faster and gives the whole picture):
@@ -1386,7 +1445,7 @@ that cost real debugging to learn (2026-07):
 
 ## Firmware overview (`keyboards/polykybd/`)
 
-The firmware runs on a **Raspberry Pi RP2040** (dual-core ARM M0+) and is a heavily customised QMK build. ⚠️ **The clock is 200 MHz by default** (since 0.10.x). It was **125 MHz** before that — never the 133 MHz this file and several code comments used to claim, which was the chip's old *rated maximum*. Nothing in QMK sets the clock; ChibiOS's `hal_lld_init()` (and, earlier in the boot, the double-tap `__late_init`) calls the pico-sdk `clocks_init()`, which reads the compile-time `SYS_CLK_KHZ`, so `rules.mk` sets it. **`-e POLYKYBD_SYS_CLK=125`** opts back out and produces an image **byte-identical** to the pre-200 MHz builds (verified) — the escape hatch if a board ever misbehaves. 200 MHz is the operating point Raspberry Pi certified in 2025 (1200 MHz VCO / 6 / 1), which requires the core voltage raised to **1.15 V** — the vendored pico-sdk predates the SDK's automatic raise and does not compile `hardware_vreg`, so `POLYKYBD_VREG_VSEL` drives it as a register write before the first `clocks_init()` (see `UPSTREAM_PATCHES.md` → `platforms/chibios/bootloaders/rp2040.c`). Peripherals need no rework: SPI (`SPI_DIVISOR`/`CPU_CLOCK`), I2C, the PIO split UART and WS2812 all derive their dividers from the **live** `clock_get_hz(clk_sys)`, and USB is on the separate 48 MHz PLL. The boot banner prints `clk: sys=…Hz vreg_vsel=0x…` so the pairing is verifiable on hardware. The one **fixed** divider is XIP flash — boot2 runs it at `clk_sys/PICO_FLASH_SPI_CLKDIV` (4), i.e. 50 MHz at 200 and 31.25 at 125, both far inside any QSPI part's rating; re-check that list rather than assuming it holds if another clock is ever added. This is **custom hardware with 8 MB of external QSPI flash** (NOT the stock 2 MB). The 8 MB is **partitioned** (see `base/fw_staging.h` for the authoritative map): **0–2 MB running firmware** (the linker `flash1` XIP window), **2–4 MB firmware-update staging**, **4–8 MB resource/overlay data** (`FLASH_TARGET_OFFSET`). So the budget that matters for adding languages/fonts is the **2 MB firmware partition**, of which `split72:default` currently uses ~0.76 MB (~38 %). `FW_STAGING_OFFSET` is kept equal to the linker `flash1` length so a build that exceeds 2 MB fails to *link* rather than silently growing into the staging area (this firmware/staging split was raised from 1 MB → 2 MB in 2026-06 as the image neared the old boundary). The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.
+The firmware runs on a **Raspberry Pi RP2040** (dual-core ARM M0+) and is a heavily customised QMK build. ⚠️ **The clock is 200 MHz by default** (since 0.10.x). It was **125 MHz** before that — never the 133 MHz this file and several code comments used to claim, which was the chip's old *rated maximum*. Nothing in QMK sets the clock; ChibiOS's `hal_lld_init()` (and, earlier in the boot, the double-tap `__late_init`) calls the pico-sdk `clocks_init()`, which reads the compile-time `SYS_CLK_KHZ`, so `rules.mk` sets it. **`-e POLYKYBD_SYS_CLK=125`** opts back out and produces an image **byte-identical** to the pre-200 MHz builds (verified) — the escape hatch if a board ever misbehaves. 200 MHz is the operating point Raspberry Pi certified in 2025 (1200 MHz VCO / 6 / 1), which requires the core voltage raised to **1.15 V** — the vendored pico-sdk predates the SDK's automatic raise and does not compile `hardware_vreg`, so `POLYKYBD_VREG_VSEL` drives it as a register write before the first `clocks_init()` (see `UPSTREAM_PATCHES.md` → `platforms/chibios/bootloaders/rp2040.c`). Peripherals need no rework: SPI (`SPI_DIVISOR`/`CPU_CLOCK`), I2C, the PIO split UART and WS2812 all derive their dividers from the **live** `clock_get_hz(clk_sys)`, and USB is on the separate 48 MHz PLL. The boot banner prints `clk: sys=…Hz vreg_vsel=0x…` so the pairing is verifiable on hardware. The one **fixed** divider is XIP flash — boot2 runs it at `clk_sys/PICO_FLASH_SPI_CLKDIV` (4), i.e. 50 MHz at 200 and 31.25 at 125, both far inside any QSPI part's rating; re-check that list rather than assuming it holds if another clock is ever added. This is **custom hardware with 8 MB of external QSPI flash** (NOT the stock 2 MB). The 8 MB is **partitioned** (see `base/fw_staging.h` for the authoritative map): **0–2 MB running firmware** (the linker `flash1` XIP window), **2–4 MB firmware-update staging**, **4–8 MB resource/overlay data** (`FLASH_TARGET_OFFSET`). So the budget that matters for adding languages/fonts is the **2 MB firmware partition**, of which `split72:default` currently uses ~0.76 MB (~38 %). `FW_STAGING_OFFSET` is kept equal to the linker `flash1` length so a build that exceeds 2 MB fails to *link* rather than silently growing into the staging area (this firmware/staging split was raised from 1 MB → 2 MB in 2026-06 as the image neared the old boundary). ⚠️ **The sectors carved off the TOP of staging (the apply log, the crash archive, the handedness stamp) need an ALIGNMENT assert as well as an overlap one — the overlap asserts do not imply it.** Each is derived by subtraction from the one above (`FW_HAND_STAMP_OFFSET` is `FW_RESOURCE_OFFSET - FW_APPLY_LOG_BYTES - 8192`), so its 4096-alignment rides on constants that can move without any two regions ever overlapping — and `flash_range_erase()` requires the boundary. Caught in review of #282; `fw_staging.c` carries both terms now. The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.
 
 The host software (`PolyKybdHost/`) communicates with this firmware over a custom HID report protocol (64-byte reports, v0.7.0+).
 
@@ -4435,6 +4494,30 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
   explicit refusal, `sync_succeeded` as a blacklist, a 1-bit-spaced ack value, a slave
   refusal reported as retryable, and a CRC check that always passes) — each caught by
   the intended test.
+  - ✅ **A `_Static_assert` is mutation-checked in SECONDS with a standalone
+    translation unit — do not reach for `qmk compile`.** The assert usually rests
+    on a chain of `#define`s and nothing else, so copy that chain into a throwaway
+    `.c`, add the assert and a `main`, and compile it with the host `gcc`. Verified
+    on `FW_HAND_STAMP_OFFSET`'s alignment assert (#282, 2026-09-09): the shipped
+    values pass, and adding 512 to `FW_APPLY_LOG_BYTES` fails with the assert's own
+    message — the whole loop in about two seconds, against ~4 minutes for a
+    firmware build per mutation.
+    ```bash
+    cat > /tmp/a.c <<'EOF'
+    #define FW_RESOURCE_OFFSET   0x400000UL
+    #define FW_APPLY_LOG_BYTES   (8UL * 4096UL)          /* mutate me: + 512UL */
+    #define FW_APPLY_LOG_OFFSET  (FW_RESOURCE_OFFSET - FW_APPLY_LOG_BYTES)
+    #define FW_CRASH_LOG_OFFSET  (FW_APPLY_LOG_OFFSET - 4096UL)
+    #define FW_HAND_STAMP_OFFSET (FW_CRASH_LOG_OFFSET - 4096UL)
+    _Static_assert(FW_HAND_STAMP_OFFSET % 4096UL == 0, "not sector-aligned");
+    int main(void){ return 0; }
+    EOF
+    gcc -o /dev/null /tmp/a.c            # must PASS as shipped, FAIL when mutated
+    ```
+    ⚠️ **Mutate a constant the assert DEPENDS on, not the assert itself.** Editing
+    the condition proves only that the compiler evaluates it; moving an input proves
+    the assert would catch the edit somebody will actually make. And copy the chain
+    verbatim — a retyped one that happens to stay aligned passes for the wrong reason.
   - ⚠️ **Strip ANSI escapes before grepping gtest output, or the mutation harness
     FAILS OPEN.** gtest prints `\e[0;32m[  FAILED  ]`, so a regex anchored on a leading
     `[` matches nothing and **every** mutation reads as "still green" — i.e. the

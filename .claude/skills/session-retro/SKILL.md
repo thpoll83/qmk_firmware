@@ -211,8 +211,11 @@ Recommendation: <which to keep, and why>
   is the only thing that decides whether it ever fires.
 - **Cite evidence.** Every proposal should point at what in the session justifies
   it; if you can't, it's probably not worth keeping.
-- **Nothing sensitive in mem0** — no credentials, keys, file contents, or
-  anything you would not put in a public issue.
+- **Nothing sensitive in mem0, and that includes the SEARCH.** No credentials,
+  keys, file contents, or anything you would not put in a public issue. ⚠️ The
+  pre-write `search_memories` sends the question text to the same cloud service
+  `add_memory` writes to — so a question that cannot leave the machine means
+  skipping the index entry altogether, not sanitising it afterwards.
 - **Approval before writing**, and **don't push** unless asked.
 - This skill is repo-agnostic; if useful beyond this project, copy it to
   `~/.claude/skills/`.

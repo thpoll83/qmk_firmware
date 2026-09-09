@@ -1129,6 +1129,17 @@ inherited-upstream noise:
   - **A mixed docs+code — or workflow+code — PR still runs the gate in full**, since
     the workflow runs when AT LEAST ONE changed file is included. Nothing can be
     smuggled in behind a README or a CI edit.
+  - ⚠️ **`!.claude/**` is anchored at the REPO ROOT, so anything under
+    `keyboards/**/.claude/` is NOT excluded — and a RENAME is matched on both its old
+    and its new path.** Measured on #286 (2026-09-09), the PR that moved the five
+    unreachable skills out of `keyboards/polykybd/.claude/skills/`: every changed file
+    was a `.md` or a `.claude/skills/**` script, so the PR body asserted it would start
+    no build and no rig run — and `Build firmware` plus `HIL test (split72)` both ran
+    (and passed) off the `previous_filename` side of the renames, which sits under
+    `keyboards/` and matches the leading `**`. The filter is doing its job; the wrong
+    part was reading "`.claude/**` is excluded" as "any `.claude/` directory". Read a
+    rename as TWO paths, and check the anchor before predicting a skip:
+    `pull_request_read` `get_files` prints `previous_filename` for each one.
   - **The exclusion is scoped to `.github/workflows/**`, not all of `.github/`.**
     Nothing under `.github/` is a build input today — there is no `uses: ./...`
     anywhere in `qmk-test.yml`, every action is external — but the narrower scope

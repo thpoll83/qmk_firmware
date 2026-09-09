@@ -154,6 +154,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGB_MATRIX_KEYPRESSES
 #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100
 
+// Startup values, written only when the RGB eeconfig is fresh (QMK's
+// eeconfig_update_rgb_matrix_default). QMK's own defaults are full brightness and
+// half speed. Each is a fraction of its OWN full scale: the value against
+// RGB_MATRIX_MAXIMUM_BRIGHTNESS above (this board's ceiling, and what the status
+// OLED calls 100%), the speed against the full 0..255 the speed gauge draws.
+//
+// ⚠️ PLAIN INTEGERS, not expressions. `qmk lint --strict` maps both of these into
+// info.json (rgb_matrix.default.val / .speed) and parses the literal with int(),
+// so `(RGB_MATRIX_MAXIMUM_BRIGHTNESS / 5)` fails the lint job with "invalid
+// literal for int()" even though it compiles fine. The arithmetic lives in the
+// comment instead; keep it true if a scale ever moves.
+#define RGB_MATRIX_DEFAULT_VAL 20   // 20% of RGB_MATRIX_MAXIMUM_BRIGHTNESS (100)
+#define RGB_MATRIX_DEFAULT_SPD 25   // 10% of the 0..255 speed range
+
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE_SIMPLE
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE_WIDE

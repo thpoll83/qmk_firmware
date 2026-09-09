@@ -4417,6 +4417,30 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 eeconfig_update_rgb_matrix(&rgb_matrix_config);
             }
             return false;
+        // The settings layer's four effect presets. These are the legacy UNDERGLOW
+        // mode keycodes (RGB_MODE_PLAIN/BREATHE/RAINBOW/SWIRL, 0x782B..0x782E), and
+        // QMK does route that range through process_underglow() even on an
+        // RGB-matrix-only board — but its switch only covers toggle / next / prev /
+        // hue / sat / val / speed. The four mode presets have no case there, none in
+        // process_rgb_matrix() (which owns the RM_* range only), and IS_RGB_KEYCODE /
+        // RGB_KEYCODE_RANGE are defined in keycodes.h and dispatched nowhere. So
+        // these keycaps drew a legend (keycode_helper.c: "Plan", "Brth", "Rnbw",
+        // "Swrl") and did nothing at all. Map each onto the closest effect that is
+        // enabled on BOTH variants — CYCLE_SPIRAL is split72-only, so Swirl takes
+        // CYCLE_PINWHEEL. rgb_matrix_mode() persists the pick the way RM_NEXT does
+        // (a deferred eeconfig flag, not a blocking write), and like RM_NEXT it is a
+        // no-op while RGB is off.
+        case RGB_M_P:  case RGB_M_B:
+        case RGB_M_R:  case RGB_M_SW:
+            if (record->event.pressed) {
+                uint8_t mode = RGB_MATRIX_SOLID_COLOR;              // RGB_M_P  "Plan"
+                if      (keycode == RGB_M_B)  mode = RGB_MATRIX_BREATHING;              // "Brth"
+                else if (keycode == RGB_M_R)  mode = RGB_MATRIX_RAINBOW_MOVING_CHEVRON; // "Rnbw"
+                else if (keycode == RGB_M_SW) mode = RGB_MATRIX_CYCLE_PINWHEEL;         // "Swrl"
+                rgb_matrix_mode(mode);
+                request_disp_refresh();
+            }
+            return false;
 #endif
         case KC_CRSEL:
             if (record->event.pressed) { SEND_STRING(SS_TAP(X_HOME) SS_TAP(X_HOME) SS_LSFT(SS_TAP(X_END)) SS_TAP(X_BACKSPACE) SS_TAP(X_BACKSPACE) SS_TAP(X_DOWN)); }
@@ -4556,6 +4580,21 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
        (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) {
         return false;
     }
+    // A gated settings key is BLANK, so it must also be INERT — swallow both edges
+    // before anything can act on it.
+    //
+    // ⚠️ MUST stay above the QK_BOOTLOADER / QK_REBOOT cases below. This file
+    // intercepts both of those and returns true from inside that switch (the
+    // bootloader announce; the reboot's bridged handoff so the slave restarts too),
+    // so a gate placed after them never ran for the only two keys on the row that
+    // cannot be undone — the blank Restart keycap rebooted the board (field
+    // 2026-09-08). QK_DEBUG_TOGGLE really is left to process_action(), which is why
+    // it alone was gated. Every other gated keycode is handled further down in
+    // poly_custom_key_action(), already below this point.
+    if (settings_more_hidden(keycode)) {
+        return false;
+    }
+
     if (record->event.pressed) {
         switch (keycode) {
             case QK_BOOTLOADER: {
@@ -4761,16 +4800,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // ran. Only a PRESS can be rejected, so every release-edge settings key is
     // unaffected; KC_LANG is the one press-edge case here and would otherwise open _LL
     // / advance the language on the very press that exists only to wake the board.
-    // A gated settings key is BLANK, so it must also be INERT — swallow both edges
-    // before anything can act on it. QK_BOOTLOADER / QK_REBOOT / QK_DEBUG_TOGGLE are
-    // QMK's own keycodes, handled by process_action() rather than by
-    // poly_custom_key_action(), so returning false here is the only thing that stops
-    // them: a gate that only blanked the legend would leave a keycap that reboots the
-    // board with nothing drawn on it.
-    if (settings_more_hidden(keycode)) {
-        return false;
-    }
-
     const bool wake_accepted = display_wakeup(record);
     if (wake_accepted && poly_custom_key_action(keycode, record)) {
         return false;

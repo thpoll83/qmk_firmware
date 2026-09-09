@@ -828,6 +828,17 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                             //   face. See s_mid_font above for why it is a single-font array.
                 mid = true;
                 break;
+            case U'\x17':   // BASE: back to the full-size caller pool for the REST of the
+                            //   string, i.e. the one op that UNDOES \x10 and \x16.
+                            //
+                            //   ⚠️ Both of those latch, and until this existed there was no
+                            //   way out of them: \x10 after \x16 half-scales the mid face
+                            //   rather than returning to the base one, so a small LABEL over
+                            //   a bigger VALUE could not be written at all -- the second line
+                            //   always came out smaller than the first.
+                small = false;
+                mid   = false;
+                break;
             default: {
                 // In a MID run, fall back to the caller's pool for anything the mid
                 // face does not carry. It is ASCII-only, so without this an icon in a

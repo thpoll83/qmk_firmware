@@ -152,9 +152,21 @@ static const uint8_t val_sun_bitmap[] PROGMEM = {       // 9x9
 #define SUN_SMALL_Y 54
 #define SV_ICON_GAP 2
 
-// v (0..255) as a percentage, rounded to nearest.
+// A 0..255 byte as a percentage, rounded to nearest. SATURATION only — the value
+// has a smaller ceiling and its own helper below.
 static uint8_t byte_to_percent(uint8_t v) {
     return (uint8_t)(((uint16_t)v * 100u + 127u) / 255u);
+}
+
+// The VALUE against ITS OWN full scale. It is capped at RGB_MATRIX_MAXIMUM_BRIGHTNESS
+// (100 here), not 255, so byte_to_percent reported a fully-lit matrix as 39% and the
+// row could never reach 100 — a scale whose top the user cannot see is not a scale.
+// QMK clamps the stored value to the cap, so the clamp below only guards an EEPROM
+// written by a build with a higher ceiling; without it that reads back as "255%".
+static uint8_t val_to_percent(uint8_t v) {
+    if(v > RGB_MATRIX_MAXIMUM_BRIGHTNESS) v = RGB_MATRIX_MAXIMUM_BRIGHTNESS;
+    return (uint8_t)(((uint16_t)v * 100u + (RGB_MATRIX_MAXIMUM_BRIGHTNESS / 2u))
+                     / RGB_MATRIX_MAXIMUM_BRIGHTNESS);
 }
 
 // "<pct>%" as one string, into a uint32_t[] (the kdisp text pipeline is 32-bit).
@@ -429,7 +441,7 @@ void oled_update_buffer(void) {
             kdisp_draw_bitmap(TEXT_X, DROPLET_Y, sat_droplet_bitmap, DROPLET_W, DROPLET_H);
             kdisp_write_gfx_text(smallFont, 1, (int8_t)(TEXT_X + DROPLET_W + SV_ICON_GAP), RGB_ROW_D, buffer);
 
-            pct_to_u32_string(buffer, sizeof(buffer), byte_to_percent(rgb_matrix_get_val()));
+            pct_to_u32_string(buffer, sizeof(buffer), val_to_percent(rgb_matrix_get_val()));
             int8_t val_lo = 0, val_hi = 0;
             kdisp_gfx_text_bounds(smallFont, 1, buffer, &val_lo, &val_hi);
             const int8_t val_x = (int8_t)(TEXT_R - val_hi);

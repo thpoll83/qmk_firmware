@@ -374,6 +374,16 @@ GAUGE_SEGMENTS, GAUGE_BAR_W, GAUGE_PITCH, GAUGE_MIN_H = 10, 4, 6, 3
 FULL_BRIGHT = 50
 
 
+MAX_BRIGHT = 100  # RGB_MATRIX_MAXIMUM_BRIGHTNESS (split72/config.h)
+
+
+def val_to_percent(v):
+    """Mirror of status_oled.c val_to_percent() -- the VALUE is capped at
+    RGB_MATRIX_MAXIMUM_BRIGHTNESS, not 255, so it scales against that."""
+    v = min(v, MAX_BRIGHT)
+    return (v * 100 + MAX_BRIGHT // 2) // MAX_BRIGHT
+
+
 def brightness_to_level(contrast):
     contrast = min(contrast, FULL_BRIGHT)
     return min((contrast * GAUGE_SEGMENTS + FULL_BRIGHT // 2) // FULL_BRIGHT, GAUGE_SEGMENTS)
@@ -507,7 +517,7 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
         draw_bitmap(setp, DROPLET_BMP, TEXT_X, DROPLET_Y, DROPLET_W, DROPLET_H)
         draw(setp, small, TEXT_X + DROPLET_W + SV_ICON_GAP, RGB_ROW_D,
              s('%d%%' % byte_to_percent(sat)))
-        vtxt = s('%d%%' % byte_to_percent(val))
+        vtxt = s('%d%%' % val_to_percent(val))
         vx = TEXT_R - measure_width(small, vtxt)
         draw_bitmap(setp, SUN_SMALL_BMP, vx - SV_ICON_GAP - SUN_SMALL_W, SUN_SMALL_Y,
                     SUN_SMALL_W, SUN_SMALL_H)

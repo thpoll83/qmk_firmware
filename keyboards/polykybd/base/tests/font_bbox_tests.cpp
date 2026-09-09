@@ -368,6 +368,39 @@ TEST_F(FontBboxTest, ANullMidPoolMakesEveryMidGlyphFallBack) {
 }
 
 // ---------------------------------------------------------------------------
+// HINT_BASE (\x17): the one op that UNDOES \x10 and \x16.
+//
+// Both of those latch for the rest of the run and there was no way out of them
+// until this existed — \x10 after \x16 half-scales the mid face rather than
+// returning to the base one — so a small LABEL over a bigger VALUE could not be
+// written at all. That is what the RGB preset keycaps are made of.
+
+TEST_F(FontBboxTest, BaseUndoesSmallForTheRestOfTheRun) {
+    // The glyph AFTER \x17 measures at full size again — derived from a plain 'a'
+    // rather than hardcoded, so the case still means what it says if the synthetic
+    // font's metrics change.
+    EXPECT_EQ(measure({0x10, 'a', 0x17, 'a'}).ymin, measure({'a'}).ymin);
+    // ...and it starts one HALF advance (4 of the font's 8) past the origin, i.e.
+    // the first 'a' was still halved.
+    EXPECT_EQ(measure({0x10, 'a', 0x17, 'a'}).xmax, 4 + measure({'a'}).xmax);
+    // Without the reset the whole run stays halved — the state this op exists to leave.
+    EXPECT_NE(measure({0x10, 'a', 'a'}).ymin, measure({'a'}).ymin);
+}
+
+TEST_F(FontBboxTest, BaseUndoesMid) {
+    EXPECT_EQ(measure_mid({0x16, 'a', 0x17, 'a'}).ymin, measure({'a'}).ymin);
+}
+
+TEST_F(FontBboxTest, BaseAloneChangesNothing) {
+    EXPECT_EQ(measure({0x17, 'a'}), measure({'a'}));
+}
+
+TEST_F(FontBboxTest, SmallAfterMidHalvesTheMidFaceRatherThanReturningToBase) {
+    // ⚠️ The reason HINT_BASE has to exist: this is NOT the base face.
+    EXPECT_FALSE(measure_mid({0x16, 'a', 0x10, 'a'}) == measure_mid({0x16, 'a', 0x17, 'a'}));
+}
+
+// ---------------------------------------------------------------------------
 // The bbox resolves through that same resolver — so a GAP record falls through
 // here too. It did not until 2026-08-29: this function ran its own range scan
 // with no gap check, so a codepoint inside a padded span measured the empty 0x0

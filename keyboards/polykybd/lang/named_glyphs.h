@@ -1970,6 +1970,11 @@
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
 #define HINT_SMALL       U"\x10"      // draw the REST of the string half-scale (text, advances)
 #define HINT_MID         U"\x16"      // draw the REST of the string from the standalone 19px UI face
+#define HINT_BASE        U"\x17"      // ...and back to the full-size caller pool: the one op that
+                                    //   UNDOES HINT_SMALL / HINT_MID. Both latch for the rest of
+                                    //   the run and \x10 after \x16 only halves the MID face, so
+                                    //   without this a small LABEL over a bigger VALUE cannot be
+                                    //   written -- the second line always came out the smaller one.
 
 // Centring runs: N x \x06 (+2px right each). There is no centring op, so a run
 // that must sit in the middle of the keycap prepends one of these, with N taken
@@ -1986,6 +1991,9 @@
 #define RIGHT_12PX       U"\x06\x06\x06\x06\x06\x06"
 #define RIGHT_18PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06"
 #define RIGHT_20PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_2PX        U"\x06"
+#define RIGHT_4PX        U"\x06\x06"
+#define RIGHT_8PX        U"\x06\x06\x06\x06"
 #define RIGHT_14PX       U"\x06\x06\x06\x06\x06\x06\x06"
 #define RIGHT_16PX       U"\x06\x06\x06\x06\x06\x06\x06\x06"
 #define RIGHT_24PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
@@ -1993,12 +2001,16 @@
 // Vertical nudges (\x0C = 2px up, \x05 = 2px down), same story as the runs above:
 // a legend that lifts a glyph has to put it back before drawing the next one, since
 // both ops move the CURSOR rather than the glyph.
+#define UP_2PX           U"\x0C"
 #define UP_4PX           U"\x0C\x0C"
+#define UP_10PX          U"\x0C\x0C\x0C\x0C\x0C"
+#define UP_12PX          U"\x0C\x0C\x0C\x0C\x0C\x0C"
 #define UP_8PX           U"\x0C\x0C\x0C\x0C"
 #define DOWN_2PX         U"\x05"
 #define DOWN_4PX         U"\x05\x05"
 #define DOWN_6PX         U"\x05\x05\x05"
 #define DOWN_8PX         U"\x05\x05\x05\x05"
+#define DOWN_10PX        U"\x05\x05\x05\x05\x05"
 
 // RGB value-key icons. The droplet and the sun are the same two symbols the status
 // OLED draws beside the saturation and value percentages (split72/status_oled.c has
@@ -2021,12 +2033,15 @@
 // what makes the sign a separate HINT_MOVE: there is no advanced cursor to draw it
 // from. Measured (tools: PolyKybdHost oled_preview.py) so the icon+sign group
 // centres on the panel and clears the word line, with zero pixels off-panel.
-#define RGB_POS_SAT_ICON U"\x30\x02"   // (48, 2)  halved droplet top-left
-#define RGB_POS_SAT_PLUS U"\x41\x17"   // (65,23)  baseline cursor for '+'
-#define RGB_POS_SAT_MINS U"\x41\x15"   // (65,21)  '-' inks 6px lower than '+' centres
-#define RGB_POS_VAL_ICON U"\x2F\x03"   // (47, 3)  halved sun top-left
-#define RGB_POS_VAL_PLUS U"\x43\x17"   // (67,23)
-#define RGB_POS_VAL_MINS U"\x43\x15"   // (67,21)
+#define RGB_POS_SAT_ICON U"\x30\x01"   // (48, 1)  halved droplet top-left
+#define RGB_POS_SAT_PLUS U"\x41\x13"   // (65,19)  baseline cursor for '+'
+#define RGB_POS_SATM_ICO U"\x33\x01"   // (51, 1)  ...the '-' group is 6px narrower,
+#define RGB_POS_SAT_MINS U"\x44\x11"   // (68,17)     so it re-centres, and '-' inks
+                                     //             6px lower than '+' centres
+#define RGB_POS_VAL_ICON U"\x2F\x01"   // (47, 1)  halved sun top-left
+#define RGB_POS_VAL_PLUS U"\x43\x13"   // (67,19)
+#define RGB_POS_VALM_ICO U"\x32\x01"   // (50, 1)
+#define RGB_POS_VAL_MINS U"\x46\x11"   // (70,17)
 
 // Two lines of MID-face text on one 72x40 keycap: a label over the value it names.
 //

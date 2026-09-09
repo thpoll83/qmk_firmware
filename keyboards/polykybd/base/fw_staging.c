@@ -38,6 +38,13 @@ _Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_HAND_STAMP_OFFSET,
                "a staged image can reach the handedness stamp / crash archive");
 _Static_assert(FW_HAND_STAMP_OFFSET + 4096UL <= FW_CRASH_LOG_OFFSET,
                "the handedness stamp overlaps the crash archive");
+// ⚠️ …and it must be SECTOR-ALIGNED, because hand_stamp.c hands this offset
+// straight to flash_range_erase(), which requires a 4096-byte boundary. The
+// overlap asserts above cannot catch that: the offset is derived as
+// FW_RESOURCE_OFFSET - FW_APPLY_LOG_BYTES - 8192, so its alignment rides on two
+// constants that could each move without ever making the regions overlap.
+_Static_assert(FW_HAND_STAMP_OFFSET % 4096UL == 0,
+               "the handedness stamp is not sector-aligned; flash_range_erase() requires it");
 _Static_assert(FW_CRASH_LOG_OFFSET + 4096UL <= FW_APPLY_LOG_OFFSET,
                "the crash archive overlaps the apply progress log");
 _Static_assert(FW_APPLY_LOG_OFFSET + FW_APPLY_LOG_BYTES <= FW_RESOURCE_OFFSET,

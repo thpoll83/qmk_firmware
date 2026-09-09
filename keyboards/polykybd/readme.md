@@ -51,6 +51,21 @@ For example:
 `qmk compile -kb polykybd/split72 -km default`
 `qmk compile -kb polykybd/split42 -km default`
 
+## Flash
+
+`make polykybd/<variant>:default:flash`
+
+For example:
+
+`make polykybd/split72:default:flash`
+
+Put the half in BOOTSEL first so it mounts as a drive. **Both halves take the same
+image** — which one is left is decided by the handedness stamp below, not by the
+build, so there is no per-side firmware target.
+
+To update a keyboard that is already running, PolyKybdHost flashes the `.bin` from a
+release over HID instead, with no BOOTSEL and no cable swapping.
+
 ### Handedness — which half is left
 
 (eg. when you flash for the first time)

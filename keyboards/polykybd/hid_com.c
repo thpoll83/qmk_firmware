@@ -24,6 +24,7 @@
 #include "lang/lang_lut.h"
 #include "base/com.h"
 #include "base/overlay.h"
+#include "base/hand_stamp.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "base/fontpack.h"
 #include "base/fonts/generated/fontpack_layout.h"  // FONTPACK_BUNDLE_COUNT, for the GET_ID size assert
@@ -899,7 +900,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 25: //set handedness (which half is left / which is right)
                 {
                     bool master_is_left = (data[HID_DATA_IDX] == 0);
-                    eeconfig_update_handedness(master_is_left);
+                    // Records the change; poly_hand_flush_pending() below writes
+                    // both the EEPROM byte and the flash stamp. The stamp is what
+                    // survives a wear-levelling wipe -- without it this setting is
+                    // one torn EEPROM write away from silently reverting.
+                    poly_hand_set_pending(master_is_left);
+                    poly_hand_flush_pending();   // main loop, so the sector write is safe inline here
                     poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
                                               .action = RESET_ACTION_REBOOT,
                                               .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };

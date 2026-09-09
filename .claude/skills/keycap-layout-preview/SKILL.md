@@ -47,12 +47,16 @@ working around it in a caller.
 ## 1. Build the ink sets
 
 ```python
-import sys; sys.path.insert(0, '.claude/skills/keycap-layout-preview')
+import sys; sys.path.insert(0, '../../.claude/skills/keycap-layout-preview')
 import keycap_preview as K
 
 legend = K.legend_ink('a')                    # base glyph + shift preview, real offsets
 legend = K.legend_ink('1', shifted='!')       # non-letters: name the shifted glyph
 legend = K.legend_ink('a', lang='ar-SA')      # another language's offsets
+legend = K.legend_ink('\u0628', lang='ar-SA', shifted='\u0644', altgr='\u0635')
+#   ^ PASS altgr= whenever the key has an AltGr cell. It is the lower-right hint,
+#     half-size on the 27 layouts that opt in, and it is the second thing corner
+#     chrome collides with — leaving it out measures a keycap with no AltGr cell.
 
 mark = K.thin_ink(0x2388, 80, 21)             # decimated (HINT_THIN)
 mark = K.half_ink(0x2387, 79, 31)             # 2x2-OR (HINT_HALF)

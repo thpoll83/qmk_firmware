@@ -383,6 +383,72 @@ skipped paragraph; a fork costs a note that only one repo ever sees. Take the fi
 If a skill ever genuinely needs to differ per repo, split the differing part into a
 separate skill rather than forking the shared one.
 
+✅ **FIVE skills lived at `keyboards/polykybd/.claude/skills/` and did NOT load — MOVED
+to the repo root `.claude/skills/` on 2026-09-09, and the fix is confirmed.** Measured
+before the move: the session's available-skills list contained none of
+`add-glyph-script`, `add-polykybd-shortcut-hint`, `keycap-layout-preview`,
+`status-oled-layout` or `tune-lang-lut-cells`, while all seventeen at the repo root
+loaded normally. **Do not theorise the mechanism** — what was measured is the location
+and the absence. A skill added later goes at the repo root; one under `keyboards/` is
+unreachable.
+
+- **The cost is silent and it was paid the same day.** `keycap-layout-preview` is
+  exactly the model-the-draw-path-and-measure-ink-against-ink loop that the RGB legend
+  work (qmk#281) re-derived by hand for twelve legends; it even ships a `half_ink()`
+  for `HINT_HALF`, the op that shaped that whole layout. Nothing anywhere said the
+  skill existed, because the file that mentions it is this one and the pointer looked
+  live.
+- ⚠️ **The move was NOT a `git mv` — TWO helper scripts encoded their nesting as
+  hardcoded `../` depths**, and a relocated script then fails in a way that reads as a
+  broken skill rather than a wrong path. `add-glyph-script/preview_block.py` walked
+  **six** levels up to reach `PolyKybdHost/tools` and three to reach
+  `base/fonts/generated/`; `status-oled-layout/measure_bands.py` walked three to reach
+  `tools/`. Both now **derive** the qmk root by walking parents for `keyboards/polykybd`,
+  which is depth-independent and is the pattern to copy. Four `SKILL.md`s also carried
+  invocation strings relative to `keyboards/polykybd/` (`python3 .claude/skills/…` →
+  `python3 ../../.claude/skills/…`).
+  - ⚠️ **`keycap_preview.py` was NOT `../`-coupled, and this note said it was.** It
+    already walked up for `keyboards/polykybd` and needed no edit at all — asserted
+    here by analogy with the other two rather than checked, in the note whose whole
+    subject is a stale pointer. **Baseline every script BEFORE relocating it**, so a
+    post-move failure cannot be confused with one that never worked; all five produced
+    identical output afterwards.
+- ⚠️ **The payoff IS verifiable in-session, and this note claimed the opposite.** The
+  five appeared in the available-skills list within the same session as the `git mv`,
+  so discovery is re-scanned rather than fixed at session start — and that is what
+  confirmed the move had worked. The claim was falsified minutes after being written,
+  by the very action it was advising to defer: a "you cannot check this here" statement
+  is worth one attempt at checking before it goes in the file.
+- ⚠️ **Making a skill reachable is what finally got its helper READ, and
+  `keycap_preview.py` had been parsing the WRONG SETTINGS ROWS the whole time.**
+  `_poly_settings()` split `poly_settings` by ordinal — `per = len(rows) // 6` — on
+  the premise that `lang_lut.c` emits the six H/V offset blocks. It emits **fifteen**
+  (six H/V, three `altgrhalf`, six held-offset), so `per` was 400 instead of 160,
+  each "block" spanned two and a half real ones, every language name appeared three
+  times inside it, and the last write won. Measured: `setting(S_LETTER_H, 'en-US',
+  VAR_SHIFT)` returned **35** out of `{num.hoffset}` where the real value is
+  `HIDE_KEY` — so the model drew an en-US letter a shift preview the firmware hides,
+  contradicting the docstring three lines above it. Every collision number the skill
+  had ever produced was measured against offsets from the wrong rows.
+  - **Key a generated block by its LABEL, never by its ordinal.** The generator
+    already writes `// {letter.hoffset}` markers, so splitting on those is immune to
+    a row being added — which is exactly what happened when `altgrhalf` landed
+    (2026-09-02) and silently invalidated the parser. The fix also raises on a
+    missing label rather than returning an empty dict, since the failure mode being
+    replaced was a plausible number rather than an error.
+  - ⚠️ **The check that catches this class is a DOCUMENTED value, not a schema
+    test.** A structural assertion (160 rows per block, 4 values per row) passes on
+    the broken parse. What fails is asking it something the firmware's own notes
+    already answer: en-US hides the letter shift preview, `{letter.altgrhalf}` is set
+    on exactly 27 layouts and `{sym.altgrhalf}` on 18. All three now match.
+  - **The AltGr hint was missing from `legend_ink()` too** — the module docstring
+    promised "base glyph, shift preview and AltGr preview" and the code composed the
+    first two, so a corner mark was measured against two thirds of the legend it can
+    collide with. It now mirrors the firmware's whole pair rule (the per-category
+    half-size opt-in, the `ALTGR_HALF_MIN_INK_H` mark guard, the four-edge clamp,
+    the shift stagger and the pull-left), and the pull is mutation-checked: disabling
+    that branch leaves the shift where it was, which the ink sets show.
+
 ## Branching (all PolyKybd repos)
 
 - **Give every branch a name that hints at its content** (a short descriptive slug, e.g. `claude/fix-slave-layer-after-fw-apply`, not just the auto-generated `claude/<random-scientist>-<id>`) so the branch list reads as a changelog.
@@ -1092,6 +1158,28 @@ inherited-upstream noise:
   - **A mixed docs+code — or workflow+code — PR still runs the gate in full**, since
     the workflow runs when AT LEAST ONE changed file is included. Nothing can be
     smuggled in behind a README or a CI edit.
+  - ⚠️ **`!.claude/**` is anchored at the REPO ROOT, so anything under
+    `keyboards/**/.claude/` is NOT excluded — and a RENAME is matched on both its old
+    and its new path.** Measured on #286 (2026-09-09), the PR that moved the five
+    unreachable skills out of `keyboards/polykybd/.claude/skills/`: every changed file
+    was a `.md` or a `.claude/skills/**` script, so the PR body asserted it would start
+    no build and no rig run — and `Build firmware` plus `HIL test (split72)` both ran
+    (and passed) off the `previous_filename` side of the renames, which sits under
+    `keyboards/` and matches the leading `**`. The filter is doing its job; the wrong
+    part was reading "`.claude/**` is excluded" as "any `.claude/` directory". Read a
+    rename as TWO paths, and check the anchor before predicting a skip:
+    `pull_request_read` `get_files` prints `previous_filename` for each one.
+    - ⚠️ **And once ONE file in the PR matches, EVERY later push re-runs the gate —
+      the `pull_request` paths filter is evaluated over the WHOLE PR's changed
+      files, not the push's.** Measured on the same #286 an hour later: a commit
+      touching only `CLAUDE.md` plus three files under `.claude/skills/`, i.e.
+      nothing but excluded paths, still started `Build firmware` and the rig,
+      because the PR still carried the renames above. So the skip you can predict
+      is per-PR, not per-push, and a docs-only follow-up on a PR that once touched
+      firmware costs a full flash-and-test cycle — which is what the "stop pushing
+      cosmetic commits while the important PR waits for the rig" rule is really
+      about. `git show --stat HEAD` proving your commit is clean says nothing;
+      `get_files` on the PR is the query that answers it.
   - **The exclusion is scoped to `.github/workflows/**`, not all of `.github/`.**
     Nothing under `.github/` is a build input today — there is no `uses: ./...`
     anywhere in `qmk-test.yml`, every action is external — but the narrower scope
@@ -2194,6 +2282,24 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   every gated keycode is mapped exactly once, only on `_SL`, in BOTH keymaps — so it
   could never hide anything the keycode list did not, and could reveal what it
   existed to hide. Gate on the keycode and the synced *value*, not on the layer.
+- ⚠️ **"Hidden" is TWO invariants — blank AND inert — and the gate covered only the
+  drawing half for the two keycodes on that row that cannot be undone.**
+  `process_record_user()` intercepts `QK_REBOOT` and `QK_BOOTLOADER` in its
+  pressed-edge switch (the bootloader announce, and the reboot's bridged handoff so
+  the slave restarts too) and returns `true` from there, while `settings_more_hidden()`
+  sat **~200 lines further down**. So the advanced row rendered blank and the blank
+  Restart keycap still rebooted the board — which reached the field as *"two crashes in
+  a row with the multisplash RGB matrix"* (2026-09-09). The log held no crash: it held
+  two presses of a key nobody could see.
+  - **The comment beside the gate asserted the premise that made it wrong** — that all
+    three of `QK_BOOTLOADER` / `QK_REBOOT` / `QK_DEBUG_TOGGLE` are left to
+    `process_action()`. True of `QK_DEBUG_TOGGLE` alone, which is precisely why it was
+    the one of the three that really was gated. A comment naming a set is worth
+    checking against the set.
+  - **The fix is ONE check ABOVE the switch, not a test inside each case** — otherwise
+    a third irreversible keycode added later inherits the same hole, which is the
+    enumerating-guard shape this file keeps recording. When you gate a keycode for
+    *display*, grep `process_record_user()` for it in the same pass.
 - ⚠️ **A hint/overlay string is drawn OVER the legend at the SAME origin, so
   full-size extra art ERASES it — a secondary mark belongs MOVE'd into a corner, and
   that corner is the BOTTOM-right.** `update_displays()` draws the legend at
@@ -3624,6 +3730,40 @@ with `−`/`+` and no staircase (they name no level); `KC_DAUTO` spells **AUTO**
   codepoint routing. Count the pixels it drops outside the 72×40 window — that is the
   clipping check, and it must be 0.
 
+### The settings-layer RGB row (`poly_keymap.c`, `keycode_helper.c`, `split72/config.h`)
+
+⚠️ **A LEGEND IS NOT EVIDENCE A KEYCODE DOES ANYTHING — the four RGB effect presets
+drew a keycap for years and were dispatched nowhere.** `RGB_M_P` / `RGB_M_B` /
+`RGB_M_R` / `RGB_M_SW` (`0x782B`–`0x782E`) are the legacy **underglow** mode keycodes.
+QMK routes that range through `process_underglow()` even on an RGB-matrix-only board,
+but its switch covers only toggle / next / previous / hue / sat / val / speed — the four
+mode presets have **no case there, none in `process_rgb_matrix()`**, and
+`IS_RGB_KEYCODE` / `RGB_KEYCODE_RANGE` are defined in `keycodes.h` and dispatched
+nowhere at all. So the keys rendered, felt real, and did nothing (fixed 2026-09-09,
+qmk#281). **Before believing a key works because it has a legend, grep for a `case`
+that handles its keycode** — the display pipeline and the action pipeline share
+nothing, and this repo has now been caught by that seam in both directions (the
+settings-gate note above is the same split with the halves reversed).
+
+- ⚠️ **The effect must be enabled on BOTH variants, because the handler is in the
+  shared keymap.** `RGB_MATRIX_CYCLE_SPIRAL` is the closer match for "Swirl" and is
+  **split72-only**, so the preset maps to `CYCLE_PINWHEEL` (18) instead; the other
+  three are `SOLID_COLOR` (1), `BREATHING` (5), `RAINBOW_MOVING_CHEVRON` (15). Read
+  the indices out of the compiled object (`nm -S` + `objcopy`) rather than counting
+  the enum by hand — the set depends on which effects each variant compiles in.
+- ⚠️ **`val_to_percent()` scaled against 255 while the value is CAPPED at
+  `RGB_MATRIX_MAXIMUM_BRIGHTNESS` (100), so a fully-lit matrix reported 39%** and the
+  status-OLED row could never reach 100 whatever the user did. It scales against the
+  cap now; since `RGB_MATRIX_VAL_STEP` is 1, one step is exactly one percent.
+  Saturation genuinely is a `/255` value — the two share a row and do **not** share a
+  scale.
+- ⚠️ **New RGB defaults reach only a FRESH eeconfig.** QMK writes them in
+  `eeconfig_update_rgb_matrix_default()`, so an existing keyboard keeps its stored
+  brightness and speed and sees no change; only the corrected percent is immediate.
+  Adopting defaults on deployed boards would need a one-time migration sentinel (the
+  `idle_style_fmt` shape) — say so in release notes rather than implying the value
+  moved for everyone.
+
 ### The utility layer's remaining text keys (`keycode_helper.c`, `poly_keymap.c`)
 
 Three `_UL` keys still spelled themselves out in four letters while every neighbour
@@ -3736,9 +3876,11 @@ has to be synthesised at draw time.
   (above the baseline) and `/2` rounds toward zero, which puts lowercase 1 px off the
   run's baseline. `half_floor()` is written out rather than `>> 1` because a right
   shift of a negative value is only arithmetic by implementation guarantee.
-- There is deliberately **no "back to full size" op** — the one use is a legend that is
-  entirely small text, and a toggle is a second thing to get wrong. `\x18` (reset) does
-  not clear it either; it resets the cursor only.
+- ⚠️ **There IS a "back to full size" op now — `HINT_BASE` (`\x17`), added 2026-09-09
+  — and this line used to say there deliberately was not.** The old reasoning ("the one
+  use is a legend that is entirely small text, and a toggle is a second thing to get
+  wrong") held only while nothing needed two sizes in one legend. `\x18` (reset) still
+  does **not** clear it; it resets the cursor only. See the `HINT_BASE` note below.
 
 **`HINT_MID` (`\x16`) is the other direction, and the only size BETWEEN the two.**
 `HINT_SMALL` synthesises a smaller face by halving; `HINT_MID` reaches the real
@@ -3778,6 +3920,56 @@ auto/pin cells), all now half-scale.
 - ⚠️ **They cannot be merged.** Swapping the two spacings breaks four legends in
   each direction — measured by sweeping every (lift, push) pair, not reasoned.
   Re-measure rather than eyeball whenever a word changes.
+
+**`HINT_BASE` (`\x17`) is the way OUT of the other two, and until 2026-09-09 there
+was none — which made a small LABEL over a bigger VALUE inexpressible.** Both
+`HINT_SMALL` and `HINT_MID` latch for the rest of the run, and the intuitive escape
+does not work: `\x10` **after** `\x16` halves the *mid* face rather than returning to
+the base one, so the second line always came out the smaller of the two. `\x17`
+returns to the caller's pool at full size. The RGB preset keycaps are what needed it —
+a half-scale `Preset:` over a mid-face `Solid` / `Breath` / `Cycle` / `Rainbw`.
+
+- ⚠️ **Adding an op is TWO walkers, not one.** The draw dispatch in
+  `base/disp_array.c` and the measurement in `base/font_lookup.c` must clear the same
+  flags, or the bbox describes a legend the draw does not produce — and every consumer
+  of that box (`plan_main_legend()`'s shift-preview layout, `roll_idle_offset()`'s
+  idle travel) is then working from fiction. `make test:polykybd_font_bbox` pins all
+  four cases, including the one that says why the op exists: that `\x10` after `\x16`
+  is *not* the base face.
+- ⚠️ **The host mirror is a THIRD edit** (`oled_preview.py`, and `SUPPORTED_OPS`
+  beside it), and skipping it is silent — a refused op makes the layout editor fall
+  back to the keycode *text*, which looks exactly like the op not working rather than
+  like a missing renderer. See `PolyKybdHost/CLAUDE.md`'s ops ledger.
+
+⚠️ **Two constraints decide where a legend element can go, and neither is visible from
+the macro:**
+
+- **A `HINT_MOVE` argument of 0 TERMINATES the string.** The walker's guard is
+  `if (text[1] && text[2])`, so a 0 in either coordinate ends the legend there — i.e.
+  **nothing is placeable on row 0 or column 0**, and the failure is a truncated legend
+  rather than a misplaced glyph. The halved droplet on the saturation keys sits at
+  row **1** for exactly this reason.
+- **Every cursor nudge is 2px, so `\v` is the ONLY op that changes the cursor's
+  PARITY.** `\f`/`\x05`/`\x06`/`\x08` move in twos, so an odd baseline can never reach
+  an even one by nudging. `\v` jumps to the next 15px multiple, which is what lets
+  line 1's baseline of 19 (as high as a full-size `+` reaches) get to line 2's 34.
+  A layout that will not close by 2px steps needs a `\r\v` in it, not more nudges.
+- ⚠️ **Nudge-run arithmetic is unverifiable by any test in this repo — the off-panel
+  pixel count is the only check.** A 5-nudge lift transcribed as `UP_8PX` (four)
+  pushed the Speed+ keycap's `p` descender two rows off the panel while `-Werror`, 52
+  bbox tests, cppcheck and `qmk lint --strict` were all green. The count that caught
+  it renders every legend through `PolyKybdHost/tools/oled_preview.py` — the
+  firmware's own interpreter — and counts pixels outside the 72x40 window. Run it on
+  every legend you touch, and require **0**.
+
+⚠️ **The WORD is the size ceiling, not the face — measure before promising a bigger
+legend.** The obvious request on a cramped legend is "use the next size up", and for a
+long word there is no next size: at the mid face "Saturation" measures **97px against
+a 72px panel**, and even at half the keycap face it was already **71 of 72**, i.e. as
+large as it can ever be drawn. So growing the legend and keeping the word were
+mutually exclusive, and the answer was to shorten the word (`Sat`; `Rainbow` 78px →
+`Rainbw`). Measure the candidate string at each face first — the trade is the user's
+to make, and it cannot be made without the numbers.
 
 ⚠️ **`kdisp_gfx_text_bbox()` did not know the display-list ops at all, and that was a
 real bug the moment a MAIN legend started using them.** Every op byte *and each of its
@@ -4949,7 +5141,9 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     points. Each size was picked to hold the previous header's **string widths**
     while gaining grid-fitting: the status-OLED row gaps went 3/2/3 + 3/3/3 → 4/3/3
     + 4/3/4 (every gap +1 px, nothing moved, bottom still pinned at 63). Re-run
-    `.claude/skills/status-oled-layout/measure_bands.py 72` after any size change.
+    `.claude/skills/status-oled-layout/measure_bands.py 72` after any size change
+    (from the repo root, or anywhere — it derives `tools/` from its own location;
+    needs an interpreter with Pillow, e.g. `/root/.qmk_venv/bin/python`).
   - Symbols are named for their **real** size (`NotoSans_Regular_Small_15px7b`,
     `..._Nano_10px7b`, `..._Mid_19px7b`). The old `…8pt7b`/`…6pt7b` names were
     fiction — the "pt" is the 141 DPI convention, so "8pt" was 16 px.

@@ -19,9 +19,9 @@ Run everything from `keyboards/polykybd/`.
 ## 1. Measure the current layout
 
 ```bash
-python3 .claude/skills/status-oled-layout/measure_bands.py 72          # both RGB modes
-python3 .claude/skills/status-oled-layout/measure_bands.py 72 --calls  # per-element extents
-python3 .claude/skills/status-oled-layout/measure_bands.py 42
+python3 ../../.claude/skills/status-oled-layout/measure_bands.py 72          # both RGB modes
+python3 ../../.claude/skills/status-oled-layout/measure_bands.py 72 --calls  # per-element extents
+python3 ../../.claude/skills/status-oled-layout/measure_bands.py 42
 ```
 
 It imports the preview module, wraps every draw helper so each lit pixel is
@@ -87,7 +87,7 @@ Python edit** or the renders stop being evidence. Then:
 python3 tools/status_oled_preview.py -b 35 --lang en-US --wpm 62 -o /tmp/on.png --diag
 python3 tools/status_oled_preview.py --rgb-off -b 35 --lang en-US --wpm 62 -o /tmp/off.png --diag
 python3 tools/status_oled42_preview.py -o /tmp/42.png --diag
-python3 .claude/skills/status-oled-layout/measure_bands.py 72   # re-measure: gaps as intended?
+python3 ../../.claude/skills/status-oled-layout/measure_bands.py 72   # re-measure: gaps as intended?
 
 export QMK_HOME=$(git rev-parse --show-toplevel)
 for kb in split72 split42; do qmk compile -kb polykybd/$kb -km default >/tmp/b_$kb.log 2>&1; echo "$kb exit=$?"; done

@@ -138,12 +138,31 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                                               ┌────────────────┐
                                                               │    Workman     │
                                                               └────────────────┘
+   HOME ROW MODS live on this layout and ONLY on this layout — it is the board's
+   demonstrator for them. Tap the key, get the letter; hold it, get the modifier,
+   in Miryoku's GACS order (GUI/Alt/Ctrl/Shift, outside in, mirrored). The `x/M`
+   cells below read tap/hold.
+   Two reasons this is a per-LAYOUT choice rather than a board-wide one:
+     * a mod-tap only exists on the layer that declares it, so the other four
+       base layouts are untouched and the base-layout switch IS the on/off
+       switch — no setting, no timing change anywhere else;
+     * the keycap can SAY so. os_hints.c draws the held modifier as a 2x2 mark
+       badge at the bottom-right, so unlike every other keyboard the hold is
+       visible rather than folklore.
+   ⚠️ The right ring finger is LALT_T, not RALT_T as a literal GACS reading would
+   give. RALT is AltGr, which on this board is a deliberate, separate function
+   with its own keycap legends — a home row mod that silently produced alternate
+   characters would be a surprise, not a modifier. Change the one token if you
+   want the literal Miryoku behaviour.
+   ⚠️ Tuning lives in split72/config.h (TAPPING_TERM / CHORDAL_HOLD /
+   PERMISSIVE_HOLD / FLOW_TAP_TERM). Nothing else on either board is a tap-hold
+   key, so those settings reach these eight keys and nothing else.
    ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
    │  Esc   │   1   │   2   │   3   │   4   │   5   │   `   │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   6   │   7   │   8   │   9   │   0   │   -   │   =    │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
    │  TAB   │   q   │   d   │   r   │   w   │   b   │  Hypr ├─╯                ╰─┤   j   │   f   │   u   │   p   │   ;   │   [   │   ]    │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  FN    │   a   │   s   │   h   │   t   │   g   │  Meh  │  (MB1)             │   y   │   n   │   e   │   o   │   i   │   '   │   \    │
+   │  FN    │  a/G  │  s/A  │  h/C  │  t/S  │   g   │ Emoji │  (MB1)             │   y   │  n/S  │  e/C  │  o/A  │  i/G  │   '   │   \    │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────╮  ╭────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────┤
    │ Shift  │   z   │   x   │   m   │   c   │   v   │  Intl │  Num!  │  │  Lang  │  Nubs │   k   │   l   │   ,   │   .   │   /   │ Shift  │
    └┬───────┼───────┼───────┼───────┼──────┬┴───────┼───────┼────────┤  ├────────┼───────┼───────┴┬──────┼───────┼───────┼───────┼───────┬┘
@@ -153,13 +172,13 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_L4] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_GRAVE,
         KC_TAB,     KC_Q,       KC_D,       KC_R,       KC_W,       KC_B,       KC_HYPR,
-        MO(_FL),   KC_A,       KC_S,       KC_H,       KC_T,       KC_G,       TO(_EMJ),     MS_BTN1,
+        MO(_FL),   LGUI_T(KC_A), LALT_T(KC_S), LCTL_T(KC_H), LSFT_T(KC_T), KC_G,   TO(_EMJ),     MS_BTN1,
         KC_LSFT,    KC_Z,       KC_X,       KC_M,       KC_C,       KC_V,       MO(_ADDLANG1), MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
                     KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_EQUAL,
                     KC_J,       KC_F,       KC_U,       KC_P,       KC_SCLN,    KC_LBRC,    KC_RBRC,
-        KC_NO,      KC_Y,       KC_N,       KC_E,       KC_O,       KC_I,       KC_QUOTE,   KC_BSLS,
+        KC_NO,      KC_Y,     RSFT_T(KC_N), RCTL_T(KC_E), LALT_T(KC_O), RGUI_T(KC_I), KC_QUOTE, KC_BSLS,
         KC_LANG,    KC_NUBS,    KC_K,       KC_L,       KC_COMMA,   KC_DOT,     KC_SLASH,   KC_RSFT,
         KC_ENTER,   KC_BSPC,    KC_SPC,                 KC_LEFT,    KC_UP,      KC_DOWN,    KC_RIGHT
         ),

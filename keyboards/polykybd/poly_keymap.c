@@ -3089,6 +3089,22 @@ void poly_fl_row_cache_invalidate(void) {
 #endif
 }
 
+#ifdef CHORDAL_HOLD
+// Chordal Hold's opposite-hands rule needs to know which half a key is on. QMK's
+// default reads a hand-maintained `chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS]`
+// table of 'L'/'R' chars -- 80 entries here, beside a keymap that already has five
+// base layers to keep in step. On a split whose halves are exactly
+// MATRIX_ROWS_PER_SIDE apart the hand is DERIVABLE, so derive it: the hook is weak
+// precisely so a board can answer the question its own way, and a derivation cannot
+// drift out of sync with the matrix the way a second table would. Same reasoning as
+// sync_is_link_fault() refusing to enumerate its siblings.
+// Rows 0..MATRIX_ROWS_PER_SIDE-1 are the left half, the rest the right -- the same
+// split LAYOUT_TO_INDEX() and is_left_side() already assume.
+char chordal_hold_handedness(keypos_t key) {
+    return (key.row < MATRIX_ROWS_PER_SIDE) ? 'L' : 'R';
+}
+#endif
+
 // Layers below the host-write cap are remappable and live in the dynamic keymap
 // (EEPROM); layers at/above it (the language/emoji function layers) are served straight
 // from the compiled keymap in flash, so they never read the dynamic keymap and always

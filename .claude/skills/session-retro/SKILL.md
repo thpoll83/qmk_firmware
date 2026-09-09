@@ -155,9 +155,27 @@ fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
      itself** — that is the learning above, and two copies of a technical
      conclusion drift with nothing comparing them. ⚠️ **`search_memories` for
      the question BEFORE writing** and skip if it is already indexed: a retro
-     re-run over an overlapping session would otherwise index it twice. Skip
-     entirely if nothing this session took more than a handful of files to
-     answer.
+     re-run over an overlapping session would otherwise index it twice.
+     ⚠️ **Write it raw — `add_memory(..., infer=False)`.** The default runs an
+     LLM extractor that rewrites the entry into third-person narrative prose
+     (*"User explained that …"*), losing the question / verdict / write-up
+     structure this bullet prescribes. ⚠️ Measured 2026-09-09, the
+     fully-qualified PR ref **did** survive that rewrite — so write raw for the
+     structure, and do not repeat a claim that the extractor eats the refs.
+     ⚠️ **Read `status` first, then `results` — and note which MODE each
+     observation belongs to.** The two paths differ, and conflating them is how
+     the first version of this note came out wrong. Measured 2026-09-09:
+     `infer=False` returns `SUCCEEDED` **synchronously** with the stored text in
+     `results`, and re-writing identical text is a **no-op that returns the
+     EXISTING memory's id**, leaving its metadata and timestamps untouched. The
+     **default** is asynchronous — `status: PENDING` plus an `event_id`, nothing
+     stored yet — so there a written entry and a discarded one look identical
+     until you poll `get_event_status`, and a near-duplicate resolves
+     `SUCCEEDED` with `results: []` and nothing written. So `status` says
+     whether the call finished and `results` says whether anything landed;
+     neither answers alone, and the empty-`results` dedupe belongs to the
+     default path, NOT to the raw write this bullet prescribes. Skip entirely if
+     nothing this session took more than a handful of files to answer.
    - Offer to commit + push the new/edited files (don't unless asked, per repo
      rules).
 

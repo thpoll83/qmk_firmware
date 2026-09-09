@@ -47,7 +47,7 @@ working around it in a caller.
 ## 1. Build the ink sets
 
 ```python
-import sys; sys.path.insert(0, '.claude/skills/keycap-layout-preview')
+import sys; sys.path.insert(0, '../../.claude/skills/keycap-layout-preview')
 import keycap_preview as K
 
 legend = K.legend_ink('a')                    # base glyph + shift preview, real offsets

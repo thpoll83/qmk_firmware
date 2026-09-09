@@ -383,13 +383,14 @@ skipped paragraph; a fork costs a note that only one repo ever sees. Take the fi
 If a skill ever genuinely needs to differ per repo, split the differing part into a
 separate skill rather than forking the shared one.
 
-⚠️ **FIVE skills live at `keyboards/polykybd/.claude/skills/` and did NOT load — and
-this file cites three of them by name as though they do.** Measured 2026-09-09: the
-session's available-skills list contained none of `add-glyph-script`,
-`add-polykybd-shortcut-hint`, `keycap-layout-preview`, `status-oled-layout` or
-`tune-lang-lut-cells`, while all seventeen at the repo root (`.claude/skills/`) loaded
-normally. **Do not theorise the mechanism** — what is measured is the location and the
-absence.
+✅ **FIVE skills lived at `keyboards/polykybd/.claude/skills/` and did NOT load — MOVED
+to the repo root `.claude/skills/` on 2026-09-09, and the fix is confirmed.** Measured
+before the move: the session's available-skills list contained none of
+`add-glyph-script`, `add-polykybd-shortcut-hint`, `keycap-layout-preview`,
+`status-oled-layout` or `tune-lang-lut-cells`, while all seventeen at the repo root
+loaded normally. **Do not theorise the mechanism** — what was measured is the location
+and the absence. A skill added later goes at the repo root; one under `keyboards/` is
+unreachable.
 
 - **The cost is silent and it was paid the same day.** `keycap-layout-preview` is
   exactly the model-the-draw-path-and-measure-ink-against-ink loop that the RGB legend
@@ -397,19 +398,27 @@ absence.
   for `HINT_HALF`, the op that shaped that whole layout. Nothing anywhere said the
   skill existed, because the file that mentions it is this one and the pointer looked
   live.
-- ⚠️ **Moving them to `.claude/skills/` is NOT a `git mv` — three helper scripts encode
-  their nesting as hardcoded `../` depths.** `add-glyph-script/preview_block.py` walks
+- ⚠️ **The move was NOT a `git mv` — TWO helper scripts encoded their nesting as
+  hardcoded `../` depths**, and a relocated script then fails in a way that reads as a
+  broken skill rather than a wrong path. `add-glyph-script/preview_block.py` walked
   **six** levels up to reach `PolyKybdHost/tools` and three to reach
-  `base/fonts/generated/`; `keycap_preview.py` and `measure_bands.py` derive their
-  sibling-repo paths from `__file__` the same way. Four `SKILL.md`s also carry
-  invocation strings relative to `keyboards/polykybd/` (*"Run everything from
-  `keyboards/polykybd/`"* plus `python3 .claude/skills/<name>/<script>.py`). So the
-  move is: relocate, fix each depth, fix each invocation line, then run each script.
-- ⚠️ **A session cannot verify the payoff, because the skill list is fixed at session
-  start.** So the move is a deliberate follow-up rather than something to slip into an
-  unrelated change: do it, then confirm the five appear in the *next* session's list
-  before deleting this note. Until then, invoke them by reading the `SKILL.md`
-  directly — they are ordinary files and their bodies work fine.
+  `base/fonts/generated/`; `status-oled-layout/measure_bands.py` walked three to reach
+  `tools/`. Both now **derive** the qmk root by walking parents for `keyboards/polykybd`,
+  which is depth-independent and is the pattern to copy. Four `SKILL.md`s also carried
+  invocation strings relative to `keyboards/polykybd/` (`python3 .claude/skills/…` →
+  `python3 ../../.claude/skills/…`).
+  - ⚠️ **`keycap_preview.py` was NOT `../`-coupled, and this note said it was.** It
+    already walked up for `keyboards/polykybd` and needed no edit at all — asserted
+    here by analogy with the other two rather than checked, in the note whose whole
+    subject is a stale pointer. **Baseline every script BEFORE relocating it**, so a
+    post-move failure cannot be confused with one that never worked; all five produced
+    identical output afterwards.
+- ⚠️ **The payoff IS verifiable in-session, and this note claimed the opposite.** The
+  five appeared in the available-skills list within the same session as the `git mv`,
+  so discovery is re-scanned rather than fixed at session start — and that is what
+  confirmed the move had worked. The claim was falsified minutes after being written,
+  by the very action it was advising to defer: a "you cannot check this here" statement
+  is worth one attempt at checking before it goes in the file.
 
 ## Branching (all PolyKybd repos)
 
@@ -5062,7 +5071,9 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     points. Each size was picked to hold the previous header's **string widths**
     while gaining grid-fitting: the status-OLED row gaps went 3/2/3 + 3/3/3 → 4/3/3
     + 4/3/4 (every gap +1 px, nothing moved, bottom still pinned at 63). Re-run
-    `.claude/skills/status-oled-layout/measure_bands.py 72` after any size change.
+    `.claude/skills/status-oled-layout/measure_bands.py 72` after any size change
+    (from the repo root, or anywhere — it derives `tools/` from its own location;
+    needs an interpreter with Pillow, e.g. `/root/.qmk_venv/bin/python`).
   - Symbols are named for their **real** size (`NotoSans_Regular_Small_15px7b`,
     `..._Nano_10px7b`, `..._Mid_19px7b`). The old `…8pt7b`/`…6pt7b` names were
     fiction — the "pt" is the 141 DPI convention, so "8pt" was 16 px.

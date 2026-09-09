@@ -148,6 +148,16 @@ fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
    - Docs gaps → invoke the **`update-polykybd-docs`** skill for each (it edits
      the `polykybd-docs` site on its own branch + PR). This retro only surfaces
      them; that skill does the writing.
+   - Investigation index → `add_memory`, ONE entry per investigation that cost
+     real effort: the question, the verdict in a sentence, and where the full
+     write-up landed (`repo/file §heading`, or `owner/repo#N` — ⚠️ a bare `#N`
+     resolves to the wrong PR across the nine repos). ⚠️ **Never the finding
+     itself** — that is the learning above, and two copies of a technical
+     conclusion drift with nothing comparing them. ⚠️ **`search_memories` for
+     the question BEFORE writing** and skip if it is already indexed: a retro
+     re-run over an overlapping session would otherwise index it twice. Skip
+     entirely if nothing this session took more than a handful of files to
+     answer.
    - Offer to commit + push the new/edited files (don't unless asked, per repo
      rules).
 
@@ -169,6 +179,10 @@ DOCS GAPS (→ update-polykybd-docs)
   i. <feature added/changed> → <likely polykybd-docs page>
   ii. ...
 
+MEMORY INDEX (→ mem0)
+  •. <question investigated> → <verdict in one line>
+     write-up: <repo/file §heading | owner/repo#N>
+
 ALREADY COVERED (skipped): <item> → <existing doc/skill>
 
 Recommendation: <which to keep, and why>
@@ -182,6 +196,10 @@ Recommendation: <which to keep, and why>
   repo; use for genuinely cross-project meta-skills.
 - **CLAUDE.md** — the most *specific* one wins (a `lang/FUTURE_LANGUAGES.md`-style
   doc over the top-level CLAUDE.md when the learning is narrow).
+- **mem0** — an INDEX of investigations, never a record of findings: one entry
+  pointing at where the real write-up lives, so a later session can find it
+  without re-deriving it. ⚠️ CLAUDE.md wins on any disagreement — a mem0 hit is
+  a lead to verify against the repo, never an authority.
 
 ## Pitfalls
 
@@ -193,6 +211,11 @@ Recommendation: <which to keep, and why>
   is the only thing that decides whether it ever fires.
 - **Cite evidence.** Every proposal should point at what in the session justifies
   it; if you can't, it's probably not worth keeping.
+- **Nothing sensitive in mem0, and that includes the SEARCH.** No credentials,
+  keys, file contents, or anything you would not put in a public issue. ⚠️ The
+  pre-write `search_memories` sends the question text to the same cloud service
+  `add_memory` writes to — so a question that cannot leave the machine means
+  skipping the index entry altogether, not sanitising it afterwards.
 - **Approval before writing**, and **don't push** unless asked.
 - This skill is repo-agnostic; if useful beyond this project, copy it to
   `~/.claude/skills/`.

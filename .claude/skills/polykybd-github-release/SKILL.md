@@ -136,7 +136,11 @@ include them in what you show the user at the review gate.
 
 Present to the user, in chat:
 - the **full drafted notes**, and
-- the **proposed metadata**: tag, release title, target branch, latest-flag.
+- the **proposed metadata**: tag, release title, target branch, latest-flag, and
+- **when the range carries a `PROTOCOL_VERSION` bump, the sibling artifact's newest
+  PUBLISHED protocol** — because that decides whether this is one release or two
+  (see the Protocol lockstep pitfall). Draft both sets of notes before the gate
+  rather than after it; a paired release is the default, not an escalation.
 
 Ask them to approve or edit. **Do not** create/push a tag or create/publish the
 release until they explicitly approve. Fold in their edits (and re-show if the change
@@ -316,8 +320,24 @@ note above).
 - **Skipping maintenance versions is about the NOTES only** — the numbers still
   increment through them. Don't renumber or imply they don't exist; fold them into a
   single "plus maintenance releases" line if the user asks.
-- **Protocol lockstep** — when the range includes a `PROTOCOL_VERSION` bump, the notes
-  must tell users to update host + firmware together (exact-match connect gate).
+- **Protocol lockstep — a `PROTOCOL_VERSION` bump in the range means you cut BOTH
+  releases, not just write a sentence in the notes.** Before drafting, read the
+  sibling artifact's newest *published* release (`mcp__github__list_releases`) and
+  check the `__protocol__` / `PROTOCOL_VERSION` at that tag.
+  - ⚠️ **The in-tree versions being in lockstep does NOT mean the releases are**, and
+    that is the check that fails. On 2026-09-09 firmware `PolyKybd` and host `main`
+    both said protocol 17 while the newest published host (v0.14.18) was still 16 —
+    so the existing "bump `__protocol__` in lockstep" note was satisfied and a
+    firmware-only release would still have shipped protocol 17 to users whose host
+    could not drive it.
+  - ⚠️ **Nothing downstream catches it, because the connect gate is NOT exact-match**
+    — this pitfall claimed it was, for a long time. The host connects to any protocol
+    `>= MIN_SUPPORTED_PROTOCOL` and gates each feature through `FEATURE_MIN_PROTOCOL`,
+    so an old host pairs with new firmware and silently leaves the new features off.
+    That is quieter than a refusal, and worse.
+  - **Publish the host first**, then the firmware: the host is the side that has to
+    understand the new protocol, and a user who updates in that order is never
+    holding firmware their app cannot drive.
 - **No git tags in the firmware tree** — releases are the GitHub Releases API; history
   boundaries are the `bump firmware/host version` commits (see `polykybd-release-notes`).
 - **WinCompose: `status.txt` has a wrong value in BOTH directions, and they need

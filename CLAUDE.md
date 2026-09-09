@@ -1357,6 +1357,25 @@ Firmware releases are **GitHub Releases** (tag `PolyKybd-fw-vX.Y.Z`; `FW_VERSION
 `polykybd-github-release` skill to draft the notes and drive the flow. The mechanics
 that cost real debugging to learn (2026-07):
 
+- ⚠️ **A `PROTOCOL_VERSION` bump means BOTH artifacts get released, and the check that
+  catches it is the PUBLISHED versions, not the in-tree ones.** The existing "bump
+  `__protocol__` in lockstep with `PROTOCOL_VERSION`" rule is about the *sources*, and
+  it can be perfectly satisfied while the releases are a protocol apart. Measured
+  2026-09-09: firmware `PolyKybd` and host `main` both read protocol 17, while the
+  newest **published** host (v0.14.18) was still 16 — so a firmware-only release would
+  have shipped protocol 17 to every user's protocol-16 app. Read the sibling's newest
+  release (`list_releases`, then its `__protocol__`/`PROTOCOL_VERSION` at that tag)
+  before drafting.
+  - ⚠️ **Nothing downstream catches it, because the connect gate is NOT exact-match.**
+    The host connects to any protocol `>= MIN_SUPPORTED_PROTOCOL` and gates each
+    feature through `FEATURE_MIN_PROTOCOL`, so an old host pairs with new firmware and
+    silently leaves the new features off — quieter than a refusal, and worse to
+    diagnose. (The release skill's own pitfall claimed exact-match for a long time,
+    which made the pairing read as self-enforcing when it is not.)
+  - **Publish the host first, then the firmware** — the host is the side that has to
+    understand the new protocol, so that order never leaves a user holding firmware
+    their app cannot drive.
+
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
   released** (`tools/require_fwapply_run.py`, the first step of `release.yml`,
   before the build so a refusal changes nothing). The HID-apply brick shipped

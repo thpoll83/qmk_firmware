@@ -2283,3 +2283,45 @@
 // GENERATED from the glyph sheet — deleting the line there would come back on the
 // next `cog -r lang/named_glyphs.h`, silently re-aliasing the slot.
 #undef ICON_BACKSPACE
+
+// The AI key's per-state marks (KC_AI, poly_sync_t.ai_state), drawn UNDER the word.
+//
+// ⚠️ Each one is HALF-scaled and MOVE-positioned, and that is forced rather than
+// stylistic: these are emoji-pack glyphs 28-36 px tall, and the mid-face word above
+// them already owns rows 2..15 of a 40 px panel. At full size all three run off the
+// bottom edge (measured: 3, 13 and 3 pixels lost). Halved they are 19x15, 14x18 and
+// 5x14, which the remaining 23 rows hold with room either side. Same composite shape
+// as ICON_GFX_RESTART's screen and ICON_SCRLOCK_*'s badge.
+//
+// ⚠️ The positions are PEN positions in ABSOLUTE BUFFER coords -- x offset by
+// BUFFER_X 28, y the BASELINE -- because HINT_SMALL keeps kdisp_write_gfx_char's
+// baseline and advance semantics and only halves the glyph's own extents. They are
+// derived from each mark's halved metrics AND from the baseline-align shift
+// kdisp_write_gfx_char applies (`font->yAdvance - fonts[0]->yAdvance`, +5 px here:
+// under HINT_MID the reference is still IconsFont, because the mid face supplies no
+// glyph for these codepoints). So a wider or taller mark does NOT self-centre and a
+// mark from another font does not even sit at the same height: re-derive and
+// re-measure through PolyKybdHost's tools/oled_preview.py.
+//
+// ⚠️ HINT_SMALL, not HINT_HALF. HINT_HALF would do the same job on the keyboard, but
+// the host renderer does not model op 0x0F -- Renderer.unsupported_ops() refuses it,
+// so the layout editor's keycap preview would silently fall back to drawing the
+// keycode text for this key instead of the legend. Verified by measuring: with
+// HINT_HALF the preview drew the word alone and reported {15}.
+//
+// U+1F5D8 is the same reload glyph ICON_GFX_RELOAD names. It is deliberately NOT
+// aliased to that macro: the two are unrelated meanings that happen to share a
+// codepoint, so a future change to either must not silently move the other.
+#define ICON_AI_IDLE                	U"\x1F4A4"  // ZZZ sleeping    (emoji pack, 37x30 -> 19x15)
+#define ICON_AI_BUSY                	U"\x1F5D8"  // clockwise reload (symbol pack, 28x36 -> 14x18)
+#define ICON_AI_ATTN                	U"\x2757"   // heavy exclamation (emoji pack, 9x28 -> 5x14)
+#define HINT_POS_AI_IDLE            	U"\x33" U"\x1E"   // (51,30) buffer: pen -> 19x15 ink at window x[26,44] y[21,35]
+#define HINT_POS_AI_BUSY            	U"\x38" U"\x1D"   // (56,29) buffer: pen -> 14x18 ink at window x[29,42] y[19,36]
+#define HINT_POS_AI_ATTN            	U"\x3C" U"\x1E"   // (60,30) buffer: pen ->  5x14 ink at window x[33,37] y[21,34]
+
+// The whole KC_AI cell: the word where AI_OFF already draws it, then the mark.
+// Keeping the word on every state is what leaves the key readable on a keyboard
+// with no font pack, where the marks draw nothing at all -- kdisp's half-size
+// writer substitutes no '!' for a glyph it cannot find, unlike the full-size one.
+#define AI_LEGEND(pos, icon)  \
+    HINT_MID U"\f\f\f\f" U"     AI" HINT_MOVE(pos) HINT_SMALL icon

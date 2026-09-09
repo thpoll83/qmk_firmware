@@ -1684,20 +1684,29 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         case KC_AI: {
             const uint8_t st = local_state->ai_state < AI_STATE_COUNT
                                    ? local_state->ai_state : AI_OFF;
+            // The three live states draw an ICON under the word rather than a second
+            // word: at a glance a shape reads faster than "idle"/"busy"/"you!" in a
+            // 14 px face, and the three marks are unmistakable from each other where
+            // three short lowercase words are not.
+            //
+            // ⚠️ The word stays. The marks are PACK glyphs, so a keyboard with no
+            // font pack draws nothing for them (kdisp substitutes '!' only at full
+            // size, and the mid face has no glyph to fall back to) — the word is what
+            // keeps the key readable there, and it is also what a colour-blind reader
+            // and split42 (no RGB matrix) have instead of the LED.
+            //
             // ⚠️ The leading spaces are MEASURED, not decorative — and they are the
             // whole reason this legend does not read as broken. Every shipped
-            // MID_TWO_LINE legend is left-aligned and only looks centred because its
-            // words nearly fill the 72 px window ("SCRIPT:"/"Rune" spans x1..68);
-            // "AI" over a four-letter word spans x0..38 and hugs the left edge with
-            // 33 px of space beside it. Each pair below centres BOTH lines to within
-            // 3.5 px, with zero pixels off the panel — re-measure through
+            // MID_* legend is left-aligned and only looks centred because its words
+            // nearly fill the 72 px window ("SCRIPT:"/"Rune" spans x1..68); "AI" is
+            // 15 px and hugs the left edge without them. Re-measure through
             // PolyKybdHost's tools/oled_preview.py rather than eyeballing if a word
-            // changes, which is what the note on the macro itself asks for.
+            // or a mark changes, which is what the note on the macro itself asks for.
             static const uint32_t* const legend[AI_STATE_COUNT] = {
                 [AI_OFF]       = HINT_MID U"\f\f\f\f" U"     AI",
-                [AI_IDLE]      = MID_TWO_LINE("     AI", "   idle"),
-                [AI_WORKING]   = MID_TWO_LINE("     AI", "  busy"),
-                [AI_ATTENTION] = MID_TWO_LINE("     AI", "   you!"),
+                [AI_IDLE]      = AI_LEGEND(HINT_POS_AI_IDLE, ICON_AI_IDLE),
+                [AI_WORKING]   = AI_LEGEND(HINT_POS_AI_BUSY, ICON_AI_BUSY),
+                [AI_ATTENTION] = AI_LEGEND(HINT_POS_AI_ATTN, ICON_AI_ATTN),
             };
             return legend[st];
         }

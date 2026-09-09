@@ -247,8 +247,8 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case RM_NEXT:                       return PRIVATE_LIGHT ICON_RIGHT;
         case RM_HUEU:                       return RGB_VALUE(UP_4PX RIGHT_20PX UP_2PX DEGREE DOWN_2PX U"+", U"", RIGHT_16PX, "Hue");
         case RM_HUED:                       return RGB_VALUE(UP_4PX RIGHT_24PX DEGREE U"-", U"", RIGHT_16PX, "Hue");
-        case RM_SATU:                       return RGB_VALUE(HINT_MOVE(RGB_POS_SAT_ICON) HINT_HALF ICON_RGB_SAT HINT_MOVE(RGB_POS_SAT_PLUS) U"+", U"", RIGHT_20PX, "Sat");
-        case RM_SATD:                       return RGB_VALUE(HINT_MOVE(RGB_POS_SATM_ICO) HINT_HALF ICON_RGB_SAT HINT_MOVE(RGB_POS_SAT_MINS) U"-", DOWN_2PX, RIGHT_20PX, "Sat");
+        case RM_SATU:                       return RGB_VALUE(HINT_MOVE(RGB_POS_SAT_ICON) HINT_HALF ICON_RGB_SAT HINT_MOVE(RGB_POS_SAT_PLUS) U"+", DOWN_2PX, RIGHT_20PX, "Sat");
+        case RM_SATD:                       return RGB_VALUE(HINT_MOVE(RGB_POS_SATM_ICO) HINT_HALF ICON_RGB_SAT HINT_MOVE(RGB_POS_SAT_MINS) U"-", DOWN_4PX, RIGHT_20PX, "Sat");
         case RM_VALU:                       return RGB_VALUE(HINT_MOVE(RGB_POS_VAL_ICON) HINT_HALF ICON_RGB_VAL HINT_MOVE(RGB_POS_VAL_PLUS) U"+", U"", RIGHT_6PX, "Bright");
         case RM_VALD:                       return RGB_VALUE(HINT_MOVE(RGB_POS_VALM_ICO) HINT_HALF ICON_RGB_VAL HINT_MOVE(RGB_POS_VAL_MINS) U"-", DOWN_2PX, RIGHT_6PX, "Bright");
         case RM_SPDU:                       return RGB_VALUE(UP_4PX RIGHT_20PX UP_10PX ICON_RGB_SPD DOWN_10PX U"+", U"", RIGHT_8PX, "Speed");
@@ -256,7 +256,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case RGB_MODE_PLAIN:                return RGB_PRESET(RIGHT_12PX, "Solid");
         case RGB_MODE_BREATHE:              return RGB_PRESET(RIGHT_4PX,  "Breath");
         case RGB_MODE_SWIRL:                return RGB_PRESET(RIGHT_12PX, "Cycle");
-        case RGB_MODE_RAINBOW:              return RGB_PRESET(RIGHT_2PX,  "Rnbow");
+        case RGB_MODE_RAINBOW:              return RGB_PRESET(U"",         "Rainbw");
         case KC_MEDIA_NEXT_TRACK:           return ICON_RIGHT ICON_RIGHT;
         case KC_MEDIA_PLAY_PAUSE:           return U"  " ICON_RIGHT;
         case KC_MEDIA_STOP:                 return ICON_MEDIA_STOP;

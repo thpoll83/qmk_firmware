@@ -223,6 +223,36 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
     `keyboards/polykybd/doom/engine/PROVENANCE.md` carries the disposition of the
     `textscreen/` findings, because that tree is a **verbatim upstream snapshot**
     and must not be patched in place.
+  - ⚠️ **A THIRD direction, and it is the one that silences review rather than
+    misdirecting it: an inherited upstream POLICY file tells a reviewer to REFUSE
+    the files this fork owns.** `.github/copilot-instructions.md` is byte-identical
+    to upstream's and says *"This review applies only to changes within the
+    `keyboards/` folder … defer to a QMK Collaborator"*. That is written for
+    somebody submitting a keyboard to `qmk/qmk_firmware`, where a contributor
+    cannot self-approve core changes. Here it means CodeRabbit reads the inherited
+    tree normally and declines to assess `release.yml`, `qmk-test.yml` and
+    `CLAUDE.md` — **exactly the files that are ours** — deferring them to a role
+    this repository has nobody to fill. Measured on #282 (2026-09-09): two findings,
+    both "defer to a QMK Collaborator", neither about the code.
+    - **The two commands that settle it** are the ones already above, read in the
+      opposite direction: `diff` against upstream says the *policy* is inherited,
+      and a **404** says the *flagged file* is not.
+      ```bash
+      curl -sSL "https://raw.githubusercontent.com/qmk/qmk_firmware/master/.github/copilot-instructions.md" \
+        | diff - .github/copilot-instructions.md && echo "POLICY IS UPSTREAM'S"
+      curl -sSL -o /dev/null -w '%{http_code}\n' \
+        "https://raw.githubusercontent.com/qmk/qmk_firmware/master/.github/workflows/release.yml"   # 404 = OURS
+      ```
+    - ✅ **Reply with that evidence — CodeRabbit withdrew both and stored a repo
+      learning**, the general form of which is *"verify whether an instruction
+      applies to the fork and the changed file before using it as review scope"*.
+      One reply, a permanent correction, same payoff as the stale-netlist reply
+      recorded in `PolyKybdHost/CLAUDE.md`. Declining silently buys nothing and the
+      finding returns on the next PR that touches `.github/`.
+    - ⚠️ **Do not "fix" it by deleting the inherited file.** It is stock upstream,
+      so removing it buys a conflict at the next catch-up merge for a problem one
+      reply solves. If it becomes tiresome, the place to scope CodeRabbit is its
+      own configuration, not upstream's file.
 
 - ⚠️ **An on-demand Claude reviewer (`@claude review`) was tried and REMOVED
   (2026-08-20) — don't rebuild it.** `.github/workflows/claude-review.yml` +
@@ -352,6 +382,72 @@ A firmware-specific section in the host's copy (or the reverse) costs a reader o
 skipped paragraph; a fork costs a note that only one repo ever sees. Take the first.
 If a skill ever genuinely needs to differ per repo, split the differing part into a
 separate skill rather than forking the shared one.
+
+✅ **FIVE skills lived at `keyboards/polykybd/.claude/skills/` and did NOT load — MOVED
+to the repo root `.claude/skills/` on 2026-09-09, and the fix is confirmed.** Measured
+before the move: the session's available-skills list contained none of
+`add-glyph-script`, `add-polykybd-shortcut-hint`, `keycap-layout-preview`,
+`status-oled-layout` or `tune-lang-lut-cells`, while all seventeen at the repo root
+loaded normally. **Do not theorise the mechanism** — what was measured is the location
+and the absence. A skill added later goes at the repo root; one under `keyboards/` is
+unreachable.
+
+- **The cost is silent and it was paid the same day.** `keycap-layout-preview` is
+  exactly the model-the-draw-path-and-measure-ink-against-ink loop that the RGB legend
+  work (qmk#281) re-derived by hand for twelve legends; it even ships a `half_ink()`
+  for `HINT_HALF`, the op that shaped that whole layout. Nothing anywhere said the
+  skill existed, because the file that mentions it is this one and the pointer looked
+  live.
+- ⚠️ **The move was NOT a `git mv` — TWO helper scripts encoded their nesting as
+  hardcoded `../` depths**, and a relocated script then fails in a way that reads as a
+  broken skill rather than a wrong path. `add-glyph-script/preview_block.py` walked
+  **six** levels up to reach `PolyKybdHost/tools` and three to reach
+  `base/fonts/generated/`; `status-oled-layout/measure_bands.py` walked three to reach
+  `tools/`. Both now **derive** the qmk root by walking parents for `keyboards/polykybd`,
+  which is depth-independent and is the pattern to copy. Four `SKILL.md`s also carried
+  invocation strings relative to `keyboards/polykybd/` (`python3 .claude/skills/…` →
+  `python3 ../../.claude/skills/…`).
+  - ⚠️ **`keycap_preview.py` was NOT `../`-coupled, and this note said it was.** It
+    already walked up for `keyboards/polykybd` and needed no edit at all — asserted
+    here by analogy with the other two rather than checked, in the note whose whole
+    subject is a stale pointer. **Baseline every script BEFORE relocating it**, so a
+    post-move failure cannot be confused with one that never worked; all five produced
+    identical output afterwards.
+- ⚠️ **The payoff IS verifiable in-session, and this note claimed the opposite.** The
+  five appeared in the available-skills list within the same session as the `git mv`,
+  so discovery is re-scanned rather than fixed at session start — and that is what
+  confirmed the move had worked. The claim was falsified minutes after being written,
+  by the very action it was advising to defer: a "you cannot check this here" statement
+  is worth one attempt at checking before it goes in the file.
+- ⚠️ **Making a skill reachable is what finally got its helper READ, and
+  `keycap_preview.py` had been parsing the WRONG SETTINGS ROWS the whole time.**
+  `_poly_settings()` split `poly_settings` by ordinal — `per = len(rows) // 6` — on
+  the premise that `lang_lut.c` emits the six H/V offset blocks. It emits **fifteen**
+  (six H/V, three `altgrhalf`, six held-offset), so `per` was 400 instead of 160,
+  each "block" spanned two and a half real ones, every language name appeared three
+  times inside it, and the last write won. Measured: `setting(S_LETTER_H, 'en-US',
+  VAR_SHIFT)` returned **35** out of `{num.hoffset}` where the real value is
+  `HIDE_KEY` — so the model drew an en-US letter a shift preview the firmware hides,
+  contradicting the docstring three lines above it. Every collision number the skill
+  had ever produced was measured against offsets from the wrong rows.
+  - **Key a generated block by its LABEL, never by its ordinal.** The generator
+    already writes `// {letter.hoffset}` markers, so splitting on those is immune to
+    a row being added — which is exactly what happened when `altgrhalf` landed
+    (2026-09-02) and silently invalidated the parser. The fix also raises on a
+    missing label rather than returning an empty dict, since the failure mode being
+    replaced was a plausible number rather than an error.
+  - ⚠️ **The check that catches this class is a DOCUMENTED value, not a schema
+    test.** A structural assertion (160 rows per block, 4 values per row) passes on
+    the broken parse. What fails is asking it something the firmware's own notes
+    already answer: en-US hides the letter shift preview, `{letter.altgrhalf}` is set
+    on exactly 27 layouts and `{sym.altgrhalf}` on 18. All three now match.
+  - **The AltGr hint was missing from `legend_ink()` too** — the module docstring
+    promised "base glyph, shift preview and AltGr preview" and the code composed the
+    first two, so a corner mark was measured against two thirds of the legend it can
+    collide with. It now mirrors the firmware's whole pair rule (the per-category
+    half-size opt-in, the `ALTGR_HALF_MIN_INK_H` mark guard, the four-edge clamp,
+    the shift stagger and the pull-left), and the pull is mutation-checked: disabling
+    that branch leaves the shift where it was, which the ink sets show.
 
 ## Branching (all PolyKybd repos)
 
@@ -1029,6 +1125,25 @@ inherited-upstream noise:
     dispatch *Build and HIL Test* with `tier: fwapply` on the right ref once the
     rig is back, and remember the ref rules there (the branch tip only works while
     it IS the release commit; otherwise dispatch on the tag).
+  - ✅ **PROVE it is the rig and not your PR by COUNTING queued runs, not by
+    reasoning about the diff.** `actions_list list_workflow_runs` on `qmk-test.yml`
+    and look for `status: queued` across heads: several PRs stuck at once means
+    the runner, and **a `workflow_dispatch` on `PolyKybd` stuck alongside them is
+    conclusive** — nothing about a feature branch can hold up a manual run on the
+    base. Measured 2026-09-09: four runs queued across three heads (two PRs plus a
+    dispatch), every one with a green `Build firmware` and a HIL job that never
+    started.
+  - ⚠️ **Do NOT re-run, and do not read the drive-to-green rules as requiring
+    one.** The rig executes one job at a time, so a re-run queues a fifth job
+    behind the four already waiting and cannot make an absent runner appear. What
+    the rules do require is saying it once: a single comment naming the check, the
+    evidence that it is not this PR's, and what you are not doing about it. Then
+    silence until the state changes.
+  - **It can self-resolve, so an outage is not automatically a person's problem.**
+    The same 2026-09-09 outage ran 05:14→07:18Z (~2h05m) and cleared with no
+    intervention; the queued jobs then ran in order and passed. Between that and
+    the 4.5 h case above there is no useful timeout to assume — keep a check-in
+    scheduled rather than declaring the rig dead or waiting on it in the loop.
 - **A change that cannot alter the firmware does NOT run the build or the rig —
   `qmk-test.yml` path-filters both its `push` and `pull_request` triggers.** Markdown
   since 2026-08-21, then `scripts/` and `.claude/`, then the sibling workflow files
@@ -1063,6 +1178,28 @@ inherited-upstream noise:
   - **A mixed docs+code — or workflow+code — PR still runs the gate in full**, since
     the workflow runs when AT LEAST ONE changed file is included. Nothing can be
     smuggled in behind a README or a CI edit.
+  - ⚠️ **`!.claude/**` is anchored at the REPO ROOT, so anything under
+    `keyboards/**/.claude/` is NOT excluded — and a RENAME is matched on both its old
+    and its new path.** Measured on #286 (2026-09-09), the PR that moved the five
+    unreachable skills out of `keyboards/polykybd/.claude/skills/`: every changed file
+    was a `.md` or a `.claude/skills/**` script, so the PR body asserted it would start
+    no build and no rig run — and `Build firmware` plus `HIL test (split72)` both ran
+    (and passed) off the `previous_filename` side of the renames, which sits under
+    `keyboards/` and matches the leading `**`. The filter is doing its job; the wrong
+    part was reading "`.claude/**` is excluded" as "any `.claude/` directory". Read a
+    rename as TWO paths, and check the anchor before predicting a skip:
+    `pull_request_read` `get_files` prints `previous_filename` for each one.
+    - ⚠️ **And once ONE file in the PR matches, EVERY later push re-runs the gate —
+      the `pull_request` paths filter is evaluated over the WHOLE PR's changed
+      files, not the push's.** Measured on the same #286 an hour later: a commit
+      touching only `CLAUDE.md` plus three files under `.claude/skills/`, i.e.
+      nothing but excluded paths, still started `Build firmware` and the rig,
+      because the PR still carried the renames above. So the skip you can predict
+      is per-PR, not per-push, and a docs-only follow-up on a PR that once touched
+      firmware costs a full flash-and-test cycle — which is what the "stop pushing
+      cosmetic commits while the important PR waits for the rig" rule is really
+      about. `git show --stat HEAD` proving your commit is clean says nothing;
+      `get_files` on the PR is the query that answers it.
   - **The exclusion is scoped to `.github/workflows/**`, not all of `.github/`.**
     Nothing under `.github/` is a build input today — there is no `uses: ./...`
     anywhere in `qmk-test.yml`, every action is external — but the narrower scope
@@ -1152,6 +1289,16 @@ inherited-upstream noise:
   check green and the PR was reported green off it while the other — same commit,
   same failure — stayed red. **Before calling a PR green, look at every check run,
   not the one you just acted on.**
+- ⚠️ **A `check_suite.completed` wake can name a SUPERSEDED head, and read at face
+  value it says "CI is green" about a commit nobody is on.** The envelope's own text
+  is *"No third-party check suite on the PR's head_sha is still running or failed"*
+  — but `head_sha` is the suite's, not the PR's, and a suite that started before
+  your last push completes after it. Three arrived on #282 (2026-09-09) for
+  `0e027fb` and `a4dcffbc` while the head was `6f41acc`. **Compare the event's
+  `head_sha` against the PR's actual head before believing it**, which the envelope
+  also asks for in the same breath ("verify the PR's overall state before acting").
+  Same family as the stale-walkthrough traps in `PolyKybdHost/CLAUDE.md`: the signal
+  is honest about what it covers and silent about what you assumed it covered.
 - **Reproduce the whole `lint` job locally instead of reading the CI log** — it is
   ~5 s and definitive. (The GitHub MCP `get_job_logs` *does* work — see the
   tail-size note below — but a local run is faster and gives the whole picture):
@@ -1318,6 +1465,25 @@ Firmware releases are **GitHub Releases** (tag `PolyKybd-fw-vX.Y.Z`; `FW_VERSION
 `polykybd-github-release` skill to draft the notes and drive the flow. The mechanics
 that cost real debugging to learn (2026-07):
 
+- ⚠️ **A `PROTOCOL_VERSION` bump means BOTH artifacts get released, and the check that
+  catches it is the PUBLISHED versions, not the in-tree ones.** The existing "bump
+  `__protocol__` in lockstep with `PROTOCOL_VERSION`" rule is about the *sources*, and
+  it can be perfectly satisfied while the releases are a protocol apart. Measured
+  2026-09-09: firmware `PolyKybd` and host `main` both read protocol 17, while the
+  newest **published** host (v0.14.18) was still 16 — so a firmware-only release would
+  have shipped protocol 17 to every user's protocol-16 app. Read the sibling's newest
+  release (`list_releases`, then its `__protocol__`/`PROTOCOL_VERSION` at that tag)
+  before drafting.
+  - ⚠️ **Nothing downstream catches it, because the connect gate is NOT exact-match.**
+    The host connects to any protocol `>= MIN_SUPPORTED_PROTOCOL` and gates each
+    feature through `FEATURE_MIN_PROTOCOL`, so an old host pairs with new firmware and
+    silently leaves the new features off — quieter than a refusal, and worse to
+    diagnose. (The release skill's own pitfall claimed exact-match for a long time,
+    which made the pairing read as self-enforcing when it is not.)
+  - **Publish the host first, then the firmware** — the host is the side that has to
+    understand the new protocol, so that order never leaves a user holding firmware
+    their app cannot drive.
+
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
   released** (`tools/require_fwapply_run.py`, the first step of `release.yml`,
   before the build so a refusal changes nothing). The HID-apply brick shipped
@@ -1406,7 +1572,7 @@ that cost real debugging to learn (2026-07):
 
 ## Firmware overview (`keyboards/polykybd/`)
 
-The firmware runs on a **Raspberry Pi RP2040** (dual-core ARM M0+) and is a heavily customised QMK build. ⚠️ **The clock is 200 MHz by default** (since 0.10.x). It was **125 MHz** before that — never the 133 MHz this file and several code comments used to claim, which was the chip's old *rated maximum*. Nothing in QMK sets the clock; ChibiOS's `hal_lld_init()` (and, earlier in the boot, the double-tap `__late_init`) calls the pico-sdk `clocks_init()`, which reads the compile-time `SYS_CLK_KHZ`, so `rules.mk` sets it. **`-e POLYKYBD_SYS_CLK=125`** opts back out and produces an image **byte-identical** to the pre-200 MHz builds (verified) — the escape hatch if a board ever misbehaves. 200 MHz is the operating point Raspberry Pi certified in 2025 (1200 MHz VCO / 6 / 1), which requires the core voltage raised to **1.15 V** — the vendored pico-sdk predates the SDK's automatic raise and does not compile `hardware_vreg`, so `POLYKYBD_VREG_VSEL` drives it as a register write before the first `clocks_init()` (see `UPSTREAM_PATCHES.md` → `platforms/chibios/bootloaders/rp2040.c`). Peripherals need no rework: SPI (`SPI_DIVISOR`/`CPU_CLOCK`), I2C, the PIO split UART and WS2812 all derive their dividers from the **live** `clock_get_hz(clk_sys)`, and USB is on the separate 48 MHz PLL. The boot banner prints `clk: sys=…Hz vreg_vsel=0x…` so the pairing is verifiable on hardware. The one **fixed** divider is XIP flash — boot2 runs it at `clk_sys/PICO_FLASH_SPI_CLKDIV` (4), i.e. 50 MHz at 200 and 31.25 at 125, both far inside any QSPI part's rating; re-check that list rather than assuming it holds if another clock is ever added. This is **custom hardware with 8 MB of external QSPI flash** (NOT the stock 2 MB). The 8 MB is **partitioned** (see `base/fw_staging.h` for the authoritative map): **0–2 MB running firmware** (the linker `flash1` XIP window), **2–4 MB firmware-update staging**, **4–8 MB resource/overlay data** (`FLASH_TARGET_OFFSET`). So the budget that matters for adding languages/fonts is the **2 MB firmware partition**, of which `split72:default` currently uses ~0.76 MB (~38 %). `FW_STAGING_OFFSET` is kept equal to the linker `flash1` length so a build that exceeds 2 MB fails to *link* rather than silently growing into the staging area (this firmware/staging split was raised from 1 MB → 2 MB in 2026-06 as the image neared the old boundary). The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.
+The firmware runs on a **Raspberry Pi RP2040** (dual-core ARM M0+) and is a heavily customised QMK build. ⚠️ **The clock is 200 MHz by default** (since 0.10.x). It was **125 MHz** before that — never the 133 MHz this file and several code comments used to claim, which was the chip's old *rated maximum*. Nothing in QMK sets the clock; ChibiOS's `hal_lld_init()` (and, earlier in the boot, the double-tap `__late_init`) calls the pico-sdk `clocks_init()`, which reads the compile-time `SYS_CLK_KHZ`, so `rules.mk` sets it. **`-e POLYKYBD_SYS_CLK=125`** opts back out and produces an image **byte-identical** to the pre-200 MHz builds (verified) — the escape hatch if a board ever misbehaves. 200 MHz is the operating point Raspberry Pi certified in 2025 (1200 MHz VCO / 6 / 1), which requires the core voltage raised to **1.15 V** — the vendored pico-sdk predates the SDK's automatic raise and does not compile `hardware_vreg`, so `POLYKYBD_VREG_VSEL` drives it as a register write before the first `clocks_init()` (see `UPSTREAM_PATCHES.md` → `platforms/chibios/bootloaders/rp2040.c`). Peripherals need no rework: SPI (`SPI_DIVISOR`/`CPU_CLOCK`), I2C, the PIO split UART and WS2812 all derive their dividers from the **live** `clock_get_hz(clk_sys)`, and USB is on the separate 48 MHz PLL. The boot banner prints `clk: sys=…Hz vreg_vsel=0x…` so the pairing is verifiable on hardware. The one **fixed** divider is XIP flash — boot2 runs it at `clk_sys/PICO_FLASH_SPI_CLKDIV` (4), i.e. 50 MHz at 200 and 31.25 at 125, both far inside any QSPI part's rating; re-check that list rather than assuming it holds if another clock is ever added. This is **custom hardware with 8 MB of external QSPI flash** (NOT the stock 2 MB). The 8 MB is **partitioned** (see `base/fw_staging.h` for the authoritative map): **0–2 MB running firmware** (the linker `flash1` XIP window), **2–4 MB firmware-update staging**, **4–8 MB resource/overlay data** (`FLASH_TARGET_OFFSET`). So the budget that matters for adding languages/fonts is the **2 MB firmware partition**, of which `split72:default` currently uses ~0.76 MB (~38 %). `FW_STAGING_OFFSET` is kept equal to the linker `flash1` length so a build that exceeds 2 MB fails to *link* rather than silently growing into the staging area (this firmware/staging split was raised from 1 MB → 2 MB in 2026-06 as the image neared the old boundary). ⚠️ **The sectors carved off the TOP of staging (the apply log, the crash archive, the handedness stamp) need an ALIGNMENT assert as well as an overlap one — the overlap asserts do not imply it.** Each is derived by subtraction from the one above (`FW_HAND_STAMP_OFFSET` is `FW_RESOURCE_OFFSET - FW_APPLY_LOG_BYTES - 8192`), so its 4096-alignment rides on constants that can move without any two regions ever overlapping — and `flash_range_erase()` requires the boundary. Caught in review of #282; `fw_staging.c` carries both terms now. The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.
 
 The host software (`PolyKybdHost/`) communicates with this firmware over a custom HID report protocol (64-byte reports, v0.7.0+).
 
@@ -1499,6 +1665,32 @@ cache at, which is the guard shape this repo keeps getting caught by (`sync_is_l
 the CI suite names, the log-source registry). The invariant is "all keymap mutation goes
 through a `_poly` function", not "these four places also call the invalidator".
 
+⚠️ **The consequence for a KEYMAP EDIT is the one this section does not spell out: on any
+board that has ever stored a keymap, a change to a layer below the write cap is INVISIBLE
+— the EEPROM copy wins.** `poly_keycode_at()` resolves layers under
+`DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT` through `keycode_at_keymap_location()`, i.e. out
+of the dynamic keymap, so the freshly compiled `keymaps[]` is only consulted for a layer
+at or above the cap — or on a board whose EEPROM has never been written. Flash, press the
+key, get the old keycode, and nothing anywhere says why. It is the flip side of this
+section's own correct advice that a CONTENTS change "needs no reset": no reset is needed
+for *correctness*, and none happens, which is exactly what leaves the edit unseen. Two
+recoveries, and they are not equivalent:
+- **Bump `KEYMAP_LAYERS_FL_MERGED`.** Reaches every board automatically at the next boot,
+  and **WIPES THE USER'S MACROS** — `dynamic_keymap_reset_poly()` calls
+  `poly_macro_reset_all()`. Right for a layer add/remove/reorder, far too blunt for a
+  keycode change.
+- **Write the keys over the wire**, which is non-destructive and touches nothing else:
+  `polyctl keymap set <layer> <row> <col> <keycode>` — ⚠️ **POSITIONAL arguments, not
+  flags**, and the keycode goes through `int(x, 0)` so `0x2804` works. One invocation per
+  changed key.
+
+⚠️ **There is NO keymap-reset and no EEPROM-clear anywhere in PolyKybdHost** — not in
+`polyctl`, not on the control socket, not in the tray. `EE_CLR` appears in the host only
+as a preview legend for `QK_CLEAR_EEPROM` in `res/preview/legends.json`, i.e. a label for
+a key the user presses **on the board**. Do not tell anyone to "reset the keymap from the
+host app"; that route does not exist (asserted three times in one session, 2026-09-10,
+and wrong every time).
+
 ### `poly_keycode_at()` is the ONE resolver for both the render and the key-event path
 
 `display_keycode_at()` (legend) and `keymap_key_to_keycode()` (action) both bottom out
@@ -1551,6 +1743,68 @@ lands on both keyboards at once — they can't drift apart. Don't re-introduce
 per-variant copies of the keymap logic (that drift is exactly what this
 extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
 `run_cog.sh` targets `poly_keymap.c`.
+
+⚠️ **The two variants also share the MCU SCHEMATIC, so an MCU-level question is
+never answered from `variations/poly_corne/` — that directory contains no
+processor.** In the hardware repo (`thpoll83/polykybd`) split42's sheets live in
+`poly_kybd/variations/poly_corne/` and are the board-specific ones only
+(`poly_corne_split42_{left,right}`, `shift_registers`, `ni_buffer2`,
+`SSD1306_TO_SPI`); the RP2040 sheet is one level up at `poly_kybd/rp_pico.kicad_sch`
+and split42 pulls it in as a hierarchical sheet (`Sheetfile` = `../../rp_pico.kicad_sch`).
+Verified 2026-09-09: **exactly one `rp_pico*.kicad_sch` exists in the whole repo**, and
+it is the only file containing `VBUS_SENSE`. So `R8 5.6K / R15 10k / D2 1N5819WS` — the
+VBUS divider on GP24 — is on **both** boards, identically.
+- ⚠️ **A grep over `variations/poly_corne/*.kicad_sch` therefore reports EVERY MCU net
+  as absent, and reads as a hardware fact.** That is how "split42 has no VBUS_SENSE net"
+  was asserted here (and used to scope a feature to split72) when the boards are
+  identical — the search covered five sheets, none of them the processor. **An empty
+  grep is evidence only once you have shown the search covered the thing you asked
+  about**; one `ls` of the directory settles it. The independent tell was already
+  available: split42's keymap `config.h` defines `USB_VBUS_PIN GP24` and its master
+  detection works, which cannot be true of an unwired pin.
+  ```bash
+  # the check that actually answers it, from the hardware repo root
+  grep -rl "VBUS_SENSE" --include=*.kicad_sch .        # -> poly_kybd/rp_pico.kicad_sch
+  find . -name "rp_pico*.kicad_sch"                    # -> exactly one
+  grep -o '"Sheetfile" "[^"]*"' poly_kybd/variations/poly_corne/poly_corne_split42_left.kicad_sch
+  ```
+- ⚠️ Minor, unresolved: the **right** sheet references a bare `rp_pico.kicad_sch` with no
+  `../../`, and no such file exists beside it. Whether KiCad resolves that from the project
+  root or the reference is simply stale was **not** established — don't read it as either.
+
+### ⚠️ Tap-hold settings are `config.h` DEFINES — the `rules.mk` lines were inert for years
+
+`PERMISSIVE_HOLD = yes` and `HOLD_ON_OTHER_KEY_PRESS = yes` sat in **both** variants'
+`rules.mk` and did **nothing**. `quantum/action_tapping.c` tests them with `#ifdef`, and
+nothing in `builddefs/` turns a make variable of that name into a `-D`, so the board ran
+QMK's defaults throughout while the build stayed green and the source read as configured.
+The general shape: a make variable is only a feature switch when some `.mk` file
+translates it: `grep -rn "<NAME>" builddefs/` before believing a line in a `rules.mk`.
+Both were removed and the real defines now live in `split72/config.h` with their
+rationale (2026-09-10, qmk#288).
+
+⚠️ **`CHORDAL_HOLD`'s weak hook is what a SPLIT board wants — do not hand-maintain the
+table.** The default `chordal_hold_handedness()` reads
+`chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS]`, i.e. an 80-entry `PROGMEM` table here
+that must be kept in step with the matrix by hand (and is an undefined symbol at link
+until you write it). The hook is `__attribute__((weak))`, so overriding it answers the
+same question as arithmetic:
+
+```c
+char chordal_hold_handedness(keypos_t key) {
+    return (key.row < MATRIX_ROWS_PER_SIDE) ? 'L' : 'R';
+}
+```
+
+That is the split `LAYOUT_TO_INDEX()` and `is_left_side()` already assume, so it cannot
+drift from the matrix the way a table can. It lives in `poly_keymap.c` under an
+`#ifdef CHORDAL_HOLD`, and the override alone links — the table is never referenced.
+
+⚠️ **`HOLD_ON_OTHER_KEY_PRESS` is deliberately NOT defined**, and the reason survives any
+retuning: it settles a tap-hold as *held* on any other key press, so it fires a mod on
+ordinary fast rolls — precisely what `CHORDAL_HOLD` (opposite-hands only) and
+`FLOW_TAP_TERM` (forces a tap soon after the preceding key) exist to prevent. A home row
+mod that fires while typing is worse than one that is occasionally slow.
 
 ### ⚠️ A release-edge action fires up to THREE times on a ONE-SHOT layer
 
@@ -2126,6 +2380,24 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   every gated keycode is mapped exactly once, only on `_SL`, in BOTH keymaps — so it
   could never hide anything the keycode list did not, and could reveal what it
   existed to hide. Gate on the keycode and the synced *value*, not on the layer.
+- ⚠️ **"Hidden" is TWO invariants — blank AND inert — and the gate covered only the
+  drawing half for the two keycodes on that row that cannot be undone.**
+  `process_record_user()` intercepts `QK_REBOOT` and `QK_BOOTLOADER` in its
+  pressed-edge switch (the bootloader announce, and the reboot's bridged handoff so
+  the slave restarts too) and returns `true` from there, while `settings_more_hidden()`
+  sat **~200 lines further down**. So the advanced row rendered blank and the blank
+  Restart keycap still rebooted the board — which reached the field as *"two crashes in
+  a row with the multisplash RGB matrix"* (2026-09-09). The log held no crash: it held
+  two presses of a key nobody could see.
+  - **The comment beside the gate asserted the premise that made it wrong** — that all
+    three of `QK_BOOTLOADER` / `QK_REBOOT` / `QK_DEBUG_TOGGLE` are left to
+    `process_action()`. True of `QK_DEBUG_TOGGLE` alone, which is precisely why it was
+    the one of the three that really was gated. A comment naming a set is worth
+    checking against the set.
+  - **The fix is ONE check ABOVE the switch, not a test inside each case** — otherwise
+    a third irreversible keycode added later inherits the same hole, which is the
+    enumerating-guard shape this file keeps recording. When you gate a keycode for
+    *display*, grep `process_record_user()` for it in the same pass.
 - ⚠️ **A hint/overlay string is drawn OVER the legend at the SAME origin, so
   full-size extra art ERASES it — a secondary mark belongs MOVE'd into a corner, and
   that corner is the BOTTOM-right.** `update_displays()` draws the legend at
@@ -3556,6 +3828,40 @@ with `−`/`+` and no staircase (they name no level); `KC_DAUTO` spells **AUTO**
   codepoint routing. Count the pixels it drops outside the 72×40 window — that is the
   clipping check, and it must be 0.
 
+### The settings-layer RGB row (`poly_keymap.c`, `keycode_helper.c`, `split72/config.h`)
+
+⚠️ **A LEGEND IS NOT EVIDENCE A KEYCODE DOES ANYTHING — the four RGB effect presets
+drew a keycap for years and were dispatched nowhere.** `RGB_M_P` / `RGB_M_B` /
+`RGB_M_R` / `RGB_M_SW` (`0x782B`–`0x782E`) are the legacy **underglow** mode keycodes.
+QMK routes that range through `process_underglow()` even on an RGB-matrix-only board,
+but its switch covers only toggle / next / previous / hue / sat / val / speed — the four
+mode presets have **no case there, none in `process_rgb_matrix()`**, and
+`IS_RGB_KEYCODE` / `RGB_KEYCODE_RANGE` are defined in `keycodes.h` and dispatched
+nowhere at all. So the keys rendered, felt real, and did nothing (fixed 2026-09-09,
+qmk#281). **Before believing a key works because it has a legend, grep for a `case`
+that handles its keycode** — the display pipeline and the action pipeline share
+nothing, and this repo has now been caught by that seam in both directions (the
+settings-gate note above is the same split with the halves reversed).
+
+- ⚠️ **The effect must be enabled on BOTH variants, because the handler is in the
+  shared keymap.** `RGB_MATRIX_CYCLE_SPIRAL` is the closer match for "Swirl" and is
+  **split72-only**, so the preset maps to `CYCLE_PINWHEEL` (18) instead; the other
+  three are `SOLID_COLOR` (1), `BREATHING` (5), `RAINBOW_MOVING_CHEVRON` (15). Read
+  the indices out of the compiled object (`nm -S` + `objcopy`) rather than counting
+  the enum by hand — the set depends on which effects each variant compiles in.
+- ⚠️ **`val_to_percent()` scaled against 255 while the value is CAPPED at
+  `RGB_MATRIX_MAXIMUM_BRIGHTNESS` (100), so a fully-lit matrix reported 39%** and the
+  status-OLED row could never reach 100 whatever the user did. It scales against the
+  cap now; since `RGB_MATRIX_VAL_STEP` is 1, one step is exactly one percent.
+  Saturation genuinely is a `/255` value — the two share a row and do **not** share a
+  scale.
+- ⚠️ **New RGB defaults reach only a FRESH eeconfig.** QMK writes them in
+  `eeconfig_update_rgb_matrix_default()`, so an existing keyboard keeps its stored
+  brightness and speed and sees no change; only the corrected percent is immediate.
+  Adopting defaults on deployed boards would need a one-time migration sentinel (the
+  `idle_style_fmt` shape) — say so in release notes rather than implying the value
+  moved for everyone.
+
 ### The utility layer's remaining text keys (`keycode_helper.c`, `poly_keymap.c`)
 
 Three `_UL` keys still spelled themselves out in four letters while every neighbour
@@ -3668,9 +3974,11 @@ has to be synthesised at draw time.
   (above the baseline) and `/2` rounds toward zero, which puts lowercase 1 px off the
   run's baseline. `half_floor()` is written out rather than `>> 1` because a right
   shift of a negative value is only arithmetic by implementation guarantee.
-- There is deliberately **no "back to full size" op** — the one use is a legend that is
-  entirely small text, and a toggle is a second thing to get wrong. `\x18` (reset) does
-  not clear it either; it resets the cursor only.
+- ⚠️ **There IS a "back to full size" op now — `HINT_BASE` (`\x17`), added 2026-09-09
+  — and this line used to say there deliberately was not.** The old reasoning ("the one
+  use is a legend that is entirely small text, and a toggle is a second thing to get
+  wrong") held only while nothing needed two sizes in one legend. `\x18` (reset) still
+  does **not** clear it; it resets the cursor only. See the `HINT_BASE` note below.
 
 **`HINT_MID` (`\x16`) is the other direction, and the only size BETWEEN the two.**
 `HINT_SMALL` synthesises a smaller face by halving; `HINT_MID` reaches the real
@@ -3710,6 +4018,56 @@ auto/pin cells), all now half-scale.
 - ⚠️ **They cannot be merged.** Swapping the two spacings breaks four legends in
   each direction — measured by sweeping every (lift, push) pair, not reasoned.
   Re-measure rather than eyeball whenever a word changes.
+
+**`HINT_BASE` (`\x17`) is the way OUT of the other two, and until 2026-09-09 there
+was none — which made a small LABEL over a bigger VALUE inexpressible.** Both
+`HINT_SMALL` and `HINT_MID` latch for the rest of the run, and the intuitive escape
+does not work: `\x10` **after** `\x16` halves the *mid* face rather than returning to
+the base one, so the second line always came out the smaller of the two. `\x17`
+returns to the caller's pool at full size. The RGB preset keycaps are what needed it —
+a half-scale `Preset:` over a mid-face `Solid` / `Breath` / `Cycle` / `Rainbw`.
+
+- ⚠️ **Adding an op is TWO walkers, not one.** The draw dispatch in
+  `base/disp_array.c` and the measurement in `base/font_lookup.c` must clear the same
+  flags, or the bbox describes a legend the draw does not produce — and every consumer
+  of that box (`plan_main_legend()`'s shift-preview layout, `roll_idle_offset()`'s
+  idle travel) is then working from fiction. `make test:polykybd_font_bbox` pins all
+  four cases, including the one that says why the op exists: that `\x10` after `\x16`
+  is *not* the base face.
+- ⚠️ **The host mirror is a THIRD edit** (`oled_preview.py`, and `SUPPORTED_OPS`
+  beside it), and skipping it is silent — a refused op makes the layout editor fall
+  back to the keycode *text*, which looks exactly like the op not working rather than
+  like a missing renderer. See `PolyKybdHost/CLAUDE.md`'s ops ledger.
+
+⚠️ **Two constraints decide where a legend element can go, and neither is visible from
+the macro:**
+
+- **A `HINT_MOVE` argument of 0 TERMINATES the string.** The walker's guard is
+  `if (text[1] && text[2])`, so a 0 in either coordinate ends the legend there — i.e.
+  **nothing is placeable on row 0 or column 0**, and the failure is a truncated legend
+  rather than a misplaced glyph. The halved droplet on the saturation keys sits at
+  row **1** for exactly this reason.
+- **Every cursor nudge is 2px, so `\v` is the ONLY op that changes the cursor's
+  PARITY.** `\f`/`\x05`/`\x06`/`\x08` move in twos, so an odd baseline can never reach
+  an even one by nudging. `\v` jumps to the next 15px multiple, which is what lets
+  line 1's baseline of 19 (as high as a full-size `+` reaches) get to line 2's 34.
+  A layout that will not close by 2px steps needs a `\r\v` in it, not more nudges.
+- ⚠️ **Nudge-run arithmetic is unverifiable by any test in this repo — the off-panel
+  pixel count is the only check.** A 5-nudge lift transcribed as `UP_8PX` (four)
+  pushed the Speed+ keycap's `p` descender two rows off the panel while `-Werror`, 52
+  bbox tests, cppcheck and `qmk lint --strict` were all green. The count that caught
+  it renders every legend through `PolyKybdHost/tools/oled_preview.py` — the
+  firmware's own interpreter — and counts pixels outside the 72x40 window. Run it on
+  every legend you touch, and require **0**.
+
+⚠️ **The WORD is the size ceiling, not the face — measure before promising a bigger
+legend.** The obvious request on a cramped legend is "use the next size up", and for a
+long word there is no next size: at the mid face "Saturation" measures **97px against
+a 72px panel**, and even at half the keycap face it was already **71 of 72**, i.e. as
+large as it can ever be drawn. So growing the legend and keeping the word were
+mutually exclusive, and the answer was to shorten the word (`Sat`; `Rainbow` 78px →
+`Rainbw`). Measure the candidate string at each face first — the trade is the user's
+to make, and it cannot be made without the numbers.
 
 ⚠️ **`kdisp_gfx_text_bbox()` did not know the display-list ops at all, and that was a
 real bug the moment a MAIN legend started using them.** Every op byte *and each of its
@@ -4445,6 +4803,30 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
   explicit refusal, `sync_succeeded` as a blacklist, a 1-bit-spaced ack value, a slave
   refusal reported as retryable, and a CRC check that always passes) — each caught by
   the intended test.
+  - ✅ **A `_Static_assert` is mutation-checked in SECONDS with a standalone
+    translation unit — do not reach for `qmk compile`.** The assert usually rests
+    on a chain of `#define`s and nothing else, so copy that chain into a throwaway
+    `.c`, add the assert and a `main`, and compile it with the host `gcc`. Verified
+    on `FW_HAND_STAMP_OFFSET`'s alignment assert (#282, 2026-09-09): the shipped
+    values pass, and adding 512 to `FW_APPLY_LOG_BYTES` fails with the assert's own
+    message — the whole loop in about two seconds, against ~4 minutes for a
+    firmware build per mutation.
+    ```bash
+    cat > /tmp/a.c <<'EOF'
+    #define FW_RESOURCE_OFFSET   0x400000UL
+    #define FW_APPLY_LOG_BYTES   (8UL * 4096UL)          /* mutate me: + 512UL */
+    #define FW_APPLY_LOG_OFFSET  (FW_RESOURCE_OFFSET - FW_APPLY_LOG_BYTES)
+    #define FW_CRASH_LOG_OFFSET  (FW_APPLY_LOG_OFFSET - 4096UL)
+    #define FW_HAND_STAMP_OFFSET (FW_CRASH_LOG_OFFSET - 4096UL)
+    _Static_assert(FW_HAND_STAMP_OFFSET % 4096UL == 0, "not sector-aligned");
+    int main(void){ return 0; }
+    EOF
+    gcc -o /dev/null /tmp/a.c            # must PASS as shipped, FAIL when mutated
+    ```
+    ⚠️ **Mutate a constant the assert DEPENDS on, not the assert itself.** Editing
+    the condition proves only that the compiler evaluates it; moving an input proves
+    the assert would catch the edit somebody will actually make. And copy the chain
+    verbatim — a retyped one that happens to stay aligned passes for the wrong reason.
   - ⚠️ **Strip ANSI escapes before grepping gtest output, or the mutation harness
     FAILS OPEN.** gtest prints `\e[0;32m[  FAILED  ]`, so a regex anchored on a leading
     `[` matches nothing and **every** mutation reads as "still green" — i.e. the
@@ -4879,7 +5261,9 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     points. Each size was picked to hold the previous header's **string widths**
     while gaining grid-fitting: the status-OLED row gaps went 3/2/3 + 3/3/3 → 4/3/3
     + 4/3/4 (every gap +1 px, nothing moved, bottom still pinned at 63). Re-run
-    `.claude/skills/status-oled-layout/measure_bands.py 72` after any size change.
+    `.claude/skills/status-oled-layout/measure_bands.py 72` after any size change
+    (from the repo root, or anywhere — it derives `tools/` from its own location;
+    needs an interpreter with Pillow, e.g. `/root/.qmk_venv/bin/python`).
   - Symbols are named for their **real** size (`NotoSans_Regular_Small_15px7b`,
     `..._Nano_10px7b`, `..._Mid_19px7b`). The old `…8pt7b`/`…6pt7b` names were
     fiction — the "pt" is the 141 DPI convention, so "8pt" was 16 px.

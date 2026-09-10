@@ -51,19 +51,70 @@ For example:
 `qmk compile -kb polykybd/split72 -km default`
 `qmk compile -kb polykybd/split42 -km default`
 
-### Flash split setup via EE Hands
+## Flash
+
+`make polykybd/<variant>:default:flash`
+
+For example:
+
+`make polykybd/split72:default:flash`
+
+Put the half in BOOTSEL first so it mounts as a drive. **Both halves take the same
+image** — which one is left is decided by the handedness stamp below, not by the
+build, so there is no per-side firmware target.
+
+To update a keyboard that is already running, PolyKybdHost flashes the `.bin` from a
+release over HID instead, with no BOOTSEL and no cable swapping.
+
+### Handedness — which half is left
 
 (eg. when you flash for the first time)
 
-`make polykybd/split72:default:uf2-split-right`
-`make polykybd/split72:default:uf2-split-left`
+Each half has to know its side, or both come up as `right` and the split link never
+forms. PolyKybd keeps that in a flash sector of its own (`FW_HAND_STAMP_OFFSET`, see
+[`base/hand_stamp.h`](base/hand_stamp.h)) rather than in the emulated EEPROM — so it
+survives an EEPROM loss, and it can be written over BOOTSEL with no host app.
+
+Drag the right file onto each half's BOOTSEL drive. Every firmware release ships
+them; they are 512 bytes, touch only that one 4 KB sector (firmware, font pack and
+EEPROM are untouched), and one pair covers both `split42` and `split72`:
+
+* `polykybd-handedness-left_vX.Y.Z.uf2`
+* `polykybd-handedness-right_vX.Y.Z.uf2`
+
+Build them yourself — the release just runs this:
+
+`python3 tools/make_hand_uf2.py --side left`
+`python3 tools/make_hand_uf2.py --side right`
+`python3 tools/make_hand_uf2.py --verify polykybd-hand-left.uf2`
+
+`--append-to <firmware.uf2>` folds the stamp into a firmware image so one file
+provisions a half. Useful on the bench, deliberately not what a release ships: then
+every firmware re-flash would rewrite handedness, and the wrong file silently flips
+a half.
+
+PolyKybdHost can also set it (HID cmd 25) — it stamps both halves and reboots them.
+
+The boot banner names the source, so a half on the wrong side is one line to diagnose:
+
+```
+   hand: LEFT (flash stamp)
+   hand: RIGHT (stamped from EEPROM)     <- first boot after the update; adopted the old value
+   hand: RIGHT (EEPROM, UNSTAMPED)       <- never provisioned, set it
+```
+
+⚠️ `make …:uf2-split-left` / `-right` are **refused** by `rules.mk`. They are QMK's
+`EE_HANDS` targets and only add `-DINIT_EE_HANDS_LEFT`, which has an effect solely
+inside the `EE_HANDS` branch of `is_keyboard_left_impl()` — and PolyKybd does not
+define `EE_HANDS` ([`config.h`](config.h) says why). Unrefused they would build a
+perfectly good image that sets no handedness at all.
 
 ### Keymaps
 
 There is a `default` keymap, also for the slightly older revision 2: `revision2`:
 
-`make polykybd/split72:revision2:uf2-split-right`
-`make polykybd/split72:revision2:uf2-split-left`
+`make polykybd/split72:revision2:uf2`
+`qmk compile -kb polykybd/split72 -km revision2`
 
 
 ## After merging master into branch update dependencies with

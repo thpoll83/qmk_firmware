@@ -3,6 +3,27 @@
 CFLAGS += -Wno-strict-prototypes
 
 # ---------------------------------------------------------------------------
+# QMK's EE_HANDS flash targets do nothing here — refuse them
+# ---------------------------------------------------------------------------
+# uf2-split-left / dfu-util-split-right and friends add -DINIT_EE_HANDS_LEFT|RIGHT
+# (platforms/chibios/flash.mk). That define is read ONLY inside the EE_HANDS branch
+# of is_keyboard_left_impl(), and PolyKybd does not define EE_HANDS: handedness
+# lives in a flash sector of its own (base/hand_stamp.h) so it survives the
+# wear-levelling wipe that a zeroed EEPROM byte reports as a confident `right`.
+#
+# So these targets would build a perfectly good image that sets no handedness at
+# all -- a silent no-op on the one command whose entire purpose is to set it, on a
+# board where the symptom is "the halves do not talk". Fail here instead, naming
+# the replacement; readme.md documents it.
+POLY_EE_HANDS_GOALS := uf2-split-left uf2-split-right dfu-util-split-left dfu-util-split-right
+ifneq (,$(filter $(MAKECMDGOALS),$(POLY_EE_HANDS_GOALS)))
+$(error PolyKybd does not use EE_HANDS, so $(filter $(MAKECMDGOALS),$(POLY_EE_HANDS_GOALS)) would set no handedness. \
+Build the image with the plain `uf2` target, then set the side with a stamp UF2: \
+`python3 keyboards/polykybd/tools/make_hand_uf2.py --side left|right` (or take the \
+polykybd-handedness-*.uf2 pair from any firmware release). See keyboards/polykybd/readme.md)
+endif
+
+# ---------------------------------------------------------------------------
 # -Wcast-align on OUR sources only (the HID-apply brick class)
 # ---------------------------------------------------------------------------
 # fw_staging's page buffer was `static uint8_t page_buf[256]` (alignment 1) and
@@ -117,7 +138,7 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/font_lookup.c base/crash_record.c slave_data.c
+POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/font_lookup.c base/crash_record.c base/hand_stamp.c slave_data.c
 SRC += $(POLY_SRC)
 
 # emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level

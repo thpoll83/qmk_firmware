@@ -75,8 +75,8 @@ and it is what a reader on a slow connection gets.
 
 **For anything the keyboard draws, GENERATE the image from a renderer that shares
 the firmware's own inputs rather than mocking it up or cropping a photo.** The
-keycap previews on the mod-tap page come from `keyboards/polykybd/.claude/skills/
-keycap-layout-preview/keycap_preview.py` (fed by the same generator that emits the
+keycap previews on the mod-tap page come from
+`.claude/skills/keycap-layout-preview/keycap_preview.py` (fed by the same generator that emits the
 firmware's position constants), and the status OLED has
 `tools/status_oled42_preview.py`. Both read the real font headers and the real
 layout values, so the image tracks the feature instead of an artist's idea of it,

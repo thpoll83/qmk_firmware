@@ -48,9 +48,6 @@ WPM_ENABLE = yes
 
 SEND_STRING_ENABLE = yes
 
-HOLD_ON_OTHER_KEY_PRESS = yes
-PERMISSIVE_HOLD = yes
-
 DYNAMIC_KEYMAP_ENABLE = yes
 
 # Shmem RPC-guard pad: a pointing-sized dummy member at the pointing member's

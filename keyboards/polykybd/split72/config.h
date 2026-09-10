@@ -138,6 +138,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGB_MATRIX_KEYPRESSES
 #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100
 
+// Startup values, written only when the RGB eeconfig is fresh (QMK's
+// eeconfig_update_rgb_matrix_default). QMK's own defaults are full brightness and
+// half speed. Each is a fraction of its OWN full scale: the value against
+// RGB_MATRIX_MAXIMUM_BRIGHTNESS above (this board's ceiling, and what the status
+// OLED calls 100%), the speed against the full 0..255 the speed gauge draws.
+//
+// ⚠️ PLAIN INTEGERS, not expressions. `qmk lint --strict` maps both of these into
+// info.json (rgb_matrix.default.val / .speed) and parses the literal with int(),
+// so `(RGB_MATRIX_MAXIMUM_BRIGHTNESS / 5)` fails the lint job with "invalid
+// literal for int()" even though it compiles fine. The arithmetic lives in the
+// comment instead; keep it true if a scale ever moves.
+#define RGB_MATRIX_DEFAULT_VAL 20   // 20% of RGB_MATRIX_MAXIMUM_BRIGHTNESS (100)
+#define RGB_MATRIX_DEFAULT_SPD 25   // 10% of the 0..255 speed range
+
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE_SIMPLE
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE
 #define ENABLE_RGB_MATRIX_SOLID_REACTIVE_WIDE
@@ -184,3 +198,46 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGB_MATRIX_SAT_STEP 2
 #define RGB_MATRIX_VAL_STEP 1
 #define RGB_MATRIX_SPD_STEP 1
+
+// --- Tap-hold / home row mods --------------------------------------------------
+// The Workman base layer (_L4) is the board's home-row-mod demonstrator; see the
+// comment above [_L4] in keymaps/default/keymap.c. This is its whole tuning surface.
+//
+// ⚠️ These reach EXACTLY those eight keys. Nothing else on either variant is a
+// tap-hold key -- the layer keys in use are MO()/OSL()/TO(), none of which is one --
+// so enabling them changed no existing behaviour when they landed.
+//
+// ⚠️ PERMISSIVE_HOLD and HOLD_ON_OTHER_KEY_PRESS used to sit in BOTH variants'
+// rules.mk as `= yes`, where they did NOTHING: they are config.h defines
+// (`#ifdef PERMISSIVE_HOLD` in quantum/action_tapping.c) and nothing in builddefs/
+// turns a make variable of either name into a -D. They were deleted rather than
+// moved across verbatim -- moving both would have been worse than leaving them
+// inert; see the HOLD_ON_OTHER_KEY_PRESS note at the bottom.
+
+// Baseline hold threshold, used when none of the rules below has already decided.
+#define TAPPING_TERM 200
+
+// The opposite-hands rule, and the single biggest reason home row mods are usable:
+// a tap-hold settles as HELD only when the key that follows it is on the OTHER half.
+// Same-hand rolls -- `as`, `ht`, `ne` on this layout -- therefore type their letters
+// instead of firing a modifier, which is the misfire everyone meets first.
+// Handedness is DERIVED, not tabulated: see chordal_hold_handedness() in
+// poly_keymap.c.
+#define CHORDAL_HOLD
+
+// Settle as held as soon as another key is pressed AND released inside the tapping
+// term, instead of waiting TAPPING_TERM out. Wanted here because it makes a
+// deliberate chord fire immediately; CHORDAL_HOLD already filters out the same-hand
+// rolls that would otherwise make this trigger-happy.
+#define PERMISSIVE_HOLD
+
+// Flow Tap: a mod-tap pressed within this many ms of the PRECEDING key is forced to
+// TAP, disabling hold behaviour mid-word during fast typing. QMK's own docs call
+// this "particularly useful for home row mods to avoid accidental mod triggers" and
+// recommend 150 ms as the starting point.
+#define FLOW_TAP_TERM 150
+
+// ⚠️ HOLD_ON_OTHER_KEY_PRESS is deliberately NOT defined. It settles as held on ANY
+// other key press, which during fast typing turns ordinary rolls into modifier
+// chords -- precisely what CHORDAL_HOLD and FLOW_TAP_TERM are here to prevent. It is
+// named here so the next reader does not "restore" it from the old rules.mk line.

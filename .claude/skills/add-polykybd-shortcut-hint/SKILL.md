@@ -42,7 +42,7 @@ From the **PolyKybdHost repo root** (so `tools/gfx_font.py` imports):
 
 ```bash
 cd PolyKybdHost
-HP=../qmk_firmware/keyboards/polykybd/.claude/skills/add-polykybd-shortcut-hint/hint_preview.py
+HP=../qmk_firmware/.claude/skills/add-polykybd-shortcut-hint/hint_preview.py
 python3 $HP --check 1F5E3 1F4DC 1F4D1 2699   # owning font + lit-pixel count per cp
 ```
 

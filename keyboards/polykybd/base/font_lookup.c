@@ -131,6 +131,10 @@ static void bbox_walk(const GFXfont *const *fonts, uint8_t num_fonts,
             case U'\x16':                                            // MID: rest of the run is the 19px UI face
                 mid = true;                                          //   (per glyph — see the fallback below)
                 break;
+            case U'\x17':                                            // BASE: undo SMALL/MID for the rest
+                small = false;                                       //   of the run (see disp_array.c)
+                mid   = false;
+                break;
             case U'\x0F':                                            // HALF / THIN composite a glyph at the
             case U'\x11':                                            //   cursor and do not advance
                 if (text[1]) {

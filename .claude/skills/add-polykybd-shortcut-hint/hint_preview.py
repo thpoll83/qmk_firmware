@@ -5,7 +5,7 @@ them, straight from the generated GFX headers (no live TTF).
 Run from the PolyKybdHost repo root so `tools/gfx_font.py` imports cleanly:
 
     cd PolyKybdHost
-    python3 ../qmk_firmware/keyboards/polykybd/.claude/skills/add-polykybd-shortcut-hint/hint_preview.py \
+    python3 ../qmk_firmware/.claude/skills/add-polykybd-shortcut-hint/hint_preview.py \
         --check 1F5E3 2699 1F4DC               # do these codepoints resolve? lit-pixel count
     python3 .../hint_preview.py --sweep 1F4DC  # best leading-space count for one glyph
     python3 .../hint_preview.py --string '   ' 1F4DC   # render an exact firmware string (spaces+cp) -> PNG
@@ -19,12 +19,28 @@ import argparse
 import os
 import sys
 
-# Resolve the gfx_font loader from the PolyKybdHost tools dir. HERE is this skill
-# dir (qmk_firmware/keyboards/polykybd/.claude/skills/add-polykybd-shortcut-hint),
-# so PolyKybdHost (a sibling of qmk_firmware) is six levels up.
+# Resolve the gfx_font loader from the PolyKybdHost tools dir (a sibling of
+# qmk_firmware). The qmk root is DERIVED by walking up for keyboards/polykybd, not
+# counted as a `../` chain — a counted chain encodes how deeply this skill dir sits
+# and breaks silently the day it moves, which is what happened when these skills
+# were relocated out of keyboards/polykybd/.claude/ (2026-09-09).
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _qmk_root(start):
+    d = start
+    while d != os.path.dirname(d):
+        if os.path.isdir(os.path.join(d, "keyboards", "polykybd")):
+            return d
+        d = os.path.dirname(d)
+    return None
+
+
+_QMK = _qmk_root(HERE)
+
 for cand in ("tools",  # cwd == PolyKybdHost
-             os.path.abspath(os.path.join(HERE, "../../../../../../PolyKybdHost/tools")),
+             os.path.join(os.path.dirname(_QMK), "PolyKybdHost", "tools") if _QMK
+             else "/home/user/PolyKybdHost/tools",
              "/home/user/PolyKybdHost/tools"):
     if os.path.exists(os.path.join(cand, "gfx_font.py")):
         sys.path.insert(0, cand)
@@ -33,10 +49,10 @@ from gfx_font import GfxGlyphRenderer, load_all_fonts, OLED_W, OLED_H, BUFFER_X 
 
 
 def _fontdir():
-    # base/fonts is three levels up from this skill dir (…/polykybd/base/fonts).
     for cand in ("../qmk_firmware/keyboards/polykybd/base/fonts",
                  "/home/user/qmk_firmware/keyboards/polykybd/base/fonts",
-                 os.path.abspath(os.path.join(HERE, "../../../base/fonts"))):
+                 os.path.join(_QMK, "keyboards", "polykybd", "base", "fonts") if _QMK
+                 else "/home/user/qmk_firmware/keyboards/polykybd/base/fonts"):
         if os.path.isdir(cand):
             return cand
     sys.exit("cannot locate base/fonts — run from the PolyKybdHost repo root")

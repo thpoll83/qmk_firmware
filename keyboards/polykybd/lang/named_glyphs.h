@@ -1970,6 +1970,78 @@
 #define HINT_MOVE(pos)   U"\x0E" pos   // move cursor to buffer (x,y) = pos
 #define HINT_SMALL       U"\x10"      // draw the REST of the string half-scale (text, advances)
 #define HINT_MID         U"\x16"      // draw the REST of the string from the standalone 19px UI face
+#define HINT_BASE        U"\x17"      // ...and back to the full-size caller pool: the one op that
+                                    //   UNDOES HINT_SMALL / HINT_MID. Both latch for the rest of
+                                    //   the run and \x10 after \x16 only halves the MID face, so
+                                    //   without this a small LABEL over a bigger VALUE cannot be
+                                    //   written -- the second line always came out the smaller one.
+
+// Centring runs: N x \x06 (+2px right each). There is no centring op, so a run
+// that must sit in the middle of the keycap prepends one of these, with N taken
+// from the rendered ink box rather than counted by eye.
+//
+// ⚠️ They live HERE and not beside their one caller in keycode_helper.c, because
+// the host's preview exporter (PolyKybdHost scripts/export_preview_data.py) reads
+// named glyphs out of THIS file and keycode_helper.h only. Defined in the .c they
+// resolve for the firmware and not for the exporter, which silently DROPS the
+// legend rather than failing -- the four RGB preset keycaps disappeared from the
+// host layout editor's key preview that way (2026-09-08). Function-like macros
+// are parsed from the .c too, so only the object-like ones have this constraint.
+#define RIGHT_6PX        U"\x06\x06\x06"
+#define RIGHT_12PX       U"\x06\x06\x06\x06\x06\x06"
+#define RIGHT_18PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_20PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_2PX        U"\x06"
+#define RIGHT_4PX        U"\x06\x06"
+#define RIGHT_8PX        U"\x06\x06\x06\x06"
+#define RIGHT_14PX       U"\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_16PX       U"\x06\x06\x06\x06\x06\x06\x06\x06"
+#define RIGHT_24PX       U"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
+
+// Vertical nudges (\x0C = 2px up, \x05 = 2px down), same story as the runs above:
+// a legend that lifts a glyph has to put it back before drawing the next one, since
+// both ops move the CURSOR rather than the glyph.
+#define UP_2PX           U"\x0C"
+#define UP_4PX           U"\x0C\x0C"
+#define UP_10PX          U"\x0C\x0C\x0C\x0C\x0C"
+#define UP_12PX          U"\x0C\x0C\x0C\x0C\x0C\x0C"
+#define UP_8PX           U"\x0C\x0C\x0C\x0C"
+#define DOWN_2PX         U"\x05"
+#define DOWN_4PX         U"\x05\x05"
+#define DOWN_6PX         U"\x05\x05\x05"
+#define DOWN_8PX         U"\x05\x05\x05\x05"
+#define DOWN_10PX        U"\x05\x05\x05\x05\x05"
+
+// RGB value-key icons. The droplet and the sun are the same two symbols the status
+// OLED draws beside the saturation and value percentages (split72/status_oled.c has
+// them as hand-drawn bitmaps; a keycap legend can only reference a FONT glyph, so
+// these are the font originals), and the degree ring stands for the hue wheel that
+// panel already labels in degrees. Speed has no panel icon at all, so it takes the
+// guillemet.
+//
+// ⚠️ DEGREE and ICON_RGB_SPD are RESIDENT; the droplet and the sun are PACK glyphs
+// (EmjEffects / SymBmp1). On a keyboard with no font pack those two simply do not
+// draw -- kdisp_draw_glyph_half_at returns without plotting -- and the keycap keeps
+// its word, which is resident. It is never blank.
+#define ICON_RGB_SAT     U"\x1F4A7"   // droplet
+#define ICON_RGB_VAL     U"\x2600"    // sun
+#define ICON_RGB_SPD     U"\xBB"      // guillemet
+
+// Buffer positions for the two PACK icons above. They ink 26x39 and 31x33 at full
+// size -- taller than the whole 72x40 keycap -- so they are drawn through HINT_HALF,
+// which plots the literal top-left at the cursor and does NOT advance it. That is
+// what makes the sign a separate HINT_MOVE: there is no advanced cursor to draw it
+// from. Measured (tools: PolyKybdHost oled_preview.py) so the icon+sign group
+// centres on the panel and clears the word line, with zero pixels off-panel.
+#define RGB_POS_SAT_ICON U"\x30\x01"   // (48, 1)  halved droplet top-left
+#define RGB_POS_SAT_PLUS U"\x41\x13"   // (65,19)  baseline cursor for '+'
+#define RGB_POS_SATM_ICO U"\x33\x01"   // (51, 1)  ...the '-' group is 6px narrower,
+#define RGB_POS_SAT_MINS U"\x44\x11"   // (68,17)     so it re-centres, and '-' inks
+                                     //             6px lower than '+' centres
+#define RGB_POS_VAL_ICON U"\x2F\x01"   // (47, 1)  halved sun top-left
+#define RGB_POS_VAL_PLUS U"\x43\x13"   // (67,19)
+#define RGB_POS_VALM_ICO U"\x32\x01"   // (50, 1)
+#define RGB_POS_VAL_MINS U"\x46\x11"   // (70,17)
 
 // Two lines of MID-face text on one 72x40 keycap: a label over the value it names.
 //

@@ -123,7 +123,9 @@ For each finding, in order:
    is the first thing a human reviewer reads.
 
 Report the outcome in the retro proposal as a table: PR → CI state → findings
-fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
+fixed / refuted / skipped. The sweep REPORTS; the approval step (§4.5)
+decides what gets pushed. That gate is separate from §4.6, which is about the
+retro's OWN output.
 
 ## 4. Procedure
 
@@ -148,8 +150,60 @@ fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
    - Docs gaps → invoke the **`update-polykybd-docs`** skill for each (it edits
      the `polykybd-docs` site on its own branch + PR). This retro only surfaces
      them; that skill does the writing.
-   - Offer to commit + push the new/edited files (don't unless asked, per repo
-     rules).
+   - Investigation index → `add_memory`, ONE entry per investigation that cost
+     real effort: the question, the verdict in a sentence, and where the full
+     write-up landed (`repo/file §heading`, or `owner/repo#N` — ⚠️ a bare `#N`
+     resolves to the wrong PR across the nine repos). ⚠️ **Never the finding
+     itself** — that is the learning above, and two copies of a technical
+     conclusion drift with nothing comparing them. ⚠️ **`search_memories` for
+     the question BEFORE writing** and skip if it is already indexed: a retro
+     re-run over an overlapping session would otherwise index it twice.
+     ⚠️ **Write it raw — `add_memory(..., infer=False)`.** The default runs an
+     LLM extractor that rewrites the entry into third-person narrative prose
+     (*"User explained that …"*), losing the question / verdict / write-up
+     structure this bullet prescribes. ⚠️ Measured 2026-09-09, the
+     fully-qualified PR ref **did** survive that rewrite — so write raw for the
+     structure, and do not repeat a claim that the extractor eats the refs.
+     ⚠️ **Read `status` first, then `results` — and note which MODE each
+     observation belongs to.** The two paths differ, and conflating them is how
+     the first version of this note came out wrong. Measured 2026-09-09:
+     `infer=False` returns `SUCCEEDED` **synchronously** with the stored text in
+     `results`, and re-writing identical text is a **no-op that returns the
+     EXISTING memory's id**, leaving its metadata and timestamps untouched. The
+     **default** is asynchronous — `status: PENDING` plus an `event_id`, nothing
+     stored yet — so there a written entry and a discarded one look identical
+     until you poll `get_event_status`, and a near-duplicate resolves
+     `SUCCEEDED` with `results: []` and nothing written. So `status` says
+     whether the call finished and `results` says whether anything landed;
+     neither answers alone, and the empty-`results` dedupe belongs to the
+     default path, NOT to the raw write this bullet prescribes. Skip entirely if
+     nothing this session took more than a handful of files to answer.
+   - **Commit, push and OPEN A PULL REQUEST — every time, in every repo the
+     retro touched.** The user's approval of the proposal IS the authorization:
+     they asked for this standing behaviour explicitly (2026-09-10), so it
+     overrides the default "do not create a pull request unless asked". Do not
+     stop at a local commit, and do not ask a second time.
+     - **One PR per repo.** A retro routinely writes into two or three
+       `CLAUDE.md`s and maybe a skill; each repo gets its own branch, commit and
+       PR against its own default — `PolyKybd` for the firmware, `master` for
+       `Adafruit-GFX-Library` and `PolyKybd` (hardware), `main` for the rest.
+     - ⚠️ **Cut the branch fresh from the updated default FIRST.** A retro runs
+       at the end of a session, which is exactly when the branch you are
+       standing on has just merged — and a push to a merged branch **succeeds
+       silently and orphans the commit** (see Branching in the repo `CLAUDE.md`).
+       `git fetch origin <default> && git checkout -B <branch> origin/<default>`,
+       then confirm with `git merge-base --is-ancestor origin/<default> HEAD`.
+     - **The PR body carries the EVIDENCE, not a summary** — for each note, what
+       happened in the session that justifies it, so a reviewer can check the
+       claim rather than the prose. That is the same evidence the proposal
+       already cites, so it costs nothing to carry over.
+     - ⚠️ **A mirrored skill is TWO PRs** (`qmk_firmware` ↔ `PolyKybdHost` keep
+       five byte-identical copies — see Mirrored skills in either `CLAUDE.md`).
+       Cross-link them in both bodies, or each reads as half a change; and
+       `cmp` the pair before opening either, since a retro is also when the
+       drift gets noticed.
+     - **Report the PR links when done.** The retro is not finished until they
+       exist.
 
 ## 5. Output format
 
@@ -169,6 +223,10 @@ DOCS GAPS (→ update-polykybd-docs)
   i. <feature added/changed> → <likely polykybd-docs page>
   ii. ...
 
+MEMORY INDEX (→ mem0)
+  •. <question investigated> → <verdict in one line>
+     write-up: <repo/file §heading | owner/repo#N>
+
 ALREADY COVERED (skipped): <item> → <existing doc/skill>
 
 Recommendation: <which to keep, and why>
@@ -182,6 +240,10 @@ Recommendation: <which to keep, and why>
   repo; use for genuinely cross-project meta-skills.
 - **CLAUDE.md** — the most *specific* one wins (a `lang/FUTURE_LANGUAGES.md`-style
   doc over the top-level CLAUDE.md when the learning is narrow).
+- **mem0** — an INDEX of investigations, never a record of findings: one entry
+  pointing at where the real write-up lives, so a later session can find it
+  without re-deriving it. ⚠️ CLAUDE.md wins on any disagreement — a mem0 hit is
+  a lead to verify against the repo, never an authority.
 
 ## Pitfalls
 
@@ -193,6 +255,13 @@ Recommendation: <which to keep, and why>
   is the only thing that decides whether it ever fires.
 - **Cite evidence.** Every proposal should point at what in the session justifies
   it; if you can't, it's probably not worth keeping.
-- **Approval before writing**, and **don't push** unless asked.
+- **Nothing sensitive in mem0, and that includes the SEARCH.** No credentials,
+  keys, file contents, or anything you would not put in a public issue. ⚠️ The
+  pre-write `search_memories` sends the question text to the same cloud service
+  `add_memory` writes to — so a question that cannot leave the machine means
+  skipping the index entry altogether, not sanitising it afterwards.
+- **Approval before writing — but approval is the ONLY gate.** Once the user
+  picks what to keep, write it, push it and open the PR (§4.6) without asking
+  again. Asking twice is what this instruction exists to stop.
 - This skill is repo-agnostic; if useful beyond this project, copy it to
   `~/.claude/skills/`.

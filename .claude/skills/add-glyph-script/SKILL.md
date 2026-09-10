@@ -75,7 +75,7 @@ codepoints), **transliteration** (runes → nearest rune per Latin letter),
 
 Emit the `-S` sequence (source codepoints in key order) with the helper:
 ```bash
-python3 .claude/skills/add-glyph-script/emit_sequence.py   # edit its SCRIPTS list
+python3 ../../.claude/skills/add-glyph-script/emit_sequence.py   # edit its SCRIPTS list
 ```
 
 ## 2. Preview at 72×40 for sign-off — BEFORE wiring
@@ -84,7 +84,7 @@ Generate the block, then render it exactly as the hardware does (baseline-align,
 per-glyph bitmap) via the host loader:
 ```bash
 FONTCONVERT=/tmp/fontconvert_pinned python3 fonts/generate_fonts.py --only gscript
-python3 .claude/skills/add-glyph-script/preview_block.py 0xEA40 26   # base, count
+python3 ../../.claude/skills/add-glyph-script/preview_block.py 0xEA40 26   # base, count
 ```
 Fix mapping/legibility here and get the user's OK. (Missing numerals show as
 Unifont hex-boxes — that means the script has no numerals; set `digits:false`.)

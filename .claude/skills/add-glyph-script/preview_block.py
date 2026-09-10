@@ -13,12 +13,34 @@ and Pillow. Prints how many glyphs rendered; writes a labelled contact sheet.
 import os
 import sys
 
-# locate PolyKybdHost/tools/gfx_font.py (sibling repo, a few common layouts)
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _qmk_root(start):
+    """Walk up to the qmk_firmware root (the dir holding keyboards/polykybd).
+
+    Derived rather than counted: a hardcoded `../../..` chain encodes how deeply
+    the skill dir happens to sit, and silently breaks the day it moves — which is
+    exactly what happened when these skills were relocated out of
+    keyboards/polykybd/.claude/ (2026-09-09).
+    """
+    d = start
+    while d != os.path.dirname(d):
+        if os.path.isdir(os.path.join(d, "keyboards", "polykybd")):
+            return d
+        d = os.path.dirname(d)
+    return None
+
+
+_QMK = _qmk_root(HERE)
+
+# locate PolyKybdHost/tools/gfx_font.py (sibling repo, a few common layouts)
 CANDIDATES = [
-    os.path.join(HERE, "../../../../../../PolyKybdHost/tools"),  # skill -> ... -> sibling repo
-    os.path.expanduser("~/PolyKybdHost/tools"),
-    "/home/user/PolyKybdHost/tools",
+    p for p in (
+        os.path.join(os.path.dirname(_QMK), "PolyKybdHost", "tools") if _QMK else None,
+        os.path.expanduser("~/PolyKybdHost/tools"),
+        "/home/user/PolyKybdHost/tools",
+    ) if p
 ]
 for c in CANDIDATES:
     if os.path.exists(os.path.join(c, "gfx_font.py")):
@@ -30,7 +52,8 @@ from PIL import Image, ImageDraw                                # noqa: E402
 base = int(sys.argv[1], 16)
 count = int(sys.argv[2])
 header = sys.argv[3] if len(sys.argv) > 3 else \
-    os.path.join(HERE, "../../../base/fonts/generated/gscript_fonts.h")
+    os.path.join(_QMK, "keyboards", "polykybd", "base", "fonts", "generated",
+                 "gscript_fonts.h")
 out = sys.argv[4] if len(sys.argv) > 4 else "/tmp/gscript_preview.png"
 
 bm, ga, rf = {}, {}, {}

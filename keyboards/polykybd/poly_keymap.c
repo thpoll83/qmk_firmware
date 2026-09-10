@@ -68,6 +68,8 @@
 #include "polymod_core1.h"
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
+#include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
+#include "usb_util.h"                     // usb_vbus_state() — the suspend-time power check
 #include "crash_test.h"                   // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
 #include "slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
 #include "polymod_crc32.h"
@@ -1132,6 +1134,10 @@ void housekeeping_task_user(void) {
     if (fw_staging_reboot_pending()) {
         clear_keyboard();   // same as above: no further matrix scan before the reset
         poly_flash_rgb_now();
+        // A handedness change arrives on this path (the reset-sync carrier). The
+        // handler only records it -- it runs inside a split-transaction callback
+        // with a ~20 ms budget, and this write can erase a sector.
+        poly_hand_flush_pending();
         save_all_dirty();   // persist before the full-chip reset — this path skips shutdown_quantum too
         mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
     }
@@ -3316,6 +3322,22 @@ void poly_keymap_cache_invalidate(void) {
     poly_ai_led_cache_invalidate();
 }
 
+#ifdef CHORDAL_HOLD
+// Chordal Hold's opposite-hands rule needs to know which half a key is on. QMK's
+// default reads a hand-maintained `chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS]`
+// table of 'L'/'R' chars -- 80 entries here, beside a keymap that already has five
+// base layers to keep in step. On a split whose halves are exactly
+// MATRIX_ROWS_PER_SIDE apart the hand is DERIVABLE, so derive it: the hook is weak
+// precisely so a board can answer the question its own way, and a derivation cannot
+// drift out of sync with the matrix the way a second table would. Same reasoning as
+// sync_is_link_fault() refusing to enumerate its siblings.
+// Rows 0..MATRIX_ROWS_PER_SIDE-1 are the left half, the rest the right -- the same
+// split LAYOUT_TO_INDEX() and is_left_side() already assume.
+char chordal_hold_handedness(keypos_t key) {
+    return (key.row < MATRIX_ROWS_PER_SIDE) ? 'L' : 'R';
+}
+#endif
+
 // Layers below the host-write cap are remappable and live in the dynamic keymap
 // (EEPROM); layers at/above it (the language/emoji function layers) are served straight
 // from the compiled keymap in flash, so they never read the dynamic keymap and always
@@ -4666,6 +4688,30 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 eeconfig_update_rgb_matrix(&rgb_matrix_config);
             }
             return false;
+        // The settings layer's four effect presets. These are the legacy UNDERGLOW
+        // mode keycodes (RGB_MODE_PLAIN/BREATHE/RAINBOW/SWIRL, 0x782B..0x782E), and
+        // QMK does route that range through process_underglow() even on an
+        // RGB-matrix-only board — but its switch only covers toggle / next / prev /
+        // hue / sat / val / speed. The four mode presets have no case there, none in
+        // process_rgb_matrix() (which owns the RM_* range only), and IS_RGB_KEYCODE /
+        // RGB_KEYCODE_RANGE are defined in keycodes.h and dispatched nowhere. So
+        // these keycaps drew a legend (keycode_helper.c: "Plan", "Brth", "Rnbw",
+        // "Swrl") and did nothing at all. Map each onto the closest effect that is
+        // enabled on BOTH variants — CYCLE_SPIRAL is split72-only, so Swirl takes
+        // CYCLE_PINWHEEL. rgb_matrix_mode() persists the pick the way RM_NEXT does
+        // (a deferred eeconfig flag, not a blocking write), and like RM_NEXT it is a
+        // no-op while RGB is off.
+        case RGB_M_P:  case RGB_M_B:
+        case RGB_M_R:  case RGB_M_SW:
+            if (record->event.pressed) {
+                uint8_t mode = RGB_MATRIX_SOLID_COLOR;              // RGB_M_P  "Plan"
+                if      (keycode == RGB_M_B)  mode = RGB_MATRIX_BREATHING;              // "Brth"
+                else if (keycode == RGB_M_R)  mode = RGB_MATRIX_RAINBOW_MOVING_CHEVRON; // "Rnbw"
+                else if (keycode == RGB_M_SW) mode = RGB_MATRIX_CYCLE_PINWHEEL;         // "Swrl"
+                rgb_matrix_mode(mode);
+                request_disp_refresh();
+            }
+            return false;
 #endif
         case KC_CRSEL:
             if (record->event.pressed) { SEND_STRING(SS_TAP(X_HOME) SS_TAP(X_HOME) SS_LSFT(SS_TAP(X_END)) SS_TAP(X_BACKSPACE) SS_TAP(X_BACKSPACE) SS_TAP(X_DOWN)); }
@@ -4805,6 +4851,21 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
        (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) {
         return false;
     }
+    // A gated settings key is BLANK, so it must also be INERT — swallow both edges
+    // before anything can act on it.
+    //
+    // ⚠️ MUST stay above the QK_BOOTLOADER / QK_REBOOT cases below. This file
+    // intercepts both of those and returns true from inside that switch (the
+    // bootloader announce; the reboot's bridged handoff so the slave restarts too),
+    // so a gate placed after them never ran for the only two keys on the row that
+    // cannot be undone — the blank Restart keycap rebooted the board (field
+    // 2026-09-08). QK_DEBUG_TOGGLE really is left to process_action(), which is why
+    // it alone was gated. Every other gated keycode is handled further down in
+    // poly_custom_key_action(), already below this point.
+    if (settings_more_hidden(keycode)) {
+        return false;
+    }
+
     if (record->event.pressed) {
         switch (keycode) {
             case QK_BOOTLOADER: {
@@ -5010,16 +5071,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // ran. Only a PRESS can be rejected, so every release-edge settings key is
     // unaffected; KC_LANG is the one press-edge case here and would otherwise open _LL
     // / advance the language on the very press that exists only to wake the board.
-    // A gated settings key is BLANK, so it must also be INERT — swallow both edges
-    // before anything can act on it. QK_BOOTLOADER / QK_REBOOT / QK_DEBUG_TOGGLE are
-    // QMK's own keycodes, handled by process_action() rather than by
-    // poly_custom_key_action(), so returning false here is the only thing that stops
-    // them: a gate that only blanked the legend would leave a keycap that reboots the
-    // board with nothing drawn on it.
-    if (settings_more_hidden(keycode)) {
-        return false;
-    }
-
     const bool wake_accepted = display_wakeup(record);
     if (wake_accepted && poly_custom_key_action(keycode, record)) {
         return false;
@@ -5184,6 +5235,14 @@ static void boot_trace(const uint32_t* digit) {
 void keyboard_post_init_user(void) {
     // (The previous run's crash record was captured and archived at the top of
     // keyboard_pre_init_user(); the boot banner reports it.)
+    // Put the EEPROM handedness byte back when the flash stamp outvoted it.
+    // Nothing in this build READS that byte (config.h drops EE_HANDS), so this is
+    // purely so a downgrade to firmware predating the stamp still comes up on the
+    // right side. Deliberately not in pre_init: quantum_init() runs between the
+    // two and erases the whole store when the magic reads invalid, which is
+    // exactly the state a wipe leaves behind. Ahead of emit_boot_banner() below,
+    // so the banner can report the repair.
+    poly_hand_post_init();
     // Labels live in RAM on both halves (the render path reads one per macro keycap per
     // refresh). Each half loads its own EEPROM copy, then the master overwrites the
     // slave's over the link -- so a role swap makes whichever half the host talks to
@@ -5504,6 +5563,15 @@ void keyboard_pre_init_user(void) {
     // post_init's multicore_launch_core1().
     crash_record_init();
 
+    // Resolve handedness while the EEPROM's own verdict is still readable. It has
+    // to be HERE, in keyboard_setup(), because keyboard_init() later runs
+    // quantum_init()'s `if (!eeconfig_is_enabled()) eeconfig_init()` -- an erase of
+    // the whole store -- and after that point "the store was wiped" and "the store
+    // is fine" look identical, which is the one input poly_hand_decide() needs.
+    // Same core1 rule as crash_record_init() above: the migration write takes no
+    // lockout because core1 has not been launched yet.
+    poly_hand_boot_init();
+
     // Load the external-flash font pack and assemble g_all_fonts = resident ++
     // pack BEFORE the first render (show_splash_screen() below draws keycaps).
     // No valid pack (erased/corrupt/ABI mismatch) -> resident-only fonts.
@@ -5528,17 +5596,16 @@ void keyboard_pre_init_user(void) {
     // right-side text.  set_side() otherwise runs only in post_init, after the
     // splash, so the splash always saw side == UNDECIDED → both rendered "SPLIT 72".
     //
-    // Read handedness with the pure eeconfig_read_handedness(), NOT
-    // is_keyboard_left_impl(): the EE_HANDS branch of is_keyboard_left_impl() runs
-    // `if (!eeconfig_is_enabled()) eeconfig_init();`.  Called this early — right
-    // after eeprom_driver_init() in keyboard_setup, before the wear-leveling store
-    // is validated — it can see eeconfig as "not enabled" and run eeconfig_init()
-    // → nvm_eeconfig_erase() → eeprom_driver_format(), which wipes the *entire*
-    // emulated EEPROM including the per-half EE_HANDS marker.  Both halves then
-    // lose their stored side and fall back to a master-derived handedness.
-    // eeprom_driver_init() has already run, so the direct read is valid here and,
-    // being read-only, can never trigger that erase.
-    set_side(eeconfig_read_handedness() ? LEFT_SIDE : RIGHT_SIDE);
+    // Resolve through poly_hand_is_left(), which poly_hand_boot_init() above has
+    // already settled from the flash stamp — so this is a cached read that touches
+    // no EEPROM at all.  That matters here specifically: any route through
+    // eeconfig this early — right after eeprom_driver_init() in keyboard_setup,
+    // before the wear-leveling store is validated — can see eeconfig as "not
+    // enabled" and run eeconfig_init() → nvm_eeconfig_erase() →
+    // eeprom_driver_format(), wiping the *entire* emulated EEPROM.  That is what
+    // the old eeconfig_read_handedness() call here had to be careful about, and
+    // what dropping EE_HANDS removed from split_pre_init() as well.
+    set_side(poly_hand_is_left() ? LEFT_SIDE : RIGHT_SIDE);
     show_splash_screen();
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"0");
@@ -5655,7 +5722,49 @@ void suspend_power_down_kb(void) {
     // session. Every block is dirty-gated, and the write sits at the very end of
     // the suspend sequence (after the final sync), so a flash consolidation can't
     // corrupt a live split transaction.
-    save_all_dirty();
+    //
+    // ⚠️ …but ONLY while USB is still supplying power. This hook fires ~3 ms after
+    // the bus goes idle, and a hub or cable being cut looks exactly like a host
+    // sleeping: the board then runs a few more ms on the regulator's output
+    // capacitance while this starts a flash write that takes tens of ms. The cost
+    // of losing that race is not one setting — QMK's wear-levelling recovery
+    // clears the WHOLE store on any inconsistency it cannot replay, so a torn
+    // write takes the brightness, the language, the Intl map, the dynamic keymap
+    // and (before the flash stamp) the handedness with it. That is the
+    // 2026-09-07 field report: hub interrupted mid-flush, and the half came back
+    // as `right master` with the RGB matrix on and the keymap reset.
+    //
+    // Nothing is lost by skipping: the dirty flags stay set, so the next suspend
+    // with power present, KC_STORE_EE, or the host's shutdown signal writes them.
+    // usb_vbus_state() is QMK's own accessor for USB_VBUS_PIN (GP24, set in each
+    // keymap's config.h), and this is not a new dependency on it: with that pin
+    // defined, chibios_config.h stops force-defining SPLIT_USB_DETECT, so the SAME
+    // read already decides which half is master. A GP24 this gate could not trust
+    // is a board whose split link never comes up, so it fails loudly long before
+    // it reaches here.
+    //
+    // What makes the reading useful in time is where the divider is tapped. The
+    // hardware runs USB1 -> [R8 5.6k taps here] -> D2 (1N5819WS) -> U1 (TLV62569
+    // buck), with R15 10k to ground: BEFORE the VSYS Schottky. So the node is
+    // pulled down within microseconds of the host cutting power, while the MCU
+    // runs on for milliseconds on the regulated side's capacitance. A tap after
+    // D2 would be held up by that same capacitance and could never report a loss
+    // this hook could act on.
+    // ⚠️ Gated on being the USB half as well, because on the other one the reading
+    // carries no information: a non-USB half has no VBUS of its own, so its GP24
+    // reads low always. It is powered over the split cable, so its rail really
+    // does die with the master's — it simply cannot see that coming from this pin.
+    // Without this clause the slave would silently stop flushing at suspend
+    // forever, which is a bigger behaviour change than the one being fixed.
+    if (is_keyboard_master() && !usb_vbus_state()) {
+        // Seen on resume when a host cuts VBUS to sleep — there the flush was
+        // skipped for a rail that was never in danger, and the next one takes it.
+        // Unseen when the power really was going, because the console goes with
+        // it; that silence IS the feature working.
+        uprintf("suspend: VBUS low — EEPROM flush deferred (a torn write clears the whole store)\n");
+    } else {
+        save_all_dirty();
+    }
     suspend_power_down_user();
     disable_idle_tracking();
 }

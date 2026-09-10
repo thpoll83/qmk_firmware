@@ -24,13 +24,17 @@ The point of the survey is that "some layouts already have it" is almost always 
 understatement. Resolve every candidate cell and histogram what is actually there.
 
 ```python
-import os, sys, re, subprocess; sys.path.insert(0, 'tools')
+import os, sys, re; sys.path.insert(0, 'tools')
 import oled_preview as op
-# derive the firmware root rather than hard-coding it - this skill lives inside it,
-# and a sibling checkout under another path is the normal case for anyone else.
-qmk  = subprocess.run(['git', 'rev-parse', '--show-toplevel'], cwd=os.environ.get(
-       'QMK_HOME', '.'), capture_output=True, text=True).stdout.strip()
-pk   = os.path.join(qmk, 'keyboards', 'polykybd')
+# ⚠️ `tools/oled_preview.py` is the HOST repo's, so this runs with cwd=PolyKybdHost
+# and `git rev-parse --show-toplevel` resolves to PolyKybdHost, NOT qmk_firmware -
+# `pk` then points at a directory that does not exist and the workbook load fails a
+# few lines later with no hint why. Resolve the firmware root explicitly and ASSERT
+# the workbook is there, so a wrong root says so instead of failing open.
+qmk = os.environ.get('QMK_HOME') or os.path.join('..', 'qmk_firmware')
+pk  = os.path.join(qmk, 'keyboards', 'polykybd')
+assert os.path.isfile(f'{pk}/lang/lang_lut.xlsx'), (
+    f'no lang_lut.xlsx under {pk!r} - set QMK_HOME to the qmk_firmware checkout')
 named = op.load_named_glyphs(f'{pk}/lang/named_glyphs.h')
 L     = op.Lang(f'{pk}/lang/lang_lut.xlsx', named)
 R     = op.load_renderer(f'{pk}/base/fonts')          # NOT Renderer(load_all_fonts(...)) - see §5
@@ -90,9 +94,15 @@ that replaces a reviewer:
 ```bash
 # EVERY generated file run_cog.sh touches, and BOTH directions: a line that
 # disappeared is as much a surprise as one that appeared.
-git diff -U0 -- keyboards/polykybd/lang/ keyboards/polykybd/*.c keyboards/polykybd/*.h \
+# ⚠️ Capture the count and TEST it. `grep -c` exits 0 when it matched something
+# and 1 when it matched nothing, i.e. its status is the OPPOSITE of the intent
+# here - a bare pipe ending in `grep -cvE` "succeeds" precisely when there ARE
+# unexpected lines, so in any `&&` chain it fails open on the case you care about.
+n=$(git diff -U0 -- keyboards/polykybd/lang/ keyboards/polykybd/*.c keyboards/polykybd/*.h \
   | grep -E '^[+-]' | grep -Ev '^(\+\+\+|---)' \
-  | grep -cvE '<the token or pattern you changed>'    # must be 0
+  | grep -cvE '<the token or pattern you changed>')
+echo "unexpected diff lines: $n"
+[ "$n" = 0 ] || { echo "UNEXPECTED lines in the generated diff - inspect before committing" >&2; exit 1; }
 ```
 
 ⚠️ **Do NOT expect one contiguous hunk** — the count depends entirely on how the

@@ -8,17 +8,33 @@ pixels off the panel, so it cannot see two rows colliding or slack pooling at th
 bottom.
 
 Run from keyboards/polykybd/:
-    python3 .claude/skills/status-oled-layout/measure_bands.py 72          # both modes
-    python3 .claude/skills/status-oled-layout/measure_bands.py 72 --calls  # per-draw-call
-    python3 .claude/skills/status-oled-layout/measure_bands.py 42
+    python3 ../../.claude/skills/status-oled-layout/measure_bands.py 72          # both modes
+    python3 ../../.claude/skills/status-oled-layout/measure_bands.py 72 --calls  # per-draw-call
+    python3 ../../.claude/skills/status-oled-layout/measure_bands.py 42
 """
 import argparse
 import os
 import sys
 
-# Resolve tools/ from THIS file, not cwd, so the script runs from anywhere.
+# Resolve tools/ from THIS file, not cwd, so the script runs from anywhere. The qmk
+# root is DERIVED by walking up for keyboards/polykybd rather than counted as a `../`
+# chain: a counted chain encodes how deeply this skill dir sits and breaks silently
+# the day it moves, which is what happened when these skills were relocated out of
+# keyboards/polykybd/.claude/ (2026-09-09).
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_TOOLS = os.path.normpath(os.path.join(_HERE, "..", "..", "..", "tools"))
+
+
+def _qmk_root(start):
+    d = start
+    while d != os.path.dirname(d):
+        if os.path.isdir(os.path.join(d, "keyboards", "polykybd")):
+            return d
+        d = os.path.dirname(d)
+    return None
+
+
+_QMK = _qmk_root(_HERE)
+_TOOLS = os.path.join(_QMK, "keyboards", "polykybd", "tools") if _QMK else ""
 sys.path.insert(0, _TOOLS if os.path.isdir(_TOOLS) else os.path.join(os.getcwd(), "tools"))
 
 # Draw helpers worth attributing; missing names are skipped per module.

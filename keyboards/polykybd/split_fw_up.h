@@ -109,7 +109,7 @@ static_assert(sizeof(fw_up_status_reply_t) <= RPC_S2M_BUFFER_SIZE,
 //                         unless it holds a valid staged image).
 //   RESET_ACTION_REBOOT — reboot only, no apply (the QK_REBOOT path).  Doubles as
 //                         the handedness-change carrier: when set_handedness != 0
-//                         the slave persists `is_left` to its EE_HANDS marker
+//                         the slave persists `is_left` to its handedness stamp
 //                         before rebooting, so both halves come up on the
 //                         corrected left/right assignment (see hid_com.c case 25).
 // The plain reboot/apply senders leave set_handedness zero via designated

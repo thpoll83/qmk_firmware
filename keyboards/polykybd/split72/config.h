@@ -74,15 +74,43 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 // Setup Cirque
+//
+// RELATIVE mode: the Pinnacle ASIC does its own tap/gesture detection and hands
+// back deltas plus button bits, so every knob below is a FeedConfig2 bit written
+// at init, not something QMK evaluates per report. The absolute-mode tuning
+// defines (CIRQUE_PINNACLE_TAPPING_TERM, CIRQUE_PINNACLE_TOUCH_DEBOUNCE,
+// POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE) are deliberately NOT set here:
+// their only readers sit inside `#if CIRQUE_PINNACLE_POSITION_MODE` blocks
+// (cirque_pinnacle_gestures.c trackpad_tap(), the absolute get_report), so in
+// this mode they compile to nothing and read as configured while doing nothing.
 #define CIRQUE_PINNACLE_DIAMETER_MM 35
-#define CIRQUE_PINNACLE_TAP_ENABLE
-#define CIRQUE_PINNACLE_TAPPING_TERM 100
-#define CIRQUE_PINNACLE_TOUCH_DEBOUNCE 300
 #define CIRQUE_PINNACLE_POSITION_MODE  CIRQUE_PINNACLE_RELATIVE_MODE
-#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
-#define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
-//#define CIRQUE_PINNACLE_SECONDARY_TAP_ENABLE
-//#define POINTING_DEVICE_GESTURES_SCROLL_ENABLE
+
+// Tap to left-click, handled on the ASIC (clears FEEDCONFIG2__ALL_TAP_DISABLE).
+#define CIRQUE_PINNACLE_TAP_ENABLE
+// Corner tap -> right click (clears FEEDCONFIG2__SECONDARY_TAP_DISABLE). NOT a
+// two-finger tap: the Pinnacle reports a single contact, so the gesture is a tap
+// in the upper-right corner with part of the finger off the pad. Requires
+// CIRQUE_PINNACLE_TAP_ENABLE above.
+#define CIRQUE_PINNACLE_SECONDARY_TAP_ENABLE
+// Side scroll (clears FEEDCONFIG2__SCROLL_DISABLE): a touch starting on the edge
+// scrolls vertically, IntelliSense style. In relative mode this define resolves
+// to CIRQUE_PINNACLE_SIDE_SCROLL_ENABLE (cirque_pinnacle.h); in absolute mode the
+// same name would mean circular scroll instead.
+// NOTE: pointing_device_adjust_by_defines() rotates only x/y, never h/v, so the
+// POINTING_DEVICE_ROTATION_90 below does not move the scroll edge — the edge that
+// arms it is the sensor's, 90 degrees off the physical one. Verify on hardware.
+#define POINTING_DEVICE_GESTURES_SCROLL_ENABLE
+
+// Touch sensitivity. 1X is the highest ADC gain and is what Cirque recommends for
+// a thicker overlay; 2X was the chip's own power-on default (TRACK_ADCCONFIG
+// DEFVAL 0x4E & ADC_ATTENUATE_MASK == ADC_ATTENUATE_2X), so setting it made
+// cirque_pinnacle_set_adc_attenuation() return false without writing and skipped
+// the calibration that a real change forces.
+#define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_1X
+// Lowers XAXIS/YAXIS_WIDEZMIN so a light touch near the pad edge still registers,
+// and forces a calibration at init.
+#define CIRQUE_PINNACLE_CURVED_OVERLAY
 
 // Enable use of pointing device on slave split.
 #define SPLIT_POINTING_ENABLE
@@ -96,6 +124,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // POINTING_DEVICE_ROTATION_90_RIGHT only applies in POINTING_DEVICE_COMBINED mode.
 #define POINTING_DEVICE_ROTATION_90
+// (absolute-mode only — see the Cirque block above)
 //#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
 
 //#define POINTING_DEVICE_DEBUG

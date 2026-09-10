@@ -151,9 +151,20 @@ fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
    - Investigation index → `add_memory`, ONE entry per investigation that cost
      real effort: the question, the verdict in a sentence, and where the full
      write-up landed (`repo/file §heading`, or `owner/repo#N` — ⚠️ a bare `#N`
-     resolves to the wrong PR across the nine repos). ⚠️ **A finding may ride
-     along ONLY if it is DATED AND CLOSED** — a measurement, the root cause of
-     one incident, a verdict about a run that already happened. Those cannot go
+     resolves to the wrong PR across the nine repos).
+     ⚠️ **A DEAD END has no write-up, and it is the case this index pays for
+     best** — real effort spent, verdict *"nothing to change"*, so nothing was
+     committed and there is no file to point at. Write the entry anyway: it IS
+     the whole record, and the **where** field then names what was checked
+     rather than where the answer lives (*"checked every `.github/workflows/`
+     hit against upstream, 2026-08-29"*). `SECURITY_AUDIT.md` §
+     *"Checked and NOT vulnerable — don't re-litigate"* is the same idea kept
+     locally for one domain, and it exists because a dismissed finding that
+     leaves no artifact gets re-raised in full by the next scan. A dead end is
+     dated and closed by construction, so it clears the test below outright.
+     ⚠️ **A finding may ride along ONLY if it is DATED AND CLOSED** — a
+     measurement, the root cause of one incident, a verdict about a run that
+     already happened. Those cannot go
      stale, because the fact is fixed in the past, and re-deriving one is exactly
      what this index exists to save. A **STANDING claim about how the code
      behaves now** (*"cmd 34's range is closed"*, *"the C1 icon band is full at
@@ -174,9 +185,16 @@ fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
      date D" is closed however technical it is; "X behaves like Y" is standing
      however trivial. When in doubt, write the dated form — *"2026-09-04: run
      992's apply job failed with the link dead; cause not established"* is safe,
-     *"the apply job kills the link"* is not. ⚠️ **`search_memories` for
-     the question BEFORE writing** and skip if it is already indexed: a retro
-     re-run over an overlapping session would otherwise index it twice.
+     *"the apply job kills the link"* is not.
+     ⚠️ **Phrase the entry as the QUESTION, not as the conclusion.**
+     `search_memories` is semantic, so it scores against what the next session
+     *asks*, and an entry led by its verdict (*"the template injection is
+     unreachable"*) matches *"is this scanner finding real?"* far worse than one
+     that opens with the question. Lead with what was asked, then the verdict,
+     then where it lives — the retrieval key and the write are the same string.
+     ⚠️ **`search_memories` for the question BEFORE writing** and skip if it is
+     already indexed: a retro re-run over an overlapping session would otherwise
+     index it twice.
      ⚠️ **Write it raw — `add_memory(..., infer=False)`.** The default runs an
      LLM extractor that rewrites the entry into third-person narrative prose
      (*"User explained that …"*), losing the question / verdict / write-up

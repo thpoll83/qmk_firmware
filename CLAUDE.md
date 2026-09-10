@@ -7,128 +7,6 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 ## Code review conventions (all PolyKybd repos)
 
 - **Docstring coverage: ignore CodeRabbit's "Docstring Coverage … threshold 80%" pre-merge check.** That 80% target is a CodeRabbit default, **not** a project policy — the check is non-blocking and we deliberately do not chase it. Do **not** add docstrings to existing functions just to satisfy it (out-of-scope churn). Document new code where a docstring genuinely helps a reader, and no more.
-- **On a rapidly-iterating PR, keep CodeRabbit OFF and ask for ONE review at the
-  end.** A design/layout PR that lands many small pushes (a preview render per
-  tweak) makes CodeRabbit re-review from scratch on every one. Two costs, both hit
-  in a single session (2026-07-29, PR #159): it burns the **per-developer review
-  rate limit** — five pushes came back `Review limit reached … next review in
-  31/41/46 minutes` and were never reviewed at all — and each landed review is
-  against a head you have already moved past. So the reviews you *do* spend are
-  the least useful ones.
-  - CodeRabbit notices this itself and **auto-pauses** the branch ("this branch is
-    under active development"), governed by
-    `reviews.auto_review.auto_pause_after_reviewed_commits`. ⚠️ Its paused comment
-    still renders a walkthrough + pre-merge checks, so it **reads like a completed
-    clean review** — check for the "Reviews paused" note before concluding the PR
-    was reviewed.
-  - Workflow: let it pause (or pause it deliberately), iterate freely, then
-    comment **`@coderabbitai review`** on the final commit for a single full-diff
-    review; **`@coderabbitai resume`** turns automatic reviews back on. Both
-    commands are listed in the paused comment itself.
-  - ⚠️ **A push while a review is in flight ABORTS it** — "Review failed: The head
-    commit changed during the review from `<a>` to `<b>`". The run is lost, not
-    resumed, and re-triggering costs another slot against the rate limit. So once
-    a review starts, **hold pushes until it reports** (2026-08, cost a full cycle).
-    - ⚠️ **A lost run leaves NO REVIEW OBJECT AND NO VERDICT, and the only
-      trace it does leave is a summary comment collapsed to a bare "Review
-      Change Stack" link — which reads as "nothing to say".**
-      Measured on #275 (2026-09-04, a docs PR touched five times in ten
-      minutes): **four** runs each rendered the `> [!NOTE] Currently processing
-      new changes…` block with a `📥 Commits` range, then had the block
-      **removed** on a later edit leaving only the stack link — no walkthrough,
-      no `📥 Commits`, no *"No actionable comments"*, and no error. No review
-      object was created either, so `get_reviews` is empty — **indistinguishable
-      from the CLEAN-pass false negative recorded below, where empty is also the
-      answer.** The tell is the summary comment itself: a bare stack link is not
-      a clean pass; *"No actionable comments were generated 🎉"*, or a
-      walkthrough, is what a completed run leaves.
-      - ✅ **The fifth run, left UNDISTURBED, completed** — full walkthrough plus
-        `🚥 Pre-merge checks ✅ 5`, describing the real head. So the collapse is
-        caused by the PR moving under a run, not by a quirk of rendering: three
-        of the four dead runs started scoped to a head that a push had **already
-        superseded** (`..39f693fa`, `..0f7ecef8`, `..73918d0` while head was
-        `ad122c45`). That is the abort documented above, and this is what its
-        aftermath looks like — the run is not merely "lost", it erases its own
-        evidence.
-      - ⚠️ **So the cost of ignoring "hold pushes until it reports" is not one
-        wasted review, it is a PR that LOOKS unreviewed and cannot tell you
-        why.** Four cycles were burned here by pushing and editing the body
-        while runs were in flight; one quiet minute produced the review.
-  - ⚠️ **Order matters: `resume` BEFORE `review` makes the review a no-op.**
-    CodeRabbit is incremental and "does not re-review already reviewed commits";
-    that guard is only relaxed *while reviews are paused*. Resuming first
-    un-pauses, so the following `review` finds nothing to do and silently reviews
-    nothing. Either `review` first and `resume` after, or use **`@coderabbitai
-    full review`**, which re-reviews the whole diff regardless of state — that is
-    also the command to reach for after an aborted run, since the failed run
-    recorded nothing but the head has already moved.
-  - ⚠️ **CodeRabbit SKIPS any PR over 100 changed files, so an upstream-merge PR
-    gets NO review at all** — *"Review skipped — Too many files! This PR contains
-    N files, which is M over the limit of 100."* This is a second, different tell
-    from the rate-limit one above, with the same consequence and the difference
-    that it is **guaranteed** on a catch-up merge rather than occasional. The
-    0.33.13 merge (#197) was skipped on all four pushes (401 → 425 files), each
-    time rendering as an ordinary status comment with a file table, so the PR read
-    as reviewed. There is no way to get it reviewed short of splitting the PR — so
-    for a merge PR, treat the **build + HIL checks and hardware testing as the only
-    real verification**, and don't count the green board as review cover.
-  - ⚠️ **A STACKED PR gets no automatic review at all** — *"Review skipped — Auto
-    reviews are disabled on base/target branches other than the default branch."*
-    This is a **fourth** no-review mode (alongside the rate limit, the <10-stars
-    repo, and the >100-file skip) and it is **guaranteed, not occasional**: any PR
-    whose base is another feature branch is silently unreviewed for as long as it is
-    stacked. Seen on #211 (2026-08-17), stacked on #210. Two ways out, and prefer the
-    first: **let the parent merge** — GitHub then retargets the child to `PolyKybd`
-    and auto-review applies again (confirm a review actually lands; a base change may
-    not itself trigger one). Otherwise spend a slot on `@coderabbitai review`, which
-    works on a stacked PR but costs the same org-wide budget as any other request.
-    ⚠️ Do **not** read the resulting quiet board as "no findings" — nothing read it.
-  - ⚠️ **Sourcery's rate-limit is QUIETER than CodeRabbit's: the `Sourcery review`
-    check run goes GREEN (`success`) while no review happened.** When its weekly
-    diff-character budget is spent it submits a `COMMENTED` review whose entire body
-    is *"you have reached your weekly rate limit of 500000 diff characters"* — and
-    that still counts as a completed check. So the PR shows a green Sourcery tick
-    with **zero findings**, which reads exactly like a clean review. CodeRabbit at
-    least renders a `> [!WARNING] Review limit reached` banner. Both were
-    simultaneously unavailable on #203 (2026-08-12), leaving a fully green board
-    that **no reviewer had read**. To tell them apart, read the review *body* via
-    `pull_request_read` `get_reviews` — do not infer from the check conclusion.
-    (The sibling rule "a bot comment is not a review" is in `PolyKybdHost/CLAUDE.md`;
-    this is the same failure with a green check instead of a long comment.)
-    - ⚠️ **A THIRD shape, and the quietest yet: `Sourcery review` = `success`
-      with NO REVIEW OBJECT AT ALL.** On #218 (2026-08-19) the check was green on
-      the head commit while `get_reviews` returned exactly one review, submitted
-      against the *first* commit of the branch — so the firmware fix and the two
-      new CI workflows had been read by nothing. There is no rate-limit body to
-      find here, because there is no review. **Check the review's `commit_id`
-      against the head sha**, not just that a review exists: a stale review plus a
-      fresh green check is indistinguishable from a current one at a glance.
-      - ✅ **Sourcery auto-reviews a PR FIVE times and then WITHDRAWS its
-        approval, which is the one reviewer behaviour here that self-corrects
-        rather than going stale.** Measured on #275 (2026-09-04): on the sixth
-        push it commented *"Sourcery has withdrawn its approval of this pull
-        request. It auto-reviews a pull request 5 times, and this push is past
-        that limit, so the approval no longer reflects code Sourcery has read"*,
-        and the `APPROVED` review — pinned to the branch's FIRST commit while its
-        check went green on every head since — stopped counting. Two things
-        follow:
-        - ⚠️ **A withdrawn approval is NOT a rejection**, and it arrives with no
-          findings attached, so it reads like one. It means only that the head
-          has outrun what Sourcery read. `@sourcery-ai review` gets a fresh one.
-        - **It bounds the stale-approval trap above rather than removing it**:
-          within the first five pushes an approval can still sit on a commit the
-          head has left behind, and that is exactly the window most PRs live in.
-          The `commit_id`-vs-head check is still the thing to run.
-    - ⚠️ **CodeRabbit's COMMIT STATUS does the same thing, so "at least it renders a
-      banner" only holds for the comment.** Its status context reads `state: success`
-      with the description **"Review rate limited"** (`pull_request_read`
-      `get_status`, head `2d61653d`, 2026-08-18) — so a head that nothing read shows
-      a green CodeRabbit tick alongside the green build. The banner lives in the
-      *comment*, which a status-only view never shows, and which vanishes on a
-      re-render anyway (see the sticky-walkthrough note above). **`get_status` can
-      only ever tell you a review RAN, never that it read the current head** — pair
-      it with `get_reviews` and compare each review's `commit_id` against the head.
-
 - **Verify an AI reviewer's finding against the code before acting on it — several
   arrive confidently wrong.** Of 7 CodeRabbit findings on one PR (2026-08-01), 3
   were false and **two were refuted by their own evidence**: a "PACK_VERSION 3
@@ -254,76 +132,24 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
       reply solves. If it becomes tiresome, the place to scope CodeRabbit is its
       own configuration, not upstream's file.
 
-- ⚠️ **An on-demand Claude reviewer (`@claude review`) was tried and REMOVED
-  (2026-08-20) — don't rebuild it.** `.github/workflows/claude-review.yml` +
-  `claude-mention.yml` existed in all three PolyKybd repos to cover exactly the
-  cases above — CodeRabbit rate-limited, Sourcery's green-check-but-empty weekly
-  limit, and the >100-file upstream-merge skip. It published one usable review in
-  its life and otherwise posted nothing while still billing the subscription
-  (~$4 total for that one review); the deciding detail — which tool the runner
-  denied it — is unreadable, because the action logs *"full output hidden for
-  security"* and uploads no artifact. Workflows and the `CLAUDE_CODE_OAUTH_TOKEN`
-  secret are gone from all three repos.
-  - **So on an upstream-merge PR there is genuinely no LLM reviewer.** CodeRabbit
-    skips it outright at >100 files, and **Sourcery has its own ceiling that lands
-    on the same PRs** — it refuses any diff over **20,000 lines** outright (*"the
-    GitHub API does not allow us to fetch diffs exceeding 20000 lines"*, a hard
-    limit, not a quota, so waiting does nothing). Treat the
-    **build + HIL checks and hardware testing as the only verification**, say so
-    on the PR, and don't read the green board as review cover.
-    - ⚠️ **A fourth bot, Greptile, now exists — see the Greptile entry in
-      `PolyKybdHost/CLAUDE.md` before repeating "no LLM reviewer" as a fact.**
-      Whether it reviews a catch-up merge is **untested**; what is measured is
-      that it reviews only some PRs and announces a skip nowhere, so its silence
-      is not evidence either way. ⚠️ **And its `Greptile Review` check run is not
-      the answer** — measured, a green `success` one accompanied a PR it did not
-      review, the same trap recorded above for Sourcery. Check `pull_request_read`
-      `get_reviews` on the PR in front of you and require **both** that a review's
-      `commit_id` equals the head sha **and** that its body is not a refusal
-      notice — a Sourcery refusal is itself a review object carrying the head sha,
-      so the sha alone reads as reviewed. Never infer from a check run or from
-      this paragraph.
-      - ⚠️ **As of 2026-09-04 Greptile is REFUSING ACCOUNT-WIDE, and that is a
-        different thing from its documented silence.** It now submits a review
-        whose entire body is *"`thpoll83` has reached the 50-credit limit for
-        trial accounts"* — measured on #275, one review object, `commit_id`
-        equal to the head sha. So the pair-check above catches it (the body is a
-        refusal), and the "announces a skip nowhere" clause still holds for an
-        ordinary skip: this is a **quota**, announced, not a skip. Two
-        consequences while it lasts: it is **not review cover on any PolyKybd
-        repo**,
-        since the limit is on the account rather than the repo; and unlike
-        CodeRabbit's hourly window it does **not** come back by waiting — the
-        trial is spent until someone upgrades. Re-check with `get_reviews`
-        rather than assuming either state persists.
-      - ⚠️ **That pair-check has a FALSE NEGATIVE in the other direction, so it is
-        not sufficient either: a CLEAN CodeRabbit review produces NO REVIEW OBJECT
-        AT ALL.** It says *"No actionable comments were generated 🎉"* by editing
-        its existing summary comment, so `get_reviews` is empty for that head and
-        the check reads a clean pass as unreviewed (measured on qmk#268,
-        2026-09-03). A refusal is an object that means nothing; a clean pass is no
-        object that means everything. Read the summary comment's BODY — its
-        `📥 Commits` range and whether it says *skipped* / *no actionable comments*
-        — alongside `get_reviews`. Full write-up in `PolyKybdHost/CLAUDE.md`.
-      - ⚠️ **A commit whose only reviewable file is GENERATED is skipped outright,
-        so a per-language DATA pass is structurally unreviewable.** *"Review skipped
-        as selected files did not have any reviewable changes"* — twice on qmk#268,
-        where the diff was the cog-generated `lang_lut.c` plus `lang_lut.xlsx`, and
-        the workbook is excluded by CodeRabbit's `!**/*.xlsx` path filter. No banner,
-        no quota, nothing wrong: just no review. On such a change the verification
-        has to be your own — assert the generated diff is confined to what you meant,
-        and measure the rendered result.
-  - **cppcheck has no quota, no star threshold and no file-count limit** — and
-    is not an LLM, so it doesn't share the others' blind spots. That is why it
-    was added, and it matters more now that it is the only automated reviewer
-    left. ⚠️ **But it is NOT unconditional, and the exception lands exactly on
-    the case above**: `cppcheck.yml` filters `pull_request` on
-    `keyboards/polykybd/**`, `modules/polykybd/**` and the workflow itself, so a
-    catch-up merge that touches only upstream paths gets **no cppcheck run at
-    all** — the check is absent, not green. Don't "fix" that by broadening the
-    trigger: analysing the whole upstream tree is the CodeQL trap this scope was
-    chosen to avoid. It means an upstream merge really is verified by the build,
-    the HIL rig and hardware alone.
+- ⚠️ **A green board is NOT evidence a reviewer read your code, and every bot here
+  has a way of going quiet that looks like a clean pass.** The standing check, in
+  full, is `pull_request_read` `get_reviews` plus the summary comment's body:
+  - a review counts only when its **`commit_id` equals the PR head sha** AND its
+    **body is not a refusal notice** (a quota / diff-too-large refusal is a real
+    review object carrying the head sha, so the sha alone reads as reviewed);
+  - **and the absence of a review object proves nothing either** — a CLEAN
+    CodeRabbit pass creates none, it edits its summary comment to say *"No
+    actionable comments were generated"*. So read the summary body's `📥 Commits`
+    range alongside `get_reviews`.
+  - **No check run answers this question.** A green `Sourcery review` /
+    `Greptile Review` / CodeRabbit status has accompanied a PR that nothing read,
+    measured, more than once.
+  **The full field guide — which bot goes quiet in which disguise, the sticky
+  walkthrough, the Merge Risk sha, the false `✅ Addressed in <sha>` attribution,
+  the quota shapes and the rate-limit arithmetic — is the `triage-pr-review`
+  skill**, mirrored in both repos. Load it when you are actually triaging a PR;
+  it is ~51 KB that does not belong in every session's context.
 
 - ⚠️ **After changing a function SIGNATURE, grep THIS FILE for other prose
   references to it — nothing in CI reads Markdown, so a stale API example ships
@@ -353,9 +179,9 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
 
 ## Mirrored skills (`qmk_firmware` ↔ `PolyKybdHost`)
 
-Five skills exist in **both** repos and are kept **byte-identical**:
+Six skills exist in **both** repos and are kept **byte-identical**:
 `add-gated-hid-command`, `mutation-test-suite`, `polykybd-github-release`,
-`session-retro`, `update-polykybd-docs`. A skill loads only from the repos a session has attached,
+`session-retro`, `triage-pr-review`, `update-polykybd-docs`. A skill loads only from the repos a session has attached,
 so one that describes cross-repo work is unreachable from a session opened on the
 other repo alone — which is what happened to `mutation-test-suite`, extended to
 cover Python/unittest suites while living only in the firmware repo.
@@ -371,7 +197,7 @@ because a skill has no build, no test and no reviewer.
 **So the rule is copy, never fork**: edit one, `cp` it to the other, and check with
 
 ```bash
-for s in add-gated-hid-command mutation-test-suite polykybd-github-release session-retro update-polykybd-docs; do
+for s in add-gated-hid-command mutation-test-suite polykybd-github-release session-retro triage-pr-review update-polykybd-docs; do
     cmp -s /home/user/qmk_firmware/.claude/skills/$s/SKILL.md \
            /home/user/PolyKybdHost/.claude/skills/$s/SKILL.md \
       && echo "$s: ok" || echo "$s: DRIFTED"
@@ -532,56 +358,17 @@ unreachable.
 
 **The ARM toolchain is installable in the dev / remote container — do not claim it is unavailable.** Verified end-to-end (`split72:default` → `.uf2`, exit 0) on 2026-05-29.
 
-- **Toolchain**: `sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi` → `arm-none-eabi-gcc` (13.2.x). This is what `qmk setup` installs on Debian/Ubuntu; the PyPI `qmk` package is only the bootstrapper (`config/clone/console/env/setup`) and does **not** bundle the compiler. There is no `bin/qmk` in this fork — the full CLI lives in `lib/python`.
-- **qmk CLI**: `pip install qmk` (use a venv if system pip errors building `halo` — a Debian setuptools quirk), then `qmk config user.qmk_home=<repo>` (or `export QMK_HOME=<repo>`) so it discovers `compile`/`flash` from the repo's `lib/python`, plus `pip install -r requirements.txt`.
-- **Submodules** (empty in a fresh clone): `make git-submodule`. The minimum for split72 is `lib/chibios lib/chibios-contrib lib/pico-sdk lib/printf lib/lufa` (printf and lufa are needed even on RP2040 — `quantum/logging` and the ChibiOS USB stack pull them in).
-  - ⚠️ **In a web/remote container `make git-submodule` (and `qmk git-submodule`) 403s** — the injected git proxy only serves the session's *authorized* repos, and `qmk/*` aren't in it, so the submodule clone is rejected. **This is NOT a real "build unavailable" — do not give up here.** The fix is **`add_repo`**, once per submodule repo: call it for `qmk/ChibiOS`, `qmk/ChibiOS-Contrib`, `qmk/lufa`, `qmk/printf`, `qmk/pico-sdk` and it answers `read_available` ("the git proxy serves anonymous git reads of public GitHub repos") **without attaching anything**. From then on the ordinary command just works — no tarballs, no manual unpacking:
-    ```bash
-    git submodule update --init --depth 1 --no-recommend-shallow lib/chibios   # …and the other four
-    ```
-    ⚠️ **The old `codeload.github.com` tarball recipe is DEAD — it now returns 403**, with a JSON body telling you to use `add_repo` (2026-08-11; it was documented here as "allowed (200), verified 2026-06-25", so believe the error, not this file's history). It also fails *quietly* in a pipeline: `curl -sSL … | tar xz` prints only `gzip: stdin: not in gzip format` while the shell reports success, so a loop over five submodules can look like it worked. `curl -w "HTTP=%{http_code}"` is the check.
-  - ⚠️ **An upstream merge BUMPS the submodule pins, and nothing checks them out for you.** The 0.33.13 merge moved `lib/chibios` `8bd61b80→6170ddf9` and `lib/chibios-contrib` `8d863d9e→5a9ad82b`. Re-run the init above **after** the merge (`git submodule status` shows the `-`/`+` prefixes), or you link a new QMK against an old ChibiOS — which compiles cleanly and fails at runtime.
-  - ⚠️ **A `lib/*` dir can be FULL OF FILES and still be uninitialised — leftover
-    extracted tarballs from the dead codeload recipe, pinned to the wrong revision.**
-    This is a third state beyond "empty clone" and "pin bumped", and it looks healthy:
-    `ls lib/chibios` shows a complete tree, so the natural conclusion is that
-    submodules are fine. The tells: **`git submodule status` prefixes it `-`** (not
-    initialised) and **`lib/<m>/.git` does not exist**. The build then dies on a
-    *version* mismatch rather than a missing file — the signature is
-    ```
-    ./lib/chibios/os/hal/include/hal.h:136:2: error: #error "obsolete or unknown configuration file"
-    ```
-    Fix: `rm -rf` the stale dirs and re-init properly (after `add_repo`, above):
-    ```bash
-    rm -rf lib/chibios lib/chibios-contrib lib/pico-sdk lib/printf lib/lufa
-    for m in lib/chibios lib/chibios-contrib lib/printf lib/lufa lib/pico-sdk; do
-        git submodule update --init --depth 1 --no-recommend-shallow $m
-    done
-    ```
-    ⚠️ `make`'s own auto-`git-submodule` step does **not** rescue this: it tries to
-    clone into the non-empty dir, prints `destination path … already exists and is not
-    an empty directory`, and carries on to a doomed build (2026-08-12).
-  - ⚠️ **In a FRESH container that loop can fail for EVERY module — retry them one at
-    a time.** Run back-to-back straight after the five `add_repo` calls (2026-09-02),
-    all five died with `fatal: clone of '<url>' failed / Failed to clone '<path>' a
-    second time, aborting`, while `git ls-remote` against the same URL succeeded — so
-    the remote was reachable and it is not an authorisation failure. Re-running
-    `lib/printf` **alone** then worked first time, and the other four followed once
-    each was retried individually:
-    ```bash
-    for m in lufa chibios chibios-contrib pico-sdk; do
-        rm -rf .git/modules/lib/$m lib/$m     # a failed clone leaves a half-state
-        git submodule update --init --depth 1 --no-recommend-shallow lib/$m
-        sleep 5
-    done
-    git submodule status lib/*                # every line must start with a SPACE
-    ```
-    ⚠️ **Cause unestablished — do not theorise one.** The plausible candidates (the
-    proxy's 429 concurrency cap, authorisation needing a moment to propagate after
-    `add_repo`) were not tested, and this file's own history is full of confident
-    mechanisms that turned out wrong. Record the remedy, not a story. The tell is
-    cheap: `git submodule status` prefixes an uninitialised module `-`, so check it
-    rather than assuming the loop worked.
+- **Toolchain, qmk CLI and submodules** — the once-per-container setup is
+  [`keyboards/polykybd/BUILD_ENVIRONMENT.md`](keyboards/polykybd/BUILD_ENVIRONMENT.md):
+  `gcc-arm-none-eabi`, `pip install qmk` + `QMK_HOME`, and the submodule init, whose
+  three failure modes are each written up there (the git proxy 403 that `add_repo`
+  fixes, a `lib/*` dir that is full of files and still uninitialised, and a fresh
+  container where all five clones fail and then succeed retried one at a time).
+  ⚠️ `git submodule status` must show a **leading space** on every line; an
+  uninitialised module is prefixed `-`, and a build against one dies on
+  `#error "obsolete or unknown configuration file"` rather than a missing file.
+  ⚠️ An upstream merge BUMPS the pins — re-init after merging or you link new QMK
+  against old ChibiOS, which compiles cleanly and fails at runtime.
 - **Build**: `qmk compile -kb polykybd/split72 -km default` (or `make polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
 - **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
   - ⚠️ **Put the commit sha in the FILENAME — every test build reports the same
@@ -1771,132 +1558,52 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)
 - **`PROTOCOL_VERSION`** (`config.h`, reported in the GET_ID string) gates host
-  features. **v2** added `GET_LANG_LIST_PACKED` (cmd `27` / `0x1b`): the language
-  list as a count byte + one `(ISO 639-1 idx, ISO 3166-1 alpha-2 idx)` **2-byte
-  pair per language** instead of the 4 ASCII chars of cmd `0x08` — it halves the
-  emitted bytes/lang and the report count. As of the **P2-only cleanup**, cmd `27`
-  is the **only** language-list command: the legacy ASCII cmd `0x08` has been
-  **retired and now NACKs** (`P\x08!`), dropping its ~570 B `.rodata` table. The
-  host (protocol ≥ 2) uses cmd `27` exclusively with **no ASCII fallback**, and
-  firmware older than v2 is unsupported; the rig asserts cmd `0x08` NACKs. The
-  index↔code tables are the **frozen, append-only** `lang/iso_lang_country.py`
-  (see "Language list encoding" below). **v3** made `SEND_OVERLAY_MAPPING`
-  (cmd `21`) **silent** — no per-chunk ACK, matching the other bulk overlay
-  commands (`0x0A`, `0x10`/`0x11`, `0x12`/`0x13`). The old ACK was informationless
-  (always `.`), discarded unread by the host, and arrived only after the blocking
-  UART bridge to the slave — escaped ACKs were the main source of stale replies
-  the host had to drain. The host (protocol 3) no longer drains after mapping
-  sends; ordering for `enable_overlays` (case 11) is preserved because HID
-  reports dispatch sequentially and the bridge completes before case 21 returns.
-  **v4** added `GET/SET_IDLE_STYLE` (cmd `28` / `0x1c`): selects the idle
-  (anti-burn-in) display style — payload `0xFF` queries (reply byte = current
-  style), else sets it (`0` = legacy pulse, `1` = jitter); out-of-range NACKs.
-  Persisted in `poly_eeconf_t.idle_style` (flushed at the next suspend/store) so
-  it survives reboots. The host (PolyKybdHost) toggles it over this command; the
-  rig has a v4-gated round-trip HIL test. See "Idle anti-burn-in styles" below.
-  **v5** added the brightness flags (`SET_BRIGHTNESS` cmd 13 payload byte: volatile /
-  host-auto). **v6** appends a **per-bundle font-pack version block** to the `GET_ID`
-  (cmd 6) reply — AFTER the NUL-terminated id string: `['V'][count][u16 little-endian
-  content_version × count]` in bundle-slot order. The host reads it to flash only the
-  font-pack bundles the keyboard is missing/behind on (no extra query); older hosts
-  stop at the NUL and ignore it. See "Font pack" below. **v9** added
-  `GET/SET_GLYPH_SCRIPT` (cmd `30` / `0x1e`): a glyph-script **override** that swaps
-  the language-layer letter/digit legends for an alternative script (`0` = standard/off,
-  `1` = Tengwar), leaving overlays and OS-hints untouched. `0xFF` queries (reply byte =
-  current script), else sets it; out-of-range NACKs. Persisted in
-  `poly_eeconf_t.glyph_script`, synced via `poly_sync_t.glyph_script`. The Tengwar
-  glyphs ship in a new **`fantasy`** font-pack bundle (the host flashes it on connect);
-  with no bundle the override falls back to Latin. See "Glyph-script override" below.
-  **v10** makes the glyph script an **open-ended index** and ships 9 more scripts,
-  values `2..10`: Elder Futhark runes, Aurebesh, Standard Galactic Alphabet,
-  Cirth/Angerthas, IBM VGA/CP437, Commodore 64, Amiga Topaz, APL, Braille — all in the
-  (regrown) `fantasy` bundle (`content_version` bumped 1→2). The wire format is unchanged
-  (one script byte); the semantic change is that the firmware now **accepts any index
-  `0..0xFE`** — an index it doesn't know, or whose font isn't flashed, renders the normal
-  legend instead of NACKing. This **decouples "add a font face" from the protocol**: within
-  v10 the script set can grow freely (the host may offer more scripts than a keyboard has;
-  older keyboards degrade gracefully), so **adding scripts never bumps the protocol again** —
-  only a real wire/semantic change would. `0xFF` stays the query sentinel.
-  **v11** reframes the **plain (uncompressed) overlay upload** (cmd `10` / `0x0A`): `modifier`
-  and `segment` now share **one** header byte — `(segment << 4) | (modifier & 0x0F)` — so the
-  header is 4 bytes (`id, cmd, keycode, packed`) and a full 60-byte segment fits the 64-byte
-  report **exactly**. The pre-v11 layout carried modifier and segment in *separate* bytes (5-byte
-  header), leaving only 59 bytes for a 60-byte segment, so the firmware `memcpy`'d 60 bytes and
-  read **1 byte past the report** — harmless on the no-MMU RP2040 but the last byte of each
-  segment was undefined (the old FW-7 finding; fixed in the wire format instead of a bounce
-  buffer). The firmware unpacks the byte in `hid_com.c` case 10 *before* `set_fragment_context_key`,
-  so `adjust_overlay_idx_to_mod` is unchanged; **compressed (`0x10`/`0x11`) and ROI (`0x12`/`0x13`)
-  paths are untouched** (their headers already fit).
-  **v13** adds `GET/SET_GLYPH_SIZE` (cmd `34` / `0x22`): the size a key's MAIN legend
-  is drawn at — `0` small (the original 27 px face), `1` medium, `2` large; `0xFF`
-  queries. Persisted in `poly_eeconf_t.glyph_size`, synced via `poly_sync_t.glyph_size`;
-  also reachable from the board via `KC_GLYPH_SIZE` on the settings layer.
-  ⚠️ **Its range is CLOSED and an unknown value NACKs — the deliberate OPPOSITE of the
-  glyph script's open-ended index one command over, and that asymmetry is the thing to
-  understand before "fixing" either.** An unknown SCRIPT index falls through to the
-  normal legend, so accepting it costs nothing and buys the host freedom to ship faces a
-  keyboard lacks. A SIZE names a rendering TIER whose relocation base and baseline the
-  firmware must know, so accepting an unknown one would store, sync and persist a
-  setting that silently renders small. The two HIL tests assert opposite things about
-  their neighbouring commands on purpose (`test_glyph_size_round_trip` /
-  `test_glyph_script_expansion`). See "Keycap legend size" below.
-  **v14** adds `GET_LAYER_NAMES` (cmd `35` / `0x23`): a read-only reply of
-  `[total][count]` followed by `count` NUL-terminated ASCII names of at most 8 chars,
-  split across as many reports as they need (54 bytes / one report today). `total` is
-  the whole payload length, that byte included.
-  The count is deliberately the SAME `DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT` that
-  `id_dynamic_keymap_get_layer_count` already answers with — the host editor sizes
-  its tab strip from that command and labels the tabs from this one, so two counts
-  could let it draw a tab it has no name for. See "Layer names over the wire" below.
-  **v15** adds **macros**: `MACRO_INFO` (cmd `36` / `0x24`, read-only — count, label
-  stride, capacity u16, bytes-used u16), `MACRO_BODY` (cmd `37` / `0x25`, windowed
-  read/write of the shared body buffer: `data[2]` 0 read / 1 write, `data[3..4]` offset
-  LE, `data[5]` count, `data[6..]` bytes) and `MACRO_LABEL` (cmd `38` / `0x26`,
-  `data[2]` id, `data[3]` 0xFF query else length, `data[4..]` text). All three sit
-  behind ONE host feature gate — a host that could read the info header but not the
-  bodies would render an editor over data it cannot fetch. See "Dynamic macros" below.
-  **v17** adds the **VOLATILE flag** to `SET_UNICODE_MODE` (cmd `20`, `data[3]`):
-  non-zero applies the mode in RAM only, leaving EEPROM alone. It exists because at
-  Windows logon the host cannot tell "WinCompose is not installed" from "WinCompose
-  has not started yet" — so it applies its early reading volatile (plain `Windows`
-  IS how the keyboard should type while WinCompose is absent) and re-asserts it
-  persistently once it can tell the two apart. Without it, every logon on a
-  WinCompose machine wrote `Windows` and then `WinCompose` back over it.
-  ⚠️ **The wire change is backwards-compatible in one direction only.** An older
-  HOST sends a zero-padded report, so `data[3]` reads 0 = persist — fine. An older
-  FIRMWARE ignores `data[3]` and would silently STORE a mode the caller asked not to
-  store, which is precisely the transient value the flag exists to keep out of
-  EEPROM — so the host gates it (`FEATURE_MIN_PROTOCOL["unicode_mode_volatile"]`) and
-  falls back to withholding the ambiguous reading entirely.
-  ⚠️ QMK has **no `set_unicode_input_mode_noeeprom()`**; `unicode_config` is `extern`
-  and `unicode_input_mode_set_kb()` is the notification the keycap legend rides on,
-  so `apply_unicode_mode()` in `hid_com.c` is the persisting path minus one call —
-  **no upstream patch**. Note the persisting path never needed help: QMK's
-  `eeprom_update_byte` already skips a write when the byte matches, so re-asserting
-  the SAME mode has always been free; only the transient wrong value is new.
-  ⚠️ **A QMK `*_set_user` hook is a NOTIFICATION, never a setter — and calling one
-  to CHANGE state fails in the quietest possible way: the UI moves and the
-  behaviour does not.** `unicode_input_mode_set_user()` is what QMK fires *from*
-  `set_unicode_input_mode()`, and our override of it (`poly_keymap.c`) does exactly
-  one thing: mirror the value into `local_state->unicode_mode` so the language
-  layer's Mac/Lnx/Win/WinC/BSD keycaps can draw their ON/OFF switch. Cmd 20 called
-  it directly for years, so a host push relabelled those keys while
-  `unicode_config.input_mode` — which decides how codepoints are actually typed —
-  never moved. Field report 2026-09-08: the layer read **Win ON** at startup while
-  emoji still worked (i.e. the keyboard was really in WinCompose mode), and pressing
-  the Win key — the one path through the real setter — made behaviour follow the
-  legend and broke emoji. **The tell is a state whose display and effect disagree**;
-  when you find one, check whether the write went through the setter or the
-  callback. The same shape applies to every `*_set_user` QMK exposes, so grep for
-  one being called rather than implemented.
-  **Bump `FW_VERSION` +
-  `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
-  lockstep.** ⚠️ The old note here said "the host connect gate is exact-match"; it is
-  not, and has not been for a while — the host connects to any protocol `>=
-  MIN_SUPPORTED_PROTOCOL` and gates each feature separately through
-  `FEATURE_MIN_PROTOCOL` (see `PolyKybdHost/CLAUDE.md`). So forgetting the bump no
-  longer rejects the keyboard; it silently leaves the new feature disabled, which is
-  quieter and worse.
+  features. The per-version rationale is
+  [`keyboards/polykybd/PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md)
+  — **read it before changing any of these commands**, because several were shaped
+  by a contrast with their neighbour that the wire format does not show. What each
+  version added:
+
+  | v | command | what it did |
+  |---|---|---|
+  | 2 | `27` GET_LANG_LIST_PACKED | 2-byte ISO index pair per language; the ASCII cmd `8` is RETIRED and NACKs |
+  | 3 | `21` SEND_OVERLAY_MAPPING | made silent (no per-chunk ACK), like the other bulk overlay commands |
+  | 4 | `28` GET/SET_IDLE_STYLE | idle anti-burn-in style; `0xFF` queries |
+  | 5 | `13` SET_BRIGHTNESS | volatile / host-auto flag byte |
+  | 6 | `6` GET_ID | appends the per-bundle font-pack version block `['V'][count][u16 × count]` |
+  | 9 | `30` GET/SET_GLYPH_SCRIPT | glyph-script override; `0xFF` queries |
+  | 10 | `30` | script index becomes OPEN-ENDED — an unknown index renders the normal legend instead of NACKing, so new faces need no protocol bump |
+  | 11 | `10` plain overlay upload | modifier+segment packed into ONE header byte, so a 60-byte segment fits the report exactly |
+  | 12 | `33` SEND_OVERLAY_MAPPING_W | variable-width mapping (8/9/10/11 bits), silent like cmd 21 |
+  | 13 | `34` GET/SET_GLYPH_SIZE | keycap legend size 0/1/2; range CLOSED, unknown NACKs |
+  | 14 | `35` GET_LAYER_NAMES | read-only `[total][count]` + NUL-terminated names |
+  | 15 | `36`/`37`/`38` | macros: info / body window / label, behind ONE host feature gate |
+  | 16 | `39` | crash record read + clear |
+  | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
+
+  ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
+  over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs
+  nothing and lets the host ship faces a keyboard lacks. A SIZE names a rendering tier
+  whose relocation base and baseline the firmware must know, so accepting an unknown
+  one would store, sync and persist a setting that silently renders small. The two HIL
+  tests assert opposite things about neighbouring commands **on purpose** — do not
+  "make them consistent".
+
+  ⚠️ **A QMK `*_set_user` hook is a NOTIFICATION, never a setter — and calling one to
+  CHANGE state fails in the quietest possible way: the UI moves and the behaviour does
+  not.** `unicode_input_mode_set_user()` is what QMK fires *from*
+  `set_unicode_input_mode()`, and our override only mirrors the value for the keycap
+  legend. Cmd 20 called it directly for years, so a host push relabelled those keys
+  while `unicode_config.input_mode` never moved (field, 2026-09-08: the layer read
+  **Win ON** while emoji still worked). **The tell is a state whose display and effect
+  disagree**; when you find one, check whether the write went through the setter or the
+  callback. Grep for any `*_set_user` being CALLED rather than implemented.
+
+  **Bump `FW_VERSION` + `PROTOCOL_VERSION` (config.h) and `__protocol__`
+  (PolyKybdHost `_version.py`) in lockstep.** ⚠️ The connect gate is NOT exact-match —
+  the host connects to any protocol `>= MIN_SUPPORTED_PROTOCOL` and gates each feature
+  through `FEATURE_MIN_PROTOCOL` — so forgetting the bump no longer rejects the
+  keyboard, it silently leaves the new feature disabled. Quieter, and worse.
 - **Cmd `32` = main-loop profiler control — present ONLY in a
   `POLYKYBD_LOOP_PROFILE` build, and bumps NO `PROTOCOL_VERSION`** (dispatched
   independently like cmd 31 / the fontpack commands). Sub-commands `0` RESET / `1`

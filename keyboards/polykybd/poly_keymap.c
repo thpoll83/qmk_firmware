@@ -298,10 +298,19 @@ _Static_assert(AI_OFF == AI_LIGHT_OFF && AI_IDLE == AI_LIGHT_IDLE &&
 static bool     s_rgb_borrow_active      = false;
 
 static void rgb_borrow_update(bool want) {
-    if (want && !s_rgb_borrow_active) {
+    if (want) {
         s_rgb_borrow_active = true;
+        // Re-assert the enable EVERY pass, not just on the acquiring edge. Anything
+        // that disables the matrix while a cue is up would otherwise leave the cue
+        // dark until its state next changes -- and the states that matter most do
+        // not change on their own: an agent that stays WORKING, or a font-pack flash
+        // mid-stream. The case that bit (field, 2026-09-10) is the user's own
+        // KC_RGB_TOG: with the matrix already on, the borrow latches without ever
+        // needing to enable anything, so the toggle's rgb_matrix_disable() in
+        // sync_and_refresh_displays() won the ground and nothing took it back.
+        // Idempotent -- the guard below means a matrix already on is not touched.
         if (!rgb_matrix_is_enabled()) rgb_matrix_enable_noeeprom();
-    } else if (!want && s_rgb_borrow_active) {
+    } else if (s_rgb_borrow_active) {
         s_rgb_borrow_active = false;
         // Restore what the USER wants, NOT a snapshot taken when the borrow started.
         // KC_RGB_TOG sets the synced RGB_ON flag and sync_and_refresh_displays() applies

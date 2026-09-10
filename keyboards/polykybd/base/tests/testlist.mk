@@ -7,5 +7,6 @@ TEST_LIST += polykybd_idle_update
 TEST_LIST += polykybd_layer_names
 TEST_LIST += polykybd_legend_plan
 TEST_LIST += polykybd_font_bbox
+TEST_LIST += polykybd_ai_light
 TEST_LIST += polykybd_macro_record
 TEST_LIST += polykybd_hand_stamp

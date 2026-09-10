@@ -131,6 +131,24 @@ reading before you change either one.
   when you find one, check whether the write went through the setter or the
   callback. The same shape applies to every `*_set_user` QMK exposes, so grep for
   one being called rather than implemented.
+  **v18** adds `GET/SET_AI_STATE` (cmd `40` / `0x28`): the agent status the AI key
+  wears — `0` off, `1` idle, `2` working, `3` attention; `0xFF` queries. Stored in
+  RAM ONLY and synced via `poly_sync_t.ai_state`, deliberately not persisted: a
+  "needs you" light that survived a reboot would be claiming something about a host
+  process that is gone. ⚠️ Its range is **CLOSED and an unknown value NACKs**, like
+  cmd 34 and unlike cmd 30 — every value names a colour the RGB indicator paints and
+  a word the keycap spells, so accepting an unknown one would store a setting that
+  shows nothing. The status light also FADES: green (idle) and blinking red
+  (attention) go out a minute after the state last changed, while breathing amber
+  (working) stays for as long as it takes — the curve is pure in `base/ai_light.h`
+  (`make test:polykybd_ai_light`).
+  ⚠️ **It claimed v17 first and had to be renumbered.** #278's volatile unicode
+  mode took 17 on `PolyKybd` while this branch was open, so two unrelated features
+  briefly both called themselves v17 — the number is allocated by whatever MERGES
+  first, not by whichever branch wrote it down first. Nothing catches this: both
+  sides build, both sides' tests pass, and the collision only shows up as a host
+  that gates the wrong feature on the wrong number. **Re-check `PROTOCOL_VERSION`
+  against the base before merging any long-lived protocol branch.**
   **Bump `FW_VERSION` +
   `PROTOCOL_VERSION` (config.h) and `__protocol__` (PolyKybdHost `_version.py`) in
   lockstep.** ⚠️ The old note here said "the host connect gate is exact-match"; it is

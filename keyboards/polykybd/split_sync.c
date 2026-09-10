@@ -17,7 +17,7 @@
 #include "nvm_eeprom_eeconfig_internal.h"
 #include "dynamic_keymap.h"
 #include "keymap_introspection.h"   // keycode_at_keymap_location_raw() for the capped reset
-#include "poly_keymap.h"   // poly_fl_row_cache_invalidate()
+#include "poly_keymap.h"   // poly_keymap_cache_invalidate()
 #include "poly_macro.h"
 #include "base/com.h"
 #include "base/disp_array.h"
@@ -107,8 +107,12 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     // Explicit rather than left to housekeeping's state-diff refresh so the new
     // size lands on the sync itself instead of a pass later.
     bool glyph_size_changed = incoming->glyph_size != current->glyph_size;
+    // The master changed what the AI key reports -> re-render this half's legends,
+    // for the same reason as the size above: KC_AI spells its state out in text, so
+    // the slave's keycap is stale until something asks for a redraw.
+    bool ai_state_changed   = incoming->ai_state != current->ai_state;
     copy_local_state(incoming);
-    if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed) {
+    if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed || ai_state_changed) {
         request_disp_refresh();
     }
     if (anim_replay) {
@@ -300,7 +304,7 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
     if (offset >= max) return;
     uint16_t clamped = (offset + size > max) ? max - offset : size;
     eeprom_update_block(data, (void *)(POLY_EEPROM_CONFIG_END + offset), clamped);
-    poly_fl_row_cache_invalidate();
+    poly_keymap_cache_invalidate();
 }
 
 // Same layer cap as dynamic_keymap_set_buffer_poly, but for single-keycode writes:
@@ -309,7 +313,7 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
 void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode) {
     if (layer >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) return;
     dynamic_keymap_set_keycode(layer, row, column, keycode);
-    poly_fl_row_cache_invalidate();
+    poly_keymap_cache_invalidate();
 }
 
 // Reset wrapper, so that EVERY mutation of the dynamic keymap goes through a *_poly
@@ -347,7 +351,7 @@ void dynamic_keymap_reset_poly(void) {
     }
     poly_macro_reset_all();   // bodies AND labels — a stale label on a cleared macro
                              // is worse than no label, it names something that is gone
-    poly_fl_row_cache_invalidate();
+    poly_keymap_cache_invalidate();
 }
 
 // Handles dynamic keymap commands on the bridge with CRC32 validation, including keymap resets and key press events.

@@ -59,6 +59,7 @@
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
+#include "base/ai_light.h"               // the pure agent-status-light fade curve
 // Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
@@ -196,6 +197,7 @@ const struct display_info disp_row_3 = { POLY_DISP_ROW_3 };
 
 bool display_wakeup(keyrecord_t* record);
 static void render_macro_key(uint8_t id);   // defined below, used from render_key()
+static uint16_t poly_keycode_at(uint8_t layer, uint8_t row, uint8_t col);  // defined below
 void update_displays(enum refresh_mode mode);
 void set_displays(uint8_t contrast, bool idle);
 void set_selected_displays(int8_t old_value, int8_t new_value);
@@ -240,6 +242,20 @@ static uint8_t overlay_flags = 0;
 // the dirty-window bboxes so the first awake render erases whatever the mode drew.
 static bool s_disp_render_active = false;
 
+// Which LED sits under the AI key (HID cmd 40). Derived from the keymap rather than
+// hardcoded, so it follows the key wherever it is mapped — including a host remap of a
+// base layer — instead of pinning the light to the position it shipped in. Cached
+// because the scan reads the dynamic keymap (EEPROM) for every remappable slot, and
+// re-derived when the base layout changes or the keymap is written
+// (poly_keymap_cache_invalidate).
+static uint8_t s_ai_led       = 255;    // NO_LED
+static uint8_t s_ai_led_layer = 0xFF;   // the base layout s_ai_led was derived for
+static bool    s_ai_led_valid = false;
+
+static void poly_ai_led_cache_invalidate(void) {
+    s_ai_led_valid = false;
+}
+
 // Continuously suppress RGB on the bridge when display is off.
 // The split transport may re-enable RGB by copying master's rgb_matrix_config; this
 // indicator callback runs every render cycle (before flush) and zeros the LED buffer,
@@ -254,8 +270,183 @@ static bool s_disp_render_active = false;
 // was off, disabling it again afterwards.
 #define FLASH_RGB_HOLD_MS 2500
 static bool     s_flash_rgb_active      = false;
-static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;
+
+// The AI status light wants the same borrow: with the matrix off, turn it on for as
+// long as an agent is reporting and put it back afterwards.
+static bool     s_ai_rgb_active         = false;
+
+// When the current agent status started, so the IDLE/ATTENTION fade knows its age
+// (base/ai_light.h). Restamped on any change of the SYNCED value, so the slave's
+// light fades on the same schedule as the master's without a second message.
+static uint8_t  s_ai_state_seen          = AI_OFF;
+static uint32_t s_ai_state_since         = 0;
+
+// The enum this file works in vs the mirror ai_light.h has to carry (it cannot
+// include state.h -- quantum.h). Asserted rather than remembered.
+_Static_assert(AI_OFF == AI_LIGHT_OFF && AI_IDLE == AI_LIGHT_IDLE &&
+                   AI_WORKING == AI_LIGHT_WORKING && AI_ATTENTION == AI_LIGHT_ATTENTION &&
+                   AI_STATE_COUNT == AI_LIGHT_COUNT,
+               "poly_ai_state and ai_light.h's mirror have diverged");
+
+// ONE borrow shared by both attention cues. Two independent borrowers cannot work: the
+// second one reads the state the FIRST produced, so when the first releases it disables a
+// matrix the second still needs. With the matrix off that made the AI light go dark for
+// good the moment a font-pack flash ended — and those two overlap on exactly the connect
+// that re-pushes the agent status. One flag, released only when nobody wants it any more
+// (caught by CodeRabbit on #276).
+static bool     s_rgb_borrow_active      = false;
+
+static void rgb_borrow_update(bool want) {
+    if (want) {
+        s_rgb_borrow_active = true;
+        // Re-assert the enable EVERY pass, not just on the acquiring edge. Anything
+        // that disables the matrix while a cue is up would otherwise leave the cue
+        // dark until its state next changes -- and the states that matter most do
+        // not change on their own: an agent that stays WORKING, or a font-pack flash
+        // mid-stream. The case that bit (field, 2026-09-10) is the user's own
+        // KC_RGB_TOG: with the matrix already on, the borrow latches without ever
+        // needing to enable anything, so the toggle's rgb_matrix_disable() in
+        // sync_and_refresh_displays() won the ground and nothing took it back.
+        // Idempotent -- the guard below means a matrix already on is not touched.
+        if (!rgb_matrix_is_enabled()) rgb_matrix_enable_noeeprom();
+    } else if (s_rgb_borrow_active) {
+        s_rgb_borrow_active = false;
+        // Restore what the USER wants, NOT a snapshot taken when the borrow started.
+        // KC_RGB_TOG sets the synced RGB_ON flag and sync_and_refresh_displays() applies
+        // it, so RGB_ON *is* the wish — the same thing suspend_wakeup_init_kb() restores
+        // from. An acquisition-time snapshot of rgb_matrix_is_enabled() goes stale the
+        // moment they toggle RGB during a cue, and an ATTENTION light lasts until the
+        // agent's status changes, so that window is long; releasing would then undo a
+        // matrix they had just switched on. Reading the flag needs no snapshot at all
+        // (CodeRabbit, #276). mode/colour restore themselves — we only touch enable.
+        if (!test_flag(get_local_state()->flags, RGB_ON)) rgb_matrix_disable_noeeprom();
+    }
+}
+
+// The agent status light. AI_OFF paints nothing at all, so a keyboard with no agent
+// reporting lights exactly as it did before this feature existed.
+//
+// The colours are the ones the user reads at a glance across a desk: green = quiet,
+// amber = the agent is working, red = it is waiting on you. Only the red one BLINKS —
+// a light that blinks in every state is just a light, and the blink is what has to
+// pull your eye back to the keyboard. The keycap spells the same state out in text
+// (to_static_text), which is what covers split42 (no RGB matrix) and colour blindness.
+static uint8_t ai_led_index(void) {
+    const uint8_t layer = (uint8_t)get_local_layer()->def_layer;
+    if (s_ai_led_valid && s_ai_led_layer == layer) {
+        return s_ai_led;
+    }
+    s_ai_led       = NO_LED;
+    s_ai_led_layer = layer;
+    s_ai_led_valid = true;
+    for (uint8_t r = 0; r < MATRIX_ROWS && s_ai_led == NO_LED; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
+            if (poly_keycode_at(layer, r, c) == KC_AI) {
+                s_ai_led = g_led_config.matrix_co[r][c];
+                break;
+            }
+        }
+    }
+    return s_ai_led;
+}
+
+// The current status light's brightness, 0..255 (base/ai_light.h). Restamps the
+// state's age on a change, so BOTH callers -- the paint and the borrow tick -- ask
+// through here and cannot disagree about when the minute started. Stamping on
+// whichever runs first also means a light never misses its own first frame: the
+// render callback can beat housekeeping to a freshly synced state.
+static uint8_t ai_light_level(void) {
+    const uint8_t st = get_local_state()->ai_state;
+    if (st != s_ai_state_seen) {
+        s_ai_state_seen  = st;
+        s_ai_state_since = timer_read32();
+    }
+    // timer_elapsed32, not a subtraction: modular arithmetic that stays correct across
+    // the 49.7-day wrap. A hand-rolled version of this is what silently disabled idle
+    // for a 25-day window (see base/update.c's history).
+    return ai_light_scale(st, timer_elapsed32(s_ai_state_since));
+}
+
+// Returns true when it OWNED the frame — only ever when the matrix was off and this
+// borrowed it, in which case every other LED was blacked out and the running effect
+// must not paint over the result.
+static bool ai_rgb_paint(void) {
+    const uint8_t st = get_local_state()->ai_state;
+    if (st == AI_OFF || st >= AI_STATE_COUNT) {
+        return false;
+    }
+    const uint8_t led = ai_led_index();
+    if (led == NO_LED) {
+        return false;   // this layout maps no AI key
+    }
+    const uint8_t scale = ai_light_level();
+    // "Borrowed" = the matrix is only lit because we switched it on, so nothing else
+    // asked for light and the rest of it must stay black. Same source of truth as the
+    // release in rgb_borrow_update(): the user does not want RGB, we do.
+    const bool borrowed = s_ai_rgb_active && s_rgb_borrow_active &&
+                          !test_flag(get_local_state()->flags, RGB_ON);
+    if (scale == 0) {
+        // Faded out. ⚠️ Read as BORROWED first, not returned from: the tick that drops
+        // the borrow runs in housekeeping, so on the frame the light reaches zero the
+        // matrix can still be on ONLY because we asked for it -- and handing that frame
+        // to the running effect flashes the user's whole RGB across a keyboard they had
+        // switched off. Keep it black for the frame or two until the borrow releases.
+        if (borrowed) {
+            rgb_matrix_set_color_all(0, 0, 0);
+            return true;
+        }
+        return false;   // matrix is the user's: hand the LED back to their effect
+    }
+    // ⚠️ FULL SCALE, and it deliberately IGNORES the user's RGB brightness.
+    // rgb_matrix_set_color() writes straight to the driver -- QMK applies hsv.v inside
+    // the EFFECTS, so an indicator that calls set_color bypasses it entirely. That was
+    // true before this change too, but at channel values of 14/37/48 the light read as
+    // an arbitrary dim level that happened to sit near the user's; at 255 it is a
+    // deliberate choice, so say which. Asked for on hardware, 2026-09-10: this is a
+    // "look at your keyboard" light, and one that a low RGB setting can dim to
+    // invisibility is not doing the one job it has.
+    // Power: this paints exactly ONE of the board's 72 LEDs (36 per half), and in the
+    // borrowed case the other 71 are explicitly black -- so whatever the full-matrix
+    // draw is, this is ~1/72 of it. ⚠️ Do NOT restate that as an absolute figure
+    // without a datasheet: an earlier version of this comment put the capped matrix at
+    // "~1.6 A" from the WS2812 rule of thumb of 20 mA a channel, and the part is an
+    // XL-3030RGBC (WS2812B-Mini survives only as the symbol/footprint name). The
+    // number was never checked, and 1.6 A past a 500 mA USB port is its own refutation.
+    // RGB_MATRIX_MAXIMUM_BRIGHTNESS (100) is the matrix-wide cap and does not reach
+    // here anyway -- QMK applies hsv.v in the effects, not in rgb_matrix_set_color().
+    uint8_t r = 0, g = 0, b = 0;
+    switch (st) {
+        case AI_IDLE:
+            r = 0; g = 255; b = 0;                                 // steady green
+            break;
+        case AI_WORKING: {
+            uint8_t phase = (uint8_t)(timer_read32() >> 3);        // ~2 s cycle
+            uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);
+            // 25..255 rather than 0..255: a breath that reaches black reads as a
+            // blink, and ATTENTION is the only state allowed to blink.
+            uint8_t v     = (uint8_t)(25 + ((uint16_t)tri * 230) / 127);
+            r = v; g = (uint8_t)((v * 2) / 3); b = 0;              // breathing amber
+            break;
+        }
+        case AI_ATTENTION:
+            if (((timer_read32() >> 8) & 1) == 0) {                // ~2 Hz square
+                r = 255;                                           // blinking red
+            }
+            break;
+        default:
+            break;
+    }
+    if (borrowed) {
+        rgb_matrix_set_color_all(0, 0, 0);   // nothing else asked for light
+    }
+    // One scale over every state's colour, applied at the single point they all pass
+    // through -- so the fade cannot be forgotten by a colour added later, and WORKING
+    // gets it too (as a no-op scale of 255) rather than by skipping this line.
+    rgb_matrix_set_color(led, ai_light_apply(r, scale), ai_light_apply(g, scale),
+                         ai_light_apply(b, scale));
+    return borrowed;
+}
 
 bool rgb_matrix_indicators_kb(void) {
     if (s_flash_rgb_active) {
@@ -293,7 +484,22 @@ bool rgb_matrix_indicators_kb(void) {
             return false;
         }
     }
+    if (ai_rgb_paint()) {
+        return false;   // borrowed matrix: this frame is ours alone
+    }
     return rgb_matrix_indicators_user();
+}
+
+// Does an agent status want the matrix? With the matrix already on this changes
+// nothing and the indicator simply overrides one LED.
+static void ai_rgb_tick(void) {
+    // The key has to exist on the active layout: without that, a layout that maps no
+    // KC_AI (split72's Neo base, say) would ask for a matrix for a light that
+    // ai_rgb_paint() then declines to draw.
+    // ...and it has to still WANT the LED: once IDLE/ATTENTION has faded out, holding
+    // the matrix on to display black would leave a keyboard whose RGB the user had
+    // switched off lit up for nothing, for as long as the agent stays connected.
+    s_ai_rgb_active = ai_light_level() != 0 && ai_led_index() != NO_LED;
 }
 
 // Drive the flash RGB attention effect from the fw_up state (master + slave).
@@ -308,15 +514,17 @@ static void flash_rgb_tick(void) {
         s_flash_rgb_seen   = timer_read();
     }
     bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
-    if (want && !s_flash_rgb_active) {
-        s_flash_rgb_active      = true;
-        s_flash_rgb_was_enabled = rgb_matrix_is_enabled();
-        if (!s_flash_rgb_was_enabled) rgb_matrix_enable_noeeprom();
-    } else if (!want && s_flash_rgb_active) {
-        s_flash_rgb_active = false;
-        s_flash_rgb_seen   = 0;
-        if (!s_flash_rgb_was_enabled) rgb_matrix_disable_noeeprom();  // mode/color auto-restore
+    if (!want && s_flash_rgb_active) {
+        s_flash_rgb_seen = 0;
     }
+    s_flash_rgb_active = want;
+}
+
+// Run both cues, then settle the one borrow they share. Called from housekeeping.
+static void attention_rgb_tick(void) {
+    flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
+    ai_rgb_tick();      // ...and while an agent is reporting a status (HID cmd 40)
+    rgb_borrow_update(s_flash_rgb_active || s_ai_rgb_active);
 }
 
 #endif
@@ -549,7 +757,11 @@ void sync_and_refresh_displays(void) {
             if(status_disp_on) {
                 oled_set_brightness(OLED_BRIGHTNESS);
 #ifdef RGB_MATRIX_ENABLE
-                if(test_flag(local_flags, RGB_ON)) {
+                // ...or an attention cue is still running. The borrow enables once when
+                // it acquires; the branch below disabled the matrix on the way into
+                // display-off, so without this a cue that spans a sleep comes back dark
+                // and stays dark until its state changes (CodeRabbit, #276).
+                if(test_flag(local_flags, RGB_ON) || s_rgb_borrow_active) {
                     rgb_matrix_enable_noeeprom();
                 }
 #endif
@@ -816,7 +1028,7 @@ void housekeeping_task_user(void) {
     crash_watchdog_feed();
     (void)crash_phase_enter(CRASH_PHASE_LOOP, 0);
 #ifdef RGB_MATRIX_ENABLE
-    flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
+    attention_rgb_tick();   // the flash + AI status cues, and the RGB borrow they share
 #endif
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
@@ -1280,6 +1492,13 @@ void housekeeping_task_user(void) {
             access_local_state()->glyph_size = get_glyph_size();
             request_disp_refresh();   // size changed -> re-render every main legend
         }
+        // Master-authoritative agent status (HID cmd 40). Same shape again: the
+        // slave adopts it via copy_local_state and re-renders, which is what puts the
+        // state word on the AI key whichever half happens to carry it.
+        if (access_local_state()->ai_state != get_ai_state()) {
+            access_local_state()->ai_state = get_ai_state();
+            request_disp_refresh();   // status changed -> re-render the AI key's legend
+        }
         // Doom game mode: synced so the SLAVE strips its legends down to the
         // game controls (the split_sync poly handler refreshes on the diff).
         // No master-side refresh — its keycaps are owned by the game blitter
@@ -1488,6 +1707,42 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
                   GLYPH_SIZE_LEGEND(ICON_FONT_SMALLER, U"3") },
             };
             return legend[shifted ? 1 : 0][size];
+        }
+
+        // The agent status key. It lives HERE for the same reason KC_GLYPH_SIZE_UP
+        // does: the status is SYNCED state (poly_sync_t.ai_state) and
+        // keycode_to_static_text() only receives led_t, so on the slave it would draw
+        // nothing at all. Spelling the state out is not decoration — the colour is on
+        // the RGB LED, which split42 does not have and a colour-blind reader cannot
+        // use, so the keycap has to carry the same answer.
+        case KC_AI: {
+            const uint8_t st = local_state->ai_state < AI_STATE_COUNT
+                                   ? local_state->ai_state : AI_OFF;
+            // The three live states draw an ICON under the word rather than a second
+            // word: at a glance a shape reads faster than "idle"/"busy"/"you!" in a
+            // 14 px face, and the three marks are unmistakable from each other where
+            // three short lowercase words are not.
+            //
+            // ⚠️ The word stays. The marks are PACK glyphs, so a keyboard with no
+            // font pack draws nothing for them (kdisp substitutes '!' only at full
+            // size, and the mid face has no glyph to fall back to) — the word is what
+            // keeps the key readable there, and it is also what a colour-blind reader
+            // and split42 (no RGB matrix) have instead of the LED.
+            //
+            // ⚠️ The leading spaces are MEASURED, not decorative — and they are the
+            // whole reason this legend does not read as broken. Every shipped
+            // MID_* legend is left-aligned and only looks centred because its words
+            // nearly fill the 72 px window ("SCRIPT:"/"Rune" spans x1..68); "AI" is
+            // 15 px and hugs the left edge without them. Re-measure through
+            // PolyKybdHost's tools/oled_preview.py rather than eyeballing if a word
+            // or a mark changes, which is what the note on the macro itself asks for.
+            static const uint32_t* const legend[AI_STATE_COUNT] = {
+                [AI_OFF]       = HINT_MID U"\f\f\f\f" U"     AI",
+                [AI_IDLE]      = AI_LEGEND(HINT_POS_AI_IDLE, ICON_AI_IDLE),
+                [AI_WORKING]   = AI_LEGEND(HINT_POS_AI_BUSY, ICON_AI_BUSY),
+                [AI_ATTENTION] = AI_LEGEND(HINT_POS_AI_ATTN, ICON_AI_ATTN),
+            };
+            return legend[st];
         }
 
         // The macro-record key states WHAT IT WILL DO next, which is the whole reason
@@ -3079,14 +3334,20 @@ static bool fl_row_is_pristine(void) {
 }
 #endif // POLY_FL_ALIGN_FROW
 
-// Drop the cached "is the F-row untouched?" answer. Called from every dynamic-keymap
-// mutation (the three *_poly wrappers in split_sync.c), so a remap takes effect on the
-// very next render rather than at the next reboot. A no-op on a board with no F-row to
-// align, so the call sites need no #ifdef of their own.
-void poly_fl_row_cache_invalidate(void) {
+// Drop every cached answer that was derived FROM the keymap. Called from each
+// dynamic-keymap mutation (the three *_poly wrappers in split_sync.c), so a remap takes
+// effect on the very next render rather than at the next reboot.
+//
+// It carries two caches now — the "is the F-row untouched?" probe and the AI key's LED
+// index — which is why it is named for the event rather than for either one. Adding a
+// third derived cache means dropping it here, not adding a fourth call site to the
+// mutation wrappers: that list is exactly the guard shape this repo keeps getting
+// caught by.
+void poly_keymap_cache_invalidate(void) {
 #if defined(POLY_FL_ALIGN_FROW)
     s_fl_row_pristine = -1;
 #endif
+    poly_ai_led_cache_invalidate();
 }
 
 #ifdef CHORDAL_HOLD
@@ -3946,6 +4207,22 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         case KC_RGB_TOG:
             if (!act) break;
             local_state->flags = toggle_flag(local_state->flags, RGB_ON);
+            break;
+        // The agent status key: ask the host to raise the agent's window.
+        //
+        // ⚠️ The ANNOUNCEMENT is a console line, not a reply. A custom keycode is
+        // swallowed here, so it emits no HID traffic of its own, and the firmware has
+        // no way to call the host — every other command is host-initiated. The host
+        // already drains the console every 250 ms (that is how it learns about a crash
+        // record), so one ungated uprintf is the whole channel and it costs no new
+        // transport. Consequence worth knowing: console output is dropped while a
+        // firmware or font-pack flash is streaming, so a press during a flash is lost.
+        //
+        // Acting on the RELEASE is the same rule the rest of this switch follows, and
+        // owning the press above is what stops an OSL layer re-dispatching it.
+        case KC_AI:
+            if (!act) break;
+            uprint("ai: open\n");
             break;
         case KC_DEADKEY:
             if (!act) break;
@@ -5545,7 +5822,10 @@ void suspend_wakeup_init_kb(void) {
 
     //rgb_matrix_reload_from_eeprom();
 #ifdef RGB_MATRIX_ENABLE
-    if(test_flag(local_state->flags, RGB_ON)) {
+    // Same pairing as the display-on branch in sync_and_refresh_displays(): re-light for
+    // a borrow that is still running, or an attention cue that spanned the sleep would
+    // never come back (CodeRabbit, #276).
+    if(test_flag(local_state->flags, RGB_ON) || s_rgb_borrow_active) {
         rgb_matrix_enable_noeeprom();
     }
 #endif

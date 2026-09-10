@@ -306,6 +306,33 @@ in either shape, so "not failed" is never "passed".
       a second incident off it. **Use `event: push` with no branch filter, and
       confirm the run you find carries the merge commit's own sha** (`head_sha`)
       rather than trusting the listing's shape.
+    - ⚠️ **A THIRD look-alike, and the one to rule out FIRST because it is a
+      single field: a MERGE CONFLICT stops every `pull_request` workflow from
+      running at all.** Such a workflow runs against the merge ref
+      (`refs/pull/N/merge`), which GitHub cannot build for a conflicted PR — so no
+      run is queued, no check appears, and the PR looks exactly like one whose
+      event was dropped. Measured on host#216 (2026-09-07): CodeQL had fired
+      within ~30 s on each of three earlier pushes and then produced nothing for
+      **two** consecutive heads over 45 minutes, which read as a dropped delivery
+      confirmed by repetition; `mergeable_state` was `"dirty"` the whole time,
+      from an auto-bump on `main` touching the line above the one the branch had
+      changed. Merging the base in started CodeQL within seconds.
+      **So `pull_request_read` `get` and read `mergeable_state` BEFORE reasoning
+      about a missing run** — it is one call, it distinguishes the two outright,
+      and unlike a dropped delivery a conflict is yours to fix now.
+      ⚠️ **Measured a second time on 2026-09-10, in THIS repo, and it is worse
+      here: qmk#276 lost `Build firmware`, `cppcheck`, `PolyKybd unit tests` AND
+      `HIL test` while `triage` (a `pull_request_target` workflow) and Sourcery
+      both fired normally.** So the PR looked alive — two checks present, green —
+      with every gate that matters simply absent. A `pull_request_target` run is
+      built from the base, not the merge ref, which is exactly why it survives a
+      conflict and why its presence is not evidence the others were even queued.
+      - ⚠️ **The `check_suite.completed` wake actively points the wrong way here.**
+        Its own note says cancelled suites, suites with no runs, the App's own
+        suites and legacy statuses are not covered — so on a PR whose CI *cannot
+        run* it still says nothing is running or failed, which reads as "CI is
+        fine, carry on". It is evidence about third-party suites only, never about
+        whether the PR is in a state that can be built.
 
 ---
 

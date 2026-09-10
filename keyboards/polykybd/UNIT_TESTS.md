@@ -148,6 +148,28 @@ Wiring a new one needs **two** registrations plus one non-obvious source list:
   explicit refusal, `sync_succeeded` as a blacklist, a 1-bit-spaced ack value, a slave
   refusal reported as retryable, and a CRC check that always passes) — each caught by
   the intended test.
+  - ⚠️ **A suite that expresses every expectation IN TERMS OF the constant under
+    test cannot catch a change to that constant — it moves both sides of the
+    comparison at once.** Measured 2026-09-06 on `polykybd_ai_light`, whose fade
+    holds for a minute: every case was written as `HOLD - 1`, `HOLD + FADE`, and
+    so on, which reads as thorough and is, for the *curve*. Mutating
+    `AI_LIGHT_HOLD_MS` from 60000 to **1000** left all 11 tests green — a light
+    that goes out after one second instead of a minute, i.e. the whole
+    user-visible requirement, unpinned. The fix is one test carrying the
+    **literal** (`EXPECT_EQ(60000u, AI_LIGHT_HOLD_MS)` plus two samples either
+    side of it), on the same reasoning as the host repo pinning `WINDOWS_APP_ID`:
+    a stated requirement needs something that states the number, and only an
+    implementation detail may be expressed relative to itself. Symbolic
+    expectations are still right for everything else — the point is that at least
+    one case has to be anchored outside the symbol.
+  - ⚠️ **Probe a bound WELL PAST it, not one unit past — one unit is where the
+    arithmetic still looks right.** The same suite clamps a ramp at the end of its
+    window and tested `HOLD + FADE` and `HOLD + FADE + 1`. Deleting the clamp
+    passed both: at +1 the unclamped expression rounds to the same 0 it should
+    be, and the underflow only becomes visible further out. The escaped mutation
+    is a light that comes back on **hours later at a wrong brightness**, which is
+    exactly the shape nobody would find by hand. Sweep the decade — `2×`, an
+    hour, a day, `0xFFFFFFFF` — for any bound whose far side is unbounded.
   - ✅ **A `_Static_assert` is mutation-checked in SECONDS with a standalone
     translation unit — do not reach for `qmk compile`.** The assert usually rests
     on a chain of `#define`s and nothing else, so copy that chain into a throwaway

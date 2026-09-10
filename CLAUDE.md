@@ -1104,6 +1104,7 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
   | 15 | `36`/`37`/`38` | macros: info / body window / label, behind ONE host feature gate |
   | 16 | `39` | crash record read + clear |
   | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
+  | 18 | `40` GET/SET_AI_STATE | agent status the AI key wears (0 off .. 3 attention); RAM only, synced, range CLOSED |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

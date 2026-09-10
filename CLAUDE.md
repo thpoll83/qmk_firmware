@@ -609,7 +609,8 @@ inherited-upstream noise:
   training data and therefore blind spots, while dataflow analysis fails elsewhere.
   It has no quota, no star threshold and no file-count limit, so unlike every bot it
   cannot go quiet on the PR that needs it. It earned the slot immediately, finding
-  the two no-OLED keys latching a chip-select (see § per-keycap rendering gotchas).
+  the two no-OLED keys latching a chip-select (§ *The per-keycap DISPLAY grid is
+  NOT a rectangle*, below).
   Scoped to `keyboards/polykybd` + `modules/polykybd`, excluding the vendored doom
   engine, generated font headers, vendored monocypher and the googletest sources.
   - **Analyse with `-DFW_REQUIRE_SIGNATURE`** — the configuration that ships.

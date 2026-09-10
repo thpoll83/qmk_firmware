@@ -112,6 +112,9 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // the image, not the bundle: tampered/unsigned share bundle 0x7e but
             // differ in pack_crc, so new_image re-arms between them.
             static uint8_t  s_last_begin_slave_ack = 0xFF;
+            // FW-9: last `stage` breadcrumb seen from the slave, so the not-ready
+            // re-log below can fire when it advances (not only when slave_ack does).
+            static uint8_t  s_last_begin_stage     = 0xFF;
             bool new_image = (pack_size != s_erased_size || pack_crc != s_erased_crc ||
                               bundle != s_erased_bundle);
 
@@ -120,6 +123,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 s_erased_crc    = pack_crc;
                 s_erased_bundle = bundle;
                 s_last_begin_slave_ack = 0xFF;   // re-arm the not-ready diagnostic for this flash
+                s_last_begin_stage     = 0xFF;   // …and its stage-advance sibling
                 // Drop to the base layer + refresh before the flash holds the main
                 // loop, so the user can still type plain characters meanwhile.
                 poly_prepare_for_flash();
@@ -131,6 +135,17 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                 send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
                 uprintf("FONTPACK_BEGIN: bundle=%u size=%lu crc=0x%08lx (master+slave staging)\n",
                         bundle, (unsigned long)pack_size, (unsigned long)pack_crc);
+                // A2 instrumentation: read the slave EARLY — the BEGIN bridge above is
+                // synchronous, so by here the slave has just handled it (or gone dark).
+                // At this instant its core1_relaunch counters reflect the DOOM TEARDOWN
+                // relaunch (which ran back in stop-idle, before this BEGIN) — the
+                // fw_staging restart only runs ~14s later, after the slave's own erase.
+                // So a timeout here pins the wedge to the teardown; a slave already dark
+                // here means it died at/before the teardown. Doom-only, to keep normal
+                // font-pack flashes quiet.
+                if (is_doomwad || is_doompack) {
+                    fw_up_log_slave_status("begin-first");
+                }
             }
 
             uint8_t slave_ack = master_ok
@@ -146,20 +161,37 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // "slave not answering / wedged" (SYNC_GIVEUP / SYNC_CRC32_ERR). Change-
             // triggered so it never floods the ~1 Hz re-poll.
             if (master_ok && master_done && !slave_ok) {
-                if (slave_ack != s_last_begin_slave_ack) {
+                // A) slave visibility for the FW-9 doom re-flash wedge. The rig
+                // reads the master console only, so dump the slave's fw_staging
+                // counters over the read-only STATUS op (its own transaction, not
+                // a core1/erase change). It answers the exact question the
+                // slave_ack alone can't: is the slave DARK ("RPC FAILED — slave
+                // unresponsive") or ALIVE-BUT-STUCK — and if alive, whether it
+                // even saw the BEGIN (begin_handler_calls), started erasing
+                // (erase_sector_next/count), and is still ticking process_deferred.
+                //
+                // The slave_ack stays not-ready (SYNC_ACK_SIG/SYNC_BUSY) for the
+                // whole ~3.6 s erase, so triggering only on IT would give one
+                // snapshot and then "RPC FAILED" when the slave wedges — losing WHERE
+                // in the teardown/erase/restart it stopped. So on a DOOM flash, also
+                // re-log when the slave's `stage` breadcrumb advances: the last stage
+                // the master reads before the slave goes dark localizes the hang. One
+                // extra read-only STATUS RPC per ~1 Hz re-poll, doom-only, quiet on
+                // normal font-pack flashes.
+                bool    print = (slave_ack != s_last_begin_slave_ack);
+                uint8_t stage = 0xFF;
+                if (is_doomwad || is_doompack) {
+                    fw_staging_status_t s;
+                    if (fw_up_query_slave_status(&s)) {
+                        stage = s.stage;
+                        if (stage != s_last_begin_stage) print = true;
+                    }
+                }
+                if (print) {
                     s_last_begin_slave_ack = slave_ack;
+                    s_last_begin_stage     = stage;
                     uprintf("FONTPACK_BEGIN: master erased, slave not ready (bundle=%u slave_ack=0x%02x)\n",
                             bundle, slave_ack);
-                    // A) slave visibility for the FW-9 doom re-flash wedge. The rig
-                    // reads the master console only, so dump the slave's fw_staging
-                    // counters over the read-only STATUS op (its own transaction, not
-                    // a core1/erase change). It answers the exact question the
-                    // slave_ack alone can't: is the slave DARK ("RPC FAILED — slave
-                    // unresponsive") or ALIVE-BUT-STUCK — and if alive, whether it
-                    // even saw the BEGIN (begin_handler_calls), started erasing
-                    // (erase_sector_next/count), and is still ticking process_deferred.
-                    // Change-triggered like the line above, so one snapshot per state,
-                    // no re-poll flood. Read-only: adds a probe path, changes nothing.
                     fw_up_log_slave_status("begin-not-ready");
                 }
             }

@@ -17,6 +17,12 @@ void multicore_launch_core1(void);
 // teardown), where a wedged handshake means a dead keyboard.
 bool multicore_launch_core1_bounded(uint32_t total_timeout_us);
 
+// Diagnostic counters for the bounded relaunch: how many were attempted and how
+// many timed out (left core1 desynced). Read by fw_staging's status RPC so the
+// master console (the rig's only window) can see whether a post-doom reflash
+// wedge correlates with a relaunch timeout. Either pointer may be NULL.
+void multicore_launch_core1_bounded_stats(uint16_t *calls, uint16_t *timeouts);
+
 // Launch core1 with a caller-provided entry + stack (the underlying primitive
 // of multicore_launch_core1; used by the Doom easter egg to hand core1 to the
 // game with a pool-backed stack).
@@ -29,6 +35,5 @@ uint32_t core1_stack_high_water_mark(void);
 #endif
 
 static inline void dmb(void) {
-    __asm volatile ("dmb" ::: "memory");
+    __asm volatile("dmb" ::: "memory");
 }
-

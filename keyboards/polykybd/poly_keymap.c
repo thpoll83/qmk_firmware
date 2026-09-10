@@ -406,9 +406,15 @@ static bool ai_rgb_paint(void) {
     // deliberate choice, so say which. Asked for on hardware, 2026-09-10: this is a
     // "look at your keyboard" light, and one that a low RGB setting can dim to
     // invisibility is not doing the one job it has.
-    // Power is not a concern at this scale even though RGB_MATRIX_MAXIMUM_BRIGHTNESS
-    // is 100: that cap covers all 72 LEDs at once (~1.6 A), while this paints exactly
-    // ONE -- ~20 mA a channel, and in the borrowed case every other LED is black.
+    // Power: this paints exactly ONE of the board's 72 LEDs (36 per half), and in the
+    // borrowed case the other 71 are explicitly black -- so whatever the full-matrix
+    // draw is, this is ~1/72 of it. ⚠️ Do NOT restate that as an absolute figure
+    // without a datasheet: an earlier version of this comment put the capped matrix at
+    // "~1.6 A" from the WS2812 rule of thumb of 20 mA a channel, and the part is an
+    // XL-3030RGBC (WS2812B-Mini survives only as the symbol/footprint name). The
+    // number was never checked, and 1.6 A past a 500 mA USB port is its own refutation.
+    // RGB_MATRIX_MAXIMUM_BRIGHTNESS (100) is the matrix-wide cap and does not reach
+    // here anyway -- QMK applies hsv.v in the effects, not in rgb_matrix_set_color().
     uint8_t r = 0, g = 0, b = 0;
     switch (st) {
         case AI_IDLE:

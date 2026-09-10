@@ -31,7 +31,7 @@ rather than assuming a loop worked.
     submodules are fine. The tells: **`git submodule status` prefixes it `-`** (not
     initialised) and **`lib/<m>/.git` does not exist**. The build then dies on a
     *version* mismatch rather than a missing file — the signature is
-    ```
+    ```text
     ./lib/chibios/os/hal/include/hal.h:136:2: error: #error "obsolete or unknown configuration file"
     ```
     Fix: `rm -rf` the stale dirs and re-init properly (after `add_repo`, above):

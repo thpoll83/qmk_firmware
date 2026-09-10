@@ -19,7 +19,7 @@ users at open with a phantom crash dialog. The discriminator is the SDK's own
 
 ---
 
-### Crash diagnostics: the crash record, the watchdog and the phase breadcrumb (`base/crash_record.*`)
+## Crash diagnostics: the crash record, the watchdog and the phase breadcrumb (`base/crash_record.*`)
 
 A HardFault, an unhandled exception or a main-loop hang used to leave **nothing**:
 the M0+ HardFault vector fell into ChibiOS's `b .` loop, the board sat dead until

@@ -18,7 +18,7 @@ on — so a default whose renderer is not in the image is not expressible.
 
 ---
 
-### Idle anti-burn-in styles (`poly_keymap.c`)
+## Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**
 pixels in. **Four** styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
 `poly_idle_style` in `state.h`): `IDLE_STYLE_PULSE` (0), `IDLE_STYLE_JITTER` (1),
@@ -72,11 +72,19 @@ change generalise well beyond this setting:
     inside `.data`'s VMA range. **Classify by ADDRESS against the section VMAs, then
     read the byte** — which also gives you the value, not just the section:
     ```bash
-    arm-none-eabi-nm -S <elf> | grep -w g_idle_style        # -> ADDR SIZE TYPE NAME
-    arm-none-eabi-objdump -h <elf> | awk '$2==".data"{print $4}'   # .data VMA
-    arm-none-eabi-objcopy -O binary --only-section=.data <elf> /tmp/data.bin
+    ELF=.build/polykybd_split72_default.elf
+    # nm -S prints "ADDR SIZE TYPE NAME"; objdump -h puts the VMA in column 4.
+    ADDR=0x$(arm-none-eabi-nm -S "$ELF" | awk '$4=="g_idle_style"{print $1}')
+    VMA=0x$(arm-none-eabi-objdump -h "$ELF" | awk '$2==".data"{print $4}')
+    arm-none-eabi-objcopy -O binary --only-section=.data "$ELF" /tmp/data.bin
     od -An -tu1 -j $(( ADDR - VMA )) -N1 /tmp/data.bin
     ```
+    ⚠️ **Assign `ADDR` and `VMA` — do not leave them as prose placeholders.** An
+    unset name is **0** inside `$(( ))`, so the offset collapses to zero and `od`
+    reports the first byte of `.data` instead of this symbol's: a plausible wrong
+    answer rather than an error. The `$ELF` placeholder fails loudly if you forget
+    it; this one does not.
+
     `.data` membership alone already proves it is not PULSE — a zero-initialised
     static would be in `.bss`.
 - ⚠️ **A `static inline` helper is often emitted OUT-OF-LINE, so "grep the caller for
@@ -158,7 +166,7 @@ change generalise well beyond this setting:
 
 ---
 
-### Eden startup animation & idle screensaver (`anim/startup_anim.*`, `poly_keymap.c`)
+## Eden startup animation & idle screensaver (`anim/startup_anim.*`, `poly_keymap.c`)
 A **fully procedural** (no framebuffer) per-keycap comet-field animation that
 converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
 - **One-shot intro** — `startup_anim_start()` (`s_loop == false`): runs to black

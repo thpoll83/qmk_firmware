@@ -209,48 +209,6 @@ skipped paragraph; a fork costs a note that only one repo ever sees. Take the fi
 If a skill ever genuinely needs to differ per repo, split the differing part into a
 separate skill rather than forking the shared one.
 
-### Where shared content can live, and what actually costs context
-
-⚠️ **A shared `CLAUDE-SHARED.md` imported by both repos would NOT reduce context.**
-Claude Code's memory docs say it twice: *"imported files still load and enter the
-context window at launch"*, and *"Splitting into `@path` imports helps organization
-but doesn't reduce context, since imported files load at launch."* The same is true
-of a `.claude/rules/` file with no `paths:` frontmatter. So single-sourcing the text
-fixes **drift** and buys nothing in tokens — worth knowing before the idea is
-proposed again, because it is an obvious-looking saving that is not one.
-
-- **The prize is small in any case — measured 2026-09-10.** Across the three
-  sections headed *"(all PolyKybd repos)"*, only **2,975 B** is byte-identical
-  between `qmk_firmware` and `PolyKybdHost`: the docstring-coverage rule, the
-  verify-an-AI-finding rule and the green-board rule. Everything else under those
-  headings has diverged into genuinely repo-specific material (qmk's
-  inherited-upstream scanner note means nothing in the host repo; the host's
-  Sourcery `nosemgrep` note means nothing in the firmware), and the two branching
-  rules are the same rules written twice in different words.
-- ⚠️ **A shared file also has nowhere safe to live.** It must sit inside a repo to
-  be version-controlled, and then a session that attached only the OTHER repo cannot
-  resolve it — the same silent absence that left `mutation-test-suite` unreachable
-  from host-only sessions and the five `keyboards/**/.claude/skills/` skills
-  invisible. The docs add a second silent failure: an import resolving outside the
-  working directory raises a one-time approval dialog, and *"If you decline, the
-  imports stay disabled and the dialog doesn't appear again."*
-- ✅ **What DOES reduce context**, in increasing order of saving: a `docs/*.md` file
-  read on demand; a **path-scoped rule** (`.claude/rules/*.md` with `paths:`
-  frontmatter), which loads only when Claude reads a matching file; and a **skill**,
-  which costs nothing at all until it is invoked. The docs are explicit — *"If an
-  entry is a multi-step procedure or only matters for one part of the codebase, move
-  it to a skill or a path-scoped rule instead."* **No path-scoped rule exists in
-  either repo yet**, and it is the obvious home for anything that only matters while
-  editing one directory.
-- **Block-level HTML comments are STRIPPED before injection**, so `<!-- … -->` in a
-  CLAUDE.md costs nothing — usable for maintainer notes, or as machine-readable
-  fences round a block that is meant to stay identical across repos.
-- ⚠️ **Both files are far past the documented target of "under 200 lines"** (2026-09-10:
-  qmk 4,927, host 1,579). That is a deliberate trade — these notes are measurements
-  nobody can re-derive — but it is why EXTRACTION keeps being the right move, and it
-  is the standing argument for pushing another subsystem into `docs/` rather than
-  adding to either file. `/doctor` proposes trims, and `claudeMdExcludes` skips a
-  file wholesale if one is ever in the way.
 
 ✅ **FIVE skills lived at `keyboards/polykybd/.claude/skills/` and did NOT load — MOVED
 to the repo root `.claude/skills/` on 2026-09-09, and the fix is confirmed.** Measured
@@ -317,6 +275,53 @@ unreachable.
     half-size opt-in, the `ALTGR_HALF_MIN_INK_H` mark guard, the four-edge clamp,
     the shift stagger and the pull-left), and the pull is mutation-checked: disabling
     that branch leaves the shift where it was, which the ink sets show.
+
+### Where shared content can live, and what actually costs context
+
+⚠️ **A shared `CLAUDE-SHARED.md` imported by both repos would NOT reduce context.**
+Claude Code's memory docs say it twice: *"imported files still load and enter the
+context window at launch"*, and *"Splitting into `@path` imports helps organization
+but doesn't reduce context, since imported files load at launch."* The same is true
+of a `.claude/rules/` file with no `paths:` frontmatter. So single-sourcing the text
+fixes **drift** and buys nothing in tokens — worth knowing before the idea is
+proposed again, because it is an obvious-looking saving that is not one.
+
+- **The prize is small in any case — measured 2026-09-10.** Across the three
+  sections headed *"(all PolyKybd repos)"*, only **2,975 B** is byte-identical
+  between `qmk_firmware` and `PolyKybdHost`: the docstring-coverage rule, the
+  verify-an-AI-finding rule and the green-board rule. Everything else under those
+  headings has diverged into genuinely repo-specific material (qmk's
+  inherited-upstream scanner note means nothing in the host repo; the host's
+  Sourcery `nosemgrep` note means nothing in the firmware), and the two branching
+  rules are the same rules written twice in different words.
+- ⚠️ **A shared file also has nowhere safe to live.** It must sit inside a repo to
+  be version-controlled, and then a session that attached only the OTHER repo cannot
+  resolve it — the same silent absence that left `mutation-test-suite` unreachable
+  from host-only sessions and the five `keyboards/**/.claude/skills/` skills
+  invisible. The docs add a second silent failure: an import resolving outside the
+  working directory raises a one-time approval dialog, and *"If you decline, the
+  imports stay disabled and the dialog doesn't appear again."*
+- ✅ **What DOES reduce context**, in increasing order of saving: a `docs/*.md` file
+  read on demand; a **path-scoped rule** (`.claude/rules/*.md` with `paths:`
+  frontmatter), which loads only when Claude reads a matching file; and a **skill**,
+  which costs nothing at all until it is invoked. The docs are explicit — *"If an
+  entry is a multi-step procedure or only matters for one part of the codebase, move
+  it to a skill or a path-scoped rule instead."* **No path-scoped rule exists in
+  either repo yet**, and it is the obvious home for anything that only matters while
+  editing one directory.
+- **Block-level HTML comments are STRIPPED before injection**, so `<!-- … -->` in a
+  CLAUDE.md costs nothing — usable for maintainer notes, or as machine-readable
+  fences round a block that is meant to stay identical across repos.
+- ⚠️ **Both files are still past the documented target of "under 200 lines", and
+  that is the standing argument for EXTRACTION over adding.** Measured 2026-09-10,
+  before and after a deliberate pass: qmk **6,178 -> 2,296 lines (485 -> 176 KB)**,
+  host **3,198 -> 1,623 (266 -> 136 KB)**. Nothing was deleted — eighteen subsystems
+  moved WHOLE into `docs/` (host) or `keyboards/polykybd/*.md` (firmware), plus the
+  reviewer forensics into the `triage-pr-review` skill, each leaving a pointer that
+  carries only the rules binding code outside its own file. The notes are
+  measurements nobody can re-derive, so the trade is size against re-derivability;
+  extraction settles it without giving anything up. `/doctor` proposes trims, and
+  `claudeMdExcludes` skips a file wholesale if one is ever in the way.
 
 ## Branching (all PolyKybd repos)
 

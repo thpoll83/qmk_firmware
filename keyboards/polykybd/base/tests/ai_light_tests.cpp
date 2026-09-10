@@ -112,8 +112,12 @@ TEST(AiLight, ApplyScalesAChannelAndBothEndsAreExact) {
 }
 
 TEST(AiLight, ApplyRoundsToNearestSoADimChannelKeepsItsLastStep) {
-    // IDLE's green is 14, so the fade has only 14 steps to spend. Truncation drops the
-    // last two of them at once, which reads as the light snapping off at the end.
+    // A DIM channel is where rounding shows: at 14 the fade has only 14 steps to
+    // spend, and truncation drops the last two at once, which reads as the light
+    // snapping off at the end rather than fading. 14 was IDLE's green until the
+    // states went to full scale (2026-09-10); it is kept here as a small-channel
+    // FIXTURE, not as a claim about what any state paints -- the scaler has to hold
+    // for whatever colour a state picks.
     EXPECT_EQ(7, ai_light_apply(14, 128));    // 14*128/255 = 7.03
     EXPECT_EQ(1, ai_light_apply(14, 12));     // 0.65 -> 1, not 0
     EXPECT_EQ(0, ai_light_apply(14, 2));      // 0.11 -> 0

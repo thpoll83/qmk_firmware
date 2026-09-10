@@ -398,21 +398,34 @@ static bool ai_rgb_paint(void) {
         }
         return false;   // matrix is the user's: hand the LED back to their effect
     }
+    // ⚠️ FULL SCALE, and it deliberately IGNORES the user's RGB brightness.
+    // rgb_matrix_set_color() writes straight to the driver -- QMK applies hsv.v inside
+    // the EFFECTS, so an indicator that calls set_color bypasses it entirely. That was
+    // true before this change too, but at channel values of 14/37/48 the light read as
+    // an arbitrary dim level that happened to sit near the user's; at 255 it is a
+    // deliberate choice, so say which. Asked for on hardware, 2026-09-10: this is a
+    // "look at your keyboard" light, and one that a low RGB setting can dim to
+    // invisibility is not doing the one job it has.
+    // Power is not a concern at this scale even though RGB_MATRIX_MAXIMUM_BRIGHTNESS
+    // is 100: that cap covers all 72 LEDs at once (~1.6 A), while this paints exactly
+    // ONE -- ~20 mA a channel, and in the borrowed case every other LED is black.
     uint8_t r = 0, g = 0, b = 0;
     switch (st) {
         case AI_IDLE:
-            r = 0; g = 14; b = 0;                                  // steady green
+            r = 0; g = 255; b = 0;                                 // steady green
             break;
         case AI_WORKING: {
             uint8_t phase = (uint8_t)(timer_read32() >> 3);        // ~2 s cycle
             uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);
-            uint8_t v     = 6 + (tri >> 2);                        // ~6..37
+            // 25..255 rather than 0..255: a breath that reaches black reads as a
+            // blink, and ATTENTION is the only state allowed to blink.
+            uint8_t v     = (uint8_t)(25 + ((uint16_t)tri * 230) / 127);
             r = v; g = (uint8_t)((v * 2) / 3); b = 0;              // breathing amber
             break;
         }
         case AI_ATTENTION:
             if (((timer_read32() >> 8) & 1) == 0) {                // ~2 Hz square
-                r = 48;                                            // blinking red
+                r = 255;                                           // blinking red
             }
             break;
         default:

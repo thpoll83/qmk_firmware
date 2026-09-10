@@ -22,6 +22,15 @@ bool multicore_launch_core1_bounded(uint32_t total_timeout_us);
 // game with a pool-backed stack).
 void multicore_launch_core1_with_stack(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes);
 
+// Bounded sibling of multicore_launch_core1_with_stack: the FIFO handshake is
+// bounded by an overall deadline instead of blocking forever. False = core1
+// never answered (not in the bootrom wait loop) — the caller can PSM-reset it
+// and retry. This is what multicore_launch_core1_bounded is built on; the Doom
+// easter egg uses it directly to hand core1 the game with a pool-backed stack
+// WITHOUT risking a wedged core0 when core1 is not cleanly back in the bootrom
+// wait loop (e.g. after cumulative flashes have disturbed it).
+bool multicore_launch_core1_with_stack_bounded(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes, uint32_t total_timeout_us);
+
 void core1_entry(void);
 
 #ifdef CORE1_STACK_HWM
@@ -29,6 +38,5 @@ uint32_t core1_stack_high_water_mark(void);
 #endif
 
 static inline void dmb(void) {
-    __asm volatile ("dmb" ::: "memory");
+    __asm volatile("dmb" ::: "memory");
 }
-

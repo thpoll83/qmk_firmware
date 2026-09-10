@@ -123,7 +123,9 @@ For each finding, in order:
    is the first thing a human reviewer reads.
 
 Report the outcome in the retro proposal as a table: PR → CI state → findings
-fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
+fixed / refuted / skipped. The sweep REPORTS; the approval step (§4.5)
+decides what gets pushed. That gate is separate from §4.6, which is about the
+retro's OWN output.
 
 ## 4. Procedure
 
@@ -176,8 +178,32 @@ fixed / refuted / skipped. Do not push fixes without approval, per §4.6.
      neither answers alone, and the empty-`results` dedupe belongs to the
      default path, NOT to the raw write this bullet prescribes. Skip entirely if
      nothing this session took more than a handful of files to answer.
-   - Offer to commit + push the new/edited files (don't unless asked, per repo
-     rules).
+   - **Commit, push and OPEN A PULL REQUEST — every time, in every repo the
+     retro touched.** The user's approval of the proposal IS the authorization:
+     they asked for this standing behaviour explicitly (2026-09-10), so it
+     overrides the default "do not create a pull request unless asked". Do not
+     stop at a local commit, and do not ask a second time.
+     - **One PR per repo.** A retro routinely writes into two or three
+       `CLAUDE.md`s and maybe a skill; each repo gets its own branch, commit and
+       PR against its own default — `PolyKybd` for the firmware, `master` for
+       `Adafruit-GFX-Library` and `PolyKybd` (hardware), `main` for the rest.
+     - ⚠️ **Cut the branch fresh from the updated default FIRST.** A retro runs
+       at the end of a session, which is exactly when the branch you are
+       standing on has just merged — and a push to a merged branch **succeeds
+       silently and orphans the commit** (see Branching in the repo `CLAUDE.md`).
+       `git fetch origin <default> && git checkout -B <branch> origin/<default>`,
+       then confirm with `git merge-base --is-ancestor origin/<default> HEAD`.
+     - **The PR body carries the EVIDENCE, not a summary** — for each note, what
+       happened in the session that justifies it, so a reviewer can check the
+       claim rather than the prose. That is the same evidence the proposal
+       already cites, so it costs nothing to carry over.
+     - ⚠️ **A mirrored skill is TWO PRs** (`qmk_firmware` ↔ `PolyKybdHost` keep
+       five byte-identical copies — see Mirrored skills in either `CLAUDE.md`).
+       Cross-link them in both bodies, or each reads as half a change; and
+       `cmp` the pair before opening either, since a retro is also when the
+       drift gets noticed.
+     - **Report the PR links when done.** The retro is not finished until they
+       exist.
 
 ## 5. Output format
 
@@ -234,6 +260,8 @@ Recommendation: <which to keep, and why>
   pre-write `search_memories` sends the question text to the same cloud service
   `add_memory` writes to — so a question that cannot leave the machine means
   skipping the index entry altogether, not sanitising it afterwards.
-- **Approval before writing**, and **don't push** unless asked.
+- **Approval before writing — but approval is the ONLY gate.** Once the user
+  picks what to keep, write it, push it and open the PR (§4.6) without asking
+  again. Asking twice is what this instruction exists to stop.
 - This skill is repo-agnostic; if useful beyond this project, copy it to
   `~/.claude/skills/`.

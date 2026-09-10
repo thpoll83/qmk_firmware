@@ -1645,6 +1645,32 @@ cache at, which is the guard shape this repo keeps getting caught by (`sync_is_l
 the CI suite names, the log-source registry). The invariant is "all keymap mutation goes
 through a `_poly` function", not "these four places also call the invalidator".
 
+⚠️ **The consequence for a KEYMAP EDIT is the one this section does not spell out: on any
+board that has ever stored a keymap, a change to a layer below the write cap is INVISIBLE
+— the EEPROM copy wins.** `poly_keycode_at()` resolves layers under
+`DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT` through `keycode_at_keymap_location()`, i.e. out
+of the dynamic keymap, so the freshly compiled `keymaps[]` is only consulted for a layer
+at or above the cap — or on a board whose EEPROM has never been written. Flash, press the
+key, get the old keycode, and nothing anywhere says why. It is the flip side of this
+section's own correct advice that a CONTENTS change "needs no reset": no reset is needed
+for *correctness*, and none happens, which is exactly what leaves the edit unseen. Two
+recoveries, and they are not equivalent:
+- **Bump `KEYMAP_LAYERS_FL_MERGED`.** Reaches every board automatically at the next boot,
+  and **WIPES THE USER'S MACROS** — `dynamic_keymap_reset_poly()` calls
+  `poly_macro_reset_all()`. Right for a layer add/remove/reorder, far too blunt for a
+  keycode change.
+- **Write the keys over the wire**, which is non-destructive and touches nothing else:
+  `polyctl keymap set <layer> <row> <col> <keycode>` — ⚠️ **POSITIONAL arguments, not
+  flags**, and the keycode goes through `int(x, 0)` so `0x2804` works. One invocation per
+  changed key.
+
+⚠️ **There is NO keymap-reset and no EEPROM-clear anywhere in PolyKybdHost** — not in
+`polyctl`, not on the control socket, not in the tray. `EE_CLR` appears in the host only
+as a preview legend for `QK_CLEAR_EEPROM` in `res/preview/legends.json`, i.e. a label for
+a key the user presses **on the board**. Do not tell anyone to "reset the keymap from the
+host app"; that route does not exist (asserted three times in one session, 2026-09-10,
+and wrong every time).
+
 ### `poly_keycode_at()` is the ONE resolver for both the render and the key-event path
 
 `display_keycode_at()` (legend) and `keymap_key_to_keycode()` (action) both bottom out
@@ -1725,6 +1751,40 @@ VBUS divider on GP24 — is on **both** boards, identically.
 - ⚠️ Minor, unresolved: the **right** sheet references a bare `rp_pico.kicad_sch` with no
   `../../`, and no such file exists beside it. Whether KiCad resolves that from the project
   root or the reference is simply stale was **not** established — don't read it as either.
+
+### ⚠️ Tap-hold settings are `config.h` DEFINES — the `rules.mk` lines were inert for years
+
+`PERMISSIVE_HOLD = yes` and `HOLD_ON_OTHER_KEY_PRESS = yes` sat in **both** variants'
+`rules.mk` and did **nothing**. `quantum/action_tapping.c` tests them with `#ifdef`, and
+nothing in `builddefs/` turns a make variable of that name into a `-D`, so the board ran
+QMK's defaults throughout while the build stayed green and the source read as configured.
+The general shape: a make variable is only a feature switch when some `.mk` file
+translates it: `grep -rn "<NAME>" builddefs/` before believing a line in a `rules.mk`.
+Both were removed and the real defines now live in `split72/config.h` with their
+rationale (2026-09-10, qmk#288).
+
+⚠️ **`CHORDAL_HOLD`'s weak hook is what a SPLIT board wants — do not hand-maintain the
+table.** The default `chordal_hold_handedness()` reads
+`chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS]`, i.e. an 80-entry `PROGMEM` table here
+that must be kept in step with the matrix by hand (and is an undefined symbol at link
+until you write it). The hook is `__attribute__((weak))`, so overriding it answers the
+same question as arithmetic:
+
+```c
+char chordal_hold_handedness(keypos_t key) {
+    return (key.row < MATRIX_ROWS_PER_SIDE) ? 'L' : 'R';
+}
+```
+
+That is the split `LAYOUT_TO_INDEX()` and `is_left_side()` already assume, so it cannot
+drift from the matrix the way a table can. It lives in `poly_keymap.c` under an
+`#ifdef CHORDAL_HOLD`, and the override alone links — the table is never referenced.
+
+⚠️ **`HOLD_ON_OTHER_KEY_PRESS` is deliberately NOT defined**, and the reason survives any
+retuning: it settles a tap-hold as *held* on any other key press, so it fires a mod on
+ordinary fast rolls — precisely what `CHORDAL_HOLD` (opposite-hands only) and
+`FLOW_TAP_TERM` (forces a tap soon after the preceding key) exist to prevent. A home row
+mod that fires while typing is worse than one that is occasionally slow.
 
 ### ⚠️ A release-edge action fires up to THREE times on a ONE-SHOT layer
 

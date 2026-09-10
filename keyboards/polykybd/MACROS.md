@@ -19,7 +19,7 @@ later and the recording silently captures **nothing**.
 
 ---
 
-### Dynamic macros (`poly_macro.c`, HID cmds 36/37/38, protocol v15+)
+## Dynamic macros (`poly_macro.c`, HID cmds 36/37/38, protocol v15+)
 
 A macro is text (or a short key sequence) stored on the keyboard, typed back on one
 keypress, with a **label the keycap spells out** along its bottom edge. What is worth
@@ -241,7 +241,7 @@ knowing is the parts that are NOT what you would write from scratch:
 
 ---
 
-### Recording a macro ON THE KEYBOARD (`poly_macro_record.*`, `base/macro_record.*`)
+## Recording a macro ON THE KEYBOARD (`poly_macro_record.*`, `base/macro_record.*`)
 
 `KC_MACRO_REC` on `_UL` records a macro with no host app: tap REC (the board becomes a
 slot picker), tap a macro key, type, tap REC again. The gesture and the alternatives

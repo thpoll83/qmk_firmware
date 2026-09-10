@@ -17,7 +17,7 @@ instrument -> bands -> place -> render -> build loop.
 
 ---
 
-### Status OLED (128×64 split72 / 128×32 split42, SSD1306 over **I2C**)
+## Status OLED (128×64 split72 / 128×32 split42, SSD1306 over **I2C**)
 The status OLED is the QMK `ssd1306` driver (`OLED_DRIVER = ssd1306`, no
 `OLED_TRANSPORT` → QMK defaults to **I2C**) on `I2CD0` (GP0/GP1) at **400 kHz**
 (`config.h`). ⚠️ It is a **different bus** from the per-keycap displays (those are

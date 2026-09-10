@@ -201,7 +201,7 @@ commits committed straight onto `PolyKybd` and never reverted:
   pre-poll work, where `poll_miss` — pointing OFF ≈500, pointing ON ≈2 — is the
   definitive probe of the dead RX-IRQ).
 
-### Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
+## Bug: second half of keyboard becomes unresponsive (slave stops sending key events)
 
 **Symptom**: Intermittently, the right/slave half stops recognising keystrokes. Only keys on the master (USB) side still work. Reconnecting (replugging) or reflashing restores it. Happens "once in a while", not on every boot.
 
@@ -246,7 +246,7 @@ Base-layer changes apply immediately and persist on the next suspend/reset/store
 
 ---
 
-### Bug: key displays turn on when keyboard is suspended/sleeping
+## Bug: key displays turn on when keyboard is suspended/sleeping
 
 **Symptom**: Per-keycap OLED displays briefly light up (or stay lit) when the keyboard should be in suspend/sleep state.
 
@@ -265,7 +265,7 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 
 ---
 
-### Bug: core1 hangs whenever overlay/ROI data is processed (post-merge regression)
+## Bug: core1 hangs whenever overlay/ROI data is processed (post-merge regression)
 
 **Symptom**: After merging upstream QMK master into the `PolyKybd` branch (May 2026), the master half hangs whenever the host sends overlay/ROI data over HID. Simple HID commands (GET_ID, brightness, language) still work. Core0 pushes a `CORE1_CMD_*` to the FIFO successfully; core1 starts processing then stops mid-work; core0 blocks in its busy wait for `core1_decomp_count` to catch up, which never happens; that wait loop starves the USB main loop on master, freezing master entirely. Slave keeps running because slave is autonomous (its own scan loop) — slave keypress inversion still works while master is frozen.
 
@@ -319,7 +319,7 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 
 ---
 
-### Bug: key display brightness drops to 0 on boot / wake (post-PR-#63 regression)
+## Bug: key display brightness drops to 0 on boot / wake (post-PR-#63 regression)
 
 **Symptom**: Keycap OLED brightness intermittently comes up as 0 on keyboard start and after wake from suspend, without the user having set it to 0.
 
@@ -369,7 +369,7 @@ brightness every boot), so the slave can't independently bank a stale auto value
 
 ---
 
-### Bug: slave does not show overlay icons after MRU program switch until modifier change
+## Bug: slave does not show overlay icons after MRU program switch until modifier change
 
 **Symptom**: After the host switches to a new program using the MRU overlay path, the slave half's keycap OLEDs do not display overlay icons. Keys on the master half show correctly. A layer or modifier change (which triggers a full display refresh) makes them appear.
 
@@ -388,7 +388,7 @@ brightness every boot), so the slave can't independently bank a stale auto value
 
 ---
 
-### Bug: one keycap's overlay missing on the SLAVE half after an app switch, fixed by switching away and back
+## Bug: one keycap's overlay missing on the SLAVE half after an app switch, fixed by switching away and back
 
 **Symptom (field, 2026-08-01)**: intermittently one keycap on the link-side half
 falls back to its plain legend while the rest of the app's overlay set renders
@@ -447,7 +447,7 @@ protocol change). Do it only if the logs show it actually happens.
 
 ---
 
-### Bug: slave half stuck in the idle pulsing frame — keypress/shift won't wake it, only a brightness key does
+## Bug: slave half stuck in the idle pulsing frame — keypress/shift won't wake it, only a brightness key does
 
 **Symptom (field, 2026-06-18)**: After the displays went into the idle *pulsing*
 animation, the **slave** half froze on one pulse frame ("some keycaps off, others
@@ -493,7 +493,7 @@ is non-zero; classify it with `sync_succeeded()`.
 
 ---
 
-### Bug: idle mode sometimes never starts; host "start idle" (cmd 15) is a no-op right after boot
+## Bug: idle mode sometimes never starts; host "start idle" (cmd 15) is a no-op right after boot
 
 **Symptom**: (1) Once in a while the keycaps never enter the idle
 fade/pulse/turn-off animation at all — the displays just stay at full brightness
@@ -544,7 +544,7 @@ so no `PROTOCOL_VERSION`/`__protocol__` bump.
 
 ---
 
-### Bug: keyboard hangs on the boot splash after a firmware apply (slave not rebooted)
+## Bug: keyboard hangs on the boot splash after a firmware apply (slave not rebooted)
 
 **Symptom (field, 2026-06-22)**: After a successful HID firmware flash + apply, the
 master rebooted onto the new firmware but **hung on the boot splash** ("SPLIT 72");
@@ -577,7 +577,7 @@ BOOTSEL/UF2. The high `err%` clears once both halves run matching firmware.
 
 ---
 
-### Split-link integrity: wire noise, the app-level CRC32, retries, and the health counter
+## Split-link integrity: wire noise, the app-level CRC32, retries, and the health counter
 
 > **RESOLVED (2026-06-16): migrated the split UART to full-duplex two-wire — the
 > ongoing corruption is gone.** `config.h` now sets `SERIAL_USART_FULL_DUPLEX` +
@@ -793,7 +793,7 @@ real value hides the fact that the real value is being thrown away.**
 
 ---
 
-### Bug: HIL "get current language" (cmd 7) times out once early in the run — boot-time busy window stalling the main loop
+## Bug: HIL "get current language" (cmd 7) times out once early in the run — boot-time busy window stalling the main loop
 
 > **⚠️ CORRECTION (2026-06-27): the "flaky rig link" premise this note was written
 > on is WRONG.** The rig runs the **same clean full-duplex two-wire split link as a

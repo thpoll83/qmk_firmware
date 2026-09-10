@@ -30,7 +30,7 @@ interpreter — and counting pixels outside the 72x40 window. Require **0**.
 
 ---
 
-### Per-keycap rendering gotchas (`base/disp_array.c`)
+## Per-keycap rendering gotchas (`base/disp_array.c`)
 
 - **`kdisp_write_gfx_char` baseline-aligns every glyph to `fonts[0]`**:
   `y += currentFont->yAdvance - fonts[0]->yAdvance`. So drawing a *single* icon
@@ -286,7 +286,7 @@ interpreter — and counting pixels outside the 72x40 window. Require **0**.
 
 ---
 
-### The utility layer's remaining text keys (`keycode_helper.c`, `poly_keymap.c`)
+## The utility layer's remaining text keys (`keycode_helper.c`, `poly_keymap.c`)
 
 Three `_UL` keys still spelled themselves out in four letters while every neighbour
 drew an icon, and one pair of keys was replaced by a single state-reflecting key.
@@ -628,7 +628,7 @@ holding **Shift** swaps the icon to `ICON_FONT_SMALLER` and reverses the step, s
 
 ---
 
-### Keycap legend size (`base/legend_plan.c` + `poly_keymap.c`, HID cmd 34, protocol v13+)
+## Keycap legend size (`base/legend_plan.c` + `poly_keymap.c`, HID cmd 34, protocol v13+)
 
 *(The planner — `glyph_size_remap()` / `plan_main_legend()` — is pure in
 `base/legend_plan.c` since #237, behind has-glyph/bbox callbacks with the firmware
@@ -748,7 +748,7 @@ like the glyph script:
 
 ---
 
-### Brightness keys — one icon family (`keycode_helper.c`, `base/fonts/gfx_icons.h`)
+## Brightness keys — one icon family (`keycode_helper.c`, `base/fonts/gfx_icons.h`)
 
 The eight brightness keycodes now draw **one resident IconsFont glyph each**, all
 built on the sun the status OLED already uses for brightness: `KC_DMIN` / `KC_D1Q` /

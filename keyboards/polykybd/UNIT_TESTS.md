@@ -14,7 +14,7 @@ NOTHING** — no "unknown target", no output, just a clean prompt. Judge a run b
 
 ---
 
-### Unit tests (`make test:<name>`)
+## Unit tests (`make test:<name>`)
 
 QMK has a googletest harness; a **standalone** test (one that links a subsystem
 against mocks, rather than booting a whole fake keyboard) is the right shape for

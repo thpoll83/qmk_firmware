@@ -322,6 +322,26 @@ proposed again, because it is an obvious-looking saving that is not one.
   measurements nobody can re-derive, so the trade is size against re-derivability;
   extraction settles it without giving anything up. `/doctor` proposes trims, and
   `claudeMdExcludes` skips a file wholesale if one is ever in the way.
+- ⚠️ **A move RE-BASES every relative path in the moved text, and a LINK is the half
+  that breaks silently.** Same hardcoded-`../`-depth trap the five relocated skills
+  hit, except prose is worse than a script: nothing runs it, so nothing fails.
+  Measured this pass — moving the font-pack notes from the repo root to
+  `keyboards/polykybd/` turned `](../AdafruitGFX/CLAUDE.md)` into a link at
+  `keyboards/AdafruitGFX/`. Check the files you touched, never the tree (an upstream
+  fork has thousands of `.md`):
+  ```bash
+  python3 - <<'EOF'
+  import pathlib, re
+  for f in list(pathlib.Path("keyboards/polykybd").glob("*.md")) + [pathlib.Path("CLAUDE.md")]:
+      for m in re.finditer(r'\]\(([^)#][^)]*)\)', f.read_text()):
+          t = m.group(1)
+          if not t.startswith(("http", "#")) and not (f.parent / t).exists():
+              print(f, "->", t, "=>", (f.parent / t).resolve())
+  EOF
+  ```
+  ⚠️ A path into a **sibling repo** resolves outside the checkout and always reports
+  missing in a session that did not attach it — read the RESOLVED path, not the
+  exists() bit.
 
 ## Branching (all PolyKybd repos)
 

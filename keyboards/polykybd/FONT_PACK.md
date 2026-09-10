@@ -361,6 +361,6 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   `font_count` is read from the header); resident wins on any overlap, the duplicate
   pack copies are harmless. No need to re-flash the pack after a resident change.
 
-See [`AdafruitGFX/CLAUDE.md`](../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
+See [`AdafruitGFX/CLAUDE.md`](../../../AdafruitGFX/CLAUDE.md) for `fontconvert` build and usage details.
 
 ---

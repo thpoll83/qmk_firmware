@@ -569,3 +569,59 @@ character twice).
   `generate_fonts.py --fontconvert /tmp/fontconvert_pinned` then `--check`.
 - Produce a flashable artifact: `qmk compile` writes `.uf2`; for a raw `.bin`,
   `arm-none-eabi-objcopy -O binary .build/…default.elf …default.bin`.
+
+## Future language candidates
+
+Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-generated from `lang_lut.xlsx` via cog), (2) re-running `fonts/gen-lang-fonts.sh` to generate the flag glyph and update `flag_fonts.h`, (3) updating the host's `LANG_REGION` map in `PolyKybdHost/polyhost/services/lang_regions.py` if the country code isn't already there. The host map covers all standard ISO 3166-1 alpha-2 country codes; only non-standard or private-use codes need a new entry added manually. Full mechanics in [`lang/FUTURE_LANGUAGES.md`](FUTURE_LANGUAGES.md) (the "Implementation playbook").
+
+> **STATUS (2026-06-10): `NUM_LANG` is now 156** (11 GET_LANG_LIST ASCII packets) after the
+> **2026-06 Europe + Americas minority/sibling batch (Wave 1)** — 13 Latin locales (no new
+> font): Europe `eu-ES gl-ES rm-CH cy-GB ga-IE mt-MT lb-LU se-NO`, Americas `gn-PY qu-PE
+> ay-BO nv-US nh-MX`. Mostly clones of es-ES/de-CH/fr-CH/en-GB/es-MX; Maltese & Northern
+> Sami are genuine new xkb mappings, Welsh/Irish/Navajo add AltGr letters. Only Nahuatl
+> needed a frozen-table pseudo-code (`nh`); only Luxembourg needed a host fold (`lu=ch`).
+> Wave 2 (Pashto, Cherokee, Inuktitut, Cree — all need new fonts) is pending. See the
+> "Europe + Americas minority/sibling batch" section in `lang/FUTURE_LANGUAGES.md`.
+>
+> **STATUS (2026-06-10): `NUM_LANG` is now 143** (10 GET_LANG_LIST ASCII packets) after the
+> **2026-06 compat easy-win batch** — 62 fold/clone locales (no new font), 4–15 per region
+> tab, ranked by computer users; see the "2026-06 compat easy-win batch" section in
+> `lang/FUTURE_LANGUAGES.md`. Distinct-layout entries are **clones** (AltGr legends inherited);
+> US-QWERTY locales are folds. Adding more fold/clone languages needs no `LANG_REGION` edit
+> (all ISO country codes are already mapped) and no frozen-table edit (all standard ISO codes).
+>
+> **STATUS (2026-06-10): the whole Oceania + Africa candidate set below is IMPLEMENTED**, together
+> with two extra computer-user picks per non-Europe region tab (see the
+> "2026-06 world batch" section in `lang/FUTURE_LANGUAGES.md`): Americas `en-CA` `es-AR`,
+> Middle East `ar-IQ` `ku-IQ` (Sorani), Africa `en-NG` `ar-MA`, Asia `ms-MY` `uz-UZ`,
+> Oceania `en-PG` `ty-PF`. 23 new entries, `NUM_LANG` 58 → 81 (6 GET_LANG_LIST packets).
+> Protocol codes are fixed 2+2 chars, so ISO-639-2/3 languages use pseudo-codes stored
+> verbatim: Hawaiian = **`hw-US`** (not `haw`), Sorani = **`ku-IQ`** (not `ckb`), and PNG is
+> covered as **`en-PG`** (Tok Pisin has no 2-letter code and types on plain Latin anyway).
+> `am-ET` got a real Ethiopic column (xkb `et(olpc)`, new NotoSansEthiopic font);
+> the plain-QWERTY locales (`en-AU/NZ/ZA/CA/PG`, `fj-FJ`, `tl-PH`, `sw-KE`, `ms-MY`) are
+> id-ID-style folds (flag + OS locale switch, en-US keycaps).
+
+### Oceania
+| Code | Language / Country | Notes |
+|------|--------------------|-------|
+| `en-AU` | English / Australia | Largest tech market in Oceania; distinct locale (date format, spelling) |
+| `en-NZ` | English / New Zealand | High tech adoption; ~5 M users |
+| `tl-PH` | Filipino / Philippines | Largest Pacific-adjacent user base; geographically SE Asia — host places it in **Asia** submenu via `PH` |
+| `mi-NZ` | Māori / New Zealand | Official NZ language; Latin + macrons (ā ē ī ō ū) + okina; active digital revitalisation |
+| `hw-US` | Hawaiian / United States | Polynesian; Latin + okina (ʻ) + kahakō macrons. Implemented as pseudo-code `hw-US` — the HID protocol carries fixed 4-char codes, so ISO-639-2 `haw` cannot be stored. Placed in **Oceania** by geographic override (host `LANG_REGION_OVERRIDE` + firmware `REGION_LANGS`), not the US country code's Americas. |
+| `sm-WS` | Samoan / Samoa | Most widely spoken Polynesian language; large diaspora in NZ/AU; Latin with macrons |
+| `fj-FJ` | Fijian / Fiji | Most developed Pacific island nation outside AU/NZ; Latin-based |
+
+### Africa
+| Code | Language / Country | Notes |
+|------|--------------------|-------|
+| `en-ZA` | English / South Africa | Largest tech ecosystem on the continent |
+| `ar-EG` | Arabic / Egypt | ~90 M internet users; complements existing `ar-SA` with Egyptian locale |
+| `sw-KE` | Swahili / Kenya | ~200 M speakers across East Africa; Kenya is the continent's leading tech hub; genuinely distinct from existing entries |
+| `am-ET` | Amharic / Ethiopia | Unique Ge'ez (Ethiopic) script; ~120 M people; fast-growing tech sector |
+| `yo-NG` | Yoruba / Nigeria | ~50 M speakers; Nigeria has Africa's largest developer community; Latin with tone diacritics |
+| `af-ZA` | Afrikaans / South Africa | Germanic/Latin; well-established digital presence; distinct from `en-ZA` |
+
+---
+

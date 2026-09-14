@@ -65,3 +65,174 @@ rather than assuming a loop worked.
     mechanisms that turned out wrong. Record the remedy, not a story. The tell is
     cheap: `git submodule status` prefixes an uninitialised module `-`, so check it
     rather than assuming the loop worked.
+
+## Building & flashing
+
+**The ARM toolchain is installable in the dev / remote container — do not claim it is unavailable.** Verified end-to-end (`split72:default` → `.uf2`, exit 0) on 2026-05-29.
+
+- **Toolchain, qmk CLI and submodules** — the once-per-container setup is
+  [`keyboards/polykybd/BUILD_ENVIRONMENT.md`](BUILD_ENVIRONMENT.md):
+  `gcc-arm-none-eabi`, `pip install qmk` + `QMK_HOME`, and the submodule init, whose
+  three failure modes are each written up there (the git proxy 403 that `add_repo`
+  fixes, a `lib/*` dir that is full of files and still uninitialised, and a fresh
+  container where all five clones fail and then succeed retried one at a time).
+  ⚠️ `git submodule status` must show a **leading space** on every line; an
+  uninitialised module is prefixed `-`, and a build against one dies on
+  `#error "obsolete or unknown configuration file"` rather than a missing file.
+  ⚠️ An upstream merge BUMPS the pins — re-init after merging or you link new QMK
+  against old ChibiOS, which compiles cleanly and fails at runtime.
+- **Build**: `qmk compile -kb polykybd/split72 -km default` (or `make polykybd/split72:default`). Output `.uf2` lands in the repo root and `.build/`.
+- **Deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over HID via PolyKybdHost's firmware updater (`polyhost/device/hid_fw_up.py`), which takes the raw RP2040 image: `arm-none-eabi-objcopy -O binary .build/<target>.elf .build/<target>.bin`. The `.uf2` is only for manual bootloader-drive recovery.
+  - ⚠️ **Put the commit sha in the FILENAME — every test build reports the same
+    `FW_VERSION`, so they are otherwise indistinguishable once flashed.** `FW_VERSION`
+    only moves on the post-merge auto-bump, so a session with several hardware rounds
+    hands over N files that all answer `0.13.1` to `polyctl fw version` and carry
+    near-identical names (`…_fix` / `…_legend` / `…_invert`). That cost a full round
+    (2026-08-13): a correct build was reported as "I did not see the new behavior",
+    and the only way to settle it was to md5 the delivered file against a fresh
+    rebuild and grep the image for a changed string literal. `split72_<sha>_<slug>.bin`
+    takes the ambiguity away. Better still, when a change alters something **visible
+    on a keycap**, say which pixel tells the builds apart — that is a check the user
+    can run without any tooling.
+  - ⚠️ **A branch-built `.bin` reports a DIFFERENT `FW_VERSION` from the one CI and
+    the HIL rig show for the SAME commit — and that is normal, not a stale build.**
+    CI builds the PR *merged into* its base, so it picks up every auto-bump that has
+    landed on `PolyKybd` since the branch was cut; a local `qmk compile` builds the
+    branch alone. On 2026-08-22 the delivered image answered `0.15.7` while the rig
+    logged `Split72 0.15.10 P13` on commit `d8bb98ca` — a 12-commit base drift. It
+    reads exactly like handing over the wrong file, so **settle it by diffing, not by
+    rebuilding**:
+    ```bash
+    git log --oneline HEAD..origin/PolyKybd                 # what the branch lacks
+    git diff --name-only HEAD...origin/PolyKybd             # EVERY path, not just ours
+    git diff HEAD...origin/PolyKybd -- keyboards/polykybd/config.h   # only FW_VERSION?
+    ```
+    If the only firmware delta is `config.h`'s version string, the `.bin` carries every
+    real change and just names itself older. If it is more than that, the branch is
+    genuinely behind and the test build is missing base fixes — merge before delivering.
+    ⚠️ **Read the CONTENT and the UNRESTRICTED path list — `--stat` scoped to
+    `keyboards/polykybd` proves neither half of that sentence.** `--stat` reports line
+    counts, so `config.h | 2 +-` is equally consistent with a version bump and with a
+    changed `#define` beside it; and the image links this fork's **patched upstream
+    files** too, which a PolyKybd-scoped diff hides — `keyboards/polykybd/
+    UPSTREAM_PATCHES.md` is the maintained list of them (today `usb_descriptor.h`,
+    `usb_main.c`, `oled_driver.c`, `transport.h`, `rp2040.c`), and a catch-up merge
+    landing on `PolyKybd` is exactly what moves them. Read that file rather than
+    hardcoding the set here — it is the thing that stays current. Even then this is a
+    drift check, not proof of binary equivalence: if anything outside `config.h` shows
+    up, rebuild on the merged base rather than reasoning about whether it mattered.
+- **Docker is NOT usable** in the remote container (no daemon) — use the native toolchain above, not the qmk docker image.
+- ⚠️ **NEVER run two `qmk compile` invocations at once — every flavour of a board
+  shares ONE `.build/` tree, and the collision presents as a CODE error.** Backgrounding
+  the pack build and starting the monolith beside it made the pack link die on
+  `undefined reference to doom_shim_menu_key_tile` (2026-09-03) — a symbol the pack
+  flavour genuinely does not define locally, so it reads exactly like a real
+  missing-shim bug rather than two builds overwriting each other's objects in
+  `.build/obj_polykybd_split72_default`. Serially, both link clean and nothing else
+  changes. `build_pack.sh` is safe because it sequences the two flavours itself.
+- The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
+- ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk` and is NOT on
+  `PATH`.** `build_pack.sh` (and anything else shelling out to `qmk`) dies with
+  `qmk: command not found`. Prefix every build:
+  `export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"`. The
+  `deliver-test-firmware` skill wraps this.
+- ⚠️ **The checkout can be SILENTLY RESET to an older commit** when the web/remote
+  container is reclaimed — your commits survive on `origin`, but the working tree
+  and `HEAD` roll back, and nothing announces it. It happened **three times** in one
+  session (2026-08-01); once it sent a code review chasing a `NUM_VARIATIONS` /
+  pool-size mismatch that existed only in the reverted tree. **Run
+  `git log --oneline -1` before trusting any grep or "the code says…" conclusion**,
+  especially at the start of a turn or after a long build. Restore with:
+  ```bash
+  git fetch origin <branch> && git reset --hard origin/<branch>
+  ```
+  Uncommitted work is lost, so push early. This applies to every repo in the
+  session, not just this one.
+- ⚠️ **The container's clone is SHALLOW, and that makes `git merge-base` return an
+  EMPTY STRING rather than an error** — so anything comparing this branch to
+  upstream silently produces nonsense instead of failing. Seen 2026-08-11: the
+  clone was 198 commits deep, `git merge-base HEAD upstream/master` printed
+  nothing, and `git rev-list --count $MB..0.33.13` with the empty variable
+  degraded to `HEAD..0.33.13` and reported **29,576 commits**, i.e. "these
+  histories are unrelated" — for a fork whose merge base is one of its own
+  branches. **Before ANY merge, diff-vs-upstream, or `git describe` reasoning:**
+  ```bash
+  git rev-parse --is-shallow-repository        # true = every history answer below is a lie
+  git fetch origin --unshallow --no-recurse-submodules   # ~1-2 min on this repo
+  ```
+  `--no-recurse-submodules` matters: the submodule repos aren't proxy-authorized
+  (see above), so a plain fetch spews `Could not access submodule 'lib/chibios'`
+  and buries the real result. Once unshallowed, the merge base resolved to
+  exactly the fork's own `master` — which is the sanity check that it worked.
+  - ⚠️ **It breaks a RELEASE RANGE the same way, and that one reads as plausible
+    history rather than as nonsense.** `git log <tag>..origin/PolyKybd` on a shallow
+    clone walks truncated history and returns a wrong set **with no error** — asked
+    for 0.15.2→0.15.14 it returned commits from the **0.9.54** era, complete with
+    believable bump-commit boundaries (2026-08-26). The 29,576-commit case above at
+    least screams; this one would simply have shipped release notes describing the
+    wrong versions. So the `--is-shallow-repository` check belongs in front of ANY
+    tag-anchored history question, not just merge-base reasoning — and note the tag
+    itself resolves fine (`git rev-parse <tag>` succeeds), so a tag-exists check
+    proves nothing. Unshallowing took **45 s** here; the count went 84 commits.
+- **`-Wcast-align` is on for PolyKybd's OWN sources, and it exists for the
+  HID-apply brick class.** `fw_staging`'s page buffer was `static uint8_t
+  page_buf[256]` (alignment 1) word-copied through a `(uint32_t *)` cast; the
+  linker put it at a byte offset, the unaligned `STMIA` HardFaulted the M0+ in a
+  function that never returns, and it shipped in a release. The warning names
+  exactly that — *"cast increases required alignment of target type"* — and with
+  `-Werror` already on it is a build failure on the PR that writes it. That is
+  the only place a bisect can find this class, because the brick itself was a
+  **layout** effect: a macro PR grew `.bss` and moved the buffer, so the guilty
+  commit never touched the failing code.
+  - ⚠️ **Scoped by path via the `$<` per-recipe filter** (`rules.mk`, the same
+    mechanism the doom `EXTRAFLAGS` block uses). `EXTRAFLAGS` otherwise lands on
+    **every** compile line — upstream QMK, ChibiOS, pico-sdk — which is the trap
+    that kept CodeQL out of this repo.
+  - ⚠️ **The WHOLE `doom/` tree is excluded, not just the vendored engine, and
+    the reason for our own sources is worth knowing: `doom_arena_at()` returns
+    `uint8_t *` because that signature IS the pack ABI** (`doom_pack_abi.h`,
+    handed to a **signed** `.plyx`). So every `(doom_mirror_t *)doom_arena_at(…)`
+    is a widening cast the check cannot be satisfied about without editing a
+    cross-boundary contract — which is not something to do on a warning's
+    account. `void *` would be the better type for untyped arena storage; it was
+    tried and reverted for exactly that reason. The offsets are
+    `_Static_assert`ed 4-aligned in `doom_arena.h` instead, which is the
+    substance, and the one such cast **outside** the doom tree (`split_sync.c`'s
+    mirror handler) carries a narrow `#pragma` pointing at those asserts.
+  - ⚠️ **A path filter that matches nothing FAILS OPEN** — the flag never applies
+    and the guard looks installed while doing nothing. Verify by compiling a
+    deliberate misalignment in a PolyKybd source and confirming the build
+    **fails**, not by reading the make output.
+  - **`void *` casts do not warn** (GCC exempts them), so `bridge_helper.c`'s
+    split-link CRC store is unaffected — and is separately safe, since every
+    caller passes a struct whose first member is a `uint32_t`.
+  - **It found two real latent instances of the same shape**, both now asserted
+    rather than assumed: `doom_mode.c` casts the core1 **stack pointer** out of a
+    `uint8_t *` pool (where a misalignment is worse than the applier's HardFault
+    — 8-aligned base, both offsets multiples of 8, which is also what AAPCS
+    demands), and every `doom_arena_at()` consumer relies on arena offsets that
+    nothing checked. ⚠️ Do **not** launder such a cast through `uintptr_t` to
+    silence the warning — that proves nothing and hides the next one.
+  - ⚠️ **Verified the hard way, and it earned its keep immediately**: the first
+    build with the flag FAILED on `split_sync.c`, which is simultaneously the
+    proof that the path filter matches (it would otherwise fail open) and a real
+    find. Do not take a clean build as evidence the flag is active — take a build
+    that fails on a deliberate misalignment.
+  - The clean-up it required was itself worth having: the OLED helpers took a
+    `uint32_t[]`, cast it down to `char *` at the call and back up inside, which
+    was safe only by convention. They take `uint32_t *` now.
+
+- ⚠️ **When an upstream merge breaks the build, look at the vendored DOOM engine
+  FIRST — a new upstream warning lands there, not on our own sources.** QMK builds
+  with `-Werror`, so *any* warning upstream adds to `builddefs/common_rules.mk`
+  becomes a hard failure in `doom/engine/` (a third-party rp2040-doom snapshot that
+  nobody is going to clean up). 0.33.13 added
+  `-Wunused-but-set-variable`/`-parameter` — as collateral of **"GCC 16.1
+  compatibility fix" (#26216)**, not a deliberate tightening, so the commit subject
+  gives no warning — and six `m_menu.c` menu callbacks that take an ignored
+  `choice` parameter failed the build. **The fix site is the `-Wno-error`/`-Wno-`
+  demotion block in `keyboards/polykybd/rules.mk`** (the doom-only `EXTRAFLAGS`),
+  which already carried the `-variable` half of that exact pair; add the sibling
+  there rather than editing vendored code. Keep the demotions doom-scoped so
+  PolyKybd's own sources still get the warning.
+

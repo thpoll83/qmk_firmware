@@ -139,3 +139,156 @@ reading before you change either one.
   `FEATURE_MIN_PROTOCOL` (see `PolyKybdHost/CLAUDE.md`). So forgetting the bump no
   longer rejects the keyboard; it silently leaves the new feature disabled, which is
   quieter and worse.
+
+## HID protocol (host → firmware)
+- 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
+- All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)
+- **`PROTOCOL_VERSION`** (`config.h`, reported in the GET_ID string) gates host
+  features. The per-version rationale is
+  [`keyboards/polykybd/PROTOCOL_HISTORY.md`](PROTOCOL_HISTORY.md)
+  — **read it before changing any of these commands**, because several were shaped
+  by a contrast with their neighbour that the wire format does not show. What each
+  version added:
+
+  | v | command | what it did |
+  |---|---|---|
+  | 2 | `27` GET_LANG_LIST_PACKED | 2-byte ISO index pair per language; the ASCII cmd `8` is RETIRED and NACKs |
+  | 3 | `21` SEND_OVERLAY_MAPPING | made silent (no per-chunk ACK), like the other bulk overlay commands |
+  | 4 | `28` GET/SET_IDLE_STYLE | idle anti-burn-in style; `0xFF` queries |
+  | 5 | `13` SET_BRIGHTNESS | volatile / host-auto flag byte |
+  | 6 | `6` GET_ID | appends the per-bundle font-pack version block `['V'][count][u16 × count]` |
+  | 9 | `30` GET/SET_GLYPH_SCRIPT | glyph-script override; `0xFF` queries |
+  | 10 | `30` | script index becomes OPEN-ENDED — an unknown index renders the normal legend instead of NACKing, so new faces need no protocol bump |
+  | 11 | `10` plain overlay upload | modifier+segment packed into ONE header byte, so a 60-byte segment fits the report exactly |
+  | 12 | `33` SEND_OVERLAY_MAPPING_W | variable-width mapping (8/9/10/11 bits), silent like cmd 21 |
+  | 13 | `34` GET/SET_GLYPH_SIZE | keycap legend size 0/1/2; range CLOSED, unknown NACKs |
+  | 14 | `35` GET_LAYER_NAMES | read-only `[total][count]` + NUL-terminated names |
+  | 15 | `36`/`37`/`38` | macros: info / body window / label, behind ONE host feature gate |
+  | 16 | `39` | crash record read + clear |
+  | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
+
+  ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
+  over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs
+  nothing and lets the host ship faces a keyboard lacks. A SIZE names a rendering tier
+  whose relocation base and baseline the firmware must know, so accepting an unknown
+  one would store, sync and persist a setting that silently renders small. The two HIL
+  tests assert opposite things about neighbouring commands **on purpose** — do not
+  "make them consistent".
+
+  ⚠️ **A QMK `*_set_user` hook is a NOTIFICATION, never a setter — and calling one to
+  CHANGE state fails in the quietest possible way: the UI moves and the behaviour does
+  not.** `unicode_input_mode_set_user()` is what QMK fires *from*
+  `set_unicode_input_mode()`, and our override only mirrors the value for the keycap
+  legend. Cmd 20 called it directly for years, so a host push relabelled those keys
+  while `unicode_config.input_mode` never moved (field, 2026-09-08: the layer read
+  **Win ON** while emoji still worked). **The tell is a state whose display and effect
+  disagree**; when you find one, check whether the write went through the setter or the
+  callback. Grep for any `*_set_user` being CALLED rather than implemented.
+
+  **Bump `FW_VERSION` + `PROTOCOL_VERSION` (config.h) and `__protocol__`
+  (PolyKybdHost `_version.py`) in lockstep.** ⚠️ The connect gate is NOT exact-match —
+  the host connects to any protocol `>= MIN_SUPPORTED_PROTOCOL` and gates each feature
+  through `FEATURE_MIN_PROTOCOL` — so forgetting the bump no longer rejects the
+  keyboard, it silently leaves the new feature disabled. Quieter, and worse.
+- **Cmd `32` = main-loop profiler control — present ONLY in a
+  `POLYKYBD_LOOP_PROFILE` build, and bumps NO `PROTOCOL_VERSION`** (dispatched
+  independently like cmd 31 / the fontpack commands). Sub-commands `0` RESET / `1`
+  READ (binary snapshot, `data[3]` = page) / `2` LOG. ⚠️ The whole `case 32` is
+  inside `#ifdef POLYKYBD_LOOP_PROFILE`, so a normal build **NACKs** it — that
+  NACK is the deliberate capability signal telling a host "no profiler here"
+  instead of handing back a page of zeros. Consumed by the rig's automated perf
+  run; see `keyboards/polykybd/profiling/README.md`.
+- Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`, protocol 11+: modifier+segment packed into one header byte), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
+- ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
+- Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)
+- ⚠️ **That flat index is the only ADDRESS an overlay upload has, and it is
+  resolved through `overlay_map[]` — so `reset_overlay_mapping()`'s identity
+  default is LOAD-BEARING FOR WRITES, not just a display convenience.** All three
+  write sites in `fill_overlay.c` (plain / compressed / ROI) run the same pair the
+  render path does — `adjust_overlay_idx_to_mod()` then `get_overlay_mapping()` —
+  and the host addresses pool slot N by sending the (keycode, modifier) pair whose
+  flat index *is* N (`OverlayMRUCache.pool_slot_to_firmware_address`: `kc = N % 90`,
+  `mod = N // 90`). It uploads every image **before** sending the real display→pool
+  mapping, so the identity must hold throughout that window. Zeroing the table
+  "because the pool is no longer variant-indexed" sent every image to slot 0:
+  nearly every keycap blank, the whole set piled onto Esc (field, 2026-08-01 —
+  cost a hardware round). The pool being smaller (600) than the flat index space
+  (810) only changes the identity's **extent**: indices `< NUM_OVERLAY_SLOTS` are
+  identity, the rest are a 0 fill that can never be an upload destination.
+
+## Telling the host something changed ON THE BOARD
+
+Most state flows host → keyboard, so the host knows what it set. The reverse
+direction — the user changes something with a keycode, records a macro, remaps a
+key — has no natural notification, and the host's caches then go stale. There are
+exactly three ways to close that, and the ranking is not obvious:
+
+| | extra HID reports | latency | new machinery |
+|---|---|---|---|
+| a counter on a reply the host ALREADY polls | **0** | ≤1 s | none |
+| a dedicated command the host polls | 1 per interval | the interval | one command + an RPC method |
+| an unsolicited report pushed by the firmware | 1 per event | instant | a reader, framing, drain routing |
+
+⚠️ **Check what the host already asks for BEFORE reaching for a back channel.** The
+host's reconnect probe sends **GET_ID and GET_LANG every second**, forever, whenever
+a keyboard is attached (`PolyKybdHost` `poly_core.py`, `RECONNECT_CYCLE_MSEC = 1000`).
+So a byte on the GET_ID reply reaches the host within a second at **zero** additional
+cost, and both other options are solving a problem that does not exist. This was
+nearly missed twice — once by designing a MACRO_INFO field the editor would have had
+to poll, once by proposing a console line — because the existing poll is invisible
+from the firmware side.
+
+- ⚠️ **UNSOLICITED raw HID is not a drop-in, and the cost is NOT bandwidth.** The event
+  rate for anything a human does on the board is tens per day against the ~173,000
+  exchanges/day the probe alone already generates, so volume is a non-issue and should
+  not be the argument. What stops it is that **nothing reads that interface except a
+  pending command**: `send_and_read_validate` writes, then reads until it matches the
+  expected prefix and **drains everything else**, so an unsolicited report is discarded
+  by the next probe within a second. Its comment states the invariant the drain rests
+  on — *"Since protocol v3 the firmware sends no unsolicited replies, so a stale reply
+  here means one thing only"* — and v3 was the change that made `SEND_OVERLAY_MAPPING`
+  silent precisely to reduce escaped ACKs. Push makes a stale reply mean two things, in
+  the code path with the stale-reply bug history. Do not add it without a distinguishable
+  prefix, routing in the drain, and an idle reader.
+- **The CONSOLE is push-shaped and already tapped** (`CrashScanner` on the host, the
+  rig's `ConsoleTap`), so it is the cheapest push — but it is lossy by construction
+  (QMK drops output nobody drains, and nothing drains it during a flash), it does not
+  survive a re-enumeration, it arrives as report-sized FRAGMENTS rather than lines, and
+  **any local process can read it**, which is why keystroke logging is gated on
+  `debug_enable`. So: **the console may announce, never define.** Anything it says must
+  also be answerable over raw HID, and the pull is the truth. `crash_record` is the
+  model — the console line announces, cmd 39 reads the same record back — and nothing
+  breaks when the line is lost.
+
+**The mechanism: `['G'][u16 state_generation]` in the GET_ID reply**, bumped by
+`poly_state_touch()` whenever the BOARD changes something the host may be caching. One
+counter covers macros, glyph script, glyph size, idle style, the OS pin, the default
+layer and a board-side key reassignment; the host re-reads whatever it has open when
+the value moves. It does not say WHAT changed, which is all "refresh what is on screen"
+needs.
+
+- ⚠️ **It goes AFTER the `V` font-pack block, never before it.** The host finds that
+  block positionally — `parse_id_version_block` (`hid_fontpack.py`) requires `'V'` at
+  exactly `nul + 1` — so prepending anything makes every deployed host read "no bundles
+  on the device" and **re-flash all eight bundles on every connect**. Both blocks are
+  tag-led, so a new host parses `V` first and then looks for `G`.
+- **The budget is a `_Static_assert` in `hid_com.c`, not a number in a comment** —
+  `sizeof(POLY_GET_ID_STR) + 2 + FONTPACK_BUNDLE_COUNT*2 + 3 <= HID_REPORT_SIZE`. Every
+  term moves (the version string grows; the `V` block grows TWO BYTES PER BUNDLE), so a
+  measured figure would go stale, and both emitters DROP their block rather than
+  truncate if it does not fit — which would cost the host its font-pack versions
+  silently and re-flash every bundle on every connect. Mutation-checked: lowering the
+  bound fails the build with the assert's own message. Roughly 11 bytes spare at 8
+  bundles, i.e. five more.
+- **A missing `G` block means "no generation available"**, so an older firmware degrades
+  to the previous behaviour (the host re-reads when a view is opened) rather than
+  failing.
+- **Bump it for host-initiated changes too.** Distinguishing them saves one re-read and
+  costs a rule someone has to remember.
+- ⚠️ **This IS an enumerated list of call sites, which is the shape that goes stale here
+  — and it is acceptable ONLY because of how it fails.** Forgetting a `poly_state_touch()`
+  leaves the host's view stale until something else refreshes it, i.e. exactly today's
+  behaviour; it can never corrupt state or mis-classify anything. Contrast
+  `sync_is_link_fault()`, where a forgotten case produces a WRONG answer, and which is
+  therefore written as a complement rather than a list.
+

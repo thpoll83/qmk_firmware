@@ -4,8 +4,9 @@ Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
 ## Mirrored skills (`qmk_firmware` ↔ `PolyKybdHost`)
 
-Six skills exist in **both** repos and are kept **byte-identical**:
-`add-gated-hid-command`, `mutation-test-suite`, `polykybd-github-release`,
+Nine skills exist in **both** repos and are kept **byte-identical**:
+`add-gated-hid-command`, `check-mirrored-artifacts`, `cross-repo-pr-sweep`,
+`mutation-test-suite`, `polykybd-github-release`, `prune-claude-md`,
 `session-retro`, `triage-pr-review`, `update-polykybd-docs`. A skill loads only from the repos a session has attached,
 so one that describes cross-repo work is unreachable from a session opened on the
 other repo alone — which is what happened to `mutation-test-suite`, extended to
@@ -22,7 +23,9 @@ because a skill has no build, no test and no reviewer.
 **So the rule is copy, never fork**: edit one, `cp` it to the other, and check with
 
 ```bash
-for s in add-gated-hid-command mutation-test-suite polykybd-github-release session-retro triage-pr-review update-polykybd-docs; do
+for s in add-gated-hid-command check-mirrored-artifacts cross-repo-pr-sweep \
+         mutation-test-suite polykybd-github-release prune-claude-md \
+         session-retro triage-pr-review update-polykybd-docs; do
     cmp -s /home/user/qmk_firmware/.claude/skills/$s/SKILL.md \
            /home/user/PolyKybdHost/.claude/skills/$s/SKILL.md \
       && echo "$s: ok" || echo "$s: DRIFTED"

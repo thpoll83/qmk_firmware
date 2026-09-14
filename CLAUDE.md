@@ -47,8 +47,9 @@ and the `triage-pr-review` skill.
 
 ## Mirrored skills (`qmk_firmware` ↔ `PolyKybdHost`)
 
-Six skills exist in **both** repos and are kept **byte-identical**:
-`add-gated-hid-command`, `mutation-test-suite`, `polykybd-github-release`,
+Nine skills exist in **both** repos and are kept **byte-identical**:
+`add-gated-hid-command`, `check-mirrored-artifacts`, `cross-repo-pr-sweep`,
+`mutation-test-suite`, `polykybd-github-release`, `prune-claude-md`,
 `session-retro`, `triage-pr-review`, `update-polykybd-docs`. A skill loads only from the
 repos a session has attached, so one describing cross-repo work is unreachable from a
 session opened on the other repo alone.
@@ -56,7 +57,9 @@ session opened on the other repo alone.
 **The rule is copy, never fork**: edit one, `cp` it to the other, and check with
 
 ```bash
-for s in add-gated-hid-command mutation-test-suite polykybd-github-release session-retro triage-pr-review update-polykybd-docs; do
+for s in add-gated-hid-command check-mirrored-artifacts cross-repo-pr-sweep \
+         mutation-test-suite polykybd-github-release prune-claude-md \
+         session-retro triage-pr-review update-polykybd-docs; do
     cmp -s /home/user/qmk_firmware/.claude/skills/$s/SKILL.md \
            /home/user/PolyKybdHost/.claude/skills/$s/SKILL.md \
       && echo "$s: ok" || echo "$s: DRIFTED"

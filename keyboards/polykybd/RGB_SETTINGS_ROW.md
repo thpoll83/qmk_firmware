@@ -1,6 +1,7 @@
 # The settings-layer RGB row
 
-Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
+Extracted from `CLAUDE.md` 2026-09-14. The prose is unchanged; only heading levels
+and relative links were adjusted to suit a standalone file.
 
 ## The settings-layer RGB row (`poly_keymap.c`, `keycode_helper.c`, `split72/config.h`)
 
@@ -15,7 +16,8 @@ nowhere at all. So the keys rendered, felt real, and did nothing (fixed 2026-09-
 qmk#281). **Before believing a key works because it has a legend, grep for a `case`
 that handles its keycode** — the display pipeline and the action pipeline share
 nothing, and this repo has now been caught by that seam in both directions (the
-settings-gate note above is the same split with the halves reversed).
+settings-gate post-mortem in [`DISPLAY_PIPELINE.md`](DISPLAY_PIPELINE.md) is the
+same split with the halves reversed).
 
 - ⚠️ **The effect must be enabled on BOTH variants, because the handler is in the
   shared keymap.** `RGB_MATRIX_CYCLE_SPIRAL` is the closer match for "Swirl" and is

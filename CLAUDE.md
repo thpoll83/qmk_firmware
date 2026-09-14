@@ -111,7 +111,7 @@ unavailable.** `qmk compile -kb polykybd/split72 -km default`. The once-per-cont
 setup, the submodule failure modes, the `-Wcast-align` guard and its path filter, and the
 vendored-DOOM `-Werror` collateral are in
 [`keyboards/polykybd/BUILD_ENVIRONMENT.md`](keyboards/polykybd/BUILD_ENVIRONMENT.md).
-Six rules bind work outside that file:
+Seven rules bind work outside that file:
 
 - **The deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over
   HID. ⚠️ **Put the commit sha in the filename**: every test build reports the same
@@ -141,7 +141,7 @@ Six rules bind work outside that file:
 
 The mechanics — the HIL tiers, the FW-APPLY and doom tiers, the paths filters, the
 inherited upstream lint, and how to read a job log — are
-[`keyboards/polykybd/CI_CHECKS.md`](keyboards/polykybd/CI_CHECKS.md). Six things every
+[`keyboards/polykybd/CI_CHECKS.md`](keyboards/polykybd/CI_CHECKS.md). Seven things every
 PR author needs without opening it:
 
 - ⚠️ **The HIL suite has TWO tiers and the default one skips the deepest checks** — the
@@ -641,7 +641,7 @@ Sorani `ku-IQ`). Adding a standard ISO language needs no table change.
 ### Troubleshooting principle: mechanical, auditable steps beat clever guesses
 
 When a bug resists the "smart" theories, do the **dumb, exhaustive, fully-auditable
-exercise** instead. Four rules, each of which was earned on the split42 rebuild (the
+exercise** instead. Five rules, each of which was earned on the split42 rebuild (the
 narrative is in
 [`keyboards/polykybd/INVESTIGATION_HISTORY.md`](keyboards/polykybd/INVESTIGATION_HISTORY.md)):
 

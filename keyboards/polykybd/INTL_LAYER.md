@@ -1,6 +1,7 @@
 # The Intl layer: picker and letter remap
 
-Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
+Extracted from `CLAUDE.md` 2026-09-14. The prose is unchanged; only heading levels
+and relative links were adjusted to suit a standalone file.
 
 ## Intl latin-variation picker (`poly_keymap.c`, `_ADDLANG1`)
 Holding **Intl** shows each letter's selected accented variation; tapping **Ctrl**

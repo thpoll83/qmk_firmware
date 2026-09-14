@@ -1,6 +1,7 @@
 # Firmware staging, the self-apply and the signing prompt
 
-Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
+Extracted from `CLAUDE.md` 2026-09-14. The prose is unchanged; only heading levels
+and relative links were adjusted to suit a standalone file.
 
 ## ⚠️ The self-apply's page buffer must be `uint32_t` — a `uint8_t` one bricked the board
 

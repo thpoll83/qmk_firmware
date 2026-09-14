@@ -1,6 +1,7 @@
 # Branching — the cross-repo sweep and its failure modes
 
-Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
+Extracted from `CLAUDE.md` 2026-09-14. The prose is unchanged; only heading levels
+and relative links were adjusted to suit a standalone file.
 
 ## Branching (all PolyKybd repos)
 

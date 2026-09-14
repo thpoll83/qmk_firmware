@@ -2,7 +2,7 @@
 
 Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
-### LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
+## LTR-559 light+proximity sensor (`modules/polykybd/polymod_ltr559/`) — ENTIRELY OPTIONAL
 
 An **entirely optional** ambient-light + proximity sensor (Pimoroni LTR-559, I2C
 addr `0x23`) on the expansion port. It **shares the Cirque I2C0 bus** (GP0/GP1) — no
@@ -77,7 +77,7 @@ who solders the part gets it and nobody else pays more than ~30 s of cheap probe
   `polymod_ltr559.c`. No shared timed-log framework yet — see `readme.md` "Diagnostics" →
   "Timed console logs".
 
-### Community modules (`modules/polykybd/`)
+## Community modules (`modules/polykybd/`)
 
 Self-contained, keyboard-independent code lives in **QMK community modules** rather
 than `keyboards/polykybd/`: currently `polymod_crc32` and `polymod_rle` (both ~55 LOC

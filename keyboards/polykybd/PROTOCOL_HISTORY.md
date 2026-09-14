@@ -140,7 +140,7 @@ reading before you change either one.
   longer rejects the keyboard; it silently leaves the new feature disabled, which is
   quieter and worse.
 
-### HID protocol (host → firmware)
+## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)
 - **`PROTOCOL_VERSION`** (`config.h`, reported in the GET_ID string) gates host
@@ -216,7 +216,7 @@ reading before you change either one.
   (810) only changes the identity's **extent**: indices `< NUM_OVERLAY_SLOTS` are
   identity, the rest are a 0 fill that can never be an upload destination.
 
-### Telling the host something changed ON THE BOARD
+## Telling the host something changed ON THE BOARD
 
 Most state flows host → keyboard, so the host knows what it set. The reverse
 direction — the user changes something with a keycode, records a macro, remaps a

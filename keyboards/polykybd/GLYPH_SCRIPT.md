@@ -2,7 +2,7 @@
 
 Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
-### Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+; expanded v10)
+## Glyph-script override (`poly_keymap.c`, HID cmd 30, protocol v9+; expanded v10)
 An OS-independent **override** of the language-layer legends with an alternative
 script (fantasy / retro). State: `poly_eeconf_t.glyph_script` (persisted, appended
 tail byte like `os_state`; `EECONFIG_USER_DATA_SIZE` grew 64→65, still ≤ the 128-byte

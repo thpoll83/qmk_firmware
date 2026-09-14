@@ -863,7 +863,7 @@ is unaffected.
 - `keyboards/polykybd/bridge_helper.c` — `send_to_bridge()` (per-attempt blocking cost = `PERIODIC_SYNC_RETRIES` × bridge timeout)
 - `polykybd-ctnd` `station/hil_tests.py` — the `get current language` test (no miss-tolerance, unlike `test_get_id_stress`)
 
-### Troubleshooting principle: don't take shortcuts — mechanical, auditable steps beat clever guesses
+## Troubleshooting principle: don't take shortcuts — mechanical, auditable steps beat clever guesses
 
 **Lesson (2026-07-14, from the split42 rebuild):** when a bug resists the "smart"
 theories, do the **dumb, exhaustive, fully-auditable exercise** instead — even when

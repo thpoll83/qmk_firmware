@@ -2,7 +2,7 @@
 
 Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
-### Keyboard variants & the shared keymap (`poly_keymap.c`)
+## Keyboard variants & the shared keymap (`poly_keymap.c`)
 
 Two hardware variants share one firmware: **`split72`** (72-key, RGB matrix,
 Cirque trackpad, 128×64 status OLED) and **`split42`** (42-key CRKBD footprint,

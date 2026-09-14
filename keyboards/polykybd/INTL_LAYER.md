@@ -2,7 +2,7 @@
 
 Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
-### Intl latin-variation picker (`poly_keymap.c`, `_ADDLANG1`)
+## Intl latin-variation picker (`poly_keymap.c`, `_ADDLANG1`)
 Holding **Intl** shows each letter's selected accented variation; tapping **Ctrl**
 (`LATIN_PICKER_MOD`) turns the number row into a picker of that letter's variations.
 The mechanism is worth knowing because it is not the obvious implementation:
@@ -47,7 +47,7 @@ The mechanism is worth knowing because it is not the obvious implementation:
 - The armed indicator is the inverted Ctrl keycap — see the two rendering bullets
   above (render it, don't `kdisp_invert()`; and pass `cy_radius` 0).
 
-### Intl letter remap — a key can host ANOTHER letter's row (`KC_LAT_REMAP`)
+## Intl letter remap — a key can host ANOTHER letter's row (`KC_LAT_REMAP`)
 
 French needs `è é ê` at once, which one letter's picker cannot give: the picker
 chooses another *form* of the letter a key already hosts. So a key can now be

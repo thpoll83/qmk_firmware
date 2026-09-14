@@ -2,7 +2,7 @@
 
 Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
-### ⚠️ The self-apply's page buffer must be `uint32_t` — a `uint8_t` one bricked the board
+## ⚠️ The self-apply's page buffer must be `uint32_t` — a `uint8_t` one bricked the board
 
 `fw_staging_do_apply()` copies the staged image a page at a time through a static
 buffer, with `ram_word_copy()` — which takes `uint32_t *`, so the compiler emits
@@ -41,7 +41,7 @@ Two things that made this diagnosable, and are worth keeping:
   Only the `uint32_t *`-typed helper got word instructions. So "flash writes work
   here but that one copy dies" was pointing at alignment the whole time.
 
-### Firmware signing enforcement & the on-keycap confirmation (FW-2)
+## Firmware signing enforcement & the on-keycap confirmation (FW-2)
 
 `rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so `fw_staging_finalize()` only stamps the
 staging header for an image carrying a valid Ed25519 signature over `base/fw_pubkey.h`.

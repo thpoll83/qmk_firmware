@@ -2,7 +2,7 @@
 
 Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
-### Layer names over the wire (`layer_names.c`, HID cmd 35, protocol v14+)
+## Layer names over the wire (`layer_names.c`, HID cmd 35, protocol v14+)
 
 The host layout editor labels its layer tabs. It used to read those labels from
 `PolyKybdHost/polyhost/res/layer_names.yaml`, a build-time artifact generated from

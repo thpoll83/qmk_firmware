@@ -2,7 +2,7 @@
 
 Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
-### The settings-layer RGB row (`poly_keymap.c`, `keycode_helper.c`, `split72/config.h`)
+## The settings-layer RGB row (`poly_keymap.c`, `keycode_helper.c`, `split72/config.h`)
 
 ⚠️ **A LEGEND IS NOT EVIDENCE A KEYCODE DOES ANYTHING — the four RGB effect presets
 drew a keycap for years and were dispatched nowhere.** `RGB_M_P` / `RGB_M_B` /

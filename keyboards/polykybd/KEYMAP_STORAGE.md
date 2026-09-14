@@ -2,7 +2,7 @@
 
 Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
-### EEPROM layout: the reclaimed dynamic-keymap tail
+## EEPROM layout: the reclaimed dynamic-keymap tail
 
 `DYNAMIC_KEYMAP_LAYER_COUNT` must stay **12** — QMK asserts it is >= the compiled
 layer count (`keymap_introspection.c`) — but only layers **0..7** are ever read or
@@ -44,7 +44,7 @@ array out of the final image, but `.build/obj_*/…/<file>.o` still has it:
 `arm-none-eabi-objdump -s -j .rodata.probe <obj>`. That is how the +672 above was
 measured rather than derived.
 
-### Key source files
+## Key source files
 
 | File | Role |
 |------|------|
@@ -59,7 +59,7 @@ measured rather than derived.
 | `multicore_exec.c` | Offloads RLE decompression to RP2040 core1 via FIFO, keeping QMK's core0 responsive |
 | `lang/lang_lut.c` | 81-language lookup table (code-generated from `lang_lut.xlsx` via cog) |
 
-### ⚠️ The dynamic keymap is indexed BY LAYER NUMBER, and QMK does not version it
+## ⚠️ The dynamic keymap is indexed BY LAYER NUMBER, and QMK does not version it
 
 Remove or reorder a layer and every stored layer above it silently changes meaning.
 There is no magic, no format byte, no size check in `dynamic_keymap` — the EEPROM block

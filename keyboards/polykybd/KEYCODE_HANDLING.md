@@ -2,7 +2,7 @@
 
 Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
 
-### ⚠️ Tap-hold settings are `config.h` DEFINES — the `rules.mk` lines were inert for years
+## ⚠️ Tap-hold settings are `config.h` DEFINES — the `rules.mk` lines were inert for years
 
 `PERMISSIVE_HOLD = yes` and `HOLD_ON_OTHER_KEY_PRESS = yes` sat in **both** variants'
 `rules.mk` and did **nothing**. `quantum/action_tapping.c` tests them with `#ifdef`, and
@@ -36,7 +36,7 @@ ordinary fast rolls — precisely what `CHORDAL_HOLD` (opposite-hands only) and
 `FLOW_TAP_TERM` (forces a tap soon after the preceding key) exist to prevent. A home row
 mod that fires while typing is worse than one that is occasionally slow.
 
-### ⚠️ A release-edge action fires up to THREE times on a ONE-SHOT layer
+## ⚠️ A release-edge action fires up to THREE times on a ONE-SHOT layer
 
 `post_process_record_user()`'s big `switch` lives inside `if (!record->event.pressed)`
 — every settings/utility keycode acts on the **release** edge. That is free on a

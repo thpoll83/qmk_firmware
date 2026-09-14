@@ -1,0 +1,176 @@
+# Firmware staging, the self-apply and the signing prompt
+
+Moved out of `CLAUDE.md` 2026-09-14. Verbatim.
+
+### ⚠️ The self-apply's page buffer must be `uint32_t` — a `uint8_t` one bricked the board
+
+`fw_staging_do_apply()` copies the staged image a page at a time through a static
+buffer, with `ram_word_copy()` — which takes `uint32_t *`, so the compiler emits
+word loads and stores. The buffer was declared `static uint8_t page_buf[256]`,
+whose alignment requirement is **1**, so the linker packed it at whatever byte
+offset the previous `.bss` symbol happened to leave. An unaligned `STMIA` is a
+**HardFault on Cortex-M0+**, taken with `PRIMASK` set inside a function that never
+returns — an instant lockup, no console line, no breadcrumb. The board comes back
+only via BOOTSEL+UF2.
+
+⚠️ **This is why the bisect and the disassembly disagreed, and the disassembly was
+the misleading one.** A HID update that reported success then bricked the keyboard
+bisected cleanly to the macro PR (#234) — which touches nothing in the applier. And
+`fw_staging_do_apply` really was **byte-identical** across the regression: same
+address, same size, same instructions. What #234 changed was `.bss`: its label cache
+shifted `page_buf` from a 4-aligned address to `…ce3`, and the first page of the
+first sector faulted the core. Ten rounds of probes were aimed at the applier's
+*code* on the strength of that byte-identical comparison. **When a bisect blames a
+commit that cannot have touched the failing code, check whether it moved the failing
+code's DATA** — `arm-none-eabi-nm -S <elf> | grep <buffer>` and look at `addr % 4`.
+
+**The fix is the type, not an `aligned(4)` attribute**: the buffer is declared
+`static uint32_t page_buf[FLASH_PAGE_SIZE / 4]` and the `(uint32_t *)` casts are
+gone, so no later edit can silently reintroduce the hazard. `flash_range_program`
+takes `(const uint8_t *)page_buf`.
+
+Two things that made this diagnosable, and are worth keeping:
+- **The in-flash progress log** (`FW_APPLY_LOG_OFFSET`, `FW_STAGING_OFFSET + 1 MB`):
+  erased at the start of every apply, one page written per completed sector, plus
+  bracket markers around the first sector. It lives past the image, so it survives
+  the BOOTSEL recovery that reading it requires — the watchdog scratch does not
+  (scratch survives a watchdog reset, **not** a power cycle).
+- ⚠️ **The log markers worked while the copy did not, and that asymmetry IS the
+  clue.** GCC knew `page_buf` was byte-aligned, so it compiled
+  `((uint32_t *)page_buf)[0] = marker` into four `strb`s — which are fine unaligned.
+  Only the `uint32_t *`-typed helper got word instructions. So "flash writes work
+  here but that one copy dies" was pointing at alignment the whole time.
+
+### Firmware signing enforcement & the on-keycap confirmation (FW-2)
+
+`rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so `fw_staging_finalize()` only stamps the
+staging header for an image carrying a valid Ed25519 signature over `base/fw_pubkey.h`.
+An image that fails that check is **not refused outright** — the keyboard asks:
+
+- **The board becomes the dialog.** `poly_sync_t.fw_confirm` (synced, so both halves
+  render) makes `update_displays()` blank every keycap except one per half: a 2×-scaled
+  **A / ACCEPT** on the left home-row index key and **R / REJECT** on the right, both at
+  local matrix `(FW_CONFIRM_ROW, FW_CONFIRM_COL)` — the *same* local position on both
+  halves, and a matrix position, so the non-rectangular display grid and the right
+  half's `c--` display fold don't apply. `process_record_user` swallows every other key
+  while it is up. Side is decided by `is_left_side()`, not by which half is master, so
+  the prompt never moves between flashes.
+- **⚠️ COMMIT must NOT block waiting for the answer.** It runs inside
+  `raw_hid_receive()` on the main loop, which is also what scans the matrix — a
+  busy-wait would guarantee the keypress is never seen. So it is a state machine:
+  the first COMMIT raises the prompt and answers **`?`**; the host re-polls COMMIT
+  (~1 Hz) until a keypress or `FW_CONFIRM_WINDOW_MS` (60 s) resolves it to `.` or `S`.
+  Re-running finalize is free — `s_buf_fill` is 0 and the CRCs are untouched — but
+  COMMIT skips **re-bridging to the slave** while `fw_staging_confirm_in_progress()`,
+  or every poll would re-erase and re-stamp the slave's 4 KB staging header sector.
+- **Only the master runs `process_record`** (the slave's matrix is pulled over the
+  split link), so a press on *either* half arrives there; the matrix row says which.
+- **Accept is physical, cancel may be remote.** The threat model is any process that
+  can talk the HID flash protocol, so an acceptance sent over HID would be forgeable by
+  exactly the attacker signing defends against. A **cancel** (COMMIT with `'x'` in
+  `data[2]`) can only ever deny, so it *is* exposed — the host's abort path and the HIL
+  rig (no fingers) use it instead of leaving the board modal for the full window.
+- ⚠️ **An UNSIGNED image (`sig == 0`) gets the prompt; an INVALID one (`sig == -1`) is
+  refused outright.** They are opposite events: the first is "you compiled this
+  yourself", the second is a file that is not what it claims to be. Offering a keypress
+  for the second would hand an attacker the one thing the physical gate exists to
+  withhold — a user who has been told to press A. The host tells the two apart from a
+  single `S` status because it knows whether it sent a signature.
+- ⚠️ **`clear_keyboard()` before ANY path that swallows keys or does not return.** Two
+  different mechanisms stranded a held key on the host, both fixed the same way (the
+  call `doom_begin()` already made, for the same reason): the prompt swallows the
+  *release* of a key that was already down, and the apply path never scans the matrix
+  again once `fw_staging_apply_and_reboot()`/`mcu_reset()` is entered, so the release is
+  never even produced. Either way the host keeps the keycode registered and auto-repeats
+  it until USB drops — field-reported as "a few hundred repetitions until the keyboard
+  rebooted". On the apply path the following `oled_fw_apply_screen()` conveniently gives
+  the cleared report ~26 ms to leave over USB.
+- **Answer the prompt on the RELEASE, not the press.** `split72.c`'s `matrix_scan_kb`
+  inverts a keycap on press and un-inverts on release *independently of
+  `process_record`*, so acting on the press tears the prompt down and redraws the normal
+  legend while that keycap is still inverted — and it stays inverted until the finger
+  lifts.
+- ⚠️ **A visual cue set on a path that never returns is never painted.**
+  `rgb_matrix_indicators_kb` had picked orange while `commit_pending` for a long time,
+  but it only runs from the next `rgb_matrix_task()` — and on the apply path there is no
+  next task. The cue the code appeared to implement had, in practice, **never been
+  seen**. `poly_flash_rgb_now()` pushes it synchronously (`rgb_matrix_update_pwm_buffers`),
+  the same way `oled_fw_apply_screen()` flushes the status OLED in one pass. Generalise:
+  anything that must be *visible* before a blocking self-flash / reset has to be flushed
+  by the code that draws it, not left to a periodic task.
+- Housekeeping calls `fw_staging_confirm_tick()` **outside** the `!fw_up_active` gate
+  and holds `update_performed()` while pending, so the idle fade can't dim the prompt
+  out from under the user (`update_displays` early-returns once `DISP_IDLE` is set, so
+  it would never be redrawn either).
+- `kdisp_draw_glyph_double_at()` (`base/disp_array.c`) is the 2× mirror of
+  `kdisp_draw_glyph_half_at()` — the keycap fonts top out at the 27 px `_Base_` face,
+  so it is the only way to fill a 72×40 panel with one character. Both take the literal
+  top-left of the **ink** (no baseline align, no `xOffset`).
+- Layout is measured from the font metrics at runtime, not hardcoded: "REJECT" descends
+  2 px below the baseline (the J) and "ACCEPT" does not, so a fixed bottom baseline
+  clips one of them. Preview the cells with `PolyKybdHost/tools/gfx_font.py`.
+- Full user-facing story: `keyboards/polykybd/tools/SIGNING.md`. BOOTSEL/UF2 bypasses
+  `fw_staging` entirely, so enforcement can never brick a board.
+- ⚠️ **Signing gates the FIRMWARE image only — it does NOT close the code-execution
+  surface, and this section reads as though it does.** `fw_staging_check_signature()`
+  is called exclusively in the `FW_TARGET_FIRMWARE` branch of `fw_staging_finalize()`;
+  the **resource region** (4–8 MB) has no signature check at any target. That matters
+  because one of the things flashed there is **executable code**: `doom_pack_load.c`
+  validates the `.plyx` engine pack with magic / ABI / size / RAM-pairing / **CRC32
+  only**, then calls `init(&s_fw_api)` — branching to an offset the pack itself names,
+  on an M0+ with no MPU, so the loaded code is unconfined. The whole chain is remote
+  over HID with no keypress: flash a crafted `.plyx` (cmds `0x50`–`0x52`) → set
+  `IDLE_STYLE_IDDQD` (cmd 28) → the next idle runs it. So the A/ACCEPT prompt guards
+  the firmware image while an unguarded path loads code beside it. Tracked as **FW-9**
+  (open, high) in `polykybd-ctnd/docs/SECURITY_AUDIT.md`, with the fix sketch — verify
+  the pack with the Ed25519 machinery already compiled in, **at load time, not at
+  COMMIT** (flash can be rewritten after a COMMIT succeeds). Interim mitigation:
+  build without `POLYKYBD_DOOM_PACK`. `.whx` / `.plyf` ride the same unsigned
+  transport but are data, not code.
+
+- **Crash diagnostics — the NOLOAD crash record, the flash archive, the 8 s
+  watchdog, the phase breadcrumb and the crash-test triggers — are
+  [`keyboards/polykybd/CRASH_DIAGNOSTICS.md`](CRASH_DIAGNOSTICS.md).**
+  A fault, an unhandled exception or a hang is recorded, rebooted through and
+  announced on the next boot: console line, HID **cmd 39** (protocol v16), and the
+  slave's own record pulled over the split link. Four rules that bind code outside
+  `base/crash_record.c`:
+  - ⚠️ **A new blocking path longer than 8 s needs a `crash_watchdog_feed()` inside
+    it** (`CRASH_WATCHDOG_MS`), or it produces a `kind=watchdog` record — which is
+    the point, but know which one you are choosing. Two places disarm it
+    deliberately: `shutdown_user()` and `fw_staging.c` right before
+    `fw_staging_do_apply()`.
+  - ⚠️ **Never move `crash_record_init()` after the core1 launch.** It archives to
+    flash WITHOUT the `fw_staging` core1 lockout, which is sound only because core1
+    has never been launched at that point; run it later and releasing the lockout
+    does a bounded RELAUNCH whose unbounded FIFO handshake finds core1 already
+    running and blocks forever — a keyboard that hangs on the boot after every crash.
+  - ⚠️ **`WATCHDOG.REASON.TIMER` alone is NOT a hang** — the bootrom's post-UF2-copy
+    reboot is a watchdog reboot, so the first boot after every BOOTSEL flash reads
+    TIMER. The discriminator is `watchdog_enable_caused_reboot()`.
+  - **The phase enum is mirrored in the host's `PHASE_NAMES`** (`crash_report.py`);
+    keep the numbers in step, or a phase added here reads as `phase N` there.
+
+- **The four idle anti-burn-in styles and the Eden screensaver are
+  [`keyboards/polykybd/IDLE_STYLES.md`](IDLE_STYLES.md)** —
+  `IDLE_STYLE_PULSE` (0), `JITTER` (1), `IDDQD` (2, the DOOM attract demo) and
+  `EDEN` (3), in `poly_eeconf_t.idle_style` / HID cmd 28. Four rules that reach
+  outside those files:
+  - ⚠️ **The looping idle frame is TIME-SLICED — never render it as one blocking
+    unit.** A frame is ~36 keycaps and ~150 ms of measured CPU; rendered whole, a tap
+    that starts and ends inside one is never seen (field: *"Eden doesn't wake on the
+    first keypress"*), and on the slave it stalls that half's scan and the master's
+    matrix pull too.
+  - **`update_displays()` early-returns while `DISP_IDLE` is set** — the idle painter
+    owns the keycaps from that point, so anything that must stay visible during idle
+    has to hold `update_performed()` (what the FW-2 prompt and the macro recorder do)
+    rather than expecting a redraw.
+  - ⚠️ **The DEFAULT is board-dependent and gated on the SAME macro the renderer
+    compiles on**, so a default whose renderer is a no-op stub is not expressible.
+    That mattered: EDEN on split42 would have been an anti-burn-in setting that
+    freezes the legends instead of moving them, and the enum's own comment claimed it
+    "behaves like PULSE". **Before defaulting anything to a feature with stubs, check
+    what the stub path actually leaves running.**
+  - **Boot-intro-done persistence rides the suspend-only dirty-flag EEPROM model** —
+    `mark_boot_intro_done()` sets `g_boot_dirty`, never a direct write.
+

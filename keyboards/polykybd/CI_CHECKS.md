@@ -687,3 +687,101 @@ in either shape, so "not failed" is never "passed".
   rows; treat the worst-iteration rows as anecdotes. **0.33.13 measured
   performance-neutral** (everything within ~1%), so its baseline was deliberately
   left in place.
+
+## Continuous integration (PR checks)
+
+A PolyKybd PR runs a handful of checks — know which ones **gate** and which are
+inherited-upstream noise:
+
+- **The mechanics — the HIL tiers and how to ask for them, the FW-APPLY and doom
+  tiers, the rig debug loop, the paths filters that decide whether a run starts at
+  all, the inherited upstream lint, and how to read a job log — are
+  [`keyboards/polykybd/CI_CHECKS.md`](CI_CHECKS.md).** Four
+  things every PR author needs without opening it:
+  - ⚠️ **The HIL suite has TWO tiers and the default one deliberately skips the
+    deepest checks** — the startup animation, idle engage + the Eden screensaver, a
+    450-frame split-link soak, and the reboot power cycle that is the ONLY thing
+    verifying user state survives a power loss. **Ask for `TIER_EXTENDED` on anything
+    touching EEPROM/persisted state, the split link, the idle/animation paths, or a
+    release**: the `hil-extended` PR label, `[hil-extended]` in a pushed commit, or a
+    `workflow_dispatch`. The job log says which tier ran (`suite tier: …`) — read it
+    before concluding a green board covered the reboot check, because by default it
+    did not.
+  - ⚠️ **A HIL job that never STARTS is not a red one, and it alerts nobody** — an
+    offline rig leaves it `queued` with no conclusion, no log and no timeout, and it
+    silently arms a release refusal hours later. **Read `status` before
+    `conclusion`.** Do not re-run: the rig runs one job at a time, so a re-run queues
+    behind the ones already waiting and cannot make an absent runner appear.
+  - ⚠️ **A green board does NOT mean a rig test from an unmerged `polykybd-ctnd` PR
+    ran** — CI force-syncs the station to ctnd `main`, so that test does not exist on
+    the rig. Land the ctnd PR first, then re-run HIL; verify by grepping the job log
+    for the test's own name.
+  - **The `diagnose-hil-failure` skill classifies a red rig check**;
+    **`debug-firmware-on-rig`** drives a one-off probe (`tier: debug`) when the
+    graded suite cannot answer the question.
+
+- **`cppcheck`** (`cppcheck.yml`) also **gates**, and is the only reviewer here that
+  is not an LLM — CodeRabbit, Sourcery and the on-demand Claude reviewer share
+  training data and therefore blind spots, while dataflow analysis fails elsewhere.
+  It has no quota, no star threshold and no file-count limit, so unlike every bot it
+  cannot go quiet on the PR that needs it. It earned the slot immediately, finding
+  the two no-OLED keys latching a chip-select (§ *The per-keycap DISPLAY grid is
+  NOT a rectangle*, below).
+  Scoped to `keyboards/polykybd` + `modules/polykybd`, excluding the vendored doom
+  engine, generated font headers, vendored monocypher and the googletest sources.
+  - **Analyse with `-DFW_REQUIRE_SIGNATURE`** — the configuration that ships.
+    Without it cppcheck reports a false `identicalInnerCondition` in `fw_staging.c`
+    that the `#ifdef` itself creates, and there is nothing wrong with the code.
+  - ⚠️ **A bare `#` line in `.cppcheck-suppressions` kills the whole run**:
+    `cppcheck: error: Failed to add suppression. No id.`, exit 1, **before checking
+    anything** — so it presents as "no findings" rather than as a syntax error. A
+    comment needs text after the hash; blank lines are fine. Cost a debugging round
+    (2026-08-19).
+  - Every suppression in that file carries a **written reason**, same discipline as
+    the Sourcery `nosemgrep` audit note. Do not add an id there to make the check
+    green; if a finding is real, fix it or record why it is deferred.
+  - **CodeQL was considered and rejected for this repo**: C/C++ wants a build, and it
+    would analyse the whole upstream QMK tree — the same trap as the
+    lint-on-upstream-keyboards problem below. The host repo runs CodeQL instead,
+    where Python needs no build and the tree is entirely ours.
+- **`PR Lint keyboards`** (job `lint`, `.github/workflows/lint.yml`) and **`Pull
+  Request Labeler`** (job `triage`, `labeler.yml`, `pull_request_target`) are **stock
+  upstream QMK** workflows the fork inherited. `lint` runs `qmk lint --strict` on the
+  changed keyboards; the labeler auto-labels by path. They **pass green on every normal
+  commit** and are **non-blocking**.
+- ⚠️ **A red `lint`/`triage` where BOTH cancelled at the same second (~16 min in) is an
+  infra/runner cancellation, NOT a code error** — GitHub surfaces a cancelled run as a
+  red "failure". Confirm via the workflow **run history** (they'll be green on the
+  prior commits) and reproduce locally: `qmk lint --strict --keyboard polykybd/split72`
+  (+ `split42`), `qmk ci-validate-keyboard-targets`, `qmk ci-validate-aliases`. If
+  those are clean, just **re-run the two jobs** — there is nothing to fix.
+- ⚠️ **Applying N labels in ONE API call fires N `labeled` events, i.e. N workflow
+  runs.** `qmk-test.yml` listens for `labeled` (it must, or the `hil-perf` label would
+  trigger nothing), so adding `hil-perf` + `bump:minor` together started **two identical
+  perf runs** — a wasted rig build + flash each (2026-08-05). The rig executes one job
+  at a time so they queue rather than collide, but cancel the duplicate. Apply labels
+  one call at a time when one of them is a trigger, or expect to clean up. This is a
+  *different* mechanism from the push/pull_request duplication below.
+- ⚠️ **A `check_suite.completed` wake can name a SUPERSEDED head, and read at face
+  value it says "CI is green" about a commit nobody is on.** The envelope's own text
+  is *"No third-party check suite on the PR's head_sha is still running or failed"*
+  — but `head_sha` is the suite's, not the PR's, and a suite that started before
+  your last push completes after it. Three arrived on #282 (2026-09-09) for
+  `0e027fb` and `a4dcffbc` while the head was `6f41acc`. **Compare the event's
+  `head_sha` against the PR's actual head before believing it**, which the envelope
+  also asks for in the same breath ("verify the PR's overall state before acting").
+  Same family as the stale-walkthrough traps in `PolyKybdHost/CLAUDE.md`: the signal
+  is honest about what it covers and silent about what you assumed it covered.
+- The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
+  above.
+- ⚠️ **PR CI does NOT build the monolith.** `qmk-test.yml` builds only
+  `POLYKYBD_DOOM_PACK=yes` (+ split42); the **monolithic** `POLYKYBD_DOOM=yes`
+  flavour — whose objects the `.plyx` is harvested from — is built **exclusively by
+  the release workflow**. So a PR can be fully green and still break at *publish*
+  time: that is exactly what #172 did, and why v0.9.81 was never built at all. The
+  monolith is also the tightest RAM flavour (it had **20 bytes** of `.heap` free at
+  v0.9.82), so it is the first to fail on any RAM growth. **Build it locally before
+  merging anything that adds statics:**
+  `qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes`, or run
+  `doom/pack/build_pack.sh`, which builds both flavours.
+

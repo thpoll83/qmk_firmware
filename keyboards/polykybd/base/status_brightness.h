@@ -22,10 +22,19 @@
 // therefore describes the panel it is drawn on, and no new synced field, EEPROM
 // byte or HID command is needed — cmd 13 and the KC_D* keys already carry it.
 //
-// ⚠️ Feed this the ACTIVE brightness (state.c get_active_brightness(): the
-// host-auto value when auto is engaged, else the stored manual one), NOT the
-// live `local_state->contrast`. During the pulse idle style the latter cycles
-// 0..49 every housekeeping pass, which would strobe the status panel.
+// ⚠️ Feed this the SYNCED `local_state->contrast`, NOT state.c's
+// get_active_brightness(). Both halves must land on the same number, and
+// contrast is the one value the split sync actually carries. g_user_brightness
+// (what get_active_brightness reads) is master-side policy; on the SLAVE it is
+// only a shadow that split_sync.c updates on an EDGE which is skipped for any
+// sync carrying DISP_IDLE or IDLE_TRANSITION, with no retry — so driving the
+// panel from it left the slave's status OLED stuck at the FULL_BRIGHT its static
+// initialiser gave it. See status_oled_level() in poly_keymap.c, which is the one
+// caller and the one place that decides.
+//
+// The pulse idle style does cycle contrast 0..49, but it does so with DISP_IDLE
+// SET throughout, and the idle branch returns POLY_STATUS_IDLE_BRIGHT before this
+// map is reached — so there is no strobe to guard against here.
 //
 // POLY_STATUS_MIN_BRIGHT is the floor of the mapped range, not a clamp applied
 // after it: the two panels differ in size and multiplex ratio, so the bottom of

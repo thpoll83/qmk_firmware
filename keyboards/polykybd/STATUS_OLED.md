@@ -83,12 +83,18 @@ in size and multiplex ratio, so the bottom of the keycap scale is not guaranteed
 readable as thin text on 128×64. Raising it rescales the map without moving the
 `FULL_BRIGHT` end. Unit-tested (`make test:polykybd_status_brightness`).
 
-- ⚠️ **Feed the map `get_active_brightness()`, NEVER `local_state->contrast`.** The
-  pulse idle style cycles contrast 0..49 every housekeeping pass; the panel would
-  strobe. `status_oled_level()` in `poly_keymap.c` is the one place that decides.
-- Both halves can answer it — the slave's `g_user_brightness` is kept current by
-  `note_user_brightness()` in `split_sync.c`, which deliberately skips idle/fade
-  values, so the status panel also holds steady through the keycap fade-out.
+- ⚠️ **Feed the map the SYNCED `local_state->contrast`, NEVER
+  `get_active_brightness()`.** `status_oled_level()` in `poly_keymap.c` is the one
+  place that decides, and contrast is the one brightness value the split sync
+  actually carries, so both halves land on the same number by construction.
+  Driving it from `get_active_brightness()` was the first attempt and it left the
+  **slave's panel stuck at full** — see the note below.
+- The pulse idle style does cycle contrast 0..49, but with `DISP_IDLE` **set**
+  throughout (Eden likewise), so the idle branch returns `POLY_STATUS_IDLE_BRIGHT`
+  and the cycling value is never mapped. There is no strobe to guard against.
+- **The panel now fades WITH the keycaps** over `FADE_TRANSITION_TIME` instead of
+  holding full until the pulse begins — identically on both halves, since both are
+  reading the same synced number.
 - **No new synced field, EEPROM byte or HID command.** Cmd 13 and the `KC_D*` keys
   already carry the value, so the brightness sun gauge drawn ON this panel now
   describes the panel it is drawn on.
@@ -107,6 +113,17 @@ panel. A *longer* absence hid it: `poly_suspend()` does clear `STATUS_DISP_ON`, 
 resume path restored 60. **The lesson generalises — a flag that a periodic task
 re-asserts every pass can never be used as a change EDGE.** The restore is now keyed
 off `contrast_changed || idle_changed`.
+
+⚠️ **`g_user_brightness` is MASTER-side policy; on the slave it is a best-effort
+shadow.** `split_sync.c` updates it from the incoming sync on an EDGE
+(`incoming->contrast != current->contrast`) that is **skipped** whenever the same
+sync carries `DISP_IDLE` or `IDLE_TRANSITION` — and `copy_local_state()` advances
+`current->contrast` on that very sync, so a skipped change can never be noticed
+again. Unlike the periodic state syncs, **the diff is not a retry queue for it**:
+one miss is permanent, and the slave keeps the `FULL_BRIGHT` its static
+initialiser gave it. That is why the status panel reads the synced contrast
+instead. Anything else the slave needs to track about brightness faces the same
+trap — derive it from synced state, not from a shadow updated on an edge.
 
 ⚠️ **Idle is a dim contrast register, NOT `oled_off()`** (`POLY_STATUS_IDLE_BRIGHT`,
 0). `oled_task_user()` hands the panel to `oled_render_logos()` during `DISP_IDLE` and

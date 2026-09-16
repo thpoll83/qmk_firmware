@@ -369,16 +369,29 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 
 // Status OLED contrast register for the current moment. Dark while idling (the
 // panel is handed to oled_render_logos() with its hardware scroll running, and
-// that faint scrolling logo is the idle look), otherwise the SAME brightness the
+// that faint scrolling logo is the idle look), otherwise the SAME contrast the
 // keycaps are on, mapped onto this panel's range by base/status_brightness.h.
 //
-// The input is the ACTIVE brightness (host-auto value when auto is engaged, else
-// the stored manual one), NOT local_state->contrast: the pulse idle style cycles
-// contrast 0..49 every housekeeping pass, which would strobe the panel. Both
-// halves can answer it — the slave's g_user_brightness is kept current by
-// note_user_brightness() in split_sync.c.
+// ⚠️ The input is the SYNCED local_state->contrast — the one value both halves
+// already agree on — NOT get_active_brightness(). That was the first attempt and
+// it left the SLAVE's panel stuck at full: get_active_brightness() reads
+// g_user_brightness, which on the slave is only a shadow maintained by one
+// conditional in split_sync.c's sync handler. That conditional is an EDGE
+// (`incoming->contrast != current->contrast`) that is skipped whenever the sync
+// also carries DISP_IDLE or IDLE_TRANSITION — and copy_local_state() advances
+// current->contrast on that very same sync, so the skipped change can never be
+// seen again. Unlike the periodic state syncs, where the diff IS the retry queue,
+// a missed note is missed for good, and the slave keeps the FULL_BRIGHT the
+// static initialiser gave it.
+//
+// The strobe this was guarding against is already handled by `idle`: the pulse
+// style cycles contrast 0..49 with DISP_IDLE SET for the whole time, and Eden
+// holds EDEN_IDLE_BRIGHTNESS with DISP_IDLE set too, so both return the idle
+// level and never see the cycling value. What the synced contrast does add is the
+// fade-out: the panel now dims WITH the keycaps over FADE_TRANSITION_TIME instead
+// of holding full until the pulse starts, identically on both halves.
 static uint8_t status_oled_level(bool idle) {
-    return idle ? POLY_STATUS_IDLE_BRIGHT : poly_status_brightness(get_active_brightness());
+    return idle ? POLY_STATUS_IDLE_BRIGHT : poly_status_brightness(get_local_state()->contrast);
 }
 
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
@@ -5308,10 +5321,11 @@ void keyboard_post_init_user(void) {
     splash_progress(7);                 // EEPROM config (brightness/lang/OS/MRU) loaded
 
     set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
-    // …and bring the status panel up on the same scale. QMK's oled_init() programs
-    // the contrast register to OLED_BRIGHTNESS unconditionally, so without this a
-    // board that booted with a stored brightness of 2 would light its status OLED at
-    // full until the first contrast change moved it.
+    // …and bring the status panel up on the same scale (local_state->contrast was
+    // just loaded from EEPROM above). QMK's oled_init() programs the contrast
+    // register to OLED_BRIGHTNESS unconditionally, so without this a board that
+    // booted with a stored brightness of 2 would light its status OLED at full
+    // until the first contrast change moved it.
     oled_set_brightness(status_oled_level(false));
 
     // One-time startup animation: on the very first boot (fresh EEPROM), play the

@@ -306,6 +306,41 @@ static void oled_fw_notice(const uint32_t* word, bool icon) {
     oled_render_dirty(true);   // one synchronous full flush before the reboot
 }
 
+// Boot progress, drawn straight onto the status OLED at every splash milestone.
+//
+// ⚠️ This exists because a boot HANG leaves no other evidence. The whole of post_init
+// runs with the watchdog off on purpose (crash_watchdog_start() is its last line), so
+// a stall there is permanent: no reset, no crash record, and the board sits there
+// until it is unplugged. The only thing that survived was the keycap splash's
+// solidify count — "how many letters went solid" — which is a field report of the
+// form "it was stuck with PO" and localises the stall to one of seven gaps only if
+// the letters are counted exactly. A number cannot be miscounted.
+//
+// Costs a couple of hundred ms of I2C across the whole boot: the first paint is a
+// full frame, the rest change only the digit, and oled_write_raw diffs.
+void oled_boot_progress(uint8_t step, uint8_t total) {
+    const GFXfont* mid[] = { &NotoSans_Regular_Mid_19px7b };
+    uint32_t       buf[12];
+    char           txt[20];
+
+    snprintf(txt, sizeof(txt), "Boot %u/%u", (unsigned)step, (unsigned)total);
+    ascii_to_u32_string(buf, sizeof(buf), txt);
+
+    oled_on();
+    kdisp_set_buffer(0);
+    int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+    kdisp_gfx_text_bbox(mid, 1, buf, &x0, &x1, &y0, &y1);
+    int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
+    if (x < 0) x = 0;
+    kdisp_write_gfx_text(mid, 1, (int8_t)x,
+                         (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (y0 + y1) / 2), buf);
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    // Synchronous, for the usual reason: the step this announces may be the one that
+    // never returns, and a frame left for the next oled_render() tick is a frame the
+    // hung board never shows.
+    oled_render_dirty(true);
+}
+
 // "⭯Applying  Firmware⭯" — the blocking self-flash is about to start and the board
 // will reboot out of it. This is the screen frozen on the panel for the whole copy,
 // so it must name the LONG operation, not the millisecond one that precedes it.

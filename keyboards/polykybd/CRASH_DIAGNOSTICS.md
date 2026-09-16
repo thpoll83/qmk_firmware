@@ -112,6 +112,36 @@ run on it (`test_no_crash_record`). What is worth knowing:
   watchdog reset mid-copy is the brick this whole area guards against). A new
   blocking path longer than 8 s needs a `crash_watchdog_feed()` inside it — or
   the record it produces will say so, which is the point.
+- ⚠️ **BOOT IS THE ONE UNWATCHED WINDOW, and that is why a boot hang stays
+  unexplained.** `crash_watchdog_start()` is the LAST line of
+  `keyboard_post_init_user()` — deliberately, because the steps above it may block for
+  seconds — so the whole of `pre_init` + `post_init` runs with no watchdog. A stall
+  anywhere in there is PERMANENT: no reset, no record, no console line, and the board
+  sits on the splash until it is unplugged. Every field report of "the master did not
+  restart, unplugging brought it back" lands in this window, which is exactly why it
+  keeps being re-reported as "still not clear why".
+
+  Two things now survive it, neither of which needs the watchdog:
+
+  - `splash_progress()` stamps `crash_phase_enter(CRASH_PHASE_BOOT, step)` at each
+    milestone, so any record written LATER says how far that boot got — the line reads
+    `phase=1:0x0003`, i.e. boot step 3. (It does nothing for a board that is unplugged
+    rather than reset; nothing written to flash can survive that.)
+  - the status OLED shows **`Boot n/8`** at each milestone. The only evidence a hang
+    used to leave was the keycap splash's solidify count — "it was stuck with PO" —
+    which localises the stall to one of seven gaps only if the letters are counted
+    exactly, and a two-letter field report cannot be trusted to that precision. The
+    number can be read straight off the wedged board.
+
+  ⚠️ **Arming the watchdog earlier is NOT a free fix**, which is why it has not been
+  done. `crash_watchdog_start()` also sets `consecutive = 0`, and reaching it is the
+  definition of "this boot succeeded" for the crash-loop halt; arming during boot
+  changes what that counter means. And 8 s is the RP2040 MAXIMUM, so any single
+  milestone gap that legitimately exceeds it turns a rare hang into a permanent reboot
+  storm — on a path where the first gap spans QMK's split and USB init, i.e. the very
+  thing that blocks when the other half is missing. It needs measured per-milestone
+  boot timings first.
+
 - **A crash loop halts instead of looping forever**: `consecutive` counts
   back-to-back records and past `CRASH_LOOP_LIMIT` (5) the handler parks in `wfi`
   rather than rebooting — recoverable over BOOTSEL, and the archive still says

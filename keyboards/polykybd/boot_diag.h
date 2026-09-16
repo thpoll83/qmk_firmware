@@ -12,6 +12,9 @@
 // handoff (see splash_progress() in boot_diag.c). Any step 1..7 draws that
 // milestone's frame.
 #define SPLASH_DONE 0xFF
+// Milestones a boot passes through: steps 1..7 plus SPLASH_DONE, reported as
+// "Boot n/8" on the status OLED and as the CRASH_PHASE_BOOT argument.
+#define POLY_SPLASH_STEPS 8
 
 // Boot identification banner — printed to the HID console (`qmk console`) so it
 // shows which board, firmware and role a half is, plus its split-link state.

@@ -5728,23 +5728,23 @@ void suspend_power_down_kb(void) {
 // here too — without this, a reboot/bootloader jump that isn't preceded by a USB
 // suspend would discard any MRU/settings/layer changes still held in RAM.
 bool shutdown_user(bool jump_to_bootloader) {
-    // ⚠️ "Restart Now" existed but was unreachable from a firmware update, and on the
-    // MASTER it was unreachable full stop. fw_staging_arm_reboot() — the only thing
-    // that sets reboot_pending — is called from ONE place: split_fw_up.c's reset-sync
-    // handler, i.e. the SLAVE being told to restart. The master's own QK_REBOOT
-    // returns true and lets QMK reset it, and the firmware apply ends in
-    // fw_staging_apply_and_reboot()'s watchdog reset, which is a different function
-    // again. So the screen only ever appeared on one half, of a reset nobody was
-    // watching for.
+    // ⚠️ Do NOT paint a "Restart" screen here, though shutdown_quantum makes this the
+    // one hook that catches every deliberate reset. It was tried (2026-09-16) and
+    // backed out, for two reasons that compound:
     //
-    // shutdown_quantum calls this before EVERY deliberate reset, which makes it the
-    // one place that covers them all. The bootloader jump is excluded: it has its own
-    // message (display_bootloader_message(), teal + "BOOT-LOADER!" on the keycaps),
-    // and overwriting that with "Restart Now" would be a downgrade.
-    if (!jump_to_bootloader) {
-        poly_board_unusable_cue();
-        oled_fw_restart_screen();
-    }
+    //  * it is not visible. mcu_reset() follows within microseconds and the board is
+    //    back in keyboard_pre_init_user()'s splash — which opens with
+    //    clear_all_displays() — inside a couple of hundred ms. The user reported
+    //    seeing nothing, which is what the timing predicts.
+    //  * the cost is a 72-panel SPI broadcast plus a blocking ~26 ms I2C flush added
+    //    to the reset path, and the reset path is the ONE place where a stall leaves
+    //    a dead board: the watchdog is deliberately not armed until the END of
+    //    post_init (crash_watchdog_start()), so nothing recovers a board that does
+    //    not make it back through boot.
+    //
+    // A restart genuinely worth announcing announces itself from a path that DWELLS —
+    // the slave's reboot_pending branch in housekeeping still does, because it holds
+    // the screen while it flushes handedness and EEPROM before mcu_reset().
     save_all_dirty();
     // Disarm the watchdog before any deliberate reset / bootloader jump. Left
     // armed across a BOOTSEL entry it would reset the bootrom out from under a

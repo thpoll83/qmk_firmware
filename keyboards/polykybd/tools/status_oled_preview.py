@@ -210,7 +210,7 @@ def build_fw_confirm_panel(side, small):
     return pts
 
 
-def build_fw_notice_panel(side, disp, arrow, word, icon=True):
+def build_fw_notice_panel(side, disp, arrow, word, icon=True, detail=None, small=None):
     """The two-word firmware notice — mirror of oled_helper.c's oled_fw_notice(),
     behind oled_fw_apply_screen() / oled_fw_restart_screen() / oled_fw_failed_screen().
 
@@ -236,8 +236,9 @@ def build_fw_notice_panel(side, disp, arrow, word, icon=True):
     gx = (P_W - (iw + gap + tw)) // 2
     if gx < 0:
         gx = 0
-    i_base = P_H // 2 - (iy0 + iy1) // 2
-    t_base = P_H // 2 - (ty0 + ty1) // 2
+    hband = (P_H * 2) // 3 if detail else P_H
+    i_base = hband // 2 - (iy0 + iy1) // 2
+    t_base = hband // 2 - (ty0 + ty1) // 2
     if not icon:
         draw(setp, disp, gx - tx0, t_base, s2cp(word))
     elif side == 'L':
@@ -246,6 +247,45 @@ def build_fw_notice_panel(side, disp, arrow, word, icon=True):
     else:
         draw(setp, disp, gx - tx0, t_base, s2cp(word))
         draw(setp, arrow, gx + tw + gap - ix0, i_base, [0x2B6F])
+    if detail:
+        dcp = s2cp(detail)
+        dx0, dx1, dy0, dy1 = text_bbox(small, dcp)
+        dx = (P_W - (dx1 - dx0 + 1)) // 2 - dx0
+        if dx < 0:
+            dx = 0
+        dband = P_H - hband
+        draw(setp, small, dx, hband + dband // 2 - (dy0 + dy1) // 2, dcp)
+    return pts
+
+
+def build_fw_failed_panel(side, small, why='crc', size=492916, want=0xa1b2c3d4, got=0x5e6f7a8b):
+    """The refused-apply screen — mirror of oled_helper.c's oled_fw_failed_screen().
+
+    Band layout (oled_fw_confirm_panel's shape), because this is the one firmware
+    screen with something to say. LEFT half = what happened and why, RIGHT half = the
+    numbers. `why` is 'crc' or 'none'. On the 32 px panel the MIDDLE line is dropped.
+    """
+    pts = []
+    setp = lambda px, py: pts.append((px, py))
+    no_image = (why == 'none')
+    if side == 'L':
+        lines = ["Update", "FAILED", "not staged" if no_image else "bad checksum"]
+    elif no_image:
+        lines = ["Nothing was", "staged", "upload again"]
+    else:
+        lines = ["%d KB" % ((size + 1023) // 1024),
+                 "want %08x" % want,
+                 "got  %08x" % got]
+    if P_H < 64:
+        lines = [lines[0], lines[2]]
+    band = P_H // len(lines)
+    for i, txt in enumerate(lines):
+        cp = s2cp(txt)
+        bx0, bx1, by0, by1 = text_bbox(small, cp)
+        x = (P_W - (bx1 - bx0 + 1)) // 2 - bx0
+        if x < 0:
+            x = 0
+        draw(setp, small, x, band * i + band // 2 - (by0 + by1) // 2, cp)
     return pts
 
 
@@ -726,7 +766,7 @@ def main():
                          "(Qwerty, 'Qwerty Stag!', 'Colemak DH', Neo, Workman)")
     ap.add_argument('--rgb-off', action='store_true',
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
-    ap.add_argument('--fw-notice', choices=('apply', 'restart', 'failed'),
+    ap.add_argument('--fw-notice', choices=('apply', 'restart', 'failed', 'failed-none'),
                     help='preview a firmware notice screen instead of the status screen')
     ap.add_argument('--telemetry', action='store_true',
                     help='preview the settings->More telemetry screen instead of the status screen')
@@ -773,13 +813,17 @@ def main():
         fx, fy = (int(v) for v in args.pad_xy.split(','))
         L = build_pad_panel(small, fx, fy, tapping=args.pad_tap)
         R = L
+    elif args.fw_notice in ('failed', 'failed-none'):
+        why = 'none' if args.fw_notice == 'failed-none' else 'crc'
+        L = build_fw_failed_panel('L', small, why)
+        R = build_fw_failed_panel('R', small, why)
     elif args.fw_notice:
         arrow = load_notice_font()
-        words = {'apply':   ('Applying', 'Firmware', True),
-                 'restart': ('Restart',  'Now',      True),
-                 'failed':  ('Update',   'FAILED',   False)}[args.fw_notice]
-        L = build_fw_notice_panel('L', disp, arrow, words[0], words[2])
-        R = build_fw_notice_panel('R', disp, arrow, words[1], words[2])
+        words = {'apply':   ('Applying', 'Firmware'),
+                 'restart': ('Restart',  'Now')}[args.fw_notice]
+        dets = ('482 KB', 'do not unplug') if args.fw_notice == 'apply' else (None, None)
+        L = build_fw_notice_panel('L', disp, arrow, words[0], True, dets[0], small)
+        R = build_fw_notice_panel('R', disp, arrow, words[1], True, dets[1], small)
     elif args.telemetry:
         L = build_telemetry_panel(True,  small, uptime=args.uptime, link=args.link)
         R = build_telemetry_panel(False, small, uptime=args.uptime, link=args.link)

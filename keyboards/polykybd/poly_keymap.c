@@ -349,6 +349,22 @@ static void poly_flash_rgb_now(void) {
 static uint16_t s_fw_notice_at = 0;
 static bool     s_fw_notice_armed = false;
 
+// Why the last apply was refused, and the numbers behind it. Kept here rather than
+// passed down the call because oled_fw_failed_screen() repaints from them on EVERY
+// tick the notice is held — the housekeeping pass that recorded them is long gone by
+// the second repaint.
+static fw_apply_verdict_t s_fw_fail_why  = FW_APPLY_OK;
+static uint32_t           s_fw_fail_size = 0;
+static uint32_t           s_fw_fail_want = 0;
+static uint32_t           s_fw_fail_got  = 0;
+
+fw_apply_verdict_t poly_fw_failure_detail(uint32_t *size, uint32_t *want, uint32_t *got) {
+    if (size) *size = s_fw_fail_size;
+    if (want) *want = s_fw_fail_want;
+    if (got)  *got  = s_fw_fail_got;
+    return s_fw_fail_why;
+}
+
 // True while a held firmware notice still owns the status OLED. Read by
 // oled_task_user() (oled_helper.c), which must draw the notice INSTEAD of the status
 // screen for as long as this is set.
@@ -1005,12 +1021,17 @@ void housekeeping_task_user(void) {
                 // a marker printed immediately before it is simply lost, which is how
                 // "did it enter the copy?" stayed unanswerable for several rounds.
                 uint32_t size = 0, want = 0, got = 0;
-                const bool good = fw_staging_verify_staged_flash(&size, &want, &got);
+                // ⚠️ The out-params stay UNTOUCHED on FW_APPLY_NO_IMAGE (there is no
+                // header to read), which is why they are initialised above.
+                const fw_apply_verdict_t why = fw_staging_verify_staged_flash(&size, &want, &got);
                 uprintf("APPLY 3/4: staged %lu B (%lu sectors) crc want=%08lx got=%08lx -> %s\n",
                         (unsigned long)size,
                         (unsigned long)((size + 4095u) / 4096u),
-                        (unsigned long)want, (unsigned long)got, good ? "OK" : "MISMATCH");
-                if (!good) {
+                        (unsigned long)want, (unsigned long)got,
+                        why == FW_APPLY_OK      ? "OK"
+                        : why == FW_APPLY_NO_IMAGE ? "NO IMAGE"
+                                                   : "MISMATCH");
+                if (why != FW_APPLY_OK) {
                     // Refuse rather than erase a working firmware with an image we
                     // cannot vouch for. The board stays usable and the host can retry.
                     uprintf("APPLY: refusing to overwrite firmware from a bad staged image\n");
@@ -1022,6 +1043,10 @@ void housekeeping_task_user(void) {
                     // console line above, so from the outside the update simply did
                     // nothing — and hand the keycaps their legends back, since stage 0
                     // blanked them for an apply that is not going to happen.
+                    s_fw_fail_why  = why;
+                    s_fw_fail_size = size;
+                    s_fw_fail_want = want;
+                    s_fw_fail_got  = got;
                     oled_fw_failed_screen();
                     s_fw_notice_at = timer_read();
                     s_fw_notice_armed = true;

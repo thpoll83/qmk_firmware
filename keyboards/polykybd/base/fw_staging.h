@@ -113,10 +113,33 @@ bool fw_staging_refused_unsigned(void);
 void fw_staging_core1_lockout_begin(void);
 void fw_staging_core1_lockout_end(void);
 
+// Why an apply was refused. The two failures are genuinely different events and the
+// user can act on the difference: NO_IMAGE means nothing ever reached the staging
+// area (the transfer did not run, or was cancelled), while BAD_CRC means bytes DID
+// arrive and are damaged -- a re-send is worth trying for the second and pointless
+// without a fresh upload for the first. They used to collapse into one `false`, so
+// the board could only say "it did not work".
+typedef enum {
+    FW_APPLY_OK = 0,      // header magic present and the flashed bytes match their CRC
+    FW_APPLY_NO_IMAGE,    // no FW_STAGING_MAGIC: nothing is staged
+    FW_APPLY_BAD_CRC,     // image present, CRC mismatch: truncated or corrupt
+} fw_apply_verdict_t;
+
 // Re-CRC the staged image AS IT SITS IN FLASH. COMMIT only checks the bytes as they
 // arrived in RAM, so it says nothing about what actually landed -- and the applier is
 // about to erase the only working firmware on the strength of it.
-bool fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc);
+//
+// ⚠️ On FW_APPLY_NO_IMAGE the out-params are left UNTOUCHED (there is no header to
+// read them from), so initialise them before the call rather than reading a size of
+// zero as a fact about the image.
+fw_apply_verdict_t fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc);
+
+// The staged image's size straight out of the header -- O(1), no CRC scan, so it is
+// safe to call on the apply path BEFORE the ~25 ms verify. 0 when nothing is staged.
+// Exists so the "Applying" notice can say how much work is about to happen: the copy
+// blocks for seconds with no way to update the panel, and a size is the only progress
+// information that can be shown at all.
+uint32_t fw_staging_staged_size(void);
 
 // Disarm an armed apply without applying it.
 void fw_staging_cancel_apply(void);

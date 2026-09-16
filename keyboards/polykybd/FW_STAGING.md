@@ -52,9 +52,36 @@ screens are previewable without flashing via
 |---|---|---|---|
 | staging / transfer | breathing **cyan** | legible base legends | `oled_fw_update_screen()` + progress bar |
 | FW-2 confirm prompt | breathing **orange** | blank except **A** / **R** | `oled_fw_confirm_screen()` |
-| applying | solid **orange** | **blank** | `⭯Applying  Firmware⭯` |
+| applying | solid **orange** | **blank** | `⭯Applying / 482 KB` · `Firmware⭯ / do not unplug` |
 | reboot / staged reset | solid **orange** | **blank** | `⭯Restart  Now⭯` |
-| apply REFUSED (bad CRC) | orange fades out | legends restored | `Update  FAILED`, held 5 s |
+| apply REFUSED | orange fades out | legends restored | `Update FAILED / <reason>` + the numbers, held 5 s |
+
+**The two halves carry DIFFERENT detail**, because printing the same number twice
+wastes the second panel. The size is the only progress information the apply screen
+can carry at all — the copy blocks for seconds with interrupts off and never returns,
+so nothing can update the panel once it starts, and a size at least separates "this
+will take a moment" from "this is wedged". The right half spends its line on the thing
+that matters most instead: the copy erases the only working firmware, so losing power
+part-way through is exactly how a board bricks.
+
+**A refused apply names WHICH failure**, via `fw_apply_verdict_t`. The two are
+different events and the user can act on the difference:
+
+- `FW_APPLY_NO_IMAGE` — no `FW_STAGING_MAGIC`, nothing ever reached the staging area.
+  Re-sending the apply fails identically; the UPLOAD has to be redone. Left half reads
+  `Update / FAILED / not staged`, right half `Nothing was / staged / upload again`.
+- `FW_APPLY_BAD_CRC` — bytes DID arrive and are damaged. A re-send usually fixes it.
+  Left half `Update / FAILED / bad checksum`, right half the size and both CRCs
+  (`want …` / `got …`) — together those separate "the host sent the wrong thing" from
+  "the flash did not take".
+
+⚠️ `fw_staging_verify_staged_flash()` leaves its out-params **untouched** on
+`FW_APPLY_NO_IMAGE` (there is no header to read them from), so initialise them at the
+call site rather than reading a size of zero as a fact about the image.
+
+⚠️ **The failure screen's values are kept in statics, not passed down the call.** It
+repaints on every tick the notice is held, and the housekeeping pass that computed
+them is long gone by the second repaint — `poly_fw_failure_detail()` is that record.
 
 ⚠️ **Orange means "you cannot type", and until 2026-09-16 the keycaps did not say
 so.** The cue was on the LEDs alone while 72 displays went on showing a full, inviting
@@ -70,6 +97,16 @@ next `rgb_matrix_task()` and there is no next one; the notice screens end in
 `oled_render_dirty(true)` because the stock one-block-per-call flush would dribble; and
 the keycap blank is a direct SPI write for the same reason. **A cue queued on a path
 that never returns is a cue nobody ever sees.**
+
+⚠️ **Measure every line; two of them did not fit and one glyph was not there.**
+`tools/status_oled_preview.py --fw-notice {apply,restart,failed,failed-none}` renders
+these from the real committed fonts. It caught `"Restarting"` at 125 of 128 px,
+`"no image staged"` at 123 (now `"not staged"`, 80) — and that **U+2014 is absent from
+`NotoSans_Regular_Small_15px7b`**, where `kdisp_write_gfx_text()` SKIPS a glyph the
+font does not carry rather than drawing a missing-glyph box. So `"staged —"` renders
+as `"staged"`, silently, and only measuring shows it: the two strings come back 2 px
+apart. A word that merely fits is a word that clips the next time the font is
+regenerated.
 
 ⚠️ **Painting a cue is not the same as KEEPING it, and `fw_up_active` does not cover
 the apply.** The first version of all of this painted correctly and was then wiped

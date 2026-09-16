@@ -24,6 +24,7 @@
 #include QMK_KEYBOARD_H
 
 #include "base/update.h" // enum refresh_mode
+#include "base/fw_staging.h" // fw_apply_verdict_t
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -138,3 +139,9 @@ void poly_prepare_for_flash(void);
 // screen for as long as it is set — every other firmware notice is followed by a
 // reboot, so only this one can be repainted over.
 bool poly_fw_notice_active(void);
+// Why the last apply was refused, plus the numbers behind it (staged size, the CRC the
+// header promised, the CRC actually read back). FW_APPLY_OK when no apply has been
+// refused. Read by oled_fw_failed_screen(), which repaints from it on every tick the
+// notice is held, so the values have to outlive the housekeeping pass that recorded
+// them rather than being passed down the call.
+fw_apply_verdict_t poly_fw_failure_detail(uint32_t *size, uint32_t *want, uint32_t *got);

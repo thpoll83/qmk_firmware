@@ -52,7 +52,8 @@ screens are previewable without flashing via
 |---|---|---|---|
 | staging / transfer | breathing **cyan** | legible base legends | `oled_fw_update_screen()` + progress bar |
 | FW-2 confirm prompt | breathing **orange** | blank except **A** / **R** | `oled_fw_confirm_screen()` |
-| applying | solid **orange** | **blank** | `⭯Applying  Firmware⭯` |
+| applying (stages 0–2) | solid **orange** | **blank** | `⭯Applying  Firmware⭯` |
+| applying (the copy) | solid **orange** | **blank** | `⭯Restart  Now⭯` |
 | reboot / staged reset | solid **orange** | **blank** | `⭯Restart  Now⭯` |
 | apply REFUSED | orange fades out | legends restored | `Update FAILED / <reason>` + the numbers, held 5 s |
 
@@ -126,14 +127,28 @@ only when the host sends another COMMIT. A host that disappears after the user p
 confirm screen permanently. The last CONFIRM pass has already stamped the clock, so the
 plain window bridges that gap and cannot latch.
 
-⚠️ **"Restart Now" was unreachable from an update, and on the MASTER unreachable at
-all.** `fw_staging_arm_reboot()` — the only thing that sets `reboot_pending` — is called
-from exactly one place, `split_fw_up.c`'s reset-sync handler, i.e. the SLAVE being told
-to restart. The master's own `QK_REBOOT` returns true and lets QMK reset it, and the
-firmware apply ends in `fw_staging_apply_and_reboot()`'s watchdog reset, a different
-function again. `shutdown_user()` now paints it: `shutdown_quantum` calls that before
-every deliberate reset, which is the one place covering all of them. The bootloader jump
-is excluded — it has its own message and overwriting that would be a downgrade.
+⚠️ **"Restart Now" is painted at the LAST PAINTABLE INSTANT, immediately before
+`fw_staging_apply_and_reboot()`.** `fw_staging_do_apply()` runs with interrupts off for
+SECONDS and resets from inside itself, so there is no window after the copy and before
+the reboot: the panel keeps whatever is on it for the whole write and then the board is
+gone. That is why the screen was never seen on an update — it lived only on
+`fw_staging_arm_reboot()`'s path, which is the SLAVE being told to restart
+(`split_fw_up.c`'s reset-sync handler) and which an APPLY does not take. The master's
+own `QK_REBOOT` lets QMK reset it, and the apply ends in a watchdog reset from inside a
+function that never returns.
+
+**The trade-off is deliberate**: the multi-second flash copy happens UNDERNEATH that
+screen, so a board that dies mid-copy sits on `Restart Now` rather than on `Applying`.
+The console keeps the honest running commentary — `APPLY 3/4` is the last line that can
+ever leave this build. Reverting is one line: drop the `oled_fw_restart_screen()` call
+from the `default:` case and the copy is labelled `Applying Firmware` again.
+
+⚠️ **That same instant is now also a path that must take the screen BACK.**
+`fw_staging_apply_and_reboot()` returns on either of its two refusals (missing header,
+failed re-verify), and the board is then alive with a restart on the panel that is not
+coming and keycaps still blanked from stage 0. It re-verifies to learn WHICH refusal it
+was — the extra ~25 ms only ever runs on a path that has already failed — then raises
+the failure notice and hands the legends back, exactly like the stage-2 refusal.
 
 ⚠️ **Measure every line; two of them did not fit and one glyph was not there.**
 `tools/status_oled_preview.py --fw-notice {apply,restart,failed,failed-none}` renders

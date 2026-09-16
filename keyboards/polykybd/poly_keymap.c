@@ -1108,6 +1108,20 @@ void housekeeping_task_user(void) {
                 return;
             }
             default:
+                // ⚠️ THE LAST PAINTABLE INSTANT. fw_staging_do_apply() below runs with
+                // interrupts off for SECONDS and resets from inside itself, so there is
+                // no window after the copy and before the reboot — the panel keeps
+                // whatever is on it right now for the whole write and then the board is
+                // gone. That is why "Restart Now" was never seen on an update: it lived
+                // on fw_staging_arm_reboot()'s path, which an APPLY does not take.
+                //
+                // So it goes here, after the accept and before the reset, which is
+                // exactly where it was asked for. The trade-off is stated plainly: the
+                // multi-second flash copy happens UNDERNEATH this screen, so a board
+                // that dies mid-copy sits on "Restart Now" rather than on "Applying".
+                // The console keeps the honest running commentary (APPLY 3/4 is the
+                // last line that can ever leave this build).
+                oled_fw_restart_screen();
                 // Nothing but the call: if the 3/4 line above is the last thing in the
                 // log, the copy was entered and did not come back.
                 apply_step = 0;
@@ -1119,6 +1133,23 @@ void housekeeping_task_user(void) {
                 // kept because it is the one path where a future halt-then-refuse
                 // would otherwise leave the RLE service down for good.
                 fw_staging_core1_lockout_end();
+                // ...and it is now also the path that has to take the screen back. The
+                // board is alive and the panel is showing a restart that is not coming,
+                // with the keycaps still blanked from stage 0.
+                // Ask which of its two refusals it was rather than assuming. It returns
+                // on a missing header OR a failed re-verify, and stage 2 passed moments
+                // ago, so whichever it is the user needs the real one. The extra ~25 ms
+                // CRC only ever runs on a path that has already failed.
+                s_fw_fail_size = s_fw_fail_want = s_fw_fail_got = 0;
+                s_fw_fail_why  = fw_staging_verify_staged_flash(&s_fw_fail_size,
+                                                               &s_fw_fail_want,
+                                                               &s_fw_fail_got);
+                if (s_fw_fail_why == FW_APPLY_OK) s_fw_fail_why = FW_APPLY_NO_IMAGE;
+                oled_fw_failed_screen();
+                s_fw_notice_at    = timer_read();
+                s_fw_notice_armed = true;
+                set_displays(get_local_state()->contrast, false);
+                request_disp_refresh();
                 break;
         }
     } else if (apply_step != 0) {

@@ -550,6 +550,26 @@ directions. Details:
 - ⚠️ **New RGB defaults reach only a FRESH eeconfig.** Say so in release notes rather
   than implying the value moved for everyone.
 
+### Cirque trackpad gesture layer (split72)
+
+- **The custom gesture layer — why the stock ASIC gestures are not used, the pure
+  decision FSM, the tunables, and the analysis of running ONE image on either half —
+  is [`keyboards/polykybd/TRACKPAD.md`](keyboards/polykybd/TRACKPAD.md).** Three rules
+  that bind code outside `cirque_gestures.c` / `base/cirque_gesture_fsm.c`:
+  - ⚠️ **The gesture layer is the DEFAULT; `-e POLYKYBD_CIRQUE_RELATIVE=yes` opts
+    out.** It was opt-in until 2026-09-15, which meant PR CI and the release
+    workflow — both of which build the *default* — produced a flavour no hardware
+    round had ever run. **A build flavour only a hand-typed `-e` reaches is covered
+    by nothing**; if a tested flavour is not the default, that is a gap, not caution.
+  - ⚠️ **`POINTING_DEVICE_ROTATION_90` is RELATIVE-ONLY** (`split72/config.h`). Our
+    layer emits deltas already in the pad's physical frame, and
+    `pointing_device_adjust_by_defines()` would rotate them a second time — a 90°
+    cursor error that reads as a wiring fault.
+  - ⚠️ **`POINTING_DEVICE_RIGHT` does NOT bake in a side** — it only selects the
+    runtime expression `!is_keyboard_left()` that three gates and both split handlers
+    evaluate every boot. So "the pad is on the right" is a build-time *assertion*, not
+    a hardware constraint; TRACKPAD.md has what a side-agnostic image would take.
+
 ### Community modules (`modules/polykybd/`) and the LTR-559 sensor
 
 Self-contained, keyboard-independent code lives in **QMK community modules** rather than

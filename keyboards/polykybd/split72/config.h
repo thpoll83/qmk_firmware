@@ -74,15 +74,139 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 // Setup Cirque
+//
+// Two flavours, selected by the rules.mk switches of the same name.
+//
+// ABSOLUTE (DEFAULT): every sample carries x, y and z, so
+// keyboards/polykybd/cirque_gestures.c takes the report function over and decides
+// tap, right click and scroll itself, with its own z threshold and with the zones
+// placed in the pad's PHYSICAL frame. The stock absolute gestures are NOT used --
+// measured on hardware, circular scroll never fires, because it sizes its outer
+// ring from CIRQUE_PINNACLE_X/Y_LOWER/UPPER, whose defaults describe Cirque's
+// 40 mm circle pad rather than this 35 mm one.
+//
+// RELATIVE (-e POLYKYBD_CIRQUE_RELATIVE=yes) hands the pad back to the ASIC: it
+// does its own tap/gesture detection and returns deltas plus button bits, so the
+// knobs are FeedConfig2 bits written at init rather than something QMK evaluates
+// per report. The gesture ZONES then live in the sensor's own frame and nothing
+// can move them -- POINTING_DEVICE_ROTATION_90 rotates reported x/y, not the
+// corner the ASIC watches -- so the corner tap and the scroll strip land wherever
+// the pad happens to be mounted. That is WHY it is no longer the default, and why
+// it survives only as an A/B escape hatch.
 #define CIRQUE_PINNACLE_DIAMETER_MM 35
-#define CIRQUE_PINNACLE_TAP_ENABLE
-#define CIRQUE_PINNACLE_TAPPING_TERM 100
-#define CIRQUE_PINNACLE_TOUCH_DEBOUNCE 300
-#define CIRQUE_PINNACLE_POSITION_MODE  CIRQUE_PINNACLE_RELATIVE_MODE
-#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
-#define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
-//#define CIRQUE_PINNACLE_SECONDARY_TAP_ENABLE
-//#define POINTING_DEVICE_GESTURES_SCROLL_ENABLE
+
+#ifdef POLYKYBD_CIRQUE_ABSOLUTE
+#    define CIRQUE_PINNACLE_POSITION_MODE CIRQUE_PINNACLE_ABSOLUTE_MODE
+// NO stock gesture defines here on purpose. cirque_gestures.c replaces the
+// driver's get_report outright, so CIRQUE_PINNACLE_TAP_ENABLE, circular scroll
+// and cursor glide would only compile in code nothing calls. Tap threshold,
+// tap term, the right-click corner and the scroll strip are all POLY_CIRQUE_*
+// tunables in that file instead.
+#else
+#    define CIRQUE_PINNACLE_POSITION_MODE CIRQUE_PINNACLE_RELATIVE_MODE
+// Corner tap -> right click (clears FEEDCONFIG2__SECONDARY_TAP_DISABLE). NOT a
+// two-finger tap: the Pinnacle tracks a single contact, so the gesture is a tap
+// in the sensor's upper-right corner. Requires CIRQUE_PINNACLE_TAP_ENABLE.
+#    define CIRQUE_PINNACLE_SECONDARY_TAP_ENABLE
+// Tap to click, detected on the ASIC (clears FEEDCONFIG2__ALL_TAP_DISABLE).
+#    define CIRQUE_PINNACLE_TAP_ENABLE
+// Side scroll: a drag along the sensor's right edge (clears
+// FEEDCONFIG2__SCROLL_DISABLE). Measured on hardware: never fires here, because
+// that edge is not one a finger reaches the way the pad is mounted.
+#    define POINTING_DEVICE_GESTURES_SCROLL_ENABLE
+#endif
+
+
+// Touch sensitivity, as -e POLYKYBD_CIRQUE_ATTEN=1|2|3|4 (1X = most gain).
+//
+// 1X SATURATES THIS PAD AND WAS A MISTAKE. It was chosen from the regdefs comment
+// "1X = most sensitive", which is true and is not the same as useful: measured on
+// hardware, ANY real contact pins z at 63, the top of the 6-bit field, and graded
+// values 0..63 appear only while the finger HOVERS. So the channel carried no
+// contact information -- a hovering finger and a firm press read identically, and
+// a threshold anywhere in that range fires before the finger lands.
+//
+// That is very likely what made taps want a hard press, and it explains why the
+// ASIC's corner zone moved when CIRQUE_PINNACLE_CURVED_OVERLAY changed WIDEZMIN:
+// the wide-z edge logic reads the same saturated z.
+//
+// MEASURED on the pad, z for hover / super-light / normal / firm:
+//     1X   0-63 / 63 / 63 / 63
+//     2X      0 / 30 / 63 / 63
+//     4X      0 /  0 / 30 / 38-42 (45 hard, 48 peak)
+//
+// 4X, and the reason is what the numbers are FOR.
+//
+// 1X is unusable: hover is graded and every contact pins at 63, so hover and a firm
+// press are the same reading.
+//
+// 2X separates hover from contact, but it reports 30 for a touch too light to be
+// meant, and then saturates -- so it is a switch with a hair trigger and no scale.
+// (This file argued for 2X on exactly that basis, treating the super-light 30 as
+// sensitivity. It is the opposite: a brush past the pad is not a click, and having
+// the lightest possible contact already at half scale is the problem, not the win.)
+//
+// 4X is the only gain that gives a usable SCALE. Incidental contact stays at 0, a
+// deliberate light touch reads ~30, normal 38-42, hard 45. That range is what makes
+// tap detection meaningful at all -- the firmware can require a real press and still
+// tell it apart from a firmer one -- and it is why the thresholds in
+// cirque_gestures.c can carry hysteresis instead of sitting on a cliff edge.
+//
+// The default is per flavour, because 4X is chosen for OUR threshold and says
+// nothing about the ASIC's. The relative build goes back to the chip's own
+// power-on value rather than inheriting a number picked for a different consumer.
+#ifndef POLYKYBD_CIRQUE_ATTEN
+#    ifdef POLYKYBD_CIRQUE_ABSOLUTE
+#        define POLYKYBD_CIRQUE_ATTEN 4
+#    else
+#        define POLYKYBD_CIRQUE_ATTEN 2
+#    endif
+#endif
+#if POLYKYBD_CIRQUE_ATTEN == 1
+#    define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_1X
+#elif POLYKYBD_CIRQUE_ATTEN == 2
+#    define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
+#elif POLYKYBD_CIRQUE_ATTEN == 3
+#    define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_3X
+#elif POLYKYBD_CIRQUE_ATTEN == 4
+#    define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_4X
+#else
+#    error "POLYKYBD_CIRQUE_ATTEN must be 1, 2, 3 or 4"
+#endif
+
+// The MEASURED reachable window, from sweeping the four corners of the real pad
+// (2026-09-15): x 280..1660, y 190..1340, against defaults of x 127..1919,
+// y 63..1471 that describe Cirque's 40 mm circle pad. Worth correcting on its own
+// terms -- every normalised position is measured against it.
+//
+// It is NOT, however, why circular scroll never fired, which this comment claimed
+// until the arithmetic was actually run. Feeding the four measured corners through
+// scale_data() and the ring test gives magnitudes of 112-120 against a threshold of
+// 85: all four pass comfortably. The wrong window skews positions, it does not stop
+// the ring arming. See cirque_gestures.c for what does explain it.
+#define CIRQUE_PINNACLE_X_LOWER 280
+#define CIRQUE_PINNACLE_X_UPPER 1660
+#define CIRQUE_PINNACLE_Y_LOWER 190
+#define CIRQUE_PINNACLE_Y_UPPER 1340
+
+// Lowers XAXIS/YAXIS_WIDEZMIN (0x06/0x05 -> 0x04/0x03) for edge touches and
+// forces a calibration. Its other documented effect -- defaulting the
+// attenuation to 2X -- cannot fire here, because CIRQUE_PINNACLE_ATTENUATION is
+// set explicitly above and the driver only defaults it when undefined.
+//
+// KEEP IT. Measured on hardware by building both ways: without it the ASIC's
+// corner tap moved from 11 o'clock to 10 and wanted a harder press, so the edge
+// tuning is helping. That also shows the WIDEZMIN pair shifts where the ASIC
+// thinks its own edge is -- which is why the corner cannot be aimed by tuning,
+// and why the absolute flavour stops trying.
+//
+// It also keeps the boot calibration alive: cirque_pinnacle_set_adc_attenuation()
+// returns true only when the value CHANGES, so at the 2X default above it writes
+// nothing, and this define becomes the sole reason cirque_pinnacle_calibrate()
+// still runs at init.
+#ifndef POLYKYBD_CIRQUE_NO_CURVED_OVERLAY
+#    define CIRQUE_PINNACLE_CURVED_OVERLAY
+#endif
 
 // Enable use of pointing device on slave split.
 #define SPLIT_POINTING_ENABLE
@@ -95,7 +219,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define POINTING_DEVICE_TASK_THROTTLE_MS 1
 
 // POINTING_DEVICE_ROTATION_90_RIGHT only applies in POINTING_DEVICE_COMBINED mode.
-#define POINTING_DEVICE_ROTATION_90
+//
+// RELATIVE ONLY. pointing_device_task() applies pointing_device_adjust_by_defines()
+// to whatever get_report returned, so with the absolute gesture layer -- which
+// already emits deltas in the pad's PHYSICAL frame -- this rotates them a SECOND
+// time and the cursor comes out 90 degrees off. Reported from hardware, and the
+// reason orientation belongs in exactly one place: to_physical().
+#ifndef POLYKYBD_CIRQUE_ABSOLUTE
+#    define POINTING_DEVICE_ROTATION_90
+#endif
+// (absolute-mode only — see the Cirque block above)
 //#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
 
 //#define POINTING_DEVICE_DEBUG

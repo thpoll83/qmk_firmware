@@ -137,3 +137,16 @@ polykybd_hand_stamp_SRC := \
 polykybd_hand_stamp_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# Pure gesture decision: no quantum.h, no timer, no I2C, so it links with just the
+# tests. That decoupling is the reason the suite can exist at all -- the arithmetic
+# used to share a function with the sensor, which is why three different tap bugs
+# each cost a hardware round to find.
+polykybd_cirque_gesture_SRC := \
+	$(POLY_BASE_PATH)/cirque_gesture_fsm.c \
+	$(POLY_BASE_PATH)/tests/cirque_gesture_tests.cpp
+
+polykybd_cirque_gesture_INC := \
+	$(POLY_BASE_PATH) \
+	$(POLY_BASE_PATH)/tests \
+	keyboards/polykybd

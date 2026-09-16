@@ -1,16 +1,16 @@
 ---
 name: session-retro
-description: Scan the current (or a past) Claude Code session for things worth keeping — (1) durable LEARNINGS (gotchas, root causes, environment/toolchain quirks, design decisions, hard-won exact commands) that belong in a CLAUDE.md / docs / memory but aren't recorded yet, and (2) repeatable multi-step WORKFLOWS done ad-hoc that should be codified as new skills. Produces a ranked proposal; on approval, writes the CLAUDE.md edits and scaffolds each new skill's SKILL.md. Use at the end of a meaty session, or when the user asks "what did we learn", "should this be a skill", "capture this", "turn X into a skill", "scan this session".
+description: Scan the current (or a past) Claude Code session for things worth keeping — (1) durable LEARNINGS (gotchas, root causes, environment/toolchain quirks, design decisions, hard-won exact commands) that belong in a CLAUDE.md or a docs page but aren't recorded yet, and (2) repeatable multi-step WORKFLOWS done ad-hoc that should be codified as new skills. Produces a ranked proposal; on approval, writes the CLAUDE.md edits and scaffolds each new skill's SKILL.md. Use at the end of a meaty session, or when the user asks "what did we learn", "should this be a skill", "capture this", "turn X into a skill", "scan this session".
 ---
 
 # Session retro — harvest learnings & new skills
 
 A session often discovers things that took real iteration to find, and runs
 workflows that will recur. Both are cheap to lose and valuable to keep. This
-skill turns a session into three concrete outputs:
+skill turns a session into four concrete outputs:
 
-1. **Learnings** → appended to the right `CLAUDE.md` / `docs/*.md` (or saved as
-   memory) so the next session starts knowing them.
+1. **Learnings** → appended to the right `CLAUDE.md` / `docs/*.md`, so the next
+   session starts knowing them.
 2. **New skills** → scaffolded `SKILL.md`s for repeatable workflows that were
    done by hand this time.
 3. **Docs gaps** → user-facing features added/changed this session that the
@@ -140,8 +140,8 @@ retro's OWN output.
 5. **Present the proposal** (format below) and stop for approval. Recommend a
    default ("I'd keep #1 and #3").
 6. **On approval, materialize:**
-   - Learnings → `Edit` the target doc (or store memory if the user prefers),
-     matching its style. Keep edits surgical.
+   - Learnings → `Edit` the target doc, matching its style. Keep edits
+     surgical.
    - Skills → for each, `mkdir -p <repo>/.claude/skills/<name>/` and write
      `SKILL.md` (YAML frontmatter `name` + a trigger-rich `description`, then a
      procedural body with concrete commands, an output format, and a
@@ -150,73 +150,6 @@ retro's OWN output.
    - Docs gaps → invoke the **`update-polykybd-docs`** skill for each (it edits
      the `polykybd-docs` site on its own branch + PR). This retro only surfaces
      them; that skill does the writing.
-   - Investigation index → `add_memory`, ONE entry per investigation that cost
-     real effort: the question, the verdict in a sentence, and where the full
-     write-up landed (`repo/file §heading`, or `owner/repo#N` — ⚠️ a bare `#N`
-     resolves to the wrong PR across the nine repos).
-     ⚠️ **A DEAD END has no write-up, and it is the case this index pays for
-     best** — real effort spent, verdict *"nothing to change"*, so nothing was
-     committed and there is no file to point at. Write the entry anyway: it IS
-     the whole record, and the **where** field then names what was checked
-     rather than where the answer lives (*"checked every `.github/workflows/`
-     hit against upstream, 2026-08-29"*). `SECURITY_AUDIT.md` §
-     *"Checked and NOT vulnerable — don't re-litigate"* is the same idea kept
-     locally for one domain, and it exists because a dismissed finding that
-     leaves no artifact gets re-raised in full by the next scan. A dead end is
-     dated and closed by construction, so it clears the test below outright.
-     ⚠️ **A finding may ride along ONLY if it is DATED AND CLOSED** — a
-     measurement, the root cause of one incident, a verdict about a run that
-     already happened. Those cannot go
-     stale, because the fact is fixed in the past, and re-deriving one is exactly
-     what this index exists to save. A **STANDING claim about how the code
-     behaves now** (*"cmd 34's range is closed"*, *"the C1 icon band is full at
-     32/32"*) goes in CLAUDE.md and mem0 gets only the pointer — that copy has an
-     expiry date and no expiry mechanism. Two things make it worse here than in
-     the mirror cases this project already tracks: **no `cmp` is possible**
-     (`iso_lang_country.py`, `noto-fonts.yaml` and the five mirrored skills all
-     drifted, and every one is recoverable because ONE command compares the
-     copies — a cloud store against prose in git has no such command, so nothing
-     will ever notice), and **the retrieval path IS the stale case** (CLAUDE.md
-     directs the next session to search mem0 for *what CLAUDE.md no longer
-     carries*, so the moment a claim is edited out, the mem0 copy stops being a
-     duplicate and becomes the only answer — carrying the superseded version).
-     The precedence rule bounds the damage to one verification round, but only
-     while it is followed; this file already records a stale prose note that
-     *"reads as authoritative and the next session copies it"*.
-     ⚠️ **The test is the CLAIM's tense, not its depth.** "We measured X on
-     date D" is closed however technical it is; "X behaves like Y" is standing
-     however trivial. When in doubt, write the dated form — *"2026-09-04: run
-     992's apply job failed with the link dead; cause not established"* is safe,
-     *"the apply job kills the link"* is not.
-     ⚠️ **Phrase the entry as the QUESTION, not as the conclusion.**
-     `search_memories` is semantic, so it scores against what the next session
-     *asks*, and an entry led by its verdict (*"the template injection is
-     unreachable"*) matches *"is this scanner finding real?"* far worse than one
-     that opens with the question. Lead with what was asked, then the verdict,
-     then where it lives — the retrieval key and the write are the same string.
-     ⚠️ **`search_memories` for the question BEFORE writing** and skip if it is
-     already indexed: a retro re-run over an overlapping session would otherwise
-     index it twice.
-     ⚠️ **Write it raw — `add_memory(..., infer=False)`.** The default runs an
-     LLM extractor that rewrites the entry into third-person narrative prose
-     (*"User explained that …"*), losing the question / verdict / write-up
-     structure this bullet prescribes. ⚠️ Measured 2026-09-09, the
-     fully-qualified PR ref **did** survive that rewrite — so write raw for the
-     structure, and do not repeat a claim that the extractor eats the refs.
-     ⚠️ **Read `status` first, then `results` — and note which MODE each
-     observation belongs to.** The two paths differ, and conflating them is how
-     the first version of this note came out wrong. Measured 2026-09-09:
-     `infer=False` returns `SUCCEEDED` **synchronously** with the stored text in
-     `results`, and re-writing identical text is a **no-op that returns the
-     EXISTING memory's id**, leaving its metadata and timestamps untouched. The
-     **default** is asynchronous — `status: PENDING` plus an `event_id`, nothing
-     stored yet — so there a written entry and a discarded one look identical
-     until you poll `get_event_status`, and a near-duplicate resolves
-     `SUCCEEDED` with `results: []` and nothing written. So `status` says
-     whether the call finished and `results` says whether anything landed;
-     neither answers alone, and the empty-`results` dedupe belongs to the
-     default path, NOT to the raw write this bullet prescribes. Skip entirely if
-     nothing this session took more than a handful of files to answer.
    - **Commit, push and OPEN A PULL REQUEST — every time, in every repo the
      retro touched.** The user's approval of the proposal IS the authorization:
      they asked for this standing behaviour explicitly (2026-09-10), so it
@@ -262,10 +195,6 @@ DOCS GAPS (→ update-polykybd-docs)
   i. <feature added/changed> → <likely polykybd-docs page>
   ii. ...
 
-MEMORY INDEX (→ mem0)
-  •. <question investigated> → <verdict in one line>
-     write-up: <repo/file §heading | owner/repo#N>
-
 ALREADY COVERED (skipped): <item> → <existing doc/skill>
 
 Recommendation: <which to keep, and why>
@@ -279,16 +208,6 @@ Recommendation: <which to keep, and why>
   repo; use for genuinely cross-project meta-skills.
 - **CLAUDE.md** — the most *specific* one wins (a `lang/FUTURE_LANGUAGES.md`-style
   doc over the top-level CLAUDE.md when the learning is narrow).
-- **mem0** — an INDEX of investigations: one entry pointing at where the real
-  write-up lives, so a later session can find it without re-deriving it. A
-  **dated, closed** finding may ride along in the entry; a **standing claim about
-  current behaviour** may not, because nothing can ever compare it against the
-  repo (§4). ⚠️ CLAUDE.md wins on any disagreement — a mem0 hit is a lead to
-  verify against the repo, never an authority.
-- **The gap this closes**: a finding can be too narrow to earn permanent space in
-  CLAUDE.md (every session pays for that file) and still expensive to re-derive.
-  Dated findings are what mem0 is *for*; before this they had nowhere to live but
-  a PR nobody would find.
 
 ## Pitfalls
 
@@ -300,11 +219,6 @@ Recommendation: <which to keep, and why>
   is the only thing that decides whether it ever fires.
 - **Cite evidence.** Every proposal should point at what in the session justifies
   it; if you can't, it's probably not worth keeping.
-- **Nothing sensitive in mem0, and that includes the SEARCH.** No credentials,
-  keys, file contents, or anything you would not put in a public issue. ⚠️ The
-  pre-write `search_memories` sends the question text to the same cloud service
-  `add_memory` writes to — so a question that cannot leave the machine means
-  skipping the index entry altogether, not sanitising it afterwards.
 - **Approval before writing — but approval is the ONLY gate.** Once the user
   picks what to keep, write it, push it and open the PR (§4.6) without asking
   again. Asking twice is what this instruction exists to stop.

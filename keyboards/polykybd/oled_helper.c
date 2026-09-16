@@ -365,11 +365,24 @@ void oled_boot_progress(uint8_t step, uint8_t total) {
     oled_render_dirty(true);
 }
 
-// "⭯Applying  Firmware⭯" — the blocking self-flash is about to start and the board
-// will reboot out of it. This is the screen frozen on the panel for the whole copy,
-// so it must name the LONG operation, not the millisecond one that precedes it.
+// "⭯Applying  Restarts⭯" — ONE screen for the whole apply, and the one frozen on the
+// panel for the entire multi-second copy.
+//
+// ⚠️ It has to name the LONG operation and the outcome at once, because there is no
+// way to change it part-way. "Restart Now" alone was tried and read as a hang: the
+// erase+rewrite of ~490 KB sits under it for seconds, so a word promising something
+// instant made the wait feel broken. "Applying Firmware" alone never mentioned the
+// reboot, which is what was being asked for. Both words, one paint.
+//
+// ⚠️ A timed hand-off between two screens is NOT available here, and the SSD1306's
+// hardware scroll cannot fake it: on a 128x64 panel OLED_MATRIX_SIZE is the whole
+// GDDRAM (64/8 * 128 = 1024 B) and every byte of it is displayed, so there is no
+// off-screen region to scroll a second frame in from — and QMK drives SCROLL_LEFT /
+// SCROLL_RIGHT, the horizontal continuous scroll, which wraps the same 128 columns.
+// (It would work on a 128x32 panel, where half the GDDRAM is hidden.) Nothing else
+// can run either: the copy holds the core with interrupts off and never returns.
 void oled_fw_apply_screen(void) {
-    oled_fw_notice(is_left_side() ? U"Applying" : U"Firmware", true);
+    oled_fw_notice(is_left_side() ? U"Applying" : U"Restarts", true);
 }
 
 // "⭯Restart  Now⭯" — the QK_REBOOT / staged-reset path. It clears the keyboard,

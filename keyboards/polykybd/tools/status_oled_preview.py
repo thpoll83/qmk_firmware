@@ -839,7 +839,7 @@ def main():
         R = build_fw_failed_panel('R', small, why)
     elif args.fw_notice:
         arrow = load_notice_font()
-        words = {'apply':   ('Applying', 'Firmware'),
+        words = {'apply':   ('Applying', 'Restarts'),
                  'restart': ('Restart',  'Now')}[args.fw_notice]
         L = build_fw_notice_panel('L', disp, arrow, words[0])
         R = build_fw_notice_panel('R', disp, arrow, words[1])

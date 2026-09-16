@@ -52,8 +52,7 @@ screens are previewable without flashing via
 |---|---|---|---|
 | staging / transfer | breathing **cyan** | legible base legends | `oled_fw_update_screen()` + progress bar |
 | FW-2 confirm prompt | breathing **orange** | blank except **A** / **R** | `oled_fw_confirm_screen()` |
-| applying (stages 0–2) | solid **orange** | **blank** | `⭯Applying  Firmware⭯` |
-| applying (the copy) | solid **orange** | **blank** | `⭯Restart  Now⭯` |
+| applying (all of it, incl. the copy) | solid **orange** | **blank** | `⭯Applying  Restarts⭯` |
 | reboot / staged reset | solid **orange** | **blank** | `⭯Restart  Now⭯` |
 | apply REFUSED | orange fades out | legends restored | `Update FAILED / <reason>` + the numbers, held 5 s |
 
@@ -127,28 +126,29 @@ only when the host sends another COMMIT. A host that disappears after the user p
 confirm screen permanently. The last CONFIRM pass has already stamped the clock, so the
 plain window bridges that gap and cannot latch.
 
-⚠️ **"Restart Now" is painted at the LAST PAINTABLE INSTANT, immediately before
-`fw_staging_apply_and_reboot()`.** `fw_staging_do_apply()` runs with interrupts off for
-SECONDS and resets from inside itself, so there is no window after the copy and before
-the reboot: the panel keeps whatever is on it for the whole write and then the board is
-gone. That is why the screen was never seen on an update — it lived only on
-`fw_staging_arm_reboot()`'s path, which is the SLAVE being told to restart
-(`split_fw_up.c`'s reset-sync handler) and which an APPLY does not take. The master's
-own `QK_REBOOT` lets QMK reset it, and the apply ends in a watchdog reset from inside a
-function that never returns.
+⚠️ **ONE screen covers the whole apply, and it has to name the long operation AND the
+outcome at once — because there is no way to change it part-way.** The apply screen is
+frozen on the panel for the entire multi-second copy: `fw_staging_do_apply()` holds the
+core with interrupts off and resets from inside itself, so there is no window after the
+copy and before the reboot. Two labels were tried and each failed in its own direction:
+`Applying Firmware` never mentioned the reboot, which is what was being asked for; and
+`Restart Now` alone **read as a hang**, because the erase+rewrite of ~490 KB sits under
+it for seconds and a word promising something instant makes the wait feel broken
+(reported from hardware, 2026-09-16). `⭯Applying  Restarts⭯` says both in one paint.
 
-**The trade-off is deliberate**: the multi-second flash copy happens UNDERNEATH that
-screen, so a board that dies mid-copy sits on `Restart Now` rather than on `Applying`.
-The console keeps the honest running commentary — `APPLY 3/4` is the last line that can
-ever leave this build. Reverting is one line: drop the `oled_fw_restart_screen()` call
-from the `default:` case and the copy is labelled `Applying Firmware` again.
+⚠️ **The SSD1306 hardware scroll CANNOT fake a timed hand-off between two screens**,
+which is the obvious idea since the panel would run it with no CPU. On a **128×64**
+panel `OLED_MATRIX_SIZE` is `64/8 * 128` = 1024 B — the whole GDDRAM, every byte of it
+displayed — so there is no off-screen region to scroll a second frame in from. QMK also
+drives `SCROLL_LEFT`/`SCROLL_RIGHT`, the *horizontal* continuous scroll, which wraps the
+same 128 columns. It WOULD work on a 128×32 panel, where half the GDDRAM is hidden,
+which is the trick's usual home. Nothing else can run during the copy either.
 
-⚠️ **That same instant is now also a path that must take the screen BACK.**
-`fw_staging_apply_and_reboot()` returns on either of its two refusals (missing header,
-failed re-verify), and the board is then alive with a restart on the panel that is not
-coming and keycaps still blanked from stage 0. It re-verifies to learn WHICH refusal it
-was — the extra ~25 ms only ever runs on a path that has already failed — then raises
-the failure notice and hands the legends back, exactly like the stage-2 refusal.
+⚠️ **`fw_staging_apply_and_reboot()` RETURNS on either of its two refusals** (missing
+header, failed re-verify), and the board is then alive with the apply screen up and
+keycaps still blanked from stage 0. That path re-verifies to learn WHICH refusal it was
+— the extra ~25 ms only ever runs on a path that has already failed — then raises the
+failure notice and hands the legends back, exactly like the stage-2 refusal.
 
 ⚠️ **Measure every line; two of them did not fit and one glyph was not there.**
 `tools/status_oled_preview.py --fw-notice {apply,restart,failed,failed-none}` renders

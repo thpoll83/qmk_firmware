@@ -1115,13 +1115,9 @@ void housekeeping_task_user(void) {
                 // gone. That is why "Restart Now" was never seen on an update: it lived
                 // on fw_staging_arm_reboot()'s path, which an APPLY does not take.
                 //
-                // So it goes here, after the accept and before the reset, which is
-                // exactly where it was asked for. The trade-off is stated plainly: the
-                // multi-second flash copy happens UNDERNEATH this screen, so a board
-                // that dies mid-copy sits on "Restart Now" rather than on "Applying".
-                // The console keeps the honest running commentary (APPLY 3/4 is the
-                // last line that can ever leave this build).
-                oled_fw_restart_screen();
+                // So the reboot is named on the apply screen itself, which is already
+                // up and stays up for the whole copy — no second paint is needed here,
+                // and none is possible after the copy. See oled_fw_apply_screen().
                 // Nothing but the call: if the 3/4 line above is the last thing in the
                 // log, the copy was entered and did not come back.
                 apply_step = 0;

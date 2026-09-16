@@ -203,6 +203,8 @@ void set_selected_displays(int8_t old_value, int8_t new_value);
 void toggle_stagger(bool new_state);
 void oled_update_buffer(void);
 void oled_fw_apply_screen(void);   // oled_helper.c — firmware-apply status screen
+void oled_fw_restart_screen(void); // oled_helper.c — "Restart Now" before mcu_reset()
+void oled_fw_failed_screen(void);  // oled_helper.c — "Update FAILED", the apply was refused
 void poly_suspend(void);
 
 
@@ -337,6 +339,44 @@ static void poly_flash_rgb_now(void) {
     rgb_matrix_set_color_all(24, 6, 0);      // same orange as the bootloader cue
     rgb_matrix_update_pwm_buffers();
 #endif
+}
+
+// How long a firmware notice that does NOT end in a reboot stays on the status OLED.
+// Only the failure notice needs it: every other caller is followed by a self-flash or
+// a reset, so the panel simply stops being repainted. 5 s is long enough to read two
+// words and short enough that the board does not look wedged.
+#define POLY_FW_NOTICE_MS 5000
+static uint16_t s_fw_notice_at = 0;
+static bool     s_fw_notice_armed = false;
+
+// True while a held firmware notice still owns the status OLED. Read by
+// oled_task_user() (oled_helper.c), which must draw the notice INSTEAD of the status
+// screen for as long as this is set.
+bool poly_fw_notice_active(void) {
+    if (s_fw_notice_armed && timer_elapsed(s_fw_notice_at) < POLY_FW_NOTICE_MS) {
+        return true;
+    }
+    s_fw_notice_armed = false;
+    return false;
+}
+
+// The board is about to stop being usable: latch the orange cue AND blank every
+// keycap, so the two halves say the same thing at once.
+//
+// ⚠️ The keycaps are the half that used to be missing. The orange RGB says "you
+// cannot type", while 72 displays went on showing a full, inviting legend set for
+// the whole apply — the one moment the keys genuinely do nothing. Both are pushed
+// out SYNCHRONOUSLY here for the same reason: the callers are about to enter a
+// blocking self-flash or a reset, so anything left to the next housekeeping pass is
+// never painted (see poly_flash_rgb_now()'s own note). clear_all_displays() is one
+// broadcast write over the shift-register chip-select, not 72 of them.
+//
+// NOT used for the staging transfer: the board still runs there, the cue is cyan
+// rather than orange, and poly_prepare_for_flash() has deliberately just drawn
+// legible base legends so you CAN keep typing.
+static void poly_board_unusable_cue(void) {
+    poly_flash_rgb_now();
+    clear_all_displays();
 }
 
 #ifdef RGB_MATRIX_ENABLE
@@ -908,14 +948,17 @@ void housekeeping_task_user(void) {
                 // reported — the host keeps it registered and auto-repeats until USB
                 // drops at the reboot (field: hundreds of repetitions).
                 clear_keyboard();
-                poly_flash_rgb_now();
+                // Orange cue AND 72 blanked keycaps. From here the matrix is never
+                // scanned again, so a keycap still showing its legend is advertising a
+                // key that does nothing — for the whole multi-second copy.
+                poly_board_unusable_cue();
                 // Paint the "⟳Applying / Firmware⟳" notice and flush it fully BEFORE the
                 // blocking self-flash below (which never returns), so the status OLED is
                 // completely refreshed — not torn mid-transition — as the apply begins.
                 // Runs on both halves; each draws its own side's word. Its ~26 ms of I2C
                 // also gives the clear_keyboard() report time to leave over USB.
                 oled_fw_apply_screen();
-                uprintf("APPLY 1/4: keys cleared, RGB + OLED flushed\n");
+                uprintf("APPLY 1/4: keys cleared, RGB + keycaps blanked, OLED flushed\n");
                 apply_step = 1;
                 return;
             case 1:
@@ -961,6 +1004,17 @@ void housekeeping_task_user(void) {
                     uprintf("APPLY: refusing to overwrite firmware from a bad staged image\n");
                     fw_staging_cancel_apply();
                     apply_step = 0;
+                    // ⚠️ This is the ONE apply path that comes back, so it is the one
+                    // that has to undo the "board is unusable" cue it just put up.
+                    // Say WHY on the panel — until now the refusal existed only as the
+                    // console line above, so from the outside the update simply did
+                    // nothing — and hand the keycaps their legends back, since stage 0
+                    // blanked them for an apply that is not going to happen.
+                    oled_fw_failed_screen();
+                    s_fw_notice_at = timer_read();
+                    s_fw_notice_armed = true;
+                    set_displays(get_local_state()->contrast, false);
+                    request_disp_refresh();
                     return;
                 }
                 apply_step = 3;
@@ -988,7 +1042,11 @@ void housekeeping_task_user(void) {
     }
     if (fw_staging_reboot_pending()) {
         clear_keyboard();   // same as above: no further matrix scan before the reset
-        poly_flash_rgb_now();
+        poly_board_unusable_cue();
+        // This path had no status-OLED state at all: it went orange and reset while the
+        // panel still showed the ordinary status screen. Flushed synchronously, like the
+        // apply notice, because mcu_reset() below never returns.
+        oled_fw_restart_screen();
         // A handedness change arrives on this path (the reset-sync carrier). The
         // handler only records it -- it runs inside a split-transaction callback
         // with a ~20 ms budget, and this write can erase a sector.

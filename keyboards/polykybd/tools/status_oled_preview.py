@@ -102,6 +102,21 @@ def load_fonts():
     return disp, small, icons, tiny, globe
 
 
+def load_notice_font():
+    """The U+2B6F arrow used by the firmware notice screens, loaded SEPARATELY.
+
+    ⚠️ Deliberately not appended to load_fonts()'s tuple. The status-oled-layout
+    skill calls `P.build_panel(side, *P.load_fonts(), brightness, ...)`, so one more
+    element there slides `arrow` into build_panel's `brightness` slot — a silent
+    wrong-argument bug in a file that lives in another directory and that nothing in
+    this repo's CI imports. Keeping the arity fixed is what stops that."""
+    B, G, F = {}, {}, {}
+    _parse_header(open(os.path.join(FONTDIR, "generated", "symbol_fonts.h"),
+                       encoding="utf-8").read(), B, G, F)
+    f = F['NotoSansSymbols2_Regular_Arrows_20pt16b']
+    return f, B[f['bmp']], G[f['gly']]
+
+
 def draw(setpix, font, x, y, text):
     """Draw a codepoint list at (x, baseline y). setpix(px, py) records a lit
     pixel; it decides in/out-of-bounds (no clipping here, so diag can see it)."""
@@ -192,6 +207,45 @@ def build_fw_confirm_panel(side, small):
             x = 0
         base = band * i + band // 2 - (by0 + by1) // 2
         draw(setp, small, x, base, txt)
+    return pts
+
+
+def build_fw_notice_panel(side, disp, arrow, word, icon=True):
+    """The two-word firmware notice — mirror of oled_helper.c's oled_fw_notice(),
+    behind oled_fw_apply_screen() / oled_fw_restart_screen() / oled_fw_failed_screen().
+
+    Reads across the PAIR of panels, so each `side` renders only its own word. The
+    arrow (resident U+2B6F) sits OUTSIDE the word: left of it on the left half, right
+    of it on the right half. Each element is centred on its own bbox, so the word and
+    the much taller arrow sit level instead of one shoving the other.
+
+    `icon=False` is the failure notice: the arrow means "in progress" and has no
+    business on a screen that says nothing is.
+
+    This exists to answer the question a build cannot: does the widest word still fit?
+    "Restarting" measures 125 of the 128 px here, which is why the firmware says
+    "Restart".
+    """
+    pts = []
+    setp = lambda px, py: pts.append((px, py))
+    gap = 3 if icon else 0
+    ix0, ix1, iy0, iy1 = text_bbox(arrow, [0x2B6F]) if icon else (0, -1, 0, -1)
+    tx0, tx1, ty0, ty1 = text_bbox(disp, s2cp(word))
+    iw = (ix1 - ix0 + 1) if icon else 0
+    tw = tx1 - tx0 + 1
+    gx = (P_W - (iw + gap + tw)) // 2
+    if gx < 0:
+        gx = 0
+    i_base = P_H // 2 - (iy0 + iy1) // 2
+    t_base = P_H // 2 - (ty0 + ty1) // 2
+    if not icon:
+        draw(setp, disp, gx - tx0, t_base, s2cp(word))
+    elif side == 'L':
+        draw(setp, arrow, gx - ix0, i_base, [0x2B6F])
+        draw(setp, disp, gx + iw + gap - tx0, t_base, s2cp(word))
+    else:
+        draw(setp, disp, gx - tx0, t_base, s2cp(word))
+        draw(setp, arrow, gx + tw + gap - ix0, i_base, [0x2B6F])
     return pts
 
 
@@ -672,6 +726,8 @@ def main():
                          "(Qwerty, 'Qwerty Stag!', 'Colemak DH', Neo, Workman)")
     ap.add_argument('--rgb-off', action='store_true',
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
+    ap.add_argument('--fw-notice', choices=('apply', 'restart', 'failed'),
+                    help='preview a firmware notice screen instead of the status screen')
     ap.add_argument('--telemetry', action='store_true',
                     help='preview the settings->More telemetry screen instead of the status screen')
     ap.add_argument('--pad', action='store_true',
@@ -717,6 +773,13 @@ def main():
         fx, fy = (int(v) for v in args.pad_xy.split(','))
         L = build_pad_panel(small, fx, fy, tapping=args.pad_tap)
         R = L
+    elif args.fw_notice:
+        arrow = load_notice_font()
+        words = {'apply':   ('Applying', 'Firmware', True),
+                 'restart': ('Restart',  'Now',      True),
+                 'failed':  ('Update',   'FAILED',   False)}[args.fw_notice]
+        L = build_fw_notice_panel('L', disp, arrow, words[0], words[2])
+        R = build_fw_notice_panel('R', disp, arrow, words[1], words[2])
     elif args.telemetry:
         L = build_telemetry_panel(True,  small, uptime=args.uptime, link=args.link)
         R = build_telemetry_panel(False, small, uptime=args.uptime, link=args.link)

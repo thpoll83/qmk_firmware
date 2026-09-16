@@ -133,3 +133,8 @@ bool display_wakeup(keyrecord_t* record);
 // still type plain characters and the keycaps show legible legends while the flash
 // holds the main loop. Must run before fw_up freezes display updates.
 void poly_prepare_for_flash(void);
+// True while a HELD firmware notice (today: the refused-apply "Update FAILED") still
+// owns the status OLED. oled_task_user() must draw that notice instead of the status
+// screen for as long as it is set — every other firmware notice is followed by a
+// reboot, so only this one can be repainted over.
+bool poly_fw_notice_active(void);

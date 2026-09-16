@@ -9,6 +9,7 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
+#include "poly_keymap.h"         // poly_fw_notice_active()
 #include "poly_macro.h"          // POLY_MACRO_COUNT
 #include "poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
 #ifdef POLYKYBD_DOOM
@@ -242,20 +243,26 @@ void oled_fw_confirm_screen(void) {
     oled_render_dirty(true);
 }
 
-// Shown on BOTH halves the instant a staged firmware image is applied (reboot
-// imminent). Reads across the two status OLEDs as "⟳Applying  Firmware⟳": the
-// LEFT half shows the resident circular refresh arrow U+2B6F + "Applying", the
-// RIGHT half "Firmware" + the arrow, each horizontally and vertically centered.
-// It is fully flushed synchronously (oled_render_dirty(true)) so the screen is
-// complete before fw_staging_apply_and_reboot()'s blocking self-flash + hard reset
-// (which never returns) — the last thing the user sees is a finished, un-torn notice.
-void oled_fw_apply_screen(void) {
+// The shared two-word firmware notice. Reads across the PAIR of status OLEDs —
+// this half draws `word`, the other draws its own — with the resident circular
+// refresh arrow U+2B6F on the outside when `icon` is true, each element
+// horizontally and vertically centered.
+//
+// ⚠️ It is flushed SYNCHRONOUSLY (oled_render_dirty(true)) because every caller is
+// about to do something that does not come back — the blocking self-flash, the hard
+// reset — or has just blanked the keycaps. A notice queued for the next
+// oled_render() tick on any of those paths is a notice nobody ever sees; that is
+// the same trap poly_flash_rgb_now() exists to dodge on the RGB side.
+//
+// `icon` is false for the failure notice on purpose: the arrow means "in progress"
+// and is the wrong thing to leave on screen when nothing is progressing. A dedicated
+// warning glyph would need a font-pack round for one screen, so the word carries it.
+static void oled_fw_notice(const uint32_t* word, bool icon) {
     const GFXfont*  mid[]     = { &NotoSans_Regular_Mid_19px7b };
     const GFXfont*  arrow[]   = { &NotoSansSymbols2_Regular_Arrows_20pt16b };
-    const uint32_t* icon      = U"\U00002B6F";   // resident circular "refresh" arrow ⭯
-    const uint32_t* word      = is_left_side() ? U"Applying" : U"Firmware";
+    const uint32_t* icon_txt  = U"\U00002B6F";   // resident circular "refresh" arrow ⭯
     const bool      icon_left = is_left_side();
-    const int8_t    gap       = 3;               // px between icon and word
+    const int8_t    gap       = icon ? 3 : 0;    // px between icon and word
 
     oled_on();
     kdisp_set_buffer(0);   // clear the scratch to black
@@ -265,9 +272,9 @@ void oled_fw_apply_screen(void) {
     // element be centered independently on the panel despite different heights.
     int8_t ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
     int8_t tx0 = 0, tx1 = 0, ty0 = 0, ty1 = 0;
-    kdisp_gfx_text_bbox(arrow, 1, icon, &ix0, &ix1, &iy0, &iy1);
+    if (icon) kdisp_gfx_text_bbox(arrow, 1, icon_txt, &ix0, &ix1, &iy0, &iy1);
     kdisp_gfx_text_bbox(mid,   1, word, &tx0, &tx1, &ty0, &ty1);
-    const int8_t iw = (int8_t)(ix1 - ix0 + 1);
+    const int8_t iw = icon ? (int8_t)(ix1 - ix0 + 1) : 0;
     const int8_t tw = (int8_t)(tx1 - tx0 + 1);
     int16_t gx = (int16_t)((OLED_DISPLAY_WIDTH - (iw + gap + tw)) / 2);
     if (gx < 0) gx = 0;
@@ -278,16 +285,51 @@ void oled_fw_apply_screen(void) {
     const int8_t iBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (iy0 + iy1) / 2);
     const int8_t tBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (ty0 + ty1) / 2);
 
-    if (icon_left) {
-        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx - ix0),            iBase, icon);
+    if (!icon) {
+        kdisp_write_gfx_text(mid, 1, (int8_t)(gx - tx0), tBase, word);
+    } else if (icon_left) {
+        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx - ix0),            iBase, icon_txt);
         kdisp_write_gfx_text(mid,   1, (int8_t)(gx + iw + gap - tx0), tBase, word);
     } else {
         kdisp_write_gfx_text(mid,   1, (int8_t)(gx - tx0),            tBase, word);
-        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx + tw + gap - ix0), iBase, icon);
+        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx + tw + gap - ix0), iBase, icon_txt);
     }
 
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     oled_render_dirty(true);   // one synchronous full flush before the reboot
+}
+
+// "⭯Applying  Firmware⭯" — the blocking self-flash is about to start and the board
+// will reboot out of it. This is the screen frozen on the panel for the whole copy,
+// so it must name the LONG operation, not the millisecond one that precedes it.
+void oled_fw_apply_screen(void) {
+    oled_fw_notice(is_left_side() ? U"Applying" : U"Firmware", true);
+}
+
+// "⭯Restart  Now⭯" — the QK_REBOOT / staged-reset path. It clears the keyboard,
+// latches the orange cue and calls mcu_reset(), which never returns, so this had no
+// status-OLED state at all: the panel kept showing the ordinary status screen right
+// up to the reset.
+//
+// "Restart", not the more natural "Restarting": measured through the real committed
+// font, arrow + gap + "Restarting" is 125 px of the 128 px panel, i.e. 1 px of left
+// margin. It does not clip, but a word that only just fits is a word that clips the
+// next time the font is regenerated. "Restart" is 96 px, 16 px a side.
+void oled_fw_restart_screen(void) {
+    oled_fw_notice(is_left_side() ? U"Restart" : U"Now", true);
+}
+
+// "Update  FAILED" — the staged image did not match its CRC, so the apply was
+// REFUSED and the board is still running the old firmware.
+//
+// This is the one firmware state the user could previously only discover from a
+// console nobody has open: the RGB went orange, the keycaps blanked, and then
+// everything silently came back with the update not applied. Held on the panel by
+// the POLY_FW_NOTICE_MS deadline in poly_keymap.c, because unlike every other
+// caller here this path DOES return — without the hold, oled_task_user() repaints
+// the status screen over it on the next 66 ms tick.
+void oled_fw_failed_screen(void) {
+    oled_fw_notice(is_left_side() ? U"Update" : U"FAILED", false);
 }
 
 // ---------------------------------------------------------------------------
@@ -540,6 +582,14 @@ bool oled_task_user(void) {
         }
         // face == 1: the panel already shows the current face — leave it be.
 #endif
+    } else if (poly_fw_notice_active()) {
+        // A firmware notice that outlived the operation that raised it: today only the
+        // refused apply, which is the one firmware path that RETURNS. Held above the
+        // recorder and the idle logos because it is the answer to "I pressed update and
+        // nothing happened", and the 66 ms status tick would otherwise erase it before
+        // it could be read. It expires by itself (POLY_FW_NOTICE_MS).
+        oled_scroll_off();
+        oled_fw_failed_screen();
     } else if (get_local_state()->rec_state != POLY_REC_IDLE) {
         // ABOVE the idle branch on purpose: the idle timer would otherwise swap the
         // panel to the logos mid-recording and take the only indicator with it. The

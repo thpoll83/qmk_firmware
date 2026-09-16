@@ -42,6 +42,51 @@ Two things that made this diagnosable, and are worth keeping:
   Only the `uint32_t *`-typed helper got word instructions. So "flash writes work
   here but that one copy dies" was pointing at alignment the whole time.
 
+## What the board SHOWS during an update, and the one path that comes back
+
+Four states, each with its own cue. Two of them were added 2026-09-16; the notice
+screens are previewable without flashing via
+`tools/status_oled_preview.py --fw-notice {apply,restart,failed}`.
+
+| state | RGB | keycaps | status OLED |
+|---|---|---|---|
+| staging / transfer | breathing **cyan** | legible base legends | `oled_fw_update_screen()` + progress bar |
+| FW-2 confirm prompt | breathing **orange** | blank except **A** / **R** | `oled_fw_confirm_screen()` |
+| applying | solid **orange** | **blank** | `⭯Applying  Firmware⭯` |
+| reboot / staged reset | solid **orange** | **blank** | `⭯Restart  Now⭯` |
+| apply REFUSED (bad CRC) | orange fades out | legends restored | `Update  FAILED`, held 5 s |
+
+⚠️ **Orange means "you cannot type", and until 2026-09-16 the keycaps did not say
+so.** The cue was on the LEDs alone while 72 displays went on showing a full, inviting
+legend set through the whole multi-second copy — the one moment the keys genuinely do
+nothing. `poly_board_unusable_cue()` now latches the orange AND calls
+`clear_all_displays()`, one broadcast write over the shift-register chip-select rather
+than 72 of them. Cyan is deliberately left alone: the board still runs during staging,
+and `poly_prepare_for_flash()` has just drawn legible legends so you CAN keep typing.
+
+⚠️ **Everything on the apply path is pushed out SYNCHRONOUSLY, for the same reason.**
+`poly_flash_rgb_now()` exists because `rgb_matrix_indicators_kb()` only runs from the
+next `rgb_matrix_task()` and there is no next one; the notice screens end in
+`oled_render_dirty(true)` because the stock one-block-per-call flush would dribble; and
+the keycap blank is a direct SPI write for the same reason. **A cue queued on a path
+that never returns is a cue nobody ever sees.**
+
+⚠️ **The refused apply is the ONE firmware path that RETURNS, so it is the only one
+that has to undo its own cue — and the only one that can be repainted over.** A staged
+image that fails its CRC is refused (rather than erasing a working firmware with an
+image we cannot vouch for), and that used to exist only as a console line on a console
+nobody has open: from the outside the update simply did nothing, and after the keycap
+blanking above it would have looked worse still. It now paints `Update FAILED`, restores
+the legends, and is held for `POLY_FW_NOTICE_MS` (5 s) by `poly_fw_notice_active()` —
+without the hold, `oled_task_user()`'s 66 ms status tick erases it before it can be read.
+
+**Why there is no separate "Verifying" state**, though the apply has four internal
+stages: only stage 3 is long. Stages 0–2 (clear keys, flush EEPROM, CRC the staged
+image) complete in milliseconds, so a screen for them would be a flicker, and the panel
+that matters is the one FROZEN for the whole copy — which must therefore name the copy.
+The stage markers stay in the console (`APPLY n/4`), where they answer "which stage
+wedged".
+
 ## Firmware signing enforcement & the on-keycap confirmation (FW-2)
 
 `rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so `fw_staging_finalize()` only stamps the

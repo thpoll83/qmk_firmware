@@ -322,10 +322,151 @@ static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang)
 }
 
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
+#ifdef POLYKYBD_CIRQUE_GESTURES
+#    include "../cirque_gestures.h"
+#    include "../base/cirque_gesture_fsm.h" /* the zone radii the view draws */
+
+/* The trackpad view: shown while the pad is IN USE, and the normal status screen
+ * comes back about a second after the finger leaves.
+ *
+ * It is drawn as a CIRCLE. The sensor silicon is square and the gesture zones are
+ * computed in that square, but the pad a customer touches is round, so the circle is
+ * what the display is of. This is the one place in the firmware where the outside of
+ * the hardware wins over the inside.
+ *
+ * Three radii, kept apart on purpose. Two preview renders were thrown away because
+ * they overlapped: at the full radius the finger dot landed exactly on the rim, and
+ * inside the right-click sector it merged with the marker drawn there and vanished
+ * altogether. Marker 32-33, rim 31, finger 0..27, dial ring 24.
+ */
+#    define PAD_CX 64
+#    define PAD_CY 32
+#    define PAD_R 31                 /* the pad rim: as large as 64 rows allow      */
+#    define PAD_DOT_R (PAD_R - 4)    /* how far the finger dot travels              */
+#    define PAD_RING_R ((PAD_DOT_R * POLY_GEST_RING_R) / (POLY_GEST_SPAN / 2))
+
+static void pad_plot(int16_t x, int16_t y) {
+    if (x < 0 || x > 127 || y < 0 || y > 63) return;
+    kdisp_fill_rect((int8_t)x, (int8_t)y, 1, 1);
+}
+
+/* Midpoint circle. `dash` leaves two of every three spans out, which is what makes
+ * the dial zone read as a boundary rather than a second rim. */
+static void pad_circle(int16_t r, bool dash) {
+    int16_t x = r, y = 0, err = 1 - r;
+    uint8_t n = 0;
+    while (x >= y) {
+        if (!dash || (n % 3) == 0) {
+            pad_plot(PAD_CX + x, PAD_CY + y);
+            pad_plot(PAD_CX + y, PAD_CY + x);
+            pad_plot(PAD_CX - y, PAD_CY + x);
+            pad_plot(PAD_CX - x, PAD_CY + y);
+            pad_plot(PAD_CX - x, PAD_CY - y);
+            pad_plot(PAD_CX - y, PAD_CY - x);
+            pad_plot(PAD_CX + y, PAD_CY - x);
+            pad_plot(PAD_CX + x, PAD_CY - y);
+        }
+        n++;
+        y++;
+        if (err < 0) {
+            err += 2 * y + 1;
+        } else {
+            x--;
+            err += 2 * (y - x) + 1;
+        }
+    }
+}
+
+/* The two corner markers, just outside the rim. Angles are tested as integer slope
+ * ratios rather than with trig: both span 29..61 degrees off the horizontal, and
+ * tan(29) and tan(61) are 554 and 1804 per 1000.
+ *
+ * `left` mirrors it to the top-left dial wedge. That one is DASHED, matching the
+ * dotted dial ring, so the two markers cannot be confused: dotted means dial, solid
+ * means right click. */
+static void pad_sector(bool left, bool dash) {
+    for (int16_t y = -PAD_R - 4; y <= 0; y++) {
+        for (int16_t x = 0; x <= PAD_R + 4; x++) {
+            const int32_t rsq = (int32_t)x * x + (int32_t)y * y;
+            if (rsq < (PAD_R + 1) * (PAD_R + 1) || rsq > (PAD_R + 4) * (PAD_R + 4)) continue;
+            const int32_t up = -(int32_t)y * 1000;
+            if (up < 554 * x || up > 1804 * x) continue;
+            if (dash && ((x + y) & 2)) continue;
+            pad_plot(PAD_CX + (left ? -x : x), PAD_CY + y);
+        }
+    }
+}
+
+static void pad_disc(int16_t cx, int16_t cy, int16_t r) {
+    for (int16_t dy = -r; dy <= r; dy++) {
+        for (int16_t dx = -r; dx <= r; dx++) {
+            if (dx * dx + dy * dy <= r * r) pad_plot(cx + dx, cy + dy);
+        }
+    }
+}
+
+void oled_draw_pad_view(void) {
+    uint32_t          buf[16];
+    poly_cirque_dbg_t d;
+    /* The 15px face, not the 10px one the debug rows used: this is a customer
+     * screen and the corners have room. At 15px a three-digit value is ~24px wide,
+     * and the circle's widest point in those rows is x 38..90, so they do not meet. */
+    const GFXfont*    f[] = {&NotoSans_Regular_Small_15px7b};
+
+    poly_cirque_debug_snapshot(&d);
+
+    pad_circle(PAD_R, false);      /* the pad, as the hand meets it */
+    pad_circle(PAD_RING_R, true);  /* where a dial arms             */
+    pad_sector(false, false);      /* where a tap is a right click  */
+    pad_sector(true, true);        /* the dedicated dial-start wedge */
+
+    /* The finger. Scaled by the pad's ON-AXIS half-extent and clamped to the travel
+     * radius, so every part of the pad reaches the rim area and a diagonal reach
+     * cannot escape the circle. */
+    if (d.down) {
+        int32_t x = ((int32_t)d.px - POLY_GEST_SPAN / 2) * PAD_DOT_R / (POLY_GEST_SPAN / 2);
+        int32_t y = ((int32_t)d.py - POLY_GEST_SPAN / 2) * PAD_DOT_R / (POLY_GEST_SPAN / 2);
+        const int32_t msq = x * x + y * y;
+        if (msq > (int32_t)PAD_DOT_R * PAD_DOT_R) {
+            const int32_t m = (int32_t)poly_gest_isqrt((uint32_t)msq);
+            if (m) {
+                x = x * PAD_DOT_R / m;
+                y = y * PAD_DOT_R / m;
+            }
+        }
+        pad_disc((int16_t)(PAD_CX + x), (int16_t)(PAD_CY + y), d.tap_flash ? 4 : 2);
+    }
+
+    /* Position in the bottom corners, where the circle is narrowest. */
+    num16_to_u32_string(buf, sizeof(buf), d.px);
+    kdisp_write_gfx_text(f, 1, 0, 63, buf);
+    num16_to_u32_string(buf, sizeof(buf), d.py);
+    {
+        int8_t lo, hi;
+        kdisp_gfx_text_bounds(f, 1, buf, &lo, &hi);
+        kdisp_write_gfx_text(f, 1, (int8_t)(127 - (hi - lo)), 63, buf);
+    }
+}
+
+bool oled_pad_view_active(void) {
+    poly_cirque_dbg_t d;
+    poly_cirque_debug_snapshot(&d);
+    return d.active;
+}
+#endif
+
 void oled_update_buffer(void) {
     uint32_t buffer[32];
 
     kdisp_set_buffer(0);
+
+#ifdef POLYKYBD_CIRQUE_GESTURES
+    /* Only while the pad is in use — otherwise the normal status screen stands. */
+    if (is_right_side() && oled_pad_view_active()) {
+        oled_draw_pad_view();
+        return;
+    }
+#endif
 
     const poly_layer_t* global_layer = get_global_layer();
     // Top row shares _Mid_ with the fw-update screens: at 19-21px grid-fitting has

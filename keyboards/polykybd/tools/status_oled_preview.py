@@ -449,6 +449,99 @@ def draw_lang_column(setp, tiny, globe, x, code):
         draw(setp, tiny, max(x, nx), base, txt)
 
 
+# ---- trackpad view (split72/status_oled.c oled_draw_pad_view) ------------------
+# Shown only while the pad is in use; the status screen returns when the finger
+# leaves. Coordinates here must track the PAD_* defines in the C.
+PAD_CX, PAD_CY = 64, 32
+PAD_R = 31                  # the pad rim: as large as 64 rows allow
+PAD_DOT_R = PAD_R - 4       # how far the finger dot travels
+PAD_SPAN = 896              # POLY_GEST_SPAN, the gesture layer's pad units
+PAD_RING = 405              # POLY_GEST_RING_R
+
+
+def pad_circle(setpix, r, dash):
+    """Mirror of the C's midpoint walk, including the dash rule, so the dotted
+    ring lands on the same pixels the firmware lights."""
+    x, y, err, n = r, 0, 1 - r, 0
+    while x >= y:
+        if not dash or (n % 3) == 0:
+            for px, py in ((x, y), (y, x), (-y, x), (-x, y),
+                           (-x, -y), (-y, -x), (y, -x), (x, -y)):
+                setpix(PAD_CX + px, PAD_CY + py)
+        n += 1
+        y += 1
+        if err < 0:
+            err += 2 * y + 1
+        else:
+            x -= 1
+            err += 2 * (y - x) + 1
+
+
+def pad_sector(setpix, left=False, dash=False):
+    """The corner markers, just OUTSIDE the rim. Angles as integer slope ratios
+    rather than trig, exactly as the C does it: both span 29..61 degrees off the
+    horizontal, and tan(29), tan(61) are 554 and 1804 per 1000.
+
+    `left` mirrors it to the top-left dial wedge, drawn DASHED to match the dotted
+    dial ring -- dotted means dial, solid means right click."""
+    for y in range(-PAD_R - 4, 1):
+        for x in range(0, PAD_R + 5):
+            rsq = x * x + y * y
+            if rsq < (PAD_R + 1) ** 2 or rsq > (PAD_R + 4) ** 2:
+                continue
+            up = -y * 1000
+            if up < 554 * x or up > 1804 * x:
+                continue
+            if dash and ((x + y) & 2):
+                continue
+            setpix(PAD_CX + (-x if left else x), PAD_CY + y)
+
+
+def pad_disc(setpix, cx, cy, r):
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            if dx * dx + dy * dy <= r * r:
+                setpix(cx + dx, cy + dy)
+
+
+def build_pad_panel(small, px=448, py=448, down=True, tapping=False):
+    """The trackpad view. Drawn as a CIRCLE: the sensor silicon is square and the
+    gesture zones are computed in that square, but the pad a customer touches is
+    round, so the circle is what the display is of.
+
+    Three radii kept apart on purpose -- marker 32..34, rim 31, finger travel
+    0..27, dial ring 24. At the full radius the dot sat on the rim, and inside the
+    right-click sector it merged with the marker and vanished; both faults showed
+    up only in the frame that put the dot there, which is why the preview renders
+    one frame per state rather than a default."""
+    pts = []
+
+    def setp(a, b):
+        pts.append((a, b))
+
+    pad_circle(setp, PAD_R, False)
+    pad_circle(setp, (PAD_DOT_R * PAD_RING) // (PAD_SPAN // 2), True)
+    pad_sector(setp)
+    pad_sector(setp, left=True, dash=True)
+
+    if down:
+        x = (px - PAD_SPAN // 2) * PAD_DOT_R // (PAD_SPAN // 2)
+        y = (py - PAD_SPAN // 2) * PAD_DOT_R // (PAD_SPAN // 2)
+        msq = x * x + y * y
+        if msq > PAD_DOT_R * PAD_DOT_R:
+            m = int(msq ** 0.5)
+            if m:
+                x = x * PAD_DOT_R // m
+                y = y * PAD_DOT_R // m
+        pad_disc(setp, PAD_CX + x, PAD_CY + y, 4 if tapping else 2)
+
+    # Position in the bottom corners, in the 15px face -- the circle is only a few
+    # pixels wide in those rows, so the corners are free.
+    draw(setp, small, 0, 63, s(str(px)))
+    draw_right(setp, small, 127, 63, s(str(py)))
+    return pts
+
+
 def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'),
                 lang='en-US', wpm=0, layout='Qwerty'):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
@@ -581,6 +674,11 @@ def main():
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
     ap.add_argument('--telemetry', action='store_true',
                     help='preview the settings->More telemetry screen instead of the status screen')
+    ap.add_argument('--pad', action='store_true',
+                    help='preview the trackpad view (shown while the pad is in use)')
+    ap.add_argument('--pad-xy', default='448,448',
+                    help='finger position in gesture pad units 0..%d (default the centre)' % PAD_SPAN)
+    ap.add_argument('--pad-tap', action='store_true', help='render the enlarged dot of a tap')
     ap.add_argument('--uptime', default='1:23:45', help='uptime string shown by --telemetry')
     def link_arg(v):
         # Validated here rather than at use: an unparsable value otherwise reached
@@ -615,7 +713,11 @@ def main():
     args = ap.parse_args()
 
     disp, small, icons, tiny, globe = load_fonts()
-    if args.telemetry:
+    if args.pad:
+        fx, fy = (int(v) for v in args.pad_xy.split(','))
+        L = build_pad_panel(small, fx, fy, tapping=args.pad_tap)
+        R = L
+    elif args.telemetry:
         L = build_telemetry_panel(True,  small, uptime=args.uptime, link=args.link)
         R = build_telemetry_panel(False, small, uptime=args.uptime, link=args.link)
     else:

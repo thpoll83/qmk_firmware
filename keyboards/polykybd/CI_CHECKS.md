@@ -712,6 +712,16 @@ inherited-upstream noise:
     silently arms a release refusal hours later. **Read `status` before
     `conclusion`.** Do not re-run: the rig runs one job at a time, so a re-run queues
     behind the ones already waiting and cannot make an absent runner appear.
+  - ⚠️ **A `needs:`-gated job is ABSENT from the run's job list until its dependency
+    finishes, which reads exactly like "skipped".** GitHub *does* list skipped jobs,
+    so absence looks like a tier that was never armed. `fwapply-test` has
+    `needs: [build-fwapply, hil-test, doom-test]` and the rig runs one job at a time,
+    so on a merge push it does not exist for the ~6 min `hil-test` takes. Measured
+    2026-09-16 on run 35066684839: at 07:09 the run listed 5 jobs and no
+    `fwapply-test`; it appeared at 07:10 and went green at 07:14. This is the case
+    where the rule above has nothing to read — **there is no `status` either**, so
+    read the workflow's `needs:` before concluding a tier did not run, or you will
+    report the release gate as unsatisfiable while it is merely queued.
   - ⚠️ **A green board does NOT mean a rig test from an unmerged `polykybd-ctnd` PR
     ran** — CI force-syncs the station to ctnd `main`, so that test does not exist on
     the rig. Land the ctnd PR first, then re-run HIL; verify by grepping the job log

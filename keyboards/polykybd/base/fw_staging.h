@@ -330,6 +330,28 @@ void fw_staging_arm_apply(void);
 void fw_staging_arm_reboot(void);
 bool fw_staging_reboot_pending(void);
 
+// True while the board has stopped being usable because a staged image is being
+// applied, or a reset is imminent. This is the DISPLAY gate for that phase: the
+// orange RGB cue, the blanked keycaps and the "Applying Firmware" notice all belong
+// to it, and every one of them is painted from a path that then blocks or never
+// returns.
+//
+// ⚠️ It is a SEPARATE question from fw_staging_fw_up_active(), which covers only the
+// chunk TRANSFER. The apply is a distinct state — the transfer has finished by then,
+// so fw_up_active is already false — and the apply sequence deliberately RETURNS
+// between its stages so each console marker can go out. Every one of those returns
+// hands the main loop a pass in which oled_task_user() and update_displays() run, and
+// they happily repainted the ordinary status screen and the full legend set straight
+// over the cue. The frozen picture during the multi-second copy was then the STATUS
+// screen, not the notice (reported from hardware 2026-09-16).
+//
+// So both walkers must ask THIS, not fw_up_active: the status OLED in
+// oled_task_user() and the keycaps in update_displays(). One predicate, so they
+// cannot answer the question differently.
+static inline bool fw_staging_board_is_flashing(void) {
+    return fw_staging_commit_pending() || fw_staging_reboot_pending();
+}
+
 // ---------------------------------------------------------------------------
 // Diagnostic snapshot — populated by the slave's handlers so the master can
 // query "what does the slave think happened" after a failed FW_UP_CHUNK.

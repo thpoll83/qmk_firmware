@@ -71,6 +71,38 @@ next `rgb_matrix_task()` and there is no next one; the notice screens end in
 the keycap blank is a direct SPI write for the same reason. **A cue queued on a path
 that never returns is a cue nobody ever sees.**
 
+⚠️ **Painting a cue is not the same as KEEPING it, and `fw_up_active` does not cover
+the apply.** The first version of all of this painted correctly and was then wiped
+within one 66 ms tick — reported from hardware as "the messages are right away
+overpainted with the normal status screen during the orange phase". Two things
+combine:
+
+- the **apply is a separate state from the transfer**. `fw_staging_fw_up_active()` is
+  already false by then, so the `oled_task_user()` branch that guards the transfer
+  does not fire and the dispatch falls through to the ordinary status screen;
+- the apply sequence **deliberately RETURNS between its four stages**, so each console
+  marker gets a main loop to go out on. Every one of those returns hands the main loop
+  a pass in which `oled_task_user()` and `update_displays()` run.
+
+So the picture actually FROZEN for the whole multi-second copy was the status screen
+and a full legend set — the exact opposite of the intent. The keycap half had a second
+trigger of its own: `clear_keyboard()` on the way in moves the mods, so the very next
+`sync_and_refresh_displays()` sees a layer diff and requests a refresh.
+
+**`fw_staging_board_is_flashing()` is the one predicate both walkers ask** — the status
+OLED in `oled_task_user()`, the keycaps in `update_displays()` — so they cannot answer
+it differently. This is the same two-walkers shape as the display-list op and the
+render/measure pair: a cue is only as good as every path that can overwrite it.
+
+⚠️ **Three other writers own the keycaps outright, and stopping them is part of the
+cue.** `update_displays()` early-returns for DOOM and for the startup animation, which
+is exactly the sign that each is a writer in its own right; the idle pulse is a third
+and does not go through `update_displays()` at all
+(`set_displays(contrast, idle)` → `kdisp_idle()`). A standalone "apply staged image"
+can arrive on an idling board with no preceding transfer, so `poly_board_unusable_cue()`
+tears all three down before blanking — the counterpart to the identical teardown
+`poly_prepare_for_flash()` does at the START of an update, and for the same reason.
+
 ⚠️ **The refused apply is the ONE firmware path that RETURNS, so it is the only one
 that has to undo its own cue — and the only one that can be repainted over.** A staged
 image that fails its CRC is refused (rather than erasing a working firmware with an

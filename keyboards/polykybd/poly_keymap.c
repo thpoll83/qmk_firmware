@@ -375,6 +375,18 @@ bool poly_fw_notice_active(void) {
 // rather than orange, and poly_prepare_for_flash() has deliberately just drawn
 // legible base legends so you CAN keep typing.
 static void poly_board_unusable_cue(void) {
+    // Take the keycaps off whatever else owns them FIRST, or that writer paints the
+    // blank straight back. update_displays() early-returns for both of these, which
+    // is precisely the sign that they are writers in their own right — and the idle
+    // pulse is a third, reached through set_displays(contrast, idle) -> kdisp_idle()
+    // rather than through update_displays() at all. A standalone "apply staged image"
+    // can arrive on an idling board with no preceding transfer, so none of this is
+    // hypothetical: poly_prepare_for_flash() does the same teardown for the same
+    // reason at the START of an update, and this is its counterpart at the end.
+    doom_screensaver_stop();   // self-guards: only an active attract demo
+    startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
+    poly_sync_t* local_state = access_local_state();
+    local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
     poly_flash_rgb_now();
     clear_all_displays();
 }
@@ -3522,6 +3534,19 @@ void update_displays(enum refresh_mode mode) {
     // Same for the one-time startup animation: while it owns the keycaps, its
     // procedural blitter is the only writer.
     if (startup_anim_active()) {
+        s_disp_render_active = false;
+        return;
+    }
+    // ⚠️ And for the apply / imminent-reset phase: the keycaps were deliberately
+    // blanked by poly_board_unusable_cue() because the matrix is never scanned again,
+    // and a re-render here paints the full legend set straight back over that blank.
+    // It is reachable because the apply sequence RETURNS between stages, and because
+    // clear_keyboard() on the way in moves the mods, which makes the very next
+    // sync_and_refresh_displays() see a layer diff and request a refresh.
+    // s_disp_render_active = false is what makes a REFUSED apply repaint correctly:
+    // the blank was an untracked write, so the next awake pass must invalidate every
+    // dirty-window bbox rather than diff against a stale one.
+    if (fw_staging_board_is_flashing()) {
         s_disp_render_active = false;
         return;
     }

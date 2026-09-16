@@ -560,6 +560,24 @@ bool oled_task_user(void) {
     } else if (fw_staging_fw_up_active()) {
         oled_scroll_off();
         oled_fw_update_screen();
+    } else if (fw_staging_board_is_flashing()) {
+        // ⚠️ The apply is NOT covered by fw_up_active above — the chunk transfer has
+        // finished by then. Without this branch the sequence's deliberate returns
+        // between stages each handed the main loop a pass that repainted the ordinary
+        // status screen over the notice, so the picture FROZEN for the whole copy was
+        // the status screen. Re-asserting it every tick is nearly free: oled_write_raw
+        // diffs, so once the notice is up nothing is dirty and oled_render_dirty(true)
+        // early-returns.
+        oled_scroll_off();
+        // Name the phase we are actually in. Re-asserting the RESTART screen matters
+        // less (that path calls mcu_reset() in the same pass and never returns), but
+        // having the branch answer with "Applying Firmware" during a reboot would be a
+        // lie waiting for the first time that path ever yields.
+        if (fw_staging_reboot_pending()) {
+            oled_fw_restart_screen();
+        } else {
+            oled_fw_apply_screen();
+        }
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {
         // Game mode status OLED — master directly, slave via the synced

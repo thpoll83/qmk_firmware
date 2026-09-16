@@ -356,7 +356,7 @@ void splash_progress(uint8_t step) {
     // CRASH_PHASE_LOOP when post_init completes.
     (void)crash_phase_enter(CRASH_PHASE_BOOT, step);
 
-    // ...and put the same number somewhere a human can read off a wedged board.
+    // ...and put the same milestone somewhere a human can read off a wedged board.
     // Skipped for step 1: that one runs in keyboard_pre_init_user(), and QMK does not
     // call oled_init() until later in keyboard_init(), so there is no panel yet.
     if (step != 1) {

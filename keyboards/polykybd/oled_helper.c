@@ -319,21 +319,45 @@ static void oled_fw_notice(const uint32_t* word, bool icon) {
 // Costs a couple of hundred ms of I2C across the whole boot: the first paint is a
 // full frame, the rest change only the digit, and oled_write_raw diffs.
 void oled_boot_progress(uint8_t step, uint8_t total) {
-    const GFXfont* mid[] = { &NotoSans_Regular_Mid_19px7b };
+    // ⚠️ The 19 px face does NOT fit two bands on the 32 px panel — measured, 2 px of
+    // "Booting...."'s ascenders land at y = -1 and the hardware clips them away.
+    // split42 uses the 15 px face instead; it still fits comfortably across 128 px
+    // (74 px for the label, 39 for the percent).
+    const GFXfont* face[]  = { (OLED_DISPLAY_HEIGHT >= 64) ? &NotoSans_Regular_Mid_19px7b
+                                                           : &NotoSans_Regular_Small_15px7b };
     uint32_t       buf[12];
     char           txt[20];
 
-    snprintf(txt, sizeof(txt), "Boot %u/%u", (unsigned)step, (unsigned)total);
+    // ⚠️ TWO lines, not one. "Booting.... 100%" measures 143 of the 128 px in this
+    // font, and 119 in the small one — 4 px of margin, the fit-by-a-hair shape that
+    // already sent "Restarting" and "no image staged" back for a second pass. Split,
+    // the widest parts are 88 px and 48 px.
+    const uint32_t* label = U"Booting....";
+    // Round to nearest so the steps read 25 / 38 / 50 / 63 / 75 / 88 / 100 rather than
+    // truncating three of them a point low. The percent is the HUMAN form of the
+    // milestone; the machine-readable one is the CRASH_PHASE_BOOT argument, which stays
+    // the step number, so "stuck at 38%" and phase=1:0x0003 name the same place.
+    const uint8_t pct = (uint8_t)(((uint16_t)step * 100u + total / 2u) / total);
+    snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
     ascii_to_u32_string(buf, sizeof(buf), txt);
 
     oled_on();
     kdisp_set_buffer(0);
-    int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-    kdisp_gfx_text_bbox(mid, 1, buf, &x0, &x1, &y0, &y1);
-    int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
-    if (x < 0) x = 0;
-    kdisp_write_gfx_text(mid, 1, (int8_t)x,
-                         (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (y0 + y1) / 2), buf);
+
+    // Each line centred in its own half of the panel, from its own bbox — the same
+    // band shape oled_fw_confirm_screen() uses, so a descender does not push the other
+    // line. Works unchanged on the 32 px panel: two bands of 16.
+    const uint32_t* lines[2] = { label, buf };
+    const int8_t    band     = (int8_t)(OLED_DISPLAY_HEIGHT / 2);
+    for (uint8_t i = 0; i < 2; ++i) {
+        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+        kdisp_gfx_text_bbox(face, 1, lines[i], &x0, &x1, &y0, &y1);
+        int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
+        if (x < 0) x = 0;
+        kdisp_write_gfx_text(face, 1, (int8_t)x,
+                             (int8_t)(band * i + band / 2 - (y0 + y1) / 2), lines[i]);
+    }
+
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     // Synchronous, for the usual reason: the step this announces may be the one that
     // never returns, and a frame left for the next oled_render() tick is a frame the

@@ -127,11 +127,20 @@ run on it (`test_no_crash_record`). What is worth knowing:
     milestone, so any record written LATER says how far that boot got — the line reads
     `phase=1:0x0003`, i.e. boot step 3. (It does nothing for a board that is unplugged
     rather than reset; nothing written to flash can survive that.)
-  - the status OLED shows **`Boot n/8`** at each milestone. The only evidence a hang
-    used to leave was the keycap splash's solidify count — "it was stuck with PO" —
-    which localises the stall to one of seven gaps only if the letters are counted
-    exactly, and a two-letter field report cannot be trusted to that precision. The
-    number can be read straight off the wedged board.
+  - the status OLED shows **`Booting....` over a percent** at each milestone (25 / 38 /
+    50 / 63 / 75 / 88 / 100, rounded to nearest). The only evidence a hang used to
+    leave was the keycap splash's solidify count — "it was stuck with PO" — which
+    localises the stall to one of seven gaps only if the letters are counted exactly,
+    and a two-letter field report cannot be trusted to that precision. A percent can be
+    read straight off the wedged board, and maps back to the milestone one-to-one.
+    ⚠️ **TWO lines, and the face depends on the panel.** `"Booting.... 100%"` measures
+    143 of the 128 px in the 19 px face and 119 in the 15 px one (4 px of margin, the
+    fit-by-a-hair shape that already sent `"Restarting"` and `"no image staged"` back
+    for a second pass). Split across two bands the widest parts are 88 and 48 px — but
+    the 19 px face then clips 2 px off the top of split42's **32 px** panel, so the
+    short panel uses the 15 px one. Both measured with
+    `tools/status_oled_preview.py --boot <step>`; 0 off-panel pixels at every milestone
+    on both heights.
 
   ⚠️ **Arming the watchdog earlier is NOT a free fix**, which is why it has not been
   done. `crash_watchdog_start()` also sets `consecutive = 0`, and reaching it is the

@@ -249,6 +249,30 @@ def build_fw_notice_panel(side, disp, arrow, word, icon=True):
     return pts
 
 
+def build_boot_panel(disp, step, total=8, small=None):
+    """Boot progress — mirror of oled_helper.c's oled_boot_progress().
+
+    TWO lines, because "Booting.... 100%" measures 143 of the 128 px in this font.
+    Both halves draw the same thing (each is reporting its OWN boot), so there is no
+    `side`. The percent rounds to nearest: 25 / 38 / 50 / 63 / 75 / 88 / 100.
+    """
+    pts = []
+    setp = lambda px, py: pts.append((px, py))
+    # The 19 px face clips 2 px off the top of a 32 px panel with two bands, so the
+    # short panel uses the 15 px one -- mirror of the same test in the C.
+    face = disp if P_H >= 64 else (small or disp)
+    lines = ["Booting....", "%d%%" % ((step * 100 + total // 2) // total)]
+    band = P_H // 2
+    for i, txt in enumerate(lines):
+        cp = s2cp(txt)
+        bx0, bx1, by0, by1 = text_bbox(face, cp)
+        x = (P_W - (bx1 - bx0 + 1)) // 2 - bx0
+        if x < 0:
+            x = 0
+        draw(setp, face, x, band * i + band // 2 - (by0 + by1) // 2, cp)
+    return pts
+
+
 def build_fw_failed_panel(side, small, why='crc', size=492916, want=0xa1b2c3d4, got=0x5e6f7a8b):
     """The refused-apply screen — mirror of oled_helper.c's oled_fw_failed_screen().
 
@@ -757,6 +781,8 @@ def main():
                          "(Qwerty, 'Qwerty Stag!', 'Colemak DH', Neo, Workman)")
     ap.add_argument('--rgb-off', action='store_true',
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
+    ap.add_argument('--boot', type=int, choices=range(2, 9), metavar='STEP',
+                    help='preview the boot-progress screen at splash milestone 2..8')
     ap.add_argument('--fw-notice', choices=('apply', 'restart', 'failed', 'failed-none'),
                     help='preview a firmware notice screen instead of the status screen')
     ap.add_argument('--telemetry', action='store_true',
@@ -803,6 +829,9 @@ def main():
     if args.pad:
         fx, fy = (int(v) for v in args.pad_xy.split(','))
         L = build_pad_panel(small, fx, fy, tapping=args.pad_tap)
+        R = L
+    elif args.boot is not None:
+        L = build_boot_panel(disp, args.boot, small=small)
         R = L
     elif args.fw_notice in ('failed', 'failed-none'):
         why = 'none' if args.fw_notice == 'failed-none' else 'crc'

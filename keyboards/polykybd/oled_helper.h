@@ -36,8 +36,9 @@ void oled_fw_confirm_screen(void);
 /* "⭯Applying / Firmware⭯" notice (resident circular refresh arrow U+2B6F) drawn +
    fully flushed on both halves the moment a staged firmware image is applied, right
    before the blocking self-flash + reboot. */
-/* "Boot n/8" on the status OLED at each splash milestone — the only evidence a boot
-   HANG leaves, since post_init runs with the watchdog off and never resets itself. */
+/* "Booting...." + a percent on the status OLED at each splash milestone — the only
+   evidence a boot HANG leaves, since post_init runs with the watchdog off and never
+   resets itself. `step`/`total` are the milestone; the percent is derived. */
 void oled_boot_progress(uint8_t step, uint8_t total);
 void oled_fw_apply_screen(void);
 /* "⭯Restarting / Now⭯" — the QK_REBOOT / staged-reset path, which also latches the

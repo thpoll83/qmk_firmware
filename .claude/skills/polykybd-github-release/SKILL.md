@@ -78,9 +78,29 @@ Apply these four rules on top of the base skill's per-version gathering:
    fold a single trailing "Plus maintenance releases 0.9.x–0.9.y 🧹" line — don't give
    each one a section). The version numbers still increment through them; you're
    trimming the *notes*, not renumbering.
-3. **Concise.** Tighter than the plain notes — one headline + 1–3 tight bullets per
-   version. Keep the load-bearing identifier (`cmd 30`, `protocol v9`, `GP5/GP4`,
-   `SERIAL_USART_PIN_SWAP`) but cut the mechanism paragraph down to the essential fact.
+   ⚠️ **Judge the interval by its DIFF, not by its commit subjects.** An interval whose
+   log reads like docs can still carry a user-facing fix in the same merge — a clipped
+   UI label and a stale preview stamp were both folded into "maintenance" on the strength
+   of their subject lines alone (2026-09-16), and both were things an owner would notice.
+   Read the commit BODIES of every interval before consigning it to the trailing line.
+3. ⚠️ **DETAILED, not terse — the published releases are the format, not this list.**
+   This rule used to say "concise, 1–3 tight bullets" and that is **wrong**: it produced
+   a draft the user rejected on sight as "not the agreed format" (2026-09-16). Read the
+   last published release of the artifact you are cutting **before drafting** — `v0.19.1`
+   and `PolyKybd-fw-v0.23.0` are the reference — and match what you find there:
+   - **5–6 per-version sections**, not two or three. Every version with any owner-facing
+     content gets its own `##` header.
+   - **A one-sentence sub-headline under the header**, before the bullets, saying what
+     the version is about ("A half can no longer come up on the wrong side because the
+     settings store was lost.").
+   - **3–5 substantial bullets per section.** Each carries the real mechanism, the real
+     numbers and identifiers, and — for a bug — **how it presented**, which is what makes
+     a reader recognise their own symptom ("reported as two unexplained reboots with no
+     crash record — because nothing had crashed"; "a fully-lit matrix reported 39%").
+   - **Inline ⚠️ on anything the reader must act on or could be bitten by**, mid-section,
+     not collected at the end.
+   A release note here is closer to a well-written changelog entry than to a tweet. Cut
+   filler, never mechanism.
 4. **Informative over funny.** A short theme + a single on-brand emoji is fine and
    matches past releases ("OS Shortcuts", "Glyph Script control", "Full Duplex Split
    Sync") — but don't force jokes or a punny "theme in quotes". Lead each line with
@@ -90,14 +110,24 @@ Still **honest and correct**: when a change bumps `PROTOCOL_VERSION`, say so and
 that host and firmware must be updated **together** (the connect gate is exact-match) —
 that's the one piece of deep detail a user genuinely needs.
 
-Per-version shape:
+Per-version shape (see the last published release for a full worked example):
 
 ```
-## 0.9.NN — <short theme> <emoji?>
-<one-sentence, user-facing headline.>
-- <tight bullet: what it does + the real identifier>
-- <why you care / or "requires matching host+firmware — protocol vN" when a protocol bumped>
+## 0.9.NN — <short theme> <emoji>
+<One sentence saying what this version is about, before any bullet.>
+
+- **<The change, in bold>** — what it does for the user, then the real mechanism with
+  its identifiers and numbers.
+- ⚠️ **<A caveat the reader must act on>** — why, and what to do instead.
+- **<A bug fix>** — what it did, HOW IT PRESENTED (the symptom they'd have seen), and
+  what it does now.
 ```
+
+**Lead the whole body with the compatibility line**, before the first `##`: whether the
+protocol moved, what that means for the other artifact, and — when it did move — which
+published version of the sibling is behind and what the user loses by not updating both.
+When the protocol did NOT move, say so explicitly and say the two can be updated
+independently; that is the opposite of the usual advice and worth stating.
 
 ## 2b. WinCompose only — three things to do BEFORE the review gate
 
@@ -134,8 +164,21 @@ include them in what you show the user at the review gate.
 
 ## 3. REVIEW GATE — get sign-off before creating anything
 
+⚠️ **PASTE THE WHOLE NOTES INTO CHAT, AS MARKDOWN. A summary is not the gate.**
+This step was performed as a metadata table plus a prose summary of what the notes
+covered, with the files already staged — the user had to ask twice to see them
+(2026-09-16). What they are approving is the **text**, so the text is what goes in the
+message: both artifacts' bodies in full, in fenced blocks, exactly as staged.
+
+⚠️ **The gate comes BEFORE step 5's staging, not alongside it.** Step 5 says "write the
+**approved** notes" — running its flow first and presenting afterwards inverts the one
+hard rule this skill has. Nothing is written to `release-notes` until the user has
+replied. If you have already staged by mistake, say so plainly and amend the branch
+rather than letting the staged copy stand as the approved one.
+
 Present to the user, in chat:
-- the **full drafted notes**, and
+- the **full drafted notes for every artifact in the range** (fenced Markdown, not a
+  description of them), and
 - the **proposed metadata**: tag, release title, target branch, latest-flag, and
 - **when the range carries a `PROTOCOL_VERSION` bump, the sibling artifact's newest
   PUBLISHED protocol** — because that decides whether this is one release or two

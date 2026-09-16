@@ -52,7 +52,7 @@ Two zones arm a dial, and they are not equally easy to hit by mistake:
 
 ⚠️ **The wedge is what fires by accident, and its radius is the knob — not the ring's.**
 The pad reaches 448 units on an axis and 633 into a corner, so the same number means
-very different things in the two zones. The ring at 405 leaves a 33-unit annulus on an
+very different things in the two zones. The ring at 405 leaves a 43-unit annulus on an
 axis: starting a dial there means touching the rim on purpose. The wedge runs up the
 45° diagonal, so its radius is a fraction of a run half as long again — at 200 it armed
 from 32 % of the way out and owned the **outer two thirds** of that diagonal, and a

@@ -96,8 +96,8 @@
 /* How far out a dial must START, of 448 on-axis (633 into a corner).
  *
  * 405 of 448 on-axis, and that is close to the hard limit rather than a free choice.
- * The pad reaches 448 pad units on the axes and 634 diagonally, so the annulus a
- * touchdown can land in is 33 units wide on an axis (7% of the half-width) and 219
+ * The pad reaches 448 pad units on the axes and 633 diagonally, so the annulus a
+ * touchdown can land in is 43 units wide on an axis (10% of the half-width) and 228
  * wide toward a corner. Pushing past ~440 makes the axes unreachable outright and
  * the dial becomes a corners-only gesture. 220 was far too generous: a finger that
  * lands anywhere but the middle starts a dial, so the pad scrolls when it should
@@ -132,7 +132,7 @@
  * owned the outer TWO THIRDS of that diagonal and a finger resting at the top left
  * scrolled instead of pointing (field report, 2026-09-16). 320 is 51% of 633, so the
  * wedge is now the outer half of its diagonal and still 313 units deep -- a target
- * far bigger than the 33-unit annulus the ring gets on an axis.
+ * far bigger than the 43-unit annulus the ring gets on an axis.
  *
  * Raise it further if it still trips; the tests derive their sample radii from this
  * constant rather than hardcoding, so moving it does not silently invalidate them. */
